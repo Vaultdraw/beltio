@@ -169,6 +169,7 @@ describe("activation", () => {
     enable(["hello"]);
     const h = getRegisteredHandler("hello.say")!;
     await h();
+    expect(toasts().join()).toMatch(/command say failed: bad/);
     await h();
     expect(backend.hostDisabledCalls).toHaveLength(0);
     await h();

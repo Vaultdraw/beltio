@@ -63,7 +63,23 @@ function runReal(rt: PluginRuntime, short: string) {
     toastStore.push({ message: `${rt.info.name}: ${message}`, kind: "error" });
     return undefined;
   }
-  return guard(id, handler, `command ${short}`, true)();
+  // Each failure is toasted (then rethrown so the guard attributes and counts it).
+  const failed = (err: unknown): never => {
+    toastStore.push({
+      message: `${rt.info.name}: command ${short} failed: ${errorText(err)}`,
+      kind: "error",
+    });
+    throw err;
+  };
+  const run = () => {
+    try {
+      const result = handler();
+      return result instanceof Promise ? result.catch(failed) : result;
+    } catch (err) {
+      return failed(err);
+    }
+  };
+  return guard(id, run, `command ${short}`, true)();
 }
 
 /** Stub handler: run directly when active, else activate first (replay). */
