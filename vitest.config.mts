@@ -86,6 +86,9 @@ export default defineConfig({
       "excalidraw-desktop/e2e/**",
       // node:test files, run with `node --test`
       "excalidraw-desktop/perf/**",
+      "excalidraw-desktop/scripts/**/*.test.mjs",
+      // git-ignored private notes and spikes (a symlink in worktrees), not product tests
+      "personal/**",
     ],
     globals: true,
     environment: "jsdom",
