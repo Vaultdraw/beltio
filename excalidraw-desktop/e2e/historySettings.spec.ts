@@ -507,6 +507,9 @@ test.describe("panel notices", () => {
       .getByTestId("history-git-notice")
       .getByRole("button", { name: "Not now" })
       .click();
+    // a reload that cancels the idle settings prefetch mid-flight reports an
+    // aborted module import (navigation artefact, not an app error)
+    await page.waitForLoadState("networkidle");
     await page.reload();
     await setup(page, CURRENT, [V1, V2]);
     await setGitRepo(page, true);
