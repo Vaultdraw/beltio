@@ -712,6 +712,20 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
 
   // 3. search --------------------------------------------------------------------------
   await scenario("search", async () => {
+    // Frame pacing floor: interval between back-to-back rAFs with no DOM work.
+    // Every "until the next frame" metric (search/typing keystroke, pan/zoom)
+    // includes up to one interval; under macOS background QoS (--low-end) the
+    // OS coalesces the frame timer to ~100 ms, which no CPU-side fix can beat.
+    {
+      let last = now();
+      const until = last + 1000;
+      while (now() < until) {
+        await raf();
+        const t = now();
+        push("frame.rafInterval", t - last);
+        last = t;
+      }
+    }
     for (let round = 0; round < 2; round++) {
       for (const query of config.searchQueries) {
         setSearch("");

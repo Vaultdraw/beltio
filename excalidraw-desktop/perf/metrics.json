@@ -41,6 +41,7 @@
     "settings.close": { "unit": "ms", "desc": "Escape to settings closed and painted" },
     "palette.openFiles": { "unit": "ms", "desc": "Cmd+P to palette rows painted (files mode)", "budgets": [{"stat": "median", "max": 100, "warn": true, "why": "product target < 100 ms; warning only"}, {"stat": "p95", "max": 100, "warn": true}] },
     "palette.openCommands": { "unit": "ms", "desc": "Cmd+Shift+P to palette rows painted (commands mode)", "budgets": [{"stat": "median", "max": 100, "warn": true, "why": "product target < 100 ms; warning only"}, {"stat": "p95", "max": 100, "warn": true}] },
+    "frame.rafInterval": { "unit": "ms", "desc": "interval between back-to-back requestAnimationFrame callbacks with no DOM work (frame pacing floor; ~8 at 120 Hz, ~100 under macOS background QoS)", "report": ["max"] },
     "search.keystrokeJs": { "unit": "ms", "desc": "per keystroke, JS cost of the input event (dispatch to return, no frame wait)", "slack": 0.5 },
     "typing.keystrokeJs": { "unit": "ms", "desc": "per character in the WYSIWYG editor, JS cost of the input event (dispatch to return)", "slack": 0.5 },
     "save.medium": { "unit": "ms" },

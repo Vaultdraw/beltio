@@ -18,6 +18,10 @@ import { machineInfo, resultTable, comparisonTable, updateBaseline } from "./lib
 const HELP = `Usage: node excalidraw-desktop/perf/run.mjs [options]
 
   --low-end              packaged app under taskpolicy -c background (+ WebKit helpers clamped), memory_pressure -S on
+                         Note: background QoS also coalesces timers (a 5 ms sleep takes ~100 ms), so frame pacing drops to
+                         ~9 Hz (frame.rafInterval ~108 ms) and every "until next frame" metric carries that floor.
+  PERF_LOWEND_ROLES=r,.. (env) low-end: clamp only these processes (app, webContent, gpu, network); default all
+  PERF_LOWEND_APP_QOS=q  (env) low-end: taskpolicy clamp for the app process (default background; e.g. utility)
   Default (between milestones): Chromium mode only (headless, no windows), 2 runs, no warmup, no extra noise runs.
   --app                  also measure the packaged app (opens app windows; 2 runs)
   --milestone            full gate: packaged app + Chromium, 4 runs + 1 warmup, up to 2 extra runs when noisy

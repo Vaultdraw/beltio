@@ -131,7 +131,9 @@ export async function runAppOnce({
   const marks = [];
   const before = await snapshotWebKitPids();
   const env = { ...process.env, VAULTDRAW_PERF: "1", ...extraEnv, EXCALIDRAW_VAULT_SMOKE_DIR: vault, ...(modes.leak && altVault ? { EXCALIDRAW_VAULT_SMOKE_DIR_ALT: vaultAlt } : {}), VAULTDRAW_CONFIG_DIR: cfg, VAULTDRAW_STATE_DIR: state };
-  const [cmd, args] = lowEnd ? ["taskpolicy", ["-c", "background", bin]] : [bin, []];
+  // PERF_LOWEND_ROLES=app,webContent,gpu,network limits which processes get background QoS (attribution runs).
+  const lowRoles = process.env.PERF_LOWEND_ROLES ? new Set(process.env.PERF_LOWEND_ROLES.split(",")) : null;
+  const [cmd, args] = lowEnd && (!lowRoles || lowRoles.has("app")) ? ["taskpolicy", ["-c", process.env.PERF_LOWEND_APP_QOS || "background", bin]] : [bin, []];
 
   const mp = memoryPressure ? startMemoryPressure({ seconds: Math.ceil(timeoutMs / 1000), log }) : null;
   const spawnWallMs = Date.now();
@@ -196,7 +198,7 @@ export async function runAppOnce({
     for (const pid of found) {
       if (helpers.has(pid)) continue;
       helpers.add(pid);
-      if (lowEnd) {
+      if (lowEnd && !lowRoles) {
         const ok = await applyBackgroundPolicy(pid);
         if (!ok) notes.push(`taskpolicy -b -p ${pid} failed`);
       }
@@ -256,7 +258,8 @@ export async function runAppOnce({
         for (const pid of ids) {
           if (helpers.has(pid)) continue;
           helpers.add(pid);
-          if (lowEnd) {
+          const role = Object.entries(p).find(([, id]) => id === pid)?.[0];
+          if (lowEnd && (!lowRoles || lowRoles.has(role))) {
             const ok = await applyBackgroundPolicy(pid);
             if (!ok) notes.push(`taskpolicy -b -p ${pid} failed`);
           }
