@@ -1611,16 +1611,22 @@ export async function runDesktopSmoke(): Promise<void> {
       )?.set;
       setter?.call(search, "ui-edited");
       search.dispatchEvent(new win.Event("input", { bubbles: true }));
-      await waitFor("search result", () =>
-        Array.from(root.querySelectorAll(".vault-search-row__name")).find(
-          (item) => item.textContent?.includes("ui-edited"),
-        ),
-      );
-      const result = Array.from(
-        root.querySelectorAll<HTMLElement>(
-          '.vault-search-row[data-kind="drawing"]',
-        ),
-      ).find((item) => item.textContent?.includes("ui-edited"));
+      // Pick the suite's own drawing by full path: a restart keeps earlier runs'
+      // files (smoke-exports/ui-edited.excalidraw), which also match "ui-edited"
+      // and can rank first.
+      const uiPath = `${nested}/ui-edited.excalidraw`;
+      const resultFor = () =>
+        Array.from(
+          root.querySelectorAll<HTMLElement>(
+            '.vault-search-row[data-kind="drawing"]',
+          ),
+        ).find(
+          (item) =>
+            item.querySelector<HTMLElement>(".vault-search-row__name")
+              ?.title === uiPath,
+        );
+      await waitFor("search result", resultFor);
+      const result = resultFor();
       if (!result) {
         throw new Error("Search result disappeared before click");
       }
@@ -1629,6 +1635,13 @@ export async function runDesktopSmoke(): Promise<void> {
         root
           .querySelector<HTMLElement>(".vault-editor")
           ?.getAttribute("data-document-id"),
+      );
+      await waitFor("reopened the suite drawing", () =>
+        root.querySelector<HTMLElement>(
+          ".vault-tree-item--active .vault-tree-item__name",
+        )?.title === uiPath
+          ? true
+          : null,
       );
       return {
         path: `${nested}/ui-edited.excalidraw`,

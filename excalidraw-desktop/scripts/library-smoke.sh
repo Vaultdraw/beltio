@@ -17,9 +17,11 @@ caffeinate -d -i -t 3600 & CAF=$!   # keep the display awake so requestAnimation
 run() { # label, prefix...
   label=$1; shift
   rm -f "$D/smoke-report.json"
-  # The suite is not idempotent in one vault (its "nested" lookup would pick the previous
-  # run's folder); drop earlier suite folders, keep the vault's library.excalidrawlib.
-  rm -rf "$D"/smoke-suite-*
+  # Each launch starts from a clean vault: earlier runs' drawings (smoke-exports/ui-edited,
+  # smoke-suite-*, search/tags/links folders) match the suite's searches and lookups and
+  # derail later steps. Only what the restart steps test is kept: the vault library
+  # (config/state dirs are shared on purpose) and the per-run report copies.
+  find "$D" -mindepth 1 -maxdepth 1 ! -name library.excalidrawlib ! -name 'smoke-report-*.json' -exec rm -rf {} +
   start=$(date +%s)
   # perl alarm: a hung WebView (rAF stops when the window is occluded) must not hold the lock forever.
   lockf -k "$LOCK" env EXCALIDRAW_VAULT_SMOKE_DIR="$D" VAULTDRAW_CONFIG_DIR="$C/config" VAULTDRAW_STATE_DIR="$C/state" "$@" perl -e 'alarm 900; exec {$ARGV[0]} @ARGV' "$APP"
