@@ -19,6 +19,7 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
+      "@vaultdraw/api": ["./excalidraw-desktop/src/plugins/api/index.ts"],
       "@excalidraw/common": ["./packages/common/src/index.ts"],
       "@excalidraw/common/*": ["./packages/common/src/*"],
       "@excalidraw/excalidraw": ["./packages/excalidraw/index.tsx"],
@@ -35,6 +36,6 @@
       "@excalidraw/utils/*": ["./packages/utils/src/*"]
     }
   },
-  "include": ["packages", "excalidraw-desktop/src", "setupTests.ts"],
+  "include": ["packages", "excalidraw-desktop/src", "sdk", "setupTests.ts"],
   "exclude": ["dist", "types", "tests"]
 }

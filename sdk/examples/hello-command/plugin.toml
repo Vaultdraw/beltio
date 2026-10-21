@@ -1,0 +1,18 @@
+id = "hello-command"
+name = "Hello"
+version = "0.1.0"
+api = 0
+main = "main.js"
+description = "Example: a command, a hotkey, a setting and a toast"
+author = "Vaultdraw"
+
+[[contributes.commands]]
+id = "hello"
+title = "Hello: say hello"
+keys = ["Mod+Alt+Shift+H"]
+
+[[contributes.settings]]
+key = "greeting"
+type = "string"
+title = "Greeting"
+default = "Hello"

@@ -6,6 +6,13 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: /^@vaultdraw\/api$/,
+        replacement: path.resolve(
+          __dirname,
+          "./excalidraw-desktop/src/plugins/api/index.ts",
+        ),
+      },
+      {
         find: /^@excalidraw\/common$/,
         replacement: path.resolve(__dirname, "./packages/common/src/index.ts"),
       },
