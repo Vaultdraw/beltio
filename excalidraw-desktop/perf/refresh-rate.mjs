@@ -22,7 +22,7 @@ run's temp config dir; the file itself is only read.
 
 Builds the perf app (smoke-test feature, temp config/state dirs; never the user's), launches it once
 (~1-2 min, the window opens in the background) and prints effective fps / rendered Hz per scenario.
-Exit 1 if a native zoom or pan pass falls below 110 fps (or 100 drawn Hz) on a 120 Hz screen, 2 if the screen is locked.
+Exit 1 if a native zoom or pan pass falls below 110 fps (or 100 drawn Hz while missing frames that got input) on a 120 Hz screen, 2 if the screen is locked.
 Wrap in the shared build lock:
   lockf -k /Users/kalon/Opensource/excalidraw/.cache/build.lock node excalidraw-desktop/perf/refresh-rate.mjs
 `;
@@ -160,8 +160,15 @@ console.log(`JSON: ${out}`);
 for (const e of run.errors) log(`error: ${e}`);
 
 const gated = result.passes.filter((p) => p.input !== "idle" && p.input.endsWith(".native") || p.input.endsWith(".native.out")).filter((p) => !p.error && !p.noEffect);
-// Drawn Hz also carries the injected input's timing jitter, so its floor is lower.
+// Drawn Hz also carries the injected input's timing jitter, so its floor is lower. The injected
+// input is not vsync-aligned: a frame whose interval got no input has nothing new to draw, so a
+// pass only fails on drawn Hz when the editor also missed frames that had input (drawnHz below
+// inputFrameHz), not when the input itself left frames empty.
 const BUDGET_DRAWN_HZ = 100;
-const failing = (result.displayHz ?? 0) >= 120 ? gated.filter((p) => p.stats.fps < BUDGET_FPS || p.stats.renderHz < BUDGET_DRAWN_HZ) : [];
+const DRAWN_HZ_SLACK = 2;
+const missesInputFrames = (s) => s.inputFrameHz === undefined || s.renderHz < s.inputFrameHz - DRAWN_HZ_SLACK;
+const failing = (result.displayHz ?? 0) >= 120 ? gated.filter((p) => p.stats.fps < BUDGET_FPS || (p.stats.renderHz < BUDGET_DRAWN_HZ && missesInputFrames(p.stats))) : [];
+const inputBound = (result.displayHz ?? 0) >= 120 ? gated.filter((p) => p.stats.renderHz < BUDGET_DRAWN_HZ && !missesInputFrames(p.stats)) : [];
+if (inputBound.length) log(`${inputBound.length} native passes below ${BUDGET_DRAWN_HZ} drawn Hz but drawing every frame that got input (input timing, not rendering): ${inputBound.map((p) => `${p.drawing.replace(/\.excalidraw$/, "")} ${p.input}`).join(", ")}`);
 if (failing.length) log(`${failing.length} native zoom/pan passes below ${BUDGET_FPS} fps or ${BUDGET_DRAWN_HZ} drawn Hz: ${failing.map((p) => `${p.drawing.replace(/\.excalidraw$/, "")} ${p.input}`).join(", ")}`);
 process.exit(run.errors.length || failing.length || !result.passes.length ? 1 : 0);
