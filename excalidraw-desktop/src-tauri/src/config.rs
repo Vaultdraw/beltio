@@ -1010,6 +1010,7 @@ pub(crate) fn start_watcher(app: &AppHandle) -> std::result::Result<ConfigWatche
                     paths.push(root.to_string_lossy().into_owned());
                 }
                 if !paths.is_empty() {
+                    super::control::events::config_changed();
                     let _ = app.emit("config-change", ConfigChangeEvent { paths });
                 }
             }

@@ -5,12 +5,19 @@
 //! - `dispatch`: the Tauri implementation of `Dispatch`.
 //! - `bridge`: calls into the window (`control-request` event, `control_reply` command).
 //! - `install`: the palette's "install CLI" symlink.
+//! - `ops` (glue on the running app) over `vault_ops`, `config_ops` and `target` (pure, tested).
+//! - `events`: the event bus with its single topic mask (zero cost while nobody subscribes).
 
 pub(crate) mod bridge;
+mod config_ops;
 mod dispatch;
+pub(crate) mod events;
 pub(crate) mod install;
 pub(crate) mod instance;
+mod ops;
 pub(crate) mod server;
+mod target;
+pub(crate) mod vault_ops;
 
 use std::io::Write;
 use std::path::Path;
@@ -27,6 +34,18 @@ pub(crate) fn on_page_load_started() {
     bridge::pending().reset();
 }
 
+/// Process exit: remove the socket and `instance.json` this process owns (the next start would
+/// replace them anyway; this keeps clients from finding a dead socket).
+pub(crate) fn on_exit() {
+    if !instance::holds_lock() {
+        return;
+    }
+    if let Ok(paths) = instance::paths() {
+        let _ = std::fs::remove_file(&paths.socket);
+        let _ = std::fs::remove_file(&paths.info);
+    }
+}
+
 /// Starts the control server on a background thread (after the window is built).
 /// Does nothing when another process owns the instance lock or `[control] enabled = false`.
 pub(crate) fn spawn(app: &AppHandle) {
@@ -40,7 +59,7 @@ pub(crate) fn spawn(app: &AppHandle) {
         }
         let Ok(paths) = instance::paths() else { return };
         let dispatch = Arc::new(dispatch::TauriDispatch::new(app));
-        match server::start(&paths, dispatch, server::ServerConfig::default()) {
+        match server::start(&paths, dispatch, events::bus().clone(), server::ServerConfig::default()) {
             Ok(handle) => {
                 let _ = SERVER.set(handle);
             }

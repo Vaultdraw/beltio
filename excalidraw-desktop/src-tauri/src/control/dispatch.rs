@@ -1,6 +1,7 @@
 //! The Tauri implementation of the control server's `Dispatch`.
 
 use super::bridge::{call_window, pending, CALL_TIMEOUT, STATE_TIMEOUT, WINDOW_LABEL};
+use super::{events, ops};
 use super::server::Dispatch;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Manager};
@@ -13,6 +14,8 @@ pub(crate) struct TauriDispatch {
 
 impl TauriDispatch {
     pub(crate) fn new(app: AppHandle) -> Self {
+        let hook_app = app.clone();
+        events::bus().set_window_hook(move |mask| ops::emit_window_topics(&hook_app, mask));
         Self { app }
     }
 
@@ -78,8 +81,13 @@ impl Dispatch for TauriDispatch {
             APP_FOCUS => self.focus(),
             APP_OPEN => self.open(params),
             COMMAND_LIST | COMMAND_RUN => call_window(&self.app, method, params, CALL_TIMEOUT),
-            _ => Err(RpcError::method_not_found(method)),
+            // The C3 methods (vault, files, tabs, config, quit).
+            _ => ops::call(&self.app, method, params),
         }
+    }
+
+    fn snapshot(&self, mask: u32) -> Value {
+        ops::snapshot(&self.app, mask)
     }
 }
 

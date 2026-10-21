@@ -103,10 +103,12 @@ impl ReplyError {
     }
 }
 
-/// The page finished loading its control handler: calls may flow.
+/// The page finished loading its control handler: calls may flow. Returns the window topics
+/// currently wanted (`{topics}`), so the page attaches only the listeners someone needs.
 #[tauri::command]
-pub(crate) async fn control_ready() {
+pub(crate) async fn control_ready() -> Value {
     pending().set_ready();
+    json!({"topics": super::events::window_topics()})
 }
 
 #[tauri::command]

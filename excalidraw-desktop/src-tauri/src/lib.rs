@@ -141,13 +141,16 @@ struct RecoveryRecord<'a> {
     created_at: u64,
 }
 
-/// First open vault as `{name, path, readOnly}` for the control API's `app.status`.
-pub(crate) fn control_vault_summary(app: &AppHandle) -> Option<serde_json::Value> {
+/// The first open vault (lowest handle): the one the control API acts on.
+pub(crate) fn control_active_vault(app: &AppHandle) -> Option<Arc<Vault>> {
     let service = app.try_state::<Service>()?;
     let vaults = service.vaults.lock().ok()?;
-    let vault = vaults.values().min_by(|a, b| a.handle.cmp(&b.handle))?;
-    let name = vault.root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-    Some(serde_json::json!({"name": name, "path": vault.root.to_string_lossy(), "readOnly": vault.read_only}))
+    vaults.values().min_by(|a, b| a.handle.cmp(&b.handle)).cloned()
+}
+
+/// First open vault as `{name, path, readOnly}` for the control API's `app.status`.
+pub(crate) fn control_vault_summary(app: &AppHandle) -> Option<serde_json::Value> {
+    control_active_vault(app).map(|v| control::vault_ops::info(&v))
 }
 
 fn now_ms(t: SystemTime) -> u64 {
@@ -587,6 +590,7 @@ fn open_vault(root: PathBuf, app: &AppHandle, service: &Service) -> Result<Vault
                 library::emit_change(&app_handle, Some(h.clone()));
             }
             if !paths.is_empty() || rescan {
+                control::events::vault_changed(&paths, rescan);
                 let _ = app_handle.emit(
                     "vault-change",
                     VaultChange {
@@ -650,6 +654,31 @@ fn open_vault(root: PathBuf, app: &AppHandle, service: &Service) -> Result<Vault
     })
 }
 
+/// Remembers the vault for the next launch (`recent-vault`); not in smoke runs.
+fn remember_vault(app: &AppHandle, info: &VaultInfo) {
+    #[cfg(feature = "smoke-test")]
+    if smoke::enabled() {
+        return;
+    }
+    if let Ok(dir) = app.path().app_config_dir() {
+        let _ = fs::create_dir_all(&dir);
+        let _ = fs::write(dir.join("recent-vault"), &info.path);
+    }
+}
+/// A folder given by path (the control API's `vault.open`): same as choosing it in the dialog.
+fn existing_vault_dir(path: &str) -> Result<PathBuf> {
+    let p = PathBuf::from(path);
+    if !p.is_absolute() { return Err(err("INVALID_PATH", "Vault path must be absolute")); }
+    let canonical = p.canonicalize().map_err(ioerr)?;
+    if !canonical.is_dir() { return Err(err("INVALID_PATH", "Vault must be a directory")); }
+    Ok(canonical)
+}
+#[tauri::command]
+async fn open_vault_at(path: String, app: AppHandle, state: State<'_, Service>) -> Result<VaultInfo> {
+    let info = open_vault(existing_vault_dir(&path)?, &app, &state)?;
+    remember_vault(&app, &info);
+    Ok(info)
+}
 #[tauri::command]
 async fn choose_vault(
     create: bool,
@@ -670,18 +699,7 @@ async fn choose_vault(
         .pick_folder();
     let Some(path) = selected else { return Ok(None); };
     let info = open_vault(path, &app, &state)?;
-    #[cfg(not(feature = "smoke-test"))]
-    if let Ok(dir) = app.path().app_config_dir() {
-        let _ = fs::create_dir_all(&dir);
-        let _ = fs::write(dir.join("recent-vault"), &info.path);
-    }
-    #[cfg(feature = "smoke-test")]
-    if !smoke::enabled() {
-        if let Ok(dir) = app.path().app_config_dir() {
-            let _ = fs::create_dir_all(&dir);
-            let _ = fs::write(dir.join("recent-vault"), &info.path);
-        }
-    }
+    remember_vault(&app, &info);
     Ok(Some(info))
 }
 #[tauri::command]
@@ -745,7 +763,11 @@ async fn list_directory(
     state: State<'_, Service>,
 ) -> Result<Vec<VaultEntry>> {
     let v = vault_for(&state, &handle)?;
-    let dir = safe_path(&v.root, &path, false)?;
+    list_directory_in(&v, &path)
+}
+/// The entries of one vault folder (the UI file tree and `vault.list` share this).
+fn list_directory_in(v: &Vault, path: &str) -> Result<Vec<VaultEntry>> {
+    let dir = safe_path(&v.root, path, false)?;
     if !dir.is_dir() {
         return Err(err("NOT_FOUND", "Directory not found"));
     }
@@ -923,6 +945,7 @@ async fn write_drawing(request: tauri::ipc::Request<'_>, state: State<'_, Servic
     // File history: one clonefile + one queue push, only after a successful commit (errors ignored).
     if let Some(rev) = result.as_ref().ok().and_then(|o| o["revision"].as_str()) {
         history.after_commit(&args.handle, &args.path, rev, body.len() as u64);
+        control::events::file_saved(&args.path, rev);
     }
     memory::schedule_release();
     result
@@ -1199,6 +1222,17 @@ mod tests {
             let s = Instant::now(); let framed = read_drawing_file(&v.root, "a.excalidraw").unwrap(); let t_read = ms(s);
             println!("run{i} bytes={} ensure_json={t_json:.1} current_revision={t_rev:.1} create_recovery={t_rec:.1} write_atomic={t_wr:.1} hash={t_hash:.1} TOTAL_write={t_all:.1} read_drawing_file={t_read:.1} ({})", json.len(), framed.len());
         }
+    }
+    #[test]
+    fn open_by_path_needs_an_existing_absolute_directory() {
+        let d = tempfile::tempdir().unwrap();
+        let ok = existing_vault_dir(d.path().to_str().unwrap()).unwrap();
+        assert_eq!(ok, d.path().canonicalize().unwrap());
+        assert_eq!(existing_vault_dir("relative/dir").unwrap_err().code, "INVALID_PATH");
+        assert_eq!(existing_vault_dir(d.path().join("nope").to_str().unwrap()).unwrap_err().code, "NOT_FOUND");
+        let f = d.path().join("f.txt");
+        std::fs::write(&f, "x").unwrap();
+        assert_eq!(existing_vault_dir(f.to_str().unwrap()).unwrap_err().code, "INVALID_PATH");
     }
     #[test]
     fn rejects_traversal_reserved_metadata_and_windows_names() {
@@ -1532,7 +1566,7 @@ pub fn run() {
         #[cfg(feature = "smoke-test")]
         let builder = if smoke::enabled() {
             builder.invoke_handler(tauri::generate_handler![
-                choose_vault, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
+                choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
                 write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
                 export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, list_recovery, discard_recovery,
                 config::load_settings, config::update_config, config::write_state, config::open_config_dir,
@@ -1546,7 +1580,7 @@ pub fn run() {
                 templates::list_global_templates, templates::read_global_template,
                 templates::write_global_template, templates::open_global_templates_dir,
                 thumbs::thumbs_lookup, thumbs::thumbs_put, thumbs::thumbs_clear,
-                control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_commands_snapshot, control::bridge::control_install_cli,
+                control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event,
                 smoke::smoke_environment, smoke::smoke_log, smoke::smoke_finish, smoke::perf_process_ids,
                 refresh_rate::probes::perf_display_info, refresh_rate::probes::perf_native_input,
                 refresh_rate::probes::perf_window_maximize, refresh_rate::probes::perf_process_cpu,
@@ -1554,7 +1588,7 @@ pub fn run() {
             ])
         } else {
             builder.invoke_handler(tauri::generate_handler![
-                choose_vault, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
+                choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
                 write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
                 export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, list_recovery, discard_recovery,
                 config::load_settings, config::update_config, config::write_state, config::open_config_dir,
@@ -1568,12 +1602,12 @@ pub fn run() {
                 templates::list_global_templates, templates::read_global_template,
                 templates::write_global_template, templates::open_global_templates_dir,
                 thumbs::thumbs_lookup, thumbs::thumbs_put, thumbs::thumbs_clear,
-                control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_commands_snapshot, control::bridge::control_install_cli
+                control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event
             ])
         };
         #[cfg(not(feature = "smoke-test"))]
         let builder = builder.invoke_handler(tauri::generate_handler![
-            choose_vault, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
+            choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
             write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
             export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, list_recovery, discard_recovery,
             config::load_settings, config::update_config, config::write_state, config::open_config_dir,
@@ -1587,7 +1621,7 @@ pub fn run() {
             templates::list_global_templates, templates::read_global_template,
             templates::write_global_template, templates::open_global_templates_dir,
                 thumbs::thumbs_lookup, thumbs::thumbs_put, thumbs::thumbs_clear,
-                control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_commands_snapshot, control::bridge::control_install_cli
+                control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event
         ]);
         startup_trace("builder configured");
         let app = builder
@@ -1595,6 +1629,9 @@ pub fn run() {
             .expect("error while building Vaultdraw");
         startup_trace("app built");
         app.run(|handle, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                control::on_exit();
+            }
             if let tauri::RunEvent::ExitRequested { api, .. } = event {
                 // The test runner intentionally exits after writing its report.
                 #[cfg(feature = "smoke-test")]

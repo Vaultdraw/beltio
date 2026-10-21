@@ -101,6 +101,16 @@ pub(crate) fn tauri_hooks(app: &AppHandle, v: &Vault) -> Hooks {
     }
 }
 
+/// `vault.links` of the control API: the drawing's links and backlinks.
+pub(crate) fn links_of(vi: &VaultIndex, path: &str) -> LinksResponse {
+    with_links(vi, |i| query::links_response(i, path))
+}
+
+/// Resolves a link-style name (`[[name]]`, from the vault root) to a drawing path.
+pub(crate) fn resolve_name(vi: &VaultIndex, name: &str) -> Option<String> {
+    with_links(vi, |i| query::resolve_raw(i, "", name).path)
+}
+
 /// Runs `f` with the vault's read-locked index once the link index exists.
 fn with_links<T>(vi: &VaultIndex, f: impl Fn(&crate::search::Index) -> T) -> T {
     loop {

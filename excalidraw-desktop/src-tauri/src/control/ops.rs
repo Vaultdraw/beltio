@@ -1,0 +1,208 @@
+//! The C3 methods on the running app: looks up the active vault and the app services, then
+//! calls the pure functions (`vault_ops`, `config_ops`, `target`) or the window. Thin glue.
+
+use super::bridge::{call_window, pending, CALL_TIMEOUT, STATE_TIMEOUT, WINDOW_LABEL};
+use super::target::{self, native_err, Need};
+use super::{config_ops, events, vault_ops};
+use crate::search::SearchService;
+use crate::{links, Vault};
+use serde_json::{json, Map, Value};
+use std::sync::Arc;
+use std::time::Duration;
+use tauri::{AppHandle, Emitter, Manager};
+use vaultdraw_protocol::methods::*;
+use vaultdraw_protocol::{codes, RpcError};
+
+type Reply = Result<Value, RpcError>;
+
+/// Time the reply of `app.quit` gets to reach the client before the quit starts.
+const QUIT_DELAY: Duration = Duration::from_millis(100);
+
+pub(super) fn call(app: &AppHandle, method: &str, params: Option<Value>) -> Reply {
+    let params = params.unwrap_or(Value::Null);
+    match method {
+        VAULT_INFO => {
+            let v = active(app)?;
+            Ok(vault_ops::info(&v))
+        }
+        VAULT_LIST => {
+            let dir = opt_str(&params, "dir")?.unwrap_or("");
+            let recursive = params.get("recursive").and_then(Value::as_bool).unwrap_or(false);
+            let v = active(app)?;
+            vault_ops::list(&v, dir, recursive)
+        }
+        VAULT_SEARCH => search(app, &params),
+        VAULT_LINKS => links_of(app, &params),
+        VAULT_TAGS => {
+            let v = active(app)?;
+            to_json(app.state::<SearchService>().tags(&v.handle).map_err(native_err)?)
+        }
+        FILE_READ => {
+            let v = active(app)?;
+            let path = resolve(app, &v, &params, Need::File)?;
+            let result = vault_ops::read(&v, &path);
+            crate::memory::schedule_release();
+            result
+        }
+        FILE_WRITE => write(app, &params),
+        CONFIG_GET => config_ops::get(&dirs()?, &params),
+        CONFIG_SET => config_ops::set(&dirs()?, &params),
+        APP_QUIT => Ok(quit(app)),
+        VAULT_OPEN | TAB_LIST => call_window(app, method, Some(params), CALL_TIMEOUT),
+        FILE_OPEN | FILE_TRASH => window_with_target(app, method, params, Need::File),
+        FILE_CREATE => window_with_target(app, method, params, Need::Nothing),
+        TAB_FOCUS | TAB_CLOSE => tab_call(app, method, params),
+        FILE_MOVE => file_move(app, params),
+        _ => Err(RpcError::method_not_found(method)),
+    }
+}
+
+fn dirs() -> Result<crate::config::Dirs, RpcError> {
+    crate::config::resolve_dirs().map_err(native_err)
+}
+
+fn to_json(v: impl serde::Serialize) -> Reply {
+    serde_json::to_value(v).map_err(|e| RpcError::app("INTERNAL", e.to_string()))
+}
+
+fn active(app: &AppHandle) -> Result<Arc<Vault>, RpcError> {
+    crate::control_active_vault(app).ok_or_else(|| RpcError::app(codes::NO_VAULT, "No vault is open"))
+}
+
+fn opt_str<'a>(params: &'a Value, key: &str) -> Result<Option<&'a str>, RpcError> {
+    match params.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(s)) => Ok(Some(s)),
+        Some(_) => Err(RpcError::invalid_params(format!("{key} must be a string"))),
+    }
+}
+
+/// Link-style name to path through the vault's link resolver; `None` when it resolves to nothing.
+fn by_name<'a>(app: &'a AppHandle, v: &'a Vault) -> impl Fn(&str) -> Option<String> + 'a {
+    move |name| {
+        let vi = app.state::<SearchService>().vault(&v.handle).ok()?;
+        links::resolve_name(&vi, name)
+    }
+}
+
+fn resolve(app: &AppHandle, v: &Vault, params: &Value, need: Need) -> Result<String, RpcError> {
+    target::resolve(&v.root, params, need, &by_name(app, v))
+}
+
+fn search(app: &AppHandle, params: &Value) -> Reply {
+    let query = opt_str(params, "query")?.ok_or_else(|| RpcError::invalid_params("query is required"))?;
+    let limit = params.get("limit").and_then(Value::as_u64).map(|n| n.min(u32::MAX as u64) as u32);
+    let v = active(app)?;
+    to_json(app.state::<SearchService>().search(&v.handle, query, limit, None).map_err(native_err)?)
+}
+
+/// `vault.links`: the app's `LinksResponse` as is (`outgoing`, `unresolved`, `backlinks`).
+fn links_of(app: &AppHandle, params: &Value) -> Reply {
+    let v = active(app)?;
+    let path = resolve(app, &v, params, Need::File)?;
+    let vi = app.state::<SearchService>().vault(&v.handle).map_err(native_err)?;
+    to_json(links::links_of(&vi, &path))
+}
+
+/// `file.write`: the UI's save path, after refusing to overwrite unsaved edits in the window.
+fn write(app: &AppHandle, params: &Value) -> Reply {
+    let v = active(app)?;
+    let path = resolve(app, &v, params, Need::Nothing)?;
+    let scene = params.get("scene").filter(|s| s.is_object()).ok_or_else(|| RpcError::invalid_params("scene must be a drawing object"))?;
+    let expected = vault_ops::expected_revision(params)?;
+    refuse_if_dirty(app, &path)?;
+    let (revision, len) = vault_ops::write(&v, &path, scene, expected)?;
+    if let Some(history) = app.try_state::<crate::history::HistoryService>() {
+        history.after_commit(&v.handle, &path, &revision, len);
+    }
+    events::file_saved(&path, &revision);
+    crate::memory::schedule_release();
+    Ok(json!({"path": path, "revision": revision}))
+}
+
+/// An open drawing with unsaved edits must not be overwritten behind the editor's back.
+fn refuse_if_dirty(app: &AppHandle, path: &str) -> Result<(), RpcError> {
+    if !pending().is_ready() {
+        return Ok(());
+    }
+    // An unanswered probe is not a reason to refuse: the revision check still guards the file.
+    let Ok(state) = call_window(app, "file.openState", Some(json!({"path": path})), STATE_TIMEOUT) else { return Ok(()) };
+    if state["open"] == true && state["dirty"] == true {
+        return Err(RpcError::app(codes::CONFLICT, "The drawing is open with unsaved changes").with("reason", "dirty").with("path", path));
+    }
+    Ok(())
+}
+
+/// Params with `file` replaced by the resolved `path`.
+fn with_path(params: Value, path: String) -> Value {
+    let mut map: Map<String, Value> = match params {
+        Value::Object(m) => m,
+        _ => Map::new(),
+    };
+    map.remove("file");
+    map.insert("path".into(), Value::String(path));
+    Value::Object(map)
+}
+
+fn window_with_target(app: &AppHandle, method: &str, params: Value, need: Need) -> Reply {
+    let v = active(app)?;
+    let path = resolve(app, &v, &params, need)?;
+    call_window(app, method, Some(with_path(params, path)), CALL_TIMEOUT)
+}
+
+/// `tab.focus` / `tab.close` take an id, an index or a target; a target is resolved here.
+fn tab_call(app: &AppHandle, method: &str, params: Value) -> Reply {
+    let has_target = ["path", "file"].iter().any(|k| params.get(*k).is_some_and(|v| !v.is_null()));
+    let params = if has_target {
+        let v = active(app)?;
+        let path = resolve(app, &v, &params, Need::Nothing)?;
+        with_path(params, path)
+    } else {
+        params
+    };
+    call_window(app, method, Some(params), CALL_TIMEOUT)
+}
+
+fn file_move(app: &AppHandle, mut params: Value) -> Reply {
+    let v = active(app)?;
+    let need = |key: &str| opt_str(&params, key).and_then(|s| s.ok_or_else(|| RpcError::invalid_params(format!("{key} is required"))));
+    let from = target::resolve_from(&v.root, need("from")?, &by_name(app, &v))?;
+    let to = target::validate_destination(need("to")?)?;
+    params["from"] = Value::String(from);
+    params["to"] = Value::String(to);
+    call_window(app, FILE_MOVE, Some(params), CALL_TIMEOUT)
+}
+
+/// Replies `{quitting: true}` now; the quit starts once the reply is on the wire, through the
+/// same awaited save barrier as Cmd+Q (`vault-quit-request`).
+fn quit(app: &AppHandle) -> Value {
+    let app = app.clone();
+    let spawned = std::thread::Builder::new().name("control-quit".into()).spawn(move || {
+        std::thread::sleep(QUIT_DELAY);
+        events::app_quitting();
+        if app.webview_windows().is_empty() {
+            app.exit(0);
+        } else {
+            let _ = app.emit("vault-quit-request", ());
+        }
+    });
+    let _ = spawned;
+    json!({"quitting": true})
+}
+
+/// State for `events.snapshot`: vault from Rust, drawing and tabs from the window when ready.
+pub(super) fn snapshot(app: &AppHandle, mask: u32) -> Value {
+    let ready = pending().is_ready();
+    let state = if ready { call_window(app, "app.state", None, STATE_TIMEOUT).ok() } else { None };
+    let tabs = if ready && mask & events::Topic::Tab.bit() != 0 { call_window(app, TAB_LIST, None, STATE_TIMEOUT).ok() } else { None };
+    json!({
+        "vault": crate::control_vault_summary(app),
+        "activeDrawing": state.as_ref().and_then(|s| s.get("activeDrawing")).cloned(),
+        "tabs": tabs,
+    })
+}
+
+/// Tells the window which of its topics are wanted (`control-topics`).
+pub(super) fn emit_window_topics(app: &AppHandle, mask: u32) {
+    let _ = app.emit_to(WINDOW_LABEL, "control-topics", json!({"topics": vaultdraw_protocol::events::topics_of(mask)}));
+}
