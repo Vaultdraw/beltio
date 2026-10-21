@@ -1586,6 +1586,14 @@ export interface ExcalidrawImperativeAPI {
   addFiles: (data: BinaryFileData[]) => Promise<void>;
   /** Drops all files and decoded images except the given file ids. */
   retainFiles: (fileIds: Iterable<string>) => void;
+  /**
+   * Removes every element and the store's snapshot (the undo baseline),
+   * leaving app state, history and files alone. For a host that replaces the
+   * whole scene in place: call it right before `updateScene` with the new
+   * elements, so the baseline holds the new scene only instead of keeping
+   * every replaced element as a deleted copy.
+   */
+  clearScene: () => void;
   id: string;
   setActiveTool: InstanceType<typeof App>["setActiveTool"];
   setCursor: InstanceType<typeof App>["cursor"]["set"];

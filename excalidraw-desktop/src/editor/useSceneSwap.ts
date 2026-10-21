@@ -104,6 +104,10 @@ export function useSceneSwap(deps: SceneSwapDeps): void {
         api.retainFiles(Object.keys(scene.files));
         api.history.clear();
         api.setElementRenderOverrides(null);
+        // the undo baseline starts from the new scene (otherwise it keeps
+        // every earlier drawing's elements as deleted copies, growing with
+        // each swap)
+        api.clearScene();
         api.updateScene({
           elements: scene.elements,
           appState: swapAppState(scene.appState, api.getAppState()) as AppState,

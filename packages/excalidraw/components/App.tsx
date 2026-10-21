@@ -822,6 +822,7 @@ class App extends React.Component<AppProps, AppState> {
       updateLibrary: this.library.updateLibrary,
       addFiles: this.addFiles,
       retainFiles: this.retainFiles,
+      clearScene: this.clearScene,
       resetScene: this.resetScene,
       getSceneElementsIncludingDeleted: this.getSceneElementsIncludingDeleted,
       getSceneElementsMapIncludingDeleted:
@@ -3666,6 +3667,12 @@ class App extends React.Component<AppProps, AppState> {
 
   private resetStore = () => {
     this.store.clear();
+  };
+
+  /** see `ExcalidrawImperativeAPI.clearScene` */
+  public clearScene = () => {
+    this.scene.replaceAllElements([]);
+    this.resetStore();
   };
 
   /**
