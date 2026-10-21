@@ -2,7 +2,9 @@
  * Settings > Interface: show/hide and reorder the activity bar's entries.
  * Order and hidden set are two config keys saved together in one scope.
  */
-import { ACTIVITY_ENTRIES } from "../../../activityBar/entries";
+// Registers the built-in entries.
+import "../../../activityBar/entries";
+import { useActivityEntries } from "../../../activityBar/activityBarRegistry";
 import {
   moveActivityEntry,
   resolveActivityLayout,
@@ -15,10 +17,11 @@ import { ScopedRow } from "./scopedRow";
 import "./activityBarEntries.css";
 
 export const ActivityBarEntriesSetting = () => {
+  const entries = useActivityEntries();
   const { scope, scopedValue, setScopedValue } = useSettings();
   const order = scopedValue("activityBarOrder");
   const hidden = scopedValue("activityBarHidden");
-  const rows = resolveActivityLayout(ACTIVITY_ENTRIES, order, hidden);
+  const rows = resolveActivityLayout(entries, order, hidden);
   const customised = order.length > 0 || hidden.length > 0;
 
   const setOrder = (next: string[]) => {
@@ -29,7 +32,7 @@ export const ActivityBarEntriesSetting = () => {
   const setHidden = (id: string, hide: boolean) => {
     setScopedValue(
       "activityBarHidden",
-      setActivityEntryHidden(ACTIVITY_ENTRIES, hidden, id, hide),
+      setActivityEntryHidden(entries, hidden, id, hide),
     );
     setScopedValue("activityBarOrder", [...order]);
   };
@@ -71,14 +74,7 @@ export const ActivityBarEntriesSetting = () => {
                     aria-label={`Move ${entry.label} up`}
                     disabled={!canUp}
                     onClick={() =>
-                      setOrder(
-                        moveActivityEntry(
-                          ACTIVITY_ENTRIES,
-                          order,
-                          entry.id,
-                          -1,
-                        ),
-                      )
+                      setOrder(moveActivityEntry(entries, order, entry.id, -1))
                     }
                   >
                     Up
@@ -89,9 +85,7 @@ export const ActivityBarEntriesSetting = () => {
                     aria-label={`Move ${entry.label} down`}
                     disabled={!canDown}
                     onClick={() =>
-                      setOrder(
-                        moveActivityEntry(ACTIVITY_ENTRIES, order, entry.id, 1),
-                      )
+                      setOrder(moveActivityEntry(entries, order, entry.id, 1))
                     }
                   >
                     Down

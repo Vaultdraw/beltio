@@ -9,6 +9,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { libraryPanelStore } from "../library/libraryPanelState";
 
+import { IconSearch } from "../components/Icons";
+
+import { activityBarRegistry } from "./activityBarRegistry";
 import { galleryPanelStore } from "./panelStores";
 import { ActivityBar } from "./ActivityBar";
 
@@ -110,5 +113,35 @@ describe("ActivityBar", () => {
     fireEvent.pointerDown(button); // now closed: a click opens it again
     fireEvent.click(button);
     expect(run).toHaveBeenCalledWith("library.toggle");
+  });
+});
+
+describe("ActivityBar slots", () => {
+  it("shows a registered entry after the built-ins and removes it on dispose", () => {
+    setup();
+    const ids = () =>
+      Array.from(
+        screen
+          .getByTestId("activity-bar")
+          .querySelectorAll("button[data-entry]"),
+      ).map((b) => (b as HTMLElement).dataset.entry);
+    const before = ids();
+    let dispose = () => {};
+    act(() => {
+      dispose = activityBarRegistry.register("activityBar.top", [
+        {
+          id: "p:extra",
+          label: "Extra",
+          icon: IconSearch,
+          commandId: "graph.open",
+          group: "top",
+        },
+      ]);
+    });
+    const after = ids();
+    expect(after.indexOf("p:extra")).toBe(after.indexOf("templates") + 1);
+    expect(after.indexOf("p:extra")).toBeLessThan(after.indexOf("hotkeys"));
+    act(() => dispose());
+    expect(ids()).toEqual(before);
   });
 });

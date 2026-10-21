@@ -18,13 +18,13 @@ import {
 import { useCommandShortcutLookup } from "../commands/useCommandShortcut";
 
 import {
-  ACTIVITY_ENTRIES,
   resolveEntryState,
   type ActivityEntry,
   type ActiveStore,
   type EntryState,
 } from "./entries";
 
+import { useActivityEntries } from "./activityBarRegistry";
 import { resolveActivityLayout } from "./layout";
 
 import "./activityBar.css";
@@ -97,6 +97,7 @@ export const ActivityBar = memo(
     hidden: hiddenIds,
     win = null,
   }: Props) => {
+    const entries = useActivityEntries();
     const shortcut = useCommandShortcutLookup(win);
     const handlersVersion = useSyncExternalStore(
       subscribeCommandHandlers,
@@ -105,7 +106,7 @@ export const ActivityBar = memo(
     );
     const visible = useMemo(
       () =>
-        resolveActivityLayout(ACTIVITY_ENTRIES, order, hiddenIds).flatMap(
+        resolveActivityLayout(entries, order, hiddenIds).flatMap(
           ({ entry, hidden }) => {
             if (hidden) {
               return [];
@@ -130,6 +131,7 @@ export const ActivityBar = memo(
         order,
         hiddenIds,
         handlersVersion,
+        entries,
       ],
     );
     const [current, setCurrent] = useState<string | null>(null);
@@ -142,11 +144,14 @@ export const ActivityBar = memo(
     // on an outside pointerdown (the Library sidebar) is already closed by the
     // time the click lands; running its toggle then would reopen it.
     const pressedAtDown = useRef<string | null>(null);
-    const onPointerDown = useCallback((e: PointerEvent) => {
-      const id = entryOf(e.target)?.dataset.entry;
-      const entry = ACTIVITY_ENTRIES.find((x) => x.id === id);
-      pressedAtDown.current = entry?.active?.get() ? entry.id : null;
-    }, []);
+    const onPointerDown = useCallback(
+      (e: PointerEvent) => {
+        const id = entryOf(e.target)?.dataset.entry;
+        const entry = entries.find((x) => x.id === id);
+        pressedAtDown.current = entry?.active?.get() ? entry.id : null;
+      },
+      [entries],
+    );
 
     const onClick = useCallback(
       (e: MouseEvent) => {
@@ -154,9 +159,7 @@ export const ActivityBar = memo(
         if (!button || button.getAttribute("aria-disabled") === "true") {
           return;
         }
-        const entry = ACTIVITY_ENTRIES.find(
-          (x) => x.id === button.dataset.entry,
-        );
+        const entry = entries.find((x) => x.id === button.dataset.entry);
         const closedByPointerDown =
           entry && pressedAtDown.current === entry.id && !entry.active?.get();
         pressedAtDown.current = null;
@@ -164,7 +167,7 @@ export const ActivityBar = memo(
           run(entry.commandId);
         }
       },
-      [run],
+      [run, entries],
     );
 
     const onFocus = useCallback((e: FocusEvent) => {

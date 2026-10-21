@@ -182,7 +182,20 @@ test("activity bar: Settings > Interface hides and reorders entries", async ({
       .getByTestId("activity-bar")
       .locator("button[data-entry]")
       .evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.entry));
-  expect((await order())[0]).toBe("library");
+  // Built-ins register through the slot registry: the default order is unchanged.
+  await expect
+    .poll(order)
+    .toEqual([
+      "library",
+      "history",
+      "graph",
+      "gallery",
+      "search",
+      "tags",
+      "templates",
+      "hotkeys",
+      "settings",
+    ]);
 
   await entry(page, "settings").click();
   await expect(settings(page)).toBeVisible();
@@ -213,7 +226,20 @@ test("activity bar: Settings > Interface hides and reorders entries", async ({
     .getByRole("button", { name: "Reset order and visibility" })
     .click();
   await expect(entry(page, "tags")).toBeVisible();
-  expect((await order())[0]).toBe("library");
+  // Built-ins register through the slot registry: the default order is unchanged.
+  await expect
+    .poll(order)
+    .toEqual([
+      "library",
+      "history",
+      "graph",
+      "gallery",
+      "search",
+      "tags",
+      "templates",
+      "hotkeys",
+      "settings",
+    ]);
   expect((await order()).indexOf("history")).toBeLessThan(
     (await order()).indexOf("graph"),
   );

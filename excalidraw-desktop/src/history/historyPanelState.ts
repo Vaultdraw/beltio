@@ -4,17 +4,17 @@
  * pressed state or avoid toggling an open panel shut. One boolean; listeners
  * run only when it flips.
  */
-import { useSyncExternalStore } from "react";
+import {
+  isPanelOpen,
+  panelFlag,
+  subscribePanel,
+  usePanelOpen,
+} from "../slots/panelStore";
 
-let open = false;
-const listeners = new Set<() => void>();
+export const HISTORY_PANEL_ID = "history";
 
-export function publishHistoryPanelOpen(value: boolean): void {
-  if (open !== value) {
-    open = value;
-    listeners.forEach((l) => l());
-  }
-}
+export const publishHistoryPanelOpen = (value: boolean): void =>
+  panelFlag(HISTORY_PANEL_ID).publish(value);
 
 const focusListeners = new Set<() => void>();
 
@@ -30,18 +30,10 @@ export const onHistoryPanelFocusRequest = (cb: () => void) => {
   };
 };
 
-export const isHistoryPanelOpen = (): boolean => open;
+export const isHistoryPanelOpen = (): boolean => isPanelOpen(HISTORY_PANEL_ID);
 
-export const subscribeHistoryPanelOpen = (cb: () => void) => {
-  listeners.add(cb);
-  return () => {
-    listeners.delete(cb);
-  };
-};
+export const subscribeHistoryPanelOpen = (cb: () => void) =>
+  subscribePanel(HISTORY_PANEL_ID, cb);
 
 export const useHistoryPanelOpen = (): boolean =>
-  useSyncExternalStore(
-    subscribeHistoryPanelOpen,
-    isHistoryPanelOpen,
-    () => false,
-  );
+  usePanelOpen(HISTORY_PANEL_ID);

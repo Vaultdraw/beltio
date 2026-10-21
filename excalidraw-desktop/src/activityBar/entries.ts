@@ -20,6 +20,7 @@ import {
   subscribeHistoryPanelOpen,
 } from "../history/historyPanelState";
 
+import { registerActivityEntries } from "./activityBarRegistry";
 import { galleryPanelStore, graphPanelStore } from "./panelStores";
 
 import type { ComponentType, SVGProps } from "react";
@@ -125,6 +126,8 @@ export const ACTIVITY_ENTRIES: readonly ActivityEntry[] = [
     group: "bottom",
   },
 ];
+
+registerActivityEntries(ACTIVITY_ENTRIES);
 
 /** Live facts about a command, supplied by the component. */
 export interface EntryContext {

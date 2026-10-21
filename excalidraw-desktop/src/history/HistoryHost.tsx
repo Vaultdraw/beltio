@@ -5,23 +5,17 @@
  * (list, timeline, preview, restore) is one lazy chunk fetched on first open,
  * never prefetched: while history is closed nothing of it is loaded or running.
  */
-import {
-  lazy,
-  memo,
-  Suspense,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import { ConfirmModal } from "../components/ConfirmModal";
 import { toastStore } from "../toasts/toastStore";
 import { errorMessage } from "../vault/types";
 
+import { PanelHost } from "../slots/PanelHost";
+
 import { CheckpointDialog } from "./CheckpointDialog";
 import { publishHistoryBridge } from "./historyBridge";
-import { publishHistoryPanelOpen } from "./historyPanelState";
+import { HISTORY_PANEL_ID, publishHistoryPanelOpen } from "./historyPanelState";
 import {
   deleteAllConfirm,
   drawingName,
@@ -36,7 +30,8 @@ import type { SaveStatus } from "../vault/types";
 import type { PanelMode, PanelNotice } from "./panel/HistoryPanel";
 import type { HistoryRepository, HistorySettings } from "./types";
 
-const HistoryPanel = lazy(() => import("./panel/HistoryPanel"));
+// The only import of the panel chunk: fetched on the first open, never before.
+const loadHistoryPanel = () => import("./panel/HistoryPanel");
 
 export interface HistoryHostProps {
   repository: HistoryRepository;
@@ -213,28 +208,32 @@ const HistoryHostImpl = ({
 
   return (
     <>
-      {showing && handle && path && (
-        <Suspense fallback={null}>
-          <HistoryPanel
-            repository={repository}
-            handle={handle}
-            path={path}
-            documentId={activeDoc?.id}
-            onClose={closePanel}
-            mode={mode}
-            onModeChange={setMode}
-            theme={theme}
-            readOnly={vault?.readOnly}
-            vaultKey={vault?.path}
-            highlightChanges={settings.highlightChanges}
-            saveState={getSaveState}
-            flush={flush}
-            notify={notify}
-            onOpenDrawing={onOpenDrawing}
-            onSaveFile={onSaveFile}
-            ownerDocument={ownerDocument}
-          />
-        </Suspense>
+      {handle && path && (
+        <PanelHost
+          id={HISTORY_PANEL_ID}
+          load={loadHistoryPanel}
+          open={showing}
+          onClose={closePanel}
+          props={{
+            repository,
+            handle,
+            path,
+            documentId: activeDoc?.id,
+            onClose: closePanel,
+            mode,
+            onModeChange: setMode,
+            theme,
+            readOnly: vault?.readOnly,
+            vaultKey: vault?.path,
+            highlightChanges: settings.highlightChanges,
+            saveState: getSaveState,
+            flush,
+            notify,
+            onOpenDrawing,
+            onSaveFile,
+            ownerDocument,
+          }}
+        />
       )}
       {dialogOpen && (
         <CheckpointDialog
