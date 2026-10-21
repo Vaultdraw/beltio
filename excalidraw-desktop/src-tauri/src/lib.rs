@@ -25,6 +25,7 @@ mod search;
 mod library;
 mod memory;
 mod pdf_import;
+mod plugins;
 mod pressure;
 mod refresh_rate;
 mod templates;
@@ -1560,6 +1561,7 @@ pub fn run() {
             .menu(|handle| app_menu::build(handle))
             .on_menu_event(app_menu::on_event);
         let builder = thumbs::register_scheme(builder);
+        let builder = plugins::register_scheme(builder);
         // Test runs must not take focus at launch (a window manager would follow it).
         #[cfg(all(feature = "smoke-test", target_os = "macos"))]
         let builder = builder.activate_ignoring_other_apps(!smoke::background_test());
@@ -1580,6 +1582,7 @@ pub fn run() {
                 templates::list_global_templates, templates::read_global_template,
                 templates::write_global_template, templates::open_global_templates_dir,
                 thumbs::thumbs_lookup, thumbs::thumbs_put, thumbs::thumbs_clear,
+                plugins::plugins_list, plugins::plugins_install_folder, plugins::plugins_uninstall, plugins::plugins_set_host_disabled, plugins::plugins_open_dir,
                 control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event,
                 smoke::smoke_environment, smoke::smoke_log, smoke::smoke_finish, smoke::perf_process_ids,
                 refresh_rate::probes::perf_display_info, refresh_rate::probes::perf_native_input,
@@ -1602,6 +1605,7 @@ pub fn run() {
                 templates::list_global_templates, templates::read_global_template,
                 templates::write_global_template, templates::open_global_templates_dir,
                 thumbs::thumbs_lookup, thumbs::thumbs_put, thumbs::thumbs_clear,
+                plugins::plugins_list, plugins::plugins_install_folder, plugins::plugins_uninstall, plugins::plugins_set_host_disabled, plugins::plugins_open_dir,
                 control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event
             ])
         };
@@ -1621,6 +1625,7 @@ pub fn run() {
             templates::list_global_templates, templates::read_global_template,
             templates::write_global_template, templates::open_global_templates_dir,
                 thumbs::thumbs_lookup, thumbs::thumbs_put, thumbs::thumbs_clear,
+                plugins::plugins_list, plugins::plugins_install_folder, plugins::plugins_uninstall, plugins::plugins_set_host_disabled, plugins::plugins_open_dir,
                 control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event
         ]);
         startup_trace("builder configured");
