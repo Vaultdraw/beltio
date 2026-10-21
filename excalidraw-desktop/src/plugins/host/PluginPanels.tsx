@@ -1,8 +1,6 @@
 /** Mounts the panels plugins declared; a panel's code loads when it first opens. */
 import { Component, useCallback, useSyncExternalStore } from "react";
 
-import type { ComponentType, ReactNode } from "react";
-
 import { PanelHost } from "../../slots/PanelHost";
 import { closePanel, usePanelOpen } from "../../slots/panelStore";
 
@@ -14,6 +12,8 @@ import {
 } from "./panelRegistry";
 
 import "./pluginPanels.css";
+
+import type { ComponentType, ReactNode } from "react";
 
 /** Attributes a render error of a plugin component to the plugin. */
 class PluginBoundary extends Component<
