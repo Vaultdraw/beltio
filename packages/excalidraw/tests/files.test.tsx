@@ -70,6 +70,23 @@ describe("addFiles / retainFiles", () => {
     spy.mockRestore();
   });
 
+  it("does not redraw the scene for files none of its elements use (a preload for the next scene)", async () => {
+    const triggerUpdate = vi.spyOn(h.app.scene, "triggerUpdate");
+    await h.app.addFiles([file("next1"), file("next2")]);
+    expect(triggerUpdate).not.toHaveBeenCalled();
+  });
+
+  it("redraws when an image element of the scene uses an added file", async () => {
+    const image = API.createElement({
+      type: "image",
+      fileId: "used" as any,
+    });
+    API.setElements([image]);
+    const triggerUpdate = vi.spyOn(h.app.scene, "triggerUpdate");
+    await h.app.addFiles([file("used")]);
+    expect(triggerUpdate).toHaveBeenCalled();
+  });
+
   it("keeps existing files and does not decode them again", async () => {
     await h.app.addFiles([file("a")]);
     const first = h.app.imageCache.get("a" as any);

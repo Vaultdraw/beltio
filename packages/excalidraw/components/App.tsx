@@ -3908,14 +3908,18 @@ class App extends React.Component<AppProps, AppState> {
     this.reconcileStylesPanelMode(this.editorInterface);
   };
 
+  /** returns whether any element of the scene uses one of the files */
   private clearImageShapeCache(filesMap?: BinaryFiles) {
     const files = filesMap ?? this.files;
+    let cleared = false;
     this.scene.getNonDeletedElements().forEach((element) => {
       if (isInitializedImageElement(element) && files[element.fileId]) {
         this.imageCache.delete(element.fileId);
         ShapeCache.delete(element);
+        cleared = true;
       }
     });
+    return cleared;
   }
 
   public async componentDidMount() {
@@ -5105,8 +5109,12 @@ class App extends React.Component<AppProps, AppState> {
     unstable_batchedUpdates(() => {
       addedFiles = this.addMissingFiles(files).addedFiles;
 
-      this.clearImageShapeCache(addedFiles);
-      this.scene.triggerUpdate();
+      // Vaultdraw: redraw only when the scene uses an added file. A host
+      // preloading the next scene's files (scene swap) would otherwise redraw
+      // the scene still on screen for files it never shows.
+      if (this.clearImageShapeCache(addedFiles)) {
+        this.scene.triggerUpdate();
+      }
 
       sceneImages = this.addNewImagesToImageCache();
     });
