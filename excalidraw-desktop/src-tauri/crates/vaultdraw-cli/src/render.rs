@@ -87,3 +87,84 @@ pub fn commands(list: &[Value]) -> String {
     }
     table(&rows)
 }
+
+fn arr<'a>(v: &'a Value, key: &str) -> &'a [Value] {
+    v.get(key).and_then(Value::as_array).map(Vec::as_slice).unwrap_or(&[])
+}
+
+/// A list item that is either a bare string or an object holding the string under one of `keys`.
+fn text_of<'a>(item: &'a Value, keys: &[&str]) -> Option<&'a str> {
+    item.as_str().or_else(|| keys.iter().find_map(|k| item.get(*k).and_then(Value::as_str)))
+}
+
+/// Folders first (trailing `/`), then drawings; each group keeps the app's order.
+pub fn ls(v: &Value) -> String {
+    let entries = arr(v, "entries");
+    let is_folder = |e: &Value| s(e, "kind") == "folder";
+    let name = |e: &Value| if s(e, "path").is_empty() { s(e, "name").to_string() } else { s(e, "path").to_string() };
+    let folders = entries.iter().filter(|e| is_folder(e)).map(|e| format!("{}/", name(e).trim_end_matches('/')));
+    let files = entries.iter().filter(|e| !is_folder(e)).map(name);
+    folders.chain(files).collect::<Vec<_>>().join("\n")
+}
+
+/// One hit per line: the path, then a tab and the matched element text when there is one.
+pub fn search(v: &Value) -> String {
+    arr(v, "results")
+        .iter()
+        .map(|r| match text_of(r, &["text", "snippet"]).filter(|_| r.is_object()) {
+            Some(t) => format!("{}\t{}", s(r, "path"), t.replace('\n', " ")),
+            None => s(r, "path").to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Resolved outgoing links, or the backlink sources. Tolerates the `links` / `outgoing` names.
+pub fn links(v: &Value, backlinks: bool) -> String {
+    let lines: Vec<&str> = if backlinks {
+        arr(v, "backlinks").iter().filter_map(|b| text_of(b, &["path", "source", "from"])).collect()
+    } else {
+        let list = if v.get("outgoing").is_some() { arr(v, "outgoing") } else { arr(v, "links") };
+        list.iter().filter(|l| l.get("resolved").and_then(Value::as_bool) != Some(false)).filter_map(|l| text_of(l, &["path"])).collect()
+    };
+    lines.join("\n")
+}
+
+/// `tag count` per line; accepts `[{tag|name, count}]` or a `{tag: count}` map.
+pub fn tags(v: &Value) -> String {
+    let count = |c: Option<&Value>| c.and_then(Value::as_u64).unwrap_or(0);
+    match v.get("tags") {
+        Some(Value::Object(m)) => m.iter().map(|(t, c)| format!("{t} {}", count(Some(c)))).collect::<Vec<_>>().join("\n"),
+        _ => arr(v, "tags").iter().map(|t| format!("{} {}", text_of(t, &["tag", "name"]).unwrap_or(""), count(t.get("count")))).collect::<Vec<_>>().join("\n"),
+    }
+}
+
+/// `*` marks the active tab, then the 1-based index, the path (or `(home)`) and `[+]` when dirty.
+pub fn tabs(v: &Value) -> String {
+    let active_id = v.get("activeId").and_then(Value::as_str);
+    arr(v, "tabs")
+        .iter()
+        .enumerate()
+        .map(|(i, t)| {
+            let active = t.get("active").and_then(Value::as_bool).unwrap_or_else(|| active_id.is_some() && active_id == t.get("id").and_then(Value::as_str));
+            let path = if s(t, "path").is_empty() { "(home)" } else { s(t, "path") };
+            let dirty = if t.get("dirty").and_then(Value::as_bool) == Some(true) { " [+]" } else { "" };
+            format!("{} {} {path}{dirty}", if active { "*" } else { " " }, i + 1)
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Strings print bare, everything else as JSON (objects pretty-printed).
+pub fn value(v: &Value) -> String {
+    match v {
+        Value::String(x) => x.clone(),
+        Value::Object(_) | Value::Array(_) => serde_json::to_string_pretty(v).unwrap_or_default(),
+        _ => v.to_string(),
+    }
+}
+
+pub fn vault(v: &Value) -> String {
+    let ro = if v.get("readOnly").and_then(Value::as_bool) == Some(true) { " [read-only]" } else { "" };
+    format!("{} ({}){ro}", s(v, "name"), s(v, "path"))
+}

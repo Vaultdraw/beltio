@@ -17,8 +17,21 @@ pub struct Fake {
 
 type Reply = Result<Value, (i64, String, Option<&'static str>)>;
 
+/// Lines pushed after a reply: notifications, or the string "CLOSE" to end the connection.
+pub type Pushes = Vec<Value>;
+
 impl Fake {
     pub fn start(handler: impl Fn(&str, &Value) -> Reply + Send + Sync + 'static) -> Self {
+        Self::start_with_pushes(handler, |_, _| vec![])
+    }
+
+    /// Like `start`, and `pushes(method, params)` lists the notifications written right after
+    /// that reply (an event stream).
+    pub fn start_with_pushes(
+        handler: impl Fn(&str, &Value) -> Reply + Send + Sync + 'static,
+        pushes: impl Fn(&str, &Value) -> Pushes + Send + Sync + 'static,
+    ) -> Self {
+        let pushes = Arc::new(pushes);
         // Short path: sun_path is 104 bytes on macOS.
         let dir = std::env::temp_dir().join(format!("vd-{}-{}", std::process::id(), next()));
         let dir = PathBuf::from("/tmp").join(dir.file_name().unwrap());
@@ -31,7 +44,7 @@ impl Fake {
         std::thread::spawn(move || {
             for stream in listener.incoming() {
                 let Ok(stream) = stream else { break };
-                let (handler, seen2) = (handler.clone(), seen2.clone());
+                let (handler, seen2, pushes) = (handler.clone(), seen2.clone(), pushes.clone());
                 std::thread::spawn(move || {
                 let mut w = stream.try_clone().unwrap();
                 for line in BufReader::new(stream).lines() {
@@ -51,6 +64,13 @@ impl Fake {
                     };
                     if writeln!(w, "{reply}").is_err() {
                         break;
+                    }
+                    for push in pushes(&method, &req["params"]) {
+                        if push == "CLOSE" {
+                            let _ = w.shutdown(std::net::Shutdown::Both);
+                            return;
+                        }
+                        let _ = writeln!(w, "{push}");
                     }
                 }
                 });
@@ -73,6 +93,12 @@ fn next() -> u64 {
 
 /// Runs the binary with a clean environment (no user dirs touched).
 pub fn vd(args: &[&str], socket: Option<&PathBuf>, state: Option<&PathBuf>) -> Output {
+    vd_in(args, socket, state, "")
+}
+
+/// Like `vd`, with `stdin` piped in.
+pub fn vd_in(args: &[&str], socket: Option<&PathBuf>, state: Option<&PathBuf>, stdin: &str) -> Output {
+    use std::process::Stdio;
     let mut c = Command::new(env!("CARGO_BIN_EXE_vaultdraw-cli"));
     c.args(args).env_clear().env("HOME", "/nonexistent-vd-home");
     match socket {
@@ -80,7 +106,9 @@ pub fn vd(args: &[&str], socket: Option<&PathBuf>, state: Option<&PathBuf>) -> O
         None => c.env("VAULTDRAW_RUNTIME_DIR", "/tmp/vd-none-runtime"),
     };
     c.env("VAULTDRAW_STATE_DIR", state.cloned().unwrap_or_else(|| "/tmp/vd-none-state".into()));
-    c.output().unwrap()
+    let mut child = c.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
+    let _ = child.stdin.take().unwrap().write_all(stdin.as_bytes());
+    child.wait_with_output().unwrap()
 }
 
 pub fn out(o: &Output) -> String {

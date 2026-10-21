@@ -1,5 +1,10 @@
 //! One handler per subcommand. Each prints its own output and returns a `Fail` on error.
 
+mod app;
+mod events;
+mod files;
+mod tabs;
+
 use crate::cli::{Cli, CmdAction, CmdArgs, Command};
 use crate::error::Fail;
 use crate::rpc::{request_line, resolve_socket, Rpc};
@@ -9,7 +14,7 @@ use serde_json::{json, Value};
 use std::io::{BufRead, Write};
 use vaultdraw_protocol::{methods, API_LEVEL, API_MIN};
 
-fn emit(json: bool, value: &Value, human: impl FnOnce() -> String) {
+pub(super) fn emit(json: bool, value: &Value, human: impl FnOnce() -> String) {
     if json {
         println!("{}", serde_json::to_string(value).unwrap_or_default());
     } else {
@@ -30,12 +35,48 @@ pub fn run(cli: &Cli) -> Result<(), Fail> {
         Command::Version => version(cli),
         Command::Raw => raw(cli),
         Command::Cmd(args) => cmd(cli, args),
+        Command::Ls { dir, recursive } => files::ls(cli, dir.as_deref(), *recursive),
+        Command::Search { query, limit } => files::search(cli, query, *limit),
+        Command::Open { target, new_tab, wait } => files::open(cli, target, *new_tab, *wait),
+        Command::New { path, from } => files::new(cli, path, from.as_deref()),
+        Command::Cat { target } => files::cat(cli, target),
+        Command::Write { target, expected_revision, create } => files::write(cli, target, expected_revision.as_deref(), *create),
+        Command::Mv { from, to } => files::mv(cli, from, to),
+        Command::Trash { target } => files::trash(cli, target),
+        Command::Links { target, backlinks } => files::links(cli, target, *backlinks),
+        Command::Tags => files::tags(cli),
+        Command::Tabs => tabs::list(cli),
+        Command::Tab { action } => tabs::run(cli, action),
+        Command::Config { action } => app::config(cli, action),
+        Command::Events { topic } => events::stream(cli, topic),
+        Command::Quit => app::quit(cli),
+        Command::Vault { action } => app::vault(cli, action.as_ref()),
     }
+}
+
+/// The connection settings of this invocation.
+pub(super) fn rpc(cli: &Cli) -> Result<Rpc, Fail> {
+    Ok(Rpc::new(resolve_socket(cli.socket.as_deref())?, cli.timeout))
+}
+
+/// Params of a file target: `{path}` for anything with a `/` or a `.excalidraw` suffix, else
+/// `{file}` (a link-style name); `--path` / `--file` force either. One place, every command.
+pub(super) fn target(cli: &Cli, t: &str) -> serde_json::Map<String, Value> {
+    let by_path = cli.force_path || (!cli.force_file && (t.contains('/') || t.ends_with(".excalidraw")));
+    let mut m = serde_json::Map::new();
+    m.insert(if by_path { "path" } else { "file" }.into(), json!(t));
+    m
+}
+
+/// Prints one line to stdout and flushes; false when the reader is gone (closed pipe).
+pub(super) fn out_line(s: &str) -> bool {
+    let mut o = std::io::stdout().lock();
+    writeln!(o, "{s}").and_then(|()| o.flush()).is_ok()
 }
 
 /// Send one request and print its result. `status_json` makes "not running" print
 /// `{"running":false}` in `--json` mode (the exit code stays 3).
-fn request(cli: &Cli, method: &str, params: Option<Value>, human: impl Fn(&Value) -> String, status_json: bool) -> Result<(), Fail> {
+pub(super) fn request(cli: &Cli, method: &str, params: Option<Value>, human: impl Fn(&Value) -> String, status_json: bool) -> Result<(), Fail> {
     if cli.print_request {
         println!("{}", request_line(method, params));
         return Ok(());

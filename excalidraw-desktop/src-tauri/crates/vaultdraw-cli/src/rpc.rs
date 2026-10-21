@@ -46,27 +46,40 @@ impl Rpc {
 
     pub fn call(&self, method: &str, params: Option<Value>) -> Result<Value, Fail> {
         let mut client = self.connect()?;
+        match self.try_on(&mut client, method, params) {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                drop(client); // the mismatch probe opens its own connection
+                Err(self.finish(e))
+            }
+        }
+    }
+
+    /// One call on an open connection (NOT_READY retry, mismatch detection).
+    pub fn call_on(&self, client: &mut Client, method: &str, params: Option<Value>) -> Result<Value, Fail> {
+        self.try_on(client, method, params).map_err(|e| self.finish(e))
+    }
+
+    /// The call with the NOT_READY retry; errors are left raw for [`Self::finish`].
+    fn try_on(&self, client: &mut Client, method: &str, params: Option<Value>) -> Result<Value, CallError> {
         let started = Instant::now();
         loop {
             match client.call(method, params.clone()) {
-                Ok(v) => return Ok(v),
-                Err(CallError::Rpc(e)) if e.app_code() == Some(codes::NOT_READY) => {
-                    // The window may still be loading: retry briefly, then report "not running".
-                    if started.elapsed() >= NOT_READY_WINDOW {
-                        return Err(Fail::new(EXIT_NOT_RUNNING, e.message, codes::NOT_READY));
-                    }
+                Err(CallError::Rpc(e)) if e.app_code() == Some(codes::NOT_READY) && started.elapsed() < NOT_READY_WINDOW => {
+                    // The window may still be loading: retry briefly.
                     std::thread::sleep(NOT_READY_STEP);
                 }
-                Err(CallError::Rpc(e)) if e.code == METHOD_NOT_FOUND => {
-                    drop(client);
-                    return Err(self.check_mismatch().unwrap_or_else(|| CallError::Rpc(e).into()));
-                }
-                Err(e @ CallError::Io(_)) => {
-                    drop(client);
-                    return Err(self.check_mismatch().unwrap_or_else(|| e.into()));
-                }
-                Err(e) => return Err(e.into()),
+                r => return r,
             }
+        }
+    }
+
+    fn finish(&self, e: CallError) -> Fail {
+        match e {
+            CallError::Rpc(e) if e.app_code() == Some(codes::NOT_READY) => Fail::new(EXIT_NOT_RUNNING, e.message, codes::NOT_READY),
+            CallError::Rpc(e) if e.code == METHOD_NOT_FOUND => self.check_mismatch().unwrap_or_else(|| CallError::Rpc(e).into()),
+            e @ CallError::Io(_) => self.check_mismatch().unwrap_or_else(|| e.into()),
+            e => e.into(),
         }
     }
 
