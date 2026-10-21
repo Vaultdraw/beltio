@@ -99,18 +99,26 @@ describe("[hotkeys] -> preferences", () => {
     expect(problems.every((p) => p.kind === "invalid")).toBe(true);
   });
 
-  it("keeps unknown ids with a warning", () => {
+  it("keeps unknown ids in a built-in namespace with a warning", () => {
+    const { values, problems } = configToPreferences({
+      hotkeys: { "palette.noSuchThing": ["Mod+J"] },
+    });
+    expect(values.hotkeys).toEqual({ "palette.noSuchThing": ["Mod+J"] });
+    expect(problems).toEqual([
+      {
+        kind: "invalid",
+        key: "hotkeys.palette.noSuchThing",
+        message: "hotkeys: unknown command palette.noSuchThing",
+      },
+    ]);
+  });
+
+  it("keeps ids of other namespaces (plugin commands) without a warning", () => {
     const { values, problems } = configToPreferences({
       hotkeys: { "future.thing": ["Mod+J"] },
     });
     expect(values.hotkeys).toEqual({ "future.thing": ["Mod+J"] });
-    expect(problems).toEqual([
-      {
-        kind: "invalid",
-        key: "hotkeys.future.thing",
-        message: "hotkeys: unknown command future.thing",
-      },
-    ]);
+    expect(problems).toEqual([]);
   });
 
   it("accepts the legacy palette.quickSwitcher id without a warning", () => {
