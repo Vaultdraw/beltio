@@ -67,14 +67,30 @@
       "better": "higher",
       "desc": "refresh-rate probe: frames per second that showed a new static-canvas render while zooming (what the eye sees)",
       "gate": ["median", "min"],
-      "budgets": [{ "stat": "min", "min": 100, "why": "drawn Hz also carries the jitter of the injected input (~118 events/s, not vsync-locked)" }]
+      "budgets": [{ "stat": "min", "min": 100, "warn": true, "why": "drawn Hz also carries the timing of the injected input (~118 events/s, not vsync-locked): frames without input have nothing new to draw, so this is a warning; zoom.missedInputHz is the gate" }]
+    },
+    "zoom.missedInputHz": {
+      "unit": "Hz",
+      "better": "lower",
+      "desc": "refresh-rate probe: frames/s that received input but showed no new static render while zooming (inputFrameHz - renderHz)",
+      "gate": ["median"],
+      "slack": 1,
+      "budgets": [{ "stat": "max", "max": 2, "why": "every frame that got input is drawn (2 Hz slack for pass edges)" }]
     },
     "pan.renderHz": {
       "unit": "Hz",
       "better": "higher",
       "desc": "refresh-rate probe: frames per second that showed a new static-canvas render while panning",
       "gate": ["median", "min"],
-      "budgets": [{ "stat": "min", "min": 100, "why": "drawn Hz also carries the jitter of the injected input (~118 events/s, not vsync-locked)" }]
+      "budgets": [{ "stat": "min", "min": 100, "warn": true, "why": "drawn Hz also carries the timing of the injected input (~118 events/s, not vsync-locked): frames without input have nothing new to draw, so this is a warning; pan.missedInputHz is the gate" }]
+    },
+    "pan.missedInputHz": {
+      "unit": "Hz",
+      "better": "lower",
+      "desc": "refresh-rate probe: frames/s that received input but showed no new static render while panning (inputFrameHz - renderHz)",
+      "gate": ["median"],
+      "slack": 1,
+      "budgets": [{ "stat": "max", "max": 2, "why": "every frame that got input is drawn (2 Hz slack for pass edges)" }]
     },
     "zoom.framesLe9msPct": { "unit": "%", "better": "higher", "desc": "refresh-rate probe: share of frame intervals <= 9 ms while zooming", "gate": ["median"] },
     "pan.framesLe9msPct": { "unit": "%", "better": "higher", "desc": "refresh-rate probe: share of frame intervals <= 9 ms while panning", "gate": ["median"] },

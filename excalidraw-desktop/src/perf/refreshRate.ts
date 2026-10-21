@@ -427,6 +427,16 @@ export function refreshRateSamples(
     }
     push(`${motion}.fps`, pass.stats.fps);
     push(`${motion}.renderHz`, pass.stats.renderHz);
+    // Frames that received input but showed no new render, per second: drawn
+    // Hz below inputFrameHz is ours; drawn Hz at inputFrameHz but below the
+    // display rate is the injected input's timing (not vsync-locked).
+    push(
+      `${motion}.missedInputHz`,
+      Math.max(
+        0,
+        Math.round((pass.stats.inputFrameHz - pass.stats.renderHz) * 10) / 10,
+      ),
+    );
     push(`${motion}.framesLe9msPct`, pass.stats.framesLe9msPct);
   }
   return samples;
