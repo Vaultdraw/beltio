@@ -43,6 +43,21 @@ describe("passStats", () => {
     expect(s.inputWithoutRenderFrames).toBe(60);
   });
 
+  it("input bunched two per frame then none: inputFrameHz caps renderHz", () => {
+    const s = passStats(
+      frames(
+        121,
+        1000 / 120,
+        (i) => (i % 2 ? 1 : 0),
+        (i) => (i % 2 ? 2 : 0),
+      ),
+      120,
+    );
+    expect(s.inputHz).toBe(120);
+    expect(s.inputFrameHz).toBe(60);
+    expect(s.renderHz).toBe(60);
+  });
+
   it("a 60 fps cap on a 120 Hz screen: every interval misses one vsync", () => {
     const s = passStats(frames(61, 1000 / 60), 120);
     expect(s.fps).toBe(60);

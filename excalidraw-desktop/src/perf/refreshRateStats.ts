@@ -30,6 +30,11 @@ export type PassStats = {
   rendersPerSec: number;
   /** input events per second that reached the page */
   inputHz: number;
+  /** frames per second whose interval received input: the most frames the
+   * input itself can move (a frame without new input has nothing new to
+   * show), so renderHz below it is ours, renderHz below 120 but at it is the
+   * input's timing */
+  inputFrameHz: number;
   intervalP50: number;
   intervalP95: number;
   /** share of intervals <= 9 ms (one 120 Hz vsync) */
@@ -107,6 +112,7 @@ export function passStats(
     renderHz: perSec(counted.filter((s) => s.renders > 0).length),
     rendersPerSec: perSec(counted.reduce((sum, s) => sum + s.renders, 0)),
     inputHz: perSec(counted.reduce((sum, s) => sum + s.inputs, 0)),
+    inputFrameHz: perSec(counted.filter((s) => s.inputs > 0).length),
     intervalP50: round1(percentile(sorted, 50)),
     intervalP95: round1(percentile(sorted, 95)),
     framesLe9msPct: pct(intervals.filter((x) => x <= 9).length),
