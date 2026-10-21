@@ -102,7 +102,11 @@ describe("parse and merge", () => {
   });
 
   it("handles non-object input", () => {
-    expect(parseVaultSettings(null)).toEqual({ overrides: {}, problems: [] });
+    expect(parseVaultSettings(null)).toEqual({
+      overrides: {},
+      pluginOverrides: {},
+      problems: [],
+    });
   });
 
   it("per-vault beats global beats default", () => {

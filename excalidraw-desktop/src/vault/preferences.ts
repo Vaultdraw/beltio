@@ -67,6 +67,10 @@ import {
   type ToolStyle,
 } from "../toolDefaults/toolStyles";
 
+import {
+  normalizePluginSettings,
+  type PluginSettingsMap,
+} from "./pluginSettingsTable";
 import { DEFAULT_SORT_ORDER, isSortOrder, type SortOrder } from "./sortOrder";
 
 export type VaultTheme = "light" | "dark" | "system";
@@ -222,6 +226,8 @@ interface VaultPreferencesBase {
   pdfPixelBudgetMp: number;
   /** Hotkey overrides (`[hotkeys]`): command id -> chords. [] = unassigned. */
   hotkeys: Record<string, string[]>;
+  /** Plugin settings (`[plugin.<id>]`): plugin id -> key -> value. */
+  pluginSettings: PluginSettingsMap;
   /** Saved pens (1 to 9), selected with the pen.selectN commands (Alt+1..9). */
   penPresets: PenPreset[];
   laserColor: string;
@@ -320,6 +326,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   pdfWarnPages: DEFAULT_PDF_IMPORT_SETTINGS.warnPages,
   pdfPixelBudgetMp: DEFAULT_PDF_IMPORT_SETTINGS.pixelBudgetMp,
   hotkeys: {},
+  pluginSettings: {},
   penPresets: DEFAULT_PEN_PRESETS.map((p) => ({ ...p })),
   laserColor: DEFAULT_LASER.color,
   laserSize: DEFAULT_LASER.size,
@@ -653,6 +660,7 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       d.pdfPixelBudgetMp,
     ),
     hotkeys: normalizeHotkeys(parsed.hotkeys),
+    pluginSettings: normalizePluginSettings(parsed.pluginSettings),
     penPresets: normalizePenPresets(parsed.penPresets, d.penPresets),
     laserColor: pick(parsed.laserColor, isString, d.laserColor),
     laserSize: pick(

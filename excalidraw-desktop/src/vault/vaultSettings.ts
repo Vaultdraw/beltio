@@ -13,6 +13,13 @@ import { TABS_VAULT_FIELDS } from "../tabs/tabsSettings";
 import { TOOL_FIELDS } from "../toolDefaults/toolStyles";
 
 import { isTauriAvailable } from "./DesktopVaultRepository";
+import {
+  parsePluginTable,
+  pluginSettingsChanges,
+  withPluginValue,
+  type PluginSettingsMap,
+  type PluginSettingValue,
+} from "./pluginSettingsTable";
 
 import {
   CONFIG_MAPPING,
@@ -41,6 +48,9 @@ export type VaultField = typeof PER_VAULT_FIELDS[number];
 export type VaultOverrides = Partial<Pick<VaultPreferences, VaultField>>;
 export type EffectiveVaultSettings = Pick<VaultPreferences, VaultField>;
 
+/** `[plugin.<id>]` overrides of this vault: plugin id -> key -> value. */
+export type PluginOverrides = PluginSettingsMap;
+
 export const VAULT_SETTINGS_CHANGE_EVENT = "vault-settings-change";
 
 const describe = (
@@ -63,13 +73,19 @@ const mappingOf = (field: VaultField) => {
 /** settings.toml (as JSON) -> valid overrides; invalid values are ignored. */
 export function parseVaultSettings(json: unknown): {
   overrides: VaultOverrides;
+  pluginOverrides: PluginOverrides;
   problems: SettingsProblem[];
 } {
   const overrides: Record<string, unknown> = {};
   const problems: SettingsProblem[] = [];
   if (!json || typeof json !== "object" || Array.isArray(json)) {
-    return { overrides, problems };
+    return { overrides, pluginOverrides: {}, problems };
   }
+  const plugins = parsePluginTable(
+    (json as Record<string, unknown>).plugin,
+    "settings.toml",
+  );
+  problems.push(...plugins.problems);
   for (const field of PER_VAULT_FIELDS) {
     const { key, valid, expected } = mappingOf(field);
     const { present, value } = readDotted(json as Record<string, unknown>, key);
@@ -88,7 +104,11 @@ export function parseVaultSettings(json: unknown): {
       });
     }
   }
-  return { overrides: overrides as VaultOverrides, problems };
+  return {
+    overrides: overrides as VaultOverrides,
+    pluginOverrides: plugins.settings,
+    problems,
+  };
 }
 
 export const resolveSetting = <F extends VaultField>(
@@ -115,6 +135,7 @@ export const resolveSettings = (
 export interface VaultSettingsSnapshot {
   handle: string | null;
   overrides: VaultOverrides;
+  pluginOverrides: PluginOverrides;
   problems: SettingsProblem[];
   loaded: boolean;
 }
@@ -140,11 +161,13 @@ interface Session {
   loadProblems: SettingsProblem[];
   writeProblems: SettingsProblem[];
   overrides: VaultOverrides;
+  pluginOverrides: PluginOverrides;
 }
 
 const EMPTY: VaultSettingsSnapshot = {
   handle: null,
   overrides: {},
+  pluginOverrides: {},
   problems: [],
   loaded: true,
 };
@@ -177,6 +200,7 @@ function publish(s: Session, loaded: boolean): void {
   const next: VaultSettingsSnapshot = {
     handle: s.handle,
     overrides: ordered(s.overrides),
+    pluginOverrides: s.pluginOverrides,
     problems: [...s.loadProblems, ...s.writeProblems],
     loaded,
   };
@@ -246,6 +270,7 @@ async function reload(s: Session): Promise<void> {
   } else {
     const parsed = parseVaultSettings(result.settings);
     s.overrides = parsed.overrides;
+    s.pluginOverrides = parsed.pluginOverrides;
     s.loadProblems = parsed.problems;
   }
   publish(s, true);
@@ -273,6 +298,7 @@ export async function attachVaultSettings(
     loadProblems: [],
     writeProblems: [],
     overrides: {},
+    pluginOverrides: {},
   };
   session = s;
   const native = deps.tauri ?? isTauriAvailable(win);
@@ -280,7 +306,13 @@ export async function attachVaultSettings(
     publish(s, true);
     return;
   }
-  setSnapshot({ handle, overrides: {}, problems: [], loaded: false });
+  setSnapshot({
+    handle,
+    overrides: {},
+    pluginOverrides: {},
+    problems: [],
+    loaded: false,
+  });
   try {
     s.invoke =
       deps.invoke ??
@@ -389,6 +421,59 @@ export async function setVaultOverride<F extends VaultField>(
     }
     // Reload result wins (also reverts a refused optimistic edit).
     await reload(s);
+    if (session === s) {
+      publish(s, true);
+    }
+    return ok;
+  });
+}
+
+/**
+ * Set (or with undefined remove) one plugin setting override. The plugin's
+ * whole `[plugin.<id>]` table is written, like a tool's style table. Resolves
+ * false when there is no writable vault or the write failed.
+ */
+export async function setPluginOverride(
+  pluginId: string,
+  key: string,
+  value: PluginSettingValue | undefined,
+): Promise<boolean> {
+  const s = session;
+  if (!s) {
+    return false;
+  }
+  s.generation++; // any in-flight load predates this edit
+  const before = s.pluginOverrides;
+  s.pluginOverrides = withPluginValue(before, pluginId, key, value);
+  const [change] = pluginSettingsChanges(before, s.pluginOverrides);
+  if (!s.invoke || !change) {
+    publish(s, snapshot.loaded || !s.invoke);
+    return true;
+  }
+  s.writeProblems = [];
+  publish(s, snapshot.loaded);
+  return enqueue(s, async () => {
+    let ok = true;
+    try {
+      await s.invoke!("update_vault_settings", {
+        handle: s.handle,
+        changes: [change],
+      });
+    } catch (error) {
+      ok = false;
+      if (session === s) {
+        s.writeProblems = [
+          {
+            kind: "io",
+            key: change.key,
+            message: `settings.toml: could not save ${change.key}: ${messageOf(
+              error,
+            )}`,
+          },
+        ];
+      }
+    }
+    await reload(s); // the file wins; also reverts a refused edit
     if (session === s) {
       publish(s, true);
     }

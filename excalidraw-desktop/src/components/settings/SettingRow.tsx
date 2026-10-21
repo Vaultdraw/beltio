@@ -7,6 +7,8 @@ import type { ReactNode } from "react";
 export interface SettingRowProps {
   /** Schema id; label and default description come from schema.ts. */
   id: string;
+  /** Declared (plugin) settings have no schema entry: they bring their label. */
+  label?: string;
   /** Replaces the schema description (e.g. a dynamic one). */
   description?: ReactNode;
   /** Shown under the description (paths, status messages). */
@@ -37,6 +39,7 @@ export interface SettingRowProps {
 
 export const SettingRow = ({
   id,
+  label,
   description,
   details,
   below,
@@ -50,7 +53,10 @@ export const SettingRow = ({
   className,
   data,
 }: SettingRowProps) => {
-  const schema = getSettingSchema(id);
+  const schema =
+    label === undefined
+      ? getSettingSchema(id)
+      : { label, description: undefined };
   const classes = [
     layout === "block" ? "vault-setting-block" : "vault-setting-row",
     layout === "stacked" && "vault-setting-row--stacked",

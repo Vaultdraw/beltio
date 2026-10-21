@@ -50,6 +50,11 @@ import {
   type ToolStyle,
 } from "../toolDefaults/toolStyles";
 
+import {
+  parsePluginTable,
+  pluginSettingsChanges,
+  sortedPluginSettings,
+} from "./pluginSettingsTable";
 import { isSortOrder, SORT_ORDERS } from "./sortOrder";
 import { isTauriAvailable } from "./DesktopVaultRepository";
 import {
@@ -773,7 +778,7 @@ export function parseHotkeysTable(table: unknown): {
  * problem.
  */
 export function configToPreferences(config: Record<string, unknown>): {
-  values: Pick<VaultPreferences, ConfigField | "hotkeys">;
+  values: Pick<VaultPreferences, ConfigField | "hotkeys" | "pluginSettings">;
   problems: SettingsProblem[];
 } {
   const values = {} as Record<ConfigField, unknown>;
@@ -803,10 +808,13 @@ export function configToPreferences(config: Record<string, unknown>): {
   }
   const table = parseHotkeysTable(config.hotkeys);
   problems.push(...table.problems);
+  const plugins = parsePluginTable(config.plugin, "config.toml");
+  problems.push(...plugins.problems);
   return {
     values: {
       ...(values as Pick<VaultPreferences, ConfigField>),
       hotkeys: table.hotkeys,
+      pluginSettings: plugins.settings,
     },
     problems,
   };
@@ -841,6 +849,10 @@ export function preferencesToConfigChanges(
       changes.push({ key: `hotkeys.${id}`, value: now ?? null });
     }
   }
+  // [plugin.<id>]: one change per plugin; null deletes its table.
+  changes.push(
+    ...pluginSettingsChanges(prev.pluginSettings, next.pluginSettings),
+  );
   return changes;
 }
 
@@ -895,6 +907,7 @@ const configSlice = (prefs: PreferencesSnapshot) => ({
   ),
   // sorted: the table's order in the file must not count as a change
   hotkeys: Object.entries(prefs.hotkeys).sort(([a], [b]) => (a < b ? -1 : 1)),
+  pluginSettings: sortedPluginSettings(prefs.pluginSettings),
 });
 
 export function formatConfigError(error: ConfigErrorPayload): string {
