@@ -1,0 +1,8 @@
+.vault-plugin-panel {
+  flex: 0 0 320px;
+  width: 320px;
+  min-width: 0;
+  overflow: auto;
+  border-left: 1px solid var(--vault-border, rgba(128, 128, 128, 0.3));
+  background: var(--vault-surface, var(--island-bg-color, transparent));
+}

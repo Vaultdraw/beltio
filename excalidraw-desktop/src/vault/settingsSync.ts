@@ -21,7 +21,7 @@ import {
   isPageSize,
 } from "@excalidraw/excalidraw/data/pageSetup";
 
-import { isCommandId } from "../commands/commands";
+import { BUILTIN_COMMANDS, isCommandId } from "../commands/commands";
 import {
   HISTORY_MAPPINGS,
   type HistoryField,
@@ -51,6 +51,7 @@ import {
 } from "../toolDefaults/toolStyles";
 
 import {
+  isPluginId,
   parsePluginTable,
   pluginSettingsChanges,
   sortedPluginSettings,
@@ -198,6 +199,7 @@ type ConfigField =
   | "showTagChips"
   | "thumbnails"
   | "activityBar"
+  | "pluginsEnabled"
   | "activityBarOrder"
   | "activityBarHidden"
   | "navigatorSort"
@@ -325,6 +327,14 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "interface.activity_bar_hidden",
     expected: 'a list of entry ids like ["tags"]',
     valid: isStringList,
+  },
+  {
+    field: "pluginsEnabled",
+    key: "plugins.enabled",
+    expected: 'a list of plugin ids like ["hello-command"]',
+    valid: (v) =>
+      Array.isArray(v) &&
+      v.every((x) => typeof x === "string" && isPluginId(x)),
   },
   {
     field: "defaultCanvasBackground",
@@ -710,6 +720,15 @@ export const readDotted = (
     : { present: false, value: undefined };
 };
 
+/**
+ * Plugin commands register after config.toml is parsed, so an id outside the
+ * built-in namespaces is kept without a problem (it may be a plugin's).
+ */
+const isBuiltinNamespace = (id: string): boolean => {
+  const ns = id.split(".")[0];
+  return BUILTIN_COMMANDS.some((c) => c.id.split(".")[0] === ns);
+};
+
 const hotkeyProblem = (key: string, message: string): SettingsProblem => ({
   kind: "invalid",
   key,
@@ -764,7 +783,7 @@ export function parseHotkeysTable(table: unknown): {
     if (chords.length === 0 && value.length > 0) {
       continue;
     }
-    if (!isCommandId(id)) {
+    if (!isCommandId(id) && isBuiltinNamespace(id)) {
       problems.push(hotkeyProblem(key, `hotkeys: unknown command ${id}`));
     }
     hotkeys[id] = chords;

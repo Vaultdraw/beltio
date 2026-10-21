@@ -105,6 +105,8 @@ import { useGraphEntry } from "./graph/useGraphEntry";
 import { createDesktopThumbnailStore } from "./thumbnails/desktopStore";
 import { ThumbnailsRoot } from "./thumbnails/ThumbnailsRoot";
 import { HistoryHost } from "./history/HistoryHost";
+import { PluginPanels } from "./plugins/host/PluginPanels";
+import { setPluginCommandRunner } from "./plugins/host/runner";
 import { useHistoryEntry } from "./history/useHistoryEntry";
 import { desktopHistoryRepository } from "./history/DesktopHistoryRepository";
 import { toHistorySettings } from "./history/historySettings";
@@ -1936,6 +1938,10 @@ export const VaultApp = ({
     },
   });
   runnerRef.current = commandRunner;
+  useEffect(() => {
+    setPluginCommandRunner((id) => runnerRef.current?.run(id) ?? false);
+    return () => setPluginCommandRunner(null);
+  }, []);
   useControlBridge(win, {
     tabStore: tabs.store,
     activePath: activeDoc?.path ?? null,
@@ -2414,6 +2420,7 @@ export const VaultApp = ({
           theme={appTheme}
           onSaveFile={exportEditorFile}
         />
+        <PluginPanels />
         {templates.dialogs}
         {appLinks.dialogs}
         {appTags.dialog}
