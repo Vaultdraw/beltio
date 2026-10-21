@@ -1,6 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { runHandler } from "../commands/dispatcher";
 import { getRegisteredHandler } from "../commands/handlerRegistry";
 import { toastStore } from "../toasts/toastStore";
 
@@ -13,8 +14,13 @@ import {
 const invoke = vi.fn();
 const unlisten = vi.fn();
 let onRequest: ((e: { payload: unknown }) => void) | null = null;
-const listen = vi.fn(async (_event: string, cb: typeof onRequest) => {
-  onRequest = cb;
+let onTopics: ((e: { payload: unknown }) => void) | null = null;
+const listen = vi.fn(async (event: string, cb: typeof onRequest) => {
+  if (event === "control-topics") {
+    onTopics = cb;
+  } else {
+    onRequest = cb;
+  }
   return unlisten;
 });
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
@@ -69,8 +75,10 @@ describe("useControlBridge", () => {
     await waitFor(() =>
       expect(calls("control_commands_snapshot")).toHaveLength(1),
     );
-    expect(listen).toHaveBeenCalledTimes(1);
-    expect(listen.mock.calls[0][0]).toBe("control-request");
+    expect(listen.mock.calls.map((c) => c[0])).toEqual([
+      "control-request",
+      "control-topics",
+    ]);
     expect(calls("control_ready")).toHaveLength(1);
     const { commands } = calls("control_commands_snapshot")[0][1];
     expect(commands.some((c: { id: string }) => c.id === CLI_INSTALL_ID)).toBe(
@@ -86,7 +94,29 @@ describe("useControlBridge", () => {
     );
 
     unmount();
-    expect(unlisten).toHaveBeenCalledTimes(1);
+    expect(unlisten).toHaveBeenCalledTimes(2);
+  });
+
+  it("topics: nothing published until wanted; ready result and control-topics drive it", async () => {
+    invoke.mockImplementation(async (cmd: string) =>
+      cmd === "control_ready" ? { topics: ["command"] } : undefined,
+    );
+    const { unmount } = renderHook(() => useControlBridge(tauriWin(), deps()));
+    await waitFor(() => expect(calls("control_ready")).toHaveLength(1));
+    await waitFor(() => expect(onTopics).not.toBeNull());
+    await new Promise((r) => setTimeout(r, 10));
+    runHandler("t.one", () => {});
+    expect(calls("control_event")).toEqual([
+      [
+        "control_event",
+        { topic: "command", name: "command.ran", data: { id: "t.one" } },
+      ],
+    ]);
+    onTopics!({ payload: { topics: [] } });
+    runHandler("t.two", () => {});
+    expect(calls("control_event")).toHaveLength(1);
+    unmount();
+    onTopics = null;
   });
 
   it("unmount before the bridge starts never leaves a listener", async () => {

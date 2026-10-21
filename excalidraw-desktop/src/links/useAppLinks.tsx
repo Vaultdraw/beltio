@@ -269,6 +269,8 @@ export function useAppLinks(deps: AppLinksDeps) {
       from: string,
       to: string,
       run: (move: (f: string, t: string) => Promise<unknown>) => Promise<void>,
+      /** No dialogs: confirmations auto-accept and links are rewritten (or not). */
+      silent?: { rewriteLinks: boolean },
     ): Promise<boolean> => {
       const d = live.current;
       if (!d.vault) {
@@ -279,8 +281,8 @@ export function useAppLinks(deps: AppLinksDeps) {
         {
           links: d.links,
           handle: h,
-          mode: d.settings.updateOnRename,
-          confirm: ask,
+          mode: silent ? silent.rewriteLinks : d.settings.updateOnRename,
+          confirm: silent ? async () => true : ask,
         },
         from,
         to,

@@ -37,10 +37,23 @@ export function pauseDispatcher(): () => void {
 
 export const isDispatcherPaused = (): boolean => pauseCount > 0;
 
+const ranListeners = new Set<(id: string) => void>();
+
+/** Observe successful command runs (palette, hotkey, control API). */
+export const onCommandRan = (cb: (id: string) => void): (() => void) => {
+  ranListeners.add(cb);
+  return () => {
+    ranListeners.delete(cb);
+  };
+};
+
 /** Run a handler; a throw or rejection is logged, never propagated. */
 export function runHandler(id: string, handler: CommandHandler): void {
   try {
     const result = handler();
+    if (ranListeners.size > 0) {
+      ranListeners.forEach((cb) => cb(id));
+    }
     if (result && typeof (result as Promise<void>).catch === "function") {
       (result as Promise<void>).catch((err) =>
         console.error(`Command ${id} failed`, err),

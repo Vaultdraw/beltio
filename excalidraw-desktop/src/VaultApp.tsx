@@ -17,6 +17,8 @@ import { DesktopVaultSearch } from "./search/DesktopVaultSearch";
 import { DesktopVaultLinks } from "./links/DesktopVaultLinks";
 import { useLinkDisplayPrefs } from "./links/useLinkDisplayPrefs";
 import { resolveOpenTarget } from "./control/openTarget";
+import { createAppFiles } from "./control/appFiles";
+import { openVaultAtPath } from "./control/vaultOpen";
 import { useControlBridge } from "./control/useControlBridge";
 import { useAppLinks } from "./links/useAppLinks";
 import { DesktopVaultTagRename } from "./tags/DesktopVaultTagRename";
@@ -1145,38 +1147,56 @@ export const VaultApp = ({
   };
 
   // Create drawing
+  // Throwing core shared by the UI handlers and the control API: create the
+  // document (blank with the default paper, or from scene JSON), open it, refresh.
+  const createEntryCore = async (
+    parentPath: string,
+    name: string,
+    json?: string,
+  ) => {
+    tabs.captureActive();
+    if (json === undefined) {
+      await createDoc(parentPath, name, newDrawingAppState());
+    } else {
+      await createDoc(parentPath, name, undefined, json);
+    }
+    await tabs.openCreated(joinPath(parentPath, name));
+    await loadDirectory(parentPath);
+    handleExpandFolder(parentPath);
+    startIndexing();
+  };
+
+  const newDrawingAppState = () => {
+    const prefs = getPreferences(win);
+    const paper = {
+      viewBackgroundColor:
+        prefs.defaultCanvasBackground ||
+        (appTheme === "dark" ? "#121212" : "#ffffff"),
+      viewBackgroundPattern: getDefaultBackgroundPattern(win),
+      pageSetup: null,
+    };
+    // Page mode default: the paper theme stamps the page colours
+    const pageSetup = getNewDrawingPageSetup(win);
+    const initialAppState = {
+      theme: appTheme,
+      ...paper,
+      ...(pageSetup && getPageSetupPatch(paper, pageSetup)),
+      currentItemFontFamily: prefs.defaultFontFamily,
+      currentItemFontSize: prefs.defaultFontSize,
+      currentItemStrokeColor: prefs.defaultStrokeColor,
+      currentItemBackgroundColor: prefs.defaultBackgroundColor,
+      currentItemFillStyle: prefs.defaultFillStyle,
+      currentItemStrokeWidth: prefs.defaultStrokeWidth,
+      currentItemRoughness: prefs.defaultRoughness,
+    };
+    return initialAppState;
+  };
+
   const handleCreateDrawing = async (parentPath: string, name: string) => {
     setIsBusy(true);
     setGlobalAlert(null);
     try {
-      const prefs = getPreferences(win);
-      const paper = {
-        viewBackgroundColor:
-          prefs.defaultCanvasBackground ||
-          (appTheme === "dark" ? "#121212" : "#ffffff"),
-        viewBackgroundPattern: getDefaultBackgroundPattern(win),
-        pageSetup: null,
-      };
-      // Page mode default: the paper theme stamps the page colours
-      const pageSetup = getNewDrawingPageSetup(win);
-      const initialAppState = {
-        theme: appTheme,
-        ...paper,
-        ...(pageSetup && getPageSetupPatch(paper, pageSetup)),
-        currentItemFontFamily: prefs.defaultFontFamily,
-        currentItemFontSize: prefs.defaultFontSize,
-        currentItemStrokeColor: prefs.defaultStrokeColor,
-        currentItemBackgroundColor: prefs.defaultBackgroundColor,
-        currentItemFillStyle: prefs.defaultFillStyle,
-        currentItemStrokeWidth: prefs.defaultStrokeWidth,
-        currentItemRoughness: prefs.defaultRoughness,
-      };
-      tabs.captureActive();
-      await createDoc(parentPath, name, initialAppState);
-      await tabs.openCreated(joinPath(parentPath, name));
-      await loadDirectory(parentPath);
-      handleExpandFolder(parentPath);
-      startIndexing();
+      await createEntryCore(parentPath, name);
     } catch (err) {
       setGlobalAlert({
         message: `Failed to create drawing: ${errorMessage(err)}`,
@@ -1243,12 +1263,7 @@ export const VaultApp = ({
     setIsBusy(true);
     setGlobalAlert(null);
     try {
-      tabs.captureActive();
-      await createDoc(parentPath, name, undefined, json);
-      await tabs.openCreated(joinPath(parentPath, name));
-      await loadDirectory(parentPath);
-      handleExpandFolder(parentPath);
-      startIndexing();
+      await createEntryCore(parentPath, name, json);
     } finally {
       setIsBusy(false);
     }
@@ -1407,13 +1422,43 @@ export const VaultApp = ({
 
   // One path for rename, move and drag-and-drop: links-aware (see useAppLinks).
   // The open drawing is flushed and relocated by relocateDoc as before.
-  const moveWithLinks = (from: string, to: string) =>
-    appLinks.moveEntry(from, to, (move) =>
-      activeDoc &&
-      (activeDoc.path === from || activeDoc.path.startsWith(`${from}/`))
-        ? relocateDoc(from, to, move)
-        : move(from, to).then(() => undefined),
+  const moveWithLinks = (
+    from: string,
+    to: string,
+    silent?: { rewriteLinks: boolean },
+  ) =>
+    appLinks.moveEntry(
+      from,
+      to,
+      (move) =>
+        activeDoc &&
+        (activeDoc.path === from || activeDoc.path.startsWith(`${from}/`))
+          ? relocateDoc(from, to, move)
+          : move(from, to).then(() => undefined),
+      silent,
     );
+
+  // Throwing core of rename/move; `destParent` also reloads and expands the
+  // destination folder. false = aborted by the user.
+  const moveEntryCore = async (
+    sourcePath: string,
+    newPath: string,
+    destParent?: string,
+    silent?: { rewriteLinks: boolean },
+  ): Promise<boolean> => {
+    if (!(await moveWithLinks(sourcePath, newPath, silent))) {
+      return false;
+    }
+    tabs.renamed(sourcePath, newPath);
+    rebaseFolders(sourcePath, newPath);
+    await loadDirectory(getParentPath(sourcePath));
+    if (destParent !== undefined) {
+      await loadDirectory(destParent);
+      handleExpandFolder(destParent);
+    }
+    startIndexing();
+    return true;
+  };
 
   // Rename entry
   const handleRenameEntry = async (oldPath: string, newName: string) => {
@@ -1426,13 +1471,7 @@ export const VaultApp = ({
       const parent = getParentPath(oldPath);
       const newPath = joinPath(parent, newName);
 
-      if (!(await moveWithLinks(oldPath, newPath))) {
-        return;
-      }
-      tabs.renamed(oldPath, newPath);
-      rebaseFolders(oldPath, newPath);
-      await loadDirectory(parent);
-      startIndexing();
+      await moveEntryCore(oldPath, newPath);
     } catch (err) {
       setGlobalAlert({
         message: `Failed to rename: ${errorMessage(err)}`,
@@ -1456,17 +1495,7 @@ export const VaultApp = ({
     try {
       const base = getBaseName(sourcePath);
       const newPath = joinPath(destinationParentPath, base);
-      const oldParent = getParentPath(sourcePath);
-
-      if (!(await moveWithLinks(sourcePath, newPath))) {
-        return;
-      }
-      tabs.renamed(sourcePath, newPath);
-      rebaseFolders(sourcePath, newPath);
-      await loadDirectory(oldParent);
-      await loadDirectory(destinationParentPath);
-      handleExpandFolder(destinationParentPath);
-      startIndexing();
+      await moveEntryCore(sourcePath, newPath, destinationParentPath);
     } catch (err) {
       setGlobalAlert({
         message: `Failed to move: ${errorMessage(err)}`,
@@ -1518,13 +1547,11 @@ export const VaultApp = ({
     }
   };
 
-  // Trash entry
-  const handleTrashEntry = async (path: string) => {
+  // Throwing core of trash (the control API calls it too).
+  const trashEntryCore = async (path: string) => {
     if (!vault) {
       return;
     }
-    setIsBusy(true);
-    setGlobalAlert(null);
     let closedActive = false;
     try {
       if (
@@ -1544,6 +1571,20 @@ export const VaultApp = ({
       if (closedActive) {
         tabs.resync(); // the document was closed but the file is still there
       }
+      throw err;
+    }
+  };
+
+  // Trash entry
+  const handleTrashEntry = async (path: string) => {
+    if (!vault) {
+      return;
+    }
+    setIsBusy(true);
+    setGlobalAlert(null);
+    try {
+      await trashEntryCore(path);
+    } catch (err) {
       setGlobalAlert({
         message: `Failed to trash entry: ${errorMessage(err)}`,
         type: "error",
@@ -1896,6 +1937,41 @@ export const VaultApp = ({
   });
   runnerRef.current = commandRunner;
   useControlBridge(win, {
+    tabStore: tabs.store,
+    activePath: activeDoc?.path ?? null,
+    files: createAppFiles({
+      vault,
+      repository,
+      active: activeDoc
+        ? { path: activeDoc.path, dirty: saveStatus !== "saved" }
+        : null,
+      tabStore: tabs.store,
+      activate: tabs.stripProps?.onActivate,
+      close: tabs.stripProps?.onClose,
+      openVaultAt: async (path) => {
+        const chosen = await openVaultAtPath(path);
+        try {
+          await safelySwitchVault(chosen);
+        } catch (err) {
+          await repository.releaseVault(chosen.handle).catch(() => {});
+          throw err;
+        }
+        return chosen;
+      },
+      openDrawing: handleOpenDrawing,
+      createEntry: createEntryCore,
+      moveEntry: (from, to, rewriteLinks) =>
+        moveEntryCore(from, to, getParentPath(to), { rewriteLinks }),
+      trashEntry: trashEntryCore,
+      busy: async (run) => {
+        setIsBusy(true);
+        try {
+          return await run();
+        } finally {
+          setIsBusy(false);
+        }
+      },
+    }),
     runner: () => runnerRef.current ?? commandRunner,
     appState: () => ({
       activeDrawing: activeDoc

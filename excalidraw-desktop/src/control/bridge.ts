@@ -5,26 +5,14 @@
 import { getCommand } from "../commands/commands";
 
 import { commandInfos } from "./commandsSnapshot";
+import { ControlError, toControlError } from "./errors";
+import { objectParams, stringParam } from "./params";
+import { createWindowMethods, type ControlFiles } from "./windowMethods";
 
 import type { CommandRunner } from "../commands/useCommands";
 import type { HotkeyOverrides } from "../commands/types";
 
-export type ControlErrorCode =
-  | "UNAVAILABLE"
-  | "NOT_FOUND"
-  | "NOT_READY"
-  | "INVALID_PARAMS"
-  | "IO_ERROR";
-
-export class ControlError extends Error {
-  constructor(
-    readonly code: ControlErrorCode,
-    message: string,
-    readonly data?: unknown,
-  ) {
-    super(message);
-  }
-}
+export { ControlError, type ControlErrorCode } from "./errors";
 
 export interface ControlRequest {
   rid: number;
@@ -48,22 +36,11 @@ export interface ControlDeps {
   };
   /** Opens the target the way links do; false when it resolves to nothing. */
   openTarget: (target: string, cwd: string) => Promise<boolean>;
+  /** Vault, file and tab methods (C3); absent = those methods are not registered. */
+  files?: () => ControlFiles;
+  /** Window topics wanted when the bridge connected (see windowEvents). */
+  onReady?: (topics: string[]) => void;
 }
-
-const objectParams = (params: unknown): Record<string, unknown> => {
-  if (params && typeof params === "object") {
-    return params as Record<string, unknown>;
-  }
-  throw new ControlError("INVALID_PARAMS", "params must be an object");
-};
-
-const stringParam = (params: unknown, name: string): string => {
-  const value = objectParams(params)[name];
-  if (typeof value !== "string" || value === "") {
-    throw new ControlError("INVALID_PARAMS", `${name} must be a string`);
-  }
-  return value;
-};
 
 export function createControlBridge(deps: ControlDeps) {
   const handlers: Record<string, (params: unknown) => unknown> = {
@@ -101,6 +78,7 @@ export function createControlBridge(deps: ControlDeps) {
       }
       return { opened: true };
     },
+    ...(deps.files ? createWindowMethods(deps.files) : {}),
   };
 
   const reply = (rid: number, body: Record<string, unknown>) =>
@@ -114,13 +92,7 @@ export function createControlBridge(deps: ControlDeps) {
       }
       await reply(rid, { result: await fn(params) });
     } catch (e) {
-      const err =
-        e instanceof ControlError
-          ? e
-          : new ControlError(
-              "IO_ERROR",
-              e instanceof Error ? e.message : String(e),
-            );
+      const err = toControlError(e);
       await reply(rid, {
         error: { code: err.code, message: err.message, data: err.data },
       });
@@ -135,7 +107,11 @@ export function createControlBridge(deps: ControlDeps) {
         "control-request",
         (e) => void handle(e.payload),
       );
-      await deps.invoke("control_ready");
+      const ready = (await deps.invoke("control_ready")) as
+        | { topics?: string[] }
+        | null
+        | undefined;
+      deps.onReady?.(ready?.topics ?? []);
       return unlisten;
     },
   };

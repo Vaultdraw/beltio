@@ -4,8 +4,16 @@ import { registerCommandHandlers } from "../commands/handlerRegistry";
 import { getPreferences, subscribePreferences } from "../vault/preferences";
 import { toastStore } from "../toasts/toastStore";
 
+import { onCommandRan } from "../commands/dispatcher";
+
 import { createControlBridge, type ControlDeps } from "./bridge";
+
 import { commandInfos, createSnapshotSender } from "./commandsSnapshot";
+import { tabListResult } from "./tabList";
+import { createWindowEvents, type WindowEvents } from "./windowEvents";
+
+import type { ControlFiles } from "./windowMethods";
+import type { TabStore } from "../tabs/tabStore";
 
 type Invoke = ControlDeps["invoke"];
 
@@ -13,6 +21,26 @@ const SNAPSHOT_DEBOUNCE_MS = 1000;
 
 export const CLI_INSTALL_ID = "cli.install";
 export const CLI_INSTALL_SYSTEM_ID = "cli.installSystem";
+
+/** One animation frame, or 50 ms when the window is hidden and frames pause. */
+const scheduleSoon = (win: Window, cb: () => void): (() => void) => {
+  let done = false;
+  const run = () => {
+    if (!done) {
+      done = true;
+      cancel();
+      cb();
+    }
+  };
+  const raf = win.requestAnimationFrame(run);
+  const timer = win.setTimeout(run, 50);
+  const cancel = () => {
+    done = true;
+    win.cancelAnimationFrame(raf);
+    win.clearTimeout(timer);
+  };
+  return cancel;
+};
 
 const inTauri = (win: Window) => "__TAURI_INTERNALS__" in win;
 
@@ -39,10 +67,23 @@ const installCli = (system: boolean) => async () => {
  */
 export function useControlBridge(
   win: Window | null,
-  deps: Pick<ControlDeps, "runner" | "appState" | "openTarget">,
+  deps: Pick<ControlDeps, "runner" | "appState" | "openTarget"> & {
+    files?: ControlFiles;
+    tabStore?: TabStore | null;
+    activePath?: string | null;
+  },
 ): void {
   const live = useRef(deps);
   live.current = deps;
+  const events = useRef<WindowEvents | null>(null);
+
+  // Cheap hooks into the live events object; no-ops until a topic is wanted.
+  useEffect(() => {
+    events.current?.setTabStore(deps.tabStore ?? null);
+  }, [deps.tabStore]);
+  useEffect(() => {
+    events.current?.activePathChanged(deps.activePath ?? null);
+  }, [deps.activePath]);
 
   useEffect(
     () =>
@@ -73,6 +114,19 @@ export function useControlBridge(
         }
         const call = invoke as Invoke;
         const overrides = () => getPreferences(win).hotkeys;
+        const winEvents = createWindowEvents({
+          publish: (topic, name, data) =>
+            void call("control_event", { topic, name, data }).catch(() => {}),
+          onCommandRan,
+          tabList: () => {
+            const l = live.current;
+            const dirty = l.appState().activeDrawing;
+            return tabListResult(l.tabStore?.getState() ?? null, dirty);
+          },
+          schedule: (cb) => scheduleSoon(win, cb),
+        });
+        events.current = winEvents;
+        winEvents.setTabStore(live.current.tabStore ?? null);
         const bridge = createControlBridge({
           listen: listen as unknown as ControlDeps["listen"],
           invoke: call,
@@ -80,6 +134,8 @@ export function useControlBridge(
           runner: () => live.current.runner(),
           appState: () => live.current.appState(),
           openTarget: (t, c) => live.current.openTarget(t, c),
+          files: () => live.current.files as ControlFiles,
+          onReady: (topics) => winEvents.setTopics(topics),
         });
         const send = createSnapshotSender((commands) =>
           call("control_commands_snapshot", {
@@ -97,7 +153,17 @@ export function useControlBridge(
           unlisten();
           return;
         }
-        stop = unlisten;
+        const offTopics = await (listen as unknown as ControlDeps["listen"])(
+          "control-topics",
+          (e) =>
+            winEvents.setTopics(
+              (e.payload as unknown as { topics?: string[] }).topics ?? [],
+            ),
+        );
+        stop = () => {
+          unlisten();
+          offTopics();
+        };
         unsubscribe = subscribePreferences(schedule);
         const idle = (
           win as Window & {
@@ -119,6 +185,8 @@ export function useControlBridge(
       clearTimeout(timer);
       unsubscribe?.();
       stop?.();
+      events.current?.dispose();
+      events.current = null;
     };
   }, [win]);
 }
