@@ -326,7 +326,6 @@ const VaultEditorComponent = ({
       // Never inherits a file handle or scene from a previously open document.
       const scene = await loadScene(
         initialSource.json,
-        doc.defaultView!.Blob,
         restoreRef.current?.view,
       );
       loadDrawingStyles(readDrawingStyles(initialSource.json));

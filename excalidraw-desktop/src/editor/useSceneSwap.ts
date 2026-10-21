@@ -89,7 +89,7 @@ export function useSceneSwap(deps: SceneSwapDeps): void {
       if (!api || api.isDestroyed) {
         throw new Error("Editor is not ready");
       }
-      const scene = await loadScene(json, win.Blob, restore?.view);
+      const scene = await loadScene(json, restore?.view);
       if (cancelled) {
         return;
       }

@@ -3,7 +3,7 @@
  * DOM): which scene may be saved, how a loaded file becomes the editor's
  * app state, and which in-flight swap is still wanted.
  */
-import { loadFromBlob } from "@excalidraw/excalidraw";
+import { loadFromJSONText } from "@excalidraw/excalidraw";
 
 import type {
   AppState,
@@ -58,18 +58,17 @@ export const withDocumentAppState = (
   }),
 });
 
-/** Parses saved JSON the way a fresh editor does (restore, migrations, files). */
+/**
+ * Parses saved JSON the way a fresh editor does (restore, migrations, files).
+ * Yields one task first: callers start it from the click's commit, and the
+ * parse must not delay that frame (the old Blob read was async too).
+ */
 export const loadScene = async (
   json: string,
-  BlobCtor: typeof Blob,
   view: SceneView | undefined,
 ): Promise<LoadedScene> => {
-  const scene = await loadFromBlob(
-    new BlobCtor([json], { type: "application/json" }),
-    null,
-    null,
-    null,
-  );
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  const scene = loadFromJSONText(json, null, null);
   return {
     elements: scene.elements,
     appState: withDocumentAppState(scene.appState, view),

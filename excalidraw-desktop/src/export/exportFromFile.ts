@@ -6,7 +6,7 @@
  * dialog. "Save a copy…" is a native byte-for-byte file copy.
  */
 
-import { loadFromBlob } from "@excalidraw/excalidraw";
+import { loadFromJSONText } from "@excalidraw/excalidraw";
 import { getNonDeletedElements } from "@excalidraw/element";
 
 import type { ImageExportRequest } from "@excalidraw/excalidraw/types";
@@ -43,13 +43,7 @@ export const readDrawingJson = async (
   path: string,
 ): Promise<string> => (await repository.readDrawing(handle, path)).json;
 
-const loadScene = (json: string, win: Window & typeof globalThis) =>
-  loadFromBlob(
-    new win.Blob([json], { type: "application/json" }),
-    null,
-    null,
-    null,
-  );
+const loadScene = async (json: string) => loadFromJSONText(json, null, null);
 
 /** Restores the drawing's JSON into an export request (no editor needed). */
 export const sceneToExportRequest = async (
@@ -59,7 +53,7 @@ export const sceneToExportRequest = async (
   options: ExplorerExportOptions,
   win: Window & typeof globalThis,
 ): Promise<ImageExportRequest> => {
-  const scene = await loadScene(json, win);
+  const scene = await loadScene(json);
   return {
     type,
     // The whole (non-deleted) scene, like the dialog without "only selected".
@@ -112,7 +106,7 @@ export const exportDrawingFromVault = async (input: {
   const json = await readDrawingJson(repository, handle, path);
   await input.beforeRender?.(json);
   if (format === "pdf") {
-    const scene = await loadScene(json, win);
+    const scene = await loadScene(json);
     const pdf = await withStandardCanvasColors(() =>
       renderPdf({
         elements: scene.elements,

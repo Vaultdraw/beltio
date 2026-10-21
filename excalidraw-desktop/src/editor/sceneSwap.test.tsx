@@ -109,7 +109,7 @@ describe("loadScene", () => {
       appState: { viewBackgroundColor: "#a5d8ff" },
       files: {},
     });
-    const scene = await loadScene(json, Blob, {
+    const scene = await loadScene(json, {
       scrollX: 3,
       scrollY: 4,
       zoom: 2,
@@ -120,7 +120,7 @@ describe("loadScene", () => {
   });
 
   it("rejects unreadable sources", async () => {
-    await expect(loadScene("{ nope", Blob, undefined)).rejects.toThrow();
+    await expect(loadScene("{ nope", undefined)).rejects.toThrow();
   });
 });
 
