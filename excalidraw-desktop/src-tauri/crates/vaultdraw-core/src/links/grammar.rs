@@ -8,13 +8,13 @@
 use memchr::{memchr3, memmem};
 use std::sync::OnceLock;
 
-pub(crate) const MAX_BODY_CHARS: usize = 256;
-pub(crate) const EXT: &str = ".excalidraw";
-pub(crate) const VAULT_URL: &str = "vaultdraw://open?";
+pub const MAX_BODY_CHARS: usize = 256;
+pub const EXT: &str = ".excalidraw";
+pub const VAULT_URL: &str = "vaultdraw://open?";
 /// Longest scanned body: 256 chars of up to 4 bytes, plus the closing brackets.
 const SCAN_BYTES: usize = MAX_BODY_CHARS * 4 + 2;
 
-pub(crate) fn strip_ext(s: &str) -> &str {
+pub fn strip_ext(s: &str) -> &str {
     let cut = s.len().saturating_sub(EXT.len());
     match s.get(cut..) {
         Some(e) if e.eq_ignore_ascii_case(EXT) => &s[..cut],
@@ -22,12 +22,12 @@ pub(crate) fn strip_ext(s: &str) -> &str {
     }
 }
 
-pub(crate) fn has_ext(s: &str) -> bool {
+pub fn has_ext(s: &str) -> bool {
     strip_ext(s).len() != s.len()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct TextLink<'a> {
+pub struct TextLink<'a> {
     /// Byte range of the whole `[[...]]` token.
     pub start: usize,
     pub end: usize,
@@ -44,7 +44,7 @@ fn opener() -> &'static memmem::Finder<'static> {
 }
 
 /// Calls `f` for every link in `text`, in order.
-pub(crate) fn text_links<'a>(text: &'a str, mut f: impl FnMut(TextLink<'a>)) {
+pub fn text_links<'a>(text: &'a str, mut f: impl FnMut(TextLink<'a>)) {
     let b = text.as_bytes();
     let mut pos = 0;
     while let Some(i) = opener().find(&b[pos..]) {
@@ -88,20 +88,20 @@ fn parse_body(text: &str, start: usize, bs: usize, be: usize) -> Option<TextLink
     Some(TextLink { start, end: be + 2, target_range: (ts, ts + written.len()), target, label })
 }
 
-pub(crate) fn text_links_vec(text: &str) -> Vec<TextLink<'_>> {
+pub fn text_links_vec(text: &str) -> Vec<TextLink<'_>> {
     let mut v = Vec::new();
     text_links(text, |l| v.push(l));
     v
 }
 
 /// UTF-16 length of `text[..byte]`.
-pub(crate) fn utf16_len_of(text: &str, byte: usize) -> u32 {
+pub fn utf16_len_of(text: &str, byte: usize) -> u32 {
     text[..byte].chars().map(|c| c.len_utf16() as u32).sum()
 }
 
 // ---- percent encoding (encodeURIComponent, `/` kept) ----
 
-pub(crate) fn pct_decode(s: &str) -> String {
+pub fn pct_decode(s: &str) -> String {
     let b = s.as_bytes();
     let mut out = Vec::with_capacity(b.len());
     let mut i = 0;
@@ -119,7 +119,7 @@ pub(crate) fn pct_decode(s: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-pub(crate) fn pct_encode(s: &str) -> String {
+pub fn pct_encode(s: &str) -> String {
     let mut o = String::with_capacity(s.len() + 8);
     for &c in s.as_bytes() {
         if c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_' | b'.' | b'!' | b'~' | b'*' | b'\'' | b'(' | b')' | b'/') {
@@ -134,7 +134,7 @@ pub(crate) fn pct_encode(s: &str) -> String {
 // ---- element link field ----
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum FieldForm {
+pub enum FieldForm {
     /// `[[x]]`
     Wiki,
     /// `vaultdraw://open?file=x`
@@ -144,7 +144,7 @@ pub(crate) enum FieldForm {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct FieldLink {
+pub struct FieldLink {
     /// Without `.excalidraw`; relative targets keep their `./` / `../` prefix.
     pub target: String,
     pub form: FieldForm,
@@ -168,14 +168,14 @@ fn has_scheme(s: &str) -> bool {
 }
 
 /// The value of the `file` (or legacy `path`) parameter of a `vaultdraw://open?` URL.
-pub(crate) fn url_file_param(query: &str) -> Option<String> {
+pub fn url_file_param(query: &str) -> Option<String> {
     query.split('&').find_map(|kv| {
         let (k, v) = kv.split_once('=')?;
         matches!(k, "file" | "path").then(|| pct_decode(v))
     })
 }
 
-pub(crate) fn parse_link_field(s: &str) -> Option<FieldLink> {
+pub fn parse_link_field(s: &str) -> Option<FieldLink> {
     let s = s.trim();
     if let Some(q) = s.strip_prefix(VAULT_URL) {
         let file = url_file_param(q)?;

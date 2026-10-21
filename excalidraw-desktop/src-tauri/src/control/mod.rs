@@ -8,6 +8,9 @@
 //! - `ops` (glue on the running app) over `vault_ops`, `config_ops` and `target` (pure, tested).
 //! - `events`: the event bus with its single topic mask (zero cost while nobody subscribes).
 
+// Pure vault/file methods and target resolution live in `vaultdraw-core`.
+pub(crate) use vaultdraw_core::ops::{target, vault_ops};
+
 pub(crate) mod bridge;
 mod config_ops;
 mod dispatch;
@@ -16,8 +19,6 @@ pub(crate) mod install;
 pub(crate) mod instance;
 mod ops;
 pub(crate) mod server;
-mod target;
-pub(crate) mod vault_ops;
 
 use std::io::Write;
 use std::path::Path;

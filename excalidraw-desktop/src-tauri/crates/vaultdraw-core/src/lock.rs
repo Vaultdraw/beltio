@@ -23,7 +23,7 @@ use std::{
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) enum ReadOnlyReason {
+pub enum ReadOnlyReason {
     /// The folder (or its lock file) can't be written by this user.
     NotWritable,
     /// Another Vaultdraw process holds the vault's lock.
@@ -33,11 +33,11 @@ pub(crate) enum ReadOnlyReason {
 }
 
 /// An acquired flock; dropping the last reference closes the fd and releases it.
-pub(crate) struct VaultLock {
+pub struct VaultLock {
     _file: File,
 }
 
-pub(crate) struct LockOutcome {
+pub struct LockOutcome {
     pub lock: Option<Arc<VaultLock>>,
     pub reason: Option<ReadOnlyReason>,
     pub holder_pid: Option<u32>,
@@ -51,13 +51,13 @@ impl LockOutcome {
 
 /// Process-wide map from canonical vault root to its live lock.
 #[derive(Default)]
-pub(crate) struct LockRegistry {
+pub struct LockRegistry {
     held: Mutex<HashMap<PathBuf, Weak<VaultLock>>>,
 }
 
 impl LockRegistry {
     /// Locks `root` (already canonical) for writing, or says why it can't.
-    pub(crate) fn acquire(&self, root: &Path, lock_name: &str) -> LockOutcome {
+    pub fn acquire(&self, root: &Path, lock_name: &str) -> LockOutcome {
         let dir_read_only = fs::metadata(root).map(|m| m.permissions().readonly()).unwrap_or(true);
         if dir_read_only {
             return LockOutcome::read_only(ReadOnlyReason::NotWritable, None);
@@ -87,7 +87,7 @@ impl LockRegistry {
 }
 
 /// Opens (or creates) the lock file; refuses symlinks and non-files.
-pub(crate) fn open_lock_file(lock_path: &Path) -> Result<File, ErrorKind> {
+pub fn open_lock_file(lock_path: &Path) -> Result<File, ErrorKind> {
     let open = |create: bool| {
         let mut o = OpenOptions::new();
         o.read(true).write(true);

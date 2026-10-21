@@ -263,7 +263,7 @@ fn bench_5k() {
 }
 
 fn walk_size(root: &Path) -> u64 {
-    super::worker::walk(root, "").iter().map(|f| f.size).sum()
+    super::walk(root, "").iter().map(|f| f.size).sum()
 }
 
 /// Where does the process footprint go while building the index? (`--ignored --nocapture`)
@@ -276,7 +276,7 @@ fn bench_footprint_stages() {
     generate(&root);
     crate::memory::release_free_memory();
     let fp0 = crate::memory::footprint_bytes();
-    let found = super::worker::walk(&root, "");
+    let found = super::walk(&root, "");
     let mut idx = Index::default();
     for f in &found {
         let items = match crate::read_bounded(&root.join(&f.path), crate::MAX_DRAWING_BYTES) {

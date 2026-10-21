@@ -31,6 +31,7 @@ unicode-normalization = "0.1"
 postcard = { version = "1", features = ["use-std"] }
 crc32fast = "1"
 vaultdraw-protocol = { path = "crates/vaultdraw-protocol" }
+vaultdraw-core = { path = "crates/vaultdraw-core" }
 libc = "0.2"
 # File history (PLAN D-Z): level-3 frames, no default features (no legacy formats, no zdict builder).
 zstd = { version = "0.13", default-features = false, features = ["thin"] }

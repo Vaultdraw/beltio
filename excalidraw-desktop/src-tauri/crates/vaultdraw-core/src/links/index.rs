@@ -23,7 +23,7 @@ use std::{
 /// FxHash: the keys are short local strings, so a fast non-cryptographic hash is enough
 /// (about 3x faster than SipHash on the build path).
 #[derive(Default, Clone, Copy)]
-pub(crate) struct Fx(u64);
+pub struct Fx(u64);
 
 const SEED: u64 = 0x517c_c1b7_2722_0a95;
 
@@ -50,13 +50,13 @@ impl Hasher for Fx {
 
 type FxMap<K, V> = HashMap<K, V, BuildHasherDefault<Fx>>;
 
-pub(crate) const NONE: u32 = u32::MAX;
+pub const NONE: u32 = u32::MAX;
 const SHAPE: u32 = 1 << 31;
 const REL: u32 = 1 << 30;
 const OFFSET: u32 = REL - 1;
 
 /// One link found in a drawing.
-pub(crate) struct RawLink<'a> {
+pub struct RawLink<'a> {
     pub elem: &'a str,
     pub kind: LinkKind,
     pub rel: bool,
@@ -64,7 +64,7 @@ pub(crate) struct RawLink<'a> {
 }
 
 /// Every drawing link of `doc` (text links first, in item order; then link fields).
-pub(crate) fn raw_links<'a>(path: &str, doc: &'a DocEntry) -> Vec<RawLink<'a>> {
+pub fn raw_links<'a>(path: &str, doc: &'a DocEntry) -> Vec<RawLink<'a>> {
     let mut out = Vec::new();
     for item in doc.items.iter().filter(|i| i.kind == ItemKind::Text) {
         text_links(&item.text, |l| out.push(RawLink { elem: &item.element_id, kind: LinkKind::Text, rel: false, key: key_of_target(l.target) }));
@@ -99,7 +99,7 @@ struct Key {
 }
 
 #[derive(Default)]
-pub(crate) struct LinkIndex {
+pub struct LinkIndex {
     docs: Vec<Doc>,
     /// Live doc ids in vault-path order, maintained on add/remove/rename (the graph export's
     /// node order, so the first export never sorts).
@@ -119,7 +119,7 @@ pub(crate) struct LinkIndex {
 }
 
 /// One planned path change.
-pub(crate) struct KeyChange {
+pub struct KeyChange {
     pub key: u32,
     pub old: u32,
     pub new: u32,
@@ -137,7 +137,7 @@ fn suffix_matches(p: &str, nk: &str) -> bool {
 
 impl LinkIndex {
     /// Builds the index from every drawing (docs first, so each key resolves once).
-    pub(crate) fn build<'a>(docs: impl Iterator<Item = (&'a String, &'a DocEntry)>) -> LinkIndex {
+    pub fn build<'a>(docs: impl Iterator<Item = (&'a String, &'a DocEntry)>) -> LinkIndex {
         let docs: Vec<_> = docs.collect();
         let mut ix = LinkIndex::default();
         ix.docs.reserve(docs.len());
@@ -154,58 +154,58 @@ impl LinkIndex {
         ix
     }
 
-    pub(crate) fn n_keys(&self) -> usize {
+    pub fn n_keys(&self) -> usize {
         self.keys.len() - self.free_keys.len()
     }
 
     // ---- lookups ----
 
-    pub(crate) fn find_doc(&self, path: &str) -> Option<u32> {
+    pub fn find_doc(&self, path: &str) -> Option<u32> {
         let np = key_of_path(path);
         self.by_base.get(base_of(&np))?.iter().copied().find(|&d| &*self.docs[d as usize].path == path)
     }
-    pub(crate) fn path(&self, d: u32) -> &str {
+    pub fn path(&self, d: u32) -> &str {
         &self.docs[d as usize].path
     }
     /// `(id, path)` of every live drawing (free slots have an empty path).
-    pub(crate) fn live_docs(&self) -> impl Iterator<Item = (u32, &str)> + '_ {
+    pub fn live_docs(&self) -> impl Iterator<Item = (u32, &str)> + '_ {
         self.docs.iter().enumerate().filter(|(_, d)| !d.path.is_empty()).map(|(i, d)| (i as u32, &*d.path))
     }
-    pub(crate) fn out_links(&self, d: u32) -> &[(u32, u32)] {
+    pub fn out_links(&self, d: u32) -> &[(u32, u32)] {
         &self.docs[d as usize].fwd
     }
-    pub(crate) fn key_str(&self, k: u32) -> &str {
+    pub fn key_str(&self, k: u32) -> &str {
         &self.keys[k as usize].s
     }
-    pub(crate) fn key_target(&self, k: u32) -> u32 {
+    pub fn key_target(&self, k: u32) -> u32 {
         self.keys[k as usize].target
     }
-    pub(crate) fn key_refs(&self, k: u32) -> &[(u32, u32)] {
+    pub fn key_refs(&self, k: u32) -> &[(u32, u32)] {
         &self.keys[k as usize].refs
     }
-    pub(crate) fn elem_id(&self, doc: u32, handle: u32) -> &str {
+    pub fn elem_id(&self, doc: u32, handle: u32) -> &str {
         elem_at(&self.docs[doc as usize].ids, handle)
     }
-    pub(crate) fn handle_kind(handle: u32) -> LinkKind {
+    pub fn handle_kind(handle: u32) -> LinkKind {
         if handle & SHAPE != 0 {
             LinkKind::Shape
         } else {
             LinkKind::Text
         }
     }
-    pub(crate) fn handle_rel(handle: u32) -> bool {
+    pub fn handle_rel(handle: u32) -> bool {
         handle & REL != 0
     }
     /// `(source doc, handle)` of every link resolving to `d`.
-    pub(crate) fn backlinks(&self, d: u32) -> impl Iterator<Item = (u32, u32)> + '_ {
+    pub fn backlinks(&self, d: u32) -> impl Iterator<Item = (u32, u32)> + '_ {
         self.docs[d as usize].keys_of.iter().flat_map(move |&k| self.keys[k as usize].refs.iter().copied())
     }
-    pub(crate) fn n_backlinks(&self, d: u32) -> usize {
+    pub fn n_backlinks(&self, d: u32) -> usize {
         self.docs[d as usize].keys_of.iter().map(|&k| self.keys[k as usize].refs.len()).sum()
     }
 
     /// Drawings a key matches: the exact path, else every path ending in the key (by basename).
-    pub(crate) fn candidates(&self, nk: &str) -> Vec<u32> {
+    pub fn candidates(&self, nk: &str) -> Vec<u32> {
         if let Some(&d) = self.by_path.get(nk) {
             return vec![d];
         }
@@ -215,7 +215,7 @@ impl LinkIndex {
     }
 
     /// Exact path, then unique basename, then the shortest path (ties lexicographic).
-    pub(crate) fn resolve(&self, nk: &str) -> u32 {
+    pub fn resolve(&self, nk: &str) -> u32 {
         if let Some(&d) = self.by_path.get(nk) {
             return d;
         }
@@ -246,7 +246,7 @@ impl LinkIndex {
     }
 
     /// Shortest link text (at least `min_segments` path segments) that resolves to `d` alone.
-    pub(crate) fn shortest_unique(&self, d: u32, min_segments: usize) -> String {
+    pub fn shortest_unique(&self, d: u32, min_segments: usize) -> String {
         let path = self.path(d);
         let stem = super::grammar::strip_ext(path);
         let segs: Vec<&str> = stem.split('/').collect();
@@ -312,14 +312,14 @@ impl LinkIndex {
     }
 
     /// Registers a drawing and resolves pending links to it. Returns its id.
-    pub(crate) fn add_doc(&mut self, path: &str) -> u32 {
+    pub fn add_doc(&mut self, path: &str) -> u32 {
         let id = self.add_doc_unsorted(path);
         self.order_insert(id);
         id
     }
 
     /// Doc ids in vault-path order.
-    pub(crate) fn sorted_docs(&self) -> &[u32] {
+    pub fn sorted_docs(&self) -> &[u32] {
         &self.sorted
     }
 
@@ -364,14 +364,14 @@ impl LinkIndex {
         id
     }
 
-    pub(crate) fn remove_doc(&mut self, d: u32) {
+    pub fn remove_doc(&mut self, d: u32) {
         self.order_remove(d);
         self.remove_doc_unordered(d);
     }
 
     /// Removes many drawings; a bulk removal (e.g. trashing a folder) prunes the
     /// path order once instead of one O(n) shift per drawing.
-    pub(crate) fn remove_many<'a>(&mut self, paths: impl IntoIterator<Item = &'a str>) {
+    pub fn remove_many<'a>(&mut self, paths: impl IntoIterator<Item = &'a str>) {
         let ids: Vec<u32> = paths.into_iter().filter_map(|p| self.find_doc(p)).collect();
         if ids.len() <= 32 {
             ids.into_iter().for_each(|d| self.remove_doc(d));
@@ -448,7 +448,7 @@ impl LinkIndex {
     }
 
     /// Replaces the forward links of `doc`. A no-op when nothing changed.
-    pub(crate) fn set_links(&mut self, doc: u32, raw: Vec<RawLink<'_>>) {
+    pub fn set_links(&mut self, doc: u32, raw: Vec<RawLink<'_>>) {
         // New element-id blob and handles.
         let mut ids: Vec<u8> = Vec::new();
         let mut seen: Vec<(&str, u32)> = Vec::new();
@@ -508,7 +508,7 @@ impl LinkIndex {
     }
 
     /// Inserts or refreshes one drawing from its parsed entry.
-    pub(crate) fn upsert(&mut self, path: &str, doc: &DocEntry) {
+    pub fn upsert(&mut self, path: &str, doc: &DocEntry) {
         let id = self.find_doc(path).unwrap_or_else(|| self.add_doc(path));
         self.set_tags(id, doc);
         self.set_links(id, if doc.parsed { raw_links(path, doc) } else { Vec::new() });
@@ -533,19 +533,19 @@ impl LinkIndex {
     }
 
     /// Tag keys interned so far (an upper bound for the export's per-key scratch).
-    pub(crate) fn n_tag_keys(&self) -> usize {
+    pub fn n_tag_keys(&self) -> usize {
         self.tag_keys.len()
     }
     /// `(display, key id)` of a doc's tag variant.
-    pub(crate) fn tag_variant_of(&self, v: u32) -> (&str, u32) {
+    pub fn tag_variant_of(&self, v: u32) -> (&str, u32) {
         let (display, key) = &self.tag_variants[v as usize];
         (display, *key)
     }
-    pub(crate) fn doc_tags(&self, d: u32) -> &[u32] {
+    pub fn doc_tags(&self, d: u32) -> &[u32] {
         &self.docs[d as usize].tags
     }
 
-    pub(crate) fn remove(&mut self, path: &str) {
+    pub fn remove(&mut self, path: &str) {
         if let Some(id) = self.find_doc(path) {
             self.remove_doc(id);
         }
@@ -553,7 +553,7 @@ impl LinkIndex {
 
     /// Applies path changes `(doc, new path)`, re-resolving the affected keys. Returns the keys
     /// whose target changed. Reverting is the same call with the old paths.
-    pub(crate) fn change_paths(&mut self, ch: &[(u32, String)]) -> Vec<KeyChange> {
+    pub fn change_paths(&mut self, ch: &[(u32, String)]) -> Vec<KeyChange> {
         let mut affected: Vec<u32> = Vec::new();
         // A few renames patch the order; a bulk move re-sorts once.
         let patch = ch.len() <= 32;
@@ -586,7 +586,7 @@ impl LinkIndex {
     }
 
     /// Heap held by the index (capacities plus a 16-byte allocator header per allocation).
-    pub(crate) fn approx_heap_bytes(&self) -> usize {
+    pub fn approx_heap_bytes(&self) -> usize {
         const HDR: usize = 16;
         let arc = |s: &Arc<str>| s.len() + 16 + HDR;
         let vec = |cap: usize, sz: usize| if cap == 0 { 0 } else { cap * sz + HDR };

@@ -35,7 +35,7 @@ use std::collections::HashMap;
 /// Where a link lives in its drawing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum LinkKind {
+pub enum LinkKind {
     /// `[[...]]` inside a text element (free text, shape label, arrow label).
     Text,
     /// The element `link` field of any element.
@@ -44,7 +44,7 @@ pub(crate) enum LinkKind {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct OutLink {
+pub struct OutLink {
     pub element_id: String,
     /// Bound text: the shape/arrow it labels.
     pub container_id: Option<String>,
@@ -59,7 +59,7 @@ pub(crate) struct OutLink {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct BackLink {
+pub struct BackLink {
     /// The drawing that links here.
     pub path: String,
     pub element_id: String,
@@ -74,7 +74,7 @@ pub(crate) struct BackLink {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct LinksResponse {
+pub struct LinksResponse {
     pub path: String,
     /// Resolved outgoing links, document order.
     pub outgoing: Vec<OutLink>,
@@ -87,7 +87,7 @@ pub(crate) struct LinksResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct MentionsResponse {
+pub struct MentionsResponse {
     pub path: String,
     /// Same shape as backlinks (`kind` is always Text).
     pub mentions: Vec<BackLink>,
@@ -96,7 +96,7 @@ pub(crate) struct MentionsResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct Resolution {
+pub struct Resolution {
     /// Resolved path, or None.
     pub path: Option<String>,
     /// More than one drawing matched; `path` is the shortest of them.
@@ -105,7 +105,7 @@ pub(crate) struct Resolution {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct RePointed {
+pub struct RePointed {
     /// Drawing containing the link.
     pub path: String,
     /// The link text as written.
@@ -118,7 +118,7 @@ pub(crate) struct RePointed {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct MovePlan {
+pub struct MovePlan {
     /// Closed drawings that would be rewritten (the open drawing is not counted).
     pub files: u32,
     /// Links that would be rewritten, in all drawings including the open one.
@@ -130,7 +130,7 @@ pub(crate) struct MovePlan {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ElementEdit {
+pub struct ElementEdit {
     pub element_id: String,
     /// "text" edits set `text` and `originalText` to `value`; "link" sets `link`.
     pub field: EditField,
@@ -139,7 +139,7 @@ pub(crate) struct ElementEdit {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum EditField {
+pub enum EditField {
     Text,
     Link,
     /// Frame `name` (tag renames reach frame names).
@@ -148,7 +148,7 @@ pub(crate) enum EditField {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct MoveResult {
+pub struct MoveResult {
     /// Background rewrite id, echoed by `links-rewrite-done`; None when nothing to rewrite.
     pub job_id: Option<u32>,
     /// Closed drawings queued for rewrite.
@@ -160,7 +160,7 @@ pub(crate) struct MoveResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct RewriteFailure {
+pub struct RewriteFailure {
     pub path: String,
     /// "CONFLICT" (changed on disk; skipped, never overwritten), "IO", "INVALID_FILE".
     pub code: String,
@@ -169,7 +169,7 @@ pub(crate) struct RewriteFailure {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct RewriteDone {
+pub struct RewriteDone {
     pub handle: String,
     pub job_id: u32,
     /// Drawings rewritten on disk.
@@ -182,7 +182,7 @@ pub(crate) struct RewriteDone {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct RemeasureSet {
+pub struct RemeasureSet {
     /// Vault-relative path -> text element ids to re-measure on open.
     pub paths: HashMap<String, Vec<String>>,
 }

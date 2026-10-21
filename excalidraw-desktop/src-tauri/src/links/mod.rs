@@ -5,25 +5,20 @@
 //! first demand, then maintained by the same upsert/remove path. Nothing here runs, or costs
 //! memory, until a link command is first used.
 
-mod graph;
-mod grammar;
-mod index;
 mod journal;
 mod layout_store;
 mod plan;
-mod query;
-mod resolve;
 mod rewrite;
 mod tag_rename;
-mod types;
+
+// Grammar, link index, graph export, resolution and queries live in `vaultdraw-core`.
+pub(crate) use vaultdraw_core::links::{grammar, graph, index, query, resolve, types};
 
 #[cfg(test)]
 mod bench;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use graph::GraphCache;
-pub(crate) use index::LinkIndex;
 pub(crate) use types::*;
 
 use crate::search::{SearchService, VaultIndex};

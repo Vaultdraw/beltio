@@ -10,7 +10,7 @@ const EXT: &str = ".excalidraw";
 
 /// What a resolved target must be on disk.
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Need {
+pub enum Need {
     /// Nothing (write/create, tabs of deleted files).
     Nothing,
     /// An existing drawing.
@@ -20,7 +20,7 @@ pub(crate) enum Need {
 }
 
 /// The app's error code and message as a JSON-RPC application error.
-pub(crate) fn native_err(e: NativeError) -> RpcError {
+pub fn native_err(e: NativeError) -> RpcError {
     RpcError::app(&e.code, e.message)
 }
 
@@ -30,7 +30,7 @@ fn not_found(target: &str) -> RpcError {
 
 /// Resolves an exact vault-relative path: validates it (`INVALID_PATH` on escapes), appends
 /// `.excalidraw` when missing and the bare path is not an existing file, checks `need`.
-pub(crate) fn resolve_path(root: &Path, path: &str, need: Need) -> Result<String, RpcError> {
+pub fn resolve_path(root: &Path, path: &str, need: Need) -> Result<String, RpcError> {
     let mut rel = path.to_string();
     let full = crate::safe_path(root, &rel, true).map_err(native_err)?;
     if !rel.to_ascii_lowercase().ends_with(EXT) && !full.is_file() && !(need == Need::Entry && full.is_dir()) {
@@ -51,7 +51,7 @@ pub(crate) fn resolve_path(root: &Path, path: &str, need: Need) -> Result<String
 
 /// `{path}` or `{file}` of `params` to a vault-relative path. `by_name` resolves a link-style
 /// name to a path. `Ok(None)` when the params have neither key.
-pub(crate) fn resolve_optional(
+pub fn resolve_optional(
     root: &Path,
     params: &Value,
     need: Need,
@@ -72,12 +72,12 @@ pub(crate) fn resolve_optional(
 }
 
 /// Like [`resolve_optional`] but one of `path` / `file` is required.
-pub(crate) fn resolve(root: &Path, params: &Value, need: Need, by_name: &dyn Fn(&str) -> Option<String>) -> Result<String, RpcError> {
+pub fn resolve(root: &Path, params: &Value, need: Need, by_name: &dyn Fn(&str) -> Option<String>) -> Result<String, RpcError> {
     resolve_optional(root, params, need, by_name)?.ok_or_else(|| RpcError::invalid_params("path or file is required"))
 }
 
 /// `file.move`'s `from`: an existing exact path first, else a link-style name.
-pub(crate) fn resolve_from(root: &Path, from: &str, by_name: &dyn Fn(&str) -> Option<String>) -> Result<String, RpcError> {
+pub fn resolve_from(root: &Path, from: &str, by_name: &dyn Fn(&str) -> Option<String>) -> Result<String, RpcError> {
     match resolve_path(root, from, Need::Entry) {
         Ok(p) => Ok(p),
         Err(e) if e.app_code() == Some(codes::NOT_FOUND) => by_name(from).ok_or(e),
@@ -86,7 +86,7 @@ pub(crate) fn resolve_from(root: &Path, from: &str, by_name: &dyn Fn(&str) -> Op
 }
 
 /// `file.move`'s `to`: a vault-relative path; a trailing `/` (a folder) is kept.
-pub(crate) fn validate_destination(to: &str) -> Result<String, RpcError> {
+pub fn validate_destination(to: &str) -> Result<String, RpcError> {
     crate::validate_relative(to.trim_end_matches('/')).map_err(native_err)?;
     Ok(to.to_string())
 }

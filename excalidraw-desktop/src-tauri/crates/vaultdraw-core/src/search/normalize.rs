@@ -7,7 +7,7 @@
 use unicode_normalization::UnicodeNormalization;
 
 /// Bump whenever the rules above change; a mismatch rebuilds persisted indexes.
-pub(crate) const NORMALIZER_VERSION: u32 = 1;
+pub const NORMALIZER_VERSION: u32 = 1;
 
 fn is_strippable_mark(c: char) -> bool {
     matches!(c, '\u{300}'..='\u{36F}' | '\u{1AB0}'..='\u{1AFF}' | '\u{1DC0}'..='\u{1DFF}' | '\u{20D0}'..='\u{20FF}' | '\u{FE20}'..='\u{FE2F}')
@@ -39,7 +39,7 @@ fn fold_lowered(c: char, out: &mut impl FnMut(char)) {
 }
 
 /// Normalises one original (non-whitespace) char, calling `out` for each result char.
-pub(crate) fn fold_char(c: char, out: &mut impl FnMut(char)) {
+pub fn fold_char(c: char, out: &mut impl FnMut(char)) {
     if c.is_ascii() {
         out(c.to_ascii_lowercase());
     } else if ('\u{AC00}'..='\u{D7A3}').contains(&c) {
@@ -60,7 +60,7 @@ pub(crate) fn fold_char(c: char, out: &mut impl FnMut(char)) {
 
 /// The exact normalisation used by the index. Whitespace runs (including
 /// newlines) collapse to one space; leading/trailing whitespace is dropped.
-pub(crate) fn normalize(s: &str) -> String {
+pub fn normalize(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     let mut pending_space = false;
     for c in s.chars() {
@@ -79,7 +79,7 @@ pub(crate) fn normalize(s: &str) -> String {
 
 /// A normalised string plus the mapping back to the (whitespace-collapsed)
 /// original chars, used to place highlights on the original text.
-pub(crate) struct Folded {
+pub struct Folded {
     pub norm: String,
     /// Original chars with whitespace runs collapsed to one space and trimmed.
     pub chars: Vec<char>,
@@ -87,7 +87,7 @@ pub(crate) struct Folded {
     pub starts: Vec<u32>,
 }
 
-pub(crate) fn fold_with_map(s: &str) -> Folded {
+pub fn fold_with_map(s: &str) -> Folded {
     let mut norm = String::with_capacity(s.len());
     let mut chars = Vec::with_capacity(s.len());
     let mut starts = Vec::with_capacity(s.len() + 1);
@@ -113,7 +113,7 @@ pub(crate) fn fold_with_map(s: &str) -> Folded {
 
 impl Folded {
     /// Maps normalised byte ranges to `[start, end)` ranges of `chars`.
-    pub(crate) fn char_ranges(&self, byte_ranges: &[(usize, usize)]) -> Vec<(usize, usize)> {
+    pub fn char_ranges(&self, byte_ranges: &[(usize, usize)]) -> Vec<(usize, usize)> {
         let n = self.chars.len();
         byte_ranges
             .iter()

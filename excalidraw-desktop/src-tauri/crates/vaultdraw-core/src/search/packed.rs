@@ -20,7 +20,7 @@ struct Rec {
 
 /// Borrowed view of one packed item; serialises exactly like `TextItem`.
 #[derive(Debug, Clone, Copy, Serialize)]
-pub(crate) struct ItemRef<'a> {
+pub struct ItemRef<'a> {
     pub element_id: &'a str,
     pub container_id: Option<&'a str>,
     pub kind: ItemKind,
@@ -28,13 +28,13 @@ pub(crate) struct ItemRef<'a> {
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct PackedItems {
+pub struct PackedItems {
     recs: Box<[Rec]>,
     arena: Box<str>,
 }
 
 impl PackedItems {
-    pub(crate) fn pack(items: Vec<TextItem>) -> PackedItems {
+    pub fn pack(items: Vec<TextItem>) -> PackedItems {
         let bytes: usize = items.iter().map(|i| i.element_id.len() + i.container_id.as_ref().map_or(0, |c| c.len()) + i.text.len()).sum();
         let mut arena = String::with_capacity(bytes);
         let mut recs = Vec::with_capacity(items.len());
@@ -49,15 +49,15 @@ impl PackedItems {
         PackedItems { recs: recs.into_boxed_slice(), arena: arena.into_boxed_str() }
     }
 
-    pub(crate) fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.recs.len()
     }
 
-    pub(crate) fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.recs.is_empty()
     }
 
-    pub(crate) fn get(&self, i: usize) -> ItemRef<'_> {
+    pub fn get(&self, i: usize) -> ItemRef<'_> {
         let r = &self.recs[i];
         let start = if i == 0 { 0 } else { self.recs[i - 1].text_end as usize };
         let (id_end, container_end, text_end) = (r.id_end as usize, r.container_end as usize, r.text_end as usize);
@@ -69,12 +69,12 @@ impl PackedItems {
         }
     }
 
-    pub(crate) fn iter(&self) -> impl Iterator<Item = ItemRef<'_>> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = ItemRef<'_>> + '_ {
         (0..self.len()).map(|i| self.get(i))
     }
 
     /// Heap bytes held (exact: both blocks are shrunk to fit).
-    pub(crate) fn heap_bytes(&self) -> usize {
+    pub fn heap_bytes(&self) -> usize {
         self.recs.len() * std::mem::size_of::<Rec>() + self.arena.len()
     }
 }

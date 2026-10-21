@@ -4,31 +4,31 @@ use crate::search::normalize;
 
 use super::grammar::strip_ext;
 
-pub(crate) fn dir_of(path: &str) -> &str {
+pub fn dir_of(path: &str) -> &str {
     path.rfind('/').map_or("", |i| &path[..i])
 }
 
-pub(crate) fn name_of(path: &str) -> &str {
+pub fn name_of(path: &str) -> &str {
     path.rfind('/').map_or(path, |i| &path[i + 1..])
 }
 
 /// Normalised basename of a normalised key or path.
-pub(crate) fn base_of(nk: &str) -> &str {
+pub fn base_of(nk: &str) -> &str {
     nk.rsplit('/').next().unwrap_or(nk)
 }
 
 /// Key of a link target as written in a text or `[[x]]`/URL link: leading `/` dropped, normalised.
-pub(crate) fn key_of_target(t: &str) -> String {
+pub fn key_of_target(t: &str) -> String {
     normalize(strip_ext(t.trim()).trim_start_matches('/'))
 }
 
 /// Normalised vault path without extension.
-pub(crate) fn key_of_path(path: &str) -> String {
+pub fn key_of_path(path: &str) -> String {
     normalize(strip_ext(path))
 }
 
 /// `rel` (with `./`, `../`) joined onto the folder `dir`; the result is a vault path.
-pub(crate) fn join_rel(dir: &str, rel: &str) -> String {
+pub fn join_rel(dir: &str, rel: &str) -> String {
     let mut segs: Vec<&str> = dir.split('/').filter(|s| !s.is_empty()).collect();
     for s in rel.split('/') {
         match s {
@@ -43,12 +43,12 @@ pub(crate) fn join_rel(dir: &str, rel: &str) -> String {
 }
 
 /// Key of a relative link target written in the drawing folder `dir`.
-pub(crate) fn key_of_rel(dir: &str, target: &str) -> String {
+pub fn key_of_rel(dir: &str, target: &str) -> String {
     normalize(&join_rel(dir, target))
 }
 
 /// Relative link from the folder `dir` to the vault path `to` (no extension).
-pub(crate) fn rel_path(dir: &str, to: &str) -> String {
+pub fn rel_path(dir: &str, to: &str) -> String {
     let from: Vec<&str> = dir.split('/').filter(|s| !s.is_empty()).collect();
     let t: Vec<&str> = to.split('/').collect();
     let mut c = 0;

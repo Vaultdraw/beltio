@@ -16,16 +16,16 @@ const HEADER_LEN: usize = 16;
 const MAX_SNAPSHOT_BYTES: u64 = 256 * 1024 * 1024;
 
 /// First 16 hex chars of sha256(root): the per-vault folder name under the state dir (shared with file history).
-pub(crate) fn vault_id(root: &Path) -> String {
+pub fn vault_id(root: &Path) -> String {
     hex::encode(Sha256::digest(root.to_string_lossy().as_bytes()))[..16].to_string()
 }
 
 /// `<state_dir>/index/<vault-id>/index.bin`.
-pub(super) fn snapshot_path(state_dir: &Path, root: &Path) -> PathBuf {
+pub fn snapshot_path(state_dir: &Path, root: &Path) -> PathBuf {
     state_dir.join("index").join(vault_id(root)).join("index.bin")
 }
 
-pub(super) fn save(path: &Path, saved_at_ms: u64, index: &Index) -> Result<()> {
+pub fn save(path: &Path, saved_at_ms: u64, index: &Index) -> Result<()> {
     // Header first (crc patched afterwards) so the payload is encoded in place, with no second copy.
     // Reserved up front from the in-memory size (untouched pages cost nothing), so it never regrows.
     let mut header = Vec::with_capacity((index.approx_heap_bytes() + HEADER_LEN).min(MAX_SNAPSHOT_BYTES as usize));
@@ -41,7 +41,7 @@ pub(super) fn save(path: &Path, saved_at_ms: u64, index: &Index) -> Result<()> {
 }
 
 /// The saved index and the time (ms) it was written.
-pub(super) fn load(path: &Path) -> Option<(u64, Index)> {
+pub fn load(path: &Path) -> Option<(u64, Index)> {
     if fs::metadata(path).ok()?.len() > MAX_SNAPSHOT_BYTES {
         return None;
     }

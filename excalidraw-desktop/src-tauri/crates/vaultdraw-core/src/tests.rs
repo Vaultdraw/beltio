@@ -1,0 +1,219 @@
+//! Tests of the vault core: path rules, atomic and revision-guarded writes, recovery, reads.
+
+use crate::*;
+use sha2::{Digest, Sha256};
+use std::{
+    fs,
+    path::Path,
+    sync::Arc,
+    thread,
+    time::Duration,
+};
+use tempfile::tempdir;
+
+const SCENE: &str = r#"{"type":"excalidraw","version":2,"source":"https://excalidraw.com","elements":[],"appState":{},"files":{}}"#;
+fn split_frame(frame: &[u8]) -> (String, &[u8]) {
+    assert_eq!(frame[REVISION_HEX_LEN], b'\n');
+    (String::from_utf8(frame[..REVISION_HEX_LEN].to_vec()).unwrap(), &frame[FRAME_PREFIX_LEN..])
+}
+fn vault(root: &Path) -> Vault {
+    Vault::new(root.canonicalize().unwrap(), "test".into(), false, None)
+}
+/// Save/open cost breakdown on a real fixture: `PERF_FIXTURE=/path/to/x.excalidraw cargo test --release
+/// bench_write_breakdown -- --ignored --nocapture`.
+#[test]
+#[ignore]
+fn bench_write_breakdown() {
+    use std::time::Instant;
+    let Ok(src) = std::env::var("PERF_FIXTURE") else { return };
+    let json = fs::read_to_string(src).unwrap();
+    let t = tempdir().unwrap();
+    let v = vault(t.path());
+    let ms = |s: Instant| s.elapsed().as_secs_f64() * 1000.0;
+    let first = write_drawing_file(&v, "a.excalidraw", &json, None, "bench-0").unwrap();
+    let mut rev = first["revision"].as_str().unwrap().to_string();
+    let p = safe_path(&v.root, "a.excalidraw", true).unwrap();
+    for i in 0..5 {
+        let s = Instant::now(); ensure_json(&json).unwrap(); let t_json = ms(s);
+        let s = Instant::now(); let _ = current_revision(&p).unwrap(); let t_rev = ms(s);
+        let s = Instant::now(); let snap = create_recovery(&v, "a.excalidraw", Some(&rev), "bench-r", &json).unwrap(); let t_rec = ms(s);
+        remove_recovery(&snap);
+        let s = Instant::now(); write_atomic(&p, json.as_bytes()).unwrap(); let t_wr = ms(s);
+        let s = Instant::now(); let _ = revision(json.as_bytes()); let t_hash = ms(s);
+        let s = Instant::now(); let out = write_drawing_file(&v, "a.excalidraw", &json, Some(&rev), &format!("bench-{i}")).unwrap(); let t_all = ms(s);
+        rev = out["revision"].as_str().unwrap().to_string();
+        let s = Instant::now(); let framed = read_drawing_file(&v.root, "a.excalidraw").unwrap(); let t_read = ms(s);
+        println!("run{i} bytes={} ensure_json={t_json:.1} current_revision={t_rev:.1} create_recovery={t_rec:.1} write_atomic={t_wr:.1} hash={t_hash:.1} TOTAL_write={t_all:.1} read_drawing_file={t_read:.1} ({})", json.len(), framed.len());
+    }
+}
+#[test]
+fn rejects_traversal_reserved_metadata_and_windows_names() {
+    for p in ["../outside", "/tmp/x", "a/../b", "a\\b", ".excalidraw-vault/x", "a//b", "CON", "nul.txt", "a:b", "bad?.excalidraw"] { assert!(validate_relative(p).is_err(), "{p}"); }
+    assert_eq!(validate_relative("").unwrap().len(), 0);
+}
+#[cfg(unix)]
+#[test]
+fn rejects_symlink_components_and_recovery_ancestors() {
+    use std::os::unix::fs::symlink;
+    let t = tempdir().unwrap(); let root = t.path().join("root"); let outside = t.path().join("out");
+    fs::create_dir(&root).unwrap(); fs::create_dir(&outside).unwrap();
+    symlink(&outside, root.join("escape")).unwrap();
+    assert!(safe_path(&root, "escape/file.excalidraw", true).is_err());
+    symlink(&outside, root.join(META_DIR)).unwrap();
+    assert_eq!(checked_recovery_dir(&vault(&root), true).unwrap_err().code, "INVALID_PATH");
+}
+#[test]
+fn recovery_reveal_target_is_created_and_refused_when_read_only() {
+    let t = tempdir().unwrap(); let root = t.path().join("root"); fs::create_dir(&root).unwrap();
+    let v = vault(&root);
+    let dir = recovery_reveal_target(&v).unwrap();
+    assert!(dir.is_dir() && dir.ends_with(format!("{META_DIR}/{RECOVERY_DIR}")));
+    let ro = t.path().join("ro"); fs::create_dir(&ro).unwrap();
+    let mut v = vault(&ro); v.read_only = true;
+    assert_eq!(recovery_reveal_target(&v).unwrap_err().code, "NOT_FOUND");
+    assert!(!ro.join(META_DIR).exists());
+}
+#[cfg(unix)]
+#[test]
+fn refuses_symlink_lock_file() {
+    use std::os::unix::fs::symlink;
+    let t = tempdir().unwrap(); let root = t.path().join("root"); let target = t.path().join("target");
+    fs::create_dir(&root).unwrap(); fs::write(&target, "outside").unwrap();
+    symlink(&target, root.join(format!("{META_DIR}.lock"))).unwrap();
+    let lock_path = root.join(format!("{META_DIR}.lock"));
+    assert!(crate::lock::open_lock_file(&lock_path).is_err());
+    assert_eq!(fs::read_to_string(target).unwrap(), "outside");
+}
+#[test]
+fn atomic_write_and_hash_revision_roundtrip() {
+    let t = tempdir().unwrap(); let p = t.path().join("scene.excalidraw");
+    write_atomic(&p, SCENE.as_bytes()).unwrap();
+    let bytes = read_bounded(&p, MAX_DRAWING_BYTES).unwrap();
+    assert_eq!(revision(&bytes), hex::encode(Sha256::digest(&bytes)));
+    assert_eq!(String::from_utf8(bytes).unwrap(), SCENE);
+    assert_eq!(fs::read_dir(t.path()).unwrap().count(), 1);
+}
+#[test]
+fn move_and_create_refuse_all_existing_destinations() {
+    let t = tempdir().unwrap(); let root = t.path();
+    fs::write(root.join("source.excalidraw"), SCENE).unwrap();
+    fs::write(root.join("dest.excalidraw"), "keep").unwrap();
+    let e = move_entry_paths(root, "source.excalidraw", "dest.excalidraw").unwrap_err();
+    assert_eq!(e.code, "NAME_COLLISION");
+    assert_eq!(fs::read_to_string(root.join("dest.excalidraw")).unwrap(), "keep");
+    assert_eq!(move_entry_paths(root, "source.excalidraw", "source.excalidraw").unwrap_err().code, "INVALID_PATH");
+    assert_eq!(create_folder_at(root, "dest.excalidraw").unwrap_err().code, "NAME_COLLISION");
+    assert!(create_folder_at(root, "").is_err());
+}
+#[test]
+fn writes_are_revision_guarded_and_never_recreate_deleted_scene() {
+    let t = tempdir().unwrap(); let v = vault(t.path()); let p = t.path().join("a.excalidraw");
+    fs::write(&p, SCENE).unwrap(); let rev = revision(SCENE.as_bytes());
+    fs::write(&p, "external").unwrap();
+    assert_eq!(write_drawing_file(&v, "a.excalidraw", SCENE, Some(&rev), "op1").unwrap_err().code, "CONFLICT");
+    fs::remove_file(&p).unwrap();
+    assert_eq!(write_drawing_file(&v, "a.excalidraw", SCENE, Some(&rev), "op2").unwrap_err().code, "CONFLICT");
+    assert!(!p.exists());
+}
+#[test]
+fn create_only_write_roundtrips_and_preserves_exact_embedded_json() {
+    let t = tempdir().unwrap(); let v = vault(t.path());
+    let embedded = r#"{"type":"excalidraw","version":2,"elements":[{"type":"image","fileId":"f"}],"appState":{"x":1},"files":{"f":{"dataURL":"data:image/png;base64,aGVsbG8=","mimeType":"image/png"}}}"#;
+    ensure_json(embedded).unwrap();
+    let result = write_drawing_file(&v, "a.excalidraw", embedded, None, "op").unwrap();
+    assert_eq!(result["revision"], revision(embedded.as_bytes()));
+    assert_eq!(fs::read_to_string(t.path().join("a.excalidraw")).unwrap(), embedded);
+    let frame = read_drawing_file(&v.root, "a.excalidraw").unwrap();
+    let (rev, body) = split_frame(&frame);
+    assert_eq!(body, embedded.as_bytes());
+    assert_eq!(rev, revision(embedded.as_bytes()));
+    assert_eq!(write_drawing_file(&v, "a.excalidraw", SCENE, None, "op2").unwrap_err().code, "CONFLICT");
+}
+#[test]
+fn injected_commit_failure_retains_recovery_snapshot_and_source() {
+    let t = tempdir().unwrap(); let v = vault(t.path()); let source = t.path().join("a.excalidraw");
+    fs::write(&source, SCENE).unwrap(); let expected = revision(SCENE.as_bytes());
+    let result = write_drawing_file_with_commit(&v, "a.excalidraw", SCENE, Some(&expected), "fault", |_, _, _| Err(err("IO_ERROR", "injected failure")));
+    assert_eq!(result.unwrap_err().code, "IO_ERROR");
+    assert_eq!(fs::read_to_string(source).unwrap(), SCENE);
+    let recovery = checked_recovery_dir(&v, false).unwrap().unwrap();
+    assert_eq!(fs::read_dir(recovery).unwrap().count(), 1);
+}
+#[test]
+fn recovery_wrapping_has_headroom_and_roundtrips() {
+    let t = tempdir().unwrap(); let v = vault(t.path());
+    let json = format!(r#"{{"type":"excalidraw","data":"{}"}}"#, "\\\"".repeat(512));
+    create_recovery(&v, "a.excalidraw", None, "op", &json).unwrap();
+    let dir = checked_recovery_dir(&v, false).unwrap().unwrap();
+    let record: RecoveryRecord = serde_json::from_slice(&read_bounded(&fs::read_dir(&dir).unwrap().next().unwrap().unwrap().path(), MAX_RECOVERY_RECORD_BYTES).unwrap()).unwrap();
+    assert_eq!(record.json, json);
+}
+#[test]
+fn bounded_reads_reject_growth_beyond_cap() {
+    let t = tempdir().unwrap(); let p = t.path().join("large"); fs::write(&p, vec![b'x'; 32]).unwrap();
+    assert_eq!(read_bounded(&p, 31).unwrap_err().code, "INVALID_FILE");
+}
+#[test]
+fn concurrent_mutations_are_serialized_and_ids_unique() {
+    let t = tempdir().unwrap(); let v = Arc::new(vault(t.path())); let mut joins = Vec::new();
+    for _ in 0..12 { let v = v.clone(); joins.push(thread::spawn(move || { let _g = mutation_guard(&v).unwrap(); thread::sleep(Duration::from_millis(1)); })); }
+    for j in joins { j.join().unwrap(); }
+    let ids: std::collections::HashSet<_> = (0..100).map(|_| random_id()).collect(); assert_eq!(ids.len(), 100);
+}
+#[test]
+fn json_validation_requires_excalidraw_scene_and_is_bounded() {
+    assert!(ensure_json("[]").is_err()); assert!(ensure_json("{bad").is_err()); assert!(ensure_json("{\"ok\":true}").is_err());
+    assert!(ensure_json(SCENE).is_ok());
+    // Shapes a derived struct would otherwise accept or mis-handle.
+    assert!(ensure_json(r#"["excalidraw"]"#).is_err());
+    assert!(ensure_json(r#"{"type":5}"#).is_err());
+    assert!(ensure_json(r#"{"type":"excalidraw"} trailing"#).is_err());
+    assert!(ensure_json(r#"{"elements":[{"type":"x"}],"type":"excalidraw"}"#).is_ok());
+    assert!(ensure_json(r#"  {"type":"exc\u0061lidraw"}"#).is_ok());
+    assert!(ensure_json(&format!("{{\"type\":\"excalidraw\",\"x\":\"{}\"}}", "x".repeat(MAX_DRAWING_BYTES as usize))).is_err());
+}
+#[test]
+fn read_frame_has_revision_prefix_and_identical_body() {
+    let t = tempdir().unwrap(); let v = vault(t.path());
+    fs::write(t.path().join("a.excalidraw"), SCENE).unwrap();
+    let frame = read_drawing_file(&v.root, "a.excalidraw").unwrap();
+    let (rev, body) = split_frame(&frame);
+    assert_eq!(body, SCENE.as_bytes());
+    assert_eq!(rev, revision(SCENE.as_bytes()));
+    assert_eq!(frame.len(), FRAME_PREFIX_LEN + SCENE.len());
+    assert_eq!(read_drawing_file(&v.root, "missing.excalidraw").unwrap_err().code, "NOT_FOUND");
+    fs::write(t.path().join("bad.excalidraw"), [0xff, 0xfe]).unwrap();
+    assert_eq!(read_drawing_file(&v.root, "bad.excalidraw").unwrap_err().code, "INVALID_FILE");
+    fs::write(t.path().join("notscene.excalidraw"), "{\"a\":1}").unwrap();
+    assert_eq!(read_drawing_file(&v.root, "notscene.excalidraw").unwrap_err().code, "INVALID_FILE");
+}
+#[test]
+fn streaming_revision_matches_buffered_revision() {
+    let t = tempdir().unwrap(); let p = t.path().join("big.excalidraw");
+    let data: Vec<u8> = (0..200_000u32).map(|i| (i % 251) as u8).collect();
+    fs::write(&p, &data).unwrap();
+    assert_eq!(current_revision(&p).unwrap(), Some(revision(&data)));
+    assert_eq!(current_revision(&t.path().join("none")).unwrap(), None);
+    assert_eq!(drawing_revision_at(t.path(), "big.excalidraw").unwrap(), Some(revision(&data)));
+    assert_eq!(drawing_revision_at(t.path(), "none.excalidraw").unwrap(), None);
+    assert_eq!(drawing_revision_at(t.path(), "big.txt").unwrap_err().code, "INVALID_PATH");
+    let (rev, n) = revision_of_reader(&data[..]).unwrap();
+    assert_eq!((rev, n), (revision(&data), data.len() as u64));
+}
+#[test]
+fn recovery_streaming_record_keeps_the_json_shape() {
+    let t = tempdir().unwrap(); let v = vault(t.path());
+    let snapshot = create_recovery(&v, "a.excalidraw", Some("abc"), "op", SCENE).unwrap();
+    let value: serde_json::Value = serde_json::from_slice(&fs::read(&snapshot).unwrap()).unwrap();
+    assert_eq!(value["path"], "a.excalidraw");
+    assert_eq!(value["expectedRevision"], "abc");
+    assert_eq!(value["operationId"], "op");
+    assert_eq!(value["json"], SCENE);
+    assert!(value["createdAt"].is_u64());
+    // Serialized length reported by the counting pass equals the bytes on disk.
+    let record = RecoveryRecord { path: "a.excalidraw".into(), expected_revision: None, operation_id: "op".into(), json: SCENE.into(), created_at: 1 };
+    let mut counter = CountingWriter(0);
+    serde_json::to_writer(&mut counter, &record).unwrap();
+    assert_eq!(counter.0 as usize, serde_json::to_vec(&record).unwrap().len());
+    assert!(fs::read_dir(snapshot.parent().unwrap()).unwrap().all(|e| !e.unwrap().file_name().to_string_lossy().starts_with(".excalidraw-tmp")));
+}

@@ -25,21 +25,20 @@
 
 use super::grammar::strip_ext;
 use super::index::{Fx, LinkIndex, NONE};
-use crate::search::DocEntry;
 use std::{collections::HashMap, hash::BuildHasherDefault};
 
-pub(crate) const MAGIC: u32 = 0x3147_4456;
-pub(crate) const VERSION: u32 = 1;
-pub(crate) const UNRESOLVED: u32 = 1;
-pub(crate) const TAG: u32 = 2;
-pub(crate) const ORPHAN: u32 = 4;
+pub const MAGIC: u32 = 0x3147_4456;
+pub const VERSION: u32 = 1;
+pub const UNRESOLVED: u32 = 1;
+pub const TAG: u32 = 2;
+pub const ORPHAN: u32 = 4;
 const TAG_BIT: u32 = 1 << 31;
 
 type FxMap<K, V> = HashMap<K, V, BuildHasherDefault<Fx>>;
 
 /// Strings packed in one buffer (one allocation instead of one per node).
 #[derive(Default, Debug, PartialEq, Eq)]
-pub(crate) struct Strs {
+pub struct Strs {
     blob: String,
     ends: Vec<u32>,
 }
@@ -48,7 +47,7 @@ impl Strs {
     fn with_capacity(n: usize) -> Strs {
         Strs { blob: String::with_capacity(n * 16), ends: Vec::with_capacity(n) }
     }
-    pub(crate) fn push(&mut self, s: &str) {
+    pub fn push(&mut self, s: &str) {
         self.blob.push_str(s);
         self.ends.push(self.blob.len() as u32);
     }
@@ -56,10 +55,10 @@ impl Strs {
         self.blob.push('#');
         self.push(display);
     }
-    pub(crate) fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.ends.len()
     }
-    pub(crate) fn get(&self, i: usize) -> &str {
+    pub fn get(&self, i: usize) -> &str {
         let start = if i == 0 { 0 } else { self.ends[i - 1] as usize };
         &self.blob[start..self.ends[i] as usize]
     }
@@ -69,14 +68,14 @@ impl Strs {
         self.ends.extend(other.ends.iter().map(|e| e + base));
     }
     #[cfg(test)]
-    pub(crate) fn to_vec(&self) -> Vec<&str> {
+    pub fn to_vec(&self) -> Vec<&str> {
         (0..self.len()).map(|i| self.get(i)).collect()
     }
 }
 
 /// The decoded-in-memory graph (also what the encoder serialises).
 #[derive(Default, Debug, PartialEq, Eq)]
-pub(crate) struct Graph {
+pub struct Graph {
     pub folder: Vec<u32>,
     pub out_deg: Vec<u32>,
     pub in_deg: Vec<u32>,
@@ -91,7 +90,7 @@ fn top_folder(path: &str) -> &str {
 }
 
 /// Builds the graph from the link index alone (it keeps the drawings' path order and tags).
-pub(crate) fn build(li: &LinkIndex) -> Graph {
+pub fn build(li: &LinkIndex) -> Graph {
     let live: Vec<(u32, &str)> = li.sorted_docs().iter().map(|&id| (id, li.path(id))).collect();
     let n_docs = live.len();
     let mut node_of_doc = vec![NONE; live.iter().map(|d| d.0 as usize + 1).max().unwrap_or(0)];
@@ -207,12 +206,12 @@ fn push_u32s(out: &mut Vec<u8>, xs: &[u32]) {
 }
 
 impl Graph {
-    pub(crate) fn node_count(&self) -> usize {
+    pub fn node_count(&self) -> usize {
         self.flags.len()
     }
 
     /// Serialises into the `VDG1` layout.
-    pub(crate) fn encode(&self) -> Vec<u8> {
+    pub fn encode(&self) -> Vec<u8> {
         let (n, e, f) = (self.node_count(), self.edges.len() / 2, self.folders.len());
         let string_bytes = self.labels.blob.len() + self.folders.blob.len();
         let words = 8 + 4 * n + 2 * e + (n + 1) + (f + 1);
@@ -233,17 +232,17 @@ impl Graph {
 }
 
 /// `vault_graph` payload for the vault's link index.
-pub(crate) fn export(li: &LinkIndex) -> Vec<u8> {
+pub fn export(li: &LinkIndex) -> Vec<u8> {
     build(li).encode()
 }
 
 /// The encoded graph of one index generation. Held inside `Index`, which clears it on every
 /// mutation, so a hit is always current; the generation check is a second guard.
 #[derive(Default)]
-pub(crate) struct GraphCache(std::sync::Mutex<Option<(u64, std::sync::Arc<Vec<u8>>)>>);
+pub struct GraphCache(std::sync::Mutex<Option<(u64, std::sync::Arc<Vec<u8>>)>>);
 
 impl GraphCache {
-    pub(crate) fn get_or_build(&self, generation: u64, build: impl FnOnce() -> Vec<u8>) -> std::sync::Arc<Vec<u8>> {
+    pub fn get_or_build(&self, generation: u64, build: impl FnOnce() -> Vec<u8>) -> std::sync::Arc<Vec<u8>> {
         let mut slot = self.0.lock().unwrap_or_else(|p| p.into_inner());
         if let Some((g, bytes)) = slot.as_ref() {
             if *g == generation {
@@ -254,22 +253,22 @@ impl GraphCache {
         *slot = Some((generation, bytes.clone()));
         bytes
     }
-    pub(crate) fn clear(&mut self) {
+    pub fn clear(&mut self) {
         *self.0.get_mut().unwrap_or_else(|p| p.into_inner()) = None;
     }
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
+pub mod tests {
     use super::*;
     use crate::search::{DocEntry, Index, ItemKind, TextItem};
 
-    pub(crate) fn drawing(path: &str, text: &str) -> (String, DocEntry) {
+    pub fn drawing(path: &str, text: &str) -> (String, DocEntry) {
         let items = vec![TextItem { element_id: "t".into(), container_id: None, kind: ItemKind::Text, text: text.into() }];
         (path.to_string(), DocEntry::new(path, (1, 1), items).with_links(Vec::new(), [0; 8]))
     }
 
-    pub(crate) fn graph_of(docs: Vec<(String, DocEntry)>) -> Graph {
+    pub fn graph_of(docs: Vec<(String, DocEntry)>) -> Graph {
         let mut ix = Index::default();
         for (p, d) in docs {
             ix.upsert(p, d);
@@ -411,7 +410,7 @@ pub(crate) mod tests {
     #[test]
     fn small_vault_fixture() {
         let g = small();
-        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/links/fixtures");
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/links/fixtures");
         let (bin, json) = (dir.join("graph_small.bin"), dir.join("graph_small.json"));
         let want_json = serde_json::to_string_pretty(&describe(&g)).unwrap() + "\n";
         if std::env::var_os("VD_UPDATE_FIXTURES").is_some() {

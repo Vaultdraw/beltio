@@ -21,7 +21,7 @@ fn path_of(li: &LinkIndex, d: u32) -> Option<String> {
 
 /// A one-line snippet of at most 120 chars centred on the first link accepted by `hit`,
 /// with every accepted link on that line highlighted (UTF-16 offsets into the snippet).
-pub(crate) fn link_snippet(text: &str, hit: impl Fn(&TextLink) -> bool) -> Option<(String, Vec<[u32; 2]>)> {
+pub fn link_snippet(text: &str, hit: impl Fn(&TextLink) -> bool) -> Option<(String, Vec<[u32; 2]>)> {
     let links: Vec<TextLink> = text_links_vec(text).into_iter().filter(|l| hit(l)).collect();
     let first = links.first()?;
     let line_start = text[..first.start].rfind('\n').map_or(0, |i| i + 1);
@@ -145,7 +145,7 @@ fn backlinks_of(li: &LinkIndex, docs: &HashMap<String, DocEntry>, d: u32) -> Vec
 }
 
 /// Outgoing, unresolved and backlinks of `path`. The link index must be built.
-pub(crate) fn links_response(index: &Index, path: &str) -> LinksResponse {
+pub fn links_response(index: &Index, path: &str) -> LinksResponse {
     let started = Instant::now();
     let mut resp = LinksResponse { path: path.to_string(), outgoing: Vec::new(), unresolved: Vec::new(), backlinks: Vec::new(), took_ms: 0.0 };
     if let Some((li, docs)) = index.links_and_docs() {
@@ -167,7 +167,7 @@ pub(crate) fn links_response(index: &Index, path: &str) -> LinksResponse {
 }
 
 /// Text that mentions the drawing's name without linking to it.
-pub(crate) fn mentions_response(index: &Index, path: &str, limit: usize) -> MentionsResponse {
+pub fn mentions_response(index: &Index, path: &str, limit: usize) -> MentionsResponse {
     let started = Instant::now();
     let mut resp = MentionsResponse { path: path.to_string(), mentions: Vec::new(), took_ms: 0.0 };
     let needle = normalize(strip_ext(name_of(path)));
@@ -198,7 +198,7 @@ pub(crate) fn mentions_response(index: &Index, path: &str, limit: usize) -> Ment
 
 /// Resolves a link as written (`[[x|y]]`, `x`, `vaultdraw://open?file=x`, `./x.excalidraw`)
 /// from the drawing `from_path`.
-pub(crate) fn resolve_raw(index: &Index, from_path: &str, raw: &str) -> Resolution {
+pub fn resolve_raw(index: &Index, from_path: &str, raw: &str) -> Resolution {
     let none = Resolution { path: None, candidates: Vec::new() };
     let Some(li) = index.links() else { return none };
     let raw = raw.trim();

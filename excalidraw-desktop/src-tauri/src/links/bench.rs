@@ -8,6 +8,7 @@ use super::query;
 use super::resolve::rel_path;
 use super::rewrite::{rewrite, FileRules, Replace};
 use super::*;
+use vaultdraw_core::links::LinkIndex;
 use crate::search::{DocEntry, ElementLink, Index, ItemKind, TextItem};
 use crate::test_alloc::live;
 use std::{
@@ -297,7 +298,7 @@ fn job_files(count: usize, elements: usize, image_bytes: usize, tag: &str) -> (t
         p.to_path = rel;
         plans.push(p);
     }
-    let v = Arc::new(Vault { root: root.canonicalize().unwrap(), handle: "b".into(), read_only: false, _lock: None, _watcher: None, mutation: Mutex::new(()) });
+    let v = Arc::new(Vault::for_tests(root.canonicalize().unwrap(), "b", false));
     (dir, v, plans)
 }
 
@@ -395,7 +396,7 @@ fn bench_rename_return() {
             fs::create_dir_all(root.join(format!("d{}", i % 20))).unwrap();
             fs::write(root.join(format!("d{}/n{i}.excalidraw", i % 20)), body).unwrap();
         }
-        let v = Arc::new(Vault { root: root.clone(), handle: "b".into(), read_only: false, _lock: None, _watcher: None, mutation: Mutex::new(()) });
+        let v = Arc::new(Vault::for_tests(root.clone(), "b", false));
         let search = SearchService::default();
         search.start_with("b", root.clone(), Arc::new(|_| {}), None);
         while !search.status("b").is_ok_and(|s| s.state == crate::search::IndexState::Ready) {
@@ -553,7 +554,7 @@ fn bench_tag_rename() {
             FilePlan { from_path: rel.clone(), to_path: rel, elements: BTreeMap::new() }
         })
         .collect();
-    let v = Arc::new(Vault { root: root.canonicalize().unwrap(), handle: "b".into(), read_only: false, _lock: None, _watcher: None, mutation: Mutex::new(()) });
+    let v = Arc::new(Vault::for_tests(root.canonicalize().unwrap(), "b", false));
     let state = LinksState::default();
     let mut runs = Vec::new();
     for k in 0..7 {

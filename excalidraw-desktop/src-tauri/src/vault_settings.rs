@@ -165,18 +165,10 @@ pub(crate) async fn update_vault_settings(
 mod tests {
     use super::*;
     use serde_json::json;
-    use std::sync::Mutex;
     use tempfile::tempdir;
 
     fn vault(root: &Path, read_only: bool) -> Vault {
-        Vault {
-            root: root.canonicalize().unwrap(),
-            handle: "test".into(),
-            read_only,
-            _lock: None,
-            _watcher: None,
-            mutation: Mutex::new(()),
-        }
+        Vault::for_tests(root.canonicalize().unwrap(), "test", read_only)
     }
     fn change(key: &str, value: Json) -> ConfigChange {
         ConfigChange { key: key.into(), value }

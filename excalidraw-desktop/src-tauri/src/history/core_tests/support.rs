@@ -154,7 +154,7 @@ impl Fx {
         let root = root.canonicalize().unwrap();
         let clock = TestClock::new(crate::now_ms(std::time::SystemTime::now()));
         let svc = HistoryService::for_tests(state.clone(), clock.clone());
-        let vault = crate::Vault { root: root.clone(), handle: "h".into(), read_only: false, _lock: None, _watcher: None, mutation: Mutex::new(()) };
+        let vault = crate::Vault::for_tests(root.clone(), "h", false);
         Fx { dir, root, state, svc, clock, events: Arc::default(), vault, revs: Mutex::default(), ops: AtomicU64::new(0) }
     }
     pub fn emitter(&self) -> crate::history::Emitter {

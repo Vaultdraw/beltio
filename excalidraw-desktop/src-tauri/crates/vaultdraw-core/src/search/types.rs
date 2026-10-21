@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum IndexState {
+pub enum IndexState {
     Loading,
     Building,
     Ready,
@@ -14,7 +14,7 @@ pub(crate) enum IndexState {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct IndexStatus {
+pub struct IndexStatus {
     pub handle: String,
     pub state: IndexState,
     /// Drawings with content indexed.
@@ -24,14 +24,14 @@ pub(crate) struct IndexStatus {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Scope {
+pub enum Scope {
     All,
     Names,
     Content,
 }
 
 impl Scope {
-    pub(crate) fn parse(s: Option<&str>) -> Option<Scope> {
+    pub fn parse(s: Option<&str>) -> Option<Scope> {
         match s {
             None | Some("all") => Some(Scope::All),
             Some("names") => Some(Scope::Names),
@@ -43,7 +43,7 @@ impl Scope {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ElementMatch {
+pub struct ElementMatch {
     pub element_id: String,
     pub container_id: Option<String>,
     pub kind: ItemKind,
@@ -54,7 +54,7 @@ pub(crate) struct ElementMatch {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct SearchHit {
+pub struct SearchHit {
     pub path: String,
     pub name: String,
     pub score: f32,
@@ -66,7 +66,7 @@ pub(crate) struct SearchHit {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct SearchResponse {
+pub struct SearchResponse {
     pub query: String,
     pub results: Vec<SearchHit>,
     pub total_matches: u32,
@@ -76,7 +76,7 @@ pub(crate) struct SearchResponse {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct TagCount {
+pub struct TagCount {
     /// Case/accent-folded key (`dsa/graphs`); what `tag:#...` filters on.
     pub tag: String,
     /// Spelling shown in the UI (`DSA/Graphs`).
@@ -87,7 +87,7 @@ pub(crate) struct TagCount {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct TagSummary {
+pub struct TagSummary {
     /// Sorted by key; includes every ancestor of a nested tag.
     pub tags: Vec<TagCount>,
     /// Vault-relative path to the display spellings of its tags (tagged drawings only).
@@ -96,7 +96,7 @@ pub(crate) struct TagSummary {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct TagsResponse {
+pub struct TagsResponse {
     #[serde(flatten)]
     pub summary: TagSummary,
     pub status: IndexStatus,
@@ -106,7 +106,7 @@ pub(crate) struct TagsResponse {
 /// Every drawing path the index knows (what `scope: "names"` searches).
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct NamesListing {
+pub struct NamesListing {
     /// Vault-relative, forward slashes, sorted.
     pub paths: Vec<String>,
     pub status: IndexStatus,

@@ -2,21 +2,21 @@
 //! walks the vault, parses new/changed drawings in small batches, then applies
 //! watcher updates and persists the snapshot (debounced).
 
-use super::extract::extract_doc;
 use super::index::DocEntry;
 use super::types::IndexState;
 use super::{store, Emitter, Update, VaultIndex};
-use crate::{now_ms, validate_relative, MAX_DRAWING_BYTES, META_DIR};
+use crate::now_ms;
+use vaultdraw_core::search::scan::{needs_parse, parse, Found};
+use vaultdraw_core::search::is_drawing_name;
+use vaultdraw_core::search::walk;
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
     fs,
-    io::Read,
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::{atomic::Ordering, mpsc::{Receiver, RecvTimeoutError}, Arc},
     time::{Duration, Instant, SystemTime},
 };
 
-const MAX_DEPTH: usize = 64;
 const BATCH_DOCS: usize = 32;
 const EMIT_EVERY: Duration = Duration::from_millis(250);
 const SAVE_DELAY: Duration = Duration::from_secs(5);
@@ -33,91 +33,6 @@ pub(super) struct Defer {
 
 impl Defer {
     pub(super) const DEFAULT: Defer = Defer { min_bytes: 4 * 1024 * 1024, delay: Duration::from_secs(5) };
-}
-
-pub(crate) struct Found {
-    pub path: String,
-    pub size: u64,
-    pub mtime: u64,
-}
-
-impl Found {
-    fn stat(&self) -> (u64, u64) {
-        (self.size, self.mtime)
-    }
-}
-
-pub(crate) fn is_drawing_name(name: &str) -> bool {
-    name.len() > 11 && name.get(name.len() - 11..).is_some_and(|e| e.eq_ignore_ascii_case(".excalidraw"))
-}
-
-/// Recursively lists drawings under `root/rel` (never following symlinks, skipping
-/// the metadata folder and temp files). Paths are vault-relative with forward slashes.
-pub(crate) fn walk(root: &Path, rel: &str) -> Vec<Found> {
-    let mut out = Vec::new();
-    let mut stack = vec![(rel.to_string(), 0usize)];
-    while let Some((dir, depth)) = stack.pop() {
-        let Ok(entries) = fs::read_dir(root.join(&dir)) else { continue };
-        for entry in entries.flatten() {
-            let Ok(name) = entry.file_name().into_string() else { continue };
-            let Ok(ft) = entry.file_type() else { continue };
-            if ft.is_symlink() || name.starts_with(".excalidraw-tmp-") || (dir.is_empty() && name.eq_ignore_ascii_case(META_DIR)) {
-                continue;
-            }
-            let child = if dir.is_empty() { name.clone() } else { format!("{dir}/{name}") };
-            if ft.is_dir() {
-                if depth < MAX_DEPTH && validate_relative(&child).is_ok() {
-                    stack.push((child, depth + 1));
-                }
-            } else if ft.is_file() && is_drawing_name(&name) && validate_relative(&child).is_ok() {
-                if let Ok(md) = entry.metadata() {
-                    out.push(Found { path: child, size: md.len(), mtime: md.modified().map(now_ms).unwrap_or(0) });
-                }
-            }
-        }
-    }
-    out
-}
-
-/// Parsed entry for one drawing file's bytes (unparseable files stay findable by name).
-pub(super) fn entry_from_bytes(path: &str, stat: (u64, u64), bytes: &[u8]) -> DocEntry {
-    match extract_doc(bytes) {
-        Ok(x) => DocEntry::new(path, stat, x.items).with_links(x.elinks, x.hash8),
-        Err(_) => DocEntry::new(path, stat, Vec::new()),
-    }
-}
-
-/// Reads `path` into `buf` (reused across files, so a build faults big buffers in once, and
-/// freed with the caller's `Vec` when the build ends).
-fn read_into(path: &Path, buf: &mut Vec<u8>, size_hint: u64) -> crate::Result<()> {
-    let need = size_hint.min(MAX_DRAWING_BYTES) as usize + 1;
-    if buf.capacity() < need {
-        // Replace instead of growing: growing would copy bytes we are about to overwrite.
-        *buf = Vec::with_capacity(need.max(buf.capacity() * 2));
-    }
-    buf.clear();
-    fs::File::open(path).map_err(crate::ioerr)?.take(MAX_DRAWING_BYTES + 1).read_to_end(buf).map_err(crate::ioerr)?;
-    if buf.len() as u64 > MAX_DRAWING_BYTES {
-        return Err(crate::err("INVALID_FILE", "File exceeds its size limit"));
-    }
-    Ok(())
-}
-
-fn parse(root: &Path, f: &Found, buf: &mut Vec<u8>) -> Option<(String, DocEntry)> {
-    let entry = match read_into(&root.join(&f.path), buf, f.size) {
-        Ok(()) => entry_from_bytes(&f.path, f.stat(), buf),
-        Err(e) if e.code == "NOT_FOUND" => return None,
-        // Unreadable or oversize: still findable by name.
-        Err(_) => DocEntry::new(&f.path, f.stat(), Vec::new()),
-    };
-    Some((f.path.clone(), entry))
-}
-
-fn needs_parse(existing: Option<&DocEntry>, f: &Found, racy_before: u64) -> bool {
-    match existing {
-        Some(d) => !d.parsed || d.stat != f.stat() || f.mtime >= racy_before,
-        None => true,
-    }
 }
 
 #[cfg(target_os = "macos")]

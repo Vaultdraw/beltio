@@ -36,7 +36,7 @@ fn file_stem(name: &str) -> &str {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct DocEntry {
+pub struct DocEntry {
     /// `(size, mtime_ms)` of the file the content was parsed from.
     pub stat: (u64, u64),
     /// False for name-only entries (content not read yet).
@@ -62,14 +62,14 @@ pub(crate) struct DocEntry {
 
 impl DocEntry {
     /// Name-only entry: searchable by path immediately, content fills in later.
-    pub(crate) fn name_only(path: &str) -> DocEntry {
+    pub fn name_only(path: &str) -> DocEntry {
         let mut d = DocEntry { stat: (0, 0), parsed: false, items: PackedItems::default(), elinks: Vec::new(), hash8: [0; 8], buf: String::new(), name_norm: String::new(), stem_off: 0, bounds: Vec::new(), tags: Vec::new() };
         d.derive_name(path);
         d
     }
 
     /// Parsed entry. Items that normalise to nothing are dropped so items and buffer lines align.
-    pub(crate) fn new(path: &str, stat: (u64, u64), items: Vec<TextItem>) -> DocEntry {
+    pub fn new(path: &str, stat: (u64, u64), items: Vec<TextItem>) -> DocEntry {
         let mut buf = String::new();
         let mut kept = Vec::with_capacity(items.len());
         let mut bounds = Vec::with_capacity(items.len());
@@ -93,7 +93,7 @@ impl DocEntry {
     }
 
     /// Attaches the element links and content hash of the parsed file.
-    pub(crate) fn with_links(mut self, elinks: Vec<ElementLink>, hash8: [u8; 8]) -> DocEntry {
+    pub fn with_links(mut self, elinks: Vec<ElementLink>, hash8: [u8; 8]) -> DocEntry {
         self.elinks = elinks;
         self.hash8 = hash8;
         self
@@ -101,10 +101,10 @@ impl DocEntry {
 
     /// Re-derives the path-based fields after the drawing moved.
     /// `(key, display)` of each distinct `#tag` of the drawing.
-    pub(crate) fn tag_pairs(&self) -> impl Iterator<Item = (&str, &str)> {
+    pub fn tag_pairs(&self) -> impl Iterator<Item = (&str, &str)> {
         self.tags.iter().map(|t| (&*t.key, &*t.display))
     }
-    pub(crate) fn set_path(&mut self, path: &str) {
+    pub fn set_path(&mut self, path: &str) {
         self.derive_name(path);
     }
 
@@ -118,7 +118,7 @@ impl DocEntry {
     }
 
     /// Rebuilds derived fields after deserialisation; false if the entry is inconsistent.
-    pub(crate) fn rebuild(&mut self, path: &str) -> bool {
+    pub fn rebuild(&mut self, path: &str) -> bool {
         self.derive_name(path);
         self.tags = doc_tags(self.items.iter().map(|i| i.text));
         self.bounds.clear();
@@ -242,7 +242,7 @@ fn build_snippet(text: &str, terms: &[Term]) -> Option<(String, Vec<[u32; 2]>)> 
 }
 
 /// One-line search-style snippet of `text` around the words of `needle` (UTF-16 highlights).
-pub(crate) fn word_snippet(text: &str, needle: &str) -> Option<(String, Vec<[u32; 2]>)> {
+pub fn word_snippet(text: &str, needle: &str) -> Option<(String, Vec<[u32; 2]>)> {
     build_snippet(text, &parse_terms(needle))
 }
 
@@ -319,7 +319,7 @@ struct Scored<'a> {
 }
 
 #[derive(Default)]
-pub(crate) struct Index {
+pub struct Index {
     docs: HashMap<String, DocEntry>,
     /// Built lazily on first use, then kept current by every mutation below.
     links: Option<Box<LinkIndex>>,
@@ -330,13 +330,13 @@ pub(crate) struct Index {
 }
 
 impl Index {
-    pub(crate) fn from_docs(mut docs: HashMap<String, DocEntry>) -> Option<Index> {
+    pub fn from_docs(mut docs: HashMap<String, DocEntry>) -> Option<Index> {
         docs.iter_mut().all(|(p, d)| d.rebuild(p)).then_some(Index { docs, links: None, generation: 0, graph_cache: Default::default() })
     }
-    pub(crate) fn links(&self) -> Option<&LinkIndex> {
+    pub fn links(&self) -> Option<&LinkIndex> {
         self.links.as_deref()
     }
-    pub(crate) fn generation(&self) -> u64 {
+    pub fn generation(&self) -> u64 {
         self.generation
     }
     fn bump(&mut self) {
@@ -345,45 +345,45 @@ impl Index {
     }
     /// The encoded vault graph, rebuilt only when a mutation happened since the last call
     /// (the encode walks the whole link index: ~20 ms at 50k drawings). None without a link index.
-    pub(crate) fn graph_bytes(&self, encode: impl FnOnce(&LinkIndex) -> Vec<u8>) -> Option<std::sync::Arc<Vec<u8>>> {
+    pub fn graph_bytes(&self, encode: impl FnOnce(&LinkIndex) -> Vec<u8>) -> Option<std::sync::Arc<Vec<u8>>> {
         let li = self.links()?;
         Some(self.graph_cache.get_or_build(self.generation, || encode(li)))
     }
     /// Builds a link index from the current docs (read-only; install it with `install_links`).
-    pub(crate) fn build_links(&self) -> LinkIndex {
+    pub fn build_links(&self) -> LinkIndex {
         LinkIndex::build(self.docs.iter())
     }
-    pub(crate) fn install_links(&mut self, links: LinkIndex) {
+    pub fn install_links(&mut self, links: LinkIndex) {
         self.links = Some(Box::new(links));
     }
     /// Both the link index and the docs, for queries that read text while resolving.
-    pub(crate) fn links_and_docs(&self) -> Option<(&LinkIndex, &HashMap<String, DocEntry>)> {
+    pub fn links_and_docs(&self) -> Option<(&LinkIndex, &HashMap<String, DocEntry>)> {
         self.links.as_deref().map(|l| (l, &self.docs))
     }
     /// Mutable link index with read access to the docs (rename planning).
-    pub(crate) fn links_and_docs_mut(&mut self) -> Option<(&mut LinkIndex, &HashMap<String, DocEntry>)> {
+    pub fn links_and_docs_mut(&mut self) -> Option<(&mut LinkIndex, &HashMap<String, DocEntry>)> {
         self.bump(); // the caller may change the link index
         let Index { docs, links, .. } = self;
         links.as_deref_mut().map(|l| (l, &*docs))
     }
 
-    pub(crate) fn docs(&self) -> &HashMap<String, DocEntry> {
+    pub fn docs(&self) -> &HashMap<String, DocEntry> {
         &self.docs
     }
-    pub(crate) fn get(&self, path: &str) -> Option<&DocEntry> {
+    pub fn get(&self, path: &str) -> Option<&DocEntry> {
         self.docs.get(path)
     }
-    pub(crate) fn contains(&self, path: &str) -> bool {
+    pub fn contains(&self, path: &str) -> bool {
         self.docs.contains_key(path)
     }
-    pub(crate) fn upsert(&mut self, path: String, entry: DocEntry) {
+    pub fn upsert(&mut self, path: String, entry: DocEntry) {
         self.bump();
         if let Some(l) = self.links.as_deref_mut() {
             l.upsert(&path, &entry);
         }
         self.docs.insert(path, entry);
     }
-    pub(crate) fn remove(&mut self, path: &str) -> bool {
+    pub fn remove(&mut self, path: &str) -> bool {
         self.bump();
         if let Some(l) = self.links.as_deref_mut() {
             l.remove(path);
@@ -391,10 +391,10 @@ impl Index {
         self.docs.remove(path).is_some()
     }
     /// Removes everything under `prefix` (pass a directory path ending in `/`).
-    pub(crate) fn remove_prefix(&mut self, prefix: &str) -> usize {
+    pub fn remove_prefix(&mut self, prefix: &str) -> usize {
         self.retain(|p| !p.starts_with(prefix))
     }
-    pub(crate) fn retain(&mut self, mut keep: impl FnMut(&str) -> bool) -> usize {
+    pub fn retain(&mut self, mut keep: impl FnMut(&str) -> bool) -> usize {
         self.bump();
         let before = self.docs.len();
         let mut removed: Vec<String> = Vec::new();
@@ -412,7 +412,7 @@ impl Index {
     }
     /// Moves a drawing (`from` is a drawing path) or every drawing under a folder to `to`,
     /// keeping parsed content. Returns the `(old, new)` paths of the drawings that moved.
-    pub(crate) fn move_docs(&mut self, from: &str, to: &str) -> Vec<(String, String)> {
+    pub fn move_docs(&mut self, from: &str, to: &str) -> Vec<(String, String)> {
         let prefix = format!("{from}/");
         let olds: Vec<String> = self.docs.keys().filter(|p| *p == from || p.starts_with(&prefix)).cloned().collect();
         let mut moved = Vec::with_capacity(olds.len());
@@ -428,7 +428,7 @@ impl Index {
             }
         }
         for (new, mut d) in taken {
-            if !super::worker::is_drawing_name(&new) {
+            if !super::scan::is_drawing_name(&new) {
                 continue;
             }
             d.set_path(&new);
@@ -444,12 +444,12 @@ impl Index {
         self.docs.remove(path)
     }
     /// `(drawings with content indexed, drawings known)`.
-    pub(crate) fn counts(&self) -> (usize, usize) {
+    pub fn counts(&self) -> (usize, usize) {
         (self.docs.values().filter(|d| d.parsed).count(), self.docs.len())
     }
     /// Calls `f(path, doc, item index)` for the first whole-word occurrence of the normalised
     /// `needle` in each text item (frame names excluded), until `f` returns false.
-    pub(crate) fn for_each_word_match(&self, needle: &str, mut f: impl FnMut(&str, &DocEntry, usize) -> bool) {
+    pub fn for_each_word_match(&self, needle: &str, mut f: impl FnMut(&str, &DocEntry, usize) -> bool) {
         if needle.is_empty() {
             return;
         }
@@ -474,13 +474,13 @@ impl Index {
     }
 
     /// Drawings that carry tags, with their distinct tags (no item scan).
-    pub(crate) fn tag_docs(&self) -> impl Iterator<Item = (&str, &[DocTag])> {
+    pub fn tag_docs(&self) -> impl Iterator<Item = (&str, &[DocTag])> {
         self.docs.iter().filter(|(_, d)| !d.tags.is_empty()).map(|(p, d)| (p.as_str(), &d.tags[..]))
     }
 
     #[allow(dead_code)] // API for the tags feature
     /// Visits every text item of every drawing (for tag extraction without re-reading files).
-    pub(crate) fn for_each_item(&self, mut f: impl FnMut(&str, ItemRef<'_>)) {
+    pub fn for_each_item(&self, mut f: impl FnMut(&str, ItemRef<'_>)) {
         for (path, d) in &self.docs {
             for item in d.items.iter() {
                 f(path, item);
@@ -488,7 +488,7 @@ impl Index {
         }
     }
     #[allow(dead_code)] // memory reporting (used by the perf test)
-    pub(crate) fn approx_heap_bytes(&self) -> usize {
+    pub fn approx_heap_bytes(&self) -> usize {
         let table = self.docs.capacity() * (std::mem::size_of::<String>() + std::mem::size_of::<DocEntry>() + 1);
         table + self.docs.iter().map(|(p, d)| p.capacity() + d.heap_bytes()).sum::<usize>()
     }
@@ -562,7 +562,7 @@ impl Index {
     /// Drawings whose name/path or text contains every whitespace-separated term and that carry
     /// every `tag:#word` filter (a parent tag matches its children), best first, at most
     /// `limit`; also the total number of matching drawings. Tag-only queries list by path.
-    pub(crate) fn query(&self, q: &str, scope: Scope, limit: usize) -> (Vec<SearchHit>, usize) {
+    pub fn query(&self, q: &str, scope: Scope, limit: usize) -> (Vec<SearchHit>, usize) {
         let (text, filters) = split_tag_filters(q);
         let mut terms = parse_terms(&text);
         if (terms.is_empty() && filters.is_empty()) || limit == 0 {
@@ -596,7 +596,7 @@ impl Index {
     }
 
     /// Every tag with the number of drawings carrying it or a child tag, plus each drawing's tags.
-    pub(crate) fn tag_summary(&self) -> TagSummary {
+    pub fn tag_summary(&self) -> TagSummary {
         let mut counts: HashMap<String, (String, u32)> = HashMap::new();
         let mut by_path = HashMap::new();
         for (path, d) in &self.docs {

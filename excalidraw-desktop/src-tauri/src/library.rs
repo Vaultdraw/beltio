@@ -261,7 +261,6 @@ pub(crate) async fn pick_library_file() -> Result<Option<PickedLibrary>> {
 mod tests {
     use super::*;
     use crate::Vault;
-    use std::sync::Mutex;
     use tempfile::tempdir;
 
     const LIB: &str = r#"{"type":"excalidrawlib","version":2,"libraryItems":[{"id":"a"}]}"#;
@@ -384,14 +383,7 @@ mod tests {
     #[test]
     fn read_only_vault_is_refused() {
         let t = tempdir().unwrap();
-        let v = Vault {
-            root: t.path().canonicalize().unwrap(),
-            handle: "h".into(),
-            read_only: true,
-            _lock: None,
-            _watcher: None,
-            mutation: Mutex::new(()),
-        };
+        let v = Vault::for_tests(t.path().canonicalize().unwrap(), "h", true);
         assert_eq!(code(writable(&v)), "READ_ONLY");
     }
 

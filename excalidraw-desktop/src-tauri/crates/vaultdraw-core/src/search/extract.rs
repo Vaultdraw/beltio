@@ -9,7 +9,7 @@ use std::borrow::Cow;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum ItemKind {
+pub enum ItemKind {
     Text,
     Frame,
     /// An image element carrying `customData.latex.source` (a LaTeX formula).
@@ -17,7 +17,7 @@ pub(crate) enum ItemKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct TextItem {
+pub struct TextItem {
     pub element_id: Box<str>,
     /// The shape/arrow a bound label belongs to.
     pub container_id: Option<Box<str>>,
@@ -28,13 +28,13 @@ pub(crate) struct TextItem {
 
 /// The `link` field of a live element (any non-empty value, as written).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ElementLink {
+pub struct ElementLink {
     pub element_id: Box<str>,
     pub link: Box<str>,
 }
 
 /// Everything the indexes need from one drawing file.
-pub(crate) struct Extracted {
+pub struct Extracted {
     pub items: Vec<TextItem>,
     pub elinks: Vec<ElementLink>,
     /// Content fingerprint, see [`fingerprint8`].
@@ -109,7 +109,7 @@ fn non_empty<'a>(s: &'a Option<Cow<'a, str>>) -> Option<&'a str> {
 /// Extracts text elements (bound labels use `originalText`, which has no
 /// auto-wrap newlines) and frame names. Items that normalise to nothing are dropped.
 #[cfg_attr(not(test), allow(dead_code))] // production indexing uses `extract_doc`; tests and benches use this
-pub(crate) fn extract_items(json: &[u8]) -> Result<Vec<TextItem>> {
+pub fn extract_items(json: &[u8]) -> Result<Vec<TextItem>> {
     Ok(parse_scene(json)?.0)
 }
 
@@ -122,7 +122,7 @@ const FINGERPRINT_EDGE: usize = 4096;
 /// (measured: 262 ms vs 123 ms of parsing for 5000 files / 822 MB; far worse on Macs without
 /// SHA hardware), against +3% for this. It identifies a file that moved unchanged (equal
 /// length, head and tail); it is not a revision and never compared with one.
-pub(crate) fn fingerprint8(bytes: &[u8]) -> [u8; 8] {
+pub fn fingerprint8(bytes: &[u8]) -> [u8; 8] {
     let mut h = Sha256::new();
     h.update((bytes.len() as u64).to_le_bytes());
     h.update(&bytes[..bytes.len().min(FINGERPRINT_EDGE)]);
@@ -133,7 +133,7 @@ pub(crate) fn fingerprint8(bytes: &[u8]) -> [u8; 8] {
 }
 
 /// Items, element links and the content fingerprint of one drawing file.
-pub(crate) fn extract_doc(json: &[u8]) -> Result<Extracted> {
+pub fn extract_doc(json: &[u8]) -> Result<Extracted> {
     let (items, elinks) = parse_scene(json)?;
     Ok(Extracted { items, elinks, hash8: fingerprint8(json) })
 }

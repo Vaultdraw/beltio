@@ -3,13 +3,6 @@
 //! In-memory index of normalised text per drawing, scanned linearly with
 //! `memchr::memmem`; built and kept current by a background worker per open vault.
 
-mod extract;
-mod index;
-mod packed;
-mod normalize;
-mod store;
-mod tags;
-mod types;
 mod worker;
 
 #[cfg(test)]
@@ -17,21 +10,22 @@ mod tests;
 #[cfg(test)]
 mod bench;
 
+// The pure index, extractor, normaliser and snapshot store live in `vaultdraw-core`.
+pub(crate) use vaultdraw_core::search::{index, store, types};
 // Public API for other features (tags, quick switcher); unused until they land.
 #[allow(unused_imports)]
-pub(crate) use extract::{extract_items, ItemKind, TextItem};
-#[allow(unused_imports)]
-pub(crate) use extract::ElementLink;
-pub(crate) use index::{word_snippet, DocEntry, Index};
-pub(crate) use tags::{find_tags, key_under, tag_key};
+pub(crate) use vaultdraw_core::search::{extract_items, ElementLink, ItemKind, TextItem};
+pub(crate) use vaultdraw_core::search::{DocEntry, Index};
+pub(crate) use vaultdraw_core::search::{find_tags, key_under, tag_key};
 // Shared with file history (one vault-id derivation, one walker, one QoS helper).
-pub(crate) use store::vault_id;
+pub(crate) use vaultdraw_core::search::vault_id;
 #[allow(unused_imports)] // `walk` is used by file-history relink (H3)
-pub(crate) use worker::{is_drawing_name, lower_priority, walk};
+pub(crate) use vaultdraw_core::search::{is_drawing_name, walk};
+pub(crate) use worker::lower_priority;
 #[allow(unused_imports)]
-pub(crate) use normalize::{normalize, NORMALIZER_VERSION};
+pub(crate) use vaultdraw_core::search::{normalize, NORMALIZER_VERSION};
 #[allow(unused_imports)]
-pub(crate) use types::{ElementMatch, IndexState, IndexStatus, NamesListing, Scope, SearchHit, SearchResponse, TagsResponse};
+pub(crate) use vaultdraw_core::search::{ElementMatch, IndexState, IndexStatus, NamesListing, Scope, SearchHit, SearchResponse, TagsResponse};
 
 use crate::{err, Result};
 use std::{
@@ -177,7 +171,7 @@ impl SearchService {
     /// Parses `bytes` (just written to `path`) and puts the result in the live indexes.
     pub(crate) fn upsert_bytes(&self, handle: &str, path: &str, stat: (u64, u64), bytes: &[u8]) {
         if let Ok(v) = self.vault(handle) {
-            let entry = worker::entry_from_bytes(path, stat, bytes);
+            let entry = vaultdraw_core::search::scan::entry_from_bytes(path, stat, bytes);
             v.write().upsert(path.to_string(), entry);
         }
     }

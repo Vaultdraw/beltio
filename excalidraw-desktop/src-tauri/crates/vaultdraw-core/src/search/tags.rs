@@ -12,10 +12,10 @@
 
 use super::normalize::normalize;
 
-pub(crate) const MAX_TAG_CHARS: usize = 64;
+pub const MAX_TAG_CHARS: usize = 64;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct TagMatch<'a> {
+pub struct TagMatch<'a> {
     /// Byte range of `#tag` in the source text.
     pub range: (usize, usize),
     /// The tag as written, without `#`.
@@ -56,7 +56,7 @@ fn accept(raw: &str) -> Option<&str> {
 }
 
 /// All tags in `text`, in order (duplicates kept).
-pub(crate) fn find_tags(text: &str) -> Vec<TagMatch<'_>> {
+pub fn find_tags(text: &str) -> Vec<TagMatch<'_>> {
     let mut out = Vec::new();
     if !text.contains('#') {
         return out;
@@ -75,23 +75,23 @@ pub(crate) fn find_tags(text: &str) -> Vec<TagMatch<'_>> {
 }
 
 /// Case/accent-folded tag key (what is compared and stored).
-pub(crate) fn tag_key(display: &str) -> String {
+pub fn tag_key(display: &str) -> String {
     normalize(display)
 }
 
 /// True when `key` equals `filter` or lives under it (`dsa/graphs` under `dsa`).
-pub(crate) fn key_under(key: &str, filter: &str) -> bool {
+pub fn key_under(key: &str, filter: &str) -> bool {
     key == filter || (key.len() > filter.len() && key.starts_with(filter) && key.as_bytes()[filter.len()] == b'/')
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct DocTag {
+pub struct DocTag {
     pub key: Box<str>,
     pub display: Box<str>,
 }
 
 /// Distinct tags of a drawing (first spelling wins), from the original item texts.
-pub(crate) fn doc_tags<'a>(texts: impl Iterator<Item = &'a str>) -> Vec<DocTag> {
+pub fn doc_tags<'a>(texts: impl Iterator<Item = &'a str>) -> Vec<DocTag> {
     let mut out: Vec<DocTag> = Vec::new();
     for t in texts {
         for m in find_tags(t) {
@@ -191,7 +191,7 @@ mod unit_tests {
 }
 
 /// Splits `tag:#word` filters (case-insensitive prefix) from the free-text part of a query.
-pub(crate) fn split_tag_filters(q: &str) -> (String, Vec<String>) {
+pub fn split_tag_filters(q: &str) -> (String, Vec<String>) {
     let mut text = Vec::new();
     let mut filters: Vec<String> = Vec::new();
     for tok in q.split_whitespace() {

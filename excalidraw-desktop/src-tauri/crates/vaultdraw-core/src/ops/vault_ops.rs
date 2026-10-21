@@ -7,13 +7,13 @@ use serde_json::{json, Value};
 use vaultdraw_protocol::RpcError;
 
 /// `vault.info` / `vault.open` result.
-pub(crate) fn info(v: &Vault) -> Value {
+pub fn info(v: &Vault) -> Value {
     let name = v.root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
     json!({"name": name, "path": v.root.to_string_lossy(), "readOnly": v.read_only})
 }
 
 /// `vault.list`: drawings and folders of `dir`, folders first; `recursive` descends into folders.
-pub(crate) fn list(v: &Vault, dir: &str, recursive: bool) -> Result<Value, RpcError> {
+pub fn list(v: &Vault, dir: &str, recursive: bool) -> Result<Value, RpcError> {
     let mut entries = Vec::new();
     let mut pending = vec![dir.trim_end_matches('/').to_string()];
     while let Some(d) = pending.pop() {
@@ -30,7 +30,7 @@ pub(crate) fn list(v: &Vault, dir: &str, recursive: bool) -> Result<Value, RpcEr
 }
 
 /// `file.read`: `{path, revision, scene}` with the scene as parsed JSON.
-pub(crate) fn read(v: &Vault, path: &str) -> Result<Value, RpcError> {
+pub fn read(v: &Vault, path: &str) -> Result<Value, RpcError> {
     let file = crate::read_drawing_parts(&v.root, path).map_err(native_err)?;
     let scene: Value = serde_json::from_str(&file.json).map_err(|e| RpcError::app("INVALID_FILE", e.to_string()))?;
     Ok(json!({"path": path, "revision": file.revision, "scene": scene}))
@@ -39,7 +39,7 @@ pub(crate) fn read(v: &Vault, path: &str) -> Result<Value, RpcError> {
 /// `file.write` core: the UI save path (`writable`, the vault mutation guard, a fresh operation
 /// id, `write_drawing_file`). Returns the new revision and the byte length written. The caller
 /// records history and publishes `file.saved` after success.
-pub(crate) fn write(v: &Vault, path: &str, scene: &Value, expected_revision: Option<&str>) -> Result<(String, u64), RpcError> {
+pub fn write(v: &Vault, path: &str, scene: &Value, expected_revision: Option<&str>) -> Result<(String, u64), RpcError> {
     crate::writable(v).map_err(native_err)?;
     let json = serde_json::to_string(scene).map_err(|e| RpcError::invalid_params(e.to_string()))?;
     let _guard = crate::mutation_guard(v).map_err(native_err)?;
@@ -49,7 +49,7 @@ pub(crate) fn write(v: &Vault, path: &str, scene: &Value, expected_revision: Opt
 }
 
 /// `file.write`'s `expectedRevision`: required key, `null` = create only.
-pub(crate) fn expected_revision(params: &Value) -> Result<Option<&str>, RpcError> {
+pub fn expected_revision(params: &Value) -> Result<Option<&str>, RpcError> {
     match params.get("expectedRevision") {
         None => Err(RpcError::invalid_params("expectedRevision is required (null creates a new drawing)")),
         Some(Value::Null) => Ok(None),
@@ -61,11 +61,10 @@ pub(crate) fn expected_revision(params: &Value) -> Result<Option<&str>, RpcError
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Mutex;
     use vaultdraw_protocol::codes;
 
     fn vault(root: &std::path::Path, read_only: bool) -> Vault {
-        Vault { root: root.canonicalize().unwrap(), handle: "t".into(), read_only, _lock: None, _watcher: None, mutation: Mutex::new(()) }
+        Vault::new(root.canonicalize().unwrap(), "t".into(), read_only, None)
     }
     fn scene() -> Value {
         json!({"type": "excalidraw", "version": 2, "elements": [], "appState": {}, "files": {}})

@@ -1,0 +1,25 @@
+[package]
+name = "vaultdraw-core"
+version = "0.1.0"
+edition = "2021"
+description = "Vaultdraw vault logic without a UI: paths, atomic writes, recovery, vault lock, search and links index"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["raw_value"] }
+sha2 = "0.10"
+hex = "0.4"
+fs2 = "0.4"
+memchr = "2"
+unicode-normalization = "0.1"
+postcard = { version = "1", features = ["use-std"] }
+crc32fast = "1"
+vaultdraw-protocol = { path = "../vaultdraw-protocol" }
+
+[dev-dependencies]
+tempfile = "3"
+
+# Hardware SHA-256 on Apple Silicon / ARM (about 4x faster revision hashing of large drawings).
+[target.'cfg(all(target_arch = "aarch64", target_vendor = "apple"))'.dependencies]
+sha2 = { version = "0.10", features = ["asm"] }
