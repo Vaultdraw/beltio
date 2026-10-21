@@ -5,7 +5,8 @@
  * without React or VaultApp.
  */
 
-export type CommandCategory =
+/** Categories the app ships; plugins may add their own. */
+export type BuiltinCommandCategory =
   | "File"
   | "Vault"
   | "View"
@@ -28,6 +29,8 @@ export type CommandCategory =
   | "Thumbnails"
   | "Tabs";
 
+export type CommandCategory = BuiltinCommandCategory | (string & {});
+
 /**
  * Facts the dispatcher checks before claiming a key.
  * - vaultOpen: a vault is open.
@@ -38,13 +41,16 @@ export type CommandCategory =
  * - canvasFocus: focus is inside the editor and not text editing.
  * - modalOpen: a vault dialog (`.vault-modal-backdrop`) is open.
  */
-export type ContextKey =
+export type BuiltinContextKey =
   | "vaultOpen"
   | "drawingOpen"
   | "writable"
   | "textEditing"
   | "canvasFocus"
   | "modalOpen";
+
+/** Plugins add namespaced keys (`ns.name`, see contextKeys.ts). */
+export type ContextKey = BuiltinContextKey | `${string}.${string}`;
 
 /** `"!modalOpen"` = must not hold. All entries of `when` must hold. */
 export type WhenClause = ContextKey | `!${ContextKey}`;
@@ -90,7 +96,7 @@ export interface CommandDefinition {
 }
 
 /** Live context snapshot the dispatcher evaluates `when` against. */
-export type CommandContext = Readonly<Record<ContextKey, boolean>>;
+export type CommandContext = Readonly<Record<BuiltinContextKey, boolean>>;
 
 export type CommandHandler = () => void | Promise<void>;
 

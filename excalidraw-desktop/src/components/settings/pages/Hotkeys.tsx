@@ -1,6 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
-import { allCommands, COMMANDS } from "../../../commands/commands";
+import { allCommands } from "../../../commands/commands";
 import {
   drawingOpenCommandId,
   parseDrawingOpenCommandId,
@@ -18,6 +24,11 @@ import {
   isCustomised,
   overrideFor,
 } from "../../../commands/keymap";
+import {
+  commandsVersion,
+  registeredCommands,
+  subscribeCommands,
+} from "../../../commands/registry";
 import { reservedReason } from "../../../commands/reserved";
 import {
   resetHotkeyOverrides,
@@ -46,10 +57,14 @@ import type { Chord, CommandDefinition } from "../../../commands/types";
 /** What the next key press is captured for: a command row, or the filter box. */
 type Recording = { kind: "command"; id: string } | { kind: "filter" } | null;
 
-const SORTED: readonly CommandDefinition[] = [...COMMANDS].sort(
-  (a, b) =>
-    a.category.localeCompare(b.category) || a.title.localeCompare(b.title),
-);
+/** Registry order is not display order: by category, then title. */
+const sortCommands = (
+  list: readonly CommandDefinition[],
+): readonly CommandDefinition[] =>
+  [...list].sort(
+    (a, b) =>
+      a.category.localeCompare(b.category) || a.title.localeCompare(b.title),
+  );
 
 const errorText = (err: unknown) =>
   err instanceof Error ? err.message : String(err);
@@ -67,7 +82,20 @@ const HotkeysPage = () => {
   const [refusal, setRefusal] = useState<string | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
 
-  const commands = useMemo(() => allCommands(overrides), [overrides]);
+  const registryVersion = useSyncExternalStore(
+    subscribeCommands,
+    commandsVersion,
+  );
+  const commands = useMemo(
+    () => allCommands(overrides),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [overrides, registryVersion],
+  );
+  const sorted = useMemo(
+    () => sortCommands(registeredCommands()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [registryVersion],
+  );
   const conflicts = useMemo(
     () => findConflicts(commands, overrides, platform),
     [commands, overrides, platform],
@@ -146,13 +174,13 @@ const HotkeysPage = () => {
     const drawings = commands
       .filter((c) => parseDrawingOpenCommandId(c.id) !== null)
       .sort((a, b) => a.title.localeCompare(b.title));
-    return [...SORTED, ...drawings].map((command) => ({
+    return [...sorted, ...drawings].map((command) => ({
       command,
       keys: effectiveKeys(command, overrides, platform),
       customised: isCustomised(command, overrides, platform),
       conflicted: conflicts.has(command.id),
     }));
-  }, [commands, overrides, platform, conflicts]);
+  }, [commands, sorted, overrides, platform, conflicts]);
   // The Conflicts chip counts conflicting (command, chord) pairs, as before.
   const counts = useMemo(
     () => ({ ...filterCounts(infos), conflicts: conflictTotal }),

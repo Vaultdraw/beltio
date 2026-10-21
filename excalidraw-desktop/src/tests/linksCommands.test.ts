@@ -124,7 +124,8 @@ describe("drawing.open:<path> commands", () => {
       title: "Open drawing: Breadth First",
       category: "Links",
     });
-    expect(allCommands({})).toBe(COMMANDS);
+    expect(allCommands({})).toEqual(COMMANDS);
+    expect(allCommands({})).toBe(allCommands({}));
     expect(allCommands({ [id]: [] })).toHaveLength(COMMANDS.length + 1);
     expect(getCommand(id)?.title).toBe("Open drawing: Breadth First");
     expect(isCommandId(id)).toBe(true);

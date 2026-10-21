@@ -1,5 +1,12 @@
 /** React glue: live hotkey overrides, the window dispatcher and run(id). */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import {
   getPreferences,
@@ -18,6 +25,7 @@ import { installCommandDispatcher, runHandler } from "./dispatcher";
 import { getRegisteredHandler } from "./handlerRegistry";
 import { detectPlatform } from "./keys";
 import { buildKeymap } from "./keymap";
+import { commandsVersion, subscribeCommands } from "./registry";
 
 import type {
   Chord,
@@ -102,9 +110,15 @@ export function useCommandDispatcher(
 ): CommandRunner {
   const platform = useMemo(() => detectPlatform(win), [win]);
   const overrides = useHotkeyOverrides(win);
+  // Plugins (un)register commands at runtime: rebuild the keymap when they do.
+  const registryVersion = useSyncExternalStore(
+    subscribeCommands,
+    commandsVersion,
+  );
   const keymap = useMemo(
     () => buildKeymap(allCommands(overrides), overrides, platform),
-    [overrides, platform],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [overrides, platform, registryVersion],
   );
 
   const live = useRef({ handlers, app, keymap });

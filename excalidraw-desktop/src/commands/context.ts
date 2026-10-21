@@ -1,4 +1,6 @@
 /** Context facts the dispatcher checks a command's `when` against. */
+import { readCustomContextKey } from "./contextKeys";
+
 import type { CommandContext, WhenClause } from "./types";
 
 export interface AppContext {
@@ -67,10 +69,16 @@ export function readContext(doc: Document, app: AppContext): CommandContext {
   };
 }
 
+/** Built-ins are always booleans in ctx; a miss is a custom key (lazy, else false). */
+const keyHolds = (key: string, ctx: CommandContext): boolean => {
+  const value = (ctx as Readonly<Record<string, boolean | undefined>>)[key];
+  return value === undefined ? readCustomContextKey(key) : !!value;
+};
+
 const clauseHolds = (clause: WhenClause, ctx: CommandContext): boolean =>
   clause.charCodeAt(0) === 33 /* ! */
-    ? !ctx[clause.slice(1) as keyof CommandContext]
-    : !!ctx[clause as keyof CommandContext];
+    ? !keyHolds(clause.slice(1), ctx)
+    : keyHolds(clause, ctx);
 
 /** The clauses of `when` that do not hold in `ctx`. */
 export function failingClauses(

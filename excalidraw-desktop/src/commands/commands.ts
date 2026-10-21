@@ -23,6 +23,12 @@ import {
 } from "./drawingCommands";
 import { EDITOR_COMMANDS } from "./editorCommands";
 import { GRAPH_COMMANDS } from "./graphCommands";
+import {
+  getRegisteredCommand,
+  isLegacyCommandId,
+  registerCommands,
+  registeredCommands,
+} from "./registry";
 import { TAB_COMMANDS } from "./tabCommands";
 import { THUMBNAIL_COMMANDS } from "./thumbnailCommands";
 
@@ -249,6 +255,7 @@ const TAGS_COMMANDS: CommandDefinition[] = [
   },
 ];
 
+/** The built-in commands (registered below; plugins register more at runtime). */
 export const COMMANDS: readonly CommandDefinition[] = [
   {
     id: "file.save",
@@ -593,33 +600,33 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...THUMBNAIL_COMMANDS,
 ];
 
-const BY_ID: ReadonlyMap<string, CommandDefinition> = new Map(
-  COMMANDS.map((command) => [command.id, command]),
-);
+registerCommands(COMMANDS);
+export const BUILTIN_COMMANDS = COMMANDS;
 
-/** A static command, or the "Open drawing" command of a `drawing.open:` id. */
+/** A registered command, or the "Open drawing" command of a `drawing.open:` id. */
 export const getCommand = (id: string): CommandDefinition | undefined => {
+  const registered = getRegisteredCommand(id);
+  if (registered) {
+    return registered;
+  }
   const path = parseDrawingOpenCommandId(id);
-  return (
-    BY_ID.get(id) ?? (path === null ? undefined : makeDrawingOpenCommand(path))
-  );
+  return path === null ? undefined : makeDrawingOpenCommand(path);
 };
 
-/** The static registry plus one command per drawing bound in `[hotkeys]`. */
+/** The registry plus one command per drawing bound in `[hotkeys]`. */
 export const allCommands = (
   overrides: HotkeyOverrides,
 ): readonly CommandDefinition[] => {
   const dynamic = drawingOpenCommands(overrides);
-  return dynamic.length > 0 ? [...COMMANDS, ...dynamic] : COMMANDS;
+  return dynamic.length > 0
+    ? [...registeredCommands(), ...dynamic]
+    : registeredCommands();
 };
 
-/** Older ids still accepted in `[hotkeys]` (see CommandDefinition.legacy). */
-const LEGACY_IDS: ReadonlySet<string> = new Set(
-  COMMANDS.flatMap((command) => (command.legacy ? [command.legacy.id] : [])),
-);
-
 export const isCommandId = (id: string): boolean =>
-  BY_ID.has(id) || LEGACY_IDS.has(id) || parseDrawingOpenCommandId(id) !== null;
+  getRegisteredCommand(id) !== undefined ||
+  isLegacyCommandId(id) ||
+  parseDrawingOpenCommandId(id) !== null;
 
 /** Default chords on a platform ([] = unassigned). */
 export const defaultKeys = (
