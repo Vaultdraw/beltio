@@ -214,6 +214,22 @@ fn links_tolerates_the_outgoing_shape() {
     assert_eq!(out(&vd(&["links", "a"], Some(&f.socket), None)), "b.excalidraw\n");
 }
 
+/// The app's real LinksResponse: `resolved` is the target path; one backlink per element.
+#[test]
+fn links_reads_the_app_shape_once_per_path() {
+    let f = Fake::start(|m, _| match m {
+        "vault.links" => Ok(json!({"path":"a.excalidraw","tookMs":0.1,
+            "outgoing":[{"elementId":"e1","kind":"text","target":"B","resolved":"G/B.excalidraw"},
+                        {"elementId":"e2","kind":"text","target":"B","resolved":"G/B.excalidraw"},
+                        {"elementId":"e3","kind":"text","target":"C","resolved":"C.excalidraw"}],
+            "unresolved":[{"elementId":"e4","kind":"text","target":"zz","resolved":null}],
+            "backlinks":[{"path":"x.excalidraw","elementId":"1"},{"path":"x.excalidraw","elementId":"2"},{"path":"y.excalidraw","elementId":"3"}]})),
+        _ => Err((-32601, "nf".into(), None)),
+    });
+    assert_eq!(out(&vd(&["links", "a"], Some(&f.socket), None)), "G/B.excalidraw\nC.excalidraw\n");
+    assert_eq!(out(&vd(&["links", "a", "--backlinks"], Some(&f.socket), None)), "x.excalidraw\ny.excalidraw\n");
+}
+
 #[test]
 fn tabs_human_and_json_and_tab_actions() {
     let (o, _) = run(&["tabs"]);

@@ -119,15 +119,21 @@ pub fn search(v: &Value) -> String {
         .join("\n")
 }
 
-/// Resolved outgoing links, or the backlink sources. Tolerates the `links` / `outgoing` names.
+/// Resolved outgoing link targets, or the backlink sources, each path once in first-seen order.
+/// The app sends `outgoing: [{resolved: "<path>", ...}]` and `backlinks: [{path, ...}]` (one
+/// entry per linking element); `links` / `path` / `resolved: bool` are tolerated too.
 pub fn links(v: &Value, backlinks: bool) -> String {
-    let lines: Vec<&str> = if backlinks {
+    let found: Vec<&str> = if backlinks {
         arr(v, "backlinks").iter().filter_map(|b| text_of(b, &["path", "source", "from"])).collect()
     } else {
         let list = if v.get("outgoing").is_some() { arr(v, "outgoing") } else { arr(v, "links") };
-        list.iter().filter(|l| l.get("resolved").and_then(Value::as_bool) != Some(false)).filter_map(|l| text_of(l, &["path"])).collect()
+        list.iter()
+            .filter(|l| l.get("resolved").and_then(Value::as_bool) != Some(false))
+            .filter_map(|l| l.get("resolved").and_then(Value::as_str).or_else(|| text_of(l, &["path"])))
+            .collect()
     };
-    lines.join("\n")
+    let mut seen = std::collections::HashSet::new();
+    found.into_iter().filter(|p| seen.insert(*p)).collect::<Vec<_>>().join("\n")
 }
 
 /// `tag count` per line; accepts `[{tag|name, count}]` or a `{tag: count}` map.
