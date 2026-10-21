@@ -1,0 +1,11 @@
+/*
+ * Excalidraw's SVGLayer (laser, lasso and eraser trails) is a fixed,
+ * full-window element above the canvases. WebKit gives it a composited layer
+ * with its own backing store, and every element that overlaps it in the
+ * stacking order (navigator, tab strip, header, editor body) gets one too.
+ * While no trail is drawn its <svg> is empty, so take it out of layout:
+ * -46 MB GPU at 1280x850 @2x (headless WebKit, e2e/compositing.spec.ts).
+ */
+.excalidraw .SVGLayer:has(> svg:empty) {
+  display: none;
+}

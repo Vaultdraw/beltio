@@ -182,7 +182,7 @@ export async function runAppOnce({
     if (!dir) return;
     mkdirSync(dir, { recursive: true });
     for (const pid of livePids()) {
-      const out = await sh("/usr/bin/footprint", ["-p", String(pid)], { timeout: 20_000, maxBuffer: 16 << 20 }).catch((e) => `footprint failed: ${e.message}`);
+      const out = await sh("/usr/bin/footprint", [...(process.env.PERF_MEM_DUMP_VERBOSE ? ["-v"] : []), "-p", String(pid)], { timeout: 20_000, maxBuffer: 64 << 20 }).catch((e) => `footprint failed: ${e.message}`);
       const base = path.join(dir, `${runIndex}-${String(timeline.length).padStart(2, "0")}-${mark.replace(/\W+/g, "_")}-${roleOf(pid)}`);
       writeFileSync(`${base}.txt`, out);
       // Live allocations by stack (launch with MallocStackLogging=lite in the environment).

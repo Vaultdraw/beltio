@@ -53,6 +53,8 @@ import { useFormulaCommands } from "../formula/useFormulaCommands";
 
 import "../theme/excalidrawChrome.css";
 
+import "./compositing.css";
+
 import { registerCanvasRepaint, suspendCanvasSync } from "./canvasSync";
 import { registerEditorApi, registerLiveEditor } from "./editorApi";
 import { registerEditorFlush } from "./editorFlush";
