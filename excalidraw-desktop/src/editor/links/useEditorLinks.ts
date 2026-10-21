@@ -73,6 +73,15 @@ export type UseEditorLinksOptions = {
   tagsSettings?: TagsSettings;
   /** Reads a vault drawing (hover preview thumbnails). */
   readDrawing?: ReadDrawing;
+  /**
+   * Link styling only (default: `api` / `currentPath`): the editor and the
+   * path of the scene on screen. While a scene swap is in flight `api` is
+   * null (links act on the new document), but the old scene is still shown
+   * and stays styled; uninstalling and reinstalling the styler around the
+   * swap redrew both scenes once more.
+   */
+  styleApi?: ExcalidrawImperativeAPI | null;
+  stylePath?: string | null;
 };
 
 const LinkSuggest = lazy(() =>
@@ -168,11 +177,12 @@ export function useEditorLinks(opts: UseEditorLinksOptions) {
   }, [autocomplete, autocompleteOn]);
 
   useLinkStyling({
-    api: opts.api,
+    api: opts.styleApi === undefined ? opts.api : opts.styleApi,
     enabled: opts.settings.styleLinks,
     linkColor: opts.settings.linkColor,
     resolver,
-    currentPath: opts.currentPath,
+    currentPath:
+      opts.stylePath === undefined ? opts.currentPath : opts.stylePath,
   });
 
   const preview = useLinkPreview({

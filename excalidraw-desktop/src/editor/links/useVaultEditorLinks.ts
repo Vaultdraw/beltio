@@ -66,23 +66,37 @@ const NO_CALLBACKS: EditorLinksCallbacks = {
   onCreate: NOOP,
 };
 
+/**
+ * `api` is null while the editor shows another document's scene (a scene
+ * swap in flight); `styleApi` is the editor itself, so link styling stays on
+ * the scene that is shown, with the path it was opened under, and switches
+ * to the new path once the new scene is the one on screen.
+ */
 export function useVaultEditorLinks(
   api: ExcalidrawImperativeAPI | null,
   containerEl: HTMLElement | null,
   wiring: EditorLinksWiring | undefined,
+  styleApi: ExcalidrawImperativeAPI | null = api,
 ) {
+  const currentPath = wiring?.currentPath ?? null;
+  const shownPath = useRef(currentPath);
+  if (api !== null || styleApi === null) {
+    shownPath.current = currentPath;
+  }
   const controller = useEditorLinks({
     api,
     containerEl,
     settings: wiring?.settings ?? OFF,
     names: wiring?.names ?? NO_NAMES,
-    currentPath: wiring?.currentPath ?? null,
+    currentPath,
     callbacks: wiring?.callbacks ?? NO_CALLBACKS,
     links: wiring?.links,
     handle: wiring?.handle,
     getRecent: wiring?.getRecent,
     tagsSettings: wiring ? wiring.tagsSettings : TAGS_OFF,
     readDrawing: wiring?.readDrawing,
+    styleApi,
+    stylePath: shownPath.current,
   });
   const live = useRef({ controller, wiring, api, containerEl });
   live.current = { controller, wiring, api, containerEl };

@@ -201,6 +201,7 @@ const VaultEditorComponent = ({
     apiReady ? libraryApi : null,
     hostEl,
     links,
+    libraryApi,
   );
   const pens = usePens(apiRef, !readOnly && !disabled);
   const onPenAppState = pens.onAppState;
