@@ -33,6 +33,14 @@ const TYPES = {
   ".map": "application/json",
 };
 
+export const PERF_PAGE = "perf/browser/perf.html";
+
+export async function hasPerfPage(distDir) {
+  return fs
+    .access(path.join(distDir, PERF_PAGE))
+    .then(() => true, () => false);
+}
+
 const median = (xs) => {
   const s = [...xs].sort((a, b) => a - b);
   if (!s.length) {
@@ -95,7 +103,7 @@ async function startServer({ distDir, vaultDir }) {
       } else {
         file = inside(
           distDir,
-          p === "/" ? "perf/browser/perf.html" : p.slice(1),
+          p === "/" ? PERF_PAGE : p.slice(1),
         );
       }
       if (!file) {
@@ -213,7 +221,10 @@ async function onePage(browser, { port, mode, timeoutMs, log, leak, leakOnly }) 
     let endMetrics = [];
     let leakHeap = [];
     try {
-      await page.goto(`http://127.0.0.1:${port}/${leak ? `?leak=1${leakOnly ? "&only=1" : ""}` : ""}`);
+      const response = await page.goto(`http://127.0.0.1:${port}/${leak ? `?leak=1${leakOnly ? "&only=1" : ""}` : ""}`);
+      if (!response?.ok()) {
+        throw new Error(`perf page not served: HTTP ${response?.status()} (is the perf bundle built?)`);
+      }
       try {
         await page.waitForFunction(
           () => window.__perfResult !== undefined,
@@ -301,7 +312,9 @@ export async function runBrowser({
 }) {
   const desktop = path.join(wtRoot, "excalidraw-desktop");
   const distDir = path.join(wtRoot, ".cache/perf/browser-dist");
-  if (build) {
+  // `--no-build` reuses the packaged app; the Chromium bundle is separate and a fresh
+  // worktree has none (perf.html would 404 and the page would wait forever with no marks).
+  if (build || !(await hasPerfPage(distDir))) {
     await runVite(desktop, log);
   }
 
