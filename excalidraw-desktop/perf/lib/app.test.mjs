@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { runAppOnce, vaultDirName } from "./app.mjs";
+import { isRafStall, runAppOnce, vaultDirName } from "./app.mjs";
 
 const fake = path.join(path.dirname(fileURLToPath(import.meta.url)), "fake-app.mjs");
 function setup() {
@@ -65,4 +65,11 @@ test("runAppOnce in leak mode: marks become checkpoints; mode travels in the vau
   assert.deepEqual(labels, ["baseline", "after-10", "after-vault-switch", "idle-after"]);
   assert.ok(r.samples["memory.leak.growthMB"].length === 1);
   assert.ok(r.notes.some((n) => /leak checkpoints/.test(n)));
+});
+
+test("isRafStall: only a stalled-frame error marks a run as hidden-window", () => {
+  assert.equal(isRafStall(["in-app: save: rAF stalled (window hidden/occluded?)"]), true);
+  assert.equal(isRafStall(["Tree row not found: perf-small.excalidraw"]), false);
+  assert.equal(isRafStall([]), false);
+  assert.equal(isRafStall(), false);
 });

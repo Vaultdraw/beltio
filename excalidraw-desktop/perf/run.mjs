@@ -11,7 +11,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { loadCatalogue, specFor, unitOf } from "./lib/catalogue.mjs";
 import { aggregate } from "./lib/stats.mjs";
 import { compare, pickBaseline } from "./lib/compare.mjs";
-import { buildPerfApp, reuseBuiltApp, runAppOnce, gitInfo, perfCacheDir, isScreenLocked } from "./lib/app.mjs";
+import { buildPerfApp, reuseBuiltApp, runAppOnce, gitInfo, perfCacheDir, isScreenLocked, isRafStall } from "./lib/app.mjs";
 import { waitQuiet, loadAvg1, loadNote, loadSummary, DEFAULT_QUIET_LOAD, DEFAULT_QUIET_WAIT_S } from "./lib/load.mjs";
 import { machineInfo, resultTable, comparisonTable, updateBaseline } from "./lib/report.mjs";
 
@@ -124,6 +124,7 @@ const gatedNoisy = (metrics) => Object.entries(metrics).some(([id, m]) => m.nois
 
 // ---- app mode ----
 let appTarget = null;
+let appAborted = null;
 if (!skipApp && isScreenLocked()) {
   errors.push(`app mode: ${LOCKED_MSG}`);
   log(`app mode skipped: ${LOCKED_MSG}`);
@@ -171,8 +172,20 @@ async function collectApp(count, label) {
       notes.push(`app ${label} run retried after: ${why}`);
       r = await appTarget.runOne(rawApp.length + i + 2000);
     }
+    if (r.errors.length) {
+      // A run that failed twice is incomplete: never mix its partial samples into the result.
+      if (label !== "warmup" || isRafStall(r.errors)) errors.push(...r.errors.map((e) => `app ${label} run: ${e}`));
+      if (isRafStall(r.errors)) {
+        // The window stopped rendering (display asleep, screen locked, occluded): every further
+        // run would stall too, so stop the app phase instead of collecting more partial runs.
+        appAborted = `rAF stalled in an app ${label} run twice in a row (display asleep or window hidden?)`;
+        log(`app mode aborted: ${appAborted}`);
+        return;
+      }
+      notes.push(`app ${label} run ${i + 1} failed twice; its samples were discarded`);
+      continue;
+    }
     if (label === "warmup") continue;
-    if (r.errors.length) errors.push(...r.errors.map((e) => `app run: ${e}`));
     if (Object.keys(r.samples).length) rawApp.push(r.samples);
     if (r.info?.memoryTimeline) notes.push(`memory timeline (MB, now/peak per process): ${r.info.memoryTimeline.map((t) => `${t.mark} ${Object.entries(t.procs).map(([k, v]) => `${k}=${v.now}/${v.peak}`).join(" ")}`).join(" | ")}`);
   }
@@ -180,9 +193,9 @@ async function collectApp(count, label) {
 
 if (appTarget) {
   await collectApp(warmup, "warmup");
-  await collectApp(runs, "measured");
+  if (!appAborted) await collectApp(runs, "measured");
   let extra = 0;
-  while (o.milestone && !o.quick && extra < 2 && rawApp.length && elapsedMin() < 5.5 && gatedNoisy(aggregate(rawApp, unitOf(catalogue)))) {
+  while (!appAborted && o.milestone && !o.quick && extra < 2 && rawApp.length && elapsedMin() < 5.5 && gatedNoisy(aggregate(rawApp, unitOf(catalogue)))) {
     extra++;
     log(`noisy gated metric(s); extra run ${extra}/2 (${elapsedMin().toFixed(1)} min elapsed)`);
     await collectApp(1, "measured");
@@ -228,6 +241,7 @@ const result = {
   version: 1, mode, createdAt: new Date().toISOString(), git, machine: machineInfo(),
   config: { runs: rawApp.length || rawBrowser.length, warmup, fixtureHash, drawingCount: modes.typical ? 50 : config.drawingCount, ...(variant ? { variant } : {}) },
   load, metrics, raw: { app: rawApp, browser: rawBrowser }, notes, errors,
+  ...(appAborted ? { aborted: { app: appAborted } } : {}),
 };
 
 const outFile = o.out ? path.resolve(o.out) : path.join(cacheDir, "results", `${new Date().toISOString().replace(/[:.]/g, "-")}-${mode}${variant ? `-${variant}` : ""}.json`);

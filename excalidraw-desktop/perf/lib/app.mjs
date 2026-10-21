@@ -33,6 +33,9 @@ export function isScreenLocked() {
   } catch { return false; }
 }
 
+/** A run whose window stopped producing frames (hidden, occluded, display asleep): its numbers are not real. */
+export const isRafStall = (errors = []) => errors.some((e) => /rAF stalled/.test(String(e)));
+
 export const perfCacheDir = (wtRoot) => path.join(wtRoot, ".cache", "perf");
 export const perfAppPath = (wtRoot) => path.join(perfCacheDir(wtRoot), "app", "Vaultdraw.app");
 
