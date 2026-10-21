@@ -326,6 +326,858 @@
       ],
       "summary": "Run a palette command by id (same ids as [hotkeys]); prefix commands like drawing.open:<path> too",
       "window": true
+    },
+    {
+      "name": "vault.info",
+      "params": {
+        "additionalProperties": true,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "readOnly": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "path",
+          "readOnly"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Name, path and read-only flag of the open vault",
+      "window": false
+    },
+    {
+      "name": "vault.open",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "readOnly": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "path",
+          "readOnly"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Open a vault folder (absolute path) in the window",
+      "window": true
+    },
+    {
+      "name": "vault.list",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "dir": {
+            "type": "string"
+          },
+          "recursive": {
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "entries": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "drawing",
+                    "folder"
+                  ],
+                  "type": "string"
+                },
+                "modifiedAt": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "size": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "path",
+                "name",
+                "kind"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "entries"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "List drawings and folders under dir (vault-relative, default the root), optionally recursive",
+      "window": false
+    },
+    {
+      "name": "vault.search",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "limit": {
+            "type": "integer"
+          },
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "results": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Search the vault (names, text, tags); each result has path plus the search hit fields",
+      "window": false
+    },
+    {
+      "name": "vault.links",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "backlinks": {
+            "type": "boolean"
+          },
+          "file": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "backlinks": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "links": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "resolved": {
+                  "type": "boolean"
+                },
+                "target": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "target",
+                "resolved"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Outgoing links of a drawing, or its backlinks with backlinks=true (one of path or file)",
+      "window": false
+    },
+    {
+      "name": "vault.tags",
+      "params": {
+        "additionalProperties": true,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "tags": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "tag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "tag",
+                "count"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "tags"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Every tag in the vault with its drawing count",
+      "window": false
+    },
+    {
+      "name": "file.read",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "revision": {},
+          "scene": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "path",
+          "revision",
+          "scene"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Read a drawing: path, revision and the parsed scene (one of path or file)",
+      "window": false
+    },
+    {
+      "name": "file.write",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "expectedRevision": {},
+          "file": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "scene": {
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "revision": {}
+        },
+        "required": [
+          "path",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Write a scene through the app's save path; expectedRevision null means create only (one of path or file)",
+      "window": false
+    },
+    {
+      "name": "file.open",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "newTab": {
+            "type": "boolean"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "opened": {
+            "type": "boolean"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "opened"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli",
+        "uri"
+      ],
+      "summary": "Open a drawing in the window, optionally in a new tab (one of path or file)",
+      "window": true
+    },
+    {
+      "name": "file.create",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "scene": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "revision": {}
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Create a drawing (path may omit .excalidraw), optionally from a scene",
+      "window": true
+    },
+    {
+      "name": "file.move",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "rewritten": {
+            "type": "integer"
+          },
+          "to": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Move or rename a drawing or folder; a trailing / on to means into that folder",
+      "window": true
+    },
+    {
+      "name": "file.trash",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "trashed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "path",
+          "trashed"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Move a drawing to the trash (one of path or file)",
+      "window": true
+    },
+    {
+      "name": "tab.list",
+      "params": {
+        "additionalProperties": true,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "activeId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tabs": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "active": {
+                  "type": "boolean"
+                },
+                "dirty": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "missing": {
+                  "type": "boolean"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "pinned": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "path"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "tabs",
+          "activeId"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Open tabs and the active tab id",
+      "window": true
+    },
+    {
+      "name": "tab.focus",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "index": {
+            "type": "integer"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Focus a tab by id, 1-based index, or file target",
+      "window": true
+    },
+    {
+      "name": "tab.close",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "closed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "closed"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Close a tab by id or file target",
+      "window": true
+    },
+    {
+      "name": "config.get",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "value": {}
+        },
+        "required": [
+          "value"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Read a config value by dotted key, or the whole config when key is omitted",
+      "window": false
+    },
+    {
+      "name": "config.set",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "changes": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "value": {}
+              },
+              "required": [
+                "key",
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "changes"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "changed": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "changed"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Set config values (same changes as the settings UI)",
+      "window": false
+    },
+    {
+      "name": "app.quit",
+      "params": {
+        "additionalProperties": true,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "quitting": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "quitting"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Quit the app through the same save barrier as Cmd+Q",
+      "window": false
+    },
+    {
+      "name": "events.subscribe",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "topics": {
+            "items": {
+              "enum": [
+                "vault",
+                "file",
+                "tab",
+                "config",
+                "command"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "seq": {
+            "type": "integer"
+          },
+          "topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "seq",
+          "topics"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Subscribe this connection to event topics (default all); the reply is followed by events.snapshot, then events",
+      "window": false
+    },
+    {
+      "name": "events.unsubscribe",
+      "params": {
+        "additionalProperties": true,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "unsubscribed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "unsubscribed"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Stop receiving events on this connection",
+      "window": false
     }
   ]
 }

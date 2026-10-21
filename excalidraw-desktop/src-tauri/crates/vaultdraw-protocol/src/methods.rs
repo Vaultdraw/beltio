@@ -12,6 +12,26 @@ pub const APP_FOCUS: &str = "app.focus";
 pub const APP_OPEN: &str = "app.open";
 pub const COMMAND_LIST: &str = "command.list";
 pub const COMMAND_RUN: &str = "command.run";
+pub const VAULT_INFO: &str = "vault.info";
+pub const VAULT_OPEN: &str = "vault.open";
+pub const VAULT_LIST: &str = "vault.list";
+pub const VAULT_SEARCH: &str = "vault.search";
+pub const VAULT_LINKS: &str = "vault.links";
+pub const VAULT_TAGS: &str = "vault.tags";
+pub const FILE_READ: &str = "file.read";
+pub const FILE_WRITE: &str = "file.write";
+pub const FILE_OPEN: &str = "file.open";
+pub const FILE_CREATE: &str = "file.create";
+pub const FILE_MOVE: &str = "file.move";
+pub const FILE_TRASH: &str = "file.trash";
+pub const TAB_LIST: &str = "tab.list";
+pub const TAB_FOCUS: &str = "tab.focus";
+pub const TAB_CLOSE: &str = "tab.close";
+pub const CONFIG_GET: &str = "config.get";
+pub const CONFIG_SET: &str = "config.set";
+pub const APP_QUIT: &str = "app.quit";
+pub const EVENTS_SUBSCRIBE: &str = "events.subscribe";
+pub const EVENTS_UNSUBSCRIBE: &str = "events.unsubscribe";
 
 /// Connection roles (a connection declares one with `rpc.hello`; default `cli`).
 pub mod roles {
@@ -55,6 +75,176 @@ fn obj(props: Value, required: &[&str]) -> Value {
 
 const CLI_ONLY: &[&str] = &[roles::CLI];
 const CLI_URI: &[&str] = &[roles::CLI, roles::URI];
+
+/// Params for methods that take a file target: `path` (exact, vault-relative) or `file`
+/// (link-style name); neither is required at schema level, the method needs one of them.
+fn target(extra: Value) -> Value {
+    let mut props = json!({"path": {"type": "string"}, "file": {"type": "string"}});
+    if let (Some(p), Some(e)) = (props.as_object_mut(), extra.as_object()) {
+        p.extend(e.clone());
+    }
+    obj(props, &[])
+}
+
+fn spec(name: &'static str, summary: &'static str, params: Value, result: Value, roles: &'static [&'static str], window: bool) -> MethodSpec {
+    MethodSpec { name, summary, params, result, roles, window }
+}
+
+/// The C3 methods: vault, files, tabs, config, quit, events.
+fn c3_methods() -> Vec<MethodSpec> {
+    let none = obj(json!({}), &[]);
+    let vault = json!({"name": {"type": "string"}, "path": {"type": "string"}, "readOnly": {"type": "boolean"}});
+    let tab_item = obj(
+        json!({"id": {"type": "string"}, "path": {"type": "string"}, "pinned": {"type": "boolean"}, "missing": {"type": "boolean"}, "active": {"type": "boolean"}, "dirty": {"type": "boolean"}}),
+        &["id", "path"],
+    );
+    vec![
+        spec(VAULT_INFO, "Name, path and read-only flag of the open vault", none.clone(), obj(vault.clone(), &["name", "path", "readOnly"]), CLI_ONLY, false),
+        spec(VAULT_OPEN, "Open a vault folder (absolute path) in the window", obj(json!({"path": {"type": "string"}}), &["path"]), obj(vault, &["name", "path", "readOnly"]), CLI_ONLY, true),
+        spec(
+            VAULT_LIST,
+            "List drawings and folders under dir (vault-relative, default the root), optionally recursive",
+            obj(json!({"dir": {"type": "string"}, "recursive": {"type": "boolean"}}), &[]),
+            obj(
+                json!({"entries": {"type": "array", "items": obj(
+                    json!({"path": {"type": "string"}, "name": {"type": "string"}, "kind": {"type": "string", "enum": ["drawing", "folder"]}, "modifiedAt": {"type": "integer"}, "size": {"type": "integer"}}),
+                    &["path", "name", "kind"])}}),
+                &["entries"],
+            ),
+            CLI_ONLY,
+            false,
+        ),
+        spec(
+            VAULT_SEARCH,
+            "Search the vault (names, text, tags); each result has path plus the search hit fields",
+            obj(json!({"query": {"type": "string"}, "limit": {"type": "integer"}}), &["query"]),
+            obj(json!({"results": {"type": "array", "items": obj(json!({"path": {"type": "string"}, "score": {"type": "number"}}), &["path"])}}), &["results"]),
+            CLI_ONLY,
+            false,
+        ),
+        spec(
+            VAULT_LINKS,
+            "Outgoing links of a drawing, or its backlinks with backlinks=true (one of path or file)",
+            target(json!({"backlinks": {"type": "boolean"}})),
+            obj(
+                json!({
+                    "path": {"type": "string"},
+                    "links": {"type": "array", "items": obj(json!({"path": {"type": "string"}, "target": {"type": "string"}, "resolved": {"type": "boolean"}}), &["target", "resolved"])},
+                    "backlinks": {"type": "array", "items": obj(json!({"path": {"type": "string"}}), &["path"])}
+                }),
+                &["path"],
+            ),
+            CLI_ONLY,
+            false,
+        ),
+        spec(
+            VAULT_TAGS,
+            "Every tag in the vault with its drawing count",
+            none.clone(),
+            obj(json!({"tags": {"type": "array", "items": obj(json!({"tag": {"type": "string"}, "count": {"type": "integer"}}), &["tag", "count"])}}), &["tags"]),
+            CLI_ONLY,
+            false,
+        ),
+        spec(
+            FILE_READ,
+            "Read a drawing: path, revision and the parsed scene (one of path or file)",
+            target(json!({})),
+            obj(json!({"path": {"type": "string"}, "revision": {}, "scene": {"type": "object"}}), &["path", "revision", "scene"]),
+            CLI_ONLY,
+            false,
+        ),
+        spec(
+            FILE_WRITE,
+            "Write a scene through the app's save path; expectedRevision null means create only (one of path or file)",
+            target(json!({"scene": {"type": "object"}, "expectedRevision": {}})),
+            obj(json!({"path": {"type": "string"}, "revision": {}}), &["path", "revision"]),
+            CLI_ONLY,
+            false,
+        ),
+        spec(
+            FILE_OPEN,
+            "Open a drawing in the window, optionally in a new tab (one of path or file)",
+            target(json!({"newTab": {"type": "boolean"}})),
+            obj(json!({"path": {"type": "string"}, "opened": {"type": "boolean"}}), &["path", "opened"]),
+            CLI_URI,
+            true,
+        ),
+        spec(
+            FILE_CREATE,
+            "Create a drawing (path may omit .excalidraw), optionally from a scene",
+            obj(json!({"path": {"type": "string"}, "scene": {"type": "object"}}), &["path"]),
+            obj(json!({"path": {"type": "string"}, "revision": {}}), &["path"]),
+            CLI_ONLY,
+            true,
+        ),
+        spec(
+            FILE_MOVE,
+            "Move or rename a drawing or folder; a trailing / on to means into that folder",
+            obj(json!({"from": {"type": "string"}, "to": {"type": "string"}}), &["from", "to"]),
+            obj(json!({"from": {"type": "string"}, "to": {"type": "string"}, "rewritten": {"type": "integer"}}), &["from", "to"]),
+            CLI_ONLY,
+            true,
+        ),
+        spec(
+            FILE_TRASH,
+            "Move a drawing to the trash (one of path or file)",
+            target(json!({})),
+            obj(json!({"path": {"type": "string"}, "trashed": {"type": "boolean"}}), &["path", "trashed"]),
+            CLI_ONLY,
+            true,
+        ),
+        spec(
+            TAB_LIST,
+            "Open tabs and the active tab id",
+            none.clone(),
+            obj(json!({"tabs": {"type": "array", "items": tab_item}, "activeId": {"type": ["string", "null"]}}), &["tabs", "activeId"]),
+            CLI_ONLY,
+            true,
+        ),
+        spec(
+            TAB_FOCUS,
+            "Focus a tab by id, 1-based index, or file target",
+            target(json!({"id": {"type": "string"}, "index": {"type": "integer"}})),
+            obj(json!({"id": {"type": "string"}}), &["id"]),
+            CLI_ONLY,
+            true,
+        ),
+        spec(
+            TAB_CLOSE,
+            "Close a tab by id or file target",
+            target(json!({"id": {"type": "string"}})),
+            obj(json!({"closed": {"type": "boolean"}}), &["closed"]),
+            CLI_ONLY,
+            true,
+        ),
+        spec(
+            CONFIG_GET,
+            "Read a config value by dotted key, or the whole config when key is omitted",
+            obj(json!({"key": {"type": "string"}}), &[]),
+            obj(json!({"key": {"type": ["string", "null"]}, "value": {}}), &["value"]),
+            CLI_ONLY,
+            false,
+        ),
+        spec(
+            CONFIG_SET,
+            "Set config values (same changes as the settings UI)",
+            obj(json!({"changes": {"type": "array", "items": obj(json!({"key": {"type": "string"}, "value": {}}), &["key", "value"])}}), &["changes"]),
+            obj(json!({"changed": {"type": "integer"}}), &["changed"]),
+            CLI_ONLY,
+            false,
+        ),
+        spec(APP_QUIT, "Quit the app through the same save barrier as Cmd+Q", none.clone(), obj(json!({"quitting": {"type": "boolean"}}), &["quitting"]), CLI_ONLY, false),
+        spec(
+            EVENTS_SUBSCRIBE,
+            "Subscribe this connection to event topics (default all); the reply is followed by events.snapshot, then events",
+            obj(json!({"topics": {"type": "array", "items": {"type": "string", "enum": ["vault", "file", "tab", "config", "command"]}}}), &[]),
+            obj(json!({"seq": {"type": "integer"}, "topics": {"type": "array", "items": {"type": "string"}}}), &["seq", "topics"]),
+            CLI_ONLY,
+            false,
+        ),
+        spec(EVENTS_UNSUBSCRIBE, "Stop receiving events on this connection", none, obj(json!({"unsubscribed": {"type": "boolean"}}), &["unsubscribed"]), CLI_ONLY, false),
+    ]
+}
 
 /// Every method, in a stable order.
 pub fn catalogue() -> Vec<MethodSpec> {
@@ -139,6 +329,9 @@ pub fn catalogue() -> Vec<MethodSpec> {
             window: true,
         },
     ]
+    .into_iter()
+    .chain(c3_methods())
+    .collect()
 }
 
 pub fn find(name: &str) -> Option<MethodSpec> {
@@ -158,6 +351,20 @@ pub fn discover(app_version: &str) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn c3_methods_are_catalogued() {
+        let names = [
+            VAULT_INFO, VAULT_OPEN, VAULT_LIST, VAULT_SEARCH, VAULT_LINKS, VAULT_TAGS, FILE_READ, FILE_WRITE, FILE_OPEN, FILE_CREATE, FILE_MOVE,
+            FILE_TRASH, TAB_LIST, TAB_FOCUS, TAB_CLOSE, CONFIG_GET, CONFIG_SET, APP_QUIT, EVENTS_SUBSCRIBE, EVENTS_UNSUBSCRIBE,
+        ];
+        for n in names {
+            assert!(find(n).is_some(), "{n} missing from catalogue");
+        }
+        assert!(find(FILE_OPEN).unwrap().roles.contains(&roles::URI));
+        assert!(!find(FILE_READ).unwrap().roles.contains(&roles::URI));
+        assert!(find(TAB_LIST).unwrap().window && !find(FILE_READ).unwrap().window);
+    }
 
     #[test]
     fn names_are_unique_and_namespaced() {

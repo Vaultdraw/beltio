@@ -12,6 +12,7 @@
 
 pub mod client;
 pub mod dirs;
+pub mod events;
 pub mod frame;
 pub mod message;
 pub mod methods;
