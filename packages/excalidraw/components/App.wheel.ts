@@ -91,21 +91,26 @@ export class AppWheel {
       return;
     }
 
+    const { viewport } = this.app;
     // Shift pans horizontally; ctrl/cmd+shift pans vertically.
     if (event.shiftKey) {
       // on Mac, shift+wheel tends to result in deltaX
       const delta = deltaY || deltaX;
-      this.app.viewport.translate(({ zoom, scrollX, scrollY }) => ({
-        scrollX: hasZoomModifier ? scrollX : scrollX - delta / zoom.value,
-        scrollY: hasZoomModifier ? scrollY - delta / zoom.value : scrollY,
-      }));
+      viewport.translateOnFrame(() =>
+        viewport.translate(({ zoom, scrollX, scrollY }) => ({
+          scrollX: hasZoomModifier ? scrollX : scrollX - delta / zoom.value,
+          scrollY: hasZoomModifier ? scrollY - delta / zoom.value : scrollY,
+        })),
+      );
       return;
     }
 
-    this.app.viewport.translate(({ zoom, scrollX, scrollY }) => ({
-      scrollX: scrollX - deltaX / zoom.value,
-      scrollY: scrollY - deltaY / zoom.value,
-    }));
+    viewport.translateOnFrame(() =>
+      viewport.translate(({ zoom, scrollX, scrollY }) => ({
+        scrollX: scrollX - deltaX / zoom.value,
+        scrollY: scrollY - deltaY / zoom.value,
+      })),
+    );
   });
 
   /**
@@ -135,6 +140,20 @@ export class AppWheel {
     // by which time the pointer may have moved on (`lastPosition` is live)
     const { x: viewportX, y: viewportY } = viewport.lastPosition;
 
+    // one commit per frame: ticks arriving between two frames land together
+    viewport.translateOnFrame(() =>
+      this.zoomAround(viewportX, viewportY, delta, sign, absDelta),
+    );
+  };
+
+  private zoomAround = (
+    viewportX: number,
+    viewportY: number,
+    delta: number,
+    sign: number,
+    absDelta: number,
+  ) => {
+    const { viewport } = this.app;
     const didTranslate = viewport.translate(
       // computed from the state the zoom applies to, not `app.state`: wheel
       // ticks arriving before React has flushed the previous one would

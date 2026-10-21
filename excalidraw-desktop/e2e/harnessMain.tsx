@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 
+import { flushPendingViewportInput } from "@excalidraw/excalidraw/components/App.viewport";
 import { createBackgroundPattern } from "@excalidraw/excalidraw/data/backgroundPattern";
 import { renderBackgroundPattern } from "@excalidraw/excalidraw/renderer/backgroundPattern";
 
@@ -615,8 +616,13 @@ repository.writeDrawing = async (input) => {
   renderBackgroundPattern,
 };
 // Paper zoom perf spec: commits one zoom step (React update + static canvas
-// render) synchronously so its cost can be timed.
-(ownerWindow as any).__flushSync = flushSync;
+// render) synchronously so its cost can be timed. Wheel/pinch input waits for
+// the next frame in the editor, so it is applied here too.
+(ownerWindow as any).__flushSync = <T,>(fn: () => T): T => {
+  const result = flushSync(fn);
+  flushPendingViewportInput();
+  return result;
+};
 (ownerWindow as any).__libraryRepo = libraryRepository;
 // PDF import: the next Import PDF pick returns a 3-page A4 doc; specs replace
 // `nextPick` (bridge.makeDoc(name, pages)) or set delays / failing pages.

@@ -5246,6 +5246,15 @@ class App extends React.Component<AppProps, AppState> {
       }
 
       if (appState) {
+        if (
+          "scrollX" in appState ||
+          "scrollY" in appState ||
+          "zoom" in appState
+        ) {
+          // wheel/pinch input still waiting for its frame was aimed at the
+          // viewport this one replaces (e.g. a scene swap)
+          this.viewport.cancelPendingInput();
+        }
         this.setState(appState as Pick<AppState, K> | null);
       }
 
@@ -6190,33 +6199,41 @@ class App extends React.Component<AppProps, AppState> {
 
     const initialScale = gesture.initialScale;
     if (initialScale) {
-      const didTranslate = this.viewport.translate(
-        (state) => ({
-          ...getViewportForZoomWithScrollConstraints(
-            {
-              viewportX: this.viewport.lastPosition.x,
-              viewportY: this.viewport.lastPosition.y,
-              nextZoom: getNormalizedZoom(initialScale * event.scale),
-            },
-            state,
-          ),
-          // Vaultdraw: like wheel and touch zoom, draw from the cached
-          // element bitmaps while the pinch is in progress; re-rasterizing
-          // every element at every pinch step held a trackpad pinch to
-          // ~20 fps on a 200-element drawing. Crisp again 300 ms after the
-          // last step.
-          shouldCacheIgnoreZoom: true,
-        }),
-        {
-          zoomPreConstrained: true,
-          preserveScrollConstraintsSnapBack: true,
-        },
+      // one commit per frame, like wheel input (see `translateOnFrame`)
+      const { scale } = event;
+      this.viewport.translateOnFrame(() =>
+        this.applyGestureScale(initialScale, scale),
       );
-      if (didTranslate) {
-        this.resetShouldCacheIgnoreZoomDebounced();
-      }
     }
   });
+
+  private applyGestureScale = (initialScale: number, scale: number) => {
+    const didTranslate = this.viewport.translate(
+      (state) => ({
+        ...getViewportForZoomWithScrollConstraints(
+          {
+            viewportX: this.viewport.lastPosition.x,
+            viewportY: this.viewport.lastPosition.y,
+            nextZoom: getNormalizedZoom(initialScale * scale),
+          },
+          state,
+        ),
+        // Vaultdraw: like wheel and touch zoom, draw from the cached
+        // element bitmaps while the pinch is in progress; re-rasterizing
+        // every element at every pinch step held a trackpad pinch to
+        // ~20 fps on a 200-element drawing. Crisp again 300 ms after the
+        // last step.
+        shouldCacheIgnoreZoom: true,
+      }),
+      {
+        zoomPreConstrained: true,
+        preserveScrollConstraintsSnapBack: true,
+      },
+    );
+    if (didTranslate) {
+      this.resetShouldCacheIgnoreZoomDebounced();
+    }
+  };
 
   // fires only on Safari
   private onGestureEnd = withBatchedUpdates((event: GestureEvent) => {

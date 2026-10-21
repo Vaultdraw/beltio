@@ -1,6 +1,9 @@
+import { flushSync } from "react-dom";
+
 import {
   debounce,
   easeOut,
+  throttleRAF,
   isBounds,
   type Bounds,
   type StylesPanelMode,
@@ -57,6 +60,21 @@ const SNAP_BACK_ANIMATION_DURATION = 250;
 /** how long after the last pan/zoom we animate the rubberband back into the
  * scroll constraints box */
 const SCROLL_CONSTRAINTS_SNAP_BACK_DELAY = 200;
+
+/** viewports holding input for their next frame */
+const viewportsWithPendingInput = new Set<AppViewport>();
+
+/**
+ * Applies the wheel/pinch input every editor holds for its next frame now.
+ * For callers that time or read back one input step synchronously (perf
+ * harnesses): `flushSync(() => dispatchEvent(wheel))` alone no longer
+ * commits it.
+ */
+export const flushPendingViewportInput = () => {
+  for (const viewport of [...viewportsWithPendingInput]) {
+    viewport.flushPendingInput();
+  }
+};
 
 /** single source of truth for the `--right-sidebar-width` CSS variable */
 export const RIGHT_SIDEBAR_WIDTH = 302;
@@ -820,6 +838,56 @@ export class AppViewport {
     );
   };
 
+  /** viewport input (wheel, trackpad pinch) waiting for the next frame */
+  private pendingInput: (() => void)[] = [];
+
+  /**
+   * Applies the viewport input that arrived since the last frame in one
+   * synchronous commit, inside the frame's animation callback: one React
+   * commit and one static-scene draw per displayed frame, painted in the same
+   * frame the input arrived in. Trackpads deliver ~120 events/s, not aligned
+   * to vsync; committed one by one, two events between two vsyncs drew the
+   * scene twice for one shown frame.
+   */
+  private applyPendingInput = throttleRAF(() => {
+    const pending = this.pendingInput;
+    this.pendingInput = [];
+    viewportsWithPendingInput.delete(this);
+    if (!pending.length || this.app.unmounted) {
+      return;
+    }
+    flushSync(() => {
+      for (const apply of pending) {
+        apply();
+      }
+    });
+  });
+
+  /**
+   * Runs `apply` (which calls `translate`) on the next animation frame,
+   * together with the other input of that frame. The state then changes
+   * when the screen does: until the frame, `app.state` still holds the
+   * viewport on screen.
+   */
+  translateOnFrame = (apply: () => void) => {
+    this.pendingInput.push(apply);
+    viewportsWithPendingInput.add(this);
+    this.applyPendingInput();
+  };
+
+  /** applies the input still waiting for its frame, if any */
+  flushPendingInput = () => {
+    this.applyPendingInput.flush();
+  };
+
+  /** drops the input still waiting for its frame (a new scene replaces the
+   * viewport it was aimed at) */
+  cancelPendingInput = () => {
+    this.pendingInput = [];
+    viewportsWithPendingInput.delete(this);
+    this.applyPendingInput.cancel();
+  };
+
   /** Use when changing scrollX/scrollY/zoom based on user interaction. */
   translate = <K extends keyof AppState>(
     state:
@@ -916,6 +984,7 @@ export class AppViewport {
   };
 
   destroy = () => {
+    this.cancelPendingInput();
     this.cancelTransition();
     AnimationController.cancel(SCROLL_CONSTRAINTS_SNAP_BACK_ANIMATION_KEY);
     this.snapBackDebounced.cancel();
