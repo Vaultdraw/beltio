@@ -4,6 +4,7 @@ import {
   CJK_HAND_DRAWN_FALLBACK_FONT,
   WINDOWS_EMOJI_FALLBACK_FONT,
   getFontFamilyFallbacks,
+  getFontFamilyString,
   FONT_SIZES,
 } from "@excalidraw/common";
 import { getContainerElement } from "@excalidraw/element";
@@ -25,6 +26,7 @@ import { isTextElement } from "@excalidraw/element";
 import type {
   ExcalidrawElement,
   ExcalidrawTextElement,
+  FontFamilyValues,
 } from "@excalidraw/element/types";
 
 import type { ValueOf } from "@excalidraw/common/utility-types";
@@ -42,6 +44,13 @@ import { LilitaFontFaces } from "./Lilita";
 import { NunitoFontFaces } from "./Nunito";
 import { VirgilFontFaces } from "./Virgil";
 import { XiaolaiFontFaces } from "./Xiaolai";
+
+/** `"Comic Shanns"` / ` Comic Shanns` -> `comic shanns` */
+const normalizeFamily = (family: string) =>
+  family
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .toLowerCase();
 
 export class Fonts {
   // it's ok to track fonts across multiple instances only once, so let's use
@@ -107,7 +116,12 @@ export class Fonts {
     // bail if all fonts with have been processed. We're checking just a
     // subset of the font properties (though it should be enough), so it
     // can technically bail on a false positive.
-    let shouldBail = true;
+    // Vaultdraw: families with a newly loaded face. Only text whose font
+    // stack (family + fallbacks) names one of them is re-measured and
+    // redrawn: a scene swap preloads the next drawing's fonts while the old
+    // scene is still shown, and redrawing every text of the old scene for a
+    // font it doesn't use cost a full static render per swap.
+    const loadedFamilies = new Set<string>();
 
     for (const fontFace of fontFaces) {
       const sig = `${fontFace.family}-${fontFace.style}-${fontFace.weight}-${fontFace.unicodeRange}`;
@@ -115,20 +129,32 @@ export class Fonts {
       // make sure to update our cache with all the loaded font faces
       if (!Fonts.loadedFontsCache.has(sig)) {
         Fonts.loadedFontsCache.add(sig);
-        shouldBail = false;
+        loadedFamilies.add(normalizeFamily(fontFace.family));
       }
     }
 
-    if (shouldBail) {
+    if (!loadedFamilies.size) {
       return;
     }
+
+    const usesLoadedFamily = new Map<FontFamilyValues, boolean>();
+    const isAffected = (fontFamily: FontFamilyValues) => {
+      let affected = usesLoadedFamily.get(fontFamily);
+      if (affected === undefined) {
+        affected = getFontFamilyString({ fontFamily })
+          .split(",")
+          .some((family) => loadedFamilies.has(normalizeFamily(family)));
+        usesLoadedFamily.set(fontFamily, affected);
+      }
+      return affected;
+    };
 
     let didUpdate = false;
 
     const elementsMap = this.scene.getNonDeletedElementsMap();
 
     for (const element of this.scene.getNonDeletedElements()) {
-      if (isTextElement(element)) {
+      if (isTextElement(element) && isAffected(element.fontFamily)) {
         didUpdate = true;
         ShapeCache.delete(element);
 
