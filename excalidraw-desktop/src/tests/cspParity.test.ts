@@ -9,6 +9,8 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { importMapCspHash } from "../../vite-plugins/pluginImportMap";
+
 const root = resolve(__dirname, "../..");
 
 const parse = (policy: string) =>
@@ -68,5 +70,21 @@ describe("native CSP style-src in release builds", () => {
     expect(security.dangerousDisableAssetCspModification).not.toContain(
       "script-src",
     );
+  });
+});
+
+describe("plugin import map and vdplugin: scheme in both CSPs", () => {
+  const sources = ["vdplugin:", "http://vdplugin.localhost"];
+
+  it.each(["script-src", "style-src"])("%s allows the plugin scheme", (d) => {
+    for (const policy of [nativePolicy(), metaPolicy()]) {
+      expect(policy.get(d)).toEqual(expect.arrayContaining(sources));
+    }
+  });
+
+  it("script-src carries the sha256 of the exact import map text", () => {
+    for (const policy of [nativePolicy(), metaPolicy()]) {
+      expect(policy.get("script-src")).toContain(importMapCspHash());
+    }
   });
 });

@@ -2,6 +2,8 @@ import path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+import { pluginImportMap } from "./vite-plugins/pluginImportMap";
+
 import type { Plugin } from "vite";
 
 // main.tsx loads VaultApp (editor and the whole shell, ~1.7 MB) only after the
@@ -192,5 +194,5 @@ export default defineConfig({
   // (service-worker.js, web icons) that must never ship in the desktop app.
   // Installer icons live in src-tauri (native worker scope).
   publicDir: false,
-  plugins: [react(), preloadVaultApp()],
+  plugins: [react(), pluginImportMap(), preloadVaultApp()],
 });
