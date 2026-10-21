@@ -1258,6 +1258,21 @@ mod tests {
     }
 
     #[test]
+    fn plugin_settings_table_round_trips_in_config_and_vault_files() {
+        // The app writes one change per plugin: the whole `[plugin.<id>]` table.
+        let fields = json!({"color": "#fff3a3", "fontSize": 16, "on": true});
+        let out = apply_changes(DEFAULT_CONFIG, &[change("plugin.sticky-notes", fields.clone())]).unwrap();
+        assert!(out.contains("[plugin.sticky-notes]\n"), "{out}");
+        assert_eq!(parse_config(&out).unwrap()["plugin"]["sticky-notes"], fields);
+        assert_eq!(apply_changes(&out, &[change("plugin.sticky-notes", Json::Null)]).unwrap(), DEFAULT_CONFIG);
+        let vault =
+            apply_toml_changes("", &[change("plugin.sticky-notes", json!({"on": false}))], "settings.toml", MAX_CONFIG_BYTES).unwrap();
+        assert_eq!(vault, "[plugin.sticky-notes]\non = false\n");
+        let cleared = apply_toml_changes(&vault, &[change("plugin.sticky-notes", Json::Null)], "settings.toml", MAX_CONFIG_BYTES);
+        assert_eq!(cleared.unwrap(), "");
+    }
+
+    #[test]
     fn tool_table_keeps_a_hand_written_inline_or_dotted_form() {
         let inline = "[tools]\n# styles\narrow = { stroke_width = 1 } # mine\n";
         let out = apply_changes(inline, &[change("tools.arrow", arrow())]).unwrap();
