@@ -1,0 +1,29 @@
+id = "focus-timer"
+name = "Focus timer"
+version = "0.1.0"
+api = 0
+main = "main.js"
+description = "Example: a panel with hooks, a command that opens it, ctx timers and an int setting"
+author = "Vaultdraw"
+
+[[contributes.commands]]
+id = "start"
+title = "Focus timer: start"
+keys = ["Mod+Alt+Shift+T"]
+
+[[contributes.commands]]
+id = "stop"
+title = "Focus timer: stop"
+
+[[contributes.panels]]
+id = "timer"
+title = "Focus timer"
+icon = "history"
+
+[[contributes.settings]]
+key = "minutes"
+type = "int"
+title = "Session length (minutes)"
+default = 25
+min = 1
+max = 180
