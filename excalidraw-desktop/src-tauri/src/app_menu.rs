@@ -28,7 +28,7 @@ const HELP_ITEMS: &[Option<(&str, &str)>] = &[
     Some(("help.checkUpdates", "Check for Updates\u{2026}")),
     None,
     Some(("help.source", "Source Code")),
-    Some(("help.license", "License & Credits")),
+    Some(("help.license", "License and Credits")),
 ];
 
 #[derive(Debug, PartialEq, Eq)]
