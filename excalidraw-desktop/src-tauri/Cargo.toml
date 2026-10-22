@@ -47,7 +47,7 @@ smoke-test = []
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
 objc2-foundation = { version = "0.3", features = ["NSString", "NSArray", "NSData"] }
-objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSPasteboard"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSPasteboard", "NSEvent"] }
 objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFData", "CFURL", "CFString", "CFNumber", "CFDictionary", "CFCGTypes", "CFBase"] }
 objc2-core-graphics = { version = "0.3", default-features = false, features = ["std", "CGPDFDocument", "CGPDFPage", "CGPDFContext", "CGContext", "CGBitmapContext", "CGColorSpace", "CGImage", "CGDataProvider", "CGAffineTransform", "CGGeometry", "CGBase"] }
 objc2-web-kit = { version = "0.3", features = ["WKWebViewConfiguration", "WKPreferences", "WKWebsiteDataStore"] }

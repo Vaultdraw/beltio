@@ -3,58 +3,22 @@ import { getPreferences, subscribePreferences } from "../../vault/preferences";
 import { markPluginHostStarted } from "../hostFlag";
 import { exposeSharedModules } from "../shared/exposeShared";
 
-import { ensureActive, setActivationWindow } from "./activation";
+import { setActivationWindow } from "./activation";
+import {
+  applyPlugins,
+  idleSchedule,
+  queueStartupActivations,
+  type Schedule,
+} from "./apply";
 import { getPluginsBackend } from "./backend";
+import { ensureDevListener } from "./manage";
+import { setPluginsList } from "./pluginsState";
+import { registerSafeModeCommands } from "./safeModeCommands";
 
-import { syncPlugins } from "./index";
+export { idleSchedule, queueStartupActivations };
 
-import type { PluginInfo } from "./types";
-
-type Schedule = (run: () => void) => void;
-
-/** requestIdleCallback is missing in WebKit: fall back to a short timeout. */
-export const idleSchedule =
-  (win: Window): Schedule =>
-  (run) => {
-    if (typeof win.requestIdleCallback === "function") {
-      win.requestIdleCallback(() => run());
-    } else {
-      win.setTimeout(run, 50);
-    }
-  };
-
-const queue: string[] = [];
-let draining = false;
-
-/** onStartupFinished plugins activate one at a time, each on its own idle tick. */
-export function queueStartupActivations(
-  infos: readonly PluginInfo[],
-  ids: readonly string[],
-  schedule: Schedule,
-): Promise<void> {
-  const byId = new Map(infos.map((i) => [i.id, i]));
-  queue.push(
-    ...ids.filter((id) =>
-      byId.get(id)?.activation.includes("onStartupFinished"),
-    ),
-  );
-  if (draining) {
-    return Promise.resolve();
-  }
-  draining = true;
-  return new Promise((resolve) => {
-    const next = () => {
-      const id = queue.shift();
-      if (id === undefined) {
-        draining = false;
-        resolve();
-        return;
-      }
-      schedule(() => void ensureActive(id).then(next));
-    };
-    next();
-  });
-}
+/** The Rust side clears its crash counter once the host has run this long. */
+export const LAUNCH_OK_DELAY_MS = 10_000;
 
 export interface PluginHost {
   stop(): void;
@@ -68,7 +32,14 @@ export async function startPluginHost(
 ): Promise<PluginHost> {
   setActivationWindow(win);
   exposeSharedModules(win);
-  const { plugins } = await getPluginsBackend().list();
+  const backend = getPluginsBackend();
+  const list = await backend.list();
+  setPluginsList(list);
+  const offCommands = registerSafeModeCommands(list.safeMode !== null);
+  const launchTimer = win.setTimeout(
+    () => void backend.launchOk().catch(() => {}),
+    LAUNCH_OK_DELAY_MS,
+  );
   let startupDone = Promise.resolve();
   let last: string | null = null;
   const apply = () => {
@@ -78,15 +49,19 @@ export async function startPluginHost(
       return;
     }
     last = key;
-    const { started } = syncPlugins(plugins, enabled);
-    startupDone = queueStartupActivations(plugins, started, schedule);
+    startupDone = applyPlugins(win, schedule) ?? startupDone;
   };
   apply();
+  ensureDevListener();
   const off = subscribePreferences(apply);
   performance.mark("vaultdraw:plugins:started");
   markPluginHostStarted();
   return {
-    stop: off,
+    stop: () => {
+      off();
+      offCommands();
+      win.clearTimeout(launchTimer);
+    },
     get startupDone() {
       return startupDone;
     },

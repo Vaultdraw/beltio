@@ -4,12 +4,14 @@
 #![cfg_attr(test, allow(dead_code))]
 
 mod install;
+mod launch;
 mod manifest;
 mod scan;
 mod scheme;
 mod state;
 #[cfg(test)]
 mod tests;
+mod watch;
 
 use crate::{config, err, Result};
 use scan::{Index, PluginInfo, PluginsList, Roots, Scanned};
@@ -17,7 +19,8 @@ use std::{
     path::PathBuf,
     sync::{Arc, RwLock},
 };
-use tauri::{AppHandle, Manager};
+use std::sync::atomic::{AtomicBool, Ordering};
+use tauri::{AppHandle, Emitter, Manager};
 
 pub(crate) use scheme::register as register_scheme;
 
@@ -40,6 +43,7 @@ fn roots<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<Roots> {
 fn rescan<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<Arc<Snapshot>> {
     let dirs = config::resolve_dirs()?;
     let Scanned { list, index, .. } = scan::scan(&roots(app)?, Some(&scan::cache_path(&dirs.state)), APP_VERSION);
+    watch::sync(app, &list.plugins);
     let snap = Arc::new(Snapshot { list, index: Arc::new(index) });
     *SNAPSHOT.write().map_err(|_| err("INTERNAL", "Plugin state unavailable"))? = Some(Arc::clone(&snap));
     Ok(snap)
@@ -71,6 +75,7 @@ pub(crate) async fn plugins_list(app: AppHandle, rescan: Option<bool>) -> Result
         let snap = snapshot(&app, rescan.unwrap_or(false))?;
         let disabled = state::load(&config::resolve_dirs()?.state);
         let mut list = snap.list.clone();
+        list.safe_mode = launch::current();
         for p in &mut list.plugins {
             p.host_disabled = disabled.get(&p.manifest.id).cloned();
         }
@@ -121,3 +126,62 @@ pub(crate) async fn plugins_open_dir(app: AppHandle, id: Option<String>) -> Resu
     .await
 }
 
+
+/// Folder picker for "Install from folder"; `None` when cancelled.
+#[tauri::command]
+pub(crate) async fn plugins_pick_folder() -> Result<Option<String>> {
+    blocking(|| {
+        Ok(rfd::FileDialog::new()
+            .set_title("Choose a plugin folder (with plugin.toml)")
+            .pick_folder()
+            .map(|p| p.to_string_lossy().into_owned()))
+    })
+    .await
+}
+
+/// The frontend host started fine: the launch counts as clean.
+#[tauri::command]
+pub(crate) async fn plugins_launch_ok() -> Result<()> {
+    blocking(|| {
+        launch::mark_ok();
+        Ok(())
+    })
+    .await
+}
+
+static RESTART_PENDING: AtomicBool = AtomicBool::new(false);
+
+/// Restart through the normal quit path so open drawings are flushed first.
+fn restart<R: tauri::Runtime>(app: &AppHandle<R>) {
+    RESTART_PENDING.store(true, Ordering::SeqCst);
+    if app.webview_windows().is_empty() {
+        app.exit(0);
+    } else {
+        let _ = app.emit("vault-quit-request", ());
+    }
+}
+
+#[tauri::command]
+pub(crate) async fn plugins_restart_safe_mode(app: AppHandle) -> Result<()> {
+    blocking(launch::request_safe_mode).await?;
+    restart(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub(crate) fn plugins_restart(app: AppHandle) {
+    restart(&app);
+}
+
+/// Setup hook, before the webview loads: crash counter and safe-mode decision.
+pub(crate) fn on_setup() {
+    launch::begin();
+}
+
+/// Exit hook: a clean exit clears the in-progress flag; a pending restart relaunches the app.
+pub(crate) fn on_exit<R: tauri::Runtime>(app: &AppHandle<R>) {
+    launch::mark_ok();
+    if RESTART_PENDING.load(Ordering::SeqCst) {
+        app.restart();
+    }
+}

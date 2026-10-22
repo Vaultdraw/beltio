@@ -46,6 +46,8 @@ pub(crate) struct PluginsList {
     pub plugins: Vec<PluginInfo>,
     pub errors: Vec<ScanError>,
     pub scan_ms: f64,
+    /// Set by `plugins_list`: this launch's safe mode, if any.
+    pub safe_mode: Option<super::launch::SafeMode>,
 }
 
 /// Where the scheme handler and uninstall find a plugin.
@@ -226,7 +228,7 @@ pub(crate) fn scan(roots: &Roots, cache_path: Option<&Path>, app_version: &str) 
         write_cache(path, &fresh, &old);
     }
     let scan_ms = started.elapsed().as_secs_f64() * 1000.0;
-    Scanned { list: PluginsList { plugins, errors, scan_ms }, index, parsed }
+    Scanned { list: PluginsList { plugins, errors, scan_ms, safe_mode: None }, index, parsed }
 }
 
 fn write_cache(path: &Path, fresh: &Cache, old: &Cache) {

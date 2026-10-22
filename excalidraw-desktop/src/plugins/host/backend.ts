@@ -8,6 +8,18 @@ export interface PluginsBackend {
   installFolder(path: string): Promise<PluginInfo>;
   uninstall(id: string): Promise<void>;
   setHostDisabled(id: string, reason: string | null): Promise<void>;
+  /** Records that this launch started fine (clears the crash counter). */
+  launchOk(): Promise<void>;
+  /** Arms safe mode for the next launch, then quits and relaunches. */
+  restartSafeMode(): Promise<void>;
+  /** Quits and relaunches the app. */
+  restart(): Promise<void>;
+  /** Opens a plugin's folder (or the user plugins folder for null) in the file manager. */
+  openDir(id: string | null): Promise<void>;
+  /** Native folder picker; null when cancelled. */
+  pickFolder(): Promise<string | null>;
+  /** Dev plugin files changed on disk; resolves to an unsubscribe. */
+  onChanged(cb: (id: string) => void): Promise<() => void>;
   /** URL the module of `path` inside plugin `id` is imported from. */
   moduleUrl(id: string, path: string): string;
 }
@@ -27,6 +39,24 @@ export function createTauriBackend(win?: Window | null): PluginsBackend {
     setHostDisabled: async (id, reason) => {
       await call("plugins_set_host_disabled", { id, reason });
     },
+    launchOk: async () => {
+      await call("plugins_launch_ok", {});
+    },
+    restartSafeMode: async () => {
+      await call("plugins_restart_safe_mode", {});
+    },
+    restart: async () => {
+      await call("plugins_restart", {});
+    },
+    openDir: async (id) => {
+      await call("plugins_open_dir", { id });
+    },
+    pickFolder: () => call<string | null>("plugins_pick_folder", {}),
+    onChanged: async (cb) =>
+      (await import("@tauri-apps/api/event")).listen<{ id: string }>(
+        "plugins://changed",
+        (e) => cb(e.payload.id),
+      ),
     moduleUrl: (id, path) =>
       `${
         windows ? "http://vdplugin.localhost" : "vdplugin://localhost"

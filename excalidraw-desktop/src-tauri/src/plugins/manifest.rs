@@ -81,6 +81,9 @@ struct Raw {
     activation: Vec<String>,
     #[serde(default)]
     contributes: Contributes,
+    /// Dev plugins are watched and reloaded when their files change.
+    #[serde(default)]
+    dev: bool,
 }
 
 /// A validated manifest, in the camelCase shape sent to the frontend.
@@ -97,6 +100,8 @@ pub(crate) struct Manifest {
     pub author: Option<String>,
     pub activation: Vec<String>,
     pub contributes: Contributes,
+    #[serde(default)]
+    pub dev: bool,
 }
 
 /// `^[a-z0-9][a-z0-9-]{1,38}$`
@@ -192,6 +197,7 @@ fn validate(raw: Raw) -> Result<Manifest, String> {
         author: raw.author,
         activation: raw.activation,
         contributes: raw.contributes,
+        dev: raw.dev,
     })
 }
 

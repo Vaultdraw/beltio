@@ -739,6 +739,7 @@ pub fn run() {
                 // First launch under the `app.vaultdraw` identifier: carry over the app folders
                 // of a pre-0.1.1 install (copy, never move). Does nothing when they're filled.
                 vaultdraw_core::migrate::run_for_current_platform();
+                plugins::on_setup();
                 // The main window is declared in tauri.conf.json with `create: false`
                 // and built here so macOS can use a custom webview configuration.
                 let window_config = app
@@ -814,6 +815,7 @@ pub fn run() {
                 templates::write_global_template, templates::open_global_templates_dir,
                 thumbs::thumbs_lookup, thumbs::thumbs_put, thumbs::thumbs_clear,
                 plugins::plugins_list, plugins::plugins_install_folder, plugins::plugins_uninstall, plugins::plugins_set_host_disabled, plugins::plugins_open_dir,
+                plugins::plugins_pick_folder, plugins::plugins_launch_ok, plugins::plugins_restart_safe_mode, plugins::plugins_restart,
                 control::uri::uri_open, control::files::external_file_read, control::linux_handlers::links_handlers_plan, control::linux_handlers::links_handlers_apply, control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_spool_begin, control::bridge::control_spool_append, control::bridge::control_spool_abort, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event,
                 smoke::smoke_environment, smoke::smoke_log, smoke::smoke_finish, smoke::perf_process_ids,
                 refresh_rate::probes::perf_display_info, refresh_rate::probes::perf_native_input,
@@ -837,6 +839,7 @@ pub fn run() {
                 templates::write_global_template, templates::open_global_templates_dir,
                 thumbs::thumbs_lookup, thumbs::thumbs_put, thumbs::thumbs_clear,
                 plugins::plugins_list, plugins::plugins_install_folder, plugins::plugins_uninstall, plugins::plugins_set_host_disabled, plugins::plugins_open_dir,
+                plugins::plugins_pick_folder, plugins::plugins_launch_ok, plugins::plugins_restart_safe_mode, plugins::plugins_restart,
                 control::uri::uri_open, control::files::external_file_read, control::linux_handlers::links_handlers_plan, control::linux_handlers::links_handlers_apply, control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_spool_begin, control::bridge::control_spool_append, control::bridge::control_spool_abort, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event
             ])
         };
@@ -857,6 +860,7 @@ pub fn run() {
             templates::write_global_template, templates::open_global_templates_dir,
                 thumbs::thumbs_lookup, thumbs::thumbs_put, thumbs::thumbs_clear,
                 plugins::plugins_list, plugins::plugins_install_folder, plugins::plugins_uninstall, plugins::plugins_set_host_disabled, plugins::plugins_open_dir,
+                plugins::plugins_pick_folder, plugins::plugins_launch_ok, plugins::plugins_restart_safe_mode, plugins::plugins_restart,
                 control::uri::uri_open, control::files::external_file_read, control::linux_handlers::links_handlers_plan, control::linux_handlers::links_handlers_apply, control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_spool_begin, control::bridge::control_spool_append, control::bridge::control_spool_abort, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event
         ]);
         startup_trace("builder configured");
@@ -867,6 +871,7 @@ pub fn run() {
         app.run(|handle, event| {
             if matches!(event, tauri::RunEvent::Exit) {
                 control::on_exit();
+                plugins::on_exit(handle);
             }
             #[cfg(target_os = "macos")]
             if let tauri::RunEvent::Opened { urls } = event {

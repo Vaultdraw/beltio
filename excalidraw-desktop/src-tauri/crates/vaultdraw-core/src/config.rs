@@ -206,7 +206,7 @@ pub struct Dirs {
     pub state: PathBuf,
 }
 impl Dirs {
-    fn config_file(&self) -> PathBuf {
+    pub fn config_file(&self) -> PathBuf {
         self.config.join(CONFIG_FILE)
     }
     fn state_file(&self) -> PathBuf {

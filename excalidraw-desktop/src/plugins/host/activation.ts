@@ -21,11 +21,21 @@ import type { PluginInfo, PluginRuntime } from "./types";
 export const DEACTIVATE_TIMEOUT_MS = 2000;
 
 const runtimes = new Map<string, PluginRuntime>();
+const runtimeListeners = new Set<() => void>();
 let hostWindow: Window | null = null;
 
 export const setActivationWindow = (win: Window): void => {
   hostWindow = win;
 };
+
+/** Notified after every runtime state change (the management state listens). */
+export function subscribeRuntimes(listener: () => void): () => void {
+  runtimeListeners.add(listener);
+  return () => {
+    runtimeListeners.delete(listener);
+  };
+}
+const runtimesChanged = () => runtimeListeners.forEach((l) => l());
 
 export const getRuntime = (id: string): PluginRuntime | undefined =>
   runtimes.get(id);
@@ -47,6 +57,7 @@ export function ensureRuntime(info: PluginInfo): PluginRuntime {
       disposeStubs: null,
     };
     runtimes.set(info.id, rt);
+    runtimesChanged();
   } else {
     rt.info = info;
   }
@@ -62,6 +73,7 @@ export function ensureActive(id: string): Promise<boolean> {
   if (!rt.promise) {
     rt.state = "loading";
     rt.promise = activate(rt);
+    runtimesChanged();
   }
   return rt.promise;
 }
@@ -85,12 +97,14 @@ async function activate(rt: PluginRuntime): Promise<boolean> {
       return false;
     }
     rt.state = "active";
+    runtimesChanged();
     return true;
   } catch (err) {
     if (rt.gen !== gen) {
       return false;
     }
     rt.state = "failed";
+    runtimesChanged();
     reportPluginError(id, err, "activate");
     disablePlugin(id, `failed to activate: ${errorText(err)}`);
     return false;
@@ -138,6 +152,7 @@ export function stopPlugin(rt: PluginRuntime): Promise<void> {
   rt.disposeStubs = null;
   const done = deactivate(rt);
   rt.state = "idle";
+  runtimesChanged();
   return done;
 }
 
@@ -150,6 +165,7 @@ export function disablePlugin(id: string, reason: string): void {
   rt.info = { ...rt.info, hostDisabled: reason };
   void stopPlugin(rt);
   rt.state = "disabled";
+  runtimesChanged();
   toastStore.push({
     message: `Plugin ${rt.info.name} was disabled: ${reason}`,
     kind: "error",
@@ -165,6 +181,7 @@ export function clearHostDisabled(id: string): void {
   if (rt) {
     rt.info = { ...rt.info, hostDisabled: null };
     rt.state = "idle";
+    runtimesChanged();
   }
   resetPluginErrors(id);
 }

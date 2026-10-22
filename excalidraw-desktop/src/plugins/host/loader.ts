@@ -11,6 +11,8 @@ export type ModuleLoader = (url: string) => Promise<unknown>;
 const defaultLoader: ModuleLoader = (url) => import(/* @vite-ignore */ url);
 let loadModule: ModuleLoader = defaultLoader;
 const cache = new Map<string, Promise<Plugin>>();
+/** Reload count per plugin: the `?t=` that busts the module cache. */
+const generations = new Map<string, number>();
 
 /** Tests and the e2e harness inject their own module source. */
 export const setModuleLoader = (fn: ModuleLoader | null): void => {
@@ -32,19 +34,22 @@ async function load(info: PluginInfo, suffix: string): Promise<Plugin> {
 export function loadPluginModule(info: PluginInfo): Promise<Plugin> {
   let p = cache.get(info.id);
   if (!p) {
-    p = load(info, "");
+    const gen = generations.get(info.id);
+    p = load(info, gen ? `?t=${gen}` : "");
     cache.set(info.id, p);
     // A failed import is not cached as success; activation fails for the session.
   }
   return p;
 }
 
-/** Dev reload: drop the cache so the next load re-imports with `?t=`. */
+/** Dev reload: drop the cache so the next load re-imports with a fresh `?t=`. */
 export const forgetPluginModule = (id: string): void => {
   cache.delete(id);
+  generations.set(id, (generations.get(id) ?? 0) + 1);
 };
 
 export const resetLoader = (): void => {
   cache.clear();
+  generations.clear();
   loadModule = defaultLoader;
 };

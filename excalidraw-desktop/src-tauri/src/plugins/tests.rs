@@ -557,3 +557,11 @@ fn smoke_fixture_manifests_parse() {
         assert_eq!(m.id, id);
     }
 }
+
+#[test]
+fn dev_flag_defaults_to_false_and_parses() {
+    assert!(!manifest::parse(&minimal("plain")).unwrap().dev);
+    let dev = format!("{}dev = true\n", minimal("devp"));
+    assert!(manifest::parse(&dev).unwrap().dev);
+    assert!(manifest::parse(&format!("{}dev = \"yes\"\n", minimal("bad"))).is_err());
+}

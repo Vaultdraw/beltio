@@ -19,6 +19,8 @@ export interface PluginInfo {
   problem: string | null;
   hostDisabled: string | null;
   activation: string[];
+  /** Dev plugins are watched and reloaded when their files change. */
+  dev?: boolean;
   contributes: {
     commands: {
       id: string;
@@ -37,10 +39,18 @@ export interface PluginInfo {
   };
 }
 
+export interface SafeModeInfo {
+  reason: "user" | "crashes" | "modifier";
+  crashedLaunches: number;
+  pluginsAtCrash: string[];
+}
+
 export interface PluginsList {
   plugins: PluginInfo[];
   errors: { dir: string; message: string }[];
   scanMs: number;
+  /** This launch's safe mode; null in a normal launch. */
+  safeMode: SafeModeInfo | null;
 }
 
 export type ActivationState =
@@ -49,6 +59,15 @@ export type ActivationState =
   | "active"
   | "failed"
   | "disabled";
+
+/** What the management UI reads (see manage.ts). */
+export interface PluginsState {
+  plugins: PluginInfo[];
+  errors: { dir: string; message: string }[];
+  scanMs: number;
+  safeMode: SafeModeInfo | null;
+  runtime: Record<string, { state: ActivationState; enabled: boolean }>;
+}
 
 /** Mutable per-plugin runtime record (activation.ts owns the transitions). */
 export interface PluginRuntime {
