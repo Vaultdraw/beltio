@@ -70,7 +70,7 @@ pub enum Command {
         #[arg(long)]
         wait: bool,
     },
-    /// Create a drawing, optionally from a scene file (or - for stdin)
+    /// Create a drawing, optionally from a scene file (or - for stdin); with the app closed, a blank plain-paper drawing
     New {
         path: String,
         #[arg(long, value_name = "FILE")]
@@ -78,7 +78,7 @@ pub enum Command {
     },
     /// Print a drawing's scene JSON
     Cat { target: String },
-    /// Write a scene from stdin (refuses when the drawing changed since it was read)
+    /// Write a scene from stdin (refuses when the drawing changed since it was read); works with the app closed
     Write {
         target: String,
         /// Fail with CONFLICT unless the drawing is at this revision

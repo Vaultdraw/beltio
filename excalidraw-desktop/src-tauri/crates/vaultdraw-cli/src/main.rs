@@ -24,7 +24,10 @@ fn main() {
         }
     };
     if let Err(f) = commands::run(&cli) {
-        eprintln!("{f}");
+        match (&f.data, cli.json) {
+            (Some(data), true) => eprintln!("{}", serde_json::json!({"code": f.tag, "message": f.message, "data": data})),
+            _ => eprintln!("{f}"),
+        }
         std::process::exit(f.exit);
     }
 }

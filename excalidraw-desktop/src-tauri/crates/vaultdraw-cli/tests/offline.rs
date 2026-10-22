@@ -234,12 +234,10 @@ fn offline_with_a_live_app_is_refused() {
 }
 
 #[test]
-fn writes_and_window_commands_still_need_the_app() {
+fn window_commands_still_need_the_app() {
     let e = env();
     let v = e.root.to_str().unwrap();
     for args in [
-        vec!["write", "a.excalidraw", "--create"],
-        vec!["new", "n.excalidraw"],
         vec!["mv", "a", "z"],
         vec!["trash", "a"],
         vec!["open", "a"],
@@ -253,7 +251,6 @@ fn writes_and_window_commands_still_need_the_app() {
         assert_eq!(code(&o), 3, "{args:?}: {}", err(&o));
         assert!(err(&o).contains("(NOT_RUNNING)"), "{args:?}: {}", err(&o));
     }
-    assert!(!e.root.join("n.excalidraw").exists());
 }
 
 #[test]

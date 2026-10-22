@@ -2,9 +2,9 @@
 //! producing the same JSON as the RPC method (so every renderer and `--json` is shared).
 
 use crate::cli::Cli;
-use crate::error::{Fail, EXIT_CLI};
+use crate::error::{Fail, EXIT_CLI, EXIT_REFUSED};
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::path::PathBuf;
 use std::time::Instant;
 use vaultdraw_core::config::Dirs;
@@ -12,7 +12,8 @@ use vaultdraw_core::links;
 use vaultdraw_core::ops::target::{self, native_err, Need};
 use vaultdraw_core::ops::{config_ops, vault_ops};
 use vaultdraw_core::search::{store, Index, IndexState, IndexStatus, Scope, SearchResponse, TagsResponse};
-use vaultdraw_core::{vault_path, Vault};
+use vaultdraw_core::lock::{LockRegistry, ReadOnlyReason};
+use vaultdraw_core::{vault_path, Vault, META_DIR};
 use vaultdraw_protocol::{codes, methods, RpcError};
 
 
@@ -127,4 +128,89 @@ fn search(v: &Vault, params: &Value) -> Result<Value, Fail> {
     let t = Instant::now();
     let (results, total) = i.query(query, Scope::All, limit);
     to_json(SearchResponse { query: query.to_string(), results, total_matches: total as u32, status: status(v, &i), took_ms: ms(t) })
+}
+
+/// What `vaultdraw new` writes without `--from` (plain paper: the app's paper and item
+/// defaults live in the frontend preferences).
+const BLANK_SCENE: &str = r#"{"type":"excalidraw","version":2,"source":"vaultdraw-cli","elements":[],"appState":{},"files":{}}"#;
+
+/// The failure for a vault that cannot be locked for writing.
+fn lock_fail(reason: Option<ReadOnlyReason>, pid: Option<u32>) -> Fail {
+    let reason = reason.unwrap_or(ReadOnlyReason::LockUnavailable);
+    let message = match (reason, pid) {
+        (ReadOnlyReason::LockedByOtherProcess, Some(p)) => format!("vault is locked by pid {p} (is Vaultdraw running?)"),
+        (ReadOnlyReason::LockedByOtherProcess, None) => "vault is locked by another process (is Vaultdraw running?)".to_string(),
+        (ReadOnlyReason::NotWritable, _) => "vault folder is not writable".to_string(),
+        (ReadOnlyReason::LockUnavailable, _) => "vault lock unavailable (network or sync folder?)".to_string(),
+    };
+    Fail::new(EXIT_REFUSED, message, codes::READ_ONLY).with_data(json!({"reason": reason, "holderPid": pid}))
+}
+
+/// `file.write` / `file.create` on disk, under the vault lock (held until the process exits).
+/// Same core write as the server; the previous content is staged for the app's history first.
+/// A `file.write` without `expectedRevision` means "unchanged since now" (read under the lock).
+pub fn write_call(cli: &Cli, method: &str, params: &Value) -> Result<Value, Fail> {
+    let root = vault_path::resolve(cli.vault.as_deref()).map_err(native_fail)?;
+    let outcome = LockRegistry::default().acquire(&root, &format!("{META_DIR}.lock"));
+    let Some(lock) = outcome.lock else { return Err(lock_fail(outcome.reason, outcome.holder_pid)) };
+    let v = Vault::new(root.clone(), store::vault_id(&root), false, Some(lock));
+    match method {
+        methods::FILE_WRITE => file_write(&v, params),
+        methods::FILE_CREATE => file_create(&v, params),
+        _ => Err(Fail::cli(format!("{method} cannot run without the app"))),
+    }
+}
+
+fn scene_of(params: &Value) -> Result<&Value, Fail> {
+    params.get("scene").filter(|s| s.is_object()).ok_or_else(|| rpc_fail(RpcError::invalid_params("scene must be a drawing object")))
+}
+
+fn file_write(v: &Vault, params: &Value) -> Result<Value, Fail> {
+    let path = if params.get("path").is_some_and(|p| !p.is_null()) {
+        target::resolve(&v.root, params, Need::Nothing, &|_| None).map_err(rpc_fail)?
+    } else {
+        resolve_nothing(v, params)?
+    };
+    let scene = scene_of(params)?;
+    let current = vaultdraw_core::drawing_revision_at(&v.root, &path).map_err(native_fail)?;
+    let expected: Option<String> = if params.get("expectedRevision").is_none() {
+        current.clone()
+    } else {
+        vault_ops::expected_revision(params).map_err(rpc_fail)?.map(str::to_string)
+    };
+    // Stage only a write that will go ahead (the revision check passes), before the replace.
+    if current.is_some() && current == expected {
+        stage(v, &path);
+    }
+    let (revision, _len) = vault_ops::write(v, &path, scene, expected.as_deref()).map_err(rpc_fail)?;
+    Ok(json!({"path": path, "revision": revision}))
+}
+
+fn resolve_nothing(v: &Vault, params: &Value) -> Result<String, Fail> {
+    target::resolve(&v.root, params, Need::Nothing, &|name| index_with_links(v).ok().and_then(|i| links::resolve_name(&i, name))).map_err(rpc_fail)
+}
+
+/// Copies the current bytes into the app's staging area; never fails the write.
+fn stage(v: &Vault, path: &str) {
+    if let Ok(d) = dirs() {
+        let _ = vaultdraw_core::staging::stage_before_overwrite(&d.state, &v.root, path);
+    }
+}
+
+fn file_create(v: &Vault, params: &Value) -> Result<Value, Fail> {
+    let path = target::resolve(&v.root, params, Need::Nothing, &|_| None).map_err(rpc_fail)?;
+    let blank: Value;
+    let scene = match params.get("scene") {
+        None | Some(Value::Null) => {
+            blank = serde_json::from_str(BLANK_SCENE).map_err(|e| Fail::cli(e.to_string()))?;
+            &blank
+        }
+        Some(_) => scene_of(params)?,
+    };
+    let full = vaultdraw_core::safe_path(&v.root, &path, true).map_err(native_fail)?;
+    if !full.parent().is_some_and(std::path::Path::is_dir) {
+        return Err(rpc_fail(RpcError::app(codes::NOT_FOUND, "The folder does not exist").with("path", path)));
+    }
+    vault_ops::write(v, &path, scene, None).map_err(rpc_fail)?;
+    Ok(json!({"path": path}))
 }

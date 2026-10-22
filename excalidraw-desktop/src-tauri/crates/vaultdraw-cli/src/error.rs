@@ -14,11 +14,18 @@ pub struct Fail {
     pub exit: i32,
     pub message: String,
     pub tag: String,
+    /// Extra machine-readable detail (e.g. the lock holder); shown with `--json`.
+    pub data: Option<serde_json::Value>,
 }
 
 impl Fail {
     pub fn new(exit: i32, message: impl Into<String>, tag: &str) -> Self {
-        Self { exit, message: message.into(), tag: tag.to_string() }
+        Self { exit, message: message.into(), tag: tag.to_string(), data: None }
+    }
+
+    pub fn with_data(mut self, data: serde_json::Value) -> Self {
+        self.data = Some(data);
+        self
     }
 
     /// Local usage or I/O failure (exit 1).
@@ -44,7 +51,7 @@ impl From<CallError> for Fail {
             CallError::Io(m) => Self::new(EXIT_CLI, m, codes::IO_ERROR),
             CallError::Rpc(e) => {
                 let tag = e.app_code().map(str::to_string).unwrap_or_else(|| e.code.to_string());
-                Self { exit: EXIT_REFUSED, message: e.message, tag }
+                Self { exit: EXIT_REFUSED, message: e.message, tag, data: None }
             }
         }
     }

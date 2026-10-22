@@ -61,7 +61,13 @@ pub fn new(cli: &Cli, path: &str, from: Option<&str>) -> Result<(), Fail> {
     if let Some(src) = from {
         p["scene"] = read_json(src)?;
     }
-    request(cli, methods::FILE_CREATE, Some(p), |v| format!("created {}", path_of(v)), false)
+    if cli.print_request {
+        println!("{}", request_line(methods::FILE_CREATE, Some(p)));
+        return Ok(());
+    }
+    let v = crate::backend::write(cli, &rpc(cli)?, methods::FILE_CREATE, p)?;
+    emit(cli.json, &v, || format!("created {}", path_of(&v)));
+    Ok(())
 }
 
 pub fn cat(cli: &Cli, t: &str) -> Result<(), Fail> {
@@ -100,15 +106,11 @@ pub fn write(cli: &Cli, t: &str, expected: Option<&str>, create: bool) -> Result
         println!("{}", request_line(methods::FILE_WRITE, Some(Value::Object(p))));
         return Ok(());
     }
-    let rpc = rpc(cli)?;
-    let mut client = rpc.connect()?;
-    let rev = match explicit {
-        Some(r) => r,
-        // Default: overwrite only if unchanged since now.
-        None => rpc.call_on(&mut client, methods::FILE_READ, Some(Value::Object(target(cli, t))))?.get("revision").cloned().unwrap_or(Value::Null),
-    };
-    p.insert("expectedRevision".into(), rev);
-    let v = rpc.call_on(&mut client, methods::FILE_WRITE, Some(Value::Object(p)))?;
+    // Without an explicit revision, the backend reads it first ("overwrite unless changed since now").
+    if let Some(rev) = explicit {
+        p.insert("expectedRevision".into(), rev);
+    }
+    let v = crate::backend::write(cli, &rpc(cli)?, methods::FILE_WRITE, Value::Object(p))?;
     emit(cli.json, &v, || match v.get("revision") {
         Some(Value::String(r)) => r.clone(),
         Some(r) => r.to_string(),

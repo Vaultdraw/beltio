@@ -2,7 +2,7 @@
 # Offline-read latency of the release CLI on a generated vault.
 # usage: sh bench/offline.sh [drawings=1000] [runs=50]
 # Prints p50/p95 (ms) for: ls, search warm (snapshot present), search cold (state wiped each run),
-# normally and under `taskpolicy -c background`. Needs python3 for the fixture and the stats.
+# plus write (overwrite a 60-element drawing from stdin) and new, normally and under `taskpolicy -c background`. Needs python3 for the fixture and the stats.
 set -eu
 N=${1:-1000}; RUNS=${2:-50}
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -25,16 +25,22 @@ echo "load: $(uptime | sed 's/.*load averages*: //')  drawings: $N  runs: $RUNS 
 measure() {
   prefix=$1; setup=$2; shift 2
   python3 -I - "$RUNS" "$prefix" "$setup" "$@" <<'PY'
-import subprocess, sys, time, shlex
+import os, subprocess, sys, time, shlex
 runs, prefix, setup, cmd = int(sys.argv[1]), sys.argv[2].split(), sys.argv[3], sys.argv[4:]
 ts = []
 for _ in range(runs):
     if setup: subprocess.run(setup, shell=True, check=True)
-    t = time.perf_counter(); r = subprocess.run(prefix + cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    t = time.perf_counter(); sin = os.environ.get('measure_stdin')
+    r = subprocess.run(prefix + cmd, stdin=open(sin) if sin else None, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     ts.append((time.perf_counter() - t) * 1000)
     if r.returncode: sys.exit(r.stderr.decode())
 ts.sort(); print("p50 %.1f ms  p95 %.1f ms  max %.1f ms" % (ts[len(ts)//2], ts[int(len(ts)*.95)-1], ts[-1]))
 PY
+}
+# measure_in <prefix> <stdin file or ""> <setup> <cmd...>: like measure, with stdin from a file
+measure_in() {
+  p=$1; f=$2; shift 2
+  if [ -n "$f" ]; then measure_stdin=$f measure "$p" "$@"; else measure "$p" "$@"; fi
 }
 for mode in normal background; do
   prefix=""; [ $mode = background ] && prefix="taskpolicy -c background"
@@ -44,4 +50,7 @@ for mode in normal background; do
   printf "search cold   "; measure "$prefix" "rm -rf $VAULTDRAW_STATE_DIR/*" "$BIN" --vault "$V" search foo --json
   "$BIN" --vault "$V" search foo --json >/dev/null
   printf "search warm   "; measure "$prefix" "" "$BIN" --vault "$V" search foo --json
+  SC=$T/scene.json; cp "$V/f0/d0.excalidraw" "$SC"
+  printf "write         "; measure_in "$prefix" "$SC" "" "$BIN" --vault "$V" write f0/d0.excalidraw --json
+  printf "new           "; measure_in "$prefix" "" "rm -f $V/f0/new.excalidraw" "$BIN" --vault "$V" new f0/new --json
 done
