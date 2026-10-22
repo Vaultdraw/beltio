@@ -53,6 +53,7 @@ describe("per-vault schema rows", () => {
         "tool-line",
         "tool-text",
         "new-drawing-folder",
+        "plugins-installed",
         "templates-folder",
         "history-enabled",
         "history-interval",
