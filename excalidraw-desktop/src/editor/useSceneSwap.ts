@@ -40,7 +40,13 @@ export type SceneSwapDeps = {
   begin(): void;
   /** Inside the landing step, before the new scene is applied. */
   beforeApply(source: string): void;
-  /** Inside the landing step, after the new scene is applied and committed. */
+  /**
+   * Inside the landing step's `flushSync`, right after the new scene is
+   * applied: state updates here join the scene's commit (one commit per open).
+   * Nothing that reads the committed editor state belongs here.
+   */
+  landing(documentId: string): void;
+  /** Right after the landing commit (same task): refs and baselines. */
   afterApply(api: ExcalidrawImperativeAPI, documentId: string): void;
   /** Anything went wrong: the caller falls back to a full remount. */
   fail(cause: unknown): void;
@@ -122,6 +128,9 @@ export function useSceneSwap(deps: SceneSwapDeps): void {
           appState: swapAppState(scene.appState, api.getAppState()) as AppState,
           captureUpdate: CaptureUpdateAction.NEVER,
         });
+        // `loadedDocId` flips in this commit, so this effect's cleanup runs
+        // inside the flush (`cancelled`, `unblock`): nothing below reads it.
+        l.landing(documentId);
       });
       markOpen("landed");
       l.afterApply(api, documentId);

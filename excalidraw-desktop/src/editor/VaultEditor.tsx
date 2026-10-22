@@ -556,7 +556,6 @@ const VaultEditorComponent = ({
       sceneDocId.current = docId;
       ready.current = true;
       onPageChange(latest.current[0], latest.current[1]);
-      setLoadedDocId(docId);
     },
     [onPageChange, getOverridesVersion],
   );
@@ -565,6 +564,7 @@ const VaultEditorComponent = ({
     (api: ExcalidrawImperativeAPI) => {
       setLibraryApi(api);
       armScene(api, initialDocId.current);
+      setLoadedDocId(initialDocId.current);
     },
     [armScene],
   );
@@ -608,10 +608,12 @@ const VaultEditorComponent = ({
       setPaperDialogOpen(false);
       setEditorError(null);
     },
-    afterApply: (api, docId) => {
-      armScene(api, docId);
+    // batched into the landing commit: the shown document flips with its scene
+    landing: (docId) => {
+      setLoadedDocId(docId);
       setSwapping(false);
     },
+    afterApply: armScene,
     fail: (cause) => {
       // eslint-disable-next-line no-console
       console.error("[editor] scene swap failed, rebuilding the editor", cause);

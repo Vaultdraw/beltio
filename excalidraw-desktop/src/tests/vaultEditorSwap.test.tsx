@@ -4,6 +4,7 @@
  * wrong document, per-document files and history) with the real editor.
  */
 import { act, render, waitFor } from "@testing-library/react";
+import { Profiler } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CaptureUpdateAction } from "@excalidraw/excalidraw";
@@ -209,6 +210,52 @@ describe("VaultEditor scene swap", () => {
     await waitFor(() => expect(ready()).toBe("true"), { timeout: 4000 });
     expect(host().getAttribute("data-document-id")).toBe("B");
     expect(getEditorApi("B")).toBeTruthy();
+  });
+
+  it("an open is one React commit: the shown document flips with the scene", async () => {
+    const commits: { shown: string | null; ids: string[] }[] = [];
+    let host: HTMLElement | null = null;
+    const watched: { api?: ReturnType<typeof getEditorApi> } = {};
+    const tree = (documentId: string, json: string) => (
+      <Profiler
+        id="editor"
+        onRender={() =>
+          commits.push({
+            shown: host?.getAttribute("data-document-id") ?? null,
+            ids: (watched.api?.getSceneElements() ?? []).map((e) => e.id),
+          })
+        }
+      >
+        <VaultEditor
+          documentId={documentId}
+          initialSource={{ json }}
+          name="x.excalidraw"
+          onChange={vi.fn()}
+        />
+      </Profiler>
+    );
+    const view = render(tree("A", scene("a")));
+    host = view.container.querySelector(".vault-editor") as HTMLElement;
+    await waitFor(() => expect(getEditorApi("A")).toBeTruthy());
+    watched.api = getEditorApi("A");
+    await settle();
+    commits.length = 0;
+    await act(async () => view.rerender(tree("B", scene("b"))));
+    await waitFor(
+      () => expect(host!.getAttribute("data-document-id")).toBe("B"),
+      {
+        timeout: 4000,
+      },
+    );
+    await settle();
+    const flip = commits.findIndex((c) => c.shown === "B");
+    expect(flip).toBeGreaterThanOrEqual(0);
+    // the commit that flips the id already shows B's scene ...
+    expect(commits[flip].ids).toEqual(["b-r0", "b-r1"]);
+    // ... and every earlier commit still showed A (id and `swapping` never
+    // flip in a commit of their own after the scene)
+    expect(commits.slice(0, flip).every((c) => c.shown === "A")).toBe(true);
+    expect(commits.slice(0, flip).every((c) => c.ids[0] === "a-r0")).toBe(true);
   });
 
   it("a change right after the swap is saved with B's content", async () => {
