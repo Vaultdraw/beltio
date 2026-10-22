@@ -4,7 +4,7 @@ Your Excalidraw drawings, in a folder you own.
 
 Vaultdraw is an offline desktop app for macOS that keeps your [Excalidraw](https://github.com/excalidraw/excalidraw) drawings as plain files in a folder on your computer, a bit like Obsidian for whiteboards. No account, no cloud, no telemetry.
 
-[Website](https://vaultdraw.swarnim-114.workers.dev) · [Download](https://github.com/Vaultdraw/vaultdraw/releases/latest) · [Changelog](CHANGELOG.md) · [Docs](docs/configuration.md)
+[Website](https://vaultdraw.swarnim-114.workers.dev) · [Download](https://github.com/Vaultdraw/vaultdraw/releases/latest) · [Changelog](CHANGELOG.md) · [Docs](https://vaultdraw.swarnim-114.workers.dev/docs/)
 
 [![Vaultdraw](docs/assets/vaultdraw.png)](https://vaultdraw.swarnim-114.workers.dev)
 
@@ -84,7 +84,7 @@ npx --yes yarn@1.22.22 desktop:build
 
 ## Contributing
 
-Bug reports, ideas and pull requests are welcome. Open an [issue](https://github.com/Vaultdraw/vaultdraw/issues) to start. Run `yarn test:typecheck` and `yarn test:app` before sending a PR.
+Bug reports, ideas and pull requests are welcome. Open an [issue](https://github.com/Vaultdraw/vaultdraw/issues) to start. The [development notes](docs/development.md) cover the repo layout, tests and how to add a command; run `yarn test:typecheck` and `yarn test:app` before sending a PR.
 
 ## Credits
 
