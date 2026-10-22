@@ -1,6 +1,6 @@
 [package]
 name = "excalidraw-vault"
-version = "0.1.1"
+version = "0.1.2"
 description = "Vaultdraw: an offline, local-first vault for Excalidraw drawings"
 authors = ["Vaultdraw contributors"]
 edition = "2021"

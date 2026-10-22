@@ -1,6 +1,6 @@
 [package]
 name = "vaultdraw-protocol"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Vaultdraw control API: JSON-RPC 2.0 types, NDJSON framing, paths and a blocking client"
 publish = false

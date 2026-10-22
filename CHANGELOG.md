@@ -2,6 +2,21 @@
 
 All notable changes to Vaultdraw are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-10-23
+
+### New
+
+- New logo and app icon: a folder with a pencil and a pen, drawn in Excalidraw's sketch style, with the name in Excalifont. The welcome screen shows it too, in light and dark mode.
+- Help links inside the app: website, documentation, keyboard shortcuts, what's new, check for updates, source code, and license and credits.
+- Report a bug and Request a feature open a GitHub issue that is already filled in with a template and your Vaultdraw and macOS versions (no file paths or vault names).
+- The links are in a new **Help** menu, in the command palette as `Help: …` commands (rebindable like every command), and on a new **Settings → About** page that shows the version.
+- The welcome screen has links to the website, the docs and bug reports.
+
+### Known limitations
+
+- The build is still unsigned, so the first open needs **right-click → Open** or **System Settings → Privacy & Security → Open Anyway**. If the `vaultdraw` command stops with `Killed: 9`, run `xattr -dr com.apple.quarantine /Applications/Vaultdraw.app`.
+- macOS only, no automatic update yet, and plugins are experimental (as in 0.1.1).
+
 ## [0.1.1] - 2026-10-22
 
 First public release. Vaultdraw is an offline, local-first vault for Excalidraw drawings: pick a folder, and your drawings are ordinary `.excalidraw` files you own. No accounts, no cloud, no telemetry.
@@ -140,4 +155,5 @@ First public release. Vaultdraw is an offline, local-first vault for Excalidraw 
 - Plugins are experimental and their interface may change.
 - There is no automatic update yet. Check the [GitHub releases](https://github.com/Vaultdraw/vaultdraw/releases) page for new versions.
 
+[0.1.2]: https://github.com/Vaultdraw/vaultdraw/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Vaultdraw/vaultdraw/releases/tag/v0.1.1

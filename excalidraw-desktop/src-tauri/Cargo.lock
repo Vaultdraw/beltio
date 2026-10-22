@@ -1114,7 +1114,7 @@ dependencies = [
 
 [[package]]
 name = "excalidraw-vault"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "crc32fast",
  "fs2",
@@ -4481,7 +4481,7 @@ dependencies = [
 
 [[package]]
 name = "vaultdraw-cli"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "clap",
  "clap_complete",
@@ -4497,7 +4497,7 @@ dependencies = [
 
 [[package]]
 name = "vaultdraw-core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "crc32fast",
  "fs2",
@@ -4516,7 +4516,7 @@ dependencies = [
 
 [[package]]
 name = "vaultdraw-protocol"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "libc",
  "serde",
