@@ -1,6 +1,7 @@
 import { activityBarRegistry } from "../../activityBar/activityBarRegistry";
 import { getRegisteredHandler } from "../../commands/handlerRegistry";
 import { registeredCommands } from "../../commands/registry";
+import { sceneListenerCount } from "../../sceneOps/sceneBus";
 import { updatePreferences } from "../../vault/preferences";
 import { registeredSettingsPlugins } from "../settings/registry";
 
@@ -60,6 +61,7 @@ export const registrySizes = (probeId = "") => ({
   bottom: activityBarRegistry.list("activityBar.bottom").length,
   settings: registeredSettingsPlugins().length,
   timers: pluginTimerCount(),
+  sceneListeners: sceneListenerCount(),
   handler: probeId ? !!getRegisteredHandler(probeId) : false,
 });
 

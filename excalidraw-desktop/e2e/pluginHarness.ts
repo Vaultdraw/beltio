@@ -75,6 +75,23 @@ export const FIXTURES: Record<string, () => PluginInfo> = {
         settings: [],
       },
     }),
+  "scene-stamp": () =>
+    makePluginInfo("scene-stamp", {
+      name: "Stamp",
+      contributes: {
+        commands: [
+          command("stamp", "Stamp: add box"),
+          command("stamp100", "Stamp: add 100 boxes"),
+        ],
+        panels: [{ id: "stamp", title: "Stamp", icon: null, group: "top" }],
+        settings: [],
+      },
+    }),
+  "scene-watch": () =>
+    makePluginInfo("scene-watch", {
+      name: "Scene watch",
+      activation: ["onStartupFinished"],
+    }),
   size5k: () => sized("size5k", "Size 5k", 5 * 1024),
   size100k: () => sized("size100k", "Size 100k", 100 * 1024),
   size1m: () => sized("size1m", "Size 1m", 1024 * 1024),

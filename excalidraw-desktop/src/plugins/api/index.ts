@@ -4,6 +4,24 @@
  */
 import type { ComponentType } from "react";
 
+import type {
+  NewElement,
+  SceneElement,
+  SceneElementType,
+  SceneOp,
+  SceneOpIssue,
+} from "../../sceneOps";
+import type { AppEventMap } from "../../events/appEvents";
+
+export type {
+  AppEventMap,
+  NewElement,
+  SceneElement,
+  SceneElementType,
+  SceneOp,
+  SceneOpIssue,
+};
+
 export interface Disposable {
   dispose(): void;
 }
@@ -40,6 +58,30 @@ export interface PluginContext {
     info(...a: unknown[]): void;
     warn(...a: unknown[]): void;
     error(...a: unknown[]): void;
+  };
+  readonly scene: {
+    /** Non-deleted elements of the active drawing (frozen snapshot), [] when none is open. */
+    elements(): readonly SceneElement[];
+    /** After the active scene changed ("edit") or another drawing became active ("switch"); at most once per frame. */
+    onChange(
+      cb: (e: { reason: "edit" | "switch"; path: string | null }) => void,
+    ): Disposable;
+    /** React hook: `select(elements)`, re-rendered only when the selected value changes (`isEqual`, default Object.is). */
+    useScene<T>(
+      select: (els: readonly SceneElement[]) => T,
+      isEqual?: (a: T, b: T) => boolean,
+    ): T;
+    /** Applies the ops as ONE undo step. Rejects: no drawing, read-only, invalid ops. */
+    batch(ops: readonly SceneOp[]): Promise<{ ids: string[] }>;
+    /** Centre of the visible canvas in scene coordinates. */
+    viewportCenter(): { x: number; y: number };
+  };
+  readonly events: {
+    /** App events (vault-relative paths). Delivery is async and ordered per event. */
+    on<K extends keyof AppEventMap>(
+      name: K,
+      cb: (payload: Readonly<AppEventMap[K]>) => void,
+    ): Disposable;
   };
   /** Disposed in reverse order on disable/reload/quit. */
   readonly subscriptions: Disposable[];

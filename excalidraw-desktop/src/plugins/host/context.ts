@@ -10,6 +10,7 @@ import { pluginSettingDecl } from "../settings/registry";
 import { errorText, logLine, reportPluginError } from "./errors";
 import { guard } from "./guard";
 import { runCommandById } from "./runner";
+import { createEventsApi, createSceneApi } from "./sceneContext";
 
 import type { Disposable, PluginContext } from "../api";
 import type { PluginRuntime } from "./types";
@@ -175,6 +176,8 @@ export function createPluginContext(
         },
       ]),
     ) as PluginContext["log"],
+    scene: createSceneApi(id, track),
+    events: createEventsApi(id, track),
     subscriptions,
     setTimeout: timer(
       (fn, ms) => win.setTimeout(fn, ms),

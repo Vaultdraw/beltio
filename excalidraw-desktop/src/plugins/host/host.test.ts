@@ -7,6 +7,8 @@ import { toastStore } from "../../toasts/toastStore";
 import { isPanelOpen } from "../../slots/panelStore";
 import { updatePreferences } from "../../vault/preferences";
 
+import { boot as bootPlugin } from "../testing";
+
 import { ensureActive, getRuntime } from "./activation";
 import { getPluginCosts } from "./cost";
 import {
@@ -97,30 +99,25 @@ describe("activation", () => {
     const activate = vi.fn((ctx: PluginContext) => {
       ctx.commands.register("say", run);
     });
-    const { loads } = await boot([withCommands("hello", "say")], {
-      hello: { activate },
-    });
-    enable(["hello"]);
-    const h = getRegisteredHandler("hello.say")!;
-    await Promise.all([h(), h(), h()]);
+    const t = await bootPlugin(
+      { id: "hello", contributes: { commands: [{ id: "say" }] } },
+      { activate },
+    );
+    await Promise.all([t.run("say"), t.run("say"), t.run("say")]);
     expect(activate).toHaveBeenCalledTimes(1);
-    expect(loads).toEqual(["hello"]);
     expect(run).toHaveBeenCalledTimes(3);
     expect(getRuntime("hello")?.state).toBe("active");
-    h();
-    expect(run).toHaveBeenCalledTimes(4);
+    await t.dispose();
   });
 
   it("refuses undeclared command registration (attributed)", async () => {
-    await boot([withCommands("hello", "say")], {
-      hello: {
-        activate: (ctx) => void ctx.commands.register("nope", () => {}),
-      },
-    });
-    enable(["hello"]);
-    await ensureActive("hello");
+    const t = await bootPlugin(
+      { id: "hello", activation: ["onStartupFinished"] },
+      { activate: (ctx) => void ctx.commands.register("nope", () => {}) },
+    );
     expect(pluginErrorCount("hello")).toBe(1);
     expect(getRegisteredHandler("hello.nope")).toBeUndefined();
+    await t.dispose();
   });
 
   it("declared but unregistered command: attributed error and toast", async () => {

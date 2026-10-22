@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { openVault, trackErrors } from "./helpers";
+import { openDrawing, openVault, trackErrors } from "./helpers";
 
 // Plugin host through the real UI: fixture plugins (e2e/fixtures/plugins) are
 // served as real ES modules and import react / @vaultdraw/api via the import map.
@@ -178,5 +178,32 @@ test("Plugins settings: enable through the consent dialog, run, disable", async 
   await openCommands(page, "say hello");
   await expect(options(page).filter({ hasText: "Hello" })).toHaveCount(0);
   await page.keyboard.press("Escape");
+  expect(errors).toEqual([]);
+});
+
+test("a plugin stamps a box through scene.batch: panel count follows, one Cmd+Z undoes it", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVaultWithPlugins(page, "scene-stamp");
+  await page
+    .locator(".vault-tree-item__name", { hasText: "DSA" })
+    .first()
+    .click();
+  await openDrawing(page, "Graphs");
+  await page.getByRole("button", { name: "Stamp" }).click();
+
+  const count = page.getByTestId("scene-count");
+  await expect(count).toHaveText(/^Elements: \d+$/);
+  const before = Number((await count.innerText()).replace(/\D/g, ""));
+  expect(before).toBeGreaterThan(0);
+
+  await openCommands(page, "stamp: add box");
+  await expect(options(page).first()).toContainText("Stamp: add box");
+  await page.keyboard.press("Enter");
+  await expect(count).toHaveText(`Elements: ${before + 1}`);
+
+  await page.keyboard.press("ControlOrMeta+KeyZ");
+  await expect(count).toHaveText(`Elements: ${before}`);
   expect(errors).toEqual([]);
 });

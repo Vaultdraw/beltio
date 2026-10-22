@@ -196,6 +196,21 @@ if (params.get("seed") !== "empty") {
       }),
     );
   }
+  if (params.get("scene") === "big10k") {
+    // Opt-in (?scene=big10k): Big/Big10k.excalidraw with 10000 elements (plugin scene perf).
+    repository.seedDrawing(
+      "Big/Big10k.excalidraw",
+      JSON.stringify({
+        type: "excalidraw",
+        version: 2,
+        elements: Array.from({ length: 10000 }, (_, k) =>
+          thumbRect(`b${k}`, k),
+        ),
+        appState: {},
+        files: {},
+      }),
+    );
+  }
   if (params.get("seed") === "searchheavy") {
     // Opt-in (?seed=searchheavy): 300 drawings with 6 text elements each that
     // all contain "note", so a short query returns the full 50 drawings x 5
