@@ -51,7 +51,7 @@ export async function runTypicalScenarios(
       await openByRow(path);
       await sleep(kit.modes.warmGapMs ?? 300);
     }
-    push("typical.open.300", await openByRow(target.path));
+    push("typical.open.300", (await openByRow(target.path)).total);
     await sleep(500);
   });
 

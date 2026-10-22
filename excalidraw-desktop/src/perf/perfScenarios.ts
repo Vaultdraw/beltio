@@ -290,8 +290,14 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
     );
   };
 
-  /** Opens a root-level drawing via its tree row; returns elapsed ms (click to 2 painted frames). */
-  const openByRow = async (path: string): Promise<number> => {
+  type OpenTiming = {
+    /** click to the editor ready and 2 painted frames (the open.* metric) */
+    total: number;
+    /** click to the editor ready (new scene committed), no frame wait */
+    ready: number;
+  };
+  /** Opens a root-level drawing via its tree row (click to 2 painted frames). */
+  const openByRow = async (path: string): Promise<OpenTiming> => {
     const target = row(path);
     if (!target) {
       throw new Error(`Tree row not found: ${path}`);
@@ -304,14 +310,24 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
       () => isEditorReady(path, previousId),
       OPEN_TIMEOUT,
     );
+    const ready = now() - t0;
     await afterPaint();
+    const paint1 = now() - t0;
     await afterPaint();
     const elapsed = now() - t0;
-    // where the open's time went (report-only): vaultdraw:open:* marks
+    // where the open's time went (report-only): vaultdraw:open:* marks, then
+    // the harness's own steps (ready, paint1; ms = paint2). Under macOS
+    // background QoS each painted frame waits for a ~100 ms frame timer.
     const breakdown = (info.openBreakdown ??= []) as unknown[];
-    breakdown.push({ path, ms: Math.round(elapsed), ...readOpenMarks(t0) });
+    breakdown.push({
+      path,
+      ms: Math.round(elapsed),
+      ...readOpenMarks(t0),
+      ready: Math.round(ready),
+      paint1: Math.round(paint1),
+    });
     fixEditorSize();
-    return elapsed;
+    return { total: elapsed, ready };
   };
   const isOpen = (path: string) => {
     const id = editorId();
@@ -777,7 +793,10 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
     const sizes = ["small", "medium", "large"] as const;
     for (let k = 0; k < iter.open; k++) {
       for (const size of sizes) {
-        push(`open.${size}`, await openByRow(openTargets[size]));
+        const timing = await openByRow(openTargets[size]);
+        push(`open.${size}`, timing.total);
+        // the same open without the two-frame wait (report-only)
+        push(`open.${size}.ready`, timing.ready);
         // Let post-open work (autosave bookkeeping, image decoding) settle.
         await sleep(300);
       }
@@ -795,8 +814,8 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
     const seen = new Set<string>();
     for (let k = 0; k < iter.open * 4; k++) {
       const target = pair[k % 2];
-      const elapsed = await openByRow(target);
-      push(seen.has(target) ? "switch.recent" : "switch.drawing", elapsed);
+      const { total } = await openByRow(target);
+      push(seen.has(target) ? "switch.recent" : "switch.drawing", total);
       seen.add(target);
       await sleep(300);
     }

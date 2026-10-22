@@ -43,7 +43,8 @@ export type PerfKit = {
   key: (target: EventTarget, k: string, extra?: KeyboardEventInit) => void;
   interactiveCanvas: () => HTMLCanvasElement | null;
   editorId: () => string | null;
-  openByRow: (path: string) => Promise<number>;
+  /** Opens a drawing by its tree row: `total` = click to 2 painted frames (the open.* metrics), `ready` = click to the editor ready. */
+  openByRow: (path: string) => Promise<{ total: number; ready: number }>;
   ensureOpen: (path: string) => Promise<void>;
   saveOnce: (path: string, metric: string) => Promise<void>;
   wheelPass: (

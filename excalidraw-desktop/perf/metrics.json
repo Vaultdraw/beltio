@@ -35,6 +35,9 @@
       "unit": "ms",
       "desc": "No absolute budget by decision: the large drawing embeds ~18 MB of images, so only the 5% regression gate applies."
     },
+    "open.small.ready": { "unit": "ms", "desc": "report-only: open.small without the two painted frames (click to the editor ready with the new scene committed); packaged low-end frames wait for a ~100 ms frame timer each, see frame.rafInterval", "gate": [], "report": ["median", "p95"] },
+    "open.medium.ready": { "unit": "ms", "desc": "report-only: open.medium without the two painted frames", "gate": [], "report": ["median", "p95"] },
+    "open.large.ready": { "unit": "ms", "desc": "report-only: open.large without the two painted frames", "gate": [], "report": ["median", "p95"] },
     "switch.drawing": { "unit": "ms", "desc": "drawing A open, click drawing B (small<->medium alternating) in the navigator to B's canvas painted" },
     "switch.recent": { "unit": "ms", "desc": "as switch.drawing, for the A-B-A switch back to a recently opened drawing" },
     "settings.open": { "unit": "ms", "desc": "Cmd+, to settings page painted", "budgets": [{"stat": "median", "max": 100, "warn": true, "why": "product target < 100 ms; warning only"}, {"stat": "p95", "max": 100, "warn": true}] },
