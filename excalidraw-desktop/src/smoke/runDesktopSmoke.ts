@@ -1636,10 +1636,12 @@ export async function runDesktopSmoke(): Promise<void> {
           .querySelector<HTMLElement>(".vault-editor")
           ?.getAttribute("data-document-id"),
       );
+      // The tree is replaced by search results here, so check the editor's document id.
       await waitFor("reopened the suite drawing", () =>
-        root.querySelector<HTMLElement>(
-          ".vault-tree-item--active .vault-tree-item__name",
-        )?.title === uiPath
+        root
+          .querySelector<HTMLElement>(".vault-editor")
+          ?.getAttribute("data-document-id")
+          ?.endsWith(`:${uiPath}`)
           ? true
           : null,
       );
