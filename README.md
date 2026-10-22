@@ -71,7 +71,7 @@ brew install --cask vaultdraw/tap/vaultdraw
 
 It runs on macOS, on Apple Silicon and on Intel.
 
-Vaultdraw isn't signed with an Apple Developer certificate yet, so macOS may refuse to open it the first time. Try to open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**. If macOS says the app is "damaged", run this and open it again:
+Vaultdraw isn't signed with an Apple Developer certificate yet, so macOS may refuse to open it the first time. Try to open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**. If macOS says the app is "damaged", or the `vaultdraw` command stops with `Killed: 9`, run this and try again:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/Vaultdraw.app
