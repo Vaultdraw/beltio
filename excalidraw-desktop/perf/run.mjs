@@ -174,13 +174,20 @@ async function collectApp(count, label) {
     }
     log(`app ${label} run ${i + 1}/${count} (${mode})`);
     if (label !== "warmup") sampleRunLoad();
+    // where each open's time went (vaultdraw:open:* marks, report-only); kept
+    // from failed runs too: a run that stalls later still timed its opens
+    const keepBreakdown = (run) => {
+      if (label !== "warmup" && run.info?.openBreakdown) appOpenBreakdown.push(run.info.openBreakdown);
+    };
     let r = await appTarget.runOne(rawApp.length + i + (label === "warmup" ? 1000 : 0));
+    keepBreakdown(r);
     if (r.errors.length) {
       // One retry: other sessions launch apps with the same bundle id and can quit ours from outside.
       const why = r.errors.join("; ");
       log(`app run failed (${why}); retrying once`);
       notes.push(`app ${label} run retried after: ${why}`);
       r = await appTarget.runOne(rawApp.length + i + 2000);
+      keepBreakdown(r);
     }
     if (r.errors.length) {
       // A run that failed twice is incomplete: never mix its partial samples into the result.
@@ -197,8 +204,6 @@ async function collectApp(count, label) {
     }
     if (label === "warmup") continue;
     if (Object.keys(r.samples).length) rawApp.push(r.samples);
-    // where each open's time went (vaultdraw:open:* marks, report-only)
-    if (r.info?.openBreakdown) appOpenBreakdown.push(r.info.openBreakdown);
     if (r.info?.memoryTimeline) notes.push(`memory timeline (MB, now/peak per process): ${r.info.memoryTimeline.map((t) => `${t.mark} ${Object.entries(t.procs).map(([k, v]) => `${k}=${v.now}/${v.peak}`).join(" ")}`).join(" | ")}`);
   }
 }
