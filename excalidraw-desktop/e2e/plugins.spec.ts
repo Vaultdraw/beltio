@@ -108,6 +108,19 @@ test("with no plugins nothing plugin-related is in the DOM or fetched", async ({
   expect(await page.locator("[class*='plugin']").count()).toBe(0);
   expect(await loadMarks(page, "hello")).toBe(0);
   expect(await page.evaluate(() => "__plugins" in window)).toBe(false);
+  expect(await page.evaluate(() => "__vaultdraw" in window)).toBe(false);
+  expect(
+    await page.evaluate(() =>
+      performance
+        .getEntriesByType("resource")
+        .map((e) => e.name)
+        .filter((n) =>
+          /\/plugins\/(host|shared)\/|\/PluginPanels|\/exposeShared|\/start-/.test(
+            n,
+          ),
+        ),
+    ),
+  ).toEqual([]);
   await openCommands(page, "hello");
   await expect(options(page).filter({ hasText: "Hello" })).toHaveCount(0);
 });

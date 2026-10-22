@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import { errorMessage, isNotFoundError } from "./vault/types";
@@ -105,8 +106,8 @@ import { useGraphEntry } from "./graph/useGraphEntry";
 import { createDesktopThumbnailStore } from "./thumbnails/desktopStore";
 import { ThumbnailsRoot } from "./thumbnails/ThumbnailsRoot";
 import { HistoryHost } from "./history/HistoryHost";
-import { PluginPanels } from "./plugins/host/PluginPanels";
-import { setPluginCommandRunner } from "./plugins/host/runner";
+import { setAppCommandRunner } from "./commands/appRunner";
+import { pluginHostStarted } from "./plugins/hostFlag";
 import { useHistoryEntry } from "./history/useHistoryEntry";
 import { desktopHistoryRepository } from "./history/DesktopHistoryRepository";
 import { toHistorySettings } from "./history/historySettings";
@@ -162,6 +163,12 @@ import type {
   VaultRepository,
 } from "./vault/types";
 
+// Plugin panel host: its chunk loads only after the host starts.
+const PluginPanels = lazy(() =>
+  import("./plugins/host/PluginPanels").then((m) => ({
+    default: m.PluginPanels,
+  })),
+);
 // The dock loads on demand: nothing about links is in the startup bundle.
 const LinksDock = lazy(() =>
   import("./components/links/LinksDock").then((m) => ({
@@ -1938,9 +1945,13 @@ export const VaultApp = ({
     },
   });
   runnerRef.current = commandRunner;
+  const pluginsStarted = useSyncExternalStore(
+    pluginHostStarted.subscribe,
+    pluginHostStarted.get,
+  );
   useEffect(() => {
-    setPluginCommandRunner((id) => runnerRef.current?.run(id) ?? false);
-    return () => setPluginCommandRunner(null);
+    setAppCommandRunner((id) => runnerRef.current?.run(id) ?? false);
+    return () => setAppCommandRunner(null);
   }, []);
   useControlBridge(win, {
     tabStore: tabs.store,
@@ -2420,7 +2431,11 @@ export const VaultApp = ({
           theme={appTheme}
           onSaveFile={exportEditorFile}
         />
-        <PluginPanels />
+        {pluginsStarted && (
+          <Suspense fallback={null}>
+            <PluginPanels />
+          </Suspense>
+        )}
         {templates.dialogs}
         {appLinks.dialogs}
         {appTags.dialog}

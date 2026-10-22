@@ -3,16 +3,8 @@
  * through vdplugin://, commands, a React panel, error attribution, costs.
  * Fixtures (smoke-hello, smoke-panel) are only present in the second launch.
  */
-import * as React from "react";
-
 import { getRegisteredHandler } from "../commands/handlerRegistry";
-import {
-  getPluginCosts,
-  getPluginLog,
-  getStubRegistrationMs,
-} from "../plugins/host";
-import { pluginErrorCount } from "../plugins/host/errors";
-import { openPanel } from "../slots/panelStore";
+import { getPreferences } from "../vault/preferences";
 
 export type PluginsSmokeContext = {
   win: Window;
@@ -43,6 +35,33 @@ export async function runPluginsSmoke(ctx: PluginsSmokeContext): Promise<void> {
   const { win, step, mark, waitFor } = ctx;
   const w = win as W;
   const delay = (ms: number) => new Promise((r) => win.setTimeout(r, ms));
+  // No plugin enabled: the host must not have loaded at all.
+  if (getPreferences(win).pluginsEnabled.length === 0) {
+    await step("plugins-host", async () => {
+      await delay(3000);
+      const started =
+        win.performance.getEntriesByName("vaultdraw:plugins:started").length >
+        0;
+      const res = vdResources(win);
+      const globalSet = "__vaultdraw" in win;
+      const violations = w.__cspViolations ?? [];
+      if (started || res.length || globalSet || violations.length) {
+        throw new Error(
+          `plugin host resident without plugins: started ${started}, resources ${res}, global ${globalSet}, csp ${JSON.stringify(
+            violations,
+          )}`,
+        );
+      }
+      return { hostStarted: false, vdResources: 0 };
+    });
+    return;
+  }
+  const React = await import("react");
+  const { getPluginCosts, getPluginLog, getStubRegistrationMs } = await import(
+    "../plugins/host"
+  );
+  const { pluginErrorCount } = await import("../plugins/host/errors");
+  const { openPanel } = await import("../slots/panelStore");
   await step("plugins-host", async () => {
     await waitFor(
       "plugin host started",

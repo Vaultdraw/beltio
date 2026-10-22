@@ -1,5 +1,6 @@
 /** Starts the plugin host after the first frame; nothing here runs on the startup path. */
 import { getPreferences, subscribePreferences } from "../../vault/preferences";
+import { markPluginHostStarted } from "../hostFlag";
 import { exposeSharedModules } from "../shared/exposeShared";
 
 import { ensureActive, setActivationWindow } from "./activation";
@@ -83,6 +84,7 @@ export async function startPluginHost(
   apply();
   const off = subscribePreferences(apply);
   performance.mark("vaultdraw:plugins:started");
+  markPluginHostStarted();
   return {
     stop: off,
     get startupDone() {

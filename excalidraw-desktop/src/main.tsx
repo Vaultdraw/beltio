@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import { installMemoryManagement } from "./memory/install";
 import { installNativeContextMenuSuppression } from "./platform/nativeContextMenu";
+import { bootPlugins } from "./plugins/boot";
 import { getPreferences, getTheme, resolveTheme } from "./vault/preferences";
 import { initSettings } from "./vault/settingsSync";
 
@@ -107,19 +108,8 @@ void initSettings(ownerWindow)
     installMemoryManagement(ownerWindow);
     mark("render-called");
     ownerWindow.requestAnimationFrame(() => mark("first-frame"));
-    // Plugin host: after the first frame, on idle (WebKit has no rIC).
-    const startPlugins = () =>
-      void import("./plugins/host/start")
-        .then(({ startPluginHost }) => startPluginHost(ownerWindow))
-        .catch((error: unknown) =>
-          console.error("Plugin host failed to start", error),
-        );
-    // Also in perf and smoke builds, so the harness measures the host's cost.
-    ownerWindow.requestAnimationFrame(() =>
-      typeof ownerWindow.requestIdleCallback === "function"
-        ? ownerWindow.requestIdleCallback(startPlugins)
-        : ownerWindow.setTimeout(startPlugins, 200),
-    );
+    // Plugin host loads only when a plugin is enabled.
+    ownerWindow.requestAnimationFrame(() => bootPlugins(ownerWindow));
     if (import.meta.env.VITE_APP_PERF_TEST === "true") {
       ownerWindow.setTimeout(() => {
         void import("./perf/runDesktopPerf")

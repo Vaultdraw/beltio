@@ -3,18 +3,12 @@
  * shell's command runner when VaultApp has registered it (same path as the
  * palette: availability + dispatcher), else the registered handler layers.
  */
+import { getAppCommandRunner } from "../../commands/appRunner";
 import { runHandler } from "../../commands/dispatcher";
 import { getRegisteredHandler } from "../../commands/handlerRegistry";
 
-type Runner = (id: string) => boolean;
-
-let runner: Runner | null = null;
-
-export const setPluginCommandRunner = (fn: Runner | null): void => {
-  runner = fn;
-};
-
 export async function runCommandById(id: string): Promise<void> {
+  const runner = getAppCommandRunner();
   if (runner) {
     if (!runner(id)) {
       throw new Error(`Command "${id}" is unknown or not available now`);
