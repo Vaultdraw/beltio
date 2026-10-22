@@ -1,5 +1,7 @@
 // ?plugins=hello,counter,size100k,... : fake plugin backend + real fixture
 // modules served by the e2e preview server (see fixtures/pluginServer.ts).
+// ?plugins=<sdk example id> fetches its manifest from /e2e-plugins/<id>/plugin.json.
+// ?pluginsOff=<ids> lists plugins in the backend without enabling them.
 // ?plugins=stubs50 registers 50 inactive-by-use plugins (3 commands, 1 panel,
 // 4 settings each) whose modules must never be fetched.
 // ?enabled=none leaves every plugin off (the Plugins settings page turns them on).
@@ -130,25 +132,38 @@ const stubPlugins = (n: number, only?: string): PluginInfo[] =>
     }),
   );
 
+const csv = (params: URLSearchParams, key: string) =>
+  (params.get(key) ?? "").split(",").filter(Boolean);
+
+async function manifestFor(name: string): Promise<PluginInfo[]> {
+  if (name.startsWith("stubs50")) {
+    return stubPlugins(50, name.split(":")[1]);
+  }
+  if (FIXTURES[name]) {
+    return [FIXTURES[name]()];
+  }
+  const res = await fetch(`${FIXTURE_PREFIX}${name}/plugin.json`);
+  return res.ok ? [(await res.json()) as PluginInfo] : [];
+}
+
 export async function startPluginsHarness(
   win: Window,
   params: URLSearchParams,
 ): Promise<void> {
-  const names = (params.get("plugins") ?? "").split(",").filter(Boolean);
-  const infos = names.flatMap((n) =>
-    n.startsWith("stubs50")
-      ? stubPlugins(50, n.split(":")[1])
-      : FIXTURES[n]
-      ? [FIXTURES[n]()]
-      : [],
-  );
+  const on = (
+    await Promise.all(csv(params, "plugins").map(manifestFor))
+  ).flat();
+  const off = (
+    await Promise.all(csv(params, "pluginsOff").map(manifestFor))
+  ).flat();
+  const infos = [...on, ...off];
   setPluginsBackend(
     createFakeBackend(infos, (id, path) => `${FIXTURE_PREFIX}${id}/${path}`),
   );
   updatePreferences(
     {
       pluginsEnabled:
-        params.get("enabled") === "none" ? [] : infos.map((p) => p.id),
+        params.get("enabled") === "none" ? [] : on.map((p) => p.id),
       // ?bar=off hides the activity bar (memory attribution)
       ...(params.get("bar") === "off" ? { activityBar: false } : {}),
     },

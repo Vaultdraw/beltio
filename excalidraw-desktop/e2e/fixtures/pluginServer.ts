@@ -1,6 +1,9 @@
 /** Serves the e2e plugin fixtures from the preview server at /e2e-plugins/<id>/main.js. */
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+
+import { readExample } from "../../../sdk/examples/testing/readManifest";
 
 import type { Plugin } from "vite";
 
@@ -40,9 +43,32 @@ const SIZED = /^size(\d+)([km])$/;
 
 export const e2ePluginFixtures = (): Plugin => {
   const root = path.resolve(__dirname, "plugins");
+  const examples = path.resolve(__dirname, "../../../sdk/examples");
+  /** An e2e fixture wins; otherwise the sdk/examples plugin of that id. */
+  const mainPath = (id: string) =>
+    existsSync(path.join(root, id, "main.js"))
+      ? path.join(root, id, "main.js")
+      : path.join(examples, id, "main.js");
   return {
     name: "e2e-plugin-fixtures",
     configurePreviewServer(server) {
+      // /e2e-plugins/<id>/plugin.json: manifest of an sdk/examples plugin.
+      server.middlewares.use((req, res, next) => {
+        const m = /^\/e2e-plugins\/([a-z0-9-]+)\/plugin\.json(\?.*)?$/.exec(
+          req.url ?? "",
+        );
+        if (!m) {
+          return next();
+        }
+        try {
+          res.setHeader("Content-Type", "application/json");
+          res.setHeader("Cache-Control", "no-store");
+          res.end(JSON.stringify(readExample(m[1])));
+        } catch {
+          res.statusCode = 404;
+          res.end("not found");
+        }
+      });
       server.middlewares.use(async (req, res, next) => {
         const m = /^\/e2e-plugins\/([a-z0-9-]+)\/main\.js(\?.*)?$/.exec(
           req.url ?? "",
@@ -58,7 +84,7 @@ export const e2ePluginFixtures = (): Plugin => {
                 id,
                 Number(sized[1]) * (sized[2] === "m" ? 1024 * 1024 : 1024),
               )
-            : await readFile(path.join(root, id, "main.js"), "utf8");
+            : await readFile(mainPath(id), "utf8");
           res.setHeader("Content-Type", "text/javascript; charset=utf-8");
           res.setHeader("Cache-Control", "no-store");
           res.end(source);
