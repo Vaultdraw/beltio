@@ -15,6 +15,7 @@ import {
   toolDefaultSaveId,
 } from "../toolDefaults/toolDefaultIds";
 import { TOOL_DEFAULT_TOOLS, TOOL_LABELS } from "../toolDefaults/toolStyles";
+import { PLUGIN_UI_COMMANDS } from "../plugins/ui/pluginCommands";
 import { SORT_LABELS, SORT_ORDERS, type SortOrder } from "../vault/sortOrder";
 
 import {
@@ -617,6 +618,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...TAGS_COMMANDS,
   ...HISTORY_COMMANDS,
   ...GRAPH_COMMANDS,
+  ...PLUGIN_UI_COMMANDS,
   ...TAB_COMMANDS,
   ...LIST_COMMANDS,
   ...FORMULA_COMMANDS,

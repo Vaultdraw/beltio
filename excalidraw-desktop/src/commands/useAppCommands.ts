@@ -9,6 +9,7 @@ import {
 import { setSettingsScope } from "../components/settings/settingsScope";
 import { HELP_COMMAND_IDS, HELP_LINK_HANDLERS } from "../help/helpCommands";
 import { PEN_COMMAND_HANDLERS } from "../pens/penCommands";
+import { pluginUiHandlers } from "../plugins/ui/pluginCommands";
 import { SORT_ORDERS, type SortOrder } from "../vault/sortOrder";
 
 import {
@@ -133,5 +134,6 @@ export function appCommandHandlers(
     ...PEN_COMMAND_HANDLERS,
     ...HELP_LINK_HANDLERS,
     [HELP_COMMAND_IDS.about]: () => actions.openSettingsPage("about"),
+    ...pluginUiHandlers(() => actions.openSettingsPage("plugins")),
   };
 }

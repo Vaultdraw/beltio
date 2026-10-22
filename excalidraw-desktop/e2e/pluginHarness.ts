@@ -2,6 +2,7 @@
 // modules served by the e2e preview server (see fixtures/pluginServer.ts).
 // ?plugins=stubs50 registers 50 inactive-by-use plugins (3 commands, 1 panel,
 // 4 settings each) whose modules must never be fetched.
+// ?enabled=none leaves every plugin off (the Plugins settings page turns them on).
 import { ensureActive } from "../src/plugins/host";
 import {
   getPluginCosts,
@@ -115,7 +116,13 @@ export async function startPluginsHarness(
   setPluginsBackend(
     createFakeBackend(infos, (id, path) => `${FIXTURE_PREFIX}${id}/${path}`),
   );
-  updatePreferences({ pluginsEnabled: infos.map((p) => p.id) }, win);
+  updatePreferences(
+    {
+      pluginsEnabled:
+        params.get("enabled") === "none" ? [] : infos.map((p) => p.id),
+    },
+    win,
+  );
   const host = await startPluginHost(win, (run) => win.setTimeout(run, 0));
   (win as any).__plugins = {
     host,

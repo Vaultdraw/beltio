@@ -124,3 +124,59 @@ test("with no plugins nothing plugin-related is in the DOM or fetched", async ({
   await openCommands(page, "hello");
   await expect(options(page).filter({ hasText: "Hello" })).toHaveCount(0);
 });
+
+test("Plugins settings: enable through the consent dialog, run, disable", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page, "?plugins=hello&enabled=none");
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
+
+  const openPluginSettings = async () => {
+    await openCommands(page, "open plugin settings");
+    await expect(options(page).first()).toContainText(
+      "Plugins: Open plugin settings",
+    );
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("plugins-page")).toBeVisible();
+  };
+
+  // Off: the command is not in the palette.
+  await openCommands(page, "say hello");
+  await expect(options(page).filter({ hasText: "Hello" })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+
+  await openPluginSettings();
+  const row = page.getByTestId("plugin-hello");
+  await expect(row).toContainText("Unverified");
+  await row
+    .getByRole("switch", { name: "Enable Hello" })
+    .click({ force: true });
+  const consent = page.getByRole("dialog", { name: /Enable Hello/ });
+  await expect(consent).toContainText("not reviewed by Vaultdraw");
+  await consent.getByRole("button", { name: "Enable", exact: true }).click();
+  await expect(row.getByRole("switch", { name: "Enable Hello" })).toBeChecked();
+  await page.keyboard.press("Escape");
+
+  await openCommands(page, "say hello");
+  await expect(options(page).first()).toContainText("Hello: say hello");
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Hello from a plugin")).toBeVisible();
+
+  await openPluginSettings();
+  await page
+    .getByTestId("plugin-hello")
+    .getByRole("switch", { name: "Enable Hello" })
+    .click({ force: true });
+  await expect(
+    page
+      .getByTestId("plugin-hello")
+      .getByRole("switch", { name: "Enable Hello" }),
+  ).not.toBeChecked();
+  await page.keyboard.press("Escape");
+
+  await openCommands(page, "say hello");
+  await expect(options(page).filter({ hasText: "Hello" })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  expect(errors).toEqual([]);
+});

@@ -206,9 +206,12 @@ const DeclaredRow = ({
 export const DeclaredSettingsPage = ({
   pluginId,
   title,
+  scopeSwitch = true,
 }: {
   pluginId: string;
   title: string;
+  /** False when a parent (the Settings header) already offers the switch. */
+  scopeSwitch?: boolean;
 }) => {
   const decls = useSyncExternalStore(subscribePluginSettings, () =>
     pluginSettingsDecls(pluginId),
@@ -220,7 +223,9 @@ export const DeclaredSettingsPage = ({
       data-testid={`declared-settings-${pluginId}`}
     >
       <h3 className="vault-settings-heading">{title}</h3>
-      {decls.some((d) => allowsScope(d, "vault")) && <ScopeSwitch />}
+      {scopeSwitch && decls.some((d) => allowsScope(d, "vault")) && (
+        <ScopeSwitch />
+      )}
       {decls.map((decl) => (
         <DeclaredRow key={decl.key} pluginId={pluginId} decl={decl} />
       ))}

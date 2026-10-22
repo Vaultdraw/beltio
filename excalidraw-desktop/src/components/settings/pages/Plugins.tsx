@@ -1,0 +1,255 @@
+import { useMemo, useState, useSyncExternalStore } from "react";
+
+import { getPluginCosts } from "../../../plugins/host/cost";
+import {
+  clearHostDisabled,
+  getPluginsState,
+  reloadPlugin,
+  restartInSafeMode,
+  revealPluginFolder,
+  subscribePluginsState,
+  uninstallPlugin,
+  type PluginsState,
+} from "../../../plugins/host/manage";
+import { runCommandById } from "../../../plugins/host/runner";
+import {
+  installPluginFromFolder,
+  reloadPluginList,
+} from "../../../plugins/ui/pluginActions";
+import { toastStore } from "../../../toasts/toastStore";
+import {
+  getPreferences,
+  subscribePreferences,
+  updatePreferences,
+} from "../../../vault/preferences";
+import { ConfirmModal } from "../../ConfirmModal";
+import { getSettingSchema } from "../schema";
+import { useSettings, type SettingControls } from "../SettingsContext";
+
+import { PluginRow, type RuntimeState } from "./PluginRow";
+
+import "./plugins.css";
+
+import type { PluginInfo } from "../../../plugins/host/types";
+
+type SafeMode = NonNullable<PluginsState["safeMode"]>;
+
+/** Why Vaultdraw is in safe mode, as one sentence. */
+export const safeModeText = (safe: SafeMode): string =>
+  safe.reason === "crashes"
+    ? `Vaultdraw started in safe mode after ${safe.crashedLaunches} crash${
+        safe.crashedLaunches === 1 ? "" : "es"
+      } with these plugins enabled: ${
+        safe.pluginsAtCrash.join(", ") || "none"
+      }.`
+    : safe.reason === "modifier"
+    ? "Vaultdraw started in safe mode because Option was held."
+    : "Vaultdraw started in safe mode on request.";
+
+export const SafeModeBanner = ({
+  safe,
+  onRestart,
+}: {
+  safe: SafeMode;
+  onRestart: () => void;
+}) => (
+  <div
+    className="vault-plugins__safe"
+    role="alert"
+    data-testid="plugins-safe-mode"
+  >
+    <p>{safeModeText(safe)} Plugins are not loaded.</p>
+    <button
+      type="button"
+      className="vault-btn vault-btn--sm"
+      onClick={onRestart}
+    >
+      Restart normally
+    </button>
+  </div>
+);
+
+const useEnabledIds = (): string[] => {
+  const { win } = useSettings();
+  const key = useSyncExternalStore(subscribePreferences, () =>
+    JSON.stringify(getPreferences(win).pluginsEnabled),
+  );
+  return useMemo(() => JSON.parse(key) as string[], [key]);
+};
+
+const useManageState = (): PluginsState =>
+  useSyncExternalStore(subscribePluginsState, getPluginsState);
+
+const report = (what: string, e: unknown) =>
+  toastStore.push({
+    message: `${what}: ${e instanceof Error ? e.message : String(e)}`,
+    kind: "error",
+  });
+
+const run = (what: string, fn: () => Promise<unknown>) =>
+  void fn().catch((e) => report(what, e));
+
+type Pending =
+  | { kind: "enable"; info: PluginInfo }
+  | { kind: "uninstall"; info: PluginInfo }
+  | null;
+
+const PluginsPage = () => {
+  const { win } = useSettings();
+  const state = useManageState();
+  const enabledIds = useEnabledIds();
+  const [pending, setPending] = useState<Pending>(null);
+  const costs = useMemo(
+    () => new Map(getPluginCosts().map((c) => [c.id, c])),
+    // Costs change when a plugin's runtime state does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [state],
+  );
+
+  const setEnabled = (id: string, on: boolean) =>
+    updatePreferences(
+      {
+        pluginsEnabled: on
+          ? [...new Set([...enabledIds, id])]
+          : enabledIds.filter((x) => x !== id),
+      },
+      win,
+    );
+
+  const toggle = (info: PluginInfo, on: boolean) =>
+    on && info.source !== "bundled"
+      ? setPending({ kind: "enable", info })
+      : setEnabled(info.id, on);
+
+  const uninstall = (info: PluginInfo) => {
+    setEnabled(info.id, false);
+    run(`Could not uninstall ${info.name}`, () => uninstallPlugin(info.id));
+  };
+
+  return (
+    <div className="vault-plugins" data-testid="plugins-page">
+      {state.safeMode && (
+        <SafeModeBanner
+          safe={state.safeMode}
+          onRestart={() =>
+            run("Could not restart", () =>
+              runCommandById("plugins.restartNormally"),
+            )
+          }
+        />
+      )}
+      <div className="vault-plugins__toolbar">
+        <button
+          type="button"
+          className="vault-btn vault-btn--sm"
+          onClick={() => void installPluginFromFolder()}
+        >
+          Install from folder…
+        </button>
+        <button
+          type="button"
+          className="vault-btn vault-btn--sm"
+          onClick={() => void reloadPluginList()}
+        >
+          Reload list
+        </button>
+        <button
+          type="button"
+          className="vault-btn vault-btn--sm"
+          onClick={() => run("Could not restart", () => restartInSafeMode())}
+        >
+          Restart in safe mode
+        </button>
+      </div>
+
+      {state.plugins.length === 0 ? (
+        <p className="vault-settings-empty">
+          No plugins installed. Put a plugin folder in the plugins folder, or
+          use Install from folder…
+        </p>
+      ) : (
+        <ul className="vault-plugins__list" aria-label="Installed plugins">
+          {state.plugins.map((info) => (
+            <PluginRow
+              key={info.id}
+              info={info}
+              enabled={enabledIds.includes(info.id)}
+              state={(state.runtime[info.id]?.state ?? "idle") as RuntimeState}
+              cost={costs.get(info.id)}
+              onToggle={(on) => toggle(info, on)}
+              onReenable={() =>
+                run(`Could not re-enable ${info.name}`, () =>
+                  clearHostDisabled(info.id),
+                )
+              }
+              onReload={() =>
+                run(`Could not reload ${info.name}`, () =>
+                  reloadPlugin(info.id),
+                )
+              }
+              onOpenFolder={() =>
+                run("Could not open the folder", () =>
+                  revealPluginFolder(info.dir),
+                )
+              }
+              onUninstall={() => setPending({ kind: "uninstall", info })}
+            />
+          ))}
+        </ul>
+      )}
+
+      {state.errors.length > 0 && (
+        <section aria-label="Broken plugins" className="vault-plugins__errors">
+          <h3 className="vault-settings-heading">Could not be read</h3>
+          <ul>
+            {state.errors.map((e) => (
+              <li key={e.dir}>
+                <code>{e.dir}</code>: {e.message}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {pending?.kind === "enable" && (
+        <ConfirmModal
+          title={`Enable ${pending.info.name}?`}
+          message={`${pending.info.name} is not reviewed by Vaultdraw. Plugins run with full access to your drawings and files. Enable?`}
+          confirmLabel="Enable"
+          onCancel={() => setPending(null)}
+          onConfirm={() => {
+            setEnabled(pending.info.id, true);
+            setPending(null);
+          }}
+        />
+      )}
+      {pending?.kind === "uninstall" && (
+        <ConfirmModal
+          title={`Uninstall ${pending.info.name}?`}
+          message={`This deletes the ${pending.info.name} folder and its files.`}
+          confirmLabel="Uninstall"
+          isDanger
+          onCancel={() => setPending(null)}
+          onConfirm={() => {
+            uninstall(pending.info);
+            setPending(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+/** Search results only point at the page. */
+const PluginsSearchHint = () => (
+  <p className="vault-settings-empty">
+    {getSettingSchema("plugins-installed").description}
+  </p>
+);
+
+export const pluginsControls: SettingControls = {
+  "plugins-installed": {
+    Component: PluginsPage,
+    SearchComponent: PluginsSearchHint,
+  },
+};

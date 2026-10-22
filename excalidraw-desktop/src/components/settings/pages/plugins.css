@@ -1,0 +1,107 @@
+/* Plugins page: flat rows like the other settings pages. */
+.vault-plugins {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vd-space-3);
+}
+
+.vault-plugins__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--vd-space-2);
+}
+
+.vault-plugins__safe {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--vd-space-3);
+  padding: var(--vd-space-3);
+  border: 1px solid var(--vault-border);
+  border-radius: var(--vd-radius-control);
+  background: var(--vault-surface);
+  font-size: var(--vd-fs-small);
+}
+
+.vault-plugins__safe p {
+  margin: 0;
+}
+
+.vault-plugins__list,
+.vault-plugins__errors ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vault-plugins__errors {
+  font-size: var(--vd-fs-small);
+  color: var(--vault-text-muted);
+}
+
+.vault-plugin {
+  padding: var(--vd-space-3) 0;
+  border-bottom: 1px solid var(--vault-border);
+}
+
+.vault-plugin__main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--vd-space-4);
+}
+
+.vault-plugin__info {
+  min-width: 0;
+}
+
+.vault-plugin__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--vd-space-2);
+}
+
+.vault-plugin__version,
+.vault-plugin__meta {
+  font-size: var(--vd-fs-caption);
+  color: var(--vault-text-faint);
+}
+
+.vault-plugin__badge {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid var(--vault-border);
+  border-radius: var(--vd-radius-chip, 4px);
+  font-size: 11px;
+  color: var(--vault-text-muted);
+}
+
+.vault-plugin__badge[data-kind="warn"] {
+  color: var(--vault-warning, var(--vault-text));
+}
+
+.vault-plugin__problem {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--vd-space-2);
+  margin-top: 4px;
+  font-size: var(--vd-fs-caption);
+  color: var(--vault-danger, var(--vault-text-muted));
+}
+
+.vault-plugin__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--vd-space-1);
+  margin-top: var(--vd-space-2);
+}
+
+.vault-plugin__settings {
+  margin-top: var(--vd-space-2);
+  padding-left: var(--vd-space-3);
+  border-left: 2px solid var(--vault-border);
+}

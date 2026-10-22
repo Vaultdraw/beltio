@@ -32,6 +32,7 @@ export type SettingsPageId =
   | "links"
   | "history"
   | "hotkeys"
+  | "plugins"
   | "about";
 
 export interface SettingsPage {
@@ -66,6 +67,7 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
   { id: "links", label: "Links", group: "Options" },
   ...HISTORY_SETTINGS_PAGES,
   { id: "hotkeys", label: "Hotkeys", group: "Options" },
+  { id: "plugins", label: "Plugins", group: "Options" },
   { id: "about", label: "About", group: "Options" },
 ];
 
@@ -747,6 +749,24 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     description:
       "Assign keyboard shortcuts to commands; changes are saved to [hotkeys] in config.toml.",
     keywords: ["shortcuts", "keyboard", "keybindings", "keys", "commands"],
+  },
+
+  // ---- Plugins ----
+  {
+    id: "plugins-installed",
+    page: "plugins",
+    label: "Installed plugins",
+    description:
+      "Turn plugins on or off, install one from a folder, and edit the settings they declare.",
+    keywords: [
+      "plugin",
+      "extension",
+      "install",
+      "uninstall",
+      "safe mode",
+      "addon",
+    ],
+    perVault: true,
   },
 
   // ---- About ----
