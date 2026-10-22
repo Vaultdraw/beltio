@@ -15,35 +15,39 @@ Vaultdraw is an offline desktop app for macOS that keeps your [Excalidraw](https
 
 ## Features
 
-**Your files**
+The Excalidraw editor, plus what you need once you have more than one drawing:
 
-- Pick any folder as your vault. Drawings are ordinary `.excalidraw` files, so you can back them up, sync them or open them anywhere.
-- A file tree next to the canvas, plus tabs for several open drawings.
-- Autosave and crash recovery. Changes made outside the app are picked up without losing your edits.
-- File history: earlier versions of every drawing, with previews and one-click restore.
-- Everything works offline. Fonts and assets are bundled.
+| Feature | What it does |
+| --- | --- |
+| **Themes** | 123 palettes, light and dark, for the whole app and, if you like, the canvas. Drawings and exports keep standard colours. |
+| **Tags** | Write `#ideas` in any text. A Tags panel lists them, search filters by them, and renaming a tag updates every drawing. |
+| **Links** | Link drawings with `[[Name]]`, from text or a shape. Backlinks show what points here, and renaming a drawing fixes every link. |
+| **Search** | Search inside every drawing in the vault (names, text, labels, formulas) and jump straight to the match. |
+| **Command palette** | `Cmd+P` opens any drawing by name; `Cmd+Shift+P` runs any command. Every command can get its own key. |
+| **Tool settings** | Each tool starts with its own style, pens are saved presets, and the laser is yours to tune, globally or per vault. |
+| **History** | Earlier versions of every drawing, kept automatically. Scrub back, see what changed, restore in one click. |
+| **Graph view** | Every drawing a dot, every link a line, plus a local graph of what sits near the open drawing. |
+| **File import** | Drop images and PDFs from Finder onto the canvas. PDF pages become images you can write on, rendered offline. |
+| **Templates** | Any drawing can become a template, for one vault or all of them. |
 
-**Find and connect**
+<table>
+  <tr>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/search-dark.webp"><img src="docs/assets/screenshots/search-light.webp" alt="Search results across the vault, with highlighted snippets"></picture><br><b>Search</b> every drawing in the vault</td>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/graph-dark.webp"><img src="docs/assets/screenshots/graph-light.webp" alt="The graph view: drawings as dots, links as lines"></picture><br><b>Graph view</b> of drawings and links</td>
+  </tr>
+  <tr>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/history-dark.webp"><img src="docs/assets/screenshots/history-light.webp" alt="File history with versions, previews and highlighted changes"></picture><br><b>History</b> with previews and restore</td>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/palette-dark.webp"><img src="docs/assets/screenshots/palette-light.webp" alt="The command palette listing export commands"></picture><br><b>Command palette</b> for every drawing and command</td>
+  </tr>
+</table>
 
-- Search inside your drawings, by name, text or tag.
-- Link drawings with `[[links]]`, see backlinks, and explore the vault in a graph view.
-- Tags, with a tag panel and filters.
-- Templates for the drawings you start over and over.
+**Also**
 
-**Draw and export**
-
-- Page mode: draw on A4, Letter or custom pages and export them as a PDF.
-- Import PDF pages and annotate them.
-- Export PNG, SVG or PDF, or copy an image to the clipboard.
-- Pens, a highlighter and a laser pointer.
-- Insert Mermaid diagrams and LaTeX formulas, converted offline.
-
-**Make it yours**
-
-- Keyboard first: `Cmd+P` opens any drawing by name, `Cmd+Shift+P` runs any command, and you can rebind every hotkey.
-- Colour themes in the Noctalia format, light and dark, with an option to sync the canvas with the theme.
-- A plain-text config folder you can edit by hand. Changes reload live.
-- A `vaultdraw` command-line tool.
+- Your drawings are ordinary `.excalidraw` files in a folder you pick: back them up, sync them or open them anywhere.
+- A file tree and tabs, autosave and crash recovery; changes made outside the app are picked up without losing your edits.
+- Page mode (A4, Letter or custom pages) with PDF export, notebook paper, and PNG, SVG or clipboard export.
+- Mermaid diagrams and LaTeX formulas, converted offline. Everything works offline; there is no account and no telemetry.
+- A plain-text config folder you can edit by hand, and a `vaultdraw` command for the terminal.
 
 **Coming next:** plugins (AI, a shape generator and more).
 
