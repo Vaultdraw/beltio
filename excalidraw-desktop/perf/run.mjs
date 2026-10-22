@@ -104,6 +104,7 @@ const typicalConfig = JSON.parse(readFileSync(path.join(here, "typical.config.js
 const errors = [];
 const notes = [];
 const rawApp = [];
+const appOpenBreakdown = [];
 let rawBrowser = [];
 let browserScenarios;
 let git = gitInfo(wtRoot);
@@ -196,6 +197,8 @@ async function collectApp(count, label) {
     }
     if (label === "warmup") continue;
     if (Object.keys(r.samples).length) rawApp.push(r.samples);
+    // where each open's time went (vaultdraw:open:* marks, report-only)
+    if (r.info?.openBreakdown) appOpenBreakdown.push(r.info.openBreakdown);
     if (r.info?.memoryTimeline) notes.push(`memory timeline (MB, now/peak per process): ${r.info.memoryTimeline.map((t) => `${t.mark} ${Object.entries(t.procs).map(([k, v]) => `${k}=${v.now}/${v.peak}`).join(" ")}`).join(" | ")}`);
   }
 }
@@ -251,7 +254,7 @@ if (lnote) notes.push(lnote);
 const result = {
   version: 1, mode, createdAt: new Date().toISOString(), git, machine: machineInfo(),
   config: { runs: rawApp.length || rawBrowser.length, warmup, fixtureHash, drawingCount: modes.typical ? 50 : config.drawingCount, ...(variant ? { variant } : {}) },
-  load, metrics, raw: { app: rawApp, browser: rawBrowser }, notes, errors,
+  load, metrics, raw: { app: rawApp, browser: rawBrowser, appOpenBreakdown }, notes, errors,
   ...(browserScenarios?.length ? { scenarios: browserScenarios } : {}),
   ...(appAborted ? { aborted: { app: appAborted } } : {}),
 };

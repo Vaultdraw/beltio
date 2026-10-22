@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { serializeAsJSON } from "@excalidraw/excalidraw";
 
+import { markOpen } from "../perf/openMarks";
+
 import { flushEditorSerialization } from "../editor/editorFlush";
 import { createOutsideFallback } from "../history/outsideFallback";
 
@@ -237,10 +239,12 @@ export const useVaultDocument = (
       }
       setLoading(true);
       try {
+        markOpen("read");
         const loaded = await repositoryRef.current.readDrawing(
           currentVault.handle,
           path,
         );
+        markOpen("read-done");
         if (
           mine !== generation.current ||
           vaultRef.current?.handle !== currentVault.handle
@@ -258,6 +262,7 @@ export const useVaultDocument = (
         ) {
           return;
         }
+        markOpen("activate");
         await activate({
           id: `${currentVault.handle}:${mine}:${path}`,
           path,

@@ -8,6 +8,7 @@ import { isSceneReady } from "../editor/sceneReady";
 
 import { runLeakScenario } from "./leakScenario";
 import { collectFrames, countLong } from "./perfStats";
+import { readOpenMarks } from "./openMarks";
 import { refreshRateSamples, runRefreshRateProbe } from "./refreshRate";
 import { scenarioSelected } from "./scenarioFilter";
 import { runTypicalScenarios } from "./typicalScenarios";
@@ -306,6 +307,9 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
     await afterPaint();
     await afterPaint();
     const elapsed = now() - t0;
+    // where the open's time went (report-only): vaultdraw:open:* marks
+    const breakdown = (info.openBreakdown ??= []) as unknown[];
+    breakdown.push({ path, ms: Math.round(elapsed), ...readOpenMarks(t0) });
     fixEditorSize();
     return elapsed;
   };

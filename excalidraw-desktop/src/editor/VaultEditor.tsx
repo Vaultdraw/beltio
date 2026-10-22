@@ -57,6 +57,7 @@ import { readDrawingStyles } from "../toolDefaults/drawingStyles";
 import { useToolDefaults } from "../toolDefaults/useToolDefaults";
 import { useFormulaCommands } from "../formula/useFormulaCommands";
 import { useMemoryRetention } from "../memory/useMemoryRetention";
+import { markOpen } from "../perf/openMarks";
 
 import "../theme/excalidrawChrome.css";
 
@@ -73,6 +74,7 @@ import { PANNED_CLASS, watchFirstPan } from "./panHint";
 import { renderImageExport } from "./imageExport";
 import { serializeSceneForSave } from "./sceneSerializer";
 import { getSaveSignature } from "./saveSignature";
+
 import { isSwapping, loadScene } from "./sceneSwap";
 import { blockEditorKeys } from "./inputGuard";
 import { LoadingLine } from "./LoadingLine";
@@ -333,10 +335,12 @@ const VaultEditorComponent = ({
     initialRestore.current = restoreRef.current;
     try {
       // Never inherits a file handle or scene from a previously open document.
+      markOpen("parse");
       const scene = await loadScene(
         initialSource.json,
         restoreRef.current?.view,
       );
+      markOpen("parsed");
       loadDrawingStyles(readDrawingStyles(initialSource.json));
       return scene;
     } catch (cause) {

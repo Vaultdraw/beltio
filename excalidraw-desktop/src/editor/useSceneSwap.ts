@@ -10,6 +10,8 @@ import type {
   ExcalidrawImperativeAPI,
 } from "@excalidraw/excalidraw/types";
 
+import { markOpen } from "../perf/openMarks";
+
 import { blockEditorInput } from "./inputGuard";
 import { loadScene, raceTimeout, swapAppState } from "./sceneSwap";
 
@@ -93,11 +95,14 @@ export function useSceneSwap(deps: SceneSwapDeps): void {
       if (!api || api.isDestroyed) {
         throw new Error("Editor is not ready");
       }
+      markOpen("parse");
       const scene = await loadScene(json, restore?.view);
+      markOpen("parsed");
       if (cancelled) {
         return;
       }
       await raceTimeout(preload(api, scene, doc), PRELOAD_TIMEOUT_MS);
+      markOpen("preloaded");
       if (cancelled) {
         return;
       }
@@ -118,6 +123,7 @@ export function useSceneSwap(deps: SceneSwapDeps): void {
           captureUpdate: CaptureUpdateAction.NEVER,
         });
       });
+      markOpen("landed");
       l.afterApply(api, documentId);
       const undo = restore?.takeUndo();
       if (undo) {
