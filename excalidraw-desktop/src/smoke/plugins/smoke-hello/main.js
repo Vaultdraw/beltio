@@ -13,3 +13,4 @@ export default definePlugin({
   },
 });
 //# sourceMappingURL=main.js.map
+/* global globalThis */
