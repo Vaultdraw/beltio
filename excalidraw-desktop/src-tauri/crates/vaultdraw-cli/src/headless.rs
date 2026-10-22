@@ -42,11 +42,12 @@ fn opt_str<'a>(params: &'a Value, key: &str) -> Result<Option<&'a str>, Fail> {
     }
 }
 
-/// `--vault` / `$VAULTDRAW_VAULT` / recent-vault, as a read-only, lock-free [`Vault`].
+/// `--vault` / `$VAULTDRAW_VAULT` / recent-vault, as a lock-free [`Vault`]. It is not flagged
+/// read-only (the app reports `readOnly: false` for a normal vault); headless reads never write.
 pub fn open_vault(cli: &Cli) -> Result<Vault, Fail> {
     let root = vault_path::resolve(cli.vault.as_deref()).map_err(native_fail)?;
     let handle = store::vault_id(&root);
-    Ok(Vault::new(root, handle, true, None))
+    Ok(Vault::new(root, handle, false, None))
 }
 
 fn dirs() -> Result<Dirs, Fail> {

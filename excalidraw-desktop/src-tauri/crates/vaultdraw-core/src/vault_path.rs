@@ -66,11 +66,13 @@ fn as_vault_dir(path: &Path) -> Result<PathBuf> {
 /// The path stored in a `recent-vault` file (`<dir>/recent-vault`), if it names a directory.
 fn read_recent(dir: &Path) -> Option<PathBuf> {
     let text = fs::read_to_string(dir.join(RECENT_VAULT_FILE)).ok()?;
-    let path = text.trim();
-    if path.is_empty() {
+    // Only the line ending goes: a folder name may end in a space. A relative path would resolve
+    // against the caller's cwd, so it is ignored.
+    let path = Path::new(text.strip_suffix('\n').map_or(text.as_str(), |t| t.strip_suffix('\r').unwrap_or(t)));
+    if !path.is_absolute() {
         return None;
     }
-    as_vault_dir(Path::new(path)).ok()
+    as_vault_dir(path).ok()
 }
 
 /// The ladder with an injected environment (`get`), platform and state dir.
@@ -184,6 +186,28 @@ mod tests {
         remember_to(&legacy_app_config_dir_with(env(&[("XDG_CONFIG_HOME", home.to_str().unwrap())]), Os::Other).unwrap(), &legacy_vault);
         let vars = [("XDG_CONFIG_HOME", home.to_str().unwrap())];
         assert_eq!(resolve_with(None, env(&vars), Os::Other, &state).unwrap(), legacy_vault);
+    }
+
+    #[test]
+    fn recent_vault_must_be_absolute_and_only_loses_its_line_ending() {
+        let t = tempfile::tempdir().unwrap();
+        let state = t.path().join("state");
+        fs::create_dir_all(&state).unwrap();
+        let file = state.join(RECENT_VAULT_FILE);
+        let a = vault(t.path(), "a");
+        // A relative path is ignored, even when it would resolve from the cwd.
+        fs::write(&file, "relative/vault").unwrap();
+        assert!(read_recent(&state).is_none());
+        for ending in ["", "\n", "\r\n"] {
+            fs::write(&file, format!("{}{ending}", a.display())).unwrap();
+            assert_eq!(read_recent(&state).unwrap(), a, "ending {ending:?}");
+        }
+        // A folder name ending in a space still resolves.
+        let spaced = vault(t.path(), "spaced ");
+        fs::write(&file, format!("{}\n", spaced.display())).unwrap();
+        assert_eq!(read_recent(&state).unwrap(), spaced);
+        fs::write(&file, "\n").unwrap();
+        assert!(read_recent(&state).is_none());
     }
 
     #[test]

@@ -159,8 +159,11 @@ fn walk(d: &Path) -> Vec<PathBuf> {
 fn vault_info_and_the_vault_ladder() {
     let e = env();
     let v = e.root.to_str().unwrap();
-    let want = vault_ops::info(&Vault::new(e.root.clone(), "t".into(), true, None));
-    assert_eq!(e.json(&["vault", "info"])["path"], want["path"]);
+    let want = vault_ops::info(&Vault::new(e.root.clone(), "t".into(), false, None));
+    assert_eq!(want["readOnly"], false);
+    let got = e.json(&["vault", "info"]);
+    assert_eq!(got["readOnly"], false);
+    assert_eq!(got, want, "offline `vault info` matches the writable vault's info");
     assert_eq!(e.json(&["vault"])["name"], "vault");
     // $VAULTDRAW_VAULT, then <state>/recent-vault.
     let o = e.cmd().env("VAULTDRAW_VAULT", v).args(["vault", "info", "--json"]).output().unwrap();

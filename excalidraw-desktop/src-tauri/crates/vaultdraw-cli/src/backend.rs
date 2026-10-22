@@ -18,9 +18,11 @@ use vaultdraw_protocol::{codes, ENV_SOCKET};
 const START_WINDOW: Duration = Duration::from_secs(2);
 const START_STEP: Duration = Duration::from_millis(100);
 
-/// True while an app process holds `<runtime>/instance.lock`.
+/// True while an app process holds `<runtime>/instance.lock`. Fails toward "live" when the runtime
+/// dir cannot be resolved (like core `app_live` on probe errors), so a read never goes headless
+/// against an app it could not rule out.
 fn app_live() -> bool {
-    InstancePaths::from_env(None).is_ok_and(|p| vaultdraw_core::instance::app_live(&p.dir))
+    InstancePaths::from_env(None).map_or(true, |p| vaultdraw_core::instance::app_live(&p.dir))
 }
 
 /// An explicit socket (flag or `$VAULTDRAW_SOCKET`) names an app to talk to: no fallback.

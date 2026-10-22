@@ -34,7 +34,12 @@ pub(crate) fn paths() -> Result<InstancePaths, String> {
     InstancePaths::from_env(smoke_root().as_deref())
 }
 
-pub(crate) use vaultdraw_core::instance::{try_claim, Claim};
+pub(crate) use vaultdraw_core::instance::Claim;
+use vaultdraw_core::instance::{claim_with_retries, try_claim};
+
+/// A CLI `app_live` probe holds the lock for microseconds; a few short retries ride it out.
+const CLAIM_TRIES: u32 = 5;
+const CLAIM_STEP: Duration = Duration::from_millis(20);
 
 /// `instance.json`: who owns the lock.
 pub(crate) fn write_info(paths: &InstancePaths) -> io::Result<()> {
@@ -47,6 +52,14 @@ fn forwarding_allowed() -> bool {
     !cfg!(feature = "smoke-test") && std::env::var_os("EXCALIDRAW_VAULT_SMOKE_DIR").is_none()
 }
 
+fn hold(paths: &InstancePaths, file: File) {
+    let _ = write_info(paths);
+    let _ = HELD.set(file);
+    // Single-threaded here, so setting the environment is safe; children of the app
+    // (terminals, scripts it starts) find the socket through it.
+    std::env::set_var(vaultdraw_protocol::ENV_SOCKET, &paths.socket);
+}
+
 /// First thing in `run()`: claim the instance, or hand this launch to the running app and
 /// exit. Any failure falls through to a normal start (the vault then opens read-only).
 pub(crate) fn claim_or_forward() {
@@ -54,20 +67,20 @@ pub(crate) fn claim_or_forward() {
     if ensure_private_dir(&paths.dir).is_err() {
         return;
     }
-    match try_claim(&paths) {
-        Ok(Claim::Held(file)) => {
-            let _ = write_info(&paths);
-            let _ = HELD.set(file);
-            // Single-threaded here, so setting the environment is safe; children of the app
-            // (terminals, scripts it starts) find the socket through it.
-            std::env::set_var(vaultdraw_protocol::ENV_SOCKET, &paths.socket);
-        }
+    match claim_with_retries(&paths, CLAIM_TRIES, CLAIM_STEP) {
+        Ok(Claim::Held(file)) => hold(&paths, file),
         Ok(Claim::Busy) if forwarding_allowed() => {
             let args: Vec<String> = std::env::args().skip(1).filter(|a| !a.starts_with("-psn_")).collect();
             let cwd = std::env::current_dir().ok().map(|p| p.to_string_lossy().into_owned());
             match forward(&paths.socket, &args, cwd.as_deref(), FORWARD_WAIT) {
                 Ok(()) => std::process::exit(0),
-                Err(e) => eprintln!("vaultdraw: could not hand over to the running app ({e}); starting normally"),
+                Err(e) => {
+                    eprintln!("vaultdraw: could not hand over to the running app ({e}); starting normally");
+                    // The "owner" may have been a probe: keep the lock if it is free now.
+                    if let Ok(Claim::Held(file)) = try_claim(&paths) {
+                        hold(&paths, file);
+                    }
+                }
             }
         }
         _ => {}
