@@ -1,0 +1,22 @@
+id = "stamp"
+name = "Stamp"
+version = "0.1.0"
+api = 0
+main = "main.js"
+description = "Example: commands that stamp a sticky note or a small flow onto the open drawing in one undo step"
+author = "Vaultdraw"
+
+[[contributes.commands]]
+id = "note"
+title = "Stamp: insert sticky note"
+keys = ["Mod+Alt+Shift+S"]
+
+[[contributes.commands]]
+id = "flow"
+title = "Stamp: insert flow"
+
+[[contributes.settings]]
+key = "color"
+type = "color"
+title = "Sticky note colour"
+default = "#ffec99"
