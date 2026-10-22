@@ -48,6 +48,8 @@ export interface ActivityEntry {
    * "Open a drawing first" (even when the editor that binds it is unmounted).
    */
   needsDrawing?: boolean;
+  /** Hidden until the user shows it (see layout.ts); plugin panels past the cap. */
+  defaultHidden?: boolean;
 }
 
 export const OPEN_DRAWING = "Open a drawing first";

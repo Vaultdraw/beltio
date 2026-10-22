@@ -110,3 +110,27 @@ describe("hasShownActivityEntry", () => {
     expect(hasShownActivityEntry([], [])).toBe(true);
   });
 });
+
+describe("defaultHidden entries", () => {
+  const extra = { ...ACTIVITY_ENTRIES[0], id: "p.x", defaultHidden: true };
+  const all = [...ACTIVITY_ENTRIES, extra];
+  const hiddenOf = (hidden: string[]) =>
+    resolveActivityLayout(all, [], hidden).find((r) => r.entry.id === "p.x")!
+      .hidden;
+
+  it("hides until the +id marker is listed", () => {
+    expect(hiddenOf([])).toBe(true);
+    expect(hiddenOf(["+p.x"])).toBe(false);
+    expect(hiddenOf(["+p.x", "p.x"])).toBe(true);
+  });
+
+  it("show adds the marker, hide removes it", () => {
+    const shown = setActivityEntryHidden(all, [], "p.x", false);
+    expect(shown).toEqual(["+p.x"]);
+    expect(setActivityEntryHidden(all, shown, "p.x", true)).toEqual([]);
+  });
+
+  it("built-in entries keep the plain hidden list", () => {
+    expect(setActivityEntryHidden(all, [], "graph", true)).toEqual(["graph"]);
+  });
+});

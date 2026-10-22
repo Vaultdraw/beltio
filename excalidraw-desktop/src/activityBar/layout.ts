@@ -3,8 +3,13 @@
  * (`interface.activity_bar_order` / `activity_bar_hidden`) are two id lists.
  * Unknown ids are ignored; entries missing from the order keep their default
  * place after the listed ones, so a future entry still appears.
+ * A `defaultHidden` entry shows only once `+<id>` is in the hidden list (the
+ * user switched it on); `<id>` in the list always hides.
  */
 import type { ActivityEntry } from "./entries";
+
+/** Hidden-list prefix: a defaultHidden entry the user switched on. */
+const SHOWN = "+";
 
 export interface LayoutRow {
   entry: ActivityEntry;
@@ -32,7 +37,12 @@ export function resolveActivityLayout(
     }
   }
   const hide = new Set(hidden);
-  return ordered.map((entry) => ({ entry, hidden: hide.has(entry.id) }));
+  return ordered.map((entry) => ({
+    entry,
+    hidden:
+      hide.has(entry.id) ||
+      (entry.defaultHidden === true && !hide.has(SHOWN + entry.id)),
+  }));
 }
 
 /**
@@ -70,9 +80,18 @@ export function setActivityEntryHidden(
   id: string,
   hide: boolean,
 ): string[] {
-  const rest = hidden.filter((x) => x !== id);
-  const next = hide ? [...rest, id] : rest;
-  const known = new Set(entries.map((e) => e.id));
+  const rest = hidden.filter((x) => x !== id && x !== SHOWN + id);
+  const entry = entries.find((e) => e.id === id);
+  // A defaultHidden entry is hidden by absence; only "show" needs a marker.
+  const mark = entry?.defaultHidden
+    ? hide
+      ? null
+      : SHOWN + id
+    : hide
+    ? id
+    : null;
+  const next = mark ? [...rest, mark] : rest;
+  const known = new Set(entries.flatMap((e) => [e.id, SHOWN + e.id]));
   return next.filter((x) => known.has(x));
 }
 
@@ -89,5 +108,9 @@ export function hasShownActivityEntry(
     return true;
   }
   const hide = new Set(hidden);
-  return entries.some((e) => !hide.has(e.id));
+  return entries.some(
+    (e) =>
+      !hide.has(e.id) &&
+      !(e.defaultHidden === true && !hide.has(SHOWN + e.id)),
+  );
 }

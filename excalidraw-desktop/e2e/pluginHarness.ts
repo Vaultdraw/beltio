@@ -80,27 +80,35 @@ export const FIXTURES: Record<string, () => PluginInfo> = {
   size1m: () => sized("size1m", "Size 1m", 1024 * 1024),
 };
 
-/** 50 manifests x (3 commands, 1 panel, 4 settings). */
-const stubPlugins = (n: number): PluginInfo[] =>
+/**
+ * n manifests x (3 commands, 1 panel, 4 settings); `only` keeps one kind
+ * (stubs50:commands | stubs50:panels | stubs50:settings) for cost attribution.
+ */
+const stubPlugins = (n: number, only?: string): PluginInfo[] =>
   Array.from({ length: n }, (_, i) =>
     makePluginInfo(`stub-${i}`, {
       name: `Stub ${i}`,
       contributes: {
-        commands: [0, 1, 2].map((c) =>
-          command(`cmd${c}`, `Stub ${i}: cmd ${c}`),
-        ),
-        panels: [
-          { id: "p", title: `Stub ${i} panel`, icon: null, group: "top" },
-        ],
-        settings: [0, 1, 2, 3].map(
-          (s) =>
-            ({
-              key: `s${s}`,
-              type: "string",
-              title: `Setting ${s}`,
-              default: "x",
-            } as never),
-        ),
+        commands:
+          only && only !== "commands"
+            ? []
+            : [0, 1, 2].map((c) => command(`cmd${c}`, `Stub ${i}: cmd ${c}`)),
+        panels:
+          only && only !== "panels"
+            ? []
+            : [{ id: "p", title: `Stub ${i} panel`, icon: null, group: "top" }],
+        settings:
+          only && only !== "settings"
+            ? []
+            : [0, 1, 2, 3].map(
+                (s) =>
+                  ({
+                    key: `s${s}`,
+                    type: "string",
+                    title: `Setting ${s}`,
+                    default: "x",
+                  } as never),
+              ),
       },
     }),
   );
@@ -111,7 +119,11 @@ export async function startPluginsHarness(
 ): Promise<void> {
   const names = (params.get("plugins") ?? "").split(",").filter(Boolean);
   const infos = names.flatMap((n) =>
-    n === "stubs50" ? stubPlugins(50) : FIXTURES[n] ? [FIXTURES[n]()] : [],
+    n.startsWith("stubs50")
+      ? stubPlugins(50, n.split(":")[1])
+      : FIXTURES[n]
+      ? [FIXTURES[n]()]
+      : [],
   );
   setPluginsBackend(
     createFakeBackend(infos, (id, path) => `${FIXTURE_PREFIX}${id}/${path}`),
@@ -120,6 +132,8 @@ export async function startPluginsHarness(
     {
       pluginsEnabled:
         params.get("enabled") === "none" ? [] : infos.map((p) => p.id),
+      // ?bar=off hides the activity bar (memory attribution)
+      ...(params.get("bar") === "off" ? { activityBar: false } : {}),
     },
     win,
   );

@@ -51,6 +51,10 @@ const ICONS: Record<string, ActivityEntry["icon"]> = {
   page: IconPage,
 };
 
+/** Plugin panel buttons shown in the activity bar by default; the rest are opt-in. */
+export const ACTIVITY_BAR_PLUGIN_CAP = 6;
+const shownPanelEntries = new Set<string>();
+
 /** Built-in panel icon names a manifest may use. */
 export const PANEL_ICON_NAMES: readonly string[] = Object.keys(ICONS);
 
@@ -129,8 +133,13 @@ export function registerStubs(rt: PluginRuntime): () => void {
       category: info.name,
       keys: { default: [] },
     });
+    const defaultHidden = shownPanelEntries.size >= ACTIVITY_BAR_PLUGIN_CAP;
+    if (!defaultHidden) {
+      shownPanelEntries.add(panelId);
+    }
     entries.push({
       id: panelId,
+      defaultHidden,
       label: p.title,
       icon: iconFor(id, p.icon),
       commandId,
@@ -172,5 +181,8 @@ export function registerStubs(rt: PluginRuntime): () => void {
     },
     info.mainBytes,
   );
-  return () => disposers.reverse().forEach((d) => d());
+  return () => {
+    disposers.reverse().forEach((d) => d());
+    panels.forEach((p) => shownPanelEntries.delete(p.id));
+  };
 }
