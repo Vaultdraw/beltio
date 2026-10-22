@@ -1,5 +1,5 @@
 /** Every external link the app offers (palette, Help menu, About, welcome). */
-export const SITE = "https://vaultdraw.swarnim-114.workers.dev";
+export const SITE = "https://vaultdraw.vercel.app";
 
 const REPO = "https://github.com/Vaultdraw/vaultdraw";
 

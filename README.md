@@ -9,9 +9,9 @@
 
 Vaultdraw is an offline desktop app for macOS that keeps your [Excalidraw](https://github.com/excalidraw/excalidraw) drawings as plain files in a folder on your computer, a bit like Obsidian for whiteboards. No account, no cloud, no telemetry.
 
-[Website](https://vaultdraw.swarnim-114.workers.dev) · [Download](https://github.com/Vaultdraw/vaultdraw/releases/latest) · [Changelog](CHANGELOG.md) · [Docs](https://vaultdraw.swarnim-114.workers.dev/docs/)
+[Website](https://vaultdraw.vercel.app) · [Download](https://github.com/Vaultdraw/vaultdraw/releases/latest) · [Changelog](CHANGELOG.md) · [Docs](https://vaultdraw.vercel.app/docs/)
 
-[![Vaultdraw](docs/assets/vaultdraw.png)](https://vaultdraw.swarnim-114.workers.dev)
+[![Vaultdraw](docs/assets/vaultdraw.png)](https://vaultdraw.vercel.app)
 
 ## Features
 
