@@ -5,6 +5,7 @@
 // ?plugins=stubs50 registers 50 inactive-by-use plugins (3 commands, 1 panel,
 // 4 settings each) whose modules must never be fetched.
 // ?enabled=none leaves every plugin off (the Plugins settings page turns them on).
+import { registeredCommands } from "../src/commands/registry";
 import { ensureActive } from "../src/plugins/host";
 import {
   getPluginCosts,
@@ -175,6 +176,7 @@ export async function startPluginsHarness(
     ensureActive,
     getPluginCosts,
     getStubRegistrationMs,
+    hasCommand: (id: string) => registeredCommands().some((c) => c.id === id),
   };
   (win as any).__pluginsReady = true;
 }
