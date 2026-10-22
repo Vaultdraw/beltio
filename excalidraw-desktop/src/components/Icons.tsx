@@ -510,6 +510,15 @@ export const IconKeyboard = strokeIcon(
   </>,
 );
 
+/** About: a circled "i" (Lucide "info"). */
+export const IconInfo = strokeIcon(
+  14,
+  <>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-4M12 8h.01" />
+  </>,
+);
+
 /** Links: two chain links (Lucide "link"). */
 export const IconLink = strokeIcon(
   14,

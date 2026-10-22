@@ -16,6 +16,7 @@ mod clipboard;
 mod config;
 mod control;
 mod drawing_copy;
+mod external;
 mod links;
 mod search;
 mod library;
@@ -800,7 +801,7 @@ pub fn run() {
                 choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
                 write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
                 export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, list_recovery, discard_recovery,
-                config::load_settings, config::update_config, config::write_state, config::open_config_dir,
+                config::load_settings, config::update_config, config::write_state, config::open_config_dir, external::open_external_url, external::system_info,
                 themes::list_themes, themes::open_themes_dir,
                 vault_settings::load_vault_settings, vault_settings::update_vault_settings,
                 search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
@@ -823,7 +824,7 @@ pub fn run() {
                 choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
                 write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
                 export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, list_recovery, discard_recovery,
-                config::load_settings, config::update_config, config::write_state, config::open_config_dir,
+                config::load_settings, config::update_config, config::write_state, config::open_config_dir, external::open_external_url, external::system_info,
                 themes::list_themes, themes::open_themes_dir,
                 vault_settings::load_vault_settings, vault_settings::update_vault_settings,
                 search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
@@ -843,7 +844,7 @@ pub fn run() {
             choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
             write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
             export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, list_recovery, discard_recovery,
-            config::load_settings, config::update_config, config::write_state, config::open_config_dir,
+            config::load_settings, config::update_config, config::write_state, config::open_config_dir, external::open_external_url, external::system_info,
             themes::list_themes, themes::open_themes_dir,
             vault_settings::load_vault_settings, vault_settings::update_vault_settings,
             search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,

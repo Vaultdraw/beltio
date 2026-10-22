@@ -4,6 +4,7 @@ import {
   IconClose,
   IconFolder,
   IconHistory,
+  IconInfo,
   IconKeyboard,
   IconLink,
   IconLayout,
@@ -33,6 +34,7 @@ export const PAGE_ICONS: Record<SettingsPageId, ReactNode> = {
   links: <IconLink {...NAV_ICON} />,
   history: <IconHistory {...NAV_ICON} />,
   hotkeys: <IconKeyboard {...NAV_ICON} />,
+  about: <IconInfo {...NAV_ICON} />,
 };
 
 export const settingsTabId = (page: SettingsPageId) =>

@@ -27,7 +27,8 @@ export type BuiltinCommandCategory =
   | "Graph"
   | "Formula"
   | "Thumbnails"
-  | "Tabs";
+  | "Tabs"
+  | "Help";
 
 export type CommandCategory = BuiltinCommandCategory | (string & {});
 

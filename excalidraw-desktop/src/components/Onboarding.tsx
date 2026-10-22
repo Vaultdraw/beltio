@@ -1,3 +1,7 @@
+import { Fragment } from "react";
+
+import { WELCOME_LINKS } from "../help/aboutLinks";
+import { HELP_LINK_HANDLERS } from "../help/helpCommands";
 import { isTauriAvailable } from "../vault/DesktopVaultRepository";
 
 import { IconAlert, IconClose, IconFolder, IconPlus } from "./Icons";
@@ -151,6 +155,21 @@ export const Onboarding = ({
             </div>
           </div>
         )}
+
+        <nav className="vault-onboarding__links" aria-label="Help links">
+          {WELCOME_LINKS.map(({ command, label }, i) => (
+            <Fragment key={command}>
+              {i > 0 && <span aria-hidden="true">&middot;</span>}
+              <button
+                type="button"
+                className="vault-onboarding__link"
+                onClick={() => HELP_LINK_HANDLERS[command]?.()}
+              >
+                {label}
+              </button>
+            </Fragment>
+          ))}
+        </nav>
       </div>
     </div>
   );

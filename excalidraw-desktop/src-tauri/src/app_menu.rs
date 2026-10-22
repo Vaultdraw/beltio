@@ -9,19 +9,57 @@ pub const CLOSE_TAB_ID: &str = "vault-menu-close-tab";
 pub const CLOSE_WINDOW_ID: &str = "vault-menu-close-window";
 /// Frontend contract: empty payload, delivered to the focused window.
 pub const CLOSE_TAB_EVENT: &str = "vault-close-tab";
+/// Help menu items run the matching palette command: id = prefix + command id.
+pub const HELP_ITEM_PREFIX: &str = "vault-help:";
+/// Frontend contract: payload is the command id (a string).
+pub const RUN_COMMAND_EVENT: &str = "vault-run-command";
+
+/// Help menu, in order; `None` is a separator. Command ids are in
+/// `src/help/helpCommands.ts`.
+const HELP_ITEMS: &[Option<(&str, &str)>] = &[
+    Some(("help.website", "Website")),
+    Some(("help.docs", "Documentation")),
+    Some(("help.keyboard", "Keyboard Shortcuts")),
+    None,
+    Some(("help.reportBug", "Report a Bug\u{2026}")),
+    Some(("help.requestFeature", "Request a Feature\u{2026}")),
+    None,
+    Some(("help.whatsNew", "What's New")),
+    Some(("help.checkUpdates", "Check for Updates\u{2026}")),
+    None,
+    Some(("help.source", "Source Code")),
+    Some(("help.license", "License & Credits")),
+];
 
 #[derive(Debug, PartialEq, Eq)]
 enum MenuAction {
     CloseTab,
     CloseWindow,
+    RunCommand(String),
 }
 
 fn action_for(id: &str) -> Option<MenuAction> {
     match id {
         CLOSE_TAB_ID => Some(MenuAction::CloseTab),
         CLOSE_WINDOW_ID => Some(MenuAction::CloseWindow),
-        _ => None,
+        _ => id
+            .strip_prefix(HELP_ITEM_PREFIX)
+            .map(|command| MenuAction::RunCommand(command.to_string())),
     }
+}
+
+fn help_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
+    let help = Submenu::with_id(app, "vault-menu-help", "Help", true)?;
+    for item in HELP_ITEMS {
+        match item {
+            Some((command, title)) => {
+                let id = format!("{HELP_ITEM_PREFIX}{command}");
+                help.append(&MenuItem::with_id(app, id, *title, true, None::<&str>)?)?;
+            }
+            None => help.append(&PredefinedMenuItem::separator(app)?)?,
+        }
+    }
+    Ok(help)
 }
 
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
@@ -84,6 +122,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
                     &PredefinedMenuItem::maximize(app, None)?,
                 ],
             )?,
+            &help_menu(app)?,
         ],
     )
 }
@@ -105,6 +144,9 @@ pub fn on_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
         MenuAction::CloseWindow => {
             let _ = window.close();
         }
+        MenuAction::RunCommand(command) => {
+            let _ = app.emit_to(window.label(), RUN_COMMAND_EVENT, command);
+        }
     }
 }
 
@@ -113,14 +155,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn help_items_are_help_commands() {
+        let n = HELP_ITEMS.iter().flatten().count();
+        assert_eq!(n, 9);
+        assert!(HELP_ITEMS.iter().flatten().all(|(c, _)| c.starts_with("help.")));
+    }
+
+    #[test]
     fn maps_item_ids_to_actions() {
         assert_eq!(action_for(CLOSE_TAB_ID), Some(MenuAction::CloseTab));
         assert_eq!(action_for(CLOSE_WINDOW_ID), Some(MenuAction::CloseWindow));
         assert_eq!(action_for("other"), None);
+        assert_eq!(
+            action_for("vault-help:help.docs"),
+            Some(MenuAction::RunCommand("help.docs".to_string()))
+        );
     }
 
     #[test]
     fn event_name_is_the_frontend_contract() {
         assert_eq!(CLOSE_TAB_EVENT, "vault-close-tab");
+        assert_eq!(RUN_COMMAND_EVENT, "vault-run-command");
     }
 }

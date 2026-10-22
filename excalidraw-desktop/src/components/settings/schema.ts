@@ -30,7 +30,8 @@ export type SettingsPageId =
   | "files"
   | "links"
   | "history"
-  | "hotkeys";
+  | "hotkeys"
+  | "about";
 
 export interface SettingsPage {
   id: SettingsPageId;
@@ -64,6 +65,7 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
   { id: "links", label: "Links", group: "Options" },
   ...HISTORY_SETTINGS_PAGES,
   { id: "hotkeys", label: "Hotkeys", group: "Options" },
+  { id: "about", label: "About", group: "Options" },
 ];
 
 export const DEFAULT_SETTINGS_PAGE: SettingsPageId = "appearance";
@@ -743,6 +745,29 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     description:
       "Assign keyboard shortcuts to commands; changes are saved to [hotkeys] in config.toml.",
     keywords: ["shortcuts", "keyboard", "keybindings", "keys", "commands"],
+  },
+
+  // ---- About ----
+  {
+    id: "about-info",
+    page: "about",
+    label: "About Vaultdraw",
+    description:
+      "Version, website, documentation, bug reports and source code.",
+    keywords: [
+      "version",
+      "help",
+      "website",
+      "docs",
+      "documentation",
+      "bug",
+      "feature request",
+      "issues",
+      "updates",
+      "changelog",
+      "license",
+      "source",
+    ],
   },
 ];
 

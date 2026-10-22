@@ -2,6 +2,7 @@ import { pdfImportControls } from "../../../pdfImport/PdfImportSettings";
 
 import { tabsControls } from "../../../tabs/tabsSettingsControls";
 
+import { aboutControls } from "./About";
 import { appearanceControls } from "./Appearance";
 import { drawingControls } from "./Drawing";
 import { filesControls } from "./Files";
@@ -33,4 +34,5 @@ export const SETTING_CONTROLS: SettingControls = {
   ...tagsControls,
   ...historyControls,
   ...hotkeysControls,
+  ...aboutControls,
 };

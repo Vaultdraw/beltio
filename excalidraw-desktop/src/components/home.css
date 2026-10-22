@@ -401,3 +401,27 @@ html.dark .vault-onboarding__logo {
   width: 10px;
   height: 10px;
 }
+
+.vault-onboarding__links {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 28px;
+  font-size: var(--vd-fs-caption);
+  color: var(--vault-text-faint);
+}
+
+.vault-onboarding__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.vault-onboarding__link:hover,
+.vault-onboarding__link:focus-visible {
+  color: var(--vault-text-muted);
+  text-decoration: underline;
+}

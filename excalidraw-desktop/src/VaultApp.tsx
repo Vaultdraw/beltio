@@ -21,6 +21,7 @@ import { resolveOpenTarget } from "./control/openTarget";
 import { createAppFiles } from "./control/appFiles";
 import { openVaultAtPath } from "./control/vaultOpen";
 import { useControlBridge } from "./control/useControlBridge";
+import { useMenuCommands } from "./help/useMenuCommands";
 import { useAppLinks } from "./links/useAppLinks";
 import { DesktopVaultTagRename } from "./tags/DesktopVaultTagRename";
 import { useAppTags } from "./tags/useAppTags";
@@ -1953,6 +1954,7 @@ export const VaultApp = ({
     setAppCommandRunner((id) => runnerRef.current?.run(id) ?? false);
     return () => setAppCommandRunner(null);
   }, []);
+  useMenuCommands();
   useControlBridge(win, {
     tabStore: tabs.store,
     activePath: activeDoc?.path ?? null,

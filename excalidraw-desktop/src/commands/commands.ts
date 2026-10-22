@@ -4,6 +4,7 @@
  * Hotkeys page lists commands in.
  */
 import { FORMULA_COMMANDS } from "../formula/formulaCommands";
+import { HELP_COMMANDS } from "../help/helpCommands";
 import { HISTORY_COMMANDS } from "../history/historyCommands";
 import { SETTINGS_PAGES } from "../components/settings/schema";
 import { MAX_PEN_PRESETS } from "../pens/penPresets";
@@ -598,6 +599,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...TAB_COMMANDS,
   ...FORMULA_COMMANDS,
   ...THUMBNAIL_COMMANDS,
+  ...HELP_COMMANDS,
 ];
 
 registerCommands(COMMANDS);
