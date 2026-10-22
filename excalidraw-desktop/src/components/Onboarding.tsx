@@ -1,12 +1,6 @@
 import { isTauriAvailable } from "../vault/DesktopVaultRepository";
 
-import {
-  IconAlert,
-  IconClose,
-  IconDrawing,
-  IconFolder,
-  IconPlus,
-} from "./Icons";
+import { IconAlert, IconClose, IconFolder, IconPlus } from "./Icons";
 
 import "./home.css";
 
@@ -40,10 +34,10 @@ export const Onboarding = ({
       {/* Empty title-bar strip so the window can be dragged before a vault opens. */}
       <div className="vault-titlebar-drag" data-tauri-drag-region />
       <div className="vault-onboarding__card">
-        <div className="vault-onboarding__logo" aria-hidden="true">
-          <IconDrawing width={28} height={28} />
-        </div>
-        <h1 className="vault-onboarding__title">Vaultdraw</h1>
+        <div className="vault-onboarding__logo" aria-hidden="true" />
+        <h1 className="vault-onboarding__title" aria-label="Vaultdraw">
+          vault<span className="vault-onboarding__title-accent">draw</span>
+        </h1>
         <p className="vault-onboarding__desc">
           A vault is just a folder: your drawings are plain files on your disk,
           readable without Vaultdraw.

@@ -201,23 +201,37 @@
   text-align: center;
 }
 
+/* The mark follows the app mode (html.dark). Only the matching SVG is fetched. */
 .vault-onboarding__logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  margin-bottom: 12px;
-  border-radius: var(--vd-radius-dialog);
-  background: var(--vault-sel);
-  color: var(--vault-accent-text);
+  display: block;
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 12px;
+  background: url("../assets/brand/mark-light.svg") center / contain no-repeat;
+}
+
+html.dark .vault-onboarding__logo {
+  background-image: url("../assets/brand/mark-dark.svg");
+}
+
+/* Wordmark font: Excalifont's Latin subset, fetched only when this view shows. */
+@font-face {
+  font-family: "Vaultdraw Wordmark";
+  src: url("../../../packages/excalidraw/fonts/Excalifont/Excalifont-Regular-a88b72a24fb54c9f94e3b5fdaa7481c9.woff2")
+    format("woff2");
+  font-display: swap;
 }
 
 .vault-onboarding__title {
   margin: 0 0 8px;
-  font-size: var(--vd-fs-display);
-  font-weight: 600;
+  font-family: "Vaultdraw Wordmark", "Excalifont", var(--vd-font);
+  font-size: calc(var(--vd-fs-display) * 1.5);
+  font-weight: 400;
   color: var(--vault-text);
+}
+
+.vault-onboarding__title-accent {
+  color: var(--vault-accent-text);
 }
 
 .vault-onboarding__desc {
