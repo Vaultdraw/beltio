@@ -1,0 +1,25 @@
+id = "event-logger"
+name = "Event logger"
+version = "0.1.0"
+api = 0
+main = "main.js"
+description = "Example: subscribes to every app event at startup, shows a ring buffer in a panel, disposes cleanly"
+author = "Vaultdraw"
+activation = ["onStartupFinished"]
+
+[[contributes.commands]]
+id = "clear"
+title = "Event logger: clear"
+
+[[contributes.panels]]
+id = "log"
+title = "Event log"
+icon = "history"
+
+[[contributes.settings]]
+key = "max"
+type = "int"
+title = "Entries to keep"
+default = 100
+min = 10
+max = 1000
