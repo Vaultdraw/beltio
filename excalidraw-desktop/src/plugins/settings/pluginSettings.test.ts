@@ -24,6 +24,7 @@ import {
 import {
   getPluginSetting,
   pluginSettingProblems,
+  allPluginSettingProblems,
   setPluginSetting,
 } from "./pluginSettings";
 import {
@@ -281,5 +282,20 @@ describe("get/set", () => {
     expect(problems).toHaveLength(1);
     expect(problems[0].key).toBe("plugin.gs.n");
     expect(getPluginSetting("gs", "n", window)).toBe(3);
+  });
+
+  it("reports every plugin's problems; out of range falls back to the default", async () => {
+    window.localStorage.clear();
+    const { updatePreferences } = await import("../../vault/preferences");
+    updatePreferences({ pluginSettings: { gs: { n: 0 } } }, window);
+    expect(allPluginSettingProblems(window).map((p) => p.key)).toEqual([
+      "plugin.gs.n",
+    ]);
+    expect(allPluginSettingProblems(window)[0].message).toMatch(
+      /config\.toml.*between.*using the default/,
+    );
+    expect(getPluginSetting("gs", "n", window)).toBe(3);
+    updatePreferences({ pluginSettings: { gs: { n: 5 } } }, window);
+    expect(allPluginSettingProblems(window)).toEqual([]);
   });
 });

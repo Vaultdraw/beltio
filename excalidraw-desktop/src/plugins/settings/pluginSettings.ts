@@ -19,7 +19,11 @@ import {
   type SettingDecl,
   type SettingScopeName,
 } from "./declaredSettings";
-import { pluginSettingDecl } from "./registry";
+import {
+  pluginSettingDecl,
+  pluginSettingsDecls,
+  registeredSettingsPlugins,
+} from "./registry";
 
 import type { SettingsProblem } from "../../vault/settingsSync";
 
@@ -87,7 +91,7 @@ export async function setPluginSetting(
   return true;
 }
 
-/** Stored values that fail their declaration (they fall back to the default). */
+/** Stored values that fail their declaration (out of range or wrong type = the default). */
 export function pluginSettingProblems(
   pluginId: string,
   decls: readonly SettingDecl[],
@@ -113,3 +117,11 @@ export function pluginSettingProblems(
     }),
   );
 }
+
+/** Problems of every plugin with declared settings. */
+export const allPluginSettingProblems = (
+  win?: Window | null,
+): SettingsProblem[] =>
+  registeredSettingsPlugins().flatMap((id) =>
+    pluginSettingProblems(id, pluginSettingsDecls(id), win),
+  );

@@ -114,6 +114,7 @@ import { ThumbnailsRoot } from "./thumbnails/ThumbnailsRoot";
 import { HistoryHost } from "./history/HistoryHost";
 import { setAppCommandRunner } from "./commands/appRunner";
 import { pluginHostStarted } from "./plugins/hostFlag";
+import { usePluginSettingProblems } from "./plugins/settings/usePluginSettingProblems";
 import { useHistoryEntry } from "./history/useHistoryEntry";
 import { desktopHistoryRepository } from "./history/DesktopHistoryRepository";
 import { toHistorySettings } from "./history/historySettings";
@@ -436,8 +437,10 @@ export const VaultApp = ({
     };
   }, [win]);
 
+  const pluginSettingProblems = usePluginSettingProblems(win);
   const allProblems = [
     ...settingsProblems,
+    ...pluginSettingProblems,
     ...vaultSettings.problems.map((p) => p.message),
     ...(appearance.snapshot.problem ? [appearance.snapshot.problem] : []),
     ...(appearance.registry.loadError ? [appearance.registry.loadError] : []),

@@ -565,3 +565,34 @@ fn dev_flag_defaults_to_false_and_parses() {
     assert!(manifest::parse(&dev).unwrap().dev);
     assert!(manifest::parse(&format!("{}dev = \"yes\"\n", minimal("bad"))).is_err());
 }
+
+/// Every plugin.toml shipped as an example, smoke plugin or e2e fixture must
+/// pass the real manifest parser. Missing folders are skipped.
+#[test]
+fn shipped_plugin_manifests_parse() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("repo root");
+    let parents = [
+        "sdk/examples",
+        "excalidraw-desktop/src/smoke/plugins",
+        "excalidraw-desktop/e2e/fixtures/plugins",
+    ];
+    let mut failures = Vec::new();
+    for parent in parents {
+        let Ok(entries) = fs::read_dir(root.join(parent)) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let file = entry.path().join("plugin.toml");
+            let Ok(text) = fs::read_to_string(&file) else {
+                continue;
+            };
+            if let Err(e) = manifest::parse(&text) {
+                failures.push(format!("{}: {e}", file.display()));
+            }
+        }
+    }
+    assert!(failures.is_empty(), "invalid manifests:\n{}", failures.join("\n"));
+}

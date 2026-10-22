@@ -116,4 +116,17 @@ describe("DeclaredSettingsPage", () => {
     await screen.findAllByText("Inherited from global");
     expect(getVaultSettingsSnapshot().pluginOverrides).toEqual({});
   });
+
+  it("never writes an out-of-range value from the stepper", () => {
+    renderPage();
+    const size = screen.getByRole("spinbutton", { name: "Size" });
+    fireEvent.keyDown(size, { key: "End" });
+    expect(getPreferences(window).pluginSettings.demo?.size).toBe(9);
+    fireEvent.keyDown(size, { key: "ArrowUp" });
+    fireEvent.keyDown(size, { key: "PageUp" });
+    expect(getPreferences(window).pluginSettings.demo?.size).toBe(9);
+    fireEvent.keyDown(size, { key: "Home" });
+    fireEvent.keyDown(size, { key: "PageDown" });
+    expect(getPreferences(window).pluginSettings.demo?.size).toBe(1);
+  });
 });

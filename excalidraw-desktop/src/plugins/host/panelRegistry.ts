@@ -1,4 +1,6 @@
 /** Plugin panels currently registered as stubs, for the PluginPanels host to mount. */
+import { closePanel } from "../../slots/panelStore";
+
 import type { ComponentType } from "react";
 
 export interface PluginPanelStub {
@@ -22,6 +24,8 @@ export function addPluginPanels(added: readonly PluginPanelStub[]): () => void {
   emit();
   return () => {
     panels = panels.filter((p) => !added.includes(p));
+    // Disable, reload and uninstall dispose the stubs: the open flags reset.
+    added.forEach((p) => closePanel(p.id));
     emit();
   };
 }

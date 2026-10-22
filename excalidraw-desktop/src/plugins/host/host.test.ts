@@ -4,6 +4,7 @@ import { getRegisteredHandler } from "../../commands/handlerRegistry";
 import { getCommand } from "../../commands/commands";
 import { getPluginSetting } from "../settings/pluginSettings";
 import { toastStore } from "../../toasts/toastStore";
+import { isPanelOpen } from "../../slots/panelStore";
 import { updatePreferences } from "../../vault/preferences";
 
 import { ensureActive, getRuntime } from "./activation";
@@ -24,6 +25,7 @@ import {
   tick,
   withCommands,
 } from "./testUtils";
+import { PANEL_ICON_NAMES } from "./stubs";
 
 import { syncPlugins } from "./index";
 
@@ -346,5 +348,42 @@ describe("syncPlugins", () => {
     setupHost([], {});
     expect(syncPlugins([], [])).toEqual({ started: [] });
     updatePreferences({ pluginsEnabled: [] });
+  });
+});
+
+describe("panels of a plugin", () => {
+  const panelInfo = (icon: string | null) => {
+    const info = makePluginInfo("pan");
+    info.contributes.panels = [{ id: "p", title: "P", icon, group: "top" }];
+    return info;
+  };
+
+  it("close on disable, and the toggle command opens them again", async () => {
+    await boot([panelInfo(null)], { pan: { activate() {} } });
+    enable(["pan"]);
+    getRegisteredHandler("pan.panel.p")!();
+    expect(isPanelOpen("pan.p")).toBe(true);
+    enable([]);
+    await tick();
+    expect(isPanelOpen("pan.p")).toBe(false);
+    enable(["pan"]);
+    getRegisteredHandler("pan.panel.p")!();
+    expect(isPanelOpen("pan.p")).toBe(true);
+  });
+
+  it("report an unknown icon name, accept every built-in one", async () => {
+    await boot([panelInfo("clock")], { pan: { activate() {} } });
+    enable(["pan"]);
+    expect(getPluginProblems("pan")).toEqual([
+      "unknown icon clock; using the default",
+    ]);
+    enable([]);
+    await tick();
+    for (const name of PANEL_ICON_NAMES) {
+      syncPlugins([panelInfo(name)], ["pan"]);
+      syncPlugins([], []);
+    }
+    expect(getPluginProblems("pan")).toHaveLength(1);
+    expect(PANEL_ICON_NAMES).toContain("library");
   });
 });

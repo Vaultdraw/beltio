@@ -51,7 +51,16 @@ const ICONS: Record<string, ActivityEntry["icon"]> = {
   page: IconPage,
 };
 
-const iconFor = (name: string | null) => (name && ICONS[name]) || IconLayout;
+/** Built-in panel icon names a manifest may use. */
+export const PANEL_ICON_NAMES: readonly string[] = Object.keys(ICONS);
+
+/** The icon for a manifest name; an unknown name is reported, not silent. */
+const iconFor = (pluginId: string, name: string | null) => {
+  if (name && !(name in ICONS)) {
+    reportPluginProblem(pluginId, `unknown icon ${name}; using the default`);
+  }
+  return (name && ICONS[name]) || IconLayout;
+};
 
 /** Run the plugin's real handler for `short` (activation already done). */
 function runReal(rt: PluginRuntime, short: string) {
@@ -123,7 +132,7 @@ export function registerStubs(rt: PluginRuntime): () => void {
     entries.push({
       id: panelId,
       label: p.title,
-      icon: iconFor(p.icon),
+      icon: iconFor(id, p.icon),
       commandId,
       group: p.group,
       active: panelFlag(panelId),
