@@ -135,6 +135,7 @@ First public release. Vaultdraw is an offline, local-first vault for Excalidraw 
 ### Known limitations
 
 - The build is unsigned, so the first open needs **right-click → Open** or **System Settings → Privacy & Security → Open Anyway** (see the README).
+- Memory: with a typical vault the app peaks around 420 MB while opening drawings (the goal is under 400 MB). Idle use is about 215 MB. Bringing the peak down is the focus of the next release.
 - macOS only for now. Windows and Linux builds are not part of this release.
 - Plugins are experimental and their interface may change.
 - There is no automatic update yet. Check the [GitHub releases](https://github.com/Vaultdraw/vaultdraw/releases) page for new versions.
