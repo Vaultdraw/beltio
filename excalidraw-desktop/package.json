@@ -1,6 +1,6 @@
 {
   "name": "excalidraw-desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "Vaultdraw — offline Tauri 2 desktop shell around the real Excalidraw editor. User-selected filesystem vault; no cloud, telemetry, or accounts.",

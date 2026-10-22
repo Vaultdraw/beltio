@@ -1,6 +1,7 @@
 //! Which vault an offline command works on. Ladder, first hit wins:
-//! `--vault` (explicit) > `$VAULTDRAW_VAULT` > `<state>/recent-vault` > the legacy Tauri
-//! `app_config_dir/recent-vault`. The result is canonical and a directory, else `NO_VAULT`.
+//! `--vault` (explicit) > `$VAULTDRAW_VAULT` > `<state>/recent-vault` > the Tauri
+//! `app_config_dir/recent-vault` (current identifier, then the pre-0.1.1 one). The result is
+//! canonical and a directory, else `NO_VAULT`.
 //!
 //! The app writes `recent-vault` (one absolute path) into both the state dir and, as before, the
 //! Tauri config dir; a perf or test instance with its own `$VAULTDRAW_STATE_DIR` is isolated by
@@ -15,12 +16,11 @@ use std::{
 };
 use vaultdraw_protocol::dirs::resolve_dirs_with;
 
-/// The Tauri bundle identifier (`tauri.conf.json`), which names the legacy config folder.
-pub const BUNDLE_ID: &str = "com.excalidraw.vault.local";
+pub use crate::migrate::{BUNDLE_ID, LEGACY_BUNDLE_ID};
 pub const RECENT_VAULT_FILE: &str = "recent-vault";
 pub const ENV_VAULT: &str = "VAULTDRAW_VAULT";
 
-/// Platform table for [`legacy_app_config_dir_with`].
+/// Platform table for [`app_config_dir_with`] and [`legacy_app_config_dir_with`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Os {
     Macos,
@@ -42,13 +42,13 @@ fn no_vault(detail: impl std::fmt::Display) -> NativeError {
 }
 
 /// Where Tauri's `app_config_dir()` points for [`BUNDLE_ID`].
+pub fn app_config_dir_with(get: impl Fn(&str) -> Option<OsString>, os: Os) -> Option<PathBuf> {
+    crate::migrate::app_config_dir_with(get, os, BUNDLE_ID)
+}
+
+/// Where Tauri's `app_config_dir()` pointed for [`LEGACY_BUNDLE_ID`] (releases before 0.1.1).
 pub fn legacy_app_config_dir_with(get: impl Fn(&str) -> Option<OsString>, os: Os) -> Option<PathBuf> {
-    let var = |name: &str| get(name).filter(|v| !v.is_empty()).map(PathBuf::from).filter(|p| p.is_absolute());
-    match os {
-        Os::Macos => var("HOME").map(|h| h.join("Library/Application Support").join(BUNDLE_ID)),
-        Os::Windows => var("APPDATA").map(|a| a.join(BUNDLE_ID)),
-        Os::Other => var("XDG_CONFIG_HOME").or_else(|| var("HOME").map(|h| h.join(".config"))).map(|c| c.join(BUNDLE_ID)),
-    }
+    crate::migrate::app_config_dir_with(get, os, LEGACY_BUNDLE_ID)
 }
 
 /// `path` as a canonical directory.
@@ -85,6 +85,9 @@ pub fn resolve_with(explicit: Option<&Path>, get: impl Fn(&str) -> Option<OsStri
         return as_vault_dir(Path::new(&p));
     }
     if let Some(p) = read_recent(state) {
+        return Ok(p);
+    }
+    if let Some(p) = app_config_dir_with(&get, os).and_then(|d| read_recent(&d)) {
         return Ok(p);
     }
     if let Some(p) = legacy_app_config_dir_with(&get, os).and_then(|d| read_recent(&d)) {
@@ -142,6 +145,10 @@ mod tests {
         let no_env = [("HOME", home.to_str().unwrap())];
         assert_eq!(resolve_with(None, env(&no_env), Os::Macos, &state).unwrap(), c, "state recent-vault next");
         fs::remove_file(state.join(RECENT_VAULT_FILE)).unwrap();
+        let e = vault(t.path(), "e");
+        remember_to(&app_config_dir_with(env(&no_env), Os::Macos).unwrap(), &e);
+        assert_eq!(resolve_with(None, env(&no_env), Os::Macos, &state).unwrap(), e, "current app dir next");
+        fs::remove_dir_all(app_config_dir_with(env(&no_env), Os::Macos).unwrap()).unwrap();
         assert_eq!(resolve_with(None, env(&no_env), Os::Macos, &state).unwrap(), d, "legacy last");
     }
 
@@ -219,6 +226,7 @@ mod tests {
         let h = env(&[("HOME", "/h"), ("XDG_CONFIG_HOME", "rel")]);
         assert_eq!(legacy_app_config_dir_with(&h, Os::Other).unwrap(), PathBuf::from("/h/.config/com.excalidraw.vault.local"));
         assert!(legacy_app_config_dir_with(env(&[]), Os::Macos).is_none());
+        assert_eq!(app_config_dir_with(&g, Os::Macos).unwrap(), PathBuf::from("/h/Library/Application Support/app.vaultdraw"));
     }
 
     #[test]

@@ -1,8 +1,8 @@
 [package]
 name = "excalidraw-vault"
-version = "0.1.0"
-description = "Offline Excalidraw local vault desktop app"
-authors = ["Excalidraw"]
+version = "0.1.1"
+description = "Vaultdraw: an offline, local-first vault for Excalidraw drawings"
+authors = ["Vaultdraw contributors"]
 edition = "2021"
 rust-version = "1.77"
 

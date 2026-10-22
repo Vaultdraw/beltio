@@ -4,6 +4,36 @@ An offline, local-first vault for [Excalidraw](https://github.com/excalidraw/exc
 
 You pick a folder on your computer as your vault. Folders are real directories and drawings are ordinary `.excalidraw` files, so you own your data: back it up, sync it or move it however you like. There are no accounts, no cloud and no telemetry.
 
+## Install
+
+Download `Vaultdraw_0.1.1_universal.dmg` from the [GitHub Releases page](https://github.com/Vaultdraw/vaultdraw/releases), open it and drag Vaultdraw to Applications. The build is universal and runs natively on Apple Silicon and Intel Macs. To verify the download, run `shasum -a 256 -c SHA256SUMS` in the folder you saved it to (optional).
+
+### First open
+
+Vaultdraw isn't signed with an Apple Developer certificate yet, so macOS may say it can't verify the developer or that the app "cannot be opened". The source is open to inspect. To open it the first time, either:
+
+- Right-click (or Control-click) Vaultdraw in Applications, choose **Open**, then **Open** again; or
+- Try to open it once, then go to **System Settings → Privacy & Security**, scroll to the message about Vaultdraw and click **Open Anyway**.
+
+If macOS reports the app as "damaged", run this in Terminal and open it again:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Vaultdraw.app
+```
+
+### Command line
+
+Open the command palette (Cmd/Ctrl+Shift+P) and run **Install 'vaultdraw' command in PATH**, or **Install 'vaultdraw' command in /usr/local/bin** to choose that location. Then check it works:
+
+```bash
+vaultdraw --version
+vaultdraw --help     # lists the commands for drawings, search, links, tags, settings and tabs
+```
+
+### Build from source
+
+See [Development](#development) below.
+
 ## Features
 
 - File tree beside the Excalidraw canvas: create, rename, duplicate, move and delete drawings and folders

@@ -10,6 +10,7 @@ pub mod instance;
 pub mod json_ascii;
 pub mod links;
 pub mod lock;
+pub mod migrate;
 pub mod ops;
 pub mod paths;
 pub mod recovery;

@@ -735,6 +735,9 @@ pub fn run() {
             })
             .setup(|app| {
                 startup_trace("setup begin");
+                // First launch under the `app.vaultdraw` identifier: carry over the app folders
+                // of a pre-0.1.1 install (copy, never move). Does nothing when they're filled.
+                vaultdraw_core::migrate::run_for_current_platform();
                 // The main window is declared in tauri.conf.json with `create: false`
                 // and built here so macOS can use a custom webview configuration.
                 let window_config = app

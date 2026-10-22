@@ -2,8 +2,8 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Vaultdraw",
   "mainBinaryName": "excalidraw-vault",
-  "version": "0.1.0",
-  "identifier": "com.excalidraw.vault.local",
+  "version": "0.1.1",
+  "identifier": "app.vaultdraw",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -37,7 +37,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["app", "dmg"],
     "externalBin": ["binaries/vaultdraw"],
     "resources": {
       "../../LICENSE": "licenses/Excalidraw-MIT.txt"
