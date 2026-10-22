@@ -1,6 +1,6 @@
 //! Vault and file commands: ls, search, open, new, cat, write, mv, trash, links, tags.
 
-use super::{emit, events, out_line, request, rpc, target};
+use super::{emit, events, out_line, read_request, request, rpc, target};
 use crate::cli::Cli;
 use crate::error::{Fail, EXIT_PROTOCOL};
 use crate::render;
@@ -19,7 +19,7 @@ pub fn ls(cli: &Cli, dir: Option<&str>, recursive: bool) -> Result<(), Fail> {
     if let Some(d) = dir {
         p["dir"] = json!(d.trim_end_matches('/'));
     }
-    request(cli, methods::VAULT_LIST, Some(p), render::ls, false)
+    read_request(cli, methods::VAULT_LIST, Some(p), render::ls)
 }
 
 pub fn search(cli: &Cli, query: &str, limit: Option<u32>) -> Result<(), Fail> {
@@ -27,7 +27,7 @@ pub fn search(cli: &Cli, query: &str, limit: Option<u32>) -> Result<(), Fail> {
     if let Some(n) = limit {
         p["limit"] = json!(n);
     }
-    request(cli, methods::VAULT_SEARCH, Some(p), render::search, false)
+    read_request(cli, methods::VAULT_SEARCH, Some(p), render::search)
 }
 
 pub fn open(cli: &Cli, t: &str, new_tab: bool, wait: bool) -> Result<(), Fail> {
@@ -70,7 +70,7 @@ pub fn cat(cli: &Cli, t: &str) -> Result<(), Fail> {
         println!("{}", request_line(methods::FILE_READ, Some(p)));
         return Ok(());
     }
-    let v = rpc(cli)?.call(methods::FILE_READ, Some(p))?;
+    let v = crate::backend::read(cli, &rpc(cli)?, methods::FILE_READ, Some(p))?;
     if cli.json {
         emit(true, &v, String::new);
     } else {
@@ -135,9 +135,9 @@ pub fn links(cli: &Cli, t: &str, backlinks: bool) -> Result<(), Fail> {
     if backlinks {
         p.insert("backlinks".into(), json!(true));
     }
-    request(cli, methods::VAULT_LINKS, some(p), |v| render::links(v, backlinks), false)
+    read_request(cli, methods::VAULT_LINKS, some(p), |v| render::links(v, backlinks))
 }
 
 pub fn tags(cli: &Cli) -> Result<(), Fail> {
-    request(cli, methods::VAULT_TAGS, None, render::tags, false)
+    read_request(cli, methods::VAULT_TAGS, None, render::tags)
 }

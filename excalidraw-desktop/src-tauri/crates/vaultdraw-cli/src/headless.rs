@@ -1,0 +1,134 @@
+//! The read methods without an app: the same core functions the app's control server calls,
+//! producing the same JSON as the RPC method (so every renderer and `--json` is shared).
+
+use crate::cli::Cli;
+use crate::error::{Fail, EXIT_CLI};
+use serde::Serialize;
+use serde_json::Value;
+use std::path::PathBuf;
+use std::time::Instant;
+use vaultdraw_core::config::Dirs;
+use vaultdraw_core::links;
+use vaultdraw_core::ops::target::{self, native_err, Need};
+use vaultdraw_core::ops::{config_ops, vault_ops};
+use vaultdraw_core::search::{store, Index, IndexState, IndexStatus, Scope, SearchResponse, TagsResponse};
+use vaultdraw_core::{vault_path, Vault};
+use vaultdraw_protocol::{codes, methods, RpcError};
+
+const MAX_QUERY_CHARS: usize = 256;
+const DEFAULT_LIMIT: u32 = 50;
+const MAX_LIMIT: u32 = 200;
+
+fn rpc_fail(e: RpcError) -> Fail {
+    crate::error::Fail::from(vaultdraw_protocol::client::CallError::Rpc(e))
+}
+
+/// A core error as the failure the app would have reported (exit 2, its code as tag); a
+/// missing vault is a CLI-side problem (exit 1).
+fn native_fail(e: vaultdraw_core::NativeError) -> Fail {
+    if e.code == codes::NO_VAULT {
+        Fail::new(EXIT_CLI, e.message, codes::NO_VAULT)
+    } else {
+        rpc_fail(native_err(e))
+    }
+}
+
+fn to_json(v: impl Serialize) -> Result<Value, Fail> {
+    serde_json::to_value(v).map_err(|e| Fail::cli(e.to_string()))
+}
+
+fn opt_str<'a>(params: &'a Value, key: &str) -> Result<Option<&'a str>, Fail> {
+    match params.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(s)) => Ok(Some(s)),
+        Some(_) => Err(rpc_fail(RpcError::invalid_params(format!("{key} must be a string")))),
+    }
+}
+
+/// `--vault` / `$VAULTDRAW_VAULT` / recent-vault, as a read-only, lock-free [`Vault`].
+pub fn open_vault(cli: &Cli) -> Result<Vault, Fail> {
+    let root = vault_path::resolve(cli.vault.as_deref()).map_err(native_fail)?;
+    let handle = store::vault_id(&root);
+    Ok(Vault::new(root, handle, true, None))
+}
+
+fn dirs() -> Result<Dirs, Fail> {
+    vaultdraw_core::config::resolve_dirs_with(|k| std::env::var_os(k), cfg!(windows), None).map_err(native_fail)
+}
+
+fn index(v: &Vault) -> Result<Index, Fail> {
+    let state: PathBuf = dirs()?.state;
+    vaultdraw_core::search::load_or_build(&v.root, &store::snapshot_path(&state, &v.root)).map_err(native_fail)
+}
+
+/// The index with its link graph built (needed by `links` and `{file}` name targets).
+fn index_with_links(v: &Vault) -> Result<Index, Fail> {
+    let mut i = index(v)?;
+    i.ensure_links();
+    Ok(i)
+}
+
+fn status(v: &Vault, i: &Index) -> IndexStatus {
+    let (indexed, total) = i.counts();
+    IndexStatus { handle: v.handle.clone(), state: IndexState::Ready, indexed: indexed as u32, total: total as u32 }
+}
+
+fn ms(t: Instant) -> f64 {
+    (t.elapsed().as_secs_f64() * 1000.0 * 100.0).round() / 100.0
+}
+
+/// Answers `method` from the vault on disk.
+pub fn call(cli: &Cli, method: &str, params: Option<Value>) -> Result<Value, Fail> {
+    let params = params.unwrap_or(Value::Null);
+    match method {
+        methods::CONFIG_GET => return config_ops::get(&dirs()?, &params).map_err(rpc_fail),
+        methods::CONFIG_SET => return config_ops::set(&dirs()?, &params).map_err(rpc_fail),
+        _ => {}
+    }
+    let v = open_vault(cli)?;
+    match method {
+        methods::VAULT_INFO => Ok(vault_ops::info(&v)),
+        methods::VAULT_LIST => {
+            let dir = opt_str(&params, "dir")?.unwrap_or("");
+            let recursive = params.get("recursive").and_then(Value::as_bool).unwrap_or(false);
+            vault_ops::list(&v, dir, recursive).map_err(rpc_fail)
+        }
+        methods::VAULT_SEARCH => search(&v, &params),
+        methods::VAULT_TAGS => {
+            let (i, t) = (index(&v)?, Instant::now());
+            let summary = i.tag_summary();
+            to_json(TagsResponse { summary, status: status(&v, &i), took_ms: ms(t) })
+        }
+        methods::VAULT_LINKS => {
+            let i = index_with_links(&v)?;
+            let path = resolve(&v, &i, &params)?;
+            to_json(links::links_of(&i, &path))
+        }
+        methods::FILE_READ => {
+            // `{path}` targets need no index; only a link-style name does.
+            let path = if params.get("path").is_some_and(|p| !p.is_null()) {
+                target::resolve(&v.root, &params, Need::File, &|_| None).map_err(rpc_fail)?
+            } else {
+                resolve(&v, &index_with_links(&v)?, &params)?
+            };
+            vault_ops::read(&v, &path).map_err(rpc_fail)
+        }
+        _ => Err(Fail::cli(format!("{method} cannot run without the app"))),
+    }
+}
+
+fn resolve(v: &Vault, i: &Index, params: &Value) -> Result<String, Fail> {
+    target::resolve(&v.root, params, Need::File, &|name| links::resolve_name(i, name)).map_err(rpc_fail)
+}
+
+fn search(v: &Vault, params: &Value) -> Result<Value, Fail> {
+    let query = opt_str(params, "query")?.ok_or_else(|| rpc_fail(RpcError::invalid_params("query is required")))?;
+    if query.chars().count() > MAX_QUERY_CHARS {
+        return Err(native_fail(vaultdraw_core::err("INVALID_QUERY", format!("Query is longer than {MAX_QUERY_CHARS} characters"))));
+    }
+    let limit = params.get("limit").and_then(Value::as_u64).map(|n| n.min(u64::from(u32::MAX)) as u32).unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT) as usize;
+    let i = index(v)?;
+    let t = Instant::now();
+    let (results, total) = i.query(query, Scope::All, limit);
+    to_json(SearchResponse { query: query.to_string(), results, total_matches: total as u32, status: status(v, &i), took_ms: ms(t) })
+}

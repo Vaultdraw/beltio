@@ -319,7 +319,8 @@ fn print_request_for_target_commands_does_not_connect() {
 
 #[test]
 fn not_running_exits_3() {
-    for args in [&["ls"][..], &["tabs"][..], &["events"][..], &["cat", "a"][..]] {
+    // Reads (ls, cat, ...) fall back to the vault on disk: see tests/offline.rs.
+    for args in [&["tabs"][..], &["events"][..], &["quit"][..]] {
         assert_eq!(code(&vd(args, None, None)), 3, "{args:?}");
     }
 }

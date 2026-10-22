@@ -1,6 +1,6 @@
 //! App-level commands: config get/set/path, vault info/open, quit.
 
-use super::request;
+use super::{read_request, request};
 use crate::cli::{Cli, ConfigAction, VaultAction};
 use crate::error::Fail;
 use crate::render;
@@ -15,12 +15,12 @@ pub fn config(cli: &Cli, action: &ConfigAction) -> Result<(), Fail> {
     match action {
         ConfigAction::Get { key } => {
             let p = key.as_ref().map(|k| json!({ "key": k }));
-            request(cli, methods::CONFIG_GET, p, |v| v.get("value").map(render::value).unwrap_or_default(), false)
+            read_request(cli, methods::CONFIG_GET, p, |v| v.get("value").map(render::value).unwrap_or_default())
         }
         ConfigAction::Set { key, value } => {
             let parsed = serde_json::from_str::<Value>(value).unwrap_or_else(|_| json!(value));
             let p = json!({ "changes": [{ "key": key, "value": parsed }] });
-            request(cli, methods::CONFIG_SET, Some(p), |v| format!("changed {}", v.get("changed").and_then(Value::as_u64).unwrap_or(0)), false)
+            read_request(cli, methods::CONFIG_SET, Some(p), |v| format!("changed {}", v.get("changed").and_then(Value::as_u64).unwrap_or(0)))
         }
         ConfigAction::Path => config_path(cli),
     }
@@ -44,7 +44,7 @@ pub fn quit(cli: &Cli) -> Result<(), Fail> {
 
 pub fn vault(cli: &Cli, action: Option<&VaultAction>) -> Result<(), Fail> {
     match action {
-        None | Some(VaultAction::Info) => request(cli, methods::VAULT_INFO, None, render::vault, false),
+        None | Some(VaultAction::Info) => read_request(cli, methods::VAULT_INFO, None, render::vault),
         Some(VaultAction::Open { path }) => {
             let abs = if path.is_absolute() {
                 path.clone()

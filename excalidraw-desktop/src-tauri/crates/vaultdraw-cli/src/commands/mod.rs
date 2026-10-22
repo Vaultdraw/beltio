@@ -8,7 +8,7 @@ mod tabs;
 use crate::cli::{Cli, CmdAction, CmdArgs, Command};
 use crate::error::Fail;
 use crate::rpc::{request_line, resolve_socket, Rpc};
-use crate::{render, snapshot};
+use crate::{backend, render, snapshot};
 use clap::CommandFactory;
 use serde_json::{json, Value};
 use std::io::{BufRead, Write};
@@ -94,6 +94,18 @@ pub(super) fn request(cli: &Cli, method: &str, params: Option<Value>, human: imp
             Err(f)
         }
     }
+}
+
+/// Like [`request`] for the read methods: the result comes from the app or, with no app
+/// running, from the vault on disk (same JSON either way).
+pub(super) fn read_request(cli: &Cli, method: &str, params: Option<Value>, human: impl Fn(&Value) -> String) -> Result<(), Fail> {
+    if cli.print_request {
+        println!("{}", request_line(method, params));
+        return Ok(());
+    }
+    let v = backend::read(cli, &rpc(cli)?, method, params)?;
+    emit(cli.json, &v, || human(&v));
+    Ok(())
 }
 
 fn version(cli: &Cli) -> Result<(), Fail> {

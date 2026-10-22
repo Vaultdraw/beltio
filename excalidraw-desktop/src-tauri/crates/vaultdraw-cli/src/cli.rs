@@ -13,6 +13,12 @@ pub struct Cli {
     /// Control socket path (default: $VAULTDRAW_SOCKET, else the instance's socket)
     #[arg(long, global = true, value_name = "PATH")]
     pub socket: Option<PathBuf>,
+    /// Vault folder for offline (headless) reads; with a running app it must be the app's vault
+    #[arg(long, global = true, value_name = "PATH")]
+    pub vault: Option<PathBuf>,
+    /// Read the vault directly, never through the app (refused while the app is running)
+    #[arg(long, global = true)]
+    pub offline: bool,
     /// Print the JSON-RPC request line instead of sending it
     #[arg(long, global = true)]
     pub print_request: bool,

@@ -1,9 +1,11 @@
 //! `vaultdraw`: a thin client over the control socket. Exit codes: 0 ok, 1 CLI error,
 //! 2 the app refused, 3 app not running (or not ready), 4 protocol mismatch.
 
+mod backend;
 mod cli;
 mod commands;
 mod error;
+mod headless;
 mod render;
 mod rpc;
 mod snapshot;
