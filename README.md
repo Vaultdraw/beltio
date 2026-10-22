@@ -42,6 +42,22 @@ Vaultdraw is an offline desktop app for macOS that keeps your [Excalidraw](https
 
 **Coming next:** plugins (AI, a shape generator and more).
 
+## How it fits together
+
+```mermaid
+flowchart LR
+  vault["Your vault<br/>a normal folder of .excalidraw files"]
+  app["Vaultdraw app<br/>editor, tabs, search, links, history"]
+  cli["vaultdraw command<br/>scripts and terminal"]
+  config["Config folder<br/>config.toml + themes/"]
+  app <-->|reads and saves| vault
+  cli <-->|talks to the running app| app
+  cli -.->|works offline too| vault
+  config -->|settings, reloaded live| app
+```
+
+Everything stays on your Mac. Back up, sync or version the vault folder with any tool you like.
+
 ## Install
 
 1. Download the DMG from the [latest release](https://github.com/Vaultdraw/vaultdraw/releases/latest).
