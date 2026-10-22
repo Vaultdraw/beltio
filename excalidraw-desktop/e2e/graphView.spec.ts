@@ -3,8 +3,9 @@ import { mkdirSync } from "node:fs";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import type { GraphHarnessHooks } from "./graphHarness";
 import { personalPath } from "./mainCheckout";
+
+import type { GraphHarnessHooks } from "./graphHarness";
 
 // Graph view smoke (fake N-node graph, no Rust): open, hover card, keyboard, Canvas2D fallback and
 // light/dark screenshots. `GRAPH_PERF=1` also prints open and frame numbers at 10k and 50k.
