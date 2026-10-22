@@ -17,6 +17,7 @@ mod sys {
     pub const PC_CASE_SENSITIVE: c_int = 11;
 }
 
+#[inline]
 pub fn key_for(rel: &str, fold: bool) -> String {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
     let mut feed = |b: u8| {
@@ -31,10 +32,12 @@ pub fn key_for(rel: &str, fold: bool) -> String {
     format!("{h:016x}")
 }
 
+#[inline]
 pub fn rev16(revision: &str) -> Option<&str> {
     revision.get(..16).filter(|r| r.bytes().all(|b| b.is_ascii_hexdigit()))
 }
 
+#[inline]
 pub fn clone_name(key: &str, rev16: &str) -> String {
     format!("{key}.{rev16}.excalidraw")
 }
