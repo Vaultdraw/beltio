@@ -3,11 +3,12 @@ import { mkdirSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
 import { breadcrumbs, expectOpen, openLinksVault } from "./linksHelpers";
+import { personalPath } from "./mainCheckout";
 
 // The graph inside the real VaultApp (fake links, fake vault_graph, fake settings.toml; no Rust).
 const SHOTS =
   process.env.GRAPH_SHOTS_DIR ??
-  "/Users/kalon/Opensource/excalidraw/personal/feature/links-graph/screenshots/p3";
+  personalPath("feature/links-graph/screenshots/p3");
 
 type Win = Window & {
   __graphApp?: {

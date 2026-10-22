@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Base-vs-head A/B perf gate (Chromium mode, interleaved base,head,base,head...). Wrap in the shared build lock:
-//   lockf -k /Users/kalon/Opensource/excalidraw/.cache/build.lock node excalidraw-desktop/perf/ab.mjs --base main
+//   lockf -k .cache/build.lock node excalidraw-desktop/perf/ab.mjs --base main   (run from the main checkout: shared lock)
 import { parseArgs } from "node:util";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -36,7 +36,7 @@ Two sides only; bisect across a batch only AFTER a confirmed regression.
   --quiet-wait S      max seconds to wait for it (default ${DEFAULT_QUIET_WAIT_S}; 0 = don't wait)
   --require-quiet     exit 1 if the machine never got quiet
 
-Wrap in the build lock: lockf -k /Users/kalon/Opensource/excalidraw/.cache/build.lock node excalidraw-desktop/perf/ab.mjs ...
+Wrap in the build lock: lockf -k .cache/build.lock node excalidraw-desktop/perf/ab.mjs ...
 `;
 
 const { values: o } = parseArgs({

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Perf harness CLI. Callers wrap the whole command in the shared build lock:
-//   lockf -k /Users/kalon/Opensource/excalidraw/.cache/build.lock node excalidraw-desktop/perf/run.mjs ...
+//   lockf -k .cache/build.lock node excalidraw-desktop/perf/run.mjs ...   (run from the main checkout: shared lock)
 // This runner never takes the lock itself (nested lockf would deadlock).
 import { parseArgs } from "node:util";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
@@ -61,7 +61,7 @@ Recommended merge gate: node excalidraw-desktop/perf/ab.mjs --base <ref> (interl
 confirmed regression). Wall-clock metrics swing with machine load; browser.cpu.* / browser.count.* (CDP CPU time, event counts) are load-insensitive.
 
 The runner does not take the build lock. Wrap the whole command:
-  lockf -k /Users/kalon/Opensource/excalidraw/.cache/build.lock node excalidraw-desktop/perf/run.mjs [options]
+  lockf -k .cache/build.lock node excalidraw-desktop/perf/run.mjs [options]
 `;
 
 const { values: o } = parseArgs({

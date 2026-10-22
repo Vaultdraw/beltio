@@ -28,8 +28,12 @@ if (!["fast", "merge", "milestone"].includes(tier)) {
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const root = path.resolve(desktop, "..");
-const LOCK = "/Users/kalon/Opensource/excalidraw/.cache/build.lock";
 const git = (...a) => execFileSync("git", a, { cwd: root, encoding: "utf8" }).trim();
+// One lock shared by every worktree: it lives in the main checkout (parent of git's common dir).
+const LOCK = path.join(
+  path.dirname(git("rev-parse", "--path-format=absolute", "--git-common-dir")),
+  ".cache/build.lock",
+);
 const base = o.base ?? git("merge-base", "HEAD", "main");
 
 // Committed on the branch + staged + unstaged + untracked, repo-relative, existing files only.

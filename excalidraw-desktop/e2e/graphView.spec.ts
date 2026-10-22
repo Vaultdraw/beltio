@@ -4,12 +4,13 @@ import { mkdirSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
 import type { GraphHarnessHooks } from "./graphHarness";
+import { personalPath } from "./mainCheckout";
 
 // Graph view smoke (fake N-node graph, no Rust): open, hover card, keyboard, Canvas2D fallback and
 // light/dark screenshots. `GRAPH_PERF=1` also prints open and frame numbers at 10k and 50k.
 const SHOTS =
   process.env.GRAPH_SHOTS_DIR ??
-  "/Users/kalon/Opensource/excalidraw/personal/feature/links-graph/screenshots/p3";
+  personalPath("feature/links-graph/screenshots/p3");
 
 type W = Window & { __graph: GraphHarnessHooks };
 

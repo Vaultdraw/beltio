@@ -7,7 +7,8 @@
 set -u
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 WT=$(cd "$HERE/.." && pwd)
-LOCK=/Users/kalon/Opensource/excalidraw/.cache/build.lock
+# One lock shared by every worktree: it lives in the main checkout (parent of git common dir).
+LOCK="$(dirname "$(git -C "$HERE" rev-parse --path-format=absolute --git-common-dir)")/.cache/build.lock"
 APP="$HERE/src-tauri/target/release/bundle/macos/Vaultdraw.app/Contents/MacOS/excalidraw-vault"
 T=$(date +%s); D="$WT/.cache/smoke-run-$T"; C="$WT/.cache/smoke-config-$T"
 mkdir -p "$D" "$C/config/themes/Test Palette" "$C/state"

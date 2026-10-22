@@ -3,12 +3,13 @@ import { mkdirSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
 import { expectOpen, openLinksVault } from "./linksHelpers";
+import { personalPath } from "./mainCheckout";
 
 // Graph view UI entry points (toimprove #22): navigator button, main menu and
 // a drawing's row menu. Each one dispatches the existing graph commands.
 const SHOTS =
   process.env.GRAPH_SHOTS_DIR ??
-  "/Users/kalon/Opensource/excalidraw/personal/feature/graph-ui-entry/screenshots";
+  personalPath("feature/graph-ui-entry/screenshots");
 
 type Session = {
   nodeCount: number;

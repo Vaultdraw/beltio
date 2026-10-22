@@ -7,14 +7,14 @@ import {
   readScene,
   trackErrors,
 } from "./helpers";
+import { personalPath } from "./mainCheckout";
 
 // toimprove #48: a tool default (Settings > Tools > Text > Font) reaches every
 // drawing, new and existing; a style picked inside a drawing is a per-drawing
 // override that is saved in the file, survives switching drawings, and can be
 // dropped with "Use default". Visible UI only (clicks), no shortcuts/palette.
 const DRAWING = "DSA/Graphs.excalidraw";
-const SHOTS =
-  "/Users/kalon/Opensource/excalidraw/personal/feature/drawing-style-scope/shots";
+const SHOTS = personalPath("feature/drawing-style-scope/shots");
 const CASCADIA = 3;
 const NUNITO = 6;
 // The style panel only shows the "Use default" marker in its full layout, which

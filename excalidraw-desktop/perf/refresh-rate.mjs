@@ -23,8 +23,8 @@ run's temp config dir; the file itself is only read.
 Builds the perf app (smoke-test feature, temp config/state dirs; never the user's), launches it once
 (~1-2 min, the window opens in the background) and prints effective fps / rendered Hz per scenario.
 Exit 1 if a native zoom or pan pass falls below 110 fps (or 100 drawn Hz while missing frames that got input) on a 120 Hz screen, 2 if the screen is locked.
-Wrap in the shared build lock:
-  lockf -k /Users/kalon/Opensource/excalidraw/.cache/build.lock node excalidraw-desktop/perf/refresh-rate.mjs
+Wrap in the shared build lock (run from the main checkout):
+  lockf -k .cache/build.lock node excalidraw-desktop/perf/refresh-rate.mjs
 `;
 
 const { values: o } = parseArgs({
