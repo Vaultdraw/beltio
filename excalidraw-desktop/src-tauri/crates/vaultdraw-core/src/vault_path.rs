@@ -99,9 +99,15 @@ pub fn resolve(explicit: Option<&Path>) -> Result<PathBuf> {
 }
 
 /// Records `vault` as the one the next launch (and the CLI) opens: `<state>/recent-vault`, atomically.
+/// Reopening the same vault leaves the file alone (no fsync on the common path).
 pub fn remember(state: &Path, vault: &Path) -> Result<()> {
+    let file = state.join(RECENT_VAULT_FILE);
+    let bytes = vault.to_string_lossy();
+    if fs::read(&file).is_ok_and(|old| old == bytes.as_bytes()) {
+        return Ok(());
+    }
     fs::create_dir_all(state).map_err(ioerr)?;
-    write_atomic(&state.join(RECENT_VAULT_FILE), vault.to_string_lossy().as_bytes())
+    write_atomic(&file, bytes.as_bytes())
 }
 
 #[cfg(test)]
@@ -199,5 +205,11 @@ mod tests {
         remember(&state, &a).unwrap();
         remember(&state, &b).unwrap();
         assert_eq!(read_recent(&state).unwrap(), b);
+        // The same vault again leaves the file untouched.
+        let file = state.join(RECENT_VAULT_FILE);
+        let before = fs::metadata(&file).unwrap().modified().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        remember(&state, &b).unwrap();
+        assert_eq!(fs::metadata(&file).unwrap().modified().unwrap(), before);
     }
 }
