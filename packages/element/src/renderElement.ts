@@ -31,6 +31,7 @@ import {
   STICKY_NOTE_FOOTER,
   STICKY_NOTE_SHADOW_OPACITY,
   DEFAULT_ZOOM,
+  isTestEnv,
 } from "@excalidraw/common";
 
 import type {
@@ -761,12 +762,91 @@ export const setElementDirectDrawDisabled = (disabled: boolean) => {
   directDrawAllowed = directDrawAllowed && !disabled;
 };
 
-/** call at the start of each static scene render */
-export const beginElementCanvasFrame = (visibleElementCount = 0) => {
+// Vaultdraw: progressive crisp-up. When a zoom gesture ends, every visible
+// bitmap was drawn at the gesture's start zoom and has to be re-rasterised
+// at the new one; doing all of them in the render that ends the gesture was
+// one long task (up to ~700 ms at 4x CPU on a large drawing). A live render
+// re-rasterises within ZOOM_REFRESH_FRAME_BUDGET_MS (but at least
+// ZOOM_REFRESH_MIN_PER_FRAME bitmaps); the rest are drawn from their old
+// bitmap, scaled and smoothed as during the gesture. The renderer then
+// re-rasterises them in short idle slices without redrawing
+// (`refreshElementCanvasForZoom`) and redraws the scene once at the end.
+export const ZOOM_REFRESH_FRAME_BUDGET_MS = 6;
+const ZOOM_REFRESH_MIN_PER_FRAME = 4;
+let zoomRefreshEnabled = !isTestEnv();
+let zoomRefreshDeadline = Infinity;
+let zoomRefreshesThisFrame = 0;
+let zoomRefreshDeferred = false;
+
+/** for tests: whether live renders defer zoom re-rasterising */
+export const setZoomRefreshEnabled = (enabled: boolean) => {
+  zoomRefreshEnabled = enabled;
+};
+
+/** whether the last render drew some bitmaps at a stale zoom */
+export const didDeferZoomRefresh = () => zoomRefreshDeferred;
+
+/**
+ * call at the start of each static scene render; a live render (on screen,
+ * not exported or sliced) passes its zoom re-rasterise budget
+ */
+export const beginElementCanvasFrame = (
+  visibleElementCount = 0,
+  zoomRefreshBudgetMs = Infinity,
+) => {
   directDrawAllowed =
     !directDrawDisabled &&
     visibleElementCount <= DIRECT_DRAW_MAX_VISIBLE_ELEMENTS;
   elementWithCanvasCache.beginFrame();
+  zoomRefreshesThisFrame = 0;
+  zoomRefreshDeferred = false;
+  zoomRefreshDeadline =
+    zoomRefreshEnabled && Number.isFinite(zoomRefreshBudgetMs)
+      ? performance.now() + zoomRefreshBudgetMs
+      : Infinity;
+};
+
+/**
+ * Re-rasterises the element's cached bitmap if it is only stale by zoom
+ * (drawn scaled by a render that deferred it). Returns whether it did.
+ * Elements without a cached bitmap (drawn directly, off screen) are left
+ * alone.
+ */
+export const refreshElementCanvasForZoom = (
+  element: NonDeletedExcalidrawElement,
+  elementsMap: NonDeletedSceneElementsMap,
+  renderConfig: StaticCanvasRenderConfig,
+  appState: StaticCanvasAppState,
+) => {
+  const prev = elementWithCanvasCache.get(element);
+  if (
+    !prev ||
+    appState.shouldCacheIgnoreZoom ||
+    prev.zoomValue === appState.zoom.value
+  ) {
+    return false;
+  }
+  const deadline = zoomRefreshDeadline;
+  zoomRefreshDeadline = Infinity;
+  try {
+    generateElementWithCanvas(element, elementsMap, renderConfig, appState);
+  } finally {
+    zoomRefreshDeadline = deadline;
+  }
+  return true;
+};
+
+/** whether this zoom-only re-rasterise waits for a later frame */
+const deferZoomRefresh = () => {
+  if (
+    zoomRefreshesThisFrame >= ZOOM_REFRESH_MIN_PER_FRAME &&
+    performance.now() > zoomRefreshDeadline
+  ) {
+    zoomRefreshDeferred = true;
+    return true;
+  }
+  zoomRefreshesThisFrame++;
+  return false;
 };
 
 /**
@@ -821,9 +901,8 @@ const generateElementWithCanvas = (
   const containingFrameOpacity =
     getContainingFrame(element, elementsMap)?.opacity || 100;
 
-  if (
+  const isStaleOtherwise =
     !prevElementWithCanvas ||
-    shouldRegenerateBecauseZoom ||
     prevElementWithCanvas.theme !== appState.theme ||
     prevElementWithCanvas.displayColorTransformVersion !==
       getDisplayColorTransformVersion() ||
@@ -832,7 +911,11 @@ const generateElementWithCanvas = (
     (prevElementWithCanvas.textStylerEpoch !== null &&
       prevElementWithCanvas.textStylerEpoch !== getTextRunStylerEpoch()) ||
     (prevElementWithCanvas.textRunsVersion !== null &&
-      prevElementWithCanvas.textRunsVersion !== getTextRunsVersion())
+      prevElementWithCanvas.textRunsVersion !== getTextRunsVersion());
+
+  if (
+    isStaleOtherwise ||
+    (shouldRegenerateBecauseZoom && !deferZoomRefresh())
   ) {
     const elementWithCanvas = generateElementCanvas(
       element,
@@ -872,11 +955,14 @@ const generateElementWithCanvas = (
  * tolerates float arithmetic.
  */
 const canSnapElement = (
-  element: ExcalidrawElement,
+  elementWithCanvas: ExcalidrawElementWithCanvas,
   appState: StaticCanvasAppState | InteractiveCanvasAppState,
 ) =>
   !appState?.shouldCacheIgnoreZoom &&
-  (!element.angle || isRightAngleRads(element.angle));
+  // a bitmap still at another zoom (progressive crisp-up) is resampled
+  elementWithCanvas.zoomValue === appState.zoom.value &&
+  (!elementWithCanvas.element.angle ||
+    isRightAngleRads(elementWithCanvas.element.angle));
 
 /**
  * Breaks a `Math.round` tie at exactly half a device pixel the same way
@@ -972,7 +1058,7 @@ const drawElementFromCanvas = (
 
   const transform = context.getTransform();
 
-  if (canSnapElement(element, appState)) {
+  if (canSnapElement(elementWithCanvas, appState)) {
     // blit the cached bitmap on whole device pixels. Nearest-neighbor at a
     // fractional offset is a pixel-exact copy shifted to the nearest pixel
     // — except at an exact half pixel, where a GPU-accelerated canvas
@@ -1342,7 +1428,7 @@ const drawElement = (
 
         // see `canSnapElement` for why not during zoom gestures or at
         // other angles
-        if (canSnapElement(element, appState)) {
+        if (canSnapElement(elementWithCanvas, appState)) {
           // Disabling smoothing makes output much sharper, especially for
           // text. Unless for non-right angles, where the aliasing is really
           // terrible on Chromium.

@@ -5,7 +5,13 @@ import {
   THEME,
   throttleRAF,
 } from "@excalidraw/common";
-import { isElementLink, beginElementCanvasFrame } from "@excalidraw/element";
+import {
+  isElementLink,
+  beginElementCanvasFrame,
+  didDeferZoomRefresh,
+  refreshElementCanvasForZoom,
+  ZOOM_REFRESH_FRAME_BUDGET_MS,
+} from "@excalidraw/element";
 import { createPlaceholderEmbeddableLabel } from "@excalidraw/element";
 import { getBoundTextElement } from "@excalidraw/element";
 import {
@@ -336,7 +342,10 @@ function* paintStaticScene(
   const { renderGrid = true, isExporting } = renderConfig;
   if (!isExporting) {
     // Vaultdraw: new frame for the element bitmap LRU
-    beginElementCanvasFrame(visibleElements.length);
+    beginElementCanvasFrame(
+      visibleElements.length,
+      sliced ? Infinity : ZOOM_REFRESH_FRAME_BUDGET_MS,
+    );
   }
   // export draws vectors, not cached bitmaps — nothing to keep on the grid
   const appState = isExporting
@@ -603,10 +612,62 @@ function* paintStaticScene(
   });
 }
 
+/** the config of the last live static render */
+let lastRendered: StaticSceneRenderConfig | null = null;
+let refreshScheduled = false;
+/** longest stretch of deferred re-rasterising before yielding, ms */
+const ZOOM_REFRESH_SLICE_MS = 8;
+
+/**
+ * Vaultdraw: a render that drew bitmaps at a stale zoom (progressive
+ * crisp-up after a zoom, see `beginElementCanvasFrame`) re-rasterises them in
+ * slices of ZOOM_REFRESH_SLICE_MS between tasks, without redrawing (the
+ * canvas keeps showing the scaled ones), then redraws the scene once. A newer
+ * render (any state change) takes over instead.
+ */
+const scheduleZoomRefresh = (config: StaticSceneRenderConfig) => {
+  if (refreshScheduled) {
+    return;
+  }
+  refreshScheduled = true;
+  let next = 0;
+  const step = () => {
+    if (lastRendered !== config || !config.canvas?.isConnected) {
+      refreshScheduled = false;
+      return;
+    }
+    const { visibleElements, allElementsMap, renderConfig, appState } = config;
+    const sliceEnd = performance.now() + ZOOM_REFRESH_SLICE_MS;
+    while (next < visibleElements.length && performance.now() < sliceEnd) {
+      refreshElementCanvasForZoom(
+        visibleElements[next++],
+        allElementsMap,
+        renderConfig,
+        appState,
+      );
+    }
+    if (next < visibleElements.length) {
+      setTimeout(step, 0);
+      return;
+    }
+    refreshScheduled = false;
+    requestAnimationFrame(() => {
+      if (lastRendered === config && config.canvas?.isConnected) {
+        _renderStaticScene(config);
+      }
+    });
+  };
+  setTimeout(step, 0);
+};
+
 const _renderStaticScene = (config: StaticSceneRenderConfig) => {
+  lastRendered = config;
   const steps = paintStaticScene(config, false);
   while (!steps.next().done) {
     // not sliced: never yields, so this is one next() call
+  }
+  if (!config.renderConfig.isExporting && didDeferZoomRefresh()) {
+    scheduleZoomRefresh(config);
   }
 };
 

@@ -737,4 +737,4 @@ export async function ensureVault({ cacheDir, config, log = console.log }) {
 }
 
 // Building blocks reused by extraVaults.mjs.
-export { mulberry32, hashSeed, ordinaryScene, imageHeavyScene, fileNameFor, sceneJson, generateElements };
+export { mulberry32, hashSeed, ordinaryScene, imageHeavyScene, openTargetScene, fileNameFor, sceneJson, generateElements };
