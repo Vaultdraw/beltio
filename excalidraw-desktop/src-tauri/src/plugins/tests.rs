@@ -548,3 +548,12 @@ fn perf_scan_50_plugins() {
         println!("warm scan {n}: {:.2} ms (internal {:.2} ms, parsed {})", t.elapsed().as_secs_f64() * 1e3, warm.list.scan_ms, warm.parsed);
     }
 }
+
+#[test]
+fn smoke_fixture_manifests_parse() {
+    for id in ["smoke-hello", "smoke-panel"] {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("../src/smoke/plugins/{id}/plugin.toml"));
+        let m = manifest::parse(&fs::read_to_string(path).unwrap()).unwrap();
+        assert_eq!(m.id, id);
+    }
+}

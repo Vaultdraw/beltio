@@ -1,0 +1,11 @@
+id = "smoke-panel"
+name = "Smoke Panel"
+version = "0.1.0"
+api = 0
+main = "main.js"
+description = "Packaged smoke fixture"
+
+[[contributes.panels]]
+id = "counter"
+title = "Smoke counter"
+group = "top"

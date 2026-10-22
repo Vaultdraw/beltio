@@ -82,6 +82,7 @@ export async function startPluginHost(
   };
   apply();
   const off = subscribePreferences(apply);
+  performance.mark("vaultdraw:plugins:started");
   return {
     stop: off,
     get startupDone() {

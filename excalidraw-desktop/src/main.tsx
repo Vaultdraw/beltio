@@ -8,6 +8,18 @@ import { initSettings } from "./vault/settingsSync";
 
 import "./desktop.css";
 
+// Smoke builds collect CSP violations for the plugin smoke step.
+if (import.meta.env.VITE_APP_SMOKE_TEST === "true") {
+  const list: unknown[] = ((window as any).__cspViolations = []);
+  window.addEventListener("securitypolicyviolation", (e) =>
+    list.push({
+      directive: e.violatedDirective,
+      blockedURI: e.blockedURI,
+      sample: e.sample,
+    }),
+  );
+}
+
 // Desktop-only bootstrap. No Sentry, Firebase, collaboration, service
 // worker, or web analytics — the vault shell starts fully offline and the
 // native side owns persistence. DOM APIs are derived from the mount node's

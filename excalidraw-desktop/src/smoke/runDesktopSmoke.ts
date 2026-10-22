@@ -22,6 +22,7 @@ import { explorerExportStep } from "./explorerExportSmoke";
 import { runHistorySmoke } from "./historySmoke";
 import { runLibrarySmoke } from "./librarySmoke";
 import { runLinksSmoke } from "./linksSmoke";
+import { runPluginsSmoke } from "./pluginsSmoke";
 import {
   paperDefaultStampedStep,
   paperDrawingPngExportStep,
@@ -654,6 +655,7 @@ export async function runDesktopSmoke(): Promise<void> {
     );
     vaultForReport = vault;
     const activeVault = vault;
+    await runPluginsSmoke({ win, step, mark, waitFor });
     const runId = Math.floor(win.Date.now()).toString(36);
     const nested = `smoke-suite-${runId}/nested`;
     const filePath = `${nested}/ipc-fixture.excalidraw`;

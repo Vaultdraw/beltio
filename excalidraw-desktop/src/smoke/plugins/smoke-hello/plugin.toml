@@ -1,0 +1,14 @@
+id = "smoke-hello"
+name = "Smoke Hello"
+version = "0.1.0"
+api = 0
+main = "main.js"
+description = "Packaged smoke fixture"
+
+[[contributes.commands]]
+id = "say"
+title = "Smoke: say"
+
+[[contributes.commands]]
+id = "boom"
+title = "Smoke: boom"
