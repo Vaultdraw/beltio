@@ -63,6 +63,12 @@ Everything stays on your Mac. Back up, sync or version the vault folder with any
 1. **[Download Vaultdraw for macOS](https://github.com/Vaultdraw/vaultdraw/releases/download/v0.1.1/Vaultdraw_0.1.1_universal.dmg)** (DMG, 57 MB). Older and newer versions are on the [releases page](https://github.com/Vaultdraw/vaultdraw/releases).
 2. Open it and drag Vaultdraw to Applications.
 
+Or with Homebrew, which also installs the `vaultdraw` command:
+
+```bash
+brew install --cask vaultdraw/tap/vaultdraw
+```
+
 It runs on macOS, on Apple Silicon and on Intel.
 
 Vaultdraw isn't signed with an Apple Developer certificate yet, so macOS may refuse to open it the first time. Try to open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**. If macOS says the app is "damaged", run this and open it again:
