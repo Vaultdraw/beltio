@@ -15,20 +15,37 @@ const hostTriple = run("rustc", ["-vV"]).match(/^host: (.+)$/m)?.[1];
 const triple = process.env.TAURI_ENV_TARGET_TRIPLE || hostTriple;
 if (!triple) throw new Error("cannot determine the target triple from `rustc -vV`");
 
-const cross = triple !== hostTriple;
-execFileSync(
-  "cargo",
-  ["build", "--release", "-p", "vaultdraw-cli", "--manifest-path", manifest, ...(cross ? ["--target", triple] : [])],
-  { stdio: "inherit" },
-);
-
 // Respects CARGO_TARGET_DIR and the workspace target directory.
 const targetDir = JSON.parse(run("cargo", ["metadata", "--format-version", "1", "--no-deps", "--manifest-path", manifest])).target_directory;
 const exe = triple.includes("windows") ? ".exe" : "";
-const built = join(targetDir, ...(cross ? [triple] : []), "release", `vaultdraw-cli${exe}`);
 const outDir = join(tauriDir, "binaries");
 const out = join(outDir, `vaultdraw-${triple}${exe}`);
 mkdirSync(outDir, { recursive: true });
-copyFileSync(built, out);
+
+// Builds the CLI for one rustc target and returns the binary path.
+const buildFor = (t) => {
+  const cross = t !== hostTriple;
+  execFileSync(
+    "cargo",
+    ["build", "--release", "-p", "vaultdraw-cli", "--manifest-path", manifest, ...(cross ? ["--target", t] : [])],
+    { stdio: "inherit" },
+  );
+  return join(targetDir, ...(cross ? [t] : []), "release", `vaultdraw-cli${exe}`);
+};
+
+if (triple === "universal-apple-darwin") {
+  // `tauri build --target universal-apple-darwin` expects one fat sidecar under that name.
+  // build.rs also checks the per-arch sidecar while compiling each slice, so keep those copies.
+  const slices = ["aarch64-apple-darwin", "x86_64-apple-darwin"].map((t) => {
+    const built = buildFor(t);
+    const sliceOut = join(outDir, `vaultdraw-${t}`);
+    copyFileSync(built, sliceOut);
+    chmodSync(sliceOut, 0o755);
+    return built;
+  });
+  execFileSync("lipo", ["-create", ...slices, "-output", out], { stdio: "inherit" });
+} else {
+  copyFileSync(buildFor(triple), out);
+}
 chmodSync(out, 0o755);
 console.log(`vaultdraw CLI -> ${out}`);
