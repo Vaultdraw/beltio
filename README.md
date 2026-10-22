@@ -1,6 +1,11 @@
-# Vaultdraw
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/svg/lockup-dark.svg">
+    <img src="docs/assets/brand/svg/lockup-light.svg" alt="Vaultdraw" width="440">
+  </picture>
+</h1>
 
-Your Excalidraw drawings, in a folder you own.
+<p align="center">Your Excalidraw drawings, in a folder you own.</p>
 
 Vaultdraw is an offline desktop app for macOS that keeps your [Excalidraw](https://github.com/excalidraw/excalidraw) drawings as plain files in a folder on your computer, a bit like Obsidian for whiteboards. No account, no cloud, no telemetry.
 
@@ -110,7 +115,7 @@ Bug reports, ideas and pull requests are welcome. Open an [issue](https://github
 
 ## Credits
 
-Vaultdraw is built on the [Excalidraw](https://github.com/excalidraw/excalidraw) editor (MIT). Themes use the [Noctalia](https://github.com/noctalia-dev/noctalia) palette format. Vaultdraw is not affiliated with or endorsed by Excalidraw.
+Vaultdraw is built on the [Excalidraw](https://github.com/excalidraw/excalidraw) editor (MIT). Themes use the [Noctalia](https://github.com/noctalia-dev/noctalia) palette format. The logo is drawn with [rough.js](https://roughjs.com) in Excalifont; logo files and usage are in [docs/brand.md](docs/brand.md). Vaultdraw is not affiliated with or endorsed by Excalidraw.
 
 ## License
 
