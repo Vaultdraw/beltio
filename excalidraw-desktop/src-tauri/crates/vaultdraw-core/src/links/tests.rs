@@ -251,3 +251,22 @@ fn unlinked_mentions_exclude_linking_items_and_respect_words() {
     assert_eq!(m.mentions[0].highlights, vec![[4, 8]]);
     assert_eq!(query::mentions_response(&ix, "Plan.excalidraw", 1).mentions.len(), 1);
 }
+
+#[test]
+fn plain_index_links_and_name_resolution() {
+    use super::{links_of, resolve_name};
+    let mut ix = Index::default();
+    ix.upsert("a.excalidraw".into(), doc("a.excalidraw", &[("t", "see [[b]] and [[nope]]")], &[]));
+    ix.upsert("sub/b.excalidraw".into(), doc("sub/b.excalidraw", &[("t", "back to [[a]]")], &[]));
+    // Without a link index the response is empty; ensure_links builds it.
+    assert!(links_of(&ix, "a.excalidraw").outgoing.is_empty());
+    ix.ensure_links();
+    let r = links_of(&ix, "a.excalidraw");
+    assert_eq!(r.outgoing.len(), 1);
+    assert_eq!(r.outgoing[0].resolved.as_deref(), Some("sub/b.excalidraw"));
+    assert_eq!(r.unresolved.len(), 1);
+    assert_eq!(r.backlinks.len(), 1);
+    assert_eq!(resolve_name(&ix, "b").as_deref(), Some("sub/b.excalidraw"));
+    assert_eq!(resolve_name(&ix, "[[a]]").as_deref(), Some("a.excalidraw"));
+    assert_eq!(resolve_name(&ix, "zzz"), None);
+}

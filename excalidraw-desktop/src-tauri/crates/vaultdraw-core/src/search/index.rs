@@ -356,6 +356,14 @@ impl Index {
     pub fn install_links(&mut self, links: LinkIndex) {
         self.links = Some(Box::new(links));
     }
+    /// Builds the link index if it does not exist yet (for a plain, unshared `Index`; the app's
+    /// `VaultIndex::ensure_links` does the same under its lock).
+    pub fn ensure_links(&mut self) {
+        if self.links.is_none() {
+            let built = self.build_links();
+            self.install_links(built);
+        }
+    }
     /// Both the link index and the docs, for queries that read text while resolving.
     pub fn links_and_docs(&self) -> Option<(&LinkIndex, &HashMap<String, DocEntry>)> {
         self.links.as_deref().map(|l| (l, &self.docs))

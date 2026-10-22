@@ -299,6 +299,16 @@ fn remember_vault(app: &AppHandle, info: &VaultInfo) {
         let _ = fs::create_dir_all(&dir);
         let _ = fs::write(dir.join("recent-vault"), &info.path);
     }
+    // The state-dir copy is what the offline CLI reads first (and isolates test/perf instances).
+    // Best effort: a failure here never fails the open.
+    match config::resolve_dirs() {
+        Ok(dirs) => {
+            if let Err(e) = vaultdraw_core::vault_path::remember(&dirs.state, Path::new(&info.path)) {
+                eprintln!("vaultdraw: recent-vault not saved in the state dir: {} ({})", e.message, e.code);
+            }
+        }
+        Err(e) => eprintln!("vaultdraw: recent-vault not saved in the state dir: {}", e.message),
+    }
 }
 /// A folder given by path (the control API's `vault.open`): same as choosing it in the dialog.
 fn existing_vault_dir(path: &str) -> Result<PathBuf> {

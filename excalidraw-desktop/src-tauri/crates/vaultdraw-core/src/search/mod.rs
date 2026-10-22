@@ -2,15 +2,19 @@
 //! normaliser and snapshot store. The background worker and the Tauri commands live in the app.
 
 pub mod extract;
+pub mod headless;
 pub mod index;
 pub mod normalize;
 pub mod packed;
 pub mod scan;
 pub mod store;
 pub mod tags;
+#[doc(hidden)]
+pub mod testgen;
 pub mod types;
 
 pub use extract::{extract_items, ElementLink, ItemKind, TextItem};
+pub use headless::load_or_build;
 pub use index::{word_snippet, DocEntry, Index};
 pub use normalize::{normalize, NORMALIZER_VERSION};
 pub use scan::{is_drawing_name, walk};

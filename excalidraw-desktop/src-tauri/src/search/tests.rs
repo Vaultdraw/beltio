@@ -910,3 +910,27 @@ fn name_highlights_index_the_original_file_name_even_with_repeated_spaces() {
     let frags: Vec<String> = h.name_highlights.iter().map(|r| slice16(&h.name, *r)).collect();
     assert_eq!(frags, ["Paths"], "name_highlights must be UTF-16 offsets into the original name");
 }
+
+#[test]
+fn headless_load_or_build_equals_the_worker_index() {
+    use vaultdraw_core::search::{load_or_build, testgen};
+    let t = tempfile::tempdir().unwrap();
+    let root = t.path().join("vault");
+    fs::create_dir_all(&root).unwrap();
+    testgen::generate(&root, 30);
+    let worker_snap = store::snapshot_path(&t.path().join("worker-state"), &root);
+    let svc = started_with(&root, Some(worker_snap.clone()));
+    wait_until("worker snapshot", || worker_snap.is_file());
+    let headless = load_or_build(&root, &store::snapshot_path(&t.path().join("cli-state"), &root)).unwrap();
+    let shared = svc.vault("h").unwrap();
+    let worker = shared.read();
+    assert_eq!(headless.counts(), worker.counts());
+    for q in ["service", "dijkstra", "database", "queue", "caf\u{e9}", "#dsa", "#interview/prep", "nosuchword"] {
+        for scope in [Scope::All, Scope::Names, Scope::Content] {
+            let a = serde_json::to_value(headless.query(q, scope, 100).0).unwrap();
+            let b = serde_json::to_value(worker.query(q, scope, 100).0).unwrap();
+            assert_eq!(a, b, "query {q} {scope:?}");
+        }
+    }
+    assert_eq!(serde_json::to_value(headless.tag_summary()).unwrap(), serde_json::to_value(worker.tag_summary()).unwrap());
+}

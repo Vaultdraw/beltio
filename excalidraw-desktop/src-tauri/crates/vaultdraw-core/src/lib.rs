@@ -6,6 +6,7 @@ pub mod config;
 pub mod drawing;
 pub mod error;
 pub mod fsops;
+pub mod instance;
 pub mod json_ascii;
 pub mod links;
 pub mod lock;
@@ -14,6 +15,7 @@ pub mod paths;
 pub mod recovery;
 pub mod search;
 pub mod vault;
+pub mod vault_path;
 
 pub use drawing::*;
 pub use error::{err, ioerr, NativeError, Result};

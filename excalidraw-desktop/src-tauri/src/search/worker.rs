@@ -8,6 +8,7 @@ use super::{store, Emitter, Update, VaultIndex};
 use crate::now_ms;
 use vaultdraw_core::search::scan::{needs_parse, parse, Found};
 use vaultdraw_core::search::is_drawing_name;
+use vaultdraw_core::search::headless::RACY_MS;
 use vaultdraw_core::search::walk;
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
@@ -20,8 +21,6 @@ use std::{
 const BATCH_DOCS: usize = 32;
 const EMIT_EVERY: Duration = Duration::from_millis(250);
 const SAVE_DELAY: Duration = Duration::from_secs(5);
-/// Files modified this close to a reference time may have changed without a stat change.
-const RACY_MS: u64 = 2000;
 
 /// Big drawings are re-indexed only after they stop changing: a save of a 20 MB drawing would
 /// otherwise cost a full re-read and parse every few hundred ms while the user types.

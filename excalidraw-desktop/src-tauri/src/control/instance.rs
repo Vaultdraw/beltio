@@ -2,9 +2,8 @@
 //! process keeps it for its lifetime; later launches forward their argv to the first one
 //! over the control socket and exit.
 
-use fs2::FileExt;
 use serde_json::json;
-use std::fs::{File, OpenOptions};
+use std::fs::File;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -35,20 +34,7 @@ pub(crate) fn paths() -> Result<InstancePaths, String> {
     InstancePaths::from_env(smoke_root().as_deref())
 }
 
-pub(crate) enum Claim {
-    Held(File),
-    Busy,
-}
-
-/// Opens `instance.lock` and tries to lock it exclusively.
-pub(crate) fn try_claim(paths: &InstancePaths) -> io::Result<Claim> {
-    let file = OpenOptions::new().read(true).write(true).create(true).truncate(false).open(&paths.lock)?;
-    match file.try_lock_exclusive() {
-        Ok(()) => Ok(Claim::Held(file)),
-        Err(e) if e.raw_os_error() == fs2::lock_contended_error().raw_os_error() => Ok(Claim::Busy),
-        Err(e) => Err(e),
-    }
-}
+pub(crate) use vaultdraw_core::instance::{try_claim, Claim};
 
 /// `instance.json`: who owns the lock.
 pub(crate) fn write_info(paths: &InstancePaths) -> io::Result<()> {
@@ -117,16 +103,6 @@ pub(crate) fn forward(socket: &Path, argv: &[String], cwd: Option<&str>, wait: D
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn second_claim_sees_the_lock_held() {
-        let t = tempfile::tempdir().unwrap();
-        let paths = InstancePaths::in_dir(t.path());
-        let Claim::Held(first) = try_claim(&paths).unwrap() else { panic!("first claim must win") };
-        assert!(matches!(try_claim(&paths).unwrap(), Claim::Busy));
-        drop(first);
-        assert!(matches!(try_claim(&paths).unwrap(), Claim::Held(_)));
-    }
 
     #[test]
     fn info_file_has_pid_version_api() {
