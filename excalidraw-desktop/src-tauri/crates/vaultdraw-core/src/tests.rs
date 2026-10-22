@@ -217,3 +217,20 @@ fn recovery_streaming_record_keeps_the_json_shape() {
     assert_eq!(counter.0 as usize, serde_json::to_vec(&record).unwrap().len());
     assert!(fs::read_dir(snapshot.parent().unwrap()).unwrap().all(|e| !e.unwrap().file_name().to_string_lossy().starts_with(".excalidraw-tmp")));
 }
+#[test]
+fn webview_text_is_ascii_while_disk_and_revision_stay_raw_utf8() {
+    let t = tempdir().unwrap(); let v = vault(t.path()); let p = t.path().join("a.excalidraw");
+    let raw = "{\"type\":\"excalidraw\",\"elements\":[{\"text\":\"a \u{2014} \u{1F600}\"}]}";
+    fs::write(&p, raw).unwrap();
+    let frame = read_drawing_file(&v.root, "a.excalidraw").unwrap();
+    let (rev, body) = split_frame(&frame);
+    assert_eq!(rev, revision(raw.as_bytes()));
+    assert!(body.is_ascii() && body != raw.as_bytes());
+    // Saving what the webview received writes the original bytes back.
+    let out = write_drawing_file(&v, "a.excalidraw", std::str::from_utf8(body).unwrap(), Some(&rev), "op").unwrap();
+    assert_eq!(fs::read(&p).unwrap(), raw.as_bytes());
+    assert_eq!(out["revision"], revision(raw.as_bytes()));
+    assert_eq!(out["bytes"], raw.len());
+    // read_drawing_parts (CLI, templates) stays raw.
+    assert_eq!(read_drawing_parts(&v.root, "a.excalidraw").unwrap().json, raw);
+}

@@ -9,6 +9,7 @@ import type {
 } from "@excalidraw/excalidraw/types";
 
 import { appendDrawingStyles } from "../toolDefaults/drawingStyles";
+import { toAsciiJson } from "../vault/asciiJson";
 
 import type { DrawingStyles } from "../toolDefaults/drawingStyles";
 
@@ -32,17 +33,17 @@ type CachedFragment = {
   /** Indented text before and after the dataURL value, quotes excluded. Small. */
   before: string;
   after: string;
-  /** dataURL needs no JSON escaping, so it can be spliced in raw (no copy). */
+  /** dataURL is ASCII and needs no JSON escaping: spliced in raw (no copy). */
   safe: boolean;
 };
 
 const fragments = new WeakMap<BinaryFileData, CachedFragment>();
 
-// Everything JSON.stringify escapes in a string: `"`, `\`, C0 controls and
-// lone surrogates (U+2028/2029 are left raw). All surrogates are rejected here,
-// which only costs the fast path for non-ASCII dataURLs.
+// A dataURL spliced in raw must be what JSON.stringify + toAsciiJson would
+// write: no `"`, `\` or C0 controls (JSON escapes) and nothing non-ASCII
+// (\uXXXX escapes). Anything else takes the slow path (rare: base64 is ASCII).
 // eslint-disable-next-line no-control-regex
-const NEEDS_NO_ESCAPING = /^[^"\\\u0000-\u001f\ud800-\udfff]*$/;
+const ASCII_NEEDS_NO_ESCAPING = /^[^"\\\u0000-\u001f\u0080-\uffff]*$/;
 const MARKER = `vaultdraw-dataurl-${Math.random().toString(36).slice(2)}`;
 const QUOTED_MARKER = `"${MARKER}"`;
 
@@ -78,9 +79,9 @@ const buildFragment = (file: BinaryFileData): CachedFragment | null => {
   }
   return {
     snapshot: { ...file },
-    before: indent(text.slice(0, at)),
-    after: indent(text.slice(at + QUOTED_MARKER.length)),
-    safe: NEEDS_NO_ESCAPING.test(file.dataURL),
+    before: toAsciiJson(indent(text.slice(0, at))),
+    after: toAsciiJson(indent(text.slice(at + QUOTED_MARKER.length))),
+    safe: ASCII_NEEDS_NO_ESCAPING.test(file.dataURL),
   };
 };
 
@@ -93,7 +94,7 @@ const fileBody = (file: BinaryFileData): string => {
     const built = buildFragment(file);
     if (!built) {
       fragments.delete(file);
-      return indent(JSON.stringify(file, null, 2));
+      return toAsciiJson(indent(JSON.stringify(file, null, 2)));
     }
     cached = built;
     fragments.set(file, cached);
@@ -101,7 +102,7 @@ const fileBody = (file: BinaryFileData): string => {
   // Concatenation keeps a rope that points at the original dataURL string.
   const value = cached.safe
     ? `"${file.dataURL}"`
-    : JSON.stringify(file.dataURL);
+    : toAsciiJson(JSON.stringify(file.dataURL));
   return cached.before + value + cached.after;
 };
 
@@ -125,7 +126,8 @@ const referencedFiles = (
 };
 
 /**
- * Byte-identical to `serializeAsJSON(elements, appState, files, "local")`,
+ * The same JSON value as `serializeAsJSON(elements, appState, files, "local")`
+ * in pure-ASCII form (`toAsciiJson`: byte-identical when the scene is ASCII),
  * plus the drawing's style overrides as a trailing `vaultdraw` block when
  * there are any.
  */
@@ -144,7 +146,7 @@ const serializeScene = (
   appState: Partial<AppState>,
   files: BinaryFiles,
 ): string => {
-  const shell = serializeAsJSON(elements, appState, {}, "local");
+  const shell = toAsciiJson(serializeAsJSON(elements, appState, {}, "local"));
   const used = referencedFiles(elements, files);
   const ids = Object.keys(used);
   if (!ids.length) {
@@ -152,10 +154,10 @@ const serializeScene = (
   }
   if (!shell.endsWith(EMPTY_FILES_SUFFIX)) {
     // The editor's format changed under us: never guess, use its serializer.
-    return serializeAsJSON(elements, appState, files, "local");
+    return toAsciiJson(serializeAsJSON(elements, appState, files, "local"));
   }
   const entries = ids.map(
-    (id) => `    ${JSON.stringify(id)}: ${fileBody(used[id])}`,
+    (id) => `    ${toAsciiJson(JSON.stringify(id))}: ${fileBody(used[id])}`,
   );
   return `${shell.slice(
     0,

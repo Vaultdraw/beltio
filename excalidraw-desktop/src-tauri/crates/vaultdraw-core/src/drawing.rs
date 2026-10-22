@@ -71,8 +71,8 @@ pub const REVISION_HEX_LEN: usize = 64;
 pub const FRAME_PREFIX_LEN: usize = REVISION_HEX_LEN + 1;
 /// Reads a drawing into one buffer laid out as `<revision hex>\n<json bytes>`: the file is
 /// read straight into the buffer after a placeholder prefix, hashed in place and validated
-/// as UTF-8 JSON without further copies.
-pub fn read_drawing_file(root: &Path, path: &str) -> Result<Vec<u8>> {
+/// as UTF-8 JSON without further copies. The body is the raw file (see `read_drawing_file`).
+pub fn read_drawing_disk(root: &Path, path: &str) -> Result<Vec<u8>> {
     if !path.to_ascii_lowercase().ends_with(".excalidraw") { return Err(err("INVALID_PATH", "Only .excalidraw files can be read as drawings")); }
     let p = safe_path(root, path, false)?;
     let file = File::open(&p).map_err(ioerr)?;
@@ -89,6 +89,23 @@ pub fn read_drawing_file(root: &Path, path: &str) -> Result<Vec<u8>> {
     buf[REVISION_HEX_LEN] = b'\n';
     Ok(buf)
 }
+/// Webview read frame: `<revision of the disk bytes>\n<pure-ASCII json>` (non-ASCII as `\uXXXX`,
+/// see `json_ascii`). The buffer is only rebuilt when the file has non-ASCII text.
+pub fn read_drawing_file(root: &Path, path: &str) -> Result<Vec<u8>> {
+    let buf = read_drawing_disk(root, path)?;
+    match crate::json_ascii::escape_non_ascii(&buf[FRAME_PREFIX_LEN..]) {
+        std::borrow::Cow::Borrowed(_) => Ok(buf),
+        std::borrow::Cow::Owned(body) => {
+            let mut prefix = [0u8; FRAME_PREFIX_LEN];
+            prefix.copy_from_slice(&buf[..FRAME_PREFIX_LEN]);
+            drop(buf);
+            let mut framed = Vec::with_capacity(FRAME_PREFIX_LEN + body.len());
+            framed.extend_from_slice(&prefix);
+            framed.extend_from_slice(&body);
+            Ok(framed)
+        }
+    }
+}
 /// `{ json, revision }` for small JSON-IPC readers (global templates); vault drawings use the raw frame.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -97,7 +114,7 @@ pub struct DrawingFile {
     pub revision: String,
 }
 pub fn read_drawing_parts(root: &Path, path: &str) -> Result<DrawingFile> {
-    let mut framed = read_drawing_file(root, path)?;
+    let mut framed = read_drawing_disk(root, path)?;
     let json = String::from_utf8(framed.split_off(FRAME_PREFIX_LEN)).map_err(|_| err("INVALID_FILE", "Drawing is not UTF-8 JSON"))?;
     framed.truncate(REVISION_HEX_LEN);
     let revision = String::from_utf8(framed).map_err(|e| err("INTERNAL", e.to_string()))?;
@@ -119,6 +136,9 @@ pub fn write_drawing_file(v: &Vault, path: &str, json: &str, expected_revision: 
 }
 pub fn write_drawing_file_with_commit<F>(v: &Vault, path: &str, json: &str, expected_revision: Option<&str>, operation_id: &str, commit_fn: F) -> Result<serde_json::Value>
 where F: FnOnce(&Path, &[u8], bool) -> Result<()> {
+    // The webview sends non-ASCII as \uXXXX; the file, its revision and the size limit use the raw UTF-8.
+    let bytes = crate::json_ascii::unescape_non_ascii(json.as_bytes());
+    let json = std::str::from_utf8(&bytes).map_err(|_| err("INVALID_FILE", "Drawing is not UTF-8 JSON"))?;
     ensure_json(json)?;
     if path.is_empty() || !path.to_ascii_lowercase().ends_with(".excalidraw") { return Err(err("INVALID_PATH", "Drawing filenames must end in .excalidraw")); }
     if operation_id.is_empty() || operation_id.len() > 200 { return Err(err("INVALID_ARGUMENT", "Invalid operation id")); }
@@ -134,7 +154,8 @@ where F: FnOnce(&Path, &[u8], bool) -> Result<()> {
     commit_fn(&p, json.as_bytes(), expected_revision.is_none())?;
     let rev = revision(json.as_bytes());
     remove_recovery(&snapshot);
-    Ok(serde_json::json!({"revision": rev}))
+    // `bytes`: size on disk (the webview's text can be longer: \uXXXX escapes).
+    Ok(serde_json::json!({"revision": rev, "bytes": json.len()}))
 }
 /// Write for the link rewriter (closed drawings only). Same path, size and JSON validation and the
 /// same revision check (before the write and again right before the rename) as
@@ -143,6 +164,8 @@ where F: FnOnce(&Path, &[u8], bool) -> Result<()> {
 /// directory is NOT synced here, the caller syncs each distinct parent once per batch
 /// (`sync_dirs`). The caller holds the vault mutation guard. Returns the parent directory.
 pub fn write_drawing_file_rewrite(v: &Vault, path: &str, json: &str, expected_revision: &str) -> Result<PathBuf> {
+    let bytes = crate::json_ascii::unescape_non_ascii(json.as_bytes());
+    let json = std::str::from_utf8(&bytes).map_err(|_| err("INVALID_FILE", "Drawing is not UTF-8 JSON"))?;
     ensure_json(json)?;
     if path.is_empty() || !path.to_ascii_lowercase().ends_with(".excalidraw") { return Err(err("INVALID_PATH", "Drawing filenames must end in .excalidraw")); }
     let p = safe_path(&v.root, path, false)?;

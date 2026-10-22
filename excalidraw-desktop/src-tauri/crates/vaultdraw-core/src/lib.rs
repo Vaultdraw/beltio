@@ -5,6 +5,7 @@
 pub mod drawing;
 pub mod error;
 pub mod fsops;
+pub mod json_ascii;
 pub mod links;
 pub mod lock;
 pub mod ops;

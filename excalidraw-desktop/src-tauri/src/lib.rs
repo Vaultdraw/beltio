@@ -439,7 +439,8 @@ async fn write_drawing(request: tauri::ipc::Request<'_>, state: State<'_, Servic
     let result = write_drawing_raw(&v, &args, body);
     // File history: one clonefile + one queue push, only after a successful commit (errors ignored).
     if let Some(rev) = result.as_ref().ok().and_then(|o| o["revision"].as_str()) {
-        history.after_commit(&args.handle, &args.path, rev, body.len() as u64);
+        let disk_len = result.as_ref().ok().and_then(|o| o["bytes"].as_u64()).unwrap_or(body.len() as u64);
+        history.after_commit(&args.handle, &args.path, rev, disk_len);
         control::events::file_saved(&args.path, rev);
     }
     memory::schedule_release();

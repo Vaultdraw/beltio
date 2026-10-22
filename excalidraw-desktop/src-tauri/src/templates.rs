@@ -75,6 +75,9 @@ fn list_in(root: &Path) -> Result<Vec<TemplateEntry>> {
 
 fn write_in(root: &Path, name: &str, json: &str) -> Result<TemplateWritten> {
     validate_name(name)?;
+    // Drawing text from the webview has non-ASCII as \uXXXX (json_ascii): keep files raw UTF-8.
+    let bytes = vaultdraw_core::json_ascii::unescape_non_ascii(json.as_bytes());
+    let json = std::str::from_utf8(&bytes).map_err(|_| err("INVALID_FILE", "Template is not UTF-8 JSON"))?;
     ensure_json(json)?;
     let _guard = WRITE_LOCK.lock().map_err(|_| err("INTERNAL", "Template write state unavailable"))?;
     if let Ok(md) = fs::symlink_metadata(root) {

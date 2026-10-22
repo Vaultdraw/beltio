@@ -8,6 +8,8 @@
  * block that the serializer appends as the LAST key, so it can be read from
  * the file tail without parsing the (possibly huge) scene.
  */
+import { toAsciiJson } from "../vault/asciiJson";
+
 import {
   STYLE_KEY_RULES,
   TOOL_DEFAULT_TOOLS,
@@ -96,9 +98,8 @@ export function appendDrawingStyles(
       ordered[tool] = clean[tool]!;
     }
   }
-  const block = JSON.stringify({ styles: ordered }, null, 2).replace(
-    /\n/g,
-    "\n  ",
+  const block = toAsciiJson(
+    JSON.stringify({ styles: ordered }, null, 2).replace(/\n/g, "\n  "),
   );
   return `${json.slice(0, -2)},\n  ${BLOCK_KEY} ${block}\n}`;
 }

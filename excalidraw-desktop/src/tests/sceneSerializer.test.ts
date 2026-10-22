@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 import type { BinaryFileData, BinaryFiles } from "@excalidraw/excalidraw/types";
 
+import { toAsciiJson } from "../vault/asciiJson";
+
 import {
   peekFileFragment,
   serializeSceneForSave,
@@ -37,9 +39,15 @@ const file = (id: string, dataURL: string, extra = {}): BinaryFileData =>
 
 const appState = { viewBackgroundColor: "#fff" };
 
+/** The editor's own output in the pure-ASCII transport form (same JSON value). */
 const same = (elements: ExcalidrawElement[], files: BinaryFiles) => {
-  const expected = serializeAsJSON(elements, appState, files, "local");
-  expect(serializeSceneForSave(elements, appState, files)).toBe(expected);
+  const editor = serializeAsJSON(elements, appState, files, "local");
+  const expected = toAsciiJson(editor);
+  const out = serializeSceneForSave(elements, appState, files);
+  expect(out).toBe(expected);
+  // eslint-disable-next-line no-control-regex
+  expect(/^[\x00-\x7f]*$/.test(out)).toBe(true);
+  expect(JSON.parse(out)).toEqual(JSON.parse(editor));
   return expected;
 };
 
