@@ -49,7 +49,8 @@ fn action_for(id: &str) -> Option<MenuAction> {
 }
 
 fn help_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
-    let help = Submenu::with_id(app, "vault-menu-help", "Help", true)?;
+    // HELP_SUBMENU_ID makes Tauri register it as the macOS Help menu (search field, placement).
+    let help = Submenu::with_id(app, tauri::menu::HELP_SUBMENU_ID, "Help", true)?;
     for item in HELP_ITEMS {
         match item {
             Some((command, title)) => {

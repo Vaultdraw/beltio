@@ -408,11 +408,12 @@ html.dark .vault-onboarding__logo {
   justify-content: center;
   margin-top: 28px;
   font-size: var(--vd-fs-caption);
-  color: var(--vault-text-faint);
+  color: var(--vault-text-muted);
 }
 
 .vault-onboarding__link {
-  padding: 0;
+  min-height: 24px;
+  padding: 4px 2px;
   border: 0;
   background: none;
   font: inherit;
