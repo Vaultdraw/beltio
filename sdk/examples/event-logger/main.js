@@ -1,8 +1,9 @@
 // event-logger: logs the app events (vault.opened, drawing.opened/saved/
 // renamed/deleted) into a ring buffer shown in a panel, newest first.
-// Shows disposal: every ctx.events.on returns a Disposable, and each one is
-// pushed onto ctx.subscriptions, so disable/reload/quit unsubscribes them all
-// (reverse order) and nothing is left listening. activation is
+// Shows disposal: everything registered through ctx (events.on,
+// settings.onChange, panels, commands) is disposed by the host on
+// disable/reload/quit, so nothing is left listening. Keep the returned
+// Disposable only to unsubscribe early. activation is
 // onStartupFinished so events from startup on are seen; activate() only
 // subscribes and registers. No timers.
 import { createElement as h, useSyncExternalStore } from "react";
@@ -27,6 +28,7 @@ export default definePlugin({
   activate(ctx) {
     // Tiny store: an immutable array (oldest first), replaced on every change.
     let entries = [];
+    let seq = 0; // stable React keys
     const listeners = new Set();
     const set = (next) => {
       entries = next;
@@ -43,15 +45,18 @@ export default definePlugin({
     const clear = () => set([]);
 
     const record = (name, payload) => {
-      const entry = { at: Date.now(), name, detail: describe(name, payload) };
+      const entry = {
+        seq: ++seq,
+        at: Date.now(),
+        name,
+        detail: describe(name, payload),
+      };
       set([...entries, entry].slice(-limit()));
     };
     for (const name of EVENTS) {
-      ctx.subscriptions.push(ctx.events.on(name, (p) => record(name, p)));
+      ctx.events.on(name, (p) => record(name, p));
     }
-    ctx.subscriptions.push(
-      ctx.settings.onChange("max", () => set(entries.slice(-limit()))),
-    );
+    ctx.settings.onChange("max", () => set(entries.slice(-limit())));
 
     function Log() {
       const list = useSyncExternalStore(store.subscribe, store.get);
@@ -80,7 +85,7 @@ export default definePlugin({
                 .map((e) =>
                   h(
                     "li",
-                    { key: `${e.at}-${e.name}-${e.detail}-${list.indexOf(e)}` },
+                    { key: e.seq },
                     `${new Date(e.at).toLocaleTimeString()}  ${e.name}  ${
                       e.detail
                     }`,
