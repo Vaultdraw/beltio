@@ -17,27 +17,56 @@ Vaultdraw is an offline desktop app for macOS that keeps your [Excalidraw](https
 
 The Excalidraw editor, plus what you need once you have more than one drawing:
 
-| Feature | What it does |
-| --- | --- |
-| **Themes** | 123 palettes, light and dark, for the whole app and, if you like, the canvas. Drawings and exports keep standard colours. |
-| **Tags** | Write `#ideas` in any text. A Tags panel lists them, search filters by them, and renaming a tag updates every drawing. |
-| **Links** | Link drawings with `[[Name]]`, from text or a shape. Backlinks show what points here, and renaming a drawing fixes every link. |
-| **Search** | Search inside every drawing in the vault (names, text, labels, formulas) and jump straight to the match. |
-| **Command palette** | `Cmd+P` opens any drawing by name; `Cmd+Shift+P` runs any command. Every command can get its own key. |
-| **Tool settings** | Each tool starts with its own style, pens are saved presets, and the laser is yours to tune, globally or per vault. |
-| **History** | Earlier versions of every drawing, kept automatically. Scrub back, see what changed, restore in one click. |
-| **Graph view** | Every drawing a dot, every link a line, plus a local graph of what sits near the open drawing. |
-| **File import** | Drop images and PDFs from Finder onto the canvas. PDF pages become images you can write on, rendered offline. |
-| **Templates** | Any drawing can become a template, for one vault or all of them. |
-
 <table>
   <tr>
-    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/search-dark.webp"><img src="docs/assets/screenshots/search-light.webp" alt="Search results across the vault, with highlighted snippets"></picture><br><b>Search</b> every drawing in the vault</td>
-    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/graph-dark.webp"><img src="docs/assets/screenshots/graph-light.webp" alt="The graph view: drawings as dots, links as lines"></picture><br><b>Graph view</b> of drawings and links</td>
+    <td width="50%" valign="top">
+      <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/themes-dark.webp"><img src="docs/assets/screenshots/themes-light.webp" alt="Settings, Appearance: mode, sync canvas with theme, accent colour and the theme grid"></picture>
+      <br><b>Themes</b><br>123 palettes, light and dark, for the whole app and, if you like, the canvas. Drawings and exports keep standard colours.
+    </td>
+    <td width="50%" valign="top">
+      <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/tools-dark.webp"><img src="docs/assets/screenshots/tools-light.webp" alt="Settings, Tools on the Arrow tab with a live preview"></picture>
+      <br><b>Tool settings</b><br>Each tool starts with its own style, pens are saved presets, and the laser is yours to tune, globally or per vault.
+    </td>
   </tr>
   <tr>
-    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/history-dark.webp"><img src="docs/assets/screenshots/history-light.webp" alt="File history with versions, previews and highlighted changes"></picture><br><b>History</b> with previews and restore</td>
-    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/palette-dark.webp"><img src="docs/assets/screenshots/palette-light.webp" alt="The command palette listing export commands"></picture><br><b>Command palette</b> for every drawing and command</td>
+    <td width="50%" valign="top">
+      <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/tags-dark.webp"><img src="docs/assets/screenshots/tags-light.webp" alt="The Tags panel with counts, filtering the file tree by #project"></picture>
+      <br><b>Tags</b><br>Write <code>#ideas</code> in any text. A Tags panel lists them, search filters by them, and renaming a tag updates every drawing.
+    </td>
+    <td width="50%" valign="top">
+      <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/history-dark.webp"><img src="docs/assets/screenshots/history-light.webp" alt="The History panel with automatic versions and a named checkpoint"></picture>
+      <br><b>History</b><br>Earlier versions of every drawing, kept automatically. Scrub back, see what changed, restore in one click.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/links-dark.webp"><img src="docs/assets/screenshots/links-light.webp" alt="A drawing with links on the canvas and the backlinks panel"></picture>
+      <br><b>Links</b><br>Link drawings with <code>[[Name]]</code>, from text or a shape. Backlinks show what points here, and renaming a drawing fixes every link.
+    </td>
+    <td width="50%" valign="top">
+      <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/search-dark.webp"><img src="docs/assets/screenshots/search-light.webp" alt="Search results across the vault with highlighted snippets"></picture>
+      <br><b>Search</b><br>Search inside every drawing in the vault (names, text, labels, formulas) and jump straight to the match.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/graph-dark.webp"><img src="docs/assets/screenshots/graph-light.webp" alt="The graph view of drawings and links"></picture>
+      <br><b>Graph view</b><br>Every drawing a dot, every link a line, plus a local graph of what sits near the open drawing.
+    </td>
+    <td width="50%" valign="top">
+      <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/templates-dark.webp"><img src="docs/assets/screenshots/templates-light.webp" alt="The template picker with thumbnails"></picture>
+      <br><b>Templates</b><br>Any drawing can become a template, for one vault or all of them.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/palette-dark.webp"><img src="docs/assets/screenshots/palette-light.webp" alt="The command palette filtered to export commands"></picture>
+      <br><b>Command palette</b><br><code>Cmd+P</code> opens any drawing by name; <code>Cmd+Shift+P</code> runs any command. Every command can get its own key.
+    </td>
+    <td width="50%" valign="top">
+      <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/import-dark.webp"><img src="docs/assets/screenshots/import-light.webp" alt="The Import PDF dialog choosing pages 1 to 5"></picture>
+      <br><b>File import</b><br>Drop images and PDFs from Finder onto the canvas. PDF pages become images you can write on, rendered offline.
+    </td>
   </tr>
 </table>
 
