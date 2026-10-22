@@ -43,27 +43,7 @@ impl Flags {
     }
 }
 
-pub fn key_for(rel: &str, fold: bool) -> String {
-    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
-    let mut feed = |b: u8| {
-        h ^= u64::from(b);
-        h = h.wrapping_mul(0x0100_0000_01b3);
-    };
-    if fold {
-        rel.to_lowercase().bytes().for_each(&mut feed);
-    } else {
-        rel.bytes().for_each(&mut feed);
-    }
-    format!("{h:016x}")
-}
-
-pub fn rev16(revision: &str) -> Option<&str> {
-    revision.get(..16).filter(|r| r.bytes().all(|b| b.is_ascii_hexdigit()))
-}
-
-pub fn clone_name(key: &str, rev16: &str) -> String {
-    format!("{key}.{rev16}.excalidraw")
-}
+pub use vaultdraw_core::staging::{clone_name, key_for, rev16};
 
 pub fn open_clone_name(key: &str, rev16: &str) -> String {
     format!("o-{key}.{rev16}.excalidraw")

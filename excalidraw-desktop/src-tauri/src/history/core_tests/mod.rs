@@ -15,3 +15,4 @@ mod sync_h3_tests;
 mod clock_tests;
 mod bench_h3;
 mod takeover_h3_tests;
+mod offline_write_tests;

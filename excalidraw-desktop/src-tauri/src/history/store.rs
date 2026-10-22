@@ -1,7 +1,7 @@
 //! On-disk access for `<vault>/.excalidraw-vault/history/`: the checked path builder (a
 //! `symlink_metadata` check on every directory level), `O_NOFOLLOW` reads with hard caps, durable
 //! writes (`.<final>.tmp` → fsync → rename), free-space guard, and the platform calls
-//! (`clonefile`, `fcntl` fsync flavours, `pathconf`) declared by hand (D8: no libc crate).
+//! (`clonefile`, `fcntl` fsync flavours) declared by hand (D8: no libc crate).
 //!
 //! Synced history is untrusted input (M13): every name is validated by the callers before it is
 //! joined here, anything unexpected is ignored and never deleted (except our own `.tmp` files).
@@ -107,15 +107,13 @@ pub fn is_enospc(e: &io::Error) -> bool {
 
 #[cfg(target_os = "macos")]
 mod sys {
-    use std::ffi::{c_char, c_int, c_long};
+    use std::ffi::{c_char, c_int};
     extern "C" {
         pub fn clonefile(src: *const c_char, dst: *const c_char, flags: u32) -> c_int;
         pub fn fcntl(fd: c_int, cmd: c_int, ...) -> c_int;
-        pub fn pathconf(path: *const c_char, name: c_int) -> c_long;
     }
     pub const F_FULLFSYNC: c_int = 51;
     pub const F_BARRIERFSYNC: c_int = 85;
-    pub const PC_CASE_SENSITIVE: c_int = 11;
     pub const O_NOFOLLOW: i32 = 0x0100;
     pub const SF_DATALESS: u32 = 0x4000_0000;
 }
@@ -174,22 +172,7 @@ pub fn sync_dir(dir: &Path) -> io::Result<()> {
     sync_file(&File::open(dir)?, true)
 }
 
-/// `false` when the volume holding `path` is case-insensitive (APFS default); `true` when unknown.
-pub fn volume_case_sensitive(path: &Path) -> bool {
-    #[cfg(target_os = "macos")]
-    {
-        use std::os::unix::ffi::OsStrExt;
-        if let Ok(c) = std::ffi::CString::new(path.as_os_str().as_bytes()) {
-            // SAFETY: valid NUL-terminated path; pathconf only reads it.
-            let r = unsafe { sys::pathconf(c.as_ptr(), sys::PC_CASE_SENSITIVE) };
-            if r == 0 {
-                return false;
-            }
-        }
-    }
-    let _ = path;
-    true
-}
+pub use vaultdraw_core::staging::volume_case_sensitive;
 
 pub fn is_dataless(md: &fs::Metadata) -> bool {
     #[cfg(target_os = "macos")]

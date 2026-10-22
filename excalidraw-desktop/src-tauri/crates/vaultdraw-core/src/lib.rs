@@ -14,6 +14,7 @@ pub mod ops;
 pub mod paths;
 pub mod recovery;
 pub mod search;
+pub mod staging;
 pub mod vault;
 pub mod vault_path;
 
