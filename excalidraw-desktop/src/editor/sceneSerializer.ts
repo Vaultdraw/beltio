@@ -142,57 +142,42 @@ export const serializeSceneForSave = (
     ? appendDrawingStyles(serializeScene(elements, appState, files), styles)
     : serializeScene(elements, appState, files);
 
-const anyNonAscii = (value: unknown): boolean => {
-  if (typeof value === "string") {
-    return hasNonAscii(value);
-  }
-  if (value && typeof value === "object") {
-    for (const item of Object.values(value)) {
-      if (anyNonAscii(item)) {
-        return true;
-      }
-    }
-  }
-  return false;
-};
+const nonAsciiString = (value: unknown): boolean =>
+  typeof value === "string" && hasNonAscii(value);
 
-/** Per element object: the version it was last checked at and the answer. */
-const checkedElements = new WeakMap<
-  ExcalidrawElement,
-  { version: number; nonce: number; ascii: boolean }
->();
+/**
+ * The element fields that can hold user text. Everything else the editor
+ * writes is numbers, ids, enums and colours from its pickers (ASCII). A miss
+ * would only cost memory (a 2-byte string), never correctness: the native
+ * side writes raw UTF-8 either way.
+ */
+const elementHasNonAscii = (element: ExcalidrawElement): boolean => {
+  const e = element as unknown as Record<string, unknown>;
+  return (
+    (element.type === "text" &&
+      (nonAsciiString(e.text) || nonAsciiString(e.originalText))) ||
+    nonAsciiString(e.link) ||
+    nonAsciiString(e.name) ||
+    (e.customData != null && hasNonAscii(JSON.stringify(e.customData)))
+  );
+};
 
 /**
  * Whether the scene shell (`serializeAsJSON` without files) is ASCII, without
- * scanning its text: elements are checked once per version (the editor bumps
- * version and nonce on every change, also when it mutates in place), app state
- * through its small export subset. Saves of ASCII scenes skip toAsciiJson's
- * scan of the whole shell (megabytes for thousands of elements).
+ * scanning its text (megabytes for thousands of elements, on every save):
+ * only the fields that hold user text are checked, plus the app state's small
+ * export subset.
  */
 const isAsciiScene = (
   elements: readonly ExcalidrawElement[],
   appState: Partial<AppState>,
 ): boolean => {
-  let ascii = true;
   for (const element of elements) {
-    const seen = checkedElements.get(element);
-    if (
-      seen &&
-      seen.version === element.version &&
-      seen.nonce === element.versionNonce
-    ) {
-      ascii &&= seen.ascii;
-      continue;
+    if (elementHasNonAscii(element)) {
+      return false;
     }
-    const elementAscii = !anyNonAscii(element);
-    checkedElements.set(element, {
-      version: element.version,
-      nonce: element.versionNonce,
-      ascii: elementAscii,
-    });
-    ascii &&= elementAscii;
   }
-  return ascii && !anyNonAscii(cleanAppStateForExport(appState));
+  return !hasNonAscii(JSON.stringify(cleanAppStateForExport(appState)));
 };
 
 const serializeScene = (
