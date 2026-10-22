@@ -48,15 +48,14 @@ const graph = (entry: string): Set<string> => {
 };
 
 describe("startup import graph", () => {
-  it.each(["../main.tsx", "../VaultApp.tsx"])(
-    "%s statically imports no plugin host/shared code",
-    (entry) => {
-      const files = [...graph(resolve(__dirname, entry))];
-      expect(files.length).toBeGreaterThan(20);
-      const bad = files.filter((f) =>
-        /\/src\/plugins\/(host|shared)\//.test(f),
-      );
-      expect(bad).toEqual([]);
-    },
-  );
+  it.each([
+    "../main.tsx",
+    "../VaultApp.tsx",
+    "../components/settings/SettingsModal.tsx",
+  ])("%s statically imports no plugin host/shared code", (entry) => {
+    const files = [...graph(resolve(__dirname, entry))];
+    expect(files.length).toBeGreaterThan(20);
+    const bad = files.filter((f) => /\/src\/plugins\/(host|shared)\//.test(f));
+    expect(bad).toEqual([]);
+  });
 });

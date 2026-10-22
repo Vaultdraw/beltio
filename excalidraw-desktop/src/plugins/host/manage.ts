@@ -3,6 +3,8 @@
  * uninstall, host-disable reset and safe-mode restart.
  */
 import { updatePreferences, getPreferences } from "../../vault/preferences";
+import { ensurePluginHost } from "../boot";
+import { pluginHostStarted } from "../hostFlag";
 
 import {
   getRuntime,
@@ -28,8 +30,14 @@ export const RELOAD_HINT_EVERY = 20;
 
 const reapply = () => applyPlugins(window, idleSchedule(window));
 
-/** Re-reads the plugin folders; new plugins appear, removed ones are disposed. */
+/**
+ * Re-reads the plugin folders; new plugins appear, removed ones are disposed.
+ * With no plugin enabled the host hasn't started: this starts it first.
+ */
 export async function rescanPlugins(): Promise<void> {
+  if (!pluginHostStarted.get()) {
+    await ensurePluginHost(window);
+  }
   setPluginsList(await getPluginsBackend().list(true));
   void reapply();
   ensureDevListener();

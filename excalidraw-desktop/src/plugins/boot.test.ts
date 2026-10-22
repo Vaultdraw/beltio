@@ -9,7 +9,7 @@ import { updatePreferences } from "../vault/preferences";
 
 import { runCommandById } from "./host/runner";
 
-import { bootPlugins } from "./boot";
+import { bootPlugins, ensurePluginHost } from "./boot";
 import { pluginHostStarted } from "./hostFlag";
 
 const startPluginHost = vi.fn(async () => ({}));
@@ -72,6 +72,15 @@ describe("bootPlugins", () => {
     flush();
     await vi.waitFor(() => expect(startPluginHost).toHaveBeenCalledTimes(1));
     flush();
+    expect(startPluginHost).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ensurePluginHost", () => {
+  it("shares one start while it is in flight", async () => {
+    startPluginHost.mockClear();
+    const { win } = fakeWin(true);
+    await Promise.all([ensurePluginHost(win), ensurePluginHost(win)]);
     expect(startPluginHost).toHaveBeenCalledTimes(1);
   });
 });

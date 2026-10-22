@@ -14,7 +14,7 @@ import { interfaceControls } from "./Interface";
 import { linksControls } from "./Links";
 import { tagsControls } from "./TagsSettings";
 import { pageControls } from "./Page";
-import { pluginsControls } from "./Plugins";
+import { pluginsControls } from "./pluginsEntry";
 import { pensControls } from "./Pens";
 import { toolDefaultsControls } from "./ToolDefaults";
 

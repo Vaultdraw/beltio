@@ -65,7 +65,8 @@ const state = (patch: Partial<PluginsState> = {}): PluginsState => ({
   ...patch,
 });
 
-const open = () =>
+/** The page is lazy: resolve once it has rendered. */
+const open = async () => {
   render(
     <SettingsModal
       vault={vault}
@@ -74,6 +75,8 @@ const open = () =>
       initialPage="plugins"
     />,
   );
+  await screen.findByTestId("plugins-page");
+};
 
 describe("Plugins settings page", () => {
   beforeEach(() => {
@@ -86,16 +89,16 @@ describe("Plugins settings page", () => {
     vi.clearAllMocks();
   });
 
-  it("shows the empty state and broken manifests", () => {
+  it("shows the empty state and broken manifests", async () => {
     h.set(state({ errors: [{ dir: "/p/bad", message: "no manifest" }] }));
-    open();
+    await open();
     expect(screen.getByText(/No plugins installed/)).toBeTruthy();
     expect(screen.getByText(/no manifest/)).toBeTruthy();
   });
 
-  it("marks user plugins Unverified and asks before enabling", () => {
+  it("marks user plugins Unverified and asks before enabling", async () => {
     h.set(state({ plugins: [makePluginInfo("hello", { name: "Hello" })] }));
-    open();
+    await open();
     const row = screen.getByTestId("plugin-hello");
     expect(within(row).getByText("Unverified")).toBeTruthy();
     fireEvent.click(screen.getByRole("switch", { name: "Enable Hello" }));
@@ -105,19 +108,19 @@ describe("Plugins settings page", () => {
     expect(getPreferences(window).pluginsEnabled).toEqual(["hello"]);
   });
 
-  it("enables a bundled plugin without a dialog", () => {
+  it("enables a bundled plugin without a dialog", async () => {
     h.set(
       state({
         plugins: [makePluginInfo("core", { name: "Core", source: "bundled" })],
       }),
     );
-    open();
+    await open();
     fireEvent.click(screen.getByRole("switch", { name: "Enable Core" }));
     expect(getPreferences(window).pluginsEnabled).toEqual(["core"]);
     expect(screen.queryByText("Unverified")).toBeNull();
   });
 
-  it("disables the switch for an incompatible plugin and says why", () => {
+  it("disables the switch for an incompatible plugin and says why", async () => {
     h.set(
       state({
         plugins: [
@@ -129,7 +132,7 @@ describe("Plugins settings page", () => {
         ],
       }),
     );
-    open();
+    await open();
     expect(
       (screen.getByRole("switch", { name: "Enable New" }) as HTMLInputElement)
         .disabled,
@@ -137,7 +140,7 @@ describe("Plugins settings page", () => {
     expect(screen.getByText("Needs app ≥ 9.0.0")).toBeTruthy();
   });
 
-  it("offers Re-enable for a plugin the host disabled", () => {
+  it("offers Re-enable for a plugin the host disabled", async () => {
     h.set(
       state({
         plugins: [
@@ -145,13 +148,13 @@ describe("Plugins settings page", () => {
         ],
       }),
     );
-    open();
+    await open();
     expect(screen.getByText(/Disabled by Vaultdraw: 3 errors/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Re-enable Bad" }));
     expect(h.clearHostDisabled).toHaveBeenCalledWith("bad");
   });
 
-  it("shows runtime state, cost, and uninstall only for user plugins", () => {
+  it("shows runtime state, cost, and uninstall only for user plugins", async () => {
     updatePreferences({ pluginsEnabled: ["hello"] }, window);
     h.set(
       state({
@@ -162,7 +165,7 @@ describe("Plugins settings page", () => {
         runtime: { hello: { state: "active", enabled: true } },
       }),
     );
-    open();
+    await open();
     const row = screen.getByTestId("plugin-hello");
     expect(within(row).getByText("Active")).toBeTruthy();
     expect(
@@ -187,7 +190,7 @@ describe("Plugins settings page", () => {
         },
       }),
     );
-    open();
+    await open();
     const banner = screen.getByTestId("plugins-safe-mode");
     expect(banner.textContent).toContain("after 2 crashes");
     expect(banner.textContent).toContain("hello");

@@ -1,4 +1,4 @@
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { getPluginCosts } from "../../../plugins/host/cost";
 import {
@@ -12,6 +12,7 @@ import {
   type PluginsState,
 } from "../../../plugins/host/manage";
 import { runCommandById } from "../../../plugins/host/runner";
+import { pluginHostStarted } from "../../../plugins/hostFlag";
 import {
   installPluginFromFolder,
   reloadPluginList,
@@ -23,8 +24,7 @@ import {
   updatePreferences,
 } from "../../../vault/preferences";
 import { ConfirmModal } from "../../ConfirmModal";
-import { getSettingSchema } from "../schema";
-import { useSettings, type SettingControls } from "../SettingsContext";
+import { useSettings } from "../SettingsContext";
 
 import { PluginRow, type RuntimeState } from "./PluginRow";
 
@@ -94,11 +94,17 @@ type Pending =
   | { kind: "uninstall"; info: PluginInfo }
   | null;
 
-const PluginsPage = () => {
+export const PluginsPage = () => {
   const { win } = useSettings();
   const state = useManageState();
   const enabledIds = useEnabledIds();
   const [pending, setPending] = useState<Pending>(null);
+  // With no plugin enabled the host (and its list) starts on first visit.
+  useEffect(() => {
+    if (!pluginHostStarted.get()) {
+      void reloadPluginList();
+    }
+  }, []);
   const costs = useMemo(
     () => new Map(getPluginCosts().map((c) => [c.id, c])),
     // Costs change when a plugin's runtime state does.
@@ -238,18 +244,4 @@ const PluginsPage = () => {
       )}
     </div>
   );
-};
-
-/** Search results only point at the page. */
-const PluginsSearchHint = () => (
-  <p className="vault-settings-empty">
-    {getSettingSchema("plugins-installed").description}
-  </p>
-);
-
-export const pluginsControls: SettingControls = {
-  "plugins-installed": {
-    Component: PluginsPage,
-    SearchComponent: PluginsSearchHint,
-  },
 };
