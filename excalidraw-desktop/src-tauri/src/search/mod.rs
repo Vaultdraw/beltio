@@ -36,9 +36,6 @@ use std::{
 };
 use tauri::{AppHandle, Emitter as _, State};
 
-const MAX_QUERY_CHARS: usize = 256;
-const DEFAULT_LIMIT: u32 = 50;
-const MAX_LIMIT: u32 = 200;
 
 /// Receives every status change (and throttled progress while building).
 pub(crate) type Emitter = Arc<dyn Fn(IndexStatus) + Send + Sync>;
@@ -223,11 +220,8 @@ impl SearchService {
     }
 
     pub(crate) fn search(&self, handle: &str, query: &str, limit: Option<u32>, scope: Option<&str>) -> Result<SearchResponse> {
-        if query.chars().count() > MAX_QUERY_CHARS {
-            return Err(err("INVALID_QUERY", format!("Query is longer than {MAX_QUERY_CHARS} characters")));
-        }
+        let limit = vaultdraw_core::search::checked_limit(query, limit)?;
         let scope = Scope::parse(scope).ok_or_else(|| err("INVALID_SCOPE", "Scope must be all, names or content"))?;
-        let limit = limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT) as usize;
         let v = self.vault(handle)?;
         let started = Instant::now();
         let (results, total) = v.read().query(query, scope, limit);

@@ -15,9 +15,6 @@ use vaultdraw_core::search::{store, Index, IndexState, IndexStatus, Scope, Searc
 use vaultdraw_core::{vault_path, Vault};
 use vaultdraw_protocol::{codes, methods, RpcError};
 
-const MAX_QUERY_CHARS: usize = 256;
-const DEFAULT_LIMIT: u32 = 50;
-const MAX_LIMIT: u32 = 200;
 
 fn rpc_fail(e: RpcError) -> Fail {
     crate::error::Fail::from(vaultdraw_protocol::client::CallError::Rpc(e))
@@ -123,10 +120,8 @@ fn resolve(v: &Vault, i: &Index, params: &Value) -> Result<String, Fail> {
 
 fn search(v: &Vault, params: &Value) -> Result<Value, Fail> {
     let query = opt_str(params, "query")?.ok_or_else(|| rpc_fail(RpcError::invalid_params("query is required")))?;
-    if query.chars().count() > MAX_QUERY_CHARS {
-        return Err(native_fail(vaultdraw_core::err("INVALID_QUERY", format!("Query is longer than {MAX_QUERY_CHARS} characters"))));
-    }
-    let limit = params.get("limit").and_then(Value::as_u64).map(|n| n.min(u64::from(u32::MAX)) as u32).unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT) as usize;
+    let limit = params.get("limit").and_then(Value::as_u64).map(|n| n.min(u64::from(u32::MAX)) as u32);
+    let limit = vaultdraw_core::search::checked_limit(query, limit).map_err(native_fail)?;
     let i = index(v)?;
     let t = Instant::now();
     let (results, total) = i.query(query, Scope::All, limit);
