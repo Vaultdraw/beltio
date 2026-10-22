@@ -66,6 +66,7 @@ import {
   rebaseFolderPath,
   scanVaultMetadata,
 } from "./vault/treeStore";
+import { appEvents } from "./events/appEvents";
 import { useVaultDocument } from "./vault/useVaultDocument";
 import { useAppearance } from "./vault/useAppearance";
 import { runZoomCommand, useInterfaceZoom } from "./vault/useInterfaceZoom";
@@ -288,6 +289,14 @@ export const VaultApp = ({
   }, []);
 
   const [vault, setVault] = useState<VaultInfo | null>(initialVault);
+  const vaultHandle = vault?.handle;
+  useEffect(() => {
+    if (vault) {
+      appEvents.emit("vault.opened", { name: vault.name });
+    }
+    // once per opened vault handle, not per vault object identity
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vaultHandle]);
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
   const [loadingVault, setLoadingVault] = useState(false);
   const [globalAlert, setGlobalAlert] = useState<{
@@ -1467,6 +1476,7 @@ export const VaultApp = ({
     if (!(await moveWithLinks(sourcePath, newPath, silent))) {
       return false;
     }
+    appEvents.emit("drawing.renamed", { from: sourcePath, to: newPath });
     tabs.renamed(sourcePath, newPath);
     rebaseFolders(sourcePath, newPath);
     await loadDirectory(getParentPath(sourcePath));
@@ -1580,6 +1590,7 @@ export const VaultApp = ({
         closedActive = true;
       }
       await repository.trash(vault.handle, path);
+      appEvents.emit("drawing.deleted", { path });
       await tabs.removed(path);
       rebaseFolders(path, null);
       const parent = getParentPath(path);
@@ -2388,12 +2399,14 @@ export const VaultApp = ({
                 <EditorComponent
                   key={vault.handle}
                   documentId={activeDoc.id}
+                  path={activeDoc.path}
                   initialSource={activeDoc.source}
                   name={getBaseName(activeDoc.path)}
                   onChange={changeDoc}
                   onExport={exportEditorFile}
                   loading={editorLoading}
                   readOnly={vault.readOnly || isClosing || mainCovered}
+                  documentReadOnly={vault.readOnly}
                   disabled={isClosing || mainCovered}
                   theme={appTheme}
                   onThemeChange={handleCanvasThemeChange}

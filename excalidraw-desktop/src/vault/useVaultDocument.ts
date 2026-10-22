@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { serializeAsJSON } from "@excalidraw/excalidraw";
 
+import { appEvents } from "../events/appEvents";
 import { markOpen } from "../perf/openMarks";
 
 import { flushEditorSerialization } from "../editor/editorFlush";
@@ -158,6 +159,9 @@ export const useVaultDocument = (
         ? { ...fresh, source: { json: fresh.savedJson } }
         : null;
       active.current = next;
+      if (next) {
+        appEvents.emit("drawing.opened", { path: next.path });
+      }
       setDocument(
         next
           ? {
@@ -210,6 +214,7 @@ export const useVaultDocument = (
           next.revision = revision;
           next.savedJson = json;
           onDrawingSavedRef.current?.(next.path, revision);
+          appEvents.emit("drawing.saved", { path: next.path });
           next.source.json = json;
           if (next.currentJson === json) {
             setCurrentStatus("saved", null);

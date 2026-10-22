@@ -92,12 +92,16 @@ import type { ComponentProps, DragEvent } from "react";
 
 type Props = {
   documentId: string;
+  /** Vault-relative path of the shown drawing (read live; renames keep the document id). */
+  path?: string | null;
   /** Stable per-activation handle; read when the scene loads, not on render. */
   initialSource: { readonly json: string };
   name: string;
   onChange: (json: string) => void;
   onExport?: (name: string, bytes: Uint8Array) => Promise<boolean>;
   readOnly?: boolean;
+  /** The drawing cannot be written (vault/file read-only); unlike `readOnly` it ignores transient UI cover. */
+  documentReadOnly?: boolean;
   disabled?: boolean;
   theme?: "light" | "dark";
   onThemeChange?: (theme: "light" | "dark" | "system") => void;
@@ -141,11 +145,13 @@ const MAX_SERIALIZE_MS = 2500;
  */
 const VaultEditorComponent = ({
   documentId,
+  path = null,
   initialSource,
   name,
   onChange,
   onExport,
   readOnly = false,
+  documentReadOnly,
   disabled = false,
   theme,
   onThemeChange,
@@ -429,10 +435,17 @@ const VaultEditorComponent = ({
     [documentId, flushImmediate],
   );
 
+  const activeMeta = useRef({ path, readOnly: documentReadOnly ?? readOnly });
+  activeMeta.current = { path, readOnly: documentReadOnly ?? readOnly };
+
   useEffect(
     () =>
       apiReady && apiRef.current
-        ? registerEditorApi(documentId, apiRef.current)
+        ? registerEditorApi(
+            documentId,
+            apiRef.current,
+            () => activeMeta.current,
+          )
         : undefined,
     // apiReady is false while another document's scene is shown under this id.
     [documentId, apiReady],

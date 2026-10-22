@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CaptureUpdateAction } from "@excalidraw/excalidraw";
 
 import { VaultEditor } from "../editor/VaultEditor";
-import { getEditorApi } from "../editor/editorApi";
+import { getActiveEditor, getEditorApi } from "../editor/editorApi";
 import { flushEditorSerialization } from "../editor/editorFlush";
 
 import type { ComponentProps } from "react";
@@ -150,6 +150,26 @@ describe("VaultEditor scene swap", () => {
   };
 
   const settle = () => act(() => new Promise((r) => setTimeout(r, 900)));
+
+  it("active editor readOnly means the drawing cannot be written, not that the UI is covered", async () => {
+    const { switchTo } = await mount({
+      documentId: "a",
+      json: scene("a"),
+      path: "a.excalidraw",
+      readOnly: true,
+      documentReadOnly: false,
+    });
+    expect(getActiveEditor()?.path).toBe("a.excalidraw");
+    expect(getActiveEditor()?.readOnly).toBe(false);
+    await switchTo({
+      documentId: "a",
+      json: scene("a"),
+      path: "a.excalidraw",
+      readOnly: true,
+      documentReadOnly: true,
+    });
+    expect(getActiveEditor()?.readOnly).toBe(true);
+  });
 
   it("never reports A's scene after the document changed, and B's landing is not a change", async () => {
     const { onChange, landed, switchTo } = await mount({
