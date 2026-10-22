@@ -1,0 +1,16 @@
+id = "word-count"
+name = "Word count"
+version = "0.1.0"
+api = 0
+main = "main.js"
+description = "Example: a live stats panel on ctx.scene.useScene (words, shapes, arrows) and an on-demand count command"
+author = "Vaultdraw"
+
+[[contributes.commands]]
+id = "count"
+title = "Word count: show words"
+
+[[contributes.panels]]
+id = "stats"
+title = "Drawing stats"
+icon = "page"
