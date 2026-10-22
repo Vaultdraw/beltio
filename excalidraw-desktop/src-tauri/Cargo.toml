@@ -60,3 +60,8 @@ sha2 = { version = "0.10", features = ["asm"] }
 # crates share this workspace, its Cargo.lock and target/.
 [workspace]
 members = [".", "crates/*"]
+
+# vaultdraw-core holds the search/links hot paths moved out of the app crate (C4a);
+# one codegen unit keeps their inlining as it was inside the app crate.
+[profile.release.package.vaultdraw-core]
+codegen-units = 1
