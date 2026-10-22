@@ -7,7 +7,7 @@
 import { readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
-import { makePluginInfo } from "../../../excalidraw-desktop/src/plugins/host/fakeBackend";
+import { makePluginInfo } from "../../../excalidraw-desktop/src/plugins/testing";
 
 import type { PluginInfo } from "../../../excalidraw-desktop/src/plugins/host/types";
 
