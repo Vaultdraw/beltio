@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { expect, test, webkit, type Page } from "@playwright/test";
 
 import { openDrawing, openVault } from "./helpers";
-import { typicalSceneJson } from "./memoryProbeScene";
+import { largeSceneJson, typicalSceneJson } from "./memoryProbeScene";
 
 // Opt-in headless WebKit memory probe (E2E_MEMORY=1) for fast relative A/Bs
 // when the packaged app cannot be measured. Per phase it reports the live
@@ -185,7 +185,11 @@ test("memory probe: typical 300-element drawing with 2 images", async ({
   });
   const page = await context.newPage();
   await trackCanvases(page);
-  const scene = typicalSceneJson();
+  // MEMPROBE_SCENE=large: the stress open target (5000 elements, 6 x 3 MB images).
+  const scene =
+    process.env.MEMPROBE_SCENE === "large"
+      ? largeSceneJson()
+      : typicalSceneJson();
   await page.addInitScript((s) => {
     (window as any).__memprobeScene = s;
   }, scene);

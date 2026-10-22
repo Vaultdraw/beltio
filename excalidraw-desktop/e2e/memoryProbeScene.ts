@@ -81,26 +81,72 @@ const makePng = (rng: any, targetChars: number) => {
   };
 };
 
+// Same key scheme as perf/lib/fixtures.mjs orderKey.
 const orderKey = (i: number) => {
+  if (i < 62) {
+    return `a${B62[i]}`;
+  }
   i -= 62;
-  return `b${B62[Math.floor(i / 62)]}${B62[i % 62]}`;
+  if (i < 62 * 62) {
+    return `b${B62[Math.floor(i / 62)]}${B62[i % 62]}`;
+  }
+  i -= 62 * 62;
+  return `c${B62[Math.floor(i / 3844) % 62]}${B62[Math.floor(i / 62) % 62]}${
+    B62[i % 62]
+  }`;
 };
 
 /** JSON of the typical 300-element drawing with 2 images (deterministic). */
-export const typicalSceneJson = (): string => {
+export const typicalSceneJson = (): string =>
+  probeSceneJson({ elements: 300, images: 2, imageChars: 750 * 1024 });
+
+/**
+ * The stress open target (perf/fixtures.config.json openTargetSpecs.large):
+ * 5000 elements over 6000x6000 and 6 images of ~3 MB PNG (18 MB in total).
+ */
+export const largeSceneJson = (): string =>
+  probeSceneJson({
+    elements: 5000,
+    images: 6,
+    imageChars: 4 * 1024 * 1024,
+    area: 6000,
+    textRatio: 0.3,
+  });
+
+const probeSceneJson = ({
+  elements: count,
+  images,
+  imageChars,
+  area,
+  textRatio = 0.25,
+}: {
+  elements: number;
+  images: number;
+  imageChars: number;
+  area?: number;
+  textRatio?: number;
+}): string => {
   const rng = mulberry32(20261015);
-  const elements = generateElements(rng, 298, 0.25, 1900, 850, null, 0);
+  const elements = generateElements(
+    rng,
+    count - images,
+    textRatio,
+    area ?? 1900,
+    area ?? 850,
+    null,
+    0,
+  );
   const files: Record<string, unknown> = {};
-  for (let i = 0; i < 2; i++) {
-    const { dataURL, width, height } = makePng(rng, 750 * 1024);
+  for (let i = 0; i < images; i++) {
+    const { dataURL, width, height } = makePng(rng, imageChars);
     const fileId = createHash("sha1").update(`memprobe:${i}`).digest("hex");
     files[fileId] = { mimeType: "image/png", id: fileId, dataURL, created: 1 };
     const w = 320;
     elements.push({
       id: `memprobe-img-${i}`,
       type: "image",
-      x: 150 + i * 700,
-      y: 250,
+      x: area ? 150 + (i % 3) * 400 : 150 + i * 700,
+      y: area ? 250 + Math.floor(i / 3) * 400 : 250,
       width: w,
       height: Math.round((w * height) / width),
       angle: 0,
@@ -122,7 +168,7 @@ export const typicalSceneJson = (): string => {
       updated: 1,
       link: null,
       locked: false,
-      index: orderKey(298 + i),
+      index: orderKey(count - images + i),
       fileId,
       status: "saved",
       scale: [1, 1],
