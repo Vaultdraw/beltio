@@ -17,6 +17,8 @@ type Reply = Result<Value, RpcError>;
 
 /// Time the reply of `app.quit` gets to reach the client before the quit starts.
 const QUIT_DELAY: Duration = Duration::from_millis(100);
+/// Rendering a drawing to a file (`export.render`) takes longer than the other window calls.
+const EXPORT_TIMEOUT: Duration = Duration::from_secs(120);
 
 pub(super) fn call(app: &AppHandle, method: &str, params: Option<Value>) -> Reply {
     let params = params.unwrap_or(Value::Null);
@@ -49,8 +51,9 @@ pub(super) fn call(app: &AppHandle, method: &str, params: Option<Value>) -> Repl
         CONFIG_SET => config_ops::set(&dirs()?, &params),
         APP_QUIT => Ok(quit(app)),
         VAULT_OPEN | TAB_LIST => call_window(app, method, Some(params), CALL_TIMEOUT),
-        FILE_OPEN | FILE_TRASH => window_with_target(app, method, params, Need::File),
-        FILE_CREATE => window_with_target(app, method, params, Need::Nothing),
+        FILE_OPEN | FILE_TRASH => window_with_target(app, method, params, Need::File, CALL_TIMEOUT),
+        FILE_CREATE => window_with_target(app, method, params, Need::Nothing, CALL_TIMEOUT),
+        EXPORT_RENDER => window_with_target(app, method, params, Need::File, EXPORT_TIMEOUT),
         TAB_FOCUS | TAB_CLOSE => tab_call(app, method, params),
         FILE_MOVE => file_move(app, params),
         _ => Err(RpcError::method_not_found(method)),
@@ -144,10 +147,10 @@ fn with_path(params: Value, path: String) -> Value {
     Value::Object(map)
 }
 
-fn window_with_target(app: &AppHandle, method: &str, params: Value, need: Need) -> Reply {
+fn window_with_target(app: &AppHandle, method: &str, params: Value, need: Need, timeout: Duration) -> Reply {
     let v = active(app)?;
     let path = resolve(app, &v, &params, need)?;
-    call_window(app, method, Some(with_path(params, path)), CALL_TIMEOUT)
+    call_window(app, method, Some(with_path(params, path)), timeout)
 }
 
 /// `tab.focus` / `tab.close` take an id, an index or a target; a target is resolved here.

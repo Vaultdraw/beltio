@@ -92,6 +92,8 @@ pub enum Command {
     Mv { from: String, to: String },
     /// Move a drawing to the trash
     Trash { target: String },
+    /// Render a drawing to PNG, SVG or PDF through the running app
+    Export(ExportArgs),
     /// Outgoing links of a drawing, or its backlinks
     Links {
         target: String,
@@ -143,6 +145,39 @@ pub struct CmdArgs {
     /// Command id to run (short form of `cmd run <id>`)
     #[arg(value_name = "ID")]
     pub id: Option<String>,
+}
+
+#[derive(Args, Debug)]
+pub struct ExportArgs {
+    /// Path (contains / or ends in .excalidraw) or link-style name
+    pub target: String,
+    /// Output file, or - for stdout (default: the drawing's file name in the current folder)
+    #[arg(short = 'o', long, value_name = "FILE")]
+    pub out: Option<String>,
+    /// png, svg or pdf (default: from the -o extension, else png)
+    #[arg(long, value_parser = ["png", "svg", "pdf"])]
+    pub format: Option<String>,
+    /// Scale factor (the app's default is 1)
+    #[arg(long, value_name = "N")]
+    pub scale: Option<f64>,
+    /// Render with the dark theme
+    #[arg(long)]
+    pub dark: bool,
+    /// Leave the background out (transparent)
+    #[arg(long)]
+    pub no_background: bool,
+    /// Leave the pattern background out
+    #[arg(long)]
+    pub no_pattern: bool,
+    /// Embed the scene in the file (PNG and SVG can be opened back as drawings)
+    #[arg(long)]
+    pub embed_scene: bool,
+    /// Export the page-shaped frame of the drawing
+    #[arg(long)]
+    pub page: bool,
+    /// Overwrite an existing output file; write to a terminal stdout
+    #[arg(long)]
+    pub force: bool,
 }
 
 #[derive(Subcommand, Debug)]

@@ -2,6 +2,7 @@
 
 mod app;
 mod events;
+mod export;
 mod files;
 mod tabs;
 
@@ -43,6 +44,7 @@ pub fn run(cli: &Cli) -> Result<(), Fail> {
         Command::Write { target, expected_revision, create } => files::write(cli, target, expected_revision.as_deref(), *create),
         Command::Mv { from, to } => files::mv(cli, from, to),
         Command::Trash { target } => files::trash(cli, target),
+        Command::Export(args) => export::run(cli, args),
         Command::Links { target, backlinks } => files::links(cli, target, *backlinks),
         Command::Tags => files::tags(cli),
         Command::Tabs => tabs::list(cli),

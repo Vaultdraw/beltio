@@ -865,6 +865,88 @@
       "window": true
     },
     {
+      "name": "export.render",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "background": {
+            "type": "boolean"
+          },
+          "dark": {
+            "type": "boolean"
+          },
+          "embedScene": {
+            "type": "boolean"
+          },
+          "file": {
+            "type": "string"
+          },
+          "format": {
+            "enum": [
+              "png",
+              "svg",
+              "pdf"
+            ],
+            "type": "string"
+          },
+          "pageShaped": {
+            "type": "boolean"
+          },
+          "path": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "boolean"
+          },
+          "scale": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "format"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "bytes": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "mime": {
+            "enum": [
+              "image/png",
+              "image/svg+xml",
+              "application/pdf"
+            ],
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "fileName",
+          "mime",
+          "size",
+          "bytes"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Render a drawing to PNG, SVG or PDF through the app window; bytes come back base64",
+      "window": true
+    },
+    {
       "name": "tab.list",
       "params": {
         "additionalProperties": true,

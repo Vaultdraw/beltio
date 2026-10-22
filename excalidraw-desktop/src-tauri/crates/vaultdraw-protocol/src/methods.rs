@@ -24,6 +24,7 @@ pub const FILE_OPEN: &str = "file.open";
 pub const FILE_CREATE: &str = "file.create";
 pub const FILE_MOVE: &str = "file.move";
 pub const FILE_TRASH: &str = "file.trash";
+pub const EXPORT_RENDER: &str = "export.render";
 pub const TAB_LIST: &str = "tab.list";
 pub const TAB_FOCUS: &str = "tab.focus";
 pub const TAB_CLOSE: &str = "tab.close";
@@ -194,6 +195,36 @@ fn c3_methods() -> Vec<MethodSpec> {
             true,
         ),
         spec(
+            EXPORT_RENDER,
+            "Render a drawing to PNG, SVG or PDF through the app window; bytes come back base64",
+            obj(
+                json!({
+                    "path": {"type": "string"},
+                    "file": {"type": "string"},
+                    "format": {"type": "string", "enum": ["png", "svg", "pdf"]},
+                    "scale": {"type": "number"},
+                    "dark": {"type": "boolean"},
+                    "background": {"type": "boolean"},
+                    "pattern": {"type": "boolean"},
+                    "embedScene": {"type": "boolean"},
+                    "pageShaped": {"type": "boolean"}
+                }),
+                &["format"],
+            ),
+            obj(
+                json!({
+                    "path": {"type": "string"},
+                    "fileName": {"type": "string"},
+                    "mime": {"type": "string", "enum": ["image/png", "image/svg+xml", "application/pdf"]},
+                    "size": {"type": "integer"},
+                    "bytes": {"type": "string"}
+                }),
+                &["path", "fileName", "mime", "size", "bytes"],
+            ),
+            CLI_ONLY,
+            true,
+        ),
+        spec(
             TAB_LIST,
             "Open tabs and the active tab id",
             none.clone(),
@@ -356,7 +387,7 @@ mod tests {
     fn c3_methods_are_catalogued() {
         let names = [
             VAULT_INFO, VAULT_OPEN, VAULT_LIST, VAULT_SEARCH, VAULT_LINKS, VAULT_TAGS, FILE_READ, FILE_WRITE, FILE_OPEN, FILE_CREATE, FILE_MOVE,
-            FILE_TRASH, TAB_LIST, TAB_FOCUS, TAB_CLOSE, CONFIG_GET, CONFIG_SET, APP_QUIT, EVENTS_SUBSCRIBE, EVENTS_UNSUBSCRIBE,
+            FILE_TRASH, EXPORT_RENDER, TAB_LIST, TAB_FOCUS, TAB_CLOSE, CONFIG_GET, CONFIG_SET, APP_QUIT, EVENTS_SUBSCRIBE, EVENTS_UNSUBSCRIBE,
         ];
         for n in names {
             assert!(find(n).is_some(), "{n} missing from catalogue");
