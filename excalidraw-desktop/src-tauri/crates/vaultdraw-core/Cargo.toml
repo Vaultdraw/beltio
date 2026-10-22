@@ -15,6 +15,8 @@ memchr = "2"
 unicode-normalization = "0.1"
 postcard = { version = "1", features = ["use-std"] }
 crc32fast = "1"
+toml = "1"
+toml_edit = "0.25"
 vaultdraw-protocol = { path = "../vaultdraw-protocol" }
 
 [dev-dependencies]

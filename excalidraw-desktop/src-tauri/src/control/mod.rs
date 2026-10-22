@@ -9,10 +9,9 @@
 //! - `events`: the event bus with its single topic mask (zero cost while nobody subscribes).
 
 // Pure vault/file methods and target resolution live in `vaultdraw-core`.
-pub(crate) use vaultdraw_core::ops::{target, vault_ops};
+pub(crate) use vaultdraw_core::ops::{config_ops, target, vault_ops};
 
 pub(crate) mod bridge;
-mod config_ops;
 mod dispatch;
 pub(crate) mod events;
 pub(crate) mod install;

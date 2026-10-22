@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 use vaultdraw_protocol::RpcError;
 
 /// `config.get {key?}`: the parsed config, or the value at a dotted key (`null` when unset).
-pub(crate) fn get(dirs: &Dirs, params: &Value) -> Result<Value, RpcError> {
+pub fn get(dirs: &Dirs, params: &Value) -> Result<Value, RpcError> {
     let key = match params.get("key") {
         None | Some(Value::Null) => None,
         Some(Value::String(k)) if !k.is_empty() => Some(k.as_str()),
@@ -25,7 +25,7 @@ pub(crate) fn get(dirs: &Dirs, params: &Value) -> Result<Value, RpcError> {
 }
 
 /// `config.set {changes: [{key, value}]}`: all-or-nothing, like `update_config`.
-pub(crate) fn set(dirs: &Dirs, params: &Value) -> Result<Value, RpcError> {
+pub fn set(dirs: &Dirs, params: &Value) -> Result<Value, RpcError> {
     let changes: Vec<ConfigChange> = params
         .get("changes")
         .cloned()
