@@ -60,7 +60,7 @@ Everything stays on your Mac. Back up, sync or version the vault folder with any
 
 ## Install
 
-1. Download the DMG from the [latest release](https://github.com/Vaultdraw/vaultdraw/releases/latest).
+1. **[Download Vaultdraw for macOS](https://github.com/Vaultdraw/vaultdraw/releases/download/v0.1.1/Vaultdraw_0.1.1_universal.dmg)** (DMG, 57 MB). Older and newer versions are on the [releases page](https://github.com/Vaultdraw/vaultdraw/releases).
 2. Open it and drag Vaultdraw to Applications.
 
 It runs on macOS, on Apple Silicon and on Intel.
