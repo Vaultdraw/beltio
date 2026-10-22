@@ -45,6 +45,9 @@ import { NunitoFontFaces } from "./Nunito";
 import { VirgilFontFaces } from "./Virgil";
 import { XiaolaiFontFaces } from "./Xiaolai";
 
+const fontFaceSignature = (fontFace: FontFace) =>
+  `${fontFace.family}-${fontFace.style}-${fontFace.weight}-${fontFace.unicodeRange}`;
+
 /** `"Comic Shanns"` / ` Comic Shanns` -> `comic shanns` */
 const normalizeFamily = (family: string) =>
   family
@@ -124,7 +127,7 @@ export class Fonts {
     const loadedFamilies = new Set<string>();
 
     for (const fontFace of fontFaces) {
-      const sig = `${fontFace.family}-${fontFace.style}-${fontFace.weight}-${fontFace.unicodeRange}`;
+      const sig = fontFaceSignature(fontFace);
 
       // make sure to update our cache with all the loaded font faces
       if (!Fonts.loadedFontsCache.has(sig)) {
@@ -192,6 +195,19 @@ export class Fonts {
   /**
    * Load font faces for passed elements - use when the scene is unavailable (i.e. export).
    */
+  /**
+   * Vaultdraw: records faces as processed without redrawing, for a host
+   * that loaded them for a scene it is about to render from scratch (scene
+   * swap preload). The browser's later `loadingdone` for the same faces
+   * (Chromium fires it after the swap landed) then no longer redraws the
+   * new scene a second time.
+   */
+  public static markFontFacesProcessed = (fontFaces: readonly FontFace[]) => {
+    for (const fontFace of fontFaces) {
+      Fonts.loadedFontsCache.add(fontFaceSignature(fontFace));
+    }
+  };
+
   public static loadElementsFonts = async (
     elements: readonly ExcalidrawElement[],
     ownerDocument: Document = document,

@@ -50,7 +50,11 @@ const preload = async (
   doc: Document,
 ) => {
   const images = api.addFiles(Object.values(scene.files));
-  const fonts = Fonts.loadElementsFonts(scene.elements, doc).catch(() => []);
+  const fonts = Fonts.loadElementsFonts(scene.elements, doc)
+    // the landing renders the new scene with these faces: a later
+    // `loadingdone` for them must not redraw it again
+    .then(Fonts.markFontFacesProcessed)
+    .catch(() => {});
   await Promise.all([images, fonts]);
 };
 

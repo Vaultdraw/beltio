@@ -40,6 +40,13 @@ describe("Fonts.onLoaded", () => {
     expect(triggerUpdate).toHaveBeenCalledTimes(1);
   });
 
+  it("faces a host marked as processed (scene swap preload) do not redraw when the browser reports them loaded", () => {
+    const { fonts, triggerUpdate } = setup();
+    Fonts.markFontFacesProcessed([face("Nunito")]);
+    fonts.onLoaded([face("Nunito")]);
+    expect(triggerUpdate).not.toHaveBeenCalled();
+  });
+
   it("bails on faces it has already processed", () => {
     const { fonts, triggerUpdate } = setup();
     fonts.onLoaded([face("Nunito")]);
