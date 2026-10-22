@@ -175,6 +175,11 @@ test.describe("formula", () => {
       },
       [appHandle, el.id] as const,
     );
+    // setState commits asynchronously: on a loaded machine Enter can arrive
+    // before the selection exists, so wait for it.
+    await expect
+      .poll(async () => (await scene(page)).selected)
+      .toEqual([el.id]);
     await page.keyboard.press("Enter");
     await expect(dialog(page)).toBeVisible();
     await expect(source(page)).toHaveValue("E=mc^2");
