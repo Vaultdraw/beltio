@@ -4,9 +4,9 @@ import { createFakeBackend } from "./fakeBackend";
 import { setPluginsBackend } from "./backend";
 import { rescanPlugins } from "./manage";
 
-const ensurePluginHost = vi.fn(async () => {});
+const ensurePluginHost = vi.fn(async (_win: Window) => {});
 vi.mock("../boot", () => ({
-  ensurePluginHost: (...a: unknown[]) => ensurePluginHost(...a),
+  ensurePluginHost: (win: Window) => ensurePluginHost(win),
 }));
 vi.mock("../hostFlag", () => ({
   pluginHostStarted: { get: () => false, subscribe: () => () => {} },

@@ -61,6 +61,7 @@ export async function runPluginsSmoke(ctx: PluginsSmokeContext): Promise<void> {
     "../plugins/host"
   );
   const { pluginErrorCount } = await import("../plugins/host/errors");
+  const { getPluginsState } = await import("../plugins/host/manage");
   const { openPanel } = await import("../slots/panelStore");
   await step("plugins-host", async () => {
     await waitFor(
@@ -79,6 +80,8 @@ export async function runPluginsSmoke(ctx: PluginsSmokeContext): Promise<void> {
     const details: Record<string, unknown> = {
       importMap,
       oneReact,
+      // Seeded crash counter / Option at launch: the packaged check of safe mode.
+      safeMode: getPluginsState().safeMode,
       pluginCount: stubCount,
       stubRegistrationMs: getStubRegistrationMs(),
       userAgent: win.navigator.userAgent.slice(0, 80),
