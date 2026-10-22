@@ -56,3 +56,47 @@ export const moveDestination = (from: string, to: string): string => {
     ? joinRel(dest, splitPath(from).name)
     : dest;
 };
+
+/** Optional boolean: absent = `fallback`, anything but a boolean is invalid. */
+export const boolParam = (
+  params: unknown,
+  name: string,
+  fallback: boolean,
+): boolean => {
+  const value = objectParams(params)[name];
+  if (value === undefined) {
+    return fallback;
+  }
+  if (typeof value !== "boolean") {
+    throw new ControlError("INVALID_PARAMS", `${name} must be a boolean`);
+  }
+  return value;
+};
+
+export const exportFormatParam = (params: unknown): "png" | "svg" | "pdf" => {
+  const value = objectParams(params).format;
+  if (value === "png" || value === "svg" || value === "pdf") {
+    return value;
+  }
+  throw new ControlError("INVALID_PARAMS", "format must be png, svg or pdf");
+};
+
+/** Export scale 1..3 (the dialog offers 1, 2, 3; halves are fine). Default 1. */
+export const exportScaleParam = (params: unknown): number => {
+  const value = objectParams(params).scale;
+  if (value === undefined) {
+    return 1;
+  }
+  if (
+    typeof value !== "number" ||
+    !Number.isFinite(value) ||
+    value < 1 ||
+    value > 3
+  ) {
+    throw new ControlError(
+      "INVALID_PARAMS",
+      "scale must be a number from 1 to 3",
+    );
+  }
+  return value;
+};

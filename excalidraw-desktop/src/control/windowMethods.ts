@@ -5,6 +5,9 @@
  */
 import { ControlError } from "./errors";
 import {
+  boolParam,
+  exportFormatParam,
+  exportScaleParam,
   moveDestination,
   objectParams,
   relPath,
@@ -21,6 +24,30 @@ export interface VaultSummary {
   path: string;
   readOnly: boolean;
 }
+
+export type ExportFormat = "png" | "svg" | "pdf";
+
+export interface ExportRenderOptions {
+  scale: number;
+  dark: boolean;
+  background: boolean;
+  pattern: boolean;
+  embedScene: boolean;
+  pageShaped: boolean;
+}
+
+/** Raw output cap: base64 adds a third and the JSON-RPC frame is 48 MiB. */
+export const MAX_EXPORT_BYTES = 32 * 1024 * 1024;
+
+/** Standard base64 of `bytes`, in chunks (no argument-count stack overflow). */
+export const bytesToBase64 = (bytes: Uint8Array): string => {
+  const CHUNK = 0x6000; // multiple of 3: chunks concatenate without padding
+  let out = "";
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    out += btoa(String.fromCharCode(...bytes.subarray(i, i + CHUNK)));
+  }
+  return out;
+};
 
 export interface ControlFiles {
   vault: () => VaultSummary | null;
@@ -49,6 +76,15 @@ export interface ControlFiles {
     rewriteLinks: boolean,
   ) => Promise<boolean>;
   trashEntry: (path: string) => Promise<void>;
+  /**
+   * Renders the drawing off-screen through the explorer export path (flushing
+   * the open drawing first). Rejects NOT_FOUND for a missing drawing.
+   */
+  exportDrawing: (
+    path: string,
+    format: ExportFormat,
+    options: ExportRenderOptions,
+  ) => Promise<{ bytes: Uint8Array; mime: string; fileName: string }>;
 }
 
 type Handler = (params: unknown) => unknown;
@@ -147,6 +183,53 @@ export function createWindowMethods(
       const path = relPath(stringParam(params, "path"), "path");
       await f.trashEntry(path);
       return { path, trashed: true };
+    },
+    "export.render": async (params) => {
+      needVault();
+      const path = relPath(stringParam(params, "path"), "path");
+      const format = exportFormatParam(params);
+      const options: ExportRenderOptions = {
+        scale: exportScaleParam(params),
+        dark: boolParam(params, "dark", false),
+        background: boolParam(params, "background", true),
+        pattern: boolParam(params, "pattern", true),
+        embedScene: boolParam(params, "embedScene", false),
+        pageShaped: boolParam(params, "pageShaped", false),
+      };
+      // PDF ignores dark and always paints the background (renderPdf).
+      let out;
+      try {
+        out = await f.exportDrawing(path, format, options);
+      } catch (e) {
+        if (e instanceof Error && /empty canvas/i.test(e.message)) {
+          throw new ControlError(
+            "INVALID_FILE",
+            "Cannot export an empty canvas",
+            {
+              path,
+            },
+          );
+        }
+        throw e;
+      }
+      const size = out.bytes.length;
+      if (size > MAX_EXPORT_BYTES) {
+        throw new ControlError(
+          "TOO_LARGE",
+          "The export is larger than 32 MiB",
+          {
+            path,
+            size,
+          },
+        );
+      }
+      return {
+        path,
+        fileName: out.fileName,
+        mime: out.mime,
+        size,
+        bytes: bytesToBase64(out.bytes),
+      };
     },
     "tab.list": tabList,
     "tab.focus": async (params) => {

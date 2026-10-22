@@ -9,6 +9,7 @@ import { onCommandRan } from "../commands/dispatcher";
 import { createControlBridge, type ControlDeps } from "./bridge";
 
 import { commandInfos, createSnapshotSender } from "./commandsSnapshot";
+import { createWindowMethods } from "./windowMethods";
 import { tabListResult } from "./tabList";
 import { createWindowEvents, type WindowEvents } from "./windowEvents";
 
@@ -96,6 +97,12 @@ export function useControlBridge(
 
   useEffect(() => {
     if (!win || !inTauri(win)) {
+      // Browser e2e harness only: it sets `__controlMethodsSink` to receive
+      // the window methods (no bridge, no Tauri).
+      const sink = (win as any)?.__controlMethodsSink;
+      if (typeof sink === "function") {
+        sink(createWindowMethods(() => live.current.files as ControlFiles));
+      }
       return;
     }
     let disposed = false;

@@ -7,6 +7,9 @@ import { createAppFiles, type AppFilesDeps } from "./appFiles";
 import { moveDestination, relPath, withExt } from "./params";
 import { waitForTabs } from "./tabActions";
 
+const renderExport = vi.hoisted(() => vi.fn());
+vi.mock("../export/renderExport", () => ({ renderExport }));
+
 const vault = { handle: "h", path: "/v", name: "V", readOnly: false };
 
 const make = (over: Partial<AppFilesDeps> = {}) => {
@@ -16,7 +19,10 @@ const make = (over: Partial<AppFilesDeps> = {}) => {
     repository: {
       readRevision: vi.fn().mockResolvedValue("r1"),
       listDirectory: vi.fn().mockResolvedValue([]),
+      readDrawing: vi.fn().mockResolvedValue({ json: "{}" }),
     },
+    win: {} as Window & typeof globalThis,
+    flushIfOpen: vi.fn().mockResolvedValue(undefined),
     active: null,
     tabStore,
     openVaultAt: vi.fn().mockResolvedValue(vault),
@@ -44,12 +50,46 @@ describe("createAppFiles", () => {
       repository: {
         readRevision: vi.fn().mockRejectedValue({ code: "NOT_FOUND" }),
         listDirectory: vi.fn().mockRejectedValue({ code: "IO_ERROR" }),
+        readDrawing: vi.fn(),
       },
     });
     expect(await files.drawingExists("a")).toBe(false);
     await expect(files.folderExists("f")).rejects.toMatchObject({
       code: "IO_ERROR",
     });
+  });
+
+  it("exportDrawing flushes, reads, renders inside busy; a missing drawing rejects NOT_FOUND", async () => {
+    const order: string[] = [];
+    const busy = vi.fn(async (run) => {
+      order.push("busy");
+      return run();
+    });
+    const { files, deps } = make({
+      busy,
+      flushIfOpen: vi.fn(async () => void order.push("flush")),
+    });
+    (deps.repository.readDrawing as any).mockImplementation(async () => {
+      order.push("read");
+      return { json: "J" };
+    });
+    renderExport.mockResolvedValue({ bytes: new Uint8Array(1) });
+    const opts = { scale: 1 } as any;
+    await files.exportDrawing("d/a.excalidraw", "png", opts);
+    expect(order).toEqual(["busy", "flush", "read"]);
+    expect(renderExport).toHaveBeenCalledWith(
+      "J",
+      "a.excalidraw",
+      "png",
+      opts,
+      deps.win,
+    );
+    (deps.repository.readDrawing as any).mockRejectedValue({
+      code: "NOT_FOUND",
+    });
+    await expect(
+      files.exportDrawing("x.excalidraw", "svg", opts),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
   it("busy wraps the mutating cores", async () => {

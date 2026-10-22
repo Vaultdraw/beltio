@@ -1638,16 +1638,19 @@ export const VaultApp = ({
     }
   };
 
+  /** Exports read disk: save pending edits when `path` is the open drawing. */
+  const flushExportedDoc = async (path: string) => {
+    if (activeDoc?.path === path) {
+      await flushDoc({ commitText: false });
+    }
+  };
+
   const handleExportDrawing = useExplorerExport({
     repository,
     vault,
     win: win as (Window & typeof globalThis) | null,
     dark: appTheme === "dark",
-    flushIfOpen: async (path) => {
-      if (activeDoc?.path === path) {
-        await flushDoc({ commitText: false });
-      }
-    },
+    flushIfOpen: flushExportedDoc,
     setAlert: setGlobalAlert,
   });
 
@@ -1987,6 +1990,8 @@ export const VaultApp = ({
       moveEntry: (from, to, rewriteLinks) =>
         moveEntryCore(from, to, getParentPath(to), { rewriteLinks }),
       trashEntry: trashEntryCore,
+      win: win as (Window & typeof globalThis) | null,
+      flushIfOpen: flushExportedDoc,
       busy: async (run) => {
         setIsBusy(true);
         try {

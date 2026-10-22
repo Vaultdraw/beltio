@@ -40,6 +40,11 @@ const makeFiles = (over: Partial<ControlFiles> = {}): ControlFiles => {
     createDrawing: vi.fn().mockResolvedValue(undefined),
     moveEntry: vi.fn().mockResolvedValue(true),
     trashEntry: vi.fn().mockResolvedValue(undefined),
+    exportDrawing: vi.fn().mockResolvedValue({
+      bytes: new Uint8Array([1, 2, 3, 250, 255]),
+      mime: "image/png",
+      fileName: "a.png",
+    }),
     ...over,
   };
 };
@@ -264,6 +269,156 @@ describe("window methods (C3)", () => {
     });
     expect(await call("tab.close", { id: "t2" })).toMatchObject({
       error: { code: "UNAVAILABLE", data: { id: "t2" } },
+    });
+  });
+
+  describe("export.render", () => {
+    const defaults = {
+      scale: 1,
+      dark: false,
+      background: true,
+      pattern: true,
+      embedScene: false,
+      pageShaped: false,
+    };
+
+    it("passes the CLI defaults and returns base64 bytes", async () => {
+      const { call, files } = make();
+      const r = await call("export.render", {
+        path: "a.excalidraw",
+        format: "png",
+      });
+      expect(files.exportDrawing).toHaveBeenCalledWith(
+        "a.excalidraw",
+        "png",
+        defaults,
+      );
+      expect(r).toEqual({
+        path: "a.excalidraw",
+        fileName: "a.png",
+        mime: "image/png",
+        size: 5,
+        bytes: btoa(String.fromCharCode(1, 2, 3, 250, 255)),
+      });
+    });
+
+    it("passes explicit options through", async () => {
+      const { call, files } = make();
+      await call("export.render", {
+        path: "d/a.excalidraw",
+        format: "svg",
+        scale: 2.5,
+        dark: true,
+        background: false,
+        pattern: false,
+        embedScene: true,
+        pageShaped: true,
+      });
+      expect(files.exportDrawing).toHaveBeenCalledWith(
+        "d/a.excalidraw",
+        "svg",
+        {
+          scale: 2.5,
+          dark: true,
+          background: false,
+          pattern: false,
+          embedScene: true,
+          pageShaped: true,
+        },
+      );
+    });
+
+    it("pdf is passed with the options as given (the renderer forces the background)", async () => {
+      const { call, files } = make();
+      await call("export.render", {
+        path: "a.excalidraw",
+        format: "pdf",
+        dark: true,
+        background: false,
+      });
+      expect(files.exportDrawing).toHaveBeenCalledWith(
+        "a.excalidraw",
+        "pdf",
+        expect.objectContaining({ dark: true, background: false }),
+      );
+    });
+
+    it("validates params", async () => {
+      const { call, files } = make();
+      for (const bad of [
+        { path: "a", format: "gif" },
+        { path: "a" },
+        { path: "../a", format: "png" },
+        { path: "a", format: "png", scale: 0.5 },
+        { path: "a", format: "png", scale: 4 },
+        { path: "a", format: "png", scale: "2" },
+        { path: "a", format: "png", dark: "yes" },
+        { path: "a", format: "png", embedScene: 1 },
+      ]) {
+        expect((await call("export.render", bad)).error.code).toBe(
+          "INVALID_PARAMS",
+        );
+      }
+      expect(files.exportDrawing).not.toHaveBeenCalled();
+    });
+
+    it("round-trips multi-MB bytes", async () => {
+      const big = new Uint8Array(5 * 1024 * 1024 + 1);
+      for (let i = 0; i < big.length; i += 1) {
+        big[i] = (i * 31) & 255;
+      }
+      const { call } = make({
+        exportDrawing: vi.fn().mockResolvedValue({
+          bytes: big,
+          mime: "image/png",
+          fileName: "b.png",
+        }),
+      });
+      const r = await call("export.render", { path: "a", format: "png" });
+      const back = Uint8Array.from(atob(r.bytes), (c) => c.charCodeAt(0));
+      expect(r.size).toBe(big.length);
+      expect(back).toEqual(big);
+    });
+
+    it("TOO_LARGE above 32 MiB", async () => {
+      const { call } = make({
+        exportDrawing: vi.fn().mockResolvedValue({
+          bytes: new Uint8Array(32 * 1024 * 1024 + 1),
+          mime: "image/png",
+          fileName: "b.png",
+        }),
+      });
+      expect(
+        (await call("export.render", { path: "a", format: "png" })).error.code,
+      ).toBe("TOO_LARGE");
+    });
+
+    it("maps an empty canvas to INVALID_FILE and NOT_FOUND passes through", async () => {
+      const empty = make({
+        exportDrawing: () =>
+          Promise.reject(new Error("Cannot export an empty canvas.")),
+      });
+      expect(
+        (await empty.call("export.render", { path: "a", format: "png" })).error,
+      ).toMatchObject({
+        code: "INVALID_FILE",
+        message: "Cannot export an empty canvas",
+      });
+      const missing = make({
+        exportDrawing: () =>
+          Promise.reject({ code: "NOT_FOUND", message: "gone" }),
+      });
+      expect(
+        (await missing.call("export.render", { path: "a", format: "png" }))
+          .error.code,
+      ).toBe("NOT_FOUND");
+    });
+
+    it("needs a vault", async () => {
+      const { call } = make({ vault: () => null });
+      expect(
+        (await call("export.render", { path: "a", format: "png" })).error.code,
+      ).toBe("NO_VAULT");
     });
   });
 });

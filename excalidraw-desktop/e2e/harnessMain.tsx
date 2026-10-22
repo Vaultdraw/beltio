@@ -610,6 +610,10 @@ repository.writeDrawing = async (input) => {
 
 (ownerWindow as any).__vaultRepo = repository;
 (ownerWindow as any).__vaultToasts = toastStore;
+// Control-API specs: receives the window methods (see useControlBridge).
+(ownerWindow as any).__controlMethodsSink = (methods: unknown) => {
+  (ownerWindow as any).__controlMethods = methods;
+};
 // Tabs specs: the live editors' APIs (there is exactly one while a drawing is open).
 (ownerWindow as any).__editorApis = allEditorApis;
 (ownerWindow as any).__updatePreferences = updatePreferences;
