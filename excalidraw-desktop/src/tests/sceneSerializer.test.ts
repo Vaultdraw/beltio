@@ -98,6 +98,26 @@ describe("serializeSceneForSave is byte-identical to serializeAsJSON", () => {
     });
   });
 
+  it("an element edited in place to non-ASCII text (version bump) is escaped", () => {
+    const text = el({ id: "t", type: "text", text: "plain" });
+    same([text], {});
+    const mutable = text as unknown as Record<string, unknown>;
+    mutable.text = "now \u2014 with a dash";
+    mutable.version = 2;
+    mutable.versionNonce = 7;
+    expect(same([text], {})).toContain("\\u2014");
+  });
+
+  it("non-ASCII in the app state is escaped", () => {
+    const out = serializeSceneForSave(
+      [el({ id: "a" })],
+      { name: "Caf\u00e9 \u2014 plan" } as never,
+      {},
+    );
+    // eslint-disable-next-line no-control-regex
+    expect(/^[\x00-\x7f]*$/.test(out)).toBe(true);
+  });
+
   it("element text that looks like the files block or ends like the shell", () => {
     const text = 'x",\n  "files": {}\n}';
     same([el({ id: "t", type: "text", text }), image("i1", "f1")], {

@@ -17,6 +17,9 @@ const NON_ASCII_UNITS = /[\u0080-\uffff]/g;
 const escapeUnit = (unit: string) =>
   `\\u${unit.charCodeAt(0).toString(16).padStart(4, "0")}`;
 
+/** True when `text` has a char outside ASCII. */
+export const hasNonAscii = (text: string): boolean => NON_ASCII.test(text);
+
 export const toAsciiJson = (text: string): string => {
   if (!NON_ASCII.test(text)) {
     return text;
