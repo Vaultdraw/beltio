@@ -32,7 +32,8 @@ import {
   previewSrc,
   scene,
   source,
-  staticCanvasIsDark,
+  canvasCorner,
+  repaintedDarker,
 } from "./formulaHelpers";
 
 // LaTeX formulas: insert, edit, undo, persistence, dark theme, perf.
@@ -400,12 +401,14 @@ test.describe("formula", () => {
       })
       .toBe(true);
 
+    const lightCorner = await canvasCorner(page);
+    expect(lightCorner[3]).toBe(255);
     await runCommand(page, "Mode: Dark");
     await expect(page.locator(".excalidraw.theme--dark").first()).toBeVisible();
-    // Wait until the static canvas has repainted in dark (background and the image are drawn in
-    // the same pass), not a fixed 600 ms. Only the wait polls: the hue check below runs once on
-    // that dark frame, so a cyan flip still fails.
-    await expect.poll(() => staticCanvasIsDark(page)).toBe(true);
+    // Wait for the dark repaint (background and image are drawn in the same pass) and for the
+    // image's ink, instead of a fixed 600 ms. Both waits poll; the hue check below runs once
+    // on that dark frame, so a cyan flip still fails.
+    await expect.poll(() => repaintedDarker(page, lightCorner)).toBe(true);
     let ink: number[][] = [];
     await expect
       .poll(async () => (ink = await inkPixels(page, el, 120)).length)

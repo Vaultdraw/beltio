@@ -129,15 +129,26 @@ export const dblclickElement = async (page: Page, e: Img) => {
   await page.mouse.dblclick(p.x, p.y);
 };
 
-/** True once the static canvas has painted a dark background (a corner pixel, luminance < 50%). */
-export const staticCanvasIsDark = (page: Page) =>
+/** RGBA of a static-canvas corner pixel (the painted background). */
+export const canvasCorner = (page: Page) =>
   page.evaluate(() => {
     const c = document.querySelector<HTMLCanvasElement>(
       ".vault-editor canvas.static",
     )!;
-    const [r, g, b] = c.getContext("2d")!.getImageData(2, 2, 1, 1).data;
-    return 0.299 * r + 0.587 * g + 0.114 * b < 128;
+    return Array.from(c.getContext("2d")!.getImageData(2, 2, 1, 1).data);
   });
+
+const luma = ([r, g, b]: number[]) => 0.299 * r + 0.587 * g + 0.114 * b;
+
+/**
+ * True once the background is painted opaque and darker than `before` (the
+ * corner read before switching to dark): an unpainted, transparent canvas
+ * (0,0,0,0) does not count.
+ */
+export const repaintedDarker = async (page: Page, before: number[]) => {
+  const now = await canvasCorner(page);
+  return now[3] === 255 && luma(now) < 128 && luma(now) < luma(before);
+};
 
 /** Non-background pixels (by sum distance from the corner pixel) in the element's box on the static canvas. */
 export const inkPixels = async (page: Page, el: Img, minDiff = 90) => {
