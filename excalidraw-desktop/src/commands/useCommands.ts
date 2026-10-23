@@ -21,10 +21,16 @@ import {
   whenHolds,
   type AppContext,
 } from "./context";
-import { installCommandDispatcher, runHandler } from "./dispatcher";
+import {
+  cancelPendingSequence,
+  installCommandDispatcher,
+  runHandler,
+} from "./dispatcher";
 import { getRegisteredHandler } from "./handlerRegistry";
 import { detectPlatform } from "./keys";
 import { buildKeymap } from "./keymap";
+import { DEFAULT_KEY_OPTIONS } from "./keySequence";
+import { buildKeyTrie } from "./keyTrie";
 import { commandsVersion, subscribeCommands } from "./registry";
 
 import type {
@@ -121,14 +127,20 @@ export function useCommandDispatcher(
     subscribeCommands,
     commandsVersion,
   );
-  const keymap = useMemo(
-    () => buildKeymap(allCommands(overrides), overrides, platform),
+  const { keymap, seqRoot } = useMemo(() => {
+    const commands = allCommands(overrides);
+    return {
+      keymap: buildKeymap(commands, overrides, platform),
+      // null unless a `[hotkeys]` value (or default) is a sequence.
+      seqRoot: buildKeyTrie(commands, overrides, DEFAULT_KEY_OPTIONS, platform),
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [overrides, platform, registryVersion],
-  );
+  }, [overrides, platform, registryVersion]);
+  // A half-typed sequence refers to the old trie: drop it on every rebuild.
+  useEffect(() => cancelPendingSequence(), [keymap, seqRoot]);
 
-  const live = useRef({ handlers, app, keymap });
-  live.current = { handlers, app, keymap };
+  const live = useRef({ handlers, app, keymap, seqRoot });
+  live.current = { handlers, app, keymap, seqRoot };
   const handlerFor = useCallback(
     (id: string) => live.current.handlers[id] ?? getRegisteredHandler(id),
     [],
@@ -157,6 +169,7 @@ export function useCommandDispatcher(
     return installCommandDispatcher(win, {
       platform,
       getKeymap: () => live.current.keymap,
+      getSeqRoot: () => live.current.seqRoot,
       getContext: context,
       getHandler: handlerFor,
     });

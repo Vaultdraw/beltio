@@ -1,6 +1,6 @@
 /** Effective keys per command (defaults + `[hotkeys]` overrides) and lookup. */
 import { defaultKeys } from "./commands";
-import { normalizeChord } from "./keys";
+import { isSequenceKey, normalizeKeys } from "./keySequence";
 
 import type {
   Chord,
@@ -9,9 +9,8 @@ import type {
   Platform,
 } from "./types";
 
-const normalizeAll = (keys: readonly Chord[], platform: Platform): Chord[] => [
-  ...new Set(keys.map((chord) => normalizeChord(chord, platform))),
-];
+/** Normalised keys; sequences stay intact (each chord normalised). */
+const normalizeAll = normalizeKeys;
 
 const own = (overrides: HotkeyOverrides, id: string) =>
   Object.prototype.hasOwnProperty.call(overrides, id)
@@ -78,7 +77,7 @@ export function isCustomised(
   );
 }
 
-/** Normalised chord -> commands bound to it, in registry order. */
+/** Normalised chord -> commands bound to it, in registry order (single chords only). */
 export function buildKeymap(
   commands: readonly CommandDefinition[],
   overrides: HotkeyOverrides,
@@ -87,6 +86,9 @@ export function buildKeymap(
   const map = new Map<Chord, CommandDefinition[]>();
   for (const command of commands) {
     for (const chord of effectiveKeys(command, overrides, platform)) {
+      if (isSequenceKey(chord)) {
+        continue; // sequences live in the trie (keyTrie.ts)
+      }
       const list = map.get(chord);
       if (list) {
         list.push(command);

@@ -239,7 +239,7 @@ const LATIN = /^[a-z]$/i;
 const isModifierCode = (code: string) =>
   /^(Shift|Control|Alt|Meta|OS)(Left|Right)$/.test(code);
 
-type KeyEventLike = Pick<
+export type KeyEventLike = Pick<
   KeyboardEvent,
   "code" | "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey"
 >;
@@ -252,7 +252,7 @@ type KeyEventLike = Pick<
  * `code`: the key is derived from `e.key`, and when both meta and ctrl are set
  * there it counts as plain Mod (the scripts set both to work on every OS).
  */
-export function chordFromEvent(
+export function chordFromEventUncached(
   e: KeyEventLike,
   platform: Platform,
 ): Chord | null {
@@ -295,6 +295,78 @@ export function chordFromEvent(
     mods.add("Shift");
   }
   return join(mods, key);
+}
+
+const MEMO_CAP = 2048;
+interface ChordMemo {
+  /** Plain/Shift letters, by `e.key`. */
+  letter: Map<string, Chord | null>;
+  /** Everything else with a `code`, by `code`. */
+  code: Map<string, Chord | null>;
+  /** Synthetic events without a `code`, by `e.key`. */
+  noCode: Map<string, Chord | null>;
+}
+const newMemo = (): ChordMemo => ({
+  letter: new Map(),
+  code: new Map(),
+  noCode: new Map(),
+});
+/** Per platform, one memo per 4-bit modifier mask (meta, ctrl, alt, shift). */
+const MEMOS: Record<Platform, (ChordMemo | undefined)[]> = {
+  mac: [],
+  win: [],
+  linux: [],
+};
+
+const isAsciiLetter = (key: unknown): boolean => {
+  if (typeof key !== "string" || key.length !== 1) {
+    return false;
+  }
+  const c = key.charCodeAt(0) | 32;
+  return c >= 97 && c <= 122;
+};
+
+/**
+ * `chordFromEventUncached` behind a memo: the result depends only on the
+ * modifier mask plus `key` (plain letters), `code` (other keys) or `key` (no
+ * `code`), so a keystroke costs a few property reads and one Map.get, with no
+ * allocation. Maps are bounded (cleared at MEMO_CAP entries).
+ */
+export function chordFromEvent(
+  e: KeyEventLike,
+  platform: Platform,
+): Chord | null {
+  const mask =
+    (e.metaKey ? 1 : 0) |
+    (e.ctrlKey ? 2 : 0) |
+    (e.altKey ? 4 : 0) |
+    (e.shiftKey ? 8 : 0);
+  const memos = MEMOS[platform];
+  const memo = memos[mask] ?? (memos[mask] = newMemo());
+  const code = e.code;
+  let map: Map<string, Chord | null>;
+  let k: string;
+  if (code) {
+    if ((mask & 7) === 0 && isAsciiLetter(e.key)) {
+      map = memo.letter;
+      k = e.key;
+    } else {
+      map = memo.code;
+      k = code;
+    }
+  } else {
+    map = memo.noCode;
+    k = e.key;
+  }
+  let chord = map.get(k);
+  if (chord === undefined) {
+    chord = chordFromEventUncached(e, platform);
+    if (map.size >= MEMO_CAP) {
+      map.clear();
+    }
+    map.set(k, chord);
+  }
+  return chord;
 }
 
 const KEY_LABELS: Record<string, string> = {

@@ -34,6 +34,7 @@ import {
 import { TABS_MAPPINGS, type TabsField } from "../tabs/tabsSettings";
 import { MEMORY_MAPPINGS, type MemoryField } from "../memory/memorySettings";
 import { parseChord } from "../commands/keys";
+import { LEADER_TOKEN, parseSequence } from "../commands/keySequence";
 import { PDF_IMPORT_LIMITS } from "../pdfImport/types";
 import { inRange, LASER_LIMITS } from "../pens/laserSettings";
 import {
@@ -755,7 +756,8 @@ const hotkeyProblem = (key: string, message: string): SettingsProblem => ({
 
 /**
  * The dynamic `[hotkeys]` table (one entry per command id, so it is not a
- * CONFIG_MAPPING row). Valid chords are kept in canonical form; an entry that
+ * CONFIG_MAPPING row). Valid chords and key sequences ("g g", with
+ * `<leader>` kept literal) are kept in canonical form; an entry that
  * is not a list, or whose chords are all invalid, is left out so the command
  * keeps its defaults; unknown ids are kept (a newer config is never lost).
  */
@@ -789,7 +791,8 @@ export function parseHotkeysTable(table: unknown): {
     }
     const chords: string[] = [];
     for (const text of value as string[]) {
-      const chord = parseChord(text);
+      const parsed = parseSequence(text, null, LEADER_TOKEN);
+      const chord = parsed && parsed.join(" ");
       if (!chord) {
         problems.push(
           hotkeyProblem(key, `${key}: "${text}" is not a valid key; ignored`),
