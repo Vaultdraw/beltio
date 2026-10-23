@@ -12,6 +12,7 @@ import { HISTORY_FIELDS } from "../history/historySettings";
 import { TABS_VAULT_FIELDS } from "../tabs/tabsSettings";
 import { TOOL_FIELDS } from "../toolDefaults/toolStyles";
 
+import { buildKnownIndex, type KnownIndex } from "./configKeys";
 import { isTauriAvailable } from "./DesktopVaultRepository";
 import {
   parsePluginTable,
@@ -25,6 +26,8 @@ import {
   CONFIG_MAPPING,
   readDotted,
   show,
+  TOOL_NESTED_KEYS,
+  unknownKeyProblemsIn,
   type InvokeFn,
   type ListenFn,
   type SettingsProblem,
@@ -66,6 +69,20 @@ const mappingOf = (field: VaultField) => {
   return mapping;
 };
 
+/**
+ * settings.toml tables never checked: `[plugin.<id>]` (plugin ids) and
+ * `[graph]` (validated by the lazily loaded graph view's own store).
+ */
+const VAULT_OPEN_TABLES: ReadonlySet<string> = new Set(["plugin", "graph"]);
+
+let vaultKnownKeys: KnownIndex | null = null;
+const vaultKnown = () =>
+  (vaultKnownKeys ??= buildKnownIndex(
+    PER_VAULT_FIELDS.map((field) => mappingOf(field).key),
+    TOOL_NESTED_KEYS,
+    VAULT_OPEN_TABLES,
+  ));
+
 // ---------------------------------------------------------------------------
 // Pure functions
 // ---------------------------------------------------------------------------
@@ -87,11 +104,15 @@ export function parseVaultSettings(json: unknown): {
   );
   problems.push(...plugins.problems);
   for (const field of PER_VAULT_FIELDS) {
-    const { key, valid, expected } = mappingOf(field);
-    const { present, value } = readDotted(json as Record<string, unknown>, key);
+    const { key, valid, expected, normalize } = mappingOf(field);
+    const { present, value: raw } = readDotted(
+      json as Record<string, unknown>,
+      key,
+    );
     if (!present) {
       continue;
     }
+    const value = normalize ? normalize(raw) : raw;
     if (valid(value)) {
       overrides[field] = value;
     } else {
@@ -104,6 +125,13 @@ export function parseVaultSettings(json: unknown): {
       });
     }
   }
+  problems.push(
+    ...unknownKeyProblemsIn(
+      json as Record<string, unknown>,
+      vaultKnown(),
+      "settings.toml",
+    ),
+  );
   return {
     overrides: overrides as VaultOverrides,
     pluginOverrides: plugins.settings,

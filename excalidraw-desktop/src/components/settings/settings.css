@@ -718,13 +718,24 @@
   color: var(--vault-danger);
 }
 
-/* Every current config.toml problem (bad values, unknown keys). */
+.vault-config-status--warning {
+  color: var(--vault-warning);
+}
+
+/* Every current config.toml problem: errors (bad values) and warnings (unknown keys). */
 .vault-config-problems {
   margin: 6px 0 0;
   padding-left: 1.2em;
   font-size: var(--vd-fs-small);
-  color: var(--vault-danger);
   user-select: text;
+}
+
+.vault-config-problem--error {
+  color: var(--vault-danger);
+}
+
+.vault-config-problem--warning {
+  color: var(--vault-warning);
 }
 
 /* Path text beside a Reveal button (Files). */

@@ -59,7 +59,7 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
     intro: "Defaults for new elements.",
     keys: {
       font_family: {
-        doc: "5 Excalifont, 6 Nunito, 8 Comic Shanns, 1 Virgil, 2 Helvetica, 3 Cascadia.",
+        doc: "Font of new text: 1 Virgil, 2 Helvetica, 3 Cascadia, 5 Excalifont, 6 Nunito, 7 Lilita One, 8 Comic Shanns, 9 Liberation Sans, 10 Assistant.",
       },
       font_size: { doc: "Font size of new text." },
       stroke_color: { doc: "Stroke colour of new elements." },

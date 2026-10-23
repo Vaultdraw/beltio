@@ -1,16 +1,16 @@
 /**
- * Unknown-key check for config.toml: a key no mapping reads is reported (never
+ * Unknown-key check for config.toml and a vault's settings.toml: a key no mapping reads is reported (never
  * fatal), with a "did you mean" suggestion, like Alacritty's "Unused config
  * key" and Cargo's "unused manifest key". The known-key index is built lazily
  * from the mapping table on first use; the check is one pass over the parsed
  * tables. Suggestions are computed only for unknown keys.
  */
 
-/** Tables whose keys are open (command ids, plugin ids): never checked. */
+/** config.toml tables whose keys are open (command ids, plugin ids): never checked. */
 export const OPEN_TABLES: ReadonlySet<string> = new Set(["hotkeys", "plugin"]);
 
 export interface UnknownKey {
-  /** Dotted key as written: `table.key`, `table` or a root key. */
+  /** Dotted key as written: `table.key`, `table.sub.key`, `table` or a root key. */
   key: string;
   /** Closest known key, if one is close enough. */
   suggestion: string | null;
@@ -18,45 +18,76 @@ export interface UnknownKey {
   notTable?: boolean;
 }
 
-type KnownIndex = ReadonlyMap<string, ReadonlySet<string>>;
+export interface KnownIndex {
+  /** table -> keys. */
+  tables: ReadonlyMap<string, ReadonlySet<string>>;
+  /** `table.key` sub-tables whose own keys are checked too (`tools.arrow`). */
+  nested: ReadonlyMap<string, ReadonlySet<string>>;
+  /** Tables never checked. */
+  open: ReadonlySet<string>;
+}
 
-/** table -> keys, from dotted mapping keys (`tools.arrow` -> tools: {arrow}). */
-export const buildKnownIndex = (keys: readonly string[]): KnownIndex => {
-  const index = new Map<string, Set<string>>();
+/**
+ * Index from dotted mapping keys (`tools.arrow` -> tools: {arrow}); `nested`
+ * lists the keys allowed inside sub-tables (`tools.arrow` -> stroke_color, …).
+ */
+export const buildKnownIndex = (
+  keys: readonly string[],
+  nested: Readonly<Record<string, readonly string[]>> = {},
+  open: ReadonlySet<string> = OPEN_TABLES,
+): KnownIndex => {
+  const tables = new Map<string, Set<string>>();
   for (const dotted of keys) {
     const dot = dotted.indexOf(".");
     const table = dotted.slice(0, dot);
-    const name = dotted.slice(dot + 1);
-    let set = index.get(table);
+    let set = tables.get(table);
     if (!set) {
       set = new Set();
-      index.set(table, set);
+      tables.set(table, set);
     }
-    set.add(name);
+    set.add(dotted.slice(dot + 1));
   }
-  return index;
+  return {
+    tables,
+    nested: new Map(
+      Object.entries(nested).map(([key, names]) => [key, new Set(names)]),
+    ),
+    open,
+  };
 };
 
-/** Levenshtein distance, capped: returns max + 1 once it is exceeded. */
+/**
+ * Edit distance counting a swap of two neighbours as one edit (optimal string
+ * alignment), so `srot` is one edit from `sort`. Capped: returns max + 1 once
+ * it is exceeded.
+ */
 export const editDistance = (a: string, b: string, max: number): number => {
   if (Math.abs(a.length - b.length) > max) {
     return max + 1;
   }
+  let before: number[] = [];
   let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  let prevBest = 0;
   for (let i = 1; i <= a.length; i++) {
     const row = [i];
     let best = i;
     for (let j = 1; j <= b.length; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
       row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        row[j] = Math.min(row[j], before[j - 2] + 1);
+      }
       best = Math.min(best, row[j]);
     }
-    if (best > max) {
+    // A swap reaches back two rows, so stop only when both rows are over.
+    if (best > max && prevBest > max) {
       return max + 1;
     }
+    before = prev;
     prev = row;
+    prevBest = best;
   }
-  return prev[b.length];
+  return Math.min(prev[b.length], max + 1);
 };
 
 /** Closest candidate within a third of the word's length (at least 1, at most 3). */
@@ -84,12 +115,12 @@ export const findUnknownKeys = (
 ): UnknownKey[] => {
   const unknown: UnknownKey[] = [];
   for (const [table, value] of Object.entries(config)) {
-    if (OPEN_TABLES.has(table)) {
+    if (known.open.has(table)) {
       continue;
     }
-    const keys = known.get(table);
+    const keys = known.tables.get(table);
     if (!keys) {
-      const guess = closest(table, [...known.keys(), ...OPEN_TABLES]);
+      const guess = closest(table, [...known.tables.keys(), ...known.open]);
       unknown.push({ key: table, suggestion: guess });
       continue;
     }
@@ -97,27 +128,39 @@ export const findUnknownKeys = (
       unknown.push({ key: table, suggestion: null, notTable: true });
       continue;
     }
-    for (const name of Object.keys(value)) {
+    for (const [name, inner] of Object.entries(value)) {
       if (!keys.has(name)) {
         const guess = closest(name, keys);
         unknown.push({
           key: `${table}.${name}`,
           suggestion: guess ? `${table}.${guess}` : null,
         });
+        continue;
+      }
+      const allowed = known.nested.get(`${table}.${name}`);
+      if (allowed && isTable(inner)) {
+        for (const sub of Object.keys(inner)) {
+          if (!allowed.has(sub)) {
+            const guess = closest(sub, allowed);
+            unknown.push({
+              key: `${table}.${name}.${sub}`,
+              suggestion: guess ? `${table}.${name}.${guess}` : null,
+            });
+          }
+        }
       }
     }
   }
   return unknown;
 };
 
-/** The banner / log line for one unknown key. */
-export const unknownKeyMessage = ({
-  key,
-  suggestion,
-  notTable,
-}: UnknownKey): string =>
+/** The banner / log line for one unknown key in `file`. */
+export const unknownKeyMessage = (
+  { key, suggestion, notTable }: UnknownKey,
+  file = "config.toml",
+): string =>
   notTable
-    ? `config.toml: ${key} must be a table like [${key}] (ignored)`
-    : `config.toml: unknown key ${key} (ignored${
+    ? `${file}: ${key} must be a table like [${key}] (ignored)`
+    : `${file}: unknown key ${key} (ignored${
         suggestion ? `; did you mean ${suggestion}?` : ""
       })`;

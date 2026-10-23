@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import {
   getSettingsStatus,
+  isWarning,
   openConfigDir,
   reloadSettings,
 } from "../../../vault/settingsSync";
@@ -16,7 +17,7 @@ const ConfigFileSetting = () => {
   const { settingsStatus, setSettingsStatus } = useSettings();
   const [action, setAction] = useState<{
     message: string;
-    type: "info" | "error";
+    type: "info" | "warning" | "error";
   } | null>(null);
 
   const handleOpen = async () => {
@@ -37,13 +38,25 @@ const ConfigFileSetting = () => {
       const changed = await reloadSettings();
       const status = getSettingsStatus();
       setSettingsStatus(status);
+      const errors = status.problems.filter((p) => !isWarning(p)).length;
+      const warnings = status.problems.length - errors;
+      const count = (n: number, what: string) =>
+        `${n} ${what}${n === 1 ? "" : "s"}`;
       setAction(
-        status.problems.length
+        errors
           ? {
-              message: `Reloaded with ${status.problems.length} ${
-                status.problems.length === 1 ? "problem" : "problems"
+              message: `Reloaded with ${count(errors, "error")}${
+                warnings ? ` and ${count(warnings, "warning")}` : ""
               } (listed above).`,
               type: "error",
+            }
+          : warnings
+          ? {
+              message: `Reloaded config.toml with ${count(
+                warnings,
+                "warning",
+              )} (listed above).`,
+              type: "warning",
             }
           : {
               message: changed
@@ -86,7 +99,16 @@ const ConfigFileSetting = () => {
               aria-label="Problems in config.toml"
             >
               {settingsStatus.problems.map((problem) => (
-                <li key={problem.message}>{problem.message}</li>
+                <li
+                  key={problem.message}
+                  className={
+                    isWarning(problem)
+                      ? "vault-config-problem--warning"
+                      : "vault-config-problem--error"
+                  }
+                >
+                  {problem.message}
+                </li>
               ))}
             </ul>
           )}

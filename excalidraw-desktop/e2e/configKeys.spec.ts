@@ -2,9 +2,10 @@ import { expect, test } from "@playwright/test";
 
 import { openVault, trackErrors } from "./helpers";
 
-// A typo in config.toml is reported (banner + Settings), never fatal: the
-// rest of the file still applies, and fixing it clears the notice.
-test("an unknown config.toml key shows in the banner and in Settings, and Reload clears it", async ({
+// A typo in config.toml is a warning (a toast, listed in Settings), never
+// fatal and never the persistent error banner: the rest of the file still
+// applies, and fixing it clears the notice.
+test("an unknown config.toml key is a warning in a toast and in Settings, and Reload clears it", async ({
   page,
 }) => {
   const errors = trackErrors(page);
@@ -16,10 +17,10 @@ test("an unknown config.toml key shows in the banner and in Settings, and Reload
   });
   await openVault(page, "?config=1");
 
-  const banner = page.getByTestId("settings-problem-banner");
-  await expect(banner).toContainText(
-    "config.toml: unknown key interface.zom (ignored; did you mean interface.zoom?)",
-  );
+  const message =
+    "config.toml: unknown key interface.zom (ignored; did you mean interface.zoom?)";
+  await expect(page.locator(".vd-toast")).toContainText(message);
+  await expect(page.getByTestId("settings-problem-banner")).toHaveCount(0);
 
   await page
     .getByLabel("Vault File Navigator")
@@ -30,17 +31,24 @@ test("an unknown config.toml key shows in the banner and in Settings, and Reload
   const problems = dialog.getByRole("list", {
     name: "Problems in config.toml",
   });
-  await expect(problems.getByRole("listitem")).toHaveText([
-    "config.toml: unknown key interface.zom (ignored; did you mean interface.zoom?)",
-  ]);
+  await expect(problems.getByRole("listitem")).toHaveText([message]);
+  await expect(problems.getByRole("listitem")).toHaveClass(
+    "vault-config-problem--warning",
+  );
+
+  // Reload with the typo still there succeeds, with a warning.
+  const reload = dialog.getByRole("button", { name: "Reload" });
+  await reload.click();
+  await expect(dialog.getByRole("status")).toHaveText(
+    "Reloaded config.toml with 1 warning (listed above).",
+  );
 
   // The user fixes the typo in the file, then presses Reload.
   await page.evaluate(() => {
     (window as any).__e2eConfig = { interface: { zoom: 120 } };
   });
-  await dialog.getByRole("button", { name: "Reload" }).click();
+  await reload.click();
   await expect(problems).toHaveCount(0);
   await expect(dialog.getByRole("status")).toHaveText("Reloaded config.toml.");
-  await expect(banner).toHaveCount(0);
   expect(errors).toEqual([]);
 });

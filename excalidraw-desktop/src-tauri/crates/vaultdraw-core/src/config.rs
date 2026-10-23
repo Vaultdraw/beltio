@@ -1451,6 +1451,14 @@ mod tests {
             other => panic!("unexpected default {other}"),
         }
     }
+    /// The text of `[table]`: from its header to the next top-level table header.
+    fn table_section<'a>(text: &'a str, table: &str) -> &'a str {
+        let header = format!("[{table}]\n");
+        let start = text.find(&header).unwrap_or_else(|| panic!("no [{table}]")) + header.len();
+        let rest = &text[start..];
+        let end = rest.match_indices("\n[").map(|(i, _)| i).find(|&i| !rest[i + 1..].starts_with("[tools.")).unwrap_or(rest.len());
+        &rest[..end]
+    }
     fn comment_lines(text: &str) -> Vec<&str> {
         text.lines().filter(|l| l.trim_start().starts_with('#')).collect()
     }
@@ -1467,8 +1475,10 @@ mod tests {
             assert!(parse_config(&removed).unwrap()[&table].get(&key).is_none(), "{k}");
             if commented {
                 // The example line was replaced by the value and comes back on removal.
-                // (Several tables may share an example line, like `# enabled = true`.)
-                assert_eq!(set.matches(&line).count() + 1, DEFAULT_CONFIG.matches(&line).count(), "{k}");
+                // Several tables may share an example line (`# enabled = true`), so look in
+                // the key's own table only.
+                assert!(table_section(&DEFAULT_CONFIG, &table).lines().any(|l| l == line), "{k}");
+                assert!(!table_section(&set, &table).lines().any(|l| l == line), "{k}");
                 assert_eq!(removed, DEFAULT_CONFIG, "{k}");
                 // And the cycle repeats.
                 let again = apply_changes(&removed, &[change(&k, other_value(&default))]).unwrap();

@@ -13,6 +13,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { toastStore } from "../toasts/toastStore";
 import { VaultApp } from "../VaultApp";
 import {
   disposeSettings,
@@ -94,5 +95,44 @@ describe("settings problem banner", () => {
       await reloadSettings();
     });
     expect(banner()).toBeNull();
+  });
+
+  // Regression (review 3): unknown keys are warnings: a toast, not the
+  // persistent error banner.
+  it("an unknown key is a toast, not the error banner", async () => {
+    toastStore.clear();
+    const invoke = vi.fn(async (cmd: string) =>
+      cmd === "load_settings"
+        ? {
+            configDir: "/c",
+            configPath: "/c/config.toml",
+            statePath: "/s/state.json",
+            config: { interface: { zom: 1 } },
+            configError: null,
+            state: {},
+          }
+        : undefined,
+    );
+    await initSettings(window, {
+      tauri: true,
+      invoke: invoke as any,
+      listen: (async () => () => {}) as any,
+    });
+    const repo = new FakeVaultRepository();
+    render(<VaultApp repository={repo} initialVault={repo.vault} />);
+    const message =
+      "config.toml: unknown key interface.zom (ignored; did you mean interface.zoom?)";
+    await waitFor(() =>
+      expect(toastStore.getSnapshot().toasts.map((t) => t.message)).toEqual([
+        message,
+      ]),
+    );
+    expect(banner()).toBeNull();
+    // A reload with the same warning does not toast again.
+    await act(async () => {
+      await reloadSettings();
+    });
+    expect(toastStore.getSnapshot().toasts).toHaveLength(1);
+    toastStore.clear();
   });
 });

@@ -80,7 +80,7 @@ describe("tool styles in config", () => {
     ]);
   });
 
-  it("falls back to {} for an invalid table and names the key", () => {
+  it("falls back to {} for an invalid value; an unknown key is dropped and reported", () => {
     const bad = configToPreferences({
       tools: { arrow: { stroke_width: 99 }, line: { colour: "red" } },
     });
@@ -89,7 +89,7 @@ describe("tool styles in config", () => {
     const messages = bad.problems.map((p) => p.message).join("\n");
     expect(messages).toContain("tools.arrow");
     expect(messages).toContain("stroke_width");
-    expect(messages).toContain("unknown key colour");
+    expect(messages).toContain("unknown key tools.line.colour");
   });
 
   it("sends an emptied style as null", () => {

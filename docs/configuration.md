@@ -79,7 +79,7 @@ stroke_style = "dotted"
 
 - **Settings and the file stay in sync.** Changing something in Settings updates `config.toml` and keeps your comments and layout. Editing the file updates the app.
 - **Live reload.** Saved changes apply immediately, no restart needed. Delete a line to go back to its default.
-- **Typos are safe.** If the file can't be parsed, the app keeps the last good settings and shows a banner such as `config.toml line 7: <error>`. A value of the wrong type falls back to its default and is reported the same way. A key the app doesn't know, such as `zom` for `zoom`, is ignored and reported with the closest real key: `config.toml: unknown key interface.zom (ignored; did you mean interface.zoom?)`. Every current problem is also listed under **Settings → General → Config file**.
+- **Typos are safe.** If the file can't be parsed, the app keeps the last good settings and shows a banner such as `config.toml line 7: <error>`. A value of the wrong type falls back to its default and is reported the same way. A key the app doesn't know, such as `zom` for `zoom` (or `stroke_colour` inside `[tools.arrow]`), is a warning: only that key is ignored, the rest applies, and a notice names the closest real key: `config.toml: unknown key interface.zom (ignored; did you mean interface.zoom?)`. A vault's `settings.toml` is checked the same way. Errors stay in the banner until fixed; every current error and warning is listed under **Settings → General → Config file**.
 - **Settings → Open config folder** opens the folder; **Reload** re-reads it.
 
 `state.json` holds machine state (recent vaults, navigator width, expanded folders, last-used image export options). It is not meant for hand editing.
@@ -896,7 +896,7 @@ Defaults for new elements.
 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
-| `font_family` | `5` | one of 1, 2, 3, 5, 6, 7, 8, 9, 10 |  | 5 Excalifont, 6 Nunito, 8 Comic Shanns, 1 Virgil, 2 Helvetica, 3 Cascadia. |
+| `font_family` | `5` | one of 1, 2, 3, 5, 6, 7, 8, 9, 10 |  | Font of new text: 1 Virgil, 2 Helvetica, 3 Cascadia, 5 Excalifont, 6 Nunito, 7 Lilita One, 8 Comic Shanns, 9 Liberation Sans, 10 Assistant. |
 | `font_size` | `20` | a positive number |  | Font size of new text. |
 | `stroke_color` | `"#1e1e1e"` | a colour like "#1e1e1e" |  | Stroke colour of new elements. |
 | `background_color` | `"transparent"` | a colour like "transparent" |  | Fill colour of new elements. |

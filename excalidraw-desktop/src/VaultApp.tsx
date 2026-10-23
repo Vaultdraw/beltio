@@ -52,8 +52,10 @@ import { getNewDrawingPaper } from "./vault/newDrawingPaper";
 import { isPageCommandChecked } from "./page/pageStatus";
 import {
   getSettingsStatus,
+  isWarning,
   PREFERENCES_CHANGED_EVENT,
   SETTINGS_STATUS_EVENT,
+  type SettingsProblem,
   type SettingsStatus,
 } from "./vault/settingsSync";
 import {
@@ -414,10 +416,11 @@ export const VaultApp = ({
   // reload preferences; re-render so autosave delay and defaults follow
   // (useAppearance re-applies the theme itself).
   const [, setPreferencesVersion] = useState(0);
-  // Settings and theme problems get their own persistent banner: unrelated
-  // setGlobalAlert(null) calls must not hide a still-broken config.
-  const [settingsProblems, setSettingsProblems] = useState<string[]>(() =>
-    getSettingsStatus().problems.map((p) => p.message),
+  // Settings and theme errors get their own persistent banner: unrelated
+  // setGlobalAlert(null) calls must not hide a still-broken config. Warnings
+  // (unknown keys) are a toast and stay listed in Settings > General.
+  const [settingsProblems, setSettingsProblems] = useState<SettingsProblem[]>(
+    () => getSettingsStatus().problems,
   );
   const [dismissedProblem, setDismissedProblem] = useState<string | null>(null);
 
@@ -426,9 +429,10 @@ export const VaultApp = ({
       return;
     }
     const showSettingsStatus = (settingsStatus: SettingsStatus) => {
-      const next = settingsStatus.problems.map((p) => p.message);
+      const next = settingsStatus.problems;
       setSettingsProblems((prev) =>
-        prev.length === next.length && prev.every((m, i) => m === next[i])
+        prev.length === next.length &&
+        prev.every((p, i) => p.message === next[i].message)
           ? prev
           : next,
       );
@@ -454,10 +458,34 @@ export const VaultApp = ({
   }, [win]);
 
   const pluginSettingProblems = usePluginSettingProblems(win);
+  const settingsErrors = [...settingsProblems, ...vaultSettings.problems]
+    .filter((p) => !isWarning(p))
+    .map((p) => p.message);
+  const settingsWarnings = [...settingsProblems, ...vaultSettings.problems]
+    .filter(isWarning)
+    .map((p) => p.message);
+  const warningsKey = settingsWarnings.join("\n");
+  const toastedWarnings = useRef(new Set<string>());
+  useEffect(() => {
+    const fresh = warningsKey
+      ? warningsKey.split("\n").filter((m) => !toastedWarnings.current.has(m))
+      : [];
+    if (fresh.length === 0) {
+      return;
+    }
+    fresh.forEach((m) => toastedWarnings.current.add(m));
+    toastStore.push({
+      message:
+        fresh.length === 1
+          ? fresh[0]
+          : `${fresh[0]} (and ${
+              fresh.length - 1
+            } more; see Settings > General)`,
+    });
+  }, [warningsKey]);
   const allProblems = [
-    ...settingsProblems,
+    ...settingsErrors,
     ...pluginSettingProblems,
-    ...vaultSettings.problems.map((p) => p.message),
     ...(appearance.snapshot.problem ? [appearance.snapshot.problem] : []),
     ...(appearance.registry.loadError ? [appearance.registry.loadError] : []),
   ];

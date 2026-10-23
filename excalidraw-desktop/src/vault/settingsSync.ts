@@ -52,11 +52,11 @@ import {
   isToolStyle,
   orderedStyle,
   TOOL_DEFAULT_TOOLS,
+  TOOL_STYLE_KEYS,
   toolConfigKey,
   TOOL_FIELDS,
   toolField,
   toolStyleProblem,
-  type StyledTool,
   type ToolField,
   type ToolStyle,
 } from "../toolDefaults/toolStyles";
@@ -74,6 +74,7 @@ import {
   buildKnownIndex,
   findUnknownKeys,
   unknownKeyMessage,
+  type KnownIndex,
 } from "./configKeys";
 import { isTauriAvailable } from "./DesktopVaultRepository";
 import {
@@ -180,6 +181,23 @@ export interface SettingsDeps {
   tauri?: boolean;
   /** write_state debounce, default 300 ms. */
   stateDebounceMs?: number;
+}
+
+/** Messages already logged this session, so reloads never repeat them. */
+const loggedProblems = new Set<string>();
+const MAX_LOGGED = 1000;
+
+/** console.warn each problem once per session, across reloads. */
+export function logProblems(problems: readonly SettingsProblem[]): void {
+  for (const { message } of problems) {
+    if (!loggedProblems.has(message)) {
+      if (loggedProblems.size >= MAX_LOGGED) {
+        loggedProblems.clear();
+      }
+      loggedProblems.add(message);
+      console.warn(message);
+    }
+  }
 }
 
 /** Fired on window when a reload changed the preferences. detail = prefs. */
@@ -748,15 +766,6 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
   },
 ];
 
-/** orderedStyle drops unknown keys; keep them so validation can report them. */
-const orderedStyleOrKeep = (tool: StyledTool, style: ToolStyle): ToolStyle => {
-  const known = orderedStyle(tool, style);
-  const unknown = Object.fromEntries(
-    Object.entries(style).filter(([k]) => !(k in known)),
-  );
-  return { ...known, ...unknown } as ToolStyle;
-};
-
 /** One `[tools.<tool>]` table per styled tool. */
 const TOOL_MAPPINGS: readonly ConfigMapping[] = TOOL_DEFAULT_TOOLS.map(
   (tool) => ({
@@ -764,9 +773,11 @@ const TOOL_MAPPINGS: readonly ConfigMapping[] = TOOL_DEFAULT_TOOLS.map(
     key: toolConfigKey(tool),
     expected: (value: unknown) =>
       `a valid ${tool} style (${toolStyleProblem(tool, value)})`,
+    // Unknown keys are dropped here (and reported by the unknown-key check),
+    // so a typo never resets the tool's valid keys.
     normalize: (value: unknown) =>
       value && typeof value === "object" && !Array.isArray(value)
-        ? orderedStyleOrKeep(tool, value as ToolStyle)
+        ? orderedStyle(tool, value as ToolStyle)
         : value,
     valid: (value: unknown) => isToolStyle(tool, value),
   }),
@@ -781,20 +792,45 @@ export const CONFIG_MAPPING: readonly ConfigMapping[] = [
   ...TOOL_MAPPINGS,
 ];
 
-let knownKeys: ReturnType<typeof buildKnownIndex> | null = null;
+/** The keys allowed inside each `[tools.<tool>]` table. */
+export const TOOL_NESTED_KEYS: Readonly<Record<string, readonly string[]>> =
+  Object.fromEntries(
+    TOOL_DEFAULT_TOOLS.map((tool) => [
+      toolConfigKey(tool),
+      TOOL_STYLE_KEYS[tool],
+    ]),
+  );
+
+let knownKeys: KnownIndex | null = null;
+
+/** Unknown keys of a parsed TOML file, as warnings (the rest still applies). */
+export const unknownKeyProblemsIn = (
+  config: Record<string, unknown>,
+  known: KnownIndex,
+  file: string,
+): SettingsProblem[] =>
+  findUnknownKeys(config, known).map((u) => ({
+    kind: "unknown",
+    key: u.key,
+    message: unknownKeyMessage(u, file),
+  }));
 
 /** config.toml keys no mapping reads, as warnings (the rest still applies). */
 export const unknownKeyProblems = (
   config: Record<string, unknown>,
 ): SettingsProblem[] =>
-  findUnknownKeys(
+  unknownKeyProblemsIn(
     config,
-    (knownKeys ??= buildKnownIndex(CONFIG_MAPPING.map((m) => m.key))),
-  ).map((u) => ({
-    kind: "unknown",
-    key: u.key,
-    message: unknownKeyMessage(u),
-  }));
+    (knownKeys ??= buildKnownIndex(
+      CONFIG_MAPPING.map((m) => m.key),
+      TOOL_NESTED_KEYS,
+    )),
+    "config.toml",
+  );
+
+/** Unknown keys are warnings; parse, invalid and io problems are errors. */
+export const isWarning = (problem: SettingsProblem): boolean =>
+  problem.kind === "unknown";
 
 export const STATE_FIELDS = [
   "recentVaults",
@@ -1256,11 +1292,7 @@ function applyLoad(
     rt.lastWrittenState = JSON.stringify(preferencesToState(next));
   }
 
-  for (const problem of loadProblems) {
-    if (!rt.loadProblems.some((p) => p.message === problem.message)) {
-      console.warn(problem.message);
-    }
-  }
+  logProblems(loadProblems);
   rt.loadProblems = loadProblems;
   publishStatus(rt.win, {
     mode: "tauri",
