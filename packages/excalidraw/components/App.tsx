@@ -2737,6 +2737,7 @@ class App extends React.Component<AppProps, AppState> {
                             appState={this.state}
                             renderConfig={{
                               imageCache: this.imageCache,
+                              onPendingImage: this.redrawWhenDecoded,
                               isExporting: false,
                               renderGrid: isGridModeEnabled(this),
                               renderLinks: this.isLinksEnabled(),
@@ -3916,14 +3917,12 @@ class App extends React.Component<AppProps, AppState> {
   };
 
   /** returns whether any element of the scene uses one of the files */
-  private clearImageShapeCache(filesMap?: BinaryFiles, dropImages = true) {
+  private clearImageShapeCache(filesMap?: BinaryFiles) {
     const files = filesMap ?? this.files;
     let cleared = false;
     this.scene.getNonDeletedElements().forEach((element) => {
       if (isInitializedImageElement(element) && files[element.fileId]) {
-        if (dropImages) {
-          this.imageCache.delete(element.fileId);
-        }
+        this.imageCache.delete(element.fileId);
         ShapeCache.delete(element);
         cleared = true;
       }
@@ -5158,13 +5157,6 @@ class App extends React.Component<AppProps, AppState> {
     // decoding began, so a slow preload is not evicted just before it lands
     for (const id of ids) {
       this.imageCacheUnreferencedSince.delete(id);
-    }
-    // Vaultdraw: an element that landed while its file was decoding (insert:
-    // addFiles, then updateScene) was drawn as the placeholder, and nothing
-    // else redraws it once the image is ready. Redraw only when the scene
-    // uses one of these files, so a preload for the next scene stays free.
-    if (!this.unmounted && this.clearImageShapeCache(addedFiles, false)) {
-      this.scene.triggerUpdate();
     }
   };
 
@@ -11595,6 +11587,43 @@ class App extends React.Component<AppProps, AppState> {
         this.scene.triggerUpdate();
       }
     }
+  };
+
+  /** file ids whose in-flight decode already has a redraw queued */
+  private awaitedImageDecodes = new Set<FileId>();
+  /** decodes already waited on once: a settled one never re-arms */
+  private seenImageDecodes = new WeakSet<Promise<HTMLImageElement>>();
+
+  /**
+   * Vaultdraw: the renderer drew `fileId` as the placeholder because its image
+   * was still decoding (e.g. addFiles, then the element via updateScene,
+   * paste or undo). Redraw once when that decode lands; nothing else would.
+   * Called only from the render path of a pending image, so it costs nothing
+   * otherwise.
+   */
+  private redrawWhenDecoded = (fileId: FileId) => {
+    const image = this.imageCache.get(fileId)?.image;
+    if (!(image instanceof Promise) || this.seenImageDecodes.has(image)) {
+      return;
+    }
+    this.seenImageDecodes.add(image);
+    this.awaitedImageDecodes.add(fileId);
+    image
+      .catch(() => {})
+      .then(() => {
+        this.awaitedImageDecodes.delete(fileId);
+        // failed, evicted or replaced by another decode: nothing new to draw
+        const ready = this.imageCache.get(fileId)?.image;
+        if (this.unmounted || ready == null || ready instanceof Promise) {
+          return;
+        }
+        for (const element of this.scene.getNonDeletedElements()) {
+          if (isInitializedImageElement(element) && element.fileId === fileId) {
+            ShapeCache.delete(element);
+          }
+        }
+        this.scene.triggerUpdate();
+      });
   };
 
   /** generally you should use `addNewImagesToImageCache()` directly if you need

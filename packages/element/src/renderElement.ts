@@ -105,12 +105,17 @@ import type { RoughCanvas } from "roughjs/bin/canvas";
 
 import type { TextRun, TextRunLayout } from "./textRuns";
 
+/** Not decoded yet: no cache entry, or (Vaultdraw) one still decoding. */
 const isPendingImageElement = (
   element: ExcalidrawElement,
   renderConfig: StaticCanvasRenderConfig,
-) =>
-  isInitializedImageElement(element) &&
-  !renderConfig.imageCache.has(element.fileId);
+) => {
+  if (!isInitializedImageElement(element)) {
+    return false;
+  }
+  const entry = renderConfig.imageCache.get(element.fileId);
+  return !entry || entry.image instanceof Promise;
+};
 
 const getCanvasPadding = (element: ExcalidrawElement) => {
   switch (element.type) {
@@ -662,6 +667,9 @@ const drawElementOnCanvas = (
           );
         }
       } else {
+        if (img instanceof Promise && element.fileId) {
+          renderConfig.onPendingImage?.(element.fileId);
+        }
         drawImagePlaceholder(element, context, renderConfig.theme);
       }
       context.restore();
@@ -930,7 +938,10 @@ const generateElementWithCanvas = (
       return null;
     }
 
-    elementWithCanvasCache.set(element, elementWithCanvas);
+    // Vaultdraw: never keep a pending image's placeholder as its bitmap.
+    if (!isPendingImageElement(element, renderConfig)) {
+      elementWithCanvasCache.set(element, elementWithCanvas);
+    }
 
     return elementWithCanvas;
   }
