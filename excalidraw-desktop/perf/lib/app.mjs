@@ -392,6 +392,7 @@ export async function runAppOnce({
       if (b && Number.isFinite(a.cpuSec) && Number.isFinite(b.cpuSec)) cpu += b.cpuSec - a.cpuSec;
     }
     if (wallS > 0) samples["idle.cpuPercent"] = [(cpu / wallS) * 100];
+    info.idleWindowS = wallS; // so cpuPercent can be turned back into CPU seconds (tests, diagnostics)
   } else {
     notes.push("idle marks missing; idle.cpuPercent not measured");
   }
