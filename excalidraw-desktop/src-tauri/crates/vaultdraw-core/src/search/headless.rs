@@ -5,7 +5,7 @@
 //! app and the CLI share one snapshot.
 
 use super::index::DocEntry;
-use super::scan::{needs_parse, parse, walk, Found};
+use super::scan::{self, needs_parse, walk_parallel, Found};
 use super::{store, Index};
 use crate::error::Result;
 use crate::paths::now_ms;
@@ -24,22 +24,32 @@ pub const RACY_MS: u64 = 2000;
 /// Drawings a worker thread claims at a time (small enough to balance big image-heavy files).
 const CLAIM: usize = 8;
 
-/// Parses `pending` on up to `available_parallelism()` threads (no new dependencies), each with
+/// Worker threads of a cold build: every core up to this cap. Past it the wall time barely moves
+/// (5,000 drawings: 8 threads 93 ms, 15 threads 88 ms) while the CPU time keeps growing, because
+/// the threads queue on the filesystem's directory locks (measured, see the cli-cold-index REPORT).
+const MAX_THREADS: usize = 8;
+
+fn threads() -> usize {
+    std::thread::available_parallelism().map_or(1, |n| n.get()).clamp(1, MAX_THREADS)
+}
+
+/// Parses `pending` on up to [`MAX_THREADS`] threads (no new dependencies), each with
 /// its own read buffer. Files that vanished meanwhile are skipped.
 pub fn parse_parallel(root: &Path, pending: &[&Found]) -> Vec<(String, DocEntry)> {
-    let threads = std::thread::available_parallelism().map_or(1, |n| n.get()).min(pending.len().div_ceil(CLAIM)).max(1);
+    let threads = threads().min(pending.len().div_ceil(CLAIM)).max(1);
     let next = AtomicUsize::new(0);
     let out = Mutex::new(Vec::with_capacity(pending.len()));
     let work = || {
         let mut buf = Vec::new();
         let mut local = Vec::new();
+        let mut dir = scan::DirHandle::default();
         loop {
             let start = next.fetch_add(CLAIM, Ordering::Relaxed);
             if start >= pending.len() {
                 break;
             }
             for f in &pending[start..(start + CLAIM).min(pending.len())] {
-                local.extend(parse(root, f, &mut buf));
+                local.extend(scan::parse_in(root, f, &mut buf, &mut dir));
             }
         }
         out.lock().unwrap_or_else(|p| p.into_inner()).extend(local);
@@ -68,7 +78,7 @@ pub fn load_or_build(root: &Path, snapshot_path: &Path) -> Result<Index> {
         }
         None => Index::default(),
     };
-    let found = walk(root, "");
+    let found = walk_parallel(root, threads());
     let present: HashSet<&str> = found.iter().map(|f| f.path.as_str()).collect();
     let mut changed = index.retain(|p| present.contains(p)) > 0;
     // Same two steps as the worker: every file is findable by name, then new/changed ones are parsed.
@@ -80,10 +90,11 @@ pub fn load_or_build(root: &Path, snapshot_path: &Path) -> Result<Index> {
     }
     let pending: Vec<&Found> = found.iter().filter(|f| needs_parse(index.get(&f.path), f, racy_before)).collect();
     if !pending.is_empty() {
-        for (path, doc) in parse_parallel(root, &pending) {
+        let r = parse_parallel(root, &pending);
+            for (path, doc) in r {
             index.upsert(path, doc);
         }
-        changed = true;
+            changed = true;
     }
     if changed {
         store::save(snapshot_path, now_ms(SystemTime::now()), &index)?;
@@ -94,6 +105,7 @@ pub fn load_or_build(root: &Path, snapshot_path: &Path) -> Result<Index> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::search::scan::{parse, walk};
     use crate::search::{testgen, Scope};
     use serde_json::{json, Value};
     use std::{fs, path::PathBuf};
@@ -204,6 +216,27 @@ mod tests {
     }
 
     #[test]
+    fn walk_parallel_lists_what_walk_lists() {
+        let (_t, root, _snap) = setup();
+        for i in 0..60 {
+            write(&root, &format!("f{}/g{}/d{i}.excalidraw", i % 7, i % 3), &["word"]);
+        }
+        write(&root, "top.excalidraw", &["word"]);
+        fs::write(root.join("f1/notes.txt"), "x").unwrap();
+        let key = |v: Vec<Found>| {
+            let mut k: Vec<_> = v.into_iter().map(|f| (f.path, f.size, f.mtime)).collect();
+            k.sort();
+            k
+        };
+        let want = key(walk(&root, ""));
+        assert_eq!(want.len(), 61);
+        for threads in [1, 2, 8] {
+            assert_eq!(key(scan::walk_parallel(&root, threads)), want, "{threads} threads");
+        }
+        assert!(scan::walk_parallel(&root.join("missing"), 4).is_empty());
+    }
+
+    #[test]
     fn parse_parallel_returns_every_file_once() {
         let (_t, root, _snap) = setup();
         for i in 0..40 {
@@ -215,6 +248,16 @@ mod tests {
         got.sort();
         got.dedup();
         assert_eq!(got.len(), 40);
+    }
+
+    /// Writes a generated vault for CLI benchmarks: `VD_GEN_ROOT=<dir> VD_GEN_COUNT=5000 cargo test --release -p vaultdraw-core -- --ignored gen_vault`
+    #[test]
+    #[ignore]
+    fn gen_vault() {
+        let root = PathBuf::from(std::env::var("VD_GEN_ROOT").expect("set VD_GEN_ROOT"));
+        let count = std::env::var("VD_GEN_COUNT").ok().and_then(|c| c.parse().ok()).unwrap_or(5000);
+        let (bytes, blobs) = testgen::generate(&root, count);
+        eprintln!("generated {count} drawings, {:.1} MB, {blobs} with an image blob", bytes as f64 / 1e6);
     }
 
     /// 1,000 realistic drawings: cold (no snapshot), warm (snapshot, nothing changed) and `ls` of the root.

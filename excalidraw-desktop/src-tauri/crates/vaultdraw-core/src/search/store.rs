@@ -6,7 +6,7 @@
 
 use super::index::{DocEntry, Index};
 use super::normalize::NORMALIZER_VERSION;
-use crate::{err, ioerr, write_atomic, Result};
+use crate::{err, ioerr, Result};
 use sha2::{Digest, Sha256};
 use std::{collections::HashMap, fs, path::{Path, PathBuf}};
 
@@ -37,7 +37,19 @@ pub fn save(path: &Path, saved_at_ms: u64, index: &Index) -> Result<()> {
     let crc = crc32fast::hash(&out[HEADER_LEN..]);
     out[12..HEADER_LEN].copy_from_slice(&crc.to_le_bytes());
     fs::create_dir_all(path.parent().ok_or_else(|| err("INVALID_PATH", "Snapshot has no parent"))?).map_err(ioerr)?;
-    write_atomic(path, &out)
+    write_cache(path, &out)
+}
+
+/// Writes the snapshot through a temp file and a rename, without `fsync`: it is a cache whose CRC
+/// rejects a torn file (the next start just rebuilds), and `fsync` is `F_FULLFSYNC` on macOS,
+/// tens of milliseconds on the cold path of every first CLI call.
+fn write_cache(path: &Path, bytes: &[u8]) -> Result<()> {
+    let tmp = path.with_extension(format!("tmp-{}", std::process::id()));
+    let r = fs::write(&tmp, bytes).and_then(|()| fs::rename(&tmp, path));
+    if r.is_err() {
+        let _ = fs::remove_file(&tmp);
+    }
+    r.map_err(ioerr)
 }
 
 /// The saved index and the time (ms) it was written.
@@ -83,6 +95,17 @@ mod unit_tests {
         assert_eq!(idx.get("x/a.excalidraw").unwrap().stat, (10, 20));
         let (hits, _) = idx.query("cafe", crate::search::types::Scope::All, 5);
         assert_eq!(hits[0].matches[0].container_id.as_deref(), Some("c"));
+    }
+
+    #[test]
+    fn save_replaces_the_snapshot_and_leaves_no_temp_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("i/index.bin");
+        save(&file, 1, &sample()).unwrap();
+        save(&file, 2, &sample()).unwrap();
+        assert_eq!(load(&file).unwrap().0, 2);
+        let names: Vec<_> = fs::read_dir(file.parent().unwrap()).unwrap().map(|e| e.unwrap().file_name().into_string().unwrap()).collect();
+        assert_eq!(names, vec!["index.bin"]);
     }
 
     #[test]

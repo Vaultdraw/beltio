@@ -123,14 +123,23 @@ const FINGERPRINT_EDGE: usize = 4096;
 /// SHA hardware), against +3% for this. It identifies a file that moved unchanged (equal
 /// length, head and tail); it is not a revision and never compared with one.
 pub fn fingerprint8(bytes: &[u8]) -> [u8; 8] {
+    fingerprint_parts(bytes.len() as u64, &bytes[..bytes.len().min(FINGERPRINT_EDGE)], &bytes[bytes.len().saturating_sub(FINGERPRINT_EDGE)..])
+}
+
+/// [`fingerprint8`] from a file's length, its first `min(len, 4096)` bytes and its last
+/// `min(len, 4096)` bytes, so a reader that skips the middle gets the same value.
+pub fn fingerprint_parts(len: u64, head: &[u8], tail: &[u8]) -> [u8; 8] {
     let mut h = Sha256::new();
-    h.update((bytes.len() as u64).to_le_bytes());
-    h.update(&bytes[..bytes.len().min(FINGERPRINT_EDGE)]);
-    h.update(&bytes[bytes.len().saturating_sub(FINGERPRINT_EDGE)..]);
+    h.update(len.to_le_bytes());
+    h.update(head);
+    h.update(tail);
     let mut out = [0u8; 8];
     out.copy_from_slice(&h.finalize()[..8]);
     out
 }
+
+/// Bytes of each end that [`fingerprint_parts`] needs.
+pub const FINGERPRINT_EDGE_BYTES: usize = FINGERPRINT_EDGE;
 
 /// Items, element links and the content fingerprint of one drawing file.
 pub fn extract_doc(json: &[u8]) -> Result<Extracted> {
@@ -139,10 +148,104 @@ pub fn extract_doc(json: &[u8]) -> Result<Extracted> {
 }
 
 fn parse_scene(json: &[u8]) -> Result<(Vec<TextItem>, Vec<ElementLink>)> {
-    let scene: Scene = serde_json::from_slice(json).map_err(|e| err("INVALID_FILE", format!("Invalid JSON: {e}")))?;
-    if scene.kind.as_deref() != Some("excalidraw") {
-        return Err(err("INVALID_FILE", "Not an Excalidraw scene"));
+    match parse_scene_prefix(json, true) {
+        Prefix::Done(v) => Ok(v),
+        Prefix::Invalid(e) => Err(e),
+        Prefix::NeedMore => Err(err("INVALID_FILE", "Invalid JSON: unexpected end of file")),
     }
+}
+
+/// Result of [`parse_scene_prefix`].
+pub enum Prefix {
+    Done((Vec<TextItem>, Vec<ElementLink>)),
+    /// The prefix ended inside the scene before `type` and `elements` were both read.
+    NeedMore,
+    Invalid(crate::NativeError),
+}
+
+/// Marks the deliberate early exit of [`StopVisitor`].
+const STOP: &str = "vaultdraw: scene read, rest skipped";
+
+/// Reads `type` and `elements` and stops at once when both are known, without scanning the
+/// rest (`appState`, and above all the `files` image blobs, which are most of a big drawing).
+/// serde_json has no "stop here" return, so the visitor parks the scene and fails on purpose.
+struct StopVisitor<'s, 'a>(&'s std::cell::RefCell<Option<Scene<'a>>>);
+
+impl<'de, 's> serde::de::Visitor<'de> for StopVisitor<'s, 'de> {
+    type Value = ();
+    fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.write_str("an Excalidraw scene object")
+    }
+    fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> std::result::Result<(), A::Error> {
+        #[derive(Deserialize)]
+        enum Key {
+            #[serde(rename = "type")]
+            Type,
+            #[serde(rename = "elements")]
+            Elements,
+            #[serde(other)]
+            Other,
+        }
+        let mut kind: Option<Option<Cow<'de, str>>> = None;
+        let mut elements: Option<Option<Vec<El<'de>>>> = None;
+        while let Some(key) = map.next_key::<Key>()? {
+            match key {
+                Key::Type => kind = Some(map.next_value()?),
+                Key::Elements => elements = Some(map.next_value()?),
+                Key::Other => {
+                    map.next_value::<serde::de::IgnoredAny>()?;
+                }
+            }
+            if kind.is_some() && elements.is_some() {
+                *self.0.borrow_mut() = Some(Scene { kind: kind.flatten(), elements: elements.flatten().unwrap_or_default() });
+                return Err(serde::de::Error::custom(STOP));
+            }
+        }
+        *self.0.borrow_mut() = Some(Scene { kind: kind.flatten(), elements: elements.flatten().unwrap_or_default() });
+        Ok(())
+    }
+}
+
+struct StopSeed<'s, 'a>(&'s std::cell::RefCell<Option<Scene<'a>>>);
+
+impl<'de, 's> serde::de::DeserializeSeed<'de> for StopSeed<'s, 'de> {
+    type Value = ();
+    fn deserialize<D: serde::Deserializer<'de>>(self, d: D) -> std::result::Result<(), D::Error> {
+        d.deserialize_map(StopVisitor(self.0))
+    }
+}
+
+/// Parses a drawing from its first bytes. `complete` says `json` is the whole file; otherwise a
+/// parse that runs out of bytes is [`Prefix::NeedMore`] (the caller reads more and retries).
+/// Same items as a full parse, because everything after `elements` (when `type` is already
+/// known) is never looked at: a file whose tail is damaged still gets indexed.
+pub fn parse_scene_prefix(json: &[u8], complete: bool) -> Prefix {
+    use serde::de::DeserializeSeed;
+    let cell = std::cell::RefCell::new(None);
+    let mut de = serde_json::Deserializer::from_slice(json);
+    let res = StopSeed(&cell).deserialize(&mut de);
+    let stopped = match &res {
+        Ok(()) => false,
+        Err(e) => cell.borrow().is_some() && e.to_string().starts_with(STOP),
+    };
+    match res {
+        Ok(()) if de.end().is_err() => return Prefix::Invalid(err("INVALID_FILE", "Invalid JSON: trailing characters")),
+        Err(e) if !stopped => {
+            if e.is_eof() && !complete {
+                return Prefix::NeedMore;
+            }
+            return Prefix::Invalid(err("INVALID_FILE", format!("Invalid JSON: {e}")));
+        }
+        _ => {}
+    }
+    let Some(scene) = cell.into_inner() else { return Prefix::Invalid(err("INVALID_FILE", "Not an Excalidraw scene")) };
+    if scene.kind.as_deref() != Some("excalidraw") {
+        return Prefix::Invalid(err("INVALID_FILE", "Not an Excalidraw scene"));
+    }
+    Prefix::Done(collect_items(&scene))
+}
+
+fn collect_items(scene: &Scene) -> (Vec<TextItem>, Vec<ElementLink>) {
     let mut out = Vec::new();
     let mut elinks = Vec::new();
     for el in &scene.elements {
@@ -169,7 +272,7 @@ fn parse_scene(json: &[u8]) -> Result<(Vec<TextItem>, Vec<ElementLink>)> {
             text: text.into(),
         });
     }
-    Ok((out, elinks))
+    (out, elinks)
 }
 
 #[cfg(test)]
@@ -274,5 +377,55 @@ mod unit_tests {
         assert!(extract_items(b"{\"type\":\"other\",\"elements\":[]}").is_err());
         assert!(extract_items(b"[1,2]").is_err());
         assert!(extract_items(b"not json").is_err());
+    }
+
+    fn same(a: &(Vec<TextItem>, Vec<ElementLink>), b: &(Vec<TextItem>, Vec<ElementLink>)) -> bool {
+        a.0 == b.0 && a.1 == b.1
+    }
+
+    #[test]
+    fn a_prefix_ending_after_elements_parses_like_the_whole_file() {
+        let head = br#"{"type":"excalidraw","version":2,"elements":[{"id":"t","type":"text","text":"hello","link":"[[A]]"}],"#;
+        let full = [&head[..], br#""appState":{},"files":{"f":{"dataURL":"data:image/png;base64,AAAA"}}}"#].concat();
+        let whole = parse_scene(&full).unwrap();
+        let Prefix::Done(got) = parse_scene_prefix(head, false) else { panic!("prefix should be enough") };
+        assert!(same(&got, &whole));
+        assert_eq!(got.0.len(), 1);
+        assert_eq!(got.1.len(), 1);
+    }
+
+    #[test]
+    fn a_prefix_cut_inside_elements_needs_more_bytes() {
+        let full = br#"{"type":"excalidraw","elements":[{"id":"a","type":"text","text":"one"},{"id":"b","type":"text","text":"two"}],"files":{}}"#;
+        for cut in [1, 10, 40, 75, 100] {
+            assert!(matches!(parse_scene_prefix(&full[..cut], false), Prefix::NeedMore), "cut {cut}");
+        }
+        // The same cut of a whole file is an error, not a request for more.
+        assert!(matches!(parse_scene_prefix(&full[..40], true), Prefix::Invalid(_)));
+    }
+
+    #[test]
+    fn key_order_does_not_matter_only_what_is_read() {
+        // `files` first: it is skipped, and the scan continues until both keys are known.
+        let json = br#"{"files":{"f":{"dataURL":"AAAA"}},"elements":[{"id":"t","type":"text","text":"late"}],"type":"excalidraw"}"#;
+        let got = parse_scene(json).unwrap();
+        assert_eq!(&*got.0[0].text, "late");
+        // No `type` at all: not a scene, whatever follows.
+        assert!(parse_scene(br#"{"elements":[{"id":"t","type":"text","text":"x"}]}"#).is_err());
+        // Elements before type.
+        assert_eq!(parse_scene(br#"{"elements":[{"id":"t","type":"text","text":"x"}],"type":"excalidraw"}"#).unwrap().0.len(), 1);
+        assert!(parse_scene(br#"{"elements":[],"type":"other"}"#).is_err());
+        // Everything after `type` and `elements` is not looked at, so a damaged tail is not an error.
+        assert!(parse_scene(br#"{"type":"excalidraw","elements":[],"files":{"a":"#).is_ok());
+    }
+
+    #[test]
+    fn fingerprint_parts_equals_fingerprint8() {
+        for len in [0usize, 1, 100, 4096, 5000, 8192, 8193, 100_000] {
+            let bytes: Vec<u8> = (0..len).map(|i| (i * 31 % 251) as u8).collect();
+            let head = &bytes[..len.min(FINGERPRINT_EDGE)];
+            let tail = &bytes[len.saturating_sub(FINGERPRINT_EDGE)..];
+            assert_eq!(fingerprint_parts(len as u64, head, tail), fingerprint8(&bytes), "len {len}");
+        }
     }
 }

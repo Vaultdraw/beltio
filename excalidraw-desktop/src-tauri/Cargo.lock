@@ -4502,6 +4502,7 @@ dependencies = [
  "crc32fast",
  "fs2",
  "hex",
+ "libc",
  "memchr",
  "postcard",
  "serde",
