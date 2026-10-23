@@ -207,7 +207,9 @@ fn c3_methods() -> Vec<MethodSpec> {
                     "background": {"type": "boolean"},
                     "pattern": {"type": "boolean"},
                     "embedScene": {"type": "boolean"},
-                    "pageShaped": {"type": "boolean"}
+                    "pageShaped": {"type": "boolean"},
+                    "frame": {"type": "string"},
+                    "padding": {"type": "number", "minimum": 0, "maximum": 200}
                 }),
                 &["format"],
             ),

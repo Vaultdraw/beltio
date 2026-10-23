@@ -889,6 +889,14 @@
             ],
             "type": "string"
           },
+          "frame": {
+            "type": "string"
+          },
+          "padding": {
+            "maximum": 200,
+            "minimum": 0,
+            "type": "number"
+          },
           "pageShaped": {
             "type": "boolean"
           },
