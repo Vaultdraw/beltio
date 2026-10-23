@@ -53,6 +53,15 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 - `sdk/api`: the `@vaultdraw/api` types package (types only, not published yet).
 - `vaultdraw-plugin`: a command line tool with `check`, `init` and `dev`.
+- `@vaultdraw/api/testing`: a mock host. `boot(manifest, plugin)` runs a plugin under vitest with a fake scene, event bus, settings and toasts, and enforces the app's rules. `VAULTDRAW_TEST_HOST=mock` runs the example tests on it. See `sdk/docs/testing.md`.
+- `sdk/api/plugin.schema.json`: a JSON Schema of `plugin.toml` for editor completion, and a generated manifest reference (`sdk/docs/manifest.md`).
+- `vaultdraw-plugin build`: bundles a TypeScript project into `dist/` with esbuild. The entry can be set under `[x-build]` in `plugin.toml`.
+- `vaultdraw-plugin package`: checks, then writes `<id>-<version>.zip` (reproducible, flat layout) and a `.sha256` file.
+- `vaultdraw-plugin check` accepts a `.zip`: it verifies the checksum, reads the archive strictly and checks the contents (new codes `zip-checksum`, `zip-invalid`, `zip-layout`). `main-missing` suggests `build` when the project has a source entry.
+- TypeScript templates: `vaultdraw-plugin init <id> --template command|panel|scene`. `dev` builds a TypeScript project and mirrors `dist/`.
+- Dev log: for a plugin with `dev = true`, the app appends its `ctx.log` lines and attributed errors to `<state dir>/plugin-logs/<id>.log` (capped at 1 MB). `vaultdraw-plugin dev` shows new lines, prefixed with `log |`.
+- `create-vaultdraw-plugin`: a thin wrapper around `init --template command` (not published).
+- Doc pages: `sdk/docs/testing.md` and `sdk/docs/packaging.md`.
 - A manifest test corpus that pins what `plugin.toml` accepts and refuses.
 - Two doc pages: `sdk/docs/reference.md` and `sdk/docs/getting-started.md`.
 
