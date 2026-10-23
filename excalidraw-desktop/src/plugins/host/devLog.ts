@@ -28,9 +28,9 @@ export interface DevLogSink {
 
 export function createDevLogSink(deps: DevLogDeps): DevLogSink {
   const pending = new Map<string, string[]>();
-  let timer: unknown = null;
+  let scheduled = false;
   const flush = () => {
-    timer = null;
+    scheduled = false;
     for (const [id, lines] of pending) {
       let chunk = "";
       const out: string[] = [];
@@ -63,7 +63,10 @@ export function createDevLogSink(deps: DevLogDeps): DevLogSink {
     } else {
       pending.set(id, [line]);
     }
-    timer ??= deps.setTimer(flush, DEV_LOG_FLUSH_MS);
+    if (!scheduled) {
+      scheduled = true;
+      deps.setTimer(flush, DEV_LOG_FLUSH_MS);
+    }
   }) as DevLogSink;
   sink.flush = flush;
   return sink;
