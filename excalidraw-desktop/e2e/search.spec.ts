@@ -123,11 +123,15 @@ test("the active row survives result refreshes while typing more characters", as
 }) => {
   await searchBox(page).click();
   await page.keyboard.type("dij", { delay: 40 });
-  await expect(snippetRows(page).first()).toBeVisible();
+  // Array form: retries until the rows show exactly this query's marks. On a
+  // loaded machine a keystroke gap can exceed the debounce, so results for an
+  // earlier prefix ("d": two marks) may still be on screen, and a single-value
+  // toHaveText fails at once on that strict-mode violation instead of waiting.
+  await expect(snippetRows(page).first().locator("mark")).toHaveText(["Dij"]);
   await page.keyboard.type("kstra", { delay: 40 });
-  await expect(snippetRows(page).first().locator("mark")).toHaveText(
+  await expect(snippetRows(page).first().locator("mark")).toHaveText([
     "Dijkstra",
-  );
+  ]);
   await page.keyboard.press("ArrowDown");
   await expect(activeRow(page)).toHaveAttribute("data-kind", "snippet");
   // the same query again (no change) must not reset the selection
