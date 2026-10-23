@@ -8,6 +8,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 - File tree keys: `j`/`k` move, `h`/`l` close and open folders, `Enter` opens, `r` renames, `a`/`A` create, `d` deletes, `m` moves, `g`/`G` jump, `Esc` goes back to the canvas. **Mod+Alt+F** focuses the tree.
 - The same `list.*` commands drive the Tags list, the Links panel and the Settings page list, so every panel key is in the palette and can be changed in Settings → Hotkeys or `[hotkeys]`. They apply only while a list has focus, never on the canvas or in a text field.
+- `vaultdraw export <drawing>` renders a drawing to PNG, SVG or PDF through the running app, with the same result as **Export** in the file tree. It writes the drawing's name in the current folder, or `-o <file>`, or `-o -` for stdout. Options: `--format`, `--scale`, `--dark`, `--no-background`, `--no-pattern`, `--embed-scene`, `--page`, and `--force` to overwrite.
 
 ### Fixed
 
