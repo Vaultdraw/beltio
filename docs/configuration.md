@@ -812,4 +812,5 @@ enabled = ["my-plugin"]
 - **Zero cost when unused:** with an empty `enabled` list, no plugin code loads at startup.
 - **Safe mode:** after two crashed launches in a row with plugins enabled, the next launch loads no plugins and shows a banner. Holding Option at launch does the same. Use **Plugins: Restart in safe mode** (`plugins.restartSafeMode`) and **Plugins: Restart normally** (`plugins.restartNormally`) to switch.
 - **Dev reload:** with `dev = true` in a plugin's `plugin.toml`, saving its `main.js` or `plugin.toml` reloads it.
-- **Commands:** `plugins.openSettings`, `plugins.installFolder` and `plugins.reloadList`. Like every command, you can rebind them in `[hotkeys]`.
+- **Commands:** `plugins.openSettings`, `plugins.installFolder`, `plugins.reloadList` and `plugins.openFolder` (shows the plugins folder). Like every command, you can rebind them in `[hotkeys]`.
+- **Writing a plugin:** the `vaultdraw-plugin` tool (`check`, `init`, `dev`) is described in `sdk/docs/getting-started.md`. It adds no config key.

@@ -31,6 +31,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **Plugin safe mode:** after two launches in a row crash with plugins enabled, the next launch loads no plugins and says why. Holding Option at launch does the same. The palette commands **Plugins: Restart in safe mode** and **Restart normally** switch between the two.
 - **Dev reload:** a plugin with `dev = true` in its `plugin.toml` reloads when its files change.
 - Palette commands: **Plugins: Open plugin settings**, **Install from folder…** and **Reload plugin list**.
+- New palette command **Plugins: Open plugins folder** (`plugins.openFolder`) shows the plugins folder in your file manager.
 - Only the first 6 plugin panel buttons show in the activity bar. The palette or Settings → Interface shows the others.
 
 ### Faster
@@ -45,6 +46,16 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - Renaming a tag across the vault no longer shows an extra "Updated N links" message next to "Renamed #a to #b" when the rewrite finishes very fast.
 - Drawings with more than 600 elements now get a thumbnail in the gallery, home, search and palette (up to 8,000 elements). Parsing, restoring, measuring and painting each run in short steps, so the app stays responsive while thumbnails draw.
 - The activity bar disappears when every entry is hidden, instead of leaving an empty 36 px strip. Showing one entry again (Settings → Interface) brings it back.
+- A plugin with `dev = true` is no longer switched off for good after three errors. It stops for the session, the disable is not saved, and the next save reloads it with a fresh error count.
+- Dev reload now also works for plugins in symlinked folders and in temp folders on macOS (watched paths are canonicalised).
+
+### Plugin SDK
+
+- `sdk/api`: the `@vaultdraw/api` types package (types only, not published yet).
+- `vaultdraw-plugin`: a command line tool with `check`, `init` and `dev`.
+- A manifest test corpus that pins what `plugin.toml` accepts and refuses.
+- Two doc pages: `sdk/docs/reference.md` and `sdk/docs/getting-started.md`.
+
 
 ## [0.1.2] - 2026-10-23
 
