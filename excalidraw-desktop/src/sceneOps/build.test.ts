@@ -64,4 +64,17 @@ describe("buildElements", () => {
     expect(out.map((e) => e.type)).toEqual(["arrow", "rectangle", "text"]);
     expect(out[0].width).toBe(100);
   });
+
+  it("keeps a lone x or y and centres only the missing axis", () => {
+    const [onlyX, onlyY] = buildElements(
+      [
+        { type: "rectangle", x: 40, width: 100, height: 50 },
+        { type: "rectangle", y: 70, width: 100, height: 50 },
+      ],
+      { x: 500, y: 300 },
+    );
+    // group bounds are x 0..140, y 0..120, so the shift is (430, 240) on the missing axes only
+    expect([onlyX.x, onlyX.y]).toEqual([40, 240]);
+    expect([onlyY.x, onlyY.y]).toEqual([430, 70]);
+  });
 });

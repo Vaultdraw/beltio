@@ -33,8 +33,8 @@ const toSkeleton = (e: NewElement): ExcalidrawElementSkeleton => {
 };
 
 /**
- * Elements without x/y are shifted as a group so their bounding box is
- * centred at `center` (relative offsets kept). Explicit x/y stay absolute.
+ * Elements missing x and/or y are shifted as a group so their bounding box is
+ * centred at `center` (relative offsets kept). A given x or y stays absolute.
  */
 export const buildElements = (
   adds: readonly NewElement[],
@@ -47,7 +47,8 @@ export const buildElements = (
     adds.map(toSkeleton),
   ) as ExcalidrawElement[];
   // Labels add bound text elements after the skeleton's own; map by order of the primaries.
-  const unplaced = new Set<number>();
+  const unplacedX = new Set<number>();
+  const unplacedY = new Set<number>();
   let cursor = 0;
   const owner: number[] = [];
   for (const el of built) {
@@ -61,18 +62,28 @@ export const buildElements = (
     }
   }
   adds.forEach((a, i) => {
-    if (a.x === undefined || a.y === undefined) {
-      unplaced.add(i);
+    if (a.x === undefined) {
+      unplacedX.add(i);
+    }
+    if (a.y === undefined) {
+      unplacedY.add(i);
     }
   });
-  const group = built.filter((_, k) => unplaced.has(owner[k]));
+  const inGroup = (k: number) =>
+    unplacedX.has(owner[k]) || unplacedY.has(owner[k]);
+  const group = built.filter((_, k) => inGroup(k));
   if (!group.length) {
     return built;
   }
   const [x1, y1, x2, y2] = getCommonBounds(group);
   const dx = center.x - (x1 + x2) / 2;
   const dy = center.y - (y1 + y2) / 2;
-  return built.map((el, k) =>
-    unplaced.has(owner[k]) ? { ...el, x: el.x + dx, y: el.y + dy } : el,
-  );
+  // Each axis is placed on its own: a given x or y is never overwritten.
+  return built.map((el, k) => {
+    const shiftX = unplacedX.has(owner[k]);
+    const shiftY = unplacedY.has(owner[k]);
+    return shiftX || shiftY
+      ? { ...el, x: shiftX ? el.x + dx : el.x, y: shiftY ? el.y + dy : el.y }
+      : el;
+  });
 };
