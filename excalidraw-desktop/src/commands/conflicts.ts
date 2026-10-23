@@ -149,6 +149,9 @@ export function findConflicts(
       const first = firstChord(chord);
       if (!defaults.includes(chord)) {
         for (const key of excalidrawActionsFor(first, platform)) {
+          if (isHostOwnedKey(key)) {
+            continue;
+          }
           found.push({
             kind: "excalidraw",
             action: key.action,
@@ -172,6 +175,10 @@ export function findConflicts(
   }
   return result;
 }
+
+/** Tool letters and Q are `tool.*` commands (the app turns Excalidraw's own off), so they only clash command-to-command. */
+const isHostOwnedKey = (key: { source: string; action: string }): boolean =>
+  key.source === "tool" || key.action === "toolLock";
 
 /** Number of (command, chord) pairs that have at least one conflict. */
 export function conflictCount(conflicts: ConflictMap): number {
