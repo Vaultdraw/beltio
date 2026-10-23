@@ -12,19 +12,20 @@ mark("interactive");
 if (mode === "hang") await sleep(60_000);
 mark("phase:open");
 if (mode === "leak") for (const label of ["baseline", "after-10", "after-vault-switch", "idle-after"]) { mark(`leak:${label}`); await sleep(500); }
-mark("idle-begin");
-// Burn a fixed amount of CPU time (not wall time: under machine load a wall-clock busy loop gets
-// less CPU and the measured percent drifts). Quiet margins on both sides let the harness's ps
-// samples, which run after it reads each mark, land outside the busy part (300 ms was too short
-// under background QoS: the idle-begin sample landed mid-burn).
+// Self-report: this process's own CPU time at each idle mark, the reference the harness's ps
+// samples are checked against. The burn is a fixed CPU-time budget (a wall-clock busy loop gets
+// less CPU under load), after an idle second so the harness's idle-begin sample, taken when it
+// reads the mark, lands before the busy part.
 const cpuSec = () => { const u = process.cpuUsage(); return (u.user + u.system) / 1e6; };
+const cpuAtBegin = cpuSec();
+mark("idle-begin");
 await sleep(1000);
 const burnFrom = cpuSec();
 while (cpuSec() - burnFrom < BURN_CPU_S) { const t = Date.now() + 25; while (Date.now() < t); await sleep(25); }
-const burnt = cpuSec() - burnFrom;
 await sleep(300);
+const cpuAtEnd = cpuSec();
 mark("idle-end");
 await sleep(600);
 if (mode !== "noreport") {
-  writeFileSync(path.join(dir, "smoke-report.json"), JSON.stringify({ status: 0, steps: [], details: { perf: { version: 1, env: "tauri", samples: { "open.small": [10, 12] }, info: { fake: true, burntCpuS: burnt }, errors: [] } } }));
+  writeFileSync(path.join(dir, "smoke-report.json"), JSON.stringify({ status: 0, steps: [], details: { perf: { version: 1, env: "tauri", samples: { "open.small": [10, 12] }, info: { fake: true, selfIdleCpuS: cpuAtEnd - cpuAtBegin }, errors: [] } } }));
 }

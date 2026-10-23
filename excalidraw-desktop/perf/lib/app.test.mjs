@@ -25,13 +25,13 @@ test("runAppOnce with fake binary: marks, rss, idle cpu, report merge, cleanup",
   assert.deepEqual(r.samples["open.small"], [10, 12]);
   assert.ok(r.samples["startup.coldToInteractive"][0] >= 250);
   assert.ok(r.samples["memory.peakRssMB"][0] > 5);
-  // Load-independent: the percent turned back into CPU seconds must match what the fake burnt
-  // in the window (a fixed CPU-time budget), not a wall-clock share that drops under load.
+  // Load-independent: the percent turned back into CPU seconds must match the CPU the fake
+  // itself reports between its idle marks, not a wall-clock share that drops under load.
   const pct = r.samples["idle.cpuPercent"][0];
   const cpuS = (pct / 100) * r.info.idleWindowS;
-  const burnt = r.info.burntCpuS;
-  assert.ok(burnt >= 0.5, `fake burnt ${burnt} s`);
-  assert.ok(cpuS > burnt * 0.8 && cpuS < burnt + 0.25, `idle cpu ${cpuS} s (${pct}% of ${r.info.idleWindowS} s) vs burnt ${burnt} s`);
+  const own = r.info.selfIdleCpuS;
+  assert.ok(own >= 0.5, `fake used ${own} s`);
+  assert.ok(cpuS > own * 0.5 && cpuS < own + 0.05, `idle cpu ${cpuS} s (${pct}% of ${r.info.idleWindowS} s) vs the fake's own ${own} s`);
   assert.deepEqual(r.marks.map((m) => m.name), ["interactive", "phase:open", "idle-begin", "idle-end"]);
   assert.equal(existsSync(path.join(runsDir)), true);
   assert.equal(r.runDir, undefined);
