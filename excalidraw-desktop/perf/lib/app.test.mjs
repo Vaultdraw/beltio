@@ -1,14 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isRafStall, runAppOnce, vaultDirName } from "./app.mjs";
 
 const fake = path.join(path.dirname(fileURLToPath(import.meta.url)), "fake-app.mjs");
+const roots = [];
+test.after(() => roots.forEach((r) => rmSync(r, { recursive: true, force: true })));
 function setup() {
   const root = mkdtempSync(path.join(tmpdir(), "perf-test-"));
+  roots.push(root);
   const vault = path.join(root, "pristine");
   mkdirSync(vault);
   writeFileSync(path.join(vault, "a.excalidraw"), "{}");
