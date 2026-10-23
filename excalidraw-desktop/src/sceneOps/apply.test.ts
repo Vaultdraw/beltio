@@ -1,4 +1,8 @@
-import { CaptureUpdateAction } from "@excalidraw/excalidraw";
+import {
+  CaptureUpdateAction,
+  convertToExcalidrawElements,
+} from "@excalidraw/excalidraw";
+import type { ExcalidrawElement } from "@excalidraw/element/types";
 import { describe, expect, it } from "vitest";
 
 import { applyOps } from "./apply";
@@ -72,5 +76,51 @@ describe("applyOps", () => {
     const el = updateScene.mock.calls[0][0].elements[0];
     expect(el.x + el.width / 2).toBe(600);
     expect(el.y + el.height / 2).toBe(300);
+  });
+
+  it("recomputes an arrow's size when its points change", () => {
+    const [arrow] = convertToExcalidrawElements([
+      { type: "arrow", x: 0, y: 0, points: [[0, 0], [10, 5]] },
+    ] as never) as ExcalidrawElement[];
+    const { api, updateScene } = stubApi([arrow]);
+    applyOps(api, [
+      {
+        op: "update",
+        id: arrow.id,
+        props: { points: [[0, 0], [120, 40], [200, -10]] },
+      },
+    ]);
+    const next = updateScene.mock.calls[0][0].elements[0];
+    expect(next.points).toHaveLength(3);
+    expect(next.width).toBe(200);
+    expect(next.height).toBe(50);
+  });
+
+  it("wraps bound label text and grows its container", () => {
+    const [box, label] = convertToExcalidrawElements([
+      {
+        type: "rectangle",
+        x: 0,
+        y: 0,
+        width: 120,
+        height: 60,
+        label: { text: "hi" },
+      },
+    ] as never) as ExcalidrawElement[];
+    expect(label.type).toBe("text");
+    const { api, updateScene } = stubApi([box, label]);
+    const long = "a long label that has to wrap over many lines inside the box";
+    applyOps(api, [{ op: "update", id: label.id, props: { text: long } }]);
+    const out = updateScene.mock.calls[0][0].elements as ExcalidrawElement[];
+    const nb = out.find((e) => e.id === box.id)!;
+    const nl = out.find((e) => e.id === label.id) as ExcalidrawElement & {
+      text: string;
+      originalText: string;
+    };
+    expect(nl.originalText).toBe(long);
+    expect(nl.text).toContain("\n"); // wrapped to the container width
+    expect(nb.height).toBeGreaterThan(box.height); // container grew to fit
+    expect(nl.y).toBeGreaterThanOrEqual(nb.y); // label stays inside
+    expect(nl.y + nl.height).toBeLessThanOrEqual(nb.y + nb.height);
   });
 });

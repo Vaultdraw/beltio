@@ -105,10 +105,19 @@ const liveTarget = (
   op: number,
   existing: ReadonlyMap<string, ExcalidrawElement>,
   issues: SceneOpIssue[],
+  deleted: ReadonlySet<string>,
 ): ExcalidrawElement | null => {
   const el = typeof id === "string" ? existing.get(id) : undefined;
   if (!el || el.isDeleted) {
     issues.push({ op, key: "id", message: "no such element" });
+    return null;
+  }
+  if (deleted.has(el.id)) {
+    issues.push({
+      op,
+      key: "id",
+      message: "element was deleted earlier in this batch",
+    });
     return null;
   }
   return el;
@@ -127,6 +136,7 @@ export const validateOps = (
     ]);
   }
   const issues: SceneOpIssue[] = [];
+  const deleted = new Set<string>();
   ops.forEach((raw: unknown, i) => {
     if (!isRecord(raw)) {
       issues.push({ op: i, message: "op must be an object" });
@@ -150,7 +160,7 @@ export const validateOps = (
         issues.push({ op: i, key: "text", message: "text elements need text" });
       }
     } else if (raw.op === "update") {
-      const target = liveTarget(raw.id, i, existing, issues);
+      const target = liveTarget(raw.id, i, existing, issues, deleted);
       if (!isRecord(raw.props)) {
         issues.push({ op: i, key: "props", message: "must be an object" });
         return;
@@ -173,7 +183,9 @@ export const validateOps = (
         }
       }
     } else if (raw.op === "delete") {
-      liveTarget(raw.id, i, existing, issues);
+      if (liveTarget(raw.id, i, existing, issues, deleted)) {
+        deleted.add(raw.id as string);
+      }
     } else {
       issues.push({
         op: i,

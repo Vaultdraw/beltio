@@ -116,4 +116,26 @@ describe("validateOps", () => {
     ]);
     expect(issues.map((i) => i.op)).toEqual([1, 2]);
   });
+
+  it("refuses an update or second delete of an element deleted earlier in the batch", () => {
+    const issues = issuesOf([
+      { op: "delete", id },
+      { op: "update", id, props: { x: 1 } },
+      { op: "delete", id },
+    ]);
+    expect(issues.map((x) => [x.op, x.key])).toEqual([
+      [1, "id"],
+      [2, "id"],
+    ]);
+    expect(issues[0].message).toMatch(/deleted earlier/);
+  });
+
+  it("still allows update then delete of the same element", () => {
+    expect(
+      issuesOf([
+        { op: "update", id, props: { x: 1 } },
+        { op: "delete", id },
+      ]),
+    ).toEqual([]);
+  });
 });
