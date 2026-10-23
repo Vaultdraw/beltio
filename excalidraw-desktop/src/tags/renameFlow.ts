@@ -5,7 +5,7 @@
  * background rewrite of the other drawings finishes.
  */
 import { findTags } from "./grammar";
-import { claimTagJob, releaseTagJob } from "./renameJobs";
+import { beginTagRename, claimTagJob, releaseTagJob } from "./renameJobs";
 
 import type { ElementEdit, RewriteDone, VaultLinks } from "../links/types";
 import type { VaultTagRename } from "./types";
@@ -96,19 +96,26 @@ export async function runTagRename(
       .then((u) => (stop ? u() : (off = u)))
       .catch(() => {});
   }
+  // Until the job id is claimed, the links toast holds its decision.
+  const jobKnown = beginTagRename();
   let result;
   try {
     result = await deps.api.rename(deps.handle, from, to, deps.openPath);
   } catch (err) {
+    jobKnown();
     stopListening();
     throw err;
   }
+  const { jobId } = result;
+  if (jobId !== null && deps.links) {
+    claimTagJob(jobId);
+  }
+  jobKnown();
   const open =
     result.openDrawingEdits.length > 0
       ? deps.applyEdits(result.openDrawingEdits)
       : 0;
   const openCount = open > 0 ? 1 : 0;
-  const { jobId } = result;
   if (jobId === null || !deps.links) {
     stopListening();
     if (openCount > 0) {
@@ -116,7 +123,6 @@ export async function runTagRename(
     }
     return { completed: Promise.resolve() };
   }
-  claimTagJob(jobId);
   const completed = (async () => {
     const done =
       early.get(jobId) ??

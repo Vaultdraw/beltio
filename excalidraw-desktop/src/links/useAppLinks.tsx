@@ -21,13 +21,12 @@ import { setHotkeyOverride } from "../commands/useCommands";
 import { ensureFolder, folderChain } from "../vault/newDrawing";
 import { errorMessage } from "../vault/types";
 
-import { isTagJob } from "../tags/renameJobs";
-
 import { createSpot } from "./createTarget";
 import { getDockVisible, setDockVisible } from "./dockState";
 import { linkTargetFor, wikiLink } from "./format";
 import { NavHistories } from "./history";
 import { decideMove, updatedMessage } from "./moveFlow";
+import { toastRewriteDone } from "./rewriteToast";
 import { createResolver } from "./resolve";
 
 import type { LinksDockHandle } from "../components/links/LinksDock";
@@ -339,27 +338,7 @@ export function useAppLinks(deps: AppLinksDeps) {
           return;
         }
         setRefreshKey((n) => n + 1);
-        if (isTagJob(done.jobId)) {
-          // The tag rename flow reports its own result.
-        } else if (done.failed.length > 0) {
-          const names = done.failed
-            .map(
-              (f) =>
-                `${f.path} (${
-                  f.code === "CONFLICT" ? "changed on disk" : f.code
-                })`,
-            )
-            .join(", ");
-          live.current.notify(
-            `${updatedMessage(done.links, done.rewritten)}; skipped: ${names}`,
-            "error",
-          );
-        } else if (done.rewritten > 0) {
-          live.current.notify(
-            updatedMessage(done.links, done.rewritten),
-            "info",
-          );
-        }
+        toastRewriteDone(done, live.current.notify);
         if (done.rewritten > 0) {
           void fetchRemeasure();
         }
