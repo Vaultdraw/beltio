@@ -197,6 +197,16 @@
   gap: 3px;
 }
 
+.vault-hotkeys__caps {
+  display: inline-flex;
+  gap: 3px;
+}
+
+/* Sequence: a small gap between chord groups */
+.vault-hotkeys__caps + .vault-hotkeys__caps {
+  margin-left: 5px;
+}
+
 .vault-hotkeys__chip-key kbd {
   min-width: 18px;
   padding: 3px 5px;
@@ -285,6 +295,48 @@
 .vault-hotkeys__add--text:hover {
   background: var(--vault-chip);
   color: var(--vault-text);
+}
+
+/* "Sequence" chip beside the recording state */
+.vault-hotkeys__seq-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 var(--vd-space-3);
+  border: 1px solid var(--vault-border);
+  border-radius: var(--vd-radius-pop);
+  background: var(--vault-chip);
+  color: var(--vault-text-muted);
+  font: inherit;
+  font-size: var(--vd-fs-small);
+  cursor: pointer;
+}
+
+.vault-hotkeys__seq-btn:hover {
+  color: var(--vault-text);
+}
+
+.vault-hotkeys__seq-btn:focus-visible {
+  outline: 2px solid var(--vault-primary);
+  outline-offset: 1px;
+}
+
+/* Sequence recording: live caps, hint, cancel */
+.vault-hotkeys__pending--seq {
+  cursor: default;
+}
+
+.vault-hotkeys__pending--seq .vault-hotkeys__caps {
+  gap: 2px;
+}
+
+.vault-hotkeys__pending--seq .vault-hotkeys__cancel {
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--vault-text-muted);
+  font: inherit;
+  cursor: pointer;
 }
 
 /* Inline recording: "Press keys… Esc cancels" */

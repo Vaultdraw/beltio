@@ -19,6 +19,7 @@ import {
   formatChord,
   formatChordParts,
 } from "../../../commands/keys";
+import { parseSequence } from "../../../commands/keySequence";
 import {
   effectiveKeys,
   isCustomised,
@@ -36,6 +37,7 @@ import {
   useHotkeyOverrides,
 } from "../../../commands/useCommands";
 import { openConfigDir } from "../../../vault/settingsSync";
+import { formatKeyLabel } from "../../../palette/shortcuts";
 import { IconAlert, IconKeyboard, IconPlus, IconRefresh } from "../../Icons";
 import { getSettingSchema } from "../schema";
 import { useSettings, type SettingControls } from "../SettingsContext";
@@ -50,12 +52,19 @@ import {
   type HotkeyInfo,
 } from "./hotkeysView";
 
+import { KeyCaps } from "./KeyCaps";
+import { stepRecorder } from "./sequenceRecorder";
+
 import "./Hotkeys.css";
 
 import type { Chord, CommandDefinition } from "../../../commands/types";
 
 /** What the next key press is captured for: a command row, or the filter box. */
-type Recording = { kind: "command"; id: string } | { kind: "filter" } | null;
+type Recording =
+  | { kind: "command"; id: string }
+  | { kind: "sequence"; id: string }
+  | { kind: "filter" }
+  | null;
 
 /** Registry order is not display order: by category, then title. */
 const sortCommands = (
@@ -79,6 +88,8 @@ const HotkeysPage = () => {
   const [chordFilter, setChordFilter] = useState<Chord | null>(null);
   const [chip, setChip] = useState<FilterId>("all");
   const [recording, setRecording] = useState<Recording>(null);
+  // Chords typed so far while recording a sequence.
+  const [seq, setSeq] = useState<Chord[]>([]);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
 
@@ -102,8 +113,8 @@ const HotkeysPage = () => {
   );
   const conflictTotal = conflictCount(conflicts);
 
-  const live = useRef({ overrides, platform, commands });
-  live.current = { overrides, platform, commands };
+  const live = useRef({ overrides, platform, commands, seq });
+  live.current = { overrides, platform, commands, seq };
 
   // Capture keys for the active recording. The dispatcher is paused and the
   // window capture listener swallows every key, so neither the app, Excalidraw
@@ -123,8 +134,52 @@ const HotkeysPage = () => {
         overrides: current,
         platform: plat,
         commands: known,
+        seq: typed,
       } = live.current;
       const chord = chordFromEvent(e, plat);
+      if (recording.kind === "sequence") {
+        const command = known.find((c) => c.id === recording.id);
+        const step = stepRecorder(typed, chord);
+        if (!command || step.action === "ignore") {
+          return;
+        }
+        if (step.action === "cancel") {
+          setRecording(null);
+          setSeq([]);
+          setRefusal(null);
+          return;
+        }
+        if (step.action === "update") {
+          const first = step.chords[0];
+          const reason =
+            typed.length === 0 && first && reservedReason(first, plat);
+          if (reason) {
+            setRefusal(`Can't use ${formatChord(first, plat)}: ${reason}`);
+            return;
+          }
+          setRefusal(null);
+          setSeq(step.chords);
+          return;
+        }
+        const text = step.chords.join(" ");
+        if (!parseSequence(text, plat)) {
+          setRefusal(`Can't use ${text}: not a valid key sequence`);
+          return;
+        }
+        setHotkeyOverride(
+          command.id,
+          overrideFor(
+            command,
+            [...effectiveKeys(command, current, plat), text],
+            plat,
+          ),
+          win,
+        );
+        setRefusal(null);
+        setSeq([]);
+        setRecording(null);
+        return;
+      }
       if (e.key === "Escape" && !e.metaKey && !e.ctrlKey && !e.altKey) {
         setRecording(null);
         setRefusal(null);
@@ -166,6 +221,7 @@ const HotkeysPage = () => {
 
   const startRecording = (next: NonNullable<Recording>) => {
     setRefusal(null);
+    setSeq([]);
     setRecording(next);
   };
 
@@ -245,11 +301,42 @@ const HotkeysPage = () => {
     </button>
   );
 
+  const sequencePending = (
+    <span
+      className="vault-hotkeys__pending vault-hotkeys__pending--seq"
+      role="status"
+    >
+      <IconKeyboard width="13" height="13" aria-hidden="true" />
+      {seq.length === 0 ? (
+        <span>Type the chords…</span>
+      ) : (
+        <span className="vault-hotkeys__seq-live">
+          <KeyCaps keyText={seq.join(" ")} platform={platform} />
+        </span>
+      )}
+      <span>Enter saves, Backspace undoes, Esc cancels</span>
+      <button
+        type="button"
+        className="vault-hotkeys__cancel"
+        aria-label="Cancel recording"
+        onClick={() => {
+          setRecording(null);
+          setSeq([]);
+        }}
+      >
+        ×
+      </button>
+    </span>
+  );
+
   const renderRow = ({ command, keys, customised }: HotkeyInfo) => {
     const perChord = conflicts.get(command.id);
     const sentence = conflictSentence(command, perChord, rank, platform);
-    const recordingHere =
+    const recordingSingle =
       recording?.kind === "command" && recording.id === command.id;
+    const recordingSeq =
+      recording?.kind === "sequence" && recording.id === command.id;
+    const recordingHere = recordingSingle || recordingSeq;
     const addLabel = `Add hotkey for ${command.title}`;
     return (
       <li
@@ -273,7 +360,7 @@ const HotkeysPage = () => {
         <div className="vault-hotkeys__keys">
           {keys.map((chord) => {
             const found = perChord?.get(chord);
-            const label = formatChord(chord, platform);
+            const label = formatKeyLabel(chord, platform);
             return (
               <span
                 key={chord}
@@ -281,9 +368,7 @@ const HotkeysPage = () => {
                 data-conflict={found ? "true" : undefined}
                 title={label}
               >
-                {formatChordParts(chord, platform).map((part, i) => (
-                  <kbd key={i}>{part}</kbd>
-                ))}
+                <KeyCaps keyText={chord} platform={platform} />
                 <button
                   type="button"
                   className="vault-hotkeys__remove"
@@ -305,7 +390,20 @@ const HotkeysPage = () => {
               </span>
             );
           })}
-          {recordingHere && pending}
+          {recordingSingle && pending}
+          {recordingSingle && (
+            <button
+              type="button"
+              className="vault-hotkeys__seq-btn"
+              title="Record a key sequence such as g r"
+              onClick={() =>
+                startRecording({ kind: "sequence", id: command.id })
+              }
+            >
+              Sequence
+            </button>
+          )}
+          {recordingSeq && sequencePending}
           {!recordingHere && isDrawing(command) && (
             <button
               type="button"

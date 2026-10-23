@@ -4,7 +4,7 @@ import { excalidrawActionsFor } from "./excalidrawKeys";
 import { effectiveKeys } from "./keymap";
 import { reservedReason } from "./reserved";
 
-import { normalizeChord } from "./keys";
+import { normalizeKey } from "./keySequence";
 
 import type {
   Chord,
@@ -17,7 +17,19 @@ import type {
 export type Conflict =
   | { kind: "command"; id: string; title: string }
   | { kind: "excalidraw"; action: string; label: string }
-  | { kind: "reserved"; reason: string };
+  | { kind: "reserved"; reason: string }
+  /**
+   * Warning only: one key is the start of the other ("g" and "g g"); the
+   * longer sequence wins. `other` is the other binding as stored,
+   * `otherIsLonger` tells which side this key is.
+   */
+  | {
+      kind: "prefix";
+      id: string;
+      title: string;
+      other: Chord;
+      otherIsLonger: boolean;
+    };
 
 /** Focus scopes: focus is in at most one of them, so two different ones never hold together. */
 const FOCUS_SCOPES: readonly string[] = [
@@ -47,6 +59,17 @@ export function whenCanOverlap(
   );
 }
 
+/** The chord that decides Excalidraw and reserved clashes: a sequence's first. */
+const firstChord = (key: Chord): Chord => key.split(" ", 1)[0];
+
+/** Every proper chord-prefix of a sequence as a stored key ("a b c" -> "a", "a b"). */
+function* properPrefixes(key: Chord): Generator<Chord> {
+  const chords = key.split(" ");
+  for (let n = 1; n < chords.length; n++) {
+    yield chords.slice(0, n).join(" ");
+  }
+}
+
 type ConflictMap = ReadonlyMap<string, ReadonlyMap<Chord, Conflict[]>>;
 
 /**
@@ -61,15 +84,23 @@ export function findConflicts(
 ): ConflictMap {
   const keys = new Map<string, Chord[]>();
   const users = new Map<Chord, CommandDefinition[]>();
+  // prefix key -> commands with a longer sequence that starts with it.
+  const longerUsers = new Map<Chord, [CommandDefinition, Chord][]>();
+  const add = <V>(map: Map<Chord, V[]>, key: Chord, value: V) => {
+    const list = map.get(key);
+    if (list) {
+      list.push(value);
+    } else {
+      map.set(key, [value]);
+    }
+  };
   for (const command of commands) {
     const chords = effectiveKeys(command, overrides, platform);
     keys.set(command.id, chords);
     for (const chord of chords) {
-      const list = users.get(chord);
-      if (list) {
-        list.push(command);
-      } else {
-        users.set(chord, [command]);
+      add(users, chord, command);
+      for (const prefix of properPrefixes(chord)) {
+        add(longerUsers, prefix, [command, chord]);
       }
     }
   }
@@ -77,7 +108,7 @@ export function findConflicts(
   const result = new Map<string, Map<Chord, Conflict[]>>();
   for (const command of commands) {
     const defaults = defaultKeys(command, platform).map((c) =>
-      normalizeChord(c, platform),
+      normalizeKey(c, platform),
     );
     for (const chord of keys.get(command.id) ?? []) {
       const found: Conflict[] = [];
@@ -89,8 +120,35 @@ export function findConflicts(
           found.push({ kind: "command", id: other.id, title: other.title });
         }
       }
+      const prefixConflict = (
+        other: CommandDefinition,
+        otherKey: Chord,
+        otherIsLonger: boolean,
+      ) => {
+        if (
+          other.id !== command.id &&
+          whenCanOverlap(command.when, other.when)
+        ) {
+          found.push({
+            kind: "prefix",
+            id: other.id,
+            title: other.title,
+            other: otherKey,
+            otherIsLonger,
+          });
+        }
+      };
+      for (const [other, otherKey] of longerUsers.get(chord) ?? []) {
+        prefixConflict(other, otherKey, true);
+      }
+      for (const prefix of properPrefixes(chord)) {
+        for (const other of users.get(prefix) ?? []) {
+          prefixConflict(other, prefix, false);
+        }
+      }
+      const first = firstChord(chord);
       if (!defaults.includes(chord)) {
-        for (const key of excalidrawActionsFor(chord, platform)) {
+        for (const key of excalidrawActionsFor(first, platform)) {
           found.push({
             kind: "excalidraw",
             action: key.action,
@@ -98,7 +156,7 @@ export function findConflicts(
           });
         }
       }
-      const reason = reservedReason(chord, platform);
+      const reason = reservedReason(first, platform);
       if (reason) {
         found.push({ kind: "reserved", reason });
       }

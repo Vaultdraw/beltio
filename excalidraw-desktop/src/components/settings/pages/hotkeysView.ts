@@ -1,5 +1,5 @@
 /** Pure view logic of the Hotkeys page: filters, counts, grouping, conflict text. */
-import { formatChord } from "../../../commands/keys";
+import { formatKeyLabel } from "../../../palette/shortcuts";
 
 import type { Conflict } from "../../../commands/conflicts";
 import type {
@@ -122,7 +122,7 @@ export const conflictSentence = (
     Chord,
     readonly Conflict[],
   ];
-  const key = formatChord(chord, platform);
+  const key = formatKeyLabel(chord, platform);
   const reserved = found.find((c) => c.kind === "reserved");
   if (reserved && reserved.kind === "reserved") {
     return `${key} can't work: ${reserved.reason}. Change it.`;
@@ -139,6 +139,15 @@ export const conflictSentence = (
     return `Also bound to ${names}. ${
       thisWins ? "This one" : first.title
     } wins (first match). Change one of them.`;
+  }
+  const prefix = found.find(
+    (c): c is Extract<Conflict, { kind: "prefix" }> => c.kind === "prefix",
+  );
+  if (prefix) {
+    const other = formatKeyLabel(prefix.other, platform);
+    return prefix.otherIsLonger
+      ? `${key} is also the start of ${other} (${prefix.title}): the sequence wins. Change one of them.`
+      : `${key} starts with ${other}, also bound to ${prefix.title}: the sequence wins. Change one of them.`;
   }
   const label = found
     .map((c) => (c.kind === "excalidraw" ? c.label : ""))

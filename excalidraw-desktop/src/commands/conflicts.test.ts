@@ -94,3 +94,80 @@ describe("findConflicts", () => {
     ).toBe(0);
   });
 });
+
+describe("findConflicts: prefix and sequences", () => {
+  const cmd = (id: string, keys: string[]): CommandDefinition => ({
+    id,
+    title: id.toUpperCase(),
+    category: "File",
+    keys: { default: keys },
+  });
+
+  it("warns both ways when a chord starts a sequence", () => {
+    const result = findConflicts(
+      [cmd("a", ["G"]), cmd("b", ["G G"])],
+      {},
+      "mac",
+    );
+    expect(result.get("a")?.get("G")).toEqual([
+      {
+        kind: "prefix",
+        id: "b",
+        title: "B",
+        other: "G G",
+        otherIsLonger: true,
+      },
+    ]);
+    expect(result.get("b")?.get("G G")).toEqual([
+      { kind: "prefix", id: "a", title: "A", other: "G", otherIsLonger: false },
+    ]);
+  });
+
+  it("covers longer prefixes and ignores unrelated sequences", () => {
+    const result = findConflicts(
+      [cmd("a", ["G R"]), cmd("b", ["G R X"]), cmd("c", ["G S"])],
+      {},
+      "mac",
+    );
+    expect(
+      result
+        .get("a")
+        ?.get("G R")
+        ?.map((c) => c.kind),
+    ).toEqual(["prefix"]);
+    expect(result.get("b")?.get("G R X")).toHaveLength(1);
+    expect(result.has("c")).toBe(false);
+  });
+
+  it("does not flag a command against its own keys or disjoint contexts", () => {
+    expect(findConflicts([cmd("a", ["g", "G G"])], {}, "mac").size).toBe(0);
+    const a = { ...cmd("a", ["G"]), when: ["textEditing" as const] };
+    const b = { ...cmd("b", ["G G"]), when: ["!textEditing" as const] };
+    expect(findConflicts([a, b], {}, "mac").size).toBe(0);
+  });
+
+  it("checks Excalidraw and reserved keys on the first chord only", () => {
+    const dup = findConflicts([cmd("a", [])], { a: ["Mod+D X"] }, "mac");
+    expect(dup.get("a")?.get("Mod+D X")?.[0]).toMatchObject({
+      kind: "excalidraw",
+      action: "duplicateSelection",
+    });
+    // a later chord that equals an Excalidraw key is fine
+    expect(findConflicts([cmd("a", ["X Mod+D"])], {}, "mac").size).toBe(0);
+    const reserved = findConflicts([cmd("a", ["Mod+Q X"])], {}, "mac");
+    expect(reserved.get("a")?.get("Mod+Q X")?.[0].kind).toBe("reserved");
+    expect(findConflicts([cmd("a", ["X Mod+Q"])], {}, "mac").size).toBe(0);
+  });
+
+  it("works through overrides", () => {
+    const result = findConflicts(
+      COMMANDS,
+      { "vault.switch": ["Mod+N X"] },
+      "mac",
+    );
+    expect(result.get("vault.switch")?.get("Mod+N X")?.[0]).toMatchObject({
+      kind: "prefix",
+      id: "vault.newDrawing",
+    });
+  });
+});
