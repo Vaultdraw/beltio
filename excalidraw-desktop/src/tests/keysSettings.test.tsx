@@ -144,9 +144,9 @@ describe("[keys] parsing", () => {
     expect(values.keysLeader).toBe("Space");
     expect(problems).toEqual([
       {
-        kind: "invalid",
+        kind: "unknown",
         key: "keys.lead",
-        message: "config.toml: keys.lead is not a known key; ignored",
+        message: "config.toml: unknown key keys.lead (ignored)",
       },
     ]);
   });

@@ -176,14 +176,9 @@ const problem = (key: string, message: string): SettingsProblem => ({
   message,
 });
 
-const KNOWN_KEYS = new Set([
-  ...KEYS_MAPPINGS.map((m) => m.key.slice("keys.".length)),
-  "labels",
-]);
-
 /**
- * The `[keys.labels]` table and the unknown-key check of `[keys]` (the scalar
- * keys are CONFIG_MAPPING rows). Labels are keyed by the canonical sequence
+ * The `[keys.labels]` table (the scalar keys are CONFIG_MAPPING rows, and
+ * unknown `[keys]` keys are reported by the generic unknown-key check). Labels are keyed by the canonical sequence
  * (`<leader>` literal), so "<leader> F" and "<leader> f" differ only as the
  * chord parser says. Keys stay as written so Settings can edit the exact line;
  * `resolveLabels` canonicalises when it looks one up. A bad entry is left out with a problem naming its path.
@@ -208,16 +203,6 @@ export function parseKeysExtras(table: unknown): {
     return { labels, problems };
   }
   const record = table as Record<string, unknown>;
-  for (const name of Object.keys(record)) {
-    if (!KNOWN_KEYS.has(name)) {
-      problems.push(
-        problem(
-          `keys.${name}`,
-          `config.toml: keys.${name} is not a known key; ignored`,
-        ),
-      );
-    }
-  }
   const raw = record.labels;
   if (raw === undefined) {
     return { labels, problems };
