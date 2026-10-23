@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  GRAPH_COMMAND_IDS,
   GRAPH_VIEW_COMMAND_IDS,
   GRAPH_VIEW_IDS,
 } from "../commands/graphCommands";
@@ -162,7 +163,8 @@ export default function GraphView(props: GraphViewProps & GraphViewExtraProps) {
     rootRef,
     GRAPH_VIEW_IDS,
     hints
-      ? {}
+      ? // graph.fit (host-bound) stays live in hint mode: feed its key to the hints.
+        { [GRAPH_COMMAND_IDS.fit]: () => onHintKey("0", hints) }
       : {
           [V.left]: move("left"),
           [V.right]: move("right"),

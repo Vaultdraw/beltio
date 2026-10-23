@@ -33,9 +33,10 @@ export const GRAPH_VIEW_COMMAND_IDS = {
   close: "graph.close",
 } as const;
 
-export const GRAPH_VIEW_IDS: readonly string[] = Object.values(
-  GRAPH_VIEW_COMMAND_IDS,
-);
+export const GRAPH_VIEW_IDS: readonly string[] = [
+  ...Object.values(GRAPH_VIEW_COMMAND_IDS),
+  GRAPH_COMMAND_IDS.fit, // host-bound; the view overrides it only during hints
+];
 
 const VAULT = ["vaultOpen", "!modalOpen"] as const;
 
