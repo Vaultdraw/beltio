@@ -380,6 +380,56 @@ describe("window methods (C3)", () => {
       expect(files.exportDrawing).not.toHaveBeenCalled();
     });
 
+    it("passes frame and padding through when given", async () => {
+      const { call, files } = make();
+      await call("export.render", {
+        path: "a.excalidraw",
+        format: "png",
+        frame: "Slide 1",
+        padding: 0,
+      });
+      expect(files.exportDrawing).toHaveBeenCalledWith("a.excalidraw", "png", {
+        ...defaults,
+        frame: "Slide 1",
+        padding: 0,
+      });
+    });
+
+    it("refuses frame and padding with pdf (INVALID_PARAMS)", async () => {
+      const { call, files } = make();
+      const framed = await call("export.render", {
+        path: "a",
+        format: "pdf",
+        frame: "F",
+      });
+      expect(framed.error.code).toBe("INVALID_PARAMS");
+      expect(framed.error.message).toBe("frames apply to png and svg");
+      const padded = await call("export.render", {
+        path: "a",
+        format: "pdf",
+        padding: 10,
+      });
+      expect(padded.error.code).toBe("INVALID_PARAMS");
+      expect(files.exportDrawing).not.toHaveBeenCalled();
+    });
+
+    it("validates frame and padding", async () => {
+      const { call, files } = make();
+      for (const bad of [
+        { path: "a", format: "png", frame: "" },
+        { path: "a", format: "png", frame: 3 },
+        { path: "a", format: "png", padding: -1 },
+        { path: "a", format: "png", padding: 201 },
+        { path: "a", format: "png", padding: "10" },
+        { path: "a", format: "png", padding: Number.NaN },
+      ]) {
+        expect((await call("export.render", bad)).error.code).toBe(
+          "INVALID_PARAMS",
+        );
+      }
+      expect(files.exportDrawing).not.toHaveBeenCalled();
+    });
+
     it("round-trips multi-MB bytes", async () => {
       const big = new Uint8Array(5 * 1024 * 1024 + 1);
       for (let i = 0; i < big.length; i += 1) {

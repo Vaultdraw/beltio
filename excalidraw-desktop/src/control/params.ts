@@ -100,3 +100,38 @@ export const exportScaleParam = (params: unknown): number => {
   }
   return value;
 };
+
+/** Optional non-empty string: absent = undefined, anything else but a string is invalid. */
+export const optionalStringParam = (
+  params: unknown,
+  name: string,
+): string | undefined => {
+  const value = objectParams(params)[name];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string" || value === "") {
+    throw new ControlError("INVALID_PARAMS", `${name} must be a string`);
+  }
+  return value;
+};
+
+/** Export canvas padding 0..200 px. Absent = undefined (the editor's default). */
+export const exportPaddingParam = (params: unknown): number | undefined => {
+  const value = objectParams(params).padding;
+  if (value === undefined) {
+    return undefined;
+  }
+  if (
+    typeof value !== "number" ||
+    !Number.isFinite(value) ||
+    value < 0 ||
+    value > 200
+  ) {
+    throw new ControlError(
+      "INVALID_PARAMS",
+      "padding must be a number from 0 to 200",
+    );
+  }
+  return value;
+};

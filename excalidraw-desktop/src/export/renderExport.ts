@@ -5,10 +5,16 @@
  */
 
 import { loadFromJSONText } from "@excalidraw/excalidraw";
-import { getNonDeletedElements } from "@excalidraw/element";
+import { getNonDeletedElements, isFrameLikeElement } from "@excalidraw/element";
 
 import type { ImageExportRequest } from "@excalidraw/excalidraw/types";
+import type {
+  ExcalidrawElement,
+  ExcalidrawFrameLikeElement,
+  NonDeleted,
+} from "@excalidraw/element/types";
 
+import { ControlError } from "../control/errors";
 import { withStandardCanvasColors } from "../editor/canvasSync";
 import { exportFileName, renderImageExport } from "../editor/imageExport";
 
@@ -25,6 +31,10 @@ export type ExplorerExportOptions = {
   dark: boolean;
   /** Page mode: the whole page column instead of the content (PNG/SVG). */
   pageShaped?: boolean;
+  /** Export one frame (or magicframe) by id, else by name (PNG/SVG). */
+  frame?: string;
+  /** Canvas padding in px (PNG/SVG); the editor's default when absent. */
+  padding?: number;
 };
 
 const loadScene = async (json: string) => {
@@ -36,6 +46,26 @@ const loadScene = async (json: string) => {
       `Not a drawing: ${e instanceof Error ? e.message : String(e)}`,
     );
   }
+};
+
+/**
+ * The frame (or magicframe) an export is cropped to: the first with `id`
+ * equal to `frame`, else the first with that `name` (case-sensitive). Deleted
+ * elements never match. NOT_FOUND (with `{frame}`) when there is none.
+ */
+export const findExportFrame = (
+  elements: readonly ExcalidrawElement[],
+  frame: string,
+): NonDeleted<ExcalidrawFrameLikeElement> => {
+  const frames = getNonDeletedElements(elements).filter(
+    (e): e is NonDeleted<ExcalidrawFrameLikeElement> => isFrameLikeElement(e),
+  );
+  const found =
+    frames.find((e) => e.id === frame) ?? frames.find((e) => e.name === frame);
+  if (!found) {
+    throw new ControlError("NOT_FOUND", `No such frame ${frame}`, { frame });
+  }
+  return found;
 };
 
 /** Restores the drawing's JSON into an export request (no editor needed). */
@@ -66,7 +96,10 @@ export const sceneToExportRequest = async (
       exportPageShaped: !!options.pageShaped,
     } as ImageExportRequest["appState"],
     files: scene.files,
-    exportingFrame: null,
+    exportingFrame:
+      options.frame === undefined
+        ? null
+        : findExportFrame(scene.elements, options.frame),
     name,
   };
 };
@@ -108,5 +141,5 @@ export const renderExport = async (
     };
   }
   const request = await sceneToExportRequest(json, name, format, options, win);
-  return renderImageExport(request, win);
+  return renderImageExport(request, win, { padding: options.padding });
 };

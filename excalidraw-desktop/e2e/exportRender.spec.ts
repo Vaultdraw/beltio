@@ -174,3 +174,94 @@ test("export.render returns the same PNG bytes as the explorer row export", asyn
   );
   expect(errors).toEqual([]);
 });
+
+// C5b: --frame and --padding through a real render (WebKit), read back from
+// the output's size: a frame crops to its own box with no padding; padding
+// adds the same margin on every side.
+const framedSceneJson = () => {
+  const scene = JSON.parse(sceneJson());
+  const rect = scene.elements[0];
+  scene.elements = [
+    {
+      ...rect,
+      id: "f1",
+      type: "frame",
+      name: "Slide 1",
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 200,
+      backgroundColor: "transparent",
+    },
+    { ...rect, id: "in", x: 20, y: 20, width: 100, height: 50, frameId: "f1" },
+    { ...rect, id: "out", x: 600, y: 400, width: 100, height: 50 },
+  ];
+  return JSON.stringify(scene);
+};
+
+test("export.render crops to --frame and applies --padding (svg and png)", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page);
+  const path = "Framed.excalidraw";
+  await page.evaluate(
+    ({ p, j }) => (window as any).__vaultRepo.externalWrite(p, j),
+    { p: path, j: framedSceneJson() },
+  );
+  await expect(page.locator(`[data-tree-path="${path}"]`)).toBeVisible({
+    timeout: 15000,
+  });
+  const sizes = await page.evaluate(async (p) => {
+    const render = (window as any).__controlMethods["export.render"];
+    const svgSize = async (extra: object) => {
+      const r = await render({ path: p, format: "svg", scale: 1, ...extra });
+      const svg = new DOMParser()
+        .parseFromString(atob(r.bytes), "image/svg+xml")
+        .querySelector("svg")!;
+      return [
+        Number(svg.getAttribute("width")),
+        Number(svg.getAttribute("height")),
+      ];
+    };
+    const pngSize = async (extra: object) => {
+      const r = await render({ path: p, format: "png", scale: 1, ...extra });
+      const bytes = Uint8Array.from(atob(r.bytes), (c) => c.charCodeAt(0));
+      const bmp = await createImageBitmap(
+        new Blob([bytes], { type: "image/png" }),
+      );
+      return [bmp.width, bmp.height];
+    };
+    let missing = "";
+    try {
+      await render({ path: p, format: "png", frame: "Nope" });
+    } catch (e: any) {
+      missing = e.code;
+    }
+    return {
+      svgDefault: await svgSize({}),
+      svgPad0: await svgSize({ padding: 0 }),
+      svgPad50: await svgSize({ padding: 50 }),
+      svgFrame: await svgSize({ frame: "Slide 1" }),
+      pngPad0: await pngSize({ padding: 0 }),
+      pngPad50: await pngSize({ padding: 50 }),
+      pngFrame: await pngSize({ frame: "f1", padding: 50 }),
+      missing,
+    };
+  }, path);
+
+  // eslint-disable-next-line no-console
+  console.log(`export.render frame/padding sizes: ${JSON.stringify(sizes)}`);
+  // Padding adds the same margin on every side (default 10 px); the scene's
+  // own box (700 wide; taller by the frame's name label) stays the same.
+  const grow = (a: number[], b: number[]) => [b[0] - a[0], b[1] - a[1]];
+  expect(sizes.svgPad0[0]).toBe(700);
+  expect(grow(sizes.svgPad0, sizes.svgDefault)).toEqual([20, 20]);
+  expect(grow(sizes.svgPad0, sizes.svgPad50)).toEqual([100, 100]);
+  expect(grow(sizes.pngPad0, sizes.pngPad50)).toEqual([100, 100]);
+  // A frame is its own box, by name or id; padding does not apply to it.
+  expect(sizes.svgFrame).toEqual([300, 200]);
+  expect(sizes.pngFrame).toEqual([300, 200]);
+  expect(sizes.missing).toBe("NOT_FOUND");
+  expect(errors).toEqual([]);
+});

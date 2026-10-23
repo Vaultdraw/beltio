@@ -9,9 +9,11 @@ import { ControlError } from "./errors";
 import {
   boolParam,
   exportFormatParam,
+  exportPaddingParam,
   exportScaleParam,
   moveDestination,
   objectParams,
+  optionalStringParam,
   relPath,
   splitPath,
   stringParam,
@@ -36,6 +38,10 @@ export interface ExportRenderOptions {
   pattern: boolean;
   embedScene: boolean;
   pageShaped: boolean;
+  /** Frame id or name to crop to (absent = the whole drawing). */
+  frame?: string;
+  /** Canvas padding in px (absent = the editor's default). */
+  padding?: number;
 }
 
 /** Options a PDF export would ignore: refused instead (INVALID_PARAMS). */
@@ -211,6 +217,17 @@ export function createWindowMethods(
           }
         }
       }
+      const frame = optionalStringParam(params, "frame");
+      const padding = exportPaddingParam(params);
+      if (format === "pdf" && frame !== undefined) {
+        throw new ControlError("INVALID_PARAMS", "frames apply to png and svg");
+      }
+      if (format === "pdf" && padding !== undefined) {
+        throw new ControlError(
+          "INVALID_PARAMS",
+          "padding applies to png and svg",
+        );
+      }
       const options: ExportRenderOptions = {
         scale: exportScaleParam(params),
         dark: boolParam(params, "dark", false),
@@ -218,6 +235,8 @@ export function createWindowMethods(
         pattern: boolParam(params, "pattern", true),
         embedScene: boolParam(params, "embedScene", false),
         pageShaped: boolParam(params, "pageShaped", false),
+        ...(frame === undefined ? {} : { frame }),
+        ...(padding === undefined ? {} : { padding }),
       };
       let out;
       try {

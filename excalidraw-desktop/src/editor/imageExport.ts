@@ -38,9 +38,16 @@ export const exportFileName = (
   return `${base}${embedScene ? ".excalidraw" : ""}.${extension}`;
 };
 
+/** Options the export dialog does not have (the control API sets them). */
+export type ImageExportExtras = {
+  /** Space around the content in px; the editor's default (10) when absent. */
+  padding?: number;
+};
+
 export const renderImageExport = (
   request: ImageExportRequest,
   win: Window & typeof globalThis,
+  extras: ImageExportExtras = {},
 ): Promise<RenderedImage> => {
   if (request.elements.length === 0) {
     return Promise.reject(emptyCanvasError());
@@ -74,6 +81,7 @@ export const renderImageExport = (
     if (svg) {
       const element = await exportToSvg({
         ...options,
+        exportPadding: extras.padding,
         renderEmbeddables: false,
       });
       const text =
@@ -90,6 +98,7 @@ export const renderImageExport = (
     const scale = request.appState.exportScale || 1;
     const blob = await exportToBlob({
       ...options,
+      exportPadding: extras.padding,
       mimeType: "image/png",
       getDimensions: (width, height) => ({
         width: width * scale,

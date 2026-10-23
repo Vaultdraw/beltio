@@ -203,6 +203,22 @@ describe("renderImageExport", () => {
     expect(out.mime).toBe("image/svg+xml");
   });
 
+  it("passes padding to both renderers, and none when unset", async () => {
+    exportToBlob.mockResolvedValue(new Blob([new Uint8Array([1])]));
+    exportToSvg.mockResolvedValue(
+      document.createElementNS("http://www.w3.org/2000/svg", "svg"),
+    );
+    await renderImageExport(req({ type: "png" }), win, { padding: 0 });
+    await renderImageExport(req({ type: "svg" }), win, { padding: 42 });
+    expect(exportToBlob.mock.calls[0][0].exportPadding).toBe(0);
+    // The public exportToSvg ignores appState.exportPadding: it must be an option.
+    expect(exportToSvg.mock.calls[0][0].exportPadding).toBe(42);
+    await renderImageExport(req({ type: "png" }), win);
+    await renderImageExport(req({ type: "svg" }), win);
+    expect(exportToBlob.mock.calls[1][0].exportPadding).toBeUndefined();
+    expect(exportToSvg.mock.calls[1][0].exportPadding).toBeUndefined();
+  });
+
   it("rejects empty elements", async () => {
     await expect(
       renderImageExport(req({ elements: [], type: "png" }), win),
