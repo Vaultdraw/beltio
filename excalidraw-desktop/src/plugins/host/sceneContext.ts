@@ -138,8 +138,8 @@ export function createEventsApi(
       }
       const safe = guard(id, cb, `events.${name}`, true);
       let live = true;
-      const enqueue = (payload: never) => {
-        queue.push(() => live && safe(payload));
+      const enqueue = (payload: unknown) => {
+        queue.push(() => live && safe(payload as never));
         if (!scheduled) {
           scheduled = true;
           queueMicrotask(drain);
@@ -149,7 +149,7 @@ export function createEventsApi(
       // A plugin that activates after the vault or drawing opened is told the current state once.
       const now = appEvents.current(name);
       if (now !== undefined) {
-        enqueue(now as never);
+        enqueue(now);
       }
       return track(() => {
         live = false;
