@@ -31,7 +31,12 @@ test("runAppOnce with fake binary: marks, rss, idle cpu, report merge, cleanup",
   const cpuS = (pct / 100) * r.info.idleWindowS;
   const own = r.info.selfIdleCpuS;
   assert.ok(own >= 0.5, `fake used ${own} s`);
-  assert.ok(cpuS > own * 0.5 && cpuS < own + 0.05, `idle cpu ${cpuS} s (${pct}% of ${r.info.idleWindowS} s) vs the fake's own ${own} s`);
+  // Bounds: the harness window runs from its ps sample after idle-begin to its ps sample after
+  // idle-end, so it also holds the fake's idle tail (mark print, GC, helper threads: tens of ms,
+  // more under load) -> up to +0.25 s. Below, it can only lose the start of the burn if the
+  // idle-begin sample is over a second late -> at least half. A broken delta (zero, doubled,
+  // wrong pid set) falls outside both.
+  assert.ok(cpuS > own * 0.5 && cpuS < own + 0.25, `idle cpu ${cpuS} s (${pct}% of ${r.info.idleWindowS} s) vs the fake's own ${own} s`);
   assert.deepEqual(r.marks.map((m) => m.name), ["interactive", "phase:open", "idle-begin", "idle-end"]);
   assert.equal(existsSync(path.join(runsDir)), true);
   assert.equal(r.runDir, undefined);
