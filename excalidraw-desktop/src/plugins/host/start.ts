@@ -11,6 +11,8 @@ import {
   type Schedule,
 } from "./apply";
 import { getPluginsBackend } from "./backend";
+import { createAppDevLogSink } from "./devLog";
+import { setDevLogSink } from "./errors";
 import { ensureDevListener } from "./manage";
 import { setPluginsList } from "./pluginsState";
 import { registerSafeModeCommands } from "./safeModeCommands";
@@ -35,6 +37,8 @@ export async function startPluginHost(
   const backend = getPluginsBackend();
   const list = await backend.list();
   setPluginsList(list);
+  // Cheap: lines are only buffered for plugins that are `dev` in the current list.
+  setDevLogSink(createAppDevLogSink(win));
   const offCommands = registerSafeModeCommands(list.safeMode !== null);
   const launchTimer = win.setTimeout(
     () => void backend.launchOk().catch(() => {}),
@@ -60,6 +64,7 @@ export async function startPluginHost(
     stop: () => {
       off();
       offCommands();
+      setDevLogSink(null);
       win.clearTimeout(launchTimer);
     },
     get startupDone() {

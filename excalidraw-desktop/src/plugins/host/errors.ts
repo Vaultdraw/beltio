@@ -26,6 +26,13 @@ const counts = new Map<string, number>();
 const logs = new Map<string, PluginLogLine[]>();
 const problems = new Map<string, string[]>();
 let onCrash: (id: string, reason: string) => void = () => {};
+type LogSink = (id: string, level: PluginLogLine["level"], text: string) => void;
+let devSink: LogSink | null = null;
+
+/** Receives every log line; the host uses it to write the dev log of `dev = true` plugins. */
+export const setDevLogSink = (sink: LogSink | null) => {
+  devSink = sink;
+};
 
 /** The host's disable action; called when a plugin crosses the error limit. */
 export const setCrashHandler = (fn: (id: string, reason: string) => void) => {
@@ -46,6 +53,7 @@ export function logLine(
     lines.shift();
   }
   lines.push({ level, text });
+  devSink?.(id, level, text);
 }
 
 export const getPluginLog = (id: string): readonly PluginLogLine[] =>

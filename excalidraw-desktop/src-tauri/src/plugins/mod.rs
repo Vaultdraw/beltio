@@ -3,6 +3,7 @@
 // `run()` (and thus the command wiring) is compiled out under `cfg(test)`.
 #![cfg_attr(test, allow(dead_code))]
 
+mod devlog;
 mod install;
 mod launch;
 mod manifest;
@@ -112,6 +113,21 @@ pub(crate) async fn plugins_uninstall(app: AppHandle, id: String) -> Result<()> 
 #[tauri::command]
 pub(crate) async fn plugins_set_host_disabled(id: String, reason: Option<String>) -> Result<()> {
     blocking(move || state::set_host_disabled(&config::resolve_dirs()?.state, &id, reason)).await
+}
+
+/// Appends host-side log lines of a `dev = true` plugin to `<state>/plugin-logs/<id>.log`.
+/// Any other plugin is refused: the file exists only for developers.
+#[tauri::command]
+pub(crate) async fn plugins_dev_log(app: AppHandle, id: String, text: String) -> Result<()> {
+    blocking(move || {
+        let snap = snapshot(&app, false)?;
+        let dev = snap.list.plugins.iter().any(|p| p.manifest.id == id && p.manifest.dev);
+        if !dev {
+            return Err(err("INVALID_ARGUMENT", "Only dev plugins have a dev log"));
+        }
+        devlog::append(&config::resolve_dirs()?.state, &id, &text)
+    })
+    .await
 }
 
 #[tauri::command]
