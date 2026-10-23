@@ -13,6 +13,8 @@ import {
 import { applyThemeTokens } from "../theme";
 import { touchesConfigSubdir } from "../vault/configPaths";
 
+import { waitAtMost } from "../platform/waitAtMost";
+
 import { touchesSnippets, startSnippets } from "./boot";
 
 import { appliedSnippetCount, applySnippetCss } from "./sheets";
@@ -29,6 +31,7 @@ import {
   reloadSnippets,
   resetSnippetsForTests,
   setSnippetSource,
+  snippetsOutOfDate,
   toggleSnippet,
   type SnippetListing,
 } from "./store";
@@ -180,9 +183,9 @@ describe("applySnippetCss (adoptedStyleSheets)", () => {
 });
 
 describe("enabledSnippetNames", () => {
-  it("trims, drops blanks and case-insensitive duplicates", () => {
-    updatePreferences({ snippets: [" a ", "", "A", "b", "  "] }, win);
-    expect(enabledSnippetNames(win)).toEqual(["a", "b"]);
+  it("trims, drops blanks and exact duplicates, keeps case variants", () => {
+    updatePreferences({ snippets: [" a ", "", "A", "b", "  ", "b"] }, win);
+    expect(enabledSnippetNames(win)).toEqual(["a", "A", "b"]);
   });
 });
 
@@ -283,6 +286,116 @@ describe("reloadSnippets / toggleSnippet", () => {
   });
 });
 
+describe("two files that differ only in case", () => {
+  it("both are listed; the exact spelling decides which one is applied", () => {
+    const listing = [row("Foo", "upper{}"), row("foo", "lower{}")];
+    const state = applyListing(doc, ["foo"], listing);
+    expect(state.snippets.map((s) => [s.id, s.enabled])).toEqual([
+      ["Foo", false],
+      ["foo", true],
+    ]);
+    expect(styles()).toEqual([["foo", "lower{}"]]);
+    expect(getRegisteredCommand("snippets.toggle:Foo")).toBeDefined();
+    expect(getRegisteredCommand("snippets.toggle:foo")).toBeDefined();
+    const both = applyListing(doc, ["Foo", "foo"], listing);
+    expect(both.snippets.every((s) => s.enabled)).toBe(true);
+    expect(styles()).toEqual([
+      ["Foo", "upper{}"],
+      ["foo", "lower{}"],
+    ]);
+  });
+
+  it("another case still finds the file; one file is applied once", () => {
+    applyListing(doc, ["FOO", "foo"], [row("foo", "x{}")]);
+    expect(styles()).toEqual([["foo", "x{}"]]);
+  });
+
+  it("toggling one spelling leaves the other alone", async () => {
+    setSnippetSource(new FakeSnippetSource({ Foo: "u{}", foo: "l{}" }));
+    await toggleSnippet(doc, win, "Foo");
+    await toggleSnippet(doc, win, "foo");
+    expect(getPreferences(win).snippets).toEqual(["Foo", "foo"]);
+    await toggleSnippet(doc, win, "Foo");
+    expect(getPreferences(win).snippets).toEqual(["foo"]);
+    expect(styles()).toEqual([["foo", "l{}"]]);
+  });
+});
+
+describe("one listing per change, retry after a failure", () => {
+  it("a toggle lists the folder once, with the preferences listener running", async () => {
+    const source = new FakeSnippetSource({ a: "a{}", b: "b{}" });
+    setSnippetSource(source);
+    const stop = startSnippets(doc, win, { idle: () => () => {} });
+    await toggleSnippet(doc, win, "a");
+    await flush();
+    const afterFirst = source.lists;
+    await toggleSnippet(doc, win, "b");
+    await flush();
+    // Turning on a (folder not yet listed) costs two; later toggles one.
+    expect(afterFirst).toBe(2);
+    expect(source.lists - afterFirst).toBe(1);
+    await toggleSnippet(doc, win, "b");
+    await flush();
+    expect(source.lists - afterFirst).toBe(2);
+    stop();
+  });
+
+  it("a toggle without the listener lists once", async () => {
+    const source = new FakeSnippetSource({ a: "a{}" });
+    setSnippetSource(source);
+    await reloadSnippets(doc, win);
+    const base = source.lists;
+    await toggleSnippet(doc, win, "a");
+    expect(source.lists - base).toBe(1);
+  });
+
+  it("a failed listing is asked again on the next change", async () => {
+    updatePreferences({ snippets: ["a"] }, win);
+    const source = new FakeSnippetSource({ a: "a{}" });
+    let fail = true;
+    setSnippetSource({
+      list: (enabled) =>
+        fail ? Promise.reject(new Error("busy")) : source.list(enabled),
+      openDir: async () => {},
+    });
+    const stop = startSnippets(doc, win, { idle: () => () => {} });
+    await reloadSnippets(doc, win);
+    expect(getSnippetsState().loadError).toContain("busy");
+    expect(snippetsOutOfDate(win)).toBe(true);
+    fail = false;
+    win.dispatchEvent(new CustomEvent(PREFERENCES_CHANGED_EVENT));
+    await flush();
+    expect(getSnippetsState().loadError).toBeNull();
+    expect(styles()).toEqual([["a", "a{}"]]);
+    expect(snippetsOutOfDate(win)).toBe(false);
+    stop();
+  });
+});
+
+describe("waitAtMost", () => {
+  it("resolves true when the promise settles in time, even on rejection", async () => {
+    expect(await waitAtMost(Promise.resolve(1), 1000)).toBe(true);
+    expect(await waitAtMost(Promise.reject(new Error("x")), 1000)).toBe(true);
+  });
+
+  it("gives up after the time and leaves the promise running", async () => {
+    vi.useFakeTimers();
+    try {
+      const never = new Promise(() => {});
+      const result = waitAtMost(never, 150);
+      await vi.advanceTimersByTimeAsync(149);
+      let settled = false;
+      void result.then(() => (settled = true));
+      await Promise.resolve();
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(2);
+      expect(await result).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("snippet command ids", () => {
   it("parses ids", () => {
     expect(parseSnippetToggleCommandId("snippets.toggle:my css")).toBe(
@@ -351,13 +464,55 @@ describe("touchesSnippets / touchesConfigSubdir", () => {
       false,
     );
     expect(touchesSnippets([`${root}/snippets.bak/a.css`], root)).toBe(false);
-    expect(touchesSnippets(["/other/snippets/a.css"], root)).toBe(false);
+    expect(touchesSnippets(["/other/themes/a.json"], root)).toBe(false);
     // The watcher reports the root itself when it can't tell what changed.
     expect(touchesSnippets([root], root)).toBe(true);
     expect(touchesSnippets([`${root}/`], root)).toBe(true);
     expect(
       touchesConfigSubdir(["C:\\Cfg\\Themes\\x.json"], "themes", "C:\\cfg"),
     ).toBe(true);
+  });
+
+  it("matches other spellings of the same config folder", () => {
+    const root = "/var/folders/ab/T/cfg";
+    // The watcher reports the canonical path (macOS /var is /private/var).
+    expect(
+      touchesSnippets([`/private/var/folders/ab/T/cfg/snippets/a.css`], root),
+    ).toBe(true);
+    expect(touchesSnippets(["/private/var/folders/ab/T/cfg"], root)).toBe(true);
+    expect(
+      touchesSnippets(["/private/var/folders/ab/T/cfg/themes/x.json"], root),
+    ).toBe(false);
+    // A symlinked config folder: the watcher reports the target.
+    expect(
+      touchesSnippets(
+        ["/Volumes/data/dots/vaultdraw/snippets/a.css"],
+        "/Users/me/.config/vaultdraw",
+      ),
+    ).toBe(true);
+    // Windows verbatim prefix and drive-letter case.
+    expect(
+      touchesConfigSubdir(
+        ["\\\\?\\C:\\Cfg\\snippets\\a.css"],
+        "snippets",
+        "c:\\cfg",
+      ),
+    ).toBe(true);
+  });
+
+  it("a snippets folder elsewhere in a foreign path still matches by segment", () => {
+    expect(
+      touchesSnippets(
+        ["/anything/at/all/snippets/a.css"],
+        "/Users/me/.config/vaultdraw",
+      ),
+    ).toBe(true);
+    expect(
+      touchesSnippets(
+        ["/anything/at/all/other/a.css"],
+        "/Users/me/.config/vaultdraw",
+      ),
+    ).toBe(false);
   });
 
   it("treats an unknown or empty batch as a change", () => {

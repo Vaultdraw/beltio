@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import { installMemoryManagement } from "./memory/install";
 import { installNativeContextMenuSuppression } from "./platform/nativeContextMenu";
+import { waitAtMost } from "./platform/waitAtMost";
 import { bootPlugins } from "./plugins/boot";
 import { getPreferences, getTheme, resolveTheme } from "./vault/preferences";
 import { initSettings } from "./vault/settingsSync";
@@ -28,6 +29,9 @@ if (import.meta.env.VITE_APP_SMOKE_TEST === "true") {
 // globals beyond the initial mount lookup fallback).
 // Boot phase marks (read with performance.getEntriesByName("vaultdraw:boot:..."), e.g.
 // from the perf harness or devtools); times are ms since navigation start.
+/** Longest the first paint waits for enabled CSS snippets (ms). */
+const SNIPPETS_WAIT_MS = 150;
+
 const mark = (name: string) => performance.mark(`vaultdraw:boot:${name}`);
 mark("main-start");
 
@@ -105,11 +109,12 @@ void initSettings(ownerWindow)
       // VaultApp retries through useAppearance.
     }
     mark("theme-applied");
-    // Enabled CSS snippets also land before the first render; they were
-    // listed in parallel with the theme (order is kept by styleOrder.ts).
+    // Enabled CSS snippets were listed in parallel with the theme (order is
+    // kept by styleOrder.ts). Wait for them only a moment: a slow or hung
+    // folder read must not hold the first paint; they apply when they land.
     if (snippetsReady) {
-      await snippetsReady;
-      mark("snippets-applied");
+      const inTime = await waitAtMost(snippetsReady, SNIPPETS_WAIT_MS);
+      mark(inTime ? "snippets-applied" : "snippets-late");
     }
     return import("./VaultApp");
   })

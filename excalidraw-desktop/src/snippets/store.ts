@@ -61,6 +61,8 @@ let registeredIds = "";
 let loading: Promise<void> = Promise.resolve();
 /** Enabled list (joined) of the latest reload asked for; null = never (none applied). */
 let requestedKey: string | null = null;
+/** The latest listing failed: the next change or reload asks again. */
+let lastFailed = false;
 const listeners = new Set<() => void>();
 
 /** Tests and the browser harness: replace the native source (null = native). */
@@ -105,29 +107,48 @@ const setState = (next: SnippetsState) => {
 
 const lower = (s: string) => s.toLowerCase();
 
-/** Enabled names, trimmed, without blanks or case-insensitive duplicates. */
+/**
+ * Enabled names, trimmed, without blanks or exact duplicates. Names that
+ * differ only in case stay: `Foo.css` and `foo.css` can both exist (Linux),
+ * and the user decides which one is on. Resolving a name to a file is
+ * `resolveSnippet`.
+ */
 export function enabledSnippetNames(win: Window | null | undefined): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const raw of getPreferences(win).snippets) {
     const name = raw.trim();
-    if (name && !seen.has(lower(name))) {
-      seen.add(lower(name));
+    if (name && !seen.has(name)) {
+      seen.add(name);
       out.push(name);
     }
   }
   return out;
 }
 
+/**
+ * The listed file a name means: the exact spelling first, else the first
+ * file that matches ignoring case (macOS and Windows folders are case-blind).
+ */
+export function resolveSnippet<T extends { id: string }>(
+  name: string,
+  files: readonly T[],
+): T | undefined {
+  return (
+    files.find((f) => f.id === name) ??
+    files.find((f) => lower(f.id) === lower(name))
+  );
+}
+
 const enabledKey = (win: Window | null | undefined) =>
-  enabledSnippetNames(win).map(lower).join("\n");
+  enabledSnippetNames(win).join("\n");
 
 /**
  * True when `appearance.snippets` differs from what the last reload applied
  * (whoever triggered it: boot, Settings, a command), i.e. a reload is due.
  */
 export const snippetsOutOfDate = (win: Window | null | undefined): boolean =>
-  enabledKey(win) !== (requestedKey ?? "");
+  lastFailed || enabledKey(win) !== (requestedKey ?? "");
 
 const syncToggleCommands = (ids: readonly string[]) => {
   const key = ids.join("\n");
@@ -149,16 +170,20 @@ export function applyListing(
   enabled: readonly string[],
   listing: readonly SnippetListing[],
 ): SnippetsState {
-  const byName = new Map(listing.map((row) => [lower(row.id), row]));
-  const on = new Set(enabled.map(lower));
+  // Every listed file is kept, also two that differ only in case. Each
+  // enabled name picks one file (exact spelling first); a file is applied once.
+  const picked = new Set<string>();
   const items: { id: string; css: string }[] = [];
   const missing: string[] = [];
   for (const name of enabled) {
-    const row = byName.get(lower(name));
+    const row = resolveSnippet(name, listing);
     if (!row) {
       missing.push(name);
-    } else if (row.css !== null) {
-      items.push({ id: row.id, css: row.css });
+    } else if (!picked.has(row.id)) {
+      picked.add(row.id);
+      if (row.css !== null) {
+        items.push({ id: row.id, css: row.css });
+      }
     }
   }
   const sheetErrors = applySnippetCss(doc, items);
@@ -168,7 +193,7 @@ export function applyListing(
     snippets: listing.map((row) => ({
       id: row.id,
       path: row.path,
-      enabled: on.has(lower(row.id)),
+      enabled: picked.has(row.id),
       error: row.error ?? sheetErrors[row.id] ?? null,
     })),
     missing,
@@ -184,7 +209,8 @@ export function reloadSnippets(
   doc: Document,
   win: Window | null | undefined,
 ): Promise<void> {
-  requestedKey = enabledKey(win);
+  const key = enabledKey(win);
+  requestedKey = key;
   loading = loading.then(async () => {
     const source = getSnippetSource(win);
     if (!source) {
@@ -193,8 +219,11 @@ export function reloadSnippets(
     const enabled = enabledSnippetNames(win);
     try {
       const listing = await source.list(enabled);
+      lastFailed = false;
       setState(applyListing(doc, enabled, listing));
     } catch (err) {
+      // Ask again on the next change or file event, not only on Reload.
+      lastFailed = true;
       setState({
         ...state,
         loaded: true,
@@ -220,7 +249,14 @@ export async function toggleSnippet(
   on?: boolean,
 ): Promise<void> {
   const enabled = enabledSnippetNames(win);
-  const isOn = enabled.some((n) => lower(n) === lower(name));
+  // The enabled entry this name stands for: exact spelling, else (when no
+  // listed file has that exact name) the same name in another case.
+  const entry =
+    enabled.find((n) => n === name) ??
+    (state.snippets.some((s) => s.id === name)
+      ? undefined
+      : enabled.find((n) => lower(n) === lower(name)));
+  const isOn = entry !== undefined;
   const want = on ?? !isOn;
   if (want === isOn) {
     return;
@@ -230,16 +266,22 @@ export async function toggleSnippet(
     if (!state.loaded) {
       await reloadSnippets(doc, win);
     }
-    const file = state.snippets.find((s) => lower(s.id) === lower(name));
+    const file = resolveSnippet(name, state.snippets);
     if (!file) {
       throw new Error(`No snippet named "${name}" in the snippets folder`);
     }
     next = [...enabled, file.id];
   } else {
-    next = enabled.filter((n) => lower(n) !== lower(name));
+    next = enabled.filter((n) => n !== entry);
   }
   updatePreferences({ snippets: next }, win);
-  await reloadSnippets(doc, win);
+  // The preferences listener (boot.ts) may already have started the reload:
+  // list the folder once, not twice.
+  if (snippetsOutOfDate(win)) {
+    await reloadSnippets(doc, win);
+  } else {
+    await loading;
+  }
 }
 
 export async function openSnippetsDir(
@@ -261,5 +303,6 @@ export function resetSnippetsForTests(): void {
   state = EMPTY;
   loading = Promise.resolve();
   requestedKey = null;
+  lastFailed = false;
   listeners.clear();
 }

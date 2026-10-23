@@ -358,7 +358,8 @@ snippets = ["wide-sidebar", "big-tabs"]   # file names without .css, applied in 
 - **On screen only.** Snippets style the app, not your drawings: saved files and PNG/SVG/PDF exports are unchanged.
 - **Offline.** `@import` is ignored and remote `url(...)` references are blocked; embed images and fonts as `data:` URLs.
 - **Commands:** `CSS snippets: Open folder` (`snippets.openFolder`), `CSS snippets: Reload` (`snippets.reload`) and one `CSS snippets: Toggle <name>` per file (`snippets.toggle:<name>`). Bind any of them in `[hotkeys]`, for example `"snippets.toggle:wide-sidebar" = ["Mod+Alt+W"]`.
-- **No snippets, no cost.** With none enabled nothing is read before the first frame; the folder is listed once when the app is idle.
+- **No snippets, no cost.** With none enabled nothing is read before the first frame; the folder is listed once when the app is idle. With some enabled, the first frame waits at most 150 ms for them and they apply when they land.
+- **Names.** A name matches a file exactly first, then ignoring case (macOS and Windows folders ignore case). If two files differ only in case (`Foo.css`, `foo.css`), both are listed and each is turned on by its own spelling.
 
 The class names and `--vault-*` tokens are the stable surface; other internal class names can change between versions.
 

@@ -1,12 +1,23 @@
 /**
- * Does a `config-change` batch concern `<config dir>/<name>/`? Paths are
- * matched against the config root (case-insensitively, either separator).
+ * Does a `config-change` batch concern `<config dir>/<name>/`?
+ *
+ * The watcher may spell a path differently from the configured folder:
+ * macOS canonical `/private/var/...` for `/var/...`, a Windows `\\?\` prefix
+ * or drive-letter case, or the target of a symlinked config folder. So paths
+ * are normalised (separators, case, those prefixes) and compared with the
+ * root; a path that is not under the root (a symlink target, an unknown
+ * spelling) still counts when it has a `/<name>/` segment. A wrong "yes" only
+ * costs one folder listing; a wrong "no" would silently stop live reload.
  * Unknown input, an empty batch or the root itself (the watcher's "something
- * changed" fallback) count as a change. Without a known root, any path
- * segment named `name` matches.
+ * changed" fallback) count as a change.
  */
 const norm = (p: string) =>
-  p.replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
+  p
+    .replace(/\\/g, "/")
+    .replace(/^\/\/[?.]\//, "")
+    .replace(/^\/private\/(?=var\/|tmp\/|etc\/)/, "/")
+    .replace(/\/+$/, "")
+    .toLowerCase();
 
 export function touchesConfigSubdir(
   paths: unknown,
@@ -17,17 +28,24 @@ export function touchesConfigSubdir(
     return true;
   }
   const sub = name.toLowerCase();
-  if (!configDir) {
-    const segment = new RegExp(`/${sub}(/|$)`);
-    return paths.some((p) => typeof p === "string" && segment.test(norm(p)));
-  }
-  const root = norm(configDir);
+  const segment = new RegExp(`/${sub}(/|$)`);
+  const root = configDir ? norm(configDir) : null;
   const prefix = `${root}/${sub}`;
   return paths.some((p) => {
     if (typeof p !== "string") {
       return false;
     }
     const path = norm(p);
-    return path === root || path === prefix || path.startsWith(`${prefix}/`);
+    if (root === null) {
+      return segment.test(path);
+    }
+    if (path === root || path === prefix || path.startsWith(`${prefix}/`)) {
+      return true;
+    }
+    // Under the root but in another folder: not ours (themes/snippets/x).
+    if (path.startsWith(`${root}/`)) {
+      return false;
+    }
+    return segment.test(path);
   });
 }
