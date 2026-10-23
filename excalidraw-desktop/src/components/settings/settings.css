@@ -718,6 +718,15 @@
   color: var(--vault-danger);
 }
 
+/* Every current config.toml problem (bad values, unknown keys). */
+.vault-config-problems {
+  margin: 6px 0 0;
+  padding-left: 1.2em;
+  font-size: var(--vd-fs-small);
+  color: var(--vault-danger);
+  user-select: text;
+}
+
 /* Path text beside a Reveal button (Files). */
 .vault-files-path {
   font-family: inherit;

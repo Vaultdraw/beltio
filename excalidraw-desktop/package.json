@@ -16,6 +16,7 @@
     "tauri:build": "tauri build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "docs:config": "vite-node --config ../vitest.config.mts scripts/gen-config-reference.ts",
     "test:e2e": "playwright test",
     "test:e2e:full": "E2E_FULL=1 playwright test",
     "test:fast": "node scripts/test-tier.mjs fast",

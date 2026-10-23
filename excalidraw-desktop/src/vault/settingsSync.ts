@@ -70,6 +70,11 @@ import {
   sortedPluginSettings,
 } from "./pluginSettingsTable";
 import { isSortOrder, SORT_ORDERS } from "./sortOrder";
+import {
+  buildKnownIndex,
+  findUnknownKeys,
+  unknownKeyMessage,
+} from "./configKeys";
 import { isTauriAvailable } from "./DesktopVaultRepository";
 import {
   attachPreferencesStore,
@@ -148,13 +153,13 @@ export interface ConfigChange {
   value: unknown;
 }
 
-export type SettingsProblemKind = "parse" | "invalid" | "io";
+export type SettingsProblemKind = "parse" | "invalid" | "unknown" | "io";
 
 export interface SettingsProblem {
   kind: SettingsProblemKind;
   /** Human readable, ready for the banner. */
   message: string;
-  /** Dotted config key for `invalid` problems. */
+  /** Dotted config key for `invalid` and `unknown` problems. */
   key?: string;
   line?: number | null;
 }
@@ -776,6 +781,21 @@ export const CONFIG_MAPPING: readonly ConfigMapping[] = [
   ...TOOL_MAPPINGS,
 ];
 
+let knownKeys: ReturnType<typeof buildKnownIndex> | null = null;
+
+/** config.toml keys no mapping reads, as warnings (the rest still applies). */
+export const unknownKeyProblems = (
+  config: Record<string, unknown>,
+): SettingsProblem[] =>
+  findUnknownKeys(
+    config,
+    (knownKeys ??= buildKnownIndex(CONFIG_MAPPING.map((m) => m.key))),
+  ).map((u) => ({
+    kind: "unknown",
+    key: u.key,
+    message: unknownKeyMessage(u),
+  }));
+
 export const STATE_FIELDS = [
   "recentVaults",
   "lastVaultPath",
@@ -924,6 +944,7 @@ export function configToPreferences(config: Record<string, unknown>): {
   problems.push(...keys.problems);
   const plugins = parsePluginTable(config.plugin, "config.toml");
   problems.push(...plugins.problems);
+  problems.push(...unknownKeyProblems(config));
   return {
     values: {
       ...(values as Pick<VaultPreferences, ConfigField>),
@@ -1235,6 +1256,11 @@ function applyLoad(
     rt.lastWrittenState = JSON.stringify(preferencesToState(next));
   }
 
+  for (const problem of loadProblems) {
+    if (!rt.loadProblems.some((p) => p.message === problem.message)) {
+      console.warn(problem.message);
+    }
+  }
   rt.loadProblems = loadProblems;
   publishStatus(rt.win, {
     mode: "tauri",

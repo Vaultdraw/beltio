@@ -15,7 +15,7 @@ vaultdraw/
 └── themes/       colour themes
 ```
 
-`config.toml` is created on first launch (with comments explaining each key). The keys and their defaults:
+`config.toml` is created on first launch, with every key listed and commented. The common keys and their defaults (the full list is [Every key](#every-key) below):
 
 ```toml
 [appearance]
@@ -79,7 +79,7 @@ stroke_style = "dotted"
 
 - **Settings and the file stay in sync.** Changing something in Settings updates `config.toml` and keeps your comments and layout. Editing the file updates the app.
 - **Live reload.** Saved changes apply immediately, no restart needed. Delete a line to go back to its default.
-- **Typos are safe.** If the file can't be parsed, the app keeps the last good settings and shows a banner such as `config.toml line 7: <error>`. A value of the wrong type falls back to its default and is reported the same way.
+- **Typos are safe.** If the file can't be parsed, the app keeps the last good settings and shows a banner such as `config.toml line 7: <error>`. A value of the wrong type falls back to its default and is reported the same way. A key the app doesn't know, such as `zom` for `zoom`, is ignored and reported with the closest real key: `config.toml: unknown key interface.zom (ignored; did you mean interface.zoom?)`. Every current problem is also listed under **Settings → General → Config file**.
 - **Settings → Open config folder** opens the folder; **Reload** re-reads it.
 
 `state.json` holds machine state (recent vaults, navigator width, expanded folders, last-used image export options). It is not meant for hand editing.
@@ -871,3 +871,216 @@ enabled = ["my-plugin"]
   Settings → Plugins lists each extension that two plugins claim. See [importers.md](../sdk/docs/importers.md).
 - **Commands:** `plugins.openSettings`, `plugins.installFolder`, `plugins.reloadList`, `plugins.openFolder` (shows the plugins folder) and `plugins.deleteData` ("Delete data of a plugin…": opens Settings → Plugins at the first **Delete data** button). Like every command, you can rebind them in `[hotkeys]`.
 - **Writing a plugin:** the `vaultdraw-plugin` tool (`check`, `init`, `dev`) is described in `sdk/docs/getting-started.md`. It adds no config key.
+
+<!-- BEGIN GENERATED: config keys (edit excalidraw-desktop/src/vault/configReference.ts, then run yarn docs:config in excalidraw-desktop) -->
+
+## Every key
+
+Every `config.toml` key, generated from the app's key table, so this list is always complete. **Per vault** keys can also be set in `<vault>/.excalidraw-vault/settings.toml` (see [Per-vault settings](#per-vault-settings)). A key not listed here is reported as unknown and ignored.
+
+### `[appearance]`
+
+Theme, light or dark mode, and canvas colours.
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `theme` | `"Default"` | a theme name |  | Colour theme: a built-in name or a theme in `themes/`. |
+| `mode` | `"system"` | "light", "dark" or "system" |  | Light, dark, or follow the system. |
+| `sync_canvas` | `false` | true or false |  | The canvas background, pencil and palette colours follow the theme. |
+| `canvas_background` | `"#ffffff"` | a colour like "#ffffff" |  | Canvas background for new drawings when `sync_canvas` is off. |
+| `accent_color` | `""` | a colour like "#6965db", or "" for the theme's own |  | Replaces the theme's primary colour, nudged for contrast; empty uses the theme's own. |
+
+### `[editor]`
+
+Defaults for new elements.
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `font_family` | `5` | one of 1, 2, 3, 5, 6, 7, 8, 9, 10 |  | 5 Excalifont, 6 Nunito, 8 Comic Shanns, 1 Virgil, 2 Helvetica, 3 Cascadia. |
+| `font_size` | `20` | a positive number |  | Font size of new text. |
+| `stroke_color` | `"#1e1e1e"` | a colour like "#1e1e1e" |  | Stroke colour of new elements. |
+| `background_color` | `"transparent"` | a colour like "transparent" |  | Fill colour of new elements. |
+| `fill_style` | `"solid"` | "solid", "hachure", "cross-hatch" |  | Fill pattern of new elements. |
+| `stroke_width` | `2` | a positive number |  | Stroke width of new elements. |
+| `roughness` | `1` | 0, 1 or 2 |  | 0 architect, 1 artist, 2 cartoonist. |
+
+### `[paper]`
+
+Paper for new drawings; each drawing can change it from the canvas menu. See [Notebook backgrounds](#notebook-backgrounds).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `style` | `"plain"` | "plain", "grid", "lines", "dots", "graph", "isometric" | yes | Background pattern. |
+| `spacing` | `0` | 0 (the style's preset) or a number between 5 and 200 |  | Distance between lines or dots. |
+| `color` | `""` | a colour like "#8899aa", or "" for automatic |  | Pattern colour. |
+| `opacity` | `1` | a number between 0.1 and 1 |  | Pattern opacity. |
+| `major_every` | `0` | 0 (the style's preset) or a whole number between 1 and 20 |  | Grid and graph: a stronger line every N lines. |
+| `margin_line` | `true` | true or false |  | Ruled lines: draw the margin line. |
+
+### `[page]`
+
+Page mode for new drawings: simulated pages instead of the infinite canvas. See [Page mode](#page-mode).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `mode` | `"normal"` | "normal" (infinite canvas) or "page" |  | Infinite canvas or pages. |
+| `layout` | `"separate"` | "continuous" or "separate" |  | Separate sheets with a gap, or one long continuous page. |
+| `size` | `"a4"` | "a3", "a4", "a5", "b5", "letter", "legal", "tablet", "tabletLarge", "phone", "custom" |  | Page size; `custom` uses `width` and `height`. |
+| `orientation` | `"portrait"` | "portrait" or "landscape" |  | Page orientation. |
+| `width` | `0` | 0 (unset) or a whole number of pixels between 100 and 5000 |  | Custom page width in pixels. |
+| `height` | `0` | 0 (unset) or a whole number of pixels between 100 and 5000 |  | Custom page height in pixels. |
+| `paper_theme` | `"normal"` | "normal", "old_school" or "match" |  | Page colours: normal, old school, or match the current theme. |
+
+### `[pdf_import]`
+
+Importing PDF pages as images. See [PDF import](#pdf-import).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `max_side` | `1440` | a whole number of pixels between 600 and 3000 |  | Longest side of each page image in pixels. |
+| `format` | `"jpeg"` | "jpeg" or "png" |  | Image format of imported pages. |
+| `quality` | `0.85` | a number between 0.5 and 1 |  | JPEG quality. |
+| `lock_pages` | `true` | true or false |  | Lock imported pages so annotating does not drag them. |
+| `warn_pages` | `50` | a whole number between 1 and 500 |  | Ask before importing more pages than this. |
+| `pixel_budget_mp` | `60` | a number of megapixels between 10 and 400 |  | Decoded-pixel budget per import; large PDFs get a lower resolution. |
+
+### `[saving]`
+
+Writing drawings to disk.
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `autosave_delay_ms` | `500` | an integer between 0 and 600000 |  | Idle time in milliseconds before an edit is written to disk. |
+
+### `[interface]`
+
+The app window around the canvas.
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `zoom` | `100` | a whole number between 50 and 200 (percent) |  | Whole-app zoom in percent (Cmd/Ctrl+Shift `+`, `-`, `0`). |
+| `show_tag_chips` | `true` | true or false |  | Show a drawing's tags as chips in the file navigator. |
+| `thumbnails` | `true` | true or false |  | Show drawing thumbnails (home, search, palette, gallery). |
+| `activity_bar` | `true` | true or false | yes | Show the activity bar. |
+| `activity_bar_order` | `[]` | a list of entry ids like ["library", "history"] | yes | Activity bar entry order: `library`, `history`, `graph`, `gallery`, `search`, `tags`, `templates`, `hotkeys`, `settings`; unlisted entries follow in their default order. |
+| `activity_bar_hidden` | `[]` | a list of entry ids like ["tags"] | yes | Activity bar entries to hide. |
+
+### `[navigator]`
+
+The file tree.
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `sort` | `"name_asc"` | "name_asc", "name_desc", "modified_desc", "modified_asc" | yes | Sort order; folders always come first, names compare by number. |
+
+### `[files]`
+
+Creating and deleting drawings.
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `confirm_delete` | `true` | true or false |  | Ask before moving a drawing to the Trash. |
+| `new_drawing_folder` | `""` | a folder path inside the vault like "Sketches/Inbox", or "" | yes | Folder for new drawings, relative to the vault root; empty puts them next to the open drawing. |
+| `templates_folder` | `"Templates"` | a non-empty folder path inside the vault like "Templates" | yes | Vault folder holding your templates. See [Templates](#templates). |
+
+### `[links]`
+
+`[[links]]` between drawings. See [Links and backlinks](#links-and-backlinks).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `new_link_format` | `"shortest"` | "shortest", "relative" or "absolute" |  | How new `[[links]]` are written. |
+| `shape_link_format` | `"wikilink"` | "wikilink" or "vaultdraw-url" |  | Link stored on a shape. |
+| `open_modifier` | `"mod"` | "mod", "alt", "ctrl" or "shift" |  | Modifier that opens a link on click. |
+| `update_on_rename` | `true` | true, false or "ask" |  | Rewrite links when a drawing is renamed or moved; `"ask"` asks each time. |
+| `autocomplete` | `true` | true or false |  | Suggest drawings while typing `[[`. |
+| `hint_chars` | `"asdfghjkl"` | at least 2 different lowercase characters with no spaces, like "asdfghjkl" |  | Letters used by link hint mode. |
+| `style_links` | `true` | true or false |  | Draw `[[links]]` in text with the link colour and an underline. |
+| `color` | `"accent"` | "accent" or a hex colour like "#6965db" |  | Link colour; `accent` uses the theme accent. |
+| `hover_preview` | `"always"` | "always", "modifier" or "off" |  | When the hover preview card shows. |
+
+### `[tags]`
+
+`#tags` in drawing text.
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `autocomplete` | `true` | true or false |  | Suggest existing tags while typing `#`. |
+| `pane_sort` | `"name"` | "name" or "count" |  | Order of the Tags pane: by name or by use count. |
+
+### `[pens]`
+
+Saved pens of the freedraw tool (Alt+1 to Alt+9 by default).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `presets` | the built-in pens | a list of tables like `{ name = "Fine liner", color = "#1e1e1e", width = 0.5, opacity = 100, pressure = false, smoothing = 0.3, highlighter = false }` |  | The saved pens, in order. `width` 0.5 thin, 1 medium, 2 bold, about 10 highlighter; `smoothing` 0 (raw) to 1; `highlighter` draws behind everything. |
+
+### `[laser]`
+
+The laser pointer trail.
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `color` | `"red"` | a colour like "red" or "#e03131" |  | Trail colour. |
+| `size` | `2` | a number between 1 and 24 (pixels) |  | Trail thickness in pixels. |
+| `decay_ms` | `1000` | a number between 200 and 5000 (milliseconds) |  | Time until the trail fades, in milliseconds. |
+| `length` | `50` | a number between 5 and 200 (trail points) |  | Tail length in points. |
+
+### `[tools]`
+
+Default style per drawing tool, one `[tools.<tool>]` table each. See [Tool defaults](#tool-defaults).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `rectangle` | unset | a table with any of `stroke_color`, `background_color`, `fill_style`, `stroke_width`, `stroke_style`, `roughness`, `opacity`, `roundness` | yes | Default style of the rectangle tool. Only the keys you set apply; the others keep the editor's current style. |
+| `diamond` | unset | a table with any of `stroke_color`, `background_color`, `fill_style`, `stroke_width`, `stroke_style`, `roughness`, `opacity`, `roundness` | yes | Default style of the diamond tool. Only the keys you set apply; the others keep the editor's current style. |
+| `ellipse` | unset | a table with any of `stroke_color`, `background_color`, `fill_style`, `stroke_width`, `stroke_style`, `roughness`, `opacity` | yes | Default style of the ellipse tool. Only the keys you set apply; the others keep the editor's current style. |
+| `arrow` | unset | a table with any of `stroke_color`, `stroke_width`, `stroke_style`, `roughness`, `opacity`, `arrow_type`, `start_arrowhead`, `end_arrowhead` | yes | Default style of the arrow tool. Only the keys you set apply; the others keep the editor's current style. |
+| `line` | unset | a table with any of `stroke_color`, `background_color`, `fill_style`, `stroke_width`, `stroke_style`, `roughness`, `opacity`, `roundness` | yes | Default style of the line tool. Only the keys you set apply; the others keep the editor's current style. |
+| `text` | unset | a table with any of `stroke_color`, `opacity`, `font_family`, `font_size`, `text_align` | yes | Default style of the text tool. Only the keys you set apply; the others keep the editor's current style. |
+
+### `[tabs]`
+
+Several drawings open at once.
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `enabled` | `true` | true or false |  | Open several drawings at once; `false` is one drawing at a time. |
+| `show_strip` | `"always"` | "always" or "never" |  | Show the tab strip; `never` switches tabs with the keyboard only. |
+| `open_from_navigator` | `"current"` | "current" or "new" | yes | Opening from the file tree replaces the open drawing (`current`) or opens a new tab. |
+| `focus_new` | `true` | true or false |  | Switch to a drawing opened in a new tab. |
+| `new_tab_position` | `"after_active"` | "after_active" or "end" |  | Where a new tab goes. |
+| `ctrl_tab` | `"mru"` | "mru" or "order" |  | Ctrl+Tab order: last used (`mru`) or strip order. |
+| `close_pinned` | `false` | true or false |  | Allow Cmd/Ctrl+W to close pinned tabs. |
+| `restore` | `true` | true or false | yes | Reopen the open tabs when a vault opens. |
+| `undo_budget_mb` | `32` | a whole number from 0 to 1024 (megabytes, 0 = no undo kept for background tabs) |  | Undo history kept for background tabs, in megabytes. |
+
+### `[history]`
+
+Version history of each drawing, kept in the vault. Older versions thin out: every version, then hourly, daily and weekly ones.
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `enabled` | `true` | true or false | yes | Make versions at all; `false` turns history off. |
+| `interval_minutes` | `5` | a whole number from 0 to 1440 (0 = no timed versions) | yes | Minutes between timed versions. |
+| `keep_all_hours` | `1` | a whole number from 0 to 720 (hours) | yes | Keep every version for this many hours. |
+| `keep_hourly_hours` | `24` | a whole number from 0 to 8760 (hours) | yes | Then keep one version per hour for this many hours. |
+| `keep_daily_days` | `30` | a whole number from 0 to 3650 (days) | yes | Then keep one version per day for this many days. |
+| `keep_weekly_weeks` | `0` | a whole number from 0 to 5200 (0 = keep weekly versions forever) | yes | Then keep one version per week for this many weeks. |
+| `size_cap_mb` | `500` | a whole number from 0 to 1000000 (megabytes, 0 = no cap) | yes | Size cap of a vault's history in megabytes; the oldest versions go first. |
+| `highlight_changes` | `true` | true or false | yes | Highlight what changed in the History preview. |
+
+### `[plugins]`
+
+Plugins in the `plugins/` folder of the config folder.
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `enabled` | `[]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load. |
+
+### `[hotkeys]` and `[plugin.<id>]`
+
+Open tables: `[hotkeys]` takes one entry per command id (see [The `[hotkeys]` table](#the-hotkeys-table)), and `[plugin.<id>]` holds the settings a plugin declares. Their keys are not checked against this list.
+
+<!-- END GENERATED: config keys -->

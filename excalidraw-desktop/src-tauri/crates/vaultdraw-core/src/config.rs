@@ -38,6 +38,8 @@ mode = "system"
 sync_canvas = false
 # Canvas background for new drawings when sync_canvas is off
 canvas_background = "#ffffff"
+# Replace the theme's primary colour, like "#6965db" ("" = the theme's own)
+# accent_color = ""
 
 [editor]
 # Defaults for new elements
@@ -104,12 +106,24 @@ autosave_delay_ms = 500
 [interface]
 # Whole-app zoom in percent (Cmd+Shift +/-/0)
 # zoom = 100
+# Show a drawing's tags as chips in the file navigator
+# show_tag_chips = true
+# Show drawing thumbnails (home, search, palette, gallery)
+# thumbnails = true
+# Show the activity bar
+# activity_bar = true
+# Entry order: library, history, graph, gallery, search, tags, templates, hotkeys, settings
+# activity_bar_order = []
+# Entries to hide, like ["tags"]
+# activity_bar_hidden = []
 
 [navigator]
 # name_asc | name_desc | modified_desc | modified_asc
 # sort = "name_asc"
 
 [files]
+# Ask before moving a drawing to the Trash
+# confirm_delete = true
 # Folder for new drawings, relative to the vault root (empty = next to the open drawing)
 # new_drawing_folder = ""
 # Vault folder holding your templates, relative to the vault root (empty falls back to "Templates")
@@ -138,6 +152,12 @@ autosave_delay_ms = 500
 # color = "accent"
 # Hover preview card: always | modifier | off
 # hover_preview = "always"
+
+[tags]
+# Suggest existing tags while typing #
+# autocomplete = true
+# Tags pane order: name | count
+# pane_sort = "name"
 
 [pens]
 # Saved pens of the freedraw tool (Alt+1 .. Alt+9 by default, see [hotkeys] pen.select1..9). width: 0.5 thin, 1 medium, 2 bold, ~10 highlighter.
@@ -185,6 +205,26 @@ autosave_delay_ms = 500
 # free_unused_images = true
 # Undo steps kept per drawing, 10 to 10000 (older steps go, with the images only they could restore)
 # undo_steps = 1000
+
+[history]
+# Version history of each drawing (false = no versions at all)
+# enabled = true
+# Minutes between timed versions, 0 to 1440 (0 = none)
+# interval_minutes = 5
+# Keep every version for this many hours, then one per hour, per day, per week
+# keep_all_hours = 1
+# keep_hourly_hours = 24
+# keep_daily_days = 30
+# Weeks of weekly versions (0 = forever)
+# keep_weekly_weeks = 0
+# Size cap per vault in MB (0 = none)
+# size_cap_mb = 500
+# Highlight what changed in the History preview
+# highlight_changes = true
+
+[plugins]
+# Ids of the plugins to load from the plugins/ folder, like ["hello-command"]
+# enabled = []
 "##;
 
 /// Serializes every config/state write within the process.

@@ -39,7 +39,12 @@ const ConfigFileSetting = () => {
       setSettingsStatus(status);
       setAction(
         status.problems.length
-          ? { message: status.problems[0].message, type: "error" }
+          ? {
+              message: `Reloaded with ${status.problems.length} ${
+                status.problems.length === 1 ? "problem" : "problems"
+              } (listed above).`,
+              type: "error",
+            }
           : {
               message: changed
                 ? "Reloaded config.toml."
@@ -75,6 +80,16 @@ const ConfigFileSetting = () => {
           <code className="vault-config-path">
             {settingsStatus.configPath ?? "Unknown location"}
           </code>
+          {settingsStatus.problems.length > 0 && (
+            <ul
+              className="vault-config-problems"
+              aria-label="Problems in config.toml"
+            >
+              {settingsStatus.problems.map((problem) => (
+                <li key={problem.message}>{problem.message}</li>
+              ))}
+            </ul>
+          )}
           {action && (
             <div
               className={`vault-config-status vault-config-status--${action.type}`}

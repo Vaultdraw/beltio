@@ -671,6 +671,13 @@ if (params.has("graph")) {
     mountGraphHarness(mountNode, params),
   );
 } else {
+  // ?config=1 (see configHarness.ts): config-folder settings over a fake
+  // native side. Opt-in: no other spec is affected.
+  if (params.has("config")) {
+    void import("./configHarness").then((m) =>
+      m.startConfigHarness(ownerWindow),
+    );
+  }
   void mountVaultApp().then(() => {
     // ?plugins=a,b (see pluginHarness.ts): opt-in, no other spec is affected.
     if (params.has("plugins")) {
