@@ -507,6 +507,17 @@ test.describe("panel notices", () => {
       .getByTestId("history-git-notice")
       .getByRole("button", { name: "Not now" })
       .click();
+    // The dismissal is stored before the page goes away.
+    await expect
+      .poll(() =>
+        page.evaluate(
+          (k) =>
+            Object.keys(JSON.parse(window.localStorage.getItem(k) ?? "{}"))
+              .length,
+          NOTICE_KEY,
+        ),
+      )
+      .toBe(1);
     // `reload`: setup waits for the reloaded app to boot. A reload followed by
     // a goto cancels the boot chunks and reports "Importing a module script
     // failed" (a navigation artefact that only shows when the server is slow).
@@ -544,9 +555,12 @@ test.describe("panel notices", () => {
       await expect(panel(page)).toHaveCount(0);
     };
 
+    const statusReads = await callsOf(page, "status");
     await openPanelByShortcut(page);
     // "No warnings" only means something once the panel has read its status.
-    await expect.poll(() => callsOf(page, "status")).toBeGreaterThan(0);
+    await expect
+      .poll(() => callsOf(page, "status"))
+      .toBeGreaterThan(statusReads);
     await expect(rows(page)).toHaveCount(2);
     await expect(warnings).toHaveCount(0);
     await closePanel();
