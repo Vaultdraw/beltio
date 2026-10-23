@@ -1,0 +1,811 @@
+# code: too-many
+# rust: Too many contributions
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+
+[[contributes.commands]]
+id = "c1"
+title = "Command 1"
+
+[[contributes.commands]]
+id = "c2"
+title = "Command 2"
+
+[[contributes.commands]]
+id = "c3"
+title = "Command 3"
+
+[[contributes.commands]]
+id = "c4"
+title = "Command 4"
+
+[[contributes.commands]]
+id = "c5"
+title = "Command 5"
+
+[[contributes.commands]]
+id = "c6"
+title = "Command 6"
+
+[[contributes.commands]]
+id = "c7"
+title = "Command 7"
+
+[[contributes.commands]]
+id = "c8"
+title = "Command 8"
+
+[[contributes.commands]]
+id = "c9"
+title = "Command 9"
+
+[[contributes.commands]]
+id = "c10"
+title = "Command 10"
+
+[[contributes.commands]]
+id = "c11"
+title = "Command 11"
+
+[[contributes.commands]]
+id = "c12"
+title = "Command 12"
+
+[[contributes.commands]]
+id = "c13"
+title = "Command 13"
+
+[[contributes.commands]]
+id = "c14"
+title = "Command 14"
+
+[[contributes.commands]]
+id = "c15"
+title = "Command 15"
+
+[[contributes.commands]]
+id = "c16"
+title = "Command 16"
+
+[[contributes.commands]]
+id = "c17"
+title = "Command 17"
+
+[[contributes.commands]]
+id = "c18"
+title = "Command 18"
+
+[[contributes.commands]]
+id = "c19"
+title = "Command 19"
+
+[[contributes.commands]]
+id = "c20"
+title = "Command 20"
+
+[[contributes.commands]]
+id = "c21"
+title = "Command 21"
+
+[[contributes.commands]]
+id = "c22"
+title = "Command 22"
+
+[[contributes.commands]]
+id = "c23"
+title = "Command 23"
+
+[[contributes.commands]]
+id = "c24"
+title = "Command 24"
+
+[[contributes.commands]]
+id = "c25"
+title = "Command 25"
+
+[[contributes.commands]]
+id = "c26"
+title = "Command 26"
+
+[[contributes.commands]]
+id = "c27"
+title = "Command 27"
+
+[[contributes.commands]]
+id = "c28"
+title = "Command 28"
+
+[[contributes.commands]]
+id = "c29"
+title = "Command 29"
+
+[[contributes.commands]]
+id = "c30"
+title = "Command 30"
+
+[[contributes.commands]]
+id = "c31"
+title = "Command 31"
+
+[[contributes.commands]]
+id = "c32"
+title = "Command 32"
+
+[[contributes.commands]]
+id = "c33"
+title = "Command 33"
+
+[[contributes.commands]]
+id = "c34"
+title = "Command 34"
+
+[[contributes.commands]]
+id = "c35"
+title = "Command 35"
+
+[[contributes.commands]]
+id = "c36"
+title = "Command 36"
+
+[[contributes.commands]]
+id = "c37"
+title = "Command 37"
+
+[[contributes.commands]]
+id = "c38"
+title = "Command 38"
+
+[[contributes.commands]]
+id = "c39"
+title = "Command 39"
+
+[[contributes.commands]]
+id = "c40"
+title = "Command 40"
+
+[[contributes.commands]]
+id = "c41"
+title = "Command 41"
+
+[[contributes.commands]]
+id = "c42"
+title = "Command 42"
+
+[[contributes.commands]]
+id = "c43"
+title = "Command 43"
+
+[[contributes.commands]]
+id = "c44"
+title = "Command 44"
+
+[[contributes.commands]]
+id = "c45"
+title = "Command 45"
+
+[[contributes.commands]]
+id = "c46"
+title = "Command 46"
+
+[[contributes.commands]]
+id = "c47"
+title = "Command 47"
+
+[[contributes.commands]]
+id = "c48"
+title = "Command 48"
+
+[[contributes.commands]]
+id = "c49"
+title = "Command 49"
+
+[[contributes.commands]]
+id = "c50"
+title = "Command 50"
+
+[[contributes.commands]]
+id = "c51"
+title = "Command 51"
+
+[[contributes.commands]]
+id = "c52"
+title = "Command 52"
+
+[[contributes.commands]]
+id = "c53"
+title = "Command 53"
+
+[[contributes.commands]]
+id = "c54"
+title = "Command 54"
+
+[[contributes.commands]]
+id = "c55"
+title = "Command 55"
+
+[[contributes.commands]]
+id = "c56"
+title = "Command 56"
+
+[[contributes.commands]]
+id = "c57"
+title = "Command 57"
+
+[[contributes.commands]]
+id = "c58"
+title = "Command 58"
+
+[[contributes.commands]]
+id = "c59"
+title = "Command 59"
+
+[[contributes.commands]]
+id = "c60"
+title = "Command 60"
+
+[[contributes.commands]]
+id = "c61"
+title = "Command 61"
+
+[[contributes.commands]]
+id = "c62"
+title = "Command 62"
+
+[[contributes.commands]]
+id = "c63"
+title = "Command 63"
+
+[[contributes.commands]]
+id = "c64"
+title = "Command 64"
+
+[[contributes.commands]]
+id = "c65"
+title = "Command 65"
+
+[[contributes.commands]]
+id = "c66"
+title = "Command 66"
+
+[[contributes.commands]]
+id = "c67"
+title = "Command 67"
+
+[[contributes.commands]]
+id = "c68"
+title = "Command 68"
+
+[[contributes.commands]]
+id = "c69"
+title = "Command 69"
+
+[[contributes.commands]]
+id = "c70"
+title = "Command 70"
+
+[[contributes.commands]]
+id = "c71"
+title = "Command 71"
+
+[[contributes.commands]]
+id = "c72"
+title = "Command 72"
+
+[[contributes.commands]]
+id = "c73"
+title = "Command 73"
+
+[[contributes.commands]]
+id = "c74"
+title = "Command 74"
+
+[[contributes.commands]]
+id = "c75"
+title = "Command 75"
+
+[[contributes.commands]]
+id = "c76"
+title = "Command 76"
+
+[[contributes.commands]]
+id = "c77"
+title = "Command 77"
+
+[[contributes.commands]]
+id = "c78"
+title = "Command 78"
+
+[[contributes.commands]]
+id = "c79"
+title = "Command 79"
+
+[[contributes.commands]]
+id = "c80"
+title = "Command 80"
+
+[[contributes.commands]]
+id = "c81"
+title = "Command 81"
+
+[[contributes.commands]]
+id = "c82"
+title = "Command 82"
+
+[[contributes.commands]]
+id = "c83"
+title = "Command 83"
+
+[[contributes.commands]]
+id = "c84"
+title = "Command 84"
+
+[[contributes.commands]]
+id = "c85"
+title = "Command 85"
+
+[[contributes.commands]]
+id = "c86"
+title = "Command 86"
+
+[[contributes.commands]]
+id = "c87"
+title = "Command 87"
+
+[[contributes.commands]]
+id = "c88"
+title = "Command 88"
+
+[[contributes.commands]]
+id = "c89"
+title = "Command 89"
+
+[[contributes.commands]]
+id = "c90"
+title = "Command 90"
+
+[[contributes.commands]]
+id = "c91"
+title = "Command 91"
+
+[[contributes.commands]]
+id = "c92"
+title = "Command 92"
+
+[[contributes.commands]]
+id = "c93"
+title = "Command 93"
+
+[[contributes.commands]]
+id = "c94"
+title = "Command 94"
+
+[[contributes.commands]]
+id = "c95"
+title = "Command 95"
+
+[[contributes.commands]]
+id = "c96"
+title = "Command 96"
+
+[[contributes.commands]]
+id = "c97"
+title = "Command 97"
+
+[[contributes.commands]]
+id = "c98"
+title = "Command 98"
+
+[[contributes.commands]]
+id = "c99"
+title = "Command 99"
+
+[[contributes.commands]]
+id = "c100"
+title = "Command 100"
+
+[[contributes.commands]]
+id = "c101"
+title = "Command 101"
+
+[[contributes.commands]]
+id = "c102"
+title = "Command 102"
+
+[[contributes.commands]]
+id = "c103"
+title = "Command 103"
+
+[[contributes.commands]]
+id = "c104"
+title = "Command 104"
+
+[[contributes.commands]]
+id = "c105"
+title = "Command 105"
+
+[[contributes.commands]]
+id = "c106"
+title = "Command 106"
+
+[[contributes.commands]]
+id = "c107"
+title = "Command 107"
+
+[[contributes.commands]]
+id = "c108"
+title = "Command 108"
+
+[[contributes.commands]]
+id = "c109"
+title = "Command 109"
+
+[[contributes.commands]]
+id = "c110"
+title = "Command 110"
+
+[[contributes.commands]]
+id = "c111"
+title = "Command 111"
+
+[[contributes.commands]]
+id = "c112"
+title = "Command 112"
+
+[[contributes.commands]]
+id = "c113"
+title = "Command 113"
+
+[[contributes.commands]]
+id = "c114"
+title = "Command 114"
+
+[[contributes.commands]]
+id = "c115"
+title = "Command 115"
+
+[[contributes.commands]]
+id = "c116"
+title = "Command 116"
+
+[[contributes.commands]]
+id = "c117"
+title = "Command 117"
+
+[[contributes.commands]]
+id = "c118"
+title = "Command 118"
+
+[[contributes.commands]]
+id = "c119"
+title = "Command 119"
+
+[[contributes.commands]]
+id = "c120"
+title = "Command 120"
+
+[[contributes.commands]]
+id = "c121"
+title = "Command 121"
+
+[[contributes.commands]]
+id = "c122"
+title = "Command 122"
+
+[[contributes.commands]]
+id = "c123"
+title = "Command 123"
+
+[[contributes.commands]]
+id = "c124"
+title = "Command 124"
+
+[[contributes.commands]]
+id = "c125"
+title = "Command 125"
+
+[[contributes.commands]]
+id = "c126"
+title = "Command 126"
+
+[[contributes.commands]]
+id = "c127"
+title = "Command 127"
+
+[[contributes.commands]]
+id = "c128"
+title = "Command 128"
+
+[[contributes.commands]]
+id = "c129"
+title = "Command 129"
+
+[[contributes.commands]]
+id = "c130"
+title = "Command 130"
+
+[[contributes.commands]]
+id = "c131"
+title = "Command 131"
+
+[[contributes.commands]]
+id = "c132"
+title = "Command 132"
+
+[[contributes.commands]]
+id = "c133"
+title = "Command 133"
+
+[[contributes.commands]]
+id = "c134"
+title = "Command 134"
+
+[[contributes.commands]]
+id = "c135"
+title = "Command 135"
+
+[[contributes.commands]]
+id = "c136"
+title = "Command 136"
+
+[[contributes.commands]]
+id = "c137"
+title = "Command 137"
+
+[[contributes.commands]]
+id = "c138"
+title = "Command 138"
+
+[[contributes.commands]]
+id = "c139"
+title = "Command 139"
+
+[[contributes.commands]]
+id = "c140"
+title = "Command 140"
+
+[[contributes.commands]]
+id = "c141"
+title = "Command 141"
+
+[[contributes.commands]]
+id = "c142"
+title = "Command 142"
+
+[[contributes.commands]]
+id = "c143"
+title = "Command 143"
+
+[[contributes.commands]]
+id = "c144"
+title = "Command 144"
+
+[[contributes.commands]]
+id = "c145"
+title = "Command 145"
+
+[[contributes.commands]]
+id = "c146"
+title = "Command 146"
+
+[[contributes.commands]]
+id = "c147"
+title = "Command 147"
+
+[[contributes.commands]]
+id = "c148"
+title = "Command 148"
+
+[[contributes.commands]]
+id = "c149"
+title = "Command 149"
+
+[[contributes.commands]]
+id = "c150"
+title = "Command 150"
+
+[[contributes.commands]]
+id = "c151"
+title = "Command 151"
+
+[[contributes.commands]]
+id = "c152"
+title = "Command 152"
+
+[[contributes.commands]]
+id = "c153"
+title = "Command 153"
+
+[[contributes.commands]]
+id = "c154"
+title = "Command 154"
+
+[[contributes.commands]]
+id = "c155"
+title = "Command 155"
+
+[[contributes.commands]]
+id = "c156"
+title = "Command 156"
+
+[[contributes.commands]]
+id = "c157"
+title = "Command 157"
+
+[[contributes.commands]]
+id = "c158"
+title = "Command 158"
+
+[[contributes.commands]]
+id = "c159"
+title = "Command 159"
+
+[[contributes.commands]]
+id = "c160"
+title = "Command 160"
+
+[[contributes.commands]]
+id = "c161"
+title = "Command 161"
+
+[[contributes.commands]]
+id = "c162"
+title = "Command 162"
+
+[[contributes.commands]]
+id = "c163"
+title = "Command 163"
+
+[[contributes.commands]]
+id = "c164"
+title = "Command 164"
+
+[[contributes.commands]]
+id = "c165"
+title = "Command 165"
+
+[[contributes.commands]]
+id = "c166"
+title = "Command 166"
+
+[[contributes.commands]]
+id = "c167"
+title = "Command 167"
+
+[[contributes.commands]]
+id = "c168"
+title = "Command 168"
+
+[[contributes.commands]]
+id = "c169"
+title = "Command 169"
+
+[[contributes.commands]]
+id = "c170"
+title = "Command 170"
+
+[[contributes.commands]]
+id = "c171"
+title = "Command 171"
+
+[[contributes.commands]]
+id = "c172"
+title = "Command 172"
+
+[[contributes.commands]]
+id = "c173"
+title = "Command 173"
+
+[[contributes.commands]]
+id = "c174"
+title = "Command 174"
+
+[[contributes.commands]]
+id = "c175"
+title = "Command 175"
+
+[[contributes.commands]]
+id = "c176"
+title = "Command 176"
+
+[[contributes.commands]]
+id = "c177"
+title = "Command 177"
+
+[[contributes.commands]]
+id = "c178"
+title = "Command 178"
+
+[[contributes.commands]]
+id = "c179"
+title = "Command 179"
+
+[[contributes.commands]]
+id = "c180"
+title = "Command 180"
+
+[[contributes.commands]]
+id = "c181"
+title = "Command 181"
+
+[[contributes.commands]]
+id = "c182"
+title = "Command 182"
+
+[[contributes.commands]]
+id = "c183"
+title = "Command 183"
+
+[[contributes.commands]]
+id = "c184"
+title = "Command 184"
+
+[[contributes.commands]]
+id = "c185"
+title = "Command 185"
+
+[[contributes.commands]]
+id = "c186"
+title = "Command 186"
+
+[[contributes.commands]]
+id = "c187"
+title = "Command 187"
+
+[[contributes.commands]]
+id = "c188"
+title = "Command 188"
+
+[[contributes.commands]]
+id = "c189"
+title = "Command 189"
+
+[[contributes.commands]]
+id = "c190"
+title = "Command 190"
+
+[[contributes.commands]]
+id = "c191"
+title = "Command 191"
+
+[[contributes.commands]]
+id = "c192"
+title = "Command 192"
+
+[[contributes.commands]]
+id = "c193"
+title = "Command 193"
+
+[[contributes.commands]]
+id = "c194"
+title = "Command 194"
+
+[[contributes.commands]]
+id = "c195"
+title = "Command 195"
+
+[[contributes.commands]]
+id = "c196"
+title = "Command 196"
+
+[[contributes.commands]]
+id = "c197"
+title = "Command 197"
+
+[[contributes.commands]]
+id = "c198"
+title = "Command 198"
+
+[[contributes.commands]]
+id = "c199"
+title = "Command 199"
+
+[[contributes.commands]]
+id = "c200"
+title = "Command 200"
+
+[[contributes.commands]]
+id = "c201"
+title = "Command 201"

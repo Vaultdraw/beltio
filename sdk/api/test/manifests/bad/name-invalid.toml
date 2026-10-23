@@ -1,0 +1,7 @@
+# code: name-invalid
+# rust: name must be
+id = "demo-plugin"
+name = ""
+version = "1.0.0"
+api = 0
+main = "main.js"

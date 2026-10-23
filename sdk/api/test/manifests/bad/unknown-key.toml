@@ -1,0 +1,8 @@
+# code: unknown-key
+# rust: unknown field
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+colour = "red"

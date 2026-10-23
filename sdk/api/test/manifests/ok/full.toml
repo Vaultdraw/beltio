@@ -1,0 +1,75 @@
+# code: none
+# rust: ok
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+min_app = "0.1.0"
+description = "Every contribution kind"
+author = "you"
+activation = ["onStartupFinished"]
+
+[[contributes.commands]]
+id = "first"
+title = "Demo: first"
+keys = ["Mod+Alt+H"]
+when = ["vaultOpen"]
+palette = false
+
+[[contributes.commands]]
+id = "second_one-2"
+title = "Demo: second"
+
+[[contributes.panels]]
+id = "top-panel"
+title = "Top"
+icon = "note"
+
+[[contributes.panels]]
+id = "bottom-panel"
+title = "Bottom"
+group = "bottom"
+
+[[contributes.settings]]
+key = "enabled"
+type = "bool"
+title = "Enabled"
+default = true
+
+[[contributes.settings]]
+key = "count"
+type = "int"
+title = "Count"
+default = 5
+min = 1
+max = 10
+
+[[contributes.settings]]
+key = "ratio"
+type = "number"
+title = "Ratio"
+default = 0.5
+min = 0
+max = 1
+
+[[contributes.settings]]
+key = "greeting"
+type = "string"
+title = "Greeting"
+default = "Hello"
+description = "Shown in the toast"
+
+[[contributes.settings]]
+key = "mode"
+type = "select"
+title = "Mode"
+default = "fast"
+options = [{ value = "fast", label = "Fast" }, { value = "slow", label = "Slow" }]
+
+[[contributes.settings]]
+key = "accent"
+type = "color"
+title = "Accent"
+default = "#1e1e1e"
+scope = ["global", "vault"]

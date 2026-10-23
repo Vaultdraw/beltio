@@ -1,0 +1,7 @@
+# code: id-invalid
+# rust: Plugin id
+id = "Demo_Plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"

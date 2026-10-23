@@ -1,0 +1,15 @@
+# code: contribution-duplicate
+# rust: Duplicate command id
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+
+[[contributes.commands]]
+id = "same"
+title = "One"
+
+[[contributes.commands]]
+id = "same"
+title = "Two"

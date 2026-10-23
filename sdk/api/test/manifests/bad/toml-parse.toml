@@ -1,0 +1,4 @@
+# code: toml-parse
+# rust: extra
+id = "demo-plugin
+name = = Demo

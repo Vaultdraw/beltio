@@ -1,0 +1,7 @@
+# code: version-invalid
+# rust: semantic version
+id = "demo-plugin"
+name = "Demo"
+version = "one"
+api = 0
+main = "main.js"

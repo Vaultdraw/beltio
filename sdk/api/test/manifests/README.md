@@ -1,0 +1,43 @@
+# Manifest corpus
+
+`plugin.toml` files shared by the Rust app and the `vaultdraw-plugin check` command. Rust is the authority; the CLI must agree.
+
+- `ok/`: manifests that are valid.
+- `bad/`: one manifest per check code, each breaking exactly one rule.
+
+## Header
+
+Every file starts with two comment lines.
+
+| Line | Meaning |
+| --- | --- |
+| `# code: <code>` | The CLI error code the file must produce. `none` for `ok/` files. |
+| `# rust: ok` | `manifest::parse` accepts it. |
+| `# rust: <text>` | `manifest::parse` fails, and the error contains this text (case-insensitive). |
+| `# rust: compat <text>` | `parse` succeeds, `manifest::compatibility(m, "0.1.0")` returns a problem containing this text. |
+
+## Codes
+
+| Code | Trigger |
+| --- | --- |
+| `toml-parse` | Not valid TOML. |
+| `unknown-key` | Unknown top-level key. |
+| `missing-key` | A required key is absent (`id`, `name`, `version`, `api`, `main`). |
+| `id-invalid` | Plugin id breaks `^[a-z0-9][a-z0-9-]{1,38}$`. |
+| `name-invalid` | Empty name. |
+| `version-invalid` | Not a semantic version. |
+| `min-app-invalid` | `min_app` is not a semantic version. |
+| `main-path-invalid` | `main` is not a safe relative path. |
+| `api-unsupported` | `api` is not the supported level. |
+| `activation-unknown` | Unknown activation event. |
+| `contribution-id-invalid` | Command or panel id has a bad shape. |
+| `contribution-duplicate` | Two commands share an id. |
+| `title-invalid` | Empty command or panel title. |
+| `setting-invalid` | A setting has no `key` or `type`. |
+| `too-many` | More than 200 commands (also 20 panels, 100 settings). |
+| `manifest-too-large` | Over 64 KB. |
+| `dev-true` | `dev = true` in a packaged manifest. Rust accepts it; `check` reports it. |
+
+## Adding a rule
+
+A new manifest rule means a new corpus file, with both headers. The Rust test (`manifest_corpus_*` in `src-tauri/src/plugins/tests.rs`) and the CLI test both walk these folders.

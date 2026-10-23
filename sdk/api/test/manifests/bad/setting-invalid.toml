@@ -1,0 +1,11 @@
+# code: setting-invalid
+# rust: 'key' and 'type'
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+
+[[contributes.settings]]
+key = "nope"
+title = "No type"

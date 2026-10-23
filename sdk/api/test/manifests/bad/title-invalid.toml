@@ -1,0 +1,11 @@
+# code: title-invalid
+# rust: command title
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+
+[[contributes.commands]]
+id = "empty"
+title = "   "

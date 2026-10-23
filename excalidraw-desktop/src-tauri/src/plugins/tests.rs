@@ -606,3 +606,83 @@ fn a_cancelled_restart_is_forgotten() {
     assert!(!RESTART_PENDING.load(Ordering::SeqCst));
     assert!(!clear_restart(), "nothing left to cancel");
 }
+
+// ---- Manifest corpus shared with the plugin SDK command line tool ----
+
+fn corpus_dir(sub: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../sdk/api/test/manifests").join(sub)
+}
+
+/// `(file name, text, code header, rust header)` for every `.toml` in a corpus folder.
+fn corpus_files(sub: &str) -> Vec<(String, String, String, String)> {
+    let mut out = Vec::new();
+    for e in fs::read_dir(corpus_dir(sub)).expect("corpus folder") {
+        let p = e.unwrap().path();
+        if p.extension().is_none_or(|x| x != "toml") {
+            continue;
+        }
+        let name = p.file_name().unwrap().to_string_lossy().into_owned();
+        let text = fs::read_to_string(&p).unwrap();
+        let header = |key: &str| {
+            text.lines()
+                .take_while(|l| l.starts_with('#'))
+                .find_map(|l| l.strip_prefix(key))
+                .map(|v| v.trim().to_string())
+                .unwrap_or_else(|| panic!("{name}: missing header '{key}'"))
+        };
+        let (code, rust) = (header("# code:"), header("# rust:"));
+        out.push((name, text, code, rust));
+    }
+    out
+}
+
+#[test]
+fn manifest_corpus_ok_files_parse() {
+    let files = corpus_files("ok");
+    assert!(!files.is_empty(), "ok corpus is empty");
+    for (name, text, code, rust) in files {
+        assert_eq!(code, "none", "{name}: ok files use '# code: none'");
+        assert_eq!(rust, "ok", "{name}: ok files use '# rust: ok'");
+        if let Err(e) = manifest::parse(&text) {
+            panic!("{name}: should parse but failed: {e}");
+        }
+    }
+}
+
+#[test]
+fn manifest_corpus_bad_files_match_expectation() {
+    let files = corpus_files("bad");
+    assert!(!files.is_empty(), "bad corpus is empty");
+    for (name, text, code, rust) in files {
+        assert!(!code.is_empty() && code != "none", "{name}: bad files need a real code");
+        let parsed = manifest::parse(&text);
+        if rust == "ok" {
+            assert!(parsed.is_ok(), "{name}: Rust should accept it, got {:?}", parsed.err());
+        } else if let Some(want) = rust.strip_prefix("compat ") {
+            let m = parsed.unwrap_or_else(|e| panic!("{name}: should parse, got {e}"));
+            let (ok, problem) = manifest::compatibility(&m, APP);
+            let problem = problem.unwrap_or_default();
+            assert!(!ok, "{name}: should be incompatible");
+            assert!(problem.to_lowercase().contains(&want.to_lowercase()), "{name}: '{problem}' lacks '{want}'");
+        } else {
+            let err = parsed.err().unwrap_or_else(|| panic!("{name}: Rust should reject it"));
+            assert!(err.to_lowercase().contains(&rust.to_lowercase()), "{name}: '{err}' lacks '{rust}'");
+        }
+    }
+}
+
+#[test]
+fn manifest_corpus_example_plugins_parse() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../sdk/examples");
+    let mut n = 0;
+    for e in fs::read_dir(&root).expect("sdk/examples") {
+        let p = e.unwrap().path().join("plugin.toml");
+        if let Ok(text) = fs::read_to_string(&p) {
+            n += 1;
+            if let Err(err) = manifest::parse(&text) {
+                panic!("{}: {err}", p.display());
+            }
+        }
+    }
+    assert!(n >= 5, "expected the five example manifests, found {n}");
+}

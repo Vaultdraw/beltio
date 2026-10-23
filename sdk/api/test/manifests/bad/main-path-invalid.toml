@@ -1,0 +1,7 @@
+# code: main-path-invalid
+# rust: main
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "../x.js"

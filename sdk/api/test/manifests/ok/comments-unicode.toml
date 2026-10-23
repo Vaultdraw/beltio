@@ -1,0 +1,10 @@
+# code: none
+# rust: ok
+# a comment line
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+description = "Zeichnen, 描画, dessin, \u00e9\u00e8 ✏️" # trailing comment
+author = "Zoë Müller"

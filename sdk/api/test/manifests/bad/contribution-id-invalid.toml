@@ -1,0 +1,11 @@
+# code: contribution-id-invalid
+# rust: command id
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+
+[[contributes.commands]]
+id = "1bad id"
+title = "X"

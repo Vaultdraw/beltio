@@ -1,0 +1,6 @@
+# code: missing-key
+# rust: missing field
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0

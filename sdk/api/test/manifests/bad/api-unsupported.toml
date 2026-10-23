@@ -1,0 +1,7 @@
+# code: api-unsupported
+# rust: compat Plugin API
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 1
+main = "main.js"
