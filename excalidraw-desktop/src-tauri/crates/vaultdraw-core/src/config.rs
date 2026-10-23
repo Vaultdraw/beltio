@@ -1385,7 +1385,11 @@ mod tests {
         .unwrap();
         assert!(out.contains("[paper]\n# Paper for new drawings (each drawing can change it from the canvas menu)\n# plain | grid | lines | dots | graph | isometric\nstyle = \"grid\"\n"), "{out}");
         assert!(
-            out.contains("[interface]\n# Whole-app zoom in percent (Cmd+Shift +/-/0)\nzoom = 125\n\n[navigator]\n# name_asc | name_desc | modified_desc | modified_asc\nsort = \"modified_desc\"\n\n[files]\n# Folder for new drawings, relative to the vault root (empty = next to the open drawing)\nnew_drawing_folder = \"Inbox\"\n# Vault folder holding your templates, relative to the vault root (empty falls back to \"Templates\")\n# templates_folder = \"Templates\"\n\n[hotkeys]\n"),
+            out.contains("[interface]\n# Whole-app zoom in percent (Cmd+Shift +/-/0)\nzoom = 125\n# Show a drawing's tags as chips in the file navigator\n"),
+            "{out}"
+        );
+        assert!(
+            out.contains("# activity_bar_hidden = []\n\n[navigator]\n# name_asc | name_desc | modified_desc | modified_asc\nsort = \"modified_desc\"\n\n[files]\n# Ask before moving a drawing to the Trash\n# confirm_delete = true\n# Folder for new drawings, relative to the vault root (empty = next to the open drawing)\nnew_drawing_folder = \"Inbox\"\n# Vault folder holding your templates, relative to the vault root (empty falls back to \"Templates\")\n# templates_folder = \"Templates\"\n\n[hotkeys]\n"),
             "{out}"
         );
         assert_eq!(out.matches("[interface]").count(), 1);
@@ -1454,7 +1458,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 49, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 65, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();
@@ -1463,7 +1467,8 @@ mod tests {
             assert!(parse_config(&removed).unwrap()[&table].get(&key).is_none(), "{k}");
             if commented {
                 // The example line was replaced by the value and comes back on removal.
-                assert!(!set.contains(&line), "{k}");
+                // (Several tables may share an example line, like `# enabled = true`.)
+                assert_eq!(set.matches(&line).count() + 1, DEFAULT_CONFIG.matches(&line).count(), "{k}");
                 assert_eq!(removed, DEFAULT_CONFIG, "{k}");
                 // And the cycle repeats.
                 let again = apply_changes(&removed, &[change(&k, other_value(&default))]).unwrap();
