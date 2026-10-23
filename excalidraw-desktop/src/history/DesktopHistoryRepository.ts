@@ -169,6 +169,17 @@ export class DesktopHistoryRepository implements HistoryRepository {
       throw normalizeError(err);
     }
   }
+
+  async onStarted(cb: (handle: string) => void) {
+    const listen = await resolveListen(this.options.listen);
+    try {
+      return await listen<{ handle: string }>("history-started", (event) =>
+        cb(event.payload.handle),
+      );
+    } catch (err) {
+      throw normalizeError(err);
+    }
+  }
 }
 
 export const desktopHistoryRepository = new DesktopHistoryRepository();

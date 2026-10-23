@@ -48,6 +48,7 @@ export function whenIdle(
     if (timer !== undefined) {
       clearTimeout(timer);
     }
+    clearTimeout(deadline);
     if (idleId !== undefined) {
       w.cancelIdleCallback?.(idleId);
     }
@@ -83,6 +84,9 @@ export function whenIdle(
   for (const type of INPUT_EVENTS) {
     win.addEventListener(type, onInput, { capture: true, passive: true });
   }
+  // Independent of the frame chain: WebKit pauses requestAnimationFrame while
+  // the window is hidden, minimised or on another Space.
+  const deadline = setTimeout(fire, deadlineMs);
   const afterPaint = () => {
     // The quiet window counts from the first paint.
     lastInput = Math.max(lastInput, Date.now());

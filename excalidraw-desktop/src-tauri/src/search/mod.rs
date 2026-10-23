@@ -31,7 +31,7 @@ use crate::{err, Result};
 use std::{
     collections::HashMap,
     path::PathBuf,
-    sync::{atomic::AtomicBool, mpsc, Arc, Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard},
+    sync::{atomic::AtomicBool, mpsc, Arc, Condvar, Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard},
     time::Instant,
 };
 use tauri::{AppHandle, Emitter as _, State};
@@ -52,6 +52,8 @@ pub(crate) struct VaultIndex {
     state: Mutex<IndexState>,
     tx: mpsc::Sender<Update>,
     stop: AtomicBool,
+    /// Signalled on every state change and on shutdown (`wait_ready`).
+    changed: Condvar,
 }
 
 impl VaultIndex {
@@ -87,6 +89,20 @@ impl VaultIndex {
     }
     fn set_state(&self, state: IndexState) {
         *self.state.lock().unwrap_or_else(|p| p.into_inner()) = state;
+        self.changed.notify_all();
+    }
+    /// Blocks until the index is ready (true) or the vault closes (false). No polling.
+    pub(crate) fn wait_ready(&self) -> bool {
+        let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
+        loop {
+            if self.stop.load(std::sync::atomic::Ordering::SeqCst) {
+                return false;
+            }
+            if *state == IndexState::Ready {
+                return true;
+            }
+            state = self.changed.wait(state).unwrap_or_else(|p| p.into_inner());
+        }
     }
     fn status(&self, handle: &str) -> IndexStatus {
         let guard = self.read();
@@ -108,7 +124,7 @@ pub(crate) struct SearchService {
     /// Opened vaults whose indexer has not started yet (`search.start` = idle or use).
     /// Watcher batches for them are dropped: a start walks the vault against the snapshot
     /// (size + mtime), so it sees every change made while pending.
-    pending: Mutex<HashMap<String, Pending>>,
+    pending: crate::services::PendingStarts<Pending>,
 }
 
 /// Emits `search-index-status` to the webview.
@@ -140,23 +156,20 @@ impl SearchService {
     }
 
     pub(crate) fn register_with(&self, handle: &str, root: PathBuf, emit: Emitter, snapshot: Option<PathBuf>) {
-        if let Ok(mut pending) = self.pending.lock() {
-            pending.insert(handle.to_string(), (root, emit, snapshot));
-        }
+        self.pending.register(handle, (root, emit, snapshot));
     }
 
     /// Starts a registered vault's indexer if it is still pending; a no-op otherwise.
     pub(crate) fn ensure(&self, handle: &str) {
-        // Held across the start so a concurrent caller waits for it instead of missing the vault.
-        let Ok(mut pending) = self.pending.lock() else { return };
-        if let Some((root, emit, snapshot)) = pending.remove(handle) {
-            self.start_with(handle, root, emit, snapshot);
+        let closed = self.pending.ensure(handle, |(root, emit, snapshot)| self.start_with(handle, root, emit, snapshot));
+        if closed {
+            self.stop(handle);
         }
     }
 
     /// Registered but not started.
     pub(crate) fn is_pending(&self, handle: &str) -> bool {
-        self.pending.lock().map(|p| p.contains_key(handle)).unwrap_or(false)
+        self.pending.is_pending(handle)
     }
 
     /// Starts indexing `root` (canonical vault path) with the snapshot in the machine state dir.
@@ -172,7 +185,7 @@ impl SearchService {
 
     fn start_deferring(&self, handle: &str, root: PathBuf, emit: Emitter, snapshot: Option<PathBuf>, defer: worker::Defer) {
         let (tx, rx) = mpsc::channel();
-        let shared = Arc::new(VaultIndex { index: RwLock::new(Index::default()), state: Mutex::new(IndexState::Loading), tx, stop: AtomicBool::new(false) });
+        let shared = Arc::new(VaultIndex { index: RwLock::new(Index::default()), state: Mutex::new(IndexState::Loading), tx, stop: AtomicBool::new(false), changed: Condvar::new() });
         let worker = worker::Worker { handle: handle.to_string(), root, shared: shared.clone(), rx, emit, snapshot, last_emit: Instant::now(), dirty_since: None, defer, deferred: Default::default() };
         if let Err(e) = std::thread::Builder::new().name("vaultdraw-search".into()).spawn(move || worker.run()) {
             eprintln!("vaultdraw: search indexer not started: {e}");
@@ -186,7 +199,12 @@ impl SearchService {
     }
 
     fn shut_down(v: &VaultIndex) {
-        v.stop.store(true, std::sync::atomic::Ordering::Relaxed);
+        v.stop.store(true, std::sync::atomic::Ordering::SeqCst);
+        {
+            // Under the state lock so a `wait_ready` between its check and its wait sees it.
+            let _state = v.state.lock().unwrap_or_else(|p| p.into_inner());
+            v.changed.notify_all();
+        }
         let _ = v.tx.send(Update::Shutdown);
     }
 
@@ -218,9 +236,7 @@ impl SearchService {
     }
 
     pub(crate) fn stop(&self, handle: &str) {
-        if let Ok(mut pending) = self.pending.lock() {
-            pending.remove(handle);
-        }
+        self.pending.cancel(handle);
         if let Some(v) = self.vaults.lock().ok().and_then(|mut m| m.remove(handle)) {
             Self::shut_down(&v);
         }
@@ -402,6 +418,31 @@ mod unit_tests {
         other.stop("h");
         assert!(!other.is_pending("h"));
         assert_eq!(other.search("h", "x", None, None).unwrap_err().code, "NOT_FOUND");
+    }
+
+    #[test]
+    fn wait_ready_wakes_on_ready_and_on_close() {
+        // Review #3: the links prewarm sleeps on this instead of polling, and ends on close.
+        let dir = tempfile::tempdir().unwrap();
+        write(dir.path(), "a.excalidraw", &["alpha"]);
+        let svc = registered(dir.path());
+        let vi = svc.vault("h").unwrap();
+        assert!(vi.wait_ready());
+        svc.stop("h");
+        let t = Instant::now();
+        assert!(!vi.wait_ready());
+        assert!(t.elapsed() < Duration::from_millis(100));
+
+        // A waiter blocked before the close is woken by it.
+        let other = registered(dir.path());
+        other.ensure("h");
+        let vi = other.started("h").unwrap();
+        assert!(vi.wait_ready()); // the worker is idle from here on
+        *vi.state.lock().unwrap() = IndexState::Building; // pretend a long cold build
+        let waiter = { let vi = vi.clone(); std::thread::spawn(move || vi.wait_ready()) };
+        std::thread::sleep(Duration::from_millis(50));
+        other.stop("h");
+        assert!(!waiter.join().unwrap());
     }
 
     #[test]

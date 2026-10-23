@@ -282,11 +282,12 @@ What `"use"` means for each service:
 
 - **Search:** the first search (navigator search, quick switcher or CLI query). Until the index starts, the navigator's tag list is empty; it fills in once the index starts.
 - **Links:** the first links action (backlinks dock, link lookup, graph, or a rename that updates links). That action waits for the index. Starting links also starts search, because the link index is built from it, and pre-builds the link index.
-- **History:** the first edit of a drawing, or the first history action (panel or checkpoint).
+- **History:** the first edit or save of a drawing, a rename or move, or the first history action (panel or checkpoint). It starts with the vault's own history settings. Settings → History shows storage use once history has started.
 
 Notes:
 
-- With `history.start` set to `"idle"` or `"use"`, nothing is versioned until history starts, so edits made before then have no version. This is why the default is `"open"`.
+- With `"open"`, the app starts the service itself as the vault opens, before the window has loaded, so history records every save from the first one.
+- With `history.start` set to `"idle"` or `"use"`, changes made outside the app before history starts have no version. Your own saves always start it first. This is why the default is `"open"`.
 - A started service keeps running until the vault closes. Switching a setting to an earlier mode (for example `"use"` to `"open"`) starts it right away.
 - File changes made while a service waits are picked up when it starts, because it rescans. Nothing is lost.
 

@@ -72,6 +72,8 @@ export function createOutsideFallback(
         return;
       }
       void (async () => {
+        // Keeping the pre-change state truly needs history: start a pending one.
+        await repository.start?.(handle);
         const s = await status(repository, handle);
         if (s.staging || s.off) {
           return;

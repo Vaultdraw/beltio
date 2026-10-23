@@ -131,6 +131,11 @@ export interface HistoryRepository {
   deleteAll(handle: string, path: string): Promise<void>;
   excludeFromGit(handle: string): Promise<void>;
   subscribe(cb: (event: HistoryChange) => void): Promise<() => void>;
+  /**
+   * `history-started`: a pending history started natively (a save, a move,
+   * a history command), so the webview configures and opens it too.
+   */
+  onStarted?(cb: (handle: string) => void): Promise<() => void>;
 }
 
 /** NativeError codes of the history commands. */

@@ -123,4 +123,24 @@ describe("HistoryHost history.start", () => {
     await vi.waitFor(() => expect(repo.calls).toContain("configure"));
     expect(start).toHaveBeenCalledTimes(1);
   });
+  it("use: a native start (history-started) configures and opens it here too", async () => {
+    // Review #4: started natively (first save, outside fallback), the webview follows.
+    updatePreferences({ historyStart: "use" });
+    let notify: ((handle: string) => void) | null = null;
+    (repo as any).onStarted = vi.fn(async (cb: (h: string) => void) => {
+      notify = cb;
+      return () => {};
+    });
+    await mount();
+    expect(repo.calls).not.toContain("configure");
+    await act(async () => {
+      notify?.("another-vault");
+    });
+    expect(repo.calls).not.toContain("configure");
+    await act(async () => {
+      notify?.(H);
+    });
+    expect(repo.calls).toContain("configure");
+    expect(repo.calls).toContain("opened");
+  });
 });

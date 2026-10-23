@@ -149,4 +149,18 @@ describe("whenIdle", () => {
     vi.advanceTimersByTime(10);
     expect(spy).toHaveBeenCalledTimes(3);
   });
+  it("fires at the deadline even when animation frames never run (hidden window)", () => {
+    // Review #1: WebKit pauses requestAnimationFrame while hidden or minimised.
+    const win = makeWindow(false);
+    const run = vi.fn();
+    whenIdle(win, run, { quietMs: 1000, deadlineMs: 5000 });
+    vi.advanceTimersByTime(4999);
+    expect(run).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(run).toHaveBeenCalledTimes(1);
+    // A late paint does not run it again.
+    paint(win);
+    vi.advanceTimersByTime(10_000);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
 });

@@ -1,11 +1,10 @@
 /**
  * Applies `search.start` and `links.start` for the open vault (D8). The
- * native side registers both at vault open without starting them; "use"
- * needs nothing here because the first query starts a pending service.
+ * native side starts "open" services itself at vault open (this hook's call
+ * is then a no-op) and registers the rest; "use" needs nothing here because
+ * the first query starts a pending service.
  */
-import { useSyncExternalStore } from "react";
-
-import { getPreferences, subscribePreferences } from "../vault/preferences";
+import { useGlobalPref } from "../vault/useGlobalPref";
 
 import { useServiceStart } from "./useServiceStart";
 
@@ -18,10 +17,7 @@ export function useStartMode(
   win: Window | null | undefined,
   field: ServicesField,
 ): StartMode {
-  return useSyncExternalStore(
-    subscribePreferences,
-    () => getPreferences(win)[field],
-  );
+  return useGlobalPref(win, field)[0];
 }
 
 export function useLazyServices(

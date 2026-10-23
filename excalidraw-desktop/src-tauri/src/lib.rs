@@ -271,14 +271,18 @@ fn open_vault(root: PathBuf, app: &AppHandle, service: &Service) -> Result<Vault
         .lock()
         .map_err(|_| err("INTERNAL", "Vault state unavailable"))?
         .insert(handle.clone(), vault.clone());
-    // Registered, not started: the webview starts each per its `start` mode (services.rs).
+    // Registered; started here only when its `start` mode is "open" (services.rs).
+    let modes = services::modes_of(&services::read_config());
     if let Some(search) = app.try_state::<search::SearchService>() {
         search.register(&handle, root.clone(), search::tauri_emitter(app));
     }
     links::on_vault_open(app, vault);
     if let Some(history) = app.try_state::<history::HistoryService>() {
-        history.register(&handle, root.clone(), read_only, history::tauri_emitter(app));
+        let settings_root = root.clone();
+        let settings: history::SettingsLoader = Arc::new(move || services::load_history_settings(&settings_root));
+        history.register(&handle, root.clone(), read_only, history::tauri_emitter(app), Some(settings));
     }
+    services::start_open(&modes, &handle, app);
     let name = root
         .file_name()
         .and_then(|s| s.to_str())

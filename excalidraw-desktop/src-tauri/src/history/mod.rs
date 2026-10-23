@@ -165,6 +165,14 @@ pub struct ChangeEvent {
 pub enum HistoryEvent {
     Change(ChangeEvent),
     Status(HistoryStatus),
+    /// A pending history started natively (`history-started`).
+    Started(StartedEvent),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StartedEvent {
+    pub handle: String,
 }
 
 /// Receives events for the webview (`history-change`, `history-status`).
@@ -179,6 +187,9 @@ pub(crate) fn tauri_emitter(app: &AppHandle) -> Emitter {
         }
         HistoryEvent::Status(s) => {
             let _ = app.emit("history-status", s);
+        }
+        HistoryEvent::Started(s) => {
+            let _ = app.emit("history-started", s);
         }
     })
 }
@@ -611,10 +622,15 @@ pub struct HistoryService {
     state_override: Option<PathBuf>,
     clock: Arc<dyn Clock>,
     free_probe: Mutex<Option<Arc<dyn Fn() -> bool + Send + Sync>>>,
-    /// Opened vaults whose history has not started (`history.start` = idle or use):
-    /// root, read-only flag and emitter, kept for the first `ensure` or history command.
-    pending: Mutex<HashMap<String, (PathBuf, bool, Emitter)>>,
+    /// Opened vaults whose history has not started (`history.start` = idle or use), kept
+    /// for the first `ensure`: a history command, a save, a move or the webview's start.
+    pending: crate::services::PendingStarts<Pending>,
 }
+
+/// Loads the vault's effective settings from disk when history starts natively.
+pub(crate) type SettingsLoader = Arc<dyn Fn() -> HistorySettings + Send + Sync>;
+/// What a pending vault needs to start: root, read-only flag, emitter, settings loader.
+type Pending = (PathBuf, bool, Emitter, Option<SettingsLoader>);
 
 impl Default for HistoryService {
     fn default() -> Self {
@@ -625,7 +641,7 @@ impl Default for HistoryService {
             state_override: None,
             clock: Arc::new(SystemClock),
             free_probe: Mutex::new(None),
-            pending: Mutex::default(),
+            pending: Default::default(),
         }
     }
 }
@@ -663,20 +679,34 @@ impl HistoryService {
         self.state_override.clone().or_else(|| crate::config::resolve_dirs().ok().map(|d| d.state))
     }
 
-    /// Records an opened vault without starting its history (`open_vault`).
-    pub(crate) fn register(&self, handle: &str, root: PathBuf, read_only: bool, emit: Emitter) {
+    /// Records an opened vault without starting its history (`open_vault`). `settings` loads
+    /// the vault's real settings when history starts, so it never runs on the defaults
+    /// while the webview has not configured it yet.
+    pub(crate) fn register(&self, handle: &str, root: PathBuf, read_only: bool, emit: Emitter, settings: Option<SettingsLoader>) {
         if self.hard_off {
             return;
         }
-        lock(&self.pending).insert(handle.to_string(), (root, read_only, emit));
+        self.pending.register(handle, (root, read_only, emit, settings));
     }
 
-    /// Starts a registered vault's history if it is still pending; a no-op otherwise.
+    /// Registered but not started.
+    pub(crate) fn is_pending(&self, handle: &str) -> bool {
+        self.pending.is_pending(handle)
+    }
+
+    /// Starts a registered vault's history if it is still pending (once; concurrent callers
+    /// for the same vault wait for that start, others don't), configures it with the loaded
+    /// settings and tells the webview (`history-started`). A no-op otherwise.
     pub(crate) fn ensure(&self, handle: &str) {
-        // Held across the start so a concurrent caller waits for it instead of missing the vault.
-        let mut pending = lock(&self.pending);
-        if let Some((root, read_only, emit)) = pending.remove(handle) {
-            self.start(handle, root, read_only, emit);
+        let closed = self.pending.ensure(handle, |(root, read_only, emit, settings)| {
+            self.start(handle, root, read_only, emit.clone());
+            if let (Some(load), Some(vh)) = (settings, self.get(handle)) {
+                vh.configure(load());
+            }
+            emit(HistoryEvent::Started(StartedEvent { handle: handle.to_string() }));
+        });
+        if closed {
+            self.stop(handle);
         }
     }
 
@@ -771,7 +801,7 @@ impl HistoryService {
     }
 
     pub(crate) fn stop(&self, handle: &str) {
-        lock(&self.pending).remove(handle);
+        self.pending.cancel(handle);
         let vh = self.vaults.write().unwrap_or_else(|p| p.into_inner()).remove(handle);
         if let Some(vh) = vh {
             vh.stop();
@@ -782,18 +812,22 @@ impl HistoryService {
 
     /// Save path: after the commit succeeded, still under the mutation guard.
     pub(crate) fn after_commit(&self, handle: &str, rel: &str, revision: &str, size: u64) {
+        // A save starts a pending history: the first edited version is never dropped.
+        self.ensure(handle);
         if let Some(vh) = self.vaults.read().unwrap_or_else(|p| p.into_inner()).get(handle) {
             vh.after_commit(rel, revision, size);
         }
     }
 
     pub(crate) fn moved(&self, handle: &str, from: &str, to: &str) {
+        self.ensure(handle);
         if let Some(vh) = self.get(handle) {
             lineage::moved(&vh, from, to);
         }
     }
 
     pub(crate) fn trashed(&self, handle: &str, path: &str) {
+        self.ensure(handle);
         if let Some(vh) = self.get(handle) {
             lineage::trashed(&vh, path);
         }
@@ -801,6 +835,7 @@ impl HistoryService {
 
     /// Links are about to rewrite `path` (D-R2): keep its pre-rewrite state.
     pub(crate) fn before_link_rewrite(&self, handle: &str, path: &str) {
+        self.ensure(handle);
         if let Some(vh) = self.get(handle) {
             outside::before_rewrite(&vh, path);
         }
@@ -832,6 +867,10 @@ pub(crate) async fn history_configure(handle: String, settings: HistorySettings,
 
 #[tauri::command]
 pub(crate) async fn history_status(handle: String, state: State<'_, HistoryService>) -> Result<HistoryStatus> {
+    // A status read (Settings > History) never starts a pending history (`history.start`).
+    if state.is_pending(&handle) {
+        return Err(err("HISTORY_NOT_STARTED", "File history has not started for this vault yet"));
+    }
     let vh = state.vault(&handle)?;
     blocking(move || Ok(vh.status())).await
 }

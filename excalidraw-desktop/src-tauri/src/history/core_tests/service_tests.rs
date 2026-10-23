@@ -387,26 +387,54 @@ fn clearing_the_canvas_with_tombstones_still_versions_the_previous_state() {
 
 // ---- lazy start (D8) ----
 
+fn loader(interval: u32) -> Option<crate::history::SettingsLoader> {
+    Some(std::sync::Arc::new(move || settings(interval)))
+}
+
 #[test]
-fn registered_history_starts_on_the_first_history_call_only() {
+fn registered_history_starts_on_a_history_call_not_on_watcher_events() {
     let fx = Fx::new();
-    fx.svc.register("h", fx.root.clone(), false, fx.emitter());
-    // Save-path and watcher hooks never start it: nothing is staged or versioned.
-    fx.svc.after_commit("h", P, &"a".repeat(64), 1);
+    fx.svc.register("h", fx.root.clone(), false, fx.emitter(), loader(5));
     fx.svc.watched("h", &[P.to_string()], &[], true);
     assert!(fx.svc.get("h").is_none());
-    // A history command starts it; later ones reuse the same vault.
+    assert!(fx.svc.is_pending("h"));
     let first = fx.svc.vault("h").unwrap();
+    assert!(!fx.svc.is_pending("h"));
     assert!(std::sync::Arc::ptr_eq(&first, &fx.svc.vault("h").unwrap()));
-    // `ensure` after a start is a no-op.
     fx.svc.ensure("h");
     assert!(std::sync::Arc::ptr_eq(&first, &fx.svc.get("h").unwrap()));
 }
 
 #[test]
+fn first_save_starts_a_pending_history_and_is_staged_with_the_real_settings() {
+    // Review #6: the first edit's save must never be dropped while the webview's start races.
+    let fx = Fx::new();
+    fx.svc.register("h", fx.root.clone(), false, fx.emitter(), loader(7));
+    let rev = fx.save(P, &scene(3, 200, 0, 0).json());
+    let vh = fx.svc.get("h").expect("the save started history");
+    assert_eq!(vh.settings.lock().unwrap().interval_minutes, 7, "configured from the loader, not the defaults");
+    assert_ne!(vh.status().state, "off");
+    let staged = fx.staged_files();
+    assert_eq!(staged.len(), 1, "{staged:?}");
+    assert!(staged[0].contains(&rev[..16]));
+}
+
+#[test]
+fn native_start_configures_and_announces_itself() {
+    // Review #4: started by any caller, history runs on the vault's settings and the webview
+    // hears `history-started` so it can configure and open the drawing too.
+    let fx = Fx::new();
+    fx.svc.register("h", fx.root.clone(), false, fx.emitter(), loader(11));
+    fx.svc.ensure("h");
+    assert_eq!(fx.vh().settings.lock().unwrap().interval_minutes, 11);
+    let events = fx.events.lock().unwrap();
+    assert!(events.iter().any(|e| matches!(e, HistoryEvent::Started(s) if s.handle == "h")));
+}
+
+#[test]
 fn ensured_history_versions_like_an_eager_start() {
     let fx = Fx::new();
-    fx.svc.register("h", fx.root.clone(), false, fx.emitter());
+    fx.svc.register("h", fx.root.clone(), false, fx.emitter(), None);
     fx.svc.ensure("h");
     fx.vh().configure(settings(5));
     let mut sc = scene(1, 50, 0, 0);
@@ -422,13 +450,13 @@ fn ensured_history_versions_like_an_eager_start() {
 #[test]
 fn stop_drops_a_pending_history_and_hard_off_never_registers() {
     let fx = Fx::new();
-    fx.svc.register("h", fx.root.clone(), false, fx.emitter());
+    fx.svc.register("h", fx.root.clone(), false, fx.emitter(), None);
     fx.svc.stop("h");
     assert_eq!(fx.svc.vault("h").err().unwrap().code, "NOT_FOUND");
 
     let dir = tempfile::tempdir().unwrap();
     let off = HistoryService::hard_off_for_tests(dir.path().join("state"));
-    off.register("h", dir.path().to_path_buf(), false, std::sync::Arc::new(|_| {}));
+    off.register("h", dir.path().to_path_buf(), false, std::sync::Arc::new(|_| {}), None);
     assert_eq!(off.vault("h").err().unwrap().code, "HISTORY_OFF");
     assert!(!dir.path().join("state").exists());
 }

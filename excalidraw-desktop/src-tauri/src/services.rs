@@ -1,10 +1,146 @@
-//! Lazy start of the per-vault services (D8): `open_vault` only registers search and
-//! history; the webview starts each one per its `start` mode (`open`, `idle`, `use`), and
-//! any query that needs a pending service starts it first (`SearchService::vault`,
-//! `HistoryService::vault`).
+//! Lazy start of the per-vault services (D8). `open_vault` registers search and history and
+//! starts natively those whose `start` mode in config.toml is "open" (history by default, so
+//! no version is missed before the webview mounts). The webview starts the others per their
+//! mode (`services_start`), and any native caller that needs a pending service starts it
+//! first (`SearchService::vault`, `HistoryService::vault`, history's save path).
 
-use crate::{err, history, links, search, Result};
+use crate::{config, err, history, links, search, Result};
+use serde_json::Value as Json;
+use std::{
+    collections::HashMap,
+    path::Path,
+    sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex, Once},
+};
 use tauri::State;
+
+// ---- pending starts ----
+
+struct Entry<T> {
+    data: Mutex<Option<T>>,
+    once: Once,
+    cancelled: AtomicBool,
+}
+
+/// Registered-but-not-started services per vault handle. `ensure` runs the start once per
+/// handle; concurrent callers for that handle wait for it, other handles never do (the map
+/// lock is held only to look the entry up).
+pub(crate) struct PendingStarts<T> {
+    map: Mutex<HashMap<String, Arc<Entry<T>>>>,
+}
+
+impl<T> Default for PendingStarts<T> {
+    fn default() -> Self {
+        PendingStarts { map: Mutex::default() }
+    }
+}
+
+impl<T> PendingStarts<T> {
+    fn map(&self) -> std::sync::MutexGuard<'_, HashMap<String, Arc<Entry<T>>>> {
+        self.map.lock().unwrap_or_else(|p| p.into_inner())
+    }
+
+    pub(crate) fn register(&self, handle: &str, data: T) {
+        let entry = Arc::new(Entry { data: Mutex::new(Some(data)), once: Once::new(), cancelled: AtomicBool::new(false) });
+        if let Some(old) = self.map().insert(handle.to_string(), entry) {
+            old.cancelled.store(true, Ordering::SeqCst);
+        }
+    }
+
+    pub(crate) fn is_pending(&self, handle: &str) -> bool {
+        self.map().contains_key(handle)
+    }
+
+    /// Runs `start` with the registered data if `handle` is pending, once. Returns true when
+    /// the vault was closed (`cancel`) while it started: the caller must stop what it started.
+    pub(crate) fn ensure(&self, handle: &str, start: impl FnOnce(T)) -> bool {
+        let Some(entry) = self.map().get(handle).cloned() else { return false };
+        entry.once.call_once(|| {
+            let data = entry.data.lock().unwrap_or_else(|p| p.into_inner()).take();
+            if let Some(data) = data {
+                start(data);
+            }
+        });
+        let mut map = self.map();
+        if map.get(handle).is_some_and(|e| Arc::ptr_eq(e, &entry)) {
+            map.remove(handle);
+        }
+        entry.cancelled.load(Ordering::SeqCst)
+    }
+
+    /// The vault closed: forget a pending start (a start in flight sees `cancelled`).
+    pub(crate) fn cancel(&self, handle: &str) {
+        if let Some(entry) = self.map().remove(handle) {
+            entry.cancelled.store(true, Ordering::SeqCst);
+        }
+    }
+}
+
+// ---- modes and settings from config.toml ----
+
+/// `[search|links|history] start`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Mode {
+    Open,
+    Idle,
+    Use,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct Modes {
+    pub search: Mode,
+    pub links: Mode,
+    pub history: Mode,
+}
+
+fn mode(config: &Json, table: &str, default: Mode) -> Mode {
+    match config.get(table).and_then(|t| t.get("start")).and_then(Json::as_str) {
+        Some("open") => Mode::Open,
+        Some("idle") => Mode::Idle,
+        Some("use") => Mode::Use,
+        _ => default,
+    }
+}
+
+/// The modes in `config` (defaults: search and links idle, history open).
+pub(crate) fn modes_of(config: &Json) -> Modes {
+    Modes { search: mode(config, "search", Mode::Idle), links: mode(config, "links", Mode::Idle), history: mode(config, "history", Mode::Open) }
+}
+
+/// The global config.toml, or `null` when missing or invalid (every key then defaults).
+#[cfg_attr(test, allow(dead_code))]
+pub(crate) fn read_config() -> Json {
+    config::resolve_dirs()
+        .ok()
+        .and_then(|d| config::read_toml_text(&d.config.join("config.toml"), "config.toml", 1024 * 1024).ok())
+        .and_then(|text| config::parse_config(&text).ok())
+        .unwrap_or(Json::Null)
+}
+
+/// History settings as the webview would send them: `[history]` of config.toml, overridden
+/// per key by the vault's settings.toml; invalid values keep the default, then clamped.
+pub(crate) fn history_settings_of(config: &Json, vault: &Json) -> history::HistorySettings {
+    let mut s = history::HistorySettings::default();
+    for table in [config.get("history"), vault.get("history")].into_iter().flatten() {
+        let num = |k: &str| table.get(k).and_then(Json::as_u64).and_then(|n| u32::try_from(n).ok());
+        let flag = |k: &str| table.get(k).and_then(Json::as_bool);
+        if let Some(v) = flag("enabled") { s.enabled = v; }
+        if let Some(v) = num("interval_minutes") { s.interval_minutes = v; }
+        if let Some(v) = num("keep_all_hours") { s.keep_all_hours = v; }
+        if let Some(v) = num("keep_hourly_hours") { s.keep_hourly_hours = v; }
+        if let Some(v) = num("keep_daily_days") { s.keep_daily_days = v; }
+        if let Some(v) = num("keep_weekly_weeks") { s.keep_weekly_weeks = v; }
+        if let Some(v) = num("size_cap_mb") { s.size_cap_mb = v; }
+        if let Some(v) = flag("highlight_changes") { s.highlight_changes = v; }
+    }
+    s.clamped()
+}
+
+/// Loads the effective history settings of the vault at `root` from disk (native start).
+#[cfg_attr(test, allow(dead_code))]
+pub(crate) fn load_history_settings(root: &Path) -> history::HistorySettings {
+    let vault = crate::vault_settings::load_vault_settings_at(root).settings.unwrap_or(Json::Null);
+    history_settings_of(&read_config(), &vault)
+}
 
 /// One service of `services_start`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -39,6 +175,18 @@ pub(crate) fn start(service: Service, handle: &str, search: &search::SearchServi
     }
 }
 
+/// At vault open: starts natively every service whose mode is "open".
+#[cfg_attr(test, allow(dead_code))]
+pub(crate) fn start_open(modes: &Modes, handle: &str, app: &tauri::AppHandle) {
+    use tauri::Manager as _;
+    let (Some(search), Some(history)) = (app.try_state::<search::SearchService>(), app.try_state::<history::HistoryService>()) else { return };
+    for (mode, service) in [(modes.history, Service::History), (modes.search, Service::Search), (modes.links, Service::Links)] {
+        if mode == Mode::Open {
+            start(service, handle, &search, &history);
+        }
+    }
+}
+
 #[tauri::command]
 #[cfg_attr(test, allow(dead_code))]
 pub(crate) async fn services_start(
@@ -55,6 +203,65 @@ pub(crate) async fn services_start(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn modes_default_to_idle_idle_open_and_read_config() {
+        // Review #5: history defaults to "open", which open_vault starts natively.
+        let none = modes_of(&Json::Null);
+        assert_eq!(none, Modes { search: Mode::Idle, links: Mode::Idle, history: Mode::Open });
+        let cfg = serde_json::json!({"search": {"start": "use"}, "links": {"start": "open"}, "history": {"start": "bogus"}});
+        assert_eq!(modes_of(&cfg), Modes { search: Mode::Use, links: Mode::Open, history: Mode::Open });
+    }
+
+    #[test]
+    fn history_settings_merge_vault_over_global_and_skip_bad_values() {
+        let global = serde_json::json!({"history": {"interval_minutes": 9, "enabled": false, "size_cap_mb": "x"}});
+        let vault = serde_json::json!({"history": {"enabled": true, "keep_all_hours": 2, "interval_minutes": 99999}});
+        let s = history_settings_of(&global, &vault);
+        assert!(s.enabled);
+        assert_eq!(s.interval_minutes, 24 * 60, "clamped");
+        assert_eq!(s.keep_all_hours, 2);
+        assert_eq!(s.size_cap_mb, history::HistorySettings::default().size_cap_mb);
+        assert_eq!(history_settings_of(&Json::Null, &Json::Null), history::HistorySettings::default());
+    }
+
+    #[test]
+    fn a_slow_start_blocks_only_callers_of_the_same_vault() {
+        // Review #2: no global lock is held across a start.
+        let pending: Arc<PendingStarts<u32>> = Arc::default();
+        pending.register("a", 1);
+        pending.register("b", 2);
+        let started = Arc::new(Mutex::new(Vec::new()));
+        let slow = {
+            let (p, s) = (pending.clone(), started.clone());
+            std::thread::spawn(move || {
+                p.ensure("a", |v| {
+                    std::thread::sleep(std::time::Duration::from_millis(400));
+                    s.lock().unwrap().push(v);
+                })
+            })
+        };
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        let t = std::time::Instant::now();
+        pending.ensure("b", |v| started.lock().unwrap().push(v));
+        assert!(t.elapsed() < std::time::Duration::from_millis(200), "b waited for a");
+        assert!(pending.is_pending("a"), "a is still starting");
+        // A second caller for "a" waits for the first start and does not start again.
+        pending.ensure("a", |_| panic!("started twice"));
+        assert_eq!(*started.lock().unwrap(), vec![2, 1]);
+        assert!(!slow.join().unwrap());
+        assert!(!pending.is_pending("a"));
+    }
+
+    #[test]
+    fn a_vault_closed_while_starting_is_reported() {
+        let pending: Arc<PendingStarts<u32>> = Arc::default();
+        pending.register("a", 1);
+        let p = pending.clone();
+        let closed = pending.ensure("a", move |_| p.cancel("a"));
+        assert!(closed);
+        assert!(!pending.ensure("a", |_| panic!("not pending any more")));
+    }
 
     #[test]
     fn parses_the_three_services_only() {

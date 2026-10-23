@@ -28,7 +28,7 @@ const HEADER: &str = "# Vaultdraw settings for this vault; these override ~/.con
 #[serde(rename_all = "camelCase")]
 pub(crate) struct LoadedVaultSettings {
     path: String,
-    settings: Option<Json>,
+    pub(crate) settings: Option<Json>,
     settings_error: Option<ConfigError>,
 }
 

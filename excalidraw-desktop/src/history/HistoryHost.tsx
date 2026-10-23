@@ -91,6 +91,34 @@ const HistoryHostImpl = ({
       activate();
     }
   }, [activate, panelOpen, dialogOpen, confirmDeleteAll, status]);
+  // Started natively (first save, a move, a history command): configure and
+  // open it here too, so live settings and the open drawing reach it.
+  useEffect(() => {
+    if (!repository.onStarted || !vault?.handle) {
+      return undefined;
+    }
+    const mine = vault.handle;
+    let off: (() => void) | undefined;
+    let disposed = false;
+    repository
+      .onStarted((h) => {
+        if (h === mine) {
+          activate();
+        }
+      })
+      .then((unsubscribe) => {
+        if (disposed) {
+          unsubscribe();
+        } else {
+          off = unsubscribe;
+        }
+      })
+      .catch(() => {});
+    return () => {
+      disposed = true;
+      off?.();
+    };
+  }, [repository, vault?.handle, activate]);
 
   useHistorySync(repository, started ? vault : null, settings, activeDoc);
 
@@ -125,6 +153,7 @@ const HistoryHostImpl = ({
       return;
     }
     try {
+      await repository.start?.(handle);
       const status = await repository.status(handle);
       if (!status.gitRepo) {
         showToast("This vault is not a git repository");

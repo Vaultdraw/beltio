@@ -2,8 +2,6 @@
  * Controls of the "Tabs" section on the Interface settings page. Rows come
  * from tabsSettingsSchema.ts; spread into pages/index.ts.
  */
-import { useEffect, useState } from "react";
-
 import {
   Segmented,
   Stepper,
@@ -15,35 +13,15 @@ import {
   useSettings,
   type SettingControls,
 } from "../components/settings/SettingsContext";
-import {
-  getPreferences,
-  subscribePreferences,
-  updatePreferences,
-  type PreferencesSnapshot,
-  type VaultPreferences,
-} from "../vault/preferences";
+import { useGlobalPref } from "../vault/useGlobalPref";
 
 import { TABS_UNDO_BUDGET_MB, type TabsField } from "./tabsSettings";
 
+import type { VaultPreferences } from "../vault/preferences";
+
 /** A global (not per-vault) tabs preference, kept in sync with config.toml. */
-const useTabsPref = <F extends TabsField>(
-  field: F,
-): [PreferencesSnapshot[F], (value: PreferencesSnapshot[F]) => void] => {
-  const { win } = useSettings();
-  const [value, setValue] = useState(() => getPreferences(win)[field]);
-  useEffect(() => {
-    const refresh = () => setValue(getPreferences(win)[field]);
-    refresh();
-    return subscribePreferences(refresh);
-  }, [win, field]);
-  return [
-    value,
-    (next) => {
-      setValue(next);
-      updatePreferences({ [field]: next } as Partial<VaultPreferences>, win);
-    },
-  ];
-};
+const useTabsPref = <F extends TabsField>(field: F) =>
+  useGlobalPref(useSettings().win, field);
 
 const SwitchSetting = ({
   id,
