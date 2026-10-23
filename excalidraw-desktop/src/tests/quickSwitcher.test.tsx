@@ -414,7 +414,7 @@ describe("QuickSwitcher keystroke cost (5,000 drawings, jsdom)", () => {
     await setup({ search: fakeSearch(paths) });
     const samples: number[] = [];
     // Count work, not milliseconds: a keystroke renders at most the first
-    // paint's rows however many drawings match, and "zq" matches none.
+    // paint's rows however many drawings match.
     // Wall-clock budgets live in the perf harness; timing is only logged.
     const counts: Record<string, number> = {};
     for (const q of [

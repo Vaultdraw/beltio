@@ -10,6 +10,8 @@ const measure = (t: string) => {
   return t.length * 10;
 };
 
+const TEXTS = 500; // only text elements read `text`; rectangles bail out on type
+
 describe("link box hit test performance", () => {
   it("500 linked texts + 2000 other elements: no measuring on cache hits, one visit per element", () => {
     const elements: VersionedText[] = [];
@@ -88,7 +90,7 @@ describe("link box hit test performance", () => {
       const s = performance.now();
       linkAt(counted, pt, measure);
       times.push(performance.now() - s);
-      expect(textReads).toBeLessThanOrEqual(counted.length);
+      expect(textReads).toBeLessThanOrEqual(TEXTS);
     }
     expect(measureCalls).toBe(0);
 
@@ -101,7 +103,7 @@ describe("link box hit test performance", () => {
       const hit = linkAt(counted, { x: -500 - run, y: -500 }, measure);
       misses.push(performance.now() - s);
       expect(hit).toBeNull();
-      expect(textReads).toBeLessThanOrEqual(counted.length);
+      expect(textReads).toBeLessThanOrEqual(TEXTS);
     }
     expect(measureCalls).toBe(0);
     // Measuring is per element (a few calls each), once: never per frame.
