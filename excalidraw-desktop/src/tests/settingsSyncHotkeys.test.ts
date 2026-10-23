@@ -144,7 +144,7 @@ describe("preferences -> config changes", () => {
       "vault.newDrawing": ["Mod+Alt+N"],
     });
     expect(preferencesToConfigChanges(prev, next)).toEqual([
-      { key: "hotkeys.view.zoomIn", value: null },
+      { key: "hotkeys.view.zoomIn", value: null, default: expect.any(Array) },
       { key: "hotkeys.vault.newDrawing", value: ["Mod+Alt+N"] },
     ]);
     expect(preferencesToConfigChanges(next, next)).toEqual([]);

@@ -26,14 +26,23 @@ import {
   MIN_THUMB_MAX_ELEMENTS,
 } from "../thumbnails/limits";
 
-import { BUILTIN_COMMANDS, isCommandId } from "../commands/commands";
+import {
+  BUILTIN_COMMANDS,
+  defaultKeys,
+  isCommandId,
+} from "../commands/commands";
+import { detectPlatform } from "../commands/keys";
 import {
   HISTORY_MAPPINGS,
   type HistoryField,
 } from "../history/historySettings";
 import { TABS_MAPPINGS, type TabsField } from "../tabs/tabsSettings";
 import { MEMORY_MAPPINGS, type MemoryField } from "../memory/memorySettings";
-import { LEADER_TOKEN, parseSequence } from "../commands/keySequence";
+import {
+  LEADER_TOKEN,
+  normalizeKeys,
+  parseSequence,
+} from "../commands/keySequence";
 import {
   KEYS_MAPPINGS,
   parseKeysExtras,
@@ -140,18 +149,38 @@ export interface ConfigErrorPayload {
   line: number | null;
 }
 
+/** One config layer as `load_settings` reports it (lowest first). */
+export interface LayerPayload {
+  id: number;
+  kind: "config" | "overrides";
+  path: string;
+  status: "ok" | "missing" | "error";
+  error: ConfigErrorPayload | null;
+  /** The layer's own parsed content; null unless `ok`. */
+  config: Record<string, unknown> | null;
+}
+
+const layerFile = (layer: LayerPayload) =>
+  layer.kind === "overrides" ? "overrides.toml" : "config.toml";
+
 export interface LoadSettingsResult {
   configDir: string;
   configPath: string;
   statePath: string;
   config: Record<string, unknown> | null;
   configError: ConfigErrorPayload | null;
+  /** Why overrides.toml was skipped (absent from older backends). */
+  overridesError?: ConfigErrorPayload | null;
+  overridesPath?: string;
+  layers?: LayerPayload[];
   state: Record<string, unknown> | null;
 }
 
 export interface ConfigChange {
   key: string;
   value: unknown;
+  /** Built-in value of the key: `value: null` with it means "use the default". */
+  default?: unknown;
 }
 
 export type SettingsProblemKind = "parse" | "invalid" | "unknown" | "io";
@@ -826,6 +855,7 @@ const CONTROL_KEYS = [
 /** config.toml keys no mapping reads, as warnings (the rest still applies). */
 export const unknownKeyProblems = (
   config: Record<string, unknown>,
+  file = "config.toml",
 ): SettingsProblem[] =>
   unknownKeyProblemsIn(
     config,
@@ -835,7 +865,7 @@ export const unknownKeyProblems = (
       [...CONFIG_MAPPING.map((m) => m.key), "keys.labels", ...CONTROL_KEYS],
       TOOL_NESTED_KEYS,
     )),
-    "config.toml",
+    file,
   );
 
 /** Unknown keys are warnings; parse, invalid and io problems are errors. */
@@ -852,7 +882,7 @@ export const STATE_FIELDS = [
   "hasPanned",
 ] as const;
 
-type StateField = typeof STATE_FIELDS[number];
+type StateField = (typeof STATE_FIELDS)[number];
 export type PersistedState = DeepReadonly<Pick<VaultPreferences, StateField>>;
 
 export const show = (value: unknown) =>
@@ -951,7 +981,11 @@ export function parseHotkeysTable(table: unknown): {
  * keys take their default; invalid values take their default and produce a
  * problem.
  */
-export function configToPreferences(config: Record<string, unknown>): {
+export function configToPreferences(
+  config: Record<string, unknown>,
+  /** The layers the config was merged from: unknown keys are named by file. */
+  layers?: readonly LayerPayload[],
+): {
   values: Pick<
     VaultPreferences,
     ConfigField | "hotkeys" | "pluginSettings" | "keysLabels"
@@ -990,7 +1024,13 @@ export function configToPreferences(config: Record<string, unknown>): {
   problems.push(...keys.problems);
   const plugins = parsePluginTable(config.plugin, "config.toml");
   problems.push(...plugins.problems);
-  problems.push(...unknownKeyProblems(config));
+  problems.push(
+    ...(layers
+      ? layers.flatMap((l) =>
+          l.config ? unknownKeyProblems(l.config, layerFile(l)) : [],
+        )
+      : unknownKeyProblems(config)),
+  );
   return {
     values: {
       ...(values as Pick<VaultPreferences, ConfigField>),
@@ -1005,7 +1045,19 @@ export function configToPreferences(config: Record<string, unknown>): {
 const isToolField = (field: ConfigField): field is ToolField =>
   (TOOL_FIELDS as readonly string[]).includes(field);
 
-/** Changed config-mapped fields -> update_config changes (dotted keys). */
+/** The default chords of a command, as `[hotkeys]` would list them. */
+const hotkeyDefault = (id: string): string[] => {
+  const command = BUILTIN_COMMANDS.find((c) => c.id === id);
+  const platform = detectPlatform();
+  return command ? normalizeKeys(defaultKeys(command, platform), platform) : [];
+};
+
+/**
+ * Changed config-mapped fields -> update_config changes (dotted keys).
+ * Settings writes `overrides.toml`: a value equal to the built-in default is
+ * sent as `null` with the default as a hint ("use the default"), so the
+ * backend can pin the default over a `config.toml` value or drop the key.
+ */
 export function preferencesToConfigChanges(
   prev: PreferencesSnapshot,
   next: PreferencesSnapshot,
@@ -1014,13 +1066,18 @@ export function preferencesToConfigChanges(
   for (const { field, key } of CONFIG_MAPPING) {
     if (!sameValue(prev[field], next[field])) {
       const value = next[field];
-      const empty =
+      const tool = isToolField(field);
+      const fallback = tool ? {} : DEFAULT_PREFERENCES[field];
+      const useDefault =
         value === undefined ||
-        (isToolField(field) && Object.keys(value as object).length === 0);
-      changes.push({ key, value: empty ? null : value });
+        (tool && Object.keys(value as object).length === 0) ||
+        (!tool && sameValue(value, fallback));
+      changes.push(
+        useDefault ? { key, value: null, default: fallback } : { key, value },
+      );
     }
   }
-  // [hotkeys]: one change per command id; null deletes the line (= defaults).
+  // [hotkeys]: one change per command id; null (the default keys) deletes the line.
   for (const id of new Set([
     ...Object.keys(prev.hotkeys),
     ...Object.keys(next.hotkeys),
@@ -1028,7 +1085,11 @@ export function preferencesToConfigChanges(
     const was = prev.hotkeys[id];
     const now = next.hotkeys[id];
     if (!sameValue(was, now)) {
-      changes.push({ key: `hotkeys.${id}`, value: now ?? null });
+      changes.push(
+        now === undefined
+          ? { key: `hotkeys.${id}`, value: null, default: hotkeyDefault(id) }
+          : { key: `hotkeys.${id}`, value: now },
+      );
     }
   }
   // [keys.labels]: one change per sequence; null deletes the line.
@@ -1106,10 +1167,13 @@ const configSlice = (prefs: PreferencesSnapshot) => ({
   pluginSettings: sortedPluginSettings(prefs.pluginSettings),
 });
 
-export function formatConfigError(error: ConfigErrorPayload): string {
+export function formatConfigError(
+  error: ConfigErrorPayload,
+  file = "config.toml",
+): string {
   return error.line != null
-    ? `config.toml line ${error.line}: ${error.message}`
-    : `config.toml: ${error.message}`;
+    ? `${file} line ${error.line}: ${error.message}`
+    : `${file}: ${error.message}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -1224,9 +1288,7 @@ function persist(
         rt.writeProblems = [
           {
             kind: "io",
-            message: `Could not save settings to config.toml: ${errorText(
-              err,
-            )}`,
+            message: `Could not save settings: ${errorText(err)}`,
           },
         ];
         refreshProblems(rt);
@@ -1292,8 +1354,22 @@ function applyLoad(
       message: formatConfigError(result.configError),
     });
   }
-  if (result.config && typeof result.config === "object") {
-    const { values, problems } = configToPreferences(result.config);
+  if (result.overridesError) {
+    loadProblems.push({
+      kind: "parse",
+      line: result.overridesError.line,
+      message: formatConfigError(result.overridesError, "overrides.toml"),
+    });
+  }
+  // A layer that fails to parse on a reload keeps the whole previous result;
+  // at startup the layers that parse apply.
+  const keepPrevious =
+    !includeState && !!(result.configError || result.overridesError);
+  if (!keepPrevious && result.config && typeof result.config === "object") {
+    const { values, problems } = configToPreferences(
+      result.config,
+      result.layers,
+    );
     next = { ...next, ...values };
     loadProblems.push(...problems);
   }

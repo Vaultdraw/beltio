@@ -106,7 +106,21 @@ fn split_library_paths(root: &Path, paths: Vec<String>) -> (Vec<String>, bool) {
     (rest.into_iter().filter(|p| !is_lock(p)).collect(), !library.is_empty())
 }
 
-/// Watches the config dir recursively and emits debounced `config-change` events.
+/// Drops the state-folder part of a watcher event: only `overrides.toml` there matters, so a
+/// `state.json` write (every few seconds while you work) never starts a batch. Events outside
+/// the state folder pass unchanged, because the theme registry reads their paths. `None` means
+/// nothing is left of the event.
+fn keep_state_event(state_dirs: &[PathBuf], mut event: Event) -> Option<Event> {
+    if event.paths.is_empty() {
+        return Some(event);
+    }
+    let in_state = |p: &Path| p.parent().is_some_and(|d| state_dirs.iter().any(|s| s == d));
+    event.paths.retain(|p| !in_state(p) || (p.file_name().is_some_and(|n| n == OVERRIDES_FILE)));
+    (!event.paths.is_empty()).then_some(event)
+}
+
+/// Watches the config dir recursively, and `overrides.toml` in the state dir, and emits
+/// debounced `config-change` events.
 pub(crate) fn start_watcher(app: &AppHandle) -> std::result::Result<ConfigWatcher, NativeError> {
     let dirs = resolve_dirs()?;
     {
@@ -114,6 +128,13 @@ pub(crate) fn start_watcher(app: &AppHandle) -> std::result::Result<ConfigWatche
         ensure_config_files(&dirs)?;
     }
     let (tx, rx) = mpsc::channel::<notify::Result<Event>>();
+    // The state folder may not exist yet; it has to before it can be watched.
+    let state_inside_config = dirs.state.starts_with(&dirs.config);
+    let state_watched = !state_inside_config && fs::create_dir_all(&dirs.state).is_ok();
+    let mut state_dirs = vec![dirs.state.clone()];
+    if let Ok(real) = fs::canonicalize(&dirs.state) {
+        state_dirs.push(real);
+    }
     let app = app.clone();
     let root = dirs.config.clone();
     thread::Builder::new()
@@ -164,18 +185,77 @@ pub(crate) fn start_watcher(app: &AppHandle) -> std::result::Result<ConfigWatche
         })
         .map_err(ioerr)?;
     let mut watcher = notify::recommended_watcher(move |event: notify::Result<Event>| {
+        let event = match event {
+            Ok(e) => match keep_state_event(&state_dirs, e) {
+                Some(e) => Ok(e),
+                None => return,
+            },
+            err => err,
+        };
         let _ = tx.send(event);
     })
     .map_err(|e| err("WATCH_FAILED", e.to_string()))?;
     watcher
         .watch(&dirs.config, RecursiveMode::Recursive)
         .map_err(|e| err("WATCH_FAILED", e.to_string()))?;
+    if state_watched {
+        // Best effort: without it a hand-edited overrides.toml needs the Reload button.
+        let _ = watcher.watch(&dirs.state, RecursiveMode::NonRecursive);
+    }
     Ok(ConfigWatcher { _watcher: Mutex::new(watcher) })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use notify::EventKind;
+
+    fn event(paths: &[&str]) -> Event {
+        let mut e = Event::new(EventKind::Any);
+        e.paths = paths.iter().map(PathBuf::from).collect();
+        e
+    }
+
+    #[test]
+    fn only_overrides_toml_passes_from_the_state_folder() {
+        let state = vec![PathBuf::from("/s/vaultdraw")];
+        assert!(keep_state_event(&state, event(&["/s/vaultdraw/state.json"])).is_none());
+        assert!(keep_state_event(&state, event(&["/s/vaultdraw/.excalidraw-tmp-1"])).is_none());
+        let kept = keep_state_event(&state, event(&["/s/vaultdraw/.excalidraw-tmp-1", "/s/vaultdraw/overrides.toml"])).unwrap();
+        assert_eq!(kept.paths, vec![PathBuf::from("/s/vaultdraw/overrides.toml")]);
+        // Config-folder events are untouched (the theme registry reads them), as are events with no path.
+        let themes = keep_state_event(&state, event(&["/c/vaultdraw/themes/x.json"])).unwrap();
+        assert_eq!(themes.paths, vec![PathBuf::from("/c/vaultdraw/themes/x.json")]);
+        assert!(keep_state_event(&state, event(&[])).is_some());
+        // A same-named file elsewhere is not the state folder's.
+        assert!(keep_state_event(&state, event(&["/c/vaultdraw/sub/state.json"])).is_some());
+    }
+
+    /// Real watcher on a temp state folder: a state.json write emits nothing, overrides.toml does.
+    #[test]
+    fn a_state_json_write_emits_nothing_but_overrides_toml_does() {
+        let t = tempfile::tempdir().unwrap();
+        let state = t.path().join("state");
+        fs::create_dir_all(&state).unwrap();
+        let mut dirs = vec![state.clone()];
+        if let Ok(real) = fs::canonicalize(&state) {
+            dirs.push(real);
+        }
+        let (tx, rx) = mpsc::channel();
+        let mut w = notify::recommended_watcher(move |e: notify::Result<Event>| {
+            if let Some(e) = e.ok().and_then(|e| keep_state_event(&dirs, e)) {
+                let _ = tx.send(e);
+            }
+        })
+        .unwrap();
+        w.watch(&state, RecursiveMode::NonRecursive).unwrap();
+        fs::write(state.join("state.json"), "{}").unwrap();
+        fs::write(state.join("state.json"), "{\"a\":1}").unwrap();
+        assert!(rx.recv_timeout(Duration::from_millis(1500)).is_err(), "state.json must not wake the loop");
+        fs::write(state.join(OVERRIDES_FILE), "a = 1\n").unwrap();
+        let e = rx.recv_timeout(Duration::from_secs(5)).expect("overrides.toml event");
+        assert!(e.paths.iter().all(|p| p.file_name().is_some_and(|n| n == OVERRIDES_FILE)), "{:?}", e.paths);
+    }
 
     #[test]
     fn library_path_is_split_from_config_changes() {

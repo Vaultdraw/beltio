@@ -98,7 +98,7 @@ describe("tool styles in config", () => {
       toolText: { font_size: 28 as const },
     };
     expect(preferencesToConfigChanges(prev, DEFAULT_PREFERENCES)).toEqual([
-      { key: "tools.text", value: null },
+      { key: "tools.text", value: null, default: {} },
     ]);
   });
 
