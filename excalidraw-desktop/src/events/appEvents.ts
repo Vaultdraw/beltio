@@ -18,7 +18,10 @@ const listeners = new Map<AppEventName, Set<Listener<never>>>();
  * (startup activation runs on idle, after the first `vault.opened` / `drawing.opened`).
  * One assignment per emit; no queue of past events.
  */
-const state: { vault?: AppEventMap["vault.opened"]; drawing?: AppEventMap["drawing.opened"] } = {};
+const state: {
+  vault?: AppEventMap["vault.opened"];
+  drawing?: AppEventMap["drawing.opened"];
+} = {};
 
 const track = <K extends AppEventName>(name: K, payload: AppEventMap[K]) => {
   if (name === "vault.opened") {
@@ -27,7 +30,9 @@ const track = <K extends AppEventName>(name: K, payload: AppEventMap[K]) => {
   } else if (name === "drawing.opened") {
     state.drawing = payload as AppEventMap["drawing.opened"];
   } else if (name === "drawing.deleted") {
-    if (state.drawing?.path === (payload as AppEventMap["drawing.deleted"]).path) {
+    if (
+      state.drawing?.path === (payload as AppEventMap["drawing.deleted"]).path
+    ) {
       state.drawing = undefined;
     }
   } else if (name === "drawing.renamed") {

@@ -2,8 +2,10 @@ import {
   CaptureUpdateAction,
   convertToExcalidrawElements,
 } from "@excalidraw/excalidraw";
-import type { ExcalidrawElement } from "@excalidraw/element/types";
+
 import { describe, expect, it } from "vitest";
+
+import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import { applyOps } from "./apply";
 import { makeElements, stubApi } from "./testUtils";
@@ -80,14 +82,28 @@ describe("applyOps", () => {
 
   it("recomputes an arrow's size when its points change", () => {
     const [arrow] = convertToExcalidrawElements([
-      { type: "arrow", x: 0, y: 0, points: [[0, 0], [10, 5]] },
+      {
+        type: "arrow",
+        x: 0,
+        y: 0,
+        points: [
+          [0, 0],
+          [10, 5],
+        ],
+      },
     ] as never) as ExcalidrawElement[];
     const { api, updateScene } = stubApi([arrow]);
     applyOps(api, [
       {
         op: "update",
         id: arrow.id,
-        props: { points: [[0, 0], [120, 40], [200, -10]] },
+        props: {
+          points: [
+            [0, 0],
+            [120, 40],
+            [200, -10],
+          ],
+        },
       },
     ]);
     const next = updateScene.mock.calls[0][0].elements[0];

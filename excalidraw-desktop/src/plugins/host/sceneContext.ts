@@ -1,10 +1,5 @@
 /** `ctx.scene` and `ctx.events` of one plugin (split out of context.ts). */
-import {
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useSyncExternalStore,
-} from "react";
+import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 
 import { appEvents, type AppEventMap } from "../../events/appEvents";
 import { applyOps, SceneOpsError, viewportCenter } from "../../sceneOps";
