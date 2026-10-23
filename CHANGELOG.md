@@ -15,6 +15,10 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - `vaultdraw export --frame <id or name>` exports one frame, and `--padding <px>` sets the space around the drawing (0 to 200, PNG and SVG).
 - `vaultdraw export` no longer sends the image through the control channel as base64. The app writes it to a spool file in 4 MiB pieces and the command moves it to the destination, so big exports no longer hit the 32 MiB limit and the command itself stays at a few MB of memory (32 MiB export: 95 MB -> 3 MB peak). The no-overwrite rule is unchanged.
 
+### Faster
+
+- `vaultdraw search` and the first in-app search on a vault with no index are faster on a 5,000-drawing vault: about 240 ms instead of 360 ms at background priority and 10 to 17% faster at normal priority, with 20 to 30% less CPU. The indexer now reads each drawing only up to its elements instead of the whole file with its embedded images, opens files relative to their folder, and reads on up to 8 threads. The index is still stored outside your vault and is still safe to delete.
+
 ### Fixed
 
 - Renaming a tag across the vault no longer shows an extra "Updated N links" message next to "Renamed #a to #b" when the rewrite finishes very fast.
