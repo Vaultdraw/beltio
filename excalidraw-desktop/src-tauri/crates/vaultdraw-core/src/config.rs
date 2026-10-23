@@ -15,6 +15,9 @@ use std::{
     sync::Mutex,
 };
 
+mod layers;
+pub use layers::*;
+
 pub(crate) const MAX_CONFIG_BYTES: u64 = 1024 * 1024;
 const MAX_STATE_BYTES: u64 = 1024 * 1024;
 const MAX_CHANGES: usize = 256;
@@ -308,7 +311,7 @@ pub fn resolve_dirs_with(
 // Payloads
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Serialize, PartialEq)]
+#[derive(Debug, Serialize, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ConfigError {
     pub message: String,
@@ -321,8 +324,14 @@ pub struct LoadedSettings {
     config_dir: String,
     config_path: String,
     state_path: String,
+    /// The merge of the layers that parsed (`config.toml`, then `overrides.toml` over it).
     config: Option<Json>,
     config_error: Option<ConfigError>,
+    /// Why `overrides.toml` was skipped, if it is broken.
+    overrides_error: Option<ConfigError>,
+    overrides_path: String,
+    /// Per-layer status, lowest layer first.
+    layers: Vec<LayerInfo>,
     state: Json,
 }
 
@@ -433,13 +442,10 @@ pub fn load_settings_in(dirs: &Dirs) -> Result<LoadedSettings> {
         ensure_config_files(dirs)?;
     }
     let config_path = dirs.config_file();
-    let (config, config_error) = match read_config_text(&config_path) {
-        Ok(text) => match parse_config(&text) {
-            Ok(json) => (Some(json), None),
-            Err(e) => (None, Some(e)),
-        },
-        Err(e) => (None, Some(ConfigError { message: e.message, line: None })),
-    };
+    let layers = read_layers(dirs);
+    let config = merged(&layers);
+    let [base, over] = &layers;
+    let (config_error, overrides_error) = (base.error.clone(), over.error.clone());
     let state_path = dirs.state_file();
     Ok(LoadedSettings {
         config_dir: dirs.config.to_string_lossy().into_owned(),
@@ -447,6 +453,9 @@ pub fn load_settings_in(dirs: &Dirs) -> Result<LoadedSettings> {
         state_path: state_path.to_string_lossy().into_owned(),
         config,
         config_error,
+        overrides_error,
+        overrides_path: dirs.overrides_file().to_string_lossy().into_owned(),
+        layers: layers.into(),
         state: read_state(&state_path),
     })
 }

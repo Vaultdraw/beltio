@@ -1,7 +1,7 @@
 //! `config.get` / `config.set` on the config folder (the same files and edits as the settings UI).
 
 use super::target::native_err;
-use crate::config::{self, ConfigChange, Dirs};
+use crate::config::{self, Dirs, LayerChange};
 use serde_json::{json, Value};
 use vaultdraw_protocol::RpcError;
 
@@ -13,9 +13,13 @@ pub fn get(dirs: &Dirs, params: &Value) -> Result<Value, RpcError> {
         Some(_) => return Err(RpcError::invalid_params("key must be a non-empty string")),
     };
     let loaded = serde_json::to_value(config::load_settings_in(dirs).map_err(native_err)?).unwrap_or(Value::Null);
+    for (field, file) in [("configError", "config.toml"), ("overridesError", "overrides.toml")] {
+        if let Some(message) = loaded[field]["message"].as_str() {
+            return Err(RpcError::app("CONFIG_INVALID", format!("{file} does not parse: {message}")));
+        }
+    }
     let Some(config) = loaded.get("config").filter(|c| !c.is_null()) else {
-        let message = loaded["configError"]["message"].as_str().unwrap_or("config.toml is unreadable");
-        return Err(RpcError::app("CONFIG_INVALID", format!("config.toml does not parse: {message}")));
+        return Err(RpcError::app("CONFIG_INVALID", "config.toml is unreadable"));
     };
     let value = match key {
         None => config.clone(),
@@ -24,14 +28,15 @@ pub fn get(dirs: &Dirs, params: &Value) -> Result<Value, RpcError> {
     Ok(json!({"key": key, "value": value}))
 }
 
-/// `config.set {changes: [{key, value}]}`: all-or-nothing, like `update_config`.
+/// `config.set {changes: [{key, value}]}`: all-or-nothing, like `update_config`. Writes
+/// `overrides.toml` in the state folder; `config.toml` is never edited.
 pub fn set(dirs: &Dirs, params: &Value) -> Result<Value, RpcError> {
-    let changes: Vec<ConfigChange> = params
+    let changes: Vec<LayerChange> = params
         .get("changes")
         .cloned()
         .ok_or_else(|| RpcError::invalid_params("changes is required"))
         .and_then(|c| serde_json::from_value(c).map_err(|e| RpcError::invalid_params(format!("changes: {e}"))))?;
-    config::update_config_in(dirs, &changes).map_err(native_err)?;
+    config::update_overrides_in(dirs, &changes).map_err(native_err)?;
     Ok(json!({"changed": changes.len()}))
 }
 

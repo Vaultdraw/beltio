@@ -135,12 +135,7 @@ pub(crate) fn update_vault_settings_at(v: &Vault, changes: &[ConfigChange]) -> R
 /// Comments in an otherwise empty document trail it in toml_edit, so the head is
 /// prepended to the rendered body rather than parsed with it.
 fn with_head(head: &str, changes: &[ConfigChange]) -> Result<String> {
-    let body = config::apply_toml_changes("", changes, SETTINGS_FILE, MAX_SETTINGS_BYTES)?;
-    let text = if head.is_empty() { body } else { format!("{head}\n\n{body}") };
-    if text.len() as u64 > MAX_SETTINGS_BYTES {
-        return Err(err("INVALID_FILE", "settings.toml would exceed 256 KiB"));
-    }
-    Ok(text)
+    config::with_head(head, changes, SETTINGS_FILE, MAX_SETTINGS_BYTES)
 }
 
 #[tauri::command]

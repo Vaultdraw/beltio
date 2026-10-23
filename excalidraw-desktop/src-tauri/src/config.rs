@@ -47,8 +47,9 @@ pub(crate) async fn load_settings() -> Result<LoadedSettings> {
 }
 
 #[tauri::command]
-pub(crate) async fn update_config(changes: Vec<ConfigChange>) -> Result<()> {
-    update_config_in(&resolve_dirs()?, &changes)
+pub(crate) async fn update_config(changes: Vec<LayerChange>) -> Result<()> {
+    // Settings writes `overrides.toml` in the state folder; config.toml is yours alone.
+    update_overrides_in(&resolve_dirs()?, &changes)
 }
 
 #[tauri::command]
