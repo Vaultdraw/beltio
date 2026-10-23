@@ -1,7 +1,6 @@
 import type { UserIdleState, EditorInterface } from "@excalidraw/common";
 import type {
   ExcalidrawElement,
-  FileId,
   NonDeletedElementsMap,
   NonDeletedExcalidrawElement,
   NonDeletedSceneElementsMap,
@@ -31,8 +30,6 @@ export type StaticCanvasRenderConfig = {
   // extra options passed to the renderer
   // ---------------------------------------------------------------------------
   imageCache: AppClassProperties["imageCache"];
-  /** Vaultdraw: an image was drawn as the placeholder while it decodes */
-  onPendingImage?: (fileId: FileId) => void;
   renderGrid: boolean;
   /** whether to render link icons on elements with links (never rendered
    when exporting). @default true */

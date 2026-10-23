@@ -2737,7 +2737,6 @@ class App extends React.Component<AppProps, AppState> {
                             appState={this.state}
                             renderConfig={{
                               imageCache: this.imageCache,
-                              onPendingImage: this.redrawWhenDecoded,
                               isExporting: false,
                               renderGrid: isGridModeEnabled(this),
                               renderLinks: this.isLinksEnabled(),
@@ -5139,15 +5138,24 @@ class App extends React.Component<AppProps, AppState> {
     sceneImages: Promise<void>,
   ) => {
     const ids = Object.keys(addedFiles) as FileId[];
+    // files the scene already uses are decoding in addNewImagesToImageCache
+    const toDecode = ids.filter((id) => !this.imageCache.has(id));
     const { erroredFiles } = await _updateImageCache({
       imageCache: this.imageCache,
-      fileIds: ids.filter((id) => !this.imageCache.has(id)),
+      fileIds: toDecode,
       files: this.files,
     });
     // an errored entry would block the render path from retrying and flagging
     // the element, so leave those uncached
     for (const id of erroredFiles.keys()) {
       this.imageCache.delete(id);
+    }
+    // Vaultdraw: elements that landed while these decoded (insert: addFiles,
+    // then updateScene) were drawn, and maybe cached, as the placeholder.
+    // One pass and one redraw for the whole batch; none for a preload.
+    const decoded = new Set(toDecode.filter((id) => !erroredFiles.has(id)));
+    if (!this.unmounted && this.invalidateDecodedImages(decoded)) {
+      this.scene.triggerUpdate();
     }
     await Promise.allSettled([
       sceneImages,
@@ -11575,56 +11583,38 @@ class App extends React.Component<AppProps, AppState> {
         files,
       );
 
-      if (updatedFiles.size) {
-        for (const element of uncachedImageElements) {
-          if (updatedFiles.has(element.fileId)) {
-            ShapeCache.delete(element);
-          }
-        }
-      }
+      // Vaultdraw: the scene as it is now, so an element added while these
+      // decoded (paste, duplicate, undo) drops its cached placeholder too
+      this.invalidateDecodedImages(updatedFiles);
 
       if (updatedFiles.size) {
         this.scene.triggerUpdate();
       }
     }
   };
-
-  /** file ids whose in-flight decode already has a redraw queued */
-  private awaitedImageDecodes = new Set<FileId>();
-  /** decodes already waited on once: a settled one never re-arms */
-  private seenImageDecodes = new WeakSet<Promise<HTMLImageElement>>();
 
   /**
-   * Vaultdraw: the renderer drew `fileId` as the placeholder because its image
-   * was still decoding (e.g. addFiles, then the element via updateScene,
-   * paste or undo). Redraw once when that decode lands; nothing else would.
-   * Called only from the render path of a pending image, so it costs nothing
-   * otherwise.
+   * Vaultdraw: drops the cached shape and bitmap (ShapeCache.delete clears
+   * both) of every scene element using one of `fileIds`, in one pass, so a
+   * placeholder drawn while the file decoded is not kept. Returns whether any
+   * element uses them.
    */
-  private redrawWhenDecoded = (fileId: FileId) => {
-    const image = this.imageCache.get(fileId)?.image;
-    if (!(image instanceof Promise) || this.seenImageDecodes.has(image)) {
-      return;
+  private invalidateDecodedImages(fileIds: {
+    size: number;
+    has(id: FileId): boolean;
+  }) {
+    if (!fileIds.size) {
+      return false;
     }
-    this.seenImageDecodes.add(image);
-    this.awaitedImageDecodes.add(fileId);
-    image
-      .catch(() => {})
-      .then(() => {
-        this.awaitedImageDecodes.delete(fileId);
-        // failed, evicted or replaced by another decode: nothing new to draw
-        const ready = this.imageCache.get(fileId)?.image;
-        if (this.unmounted || ready == null || ready instanceof Promise) {
-          return;
-        }
-        for (const element of this.scene.getNonDeletedElements()) {
-          if (isInitializedImageElement(element) && element.fileId === fileId) {
-            ShapeCache.delete(element);
-          }
-        }
-        this.scene.triggerUpdate();
-      });
-  };
+    let used = false;
+    for (const element of this.scene.getNonDeletedElements()) {
+      if (isInitializedImageElement(element) && fileIds.has(element.fileId)) {
+        ShapeCache.delete(element);
+        used = true;
+      }
+    }
+    return used;
+  }
 
   /** generally you should use `addNewImagesToImageCache()` directly if you need
    *  to render new images. This is just a failsafe  */

@@ -1,7 +1,7 @@
 import React from "react";
 import { vi } from "vitest";
 
-import { pruneImageCache } from "@excalidraw/element";
+import { pruneImageCache, ShapeCache } from "@excalidraw/element";
 
 import { Excalidraw } from "../index";
 
@@ -43,9 +43,11 @@ const stubImage = () => {
   };
 };
 
-/** Holds every decode until `release()` (FakeImage fires load on release). */
+/**
+ * Holds every decode until `release()`. Replaces window.Image; the
+ * suite's afterEach puts the real one back even when a test fails.
+ */
 const holdDecodes = () => {
-  const Current = window.Image;
   const held: (() => void)[] = [];
   let built = 0;
   // A canvas stands in for the decoded image: the renderer can draw it.
@@ -53,7 +55,12 @@ const holdDecodes = () => {
     built++;
     const img = document.createElement("canvas") as any;
     Object.defineProperty(img, "src", {
-      set: () => held.push(() => img.onload?.()),
+      set: (value: string) =>
+        held.push(() =>
+          value.includes("BAD")
+            ? img.onerror?.(new Error("bad"))
+            : img.onload?.(),
+        ),
     });
     return img;
   }
@@ -61,15 +68,19 @@ const holdDecodes = () => {
   return {
     built: () => built,
     release: () => held.splice(0).forEach((fire) => fire()),
-    restore: () => {
-      window.Image = Current;
-    },
   };
 };
 
-const awaited = () =>
-  (h.app as unknown as { awaitedImageDecodes: Set<string> })
-    .awaitedImageDecodes;
+const image = (fileId: string) =>
+  API.createElement({ type: "image", fileId: fileId as any });
+
+/** Caches the element's shape as a render does (null for images). */
+const cacheShape = (element: ReturnType<typeof image>) => {
+  ShapeCache.generateElementShape(element as any, null);
+  expect(ShapeCache.get(element, null)).not.toBeUndefined();
+};
+
+const settle = () => new Promise((r) => setTimeout(r, 30));
 
 describe("addFiles / retainFiles", () => {
   let restore: () => void;
@@ -115,106 +126,104 @@ describe("addFiles / retainFiles", () => {
     expect(triggerUpdate).toHaveBeenCalled();
   });
 
-  it("redraws once decoded when an element using the file lands while it decodes (formula insert)", async () => {
+  it("an element that lands while its file decodes (formula insert: addFiles, then the element) drops its cached placeholder and redraws once", async () => {
     const decode = holdDecodes();
-    const triggerUpdate = vi.spyOn(h.app.scene, "triggerUpdate");
     const preload = h.app.addFiles([file("late")]);
-    // insertFormula: addFiles, then the element, before the image decodes
-    API.setElements([
-      API.createElement({ type: "image", fileId: "late" as any }),
-    ]);
-    // the renderer drew the placeholder and queued one redraw for the decode
-    await waitFor(() => expect(awaited().has("late")).toBe(true));
-    triggerUpdate.mockClear();
+    const el = image("late");
+    API.setElements([el]);
+    cacheShape(el); // drawn (and cached) as the placeholder
+    const triggerUpdate = vi.spyOn(h.app.scene, "triggerUpdate");
     decode.release();
     await preload;
-    await waitFor(() => expect(triggerUpdate).toHaveBeenCalledTimes(1));
-    expect(awaited().size).toBe(0);
-    decode.restore();
-  });
-
-  it("redraws once decoded for any route that leaves a decoding entry (no addFiles)", async () => {
-    let resolve!: (img: HTMLImageElement) => void;
-    const image = new Promise<HTMLImageElement>((r) => (resolve = r));
-    h.app.imageCache.set(
-      "pasted" as any,
-      {
-        image,
-        mimeType: "image/png",
-      } as any,
-    );
-    API.setElements([
-      API.createElement({ type: "image", fileId: "pasted" as any }),
-      API.createElement({ type: "image", fileId: "pasted" as any }),
-    ]);
-    await waitFor(() => expect(awaited().has("pasted")).toBe(true));
-    const triggerUpdate = vi.spyOn(h.app.scene, "triggerUpdate");
-    // the route's own decode resolves and stores the image (as updateImageCache does)
-    const img = document.createElement("canvas") as unknown as HTMLImageElement;
-    resolve(img);
-    h.app.imageCache.set("pasted" as any, {
-      image: img,
-      mimeType: "image/png",
-    });
-    await waitFor(() => expect(awaited().size).toBe(0));
-    await new Promise((r) => setTimeout(r, 20));
+    expect(ShapeCache.get(el, null)).toBeUndefined();
     expect(triggerUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it("a failed decode left in the cache never loops redraws", async () => {
-    let reject!: (e: Error) => void;
-    const image = new Promise<HTMLImageElement>((_, r) => (reject = r));
-    h.app.imageCache.set(
-      "broken" as any,
-      {
-        image,
-        mimeType: "image/png",
-      } as any,
-    );
-    API.setElements([
-      API.createElement({ type: "image", fileId: "broken" as any }),
-    ]);
-    await waitFor(() => expect(awaited().has("broken")).toBe(true));
+  it("an element added while another route decodes its file (paste, duplicate, undo) drops its cached placeholder", async () => {
+    const decode = holdDecodes();
+    const first = image("pasted");
+    API.setElements([first]);
+    (h.app as any).addMissingFiles([file("pasted")]);
+    const decoding = (h.app as any).addNewImagesToImageCache();
+    const second = image("pasted"); // lands mid-decode
+    API.setElements([first, second]);
+    cacheShape(second);
     const triggerUpdate = vi.spyOn(h.app.scene, "triggerUpdate");
-    reject(new Error("bad"));
-    await waitFor(() => expect(awaited().size).toBe(0));
-    await new Promise((r) => setTimeout(r, 50));
-    expect(triggerUpdate).not.toHaveBeenCalled();
+    decode.release();
+    await decoding;
+    expect(ShapeCache.get(second, null)).toBeUndefined();
+    expect(triggerUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it("an open whose files decode first builds each image once and queues no redraw", async () => {
+  it("N images whose elements land while decoding: each built once, one batched redraw", async () => {
+    const decode = holdDecodes();
+    const ids = ["d1", "d2", "d3", "d4", "d5"];
+    const preload = h.app.addFiles(ids.map((id) => file(id)));
+    const els = ids.map(image);
+    API.setElements(els);
+    els.forEach(cacheShape);
+    const triggerUpdate = vi.spyOn(h.app.scene, "triggerUpdate");
+    decode.release();
+    await preload;
+    await settle();
+    expect(decode.built()).toBe(5);
+    expect(triggerUpdate).toHaveBeenCalledTimes(1);
+    els.forEach((el) => expect(ShapeCache.get(el, null)).toBeUndefined());
+  });
+
+  it("an open whose files decode first builds each image once and adds no redraw", async () => {
     const decode = holdDecodes();
     const ids = ["o1", "o2", "o3"];
     const preload = h.app.addFiles(ids.map((id) => file(id)));
     decode.release();
     await preload;
     const triggerUpdate = vi.spyOn(h.app.scene, "triggerUpdate");
-    API.setElements(
-      ids.map((id) => API.createElement({ type: "image", fileId: id as any })),
-    );
+    API.setElements(ids.map(image));
     const afterSet = triggerUpdate.mock.calls.length;
-    await new Promise((r) => setTimeout(r, 50));
+    await settle();
     expect(decode.built()).toBe(3);
-    expect(awaited().size).toBe(0);
     expect(triggerUpdate.mock.calls.length).toBe(afterSet);
-    decode.restore();
   });
 
-  it("an open whose elements land while decoding builds each image once and redraws once per file", async () => {
+  it("addFiles for elements already in the scene builds each image once and redraws once after the decode", async () => {
     const decode = holdDecodes();
-    const ids = ["d1", "d2", "d3"];
+    const ids = ["s1", "s2", "s3"];
+    API.setElements(ids.map(image));
+    const triggerUpdate = vi.spyOn(h.app.scene, "triggerUpdate");
     const preload = h.app.addFiles(ids.map((id) => file(id)));
-    API.setElements(
-      ids.map((id) => API.createElement({ type: "image", fileId: id as any })),
-    );
-    await waitFor(() => expect(awaited().size).toBe(3));
+    const beforeDecode = triggerUpdate.mock.calls.length; // addFiles' own sync redraw
+    decode.release();
+    await preload;
+    await settle();
+    expect(decode.built()).toBe(3);
+    expect(triggerUpdate.mock.calls.length - beforeDecode).toBe(1);
+  });
+
+  it("an errored decode keeps its placeholder cached and adds no redraw", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const decode = holdDecodes();
+    const preload = h.app.addFiles([file("bad", false)]);
+    const el = image("bad");
+    API.setElements([el]);
+    cacheShape(el);
     const triggerUpdate = vi.spyOn(h.app.scene, "triggerUpdate");
     decode.release();
     await preload;
-    await waitFor(() => expect(awaited().size).toBe(0));
-    expect(decode.built()).toBe(3);
-    expect(triggerUpdate.mock.calls.length).toBeLessThanOrEqual(3);
-    decode.restore();
+    await settle();
+    expect(h.app.imageCache.has("bad" as any)).toBe(false);
+    expect(ShapeCache.get(el, null)).not.toBeUndefined();
+    expect(triggerUpdate).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("a missing file (no cache entry, nothing decoding) adds no redraw", async () => {
+    const el = image("missing");
+    API.setElements([el]);
+    cacheShape(el);
+    const triggerUpdate = vi.spyOn(h.app.scene, "triggerUpdate");
+    await settle();
+    expect(ShapeCache.get(el, null)).not.toBeUndefined();
+    expect(triggerUpdate).not.toHaveBeenCalled();
   });
 
   it("keeps existing files and does not decode them again", async () => {
