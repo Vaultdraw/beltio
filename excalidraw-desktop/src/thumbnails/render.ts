@@ -5,15 +5,17 @@
  * dynamically, when the first job runs.
  */
 import { fitThumb } from "./fit";
-import { sceneSlicing } from "./slicing";
+import { sceneSlicing, yieldToMain } from "./slicing";
 import { withStandardColors } from "./standardColors";
 
 /**
  * PNG renderer generation. Bumping it re-renders every cached thumbnail (the
  * PNG and fail-marker names carry the version) and retries failed scenes.
  * v2 (2026-10-21): device-pixel density, fixed 4:3 box, padded fit.
+ * v3 (2026-10-23): same pixels; retries the "too-many" fail markers left by
+ * the old 600-element cap.
  */
-export const RENDER_VERSION = 2;
+export const RENDER_VERSION = 3;
 
 /**
  * Version sent to the cache for PNGs rendered at `density`: a 1x render is
@@ -28,11 +30,15 @@ export const THUMBNAIL_MAX_ELEMENTS = 2000;
 
 // PNG disk cache: box geometry in ./fit.ts.
 /**
- * Step 0 (2026-10-19, e2e/thumbnailsPerf.spec.ts): renderScenePng p95 at 4x CPU
- * throttle is 13 ms at 100, 42 ms at 500 and 95-106 ms at 1500 elements, so
- * the 50 ms long-task budget holds up to about 600 elements.
+ * Element cap for the PNG render. Painting is time-sliced (./slicing.ts) and
+ * the linear pre-paint phases (parse, restore, bounds) each run in their own
+ * task, so the longest task is the slowest phase, not the whole render.
+ * 2026-10-23 (e2e/thumbnailsBlocking.spec.ts, Chromium 4x, quiet machine):
+ * longest task 25.7 ms at 2000, 36.5 at 3000, 46.5 at 4000 and 58 at 5000
+ * elements, so the 50 ms long-task budget holds up to 4000.
+ * Was 600 before slicing (one-task render: 42 ms at 500 elements).
  */
-export const THUMB_MAX_ELEMENTS = 600;
+export const THUMB_MAX_ELEMENTS = 4000;
 /** Above this the scene is not parsed at all (long task); fail marker. */
 export const THUMB_MAX_JSON_BYTES = 8 * 1024 * 1024;
 /** Above this the embedded images are dropped (placeholders): bounds decode cost. */
@@ -160,6 +166,9 @@ export const renderPng = async (
   });
   if (typeof scene === "string") {
     return { kind: "fail", reason: scene };
+  }
+  if (sliced) {
+    await yieldToMain(); // the parse is one task; restore starts in the next
   }
   try {
     const { exportToCanvas } = await import("@excalidraw/excalidraw");

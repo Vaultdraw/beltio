@@ -127,7 +127,7 @@ test.describe("render step 0", () => {
         };
         console.log(`THUMB_STEP0 ${JSON.stringify(row)}`);
         if (res.reason !== "too-many") {
-          // Over-cap scenes (1500) are expected placeholders (D12).
+          // Over-cap scenes are expected placeholders (D12; cap 4000 since 2026-10-23).
           expect(res.fails, `${c.name}: render failed (${res.reason})`).toBe(0);
         }
       }

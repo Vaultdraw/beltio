@@ -140,6 +140,16 @@ describe("renderScenePng", () => {
     expect(exportToCanvas).not.toHaveBeenCalled();
   });
 
+  it("renders drawings well over the old 600-element cap, time-sliced", async () => {
+    expect(THUMB_MAX_ELEMENTS).toBeGreaterThanOrEqual(4000);
+    exportsContent();
+    const result = await renderScenePng(scene(2500), 2);
+    expect(result.kind).toBe("png");
+    const opts = exportToCanvas.mock.calls[0][0];
+    expect(opts.elements).toHaveLength(2500);
+    expect(opts.slicing.budgetMs).toBe(6);
+  });
+
   it("drops embedded files above the files size limit", async () => {
     exportsContent();
     await renderScenePng(scene(1, { pad: "x".repeat(THUMB_FILES_JSON_BYTES) }));

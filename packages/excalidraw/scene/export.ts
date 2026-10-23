@@ -216,6 +216,9 @@ export const exportToCanvas = async (
 ) => {
   // load font faces before continuing, by default leverages browsers' [FontFace API](https://developer.mozilla.org/en-US/docs/Web/API/FontFace)
   await loadFonts();
+  // Sliced: restore (in the caller) and bounds are each linear in the scene;
+  // hand control back between them so they never run as one long task.
+  await slicing?.yieldFn();
 
   const frameRendering = getFrameRenderingConfig(
     exportingFrame ?? null,
@@ -242,6 +245,8 @@ export const exportToCanvas = async (
     exportingFrame ? [exportingFrame] : getRootElements(elementsForRender),
     exportPadding,
   );
+
+  await slicing?.yieldFn();
 
   const { canvas, scale = 1 } = createCanvas(width, height);
 

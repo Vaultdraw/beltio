@@ -20,7 +20,8 @@ import type { Step0Hooks } from "./thumbnailsStep0";
 const PERF = process.env.E2E_PERF === "1" || process.env.THUMB_PERF === "1";
 const DENSITY = Number(process.env.THUMB_DENSITY ?? 2);
 const ROUNDS = Number(process.env.THUMB_ROUNDS ?? 3);
-const CAP = Number(process.env.THUMB_BIG ?? 600);
+/** Big single-drawing cases, e.g. THUMB_BIG=600,2000,4000. */
+const BIG = (process.env.THUMB_BIG ?? "600,2000,4000").split(",").map(Number);
 /** Element counts of the 20-drawing batch: a realistic vault mix. */
 const BATCH = [
   5, 12, 20, 30, 40, 60, 80, 100, 120, 150, 180, 220, 260, 300, 350, 400, 450,
@@ -43,7 +44,7 @@ const CASES = [
     name: "batch20",
     json: () => BATCH.map((n, i) => scene(n, i % 2, i % 7 === 3)),
   },
-  { name: `near-cap-${CAP}`, json: () => [scene(CAP, 1)] },
+  ...BIG.map((n) => ({ name: `big-${n}`, json: () => [scene(n, 1)] })),
 ];
 
 test.describe("thumbnail main-thread blocking", () => {
