@@ -611,6 +611,9 @@ pub struct HistoryService {
     state_override: Option<PathBuf>,
     clock: Arc<dyn Clock>,
     free_probe: Mutex<Option<Arc<dyn Fn() -> bool + Send + Sync>>>,
+    /// Opened vaults whose history has not started (`history.start` = idle or use):
+    /// root, read-only flag and emitter, kept for the first `ensure` or history command.
+    pending: Mutex<HashMap<String, (PathBuf, bool, Emitter)>>,
 }
 
 impl Default for HistoryService {
@@ -622,6 +625,7 @@ impl Default for HistoryService {
             state_override: None,
             clock: Arc::new(SystemClock),
             free_probe: Mutex::new(None),
+            pending: Mutex::default(),
         }
     }
 }
@@ -646,10 +650,12 @@ impl HistoryService {
         self.vaults.read().unwrap_or_else(|p| p.into_inner()).get(handle).cloned()
     }
 
+    /// The vault's history, starting it first if it is pending (lazy start on first use).
     pub(crate) fn vault(&self, handle: &str) -> Result<Arc<VaultHistory>> {
         if self.hard_off {
             return Err(off());
         }
+        self.ensure(handle);
         self.get(handle).ok_or_else(|| err("NOT_FOUND", "Vault handle is no longer active"))
     }
 
@@ -657,7 +663,24 @@ impl HistoryService {
         self.state_override.clone().or_else(|| crate::config::resolve_dirs().ok().map(|d| d.state))
     }
 
-    /// Opens history for a vault (`open_vault`). Joins the previous worker for the same vault id
+    /// Records an opened vault without starting its history (`open_vault`).
+    pub(crate) fn register(&self, handle: &str, root: PathBuf, read_only: bool, emit: Emitter) {
+        if self.hard_off {
+            return;
+        }
+        lock(&self.pending).insert(handle.to_string(), (root, read_only, emit));
+    }
+
+    /// Starts a registered vault's history if it is still pending; a no-op otherwise.
+    pub(crate) fn ensure(&self, handle: &str) {
+        // Held across the start so a concurrent caller waits for it instead of missing the vault.
+        let mut pending = lock(&self.pending);
+        if let Some((root, read_only, emit)) = pending.remove(handle) {
+            self.start(handle, root, read_only, emit);
+        }
+    }
+
+    /// Opens history for a vault. Joins the previous worker for the same vault id
     /// (≤ 2 s) so an A→B→A switch never has two writers; a generation token stops stragglers.
     pub(crate) fn start(&self, handle: &str, root: PathBuf, read_only: bool, emit: Emitter) {
         if self.hard_off {
@@ -748,6 +771,7 @@ impl HistoryService {
     }
 
     pub(crate) fn stop(&self, handle: &str) {
+        lock(&self.pending).remove(handle);
         let vh = self.vaults.write().unwrap_or_else(|p| p.into_inner()).remove(handle);
         if let Some(vh) = vh {
             vh.stop();

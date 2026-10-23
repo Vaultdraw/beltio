@@ -13,6 +13,9 @@ import { errorMessage } from "../vault/types";
 
 import { PanelHost } from "../slots/PanelHost";
 
+import { useStartMode } from "../services/useLazyServices";
+import { useServiceStart } from "../services/useServiceStart";
+
 import { CheckpointDialog } from "./CheckpointDialog";
 import { publishHistoryBridge } from "./historyBridge";
 import { HISTORY_PANEL_ID, publishHistoryPanelOpen } from "./historyPanelState";
@@ -74,7 +77,22 @@ const HistoryHostImpl = ({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
 
-  useHistorySync(repository, vault, settings, activeDoc);
+  // history.start (D8): nothing is configured or versioned before the start;
+  // "use" starts on the first history action or the first edit.
+  const win = ownerDocument?.defaultView ?? null;
+  const { started, activate } = useServiceStart(
+    win,
+    vault?.handle ?? null,
+    useStartMode(win, "historyStart"),
+    repository.start ? (h) => repository.start?.(h) : undefined,
+  );
+  useEffect(() => {
+    if (panelOpen || dialogOpen || confirmDeleteAll || status !== "saved") {
+      activate();
+    }
+  }, [activate, panelOpen, dialogOpen, confirmDeleteAll, status]);
+
+  useHistorySync(repository, started ? vault : null, settings, activeDoc);
 
   const showToast = useCallback(
     (message: string, error = false, action?: PanelNotice["action"]) =>

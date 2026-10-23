@@ -384,3 +384,51 @@ fn clearing_the_canvas_with_tombstones_still_versions_the_previous_state() {
     let vs = fx.versions(P);
     assert!(vs.iter().any(|v| v.reason == "before-clear"), "{:?}", vs.iter().map(|v| v.reason).collect::<Vec<_>>());
 }
+
+// ---- lazy start (D8) ----
+
+#[test]
+fn registered_history_starts_on_the_first_history_call_only() {
+    let fx = Fx::new();
+    fx.svc.register("h", fx.root.clone(), false, fx.emitter());
+    // Save-path and watcher hooks never start it: nothing is staged or versioned.
+    fx.svc.after_commit("h", P, &"a".repeat(64), 1);
+    fx.svc.watched("h", &[P.to_string()], &[], true);
+    assert!(fx.svc.get("h").is_none());
+    // A history command starts it; later ones reuse the same vault.
+    let first = fx.svc.vault("h").unwrap();
+    assert!(std::sync::Arc::ptr_eq(&first, &fx.svc.vault("h").unwrap()));
+    // `ensure` after a start is a no-op.
+    fx.svc.ensure("h");
+    assert!(std::sync::Arc::ptr_eq(&first, &fx.svc.get("h").unwrap()));
+}
+
+#[test]
+fn ensured_history_versions_like_an_eager_start() {
+    let fx = Fx::new();
+    fx.svc.register("h", fx.root.clone(), false, fx.emitter());
+    fx.svc.ensure("h");
+    fx.vh().configure(settings(5));
+    let mut sc = scene(1, 50, 0, 0);
+    fx.save(P, &sc.json());
+    fx.open(Some(P));
+    sc.edit();
+    fx.save(P, &sc.json());
+    let v = fx.vh().checkpoint(P, "after lazy start", "").unwrap();
+    assert_eq!(v.name.as_deref(), Some("after lazy start"));
+    assert!(!fx.versions(P).is_empty());
+}
+
+#[test]
+fn stop_drops_a_pending_history_and_hard_off_never_registers() {
+    let fx = Fx::new();
+    fx.svc.register("h", fx.root.clone(), false, fx.emitter());
+    fx.svc.stop("h");
+    assert_eq!(fx.svc.vault("h").err().unwrap().code, "NOT_FOUND");
+
+    let dir = tempfile::tempdir().unwrap();
+    let off = HistoryService::hard_off_for_tests(dir.path().join("state"));
+    off.register("h", dir.path().to_path_buf(), false, std::sync::Arc::new(|_| {}));
+    assert_eq!(off.vault("h").err().unwrap().code, "HISTORY_OFF");
+    assert!(!dir.path().join("state").exists());
+}

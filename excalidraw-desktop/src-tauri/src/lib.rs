@@ -19,6 +19,7 @@ mod drawing_copy;
 mod external;
 mod links;
 mod search;
+mod services;
 mod library;
 mod markdown;
 mod memory;
@@ -270,12 +271,13 @@ fn open_vault(root: PathBuf, app: &AppHandle, service: &Service) -> Result<Vault
         .lock()
         .map_err(|_| err("INTERNAL", "Vault state unavailable"))?
         .insert(handle.clone(), vault.clone());
+    // Registered, not started: the webview starts each per its `start` mode (services.rs).
     if let Some(search) = app.try_state::<search::SearchService>() {
-        search.start(&handle, root.clone(), search::tauri_emitter(app));
+        search.register(&handle, root.clone(), search::tauri_emitter(app));
     }
     links::on_vault_open(app, vault);
     if let Some(history) = app.try_state::<history::HistoryService>() {
-        history.start(&handle, root.clone(), read_only, history::tauri_emitter(app));
+        history.register(&handle, root.clone(), read_only, history::tauri_emitter(app));
     }
     let name = root
         .file_name()
@@ -853,7 +855,7 @@ pub fn run() {
                 config::load_settings, config::update_config, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
                 themes::list_themes, themes::open_themes_dir, snippets::list_snippets, snippets::open_snippets_dir,
                 vault_settings::load_vault_settings, vault_settings::update_vault_settings,
-                search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
+                services::services_start, search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
                 links::vault_links, links::vault_unlinked_mentions, links::resolve_link, links::links_plan_move, links::links_remeasure, links::links_remeasure_done, links::tags_plan_rename, links::rename_tag, links::vault_graph, links::graph_layout_load, links::graph_layout_save,
                 history::history_configure, history::history_status, history::history_opened, history::history_list, history::history_snapshot, history::history_checkpoint, history::history_read_version, history::history_read_blob, history::history_snapshot_bytes, history::history_restore_copy, history::history_export_file, history::history_delete_checkpoint, history::history_delete_all, history::history_exclude_from_git,
                 library::read_library, library::write_library, library::pick_library_file, markdown::markdown_parse, markdown::markdown_parse_file,
@@ -877,7 +879,7 @@ pub fn run() {
                 config::load_settings, config::update_config, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
                 themes::list_themes, themes::open_themes_dir, snippets::list_snippets, snippets::open_snippets_dir,
                 vault_settings::load_vault_settings, vault_settings::update_vault_settings,
-                search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
+                services::services_start, search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
                 links::vault_links, links::vault_unlinked_mentions, links::resolve_link, links::links_plan_move, links::links_remeasure, links::links_remeasure_done, links::tags_plan_rename, links::rename_tag, links::vault_graph, links::graph_layout_load, links::graph_layout_save,
                 history::history_configure, history::history_status, history::history_opened, history::history_list, history::history_snapshot, history::history_checkpoint, history::history_read_version, history::history_read_blob, history::history_snapshot_bytes, history::history_restore_copy, history::history_export_file, history::history_delete_checkpoint, history::history_delete_all, history::history_exclude_from_git,
                 library::read_library, library::write_library, library::pick_library_file, markdown::markdown_parse, markdown::markdown_parse_file,
@@ -898,7 +900,7 @@ pub fn run() {
             config::load_settings, config::update_config, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
             themes::list_themes, themes::open_themes_dir, snippets::list_snippets, snippets::open_snippets_dir,
             vault_settings::load_vault_settings, vault_settings::update_vault_settings,
-            search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
+            services::services_start, search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
                 links::vault_links, links::vault_unlinked_mentions, links::resolve_link, links::links_plan_move, links::links_remeasure, links::links_remeasure_done, links::tags_plan_rename, links::rename_tag, links::vault_graph, links::graph_layout_load, links::graph_layout_save,
                 history::history_configure, history::history_status, history::history_opened, history::history_list, history::history_snapshot, history::history_checkpoint, history::history_read_version, history::history_read_blob, history::history_snapshot_bytes, history::history_restore_copy, history::history_export_file, history::history_delete_checkpoint, history::history_delete_all, history::history_exclude_from_git,
             library::read_library, library::write_library, library::pick_library_file, markdown::markdown_parse, markdown::markdown_parse_file,

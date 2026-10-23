@@ -59,6 +59,10 @@ export class DesktopHistoryRepository implements HistoryRepository {
     }
   }
 
+  async start(handle: string): Promise<void> {
+    await this.call("services_start", { handle, service: "history" });
+  }
+
   async configure(handle: string, settings: HistorySettings): Promise<void> {
     await this.call<void>("history_configure", { handle, settings });
   }

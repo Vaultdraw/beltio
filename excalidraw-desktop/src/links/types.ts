@@ -141,6 +141,12 @@ export interface VaultLinks {
   remeasureDone(handle: string, path: string): Promise<void>;
   /** `links-rewrite-done`; resolves to an unsubscribe function. */
   onRewriteDone(listener: (done: RewriteDone) => void): Promise<() => void>;
+  /**
+   * Starts search (if pending) and pre-builds the link index once it is
+   * ready (`links.start` open or idle). Optional: the first links query
+   * builds it otherwise.
+   */
+  start?(handle: string): Promise<void>;
 }
 
 /** `[links]` in config.toml (global). Defaults follow Obsidian. */

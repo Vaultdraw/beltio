@@ -251,6 +251,45 @@ Everything here can be changed in **Settings** (Cmd/Ctrl+,) or by editing `confi
 - **Confirm before delete** (Files, `files.confirm_delete`). On by default. Turn it off and "Move to Trash" acts immediately. It only affects moving to Trash, which can be undone from the OS trash.
 - **Default folder for new drawings** (Files, `files.new_drawing_folder`). A path relative to the vault root, for example `Sketches/Inbox`. It is created if it doesn't exist. Empty (the default) puts a new drawing next to the open drawing.
 
+#### Startup
+
+Settings → General → **Startup** chooses when three background services start, so opening a vault does not pay for work you may not use. Each has three buttons: **On open**, **When idle** and **On first use**. All three apply live.
+
+| Key | Default | Starts |
+| --- | --- | --- |
+| `search.start` | `"idle"` | the search index |
+| `links.start` | `"idle"` | the link index (backlinks, link lookup, graph) |
+| `history.start` | `"open"` | file history (versions and checkpoints) |
+
+Values for each key:
+
+- `"open"`: when the vault opens.
+- `"idle"`: after the first paint, once keyboard and mouse input has been quiet for about a second, and at most about 5 s after the vault opens.
+- `"use"`: on the first thing that needs it.
+
+```toml
+[search]
+start = "idle"     # open | idle | use
+
+[links]
+start = "idle"     # open | idle | use
+
+[history]
+start = "open"     # open | idle | use
+```
+
+What `"use"` means for each service:
+
+- **Search:** the first search (navigator search, quick switcher or CLI query). Until the index starts, the navigator's tag list is empty; it fills in once the index starts.
+- **Links:** the first links action (backlinks dock, link lookup, graph, or a rename that updates links). That action waits for the index. Starting links also starts search, because the link index is built from it, and pre-builds the link index.
+- **History:** the first edit of a drawing, or the first history action (panel or checkpoint).
+
+Notes:
+
+- With `history.start` set to `"idle"` or `"use"`, nothing is versioned until history starts, so edits made before then have no version. This is why the default is `"open"`.
+- A started service keeps running until the vault closes. Switching a setting to an earlier mode (for example `"use"` to `"open"`) starts it right away.
+- File changes made while a service waits are picked up when it starts, because it rescans. Nothing is lost.
+
 #### Per-vault settings
 
 Navigator sort order, the default folder for new drawings, the templates folder, the paper style and each tool's default style can differ per vault. Those rows have a **This vault** switch:
@@ -798,7 +837,7 @@ Matching rules:
 - Every word you type must appear in the drawing, but the words can be in different elements.
 - Chinese, Japanese and Korean text is searched as written, without spaces between words.
 
-The index is stored outside the vault, in the state folder (`~/.local/state/vaultdraw/index/` by default; `VAULTDRAW_STATE_DIR` changes the folder). Nothing is written into your vault. The index is rebuilt automatically when it is missing or damaged, and it is safe to delete. When a large vault is indexed for the first time, the status line shows progress, such as "Indexing 1,234 of 5,000 drawings…", and results cover only the drawings indexed so far.
+The index is stored outside the vault, in the state folder (`~/.local/state/vaultdraw/index/` by default; `VAULTDRAW_STATE_DIR` changes the folder). Nothing is written into your vault. The index is rebuilt automatically when it is missing or damaged, and it is safe to delete. When a large vault is indexed for the first time, the status line shows progress, such as "Indexing 1,234 of 5,000 drawings…", and results cover only the drawings indexed so far. The index starts according to `search.start` (default: once the app is idle); see [Startup](#startup).
 
 ## Links and backlinks
 
@@ -912,6 +951,7 @@ hint_chars = "asdfghjkl"           # letters used by Shift+F hints
 style_links = true                 # draw [[links]] in the link colour, underlined
 color = "accent"                   # accent (theme) | "#rrggbb"
 hover_preview = "always"           # always | modifier | off
+start = "idle"                     # when the link index starts: open | idle | use (see Startup)
 ```
 
 ### Notes

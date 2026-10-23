@@ -51,6 +51,10 @@ import {
   parseKeysExtras,
   type KeysField,
 } from "../commands/keySettings";
+import {
+  SERVICES_MAPPINGS,
+  type ServicesField,
+} from "../services/servicesSettings";
 import { PDF_IMPORT_LIMITS } from "../pdfImport/types";
 import { inRange, LASER_LIMITS } from "../pens/laserSettings";
 import {
@@ -336,6 +340,7 @@ type ConfigField =
   | MemoryField
   | SearchField
   | KeysField
+  | ServicesField
   | ToolField;
 
 export interface ConfigMapping {
@@ -860,6 +865,7 @@ export const CONFIG_MAPPING: readonly ConfigMapping[] = [
   ...MEMORY_MAPPINGS,
   ...SEARCH_MAPPINGS,
   ...KEYS_MAPPINGS,
+  ...SERVICES_MAPPINGS,
   ...TOOL_MAPPINGS,
 ];
 

@@ -64,4 +64,9 @@ export interface VaultSearch {
   status(handle: string): Promise<IndexStatus>;
   tags(handle: string): Promise<TagsResponse>;
   subscribe(listener: (status: IndexStatus) => void): Promise<() => void>;
+  /**
+   * Starts the native index now if it is still pending (`search.start` idle
+   * or use). Optional: without it, the first query starts the index.
+   */
+  start?(handle: string): Promise<void>;
 }

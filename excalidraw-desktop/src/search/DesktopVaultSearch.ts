@@ -69,6 +69,15 @@ export class DesktopVaultSearch implements VaultSearch {
     }
   }
 
+  async start(handle: string): Promise<void> {
+    const invoke = await resolveInvoke(this.options.invoke);
+    try {
+      await invoke("services_start", { handle, service: "search" });
+    } catch (err) {
+      throw normalizeError(err);
+    }
+  }
+
   async subscribe(listener: (status: IndexStatus) => void) {
     const listen = await resolveListen(this.options.listen);
     try {

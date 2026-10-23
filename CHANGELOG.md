@@ -80,6 +80,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - Switching between drawings is faster on a slow CPU: the editor now shows the new drawing in one render instead of two. On a 4x-throttled CPU, switching back and forth takes 6 to 12% less time (median) and 11% less at the slow end (95th percentile).
 - Opening a vault is a few milliseconds faster on a slow CPU: adding the vault to the recent list no longer makes the settings be parsed and checked a second time.
 - `interface.thumbnail_max_elements` in `config.toml` sets the biggest drawing that gets a thumbnail (default 8000, was a fixed 2,500). Changing it applies live.
+- **Startup** settings (Settings → General): choose when the search index, link index and file history start: on open, when idle, or on first use (`search.start`, `links.start`, `history.start` in `config.toml`, live reload). Search and links default to when idle, so opening a vault no longer waits for indexing; history stays on open so every edit is versioned.
 
 ### Fixed
 

@@ -57,6 +57,11 @@ import {
   normalizeTabsPreferences,
   type TabsPreferences,
 } from "../tabs/tabsSettings";
+import {
+  SERVICES_DEFAULTS,
+  normalizeServicesPreferences,
+  type ServicesPreferences,
+} from "../services/servicesSettings";
 
 import {
   DEFAULT_TAGS_SETTINGS,
@@ -297,6 +302,7 @@ export type VaultPreferences = VaultPreferencesBase &
   MemoryPreferences &
   SearchPreferences &
   KeysPreferences &
+  ServicesPreferences &
   Record<ToolField, ToolStyle>;
 
 const STORAGE_KEY = "excalidraw-vault-preferences-v1";
@@ -405,6 +411,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   ...MEMORY_DEFAULTS,
   ...SEARCH_DEFAULTS,
   ...KEYS_DEFAULTS,
+  ...SERVICES_DEFAULTS,
   ...emptyToolStyles(),
 };
 
@@ -822,6 +829,7 @@ export function normalizePreferences(input: unknown): VaultPreferences {
     ...normalizeMemoryPreferences(parsed as Record<string, unknown>),
     ...normalizeSearchPreferences(parsed as Record<string, unknown>),
     ...normalizeKeysPreferences(parsed as Record<string, unknown>),
+    ...normalizeServicesPreferences(parsed as Record<string, unknown>),
     ...normalizeToolStyles(parsed as Partial<Record<ToolField, unknown>>),
   };
 }

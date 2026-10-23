@@ -82,6 +82,10 @@ export class DesktopVaultLinks implements VaultLinks {
     return this.call("links_remeasure", { handle });
   }
 
+  async start(handle: string): Promise<void> {
+    await this.call("services_start", { handle, service: "links" });
+  }
+
   async remeasureDone(handle: string, path: string): Promise<void> {
     await this.call("links_remeasure_done", { handle, path });
   }

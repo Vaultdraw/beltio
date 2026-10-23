@@ -43,6 +43,7 @@ const MAX_MENTIONS: u32 = 200;
 const WAIT_STEP: Duration = Duration::from_millis(5);
 const MAX_JOB_WAIT: Duration = Duration::from_secs(5);
 const MAX_READY_WAIT: Duration = Duration::from_secs(3);
+const PREWARM_WAIT: Duration = Duration::from_secs(60);
 
 /// Shared, cheap-to-clone state of the links feature.
 #[derive(Clone, Default)]
@@ -224,6 +225,18 @@ pub(crate) fn on_vault_open(app: &AppHandle, v: Arc<Vault>) {
     let _ = std::thread::Builder::new().name("vaultdraw-links-replay".into()).spawn(move || {
         if let Some(state) = app.try_state::<LinksState>() {
             replay_journal(&v, &hooks, &state);
+        }
+    });
+}
+
+/// Builds the link index in the background once the search index is ready (`links.start` =
+/// open or idle), so the first backlinks query does not pay for it. Gives up after a minute.
+pub(crate) fn prewarm(vi: Arc<VaultIndex>) {
+    let _ = std::thread::Builder::new().name("vaultdraw-links-prewarm".into()).spawn(move || {
+        crate::search::lower_priority();
+        wait_for(PREWARM_WAIT, || vi.is_ready());
+        if vi.is_ready() {
+            vi.ensure_links();
         }
     });
 }

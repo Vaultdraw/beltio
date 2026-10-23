@@ -81,6 +81,11 @@ export interface HistoryChange {
 }
 
 export interface HistoryRepository {
+  /**
+   * Starts the native history now if it is still pending (`history.start`
+   * idle or use). Optional: any other history call starts it too.
+   */
+  start?(handle: string): Promise<void>;
   configure(handle: string, settings: HistorySettings): Promise<void>;
   status(handle: string): Promise<HistoryStatus>;
   /** The editor now shows `path` (null = no drawing). Never during autosave. */

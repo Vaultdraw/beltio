@@ -99,9 +99,16 @@ impl VaultIndex {
     }
 }
 
+/// What a pending vault needs to start: root, emitter, snapshot path.
+type Pending = (PathBuf, Emitter, Option<PathBuf>);
+
 #[derive(Default)]
 pub(crate) struct SearchService {
     vaults: Mutex<HashMap<String, Arc<VaultIndex>>>,
+    /// Opened vaults whose indexer has not started yet (`search.start` = idle or use).
+    /// Watcher batches for them are dropped: a start walks the vault against the snapshot
+    /// (size + mtime), so it sees every change made while pending.
+    pending: Mutex<HashMap<String, Pending>>,
 }
 
 /// Emits `search-index-status` to the webview.
@@ -114,13 +121,42 @@ pub(crate) fn tauri_emitter(app: &AppHandle) -> Emitter {
 }
 
 impl SearchService {
+    /// The vault's index, starting a pending indexer first (lazy start on first use).
     pub(crate) fn vault(&self, handle: &str) -> Result<Arc<VaultIndex>> {
-        self.vaults
-            .lock()
-            .map_err(|_| err("INTERNAL", "Search state unavailable"))?
-            .get(handle)
-            .cloned()
-            .ok_or_else(|| err("NOT_FOUND", "Unknown vault"))
+        self.ensure(handle);
+        self.started(handle).ok_or_else(|| err("NOT_FOUND", "Unknown vault"))
+    }
+
+    /// The vault's index only if its indexer is running (never starts one).
+    fn started(&self, handle: &str) -> Option<Arc<VaultIndex>> {
+        self.vaults.lock().ok()?.get(handle).cloned()
+    }
+
+    /// Records an opened vault without starting its indexer (`open_vault`).
+    #[cfg_attr(test, allow(dead_code))]
+    pub(crate) fn register(&self, handle: &str, root: PathBuf, emit: Emitter) {
+        let snapshot = crate::config::resolve_dirs().ok().map(|d| store::snapshot_path(&d.state, &root));
+        self.register_with(handle, root, emit, snapshot);
+    }
+
+    pub(crate) fn register_with(&self, handle: &str, root: PathBuf, emit: Emitter, snapshot: Option<PathBuf>) {
+        if let Ok(mut pending) = self.pending.lock() {
+            pending.insert(handle.to_string(), (root, emit, snapshot));
+        }
+    }
+
+    /// Starts a registered vault's indexer if it is still pending; a no-op otherwise.
+    pub(crate) fn ensure(&self, handle: &str) {
+        // Held across the start so a concurrent caller waits for it instead of missing the vault.
+        let Ok(mut pending) = self.pending.lock() else { return };
+        if let Some((root, emit, snapshot)) = pending.remove(handle) {
+            self.start_with(handle, root, emit, snapshot);
+        }
+    }
+
+    /// Registered but not started.
+    pub(crate) fn is_pending(&self, handle: &str) -> bool {
+        self.pending.lock().map(|p| p.contains_key(handle)).unwrap_or(false)
     }
 
     /// Starts indexing `root` (canonical vault path) with the snapshot in the machine state dir.
@@ -156,7 +192,7 @@ impl SearchService {
 
     /// Forwards watcher results; `paths` are vault-relative, `rescan` forces a full resync.
     pub(crate) fn notify(&self, handle: &str, paths: &[String], rescan: bool) {
-        let Ok(v) = self.vault(handle) else { return };
+        let Some(v) = self.started(handle) else { return };
         if rescan {
             let _ = v.tx.send(Update::Rescan);
         }
@@ -167,7 +203,7 @@ impl SearchService {
 
     /// Parses `bytes` (just written to `path`) and puts the result in the live indexes.
     pub(crate) fn upsert_bytes(&self, handle: &str, path: &str, stat: (u64, u64), bytes: &[u8]) {
-        if let Ok(v) = self.vault(handle) {
+        if let Some(v) = self.started(handle) {
             let entry = vaultdraw_core::search::scan::entry_from_bytes(path, stat, bytes);
             v.write().upsert(path.to_string(), entry);
         }
@@ -182,6 +218,9 @@ impl SearchService {
     }
 
     pub(crate) fn stop(&self, handle: &str) {
+        if let Ok(mut pending) = self.pending.lock() {
+            pending.remove(handle);
+        }
         if let Some(v) = self.vaults.lock().ok().and_then(|mut m| m.remove(handle)) {
             Self::shut_down(&v);
         }
@@ -195,7 +234,11 @@ impl SearchService {
         Some(f(&index))
     }
 
+    /// Never starts the indexer: a pending vault reports `loading` with nothing indexed.
     pub(crate) fn status(&self, handle: &str) -> Result<IndexStatus> {
+        if self.is_pending(handle) {
+            return Ok(IndexStatus { handle: handle.to_string(), state: IndexState::Loading, indexed: 0, total: 0 });
+        }
         Ok(self.vault(handle)?.status(handle))
     }
 
@@ -251,6 +294,11 @@ pub(crate) async fn search_index_status(handle: String, state: State<'_, SearchS
 #[tauri::command]
 #[cfg_attr(test, allow(dead_code))]
 pub(crate) async fn vault_tags(handle: String, state: State<'_, SearchService>) -> Result<TagsResponse> {
+    // The navigator reads tags at mount: that must not start a lazy index. It refetches on
+    // the status events that follow a start.
+    if state.is_pending(&handle) {
+        return Ok(TagsResponse { summary: vaultdraw_core::search::types::TagSummary { tags: Vec::new(), by_path: HashMap::new() }, status: state.status(&handle)?, took_ms: 0.0 });
+    }
     state.tags(&handle)
 }
 
@@ -297,6 +345,63 @@ mod unit_tests {
         svc.start_with("h", root.to_path_buf(), noop(), None);
         wait_until("ready", || svc.status("h").is_ok_and(|s| s.state == IndexState::Ready));
         svc
+    }
+
+    // ---- lazy start (D8) ----
+
+    fn registered(root: &Path) -> SearchService {
+        let svc = SearchService::default();
+        svc.register_with("h", root.to_path_buf(), noop(), None);
+        svc
+    }
+
+    #[test]
+    fn registered_vault_does_not_start_until_used() {
+        let dir = tempfile::tempdir().unwrap();
+        write(dir.path(), "a.excalidraw", &["alpha"]);
+        let svc = registered(dir.path());
+        // Status and watcher batches never start the indexer.
+        let s = svc.status("h").unwrap();
+        assert_eq!((s.state, s.indexed, s.total), (IndexState::Loading, 0, 0));
+        svc.notify("h", &["a.excalidraw".into()], true);
+        assert!(svc.is_pending("h"));
+        assert!(svc.started("h").is_none());
+        // The first query starts it and the answer fills in.
+        let _ = svc.search("h", "alpha", None, None).unwrap();
+        assert!(!svc.is_pending("h"));
+        wait_until("ready", || svc.status("h").is_ok_and(|s| s.state == IndexState::Ready));
+        assert_eq!(paths(&svc, "alpha"), vec!["a.excalidraw"]);
+    }
+
+    #[test]
+    fn changes_made_while_pending_are_found_after_start() {
+        let dir = tempfile::tempdir().unwrap();
+        write(dir.path(), "old.excalidraw", &["before"]);
+        let svc = registered(dir.path());
+        // Created, edited and deleted while pending: the watcher batches are dropped.
+        write(dir.path(), "new.excalidraw", &["created while pending"]);
+        write(dir.path(), "old.excalidraw", &["edited while pending"]);
+        svc.notify("h", &["new.excalidraw".into(), "old.excalidraw".into()], false);
+        svc.ensure("h");
+        wait_until("ready", || svc.status("h").is_ok_and(|s| s.state == IndexState::Ready));
+        assert_eq!(paths(&svc, "created while pending"), vec!["new.excalidraw"]);
+        assert_eq!(paths(&svc, "edited while pending"), vec!["old.excalidraw"]);
+        assert!(paths(&svc, "before").is_empty());
+    }
+
+    #[test]
+    fn ensure_is_idempotent_and_stop_drops_a_pending_vault() {
+        let dir = tempfile::tempdir().unwrap();
+        let svc = registered(dir.path());
+        svc.ensure("h");
+        let first = svc.started("h").unwrap();
+        svc.ensure("h");
+        assert!(Arc::ptr_eq(&first, &svc.started("h").unwrap()));
+
+        let other = registered(dir.path());
+        other.stop("h");
+        assert!(!other.is_pending("h"));
+        assert_eq!(other.search("h", "x", None, None).unwrap_err().code, "NOT_FOUND");
     }
 
     #[test]

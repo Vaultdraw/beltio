@@ -170,6 +170,8 @@ autosave_delay_ms = 500
 # color = "accent"
 # Hover preview card: always | modifier | off
 # hover_preview = "always"
+# When the link index starts: open (vault open) | idle (once the app is idle) | use (first links action). Also starts search.
+# start = "idle"
 
 [tags]
 # Suggest existing tags while typing #
@@ -218,6 +220,10 @@ autosave_delay_ms = 500
 # Undo history kept for background tabs in MB, 0 to 1024 (0 = none)
 # undo_budget_mb = 32
 
+[search]
+# When the search index starts: open (vault open) | idle (once the app is idle) | use (first search)
+# start = "idle"
+
 [keys]
 # The key <leader> stands for in a sequence
 # leader = "Backslash"
@@ -265,6 +271,9 @@ autosave_delay_ms = 500
 # size_cap_mb = 500
 # Highlight what changed in the History preview
 # highlight_changes = true
+# When file history starts: open (vault open) | idle | use (first edit or history action).
+# Edits made before history starts are not versioned.
+# start = "open"
 
 [plugins]
 # Ids of the plugins to load from the plugins/ folder, like ["hello-command"]

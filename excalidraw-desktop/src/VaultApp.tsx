@@ -28,6 +28,7 @@ import { LinkPromptHost, LinkRequestHost } from "./control/linkRequests";
 import { useControlBridge } from "./control/useControlBridge";
 import { useMenuCommands } from "./help/useMenuCommands";
 import { useAppLinks } from "./links/useAppLinks";
+import { useLazyServices } from "./services/useLazyServices";
 import { DesktopVaultTagRename } from "./tags/DesktopVaultTagRename";
 import { scheduleIdle } from "./platform/idle";
 import { useAppTags } from "./tags/useAppTags";
@@ -308,6 +309,8 @@ export const VaultApp = ({
     // once per opened vault handle, not per vault object identity
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vaultHandle]);
+  // search.start / links.start (D8): native services start lazily.
+  useLazyServices(win, vault?.handle ?? null, vaultSearch, vaultLinks);
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
   const [loadingVault, setLoadingVault] = useState(false);
   const [globalAlert, setGlobalAlert] = useState<{
