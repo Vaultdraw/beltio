@@ -33,7 +33,7 @@ fn threads() -> usize {
     std::thread::available_parallelism().map_or(1, |n| n.get()).clamp(1, MAX_THREADS)
 }
 
-/// Parses `pending` on up to [`MAX_THREADS`] threads (no new dependencies), each with
+/// Parses `pending` on up to [`MAX_THREADS`] threads, each with
 /// its own read buffer. Files that vanished meanwhile are skipped.
 pub fn parse_parallel(root: &Path, pending: &[&Found]) -> Vec<(String, DocEntry)> {
     let threads = threads().min(pending.len().div_ceil(CLAIM)).max(1);
@@ -90,11 +90,10 @@ pub fn load_or_build(root: &Path, snapshot_path: &Path) -> Result<Index> {
     }
     let pending: Vec<&Found> = found.iter().filter(|f| needs_parse(index.get(&f.path), f, racy_before)).collect();
     if !pending.is_empty() {
-        let r = parse_parallel(root, &pending);
-            for (path, doc) in r {
+        for (path, doc) in parse_parallel(root, &pending) {
             index.upsert(path, doc);
         }
-            changed = true;
+        changed = true;
     }
     if changed {
         store::save(snapshot_path, now_ms(SystemTime::now()), &index)?;

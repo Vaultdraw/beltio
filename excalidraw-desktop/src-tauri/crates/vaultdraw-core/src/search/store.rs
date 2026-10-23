@@ -44,7 +44,9 @@ pub fn save(path: &Path, saved_at_ms: u64, index: &Index) -> Result<()> {
 /// rejects a torn file (the next start just rebuilds), and `fsync` is `F_FULLFSYNC` on macOS,
 /// tens of milliseconds on the cold path of every first CLI call.
 fn write_cache(path: &Path, bytes: &[u8]) -> Result<()> {
-    let tmp = path.with_extension(format!("tmp-{}", std::process::id()));
+    static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let seq = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let tmp = path.with_extension(format!("tmp-{}-{seq}", std::process::id()));
     let r = fs::write(&tmp, bytes).and_then(|()| fs::rename(&tmp, path));
     if r.is_err() {
         let _ = fs::remove_file(&tmp);

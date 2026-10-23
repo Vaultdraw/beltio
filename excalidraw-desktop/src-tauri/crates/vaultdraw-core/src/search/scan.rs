@@ -145,29 +145,30 @@ pub fn read_entry_open(file: &mut fs::File, rel: &str, stat: (u64, u64), buf: &m
 
 /// Reads into `dst[have..]` until it is full, the file ends, or `hint` (the size the walk saw) is
 /// reached: for a regular file that fits, that is one `read` call instead of read plus a probe.
-fn fill(file: &mut fs::File, buf: &mut [u8], mut have: usize, hint: u64) -> Result<usize> {
+/// Also says whether end of file was actually seen: a file that grew since the walk is not over at `hint`.
+fn fill(file: &mut fs::File, buf: &mut [u8], mut have: usize, hint: u64) -> Result<(usize, bool)> {
     loop {
         match file.read(&mut buf[have..]) {
-            Ok(0) => return Ok(have),
+            Ok(0) => return Ok((have, true)),
             Ok(n) => have += n,
             Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
             Err(e) => return Err(ioerr(e)),
         }
         if have == buf.len() || have as u64 >= hint {
-            return Ok(have);
+            return Ok((have, false));
         }
     }
 }
 
 fn read_entry_from(file: &mut fs::File, rel: &str, stat: (u64, u64), buf: &mut Vec<u8>) -> Result<DocEntry> {
-    let hint = stat.0;
+    let mut hint = stat.0;
     let mut want = FIRST_READ;
     let mut have = 0;
     if buf.len() < want {
         buf.resize(want, 0);
     }
     let (len, items, filled) = loop {
-        let filled = fill(file, &mut buf[..want], have, hint)?;
+        let (filled, eof) = fill(file, &mut buf[..want], have, hint)?;
         let at_end = filled < want;
         let len = if at_end { filled as u64 } else { file.metadata().map_err(ioerr)?.len().max(filled as u64) };
         if len > MAX_DRAWING_BYTES {
@@ -175,6 +176,11 @@ fn read_entry_from(file: &mut fs::File, rel: &str, stat: (u64, u64), buf: &mut V
         }
         match parse_scene_prefix(&buf[..filled], at_end) {
             Prefix::Done(v) => break (len, v, filled),
+            // The walk's size was stale (the file grew): read on to the real end before giving up.
+            Prefix::Invalid(_) if at_end && !eof && hint != u64::MAX => {
+                hint = u64::MAX;
+                have = filled;
+            }
             Prefix::Invalid(e) => return Err(e),
             Prefix::NeedMore => {
                 have = filled;
@@ -247,11 +253,17 @@ fn open_at(dir: &fs::File, name: &str) -> std::io::Result<fs::File> {
     use std::os::fd::{AsRawFd, FromRawFd};
     let c = std::ffi::CString::new(name).map_err(|_| std::io::Error::from(std::io::ErrorKind::InvalidInput))?;
     // SAFETY: `dir` is a live descriptor, `c` a NUL-terminated name; a non-negative result is a fresh descriptor we own.
-    let fd = unsafe { libc::openat(dir.as_raw_fd(), c.as_ptr(), libc::O_RDONLY | libc::O_CLOEXEC | libc::O_NOFOLLOW) };
+    let fd = unsafe { libc::openat(dir.as_raw_fd(), c.as_ptr(), libc::O_RDONLY | libc::O_CLOEXEC | libc::O_NOFOLLOW | libc::O_NONBLOCK) };
     if fd < 0 {
         return Err(std::io::Error::last_os_error());
     }
-    Ok(unsafe { fs::File::from_raw_fd(fd) })
+    // SAFETY: `fd` was just returned by openat and is owned by nothing else.
+    let file = unsafe { fs::File::from_raw_fd(fd) };
+    // A FIFO or device swapped in under a drawing name must not be read (O_NONBLOCK keeps the open from hanging).
+    if !file.metadata()?.is_file() {
+        return Err(std::io::Error::from(std::io::ErrorKind::InvalidInput));
+    }
+    Ok(file)
 }
 
 pub fn needs_parse(existing: Option<&DocEntry>, f: &Found, racy_before: u64) -> bool {
@@ -295,6 +307,27 @@ mod tests {
             assert!(!got.items.is_empty());
         }
         assert!(buf.capacity() <= KEEP_BUF + 1, "a big buffer is not kept");
+    }
+
+    #[test]
+    fn a_file_that_grew_since_the_walk_is_still_read_whole() {
+        let dir = tempfile::tempdir().unwrap();
+        let body = drawing(2_000, 0);
+        let p = dir.path().join("grew.excalidraw");
+        fs::write(&p, &body).unwrap();
+        // The walk saw an older, smaller size that ends inside `elements`.
+        let got = read_entry(&p, "grew.excalidraw", (300, 1), &mut Vec::new()).unwrap();
+        assert_eq!(got.items.len(), 2_000);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_fifo_under_a_drawing_name_is_refused_not_waited_on() {
+        let dir = tempfile::tempdir().unwrap();
+        let c = std::ffi::CString::new(dir.path().join("p.excalidraw").to_str().unwrap()).unwrap();
+        assert_eq!(unsafe { libc::mkfifo(c.as_ptr(), 0o600) }, 0);
+        let handle = fs::File::open(dir.path()).unwrap();
+        assert!(open_at(&handle, "p.excalidraw").is_err());
     }
 
     #[test]
