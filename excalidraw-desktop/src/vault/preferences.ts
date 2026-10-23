@@ -30,6 +30,11 @@ import {
   type UpdateOnRename,
 } from "../links/types";
 import {
+  KEYS_DEFAULTS,
+  normalizeKeysPreferences,
+  type KeysPreferences,
+} from "../commands/keySettings";
+import {
   HISTORY_DEFAULTS,
   normalizeHistoryPreferences,
   type HistoryPreferences,
@@ -256,6 +261,7 @@ export type VaultPreferences = VaultPreferencesBase &
   HistoryPreferences &
   TabsPreferences &
   MemoryPreferences &
+  KeysPreferences &
   Record<ToolField, ToolStyle>;
 
 const STORAGE_KEY = "excalidraw-vault-preferences-v1";
@@ -353,6 +359,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   ...HISTORY_DEFAULTS,
   ...TABS_DEFAULTS,
   ...MEMORY_DEFAULTS,
+  ...KEYS_DEFAULTS,
   ...emptyToolStyles(),
 };
 
@@ -715,6 +722,7 @@ export function normalizePreferences(input: unknown): VaultPreferences {
     ...normalizeHistoryPreferences(parsed as Record<string, unknown>),
     ...normalizeTabsPreferences(parsed as Record<string, unknown>),
     ...normalizeMemoryPreferences(parsed as Record<string, unknown>),
+    ...normalizeKeysPreferences(parsed as Record<string, unknown>),
     ...normalizeToolStyles(parsed as Partial<Record<ToolField, unknown>>),
   };
 }

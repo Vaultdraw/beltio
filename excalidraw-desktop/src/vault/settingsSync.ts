@@ -35,6 +35,11 @@ import { TABS_MAPPINGS, type TabsField } from "../tabs/tabsSettings";
 import { MEMORY_MAPPINGS, type MemoryField } from "../memory/memorySettings";
 import { parseChord } from "../commands/keys";
 import { LEADER_TOKEN, parseSequence } from "../commands/keySequence";
+import {
+  KEYS_MAPPINGS,
+  parseKeysExtras,
+  type KeysField,
+} from "../commands/keySettings";
 import { PDF_IMPORT_LIMITS } from "../pdfImport/types";
 import { inRange, LASER_LIMITS } from "../pens/laserSettings";
 import {
@@ -238,6 +243,7 @@ type ConfigField =
   | HistoryField
   | TabsField
   | MemoryField
+  | KeysField
   | ToolField;
 
 export interface ConfigMapping {
@@ -705,6 +711,7 @@ export const CONFIG_MAPPING: readonly ConfigMapping[] = [
   ...HISTORY_MAPPINGS,
   ...TABS_MAPPINGS,
   ...MEMORY_MAPPINGS,
+  ...KEYS_MAPPINGS,
   ...TOOL_MAPPINGS,
 ];
 
@@ -818,7 +825,10 @@ export function parseHotkeysTable(table: unknown): {
  * problem.
  */
 export function configToPreferences(config: Record<string, unknown>): {
-  values: Pick<VaultPreferences, ConfigField | "hotkeys" | "pluginSettings">;
+  values: Pick<
+    VaultPreferences,
+    ConfigField | "hotkeys" | "pluginSettings" | "keysLabels"
+  >;
   problems: SettingsProblem[];
 } {
   const values = {} as Record<ConfigField, unknown>;
@@ -848,12 +858,15 @@ export function configToPreferences(config: Record<string, unknown>): {
   }
   const table = parseHotkeysTable(config.hotkeys);
   problems.push(...table.problems);
+  const keys = parseKeysExtras(config.keys);
+  problems.push(...keys.problems);
   const plugins = parsePluginTable(config.plugin, "config.toml");
   problems.push(...plugins.problems);
   return {
     values: {
       ...(values as Pick<VaultPreferences, ConfigField>),
       hotkeys: table.hotkeys,
+      keysLabels: keys.labels,
       pluginSettings: plugins.settings,
     },
     problems,
@@ -947,6 +960,7 @@ const configSlice = (prefs: PreferencesSnapshot) => ({
   ),
   // sorted: the table's order in the file must not count as a change
   hotkeys: Object.entries(prefs.hotkeys).sort(([a], [b]) => (a < b ? -1 : 1)),
+  keysLabels: prefs.keysLabels,
   pluginSettings: sortedPluginSettings(prefs.pluginSettings),
 });
 
