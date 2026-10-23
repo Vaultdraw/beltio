@@ -61,11 +61,19 @@ fn is_loopback(url: &Url) -> bool {
 /// True for IP literals that point into a private or local network.
 fn is_private_ip(ip: IpAddr) -> bool {
     match ip {
-        IpAddr::V4(v) => v.is_private() || v.is_link_local() || v.is_unspecified() || v.is_broadcast() || v.octets()[0] == 0,
-        IpAddr::V6(v) => {
-            let seg = v.segments()[0];
-            v.is_unspecified() || (seg & 0xfe00) == 0xfc00 || (seg & 0xffc0) == 0xfe80
+        IpAddr::V4(v) => {
+            let o = v.octets();
+            let cgnat = o[0] == 100 && (o[1] & 0xc0) == 64; // 100.64.0.0/10
+            v.is_private() || v.is_link_local() || v.is_unspecified() || v.is_broadcast() || o[0] == 0 || cgnat
         }
+        // ::ffff:a.b.c.d is judged as the IPv4 address it wraps.
+        IpAddr::V6(v) => match v.to_ipv4_mapped() {
+            Some(v4) => is_private_ip(IpAddr::V4(v4)) || v4.is_loopback(),
+            None => {
+                let seg = v.segments()[0];
+                v.is_unspecified() || (seg & 0xfe00) == 0xfc00 || (seg & 0xffc0) == 0xfe80
+            }
+        },
     }
 }
 
@@ -78,6 +86,7 @@ pub(crate) fn parse_url(text: &str) -> Result<Url> {
     }
     let loopback = is_loopback(&url);
     match url.scheme() {
+        "https" if loopback => return Err(bad("Local addresses are only reachable over http")),
         "https" => {}
         "http" if loopback => {}
         _ => return Err(bad("Only https URLs are allowed")),
@@ -250,6 +259,12 @@ mod tests {
             "https://[fe80::1]/a",
             "https://[fd00::1]/a",
             "https://0.0.0.0/a",
+            "https://100.64.0.1/a",
+            "https://[::ffff:192.168.1.1]/a",
+            "https://[::ffff:169.254.169.254]/a",
+            "https://127.0.0.1/a",
+            "https://localhost/a",
+            "https://[::1]/a",
             "not a url",
         ] {
             assert_eq!(parse_url(bad).unwrap_err().code, "INVALID_URL", "{bad}");

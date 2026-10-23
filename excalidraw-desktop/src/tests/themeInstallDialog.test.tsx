@@ -66,7 +66,7 @@ describe("ThemeInstallDialog (install)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Allow" }));
     expect(getPreferences().networkAllowThemes).toBe(true);
 
-    fireEvent.change(screen.getByLabelText("Address or GitHub repo"), {
+    fireEvent.change(await screen.findByLabelText("Address or GitHub repo"), {
       target: { value: "https://example.com/Midnight.json" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Look up" }));

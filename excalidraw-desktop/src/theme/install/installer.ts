@@ -42,6 +42,10 @@ export const validateCandidate = (
   }
 };
 
+/** The file's JSON with its `name` set, so a renamed copy shows under its new name. */
+const withName = (json: string, name: string): string =>
+  JSON.stringify({ ...JSON.parse(json), name }, null, 2);
+
 /** Validates, then writes. `asName` installs under another name (clash resolution). */
 export const installCandidate = async (
   backend: InstallBackend,
@@ -51,7 +55,9 @@ export const installCandidate = async (
   const name = validateCandidate(candidate.json, candidate.fallbackName);
   const written = await backend.write({
     name: options.asName ?? name,
-    json: candidate.json,
+    json: options.asName
+      ? withName(candidate.json, options.asName)
+      : candidate.json,
     source: candidate.source,
     replace: options.replace ?? false,
   });

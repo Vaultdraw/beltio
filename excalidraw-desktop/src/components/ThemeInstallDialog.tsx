@@ -12,6 +12,7 @@ import {
 import { toInstallError } from "../theme/install/types";
 import { reloadThemeRegistry } from "../theme/registry";
 import { getPreferences, updatePreferences } from "../vault/preferences";
+import { flushSettings } from "../vault/settingsSync";
 
 import { Dialog } from "./Dialog";
 
@@ -176,8 +177,14 @@ export const ThemeInstallDialog = ({
       }
     });
 
-  const allow = () => {
+  // The desktop backend re-reads config.toml, so wait until the saved yes is on disk.
+  const allow = async () => {
     updatePreferences({ networkEnabled: true, networkAllowThemes: true }, win);
+    try {
+      await flushSettings();
+    } catch {
+      // Browser mode or a failed write: the next request reports the problem.
+    }
     setStep(startStep(request));
   };
 
@@ -421,7 +428,7 @@ export const ThemeInstallDialog = ({
             <button
               type="button"
               className="vault-btn vault-btn--primary"
-              onClick={allow}
+              onClick={() => void allow()}
             >
               Allow
             </button>

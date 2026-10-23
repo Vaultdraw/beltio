@@ -108,6 +108,9 @@ describe("installCandidate", () => {
       ["Midnight 2", false],
       ["Midnight", true],
     ]);
+    // The copy's own name changes too, so the picker can tell them apart.
+    expect(JSON.parse(written[0].json).name).toBe("Midnight 2");
+    expect(written[1].json).toBe(THEME);
   });
 });
 

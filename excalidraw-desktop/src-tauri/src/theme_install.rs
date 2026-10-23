@@ -400,12 +400,16 @@ fn fetch_tree(ep: &Endpoints, owner: &str, repo: &str, commit: &str) -> Result<V
     #[derive(Deserialize)]
     struct Tree {
         tree: Vec<TreeEntry>,
+        #[serde(default)]
+        truncated: bool,
     }
     let url = api_url(ep, owner, repo, &["git", "trees", commit], Some("recursive=1"))?;
     let bytes = network::get_bytes(&url, MAX_TREE_BYTES, "application/vnd.github+json")?;
-    serde_json::from_slice::<Tree>(&bytes)
-        .map(|t| t.tree)
-        .map_err(|_| err("BAD_RESPONSE", "GitHub returned an unexpected file list"))
+    let tree = serde_json::from_slice::<Tree>(&bytes).map_err(|_| err("BAD_RESPONSE", "GitHub returned an unexpected file list"))?;
+    if tree.truncated {
+        return Err(err("BAD_RESPONSE", "The repo is too large for GitHub to list in one go; give a folder inside it (owner/repo/tree/<branch>/<folder>)"));
+    }
+    Ok(tree.tree)
 }
 
 /// A file theme's name: the JSON `name` field when present, else the URL's file stem.
@@ -516,8 +520,11 @@ pub(crate) fn write_in(dirs: &config::Dirs, req: &WriteRequest) -> Result<Writte
     };
     let file = folder.join(format!("{name}.json"));
     let source = serde_json::to_vec_pretty(&source_json(&req.source, &now_iso())).map_err(|e| err("INTERNAL", e.to_string()))?;
-    // source.json first: a folder without it would look hand-made.
-    let result = write_atomic(&folder.join(SOURCE_FILE), &source).and_then(|_| write_atomic(&file, req.json.as_bytes()));
+    // New install: source.json first, so a folder without it never looks hand-made.
+    // Replace: the theme file first, so a failure leaves the old hash and the next update retries.
+    let write_source = || write_atomic(&folder.join(SOURCE_FILE), &source);
+    let write_file = || write_atomic(&file, req.json.as_bytes());
+    let result = if created { write_source().and_then(|_| write_file()) } else { write_file().and_then(|_| write_source()) };
     if result.is_err() && created {
         let _ = fs::remove_dir_all(&folder);
     }
