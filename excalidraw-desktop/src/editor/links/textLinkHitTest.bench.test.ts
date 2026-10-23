@@ -38,39 +38,98 @@ function countingMeasure() {
   return { counter, measure };
 }
 
-function scene(lines: number, plain: number): TextLike[] {
+/**
+ * The big element at the bottom, then `plain` link-less elements and `linked`
+ * link-bearing ones, all far from the clicks, above it (the hit test walks
+ * topmost first, so it passes every one of them on each click).
+ */
+function scene(lines: number, plain: number, linked = 0): TextLike[] {
   const el = bigElement(lines);
-  const others = Array.from({ length: plain }, (_, i) => ({
+  const far = (i: number, text: string) => ({
     ...el,
     id: `o${i}`,
-    text: "no links here",
-    x: 5000 + i,
-  }));
-  return [el, ...others];
+    text,
+    height: 25,
+    x: 50_000 + i * 10,
+  });
+  return [
+    el,
+    ...Array.from({ length: plain }, (_, i) => far(i, "no links here")),
+    ...Array.from({ length: linked }, (_, i) =>
+      far(plain + i, `see [[Far ${i}]]`),
+    ),
+  ];
 }
 
-/** Max measure calls over 400 clicks spread over the big element. */
-function maxCallsPerClick(elements: TextLike[], lines: number) {
+/** Wraps each element so reads of `text` (the per-element work) are counted by id. */
+function countingTextReads(elements: TextLike[]) {
+  const reads = new Map<string, number>();
+  const wrapped = elements.map(
+    (el) =>
+      new Proxy(el, {
+        get(target, key, receiver) {
+          if (key === "text") {
+            reads.set(target.id, (reads.get(target.id) ?? 0) + 1);
+          }
+          return Reflect.get(target, key, receiver);
+        },
+      }),
+  );
+  return { wrapped, reads };
+}
+
+const CLICKS = 400;
+const clickAt = (run: number, lines: number) => ({
+  x: 250 + (run % 90),
+  y: ((run * 37) % lines) * 25 + 5,
+});
+
+/**
+ * Over 400 clicks spread over the big element: the max measure calls per
+ * click, hits, and the max text reads of any other element per click. Logs
+ * wall-clock p50/p95 for information only (never asserted: it flakes under
+ * load, toimprove #20/#21).
+ */
+function costPerClick(elements: TextLike[], lines: number) {
   const { counter, measure } = countingMeasure();
+  const { wrapped, reads } = countingTextReads(elements);
+  const times: number[] = [];
   let max = 0;
   let hits = 0;
-  for (let run = 0; run < 400; run++) {
-    const y = ((run * 37) % lines) * 25 + 5;
+  let maxOtherReads = 0;
+  for (let run = 0; run < CLICKS; run++) {
     counter.calls = 0;
-    if (hitTestTextLink(elements, { x: 250 + (run % 90), y }, measure)) {
+    reads.clear();
+    const s = performance.now();
+    if (hitTestTextLink(wrapped, clickAt(run, lines), measure)) {
       hits++;
     }
+    times.push(performance.now() - s);
     max = Math.max(max, counter.calls);
+    for (const [id, n] of reads) {
+      if (id !== "big") {
+        maxOtherReads = Math.max(maxOtherReads, n);
+      }
+    }
   }
-  return { max, hits };
+  times.sort((a, b) => a - b);
+  const p = (q: number) => times[Math.floor(q * (times.length - 1))].toFixed(3);
+  // eslint-disable-next-line no-console
+  console.info(
+    `link hit-test ${lines} lines, ${
+      elements.length - 1
+    } other elements: p50 ${p(0.5)} ms, p95 ${p(0.95)} ms`,
+  );
+  return { max, hits, maxOtherReads };
 }
 
 // The cost of a click is counted, not timed: wall-clock asserts flake under machine load
-// (toimprove #20/#21). What keeps a click under 1 ms is that it measures one line with a
-// binary search (about log2(line length) calls) and never measures other elements or lines.
+// (toimprove #20/#21). What keeps a click under 1 ms: other elements cost one `text` scan
+// each and are never measured, and the clicked element measures one line by binary search
+// (about log2(line length) calls).
 describe("text link hit-test cost (500-line element)", () => {
   it("measures one line by binary search: O(log line length) calls per click", () => {
-    const { max, hits } = maxCallsPerClick(scene(500, 200), 500);
+    const { max, hits } = costPerClick(scene(500, 200), 500);
     const longest = Math.max(
       ...bigElement(500)
         .text.split("\n")
@@ -78,34 +137,19 @@ describe("text link hit-test cost (500-line element)", () => {
     );
     // line start + line width + binary search + one fragment (start, x1, x2)
     const bound = 2 + Math.ceil(Math.log2(longest + 1)) + 3;
-    expect(hits).toBeGreaterThan(0);
+    expect(hits).toBe(CLICKS);
     expect(max).toBeLessThanOrEqual(bound);
   });
 
-  it("does not grow with line count or with elements that have no links", () => {
-    const small = maxCallsPerClick(scene(50, 0), 50).max;
-    const big = maxCallsPerClick(scene(5000, 2000), 5000).max;
+  it("measure calls do not grow with line count or with other elements, linked or not", () => {
+    const small = costPerClick(scene(50, 0), 50).max;
+    const big = costPerClick(scene(5000, 2000, 2000), 5000).max;
     expect(big).toBe(small);
   });
 
-  it("logs wall-clock p50/p95 for information (not asserted)", () => {
-    const elements = scene(500, 200);
-    const { measure } = countingMeasure();
-    const times: number[] = [];
-    for (let run = 0; run < 400; run++) {
-      const y = ((run * 37) % 500) * 25 + 5;
-      const s = performance.now();
-      hitTestTextLink(elements, { x: 250 + (run % 90), y }, measure);
-      times.push(performance.now() - s);
-    }
-    times.sort((a, b) => a - b);
-    const p = (q: number) => times[Math.floor(q * (times.length - 1))];
-    // eslint-disable-next-line no-console
-    console.info(
-      `link hit-test 500 lines: p50 ${p(0.5).toFixed(3)} ms, p95 ${p(
-        0.95,
-      ).toFixed(3)} ms, max ${times[times.length - 1].toFixed(3)} ms`,
-    );
-    expect(times.length).toBe(400);
+  it("every other element costs at most one text scan per click", () => {
+    const { maxOtherReads, hits } = costPerClick(scene(500, 2000, 2000), 500);
+    expect(hits).toBe(CLICKS);
+    expect(maxOtherReads).toBe(1);
   });
 });
