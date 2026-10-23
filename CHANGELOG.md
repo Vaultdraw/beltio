@@ -27,6 +27,11 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - Settings → Hotkeys has a **Sequence** button that records a sequence chord by chord. A key that is the start of another command's sequence shows a `prefix` warning.
 - The tool keys (`R`, `E`, `A`, `Q` and the rest) are now commands, `tool.rectangle`, `tool.eraser` and so on, with the same default keys. They can be rebound, removed or turned into sequences in Settings → Hotkeys or `[hotkeys]`.
 - `vaultdraw export` no longer sends the image through the control channel as base64. The app writes it to a spool file in 4 MiB pieces and the command moves it to the destination, so big exports no longer hit the 32 MiB limit and the command itself stays at a few MB of memory (32 MiB export: 95 MB -> 3 MB peak). The no-overwrite rule is unchanged.
+- **Settings → Plugins** lists installed plugins. You can turn each one on or off, install one from a folder, reload or uninstall it, and edit the settings it declares. Each plugin shows its activation time and a memory estimate. A plugin that isn't bundled asks for consent before it runs.
+- **Plugin safe mode:** after two launches in a row crash with plugins enabled, the next launch loads no plugins and says why. Holding Option at launch does the same. The palette commands **Plugins: Restart in safe mode** and **Restart normally** switch between the two.
+- **Dev reload:** a plugin with `dev = true` in its `plugin.toml` reloads when its files change.
+- Palette commands: **Plugins: Open plugin settings**, **Install from folder…** and **Reload plugin list**.
+- Only the first 6 plugin panel buttons show in the activity bar. The palette or Settings → Interface shows the others.
 
 ### Faster
 

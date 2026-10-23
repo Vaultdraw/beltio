@@ -798,3 +798,18 @@ uri_allow = []        # run without asking: "new", "switch-vault", or command id
 - **What always asks.** Switching vault, `new` and `cmd` ask unless listed in `uri_allow`. Opening a drawing and searching never write, so they run at once.
 - **Blocked commands.** A link can run only built-in commands, and never ones that delete, move, rename, import, export, install or quit, or the link commands themselves, unless you list that exact id in `uri_allow`.
 - **Limit.** At most 5 links per 10 seconds are handled for each source (the system, scripts, the palette); the rest are dropped with one notice.
+
+## Plugins (experimental)
+
+Plugins are folders in `plugins/` inside the config folder (`~/.config/vaultdraw/plugins/`). Only the ones listed in `config.toml` run:
+
+```toml
+[plugins]
+enabled = ["my-plugin"]
+```
+
+- **Settings → Plugins** edits this list. It also installs a plugin from a folder (copied into `plugins/`, not enabled), reloads or uninstalls a plugin, and edits the settings each plugin declares. A plugin that isn't bundled asks for consent the first time you enable it, because it runs with full access.
+- **Zero cost when unused:** with an empty `enabled` list, no plugin code loads at startup.
+- **Safe mode:** after two crashed launches in a row with plugins enabled, the next launch loads no plugins and shows a banner. Holding Option at launch does the same. Use **Plugins: Restart in safe mode** (`plugins.restartSafeMode`) and **Plugins: Restart normally** (`plugins.restartNormally`) to switch.
+- **Dev reload:** with `dev = true` in a plugin's `plugin.toml`, saving its `main.js` or `plugin.toml` reloads it.
+- **Commands:** `plugins.openSettings`, `plugins.installFolder` and `plugins.reloadList`. Like every command, you can rebind them in `[hotkeys]`.
