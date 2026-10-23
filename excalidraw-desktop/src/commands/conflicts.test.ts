@@ -13,6 +13,7 @@ describe("whenCanOverlap", () => {
       false,
     );
     expect(whenCanOverlap(["vaultOpen"], ["drawingOpen"])).toBe(true);
+    expect(whenCanOverlap(["canvasFocus"], ["listFocus"])).toBe(false);
   });
 });
 

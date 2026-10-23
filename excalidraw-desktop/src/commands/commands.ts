@@ -35,6 +35,7 @@ import { TAB_COMMANDS } from "./tabCommands";
 import { LIST_COMMANDS } from "./listCommands";
 import { THUMBNAIL_COMMANDS } from "./thumbnailCommands";
 import { MEMORY_COMMANDS } from "./memoryCommands";
+import { TOOL_COMMANDS } from "./toolCommands";
 
 import type {
   Chord,
@@ -595,6 +596,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...EDITOR_COMMANDS,
   ...PEN_COMMANDS,
   ...TOOL_DEFAULT_COMMANDS,
+  ...TOOL_COMMANDS,
   ...LINKS_COMMANDS,
   ...TAGS_COMMANDS,
   ...HISTORY_COMMANDS,

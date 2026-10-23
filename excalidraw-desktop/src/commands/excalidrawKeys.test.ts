@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 
 import { EXCALIDRAW_KEYS, excalidrawActionsFor } from "./excalidrawKeys";
 import { normalizeChord, parseChord } from "./keys";
+import { TOOL_COMMANDS } from "./toolCommands";
 
 const packages = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -88,6 +89,23 @@ describe("EXCALIDRAW_KEYS drift", () => {
     const upstream = toolPairs();
     expect(upstream.size).toBeGreaterThan(20);
     expect(sorted(tablePairs("tool")), hint).toEqual(sorted(upstream));
+  });
+});
+
+describe("tool commands vs Excalidraw", () => {
+  it("tool.* defaults equal the keys in TOOLS and the Q tool lock", () => {
+    const commands = new Set(
+      TOOL_COMMANDS.filter((c) => c.id !== "tool.lock").flatMap((c) =>
+        c.keys.default.map((key) => `${c.id}|${toChord(key)}`),
+      ),
+    );
+    expect(sorted(commands), hint).toEqual(sorted(toolPairs()));
+    const lock = TOOL_COMMANDS.find((c) => c.id === "tool.lock");
+    expect(lock?.keys.default.map(toChord)).toEqual(
+      [...shortcutMapPairs()]
+        .filter((pair) => pair.startsWith("toolLock|"))
+        .map((pair) => pair.split("|")[1]),
+    );
   });
 });
 

@@ -32,6 +32,8 @@ import { isPdfFile } from "../canvasImport/importFiles";
 import { useCanvasImportMenu } from "../canvasImport/useCanvasImportMenu";
 import { CommandMenuItem } from "../commands/CommandMenuItem";
 import { GRAPH_COMMAND_IDS } from "../commands/graphCommands";
+import { registerCommandHandlers } from "../commands/handlerRegistry";
+import { createToolHandlers } from "../commands/toolCommands";
 import { IconGraph, IconHistory, IconLibrary } from "../components/Icons";
 import { HISTORY_COMMAND_IDS } from "../history/historyCommands";
 import { PaperDialog } from "../components/paper/PaperDialog";
@@ -433,6 +435,22 @@ const VaultEditorComponent = ({
     () => (libraryApi ? registerLiveEditor(libraryApi) : undefined),
     [libraryApi],
   );
+
+  // Tool keys (tool.* commands): Excalidraw's built-in letters are turned off
+  // only after the handlers are bound, so a key is never dead for a frame. No
+  // API (or an Excalidraw without the hook) keeps the built-in keys.
+  const [toolKeysBound, setToolKeysBound] = useState(false);
+  useEffect(() => {
+    if (!libraryApi || typeof libraryApi.activateToolShortcut !== "function") {
+      return undefined;
+    }
+    const unbind = registerCommandHandlers(createToolHandlers(libraryApi));
+    setToolKeysBound(true);
+    return () => {
+      setToolKeysBound(false);
+      unbind();
+    };
+  }, [libraryApi]);
 
   // Canvas sync: the display colour transform changed (theme, mode, sync
   // toggle, export). Element caches invalidate on the next render, so force
@@ -878,6 +896,7 @@ const VaultEditorComponent = ({
         laserPointerOptions={pens.laserPointerOptions}
         libraryUIOptions={libraryUIOptions}
         UIOptions={{
+          toolShortcuts: !toolKeysBound,
           canvasActions: {
             toggleTheme: true,
             export: false,
