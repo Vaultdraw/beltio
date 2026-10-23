@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { getSnippetSource } from "../../../snippets/store";
 import { resolveAccent } from "../../../theme/accent";
 import { openThemesDir } from "../../../theme/registry";
 import { resolveTheme } from "../../../vault/preferences";
@@ -12,6 +13,7 @@ import { useSettings, type SettingControls } from "../SettingsContext";
 import { ColorSwatches, Segmented, Switch } from "./controls";
 import { useCanvasTheme } from "./useCanvasTheme";
 import { PaperSetting } from "./PaperSetting";
+import { SnippetsSetting } from "./Snippets";
 
 import type { CSSProperties } from "react";
 
@@ -263,5 +265,9 @@ export const appearanceControls: SettingControls = {
   "themes-folder": {
     Component: ThemesFolderSetting,
     available: (ctx) => ctx.registry.mode === "tauri",
+  },
+  "css-snippets": {
+    Component: SnippetsSetting,
+    available: (ctx) => getSnippetSource(ctx.win) !== null,
   },
 };

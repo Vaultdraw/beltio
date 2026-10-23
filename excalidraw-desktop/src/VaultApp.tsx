@@ -76,6 +76,7 @@ import {
 } from "./plugins/workspaceBridge";
 import { useVaultDocument } from "./vault/useVaultDocument";
 import { useAppearance } from "./vault/useAppearance";
+import { useSnippets } from "./snippets/useSnippets";
 import { runZoomCommand, useInterfaceZoom } from "./vault/useInterfaceZoom";
 import { useVaultSettings } from "./vault/useVaultSettings";
 import { tagQuery } from "./tags/types";
@@ -370,6 +371,7 @@ export const VaultApp = ({
     }));
   // Colour theme + mode: tokens, html.dark, canvas sync (see useAppearance).
   const appearance = useAppearance(doc, win);
+  useSnippets(doc, win);
   const { refresh: refreshAppearance } = appearance;
   const appTheme = appearance.snapshot.mode;
   // The thumbnail service lives in ThumbnailsRoot (see there); save notices

@@ -10,6 +10,11 @@ import { installNativeContextMenuSuppression } from "../src/platform/nativeConte
 import { allEditorApis } from "../src/editor/editorApi";
 import { FakeHistoryRepository } from "../src/tests/fakeHistoryRepository";
 import { FakeLibraryRepository } from "../src/tests/fakeLibraryRepository";
+import { setSnippetSource } from "../src/snippets/store";
+import {
+  E2E_SNIPPETS,
+  FakeSnippetSource,
+} from "../src/tests/fakeSnippetSource";
 import { FakePdfBridge } from "../src/tests/fakePdfBridge";
 import { toastStore } from "../src/toasts/toastStore";
 import { FakeVaultRepository } from "../src/tests/fakeVaultRepository";
@@ -59,6 +64,10 @@ setAutosaveDelayMs(
   Number(params.get("autosave")) || E2E_AUTOSAVE_MS,
   ownerWindow,
 );
+// ?snippets=1: a fake snippets folder, so Settings → CSS snippets shows up.
+if (params.get("snippets") === "1") {
+  setSnippetSource(new FakeSnippetSource(E2E_SNIPPETS));
+}
 if (params.get("chrome") === "macos") {
   ownerDocument.documentElement.classList.add("vault-macos");
 }

@@ -10,6 +10,12 @@ import { HISTORY_COMMANDS } from "../history/historyCommands";
 import { SETTINGS_PAGES } from "../components/settings/schema";
 import { MAX_PEN_PRESETS } from "../pens/penPresets";
 import {
+  boundSnippetToggleCommands,
+  makeSnippetToggleCommand,
+  parseSnippetToggleCommandId,
+  SNIPPET_COMMANDS,
+} from "../snippets/snippetCommands";
+import {
   TOOL_DEFAULT_RESET_DRAWING_ID,
   TOOL_DEFAULT_SAVE_ACTIVE_ID,
   toolDefaultResetId,
@@ -636,6 +642,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...AI_COMMANDS,
   ...CONFIG_COMMANDS,
   ...HELP_COMMANDS,
+  ...SNIPPET_COMMANDS,
 ];
 
 registerCommands(COMMANDS);
@@ -657,14 +664,26 @@ export const getCommand = (id: string): CommandDefinition | undefined => {
     return registered;
   }
   const path = parseDrawingOpenCommandId(id);
-  return path === null ? undefined : makeDrawingOpenCommand(path);
+  if (path !== null) {
+    return makeDrawingOpenCommand(path);
+  }
+  const snippet = parseSnippetToggleCommandId(id);
+  return snippet === null ? undefined : makeSnippetToggleCommand(snippet);
 };
 
-/** The registry plus one command per drawing bound in `[hotkeys]`. */
+/**
+ * The registry plus one command per drawing bound in `[hotkeys]`, and per
+ * bound CSS snippet toggle not registered yet (the folder is listed lazily).
+ */
 export const allCommands = (
   overrides: HotkeyOverrides,
 ): readonly CommandDefinition[] => {
-  const dynamic = drawingOpenCommands(overrides);
+  const dynamic = [
+    ...drawingOpenCommands(overrides),
+    ...boundSnippetToggleCommands(overrides).filter(
+      (c) => !getRegisteredCommand(c.id),
+    ),
+  ];
   return dynamic.length > 0
     ? [...registeredCommands(), ...dynamic]
     : registeredCommands();
@@ -673,7 +692,8 @@ export const allCommands = (
 export const isCommandId = (id: string): boolean =>
   getRegisteredCommand(id) !== undefined ||
   isLegacyCommandId(id) ||
-  parseDrawingOpenCommandId(id) !== null;
+  parseDrawingOpenCommandId(id) !== null ||
+  parseSnippetToggleCommandId(id) !== null;
 
 /** Default chords on a platform ([] = unassigned). */
 export const defaultKeys = (

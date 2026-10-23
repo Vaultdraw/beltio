@@ -190,6 +190,8 @@ interface VaultPreferencesBase {
   pagePaperTheme: PagePaperTheme;
   /** Replaces the theme's primary colour ("#rrggbb"); "" = the theme's own. */
   accentColor: string;
+  /** Enabled CSS snippets (`<config>/snippets/<name>.css`), applied in order. */
+  snippets: string[];
   /** Whole-window zoom in percent (webview zoom), 50 to 200. */
   zoom: number;
   /** Ask before moving a file or folder to the OS Trash. */
@@ -342,6 +344,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   pageHeight: 0,
   pagePaperTheme: "normal",
   accentColor: "",
+  snippets: [],
   zoom: 100,
   confirmDelete: true,
   showTagChips: true,
@@ -665,6 +668,7 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       d.pagePaperTheme,
     ),
     accentColor: pick(parsed.accentColor, isString, d.accentColor),
+    snippets: pick(parsed.snippets, isStringArray, d.snippets),
     zoom: pick(
       parsed.zoom,
       (v) =>

@@ -285,6 +285,7 @@ type ConfigField =
   | "defaultRoughness"
   | "autosaveDelayMs"
   | "accentColor"
+  | "snippets"
   | "zoom"
   | "confirmDelete"
   | "showTagChips"
@@ -616,6 +617,12 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "appearance.accent_color",
     expected: 'a colour like "#6965db", or "" for the theme\'s own',
     valid: (v) => v === "" || (typeof v === "string" && ACCENT_RE.test(v)),
+  },
+  {
+    field: "snippets",
+    key: "appearance.snippets",
+    expected: 'a list of snippet names like ["wide-sidebar"]',
+    valid: isStringList,
   },
   {
     field: "zoom",

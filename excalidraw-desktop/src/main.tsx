@@ -95,6 +95,16 @@ void initSettings(ownerWindow)
       // VaultApp retries through useAppearance.
     }
     mark("theme-applied");
+    // Enabled CSS snippets before the first render too; no snippets, no work.
+    if (getPreferences(ownerWindow).snippets.length > 0) {
+      try {
+        const { reloadSnippets } = await import("./snippets/store");
+        await reloadSnippets(ownerDocument, ownerWindow);
+      } catch {
+        // Never fatal: the app starts without snippets.
+      }
+      mark("snippets-applied");
+    }
     return import("./VaultApp");
   })
   .then(({ default: VaultApp }) => {

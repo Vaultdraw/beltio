@@ -1,0 +1,44 @@
+/* Settings → Appearance → CSS snippets */
+.vault-snippets__actions {
+  display: inline-flex;
+  gap: var(--vd-space-2);
+}
+
+.vault-snippets {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vault-snippets__item {
+  display: flex;
+  align-items: center;
+  gap: var(--vd-space-2);
+  padding: 6px 0;
+  border-top: 1px solid var(--vault-border);
+}
+
+.vault-snippets__item:first-child {
+  border-top: 0;
+}
+
+.vault-snippets__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vault-snippets__error {
+  color: var(--vault-danger);
+  font-size: var(--vd-fs-small);
+}
+
+.vault-snippets__empty {
+  margin: 0;
+  color: var(--vault-text-muted);
+  font-size: var(--vd-fs-small);
+}

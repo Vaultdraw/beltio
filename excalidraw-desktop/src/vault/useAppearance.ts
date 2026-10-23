@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import { setCanvasSync, setCanvasThemeSource } from "../editor/canvasSync";
+import { keepSnippetsLast } from "../snippets/sheets";
 import {
   getThemeRegistry,
   THEMES_CHANGED_EVENT,
@@ -79,6 +80,8 @@ export const useAppearance = (
   useLayoutEffect(() => {
     if (doc) {
       applyAppearance(doc, snapshot);
+      // A theme sheet adopted now must not cover the user's CSS snippets.
+      keepSnippetsLast(doc);
     }
     // The canvas palette follows the theme, not the accent.
     const source = {
