@@ -59,6 +59,8 @@ let state: SnippetsState = EMPTY;
 let unregisterToggles: (() => void) | null = null;
 let registeredIds = "";
 let loading: Promise<void> = Promise.resolve();
+/** Enabled list (joined) of the latest reload asked for; null = never (none applied). */
+let requestedKey: string | null = null;
 const listeners = new Set<() => void>();
 
 /** Tests and the browser harness: replace the native source (null = native). */
@@ -117,6 +119,16 @@ export function enabledSnippetNames(win: Window | null | undefined): string[] {
   return out;
 }
 
+const enabledKey = (win: Window | null | undefined) =>
+  enabledSnippetNames(win).map(lower).join("\n");
+
+/**
+ * True when `appearance.snippets` differs from what the last reload applied
+ * (whoever triggered it: boot, Settings, a command), i.e. a reload is due.
+ */
+export const snippetsOutOfDate = (win: Window | null | undefined): boolean =>
+  enabledKey(win) !== (requestedKey ?? "");
+
 const syncToggleCommands = (ids: readonly string[]) => {
   const key = ids.join("\n");
   if (key === registeredIds) {
@@ -172,6 +184,7 @@ export function reloadSnippets(
   doc: Document,
   win: Window | null | undefined,
 ): Promise<void> {
+  requestedKey = enabledKey(win);
   loading = loading.then(async () => {
     const source = getSnippetSource(win);
     if (!source) {
@@ -194,7 +207,12 @@ export function reloadSnippets(
   return loading;
 }
 
-/** Turns one snippet on (appended last) or off, saves config.toml, re-applies. */
+/**
+ * Turns one snippet on (appended last) or off, saves config.toml, re-applies.
+ * Only a snippet that exists in the folder can be turned on (no typos in
+ * config.toml from a keypress); any enabled name can be turned off.
+ * Throws when asked to turn on an unknown name.
+ */
 export async function toggleSnippet(
   doc: Document,
   win: Window | null | undefined,
@@ -207,14 +225,20 @@ export async function toggleSnippet(
   if (want === isOn) {
     return;
   }
-  updatePreferences(
-    {
-      snippets: want
-        ? [...enabled, name]
-        : enabled.filter((n) => lower(n) !== lower(name)),
-    },
-    win,
-  );
+  let next: string[];
+  if (want) {
+    if (!state.loaded) {
+      await reloadSnippets(doc, win);
+    }
+    const file = state.snippets.find((s) => lower(s.id) === lower(name));
+    if (!file) {
+      throw new Error(`No snippet named "${name}" in the snippets folder`);
+    }
+    next = [...enabled, file.id];
+  } else {
+    next = enabled.filter((n) => lower(n) !== lower(name));
+  }
+  updatePreferences({ snippets: next }, win);
   await reloadSnippets(doc, win);
 }
 
@@ -236,5 +260,6 @@ export function resetSnippetsForTests(): void {
   injected = null;
   state = EMPTY;
   loading = Promise.resolve();
+  requestedKey = null;
   listeners.clear();
 }

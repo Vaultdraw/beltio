@@ -9,6 +9,11 @@
  *   // later: handle.restore();
  */
 
+import {
+  adoptBeforeUserSheets,
+  insertStyleBeforeUserStyles,
+} from "../platform/styleOrder";
+
 import { builtinThemeFiles } from "./builtins";
 
 export * from "./types";
@@ -102,7 +107,7 @@ const writeOverrideCss = (doc: Document, css: string): (() => void) => {
     if (!sheet) {
       sheet = new win.CSSStyleSheet();
       constructedSheets.set(doc, sheet);
-      doc.adoptedStyleSheets = [...doc.adoptedStyleSheets, sheet];
+      adoptBeforeUserSheets(doc, sheet);
     }
     sheet.replaceSync(css);
     const current = sheet;
@@ -118,12 +123,14 @@ const writeOverrideCss = (doc: Document, css: string): (() => void) => {
     };
   }
 
-  let style = doc.getElementById(EXCALIDRAW_OVERRIDE_STYLE_ID);
+  let style = doc.getElementById(
+    EXCALIDRAW_OVERRIDE_STYLE_ID,
+  ) as HTMLStyleElement | null;
   const previousCss = style ? style.textContent : null;
   if (!style) {
     style = doc.createElement("style");
     style.id = EXCALIDRAW_OVERRIDE_STYLE_ID;
-    (doc.head ?? doc.documentElement).appendChild(style);
+    insertStyleBeforeUserStyles(doc, style);
   }
   style.textContent = css;
   const styleEl = style;

@@ -672,21 +672,27 @@ export const getCommand = (id: string): CommandDefinition | undefined => {
 };
 
 /**
- * The registry plus one command per drawing bound in `[hotkeys]`, and per
- * bound CSS snippet toggle not registered yet (the folder is listed lazily).
+ * The registry plus one command per drawing bound in `[hotkeys]`, and one
+ * per CSS snippet toggle bound there (the folder is listed lazily). Snippet
+ * names match case-insensitively, so a bound toggle replaces a registered
+ * one that differs only in case: the bound id carries the key.
  */
 export const allCommands = (
   overrides: HotkeyOverrides,
 ): readonly CommandDefinition[] => {
-  const dynamic = [
-    ...drawingOpenCommands(overrides),
-    ...boundSnippetToggleCommands(overrides).filter(
-      (c) => !getRegisteredCommand(c.id),
-    ),
-  ];
-  return dynamic.length > 0
-    ? [...registeredCommands(), ...dynamic]
-    : registeredCommands();
+  const drawings = drawingOpenCommands(overrides);
+  const snippets = boundSnippetToggleCommands(overrides);
+  if (drawings.length === 0 && snippets.length === 0) {
+    return registeredCommands();
+  }
+  const boundSnippets = new Set(
+    snippets.map((c) => parseSnippetToggleCommandId(c.id)!.toLowerCase()),
+  );
+  const registered = registeredCommands().filter((c) => {
+    const name = parseSnippetToggleCommandId(c.id);
+    return name === null || !boundSnippets.has(name.toLowerCase());
+  });
+  return [...registered, ...drawings, ...snippets];
 };
 
 export const isCommandId = (id: string): boolean =>

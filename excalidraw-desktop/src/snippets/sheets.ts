@@ -1,19 +1,24 @@
 /**
  * Puts enabled CSS snippets into the document, one stylesheet per snippet,
- * after everything else so a snippet overrides the theme at equal
- * specificity.
+ * after the app's own sheets so a snippet overrides the theme at equal
+ * specificity. The theme inserts its sheet before user sheets
+ * (platform/styleOrder.ts), so the order holds whatever is applied last.
  *
- * Constructed stylesheets (adoptedStyleSheets) are used whenever available:
- * the packaged app's CSP nonce makes injected <style> elements inert, and
- * adopted sheets also cascade after every <style>/<link> in the document,
- * including the theme's override sheet once `keepSnippetsLast` has run.
- * <style data-vault-snippet> elements are the fallback (jsdom).
+ * Constructed stylesheets (adoptedStyleSheets, WebKit 16.4+) are used when
+ * available. Older WebKit gets <style> elements, which apply under the
+ * release CSP (style-src keeps 'unsafe-inline'; a nonce is copied if the
+ * page has one), so neither path is a silent no-op.
  *
- * The CSS is applied as written. A sheet that fails to build (it can only
- * throw for non-CSS input) is skipped and reported; it never breaks startup.
- * `@import` is ignored by constructed sheets, and the CSP blocks remote
- * url()s, so a snippet never reaches the network.
+ * The CSS is applied as written. A sheet that fails to build is skipped and
+ * reported; it never breaks startup. `@import` is ignored by constructed
+ * sheets, and the CSP blocks remote url()s, so a snippet never reaches the
+ * network.
  */
+import {
+  markUserSheet,
+  styleNonce,
+  USER_STYLE_ATTR,
+} from "../platform/styleOrder";
 
 export interface SnippetCss {
   id: string;
@@ -55,7 +60,7 @@ export function applySnippetCss(
       try {
         const sheet = new win.CSSStyleSheet();
         sheet.replaceSync(css);
-        sheets.push(sheet);
+        sheets.push(markUserSheet(sheet));
       } catch (err) {
         errors[id] = errorText(err);
       }
@@ -74,30 +79,18 @@ export function applySnippetCss(
   }
   doc.querySelectorAll(`style[${SNIPPET_ATTR}]`).forEach((el) => el.remove());
   const parent = doc.head ?? doc.documentElement;
+  const nonce = items.length > 0 ? styleNonce(doc) : "";
   for (const { id, css } of items) {
     const style = doc.createElement("style");
     style.setAttribute(SNIPPET_ATTR, id);
+    style.setAttribute(USER_STYLE_ATTR, "");
+    if (nonce) {
+      style.nonce = nonce;
+    }
     style.textContent = css;
     parent.appendChild(style);
   }
   return errors;
-}
-
-/**
- * Moves our adopted sheets back to the end if something (the theme) was
- * adopted after them. Cheap no-op when no snippet is applied.
- */
-export function keepSnippetsLast(doc: Document): void {
-  const ours = adopted.get(doc);
-  if (!ours || ours.length === 0) {
-    return;
-  }
-  const list = doc.adoptedStyleSheets;
-  const tail = list.slice(list.length - ours.length);
-  if (tail.every((s, i) => s === ours[i])) {
-    return;
-  }
-  doc.adoptedStyleSheets = [...list.filter((s) => !ours.includes(s)), ...ours];
 }
 
 /** Number of snippet sheets currently applied (tests, diagnostics). */

@@ -1,4 +1,5 @@
 /** Applies the current plugin list and enabled ids to the registries (stubs). */
+import { scheduleIdle } from "../../platform/idle";
 import { getPreferences } from "../../vault/preferences";
 
 import { ensureActive } from "./activation";
@@ -14,11 +15,7 @@ export type Schedule = (run: () => void) => void;
 export const idleSchedule =
   (win: Window): Schedule =>
   (run) => {
-    if (typeof win.requestIdleCallback === "function") {
-      win.requestIdleCallback(() => run());
-    } else {
-      win.setTimeout(run, 50);
-    }
+    scheduleIdle(win, run);
   };
 
 const queue: string[] = [];

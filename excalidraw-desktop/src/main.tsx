@@ -78,6 +78,16 @@ void initSettings(ownerWindow)
     void import("./vault/zoom").then(({ applyWebviewZoom, clampZoom }) =>
       applyWebviewZoom(clampZoom(getPreferences(ownerWindow).zoom)),
     );
+    // Enabled CSS snippets: read in parallel with the theme registry below.
+    // No snippets, no work. Never fatal: the app starts without them.
+    const snippetsReady =
+      getPreferences(ownerWindow).snippets.length > 0
+        ? import("./snippets/store")
+            .then(({ reloadSnippets }) =>
+              reloadSnippets(ownerDocument, ownerWindow),
+            )
+            .catch(() => {})
+        : null;
     // Colour theme before the first render (no flash of the default look).
     // Never fatal: a broken theme setup falls back to the stock look.
     try {
@@ -95,14 +105,10 @@ void initSettings(ownerWindow)
       // VaultApp retries through useAppearance.
     }
     mark("theme-applied");
-    // Enabled CSS snippets before the first render too; no snippets, no work.
-    if (getPreferences(ownerWindow).snippets.length > 0) {
-      try {
-        const { reloadSnippets } = await import("./snippets/store");
-        await reloadSnippets(ownerDocument, ownerWindow);
-      } catch {
-        // Never fatal: the app starts without snippets.
-      }
+    // Enabled CSS snippets also land before the first render; they were
+    // listed in parallel with the theme (order is kept by styleOrder.ts).
+    if (snippetsReady) {
+      await snippetsReady;
       mark("snippets-applied");
     }
     return import("./VaultApp");

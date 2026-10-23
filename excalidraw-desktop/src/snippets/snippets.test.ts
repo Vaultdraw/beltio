@@ -10,12 +10,12 @@ import {
   PREFERENCES_CHANGED_EVENT,
 } from "../vault/settingsSync";
 
+import { applyThemeTokens } from "../theme";
+import { touchesConfigSubdir } from "../vault/configPaths";
+
 import { touchesSnippets, startSnippets } from "./boot";
-import {
-  appliedSnippetCount,
-  applySnippetCss,
-  keepSnippetsLast,
-} from "./sheets";
+
+import { appliedSnippetCount, applySnippetCss } from "./sheets";
 import {
   boundSnippetToggleCommands,
   makeSnippetToggleCommand,
@@ -86,10 +86,16 @@ describe("applySnippetCss (style element fallback)", () => {
     expect(appliedSnippetCount(doc)).toBe(0);
   });
 
-  it("keepSnippetsLast is a no-op without adopted sheets", () => {
+  it("a theme <style> applied later still lands before the snippets", () => {
     applySnippetCss(doc, [{ id: "a", css: "a{}" }]);
-    expect(() => keepSnippetsLast(doc)).not.toThrow();
-    expect(appliedSnippetCount(doc)).toBe(1);
+    const handle = applyThemeTokens(doc, {}, { "--x": "1" });
+    const order = Array.from(doc.head.querySelectorAll("style")).map(
+      (el) => el.id || el.getAttribute("data-vault-snippet"),
+    );
+    expect(order.indexOf("vault-theme-excalidraw-vars")).toBeLessThan(
+      order.indexOf("a"),
+    );
+    handle.restore();
   });
 });
 
@@ -161,27 +167,15 @@ describe("applySnippetCss (adoptedStyleSheets)", () => {
     expect(adoptedCss()).toEqual(["ok{}"]);
   });
 
-  it("keepSnippetsLast moves ours behind a later-adopted sheet", () => {
+  it("a theme sheet adopted after the snippets is inserted before them", () => {
     applySnippetCss(doc, [{ id: "a", css: "a{}" }]);
-    const later = new FakeSheet();
-    later.css = "theme";
-    (doc as any).adoptedStyleSheets = [
-      ...(doc as any).adoptedStyleSheets,
-      later,
-    ];
-    expect(adoptedCss()).toEqual(["a{}", "theme"]);
-    keepSnippetsLast(doc);
-    expect(adoptedCss()).toEqual(["theme", "a{}"]);
-    const same = (doc as any).adoptedStyleSheets;
-    keepSnippetsLast(doc);
-    expect((doc as any).adoptedStyleSheets).toBe(same);
-  });
-
-  it("keepSnippetsLast is a no-op with none applied", () => {
-    const list = [new FakeSheet()];
-    (doc as any).adoptedStyleSheets = list;
-    keepSnippetsLast(doc);
-    expect((doc as any).adoptedStyleSheets).toBe(list);
+    const handle = applyThemeTokens(doc, {}, { "--x": "1" });
+    const list = adoptedCss();
+    expect(list).toHaveLength(2);
+    expect(list[1]).toBe("a{}");
+    expect(list[0]).toContain("--x");
+    handle.restore();
+    expect(adoptedCss()).toEqual(["a{}"]);
   });
 });
 
@@ -269,9 +263,23 @@ describe("reloadSnippets / toggleSnippet", () => {
     await toggleSnippet(doc, win, "a", false);
     expect(source.lists).toBe(0);
     await toggleSnippet(doc, win, "a", true);
+    const lists = source.lists;
     await toggleSnippet(doc, win, "a", true);
-    expect(source.lists).toBe(1);
+    expect(source.lists).toBe(lists);
     expect(getPreferences(win).snippets).toEqual(["a"]);
+  });
+
+  it("only turns on snippets that exist; unknown names can be turned off", async () => {
+    setSnippetSource(new FakeSnippetSource({ wide: "w{}" }));
+    await expect(toggleSnippet(doc, win, "typo")).rejects.toThrow(
+      'No snippet named "typo"',
+    );
+    expect(getPreferences(win).snippets).toEqual([]);
+    await toggleSnippet(doc, win, "WIDE");
+    expect(getPreferences(win).snippets).toEqual(["wide"]);
+    updatePreferences({ snippets: ["wide", "deleted"] }, win);
+    await toggleSnippet(doc, win, "deleted");
+    expect(getPreferences(win).snippets).toEqual(["wide"]);
   });
 });
 
@@ -301,6 +309,19 @@ describe("snippet command ids", () => {
     );
   });
 
+  it("a bound toggle differing only in case replaces the registered one", () => {
+    applyListing(doc, [], [row("Wide", null)]);
+    const overrides = {
+      "snippets.toggle:wide": ["Mod+W"],
+      "snippets.toggle:WIDE": ["Mod+Alt+W"],
+    } as any;
+    const ids = allCommands(overrides)
+      .map((c) => c.id)
+      .filter((id) => id.toLowerCase() === "snippets.toggle:wide");
+    expect(ids).toHaveLength(1);
+    expect(overrides[ids[0]]).toBeDefined();
+  });
+
   it("registered toggles are not duplicated by allCommands", () => {
     applyListing(doc, [], [row("dark", null)]);
     const ids = allCommands({ "snippets.toggle:dark": ["Mod+D"] } as any).map(
@@ -310,15 +331,38 @@ describe("snippet command ids", () => {
   });
 });
 
-describe("touchesSnippets", () => {
-  it("matches only paths inside snippets/", () => {
-    expect(touchesSnippets(["/c/snippets/a.css"])).toBe(true);
-    expect(touchesSnippets(["C:\\c\\snippets\\a.css"])).toBe(true);
-    expect(touchesSnippets(["/c/config.toml", "/c/snippets"])).toBe(true);
-    expect(touchesSnippets(["/c/config.toml", "/c/themes/x.json"])).toBe(false);
-    expect(touchesSnippets(["/c/mysnippets/a.css"])).toBe(false);
-    expect(touchesSnippets(undefined)).toBe(false);
-    expect(touchesSnippets([1])).toBe(false);
+describe("touchesSnippets / touchesConfigSubdir", () => {
+  it("without a known root, matches a snippets/ path segment", () => {
+    expect(touchesSnippets(["/c/snippets/a.css"], null)).toBe(true);
+    expect(touchesSnippets(["C:\\c\\snippets\\a.css"], null)).toBe(true);
+    expect(touchesSnippets(["/c/config.toml", "/c/snippets"], null)).toBe(true);
+    expect(touchesSnippets(["/c/config.toml", "/c/themes/x.json"], null)).toBe(
+      false,
+    );
+    expect(touchesSnippets(["/c/mysnippets/a.css"], null)).toBe(false);
+    expect(touchesSnippets([1], null)).toBe(false);
+  });
+
+  it("is anchored to the config root", () => {
+    const root = "/Users/me/.config/vaultdraw";
+    expect(touchesSnippets([`${root}/snippets/a.css`], root)).toBe(true);
+    expect(touchesSnippets([`${root}/SNIPPETS`], root)).toBe(true);
+    expect(touchesSnippets([`${root}/themes/snippets/x.json`], root)).toBe(
+      false,
+    );
+    expect(touchesSnippets([`${root}/snippets.bak/a.css`], root)).toBe(false);
+    expect(touchesSnippets(["/other/snippets/a.css"], root)).toBe(false);
+    // The watcher reports the root itself when it can't tell what changed.
+    expect(touchesSnippets([root], root)).toBe(true);
+    expect(touchesSnippets([`${root}/`], root)).toBe(true);
+    expect(
+      touchesConfigSubdir(["C:\\Cfg\\Themes\\x.json"], "themes", "C:\\cfg"),
+    ).toBe(true);
+  });
+
+  it("treats an unknown or empty batch as a change", () => {
+    expect(touchesSnippets(undefined, null)).toBe(true);
+    expect(touchesSnippets([], "/c")).toBe(true);
   });
 });
 
@@ -397,6 +441,22 @@ describe("startSnippets", () => {
     win.dispatchEvent(new Event(PREFERENCES_CHANGED_EVENT));
     await flush();
     expect(t.source.lists).toBe(1);
+  });
+
+  it("a Settings toggle then a hand edit removing it reloads (no stale key)", async () => {
+    const t = setup();
+    const stop = startSnippets(doc, win, { listen: t.listen, idle: t.idle });
+    t.runIdle();
+    await flush();
+    // Settings calls the store directly, not through boot.
+    await toggleSnippet(doc, win, "a", true);
+    expect(styles().map((x) => x[0])).toEqual(["a"]);
+    // config.toml edited by hand: the snippet is removed again.
+    updatePreferences({ snippets: [] }, win);
+    win.dispatchEvent(new Event(PREFERENCES_CHANGED_EVENT));
+    await flush();
+    expect(styles()).toEqual([]);
+    stop();
   });
 
   it("reloads on config-change only when snippets/ was touched", async () => {

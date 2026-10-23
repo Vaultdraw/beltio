@@ -86,7 +86,19 @@ pub(crate) fn list_snippets_in(dir: &Path, enabled: &[String]) -> Result<Vec<Sni
         })
         .collect();
     found.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()).then_with(|| a.1.cmp(&b.1)));
-    found.truncate(MAX_SNIPPETS);
+    // Cap the listing, but never drop an enabled snippet (it would read as "not found").
+    if found.len() > MAX_SNIPPETS {
+        let is_enabled = |id: &str| enabled.contains(&id.to_lowercase());
+        let room = MAX_SNIPPETS.saturating_sub(found.iter().filter(|(id, _)| is_enabled(id)).count());
+        let mut others = 0;
+        found.retain(|(id, _)| {
+            if is_enabled(id) {
+                return true;
+            }
+            others += 1;
+            others <= room
+        });
+    }
     Ok(found
         .into_iter()
         .map(|(id, path)| {
@@ -170,6 +182,21 @@ mod tests {
         assert_eq!(list[0].error.as_deref(), Some("big.css is larger than 256 KiB"));
         assert_eq!(list[1].error.as_deref(), Some("bin.css is not valid UTF-8"));
         assert!(list.iter().all(|e| e.css.is_none()));
+    }
+
+    #[test]
+    fn cap_keeps_enabled_snippets_past_the_limit() {
+        let t = tempdir().unwrap();
+        let dir = t.path();
+        for i in 0..MAX_SNIPPETS + 5 {
+            fs::write(dir.join(format!("s{i:04}.css")), "").unwrap();
+        }
+        let last = format!("s{:04}", MAX_SNIPPETS + 4);
+        let list = list_snippets_in(dir, &[last.to_uppercase()]).unwrap();
+        assert_eq!(list.len(), MAX_SNIPPETS);
+        let entry = list.iter().find(|e| e.id == last).expect("enabled snippet kept");
+        assert_eq!(entry.css.as_deref(), Some(""));
+        assert_eq!(list[0].id, "s0000");
     }
 
     #[cfg(unix)]

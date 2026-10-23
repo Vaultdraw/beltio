@@ -18,7 +18,9 @@
  * parse the one theme actually used.
  */
 
+import { touchesConfigSubdir } from "../vault/configPaths";
 import { isTauriAvailable } from "../vault/DesktopVaultRepository";
+import { getSettingsStatus } from "../vault/settingsSync";
 
 import { parseThemeFile, slugify } from "./normalize";
 
@@ -434,9 +436,7 @@ export const loadThemeRegistry = async (
 };
 
 const touchesThemes = (paths: unknown) =>
-  !Array.isArray(paths) ||
-  paths.length === 0 ||
-  paths.some((p) => typeof p === "string" && /[\\/]themes([\\/]|$)/i.test(p));
+  touchesConfigSubdir(paths, "themes", getSettingsStatus().configDir);
 
 /**
  * Reloads the registry whenever the config watcher reports a change inside

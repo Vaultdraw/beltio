@@ -11,19 +11,26 @@ import {
   registerCommandHandlers,
   registerCommandPrefixHandler,
 } from "../commands/handlerRegistry";
-import { PREFERENCES_CHANGED_EVENT } from "../vault/settingsSync";
+import {
+  getSettingsStatus,
+  PREFERENCES_CHANGED_EVENT,
+} from "../vault/settingsSync";
 import { isTauriAvailable } from "../vault/DesktopVaultRepository";
+import { scheduleIdle } from "../platform/idle";
 import { toastStore } from "../toasts/toastStore";
+import { touchesConfigSubdir } from "../vault/configPaths";
 
 import { SNIPPET_COMMAND_IDS, SNIPPET_TOGGLE_PREFIX } from "./snippetCommands";
 import {
-  enabledSnippetNames,
   getSnippetSource,
   getSnippetsState,
   openSnippetsDir,
   reloadSnippets,
+  snippetsOutOfDate,
   toggleSnippet,
 } from "./store";
+
+const IDLE = { timeout: 5000, fallbackMs: 1000 };
 
 type ListenFn = <T>(
   event: string,
@@ -36,25 +43,11 @@ export interface SnippetBootDeps {
   idle?: (run: () => void) => () => void;
 }
 
-/** True when a `config-change` batch touched `<config>/snippets/`. */
-export const touchesSnippets = (paths: unknown): boolean =>
-  Array.isArray(paths) &&
-  paths.some((p) => typeof p === "string" && /[\\/]snippets([\\/]|$)/i.test(p));
-
-const defaultIdle =
-  (win: Window) =>
-  (run: () => void): (() => void) => {
-    const w = win as Window & {
-      requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
-      cancelIdleCallback?: (id: number) => void;
-    };
-    if (w.requestIdleCallback) {
-      const id = w.requestIdleCallback(run, { timeout: 5000 });
-      return () => w.cancelIdleCallback?.(id);
-    }
-    const id = win.setTimeout(run, 1000);
-    return () => win.clearTimeout(id);
-  };
+/** True when a `config-change` batch concerns `<config>/snippets/`. */
+export const touchesSnippets = (
+  paths: unknown,
+  configDir: string | null = getSettingsStatus().configDir,
+): boolean => touchesConfigSubdir(paths, "snippets", configDir);
 
 const report = (message: string) => {
   toastStore.push({ kind: "error", message });
@@ -70,11 +63,7 @@ export function startSnippets(
   }
   let disposed = false;
   const disposers: (() => void)[] = [];
-  let appliedKey = enabledSnippetNames(win).join("\n");
-  const reload = () => {
-    appliedKey = enabledSnippetNames(win).join("\n");
-    return reloadSnippets(doc, win);
-  };
+  const reload = () => reloadSnippets(doc, win);
 
   disposers.push(
     registerCommandHandlers({
@@ -88,15 +77,17 @@ export function startSnippets(
           ),
         ),
     }),
-    registerCommandPrefixHandler(SNIPPET_TOGGLE_PREFIX, async (name) => {
-      await toggleSnippet(doc, win, name);
-      appliedKey = enabledSnippetNames(win).join("\n");
-    }),
+    registerCommandPrefixHandler(SNIPPET_TOGGLE_PREFIX, (name) =>
+      toggleSnippet(doc, win, name).catch((err) =>
+        report(err instanceof Error ? err.message : String(err)),
+      ),
+    ),
   );
 
-  // config.toml edited by hand (or another window): follow the list.
+  // config.toml edited by hand (or another window): follow the list. The
+  // store remembers what the last reload applied, whoever triggered it.
   const onPrefs = () => {
-    if (enabledSnippetNames(win).join("\n") !== appliedKey) {
+    if (snippetsOutOfDate(win)) {
       void reload();
     }
   };
@@ -132,7 +123,7 @@ export function startSnippets(
   // only fills the list for the palette and Settings, when the app is idle.
   if (!getSnippetsState().loaded) {
     disposers.push(
-      (deps.idle ?? defaultIdle(win))(() => {
+      (deps.idle ?? ((run) => scheduleIdle(win, run, IDLE)))(() => {
         if (!disposed && !getSnippetsState().loaded) {
           void reload();
         }

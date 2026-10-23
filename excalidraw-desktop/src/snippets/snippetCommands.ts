@@ -46,11 +46,21 @@ export const makeSnippetToggleCommand = (name: string): CommandDefinition => ({
   keys: { default: [] },
 });
 
-/** One toggle per snippet bound in `[hotkeys]` (in id order). */
+/**
+ * One toggle per snippet bound in `[hotkeys]`, in id order. Names match
+ * case-insensitively, so ids differing only in case count once (the first).
+ */
 export const boundSnippetToggleCommands = (
   overrides: HotkeyOverrides,
-): CommandDefinition[] =>
-  Object.keys(overrides)
-    .filter((id) => parseSnippetToggleCommandId(id) !== null)
-    .sort()
-    .map((id) => makeSnippetToggleCommand(parseSnippetToggleCommandId(id)!));
+): CommandDefinition[] => {
+  const seen = new Set<string>();
+  const out: CommandDefinition[] = [];
+  for (const id of Object.keys(overrides).sort()) {
+    const name = parseSnippetToggleCommandId(id);
+    if (name !== null && !seen.has(name.toLowerCase())) {
+      seen.add(name.toLowerCase());
+      out.push(makeSnippetToggleCommand(name));
+    }
+  }
+  return out;
+};
