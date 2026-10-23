@@ -297,3 +297,77 @@ describe("addFiles / retainFiles", () => {
     expect(Object.keys(h.app.files)).toEqual([]);
   });
 });
+
+describe("releasing files nothing can bring back", () => {
+  let restore: () => void;
+  beforeEach(async () => {
+    restore = stubImage();
+    await render(<Excalidraw />);
+  });
+  afterEach(() => restore());
+
+  const addImages = async (ids: string[]) => {
+    await h.app.addFiles(ids.map((id) => file(id)));
+    API.setElements(ids.map((id) => image(id)));
+  };
+
+  it("frees a deleted image's file once no undo entry touches it, and not before", async () => {
+    await addImages(["a", "b"]);
+    const deleted = h.elements[0];
+    API.updateElement(deleted, { isDeleted: true });
+    // an undo entry still names the deleted element: it can come back
+    h.app.history.undoStack.push({
+      elements: { added: {}, removed: {}, updated: { [deleted.id]: {} } },
+    } as any);
+    expect(h.app.releaseUnusedFiles({ graceMs: 0 }).released).toBe(0);
+    expect(Object.keys(h.app.files).sort()).toEqual(["a", "b"]);
+
+    h.app.history.clear(); // horizon passed
+    const out = h.app.releaseUnusedFiles({ graceMs: 0 });
+    expect(out.released).toBe(1);
+    expect(out.bytes).toBe(file("a").dataURL.length);
+    expect(Object.keys(h.app.files)).toEqual(["b"]);
+    expect(h.app.imageCache.has("a" as any)).toBe(false);
+    expect(h.app.imageCache.has("b" as any)).toBe(true);
+  });
+
+  it("tells the host through onChange with the smaller files map", async () => {
+    await addImages(["a"]);
+    API.updateElement(h.elements[0], { isDeleted: true });
+    const seen: string[][] = [];
+    const off = h.app.onChangeEmitter.on((_e, _s, files) => {
+      seen.push(Object.keys(files));
+    });
+    h.app.releaseUnusedFiles({ graceMs: 0 });
+    off();
+    expect(seen).toEqual([[]]);
+  });
+
+  it("trims the undo horizon, which makes older deleted images unreachable", async () => {
+    await addImages(["a"]);
+    const e = h.elements[0];
+    API.updateElement(e, { isDeleted: true });
+    const entry = (id: string) =>
+      ({
+        elements: { added: {}, removed: {}, updated: { [id]: {} } },
+      } as any);
+    h.app.history.undoStack.push(entry(e.id), entry("x"), entry("y"));
+    h.app.setFilesRetention({ undoSteps: 2 });
+    expect(h.app.releaseUnusedFiles({ graceMs: 0 }).released).toBe(1);
+    expect(h.app.history.undoStack.length).toBe(2);
+  });
+
+  it("is off until the host turns it on, and zero work for a drawing without images", async () => {
+    await addImages(["a"]);
+    API.updateElement(h.elements[0], { isDeleted: true });
+    h.app.history.clear();
+    vi.useFakeTimers();
+    try {
+      h.app.setFilesRetention({ undoSteps: 0 });
+      vi.advanceTimersByTime(60_000);
+      expect(Object.keys(h.app.files)).toEqual(["a"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

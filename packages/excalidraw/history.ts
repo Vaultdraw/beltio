@@ -120,6 +120,44 @@ export class History {
     this.redoStack.length = 0;
   }
 
+  /**
+   * Ids of every element an undo or redo entry still touches. A deleted image
+   * element in this set can come back, so its file must stay reachable.
+   */
+  public referencedElementIds(): Set<string> {
+    const ids = new Set<string>();
+    for (const stack of [this.undoStack, this.redoStack]) {
+      for (const delta of stack) {
+        const { added, removed, updated } = delta.elements;
+        for (const group of [added, removed, updated]) {
+          for (const id in group) {
+            ids.add(id);
+          }
+        }
+      }
+    }
+    return ids;
+  }
+
+  /**
+   * Drops the oldest entries of each stack beyond `maxSteps` (the undo
+   * horizon). 0 or less keeps everything. Returns how many entries went.
+   */
+  public trim(maxSteps: number): number {
+    if (!(maxSteps > 0)) {
+      return 0;
+    }
+    let dropped = 0;
+    for (const stack of [this.undoStack, this.redoStack]) {
+      const extra = stack.length - Math.floor(maxSteps);
+      if (extra > 0) {
+        stack.splice(0, extra);
+        dropped += extra;
+      }
+    }
+    return dropped;
+  }
+
   public exportStacks(): HistorySnapshot {
     return { undo: [...this.undoStack], redo: [...this.redoStack] };
   }

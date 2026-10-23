@@ -1587,6 +1587,24 @@ export interface ExcalidrawImperativeAPI {
   /** Drops all files and decoded images except the given file ids. */
   retainFiles: (fileIds: Iterable<string>) => void;
   /**
+   * Sets the undo horizon (`undoSteps`, 0 = unbounded) and whether files that
+   * no element and no undo/redo entry can bring back are freed on idle
+   * (`freeUnreachable`). Both are off until set.
+   */
+  setFilesRetention: (options: {
+    freeUnreachable?: boolean;
+    undoSteps?: number;
+  }) => void;
+  /**
+   * Trims the undo horizon and frees unreachable files now (`graceMs` 0 skips
+   * the probation). `bytes` counts the dataURL characters released.
+   */
+  releaseUnusedFiles: (options?: { graceMs?: number }) => {
+    released: number;
+    bytes: number;
+    pending: number;
+  };
+  /**
    * Removes every element and the store's snapshot (the undo baseline),
    * leaving app state, history and files alone. For a host that replaces the
    * whole scene in place: call it right before `updateScene` with the new

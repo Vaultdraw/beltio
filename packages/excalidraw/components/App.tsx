@@ -158,6 +158,8 @@ import {
   normalizeSVG,
   updateImageCache as _updateImageCache,
   pruneImageCache,
+  findUnreachableFileIds,
+  FILES_RELEASE_GRACE_MS,
   IMAGE_CACHE_PRUNE_GRACE_MS,
   IMAGE_CACHE_PRUNE_MIN_ENTRIES,
   getBoundTextElement,
@@ -617,6 +619,13 @@ const gesture: Gesture = {
   initialScale: null,
 };
 
+const hasAnyKey = (o: object) => {
+  for (const _ in o) {
+    return true;
+  }
+  return false;
+};
+
 class App extends React.Component<AppProps, AppState> {
   canvas: AppClassProperties["canvas"];
   interactiveCanvas: AppClassProperties["interactiveCanvas"] = null;
@@ -822,6 +831,8 @@ class App extends React.Component<AppProps, AppState> {
       updateLibrary: this.library.updateLibrary,
       addFiles: this.addFiles,
       retainFiles: this.retainFiles,
+      setFilesRetention: this.setFilesRetention,
+      releaseUnusedFiles: this.releaseUnusedFiles,
       clearScene: this.clearScene,
       resetScene: this.resetScene,
       getSceneElementsIncludingDeleted: this.getSceneElementsIncludingDeleted,
@@ -4071,6 +4082,7 @@ class App extends React.Component<AppProps, AppState> {
     this.renderer = new Renderer(this.scene);
     this.files = {};
     this.scheduleImageCachePrune.cancel();
+    this.scheduleFilesRelease.cancel();
     this.imageCache.clear();
     this.resizeObserver?.disconnect();
     this.unmounted = true;
@@ -4659,7 +4671,118 @@ class App extends React.Component<AppProps, AppState> {
     if (this.imageCache.size >= IMAGE_CACHE_PRUNE_MIN_ENTRIES) {
       this.scheduleImageCachePrune();
     }
+
+    // Vaultdraw: drawings without images cost one flag check here
+    if (
+      this.filesRetention.freeUnreachable
+        ? hasAnyKey(this.files)
+        : this.filesRetention.undoSteps > 0 &&
+          this.history.undoStack.length > this.filesRetention.undoSteps
+    ) {
+      this.scheduleFilesRelease();
+    }
   }
+
+  private filesRetention = { freeUnreachable: false, undoSteps: 0 };
+
+  private filesUnreachableSince = new Map<FileId, number>();
+
+  /**
+   * Vaultdraw: sets the undo horizon and whether files that no element and
+   * no undo/redo entry can bring back are freed (off and unbounded until the
+   * host says otherwise). Takes effect on the next idle pass.
+   */
+  public setFilesRetention: ExcalidrawImperativeAPI["setFilesRetention"] = (
+    options,
+  ) => {
+    this.filesRetention = {
+      freeUnreachable:
+        options.freeUnreachable ?? this.filesRetention.freeUnreachable,
+      undoSteps: options.undoSteps ?? this.filesRetention.undoSteps,
+    };
+    this.scheduleFilesRelease();
+  };
+
+  /**
+   * Trims the undo horizon, then drops the dataURLs (and decoded images) of
+   * files unreachable by any element or history entry. `graceMs` 0 releases
+   * at once. Never touches a file a visible element, a pending insert or a
+   * reachable undo entry uses; the saved scene never contains the others.
+   */
+  public releaseUnusedFiles: ExcalidrawImperativeAPI["releaseUnusedFiles"] = (
+    options,
+  ) => {
+    const graceMs = options?.graceMs ?? FILES_RELEASE_GRACE_MS;
+    const { undoSteps } = this.filesRetention;
+    if (undoSteps > 0) {
+      this.history.trim(undoSteps);
+    }
+    const none = { released: 0, bytes: 0, pending: 0 };
+    if (this.unmounted || !hasAnyKey(this.files)) {
+      return none;
+    }
+    const keep = new Set<FileId>();
+    const { newElement, croppingElementId } = this.state;
+    if (isInitializedImageElement(newElement)) {
+      keep.add(newElement.fileId);
+    }
+    const cropping = croppingElementId
+      ? this.scene.getElement(croppingElementId)
+      : null;
+    if (isInitializedImageElement(cropping)) {
+      keep.add(cropping.fileId);
+    }
+    const { release, pending } = findUnreachableFileIds({
+      fileIds: Object.keys(this.files) as FileId[],
+      elements: this.scene.getElementsIncludingDeleted(),
+      historyElementIds: this.history.referencedElementIds(),
+      unreachableSince: this.filesUnreachableSince,
+      now: Date.now(),
+      keep,
+      graceMs,
+    });
+    let bytes = 0;
+    if (release.length) {
+      const nextFiles = { ...this.files };
+      for (const id of release) {
+        bytes += nextFiles[id]?.dataURL.length ?? 0;
+        delete nextFiles[id];
+        this.imageCache.delete(id);
+        this.imageCacheUnreferencedSince.delete(id);
+      }
+      this.files = nextFiles;
+      // hosts holding the previous map (their own copy of the strings) drop it
+      const elements = this.scene.getElementsIncludingDeleted();
+      this.props.onChange?.(elements, this.state, this.files);
+      this.onChangeEmitter.trigger(elements, this.state, this.files);
+    }
+    return { released: release.length, bytes, pending };
+  };
+
+  /** runs on idle after the editor was quiet; re-arms while files are on probation */
+  private scheduleFilesRelease = debounce(() => {
+    const run = () => {
+      if (this.unmounted) {
+        return;
+      }
+      const { freeUnreachable, undoSteps } = this.filesRetention;
+      if (!freeUnreachable) {
+        if (undoSteps > 0) {
+          this.history.trim(undoSteps);
+        }
+        return;
+      }
+      if (this.releaseUnusedFiles().pending) {
+        this.scheduleFilesRelease();
+      }
+    };
+    const ric = (this.ownerWindow as any)?.requestIdleCallback;
+    if (typeof ric === "function") {
+      ric.call(this.ownerWindow, run, { timeout: 5000 });
+    } else {
+      setTimeout(run, 0);
+    }
+  }, FILES_RELEASE_GRACE_MS + 200);
 
   private imageCacheUnreferencedSince = new Map<FileId, number>();
 

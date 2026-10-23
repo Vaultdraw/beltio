@@ -221,3 +221,70 @@ export const pruneImageCache = ({
   }
   return { removed, pending };
 };
+
+/** An unreachable file must stay so for this long before it is released. */
+export const FILES_RELEASE_GRACE_MS = 10_000;
+
+/**
+ * Finds files that nothing can bring back: no non-deleted image element
+ * uses them, and no deleted image element that an undo or redo entry still
+ * touches (`historyElementIds`) does either. Files with no element at all
+ * are included (a host may preload before the elements land), so every
+ * candidate must stay unreachable for `graceMs` across calls
+ * (`unreachableSince` is caller-owned state). `keep` is never released.
+ * Pure: it only reports ids; the caller drops them.
+ * @returns the ids to release now, and how many are still on probation
+ */
+export const findUnreachableFileIds = ({
+  fileIds,
+  elements,
+  historyElementIds,
+  unreachableSince,
+  now,
+  keep,
+  graceMs = FILES_RELEASE_GRACE_MS,
+}: {
+  fileIds: Iterable<FileId>;
+  elements: readonly ExcalidrawElement[];
+  historyElementIds: ReadonlySet<string>;
+  unreachableSince: Map<FileId, number>;
+  now: number;
+  keep?: ReadonlySet<FileId>;
+  graceMs?: number;
+}) => {
+  const reachable = new Set<FileId>();
+  for (const element of elements) {
+    if (
+      isInitializedImageElement(element) &&
+      (!element.isDeleted || historyElementIds.has(element.id))
+    ) {
+      reachable.add(element.fileId);
+    }
+  }
+  const release: FileId[] = [];
+  let pending = 0;
+  const seen = new Set<FileId>();
+  for (const fileId of fileIds) {
+    seen.add(fileId);
+    if (reachable.has(fileId) || keep?.has(fileId)) {
+      unreachableSince.delete(fileId);
+      continue;
+    }
+    const since = unreachableSince.get(fileId);
+    if (graceMs <= 0 || (since !== undefined && now - since >= graceMs)) {
+      release.push(fileId);
+      unreachableSince.delete(fileId);
+    } else {
+      if (since === undefined) {
+        unreachableSince.set(fileId, now);
+      }
+      pending++;
+    }
+  }
+  for (const fileId of unreachableSince.keys()) {
+    if (!seen.has(fileId)) {
+      unreachableSince.delete(fileId);
+    }
+  }
+  return { release, pending };
+};
