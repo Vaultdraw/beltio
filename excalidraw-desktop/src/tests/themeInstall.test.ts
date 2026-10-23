@@ -277,21 +277,35 @@ describe("browserBackend", () => {
 
 describe("browserBackend downloads", () => {
   const mkWin = (f: typeof fetch) =>
-    ({ location: window.location, fetch: f, localStorage } as unknown as Window);
+    ({
+      location: window.location,
+      fetch: f,
+      localStorage,
+    } as unknown as Window);
   const hex = (d: ArrayBuffer) =>
     [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
   it("hashes the downloaded bytes, BOM included, not the decoded text", async () => {
-    const bytes = new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode(THEME)]);
+    const bytes = new Uint8Array([
+      0xef,
+      0xbb,
+      0xbf,
+      ...new TextEncoder().encode(THEME),
+    ]);
     const b = browserBackend(mkWin(vi.fn(async () => new Response(bytes))));
-    const got = await b.fetch({ kind: "url", url: "https://example.com/a.json" }, 65536);
+    const got = await b.fetch(
+      { kind: "url", url: "https://example.com/a.json" },
+      65536,
+    );
     expect(got.json).toBe(THEME);
     expect(got.sha256).toBe(hex(await crypto.subtle.digest("SHA-256", bytes)));
   });
 
   it("rejects text that is not UTF-8", async () => {
     const b = browserBackend(
-      mkWin(vi.fn(async () => new Response(new Uint8Array([0x7b, 0xff, 0x7d])))),
+      mkWin(
+        vi.fn(async () => new Response(new Uint8Array([0x7b, 0xff, 0x7d]))),
+      ),
     );
     await expect(
       b.fetch({ kind: "url", url: "https://example.com/a.json" }, 1000),

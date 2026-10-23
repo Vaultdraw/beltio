@@ -40,7 +40,7 @@ export const tauriBackend = (invoke: Invoke): InstallBackend => {
   };
 };
 
-const sha256Hex = async (bytes: Uint8Array): Promise<string> => {
+const sha256Hex = async (bytes: Uint8Array<ArrayBuffer>): Promise<string> => {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return [...new Uint8Array(digest)]
     .map((b) => b.toString(16).padStart(2, "0"))
@@ -59,7 +59,7 @@ const tooLarge = (maxBytes: number) =>
 const readCapped = async (
   response: Response,
   maxBytes: number,
-): Promise<Uint8Array> => {
+): Promise<Uint8Array<ArrayBuffer>> => {
   const declared = Number(response.headers.get("content-length"));
   if (declared > maxBytes) {
     void response.body?.cancel().catch(() => {});
