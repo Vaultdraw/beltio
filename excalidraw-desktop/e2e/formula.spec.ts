@@ -32,6 +32,7 @@ import {
   previewSrc,
   scene,
   source,
+  staticCanvasIsDark,
 } from "./formulaHelpers";
 
 // LaTeX formulas: insert, edit, undo, persistence, dark theme, perf.
@@ -385,7 +386,8 @@ test.describe("formula", () => {
       [appHandle] as const,
     );
     await insertViaPalette(page, String.raw`\int_0^1 x^2\,dx`);
-    await page.waitForTimeout(300);
+    // Wait on the condition, not a timer: under load the element lands after a fixed 300 ms.
+    await expect.poll(async () => (await images(page)).length).toBe(1);
     const el = (await images(page))[0];
     // deselect so no selection chrome overlaps (it lives on another canvas anyway)
     expect(el.customData.latex.color).toBe("#e03131");
@@ -400,9 +402,14 @@ test.describe("formula", () => {
 
     await runCommand(page, "Mode: Dark");
     await expect(page.locator(".excalidraw.theme--dark").first()).toBeVisible();
-    await page.waitForTimeout(600);
-    const ink = await inkPixels(page, el, 120);
-    expect(ink.length).toBeGreaterThan(30);
+    // Wait until the static canvas has repainted in dark (background and the image are drawn in
+    // the same pass), not a fixed 600 ms. Only the wait polls: the hue check below runs once on
+    // that dark frame, so a cyan flip still fails.
+    await expect.poll(() => staticCanvasIsDark(page)).toBe(true);
+    let ink: number[][] = [];
+    await expect
+      .poll(async () => (ink = await inkPixels(page, el, 120)).length)
+      .toBeGreaterThan(30);
     // the most visible (strongest) pixels stay red-dominant, not cyan
     const strongest = [...ink]
       .sort(

@@ -129,6 +129,16 @@ export const dblclickElement = async (page: Page, e: Img) => {
   await page.mouse.dblclick(p.x, p.y);
 };
 
+/** True once the static canvas has painted a dark background (a corner pixel, luminance < 50%). */
+export const staticCanvasIsDark = (page: Page) =>
+  page.evaluate(() => {
+    const c = document.querySelector<HTMLCanvasElement>(
+      ".vault-editor canvas.static",
+    )!;
+    const [r, g, b] = c.getContext("2d")!.getImageData(2, 2, 1, 1).data;
+    return 0.299 * r + 0.587 * g + 0.114 * b < 128;
+  });
+
 /** Non-background pixels (by sum distance from the corner pixel) in the element's box on the static canvas. */
 export const inkPixels = async (page: Page, el: Img, minDiff = 90) => {
   const b = await clientBox(page, el);
