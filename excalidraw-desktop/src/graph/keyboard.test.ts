@@ -1,35 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { actionForKey, GRAPH_KEYS, selectInDirection } from "./keyboard";
-
-describe("key table", () => {
-  it("maps the Vim keys", () => {
-    expect(actionForKey({ key: "h" })).toEqual({ type: "move", dir: "left" });
-    expect(actionForKey({ key: "ArrowDown" })).toEqual({
-      type: "move",
-      dir: "down",
-    });
-    expect(actionForKey({ key: "L" })).toEqual({ type: "toggleLocal" });
-    expect(actionForKey({ key: "l" })).toEqual({ type: "move", dir: "right" });
-    expect(actionForKey({ key: "2" })).toEqual({ type: "depth", depth: 2 });
-    expect(actionForKey({ key: "F" })).toEqual({ type: "hints" });
-    expect(actionForKey({ key: "f" })).toEqual({ type: "hints" });
-    expect(actionForKey({ key: "Escape" })).toEqual({ type: "close" });
-    expect(actionForKey({ key: "0" })).toEqual({ type: "fit" });
-    expect(actionForKey({ key: "q" })).toBeNull();
-  });
-
-  it("leaves app chords alone and accepts a replacement table", () => {
-    expect(actionForKey({ key: "h", metaKey: true })).toBeNull();
-    expect(actionForKey({ key: "k", ctrlKey: true })).toBeNull();
-    expect(
-      actionForKey({ key: "x" }, { ...GRAPH_KEYS, x: { type: "fit" } }),
-    ).toEqual({
-      type: "fit",
-    });
-    expect(actionForKey({ key: "toString" })).toBeNull();
-  });
-});
+import { selectInDirection } from "./keyboard";
 
 // 0 centre, 1 right, 2 far right, 3 up, 4 down-left
 const pos = Float32Array.from([0, 0, 10, 0, 40, 2, 0, -10, -8, 9]);

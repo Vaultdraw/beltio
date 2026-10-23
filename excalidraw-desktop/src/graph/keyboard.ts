@@ -1,65 +1,8 @@
 /**
- * Graph keyboard: a plain key -> action table (so settings can replace it later) and the
- * "nearest neighbour in this direction" selection behind h/j/k/l.
+ * Graph keyboard: the "nearest neighbour in this direction" selection behind
+ * the graph.moveLeft/Right/Up/Down commands (keys: commands/graphCommands.ts).
  */
 export type Direction = "left" | "right" | "up" | "down";
-
-export type GraphAction =
-  | { type: "move"; dir: Direction }
-  | { type: "open" }
-  | { type: "filter" }
-  | { type: "toggleLocal" }
-  | { type: "depth"; depth: 1 | 2 | 3 }
-  | { type: "hints" }
-  | { type: "close" }
-  | { type: "fit" }
-  | { type: "zoom"; dir: 1 | -1 };
-
-export type KeyTable = Readonly<Record<string, GraphAction>>;
-
-export const GRAPH_KEYS: KeyTable = {
-  h: { type: "move", dir: "left" },
-  ArrowLeft: { type: "move", dir: "left" },
-  l: { type: "move", dir: "right" },
-  ArrowRight: { type: "move", dir: "right" },
-  k: { type: "move", dir: "up" },
-  ArrowUp: { type: "move", dir: "up" },
-  j: { type: "move", dir: "down" },
-  ArrowDown: { type: "move", dir: "down" },
-  Enter: { type: "open" },
-  "/": { type: "filter" },
-  L: { type: "toggleLocal" },
-  "1": { type: "depth", depth: 1 },
-  "2": { type: "depth", depth: 2 },
-  "3": { type: "depth", depth: 3 },
-  f: { type: "hints" },
-  F: { type: "hints" },
-  Escape: { type: "close" },
-  "0": { type: "fit" },
-  "+": { type: "zoom", dir: 1 },
-  "=": { type: "zoom", dir: 1 },
-  "-": { type: "zoom", dir: -1 },
-};
-
-export interface KeyLike {
-  key: string;
-  ctrlKey?: boolean;
-  metaKey?: boolean;
-  altKey?: boolean;
-}
-
-/** Chords with Ctrl/Cmd/Alt belong to the app, not the graph. */
-export function actionForKey(
-  e: KeyLike,
-  table: KeyTable = GRAPH_KEYS,
-): GraphAction | null {
-  if (e.ctrlKey || e.metaKey || e.altKey) {
-    return null;
-  }
-  return Object.prototype.hasOwnProperty.call(table, e.key)
-    ? table[e.key]
-    : null;
-}
 
 const VEC: Record<Direction, [number, number]> = {
   left: [-1, 0],

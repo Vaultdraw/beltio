@@ -1,6 +1,11 @@
 import { StrictMode, useCallback, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 
+import { BUILTIN_COMMANDS } from "../src/commands/commands";
+import { readContext } from "../src/commands/context";
+import { installCommandDispatcher } from "../src/commands/dispatcher";
+import { getRegisteredHandler } from "../src/commands/handlerRegistry";
+import { buildKeymap } from "../src/commands/keymap";
 import "../src/components/VaultShell.css";
 import { fakeGraph } from "../src/graph/fakeGraph";
 import { DEFAULT_GRAPH_SETTINGS } from "../src/graph/settings";
@@ -46,6 +51,21 @@ export function mountGraphHarness(root: HTMLElement, params: URLSearchParams) {
     session: null,
   };
   window.__graph = hooks;
+
+  // No app shell here: the real dispatcher with the built-in keymap, so the
+  // graph.* keys reach the view as they do in the app.
+  const keymap = buildKeymap(BUILTIN_COMMANDS, {}, "linux");
+  installCommandDispatcher(window, {
+    platform: "linux",
+    getKeymap: () => keymap,
+    getContext: () =>
+      readContext(document, {
+        vaultOpen: true,
+        drawingOpen: true,
+        writable: true,
+      }),
+    getHandler: getRegisteredHandler,
+  });
 
   let cached: ReturnType<typeof fakeGraph> | null = null;
   const getGraph = () => {

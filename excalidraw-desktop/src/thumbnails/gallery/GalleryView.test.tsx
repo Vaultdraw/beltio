@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
 
+import { installListKeysForTests } from "../../commands/listKeysForTests";
 import { ThumbnailProvider } from "../context";
 
 import GalleryView from "./GalleryView";
@@ -38,6 +39,12 @@ const setup = (items: VaultEntry[], folder = "") => {
   render(<GalleryView folder={folder} vaultName="V" items={items} {...h} />);
   return { ...h, grid: screen.getByRole("grid") };
 };
+
+let uninstall: () => void;
+beforeEach(() => {
+  uninstall = installListKeysForTests();
+});
+afterEach(() => uninstall());
 
 describe("<GalleryView>", () => {
   it("mounts only the window for 5k items", () => {
@@ -80,6 +87,17 @@ describe("<GalleryView>", () => {
     expect(onClose).toHaveBeenCalled();
     fireEvent.click(screen.getAllByRole("gridcell")[2]);
     expect(onOpenDrawing).toHaveBeenCalledWith("d2.excalidraw");
+  });
+
+  it("keys act only while the grid has focus", () => {
+    const { grid, onClose } = setup(entries(1, 3));
+    (document.activeElement as HTMLElement).blur();
+    document.body.focus();
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(onClose).not.toHaveBeenCalled();
+    grid.focus();
+    fireEvent.keyDown(grid, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("without a thumbnail service tiles show placeholders and no img", () => {

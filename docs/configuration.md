@@ -245,6 +245,19 @@ Rename, delete, move and the row menu need a focused row: with none (even while 
 "list.delete" = ["Delete"]
 ```
 
+### Gallery keys
+
+The gallery grid's keys are `gallery.*` commands. They work only while the grid has focus. Rebind them like any command.
+
+| Command id | Action | Default keys |
+| --- | --- | --- |
+| `gallery.left` / `right` / `up` / `down` | Move one tile or row | `H`, `L`, `K`, `J` and the arrows |
+| `gallery.first` / `gallery.last` | First / last tile | `Home` / `End` |
+| `gallery.pageUp` / `gallery.pageDown` | One page up / down | `PageUp` / `PageDown` |
+| `gallery.open` | Open the tile (a folder is entered) | `Enter` |
+| `gallery.parent` | Go to the parent folder | `Backspace` |
+| `gallery.close` | Close the gallery | `Escape` |
+
 ### The `[hotkeys]` table
 
 Settings writes to `config.toml`, and you can edit it by hand. Only your changes are stored, as a list of keys per command id:
@@ -501,7 +514,26 @@ The graph is alive: it spreads out when it opens and settles within a few second
 | 0, + and - | Fit, zoom in, zoom out |
 | Esc | Close |
 
-**Graph: Toggle orphans**, **Toggle tags**, **Toggle unresolved links** and **Fit graph to view** are in the command palette (⌘⇧P) and on the Hotkeys page, with no default key. Every graph command can be rebound.
+Each key above is a command that applies only while focus is in the graph (not in its filter box), so it never fires on the canvas. Rebind them in Settings → Hotkeys or `[hotkeys]`:
+
+| Command id | Action | Default keys |
+| --- | --- | --- |
+| `graph.moveLeft` / `moveRight` / `moveUp` / `moveDown` | Move to the nearest dot | `H`, `L`, `K`, `J` and the arrows |
+| `graph.openNode` | Open the focused dot | `Enter` |
+| `graph.hints` | Show hint letters | `F`, `Shift+F` |
+| `graph.focusFilter` | Focus the filter | `Slash` |
+| `graph.toggleLocal` | Global / local | `Shift+L` |
+| `graph.depth1` / `depth2` / `depth3` | Local depth | `1`, `2`, `3` |
+| `graph.fit` | Fit to view | `0` |
+| `graph.zoomIn` / `graph.zoomOut` | Zoom | `=`, `Shift+=` / `-` |
+| `graph.close` | Close | `Escape` |
+
+```toml
+[hotkeys]
+"graph.close" = ["Escape", "Q"]
+```
+
+**Graph: Toggle orphans**, **Toggle tags** and **Toggle unresolved links** have no default key. While hint letters show, every key is a hint letter.
 
 The settings button in the graph's toolbar opens colour groups, display (arrows, label fade, dot size, line thickness) and forces (centre, repel, link strength, link distance). They are stored per vault in `<vault>/.excalidraw-vault/settings.toml` under `[graph]`, and only values that differ from the default are written:
 

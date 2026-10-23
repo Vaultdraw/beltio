@@ -101,7 +101,13 @@ interface Options {
 }
 
 /** `when` rules that depend on where the key was pressed do not apply to run(). */
-const FOCUS_RULES = new Set(["textEditing", "canvasFocus", "listFocus"]);
+const FOCUS_RULES = new Set([
+  "textEditing",
+  "canvasFocus",
+  "listFocus",
+  "galleryFocus",
+  "graphFocus",
+]);
 
 export function useCommandDispatcher(
   doc: Document | null,
@@ -138,6 +144,8 @@ export function useCommandDispatcher(
             canvasFocus: false,
             modalOpen: false,
             listFocus: false,
+            galleryFocus: false,
+            graphFocus: false,
           },
     [doc],
   );

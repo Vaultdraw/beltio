@@ -4,12 +4,18 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import {
+  GRAPH_VIEW_COMMAND_IDS,
+  GRAPH_VIEW_IDS,
+} from "../commands/graphCommands";
+import { useViewCommands } from "../commands/useViewCommands";
+
 import { DesktopVaultGraph } from "./DesktopVaultGraph";
 import { type GraphSession, type GraphSource } from "./GraphSession";
 import { GraphToolbar } from "./GraphToolbar";
 import { HoverCard } from "./HoverCard";
 import { resolveHint, type HintMap } from "./hints";
-import { actionForKey } from "./keyboard";
+import { type Direction } from "./keyboard";
 import { SettingsPanel } from "./SettingsPanel";
 import { useGraphSession } from "./useGraphSession";
 
@@ -134,60 +140,53 @@ export default function GraphView(props: GraphViewProps & GraphViewExtraProps) {
     }
   };
 
+  // Link-hint typing: while hints show, every key is a hint letter, so the
+  // graph.* commands are withdrawn (below) and keys reach this handler.
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (isField(e.target)) {
-      return;
-    }
-    const session = sessionRef.current;
-    if (hints) {
-      e.preventDefault();
-      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-        onHintKey(e.key, hints);
-      }
-      return;
-    }
-    const action = actionForKey(e);
-    if (!action) {
+    if (isField(e.target) || !hints) {
       return;
     }
     e.preventDefault();
-    switch (action.type) {
-      case "close":
-        onClose();
-        break;
-      case "move":
-        session?.moveFocus(action.dir);
-        break;
-      case "open": {
-        const n = session
-          ? session.shown >= 0
-            ? session.shown
-            : session.focus
-          : -1;
-        session?.activate(n);
-        break;
-      }
-      case "filter":
-        filterRef.current?.focus();
-        filterRef.current?.select();
-        break;
-      case "toggleLocal":
-        props.onModeChange(mode === "local" ? "global" : "local");
-        break;
-      case "depth":
-        props.onSettingsChange({ ...settings, localDepth: action.depth });
-        break;
-      case "hints":
-        startHints();
-        break;
-      case "fit":
-        session?.userFit();
-        break;
-      case "zoom":
-        session?.zoomCentre(action.dir > 0 ? ZOOM_STEP : 1 / ZOOM_STEP);
-        break;
+    if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+      onHintKey(e.key, hints);
     }
   };
+
+  // graph.* in-view commands (graphCommands.ts), bound while the view is open.
+  const V = GRAPH_VIEW_COMMAND_IDS;
+  const move = (dir: Direction) => () => sessionRef.current?.moveFocus(dir);
+  const depth = (d: 1 | 2 | 3) => () =>
+    props.onSettingsChange({ ...settings, localDepth: d });
+  const zoom = (f: number) => () => sessionRef.current?.zoomCentre(f);
+  useViewCommands(
+    rootRef,
+    GRAPH_VIEW_IDS,
+    hints
+      ? {}
+      : {
+          [V.left]: move("left"),
+          [V.right]: move("right"),
+          [V.up]: move("up"),
+          [V.down]: move("down"),
+          [V.openNode]: () => {
+            const s = sessionRef.current;
+            s?.activate(s.shown >= 0 ? s.shown : s.focus);
+          },
+          [V.filter]: () => {
+            filterRef.current?.focus();
+            filterRef.current?.select();
+          },
+          [V.toggleLocal]: () =>
+            props.onModeChange(mode === "local" ? "global" : "local"),
+          [V.depth1]: depth(1),
+          [V.depth2]: depth(2),
+          [V.depth3]: depth(3),
+          [V.hints]: startHints,
+          [V.zoomIn]: zoom(ZOOM_STEP),
+          [V.zoomOut]: zoom(1 / ZOOM_STEP),
+          [V.close]: onClose,
+        },
+  );
 
   const session = sessionRef.current;
   const hintLetters =
@@ -202,6 +201,7 @@ export default function GraphView(props: GraphViewProps & GraphViewExtraProps) {
       role="application"
       aria-label="Graph view"
       data-testid="graph-view"
+      data-keyscope="graph"
       onKeyDown={onKeyDown}
     >
       <GraphToolbar

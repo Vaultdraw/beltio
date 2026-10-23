@@ -7,10 +7,18 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 
+import {
+  GALLERY_COMMAND_IDS,
+  GALLERY_MOVES,
+  galleryCommandId,
+  type GalleryMove,
+} from "../../commands/galleryCommands";
+import { useViewCommands } from "../../commands/useViewCommands";
 import { IconDrawing, IconFolder } from "../../components/Icons";
 import { getBaseName } from "../../vault/treeStore";
 import { useThumbnail, useThumbnailService } from "../context";
@@ -26,7 +34,7 @@ import {
   type GridMetrics,
   type GridWindow,
 } from "./gridWindow";
-import { actionForKey } from "./keyboard";
+import { moveIndex } from "./keyboard";
 import { createScrollSettle, type ScrollSettle } from "./scrollSettle";
 
 import "./gallery.css";
@@ -245,33 +253,38 @@ export default function GalleryView({
     [activate],
   );
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    const action = actionForKey(e, {
+  // gallery.* commands (galleryCommands.ts): bound while the grid is open.
+  const actions = useMemo(() => {
+    const ctx = {
       index: current,
       count: items.length,
       columns: win.columns,
       pageRows: pageRows(size.height, win.rowHeight),
-    });
-    if (!action) {
-      return;
-    }
-    e.preventDefault();
-    e.stopPropagation();
-    switch (action.type) {
-      case "move":
-        setActive(action.index);
-        break;
-      case "open":
-        activate(current);
-        break;
-      case "parent":
-        onParent();
-        break;
-      case "close":
-        onClose();
-        break;
-    }
-  };
+    };
+    const move = (m: GalleryMove) => {
+      const index = moveIndex(m, ctx);
+      return index === null ? undefined : () => setActive(index);
+    };
+    return Object.fromEntries([
+      ...GALLERY_MOVES.map((m) => [galleryCommandId(m), move(m)]),
+      [
+        galleryCommandId("open"),
+        items.length > 0 ? () => activate(current) : undefined,
+      ],
+      [galleryCommandId("parent"), onParent],
+      [galleryCommandId("close"), onClose],
+    ]);
+  }, [
+    current,
+    items.length,
+    win.columns,
+    win.rowHeight,
+    size.height,
+    activate,
+    onParent,
+    onClose,
+  ]);
+  useViewCommands(scroller, GALLERY_COMMAND_IDS, actions);
 
   const mounted: VaultEntry[] = items.slice(win.first, win.last + 1);
   const rows: { row: number; start: number }[] = [];
@@ -301,6 +314,7 @@ export default function GalleryView({
         ref={scroller}
         className={`vd-gallery__scroller ${dark}`}
         role="grid"
+        data-keyscope="gallery"
         tabIndex={0}
         aria-label={`Gallery: ${folder || vaultName}`}
         aria-rowcount={win.rowCount}
@@ -309,7 +323,6 @@ export default function GalleryView({
           activeMounted ? `vd-gallery-tile-${current}` : undefined
         }
         onScroll={onScroll}
-        onKeyDown={onKeyDown}
       >
         {items.length === 0 ? (
           <div className="vd-gallery__empty">This folder is empty</div>

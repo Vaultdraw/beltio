@@ -13,6 +13,8 @@ const ctx: CommandContext = {
   canvasFocus: true,
   modalOpen: false,
   listFocus: false,
+  galleryFocus: false,
+  graphFocus: false,
 };
 
 const nsPerOp = (fn: () => void, n = 200_000) => {

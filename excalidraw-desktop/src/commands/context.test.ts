@@ -77,6 +77,8 @@ describe("whenHolds", () => {
     canvasFocus: false,
     modalOpen: false,
     listFocus: false,
+    galleryFocus: false,
+    graphFocus: false,
   };
   it("evaluates positive and negated clauses", () => {
     expect(whenHolds(undefined, ctx)).toBe(true);

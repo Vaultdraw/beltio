@@ -1,9 +1,5 @@
-/** Gallery keyboard: pure key -> action. Chords with Ctrl/Cmd/Alt are the app's. */
-export type GalleryAction =
-  | { type: "move"; index: number }
-  | { type: "open" }
-  | { type: "parent" }
-  | { type: "close" };
+/** Gallery movement: pure index maths for the `gallery.*` commands (galleryCommands.ts). */
+import type { GalleryMove } from "../../commands/galleryCommands";
 
 export interface KeyContext {
   index: number;
@@ -13,66 +9,35 @@ export interface KeyContext {
   pageRows: number;
 }
 
-export interface KeyLike {
-  key: string;
-  ctrlKey?: boolean;
-  metaKey?: boolean;
-  altKey?: boolean;
-  shiftKey?: boolean;
-}
-
 const clamp = (n: number, count: number) => Math.max(0, Math.min(count - 1, n));
 
-export function moveIndex(key: string, c: KeyContext): number | null {
+/** The tile a move lands on, or null when the grid is empty. */
+export function moveIndex(move: GalleryMove, c: KeyContext): number | null {
   const { index, count, columns } = c;
   if (count === 0) {
     return null;
   }
-  switch (key) {
-    case "ArrowLeft":
-    case "h":
+  switch (move) {
+    case "left":
       return clamp(index - 1, count);
-    case "ArrowRight":
-    case "l":
+    case "right":
       return clamp(index + 1, count);
-    case "ArrowUp":
-    case "k":
+    case "up":
       return index - columns >= 0 ? index - columns : index;
-    case "ArrowDown":
-    case "j":
+    case "down":
       // Only when a next row exists; a short last row takes its last tile.
       return Math.floor(index / columns) < Math.floor((count - 1) / columns)
         ? clamp(index + columns, count)
         : index;
-    case "Home":
+    case "first":
       return 0;
-    case "End":
+    case "last":
       return count - 1;
-    case "PageDown":
+    case "pageDown":
       return clamp(index + c.pageRows * columns, count);
-    case "PageUp": {
+    case "pageUp": {
       const up = index - c.pageRows * columns;
       return up >= 0 ? up : index % columns;
-    }
-    default:
-      return null;
-  }
-}
-
-export function actionForKey(e: KeyLike, c: KeyContext): GalleryAction | null {
-  if (e.ctrlKey || e.metaKey || e.altKey) {
-    return null;
-  }
-  switch (e.key) {
-    case "Enter":
-      return c.count > 0 ? { type: "open" } : null;
-    case "Backspace":
-      return { type: "parent" };
-    case "Escape":
-      return { type: "close" };
-    default: {
-      const index = moveIndex(e.key, c);
-      return index === null ? null : { type: "move", index };
     }
   }
 }

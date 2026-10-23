@@ -43,6 +43,8 @@ export type CommandCategory = BuiltinCommandCategory | (string & {});
  * - modalOpen: a vault dialog (`.vault-modal-backdrop`) is open.
  * - listFocus: focus is in a keyboard list (file tree, tags, links, Settings
  *   pages; see listNav.ts) and not text editing.
+ * - galleryFocus / graphFocus: focus is inside the gallery grid / graph view
+ *   (a `data-keyscope` root) and not text editing.
  */
 export type BuiltinContextKey =
   | "vaultOpen"
@@ -51,7 +53,9 @@ export type BuiltinContextKey =
   | "textEditing"
   | "canvasFocus"
   | "modalOpen"
-  | "listFocus";
+  | "listFocus"
+  | "galleryFocus"
+  | "graphFocus";
 
 /** Plugins add namespaced keys (`ns.name`, see contextKeys.ts). */
 export type ContextKey = BuiltinContextKey | `${string}.${string}`;

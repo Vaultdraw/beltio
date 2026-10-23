@@ -16,7 +16,34 @@ const EXPECTED: Record<string, { title: string; keys: string[] }> = {
     title: "Graph: Toggle unresolved links",
     keys: [],
   },
-  "graph.fit": { title: "Graph: Fit graph to view", keys: [] },
+  "graph.fit": { title: "Graph: Fit graph to view", keys: ["0"] },
+  // In-view keys: only while focus is in the graph (graphFocus).
+  "graph.moveLeft": {
+    title: "Graph: Focus node to the left",
+    keys: ["H", "ArrowLeft"],
+  },
+  "graph.moveRight": {
+    title: "Graph: Focus node to the right",
+    keys: ["L", "ArrowRight"],
+  },
+  "graph.moveUp": { title: "Graph: Focus node above", keys: ["K", "ArrowUp"] },
+  "graph.moveDown": {
+    title: "Graph: Focus node below",
+    keys: ["J", "ArrowDown"],
+  },
+  "graph.openNode": { title: "Graph: Open focused node", keys: ["Enter"] },
+  "graph.focusFilter": { title: "Graph: Focus the filter", keys: ["Slash"] },
+  "graph.toggleLocal": {
+    title: "Graph: Switch between global and local graph",
+    keys: ["Shift+L"],
+  },
+  "graph.depth1": { title: "Graph: Local depth 1", keys: ["1"] },
+  "graph.depth2": { title: "Graph: Local depth 2", keys: ["2"] },
+  "graph.depth3": { title: "Graph: Local depth 3", keys: ["3"] },
+  "graph.hints": { title: "Graph: Show link hints", keys: ["F", "Shift+F"] },
+  "graph.zoomIn": { title: "Graph: Zoom in", keys: ["Equal", "Shift+Equal"] },
+  "graph.zoomOut": { title: "Graph: Zoom out", keys: ["Minus"] },
+  "graph.close": { title: "Graph: Close graph", keys: ["Escape"] },
 };
 const PLATFORMS: Platform[] = ["mac", "win", "linux"];
 

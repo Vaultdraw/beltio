@@ -23,6 +23,7 @@ import {
   parseDrawingOpenCommandId,
 } from "./drawingCommands";
 import { EDITOR_COMMANDS } from "./editorCommands";
+import { GALLERY_COMMANDS } from "./galleryCommands";
 import { GRAPH_COMMANDS } from "./graphCommands";
 import {
   getRegisteredCommand,
@@ -601,6 +602,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...LIST_COMMANDS,
   ...FORMULA_COMMANDS,
   ...THUMBNAIL_COMMANDS,
+  ...GALLERY_COMMANDS,
   ...HELP_COMMANDS,
 ];
 

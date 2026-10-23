@@ -16,6 +16,8 @@ const BUILTIN_KEYS: ReadonlySet<string> = new Set([
   "canvasFocus",
   "modalOpen",
   "listFocus",
+  "galleryFocus",
+  "graphFocus",
 ]);
 
 const NAMESPACED = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_.-]+$/;

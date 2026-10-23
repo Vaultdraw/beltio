@@ -59,6 +59,12 @@ export function commitCanvasTextEdit(doc: Document | null | undefined): void {
 export function readContext(doc: Document, app: AppContext): CommandContext {
   const active = doc.activeElement;
   const textEditing = isTextEditingTarget(active);
+  // One closest() for every focus scope: lists (listNav.ts) and views
+  // (data-keyscope="gallery" | "graph").
+  const scopeRoot = textEditing
+    ? null
+    : active?.closest("[data-keylist],[data-keyscope]") ?? null;
+  const scope = scopeRoot?.getAttribute("data-keyscope");
   return {
     vaultOpen: app.vaultOpen,
     drawingOpen: app.drawingOpen,
@@ -67,7 +73,9 @@ export function readContext(doc: Document, app: AppContext): CommandContext {
     canvasFocus: !textEditing && !!active?.closest(".vault-editor"),
     modalOpen: !!doc.querySelector(".vault-modal-backdrop"),
     // listNav.ts sets the attribute only while a list is registered.
-    listFocus: !textEditing && !!active?.closest("[data-keylist]"),
+    listFocus: !!scopeRoot?.hasAttribute("data-keylist"),
+    galleryFocus: scope === "gallery",
+    graphFocus: scope === "graph",
   };
 }
 

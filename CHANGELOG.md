@@ -6,6 +6,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### New
 
+- The gallery grid and the graph view keys are commands too: `gallery.*` (move, open, parent, close, paging) and `graph.*` (move, open, hints, filter, local, depth, fit, zoom, close). Same default keys as before, listed in the palette and Hotkeys page, rebindable in `[hotkeys]`, and active only while that view has focus. `graph.fit` now has the default key `0` in the graph.
 - File tree keys: `j`/`k` move, `h`/`l` close and open folders, `Enter` opens, `r` renames, `a`/`A` create, `d` deletes, `m` moves, `g`/`G` jump, `Esc` goes back to the canvas. **Mod+Alt+F** focuses the tree.
 - The same `list.*` commands drive the Tags list, the Links panel and the Settings page list, so every panel key is in the palette and can be changed in Settings → Hotkeys or `[hotkeys]`. They apply only while a list has focus, never on the canvas or in a text field.
 - `vaultdraw export <drawing>` renders a drawing to PNG, SVG or PDF through the running app, with the same result as **Export** in the file tree. It writes the file under the drawing's name in the current folder, to `-o <file>` or `-o <folder>`, or to stdout with `-o -`. It never replaces an existing file unless you pass `--force`. Options: `--format`, `--scale`, `--dark`, `--no-background`, `--no-pattern`, `--embed-scene` and `--page`. PDF takes only `--no-pattern`. Exports run in the background, so you can keep drawing.

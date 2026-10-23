@@ -19,13 +19,26 @@ export type Conflict =
   | { kind: "excalidraw"; action: string; label: string }
   | { kind: "reserved"; reason: string };
 
-/** Two `when` lists can hold together unless one needs X and the other !X. */
+/** Focus scopes: focus is in at most one of them, so two different ones never hold together. */
+const FOCUS_SCOPES: readonly string[] = [
+  "canvasFocus",
+  "listFocus",
+  "galleryFocus",
+  "graphFocus",
+];
+
+/** Two `when` lists can hold together unless one needs X and the other !X, or they need different focus scopes. */
 export function whenCanOverlap(
   a: readonly WhenClause[] | undefined,
   b: readonly WhenClause[] | undefined,
 ): boolean {
   if (!a || !b) {
     return true;
+  }
+  const scopeA = a.find((clause) => FOCUS_SCOPES.includes(clause));
+  const scopeB = b.find((clause) => FOCUS_SCOPES.includes(clause));
+  if (scopeA && scopeB && scopeA !== scopeB) {
+    return false;
   }
   return !a.some((clause) =>
     b.includes(
