@@ -4,6 +4,8 @@
  * synthetic DOM events dispatched into the real app; timers bracket "event
  * dispatched" to "frame after the DOM updated has been presented".
  */
+import { getEditorApi } from "../editor/editorApi";
+
 import { runLeakScenario } from "./leakScenario";
 import { collectFrames, countLong } from "./perfStats";
 import { refreshRateSamples, runRefreshRateProbe } from "./refreshRate";
@@ -261,6 +263,13 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
       return false;
     }
     if (root.querySelector(".vault-editor-container--busy")) {
+      return false;
+    }
+    // The scene is on screen, not just the editor shell: a fresh editor
+    // names its document before the drawing has loaded, so without this a
+    // fresh-editor open (the way drawings opened before the in-place swap)
+    // stops its clock long before the drawing appears.
+    if (!getEditorApi(id)) {
       return false;
     }
     if (doc.querySelector(".LoadingMessage")) {
