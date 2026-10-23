@@ -15,10 +15,7 @@ import {
   setCanvasSync,
   withStandardCanvasColors,
 } from "../editor/canvasSync";
-import {
-  deriveTokens,
-  EXCALIDRAW_OVERRIDE_STYLE_ID,
-} from "../theme";
+import { deriveTokens, EXCALIDRAW_OVERRIDE_STYLE_ID } from "../theme";
 import { resetBuiltinCaches } from "../theme/builtins";
 import {
   builtinRegistry,
