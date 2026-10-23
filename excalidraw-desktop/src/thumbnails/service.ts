@@ -216,6 +216,9 @@ export const createThumbnailService = (
           return "skipped";
         }
         try {
+          // The marker names the cap this render ran under, even if the cap
+          // changes while the job is in flight.
+          const failV = failVersion();
           const { json, revision } = await deps.readDrawing(path);
           // Polled at every render yield: a scrolled-past or unwatched
           // drawing stops parsing/painting at the next slice.
@@ -251,7 +254,7 @@ export const createThumbnailService = (
             );
           } else {
             if (result.reason !== "error") {
-              await store.put(handle, path, revision, null, failVersion());
+              await store.put(handle, path, revision, null, failV);
             }
             publish(path, target, THUMB_NONE);
           }

@@ -55,7 +55,6 @@ export const THUMBNAIL_MAX_ELEMENTS = 2000;
  */
 export const THUMB_MAX_ELEMENTS = DEFAULT_THUMB_MAX_ELEMENTS;
 let maxElements = THUMB_MAX_ELEMENTS;
-export const getThumbMaxElements = () => maxElements;
 export const setThumbMaxElements = (n: number) => {
   maxElements = n;
 };
