@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
-import { trackErrors } from "./helpers";
+import { enterVault, trackErrors } from "./helpers";
 
 export { trackErrors };
 
@@ -75,14 +75,7 @@ export const openSeededVault = async (
   query = "",
 ) => {
   await page.goto(`/e2e.html${query}`);
-  const onboarding = page.getByRole("button", { name: /Open Vault Folder/ });
-  const navigator = page.getByLabel("Vault File Navigator");
-  await expect(onboarding.or(navigator).first()).toBeVisible();
-  if (await onboarding.isVisible()) {
-    await seedDrawings(page, drawings);
-    await onboarding.click();
-  }
-  await expect(navigator).toBeVisible();
+  await enterVault(page, () => seedDrawings(page, drawings));
   await seedDrawings(page, drawings);
 };
 

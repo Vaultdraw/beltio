@@ -52,7 +52,10 @@ export const trackErrors = (page: Page) => {
  * click then waits for it until the test times out. Wait for the state instead:
  * the navigator is there, or the onboarding button can be clicked.
  */
-const enterVault = async (page: Page) => {
+export const enterVault = async (
+  page: Page,
+  beforeClick?: () => Promise<void>,
+) => {
   const onboarding = page.getByRole("button", { name: /Open Vault Folder/ });
   const navigator = page.getByLabel("Vault File Navigator");
   await expect(async () => {
@@ -61,6 +64,11 @@ const enterVault = async (page: Page) => {
     }
     // Fails (and is polled again) while the page is still loading or when the
     // button vanished because the vault opened by itself; one click is enough.
+    // `beforeClick` runs on every poll that still sees the button: keep it
+    // repeatable.
+    if (await onboarding.isVisible()) {
+      await beforeClick?.();
+    }
     await onboarding.click({ timeout: 1000 });
   }).toPass({ timeout: 30_000 });
   await expect(navigator).toBeVisible();
