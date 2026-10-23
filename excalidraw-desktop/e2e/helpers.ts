@@ -43,8 +43,8 @@ export const trackErrors = (page: Page) => {
   return errors;
 };
 
-export const openVault = async (page: Page, query = "") => {
-  await page.goto(`/e2e.html${query}`);
+/** Waits for the freshly loaded app, opening the (fake) vault if it asks. */
+const enterVault = async (page: Page) => {
   const onboarding = page.getByRole("button", { name: /Open Vault Folder/ });
   const navigator = page.getByLabel("Vault File Navigator");
   await expect(onboarding.or(navigator).first()).toBeVisible();
@@ -52,6 +52,23 @@ export const openVault = async (page: Page, query = "") => {
     await onboarding.click();
   }
   await expect(page.getByLabel("Vault File Navigator")).toBeVisible();
+};
+
+export const openVault = async (page: Page, query = "") => {
+  await page.goto(`/e2e.html${query}`);
+  await enterVault(page);
+};
+
+/**
+ * Reloads the page and waits until the app has booted again. Never follow a
+ * `page.reload()` with `openVault` (its `goto`): that navigation cancels the
+ * module chunks the reloaded page is still importing, and WebKit reports each
+ * as `pageerror: Importing a module script failed` (80 reload+goto loops gave
+ * 21 of them). Use this instead.
+ */
+export const reloadVault = async (page: Page) => {
+  await page.reload();
+  await enterVault(page);
 };
 
 export const openDrawing = async (page: Page, name: string) => {

@@ -4,6 +4,7 @@ import {
   canvasBox,
   openDrawing,
   openVault,
+  reloadVault,
   readScene,
   trackErrors,
 } from "./helpers";
@@ -470,8 +471,7 @@ test.describe("Hotkeys settings page", () => {
     await page.keyboard.press("ControlOrMeta+Alt+KeyB");
     await expect(chips(page, "view.toggleNavigator")).toHaveCount(2);
 
-    await page.reload();
-    await openVault(page);
+    await reloadVault(page);
     await page.keyboard.press("ControlOrMeta+Comma");
     await page.getByRole("tab", { name: "Hotkeys" }).click();
     await expect(chips(page, "view.toggleNavigator")).toHaveCount(2);

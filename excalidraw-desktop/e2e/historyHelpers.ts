@@ -1,6 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 
-import { openDrawing, openVault } from "./helpers";
+import { openDrawing, openVault, reloadVault } from "./helpers";
 
 /** Shared fixtures for the history panel, isolation and perf specs. */
 export const PATH = "DSA/Graphs.excalidraw";
@@ -84,13 +84,16 @@ export interface SeedVersion {
 /**
  * Opens the vault with `current` as the drawing's saved scene, then adds
  * `versions` (oldest first) to the fake history as if earlier runs wrote them.
+ * `{ reload: true }` reloads the open page instead of navigating to it.
  */
 export const setup = async (
   page: Page,
   current: unknown[],
   versions: SeedVersion[] = [],
+  { reload = false }: { reload?: boolean } = {},
 ) => {
-  await openVault(page);
+  // `reload`: the page is already open; reload it (never reload then goto).
+  await (reload ? reloadVault(page) : openVault(page));
   await page.evaluate(
     ({ path, json }) => {
       (window as any).__vaultRepo.seedDrawing(path, json);

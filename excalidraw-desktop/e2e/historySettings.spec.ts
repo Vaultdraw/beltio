@@ -507,11 +507,10 @@ test.describe("panel notices", () => {
       .getByTestId("history-git-notice")
       .getByRole("button", { name: "Not now" })
       .click();
-    // a reload that cancels the idle settings prefetch mid-flight reports an
-    // aborted module import (navigation artefact, not an app error)
-    await page.waitForLoadState("networkidle");
-    await page.reload();
-    await setup(page, CURRENT, [V1, V2]);
+    // `reload`: setup waits for the reloaded app to boot. A reload followed by
+    // a goto cancels the boot chunks and reports "Importing a module script
+    // failed" (a navigation artefact that only shows when the server is slow).
+    await setup(page, CURRENT, [V1, V2], { reload: true });
     await setGitRepo(page, true);
     await openPanelByShortcut(page);
     await expect(rows(page)).toHaveCount(2);
@@ -538,10 +537,19 @@ test.describe("panel notices", () => {
   test("over-cap and disk-low warnings show in the panel", async ({ page }) => {
     const errors = trackErrors(page);
     const warnings = panel(page).locator(".vault-history-panel__warnings");
+    // Closing is a toggle: wait until the panel is really gone before the next
+    // press (and before patching), or two quick presses can land on one state.
+    const closePanel = async () => {
+      await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+      await expect(panel(page)).toHaveCount(0);
+    };
 
     await openPanelByShortcut(page);
+    // "No warnings" only means something once the panel has read its status.
+    await expect.poll(() => callsOf(page, "status")).toBeGreaterThan(0);
+    await expect(rows(page)).toHaveCount(2);
     await expect(warnings).toHaveCount(0);
-    await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+    await closePanel();
 
     await patchStatus(page, {
       overCap: "checkpoints",
@@ -550,7 +558,7 @@ test.describe("panel notices", () => {
     await openPanelByShortcut(page);
     await expect(warnings).toContainText("only checkpoints are left to remove");
     await expect(warnings).toContainText("Disk space is low");
-    await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+    await closePanel();
 
     await patchStatus(page, { overCap: "other-devices", lastError: null });
     await openPanelByShortcut(page);
