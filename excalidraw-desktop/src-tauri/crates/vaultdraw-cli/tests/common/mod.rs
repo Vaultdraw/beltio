@@ -96,10 +96,22 @@ pub fn vd(args: &[&str], socket: Option<&PathBuf>, state: Option<&PathBuf>) -> O
     vd_in(args, socket, state, "")
 }
 
+/// Like `vd`, run in the folder `cwd` (for output files named after the drawing).
+pub fn vd_at(args: &[&str], socket: Option<&PathBuf>, cwd: &std::path::Path) -> Output {
+    vd_cmd(args, socket, None, "", Some(cwd))
+}
+
 /// Like `vd`, with `stdin` piped in.
 pub fn vd_in(args: &[&str], socket: Option<&PathBuf>, state: Option<&PathBuf>, stdin: &str) -> Output {
+    vd_cmd(args, socket, state, stdin, None)
+}
+
+fn vd_cmd(args: &[&str], socket: Option<&PathBuf>, state: Option<&PathBuf>, stdin: &str, cwd: Option<&std::path::Path>) -> Output {
     use std::process::Stdio;
     let mut c = Command::new(env!("CARGO_BIN_EXE_vaultdraw-cli"));
+    if let Some(dir) = cwd {
+        c.current_dir(dir);
+    }
     c.args(args).env_clear().env("HOME", "/nonexistent-vd-home");
     match socket {
         Some(s) => c.arg("--socket").arg(s),

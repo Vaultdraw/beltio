@@ -56,15 +56,72 @@ fn export_sends_only_the_options_set_and_writes_the_exact_bytes() {
 fn format_comes_from_the_extension_and_options_map_to_their_keys() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("p.PDF");
-    let (o, seen) = run(&["export", "Graphs/a.excalidraw", "-o", file.to_str().unwrap(), "--no-background", "--no-pattern", "--embed-scene", "--page"]);
+    let (o, seen) = run(&["export", "Graphs/a.excalidraw", "-o", file.to_str().unwrap(), "--no-pattern"]);
     assert_eq!(code(&o), 0, "{}", err(&o));
-    assert_eq!(
-        seen[0]["params"],
-        json!({"path":"Graphs/a.excalidraw","format":"pdf","background":false,"pattern":false,"embedScene":true,"pageShaped":true})
-    );
-    // Default format is png when neither --format nor a known extension is given.
-    let (_, seen) = run(&["export", "a", "-o", dir.path().join("x.bin").to_str().unwrap()]);
-    assert_eq!(seen[0]["params"], json!({"file":"a","format":"png"}));
+    assert_eq!(seen[0]["params"], json!({"path":"Graphs/a.excalidraw","format":"pdf","pattern":false}));
+    let file = dir.path().join("s.svg");
+    let (o, seen) = run(&["export", "a", "-o", file.to_str().unwrap(), "--no-background", "--embed-scene", "--page"]);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(seen[0]["params"], json!({"file":"a","format":"svg","background":false,"embedScene":true,"pageShaped":true}));
+}
+
+#[test]
+fn an_unknown_or_mismatched_extension_is_a_usage_error_before_any_request() {
+    let dir = tempfile::tempdir().unwrap();
+    let at = |name: &str| dir.path().join(name).to_str().unwrap().to_string();
+    let (bin, noext, png) = (at("x.bin"), at("noext"), at("x.png"));
+    for (args, needle) in [
+        (vec!["export", "a", "-o", &bin], ".png, .svg or .pdf"),
+        (vec!["export", "a", "-o", &noext], ".png, .svg or .pdf"),
+        (vec!["export", "a", "-o", &png, "--format", "svg"], "does not match"),
+    ] {
+        let (o, seen) = run(&args);
+        assert_eq!(code(&o), 1, "{args:?}: {}", err(&o));
+        assert!(err(&o).contains(needle), "{args:?}: {}", err(&o));
+        assert!(seen.is_empty(), "{args:?}");
+    }
+    assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 0);
+}
+
+#[test]
+fn pdf_refuses_the_options_it_would_ignore_before_any_request() {
+    for flag in [&["--dark"][..], &["--no-background"], &["--scale", "2"], &["--embed-scene"], &["--page"]] {
+        let mut args = vec!["export", "a", "--format", "pdf", "-o", "-"];
+        args.extend_from_slice(flag);
+        let (o, seen) = run(&args);
+        assert_eq!(code(&o), 1, "{flag:?}: {}", err(&o));
+        assert!(err(&o).contains("not apply to pdf"), "{flag:?}: {}", err(&o));
+        assert!(seen.is_empty(), "{flag:?}");
+    }
+}
+
+#[test]
+fn the_default_name_is_checked_before_the_render() {
+    let dir = tempfile::tempdir().unwrap();
+    let f = Fake::start(app);
+    let o = vd_at(&["export", "a"], Some(&f.socket), dir.path());
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(std::fs::read(dir.path().join("a.png")).unwrap(), PNG);
+    // A repeat export fails fast: no second render.
+    let o = vd_at(&["export", "a"], Some(&f.socket), dir.path());
+    assert_eq!(code(&o), 1, "{}", err(&o));
+    assert!(err(&o).contains("a.png") && err(&o).contains("--force"), "{}", err(&o));
+    assert_eq!(f.seen.lock().unwrap().len(), 1, "refused before the second render");
+    let o = vd_at(&["export", "a", "--force"], Some(&f.socket), dir.path());
+    assert_eq!(code(&o), 0, "{}", err(&o));
+}
+
+#[test]
+fn o_naming_an_existing_folder_writes_the_drawing_name_into_it() {
+    let dir = tempfile::tempdir().unwrap();
+    let f = Fake::start(app);
+    let o = vd(&["export", "a", "--format", "svg", "-o", dir.path().to_str().unwrap()], Some(&f.socket), None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(std::fs::read(dir.path().join("a.svg")).unwrap(), SVG);
+    assert!(out(&o).contains(&dir.path().join("a.svg").display().to_string()), "{}", out(&o));
+    let o = vd(&["export", "a", "--format", "svg", "-o", dir.path().to_str().unwrap()], Some(&f.socket), None);
+    assert_eq!(code(&o), 1, "{}", err(&o));
+    assert_eq!(f.seen.lock().unwrap().len(), 1, "the taken name is refused before the render");
 }
 
 #[test]
@@ -110,11 +167,11 @@ fn json_output_has_the_reply_fields_and_no_bytes() {
 
 #[test]
 fn print_request_shows_the_line_without_a_socket() {
-    let o = vd(&["export", "a", "--format", "pdf", "--scale", "1.5", "--print-request"], None, None);
+    let o = vd(&["export", "a", "--format", "svg", "--scale", "1.5", "--print-request"], None, None);
     assert_eq!(code(&o), 0, "{}", err(&o));
     let line = parse(&out(&o));
     assert_eq!(line["method"], "export.render");
-    assert_eq!(line["params"], json!({"file":"a","format":"pdf","scale":1.5}));
+    assert_eq!(line["params"], json!({"file":"a","format":"svg","scale":1.5}));
 }
 
 #[test]

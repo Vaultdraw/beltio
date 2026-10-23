@@ -14,37 +14,31 @@ use vaultdraw_protocol::methods;
 const REPLY_WAIT_SECS: u64 = 125;
 
 pub fn run(cli: &Cli, args: &ExportArgs) -> Result<(), Fail> {
-    let format = args.format.clone().or_else(|| args.out.as_deref().and_then(format_of_ext)).unwrap_or_else(|| "png".into());
-    let mut p = target(cli, &args.target);
-    p.insert("format".into(), json!(format));
-    if let Some(s) = args.scale {
-        p.insert("scale".into(), json!(s));
-    }
-    for (set, key) in [(args.dark, "dark"), (args.embed_scene, "embedScene"), (args.page, "pageShaped")] {
-        if set {
-            p.insert(key.into(), json!(true));
-        }
-    }
-    for (set, key) in [(args.no_background, "background"), (args.no_pattern, "pattern")] {
-        if set {
-            p.insert(key.into(), json!(false));
-        }
-    }
-    let params = Value::Object(p);
+    let to_stdout = args.out.as_deref() == Some("-");
+    // `-o <existing folder>` writes the drawing's file name into that folder.
+    let out_dir = args.out.as_deref().filter(|o| *o != "-" && Path::new(o).is_dir());
+    let file_out = args.out.as_deref().filter(|o| *o != "-" && out_dir.is_none());
+    let format = export_format(args.format.as_deref(), file_out)?;
+    check_pdf_options(args, &format)?;
+    let params = Value::Object(with_target(cli, &args.target, render_params(args, &format)));
     if cli.print_request {
         println!("{}", request_line(methods::EXPORT_RENDER, Some(params)));
         return Ok(());
     }
-    let to_stdout = args.out.as_deref() == Some("-");
     if to_stdout && cli.json {
         return Err(Fail::cli("--json cannot be combined with -o - (stdout carries the file's bytes)"));
     }
     if to_stdout && !args.force && std::io::stdout().is_terminal() {
         return Err(Fail::cli("refusing to write binary output to a terminal (redirect it, use -o <file>, or pass --force)"));
     }
-    // Fail before the render when the target is known and taken.
-    if let Some(out) = args.out.as_deref().filter(|o| *o != "-") {
-        check_free(Path::new(out), args.force)?;
+    // Fail before the render when the destination is known and taken. Without -o (or with a
+    // folder) the name is the one the app will give it; the write checks the real name again.
+    let planned = file_name_for(&args.target, &format, args.embed_scene);
+    match (file_out, out_dir) {
+        (Some(file), _) => check_free(Path::new(file), args.force)?,
+        (None, Some(dir)) => check_free(&Path::new(dir).join(&planned), args.force)?,
+        (None, None) if !to_stdout => check_free(Path::new(&planned), args.force)?,
+        _ => {}
     }
     let socket = resolve_socket(cli.socket.as_deref())?;
     let reply = Rpc::new(socket, cli.timeout.max(REPLY_WAIT_SECS)).call(methods::EXPORT_RENDER, Some(params))?;
@@ -59,9 +53,10 @@ pub fn run(cli: &Cli, args: &ExportArgs) -> Result<(), Fail> {
         o.write_all(&bytes).and_then(|()| o.flush()).map_err(|e| Fail::cli(format!("cannot write to stdout: {e}")))?;
         "-".to_string()
     } else {
-        let dest = match args.out.as_deref() {
-            Some(out) => PathBuf::from(out),
-            None => PathBuf::from(safe_name(&file_name)?),
+        let dest = match (file_out, out_dir) {
+            (Some(file), _) => PathBuf::from(file),
+            (None, Some(dir)) => Path::new(dir).join(safe_name(&file_name)?),
+            (None, None) => PathBuf::from(safe_name(&file_name)?),
         };
         write_file(&dest, &bytes, args.force)?;
         dest.display().to_string()
@@ -78,13 +73,88 @@ pub fn run(cli: &Cli, args: &ExportArgs) -> Result<(), Fail> {
     Ok(())
 }
 
+/// The export options as `export.render` params (format, scale, flags); no target.
+fn render_params(args: &ExportArgs, format: &str) -> serde_json::Map<String, Value> {
+    let mut p = serde_json::Map::new();
+    p.insert("format".into(), json!(format));
+    if let Some(s) = args.scale {
+        p.insert("scale".into(), json!(s));
+    }
+    for (set, key) in [(args.dark, "dark"), (args.embed_scene, "embedScene"), (args.page, "pageShaped")] {
+        if set {
+            p.insert(key.into(), json!(true));
+        }
+    }
+    for (set, key) in [(args.no_background, "background"), (args.no_pattern, "pattern")] {
+        if set {
+            p.insert(key.into(), json!(false));
+        }
+    }
+    p
+}
+
+/// `params` with the target added (`path` or `file`, see `target`).
+fn with_target(cli: &Cli, target_arg: &str, mut params: serde_json::Map<String, Value>) -> serde_json::Map<String, Value> {
+    let mut p = target(cli, target_arg);
+    p.append(&mut params);
+    p
+}
+
+/// The format: `--format`, else the `-o` file's extension, else png. A `-o` file must end in
+/// .png, .svg or .pdf, and it must agree with `--format` when both are given.
+fn export_format(flag: Option<&str>, file_out: Option<&str>) -> Result<String, Fail> {
+    let Some(file) = file_out else {
+        return Ok(flag.unwrap_or("png").to_string());
+    };
+    let Some(ext) = format_of_ext(file) else {
+        return Err(Fail::cli(format!("{file}: -o needs a .png, .svg or .pdf file name, or an existing folder")));
+    };
+    match flag {
+        Some(f) if f != ext => Err(Fail::cli(format!("--format {f} does not match the .{ext} extension of {file}"))),
+        _ => Ok(ext),
+    }
+}
+
+/// PDF has fixed pages: it always paints the background in the light theme at its own
+/// resolution, so these options would be ignored. Refused before any request.
+fn check_pdf_options(args: &ExportArgs, format: &str) -> Result<(), Fail> {
+    if format != "pdf" {
+        return Ok(());
+    }
+    let set: Vec<&str> = [
+        (args.dark, "--dark"),
+        (args.no_background, "--no-background"),
+        (args.scale.is_some(), "--scale"),
+        (args.embed_scene, "--embed-scene"),
+        (args.page, "--page"),
+    ]
+    .into_iter()
+    .filter_map(|(on, flag)| on.then_some(flag))
+    .collect();
+    if set.is_empty() {
+        return Ok(());
+    }
+    Err(Fail::cli(format!("{} {} not apply to pdf", set.join(", "), if set.len() == 1 { "does" } else { "do" })))
+}
+
+/// The file name the app gives an export of `target` (as `exportFileName` in the app): the
+/// drawing's name without `.excalidraw`, `.excalidraw` again when the scene is embedded, then
+/// the format.
+fn file_name_for(target: &str, format: &str, embed_scene: bool) -> String {
+    let name = target.rsplit('/').next().unwrap_or(target);
+    let base = if name.to_ascii_lowercase().ends_with(".excalidraw") { &name[..name.len() - ".excalidraw".len()] } else { name };
+    let base = if base.is_empty() { "Drawing" } else { base };
+    let embed = if embed_scene && format != "pdf" { ".excalidraw" } else { "" };
+    format!("{base}{embed}.{format}")
+}
+
 /// `png`, `svg` or `pdf` from a file extension (case-insensitive).
 fn format_of_ext(out: &str) -> Option<String> {
     let ext = Path::new(out).extension()?.to_str()?.to_ascii_lowercase();
     matches!(ext.as_str(), "png" | "svg" | "pdf").then_some(ext)
 }
 
-/// The reply's bytes, decoded and checked against its `size`.
+/// The decoded bytes; refuses a reply without `bytes`, with bad base64 or a wrong `size`.
 fn decode_reply(reply: &Value) -> Result<Vec<u8>, Fail> {
     let bad = |what: &str| Fail::new(EXIT_PROTOCOL, format!("the app's reply has {what}"), "BAD_REPLY");
     let text = reply.get("bytes").and_then(Value::as_str).ok_or_else(|| bad("no bytes"))?;
@@ -104,28 +174,51 @@ fn safe_name(name: &str) -> Result<String, Fail> {
         .ok_or_else(|| Fail::new(EXIT_PROTOCOL, "the app's reply has no file name", "BAD_REPLY"))
 }
 
+fn taken(dest: &Path) -> Fail {
+    Fail::cli(format!("{} already exists (use --force to overwrite it)", dest.display()))
+}
+
 fn check_free(dest: &Path, force: bool) -> Result<(), Fail> {
     if !force && dest.exists() {
-        return Err(Fail::cli(format!("{} already exists (use --force to overwrite it)", dest.display())));
+        return Err(taken(dest));
     }
     Ok(())
 }
 
-/// Writes to `<dest>.tmp-<pid>` and renames it into place, so a failed write leaves no partial file.
+/// Writes `<dest>.tmp-<pid>`, then moves it into place, so a failed write leaves no partial file.
+/// Without `force` the move itself refuses an existing file (a hard link fails when the name is
+/// taken), so a file created by someone else during the render is never replaced.
 fn write_file(dest: &Path, bytes: &[u8], force: bool) -> Result<(), Fail> {
     check_free(dest, force)?;
     let tmp = PathBuf::from(format!("{}.tmp-{}", dest.display(), std::process::id()));
-    let fail = |what: &str, e: std::io::Error| {
+    let fail = |e: std::io::Error| Fail::cli(format!("cannot write {}: {e}", dest.display()));
+    if let Err(e) = std::fs::write(&tmp, bytes) {
         let _ = std::fs::remove_file(&tmp);
-        Fail::cli(format!("cannot {what} {}: {e}", dest.display()))
-    };
-    std::fs::write(&tmp, bytes).map_err(|e| fail("write", e))?;
-    // Re-check after the render: another process may have created the file meanwhile.
-    if let Err(f) = check_free(dest, force) {
-        let _ = std::fs::remove_file(&tmp);
-        return Err(f);
+        return Err(fail(e));
     }
-    std::fs::rename(&tmp, dest).map_err(|e| fail("write", e))
+    let placed = if force { std::fs::rename(&tmp, dest) } else { place_new(&tmp, dest, bytes) };
+    let _ = std::fs::remove_file(&tmp);
+    match placed {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => Err(taken(dest)),
+        Err(e) => Err(fail(e)),
+    }
+}
+
+/// Moves `tmp` to a `dest` that must not exist yet. A hard link is atomic and fails on an
+/// existing name; on a filesystem without hard links, an exclusive create (`O_EXCL`) does the
+/// same check (the file is then filled in place).
+fn place_new(tmp: &Path, dest: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    match std::fs::hard_link(tmp, dest) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => Err(e),
+        Err(_) => {
+            let mut f = std::fs::OpenOptions::new().write(true).create_new(true).open(dest)?;
+            f.write_all(bytes).inspect_err(|_| {
+                let _ = std::fs::remove_file(dest);
+            })
+        }
+    }
 }
 
 /// Standard base64 (RFC 4648, `+` and `/`, `=` padding). Rejects anything else, including
@@ -180,6 +273,42 @@ pub(crate) fn base64_decode(s: &str) -> Option<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn format_comes_from_the_flag_or_the_extension_and_they_must_agree() {
+        assert_eq!(export_format(None, None).unwrap(), "png");
+        assert_eq!(export_format(Some("svg"), None).unwrap(), "svg");
+        assert_eq!(export_format(None, Some("a/B.PDF")).unwrap(), "pdf");
+        assert_eq!(export_format(Some("png"), Some("x.png")).unwrap(), "png");
+        assert!(export_format(Some("svg"), Some("x.png")).unwrap_err().message.contains("does not match"));
+        for bad in ["x.jpg", "x", "x.excalidraw"] {
+            assert!(export_format(None, Some(bad)).unwrap_err().message.contains(".png, .svg or .pdf"), "{bad}");
+        }
+    }
+
+    #[test]
+    fn file_name_for_matches_the_apps_export_file_name() {
+        assert_eq!(file_name_for("Plans/Roadmap.excalidraw", "png", false), "Roadmap.png");
+        assert_eq!(file_name_for("Roadmap", "svg", true), "Roadmap.excalidraw.svg");
+        assert_eq!(file_name_for("Roadmap.EXCALIDRAW", "pdf", true), "Roadmap.pdf");
+        assert_eq!(file_name_for(".excalidraw", "png", false), "Drawing.png");
+    }
+
+    #[test]
+    fn writing_never_replaces_a_file_that_appeared_after_the_check() {
+        let dir = tempfile::tempdir().unwrap();
+        let dest = dir.path().join("out.png");
+        let tmp = dir.path().join("out.png.tmp");
+        std::fs::write(&tmp, b"new").unwrap();
+        // Someone else creates the file between the check and the move.
+        std::fs::write(&dest, b"theirs").unwrap();
+        let e = place_new(&tmp, &dest, b"new").unwrap_err();
+        assert_eq!(e.kind(), std::io::ErrorKind::AlreadyExists);
+        assert_eq!(std::fs::read(&dest).unwrap(), b"theirs");
+        std::fs::remove_file(&dest).unwrap();
+        place_new(&tmp, &dest, b"new").unwrap();
+        assert_eq!(std::fs::read(&dest).unwrap(), b"new");
+    }
 
     #[test]
     fn base64_rfc4648_vectors() {

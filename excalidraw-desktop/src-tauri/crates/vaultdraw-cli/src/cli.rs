@@ -151,28 +151,28 @@ pub struct CmdArgs {
 pub struct ExportArgs {
     /// Path (contains / or ends in .excalidraw) or link-style name
     pub target: String,
-    /// Output file, or - for stdout (default: the drawing's file name in the current folder)
+    /// Output .png/.svg/.pdf file, an existing folder, or - for stdout (default: the drawing's name here)
     #[arg(short = 'o', long, value_name = "FILE")]
     pub out: Option<String>,
-    /// png, svg or pdf (default: from the -o extension, else png)
+    /// png, svg or pdf (default: from the -o extension, which must agree, else png)
     #[arg(long, value_parser = ["png", "svg", "pdf"])]
     pub format: Option<String>,
-    /// Scale factor (the app's default is 1)
+    /// Scale factor (the app's default is 1; not for pdf)
     #[arg(long, value_name = "N")]
     pub scale: Option<f64>,
-    /// Render with the dark theme
+    /// Render with the dark theme (not for pdf)
     #[arg(long)]
     pub dark: bool,
-    /// Leave the background out (transparent)
+    /// Leave the background out (transparent; not for pdf)
     #[arg(long)]
     pub no_background: bool,
     /// Leave the pattern background out
     #[arg(long)]
     pub no_pattern: bool,
-    /// Embed the scene in the file (PNG and SVG can be opened back as drawings)
+    /// Embed the scene in the file (PNG and SVG can be opened back as drawings; not for pdf)
     #[arg(long)]
     pub embed_scene: bool,
-    /// Export the page-shaped frame of the drawing
+    /// Export the page-shaped frame of the drawing (not for pdf)
     #[arg(long)]
     pub page: bool,
     /// Overwrite an existing output file; write to a terminal stdout
