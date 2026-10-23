@@ -1,5 +1,10 @@
 /** `ctx.scene` and `ctx.events` of one plugin (split out of context.ts). */
-import { useCallback, useRef, useSyncExternalStore } from "react";
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 
 import { appEvents, type AppEventMap } from "../../events/appEvents";
 import { applyOps, SceneOpsError, viewportCenter } from "../../sceneOps";
@@ -31,32 +36,35 @@ function useScene<T>(
   select: (els: readonly SceneElement[]) => T,
   isEqual: (a: T, b: T) => boolean = Object.is,
 ): T {
-  const sel = useRef(select);
-  const eq = useRef(isEqual);
-  sel.current = select;
-  eq.current = isEqual;
-  const last = useRef<{
-    els: readonly SceneElement[];
-    select: typeof select;
-    value: T;
-  } | null>(null);
-  const getSnapshot = useCallback((): T => {
-    const els = readScene();
-    const prev = last.current;
-    if (prev && prev.els === els && prev.select === sel.current) {
-      return prev.value;
-    }
-    const next = sel.current(els);
-    const value = prev && eq.current(prev.value, next) ? prev.value : next;
-    last.current = { els, select: sel.current, value };
-    return value;
-  }, []);
-  return useSyncExternalStore(subscribeHook, getSnapshot);
+  // The last value handed out, so an equal result keeps its identity across renders.
+  // Written in a layout effect, never during render.
+  const prev = useRef<{ value: T } | null>(null);
+  const getSnapshot = useMemo(() => {
+    let els: readonly SceneElement[] | null = null;
+    let memo: T;
+    return (): T => {
+      const now = readScene();
+      if (els === now) {
+        return memo;
+      }
+      const next = select(now);
+      const before = prev.current;
+      memo = before && isEqual(before.value, next) ? before.value : next;
+      els = now;
+      return memo;
+    };
+  }, [select, isEqual]);
+  const value = useSyncExternalStore(subscribeHook, getSnapshot);
+  useLayoutEffect(() => {
+    prev.current = { value };
+  }, [value]);
+  return value;
 }
 
 export function createSceneApi(
   id: string,
   track: Track,
+  isLive: () => boolean = () => true,
 ): PluginContext["scene"] {
   const refusal = (what: string) => {
     const err = new Error(`scene.batch: ${what}`);
@@ -66,11 +74,17 @@ export function createSceneApi(
   return {
     elements: readScene,
     onChange(cb) {
+      if (!isLive()) {
+        return NOOP;
+      }
       const safe = guard(id, cb, "scene.onChange", true);
       return track(subscribeScene(safe));
     },
     useScene,
     async batch(ops) {
+      if (!isLive()) {
+        throw refusal("the plugin was stopped");
+      }
       const scene = getActiveScene();
       if (!scene) {
         throw refusal("no drawing is open");
@@ -97,6 +111,7 @@ export function createSceneApi(
 export function createEventsApi(
   id: string,
   track: Track,
+  isLive: () => boolean = () => true,
 ): PluginContext["events"] {
   // One microtask queue per plugin: emission order is kept across event names
   // and a burst never runs inside the emitter.
@@ -118,15 +133,24 @@ export function createEventsApi(
         );
         return NOOP;
       }
+      if (!isLive()) {
+        return NOOP;
+      }
       const safe = guard(id, cb, `events.${name}`, true);
       let live = true;
-      const off = appEvents.on(name, (payload) => {
+      const enqueue = (payload: never) => {
         queue.push(() => live && safe(payload));
         if (!scheduled) {
           scheduled = true;
           queueMicrotask(drain);
         }
-      });
+      };
+      const off = appEvents.on(name, enqueue);
+      // A plugin that activates after the vault or drawing opened is told the current state once.
+      const now = appEvents.current(name);
+      if (now !== undefined) {
+        enqueue(now as never);
+      }
       return track(() => {
         live = false;
         off();

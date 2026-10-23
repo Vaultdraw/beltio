@@ -168,6 +168,7 @@ export async function boot(
       host.stop();
       scene.dispose();
       toastStore.clear();
+      appEvents.clearCurrent();
       updatePreferences({ pluginsEnabled: [] });
     },
   };

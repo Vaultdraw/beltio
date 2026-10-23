@@ -36,6 +36,8 @@ export function createPluginContext(
   const { info } = rt;
   const id = info.id;
   const subscriptions: Disposable[] = [];
+  let stopped = false;
+  const isLive = () => !stopped;
   const track = (fn: () => void): Disposable => {
     let done = false;
     const d = {
@@ -176,8 +178,8 @@ export function createPluginContext(
         },
       ]),
     ) as PluginContext["log"],
-    scene: createSceneApi(id, track),
-    events: createEventsApi(id, track),
+    scene: createSceneApi(id, track, isLive),
+    events: createEventsApi(id, track, isLive),
     subscriptions,
     setTimeout: timer(
       (fn, ms) => win.setTimeout(fn, ms),
@@ -194,6 +196,7 @@ export function createPluginContext(
   return {
     ctx,
     dispose() {
+      stopped = true;
       while (subscriptions.length > 0) {
         const d = subscriptions.pop()!;
         try {

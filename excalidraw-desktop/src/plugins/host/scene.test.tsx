@@ -144,6 +144,22 @@ describe("ctx.scene.batch", () => {
   });
 });
 
+describe("a stopped plugin", () => {
+  it("cannot change the drawing or subscribe through its old context", async () => {
+    const ctx = await bootCtx((c) => void c.commands.register("go", () => {}));
+    t!.scene.setElements([{ ...rect, id: "a" }]);
+    await t!.disable();
+    await expect(
+      ctx.scene.batch([{ op: "add", element: rect }]),
+    ).rejects.toThrow(/stopped/);
+    expect(t!.scene.batches).toHaveLength(0);
+    const base = sceneListenerCount();
+    ctx.scene.onChange(() => {}).dispose();
+    expect(sceneListenerCount()).toBe(base);
+    ctx.events.on("drawing.saved", () => {}).dispose();
+  });
+});
+
 describe("ctx.scene.useScene", () => {
   it("re-renders only when the selected value changes and unsubscribes on unmount", async () => {
     const renders = vi.fn();

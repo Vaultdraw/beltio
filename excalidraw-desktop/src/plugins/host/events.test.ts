@@ -71,4 +71,37 @@ describe("ctx.events", () => {
     await t!.flush();
     expect(cb).not.toHaveBeenCalled();
   });
+
+  it("tells a plugin that activates late the current vault and drawing once", async () => {
+    appEvents.emit("vault.opened", { name: "first" });
+    appEvents.emit("vault.opened", { name: "v" });
+    appEvents.emit("drawing.opened", { path: "a" });
+    appEvents.emit("drawing.opened", { path: "b" });
+    appEvents.emit("drawing.saved", { path: "b" }); // not replayed: only state is
+    const seen: string[] = [];
+    await bootEvents((ctx) => {
+      ctx.events.on("vault.opened", (p) => seen.push(`vault:${p.name}`));
+      ctx.events.on("drawing.opened", (p) => seen.push(`open:${p.path}`));
+      ctx.events.on("drawing.saved", (p) => seen.push(`saved:${p.path}`));
+    });
+    await t!.flush();
+    expect(seen).toEqual(["vault:v", "open:b"]);
+  });
+
+  it("does not replay a drawing that was deleted or a vault that changed", async () => {
+    appEvents.emit("vault.opened", { name: "v" });
+    appEvents.emit("drawing.opened", { path: "a" });
+    appEvents.emit("drawing.deleted", { path: "a" });
+    const seen: string[] = [];
+    await bootEvents((ctx) => {
+      ctx.events.on("drawing.opened", (p) => seen.push(p.path));
+    });
+    await t!.flush();
+    expect(seen).toEqual([]);
+    appEvents.emit("drawing.opened", { path: "x" });
+    appEvents.emit("drawing.renamed", { from: "x", to: "y" });
+    expect(appEvents.current("drawing.opened")).toEqual({ path: "y" });
+    appEvents.emit("vault.opened", { name: "w" });
+    expect(appEvents.current("drawing.opened")).toBeUndefined();
+  });
 });
