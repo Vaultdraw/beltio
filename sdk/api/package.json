@@ -6,14 +6,30 @@
   "type": "module",
   "license": "MIT",
   "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./testing/index.ts",
+    "./plugin.schema.json": "./plugin.schema.json"
+  },
   "files": [
     "src",
-    "etc"
+    "etc",
+    "testing"
   ],
   "vaultdraw": {
     "minApp": "0.1.2"
   },
   "peerDependencies": {
-    "@types/react": ">=18"
+    "@testing-library/react": ">=14",
+    "@types/react": ">=18",
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "@testing-library/react": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
   }
 }

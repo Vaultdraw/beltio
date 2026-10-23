@@ -5,6 +5,18 @@ import { configDefaults, defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: [
+      // Before `@vaultdraw/api$`. The example tests run on the real in-repo
+      // host kit by default and on the SDK's mock with VAULTDRAW_TEST_HOST=mock.
+      {
+        find: /^@vaultdraw\/api\/testing$/,
+        replacement:
+          process.env.VAULTDRAW_TEST_HOST === "mock"
+            ? path.resolve(__dirname, "./sdk/api/testing/index.ts")
+            : path.resolve(
+                __dirname,
+                "./excalidraw-desktop/src/plugins/testing/index.tsx",
+              ),
+      },
       {
         find: /^@vaultdraw\/api$/,
         replacement: path.resolve(

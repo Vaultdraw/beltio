@@ -1,10 +1,8 @@
 import { screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  boot,
-  type TestPlugin,
-} from "../../../excalidraw-desktop/src/plugins/testing";
+import { boot, type TestPlugin } from "@vaultdraw/api/testing";
+
 import { readExample } from "../testing/readManifest";
 
 import plugin, { stats } from "./main.js";

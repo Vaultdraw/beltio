@@ -96,6 +96,7 @@ if (tier === "fast") {
   npx(desktop, "vitest (desktop)", ["vitest", "run", ...vitestCaps]);
   // Example plugins (sdk/examples) are the plugin host's integration tests.
   npx(root, "vitest (sdk examples)", ["vitest", "run", "sdk", ...vitestCaps]);
+  npx(root, "vitest (sdk examples, mock host)", ["vitest", "run", "sdk/examples", ...vitestCaps], { VAULTDRAW_TEST_HOST: "mock" });
   step("perf lib tests", root, "node", ["--test", "excalidraw-desktop/perf/lib/*.test.mjs", "excalidraw-desktop/scripts/*.test.mjs"]);
   if (tier === "milestone") {
     npx(root, "tsc (root)", ["tsc"]);
