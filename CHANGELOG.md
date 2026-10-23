@@ -6,7 +6,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### New
 
-- **Install themes.** **Settings → Appearance → Install from URL…** (and the command `Themes: Install from URL or GitHub repo`) downloads a theme file or lists the themes in a GitHub repo, checks the file, and installs it into your `themes/` folder with a record of where it came from. `Themes: Check installed themes for updates` and `Themes: Remove an installed theme` keep them tidy. The Vaultdraw/themes repo has over a hundred more palettes, credited to their authors.
+- **Install themes.** **Settings → Appearance → Install from URL…** (and the command `Themes: Install from URL or GitHub repo`) downloads a theme file or lists the themes in a GitHub repo, checks the file, and installs it into your `themes/` folder with a record of where it came from. `Themes: Check installed themes for updates` and `Themes: Remove an installed theme` keep them tidy. The Vaultdraw/themes repo has over a hundred more palettes, credited to their authors. Host names that resolve to private, loopback or link-local addresses are refused, repo themes update from the branch they were installed from, and `example.com/x.json` without `https://` gets a clear message.
 - **Network consent.** Downloading is off until you allow it: the first install asks once and saves the answer as `network.allow_themes` in `config.toml`. `network.enabled = false` is a master switch, and both are in **Settings → General**. New key `themes.max_install_kb` caps the file size.
 
 ### Changed

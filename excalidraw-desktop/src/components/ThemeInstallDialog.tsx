@@ -115,6 +115,7 @@ export const ThemeInstallDialog = ({
         repo: `${repo.owner}/${repo.repo}`,
         path: theme.path,
         commit: repo.commit,
+        ref: repo.ref,
         sha256: got.sha256,
         url: got.url,
       },

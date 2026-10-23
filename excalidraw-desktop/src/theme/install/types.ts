@@ -19,6 +19,8 @@ export interface ThemeSource {
   repo?: string;
   path?: string;
   commit?: string;
+  /** Branch, tag or commit a repo theme was installed from; updates follow it. */
+  ref?: string;
   sha256: string;
   installed?: string;
 }
@@ -35,6 +37,8 @@ export type Resolved =
       owner: string;
       repo: string;
       commit: string;
+      /** What was asked for (`HEAD` = the default branch). */
+      ref?: string;
       themes: RepoTheme[];
     };
 

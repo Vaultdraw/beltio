@@ -46,7 +46,8 @@ pub(crate) struct ThemeRef {
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub(crate) enum Resolved {
     File { name: String, json: String, sha256: String, url: String },
-    Repo { owner: String, repo: String, commit: String, themes: Vec<ThemeRef> },
+    /// `reference` is the branch, tag or commit asked for (`HEAD` = the default branch); updates follow it.
+    Repo { owner: String, repo: String, commit: String, #[serde(rename = "ref")] reference: String, themes: Vec<ThemeRef> },
 }
 
 #[derive(Debug, Deserialize)]
@@ -69,6 +70,9 @@ pub(crate) struct SourceIn {
     repo: Option<String>,
     path: Option<String>,
     commit: Option<String>,
+    /// The branch, tag or commit a repo theme was installed from; absent in older installs.
+    #[serde(rename = "ref")]
+    reference: Option<String>,
     sha256: String,
 }
 
@@ -222,6 +226,11 @@ pub(crate) fn classify(input: &str) -> Result<Source> {
         return Err(invalid("Enter a URL or owner/repo"));
     }
     if !text.contains("://") {
+        // GitHub owner names cannot contain a dot, so `example.com/x.json` is a web address.
+        let first = text.split('/').next().unwrap_or("");
+        if first.contains('.') && first != "github.com" {
+            return Err(err("NOT_A_THEME_URL", "That looks like a web address. Start it with https:// (or use github.com/<owner>/<repo>)"));
+        }
         let prefixed = text.starts_with("github.com/");
         let parts: Vec<String> = text.strip_prefix("github.com/").unwrap_or(text).split('/').map(str::to_string).collect();
         if (prefixed && parts.len() >= 2) || (!prefixed && parts.len() == 2 && !text.contains(':')) {
@@ -345,12 +354,15 @@ fn now_iso() -> String {
 fn source_json(src: &SourceIn, installed: &str) -> Value {
     json!({
         "url": src.url, "repo": src.repo, "path": src.path,
-        "commit": src.commit, "sha256": src.sha256, "installed": installed,
+        "commit": src.commit, "ref": src.reference, "sha256": src.sha256, "installed": installed,
     })
 }
 
 fn validate_source(src: &SourceIn) -> Result<()> {
-    let long = [&src.url, &src.repo, &src.path, &src.commit].iter().any(|v| v.as_ref().is_some_and(|s| s.len() > 2048));
+    let long = [&src.url, &src.repo, &src.path, &src.commit, &src.reference].iter().any(|v| v.as_ref().is_some_and(|s| s.len() > 2048));
+    if src.reference.as_deref().is_some_and(|r| !is_ref(r)) {
+        return Err(err("INVALID_SOURCE", "The theme source is malformed"));
+    }
     if long || src.sha256.len() != 64 || !src.sha256.bytes().all(|b| b.is_ascii_hexdigit()) {
         return Err(err("INVALID_SOURCE", "The theme source is malformed"));
     }
@@ -440,7 +452,7 @@ pub(crate) fn resolve_in(dirs: &config::Dirs, ep: &Endpoints, input: &str, max_b
             if themes.is_empty() {
                 return Err(err("NO_THEMES_FOUND", "No theme files (.json) found in this repository"));
             }
-            Ok(Resolved::Repo { owner: spec.owner, repo: spec.repo, commit, themes })
+            Ok(Resolved::Repo { owner: spec.owner, repo: spec.repo, commit, reference: reference.to_string(), themes })
         }
     }
 }
@@ -574,7 +586,12 @@ pub(crate) fn update_fetch_in(dirs: &config::Dirs, ep: &Endpoints, name: &str, m
         (Some(repo), _) => {
             let (owner, repo) = repo.split_once('/').ok_or_else(|| err("INVALID_SOURCE", "The stored repo is malformed"))?;
             let path = text("path").ok_or_else(|| err("INVALID_SOURCE", "The stored source has no path"))?;
-            let commit = resolve_commit(ep, owner, repo, "HEAD")?;
+            // Follow the branch, tag or commit it was installed from (older installs: default branch).
+            let reference = text("ref").unwrap_or_else(|| "HEAD".to_string());
+            if !is_ref(&reference) {
+                return Err(err("INVALID_SOURCE", "The stored branch or tag is malformed"));
+            }
+            let commit = resolve_commit(ep, owner, repo, &reference)?;
             (fetch_repo_file(ep, owner, repo, &commit, &path, max)?, Some(commit))
         }
         (None, Some(url)) => {

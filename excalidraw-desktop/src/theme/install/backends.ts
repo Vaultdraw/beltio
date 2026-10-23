@@ -40,17 +40,54 @@ export const tauriBackend = (invoke: Invoke): InstallBackend => {
   };
 };
 
-const sha256Hex = async (text: string): Promise<string> => {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(text),
-  );
+const sha256Hex = async (bytes: Uint8Array): Promise<string> => {
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
   return [...new Uint8Array(digest)]
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 };
 
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+const tooLarge = (maxBytes: number) =>
+  new InstallError(
+    "TOO_LARGE",
+    `The file is larger than ${Math.round(maxBytes / 1024)} KiB`,
+  );
+
+/** The body's bytes, stopping the download as soon as it passes `maxBytes`. */
+const readCapped = async (
+  response: Response,
+  maxBytes: number,
+): Promise<Uint8Array> => {
+  const declared = Number(response.headers.get("content-length"));
+  if (declared > maxBytes) {
+    void response.body?.cancel().catch(() => {});
+    throw tooLarge(maxBytes);
+  }
+  if (!response.body) {
+    const all = new Uint8Array(await response.arrayBuffer());
+    if (all.length > maxBytes) {
+      throw tooLarge(maxBytes);
+    }
+    return all;
+  }
+  const reader = response.body.getReader();
+  const out = new Uint8Array(maxBytes);
+  let length = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      return out.slice(0, length);
+    }
+    if (length + value.length > maxBytes) {
+      void reader.cancel().catch(() => {});
+      throw tooLarge(maxBytes);
+    }
+    out.set(value, length);
+    length += value.length;
+  }
+};
 
 /** Direct URL download only; https, or http on this machine. Themes are stored in localStorage. */
 export const browserBackend = (win: Window): InstallBackend => {
@@ -79,14 +116,16 @@ export const browserBackend = (win: Window): InstallBackend => {
         `${url.host} answered ${response.status}`,
       );
     }
-    const json = await response.text();
-    if (new TextEncoder().encode(json).length > maxBytes) {
-      throw new InstallError(
-        "TOO_LARGE",
-        `The file is larger than ${Math.round(maxBytes / 1024)} KiB`,
-      );
+    const bytes = await readCapped(response, maxBytes);
+    let json: string;
+    try {
+      json = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true })
+        .decode(bytes)
+        .replace(/^\uFEFF/, "");
+    } catch {
+      throw new InstallError("INVALID_FILE", "The file is not valid UTF-8");
     }
-    return { json, sha256: await sha256Hex(json), url: url.href };
+    return { json, sha256: await sha256Hex(bytes), url: url.href };
   };
   const stem = (url: string) =>
     decodeURIComponent(url.split("?")[0].split("/").pop() ?? "").replace(

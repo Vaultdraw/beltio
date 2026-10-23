@@ -17,7 +17,7 @@ fn dirs_in(root: &Path, consent: Option<&str>) -> config::Dirs {
 const ALLOW: &str = "[network]\nallow_themes = true\n";
 
 fn src(url: &str) -> SourceIn {
-    SourceIn { url: Some(url.into()), repo: None, path: None, commit: None, sha256: "a".repeat(64) }
+    SourceIn { url: Some(url.into()), repo: None, path: None, commit: None, reference: None, sha256: "a".repeat(64) }
 }
 
 fn req(name: &str, replace: bool) -> WriteRequest {
@@ -76,6 +76,7 @@ fn rejects_bad_inputs() {
     for bad in [
         "", "   ", "justone", "a/b/c", "owner/re po", "../x", "o/..", "http://example.com/a.json", "ftp://x/a.json",
         "https://u:p@example.com/a.json", "https://10.1.1.1/a.json", "https://github.com/o", "c:/x/y",
+        "example.com/x.json", "example.com/a", "themes.example.org/dir/x.json", "www.github.com/o/r",
     ] {
         assert!(classify(bad).is_err(), "{bad:?} was accepted");
     }
@@ -367,12 +368,13 @@ fn resolves_a_repo_and_fetches_its_files() {
     let r = serde_json::to_value(resolve_in(&d, &ep(&base), "o/r", 100_000).unwrap()).unwrap();
     assert_eq!(
         r,
-        json!({"kind":"repo","owner":"o","repo":"r","commit":SHA,"themes":[
+        json!({"kind":"repo","owner":"o","repo":"r","commit":SHA,"ref":"HEAD","themes":[
             {"name":"Nord","path":"Nord/Nord.json"},
             {"name":"Tokyo Night","path":"Tokyo Night.json"}]})
     );
     // `tree/dev` resolves that ref.
-    assert!(resolve_in(&d, &ep(&base), "https://github.com/o/r/tree/dev", 100_000).is_ok());
+    let dev = serde_json::to_value(resolve_in(&d, &ep(&base), "https://github.com/o/r/tree/dev", 100_000).unwrap()).unwrap();
+    assert_eq!(dev["ref"], "dev");
     assert_eq!(code(resolve_in(&d, &ep(&base), "https://github.com/o/r/tree/nope", 100_000)), "HTTP_STATUS");
 
     let f = FetchRef::Repo { owner: "o".into(), repo: "r".into(), commit: SHA.into(), path: "Nord/Nord.json".into() };
@@ -412,7 +414,7 @@ fn update_check_url_source() {
     let d = dirs_in(t.path(), Some(ALLOW));
     let url = format!("{base}/Nord.json");
     let mut r = req("Nord", false);
-    r.source = SourceIn { url: Some(url.clone()), repo: None, path: None, commit: None, sha256: sha256_hex(THEME.as_bytes()) };
+    r.source = SourceIn { url: Some(url.clone()), repo: None, path: None, commit: None, reference: None, sha256: sha256_hex(THEME.as_bytes()) };
     write_in(&d, &r).unwrap();
 
     let same = update_fetch_in(&d, &ep(&base), "Nord", 1000).unwrap();
@@ -442,6 +444,7 @@ fn update_check_repo_source_uses_head_commit() {
         repo: Some("o/r".into()),
         path: Some("Nord/Nord.json".into()),
         commit: Some("f".repeat(40)),
+        reference: None,
         sha256: "b".repeat(64),
     };
     write_in(&d, &r).unwrap();
@@ -450,4 +453,73 @@ fn update_check_repo_source_uses_head_commit() {
     assert_eq!(u.commit.as_deref(), Some(SHA));
     assert_eq!(u.json.as_deref(), Some(THEME));
     assert_eq!(u.sha256, sha256_hex(THEME.as_bytes()));
+}
+
+#[test]
+fn bare_web_address_is_not_a_github_repo() {
+    // A dot in the first segment means a host name; GitHub owners cannot contain dots.
+    let e = classify("example.com/x.json").unwrap_err();
+    assert_eq!(e.code, "NOT_A_THEME_URL");
+    assert!(e.message.contains("https://"), "{}", e.message);
+    // Real owner/repo forms still work, including dots in the repo name.
+    assert!(classify("o/r.js").is_ok());
+    assert!(classify("github.com/o/r").is_ok());
+}
+
+/// Server where `dev` and `HEAD` point at different commits, to prove which one an update follows.
+fn two_branch_server() -> (String, Arc<std::sync::atomic::AtomicUsize>) {
+    let dev_sha = "d".repeat(40);
+    start(move |p| match p {
+        "/repos/o/r/commits/HEAD" => Resp::ok(SHA),
+        "/repos/o/r/commits/dev" => Resp::ok(dev_sha.clone()),
+        p if p == format!("/o/r/{SHA}/Nord/Nord.json") => Resp::ok(r#"{"name":"from-default-branch"}"#),
+        p if p == format!("/o/r/{}/Nord/Nord.json", "d".repeat(40)) => Resp::ok(THEME),
+        _ => Resp::status(404),
+    })
+}
+
+fn installed_from(d: &config::Dirs, reference: Option<&str>) {
+    let mut r = req("Nord", false);
+    r.source = SourceIn {
+        url: None,
+        repo: Some("o/r".into()),
+        path: Some("Nord/Nord.json".into()),
+        commit: Some("f".repeat(40)),
+        reference: reference.map(str::to_string),
+        sha256: "b".repeat(64),
+    };
+    write_in(d, &r).unwrap();
+}
+
+#[test]
+fn update_follows_the_branch_it_was_installed_from() {
+    let (base, _) = two_branch_server();
+    let t = tempdir().unwrap();
+    let d = dirs_in(t.path(), Some(ALLOW));
+    installed_from(&d, Some("dev"));
+    let u = update_fetch_in(&d, &ep(&base), "Nord", 1000).unwrap();
+    assert_eq!(u.commit.as_deref(), Some("d".repeat(40).as_str()));
+    assert_eq!(u.json.as_deref(), Some(THEME));
+    // The ref is stored in source.json.
+    let stored = installed_in(&d).unwrap();
+    assert_eq!(stored[0].source["ref"], "dev");
+}
+
+#[test]
+fn update_without_a_stored_ref_follows_the_default_branch() {
+    let (base, _) = two_branch_server();
+    let t = tempdir().unwrap();
+    let d = dirs_in(t.path(), Some(ALLOW));
+    installed_from(&d, None);
+    let u = update_fetch_in(&d, &ep(&base), "Nord", 1000).unwrap();
+    assert_eq!(u.commit.as_deref(), Some(SHA));
+}
+
+#[test]
+fn a_malformed_ref_is_refused() {
+    let t = tempdir().unwrap();
+    let d = dirs_in(t.path(), Some(ALLOW));
+    let mut r = req("Nord", false);
+    r.source.reference = Some("../x".into());
+    assert_eq!(code(write_in(&d, &r)), "INVALID_SOURCE");
 }

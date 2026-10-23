@@ -275,6 +275,59 @@ describe("browserBackend", () => {
   });
 });
 
+describe("browserBackend downloads", () => {
+  const mkWin = (f: typeof fetch) =>
+    ({ location: window.location, fetch: f, localStorage } as unknown as Window);
+  const hex = (d: ArrayBuffer) =>
+    [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("");
+
+  it("hashes the downloaded bytes, BOM included, not the decoded text", async () => {
+    const bytes = new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode(THEME)]);
+    const b = browserBackend(mkWin(vi.fn(async () => new Response(bytes))));
+    const got = await b.fetch({ kind: "url", url: "https://example.com/a.json" }, 65536);
+    expect(got.json).toBe(THEME);
+    expect(got.sha256).toBe(hex(await crypto.subtle.digest("SHA-256", bytes)));
+  });
+
+  it("rejects text that is not UTF-8", async () => {
+    const b = browserBackend(
+      mkWin(vi.fn(async () => new Response(new Uint8Array([0x7b, 0xff, 0x7d])))),
+    );
+    await expect(
+      b.fetch({ kind: "url", url: "https://example.com/a.json" }, 1000),
+    ).rejects.toMatchObject({ code: "INVALID_FILE" });
+  });
+
+  it("stops reading once the cap is passed", async () => {
+    let pulled = 0;
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled += 1;
+        controller.enqueue(new Uint8Array(400));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const b = browserBackend(mkWin(vi.fn(async () => new Response(body))));
+    await expect(
+      b.fetch({ kind: "url", url: "https://example.com/a.json" }, 1000),
+    ).rejects.toMatchObject({ code: "TOO_LARGE" });
+    expect(cancelled).toBe(true);
+    // An endless body is read only a few chunks (stream queue + 3 reads), never to the end.
+    expect(pulled).toBeLessThan(10);
+  });
+
+  it("refuses a declared length over the cap without reading the body", async () => {
+    const res = new Response("x", { headers: { "content-length": "5000" } });
+    const b = browserBackend(mkWin(vi.fn(async () => res)));
+    await expect(
+      b.fetch({ kind: "url", url: "https://example.com/a.json" }, 1000),
+    ).rejects.toMatchObject({ code: "TOO_LARGE" });
+  });
+});
+
 describe("network and install keys", () => {
   it("defaults: network on, themes not yet allowed, 64 KiB", () => {
     expect(DEFAULT_PREFERENCES.networkEnabled).toBe(true);

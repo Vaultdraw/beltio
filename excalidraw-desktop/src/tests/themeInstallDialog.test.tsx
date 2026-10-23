@@ -164,6 +164,7 @@ describe("ThemeInstallDialog (install)", () => {
         owner: "Vaultdraw",
         repo: "themes",
         commit: "abc1234",
+        ref: "dev",
         themes: [
           { name: "Midnight", path: "Midnight/Midnight.json" },
           { name: "Other", path: "Other/Other.json" },
@@ -191,6 +192,14 @@ describe("ThemeInstallDialog (install)", () => {
         path: "Midnight/Midnight.json",
       },
       65536,
+    );
+    // The branch it came from is kept, so updates follow it.
+    fireEvent.click(screen.getByRole("button", { name: "Install" }));
+    await screen.findByTestId("theme-install-done");
+    expect(backend.write).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        source: expect.objectContaining({ ref: "dev", commit: "abc1234" }),
+      }),
     );
   });
 });

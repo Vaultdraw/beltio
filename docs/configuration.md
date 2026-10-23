@@ -342,13 +342,13 @@ Over a hundred more palettes, all credited to their authors, live in the [Vaultd
 
 1. Open **Settings → Appearance → Install from URL…** (or run `Themes: Install from URL or GitHub repo` from the command palette).
 2. Allow theme downloads the first time (see "Network" below).
-3. Paste the address of a theme `.json`, or a GitHub repo (`owner/repo`, or a `github.com/owner/repo/tree/<branch>/<folder>` link), and pick a theme from the list.
+3. Paste the address of a theme `.json`, or a GitHub repo (`owner/repo`, or a `github.com/owner/repo/tree/<branch>/<folder>` link), and pick a theme from the list. A web address needs its `https://`: `example.com/x.json` is refused, since `owner/repo` would read it as a GitHub repo. Host names that point to a private or local address are never contacted.
 4. Confirm. The theme is saved in `themes/<Name>/` with a `source.json` that records where it came from, and **Use it** selects it.
 
 | Command | What it does |
 | --- | --- |
 | `Themes: Install from URL or GitHub repo` | The steps above. |
-| `Themes: Check installed themes for updates` | Re-downloads each installed theme's source and offers **Update** when the file changed. Nothing changes without your click. |
+| `Themes: Check installed themes for updates` | Re-downloads each installed theme's source and offers **Update** when the file changed. A theme from a repo updates from the branch, tag or commit you installed it from. Nothing changes without your click. |
 | `Themes: Remove an installed theme` | Deletes a theme that was installed this way. Themes you added by hand are never listed or touched. |
 
 None has a default key; bind them on the Hotkeys page.

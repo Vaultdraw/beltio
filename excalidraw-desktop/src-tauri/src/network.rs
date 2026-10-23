@@ -9,7 +9,11 @@
 
 use super::{config, err, Result};
 use serde_json::Value;
-use std::{io::Read, net::IpAddr, time::Duration};
+use std::{io::Read, net::{IpAddr, SocketAddr}, time::Duration};
+use ureq::unversioned::{
+    resolver::{DefaultResolver, ResolvedSocketAddrs, Resolver},
+    transport::{DefaultConnector, NextTimeout},
+};
 use url::{Host, Url};
 
 /// Pure check on the parsed config (`None` when `config.toml` is missing or does not parse).
@@ -78,6 +82,7 @@ fn is_private_ip(ip: IpAddr) -> bool {
 }
 
 /// Parses and vets a URL: https (http only for loopback), no userinfo, no private IP literals.
+/// Host names are vetted when they are resolved (`GuardedResolver`).
 pub(crate) fn parse_url(text: &str) -> Result<Url> {
     let bad = |m: &str| err("INVALID_URL", m.to_string());
     let url = Url::parse(text.trim()).map_err(|_| bad("Not a valid URL"))?;
@@ -114,21 +119,73 @@ pub(crate) fn redirect_target(base: &Url, location: &str) -> Result<Url> {
     parse_url(next.as_str()).map_err(|e| refused(e.message))
 }
 
-fn agent() -> ureq::Agent {
-    ureq::Agent::config_builder()
+/// True for addresses a public host must never resolve to: private, link-local, CGNAT,
+/// unspecified, multicast and loopback.
+fn is_blocked_address(ip: IpAddr) -> bool {
+    is_private_ip(ip)
+        || ip.is_loopback()
+        || ip.is_multicast()
+        || matches!(ip, IpAddr::V6(v) if v.to_ipv4_mapped().is_some_and(|v4| v4.is_multicast()))
+}
+
+/// Marks the error raised when a host name resolves to a forbidden address.
+#[derive(Debug)]
+struct ForbiddenAddress;
+impl std::fmt::Display for ForbiddenAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("The host resolves to a private or local address")
+    }
+}
+impl std::error::Error for ForbiddenAddress {}
+
+/// Judges resolved addresses. A loopback URL (tests) must resolve only to loopback addresses;
+/// any other host must resolve to none of the blocked ones (one bad answer refuses the host).
+fn check_resolved(loopback_url: bool, addrs: &[SocketAddr]) -> bool {
+    addrs.iter().all(|a| if loopback_url { a.ip().is_loopback() } else { !is_blocked_address(a.ip()) })
+}
+
+/// Resolves host names and vets the answers. ureq connects to exactly the addresses this
+/// returns, so there is no second lookup an attacker could change (DNS rebinding).
+#[derive(Debug)]
+struct GuardedResolver<R: Resolver>(R);
+
+impl<R: Resolver> Resolver for GuardedResolver<R> {
+    fn resolve(&self, uri: &ureq::http::Uri, config: &ureq::config::Config, timeout: NextTimeout) -> std::result::Result<ResolvedSocketAddrs, ureq::Error> {
+        let addrs = self.0.resolve(uri, config, timeout)?;
+        let loopback_url = uri.host().is_some_and(|h| {
+            let h = h.trim_start_matches('[').trim_end_matches(']');
+            h.eq_ignore_ascii_case("localhost") || h.parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback())
+        });
+        if check_resolved(loopback_url, &addrs) {
+            Ok(addrs)
+        } else {
+            Err(ureq::Error::Io(std::io::Error::new(std::io::ErrorKind::PermissionDenied, ForbiddenAddress)))
+        }
+    }
+}
+
+fn agent_with<R: Resolver>(resolver: R) -> ureq::Agent {
+    let config = ureq::Agent::config_builder()
         .max_redirects(0)
         .max_redirects_will_error(false)
         .http_status_as_error(false)
         .timeout_connect(Some(Duration::from_secs(8)))
         .timeout_global(Some(Duration::from_secs(20)))
         .user_agent(format!("Vaultdraw/{}", env!("CARGO_PKG_VERSION")))
-        .build()
-        .into()
+        .build();
+    ureq::Agent::with_parts(config, DefaultConnector::new(), GuardedResolver(resolver))
+}
+
+fn agent() -> ureq::Agent {
+    agent_with(DefaultResolver::default())
 }
 
 fn net_error(e: ureq::Error) -> super::NativeError {
     match e {
         ureq::Error::Timeout(_) => err("NETWORK_TIMEOUT", "The request timed out"),
+        ureq::Error::Io(ref io) if io.get_ref().is_some_and(|inner| inner.is::<ForbiddenAddress>()) => {
+            err("PRIVATE_ADDRESS", "That host name points to a private or local address, so it was not contacted")
+        }
         other => err("NETWORK_ERROR", format!("Request failed: {other}")),
     }
 }
@@ -136,7 +193,10 @@ fn net_error(e: ureq::Error) -> super::NativeError {
 /// GET `url` (already vetted) and return at most `max_bytes` of body. Redirects are followed
 /// manually, up to three, to GitHub hosts only. Does not check consent: the caller must.
 pub(crate) fn get_bytes(url: &Url, max_bytes: u64, accept: &str) -> Result<Vec<u8>> {
-    let agent = agent();
+    get_bytes_with(&agent(), url, max_bytes, accept)
+}
+
+fn get_bytes_with(agent: &ureq::Agent, url: &Url, max_bytes: u64, accept: &str) -> Result<Vec<u8>> {
     let mut current = url.clone();
     for _ in 0..=MAX_REDIRECTS {
         let mut resp = agent.get(current.as_str()).header("Accept", accept).call().map_err(net_error)?;
@@ -316,6 +376,45 @@ mod tests {
             assert_eq!(e.code, "REDIRECT_REFUSED", "{target}");
             assert_eq!(hits.load(Ordering::SeqCst), 1);
         }
+    }
+
+    #[derive(Debug)]
+    struct Fake(Vec<SocketAddr>);
+    impl Resolver for Fake {
+        fn resolve(&self, _: &ureq::http::Uri, _: &ureq::config::Config, _: NextTimeout) -> std::result::Result<ResolvedSocketAddrs, ureq::Error> {
+            let mut out = self.empty();
+            for a in &self.0 {
+                out.push(*a);
+            }
+            Ok(out)
+        }
+    }
+
+    #[test]
+    fn host_names_resolving_to_private_addresses_are_refused() {
+        let (base, hits) = start(|_| Resp::ok("secret"));
+        let port: u16 = base.rsplit(':').next().unwrap().parse().unwrap();
+        let target = url("https://themes.example/a.json");
+        for ip in ["127.0.0.1", "10.0.0.5", "192.168.1.9", "169.254.169.254", "100.64.0.1", "::1", "fd00::1", "fe80::1", "::ffff:10.0.0.1", "0.0.0.0"] {
+            let agent = agent_with(Fake(vec![SocketAddr::new(ip.parse().unwrap(), port)]));
+            let e = get_bytes_with(&agent, &target, 100, "*/*").unwrap_err();
+            assert_eq!(e.code, "PRIVATE_ADDRESS", "{ip}");
+        }
+        // One private answer among public ones refuses the host too.
+        let mixed = agent_with(Fake(vec!["93.184.216.34:443".parse().unwrap(), SocketAddr::new("10.0.0.5".parse().unwrap(), 443)]));
+        assert_eq!(get_bytes_with(&mixed, &target, 100, "*/*").unwrap_err().code, "PRIVATE_ADDRESS");
+        assert_eq!(hits.load(Ordering::SeqCst), 0, "nothing was contacted");
+    }
+
+    #[test]
+    fn resolved_address_judgement() {
+        let a = |s: &str| -> SocketAddr { s.parse().unwrap() };
+        assert!(check_resolved(false, &[a("93.184.216.34:443"), a("[2606:2800:220:1::1]:443")]));
+        assert!(!check_resolved(false, &[a("127.0.0.1:443")]));
+        assert!(!check_resolved(false, &[a("93.184.216.34:443"), a("172.16.0.1:443")]));
+        assert!(check_resolved(true, &[a("127.0.0.1:80"), a("[::1]:80")]));
+        // A loopback URL must not reach anywhere else (e.g. /etc/hosts remapping `localhost`).
+        assert!(!check_resolved(true, &[a("10.0.0.1:80")]));
     }
 
     #[test]
