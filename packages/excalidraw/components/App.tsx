@@ -2713,19 +2713,19 @@ class App extends React.Component<AppProps, AppState> {
                             )}
 
                           {this.isDefaultUIEnabled() && this.state.contextMenu && (
-                              <ContextMenu
-                                items={this.state.contextMenu.items}
-                                top={this.state.contextMenu.top}
-                                left={this.state.contextMenu.left}
-                                actionManager={this.actionManager}
-                                onClose={(callback) => {
-                                  this.setState({ contextMenu: null }, () => {
-                                    this.focusContainer();
-                                    callback?.();
-                                  });
-                                }}
-                              />
-                            )}
+                            <ContextMenu
+                              items={this.state.contextMenu.items}
+                              top={this.state.contextMenu.top}
+                              left={this.state.contextMenu.left}
+                              actionManager={this.actionManager}
+                              onClose={(callback) => {
+                                this.setState({ contextMenu: null }, () => {
+                                  this.focusContainer();
+                                  callback?.();
+                                });
+                              }}
+                            />
+                          )}
                           <StaticCanvas
                             canvas={this.canvas}
                             rc={this.rc}
