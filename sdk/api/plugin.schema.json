@@ -1,0 +1,271 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vaultdraw.vercel.app/schemas/plugin.schema.json",
+  "$comment": "Describes the parsed plugin.toml. The Rust app (manifest.rs) is the authority and the CLI validator (sdk/cli/src/manifest.mjs) mirrors it; this file mirrors both for editors and docs. Rules a schema cannot express stay in code: unique command and panel ids, that the file named by main exists, id collisions with other installed plugins, dev = true in a packaged manifest (error dev-true), min_app lower than the @since of the API the code uses, the 64 KB size limit of the file, and that main is at most 260 bytes (the schema counts characters). The schema is stricter than the validator in one place: settings must have title and default, because the settings registry rejects a missing default.",
+  "title": "Vaultdraw plugin manifest (plugin.toml)",
+  "description": "The manifest of a Vaultdraw plugin: one plugin.toml next to main.js.",
+  "type": "object",
+  "required": ["id", "name", "version", "api", "main"],
+  "properties": {
+    "id": {
+      "title": "Plugin id",
+      "description": "Unique id. 2 to 39 characters of a-z, 0-9 and -, not starting with -. Full command ids are \"<id>.<command id>\".",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{1,38}$"
+    },
+    "name": {
+      "title": "Name",
+      "description": "Display name. 1 to 200 characters, not blank.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "\\S"
+    },
+    "version": {
+      "title": "Version",
+      "description": "The plugin's own semantic version, for example 1.0.0.",
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "api": {
+      "title": "API level",
+      "description": "The plugin API level this plugin targets. The app refuses any level it does not implement. Level 0 is experimental.",
+      "const": 0
+    },
+    "min_app": {
+      "title": "Minimum app version",
+      "description": "Optional. Semantic version of the oldest Vaultdraw app that can run the plugin. Older apps refuse it.",
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "main": {
+      "title": "Entry file",
+      "description": "Relative path of the ESM bundle inside the plugin folder, with / separators. No .., no ., no empty segment, no leading /, no backslash, no colon. At most 260 bytes.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 260,
+      "pattern": "^(?!(?:.*/)?\\.\\.?(?:/|$))[^/\\\\:\\u0000]+(?:/[^/\\\\:\\u0000]+)*$"
+    },
+    "description": {
+      "title": "Description",
+      "description": "Optional. One line about the plugin. At most 1000 characters.",
+      "type": "string",
+      "maxLength": 1000
+    },
+    "author": {
+      "title": "Author",
+      "description": "Optional. Who made the plugin. At most 1000 characters.",
+      "type": "string",
+      "maxLength": 1000
+    },
+    "activation": {
+      "title": "Activation events",
+      "description": "Optional. By default a plugin loads on first use: one of its commands runs or one of its panels opens. List \"onStartupFinished\" to also activate it on an idle callback after startup. No other event exists.",
+      "type": "array",
+      "items": {
+        "title": "Activation event",
+        "description": "The event name.",
+        "enum": ["onStartupFinished"]
+      }
+    },
+    "dev": {
+      "title": "Development mode",
+      "default": false,
+      "description": "Optional. true makes the app reload the plugin when its files change. `vaultdraw-plugin dev` adds it to the installed copy. A packaged plugin must not set it to true (error dev-true).",
+      "type": "boolean"
+    },
+    "contributes": {
+      "title": "Contributions",
+      "description": "What the plugin adds to the app. The app registers stubs for these without loading any plugin code.",
+      "type": "object",
+      "properties": {
+        "commands": {
+          "title": "Commands",
+          "description": "Palette commands, written as [[contributes.commands]]. At most 200.",
+          "type": "array",
+          "maxItems": 200,
+          "items": { "$ref": "#/definitions/command" }
+        },
+        "panels": {
+          "title": "Panels",
+          "description": "Side panels, written as [[contributes.panels]]. At most 20.",
+          "type": "array",
+          "maxItems": 20,
+          "items": { "$ref": "#/definitions/panel" }
+        },
+        "settings": {
+          "title": "Settings",
+          "description": "Settings the plugin declares, written as [[contributes.settings]]. At most 100.",
+          "type": "array",
+          "maxItems": 100,
+          "items": { "$ref": "#/definitions/setting" }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "patternProperties": {
+    "^x-": {
+      "title": "Tool extension table",
+      "description": "Tables named x-* belong to tools. The app and the CLI ignore them.",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "command": {
+      "title": "Command",
+      "description": "A command declared in plugin.toml. Bind its handler with ctx.commands.register in activate().",
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": {
+          "title": "Command id",
+          "description": "Short id, unique among the plugin's commands. Letters, digits, `-` and `_`, starting with a letter, at most 64 characters. The full id is \"<plugin id>.<id>\".",
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+        },
+        "title": {
+          "title": "Command title",
+          "description": "Shown in the palette. 1 to 200 characters, not blank.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "\\S"
+        },
+        "keys": {
+          "title": "Default keys",
+          "description": "Optional default chords in config notation, for example \"Mod+Alt+H\". An empty list means none. Users can rebind them.",
+          "type": "array",
+          "items": { "type": "string", "title": "Chord", "description": "One chord." }
+        },
+        "when": {
+          "title": "Context keys",
+          "description": "Optional. Built-in or namespaced context keys that must hold for the command to be available, for example \"vaultOpen\".",
+          "type": "array",
+          "items": { "type": "string", "title": "Context key", "description": "One context key." }
+        },
+        "palette": {
+          "title": "In the palette",
+          "default": true,
+          "description": "Optional, default true. false hides the command from the command palette.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "panel": {
+      "title": "Panel",
+      "description": "A panel declared in plugin.toml. Bind its React component with ctx.panels.register in activate().",
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": {
+          "title": "Panel id",
+          "description": "Short id, unique among the plugin's panels. Same rule as a command id. The full id is \"<plugin id>.<id>\".",
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+        },
+        "title": {
+          "title": "Panel title",
+          "description": "Shown on the panel and its activity-bar button. 1 to 200 characters, not blank.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "\\S"
+        },
+        "icon": {
+          "title": "Icon",
+          "description": "Optional. A built-in icon name.",
+          "type": "string"
+        },
+        "group": {
+          "title": "Activity-bar group",
+          "default": "top",
+          "description": "Optional, default \"top\". Where the button sits in the activity bar.",
+          "enum": ["top", "bottom"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "setting": {
+      "title": "Setting",
+      "description": "A setting the plugin declares. Values live in [plugin.<id>] tables of config.toml, or in the vault's settings.toml for vault scope. A stored value outside min and max, or of the wrong type, reads as the default.",
+      "type": "object",
+      "required": ["key", "type", "title", "default"],
+      "properties": {
+        "key": {
+          "title": "Key",
+          "description": "The setting's name inside the plugin. Unique among its settings.",
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "title": "Type",
+          "description": "bool: true or false. int: whole number. number: any finite number. string: text. select: one of options. color: a color string.",
+          "enum": ["bool", "int", "number", "string", "select", "color"]
+        },
+        "title": {
+          "title": "Title",
+          "description": "Label in Settings, Plugins.",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "description": "Optional. Help text under the label.",
+          "type": "string"
+        },
+        "default": {
+          "title": "Default",
+          "description": "The value used when nothing is stored. It must fit type, min, max and options.",
+          "type": ["string", "number", "boolean"]
+        },
+        "min": {
+          "title": "Minimum",
+          "description": "Optional. Lowest allowed value of an int or number setting.",
+          "type": "number"
+        },
+        "max": {
+          "title": "Maximum",
+          "description": "Optional. Highest allowed value of an int or number setting.",
+          "type": "number"
+        },
+        "options": {
+          "title": "Options",
+          "description": "select only. The choices, as inline tables with value and label.",
+          "type": "array",
+          "items": {
+            "title": "Option",
+            "description": "One choice.",
+            "type": "object",
+            "required": ["value", "label"],
+            "properties": {
+              "value": {
+                "title": "Value",
+                "description": "The stored value.",
+                "type": "string"
+              },
+              "label": {
+                "title": "Label",
+                "description": "The text shown to the user.",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "scope": {
+          "title": "Scope",
+          "description": "Optional. The layers that may hold a value. Default: both global and vault.",
+          "type": "array",
+          "items": {
+            "title": "Layer",
+            "description": "A layer.",
+            "enum": ["global", "vault"]
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

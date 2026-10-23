@@ -14,7 +14,7 @@ const MAX_TITLE = 200;
 const MAX_TEXT = 1000;
 const MAX_PATH = 260;
 
-const TOP_KEYS = new Set([
+export const TOP_KEYS = new Set([
   "id",
   "name",
   "version",
