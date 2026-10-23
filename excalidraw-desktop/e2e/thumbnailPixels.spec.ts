@@ -2,7 +2,7 @@
 import { expect, test } from "@playwright/test";
 
 import { representativeScenes } from "./thumbnailScenes";
-import { buildStep0, openStep0 } from "./thumbnailsStep0Page";
+import { buildStep0, cleanupStep0, openStep0 } from "./thumbnailsStep0Page";
 
 import type { Step0Hooks } from "./thumbnailsStep0";
 
@@ -19,6 +19,7 @@ test.describe.configure({ timeout: 300_000 });
 
 test.describe("thumbnail pixel identity", () => {
   test.beforeAll(buildStep0);
+  test.afterAll(cleanupStep0);
 
   test("sliced render equals the one-task render", async ({
     page,

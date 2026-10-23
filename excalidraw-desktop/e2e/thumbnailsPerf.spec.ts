@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 
 import { openVault } from "./helpers";
 import { scene } from "./thumbnailScenes";
-import { buildStep0, openStep0 } from "./thumbnailsStep0Page";
+import { buildStep0, cleanupStep0, openStep0 } from "./thumbnailsStep0Page";
 
 import type { Step0Hooks } from "./thumbnailsStep0";
 
@@ -45,6 +45,7 @@ const r1 = (x: number) => Math.round(x * 10) / 10;
 
 test.describe("render step 0", () => {
   test.beforeAll(buildStep0);
+  test.afterAll(cleanupStep0);
 
   for (const rate of [1, 4]) {
     test(`render step 0, cpu x${rate}`, async ({

@@ -2,7 +2,7 @@
 import { expect, test } from "@playwright/test";
 
 import { scene } from "./thumbnailScenes";
-import { buildStep0, openStep0 } from "./thumbnailsStep0Page";
+import { buildStep0, cleanupStep0, openStep0 } from "./thumbnailsStep0Page";
 
 import type { Step0Hooks } from "./thumbnailsStep0";
 
@@ -67,6 +67,7 @@ const CASES = [
 
 test.describe("thumbnail main-thread blocking", () => {
   test.beforeAll(buildStep0);
+  test.afterAll(cleanupStep0);
 
   for (const rate of RATES) {
     test(`blocking, cpu x${rate}`, async ({ page, browserName, baseURL }) => {

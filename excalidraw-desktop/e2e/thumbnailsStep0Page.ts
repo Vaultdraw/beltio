@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -40,6 +40,11 @@ export const buildStep0 = () =>
       },
     },
   });
+
+/** Remove the build dir (about 21 MB per worker); use in `test.afterAll`, which runs after failures too. */
+export const cleanupStep0 = () => {
+  rmSync(outDir, { recursive: true, force: true });
+};
 
 export const openStep0 = async (page: Page, origin: string) => {
   await page.route(`${origin}/__step0/**`, async (route) => {
