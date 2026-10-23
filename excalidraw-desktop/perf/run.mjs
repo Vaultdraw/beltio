@@ -235,6 +235,7 @@ if (!skipBrowser) {
   }
 }
 
+if ((o.scenarios || o["skip-scenarios"]) && !skipApp) notes.push("--scenarios/--skip-scenarios apply to Chromium mode only; the packaged app ran every scenario");
 const metrics = {
   ...aggregate(rawApp, unitOf(catalogue)),
   ...aggregate(rawBrowser, unitOf(catalogue)),

@@ -25,13 +25,14 @@ export function headScenarioFilter(baseScenarios) {
 }
 
 /** Notes on scenario-set differences after both sides ran: what the head skipped and what only the base ran. */
-export function scenarioNotes({ base, head, filtered }) {
+export function scenarioNotes({ base, head, filtered, manual = false, headFilter }) {
   const notes = [];
   const inBase = new Set(base ?? []);
   const inHead = new Set(head ?? []);
   const baseOnly = [...inBase].filter((n) => !inHead.has(n));
   const headOnly = [...inHead].filter((n) => !inBase.has(n));
-  if (filtered) notes.push(`like-for-like: head ran only the base's scenarios (${[...inBase].join(", ")})`);
+  if (filtered && manual) notes.push(`NOT like-for-like: head ran only ${(headFilter ?? []).join(", ")} (--scenarios); the base ran all its scenarios, so whole-run CPU time and counts are not comparable`);
+  else if (filtered) notes.push(`like-for-like: head ran only the base's scenarios (${[...inBase].join(", ")})`);
   if (headOnly.length) notes.push(`scenarios only in head (their CPU time and counts are in the totals): ${headOnly.join(", ")}`);
   if (baseOnly.length) notes.push(`scenarios only in base (the base cannot skip them; its totals include them): ${baseOnly.join(", ")}`);
   return notes;

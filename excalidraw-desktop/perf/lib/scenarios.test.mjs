@@ -59,3 +59,8 @@ test("a scenario added since the base is a false regression when the head runs i
   assert.deepEqual(verdict(runWith(["open", "switch", "settings", "palette"]), base).sort(), ["browser.count.layout", "browser.cpu.thread"]);
   assert.deepEqual(verdict(runWith(["open"]), base), []);
 });
+
+test("scenarioNotes: a hand-picked head filter is flagged as not like-for-like", () => {
+  const n = scenarioNotes({ base: ["a", "b"], head: ["a"], filtered: true, manual: true, headFilter: ["a"] });
+  assert.match(n[0], /NOT like-for-like.*only a/);
+});

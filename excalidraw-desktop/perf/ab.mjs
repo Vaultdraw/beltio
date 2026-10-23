@@ -92,7 +92,8 @@ const runPairs = async (from, to, into = results, tag = "") => {
       build: step.index === 0, scenarios: step.side === "head" ? headScenarios : undefined, log,
     });
     into[step.side].push(r);
-    if (step.side === "base" && !baseScenarios && r.scenarios?.length) {
+    // Only a clean run gives the full list: an aborted run reports fewer scenarios than the base has.
+    if (step.side === "base" && !baseScenarios && r.scenarios?.length && !r.errors?.length) {
       baseScenarios = r.scenarios;
       if (!o["all-scenarios"] && !o.scenarios) {
         headScenarios = headScenarioFilter(baseScenarios);
@@ -118,7 +119,7 @@ const result = buildAbResult({
   template: results.head.at(-1), head, base: baseSide, baseSha: base.sha, pairs: pairsDone, load,
   notes: [
     `A/B interleaved: base ${o.base} (${base.sha.slice(0, 10)}) vs head, ${pairsDone} pair(s)`,
-    ...scenarioNotes({ base: baseScenarios, head: results.head.at(-1)?.scenarios, filtered: !!headScenarios }),
+    ...scenarioNotes({ base: baseScenarios, head: results.head.at(-1)?.scenarios, filtered: !!headScenarios, manual: !!o.scenarios, headFilter: headScenarios }),
     ...(lnote ? [lnote] : []),
   ],
 });

@@ -2,7 +2,7 @@
 export type ScenarioFilter = { only?: string[]; skip?: string[] };
 
 /** Every other scenario needs the vault open, so it always runs. */
-export const ALWAYS_RUN = "vault-open";
+export const ALWAYS_RUN = ["vault-open", "typical-vault-open"];
 
 export const parseScenarioList = (
   value: string | null | undefined,
@@ -18,7 +18,7 @@ export const scenarioSelected = (
   name: string,
   filter?: ScenarioFilter,
 ): boolean => {
-  if (!filter || name === ALWAYS_RUN) {
+  if (!filter || ALWAYS_RUN.includes(name)) {
     return true;
   }
   if (filter.skip?.includes(name)) {

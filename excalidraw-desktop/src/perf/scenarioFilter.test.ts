@@ -23,6 +23,12 @@ describe("perf scenario filter", () => {
     expect(scenarioSelected("vault-open", { skip: ["vault-open"] })).toBe(true);
   });
 
+  it("never skips the typical-mode vault open either", () => {
+    expect(
+      scenarioSelected("typical-vault-open", { only: ["typical-open"] }),
+    ).toBe(true);
+  });
+
   it("parses comma lists", () => {
     expect(parseScenarioList("a, b,,c")).toEqual(["a", "b", "c"]);
     expect(parseScenarioList("")).toBeUndefined();
