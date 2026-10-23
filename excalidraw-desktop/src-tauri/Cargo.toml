@@ -35,6 +35,9 @@ vaultdraw-core = { path = "crates/vaultdraw-core" }
 libc = "0.2"
 # File history (PLAN D-Z): level-3 frames, no default features (no legacy formats, no zdict builder).
 zstd = { version = "0.13", default-features = false, features = ["thin"] }
+url = "2"
+percent-encoding = "2"
+ureq = { version = "3", default-features = false, features = ["rustls"] }
 
 [dev-dependencies]
 tempfile = "3"

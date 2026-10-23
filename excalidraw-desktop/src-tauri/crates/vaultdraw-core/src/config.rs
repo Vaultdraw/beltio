@@ -362,6 +362,16 @@ autosave_delay_ms = 500
 # "native" = the system title bar. Needs a restart.
 # decorations = "custom"
 
+[network]
+# Master switch for every feature that uses the internet
+# enabled = true    # false = never connect
+# Install themes from a URL or GitHub repo: absent = ask on first use, true = allow, false = refuse
+# allow_themes = false
+
+[themes]
+# Largest theme file to install from the internet, in KB, 1 to 256
+# max_install_kb = 64
+
 # To split this file, add an [include] table that lists other TOML files or folders
 # (relative to this file, or starting with ~). See "Including other files" in
 # docs/configuration.md. This file wins over what it includes.

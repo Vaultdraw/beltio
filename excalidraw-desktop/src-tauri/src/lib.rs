@@ -33,6 +33,8 @@ mod pressure;
 mod refresh_rate;
 mod templates;
 mod snippets;
+mod network;
+mod theme_install;
 mod themes;
 mod vault_settings;
 mod history;
