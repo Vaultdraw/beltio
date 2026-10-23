@@ -60,6 +60,10 @@ function tail(file, n = 40) {
   try { return readFileSync(file, "utf8").split("\n").slice(-n).join("\n"); } catch { return ""; }
 }
 
+// Test builds get their own bundle id (app.vaultdraw.test), so window-manager rules and
+// macOS treat them apart from the owner's real Vaultdraw.
+const TEST_APP_CONFIG = "src-tauri/tauri.test.conf.json";
+
 export async function buildPerfApp({ wtRoot, log = () => {} }) {
   const logDir = path.join(perfCacheDir(wtRoot), "logs");
   mkdirSync(logDir, { recursive: true });
@@ -69,7 +73,7 @@ export async function buildPerfApp({ wtRoot, log = () => {} }) {
   log(`building perf app (log: ${logFile}) ...`);
   const t0 = Date.now();
   const code = await new Promise((resolve) => {
-    const c = trackChild(spawn(process.execPath, ["../node_modules/@tauri-apps/cli/tauri.js", "build", "--features", "smoke-test", "--bundles", "app"], {
+    const c = trackChild(spawn(process.execPath, ["../node_modules/@tauri-apps/cli/tauri.js", "build", "--features", "smoke-test", "--bundles", "app", "--config", TEST_APP_CONFIG], {
       cwd, env: { ...process.env, VITE_APP_PERF_TEST: "true" }, stdio: ["ignore", "pipe", "pipe"],
     }));
     c.stdout.pipe(out, { end: false });
