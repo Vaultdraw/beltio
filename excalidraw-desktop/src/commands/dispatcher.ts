@@ -6,7 +6,12 @@
 import { chordFromEvent, isModifierFree } from "./keys";
 import { whenHolds } from "./context";
 import { DEFAULT_KEY_OPTIONS, canStartInText } from "./keySequence";
-import { clearPendingKeys, setPendingKeys } from "./pendingKeys";
+import {
+  clearPendingKeys,
+  getKeyInterceptor,
+  setKeyView,
+  setPendingKeys,
+} from "./pendingKeys";
 
 import type { KeyOptions } from "./keySequence";
 import type { SeqNode, SeqRoot } from "./keyTrie";
@@ -36,6 +41,19 @@ let cancelActive: (() => void) | null = null;
 
 /** Drop a half-typed sequence (config reload, trie rebuild); no-op when idle. */
 export const cancelPendingSequence = (): void => cancelActive?.();
+
+let advanceActive: ((chord: Chord) => void) | null = null;
+
+/** Type `chord` as the next key of the dispatcher (which-key Enter); no-op if none installed. */
+export const advancePendingSequence = (chord: Chord): void =>
+  advanceActive?.(chord);
+
+/** The slice of a KeyboardEvent the pending-key path uses. */
+const SYNTHETIC_KEY = {
+  repeat: false,
+  preventDefault() {},
+  stopImmediatePropagation() {},
+} as unknown as KeyboardEvent;
 
 let pauseCount = 0;
 
@@ -247,6 +265,19 @@ export function installCommandDispatcher(
     return false;
   };
 
+  /** Programmatic key: continue the pending sequence or start one at the root. */
+  const advance = (chord: Chord) => {
+    if (node) {
+      onPendingKey(SYNTHETIC_KEY, chord);
+      return;
+    }
+    const seq = deps.getSeqRoot?.()?.get(chord);
+    if (seq && hasLivePathBelow(seq, deps.getContext())) {
+      path = [chord];
+      settle(seq);
+    }
+  };
+
   const onKeyDown = (e: KeyboardEvent) => {
     if (pauseCount > 0 || e.isComposing || e.keyCode === 229) {
       if (node && pauseCount > 0) {
@@ -256,6 +287,10 @@ export function installCommandDispatcher(
     }
     const chord = chordFromEvent(e, deps.platform);
     if (!chord) {
+      return;
+    }
+    if (getKeyInterceptor()?.(chord)) {
+      claim(e);
       return;
     }
     if (node) {
@@ -302,7 +337,19 @@ export function installCommandDispatcher(
     }
   };
   win.addEventListener("keydown", onKeyDown, true);
+  const view = {
+    platform: deps.platform,
+    getSeqRoot: () => deps.getSeqRoot?.() ?? null,
+    getContext: deps.getContext,
+    hasHandler: (id: string) => !!deps.getHandler(id),
+  };
+  setKeyView(view);
+  advanceActive = advance;
   return () => {
+    setKeyView(null);
+    if (advanceActive === advance) {
+      advanceActive = null;
+    }
     cancel();
     win.removeEventListener("keydown", onKeyDown, true);
   };

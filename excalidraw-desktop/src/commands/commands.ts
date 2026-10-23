@@ -32,6 +32,7 @@ import {
   registeredCommands,
 } from "./registry";
 import { TAB_COMMANDS } from "./tabCommands";
+import { KEYS_COMMANDS } from "./keysCommands";
 import { LIST_COMMANDS } from "./listCommands";
 import { THUMBNAIL_COMMANDS } from "./thumbnailCommands";
 import { MEMORY_COMMANDS } from "./memoryCommands";
@@ -597,6 +598,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...PEN_COMMANDS,
   ...TOOL_DEFAULT_COMMANDS,
   ...TOOL_COMMANDS,
+  ...KEYS_COMMANDS,
   ...LINKS_COMMANDS,
   ...TAGS_COMMANDS,
   ...HISTORY_COMMANDS,

@@ -51,8 +51,9 @@ export const TOOL_COMMANDS: CommandDefinition[] = TOOL_TABLE.map((row) => ({
   title: `Tool: ${row.title}`,
   category: "Tools",
   keys: { default: row.keys },
-  // canvasFocus is waived for the palette like other focus rules (FOCUS_RULES).
-  when: ["drawingOpen", "canvasFocus", "!textEditing", "!modalOpen"],
+  // Not canvasFocus: Excalidraw listened on the document, so tool letters work
+  // with focus on the body (after a dialog closes). A focused list keeps its keys.
+  when: ["drawingOpen", "!listFocus", "!textEditing", "!modalOpen"],
   repeat: false,
 }));
 

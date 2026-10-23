@@ -93,6 +93,7 @@ import {
   useCommandDispatcher,
   type CommandRunner,
 } from "./commands/useCommands";
+import { WhichKeyHost } from "./keys/WhichKeyHost";
 import { drawingOpenCommandId } from "./commands/drawingCommands";
 import { useCommandShortcutLookup } from "./commands/useCommandShortcut";
 import {
@@ -2527,6 +2528,8 @@ export const VaultApp = ({
           onClose={() => setShowRecoveryDialog(false)}
         />
       )}
+
+      <WhichKeyHost win={win} />
 
       {showSettingsModal && (
         <Suspense fallback={null}>

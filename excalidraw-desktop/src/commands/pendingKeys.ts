@@ -3,7 +3,8 @@
  * dispatcher writes it only while a sequence is pending, so it costs nothing
  * otherwise. Snapshots are immutable arrays (useSyncExternalStore friendly).
  */
-import type { Chord } from "./types";
+import type { SeqRoot } from "./keyTrie";
+import type { Chord, CommandContext, Platform } from "./types";
 
 const NONE: readonly Chord[] = [];
 let path: readonly Chord[] = NONE;
@@ -28,3 +29,37 @@ export function subscribePendingKeys(cb: () => void): () => void {
     listeners.delete(cb);
   };
 }
+
+/** What the which-key popup reads from the installed dispatcher. */
+export interface KeyView {
+  platform: Platform;
+  getSeqRoot(): SeqRoot;
+  getContext(): CommandContext;
+  hasHandler(id: string): boolean;
+}
+
+let keyView: KeyView | null = null;
+
+/** Set by the dispatcher on install; null on uninstall. */
+export const setKeyView = (view: KeyView | null): void => {
+  keyView = view;
+};
+
+export const getKeyView = (): KeyView | null => keyView;
+
+let interceptor: ((chord: Chord) => boolean) | null = null;
+
+/**
+ * The open which-key popup claims ArrowUp/ArrowDown/Enter through this (the
+ * dispatcher sees keys first). Returns a disposer; null interceptor = none.
+ */
+export function setKeyInterceptor(fn: (chord: Chord) => boolean): () => void {
+  interceptor = fn;
+  return () => {
+    if (interceptor === fn) {
+      interceptor = null;
+    }
+  };
+}
+
+export const getKeyInterceptor = () => interceptor;

@@ -7,17 +7,22 @@ import type { Chord, Platform } from "../../../commands/types";
 export const KeyCaps = ({
   keyText,
   platform,
+  leader,
 }: {
   keyText: Chord;
   platform: Platform;
+  /** Chord `<leader>` shows as; default is the built-in leader. */
+  leader?: string;
 }) => (
   <>
-    {keyCapGroups(keyText, platform, formatChordParts).map((caps, g) => (
-      <span key={g} className="vault-hotkeys__caps">
-        {caps.map((part, i) => (
-          <kbd key={i}>{part}</kbd>
-        ))}
-      </span>
-    ))}
+    {keyCapGroups(keyText, platform, formatChordParts, leader).map(
+      (caps, g) => (
+        <span key={g} className="vault-hotkeys__caps">
+          {caps.map((part, i) => (
+            <kbd key={i}>{part}</kbd>
+          ))}
+        </span>
+      ),
+    )}
   </>
 );

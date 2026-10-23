@@ -37,6 +37,7 @@ import {
   useHotkeyOverrides,
 } from "../../../commands/useCommands";
 import { openConfigDir } from "../../../vault/settingsSync";
+import { useKeyOptions } from "../../../commands/useKeyOptions";
 import { formatKeyLabel } from "../../../palette/shortcuts";
 import { IconAlert, IconKeyboard, IconPlus, IconRefresh } from "../../Icons";
 import { getSettingSchema } from "../schema";
@@ -83,6 +84,7 @@ const HotkeysPage = () => {
   const win = ctxWin ?? (typeof window !== "undefined" ? window : null);
   const platform = useMemo(() => detectPlatform(win), [win]);
   const overrides = useHotkeyOverrides(win);
+  const { leader } = useKeyOptions(win);
 
   const [text, setText] = useState("");
   const [chordFilter, setChordFilter] = useState<Chord | null>(null);
@@ -311,7 +313,11 @@ const HotkeysPage = () => {
         <span>Type the chords…</span>
       ) : (
         <span className="vault-hotkeys__seq-live">
-          <KeyCaps keyText={seq.join(" ")} platform={platform} />
+          <KeyCaps
+            keyText={seq.join(" ")}
+            platform={platform}
+            leader={leader}
+          />
         </span>
       )}
       <span>Enter saves, Backspace undoes, Esc cancels</span>
@@ -360,7 +366,7 @@ const HotkeysPage = () => {
         <div className="vault-hotkeys__keys">
           {keys.map((chord) => {
             const found = perChord?.get(chord);
-            const label = formatKeyLabel(chord, platform);
+            const label = formatKeyLabel(chord, platform, leader);
             return (
               <span
                 key={chord}
@@ -368,7 +374,7 @@ const HotkeysPage = () => {
                 data-conflict={found ? "true" : undefined}
                 title={label}
               >
-                <KeyCaps keyText={chord} platform={platform} />
+                <KeyCaps keyText={chord} platform={platform} leader={leader} />
                 <button
                   type="button"
                   className="vault-hotkeys__remove"

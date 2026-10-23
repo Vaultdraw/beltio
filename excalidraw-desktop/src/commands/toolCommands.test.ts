@@ -41,7 +41,7 @@ describe("tool commands", () => {
       expect(c.category).toBe("Tools");
       expect(c.when).toEqual([
         "drawingOpen",
-        "canvasFocus",
+        "!listFocus",
         "!textEditing",
         "!modalOpen",
       ]);

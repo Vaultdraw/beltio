@@ -1,0 +1,94 @@
+.vault-whichkey {
+  position: fixed;
+  z-index: 60;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  animation: vault-whichkey-in 100ms ease-out;
+}
+
+.vault-whichkey--bottom {
+  bottom: 16px;
+}
+
+.vault-whichkey--center {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.vault-whichkey__card {
+  max-width: min(720px, calc(100vw - 32px));
+  max-height: 60vh;
+  overflow: auto;
+  padding: 10px 14px;
+  border: 1px solid var(--vault-border);
+  border-radius: 8px;
+  background: var(--vault-surface);
+  color: var(--vault-text);
+  box-shadow: var(--vault-shadow-pop);
+  font-size: var(--vd-fs-emph);
+}
+
+.vault-whichkey__path {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--vault-text-muted);
+}
+
+.vault-whichkey__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 2px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vault-whichkey__entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.vault-whichkey__entry.is-active {
+  background: var(--vault-surface-active);
+}
+
+.vault-whichkey__entry--group .vault-whichkey__label {
+  color: var(--vault-text-muted);
+}
+
+.vault-whichkey__caps {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.vault-whichkey kbd {
+  min-width: 1.6em;
+  padding: 0 5px;
+  border: 1px solid var(--vault-border);
+  border-radius: 4px;
+  font: inherit;
+  text-align: center;
+  color: var(--vault-text);
+}
+
+@keyframes vault-whichkey-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vault-whichkey {
+    animation: none;
+  }
+}
