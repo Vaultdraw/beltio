@@ -8,6 +8,8 @@ import { useMemo } from "react";
 import { createSlotRegistry } from "../slots/slotRegistry";
 import { useSlot } from "../slots/useSlot";
 
+import { hasShownActivityEntry } from "./layout";
+
 import type { ActivityEntry } from "./entries";
 
 export const ACTIVITY_SLOTS = [
@@ -41,4 +43,13 @@ export function useActivityEntries(): readonly ActivityEntry[] {
   const top = useSlot(activityBarRegistry, "activityBar.top");
   const bottom = useSlot(activityBarRegistry, "activityBar.bottom");
   return useMemo(() => [...top, ...bottom], [top, bottom]);
+}
+
+/** The rail shows when it is on and some entry is not hidden by the user. */
+export function useActivityBarShown(
+  on: boolean,
+  hidden: readonly string[],
+): boolean {
+  const entries = useActivityEntries();
+  return on && hasShownActivityEntry(entries, hidden);
 }

@@ -77,6 +77,7 @@ import {
 } from "./vault/newDrawing";
 import { commitCanvasTextEdit } from "./commands/context";
 import { ActivityBar } from "./activityBar/ActivityBar";
+import { useActivityBarShown } from "./activityBar/activityBarRegistry";
 import { galleryPanelStore, graphPanelStore } from "./activityBar/panelStores";
 import { getRegisteredHandler } from "./commands/handlerRegistry";
 import { GRAPH_COMMAND_IDS } from "./commands/graphCommands";
@@ -360,6 +361,10 @@ export const VaultApp = ({
     activityBarOrder,
     activityBarHidden,
   } = vaultSettings.effective;
+  const activityBarShown = useActivityBarShown(
+    activityBarOn,
+    activityBarHidden,
+  );
 
   const handleCanvasThemeChange = useCallback(
     (newTheme: "light" | "dark" | "system") => {
@@ -2298,7 +2303,7 @@ export const VaultApp = ({
       />
 
       <div className="vault-main">
-        {activityBarOn && (
+        {activityBarShown && (
           <ActivityBar
             run={runCommand}
             isAvailable={isCommandAvailable}

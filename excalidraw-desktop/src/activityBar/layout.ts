@@ -75,3 +75,19 @@ export function setActivityEntryHidden(
   const known = new Set(entries.map((e) => e.id));
   return next.filter((x) => known.has(x));
 }
+
+/**
+ * Whether the rail is worth mounting: the user's hidden list must not cover
+ * every registered entry. Command availability is ignored on purpose (handlers
+ * register late; it must not make the rail flicker in).
+ */
+export function hasShownActivityEntry(
+  entries: readonly ActivityEntry[],
+  hidden: readonly string[],
+): boolean {
+  if (entries.length === 0) {
+    return true;
+  }
+  const hide = new Set(hidden);
+  return entries.some((e) => !hide.has(e.id));
+}

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ACTIVITY_ENTRIES } from "./entries";
 import {
+  hasShownActivityEntry,
   moveActivityEntry,
   resolveActivityLayout,
   setActivityEntryHidden,
@@ -91,5 +92,21 @@ describe("setActivityEntryHidden", () => {
     expect(
       setActivityEntryHidden(ACTIVITY_ENTRIES, hidden, "tags", false),
     ).toEqual([]);
+  });
+});
+
+describe("hasShownActivityEntry", () => {
+  const all = DEFAULT;
+  it("is true unless the hidden list covers every entry", () => {
+    expect(hasShownActivityEntry(ACTIVITY_ENTRIES, [])).toBe(true);
+    expect(hasShownActivityEntry(ACTIVITY_ENTRIES, all.slice(1))).toBe(true);
+    expect(hasShownActivityEntry(ACTIVITY_ENTRIES, all)).toBe(false);
+    expect(hasShownActivityEntry(ACTIVITY_ENTRIES, [...all, "unknown"])).toBe(
+      false,
+    );
+  });
+  it("ignores unknown hidden ids and keeps an empty registry showing", () => {
+    expect(hasShownActivityEntry(ACTIVITY_ENTRIES, ["nope"])).toBe(true);
+    expect(hasShownActivityEntry([], [])).toBe(true);
   });
 });

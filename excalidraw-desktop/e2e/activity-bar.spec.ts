@@ -244,3 +244,46 @@ test("activity bar: Settings > Interface hides and reorders entries", async ({
     (await order()).indexOf("graph"),
   );
 });
+
+test("activity bar: hiding every entry removes the rail, showing one brings it back", async ({
+  page,
+}) => {
+  await openTagsVault(page);
+  const bar = page.getByTestId("activity-bar");
+  await expect(bar).toBeVisible();
+  const railWidth = (await bar.boundingBox())!.width;
+  expect(railWidth).toBeGreaterThan(30);
+  const paneLeft = async () =>
+    (await page.locator(".vault-editor-pane").boundingBox())!.x;
+  const withRail = await paneLeft();
+
+  await entry(page, "settings").click();
+  await expect(settings(page)).toBeVisible();
+  await page.getByRole("tab", { name: "Interface" }).click();
+  const list = settings(page).getByRole("list", {
+    name: "Activity bar entries",
+  });
+  await list.scrollIntoViewIfNeeded();
+  const switches = list.getByRole("switch");
+  const count = await switches.count();
+  expect(count).toBeGreaterThanOrEqual(9);
+  for (let i = 0; i < count; i++) {
+    const toggle = switches.nth(i);
+    await toggle.scrollIntoViewIfNeeded();
+    await toggle.uncheck();
+    await expect(toggle).not.toBeChecked();
+  }
+
+  // No empty rail: the element is gone and the editor pane moved left.
+  await expect(bar).toHaveCount(0);
+  await expect.poll(paneLeft).toBeLessThanOrEqual(withRail - railWidth + 1);
+
+  // Showing a single entry brings the rail back with just that entry.
+  const search = list.getByRole("switch", { name: "Show Search", exact: true });
+  await search.scrollIntoViewIfNeeded();
+  await search.check();
+  await expect(search).toBeChecked();
+  await expect(bar).toBeVisible();
+  await expect(bar.locator("button[data-entry]")).toHaveCount(1);
+  await expect(entry(page, "search")).toBeVisible();
+});
