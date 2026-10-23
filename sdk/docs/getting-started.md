@@ -47,9 +47,10 @@ $VP dev .
 Installed my-hello in ~/.config/vaultdraw/plugins/my-hello
 In Vaultdraw: Cmd+P, Plugins: Reload plugin list; then Settings, Plugins, enable the plugin. After that, saves reload it by itself.
 Watching /…/my-hello. Press Ctrl+C to stop.
+Dev log: ~/.local/state/vaultdraw/plugin-logs/my-hello.log (new lines are shown here)
 ```
 
-`dev` copies the folder into `plugins/` in the config folder and watches your folder. It adds `dev = true` to the installed copy only, so the host reloads the plugin on each save. Add `--once` to copy and exit.
+`dev` copies the folder into `plugins/` in the config folder and watches your folder. It adds `dev = true` to the installed copy only, so the host reloads the plugin on each save. Add `--once` to copy and exit. In a TypeScript project (a source entry such as `src/main.ts` and no `main.js`), `dev` builds into `dist/` first and keeps `dist/` in sync.
 
 Do these once, in the app:
 
@@ -102,13 +103,32 @@ Every finding code is listed in the [reference](reference.md).
 
 - **Examples** in `sdk/examples/`: `focus-timer` (a panel, timers and an int setting), `stamp` (commands that put a sticky note or a small flow on the open drawing), plus `event-logger`, `word-count` and `testing`.
 - **Reference:** [reference.md](reference.md) covers the manifest, the whole `ctx` API, the lifecycle and every check code.
+- **Dev log:** see [below](#the-dev-log).
 - **Errors:** use `ctx.log`, not `console.*`, which is not attributed to your plugin. A command declared but not bound in `activate()` fails with a toast. Errors are attributed to your plugin. A `dev` plugin that errors out is stopped for the session only, and the next save starts it again with a fresh count.
 - **Keep your own config untouched:** `$VP dev --print-env` prints a throwaway config and state folder as `VAULTDRAW_CONFIG_DIR=...` and `VAULTDRAW_STATE_DIR=...`. Start the app with those two variables set and run `dev` with the same variables (or `--config-dir <dir>`). `dev` then writes there, not to `~/.config/vaultdraw/`.
+
+## The dev log
+
+For a plugin with `dev = true` (which `dev` sets on the installed copy), the app appends its `ctx.log` lines and the errors attributed to it to `<state dir>/plugin-logs/<id>.log`. A line looks like this:
+
+```
+2026-10-24T04:00:00.000Z [info] text
+```
+
+`dev` prints the log path and shows new lines as they arrive, prefixed with `log |`. Only lines written after `dev` starts are shown. Nothing is written for a plugin without `dev = true`. The file is capped at 1 MB; past that, the newest 256 KB are kept.
+
+The state folder is `$VAULTDRAW_STATE_DIR`, else `$XDG_STATE_HOME/vaultdraw`, else `~/.local/state/vaultdraw`. With `dev --print-env` it is the throwaway folder it prints.
+
+## TypeScript
+
+To write the plugin in TypeScript, start from a template with `init --template command|panel|scene`, build with `vaultdraw-plugin build`, and test with vitest. `npm create vaultdraw-plugin <id>` runs `init --template command` (it is a thin wrapper and is not published either).
+
+- [testing.md](testing.md): test a plugin without the app, using the mock host.
+- [packaging.md](packaging.md): `build`, `package`, and the zip layout.
 
 ## Limits
 
 - Tested on macOS only.
 - The CLI is not published to npm yet.
 - The plugin API is level 0 and experimental. It can change in a minor release, with changes listed in the CHANGELOG.
-- Testing a plugin without the app is planned, not built.
-- This page does not say where `ctx.log` output appears in the app; see the reference.
+- `ctx.log` lines go to a file only for `dev = true` plugins (the dev log). The app has no log view, and it writes nothing for other plugins.

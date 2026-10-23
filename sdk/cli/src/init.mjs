@@ -175,12 +175,20 @@ function initTemplate(id, template, parent, out) {
     writeFileSync(f, data);
   };
   for (const f of allFiles(templateDir)) {
+    const text = readFileSync(path.join(templateDir, ...f.split("/")), "utf8")
+      .replaceAll("__ID__", id)
+      .replaceAll("__NAME__", name);
+    // Taplo and VS Code read this line: completion and errors in plugin.toml.
     put(
       f.replace(/\.tpl$/, ""),
-      readFileSync(path.join(templateDir, ...f.split("/")), "utf8")
-        .replaceAll("__ID__", id)
-        .replaceAll("__NAME__", name),
+      f === "plugin.toml.tpl"
+        ? `#:schema ./vaultdraw/plugin.schema.json\n${text}`
+        : text,
     );
+  }
+  const schemaFile = path.join(sdkRoot(), "api", "plugin.schema.json");
+  if (existsSync(schemaFile)) {
+    put("vaultdraw/plugin.schema.json", readFileSync(schemaFile));
   }
   put(
     "vaultdraw/vaultdraw-api.d.ts",

@@ -16,51 +16,28 @@ The config folder is `~/.config/vaultdraw/`. Bundled plugins live in the app's `
 
 ## plugin.toml
 
+The manifest sits next to `main.js`. It names the plugin and declares its commands, panels and settings, so the app can register them without loading any code.
+
 ```toml
-id = "hello-command"        # ^[a-z0-9][a-z0-9-]{1,38}$, unique
+id = "hello-command"        # 2 to 39 characters: a-z, 0-9, -
 name = "Hello"
 version = "0.1.0"           # semver
 api = 0                     # API level this plugin targets
-min_app = "0.1.0"           # optional; semver; refused on older apps
 main = "main.js"            # relative path inside the folder
-description = "Says hello"  # optional
-author = "you"              # optional
-activation = []             # optional; only "onStartupFinished" exists
-dev = false                 # optional; true = the app reloads the plugin when its files change
 
 [[contributes.commands]]
-id = "hello"                # short id; the full id is "hello-command.hello"
+id = "hello"                # the full id is "hello-command.hello"
 title = "Hello: say hello"
-keys = ["Mod+Alt+H"]        # optional default chords (config notation); [] = none
-when = ["vaultOpen"]        # optional; built-in or namespaced context keys
-palette = true              # optional, default true
-
-[[contributes.panels]]
-id = "notes"                # full id "hello-command.notes"
-title = "Notes"
-icon = "note"               # optional; a built-in icon name
-group = "top"               # optional: "top" | "bottom" (activity bar)
-
-[[contributes.settings]]
-key = "greeting"
-type = "string"             # bool | int | number | string | select | color
-title = "Greeting"
-default = "Hello"
+keys = ["Mod+Alt+H"]        # optional default chords; [] = none
 ```
 
-| Rule | Value |
-| --- | --- |
-| `plugin.toml` size | at most 64 KB |
-| Contributions | at most 200 commands, 20 panels, 100 settings |
-| Titles | 1 to 200 characters |
-| `name`, command and panel titles | not blank |
-| `description`, `author` | at most 1000 characters |
-| Command and panel ids | `^[A-Za-z][A-Za-z0-9_-]{0,63}$`, unique within the plugin |
-| `main` | relative path inside the folder: no `..`, no leading `/`, no `\` or `:` |
-| Unknown top-level keys | errors, except tables named `x-*` (reserved for forward-compatible extras) |
-| Unknown activation event | error |
+Every key, type and limit is in the generated [manifest reference](manifest.md). It comes from `sdk/api/plugin.schema.json`, which editors can use for completion. In short:
 
-The settings entries have the shape of `SettingDecl` in `@vaultdraw/api`. The Rust side only checks that each has a `key` and a `type`. The app's settings registry validates the rest and reports problems on the Plugins page.
+- Required: `id`, `name`, `version`, `api`, `main`. Optional: `min_app`, `description`, `author`, `activation`, `dev`.
+- `plugin.toml` is at most 64 KB. A manifest has at most 200 commands, 20 panels and 100 settings.
+- Unknown keys are errors, except tables named `x-*`, which are reserved for tools.
+- Only the activation event `onStartupFinished` exists. `dev = true` makes the app reload the plugin when its files change; a packaged plugin must not set it.
+- The settings entries have the shape of `SettingDecl` in `@vaultdraw/api`. The Rust side only checks that each has a `key` and a `type`. The app's settings registry validates the rest and reports problems on the Plugins page.
 
 ## Lifecycle
 
@@ -265,7 +242,7 @@ type AppEventMap = {
 
 1. Use `ctx.setTimeout`, `ctx.setInterval` and `ctx.subscriptions` instead of raw timers and listeners. Then disabling a plugin leaves nothing running.
 2. Never block. A command handler whose synchronous part takes over 50 ms is recorded as slow. Keep work async or chunked.
-3. `console.*` is not attributed to your plugin. Use `ctx.log`.
+3. `console.*` is not attributed to your plugin. Use `ctx.log` (see [Logging](#logging)).
 4. Keep `main.js` small. The host loads it only on first use, so unused plugins cost nothing, and a small bundle activates faster.
 
 ## What the host adds for you
@@ -291,38 +268,26 @@ type AppEventMap = {
 - **Safe mode** loads no plugins at all. The Plugins page still lists them. Start it by holding Option at launch (macOS) or with **Restart in safe mode**. It also starts by itself after 2 launches in a row that crashed with plugins enabled. A launch counts as OK 10 s after the host starts, or on a clean quit.
 - **Dev loop:** put `dev = true` in `plugin.toml`, install the folder and enable it. Saving `main.js` or `plugin.toml` reloads the plugin: dispose, import again with a fresh `?t=` URL, then activate if it was active. Symlinked and temp folders work (watched paths are canonicalised). Each reload keeps the old module in memory (about 6 times its size) until the app restarts, and a hint is logged every 20 reloads. `vaultdraw-plugin dev` wraps this loop (see below).
 
+## Logging
+
+`ctx.log.debug`, `info`, `warn` and `error` record a line for your plugin. The host also records every error attributed to the plugin and every declared-setting problem, as `warn` or `error` lines.
+
+| Plugin | What happens to a line |
+| --- | --- |
+| `dev = true` | Appended to `<state dir>/plugin-logs/<id>.log` |
+| other | Kept in memory only (the last 100 lines); no file, and the app has no log view |
+
+Dev log details:
+
+- Each line is `<ISO time> [<level>] <text>`, for example `2026-10-24T04:00:00.000Z [info] text`. Text is cut at 4000 characters.
+- The app sends lines in batches, about every 250 ms.
+- The file is capped at 1 MB. When an append would pass the cap, only the newest 256 KB are kept (from a line start), then the append goes on.
+- The state folder is `$VAULTDRAW_STATE_DIR`, else `$XDG_STATE_HOME/vaultdraw`, else `~/.local/state/vaultdraw` (on Windows `%LOCALAPPDATA%\Vaultdraw`). A relative override is an error.
+- `vaultdraw-plugin dev` prints the log path and new lines of the dev log, prefixed with `log |`.
+
 ## Testing a plugin without the app
 
-The test kit boots a plugin in memory under vitest, with a fake scene, event bus and settings. It lives in `excalidraw-desktop/src/plugins/testing` and is not yet a package. The examples in `sdk/examples/*/main.test.ts` show it in use.
-
-```ts
-const p = await boot(
-  { id: "word-count", contributes: { panels: [{ id: "stats" }] } },
-  plugin,
-);
-p.scene.setElements([
-  {
-    id: "a",
-    type: "text",
-    text: "hello world",
-    x: 0,
-    y: 0,
-    width: 50,
-    height: 20,
-  },
-]);
-const view = await p.openPanel("stats"); // testing-library RenderResult
-p.scene.emitChange();
-await p.flush();
-p.events.emit("drawing.saved", { path: "a.excalidraw" });
-await p.run("say");
-p.toasts();
-p.timers();
-p.log();
-await p.setSetting("greeting", "Hi");
-p.scene.batches; // one entry per undo step
-await p.dispose();
-```
+`boot` from `@vaultdraw/api/testing` runs a plugin in memory under vitest, with a fake scene, event bus and settings. In this repo, `vitest.config.mts` maps that import to the in-repo host kit by default and to the mock (`sdk/api/testing`) when `VAULTDRAW_TEST_HOST=mock`. See [testing.md](testing.md) for the members, fake timers, what the mock does and does not do, and the conformance run against the real host. The examples in `sdk/examples/*/main.test.ts` show it in use.
 
 - A plugin with no command or panel to trigger activation needs `activation = ["onStartupFinished"]` to be active after `boot`.
 - `flush()` works with and without fake timers.
@@ -337,11 +302,21 @@ await p.dispose();
 
 ## The `vaultdraw-plugin` tool
 
-`vaultdraw-plugin` is the developer command line tool: `check` validates a plugin folder, `init` creates one from a template, and `dev` runs the reload loop. Usage and examples are in [getting-started.md](getting-started.md).
+`vaultdraw-plugin` is the developer command line tool. Exit codes: 0 ok, 1 findings or refusal, 2 usage or environment error.
+
+| Command | What it does | Docs |
+| --- | --- | --- |
+| `check <dir\|file.zip> [--json]` | Static checks of a folder or a zip | below |
+| `init <id> [--example <name> \| --template command\|panel\|scene] [--dir <parent>]` | A JavaScript plugin from an example, or a TypeScript project from a template | [getting-started.md](getting-started.md), [testing.md](testing.md#typescript-projects) |
+| `build [dir] [--watch]` | Bundle a TypeScript project into `dist/` | [packaging.md](packaging.md) |
+| `package <dir> [--out <dir>] [--json]` | Check, then write a reproducible zip and its `.sha256` file | [packaging.md](packaging.md) |
+| `dev <dir> [--config-dir <dir>] [--once] [--print-env]` | Copy the plugin into the plugins folder on each save; show the dev log | [getting-started.md](getting-started.md) |
+
+The templates are `.tpl` files in `sdk/cli/templates/`; `init` strips the suffix and replaces `__ID__` and `__NAME__`. A manifest can name its build entry in an `x-build` table (`entry = "src/main.ts"`).
 
 ### `check` codes
 
-`vaultdraw-plugin check <dir>` prints each finding with its code. `--json` prints them as JSON. It exits 1 when there is any error. Warnings do not change the exit code.
+`vaultdraw-plugin check <dir|file.zip>` prints each finding with its code. `--json` prints them as JSON. It exits 1 when there is any error. Warnings do not change the exit code.
 
 | Code | Kind | Meaning |
 | --- | --- | --- |
@@ -365,9 +340,12 @@ await p.dispose();
 | `title-invalid` | error | A command or panel title is not 1 to 200 characters |
 | `setting-invalid` | error | A setting has no string `key` and `type` |
 | `too-many` | error | More than 200 commands, 20 panels or 100 settings |
-| `main-missing` | error | The file named by `main` doesn't exist |
+| `main-missing` | error | The file named by `main` doesn't exist. When the folder has `src/main.ts`, `src/main.tsx` or `dist/plugin.toml`, the hint says to run `vaultdraw-plugin build` first (or check `dist/`) |
 | `imports-unshared` | error | `main.js` (or a file it imports) imports a bare module the app doesn't provide; bundle it |
 | `import-missing` | warning | A relative import points to a file that isn't in the plugin folder |
 | `bundle-large` | warning | `main` is over 100 KB |
 | `min-app-low` | warning | `min_app` is lower than the first app version with the API the code uses (best effort: it looks for `ctx.<area>` in the code) |
 | `readme-missing` | warning | No `README.md` |
+| `zip-checksum` | error | Zip only: the file does not match its `.sha256` file, or that file holds no checksum |
+| `zip-invalid` | error | Zip only: the archive breaks the strict reader's rules (see [packaging.md](packaging.md#check-a-zip)) |
+| `zip-layout` | error | Zip only: `plugin.toml` is inside a single top folder instead of at the zip root |

@@ -106,6 +106,16 @@ describe("init --template", () => {
     }
   });
 
+  it("ships the schema and points plugin.toml at it", () => {
+    const r = init("command");
+    expect(
+      existsSync(path.join(r.dir, "vaultdraw", "plugin.schema.json")),
+    ).toBe(true);
+    expect(readFileSync(path.join(r.dir, "plugin.toml"), "utf8")).toMatch(
+      /^#:schema \.\/vaultdraw\/plugin\.schema\.json\n/,
+    );
+  });
+
   it("vendors the test kit (tests of the kit stay behind)", () => {
     const r = init("command");
     const files = tree(r.dir).filter((f) => f.startsWith("vaultdraw/testing/"));
