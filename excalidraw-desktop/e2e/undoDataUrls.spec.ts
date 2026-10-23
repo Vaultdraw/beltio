@@ -154,7 +154,9 @@ test("images only deleted undo steps could restore are released from memory", as
   const before = await editorState(page);
   expect(before.ids).toHaveLength(IMAGES);
   const heapBefore = browserName === "chromium" ? await heapMb(page) : null;
-  const savedBefore = JSON.stringify(await readScene(page, "Images.excalidraw"));
+  const savedBefore = JSON.stringify(
+    await readScene(page, "Images.excalidraw"),
+  );
 
   // delete images 1..3 with the Delete button
   const box = await canvasBox(page);
