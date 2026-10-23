@@ -65,6 +65,10 @@ confirm_delete = true        # ask before moving to Trash
 new_drawing_folder = ""      # relative to the vault root; "" = next to the open drawing
 templates_folder = "Templates" # vault folder holding templates, relative to the vault root
 
+[memory]                     # see "Memory"
+free_unused_images = true    # release image data of deleted images once no undo step can restore it
+undo_steps = 1000            # undo steps kept per drawing, 10 to 10000
+
 [tools.arrow]                # default style of one tool; see "Tool defaults"
 stroke_color = "#f08c00"     # set only the keys you want; others keep the current style
 stroke_width = 3
@@ -569,3 +573,18 @@ To start a drawing from a template, use **New from template…** in the header, 
 To make a template, choose **Save as template…** in a drawing's ⋯ menu, then pick **This vault** or **All vaults**.
 
 Templates are left out of the Recent list. They still appear in the navigator, where you can open and edit them.
+
+## Memory
+
+Big images are the largest thing a drawing keeps in memory. Vaultdraw releases an image's data as soon as nothing can bring it back, so deleting images actually gives the memory back.
+
+| Key | Settings | Default | What it does |
+| --- | --- | --- | --- |
+| `memory.free_unused_images` | Interface → Memory | `true` | Releases image data that no element and no undo or redo step can restore. `false` keeps it until the drawing closes. |
+| `memory.undo_steps` | Interface → Memory | `1000` | Undo steps kept per drawing, 10 to 10000. Older steps are dropped, and with them the images only they could restore. |
+
+- **When it runs.** About 20 seconds after you stop editing, in idle time. Typing and drawing never wait for it. A drawing without images does nothing.
+- **What is safe.** An image stays while an element shows it, or while any undo or redo step could bring a deleted one back. Saved drawings never change: a deleted image is already left out of the file when it saves.
+- **After the undo horizon.** Once a deletion is older than `undo_steps` steps, Cmd+Z can no longer restore it, and its image data is released. Restoring an older version from History still works: it brings its images back.
+- **Command.** `Memory: Free unused images` (in the command palette, rebindable) does it now, without the wait, and shows how much it freed.
+- Changes apply live: edit `config.toml` or Settings and the next idle pass uses the new values.

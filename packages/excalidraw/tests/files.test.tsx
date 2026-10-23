@@ -316,13 +316,13 @@ describe("releasing files nothing can bring back", () => {
     const deleted = h.elements[0];
     API.updateElement(deleted, { isDeleted: true });
     // an undo entry still names the deleted element: it can come back
-    h.app.history.undoStack.push({
+    (h.app as any).history.undoStack.push({
       elements: { added: {}, removed: {}, updated: { [deleted.id]: {} } },
     } as any);
     expect(h.app.releaseUnusedFiles({ graceMs: 0 }).released).toBe(0);
     expect(Object.keys(h.app.files).sort()).toEqual(["a", "b"]);
 
-    h.app.history.clear(); // horizon passed
+    (h.app as any).history.clear(); // horizon passed
     const out = h.app.releaseUnusedFiles({ graceMs: 0 });
     expect(out.released).toBe(1);
     expect(out.bytes).toBe(file("a").dataURL.length);
@@ -351,16 +351,16 @@ describe("releasing files nothing can bring back", () => {
       ({
         elements: { added: {}, removed: {}, updated: { [id]: {} } },
       } as any);
-    h.app.history.undoStack.push(entry(e.id), entry("x"), entry("y"));
+    (h.app as any).history.undoStack.push(entry(e.id), entry("x"), entry("y"));
     h.app.setFilesRetention({ undoSteps: 2 });
     expect(h.app.releaseUnusedFiles({ graceMs: 0 }).released).toBe(1);
-    expect(h.app.history.undoStack.length).toBe(2);
+    expect((h.app as any).history.undoStack.length).toBe(2);
   });
 
   it("is off until the host turns it on, and zero work for a drawing without images", async () => {
     await addImages(["a"]);
     API.updateElement(h.elements[0], { isDeleted: true });
-    h.app.history.clear();
+    (h.app as any).history.clear();
     vi.useFakeTimers();
     try {
       h.app.setFilesRetention({ undoSteps: 0 });

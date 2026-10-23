@@ -5,7 +5,10 @@
  */
 import type { ConfigMapping } from "../vault/settingsSync";
 
-export const MEMORY_FIELDS = ["memoryFreeUnusedImages", "memoryUndoSteps"] as const;
+export const MEMORY_FIELDS = [
+  "memoryFreeUnusedImages",
+  "memoryUndoSteps",
+] as const;
 export type MemoryField = typeof MEMORY_FIELDS[number];
 
 /** Undo steps kept per drawing: older ones are dropped, with the images only they could restore. */
