@@ -9,8 +9,12 @@ export interface IdleOptions {
   fallbackMs?: number;
 }
 
+/** What scheduleIdle needs: a Window, or globalThis. */
+export type IdleHost = Pick<Window, "setTimeout" | "clearTimeout"> &
+  Partial<Pick<Window, "requestIdleCallback" | "cancelIdleCallback">>;
+
 export function scheduleIdle(
-  win: Window,
+  win: IdleHost,
   run: () => void,
   { timeout, fallbackMs = 50 }: IdleOptions = {},
 ): () => void {

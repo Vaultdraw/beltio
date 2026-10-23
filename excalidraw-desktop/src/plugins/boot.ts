@@ -2,14 +2,13 @@
  * Plugin boot: with no plugin enabled nothing plugin-related loads. The host
  * chunk is imported on idle once the enabled list is non-empty.
  */
+import { scheduleIdle } from "../platform/idle";
 import { getPreferences, subscribePreferences } from "../vault/preferences";
 
 import { pluginHostStarted } from "./hostFlag";
 
 const onIdle = (win: Window, run: () => void) =>
-  typeof win.requestIdleCallback === "function"
-    ? win.requestIdleCallback(() => run())
-    : win.setTimeout(run, 200);
+  scheduleIdle(win, run, { fallbackMs: 200 });
 
 let starting: Promise<void> | null = null;
 

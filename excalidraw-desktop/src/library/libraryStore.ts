@@ -6,6 +6,7 @@ import {
 
 import type { LibraryItem, LibraryItems } from "@excalidraw/excalidraw/types";
 
+import { scheduleIdle } from "../platform/idle";
 import { errorMessage } from "../vault/types";
 
 import type { LibraryChange, LibraryRepository, LibraryScope } from "./types";
@@ -207,19 +208,10 @@ export interface LibraryStoreOptions {
 }
 
 const defaultScheduleIdle = (run: () => void) => {
-  const ric = (
-    globalThis as {
-      requestIdleCallback?: (
-        cb: () => void,
-        opts: { timeout: number },
-      ) => number;
-    }
-  ).requestIdleCallback;
-  if (ric) {
-    ric(run, { timeout: IDLE_TIMEOUT_MS });
-  } else {
-    setTimeout(run, IDLE_FALLBACK_MS);
-  }
+  scheduleIdle(globalThis, run, {
+    timeout: IDLE_TIMEOUT_MS,
+    fallbackMs: IDLE_FALLBACK_MS,
+  });
 };
 
 export class LibraryStore {

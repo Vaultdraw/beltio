@@ -29,6 +29,7 @@ import { useControlBridge } from "./control/useControlBridge";
 import { useMenuCommands } from "./help/useMenuCommands";
 import { useAppLinks } from "./links/useAppLinks";
 import { DesktopVaultTagRename } from "./tags/DesktopVaultTagRename";
+import { scheduleIdle } from "./platform/idle";
 import { useAppTags } from "./tags/useAppTags";
 import { usePalettePick } from "./palette/usePalettePick";
 import {
@@ -212,17 +213,10 @@ const LazySettingsModal = lazy(() =>
   loadSettingsModal().then((m) => ({ default: m.SettingsModal })),
 );
 const prefetchSettings = () => {
-  const ric = (
-    globalThis as {
-      requestIdleCallback?: (cb: () => void, o: { timeout: number }) => number;
-    }
-  ).requestIdleCallback;
-  const run = () => void loadSettingsModal().catch(() => {});
-  if (ric) {
-    ric(run, { timeout: 3000 });
-  } else {
-    setTimeout(run, 1500);
-  }
+  scheduleIdle(globalThis, () => void loadSettingsModal().catch(() => {}), {
+    timeout: 3000,
+    fallbackMs: 1500,
+  });
 };
 
 export interface VaultAppProps {

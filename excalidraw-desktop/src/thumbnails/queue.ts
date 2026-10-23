@@ -3,6 +3,8 @@
  * ones, cancel of queued jobs, one standard-colours scope per drain, and a
  * pause while the user is giving input. Idle = no timers, no listeners.
  */
+import { scheduleIdle } from "../platform/idle";
+
 import type { ColorScope } from "./standardColors";
 
 export type Priority = "visible" | "near";
@@ -24,14 +26,7 @@ export interface JobQueue {
 
 export const yieldToEventLoop = (): Promise<void> =>
   new Promise((resolve) => {
-    const ric = (globalThis as any).requestIdleCallback as
-      | ((cb: () => void, opts?: { timeout: number }) => number)
-      | undefined;
-    if (typeof ric === "function") {
-      ric(() => resolve(), { timeout: 50 });
-    } else {
-      setTimeout(resolve, 0);
-    }
+    scheduleIdle(globalThis, resolve, { timeout: 50, fallbackMs: 0 });
   });
 
 const INPUT_EVENTS = [
