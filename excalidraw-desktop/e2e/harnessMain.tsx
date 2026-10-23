@@ -21,6 +21,7 @@ import { FakeVaultLinks } from "../src/tests/fakeVaultLinks";
 import { FakeVaultSearch } from "../src/tests/fakeVaultSearch";
 import { SAMPLE_SCENE, SEARCH_SCENE } from "../src/tests/fixtures";
 import { createFakeThumbnailStore } from "../src/thumbnails/fakeStore";
+import { THUMB_MAX_ELEMENTS } from "../src/thumbnails/render";
 import {
   setAutosaveDelayMs,
   updatePreferences,
@@ -181,13 +182,15 @@ if (params.get("seed") !== "empty") {
     );
   }
   if (params.get("scene") === "huge") {
-    // Opt-in (?scene=huge): Huge/Huge.excalidraw with 700 elements (> thumbnail cap 600).
+    // Opt-in (?scene=huge): Huge/Huge.excalidraw, 100 elements over the thumbnail cap.
     repository.seedDrawing(
       "Huge/Huge.excalidraw",
       JSON.stringify({
         type: "excalidraw",
         version: 2,
-        elements: Array.from({ length: 700 }, (_, k) => thumbRect(`h${k}`, k)),
+        elements: Array.from({ length: THUMB_MAX_ELEMENTS + 100 }, (_, k) =>
+          thumbRect(`h${k}`, k),
+        ),
         appState: {},
         files: {},
       }),
