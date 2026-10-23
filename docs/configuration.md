@@ -291,6 +291,181 @@ Mistakes never break the app. They show as a warning banner in Settings and the 
 - A value that isn't a list keeps the command's defaults.
 - An older `"palette.quickSwitcher"` entry still works: it sets the Cmd+P (files) key, unless `"palette.files"` is set too. Cmd+Shift+P and Cmd+/ in it are ignored, because they now open commands mode. Changing the key in Settings replaces the old line.
 
+### Key sequences, leader and which-key
+
+A key can be a sequence of chords, like Vim's `gg` or `<leader> f f`. Sequences are plain text in `[hotkeys]`, so nothing changes until you write one. With none configured, Vaultdraw does no extra work per key and starts no timers.
+
+```toml
+[keys]                          # options only
+leader = "Backslash"            # what <leader> means in a sequence
+timeout_ms = 1000
+cancel_after_ms = 5000
+which_key = true
+which_key_delay_ms = 400
+which_key_position = "bottom"   # bottom | center
+
+[keys.labels]                   # names for groups in the popup
+"<leader> f" = "file"
+
+[hotkeys]                       # values may be sequences
+"list.first" = ["g g", "Home"]
+"palette.files" = ["<leader> f f", "Mod+P"]
+```
+
+#### Writing a sequence
+
+A sequence is chords separated by spaces. Each chord uses the notation above (`Mod+Shift+Equal`, `Shift+G`, `Alt+N`). Examples: `"g g"`, `"Mod+Alt+K Mod+S"`, `"<leader> f f"`.
+
+| Written | Means |
+| --- | --- |
+| `<leader>` | The `[keys] leader` key. Change the leader and every sequence follows. |
+| `<C-x>`, `<A-x>`, `<S-x>` | Ctrl+X, Alt+X, Shift+X (Vim style; they combine: `<C-S-x>`). |
+| `<CR>`, `<Esc>`, `<Space>`, `<Tab>`, `<BS>`, `<Del>` | Enter, Escape, Space, Tab, Backspace, Delete. |
+| `"Mod + S"` | Still one chord. A value is read as a single chord first, then split into a sequence. |
+
+Keys are stored in a canonical form: `<C-x>` becomes `Ctrl+X` and letters are upper case (`g g` is kept as `G G`, and still means the plain letter, not Shift). Settings writes that form when it saves `[hotkeys]`; `<leader>` stays as typed. Bad values are ignored with a warning, like any other key.
+
+#### The `[keys]` table
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `leader` | one key | `"Backslash"` | The key `<leader>` stands for: one chord such as `"Backslash"`, `"Space"` or `"Alt+K"`. It cannot be `<leader>` or a sequence. |
+| `timeout_ms` | whole number, 0 to 3600000 | `1000` | When a key is both a binding and the start of a longer one (`g` and `g g`), how long to wait before running the shorter one. `0` waits for the next key, with no timeout. |
+| `cancel_after_ms` | whole number, 0 to 3600000 | `5000` | Drops a half-typed sequence after this idle time. `0` never drops it. |
+| `which_key` | `true` or `false` | `true` | Show the popup while a sequence is half typed. |
+| `which_key_delay_ms` | whole number, 0 to 3600000 | `400` | How long a sequence waits before the popup shows. |
+| `which_key_position` | `"bottom"` or `"center"` | `"bottom"` | A bar at the bottom or a card in the middle. |
+
+All six reload live: save the file and the next key uses the new values. A half-typed sequence is dropped on reload. A bad value uses its default and shows a warning; an unknown key in `[keys]` is ignored with a warning.
+
+`[keys.labels]` maps a sequence to a group name for the popup, for example `"<leader> f" = "file"`. Without a label a group shows `+N more`. It is edited by hand only: Settings never writes `[keys]` or `[keys.labels]`. A label with an invalid sequence or an empty text is ignored with a warning.
+
+#### How keys behave
+
+```mermaid
+flowchart TD
+    K[Key pressed] --> S{Starts a sequence,<br/>and something below<br/>can run now?}
+    S -->|no| O[Normal single-key rules]
+    S -->|yes| P[Pending: key is claimed]
+    P --> N{Next key}
+    N -->|continues| P
+    N -->|completes| R[Command runs]
+    N -->|Backspace| U[Up one level]
+    N -->|Esc or no match| C[Cancelled]
+    P -->|popup delay| W[Which-key popup]
+    P -->|binding and prefix, timeout_ms| R
+    P -->|cancel_after_ms, click, window blur, IME| C
+```
+
+- **Only live sequences claim a key.** The first key is taken only when some command under it can run right now (its `when` holds). Otherwise the key goes on as usual, so `g g` does not stop `g` working on the canvas.
+- **Text boxes.** A sequence may start while you type only with Mod, Ctrl or Alt (`Mod+Alt+K Mod+S`). A sequence that starts with a plain key never starts in a text box. AltGr (Ctrl+Alt without Cmd) counts as typing, so `@` on a German keyboard is never taken.
+- **A key that doesn't match** cancels the sequence. On the canvas and in lists it is swallowed (like Vim and VS Code). In a text box it is typed, so you never lose a letter.
+- **Escape** cancels. **Backspace** goes up one level (at the first key it cancels). Held-down keys are ignored while pending.
+- **Ambiguity.** If `g` and `g g` are both bound, `g` waits `timeout_ms`. Press `g` again for the long one. Wait, and the short one runs. A longer sequence is never blocked by a shorter one.
+- **Cancelled by** a click, the window losing focus, IME composition, a settings reload, and `cancel_after_ms`.
+
+#### Which-key popup
+
+After `which_key_delay_ms` the popup lists the keys that can follow, with the command title or the group label. Only entries that can run now are shown.
+
+- Keep typing to continue; **Backspace** goes up, **Esc** cancels.
+- **Up/Down** move a highlight and **Enter** runs it or steps into it. The popup never takes focus.
+- It loads on first use, in a separate chunk, so it costs nothing at startup. With `which_key = false` it never loads on its own.
+
+Two commands, both unbound by default and in the palette under **Keys: …**:
+
+| Command id | What it does |
+| --- | --- |
+| `keys.whichKey` | Show the popup with the first keys of every sequence (works with `which_key = false`; needs a vault open). |
+| `keys.cancel` | Cancel a half-typed sequence. |
+
+#### Keyboard layouts
+
+Letters follow your layout: `g` is the key that types g on Dvorak or AZERTY. Punctuation and digits are physical keys (`KeyboardEvent.code`), so `Backslash` is the key at the US position, which can be awkward to reach or sit elsewhere on other layouts. On a non-US keyboard, pick a leader that is easy to press, such as `"Alt+K"`. `"Space"` is valid but is a poor choice: Space pans the canvas and selects list rows.
+
+#### Recording a sequence
+
+In **Settings → Hotkeys**, the **Sequence** button next to **+** records one:
+
+1. Click **Sequence** on a command.
+2. Type the chords, one after another. The page shows them as you go.
+3. **Enter** saves. **Backspace** removes the last chord, **Esc** cancels.
+
+The recorder saves the physical keys you pressed and adds the sequence to the command's keys. Enter and Escape control the recorder, so they cannot be part of a recorded sequence; write those by hand (`<CR>`, `<Esc>`). `<leader>` and groups are hand-edited too.
+
+A sequence that is the start of another key of a different command (`g` and `g g`) is flagged as a `prefix` conflict: a warning in red, never a refusal. The longer sequence wins. A sequence that begins with a key Excalidraw uses is flagged the same way as a single chord.
+
+#### Tool keys
+
+The tool letters and digits of the toolbar are now ordinary commands, so they can be rebound, removed or turned into sequences like any other. Their defaults are unchanged. They work while a drawing is open, and not while you type, with a list focused or with a dialog open.
+
+| Command id | Tool | Default keys |
+| --- | --- | --- |
+| `tool.selection` | Tool: Selection | `V`, `1` |
+| `tool.rectangle` | Tool: Rectangle | `R`, `2` |
+| `tool.diamond` | Tool: Diamond | `D`, `3` |
+| `tool.ellipse` | Tool: Ellipse | `O`, `4` |
+| `tool.arrow` | Tool: Arrow | `A`, `5` |
+| `tool.line` | Tool: Line | `L`, `6` |
+| `tool.freedraw` | Tool: Draw | `P`, `X`, `7` |
+| `tool.text` | Tool: Text | `T`, `8` |
+| `tool.stickynote` | Tool: Sticky note | `N` |
+| `tool.image` | Tool: Image | `9` |
+| `tool.eraser` | Tool: Eraser | `E`, `0` |
+| `tool.hand` | Tool: Hand | `H` |
+| `tool.frame` | Tool: Frame | `F` |
+| `tool.autoshape` | Tool: Shape recognition | `Shift+X` |
+| `tool.laser` | Tool: Laser pointer | `K` |
+| `tool.bucketfill` | Tool: Bucket fill | `B` |
+| `tool.lock` | Tool: Keep tool active | `Q` |
+
+Unassign a tool with an empty list (`"tool.laser" = []`) and its letter does nothing. Rebinding keeps Excalidraw's own rules: a tool that is disabled or refused while you draw stays refused. Excalidraw's other shortcuts (Mod+D, Mod+G and so on) are not commands yet.
+
+#### Vim-style example
+
+A starting point to copy into `config.toml`. It is plain text: change anything, or delete what you don't want. Nothing is on by default, and Vaultdraw ships no Vim mode. Keys you list replace that command's defaults, so the block repeats the defaults it keeps.
+
+<!-- keys-docs-example -->
+```toml
+[keys]
+leader = "Backslash"
+
+[keys.labels]
+"<leader> f" = "file"
+"<leader> s" = "shape"
+
+[hotkeys]
+# lists (file tree, tags, links): gg, dd
+"list.first" = ["g g", "Home"]
+"list.delete" = ["d d", "Delete"]
+
+# leader groups
+"palette.files" = ["<leader> f f", "Mod+P"]
+"palette.commands" = ["<leader> p", "Mod+Shift+P"]
+"file.save" = ["<leader> f s", "Mod+S", "Mod+Shift+S"]
+"vault.newDrawing" = ["<leader> f n", "Mod+N"]
+"view.toggleNavigator" = ["<leader> e", "Mod+Backslash"]
+
+# tools: keep the letters, add leader picks
+"tool.rectangle" = ["<leader> s r", "R", "2"]
+"tool.ellipse" = ["<leader> s e", "O", "4"]
+"tool.arrow" = ["<leader> s a", "A", "5"]
+"tool.text" = ["<leader> s t", "T", "8"]
+```
+<!-- /keys-docs-example -->
+
+After `\` the popup lists `f` (file), `s` (shape), `p` and `e`; after `\ f` it lists `f`, `s` and `n`.
+
+#### Not in this version
+
+| Not included | Why |
+| --- | --- |
+| Key-first tables (`[keymap.canvas]` and the like) | `[hotkeys]` already maps a command to its sequences, and Settings edits it. Two tables would show two truths. They can be added later without breaking this file. |
+| Modes (a sticky Normal or Insert layer) | A mode with no visible state at rest is easy to get stuck in. Each command's own conditions already decide where a key works. |
+| A shipped Vim preset | You decide: a copied block is plain text you own and edit, not a setting you have to undo. |
+| Counts, macros, operators, registers | Out of scope for a minimal core. |
+| Excalidraw's other shortcuts as commands | Only the tool keys moved. The rest may follow. |
+
 ### Command palette
 
 One palette with two modes, as in VS Code:
