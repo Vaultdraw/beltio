@@ -4,6 +4,10 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Changed
+
+- Faster start: only eight built-in colour themes (Default, Noctalia, Catppuccin, Dracula, Gruvbox, Nord, Rosé Pine, Tokyo Night) ship in the startup code. The other built-ins load the moment you pick one, and a configured one loads before the first paint, so there is no flash. The theme code read at startup shrinks from 210 KB to 67 KB.
+
 ## [0.2.0] - 2026-10-28
 
 The plugin platform, Markdown notes with Obsidian vaults, Linux builds and memory work. See [RELEASE-NOTES.md](RELEASE-NOTES.md).
