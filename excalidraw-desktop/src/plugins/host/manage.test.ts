@@ -16,6 +16,7 @@ import {
   reloadPlugin,
   rescanPlugins,
   restartInSafeMode,
+  stopDevListener,
   subscribePluginsState,
   uninstallPlugin,
   RELOAD_HINT_EVERY,
@@ -148,11 +149,76 @@ describe("reload", () => {
     await vi.waitFor(() => expect(h.loads).toEqual(["alpha", "alpha"]));
   });
 
+  it("a dev plugin that crashed is not saved as disabled and restarts on the next save", async () => {
+    let bad = true;
+    const dev = withCommands("alpha", "go");
+    dev.dev = true;
+    const h = await boot([dev], {
+      alpha: () => ({
+        activate(ctx) {
+          ctx.commands.register("go", () => {
+            if (bad) {
+              throw new Error("typo");
+            }
+          });
+        },
+      }),
+    });
+    enable(["alpha"]);
+    // The listener belongs to the backend of the first dev test: attach ours.
+    await stopDevListener();
+    await rescanPlugins();
+    const { ensureActive } = await import("./index");
+    const { getRegisteredHandler } = await import(
+      "../../commands/handlerRegistry"
+    );
+    await ensureActive("alpha");
+    const run = getRegisteredHandler("alpha.go")!;
+    for (let i = 0; i < 3; i++) {
+      await run();
+    }
+    expect(getRuntime("alpha")?.state).toBe("disabled");
+    expect(h.backend.hostDisabledCalls).toHaveLength(0);
+    expect(
+      toastStore
+        .getSnapshot()
+        .toasts.map((t) => t.message)
+        .join(),
+    ).toMatch(
+      /stopped.*Save a file/,
+    );
+
+    bad = false;
+    h.backend.emitChanged("alpha");
+    await tick();
+    await tick();
+    expect(getRuntime("alpha")?.state).toBe("active");
+    const { pluginErrorCount } = await import("./errors");
+    expect(pluginErrorCount("alpha")).toBe(0);
+    // Two more errors after the reload do not stop it (the count restarted).
+    bad = true;
+    const run2 = getRegisteredHandler("alpha.go")!;
+    await run2();
+    await run2();
+    expect(getRuntime("alpha")?.state).toBe("active");
+  });
+
   it("installs no dev listener when no plugin is dev", async () => {
     const h = await boot([makePluginInfo("alpha")], { alpha: plugin() });
     const spy = vi.spyOn(h.backend, "onChanged");
     await rescanPlugins();
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe("open plugins folder", () => {
+  it("the command opens the plugins folder itself", async () => {
+    const h = await boot([]);
+    const { PLUGIN_UI_COMMAND_IDS, pluginUiHandlers } = await import(
+      "../ui/pluginCommands"
+    );
+    pluginUiHandlers(() => {})[PLUGIN_UI_COMMAND_IDS.openFolder]();
+    await vi.waitFor(() => expect(h.backend.opened).toEqual([null]));
   });
 });
 

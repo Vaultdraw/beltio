@@ -57,8 +57,13 @@ const reloads = new Map<string, number>();
 const chains = new Map<string, Promise<void>>();
 
 async function doReload(id: string): Promise<void> {
-  const wasActive = getRuntime(id)?.state === "active";
+  const before = getRuntime(id);
+  // A dev plugin the host stopped after errors is retried on the next save.
+  const wasActive =
+    before?.state === "active" ||
+    (before?.info.dev === true && before.state === "disabled");
   await dispose(id);
+  resetPluginErrors(id);
   await rescanPlugins();
   const n = (reloads.get(id) ?? 0) + 1;
   reloads.set(id, n);
@@ -137,3 +142,7 @@ export const revealPluginFolder = (dir: string): Promise<void> =>
   getPluginsBackend().openDir(
     currentList().plugins.find((p) => p.dir === dir)?.id ?? null,
   );
+
+/** Shows the plugins folder itself in the file manager. */
+export const openPluginsFolder = (): Promise<void> =>
+  getPluginsBackend().openDir(null);

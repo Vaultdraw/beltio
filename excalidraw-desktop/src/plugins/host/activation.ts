@@ -9,6 +9,7 @@ import { createPluginContext } from "./context";
 import { recordActivate } from "./cost";
 import {
   errorText,
+  logLine,
   reportPluginError,
   resetPluginErrors,
   setCrashHandler,
@@ -156,16 +157,29 @@ export function stopPlugin(rt: PluginRuntime): Promise<void> {
   return done;
 }
 
-/** Host-side disable after a crash or failed activation. */
+/**
+ * Host-side disable after a crash or failed activation. A `dev = true` plugin
+ * is stopped for this session only: the disable is not saved, and the next
+ * reload (a file save) starts it again with a fresh error count.
+ */
 export function disablePlugin(id: string, reason: string): void {
   const rt = runtimes.get(id);
   if (!rt || rt.state === "disabled") {
     return;
   }
+  const dev = rt.info.dev === true;
   rt.info = { ...rt.info, hostDisabled: reason };
   void stopPlugin(rt);
   rt.state = "disabled";
   runtimesChanged();
+  if (dev) {
+    logLine(id, "error", `stopped: ${reason}`);
+    toastStore.push({
+      message: `Plugin ${rt.info.name} stopped: ${reason}. Save a file to reload it.`,
+      kind: "error",
+    });
+    return;
+  }
   toastStore.push({
     message: `Plugin ${rt.info.name} was disabled: ${reason}`,
     kind: "error",

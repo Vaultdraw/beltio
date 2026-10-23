@@ -31,13 +31,25 @@ pub(crate) struct Target {
     pub main: PathBuf,
 }
 
+/// The real path of `p`. A path that no longer exists (a file mid-save) keeps its folder's real
+/// path, so an event for it still compares equal. macOS reports `/private/var/...` for `/var/...`.
+pub(crate) fn canonical(p: &Path) -> PathBuf {
+    if let Ok(c) = p.canonicalize() {
+        return c;
+    }
+    match (p.parent().and_then(|d| d.canonicalize().ok()), p.file_name()) {
+        (Some(dir), Some(name)) => dir.join(name),
+        _ => p.to_path_buf(),
+    }
+}
+
 pub(crate) fn targets(plugins: &[PluginInfo]) -> Vec<Target> {
     plugins
         .iter()
         .filter(|p| p.manifest.dev)
         .map(|p| {
-            let dir = PathBuf::from(&p.dir);
-            Target { id: p.manifest.id.clone(), main: dir.join(&p.manifest.main), dir }
+            let dir = canonical(Path::new(&p.dir));
+            Target { id: p.manifest.id.clone(), main: canonical(&dir.join(&p.manifest.main)), dir }
         })
         .collect()
 }
@@ -53,6 +65,7 @@ fn watch_dirs(targets: &[Target]) -> BTreeSet<PathBuf> {
 
 /// Ids whose manifest or main file is among `paths`.
 pub(crate) fn changed_ids(paths: &[PathBuf], targets: &[Target]) -> BTreeSet<String> {
+    let paths: Vec<PathBuf> = paths.iter().map(|p| canonical(p)).collect();
     targets
         .iter()
         .filter(|t| paths.iter().any(|p| *p == t.main || *p == t.dir.join("plugin.toml")))
@@ -157,6 +170,53 @@ mod tests {
         assert_eq!(changed_ids(&[p("/p/a/main.js")], &ts), BTreeSet::from(["a".to_string()]));
         assert_eq!(changed_ids(&[p("/p/b/dist/main.js"), p("/p/b/plugin.toml")], &ts), BTreeSet::from(["b".to_string()]));
         assert!(changed_ids(&[p("/p/a/notes.txt"), p("/p/a/dist/main.js")], &ts).is_empty());
+    }
+
+    #[test]
+    fn a_symlinked_plugin_folder_matches_the_real_path_events() {
+        use std::fs;
+        let tmp = tempfile::tempdir().unwrap();
+        let real = tmp.path().join("real");
+        fs::create_dir_all(&real).unwrap();
+        fs::write(real.join("main.js"), "1").unwrap();
+        let link = tmp.path().join("link");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+        // The folder is registered through the link; events arrive with real paths (or the reverse).
+        let t = Target { id: "a".into(), dir: canonical(&link), main: canonical(&link.join("main.js")) };
+        let ids = BTreeSet::from(["a".to_string()]);
+        assert_eq!(changed_ids(&[real.join("main.js")], &[t.clone()]), ids);
+        assert_eq!(changed_ids(&[link.join("main.js")], &[t.clone()]), ids);
+        // A file that was just removed still matches (its folder is canonicalised).
+        fs::remove_file(real.join("main.js")).unwrap();
+        assert_eq!(changed_ids(&[link.join("main.js")], &[t]), ids);
+    }
+
+    #[test]
+    fn a_real_watcher_reports_a_save_through_a_symlinked_folder() {
+        use std::fs;
+        let tmp = tempfile::tempdir().unwrap();
+        let real = tmp.path().join("real");
+        fs::create_dir_all(&real).unwrap();
+        let link = tmp.path().join("link");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+        let t = Target { id: "a".into(), dir: canonical(&link), main: canonical(&link.join("main.js")) };
+        let (tx, rx) = mpsc::channel();
+        let mut w = notify::recommended_watcher(move |e: notify::Result<notify::Event>| {
+            if let Ok(e) = e {
+                let _ = tx.send(e.paths);
+            }
+        })
+        .unwrap();
+        w.watch(&t.dir, RecursiveMode::NonRecursive).unwrap();
+        fs::write(link.join("main.js"), "export default {};").unwrap();
+        let mut hit = false;
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while Instant::now() < deadline && !hit {
+            if let Ok(paths) = rx.recv_timeout(Duration::from_millis(200)) {
+                hit = !changed_ids(&paths, &[t.clone()]).is_empty();
+            }
+        }
+        assert!(hit, "no event matched the canonical target");
     }
 
     #[test]

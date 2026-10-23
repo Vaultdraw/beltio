@@ -32,3 +32,12 @@ export async function reloadPluginList(): Promise<void> {
     fail("Could not reload the plugin list", e);
   }
 }
+
+/** Show the plugins folder in the file manager (where `vaultdraw-plugin dev` copies a plugin). */
+export async function openPluginsFolder(): Promise<void> {
+  try {
+    await (await import("../host/manage")).openPluginsFolder();
+  } catch (e) {
+    fail("Could not open the plugins folder", e);
+  }
+}
