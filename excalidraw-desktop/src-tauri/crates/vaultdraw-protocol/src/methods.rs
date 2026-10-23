@@ -25,6 +25,7 @@ pub const FILE_CREATE: &str = "file.create";
 pub const FILE_MOVE: &str = "file.move";
 pub const FILE_TRASH: &str = "file.trash";
 pub const EXPORT_RENDER: &str = "export.render";
+pub const EXPORT_SPOOL: &str = "export.spool";
 pub const TAB_LIST: &str = "tab.list";
 pub const TAB_FOCUS: &str = "tab.focus";
 pub const TAB_CLOSE: &str = "tab.close";
@@ -227,6 +228,38 @@ fn c3_methods() -> Vec<MethodSpec> {
             true,
         ),
         spec(
+            EXPORT_SPOOL,
+            "Like export.render, but the app writes the output to a spool file and returns its path (no size cap, no copy through the reply); the caller moves or deletes the file",
+            obj(
+                json!({
+                    "path": {"type": "string"},
+                    "file": {"type": "string"},
+                    "format": {"type": "string", "enum": ["png", "svg", "pdf"]},
+                    "scale": {"type": "number"},
+                    "dark": {"type": "boolean"},
+                    "background": {"type": "boolean"},
+                    "pattern": {"type": "boolean"},
+                    "embedScene": {"type": "boolean"},
+                    "pageShaped": {"type": "boolean"},
+                    "frame": {"type": "string"},
+                    "padding": {"type": "number", "minimum": 0, "maximum": 200}
+                }),
+                &["format"],
+            ),
+            obj(
+                json!({
+                    "path": {"type": "string"},
+                    "fileName": {"type": "string"},
+                    "mime": {"type": "string", "enum": ["image/png", "image/svg+xml", "application/pdf"]},
+                    "size": {"type": "integer"},
+                    "spool": {"type": "string"}
+                }),
+                &["path", "fileName", "mime", "size", "spool"],
+            ),
+            CLI_ONLY,
+            true,
+        ),
+        spec(
             TAB_LIST,
             "Open tabs and the active tab id",
             none.clone(),
@@ -389,7 +422,7 @@ mod tests {
     fn c3_methods_are_catalogued() {
         let names = [
             VAULT_INFO, VAULT_OPEN, VAULT_LIST, VAULT_SEARCH, VAULT_LINKS, VAULT_TAGS, FILE_READ, FILE_WRITE, FILE_OPEN, FILE_CREATE, FILE_MOVE,
-            FILE_TRASH, EXPORT_RENDER, TAB_LIST, TAB_FOCUS, TAB_CLOSE, CONFIG_GET, CONFIG_SET, APP_QUIT, EVENTS_SUBSCRIBE, EVENTS_UNSUBSCRIBE,
+            FILE_TRASH, EXPORT_RENDER, EXPORT_SPOOL, TAB_LIST, TAB_FOCUS, TAB_CLOSE, CONFIG_GET, CONFIG_SET, APP_QUIT, EVENTS_SUBSCRIBE, EVENTS_UNSUBSCRIBE,
         ];
         for n in names {
             assert!(find(n).is_some(), "{n} missing from catalogue");

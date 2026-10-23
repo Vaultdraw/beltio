@@ -813,7 +813,7 @@ pub fn run() {
                 templates::write_global_template, templates::open_global_templates_dir,
                 thumbs::thumbs_lookup, thumbs::thumbs_put, thumbs::thumbs_clear,
                 plugins::plugins_list, plugins::plugins_install_folder, plugins::plugins_uninstall, plugins::plugins_set_host_disabled, plugins::plugins_open_dir,
-                control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event,
+                control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_spool_begin, control::bridge::control_spool_append, control::bridge::control_spool_abort, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event,
                 smoke::smoke_environment, smoke::smoke_log, smoke::smoke_finish, smoke::perf_process_ids,
                 refresh_rate::probes::perf_display_info, refresh_rate::probes::perf_native_input,
                 refresh_rate::probes::perf_window_maximize, refresh_rate::probes::perf_process_cpu,
@@ -836,7 +836,7 @@ pub fn run() {
                 templates::write_global_template, templates::open_global_templates_dir,
                 thumbs::thumbs_lookup, thumbs::thumbs_put, thumbs::thumbs_clear,
                 plugins::plugins_list, plugins::plugins_install_folder, plugins::plugins_uninstall, plugins::plugins_set_host_disabled, plugins::plugins_open_dir,
-                control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event
+                control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_spool_begin, control::bridge::control_spool_append, control::bridge::control_spool_abort, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event
             ])
         };
         #[cfg(not(feature = "smoke-test"))]
@@ -856,7 +856,7 @@ pub fn run() {
             templates::write_global_template, templates::open_global_templates_dir,
                 thumbs::thumbs_lookup, thumbs::thumbs_put, thumbs::thumbs_clear,
                 plugins::plugins_list, plugins::plugins_install_folder, plugins::plugins_uninstall, plugins::plugins_set_host_disabled, plugins::plugins_open_dir,
-                control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event
+                control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_spool_begin, control::bridge::control_spool_append, control::bridge::control_spool_abort, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event
         ]);
         startup_trace("builder configured");
         let app = builder

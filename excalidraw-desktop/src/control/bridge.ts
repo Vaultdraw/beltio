@@ -3,6 +3,7 @@
  * Rust server. Pure: listen/invoke and the app state are injected.
  */
 import { getCommand } from "../commands/commands";
+import { spoolBlob } from "../export/spoolBlob";
 
 import { commandInfos } from "./commandsSnapshot";
 import { ControlError, toControlError } from "./errors";
@@ -25,7 +26,11 @@ export interface ControlDeps {
     event: string,
     cb: (e: { payload: ControlRequest }) => void,
   ) => Promise<() => void>;
-  invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
+  invoke: (
+    cmd: string,
+    args?: any,
+    options?: { headers?: Record<string, string> },
+  ) => Promise<unknown>;
   runner: () => Pick<CommandRunner, "run" | "isAvailable" | "platform"> & {
     failedClauses?: (id: string) => string[];
   };
@@ -78,7 +83,9 @@ export function createControlBridge(deps: ControlDeps) {
       }
       return { opened: true };
     },
-    ...(deps.files ? createWindowMethods(deps.files) : {}),
+    ...(deps.files
+      ? createWindowMethods(deps.files, (blob) => spoolBlob(deps.invoke, blob))
+      : {}),
   };
 
   const reply = (rid: number, body: Record<string, unknown>) =>

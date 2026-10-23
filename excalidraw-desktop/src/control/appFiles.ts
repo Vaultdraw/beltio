@@ -5,7 +5,7 @@
 import { isNotFoundError } from "../vault/types";
 import { probeExists } from "../tabs/missingWatcher";
 
-import { renderExport } from "../export/renderExport";
+import { renderExport, renderExportBlob } from "../export/renderExport";
 
 import { ControlError } from "./errors";
 import { waitForTabs } from "./tabActions";
@@ -62,6 +62,21 @@ export function createAppFiles(d: AppFilesDeps): ControlFiles {
   const handle = () => d.vault?.handle ?? "";
   const missing = (e: unknown) =>
     isNotFoundError(e) ? false : Promise.reject(e);
+  const exportWith = async <T>(
+    path: string,
+    render: (
+      json: string,
+      name: string,
+      win: Window & typeof globalThis,
+    ) => Promise<T>,
+  ): Promise<T> => {
+    if (!d.win) {
+      throw new ControlError("UNAVAILABLE", "No window to render in");
+    }
+    await d.flushIfOpen(path);
+    const { json } = await d.repository.readDrawing(handle(), path);
+    return render(json, path.slice(path.lastIndexOf("/") + 1), d.win);
+  };
   return {
     vault: () => (d.vault ? summary(d.vault) : null),
     active: () => d.active,
@@ -92,19 +107,13 @@ export function createAppFiles(d: AppFilesDeps): ControlFiles {
     trashEntry: (path) => d.busy(() => d.trashEntry(path)),
     // No busy overlay: an export only reads and renders off-screen, so the
     // user keeps editing while a script exports (and calls may overlap).
-    exportDrawing: async (path, format, options) => {
-      if (!d.win) {
-        throw new ControlError("UNAVAILABLE", "No window to render in");
-      }
-      await d.flushIfOpen(path);
-      const { json } = await d.repository.readDrawing(handle(), path);
-      return renderExport(
-        json,
-        path.slice(path.lastIndexOf("/") + 1),
-        format,
-        options,
-        d.win,
-      );
-    },
+    exportDrawing: (path, format, options) =>
+      exportWith(path, (json, name, win) =>
+        renderExport(json, name, format, options, win),
+      ),
+    exportDrawingBlob: (path, format, options) =>
+      exportWith(path, (json, name, win) =>
+        renderExportBlob(json, name, format, options, win),
+      ),
   };
 }

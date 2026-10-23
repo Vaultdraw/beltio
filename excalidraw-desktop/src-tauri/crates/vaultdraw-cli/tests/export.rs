@@ -20,20 +20,36 @@ fn parse(s: &str) -> Value {
 fn app(method: &str, params: &Value) -> Result<Value, (i64, String, Option<&'static str>)> {
     match method {
         "vault.list" => Err((-32000, "Directory not found".into(), Some("NOT_FOUND"))),
-        "export.render" => {
+        "export.render" | "export.spool" => {
             let (name, mime, b64, size) = match params["format"].as_str() {
                 Some("svg") => ("a.svg", "image/svg+xml", SVG_B64, SVG.len()),
                 _ => ("a.png", "image/png", PNG_B64, PNG.len()),
             };
-            Ok(json!({"path":"a.excalidraw","fileName":name,"mime":mime,"size":size,"bytes":b64}))
+            if method == "export.spool" {
+                let raw = if mime == "image/png" { PNG } else { SVG };
+                Ok(json!({"path":"a.excalidraw","fileName":name,"mime":mime,"size":size,"spool":spool_file(raw)}))
+            } else {
+                Ok(json!({"path":"a.excalidraw","fileName":name,"mime":mime,"size":size,"bytes":b64}))
+            }
         }
         _ => Err((-32601, "Method not found".into(), None)),
     }
 }
 
+/// What the app does for `spool: true`: a file in its `export-spool` folder (a fresh name each time).
+fn spool_file(bytes: &[u8]) -> String {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static N: AtomicU64 = AtomicU64::new(0);
+    let dir = std::env::temp_dir().join(format!("vd-export-spool-test-{}", std::process::id())).join("export-spool");
+    std::fs::create_dir_all(&dir).unwrap();
+    let p = dir.join(format!("{:032x}", N.fetch_add(1, Ordering::SeqCst) + 1));
+    std::fs::write(&p, bytes).unwrap();
+    p.to_str().unwrap().to_string()
+}
+
 /// The `export.render` requests the app received (the folder probe is `vault.list`).
 fn renders(f: &Fake) -> Vec<Value> {
-    f.seen.lock().unwrap().iter().filter(|r| r["method"] == "export.render").cloned().collect()
+    f.seen.lock().unwrap().iter().filter(|r| r["method"] == "export.render" || r["method"] == "export.spool").cloned().collect()
 }
 
 fn run(args: &[&str]) -> (Output, Vec<Value>) {
@@ -53,7 +69,7 @@ fn export_sends_only_the_options_set_and_writes_the_exact_bytes() {
     assert_eq!(out(&o), format!("exported a.excalidraw -> {} ({} bytes)\n", file.display(), SVG.len()));
     assert_eq!(std::fs::read(&file).unwrap(), SVG);
     let seen = renders(&f);
-    assert_eq!(seen[0]["method"], "export.render");
+    assert_eq!(seen[0]["method"], "export.spool");
     assert_eq!(seen[0]["params"], json!({"file":"a","format":"svg","scale":2.0,"dark":true}));
     // No temporary file left behind.
     assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
@@ -177,7 +193,7 @@ fn print_request_shows_the_line_without_a_socket() {
     let o = vd(&["export", "a", "--format", "svg", "--scale", "1.5", "--print-request"], None, None);
     assert_eq!(code(&o), 0, "{}", err(&o));
     let line = parse(&out(&o));
-    assert_eq!(line["method"], "export.render");
+    assert_eq!(line["method"], "export.spool");
     assert_eq!(line["params"], json!({"file":"a","format":"svg","scale":1.5}));
 }
 
@@ -209,7 +225,7 @@ fn folder_app(method: &str, params: &Value) -> Result<Value, (i64, String, Optio
                 {"path":"Evil/later.excalidraw","kind":"drawing"}]})),
             _ => Err((-32000, "Directory not found".into(), Some("NOT_FOUND"))),
         },
-        "export.render" if params["path"].as_str().is_some_and(|p| p.contains("broken")) => {
+        "export.render" | "export.spool" if params["path"].as_str().is_some_and(|p| p.contains("broken")) => {
             Err((-32000, "Cannot export an empty canvas".into(), Some("INVALID_FILE")))
         }
         _ => app(method, params),
@@ -225,7 +241,7 @@ fn a_single_drawing_sends_one_request_and_no_folder_listing() {
     assert_eq!(code(&o), 0, "{}", err(&o));
     let seen = f.seen.lock().unwrap();
     assert_eq!(seen.len(), 1, "{seen:?}");
-    assert_eq!(seen[0]["method"], "export.render");
+    assert_eq!(seen[0]["method"], "export.spool");
 }
 
 #[test]
@@ -243,7 +259,7 @@ fn folder_exports_every_drawing_under_out_dir_with_the_new_extension() {
     assert_eq!(seen[0]["params"], json!({"dir":"Graphs","recursive":true}));
     let paths: Vec<&str> = seen[1..].iter().map(|r| r["params"]["path"].as_str().unwrap()).collect();
     assert_eq!(paths, ["Graphs/a.excalidraw", "Graphs/sub/b.excalidraw"]);
-    assert!(seen[1..].iter().all(|r| r["method"] == "export.render" && r["params"]["format"] == "png"));
+    assert!(seen[1..].iter().all(|r| r["method"] == "export.spool" && r["params"]["format"] == "png"));
 }
 
 #[test]
@@ -351,4 +367,42 @@ fn frame_and_padding_go_into_the_render_request_and_are_checked() {
         let o = vd(&args, None, None);
         assert_eq!(code(&o), 1, "{bad:?}: {}", err(&o));
     }
+}
+
+#[test]
+fn an_app_without_spool_support_still_works_through_base64() {
+    let f = Fake::start(|m, _| match m {
+        "export.render" => Ok(json!({"path":"a.excalidraw","fileName":"a.png","mime":"image/png","size":PNG.len(),"bytes":PNG_B64})),
+        _ => Err((-32601, "Method not found".into(), None)),
+    });
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("o.png");
+    let o = vd(&["export", "a", "-o", file.to_str().unwrap()], Some(&f.socket), None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(std::fs::read(&file).unwrap(), PNG);
+    let methods: Vec<String> = f.seen.lock().unwrap().iter().map(|r| r["method"].as_str().unwrap().to_string()).filter(|m| m.starts_with("export.")).collect();
+    assert_eq!(methods, ["export.spool", "export.render"]);
+}
+
+#[test]
+fn the_spool_file_is_gone_after_each_outcome() {
+    let dir = tempfile::tempdir().unwrap();
+    let f = Fake::start(app);
+    let file = dir.path().join("o.png");
+    let spools = || {
+        let d = std::env::temp_dir().join(format!("vd-export-spool-test-{}", std::process::id())).join("export-spool");
+        std::fs::read_dir(d).map(|r| r.count()).unwrap_or(0)
+    };
+    // File, stdout, taken name (refused before the render), and a missing folder.
+    for args in [vec!["export", "a", "-o", file.to_str().unwrap()], vec!["export", "a", "-o", "-", "--force"], vec!["export", "a", "-o", file.to_str().unwrap()]] {
+        vd(&args, Some(&f.socket), None);
+        assert_eq!(spools(), 0, "{args:?}");
+    }
+    let missing = dir.path().join("nope/o.png");
+    let o = vd(&["export", "a", "-o", missing.to_str().unwrap()], Some(&f.socket), None);
+    assert_eq!(code(&o), 1);
+    assert!(err(&o).contains("the folder") && err(&o).contains("does not exist"), "{}", err(&o));
+    assert_eq!(spools(), 0);
+    assert_eq!(std::fs::read(&file).unwrap(), PNG);
+    assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
 }

@@ -26,6 +26,9 @@ export type RenderedImage = {
   mime: "image/png" | "image/svg+xml";
 };
 
+/** The same render as [RenderedImage] with the bytes still in a Blob (no whole-image copy). */
+export type RenderedImageBlob = Omit<RenderedImage, "bytes"> & { blob: Blob };
+
 const isClipboard = (type: ImageExportRequest["type"]) =>
   type === "clipboard" || type === "clipboard-svg";
 
@@ -44,11 +47,21 @@ export type ImageExportExtras = {
   padding?: number;
 };
 
-export const renderImageExport = (
+export const renderImageExport = async (
   request: ImageExportRequest,
   win: Window & typeof globalThis,
   extras: ImageExportExtras = {},
 ): Promise<RenderedImage> => {
+  const { blob, ...rest } = await renderImageBlob(request, win, extras);
+  return { ...rest, bytes: new Uint8Array(await blob.arrayBuffer()) };
+};
+
+/** [renderImageExport] without turning the result into one big byte array. */
+export const renderImageBlob = (
+  request: ImageExportRequest,
+  win: Window & typeof globalThis,
+  extras: ImageExportExtras = {},
+): Promise<RenderedImageBlob> => {
   if (request.elements.length === 0) {
     return Promise.reject(emptyCanvasError());
   }
@@ -88,7 +101,7 @@ export const renderImageExport = (
         SVG_DOCUMENT_PREAMBLE +
         new win.XMLSerializer().serializeToString(element);
       return {
-        bytes: new TextEncoder().encode(text),
+        blob: new Blob([text], { type: "image/svg+xml" }),
         fileName: exportFileName(request.name, "svg", embedScene),
         mime: "image/svg+xml" as const,
       };
@@ -107,7 +120,7 @@ export const renderImageExport = (
       }),
     });
     return {
-      bytes: new Uint8Array(await blob.arrayBuffer()),
+      blob,
       fileName: exportFileName(request.name, "png", embedScene),
       mime: "image/png" as const,
     };

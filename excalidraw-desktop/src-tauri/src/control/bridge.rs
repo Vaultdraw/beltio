@@ -120,6 +120,33 @@ pub(crate) async fn control_reply(rid: u64, result: Option<Value>, error: Option
     pending().resolve(rid, reply);
 }
 
+/// Starts a spool file for an `export.spool` result: `{id, path}`.
+#[tauri::command]
+pub(crate) async fn control_spool_begin() -> crate::Result<Value> {
+    let state = crate::config::resolve_dirs()?.state;
+    let (id, path) = super::spool::begin(&state).map_err(crate::ioerr)?;
+    Ok(json!({"id": id, "path": path}))
+}
+
+/// Appends one raw chunk (header `x-spool-id`) to a spool file.
+#[tauri::command]
+pub(crate) async fn control_spool_append(request: tauri::ipc::Request<'_>) -> crate::Result<()> {
+    let id = crate::clipboard::header(&request, "x-spool-id")?;
+    let bytes = match request.body() {
+        tauri::ipc::InvokeBody::Raw(bytes) => bytes.as_slice(),
+        tauri::ipc::InvokeBody::Json(_) => return Err(crate::err("INVALID_ARGUMENT", "Expected a raw binary body, got JSON")),
+    };
+    let state = crate::config::resolve_dirs()?.state;
+    super::spool::append(&state, &id, bytes).map_err(crate::ioerr)
+}
+
+/// Deletes a spool file whose export failed.
+#[tauri::command]
+pub(crate) async fn control_spool_abort(id: String) -> crate::Result<()> {
+    let state = crate::config::resolve_dirs()?.state;
+    super::spool::abort(&state, &id).map_err(crate::ioerr)
+}
+
 /// The window's command registry, for `vaultdraw` completions and offline `command list`.
 #[tauri::command]
 pub(crate) async fn control_commands_snapshot(commands: Value) -> crate::Result<()> {

@@ -16,7 +16,11 @@ import type {
 
 import { ControlError } from "../control/errors";
 import { withStandardCanvasColors } from "../editor/canvasSync";
-import { exportFileName, renderImageExport } from "../editor/imageExport";
+import {
+  exportFileName,
+  renderImageBlob,
+  renderImageExport,
+} from "../editor/imageExport";
 
 import { ExportError } from "./exportError";
 
@@ -142,4 +146,31 @@ export const renderExport = async (
   }
   const request = await sceneToExportRequest(json, name, format, options, win);
   return renderImageExport(request, win, { padding: options.padding });
+};
+
+export type RenderedExportBlob = Omit<RenderedExport, "bytes"> & { blob: Blob };
+
+/** [renderExport] keeping the output in a Blob: the control API streams it in chunks. */
+export const renderExportBlob = async (
+  json: string,
+  name: string,
+  format: "png" | "svg" | "pdf",
+  options: ExplorerExportOptions,
+  win: Window & typeof globalThis,
+): Promise<RenderedExportBlob> => {
+  if (format === "pdf") {
+    const { bytes, ...rest } = await renderExport(
+      json,
+      name,
+      format,
+      options,
+      win,
+    );
+    return {
+      ...rest,
+      blob: new Blob([bytes as BlobPart], { type: rest.mime }),
+    };
+  }
+  const request = await sceneToExportRequest(json, name, format, options, win);
+  return renderImageBlob(request, win, { padding: options.padding });
 };

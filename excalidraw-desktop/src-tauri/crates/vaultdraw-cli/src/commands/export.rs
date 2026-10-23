@@ -1,14 +1,17 @@
-//! `vaultdraw export`: the app renders a drawing (PNG, SVG or PDF) and the bytes come back
-//! base64 encoded; this writes them to a file or stdout. Needs the running app (no offline path).
+//! `vaultdraw export`: the app renders a drawing (PNG, SVG or PDF) into a spool file and replies
+//! with its path; this moves that file into place (or streams it to stdout), so the image is never
+//! held in memory here. An app without spool support answers with base64 `bytes`, still accepted.
+//! Needs the running app (no offline path).
 
 use super::target;
 use crate::cli::{Cli, ExportArgs};
 use crate::error::{Fail, EXIT_PROTOCOL, EXIT_REFUSED};
 use crate::rpc::{request_line, resolve_socket, Rpc};
 use serde_json::{json, Value};
+use std::cell::Cell;
 use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
-use vaultdraw_protocol::methods;
+use vaultdraw_protocol::{methods, METHOD_NOT_FOUND};
 
 /// The app waits up to 120 s for a render (`EXPORT_TIMEOUT`); the CLI must wait at least as long.
 const REPLY_WAIT_SECS: u64 = 125;
@@ -25,7 +28,7 @@ pub fn run(cli: &Cli, args: &ExportArgs) -> Result<(), Fail> {
         let line = match &args.out_dir {
             // A folder batch starts with this listing (the drawings come from its reply).
             Some(_) => request_line(methods::VAULT_LIST, Some(list_params(&args.target))),
-            None => request_line(methods::EXPORT_RENDER, Some(params)),
+            None => request_line(methods::EXPORT_SPOOL, Some(params)),
         };
         println!("{line}");
         return Ok(());
@@ -43,22 +46,22 @@ pub fn run(cli: &Cli, args: &ExportArgs) -> Result<(), Fail> {
     // folder) the name is the one the app will give it; the write checks the real name again.
     let planned = file_name_for(&args.target, &format, args.embed_scene);
     match (file_out, out_dir) {
-        (Some(file), _) => check_free(Path::new(file), args.force)?,
-        (None, Some(dir)) => check_free(&Path::new(dir).join(&planned), args.force)?,
-        (None, None) if !to_stdout => check_free(Path::new(&planned), args.force)?,
+        (Some(file), _) => check_dest(Path::new(file), args.force)?,
+        (None, Some(dir)) => check_dest(&Path::new(dir).join(&planned), args.force)?,
+        (None, None) if !to_stdout => check_dest(Path::new(&planned), args.force)?,
         _ => {}
     }
     let socket = resolve_socket(cli.socket.as_deref())?;
-    let reply = Rpc::new(socket, cli.timeout.max(REPLY_WAIT_SECS)).call(methods::EXPORT_RENDER, Some(params))?;
-    let bytes = decode_reply(&reply)?;
+    let rpc = Rpc::new(socket, cli.timeout.max(REPLY_WAIT_SECS));
+    let reply = render(&Cell::new(false), |method| rpc.call(method, Some(params.clone())))?;
+    let payload = Payload::from_reply(&reply)?;
     let size = reply.get("size").and_then(Value::as_u64).unwrap_or(0);
     let path = reply.get("path").and_then(Value::as_str).unwrap_or("").to_string();
     let file_name = reply.get("fileName").and_then(Value::as_str).unwrap_or("").to_string();
     let mime = reply.get("mime").and_then(Value::as_str).unwrap_or("").to_string();
 
     let out = if to_stdout {
-        let mut o = std::io::stdout().lock();
-        o.write_all(&bytes).and_then(|()| o.flush()).map_err(|e| Fail::cli(format!("cannot write to stdout: {e}")))?;
+        payload.to_stdout()?;
         "-".to_string()
     } else {
         let dest = match (file_out, out_dir) {
@@ -66,7 +69,7 @@ pub fn run(cli: &Cli, args: &ExportArgs) -> Result<(), Fail> {
             (None, Some(dir)) => Path::new(dir).join(safe_name(&file_name)?),
             (None, None) => PathBuf::from(safe_name(&file_name)?),
         };
-        write_file(&dest, &bytes, args.force)?;
+        payload.place(&dest, args.force)?;
         dest.display().to_string()
     };
     let value = json!({"path": path, "fileName": file_name, "mime": mime, "size": size, "out": out});
@@ -79,6 +82,18 @@ pub fn run(cli: &Cli, args: &ExportArgs) -> Result<(), Fail> {
         println!("{human}");
     }
     Ok(())
+}
+
+/// Asks the app to render: `export.spool` (the output arrives as a file), or `export.render`
+/// (base64 in the reply) when the app predates it. `legacy` remembers that across a batch.
+fn render(legacy: &Cell<bool>, mut call: impl FnMut(&str) -> Result<Value, Fail>) -> Result<Value, Fail> {
+    if !legacy.get() {
+        match call(methods::EXPORT_SPOOL) {
+            Err(f) if f.tag == METHOD_NOT_FOUND.to_string() => legacy.set(true),
+            reply => return reply,
+        }
+    }
+    call(methods::EXPORT_RENDER)
 }
 
 /// The export options as `export.render` params (format, scale, flags); no target.
@@ -145,10 +160,11 @@ fn export_folder(cli: &Cli, args: &ExportArgs, format: &str, socket: PathBuf, ou
         Err(f) => return Err(f),
     };
     let options = render_params(args, format);
+    let legacy = Cell::new(false);
     let (mut done, total) = (0usize, paths.len());
     for path in &paths {
         let result = match out_path(out_dir, path, format) {
-            Some(out) => export_one(&rpc, &mut client, &options, path, &out, args.force).map(|size| (out, size)),
+            Some(out) => export_one(&rpc, &mut client, &legacy, &options, path, &out, args.force).map(|size| (out, size)),
             None => Err(bad_reply(format!("vault.list returned an unsafe path {path:?}"))),
         };
         let out_text = |out: &Path| out.display().to_string();
@@ -188,17 +204,18 @@ fn export_folder(cli: &Cli, args: &ExportArgs, format: &str, socket: PathBuf, ou
 
 /// One drawing of a batch: render on the open connection, then write (never over an existing file
 /// without `--force`, creating the folders it needs). Returns the bytes written.
-fn export_one(rpc: &Rpc, client: &mut vaultdraw_protocol::client::Client, options: &serde_json::Map<String, Value>, path: &str, out: &Path, force: bool) -> Result<u64, Fail> {
+fn export_one(rpc: &Rpc, client: &mut vaultdraw_protocol::client::Client, legacy: &Cell<bool>, options: &serde_json::Map<String, Value>, path: &str, out: &Path, force: bool) -> Result<u64, Fail> {
     check_free(out, force)?;
     let mut p = options.clone();
     p.insert("path".into(), json!(path));
-    let reply = rpc.call_on(client, methods::EXPORT_RENDER, Some(Value::Object(p)))?;
-    let bytes = decode_reply(&reply)?;
+    let reply = render(legacy, |method| rpc.call_on(client, method, Some(Value::Object(p.clone()))))?;
+    let payload = Payload::from_reply(&reply)?;
+    let size = payload.len();
     if let Some(parent) = out.parent().filter(|d| !d.as_os_str().is_empty()) {
         std::fs::create_dir_all(parent).map_err(|e| Fail::cli(format!("cannot create {}: {e}", parent.display())))?;
     }
-    write_file(out, &bytes, force)?;
-    Ok(bytes.len() as u64)
+    payload.place(out, force)?;
+    Ok(size)
 }
 
 /// `<dir>/<drawing path>` with the `.excalidraw` suffix replaced by the export's extension. None
@@ -306,40 +323,179 @@ fn check_free(dest: &Path, force: bool) -> Result<(), Fail> {
     Ok(())
 }
 
+fn check_dest(dest: &Path, force: bool) -> Result<(), Fail> {
+    check_free(dest, force)?;
+    check_folder(dest)
+}
+
+fn write_failed(dest: &Path, e: std::io::Error) -> Fail {
+    Fail::cli(format!("cannot write {}: {e}", dest.display()))
+}
+
+fn tmp_name(dest: &Path) -> PathBuf {
+    PathBuf::from(format!("{}.tmp-{}", dest.display(), std::process::id()))
+}
+
+/// Fails before the render when `dest` cannot be created: its folder must exist.
+fn check_folder(dest: &Path) -> Result<(), Fail> {
+    match dest.parent().filter(|d| !d.as_os_str().is_empty()) {
+        Some(dir) if !dir.is_dir() => Err(Fail::cli(format!("cannot write {}: the folder {} does not exist", dest.display(), dir.display()))),
+        _ => Ok(()),
+    }
+}
+
 /// Writes `<dest>.tmp-<pid>`, then moves it into place, so a failed write leaves no partial file.
-/// Without `force` the move itself refuses an existing file (a hard link fails when the name is
-/// taken), so a file created by someone else during the render is never replaced.
 fn write_file(dest: &Path, bytes: &[u8], force: bool) -> Result<(), Fail> {
     check_free(dest, force)?;
-    let tmp = PathBuf::from(format!("{}.tmp-{}", dest.display(), std::process::id()));
-    let fail = |e: std::io::Error| Fail::cli(format!("cannot write {}: {e}", dest.display()));
+    let tmp = tmp_name(dest);
     if let Err(e) = std::fs::write(&tmp, bytes) {
         let _ = std::fs::remove_file(&tmp);
-        return Err(fail(e));
+        return Err(write_failed(dest, e));
     }
-    let placed = if force { std::fs::rename(&tmp, dest) } else { place_new(&tmp, dest, bytes) };
-    let _ = std::fs::remove_file(&tmp);
+    place_tmp(&tmp, dest, force)
+}
+
+/// Moves a finished temp file to `dest` and removes it. Without `force` the move itself refuses an
+/// existing file (a hard link fails when the name is taken), so a file created by someone else
+/// during the render is never replaced.
+fn place_tmp(tmp: &Path, dest: &Path, force: bool) -> Result<(), Fail> {
+    let placed = if force { std::fs::rename(tmp, dest) } else { place_new(tmp, dest) };
+    let _ = std::fs::remove_file(tmp);
     match placed {
         Ok(()) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => Err(taken(dest)),
-        Err(e) => Err(fail(e)),
+        Err(e) => Err(write_failed(dest, e)),
     }
 }
 
 /// Moves `tmp` to a `dest` that must not exist yet. A hard link is atomic and fails on an
 /// existing name; on a filesystem without hard links, an exclusive create (`O_EXCL`) does the
 /// same check (the file is then filled in place).
-fn place_new(tmp: &Path, dest: &Path, bytes: &[u8]) -> std::io::Result<()> {
+fn place_new(tmp: &Path, dest: &Path) -> std::io::Result<()> {
     match std::fs::hard_link(tmp, dest) {
         Ok(()) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => Err(e),
         Err(_) => {
-            let mut f = std::fs::OpenOptions::new().write(true).create_new(true).open(dest)?;
-            f.write_all(bytes).inspect_err(|_| {
+            let mut out = std::fs::OpenOptions::new().write(true).create_new(true).open(dest)?;
+            copy_stream(&mut std::fs::File::open(tmp)?, &mut out).inspect_err(|_| {
                 let _ = std::fs::remove_file(dest);
             })
         }
     }
+}
+
+const COPY_BLOCK: usize = 64 * 1024;
+
+/// Copies `from` to `to` in 64 KiB blocks (the whole file is never in memory).
+fn copy_stream(from: &mut impl std::io::Read, to: &mut impl Write) -> std::io::Result<()> {
+    let mut buf = vec![0u8; COPY_BLOCK];
+    loop {
+        let n = match from.read(&mut buf) {
+            Ok(0) => return Ok(()),
+            Ok(n) => n,
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(e),
+        };
+        to.write_all(&buf[..n])?;
+    }
+}
+
+/// What the app returned: a spool file to take, or (older apps) the decoded bytes.
+enum Payload {
+    Spool { path: PathBuf, size: u64 },
+    Bytes(Vec<u8>),
+}
+
+impl Payload {
+    fn from_reply(reply: &Value) -> Result<Self, Fail> {
+        let Some(spool) = reply.get("spool").and_then(Value::as_str) else {
+            return decode_reply(reply).map(Payload::Bytes);
+        };
+        let bad = |what: &str| Fail::new(EXIT_PROTOCOL, format!("the app's reply has {what}"), "BAD_REPLY");
+        let path = PathBuf::from(spool);
+        if !is_spool_path(&path) {
+            return Err(bad("a spool path outside the app's export-spool folder"));
+        }
+        let size = std::fs::metadata(&path).map_err(|e| bad(&format!("a spool file that cannot be read ({e})")))?.len();
+        if reply.get("size").and_then(Value::as_u64) != Some(size) {
+            let _ = std::fs::remove_file(&path);
+            return Err(bad("a size that does not match its spool file"));
+        }
+        Ok(Payload::Spool { path, size })
+    }
+
+    fn len(&self) -> u64 {
+        match self {
+            Payload::Spool { size, .. } => *size,
+            Payload::Bytes(b) => b.len() as u64,
+        }
+    }
+
+    fn to_stdout(self) -> Result<(), Fail> {
+        let fail = |e: std::io::Error| Fail::cli(format!("cannot write to stdout: {e}"));
+        let mut o = std::io::stdout().lock();
+        match &self {
+            Payload::Bytes(b) => o.write_all(b).map_err(fail)?,
+            Payload::Spool { path, .. } => {
+                let mut f = std::fs::File::open(path).map_err(|e| Fail::cli(format!("cannot read {}: {e}", path.display())))?;
+                copy_stream(&mut f, &mut o).map_err(fail)?;
+            }
+        }
+        o.flush().map_err(fail)?;
+        self.discard();
+        Ok(())
+    }
+
+    /// Moves the render to `dest` (never over an existing file without `force`).
+    fn place(self, dest: &Path, force: bool) -> Result<(), Fail> {
+        let result = match &self {
+            Payload::Bytes(b) => write_file(dest, b, force),
+            Payload::Spool { path, .. } => place_spool(path, dest, force),
+        };
+        self.discard();
+        result
+    }
+
+    /// Removes the spool file (a no-op after a rename, or for inline bytes).
+    fn discard(&self) {
+        if let Payload::Spool { path, .. } = self {
+            let _ = std::fs::remove_file(path);
+        }
+    }
+}
+
+impl Drop for Payload {
+    fn drop(&mut self) {
+        self.discard();
+    }
+}
+
+/// Only files the app made in its own `export-spool` folder are ever moved or deleted here.
+fn is_spool_path(p: &Path) -> bool {
+    let name_ok = p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.len() == 32 && n.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')));
+    p.is_absolute() && name_ok && p.parent().and_then(|d| d.file_name()).is_some_and(|d| d == "export-spool")
+}
+
+/// Fast path: a rename (`--force`) or hard link (no `force`) of the spool file, no bytes copied.
+/// When the folders are on different filesystems it copies in blocks to `<dest>.tmp-<pid>` first.
+fn place_spool(spool: &Path, dest: &Path, force: bool) -> Result<(), Fail> {
+    check_free(dest, force)?;
+    let fast = if force { std::fs::rename(spool, dest) } else { std::fs::hard_link(spool, dest) };
+    match fast {
+        Ok(()) => return Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => return Err(taken(dest)),
+        Err(_) => {}
+    }
+    let tmp = tmp_name(dest);
+    let copied = std::fs::File::open(spool).and_then(|mut from| {
+        let mut to = std::fs::File::create(&tmp)?;
+        copy_stream(&mut from, &mut to)
+    });
+    if let Err(e) = copied {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(write_failed(dest, e));
+    }
+    place_tmp(&tmp, dest, force)
 }
 
 /// Standard base64 (RFC 4648, `+` and `/`, `=` padding). Rejects anything else, including
@@ -423,12 +579,96 @@ mod tests {
         std::fs::write(&tmp, b"new").unwrap();
         // Someone else creates the file between the check and the move.
         std::fs::write(&dest, b"theirs").unwrap();
-        let e = place_new(&tmp, &dest, b"new").unwrap_err();
+        let e = place_new(&tmp, &dest).unwrap_err();
         assert_eq!(e.kind(), std::io::ErrorKind::AlreadyExists);
         assert_eq!(std::fs::read(&dest).unwrap(), b"theirs");
         std::fs::remove_file(&dest).unwrap();
-        place_new(&tmp, &dest, b"new").unwrap();
+        place_new(&tmp, &dest).unwrap();
         assert_eq!(std::fs::read(&dest).unwrap(), b"new");
+    }
+
+    fn spool_in(dir: &Path, bytes: &[u8]) -> PathBuf {
+        let folder = dir.join("export-spool");
+        std::fs::create_dir_all(&folder).unwrap();
+        let p = folder.join("0123456789abcdef0123456789abcdef");
+        std::fs::write(&p, bytes).unwrap();
+        p
+    }
+
+    fn reply_for(p: &Path, size: usize) -> Value {
+        json!({"path": "a.excalidraw", "fileName": "a.png", "mime": "image/png", "size": size, "spool": p.to_str().unwrap()})
+    }
+
+    #[test]
+    fn a_spool_file_is_hard_linked_into_place_and_removed() {
+        let t = tempfile::tempdir().unwrap();
+        let spool = spool_in(t.path(), b"image");
+        let dest = t.path().join("out.png");
+        let payload = Payload::from_reply(&reply_for(&spool, 5)).unwrap();
+        assert_eq!(payload.len(), 5);
+        payload.place(&dest, false).unwrap();
+        assert_eq!(std::fs::read(&dest).unwrap(), b"image");
+        assert!(!spool.exists());
+        assert_eq!(std::fs::read_dir(t.path()).unwrap().count(), 2, "only export-spool/ and out.png");
+    }
+
+    #[test]
+    fn a_taken_name_is_refused_without_force_and_replaced_with_it() {
+        let t = tempfile::tempdir().unwrap();
+        let dest = t.path().join("out.png");
+        std::fs::write(&dest, b"theirs").unwrap();
+        let spool = spool_in(t.path(), b"mine");
+        let e = Payload::from_reply(&reply_for(&spool, 4)).unwrap().place(&dest, false).unwrap_err();
+        assert!(e.message.contains("already exists"), "{}", e.message);
+        assert_eq!(std::fs::read(&dest).unwrap(), b"theirs");
+        assert!(!spool.exists(), "the spool file never outlives the command");
+        let spool = spool_in(t.path(), b"mine");
+        Payload::from_reply(&reply_for(&spool, 4)).unwrap().place(&dest, true).unwrap();
+        assert_eq!(std::fs::read(&dest).unwrap(), b"mine");
+        assert!(!spool.exists());
+    }
+
+    #[test]
+    fn an_unwritable_destination_is_a_clear_error_and_leaves_nothing_behind() {
+        let t = tempfile::tempdir().unwrap();
+        let spool = spool_in(t.path(), b"mine");
+        let dest = t.path().join("missing/dir/out.png");
+        let e = check_dest(&dest, false).unwrap_err();
+        assert!(e.message.contains("the folder") && e.message.contains("does not exist"), "{}", e.message);
+        let e = Payload::from_reply(&reply_for(&spool, 4)).unwrap().place(&dest, false).unwrap_err();
+        assert!(e.message.starts_with("cannot write "), "{}", e.message);
+        assert!(!spool.exists());
+        assert!(!dest.exists() && !tmp_name(&dest).exists());
+    }
+
+    #[test]
+    fn the_copy_fallback_streams_and_leaves_no_temp_file() {
+        let t = tempfile::tempdir().unwrap();
+        let spool = spool_in(t.path(), &vec![7u8; COPY_BLOCK * 2 + 5]);
+        let dest = t.path().join("out.png");
+        // What place_spool does when the rename or link crosses filesystems.
+        let tmp = tmp_name(&dest);
+        copy_stream(&mut std::fs::File::open(&spool).unwrap(), &mut std::fs::File::create(&tmp).unwrap()).unwrap();
+        place_tmp(&tmp, &dest, false).unwrap();
+        assert_eq!(std::fs::read(&dest).unwrap().len(), COPY_BLOCK * 2 + 5);
+        assert!(!tmp.exists());
+    }
+
+    #[test]
+    fn replies_with_a_bad_spool_path_or_size_are_refused() {
+        let t = tempfile::tempdir().unwrap();
+        let outside = t.path().join("0123456789abcdef0123456789abcdef");
+        std::fs::write(&outside, b"x").unwrap();
+        for bad in [outside.to_str().unwrap().to_string(), "export-spool/0123456789abcdef0123456789abcdef".into(), "/export-spool/../../etc/passwd".into(), "/x/export-spool/notahexname".into()] {
+            let r = json!({"size": 1, "spool": bad});
+            assert_eq!(Payload::from_reply(&r).err().map(|f| f.tag), Some("BAD_REPLY".to_string()), "{bad}");
+        }
+        assert!(outside.exists(), "a refused path is never deleted");
+        let spool = spool_in(t.path(), b"abc");
+        assert!(Payload::from_reply(&reply_for(&spool, 4)).is_err());
+        assert!(!spool.exists(), "a size mismatch discards the spool file");
+        let old = json!({"size": 3, "bytes": "YWJj"});
+        assert_eq!(Payload::from_reply(&old).unwrap().len(), 3);
     }
 
     #[test]

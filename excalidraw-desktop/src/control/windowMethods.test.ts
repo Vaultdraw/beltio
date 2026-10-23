@@ -47,6 +47,11 @@ const makeFiles = (over: Partial<ControlFiles> = {}): ControlFiles => {
       mime: "image/png",
       fileName: "a.png",
     }),
+    exportDrawingBlob: vi.fn().mockResolvedValue({
+      blob: new Blob([new Uint8Array([1, 2, 3, 250, 255])]),
+      mime: "image/png",
+      fileName: "a.png",
+    }),
     ...over,
   };
 };

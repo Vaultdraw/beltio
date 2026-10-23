@@ -955,6 +955,96 @@
       "window": true
     },
     {
+      "name": "export.spool",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "background": {
+            "type": "boolean"
+          },
+          "dark": {
+            "type": "boolean"
+          },
+          "embedScene": {
+            "type": "boolean"
+          },
+          "file": {
+            "type": "string"
+          },
+          "format": {
+            "enum": [
+              "png",
+              "svg",
+              "pdf"
+            ],
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "padding": {
+            "maximum": 200,
+            "minimum": 0,
+            "type": "number"
+          },
+          "pageShaped": {
+            "type": "boolean"
+          },
+          "path": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "boolean"
+          },
+          "scale": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "format"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "fileName": {
+            "type": "string"
+          },
+          "mime": {
+            "enum": [
+              "image/png",
+              "image/svg+xml",
+              "application/pdf"
+            ],
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "spool": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "fileName",
+          "mime",
+          "size",
+          "spool"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Like export.render, but the app writes the output to a spool file and returns its path (no size cap, no copy through the reply); the caller moves or deletes the file",
+      "window": true
+    },
+    {
       "name": "tab.list",
       "params": {
         "additionalProperties": true,

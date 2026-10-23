@@ -30,7 +30,7 @@ pub mod codes {
     pub const IO_ERROR: &str = "IO_ERROR";
     /// The drawing cannot be read or rendered (not a drawing, or an empty canvas for an export).
     pub const INVALID_FILE: &str = "INVALID_FILE";
-    /// The result is over a size cap (`export.render`: 32 MiB of output).
+    /// The result is over a size cap (`export.render`: 32 MiB of output; `export.spool` has no cap).
     pub const TOO_LARGE: &str = "TOO_LARGE";
 }
 

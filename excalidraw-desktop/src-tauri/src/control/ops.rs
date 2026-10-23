@@ -53,7 +53,7 @@ pub(super) fn call(app: &AppHandle, method: &str, params: Option<Value>) -> Repl
         VAULT_OPEN | TAB_LIST => call_window(app, method, Some(params), CALL_TIMEOUT),
         FILE_OPEN | FILE_TRASH => window_with_target(app, method, params, Need::File, CALL_TIMEOUT),
         FILE_CREATE => window_with_target(app, method, params, Need::Nothing, CALL_TIMEOUT),
-        EXPORT_RENDER => window_with_target(app, method, params, Need::File, EXPORT_TIMEOUT),
+        EXPORT_RENDER | EXPORT_SPOOL => window_with_target(app, method, params, Need::File, EXPORT_TIMEOUT),
         TAB_FOCUS | TAB_CLOSE => tab_call(app, method, params),
         FILE_MOVE => file_move(app, params),
         _ => Err(RpcError::method_not_found(method)),

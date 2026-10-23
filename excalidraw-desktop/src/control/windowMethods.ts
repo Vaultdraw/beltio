@@ -102,12 +102,20 @@ export interface ControlFiles {
     format: ExportFormat,
     options: ExportRenderOptions,
   ) => Promise<{ bytes: Uint8Array; mime: string; fileName: string }>;
+  /** [exportDrawing] with the output left in a Blob (for `spool: true`). */
+  exportDrawingBlob: (
+    path: string,
+    format: ExportFormat,
+    options: ExportRenderOptions,
+  ) => Promise<{ blob: Blob; mime: string; fileName: string }>;
 }
 
 type Handler = (params: unknown) => unknown;
 
 export function createWindowMethods(
   getFiles: () => ControlFiles,
+  /** Streams a Blob to a spool file and returns its path (absent = spool unsupported). */
+  spool?: (blob: Blob) => Promise<string>,
 ): Record<string, Handler> {
   /** The app rebuilds its ControlFiles each render: always call the latest. */
   const f = new Proxy({} as ControlFiles, {
@@ -128,6 +136,55 @@ export function createWindowMethods(
     return v;
   };
   const tabList = () => tabListResult(f.tabState(), f.active());
+
+  /** Validates an `export.render` / `export.spool` request. */
+  const exportRequest = (params: unknown) => {
+    needVault();
+    const path = relPath(stringParam(params, "path"), "path");
+    const format = exportFormatParam(params);
+    if (format === "pdf") {
+      // PDF pages are fixed: light theme, background on, own resolution.
+      const given = objectParams(params);
+      for (const key of PDF_IGNORED) {
+        if (given[key] !== undefined) {
+          throw new ControlError(
+            "INVALID_PARAMS",
+            `${key} does not apply to pdf`,
+          );
+        }
+      }
+    }
+    const frame = optionalStringParam(params, "frame");
+    const padding = exportPaddingParam(params);
+    if (format === "pdf" && frame !== undefined) {
+      throw new ControlError("INVALID_PARAMS", "frames apply to png and svg");
+    }
+    if (format === "pdf" && padding !== undefined) {
+      throw new ControlError(
+        "INVALID_PARAMS",
+        "padding applies to png and svg",
+      );
+    }
+    const options: ExportRenderOptions = {
+      scale: exportScaleParam(params),
+      dark: boolParam(params, "dark", false),
+      background: boolParam(params, "background", true),
+      pattern: boolParam(params, "pattern", true),
+      embedScene: boolParam(params, "embedScene", false),
+      pageShaped: boolParam(params, "pageShaped", false),
+      ...(frame === undefined ? {} : { frame }),
+      ...(padding === undefined ? {} : { padding }),
+    };
+    return { path, format, options };
+  };
+  const exportFailure = (e: unknown, path: string) => {
+    if (e instanceof ExportError) {
+      const message =
+        e.code === "EMPTY" ? "Cannot export an empty canvas" : e.message;
+      return new ControlError("INVALID_FILE", message, { path });
+    }
+    return e;
+  };
 
   return {
     "file.openState": (params) => {
@@ -202,52 +259,12 @@ export function createWindowMethods(
       return { path, trashed: true };
     },
     "export.render": async (params) => {
-      needVault();
-      const path = relPath(stringParam(params, "path"), "path");
-      const format = exportFormatParam(params);
-      if (format === "pdf") {
-        // PDF pages are fixed: light theme, background on, own resolution.
-        const given = objectParams(params);
-        for (const key of PDF_IGNORED) {
-          if (given[key] !== undefined) {
-            throw new ControlError(
-              "INVALID_PARAMS",
-              `${key} does not apply to pdf`,
-            );
-          }
-        }
-      }
-      const frame = optionalStringParam(params, "frame");
-      const padding = exportPaddingParam(params);
-      if (format === "pdf" && frame !== undefined) {
-        throw new ControlError("INVALID_PARAMS", "frames apply to png and svg");
-      }
-      if (format === "pdf" && padding !== undefined) {
-        throw new ControlError(
-          "INVALID_PARAMS",
-          "padding applies to png and svg",
-        );
-      }
-      const options: ExportRenderOptions = {
-        scale: exportScaleParam(params),
-        dark: boolParam(params, "dark", false),
-        background: boolParam(params, "background", true),
-        pattern: boolParam(params, "pattern", true),
-        embedScene: boolParam(params, "embedScene", false),
-        pageShaped: boolParam(params, "pageShaped", false),
-        ...(frame === undefined ? {} : { frame }),
-        ...(padding === undefined ? {} : { padding }),
-      };
+      const { path, format, options } = exportRequest(params);
       let out;
       try {
         out = await f.exportDrawing(path, format, options);
       } catch (e) {
-        if (e instanceof ExportError) {
-          const message =
-            e.code === "EMPTY" ? "Cannot export an empty canvas" : e.message;
-          throw new ControlError("INVALID_FILE", message, { path });
-        }
-        throw e;
+        throw exportFailure(e, path);
       }
       const size = out.bytes.length;
       if (size > MAX_EXPORT_BYTES) {
@@ -266,6 +283,30 @@ export function createWindowMethods(
         mime: out.mime,
         size,
         bytes: bytesToBase64(out.bytes),
+      };
+    },
+    // Same render, but the image stays in one Blob and goes to a spool file in
+    // chunks: no copy through the reply and no size cap.
+    "export.spool": async (params) => {
+      const { path, format, options } = exportRequest(params);
+      if (!spool) {
+        throw new ControlError(
+          "UNAVAILABLE",
+          "This window cannot spool exports",
+        );
+      }
+      let rendered;
+      try {
+        rendered = await f.exportDrawingBlob(path, format, options);
+      } catch (e) {
+        throw exportFailure(e, path);
+      }
+      return {
+        path,
+        fileName: rendered.fileName,
+        mime: rendered.mime,
+        size: rendered.blob.size,
+        spool: await spool(rendered.blob),
       };
     },
     "tab.list": tabList,
