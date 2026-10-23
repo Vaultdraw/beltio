@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { createHash } from "node:crypto";
+
 import { AFTER_AUTOSAVE_MS } from "./constants";
 import {
   canvasBox,
@@ -10,6 +12,7 @@ import {
   SHOTS,
   trackErrors,
 } from "./helpers";
+import { MIDNIGHT_THEME } from "./fixtures/themeServer";
 
 const DRAWING = "DSA/Graphs.excalidraw";
 
@@ -245,5 +248,116 @@ test("Install from URL in Settings asks once, downloads the theme and applies it
     settings.getByRole("radio", { name: "Midnight", exact: true }),
   ).toHaveAttribute("aria-checked", "true");
   expect(fixtureRequests).toHaveLength(1);
+  expect(errors).toEqual([]);
+});
+
+test("Install more themes in Settings opens the browser, filters, installs and applies a theme", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  const DAYBREAK = JSON.stringify({
+    name: "Daybreak",
+    author: "E2E",
+    light: {
+      mPrimary: "#d9480f",
+      mOnPrimary: "#ffffff",
+      mSurface: "#fff8f0",
+      mOnSurface: "#2b2118",
+    },
+  });
+  const sha = (text: string) => createHash("sha256").update(text).digest("hex");
+  const index = JSON.stringify({
+    schemaVersion: 1,
+    themes: [
+      {
+        name: "Daybreak",
+        path: "Daybreak/Daybreak.json",
+        author: "E2E",
+        description: "A warm light theme",
+        tags: ["light", "warm"],
+        modes: ["light"],
+        swatch: { light: ["#fff8f0", "#2b2118", "#d9480f"] },
+        sha256: sha(DAYBREAK),
+        previews: [],
+        credit: "E2E fixtures",
+        licence: "MIT",
+      },
+      {
+        name: "Midnight",
+        path: "Midnight/Midnight.json",
+        author: "E2E",
+        description: "A cool dark theme",
+        tags: ["dark", "cool"],
+        modes: ["dark"],
+        swatch: { dark: ["#101820", "#e8eef5", "#4aa3ff"] },
+        sha256: sha(MIDNIGHT_THEME),
+        previews: [],
+      },
+    ],
+  });
+  const files: Record<string, string> = {
+    "/Vaultdraw/themes/main/index.json": index,
+    "/Vaultdraw/themes/main/Daybreak/Daybreak.json": DAYBREAK,
+    "/Vaultdraw/themes/main/Midnight/Midnight.json": MIDNIGHT_THEME,
+  };
+  const requested: string[] = [];
+  await page.route("https://raw.githubusercontent.com/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    requested.push(path);
+    const body = files[path];
+    await route.fulfill(
+      body === undefined
+        ? { status: 404, body: "not found" }
+        : {
+            status: 200,
+            contentType: "application/json",
+            headers: { "access-control-allow-origin": "*" },
+            body,
+          },
+    );
+  });
+  const defaultBg = await rootVar(page, "--vault-bg");
+
+  const settings = await openSettings(page);
+  await settings
+    .getByRole("button", { name: "Install more themes..." })
+    .click();
+  const browser = page.getByTestId("theme-browser-dialog");
+  await expect(browser.getByTestId("theme-browser-consent")).toBeVisible();
+  expect(requested).toEqual([]);
+  await browser.getByRole("button", { name: "Allow" }).click();
+
+  await expect(browser.getByTestId("theme-browser-status")).toContainText(
+    "2 of 2 themes",
+  );
+  const midnight = browser.getByTestId("theme-card-Midnight");
+  const daybreak = browser.getByTestId("theme-card-Daybreak");
+  await expect(midnight).toBeVisible();
+  await expect(daybreak).toContainText("Credit: E2E fixtures");
+  await expect(daybreak).toContainText("Licence: MIT");
+
+  await browser.getByLabel("Search themes").fill("cool");
+  await expect(daybreak).toHaveCount(0);
+  await expect(browser.getByTestId("theme-browser-status")).toContainText(
+    "1 of 2 themes",
+  );
+
+  await midnight.getByRole("button", { name: "Install", exact: true }).click();
+  await expect(browser.getByTestId("theme-browser-status")).toContainText(
+    "Installed Midnight",
+  );
+  await expect(midnight).toContainText("Installed");
+  await midnight.getByRole("button", { name: "Use", exact: true }).click();
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.dataset.vaultTheme),
+    )
+    .toBe("Midnight");
+  await expect.poll(() => rootVar(page, "--vault-bg")).not.toBe(defaultBg);
+  expect(requested).toEqual([
+    "/Vaultdraw/themes/main/index.json",
+    "/Vaultdraw/themes/main/Midnight/Midnight.json",
+  ]);
   expect(errors).toEqual([]);
 });

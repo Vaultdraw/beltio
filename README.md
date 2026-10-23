@@ -21,7 +21,7 @@ The Excalidraw editor, plus what you need once you have more than one drawing:
   <tr>
     <td width="50%" valign="top">
       <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/themes-dark.webp"><img src="docs/assets/screenshots/themes-light.webp" alt="Settings, Appearance: mode, sync canvas with theme, accent colour and the theme grid"></picture>
-      <br><b>Themes</b><br>Ten built-in palettes and over a hundred more to install from a URL or GitHub repo, light and dark, for the whole app and, if you like, the canvas. Drawings and exports keep standard colours.
+      <br><b>Themes</b><br>Ten built-in palettes and over a hundred more to browse and install from the community list, a URL or a GitHub repo, light and dark, for the whole app and, if you like, the canvas. Drawings and exports keep standard colours.
     </td>
     <td width="50%" valign="top">
       <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/tools-dark.webp"><img src="docs/assets/screenshots/tools-light.webp" alt="Settings, Tools on the Arrow tab with a live preview"></picture>

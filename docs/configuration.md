@@ -34,6 +34,9 @@ allow_themes = true          # theme downloads allowed; leave the line out to be
 
 [themes]
 max_install_kb = 64          # largest theme file Install from URL accepts (1 to 256)
+index_url = "https://raw.githubusercontent.com/Vaultdraw/themes/main/index.json"  # community list, https only
+index_ttl_hours = 24         # reuse the cached list this long (0 to 720; 0 = fetch on every open)
+previews = true              # theme browser fetches preview images; false = colour swatches only
 
 [editor]                     # defaults for new elements
 font_family = 5              # 5 Excalifont, 6 Nunito, 8 Comic Shanns, 1 Virgil, 2 Helvetica, 3 Cascadia
@@ -336,6 +339,24 @@ sync_canvas = true      # canvas follows the theme too
 
 **Built-in themes (10):** Default, Dracula, Catppuccin, Solarized, Gruvbox, Tokyo Night, Nord, Kanagawa, Everforest and One Dark. If `theme` names a theme that doesn't exist, Vaultdraw uses Default and shows a warning. If it names one that used to be built in, the warning offers **Install it** (see below).
 
+#### Browsing community themes
+
+**Settings → Appearance → Install more themes…** (or `Themes: Browse community themes`) opens a browser for the [Vaultdraw/themes](https://github.com/Vaultdraw/themes) list. The dialog loads only when opened, so it costs nothing until then.
+
+- **Cards** show a preview image or colour swatches, name, author, description, dark or light, credit and licence, and an **Installed** or **Update** badge.
+- **Find:** the search box matches name, author, tag and description; tag and mode filters narrow it further.
+- **Actions:** **Install**, **Update** (shown when the list has a newer file than the installed one), **Use** and **Remove**.
+- **Keys:** search is focused on open. Arrows move between cards, **Enter** installs or uses, **Delete** removes, **/** jumps back to search, **Escape** closes.
+
+| Command | What it does |
+| --- | --- |
+| `Themes: Browse community themes` (`theme.browse`) | Opens the browser. |
+| `Themes: Refresh the community themes list` (`theme.browseRefresh`) | Fetches the list again, ignoring the cache. |
+
+Neither has a default key; bind them on the Hotkeys page.
+
+Limits: the list needs network consent (see "Network"), and the CLI `vaultdraw theme install` does not exist yet.
+
 #### Installing more themes
 
 Over a hundred more palettes, all credited to their authors, live in the [Vaultdraw/themes](https://github.com/Vaultdraw/themes) repo. Install one, or any theme file or repo you trust:
@@ -359,13 +380,26 @@ None has a default key; bind them on the Hotkeys page.
 
 #### Network
 
-Vaultdraw never connects on its own: no update checks, no telemetry. Installing a theme is the one feature that downloads, and it asks first.
+Vaultdraw never connects on its own: no update checks, no telemetry. Installing a theme, and browsing the community list, are the features that download, and they ask first.
 
 | Key | Meaning |
 | --- | --- |
 | `network.enabled` | Master switch, default `true`. `false` blocks every download, whatever else is allowed. Turning it back on from Settings asks in a native dialog. **Settings → General → Network access.** |
 | `network.allow_themes` | `true` allows theme downloads, `false` refuses them. Absent (the default) means "not asked yet": the first install shows a popup, **Allow** opens a second, native confirmation dialog, and **Yes** there writes `true`. **Settings → General → Allow downloading themes**; the reset arrow brings the question back. |
 | `themes.max_install_kb` | Largest theme file to accept, 1 to 256, default 64. **Settings → Appearance → Largest theme file.** |
+| `themes.index_url` | Where the community list comes from, default `https://raw.githubusercontent.com/Vaultdraw/themes/main/index.json`. `https` only. |
+| `themes.index_ttl_hours` | Hours the cached list is reused, 0 to 720, default 24. `0` fetches on every open. **Settings → Appearance → Refresh the Themes List.** |
+| `themes.previews` | Default `true`. `false` shows colour swatches only and fetches no images. **Settings → Appearance → Theme Preview Images.** |
+
+How the browser uses the network:
+
+1. Nothing is requested before you allow theme downloads, or before you open the browser.
+2. One request fetches `index.json`. It is cached on disk with its SHA-256 and fetch time, and reused for `themes.index_ttl_hours`.
+3. Offline, the browser shows the cached list with a notice.
+4. Previews are fetched only for cards scrolled into view, cached on disk, PNG, JPEG or WebP only, at most 512 KiB each.
+5. Each theme file is checked against the SHA-256 in the list before it is written.
+
+All three keys reload live, like the others.
 
 The desktop app checks these keys again in its Rust backend before every request, so a setting you turn off holds even if the interface is out of date.
 
