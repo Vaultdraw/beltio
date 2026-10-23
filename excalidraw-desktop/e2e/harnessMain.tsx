@@ -575,7 +575,12 @@ if (tagCount > 0) {
   });
 }
 
-const vaultSearch = new FakeVaultSearch(repository);
+// ?lazysearch=1: a native-like pending index, with search.start = "use".
+const lazySearch = params.get("lazysearch") === "1";
+const vaultSearch = new FakeVaultSearch(repository, { lazy: lazySearch });
+if (lazySearch) {
+  updatePreferences({ searchStart: "use" }, ownerWindow);
+}
 // The fake index only refreshes on demand: specs call __vaultSearch.setIndexState(null).
 (ownerWindow as any).__vaultSearch = vaultSearch;
 const libraryRepository = new FakeLibraryRepository();

@@ -204,7 +204,39 @@ export class FakeVaultSearch implements VaultSearch {
   private override: Partial<Pick<IndexStatus, "state" | "indexed">> | null =
     null;
 
-  constructor(private readonly repository: VaultRepository) {}
+  /** Opt-in lazy mode (D8): the index is "loading" until start() or the first query. */
+  private started: boolean;
+  /** Every start() call and first-query start, in order ("start" | "query"). */
+  readonly startCalls: string[] = [];
+
+  constructor(
+    private readonly repository: VaultRepository,
+    options: { lazy?: boolean } = {},
+  ) {
+    this.started = !options.lazy;
+  }
+
+  private begin(handle: string, by: string): boolean {
+    if (this.started) {
+      return false;
+    }
+    this.started = true;
+    this.startCalls.push(by);
+    const emit = async (state: "building" | "ready") => {
+      const s = { ...(await this.status(handle)), state };
+      for (const l of [...this.listeners]) {
+        l(s);
+      }
+    };
+    setTimeout(() => {
+      void emit("building").then(() => emit("ready"));
+    }, 20);
+    return true;
+  }
+
+  async start(handle: string): Promise<void> {
+    this.begin(handle, "start");
+  }
 
   /** Test hook: pretend the index is still building (or ready again with null). */
   setIndexState(
@@ -273,6 +305,9 @@ export class FakeVaultSearch implements VaultSearch {
   }
 
   async status(handle: string): Promise<IndexStatus> {
+    if (!this.started) {
+      return { handle, state: "loading", indexed: 0, total: 0 };
+    }
     const total = (await this.drawings(handle)).length;
     const state = this.override?.state ?? "ready";
     return {
@@ -284,6 +319,9 @@ export class FakeVaultSearch implements VaultSearch {
   }
 
   async listNames(handle: string): Promise<NamesListing> {
+    if (this.begin(handle, "query")) {
+      return { paths: [], status: await this.status(handle) };
+    }
     const paths = (await this.drawings(handle)).sort();
     return { paths, status: await this.status(handle) };
   }
@@ -301,6 +339,15 @@ export class FakeVaultSearch implements VaultSearch {
     opts?: SearchOptions,
   ): Promise<SearchResponse> {
     const started = Date.now();
+    if (this.begin(handle, "query")) {
+      return {
+        query,
+        results: [],
+        totalMatches: 0,
+        status: { handle, state: "loading", indexed: 0, total: 0 },
+        tookMs: 0,
+      };
+    }
     const status = await this.status(handle);
     const { text, filters } = splitTagFilters(query);
     const terms = normalizeQuery(text).split(/\s+/).filter(Boolean);

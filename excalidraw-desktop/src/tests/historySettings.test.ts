@@ -67,7 +67,10 @@ describe("history settings defaults", () => {
 
 describe("config.toml mapping", () => {
   it("maps every field to its [history] key, once", () => {
-    const rows = CONFIG_MAPPING.filter((m) => m.key.startsWith("history."));
+    // history.start belongs to the services settings (when history starts).
+    const rows = CONFIG_MAPPING.filter(
+      (m) => m.key.startsWith("history.") && m.key !== "history.start",
+    );
     expect(rows).toHaveLength(HISTORY_FIELDS.length);
     expect(HISTORY_MAPPINGS.map((m) => [m.field, m.key])).toEqual(
       HISTORY_FIELDS.map((f) => [f, KEYS[f]]),
