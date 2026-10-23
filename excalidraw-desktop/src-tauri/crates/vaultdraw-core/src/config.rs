@@ -170,8 +170,8 @@ autosave_delay_ms = 500
 # color = "accent"
 # Hover preview card: always | modifier | off
 # hover_preview = "always"
-# When the link index starts: open (vault open) | idle (once the app is idle) | use (first links action). Also starts search.
-# start = "idle"
+# When the link index starts: open (vault open) | idle (once the app is idle) | use (first links action)
+# start = "idle"   # also starts search
 
 [tags]
 # Suggest existing tags while typing #
@@ -222,7 +222,7 @@ autosave_delay_ms = 500
 
 [search]
 # When the search index starts: open (vault open) | idle (once the app is idle) | use (first search)
-# start = "idle"
+# start = "idle"   # tags show once it has started
 
 [keys]
 # The key <leader> stands for in a sequence
@@ -1552,7 +1552,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 87, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 90, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();
