@@ -28,8 +28,9 @@ export const tauriBackend = (invoke: Invoke): InstallBackend => {
   return {
     resolve: (input, maxBytes) =>
       call<Resolved>("theme_resolve", { input, maxBytes }),
-    fetch: (ref, maxBytes) => call<Fetched>("theme_fetch", { ref, maxBytes }),
-    write: (request) => call<{ name: string }>("theme_write", { request }),
+    fetch: (ref, maxBytes) =>
+      call<Fetched>("theme_fetch", { fetchRef: ref, maxBytes }),
+    write: (request) => call<{ name: string }>("theme_write", { req: request }),
     installed: () => call<InstalledTheme[]>("theme_installed", {}),
     updateFetch: (name, maxBytes) =>
       call<UpdateFetch>("theme_update_fetch", { name, maxBytes }),
