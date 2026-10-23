@@ -12,6 +12,20 @@ const rejects = (buf, re) => {
 };
 
 describe("zip writer and reader", () => {
+  it("refuses names that clash: case-insensitive duplicates and a file that is also a folder", () => {
+    expect(() => writeZip([e("A.txt", "1"), e("a.txt", "2")])).toThrow(
+      ZipError,
+    );
+    expect(() => writeZip([e("assets", "1"), e("assets/x.png", "2")])).toThrow(
+      /also a file/,
+    );
+    const raw = rawZip([
+      { name: "assets", data: Buffer.from("1") },
+      { name: "assets/x.png", data: Buffer.from("2") },
+    ]);
+    rejects(raw, /also a file/);
+  });
+
   it("round trips, sorted, with small entries stored and big ones deflated", () => {
     const big = "x".repeat(5000);
     const zip = writeZip([e("b.txt", "bee"), e("a/z.js", big), e("a.md", "")]);

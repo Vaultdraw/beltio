@@ -11,7 +11,14 @@
  * tables; a plain `[build]` would be an unknown key), else src/main.ts, src/main.tsx,
  * src/main.js.
  */
-import { existsSync, mkdirSync, readFileSync, statSync, watch } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  watch,
+} from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -189,6 +196,8 @@ export async function buildProject(root, out, err) {
   const esbuild = await loadEsbuild(root);
   const { options } = buildOptions(root, entry);
   const dist = path.join(root, "dist");
+  // dist is build output only: start clean so a removed asset never lingers in the package.
+  rmSync(dist, { recursive: true, force: true });
   mkdirSync(dist, { recursive: true });
   try {
     const result = await esbuild.build(options);
@@ -223,6 +232,7 @@ export async function watchProject(root, out, err) {
   const esbuild = await loadEsbuild(root);
   const { options, outfile } = buildOptions(root, entry);
   const dist = path.join(root, "dist");
+  rmSync(dist, { recursive: true, force: true });
   mkdirSync(dist, { recursive: true });
   // esbuild's watcher reports one rebuild right after it starts; only a changed bundle is news.
   /** @type {Buffer | null} */
@@ -239,8 +249,15 @@ export async function watchProject(root, out, err) {
               err(`${stamp()} build failed`);
               return;
             }
-            copyStatic(root, dist);
-            const now = readFileSync(outfile);
+            /** @type {Buffer} */
+            let now;
+            try {
+              copyStatic(root, dist);
+              now = readFileSync(outfile);
+            } catch {
+              // a file vanished mid-save; the next rebuild retries
+              return;
+            }
             if (last && now.equals(last)) {
               return;
             }

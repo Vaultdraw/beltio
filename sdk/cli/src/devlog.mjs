@@ -1,6 +1,7 @@
 /** Shows new lines of the app's dev log (`<state>/plugin-logs/<id>.log`) while `dev` runs. */
 import { closeSync, openSync, readSync, statSync } from "node:fs";
 import path from "node:path";
+import { StringDecoder } from "node:string_decoder";
 
 import { resolveDirs } from "./dirs.mjs";
 
@@ -35,11 +36,13 @@ export function tailLog(file, out, intervalMs = 400) {
   };
   let offset = size();
   let partial = "";
+  let decoder = new StringDecoder("utf8");
   const poll = () => {
     const now = size();
     if (now < offset) {
       offset = 0;
       partial = "";
+      decoder = new StringDecoder("utf8");
     }
     if (now === offset) {
       return;
@@ -50,7 +53,7 @@ export function tailLog(file, out, intervalMs = 400) {
       fd = openSync(file, "r");
       const n = readSync(fd, buf, 0, buf.length, offset);
       offset += n;
-      const lines = (partial + buf.subarray(0, n).toString("utf8")).split("\n");
+      const lines = (partial + decoder.write(buf.subarray(0, n))).split("\n");
       partial = lines.pop() ?? "";
       for (const l of lines) {
         out(`log | ${l}`);

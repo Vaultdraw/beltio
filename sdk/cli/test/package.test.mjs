@@ -65,6 +65,19 @@ describe("package", () => {
     expect(names).not.toContain("demo-plugin-1.0.0.zip.sha256");
   });
 
+  it("does not pack its own output when --out is a folder inside the plugin", () => {
+    const dir = makePlugin({});
+    const first = pack(dir, path.join(dir, "release"));
+    expect(first.code).toBe(0);
+    const bytes = readFileSync(first.zip);
+    const second = pack(dir, path.join(dir, "release"));
+    expect(second.code).toBe(0);
+    expect(readFileSync(second.zip).equals(bytes)).toBe(true);
+    expect(readZip(bytes).some((x) => x.name.startsWith("release/"))).toBe(
+      false,
+    );
+  });
+
   it("refuses a broken plugin, prints the errors and writes nothing", () => {
     const dir = makePlugin({ "main.js": null });
     write(dir, { "plugin.toml": MANIFEST.replace('"main.js"', '"gone.js"') });

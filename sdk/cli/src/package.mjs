@@ -95,10 +95,13 @@ export async function runPackage(dir, opts, out, err) {
   const base = `${doc.id}-${doc.version}`;
   const outDir = path.resolve(opts.out ?? process.cwd());
   const zipName = `${base}.zip`;
+  // Never pack our own output, wherever --out points inside the folder.
+  const rel = path.relative(root, outDir).split(path.sep).join("/");
+  const prefix = rel === "" ? "" : `${rel}/`;
   const skip = new Set(
-    path.dirname(path.join(outDir, zipName)) === root
-      ? [zipName, `${zipName}.sha256`]
-      : [],
+    rel.startsWith("..") || path.isAbsolute(rel)
+      ? []
+      : [`${prefix}${zipName}`, `${prefix}${zipName}.sha256`],
   );
   const files = listFiles(root).filter((f) => !skip.has(f));
   let zip;

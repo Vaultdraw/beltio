@@ -99,6 +99,30 @@ export function badEntryName(name) {
 }
 
 /**
+ * A message when two names clash: the same name in another case, or a name that is both a
+ * file and a folder (`a` and `a/b`). Such a zip cannot be unpacked on every system.
+ * @param {string[]} names
+ * @returns {string | null}
+ */
+export function nameConflict(names) {
+  const lower = new Set(names.map((n) => n.toLowerCase()));
+  if (lower.size < new Set(names).size) {
+    return "Two entries differ only in letter case";
+  }
+  for (const n of names) {
+    const parts = n.toLowerCase().split("/");
+    for (let i = 1; i < parts.length; i++) {
+      if (lower.has(parts.slice(0, i).join("/"))) {
+        return `'${n}' is inside '${parts
+          .slice(0, i)
+          .join("/")}', which is also a file`;
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * Builds a zip. Entries are sorted by name (byte order); same input gives the same bytes.
  * @param {{ name: string, data: Uint8Array }[]} entries
  * @returns {Buffer}
@@ -107,6 +131,10 @@ export function writeZip(entries) {
   const sorted = [...entries].sort((a, b) =>
     Buffer.compare(Buffer.from(a.name), Buffer.from(b.name)),
   );
+  const clash = nameConflict(sorted.map((e) => e.name));
+  if (clash) {
+    throw new ZipError(clash);
+  }
   /** @type {Buffer[]} */
   const parts = [];
   /** @type {Buffer[]} */
@@ -343,6 +371,10 @@ export function readZip(bytes) {
   }
   if (p !== cenOffset + cenSize) {
     fail("The central directory has extra data");
+  }
+  const clash = nameConflict(out.map((e) => e.name));
+  if (clash) {
+    fail(clash);
   }
   return out;
 }

@@ -29,6 +29,8 @@ export interface DevLogSink {
 export function createDevLogSink(deps: DevLogDeps): DevLogSink {
   const pending = new Map<string, string[]>();
   let scheduled = false;
+  // One send at a time, so the file keeps the order of the lines.
+  let chain: Promise<void> = Promise.resolve();
   const flush = () => {
     scheduled = false;
     for (const [id, lines] of pending) {
@@ -44,7 +46,7 @@ export function createDevLogSink(deps: DevLogDeps): DevLogSink {
       out.push(chunk);
       for (const text of out) {
         // A failed dev log must never disturb the plugin or the host.
-        deps.send(id, text).catch(() => {});
+        chain = chain.then(() => deps.send(id, text)).catch(() => {});
       }
     }
     pending.clear();
