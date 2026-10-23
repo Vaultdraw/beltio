@@ -68,7 +68,7 @@ const parseValue = (raw: string, where: string): Value => {
 
 export function parseManifest(source: string, mainBytes = 0): PluginInfo {
   const top: Table = {};
-  const arrays: Record<(typeof ARRAYS)[number], Table[]> = {
+  const arrays: Record<typeof ARRAYS[number], Table[]> = {
     commands: [],
     panels: [],
     settings: [],
@@ -85,7 +85,7 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
     if (header && (ARRAYS as readonly string[]).includes(header[1])) {
       current = {};
       extra = false;
-      arrays[header[1] as (typeof ARRAYS)[number]].push(current);
+      arrays[header[1] as typeof ARRAYS[number]].push(current);
     } else if (/^\[x-[\w-]+\]$/.test(line)) {
       extra = true;
     } else if (line.startsWith("[")) {
