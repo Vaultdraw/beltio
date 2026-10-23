@@ -3,7 +3,7 @@
 
 use super::target;
 use crate::cli::{Cli, ExportArgs};
-use crate::error::{Fail, EXIT_PROTOCOL};
+use crate::error::{Fail, EXIT_PROTOCOL, EXIT_REFUSED};
 use crate::rpc::{request_line, resolve_socket, Rpc};
 use serde_json::{json, Value};
 use std::io::{IsTerminal, Write};
@@ -22,8 +22,16 @@ pub fn run(cli: &Cli, args: &ExportArgs) -> Result<(), Fail> {
     check_pdf_options(args, &format)?;
     let params = Value::Object(with_target(cli, &args.target, render_params(args, &format)));
     if cli.print_request {
-        println!("{}", request_line(methods::EXPORT_RENDER, Some(params)));
+        let line = match &args.out_dir {
+            // A folder batch starts with this listing (the drawings come from its reply).
+            Some(_) => request_line(methods::VAULT_LIST, Some(list_params(&args.target))),
+            None => request_line(methods::EXPORT_RENDER, Some(params)),
+        };
+        println!("{line}");
         return Ok(());
+    }
+    if let Some(dir) = args.out_dir.as_deref() {
+        return export_folder(cli, args, &format, resolve_socket(cli.socket.as_deref())?, Path::new(dir));
     }
     if to_stdout && cli.json {
         return Err(Fail::cli("--json cannot be combined with -o - (stdout carries the file's bytes)"));
@@ -90,6 +98,12 @@ fn render_params(args: &ExportArgs, format: &str) -> serde_json::Map<String, Val
             p.insert(key.into(), json!(false));
         }
     }
+    if let Some(frame) = &args.frame {
+        p.insert("frame".into(), json!(frame));
+    }
+    if let Some(px) = args.padding {
+        p.insert("padding".into(), json!(px));
+    }
     p
 }
 
@@ -98,6 +112,111 @@ fn with_target(cli: &Cli, target_arg: &str, mut params: serde_json::Map<String, 
     let mut p = target(cli, target_arg);
     p.append(&mut params);
     p
+}
+
+/// `vault.list` params for a folder target: recursive; `.`, `/` or `` is the vault root.
+fn list_params(target_arg: &str) -> Value {
+    let dir = target_arg.trim_end_matches('/');
+    let dir = if dir == "." { "" } else { dir };
+    json!({"dir": dir, "recursive": true})
+}
+
+/// The drawing paths of a `vault.list` reply, in its order.
+fn listed_drawings(reply: &Value) -> Result<Vec<String>, Fail> {
+    let entries = reply.get("entries").and_then(Value::as_array).ok_or_else(|| bad_reply("vault.list reply has no entries"))?;
+    Ok(entries
+        .iter()
+        .filter(|e| e.get("kind").and_then(Value::as_str) == Some("drawing"))
+        .filter_map(|e| e.get("path").and_then(Value::as_str).map(str::to_string))
+        .collect())
+}
+
+/// Exports each drawing of a folder (recursively) into `out_dir` on one connection, one after
+/// another. An app refusal or a local write failure is reported and the batch goes on; a lost
+/// connection or a bad reply stops it. Any failed drawing makes the exit code 2.
+fn export_folder(cli: &Cli, args: &ExportArgs, format: &str, socket: PathBuf, out_dir: &Path) -> Result<(), Fail> {
+    let rpc = Rpc::new(socket, cli.timeout.max(REPLY_WAIT_SECS));
+    let mut client = rpc.connect()?;
+    let paths = match rpc.call_on(&mut client, methods::VAULT_LIST, Some(list_params(&args.target))) {
+        Ok(reply) => listed_drawings(&reply)?,
+        Err(f) if f.tag == "NOT_FOUND" || f.tag == "INVALID_PATH" => {
+            return Err(Fail::new(f.exit, format!("{} is not a folder of the vault (--out-dir exports a folder; a drawing takes -o <file>)", args.target), &f.tag));
+        }
+        Err(f) => return Err(f),
+    };
+    let options = render_params(args, format);
+    let (mut done, total) = (0usize, paths.len());
+    for path in &paths {
+        let result = match out_path(out_dir, path, format) {
+            Some(out) => export_one(&rpc, &mut client, &options, path, &out, args.force).map(|size| (out, size)),
+            None => Err(bad_reply(format!("vault.list returned an unsafe path {path:?}"))),
+        };
+        let out_text = |out: &Path| out.display().to_string();
+        match result {
+            Ok((out, size)) => {
+                done += 1;
+                if cli.json {
+                    println!("{}", json!({"path": path, "out": out_text(&out), "size": size, "ok": true}));
+                } else {
+                    println!("exported {path} -> {} ({size} bytes)", out_text(&out));
+                }
+            }
+            Err(f) if f.exit == EXIT_REFUSED || f.tag == "CLI_ERROR" => {
+                eprintln!("vaultdraw: {path}: {} ({})", f.message, f.tag);
+                if cli.json {
+                    println!("{}", json!({"path": path, "ok": false, "code": f.tag, "error": f.message}));
+                }
+            }
+            Err(f) => {
+                // The connection or the protocol failed: the rest would fail the same way.
+                eprintln!("vaultdraw: stopped after {done} of {total} drawings");
+                return Err(f);
+            }
+        }
+    }
+    let summary = format!("exported {done} of {total} drawings to {}", out_dir.display());
+    if cli.json {
+        eprintln!("{summary}");
+    } else {
+        println!("{summary}");
+    }
+    if done < total {
+        return Err(Fail::new(EXIT_REFUSED, format!("{} of {total} drawings failed", total - done), "EXPORT_FAILED"));
+    }
+    Ok(())
+}
+
+/// One drawing of a batch: render on the open connection, then write (never over an existing file
+/// without `--force`, creating the folders it needs). Returns the bytes written.
+fn export_one(rpc: &Rpc, client: &mut vaultdraw_protocol::client::Client, options: &serde_json::Map<String, Value>, path: &str, out: &Path, force: bool) -> Result<u64, Fail> {
+    check_free(out, force)?;
+    let mut p = options.clone();
+    p.insert("path".into(), json!(path));
+    let reply = rpc.call_on(client, methods::EXPORT_RENDER, Some(Value::Object(p)))?;
+    let bytes = decode_reply(&reply)?;
+    if let Some(parent) = out.parent().filter(|d| !d.as_os_str().is_empty()) {
+        std::fs::create_dir_all(parent).map_err(|e| Fail::cli(format!("cannot create {}: {e}", parent.display())))?;
+    }
+    write_file(out, &bytes, force)?;
+    Ok(bytes.len() as u64)
+}
+
+/// `<dir>/<drawing path>` with the `.excalidraw` suffix replaced by the export's extension. None
+/// unless `path` is a safe vault-relative drawing path (the reply decides where files are written,
+/// so it must never reach outside `dir`: no `..`, no absolute path, no backslash).
+fn out_path(dir: &Path, path: &str, format: &str) -> Option<PathBuf> {
+    if path.is_empty() || vaultdraw_core::validate_relative(path).is_err() {
+        return None;
+    }
+    let cut = path.len().checked_sub(".excalidraw".len())?;
+    if !path.is_char_boundary(cut) || !path[cut..].eq_ignore_ascii_case(".excalidraw") || cut == 0 || path[..cut].ends_with('/') {
+        return None;
+    }
+    Some(dir.join(format!("{}.{format}", &path[..cut])))
+}
+
+fn bad_reply(message: impl Into<String>) -> Fail {
+    Fail::new(EXIT_PROTOCOL, message, "BAD_REPLY")
 }
 
 /// The format: `--format`, else the `-o` file's extension, else png. A `-o` file must end in
@@ -127,6 +246,8 @@ fn check_pdf_options(args: &ExportArgs, format: &str) -> Result<(), Fail> {
         (args.scale.is_some(), "--scale"),
         (args.embed_scene, "--embed-scene"),
         (args.page, "--page"),
+        (args.frame.is_some(), "--frame"),
+        (args.padding.is_some(), "--padding"),
     ]
     .into_iter()
     .filter_map(|(on, flag)| on.then_some(flag))
@@ -308,6 +429,29 @@ mod tests {
         std::fs::remove_file(&dest).unwrap();
         place_new(&tmp, &dest, b"new").unwrap();
         assert_eq!(std::fs::read(&dest).unwrap(), b"new");
+    }
+
+    #[test]
+    fn out_path_keeps_subfolders_and_swaps_the_extension() {
+        let d = Path::new("/out");
+        assert_eq!(out_path(d, "a.excalidraw", "png").unwrap(), Path::new("/out/a.png"));
+        assert_eq!(out_path(d, "Graphs/sub/b.Excalidraw", "svg").unwrap(), Path::new("/out/Graphs/sub/b.svg"));
+        assert_eq!(out_path(d, "Ünïcode/é.excalidraw", "pdf").unwrap(), Path::new("/out/Ünïcode/é.pdf"));
+    }
+
+    #[test]
+    fn out_path_refuses_paths_that_leave_the_out_dir_or_are_not_drawings() {
+        let d = Path::new("/out");
+        for bad in ["", "../x.excalidraw", "a/../../x.excalidraw", "/etc/x.excalidraw", "a\\..\\x.excalidraw", "./x.excalidraw", "a//b.excalidraw", ".excalidraw", "a/.excalidraw", "notes.md", "é"] {
+            assert!(out_path(d, bad, "png").is_none(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn list_params_maps_the_root_and_trailing_slashes() {
+        assert_eq!(list_params("."), json!({"dir":"","recursive":true}));
+        assert_eq!(list_params("/"), json!({"dir":"","recursive":true}));
+        assert_eq!(list_params("A/B/"), json!({"dir":"A/B","recursive":true}));
     }
 
     #[test]

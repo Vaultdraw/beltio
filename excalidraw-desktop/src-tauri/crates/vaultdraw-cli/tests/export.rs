@@ -1,5 +1,5 @@
-//! `vaultdraw export`: request params, the written bytes, overwrite rules, stdout, --json and
-//! --print-request, against the fake server.
+//! `vaultdraw export`: request params, the written bytes, overwrite rules, stdout, --json,
+//! --print-request, folder batches (--out-dir) and --frame / --padding, against the fake server.
 mod common;
 use common::*;
 use serde_json::{json, Value};
@@ -15,9 +15,11 @@ fn parse(s: &str) -> Value {
     serde_json::from_str(s.trim()).unwrap()
 }
 
-/// Replies to `export.render` with the bytes of the requested format.
+/// Replies to `export.render` with the bytes of the requested format. A drawing is not a folder:
+/// `vault.list` answers NOT_FOUND, as the app does.
 fn app(method: &str, params: &Value) -> Result<Value, (i64, String, Option<&'static str>)> {
     match method {
+        "vault.list" => Err((-32000, "Directory not found".into(), Some("NOT_FOUND"))),
         "export.render" => {
             let (name, mime, b64, size) = match params["format"].as_str() {
                 Some("svg") => ("a.svg", "image/svg+xml", SVG_B64, SVG.len()),
@@ -29,10 +31,15 @@ fn app(method: &str, params: &Value) -> Result<Value, (i64, String, Option<&'sta
     }
 }
 
+/// The `export.render` requests the app received (the folder probe is `vault.list`).
+fn renders(f: &Fake) -> Vec<Value> {
+    f.seen.lock().unwrap().iter().filter(|r| r["method"] == "export.render").cloned().collect()
+}
+
 fn run(args: &[&str]) -> (Output, Vec<Value>) {
     let f = Fake::start(app);
     let o = vd(args, Some(&f.socket), None);
-    let seen = f.seen.lock().unwrap().clone();
+    let seen = renders(&f);
     (o, seen)
 }
 
@@ -45,7 +52,7 @@ fn export_sends_only_the_options_set_and_writes_the_exact_bytes() {
     assert_eq!(code(&o), 0, "{}", err(&o));
     assert_eq!(out(&o), format!("exported a.excalidraw -> {} ({} bytes)\n", file.display(), SVG.len()));
     assert_eq!(std::fs::read(&file).unwrap(), SVG);
-    let seen = f.seen.lock().unwrap();
+    let seen = renders(&f);
     assert_eq!(seen[0]["method"], "export.render");
     assert_eq!(seen[0]["params"], json!({"file":"a","format":"svg","scale":2.0,"dark":true}));
     // No temporary file left behind.
@@ -134,7 +141,7 @@ fn existing_file_is_refused_without_force_and_force_overwrites() {
     assert_eq!(code(&o), 1);
     assert!(err(&o).contains("keep.png") && err(&o).contains("--force"), "{}", err(&o));
     assert_eq!(std::fs::read(&file).unwrap(), b"old");
-    assert!(f.seen.lock().unwrap().is_empty(), "refused before the render");
+    assert!(renders(&f).is_empty(), "refused before the render");
     let o = vd(&["export", "a", "-o", file.to_str().unwrap(), "--force"], Some(&f.socket), None);
     assert_eq!(code(&o), 0, "{}", err(&o));
     assert_eq!(std::fs::read(&file).unwrap(), PNG);
@@ -183,4 +190,165 @@ fn a_reply_whose_size_does_not_match_is_a_protocol_error() {
     let o = vd(&["export", "a", "-o", "-"], Some(&f.socket), None);
     assert_eq!(code(&o), 4, "{}", err(&o));
     assert!(err(&o).contains("BAD_REPLY"), "{}", err(&o));
+}
+
+/// Lists folders for `vault.list`; drawings render like `app`, except one named `broken`.
+fn folder_app(method: &str, params: &Value) -> Result<Value, (i64, String, Option<&'static str>)> {
+    match method {
+        "vault.list" => match params["dir"].as_str() {
+            Some("Graphs") => Ok(json!({"entries": [
+                {"path":"Graphs/a.excalidraw","kind":"drawing"},
+                {"path":"Graphs/sub","kind":"folder"},
+                {"path":"Graphs/sub/b.excalidraw","kind":"drawing"}]})),
+            Some("Bad") => Ok(json!({"entries": [
+                {"path":"Bad/ok.excalidraw","kind":"drawing"},
+                {"path":"Bad/broken.excalidraw","kind":"drawing"}]})),
+            Some("") => Ok(json!({"entries": [{"path":"Top.EXCALIDRAW","kind":"drawing"}]})),
+            Some("Evil") => Ok(json!({"entries": [
+                {"path":"../escape.excalidraw","kind":"drawing"},
+                {"path":"Evil/later.excalidraw","kind":"drawing"}]})),
+            _ => Err((-32000, "Directory not found".into(), Some("NOT_FOUND"))),
+        },
+        "export.render" if params["path"].as_str().is_some_and(|p| p.contains("broken")) => {
+            Err((-32000, "Cannot export an empty canvas".into(), Some("INVALID_FILE")))
+        }
+        _ => app(method, params),
+    }
+}
+
+#[test]
+fn a_single_drawing_sends_one_request_and_no_folder_listing() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("one.png");
+    let f = Fake::start(folder_app);
+    let o = vd(&["export", "Graphs", "-o", file.to_str().unwrap()], Some(&f.socket), None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    let seen = f.seen.lock().unwrap();
+    assert_eq!(seen.len(), 1, "{seen:?}");
+    assert_eq!(seen[0]["method"], "export.render");
+}
+
+#[test]
+fn folder_exports_every_drawing_under_out_dir_with_the_new_extension() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("out");
+    let f = Fake::start(folder_app);
+    let o = vd(&["export", "Graphs/", "--out-dir", root.to_str().unwrap()], Some(&f.socket), None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(std::fs::read(root.join("Graphs/a.png")).unwrap(), PNG);
+    assert_eq!(std::fs::read(root.join("Graphs/sub/b.png")).unwrap(), PNG);
+    assert!(out(&o).contains("exported 2 of 2 drawings"), "{}", out(&o));
+    let seen = f.seen.lock().unwrap();
+    assert_eq!(seen[0]["method"], "vault.list");
+    assert_eq!(seen[0]["params"], json!({"dir":"Graphs","recursive":true}));
+    let paths: Vec<&str> = seen[1..].iter().map(|r| r["params"]["path"].as_str().unwrap()).collect();
+    assert_eq!(paths, ["Graphs/a.excalidraw", "Graphs/sub/b.excalidraw"]);
+    assert!(seen[1..].iter().all(|r| r["method"] == "export.render" && r["params"]["format"] == "png"));
+}
+
+#[test]
+fn dot_is_the_vault_root_and_the_suffix_is_matched_case_insensitively() {
+    let dir = tempfile::tempdir().unwrap();
+    let f = Fake::start(folder_app);
+    let o = vd(&["export", ".", "--out-dir", dir.path().to_str().unwrap(), "--format", "svg"], Some(&f.socket), None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(f.seen.lock().unwrap()[0]["params"], json!({"dir":"","recursive":true}));
+    assert_eq!(std::fs::read(dir.path().join("Top.svg")).unwrap(), SVG);
+}
+
+#[test]
+fn a_failing_drawing_is_reported_and_the_batch_goes_on_with_exit_2() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("out");
+    let f = Fake::start(folder_app);
+    let o = vd(&["export", "Bad", "--out-dir", root.to_str().unwrap(), "--format", "svg", "--json"], Some(&f.socket), None);
+    assert_eq!(code(&o), 2, "{}", err(&o));
+    assert!(err(&o).contains("vaultdraw: Bad/broken.excalidraw: Cannot export an empty canvas (INVALID_FILE)"), "{}", err(&o));
+    assert!(err(&o).contains("exported 1 of 2 drawings"), "{}", err(&o));
+    assert_eq!(err(&o).trim().lines().last(), Some("vaultdraw: 1 of 2 drawings failed (EXPORT_FAILED)"), "{}", err(&o));
+    assert_eq!(std::fs::read(root.join("Bad/ok.svg")).unwrap(), SVG);
+    assert!(!root.join("Bad/broken.svg").exists());
+    // One JSON line per drawing on stdout, in order.
+    let lines: Vec<Value> = out(&o).lines().map(parse).collect();
+    assert_eq!(lines.len(), 2);
+    assert_eq!(lines[0]["path"], "Bad/ok.excalidraw");
+    assert_eq!(lines[0]["ok"], true);
+    assert_eq!(lines[0]["size"], SVG.len());
+    assert!(lines[0].get("error").is_none());
+    assert_eq!(lines[1], json!({"path":"Bad/broken.excalidraw","ok":false,"code":"INVALID_FILE","error":"Cannot export an empty canvas"}));
+}
+
+#[test]
+fn an_existing_file_is_skipped_without_force_and_overwritten_with_it() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join("Graphs")).unwrap();
+    let taken = dir.path().join("Graphs/a.png");
+    std::fs::write(&taken, b"old").unwrap();
+    let f = Fake::start(folder_app);
+    let o = vd(&["export", "Graphs", "--out-dir", dir.path().to_str().unwrap()], Some(&f.socket), None);
+    assert_eq!(code(&o), 2, "{}", err(&o));
+    assert!(err(&o).contains("Graphs/a.excalidraw") && err(&o).contains("--force"), "{}", err(&o));
+    assert_eq!(std::fs::read(&taken).unwrap(), b"old");
+    assert_eq!(std::fs::read(dir.path().join("Graphs/sub/b.png")).unwrap(), PNG);
+    // Refused before its render: only the other drawing was rendered.
+    assert_eq!(renders(&f).len(), 1);
+    let o = vd(&["export", "Graphs", "--out-dir", dir.path().to_str().unwrap(), "--force"], Some(&f.socket), None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(std::fs::read(&taken).unwrap(), PNG);
+}
+
+#[test]
+fn an_unsafe_listed_path_stops_the_batch_and_writes_nothing() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("out");
+    let f = Fake::start(folder_app);
+    let o = vd(&["export", "Evil", "--out-dir", root.to_str().unwrap()], Some(&f.socket), None);
+    assert_eq!(code(&o), 4, "{}", err(&o));
+    assert!(err(&o).contains("unsafe path") && err(&o).contains("BAD_REPLY"), "{}", err(&o));
+    assert!(!dir.path().join("escape.png").exists());
+    assert!(!root.exists());
+    assert!(renders(&f).is_empty());
+}
+
+#[test]
+fn out_dir_refuses_o_and_a_drawing_target() {
+    let dir = tempfile::tempdir().unwrap();
+    let f = Fake::start(folder_app);
+    let file = dir.path().join("x.png");
+    let o = vd(&["export", "Graphs", "-o", file.to_str().unwrap(), "--out-dir", dir.path().to_str().unwrap()], Some(&f.socket), None);
+    assert_eq!(code(&o), 1, "{}", err(&o));
+    assert!(f.seen.lock().unwrap().is_empty(), "refused before any request");
+    let o = vd(&["export", "Graphs/a.excalidraw", "--out-dir", dir.path().to_str().unwrap()], Some(&f.socket), None);
+    assert_eq!(code(&o), 2, "{}", err(&o));
+    assert!(err(&o).contains("is not a folder of the vault") && err(&o).contains("-o <file>"), "{}", err(&o));
+    assert!(renders(&f).is_empty());
+}
+
+#[test]
+fn out_dir_without_the_app_exits_3() {
+    let dir = tempfile::tempdir().unwrap();
+    let o = vd(&["export", "Graphs", "--out-dir", dir.path().to_str().unwrap()], None, None);
+    assert_eq!(code(&o), 3, "{}", err(&o));
+}
+
+#[test]
+fn print_request_shows_the_listing_for_a_folder_batch() {
+    let o = vd(&["export", "Graphs/", "--out-dir", "out", "--print-request"], None, None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    let line = parse(&out(&o));
+    assert_eq!(line["method"], "vault.list");
+    assert_eq!(line["params"], json!({"dir":"Graphs","recursive":true}));
+}
+
+#[test]
+fn frame_and_padding_go_into_the_render_request_and_are_checked() {
+    let o = vd(&["export", "a", "--frame", "Slide 1", "--padding", "0", "--print-request"], None, None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(parse(&out(&o))["params"], json!({"file":"a","format":"png","frame":"Slide 1","padding":0}));
+    for bad in [&["--padding", "-1"][..], &["--padding", "201"], &["--format", "pdf", "--frame", "F"], &["--format", "pdf", "--padding", "5"]] {
+        let mut args = vec!["export", "a", "--print-request"];
+        args.extend_from_slice(bad);
+        let o = vd(&args, None, None);
+        assert_eq!(code(&o), 1, "{bad:?}: {}", err(&o));
+    }
 }

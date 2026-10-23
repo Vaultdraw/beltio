@@ -92,7 +92,7 @@ pub enum Command {
     Mv { from: String, to: String },
     /// Move a drawing to the trash
     Trash { target: String },
-    /// Render a drawing to PNG, SVG or PDF through the running app
+    /// Render a drawing (or, with --out-dir, every drawing in a folder) to PNG, SVG or PDF through the running app
     Export(ExportArgs),
     /// Outgoing links of a drawing, or its backlinks
     Links {
@@ -149,7 +149,7 @@ pub struct CmdArgs {
 
 #[derive(Args, Debug)]
 pub struct ExportArgs {
-    /// Path (contains / or ends in .excalidraw) or link-style name
+    /// A drawing (path with / or .excalidraw, or a link-style name); with --out-dir, a folder (. for the vault root)
     pub target: String,
     /// Output .png/.svg/.pdf file, an existing folder, or - for stdout (default: the drawing's name here)
     #[arg(short = 'o', long, value_name = "FILE")]
@@ -175,6 +175,15 @@ pub struct ExportArgs {
     /// Export the page-shaped frame of the drawing (not for pdf)
     #[arg(long)]
     pub page: bool,
+    /// Export only this frame, by element id, else by name (png and svg; wins over --page)
+    #[arg(long, value_name = "ID|NAME")]
+    pub frame: Option<String>,
+    /// Space around the drawing in px, 0 to 200 (png and svg; default 10; a frame has none)
+    #[arg(long, value_name = "PX", value_parser = clap::value_parser!(u32).range(0..=200))]
+    pub padding: Option<u32>,
+    /// Export every drawing of the folder TARGET (recursively) into DIR, keeping subfolders
+    #[arg(long, value_name = "DIR", conflicts_with = "out")]
+    pub out_dir: Option<String>,
     /// Overwrite an existing output file; write to a terminal stdout
     #[arg(long)]
     pub force: bool,
