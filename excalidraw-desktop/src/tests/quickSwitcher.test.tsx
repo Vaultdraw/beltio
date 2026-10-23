@@ -435,8 +435,8 @@ describe("QuickSwitcher keystroke cost (5,000 drawings, jsdom)", () => {
       counts[q] = screen.queryAllByRole("option").length;
       expect(counts[q]).toBeLessThanOrEqual(24);
     }
-    expect(counts["d"]).toBe(24);
-    expect(counts["drawi"]).toBe(24);
+    expect(counts.d).toBe(24);
+    expect(counts.drawi).toBe(24);
     expect(counts["f1 dr 12"]).toBeGreaterThan(0);
     samples.sort((a, b) => a - b);
     const p50 = samples[Math.floor(samples.length * 0.5)];
