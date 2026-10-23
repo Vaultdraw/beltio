@@ -106,6 +106,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - Two doc pages: `sdk/docs/reference.md` and `sdk/docs/getting-started.md`.
 - A lint (D7): official plugins, built-in extensions and example plugins may import only the public API, never app or editor internals.
 
+- **CSS snippets:** put your own `.css` files in the config folder's `snippets/` and turn each on in **Settings → Appearance → CSS snippets** or with `appearance.snippets` in `config.toml`. They apply after the theme, reload live, and never touch files or exports. Palette commands open the folder, reload, and toggle each snippet (rebindable).
 
 ## [0.1.2] - 2026-10-23
 

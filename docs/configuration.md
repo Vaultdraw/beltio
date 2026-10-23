@@ -13,7 +13,8 @@ All settings live in one folder, like kitty, Ghostty or Zed:
 config folder                 state folder
 vaultdraw/                    vaultdraw/
 ├── config.toml   yours       ├── overrides.toml   what Settings saves
-└── themes/       themes      └── state.json       machine state
+├── themes/       themes      └── state.json       machine state
+└── snippets/     CSS snippets
 ```
 
 `config.toml` is created on first launch, with every key listed and commented. The common keys and their defaults (the full list is [Every key](#every-key) below):
@@ -25,6 +26,7 @@ mode = "system"              # light | dark | system
 sync_canvas = false          # canvas follows the theme's colours
 canvas_background = "#ffffff" # for new drawings when sync_canvas is off
 accent_color = ""            # "#rrggbb" replaces the theme's primary colour; "" = the theme's own
+snippets = []                # CSS snippets to apply, by file name in snippets/, e.g. ["wide-sidebar"]
 
 [editor]                     # defaults for new elements
 font_family = 5              # 5 Excalifont, 6 Nunito, 8 Comic Shanns, 1 Virgil, 2 Helvetica, 3 Cascadia
@@ -335,6 +337,30 @@ Optional top-level `name` and `author` fields are for display only.
 With `sync_canvas = true` (**Sync canvas with theme** in Settings), the canvas is recoloured on screen: its background becomes the theme's background, and the pencil, stroke and fill colours from Excalidraw's palette become matching theme colours. This only changes what you see. Saved drawings and PNG/SVG exports keep Excalidraw's standard colours, so they look the same for anyone who opens them. With it off, the canvas renders as in regular Excalidraw.
 
 Themes are data only: colour values, no code.
+
+### CSS snippets
+
+For anything a theme can't do (spacing, fonts, hiding a button, a wider sidebar), add your own CSS, the way Obsidian's snippets work. Put `.css` files in `snippets/` inside the config folder (`~/.config/vaultdraw/snippets/` on macOS and Linux) and turn each one on in **Settings → Appearance → CSS snippets** or in `config.toml`:
+
+```toml
+[appearance]
+snippets = ["wide-sidebar", "big-tabs"]   # file names without .css, applied in this order
+```
+
+```css
+/* snippets/wide-sidebar.css */
+.vault-navigator { min-width: 320px; }
+```
+
+- **Applied after the theme**, so a snippet wins over it at equal specificity. Theme colours are set inline on `<html>`; to override a `--vault-*` token, add `!important`: `:root { --vault-primary: #e64980 !important; }`.
+- **Live reload.** Saving a snippet file, adding or removing one, or editing `appearance.snippets` applies at once. **Reload** in Settings (or the `CSS snippets: Reload` command) re-reads the folder.
+- **Your files, as written.** Nothing is stripped or rewritten. A snippet that fails to load (larger than 256 KiB, not UTF-8, a symbolic link) is skipped and its problem is shown in Settings; the app always starts. A name in `snippets` with no file is reported as not found.
+- **On screen only.** Snippets style the app, not your drawings: saved files and PNG/SVG/PDF exports are unchanged.
+- **Offline.** `@import` is ignored and remote `url(...)` references are blocked; embed images and fonts as `data:` URLs.
+- **Commands:** `CSS snippets: Open folder` (`snippets.openFolder`), `CSS snippets: Reload` (`snippets.reload`) and one `CSS snippets: Toggle <name>` per file (`snippets.toggle:<name>`). Bind any of them in `[hotkeys]`, for example `"snippets.toggle:wide-sidebar" = ["Mod+Alt+W"]`.
+- **No snippets, no cost.** With none enabled nothing is read before the first frame; the folder is listed once when the app is idle.
+
+The class names and `--vault-*` tokens are the stable surface; other internal class names can change between versions.
 
 ## Hotkeys
 
