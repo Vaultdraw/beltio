@@ -125,18 +125,33 @@ export class History {
    * element in this set can come back, so its file must stay reachable.
    */
   public referencedElementIds(): Set<string> {
+    return this.referenced().elementIds;
+  }
+
+  /** Same walk, also the `fileId` values the entries carry. */
+  public referenced() {
     const ids = new Set<string>();
+    const fileIds = new Set<string>();
     for (const stack of [this.undoStack, this.redoStack]) {
       for (const delta of stack) {
         const { added, removed, updated } = delta.elements;
         for (const group of [added, removed, updated]) {
           for (const id in group) {
             ids.add(id);
+            const { deleted, inserted } = group[id] as {
+              deleted?: { fileId?: unknown };
+              inserted?: { fileId?: unknown };
+            };
+            for (const side of [deleted, inserted]) {
+              if (typeof side?.fileId === "string") {
+                fileIds.add(side.fileId);
+              }
+            }
           }
         }
       }
     }
-    return ids;
+    return { elementIds: ids, fileIds };
   }
 
   /**
@@ -144,12 +159,13 @@ export class History {
    * horizon). 0 or less keeps everything. Returns how many entries went.
    */
   public trim(maxSteps: number): number {
-    if (!(maxSteps > 0)) {
+    const max = Math.floor(maxSteps);
+    if (!(max >= 1)) {
       return 0;
     }
     let dropped = 0;
     for (const stack of [this.undoStack, this.redoStack]) {
-      const extra = stack.length - Math.floor(maxSteps);
+      const extra = stack.length - max;
       if (extra > 0) {
         stack.splice(0, extra);
         dropped += extra;

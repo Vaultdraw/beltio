@@ -357,6 +357,14 @@ describe("releasing files nothing can bring back", () => {
     expect((h.app as any).history.undoStack.length).toBe(2);
   });
 
+  it("a fractional or zero horizon never clears the history", () => {
+    const stack = (h.app as any).history.undoStack;
+    stack.push({ elements: { added: {}, removed: {}, updated: {} } } as any);
+    expect((h.app as any).history.trim(0.5)).toBe(0);
+    expect((h.app as any).history.trim(0)).toBe(0);
+    expect(stack.length).toBe(1);
+  });
+
   it("is off until the host turns it on, and zero work for a drawing without images", async () => {
     await addImages(["a"]);
     API.updateElement(h.elements[0], { isDeleted: true });

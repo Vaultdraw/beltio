@@ -62,13 +62,15 @@ describe("findUnreachableFileIds", () => {
     expect(call([], 16_000).release).toEqual([fid(0)]);
   });
 
-  it("never releases `keep`, releases at once with graceMs 0, forgets gone ids", () => {
+  it("never releases `keep` or a file a history entry carries, forgets gone ids", () => {
     const since = new Map<FileId, number>([[fid(9), 1]]);
-    const out = run([], [], since, 0, {
+    const out = run([img(1, true), img(2, true)], [], since, 0, {
       keep: new Set([fid(0)]),
+      historyFileIds: new Set([fid(2)]),
       graceMs: 0,
     });
-    expect(out.release).toEqual([fid(1), fid(2), fid(3)]);
+    // f1: deleted element, released at once; f3: no element, needs probation
+    expect(out).toEqual({ release: [fid(1)], pending: 1 });
     expect(since.has(fid(9))).toBe(false);
   });
 });

@@ -239,6 +239,7 @@ export const findUnreachableFileIds = ({
   fileIds,
   elements,
   historyElementIds,
+  historyFileIds,
   unreachableSince,
   now,
   keep,
@@ -247,18 +248,25 @@ export const findUnreachableFileIds = ({
   fileIds: Iterable<FileId>;
   elements: readonly ExcalidrawElement[];
   historyElementIds: ReadonlySet<string>;
+  /** file ids the undo/redo entries carry themselves */
+  historyFileIds?: ReadonlySet<string>;
   unreachableSince: Map<FileId, number>;
   now: number;
   keep?: ReadonlySet<FileId>;
   graceMs?: number;
 }) => {
   const reachable = new Set<FileId>();
+  // deleted image elements still in the scene: the only files `graceMs: 0`
+  // may release at once (a file no element mentions may be mid-insert)
+  const tombstoned = new Set<FileId>();
   for (const element of elements) {
-    if (
-      isInitializedImageElement(element) &&
-      (!element.isDeleted || historyElementIds.has(element.id))
-    ) {
+    if (!isInitializedImageElement(element)) {
+      continue;
+    }
+    if (!element.isDeleted || historyElementIds.has(element.id)) {
       reachable.add(element.fileId);
+    } else {
+      tombstoned.add(element.fileId);
     }
   }
   const release: FileId[] = [];
@@ -266,12 +274,19 @@ export const findUnreachableFileIds = ({
   const seen = new Set<FileId>();
   for (const fileId of fileIds) {
     seen.add(fileId);
-    if (reachable.has(fileId) || keep?.has(fileId)) {
+    if (
+      reachable.has(fileId) ||
+      keep?.has(fileId) ||
+      historyFileIds?.has(fileId)
+    ) {
       unreachableSince.delete(fileId);
       continue;
     }
     const since = unreachableSince.get(fileId);
-    if (graceMs <= 0 || (since !== undefined && now - since >= graceMs)) {
+    if (
+      (graceMs <= 0 && tombstoned.has(fileId)) ||
+      (since !== undefined && now - since >= Math.max(graceMs, 0))
+    ) {
       release.push(fileId);
       unreachableSince.delete(fileId);
     } else {

@@ -4082,7 +4082,10 @@ class App extends React.Component<AppProps, AppState> {
     this.renderer = new Renderer(this.scene);
     this.files = {};
     this.scheduleImageCachePrune.cancel();
-    this.scheduleFilesRelease.cancel();
+    if (this.filesReleaseTimer !== null) {
+      clearTimeout(this.filesReleaseTimer);
+      this.filesReleaseTimer = null;
+    }
     this.imageCache.clear();
     this.resizeObserver?.disconnect();
     this.unmounted = true;
@@ -4673,11 +4676,10 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     // Vaultdraw: drawings without images cost one flag check here
+    const { freeUnreachable, undoSteps } = this.filesRetention;
     if (
-      this.filesRetention.freeUnreachable
-        ? hasAnyKey(this.files)
-        : this.filesRetention.undoSteps > 0 &&
-          this.history.undoStack.length > this.filesRetention.undoSteps
+      (freeUnreachable && hasAnyKey(this.files)) ||
+      (undoSteps > 0 && this.history.undoStack.length > undoSteps)
     ) {
       this.scheduleFilesRelease();
     }
@@ -4732,10 +4734,12 @@ class App extends React.Component<AppProps, AppState> {
     if (isInitializedImageElement(cropping)) {
       keep.add(cropping.fileId);
     }
+    const referenced = this.history.referenced();
     const { release, pending } = findUnreachableFileIds({
       fileIds: Object.keys(this.files) as FileId[],
       elements: this.scene.getElementsIncludingDeleted(),
-      historyElementIds: this.history.referencedElementIds(),
+      historyElementIds: referenced.elementIds,
+      historyFileIds: referenced.fileIds,
       unreachableSince: this.filesUnreachableSince,
       now: Date.now(),
       keep,
@@ -4759,30 +4763,38 @@ class App extends React.Component<AppProps, AppState> {
     return { released: release.length, bytes, pending };
   };
 
-  /** runs on idle after the editor was quiet; re-arms while files are on probation */
-  private scheduleFilesRelease = debounce(() => {
-    const run = () => {
-      if (this.unmounted) {
-        return;
-      }
-      const { freeUnreachable, undoSteps } = this.filesRetention;
-      if (!freeUnreachable) {
-        if (undoSteps > 0) {
-          this.history.trim(undoSteps);
-        }
-        return;
-      }
-      if (this.releaseUnusedFiles().pending) {
-        this.scheduleFilesRelease();
-      }
-    };
-    const ric = (this.ownerWindow as any)?.requestIdleCallback;
-    if (typeof ric === "function") {
-      ric.call(this.ownerWindow, run, { timeout: 5000 });
-    } else {
-      setTimeout(run, 0);
+  private filesReleaseTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** arms one idle pass; calls while armed are free (it is not re-armed per update) */
+  private scheduleFilesRelease = () => {
+    if (this.filesReleaseTimer !== null || this.unmounted) {
+      return;
     }
-  }, FILES_RELEASE_GRACE_MS + 200);
+    this.filesReleaseTimer = setTimeout(() => {
+      this.filesReleaseTimer = null;
+      const run = () => {
+        if (this.unmounted) {
+          return;
+        }
+        const { freeUnreachable, undoSteps } = this.filesRetention;
+        if (!freeUnreachable) {
+          if (undoSteps > 0) {
+            this.history.trim(undoSteps);
+          }
+          return;
+        }
+        if (this.releaseUnusedFiles().pending) {
+          this.scheduleFilesRelease();
+        }
+      };
+      const ric = (this.ownerWindow as any)?.requestIdleCallback;
+      if (typeof ric === "function") {
+        ric.call(this.ownerWindow, run, { timeout: 5000 });
+      } else {
+        run();
+      }
+    }, FILES_RELEASE_GRACE_MS + 200);
+  };
 
   private imageCacheUnreferencedSince = new Map<FileId, number>();
 
