@@ -377,7 +377,15 @@ describe("window methods (C3)", () => {
       const r = await call("export.render", { path: "a", format: "png" });
       const back = Uint8Array.from(atob(r.bytes), (c) => c.charCodeAt(0));
       expect(r.size).toBe(big.length);
-      expect(back).toEqual(big);
+      expect(back.length).toBe(big.length);
+      // A plain loop: a deep toEqual over 5 MB takes seconds (flaky under load).
+      let firstDiff = -1;
+      for (let i = 0; i < big.length && firstDiff < 0; i += 1) {
+        if (back[i] !== big[i]) {
+          firstDiff = i;
+        }
+      }
+      expect(firstDiff).toBe(-1);
     });
 
     it("TOO_LARGE above 32 MiB", async () => {
