@@ -259,9 +259,10 @@ test.describe("opening, shortcuts and focus", () => {
     await page.keyboard.press("Tab");
     await expect(input(page)).toHaveValue(">Theme: ");
     await expect(input(page)).toBeFocused();
-    const count = await options(page).count();
-    expect(count).toBeGreaterThan(1);
-    for (let i = 0; i < count; i++) {
+    // The ten bundled themes lead. The drill query is fuzzy, so non-theme
+    // matches (for example "Sync canvas with theme") can follow them.
+    const bundled = 10;
+    for (let i = 0; i < bundled; i++) {
       await expect(options(page).nth(i)).toContainText("Theme: ");
     }
   });
