@@ -42,9 +42,13 @@ export interface AppFilesDeps {
   trashEntry: (path: string) => Promise<void>;
   /** The window the export renders in. */
   win: (Window & typeof globalThis) | null;
-  /** Saves pending edits when `path` is the open drawing (exports read disk). */
+  /**
+   * Saves pending edits when `path` is the open drawing (exports read disk).
+   * Only the live editor can hold unsaved edits: a tab switch saves the
+   * outgoing drawing before the next one opens (tabController capture).
+   */
   flushIfOpen: (path: string) => Promise<void>;
-  /** Shows the busy overlay while `run` is in flight. */
+  /** Shows the busy overlay while `run` is in flight (mutating calls only). */
   busy: <T>(run: () => Promise<T>) => Promise<T>;
 }
 
@@ -86,20 +90,21 @@ export function createAppFiles(d: AppFilesDeps): ControlFiles {
     moveEntry: (from, to, rewriteLinks) =>
       d.busy(() => d.moveEntry(from, to, rewriteLinks)),
     trashEntry: (path) => d.busy(() => d.trashEntry(path)),
-    exportDrawing: (path, format, options) =>
-      d.busy(async () => {
-        if (!d.win) {
-          throw new ControlError("UNAVAILABLE", "No window to render in");
-        }
-        await d.flushIfOpen(path);
-        const { json } = await d.repository.readDrawing(handle(), path);
-        return renderExport(
-          json,
-          path.slice(path.lastIndexOf("/") + 1),
-          format,
-          options,
-          d.win,
-        );
-      }),
+    // No busy overlay: an export only reads and renders off-screen, so the
+    // user keeps editing while a script exports (and calls may overlap).
+    exportDrawing: async (path, format, options) => {
+      if (!d.win) {
+        throw new ControlError("UNAVAILABLE", "No window to render in");
+      }
+      await d.flushIfOpen(path);
+      const { json } = await d.repository.readDrawing(handle(), path);
+      return renderExport(
+        json,
+        path.slice(path.lastIndexOf("/") + 1),
+        format,
+        options,
+        d.win,
+      );
+    },
   };
 }

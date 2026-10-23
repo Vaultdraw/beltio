@@ -19,6 +19,7 @@ import { DesktopVaultLinks } from "./links/DesktopVaultLinks";
 import { useLinkDisplayPrefs } from "./links/useLinkDisplayPrefs";
 import { resolveOpenTarget } from "./control/openTarget";
 import { createAppFiles } from "./control/appFiles";
+import { createBusyCounter } from "./control/busyCounter";
 import { openVaultAtPath } from "./control/vaultOpen";
 import { useControlBridge } from "./control/useControlBridge";
 import { useMenuCommands } from "./help/useMenuCommands";
@@ -290,6 +291,8 @@ export const VaultApp = ({
     type: "error" | "info";
   } | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  // Control calls share one counter, so overlapping calls keep the overlay.
+  const controlBusy = useMemo(() => createBusyCounter(setIsBusy), []);
   const [isClosing, setIsClosing] = useState(false);
   const [showCloseDiscardConfirm, setShowCloseDiscardConfirm] = useState(false);
 
@@ -1639,9 +1642,12 @@ export const VaultApp = ({
   };
 
   /** Exports read disk: save pending edits when `path` is the open drawing. */
+  // Reads the live document (not this render's snapshot): a tab may have
+  // switched since. Background tabs hold no unsaved edits (a switch saves).
   const flushExportedDoc = async (path: string) => {
-    if (activeDoc?.path === path) {
-      await flushDoc({ commitText: false });
+    const doc = docHookRef.current;
+    if (doc.getActive()?.path === path) {
+      await doc.flush({ commitText: false });
     }
   };
 
@@ -1992,14 +1998,7 @@ export const VaultApp = ({
       trashEntry: trashEntryCore,
       win: win as (Window & typeof globalThis) | null,
       flushIfOpen: flushExportedDoc,
-      busy: async (run) => {
-        setIsBusy(true);
-        try {
-          return await run();
-        } finally {
-          setIsBusy(false);
-        }
-      },
+      busy: controlBusy,
     }),
     runner: () => runnerRef.current ?? commandRunner,
     appState: () => ({

@@ -59,7 +59,7 @@ describe("createAppFiles", () => {
     });
   });
 
-  it("exportDrawing flushes, reads, renders inside busy; a missing drawing rejects NOT_FOUND", async () => {
+  it("exportDrawing flushes, reads and renders without the busy overlay; a missing drawing rejects NOT_FOUND", async () => {
     const order: string[] = [];
     const busy = vi.fn(async (run) => {
       order.push("busy");
@@ -76,7 +76,9 @@ describe("createAppFiles", () => {
     renderExport.mockResolvedValue({ bytes: new Uint8Array(1) });
     const opts = { scale: 1 } as any;
     await files.exportDrawing("d/a.excalidraw", "png", opts);
-    expect(order).toEqual(["busy", "flush", "read"]);
+    // No busy overlay: the user keeps editing while a script exports.
+    expect(order).toEqual(["flush", "read"]);
+    expect(busy).not.toHaveBeenCalled();
     expect(renderExport).toHaveBeenCalledWith(
       "J",
       "a.excalidraw",

@@ -31,6 +31,8 @@ const setup = (
     failPaths?: Set<string>;
     conflict?: () => boolean;
     closePinned?: boolean;
+    /** Record `flush` calls (the live document is saved before a switch). */
+    flush?: boolean;
   } = {},
 ) => {
   const calls: string[] = [];
@@ -67,6 +69,13 @@ const setup = (
     onPinnedCloseBlocked,
     closePinnedWithShortcut: () => opts.closePinned ?? false,
     session: { save: (s) => sessionSaves.push(s) },
+    ...(opts.flush
+      ? {
+          flushDocument: async () => {
+            calls.push(`flush:${doc.current?.path ?? ""}`);
+          },
+        }
+      : {}),
   };
   const rt = createTabsRuntime(deps);
   return {
@@ -105,6 +114,17 @@ describe("TabsController", () => {
     expect(t.memory.take(b.id, "b.excalidraw", "r1")).toEqual({
       stack: "b-undo",
     });
+  });
+
+  it("a switch saves the outgoing drawing before the next opens, so background tabs hold no unsaved edits", async () => {
+    const t = setup({ flush: true });
+    await t.controller.openPath("a.excalidraw", { target: "current" });
+    await t.controller.openPath("b.excalidraw", { target: "new" });
+    expect(t.calls).toEqual([
+      "open:a.excalidraw",
+      "flush:a.excalidraw",
+      "open:b.excalidraw",
+    ]);
   });
 
   it("capture happens before the open", async () => {
