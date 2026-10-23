@@ -209,9 +209,15 @@ export const useSettingsController = ({
   const vaultSettings = useVaultSettingsView(win);
   const [settingsStatus, setSettingsStatus] = useState(getSettingsStatus);
 
-  // The view.zoom* shortcuts change the zoom while Settings may be open.
+  // The view.zoom* shortcuts change the zoom, and the theme installer picks a
+  // theme, while Settings may be open.
   useEffect(
-    () => subscribePreferences(() => setZoomState(getPreferences(win).zoom)),
+    () =>
+      subscribePreferences(() => {
+        const prefs = getPreferences(win);
+        setZoomState(prefs.zoom);
+        setColorThemeState(prefs.colorTheme);
+      }),
     [win],
   );
 

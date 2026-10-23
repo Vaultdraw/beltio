@@ -39,6 +39,8 @@ const MAX_ROWS = 200;
 interface Props {
   request: InstallDialogRequest;
   onClose: () => void;
+  /** Called after "Use it" changed the selected theme (re-reads appearance). */
+  onThemeChanged?: () => void;
   win?: Window;
 }
 
@@ -52,6 +54,7 @@ const consentText = (enabled: boolean, allow: boolean | undefined) =>
 export const ThemeInstallDialog = ({
   request,
   onClose,
+  onThemeChanged,
   win = window,
 }: Props) => {
   const prefs = getPreferences(win);
@@ -488,6 +491,7 @@ export const ThemeInstallDialog = ({
               className="vault-btn vault-btn--primary"
               onClick={() => {
                 updatePreferences({ colorTheme: step.name }, win);
+                onThemeChanged?.();
                 onClose();
               }}
             >

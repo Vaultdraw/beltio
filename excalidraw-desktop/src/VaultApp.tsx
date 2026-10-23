@@ -3144,6 +3144,7 @@ export const VaultApp = ({
           <ThemeInstallDialog
             request={themeInstallRequest}
             onClose={closeInstallDialog}
+            onThemeChanged={refreshAppearance}
           />
         </Suspense>
       )}
