@@ -9,6 +9,7 @@ import { DEFAULT_KEY_OPTIONS, canStartInText } from "./keySequence";
 import {
   clearPendingKeys,
   getKeyInterceptor,
+  clearKeyView,
   setKeyView,
   setPendingKeys,
 } from "./pendingKeys";
@@ -105,6 +106,9 @@ export function installCommandDispatcher(
   // Pending sequence state; all null/empty while idle.
   let node: SeqNode | null = null;
   let path: Chord[] = [];
+  // Single-chord bindings on the first chord of a sequence ("R" and "R R"):
+  // they run after the ambiguity timeout if no second key follows.
+  let rootFallback: readonly CommandDefinition[] | null = null;
   let ambiguityTimer: ReturnType<typeof setTimeout> | undefined;
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -160,6 +164,7 @@ export function installCommandDispatcher(
     clearTimeout(ambiguityTimer);
     clearTimeout(idleTimer);
     ambiguityTimer = idleTimer = undefined;
+    rootFallback = null;
     for (const type of CANCEL_EVENTS) {
       win.removeEventListener(type, onCancelEvent, true);
     }
@@ -190,12 +195,12 @@ export function installCommandDispatcher(
     clearTimeout(ambiguityTimer);
     ambiguityTimer = undefined;
     const ms = (deps.getOptions?.() ?? DEFAULT_KEY_OPTIONS).timeoutMs;
-    if (next.commands && ms > 0) {
+    const bound = next.commands ?? (path.length === 1 ? rootFallback : null);
+    if (bound && ms > 0) {
       // Both a binding and a prefix: run the shorter one if no key follows.
       ambiguityTimer = setTimeout(() => {
-        const target = node;
         cancel();
-        const hit = target && runnable(target.commands, deps.getContext());
+        const hit = runnable(bound, deps.getContext());
         if (hit) {
           runHandler(hit.id, hit.handler);
         }
@@ -274,6 +279,7 @@ export function installCommandDispatcher(
     const seq = deps.getSeqRoot?.()?.get(chord);
     if (seq && hasLivePathBelow(seq, deps.getContext())) {
       path = [chord];
+      rootFallback = deps.getKeymap().get(chord) ?? null;
       settle(seq);
     }
   };
@@ -311,6 +317,7 @@ export function installCommandDispatcher(
       claim(e);
       if (!e.repeat) {
         path = [chord];
+        rootFallback = candidates ?? null;
         settle(seq);
       }
       return;
@@ -346,7 +353,7 @@ export function installCommandDispatcher(
   setKeyView(view);
   advanceActive = advance;
   return () => {
-    setKeyView(null);
+    clearKeyView(view);
     if (advanceActive === advance) {
       advanceActive = null;
     }

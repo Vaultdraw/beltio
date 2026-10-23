@@ -397,7 +397,7 @@ A sequence that is the start of another key of a different command (`g` and `g g
 
 #### Tool keys
 
-The tool letters and digits of the toolbar are now ordinary commands, so they can be rebound, removed or turned into sequences like any other. Their defaults are unchanged. They work while a drawing is open, and not while you type, with a list focused or with a dialog open.
+The tool letters and digits of the toolbar are now ordinary commands, so they can be rebound, removed or turned into sequences like any other. Their defaults are unchanged. They work while a drawing is open, and not while you type, with a list, gallery or graph focused or with a dialog open.
 
 | Command id | Tool | Default keys |
 | --- | --- | --- |

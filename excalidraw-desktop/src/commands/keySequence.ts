@@ -117,6 +117,10 @@ export function parseSequence(
     }
     chords.push(chord);
   }
+  // A lone literal <leader> never expands, so it would be a silently dead key.
+  if (chords.length === 1 && chords[0] === LEADER_TOKEN) {
+    return null;
+  }
   return chords;
 }
 

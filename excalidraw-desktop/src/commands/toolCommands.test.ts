@@ -42,6 +42,8 @@ describe("tool commands", () => {
       expect(c.when).toEqual([
         "drawingOpen",
         "!listFocus",
+        "!galleryFocus",
+        "!graphFocus",
         "!textEditing",
         "!modalOpen",
       ]);
@@ -59,6 +61,8 @@ describe("tool commands", () => {
       (c) =>
         // list.* keys (j, k, r, d...) need listFocus, never canvasFocus
         !c.when?.includes("listFocus") &&
+        !c.when?.includes("galleryFocus") &&
+        !c.when?.includes("graphFocus") &&
         Array.isArray(c.keys.default) &&
         c.keys.default.some((k) => toolKeys.has(k)),
     );

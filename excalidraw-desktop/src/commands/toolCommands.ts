@@ -52,8 +52,15 @@ export const TOOL_COMMANDS: CommandDefinition[] = TOOL_TABLE.map((row) => ({
   category: "Tools",
   keys: { default: row.keys },
   // Not canvasFocus: Excalidraw listened on the document, so tool letters work
-  // with focus on the body (after a dialog closes). A focused list keeps its keys.
-  when: ["drawingOpen", "!listFocus", "!textEditing", "!modalOpen"],
+  // with focus on the body (after a dialog closes). A focused list, gallery or graph keeps its keys.
+  when: [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "!textEditing",
+    "!modalOpen",
+  ],
   repeat: false,
 }));
 

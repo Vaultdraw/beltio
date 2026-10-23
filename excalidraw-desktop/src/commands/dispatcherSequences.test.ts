@@ -266,6 +266,26 @@ describe("dispatcher key sequences", () => {
     expect(short).toHaveBeenCalledTimes(1);
   });
 
+  it("a single chord that starts a sequence runs after the timeout (R and R R)", () => {
+    vi.useFakeTimers();
+    const single = vi.fn();
+    const seq = vi.fn();
+    install({
+      commands: [cmd("t.rect", ["R"]), cmd("t.seq", ["R R"])],
+      handlers: { "t.rect": single, "t.seq": seq },
+    });
+    canvas();
+    letter("r");
+    expect(single).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1001);
+    expect(single).toHaveBeenCalledTimes(1);
+    letter("r");
+    letter("r");
+    expect(seq).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(5000);
+    expect(single).toHaveBeenCalledTimes(1);
+  });
+
   it("timeout_ms = 0 waits for a key", () => {
     vi.useFakeTimers();
     const short = vi.fn();

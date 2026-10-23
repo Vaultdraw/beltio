@@ -45,6 +45,13 @@ export const setKeyView = (view: KeyView | null): void => {
   keyView = view;
 };
 
+/** Clear the view only if it is still `view` (a newer dispatcher keeps its own). */
+export const clearKeyView = (view: KeyView): void => {
+  if (keyView === view) {
+    keyView = null;
+  }
+};
+
 export const getKeyView = (): KeyView | null => keyView;
 
 let interceptor: ((chord: Chord) => boolean) | null = null;
