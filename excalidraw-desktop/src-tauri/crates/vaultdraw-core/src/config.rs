@@ -464,6 +464,102 @@ fn json_to_table(key: &str, fields: &serde_json::Map<String, Json>) -> Result<to
     Ok(table)
 }
 
+/// `keys.labels.<sequence>` addresses one entry of the nested `[keys.labels]` table; the
+/// rest of the key is the sequence, taken verbatim (`<leader> f f`, `g g`) and quoted by
+/// the writer. `split_key` stays one level deep for every other key.
+const LABELS_PREFIX: &str = "keys.labels.";
+
+/// A label change: `Some(text)` sets the entry, `None` removes it.
+struct LabelChange {
+    seq: String,
+    text: Option<String>,
+}
+
+/// Validates a `keys.labels.<seq>` change, or `None` when `key` is not one.
+fn plan_label(key: &str, value: &Json) -> Option<Result<LabelChange>> {
+    let seq = key.strip_prefix(LABELS_PREFIX)?;
+    let bad = |what: &str| err("INVALID_ARGUMENT", format!("Invalid config key \"{key}\": {what}"));
+    if seq.is_empty() || seq.chars().count() > 1024 || seq.chars().any(char::is_control) {
+        return Some(Err(bad("the key sequence is empty, too long or has control characters")));
+    }
+    let text = match value {
+        Json::Null => None,
+        Json::String(s) if !s.trim().is_empty() && s.chars().count() <= 1024 && !s.chars().any(char::is_control) => {
+            Some(s.clone())
+        }
+        _ => return Some(Err(bad("a label must be a non-empty text without control characters"))),
+    };
+    Some(Ok(LabelChange { seq: seq.to_owned(), text }))
+}
+
+/// Sets or removes one `[keys.labels]` entry, creating the table (under an implicit
+/// `[keys]`) on the first label. A removed entry's comments move to the next entry, and a
+/// table left empty and uncommented is dropped along with an empty implicit `[keys]`.
+fn apply_label(doc: &mut toml_edit::DocumentMut, label: &LabelChange, name: &str) -> Result<()> {
+    let not_table = |t: &str| err("INVALID_ARGUMENT", format!("\"{t}\" in {name} is not a table"));
+    let root = doc.as_table_mut();
+    let Some(text) = &label.text else {
+        remove_label(root, &label.seq);
+        return Ok(());
+    };
+    if !root.contains_key("keys") {
+        let mut parent = toml_edit::Table::new();
+        parent.set_implicit(true);
+        root.insert("keys", toml_edit::Item::Table(parent));
+    }
+    let keys = root.get_mut("keys").and_then(toml_edit::Item::as_table_like_mut).ok_or_else(|| not_table("keys"))?;
+    if !keys.contains_key("labels") {
+        keys.insert("labels", toml_edit::Item::Table(toml_edit::Table::new()));
+    }
+    let labels = keys.get_mut("labels").and_then(toml_edit::Item::as_table_like_mut).ok_or_else(|| not_table("keys.labels"))?;
+    let mut new = toml_edit::Value::from(text.as_str());
+    match labels.get_mut(&label.seq) {
+        Some(existing) if existing.is_value() => {
+            if let Some(old) = existing.as_value() {
+                *new.decor_mut() = old.decor().clone();
+            }
+            *existing = toml_edit::Item::Value(new);
+        }
+        Some(_) => return Err(err("INVALID_ARGUMENT", format!("\"keys.labels.{}\" in {name} is a table, not a value", label.seq))),
+        None => {
+            labels.insert(&label.seq, toml_edit::Item::Value(new));
+        }
+    }
+    Ok(())
+}
+
+fn remove_label(root: &mut toml_edit::Table, seq: &str) {
+    let Some(keys) = root.get_mut("keys").and_then(toml_edit::Item::as_table_like_mut) else { return };
+    let Some(labels) = keys.get_mut("labels").and_then(toml_edit::Item::as_table_like_mut) else { return };
+    let Some(comments) = labels.key(seq).map(|k| k.leaf_decor().prefix().and_then(|r| r.as_str()).unwrap_or("").to_owned())
+    else {
+        return;
+    };
+    let next = labels.iter().skip_while(|(k, _)| *k != seq).nth(1).map(|(k, _)| k.to_owned());
+    labels.remove(seq);
+    if let (Some(next), false) = (next, comments.is_empty()) {
+        if let Some(mut k) = labels.key_mut(&next) {
+            let existing = k.leaf_decor().prefix().and_then(|r| r.as_str()).unwrap_or("").to_owned();
+            k.leaf_decor_mut().set_prefix(format!("{comments}{existing}"));
+        }
+    }
+    if !labels.is_empty() {
+        return;
+    }
+    // Only a plain `[keys.labels]` without comments of its own is dropped.
+    let plain = keys.get("labels").and_then(toml_edit::Item::as_table).is_some_and(|t| {
+        let text = |r: Option<&toml_edit::RawString>| r.and_then(|r| r.as_str()).unwrap_or("").to_owned();
+        !text(t.decor().prefix()).contains('#') && !text(t.decor().suffix()).contains('#') && comments.is_empty()
+    });
+    if !plain {
+        return;
+    }
+    keys.remove("labels");
+    if keys.is_empty() && root.get("keys").and_then(toml_edit::Item::as_table).is_some_and(toml_edit::Table::is_implicit) {
+        root.remove("keys");
+    }
+}
+
 /// One validated change: remove the key, set a scalar/array, or set a sub-table.
 enum Planned {
     Remove,
@@ -507,7 +603,12 @@ fn edit_toml(
         .map_err(|e: toml_edit::TomlError| err("CONFIG_INVALID", format!("{name} does not parse: {}", e.message())))?;
     // Validate everything before mutating so a bad change applies nothing.
     let mut planned = Vec::with_capacity(changes.len());
+    let mut labels = Vec::new();
     for change in changes {
+        if let Some(label) = plan_label(&change.key, &change.value) {
+            labels.push(label?);
+            continue;
+        }
         let (table, key) = split_key(&change.key)?;
         let value = match &change.value {
             Json::Null => Planned::Remove,
@@ -566,6 +667,9 @@ fn edit_toml(
                 }
             },
         }
+    }
+    for label in &labels {
+        apply_label(&mut doc, label, name)?;
     }
     let out = doc.to_string();
     if out.len() as u64 > max {
@@ -1469,5 +1573,74 @@ mod tests {
             let w = resolve_dirs_with(env(&[("APPDATA", "/r"), ("LOCALAPPDATA", "/l"), ("XDG_CONFIG_HOME", "/x")]), true, None).unwrap();
             assert_eq!(w, Dirs { config: "/r/Vaultdraw".into(), state: "/l/Vaultdraw".into() });
         }
+    }
+
+    #[test]
+    fn labels_write_a_quoted_key_into_keys_labels() {
+        let out = apply_changes("", &[change("keys.labels.<leader> f f", json!("find file"))]).unwrap();
+        assert_eq!(out, "[keys.labels]\n\"<leader> f f\" = \"find file\"\n");
+        assert_eq!(parse_config(&out).unwrap()["keys"]["labels"]["<leader> f f"], json!("find file"));
+        // Removing the only label drops the table again (and the implicit [keys]).
+        assert_eq!(apply_changes(&out, &[change("keys.labels.<leader> f f", Json::Null)]).unwrap(), "");
+    }
+
+    #[test]
+    fn labels_keep_comments_and_sit_beside_scalar_keys() {
+        let src = "# top\n[keys]\nleader = \"Space\" # mine\n\n[keys.labels]\n# files\n\"<leader> f\" = \"file\" # keep\n\"g g\" = \"top\"\n\n[saving]\nautosave_delay_ms = 500\n";
+        let out = apply_changes(
+            src,
+            &[
+                change("keys.labels.<leader> f", json!("files")),
+                change("keys.labels.<leader> b", json!("buffers")),
+                change("keys.timeout_ms", json!(800)),
+            ],
+        )
+        .unwrap();
+        assert_eq!(
+            out,
+            "# top\n[keys]\nleader = \"Space\" # mine\ntimeout_ms = 800\n\n[keys.labels]\n# files\n\"<leader> f\" = \"files\" # keep\n\"g g\" = \"top\"\n\"<leader> b\" = \"buffers\"\n\n[saving]\nautosave_delay_ms = 500\n"
+        );
+        // Removing the commented entry hands its comment to the next one.
+        let out = apply_changes(&out, &[change("keys.labels.<leader> f", Json::Null)]).unwrap();
+        assert!(out.contains("[keys.labels]\n# files\n\"g g\" = \"top\"\n"), "{out}");
+        // Removing a label that is not there changes nothing.
+        assert_eq!(apply_changes(&out, &[change("keys.labels.nope", Json::Null)]).unwrap(), out);
+    }
+
+    #[test]
+    fn labels_create_the_table_below_an_existing_keys_table() {
+        let out = apply_changes("[keys]\nleader = \"Space\"\n", &[change("keys.labels.g g", json!("top"))]).unwrap();
+        assert_eq!(out, "[keys]\nleader = \"Space\"\n\n[keys.labels]\n\"g g\" = \"top\"\n");
+        let v = parse_config(&out).unwrap();
+        assert_eq!(v["keys"]["leader"], json!("Space"));
+        // [keys] itself stays when it holds other keys.
+        assert_eq!(apply_changes(&out, &[change("keys.labels.g g", Json::Null)]).unwrap(), "[keys]\nleader = \"Space\"\n");
+    }
+
+    #[test]
+    fn labels_reject_bad_input_and_a_non_table_without_partial_writes() {
+        for (key, v) in [
+            ("keys.labels.", json!("x")),
+            ("keys.labels.g g", json!("")),
+            ("keys.labels.g g", json!(3)),
+            ("keys.labels.g g", json!(["a"])),
+            ("keys.labels.g\u{7}", json!("x")),
+        ] {
+            let e = apply_changes("", &[change("keys.timeout_ms", json!(5)), change(key, v.clone())]).unwrap_err();
+            assert_eq!(e.code, "INVALID_ARGUMENT", "{key} {v}");
+        }
+        let e = apply_changes("keys = 1\n", &[change("keys.labels.g g", json!("x"))]).unwrap_err();
+        assert!(e.message.contains("not a table"), "{}", e.message);
+        let e = apply_changes("[keys]\nlabels = 1\n", &[change("keys.labels.g g", json!("x"))]).unwrap_err();
+        assert!(e.message.contains("keys.labels"), "{}", e.message);
+    }
+
+    #[test]
+    fn labels_write_into_an_inline_table_and_vault_settings() {
+        let out = apply_changes("[keys]\nlabels = { \"g g\" = \"top\" }\n", &[change("keys.labels.g h", json!("home"))]).unwrap();
+        let v = parse_config(&out).unwrap();
+        assert_eq!(v["keys"]["labels"], json!({"g g": "top", "g h": "home"}));
+        let vault = apply_toml_changes("", &[change("keys.labels.<leader> f", json!("file"))], "settings.toml", MAX_CONFIG_BYTES).unwrap();
+        assert_eq!(vault, "[keys.labels]\n\"<leader> f\" = \"file\"\n");
     }
 }
