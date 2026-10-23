@@ -27,6 +27,7 @@ export type BuiltinCommandCategory =
   | "Graph"
   | "Formula"
   | "Thumbnails"
+  | "Memory"
   | "Tabs"
   | "Help";
 

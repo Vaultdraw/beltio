@@ -29,6 +29,11 @@ import {
   type HistoryPreferences,
 } from "../history/historySettings";
 import {
+  MEMORY_DEFAULTS,
+  normalizeMemoryPreferences,
+  type MemoryPreferences,
+} from "../memory/memorySettings";
+import {
   TABS_DEFAULTS,
   normalizeTabsPreferences,
   type TabsPreferences,
@@ -242,6 +247,7 @@ interface VaultPreferencesBase {
 export type VaultPreferences = VaultPreferencesBase &
   HistoryPreferences &
   TabsPreferences &
+  MemoryPreferences &
   Record<ToolField, ToolStyle>;
 
 const STORAGE_KEY = "excalidraw-vault-preferences-v1";
@@ -337,6 +343,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   laserLength: DEFAULT_LASER.length,
   ...HISTORY_DEFAULTS,
   ...TABS_DEFAULTS,
+  ...MEMORY_DEFAULTS,
   ...emptyToolStyles(),
 };
 
@@ -688,6 +695,7 @@ export function normalizePreferences(input: unknown): VaultPreferences {
     ),
     ...normalizeHistoryPreferences(parsed as Record<string, unknown>),
     ...normalizeTabsPreferences(parsed as Record<string, unknown>),
+    ...normalizeMemoryPreferences(parsed as Record<string, unknown>),
     ...normalizeToolStyles(parsed as Partial<Record<ToolField, unknown>>),
   };
 }

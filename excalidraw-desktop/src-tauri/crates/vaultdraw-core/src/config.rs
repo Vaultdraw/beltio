@@ -179,6 +179,12 @@ autosave_delay_ms = 500
 # restore = true
 # Undo history kept for background tabs in MB, 0 to 1024 (0 = none)
 # undo_budget_mb = 32
+
+[memory]
+# Free image data of deleted images once no undo or redo step can restore it
+# free_unused_images = true
+# Undo steps kept per drawing, 10 to 10000 (older steps go, with the images only they could restore)
+# undo_steps = 1000
 "##;
 
 /// Serializes every config/state write within the process.

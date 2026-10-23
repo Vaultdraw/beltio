@@ -50,6 +50,7 @@ import { usePens } from "../pens/usePens";
 import { readDrawingStyles } from "../toolDefaults/drawingStyles";
 import { useToolDefaults } from "../toolDefaults/useToolDefaults";
 import { useFormulaCommands } from "../formula/useFormulaCommands";
+import { useMemoryRetention } from "../memory/useMemoryRetention";
 
 import "../theme/excalidrawChrome.css";
 
@@ -226,6 +227,8 @@ const VaultEditorComponent = ({
     apiRef,
     readOnly: readOnly || disabled,
   });
+
+  useMemoryRetention({ apiRef, active: apiReady && !disabled });
 
   const pageMode = usePageMode({
     apiRef,
@@ -477,10 +480,14 @@ const VaultEditorComponent = ({
         appState,
         getOverridesVersion(),
       );
-      const fileChanged =
-        Object.keys(files).length !== Object.keys(fileRefs.current).length ||
-        Object.keys(files).some((id) => files[id] !== fileRefs.current[id]);
+      // A file added or replaced changes the saved scene. One only dropped
+      // from memory (memory.free_unused_images: nothing can bring it back,
+      // and the saved scene never held it) does not: no rewrite for it.
+      const fileChanged = Object.keys(files).some(
+        (id) => files[id] !== fileRefs.current[id],
+      );
       if (signature.current === nextSignature && !fileChanged) {
+        fileRefs.current = files;
         return;
       }
       signature.current = nextSignature;

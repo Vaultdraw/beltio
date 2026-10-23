@@ -1,6 +1,7 @@
 import { pdfImportControls } from "../../../pdfImport/PdfImportSettings";
 
 import { tabsControls } from "../../../tabs/tabsSettingsControls";
+import { memoryControls } from "../../../memory/memorySettingsControls";
 
 import { aboutControls } from "./About";
 import { appearanceControls } from "./Appearance";
@@ -25,6 +26,7 @@ export const SETTING_CONTROLS: SettingControls = {
   ...pageControls,
   ...interfaceControls,
   ...tabsControls,
+  ...memoryControls,
   ...drawingControls,
   ...pensControls,
   ...toolDefaultsControls,

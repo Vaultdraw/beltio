@@ -27,6 +27,7 @@ import {
   type HistoryField,
 } from "../history/historySettings";
 import { TABS_MAPPINGS, type TabsField } from "../tabs/tabsSettings";
+import { MEMORY_MAPPINGS, type MemoryField } from "../memory/memorySettings";
 import { parseChord } from "../commands/keys";
 import { PDF_IMPORT_LIMITS } from "../pdfImport/types";
 import { inRange, LASER_LIMITS } from "../pens/laserSettings";
@@ -229,6 +230,7 @@ type ConfigField =
   | "laserLength"
   | HistoryField
   | TabsField
+  | MemoryField
   | ToolField;
 
 export interface ConfigMapping {
@@ -686,6 +688,7 @@ export const CONFIG_MAPPING: readonly ConfigMapping[] = [
   ...CORE_MAPPING,
   ...HISTORY_MAPPINGS,
   ...TABS_MAPPINGS,
+  ...MEMORY_MAPPINGS,
   ...TOOL_MAPPINGS,
 ];
 
