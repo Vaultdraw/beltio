@@ -759,4 +759,29 @@ describe("settingsSync runtime", () => {
     expect(backend.unlisten).toHaveBeenCalled();
     await expect(openConfigDir()).rejects.toThrow();
   });
+
+  describe("interface.thumbnail_max_elements", () => {
+    it("defaults to 8000 and accepts integers from 100 to 50000", () => {
+      expect(DEFAULT_PREFERENCES.thumbnailMaxElements).toBe(8000);
+      expect(
+        configToPreferences({ interface: { thumbnail_max_elements: 20000 } }),
+      ).toMatchObject({
+        values: { thumbnailMaxElements: 20000 },
+        problems: [],
+      });
+      for (const bad of [99, 50001, 1.5, "big", true]) {
+        expect(
+          configToPreferences({
+            interface: { thumbnail_max_elements: bad },
+          }).problems.map((p) => p.key),
+        ).toEqual(["interface.thumbnail_max_elements"]);
+      }
+      expect(
+        preferencesToConfigChanges(DEFAULT_PREFERENCES, {
+          ...DEFAULT_PREFERENCES,
+          thumbnailMaxElements: 3000,
+        }),
+      ).toEqual([{ key: "interface.thumbnail_max_elements", value: 3000 }]);
+    });
+  });
 });

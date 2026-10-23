@@ -946,6 +946,96 @@ const restoreStickyNotes = (
   }
 };
 
+/**
+ * The per-element step of restoreElements, with its state (duplicate-id set,
+ * lookup maps) in a closure so the sync and the sliced restore share it.
+ */
+const createElementRestorer = (
+  targetElements: readonly ExcalidrawElement[] | undefined | null,
+  existingElements: Readonly<ElementsMapOrArray> | null | undefined,
+  opts?: { deleteInvisibleElements?: boolean },
+) => {
+  // used to detect duplicate top-level element ids
+  const existingIds = new Set<string>();
+  const targetElementsMap = arrayToMap(targetElements || []);
+  const existingElementsMap = existingElements
+    ? arrayToMap(existingElements)
+    : null;
+
+  return (element: ExcalidrawElement, elements: ExcalidrawElement[]) => {
+    // filtering out selection, which is legacy, no longer kept in elements,
+    // and causing issues if retained
+    if (element.type === "selection") {
+      return;
+    }
+    let migratedElement: ExcalidrawElement | null;
+    try {
+      migratedElement = restoreElement(
+        element,
+        targetElementsMap,
+        existingElementsMap,
+        {
+          deleteInvisibleElements: opts?.deleteInvisibleElements,
+        },
+      );
+    } catch (error) {
+      console.error("Error restoring element:", error);
+      migratedElement = null;
+    }
+    if (migratedElement) {
+      const localElement = existingElementsMap?.get(element.id);
+
+      const shouldMarkAsDeleted =
+        opts?.deleteInvisibleElements && isInvisiblySmallElement(element);
+
+      if (shouldMarkAsDeleted) {
+        migratedElement = bumpVersion(migratedElement, localElement?.version);
+      }
+
+      if (shouldMarkAsDeleted) {
+        migratedElement = { ...migratedElement, isDeleted: true };
+      }
+
+      if (existingIds.has(migratedElement.id)) {
+        migratedElement = { ...migratedElement, id: randomId() };
+      }
+      existingIds.add(migratedElement.id);
+
+      elements.push(migratedElement);
+    }
+  };
+};
+
+/**
+ * restoreElements for scenes without binding repair (the thumbnail and export
+ * path), in slices: control goes back through `slicing.yieldFn` whenever a
+ * slice used `budgetMs`, so a large scene never restores as one long task.
+ * Same elements, same order, same result as restoreElements without
+ * `repairBindings`.
+ */
+export const restoreElementsInSlices = async <T extends ExcalidrawElement>(
+  targetElements: readonly T[] | undefined | null,
+  opts: { deleteInvisibleElements?: boolean } | undefined,
+  { budgetMs, yieldFn }: { budgetMs: number; yieldFn: () => Promise<void> },
+): Promise<CombineBrandsIfNeeded<T, OrderedExcalidrawElement>> => {
+  const restoreOne = createElementRestorer(targetElements, null, opts);
+  const source = targetElements || [];
+  const restored: ExcalidrawElement[] = [];
+  let sliceStart = performance.now();
+  for (let i = 0; i < source.length; i++) {
+    restoreOne(source[i], restored);
+    if (performance.now() - sliceStart >= budgetMs) {
+      await yieldFn();
+      sliceStart = performance.now();
+    }
+  }
+  await yieldFn(); // the index sync below is one linear pass
+  return syncInvalidIndices(restored) as CombineBrandsIfNeeded<
+    T,
+    OrderedExcalidrawElement
+  >;
+};
+
 export const restoreElements = <T extends ExcalidrawElement>(
   targetElements: readonly T[] | undefined | null,
   /** used for additional context (e.g. repairing arrow bindings) */
@@ -958,59 +1048,16 @@ export const restoreElements = <T extends ExcalidrawElement>(
       }
     | undefined,
 ): CombineBrandsIfNeeded<T, OrderedExcalidrawElement> => {
-  // used to detect duplicate top-level element ids
-  const existingIds = new Set<string>();
-  const targetElementsMap = arrayToMap(targetElements || []);
-  const existingElementsMap = existingElements
-    ? arrayToMap(existingElements)
-    : null;
-
-  const restoredElements = syncInvalidIndices(
-    (targetElements || []).reduce((elements, element) => {
-      // filtering out selection, which is legacy, no longer kept in elements,
-      // and causing issues if retained
-      if (element.type === "selection") {
-        return elements;
-      }
-      let migratedElement: ExcalidrawElement | null;
-      try {
-        migratedElement = restoreElement(
-          element,
-          targetElementsMap,
-          existingElementsMap,
-          {
-            deleteInvisibleElements: opts?.deleteInvisibleElements,
-          },
-        );
-      } catch (error) {
-        console.error("Error restoring element:", error);
-        migratedElement = null;
-      }
-      if (migratedElement) {
-        const localElement = existingElementsMap?.get(element.id);
-
-        const shouldMarkAsDeleted =
-          opts?.deleteInvisibleElements && isInvisiblySmallElement(element);
-
-        if (shouldMarkAsDeleted) {
-          migratedElement = bumpVersion(migratedElement, localElement?.version);
-        }
-
-        if (shouldMarkAsDeleted) {
-          migratedElement = { ...migratedElement, isDeleted: true };
-        }
-
-        if (existingIds.has(migratedElement.id)) {
-          migratedElement = { ...migratedElement, id: randomId() };
-        }
-        existingIds.add(migratedElement.id);
-
-        elements.push(migratedElement);
-      }
-
-      return elements;
-    }, [] as ExcalidrawElement[]),
+  const restoreOne = createElementRestorer(
+    targetElements,
+    existingElements,
+    opts,
   );
+  const unsynced: ExcalidrawElement[] = [];
+  for (const element of targetElements || []) {
+    restoreOne(element, unsynced);
+  }
+  const restoredElements = syncInvalidIndices(unsynced);
 
   if (!opts?.repairBindings) {
     return restoredElements as CombineBrandsIfNeeded<

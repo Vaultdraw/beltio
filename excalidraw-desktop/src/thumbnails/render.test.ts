@@ -10,6 +10,8 @@ import {
   renderPng,
   renderScenePng,
   renderSceneToSvgDataUrl,
+  setThumbMaxElements,
+  failMarkerVersion,
 } from "./render";
 
 const exportToCanvas = vi.fn();
@@ -138,6 +140,30 @@ describe("renderScenePng", () => {
       reason: "too-large",
     });
     expect(exportToCanvas).not.toHaveBeenCalled();
+  });
+
+  it("takes the element cap live from setThumbMaxElements", async () => {
+    exportsContent();
+    try {
+      setThumbMaxElements(300);
+      expect(await renderScenePng(scene(301))).toEqual({
+        kind: "fail",
+        reason: "too-many",
+      });
+      expect((await renderScenePng(scene(300))).kind).toBe("png");
+      setThumbMaxElements(400);
+      expect((await renderScenePng(scene(301))).kind).toBe("png");
+    } finally {
+      setThumbMaxElements(THUMB_MAX_ELEMENTS);
+    }
+  });
+
+  it("fail markers are versioned by the cap they were written under", () => {
+    expect(failMarkerVersion(2, 300)).not.toBe(failMarkerVersion(2, 400));
+    expect(failMarkerVersion(2, 300)).toBe(failMarkerVersion(2, 300));
+    expect(failMarkerVersion(1, 300)).not.toBe(failMarkerVersion(2, 300));
+    // The cache stores versions as u32.
+    expect(failMarkerVersion(2, 1e9)).toBeLessThan(2 ** 32);
   });
 
   it("renders drawings well over the old 600-element cap, time-sliced", async () => {

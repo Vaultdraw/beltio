@@ -102,7 +102,8 @@ export const createThumbnailService = (
       typeof window === "undefined" ? undefined : window.devicePixelRatio,
     );
   const renderVersion = pngRenderVersion(density);
-  const failVersion = failMarkerVersion(density);
+  // Read per call: the element cap is a live preference.
+  const failVersion = () => failMarkerVersion(density);
   const queue = deps.queue ?? getSharedQueue();
   const schedule = deps.schedule ?? defaultSchedule;
   const maxEntries = deps.maxEntries ?? 20000;
@@ -250,7 +251,7 @@ export const createThumbnailService = (
             );
           } else {
             if (result.reason !== "error") {
-              await store.put(handle, path, revision, null, failVersion);
+              await store.put(handle, path, revision, null, failVersion());
             }
             publish(path, target, THUMB_NONE);
           }
@@ -347,7 +348,12 @@ export const createThumbnailService = (
       return;
     }
     try {
-      const res = await store.lookup(handle, paths, renderVersion, failVersion);
+      const res = await store.lookup(
+        handle,
+        paths,
+        renderVersion,
+        failVersion(),
+      );
       if (!live()) {
         return;
       }

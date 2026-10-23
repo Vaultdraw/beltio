@@ -5,6 +5,7 @@
  * dynamically, when the first job runs.
  */
 import { fitThumb } from "./fit";
+import { DEFAULT_THUMB_MAX_ELEMENTS } from "./limits";
 import { RenderCancelled, sceneSlicing, yieldToMain } from "./slicing";
 import { withStandardColors } from "./standardColors";
 
@@ -23,15 +24,18 @@ export const pngRenderVersion = (density: number) =>
   RENDER_VERSION * 10 + density;
 
 /**
- * Fail-marker generation. Bump it when a cap below changes: only the drawings
- * that failed are retried, cached PNGs stay valid. Generation 0 shared the PNG
- * version; 1 (2026-10-23) retries the "too-many" markers of the 600 cap.
+ * Fail-marker generation. Bump it when the failure rules change. Markers also
+ * carry the element cap they were written under, so raising or lowering
+ * `interface.thumbnail_max_elements` retries only the drawings that failed;
+ * cached PNGs stay valid. Generation 0 shared the PNG version; 1 retried the
+ * "too-many" markers of the 600 cap; 2 (2026-10-24) adds the cap.
  */
-export const FAIL_MARKER_GEN = 1;
+export const FAIL_MARKER_GEN = 2;
 
-/** Version of the fail markers written and honoured at `density`. */
-export const failMarkerVersion = (density: number) =>
-  FAIL_MARKER_GEN * 1000 + pngRenderVersion(density);
+/** Version of the fail markers written and honoured at `density` under `cap`. */
+export const failMarkerVersion = (density: number, cap = maxElements) =>
+  (FAIL_MARKER_GEN * 100000 + Math.min(cap, 99999)) * 100 +
+  pngRenderVersion(density);
 
 // SVG data URLs (history rows, link cards, templates).
 export const THUMBNAIL_MAX_SIZE = 240;
@@ -45,16 +49,16 @@ export const THUMBNAIL_MAX_ELEMENTS = 2000;
 
 // PNG disk cache: box geometry in ./fit.ts.
 /**
- * Element cap for the PNG render. Painting is time-sliced (./slicing.ts) and
- * the linear pre-paint phases (parse, restore, bounds) each run in their own
- * task, so the longest task is the slowest phase, not the whole render.
- * 2026-10-23 (e2e/thumbnailsBlocking.spec.ts, Chromium, quiet machine), the
- * longest task at 4x / 6x CPU throttle: 2000 elements 27 / 42 ms, 2500
- * 30 / 43 ms, 3000 40 / 50 ms, 4000 44 / 69 ms. Low-end is judged at 4-6x
- * against the 50 ms long-task budget, so the cap is 2500 (headroom at 6x).
- * Was 600 before slicing (one-task render: 42 ms at 500 elements at 4x).
+ * Element cap for the PNG render (default and why: ./limits.ts). Painting,
+ * restore and bounds are time-sliced (./slicing.ts), so the longest task is
+ * the JSON parse, not the whole render. A preference sets it live.
  */
-export const THUMB_MAX_ELEMENTS = 2500;
+export const THUMB_MAX_ELEMENTS = DEFAULT_THUMB_MAX_ELEMENTS;
+let maxElements = THUMB_MAX_ELEMENTS;
+export const getThumbMaxElements = () => maxElements;
+export const setThumbMaxElements = (n: number) => {
+  maxElements = n;
+};
 /** Above this the scene is not parsed at all (long task); fail marker. */
 export const THUMB_MAX_JSON_BYTES = 8 * 1024 * 1024;
 /** Above this the embedded images are dropped (placeholders): bounds decode cost. */
@@ -184,7 +188,7 @@ export const renderPng = async (
   cancelled?: () => boolean,
 ): Promise<PngResult> => {
   const scene = parseScene(json, {
-    maxElements: THUMB_MAX_ELEMENTS,
+    maxElements,
     maxJsonChars: THUMB_MAX_JSON_BYTES,
     dropFilesAbove: THUMB_FILES_JSON_BYTES,
   });

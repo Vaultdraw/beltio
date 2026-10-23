@@ -15,6 +15,12 @@ import {
 } from "@excalidraw/excalidraw/data/pageSetup";
 
 import {
+  DEFAULT_THUMB_MAX_ELEMENTS,
+  MAX_THUMB_MAX_ELEMENTS,
+  MIN_THUMB_MAX_ELEMENTS,
+} from "../thumbnails/limits";
+
+import {
   DEFAULT_LINKS_SETTINGS,
   type HoverPreview,
   type LinksSettings,
@@ -179,6 +185,8 @@ interface VaultPreferencesBase {
   showTagChips: boolean;
   /** Show drawing thumbnails (home, search, palette, gallery). */
   thumbnails: boolean;
+  /** Largest drawing (elements) that gets a PNG thumbnail; bigger ones keep the placeholder. */
+  thumbnailMaxElements: number;
   /** Show the icon bar on the left edge. A vault's settings.toml may override it. */
   activityBar: boolean;
   /** Activity bar entry ids in display order; unlisted entries follow in default order. */
@@ -310,6 +318,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   confirmDelete: true,
   showTagChips: true,
   thumbnails: true,
+  thumbnailMaxElements: DEFAULT_THUMB_MAX_ELEMENTS,
   activityBar: true,
   activityBarOrder: [],
   activityBarHidden: [],
@@ -489,6 +498,11 @@ const pick = <T>(
 
 const isNumber = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value);
+const isThumbMaxElements = (value: unknown) =>
+  typeof value === "number" &&
+  Number.isInteger(value) &&
+  value >= MIN_THUMB_MAX_ELEMENTS &&
+  value <= MAX_THUMB_MAX_ELEMENTS;
 const isString = (value: unknown) => typeof value === "string";
 const isBoolean = (value: unknown) => typeof value === "boolean";
 
@@ -606,6 +620,11 @@ export function normalizePreferences(input: unknown): VaultPreferences {
     confirmDelete: pick(parsed.confirmDelete, isBoolean, d.confirmDelete),
     showTagChips: pick(parsed.showTagChips, isBoolean, d.showTagChips),
     thumbnails: pick(parsed.thumbnails, isBoolean, d.thumbnails),
+    thumbnailMaxElements: pick(
+      parsed.thumbnailMaxElements,
+      isThumbMaxElements,
+      d.thumbnailMaxElements,
+    ),
     activityBar: pick(parsed.activityBar, isBoolean, d.activityBar),
     activityBarOrder: pick(
       parsed.activityBarOrder,

@@ -1595,3 +1595,65 @@ describe("restoreLibraryItems creation timestamps", () => {
     },
   );
 });
+
+describe("restoreElementsInSlices", () => {
+  const manual = () => {
+    let yields = 0;
+    return {
+      get yields() {
+        return yields;
+      },
+      slicing: {
+        budgetMs: 0, // every element ends its slice
+        yieldFn: async () => {
+          yields++;
+        },
+      },
+    };
+  };
+
+  it("restores exactly like restoreElements and yields between slices", async () => {
+    const elements = [
+      API.createElement({ type: "rectangle", id: "a", width: 40, height: 30 }),
+      API.createElement({ type: "ellipse", id: "b", width: 50, height: 20 }),
+      // a duplicate id and a tiny element (marked deleted) take their branches
+      API.createElement({ type: "rectangle", id: "a", width: 10, height: 10 }),
+      API.createElement({ type: "rectangle", id: "tiny", width: 0, height: 0 }),
+      {
+        ...API.createElement({ type: "rectangle", id: "sel" }),
+        type: "selection",
+      },
+    ] as any[];
+    const opts = { deleteInvisibleElements: true };
+    const m = manual();
+    const sliced = await restore.restoreElementsInSlices(
+      elements,
+      opts,
+      m.slicing,
+    );
+    const plain = restore.restoreElements(elements, null, opts);
+    expect(sliced.length).toBe(plain.length);
+    // ids of duplicates and bumped nonces are random: compare the rest
+    sliced.forEach((el, i) => {
+      const { id, versionNonce, ...rest } = el;
+      const { id: plainId, versionNonce: plainNonce, ...plainRest } = plain[i];
+      expect(typeof versionNonce).toBe(typeof plainNonce);
+      expect(rest).toEqual(plainRest);
+      expect(id === plainId || (id.length > 1 && plainId.length > 1)).toBe(
+        true,
+      );
+    });
+    expect(new Set(sliced.map((e) => e.id)).size).toBe(sliced.length);
+    expect(m.yields).toBeGreaterThanOrEqual(elements.length);
+  });
+
+  it("handles an empty or missing scene", async () => {
+    const m = manual();
+    expect(
+      await restore.restoreElementsInSlices([], undefined, m.slicing),
+    ).toEqual([]);
+    expect(
+      await restore.restoreElementsInSlices(null, undefined, m.slicing),
+    ).toEqual([]);
+  });
+});

@@ -15,7 +15,11 @@ import {
   applyDarkModeFilter,
 } from "@excalidraw/common";
 
-import { getCommonBounds, getElementAbsoluteCoords } from "@excalidraw/element";
+import {
+  getCommonBounds,
+  getElementAbsoluteCoords,
+  getElementBounds,
+} from "@excalidraw/element";
 
 import {
   getInitializedImageElements,
@@ -241,10 +245,12 @@ export const exportToCanvas = async (
     exportPadding = 0;
   }
 
-  const [minX, minY, width, height] = getCanvasSize(
-    exportingFrame ? [exportingFrame] : getRootElements(elementsForRender),
-    exportPadding,
-  );
+  const boundsElements = exportingFrame
+    ? [exportingFrame]
+    : getRootElements(elementsForRender);
+  const [minX, minY, width, height] = slicing
+    ? await getCanvasSizeInSlices(boundsElements, exportPadding, slicing)
+    : getCanvasSize(boundsElements, exportPadding);
 
   await slicing?.yieldFn();
 
@@ -604,6 +610,40 @@ const getCanvasSize = (
   const height = distance(minY, maxY) + exportPadding * 2;
 
   return [minX, minY, width, height];
+};
+
+/** getCanvasSize with the bounds loop sliced; same numbers. */
+const getCanvasSizeInSlices = async (
+  elements: readonly NonDeletedExcalidrawElement[],
+  exportPadding: number,
+  { budgetMs, yieldFn }: SceneSlicing,
+): Promise<Bounds> => {
+  if (!elements.length) {
+    return getCanvasSize(elements, exportPadding);
+  }
+  const elementsMap = arrayToMap(elements);
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  let sliceStart = performance.now();
+  for (const element of elements) {
+    const [x1, y1, x2, y2] = getElementBounds(element, elementsMap);
+    minX = Math.min(minX, x1);
+    minY = Math.min(minY, y1);
+    maxX = Math.max(maxX, x2);
+    maxY = Math.max(maxY, y2);
+    if (performance.now() - sliceStart >= budgetMs) {
+      await yieldFn();
+      sliceStart = performance.now();
+    }
+  }
+  return [
+    minX,
+    minY,
+    distance(minX, maxX) + exportPadding * 2,
+    distance(minY, maxY) + exportPadding * 2,
+  ];
 };
 
 export const getExportSize = (

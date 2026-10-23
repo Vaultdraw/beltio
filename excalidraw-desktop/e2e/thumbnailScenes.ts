@@ -295,5 +295,7 @@ export const representativeScenes = (): Record<string, string> => {
       },
     ),
     large: scene(500, 1),
+    // Past the old 2,500 cap: restore and bounds yield many times.
+    huge: scene(6000, 1),
   };
 };

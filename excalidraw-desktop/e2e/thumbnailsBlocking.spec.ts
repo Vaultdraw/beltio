@@ -14,7 +14,8 @@ import type { Step0Hooks } from "./thumbnailsStep0";
 // line per case (record.mjs spec ingests `<NAME>_PERF`).
 //
 //   E2E_PERF=1 E2E_FULL=1 E2E_WORKERS=1 npx playwright test e2e/thumbnailsBlocking.spec.ts
-//   (THUMB_BIG=600,2000,2500 big cases; THUMB_RATES=1,4 CPU throttle rates)
+//   (THUMB_BIG=600,2000,2500 big cases; THUMB_RATES=1,4 CPU throttle rates;
+//   THUMB_CAP=12000 raises the element cap for the run)
 //
 // Only `renderScenePng(json, density)` is used, so the spec runs unchanged on
 // older checkouts (before/after comparisons).
@@ -33,6 +34,8 @@ if (BIG_RAW.length === 0 || BIG_RAW.some((v) => !/^[1-9][0-9]*$/.test(v))) {
   );
 }
 const BIG = BIG_RAW.map(Number);
+/** Element cap for the run (THUMB_CAP=12000); default keeps the shipped cap. */
+const CAP = process.env.THUMB_CAP ? Number(process.env.THUMB_CAP) : null;
 /** CPU throttle rates, e.g. THUMB_RATES=4,6 (low-end is judged at 4-6x). */
 const RATES = (process.env.THUMB_RATES ?? "1,4").split(",").map(Number);
 if (RATES.some((r) => !Number.isFinite(r) || r < 1)) {
@@ -76,6 +79,11 @@ test.describe("thumbnail main-thread blocking", () => {
         "CDP throttling is chromium only",
       );
       await openStep0(page, new URL(baseURL!).origin);
+      if (CAP) {
+        await page.evaluate((cap) => {
+          (window as any).__step0.setThumbMaxElements?.(cap);
+        }, CAP);
+      }
       const cdp = rate > 1 ? await page.context().newCDPSession(page) : null;
       await cdp?.send("Emulation.setCPUThrottlingRate", { rate });
       // Warm the editor chunk, fonts and JIT with one throw-away render.

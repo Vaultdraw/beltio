@@ -223,7 +223,7 @@ test.describe("tree changes", () => {
 });
 
 test.describe("render cap", () => {
-  test("a drawing over the element cap shows the placeholder and writes one fail marker", async ({
+  test("a drawing over the element cap shows the placeholder and writes one fail marker, then renders when the cap is raised", async ({
     page,
   }) => {
     const errors = trackErrors(page);
@@ -274,6 +274,14 @@ test.describe("render cap", () => {
     await page.waitForTimeout(500);
     expect((await calls(page)).put).toBe(settled.put);
     expect(await storeSize(page)).toBe(size);
+    // Raising `interface.thumbnail_max_elements` (live) retries it: the
+    // marker was written under the old cap, so the drawing now renders.
+    await page.evaluate(() =>
+      (window as any).__updatePreferences({ thumbnailMaxElements: 20000 }),
+    );
+    await expect(
+      cells(page).filter({ hasText: "Huge" }).locator("img.vault-thumb"),
+    ).toBeVisible({ timeout: 30_000 });
     expect(errors).toEqual([]);
   });
 });

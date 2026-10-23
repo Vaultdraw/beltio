@@ -21,6 +21,11 @@ import {
   isPageSize,
 } from "@excalidraw/excalidraw/data/pageSetup";
 
+import {
+  MAX_THUMB_MAX_ELEMENTS,
+  MIN_THUMB_MAX_ELEMENTS,
+} from "../thumbnails/limits";
+
 import { BUILTIN_COMMANDS, isCommandId } from "../commands/commands";
 import {
   HISTORY_MAPPINGS,
@@ -199,6 +204,7 @@ type ConfigField =
   | "confirmDelete"
   | "showTagChips"
   | "thumbnails"
+  | "thumbnailMaxElements"
   | "activityBar"
   | "pluginsEnabled"
   | "activityBarOrder"
@@ -311,6 +317,15 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "interface.thumbnails",
     expected: "true or false",
     valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "thumbnailMaxElements",
+    key: "interface.thumbnail_max_elements",
+    expected: `an integer between ${MIN_THUMB_MAX_ELEMENTS} and ${MAX_THUMB_MAX_ELEMENTS}`,
+    valid: (v) =>
+      isInt(v) &&
+      (v as number) >= MIN_THUMB_MAX_ELEMENTS &&
+      (v as number) <= MAX_THUMB_MAX_ELEMENTS,
   },
   {
     field: "activityBar",

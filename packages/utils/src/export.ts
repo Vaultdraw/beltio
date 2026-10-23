@@ -11,6 +11,7 @@ import { serializeAsJSON } from "@excalidraw/excalidraw/data/json";
 import {
   restoreAppState,
   restoreElements,
+  restoreElementsInSlices,
 } from "@excalidraw/excalidraw/data/restore";
 import {
   exportToCanvas as _exportToCanvas,
@@ -40,7 +41,7 @@ type ExportOpts = {
   ) => { width: number; height: number; scale?: number };
 };
 
-export const exportToCanvas = ({
+export const exportToCanvas = async ({
   elements,
   appState,
   files,
@@ -54,10 +55,12 @@ export const exportToCanvas = ({
   /** Paint in slices that yield to the event loop (same pixels). */
   slicing?: SceneSlicing;
 }) => {
+  const restoreOpts = { deleteInvisibleElements: true };
+  // Sliced: restore is linear in the scene, so it yields like the paint does.
   const restoredElements = getNonDeletedElements(
-    restoreElements(elements, null, {
-      deleteInvisibleElements: true,
-    }),
+    slicing
+      ? await restoreElementsInSlices(elements, restoreOpts, slicing)
+      : restoreElements(elements, null, restoreOpts),
   );
   const restoredAppState = restoreAppState(appState, null);
 

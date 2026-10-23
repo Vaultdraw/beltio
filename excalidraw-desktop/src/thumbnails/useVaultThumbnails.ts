@@ -13,6 +13,7 @@ import {
   updatePreferences,
 } from "../vault/preferences";
 
+import { setThumbMaxElements } from "./render";
 import { createThumbnailService } from "./service";
 
 import type { VaultRepository } from "../vault/types";
@@ -26,11 +27,15 @@ export interface VaultThumbnails {
   darkInvert: boolean;
 }
 
-type ThumbnailPrefs = { thumbnails: boolean; syncCanvas: boolean };
+type ThumbnailPrefs = {
+  thumbnails: boolean;
+  syncCanvas: boolean;
+  maxElements: number;
+};
 
 const readThumbnailPrefs = (win: Window | null): ThumbnailPrefs => {
-  const { thumbnails, syncCanvas } = getPreferences(win);
-  return { thumbnails, syncCanvas };
+  const { thumbnails, syncCanvas, thumbnailMaxElements } = getPreferences(win);
+  return { thumbnails, syncCanvas, maxElements: thumbnailMaxElements };
 };
 
 /**
@@ -45,7 +50,8 @@ const useThumbnailPrefs = (win: Window | null): ThumbnailPrefs => {
       setPrefs((prev) => {
         const next = readThumbnailPrefs(win);
         return next.thumbnails === prev.thumbnails &&
-          next.syncCanvas === prev.syncCanvas
+          next.syncCanvas === prev.syncCanvas &&
+          next.maxElements === prev.maxElements
           ? prev
           : next;
       });
@@ -68,7 +74,7 @@ export const useVaultThumbnails = ({
   win: Window | null;
   appTheme: string;
 }): VaultThumbnails => {
-  const { thumbnails: prefs, syncCanvas } = useThumbnailPrefs(win);
+  const { thumbnails: prefs, syncCanvas, maxElements } = useThumbnailPrefs(win);
   const [service, setService] = useState<ThumbnailService | null>(null);
   const repoRef = useRef(repository);
   repoRef.current = repository;
@@ -104,6 +110,17 @@ export const useVaultThumbnails = ({
   useEffect(() => {
     service?.setEnabled(prefs);
   }, [service, prefs]);
+
+  // The cap is a live preference: apply it, and re-check the drawings that
+  // were over (or are now over) it. The first run only applies it.
+  const appliedMax = useRef<number | null>(null);
+  useEffect(() => {
+    setThumbMaxElements(maxElements);
+    if (appliedMax.current !== null && appliedMax.current !== maxElements) {
+      service?.invalidate([""]);
+    }
+    appliedMax.current = maxElements;
+  }, [service, maxElements]);
 
   return {
     service: prefs ? service : null,
