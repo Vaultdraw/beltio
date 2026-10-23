@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { loadCatalogue, unitOf } from "./lib/catalogue.mjs";
 import { compare } from "./lib/compare.mjs";
 import { comparisonTable } from "./lib/report.mjs";
+import { parseScenarioList, headScenarioFilter, scenarioNotes } from "./lib/scenarios.mjs";
 import { waitQuiet, loadNote, loadSummary, DEFAULT_QUIET_LOAD, DEFAULT_QUIET_WAIT_S } from "./lib/load.mjs";
 import {
   interleaveOrder, mergeSide, buildAbResult, ensureBaseWorktree, runOnce, gateFailures, needsReproduction, reproduced, consistentShifts, CONFIRM_PAIRS,
@@ -21,6 +22,9 @@ Two sides only; bisect across a batch only AFTER a confirmed regression.
 
   --base <ref>        base commit/branch (a detached worktree is created under <head>/.cache/perf/ab/base-<sha>)
   --head <path>       head worktree (default: this worktree)
+  --scenarios a,b,..  run only these scenarios on the head (default: the scenarios the base's first run reported, so a scenario
+                      added since the base never counts as a regression; the base itself always runs everything it has)
+  --all-scenarios     no filter: the head runs every scenario it has (whole-run CPU time and counts then include head-only scenarios)
   --pairs N           base/head pairs (default 1 = quick perf). When anything is flagged, more pairs run
                       automatically up to ${CONFIRM_PAIRS} (--no-confirm skips that)
   Gate: browser.cpu.thread/process and browser.count.* (CPU time, counts) block from any run. Wall-clock
@@ -42,7 +46,7 @@ Wrap in the build lock: lockf -k .cache/build.lock node excalidraw-desktop/perf/
 const { values: o } = parseArgs({
   options: {
     base: { type: "string" }, head: { type: "string" }, pairs: { type: "string" }, "low-end": { type: "boolean" }, out: { type: "string" },
-    "quiet-load": { type: "string" }, "quiet-wait": { type: "string" }, "require-quiet": { type: "boolean" }, "no-confirm": { type: "boolean" }, "no-reproduce": { type: "boolean" }, help: { type: "boolean", short: "h" },
+    "quiet-load": { type: "string" }, "quiet-wait": { type: "string" }, "require-quiet": { type: "boolean" }, "no-confirm": { type: "boolean" }, "no-reproduce": { type: "boolean" }, scenarios: { type: "string" }, "all-scenarios": { type: "boolean" }, help: { type: "boolean", short: "h" },
   },
 });
 if (o.help || !o.base) { console.log(HELP); process.exit(o.help ? 0 : 1); }
@@ -75,15 +79,26 @@ mkdirSync(scratch, { recursive: true });
 
 const results = { base: [], head: [] };
 const unit = unitOf(catalogue);
+// Head scenario allow-list: --scenarios, else (unless --all-scenarios) what the base's first run reported.
+let headScenarios = o["all-scenarios"] ? undefined : parseScenarioList(o.scenarios);
+let baseScenarios;
 const runPairs = async (from, to, into = results, tag = "") => {
   for (const step of interleaveOrder(to).slice(2 * from)) {
     const out = path.join(scratch, `${tag}${step.side}-${step.index}.json`);
     log(`${step.side} run ${step.index + 1}/${to}`);
-    into[step.side].push(await runOnce({
+    const r = await runOnce({
       runMjs, wtRoot: step.side === "base" ? base.dir : headWt, fixturesDir, out, lowEnd: !!o["low-end"],
       // The first run per side builds its own browser bundle; later ones reuse it.
-      build: step.index === 0, log,
-    }));
+      build: step.index === 0, scenarios: step.side === "head" ? headScenarios : undefined, log,
+    });
+    into[step.side].push(r);
+    if (step.side === "base" && !baseScenarios && r.scenarios?.length) {
+      baseScenarios = r.scenarios;
+      if (!o["all-scenarios"] && !o.scenarios) {
+        headScenarios = headScenarioFilter(baseScenarios);
+        log(`head will run only the base's scenarios: ${headScenarios.join(", ")}`);
+      }
+    }
   }
 };
 let pairsDone = pairs;
@@ -101,7 +116,11 @@ const baseSide = mergeSide(results.base, unit);
 const lnote = loadNote({ ...load, perRun: [...head.perRunLoad, ...baseSide.perRunLoad] });
 const result = buildAbResult({
   template: results.head.at(-1), head, base: baseSide, baseSha: base.sha, pairs: pairsDone, load,
-  notes: [`A/B interleaved: base ${o.base} (${base.sha.slice(0, 10)}) vs head, ${pairsDone} pair(s)`, ...(lnote ? [lnote] : [])],
+  notes: [
+    `A/B interleaved: base ${o.base} (${base.sha.slice(0, 10)}) vs head, ${pairsDone} pair(s)`,
+    ...scenarioNotes({ base: baseScenarios, head: results.head.at(-1)?.scenarios, filtered: !!headScenarios }),
+    ...(lnote ? [lnote] : []),
+  ],
 });
 
 const cmp = compare(result, { metrics: baseSide.metrics }, catalogue);

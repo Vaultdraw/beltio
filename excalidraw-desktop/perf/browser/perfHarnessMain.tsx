@@ -4,6 +4,8 @@ import { createRoot } from "react-dom/client";
 import "../../src/desktop.css";
 import fixturesConfig from "../fixtures.config.json";
 
+import { parseScenarioList } from "../../src/perf/scenarioFilter";
+
 import { HttpVaultRepository } from "./httpVaultRepository";
 
 // Perf harness for Chromium mode: the real VaultApp over an HTTP-served
@@ -18,7 +20,13 @@ w.EXCALIDRAW_ASSET_PATH = `${ownerWindow.location.origin}/`;
 w.__perfMarks = [] as Array<{ name: string; t: number }>;
 // Leak mode (?leak=1): JS heap after a forced GC at every `leak:<label>` mark (read by lib/browser.mjs).
 w.__leakHeap = [] as Array<{ label: string; jsHeapMB: number }>;
-const leakMode = new URLSearchParams(ownerWindow.location.search).has("leak");
+const pageParams = new URLSearchParams(ownerWindow.location.search);
+const leakMode = pageParams.has("leak");
+// ?scenarios=a,b runs only those scenarios (vault-open always runs); ?skip=a,b runs all but those.
+const scenarioFilter = {
+  only: parseScenarioList(pageParams.get("scenarios")),
+  skip: parseScenarioList(pageParams.get("skip")),
+};
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -63,6 +71,7 @@ async function main() {
         });
       }
     },
+    scenarioFilter,
     modes: {
       leak: leakMode,
       leakOnly: new URLSearchParams(ownerWindow.location.search).has("only"),

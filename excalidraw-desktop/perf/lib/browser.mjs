@@ -182,7 +182,18 @@ function longTaskStats(tasks, marks, endT) {
   return { count, totalMs };
 }
 
-async function onePage(browser, { port, mode, timeoutMs, log, leak, leakOnly }) {
+/** Page URL: leak flags plus the scenario filter (?scenarios= allow-list, ?skip= deny-list). */
+export function pageUrl(port, { leak, leakOnly, scenarios, skipScenarios } = {}) {
+  const q = new URLSearchParams();
+  if (leak) q.set("leak", "1");
+  if (leak && leakOnly) q.set("only", "1");
+  if (scenarios?.length) q.set("scenarios", scenarios.join(","));
+  if (skipScenarios?.length) q.set("skip", skipScenarios.join(","));
+  const qs = q.toString();
+  return `http://127.0.0.1:${port}/${qs ? `?${qs}` : ""}`;
+}
+
+async function onePage(browser, { port, mode, timeoutMs, log, leak, leakOnly, scenarios, skipScenarios }) {
   const context = await browser.newContext({
     viewport: { width: 1280, height: 850 },
   });
@@ -221,7 +232,7 @@ async function onePage(browser, { port, mode, timeoutMs, log, leak, leakOnly }) 
     let endMetrics = [];
     let leakHeap = [];
     try {
-      const response = await page.goto(`http://127.0.0.1:${port}/${leak ? `?leak=1${leakOnly ? "&only=1" : ""}` : ""}`);
+      const response = await page.goto(pageUrl(port, { leak, leakOnly, scenarios, skipScenarios }));
       if (!response?.ok()) {
         throw new Error(`perf page not served: HTTP ${response?.status()} (is the perf bundle built?)`);
       }
@@ -308,6 +319,8 @@ export async function runBrowser({
   onRun = () => {},
   leak = false,
   leakOnly = false,
+  scenarios,
+  skipScenarios,
   log = () => {},
 }) {
   const desktop = path.join(wtRoot, "excalidraw-desktop");
@@ -363,7 +376,7 @@ export async function runBrowser({
       // Headless rAF occasionally stalls under heavy machine load: retry a stalled run once.
       for (let attempt = 0; ; attempt++) {
         try {
-          page = await onePage(browser, { port, mode, timeoutMs, log, leak, leakOnly });
+          page = await onePage(browser, { port, mode, timeoutMs, log, leak, leakOnly, scenarios, skipScenarios });
           break;
         } catch (error) {
           if (

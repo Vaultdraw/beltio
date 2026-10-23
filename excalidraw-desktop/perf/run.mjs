@@ -13,6 +13,7 @@ import { aggregate } from "./lib/stats.mjs";
 import { compare, pickBaseline } from "./lib/compare.mjs";
 import { buildPerfApp, reuseBuiltApp, runAppOnce, gitInfo, perfCacheDir, isScreenLocked, isRafStall } from "./lib/app.mjs";
 import { waitQuiet, loadAvg1, loadNote, loadSummary, DEFAULT_QUIET_LOAD, DEFAULT_QUIET_WAIT_S } from "./lib/load.mjs";
+import { parseScenarioList, scenarioNames } from "./lib/scenarios.mjs";
 import { machineInfo, resultTable, comparisonTable, updateBaseline } from "./lib/report.mjs";
 
 const HELP = `Usage: node excalidraw-desktop/perf/run.mjs [options]
@@ -55,6 +56,9 @@ const HELP = `Usage: node excalidraw-desktop/perf/run.mjs [options]
   --foreground           (or PERF_FOREGROUND=1) launch the perf app as a normal foreground app (no accessory/hidden-rendering hardening); default unchanged
   PERF_TYPICAL_GAP_MS=N  (env) typical mode: ms between the warm drawing opens (default 300), e.g. 2000 for a human pace
   PERF_CONFIG_TOML=<f>   (env) config.toml for the perf app's temp config dir (e.g. [interface] thumbnails = false)
+  --scenarios a,b,..     Chromium mode: run only these scenarios (vault-open always runs). Names as in the result's "scenarios"
+                         field: vault-open, tree-expand, search, open, switch, settings, palette, save, pan-zoom, typing
+  --skip-scenarios a,..  Chromium mode: run all scenarios except these. ab.mjs sets --scenarios itself (see its --help)
   --quick                1 run, no warmup, no extra noise runs (harness smoke test)
 
 Recommended merge gate: node excalidraw-desktop/perf/ab.mjs --base <ref> (interleaved base/head A/B in one session; bisect only after a
@@ -69,7 +73,7 @@ const { values: o } = parseArgs({
     "low-end": { type: "boolean" }, runs: { type: "string" }, warmup: { type: "string" }, compare: { type: "string" },
     out: { type: "string" }, "update-baseline": { type: "string" }, "no-build": { type: "boolean" },
     "skip-browser": { type: "boolean" }, "skip-app": { type: "boolean" }, "memory-pressure": { type: "boolean" },
-    "keep-runs": { type: "boolean" }, "quiet-load": { type: "string" }, "quiet-wait": { type: "string" }, "require-quiet": { type: "boolean" }, leak: { type: "boolean" }, "leak-only": { type: "boolean" }, typical: { type: "boolean" }, ablate: { type: "boolean" }, foreground: { type: "boolean" }, quick: { type: "boolean" }, app: { type: "boolean" }, milestone: { type: "boolean" }, help: { type: "boolean", short: "h" },
+    "keep-runs": { type: "boolean" }, "quiet-load": { type: "string" }, "quiet-wait": { type: "string" }, "require-quiet": { type: "boolean" }, leak: { type: "boolean" }, "leak-only": { type: "boolean" }, scenarios: { type: "string" }, "skip-scenarios": { type: "string" }, typical: { type: "boolean" }, ablate: { type: "boolean" }, foreground: { type: "boolean" }, quick: { type: "boolean" }, app: { type: "boolean" }, milestone: { type: "boolean" }, help: { type: "boolean", short: "h" },
   },
 });
 if (o.help) { console.log(HELP); process.exit(0); }
@@ -101,6 +105,7 @@ const errors = [];
 const notes = [];
 const rawApp = [];
 let rawBrowser = [];
+let browserScenarios;
 let git = gitInfo(wtRoot);
 let fixtureHash = createHash("sha256").update(JSON.stringify(config)).digest("hex").slice(0, 12);
 
@@ -218,10 +223,11 @@ if (!skipBrowser) {
       const { ensureVault } = await import(pathToFileURL(path.join(here, "lib", "fixtures.mjs")).href);
       const { vaultDir } = await ensureVault({ cacheDir: fixturesDir, config, log });
       // runBrowser discards its own warmup runs and returns only measured ones.
-      const r = await runBrowser({ mode, runs, warmup, vaultDir, config, wtRoot, build: !o["no-build"], leak: modes.leak, leakOnly: modes.leakOnly, onRun: () => { if (!appTarget) sampleRunLoad(); }, log });
+      const r = await runBrowser({ mode, runs, warmup, vaultDir, config, wtRoot, build: !o["no-build"], leak: modes.leak, leakOnly: modes.leakOnly, scenarios: parseScenarioList(o.scenarios), skipScenarios: parseScenarioList(o["skip-scenarios"]), onRun: () => { if (!appTarget) sampleRunLoad(); }, log });
       for (const e of r.errors ?? []) errors.push(`browser mode: ${e}`);
       rawBrowser = (r.samplesPerRun ?? []).map((run) =>
         Object.fromEntries(Object.entries(run).map(([k, v]) => [k.startsWith("browser.") ? k : `browser.${k}`, v])));
+      browserScenarios = scenarioNames(r.info);
       if (r.info) notes.push(`browser info: ${JSON.stringify(r.info)}`);
     } catch (e) {
       errors.push(`browser mode: ${e.message}`);
@@ -245,6 +251,7 @@ const result = {
   version: 1, mode, createdAt: new Date().toISOString(), git, machine: machineInfo(),
   config: { runs: rawApp.length || rawBrowser.length, warmup, fixtureHash, drawingCount: modes.typical ? 50 : config.drawingCount, ...(variant ? { variant } : {}) },
   load, metrics, raw: { app: rawApp, browser: rawBrowser }, notes, errors,
+  ...(browserScenarios?.length ? { scenarios: browserScenarios } : {}),
   ...(appAborted ? { aborted: { app: appAborted } } : {}),
 };
 

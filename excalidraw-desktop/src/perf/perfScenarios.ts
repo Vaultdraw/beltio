@@ -7,6 +7,7 @@
 import { runLeakScenario } from "./leakScenario";
 import { collectFrames, countLong } from "./perfStats";
 import { refreshRateSamples, runRefreshRateProbe } from "./refreshRate";
+import { scenarioSelected } from "./scenarioFilter";
 import { runTypicalScenarios } from "./typicalScenarios";
 
 import type {
@@ -17,6 +18,7 @@ import type {
 
 import type fixturesConfig from "../../perf/fixtures.config.json";
 import type { PerfKit, PerfModes } from "./perfKit";
+import type { ScenarioFilter } from "./scenarioFilter";
 import type { VaultRepository } from "../vault/types";
 
 export type PerfSamples = Record<string, number[]>;
@@ -33,6 +35,8 @@ export type PerfContext = {
   mark: (name: string) => Promise<void>;
   /** Opt-in modes (leak, typical vault); none in the default gate run. */
   modes?: PerfModes;
+  /** Restrict which scenarios run (the base-vs-head comparison runs only what both sides have). */
+  scenarioFilter?: ScenarioFilter;
   iterations?: Partial<{
     open: number;
     save: number;
@@ -369,6 +373,10 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
   };
 
   const scenario = async (name: string, work: () => Promise<void>) => {
+    if (!scenarioSelected(name, ctx.scenarioFilter)) {
+      log(`scenario ${name} skipped by filter`);
+      return;
+    }
     await ctx.mark(`phase:${name}`);
     log(`scenario ${name}`);
     const started = now();

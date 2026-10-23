@@ -119,8 +119,9 @@ export function linkNodeModules(main, wt) {
 }
 
 /** One `run.mjs --runs 1` invocation (head's runner, pointed at `wtRoot` via PERF_WT_ROOT). */
-export function runOnce({ runMjs, wtRoot, fixturesDir, out, lowEnd, build, log }) {
+export function runOnce({ runMjs, wtRoot, fixturesDir, out, lowEnd, build, scenarios, log }) {
   const args = [runMjs, "--skip-app", "--runs", "1", "--quiet-wait", "0", "--out", out];
+  if (scenarios?.length) args.push("--scenarios", scenarios.join(","));
   if (lowEnd) args.push("--low-end");
   if (!build) args.push("--no-build");
   return new Promise((resolve, reject) => {
