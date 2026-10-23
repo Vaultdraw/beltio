@@ -39,6 +39,8 @@ export interface AppearanceSnapshot {
   syncCanvas: boolean;
   /** Unknown/broken selected theme (Default is used instead). */
   problem: string | null;
+  /** Repo name of a removed built-in the config still selects (Default shown). */
+  removed: string | null;
   /** Stable identity of what is shown (theme content + mode + sync). */
   key: string;
 }
@@ -50,14 +52,17 @@ export const computeAppearance = (
   win: Window | null | undefined,
 ): AppearanceSnapshot => {
   const mode = resolveTheme(prefs.theme, win);
-  const { entry, problem } = resolveSelectedTheme(registry, prefs.colorTheme);
+  const { entry, problem, removed } = resolveSelectedTheme(
+    registry,
+    prefs.colorTheme,
+  );
   const accent = normalizeAccent(prefs.accentColor);
   const variant = applyAccent(entry.theme[mode], accent, mode);
   const syncCanvas = !!prefs.syncCanvas;
   const key = `${entry.source}:${entry.key}:${mode}:${
     syncCanvas ? 1 : 0
   }:${accent}:${JSON.stringify(variant)}`;
-  return { mode, entry, variant, accent, syncCanvas, problem, key };
+  return { mode, entry, variant, accent, syncCanvas, problem, removed, key };
 };
 
 let applied: {

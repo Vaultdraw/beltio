@@ -86,7 +86,7 @@ describe("design tokens over every built-in theme", () => {
   const themes = ALL_BUILTINS;
 
   it("covers all built-ins", () => {
-    expect(themes.length).toBeGreaterThanOrEqual(120);
+    expect(themes.length).toBe(10);
   });
 
   it("keeps on-primary, on-danger, accent text and state tints readable", () => {

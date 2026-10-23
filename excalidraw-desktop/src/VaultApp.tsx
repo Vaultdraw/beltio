@@ -104,6 +104,8 @@ import { ActivityBar } from "./activityBar/ActivityBar";
 import { useActivityBarShown } from "./activityBar/activityBarRegistry";
 import { galleryPanelStore, graphPanelStore } from "./activityBar/panelStores";
 import { getRegisteredHandler } from "./commands/handlerRegistry";
+import { closeInstallDialog } from "./theme/install/installStore";
+import { useThemeInstall } from "./theme/install/useThemeInstall";
 import { GRAPH_COMMAND_IDS } from "./commands/graphCommands";
 import { THUMBNAIL_COMMAND_IDS } from "./commands/thumbnailCommands";
 import { TabStrip } from "./tabs/TabStrip";
@@ -215,6 +217,14 @@ const PluginPanels = lazy(() =>
 const LinksDock = lazy(() =>
   import("./components/links/LinksDock").then((m) => ({
     default: m.LinksDock,
+  })),
+);
+
+// The theme install dialog loads only when a command, Settings or the
+// "no longer built in" notice opens it.
+const ThemeInstallDialog = lazy(() =>
+  import("./components/ThemeInstallDialog").then((m) => ({
+    default: m.ThemeInstallDialog,
   })),
 );
 
@@ -413,6 +423,7 @@ export const VaultApp = ({
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const themeInstallRequest = useThemeInstall();
   // Picked when the modal opens, so an open modal never remounts.
   const SettingsModal = useMemo(
     () =>
@@ -3128,6 +3139,14 @@ export const VaultApp = ({
       {/* After Settings: the warning must stack above it. */}
       <AiHost win={win} />
       <WatchdogHost win={win} />
+      {themeInstallRequest && (
+        <Suspense fallback={null}>
+          <ThemeInstallDialog
+            request={themeInstallRequest}
+            onClose={closeInstallDialog}
+          />
+        </Suspense>
+      )}
 
       {(switcher || palettePick.pick) && (
         <QuickSwitcher

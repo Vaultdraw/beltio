@@ -48,6 +48,7 @@ import {
 import { TAB_COMMANDS } from "./tabCommands";
 import { KEYS_COMMANDS } from "./keysCommands";
 import { LIST_COMMANDS } from "./listCommands";
+import { THEME_COMMANDS } from "./themeCommands";
 import { THUMBNAIL_COMMANDS } from "./thumbnailCommands";
 import { CONFIG_COMMANDS } from "./configCommands";
 import { MEMORY_COMMANDS } from "./memoryCommands";
@@ -682,6 +683,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...WATCHDOG_COMMANDS,
   ...WINDOW_COMMANDS,
   ...CONFIG_COMMANDS,
+  ...THEME_COMMANDS,
   ...HELP_COMMANDS,
   ...SNIPPET_COMMANDS,
   ...LAYOUT_COMMANDS,

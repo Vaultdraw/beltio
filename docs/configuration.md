@@ -28,6 +28,13 @@ canvas_background = "#ffffff" # for new drawings when sync_canvas is off
 accent_color = ""            # "#rrggbb" replaces the theme's primary colour; "" = the theme's own
 snippets = []                # CSS snippets to apply, by file name in snippets/, e.g. ["wide-sidebar"]
 
+[network]
+enabled = true               # master switch: false blocks every download
+allow_themes = true          # theme downloads allowed; leave the line out to be asked
+
+[themes]
+max_install_kb = 64          # largest theme file Install from URL accepts (1 to 256)
+
 [editor]                     # defaults for new elements
 font_family = 5              # 5 Excalifont, 6 Nunito, 8 Comic Shanns, 1 Virgil, 2 Helvetica, 3 Cascadia
 font_size = 20
@@ -327,7 +334,40 @@ sync_canvas = true      # canvas follows the theme too
 
 **One theme per vault:** in Settings → Appearance, switch the scope to **This vault** and pick a theme, mode or accent; it is saved in that vault's `settings.toml` (`[appearance] theme`, `mode`, `accent_color`) and applies when the vault opens. **Appearance: Use the current theme for this vault only** and **Appearance: Use the global theme in this vault** do the same from the palette. Theme files stay in the config folder's `themes/`.
 
-**Built-in themes:** Default, Dracula, Tokyo Night, Catppuccin, Everforest, Gruvbox, Nord, Rosé Pine, Solarized. If `theme` names a theme that doesn't exist, Vaultdraw uses Default and shows a warning.
+**Built-in themes (10):** Default, Dracula, Catppuccin, Solarized, Gruvbox, Tokyo Night, Nord, Kanagawa, Everforest and One Dark. If `theme` names a theme that doesn't exist, Vaultdraw uses Default and shows a warning. If it names one that used to be built in, the warning offers **Install it** (see below).
+
+#### Installing more themes
+
+Over a hundred more palettes, all credited to their authors, live in the [Vaultdraw/themes](https://github.com/Vaultdraw/themes) repo. Install one, or any theme file or repo you trust:
+
+1. Open **Settings → Appearance → Install from URL…** (or run `Themes: Install from URL or GitHub repo` from the command palette).
+2. Allow theme downloads the first time (see "Network" below).
+3. Paste the address of a theme `.json`, or a GitHub repo (`owner/repo`, or a `github.com/owner/repo/tree/<branch>/<folder>` link), and pick a theme from the list.
+4. Confirm. The theme is saved in `themes/<Name>/` with a `source.json` that records where it came from, and **Use it** selects it.
+
+| Command | What it does |
+| --- | --- |
+| `Themes: Install from URL or GitHub repo` | The steps above. |
+| `Themes: Check installed themes for updates` | Re-downloads each installed theme's source and offers **Update** when the file changed. Nothing changes without your click. |
+| `Themes: Remove an installed theme` | Deletes a theme that was installed this way. Themes you added by hand are never listed or touched. |
+
+None has a default key; bind them on the Hotkeys page.
+
+- Only `https` addresses are accepted (plain `http` only for `localhost`). Downloads over `themes.max_install_kb` are refused, and the file is checked as a theme before anything is written.
+- A theme with the same name as an installed one asks: **Replace** or **Keep both**. A theme you added by hand is never overwritten.
+- In the browser build, only direct file addresses work and themes are kept in the browser.
+
+#### Network
+
+Vaultdraw never connects on its own: no update checks, no telemetry. Installing a theme is the one feature that downloads, and it asks first.
+
+| Key | Meaning |
+| --- | --- |
+| `network.enabled` | Master switch, default `true`. `false` blocks every download, whatever else is allowed. **Settings → General → Network access.** |
+| `network.allow_themes` | `true` allows theme downloads, `false` refuses them. Absent (the default) means "not asked yet": the first install shows a popup and **Allow** writes `true`. **Settings → General → Allow downloading themes**; the reset arrow brings the question back. |
+| `themes.max_install_kb` | Largest theme file to accept, 1 to 256, default 64. **Settings → Appearance → Largest theme file.** |
+
+The desktop app checks these keys again in its Rust backend before every request, so a setting you turn off holds even if the interface is out of date.
 
 #### Adding a theme
 
@@ -342,7 +382,7 @@ themes/
 
 The file or folder name is the theme's name: `theme = "Midnight"` selects `Midnight.json`. A theme in `themes/` with the same name as a built-in one replaces it.
 
-Eight built-in themes ship in the startup code (Default, Noctalia, Catppuccin, Dracula, Gruvbox, Nord, Rosé Pine, Tokyo Night). The other built-ins load on demand when selected; the configured theme is loaded before the window is first drawn.
+All ten built-in themes ship in the startup code, so the configured theme is applied before the window is first drawn. Old names still work: `One` selects One Dark and `Everforest Alt` selects Everforest.
 
 A theme needs only three colours per variant (background, text, accent); everything else is derived:
 

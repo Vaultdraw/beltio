@@ -57,7 +57,7 @@ describe("theme registry rules", () => {
     // Noctalia names it "Tokyo-Night"; the old "Tokyo Night" still matches by slug.
     expect(findTheme(reg, "tokyo night")?.key).toBe("Tokyo-Night");
     expect(findTheme(reg, "TOKYO-NIGHT")?.key).toBe("Tokyo-Night");
-    expect(findTheme(reg, "Rose Pine")?.key).toBe("Rosé Pine");
+    expect(findTheme(reg, "gruvbox")?.key).toBe("Gruvbox");
     expect(findTheme(reg, "My-Theme")?.key).toBe("my-theme");
     expect(findTheme(reg, "ocean breeze")?.key).toBe("my-theme");
     expect(findTheme(reg, "nope")).toBeNull();

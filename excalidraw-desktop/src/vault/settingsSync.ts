@@ -128,6 +128,7 @@ import {
   isPageMode,
   isPagePaperTheme,
   isPageSide,
+  isThemeInstallMaxKb,
   isPaperColor,
   isPaperMajorEvery,
   isHintChars,
@@ -294,6 +295,9 @@ export const SETTINGS_STATUS_EVENT = "vault-settings-status";
 
 type ConfigField =
   | "colorTheme"
+  | "networkEnabled"
+  | "networkAllowThemes"
+  | "themeInstallMaxKb"
   | "theme"
   | "syncCanvas"
   | "defaultCanvasBackground"
@@ -433,6 +437,24 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "appearance.theme",
     expected: "a theme name",
     valid: (v) => typeof v === "string" && v.trim().length > 0,
+  },
+  {
+    field: "networkEnabled",
+    key: "network.enabled",
+    expected: "true or false",
+    valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "networkAllowThemes",
+    key: "network.allow_themes",
+    expected: "true or false (leave it out to be asked)",
+    valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "themeInstallMaxKb",
+    key: "themes.max_install_kb",
+    expected: "a whole number of KiB between 1 and 256",
+    valid: isThemeInstallMaxKb,
   },
   {
     field: "theme",

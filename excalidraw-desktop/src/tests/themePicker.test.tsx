@@ -63,8 +63,8 @@ afterEach(() => {
 
 describe("filterThemes", () => {
   it("matches theme names case-insensitively and ignores surrounding blanks", () => {
-    expect(filterThemes(base, "  ROSÉ ").map(themeEntryName)).toEqual([
-      "Rosé Pine",
+    expect(filterThemes(base, "  KANAGAWA ").map(themeEntryName)).toEqual([
+      "Kanagawa",
     ]);
     expect(filterThemes(base, "")).toBe(base);
     expect(filterThemes(base, "zzz")).toEqual([]);

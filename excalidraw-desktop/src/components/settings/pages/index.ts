@@ -16,6 +16,7 @@ import { hotkeysControls } from "./Hotkeys";
 import { historyControls } from "./History";
 import { interfaceControls } from "./Interface";
 import { linksControls } from "./Links";
+import { networkControls } from "./Network";
 import { tagsControls } from "./TagsSettings";
 import { pageControls } from "./Page";
 import { pluginsControls } from "./pluginsEntry";
@@ -30,6 +31,7 @@ import type { SettingControls } from "../SettingsContext";
 /** Every setting's control, keyed by schema id. */
 export const SETTING_CONTROLS: SettingControls = {
   ...generalControls,
+  ...networkControls,
   ...appearanceControls,
   ...pageControls,
   ...interfaceControls,

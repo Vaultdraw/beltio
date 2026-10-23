@@ -198,6 +198,12 @@ interface VaultPreferencesBase {
   theme: VaultTheme;
   /** Colour theme name: a built-in name or a theme in the config themes/ folder. */
   colorTheme: string;
+  /** Master switch for every network use (config `network.enabled`). */
+  networkEnabled: boolean;
+  /** Consent for downloading themes (`network.allow_themes`); undefined = not asked yet. */
+  networkAllowThemes: boolean | undefined;
+  /** Largest theme file to install, in KiB (`themes.max_install_kb`). */
+  themeInstallMaxKb: number;
   /** Make the canvas background, pencil and palette colours follow the theme. */
   syncCanvas: boolean;
   defaultFontFamily: number;
@@ -377,6 +383,9 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   hasPanned: false,
   theme: "system",
   colorTheme: "Default",
+  networkEnabled: true,
+  networkAllowThemes: undefined,
+  themeInstallMaxKb: 64,
   syncCanvas: false,
   defaultFontFamily: DEFAULT_FONT_FAMILY,
   defaultFontSize: 20,
@@ -571,6 +580,9 @@ export const isPagePaperTheme = (value: unknown): value is PagePaperTheme =>
 export const isPageSide = (value: unknown) =>
   value === 0 || (Number.isInteger(value) && inRange(value, PAGE_LIMITS.side));
 
+export const isThemeInstallMaxKb = (v: unknown) =>
+  typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 256;
+
 export const MIN_ZOOM = 50;
 export const MAX_ZOOM = 200;
 
@@ -751,6 +763,17 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       (v) =>
         isNumber(v) && (v as number) >= MIN_ZOOM && (v as number) <= MAX_ZOOM,
       d.zoom,
+    ),
+    networkEnabled: pick(parsed.networkEnabled, isBoolean, d.networkEnabled),
+    networkAllowThemes: pick(
+      parsed.networkAllowThemes,
+      isBoolean,
+      d.networkAllowThemes,
+    ),
+    themeInstallMaxKb: pick(
+      parsed.themeInstallMaxKb,
+      isThemeInstallMaxKb,
+      d.themeInstallMaxKb,
     ),
     confirmDelete: pick(parsed.confirmDelete, isBoolean, d.confirmDelete),
     showTagChips: pick(parsed.showTagChips, isBoolean, d.showTagChips),

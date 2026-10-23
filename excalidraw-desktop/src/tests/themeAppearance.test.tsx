@@ -4,7 +4,6 @@ import {
   render,
   renderHook,
   screen,
-  waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -19,7 +18,6 @@ import {
 import {
   deriveTokens,
   EXCALIDRAW_OVERRIDE_STYLE_ID,
-  loadBuiltinTheme,
 } from "../theme";
 import { resetBuiltinCaches } from "../theme/builtins";
 import {
@@ -276,26 +274,18 @@ describe("useAppearance wiring", () => {
     expect(root().style.getPropertyValue("--vault-bg")).toBe("");
   });
 
-  it("keeps the current look while a lazy theme loads (no Default flash)", async () => {
+  it("shows Default and reports the repo name when the selected theme was removed from the app", () => {
     resetBuiltinCaches();
-    updatePreferences({ theme: "dark", colorTheme: "Dracula" });
+    updatePreferences({ theme: "dark", colorTheme: "Rose Pine Moon" });
     const { result } = renderHook(() => useAppearance(document, window));
-    expect(root().dataset.vaultTheme).toBe("Dracula");
-    const draculaBg = root().style.getPropertyValue("--vault-bg");
-
+    expect(root().dataset.vaultTheme).toBe("Default");
+    expect(result.current.snapshot.removed).toBe("Rose Pine Moon");
     act(() => {
-      updatePreferences({ colorTheme: "Everforest" });
+      updatePreferences({ colorTheme: "Dracula" });
       result.current.refresh();
     });
-    // Chunk not loaded yet: still Dracula, never Default.
     expect(root().dataset.vaultTheme).toBe("Dracula");
-    expect(root().style.getPropertyValue("--vault-bg")).toBe(draculaBg);
-
-    await waitFor(() => expect(root().dataset.vaultTheme).toBe("Everforest"));
-    const everforest = (await loadBuiltinTheme("everforest"))!;
-    expect(root().style.getPropertyValue("--vault-bg")).toBe(
-      deriveTokens(everforest.dark, "dark")["--vault-bg"],
-    );
+    expect(result.current.snapshot.removed).toBeNull();
   });
 
   it("reports an unknown theme and uses Default", () => {

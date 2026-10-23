@@ -1,13 +1,14 @@
 /**
- * Built-in themes: a few bundled, the rest loaded on demand.
+ * Built-in themes: the ten most popular palettes, all in the startup bundle.
+ * Every other theme lives in https://github.com/Vaultdraw/themes and is
+ * installed on demand (see themeInstall/).
  *
  * - builtin-index.json (generated, see builtinIndex.ts) lists every
  *   built-in with its name and preview colours: lists, pickers and the
- *   palette never touch a theme file.
- * - EAGER themes (Default and seven popular Noctalia palettes) are in the
- *   startup bundle. Every other file is its own lazy chunk, fetched by
- *   loadBuiltinTheme() when that theme is selected.
+ *   palette never parse a theme file.
  * - A theme is parsed (parseThemeFile) once, on first use.
+ * - loadBuiltinTheme() stays async so callers did not change when the other
+ *   115 themes moved out of the app (themes-lazy, themes-10).
  */
 
 import INDEX from "./builtin-index.json";
@@ -28,36 +29,34 @@ export type { BuiltinOrigin } from "./builtinIndex";
 export { previewFromTheme, previewFromVariant } from "./preview";
 export type { ThemePreview, ThemePreviewColors } from "./preview";
 
-/** Bundled with the app (keep in sync with EAGER_THEME_IDS). */
-const EAGER: Record<string, unknown> = import.meta.glob(
-  [
-    "./builtin/default.json",
-    "./builtin/noctalia/{noctalia,catppuccin,dracula,gruvbox,nord,rose-pine,tokyo-night}.json",
-  ],
+/** Every bundled theme file (ten). */
+const BUNDLED: Record<string, unknown> = import.meta.glob(
+  ["./builtin/default.json", "./builtin/*/*.json"],
   { eager: true, import: "default" },
 );
 
-/** One lazy chunk per file. */
-const LAZY = import.meta.glob(
-  [
-    "./builtin/**/*.json",
-    "!./builtin/default.json",
-    "!./builtin/noctalia/{noctalia,catppuccin,dracula,gruvbox,nord,rose-pine,tokyo-night}.json",
-  ],
-  { import: "default" },
-) as Record<string, () => Promise<unknown>>;
-
-/** Ids of the bundled built-ins (tests / docs). */
+/** Ids of the bundled built-ins, in picker order after Default (tests / docs). */
 export const EAGER_THEME_IDS = [
   "default",
-  "noctalia",
   "catppuccin",
   "dracula",
+  "everforest",
   "gruvbox",
+  "kanagawa",
   "nord",
-  "rose-pine",
+  "one-dark",
+  "solarized",
   "tokyo-night",
 ] as const;
+
+/**
+ * Names that used to select a bundled theme and now map to another one:
+ * "One" became "One Dark", the old "Everforest Alt" palette is "Everforest".
+ */
+export const BUILTIN_ALIASES: Readonly<Record<string, string>> = {
+  one: "one-dark",
+  "everforest-alt": "everforest",
+};
 
 export interface BuiltinThemeFile {
   id: string;
@@ -105,76 +104,39 @@ export const builtinThemeFiles = (): readonly BuiltinThemeFile[] =>
     path,
   })));
 
-/** Loaded theme JSON by id (lazy ones once fetched). */
-const jsonById = new Map<string, unknown>();
-const loading = new Map<string, Promise<ResolvedTheme | null>>();
 const resolvedCache = new Map<string, ResolvedTheme>();
 
-const availableJson = (id: string): { json: unknown } | null => {
-  if (jsonById.has(id)) {
-    return { json: jsonById.get(id) };
-  }
-  const entry = indexEntry(id);
-  return entry && entry.path in EAGER ? { json: EAGER[entry.path] } : null;
-};
-
-/** True when getBuiltinTheme(id) can answer synchronously. */
+/** True when getBuiltinTheme(id) can answer (every bundled id). */
 export const isBuiltinThemeLoaded = (id: string): boolean =>
-  resolvedCache.has(id) || availableJson(id) !== null;
+  resolvedCache.has(id) || indexEntry(id) !== undefined;
 
-/**
- * Parses (once) and returns one built-in theme by id. Null when the id is
- * unknown or the theme is a lazy one not loaded yet (see loadBuiltinTheme).
- */
+/** Parses (once) and returns one built-in theme by id; null when unknown. */
 export const getBuiltinTheme = (id: string): ResolvedTheme | null => {
   const hit = resolvedCache.get(id);
   if (hit) {
     return hit;
   }
   const entry = indexEntry(id);
-  const source = entry && availableJson(id);
-  if (!entry || !source) {
+  if (!entry || !(entry.path in BUNDLED)) {
     return null;
   }
-  const theme = parseThemeFile(source.json, entry.name);
+  const theme = parseThemeFile(BUNDLED[entry.path], entry.name);
   resolvedCache.set(id, theme);
   return theme;
 };
 
-/** Loads (fetching its chunk if lazy) and parses one built-in; null when unknown. */
-export const loadBuiltinTheme = (id: string): Promise<ResolvedTheme | null> => {
-  if (isBuiltinThemeLoaded(id)) {
-    return Promise.resolve(getBuiltinTheme(id));
-  }
-  const entry = indexEntry(id);
-  const load = entry && LAZY[entry.path];
-  if (!load) {
-    return Promise.resolve(null);
-  }
-  let pending = loading.get(id);
-  if (!pending) {
-    pending = load()
-      .then((json) => {
-        jsonById.set(id, json);
-        return getBuiltinTheme(id);
-      })
-      .finally(() => loading.delete(id));
-    loading.set(id, pending);
-  }
-  return pending;
-};
+/** Async for API stability; the theme is already in the bundle. */
+export const loadBuiltinTheme = (id: string): Promise<ResolvedTheme | null> =>
+  Promise.resolve(getBuiltinTheme(id));
 
 /** Number of built-ins parsed so far (tests / diagnostics). */
 export const parsedBuiltinCount = () => resolvedCache.size;
 
-/**
- * Loads and parses every built-in, Default first. Expensive (fetches 100+
- * chunks): tests and tools only; the app uses previews and loadBuiltinTheme.
- */
+/** Parses every built-in, Default first (tests and tools). */
 export const loadBuiltinThemes = async (): Promise<ResolvedTheme[]> =>
-  (
-    await Promise.all(builtinThemeFiles().map((f) => loadBuiltinTheme(f.id)))
-  ).filter((t): t is ResolvedTheme => t !== null);
+  builtinThemeFiles()
+    .map((f) => getBuiltinTheme(f.id))
+    .filter((t): t is ResolvedTheme => t !== null);
 
 const previewCache = new Map<string, ThemePreview>();
 
@@ -200,10 +162,8 @@ export const builtinThemePreview = (id: string): ThemePreview | null => {
   return preview;
 };
 
-/** Clears every cache, including loaded lazy themes (tests / benchmarks). */
+/** Clears every cache (tests / benchmarks). */
 export const resetBuiltinCaches = () => {
-  jsonById.clear();
-  loading.clear();
   resolvedCache.clear();
   previewCache.clear();
 };

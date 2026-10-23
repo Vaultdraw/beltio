@@ -205,38 +205,45 @@ test("with sync on, a drawing with a dark custom background shows the theme canv
   expect(errors).toEqual([]);
 });
 
-test("a theme outside the startup bundle (Everforest) loads when picked in Settings", async ({
+test("Install from URL in Settings asks once, downloads the theme and applies it", async ({
   page,
 }) => {
   const errors = trackErrors(page);
-  // Only the eight bundled themes ship with the startup code.
-  const fetchedEverforest = () =>
-    page.evaluate(() =>
-      performance
-        .getEntriesByType("resource")
-        .some((e) => /\/everforest[-.]/.test(e.name)),
-    );
-  expect(await fetchedEverforest()).toBe(false);
+  const fixtureRequests: string[] = [];
+  page.on("request", (r) => {
+    if (r.url().includes("/e2e-themes/")) {
+      fixtureRequests.push(r.url());
+    }
+  });
   const defaultBg = await rootVar(page, "--vault-bg");
 
-  const dialog = await openSettings(page);
-  await dialog
-    .getByRole("searchbox", { name: "Search colour themes" })
-    .fill("everforest");
-  await dialog.getByRole("radio", { name: "Everforest", exact: true }).click();
-  await expect(
-    dialog.getByRole("radio", { name: "Everforest", exact: true }),
-  ).toHaveAttribute("aria-checked", "true");
+  const settings = await openSettings(page);
+  await settings.getByRole("button", { name: "Install from URL..." }).click();
+  const install = page.getByTestId("theme-install-dialog");
+  await expect(install.getByTestId("theme-install-consent")).toBeVisible();
+  expect(fixtureRequests).toEqual([]);
+  await install.getByRole("button", { name: "Allow" }).click();
 
-  // The app shows Everforest once its chunk lands.
+  await install
+    .getByLabel("Address or GitHub repo")
+    .fill(`${new URL(page.url()).origin}/e2e-themes/Midnight.json`);
+  await install.getByRole("button", { name: "Look up" }).click();
+  await expect(install.getByText("Midnight", { exact: true })).toBeVisible();
+  await install.getByRole("button", { name: "Install", exact: true }).click();
+  await expect(install.getByTestId("theme-install-done")).toContainText(
+    "Midnight",
+  );
+  await install.getByRole("button", { name: "Use it" }).click();
+
   await expect
     .poll(() =>
       page.evaluate(() => document.documentElement.dataset.vaultTheme),
     )
-    .toBe("Everforest");
+    .toBe("Midnight");
   await expect.poll(() => rootVar(page, "--vault-bg")).not.toBe(defaultBg);
-  const [r, g, b] = hexToRgb(await rootVar(page, "--vault-surface"));
-  await expect.poll(() => islandBackground(page)).toBe(`rgb(${r}, ${g}, ${b})`);
-  expect(await fetchedEverforest()).toBe(true);
+  await expect(
+    settings.getByRole("radio", { name: "Midnight", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+  expect(fixtureRequests).toHaveLength(1);
   expect(errors).toEqual([]);
 });

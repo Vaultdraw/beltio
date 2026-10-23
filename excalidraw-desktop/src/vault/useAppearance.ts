@@ -13,6 +13,9 @@ import {
 } from "react";
 
 import { setCanvasSync, setCanvasThemeSource } from "../editor/canvasSync";
+import { openInstallDialog } from "../theme/install/installStore";
+import { THEMES_REPO } from "../theme/removedThemes";
+import { toastStore } from "../toasts/toastStore";
 import {
   getThemeRegistry,
   isThemeReady,
@@ -42,6 +45,7 @@ export type VaultAppearance = Partial<
 >;
 
 const NO_VAULT_APPEARANCE: VaultAppearance = {};
+const noticed = new Set<string>();
 
 export const useAppearance = (
   doc: Document | null,
@@ -124,6 +128,26 @@ export const useAppearance = (
     setCanvasThemeSource(source);
     setCanvasSync(snapshot.syncCanvas ? source : null);
   }, [doc, snapshot]);
+
+  // The config names a theme that left the app: say so once, offer the install.
+  const removed = snapshot.removed;
+  useEffect(() => {
+    if (removed && !noticed.has(removed)) {
+      noticed.add(removed);
+      toastStore.push({
+        message: `"${removed}" is no longer built in. Showing Default.`,
+        action: {
+          label: "Install it",
+          run: () =>
+            openInstallDialog({
+              mode: "install",
+              input: THEMES_REPO,
+              pick: removed,
+            }),
+        },
+      });
+    }
+  }, [removed]);
 
   return { snapshot, registry, refresh };
 };

@@ -1,7 +1,7 @@
 /**
  * Theme engine public API.
  *
- *   const theme = await loadBuiltinTheme("nord");  // lazy chunk, parsed once
+ *   const theme = await loadBuiltinTheme("nord");  // parsed once
  *   // (getBuiltinTheme(id) answers synchronously once loaded, and for Default)
  *   const variant = theme[mode];
  *   const tokens = deriveTokens(variant, mode);

@@ -25,8 +25,11 @@ import { isTauriAvailable } from "../vault/DesktopVaultRepository";
 import { getSettingsStatus } from "../vault/settingsSync";
 
 import { parseThemeFile, slugify } from "./normalize";
+import { readBrowserInstalledThemes } from "./install/browserStore";
+import { removedThemeName } from "./removedThemes";
 
 import {
+  BUILTIN_ALIASES,
   builtinThemeFiles,
   builtinThemePreview,
   DEFAULT_THEME_ID,
@@ -113,6 +116,12 @@ export interface ResolvedSelection {
   entry: ThemeEntry;
   /** Set when the selected theme is unknown or broken and Default is used. */
   problem: string | null;
+  /**
+   * Repo name of a theme that used to be bundled (not in the app any more,
+   * not in themes/): Default is used, `problem` stays null, and the UI
+   * offers "Install it".
+   */
+  removed: string | null;
 }
 
 const lower = (s: string) => s.trim().toLowerCase();
@@ -329,6 +338,7 @@ export const findTheme = (
     registry.themes.find((e) => lower(e.key) === q) ??
     registry.themes.find((e) => lower(e.name) === q) ??
     registry.themes.find((e) => e.id === slugify(name)) ??
+    registry.themes.find((e) => e.id === BUILTIN_ALIASES[slugify(name)]) ??
     null
   );
 };
@@ -351,9 +361,13 @@ export const resolveSelectedTheme = (
 ): ResolvedSelection => {
   const found = findTheme(registry, selected);
   if (found) {
-    return { entry: found, problem: null };
+    return { entry: found, problem: null, removed: null };
   }
   const fallback = getDefaultEntry(registry);
+  const removed = removedThemeName(selected);
+  if (removed) {
+    return { entry: fallback, problem: null, removed };
+  }
   const broken = registry.fileProblems.find(
     (p) => p.kind === "error" && lower(p.id) === lower(selected),
   );
@@ -362,6 +376,7 @@ export const resolveSelectedTheme = (
     problem: broken
       ? `Theme "${selected}" could not be loaded: ${broken.message}. Using ${fallback.name}.`
       : `Theme "${selected}" was not found in the themes folder. Using ${fallback.name}.`,
+    removed: null,
   };
 };
 
@@ -488,7 +503,11 @@ export const loadThemeRegistry = async (
 ): Promise<ThemeRegistry> => {
   const useTauri = deps.tauri ?? isTauriAvailable(win);
   if (!useTauri) {
-    cached = builtinRegistry("browser");
+    // Browser harness: themes installed from a URL live in localStorage.
+    const stored = readBrowserInstalledThemes(win);
+    cached = stored.length
+      ? buildThemeRegistry(stored, "browser")
+      : builtinRegistry("browser");
     return cached;
   }
   try {
@@ -502,6 +521,22 @@ export const loadThemeRegistry = async (
     };
   }
   return cached;
+};
+
+/**
+ * Loads the registry again and tells the app (THEMES_CHANGED_EVENT), e.g.
+ * after a theme was installed or removed. Returns the new registry.
+ */
+export const reloadThemeRegistry = async (
+  win: Window,
+  deps: ThemeRegistryDeps = {},
+): Promise<ThemeRegistry> => {
+  const registry = await loadThemeRegistry(win, deps);
+  const EventCtor =
+    (win as Window & { CustomEvent?: typeof CustomEvent }).CustomEvent ??
+    CustomEvent;
+  win.dispatchEvent(new EventCtor(THEMES_CHANGED_EVENT, { detail: registry }));
+  return registry;
 };
 
 const touchesThemes = (paths: unknown) =>

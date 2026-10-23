@@ -144,6 +144,32 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
       "file",
     ],
   },
+  {
+    id: "network-enabled",
+    page: "general",
+    label: "Network access",
+    description:
+      "Master switch. Off blocks every download. Vaultdraw never connects in the background; it only connects when you ask.",
+    keywords: [
+      "network",
+      "internet",
+      "offline",
+      "online",
+      "download",
+      "privacy",
+    ],
+    configKey: "network.enabled",
+    heading: "Network",
+  },
+  {
+    id: "network-themes",
+    page: "general",
+    label: "Allow downloading themes",
+    description:
+      "Lets Install theme fetch a theme from the address or GitHub repo you give. Asked once, the first time you install one.",
+    keywords: ["network", "theme", "download", "install", "consent", "allow"],
+    configKey: "network.allow_themes",
+  },
 
   // ---- Appearance ----
   {
@@ -229,6 +255,34 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
       "Your own .css files from the snippets folder, applied after the theme. On screen only: files and exports are unchanged.",
     keywords: ["css", "snippet", "style", "custom", "stylesheet", "tweak"],
     configKey: "appearance.snippets",
+  },
+  {
+    id: "install-theme",
+    page: "appearance",
+    label: "Install Themes",
+    description:
+      "Ten themes are built in. Download more from a URL or a GitHub repo (the Vaultdraw/themes repo has over a hundred), then update or remove them here.",
+    keywords: [
+      "theme",
+      "install",
+      "download",
+      "github",
+      "url",
+      "update",
+      "remove",
+      "uninstall",
+      "repo",
+      "palette",
+    ],
+  },
+  {
+    id: "theme-max-size",
+    page: "appearance",
+    label: "Largest theme file",
+    description:
+      "Downloads bigger than this are refused. Theme files are a few KiB.",
+    keywords: ["theme", "install", "size", "limit", "kib", "download"],
+    configKey: "themes.max_install_kb",
   },
 
   // ---- Page ----

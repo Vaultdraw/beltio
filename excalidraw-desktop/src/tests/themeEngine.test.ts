@@ -171,19 +171,18 @@ describe("built-in themes", () => {
   it("ships the bundled palettes, all hand-authored in both modes", async () => {
     const ids = themes.map((t) => t.id);
     expect(ids[0]).toBe("default");
-    expect(ids.length).toBeGreaterThanOrEqual(100);
+    expect(ids.length).toBe(10);
     expect(new Set(ids).size).toBe(ids.length);
-    // Noctalia's built-ins (MIT) are all present.
+    // The ten bundled themes; the rest live in the Vaultdraw/themes repo.
     for (const id of [
-      "ayu",
       "catppuccin",
       "dracula",
-      "eldritch",
+      "everforest",
       "gruvbox",
       "kanagawa",
-      "noctalia",
       "nord",
-      "rose-pine",
+      "one-dark",
+      "solarized",
       "tokyo-night",
     ]) {
       expect(ids).toContain(id);

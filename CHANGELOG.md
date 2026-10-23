@@ -4,9 +4,15 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### New
+
+- **Install themes.** **Settings → Appearance → Install from URL…** (and the command `Themes: Install from URL or GitHub repo`) downloads a theme file or lists the themes in a GitHub repo, checks the file, and installs it into your `themes/` folder with a record of where it came from. `Themes: Check installed themes for updates` and `Themes: Remove an installed theme` keep them tidy. The Vaultdraw/themes repo has over a hundred more palettes, credited to their authors.
+- **Network consent.** Downloading is off until you allow it: the first install asks once and saves the answer as `network.allow_themes` in `config.toml`. `network.enabled = false` is a master switch, and both are in **Settings → General**. New key `themes.max_install_kb` caps the file size.
+
 ### Changed
 
-- Faster start: only eight built-in colour themes (Default, Noctalia, Catppuccin, Dracula, Gruvbox, Nord, Rosé Pine, Tokyo Night) ship in the startup code. The other built-ins load the moment you pick one, and a configured one loads before the first paint, so there is no flash. The theme code read at startup shrinks from 210 KB to 67 KB.
+- Ten built-in themes instead of 123: Default, Dracula, Catppuccin, Solarized, Gruvbox, Tokyo Night, Nord, Kanagawa, Everforest and One Dark. The rest moved to the Vaultdraw/themes repo; a `config.toml` that still names one shows Default, with a notice and an **Install it** button. `One` and `Everforest Alt` still select One Dark and Everforest.
+- Faster start: every built-in theme is in the startup code, and there is no lazy theme loading any more.
 
 ## [0.2.0] - 2026-10-28
 

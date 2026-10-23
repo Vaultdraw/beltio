@@ -3,14 +3,21 @@ import { useState } from "react";
 import { getSnippetSource } from "../../../snippets/store";
 import { resolveAccent } from "../../../theme/accent";
 import { openThemesDir } from "../../../theme/registry";
-import { resolveTheme } from "../../../vault/preferences";
+import { openInstallDialog } from "../../../theme/install/installStore";
+import {
+  removedNotice,
+  THEMES_REPO,
+  THEMES_REPO_URL,
+} from "../../../theme/removedThemes";
+import { resolveTheme, updatePreferences } from "../../../vault/preferences";
+import { usePreference } from "../usePreference";
 import { IconFolder } from "../../Icons";
 import { ThemePicker } from "../../ThemePicker";
 import { accentSwatches } from "../accentSwatches";
 import { SettingRow } from "../SettingRow";
 import { useSettings, type SettingControls } from "../SettingsContext";
 
-import { ColorSwatches, Segmented, Switch } from "./controls";
+import { ColorSwatches, Segmented, Stepper, Switch } from "./controls";
 import { useCanvasTheme } from "./useCanvasTheme";
 import { PaperSetting } from "./PaperSetting";
 import { SnippetsSetting } from "./Snippets";
@@ -262,6 +269,73 @@ const ThemesFolderSetting = () => {
   );
 };
 
+const InstallThemeSetting = () => {
+  const removed = useSettings().selection.removed;
+  return (
+    <SettingRow
+      id="install-theme"
+      testId="settings-install-theme"
+      details={
+        removed && (
+          <div className="vault-theme-problem" role="status">
+            {removedNotice(removed)}{" "}
+            <a href={THEMES_REPO_URL} target="_blank" rel="noreferrer">
+              {THEMES_REPO}
+            </a>
+          </div>
+        )
+      }
+    >
+      <div className="vault-config-actions">
+        <button
+          type="button"
+          className="vault-btn vault-btn--sm"
+          onClick={() =>
+            openInstallDialog(
+              removed
+                ? { mode: "install", input: THEMES_REPO, pick: removed }
+                : { mode: "install" },
+            )
+          }
+        >
+          {removed ? `Install ${removed}` : "Install from URL..."}
+        </button>
+        <button
+          type="button"
+          className="vault-btn vault-btn--sm"
+          onClick={() => openInstallDialog({ mode: "update" })}
+        >
+          Update
+        </button>
+        <button
+          type="button"
+          className="vault-btn vault-btn--sm"
+          onClick={() => openInstallDialog({ mode: "uninstall" })}
+        >
+          Remove...
+        </button>
+      </div>
+    </SettingRow>
+  );
+};
+
+const ThemeMaxSizeSetting = () => {
+  const kb = usePreference("themeInstallMaxKb");
+  return (
+    <SettingRow id="theme-max-size">
+      <Stepper
+        label="Largest theme file"
+        unit="KiB"
+        min={8}
+        max={256}
+        step={8}
+        value={kb}
+        onChange={(next) => updatePreferences({ themeInstallMaxKb: next })}
+      />
+    </SettingRow>
+  );
+};
+
 export const appearanceControls: SettingControls = {
   mode: { Component: ModeSetting },
   "colour-theme": { Component: ColourThemeSetting },
@@ -269,6 +343,8 @@ export const appearanceControls: SettingControls = {
   "accent-colour": { Component: AccentSetting },
   "canvas-background": { Component: CanvasBackgroundSetting },
   paper: { Component: PaperSetting },
+  "install-theme": { Component: InstallThemeSetting },
+  "theme-max-size": { Component: ThemeMaxSizeSetting },
   "themes-folder": {
     Component: ThemesFolderSetting,
     available: (ctx) => ctx.registry.mode === "tauri",
