@@ -43,4 +43,12 @@ describe("scheduleIdle", () => {
     scheduleIdle({ setTimeout: st, clearTimeout: vi.fn() } as never, () => {});
     expect(st).toHaveBeenCalledWith(expect.any(Function), 50);
   });
+
+  it("keeps a fallback delay of 0 (not the 50 ms default)", () => {
+    const st = vi.fn(() => 1);
+    scheduleIdle({ setTimeout: st, clearTimeout: vi.fn() } as never, () => {}, {
+      fallbackMs: 0,
+    });
+    expect(st).toHaveBeenCalledWith(expect.any(Function), 0);
+  });
 });
