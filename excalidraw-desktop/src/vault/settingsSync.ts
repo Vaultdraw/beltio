@@ -33,7 +33,6 @@ import {
 } from "../history/historySettings";
 import { TABS_MAPPINGS, type TabsField } from "../tabs/tabsSettings";
 import { MEMORY_MAPPINGS, type MemoryField } from "../memory/memorySettings";
-import { parseChord } from "../commands/keys";
 import { LEADER_TOKEN, parseSequence } from "../commands/keySequence";
 import {
   KEYS_MAPPINGS,
