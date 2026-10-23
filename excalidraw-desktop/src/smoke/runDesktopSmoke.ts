@@ -1921,8 +1921,9 @@ export async function runDesktopSmoke(): Promise<void> {
           }`,
         );
       }
-      // Leave the drawing as it was: images cannot be added to the library, so a
-      // leftover image would make the later "select all, add to library" step fail.
+      // Leave the drawing as it was: images can go into the library (the item
+      // embeds its files), but a leftover image would be added to the item the
+      // later library smoke saves from the whole drawing and change its contents.
       // The inserted image is the selection; delete it and save.
       doc.dispatchEvent(
         new win.KeyboardEvent("keydown", {
