@@ -483,3 +483,32 @@ fn cap_defaults_and_follows_a_valid_setting_only() {
     vt.set_cap_mb(8);
     assert_eq!(vt.cap.load(Relaxed), 8 * 1024 * 1024);
 }
+
+#[cfg(unix)]
+#[test]
+fn write_atomic_never_follows_a_planted_temp_symlink() {
+    let dir = tempdir().unwrap();
+    let victim = dir.path().join("victim.txt");
+    fs::write(&victim, b"keep me").unwrap();
+    let out = dir.path().join("sub");
+    fs::create_dir_all(&out).unwrap();
+    // The names the old code used (.<pid>-<n>.tmp) are all symlinks to the victim.
+    for n in 0..64 {
+        std::os::unix::fs::symlink(&victim, out.join(format!(".{}-{n}.tmp", std::process::id()))).unwrap();
+    }
+    let dest = out.join("a.png");
+    store::write_atomic(&dest, PNG).unwrap();
+    assert_eq!(fs::read(&dest).unwrap(), PNG);
+    assert_eq!(fs::read(&victim).unwrap(), b"keep me");
+}
+
+#[test]
+fn write_atomic_temp_names_differ_and_leave_nothing_behind() {
+    assert_ne!(store::temp_name(), store::temp_name());
+    let dir = tempdir().unwrap();
+    let dest = dir.path().join("x").join("a.png");
+    store::write_atomic(&dest, PNG).unwrap();
+    store::write_atomic(&dest, PNG).unwrap();
+    let names: Vec<_> = fs::read_dir(dest.parent().unwrap()).unwrap().map(|e| e.unwrap().file_name()).collect();
+    assert_eq!(names, vec![std::ffi::OsString::from("a.png")]);
+}

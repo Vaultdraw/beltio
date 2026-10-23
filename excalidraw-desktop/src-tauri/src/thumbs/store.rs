@@ -80,14 +80,37 @@ pub(super) fn validate_body(kind: Kind, body: &[u8]) -> Result<()> {
 
 static TMP_ID: AtomicU64 = AtomicU64::new(0);
 
+/// A temp name that cannot be guessed: process id, a counter and 64 random bits.
+pub(super) fn temp_name() -> String {
+    use std::hash::{BuildHasher, Hasher};
+    let mut h = std::collections::hash_map::RandomState::new().build_hasher();
+    h.write_u64(TMP_ID.load(Ordering::Relaxed));
+    format!(".{}-{}-{:016x}.tmp", std::process::id(), TMP_ID.fetch_add(1, Ordering::Relaxed), h.finish())
+}
+
+/// Create a new file at an unused temp name. `create_new` fails on anything already there
+/// (including a symlink planted at that name) instead of following it.
+fn create_temp(dir: &Path) -> std::io::Result<(PathBuf, fs::File)> {
+    let mut last = None;
+    for _ in 0..8 {
+        let tmp = dir.join(temp_name());
+        match fs::OpenOptions::new().write(true).create_new(true).open(&tmp) {
+            Ok(f) => return Ok((tmp, f)),
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => last = Some(e),
+            Err(e) => return Err(e),
+        }
+    }
+    Err(last.unwrap_or_else(|| std::io::Error::from(std::io::ErrorKind::AlreadyExists)))
+}
+
 /// Write `bytes` to `dest` through a sibling temp file + rename (never leaves a partial file).
 pub(super) fn write_atomic(dest: &Path, bytes: &[u8]) -> Result<()> {
     let dir = dest.parent().ok_or_else(|| err("INTERNAL", "Thumbnail path has no parent"))?;
     fs::create_dir_all(dir).map_err(ioerr)?;
-    let tmp = dir.join(format!(".{}-{}.tmp", std::process::id(), TMP_ID.fetch_add(1, Ordering::Relaxed)));
+    let (tmp, mut f) = create_temp(dir).map_err(ioerr)?;
     let res = (|| {
-        let mut f = fs::File::create(&tmp)?;
         f.write_all(bytes)?;
+        drop(f);
         fs::rename(&tmp, dest)
     })();
     if let Err(e) = res {
