@@ -338,7 +338,7 @@ Keys are stored in a canonical form: `<C-x>` becomes `Ctrl+X` and letters are up
 
 All six reload live: save the file and the next key uses the new values. A half-typed sequence is dropped on reload. A bad value uses its default and shows a warning; an unknown key in `[keys]` is ignored with a warning.
 
-`[keys.labels]` maps a sequence to a group name for the popup, for example `"<leader> f" = "file"`. Without a label a group shows `+N more`. It is edited by hand only: Settings never writes `[keys]` or `[keys.labels]`. A label with an invalid sequence or an empty text is ignored with a warning.
+`[keys.labels]` maps a sequence to a group name for the popup, for example `"<leader> f" = "file"`. Without a label a group shows `+N more`. Edit it by hand or in Settings → Hotkeys → Key group names (add, rename, remove; **Settings: Hotkeys** in the palette opens it). Settings changes only the lines you edit and keeps your comments and order. A label with an invalid sequence or an empty text is ignored with a warning.
 
 #### How keys behave
 
@@ -391,7 +391,7 @@ In **Settings → Hotkeys**, the **Sequence** button next to **+** records one:
 2. Type the chords, one after another. The page shows them as you go.
 3. **Enter** saves. **Backspace** removes the last chord, **Esc** cancels.
 
-The recorder saves the physical keys you pressed and adds the sequence to the command's keys. Enter and Escape control the recorder, so they cannot be part of a recorded sequence; write those by hand (`<CR>`, `<Esc>`). `<leader>` and groups are hand-edited too.
+The recorder saves the physical keys you pressed and adds the sequence to the command's keys. Enter and Escape control the recorder, so they cannot be part of a recorded sequence; write those by hand (`<CR>`, `<Esc>`). The `<leader>` key is hand-edited; group names have their own section on the same page.
 
 A sequence that is the start of another key of a different command (`g` and `g g`) is flagged as a `prefix` conflict: a warning in red, never a refusal. The longer sequence wins. A sequence that begins with a key Excalidraw uses is flagged the same way as a single chord.
 
