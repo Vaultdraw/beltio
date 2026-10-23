@@ -43,15 +43,27 @@ export const trackErrors = (page: Page) => {
   return errors;
 };
 
-/** Waits for the freshly loaded app, opening the (fake) vault if it asks. */
+/**
+ * Waits for the freshly loaded app and lets it into the (fake) vault.
+ *
+ * The app reopens the last vault by itself right after mount, so the first
+ * frames show the onboarding button and then swap it for the navigator. Never
+ * "see the button, then click it": the button can vanish in between, and the
+ * click then waits for it until the test times out. Wait for the state instead:
+ * the navigator is there, or the onboarding button can be clicked.
+ */
 const enterVault = async (page: Page) => {
   const onboarding = page.getByRole("button", { name: /Open Vault Folder/ });
   const navigator = page.getByLabel("Vault File Navigator");
-  await expect(onboarding.or(navigator).first()).toBeVisible();
-  if (await onboarding.isVisible()) {
-    await onboarding.click();
-  }
-  await expect(page.getByLabel("Vault File Navigator")).toBeVisible();
+  await expect(async () => {
+    if (await navigator.isVisible()) {
+      return;
+    }
+    // Fails (and is polled again) while the page is still loading or when the
+    // button vanished because the vault opened by itself; one click is enough.
+    await onboarding.click({ timeout: 1000 });
+  }).toPass({ timeout: 30_000 });
+  await expect(navigator).toBeVisible();
 };
 
 export const openVault = async (page: Page, query = "") => {
