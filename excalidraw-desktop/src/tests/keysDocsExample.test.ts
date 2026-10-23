@@ -81,7 +81,7 @@ describe("docs/configuration.md Vim-style example", () => {
     expect(Object.keys(values.hotkeys).length).toBeGreaterThan(5);
     expect(values.hotkeys["list.first"]).toEqual(["G G", "Home"]);
     expect(values.hotkeys["palette.files"]).toContain("<leader> F F");
-    expect(values.keysLabels["<leader> F"]).toBe("file");
+    expect(values.keysLabels["<leader> f"]).toBe("file");
   });
 
   it("uses only registered command ids", () => {

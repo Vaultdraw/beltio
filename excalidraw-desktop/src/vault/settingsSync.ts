@@ -901,6 +901,17 @@ export function preferencesToConfigChanges(
       changes.push({ key: `hotkeys.${id}`, value: now ?? null });
     }
   }
+  // [keys.labels]: one change per sequence; null deletes the line.
+  for (const seq of new Set([
+    ...Object.keys(prev.keysLabels),
+    ...Object.keys(next.keysLabels),
+  ])) {
+    const was = prev.keysLabels[seq];
+    const now = next.keysLabels[seq];
+    if (was !== now) {
+      changes.push({ key: `keys.labels.${seq}`, value: now ?? null });
+    }
+  }
   // [plugin.<id>]: one change per plugin; null deletes its table.
   changes.push(
     ...pluginSettingsChanges(prev.pluginSettings, next.pluginSettings),
@@ -959,7 +970,9 @@ const configSlice = (prefs: PreferencesSnapshot) => ({
   ),
   // sorted: the table's order in the file must not count as a change
   hotkeys: Object.entries(prefs.hotkeys).sort(([a], [b]) => (a < b ? -1 : 1)),
-  keysLabels: prefs.keysLabels,
+  keysLabels: Object.entries(prefs.keysLabels).sort(([a], [b]) =>
+    a < b ? -1 : 1,
+  ),
   pluginSettings: sortedPluginSettings(prefs.pluginSettings),
 });
 

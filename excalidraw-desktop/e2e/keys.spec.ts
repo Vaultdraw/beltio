@@ -73,3 +73,35 @@ test("a recorded key sequence shows the which-key popup and picks a tool", async
   await expect.poll(() => toolActive(page, "rectangle")).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test("Settings names a key group from the Hotkeys page", async ({ page }) => {
+  const errors = trackErrors(page);
+  await openVault(page);
+  await page
+    .getByLabel("Vault File Navigator")
+    .getByRole("button", { name: "Settings" })
+    .click();
+  await expect(page.locator(".vault-settings-modal")).toBeVisible();
+  await page.getByRole("tab", { name: "Hotkeys" }).click();
+
+  const labels = page.getByTestId("key-labels");
+  await labels.getByLabel("Key sequence", { exact: true }).fill("Nope+x");
+  await labels.getByLabel("Name of the group", { exact: true }).fill("bad");
+  await labels.getByRole("button", { name: "Add name" }).click();
+  await expect(labels.getByText("Not a key sequence")).toBeVisible();
+
+  await labels.getByLabel("Key sequence", { exact: true }).fill("<leader> f");
+  await labels.getByLabel("Name of the group", { exact: true }).fill("file");
+  await labels.getByRole("button", { name: "Add name" }).click();
+  await expect(
+    labels.getByLabel("Name for <leader> f", { exact: true }),
+  ).toHaveValue("file");
+
+  await labels
+    .getByRole("button", { name: "Remove name for <leader> f" })
+    .click();
+  await expect(
+    labels.getByLabel("Name for <leader> f", { exact: true }),
+  ).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

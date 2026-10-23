@@ -42,7 +42,7 @@ export interface KeysPreferences {
   keysWhichKeyDelayMs: number;
   /** keys.which_key_position */
   keysWhichKeyPosition: WhichKeyPosition;
-  /** `[keys.labels]`: canonical sequence -> group label. Hand-edited only. */
+  /** `[keys.labels]`: sequence as written in the file -> group label. */
   keysLabels: Record<string, string>;
 }
 
@@ -248,8 +248,35 @@ export function parseKeysExtras(table: unknown): {
         ),
       );
     } else {
-      labels[chords.join(" ")] = label;
+      // Keyed as written, so Settings can rewrite or remove the exact line;
+      // `resolveLabels` parses each key again.
+      labels[seq] = label;
     }
   }
   return { labels, problems };
+}
+
+/** Longest label text Settings writes (the writer allows 1024). */
+export const KEY_LABEL_MAX = 80;
+
+/**
+ * Checks a new label's sequence and text for the Settings editor. Returns the
+ * trimmed pair, or the reason it was refused.
+ */
+export function checkKeyLabel(
+  sequence: string,
+  text: string,
+): { sequence: string; text: string } | { error: string } {
+  const seq = sequence.trim().replace(/\s+/g, " ");
+  const label = text.trim();
+  if (!seq || !parseSequence(seq, null, LEADER_TOKEN)) {
+    return { error: 'Not a key sequence. Try "<leader> f" or "g g".' };
+  }
+  if (!label) {
+    return { error: "Give the group a name." };
+  }
+  if (label.length > KEY_LABEL_MAX) {
+    return { error: `Keep the name under ${KEY_LABEL_MAX} characters.` };
+  }
+  return { sequence: seq, text: label };
 }

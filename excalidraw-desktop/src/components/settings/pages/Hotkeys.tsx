@@ -54,6 +54,7 @@ import {
 } from "./hotkeysView";
 
 import { KeyCaps } from "./KeyCaps";
+import { KeyLabels } from "./KeyLabels";
 import { stepRecorder } from "./sequenceRecorder";
 
 import "./Hotkeys.css";
@@ -84,7 +85,7 @@ const HotkeysPage = () => {
   const win = ctxWin ?? (typeof window !== "undefined" ? window : null);
   const platform = useMemo(() => detectPlatform(win), [win]);
   const overrides = useHotkeyOverrides(win);
-  const { leader } = useKeyOptions(win);
+  const { leader, labels } = useKeyOptions(win);
 
   const [text, setText] = useState("");
   const [chordFilter, setChordFilter] = useState<Chord | null>(null);
@@ -616,6 +617,8 @@ const HotkeysPage = () => {
           )}
         </section>
       )}
+
+      <KeyLabels labels={labels} win={win} />
 
       {settingsStatus.mode === "tauri" && (
         <div className="vault-hotkeys__footer">

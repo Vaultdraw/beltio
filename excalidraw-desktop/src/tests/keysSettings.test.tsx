@@ -6,6 +6,7 @@ import {
   DEFAULT_KEY_SETTINGS,
   KEYS_DEFAULTS,
   KEYS_FIELDS,
+  checkKeyLabel,
   normalizeKeysPreferences,
   toKeySettings,
 } from "../commands/keySettings";
@@ -157,14 +158,14 @@ describe("[keys] parsing", () => {
 });
 
 describe("[keys.labels]", () => {
-  it("keeps valid sequences with their label, canonical", () => {
+  it("keeps valid sequences with their label, as written", () => {
     const { values, problems } = prefsOf({
       labels: { "<leader> f": "file", "g g": "top" },
     });
     expect(problems).toEqual([]);
     expect(values.keysLabels).toEqual({
-      "<leader> F": "file",
-      "G G": "top",
+      "<leader> f": "file",
+      "g g": "top",
     });
   });
 
@@ -172,7 +173,7 @@ describe("[keys.labels]", () => {
     const { values, problems } = prefsOf({
       labels: { "<leader> f": "file", "Nope+x": "bad", "g h": 3, "g j": "" },
     });
-    expect(values.keysLabels).toEqual({ "<leader> F": "file" });
+    expect(values.keysLabels).toEqual({ "<leader> f": "file" });
     expect(problems.map((p) => p.key)).toEqual([
       "keys.labels.Nope+x",
       "keys.labels.g h",
@@ -189,18 +190,35 @@ describe("[keys.labels]", () => {
 });
 
 describe("[keys] round trip", () => {
-  it("emits one change per changed option, none for labels or defaults", () => {
+  it("emits one change per changed option and per changed label", () => {
     const next = {
       ...DEFAULT_PREFERENCES,
       keysLeader: "Space",
       keysWhichKeyPosition: "center" as const,
-      keysLabels: { "<leader> F": "file" },
+      keysLabels: { "<leader> f": "file" },
     };
     expect(preferencesToConfigChanges(DEFAULT_PREFERENCES, next)).toEqual([
       { key: "keys.leader", value: "Space" },
       { key: "keys.which_key_position", value: "center" },
+      { key: "keys.labels.<leader> f", value: "file" },
     ]);
     expect(preferencesToConfigChanges(next, next)).toEqual([]);
+  });
+
+  it("labels: set, rename and remove become keys.labels.<seq> changes", () => {
+    const base = {
+      ...DEFAULT_PREFERENCES,
+      keysLabels: { "g g": "top", "<leader> f": "file" },
+    };
+    const next = {
+      ...base,
+      keysLabels: { "<leader> f": "files", "g h": "home" },
+    };
+    expect(preferencesToConfigChanges(base, next)).toEqual([
+      { key: "keys.labels.g g", value: null },
+      { key: "keys.labels.<leader> f", value: "files" },
+      { key: "keys.labels.g h", value: "home" },
+    ]);
   });
 
   it("prefs -> changes -> config -> prefs", () => {
@@ -315,12 +333,72 @@ describe("useKeyOptions and live reload", () => {
     });
     expect(getPreferences(window).keysLeader).toBe("Space");
     expect(result.current.leader).toBe("Space");
-    expect(result.current.labels).toEqual({ "<leader> F": "file" });
+    expect(result.current.labels).toEqual({ "<leader> f": "file" });
 
     delete config.keys;
     await act(async () => {
       await reloadSettings();
     });
     expect(result.current).toEqual(DEFAULT_KEY_SETTINGS);
+  });
+});
+
+describe("Settings writes [keys.labels]", () => {
+  afterEach(() => {
+    disposeSettings();
+    window.localStorage.clear();
+  });
+
+  it("sends one keys.labels.<sequence> change per edited label to update_config", async () => {
+    const calls: Array<{ cmd: string; args: unknown }> = [];
+    const invoke = vi.fn(async (cmd: string, args?: unknown) => {
+      calls.push({ cmd, args });
+      if (cmd === "load_settings") {
+        return {
+          configDir: "/c",
+          configPath: "/c/config.toml",
+          statePath: "/s/state.json",
+          config: { keys: { labels: { "g g": "top" } } },
+          configError: null,
+          state: {},
+        } as LoadSettingsResult;
+      }
+      return undefined;
+    });
+    await initSettings(window, {
+      tauri: true,
+      invoke: invoke as never,
+      listen: (async () => () => undefined) as never,
+    });
+    expect(getPreferences(window).keysLabels).toEqual({ "g g": "top" });
+    act(() => {
+      updatePreferences(
+        { keysLabels: { "<leader> f f": "find file" } },
+        window,
+      );
+    });
+    await vi.waitFor(() =>
+      expect(calls.some((c) => c.cmd === "update_config")).toBe(true),
+    );
+    const update = calls.find((c) => c.cmd === "update_config");
+    expect((update?.args as { changes: unknown }).changes).toEqual([
+      { key: "keys.labels.g g", value: null },
+      { key: "keys.labels.<leader> f f", value: "find file" },
+    ]);
+  });
+});
+
+describe("checkKeyLabel", () => {
+  it("accepts a sequence and a name, trimmed", () => {
+    expect(checkKeyLabel("  <leader>   f ", " file ")).toEqual({
+      sequence: "<leader> f",
+      text: "file",
+    });
+  });
+  it("refuses a bad sequence, an empty name and a long name", () => {
+    expect(checkKeyLabel("Nope+x", "a")).toHaveProperty("error");
+    expect(checkKeyLabel("", "a")).toHaveProperty("error");
+    expect(checkKeyLabel("g g", "  ")).toHaveProperty("error");
+    expect(checkKeyLabel("g g", "x".repeat(81))).toHaveProperty("error");
   });
 });
