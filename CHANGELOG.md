@@ -2,6 +2,13 @@
 
 All notable changes to Vaultdraw are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Renaming a tag across the vault no longer shows an extra "Updated N links" message next to "Renamed #a to #b" when the rewrite finishes very fast.
+- Drawings with more than 600 elements now get a thumbnail in the gallery, home, search and palette (up to 4,000 elements). Rendering stays split into short steps, so the app stays responsive while thumbnails draw.
+
 ## [0.1.2] - 2026-10-23
 
 ### New
