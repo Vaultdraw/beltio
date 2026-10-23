@@ -93,6 +93,18 @@ test.describe("thumbnail main-thread blocking", () => {
         },
         { json: scene(30, 1), density: DENSITY },
       );
+      // Heap after a forced GC (Chromium only): no lasting growth per case.
+      const heapMb = async () => {
+        if (browserName !== "chromium") {
+          return null;
+        }
+        const heapCdp = await page.context().newCDPSession(page);
+        await heapCdp.send("HeapProfiler.collectGarbage");
+        const { usedSize } = await heapCdp.send("Runtime.getHeapUsage");
+        await heapCdp.detach();
+        return r1(usedSize / 1048576);
+      };
+      const heapBefore = await heapMb();
       for (const c of CASES) {
         const jsons = c.json();
         const perThumb = { longest: [] as number[], wall: [] as number[] };
@@ -183,6 +195,17 @@ test.describe("thumbnail main-thread blocking", () => {
           fails,
         };
         console.log(`THUMBBLOCK_PERF ${JSON.stringify(row)}`);
+        const heapAfter = await heapMb();
+        if (heapAfter !== null) {
+          console.log(
+            `THUMBMEM ${JSON.stringify({
+              case: c.name,
+              cpuRate: rate,
+              heapBeforeMb: heapBefore,
+              heapAfterMb: heapAfter,
+            })}`,
+          );
+        }
         expect(fails).toBe(0);
       }
       await cdp?.send("Emulation.setCPUThrottlingRate", { rate: 1 });
