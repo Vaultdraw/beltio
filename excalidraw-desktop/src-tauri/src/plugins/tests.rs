@@ -1,6 +1,8 @@
 use super::{install, manifest, scan, scheme};
 use scan::{Index, Roots, Source};
 use std::{fs, path::{Path, PathBuf}, time::Instant};
+use super::{clear_restart, RESTART_PENDING};
+use std::sync::atomic::Ordering;
 use tempfile::tempdir;
 
 const APP: &str = "0.1.0";
@@ -595,4 +597,12 @@ fn shipped_plugin_manifests_parse() {
         }
     }
     assert!(failures.is_empty(), "invalid manifests:\n{}", failures.join("\n"));
+}
+
+#[test]
+fn a_cancelled_restart_is_forgotten() {
+    RESTART_PENDING.store(true, Ordering::SeqCst);
+    assert!(clear_restart());
+    assert!(!RESTART_PENDING.load(Ordering::SeqCst));
+    assert!(!clear_restart(), "nothing left to cancel");
 }

@@ -143,6 +143,21 @@ pub(crate) fn request_safe_mode() -> Result<()> {
     store(&dirs.state, &l)
 }
 
+/// Drops the one-shot safe-mode request (the restart that carried it was cancelled).
+pub(crate) fn cancel_safe_mode() -> Result<()> {
+    let dirs = config::resolve_dirs()?;
+    cancel_safe_mode_in(&dirs.state)
+}
+
+fn cancel_safe_mode_in(dir: &Path) -> Result<()> {
+    let mut l = load(dir);
+    if l.safe_mode_next {
+        l.safe_mode_next = false;
+        store(dir, &l)?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -192,6 +207,16 @@ mod tests {
         assert!(!rec.safe_mode_next);
         let (again, _) = next_launch(&rec, &ids(&["a"]), false);
         assert_eq!(again, None);
+    }
+
+    #[test]
+    fn cancelled_restart_drops_the_safe_mode_request() {
+        let dir = tempfile::tempdir().unwrap();
+        store(dir.path(), &Launch { safe_mode_next: true, ..Launch::default() }).unwrap();
+        cancel_safe_mode_in(dir.path()).unwrap();
+        assert!(!load(dir.path()).safe_mode_next);
+        // Nothing armed: no write, no error.
+        cancel_safe_mode_in(dir.path()).unwrap();
     }
 
     #[test]

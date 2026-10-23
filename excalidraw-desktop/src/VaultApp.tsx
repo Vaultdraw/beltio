@@ -2646,6 +2646,10 @@ export const VaultApp = ({
             }
           }}
           onCancel={() => {
+            // A pending plugin restart must not relaunch an app the user kept open.
+            void import("@tauri-apps/api/core")
+              .then((m) => m.invoke("plugins_restart_cancel"))
+              .catch(() => {});
             setShowCloseDiscardConfirm(false);
             closeAttemptRef.current = false;
             setIsClosing(false);

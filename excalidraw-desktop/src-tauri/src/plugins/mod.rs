@@ -9,6 +9,7 @@ mod manifest;
 mod scan;
 mod scheme;
 mod state;
+mod term;
 #[cfg(test)]
 mod tests;
 mod watch;
@@ -151,6 +152,21 @@ pub(crate) async fn plugins_launch_ok() -> Result<()> {
 
 static RESTART_PENDING: AtomicBool = AtomicBool::new(false);
 
+/// Forgets a restart whose quit was not confirmed. Returns whether one was pending.
+fn clear_restart() -> bool {
+    RESTART_PENDING.swap(false, Ordering::SeqCst)
+}
+
+/// The quit was cancelled (the user kept the window open after a failed save): the app stays
+/// running, so it must not relaunch later and the one-shot safe mode request is dropped.
+#[tauri::command]
+pub(crate) async fn plugins_restart_cancel() -> Result<()> {
+    if clear_restart() {
+        blocking(launch::cancel_safe_mode).await?;
+    }
+    Ok(())
+}
+
 /// Restart through the normal quit path so open drawings are flushed first.
 fn restart<R: tauri::Runtime>(app: &AppHandle<R>) {
     RESTART_PENDING.store(true, Ordering::SeqCst);
@@ -176,6 +192,7 @@ pub(crate) fn plugins_restart(app: AppHandle) {
 /// Setup hook, before the webview loads: crash counter and safe-mode decision.
 pub(crate) fn on_setup() {
     launch::begin();
+    term::install();
 }
 
 /// Exit hook: a clean exit clears the in-progress flag; a pending restart relaunches the app.
