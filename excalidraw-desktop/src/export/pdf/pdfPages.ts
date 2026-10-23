@@ -14,6 +14,8 @@ import type {
 } from "@excalidraw/excalidraw/data/pageSetup";
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 
+import { emptyCanvasError } from "../exportError";
+
 export type PdfPagePlan = {
   /** area of the scene drawn on this page, scene px */
   rect: PageRect;
@@ -42,7 +44,7 @@ export const planPdfPages = (
   }
   const live = elements.filter((el) => !el.isDeleted);
   if (live.length === 0) {
-    throw new Error("Cannot export an empty canvas.");
+    throw emptyCanvasError();
   }
   const [x1, y1, x2, y2] = getCommonBounds(live);
   const rect = {

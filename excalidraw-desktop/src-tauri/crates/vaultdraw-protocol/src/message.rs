@@ -28,6 +28,10 @@ pub mod codes {
     /// No vault is open in the app and the method needs one.
     pub const NO_VAULT: &str = "NO_VAULT";
     pub const IO_ERROR: &str = "IO_ERROR";
+    /// The drawing cannot be read or rendered (not a drawing, or an empty canvas for an export).
+    pub const INVALID_FILE: &str = "INVALID_FILE";
+    /// The result is over a size cap (`export.render`: 32 MiB of output).
+    pub const TOO_LARGE: &str = "TOO_LARGE";
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

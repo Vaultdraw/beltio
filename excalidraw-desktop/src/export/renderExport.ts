@@ -12,6 +12,8 @@ import type { ImageExportRequest } from "@excalidraw/excalidraw/types";
 import { withStandardCanvasColors } from "../editor/canvasSync";
 import { exportFileName, renderImageExport } from "../editor/imageExport";
 
+import { ExportError } from "./exportError";
+
 import { renderPdf } from "./pdf/renderPdf";
 
 export type ExplorerExportOptions = {
@@ -25,7 +27,16 @@ export type ExplorerExportOptions = {
   pageShaped?: boolean;
 };
 
-const loadScene = async (json: string) => loadFromJSONText(json, null, null);
+const loadScene = async (json: string) => {
+  try {
+    return await loadFromJSONText(json, null, null);
+  } catch (e) {
+    throw new ExportError(
+      "INVALID_FILE",
+      `Not a drawing: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+};
 
 /** Restores the drawing's JSON into an export request (no editor needed). */
 export const sceneToExportRequest = async (

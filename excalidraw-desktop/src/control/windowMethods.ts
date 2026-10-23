@@ -3,6 +3,8 @@
  * app effect is injected through ControlFiles; VaultApp supplies the same
  * throwing cores the UI handlers use.
  */
+import { ExportError } from "../export/exportError";
+
 import { ControlError } from "./errors";
 import {
   boolParam,
@@ -35,6 +37,15 @@ export interface ExportRenderOptions {
   embedScene: boolean;
   pageShaped: boolean;
 }
+
+/** Options a PDF export would ignore: refused instead (INVALID_PARAMS). */
+const PDF_IGNORED = [
+  "dark",
+  "background",
+  "scale",
+  "embedScene",
+  "pageShaped",
+] as const;
 
 /** Raw output cap: base64 adds a third and the JSON-RPC frame is 48 MiB. */
 export const MAX_EXPORT_BYTES = 32 * 1024 * 1024;
@@ -188,6 +199,18 @@ export function createWindowMethods(
       needVault();
       const path = relPath(stringParam(params, "path"), "path");
       const format = exportFormatParam(params);
+      if (format === "pdf") {
+        // PDF pages are fixed: light theme, background on, own resolution.
+        const given = objectParams(params);
+        for (const key of PDF_IGNORED) {
+          if (given[key] !== undefined) {
+            throw new ControlError(
+              "INVALID_PARAMS",
+              `${key} does not apply to pdf`,
+            );
+          }
+        }
+      }
       const options: ExportRenderOptions = {
         scale: exportScaleParam(params),
         dark: boolParam(params, "dark", false),
@@ -196,19 +219,14 @@ export function createWindowMethods(
         embedScene: boolParam(params, "embedScene", false),
         pageShaped: boolParam(params, "pageShaped", false),
       };
-      // PDF ignores dark and always paints the background (renderPdf).
       let out;
       try {
         out = await f.exportDrawing(path, format, options);
       } catch (e) {
-        if (e instanceof Error && /empty canvas/i.test(e.message)) {
-          throw new ControlError(
-            "INVALID_FILE",
-            "Cannot export an empty canvas",
-            {
-              path,
-            },
-          );
+        if (e instanceof ExportError) {
+          const message =
+            e.code === "EMPTY" ? "Cannot export an empty canvas" : e.message;
+          throw new ControlError("INVALID_FILE", message, { path });
         }
         throw e;
       }

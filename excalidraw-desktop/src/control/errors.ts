@@ -7,6 +7,8 @@ export type ControlErrorCode =
   | "CONFLICT"
   | "INVALID_PARAMS"
   | "IO_ERROR"
+  | "INVALID_FILE"
+  | "TOO_LARGE"
   // The app's own native codes (NOT_EMPTY, TRASH_FAILED, ...) pass through.
   | (string & {});
 

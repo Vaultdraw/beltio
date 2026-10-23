@@ -16,6 +16,8 @@ import { isPageModeOn } from "@excalidraw/excalidraw/data/pageSetup";
 
 import type { ImageExportRequest } from "@excalidraw/excalidraw/types";
 
+import { emptyCanvasError } from "../export/exportError";
+
 import { withStandardCanvasColors } from "./canvasSync";
 
 export type RenderedImage = {
@@ -41,7 +43,7 @@ export const renderImageExport = (
   win: Window & typeof globalThis,
 ): Promise<RenderedImage> => {
   if (request.elements.length === 0) {
-    return Promise.reject(new Error("Cannot export an empty canvas."));
+    return Promise.reject(emptyCanvasError());
   }
   const svg = request.type === "svg" || request.type === "clipboard-svg";
   // Scene embedding applies to files only, never to the clipboard.

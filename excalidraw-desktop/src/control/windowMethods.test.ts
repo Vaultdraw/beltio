@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { emptyCanvasError, ExportError } from "../export/exportError";
+
 import { createControlBridge, type ControlDeps } from "./bridge";
 
 import type { ControlFiles } from "./windowMethods";
@@ -328,18 +330,34 @@ describe("window methods (C3)", () => {
       );
     });
 
-    it("pdf is passed with the options as given (the renderer forces the background)", async () => {
+    it("pdf refuses the options it would ignore (INVALID_PARAMS) and takes pattern", async () => {
       const { call, files } = make();
+      for (const extra of [
+        { dark: true },
+        { dark: false },
+        { background: false },
+        { scale: 2 },
+        { embedScene: true },
+        { pageShaped: false },
+      ]) {
+        const r = await call("export.render", {
+          path: "a.excalidraw",
+          format: "pdf",
+          ...extra,
+        });
+        expect(r.error.code).toBe("INVALID_PARAMS");
+        expect(r.error.message).toMatch(/does not apply to pdf/);
+      }
+      expect(files.exportDrawing).not.toHaveBeenCalled();
       await call("export.render", {
         path: "a.excalidraw",
         format: "pdf",
-        dark: true,
-        background: false,
+        pattern: false,
       });
       expect(files.exportDrawing).toHaveBeenCalledWith(
         "a.excalidraw",
         "pdf",
-        expect.objectContaining({ dark: true, background: false }),
+        expect.objectContaining({ pattern: false }),
       );
     });
 
@@ -403,8 +421,7 @@ describe("window methods (C3)", () => {
 
     it("maps an empty canvas to INVALID_FILE and NOT_FOUND passes through", async () => {
       const empty = make({
-        exportDrawing: () =>
-          Promise.reject(new Error("Cannot export an empty canvas.")),
+        exportDrawing: () => Promise.reject(emptyCanvasError()),
       });
       expect(
         (await empty.call("export.render", { path: "a", format: "png" })).error,
@@ -422,6 +439,24 @@ describe("window methods (C3)", () => {
       ).toBe("NOT_FOUND");
     });
 
+    it("maps coded export errors, not messages: a bad file is INVALID_FILE, an untyped failure IO_ERROR", async () => {
+      const bad = make({
+        exportDrawing: () =>
+          Promise.reject(new ExportError("INVALID_FILE", "Not a drawing: x")),
+      });
+      expect(
+        (await bad.call("export.render", { path: "a", format: "png" })).error,
+      ).toMatchObject({ code: "INVALID_FILE", message: "Not a drawing: x" });
+      // A message that merely mentions an empty canvas is not the EMPTY code.
+      const other = make({
+        exportDrawing: () =>
+          Promise.reject(new Error("GPU lost while drawing an empty canvas")),
+      });
+      expect(
+        (await other.call("export.render", { path: "a", format: "png" })).error
+          .code,
+      ).toBe("IO_ERROR");
+    });
     it("needs a vault", async () => {
       const { call } = make({ vault: () => null });
       expect(
