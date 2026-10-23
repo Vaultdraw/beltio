@@ -214,6 +214,36 @@ Every other palette entry with a fixed name (Mode: Dark, Paper: Grid, Settings: 
 
 Canvas zoom is Excalidraw's own: **Cmd/Ctrl + `+`**, **`-`** and **`0`**. Interface zoom adds Shift.
 
+### File tree and panel keys
+
+The file tree, the Tags list, the Links panel and the Settings page list share one set of `list.*` commands. Their keys work only while that list has focus (click into it, or press **Mod+Alt+F** for the file tree), so on the canvas `r` is still the rectangle tool and in a text field `j` still types a `j`. A key a list has no use for (for example `r` in the Links panel) is left alone.
+
+| Command id | What it does | Default keys |
+| --- | --- | --- |
+| `list.down` / `list.up` | Move down / up | `J`, `ArrowDown` / `K`, `ArrowUp` |
+| `list.first` / `list.last` | First / last row | `G`, `Home` / `Shift+G`, `End` |
+| `list.expand` | Open a folder, or step into an open one | `L`, `ArrowRight` |
+| `list.collapse` | Close a folder, or go to its parent | `H`, `ArrowLeft` |
+| `list.open` | Open a drawing, toggle a folder, apply a tag | `Enter`, `O`, `Space` |
+| `list.openInNewTab` | Open a drawing in a new tab | `Mod+Enter` (also `Ctrl+Enter` on macOS) |
+| `list.rename` | Rename the row (file tree, tags) | `R`, `F2` |
+| `list.delete` | Move the row to the Trash | `D`, `Delete`, `Backspace` |
+| `list.newItem` / `list.newFolder` | New drawing / folder in the focused folder | `A` / `Shift+A` |
+| `list.move` | Move the row to another folder | `M` |
+| `list.menu` | The row's menu | `Shift+F10`, `ContextMenu` |
+| `list.nextView` | Switch Backlinks / Outgoing (Links panel) | `Tab` |
+| `list.exit` | Leave the list (the tree goes back to the canvas) | `Escape` |
+| `navigator.focusTree` | Focus the file tree; again goes back to the canvas | `Mod+Alt+F` |
+
+They are in the palette under **List: …**; run from the palette, they act on the last list you used. Arrow-only or Emacs-style lists are one `[hotkeys]` edit away:
+
+```toml
+[hotkeys]
+"list.down" = ["ArrowDown", "Ctrl+N"]
+"list.up" = ["ArrowUp", "Ctrl+P"]
+"list.delete" = ["Delete"]
+```
+
 ### The `[hotkeys]` table
 
 Settings writes to `config.toml`, and you can edit it by hand. Only your changes are stored, as a list of keys per command id:
