@@ -60,6 +60,27 @@ describe("sceneOps micro-benchmark (jsdom)", () => {
     expect(cached.p95).toBeLessThan(0.5);
   });
 
+  it("projection after a small change at 10k elements", () => {
+    // Drag: one element mutated in place, same array. Add: a new array with one new element.
+    const live = makeElements(10_000);
+    const drag = measure(() => {
+      (live[5] as { version: number }).version += 1;
+      projectScene(live);
+    }, 40);
+    report("projectScene after in-place drag of 1 (10k)", drag);
+    let arr = live;
+    const edit = measure(() => {
+      const el = arr[7];
+      arr = arr.map((e) =>
+        e === el ? { ...e, version: e.version + 1, x: e.x + 1 } : e,
+      );
+      projectScene(arr);
+    }, 40);
+    report("projectScene after replacing 1 of 10k (incl. array map)", edit);
+    expect(drag.p95).toBeLessThan(3);
+    expect(edit.p95).toBeLessThan(3);
+  });
+
   it("validateOps, 100 ops against 10k elements", () => {
     const map = byId(els);
     const ops: SceneOp[] = [
