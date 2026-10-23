@@ -1,8 +1,12 @@
 /**
  * The file tree's keyboard actions as a ListController (commands/listNav.ts):
  * the `list.*` commands call these, so every key is rebindable in `[hotkeys]`.
- * Pure over a snapshot of the tree's state; the navigator rebuilds it per
- * render and the registered controller reads the latest one.
+ * Pure over a snapshot of the tree's state, computed only when a command
+ * asks (lazyTreeController), never per render.
+ *
+ * Safety: rename, delete, move and the menu need a focused row. With none,
+ * they are not offered (the key passes, the palette hides them), even while
+ * a drawing is open: navigation may start at the open drawing, edits never.
  */
 import { getParentPath } from "../../vault/treeStore";
 
@@ -16,6 +20,8 @@ export interface TreeKeyDeps {
   /** The open drawing: the cursor starts there when nothing is focused. */
   activePath: string | null;
   readOnly: boolean;
+  /** A row is being dragged: Escape belongs to the drag. */
+  dragging: boolean;
   setFocusedPath(path: string): void;
   expand(folder: string): void;
   /** Toggle a folder open/closed. */
@@ -40,6 +46,7 @@ export const TREE_ACTIONS: readonly TreeAction[] = [
   "expand",
   "collapse",
   "open",
+  "select",
   "openInNewTab",
   "rename",
   "delete",
@@ -50,91 +57,114 @@ export const TREE_ACTIONS: readonly TreeAction[] = [
   "exit",
 ];
 
-export function treeActions(d: TreeKeyDeps): Record<TreeAction, () => void> {
+/**
+ * The folder a new item goes in: `path` itself when it is a folder, else its
+ * parent; the vault root when there is no path. Shared with the palette's
+ * "New drawing in selected folder".
+ */
+export function targetFolder(
+  path: string | null,
+  isFolder: (path: string) => boolean,
+): string {
+  if (!path) {
+    return "";
+  }
+  return isFolder(path) ? path : getParentPath(path) ?? "";
+}
+
+type TreeActions = Partial<Record<TreeAction, () => void>>;
+
+export function treeActions(d: TreeKeyDeps): TreeActions {
   const { rows } = d;
-  const index = rows.findIndex(
-    (r) => r.entry.path === (d.focusedPath ?? d.activePath),
-  );
+  const indexOf = (path: string | null) =>
+    path === null ? -1 : rows.findIndex((r) => r.entry.path === path);
+  const index = indexOf(d.focusedPath);
   const row = index >= 0 ? rows[index] : undefined;
   const item = row?.entry;
+  // Where navigation starts without a focused row: the open drawing.
+  const cursor = index >= 0 ? index : indexOf(d.activePath);
   const go = (i: number) => {
     if (rows.length > 0) {
       d.setFocusedPath(rows[(i + rows.length) % rows.length].entry.path);
     }
   };
-  const writable = (fn: (entry: VaultEntry) => void) => () => {
-    if (item && !d.readOnly) {
-      fn(item);
-    }
-  };
-  // New items go in the focused folder, else beside the focused drawing.
-  const createIn = (kind: "drawing" | "folder") => () => {
-    if (d.readOnly) {
-      return;
-    }
-    const folder = !item
-      ? ""
-      : item.kind === "folder"
-      ? item.path
-      : getParentPath(item.path) ?? "";
-    d.create(folder, kind);
-  };
-  const activate = (newTab: boolean) => () => {
-    if (!item) {
-      go(0);
-    } else if (item.kind === "folder") {
-      d.setFocusedPath(item.path);
-      d.toggle(item.path);
-    } else {
-      d.setFocusedPath(item.path);
-      d.open(item.path, newTab);
-    }
-  };
+  const start = () => go(cursor < 0 ? 0 : cursor);
+  const onRow = (fn: (row: TreeRow) => void) => () => row ? fn(row) : start();
+  const edit = (fn: (entry: VaultEntry) => void) =>
+    item && !d.readOnly ? () => fn(item) : undefined;
+  const createIn = (kind: "drawing" | "folder") =>
+    d.readOnly
+      ? undefined
+      : () =>
+          d.create(
+            targetFolder(
+              d.focusedPath ?? d.activePath,
+              (p) => rows[indexOf(p)]?.entry.kind === "folder",
+            ),
+            kind,
+          );
+  const activate = (newTab: boolean) =>
+    onRow(({ entry }) => {
+      if (entry.kind === "folder") {
+        d.toggle(entry.path);
+      } else {
+        d.open(entry.path, newTab);
+      }
+    });
 
   return {
-    down: () => go(index < 0 ? 0 : index + 1),
-    up: () => go(index < 0 ? rows.length - 1 : index - 1),
+    down: () => go(cursor < 0 ? 0 : cursor + 1),
+    up: () => go(cursor < 0 ? rows.length - 1 : cursor - 1),
     first: () => go(0),
     last: () => go(rows.length - 1),
     // Folder: open it, or step into its first child when already open.
-    expand: () => {
-      if (row?.entry.kind !== "folder") {
+    expand: onRow((r) => {
+      if (r.entry.kind !== "folder") {
         return;
       }
-      if (!row.expanded) {
-        d.setFocusedPath(row.entry.path);
-        d.expand(row.entry.path);
-      } else if (rows[index + 1]?.depth > row.depth) {
+      if (!r.expanded) {
+        d.expand(r.entry.path);
+      } else if (rows[index + 1]?.depth > r.depth) {
         go(index + 1);
       }
-    },
+    }),
     // Open folder: close it; anything else: go to the parent folder.
-    collapse: () => {
-      if (!row) {
+    collapse: onRow((r) => {
+      if (r.entry.kind === "folder" && r.expanded) {
+        d.toggle(r.entry.path);
         return;
       }
-      if (row.entry.kind === "folder" && row.expanded) {
-        d.setFocusedPath(row.entry.path);
-        d.toggle(row.entry.path);
-        return;
-      }
-      const parent = getParentPath(row.entry.path);
+      const parent = getParentPath(r.entry.path);
       if (parent) {
         d.setFocusedPath(parent);
       }
-    },
+    }),
     open: activate(false),
+    select: activate(false),
     openInNewTab: activate(true),
-    rename: writable(d.rename),
-    delete: writable(d.trash),
-    move: writable(d.move),
+    rename: edit(d.rename),
+    delete: edit(d.trash),
+    move: edit(d.move),
     newItem: createIn("drawing"),
     newFolder: createIn("folder"),
-    menu: () => {
-      if (item) {
-        d.menu(item);
-      }
-    },
-    exit: d.exit,
+    menu: item ? () => d.menu(item) : undefined,
+    exit: d.dragging ? undefined : d.exit,
   };
+}
+
+/**
+ * A stable ListController over `deps` (a ref updated each render): each
+ * getter computes the actions only when the dispatcher or palette asks.
+ */
+export function lazyTreeController(deps: {
+  readonly current: TreeKeyDeps | null;
+}): TreeActions {
+  const controller: TreeActions = {};
+  for (const action of TREE_ACTIONS) {
+    Object.defineProperty(controller, action, {
+      enumerable: true,
+      get: () => (deps.current ? treeActions(deps.current)[action] : undefined),
+    });
+  }
+  return controller;
 }

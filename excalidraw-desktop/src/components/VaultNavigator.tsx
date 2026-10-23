@@ -25,6 +25,7 @@ import { requestGallery } from "../thumbnails/gallery/openRequest";
 
 import { isNewTabClick } from "../tabs/newTabClick";
 import { useListKeys } from "../commands/useListKeys";
+import { focusList } from "../commands/listNav";
 import { registerCommandHandlers } from "../commands/handlerRegistry";
 import { FOCUS_TREE_COMMAND_ID } from "../commands/listCommands";
 import { focusCanvasIfIdle } from "../palette/focus";
@@ -70,7 +71,11 @@ import { RenameModal } from "./RenameModal";
 import { flattenTree } from "./tree/flattenTree";
 import { TREE_ROW_HEIGHT, useTreeWindow } from "./tree/useTreeWindow";
 import { ghostTransform, useTreeDrag } from "./tree/useTreeDrag";
-import { treeActions } from "./tree/treeKeys";
+import {
+  lazyTreeController,
+  targetFolder,
+  type TreeKeyDeps,
+} from "./tree/treeKeys";
 
 import type { ReactNode } from "react";
 
@@ -330,14 +335,16 @@ export const VaultNavigator = ({
   const tagsPanelRef = useRef<TagsPanelHandle>(null);
   // Palette "Tag: #x" entries, the dock chips and a focus command reach the
   // navigator through these slots (nothing runs until they are called).
-  const tagActionsRef = useRef({ collapsed, onToggleCollapse });
-  tagActionsRef.current = { collapsed, onToggleCollapse };
+  const navLive = useRef({ collapsed, onToggleCollapse });
+  navLive.current = { collapsed, onToggleCollapse };
+  /** Expand the navigator if it is collapsed (tags, focus tree). */
+  const showNavigator = useCallback(() => {
+    if (navLive.current.collapsed) {
+      navLive.current.onToggleCollapse();
+    }
+  }, []);
   useEffect(() => {
-    const expand = () => {
-      if (tagActionsRef.current.collapsed) {
-        tagActionsRef.current.onToggleCollapse();
-      }
-    };
+    const expand = showNavigator;
     const unActions = registerTagActions({
       filter: (key) => {
         expand();
@@ -361,7 +368,7 @@ export const VaultNavigator = ({
       unActions();
       unPalette();
     };
-  }, []);
+  }, [showNavigator]);
   // Keep the panel during a plain tag filter so the active tag can be toggled off.
   const isTagFilter = tags.some((t) => tagQuery(t.tag) === searchQuery.trim());
 
@@ -395,13 +402,13 @@ export const VaultNavigator = ({
     }
     if (request.kind === "newDrawingInFolder") {
       // The focused folder, else the focused row's (or open drawing's) folder.
-      const from = focusedPath ?? activePath;
-      const folder = !from
-        ? ""
-        : rows.find((r) => r.entry.path === from)?.entry.kind === "folder"
-        ? from
-        : getParentPath(from) ?? "";
-      onRowNewInside(folder, "drawing");
+      onRowNewInside(
+        targetFolder(
+          focusedPath ?? activePath,
+          (p) => rows.find((r) => r.entry.path === p)?.entry.kind === "folder",
+        ),
+        "drawing",
+      );
       return;
     }
     const entry = allIndexedEntries.find((e) => e.path === request.path) ?? {
@@ -471,23 +478,18 @@ export const VaultNavigator = ({
     [],
   );
 
-  // Tree keys are `list.*` commands (rebindable in [hotkeys]); the registered
-  // controller reads the latest snapshot of these actions.
-  const treeKeys = treeActions({
-    rows,
-    focusedPath,
-    activePath,
-    readOnly: vault.readOnly,
-    setFocusedPath,
-    expand: onExpandFolder,
-    toggle: onToggleFolder,
-    open: (path, newTab) =>
-      void onOpenDrawing(path, newTab ? { target: "new" } : undefined),
-    rename: setRenameTarget,
-    trash: requestTrash,
-    move: setMoveTarget,
-    create: onRowNewInside,
-    menu: (entry) => {
+  // Tree keys are `list.*` commands (rebindable in [hotkeys]). The controller
+  // is stable and computes actions from this snapshot only on demand.
+  const openRow = useCallback(
+    (path: string, newTab: boolean) =>
+      void live.current.onOpenDrawing(
+        path,
+        newTab ? { target: "new" } : undefined,
+      ),
+    [],
+  );
+  const openRowMenu = useCallback(
+    (entry: VaultEntry) => {
       const rowEl = treeContainerRef.current?.querySelector<HTMLElement>(
         `[data-tree-path="${CSS.escape(entry.path)}"]`,
       );
@@ -496,46 +498,60 @@ export const VaultNavigator = ({
         onRowMenu(entry, box.left + 40, box.bottom);
       }
     },
-    exit: () => {
-      treeContainerRef.current?.blur();
-      focusCanvasIfIdle(treeContainerRef.current?.ownerDocument);
-    },
-  });
-  // While a row is dragged, Escape belongs to the drag (it cancels it).
-  useListKeys(
-    treeContainerRef,
-    "tree",
-    isSearching ? null : drag ? { ...treeKeys, exit: undefined } : treeKeys,
+    [onRowMenu],
   );
+  const exitTree = useCallback(() => {
+    treeContainerRef.current?.blur();
+    focusCanvasIfIdle(treeContainerRef.current?.ownerDocument);
+  }, []);
+  const treeState = useRef<TreeKeyDeps | null>(null);
+  treeState.current = {
+    rows,
+    focusedPath,
+    activePath,
+    readOnly: vault.readOnly,
+    dragging: !!drag,
+    setFocusedPath,
+    expand: onExpandFolder,
+    toggle: onToggleFolder,
+    open: openRow,
+    rename: setRenameTarget,
+    trash: requestTrash,
+    move: setMoveTarget,
+    create: onRowNewInside,
+    menu: openRowMenu,
+    exit: exitTree,
+  };
+  const treeKeys = useMemo(() => lazyTreeController(treeState), []);
+  useListKeys(treeContainerRef, "tree", isSearching ? null : treeKeys);
 
   // "Focus file tree" (navigator.focusTree): show the tree and focus it; from
-  // the tree, back to the canvas (a toggle, like Zed's project panel).
+  // the tree, back to the canvas (a toggle, like Zed's project panel). The
+  // request is consumed once, so later search or collapse changes never
+  // pull focus into the tree.
+  const focusTreePending = useRef(false);
   const [focusTreeNonce, setFocusTreeNonce] = useState(0);
-  const treeKeysLive = useRef(treeKeys);
-  treeKeysLive.current = treeKeys;
-  const focusTreeLive = useRef({ collapsed, onToggleCollapse });
-  focusTreeLive.current = { collapsed, onToggleCollapse };
   useEffect(
     () =>
       registerCommandHandlers({
         [FOCUS_TREE_COMMAND_ID]: () => {
           const el = treeContainerRef.current;
           if (el?.contains(el.ownerDocument.activeElement)) {
-            treeKeysLive.current.exit();
+            exitTree();
             return;
           }
-          if (focusTreeLive.current.collapsed) {
-            focusTreeLive.current.onToggleCollapse();
-          }
+          showNavigator();
           setSearchQuery("");
+          focusTreePending.current = true;
           setFocusTreeNonce((n) => n + 1);
         },
       }),
-    [],
+    [exitTree, showNavigator],
   );
   useEffect(() => {
-    if (focusTreeNonce > 0 && !collapsed && !isSearching) {
-      treeContainerRef.current?.focus({ preventScroll: true });
+    if (focusTreePending.current && !collapsed && !isSearching) {
+      focusTreePending.current = false;
+      focusList("tree");
     }
   }, [focusTreeNonce, collapsed, isSearching]);
 

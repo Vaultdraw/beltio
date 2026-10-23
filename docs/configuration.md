@@ -224,8 +224,9 @@ The file tree, the Tags list, the Links panel and the Settings page list share o
 | `list.first` / `list.last` | First / last row | `G`, `Home` / `Shift+G`, `End` |
 | `list.expand` | Open a folder, or step into an open one | `L`, `ArrowRight` |
 | `list.collapse` | Close a folder, or go to its parent | `H`, `ArrowLeft` |
-| `list.open` | Open a drawing, toggle a folder, apply a tag | `Enter`, `O`, `Space` |
-| `list.openInNewTab` | Open a drawing in a new tab | `Mod+Enter` (also `Ctrl+Enter` on macOS) |
+| `list.open` | Open a drawing, toggle a folder, apply a tag, enter a Settings page | `Enter`, `NumpadEnter`, `O` |
+| `list.select` | Select the row (Settings: select the tab and stay; elsewhere like open) | `Space` |
+| `list.openInNewTab` | Open a drawing in a new tab | `Mod+Enter`, `Mod+NumpadEnter` (also `Ctrl+Enter` on macOS) |
 | `list.rename` | Rename the row (file tree, tags) | `R`, `F2` |
 | `list.delete` | Move the row to the Trash | `D`, `Delete`, `Backspace` |
 | `list.newItem` / `list.newFolder` | New drawing / folder in the focused folder | `A` / `Shift+A` |
@@ -235,7 +236,7 @@ The file tree, the Tags list, the Links panel and the Settings page list share o
 | `list.exit` | Leave the list (the tree goes back to the canvas) | `Escape` |
 | `navigator.focusTree` | Focus the file tree; again goes back to the canvas | `Mod+Alt+F` |
 
-They are in the palette under **List: …**; run from the palette, they act on the last list you used. Arrow-only or Emacs-style lists are one `[hotkeys]` edit away:
+Rename, delete, move and the row menu need a focused row: with none (even while a drawing is open) they do nothing and the key passes on. In the palette they appear under **List: …** once you have used a list, and act on the last list you used. Arrow-only or Emacs-style lists are one `[hotkeys]` edit away:
 
 ```toml
 [hotkeys]
@@ -262,7 +263,7 @@ Settings writes to `config.toml`, and you can edit it by hand. Only your changes
 
 Ids contain dots, so quote them. Delete a line to go back to the default. Edits apply as soon as the file is saved, with no restart.
 
-Keys are modifiers plus one key, joined with `+`: `Mod`, `Ctrl`, `Alt`, `Shift`, `Meta`. `Mod` means Cmd on macOS and Ctrl elsewhere, so one file works on both. The key is the physical key (`KeyboardEvent.code`) without the `Key` or `Digit` prefix: `N`, `0`, `Comma`, `Equal`, `Backslash`, `F2`, `ArrowUp`, `Numpad0`. These aliases are accepted too: `Cmd`, `CmdOrCtrl`, `Option`, `Esc`, `Plus`, `=`, `,`, `Digit0`, `KeyN`.
+Keys are modifiers plus one key, joined with `+`: `Mod`, `Ctrl`, `Alt`, `Shift`, `Meta`. `Mod` means Cmd on macOS and Ctrl elsewhere, so one file works on both. Plain letters (alone or with Shift) match the letter your layout types, so `J` is the key that types j on Dvorak or AZERTY too. With `Mod`, `Ctrl` or `Alt`, and for every other key, the key is the physical key (`KeyboardEvent.code`) without the `Key` or `Digit` prefix: `N`, `0`, `Comma`, `Equal`, `Backslash`, `F2`, `ArrowUp`, `Numpad0`. These aliases are accepted too: `Cmd`, `CmdOrCtrl`, `Option`, `Esc`, `Plus`, `=`, `,`, `Digit0`, `KeyN`.
 
 Mistakes never break the app. They show as a warning banner in Settings and the rest of the file still applies:
 

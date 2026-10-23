@@ -11,7 +11,6 @@
  * registration and the keypress path is one `closest()` call.
  */
 import { registerCommandHandlers } from "./handlerRegistry";
-import { isTextEditingTarget } from "./context";
 
 import type { CommandHandler, CommandHandlers } from "./types";
 
@@ -23,6 +22,7 @@ export const LIST_ACTIONS = [
   "expand",
   "collapse",
   "open",
+  "select",
   "openInNewTab",
   "rename",
   "delete",
@@ -46,7 +46,7 @@ export const listCommandId = (action: ListAction) => `list.${action}`;
 export const LIST_ATTR = "data-keylist";
 
 const controllers = new WeakMap<Element, ListController>();
-/** Mounted list roots, newest last: the fallback target for palette runs. */
+/** Mounted list roots, newest last (focusList, handler lifetime). */
 const mounted: Element[] = [];
 let lastFocused: Element | null = null;
 let unbindHandlers: (() => void) | null = null;
@@ -54,24 +54,16 @@ let unbindHandlers: (() => void) | null = null;
 const rootOf = (el: Element | null): Element | null =>
   el?.closest(`[${LIST_ATTR}]`) ?? null;
 
-/** True when focus is in a registered list and not in a text field. */
-export function isListFocused(active: Element | null): boolean {
-  if (!active || isTextEditingTarget(active)) {
-    return false;
-  }
-  const root = rootOf(active);
-  return !!root && controllers.has(root);
-}
-
-/** The list a command acts on: the focused one, else the last focused one. */
+/**
+ * The list a command acts on: the focused one, else the last one used (from
+ * the palette). None used yet = no target, so the palette hides `list.*`.
+ */
 function target(): { root: Element; ctrl: ListController } | null {
   const doc = mounted[0]?.ownerDocument;
   const focused = rootOf(doc?.activeElement ?? null);
   const root =
     (focused && controllers.has(focused) ? focused : null) ??
-    (lastFocused && controllers.has(lastFocused) ? lastFocused : null) ??
-    mounted[mounted.length - 1] ??
-    null;
+    (lastFocused && controllers.has(lastFocused) ? lastFocused : null);
   const ctrl = root && controllers.get(root);
   return root && ctrl ? { root, ctrl } : null;
 }

@@ -113,6 +113,21 @@ describe("chordFromEvent", () => {
       ...init,
     } as Parameters<typeof chordFromEvent>[0]);
 
+  it("plain letters follow the layout; modified ones the physical key", () => {
+    // Dvorak: the key at QWERTY C types j.
+    expect(chordFromEvent(ev({ code: "KeyC", key: "j" }), "mac")).toBe("J");
+    expect(
+      chordFromEvent(ev({ code: "KeyC", key: "J", shiftKey: true }), "mac"),
+    ).toBe("Shift+J");
+    // AZERTY: the key at QWERTY Q types a.
+    expect(chordFromEvent(ev({ code: "KeyQ", key: "a" }), "win")).toBe("A");
+    expect(
+      chordFromEvent(ev({ code: "KeyC", key: "j", metaKey: true }), "mac"),
+    ).toBe("Mod+C");
+    // Non-Latin layouts keep the physical key.
+    expect(chordFromEvent(ev({ code: "KeyJ", key: "о" }), "mac")).toBe("J");
+  });
+
   it("uses code, per platform", () => {
     const e = ev({ code: "KeyS", key: "s", metaKey: true });
     expect(chordFromEvent(e, "mac")).toBe("Mod+S");

@@ -88,7 +88,7 @@ export const Sidebar = ({
   };
 
   // Page tabs are a `list.*` command target: j/k or arrows step, Home/End
-  // (g/G) jump, Enter/l/ArrowRight move focus into the page.
+  // (g/G) jump, Space selects, Enter/l/ArrowRight move focus into the page.
   const currentTab = () => {
     const id = navRef.current?.ownerDocument.activeElement?.id;
     return pages.findIndex((p) => settingsTabId(p.id) === id);
@@ -124,6 +124,8 @@ export const Sidebar = ({
     last: step((_, last) => last),
     expand: enterPage,
     open: enterPage,
+    // Space selects the focused tab and keeps focus here (ARIA tablist).
+    select: step((current) => current),
   });
 
   return (

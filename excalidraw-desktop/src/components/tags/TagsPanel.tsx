@@ -211,6 +211,11 @@ export const TagsPanel = ({
 
   // Keys are `list.*` commands (j/k/h/l, g/G, Enter, r/F2, Escape by default).
   const row = cursorRow;
+  const filterRow = () => {
+    if (row) {
+      applyFilter(row.node.key);
+    }
+  };
   const keys: ListController = {
     down: () => move(cursorIndex + 1),
     up: () => move(cursorIndex - 1),
@@ -232,11 +237,8 @@ export const TagsPanel = ({
         }
       }
     },
-    open: () => {
-      if (row) {
-        applyFilter(row.node.key);
-      }
-    },
+    open: filterRow,
+    select: filterRow,
     rename: onRenameTag
       ? () => {
           if (row) {

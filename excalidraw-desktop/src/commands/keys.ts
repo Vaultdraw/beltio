@@ -235,6 +235,7 @@ const MODIFIER_KEYS = new Set([
   "capslock",
   "fn",
 ]);
+const LATIN = /^[a-z]$/i;
 const isModifierCode = (code: string) =>
   /^(Shift|Control|Alt|Meta|OS)(Left|Right)$/.test(code);
 
@@ -245,7 +246,9 @@ type KeyEventLike = Pick<
 
 /**
  * Normalised chord for a keydown, or null for modifier-only presses and keys
- * we have no name for. Synthetic events (smoke/perf scripts) have an empty
+ * we have no name for. Letters without Mod/Ctrl/Alt are matched by the typed
+ * character (layout-correct); everything else by the physical key (`code`),
+ * and non-Latin layouts fall back to `code` as well. Synthetic events (smoke/perf scripts) have an empty
  * `code`: the key is derived from `e.key`, and when both meta and ctrl are set
  * there it counts as plain Mod (the scripts set both to work on every OS).
  */
@@ -254,7 +257,12 @@ export function chordFromEvent(
   platform: Platform,
 ): Chord | null {
   let key: string | null;
-  if (e.code) {
+  if (e.code && !e.metaKey && !e.ctrlKey && !e.altKey && LATIN.test(e.key)) {
+    // Plain (or Shift+) letters follow the layout, like Vim and Excalidraw's
+    // tool keys: `j` is the key that types j on Dvorak/AZERTY too. With Mod,
+    // Ctrl or Alt the physical key counts (Option+N types a dead key).
+    key = e.key.toUpperCase();
+  } else if (e.code) {
     if (isModifierCode(e.code)) {
       return null;
     }

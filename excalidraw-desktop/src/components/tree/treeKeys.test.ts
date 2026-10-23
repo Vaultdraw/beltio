@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { treeActions, type TreeKeyDeps } from "./treeKeys";
+import {
+  lazyTreeController,
+  targetFolder,
+  treeActions,
+  type TreeAction,
+  type TreeKeyDeps,
+} from "./treeKeys";
 
 import type { VaultEntry } from "../../vault/types";
 import type { TreeRow } from "./flattenTree";
@@ -26,6 +32,7 @@ const deps = (focusedPath: string | null, over: Partial<TreeKeyDeps> = {}) => {
     focusedPath,
     activePath: null,
     readOnly: false,
+    dragging: false,
     setFocusedPath: vi.fn(),
     expand: vi.fn(),
     toggle: vi.fn(),
@@ -38,99 +45,155 @@ const deps = (focusedPath: string | null, over: Partial<TreeKeyDeps> = {}) => {
     exit: vi.fn(),
     ...over,
   };
-  return { d, act: treeActions(d) };
+  const actions = treeActions(d);
+  const run = (action: TreeAction) => {
+    const fn = actions[action];
+    expect(fn, `${action} offered`).toBeDefined();
+    fn!();
+  };
+  return { d, actions, run };
 };
 
 describe("treeActions", () => {
   it("j/k move and wrap; g/G jump; nothing focused starts at the ends", () => {
     let t = deps(null);
-    t.act.down();
+    t.run("down");
     expect(t.d.setFocusedPath).toHaveBeenLastCalledWith("a");
     t = deps(null);
-    t.act.up();
+    t.run("up");
     expect(t.d.setFocusedPath).toHaveBeenLastCalledWith("c.excalidraw");
     t = deps("c.excalidraw");
-    t.act.down();
+    t.run("down");
     expect(t.d.setFocusedPath).toHaveBeenLastCalledWith("a");
     t = deps("a");
-    t.act.up();
+    t.run("up");
     expect(t.d.setFocusedPath).toHaveBeenLastCalledWith("c.excalidraw");
-    t.act.last();
+    t.run("last");
     expect(t.d.setFocusedPath).toHaveBeenLastCalledWith("c.excalidraw");
-    t.act.first();
+    t.run("first");
     expect(t.d.setFocusedPath).toHaveBeenLastCalledWith("a");
   });
 
-  it("starts from the open drawing when nothing is focused", () => {
+  it("navigation starts from the open drawing when nothing is focused", () => {
     const t = deps(null, { activePath: "b" });
-    t.act.down();
+    t.run("down");
     expect(t.d.setFocusedPath).toHaveBeenLastCalledWith("c.excalidraw");
   });
 
   it("l expands a closed folder, steps into an open one, ignores drawings", () => {
     let t = deps("b");
-    t.act.expand();
+    t.run("expand");
     expect(t.d.expand).toHaveBeenCalledWith("b");
     t = deps("a");
-    t.act.expand();
+    t.run("expand");
     expect(t.d.setFocusedPath).toHaveBeenLastCalledWith("a/x.excalidraw");
     t = deps("c.excalidraw");
-    t.act.expand();
+    t.run("expand");
     expect(t.d.expand).not.toHaveBeenCalled();
     expect(t.d.open).not.toHaveBeenCalled();
   });
 
   it("h closes an open folder, else goes to the parent", () => {
     let t = deps("a");
-    t.act.collapse();
+    t.run("collapse");
     expect(t.d.toggle).toHaveBeenCalledWith("a");
     t = deps("a/x.excalidraw");
-    t.act.collapse();
+    t.run("collapse");
     expect(t.d.setFocusedPath).toHaveBeenLastCalledWith("a");
     t = deps("c.excalidraw");
-    t.act.collapse();
+    t.run("collapse");
     expect(t.d.setFocusedPath).not.toHaveBeenCalled();
   });
 
   it("Enter opens drawings (new tab with Mod) and toggles folders", () => {
     let t = deps("c.excalidraw");
-    t.act.open();
+    t.run("open");
     expect(t.d.open).toHaveBeenCalledWith("c.excalidraw", false);
-    t.act.openInNewTab();
+    t.run("openInNewTab");
     expect(t.d.open).toHaveBeenLastCalledWith("c.excalidraw", true);
     t = deps("b");
-    t.act.open();
+    t.run("select");
     expect(t.d.toggle).toHaveBeenCalledWith("b");
   });
 
-  it("file actions target the focused row and respect read-only", () => {
-    let t = deps("a/x.excalidraw");
-    t.act.rename();
-    t.act.delete();
-    t.act.move();
-    t.act.menu();
+  it("Enter with no focused row only moves the cursor to the open drawing", () => {
+    const t = deps(null, { activePath: "c.excalidraw" });
+    t.run("open");
+    expect(t.d.open).not.toHaveBeenCalled();
+    expect(t.d.setFocusedPath).toHaveBeenLastCalledWith("c.excalidraw");
+  });
+
+  it("file actions target the focused row", () => {
+    const t = deps("a/x.excalidraw");
+    t.run("rename");
+    t.run("delete");
+    t.run("move");
+    t.run("menu");
     expect(t.d.rename).toHaveBeenCalledWith(ROWS[1].entry);
     expect(t.d.trash).toHaveBeenCalledWith(ROWS[1].entry);
     expect(t.d.move).toHaveBeenCalledWith(ROWS[1].entry);
     expect(t.d.menu).toHaveBeenCalledWith(ROWS[1].entry);
-    t = deps("a/x.excalidraw", { readOnly: true });
-    t.act.rename();
-    t.act.delete();
-    t.act.newItem();
-    expect(t.d.rename).not.toHaveBeenCalled();
-    expect(t.d.trash).not.toHaveBeenCalled();
-    expect(t.d.create).not.toHaveBeenCalled();
+  });
+
+  // Regression: d/Backspace used to trash the open drawing when no row had
+  // focus (the cursor fell back to activePath).
+  it("with no focused row, edits are not offered even with a drawing open", () => {
+    const t = deps(null, { activePath: "c.excalidraw" });
+    for (const action of ["rename", "delete", "move", "menu"] as const) {
+      expect(t.actions[action], action).toBeUndefined();
+    }
+    const stale = deps("gone.excalidraw", { activePath: "c.excalidraw" });
+    expect(stale.actions.delete).toBeUndefined();
+  });
+
+  it("read-only vaults offer no edits; a drag keeps Escape", () => {
+    const t = deps("a/x.excalidraw", { readOnly: true });
+    for (const action of [
+      "rename",
+      "delete",
+      "move",
+      "newItem",
+      "newFolder",
+    ] as const) {
+      expect(t.actions[action], action).toBeUndefined();
+    }
+    expect(deps("a", { dragging: true }).actions.exit).toBeUndefined();
   });
 
   it("a/A create in the focused folder or beside the focused drawing", () => {
     let t = deps("a");
-    t.act.newItem();
+    t.run("newItem");
     expect(t.d.create).toHaveBeenCalledWith("a", "drawing");
     t = deps("a/x.excalidraw");
-    t.act.newFolder();
+    t.run("newFolder");
     expect(t.d.create).toHaveBeenCalledWith("a", "folder");
     t = deps(null);
-    t.act.newItem();
+    t.run("newItem");
     expect(t.d.create).toHaveBeenCalledWith("", "drawing");
+  });
+});
+
+describe("targetFolder", () => {
+  const isFolder = (p: string) => p === "a" || p === "a/b";
+  it("is the folder itself, a drawing's parent, or the root", () => {
+    expect(targetFolder("a/b", isFolder)).toBe("a/b");
+    expect(targetFolder("a/b/x.excalidraw", isFolder)).toBe("a/b");
+    expect(targetFolder("x.excalidraw", isFolder)).toBe("");
+    expect(targetFolder(null, isFolder)).toBe("");
+  });
+});
+
+describe("lazyTreeController", () => {
+  it("computes nothing until asked and reads the latest snapshot", () => {
+    const ref: { current: TreeKeyDeps | null } = { current: null };
+    const c = lazyTreeController(ref);
+    expect(c.down).toBeUndefined();
+    const { d } = deps("a");
+    ref.current = d;
+    c.down!();
+    expect(d.setFocusedPath).toHaveBeenLastCalledWith("a/x.excalidraw");
+    expect(c.delete).toBeDefined();
+    ref.current = { ...d, focusedPath: null };
+    expect(c.delete).toBeUndefined();
   });
 });

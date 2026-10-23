@@ -25,12 +25,14 @@ describe("listNav", () => {
     expect(getRegisteredHandler("list.down")).toBeUndefined();
     const el = mount();
     cleanups.push(registerList(el, "test", { down: () => {} }));
+    el.focus();
     expect(getRegisteredHandler("list.down")).toBeDefined();
   });
 
   it("offers only the actions the target list implements", () => {
     const el = mount();
     cleanups.push(registerList(el, "test", { down: () => {} }));
+    el.focus();
     expect(getRegisteredHandler("list.down")).toBeDefined();
     expect(getRegisteredHandler("list.rename")).toBeUndefined();
   });
@@ -62,6 +64,53 @@ describe("listNav", () => {
     expect(downA).toHaveBeenCalledTimes(2);
     expect(document.activeElement).toBe(a);
     expect(downB).not.toHaveBeenCalled();
+  });
+
+  // Regression: the palette used to target the most recently mounted list
+  // and offered every List: entry before any list had been used.
+  it("targets no list until one is used, then the last used, not the newest", () => {
+    const a = mount();
+    const downA = vi.fn();
+    cleanups.push(registerList(a, "a", { down: downA }));
+    expect(getRegisteredHandler("list.down")).toBeUndefined();
+    a.focus();
+    a.blur();
+    const b = mount();
+    const downB = vi.fn();
+    cleanups.push(registerList(b, "b", { down: downB }));
+    getRegisteredHandler("list.down")!();
+    expect(downA).toHaveBeenCalledTimes(1);
+    expect(downB).not.toHaveBeenCalled();
+  });
+
+  // Regression: letters matched the physical key, so on Dvorak `j` (QWERTY C)
+  // did nothing and QWERTY J (Dvorak h) moved down.
+  it("letters follow the keyboard layout", () => {
+    cleanups.push(installListKeysForTests());
+    const el = mount();
+    const down = vi.fn();
+    const collapse = vi.fn();
+    cleanups.push(registerList(el, "test", { down, collapse }));
+    pressListKey(el, "j", { code: "KeyC" });
+    expect(down).toHaveBeenCalledTimes(1);
+    pressListKey(el, "h", { code: "KeyJ" });
+    expect(collapse).toHaveBeenCalledTimes(1);
+    expect(down).toHaveBeenCalledTimes(1);
+  });
+
+  // Regression: NumpadEnter stopped opening rows.
+  it("numpad Enter opens like Enter; Space selects", () => {
+    cleanups.push(installListKeysForTests());
+    const el = mount();
+    const open = vi.fn();
+    const select = vi.fn();
+    cleanups.push(registerList(el, "test", { open, select }));
+    pressListKey(el, "Enter", { code: "NumpadEnter" });
+    pressListKey(el, "Enter", { code: "Enter" });
+    expect(open).toHaveBeenCalledTimes(2);
+    pressListKey(el, " ", { code: "Space" });
+    expect(select).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledTimes(2);
   });
 
   it("keys run list commands only while a list has focus", () => {
