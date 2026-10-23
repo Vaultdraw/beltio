@@ -12,7 +12,9 @@ export type InstallDialogRequest =
       /** A theme name to pick once a repo is listed. */
       pick?: string;
     }
-  | { mode: "update" | "uninstall" };
+  | { mode: "update" | "uninstall" }
+  /** The community themes browser; `refresh` fetches the list even if the cache is fresh. */
+  | { mode: "browse"; refresh?: boolean };
 
 type Listener = () => void;
 

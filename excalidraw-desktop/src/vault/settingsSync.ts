@@ -129,6 +129,8 @@ import {
   isPagePaperTheme,
   isPageSide,
   isThemeInstallMaxKb,
+  isThemesIndexTtlHours,
+  isThemesIndexUrl,
   isPaperColor,
   isPaperMajorEvery,
   isHintChars,
@@ -298,6 +300,9 @@ type ConfigField =
   | "networkEnabled"
   | "networkAllowThemes"
   | "themeInstallMaxKb"
+  | "themesIndexUrl"
+  | "themesIndexTtlHours"
+  | "themesPreviews"
   | "theme"
   | "syncCanvas"
   | "defaultCanvasBackground"
@@ -455,6 +460,24 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "themes.max_install_kb",
     expected: "a whole number of KiB between 1 and 256",
     valid: isThemeInstallMaxKb,
+  },
+  {
+    field: "themesIndexUrl",
+    key: "themes.index_url",
+    expected: "an https address",
+    valid: isThemesIndexUrl,
+  },
+  {
+    field: "themesIndexTtlHours",
+    key: "themes.index_ttl_hours",
+    expected: "a whole number of hours between 0 and 720",
+    valid: isThemesIndexTtlHours,
+  },
+  {
+    field: "themesPreviews",
+    key: "themes.previews",
+    expected: "true or false",
+    valid: (v) => typeof v === "boolean",
   },
   {
     field: "theme",
@@ -999,7 +1022,7 @@ export const STATE_FIELDS = [
   "hasPanned",
 ] as const;
 
-type StateField = typeof STATE_FIELDS[number];
+type StateField = (typeof STATE_FIELDS)[number];
 export type PersistedState = DeepReadonly<Pick<VaultPreferences, StateField>>;
 
 export const show = (value: unknown) =>

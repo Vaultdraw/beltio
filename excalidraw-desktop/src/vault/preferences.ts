@@ -204,6 +204,12 @@ interface VaultPreferencesBase {
   networkAllowThemes: boolean | undefined;
   /** Largest theme file to install, in KiB (`themes.max_install_kb`). */
   themeInstallMaxKb: number;
+  /** Where the community themes list comes from (`themes.index_url`, https only). */
+  themesIndexUrl: string;
+  /** Hours the cached list is used before the browser fetches again (`themes.index_ttl_hours`). */
+  themesIndexTtlHours: number;
+  /** Fetch preview images in the theme browser (`themes.previews`); false = swatches only. */
+  themesPreviews: boolean;
   /** Make the canvas background, pencil and palette colours follow the theme. */
   syncCanvas: boolean;
   defaultFontFamily: number;
@@ -373,6 +379,9 @@ const normalizeToolStyles = (parsed: Partial<Record<ToolField, unknown>>) =>
     }),
   ) as Record<ToolField, ToolStyle>;
 
+export const DEFAULT_THEMES_INDEX_URL =
+  "https://raw.githubusercontent.com/Vaultdraw/themes/main/index.json";
+
 export const DEFAULT_PREFERENCES: VaultPreferences = {
   recentVaults: [],
   lastVaultPath: null,
@@ -386,6 +395,9 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   networkEnabled: true,
   networkAllowThemes: undefined,
   themeInstallMaxKb: 64,
+  themesIndexUrl: DEFAULT_THEMES_INDEX_URL,
+  themesIndexTtlHours: 24,
+  themesPreviews: true,
   syncCanvas: false,
   defaultFontFamily: DEFAULT_FONT_FAMILY,
   defaultFontSize: 20,
@@ -579,6 +591,26 @@ export const isPagePaperTheme = (value: unknown): value is PagePaperTheme =>
 /** 0 = unset (the A4 side is used). */
 export const isPageSide = (value: unknown) =>
   value === 0 || (Number.isInteger(value) && inRange(value, PAGE_LIMITS.side));
+
+/** An https address (plain http only for this machine, used by tests). */
+export const isThemesIndexUrl = (v: unknown) => {
+  if (typeof v !== "string" || v.length > 500) {
+    return false;
+  }
+  try {
+    const url = new URL(v);
+    return (
+      url.protocol === "https:" ||
+      (url.protocol === "http:" &&
+        ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))
+    );
+  } catch {
+    return false;
+  }
+};
+
+export const isThemesIndexTtlHours = (v: unknown) =>
+  typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 720;
 
 export const isThemeInstallMaxKb = (v: unknown) =>
   typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 256;
@@ -775,6 +807,17 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       isThemeInstallMaxKb,
       d.themeInstallMaxKb,
     ),
+    themesIndexUrl: pick(
+      parsed.themesIndexUrl,
+      isThemesIndexUrl,
+      d.themesIndexUrl,
+    ),
+    themesIndexTtlHours: pick(
+      parsed.themesIndexTtlHours,
+      isThemesIndexTtlHours,
+      d.themesIndexTtlHours,
+    ),
+    themesPreviews: pick(parsed.themesPreviews, isBoolean, d.themesPreviews),
     confirmDelete: pick(parsed.confirmDelete, isBoolean, d.confirmDelete),
     showTagChips: pick(parsed.showTagChips, isBoolean, d.showTagChips),
     deferHomePane: pick(parsed.deferHomePane, isBoolean, d.deferHomePane),

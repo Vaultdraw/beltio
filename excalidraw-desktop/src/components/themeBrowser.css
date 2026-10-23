@@ -1,0 +1,134 @@
+.vault-modal.vault-tb-dialog {
+  max-width: 880px;
+  width: min(880px, 94vw);
+}
+
+.vault-tb {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vd-space-2, 8px);
+  min-height: 0;
+}
+
+.vault-tb__bar {
+  display: flex;
+  gap: 8px;
+}
+
+.vault-tb__search {
+  flex: 1;
+  min-width: 0;
+}
+
+.vault-tb__select {
+  width: auto;
+  max-width: 11em;
+}
+
+.vault-tb__status,
+.vault-tb__hint,
+.vault-tb__empty {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.vault-tb__grid {
+  list-style: none;
+  margin: 0;
+  padding: 2px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  max-height: min(56vh, 520px);
+  overflow-y: auto;
+}
+
+.vault-tb__card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--vault-chip-strong);
+  border-radius: 8px;
+  cursor: default;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 230px;
+}
+
+.vault-tb__card.is-current {
+  border-color: var(--vault-accent-text);
+  background: var(--vault-sel);
+}
+
+.vault-tb__preview {
+  height: 70px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--vault-chip);
+}
+
+.vault-tb__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vault-tb__swatches {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.vault-tb__swatch-row {
+  display: flex;
+  flex: 1;
+}
+
+.vault-tb__swatch-row span {
+  flex: 1;
+}
+
+.vault-tb__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.vault-tb__name {
+  font-size: 13px;
+}
+
+.vault-tb__badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--vault-chip);
+}
+
+.vault-tb__badge.is-update {
+  background: var(--vault-sel-strong);
+}
+
+.vault-tb__meta,
+.vault-tb__credit {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.vault-tb__desc {
+  font-size: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.vault-tb__actions {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 4px;
+}

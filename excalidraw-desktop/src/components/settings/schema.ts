@@ -88,7 +88,7 @@ export const DEFAULT_SETTINGS_PAGE: SettingsPageId = "appearance";
 
 /** Sections of the Tools page, in tab order: styled tools, then pen and laser. */
 export const TOOLS_SECTIONS = [...TOOL_DEFAULT_TOOLS, "pen", "laser"] as const;
-export type ToolsSection = typeof TOOLS_SECTIONS[number];
+export type ToolsSection = (typeof TOOLS_SECTIONS)[number];
 
 export const TOOLS_SECTION_LABELS: Record<ToolsSection, string> = {
   ...TOOL_LABELS,
@@ -261,7 +261,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     page: "appearance",
     label: "Install Themes",
     description:
-      "Ten themes are built in. Download more from a URL or a GitHub repo (the Vaultdraw/themes repo has over a hundred), then update or remove them here.",
+      "Ten themes are built in. Browse the community themes, or download one from a URL or a GitHub repo, then update or remove them here.",
     keywords: [
       "theme",
       "install",
@@ -271,6 +271,8 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
       "update",
       "remove",
       "uninstall",
+      "browse",
+      "community",
       "repo",
       "palette",
     ],
@@ -283,6 +285,25 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
       "Downloads bigger than this are refused. Theme files are a few KiB.",
     keywords: ["theme", "install", "size", "limit", "kib", "download"],
     configKey: "themes.max_install_kb",
+  },
+
+  {
+    id: "theme-previews",
+    page: "appearance",
+    label: "Theme Preview Images",
+    description:
+      "The theme browser downloads a small preview image for each theme you scroll to. Off shows colour swatches only.",
+    keywords: ["theme", "browse", "preview", "image", "download"],
+    configKey: "themes.previews",
+  },
+  {
+    id: "theme-index-ttl",
+    page: "appearance",
+    label: "Refresh the Themes List",
+    description:
+      "How long the theme browser keeps its list before fetching it again. 0 fetches every time it opens.",
+    keywords: ["theme", "browse", "list", "cache", "refresh", "hours"],
+    configKey: "themes.index_ttl_hours",
   },
 
   // ---- Page ----

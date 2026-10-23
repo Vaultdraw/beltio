@@ -9,10 +9,14 @@ import {
   kibToBytes,
   validateCandidate,
 } from "../theme/install/installer";
+import {
+  consentText,
+  grantThemeConsent,
+  hasThemeConsent,
+} from "../theme/install/consent";
 import { toInstallError } from "../theme/install/types";
 import { reloadThemeRegistry } from "../theme/registry";
 import { getPreferences, updatePreferences } from "../vault/preferences";
-import { flushSettings } from "../vault/settingsSync";
 
 import { Dialog } from "./Dialog";
 
@@ -45,13 +49,6 @@ interface Props {
   win?: Window;
 }
 
-const consentText = (enabled: boolean, allow: boolean | undefined) =>
-  !enabled
-    ? "Network access is switched off in your settings (network.enabled). Turn it on and allow theme downloads?"
-    : allow === false
-    ? "Theme downloads are switched off (network.allow_themes). Allow them?"
-    : "Vaultdraw will connect to GitHub, or to the address you give, to download a theme. It sends nothing but the request. You can change this any time in Settings, General.";
-
 export const ThemeInstallDialog = ({
   request,
   onClose,
@@ -60,7 +57,7 @@ export const ThemeInstallDialog = ({
 }: Props) => {
   const prefs = getPreferences(win);
   const needsNetwork = request.mode !== "uninstall";
-  const consented = prefs.networkEnabled && prefs.networkAllowThemes === true;
+  const consented = hasThemeConsent(win);
   const [step, setStep] = useState<Step>(
     needsNetwork && !consented ? { k: "consent" } : startStep(request),
   );
@@ -178,21 +175,10 @@ export const ThemeInstallDialog = ({
       }
     });
 
-  // The desktop backend re-reads config.toml, so wait until the saved yes is on disk. The app
-  // asks once more in a native dialog; if that is declined the switches fall back and this
-  // popup stays open.
   const allow = async () => {
-    updatePreferences({ networkEnabled: true, networkAllowThemes: true }, win);
-    try {
-      await flushSettings();
-    } catch {
-      // Browser mode or a failed write: the next request reports the problem.
+    if (await grantThemeConsent(win)) {
+      setStep(startStep(request));
     }
-    const now = getPreferences(win);
-    if (!(now.networkEnabled && now.networkAllowThemes === true)) {
-      return;
-    }
-    setStep(startStep(request));
   };
 
   // Update / uninstall: load the list; update also checks for newer files.

@@ -40,14 +40,16 @@ export const tauriBackend = (invoke: Invoke): InstallBackend => {
   };
 };
 
-const sha256Hex = async (bytes: Uint8Array<ArrayBuffer>): Promise<string> => {
+export const sha256Hex = async (
+  bytes: Uint8Array<ArrayBuffer>,
+): Promise<string> => {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return [...new Uint8Array(digest)]
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 };
 
-const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
+export const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 const tooLarge = (maxBytes: number) =>
   new InstallError(
@@ -56,7 +58,7 @@ const tooLarge = (maxBytes: number) =>
   );
 
 /** The body's bytes, stopping the download as soon as it passes `maxBytes`. */
-const readCapped = async (
+export const readCapped = async (
   response: Response,
   maxBytes: number,
 ): Promise<Uint8Array<ArrayBuffer>> => {

@@ -290,6 +290,13 @@ const InstallThemeSetting = () => {
         <button
           type="button"
           className="vault-btn vault-btn--sm"
+          onClick={() => openInstallDialog({ mode: "browse" })}
+        >
+          Install more themes...
+        </button>
+        <button
+          type="button"
+          className="vault-btn vault-btn--sm"
           onClick={() =>
             openInstallDialog(
               removed
@@ -336,6 +343,36 @@ const ThemeMaxSizeSetting = () => {
   );
 };
 
+const ThemePreviewsSetting = () => {
+  const on = usePreference("themesPreviews");
+  return (
+    <SettingRow id="theme-previews" htmlFor="vault-theme-previews">
+      <Switch
+        id="vault-theme-previews"
+        checked={on}
+        onChange={(next) => updatePreferences({ themesPreviews: next })}
+      />
+    </SettingRow>
+  );
+};
+
+const ThemeIndexTtlSetting = () => {
+  const hours = usePreference("themesIndexTtlHours");
+  return (
+    <SettingRow id="theme-index-ttl">
+      <Stepper
+        label="Keep the list for"
+        unit="hours"
+        min={0}
+        max={720}
+        step={6}
+        value={hours}
+        onChange={(next) => updatePreferences({ themesIndexTtlHours: next })}
+      />
+    </SettingRow>
+  );
+};
+
 export const appearanceControls: SettingControls = {
   mode: { Component: ModeSetting },
   "colour-theme": { Component: ColourThemeSetting },
@@ -345,6 +382,8 @@ export const appearanceControls: SettingControls = {
   paper: { Component: PaperSetting },
   "install-theme": { Component: InstallThemeSetting },
   "theme-max-size": { Component: ThemeMaxSizeSetting },
+  "theme-previews": { Component: ThemePreviewsSetting },
+  "theme-index-ttl": { Component: ThemeIndexTtlSetting },
   "themes-folder": {
     Component: ThemesFolderSetting,
     available: (ctx) => ctx.registry.mode === "tauri",

@@ -222,6 +222,11 @@ const LinksDock = lazy(() =>
 
 // The theme install dialog loads only when a command, Settings or the
 // "no longer built in" notice opens it.
+const ThemeBrowserDialog = lazy(() =>
+  import("./components/ThemeBrowserDialog").then((m) => ({
+    default: m.ThemeBrowserDialog,
+  })),
+);
 const ThemeInstallDialog = lazy(() =>
   import("./components/ThemeInstallDialog").then((m) => ({
     default: m.ThemeInstallDialog,
@@ -3141,11 +3146,19 @@ export const VaultApp = ({
       <WatchdogHost win={win} />
       {themeInstallRequest && (
         <Suspense fallback={null}>
-          <ThemeInstallDialog
-            request={themeInstallRequest}
-            onClose={closeInstallDialog}
-            onThemeChanged={refreshAppearance}
-          />
+          {themeInstallRequest.mode === "browse" ? (
+            <ThemeBrowserDialog
+              refresh={themeInstallRequest.refresh}
+              onClose={closeInstallDialog}
+              onThemeChanged={refreshAppearance}
+            />
+          ) : (
+            <ThemeInstallDialog
+              request={themeInstallRequest}
+              onClose={closeInstallDialog}
+              onThemeChanged={refreshAppearance}
+            />
+          )}
         </Suspense>
       )}
 
