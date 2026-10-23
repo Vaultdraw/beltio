@@ -1,0 +1,20 @@
+{
+  "name": "create-vaultdraw-plugin",
+  "version": "0.1.0",
+  "description": "npm create vaultdraw-plugin <id>: a thin wrapper around vaultdraw-plugin init",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "create-vaultdraw-plugin": "./bin/create.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "bin"
+  ],
+  "dependencies": {
+    "vaultdraw-plugin": "0.1.0"
+  }
+}

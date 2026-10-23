@@ -1,5 +1,16 @@
 /** `vaultdraw-plugin check <dir> [--json]`: static checks of a plugin folder. */
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import { EnvError } from "./dirs.mjs";
@@ -151,10 +162,16 @@ const finish = (errors, warnings) => {
 function checkMain(root, main, minApp, errors, warnings) {
   const mainPath = path.join(root, ...main.split("/"));
   if (!isFile(mainPath)) {
+    const built =
+      isFile(path.join(root, "src", "main.ts")) ||
+      isFile(path.join(root, "src", "main.tsx")) ||
+      isFile(path.join(root, "dist", "plugin.toml"));
     errors.push({
       code: "main-missing",
       file: main,
-      message: `The main file '${main}' does not exist`,
+      message: built
+        ? `${main} not found: run \`vaultdraw-plugin build\` first (or check dist/)`
+        : `The main file '${main}' does not exist`,
     });
     return;
   }
@@ -268,13 +285,87 @@ export function formatText(r, dir) {
 }
 
 /**
- * @param {string} dir
+ * Checks a `.zip` package: strict read into a temp folder, optional `.sha256` sidecar,
+ * flat layout, then the normal checks. Findings refer to zip entries.
+ * @param {string} file
+ * @returns {Promise<CheckResult>}
+ */
+export async function checkZip(file) {
+  const { readZip, ZipError } = await import("./zip.mjs");
+  /** @type {Finding[]} */
+  const errors = [];
+  const bytes = readFileSync(file);
+  const sidecar = `${file}.sha256`;
+  if (existsSync(sidecar)) {
+    const want = /^([0-9a-fA-F]{64})(?:\s|$)/.exec(
+      readFileSync(sidecar, "utf8"),
+    )?.[1];
+    const got = createHash("sha256").update(bytes).digest("hex");
+    if (!want || want.toLowerCase() !== got) {
+      errors.push({
+        code: "zip-checksum",
+        file: path.basename(sidecar),
+        message: want
+          ? `The zip does not match ${path.basename(
+              sidecar,
+            )} (expected ${want.toLowerCase()}, got ${got})`
+          : `${path.basename(sidecar)} does not hold a sha256 checksum`,
+      });
+    }
+  }
+  /** @type {{ name: string, data: Buffer }[]} */
+  let entries;
+  try {
+    entries = readZip(bytes);
+  } catch (e) {
+    if (e instanceof ZipError) {
+      errors.push({
+        code: "zip-invalid",
+        file: path.basename(file),
+        message: e.message,
+      });
+      return finish(errors, []);
+    }
+    throw e;
+  }
+  if (!entries.some((e) => e.name === "plugin.toml")) {
+    const tops = new Set(entries.map((e) => e.name.split("/")[0]));
+    if (
+      tops.size === 1 &&
+      entries.some((e) => /^[^/]+\/plugin\.toml$/.test(e.name))
+    ) {
+      errors.push({
+        code: "zip-layout",
+        file: `${[...tops][0]}/plugin.toml`,
+        message:
+          "plugin.toml is inside a top folder; put plugin.toml and the other files at the zip root",
+      });
+      return finish(errors, []);
+    }
+  }
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "vdp-zip-"));
+  try {
+    for (const { name, data } of entries) {
+      const target = path.join(tmp, ...name.split("/"));
+      mkdirSync(path.dirname(target), { recursive: true });
+      writeFileSync(target, data);
+    }
+    const r = checkPlugin(tmp);
+    return finish([...errors, ...r.errors], r.warnings);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+/**
+ * @param {string} dir a plugin folder or a `.zip` file
  * @param {{ json?: boolean }} opts
  * @param {(s: string) => void} out
- * @returns {number} the exit code
+ * @returns {Promise<number>} the exit code
  */
-export function runCheck(dir, opts, out) {
-  const r = checkPlugin(dir);
+export async function runCheck(dir, opts, out) {
+  const isZip = /\.zip$/i.test(dir) && isFile(dir);
+  const r = isZip ? await checkZip(dir) : checkPlugin(dir);
   if (opts.json) {
     out(
       JSON.stringify(

@@ -263,10 +263,46 @@ export async function runDev(dir, opts, out, err) {
   if (!dir) {
     throw new EnvError("Missing the plugin folder: vaultdraw-plugin dev <dir>");
   }
-  const src = path.resolve(dir);
+  let src = path.resolve(dir);
   if (!existsSync(src) || !statSync(src).isDirectory()) {
     throw new EnvError(`Folder not found: ${dir}`);
   }
+  // A project with a source entry (TypeScript) is built into dist/, and dist/ is mirrored.
+  /** @type {{ stop: () => Promise<void> } | null} */
+  let builder = null;
+  const { isBuildProject, buildProject, watchProject } = await import(
+    "./build.mjs"
+  );
+  if (isBuildProject(src)) {
+    const project = src;
+    if (opts.once) {
+      if ((await buildProject(project, out, err)) !== 0) {
+        return 1;
+      }
+    } else {
+      builder = await watchProject(project, out, err);
+      if (!builder) {
+        return 1;
+      }
+    }
+    src = path.join(project, "dist");
+  }
+  try {
+    return await mirror(dir, src, opts, out, err);
+  } finally {
+    await builder?.stop();
+  }
+}
+
+/**
+ * @param {string} dir
+ * @param {string} src
+ * @param {{ configDir?: string, once?: boolean, env: Record<string, string | undefined> }} opts
+ * @param {(s: string) => void} out
+ * @param {(s: string) => void} err
+ * @returns {Promise<number>}
+ */
+async function mirror(dir, src, opts, out, err) {
   const manifestFile = path.join(src, "plugin.toml");
   if (!existsSync(manifestFile)) {
     err(
@@ -365,6 +401,12 @@ export async function runDev(dir, opts, out, err) {
   }
 
   out(`Watching ${src}. Press Ctrl+C to stop.`);
+  const { devLogPath, tailLog } = await import("./devlog.mjs");
+  const logFile = devLogPath(opts.env, id);
+  const stopTail = logFile ? tailLog(logFile, out) : () => {};
+  if (logFile) {
+    out(`Dev log: ${logFile} (new lines are shown here)`);
+  }
   await new Promise((resolve) => {
     let timer;
     let running = false;
@@ -407,6 +449,7 @@ export async function runDev(dir, opts, out, err) {
     });
     const stop = () => {
       clearTimeout(timer);
+      stopTail();
       watcher.close();
       resolve(undefined);
     };

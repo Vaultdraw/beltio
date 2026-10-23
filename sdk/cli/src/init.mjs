@@ -1,6 +1,7 @@
 /** `vaultdraw-plugin init <id>`: a new plugin folder from an example. */
 import {
   existsSync,
+  statSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -14,6 +15,7 @@ import { listFiles } from "./files.mjs";
 import { isValidPluginId } from "./manifest.mjs";
 
 export const EXAMPLES = ["hello-command", "focus-timer", "stamp"];
+export const TEMPLATES = ["command", "panel", "scene"];
 /** The `sdk/` folder, next to this command. */
 const sdkRoot = () => fileURLToPath(new URL("../../", import.meta.url));
 
@@ -118,11 +120,121 @@ The plugin id is \`${id}\`. The manifest is \`plugin.toml\`; the code is \`main.
 `;
 
 /**
+ * Every file below `dir` as sorted `/`-separated relative paths (dot-files included).
+ * @param {string} dir
+ * @returns {string[]}
+ */
+function allFiles(dir) {
+  /** @type {string[]} */
+  const out = [];
+  /** @param {string} rel */
+  const walk = (rel) => {
+    for (const e of readdirSync(path.join(dir, rel), { withFileTypes: true })) {
+      const r = rel ? `${rel}/${e.name}` : e.name;
+      if (e.isDirectory()) {
+        walk(r);
+      } else if (e.isFile()) {
+        out.push(r);
+      }
+    }
+  };
+  walk("");
+  return out.sort();
+}
+
+/**
+ * A TypeScript project from `templates/<name>/`. Template files end in `.tpl` (so the
+ * repo's own tools ignore them); `__ID__` and `__NAME__` are replaced.
  * @param {string} id
- * @param {{ example?: string, dir?: string }} opts
+ * @param {string} template
+ * @param {string} parent
+ * @param {(s: string) => void} out
+ */
+function initTemplate(id, template, parent, out) {
+  const templateDir = fileURLToPath(
+    new URL(`../templates/${template}/`, import.meta.url),
+  );
+  const surfaceFile = path.join(sdkRoot(), "api", "etc", "api-surface.d.ts");
+  if (!existsSync(templateDir) || !existsSync(surfaceFile)) {
+    throw new EnvError(
+      "The SDK templates and types were not found next to this command",
+    );
+  }
+  const target = path.join(parent, id);
+  if (existsSync(target) && readdirSync(target).length > 0) {
+    throw new EnvError(`The folder ${target} already exists and is not empty`);
+  }
+  if (!existsSync(parent)) {
+    throw new EnvError(`Folder not found: ${parent}`);
+  }
+  const name = titleCase(id);
+  /** @param {string} rel @param {string | Buffer} data */
+  const put = (rel, data) => {
+    const f = path.join(target, ...rel.split("/"));
+    mkdirSync(path.dirname(f), { recursive: true });
+    writeFileSync(f, data);
+  };
+  for (const f of allFiles(templateDir)) {
+    put(
+      f.replace(/\.tpl$/, ""),
+      readFileSync(path.join(templateDir, ...f.split("/")), "utf8")
+        .replaceAll("__ID__", id)
+        .replaceAll("__NAME__", name),
+    );
+  }
+  put(
+    "vaultdraw/vaultdraw-api.d.ts",
+    wrapApiTypes(readFileSync(surfaceFile, "utf8")),
+  );
+  // The test kit: a few .ts/.tsx files, copied as they are (tests of the kit stay behind).
+  const kit = path.join(sdkRoot(), "api", "testing");
+  if (existsSync(kit) && statSync(kit).isDirectory()) {
+    for (const f of allFiles(kit).filter((f) => !/\.test\./.test(f))) {
+      put(
+        `vaultdraw/testing/${f}`,
+        readFileSync(path.join(kit, ...f.split("/"))),
+      );
+    }
+  }
+  out(`Created ${target} from the ${template} template.`);
+  out("");
+  out("Next steps:");
+  out(`  cd ${parent === process.cwd() ? id : target}`);
+  out("  npm install");
+  out("  npm test");
+  out("  vaultdraw-plugin dev .");
+  return 0;
+}
+
+/**
+ * @param {string} id
+ * @param {{ example?: string, template?: string, dir?: string }} opts
  * @param {(s: string) => void} out
  */
 export function runInit(id, opts, out) {
+  if (opts.template !== undefined) {
+    if (opts.example !== undefined) {
+      throw new EnvError("Use either --template or --example, not both");
+    }
+    if (!TEMPLATES.includes(opts.template)) {
+      throw new EnvError(
+        `Unknown template '${opts.template}'. Choose one of: ${TEMPLATES.join(
+          ", ",
+        )}`,
+      );
+    }
+    if (!isValidPluginId(id)) {
+      throw new EnvError(
+        `'${id}' is not a valid plugin id. Use a-z, 0-9 and -, 2 to 39 characters, not starting with -`,
+      );
+    }
+    return initTemplate(
+      id,
+      opts.template,
+      path.resolve(opts.dir ?? process.cwd()),
+      out,
+    );
+  }
   const example = opts.example ?? "hello-command";
   if (!EXAMPLES.includes(example)) {
     throw new EnvError(

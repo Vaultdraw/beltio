@@ -6,9 +6,14 @@ import { parseArgs } from "node:util";
 const USAGE = `Usage: vaultdraw-plugin <command> [options]
 
 Commands:
-  check <dir> [--json]       Static checks of a plugin folder (exit 1 on errors)
-  init <id> [--example hello-command|focus-timer|stamp] [--dir <parent>]
-                             Create a plugin folder from an example
+  check <dir|file.zip> [--json]
+                             Static checks of a plugin folder or package (exit 1 on errors)
+  init <id> [--example hello-command|focus-timer|stamp | --template command|panel|scene] [--dir <parent>]
+                             Create a plugin folder from an example (JavaScript) or a
+                             template (TypeScript project)
+  build [dir] [--watch]      Bundle a TypeScript project into dist/ with esbuild
+  package <dir> [--out <dir>] [--json]
+                             Check, then write <id>-<version>.zip and its .sha256 file
   dev <dir> [--config-dir <dir>] [--once] [--print-env]
                              Keep a copy of the plugin in the app's plugins folder
 
@@ -21,14 +26,20 @@ Exit codes: 0 ok, 1 findings or refusal, 2 usage or environment error.
 
 const OPTIONS = {
   check: { json: { type: "boolean" } },
-  init: { example: { type: "string" }, dir: { type: "string" } },
+  init: {
+    example: { type: "string" },
+    template: { type: "string" },
+    dir: { type: "string" },
+  },
+  build: { watch: { type: "boolean" } },
+  package: { out: { type: "string" }, json: { type: "boolean" } },
   dev: {
     "config-dir": { type: "string" },
     once: { type: "boolean" },
     "print-env": { type: "boolean" },
   },
 };
-const POSITIONALS = { check: 1, init: 1, dev: 1 };
+const POSITIONALS = { check: 1, init: 1, dev: 1, build: 1, package: 1 };
 
 const out = (s) => process.stdout.write(`${s}\n`);
 const err = (s) => process.stderr.write(`${s}\n`);
@@ -97,11 +108,9 @@ async function main(argv, env = process.env) {
         err("Missing the plugin folder: vaultdraw-plugin check <dir>");
         return 2;
       }
-      return (await import("../src/check.mjs")).runCheck(
-        arg,
-        { json: v.json },
-        out,
-      );
+      return await (
+        await import("../src/check.mjs")
+      ).runCheck(arg, { json: v.json }, out);
     }
     if (cmd === "init") {
       if (!arg) {
@@ -110,9 +119,23 @@ async function main(argv, env = process.env) {
       }
       return (await import("../src/init.mjs")).runInit(
         arg,
-        { example: v.example, dir: v.dir },
+        { example: v.example, template: v.template, dir: v.dir },
         out,
       );
+    }
+    if (cmd === "build") {
+      return await (
+        await import("../src/build.mjs")
+      ).runBuild(arg, { watch: v.watch }, out, err);
+    }
+    if (cmd === "package") {
+      if (!arg) {
+        err("Missing the plugin folder: vaultdraw-plugin package <dir>");
+        return 2;
+      }
+      return await (
+        await import("../src/package.mjs")
+      ).runPackage(arg, { out: v.out, json: v.json }, out, err);
     }
     return await (
       await import("../src/dev.mjs")
