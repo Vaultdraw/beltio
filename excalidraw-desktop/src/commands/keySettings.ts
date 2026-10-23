@@ -185,7 +185,8 @@ const KNOWN_KEYS = new Set([
  * The `[keys.labels]` table and the unknown-key check of `[keys]` (the scalar
  * keys are CONFIG_MAPPING rows). Labels are keyed by the canonical sequence
  * (`<leader>` literal), so "<leader> F" and "<leader> f" differ only as the
- * chord parser says. A bad entry is left out with a problem naming its path.
+ * chord parser says. Keys stay as written so Settings can edit the exact line;
+ * `resolveLabels` canonicalises when it looks one up. A bad entry is left out with a problem naming its path.
  */
 export function parseKeysExtras(table: unknown): {
   labels: Record<string, string>;
@@ -255,6 +256,13 @@ export function parseKeysExtras(table: unknown): {
   }
   return { labels, problems };
 }
+
+/** True when two spellings are the same sequence (`g g` and `G G`). */
+export const sameKeySequence = (a: string, b: string): boolean => {
+  const x = parseSequence(a, null, LEADER_TOKEN);
+  const y = parseSequence(b, null, LEADER_TOKEN);
+  return !!x && !!y && x.join(" ") === y.join(" ");
+};
 
 /** Longest label text Settings writes (the writer allows 1024). */
 export const KEY_LABEL_MAX = 80;

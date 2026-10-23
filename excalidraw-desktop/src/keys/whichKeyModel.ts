@@ -34,8 +34,8 @@ export interface WhichKeyInput {
 }
 
 /**
- * `[keys.labels]` keys are canonical ("chords joined by a space, <leader>
- * literal"); the trie holds expanded chords. Re-key by the expanded form.
+ * `[keys.labels]` keys are sequences as written ("g g", "<leader> f"); the trie
+ * holds expanded chords. Re-key by the expanded form.
  */
 export function resolveLabels(
   labels: Readonly<Record<string, string>>,

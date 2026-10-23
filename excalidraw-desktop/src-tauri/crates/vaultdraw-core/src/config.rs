@@ -493,8 +493,8 @@ fn plan_label(key: &str, value: &Json) -> Option<Result<LabelChange>> {
 }
 
 /// Sets or removes one `[keys.labels]` entry, creating the table (under an implicit
-/// `[keys]`) on the first label. A removed entry's comments move to the next entry, and a
-/// table left empty and uncommented is dropped along with an empty implicit `[keys]`.
+/// `[keys]`) on the first label. A removed entry's comments move to the next entry (the last
+/// entry's go with it), and a table left empty and uncommented is dropped along with an empty implicit `[keys]`.
 fn apply_label(doc: &mut toml_edit::DocumentMut, label: &LabelChange, name: &str) -> Result<()> {
     let not_table = |t: &str| err("INVALID_ARGUMENT", format!("\"{t}\" in {name} is not a table"));
     let root = doc.as_table_mut();
@@ -549,7 +549,7 @@ fn remove_label(root: &mut toml_edit::Table, seq: &str) {
     // Only a plain `[keys.labels]` without comments of its own is dropped.
     let plain = keys.get("labels").and_then(toml_edit::Item::as_table).is_some_and(|t| {
         let text = |r: Option<&toml_edit::RawString>| r.and_then(|r| r.as_str()).unwrap_or("").to_owned();
-        !text(t.decor().prefix()).contains('#') && !text(t.decor().suffix()).contains('#') && comments.is_empty()
+        !text(t.decor().prefix()).contains('#') && !text(t.decor().suffix()).contains('#')
     });
     if !plain {
         return;
@@ -1640,6 +1640,8 @@ mod tests {
         let out = apply_changes("[keys]\nlabels = { \"g g\" = \"top\" }\n", &[change("keys.labels.g h", json!("home"))]).unwrap();
         let v = parse_config(&out).unwrap();
         assert_eq!(v["keys"]["labels"], json!({"g g": "top", "g h": "home"}));
+        let dotted = apply_changes("", &[change("keys.labels.<leader> .", json!("dot"))]).unwrap();
+        assert_eq!(parse_config(&dotted).unwrap()["keys"]["labels"]["<leader> ."], json!("dot"));
         let vault = apply_toml_changes("", &[change("keys.labels.<leader> f", json!("file"))], "settings.toml", MAX_CONFIG_BYTES).unwrap();
         assert_eq!(vault, "[keys.labels]\n\"<leader> f\" = \"file\"\n");
     }

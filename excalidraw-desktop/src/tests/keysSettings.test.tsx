@@ -7,6 +7,7 @@ import {
   KEYS_DEFAULTS,
   KEYS_FIELDS,
   checkKeyLabel,
+  sameKeySequence,
   normalizeKeysPreferences,
   toKeySettings,
 } from "../commands/keySettings";
@@ -400,5 +401,14 @@ describe("checkKeyLabel", () => {
     expect(checkKeyLabel("", "a")).toHaveProperty("error");
     expect(checkKeyLabel("g g", "  ")).toHaveProperty("error");
     expect(checkKeyLabel("g g", "x".repeat(81))).toHaveProperty("error");
+  });
+});
+
+describe("sameKeySequence", () => {
+  it("treats spellings of one sequence as the same", () => {
+    expect(sameKeySequence("g g", "G G")).toBe(true);
+    expect(sameKeySequence("<leader> f", "<leader>  F")).toBe(true);
+    expect(sameKeySequence("g g", "g h")).toBe(false);
+    expect(sameKeySequence("g g", "Nope+x")).toBe(false);
   });
 });

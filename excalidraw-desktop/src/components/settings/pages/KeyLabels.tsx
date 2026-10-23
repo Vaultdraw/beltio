@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { checkKeyLabel } from "../../../commands/keySettings";
+import { checkKeyLabel, sameKeySequence } from "../../../commands/keySettings";
 import { updatePreferences } from "../../../vault/preferences";
 
 /**
@@ -29,7 +29,11 @@ export const KeyLabels = ({
       return;
     }
     setError(null);
-    save({ ...labels, [checked.sequence]: checked.text });
+    // Another spelling of the same sequence is replaced, never duplicated.
+    const same = Object.keys(labels).find((k) =>
+      sameKeySequence(k, checked.sequence),
+    );
+    save({ ...labels, [same ?? checked.sequence]: checked.text });
     setSequence("");
     setText("");
   };
@@ -52,7 +56,7 @@ export const KeyLabels = ({
           </li>
         )}
         {rows.map(([seq, label]) => (
-          <li key={`${seq}\u0000${label}`} className="vault-key-labels__row">
+          <li key={seq} className="vault-key-labels__row">
             <code className="vault-key-labels__seq">{seq}</code>
             <input
               className="vault-input vault-input--compact"
@@ -60,12 +64,15 @@ export const KeyLabels = ({
               defaultValue={label}
               spellCheck={false}
               autoComplete="off"
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
               onBlur={(e) => {
-                const value = e.target.value.trim();
-                if (value && value !== label) {
-                  save({ ...labels, [seq]: value });
-                } else {
+                const checked = checkKeyLabel(seq, e.target.value);
+                if ("error" in checked) {
+                  setError(checked.error);
                   e.target.value = label;
+                } else if (checked.text !== label) {
+                  setError(null);
+                  save({ ...labels, [seq]: checked.text });
                 }
               }}
             />
