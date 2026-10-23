@@ -3916,12 +3916,14 @@ class App extends React.Component<AppProps, AppState> {
   };
 
   /** returns whether any element of the scene uses one of the files */
-  private clearImageShapeCache(filesMap?: BinaryFiles) {
+  private clearImageShapeCache(filesMap?: BinaryFiles, dropImages = true) {
     const files = filesMap ?? this.files;
     let cleared = false;
     this.scene.getNonDeletedElements().forEach((element) => {
       if (isInitializedImageElement(element) && files[element.fileId]) {
-        this.imageCache.delete(element.fileId);
+        if (dropImages) {
+          this.imageCache.delete(element.fileId);
+        }
         ShapeCache.delete(element);
         cleared = true;
       }
@@ -5156,6 +5158,13 @@ class App extends React.Component<AppProps, AppState> {
     // decoding began, so a slow preload is not evicted just before it lands
     for (const id of ids) {
       this.imageCacheUnreferencedSince.delete(id);
+    }
+    // Vaultdraw: an element that landed while its file was decoding (insert:
+    // addFiles, then updateScene) was drawn as the placeholder, and nothing
+    // else redraws it once the image is ready. Redraw only when the scene
+    // uses one of these files, so a preload for the next scene stays free.
+    if (!this.unmounted && this.clearImageShapeCache(addedFiles, false)) {
+      this.scene.triggerUpdate();
     }
   };
 

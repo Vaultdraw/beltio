@@ -87,6 +87,21 @@ describe("addFiles / retainFiles", () => {
     expect(triggerUpdate).toHaveBeenCalled();
   });
 
+  it("redraws once decoded when an element using the file lands while it decodes (formula insert)", async () => {
+    const triggerUpdate = vi.spyOn(h.app.scene, "triggerUpdate");
+    const preload = h.app.addFiles([file("late")]);
+    // insertFormula: addFiles, then the element, before the image decodes
+    API.setElements([
+      API.createElement({ type: "image", fileId: "late" as any }),
+    ]);
+    triggerUpdate.mockClear();
+    await preload;
+    expect(h.app.imageCache.get("late" as any)?.image).toBeInstanceOf(
+      window.Image,
+    );
+    expect(triggerUpdate).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps existing files and does not decode them again", async () => {
     await h.app.addFiles([file("a")]);
     const first = h.app.imageCache.get("a" as any);
