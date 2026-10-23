@@ -8,12 +8,16 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import { setCanvasSync, setCanvasThemeSource } from "../editor/canvasSync";
 import {
   getThemeRegistry,
+  isThemeReady,
+  loadThemeEntry,
+  resolveSelectedTheme,
   THEMES_CHANGED_EVENT,
   watchThemeRegistry,
   type ThemeRegistry,
@@ -68,12 +72,23 @@ export const useAppearance = (
     };
   }, [win, refresh]);
 
-  const snapshot = useMemo(
-    () => computeAppearance(getPreferences(win), registry, win),
+  const shown = useRef<AppearanceSnapshot | null>(null);
+  const snapshot = useMemo(() => {
+    const prefs = getPreferences(win);
+    // A lazy built-in still loading: keep the current look (no flash of
+    // Default); THEMES_CHANGED_EVENT brings a new registry when it lands.
+    const { entry } = resolveSelectedTheme(registry, prefs.colorTheme);
+    if (!isThemeReady(entry)) {
+      void loadThemeEntry(entry);
+      if (shown.current) {
+        return shown.current;
+      }
+    }
+    return computeAppearance(prefs, registry, win);
     // `tick` re-reads preferences after local edits and OS changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [registry, tick, win],
-  );
+  }, [registry, tick, win]);
+  shown.current = snapshot;
 
   // Layout effect: tokens land before the browser paints the new state.
   useLayoutEffect(() => {

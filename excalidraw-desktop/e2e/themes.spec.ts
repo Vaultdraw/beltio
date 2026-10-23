@@ -204,3 +204,39 @@ test("with sync on, a drawing with a dark custom background shows the theme canv
   expect(saved.appState.viewBackgroundColor).toBe(darkBg);
   expect(errors).toEqual([]);
 });
+
+test("a theme outside the startup bundle (Everforest) loads when picked in Settings", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  // Only the eight bundled themes ship with the startup code.
+  const fetchedEverforest = () =>
+    page.evaluate(() =>
+      performance
+        .getEntriesByType("resource")
+        .some((e) => /\/everforest[-.]/.test(e.name)),
+    );
+  expect(await fetchedEverforest()).toBe(false);
+  const defaultBg = await rootVar(page, "--vault-bg");
+
+  const dialog = await openSettings(page);
+  await dialog
+    .getByRole("searchbox", { name: "Search colour themes" })
+    .fill("everforest");
+  await dialog.getByRole("radio", { name: "Everforest", exact: true }).click();
+  await expect(
+    dialog.getByRole("radio", { name: "Everforest", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+
+  // The app shows Everforest once its chunk lands.
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.dataset.vaultTheme),
+    )
+    .toBe("Everforest");
+  await expect.poll(() => rootVar(page, "--vault-bg")).not.toBe(defaultBg);
+  const [r, g, b] = hexToRgb(await rootVar(page, "--vault-surface"));
+  await expect.poll(() => islandBackground(page)).toBe(`rgb(${r}, ${g}, ${b})`);
+  expect(await fetchedEverforest()).toBe(true);
+  expect(errors).toEqual([]);
+});

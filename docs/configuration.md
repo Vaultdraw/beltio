@@ -295,6 +295,8 @@ themes/
 
 The file or folder name is the theme's name: `theme = "Midnight"` selects `Midnight.json`. A theme in `themes/` with the same name as a built-in one replaces it.
 
+Eight built-in themes ship in the startup code (Default, Noctalia, Catppuccin, Dracula, Gruvbox, Nord, Rosé Pine, Tokyo Night). The other built-ins load on demand when selected; the configured theme is loaded before the window is first drawn.
+
 A theme needs only three colours per variant (background, text, accent); everything else is derived:
 
 ```json

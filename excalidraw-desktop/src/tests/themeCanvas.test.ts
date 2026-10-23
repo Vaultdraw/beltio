@@ -23,7 +23,7 @@ import { GRAY_MIX, SHADE_MIX } from "../theme/canvas";
 import type { ResolvedTheme, ThemeMode } from "../theme";
 
 const MODES: ThemeMode[] = ["dark", "light"];
-const themes = loadBuiltinThemes();
+const themes = await loadBuiltinThemes();
 const FAMILIES = [...HUE_FAMILIES, "bronze"] as const;
 const fallback = (c: string) => `fallback(${c})`;
 

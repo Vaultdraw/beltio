@@ -33,7 +33,7 @@ vi.mock("@excalidraw/excalidraw", () => ({
   exportToSvg: (o: unknown) => exportToSvg(o),
 }));
 
-const theme = loadBuiltinThemes()[0];
+const theme = (await loadBuiltinThemes())[0];
 const syncOn = () =>
   setCanvasSync({ variant: theme.dark, mode: "dark", key: "t" });
 const win = window as unknown as Window & typeof globalThis;

@@ -163,10 +163,12 @@ const expectTokenGuarantees = (
   return t;
 };
 
-describe("built-in themes", () => {
-  const themes = loadBuiltinThemes();
+const ALL_BUILTINS = await loadBuiltinThemes();
 
-  it("ships the bundled palettes, all hand-authored in both modes", () => {
+describe("built-in themes", () => {
+  const themes = ALL_BUILTINS;
+
+  it("ships the bundled palettes, all hand-authored in both modes", async () => {
     const ids = themes.map((t) => t.id);
     expect(ids[0]).toBe("default");
     expect(ids.length).toBeGreaterThanOrEqual(100);
@@ -201,7 +203,7 @@ describe("built-in themes", () => {
         hexToOklab(t.light.mSurface).l,
       );
     }
-    expect(loadBuiltinThemes()).toBe(themes);
+    expect(await loadBuiltinThemes()).toEqual(themes);
   });
 
   it("Default reproduces the app's current look", () => {
@@ -507,7 +509,7 @@ describe("parseThemeFile", () => {
 
 describe("Excalidraw variable overrides", () => {
   it("maps tokens onto Excalidraw's UI variables in both modes", () => {
-    const theme = loadBuiltinThemes().find(
+    const theme = ALL_BUILTINS.find(
       (t) => t.id === "tokyo-night",
     ) as ResolvedTheme;
     for (const mode of MODES) {
@@ -540,7 +542,7 @@ describe("applyThemeTokens", () => {
   it("sets inline variables + an override stylesheet, and restores both", () => {
     const root = document.documentElement;
     root.style.setProperty("--vault-text", "#123456");
-    const theme = loadBuiltinThemes()[1];
+    const theme = ALL_BUILTINS[1];
     const tokens = deriveTokens(theme.dark, "dark");
     const vars = excalidrawVariableOverrides(tokens, "dark");
 

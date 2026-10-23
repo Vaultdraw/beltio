@@ -107,6 +107,9 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - A lint (D7): official plugins, built-in extensions and example plugins may import only the public API, never app or editor internals.
 
 - **CSS snippets:** put your own `.css` files in the config folder's `snippets/` and turn each on in **Settings → Appearance → CSS snippets** or with `appearance.snippets` in `config.toml`. They apply after the theme, reload live, and never touch files or exports. Palette commands open the folder, reload, and toggle each snippet (rebindable).
+### Changed
+
+- Faster start: only eight built-in colour themes (Default, Noctalia, Catppuccin, Dracula, Gruvbox, Nord, Rosé Pine, Tokyo Night) ship in the startup code. The other built-ins load the moment you pick one, and a configured one loads before the first paint, so there is no flash. The theme code read at startup shrinks from 210 KB to 67 KB.
 
 ## [0.1.2] - 2026-10-23
 

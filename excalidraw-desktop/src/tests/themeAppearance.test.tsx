@@ -4,6 +4,7 @@ import {
   render,
   renderHook,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,7 +16,12 @@ import {
   setCanvasSync,
   withStandardCanvasColors,
 } from "../editor/canvasSync";
-import { deriveTokens, EXCALIDRAW_OVERRIDE_STYLE_ID } from "../theme";
+import {
+  deriveTokens,
+  EXCALIDRAW_OVERRIDE_STYLE_ID,
+  loadBuiltinTheme,
+} from "../theme";
+import { resetBuiltinCaches } from "../theme/builtins";
 import {
   builtinRegistry,
   findTheme,
@@ -268,6 +274,28 @@ describe("useAppearance wiring", () => {
     });
     expect(isCanvasSyncActive()).toBe(false);
     expect(root().style.getPropertyValue("--vault-bg")).toBe("");
+  });
+
+  it("keeps the current look while a lazy theme loads (no Default flash)", async () => {
+    resetBuiltinCaches();
+    updatePreferences({ theme: "dark", colorTheme: "Dracula" });
+    const { result } = renderHook(() => useAppearance(document, window));
+    expect(root().dataset.vaultTheme).toBe("Dracula");
+    const draculaBg = root().style.getPropertyValue("--vault-bg");
+
+    act(() => {
+      updatePreferences({ colorTheme: "Everforest" });
+      result.current.refresh();
+    });
+    // Chunk not loaded yet: still Dracula, never Default.
+    expect(root().dataset.vaultTheme).toBe("Dracula");
+    expect(root().style.getPropertyValue("--vault-bg")).toBe(draculaBg);
+
+    await waitFor(() => expect(root().dataset.vaultTheme).toBe("Everforest"));
+    const everforest = (await loadBuiltinTheme("everforest"))!;
+    expect(root().style.getPropertyValue("--vault-bg")).toBe(
+      deriveTokens(everforest.dark, "dark")["--vault-bg"],
+    );
   });
 
   it("reports an unknown theme and uses Default", () => {

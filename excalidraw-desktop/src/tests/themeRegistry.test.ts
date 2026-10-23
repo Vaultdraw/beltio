@@ -35,10 +35,10 @@ const file = (
 afterEach(() => setThemeRegistry(null));
 
 describe("theme registry rules", () => {
-  it("browser mode has exactly the built-ins, Default first", () => {
+  it("browser mode has exactly the built-ins, Default first", async () => {
     const reg = builtinRegistry();
     expect(reg.themes.map((t) => t.key)).toEqual(
-      loadBuiltinThemes().map((t) => t.name),
+      (await loadBuiltinThemes()).map((t) => t.name),
     );
     expect(reg.themes[0].key).toBe("Default");
     expect(reg.themes.every((t) => t.source === "builtin")).toBe(true);

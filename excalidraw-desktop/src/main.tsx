@@ -95,12 +95,16 @@ void initSettings(ownerWindow)
     // Colour theme before the first render (no flash of the default look).
     // Never fatal: a broken theme setup falls back to the stock look.
     try {
-      const [{ loadThemeRegistry }, { applyAppearance, computeAppearance }] =
-        await Promise.all([
-          import("./theme/registry"),
-          import("./vault/appearance"),
-        ]);
+      const [
+        { loadSelectedTheme, loadThemeRegistry },
+        { applyAppearance, computeAppearance },
+      ] = await Promise.all([
+        import("./theme/registry"),
+        import("./vault/appearance"),
+      ]);
       const registry = await loadThemeRegistry(ownerWindow);
+      // A lazy built-in's chunk lands before the first paint (no flash).
+      await loadSelectedTheme(registry, getPreferences(ownerWindow).colorTheme);
       applyAppearance(
         ownerDocument,
         computeAppearance(getPreferences(ownerWindow), registry, ownerWindow),

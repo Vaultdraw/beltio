@@ -12,10 +12,12 @@
  *
  * In a plain browser (Playwright harness, tests) only built-ins exist.
  *
- * Built-ins are parsed lazily: an entry's `theme` is resolved on first
- * access, so building the registry (100+ themes) only reads names. Lists use
- * `listThemeSummaries()` (cheap previews); `resolveTheme()` / `entry.theme`
- * parse the one theme actually used.
+ * Built-ins are lazy: names and previews come from the generated index, and
+ * most theme files are separate chunks (builtins.ts). Lists use
+ * `listThemeSummaries()` (cheap previews). Before showing a theme, load it
+ * with `loadThemeEntry()` / `loadSelectedTheme()`; `entry.theme` on a lazy
+ * built-in that isn't loaded yet returns Default and starts the load, and
+ * THEMES_CHANGED_EVENT fires (with a new registry object) once it lands.
  */
 
 import { touchesConfigSubdir } from "../vault/configPaths";
@@ -29,6 +31,8 @@ import {
   builtinThemePreview,
   DEFAULT_THEME_ID,
   getBuiltinTheme,
+  isBuiltinThemeLoaded,
+  loadBuiltinTheme,
   previewFromTheme,
 } from "./builtins";
 
@@ -53,8 +57,9 @@ export interface ThemeEntry {
   author?: string;
   /**
    * The fully resolved theme. For built-ins this is a lazy getter: the file
-   * is parsed on first access. Avoid touching it for every entry in a list;
-   * use `summary` / `listThemeSummaries()` instead.
+   * is parsed on first access; a lazy built-in not loaded yet returns
+   * Default and starts loading (see isThemeReady / loadThemeEntry). Avoid
+   * touching it for every entry in a list; use `summary` instead.
    */
   readonly theme: ResolvedTheme;
   /** Cheap card data (previews etc.). */
@@ -142,10 +147,15 @@ const builtinEntry = (file: BuiltinThemeFile): ThemeEntry => {
     overridesBuiltin: false,
   };
   let summary: ThemeSummary | null = null;
-  return {
+  const entry: ThemeEntry = {
     ...base,
     get theme() {
-      return getBuiltinTheme(file.id) as ResolvedTheme;
+      const theme = getBuiltinTheme(file.id);
+      if (theme) {
+        return theme;
+      }
+      void loadThemeEntry(entry);
+      return getBuiltinTheme(DEFAULT_THEME_ID) as ResolvedTheme;
     },
     get summary() {
       return (summary ??= summaryOf(
@@ -154,6 +164,7 @@ const builtinEntry = (file: BuiltinThemeFile): ThemeEntry => {
       ));
     },
   };
+  return entry;
 };
 
 const userEntry = (
@@ -363,13 +374,71 @@ export const listThemeSummaries = (
 ): ThemeSummary[] => registry.themes.map((e) => e.summary);
 
 /**
- * Fully resolves one theme by key, name or slug (parsing a built-in on first
- * use). Null when unknown; use resolveSelectedTheme for the Default fallback.
+ * Fully resolves one theme by key, name or slug (loading and parsing a
+ * built-in on first use). Null when unknown; use resolveSelectedTheme for
+ * the Default fallback.
  */
-export const resolveTheme = (
+export const resolveTheme = async (
   key: string,
   registry: ThemeRegistry = getThemeRegistry(),
-): ResolvedTheme | null => findTheme(registry, key)?.theme ?? null;
+): Promise<ResolvedTheme | null> => {
+  const entry = findTheme(registry, key);
+  if (!entry) {
+    return null;
+  }
+  await loadThemeEntry(entry);
+  return entry.theme;
+};
+
+// ---------------------------------------------------------------------------
+// Lazy built-ins
+// ---------------------------------------------------------------------------
+
+/** True when `entry.theme` is the real theme (not the loading fallback). */
+export const isThemeReady = (entry: ThemeEntry): boolean =>
+  entry.source !== "builtin" || isBuiltinThemeLoaded(entry.id);
+
+const pendingLoads = new Map<string, Promise<void>>();
+
+/** Lets React state holding the registry see that a theme finished loading. */
+const announceLoaded = () => {
+  if (cached) {
+    cached = { ...cached };
+  }
+  const win = typeof window !== "undefined" ? window : null;
+  if (win && typeof win.dispatchEvent === "function") {
+    win.dispatchEvent(
+      new CustomEvent(THEMES_CHANGED_EVENT, { detail: getThemeRegistry() }),
+    );
+  }
+};
+
+/**
+ * Loads a lazy built-in's chunk (no-op when ready). Fires
+ * THEMES_CHANGED_EVENT once when a load completes. Never throws.
+ */
+export const loadThemeEntry = (entry: ThemeEntry): Promise<void> => {
+  if (isThemeReady(entry)) {
+    return Promise.resolve();
+  }
+  let pending = pendingLoads.get(entry.id);
+  if (!pending) {
+    pending = loadBuiltinTheme(entry.id)
+      .then(announceLoaded, () => {
+        // Chunk failed to load: entry.theme keeps returning Default.
+      })
+      .finally(() => pendingLoads.delete(entry.id));
+    pendingLoads.set(entry.id, pending);
+  }
+  return pending;
+};
+
+/** Loads the theme `selected` resolves to (startup: before the first paint). */
+export const loadSelectedTheme = (
+  registry: ThemeRegistry,
+  selected: string,
+): Promise<void> =>
+  loadThemeEntry(resolveSelectedTheme(registry, selected).entry);
 
 // ---------------------------------------------------------------------------
 // Runtime (Tauri): load, cache and live reload

@@ -80,8 +80,10 @@ const checkDesignGuarantees = (t: ThemeTokens, label: string) => {
   }
 };
 
+const ALL_BUILTINS = await loadBuiltinThemes();
+
 describe("design tokens over every built-in theme", () => {
-  const themes = loadBuiltinThemes();
+  const themes = ALL_BUILTINS;
 
   it("covers all built-ins", () => {
     expect(themes.length).toBeGreaterThanOrEqual(120);

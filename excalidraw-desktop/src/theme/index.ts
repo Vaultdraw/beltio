@@ -1,7 +1,8 @@
 /**
  * Theme engine public API.
  *
- *   const theme = getBuiltinTheme("default");   // parsed lazily, cached
+ *   const theme = await loadBuiltinTheme("nord");  // lazy chunk, parsed once
+ *   // (getBuiltinTheme(id) answers synchronously once loaded, and for Default)
  *   const variant = theme[mode];
  *   const tokens = deriveTokens(variant, mode);
  *   const handle = applyThemeTokens(document, tokens,
@@ -13,8 +14,6 @@ import {
   adoptBeforeUserSheets,
   insertStyleBeforeUserStyles,
 } from "../platform/styleOrder";
-
-import { builtinThemeFiles } from "./builtins";
 
 export * from "./types";
 export * from "./color";
@@ -42,9 +41,12 @@ export {
 } from "./canvas";
 export {
   DEFAULT_THEME_ID,
+  EAGER_THEME_IDS,
   builtinThemeFiles,
   builtinThemePreview,
   getBuiltinTheme,
+  isBuiltinThemeLoaded,
+  loadBuiltinTheme,
   loadBuiltinThemes,
   previewFromTheme,
   previewFromVariant,
@@ -55,13 +57,6 @@ export type {
   ThemePreview,
   ThemePreviewColors,
 } from "./builtins";
-
-/**
- * Built-in theme files in display order as [name, json] (no parsing).
- * @deprecated use builtinThemeFiles()
- */
-export const BUILTIN_THEME_FILES: ReadonlyArray<[string, unknown]> =
-  builtinThemeFiles().map((f) => [f.name, f.json]);
 
 /** id of the fallback <style> element carrying Excalidraw variable overrides. */
 export const EXCALIDRAW_OVERRIDE_STYLE_ID = "vault-theme-excalidraw-vars";
