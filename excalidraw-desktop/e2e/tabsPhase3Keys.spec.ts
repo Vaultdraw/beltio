@@ -65,16 +65,26 @@ const runCommand = async (page: Page, query: string, first: string) => {
   await page.keyboard.press("Enter");
 };
 
-/** Context menu of a tab from the keyboard: focus it, Shift+F10. */
+const menuItems = (page: Page) => menu(page).getByRole("menuitem");
+
+/**
+ * Context menu of a tab from the keyboard: focus it, Shift+F10. Waits until the
+ * menu has focused its first item (it owns the arrow keys from then on): a
+ * visible menu alone is not enough under load.
+ */
 const keyboardMenu = async (page: Page, path: string) => {
   await tabByPath(page, path).focus();
+  await expect(tabByPath(page, path)).toBeFocused();
   await page.keyboard.press("Shift+F10");
   await expect(menu(page)).toBeVisible();
+  await expect(menuItems(page).first()).toBeFocused();
 };
 
+/** ArrowDown `downs` times, checking each step landed, then Enter. */
 const pickByKeys = async (page: Page, downs: number) => {
   for (let i = 0; i < downs; i++) {
     await page.keyboard.press("ArrowDown");
+    await expect(menuItems(page).nth(i + 1)).toBeFocused();
   }
   await page.keyboard.press("Enter");
 };
