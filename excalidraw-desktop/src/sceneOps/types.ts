@@ -1,61 +1,18 @@
 /**
- * Public scene vocabulary shared by plugins, the control API and the CLI
- * bridge. Additive only. Never exposes version, versionNonce, index, seed,
- * bindings or boundElements.
+ * Scene vocabulary. The public types live in `sdk/api` (re-exported here);
+ * the error class and the editor seam below are internal to the app.
  */
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
-export type SceneElementType =
-  | "rectangle"
-  | "ellipse"
-  | "diamond"
-  | "text"
-  | "arrow"
-  | "line"
-  | "freedraw"
-  | "image"
-  | "frame"
-  | "other";
+import type { SceneOpIssue } from "../../../sdk/api/src/index";
 
-export interface SceneElement {
-  readonly id: string;
-  readonly type: SceneElementType;
-  readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height: number;
-  readonly angle: number;
-  readonly text?: string;
-  readonly strokeColor?: string;
-  readonly backgroundColor?: string;
-}
-
-export interface NewElement {
-  type: "rectangle" | "ellipse" | "diamond" | "text" | "arrow" | "line";
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-  text?: string;
-  fontSize?: number;
-  strokeColor?: string;
-  backgroundColor?: string;
-  strokeWidth?: number;
-  opacity?: number;
-  points?: [number, number][];
-}
-
-export type SceneOp =
-  | { op: "add"; element: NewElement }
-  | { op: "update"; id: string; props: Partial<Omit<NewElement, "type">> }
-  | { op: "delete"; id: string };
-
-export interface SceneOpIssue {
-  /** Index in the ops array. */
-  op: number;
-  key?: string;
-  message: string;
-}
+export type {
+  NewElement,
+  SceneElement,
+  SceneElementType,
+  SceneOp,
+  SceneOpIssue,
+} from "../../../sdk/api/src/index";
 
 /** Thrown before anything is written; lists every problem found. */
 export class SceneOpsError extends Error {

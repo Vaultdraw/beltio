@@ -17,7 +17,6 @@ import type { PluginRuntime } from "./types";
 import type { PluginSettingValue } from "../../vault/pluginSettingsTable";
 
 const NOOP: Disposable = { dispose() {} };
-const LEVELS = ["debug", "info", "warn", "error"] as const;
 
 let activeTimers = 0;
 /** Timers currently scheduled by plugins (leak check for tests and the cost panel). */
@@ -89,6 +88,14 @@ export function createPluginContext(
         clear(handle);
         stop();
       });
+    };
+
+  const logger =
+    (level: "debug" | "info" | "warn" | "error") =>
+    (...a: unknown[]) => {
+      // eslint-disable-next-line no-console
+      console[level](`[plugin ${id}]`, ...a);
+      logLine(id, level, a.map((x) => errorText(x)).join(" "));
     };
 
   const settingValue = (key: string) => getPluginSetting(id, key);
@@ -168,16 +175,12 @@ export function createPluginContext(
       toast: (message) =>
         toastStore.push({ message: `${info.name}: ${String(message)}` }),
     },
-    log: Object.fromEntries(
-      LEVELS.map((level) => [
-        level,
-        (...a: unknown[]) => {
-          // eslint-disable-next-line no-console
-          console[level](`[plugin ${id}]`, ...a);
-          logLine(id, level, a.map((x) => errorText(x)).join(" "));
-        },
-      ]),
-    ) as PluginContext["log"],
+    log: {
+      debug: logger("debug"),
+      info: logger("info"),
+      warn: logger("warn"),
+      error: logger("error"),
+    },
     scene: createSceneApi(id, track, isLive),
     events: createEventsApi(id, track, isLive),
     subscriptions,

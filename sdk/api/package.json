@@ -1,0 +1,19 @@
+{
+  "name": "@vaultdraw/api",
+  "version": "0.1.0",
+  "description": "Types of the Vaultdraw plugin API",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "types": "./src/index.ts",
+  "files": [
+    "src",
+    "etc"
+  ],
+  "vaultdraw": {
+    "minApp": "0.1.2"
+  },
+  "peerDependencies": {
+    "@types/react": ">=18"
+  }
+}

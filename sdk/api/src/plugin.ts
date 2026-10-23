@@ -1,0 +1,108 @@
+import type { CommandsApi } from "./commands";
+import type { Disposable } from "./disposable";
+import type { EventsApi } from "./events";
+import type { PluginManifestInfo } from "./manifest";
+import type { PanelsApi } from "./panels";
+import type { SceneContextApi } from "./scene";
+import type { SettingsApi } from "./settings";
+
+/**
+ * Toast messages.
+ *
+ * @since 0.1.0
+ */
+export interface UiApi {
+  /**
+   * Shows a short message, prefixed with the plugin name.
+   *
+   * @since 0.1.0
+   */
+  toast(message: string): void;
+}
+
+/**
+ * Logging; lines go to the console and to the plugin's log.
+ *
+ * @since 0.1.0
+ */
+export interface LogApi {
+  /** @since 0.1.0 */
+  debug(...a: unknown[]): void;
+  /** @since 0.1.0 */
+  info(...a: unknown[]): void;
+  /** @since 0.1.0 */
+  warn(...a: unknown[]): void;
+  /** @since 0.1.0 */
+  error(...a: unknown[]): void;
+}
+
+/**
+ * What the app hands to `activate`. Everything a plugin registers goes into
+ * `subscriptions` and is disposed with the plugin.
+ *
+ * @since 0.1.0
+ */
+export interface PluginContext {
+  /** @since 0.1.0 */
+  readonly manifest: PluginManifestInfo;
+  /** @since 0.1.0 */
+  readonly commands: CommandsApi;
+  /** @since 0.1.0 */
+  readonly panels: PanelsApi;
+  /** @since 0.1.0 */
+  readonly settings: SettingsApi;
+  /** @since 0.1.0 */
+  readonly ui: UiApi;
+  /** @since 0.1.0 */
+  readonly log: LogApi;
+  /** @since 0.1.0 */
+  readonly scene: SceneContextApi;
+  /** @since 0.1.0 */
+  readonly events: EventsApi;
+  /**
+   * Disposed in reverse order on disable/reload/quit.
+   *
+   * @since 0.1.0
+   */
+  readonly subscriptions: Disposable[];
+  /**
+   * Like `window.setTimeout`; cleared when the plugin is disposed.
+   *
+   * @since 0.1.0
+   */
+  setTimeout(fn: () => void, ms: number): Disposable;
+  /**
+   * Like `window.setInterval`; cleared when the plugin is disposed.
+   *
+   * @since 0.1.0
+   */
+  setInterval(fn: () => void, ms: number): Disposable;
+}
+
+/**
+ * A plugin: the default export of its `main.js`.
+ *
+ * @since 0.1.0
+ */
+export interface Plugin {
+  /**
+   * Called once when the plugin is activated.
+   *
+   * @since 0.1.0
+   */
+  activate(ctx: PluginContext): void | Promise<void>;
+  /**
+   * Called when the plugin is disabled or reloaded. 2 s timeout.
+   *
+   * @since 0.1.0
+   */
+  deactivate?(): void | Promise<void>;
+}
+
+/**
+ * Identity function that types a plugin object. The app has the same function
+ * at runtime (import `@vaultdraw/api`).
+ *
+ * @since 0.1.0
+ */
+export const definePlugin = (plugin: Plugin): Plugin => plugin;

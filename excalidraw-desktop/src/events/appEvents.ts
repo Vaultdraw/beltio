@@ -1,11 +1,6 @@
-/** Typed app events for plugins. Paths are vault-relative, never absolute. */
-export type AppEventMap = {
-  "vault.opened": { name: string };
-  "drawing.opened": { path: string };
-  "drawing.saved": { path: string };
-  "drawing.renamed": { from: string; to: string };
-  "drawing.deleted": { path: string };
-};
+import type { AppEventMap } from "../../../sdk/api/src/index";
+
+export type { AppEventMap };
 
 export type AppEventName = keyof AppEventMap;
 
