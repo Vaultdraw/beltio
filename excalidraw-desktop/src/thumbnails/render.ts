@@ -5,17 +5,15 @@
  * dynamically, when the first job runs.
  */
 import { fitThumb } from "./fit";
-import { sceneSlicing, yieldToMain } from "./slicing";
+import { RenderCancelled, sceneSlicing, yieldToMain } from "./slicing";
 import { withStandardColors } from "./standardColors";
 
 /**
  * PNG renderer generation. Bumping it re-renders every cached thumbnail (the
  * PNG and fail-marker names carry the version) and retries failed scenes.
  * v2 (2026-10-21): device-pixel density, fixed 4:3 box, padded fit.
- * v3 (2026-10-23): same pixels; retries the "too-many" fail markers left by
- * the old 600-element cap.
  */
-export const RENDER_VERSION = 3;
+export const RENDER_VERSION = 2;
 
 /**
  * Version sent to the cache for PNGs rendered at `density`: a 1x render is
@@ -24,8 +22,25 @@ export const RENDER_VERSION = 3;
 export const pngRenderVersion = (density: number) =>
   RENDER_VERSION * 10 + density;
 
+/**
+ * Fail-marker generation. Bump it when a cap below changes: only the drawings
+ * that failed are retried, cached PNGs stay valid. Generation 0 shared the PNG
+ * version; 1 (2026-10-23) retries the "too-many" markers of the 600 cap.
+ */
+export const FAIL_MARKER_GEN = 1;
+
+/** Version of the fail markers written and honoured at `density`. */
+export const failMarkerVersion = (density: number) =>
+  FAIL_MARKER_GEN * 1000 + pngRenderVersion(density);
+
 // SVG data URLs (history rows, link cards, templates).
 export const THUMBNAIL_MAX_SIZE = 240;
+/**
+ * Cap for the SVG previews. Deliberately separate from (and lower than)
+ * THUMB_MAX_ELEMENTS: exportToSvg is not time-sliced, so a whole SVG render is
+ * one task, and each preview's DOM/data-URL size grows with the scene. The
+ * PNG cap is higher only because its paint is sliced.
+ */
 export const THUMBNAIL_MAX_ELEMENTS = 2000;
 
 // PNG disk cache: box geometry in ./fit.ts.
@@ -33,12 +48,13 @@ export const THUMBNAIL_MAX_ELEMENTS = 2000;
  * Element cap for the PNG render. Painting is time-sliced (./slicing.ts) and
  * the linear pre-paint phases (parse, restore, bounds) each run in their own
  * task, so the longest task is the slowest phase, not the whole render.
- * 2026-10-23 (e2e/thumbnailsBlocking.spec.ts, Chromium 4x, quiet machine):
- * longest task 25.7 ms at 2000, 36.5 at 3000, 46.5 at 4000 and 58 at 5000
- * elements, so the 50 ms long-task budget holds up to 4000.
- * Was 600 before slicing (one-task render: 42 ms at 500 elements).
+ * 2026-10-23 (e2e/thumbnailsBlocking.spec.ts, Chromium, quiet machine), the
+ * longest task at 4x / 6x CPU throttle: 2000 elements 27 / 42 ms, 2500
+ * 30 / 43 ms, 3000 40 / 50 ms, 4000 44 / 69 ms. Low-end is judged at 4-6x
+ * against the 50 ms long-task budget, so the cap is 2500 (headroom at 6x).
+ * Was 600 before slicing (one-task render: 42 ms at 500 elements at 4x).
  */
-export const THUMB_MAX_ELEMENTS = 4000;
+export const THUMB_MAX_ELEMENTS = 2500;
 /** Above this the scene is not parsed at all (long task); fail marker. */
 export const THUMB_MAX_JSON_BYTES = 8 * 1024 * 1024;
 /** Above this the embedded images are dropped (placeholders): bounds decode cost. */
@@ -50,13 +66,20 @@ export type FailReason =
   | "too-many"
   | "too-large"
   | "encode"
-  | "error";
+  | "error"
+  /** Stopped at a yield (unwatched, scrolled past, disposed): never a marker. */
+  | "cancelled";
 export type PngResult =
   | { kind: "png"; blob: Blob }
   | { kind: "fail"; reason: FailReason };
 
 export type RenderSvg = (json: string) => Promise<string | null>;
-export type RenderPng = (json: string, density?: number) => Promise<PngResult>;
+/** `cancelled` is polled after every yield; true stops the render. */
+export type RenderPng = (
+  json: string,
+  density?: number,
+  cancelled?: () => boolean,
+) => Promise<PngResult>;
 
 type Scene = { elements: any[]; appState: any; files: any };
 
@@ -150,14 +173,15 @@ const canvasToPng = async (canvas: HTMLCanvasElement): Promise<Blob | null> => {
  * Scene JSON -> opaque PNG of the fixed 4:3 thumbnail box at `density`
  * (fitThumb), standard light colours.
  */
-export const renderScenePng: RenderPng = async (json, density = 1) =>
-  renderPng(json, density, true);
+export const renderScenePng: RenderPng = async (json, density = 1, cancelled) =>
+  renderPng(json, density, true, cancelled);
 
 /** `sliced` false is the one-task render (pixel reference in tests). */
 export const renderPng = async (
   json: string,
   density: number,
   sliced: boolean,
+  cancelled?: () => boolean,
 ): Promise<PngResult> => {
   const scene = parseScene(json, {
     maxElements: THUMB_MAX_ELEMENTS,
@@ -169,6 +193,9 @@ export const renderPng = async (
   }
   if (sliced) {
     await yieldToMain(); // the parse is one task; restore starts in the next
+    if (cancelled?.()) {
+      return { kind: "fail", reason: "cancelled" };
+    }
   }
   try {
     const { exportToCanvas } = await import("@excalidraw/excalidraw");
@@ -183,7 +210,7 @@ export const renderPng = async (
           fit = fitThumb(width, height, density);
           return { width: fit.width, height: fit.height, scale: fit.scale };
         },
-        slicing: sliced ? sceneSlicing() : undefined,
+        slicing: sliced ? sceneSlicing(cancelled) : undefined,
       });
       const box = document.createElement("canvas");
       box.width = fit.boxWidth;
@@ -201,7 +228,10 @@ export const renderPng = async (
       const blob = await canvasToPng(box);
       return blob ? { kind: "png", blob } : { kind: "fail", reason: "encode" };
     });
-  } catch {
-    return { kind: "fail", reason: "error" };
+  } catch (err) {
+    return {
+      kind: "fail",
+      reason: err instanceof RenderCancelled ? "cancelled" : "error",
+    };
   }
 };

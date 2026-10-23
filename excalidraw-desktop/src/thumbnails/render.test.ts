@@ -141,13 +141,36 @@ describe("renderScenePng", () => {
   });
 
   it("renders drawings well over the old 600-element cap, time-sliced", async () => {
-    expect(THUMB_MAX_ELEMENTS).toBeGreaterThanOrEqual(4000);
+    expect(THUMB_MAX_ELEMENTS).toBeGreaterThanOrEqual(2500);
     exportsContent();
-    const result = await renderScenePng(scene(2500), 2);
+    const result = await renderScenePng(scene(2400), 2);
     expect(result.kind).toBe("png");
     const opts = exportToCanvas.mock.calls[0][0];
-    expect(opts.elements).toHaveLength(2500);
+    expect(opts.elements).toHaveLength(2400);
     expect(opts.slicing.budgetMs).toBe(6);
+  });
+
+  it("stops after the parse when cancelled: no restore, no paint", async () => {
+    exportsContent();
+    expect(await renderScenePng(scene(10), 1, () => true)).toEqual({
+      kind: "fail",
+      reason: "cancelled",
+    });
+    expect(exportToCanvas).not.toHaveBeenCalled();
+  });
+
+  it("stops at a paint slice when cancelled mid-render", async () => {
+    let stop = false;
+    exportToCanvas.mockImplementation(async (opts: any) => {
+      opts.getDimensions(10, 10);
+      stop = true; // e.g. scrolled past while painting
+      await opts.slicing.yieldFn();
+      return contentCanvas();
+    });
+    expect(await renderScenePng(scene(10), 1, () => stop)).toEqual({
+      kind: "fail",
+      reason: "cancelled",
+    });
   });
 
   it("drops embedded files above the files size limit", async () => {

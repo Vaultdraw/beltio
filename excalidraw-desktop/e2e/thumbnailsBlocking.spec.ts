@@ -14,14 +14,32 @@ import type { Step0Hooks } from "./thumbnailsStep0";
 // line per case (record.mjs spec ingests `<NAME>_PERF`).
 //
 //   E2E_PERF=1 E2E_FULL=1 E2E_WORKERS=1 npx playwright test e2e/thumbnailsBlocking.spec.ts
+//   (THUMB_BIG=600,2000,2500 big cases; THUMB_RATES=1,4 CPU throttle rates)
 //
 // Only `renderScenePng(json, density)` is used, so the spec runs unchanged on
 // older checkouts (before/after comparisons).
 const PERF = process.env.E2E_PERF === "1" || process.env.THUMB_PERF === "1";
 const DENSITY = Number(process.env.THUMB_DENSITY ?? 2);
 const ROUNDS = Number(process.env.THUMB_ROUNDS ?? 3);
-/** Big single-drawing cases, e.g. THUMB_BIG=600,2000,4000. */
-const BIG = (process.env.THUMB_BIG ?? "600,2000,4000").split(",").map(Number);
+/** Big single-drawing cases, e.g. THUMB_BIG=600,2000,2500 (positive integers). */
+const BIG_RAW = (process.env.THUMB_BIG ?? "600,2000,2500")
+  .split(",")
+  .map((v) => v.trim());
+if (BIG_RAW.length === 0 || BIG_RAW.some((v) => !/^[1-9][0-9]*$/.test(v))) {
+  throw new Error(
+    `THUMB_BIG must be a comma-separated list of positive integers, got ${JSON.stringify(
+      process.env.THUMB_BIG,
+    )}`,
+  );
+}
+const BIG = BIG_RAW.map(Number);
+/** CPU throttle rates, e.g. THUMB_RATES=4,6 (low-end is judged at 4-6x). */
+const RATES = (process.env.THUMB_RATES ?? "1,4").split(",").map(Number);
+if (RATES.some((r) => !Number.isFinite(r) || r < 1)) {
+  throw new Error(
+    `THUMB_RATES must list numbers >= 1, got ${process.env.THUMB_RATES}`,
+  );
+}
 /** Element counts of the 20-drawing batch: a realistic vault mix. */
 const BATCH = [
   5, 12, 20, 30, 40, 60, 80, 100, 120, 150, 180, 220, 260, 300, 350, 400, 450,
@@ -50,7 +68,7 @@ const CASES = [
 test.describe("thumbnail main-thread blocking", () => {
   test.beforeAll(buildStep0);
 
-  for (const rate of [1, 4]) {
+  for (const rate of RATES) {
     test(`blocking, cpu x${rate}`, async ({ page, browserName, baseURL }) => {
       test.skip(
         rate > 1 && browserName !== "chromium",

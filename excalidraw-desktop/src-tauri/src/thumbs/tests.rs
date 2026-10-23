@@ -30,7 +30,7 @@ impl Fixture {
     }
     fn lookup(&self, paths: &[&str]) -> Vec<ThumbLookup> {
         let p: Vec<String> = paths.iter().map(|s| s.to_string()).collect();
-        self.vt.lookup(&p, RV).unwrap().items
+        self.vt.lookup(&p, RV, RV).unwrap().items
     }
     fn rev(&self, name: &str) -> String {
         self.lookup(&[name])[0].rev.clone().unwrap()
@@ -81,10 +81,28 @@ fn lookup_states() {
 }
 
 #[test]
+fn fail_markers_have_their_own_version() {
+    // A new fail-marker generation retries old markers; cached PNGs still hit.
+    let f = fixture();
+    f.draw("a.excalidraw", "{\"a\":1}");
+    f.draw("b.excalidraw", "{\"b\":1}");
+    let arev = f.rev("a.excalidraw");
+    let brev = f.rev("b.excalidraw");
+    f.put_png("a.excalidraw", &arev).unwrap();
+    f.vt.put("b.excalidraw", &brev, Kind::Fail, RV, &[]).unwrap();
+    let names = vec!["a.excalidraw".to_string(), "b.excalidraw".to_string()];
+    let states = |fv| f.vt.lookup(&names, RV, fv).unwrap().items.into_iter().map(|i| i.state).collect::<Vec<_>>();
+    assert_eq!(states(RV), vec![ThumbState::Hit, ThumbState::Failed]);
+    assert_eq!(states(RV + 1000), vec![ThumbState::Hit, ThumbState::Miss]);
+    f.vt.put("b.excalidraw", &brev, Kind::Fail, RV + 1000, &[]).unwrap();
+    assert_eq!(states(RV + 1000), vec![ThumbState::Hit, ThumbState::Failed]);
+}
+
+#[test]
 fn lookup_rejects_too_many_paths_and_keeps_order() {
     let f = fixture();
     let many: Vec<String> = (0..501).map(|i| format!("{i}.excalidraw")).collect();
-    assert!(f.vt.lookup(&many, RV).is_err());
+    assert!(f.vt.lookup(&many, RV, RV).is_err());
     f.draw("a.excalidraw", "1");
     let r = f.lookup(&["x.excalidraw", "a.excalidraw", "y.excalidraw"]);
     assert_eq!(r[0].state, ThumbState::Missing);
@@ -99,13 +117,13 @@ fn rehash_budget_then_pending() {
     for (i, n) in names.iter().enumerate() {
         f.draw(n, &format!("{{\"i\":{i}}}"));
     }
-    let first = f.vt.lookup(&names, RV).unwrap().items;
+    let first = f.vt.lookup(&names, RV, RV).unwrap().items;
     let pending = first.iter().filter(|i| i.state == ThumbState::Pending).count();
     assert_eq!(pending, 6);
     assert!(first[..64].iter().all(|i| i.state == ThumbState::Miss && i.rev.is_some()));
     assert!(first[64..].iter().all(|i| i.rev.is_none()));
     // Second call: the 64 are gated by the manifest (no budget used), the rest get hashed.
-    let second = f.vt.lookup(&names, RV).unwrap().items;
+    let second = f.vt.lookup(&names, RV, RV).unwrap().items;
     assert!(second.iter().all(|i| i.state == ThumbState::Miss && i.rev.is_some()));
 }
 
@@ -397,7 +415,7 @@ fn symlinked_drawing_is_missing() {
 fn lookup_json_shape() {
     let f = fixture();
     f.draw("a.excalidraw", "1");
-    let r = f.vt.lookup(&["a.excalidraw".into(), "z.excalidraw".into()], RV).unwrap();
+    let r = f.vt.lookup(&["a.excalidraw".into(), "z.excalidraw".into()], RV, RV).unwrap();
     let v = serde_json::to_value(&r).unwrap();
     assert_eq!(v["vaultId"].as_str().unwrap().len(), 16);
     assert_eq!(v["items"][0]["state"], "miss");
@@ -414,11 +432,11 @@ fn bench_lookup_100_warm() {
     for n in &names {
         f.draw(n, &format!("{{\"n\":\"{n}\"}}"));
     }
-    f.vt.lookup(&names, RV).unwrap();
+    f.vt.lookup(&names, RV, RV).unwrap();
     let mut times = Vec::new();
     for _ in 0..30 {
         let t = Instant::now();
-        f.vt.lookup(&names, RV).unwrap();
+        f.vt.lookup(&names, RV, RV).unwrap();
         times.push(t.elapsed().as_secs_f64() * 1000.0);
     }
     times.sort_by(|a, b| a.partial_cmp(b).unwrap());
@@ -434,7 +452,7 @@ fn new_render_version_replaces_old_renderings_of_the_revision() {
     let legacy = f.vt.cache.join(&rev[..2]).join(format!("{rev}.png"));
     store::write_atomic(&legacy, PNG).unwrap();
     f.vt.put("a.excalidraw", &rev, Kind::Png, RV, PNG).unwrap();
-    let lookup = |v| f.vt.lookup(&["a.excalidraw".to_string()], v).unwrap().items.remove(0).state;
+    let lookup = |v| f.vt.lookup(&["a.excalidraw".to_string()], v, v).unwrap().items.remove(0).state;
     assert_eq!(lookup(RV), ThumbState::Hit);
     assert_eq!(lookup(RV + 1), ThumbState::Miss, "another version renders again");
     let url = f.vt.put("a.excalidraw", &rev, Kind::Png, RV + 1, PNG).unwrap().url.unwrap();

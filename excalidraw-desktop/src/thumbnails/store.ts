@@ -5,13 +5,20 @@ export type LookupItem = { rev: string | null; state: LookupState };
 export type LookupResult = { vaultId: string; items: LookupItem[] };
 
 export interface ThumbnailStore {
-  /** One item per path, same order. `pending` = retry on the next frame. */
+  /**
+   * One item per path, same order. `pending` = retry on the next frame.
+   * `failVersion` names the fail markers that count (default `renderVersion`).
+   */
   lookup(
     handle: string,
     paths: string[],
     renderVersion: number,
+    failVersion?: number,
   ): Promise<LookupResult>;
-  /** `png` null stores a fail marker. Resolves the image url (null for a marker). */
+  /**
+   * `png` null stores a fail marker (pass its fail version as `renderVersion`).
+   * Resolves the image url (null for a marker).
+   */
   put(
     handle: string,
     path: string,

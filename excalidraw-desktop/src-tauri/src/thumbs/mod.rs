@@ -210,16 +210,18 @@ impl VaultThumbs {
         saved
     }
 
-    pub(crate) fn lookup(self: &Arc<Self>, paths: &[String], render_version: u32) -> Result<LookupResult> {
+    /// `fail_version` names the fail markers to honour (they carry their own generation, so a
+    /// renderer cap change can retry them without re-rendering every PNG).
+    pub(crate) fn lookup(self: &Arc<Self>, paths: &[String], render_version: u32, fail_version: u32) -> Result<LookupResult> {
         if paths.len() > MAX_LOOKUP_PATHS {
             return Err(err("INVALID_ARGUMENT", format!("At most {MAX_LOOKUP_PATHS} paths per lookup")));
         }
         let mut budget = MAX_REHASH_PER_LOOKUP;
-        let items = paths.iter().map(|p| self.lookup_one(p, render_version, &mut budget)).collect();
+        let items = paths.iter().map(|p| self.lookup_one(p, render_version, fail_version, &mut budget)).collect();
         Ok(LookupResult { vault_id: self.vault_id.clone(), items })
     }
 
-    fn lookup_one(self: &Arc<Self>, path: &str, render_version: u32, budget: &mut usize) -> ThumbLookup {
+    fn lookup_one(self: &Arc<Self>, path: &str, render_version: u32, fail_version: u32, budget: &mut usize) -> ThumbLookup {
         let item = |rev: Option<String>, state| ThumbLookup { rev, state };
         let Some(file) = self.drawing_file(path) else {
             self.forget(path);
@@ -231,7 +233,7 @@ impl VaultThumbs {
             Ok(Some((_, rev))) => {
                 let state = if png_path(&self.cache, &rev, render_version).is_file() {
                     ThumbState::Hit
-                } else if fail_path(&self.cache, &rev, render_version).is_file() {
+                } else if fail_path(&self.cache, &rev, fail_version).is_file() {
                     ThumbState::Failed
                 } else {
                     ThumbState::Miss
@@ -353,11 +355,13 @@ pub(crate) async fn thumbs_lookup(
     handle: String,
     paths: Vec<String>,
     render_version: u32,
+    fail_version: Option<u32>,
     svc: State<'_, Service>,
     thumbs: State<'_, ThumbsService>,
 ) -> Result<LookupResult> {
     let vt = vault_thumbs(&handle, &svc, &thumbs)?;
-    blocking(move || vt.lookup(&paths, render_version)).await
+    let fail_version = fail_version.unwrap_or(render_version);
+    blocking(move || vt.lookup(&paths, render_version, fail_version)).await
 }
 
 #[tauri::command]

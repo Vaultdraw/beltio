@@ -7,7 +7,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 ### Fixed
 
 - Renaming a tag across the vault no longer shows an extra "Updated N links" message next to "Renamed #a to #b" when the rewrite finishes very fast.
-- Drawings with more than 600 elements now get a thumbnail in the gallery, home, search and palette (up to 4,000 elements). Rendering stays split into short steps, so the app stays responsive while thumbnails draw.
+- Drawings with more than 600 elements now get a thumbnail in the gallery, home, search and palette (up to 2,500 elements). Rendering stays split into short steps, so the app stays responsive while thumbnails draw.
 
 ## [0.1.2] - 2026-10-23
 

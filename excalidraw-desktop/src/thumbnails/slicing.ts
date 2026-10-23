@@ -33,7 +33,23 @@ export const yieldToMain = (): Promise<void> => {
   });
 };
 
-export const sceneSlicing = (): SceneSlicing => ({
+/** Thrown at a slice boundary once `cancelled()` is true: stops the render. */
+export class RenderCancelled extends Error {
+  constructor() {
+    super("thumbnail render cancelled");
+    this.name = "RenderCancelled";
+  }
+}
+
+/** `cancelled` is checked after every yield (no cost between slices). */
+export const sceneSlicing = (cancelled?: () => boolean): SceneSlicing => ({
   budgetMs: SLICE_BUDGET_MS,
-  yieldFn: yieldToMain,
+  yieldFn: cancelled
+    ? async () => {
+        await yieldToMain();
+        if (cancelled()) {
+          throw new RenderCancelled();
+        }
+      }
+    : yieldToMain,
 });

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createFakeThumbnailStore } from "./fakeStore";
 import { createJobQueue } from "./queue";
-import { pngRenderVersion } from "./render";
+import { failMarkerVersion, pngRenderVersion } from "./render";
 import { THUMB_NONE, createThumbnailService } from "./service";
 
 import type { PngResult } from "./render";
@@ -166,6 +166,45 @@ describe("thumbnail service", () => {
     await settle();
     expect(b.last()).toBe(THUMB_NONE);
     expect(t2.store.calls.put).toBe(0);
+  });
+
+  it("fail markers carry their own version: old markers retry, cached PNGs stay", async () => {
+    const t = setup();
+    const v = pngRenderVersion(1); // jsdom devicePixelRatio 1
+    expect(failMarkerVersion(1)).not.toBe(v);
+    // a.excalidraw: cached PNG; b.excalidraw: a marker from the old cap (PNG version)
+    await t.store.put(
+      "h",
+      "a.excalidraw",
+      "r-a",
+      new Blob([new Uint8Array([1])], { type: "image/png" }),
+      v,
+    );
+    await t.store.put("h", "b.excalidraw", "r-b", null, v);
+    const put = vi.spyOn(t.store, "put");
+    t.render.mockResolvedValueOnce({ kind: "fail", reason: "too-many" });
+    const a = t.watch("a.excalidraw");
+    const b = t.watch("b.excalidraw");
+    t.frames.run();
+    await settle();
+    expect(a.last().status).toBe("ready");
+    expect(t.render).toHaveBeenCalledTimes(1); // only b retried
+    expect(b.last()).toBe(THUMB_NONE);
+    // The new marker is written under the fail version and honoured next time.
+    expect(put).toHaveBeenCalledWith(
+      "h",
+      "b.excalidraw",
+      "r-b",
+      null,
+      failMarkerVersion(1),
+    );
+    const res = await t.store.lookup(
+      "h",
+      ["b.excalidraw"],
+      v,
+      failMarkerVersion(1),
+    );
+    expect(res.items[0].state).toBe("failed");
   });
 
   it("revision mismatch: stores under the revision read, not the looked-up one", async () => {
@@ -351,6 +390,64 @@ describe("thumbnail service", () => {
     release();
     await settle();
     expect(render).toHaveBeenCalledTimes(1);
+    expect(second.last().status).toBe("ready");
+  });
+
+  it("passes a cancel check to the render: true once the path is unwatched", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    let cancelled: (() => boolean) | undefined;
+    const render = vi.fn(async (_j: string, _d?: number, c?: () => boolean) => {
+      cancelled = c;
+      await gate;
+      return c?.()
+        ? ({ kind: "fail", reason: "cancelled" } as PngResult)
+        : png();
+    });
+    const t = setup({ render });
+    const a = t.watch("a.excalidraw");
+    t.frames.run();
+    await settle();
+    expect(cancelled?.()).toBe(false);
+    a.off();
+    expect(cancelled?.()).toBe(true);
+    release();
+    await settle();
+    expect(t.store.calls.put).toBe(0); // no fail marker for a cancelled render
+  });
+
+  it("a render cancelled while unwatched, joined by a re-watch, is looked up again", async () => {
+    let releasePoll!: () => void;
+    const poll = new Promise<void>((r) => (releasePoll = r));
+    let releaseEnd!: () => void;
+    const end = new Promise<void>((r) => (releaseEnd = r));
+    let calls = 0;
+    const render = vi.fn(async (_j: string, _d?: number, c?: () => boolean) => {
+      if (++calls > 1) {
+        return png();
+      }
+      await poll;
+      const stop = c?.() ?? false;
+      await end;
+      return stop
+        ? ({ kind: "fail", reason: "cancelled" } as PngResult)
+        : png();
+    });
+    const t = setup({ render });
+    const first = t.watch("a.excalidraw");
+    t.frames.run();
+    await settle(); // render started
+    first.off();
+    releasePoll();
+    await settle(); // the render saw "cancelled"
+    const second = t.watch("a.excalidraw");
+    t.frames.run();
+    await settle(); // lookup miss -> joins the started (cancelled) job
+    releaseEnd();
+    await settle();
+    t.frames.run();
+    await settle();
+    expect(render).toHaveBeenCalledTimes(2);
     expect(second.last().status).toBe("ready");
   });
 

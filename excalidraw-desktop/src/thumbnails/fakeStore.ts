@@ -50,7 +50,7 @@ export const createFakeThumbnailStore = (opts: {
   return {
     calls,
     size: () => urls.size + fails.size,
-    async lookup(handle, paths, renderVersion) {
+    async lookup(handle, paths, renderVersion, failVersion = renderVersion) {
       calls.lookup++;
       calls.lookupPaths.push([...paths]);
       if (pending > 0) {
@@ -71,7 +71,7 @@ export const createFakeThumbnailStore = (opts: {
           }
           return {
             rev,
-            state: fails.has(`${rev}.v${renderVersion}`) ? "failed" : "miss",
+            state: fails.has(`${rev}.v${failVersion}`) ? "failed" : "miss",
           };
         }),
       );

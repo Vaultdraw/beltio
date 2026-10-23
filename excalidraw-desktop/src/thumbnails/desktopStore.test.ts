@@ -12,6 +12,14 @@ describe("desktop thumbnail store", () => {
       handle: "h",
       paths: ["a b.excalidraw"],
       renderVersion: 3,
+      failVersion: 3,
+    });
+    await s.lookup("h", ["a"], 22, 1022);
+    expect(invoke).toHaveBeenLastCalledWith("thumbs_lookup", {
+      handle: "h",
+      paths: ["a"],
+      renderVersion: 22,
+      failVersion: 1022,
     });
   });
 

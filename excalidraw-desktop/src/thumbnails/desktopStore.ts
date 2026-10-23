@@ -7,12 +7,13 @@ import type { LookupResult, ThumbnailStore } from "./store";
 export const createDesktopThumbnailStore = (
   opts: { invoke?: InvokeFn } = {},
 ): ThumbnailStore => ({
-  async lookup(handle, paths, renderVersion) {
+  async lookup(handle, paths, renderVersion, failVersion) {
     const invoke = await resolveInvoke(opts.invoke);
     return invoke<LookupResult>("thumbs_lookup", {
       handle,
       paths,
       renderVersion,
+      failVersion: failVersion ?? renderVersion,
     });
   },
   async put(handle, path, rev, png, renderVersion) {

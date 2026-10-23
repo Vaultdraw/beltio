@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { SLICE_BUDGET_MS, sceneSlicing, yieldToMain } from "./slicing";
+import {
+  RenderCancelled,
+  SLICE_BUDGET_MS,
+  sceneSlicing,
+  yieldToMain,
+} from "./slicing";
 
 describe("slicing", () => {
   it("slices of one third of a frame, yielding through yieldToMain", () => {
@@ -17,5 +22,13 @@ describe("slicing", () => {
     const b = yieldToMain().then(() => order.push("b"));
     await Promise.all([a, b]);
     expect(order).toEqual(["micro", "a", "b"]);
+  });
+
+  it("with a cancel check, a yield rejects once cancelled", async () => {
+    let stop = false;
+    const s = sceneSlicing(() => stop);
+    await expect(s.yieldFn()).resolves.toBeUndefined();
+    stop = true;
+    await expect(s.yieldFn()).rejects.toBeInstanceOf(RenderCancelled);
   });
 });

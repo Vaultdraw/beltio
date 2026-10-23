@@ -6,7 +6,7 @@
  */
 import { createJobQueue } from "./queue";
 import { thumbDensity } from "./fit";
-import { pngRenderVersion, renderScenePng } from "./render";
+import { failMarkerVersion, pngRenderVersion, renderScenePng } from "./render";
 import { enterStandardColors } from "./standardColors";
 import { LOOKUP_BATCH_MAX } from "./store";
 
@@ -102,6 +102,7 @@ export const createThumbnailService = (
       typeof window === "undefined" ? undefined : window.devicePixelRatio,
     );
   const renderVersion = pngRenderVersion(density);
+  const failVersion = failMarkerVersion(density);
   const queue = deps.queue ?? getSharedQueue();
   const schedule = deps.schedule ?? defaultSchedule;
   const maxEntries = deps.maxEntries ?? 20000;
@@ -215,11 +216,22 @@ export const createThumbnailService = (
         }
         try {
           const { json, revision } = await deps.readDrawing(path);
-          const result = await render(json, density);
+          // Polled at every render yield: a scrolled-past or unwatched
+          // drawing stops parsing/painting at the next slice.
+          const result = await render(
+            json,
+            density,
+            () => signal.aborted || !live() || !isWatched(path),
+          );
           // The entry may have been dropped and recreated while this job ran
           // (unwatch + re-watch joins the started job): publish to the current one.
           const target = entries.get(path);
-          if (!live() || signal.aborted || !target) {
+          if (
+            !live() ||
+            signal.aborted ||
+            !target ||
+            (result.kind === "fail" && result.reason === "cancelled")
+          ) {
             return "skipped";
           }
           target.rev = revision; // the revision actually read, not the looked-up one
@@ -238,7 +250,7 @@ export const createThumbnailService = (
             );
           } else {
             if (result.reason !== "error") {
-              await store.put(handle, path, revision, null, renderVersion);
+              await store.put(handle, path, revision, null, failVersion);
             }
             publish(path, target, THUMB_NONE);
           }
@@ -257,6 +269,16 @@ export const createThumbnailService = (
     const current = entries.get(path) ?? e;
     if (outcome === "failed" && live() && isWatched(path)) {
       publish(path, current, THUMB_NONE);
+    }
+    if (
+      outcome === "skipped" &&
+      live() &&
+      isWatched(path) &&
+      current.state.status === "loading"
+    ) {
+      // Cancelled while unwatched, then watched again (joined the job):
+      // look it up afresh instead of leaving it loading.
+      current.stale = true;
     }
     settle(path, current);
   };
@@ -325,7 +347,7 @@ export const createThumbnailService = (
       return;
     }
     try {
-      const res = await store.lookup(handle, paths, renderVersion);
+      const res = await store.lookup(handle, paths, renderVersion, failVersion);
       if (!live()) {
         return;
       }
