@@ -8,7 +8,8 @@ import {
   registerCommandHandlers,
 } from "./handlerRegistry";
 import { buildKeymap } from "./keymap";
-import { createToolHandlers } from "./toolCommands";
+import { defineContextKey } from "./contextKeys";
+import { createToolHandlers, TOOL_KEYS_CONTEXT } from "./toolCommands";
 
 const app = { vaultOpen: true, drawingOpen: true, writable: true };
 const LETTERS = "VRDOALPTNEHFKB";
@@ -32,6 +33,7 @@ describe("tool keys dispatch benchmark", () => {
     const canvas = document.getElementById("canvas") as HTMLElement;
     canvas.focus();
     const activate = vi.fn(() => true);
+    cleanup.push(defineContextKey(TOOL_KEYS_CONTEXT, () => true));
     cleanup.push(
       registerCommandHandlers(
         createToolHandlers({ activateToolShortcut: activate }),

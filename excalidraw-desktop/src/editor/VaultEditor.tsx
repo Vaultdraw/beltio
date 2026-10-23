@@ -33,7 +33,11 @@ import { useCanvasImportMenu } from "../canvasImport/useCanvasImportMenu";
 import { CommandMenuItem } from "../commands/CommandMenuItem";
 import { GRAPH_COMMAND_IDS } from "../commands/graphCommands";
 import { registerCommandHandlers } from "../commands/handlerRegistry";
-import { createToolHandlers } from "../commands/toolCommands";
+import { defineContextKey } from "../commands/contextKeys";
+import {
+  createToolHandlers,
+  TOOL_KEYS_CONTEXT,
+} from "../commands/toolCommands";
 import { IconGraph, IconHistory, IconLibrary } from "../components/Icons";
 import { HISTORY_COMMAND_IDS } from "../history/historyCommands";
 import { PaperDialog } from "../components/paper/PaperDialog";
@@ -445,9 +449,17 @@ const VaultEditorComponent = ({
       return undefined;
     }
     const unbind = registerCommandHandlers(createToolHandlers(libraryApi));
+    // Not in a history preview, not while link hints are typing letters.
+    const undefine = defineContextKey(
+      TOOL_KEYS_CONTEXT,
+      () =>
+        !document.activeElement?.closest("[data-testid='history-preview']") &&
+        !document.querySelector(".vault-link-hint"),
+    );
     setToolKeysBound(true);
     return () => {
       setToolKeysBound(false);
+      undefine();
       unbind();
     };
   }, [libraryApi]);

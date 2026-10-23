@@ -8,7 +8,13 @@ import {
   registerCommandHandlers,
 } from "./handlerRegistry";
 import { buildKeymap } from "./keymap";
-import { TOOL_COMMANDS, TOOL_TABLE, createToolHandlers } from "./toolCommands";
+import { defineContextKey } from "./contextKeys";
+import {
+  TOOL_COMMANDS,
+  TOOL_KEYS_CONTEXT,
+  TOOL_TABLE,
+  createToolHandlers,
+} from "./toolCommands";
 
 const app = { vaultOpen: true, drawingOpen: true, writable: true };
 
@@ -44,6 +50,7 @@ describe("tool commands", () => {
         "!listFocus",
         "!galleryFocus",
         "!graphFocus",
+        "keys.toolKeys",
         "!textEditing",
         "!modalOpen",
       ]);
@@ -96,9 +103,14 @@ describe("tool keys through the real dispatcher", () => {
   const activate = vi.fn(() => true);
 
   const install = (overrides: Record<string, string[]> = {}) => {
-    unbind = registerCommandHandlers(
+    const undefine = defineContextKey(TOOL_KEYS_CONTEXT, () => true);
+    const unbindHandlers = registerCommandHandlers(
       createToolHandlers({ activateToolShortcut: activate }),
     );
+    unbind = () => {
+      undefine();
+      unbindHandlers();
+    };
     const keymap = buildKeymap(COMMANDS, overrides, "mac");
     dispose = installCommandDispatcher(window, {
       platform: "mac",

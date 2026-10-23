@@ -20,6 +20,13 @@ interface ToolRow {
 }
 
 /** One row per tool; the order is the order on the Hotkeys page. */
+/**
+ * Custom context key defined by the editor while tool keys are bound: false in
+ * a history preview and while link hints take letters. The dispatcher runs
+ * before those, so the command itself must stand down.
+ */
+export const TOOL_KEYS_CONTEXT = "keys.toolKeys";
+
 export const TOOL_TABLE: readonly ToolRow[] = [
   { tool: "selection", title: "Selection", keys: ["V", "1"] },
   { tool: "rectangle", title: "Rectangle", keys: ["R", "2"] },
@@ -58,6 +65,7 @@ export const TOOL_COMMANDS: CommandDefinition[] = TOOL_TABLE.map((row) => ({
     "!listFocus",
     "!galleryFocus",
     "!graphFocus",
+    TOOL_KEYS_CONTEXT,
     "!textEditing",
     "!modalOpen",
   ],
