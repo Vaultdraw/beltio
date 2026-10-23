@@ -3,7 +3,10 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { readExample } from "../../../sdk/examples/testing/readManifest";
+import {
+  readExample,
+  readPluginDir,
+} from "../../../sdk/examples/testing/readManifest";
 
 import type { Plugin } from "vite";
 
@@ -41,12 +44,22 @@ export const sizedPluginSource = (id: string, bytes: number): string => {
 
 const SIZED = /^size(\d+)([km])$/;
 
+/**
+ * Where the CLI e2e test lets `vaultdraw-plugin dev` write: the plugins folder of a
+ * throwaway config directory. A plugin found there wins over fixtures and examples.
+ */
+const cliPluginsDir = () =>
+  path.resolve(__dirname, "../../../.cache/e2e-cli/config/plugins");
+
 export const e2ePluginFixtures = (): Plugin => {
   const root = path.resolve(__dirname, "plugins");
   const examples = path.resolve(__dirname, "../../../sdk/examples");
   /** An e2e fixture wins; otherwise the sdk/examples plugin of that id. */
+  const cliDir = (id: string) => path.join(cliPluginsDir(), id);
   const mainPath = (id: string) =>
-    existsSync(path.join(root, id, "main.js"))
+    existsSync(path.join(cliDir(id), "plugin.toml"))
+      ? path.join(cliDir(id), "main.js")
+      : existsSync(path.join(root, id, "main.js"))
       ? path.join(root, id, "main.js")
       : path.join(examples, id, "main.js");
   return {
@@ -63,7 +76,13 @@ export const e2ePluginFixtures = (): Plugin => {
         try {
           res.setHeader("Content-Type", "application/json");
           res.setHeader("Cache-Control", "no-store");
-          res.end(JSON.stringify(readExample(m[1])));
+          res.end(
+            JSON.stringify(
+              existsSync(path.join(cliDir(m[1]), "plugin.toml"))
+                ? readPluginDir(cliDir(m[1]))
+                : readExample(m[1]),
+            ),
+          );
         } catch {
           res.statusCode = 404;
           res.end("not found");

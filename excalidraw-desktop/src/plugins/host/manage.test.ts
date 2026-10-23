@@ -184,9 +184,7 @@ describe("reload", () => {
         .getSnapshot()
         .toasts.map((t) => t.message)
         .join(),
-    ).toMatch(
-      /stopped.*Save a file/,
-    );
+    ).toMatch(/stopped.*Save a file/);
 
     bad = false;
     h.backend.emitChanged("alpha");
@@ -217,7 +215,7 @@ describe("open plugins folder", () => {
     const { PLUGIN_UI_COMMAND_IDS, pluginUiHandlers } = await import(
       "../ui/pluginCommands"
     );
-    pluginUiHandlers(() => {})[PLUGIN_UI_COMMAND_IDS.openFolder]();
+    pluginUiHandlers(() => {})[PLUGIN_UI_COMMAND_IDS.openFolder]?.();
     await vi.waitFor(() => expect(h.backend.opened).toEqual([null]));
   });
 });

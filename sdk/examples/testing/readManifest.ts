@@ -26,6 +26,7 @@ const TOP_KEYS = new Set([
   "description",
   "author",
   "activation",
+  "dev",
 ]);
 const ARRAYS = ["commands", "panels", "settings"] as const;
 
@@ -67,7 +68,7 @@ const parseValue = (raw: string, where: string): Value => {
 
 export function parseManifest(source: string, mainBytes = 0): PluginInfo {
   const top: Table = {};
-  const arrays: Record<typeof ARRAYS[number], Table[]> = {
+  const arrays: Record<(typeof ARRAYS)[number], Table[]> = {
     commands: [],
     panels: [],
     settings: [],
@@ -84,7 +85,7 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
     if (header && (ARRAYS as readonly string[]).includes(header[1])) {
       current = {};
       extra = false;
-      arrays[header[1] as typeof ARRAYS[number]].push(current);
+      arrays[header[1] as (typeof ARRAYS)[number]].push(current);
     } else if (/^\[x-[\w-]+\]$/.test(line)) {
       extra = true;
     } else if (line.startsWith("[")) {
@@ -139,7 +140,11 @@ export const EXAMPLES_DIR = path.resolve(__dirname, "..");
 
 /** Read `sdk/examples/<id>/plugin.toml` into a PluginInfo (mainBytes = main.js size). */
 export function readExample(id: string): PluginInfo {
-  const dir = path.join(EXAMPLES_DIR, id);
+  return readPluginDir(path.join(EXAMPLES_DIR, id));
+}
+
+/** Read the plugin folder `dir` (plugin.toml and its main file) into a PluginInfo. */
+export function readPluginDir(dir: string): PluginInfo {
   const info = parseManifest(
     readFileSync(path.join(dir, "plugin.toml"), "utf8"),
   );

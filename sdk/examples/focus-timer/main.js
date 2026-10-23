@@ -46,7 +46,7 @@ export default definePlugin({
     };
     const start = () => {
       ending?.dispose();
-      const ms = ctx.settings.get("minutes") * 60_000;
+      const ms = /** @type {number} */ (ctx.settings.get("minutes")) * 60_000;
       ending = ctx.setTimeout(() => {
         ending = null;
         set(null);
@@ -78,7 +78,9 @@ export default definePlugin({
           },
           running
             ? clock(end - Date.now())
-            : clock(ctx.settings.get("minutes") * 60_000),
+            : clock(
+                /** @type {number} */ (ctx.settings.get("minutes")) * 60_000,
+              ),
         ),
         h(
           "div",
