@@ -46,12 +46,82 @@ pub(crate) fn ensure_network_allowed(dirs: &config::Dirs, purpose: &str) -> Resu
 }
 
 // ---------------------------------------------------------------------------
+// Granting consent
+// ---------------------------------------------------------------------------
+
+/// True for the keys that give consent: `network.enabled` and `network.allow_<purpose>`.
+fn is_consent_key(key: &str) -> bool {
+    key == "enabled" || key.strip_prefix("allow_").is_some_and(|p| !p.is_empty())
+}
+
+/// `update_config` (the webview's write path) may revoke consent or remove a consent key, but
+/// never set one to anything but false: a grant goes through `network_grant` and its native
+/// dialog, so a script in the page cannot give itself network access.
+pub(crate) fn refuse_consent_grants(changes: &[config::LayerChange]) -> Result<()> {
+    let refuse = |key: &str| {
+        err(
+            "CONSENT_REQUIRED",
+            format!("`network.{key}` can only be turned on through the confirmation dialog (network_grant)"),
+        )
+    };
+    let revokes = |v: &Value| matches!(v, Value::Null | Value::Bool(false));
+    for change in changes {
+        if change.key == "network" {
+            if let Value::Object(fields) = &change.value {
+                if let Some((key, _)) = fields.iter().find(|(k, v)| is_consent_key(k) && !revokes(v)) {
+                    return Err(refuse(key));
+                }
+            }
+        } else if let Some(key) = change.key.strip_prefix("network.") {
+            if is_consent_key(key) && !revokes(&change.value) {
+                return Err(refuse(key));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// What the confirmation dialog says for a consent key.
+fn grant_prompt(key: &str) -> (String, String) {
+    if key == "enabled" {
+        ("Allow network access?".into(), "Vaultdraw will be allowed to use the internet for features you allow (network.enabled). Nothing is sent until you use one.".into())
+    } else {
+        let purpose = key.trim_start_matches("allow_");
+        (
+            format!("Allow `{purpose}` downloads?"),
+            format!("Vaultdraw will connect to the internet to download {purpose}, only when you ask for it. You can turn this off any time in Settings (network.{key})."),
+        )
+    }
+}
+
+/// Turns a consent key on after `confirm(title, text)` says yes. Returns whether it was granted;
+/// a refusal writes nothing. `key` is `enabled` or `allow_<purpose>`, without the `network.` prefix.
+pub(crate) fn grant_in(dirs: &config::Dirs, key: &str, confirm: impl FnOnce(&str, &str) -> bool) -> Result<bool> {
+    let valid = key.len() <= 40
+        && is_consent_key(key)
+        && key.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_');
+    if !valid {
+        return Err(err("INVALID_ARGUMENT", "Not a network consent key"));
+    }
+    let (title, text) = grant_prompt(key);
+    if !confirm(&title, &text) {
+        return Ok(false);
+    }
+    config::update_overrides_in(dirs, &[config::LayerChange { key: format!("network.{key}"), value: Value::Bool(true), default: None }])?;
+    Ok(true)
+}
+
+// ---------------------------------------------------------------------------
 // Downloader
 // ---------------------------------------------------------------------------
 
 /// Redirects are followed only to these hosts (GitHub's own).
 const REDIRECT_HOSTS: [&str; 4] = ["github.com", "api.github.com", "raw.githubusercontent.com", "codeload.github.com"];
 const MAX_REDIRECTS: usize = 3;
+
+/// Plain http to loopback exists only for Rust unit tests (a local test server). Release and
+/// debug builds of the app speak https to public hosts only.
+const ALLOW_LOOPBACK: bool = cfg!(test);
 
 fn is_loopback(url: &Url) -> bool {
     match url.host() {
@@ -62,28 +132,58 @@ fn is_loopback(url: &Url) -> bool {
     }
 }
 
-/// True for IP literals that point into a private or local network.
+/// A wrapped IPv4 address (mapped, NAT64, 6to4) is judged as the IPv4 address it carries.
+fn blocked_v4(v4: std::net::Ipv4Addr) -> bool {
+    is_private_ip(IpAddr::V4(v4)) || v4.is_loopback() || v4.is_multicast()
+}
+
+/// True for IP literals that point into a private or local network, or into a range with no
+/// public host: private, link-local, CGNAT, unspecified, "this network", broadcast, IETF
+/// protocol (192.0.0.0/24), benchmarking (198.18.0.0/15), reserved (240.0.0.0/4), IPv6
+/// unique-local, link-local, site-local, IPv4-compatible (::/96), and IPv6 forms that carry an
+/// IPv4 address (mapped, NAT64, 6to4), which are judged by that address.
 fn is_private_ip(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(v) => {
             let o = v.octets();
             let cgnat = o[0] == 100 && (o[1] & 0xc0) == 64; // 100.64.0.0/10
-            v.is_private() || v.is_link_local() || v.is_unspecified() || v.is_broadcast() || o[0] == 0 || cgnat
+            let ietf = o[0] == 192 && o[1] == 0 && o[2] == 0; // 192.0.0.0/24
+            let bench = o[0] == 198 && (o[1] & 0xfe) == 18; // 198.18.0.0/15
+            let reserved = o[0] >= 240; // 240.0.0.0/4 (includes broadcast)
+            v.is_private() || v.is_link_local() || v.is_unspecified() || o[0] == 0 || cgnat || ietf || bench || reserved
         }
-        // ::ffff:a.b.c.d is judged as the IPv4 address it wraps.
-        IpAddr::V6(v) => match v.to_ipv4_mapped() {
-            Some(v4) => is_private_ip(IpAddr::V4(v4)) || v4.is_loopback(),
-            None => {
-                let seg = v.segments()[0];
-                v.is_unspecified() || (seg & 0xfe00) == 0xfc00 || (seg & 0xffc0) == 0xfe80
+        IpAddr::V6(v) => {
+            if let Some(v4) = v.to_ipv4_mapped() {
+                return blocked_v4(v4);
             }
-        },
+            let s = v.segments();
+            let embedded = |hi: u16, lo: u16| std::net::Ipv4Addr::new((hi >> 8) as u8, hi as u8, (lo >> 8) as u8, lo as u8);
+            // NAT64 well-known prefix 64:ff9b::/96 carries the IPv4 address in the last 32 bits.
+            if s[..6] == [0x64, 0xff9b, 0, 0, 0, 0] {
+                return blocked_v4(embedded(s[6], s[7]));
+            }
+            // 6to4 2002::/16 carries it in bits 16..48.
+            if s[0] == 0x2002 {
+                return blocked_v4(embedded(s[1], s[2]));
+            }
+            v.is_unspecified()
+                || s[..6] == [0; 6] // ::/96, IPv4-compatible (deprecated) and ::1
+                || (s[0] == 0x64 && s[1] == 0xff9b && s[2] == 1) // 64:ff9b:1::/48 local-use NAT64
+                || (s[0] & 0xfe00) == 0xfc00 // fc00::/7 unique-local
+                || (s[0] & 0xffc0) == 0xfe80 // fe80::/10 link-local
+                || (s[0] & 0xffc0) == 0xfec0 // fec0::/10 site-local
+        }
     }
 }
 
-/// Parses and vets a URL: https (http only for loopback), no userinfo, no private IP literals.
+/// Parses and vets a URL: https only, no userinfo, no private or local IP literals.
 /// Host names are vetted when they are resolved (`GuardedResolver`).
 pub(crate) fn parse_url(text: &str) -> Result<Url> {
+    parse_url_with(text, ALLOW_LOOPBACK)
+}
+
+/// `allow_loopback` admits plain http to loopback; only tests pass true (see `ALLOW_LOOPBACK`).
+fn parse_url_with(text: &str, allow_loopback: bool) -> Result<Url> {
     let bad = |m: &str| err("INVALID_URL", m.to_string());
     let url = Url::parse(text.trim()).map_err(|_| bad("Not a valid URL"))?;
     if !url.username().is_empty() || url.password().is_some() {
@@ -91,9 +191,9 @@ pub(crate) fn parse_url(text: &str) -> Result<Url> {
     }
     let loopback = is_loopback(&url);
     match url.scheme() {
-        "https" if loopback => return Err(bad("Local addresses are only reachable over http")),
+        "https" if loopback => return Err(bad("Local addresses are not allowed")),
         "https" => {}
-        "http" if loopback => {}
+        "http" if loopback && allow_loopback => {}
         _ => return Err(bad("Only https URLs are allowed")),
     }
     let ip = match url.host() {
@@ -102,7 +202,7 @@ pub(crate) fn parse_url(text: &str) -> Result<Url> {
         Some(Host::Ipv6(ip)) => Some(IpAddr::V6(ip)),
         Some(Host::Domain(_)) => None,
     };
-    if ip.is_some_and(is_private_ip) {
+    if ip.is_some_and(|ip| !(loopback && allow_loopback) && is_blocked_address(ip)) {
         return Err(bad("Addresses on a private network are not allowed"));
     }
     Ok(url)
@@ -138,6 +238,11 @@ impl std::fmt::Display for ForbiddenAddress {
 }
 impl std::error::Error for ForbiddenAddress {}
 
+fn is_loopback_host(h: &str) -> bool {
+    let h = h.trim_start_matches('[').trim_end_matches(']');
+    h.eq_ignore_ascii_case("localhost") || h.parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback())
+}
+
 /// Judges resolved addresses. A loopback URL (tests) must resolve only to loopback addresses;
 /// any other host must resolve to none of the blocked ones (one bad answer refuses the host).
 fn check_resolved(loopback_url: bool, addrs: &[SocketAddr]) -> bool {
@@ -152,10 +257,7 @@ struct GuardedResolver<R: Resolver>(R);
 impl<R: Resolver> Resolver for GuardedResolver<R> {
     fn resolve(&self, uri: &ureq::http::Uri, config: &ureq::config::Config, timeout: NextTimeout) -> std::result::Result<ResolvedSocketAddrs, ureq::Error> {
         let addrs = self.0.resolve(uri, config, timeout)?;
-        let loopback_url = uri.host().is_some_and(|h| {
-            let h = h.trim_start_matches('[').trim_end_matches(']');
-            h.eq_ignore_ascii_case("localhost") || h.parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback())
-        });
+        let loopback_url = ALLOW_LOOPBACK && uri.host().is_some_and(is_loopback_host);
         if check_resolved(loopback_url, &addrs) {
             Ok(addrs)
         } else {
@@ -164,16 +266,23 @@ impl<R: Resolver> Resolver for GuardedResolver<R> {
     }
 }
 
-fn agent_with<R: Resolver>(resolver: R) -> ureq::Agent {
-    let config = ureq::Agent::config_builder()
+/// No proxy: ureq would read HTTPS_PROXY / ALL_PROXY from the environment, and the private
+/// address check would then see only the proxy. The app is offline-first; a proxy can become
+/// an explicit setting later.
+fn agent_config() -> ureq::config::Config {
+    ureq::Agent::config_builder()
+        .proxy(None)
         .max_redirects(0)
         .max_redirects_will_error(false)
         .http_status_as_error(false)
         .timeout_connect(Some(Duration::from_secs(8)))
         .timeout_global(Some(Duration::from_secs(20)))
         .user_agent(format!("Vaultdraw/{}", env!("CARGO_PKG_VERSION")))
-        .build();
-    ureq::Agent::with_parts(config, DefaultConnector::new(), GuardedResolver(resolver))
+        .build()
+}
+
+fn agent_with<R: Resolver>(resolver: R) -> ureq::Agent {
+    ureq::Agent::with_parts(agent_config(), DefaultConnector::new(), GuardedResolver(resolver))
 }
 
 fn agent() -> ureq::Agent {
@@ -472,5 +581,166 @@ mod tests {
     fn default_config_makes_no_request() {
         // A fresh install writes the default config; it must not grant consent.
         assert_eq!(gate_with(None), "NETWORK_NOT_ALLOWED");
+    }
+
+    // ---- security review fixes ----
+
+    #[test]
+    fn release_rules_refuse_plain_http_to_loopback() {
+        for u in ["http://127.0.0.1:8080/a", "http://localhost/a", "http://[::1]:1/a", "http://127.0.0.2/a"] {
+            assert_eq!(parse_url_with(u, false).unwrap_err().code, "INVALID_URL", "{u}");
+            assert!(parse_url_with(u, true).is_ok(), "{u} is a test-only exception");
+        }
+        // https to a local name still refuses in both modes; nothing about it is test-only.
+        for u in ["https://127.0.0.1/a", "https://localhost/a", "https://[::1]/a"] {
+            for allow in [false, true] {
+                assert_eq!(parse_url_with(u, allow).unwrap_err().code, "INVALID_URL", "{u} {allow}");
+            }
+        }
+        assert!(parse_url_with("https://example.com/a", false).is_ok());
+        assert!(!ALLOW_LOOPBACK || cfg!(test));
+    }
+
+    #[test]
+    fn address_table() {
+        // (address, blocked)
+        let table: &[(&str, bool)] = &[
+            // IPv4
+            ("93.184.216.34", false), ("8.8.8.8", false), ("1.1.1.1", false), ("198.17.255.255", false), ("198.20.0.1", false),
+            ("192.0.1.1", false), ("239.255.255.255", true), ("223.255.255.255", false),
+            ("192.0.0.1", true), ("192.0.0.255", true), ("198.18.0.1", true), ("198.19.255.255", true),
+            ("240.0.0.1", true), ("255.255.255.254", true), ("255.255.255.255", true),
+            ("10.1.2.3", true), ("172.16.0.1", true), ("192.168.0.1", true), ("169.254.169.254", true),
+            ("100.64.0.1", true), ("0.1.2.3", true), ("127.0.0.1", true),
+            // IPv6 plain
+            ("2606:2800:220:1::1", false), ("2001:4860:4860::8888", false),
+            ("fd00::1", true), ("fe80::1", true), ("::", true), ("::1", true),
+            // site-local fec0::/10
+            ("fec0::1", true), ("feff::1", true), ("fe00::1", false),
+            // IPv4-compatible ::a.b.c.d
+            ("::8.8.8.8", true), ("::192.168.1.1", true), ("::7f00:1", true),
+            // IPv4-mapped
+            ("::ffff:8.8.8.8", false), ("::ffff:10.0.0.1", true), ("::ffff:127.0.0.1", true), ("::ffff:192.0.0.1", true),
+            // NAT64 64:ff9b::/96 judged by the embedded IPv4
+            ("64:ff9b::808:808", false), ("64:ff9b::a00:1", true), ("64:ff9b::7f00:1", true),
+            ("64:ff9b::a9fe:a9fe", true), ("64:ff9b::c612:1", true), ("64:ff9b::f000:1", true),
+            ("64:ff9b:1::1", true),
+            // 6to4 2002::/16 judged by the embedded IPv4 (bits 16..48)
+            ("2002:808:808::1", false), ("2002:a00:1::1", true), ("2002:7f00:1::1", true),
+            ("2002:a9fe:a9fe::1", true), ("2002:c0a8:101::", true),
+        ];
+        for (text, blocked) in table {
+            let ip: IpAddr = text.parse().unwrap();
+            assert_eq!(is_blocked_address(ip), *blocked, "{text}");
+            let url = format!("https://{}/a", if ip.is_ipv6() { format!("[{text}]") } else { text.to_string() });
+            assert_eq!(parse_url_with(&url, false).is_err(), *blocked, "{url}");
+        }
+    }
+
+    #[test]
+    fn resolved_names_in_new_ranges_are_refused() {
+        let (base, hits) = start(|_| Resp::ok("secret"));
+        let port: u16 = base.rsplit(':').next().unwrap().parse().unwrap();
+        let target = url("https://themes.example/a.json");
+        for ip in ["64:ff9b::a00:1", "2002:c0a8:101::", "fec0::1", "::192.168.1.1", "192.0.0.8", "198.18.0.5", "240.0.0.9"] {
+            let agent = agent_with(Fake(vec![SocketAddr::new(ip.parse().unwrap(), port)]));
+            assert_eq!(get_bytes_with(&agent, &target, 100, "*/*").unwrap_err().code, "PRIVATE_ADDRESS", "{ip}");
+        }
+        assert_eq!(hits.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn requests_never_use_a_proxy() {
+        // ureq's default reads ALL_PROXY / HTTPS_PROXY; the agent must not.
+        std::env::set_var("ALL_PROXY", "http://127.0.0.1:9");
+        std::env::set_var("HTTPS_PROXY", "http://127.0.0.1:9");
+        let default_has_proxy = ureq::Agent::config_builder().build().proxy().is_some();
+        let ours = agent_config();
+        std::env::remove_var("ALL_PROXY");
+        std::env::remove_var("HTTPS_PROXY");
+        assert!(default_has_proxy, "the test environment must make ureq pick up a proxy");
+        assert!(ours.proxy().is_none());
+    }
+
+    fn change(key: &str, value: Value) -> config::LayerChange {
+        config::LayerChange { key: key.into(), value, default: None }
+    }
+
+    #[test]
+    fn update_config_may_revoke_but_not_grant() {
+        for ok in [
+            change("network.allow_themes", json!(false)),
+            change("network.allow_themes", Value::Null),
+            change("network.enabled", json!(false)),
+            change("network.enabled", Value::Null),
+            change("network", Value::Null),
+            change("network", json!({"allow_themes": false, "enabled": false})),
+            change("appearance.theme", json!("dark")),
+            change("themes.max_install_kb", json!(64)),
+        ] {
+            assert!(refuse_consent_grants(std::slice::from_ref(&ok)).is_ok(), "{ok:?}");
+        }
+        for bad in [
+            change("network.allow_themes", json!(true)),
+            change("network.enabled", json!(true)),
+            change("network.allow_catalogue", json!(true)),
+            change("network.allow_themes", json!("true")),
+            change("network.allow_themes", json!(1)),
+            change("network", json!({"allow_themes": true})),
+            change("network", json!({"enabled": true})),
+        ] {
+            let e = refuse_consent_grants(std::slice::from_ref(&bad)).unwrap_err();
+            assert_eq!(e.code, "CONSENT_REQUIRED", "{bad:?}");
+        }
+        // One grant hidden among harmless changes refuses the whole call.
+        let mixed = [change("appearance.theme", json!("dark")), change("network.allow_themes", json!(true))];
+        assert_eq!(refuse_consent_grants(&mixed).unwrap_err().code, "CONSENT_REQUIRED");
+    }
+
+    fn dirs_in(t: &tempfile::TempDir) -> config::Dirs {
+        config::Dirs { config: t.path().join("config"), state: t.path().join("state") }
+    }
+
+    #[test]
+    fn grant_writes_only_after_the_dialog_says_yes() {
+        let t = tempfile::tempdir().unwrap();
+        let dirs = dirs_in(&t);
+        let mut seen = None;
+        let granted = grant_in(&dirs, "allow_themes", |title, text| {
+            seen = Some((title.to_string(), text.to_string()));
+            false
+        })
+        .unwrap();
+        assert!(!granted);
+        assert!(seen.unwrap().1.contains("network.allow_themes"));
+        assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "NETWORK_NOT_ALLOWED");
+        let text = fs::read_to_string(dirs.config.join("config.toml")).unwrap_or_default();
+        assert!(!text.contains("allow_themes = true"), "{text}");
+
+        assert!(grant_in(&dirs, "allow_themes", |_, _| true).unwrap());
+        assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "");
+    }
+
+    #[test]
+    fn grant_enabled_turns_the_master_switch_back_on() {
+        let t = tempfile::tempdir().unwrap();
+        let dirs = dirs_in(&t);
+        fs::create_dir_all(&dirs.config).unwrap();
+        fs::write(dirs.config.join("config.toml"), "[network]\nenabled = false\nallow_themes = true\n").unwrap();
+        assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "NETWORK_DISABLED");
+        assert!(!grant_in(&dirs, "enabled", |_, _| false).unwrap());
+        assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "NETWORK_DISABLED");
+        assert!(grant_in(&dirs, "enabled", |_, _| true).unwrap());
+        assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "");
+    }
+
+    #[test]
+    fn grant_rejects_other_keys_without_asking() {
+        let t = tempfile::tempdir().unwrap();
+        let dirs = dirs_in(&t);
+        for key in ["", "allow_", "themes", "appearance.theme", "allow_themes.x", "ALLOW_THEMES", "allow_a b", "hotkeys"] {
+            let r = grant_in(&dirs, key, |_, _| panic!("must not ask for {key:?}"));
+            assert_eq!(r.unwrap_err().code, "INVALID_ARGUMENT", "{key:?}");
+        }
     }
 }

@@ -363,8 +363,8 @@ Vaultdraw never connects on its own: no update checks, no telemetry. Installing 
 
 | Key | Meaning |
 | --- | --- |
-| `network.enabled` | Master switch, default `true`. `false` blocks every download, whatever else is allowed. **Settings → General → Network access.** |
-| `network.allow_themes` | `true` allows theme downloads, `false` refuses them. Absent (the default) means "not asked yet": the first install shows a popup and **Allow** writes `true`. **Settings → General → Allow downloading themes**; the reset arrow brings the question back. |
+| `network.enabled` | Master switch, default `true`. `false` blocks every download, whatever else is allowed. Turning it back on from Settings asks in a native dialog. **Settings → General → Network access.** |
+| `network.allow_themes` | `true` allows theme downloads, `false` refuses them. Absent (the default) means "not asked yet": the first install shows a popup, **Allow** opens a second, native confirmation dialog, and **Yes** there writes `true`. **Settings → General → Allow downloading themes**; the reset arrow brings the question back. |
 | `themes.max_install_kb` | Largest theme file to accept, 1 to 256, default 64. **Settings → Appearance → Largest theme file.** |
 
 The desktop app checks these keys again in its Rust backend before every request, so a setting you turn off holds even if the interface is out of date.

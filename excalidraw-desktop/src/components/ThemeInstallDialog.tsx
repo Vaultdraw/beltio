@@ -178,13 +178,19 @@ export const ThemeInstallDialog = ({
       }
     });
 
-  // The desktop backend re-reads config.toml, so wait until the saved yes is on disk.
+  // The desktop backend re-reads config.toml, so wait until the saved yes is on disk. The app
+  // asks once more in a native dialog; if that is declined the switches fall back and this
+  // popup stays open.
   const allow = async () => {
     updatePreferences({ networkEnabled: true, networkAllowThemes: true }, win);
     try {
       await flushSettings();
     } catch {
       // Browser mode or a failed write: the next request reports the problem.
+    }
+    const now = getPreferences(win);
+    if (!(now.networkEnabled && now.networkAllowThemes === true)) {
+      return;
     }
     setStep(startStep(request));
   };

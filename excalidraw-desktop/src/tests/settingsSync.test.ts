@@ -9,6 +9,7 @@ import {
 import {
   configToPreferences,
   disposeSettings,
+  flushSettings,
   formatConfigError,
   getSettingsStatus,
   initSettings,
@@ -56,6 +57,8 @@ const createBackend = (initial?: {
       : initial.config) as Config | null,
     configError: initial?.configError ?? null,
     state: initial?.state ?? {},
+    /** What the native consent dialog answers. */
+    grantAnswer: true,
     handler: null as null | ((e: { payload: unknown }) => void),
     unlisten: vi.fn(),
     invoke: vi.fn(async (cmd: string, args?: Record<string, unknown>) => {
@@ -85,6 +88,15 @@ const createBackend = (initial?: {
             }
           }
           return undefined;
+        }
+        case "network_grant": {
+          if (!backend.grantAnswer) {
+            return false;
+          }
+          backend.config ??= {};
+          backend.config.network ??= {};
+          backend.config.network[(args as any).key] = true;
+          return true;
         }
         case "write_state":
           backend.state = clone((args as any).state);
@@ -589,6 +601,62 @@ describe("settingsSync runtime", () => {
     updatePreferences({ theme: "dark" }, window);
     await Promise.resolve();
     expect(backend.callsOf("update_config")).toHaveLength(1);
+  });
+
+  it("sends consent grants to network_grant, never update_config", async () => {
+    const backend = createBackend();
+    await init(backend);
+    updatePreferences(
+      { networkAllowThemes: true, networkEnabled: false, theme: "dark" },
+      window,
+    );
+    await flushSettings();
+    // turning it off is an ordinary write; the grant is not part of it
+    expect(backend.callsOf("update_config")).toEqual([
+      [
+        "update_config",
+        {
+          changes: [
+            { key: "network.enabled", value: false },
+            { key: "appearance.mode", value: "dark" },
+          ],
+        },
+      ],
+    ]);
+    expect(backend.callsOf("network_grant")).toEqual([
+      ["network_grant", { key: "allow_themes" }],
+    ]);
+    expect(getPreferences(window).networkAllowThemes).toBe(true);
+    updatePreferences({ networkEnabled: true }, window);
+    await flushSettings();
+    expect(backend.callsOf("network_grant").map(([, a]) => a)).toEqual([
+      { key: "allow_themes" },
+      { key: "enabled" },
+    ]);
+    expect(backend.callsOf("update_config")).toHaveLength(1);
+  });
+
+  it("puts a consent switch back when the native dialog says no", async () => {
+    const backend = createBackend();
+    backend.grantAnswer = false;
+    await init(backend);
+    updatePreferences({ networkAllowThemes: true }, window);
+    expect(getPreferences(window).networkAllowThemes).toBe(true);
+    await flushSettings();
+    expect(getPreferences(window).networkAllowThemes).toBeUndefined();
+    expect(backend.config?.network?.allow_themes).toBeUndefined();
+    expect(backend.callsOf("update_config")).toHaveLength(0);
+  });
+
+  it("revokes consent with a normal update_config write", async () => {
+    const backend = createBackend({
+      config: { ...clone(DEFAULT_CONFIG), network: { allow_themes: true } },
+    });
+    await init(backend);
+    updatePreferences({ networkAllowThemes: false }, window);
+    await flushSettings();
+    expect(backend.callsOf("network_grant")).toHaveLength(0);
+    expect(backend.config?.network?.allow_themes).toBe(false);
   });
 
   it("debounces write_state and skips unchanged state", async () => {

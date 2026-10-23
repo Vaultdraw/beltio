@@ -49,8 +49,26 @@ pub(crate) async fn load_settings() -> Result<crate::launch::WithSafeStart<Loade
 
 #[tauri::command]
 pub(crate) async fn update_config(changes: Vec<LayerChange>) -> Result<()> {
+    // The webview may revoke network consent but never grant it (see `network_grant`).
+    super::network::refuse_consent_grants(&changes)?;
     // Settings writes `overrides.toml` in the state folder; config.toml is yours alone.
     update_overrides_in(&resolve_dirs()?, &changes)
+}
+
+/// Turns `network.enabled` or `network.allow_<purpose>` on after a native confirmation dialog the
+/// page cannot click. `key` is `enabled` or `allow_<purpose>`. Ok(false) = the user said no.
+#[tauri::command]
+pub(crate) async fn network_grant(key: String) -> Result<bool> {
+    let dirs = resolve_dirs()?;
+    super::network::grant_in(&dirs, &key, |title, text| {
+        rfd::MessageDialog::new()
+            .set_level(rfd::MessageLevel::Info)
+            .set_title(title)
+            .set_description(text)
+            .set_buttons(rfd::MessageButtons::YesNo)
+            .show()
+            == rfd::MessageDialogResult::Yes
+    })
 }
 
 #[tauri::command]

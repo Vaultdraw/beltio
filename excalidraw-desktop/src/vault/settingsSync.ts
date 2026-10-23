@@ -1399,6 +1399,18 @@ function enqueue<T>(rt: Runtime, task: () => Promise<T>): Promise<T> {
   return run;
 }
 
+/**
+ * Turning network consent on is not an ordinary config write: Rust refuses it in
+ * `update_config` and asks through a native dialog (`network_grant`) the page cannot click.
+ * Turning it off or clearing it stays a normal write.
+ */
+const CONSENT_FIELDS: Readonly<Record<string, ConfigField>> = {
+  "network.enabled": "networkEnabled",
+  "network.allow_themes": "networkAllowThemes",
+};
+const isConsentGrant = (change: ConfigChange) =>
+  change.value === true && change.key in CONSENT_FIELDS;
+
 function persist(
   rt: Runtime,
   next: PreferencesSnapshot,
@@ -1407,17 +1419,41 @@ function persist(
   if (rt.disposed) {
     return;
   }
-  const changes = preferencesToConfigChanges(prev, next);
-  if (changes.length > 0) {
+  const all = preferencesToConfigChanges(prev, next);
+  const grants = all.filter(isConsentGrant);
+  const changes = all.filter((c) => !isConsentGrant(c));
+  if (all.length > 0) {
     rt.localEdits++;
     void enqueue(rt, async () => {
+      const refused: ConfigField[] = [];
+      // The user said no (or the call failed): put the switch back to what config.toml holds.
+      const revert = () => {
+        if (refused.length > 0) {
+          const back = Object.fromEntries(refused.map((f) => [f, prev[f]]));
+          replaceStoredPreferences({ ...getPreferences(rt.win), ...back });
+          dispatch(rt.win, PREFERENCES_CHANGED_EVENT, getPreferences(rt.win));
+        }
+      };
       try {
-        await rt.invoke("update_config", { changes });
+        if (changes.length > 0) {
+          await rt.invoke("update_config", { changes });
+        }
+        for (const grant of grants) {
+          refused.push(CONSENT_FIELDS[grant.key]);
+          const granted = await rt.invoke<boolean>("network_grant", {
+            key: grant.key.slice("network.".length),
+          });
+          if (granted) {
+            refused.pop();
+          }
+        }
+        revert();
         if (rt.writeProblems.length) {
           rt.writeProblems = [];
           refreshProblems(rt);
         }
       } catch (err) {
+        revert();
         rt.writeProblems = [
           {
             kind: "io",
