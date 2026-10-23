@@ -7,7 +7,7 @@ import { Excalidraw } from "../index";
 
 import { API } from "./helpers/api";
 
-import { render, unmountComponent, waitFor } from "./test-utils";
+import { render, unmountComponent } from "./test-utils";
 
 import type { BinaryFileData } from "../types";
 
