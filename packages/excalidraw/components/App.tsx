@@ -911,6 +911,7 @@ class App extends React.Component<AppProps, AppState> {
       setToast: this.setToast,
       id: this.id,
       setActiveTool: this.setActiveTool,
+      activateToolShortcut: this.activateToolShortcut,
       setCursor: this.cursor.set,
       resetCursor: this.cursor.reset,
       getEditorInterface: () => this.editorInterface,
@@ -2712,19 +2713,19 @@ class App extends React.Component<AppProps, AppState> {
                             )}
 
                           {this.isDefaultUIEnabled() && this.state.contextMenu && (
-                            <ContextMenu
-                              items={this.state.contextMenu.items}
-                              top={this.state.contextMenu.top}
-                              left={this.state.contextMenu.left}
-                              actionManager={this.actionManager}
-                              onClose={(callback) => {
-                                this.setState({ contextMenu: null }, () => {
-                                  this.focusContainer();
-                                  callback?.();
-                                });
-                              }}
-                            />
-                          )}
+                              <ContextMenu
+                                items={this.state.contextMenu.items}
+                                top={this.state.contextMenu.top}
+                                left={this.state.contextMenu.left}
+                                actionManager={this.actionManager}
+                                onClose={(callback) => {
+                                  this.setState({ contextMenu: null }, () => {
+                                    this.focusContainer();
+                                    callback?.();
+                                  });
+                                }}
+                              />
+                            )}
                           <StaticCanvas
                             canvas={this.canvas}
                             rc={this.rc}
@@ -5091,6 +5092,82 @@ class App extends React.Component<AppProps, AppState> {
     }
   };
 
+  /**
+   * Activates a tool as its keyboard shortcut would (`"lock"` toggles the tool
+   * lock like Q). Applies every shortcut gate (view mode, drawing in
+   * progress, host-controlled `activeTool`) and returns `false` on refusal.
+   * `"selection"` resolves to the preferred selection tool.
+   */
+  activateToolShortcut = (
+    tool: ToolType | "lock",
+    via: "letter" | "digit",
+  ): boolean => {
+    if (
+      this.props.viewModeEnabled === true ||
+      this.state.newElement ||
+      this.state.selectionElement ||
+      this.state.selectedElementsAreBeingDragged
+    ) {
+      return false;
+    }
+
+    if (tool === "lock") {
+      if (this.props.activeTool) {
+        return false;
+      }
+      this.toggleLock("keyboard");
+      return true;
+    }
+
+    const shape =
+      tool === "selection" ? this.state.preferredSelectionTool.type : tool;
+
+    if (this.state.viewModeEnabled && !oneOf(shape, ["laser", "hand"])) {
+      return false;
+    }
+    if (
+      !this.isToolSupported(shape) ||
+      (this.props.activeTool &&
+        !this.isSameForcedTool(this.props.activeTool, { type: shape }))
+    ) {
+      return false;
+    }
+
+    if (this.state.activeTool.type !== shape) {
+      trackEvent(
+        "toolbar",
+        shape,
+        `keyboard (${
+          this.editorInterface.formFactor === "phone" ? "mobile" : "desktop"
+        })`,
+      );
+    }
+    if (shape === "arrow" && this.state.activeTool.type === "arrow") {
+      const nextArrowType =
+        this.state.currentItemArrowType === ARROW_TYPE.sharp
+          ? ARROW_TYPE.round
+          : this.state.currentItemArrowType === ARROW_TYPE.round
+          ? ARROW_TYPE.elbow
+          : ARROW_TYPE.sharp;
+      this.setState({ currentItemArrowType: nextArrowType });
+      this.cursorHints.onArrowTypeCycled(nextArrowType);
+    } else if (shape === "arrow" || shape === "line") {
+      this.cursorHints.onToolShortcut(shape, via);
+    }
+
+    if (shape === "bucketfill" && this.state.activeTool.type === "bucketfill") {
+      this.bucketFill.cycleBackgroundColor();
+    } else if (shape === "lasso" && this.state.activeTool.type === "laser") {
+      this.setActiveTool({
+        type: this.state.preferredSelectionTool.type,
+      });
+    } else {
+      this.setActiveTool({ type: shape }, { toggle: true });
+    }
+
+    return true;
+  };
+
   toggleLock = (source: "keyboard" | "ui" = "ui") => {
     if (this.props.activeTool) {
       // the active tool — including its lock state — is host-controlled
@@ -5735,69 +5812,19 @@ class App extends React.Component<AppProps, AppState> {
       }
 
       if (
-        !shouldPreventToolSwitching &&
+        this.props.UIOptions.toolShortcuts !== false &&
         !event.ctrlKey &&
         !event.altKey &&
-        !event.metaKey &&
-        !this.state.newElement &&
-        !this.state.selectionElement &&
-        !this.state.selectedElementsAreBeingDragged
+        !event.metaKey
       ) {
         const shape = findShapeByKey(event.key, this, event.shiftKey);
-
-        if (this.state.viewModeEnabled && !oneOf(shape, ["laser", "hand"])) {
-          return;
-        }
-
-        if (shape) {
-          if (this.state.activeTool.type !== shape) {
-            trackEvent(
-              "toolbar",
-              shape,
-              `keyboard (${
-                this.editorInterface.formFactor === "phone"
-                  ? "mobile"
-                  : "desktop"
-              })`,
-            );
-          }
-          if (shape === "arrow" && this.state.activeTool.type === "arrow") {
-            const nextArrowType =
-              this.state.currentItemArrowType === ARROW_TYPE.sharp
-                ? ARROW_TYPE.round
-                : this.state.currentItemArrowType === ARROW_TYPE.round
-                ? ARROW_TYPE.elbow
-                : ARROW_TYPE.sharp;
-            this.setState({ currentItemArrowType: nextArrowType });
-            this.cursorHints.onArrowTypeCycled(nextArrowType);
-          } else if (shape === "arrow" || shape === "line") {
-            this.cursorHints.onToolShortcut(
+        const handled = shape
+          ? this.activateToolShortcut(
               shape,
               /^\d$/.test(event.key) ? "digit" : "letter",
-            );
-          }
-
-          if (
-            shape === "bucketfill" &&
-            this.state.activeTool.type === "bucketfill"
-          ) {
-            this.bucketFill.cycleBackgroundColor();
-          } else if (
-            shape === "lasso" &&
-            this.state.activeTool.type === "laser"
-          ) {
-            this.setActiveTool({
-              type: this.state.preferredSelectionTool.type,
-            });
-          } else {
-            this.setActiveTool({ type: shape }, { toggle: true });
-          }
-
-          event.stopPropagation();
-
-          return;
-        } else if (event.key === KEYS.Q) {
-          this.toggleLock("keyboard");
+            )
+          : event.key === KEYS.Q && this.activateToolShortcut("lock", "letter");
+        if (handled) {
           event.stopPropagation();
           return;
         }

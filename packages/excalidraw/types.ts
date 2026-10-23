@@ -1275,6 +1275,12 @@ export type UIOptions = Partial<{
     editorWidth: number,
     editorHeight: number,
   ) => EditorInterface["formFactor"];
+  /**
+   * Set to `false` to disable the built-in letter and digit tool shortcuts and
+   * Q (tool lock); the host then drives them through
+   * `ExcalidrawAPI.activateToolShortcut`. Defaults to `true`.
+   */
+  toolShortcuts?: boolean;
   /** @deprecated does nothing. Will be removed in 0.15 */
   welcomeScreen?: boolean;
 }>;
@@ -1614,6 +1620,11 @@ export interface ExcalidrawImperativeAPI {
   clearScene: () => void;
   id: string;
   setActiveTool: InstanceType<typeof App>["setActiveTool"];
+  /**
+   * Runs a tool shortcut (`"lock"` = Q) with every keyboard gate; returns
+   * `false` when refused.
+   */
+  activateToolShortcut: InstanceType<typeof App>["activateToolShortcut"];
   setCursor: InstanceType<typeof App>["cursor"]["set"];
   resetCursor: InstanceType<typeof App>["cursor"]["reset"];
   toggleSidebar: InstanceType<typeof App>["toggleSidebar"];
