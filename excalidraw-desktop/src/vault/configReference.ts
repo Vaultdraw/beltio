@@ -140,6 +140,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       thumbnails: {
         doc: "Show drawing thumbnails (home, search, palette, gallery).",
       },
+      thumbnail_max_elements: {
+        doc: "Biggest drawing (in elements) that gets a thumbnail.",
+      },
       activity_bar: { doc: "Show the activity bar." },
       activity_bar_order: {
         doc: "Activity bar entry order: `library`, `history`, `graph`, `gallery`, `search`, `tags`, `templates`, `hotkeys`, `settings`; unlisted entries follow in their default order.",
@@ -255,6 +258,39 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       undo_budget_mb: {
         doc: "Undo history kept for background tabs, in megabytes.",
       },
+    },
+  },
+  {
+    table: "memory",
+    intro: "Memory kept by open drawings. See [Memory](#memory).",
+    keys: {
+      free_unused_images: {
+        doc: "Release image data that no element and no undo or redo step can restore.",
+      },
+      undo_steps: {
+        doc: "Undo steps kept per drawing; older steps go, with the images only they could restore.",
+      },
+    },
+  },
+  {
+    table: "keys",
+    intro:
+      'Key sequences and the which-key popup. `[keys.labels]` names sequence groups (`"<leader> f" = "files"`); its entries are free text and are not checked. See [Key sequences, leader and which-key](#key-sequences-leader-and-which-key).',
+    keys: {
+      leader: { doc: "The key `<leader>` stands for in a sequence." },
+      timeout_ms: {
+        doc: "Time allowed between the keys of a sequence; 0 waits for the next key.",
+      },
+      cancel_after_ms: {
+        doc: "Drop a half-typed sequence after this long; 0 never does.",
+      },
+      which_key: {
+        doc: "Show the which-key popup while a sequence is half typed.",
+      },
+      which_key_delay_ms: {
+        doc: "Wait this long before the popup appears.",
+      },
+      which_key_position: { doc: "Where the popup shows." },
     },
   },
   {

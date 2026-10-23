@@ -170,3 +170,14 @@ describe("unknown config keys", () => {
     expect(perRun).toBeLessThan(0.5);
   });
 });
+
+describe("[keys.labels]", () => {
+  it("is not reported as unknown", async () => {
+    const { unknownKeyProblems } = await import("../vault/settingsSync");
+    expect(
+      unknownKeyProblems({
+        keys: { leader: "Space", labels: { "g g": "top" } },
+      }),
+    ).toEqual([]);
+  });
+});

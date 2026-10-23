@@ -822,7 +822,8 @@ export const unknownKeyProblems = (
   unknownKeyProblemsIn(
     config,
     (knownKeys ??= buildKnownIndex(
-      CONFIG_MAPPING.map((m) => m.key),
+      // `[keys.labels]` holds free-text group names, read apart from the mapping.
+      [...CONFIG_MAPPING.map((m) => m.key), "keys.labels"],
       TOOL_NESTED_KEYS,
     )),
     "config.toml",

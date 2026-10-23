@@ -961,6 +961,7 @@ The app window around the canvas.
 | `zoom` | `100` | a whole number between 50 and 200 (percent) |  | Whole-app zoom in percent (Cmd/Ctrl+Shift `+`, `-`, `0`). |
 | `show_tag_chips` | `true` | true or false |  | Show a drawing's tags as chips in the file navigator. |
 | `thumbnails` | `true` | true or false |  | Show drawing thumbnails (home, search, palette, gallery). |
+| `thumbnail_max_elements` | `8000` | an integer between 100 and 50000 |  | Biggest drawing (in elements) that gets a thumbnail. |
 | `activity_bar` | `true` | true or false | yes | Show the activity bar. |
 | `activity_bar_order` | `[]` | a list of entry ids like ["library", "history"] | yes | Activity bar entry order: `library`, `history`, `graph`, `gallery`, `search`, `tags`, `templates`, `hotkeys`, `settings`; unlisted entries follow in their default order. |
 | `activity_bar_hidden` | `[]` | a list of entry ids like ["tags"] | yes | Activity bar entries to hide. |
@@ -1055,6 +1056,28 @@ Several drawings open at once.
 | `close_pinned` | `false` | true or false |  | Allow Cmd/Ctrl+W to close pinned tabs. |
 | `restore` | `true` | true or false | yes | Reopen the open tabs when a vault opens. |
 | `undo_budget_mb` | `32` | a whole number from 0 to 1024 (megabytes, 0 = no undo kept for background tabs) |  | Undo history kept for background tabs, in megabytes. |
+
+### `[memory]`
+
+Memory kept by open drawings. See [Memory](#memory).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `free_unused_images` | `true` | true or false |  | Release image data that no element and no undo or redo step can restore. |
+| `undo_steps` | `1000` | a whole number from 10 to 10000 (undo steps kept per drawing) |  | Undo steps kept per drawing; older steps go, with the images only they could restore. |
+
+### `[keys]`
+
+Key sequences and the which-key popup. `[keys.labels]` names sequence groups (`"<leader> f" = "files"`); its entries are free text and are not checked. See [Key sequences, leader and which-key](#key-sequences-leader-and-which-key).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `leader` | `"Backslash"` | one key like "Backslash", "Space" or "Alt+K" |  | The key `<leader>` stands for in a sequence. |
+| `timeout_ms` | `1000` | a whole number from 0 to 3600000 (0 = wait for a key) |  | Time allowed between the keys of a sequence; 0 waits for the next key. |
+| `cancel_after_ms` | `5000` | a whole number from 0 to 3600000 (0 = never) |  | Drop a half-typed sequence after this long; 0 never does. |
+| `which_key` | `true` | true or false |  | Show the which-key popup while a sequence is half typed. |
+| `which_key_delay_ms` | `400` | a whole number from 0 to 3600000 (milliseconds) |  | Wait this long before the popup appears. |
+| `which_key_position` | `"bottom"` | "bottom" or "center" |  | Where the popup shows. |
 
 ### `[history]`
 

@@ -110,6 +110,8 @@ autosave_delay_ms = 500
 # show_tag_chips = true
 # Show drawing thumbnails (home, search, palette, gallery)
 # thumbnails = true
+# Biggest drawing (in elements) that gets a thumbnail, 100 to 50000
+# thumbnail_max_elements = 8000
 # Show the activity bar
 # activity_bar = true
 # Entry order: library, history, graph, gallery, search, tags, templates, hotkeys, settings
@@ -199,6 +201,20 @@ autosave_delay_ms = 500
 # restore = true
 # Undo history kept for background tabs in MB, 0 to 1024 (0 = none)
 # undo_budget_mb = 32
+
+[keys]
+# The key <leader> stands for in a sequence
+# leader = "Backslash"
+# Milliseconds allowed between the keys of a sequence (0 = wait for a key)
+# timeout_ms = 1000
+# Drop a half-typed sequence after this many milliseconds (0 = never)
+# cancel_after_ms = 5000
+# Show the which-key popup while a sequence is half typed
+# which_key = true
+# Milliseconds before the popup appears
+# which_key_delay_ms = 400
+# Where the popup shows: "bottom" or "center"
+# which_key_position = "bottom"
 
 [memory]
 # Free image data of deleted images once no undo or redo step can restore it
@@ -1466,7 +1482,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 65, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 74, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();
