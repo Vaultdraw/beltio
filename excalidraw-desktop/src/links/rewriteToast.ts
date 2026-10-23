@@ -42,16 +42,22 @@ export function rewriteDoneMessage(
 /**
  * Toasts a finished rewrite unless a tag rename owns it. The event can arrive
  * before the tag flow learns its job id (the job finishes before the rename
- * invoke resolves), so the decision waits until no tag rename is in flight.
+ * invoke resolves), so the decision waits until no tag rename is in flight
+ * (at most GATE_TIMEOUT_MS). `currentHandle` is read when the toast would
+ * show: a rewrite from a vault that is no longer open stays silent.
  */
-export function toastRewriteDone(done: RewriteDone, notify: Notify): void {
+export function toastRewriteDone(
+  done: RewriteDone,
+  notify: () => Notify,
+  currentHandle: () => string | undefined,
+): void {
   whenTagJobsKnown(() => {
-    if (isTagJob(done.jobId)) {
+    if (done.handle !== currentHandle() || isTagJob(done.handle, done.jobId)) {
       return;
     }
     const toast = rewriteDoneMessage(done);
     if (toast) {
-      notify(toast.message, toast.type);
+      notify()(toast.message, toast.type);
     }
   });
 }

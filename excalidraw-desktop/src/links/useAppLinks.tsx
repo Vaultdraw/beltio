@@ -338,7 +338,11 @@ export function useAppLinks(deps: AppLinksDeps) {
           return;
         }
         setRefreshKey((n) => n + 1);
-        toastRewriteDone(done, live.current.notify);
+        toastRewriteDone(
+          done,
+          () => live.current.notify,
+          () => live.current.vault?.handle,
+        );
         if (done.rewritten > 0) {
           void fetchRemeasure();
         }

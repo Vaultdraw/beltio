@@ -203,7 +203,7 @@ describe("runTagRename", () => {
     expect(api.renameCalls).toEqual([
       { handle: "h", from: "dsa", to: "Algo", openPath: "open.excalidraw" },
     ]);
-    expect(isTagJob(7)).toBe(true);
+    expect(isTagJob("h", 7)).toBe(true);
     expect(notify).not.toHaveBeenCalled();
     await act(async () => {
       emit(done());
@@ -213,7 +213,7 @@ describe("runTagRename", () => {
       "Renamed #DSA to #Algo in 3 drawings",
       "info",
     );
-    expect(isTagJob(7)).toBe(false);
+    expect(isTagJob("h", 7)).toBe(false);
   });
 
   it("toasts immediately when only the open drawing changed (jobId null)", async () => {

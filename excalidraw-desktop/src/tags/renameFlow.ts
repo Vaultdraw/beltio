@@ -71,20 +71,17 @@ export async function runTagRename(
   fromDisplay = from,
 ): Promise<{ completed: Promise<void> }> {
   await deps.flush();
-  // Listen before invoking so a fast job cannot finish unseen.
+  const { handle } = deps;
+  // Listen (and wait for the registration) before invoking, so a fast job
+  // cannot finish unseen.
   const early = new Map<number, RewriteDone>();
   let waiter: ((d: RewriteDone) => void) | null = null;
   let wanted: number | null = null;
-  let off: (() => void) | undefined;
-  let stop = false;
-  const stopListening = () => {
-    stop = true;
-    off?.();
-  };
+  let off: (() => void) | null = null;
   if (deps.links) {
-    deps.links
-      .onRewriteDone((d) => {
-        if (d.handle !== deps.handle) {
+    try {
+      off = await deps.links.onRewriteDone((d) => {
+        if (d.handle !== handle) {
           return;
         }
         if (wanted === d.jobId) {
@@ -92,56 +89,70 @@ export async function runTagRename(
         } else {
           early.set(d.jobId, d);
         }
-      })
-      .then((u) => (stop ? u() : (off = u)))
-      .catch(() => {});
+      });
+    } catch {
+      off = null; // no completion event: the generic links toast reports it
+    }
   }
-  // Until the job id is claimed, the links toast holds its decision.
+  const stopListening = () => {
+    off?.();
+    off = null;
+  };
+  // Until the job id is claimed (or the flow fails), the links toast waits.
   const jobKnown = beginTagRename();
-  let result;
+  let jobId: number | null = null;
+  let openCount = 0;
+  let claimed = false;
   try {
-    result = await deps.api.rename(deps.handle, from, to, deps.openPath);
+    const result = await deps.api.rename(handle, from, to, deps.openPath);
+    jobId = result.jobId;
+    const open =
+      result.openDrawingEdits.length > 0
+        ? deps.applyEdits(result.openDrawingEdits)
+        : 0;
+    openCount = open > 0 ? 1 : 0;
+    // Claimed last: if anything above throws, the job stays unclaimed and
+    // the generic "Updated N links" toast reports it instead.
+    if (jobId !== null && off) {
+      claimTagJob(handle, jobId);
+      claimed = true;
+    }
   } catch (err) {
-    jobKnown();
     stopListening();
     throw err;
+  } finally {
+    jobKnown();
   }
-  const { jobId } = result;
-  if (jobId !== null && deps.links) {
-    claimTagJob(jobId);
-  }
-  jobKnown();
-  const open =
-    result.openDrawingEdits.length > 0
-      ? deps.applyEdits(result.openDrawingEdits)
-      : 0;
-  const openCount = open > 0 ? 1 : 0;
-  if (jobId === null || !deps.links) {
+  if (!claimed || jobId === null) {
     stopListening();
     if (openCount > 0) {
       deps.notify(renamedMessage(fromDisplay, to, openCount), "info");
     }
     return { completed: Promise.resolve() };
   }
+  const id = jobId;
   const completed = (async () => {
-    const done =
-      early.get(jobId) ??
-      (await new Promise<RewriteDone>((resolve) => {
-        wanted = jobId;
-        waiter = resolve;
-      }));
-    stopListening();
-    releaseTagJob(jobId);
-    const n = done.rewritten + openCount;
-    if (done.failed.length > 0) {
-      deps.notify(
-        `${renamedMessage(fromDisplay, to, n)}; skipped: ${skippedMessage(
-          done,
-        )}`,
-        "error",
-      );
-    } else {
-      deps.notify(renamedMessage(fromDisplay, to, n), "info");
+    try {
+      const done =
+        early.get(id) ??
+        (await new Promise<RewriteDone>((resolve) => {
+          wanted = id;
+          waiter = resolve;
+        }));
+      const n = done.rewritten + openCount;
+      if (done.failed.length > 0) {
+        deps.notify(
+          `${renamedMessage(fromDisplay, to, n)}; skipped: ${skippedMessage(
+            done,
+          )}`,
+          "error",
+        );
+      } else {
+        deps.notify(renamedMessage(fromDisplay, to, n), "info");
+      }
+    } finally {
+      stopListening();
+      releaseTagJob(handle, id);
     }
   })();
   return { completed };
