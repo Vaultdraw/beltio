@@ -4,7 +4,7 @@
  * hidden for home tabs.
  */
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 import type { TabId } from "./types";
 
@@ -112,7 +112,9 @@ export const TabContextMenu = ({
   const ref = useRef<HTMLDivElement>(null);
   const entries = buildEntries(rest);
 
-  useEffect(() => {
+  // Layout effect: focus and key listeners are in place before the first
+  // paint, so a key pressed in the same frame as the menu opens is not lost.
+  useLayoutEffect(() => {
     const menu = ref.current;
     const doc = menu?.ownerDocument;
     const win = doc?.defaultView;

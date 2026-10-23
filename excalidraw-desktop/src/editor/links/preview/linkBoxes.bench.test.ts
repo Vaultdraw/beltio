@@ -4,10 +4,14 @@ import { linkAt } from "./linkBoxes";
 
 import type { VersionedText } from "./linkBoxes";
 
-const measure = (t: string) => t.length * 10;
+let measureCalls = 0;
+const measure = (t: string) => {
+  measureCalls++;
+  return t.length * 10;
+};
 
 describe("link box hit test performance", () => {
-  it("500 linked texts + 2000 other elements: p95 < 0.2 ms per frame", () => {
+  it("500 linked texts + 2000 other elements: no measuring on cache hits, one visit per element", () => {
     const elements: VersionedText[] = [];
     for (let i = 0; i < 2000; i++) {
       elements.push({
@@ -42,38 +46,72 @@ describe("link box hit test performance", () => {
         version: 1,
       });
     }
-    // Warm the cache the way the first hovers would.
+    // Count work, not milliseconds (wall-clock budgets live in the perf
+    // harness): `text` reads per scan and `measure` calls.
+    let textReads = 0;
+    const counted = elements.map(
+      (el) =>
+        new Proxy(el, {
+          get(target, prop, receiver) {
+            if (prop === "text") {
+              textReads++;
+            }
+            return Reflect.get(target, prop, receiver);
+          },
+        }),
+    );
+    // Warm the cache the way the first hovers would: every linked text is
+    // measured once.
+    measureCalls = 0;
     for (let i = 0; i < 500; i++) {
-      linkAt(
-        elements,
-        { x: (i % 25) * 200 + 60, y: Math.floor(i / 25) * 60 + 10 },
-        measure,
-      );
+      expect(
+        linkAt(
+          counted,
+          { x: (i % 25) * 200 + 60, y: Math.floor(i / 25) * 60 + 10 },
+          measure,
+        ),
+      ).not.toBeNull();
     }
+    expect(measureCalls).toBeGreaterThan(0);
+    const warmCalls = measureCalls;
+
+    // Hits on warm elements: no measuring, and no element scanned twice.
     const times: number[] = [];
+    measureCalls = 0;
     for (let run = 0; run < 1000; run++) {
       const i = (run * 37) % 500;
       const pt = {
         x: (i % 25) * 200 + 60 + (run % 5),
         y: Math.floor(i / 25) * 60 + 10,
       };
+      textReads = 0;
       const s = performance.now();
-      linkAt(elements, pt, measure);
+      linkAt(counted, pt, measure);
       times.push(performance.now() - s);
+      expect(textReads).toBeLessThanOrEqual(counted.length);
     }
-    // Pointer over empty canvas: the whole scene is scanned, nothing hits.
+    expect(measureCalls).toBe(0);
+
+    // Pointer over empty canvas: the whole scene is scanned, nothing hits,
+    // nothing is measured, each element is read at most once.
     const misses: number[] = [];
     for (let run = 0; run < 1000; run++) {
+      textReads = 0;
       const s = performance.now();
-      linkAt(elements, { x: -500 - run, y: -500 }, measure);
+      const hit = linkAt(counted, { x: -500 - run, y: -500 }, measure);
       misses.push(performance.now() - s);
+      expect(hit).toBeNull();
+      expect(textReads).toBeLessThanOrEqual(counted.length);
     }
+    expect(measureCalls).toBe(0);
+    // Measuring is per element (a few calls each), once: never per frame.
+    expect(warmCalls).toBeLessThanOrEqual(500 * 4);
+
     misses.sort((a, b) => a - b);
     // eslint-disable-next-line no-console
     console.info(
       `link box hit test, full-scene miss: p95 ${misses[949].toFixed(4)} ms`,
     );
-    expect(misses[949]).toBeLessThan(0.2);
     times.sort((a, b) => a - b);
     const p = (q: number) => times[Math.floor(q * (times.length - 1))];
     // eslint-disable-next-line no-console
@@ -84,6 +122,5 @@ describe("link box hit test performance", () => {
         times.length - 1
       ].toFixed(4)} ms`,
     );
-    expect(p(0.95)).toBeLessThan(0.2);
   });
 });
