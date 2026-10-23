@@ -1,7 +1,8 @@
 /**
  * The Links dock: Backlinks / Outgoing for the open drawing, in the
  * navigator. Queries nothing while hidden; "Unlinked mentions" is computed
- * only while its section is expanded. Keyboard (Vim style): j/k or arrows
+ * only while its section is expanded. Keyboard (Vim style, `list.*`
+ * commands, rebindable): j/k or arrows
  * move, Enter/o opens (or creates / toggles), Tab switches tabs, h/l
  * collapse/expand the section.
  */
@@ -14,16 +15,13 @@ import {
   useState,
 } from "react";
 
+import { useListKeys } from "../../commands/useListKeys";
 import { IconChevronDown, IconChevronRight } from "../Icons";
 import { DrawingTags } from "../tags/TagChips";
 
 import "./LinksDock.css";
 
-import type {
-  KeyboardEvent as ReactKeyboardEvent,
-  ReactNode,
-  Ref,
-} from "react";
+import type { ReactNode, Ref } from "react";
 
 import type {
   BackLink,
@@ -292,58 +290,35 @@ export function LinksDock(props: LinksDockProps) {
     }
   };
 
-  const onKeyDown = (e: ReactKeyboardEvent) => {
-    if (e.metaKey || e.ctrlKey || e.altKey) {
-      return;
-    }
-    const used = () => {
-      e.preventDefault();
-      e.stopPropagation();
-    };
-    switch (e.key) {
-      case "j":
-      case "ArrowDown":
-        used();
-        move(1);
-        break;
-      case "k":
-      case "ArrowUp":
-        used();
-        move(-1);
-        break;
-      case "Enter":
-      case "o":
-        used();
-        activate(selected);
-        break;
-      case "Tab":
-        used();
-        setTab((t) => (t === "backlinks" ? "outgoing" : "backlinks"));
-        setSelectedKey(null);
-        break;
-      case "h":
-      case "l": {
-        used();
-        if (selected) {
-          const open = e.key === "l";
-          toggle(selected.section, !open);
-          if (!open) {
-            setSelectedKey(`h:${selected.section}`);
-          }
-        }
-        break;
+  // Keys are `list.*` commands: j/k move, Enter/o open, Tab switches tabs,
+  // h/l collapse/expand the section, g/G first/last.
+  const fold = (open: boolean) => () => {
+    if (selected) {
+      toggle(selected.section, !open);
+      if (!open) {
+        setSelectedKey(`h:${selected.section}`);
       }
-      case "g":
-        used();
-        setSelectedKey(rows[0]?.key ?? null);
-        break;
-      case "G":
-        used();
-        setSelectedKey(rows[rows.length - 1]?.key ?? null);
-        break;
-      default:
     }
   };
+  useListKeys(
+    rootRef,
+    "links",
+    visible
+      ? {
+          down: () => move(1),
+          up: () => move(-1),
+          first: () => setSelectedKey(rows[0]?.key ?? null),
+          last: () => setSelectedKey(rows[rows.length - 1]?.key ?? null),
+          open: () => activate(selected),
+          nextView: () => {
+            setTab((t) => (t === "backlinks" ? "outgoing" : "backlinks"));
+            setSelectedKey(null);
+          },
+          expand: fold(true),
+          collapse: fold(false),
+        }
+      : null,
+  );
 
   if (!visible) {
     return null;
@@ -361,7 +336,6 @@ export function LinksDock(props: LinksDockProps) {
       tabIndex={0}
       role="region"
       aria-label="Links"
-      onKeyDown={onKeyDown}
     >
       <DrawingTags path={path} />
       <div className="vault-links__tabs" role="tablist">

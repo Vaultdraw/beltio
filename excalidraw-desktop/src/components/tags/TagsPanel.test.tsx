@@ -1,6 +1,11 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  installListKeysForTests,
+  pressListKey,
+} from "../../commands/listKeysForTests";
+
 import { TagsPanel, VIRTUALIZE_ABOVE, windowRange } from "./TagsPanel";
 
 const tags = [
@@ -16,7 +21,14 @@ const labels = () =>
     .map((el) => el.querySelector(".vault-tags__label")!.textContent);
 
 beforeEach(() => window.localStorage.clear());
-afterEach(cleanup);
+let uninstall = () => {};
+beforeEach(() => {
+  uninstall = installListKeysForTests();
+});
+afterEach(() => {
+  uninstall();
+  cleanup();
+});
 
 describe("TagsPanel", () => {
   it("renders nothing without tags", () => {
@@ -57,7 +69,7 @@ describe("TagsPanel", () => {
       />,
     );
     const list = screen.getByRole("tree", { name: "Tag list" });
-    const key = (k: string) => fireEvent.keyDown(list, { key: k });
+    const key = (k: string) => pressListKey(list, k);
     const cursor = () =>
       list.querySelector(".vault-tags__row--cursor .vault-tags__label")!
         .textContent;
@@ -86,9 +98,7 @@ describe("TagsPanel", () => {
     render(
       <TagsPanel tags={tags} query="tag:#dsa" onQueryChange={onQueryChange} />,
     );
-    fireEvent.keyDown(screen.getByRole("tree", { name: "Tag list" }), {
-      key: "Enter",
-    });
+    pressListKey(screen.getByRole("tree", { name: "Tag list" }), "Enter");
     expect(onQueryChange).toHaveBeenCalledWith("");
   });
 

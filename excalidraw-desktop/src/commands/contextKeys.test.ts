@@ -12,6 +12,7 @@ const ctx: CommandContext = {
   textEditing: false,
   canvasFocus: false,
   modalOpen: false,
+  listFocus: false,
 };
 
 const disposers: (() => void)[] = [];

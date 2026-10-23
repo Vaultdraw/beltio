@@ -24,6 +24,10 @@ import { createTagsProvider } from "../palette/providers/tags";
 import { requestGallery } from "../thumbnails/gallery/openRequest";
 
 import { isNewTabClick } from "../tabs/newTabClick";
+import { useListKeys } from "../commands/useListKeys";
+import { registerCommandHandlers } from "../commands/handlerRegistry";
+import { FOCUS_TREE_COMMAND_ID } from "../commands/listCommands";
+import { focusCanvasIfIdle } from "../palette/focus";
 
 import {
   IconChevronDown,
@@ -66,6 +70,7 @@ import { RenameModal } from "./RenameModal";
 import { flattenTree } from "./tree/flattenTree";
 import { TREE_ROW_HEIGHT, useTreeWindow } from "./tree/useTreeWindow";
 import { ghostTransform, useTreeDrag } from "./tree/useTreeDrag";
+import { treeActions } from "./tree/treeKeys";
 
 import type { ReactNode } from "react";
 
@@ -422,7 +427,6 @@ export const VaultNavigator = ({
     () => flattenTree(treeNodes, expandedFolders),
     [treeNodes, expandedFolders],
   );
-  const getVisibleItems = (): VaultEntry[] => rows.map((r) => r.entry);
   const treeWindow = useTreeWindow(treeContainerRef, rows.length, !isSearching);
   const { scrollToRow } = treeWindow;
   // Keyboard focus moves between rows that may be outside the mounted window.
@@ -467,105 +471,73 @@ export const VaultNavigator = ({
     [],
   );
 
-  // Keyboard navigation within tree
-  const handleTreeKeyDown = (e: React.KeyboardEvent) => {
-    const visible = getVisibleItems();
-    if (visible.length === 0) {
-      return;
-    }
+  // Tree keys are `list.*` commands (rebindable in [hotkeys]); the registered
+  // controller reads the latest snapshot of these actions.
+  const treeKeys = treeActions({
+    rows,
+    focusedPath,
+    activePath,
+    readOnly: vault.readOnly,
+    setFocusedPath,
+    expand: onExpandFolder,
+    toggle: onToggleFolder,
+    open: (path, newTab) =>
+      void onOpenDrawing(path, newTab ? { target: "new" } : undefined),
+    rename: setRenameTarget,
+    trash: requestTrash,
+    move: setMoveTarget,
+    create: onRowNewInside,
+    menu: (entry) => {
+      const rowEl = treeContainerRef.current?.querySelector<HTMLElement>(
+        `[data-tree-path="${CSS.escape(entry.path)}"]`,
+      );
+      const box = rowEl?.getBoundingClientRect();
+      if (box) {
+        onRowMenu(entry, box.left + 40, box.bottom);
+      }
+    },
+    exit: () => {
+      treeContainerRef.current?.blur();
+      focusCanvasIfIdle(treeContainerRef.current?.ownerDocument);
+    },
+  });
+  // While a row is dragged, Escape belongs to the drag (it cancels it).
+  useListKeys(
+    treeContainerRef,
+    "tree",
+    isSearching ? null : drag ? { ...treeKeys, exit: undefined } : treeKeys,
+  );
 
-    const currentIndex = visible.findIndex((item) => item.path === focusedPath);
-
-    switch (e.key) {
-      case "ArrowDown": {
-        e.preventDefault();
-        const nextIndex =
-          currentIndex < visible.length - 1 ? currentIndex + 1 : 0;
-        setFocusedPath(visible[nextIndex].path);
-        break;
-      }
-      case "ArrowUp": {
-        e.preventDefault();
-        const prevIndex =
-          currentIndex > 0 ? currentIndex - 1 : visible.length - 1;
-        setFocusedPath(visible[prevIndex].path);
-        break;
-      }
-      case "ArrowRight": {
-        if (focusedPath) {
-          const item = visible.find((i) => i.path === focusedPath);
-          if (item?.kind === "folder") {
-            e.preventDefault();
-            if (!expandedFolders.has(item.path)) {
-              onExpandFolder(item.path);
-            }
+  // "Focus file tree" (navigator.focusTree): show the tree and focus it; from
+  // the tree, back to the canvas (a toggle, like Zed's project panel).
+  const [focusTreeNonce, setFocusTreeNonce] = useState(0);
+  const treeKeysLive = useRef(treeKeys);
+  treeKeysLive.current = treeKeys;
+  const focusTreeLive = useRef({ collapsed, onToggleCollapse });
+  focusTreeLive.current = { collapsed, onToggleCollapse };
+  useEffect(
+    () =>
+      registerCommandHandlers({
+        [FOCUS_TREE_COMMAND_ID]: () => {
+          const el = treeContainerRef.current;
+          if (el?.contains(el.ownerDocument.activeElement)) {
+            treeKeysLive.current.exit();
+            return;
           }
-        }
-        break;
-      }
-      case "ArrowLeft": {
-        if (focusedPath) {
-          const item = visible.find((i) => i.path === focusedPath);
-          if (item?.kind === "folder" && expandedFolders.has(item.path)) {
-            e.preventDefault();
-            onToggleFolder(item.path);
-          } else {
-            const parent = getParentPath(focusedPath);
-            if (parent !== undefined) {
-              e.preventDefault();
-              setFocusedPath(parent);
-            }
+          if (focusTreeLive.current.collapsed) {
+            focusTreeLive.current.onToggleCollapse();
           }
-        }
-        break;
-      }
-      case "Enter":
-      case " ": {
-        if (focusedPath) {
-          e.preventDefault();
-          const item = visible.find((i) => i.path === focusedPath);
-          if (item) {
-            if (item.kind === "folder") {
-              onToggleFolder(item.path);
-            } else {
-              void onOpenDrawing(
-                item.path,
-                isNewTabClick(e) ? { target: "new" } : undefined,
-              );
-            }
-          }
-        }
-        break;
-      }
-      case "ContextMenu":
-      case "F10": {
-        // Menu key / Shift+F10: the focused row's menu, beside the row.
-        if (focusedPath && (e.key === "ContextMenu" || e.shiftKey)) {
-          const item = visible.find((i) => i.path === focusedPath);
-          const rowEl = e.currentTarget.querySelector<HTMLElement>(
-            `[data-tree-path="${CSS.escape(focusedPath)}"]`,
-          );
-          if (item && rowEl) {
-            e.preventDefault();
-            const box = rowEl.getBoundingClientRect();
-            onRowMenu(item, box.left + 40, box.bottom);
-          }
-        }
-        break;
-      }
-      case "Delete":
-      case "Backspace": {
-        if (focusedPath && !vault.readOnly) {
-          const item = visible.find((i) => i.path === focusedPath);
-          if (item) {
-            e.preventDefault();
-            requestTrash(item);
-          }
-        }
-        break;
-      }
+          setSearchQuery("");
+          setFocusTreeNonce((n) => n + 1);
+        },
+      }),
+    [],
+  );
+  useEffect(() => {
+    if (focusTreeNonce > 0 && !collapsed && !isSearching) {
+      treeContainerRef.current?.focus({ preventScroll: true });
     }
-  };
+  }, [focusTreeNonce, collapsed, isSearching]);
 
   // Create submission
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -748,7 +720,6 @@ export const VaultNavigator = ({
         role={isSearching ? undefined : "tree"}
         id={treeId}
         tabIndex={isSearching ? undefined : 0}
-        onKeyDown={isSearching ? undefined : handleTreeKeyDown}
       >
         {isSearching ? (
           <SearchResults

@@ -1,8 +1,8 @@
 /**
  * The Tags pane: nested tag list with counts. Click or Enter applies the
- * `tag:#key` filter. Keyboard (Vim style, list focused): j/k or arrows move,
- * h/l collapse/expand, Enter/Space filter, g/G first/last, r or F2 rename,
- * Escape leaves. Above VIRTUALIZE_ABOVE visible rows only a window of rows is
+ * `tag:#key` filter. Keyboard (Vim style, list focused, all `list.*`
+ * commands): j/k or arrows move, h/l collapse/expand, Enter/Space filter,
+ * g/G first/last, r or F2 rename, Escape leaves. Above VIRTUALIZE_ABOVE visible rows only a window of rows is
  * in the DOM. Sort, open/closed and collapsed nodes persist per vault.
  */
 import {
@@ -14,6 +14,7 @@ import {
   useState,
 } from "react";
 
+import { useListKeys } from "../../commands/useListKeys";
 import { flattenTree, buildTagTree, type TagRow } from "../../tags/tagTree";
 import { registerTagSortToggle } from "../../tags/tagActions";
 import { loadPaneState, savePaneState } from "../../tags/tagPaneState";
@@ -23,6 +24,7 @@ import {
   type TagCount,
   type TagSort,
 } from "../../tags/types";
+
 import {
   IconChevronDown,
   IconChevronRight,
@@ -32,11 +34,9 @@ import {
 
 import "./TagsPanel.css";
 
-import type {
-  CSSProperties,
-  KeyboardEvent as ReactKeyboardEvent,
-  Ref,
-} from "react";
+import type { CSSProperties, Ref } from "react";
+
+import type { ListController } from "../../commands/listNav";
 
 export const ROW_HEIGHT = 22;
 export const VIRTUALIZE_ABOVE = 500;
@@ -172,10 +172,6 @@ export const TagsPanel = ({
   };
   useEffect(() => registerTagSortToggle(() => toggleSortRef.current()), []);
 
-  if (tags.length === 0) {
-    return null;
-  }
-
   const setNodeOpen = (key: string, wantOpen: boolean) =>
     setCollapsed((prev) => {
       if (prev.has(key) === !wantOpen) {
@@ -213,75 +209,48 @@ export const TagsPanel = ({
     }
   };
 
-  const onKeyDown = (e: ReactKeyboardEvent) => {
-    if (e.metaKey || e.ctrlKey || e.altKey) {
-      return;
-    }
-    const used = () => {
-      e.preventDefault();
-      e.stopPropagation();
-    };
-    const row = cursorRow;
-    switch (e.key) {
-      case "j":
-      case "ArrowDown":
-        used();
-        move(cursorIndex + 1);
-        break;
-      case "k":
-      case "ArrowUp":
-        used();
-        move(cursorIndex - 1);
-        break;
-      case "g":
-        used();
-        move(0);
-        break;
-      case "G":
-        used();
-        move(rows.length - 1);
-        break;
-      case "h":
-      case "ArrowLeft":
-        used();
-        if (row?.isOpen) {
-          setNodeOpen(row.node.key, false);
-        } else if (row?.parent) {
-          setCursorKey(row.parent);
+  // Keys are `list.*` commands (j/k/h/l, g/G, Enter, r/F2, Escape by default).
+  const row = cursorRow;
+  const keys: ListController = {
+    down: () => move(cursorIndex + 1),
+    up: () => move(cursorIndex - 1),
+    first: () => move(0),
+    last: () => move(rows.length - 1),
+    collapse: () => {
+      if (row?.isOpen) {
+        setNodeOpen(row.node.key, false);
+      } else if (row?.parent) {
+        setCursorKey(row.parent);
+      }
+    },
+    expand: () => {
+      if (row?.hasChildren) {
+        if (row.isOpen) {
+          move(cursorIndex + 1);
+        } else {
+          setNodeOpen(row.node.key, true);
         }
-        break;
-      case "l":
-      case "ArrowRight":
-        used();
-        if (row?.hasChildren) {
-          if (row.isOpen) {
-            move(cursorIndex + 1);
-          } else {
-            setNodeOpen(row.node.key, true);
+      }
+    },
+    open: () => {
+      if (row) {
+        applyFilter(row.node.key);
+      }
+    },
+    rename: onRenameTag
+      ? () => {
+          if (row) {
+            onRenameTag(row.node.key, row.node.display);
           }
         }
-        break;
-      case "Enter":
-      case " ":
-        used();
-        if (row) {
-          applyFilter(row.node.key);
-        }
-        break;
-      case "r":
-      case "F2":
-        used();
-        if (row && onRenameTag) {
-          onRenameTag(row.node.key, row.node.display);
-        }
-        break;
-      case "Escape":
-        used();
-        onExit?.();
-        break;
-      default:
-    }
+      : undefined,
+    exit: () => onExit?.(),
   };
+  useListKeys(listRef, "tags", open && tags.length > 0 ? keys : null);
+
+  if (tags.length === 0) {
+    return null;
+  }
 
   const total = rows.length;
   const [from, to] = windowRange(
@@ -326,7 +295,6 @@ export const TagsPanel = ({
           aria-activedescendant={
             cursorRow ? rowId(listId, cursorRow.node.key) : undefined
           }
-          onKeyDown={onKeyDown}
           onScroll={
             virtual ? (e) => setScrollTop(e.currentTarget.scrollTop) : undefined
           }

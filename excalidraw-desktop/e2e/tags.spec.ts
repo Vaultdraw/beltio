@@ -218,11 +218,11 @@ test("keyboard: j/k/h/l/g/G move, Enter filters, Escape leaves", async ({
   await expect(tagButton(page, "dsa/graphs")).toHaveCount(0);
   await page.keyboard.press("l");
   await expect(tagButton(page, "dsa/graphs")).toBeVisible();
-  await page.keyboard.press("G");
+  await page.keyboard.press("Shift+G");
   await expect(cursorRow(page)).toHaveText("#Interview");
   await page.keyboard.press("g");
   await expect(cursorRow(page)).toHaveText("#dsa");
-  await page.keyboard.press("G");
+  await page.keyboard.press("Shift+G");
   await page.keyboard.press("Enter");
   await expect(searchBox(page)).toHaveValue("tag:#interview");
   await expect(drawingRow(page, "Tagged Graphs")).toBeVisible();
@@ -256,7 +256,7 @@ test("600+ tags are virtualised and scrolling shows later rows", async ({
   await tagList(page).focus();
   await page.keyboard.press("g");
   await expect(tagButton(page, "grp")).toBeVisible();
-  await page.keyboard.press("G");
+  await page.keyboard.press("Shift+G");
   await expect(tagButton(page, "t0699")).toBeVisible();
   expect(await rows.count()).toBeLessThan(100);
   expect(errors).toEqual([]);

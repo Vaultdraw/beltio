@@ -9,6 +9,11 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  installListKeysForTests,
+  pressListKey,
+} from "../commands/listKeysForTests";
+
 import { DrawingTags } from "../components/tags/TagChips";
 import { TagsPanel, VIRTUALIZE_ABOVE } from "../components/tags/TagsPanel";
 import { applyTagFilter, registerTagActions } from "../tags/tagActions";
@@ -50,7 +55,14 @@ function setup(extra: Partial<React.ComponentProps<typeof TagsPanel>> = {}) {
 }
 
 beforeEach(() => window.localStorage.clear());
-afterEach(() => cleanup());
+let uninstall = () => {};
+beforeEach(() => {
+  uninstall = installListKeysForTests();
+});
+afterEach(() => {
+  uninstall();
+  cleanup();
+});
 
 describe("sort", () => {
   it("defaults to name and toggles to count at every level", () => {
@@ -125,14 +137,13 @@ describe("virtualisation", () => {
     setup({ tags: many(2000) });
     const list = screen.getByRole("tree");
     list.focus();
-    fireEvent.keyDown(list, { key: "G" });
+    pressListKey(list, "G");
     expect(list.scrollTop).toBeGreaterThan(22 * 1900);
   });
 });
 
 describe("keyboard", () => {
-  const key = (k: string) =>
-    fireEvent.keyDown(screen.getByRole("tree"), { key: k });
+  const key = (k: string) => pressListKey(screen.getByRole("tree"), k);
   const cursor = () =>
     screen
       .getAllByRole("treeitem")

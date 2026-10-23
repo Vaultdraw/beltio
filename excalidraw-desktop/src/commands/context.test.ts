@@ -76,6 +76,7 @@ describe("whenHolds", () => {
     textEditing: false,
     canvasFocus: false,
     modalOpen: false,
+    listFocus: false,
   };
   it("evaluates positive and negated clauses", () => {
     expect(whenHolds(undefined, ctx)).toBe(true);

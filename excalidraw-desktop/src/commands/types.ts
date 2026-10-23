@@ -41,6 +41,8 @@ export type CommandCategory = BuiltinCommandCategory | (string & {});
  *   (includes Excalidraw's WYSIWYG text editor).
  * - canvasFocus: focus is inside the editor and not text editing.
  * - modalOpen: a vault dialog (`.vault-modal-backdrop`) is open.
+ * - listFocus: focus is in a keyboard list (file tree, tags, links, Settings
+ *   pages; see listNav.ts) and not text editing.
  */
 export type BuiltinContextKey =
   | "vaultOpen"
@@ -48,7 +50,8 @@ export type BuiltinContextKey =
   | "writable"
   | "textEditing"
   | "canvasFocus"
-  | "modalOpen";
+  | "modalOpen"
+  | "listFocus";
 
 /** Plugins add namespaced keys (`ns.name`, see contextKeys.ts). */
 export type ContextKey = BuiltinContextKey | `${string}.${string}`;

@@ -1,5 +1,7 @@
 import { useRef } from "react";
 
+import { useListKeys } from "../../commands/useListKeys";
+
 import {
   IconClose,
   IconFolder,
@@ -55,18 +57,6 @@ export interface SidebarProps {
   footer?: ReactNode;
 }
 
-/** Step of a nav key: arrows and Vim's j/k, plus Home/End. */
-const navStep = (key: string): "next" | "prev" | "first" | "last" | null =>
-  key === "ArrowDown" || key === "j"
-    ? "next"
-    : key === "ArrowUp" || key === "k"
-    ? "prev"
-    : key === "Home"
-    ? "first"
-    : key === "End"
-    ? "last"
-    : null;
-
 export const Sidebar = ({
   pages,
   activePage,
@@ -97,42 +87,44 @@ export const Sidebar = ({
     }
   };
 
-  const handleNavKeyDown = (e: KeyboardEvent<HTMLElement>) => {
-    if (e.altKey || e.ctrlKey || e.metaKey) {
-      return;
-    }
-    const current = pages.findIndex(
-      (p) => settingsTabId(p.id) === (e.target as HTMLElement).id,
-    );
+  // Page tabs are a `list.*` command target: j/k or arrows step, Home/End
+  // (g/G) jump, Enter/l/ArrowRight move focus into the page.
+  const currentTab = () => {
+    const id = navRef.current?.ownerDocument.activeElement?.id;
+    return pages.findIndex((p) => settingsTabId(p.id) === id);
+  };
+  const step = (pick: (current: number, last: number) => number) => () => {
+    const current = currentTab();
     if (current < 0) {
       return;
     }
-    const step = navStep(e.key);
-    if (step) {
-      e.preventDefault();
-      const last = pages.length - 1;
-      const next =
-        step === "next"
-          ? Math.min(last, current + 1)
-          : step === "prev"
-          ? Math.max(0, current - 1)
-          : step === "first"
-          ? 0
-          : last;
-      if (step === "prev" && current === 0) {
-        searchRef?.current?.focus();
-        return;
-      }
-      onSelectPage(pages[next].id);
-      focusTab(pages[next].id);
-    } else if (e.key === "Enter" || e.key === "ArrowRight" || e.key === "l") {
-      e.preventDefault();
-      if (pages[current].id !== activePage) {
-        onSelectPage(pages[current].id);
-      }
-      onEnterPage?.();
+    const next = pick(current, pages.length - 1);
+    if (next < 0) {
+      searchRef?.current?.focus();
+      return;
     }
+    onSelectPage(pages[next].id);
+    focusTab(pages[next].id);
   };
+  const enterPage = () => {
+    const current = currentTab();
+    if (current < 0) {
+      return;
+    }
+    if (pages[current].id !== activePage) {
+      onSelectPage(pages[current].id);
+    }
+    onEnterPage?.();
+  };
+  useListKeys(navRef, "settings", {
+    down: step((current, last) => Math.min(last, current + 1)),
+    // Up from the first page goes back to the search field.
+    up: step((current) => current - 1),
+    first: step(() => 0),
+    last: step((_, last) => last),
+    expand: enterPage,
+    open: enterPage,
+  });
 
   return (
     <aside className="vault-settings-sidebar">
@@ -175,7 +167,6 @@ export const Sidebar = ({
         role="tablist"
         aria-orientation="vertical"
         aria-label="Settings pages"
-        onKeyDown={handleNavKeyDown}
       >
         {pages.map((page) => {
           const active = page.id === activePage;

@@ -66,6 +66,8 @@ export function readContext(doc: Document, app: AppContext): CommandContext {
     textEditing,
     canvasFocus: !textEditing && !!active?.closest(".vault-editor"),
     modalOpen: !!doc.querySelector(".vault-modal-backdrop"),
+    // listNav.ts sets the attribute only while a list is registered.
+    listFocus: !textEditing && !!active?.closest("[data-keylist]"),
   };
 }
 

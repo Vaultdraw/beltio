@@ -15,6 +15,7 @@ const BUILTIN_KEYS: ReadonlySet<string> = new Set([
   "textEditing",
   "canvasFocus",
   "modalOpen",
+  "listFocus",
 ]);
 
 const NAMESPACED = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_.-]+$/;

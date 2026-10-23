@@ -31,6 +31,7 @@ import {
   registeredCommands,
 } from "./registry";
 import { TAB_COMMANDS } from "./tabCommands";
+import { LIST_COMMANDS } from "./listCommands";
 import { THUMBNAIL_COMMANDS } from "./thumbnailCommands";
 
 import type {
@@ -597,6 +598,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...HISTORY_COMMANDS,
   ...GRAPH_COMMANDS,
   ...TAB_COMMANDS,
+  ...LIST_COMMANDS,
   ...FORMULA_COMMANDS,
   ...THUMBNAIL_COMMANDS,
   ...HELP_COMMANDS,

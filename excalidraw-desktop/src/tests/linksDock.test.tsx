@@ -7,7 +7,12 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import {
+  installListKeysForTests,
+  pressListKey,
+} from "../commands/listKeysForTests";
 
 import { LinksDock } from "../components/links/LinksDock";
 
@@ -65,11 +70,18 @@ function setup() {
   return { repo, links, onOpen, onCreate, props };
 }
 
-afterEach(() => cleanup());
+let uninstall = () => {};
+beforeEach(() => {
+  uninstall = installListKeysForTests();
+});
+afterEach(() => {
+  uninstall();
+  cleanup();
+});
 
 const dock = () => screen.getByRole("region", { name: "Links" });
-const key = (k: string, init: Record<string, unknown> = {}) =>
-  fireEvent.keyDown(dock(), { key: k, ...init });
+const key = (k: string, init: KeyboardEventInit = {}) =>
+  pressListKey(dock(), k, init);
 const selected = () => within(dock()).getByRole("option", { selected: true });
 
 describe("LinksDock", () => {
