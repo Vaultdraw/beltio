@@ -98,8 +98,12 @@ export function useControlBridge(
   useEffect(() => {
     if (!win || !inTauri(win)) {
       // Browser e2e harness only: it sets `__controlMethodsSink` to receive
-      // the window methods (no bridge, no Tauri).
-      const sink = (win as any)?.__controlMethodsSink;
+      // the window methods (no bridge, no Tauri). Compiled out of every other
+      // build, so no page can grab the method table.
+      const sink =
+        import.meta.env.VITE_APP_E2E === "true"
+          ? (win as any)?.__controlMethodsSink
+          : undefined;
       if (typeof sink === "function") {
         sink(createWindowMethods(() => live.current.files as ControlFiles));
       }

@@ -14,6 +14,8 @@ export default mergeConfig(
   baseConfig,
   defineConfig({
     plugins: [e2ePluginFixtures()],
+    // Only this harness build exposes test hooks (useControlBridge).
+    define: { "import.meta.env.VITE_APP_E2E": JSON.stringify("true") },
     build: {
       outDir: path.resolve(__dirname, `../.cache/e2e-dist-${port}`),
       emptyOutDir: true,
