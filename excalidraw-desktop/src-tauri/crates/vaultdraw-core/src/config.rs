@@ -15,8 +15,10 @@ use std::{
     sync::Mutex,
 };
 
+mod check;
 mod includes;
 mod layers;
+pub use check::*;
 pub use includes::*;
 pub use layers::*;
 
