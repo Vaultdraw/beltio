@@ -58,24 +58,25 @@ impl Default for Limiter {
     }
 }
 
-/// Admits one request from `role`. Only the `mcp` role is ever refused here, and only it reads
-/// the switch (`switch` is not called for `cli` or `uri`).
+/// Admits one request from `role`. Only the `mcp` role is ever refused here. Its token is
+/// taken first and the switch read after, so a looping client is throttled before it costs a
+/// config read; `switch` is never called for `cli` or `uri`.
 pub(crate) fn admit(role: &str, limiter: &mut Limiter, switch: fn() -> bool) -> Result<(), RpcError> {
-    let enabled = role == roles::MCP && switch();
-    admit_with(role, limiter, enabled, Instant::now())
+    admit_with(role, limiter, switch, Instant::now())
 }
 
-fn admit_with(role: &str, limiter: &mut Limiter, enabled: bool, now: Instant) -> Result<(), RpcError> {
+fn admit_with(role: &str, limiter: &mut Limiter, switch: impl FnOnce() -> bool, now: Instant) -> Result<(), RpcError> {
     if role != roles::MCP {
         return Ok(());
-    }
-    if !enabled {
-        return Err(RpcError::app(codes::NOT_PERMITTED, "The AI interface is disabled"));
     }
     limiter.take(now).map_err(|wait| {
         let ms = (wait.as_millis() as u64).max(1);
         RpcError::app(codes::RATE_LIMITED, "Too many requests, slow down").with("retryAfterMs", ms)
-    })
+    })?;
+    if !switch() {
+        return Err(RpcError::app(codes::NOT_PERMITTED, "The AI interface is disabled"));
+    }
+    Ok(())
 }
 
 /// The one in-flight window call of the `mcp` role.
@@ -140,11 +141,11 @@ mod tests {
     fn closed_switch_refuses_mcp_only() {
         let t = Instant::now();
         let mut l = Limiter::new(t);
-        let e = admit_with(roles::MCP, &mut l, false, t).unwrap_err();
+        let e = admit_with(roles::MCP, &mut l, || false, t).unwrap_err();
         assert_eq!(code(&e), Some(codes::NOT_PERMITTED));
         assert_eq!(e.message, "The AI interface is disabled");
-        assert!(admit_with(roles::CLI, &mut l, false, t).is_ok());
-        assert!(admit_with(roles::URI, &mut l, false, t).is_ok());
+        assert!(admit_with(roles::CLI, &mut l, || false, t).is_ok());
+        assert!(admit_with(roles::URI, &mut l, || false, t).is_ok());
         // The entry point reads the switch only for the mcp role.
         assert!(admit(roles::MCP, &mut Limiter::default(), || false).is_err());
         assert!(admit(roles::MCP, &mut Limiter::default(), || true).is_ok());
@@ -152,26 +153,38 @@ mod tests {
     }
 
     #[test]
+    fn a_looping_client_is_throttled_before_the_switch_is_read() {
+        let t = Instant::now();
+        let mut l = Limiter::new(t);
+        for _ in 0..40 {
+            let e = admit_with(roles::MCP, &mut l, || false, t).unwrap_err();
+            assert_eq!(code(&e), Some(codes::NOT_PERMITTED));
+        }
+        let e = admit_with(roles::MCP, &mut l, || panic!("no config read once throttled"), t).unwrap_err();
+        assert_eq!(code(&e), Some(codes::RATE_LIMITED));
+    }
+
+    #[test]
     fn bucket_refuses_after_the_burst_and_refills_over_time() {
         let t = Instant::now();
         let mut l = Limiter::new(t);
         for i in 0..40 {
-            assert!(admit_with(roles::MCP, &mut l, true, t).is_ok(), "request {i} inside the burst");
+            assert!(admit_with(roles::MCP, &mut l, || true, t).is_ok(), "request {i} inside the burst");
         }
-        let e = admit_with(roles::MCP, &mut l, true, t).unwrap_err();
+        let e = admit_with(roles::MCP, &mut l, || true, t).unwrap_err();
         assert_eq!(code(&e), Some(codes::RATE_LIMITED));
         let retry = e.data.as_ref().unwrap().extra["retryAfterMs"].as_u64().unwrap();
         assert!((1..=50).contains(&retry), "one token takes 50 ms at 20 per second, got {retry}");
         // Waiting the advised time frees exactly one request.
         let later = t + Duration::from_millis(retry);
-        assert!(admit_with(roles::MCP, &mut l, true, later).is_ok());
-        assert!(admit_with(roles::MCP, &mut l, true, later).is_err());
+        assert!(admit_with(roles::MCP, &mut l, || true, later).is_ok());
+        assert!(admit_with(roles::MCP, &mut l, || true, later).is_err());
         // A long pause refills to the burst, not beyond.
         let much_later = later + Duration::from_secs(60);
         for _ in 0..40 {
-            assert!(admit_with(roles::MCP, &mut l, true, much_later).is_ok());
+            assert!(admit_with(roles::MCP, &mut l, || true, much_later).is_ok());
         }
-        assert!(admit_with(roles::MCP, &mut l, true, much_later).is_err());
+        assert!(admit_with(roles::MCP, &mut l, || true, much_later).is_err());
     }
 
     #[test]
@@ -179,11 +192,11 @@ mod tests {
         let t = Instant::now();
         let mut l = Limiter::new(t);
         for _ in 0..500 {
-            assert!(admit_with(roles::CLI, &mut l, true, t).is_ok());
-            assert!(admit_with(roles::URI, &mut l, true, t).is_ok());
+            assert!(admit_with(roles::CLI, &mut l, || true, t).is_ok());
+            assert!(admit_with(roles::URI, &mut l, || true, t).is_ok());
         }
         // And they did not use up the mcp connection's tokens.
-        assert!(admit_with(roles::MCP, &mut l, true, t).is_ok());
+        assert!(admit_with(roles::MCP, &mut l, || true, t).is_ok());
     }
 
     #[test]

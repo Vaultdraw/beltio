@@ -23,6 +23,8 @@ import {
   preferencesToConfigChanges,
 } from "../vault/settingsSync";
 
+import { toastStore } from "../toasts/toastStore";
+
 import { AiHost } from "./AiHost";
 import { cancelAiOn, isAiWarningPending } from "./aiSwitch";
 
@@ -74,9 +76,13 @@ describe("AI preferences: config -> prefs -> config", () => {
     expect(normalizePreferences({ aiEnabled: true }).aiEnabled).toBe(true);
   });
 
-  it("a non-boolean MCP switch falls back to on", () => {
-    const { values } = configToPreferences({ ai: { mcp_enabled: "no" } });
-    expect(values.aiMcpEnabled).toBe(true);
+  it("a non-boolean MCP switch is off, like the app's check", () => {
+    const { values, problems } = configToPreferences({
+      ai: { mcp_enabled: "no" },
+    });
+    expect(values.aiMcpEnabled).toBe(false);
+    expect(problems.map((p) => p.key)).toEqual(["ai.mcp_enabled"]);
+    expect(problems[0].message).toContain("using false");
   });
 
   it("writes changed values under [ai] and [control]", () => {
@@ -160,6 +166,18 @@ describe("AI switch", () => {
     expect(prefs().aiMcpEnabled).toBe(false);
     run("ai.toggleMcp");
     expect(prefs().aiMcpEnabled).toBe(true);
+    // AI is off here, so the notice says when it applies.
+    expect(toastStore.getSnapshot().toasts.at(-1)?.message).toBe(
+      "AI tools interface (MCP) turned on. It applies once AI is on",
+    );
+  });
+
+  it("an unanswered warning does not come back after the host unmounts", () => {
+    const { unmount } = render(<AiHost win={window} />);
+    run("ai.toggle");
+    expect(isAiWarningPending()).toBe(true);
+    unmount();
+    expect(isAiWarningPending()).toBe(false);
   });
 });
 

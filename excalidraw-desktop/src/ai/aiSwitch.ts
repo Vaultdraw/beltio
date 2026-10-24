@@ -4,6 +4,7 @@
  * `confirmAiOn`). Turning it off, and the MCP sub-switch, act directly.
  * A hand edit of config.toml bypasses this on purpose: typing the key is consent.
  */
+import { toastStore } from "../toasts/toastStore";
 import { getPreferences, updatePreferences } from "../vault/preferences";
 
 let pending = false;
@@ -61,7 +62,14 @@ export const toggleAi = (win?: Window | null) => {
   }
 };
 
-/** `ai.toggleMcp`: flips ai.mcp_enabled (it only matters while AI is on). */
+/** `ai.toggleMcp`: flips ai.mcp_enabled and says so (the Settings row is hidden while AI is off). */
 export const toggleMcp = (win?: Window | null) => {
-  updatePreferences({ aiMcpEnabled: !getPreferences(win).aiMcpEnabled }, win);
+  const prefs = getPreferences(win);
+  const next = !prefs.aiMcpEnabled;
+  updatePreferences({ aiMcpEnabled: next }, win);
+  toastStore.push({
+    message: `AI tools interface (MCP) turned ${next ? "on" : "off"}${
+      prefs.aiEnabled ? "" : ". It applies once AI is on"
+    }`,
+  });
 };

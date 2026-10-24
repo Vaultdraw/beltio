@@ -265,6 +265,8 @@ export interface ConfigMapping {
   /** Fills in hand-written gaps before validation; the result is stored. */
   normalize?: (value: unknown) => unknown;
   valid: (value: unknown) => boolean;
+  /** Used instead of the default when the value is invalid (fail closed). */
+  onInvalid?: unknown;
 }
 
 /** Every id in Excalidraw's FONT_FAMILY (packages/common/src/constants.ts). */
@@ -645,6 +647,8 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "ai.mcp_enabled",
     expected: "true or false",
     valid: (v) => typeof v === "boolean",
+    // The app refuses AI tools on a wrong type; Settings must show it off too.
+    onInvalid: false,
   },
   {
     field: "controlNotifyEdits",
@@ -890,7 +894,8 @@ export function configToPreferences(config: Record<string, unknown>): {
     } else if (mapping.valid(value)) {
       values[mapping.field] = value;
     } else {
-      values[mapping.field] = fallback;
+      const used = "onInvalid" in mapping ? mapping.onInvalid : fallback;
+      values[mapping.field] = used;
       problems.push({
         kind: "invalid",
         key: mapping.key,
@@ -900,7 +905,7 @@ export function configToPreferences(config: Record<string, unknown>): {
           typeof mapping.expected === "function"
             ? mapping.expected(value)
             : mapping.expected
-        }); using ${show(fallback)}`,
+        }); using ${show(used)}`,
       });
     }
   }

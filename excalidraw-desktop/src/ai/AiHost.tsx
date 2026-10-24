@@ -9,6 +9,7 @@ import { registerCommandHandlers } from "../commands/handlerRegistry";
 
 import { AI_COMMAND_IDS } from "./aiCommands";
 import {
+  cancelAiOn,
   isAiWarningPending,
   subscribeAiWarning,
   toggleAi,
@@ -17,14 +18,17 @@ import {
 import { AiWarningDialog } from "./AiWarningDialog";
 
 export const AiHost = ({ win }: { win: Window | null }) => {
-  useEffect(
-    () =>
-      registerCommandHandlers({
-        [AI_COMMAND_IDS.toggle]: () => toggleAi(win),
-        [AI_COMMAND_IDS.toggleMcp]: () => toggleMcp(win),
-      }),
-    [win],
-  );
+  useEffect(() => {
+    const stop = registerCommandHandlers({
+      [AI_COMMAND_IDS.toggle]: () => toggleAi(win),
+      [AI_COMMAND_IDS.toggleMcp]: () => toggleMcp(win),
+    });
+    return () => {
+      stop();
+      // An unanswered warning never comes back later out of context.
+      cancelAiOn();
+    };
+  }, [win]);
   const pending = useSyncExternalStore(subscribeAiWarning, isAiWarningPending);
   return pending ? <AiWarningDialog win={win} /> : null;
 };

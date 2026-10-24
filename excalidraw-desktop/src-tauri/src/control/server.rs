@@ -46,13 +46,13 @@ pub(crate) struct Conn {
     sub: Option<Subscription>,
     /// A subscription whose reply is being written; the snapshot and deltas follow it.
     staged: Option<Staged>,
-    /// The AI switch, read per `mcp` request (injectable for tests).
+    /// The AI switch, read per `mcp` request; set from `ServerConfig` (closed by default).
     mcp_open: fn() -> bool,
 }
 
 impl Default for Conn {
     fn default() -> Self {
-        Self { role: roles::CLI.to_string(), limiter: policy::Limiter::default(), sub: None, staged: None, mcp_open: policy::mcp_enabled }
+        Self { role: roles::CLI.to_string(), limiter: policy::Limiter::default(), sub: None, staged: None, mcp_open: || false }
     }
 }
 
