@@ -11,6 +11,8 @@ import {
   SETTINGS_STATUS_EVENT,
 } from "../vault/settingsSync";
 
+import { isSceneReady } from "../editor/sceneReady";
+
 import {
   clipboardCopyStep,
   exportDialogOptionsStep,
@@ -58,7 +60,6 @@ import type {
 } from "../vault/preferences";
 
 import type { VaultEntry, VaultInfo } from "../vault/types";
-import { isSceneReady } from "../editor/sceneReady";
 
 type SmokeRecord = {
   step: string;
