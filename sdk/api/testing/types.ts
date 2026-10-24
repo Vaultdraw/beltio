@@ -1,6 +1,7 @@
 import type {
   AppEventMap,
   CommandContribution,
+  ImporterContribution,
   Json,
   NewElement,
   PanelContribution,
@@ -44,6 +45,10 @@ export interface TestManifest {
     commands?: (Partial<CommandContribution> & { id: string })[];
     panels?: (Partial<PanelContribution> & { id: string })[];
     settings?: SettingDecl[];
+    importers?: (Partial<ImporterContribution> & {
+      id: string;
+      extensions: string[];
+    })[];
   };
 }
 
@@ -124,6 +129,22 @@ export interface FakeStorage {
   setLimitKb(kb: number): void;
 }
 
+/** The vault `ctx.vault` sees: in memory, seedable. */
+export interface FakeVault {
+  /** Replaces every drawing: path to elements. Paths follow the plugin path rules. */
+  seed(drawings: Record<string, readonly FakeElementInput[]>): void;
+  /** The drawings now (seeded or created by the plugin), by path. */
+  drawings(): Record<string, readonly FakeElement[]>;
+  /** The open vault; null = no vault is open (`NO_VAULT`). Default: a writable "mock-vault". */
+  setVault(info: { name: string; readOnly: boolean } | null): void;
+}
+
+/** What `ctx.workspace` did. */
+export interface FakeWorkspace {
+  /** Every `open` call that succeeded. */
+  opened(): { path: string; newTab: boolean }[];
+}
+
 /** The `events` side of a booted plugin. */
 export interface FakeEvents {
   /** Emits an app event as the app would. */
@@ -153,6 +174,22 @@ export interface TestPlugin {
   events: FakeEvents;
   theme: FakeTheme;
   storage: FakeStorage;
+  vault: FakeVault;
+  workspace: FakeWorkspace;
+  /**
+   * Drops a file on the drawing as the app does: finds the importer by file
+   * extension, loads the plugin, runs it and applies the returned ops as one
+   * scene write. Resolves to that write, or null when nothing was applied
+   * (no ops, drawing changed, read-only, cancelled, refused). `at` defaults
+   * to the viewport centre.
+   */
+  import(
+    fileName: string,
+    content: string | Uint8Array,
+    at?: { x: number; y: number },
+  ): Promise<FakeBatch | null>;
+  /** "Import: Cancel": true when an import was running. */
+  cancelImport(): boolean;
   /** Lets timers, microtasks and one animation frame run (and React settle). */
   flush(): Promise<void>;
   /** Disables the plugin: `deactivate` runs and everything it registered is disposed. */

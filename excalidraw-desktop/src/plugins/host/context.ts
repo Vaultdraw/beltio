@@ -11,17 +11,29 @@ import { errorText, logLine, reportPluginError } from "./errors";
 import { guard } from "./guard";
 import { createHostApi } from "./hostContext";
 import { runCommandById } from "./runner";
-import { createEventsApi, createSceneApi } from "./sceneContext";
+import { createGatedEventsApi } from "./eventGate";
+import {
+  abortPluginImport,
+  clearImporters,
+  removeImporter,
+  setImporter,
+} from "./importerRegistry";
+import { createSceneApi } from "./sceneContext";
 import { createThemeApi } from "./themeContext";
 import { createStorageApi } from "./storageContext";
+import { createVaultApi } from "./vaultContext";
+import { createWorkspaceApi } from "./workspaceContext";
 
 import type {
   Disposable,
   HostApi,
+  ImportersApi,
   PluginContext,
   PluginPermission,
   StorageApi,
   ThemeApi,
+  VaultApi,
+  WorkspaceApi,
 } from "../api";
 import type { PluginRuntime } from "./types";
 import type { PluginSettingValue } from "../../vault/pluginSettingsTable";
@@ -70,6 +82,9 @@ export function createPluginContext(
   };
   const declaredCommands = new Set(info.contributes.commands.map((c) => c.id));
   const declaredPanels = new Set(info.contributes.panels.map((p) => p.id));
+  const declaredImporters = new Set(
+    (info.contributes.importers ?? []).map((i) => i.id),
+  );
   const panelId = (short: string) => `${id}.${short}`;
 
   const timer =
@@ -111,6 +126,9 @@ export function createPluginContext(
   let hostApi: HostApi | undefined;
   let themeApi: ThemeApi | undefined;
   let storageApi: StorageApi | undefined;
+  let vaultApi: VaultApi | undefined;
+  let workspaceApi: WorkspaceApi | undefined;
+  let importersApi: ImportersApi | undefined;
 
   const settingValue = (key: string) => getPluginSetting(id, key);
 
@@ -201,7 +219,7 @@ export function createPluginContext(
       error: logger("error"),
     },
     scene: createSceneApi(id, track, isLive),
-    events: createEventsApi(id, track, isLive),
+    events: createGatedEventsApi(rt, track, isLive),
     // Built on first read: a plugin that never touches them costs nothing.
     get host() {
       return (hostApi ??= createHostApi());
@@ -211,6 +229,23 @@ export function createPluginContext(
     },
     get storage() {
       return (storageApi ??= createStorageApi(rt, win, track));
+    },
+    get vault() {
+      return (vaultApi ??= createVaultApi(rt));
+    },
+    get workspace() {
+      return (workspaceApi ??= createWorkspaceApi());
+    },
+    get importers() {
+      return (importersApi ??= {
+        register(importerId, importer) {
+          if (!declaredImporters.has(importerId)) {
+            return refuse("importer", importerId);
+          }
+          setImporter(rt, importerId, importer);
+          return track(() => removeImporter(rt, importerId, importer));
+        },
+      });
     },
     subscriptions,
     setTimeout: timer(
@@ -229,6 +264,8 @@ export function createPluginContext(
     ctx,
     dispose() {
       stopped = true;
+      abortPluginImport(id);
+      clearImporters(rt);
       while (subscriptions.length > 0) {
         const d = subscriptions.pop()!;
         try {

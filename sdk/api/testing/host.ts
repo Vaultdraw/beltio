@@ -16,11 +16,27 @@ import {
   type MockToast,
 } from "./rules";
 import { API_REVISION, FEATURES } from "./features";
+import {
+  baseName,
+  importBusyMessage,
+  importCancelledMessage,
+  importChangedMessage,
+  importFailedMessage,
+  importMissingMessage,
+  importReadOnlyMessage,
+  importTooBigMessage,
+  makeImportInput,
+  MAX_IMPORT_BYTES,
+  resultOps,
+} from "./importers";
 import { createSceneModel } from "./scene";
+import { createVaultModel, permissionError } from "./vault";
 
 import type {
   AppEventMap,
   Disposable,
+  Importer,
+  ImportersApi,
   Json,
   Plugin,
   PluginContext,
@@ -35,8 +51,12 @@ import type {
 import type { ComponentType } from "react";
 import type { RenderResult } from "@testing-library/react";
 import type {
+  FakeBatch,
+  FakeScene,
   FakeStorage,
   FakeTheme,
+  FakeVault,
+  FakeWorkspace,
   PluginLogLine,
   TestPluginInfo,
 } from "./types";
@@ -52,6 +72,7 @@ const EVENT_NAMES: Record<keyof AppEventMap, true> = {
   "drawing.saved": true,
   "drawing.renamed": true,
   "drawing.deleted": true,
+  "vault.changed": true,
 };
 
 type State = "idle" | "loading" | "active" | "failed" | "disabled";
@@ -68,9 +89,18 @@ export const notSetUp = (what: string): Error =>
 
 export interface MockHost {
   info: TestPluginInfo;
-  scene: ReturnType<typeof createSceneModel>["fake"];
+  scene: FakeScene;
   theme: FakeTheme;
   storage: FakeStorage;
+  vault: FakeVault;
+  workspace: FakeWorkspace;
+  /** Drops a file on the active drawing; resolves to the scene write it made, or null. */
+  importFile(
+    fileName: string,
+    content: string | Uint8Array,
+    at?: { x: number; y: number },
+  ): Promise<FakeBatch | null>;
+  cancelImport(): boolean;
   log(): readonly PluginLogLine[];
   toasts(): string[];
   timers(): number;
@@ -104,6 +134,24 @@ export function createMockHost(
 ): MockHost {
   const id = info.id;
   const scene = createSceneModel("fake.excalidraw");
+  const vault = createVaultModel();
+  // The scene model keeps its path private; the host needs it for imports and ctx.workspace.
+  let activePath: string | null = "fake.excalidraw";
+  let sceneReadOnly = false;
+  /** The import running now: aborted on a drawing switch, stop or cancel. */
+  let importing: AbortController | null = null;
+  const fakeScene: FakeScene = {
+    ...scene.fake,
+    switchTo(next) {
+      activePath = next;
+      importing?.abort("switch");
+      scene.fake.switchTo(next);
+    },
+    readOnly(flag) {
+      sceneReadOnly = flag;
+      scene.fake.readOnly(flag);
+    },
+  };
 
   // --- state ---
   let state: State = "idle";
@@ -132,6 +180,16 @@ export function createMockHost(
     info.contributes.panels.map((p) => [p.id, p.title] as const),
   );
   const decl = (key: string) => decls.find((d) => d.key === key);
+  const declaredImporters = new Map(
+    (info.contributes.importers ?? []).map((i) => [i.id, i] as const),
+  );
+  /** extension -> importer id, for the longest-suffix lookup of a dropped file */
+  const importerByExt = new Map(
+    (info.contributes.importers ?? []).flatMap((i) =>
+      i.extensions.map((e) => [e.toLowerCase(), i.id] as const),
+    ),
+  );
+  const importerImpls = new Map<string, Importer>();
 
   // --- log, errors, toasts ---
   const logLine = (level: PluginLogLine["level"], text: string) => {
@@ -282,7 +340,10 @@ export function createMockHost(
       subscriptions.push(d);
       return d;
     };
-    const refuse = (what: "command" | "panel", short: string): Disposable => {
+    const refuse = (
+      what: "command" | "panel" | "importer",
+      short: string,
+    ): Disposable => {
       reportError(new Error(undeclaredMessage(what, short)), "register");
       return NOOP;
     };
@@ -334,6 +395,9 @@ export function createMockHost(
 
     let hostApi: PluginContext["host"] | undefined;
     let themeApi: ThemeApi | undefined;
+    let vaultApi: PluginContext["vault"] | undefined;
+    let workspaceApi: PluginContext["workspace"] | undefined;
+    let importersApi: ImportersApi | undefined;
     const ctx: PluginContext = {
       manifest: {
         id,
@@ -447,6 +511,16 @@ export function createMockHost(
             );
             return NOOP;
           }
+          if (
+            name === "vault.changed" &&
+            !info.permissions.includes("vault.read")
+          ) {
+            reportError(
+              permissionError(id, "vault.changed", "vault.read"),
+              "events.on",
+            );
+            return NOOP;
+          }
           const safe = guard(cb, `events.${name}`);
           let live = true;
           const listener = (payload: unknown) => {
@@ -475,6 +549,35 @@ export function createMockHost(
         }));
       },
       storage: storageApi,
+      get vault() {
+        return (vaultApi ??= vault.vaultApi(id, info.permissions));
+      },
+      get workspace() {
+        return (workspaceApi ??= vault.workspaceApi({
+          activePath: () => activePath,
+          opened: (path) => {
+            fakeScene.switchTo(path);
+            [...(eventSubs.get("drawing.opened") ?? [])].forEach((cb) =>
+              cb({ path }),
+            );
+          },
+        }));
+      },
+      get importers() {
+        return (importersApi ??= {
+          register(importerId, importer) {
+            if (!declaredImporters.has(importerId)) {
+              return refuse("importer", importerId);
+            }
+            importerImpls.set(importerId, importer);
+            return track(() => {
+              if (importerImpls.get(importerId) === importer) {
+                importerImpls.delete(importerId);
+              }
+            });
+          },
+        });
+      },
       get theme() {
         return (themeApi ??= {
           mode: () => themeMode,
@@ -580,6 +683,7 @@ export function createMockHost(
     gen++;
     promise = null;
     disposeContext = null;
+    importing?.abort("stop");
     if (wasActive && plugin.deactivate) {
       const call = guard(plugin.deactivate.bind(plugin), "deactivate");
       await withTimeout(
@@ -590,6 +694,7 @@ export function createMockHost(
     had?.();
     handlers.clear();
     components.clear();
+    importerImpls.clear();
   };
 
   const stop = (): Promise<void> => {
@@ -656,6 +761,118 @@ export function createMockHost(
       : ensureActive().then((ok) => (ok ? runReal(short) : undefined)));
   }
 
+  // --- imports: the app's runner (host/importers.ts), in memory ---
+  const sceneApi = scene.api(
+    {
+      track: (fn) => ({ dispose: fn }),
+      guard,
+      logError: (text) => logLine("error", text),
+    },
+    () => {
+      throw notSetUp("React hooks in an import");
+    },
+  );
+  const findImporter = (fileName: string): string | null => {
+    const lower = baseName(fileName).toLowerCase();
+    for (let i = lower.indexOf("."); i >= 0; i = lower.indexOf(".", i + 1)) {
+      const hit = importerByExt.get(lower.slice(i + 1));
+      if (hit) {
+        return hit;
+      }
+    }
+    return null;
+  };
+  const importFile = async (
+    fileName: string,
+    content: string | Uint8Array,
+    at?: { x: number; y: number },
+  ): Promise<FakeBatch | null> => {
+    if (importing) {
+      toast(importBusyMessage, "info");
+      return null;
+    }
+    const importerId = findImporter(fileName);
+    if (importerId === null) {
+      throw new Error(`no importer declared for ${fileName}`);
+    }
+    if (activePath === null) {
+      throw new Error("no drawing is open");
+    }
+    const bytes =
+      typeof content === "string" ? new TextEncoder().encode(content) : content;
+    if (bytes.length > MAX_IMPORT_BYTES) {
+      toast(importTooBigMessage(baseName(fileName)), "info");
+      return null;
+    }
+    const target = activePath;
+    const ctl = new AbortController();
+    importing = ctl;
+    try {
+      if (!(await ensureActive())) {
+        toast(`${info.name}: could not be loaded`, "error");
+        return null;
+      }
+      const importer = importerImpls.get(importerId);
+      if (!importer) {
+        const message = importMissingMessage(info.name, importerId);
+        reportError(new Error(message), "import");
+        toast(message, "error");
+        return null;
+      }
+      const input = makeImportInput(fileName, bytes.length, async () => bytes);
+      const run = guard(async () => {
+        try {
+          return await importer.import(input, {
+            signal: ctl.signal,
+            at: at ?? sceneApi.viewportCenter(),
+            path: target,
+          });
+        } catch (err) {
+          toast(
+            importFailedMessage(info.name, baseName(fileName), errorText(err)),
+            "error",
+          );
+          throw err;
+        }
+      }, `importer ${importerId}`);
+      const ops = resultOps(await run());
+      if (ctl.signal.aborted) {
+        if (ctl.signal.reason === "cancel") {
+          toast(importCancelledMessage(info.name), "info");
+        } else if (ctl.signal.reason === "switch" && ops) {
+          toast(importChangedMessage(info.name), "error");
+        }
+        return null;
+      }
+      if (!ops) {
+        return null;
+      }
+      if (activePath !== target) {
+        toast(importChangedMessage(info.name), "error");
+        return null;
+      }
+      if (sceneReadOnly) {
+        toast(importReadOnlyMessage, "info");
+        return null;
+      }
+      try {
+        await sceneApi.batch(ops);
+      } catch (err) {
+        reportError(err, "import");
+        toast(
+          importFailedMessage(info.name, baseName(fileName), errorText(err)),
+          "error",
+        );
+        return null;
+      }
+      return scene.fake.batches[scene.fake.batches.length - 1] ?? null;
+    } finally {
+      if (importing === ctl) {
+        importing = null;
+      }
+    }
+  };
+
   const rtl = deps?.rtl;
   /** Renders the panels root once; unmounting it forgets the view. */
   const mount = (d: PanelDeps): RenderResult => {
@@ -692,9 +909,19 @@ export function createMockHost(
 
   return {
     info,
-    scene: scene.fake,
+    scene: fakeScene,
     theme,
     storage,
+    vault: vault.fake,
+    workspace: vault.workspace,
+    importFile,
+    cancelImport() {
+      if (!importing) {
+        return false;
+      }
+      importing.abort("cancel");
+      return true;
+    },
     log: () => lines,
     toasts: () => toastQueue.map((t) => t.message),
     timers: () => activeTimers,
@@ -741,6 +968,10 @@ export function createMockHost(
       themeMode = "light";
       themeId = "default";
       themeTokens = null;
+      vault.reset();
+      activePath = "fake.excalidraw";
+      sceneReadOnly = false;
+      importerImpls.clear();
       stored = new Map();
       storageLimitKb = STORAGE_DEFAULT_LIMIT_KB;
       lines = [];

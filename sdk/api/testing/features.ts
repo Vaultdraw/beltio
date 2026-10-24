@@ -1,7 +1,7 @@
 // Generated from the @since tags of sdk/api/src by sdk/api/scripts/gen-features.mjs. Do not edit.
 
 /** The API revision of this build (the version of sdk/api/package.json). */
-export const API_REVISION = "0.3.0";
+export const API_REVISION = "0.6.0";
 
 /** Feature name to the revision that added it. `ctx.host.has(name)` is true for these. */
 export const FEATURES: Readonly<Record<string, string>> = {
@@ -18,6 +18,8 @@ export const FEATURES: Readonly<Record<string, string>> = {
   "host.api": "0.2.0",
   "host.app": "0.2.0",
   "host.has": "0.2.0",
+  importers: "0.6.0",
+  "importers.register": "0.6.0",
   log: "0.1.0",
   "log.debug": "0.1.0",
   "log.error": "0.1.0",
@@ -53,5 +55,14 @@ export const FEATURES: Readonly<Record<string, string>> = {
   "theme.tokens": "0.2.0",
   ui: "0.1.0",
   "ui.toast": "0.1.0",
+  vault: "0.6.0",
+  "vault.changed": "0.6.0",
+  "vault.createDrawing": "0.6.0",
+  "vault.info": "0.6.0",
+  "vault.list": "0.6.0",
   "vault.opened": "0.1.0",
+  "vault.readDrawing": "0.6.0",
+  workspace: "0.6.0",
+  "workspace.activePath": "0.6.0",
+  "workspace.open": "0.6.0",
 };

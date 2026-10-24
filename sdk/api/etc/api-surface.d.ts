@@ -29,6 +29,10 @@ export type AppEventMap = {
     "drawing.deleted": {
         path: string;
     };
+    "vault.changed": {
+        paths: string[];
+        rescan: boolean;
+    };
 };
 export interface EventsApi {
     on<K extends keyof AppEventMap>(name: K, cb: (payload: Readonly<AppEventMap[K]>) => void): Disposable;
@@ -45,12 +49,40 @@ export interface HostApi {
     has(feature: string): boolean;
 }
 
+// importers.ts
+import type { Disposable } from "./disposable";
+import type { SceneOp } from "./scene";
+export interface ImportInput {
+    name: string;
+    size: number;
+    bytes(): Promise<Uint8Array>;
+    text(): Promise<string>;
+}
+export interface ImportOptions {
+    signal: AbortSignal;
+    at: {
+        x: number;
+        y: number;
+    };
+    path: string;
+}
+export type ImportResult = {
+    ops: readonly SceneOp[];
+} | void;
+export interface Importer {
+    import(input: ImportInput, opts: ImportOptions): Promise<ImportResult> | ImportResult;
+}
+export interface ImportersApi {
+    register(id: string, importer: Importer): Disposable;
+}
+
 // index.ts
 export type { CommandsApi } from "./commands";
 export type { Disposable } from "./disposable";
 export type { AppEventMap, EventsApi } from "./events";
-export type { CommandContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
+export type { CommandContribution, ImporterContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
 export type { ApiVersion, HostApi } from "./host";
+export type { ImportersApi, Importer, ImportInput, ImportOptions, ImportResult, } from "./importers";
 export type { PanelsApi } from "./panels";
 export { definePlugin } from "./plugin";
 export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
@@ -58,6 +90,8 @@ export type { NewElement, SceneContextApi, SceneElement, SceneElementType, Scene
 export type { SelectOption, SettingDecl, SettingScopeName, SettingsApi, SettingValue, } from "./settings";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
+export type { VaultApi, VaultEntry } from "./vault";
+export type { WorkspaceApi } from "./workspace";
 export { SHARED_SPECIFIERS } from "./specifiers";
 
 // manifest.ts
@@ -82,10 +116,16 @@ export interface PanelContribution {
     icon: string | null;
     group: "top" | "bottom";
 }
+export interface ImporterContribution {
+    id: string;
+    title: string;
+    extensions: string[];
+}
 export interface PluginContributions {
     commands: CommandContribution[];
     panels: PanelContribution[];
     settings: SettingDecl[];
+    importers?: ImporterContribution[];
 }
 
 // panels.ts
@@ -102,12 +142,15 @@ import type { CommandsApi } from "./commands";
 import type { Disposable } from "./disposable";
 import type { EventsApi } from "./events";
 import type { HostApi } from "./host";
+import type { ImportersApi } from "./importers";
 import type { PluginManifestInfo } from "./manifest";
 import type { PanelsApi } from "./panels";
 import type { SceneContextApi } from "./scene";
 import type { SettingsApi } from "./settings";
 import type { StorageApi } from "./storage";
 import type { ThemeApi } from "./theme";
+import type { VaultApi } from "./vault";
+import type { WorkspaceApi } from "./workspace";
 export interface UiApi {
     toast(message: string): void;
 }
@@ -129,6 +172,9 @@ export interface PluginContext {
     readonly host: HostApi;
     readonly theme: ThemeApi;
     readonly storage: StorageApi;
+    readonly vault: VaultApi;
+    readonly workspace: WorkspaceApi;
+    readonly importers: ImportersApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;
     setInterval(fn: () => void, ms: number): Disposable;
@@ -254,4 +300,38 @@ export interface ThemeApi {
     mode(): ThemeMode;
     tokens(): Readonly<Record<ThemeTokenName, string>>;
     onChange(cb: (e: ThemeChange) => void): Disposable;
+}
+
+// vault.ts
+import type { SceneElement, SceneOp } from "./scene";
+export interface VaultEntry {
+    path: string;
+    name: string;
+    kind: "drawing" | "folder";
+    modifiedAt: number;
+    size: number;
+}
+export interface VaultApi {
+    info(): {
+        name: string;
+        readOnly: boolean;
+    } | null;
+    list(dir?: string): Promise<VaultEntry[]>;
+    readDrawing(path: string): Promise<{
+        elements: readonly SceneElement[];
+        revision: string;
+    }>;
+    createDrawing(path: string, ops: readonly SceneOp[]): Promise<{
+        path: string;
+        revision: string;
+        ids: string[];
+    }>;
+}
+
+// workspace.ts
+export interface WorkspaceApi {
+    open(path: string, opts?: {
+        newTab?: boolean;
+    }): Promise<void>;
+    activePath(): string | null;
 }

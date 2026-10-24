@@ -21,6 +21,8 @@ export type {
   FakeScene,
   FakeStorage,
   FakeTheme,
+  FakeVault,
+  FakeWorkspace,
   PanelView,
   PluginLogLine,
   TestManifest,
@@ -60,6 +62,10 @@ const normalise = (m: TestManifest) => {
         ...x,
       })),
       settings: c.settings ?? [],
+      importers: (c.importers ?? []).map((x) => ({
+        title: x.id,
+        ...x,
+      })),
     },
   };
   return info;
@@ -108,6 +114,10 @@ export async function boot(
     events: { emit: host.emit },
     theme: host.theme,
     storage: host.storage,
+    vault: host.vault,
+    workspace: host.workspace,
+    import: host.importFile,
+    cancelImport: host.cancelImport,
     flush,
     disable,
     async dispose() {

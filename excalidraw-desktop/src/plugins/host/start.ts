@@ -12,6 +12,7 @@ import {
 } from "./apply";
 import { getPluginsBackend } from "./backend";
 import { createAppDevLogSink } from "./devLog";
+import { installImportRunner } from "./importers";
 import { setDevLogSink } from "./errors";
 import { ensureDevListener } from "./manage";
 import { setPluginsList } from "./pluginsState";
@@ -41,6 +42,7 @@ export async function startPluginHost(
   const devLog = createAppDevLogSink(win);
   setDevLogSink(devLog);
   const offCommands = registerSafeModeCommands(list.safeMode !== null);
+  const offImports = installImportRunner();
   const launchTimer = win.setTimeout(
     () => void backend.launchOk().catch(() => {}),
     LAUNCH_OK_DELAY_MS,
@@ -65,6 +67,7 @@ export async function startPluginHost(
     stop: () => {
       off();
       offCommands();
+      offImports();
       devLog.flush();
       setDevLogSink(null);
       win.clearTimeout(launchTimer);

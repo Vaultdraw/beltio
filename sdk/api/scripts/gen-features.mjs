@@ -76,7 +76,8 @@ export function readFeatures() {
     (s) => ts.isTypeAliasDeclaration(s) && s.name.text === "AppEventMap",
   );
   for (const m of map.type.members) {
-    add(m.name.text.replace(/^"|"$/g, ""), map);
+    // A member's own @since wins over the one on the type alias.
+    add(m.name.text.replace(/^"|"$/g, ""), sinceOf(m) ? m : map);
   }
 
   if (missing.length > 0) {

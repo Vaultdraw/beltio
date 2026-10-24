@@ -11,7 +11,12 @@ import {
 } from "@testing-library/react";
 import { vi } from "vitest";
 
+import type { ExcalidrawElement } from "@excalidraw/element/types";
+
 import { getRegisteredHandler } from "../../commands/handlerRegistry";
+import { buildElements } from "../../sceneOps";
+import { getActiveScene } from "../../sceneOps/sceneBus";
+import { viewportCenter } from "../../sceneOps/viewport";
 import { appEvents, type AppEventMap } from "../../events/appEvents";
 import { toastStore } from "../../toasts/toastStore";
 import { notifyAppearanceChanged } from "../../vault/appearance";
@@ -27,11 +32,20 @@ import { pluginTimerCount } from "../host/context";
 import { PluginPanels } from "../host/PluginPanels";
 import { startPluginHost } from "../host/start";
 import { enable, setupHost } from "../host/testUtils";
+import { findImporter, runImports } from "../importerMap";
+import { cancelImports } from "../importerMap";
+import { setWorkspaceBridge } from "../workspaceBridge";
 import { setPluginSetting } from "../settings/pluginSettings";
 
 import { createFakeScene, type FakeScene } from "./fakeScene";
 
-import type { Json, Plugin, ThemeMode, ThemeTokenName } from "../api";
+import type {
+  Json,
+  NewElement,
+  Plugin,
+  ThemeMode,
+  ThemeTokenName,
+} from "../api";
 import type { PluginInfo } from "../host/types";
 import type { PluginSettingValue } from "../../vault/pluginSettingsTable";
 
@@ -48,8 +62,14 @@ export type TestManifest = Partial<Omit<PluginInfo, "contributes">> & {
     commands?: (Partial<CommandDecl> & { id: string })[];
     panels?: (Partial<PanelDecl> & { id: string })[];
     settings?: PluginInfo["contributes"]["settings"];
+    importers?: (Partial<ImporterDecl> & {
+      id: string;
+      extensions: string[];
+    })[];
   };
 };
+
+type ImporterDecl = NonNullable<PluginInfo["contributes"]["importers"]>[number];
 
 export interface FakeTheme {
   /**
@@ -70,6 +90,23 @@ export interface FakeStorage {
   seed(data: Record<string, Json>): void;
   /** Sets `plugins.storage_limit_kb`. */
   setLimitKb(kb: number): void;
+}
+
+/** The vault `ctx.vault` sees: the fake backend's drawings, seedable. */
+export interface FakeVault {
+  /** Replaces every drawing: path to elements. */
+  seed(
+    drawings: Record<string, readonly (NewElement & { id?: string })[]>,
+  ): void;
+  /** The drawings now (seeded or created by the plugin), by path. */
+  drawings(): Record<string, readonly ExcalidrawElement[]>;
+  /** The open vault; null = no vault is open. Default: a writable "mock-vault". */
+  setVault(info: { name: string; readOnly: boolean } | null): void;
+}
+
+/** What `ctx.workspace` did. */
+export interface FakeWorkspace {
+  opened(): { path: string; newTab: boolean }[];
 }
 
 export interface FakeEvents {
@@ -98,6 +135,21 @@ export interface TestPlugin {
   events: FakeEvents;
   theme: FakeTheme;
   storage: FakeStorage;
+  vault: FakeVault;
+  workspace: FakeWorkspace;
+  /**
+   * Drops a file on the drawing as the app does: finds the importer by
+   * extension, runs the real import runner and resolves to the scene write
+   * it made, or null when nothing was applied. `at` defaults to the viewport
+   * centre.
+   */
+  import(
+    fileName: string,
+    content: string | Uint8Array,
+    at?: { x: number; y: number },
+  ): Promise<FakeScene["batches"][number] | null>;
+  /** "Import: Cancel": true when an import was running. */
+  cancelImport(): boolean;
   /** act + fake-timer advance (when faked) + microtasks + one animation frame + pending storage writes. */
   flush(): Promise<void>;
   /** Disables the plugin (disposes its context). */
@@ -125,6 +177,7 @@ const normalise = (m: TestManifest): PluginInfo => {
         ...x,
       })),
       settings: c.settings ?? [],
+      importers: (c.importers ?? []).map((x) => ({ title: x.id, ...x })),
     },
   } as Partial<PluginInfo>);
 };
@@ -179,6 +232,55 @@ export async function boot(
   enable([id]);
   await host.startupDone;
 
+  // The shell's bridge: the fake vault plus the fake scene stand in for the window.
+  let vaultInfo: { name: string; readOnly: boolean } | null = {
+    name: "mock-vault",
+    readOnly: false,
+  };
+  const opened: { path: string; newTab: boolean }[] = [];
+  setWorkspaceBridge({
+    vault: () => vaultInfo,
+    activePath: () => getActiveScene()?.path ?? null,
+    drawingExists: async (path) => path in backend.drawings,
+    openDrawing: async (path, newTab) => {
+      opened.push({ path, newTab });
+      scene.switchTo(path);
+      appEvents.emit("drawing.opened", { path });
+      return true;
+    },
+  });
+  const sceneOf = (els: readonly (NewElement & { id?: string })[]) => ({
+    type: "excalidraw",
+    version: 2,
+    elements: buildElements(els, { x: 0, y: 0 }),
+    appState: {},
+    files: {},
+  });
+  const vault: FakeVault = {
+    seed(drawings) {
+      backend.drawings = Object.fromEntries(
+        Object.entries(drawings).map(([path, els]) => [
+          path,
+          { scene: sceneOf(els), revision: "seed" },
+        ]),
+      );
+    },
+    drawings: () =>
+      Object.fromEntries(
+        Object.entries(backend.drawings).map(([path, d]) => [
+          path,
+          ((d.scene.elements ?? []) as ExcalidrawElement[]).filter(
+            (e) => !e.isDeleted,
+          ),
+        ]),
+      ),
+    setVault(next) {
+      vaultInfo = next ? { ...next } : null;
+      backend.vaultOpen = next !== null;
+      backend.vaultReadOnly = next?.readOnly === true;
+    },
+  };
+
   const handler = (full: string) => {
     const h = getRegisteredHandler(full);
     if (!h) {
@@ -218,6 +320,35 @@ export async function boot(
     scene,
     events: { emit: (name, payload) => appEvents.emit(name, payload) },
     theme: fakeTheme,
+    vault,
+    workspace: { opened: () => opened.map((o) => ({ ...o })) },
+    async import(fileName, content, at) {
+      const match = findImporter(fileName);
+      const active = getActiveScene();
+      if (!match) {
+        throw new Error(`no importer declared for ${fileName}`);
+      }
+      if (!active?.path) {
+        throw new Error("no drawing is open");
+      }
+      const before = scene.batches.length;
+      const ok = await act(() =>
+        runImports(
+          [{ file: new File([content as BlobPart], fileName), match }],
+          {
+            path: active.path!,
+            at: at ?? viewportCenter(active.api.getAppState()),
+          },
+        ),
+      );
+      if (!ok) {
+        throw new Error("the import runner is not running");
+      }
+      return scene.batches.length > before
+        ? scene.batches[scene.batches.length - 1]
+        : null;
+    },
+    cancelImport: cancelImports,
     storage: {
       data: () => JSON.parse(backend.data[id] ?? "{}"),
       seed(data) {
@@ -232,6 +363,7 @@ export async function boot(
       cleanup();
       await disable();
       host.stop();
+      setWorkspaceBridge(null);
       scene.dispose();
       toastStore.clear();
       appEvents.clearCurrent();

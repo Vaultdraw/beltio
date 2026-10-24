@@ -21,6 +21,7 @@ import { registerCommands } from "../../commands/registry";
 import { registerCommandHandlers } from "../../commands/handlerRegistry";
 import { panelFlag, togglePanel } from "../../slots/panelStore";
 import { toastStore } from "../../toasts/toastStore";
+import { claimImporter } from "../importerMap";
 import { registerPluginSettings } from "../settings/registry";
 
 import { ensureActive } from "./activation";
@@ -171,6 +172,15 @@ export function registerStubs(rt: PluginRuntime): () => void {
     } catch (err) {
       reportPluginProblem(id, errorText(err));
     }
+  }
+  // A declared importer claims its extensions now; the plugin loads on the first matching file.
+  for (const imp of info.contributes.importers ?? []) {
+    disposers.push(
+      claimImporter(
+        { pluginId: id, importerId: imp.id, title: imp.title },
+        imp.extensions,
+      ),
+    );
   }
   setRegistrationCounts(
     id,

@@ -311,7 +311,7 @@ describe("parity: host and theme seen through both kits", () => {
           "theme.tokens",
           "scene.batch",
           "drawing.saved",
-          "vault.list",
+          "vault.rename",
           "toString",
         ].map((n) => ctx.host.has(n));
         seen.permissions = ctx.manifest.permissions;
@@ -341,5 +341,175 @@ describe("parity: host and theme seen through both kits", () => {
       { mode: "dark", themeId: "cendre" },
       { mode: "dark", themeId: "cendre" },
     ]);
+  });
+});
+
+describe("parity: vault, workspace and importers seen through both kits", () => {
+  const rect = {
+    type: "rectangle",
+    x: 1,
+    y: 2,
+    width: 30,
+    height: 40,
+  } as const;
+  const code = (p: Promise<unknown>) =>
+    p.then(
+      () => "ok",
+      (e: { code?: string }) => e.code ?? "no code",
+    );
+
+  const observe = async (
+    bootFn: (m: never, p: Plugin) => Promise<unknown>,
+    permissions: ("vault.read" | "vault.write")[],
+  ) => {
+    let ctx!: import("../src/index").PluginContext;
+    const t = (await bootFn(
+      {
+        id: "par-vault",
+        name: "ParV",
+        permissions,
+        activation: ["onStartupFinished"],
+        contributes: {
+          importers: [{ id: "txt", extensions: ["txt", "excalidraw.txt"] }],
+        },
+      } as never,
+      {
+        activate(c) {
+          ctx = c;
+          c.importers.register("txt", {
+            async import(input, { at, path }) {
+              return {
+                ops: [
+                  {
+                    op: "add",
+                    element: {
+                      type: "text",
+                      text: `${await input.text()}@${path}`,
+                      x: at.x,
+                      y: at.y,
+                    },
+                  },
+                ],
+              };
+            },
+          });
+          c.importers.register("nope", { import() {} });
+        },
+      },
+    )) as import("../testing").TestPlugin;
+    try {
+      const out: Record<string, unknown> = {};
+      t.vault.seed({ "a.excalidraw": [rect], "sub/b.excalidraw": [rect] });
+      out.info = ctx.vault.info();
+      out.list = await code(ctx.vault.list());
+      out.listNames = await ctx.vault
+        .list()
+        .then((es) => es.map((e) => [e.path, e.kind]))
+        .catch(() => null);
+      out.listMissing = await code(ctx.vault.list("zzz"));
+      out.listBad = await code(ctx.vault.list(".git"));
+      out.read = await ctx.vault
+        .readDrawing("a.excalidraw")
+        .then((r) =>
+          r.elements.map(({ type, x, y, width, height }) => ({
+            type,
+            x,
+            y,
+            width,
+            height,
+          })),
+        )
+        .catch((e: { code: string }) => e.code);
+      out.readMissing = await code(ctx.vault.readDrawing("zz.excalidraw"));
+      out.readBad = await code(ctx.vault.readDrawing("a.txt"));
+      out.create = await ctx.vault
+        .createDrawing("c.excalidraw", [
+          { op: "add", element: { type: "text", text: "x", x: 1, y: 1 } },
+        ])
+        .then((r) => [r.path, r.ids.length])
+        .catch((e: { code: string }) => e.code);
+      out.createAgain = await code(ctx.vault.createDrawing("c.excalidraw", []));
+      out.createBadOps = await ctx.vault
+        .createDrawing("d.excalidraw", [{ op: "delete", id: "q" }])
+        .catch((e: Error) => e.message);
+      out.createBadPath = await code(ctx.vault.createDrawing("d.txt", []));
+      out.openMissing = await code(ctx.workspace.open("nope.excalidraw"));
+      out.openBad = await code(ctx.workspace.open("nope.txt"));
+      out.active = ctx.workspace.activePath();
+      const batch = await t.import("note.txt", "hello", { x: 7, y: 8 });
+      out.imported = batch?.elements.map(({ x, y, text }) => ({ x, y, text }));
+      out.importedLong = (
+        await t.import("n.excalidraw.txt", "deep", { x: 1, y: 1 })
+      )?.elements.length;
+      out.cancel = t.cancelImport();
+      out.undeclared = t.log().map((l) => l.text);
+      out.opened = await code(
+        ctx.workspace.open("a.excalidraw", { newTab: true }),
+      );
+      out.openedList = t.workspace.opened();
+      out.activeAfter = ctx.workspace.activePath();
+      t.vault.setVault(null);
+      out.noVault = await code(ctx.vault.list());
+      out.noVaultInfo = ctx.vault.info();
+      return out;
+    } finally {
+      await t.dispose();
+    }
+  };
+
+  it("declared permissions: results and error codes are the same", async () => {
+    const real = await observe(bootHost as never, [
+      "vault.read",
+      "vault.write",
+    ]);
+    const mock = await observe(bootMock as never, [
+      "vault.read",
+      "vault.write",
+    ]);
+    expect(mock).toEqual(real);
+    expect(mock.read).toEqual([
+      { type: "rectangle", x: 1, y: 2, width: 30, height: 40 },
+    ]);
+    expect(mock.imported).toEqual([
+      { x: 7, y: 8, text: "hello@fake.excalidraw" },
+    ]);
+    expect(mock.createAgain).toBe("NAME_COLLISION");
+    expect(mock.openMissing).toBe("NOT_FOUND");
+  });
+
+  it("missing permissions: the same PERMISSION refusals", async () => {
+    const real = await observe(bootHost as never, []);
+    const mock = await observe(bootMock as never, []);
+    expect(mock).toEqual(real);
+    expect(mock.list).toBe("PERMISSION");
+    expect(mock.create).toBe("PERMISSION");
+  });
+
+  it("vault.changed without vault.read reports the same PERMISSION error", async () => {
+    const observeGate = async (
+      bootFn: (m: never, p: Plugin) => Promise<unknown>,
+    ) => {
+      const t = (await bootFn(
+        {
+          id: "par-gate",
+          permissions: [],
+          activation: ["onStartupFinished"],
+        } as never,
+        {
+          activate(c) {
+            c.events.on("vault.changed", () => {});
+          },
+        },
+      )) as import("../testing").TestPlugin;
+      try {
+        return t.log();
+      } finally {
+        await t.dispose();
+      }
+    };
+    const real = await observeGate(bootHost as never);
+    const mock = await observeGate(bootMock as never);
+    expect(mock).toEqual(real);
+    expect(mock[0].text).toContain("vault.changed needs the permission");
   });
 });

@@ -19,6 +19,7 @@ const EVENT_NAMES = [
   "drawing.saved",
   "drawing.renamed",
   "drawing.deleted",
+  "vault.changed",
 ];
 
 const DEACTIVATE_TIMEOUT_MS = 2000;

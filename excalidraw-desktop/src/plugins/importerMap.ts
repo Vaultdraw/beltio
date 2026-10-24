@@ -8,7 +8,7 @@
  *   turns plugin handling off for it with "".
  * - Without the key, the first plugin id in sort order wins; the others are
  *   listed by `importerClashes()` for the Plugins page.
- * - Lookups are O(1) per suffix: the winners are resolved on every change.
+ * - Lookups are O(1) per suffix; winners are resolved lazily after a change.
  */
 
 export interface ImporterEntry {
@@ -61,7 +61,17 @@ let canceller: (() => boolean) | null = null;
 let version = 0;
 const listeners = new Set<() => void>();
 
+let dirty = false;
+
+/** Marks the winners stale; they are resolved on the next read (claims come in bursts at host start). */
+const changed = () => {
+  dirty = true;
+  version++;
+  listeners.forEach((fn) => fn());
+};
+
 const resolveWinners = () => {
+  dirty = false;
   const next = new Map<string, ImporterEntry>();
   let longest = 1;
   for (const [ext, list] of claims) {
@@ -83,8 +93,13 @@ const resolveWinners = () => {
   }
   winners = next;
   longestParts = longest;
-  version++;
-  listeners.forEach((fn) => fn());
+};
+
+const current = (): Map<string, ImporterEntry> => {
+  if (dirty) {
+    resolveWinners();
+  }
+  return winners;
 };
 
 /** Claims `extensions` for one importer; returns the disposer. */
@@ -98,7 +113,7 @@ export function claimImporter(
     list.push(entry);
     claims.set(ext, list);
   }
-  resolveWinners();
+  changed();
   let done = false;
   return () => {
     if (done) {
@@ -118,7 +133,7 @@ export function claimImporter(
         claims.delete(ext);
       }
     }
-    resolveWinners();
+    changed();
   };
 }
 
@@ -133,14 +148,15 @@ export function setImporterOverrides(
     }
   }
   overrides = clean;
-  resolveWinners();
+  changed();
 }
 
 /** True when any extension is handled by a plugin (the drop path's one check). */
-export const hasImporters = (): boolean => winners.size > 0;
+export const hasImporters = (): boolean => current().size > 0;
 
 /** The importer for a file name; the longest suffix wins (`excalidraw.md` before `md`). */
 export function findImporter(name: string): ImporterMatch | null {
+  const winners = current();
   if (winners.size === 0) {
     return null;
   }
@@ -158,10 +174,12 @@ export function findImporter(name: string): ImporterMatch | null {
 }
 
 /** Extensions plugins handle now, for the picker's `accept`. */
-export const importerExtensions = (): string[] => [...winners.keys()].sort();
+export const importerExtensions = (): string[] =>
+  [...current().keys()].sort();
 
 /** Extensions claimed by more than one plugin, or turned off by the config key. */
 export function importerClashes(): ImporterClash[] {
+  const winners = current();
   const out: ImporterClash[] = [];
   for (const [extension, list] of claims) {
     const winner = winners.get(extension) ?? null;
@@ -212,5 +230,5 @@ export function resetImporterMap(): void {
   overrides = {};
   runner = null;
   canceller = null;
-  resolveWinners();
+  changed();
 }

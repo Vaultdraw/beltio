@@ -11,6 +11,14 @@ export type AppEventMap = {
   "drawing.saved": { path: string };
   "drawing.renamed": { from: string; to: string };
   "drawing.deleted": { path: string };
+  /**
+   * Files in the vault changed on disk (a plugin's own writes and autosaves
+   * included, so compare revisions). `rescan` is true when the watcher lost
+   * track and every path may have changed. Needs `vault.read`.
+   *
+   * @since 0.6.0
+   */
+  "vault.changed": { paths: string[]; rescan: boolean };
 };
 
 /**

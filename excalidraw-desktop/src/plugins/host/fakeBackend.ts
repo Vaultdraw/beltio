@@ -18,6 +18,15 @@ export interface FakeBackend extends PluginsBackend {
   emitChanged(id: string): void;
   /** Saved plugin data (`storage.global`) as the JSON text Rust would hold, by id. */
   data: Record<string, string>;
+  /** Drawings the vault rows (`vault.list`, `file.read`, `file.write`) serve, by path. */
+  drawings: Record<
+    string,
+    { scene: Record<string, unknown>; revision: string }
+  >;
+  /** Makes `file.write` fail with READ_ONLY. */
+  vaultReadOnly: boolean;
+  /** False: the vault rows fail with NO_VAULT. */
+  vaultOpen: boolean;
   /** Every gateway call, in order. */
   gatewayCalls: { pluginId: string; method: string; params: unknown }[];
 }
@@ -25,6 +34,86 @@ export interface FakeBackend extends PluginsBackend {
 /** An error as the gateway reports it (`code` plus message). */
 const coded = (code: string, message: string) =>
   Object.assign(new Error(message), { code });
+
+const VAULT_ROWS: Record<string, "vault.read" | "vault.write"> = {
+  "vault.list": "vault.read",
+  "file.read": "vault.read",
+  "file.write": "vault.write",
+};
+
+/** The vault rows of the Rust gateway, over `fake.drawings`. */
+function vaultCall(
+  fake: FakeBackend,
+  method: string,
+  params: Record<string, unknown> | null,
+): unknown {
+  const path = String(params?.path ?? "");
+  if (!fake.vaultOpen) {
+    throw coded("NO_VAULT", "No vault is open");
+  }
+  if (method === "vault.list") {
+    const dir = String(params?.dir ?? "");
+    const base = dir === "" ? "" : `${dir}/`;
+    const folders = new Set<string>();
+    const files: unknown[] = [];
+    for (const p of Object.keys(fake.drawings).sort()) {
+      if (!p.startsWith(base)) {
+        continue;
+      }
+      const rest = p.slice(base.length);
+      const slash = rest.indexOf("/");
+      if (slash >= 0) {
+        folders.add(rest.slice(0, slash));
+      } else {
+        files.push({
+          path: p,
+          name: rest,
+          kind: "drawing",
+          modifiedAt: 1,
+          size: 10,
+        });
+      }
+    }
+    if (dir !== "" && folders.size + files.length === 0) {
+      throw coded("NOT_FOUND", "Directory not found");
+    }
+    return {
+      entries: [
+        ...[...folders].map((name) => ({
+          path: `${base}${name}`,
+          name,
+          kind: "folder",
+          modifiedAt: 1,
+          size: 0,
+        })),
+        ...files,
+      ],
+    };
+  }
+  if (method === "file.read") {
+    const d = fake.drawings[path];
+    if (!d) {
+      throw coded("NOT_FOUND", `Drawing not found: ${path}`);
+    }
+    return { path, revision: d.revision, scene: d.scene };
+  }
+  // file.write: plugins only create
+  if (fake.vaultReadOnly) {
+    throw coded("READ_ONLY", "The vault is read-only");
+  }
+  if (fake.drawings[path]) {
+    throw coded("NAME_COLLISION", "A drawing with that name already exists");
+  }
+  if (params?.expectedRevision !== null) {
+    throw coded("PERMISSION", "Plugins can only create new drawings");
+  }
+  const revision = `rev-${Object.keys(fake.drawings).length + 1}`;
+  fake.drawings[path] = {
+    scene: params?.scene as Record<string, unknown>,
+    revision,
+  };
+  return { path, revision };
+}
 
 export function createFakeBackend(
   plugins: PluginInfo[] = [],
@@ -44,6 +133,9 @@ export function createFakeBackend(
     opened: [],
     data: {},
     gatewayCalls: [],
+    drawings: {},
+    vaultReadOnly: false,
+    vaultOpen: true,
     // The storage rows of the Rust gateway (plugins/gateway.rs); other rows are not faked.
     pluginCall: async (pluginId, method, params) => {
       fake.gatewayCalls.push({ pluginId, method, params });
@@ -52,6 +144,17 @@ export function createFakeBackend(
           "NOT_FOUND",
           `No installed plugin has the id "${pluginId}"`,
         );
+      }
+      const row = VAULT_ROWS[method];
+      if (row) {
+        const plugin = fake.plugins.find((p) => p.id === pluginId)!;
+        if (!plugin.permissions.includes(row)) {
+          throw coded(
+            "PERMISSION",
+            `${pluginId}: ${method} needs the permission "${row}", which plugin.toml does not declare`,
+          );
+        }
+        return vaultCall(fake, method, params);
       }
       if (method === "storage.read") {
         const text = fake.data[pluginId];

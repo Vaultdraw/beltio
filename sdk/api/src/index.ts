@@ -8,12 +8,20 @@ export type { Disposable } from "./disposable";
 export type { AppEventMap, EventsApi } from "./events";
 export type {
   CommandContribution,
+  ImporterContribution,
   PanelContribution,
   PluginContributions,
   PluginManifestInfo,
   PluginPermission,
 } from "./manifest";
 export type { ApiVersion, HostApi } from "./host";
+export type {
+  ImportersApi,
+  Importer,
+  ImportInput,
+  ImportOptions,
+  ImportResult,
+} from "./importers";
 export type { PanelsApi } from "./panels";
 export { definePlugin } from "./plugin";
 export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
@@ -34,4 +42,6 @@ export type {
 } from "./settings";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
+export type { VaultApi, VaultEntry } from "./vault";
+export type { WorkspaceApi } from "./workspace";
 export { SHARED_SPECIFIERS } from "./specifiers";

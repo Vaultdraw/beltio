@@ -14,6 +14,12 @@ export type {
   Disposable,
   EventsApi,
   HostApi,
+  Importer,
+  ImporterContribution,
+  ImportersApi,
+  ImportInput,
+  ImportOptions,
+  ImportResult,
   Json,
   LogApi,
   NewElement,
@@ -41,6 +47,9 @@ export type {
   ThemeMode,
   ThemeTokenName,
   UiApi,
+  VaultApi,
+  VaultEntry,
+  WorkspaceApi,
 } from "../../../../sdk/api/src/index";
 
 export const definePlugin = (plugin: Plugin): Plugin => plugin;

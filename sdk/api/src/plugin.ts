@@ -2,12 +2,15 @@ import type { CommandsApi } from "./commands";
 import type { Disposable } from "./disposable";
 import type { EventsApi } from "./events";
 import type { HostApi } from "./host";
+import type { ImportersApi } from "./importers";
 import type { PluginManifestInfo } from "./manifest";
 import type { PanelsApi } from "./panels";
 import type { SceneContextApi } from "./scene";
 import type { SettingsApi } from "./settings";
 import type { StorageApi } from "./storage";
 import type { ThemeApi } from "./theme";
+import type { VaultApi } from "./vault";
+import type { WorkspaceApi } from "./workspace";
 
 /**
  * Toast messages.
@@ -68,6 +71,12 @@ export interface PluginContext {
   readonly theme: ThemeApi;
   /** @since 0.3.0 */
   readonly storage: StorageApi;
+  /** @since 0.6.0 */
+  readonly vault: VaultApi;
+  /** @since 0.6.0 */
+  readonly workspace: WorkspaceApi;
+  /** @since 0.6.0 */
+  readonly importers: ImportersApi;
   /**
    * Disposed in reverse order on disable/reload/quit.
    *

@@ -22,6 +22,7 @@ const EVENT_NAMES: Record<keyof AppEventMap, true> = {
   "drawing.saved": true,
   "drawing.renamed": true,
   "drawing.deleted": true,
+  "vault.changed": true,
 };
 
 const subscribeHook = (onStoreChange: () => void) =>

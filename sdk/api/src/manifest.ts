@@ -64,6 +64,25 @@ export interface PanelContribution {
 }
 
 /**
+ * An importer declared in `plugin.toml` (`[[contributes.importers]]`): the
+ * file types the plugin handles when the user drops or picks one.
+ *
+ * @since 0.6.0
+ */
+export interface ImporterContribution {
+  /** @since 0.6.0 */
+  id: string;
+  /** @since 0.6.0 */
+  title: string;
+  /**
+   * Lower case, no leading dot, such as `txt` or `excalidraw.md`.
+   *
+   * @since 0.6.0
+   */
+  extensions: string[];
+}
+
+/**
  * Everything a plugin declares it adds to the app.
  *
  * @since 0.1.0
@@ -75,4 +94,10 @@ export interface PluginContributions {
   panels: PanelContribution[];
   /** @since 0.1.0 */
   settings: SettingDecl[];
+  /**
+   * Absent when the app that reads the manifest is older than 0.6.0.
+   *
+   * @since 0.6.0
+   */
+  importers?: ImporterContribution[];
 }
