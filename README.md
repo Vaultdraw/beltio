@@ -155,7 +155,7 @@ echo '[{"op":"add","element":{"type":"rectangle","width":120,"height":80}}]' | v
 
 ## Configuration
 
-Settings live in a plain-text folder (`~/.config/vaultdraw/config.toml`, plus `themes/`). Edit it by hand or in Settings, and the app reloads it live. The full reference is in [docs/configuration.md](docs/configuration.md).
+Settings live in a plain-text folder (`~/.config/vaultdraw/config.toml`, plus `themes/`). Edit it by hand or in Settings (Settings saves to its own `overrides.toml`, so your `config.toml` is never rewritten), and the app reloads it live. A chip beside each setting says which file its value comes from. The full reference is in [docs/configuration.md](docs/configuration.md).
 
 ## Build from source
 

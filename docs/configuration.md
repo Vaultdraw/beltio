@@ -81,7 +81,7 @@ stroke_style = "dotted"
 - **Two files, two owners.** `config.toml` is yours: the app creates it once and never writes to it again. What you change in Settings goes to `overrides.toml` in the state folder, and wins over `config.toml`. See [Layers](#layers).
 - **Live reload.** Saved changes apply immediately, no restart needed. Delete a line to go back to its default.
 - **Typos are safe.** If the file can't be parsed, the app keeps the last good settings and shows a banner such as `config.toml line 7: <error>`. A value of the wrong type falls back to its default and is reported the same way. A key the app doesn't know, such as `zom` for `zoom` (or `stroke_colour` inside `[tools.arrow]`), is a warning: only that key is ignored, the rest applies, and a notice names the closest real key: `config.toml: unknown key interface.zom (ignored; did you mean interface.zoom?)`. A vault's `settings.toml` is checked the same way. Errors stay in the banner until fixed; every current error and warning is listed under **Settings → General → Config file**.
-- **Settings → Open config folder** opens the folder; **Reload** re-reads it.
+- **Settings → General → Config files** lists both files with their paths and status, an **Open** button for each, **Open config folder**, **Reload**, and **Reset all Settings changes**. All of these are palette commands too: see [Where a value comes from](#where-a-value-comes-from).
 
 `state.json` holds machine state (recent vaults, navigator width, expanded folders, last-used image export options). It is not meant for hand editing.
 
@@ -112,10 +112,46 @@ flowchart LR
 - **`overrides.toml` is safe to delete.** Values fall back to `config.toml` at once. It starts with a header comment, is plain TOML, and reloads live like `config.toml`, so you can read or edit it too.
 - **Existing configs keep working.** Whatever Settings wrote to `config.toml` before stays there as the base layer; nothing is moved or rewritten. A newer Settings change to the same key goes to `overrides.toml` and wins.
 - **A broken file never loses your settings.** If either file fails to parse on reload, the app keeps the last good settings and the banner names the file (`overrides.toml line 2: ...`). At startup the file that parses still applies. While either file is broken Settings refuses to save (it could not tell what your change means, and a good write must never overwrite a file you still have to fix): fix the file, or delete `overrides.toml`.
-- **Removing a value that `config.toml` sets.** A value in `config.toml` can be replaced from Settings (Reset stores the default), but a key with no default, such as a `[keys.labels]` entry, can only be removed in `config.toml` itself. `vaultdraw config set <key> null` drops what Settings or the CLI stored in `overrides.toml`; it does not edit `config.toml`. A key inside `[tools.<tool>]` or `[plugin.<id>]` set from the CLI rewrites that whole table in `overrides.toml`, starting from the table in effect, so its other keys keep their values.
+- **Removing a value that `config.toml` sets.** A value in `config.toml` can be replaced from Settings (Reset stores the default), but a key with no default, such as a `[keys.labels]` entry, can only be removed in `config.toml` itself: Settings shows a `config.toml` chip on that name and disables its remove button. `vaultdraw config set <key> null` drops what Settings or the CLI stored in `overrides.toml`; it does not edit `config.toml`. A key inside `[tools.<tool>]` or `[plugin.<id>]` set from the CLI rewrites that whole table in `overrides.toml`, starting from the table in effect, so its other keys keep their values.
 - **Unknown keys** are reported with the name of the file that holds them.
 - **Control switch.** `[control] enabled` is read through both files before the app starts the control socket, so `vaultdraw config set control.enabled false` holds at the next launch.
 - **Older versions** ignore `overrides.toml`, so a downgrade shows `config.toml` values only.
+
+### Where a value comes from
+
+Every setting with a config key shows a small chip beside its name when it is not the built-in default: `config.toml` or `overrides`. Click it for details, all computed from the files already loaded.
+
+| Chip says | Meaning | Actions |
+| --- | --- | --- |
+| `config.toml` | Your file sets it. A change made in Settings is saved apart and wins. | **Use default** (stores the default), **Open config.toml** |
+| `overrides` | Settings saved it. | **Reset to default** |
+| `overrides ≠` | Settings saved it and hides a different `config.toml` value, which the note names (`config.toml says 14`). | **Reset to config.toml value**, **Open config.toml** |
+
+**Reset to config.toml value** removes the key from `overrides.toml`; `config.toml` is never edited, by Settings, the CLI or a command.
+
+**Commands** (palette, no default keys, rebindable in Settings → Hotkeys or `[hotkeys]`):
+
+| Command | Does |
+| --- | --- |
+| `config.reload` | Re-read `config.toml` and `overrides.toml` now |
+| `config.openFile` | Open `config.toml` with the default app |
+| `config.openOverrides` | Show `overrides.toml` in the file manager (its folder if nothing was saved yet) |
+| `config.openFolder` | Open the config folder |
+| `config.resetOverrides` | Delete `overrides.toml` after a confirmation; values return to `config.toml` or the defaults |
+
+**CLI** (works with or without the app):
+
+```sh
+vaultdraw config get editor.font_size --source
+# 20  (overrides.toml; config.toml says 14)
+vaultdraw config get interface.zoom --source
+# null  (default)
+vaultdraw config path --all          # config.toml, then overrides.toml
+```
+
+With `--json`, `get --source` adds `"source"` (`default`, `config.toml` or `overrides.toml`) and, when a higher file hides another value, `"hidden": {"file": ..., "value": ...}`. `--source` needs a key. A value shown as `null` with source `default` means no file sets the key.
+
+A value that fails validation is reported with the file it came from (`overrides.toml: editor.font_size = "big" is not valid ...`).
 
 ### Settings reference
 
