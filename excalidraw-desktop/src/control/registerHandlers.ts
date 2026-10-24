@@ -3,7 +3,7 @@ import type { AskSpec } from "./uriRun";
 /** The Rust side's plan: files it would write (and what is there now) and helpers it would run. */
 export interface HandlersPlan {
   files: { path: string; state: "new" | "same" | "update" | "foreign" }[];
-  commands: string[];
+  commands: string[][];
 }
 
 export interface HandlersReport {
@@ -54,7 +54,7 @@ export async function registerHandlers(d: RegisterDeps): Promise<void> {
       "This tells your desktop that Vaultdraw opens vaultdraw:// links and .excalidraw / .excalidrawlib files. Only your own folders are changed; file types are offered in Open With, not made the default.",
     details: [
       ...plan.files.map((f) => `${WORDS[f.state]}: ${f.path}`),
-      ...plan.commands.map((c) => `then run: ${c}`),
+      ...plan.commands.map((c) => `then run: ${c.join(" ")}`),
     ],
     confirmLabel: "Register",
     onConfirm: () =>

@@ -5,7 +5,12 @@ import { canAddVaultLibrary, importLibrary } from "./libraryImport";
 const item = (id: string) => ({ id } as never);
 
 const make = (
-  over: { vault?: boolean; readOnly?: boolean; noApi?: boolean } = {},
+  over: {
+    vault?: boolean;
+    readOnly?: boolean;
+    noApi?: boolean;
+    hasA?: boolean;
+  } = {},
 ) => {
   const order: string[] = [];
   const updateLibrary = vi.fn(async () => {
@@ -20,6 +25,7 @@ const make = (
     }),
     hasVault: () => over.vault ?? true,
     isVaultReadOnly: () => over.readOnly ?? false,
+    getItem: (id: string) => (id === "a" && over.hasA ? item("a") : undefined),
   };
   return {
     order,
@@ -49,6 +55,12 @@ describe("importLibrary", () => {
     await importLibrary(t.deps, "{}", "vault");
     expect(t.order).toEqual(["load", "assign", "update"]);
     expect(t.store.assign).toHaveBeenCalledWith(["a", "b"], "vault");
+  });
+
+  it("vault scope leaves items that already exist where they are", async () => {
+    const t = make({ hasA: true });
+    await importLibrary(t.deps, "{}", "vault");
+    expect(t.store.assign).toHaveBeenCalledWith(["b"], "vault");
   });
 
   it("refuses the vault library when read-only or absent, and changes nothing", async () => {

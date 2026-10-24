@@ -1976,11 +1976,7 @@ export const VaultApp = ({
         showNavigator();
         requestNavigator({ kind: "search", query });
       },
-      exists: (path) =>
-        probeExists(repository, vault?.handle ?? "", path).then(
-          (found) => found,
-          () => false,
-        ),
+      exists: (path) => probeExists(repository, vault?.handle ?? "", path),
       canAddVaultLibrary: () => canAddVaultLibrary(libraryStore),
       addLibrary: (json, scope) =>
         importLibrary(

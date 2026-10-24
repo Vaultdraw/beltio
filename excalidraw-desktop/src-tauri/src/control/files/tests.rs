@@ -110,3 +110,10 @@ fn security_an_oversize_drawing_is_refused() {
     f.set_len(vaultdraw_core::paths::MAX_DRAWING_BYTES + 1).unwrap();
     assert_eq!(read_checked(big.to_str().unwrap(), Kind::Drawing).unwrap_err().code, "INVALID_FILE");
 }
+
+#[test]
+fn paths_are_normalized_before_they_are_granted() {
+    assert_eq!(normalize("/a/./b/../c//d.excalidraw"), "/a/c/d.excalidraw");
+    assert_eq!(normalize("/../x.excalidraw"), "/x.excalidraw");
+    assert_eq!(normalize("/a/b.excalidraw"), "/a/b.excalidraw");
+}

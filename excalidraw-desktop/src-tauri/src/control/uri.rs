@@ -256,6 +256,14 @@ impl Handler {
     pub(crate) fn handle_file(&self, win: &dyn Window, config_text: &str, path: &str, origin: Origin, now: Instant) -> Result<Value, RpcError> {
         let toast = origin != Origin::Cli;
         self.admit(win, config_text, origin, now, "Opening files from outside is turned off")?;
+        // The same normalized text is granted and sent, so the window's read matches the grant.
+        let normalized;
+        let path = if path.starts_with('/') {
+            normalized = super::files::normalize(path);
+            &normalized
+        } else {
+            path // a relative path is refused below, never made absolute
+        };
         let plan = match super::files::plan_for(path, origin.name()) {
             Ok(p) => p,
             Err(msg) => {

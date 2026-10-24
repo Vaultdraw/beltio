@@ -5,7 +5,7 @@ import type { LibraryStore } from "../library/libraryStore";
 export interface LibraryImportDeps {
   store: Pick<
     LibraryStore,
-    "loadNow" | "assign" | "hasVault" | "isVaultReadOnly"
+    "loadNow" | "assign" | "hasVault" | "isVaultReadOnly" | "getItem"
   >;
   /** Mounted editors (the first one takes the merge). */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,9 +41,10 @@ export async function importLibrary(
   await deps.store.loadNow();
   const items = await deps.parse(json);
   if (scope === "vault") {
-    // Record where the new items go before the editor reports the change.
+    // Record where the new items go before the editor reports the change. Items already in a
+    // library keep their place (the editor's merge skips them).
     deps.store.assign(
-      items.map((i) => i.id),
+      items.filter((i) => !deps.store.getItem(i.id)).map((i) => i.id),
       "vault",
     );
   }

@@ -18,7 +18,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use vaultdraw_core::uri::is_bidi;
 
-use crate::{err, ioerr, read_bounded, Result};
+use crate::{err, ioerr, Result};
 
 /// Longest path accepted (bytes). Real paths are far shorter; this bounds the dialog text.
 pub(crate) const MAX_PATH_BYTES: usize = 4096;
@@ -71,6 +71,22 @@ pub(crate) fn absolute(path: &str, cwd: Option<&str>) -> Option<String> {
     }
     let cwd = cwd.filter(|c| Path::new(c).is_absolute())?;
     Some(Path::new(cwd).join(p).to_string_lossy().into_owned())
+}
+
+/// Resolves `.`, `..` and repeated `/` in an absolute path (text only). The same text is granted
+/// and sent to the window, so the window's read matches the grant.
+pub(crate) fn normalize(path: &str) -> String {
+    let mut out: Vec<&str> = Vec::new();
+    for part in path.split('/') {
+        match part {
+            "" | "." => {}
+            ".." => {
+                out.pop();
+            }
+            p => out.push(p),
+        }
+    }
+    format!("/{}", out.join("/"))
 }
 
 /// The plan the window gets for a file, or the refusal text. Pure.
@@ -131,6 +147,26 @@ pub(crate) struct ExternalFile {
     pub json: String,
 }
 
+#[cfg(unix)]
+fn open_no_follow(p: &Path) -> Result<std::fs::File> {
+    use std::os::unix::fs::OpenOptionsExt;
+    std::fs::OpenOptions::new().read(true).custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK).open(p).map_err(|e| {
+        // ELOOP: the last part is a symbolic link.
+        if e.raw_os_error() == Some(libc::ELOOP) {
+            err("INVALID_PATH", "A symbolic link cannot be opened this way; open the file it points to")
+        } else {
+            ioerr(e)
+        }
+    })
+}
+#[cfg(not(unix))]
+fn open_no_follow(p: &Path) -> Result<std::fs::File> {
+    if std::fs::symlink_metadata(p).map_err(ioerr)?.file_type().is_symlink() {
+        return Err(err("INVALID_PATH", "A symbolic link cannot be opened this way; open the file it points to"));
+    }
+    std::fs::File::open(p).map_err(ioerr)
+}
+
 /// Reads and checks one external file: a regular file (a symlink is refused), within the size
 /// limit, UTF-8, and a real drawing or library. Does not look at grants (the command does).
 pub(crate) fn read_checked(path: &str, kind: Kind) -> Result<ExternalFile> {
@@ -141,10 +177,10 @@ pub(crate) fn read_checked(path: &str, kind: Kind) -> Result<ExternalFile> {
     if !p.is_absolute() {
         return Err(err("INVALID_PATH", "The file path must be absolute"));
     }
-    let meta = std::fs::symlink_metadata(p).map_err(ioerr)?;
-    if meta.file_type().is_symlink() {
-        return Err(err("INVALID_PATH", "A symbolic link cannot be opened this way; open the file it points to"));
-    }
+    // One open that refuses a symbolic link as the last part of the path, then every check and
+    // the read use that same handle (no gap in which the file can be swapped).
+    let file = open_no_follow(p)?;
+    let meta = file.metadata().map_err(ioerr)?;
     if !meta.is_file() {
         return Err(err("INVALID_PATH", "Not a regular file"));
     }
@@ -155,7 +191,11 @@ pub(crate) fn read_checked(path: &str, kind: Kind) -> Result<ExternalFile> {
     if meta.len() > limit {
         return Err(err("INVALID_FILE", "The file is too large to open"));
     }
-    let bytes = read_bounded(p, limit)?;
+    let mut bytes = Vec::new();
+    std::io::Read::read_to_end(&mut std::io::Read::take(file, limit.saturating_add(1)), &mut bytes).map_err(ioerr)?;
+    if bytes.len() as u64 > limit {
+        return Err(err("INVALID_FILE", "The file is too large to open"));
+    }
     let json = String::from_utf8(bytes).map_err(|_| err("INVALID_FILE", "The file is not valid UTF-8"))?;
     match kind {
         Kind::Drawing => vaultdraw_core::fsops::ensure_json(&json)?,

@@ -51,8 +51,8 @@ pub(crate) struct FilePlan {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub(crate) struct Plan {
     pub files: Vec<FilePlan>,
-    /// Commands run afterwards, best effort (shown to the user in the dialog).
-    pub commands: Vec<String>,
+    /// Programs run afterwards, best effort: the program, then its arguments (shown in the dialog).
+    pub commands: Vec<Vec<String>>,
 }
 
 /// A program path as the `Exec` key wants it: quoted, with the characters the format reserves
@@ -126,10 +126,11 @@ pub(crate) fn plan(data_home: &Path, program: &str) -> Result<Plan> {
         FilePlan { state: state_of(&desktop, &dtext)?, path: desktop.to_string_lossy().into_owned(), text: dtext },
         FilePlan { state: state_of(&mime, MIME_XML)?, path: mime.to_string_lossy().into_owned(), text: MIME_XML.to_string() },
     ];
+    let argv = |parts: &[&str]| parts.iter().map(|p| p.to_string()).collect::<Vec<_>>();
     let commands = vec![
-        format!("update-desktop-database {}", data_home.join("applications").display()),
-        format!("update-mime-database {}", data_home.join("mime").display()),
-        format!("xdg-mime default {DESKTOP_NAME} x-scheme-handler/vaultdraw"),
+        argv(&["update-desktop-database", &data_home.join("applications").to_string_lossy()]),
+        argv(&["update-mime-database", &data_home.join("mime").to_string_lossy()]),
+        argv(&["xdg-mime", "default", DESKTOP_NAME, "x-scheme-handler/vaultdraw"]),
     ];
     Ok(Plan { files, commands })
 }
@@ -167,9 +168,8 @@ pub(crate) fn apply(plan: &Plan, run: &dyn Fn(&str, &[&str]) -> std::result::Res
     }
     if !report.written.is_empty() {
         for cmd in &plan.commands {
-            let mut parts = cmd.split(' ');
-            let program = parts.next().unwrap_or_default();
-            let args: Vec<&str> = parts.collect();
+            let Some((program, rest)) = cmd.split_first() else { continue };
+            let args: Vec<&str> = rest.iter().map(String::as_str).collect();
             if let Err(e) = run(program, &args) {
                 report.notes.push(format!("{program}: {e}"));
             }

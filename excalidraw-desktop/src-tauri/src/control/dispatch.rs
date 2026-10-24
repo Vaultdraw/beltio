@@ -64,10 +64,14 @@ impl TauriDispatch {
                 }
                 Route::File(path) => {
                     // Same handler as Finder opens: in-vault files open, others ask first.
-                    let Some(abs) = super::files::absolute(path, cwd.as_str()) else { continue };
-                    if let Err(e) = super::uri::handle_file(&self.app, &abs, super::uri::Origin::Forwarded) {
-                        if e.app_code() == Some(codes::NOT_READY) {
-                            return Err(e);
+                    // `path` may be a plain path (relative to the sender's cwd) or a `file:` URL (Linux `%U`).
+                    for item in super::uri::classify_opened([path.to_string()], cwd.as_str()) {
+                        if let super::uri::Item::File(abs) = item {
+                            if let Err(e) = super::uri::handle_file(&self.app, &abs, super::uri::Origin::Forwarded) {
+                                if e.app_code() == Some(codes::NOT_READY) {
+                                    return Err(e);
+                                }
+                            }
                         }
                     }
                 }

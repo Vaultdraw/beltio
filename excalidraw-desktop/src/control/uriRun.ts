@@ -315,7 +315,7 @@ export function createUriRunner(deps: UriDeps) {
       }
       const file = await deps.readExternal(path, "drawing");
       const scene = JSON.parse(file.json) as unknown;
-      const stem = base.replace(/\.excalidraw$/i, "");
+      const stem = base.replace(/\.excalidraw$/i, "").trim() || "Imported";
       let name = `${stem}.excalidraw`;
       for (let n = 2; await deps.exists(name); n += 1) {
         if (n > MAX_COPY_SUFFIX) {

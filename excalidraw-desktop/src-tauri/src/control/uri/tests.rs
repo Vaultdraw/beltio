@@ -462,6 +462,20 @@ fn a_file_becomes_a_plan_and_a_single_use_grant() {
 }
 
 #[test]
+fn the_granted_path_is_the_one_the_window_gets_even_with_dot_segments() {
+    let (h, w) = (Handler::default(), Fake::new(true));
+    file(&h, &w, "", "/x/./y/../a.excalidraw", Origin::Forwarded).unwrap();
+    assert_eq!(w.plans()[0]["path"], "/x/a.excalidraw");
+    assert_eq!(*w.granted.borrow(), ["/x/a.excalidraw"]);
+}
+
+#[test]
+fn a_forwarded_file_url_is_decoded_like_an_apple_event() {
+    let items = classify_opened(["file:///home/u/My%20Dir/a.excalidraw".to_string()], Some("/w"));
+    assert_eq!(items, [Item::File("/home/u/My Dir/a.excalidraw".into())]);
+}
+
+#[test]
 fn security_files_obey_the_off_switch_and_the_rate_limit() {
     let (h, w) = (Handler::default(), Fake::new(true));
     let off = "[control]\nuri_enabled = false\n";

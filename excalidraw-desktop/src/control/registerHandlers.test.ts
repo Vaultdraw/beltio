@@ -39,7 +39,7 @@ const fresh = {
     { path: "/h/.local/share/applications/vaultdraw.desktop", state: "new" },
     { path: "/h/.local/share/mime/packages/vaultdraw.xml", state: "new" },
   ],
-  commands: ["update-desktop-database /h/.local/share/applications"],
+  commands: [["update-desktop-database", "/h/.local/share/applications"]],
 };
 
 describe("registerHandlers", () => {

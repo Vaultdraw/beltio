@@ -61,8 +61,8 @@ fn plan_names_exactly_two_files_under_the_data_folder_and_three_commands() {
     assert_eq!(paths, ["applications/vaultdraw.desktop", "mime/packages/vaultdraw.xml"]);
     assert!(p.files.iter().all(|f| f.state == State::New));
     assert_eq!(p.commands.len(), 3);
-    assert!(p.commands[2].ends_with("x-scheme-handler/vaultdraw"), "only the link scheme gets a default");
-    assert!(!p.commands.iter().any(|c| c.contains("excalidraw+json")), "file types are not claimed");
+    assert_eq!(p.commands[2].last().map(String::as_str), Some("x-scheme-handler/vaultdraw"), "only the link scheme gets a default");
+    assert!(!p.commands.iter().flatten().any(|c| c.contains("excalidraw+json")), "file types are not claimed");
     assert!(!d.path().join("applications").exists(), "planning writes nothing");
 }
 
@@ -145,4 +145,19 @@ fn a_missing_helper_is_a_note_not_a_failure() {
     let r = apply(&plan(d.path(), PROGRAM).unwrap(), &run).unwrap();
     assert_eq!(r.written.len(), 2);
     assert_eq!(r.notes, ["xdg-mime: not found"]);
+}
+
+#[test]
+fn a_data_folder_with_spaces_stays_one_argument() {
+    let d = tempfile::tempdir().unwrap();
+    let spaced = d.path().join("my user/share");
+    let ran = RefCell::new(Vec::<Vec<String>>::new());
+    let run = |prog: &str, args: &[&str]| {
+        let mut v = vec![prog.to_string()];
+        v.extend(args.iter().map(|a| a.to_string()));
+        ran.borrow_mut().push(v);
+        Ok(())
+    };
+    apply(&plan(&spaced, PROGRAM).unwrap(), &run).unwrap();
+    assert_eq!(ran.borrow()[0], ["update-desktop-database".to_string(), spaced.join("applications").to_string_lossy().into_owned()]);
 }
