@@ -11,8 +11,8 @@ import { detectPlatform } from "../commands/keys";
 import { createControlBridge, type ControlDeps } from "./bridge";
 import { ControlError } from "./errors";
 import { linkPrompt, linkRequests } from "./linkRequests";
-
 import { registerHandlers } from "./registerHandlers";
+import { createLazySceneMethods } from "./sceneLazy";
 import { createUriRunner, type UriDeps, type UriPlan } from "./uriRun";
 
 import { commandInfos, createSnapshotSender } from "./commandsSnapshot";
@@ -197,6 +197,7 @@ export function useControlBridge(
         const methods = createWindowMethods(
           () => live.current.files as ControlFiles,
         );
+        Object.assign(methods, createLazySceneMethods());
         const w = win as Window;
         if (live.current.uri) {
           const runner = createUriRunner({

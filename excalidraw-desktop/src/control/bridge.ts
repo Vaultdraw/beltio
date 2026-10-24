@@ -8,6 +8,7 @@ import { spoolBlob } from "../export/spoolBlob";
 import { commandInfos } from "./commandsSnapshot";
 import { ControlError, toControlError } from "./errors";
 import { objectParams, stringParam } from "./params";
+import { createLazySceneMethods } from "./sceneLazy";
 import { createUriRunner, type UriDeps, type UriPlan } from "./uriRun";
 import { createWindowMethods, type ControlFiles } from "./windowMethods";
 
@@ -51,6 +52,8 @@ export interface ControlDeps {
    * this bridge's own handlers. Absent = `uri.run` is not registered.
    */
   uri?: () => Omit<UriDeps, "call">;
+  /** The scene.* handlers (default: lazy, see sceneLazy.ts); tests inject their own. */
+  scene?: Record<string, (params: unknown) => unknown>;
 }
 
 export function createControlBridge(deps: ControlDeps) {
@@ -92,6 +95,7 @@ export function createControlBridge(deps: ControlDeps) {
     ...(deps.files
       ? createWindowMethods(deps.files, (blob) => spoolBlob(deps.invoke, blob))
       : {}),
+    ...(deps.scene ?? createLazySceneMethods()),
   };
 
   if (deps.uri) {

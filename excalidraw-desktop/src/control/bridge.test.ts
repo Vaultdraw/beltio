@@ -31,6 +31,32 @@ const make = (over: Partial<ControlDeps> = {}, run = true, avail = true) => {
 };
 
 describe("control bridge", () => {
+  it("routes scene.* to the injected handlers, with no files dep", async () => {
+    const apply = vi.fn(() => ({ applied: 1 }));
+    const { reply } = make({ scene: { "scene.apply": apply } });
+    expect(await reply("scene.apply", { ops: [] })).toEqual({
+      rid: 7,
+      result: { applied: 1 },
+    });
+    expect(apply).toHaveBeenCalledWith({ ops: [] });
+  });
+
+  it("registers the four lazy scene methods by default", async () => {
+    // No drawing is open in this test: the real handlers answer NOT_FOUND no_drawing.
+    const { reply } = make();
+    for (const m of ["scene.read", "scene.get", "scene.selection"]) {
+      const r = await reply(m, { ids: ["a"] });
+      expect(r.error).toMatchObject({
+        code: "NOT_FOUND",
+        data: { reason: "no_drawing" },
+      });
+    }
+    const r = await reply("scene.apply", {
+      ops: [{ op: "delete", id: "a" }],
+    });
+    expect(r.error.data).toEqual({ reason: "no_drawing" });
+  });
+
   it("runs a known command", async () => {
     const { reply, runner } = make();
     expect(await reply("command.run", { id: "file.save" })).toEqual({

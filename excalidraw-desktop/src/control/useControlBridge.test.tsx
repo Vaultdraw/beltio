@@ -70,6 +70,28 @@ describe("useControlBridge", () => {
     expect(getRegisteredHandler(CLI_INSTALL_ID)).toBeUndefined();
   });
 
+  it("e2e harness sink receives the scene methods, loaded lazily", async () => {
+    vi.stubEnv("VITE_APP_E2E", "true");
+    try {
+      const sink = vi.fn();
+      const win = Object.create(window) as Window & Record<string, unknown>;
+      win.__controlMethodsSink = sink;
+      renderHook(() => useControlBridge(win, deps()));
+      await waitFor(() => expect(sink).toHaveBeenCalledTimes(1));
+      const methods = sink.mock.calls[0][0] as Record<string, unknown>;
+      for (const name of [
+        "scene.read",
+        "scene.get",
+        "scene.selection",
+        "scene.apply",
+      ]) {
+        expect(typeof methods[name]).toBe("function");
+      }
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("listens once, signals ready, sends the snapshot on idle and answers requests", async () => {
     const { unmount } = renderHook(() => useControlBridge(tauriWin(), deps()));
     await waitFor(() =>
