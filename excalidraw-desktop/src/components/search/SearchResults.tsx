@@ -19,6 +19,8 @@ import { IconFolder } from "../Icons";
 
 import "./SearchResults.css";
 
+import { formatCount } from "./formatCount";
+
 import type { RefObject } from "react";
 
 import type { ElementMatch, SearchHit, VaultSearch } from "../../search/types";
@@ -52,7 +54,7 @@ interface Props {
 }
 
 const stripExt = (name: string) => name.replace(/\.excalidraw$/i, "");
-const fmt = (n: number) => n.toLocaleString("en-US");
+const fmt = formatCount;
 
 const entryToHit = (entry: VaultEntry): SearchHit => ({
   path: entry.path,
