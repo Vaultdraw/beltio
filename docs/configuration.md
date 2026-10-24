@@ -440,7 +440,7 @@ The file tree's row menu items are commands too, with no default key. They act o
 | `list.exportPng` / `list.exportSvg` / `list.exportPdf` | Export the drawing |
 | `list.saveCopy` | Save a copy of the drawing |
 
-Other buttons that are now commands (no default key, offered only while their button is there):
+Other buttons that are now commands (no default key; except the templates folder, each is offered only while its button is there):
 
 | Command id | Action |
 | --- | --- |

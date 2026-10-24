@@ -94,13 +94,11 @@ export class ActionManager {
       return false;
     }
 
-    const hostKeys = this.app.props.UIOptions.hostActionKeys;
     const data = Object.values(this.actions)
       .sort((a, b) => (b.keyPriority || 0) - (a.keyPriority || 0))
       .filter(
         (action) =>
           this.isCanvasActionAllowed(action) &&
-          !hostKeys?.includes(action.name) &&
           action.keyTest &&
           action.keyTest(
             event,
@@ -117,6 +115,15 @@ export class ActionManager {
       return false;
     }
 
+    // Vaultdraw: the host owns this action's key (it claims it before us when
+    // its binding applies). Swallow it, so a removed or out-of-scope binding
+    // does nothing instead of falling through to later key handling.
+    if (this.isHostOwned(data[0].name)) {
+      event.preventDefault();
+      event.stopPropagation();
+      return true;
+    }
+
     if (!this.isKeyboardRunAllowed(data[0])) {
       return false;
     }
@@ -126,16 +133,32 @@ export class ActionManager {
     return true;
   }
 
+  private hostKeysSource: readonly ActionName[] | undefined;
+  private hostKeysSet: ReadonlySet<ActionName> = new Set();
+
+  private isHostOwned(name: ActionName): boolean {
+    const names = this.app.props.UIOptions.hostActionKeys;
+    if (!names) {
+      return false;
+    }
+    if (names !== this.hostKeysSource) {
+      this.hostKeysSource = names;
+      this.hostKeysSet = new Set(names);
+    }
+    return this.hostKeysSet.has(name);
+  }
+
   /**
    * Vaultdraw: runs `name` as its keyboard shortcut would (the host owns the
    * key, see `UIOptions.hostActionKeys`). Same gates as `handleKeyDown`
-   * minus the `keyTest`; `false` when refused or unknown.
+   * (and App.onKeyDown's element-link-selector bail-out) minus the
+   * `keyTest`; `false` when refused or unknown.
    */
   runShortcut(name: ActionName): boolean {
     const action = this.actions[name];
     if (
       !action ||
-      (!this.app.isInteractionEnabled() && !this.app.isNavigationEnabled()) ||
+      this.getAppState().openDialog?.name === "elementLinkSelector" ||
       !this.isCanvasActionAllowed(action) ||
       !this.isKeyboardRunAllowed(action)
     ) {

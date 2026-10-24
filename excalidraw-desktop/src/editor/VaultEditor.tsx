@@ -39,6 +39,7 @@ import {
 import { hasImporters, runImports } from "../plugins/importerMap";
 import { useCanvasImportMenu } from "../canvasImport/useCanvasImportMenu";
 import {
+  ACTION_KEYS_CONTEXT,
   createActionHandlers,
   HOST_ACTION_NAMES,
 } from "../commands/actionCommands";
@@ -541,16 +542,24 @@ const VaultEditorComponent = ({
 
   // Action keys (canvas.* commands, command audit D5): same order as the tool
   // keys. Excalidraw skips its own keys for these actions only once the
-  // handlers are bound. They share the tool keys' context key.
+  // handlers are bound.
   const [actionKeysBound, setActionKeysBound] = useState(false);
   useEffect(() => {
     if (!libraryApi || typeof libraryApi.runActionShortcut !== "function") {
       return undefined;
     }
     const unbind = registerCommandHandlers(createActionHandlers(libraryApi));
+    const undefine = defineContextKey(
+      ACTION_KEYS_CONTEXT,
+      () =>
+        !document.activeElement?.closest("[data-testid='history-preview']") &&
+        !document.querySelector(".vault-link-hint") &&
+        libraryApi.getAppState().openDialog?.name !== "elementLinkSelector",
+    );
     setActionKeysBound(true);
     return () => {
       setActionKeysBound(false);
+      undefine();
       unbind();
     };
   }, [libraryApi]);

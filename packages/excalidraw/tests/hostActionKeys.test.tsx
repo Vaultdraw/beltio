@@ -45,6 +45,25 @@ describe("host action keys", () => {
     expect(h.elements.every((el) => el.groupIds.length === 0)).toBe(true);
   });
 
+  it("an unclaimed host key does nothing (no fall-through to the nudge)", async () => {
+    await render(<Excalidraw UIOptions={{ hostActionKeys: ["alignTop"] }} />);
+    const [, b] = twoRects();
+    const y = h.elements.find((el) => el.id === b.id)!.y;
+    Keyboard.withModifierKeys({ ctrl: true, shift: true }, () => {
+      Keyboard.keyPress(KEYS.ARROW_UP, GlobalTestState.interactiveCanvas);
+    });
+    expect(h.elements.find((el) => el.id === b.id)!.y).toBe(y);
+  });
+
+  it("runShortcut refuses while the element link selector is open", async () => {
+    await render(<Excalidraw />);
+    twoRects();
+    API.setAppState({
+      openDialog: { name: "elementLinkSelector", sourceElementId: "x" },
+    } as any);
+    expect(run("group")).toBe(false);
+  });
+
   it("runShortcut runs the action when the host owns the key", async () => {
     await render(<Excalidraw UIOptions={{ hostActionKeys: ["group"] }} />);
     twoRects();

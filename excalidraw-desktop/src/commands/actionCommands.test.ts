@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   ACTION_COMMANDS,
+  ACTION_KEYS_CONTEXT,
   ACTION_TABLE,
   HOST_ACTION_NAMES,
   createActionHandlers,
@@ -22,7 +23,6 @@ import {
   registerCommandHandlers,
 } from "./handlerRegistry";
 import { buildKeymap, effectiveKeys } from "./keymap";
-import { TOOL_KEYS_CONTEXT } from "./toolCommands";
 
 import type { Platform } from "./types";
 
@@ -46,7 +46,7 @@ describe("canvas action commands", () => {
       expect(c.id).toMatch(/^canvas\.[a-zA-Z]+$/);
       expect(c.category).toBe("Canvas");
       expect(c.title).toMatch(/^Canvas: /);
-      expect(c.when).toContain(TOOL_KEYS_CONTEXT);
+      expect(c.when).toContain(ACTION_KEYS_CONTEXT);
       expect(c.when).toContain("!textEditing");
     }
     expect(getCommand("canvas.alignTop")?.title).toBe("Canvas: Align top");
@@ -141,7 +141,7 @@ describe("action keys through the real dispatcher", () => {
   const app = { vaultOpen: true, drawingOpen: true, writable: true };
 
   const install = (overrides: Record<string, string[]> = {}) => {
-    const undefine = defineContextKey(TOOL_KEYS_CONTEXT, () => true);
+    const undefine = defineContextKey(ACTION_KEYS_CONTEXT, () => true);
     const unbindHandlers = registerCommandHandlers(
       createActionHandlers({ runActionShortcut }),
     );

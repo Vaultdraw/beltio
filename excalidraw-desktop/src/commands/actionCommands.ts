@@ -10,8 +10,6 @@
 import type { ActionName } from "@excalidraw/excalidraw/actions/types";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
-import { TOOL_KEYS_CONTEXT } from "./toolCommands";
-
 import type { CommandDefinition, CommandHandlers, CommandKeys } from "./types";
 
 interface ActionRow {
@@ -28,6 +26,13 @@ interface ActionRow {
 }
 
 const keys = (...chords: string[]): CommandKeys => ({ default: chords });
+
+/**
+ * Custom context key the editor defines while action keys are bound: false in
+ * a history preview, while link hints take letters and while Excalidraw's
+ * element-link selector is open (Excalidraw ignored keys there).
+ */
+export const ACTION_KEYS_CONTEXT = "keys.actionKeys";
 
 /** One row per action; the order is the order on the Hotkeys page. */
 export const ACTION_TABLE: readonly ActionRow[] = [
@@ -174,11 +179,12 @@ export const ACTION_COMMANDS: CommandDefinition[] = ACTION_TABLE.map((row) => ({
     "!listFocus",
     "!galleryFocus",
     "!graphFocus",
-    TOOL_KEYS_CONTEXT,
+    ACTION_KEYS_CONTEXT,
     "!textEditing",
     "!modalOpen",
   ],
-  repeat: false,
+  // Excalidraw ran its actions on auto-repeat too (held Mod+D, font size).
+  repeat: true,
 }));
 
 /** Handlers for every `canvas.*` command, calling the editor's action hook. */
