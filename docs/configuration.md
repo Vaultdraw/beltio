@@ -425,6 +425,20 @@ The file tree, the Tags list, the Links panel and the Settings page list share o
 | `list.nextView` | Switch Backlinks / Outgoing (Links panel) | `Tab` |
 | `list.exit` | Leave the list (the tree goes back to the canvas) | `Escape` |
 | `navigator.focusTree` | Focus the file tree; again goes back to the canvas | `Mod+Alt+F` |
+| `navigator.clearSearch` | Clear the navigator's search box (offered while it has text) | none |
+
+The file tree's row menu items are commands too, with no default key. They act on the focused row, appear only where the row menu shows them (a folder offers reveal and show as grid, a drawing the rest; duplicate needs a writable vault), and are listed in the palette as **List: …**:
+
+| Command id | Action |
+| --- | --- |
+| `list.duplicate` | Duplicate the drawing |
+| `list.saveAsTemplate` | Save the drawing as a template |
+| `list.reveal` | Reveal the row in the file manager |
+| `list.showAsGrid` | Show the folder as a grid |
+| `list.localGraph` | Open the drawing's local graph |
+| `list.history` | Show the drawing's history |
+| `list.exportPng` / `list.exportSvg` / `list.exportPdf` | Export the drawing |
+| `list.saveCopy` | Save a copy of the drawing |
 
 Rename, delete, move and the row menu need a focused row: with none (even while a drawing is open) they do nothing and the key passes on. In the palette they appear under **List: …** once you have used a list, and act on the last list you used. Arrow-only or Emacs-style lists are one `[hotkeys]` edit away:
 
@@ -603,7 +617,31 @@ The tool letters and digits of the toolbar are now ordinary commands, so they ca
 | `tool.bucketfill` | Tool: Bucket fill | `B` |
 | `tool.lock` | Tool: Keep tool active | `Q` |
 
-Unassign a tool with an empty list (`"tool.laser" = []`) and its letter does nothing. Rebinding keeps Excalidraw's own rules: a tool that is disabled or refused while you draw stays refused. Excalidraw's other shortcuts (Mod+D, Mod+G and so on) are not commands yet.
+Unassign a tool with an empty list (`"tool.laser" = []`) and its letter does nothing. Rebinding keeps Excalidraw's own rules: a tool that is disabled or refused while you draw stays refused.
+
+#### Canvas action keys
+
+Excalidraw's action shortcuts (align, distribute, layer order, flip, group, lock and more) are `canvas.*` commands with the same defaults, in the same scope as the tool keys. Rebind or remove them in `[hotkeys]`; an empty list (`"canvas.flipHorizontal" = []`) leaves the key doing nothing. The palette shows them under Excalidraw's own names with your key. On Windows and Linux, `Mod` is Ctrl and send to back / bring to front use `Mod+Shift` instead of `Mod+Alt`.
+
+| Command id | Action | Default keys |
+| --- | --- | --- |
+| `canvas.alignTop` / `alignBottom` / `alignLeft` / `alignRight` | Align the selection | `Mod+Shift+ArrowUp` / `ArrowDown` / `ArrowLeft` / `ArrowRight` |
+| `canvas.alignVerticallyCentered` / `alignHorizontallyCentered` | Center the selection | none |
+| `canvas.distributeHorizontally` / `distributeVertically` | Distribute the selection | `Alt+H` / `Alt+V` |
+| `canvas.sendBackward` / `bringForward` | One layer down / up | `Mod+BracketLeft` / `Mod+BracketRight` |
+| `canvas.sendToBack` / `bringToFront` | To the bottom / top | `Mod+Alt+BracketLeft` / `Mod+Alt+BracketRight` |
+| `canvas.flipHorizontal` / `flipVertical` | Flip the selection | `Shift+H` / `Shift+V` |
+| `canvas.group` / `ungroup` | Group / ungroup | `Mod+G` / `Mod+Shift+G` |
+| `canvas.toggleElementLock` / `unlockAllElements` | Lock or unlock the selection / unlock all | `Mod+Shift+L` / none |
+| `canvas.duplicateSelection` | Duplicate the selection | `Mod+D` |
+| `canvas.copyStyles` / `pasteStyles` | Copy / paste styles | `Mod+Alt+C` / `Mod+Alt+V` |
+| `canvas.decreaseFontSize` / `increaseFontSize` | Text size down / up | `Mod+Shift+Comma` / `Mod+Shift+Period` |
+| `canvas.hyperlink` | Edit the element's link | `Mod+K` |
+| `canvas.gridMode` / `objectsSnapMode` | Toggle grid / snap to objects | `Mod+Quote` / `Alt+S` |
+| `canvas.zenMode` / `viewMode` / `stats` | Toggle zen mode / view mode / stats | `Alt+Z` / `Alt+R` / `Alt+Slash` |
+| `canvas.zoomToFit` / `zoomToFitSelectionInViewport` / `zoomToFitSelection` | Zoom to fit all / the selection / zoom to the selection | `Shift+1` / `Shift+2` / `Shift+3` |
+
+Still Excalidraw's own and not rebindable: cut, copy, paste, undo, redo, delete, arrow-key nudges, Escape, Enter, Tab, canvas zoom in, out and reset, and select all (`Mod+A`, which text fields need).
 
 #### Vim-style example
 
