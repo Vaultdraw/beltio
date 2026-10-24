@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { applyOps } from "./apply";
 import { buildElements } from "./build";
-import { projectScene } from "./project";
+import { projectScene, sceneDetails } from "./project";
 import { byId, makeElements, stubApi } from "./testUtils";
 import { validateOps } from "./validate";
 
@@ -110,5 +110,48 @@ describe("sceneOps micro-benchmark (jsdom)", () => {
     const r = measure(() => applyOps(api, ops), 20);
     report("applyOps 100 adds (10k scene, stub api)", r);
     expect(r.p95).toBeLessThan(150);
+  });
+
+  it("applyOps, a connected flow of 100 ops (refs, bound arrows, one group) against 10k", () => {
+    const { api } = stubApi(els);
+    const ops: SceneOp[] = [];
+    const members: { ref: string }[] = [];
+    for (let i = 0; i < 33; i++) {
+      ops.push(
+        {
+          op: "add",
+          ref: `a${i}`,
+          element: { type: "rectangle", x: i * 200, y: 0, text: `Step ${i}` },
+        },
+        {
+          op: "add",
+          ref: `b${i}`,
+          element: { type: "ellipse", x: i * 200 + 120, y: 0 },
+        },
+        {
+          op: "add",
+          ref: `c${i}`,
+          element: {
+            type: "arrow",
+            start: { ref: `a${i}` },
+            end: { ref: `b${i}` },
+          },
+        },
+      );
+      members.push({ ref: `a${i}` }, { ref: `b${i}` }, { ref: `c${i}` });
+    }
+    ops.push({ op: "group", ids: members });
+    const r = measure(() => applyOps(api, ops), 20);
+    report("applyOps flow of 100 ops (10k scene, stub api)", r);
+    expect(r.p95).toBeLessThan(150);
+  });
+
+  it("scene.get of 10 elements with rich fields at 10k", () => {
+    const ids = [0, 999, 2500, 5000, 7500, 9000, 9500, 9990, 9998, 9999].map(
+      (i) => els[i].id,
+    );
+    const r = measure(() => sceneDetails(els, ids, { data: true }, "k"), 200);
+    report("sceneDetails 10 of 10k", r);
+    expect(r.p95).toBeLessThan(5);
   });
 });

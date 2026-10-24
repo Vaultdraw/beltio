@@ -199,13 +199,13 @@ const checkProps = (
   issues: SceneOpIssue[],
 ) => {
   for (const key of Object.keys(props)) {
-    if (SPECIAL.has(key)) {
-      continue;
-    }
     const check = Object.prototype.hasOwnProperty.call(PROPS, key)
       ? PROPS[key]
       : null;
     if (!check) {
+      if (SPECIAL.has(key)) {
+        continue;
+      }
       issues.push({ op, key, message: "unknown property" });
       continue;
     }
@@ -404,39 +404,52 @@ export const validateOps = (
         issues.push({ op: i, key: "props", message: "must be an object" });
         return;
       }
-      checkProps(raw.props, i, issues);
-      checkData(raw.props, i, issues, options.dataKey);
-      for (const key of ["start", "end"]) {
-        if (key in raw.props) {
-          issues.push({
-            op: i,
-            key,
-            message: "only valid when adding an arrow",
-          });
-        }
+      const props = raw.props;
+      checkProps(props, i, issues);
+      if ("data" in props) {
+        checkData(props, i, issues, options.dataKey);
       }
-      if (target && target.type !== "text") {
-        for (const key of ["text", "fontSize", "fontFamily"]) {
-          if (key in raw.props) {
-            issues.push({ op: i, key, message: "only valid on text elements" });
+      if ("start" in props || "end" in props) {
+        for (const key of ["start", "end"]) {
+          if (key in props) {
+            issues.push({
+              op: i,
+              key,
+              message: "only valid when adding an arrow",
+            });
           }
         }
       }
-      if (target && target.type === "text" && "roundness" in raw.props) {
+      if (target && target.type !== "text") {
+        if ("text" in props || "fontSize" in props || "fontFamily" in props) {
+          for (const key of ["text", "fontSize", "fontFamily"]) {
+            if (key in props) {
+              issues.push({
+                op: i,
+                key,
+                message: "only valid on text elements",
+              });
+            }
+          }
+        }
+      } else if (target && "roundness" in props) {
         issues.push({
           op: i,
           key: "roundness",
           message: "not valid on text elements",
         });
       }
-      if (target && target.type !== "arrow" && target.type !== "line") {
-        if ("points" in raw.props) {
-          issues.push({
-            op: i,
-            key: "points",
-            message: "only valid on lines and arrows",
-          });
-        }
+      if (
+        target &&
+        target.type !== "arrow" &&
+        target.type !== "line" &&
+        "points" in props
+      ) {
+        issues.push({
+          op: i,
+          key: "points",
+          message: "only valid on lines and arrows",
+        });
       }
     } else if (raw.op === "delete") {
       if (liveTarget(raw.id, i, "id")) {
