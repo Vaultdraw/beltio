@@ -46,6 +46,8 @@ import { THUMBNAIL_COMMANDS } from "./thumbnailCommands";
 import { CONFIG_COMMANDS } from "./configCommands";
 import { MEMORY_COMMANDS } from "./memoryCommands";
 import { TOOL_COMMANDS } from "./toolCommands";
+// command audit (D5): Excalidraw action keys
+import { ACTION_COMMANDS } from "./actionCommands";
 
 import type {
   Chord,
@@ -627,6 +629,8 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...PEN_COMMANDS,
   ...TOOL_DEFAULT_COMMANDS,
   ...TOOL_COMMANDS,
+  // command audit (D5)
+  ...ACTION_COMMANDS,
   ...KEYS_COMMANDS,
   ...LINKS_COMMANDS,
   ...TAGS_COMMANDS,

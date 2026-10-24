@@ -60,16 +60,23 @@ describe("findConflicts", () => {
   it("flags Excalidraw keys with the action label, not for defaults", () => {
     const result = findConflicts(
       COMMANDS,
-      { "vault.switch": ["Mod+D"] },
+      { "vault.switch": ["Alt+Shift+C"], "file.save": ["Mod+D"] },
       "mac",
     );
-    expect(result.get("vault.switch")?.get("Mod+D")).toEqual([
+    expect(result.get("vault.switch")?.get("Alt+Shift+C")).toEqual([
       {
         kind: "excalidraw",
-        action: "duplicateSelection",
-        label: "Duplicate selection",
+        action: "copyAsPng",
+        label: "Copy as PNG",
       },
     ]);
+    // Mod+D is now the canvas.duplicateSelection command: a command clash
+    expect(
+      result
+        .get("file.save")
+        ?.get("Mod+D")
+        ?.map((c) => c.kind),
+    ).toEqual(["command"]);
     // Mod+P and Mod+Shift+= are defaults that overlap Excalidraw on purpose
     expect(result.get("palette.files")).toBeUndefined();
     expect(result.get("palette.commands")).toBeUndefined();
@@ -148,13 +155,15 @@ describe("findConflicts: prefix and sequences", () => {
   });
 
   it("checks Excalidraw and reserved keys on the first chord only", () => {
-    const dup = findConflicts([cmd("a", [])], { a: ["Mod+D X"] }, "mac");
-    expect(dup.get("a")?.get("Mod+D X")?.[0]).toMatchObject({
+    const dup = findConflicts([cmd("a", [])], { a: ["Alt+Shift+C X"] }, "mac");
+    expect(dup.get("a")?.get("Alt+Shift+C X")?.[0]).toMatchObject({
       kind: "excalidraw",
-      action: "duplicateSelection",
+      action: "copyAsPng",
     });
     // a later chord that equals an Excalidraw key is fine
-    expect(findConflicts([cmd("a", ["X Mod+D"])], {}, "mac").size).toBe(0);
+    expect(findConflicts([cmd("a", ["X Alt+Shift+C"])], {}, "mac").size).toBe(
+      0,
+    );
     const reserved = findConflicts([cmd("a", ["Mod+Q X"])], {}, "mac");
     expect(reserved.get("a")?.get("Mod+Q X")?.[0].kind).toBe("reserved");
     expect(findConflicts([cmd("a", ["X Mod+Q"])], {}, "mac").size).toBe(0);

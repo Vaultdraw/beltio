@@ -912,6 +912,7 @@ class App extends React.Component<AppProps, AppState> {
       id: this.id,
       setActiveTool: this.setActiveTool,
       activateToolShortcut: this.activateToolShortcut,
+      runActionShortcut: (name) => this.actionManager.runShortcut(name),
       setCursor: this.cursor.set,
       resetCursor: this.cursor.reset,
       getEditorInterface: () => this.editorInterface,

@@ -38,6 +38,10 @@ import {
 } from "../canvasImport/importFiles";
 import { hasImporters, runImports } from "../plugins/importerMap";
 import { useCanvasImportMenu } from "../canvasImport/useCanvasImportMenu";
+import {
+  createActionHandlers,
+  HOST_ACTION_NAMES,
+} from "../commands/actionCommands";
 import { CommandMenuItem } from "../commands/CommandMenuItem";
 import { GRAPH_COMMAND_IDS } from "../commands/graphCommands";
 import { registerCommandHandlers } from "../commands/handlerRegistry";
@@ -535,6 +539,22 @@ const VaultEditorComponent = ({
     };
   }, [libraryApi]);
 
+  // Action keys (canvas.* commands, command audit D5): same order as the tool
+  // keys. Excalidraw skips its own keys for these actions only once the
+  // handlers are bound. They share the tool keys' context key.
+  const [actionKeysBound, setActionKeysBound] = useState(false);
+  useEffect(() => {
+    if (!libraryApi || typeof libraryApi.runActionShortcut !== "function") {
+      return undefined;
+    }
+    const unbind = registerCommandHandlers(createActionHandlers(libraryApi));
+    setActionKeysBound(true);
+    return () => {
+      setActionKeysBound(false);
+      unbind();
+    };
+  }, [libraryApi]);
+
   // Canvas sync: the display colour transform changed (theme, mode, sync
   // toggle, export). Element caches invalidate on the next render, so force
   // one by re-committing the same elements (no history entry, no save: the
@@ -985,6 +1005,7 @@ const VaultEditorComponent = ({
         libraryUIOptions={libraryUIOptions}
         UIOptions={{
           toolShortcuts: !toolKeysBound,
+          hostActionKeys: actionKeysBound ? HOST_ACTION_NAMES : undefined,
           canvasActions: {
             toggleTheme: true,
             export: false,

@@ -1,4 +1,5 @@
 /** Conflicts between a command's keys and other commands, Excalidraw, reserved. */
+import { isHostOwnedAction } from "./actionCommands";
 import { defaultKeys } from "./commands";
 import { excalidrawActionsFor } from "./excalidrawKeys";
 import { effectiveKeys } from "./keymap";
@@ -176,9 +177,15 @@ export function findConflicts(
   return result;
 }
 
-/** Tool letters and Q are `tool.*` commands (the app turns Excalidraw's own off), so they only clash command-to-command. */
+/**
+ * Tool letters and Q are `tool.*` commands, action keys (align, group ...)
+ * `canvas.*` commands (the app turns Excalidraw's own off), so they only
+ * clash command-to-command.
+ */
 const isHostOwnedKey = (key: { source: string; action: string }): boolean =>
-  key.source === "tool" || key.action === "toolLock";
+  key.source === "tool" ||
+  key.action === "toolLock" ||
+  isHostOwnedAction(key.action);
 
 /** Number of (command, chord) pairs that have at least one conflict. */
 export function conflictCount(conflicts: ConflictMap): number {

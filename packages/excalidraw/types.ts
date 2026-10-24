@@ -57,7 +57,7 @@ import type {
 } from "@excalidraw/element";
 import type { GlobalPoint } from "@excalidraw/math";
 
-import type { Action } from "./actions/types";
+import type { Action, ActionName } from "./actions/types";
 import type { Spreadsheet } from "./charts";
 import type { ClipboardData } from "./clipboard";
 import type App from "./components/App";
@@ -1281,6 +1281,12 @@ export type UIOptions = Partial<{
    * `ExcalidrawAPI.activateToolShortcut`. Defaults to `true`.
    */
   toolShortcuts?: boolean;
+  /**
+   * Actions whose keyboard shortcut the host owns: Excalidraw skips their
+   * `keyTest`, and the host runs them through
+   * `ExcalidrawAPI.runActionShortcut`. Defaults to none.
+   */
+  hostActionKeys?: readonly ActionName[];
   /** @deprecated does nothing. Will be removed in 0.15 */
   welcomeScreen?: boolean;
 }>;
@@ -1625,6 +1631,12 @@ export interface ExcalidrawImperativeAPI {
    * `false` when refused.
    */
   activateToolShortcut: InstanceType<typeof App>["activateToolShortcut"];
+  /**
+   * Runs an action as its keyboard shortcut would, with every keyboard gate
+   * (interaction, view mode, `canvasActions`); returns `false` when refused
+   * or unknown.
+   */
+  runActionShortcut: (name: ActionName) => boolean;
   setCursor: InstanceType<typeof App>["cursor"]["set"];
   resetCursor: InstanceType<typeof App>["cursor"]["reset"];
   toggleSidebar: InstanceType<typeof App>["toggleSidebar"];

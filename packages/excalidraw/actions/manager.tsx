@@ -94,14 +94,13 @@ export class ActionManager {
       return false;
     }
 
-    const canvasActions = this.app.props.UIOptions.canvasActions;
+    const hostKeys = this.app.props.UIOptions.hostActionKeys;
     const data = Object.values(this.actions)
       .sort((a, b) => (b.keyPriority || 0) - (a.keyPriority || 0))
       .filter(
         (action) =>
-          (action.name in canvasActions
-            ? canvasActions[action.name as keyof typeof canvasActions]
-            : true) &&
+          this.isCanvasActionAllowed(action) &&
+          !hostKeys?.includes(action.name) &&
           action.keyTest &&
           action.keyTest(
             event,
@@ -118,34 +117,59 @@ export class ActionManager {
       return false;
     }
 
-    const action = data[0];
+    if (!this.isKeyboardRunAllowed(data[0])) {
+      return false;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    this.performKeyboardAction(data[0]);
+    return true;
+  }
 
+  /**
+   * Vaultdraw: runs `name` as its keyboard shortcut would (the host owns the
+   * key, see `UIOptions.hostActionKeys`). Same gates as `handleKeyDown`
+   * minus the `keyTest`; `false` when refused or unknown.
+   */
+  runShortcut(name: ActionName): boolean {
+    const action = this.actions[name];
+    if (
+      !action ||
+      (!this.app.isInteractionEnabled() && !this.app.isNavigationEnabled()) ||
+      !this.isCanvasActionAllowed(action) ||
+      !this.isKeyboardRunAllowed(action)
+    ) {
+      return false;
+    }
+    this.performKeyboardAction(action);
+    return true;
+  }
+
+  private isCanvasActionAllowed(action: Action) {
+    const canvasActions = this.app.props.UIOptions.canvasActions;
+    return action.name in canvasActions
+      ? !!canvasActions[action.name as keyof typeof canvasActions]
+      : true;
+  }
+
+  private isKeyboardRunAllowed(action: Action) {
     // in the non-interactive editor, only navigation actions are allowed
     // (when navigation itself is)
     if (!this.app.isInteractionEnabled() && action.navigation !== true) {
       return false;
     }
+    return !(this.getAppState().viewModeEnabled && action.viewMode !== true);
+  }
 
-    if (this.getAppState().viewModeEnabled && action.viewMode !== true) {
-      return false;
-    }
-
+  /** A blocked viewport transition swallows the key without running. */
+  private performKeyboardAction(action: Action) {
     if (this.isActionBlockedByViewportTransition(action)) {
-      event.preventDefault();
-      event.stopPropagation();
-      return true;
+      return;
     }
-
     const elements = this.getElementsIncludingDeleted();
     const appState = this.getAppState();
-    const value = null;
-
     trackAction(action, "keyboard", appState, elements, this.app, null);
-
-    event.preventDefault();
-    event.stopPropagation();
-    this.updater(data[0].perform(elements, appState, value, this.app));
-    return true;
+    this.updater(action.perform(elements, appState, null, this.app));
   }
 
   executeAction<T extends Action>(

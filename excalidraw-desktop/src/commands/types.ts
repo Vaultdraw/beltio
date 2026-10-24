@@ -30,6 +30,7 @@ export type BuiltinCommandCategory =
   | "Memory"
   | "Tabs"
   | "AI"
+  | "Canvas"
   | "Help";
 
 export type CommandCategory = BuiltinCommandCategory | (string & {});
