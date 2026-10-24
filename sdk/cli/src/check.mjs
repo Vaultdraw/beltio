@@ -27,7 +27,7 @@ const MAX_SCANNED_FILES = 200;
  * warning. Best effort: it only looks for `ctx.<area>` in the code. A test keeps the
  * revision equal to `vaultdraw.minApp` in sdk/api/package.json.
  */
-const FIRST_APP_WITH_API = "0.1.2";
+export const FIRST_APP_WITH_API = "0.1.2";
 export const API_AREAS = /** @type {const} */ ([
   [
     /\bctx\.(commands|settings|events|log|ui|panels|scene|setTimeout|setInterval)\b/,

@@ -263,6 +263,14 @@ export async function runDev(dir, opts, out, err) {
   if (!dir) {
     throw new EnvError("Missing the plugin folder: vaultdraw-plugin dev <dir>");
   }
+  if (opts.app && !opts.sandbox) {
+    throw new EnvError("--app only works with --sandbox");
+  }
+  if (opts.sandbox && (opts.configDir || opts.once)) {
+    throw new EnvError(
+      "--sandbox makes its own config folder and runs until you stop it; it cannot be combined with --config-dir or --once",
+    );
+  }
   let src = path.resolve(dir);
   if (!existsSync(src) || !statSync(src).isDirectory()) {
     throw new EnvError(`Folder not found: ${dir}`);
@@ -288,6 +296,9 @@ export async function runDev(dir, opts, out, err) {
     src = path.join(project, "dist");
   }
   try {
+    if (opts.sandbox) {
+      return await runSandbox(dir, src, opts, out, err);
+    }
     return await mirror(dir, src, opts, out, err);
   } finally {
     await builder?.stop();
@@ -295,9 +306,91 @@ export async function runDev(dir, opts, out, err) {
 }
 
 /**
+ * `dev --sandbox`: a throwaway app instance (own config, state and vault) with the plugin
+ * enabled; the folder is removed when the app or dev stops.
  * @param {string} dir
  * @param {string} src
- * @param {{ configDir?: string, once?: boolean, env: Record<string, string | undefined> }} opts
+ * @param {{ app?: string, env: Record<string, string | undefined> }} opts
+ * @param {(s: string) => void} out
+ * @param {(s: string) => void} err
+ * @returns {Promise<number>}
+ */
+async function runSandbox(dir, src, opts, out, err) {
+  const sb = await import("./sandbox.mjs");
+  let doc;
+  try {
+    doc = parseToml(readFileSync(path.join(src, "plugin.toml"), "utf8"));
+  } catch {
+    // mirror() reports a missing or broken manifest in its usual words
+    return await mirror(dir, src, { ...opts, once: true }, out, err);
+  }
+  const id = doc.id;
+  if (typeof id !== "string" || !isValidPluginId(id)) {
+    return await mirror(dir, src, { ...opts, once: true }, out, err);
+  }
+  const bin = sb.findApp({ app: opts.app, env: opts.env });
+  const version = sb.readAppVersion(bin);
+  const verdict = sb.checkAppVersion(
+    version,
+    typeof doc.min_app === "string" ? doc.min_app : null,
+  );
+  if (verdict.error) {
+    err(verdict.error);
+    return 1;
+  }
+  if (verdict.warning) {
+    err(`Note: ${verdict.warning}`);
+  }
+  const box = sb.createSandbox(id);
+  /** @type {ReturnType<typeof sb.launchApp> | null} */
+  let app = null;
+  const aborter = new AbortController();
+  let appCode = 0;
+  try {
+    out(`Sandbox: ${box.base} (removed when you stop)`);
+    out(`Vault:   ${box.vault}`);
+    const env = { ...opts.env, ...box.env };
+    const code = await mirror(
+      dir,
+      src,
+      {
+        env,
+        configDir: box.config,
+        sandbox: true,
+        signal: aborter.signal,
+        onInstalled() {
+          out(`Starting ${bin} on the sandbox. Your own config, state and vaults are not used.`);
+          app = sb.launchApp(bin, box.env, (l) => out(`app | ${l}`));
+          void app.exited.then((r) => {
+            if (r.error) {
+              err(`Could not start the app: ${r.error.message}`);
+              appCode = 1;
+            } else if (r.code) {
+              err(`The app exited with code ${r.code}.`);
+              appCode = 1;
+            } else if (!aborter.signal.aborted) {
+              out("The app closed.");
+            }
+            aborter.abort();
+          });
+        },
+      },
+      out,
+      err,
+    );
+    return code !== 0 ? code : appCode;
+  } finally {
+    await app?.stop();
+    if (!sb.removeSandbox(box.base)) {
+      err(`Could not remove ${box.base}; delete it by hand.`);
+    }
+  }
+}
+
+/**
+ * @param {string} dir
+ * @param {string} src
+ * @param {{ configDir?: string, once?: boolean, sandbox?: boolean, signal?: AbortSignal, onInstalled?: () => void, env: Record<string, string | undefined> }} opts
  * @param {(s: string) => void} out
  * @param {(s: string) => void} err
  * @returns {Promise<number>}
@@ -395,10 +488,15 @@ async function mirror(dir, src, opts, out, err) {
   if (!sync(true)) {
     return 1;
   }
-  out(NEXT_STEPS);
+  out(
+    opts.sandbox
+      ? "The plugin is enabled in the sandbox config. Saves reload it by itself."
+      : NEXT_STEPS,
+  );
   if (opts.once) {
     return 0;
   }
+  opts.onInstalled?.();
 
   out(`Watching ${src}. Press Ctrl+C to stop.`);
   const { devLogPath, tailLog } = await import("./devlog.mjs");
@@ -455,6 +553,10 @@ async function mirror(dir, src, opts, out, err) {
     };
     process.once("SIGINT", stop);
     process.once("SIGTERM", stop);
+    if (opts.signal?.aborted) {
+      stop();
+    }
+    opts.signal?.addEventListener("abort", stop, { once: true });
   });
   return 0;
 }
