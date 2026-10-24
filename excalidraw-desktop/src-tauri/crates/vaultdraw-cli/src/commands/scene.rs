@@ -6,7 +6,7 @@ use crate::cli::{Cli, SceneAction};
 use crate::error::Fail;
 use crate::render;
 use serde_json::{json, Map, Value};
-use std::io::Read;
+use std::io::{IsTerminal, Read};
 use vaultdraw_protocol::methods;
 
 /// Params with the optional target (`path` or `file`) filled in.
@@ -61,6 +61,7 @@ pub fn run(cli: &Cli, action: &SceneAction) -> Result<(), Fail> {
 
 /// Operations from a file or stdin (`-`): a JSON array, or an object with an `ops` array.
 fn read_ops(src: &str) -> Result<Vec<Value>, Fail> {
+    check_ops_source(src, std::io::stdin().is_terminal())?;
     let (text, name) = if src == "-" {
         let mut t = String::new();
         std::io::stdin().read_to_string(&mut t).map_err(|e| Fail::cli(format!("cannot read stdin: {e}")))?;
@@ -69,6 +70,14 @@ fn read_ops(src: &str) -> Result<Vec<Value>, Fail> {
         (std::fs::read_to_string(src).map_err(|e| Fail::cli(format!("cannot read {src}: {e}")))?, src)
     };
     parse_ops(&text, name)
+}
+
+/// Reading stdin from an interactive terminal would hang, so refuse before reading.
+fn check_ops_source(src: &str, stdin_is_terminal: bool) -> Result<(), Fail> {
+    if src == "-" && stdin_is_terminal {
+        return Err(Fail::cli("pass --ops FILE or pipe the operations on stdin"));
+    }
+    Ok(())
 }
 
 fn parse_ops(text: &str, name: &str) -> Result<Vec<Value>, Fail> {
@@ -86,6 +95,14 @@ fn parse_ops(text: &str, name: &str) -> Result<Vec<Value>, Fail> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn terminal_stdin_is_refused_before_reading() {
+        let e = check_ops_source("-", true).unwrap_err();
+        assert!(e.to_string().contains("pass --ops FILE or pipe the operations on stdin"));
+        assert!(check_ops_source("-", false).is_ok());
+        assert!(check_ops_source("ops.json", true).is_ok());
+    }
 
     #[test]
     fn ops_as_array_or_object() {
