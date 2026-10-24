@@ -306,11 +306,12 @@ Dev log details:
 
 | Command | What it does | Docs |
 | --- | --- | --- |
-| `check <dir\|file.zip> [--json]` | Static checks of a folder or a zip | below |
+| `check <dir\|file.zip> [--json] [--activate [--timeout <ms>]]` | Static checks of a folder or a zip; `--activate` also runs `activate()` once in a dry host (folder only) | below |
 | `init <id> [--example <name> \| --template command\|panel\|scene] [--dir <parent>]` | A JavaScript plugin from an example, or a TypeScript project from a template | [getting-started.md](getting-started.md), [testing.md](testing.md#typescript-projects) |
 | `build [dir] [--watch]` | Bundle a TypeScript project into `dist/` | [packaging.md](packaging.md) |
 | `package <dir> [--out <dir>] [--json]` | Check, then write a reproducible zip and its `.sha256` file | [packaging.md](packaging.md) |
 | `dev <dir> [--config-dir <dir>] [--once] [--print-env]` | Copy the plugin into the plugins folder on each save; show the dev log | [getting-started.md](getting-started.md) |
+| `dev <dir> --sandbox [--app <path>]` | Start the app on a throwaway config, state and vault, with the plugin enabled; remove them on exit | [getting-started.md](getting-started.md#the-sandbox) |
 
 The templates are `.tpl` files in `sdk/cli/templates/`; `init` strips the suffix and replaces `__ID__` and `__NAME__`. A manifest can name its build entry in an `x-build` table (`entry = "src/main.ts"`).
 
@@ -349,3 +350,23 @@ The templates are `.tpl` files in `sdk/cli/templates/`; `init` strips the suffix
 | `zip-checksum` | error | Zip only: the file does not match its `.sha256` file, or that file holds no checksum |
 | `zip-invalid` | error | Zip only: the archive breaks the strict reader's rules (see [packaging.md](packaging.md#check-a-zip)) |
 | `zip-layout` | error | Zip only: `plugin.toml` is inside a single top folder instead of at the zip root |
+
+With `--activate`, the codes below are added (only when the static checks found no errors). `activate-unsupported`, `activate-timer-error`, `deactivate-threw` and `dispose-threw` are warnings.
+
+| Code | Kind | Meaning |
+| --- | --- | --- |
+| `activate-load-failed` | error | `main` could not be loaded (a syntax error, or an error at the top level) |
+| `activate-no-default` | error | `main` has no default export with an `activate(ctx)` function |
+| `activate-threw` | error | `activate()` threw or rejected |
+| `activate-timeout` | error | `activate()` did not finish in time (default 5000 ms; `--timeout <ms>`, 100 to 60000) |
+| `activate-crashed` | error | The dry run ended without a result |
+| `activate-unbound-command` | error | A declared command is never bound with `ctx.commands.register` |
+| `activate-unbound-panel` | error | A declared panel is never registered with `ctx.panels.register` |
+| `activate-undeclared-command` | error | `activate()` binds a command `plugin.toml` does not declare (the app refuses it) |
+| `activate-undeclared-panel` | error | The same for a panel |
+| `activate-unknown-event` | error | `ctx.events.on` names an event the app does not have |
+| `activate-bad-call` | error | `register` was called without an id and a function or component |
+| `activate-unsupported` | warning | The plugin used something that needs the running app (`ctx.scene`, `ctx.commands.execute`, `ctx.panels.open`, `ctx.settings.set`); it was skipped |
+| `activate-timer-error`, `deactivate-threw`, `dispose-threw` | warning | A timer callback, `deactivate()` or a `dispose()` threw |
+
+`--activate` runs your plugin's code in a child process with your rights (the app does the same), so use it only on plugins you trust. The child gets a minimal environment (no tokens), and the timeout stops loops. It needs Node 22.15 or newer. The shared modules (`react`, `@vaultdraw/api` and the others the app provides) are stubs in this run, so panel components are not rendered; use the [mock host](testing.md) for behaviour tests.

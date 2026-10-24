@@ -105,7 +105,24 @@ Every finding code is listed in the [reference](reference.md).
 - **Reference:** [reference.md](reference.md) covers the manifest, the whole `ctx` API, the lifecycle and every check code.
 - **Dev log:** see [below](#the-dev-log).
 - **Errors:** use `ctx.log`, not `console.*`, which is not attributed to your plugin. A command declared but not bound in `activate()` fails with a toast. Errors are attributed to your plugin. A `dev` plugin that errors out is stopped for the session only, and the next save starts it again with a fresh count.
-- **Keep your own config untouched:** `$VP dev --print-env` prints a throwaway config and state folder as `VAULTDRAW_CONFIG_DIR=...` and `VAULTDRAW_STATE_DIR=...`. Start the app with those two variables set and run `dev` with the same variables (or `--config-dir <dir>`). `dev` then writes there, not to `~/.config/vaultdraw/`.
+- **Keep your own config untouched:** use the [sandbox](#the-sandbox) (`dev --sandbox`), or by hand: `$VP dev --print-env` prints a throwaway config and state folder as `VAULTDRAW_CONFIG_DIR=...` and `VAULTDRAW_STATE_DIR=...`. Start the app with those two variables set and run `dev` with the same variables (or `--config-dir <dir>`). `dev` then writes there, not to `~/.config/vaultdraw/`. By hand, the app still opens your own recent vault; the sandbox does not.
+- **Does it activate?** `$VP check . --activate` also runs `activate()` once in a dry host and reports commands or panels that are declared but never bound (see the [reference](reference.md#check-codes)).
+
+## The sandbox
+
+`$VP dev . --sandbox` starts the app on a throwaway copy of everything, so a buggy plugin cannot touch your settings or drawings:
+
+```
+Sandbox: /tmp/vds-aB3dEf (removed when you stop)
+Vault:   /tmp/vds-aB3dEf/vault
+```
+
+It makes `/tmp/vds-xxxxxx/` with `config/` (a `config.toml` that enables your plugin), `state/` and `vault/` with one drawing, copies the plugin in, starts the app, keeps copying on each save and removes the folder when the app closes or you press Ctrl+C. The app is found with `--app <path>`, then `$VAULTDRAW_APP`, then `/Applications/Vaultdraw.app` (macOS).
+
+- **Your vault stays closed.** The app is started with `VAULTDRAW_CONFIG_DIR`, `VAULTDRAW_STATE_DIR` and `VAULTDRAW_VAULT` set to the sandbox. With `VAULTDRAW_VAULT` set, the app opens only that folder and never reads or writes your own `recent-vault`.
+- **App version.** The app must have plugin support (0.1.2 or newer) and be at least `min_app`; otherwise `dev` stops and says so. Older apps ignore `VAULTDRAW_VAULT`, which is why the version is checked first.
+- **Limit.** The web view's own storage (window size, a few remembered UI choices) is still the app's normal one.
+- `--sandbox` cannot be combined with `--config-dir` or `--once`.
 
 ## The dev log
 

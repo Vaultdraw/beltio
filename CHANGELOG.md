@@ -48,6 +48,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - The activity bar disappears when every entry is hidden, instead of leaving an empty 36 px strip. Showing one entry again (Settings → Interface) brings it back.
 - A plugin with `dev = true` is no longer switched off for good after three errors. It stops for the session, the disable is not saved, and the next save reloads it with a fresh error count.
 - Dev reload now also works for plugins in symlinked folders and in temp folders on macOS (watched paths are canonicalised).
+- An app started with `VAULTDRAW_VAULT` set opens only that vault and no longer reads or writes your own `recent-vault` (used by `dev --sandbox`; it changes nothing when the variable is unset).
 
 ### Plugin SDK
 
@@ -61,6 +62,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - TypeScript templates: `vaultdraw-plugin init <id> --template command|panel|scene`. `dev` builds a TypeScript project and mirrors `dist/`.
 - Dev log: for a plugin with `dev = true`, the app appends its `ctx.log` lines and attributed errors to `<state dir>/plugin-logs/<id>.log` (capped at 1 MB). `vaultdraw-plugin dev` shows new lines, prefixed with `log |`.
 - `create-vaultdraw-plugin`: a thin wrapper around `init --template command` (not published).
+- `vaultdraw-plugin check --activate`: also runs `activate()` once in a dry host (a child process with a timeout) and reports declared commands or panels that are never bound, undeclared ones, unknown events, errors and endless activations.
+- `vaultdraw-plugin dev --sandbox`: starts the app on a throwaway config, state and vault with the plugin enabled, and removes them on exit.
 - Doc pages: `sdk/docs/testing.md` and `sdk/docs/packaging.md`.
 - A manifest test corpus that pins what `plugin.toml` accepts and refuses.
 - Two doc pages: `sdk/docs/reference.md` and `sdk/docs/getting-started.md`.
