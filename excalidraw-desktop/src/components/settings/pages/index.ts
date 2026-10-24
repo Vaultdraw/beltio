@@ -5,6 +5,7 @@ import { memoryControls } from "../../../memory/memorySettingsControls";
 
 import { aboutControls } from "./About";
 import { appearanceControls } from "./Appearance";
+import { controlControls } from "./Control";
 import { drawingControls } from "./Drawing";
 import { filesControls } from "./Files";
 import { generalControls } from "./General";
@@ -38,5 +39,6 @@ export const SETTING_CONTROLS: SettingControls = {
   ...historyControls,
   ...hotkeysControls,
   ...pluginsControls,
+  ...controlControls,
   ...aboutControls,
 };

@@ -33,6 +33,7 @@ export type SettingsPageId =
   | "history"
   | "hotkeys"
   | "plugins"
+  | "control"
   | "about";
 
 export interface SettingsPage {
@@ -68,6 +69,7 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
   ...HISTORY_SETTINGS_PAGES,
   { id: "hotkeys", label: "Hotkeys", group: "Options" },
   { id: "plugins", label: "Plugins", group: "Options" },
+  { id: "control", label: "Control", group: "Options" },
   { id: "about", label: "About", group: "Options" },
 ];
 
@@ -767,6 +769,34 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
       "addon",
     ],
     perVault: true,
+  },
+
+  // ---- Control ----
+  {
+    id: "ai-enabled",
+    page: "control",
+    label: "AI",
+    description:
+      "Off keeps your device fully offline. On lets an AI app you connect read and edit your drawings.",
+    keywords: ["ai", "assistant", "agent", "llm", "mcp", "offline", "privacy"],
+    configKey: "ai.enabled",
+  },
+  {
+    id: "ai-mcp-enabled",
+    page: "control",
+    label: "AI tools interface (MCP)",
+    description:
+      "Lets AI apps connect through the MCP tools interface. Only applies while AI is on.",
+    keywords: ["mcp", "model context protocol", "tools", "ai", "agent"],
+    configKey: "ai.mcp_enabled",
+  },
+  {
+    id: "control-notify-edits",
+    page: "control",
+    label: "Edit notices",
+    description: "Show a notice when a script or AI tool edits the drawing.",
+    keywords: ["notify", "notice", "toast", "script", "ai", "edit", "control"],
+    configKey: "control.notify_edits",
   },
 
   // ---- About ----

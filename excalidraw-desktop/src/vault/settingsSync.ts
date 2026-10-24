@@ -237,6 +237,9 @@ type ConfigField =
   | "linkHoverPreview"
   | "tagAutocomplete"
   | "tagPaneSort"
+  | "aiEnabled"
+  | "aiMcpEnabled"
+  | "controlNotifyEdits"
   | "pdfMaxSide"
   | "pdfFormat"
   | "pdfQuality"
@@ -630,6 +633,24 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "tags.pane_sort",
     expected: '"name" or "count"',
     valid: isTagSort,
+  },
+  {
+    field: "aiEnabled",
+    key: "ai.enabled",
+    expected: "true or false",
+    valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "aiMcpEnabled",
+    key: "ai.mcp_enabled",
+    expected: "true or false",
+    valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "controlNotifyEdits",
+    key: "control.notify_edits",
+    expected: "true or false",
+    valid: (v) => typeof v === "boolean",
   },
   {
     field: "pdfMaxSide",

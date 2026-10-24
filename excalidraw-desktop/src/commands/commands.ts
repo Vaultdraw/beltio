@@ -3,6 +3,7 @@
  * those). Order matters: it is the dispatcher's tie-break and the order the
  * Hotkeys page lists commands in.
  */
+import { AI_COMMANDS } from "../ai/aiCommands";
 import { FORMULA_COMMANDS } from "../formula/formulaCommands";
 import { HELP_COMMANDS } from "../help/helpCommands";
 import { HISTORY_COMMANDS } from "../history/historyCommands";
@@ -631,6 +632,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...THUMBNAIL_COMMANDS,
   ...GALLERY_COMMANDS,
   ...MEMORY_COMMANDS,
+  ...AI_COMMANDS,
   ...HELP_COMMANDS,
 ];
 

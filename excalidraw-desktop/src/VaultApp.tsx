@@ -148,6 +148,7 @@ import { Banner } from "./components/Banner";
 import { Toasts } from "./components/Toasts";
 import { toastStore } from "./toasts/toastStore";
 import { describeReadOnly } from "./vault/readOnlyReason";
+import { AiHost } from "./ai/AiHost";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { VaultHome } from "./components/VaultHome";
 import { DeferredHome } from "./components/DeferredHome";
@@ -2641,6 +2642,9 @@ export const VaultApp = ({
           />
         </Suspense>
       )}
+
+      {/* After Settings: the warning must stack above it. */}
+      <AiHost win={win} />
 
       {(switcher || palettePick.pick) && (
         <QuickSwitcher

@@ -243,6 +243,12 @@ interface VaultPreferencesBase {
   tagAutocomplete: boolean;
   /** tags.pane_sort */
   tagPaneSort: TagSort;
+  /** ai.enabled: the AI master switch (off unless the file says literal true) */
+  aiEnabled: boolean;
+  /** ai.mcp_enabled: the AI tools interface, effective only while aiEnabled */
+  aiMcpEnabled: boolean;
+  /** control.notify_edits: notice when a script or AI tool edits the drawing */
+  controlNotifyEdits: boolean;
   /** pdf_import.max_side */
   pdfMaxSide: number;
   /** pdf_import.format */
@@ -357,6 +363,9 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   linkHoverPreview: DEFAULT_LINKS_SETTINGS.hoverPreview,
   tagAutocomplete: DEFAULT_TAGS_SETTINGS.autocomplete,
   tagPaneSort: DEFAULT_TAGS_SETTINGS.paneSort,
+  aiEnabled: false,
+  aiMcpEnabled: true,
+  controlNotifyEdits: true,
   pdfMaxSide: DEFAULT_PDF_IMPORT_SETTINGS.maxSide,
   pdfFormat: DEFAULT_PDF_IMPORT_SETTINGS.format,
   pdfQuality: DEFAULT_PDF_IMPORT_SETTINGS.quality,
@@ -728,6 +737,14 @@ export function normalizePreferences(input: unknown): VaultPreferences {
     ),
     tagAutocomplete: pick(parsed.tagAutocomplete, isBoolean, d.tagAutocomplete),
     tagPaneSort: pick(parsed.tagPaneSort, isTagSort, d.tagPaneSort),
+    // Fail closed: anything but a literal true leaves AI off.
+    aiEnabled: parsed.aiEnabled === true,
+    aiMcpEnabled: pick(parsed.aiMcpEnabled, isBoolean, d.aiMcpEnabled),
+    controlNotifyEdits: pick(
+      parsed.controlNotifyEdits,
+      isBoolean,
+      d.controlNotifyEdits,
+    ),
     pdfMaxSide: pick(parsed.pdfMaxSide, isPdfMaxSide, d.pdfMaxSide),
     pdfFormat: pick(parsed.pdfFormat, isPdfFormat, d.pdfFormat),
     pdfQuality: pick(parsed.pdfQuality, isPdfQuality, d.pdfQuality),

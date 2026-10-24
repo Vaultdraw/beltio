@@ -343,6 +343,11 @@
   margin-top: var(--vd-space-3);
 }
 
+/* A sub-switch under its parent setting (e.g. the AI tools interface). */
+.vault-setting-row--sub {
+  margin-left: var(--vd-space-4, 16px);
+}
+
 .vault-setting-row--disabled .vault-setting-label,
 .vault-setting-row--disabled .vault-setting-control {
   opacity: var(--vd-disabled-opacity);
