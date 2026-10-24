@@ -145,11 +145,10 @@ import { toastStore } from "./toasts/toastStore";
 import { describeReadOnly } from "./vault/readOnlyReason";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { VaultHome } from "./components/VaultHome";
+import { DeferredHome } from "./components/DeferredHome";
 
 import "./components/VaultShell.css";
 import "./components/shell.css";
-
-import { useDeferredHome } from "./vault/useDeferredHome";
 
 import type { OpenTarget } from "./tabs/types";
 import type { TabsApi } from "./tabs/useTabs";
@@ -2182,14 +2181,6 @@ export const VaultApp = ({
     }, 0);
   };
 
-  // The home pane mounts one frame after the tree's first paint (config key).
-  const homeReady = useDeferredHome(
-    win ?? window,
-    vault?.handle ?? null,
-    directoryMap.has(""),
-    prefsNow.deferHomePane,
-  );
-
   // Build tree nodes for Navigator
   const treeNodes = useMemo(() => {
     return buildTree(directoryMap, "", navigatorSort);
@@ -2436,7 +2427,12 @@ export const VaultApp = ({
               </div>
             ) : (
               <ActiveTabGate {...tabs.gateProps}>
-                {homeReady ? (
+                <DeferredHome
+                  win={win ?? window}
+                  vaultKey={vault.handle}
+                  rootListed={directoryMap.has("")}
+                  enabled={prefsNow.deferHomePane}
+                >
                   <VaultHome
                     readOnly={vault.readOnly}
                     recent={recentDrawings.map((entry) => ({
@@ -2452,10 +2448,7 @@ export const VaultApp = ({
                     ownerWindow={win}
                     inert={mainCovered}
                   />
-                ) : (
-                  // Same box as the pane, so nothing shifts when it mounts.
-                  <div className="vault-empty-state vault-home" />
-                )}
+                </DeferredHome>
               </ActiveTabGate>
             )}
             <GalleryHost
