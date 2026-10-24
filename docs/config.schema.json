@@ -613,7 +613,6 @@
               "color",
               "width"
             ],
-            "additionalProperties": false,
             "properties": {
               "name": {
                 "type": "string",

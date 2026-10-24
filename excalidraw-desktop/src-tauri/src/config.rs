@@ -100,8 +100,6 @@ pub(crate) async fn open_included_file(path: String) -> Result<()> {
     launch(&[wanted.as_os_str()], false)
 }
 
-/// Deletes `overrides.toml` (the confirmed "reset Settings changes"); `config.toml` is untouched.
-/// Returns whether a file was deleted. The watcher reports the change like any other edit.
 /// "Config: Check config files": every layer against the schema, with lines. Reads only.
 #[tauri::command]
 pub(crate) async fn config_check() -> Result<CheckReport> {
@@ -127,6 +125,8 @@ pub(crate) async fn doctor_report(app: AppHandle) -> Result<DoctorReport> {
     Ok(doctor_in(&dirs, &input))
 }
 
+/// Deletes `overrides.toml` (the confirmed "reset Settings changes"); `config.toml` is untouched.
+/// Returns whether a file was deleted. The watcher reports the change like any other edit.
 #[tauri::command]
 pub(crate) async fn reset_overrides() -> Result<bool> {
     reset_overrides_in(&resolve_dirs()?)

@@ -104,9 +104,12 @@ export interface ReportRequest {
   tone: ReportTone;
 }
 
-let report: ReportRequest | null = null;
+/** An open report; `id` changes with every open so the dialog starts fresh. */
+type OpenReport = ReportRequest & { id: number };
+let report: OpenReport | null = null;
+let reportSeq = 0;
 const reportListeners = new Set<() => void>();
-const setReport = (next: ReportRequest | null) => {
+const setReport = (next: OpenReport | null) => {
   report = next;
   reportListeners.forEach((l) => l());
 };
@@ -116,7 +119,8 @@ export const subscribeReport = (listener: () => void) => {
   return () => reportListeners.delete(listener);
 };
 export const getReport = () => report;
-export const openReport = (next: ReportRequest) => setReport(next);
+export const openReport = (next: ReportRequest) =>
+  setReport({ ...next, id: ++reportSeq });
 export const closeReport = () => setReport(null);
 
 /** Check the config files and show the report (command and Settings button). */

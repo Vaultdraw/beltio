@@ -49,6 +49,22 @@ describe("report dialog", () => {
     act(() => closeReport());
     expect(screen.queryByRole("dialog")).toBeNull();
   });
+
+  it("a new report starts fresh: no stale Copied status", async () => {
+    Object.assign(navigator, {
+      clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
+    render(<ReportDialogHost />);
+    act(() => openReport({ title: "Config check", text: "a", tone: "ok" }));
+    await screen.findByRole("dialog", { name: "Config check" });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+    });
+    expect(screen.getByRole("status").textContent).toBe("Copied");
+    act(() => openReport({ title: "Debug info", text: "b", tone: "ok" }));
+    await screen.findByRole("dialog", { name: "Debug info" });
+    expect(screen.getByRole("status").textContent).toBe("");
+  });
 });
 
 describe("config check commands", () => {

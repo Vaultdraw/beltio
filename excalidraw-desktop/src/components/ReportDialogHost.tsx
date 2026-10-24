@@ -20,6 +20,7 @@ export const ReportDialogHost = () => {
   return (
     <Suspense fallback={null}>
       <ReportDialog
+        key={report.id}
         title={report.title}
         text={report.text}
         tone={report.tone}

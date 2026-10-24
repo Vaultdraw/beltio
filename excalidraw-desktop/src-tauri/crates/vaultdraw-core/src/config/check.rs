@@ -71,30 +71,43 @@ pub(super) fn check_layers(layers: &Layers) -> CheckReport {
     let mut problems = Vec::new();
     for layer in &layers.all {
         files.push(FileStatus { file: layer.name.clone(), path: layer.path.clone(), status: layer.status });
-        match layer.status {
-            "missing" => {}
-            "ok" => {
-                let max = if layer.kind == "overrides" { 1024 * 1024 } else if layer.kind == KIND_INCLUDE { MAX_INCLUDE_BYTES } else { MAX_CONFIG_BYTES };
+        let layer_error = || layer.error.as_ref().map(|e| (e.message.clone(), e.line)).unwrap_or_default();
+        match (layer.status, layer.kind == KIND_INCLUDE) {
+            ("ok", _) => {
+                let max = if layer.kind == "overrides" { MAX_OVERRIDES_BYTES } else { MAX_CONFIG_BYTES };
                 match read_toml_text(Path::new(&layer.path), &layer.name, max) {
                     Ok(text) => problems.extend(check_text(&text, &layer.name, &layer.path)),
                     Err(e) => problems.push(file_problem(layer, SEVERITY_ERROR, e.message, None)),
                 }
             }
+            // An absent config.toml or overrides.toml is normal: the defaults apply.
+            ("missing", false) => {}
+            // A missing or broken included file is skipped with a warning, as the app does.
+            (_, true) => {
+                let (message, line) = layer_error();
+                problems.push(file_problem(layer, SEVERITY_WARNING, message, line));
+            }
             _ => {
-                let (message, line) = layer.error.as_ref().map(|e| (e.message.clone(), e.line)).unwrap_or_default();
+                let (message, line) = layer_error();
                 problems.push(file_problem(layer, SEVERITY_ERROR, message, line));
             }
         }
     }
     for warning in &layers.warnings {
+        // Warnings that name their file (`overrides.toml: ...`) are filed under it.
+        let (file, message) = match warning.split_once(": ") {
+            Some((f, m)) if f.ends_with(".toml") && !f.contains(char::is_whitespace) => (f.to_string(), m.to_string()),
+            _ => (CONFIG_FILE.to_string(), warning.clone()),
+        };
+        let path = layers.all.iter().find(|l| l.name == file).map(|l| l.path.clone()).unwrap_or_default();
         problems.push(Problem {
-            file: CONFIG_FILE.into(),
-            path: String::new(),
+            file,
+            path,
             line: None,
             column: None,
             key: Some("include".into()),
             severity: SEVERITY_WARNING,
-            message: warning.clone(),
+            message,
         });
     }
     report(files, problems)
@@ -209,10 +222,8 @@ impl Walk<'_> {
                 }
                 return;
             }
-            if !key.contains('.') {
-                // A known table written as a value: the app ignores it with a warning.
-                return self.push(span, key, SEVERITY_WARNING, format!("{key} must be a table like [{key}] (ignored)"));
-            }
+            // A known table written as a value: the app ignores it with a warning.
+            return self.push(span, key, SEVERITY_WARNING, format!("{key} must be a table like [{key}] (ignored)"));
         }
         let value = item_to_json(item);
         if !accepts(schema, &value) {
@@ -564,6 +575,8 @@ mod tests {
         let p = check("[[pens.presets]]\nname = \"Pen\"\ncolor = \"#000000\"\nwidth = 99\n");
         assert_eq!(p.len(), 1);
         assert_eq!(p[0].key.as_deref(), Some("pens.presets"));
+        // The app ignores extra fields in a preset, so the check does too.
+        assert_eq!(check("[[pens.presets]]\nname = \"Pen\"\ncolor = \"#000000\"\nwidth = 2\nid = \"x\"\n"), vec![]);
     }
 
     #[test]
@@ -579,6 +592,9 @@ mod tests {
         let p = check("interface = 1\n");
         assert_eq!(p[0].severity, SEVERITY_WARNING);
         assert_eq!(p[0].message, "interface must be a table like [interface] (ignored)");
+        let p = check("[tools]\narrow = 1\n");
+        assert_eq!((p.len(), p[0].severity), (1, SEVERITY_WARNING), "{p:?}");
+        assert_eq!(p[0].message, "tools.arrow must be a table like [tools.arrow] (ignored)");
     }
 
     #[test]
@@ -621,6 +637,25 @@ mod tests {
         assert_eq!((r.ok, r.errors, r.warnings), (false, 2, 1));
         assert!(r.text.ends_with("2 errors, 1 warning in 3 config files.\n"), "{}", r.text);
         assert!(r.text.starts_with("extra.toml:2:1: error: paper.opacity = 9 is not valid"), "{}", r.text);
+    }
+
+    #[test]
+    fn a_missing_or_broken_include_is_a_warning_and_an_overrides_include_is_filed_under_it() {
+        let t = tempdir().unwrap();
+        let dirs = Dirs { config: t.path().join("config"), state: t.path().join("state") };
+        fs::create_dir_all(&dirs.config).unwrap();
+        fs::create_dir_all(&dirs.state).unwrap();
+        fs::write(dirs.config_file(), "[include]\nfiles = [\"nope.toml\", \"bad.toml\"]\n").unwrap();
+        fs::write(dirs.config.join("bad.toml"), "[paper\n").unwrap();
+        fs::write(dirs.overrides_file(), "[include]\nfiles = []\n").unwrap();
+        let r = check_config_in(&dirs);
+        assert_eq!((r.ok, r.errors), (true, 0), "{}", r.text);
+        let nope = r.problems.iter().find(|p| p.file == "nope.toml").expect("missing include reported");
+        assert!(nope.message.contains("include not found"), "{}", nope.message);
+        assert!(r.problems.iter().any(|p| p.file == "bad.toml" && p.severity == SEVERITY_WARNING), "{}", r.text);
+        let o = r.problems.iter().find(|p| p.file == "overrides.toml").expect("overrides include warning");
+        assert!(o.message.starts_with("[include] is only read in config.toml"), "{}", o.message);
+        assert_eq!(o.path, dirs.overrides_file().to_string_lossy());
     }
 
     #[test]

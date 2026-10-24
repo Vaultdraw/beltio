@@ -358,3 +358,14 @@ fn doctor_is_read_only_and_works_without_the_app() {
     assert_eq!(j["config"]["changed"][0]["key"], "interface.zoom");
     assert_eq!(tree(e.root.parent().unwrap()), before, "doctor writes nothing");
 }
+
+#[test]
+fn doctor_names_a_running_app_with_the_socket_off() {
+    let e = env();
+    std::fs::write(e.config.join("config.toml"), "[control]\nenabled = false\n").unwrap();
+    let _lock = e.hold_instance();
+    let o = e.run(&["doctor"]);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    let out = String::from_utf8_lossy(&o.stdout).into_owned();
+    assert!(out.contains("running, control socket off"), "{out}");
+}

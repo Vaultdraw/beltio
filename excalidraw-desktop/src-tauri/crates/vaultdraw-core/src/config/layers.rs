@@ -7,7 +7,7 @@ use super::*;
 
 pub const KIND_INCLUDE: &str = "include";
 pub const OVERRIDES_FILE: &str = "overrides.toml";
-const MAX_OVERRIDES_BYTES: u64 = 1024 * 1024;
+pub(super) const MAX_OVERRIDES_BYTES: u64 = 1024 * 1024;
 
 /// Comment block of a new `overrides.toml`.
 pub const OVERRIDES_HEADER: &str = "# Written by Vaultdraw Settings. Settings wins over config.toml.\n# Safe to delete. Your own settings go in config.toml.";

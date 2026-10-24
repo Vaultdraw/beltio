@@ -8,7 +8,7 @@ use crate::error::{Fail, EXIT_CLI};
 use crate::rpc::{resolve_socket, Rpc};
 use serde_json::Value;
 use std::path::PathBuf;
-use vaultdraw_core::config::{check_config_in, doctor_in, resolve_dirs_with, Dirs, DoctorInput, CONFIG_SCHEMA};
+use vaultdraw_core::config::{check_config_in, control_enabled, doctor_in, layered_config_in, resolve_dirs_with, Dirs, DoctorInput, CONFIG_SCHEMA};
 use vaultdraw_core::vault_path::{self, ENV_VAULT};
 use vaultdraw_protocol::dirs::InstancePaths;
 use vaultdraw_protocol::{methods, API_LEVEL};
@@ -76,7 +76,13 @@ pub fn doctor(cli: &Cli) -> Result<(), Fail> {
         }
         None => {
             let live = InstancePaths::from_env(None).is_ok_and(|p| vaultdraw_core::instance::app_live(&p.dir));
-            input.app_state = if live { "starting (holds the instance lock, no answer yet)" } else { "not running" }.into();
+            let socket_off = !layered_config_in(&dirs).as_ref().is_none_or(control_enabled);
+            input.app_state = match (live, socket_off) {
+                (false, _) => "not running",
+                (true, true) => "running, control socket off ([control] enabled = false)",
+                (true, false) => "starting (holds the instance lock, no answer yet)",
+            }
+            .into();
         }
     }
     if input.vault.is_none() {

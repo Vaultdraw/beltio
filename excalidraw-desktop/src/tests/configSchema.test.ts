@@ -14,6 +14,7 @@ import { currentSchema, schemaInput } from "../vault/configReferenceDoc";
 import { NATIVE_KEYS } from "../vault/configKeys";
 import { CONFIG_MAPPING, unknownKeyProblems } from "../vault/settingsSync";
 import { STYLE_KEY_RULES } from "../toolDefaults/toolStyles";
+import { DEFAULT_PEN_PRESETS, penPresetProblem } from "../pens/penPresets";
 
 const root = resolve(__dirname, "../../..");
 
@@ -148,6 +149,10 @@ describe("config schema", () => {
     expect(accepts(schema, [{ name: "Pen", color: "#000000", width: 2 }])).toBe(
       true,
     );
+    expect(
+      accepts(schema, [{ name: "Pen", color: "#000000", width: 2, id: "x" }]),
+    ).toBe(true);
+    expect(penPresetProblem({ ...DEFAULT_PEN_PRESETS[0], id: "x" })).toBe(null);
     expect(
       accepts(schema, [{ name: "Pen", color: "#000000", width: 99 }]),
     ).toBe(false);

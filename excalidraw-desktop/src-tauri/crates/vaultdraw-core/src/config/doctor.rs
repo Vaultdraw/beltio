@@ -53,9 +53,16 @@ pub struct ChangedKey {
 /// Every key the merged config sets to a non-default value, with the layer it comes from.
 /// Keys of open tables (`[hotkeys]`, `[plugin.<id>]`) have no default and are always listed.
 pub fn changed_keys(layers: &[LayerInfo]) -> Vec<ChangedKey> {
-    let Some(merged) = merged(layers) else {
-        return Vec::new();
-    };
+    merged(layers).map(|m| changed_in(&m, layers)).unwrap_or_default()
+}
+
+/// `[control] enabled` of a merged config; unset (or not a boolean) means enabled. The one
+/// rule the app's socket start and the doctor report share.
+pub fn control_enabled(merged: &Json) -> bool {
+    merged.get("control").and_then(|c| c.get("enabled")).and_then(Json::as_bool).unwrap_or(true)
+}
+
+fn changed_in(merged: &Json, layers: &[LayerInfo]) -> Vec<ChangedKey> {
     let props = check_schema().get("properties");
     let mut out = Vec::new();
     for (table, keys) in merged.as_object().into_iter().flatten() {
@@ -134,8 +141,8 @@ pub fn doctor_in(dirs: &Dirs, input: &DoctorInput) -> DoctorReport {
 pub(super) fn doctor_with(dirs: &Dirs, input: &DoctorInput, now: SystemTime) -> DoctorReport {
     let layers = read_layers(dirs);
     let check = check_layers(&layers);
-    let changed = changed_keys(&layers.all);
     let merged = merged(&layers.all).unwrap_or(Json::Null);
+    let changed = changed_in(&merged, &layers.all);
     let plugins_dir = dirs.config.join(PLUGINS_DIR);
     let installed = installed_plugins(&plugins_dir);
     let enabled: Vec<String> = merged
@@ -149,11 +156,7 @@ pub(super) fn doctor_with(dirs: &Dirs, input: &DoctorInput, now: SystemTime) -> 
                 .collect()
         })
         .unwrap_or_default();
-    let control_enabled = merged
-        .get("control")
-        .and_then(|c| c.get("enabled"))
-        .and_then(Json::as_bool)
-        .unwrap_or(true);
+    let control_enabled = control_enabled(&merged);
     let index = input.vault.as_ref().map(|v| {
         let path = snapshot_path(&dirs.state, v);
         let meta = fs::metadata(&path).ok().filter(|m| m.is_file());

@@ -11,6 +11,8 @@
  * embeds it for `vaultdraw config check`. Only the generator and the tests
  * import this module.
  */
+import { MAX_PEN_WIDTH, MIN_PEN_WIDTH } from "../pens/penPresets";
+
 import { CONFIG_REFERENCE } from "./configReference";
 import { OPEN_TABLES } from "./configKeys";
 
@@ -128,14 +130,15 @@ const fromDefault = (value: unknown): Schema | null =>
     ? { type: "string" }
     : null;
 
+// Same limits as `penPresetProblem`; extra fields are ignored by the app, so
+// they are allowed here too (the schema is never stricter than the app).
 const penPreset: Schema = {
   type: "object",
   required: ["name", "color", "width"],
-  additionalProperties: false,
   properties: {
     name: { type: "string", minLength: 1, maxLength: 40 },
     color: fmt("color"),
-    width: { type: "number", minimum: 0.5, maximum: 40 },
+    width: { type: "number", minimum: MIN_PEN_WIDTH, maximum: MAX_PEN_WIDTH },
     opacity: { type: "number", minimum: 1, maximum: 100 },
     pressure: { type: "boolean" },
     smoothing: { type: "number", minimum: 0, maximum: 1 },
