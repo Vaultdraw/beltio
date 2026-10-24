@@ -456,13 +456,23 @@ leader = "Backslash"
 
 After `\` the popup lists `f` (file), `s` (shape), `p` and `e`; after `\ f` it lists `f`, `s` and `n`.
 
+#### Full Vim-style preset
+
+For a bigger block, copy [`docs/presets/vim.toml`](presets/vim.toml). It adds `gg` and `dd` in lists, `<leader>` groups for files, tabs, links, graph and tools, and names for each group.
+
+1. Open `config.toml` in your editor (Settings → **Open config folder** shows where it is).
+2. Copy the lines you want from `vim.toml` into it. Keep one `[keys]`, one `[keys.labels]` and one `[hotkeys]` table: merge lines into a table you already have, don't repeat the header.
+3. Save. Keys reload live; press `\` and the which-key popup lists the groups.
+
+Vaultdraw never reads the preset file, so it costs nothing and nothing changes until you copy lines. It has no modes; modal keys stay off. A key you list replaces that command's defaults, so each line repeats the defaults it keeps. A unit test parses the file with the app's own key parser and checks every command id, so it stays in step with the commands.
+
 #### Not in this version
 
 | Not included | Why |
 | --- | --- |
 | Key-first tables (`[keymap.canvas]` and the like) | `[hotkeys]` already maps a command to its sequences, and Settings edits it. Two tables would show two truths. They can be added later without breaking this file. |
 | Modes (a sticky Normal or Insert layer) | A mode with no visible state at rest is easy to get stuck in. Each command's own conditions already decide where a key works. |
-| A shipped Vim preset | You decide: a copied block is plain text you own and edit, not a setting you have to undo. |
+| A Vim preset that loads itself (`keys.preset`) | You decide: a copied block is plain text you own and edit, not a setting you have to undo. The copyable file is `docs/presets/vim.toml`. |
 | Counts, macros, operators, registers | Out of scope for a minimal core. |
 | Excalidraw's other shortcuts as commands | Only the tool keys moved. The rest may follow. |
 

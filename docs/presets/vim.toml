@@ -1,0 +1,59 @@
+# Vaultdraw Vim-style key preset
+#
+# Copy the parts you want into your config.toml (Settings -> Open config
+# folder shows where it is). Vaultdraw never reads this file: nothing loads it, so it
+# costs nothing. Nothing here is on by default and there is no Vim mode: these
+# are ordinary key sequences you own and can edit.
+#
+# Keys you list for a command REPLACE that command's defaults, so each line
+# repeats the defaults it keeps (Mod is Cmd on macOS, Ctrl elsewhere).
+#
+# Lists (file tree, tags, links, settings pages) already move with
+# j / k / h / l, open with Enter or o, rename with r and move with m by
+# default. This preset adds the two-key Vim forms on top.
+
+[keys]
+leader = "Backslash"       # on a non-US keyboard pick an easy key, e.g. "Alt+K"
+timeout_ms = 1000          # wait this long when "g" is also the start of "g g"
+
+[keys.labels]              # names the which-key popup shows for a group
+"<leader> f" = "file"
+"<leader> s" = "shape"
+"<leader> t" = "tab"
+"<leader> l" = "links"
+"<leader> g" = "graph"
+
+[hotkeys]
+# Lists: gg first row, G last row (Shift+G is already the default), dd delete.
+"list.first" = ["g g", "Home"]
+"list.delete" = ["d d", "Delete", "Backspace"]
+
+# Palette and files: <leader> f ...
+"palette.files" = ["<leader> f f", "Mod+P"]
+"palette.commands" = ["<leader> p", "Mod+Shift+P", "Mod+Slash"]
+"file.save" = ["<leader> f s", "Mod+S", "Mod+Shift+S"]
+"vault.newDrawing" = ["<leader> f n", "Mod+N"]
+"navigator.focusSearch" = ["<leader> /", "Mod+Shift+F"]
+"navigator.focusTree" = ["<leader> e", "Mod+Alt+F"]
+"view.toggleNavigator" = ["<leader> b", "Mod+Backslash"]
+
+# Tabs: <leader> t ...
+"tabs.new" = ["<leader> t n", "Mod+T"]
+"tabs.close" = ["<leader> t c", "Mod+W"]
+"tabs.reopenClosed" = ["<leader> t u", "Mod+Shift+T"]
+
+# Links and graph: <leader> l ..., <leader> g ...
+"links.back" = ["<leader> l b", "Mod+Alt+ArrowLeft"]
+"links.forward" = ["<leader> l f", "Mod+Alt+ArrowRight"]
+"graph.open" = ["<leader> g g"]
+"graph.openLocal" = ["<leader> g l"]
+
+# Tools: keep the letters, add <leader> s picks.
+"tool.selection" = ["<leader> s s", "V", "1"]
+"tool.rectangle" = ["<leader> s r", "R", "2"]
+"tool.diamond" = ["<leader> s d", "D", "3"]
+"tool.ellipse" = ["<leader> s e", "O", "4"]
+"tool.arrow" = ["<leader> s a", "A", "5"]
+"tool.line" = ["<leader> s l", "L", "6"]
+"tool.text" = ["<leader> s t", "T", "8"]
+"tool.eraser" = ["<leader> s x", "E", "0"]
