@@ -14,6 +14,16 @@ export const OPEN_TABLES: ReadonlySet<string> = new Set([
   "include",
 ]);
 
+/**
+ * Keys only the native side reads (no preference field): known, so never
+ * reported as unknown. `[control] enabled` gates the control socket at launch.
+ */
+export const NATIVE_KEYS: readonly string[] = [
+  "control.enabled",
+  "control.uri_enabled",
+  "control.uri_allow",
+];
+
 export interface UnknownKey {
   /** Dotted key as written: `table.key`, `table.sub.key`, `table` or a root key. */
   key: string;

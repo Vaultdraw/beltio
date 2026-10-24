@@ -227,6 +227,36 @@ const EXTRA_KEYS: Readonly<Record<string, Readonly<Record<string, Schema>>>> = {
   },
 };
 
+/** Tables only the native side reads (NATIVE_KEYS in configKeys.ts). */
+const NATIVE_TABLES: Readonly<Record<string, Schema>> = {
+  control: {
+    type: "object",
+    description: "The control socket for the `vaultdraw` command.",
+    additionalProperties: false,
+    properties: {
+      enabled: {
+        description:
+          "Start the control socket at launch; `false` turns the `vaultdraw` command's link to the app off.",
+        default: true,
+        type: "boolean",
+      },
+      uri_enabled: {
+        description:
+          "`false` ignores every `vaultdraw://` link and every drawing or library file opened from outside.",
+        default: true,
+        type: "boolean",
+      },
+      uri_allow: {
+        description:
+          'What a link may do without asking: "new", "switch-vault", or command ids.',
+        default: [],
+        type: "array",
+        items: { type: "string" },
+      },
+    },
+  },
+};
+
 /** The whole schema (draft-07, what Taplo supports best). */
 export function buildConfigSchema(input: SchemaInput): Schema {
   const byKey = new Map(input.mappings.map((m) => [m.key, m]));
@@ -252,6 +282,19 @@ export function buildConfigSchema(input: SchemaInput): Schema {
       additionalProperties: false,
       properties: keys,
     };
+  }
+  for (const [table, schema] of Object.entries(NATIVE_TABLES)) {
+    // A table the app also reads (`[control] notify_edits`) keeps both sets of keys.
+    const known = properties[table];
+    properties[table] = known
+      ? {
+          ...known,
+          properties: {
+            ...(known.properties as Schema),
+            ...(schema.properties as Schema),
+          },
+        }
+      : schema;
   }
   for (const table of OPEN_TABLES) {
     const schema = OPEN_TABLE_SCHEMAS[table];

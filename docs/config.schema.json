@@ -1270,6 +1270,18 @@
         }
       }
     },
+    "control": {
+      "type": "object",
+      "description": "The control socket for the `vaultdraw` command.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Start the control socket at launch; `false` turns the `vaultdraw` command's link to the app off.",
+          "default": true,
+          "type": "boolean"
+        }
+      }
+    },
     "hotkeys": {
       "type": "object",
       "description": "One entry per command id: a list of keys like [\"Mod+S\"] or key sequences like [\"g g\"]; [] removes the default keys.",

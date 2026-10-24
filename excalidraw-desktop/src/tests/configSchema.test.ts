@@ -11,7 +11,8 @@ import {
   type Schema,
 } from "../vault/configSchema";
 import { currentSchema, schemaInput } from "../vault/configReferenceDoc";
-import { CONFIG_MAPPING } from "../vault/settingsSync";
+import { NATIVE_KEYS } from "../vault/configKeys";
+import { CONFIG_MAPPING, unknownKeyProblems } from "../vault/settingsSync";
 import { STYLE_KEY_RULES } from "../toolDefaults/toolStyles";
 
 const root = resolve(__dirname, "../../..");
@@ -85,6 +86,10 @@ describe("config schema", () => {
       const [table, name] = key.split(".");
       expect(schema.properties[table].properties[name], key).toBeDefined();
     }
+    for (const key of NATIVE_KEYS) {
+      const [table, name] = key.split(".");
+      expect(schema.properties[table].properties[name], key).toBeDefined();
+    }
     expect(Object.keys(schema.properties)).toEqual(
       expect.arrayContaining(["hotkeys", "plugin", "include"]),
     );
@@ -147,6 +152,10 @@ describe("config schema", () => {
       accepts(schema, [{ name: "Pen", color: "#000000", width: 99 }]),
     ).toBe(false);
     expect(accepts(schema, [])).toBe(false);
+  });
+
+  it("native-only keys are known to the app's unknown-key check", () => {
+    expect(unknownKeyProblems({ control: { enabled: false } })).toEqual([]);
   });
 
   it("reads the expected texts the app writes", () => {

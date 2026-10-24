@@ -82,6 +82,7 @@ import { isSortOrder, SORT_ORDERS } from "./sortOrder";
 import {
   buildKnownIndex,
   findUnknownKeys,
+  NATIVE_KEYS,
   unknownKeyMessage,
   type KnownIndex,
 } from "./configKeys";
@@ -863,14 +864,6 @@ export const unknownKeyProblemsIn = (
     message: unknownKeyMessage(u, file),
   }));
 
-/** `[control]` keys, read by the native side (docs: "Control and links"). */
-const CONTROL_KEYS = [
-  "control.enabled",
-  "control.uri_enabled",
-  "control.uri_allow",
-  "control.notify_edits",
-];
-
 /** config.toml keys no mapping reads, as warnings (the rest still applies). */
 export const unknownKeyProblems = (
   config: Record<string, unknown>,
@@ -879,9 +872,8 @@ export const unknownKeyProblems = (
   unknownKeyProblemsIn(
     config,
     (knownKeys ??= buildKnownIndex(
-      // `[keys.labels]` holds free-text group names, read apart from the mapping;
-      // `[control]` is read only by the native side.
-      [...CONFIG_MAPPING.map((m) => m.key), "keys.labels", ...CONTROL_KEYS],
+      // `[keys.labels]` holds free-text group names, read apart from the mapping.
+      [...CONFIG_MAPPING.map((m) => m.key), "keys.labels", ...NATIVE_KEYS],
       TOOL_NESTED_KEYS,
     )),
     file,
@@ -1666,6 +1658,11 @@ function need(what: string): Runtime {
     throw new Error(`${what} is only available in the desktop app`);
   }
   return runtime;
+}
+
+/** Call a read-only native command through the settings bridge (desktop only). */
+export async function nativeCall<T>(what: string, cmd: string): Promise<T> {
+  return need(what).invoke<T>(cmd);
 }
 
 /** Write any pending state.json change now (e.g. before quitting). */
