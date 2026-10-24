@@ -207,6 +207,8 @@ interface VaultPreferencesBase {
   activityBarHidden: string[];
   /** Ids of enabled plugins (`[plugins] enabled`). */
   pluginsEnabled: string[];
+  /** `[plugins] importers`: file extension -> plugin id ("" = no plugin handles it). */
+  pluginImporters: Record<string, string>;
   /** Limit of each plugin's `ctx.storage.global`, in KiB (`plugins.storage_limit_kb`). */
   pluginsStorageLimitKb: number;
   /** Global navigator sort order; a vault's settings.toml may override it. */
@@ -339,6 +341,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   activityBarOrder: [],
   activityBarHidden: [],
   pluginsEnabled: [],
+  pluginImporters: {},
   pluginsStorageLimitKb: DEFAULT_PLUGIN_STORAGE_KB,
   navigatorSort: DEFAULT_SORT_ORDER,
   newDrawingFolder: "",
@@ -521,6 +524,14 @@ const isThumbMaxElements = (value: unknown) =>
   Number.isInteger(value) &&
   value >= MIN_THUMB_MAX_ELEMENTS &&
   value <= MAX_THUMB_MAX_ELEMENTS;
+/** `plugins.importers`: a table of extension -> plugin id or "". */
+export const isPluginImporters = (
+  value: unknown,
+): value is Record<string, string> =>
+  !!value &&
+  typeof value === "object" &&
+  !Array.isArray(value) &&
+  Object.values(value).every((v) => typeof v === "string");
 export const isPluginStorageKb = (value: unknown) =>
   typeof value === "number" &&
   Number.isInteger(value) &&
@@ -664,6 +675,11 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       parsed.pluginsEnabled,
       isStringArray,
       d.pluginsEnabled,
+    ),
+    pluginImporters: pick(
+      parsed.pluginImporters,
+      isPluginImporters,
+      d.pluginImporters,
     ),
     pluginsStorageLimitKb: pick(
       parsed.pluginsStorageLimitKb,

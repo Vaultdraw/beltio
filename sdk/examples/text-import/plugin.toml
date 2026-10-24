@@ -1,0 +1,12 @@
+id = "text-import"
+name = "Text import"
+version = "0.1.0"
+api = 0
+main = "main.js"
+description = "Example: drop or pick a .txt file and its text lands on the drawing in one undo step"
+author = "Vaultdraw"
+
+[[contributes.importers]]
+id = "txt"
+title = "Plain text"
+extensions = ["txt"]

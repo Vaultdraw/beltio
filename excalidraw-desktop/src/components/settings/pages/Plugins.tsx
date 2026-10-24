@@ -25,6 +25,12 @@ import { permissionText } from "../../../plugins/host/permissions";
 import { runCommandById } from "../../../plugins/host/runner";
 import { pluginHostStarted } from "../../../plugins/hostFlag";
 import {
+  importerClashes,
+  importersVersion,
+  subscribeImporters,
+  type ImporterClash,
+} from "../../../plugins/importerMap";
+import {
   installPluginFromFolder,
   reloadPluginList,
 } from "../../../plugins/ui/pluginActions";
@@ -88,6 +94,54 @@ const useEnabledIds = (): string[] => {
     JSON.stringify(getPreferences(win).pluginsEnabled),
   );
   return useMemo(() => JSON.parse(key) as string[], [key]);
+};
+
+const extText = (extensions: readonly string[]) =>
+  extensions.map((e) => `.${e}`).join(", ");
+
+/** One sentence per extension that several plugins claim, or that config turned off. */
+export const clashText = (c: ImporterClash): string => {
+  const others = c.others.map((o) => o.title).join(", ");
+  return c.winner
+    ? `.${c.extension} is claimed by ${c.winner.pluginId} and ${others}. ${c.winner.pluginId} imports it. Set plugins.importers in config.toml to choose.`
+    : `.${c.extension} is not imported by plugins (plugins.importers is empty for it). Claimed by ${others}.`;
+};
+
+/** "Imports: .txt" per plugin that declares importers, plus clash problems. */
+export const ImportsSection = ({
+  plugins,
+}: {
+  plugins: readonly PluginInfo[];
+}) => {
+  useSyncExternalStore(subscribeImporters, importersVersion);
+  const withImporters = plugins.filter(
+    (p) => (p.contributes?.importers?.length ?? 0) > 0,
+  );
+  const clashes = importerClashes();
+  if (withImporters.length === 0 && clashes.length === 0) {
+    return null;
+  }
+  return (
+    <section
+      aria-label="Plugin imports"
+      className="vault-plugins__imports"
+      data-testid="plugins-imports"
+    >
+      <ul>
+        {withImporters.map((p) => (
+          <li key={p.id}>
+            {p.name}: Imports:{" "}
+            {extText(p.contributes!.importers!.flatMap((i) => i.extensions))}
+          </li>
+        ))}
+        {clashes.map((c) => (
+          <li key={c.extension} role="alert">
+            {clashText(c)}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 };
 
 const useManageState = (): PluginsState =>
@@ -293,6 +347,8 @@ export const PluginsPage = () => {
           ))}
         </ul>
       )}
+
+      <ImportsSection plugins={state.plugins} />
 
       {orphanData.length > 0 && (
         <section

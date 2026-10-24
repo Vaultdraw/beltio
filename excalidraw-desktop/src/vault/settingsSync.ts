@@ -61,6 +61,8 @@ import {
   type ToolStyle,
 } from "../toolDefaults/toolStyles";
 
+import { setImporterOverrides } from "../plugins/importerMap";
+
 import {
   isPluginId,
   parsePluginTable,
@@ -102,6 +104,7 @@ import {
   isVaultTheme,
   readLocalStoragePreferences,
   replaceStoredPreferences,
+  isPluginImporters,
   isPluginStorageKb,
   MAX_PLUGIN_STORAGE_KB,
   MIN_PLUGIN_STORAGE_KB,
@@ -216,6 +219,7 @@ type ConfigField =
   | "thumbnailMaxElements"
   | "activityBar"
   | "pluginsEnabled"
+  | "pluginImporters"
   | "pluginsStorageLimitKb"
   | "activityBarOrder"
   | "activityBarHidden"
@@ -369,6 +373,13 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     valid: (v) =>
       Array.isArray(v) &&
       v.every((x) => typeof x === "string" && isPluginId(x)),
+  },
+  {
+    field: "pluginImporters",
+    key: "plugins.importers",
+    expected:
+      'a table like { txt = "text-import" } (extension = plugin id, "" for none)',
+    valid: isPluginImporters,
   },
   {
     field: "pluginsStorageLimitKb",
@@ -1206,6 +1217,9 @@ function applyLoad(
         JSON.stringify(preferencesToState(next)));
   if (changed) {
     replaceStoredPreferences(next);
+  }
+  if (changed || includeState) {
+    setImporterOverrides(next.pluginImporters);
   }
   return changed;
 }

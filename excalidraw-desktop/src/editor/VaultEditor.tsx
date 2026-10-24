@@ -14,7 +14,10 @@ import {
   Excalidraw,
   MainMenu,
 } from "@excalidraw/excalidraw";
-import { DEFAULT_SIDEBAR } from "@excalidraw/common";
+import {
+  DEFAULT_SIDEBAR,
+  viewportCoordsToSceneCoords,
+} from "@excalidraw/common";
 
 import {
   LoadIcon,
@@ -28,7 +31,12 @@ import type {
   ImageExportRequest,
 } from "@excalidraw/excalidraw/types";
 
-import { isPdfFile } from "../canvasImport/importFiles";
+import {
+  isPdfFile,
+  planImport,
+  skippedMessage,
+} from "../canvasImport/importFiles";
+import { hasImporters, runImports } from "../plugins/importerMap";
 import { useCanvasImportMenu } from "../canvasImport/useCanvasImportMenu";
 import { CommandMenuItem } from "../commands/CommandMenuItem";
 import { GRAPH_COMMAND_IDS } from "../commands/graphCommands";
@@ -283,38 +291,81 @@ const VaultEditorComponent = ({
   const canImportPdfRef = useRef(canImportPdf);
   canImportPdfRef.current = canImportPdf;
 
-  const guardSceneDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
-    // A dropped PDF opens the import dialog instead of Excalidraw's handling.
-    const pdf = Array.from(event.dataTransfer.files).find(isPdfFile);
-    if (pdf && pdfImportRef.current) {
-      event.preventDefault();
-      event.stopPropagation();
-      if (canImportPdfRef.current) {
-        pdfImportRef.current.openFile(pdf);
+  const dropRef = useRef({ path, readOnly: readOnly || disabled });
+  dropRef.current = { path, readOnly: readOnly || disabled };
+
+  /** Plugin-imported files in a drop; false leaves the drop to the paths below. */
+  const dropPluginFiles = useCallback(
+    (event: DragEvent<HTMLDivElement>): boolean => {
+      const files = Array.from(event.dataTransfer.files);
+      const plan = planImport(files);
+      if (!plan.plugin.length) {
+        return false;
       }
-      return;
-    }
-    // Files that carry a scene (.excalidraw/.json, or Excalidraw's
-    // "embed scene" exports named *.excalidraw.png/.svg) would replace the
-    // drawing. Plain images are inserted as image elements, so let them through.
-    const mayReplaceScene = Array.from(event.dataTransfer.files).some(
-      (file) =>
-        /\.(excalidraw|json)$/i.test(file.name) ||
-        /\.excalidraw\.(png|svg)$/i.test(file.name) ||
-        file.type === "application/vnd.excalidraw+json",
-    );
-    if (mayReplaceScene && !event.shiftKey) {
-      // The core editor normally replaces the scene on file drop. In a vault
-      // that would autosave imported content over the current source file.
+      const { path: target, readOnly: locked } = dropRef.current;
+      const api = apiRef.current;
+      if (!locked && (!api || !target)) {
+        return false; // no scene is shown yet: today's behaviour
+      }
       event.preventDefault();
       event.stopPropagation();
-      setEditorError(
-        "To open another drawing, copy it into your vault and select it in the navigator. Hold Shift while dropping to insert content without replacing this drawing.",
+      if (locked) {
+        setEditorError("This drawing is read-only");
+        return true;
+      }
+      const at = viewportCoordsToSceneCoords(event, api!.getAppState());
+      void runImports(plan.plugin, { path: target!, at }).then((ran) => {
+        if (!ran) {
+          setEditorError(skippedMessage(plan.plugin.map((i) => i.file)));
+        }
+      });
+      if (plan.images.length) {
+        void api!.insertImages(plan.images, at);
+      }
+      setEditorError(skippedMessage(plan.skipped));
+      return true;
+    },
+    [],
+  );
+
+  const guardSceneDrop = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      // A dropped PDF opens the import dialog instead of Excalidraw's handling.
+      const pdf = Array.from(event.dataTransfer.files).find(isPdfFile);
+      if (pdf && pdfImportRef.current) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (canImportPdfRef.current) {
+          pdfImportRef.current.openFile(pdf);
+        }
+        return;
+      }
+      if (hasImporters() && dropPluginFiles(event)) {
+        return;
+      }
+      // Files that carry a scene (.excalidraw/.json, or Excalidraw's
+      // "embed scene" exports named *.excalidraw.png/.svg) would replace the
+      // drawing. Plain images are inserted as image elements, so let them through.
+      const mayReplaceScene = Array.from(event.dataTransfer.files).some(
+        (file) =>
+          /\.(excalidraw|json)$/i.test(file.name) ||
+          /\.excalidraw\.(png|svg)$/i.test(file.name) ||
+          file.type === "application/vnd.excalidraw+json",
       );
-    } else if (mayReplaceScene) {
-      setEditorError(null);
-    }
-  }, []);
+      if (mayReplaceScene && !event.shiftKey) {
+        // The core editor normally replaces the scene on file drop. In a vault
+        // that would autosave imported content over the current source file.
+        event.preventDefault();
+        event.stopPropagation();
+        setEditorError(
+          "To open another drawing, copy it into your vault and select it in the navigator. Hold Shift while dropping to insert content without replacing this drawing.",
+        );
+      } else if (mayReplaceScene) {
+        setEditorError(null);
+      }
+    },
+    [dropPluginFiles],
+  );
   callbackRef.current = onChange;
   exportRef.current = onExport;
   nameRef.current = name;

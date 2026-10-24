@@ -504,6 +504,12 @@ export const COMMANDS: readonly CommandDefinition[] = [
     when: ["drawingOpen", "writable"],
   },
   {
+    id: "plugins.cancelImport",
+    title: "Import: Cancel",
+    category: "File",
+    keys: { default: [] },
+  },
+  {
     id: "file.saveCopy",
     title: "Save a copy",
     category: "Export",

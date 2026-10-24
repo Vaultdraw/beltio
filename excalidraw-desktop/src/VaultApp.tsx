@@ -67,6 +67,8 @@ import {
   scanVaultMetadata,
 } from "./vault/treeStore";
 import { appEvents } from "./events/appEvents";
+import { cancelImports } from "./plugins/importerMap";
+import { setWorkspaceBridge } from "./plugins/workspaceBridge";
 import { useVaultDocument } from "./vault/useVaultDocument";
 import { useAppearance } from "./vault/useAppearance";
 import { runZoomCommand, useInterfaceZoom } from "./vault/useInterfaceZoom";
@@ -815,6 +817,15 @@ export const VaultApp = ({
           currentGen !== vaultGeneration.current
         ) {
           return;
+        }
+
+        if (appEvents.hasListeners("vault.changed")) {
+          appEvents.emit("vault.changed", {
+            paths: event.paths.filter(
+              (p) => !p.split("/").some((seg) => seg.startsWith(".")),
+            ),
+            rescan: !!event.rescan,
+          });
         }
 
         if (event.rescan) {
@@ -1862,6 +1873,7 @@ export const VaultApp = ({
     getApi: () => (activeDoc ? getEditorApi(activeDoc.id) : undefined),
     getDocument: () => doc ?? document,
     openPdf: openPdfFile,
+    getPath: () => activeDoc?.path ?? null,
     notify: (message) => setGlobalAlert({ message, type: "error" }),
   });
 
@@ -1926,6 +1938,11 @@ export const VaultApp = ({
     },
     importPdf: startPdfImport,
     importFile: () => importFile(),
+    cancelImport: () => {
+      if (!cancelImports()) {
+        toastStore.push({ message: "No import is running" });
+      }
+    },
     saveActiveAsTemplate: () => {
       if (activeDoc) {
         templates.requestSave(activeDoc.path);
@@ -1982,6 +1999,49 @@ export const VaultApp = ({
     return () => setAppCommandRunner(null);
   }, []);
   useMenuCommands();
+  const appFiles = createAppFiles({
+    vault,
+    repository,
+    active: activeDoc
+      ? { path: activeDoc.path, dirty: saveStatus !== "saved" }
+      : null,
+    tabStore: tabs.store,
+    activate: tabs.stripProps?.onActivate,
+    close: tabs.stripProps?.onClose,
+    openVaultAt: async (path) => {
+      const chosen = await openVaultAtPath(path);
+      try {
+        await safelySwitchVault(chosen);
+      } catch (err) {
+        await repository.releaseVault(chosen.handle).catch(() => {});
+        throw err;
+      }
+      return chosen;
+    },
+    openDrawing: handleOpenDrawing,
+    createEntry: createEntryCore,
+    moveEntry: (from, to, rewriteLinks) =>
+      moveEntryCore(from, to, getParentPath(to), { rewriteLinks }),
+    trashEntry: trashEntryCore,
+    win: win as (Window & typeof globalThis) | null,
+    flushIfOpen: flushExportedDoc,
+    busy: controlBusy,
+  });
+  const appFilesRef = useRef(appFiles);
+  appFilesRef.current = appFiles;
+  useEffect(() => {
+    setWorkspaceBridge({
+      vault: () => {
+        const f = appFilesRef.current.vault();
+        return f ? { name: f.name, readOnly: f.readOnly } : null;
+      },
+      activePath: () => appFilesRef.current.active()?.path ?? null,
+      drawingExists: (path) => appFilesRef.current.drawingExists(path),
+      openDrawing: (path, newTab) =>
+        appFilesRef.current.openDrawing(path, newTab),
+    });
+    return () => setWorkspaceBridge(null);
+  }, []);
   useControlBridge(win, {
     uri: {
       vault: () => (vault ? { name: vault.name, path: vault.path } : null),
@@ -2010,34 +2070,7 @@ export const VaultApp = ({
     },
     tabStore: tabs.store,
     activePath: activeDoc?.path ?? null,
-    files: createAppFiles({
-      vault,
-      repository,
-      active: activeDoc
-        ? { path: activeDoc.path, dirty: saveStatus !== "saved" }
-        : null,
-      tabStore: tabs.store,
-      activate: tabs.stripProps?.onActivate,
-      close: tabs.stripProps?.onClose,
-      openVaultAt: async (path) => {
-        const chosen = await openVaultAtPath(path);
-        try {
-          await safelySwitchVault(chosen);
-        } catch (err) {
-          await repository.releaseVault(chosen.handle).catch(() => {});
-          throw err;
-        }
-        return chosen;
-      },
-      openDrawing: handleOpenDrawing,
-      createEntry: createEntryCore,
-      moveEntry: (from, to, rewriteLinks) =>
-        moveEntryCore(from, to, getParentPath(to), { rewriteLinks }),
-      trashEntry: trashEntryCore,
-      win: win as (Window & typeof globalThis) | null,
-      flushIfOpen: flushExportedDoc,
-      busy: controlBusy,
-    }),
+    files: appFiles,
     runner: () => runnerRef.current ?? commandRunner,
     appState: () => ({
       activeDrawing: activeDoc

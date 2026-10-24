@@ -44,6 +44,8 @@ export interface AppCommandActions {
   importPdf(): void | Promise<void>;
   /** Pick PDFs/images: PDF -> import dialog, images -> viewport centre. */
   importFile(): void | Promise<void>;
+  /** "Import: Cancel": aborts the running plugin import. */
+  cancelImport(): void;
   saveActiveAsTemplate(): void;
   searchTags(): void;
   newFolder(): void;
@@ -103,6 +105,7 @@ export function appCommandHandlers(
     "file.exportPdf": () => actions.exportActive("pdf"),
     "file.importPdf": actions.importPdf,
     "file.importFile": actions.importFile,
+    "plugins.cancelImport": actions.cancelImport,
     "file.saveCopy": () => actions.exportActive("copy"),
     "templates.saveDrawing": actions.saveActiveAsTemplate,
     "navigator.searchTags": actions.searchTags,

@@ -5,6 +5,12 @@
  */
 import { IMAGE_MIME_TYPES } from "@excalidraw/common";
 
+import {
+  findImporter,
+  importerExtensions,
+  type ImportItem,
+} from "../plugins/importerMap";
+
 const PDF_MIME = "application/pdf";
 
 export const isPdfFile = (file: File) =>
@@ -14,24 +20,37 @@ const IMAGE_TYPES = new Set<string>(Object.values(IMAGE_MIME_TYPES));
 
 export const isImportableImage = (file: File) => IMAGE_TYPES.has(file.type);
 
-/** The picker's `accept`: PDF plus every image type the editor inserts. */
-export const IMPORT_ACCEPT = [
+const BASE_ACCEPT = [
   PDF_MIME,
   ".pdf",
   ...Object.values(IMAGE_MIME_TYPES),
   ...Object.keys(IMAGE_MIME_TYPES).map((ext) => `.${ext}`),
-].join(",");
+];
+
+/** The picker's `accept` without plugins: PDF plus every image type the editor inserts. */
+export const IMPORT_ACCEPT = BASE_ACCEPT.join(",");
+
+/** The picker's `accept` now: adds the extensions plugins import (read at call time). */
+export const importAccept = (): string =>
+  [...BASE_ACCEPT, ...importerExtensions().map((e) => `.${e}`)].join(",");
 
 export interface ImportPlan {
   /** The first PDF (the dialog imports one document at a time). */
   pdf: File | null;
+  /** Files a plugin imports (checked after PDF, before images). */
+  plugin: ImportItem[];
   images: File[];
   /** Everything else, including further PDFs. */
   skipped: File[];
 }
 
 export const planImport = (files: readonly File[]): ImportPlan => {
-  const plan: ImportPlan = { pdf: null, images: [], skipped: [] };
+  const plan: ImportPlan = {
+    pdf: null,
+    plugin: [],
+    images: [],
+    skipped: [],
+  };
   for (const file of files) {
     if (isPdfFile(file)) {
       if (plan.pdf) {
@@ -39,6 +58,11 @@ export const planImport = (files: readonly File[]): ImportPlan => {
       } else {
         plan.pdf = file;
       }
+      continue;
+    }
+    const match = findImporter(file.name);
+    if (match) {
+      plan.plugin.push({ file, match });
     } else if (isImportableImage(file)) {
       plan.images.push(file);
     } else {
@@ -53,5 +77,15 @@ export const skippedMessage = (skipped: readonly File[]): string | null => {
     return null;
   }
   const names = skipped.map((f) => f.name).join(", ");
-  return `Not imported: ${names}. Vaultdraw imports one PDF at a time and PNG, JPEG, SVG, GIF or WebP images.`;
+  const titles = [
+    ...new Set(
+      importerExtensions()
+        .map((ext) => findImporter(`x.${ext}`)?.title)
+        .filter((t): t is string => !!t),
+    ),
+  ];
+  const plugins = titles.length
+    ? `, and ${titles.join(", ")} files from plugins`
+    : "";
+  return `Not imported: ${names}. Vaultdraw imports one PDF at a time and PNG, JPEG, SVG, GIF or WebP images${plugins}.`;
 };
