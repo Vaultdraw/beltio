@@ -209,6 +209,9 @@ fn handle_request(req: &Request, conn: &mut Conn, dispatch: &dyn Dispatch, bus: 
         let Some(wanted) = wanted.filter(|r| roles::ALL.contains(r)) else {
             return Err(RpcError::invalid_params("role must be one of cli, uri, mcp"));
         };
+        if conn.role == roles::MCP && wanted != roles::MCP {
+            return Err(RpcError::app(codes::NOT_PERMITTED, "The mcp role cannot be changed on this connection"));
+        }
         conn.role = wanted.to_string();
         return Ok(json!({"api": API_LEVEL, "role": wanted}));
     }
@@ -380,6 +383,18 @@ mod tests {
             send_line(&mut s, &format!(r#"{{"jsonrpc":"2.0","id":6,"method":"{m}"}}"#));
             assert_eq!(recv(&mut r)["error"]["data"]["code"], "NOT_PERMITTED", "{m}");
         }
+
+        // Once mcp, always mcp: no way back to a wider role; re-declaring mcp is fine.
+        for role in ["cli", "uri"] {
+            send_line(&mut s, &format!(r#"{{"jsonrpc":"2.0","id":7,"method":"rpc.hello","params":{{"role":"{role}"}}}}"#));
+            let e = recv(&mut r);
+            assert_eq!(e["error"]["data"]["code"], "NOT_PERMITTED", "{role}");
+            assert_eq!(e["error"]["message"], "The mcp role cannot be changed on this connection");
+        }
+        send_line(&mut s, r#"{"jsonrpc":"2.0","id":8,"method":"rpc.hello","params":{"role":"mcp"}}"#);
+        assert_eq!(recv(&mut r)["result"]["role"], "mcp");
+        send_line(&mut s, r#"{"jsonrpc":"2.0","id":9,"method":"app.status"}"#);
+        assert_eq!(recv(&mut r)["error"]["data"]["code"], "NOT_PERMITTED");
     }
 
     #[test]
