@@ -7,9 +7,12 @@ import { CONTRAST, deriveTokens } from "../theme/tokens";
 // Cendre omits mHover/mOnHover/mShadow. The navigator's hover, chip and
 // selected tints and its accent icon come from on-surface and primary, so they
 // must still be readable in every depth and mode.
-describe("Cendre navigator tokens", () => {
-  const cendres = loadBuiltinThemes().filter((t) => t.id.startsWith("cendre"));
+// Built-in themes load on demand: resolve them once, before the cases are made.
+const cendres = (await loadBuiltinThemes()).filter((t) =>
+  t.id.startsWith("cendre"),
+);
 
+describe("Cendre navigator tokens", () => {
   it("loads the three depths", () => {
     expect(cendres).toHaveLength(3);
   });
