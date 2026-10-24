@@ -57,6 +57,7 @@ autosave_delay_ms = 500      # idle time before an edit is written to disk
 [interface]
 zoom = 100                   # whole-app zoom, 50 to 200 percent
 thumbnail_max_elements = 8000 # biggest drawing that gets a thumbnail, 100 to 50000
+defer_home_pane = true       # show the file tree first, the home pane one frame later
 
 [navigator]
 sort = "name_asc"            # name_asc | name_desc | modified_desc | modified_asc
@@ -91,6 +92,7 @@ Everything here can be changed in **Settings** (Cmd/Ctrl+,) or by editing `confi
 - **Interface zoom** (Interface, `interface.zoom`). Scales the whole window from 50 % to 200 %. **Cmd/Ctrl+Shift + `+`**, **`-`** and **`0`** step by 10 and reset to 100 %. Plain **Cmd/Ctrl + `+`**, **`-`** and **`0`** still zoom the canvas, as in Excalidraw.
 - **Navigator sort order** (Interface, `navigator.sort`, also the sort button in the navigator toolbar). Four orders: name A to Z, name Z to A, modified new to old, modified old to new. Folders always come first; the order applies within folders and within drawings. Names compare ignoring case and by number, so "Drawing 2" comes before "Drawing 10".
 - **Thumbnail size limit** (`config.toml` only, `interface.thumbnail_max_elements`, default 8000). Drawings with more elements than this keep a placeholder instead of a thumbnail (a small marker file records the failure). Thumbnails draw in short steps, so even 8,000 elements does not freeze the window: the longest single step measured 24 to 31 ms at 4x CPU slowdown and 29 to 52 ms at 6x. Raise it for big drawings, lower it on a slow machine; the change applies at once and only the drawings that had no thumbnail are retried. Lowering it does not remove thumbnails already cached; the palette command **Thumbnails: Clear cache for this vault** does. Drawings whose file is over 8 MB never get one.
+- **Home pane after the tree** (`config.toml` only, `interface.defer_home_pane`, default true). When a vault opens, the file tree paints first and the home pane (recent drawings and actions) one frame later, in the same place, so nothing moves. The tree appears about 10 ms sooner at 4x CPU slowdown. Set it to `false` to draw both together. Applies at once to the next vault you open.
 - **Confirm before delete** (Files, `files.confirm_delete`). On by default. Turn it off and "Move to Trash" acts immediately. It only affects moving to Trash, which can be undone from the OS trash.
 - **Default folder for new drawings** (Files, `files.new_drawing_folder`). A path relative to the vault root, for example `Sketches/Inbox`. It is created if it doesn't exist. Empty (the default) puts a new drawing next to the open drawing.
 
