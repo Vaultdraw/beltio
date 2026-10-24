@@ -6,8 +6,9 @@ import { parseArgs } from "node:util";
 const USAGE = `Usage: vaultdraw-plugin <command> [options]
 
 Commands:
-  check <dir|file.zip> [--json]
-                             Static checks of a plugin folder or package (exit 1 on errors)
+  check <dir|file.zip> [--json] [--activate [--timeout <ms>]]
+                             Static checks of a plugin folder or package (exit 1 on errors).
+                             --activate also runs activate() once in a dry host (folder only)
   init <id> [--example hello-command|focus-timer|stamp | --template command|panel|scene] [--dir <parent>]
                              Create a plugin folder from an example (JavaScript) or a
                              template (TypeScript project)
@@ -15,7 +16,9 @@ Commands:
   package <dir> [--out <dir>] [--json]
                              Check, then write <id>-<version>.zip and its .sha256 file
   dev <dir> [--config-dir <dir>] [--once] [--print-env]
-                             Keep a copy of the plugin in the app's plugins folder
+  dev <dir> --sandbox [--app <path>]
+                             Keep a copy of the plugin in the app's plugins folder, or (--sandbox)
+                             start the app on a throwaway config, state and vault
 
 Options:
   -h, --help                 Show this help
@@ -25,7 +28,11 @@ Exit codes: 0 ok, 1 findings or refusal, 2 usage or environment error.
 `;
 
 const OPTIONS = {
-  check: { json: { type: "boolean" } },
+  check: {
+    json: { type: "boolean" },
+    activate: { type: "boolean" },
+    timeout: { type: "string" },
+  },
   init: {
     example: { type: "string" },
     template: { type: "string" },
@@ -37,6 +44,8 @@ const OPTIONS = {
     "config-dir": { type: "string" },
     once: { type: "boolean" },
     "print-env": { type: "boolean" },
+    sandbox: { type: "boolean" },
+    app: { type: "string" },
   },
 };
 const POSITIONALS = { check: 1, init: 1, dev: 1, build: 1, package: 1 };
@@ -108,9 +117,21 @@ async function main(argv, env = process.env) {
         err("Missing the plugin folder: vaultdraw-plugin check <dir>");
         return 2;
       }
+      if (v.timeout !== undefined && !v.activate) {
+        err("--timeout only works with --activate. Run vaultdraw-plugin --help.");
+        return 2;
+      }
+      let timeoutMs;
+      if (v.timeout !== undefined) {
+        timeoutMs = Number(v.timeout);
+        if (!Number.isInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 60000) {
+          err("--timeout must be a whole number of milliseconds from 100 to 60000.");
+          return 2;
+        }
+      }
       return await (
         await import("../src/check.mjs")
-      ).runCheck(arg, { json: v.json }, out);
+      ).runCheck(arg, { json: v.json, activate: v.activate, timeoutMs }, out);
     }
     if (cmd === "init") {
       if (!arg) {
@@ -145,6 +166,8 @@ async function main(argv, env = process.env) {
         configDir: v["config-dir"],
         once: v.once,
         printEnv: v["print-env"],
+        sandbox: v.sandbox,
+        app: v.app,
         env,
       },
       out,

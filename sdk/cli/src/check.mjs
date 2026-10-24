@@ -359,23 +359,60 @@ export async function checkZip(file) {
 
 /**
  * @param {string} dir a plugin folder or a `.zip` file
- * @param {{ json?: boolean }} opts
+ * @param {{ json?: boolean, activate?: boolean, timeoutMs?: number }} opts
  * @param {(s: string) => void} out
  * @returns {Promise<number>} the exit code
  */
 export async function runCheck(dir, opts, out) {
   const isZip = /\.zip$/i.test(dir) && isFile(dir);
+  if (opts.activate && isZip) {
+    throw new EnvError(
+      "--activate needs a plugin folder, not a zip: unzip it and check the folder",
+    );
+  }
   const r = isZip ? await checkZip(dir) : checkPlugin(dir);
+  /** @type {import("./activate.mjs").ActivationResult | null} */
+  let activation = null;
+  if (opts.activate && r.ok) {
+    const { activatePlugin } = await import("./activate.mjs");
+    activation = await activatePlugin(dir, { timeoutMs: opts.timeoutMs });
+    r.errors.push(...activation.errors);
+    r.warnings.push(...activation.warnings);
+    r.ok = r.errors.length === 0;
+  }
   if (opts.json) {
     out(
       JSON.stringify(
-        { schemaVersion: 1, ok: r.ok, errors: r.errors, warnings: r.warnings },
+        {
+          schemaVersion: 1,
+          ok: r.ok,
+          errors: r.errors,
+          warnings: r.warnings,
+          ...(opts.activate
+            ? {
+                activation: activation
+                  ? {
+                      commands: activation.commands,
+                      panels: activation.panels,
+                      ms: activation.ms,
+                    }
+                  : null,
+              }
+            : {}),
+        },
         null,
         2,
       ),
     );
   } else {
     out(formatText(r, dir));
+    if (opts.activate) {
+      out(
+        activation
+          ? `Activation: ran in ${activation.ms} ms; bound ${activation.commands.length} command${activation.commands.length === 1 ? "" : "s"} and ${activation.panels.length} panel${activation.panels.length === 1 ? "" : "s"}.`
+          : "Activation: skipped because the static checks found errors.",
+      );
+    }
   }
   return r.ok ? 0 : 1;
 }
