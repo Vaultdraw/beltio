@@ -211,6 +211,7 @@ type ConfigField =
   | "zoom"
   | "confirmDelete"
   | "showTagChips"
+  | "deferHomePane"
   | "thumbnails"
   | "thumbnailMaxElements"
   | "activityBar"
@@ -319,6 +320,12 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
   {
     field: "showTagChips",
     key: "interface.show_tag_chips",
+    expected: "true or false",
+    valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "deferHomePane",
+    key: "interface.defer_home_pane",
     expected: "true or false",
     valid: (v) => typeof v === "boolean",
   },

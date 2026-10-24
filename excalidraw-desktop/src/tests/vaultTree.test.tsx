@@ -112,9 +112,9 @@ describe("VaultApp Workspace with active vault", () => {
     expect(header).toBeInTheDocument();
     expect(within(header).getByText(repo.vault.name)).toBeInTheDocument();
 
-    // Empty state rendered when no drawing is open
+    // Empty state rendered when no drawing is open (one frame after the tree)
     expect(
-      screen.getByRole("heading", { name: /No Drawing Open/i }),
+      await screen.findByRole("heading", { name: /No Drawing Open/i }),
     ).toBeInTheDocument();
 
     // Navigator is present with search input

@@ -193,6 +193,8 @@ interface VaultPreferencesBase {
   confirmDelete: boolean;
   /** Show small tag chips after drawing names in the file tree. */
   showTagChips: boolean;
+  /** Mount the vault home pane one frame after the file tree first paints (faster vault open). */
+  deferHomePane: boolean;
   /** Show drawing thumbnails (home, search, palette, gallery). */
   thumbnails: boolean;
   /** Largest drawing (elements) that gets a PNG thumbnail; bigger ones keep the placeholder. */
@@ -330,6 +332,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   zoom: 100,
   confirmDelete: true,
   showTagChips: true,
+  deferHomePane: true,
   thumbnails: true,
   thumbnailMaxElements: DEFAULT_THUMB_MAX_ELEMENTS,
   activityBar: true,
@@ -639,6 +642,7 @@ export function normalizePreferences(input: unknown): VaultPreferences {
     ),
     confirmDelete: pick(parsed.confirmDelete, isBoolean, d.confirmDelete),
     showTagChips: pick(parsed.showTagChips, isBoolean, d.showTagChips),
+    deferHomePane: pick(parsed.deferHomePane, isBoolean, d.deferHomePane),
     thumbnails: pick(parsed.thumbnails, isBoolean, d.thumbnails),
     thumbnailMaxElements: pick(
       parsed.thumbnailMaxElements,

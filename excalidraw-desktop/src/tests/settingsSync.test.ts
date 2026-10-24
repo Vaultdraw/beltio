@@ -210,6 +210,21 @@ describe("settingsSync mapping", () => {
         showTagChips: false,
       }),
     ).toEqual([{ key: "interface.show_tag_chips", value: false }]);
+    expect(configToPreferences({}).values.deferHomePane).toBe(true);
+    expect(
+      configToPreferences({ interface: { defer_home_pane: false } }),
+    ).toMatchObject({ values: { deferHomePane: false }, problems: [] });
+    expect(
+      configToPreferences({
+        interface: { defer_home_pane: 1 },
+      }).problems.map((p) => p.key),
+    ).toEqual(["interface.defer_home_pane"]);
+    expect(
+      preferencesToConfigChanges(DEFAULT_PREFERENCES, {
+        ...DEFAULT_PREFERENCES,
+        deferHomePane: false,
+      }),
+    ).toEqual([{ key: "interface.defer_home_pane", value: false }]);
     expect(problems).toEqual([]);
     expect(values).toMatchObject({
       accentColor: "#336699",

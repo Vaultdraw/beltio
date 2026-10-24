@@ -149,6 +149,8 @@ import { VaultHome } from "./components/VaultHome";
 import "./components/VaultShell.css";
 import "./components/shell.css";
 
+import { useDeferredHome } from "./vault/useDeferredHome";
+
 import type { OpenTarget } from "./tabs/types";
 import type { TabsApi } from "./tabs/useTabs";
 import type { PdfBridge } from "./pdfImport/types";
@@ -2180,6 +2182,14 @@ export const VaultApp = ({
     }, 0);
   };
 
+  // The home pane mounts one frame after the tree's first paint (config key).
+  const homeReady = useDeferredHome(
+    win ?? window,
+    vault?.handle ?? null,
+    directoryMap.has(""),
+    prefsNow.deferHomePane,
+  );
+
   // Build tree nodes for Navigator
   const treeNodes = useMemo(() => {
     return buildTree(directoryMap, "", navigatorSort);
@@ -2426,18 +2436,26 @@ export const VaultApp = ({
               </div>
             ) : (
               <ActiveTabGate {...tabs.gateProps}>
-                <VaultHome
-                  readOnly={vault.readOnly}
-                  recent={recentDrawings.map((entry) => ({
-                    path: entry.path,
-                    name: getBaseName(entry.path).replace(/\.excalidraw$/i, ""),
-                    folder: getParentPath(entry.path) || vault.name,
-                  }))}
-                  onRun={(id) => commandRunner.run(id)}
-                  onOpenDrawing={(path) => void handleOpenDrawing(path)}
-                  ownerWindow={win}
-                  inert={mainCovered}
-                />
+                {homeReady ? (
+                  <VaultHome
+                    readOnly={vault.readOnly}
+                    recent={recentDrawings.map((entry) => ({
+                      path: entry.path,
+                      name: getBaseName(entry.path).replace(
+                        /\.excalidraw$/i,
+                        "",
+                      ),
+                      folder: getParentPath(entry.path) || vault.name,
+                    }))}
+                    onRun={(id) => commandRunner.run(id)}
+                    onOpenDrawing={(path) => void handleOpenDrawing(path)}
+                    ownerWindow={win}
+                    inert={mainCovered}
+                  />
+                ) : (
+                  // Same box as the pane, so nothing shifts when it mounts.
+                  <div className="vault-empty-state vault-home" />
+                )}
               </ActiveTabGate>
             )}
             <GalleryHost
