@@ -1,5 +1,5 @@
 import type { SettingDecl } from "../settings/declaredSettings";
-import type { Plugin } from "../api";
+import type { Plugin, PluginPermission } from "../api";
 import type { CommandHandler } from "../../commands/types";
 import type { ComponentType } from "react";
 
@@ -19,8 +19,8 @@ export interface PluginInfo {
   problem: string | null;
   hostDisabled: string | null;
   activation: string[];
-  /** What the manifest declares (`vault.read`, `vault.write`). */
-  permissions: string[];
+  /** What the manifest declares; Rust refuses unknown names at parse time. */
+  permissions: PluginPermission[];
   /**
    * Declared permissions against the consent record: `review` keeps the plugin
    * off, `notice` loads it and tells the user once, `ok` is quiet.

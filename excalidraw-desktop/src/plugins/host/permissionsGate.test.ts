@@ -15,7 +15,7 @@ import type { PluginInfo } from "./types";
 const withReview = (
   id: string,
   state: PluginInfo["review"]["state"],
-  permissions: string[],
+  permissions: PluginInfo["permissions"],
   added: string[],
 ): PluginInfo => ({
   ...withCommands(id, "go"),

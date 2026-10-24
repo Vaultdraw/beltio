@@ -5,6 +5,7 @@ import { appearanceListenerCount } from "../../vault/appearance";
 import { boot, type TestPlugin } from "../testing";
 
 import type { PluginContext } from "../api";
+import type { PluginInfo } from "./types";
 
 let t: TestPlugin | undefined;
 beforeEach(() => {
@@ -19,7 +20,7 @@ afterEach(async () => {
 
 const bootWith = async (
   activate: (ctx: PluginContext) => void,
-  permissions: string[] = [],
+  permissions: PluginInfo["permissions"] = [],
 ) => {
   t = await boot(
     { id: "th", activation: ["onStartupFinished"], permissions },
