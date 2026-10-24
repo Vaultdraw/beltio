@@ -5,6 +5,7 @@
 //! `malloc_zone_pressure_relief` does not empty it. `LargeBlockAlloc` therefore keeps multi-MB
 //! blocks out of libmalloc altogether (unmapped on free). The relief call remains for the
 //! small/tiny magazines and for memory-pressure events; it never touches live allocations.
+//! On Linux (glibc) large blocks are mmapped and unmapped by glibc itself, so only `malloc_trim` is added.
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
@@ -13,12 +14,21 @@ extern "C" {
     fn malloc_zone_pressure_relief(zone: *mut std::ffi::c_void, goal: usize) -> usize;
 }
 
-/// Release cached free memory in every malloc zone. No-op outside macOS.
+/// Release cached free memory: every malloc zone on macOS, the glibc heap on Linux (gnu).
+/// No-op elsewhere (musl has no `malloc_trim`).
 pub fn release_free_memory() {
     #[cfg(target_os = "macos")]
     // SAFETY: a null zone means "all zones"; a zero goal means "release as much as possible".
     unsafe {
         malloc_zone_pressure_relief(std::ptr::null_mut(), 0);
+    }
+    // glibc keeps freed small blocks in per-thread arenas; `malloc_trim(0)` hands the free top and
+    // interior pages back to the kernel. Big blocks are already mmapped, so this only matters for
+    // the long-lived growth of the small-block heap. Never touches live allocations.
+    #[cfg(all(target_os = "linux", target_env = "gnu"))]
+    // SAFETY: `malloc_trim` takes no pointers and is safe to call from any thread.
+    unsafe {
+        libc::malloc_trim(0);
     }
 }
 

@@ -50,11 +50,72 @@ pub(crate) struct SystemInfo {
     arch: &'static str,
 }
 
+/// Reads one value from `os-release` text (`KEY=value`, optionally quoted, `#` comments), as in
+/// os-release(5). Backslash escapes inside quotes are resolved for `\\`, `\"`, `\$` and `` \` ``.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+fn os_release_value(text: &str, key: &str) -> Option<String> {
+    let mut found = None;
+    for line in text.lines() {
+        let line = line.trim();
+        let Some((k, v)) = line.split_once('=') else { continue };
+        if k.trim() != key {
+            continue;
+        }
+        let v = v.trim();
+        let unquoted = match v.chars().next() {
+            Some(q @ ('"' | '\'')) if v.len() >= 2 && v.ends_with(q) => {
+                let inner = &v[1..v.len() - 1];
+                if q == '"' {
+                    let mut out = String::with_capacity(inner.len());
+                    let mut chars = inner.chars();
+                    while let Some(c) = chars.next() {
+                        match (c, chars.clone().next()) {
+                            ('\\', Some(n @ ('\\' | '"' | '$' | '`'))) => {
+                                out.push(n);
+                                chars.next();
+                            }
+                            _ => out.push(c),
+                        }
+                    }
+                    out
+                } else {
+                    inner.to_string()
+                }
+            }
+            _ => v.to_string(),
+        };
+        found = Some(unquoted); // the last assignment wins, as when the file is sourced
+    }
+    found.filter(|s| !s.is_empty())
+}
+
+/// The distribution name and version for a bug report: `PRETTY_NAME`, else `NAME` + `VERSION_ID`.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+fn os_release_pretty(text: &str) -> Option<String> {
+    if let Some(p) = os_release_value(text, "PRETTY_NAME") {
+        return Some(p);
+    }
+    let name = os_release_value(text, "NAME")?;
+    Some(match os_release_value(text, "VERSION_ID") {
+        Some(v) => format!("{name} {v}"),
+        None => name,
+    })
+}
+
 fn os_version() -> String {
     #[cfg(target_os = "macos")]
     {
         if let Ok(out) = std::process::Command::new("sw_vers").arg("-productVersion").output() {
             return String::from_utf8_lossy(&out.stdout).trim().to_string();
+        }
+    }
+    #[cfg(target_os = "linux")]
+    {
+        // os-release(5): /etc first, then the vendor copy under /usr/lib.
+        for path in ["/etc/os-release", "/usr/lib/os-release"] {
+            if let Some(v) = std::fs::read_to_string(path).ok().as_deref().and_then(os_release_pretty) {
+                return v;
+            }
         }
     }
     String::new()
@@ -104,6 +165,32 @@ mod tests {
         for bad in ["https://a.b/x|y", "https://a.b/^"] {
             assert!(validate_https(bad).is_err(), "{bad}");
         }
+    }
+
+    #[test]
+    fn os_release_prefers_pretty_name_and_unquotes() {
+        let text = "# comment\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nPRETTY_NAME=\"Ubuntu 24.04.1 LTS\"\nID=ubuntu\n";
+        assert_eq!(os_release_pretty(text).as_deref(), Some("Ubuntu 24.04.1 LTS"));
+        assert_eq!(os_release_value(text, "ID").as_deref(), Some("ubuntu"));
+        assert_eq!(os_release_value(text, "MISSING"), None);
+    }
+
+    #[test]
+    fn os_release_falls_back_to_name_and_version_id() {
+        assert_eq!(os_release_pretty("NAME=Arch Linux\n").as_deref(), Some("Arch Linux"));
+        assert_eq!(os_release_pretty("NAME='Void'\nVERSION_ID=1\n").as_deref(), Some("Void 1"));
+        assert_eq!(os_release_pretty("").as_deref(), None);
+        assert_eq!(os_release_pretty("PRETTY_NAME=\"\"\n").as_deref(), None);
+    }
+
+    #[test]
+    fn os_release_handles_escapes_last_wins_and_odd_lines() {
+        let text = "PRETTY_NAME=\"A \\\"b\\\" \\$c\"\nPRETTY_NAME=\"Second\"\nnot a pair\n  =x\n";
+        assert_eq!(os_release_value(text, "PRETTY_NAME").as_deref(), Some("Second"));
+        let one = "PRETTY_NAME=\"A \\\"b\\\" \\$c\"\n";
+        assert_eq!(os_release_value(one, "PRETTY_NAME").as_deref(), Some("A \"b\" $c"));
+        // a lone quote is kept as written
+        assert_eq!(os_release_value("NAME=\"\n", "NAME").as_deref(), Some("\""));
     }
 
     #[test]
