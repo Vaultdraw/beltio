@@ -31,6 +31,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 ### Faster
 
 - `vaultdraw search` and the first in-app search on a vault with no index are faster on a 5,000-drawing vault: about 240 ms instead of 360 ms at background priority and 10 to 17% faster at normal priority, with 20 to 30% less CPU. The indexer now reads each drawing only up to its elements instead of the whole file with its embedded images, opens files relative to their folder, and reads on up to 8 threads. The index is still stored outside your vault and is still safe to delete.
+- Switching between drawings is faster on a slow CPU: the editor now shows the new drawing in one render instead of two. On a 4x-throttled CPU, switching back and forth takes 6 to 12% less time (median) and 11% less at the slow end (95th percentile).
 - Opening a vault is a few milliseconds faster on a slow CPU: adding the vault to the recent list no longer makes the settings be parsed and checked a second time.
 - `interface.thumbnail_max_elements` in `config.toml` sets the biggest drawing that gets a thumbnail (default 8000, was a fixed 2,500). Changing it applies live.
 
