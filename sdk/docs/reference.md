@@ -350,7 +350,7 @@ type AppEventMap = {
 - **Refs.** An `add` may carry `ref` (1 to 64 letters, digits, `_`, `-`, `.` or `:`, unique in the batch). Use `{ ref }` where an id is needed (`start`, `end`, `group`). A plain string is always a real element id. The result's `refs` maps each ref to its new id.
 - **Bound arrows.** `start` and `end` take `{ ref }` only. The arrow sits on the outline of the shape and is bound to it, so moving the shape moves the arrow. Only rectangle, ellipse, diamond and text can be bound. Binding to an element already on the canvas is refused for now.
 - **Groups.** `group` lists two or more members: ids, or `{ ref }`. A label cannot be listed; list its container, which groups the label with it.
-- **Plugin data.** `data` is stored under the plugin's data key: `data_key` in `plugin.toml`, else `plugins.<id>`. Read it with `scene.dataOf(id)`, or with `scene.get(ids, { data: true })`. Set `data: null` to remove it.
+- **Plugin data.** `data` is stored under the plugin's data key: `data_key` in `plugin.toml`, else `plugins.<id>`. Read it with `scene.dataOf(id)`, or with `scene.get(ids, { data: true })`. Set `data: null` to remove it. Keys under `plugins.` belong to the plugin of that id: a plugin may declare `plugins.<its own id>` or any other key, never another plugin's.
 - **Path guard.** `scene.batch(ops, { path })` applies only if `path` is still the active drawing. Otherwise it rejects with `DRAWING_CHANGED`.
 - **Errors.** Refusals carry `code`: `NOT_FOUND`, `READ_ONLY`, `DRAWING_CHANGED` or `INVALID_ARGUMENT`. The table under "Notes" above lists them.
 
@@ -390,7 +390,7 @@ const role = ctx.scene.dataOf(startId); // { role: "start" }
 ```
 
 - `refs` is valid only for the batch that made it. Later batches use the real ids.
-- Each arrow's `start` and `end` must name an add in the same batch.
+- Each arrow's `start` and `end` must name an add in the same batch, and two different elements. An arrow with only one bound end and no `x`/`y` becomes a short stub beside its shape.
 - Only rectangle, ellipse, diamond and text can be bound.
 - The example plugin `sdk/examples/flow-diagram` does this with a panel button and a command.
 
