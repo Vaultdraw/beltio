@@ -1,0 +1,1304 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Vaultdraw config.toml",
+  "description": "Generated from the app's key table by `yarn docs:config`; do not edit. Put `#:schema ./config.schema.json` at the top of config.toml (with this file next to it) for completion in Taplo-based editors.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "appearance": {
+      "type": "object",
+      "description": "Theme, light or dark mode, and canvas colours.",
+      "additionalProperties": false,
+      "properties": {
+        "theme": {
+          "description": "Colour theme: a built-in name or a theme in `themes/`.",
+          "default": "Default",
+          "type": "string",
+          "minLength": 1
+        },
+        "mode": {
+          "description": "Light, dark, or follow the system.",
+          "default": "system",
+          "type": "string",
+          "enum": [
+            "light",
+            "dark",
+            "system"
+          ]
+        },
+        "sync_canvas": {
+          "description": "The canvas background, pencil and palette colours follow the theme.",
+          "default": false,
+          "type": "boolean"
+        },
+        "canvas_background": {
+          "description": "Canvas background for new drawings when `sync_canvas` is off.",
+          "default": "#ffffff",
+          "type": "string",
+          "format": "color",
+          "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent|[a-zA-Z]+)$"
+        },
+        "accent_color": {
+          "description": "Replaces the theme's primary colour, nudged for contrast; empty uses the theme's own.",
+          "default": "",
+          "anyOf": [
+            {
+              "const": ""
+            },
+            {
+              "type": "string",
+              "format": "hex3or6",
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+            }
+          ]
+        }
+      }
+    },
+    "editor": {
+      "type": "object",
+      "description": "Defaults for new elements.",
+      "additionalProperties": false,
+      "properties": {
+        "font_family": {
+          "description": "Font of new text: 1 Virgil, 2 Helvetica, 3 Cascadia, 5 Excalifont, 6 Nunito, 7 Lilita One, 8 Comic Shanns, 9 Liberation Sans, 10 Assistant.",
+          "default": 5,
+          "enum": [
+            1,
+            2,
+            3,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ]
+        },
+        "font_size": {
+          "description": "Font size of new text.",
+          "default": 20,
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000
+        },
+        "stroke_color": {
+          "description": "Stroke colour of new elements.",
+          "default": "#1e1e1e",
+          "type": "string",
+          "format": "color",
+          "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent|[a-zA-Z]+)$"
+        },
+        "background_color": {
+          "description": "Fill colour of new elements.",
+          "default": "transparent",
+          "type": "string",
+          "format": "color",
+          "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent|[a-zA-Z]+)$"
+        },
+        "fill_style": {
+          "description": "Fill pattern of new elements.",
+          "default": "solid",
+          "type": "string",
+          "enum": [
+            "solid",
+            "hachure",
+            "cross-hatch"
+          ]
+        },
+        "stroke_width": {
+          "description": "Stroke width of new elements.",
+          "default": 2,
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000
+        },
+        "roughness": {
+          "description": "0 architect, 1 artist, 2 cartoonist.",
+          "default": 1,
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        }
+      }
+    },
+    "paper": {
+      "type": "object",
+      "description": "Paper for new drawings; each drawing can change it from the canvas menu. See [Notebook backgrounds](#notebook-backgrounds).",
+      "additionalProperties": false,
+      "properties": {
+        "style": {
+          "description": "Background pattern.",
+          "default": "plain",
+          "type": "string",
+          "enum": [
+            "plain",
+            "grid",
+            "lines",
+            "dots",
+            "graph",
+            "isometric"
+          ]
+        },
+        "spacing": {
+          "description": "Distance between lines or dots.",
+          "default": 0,
+          "anyOf": [
+            {
+              "const": 0
+            },
+            {
+              "type": "number",
+              "minimum": 5,
+              "maximum": 200
+            }
+          ]
+        },
+        "color": {
+          "description": "Pattern colour.",
+          "default": "",
+          "anyOf": [
+            {
+              "const": ""
+            },
+            {
+              "type": "string",
+              "format": "hex6",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            }
+          ]
+        },
+        "opacity": {
+          "description": "Pattern opacity.",
+          "default": 1,
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 1
+        },
+        "major_every": {
+          "description": "Grid and graph: a stronger line every N lines.",
+          "default": 0,
+          "anyOf": [
+            {
+              "const": 0
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            }
+          ]
+        },
+        "margin_line": {
+          "description": "Ruled lines: draw the margin line.",
+          "default": true,
+          "type": "boolean"
+        }
+      }
+    },
+    "page": {
+      "type": "object",
+      "description": "Page mode for new drawings: simulated pages instead of the infinite canvas. See [Page mode](#page-mode).",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "description": "Infinite canvas or pages.",
+          "default": "normal",
+          "type": "string",
+          "enum": [
+            "normal",
+            "page"
+          ]
+        },
+        "layout": {
+          "description": "Separate sheets with a gap, or one long continuous page.",
+          "default": "separate",
+          "type": "string",
+          "enum": [
+            "continuous",
+            "separate"
+          ]
+        },
+        "size": {
+          "description": "Page size; `custom` uses `width` and `height`.",
+          "default": "a4",
+          "type": "string",
+          "enum": [
+            "a3",
+            "a4",
+            "a5",
+            "b5",
+            "letter",
+            "legal",
+            "tablet",
+            "tabletLarge",
+            "phone",
+            "custom"
+          ]
+        },
+        "orientation": {
+          "description": "Page orientation.",
+          "default": "portrait",
+          "type": "string",
+          "enum": [
+            "portrait",
+            "landscape"
+          ]
+        },
+        "width": {
+          "description": "Custom page width in pixels.",
+          "default": 0,
+          "anyOf": [
+            {
+              "const": 0
+            },
+            {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 5000
+            }
+          ]
+        },
+        "height": {
+          "description": "Custom page height in pixels.",
+          "default": 0,
+          "anyOf": [
+            {
+              "const": 0
+            },
+            {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 5000
+            }
+          ]
+        },
+        "paper_theme": {
+          "description": "Page colours: normal, old school, or match the current theme.",
+          "default": "normal",
+          "type": "string",
+          "enum": [
+            "normal",
+            "old_school",
+            "match"
+          ]
+        }
+      }
+    },
+    "pdf_import": {
+      "type": "object",
+      "description": "Importing PDF pages as images. See [PDF import](#pdf-import).",
+      "additionalProperties": false,
+      "properties": {
+        "max_side": {
+          "description": "Longest side of each page image in pixels.",
+          "default": 1440,
+          "type": "integer",
+          "minimum": 600,
+          "maximum": 3000
+        },
+        "format": {
+          "description": "Image format of imported pages.",
+          "default": "jpeg",
+          "type": "string",
+          "enum": [
+            "jpeg",
+            "png"
+          ]
+        },
+        "quality": {
+          "description": "JPEG quality.",
+          "default": 0.85,
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 1
+        },
+        "lock_pages": {
+          "description": "Lock imported pages so annotating does not drag them.",
+          "default": true,
+          "type": "boolean"
+        },
+        "warn_pages": {
+          "description": "Ask before importing more pages than this.",
+          "default": 50,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500
+        },
+        "pixel_budget_mp": {
+          "description": "Decoded-pixel budget per import; large PDFs get a lower resolution.",
+          "default": 60,
+          "type": "number",
+          "minimum": 10,
+          "maximum": 400
+        }
+      }
+    },
+    "saving": {
+      "type": "object",
+      "description": "Writing drawings to disk.",
+      "additionalProperties": false,
+      "properties": {
+        "autosave_delay_ms": {
+          "description": "Idle time in milliseconds before an edit is written to disk.",
+          "default": 500,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 600000
+        }
+      }
+    },
+    "interface": {
+      "type": "object",
+      "description": "The app window around the canvas.",
+      "additionalProperties": false,
+      "properties": {
+        "zoom": {
+          "description": "Whole-app zoom in percent (Cmd/Ctrl+Shift `+`, `-`, `0`).",
+          "default": 100,
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 200
+        },
+        "show_tag_chips": {
+          "description": "Show a drawing's tags as chips in the file navigator.",
+          "default": true,
+          "type": "boolean"
+        },
+        "thumbnails": {
+          "description": "Show drawing thumbnails (home, search, palette, gallery).",
+          "default": true,
+          "type": "boolean"
+        },
+        "thumbnail_max_elements": {
+          "description": "Biggest drawing (in elements) that gets a thumbnail.",
+          "default": 8000,
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 50000
+        },
+        "activity_bar": {
+          "description": "Show the activity bar.",
+          "default": true,
+          "type": "boolean"
+        },
+        "activity_bar_order": {
+          "description": "Activity bar entry order: `library`, `history`, `graph`, `gallery`, `search`, `tags`, `templates`, `hotkeys`, `settings`; unlisted entries follow in their default order.",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "activity_bar_hidden": {
+          "description": "Activity bar entries to hide.",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "navigator": {
+      "type": "object",
+      "description": "The file tree.",
+      "additionalProperties": false,
+      "properties": {
+        "sort": {
+          "description": "Sort order; folders always come first, names compare by number.",
+          "default": "name_asc",
+          "type": "string",
+          "enum": [
+            "name_asc",
+            "name_desc",
+            "modified_desc",
+            "modified_asc"
+          ]
+        }
+      }
+    },
+    "files": {
+      "type": "object",
+      "description": "Creating and deleting drawings.",
+      "additionalProperties": false,
+      "properties": {
+        "confirm_delete": {
+          "description": "Ask before moving a drawing to the Trash.",
+          "default": true,
+          "type": "boolean"
+        },
+        "new_drawing_folder": {
+          "description": "Folder for new drawings, relative to the vault root; empty puts them next to the open drawing.",
+          "default": "",
+          "type": "string"
+        },
+        "templates_folder": {
+          "description": "Vault folder holding your templates. See [Templates](#templates).",
+          "default": "Templates",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "links": {
+      "type": "object",
+      "description": "`[[links]]` between drawings. See [Links and backlinks](#links-and-backlinks).",
+      "additionalProperties": false,
+      "properties": {
+        "new_link_format": {
+          "description": "How new `[[links]]` are written.",
+          "default": "shortest",
+          "type": "string",
+          "enum": [
+            "shortest",
+            "relative",
+            "absolute"
+          ]
+        },
+        "shape_link_format": {
+          "description": "Link stored on a shape.",
+          "default": "wikilink",
+          "type": "string",
+          "enum": [
+            "wikilink",
+            "vaultdraw-url"
+          ]
+        },
+        "open_modifier": {
+          "description": "Modifier that opens a link on click.",
+          "default": "mod",
+          "type": "string",
+          "enum": [
+            "mod",
+            "alt",
+            "ctrl",
+            "shift"
+          ]
+        },
+        "update_on_rename": {
+          "description": "Rewrite links when a drawing is renamed or moved; `\"ask\"` asks each time.",
+          "default": true,
+          "enum": [
+            true,
+            false,
+            "ask"
+          ]
+        },
+        "autocomplete": {
+          "description": "Suggest drawings while typing `[[`.",
+          "default": true,
+          "type": "boolean"
+        },
+        "hint_chars": {
+          "description": "Letters used by link hint mode.",
+          "default": "asdfghjkl",
+          "type": "string",
+          "minLength": 2
+        },
+        "style_links": {
+          "description": "Draw `[[links]]` in text with the link colour and an underline.",
+          "default": true,
+          "type": "boolean"
+        },
+        "color": {
+          "description": "Link colour; `accent` uses the theme accent.",
+          "default": "accent",
+          "anyOf": [
+            {
+              "const": "accent"
+            },
+            {
+              "type": "string",
+              "format": "hex6",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            }
+          ]
+        },
+        "hover_preview": {
+          "description": "When the hover preview card shows.",
+          "default": "always",
+          "type": "string",
+          "enum": [
+            "always",
+            "modifier",
+            "off"
+          ]
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "`#tags` in drawing text.",
+      "additionalProperties": false,
+      "properties": {
+        "autocomplete": {
+          "description": "Suggest existing tags while typing `#`.",
+          "default": true,
+          "type": "boolean"
+        },
+        "pane_sort": {
+          "description": "Order of the Tags pane: by name or by use count.",
+          "default": "name",
+          "type": "string",
+          "enum": [
+            "name",
+            "count"
+          ]
+        }
+      }
+    },
+    "pens": {
+      "type": "object",
+      "description": "Saved pens of the freedraw tool (Alt+1 to Alt+9 by default).",
+      "additionalProperties": false,
+      "properties": {
+        "presets": {
+          "description": "The saved pens, in order. `width` 0.5 thin, 1 medium, 2 bold, about 10 highlighter; `smoothing` 0 (raw) to 1; `highlighter` draws behind everything.",
+          "default": [
+            {
+              "name": "Fine liner",
+              "color": "#1e1e1e",
+              "width": 0.5,
+              "opacity": 100,
+              "pressure": false,
+              "smoothing": 0.3,
+              "highlighter": false
+            },
+            {
+              "name": "Marker",
+              "color": "#1e1e1e",
+              "width": 2,
+              "opacity": 100,
+              "pressure": false,
+              "smoothing": 0.5,
+              "highlighter": false
+            },
+            {
+              "name": "Brush",
+              "color": "#1e1e1e",
+              "width": 1.5,
+              "opacity": 100,
+              "pressure": true,
+              "smoothing": 0.6,
+              "highlighter": false
+            },
+            {
+              "name": "Red pen",
+              "color": "#e03131",
+              "width": 1,
+              "opacity": 100,
+              "pressure": false,
+              "smoothing": 0.4,
+              "highlighter": false
+            },
+            {
+              "name": "Highlighter",
+              "color": "#ffd43b",
+              "width": 10,
+              "opacity": 40,
+              "pressure": false,
+              "smoothing": 0.5,
+              "highlighter": true
+            }
+          ],
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 9,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "color",
+              "width"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "color": {
+                "type": "string",
+                "format": "color",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent|[a-zA-Z]+)$"
+              },
+              "width": {
+                "type": "number",
+                "minimum": 0.5,
+                "maximum": 40
+              },
+              "opacity": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "pressure": {
+                "type": "boolean"
+              },
+              "smoothing": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "highlighter": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "laser": {
+      "type": "object",
+      "description": "The laser pointer trail.",
+      "additionalProperties": false,
+      "properties": {
+        "color": {
+          "description": "Trail colour.",
+          "default": "red",
+          "type": "string",
+          "format": "color",
+          "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent|[a-zA-Z]+)$"
+        },
+        "size": {
+          "description": "Trail thickness in pixels.",
+          "default": 2,
+          "type": "number",
+          "minimum": 1,
+          "maximum": 24
+        },
+        "decay_ms": {
+          "description": "Time until the trail fades, in milliseconds.",
+          "default": 1000,
+          "type": "number",
+          "minimum": 200,
+          "maximum": 5000
+        },
+        "length": {
+          "description": "Tail length in points.",
+          "default": 50,
+          "type": "number",
+          "minimum": 5,
+          "maximum": 200
+        }
+      }
+    },
+    "tools": {
+      "type": "object",
+      "description": "Default style per drawing tool, one `[tools.<tool>]` table each. See [Tool defaults](#tool-defaults).",
+      "additionalProperties": false,
+      "properties": {
+        "rectangle": {
+          "description": "Default style of the rectangle tool. Only the keys you set apply; the others keep the editor's current style.",
+          "default": {},
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "stroke_color": {
+              "type": "string",
+              "format": "color",
+              "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent|[a-zA-Z]+)$"
+            },
+            "background_color": {
+              "type": "string",
+              "format": "color",
+              "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent|[a-zA-Z]+)$"
+            },
+            "fill_style": {
+              "type": "string",
+              "enum": [
+                "hachure",
+                "cross-hatch",
+                "solid",
+                "zigzag"
+              ]
+            },
+            "stroke_width": {
+              "type": "number",
+              "minimum": 0.5,
+              "maximum": 40
+            },
+            "stroke_style": {
+              "type": "string",
+              "enum": [
+                "solid",
+                "dashed",
+                "dotted"
+              ]
+            },
+            "roughness": {
+              "enum": [
+                0,
+                1,
+                2
+              ]
+            },
+            "opacity": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "roundness": {
+              "type": "string",
+              "enum": [
+                "sharp",
+                "round"
+              ]
+            }
+          }
+        },
+        "diamond": {
+          "description": "Default style of the diamond tool. Only the keys you set apply; the others keep the editor's current style.",
+          "default": {},
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "stroke_color": {
+              "type": "string",
+              "format": "color",
+              "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent|[a-zA-Z]+)$"
+            },
+            "background_color": {
+              "type": "string",
+              "format": "color",
+              "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent|[a-zA-Z]+)$"
+            },
+            "fill_style": {
+              "type": "string",
+              "enum": [
+                "hachure",
+                "cross-hatch",
+                "solid",
+                "zigzag"
+              ]
+            },
+            "stroke_width": {
+              "type": "number",
+              "minimum": 0.5,
+              "maximum": 40
+            },
+            "stroke_style": {
+              "type": "string",
+              "enum": [
+                "solid",
+                "dashed",
+                "dotted"
+              ]
+            },
+            "roughness": {
+              "enum": [
+                0,
+                1,
+                2
+              ]
+            },
+            "opacity": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "roundness": {
+              "type": "string",
+              "enum": [
+                "sharp",
+                "round"
+              ]
+            }
+          }
+        },
+        "ellipse": {
+          "description": "Default style of the ellipse tool. Only the keys you set apply; the others keep the editor's current style.",
+          "default": {},
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "stroke_color": {
+              "type": "string",
+              "format": "color",
+              "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent|[a-zA-Z]+)$"
+            },
+            "background_color": {
+              "type": "string",
+              "format": "color",
+              "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent|[a-zA-Z]+)$"
+            },
+            "fill_style": {
+              "type": "string",
+              "enum": [
+                "hachure",
+                "cross-hatch",
+                "solid",
+                "zigzag"
+              ]
+            },
+            "stroke_width": {
+              "type": "number",
+              "minimum": 0.5,
+              "maximum": 40
+            },
+            "stroke_style": {
+              "type": "string",
+              "enum": [
+                "solid",
+                "dashed",
+                "dotted"
+              ]
+            },
+            "roughness": {
+              "enum": [
+                0,
+                1,
+                2
+              ]
+            },
+            "opacity": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "arrow": {
+          "description": "Default style of the arrow tool. Only the keys you set apply; the others keep the editor's current style.",
+          "default": {},
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "stroke_color": {
+              "type": "string",
+              "format": "color",
+              "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent|[a-zA-Z]+)$"
+            },
+            "stroke_width": {
+              "type": "number",
+              "minimum": 0.5,
+              "maximum": 40
+            },
+            "stroke_style": {
+              "type": "string",
+              "enum": [
+                "solid",
+                "dashed",
+                "dotted"
+              ]
+            },
+            "roughness": {
+              "enum": [
+                0,
+                1,
+                2
+              ]
+            },
+            "opacity": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "arrow_type": {
+              "type": "string",
+              "enum": [
+                "sharp",
+                "round",
+                "elbow"
+              ]
+            },
+            "start_arrowhead": {
+              "type": "string",
+              "enum": [
+                "none",
+                "arrow",
+                "bar",
+                "circle",
+                "circle_outline",
+                "triangle",
+                "triangle_outline",
+                "diamond",
+                "diamond_outline",
+                "cardinality_one",
+                "cardinality_many",
+                "cardinality_one_or_many",
+                "cardinality_exactly_one",
+                "cardinality_zero_or_one",
+                "cardinality_zero_or_many"
+              ]
+            },
+            "end_arrowhead": {
+              "type": "string",
+              "enum": [
+                "none",
+                "arrow",
+                "bar",
+                "circle",
+                "circle_outline",
+                "triangle",
+                "triangle_outline",
+                "diamond",
+                "diamond_outline",
+                "cardinality_one",
+                "cardinality_many",
+                "cardinality_one_or_many",
+                "cardinality_exactly_one",
+                "cardinality_zero_or_one",
+                "cardinality_zero_or_many"
+              ]
+            }
+          }
+        },
+        "line": {
+          "description": "Default style of the line tool. Only the keys you set apply; the others keep the editor's current style.",
+          "default": {},
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "stroke_color": {
+              "type": "string",
+              "format": "color",
+              "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent|[a-zA-Z]+)$"
+            },
+            "background_color": {
+              "type": "string",
+              "format": "color",
+              "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent|[a-zA-Z]+)$"
+            },
+            "fill_style": {
+              "type": "string",
+              "enum": [
+                "hachure",
+                "cross-hatch",
+                "solid",
+                "zigzag"
+              ]
+            },
+            "stroke_width": {
+              "type": "number",
+              "minimum": 0.5,
+              "maximum": 40
+            },
+            "stroke_style": {
+              "type": "string",
+              "enum": [
+                "solid",
+                "dashed",
+                "dotted"
+              ]
+            },
+            "roughness": {
+              "enum": [
+                0,
+                1,
+                2
+              ]
+            },
+            "opacity": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "roundness": {
+              "type": "string",
+              "enum": [
+                "sharp",
+                "round"
+              ]
+            }
+          }
+        },
+        "text": {
+          "description": "Default style of the text tool. Only the keys you set apply; the others keep the editor's current style.",
+          "default": {},
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "stroke_color": {
+              "type": "string",
+              "format": "color",
+              "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent|[a-zA-Z]+)$"
+            },
+            "opacity": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "font_family": {
+              "enum": [
+                1,
+                2,
+                3,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10
+              ]
+            },
+            "font_size": {
+              "type": "number",
+              "minimum": 4,
+              "maximum": 400
+            },
+            "text_align": {
+              "type": "string",
+              "enum": [
+                "left",
+                "center",
+                "right"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "tabs": {
+      "type": "object",
+      "description": "Several drawings open at once.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Open several drawings at once; `false` is one drawing at a time.",
+          "default": true,
+          "type": "boolean"
+        },
+        "show_strip": {
+          "description": "Show the tab strip; `never` switches tabs with the keyboard only.",
+          "default": "always",
+          "type": "string",
+          "enum": [
+            "always",
+            "never"
+          ]
+        },
+        "open_from_navigator": {
+          "description": "Opening from the file tree replaces the open drawing (`current`) or opens a new tab.",
+          "default": "current",
+          "type": "string",
+          "enum": [
+            "current",
+            "new"
+          ]
+        },
+        "focus_new": {
+          "description": "Switch to a drawing opened in a new tab.",
+          "default": true,
+          "type": "boolean"
+        },
+        "new_tab_position": {
+          "description": "Where a new tab goes.",
+          "default": "after_active",
+          "type": "string",
+          "enum": [
+            "after_active",
+            "end"
+          ]
+        },
+        "ctrl_tab": {
+          "description": "Ctrl+Tab order: last used (`mru`) or strip order.",
+          "default": "mru",
+          "type": "string",
+          "enum": [
+            "mru",
+            "order"
+          ]
+        },
+        "close_pinned": {
+          "description": "Allow Cmd/Ctrl+W to close pinned tabs.",
+          "default": false,
+          "type": "boolean"
+        },
+        "restore": {
+          "description": "Reopen the open tabs when a vault opens.",
+          "default": true,
+          "type": "boolean"
+        },
+        "undo_budget_mb": {
+          "description": "Undo history kept for background tabs, in megabytes.",
+          "default": 32,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1024
+        }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "description": "Memory kept by open drawings. See [Memory](#memory).",
+      "additionalProperties": false,
+      "properties": {
+        "free_unused_images": {
+          "description": "Release image data that no element and no undo or redo step can restore.",
+          "default": true,
+          "type": "boolean"
+        },
+        "undo_steps": {
+          "description": "Undo steps kept per drawing; older steps go, with the images only they could restore.",
+          "default": 1000,
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 10000
+        }
+      }
+    },
+    "keys": {
+      "type": "object",
+      "description": "Key sequences and the which-key popup. `[keys.labels]` names sequence groups (`\"<leader> f\" = \"files\"`); its entries are free text and are not checked. See [Key sequences, leader and which-key](#key-sequences-leader-and-which-key).",
+      "additionalProperties": false,
+      "properties": {
+        "leader": {
+          "description": "The key `<leader>` stands for in a sequence.",
+          "default": "Backslash",
+          "type": "string",
+          "minLength": 1
+        },
+        "timeout_ms": {
+          "description": "Time allowed between the keys of a sequence; 0 waits for the next key.",
+          "default": 1000,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3600000
+        },
+        "cancel_after_ms": {
+          "description": "Drop a half-typed sequence after this long; 0 never does.",
+          "default": 5000,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3600000
+        },
+        "which_key": {
+          "description": "Show the which-key popup while a sequence is half typed.",
+          "default": true,
+          "type": "boolean"
+        },
+        "which_key_delay_ms": {
+          "description": "Wait this long before the popup appears.",
+          "default": 400,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3600000
+        },
+        "which_key_position": {
+          "description": "Where the popup shows.",
+          "default": "bottom",
+          "type": "string",
+          "enum": [
+            "bottom",
+            "center"
+          ]
+        },
+        "labels": {
+          "type": "object",
+          "description": "Names of key groups shown in the which-key popup.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "history": {
+      "type": "object",
+      "description": "Version history of each drawing, kept in the vault. Older versions thin out: every version, then hourly, daily and weekly ones.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Make versions at all; `false` turns history off.",
+          "default": true,
+          "type": "boolean"
+        },
+        "interval_minutes": {
+          "description": "Minutes between timed versions.",
+          "default": 5,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1440
+        },
+        "keep_all_hours": {
+          "description": "Keep every version for this many hours.",
+          "default": 1,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 720
+        },
+        "keep_hourly_hours": {
+          "description": "Then keep one version per hour for this many hours.",
+          "default": 24,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8760
+        },
+        "keep_daily_days": {
+          "description": "Then keep one version per day for this many days.",
+          "default": 30,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3650
+        },
+        "keep_weekly_weeks": {
+          "description": "Then keep one version per week for this many weeks.",
+          "default": 0,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5200
+        },
+        "size_cap_mb": {
+          "description": "Size cap of a vault's history in megabytes; the oldest versions go first.",
+          "default": 500,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "highlight_changes": {
+          "description": "Highlight what changed in the History preview.",
+          "default": true,
+          "type": "boolean"
+        }
+      }
+    },
+    "plugins": {
+      "type": "object",
+      "description": "Plugins in the `plugins/` folder of the config folder.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Ids of the plugins to load.",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "hotkeys": {
+      "type": "object",
+      "description": "One entry per command id: a list of keys like [\"Mod+S\"] or key sequences like [\"g g\"]; [] removes the default keys.",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "plugin": {
+      "type": "object",
+      "description": "[plugin.<id>]: the settings a plugin declares.",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "include": {
+      "type": "object",
+      "description": "Other TOML files or folders to read under this file.",
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
