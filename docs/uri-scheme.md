@@ -1,6 +1,6 @@
-# Links from outside
+# Links and files from outside
 
-A `vaultdraw://` link opens a drawing, a search, a new drawing or a command in your running Vaultdraw. Use it from a note, a web page, a launcher or a script. Back to the [README](../README.md).
+A `vaultdraw://` link opens a drawing, a search, a new drawing or a command in your running Vaultdraw. Use it from a note, a web page, a launcher or a script. Files you open from Finder or a file manager follow the same rules (see [Files](#files)). Back to the [README](../README.md).
 
 Nothing happens behind your back: opening and searching only change what you see, and anything that writes or runs a command asks you first. Invisible characters (zero-width spaces, direction overrides) in a link are refused.
 
@@ -33,8 +33,8 @@ Nothing happens behind your back: opening and searching only change what you see
 
 ```mermaid
 flowchart LR
-  OS["macOS: a click on a link<br/>(Apple Event)"]
-  Argv["first launch with a link<br/>(Linux, Windows, open -n)"]
+  OS["macOS: a click on a link<br/>or Open With on a file<br/>(Apple Event)"]
+  Argv["first launch with a link or file<br/>(Linux, Windows, open -n)"]
   Fwd["second launch<br/>(forwarded to the running app)"]
   CLI["vaultdraw uri URL"]
   H["parse, config, rate limit,<br/>block list"]
@@ -46,7 +46,7 @@ flowchart LR
   H --> W
 ```
 
-If the window is still starting, links from the system wait in a small queue (16 at most) and run when it is ready.
+If the window is still starting, links and files from the system wait in a small queue (16 at most) and run when it is ready.
 
 ## From a terminal
 
@@ -58,6 +58,35 @@ The command checks the link itself first (a bad link exits with code 2 before it
 
 **Links: Open a vaultdraw:// link…** in the command palette does the same from inside the app. It goes through the same checks as any other link: it still asks before it creates a drawing, runs a command or switches vault, and it obeys the off switch and the rate limit.
 
+## Files
+
+`.excalidraw` drawings and `.excalidrawlib` libraries can be opened with Vaultdraw from Finder (**Open With**), `open -a Vaultdraw file.excalidraw`, or a second launch with a file path. Vaultdraw is registered as an *alternate* app for both types: it shows in **Open With**, and your double-click default is not changed. To make it the default, use Finder's **Get Info, Open with, Change All**.
+
+| The file is... | What happens |
+| --- | --- |
+| In the open vault | It opens at once. |
+| In another vault you have used | A dialog asks to switch to that vault, then it opens. |
+| In no vault you use | A dialog with three choices: **Copy into vault** (a copy goes to the vault's top folder; a taken name gets a number, so nothing is replaced), **Open its folder as a vault**, or **Cancel**. |
+| A `.excalidrawlib` | A dialog "Add N items to the library?": **Add to my library** (all vaults, the default), **Add to this vault's library**, or **Cancel**. The editor's merge adds the new items and removes none. |
+
+Vaultdraw works on files inside a vault, so a file from outside is never edited in place or opened read-only. Copying and importing happen only after you click, and the dialog starts on Cancel and ignores Confirm for 0.6 seconds, like the link dialogs.
+
+The same safety rules apply to files:
+
+- **Same switch and limit.** `control.uri_enabled = false` turns file opens from outside off too (a notice says so), and the limit of 5 per 10 seconds applies.
+- **Only what the system handed over.** The app reads an outside file once, through a grant created when the system passed that exact path. A script in a page cannot read other files this way.
+- **Checked before use.** The path must be absolute and have no control or invisible characters. The file must be a regular file (a symbolic link is refused: open the file it points to), within 32 MiB for a drawing and 64 MiB for a library, valid UTF-8, and a real drawing or library.
+- **No network, no overwrite.**
+
+### Linux
+
+Packages should install the two files in `src-tauri/linux/` (`vaultdraw.desktop` and `vaultdraw-mime.xml`). For an AppImage or a binary you copied somewhere, run **Links: Register Vaultdraw for links and files (Linux)** in the command palette. It shows exactly what it will do and waits for **Register**:
+
+1. Writes `~/.local/share/applications/vaultdraw.desktop` and `~/.local/share/mime/packages/vaultdraw.xml` (or under `$XDG_DATA_HOME`). Never system-wide, never over a file Vaultdraw did not create.
+2. Runs `update-desktop-database`, `update-mime-database` and `xdg-mime default vaultdraw.desktop x-scheme-handler/vaultdraw`. Only the `vaultdraw://` scheme gets a default; the file types appear in **Open With**.
+
+To undo it, delete those two files and run the two `update-*` commands. This has been checked by unit tests only; a Linux desktop check is part of the Linux step.
+
 ## Not yet
 
-File associations (double-click `.excalidraw` files) are a separate step. A link cannot yet carry a template or content for `new`, point at an element, or open a folder as a vault.
+A link cannot yet carry a template or content for `new`, point at an element, or open a folder as a vault. A file from outside cannot be opened without copying it or opening its folder as a vault. If you open a library file before any drawing is open, Vaultdraw asks you to open a drawing first (the library merges in the editor). Windows file types are not registered.

@@ -769,20 +769,20 @@ Big images are the largest thing a drawing keeps in memory. Vaultdraw releases a
 
 ## Control and links
 
-Other programs reach a running Vaultdraw in two ways: the local control socket (the `vaultdraw` command) and `vaultdraw://` links. Both are settings in `[control]`. See [Links from outside](uri-scheme.md) for what a link can do.
+Other programs reach a running Vaultdraw in two ways: the local control socket (the `vaultdraw` command) and `vaultdraw://` links, plus `.excalidraw` and `.excalidrawlib` files opened from the system. All are settings in `[control]`. See [Links and files from outside](uri-scheme.md) for what they can do.
 
 ```toml
 [control]
 enabled = true        # the local control socket, which the vaultdraw command uses
-uri_enabled = true    # false: ignore vaultdraw:// links from outside
+uri_enabled = true    # false: ignore vaultdraw:// links and files opened from outside
 uri_allow = []        # run without asking: "new", "switch-vault", or command ids
 ```
 
 | Key | Default | What it does |
 | --- | --- | --- |
 | `control.enabled` | `true` | Starts the control socket when Vaultdraw launches. `false` turns off the `vaultdraw` command and forwarding of a second launch to the running app. Takes effect at the next launch. |
-| `control.uri_enabled` | `true` | `false` makes Vaultdraw ignore every `vaultdraw://` link from outside (the system, a web page, a script). Each one shows a notice instead, including one typed in **Links: Open a vaultdraw:// link…**. A value that is not `true` or `false`, or a `control` that is not a table, counts as off, and so does a `config.toml` that cannot be read. The macOS registration stays; the app just does nothing with it. |
-| `control.uri_allow` | `[]` | Things a link may do without asking. `"new"` creates drawings, `"switch-vault"` switches vault, and an entry with a dot (such as `"appearance.toggleMode"`) runs that command. Anything not listed asks first. A command listed here also overrides the block list, and it is the only way a link can run a plugin's command. |
+| `control.uri_enabled` | `true` | `false` makes Vaultdraw ignore every `vaultdraw://` link and every `.excalidraw` or `.excalidrawlib` file opened from outside (the system, Finder, a web page, a script). Each one shows a notice instead, including one typed in **Links: Open a vaultdraw:// link…**. A value that is not `true` or `false`, or a `control` that is not a table, counts as off, and so does a `config.toml` that cannot be read. The macOS registration stays; the app just does nothing with it. |
+| `control.uri_allow` | `[]` | Things a link may do without asking (files from outside always ask before they are copied or imported). `"new"` creates drawings, `"switch-vault"` switches vault, and an entry with a dot (such as `"appearance.toggleMode"`) runs that command. Anything not listed asks first. A command listed here also overrides the block list, and it is the only way a link can run a plugin's command. |
 
 - **Live.** Both link keys are read each time a link arrives, so edits to `config.toml` apply at once. There is no watcher and no cost until a link comes in.
 - **What always asks.** Switching vault, `new` and `cmd` ask unless listed in `uri_allow`. Opening a drawing and searching never write, so they run at once.
