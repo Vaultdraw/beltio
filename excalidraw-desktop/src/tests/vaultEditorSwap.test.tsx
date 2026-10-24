@@ -194,6 +194,23 @@ describe("VaultEditor scene swap", () => {
     ).toEqual(["b-r0", "b-r1", "b-img"]);
   });
 
+  it("data-scene-ready is true only once the scene has landed, and false from the start of a swap", async () => {
+    const { host, switchTo } = await mount({
+      documentId: "A",
+      json: scene("a"),
+    });
+    const ready = () => host().getAttribute("data-scene-ready");
+    await waitFor(() => expect(ready()).toBe("true"));
+    imageDelayMs = 400; // keeps the swap in flight
+    await switchTo({ documentId: "B", json: scene("b", 2, true) });
+    // A's scene is still shown under B's id: not ready, and the id says A
+    expect(ready()).toBe("false");
+    expect(host().getAttribute("data-document-id")).toBe("A");
+    await waitFor(() => expect(ready()).toBe("true"), { timeout: 4000 });
+    expect(host().getAttribute("data-document-id")).toBe("B");
+    expect(getEditorApi("B")).toBeTruthy();
+  });
+
   it("a change right after the swap is saved with B's content", async () => {
     const { onChange, landed, switchTo } = await mount({
       documentId: "A",

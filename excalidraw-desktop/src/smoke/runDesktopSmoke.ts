@@ -58,6 +58,7 @@ import type {
 } from "../vault/preferences";
 
 import type { VaultEntry, VaultInfo } from "../vault/types";
+import { isSceneReady } from "../editor/sceneReady";
 
 type SmokeRecord = {
   step: string;
@@ -1634,12 +1635,15 @@ export async function runDesktopSmoke(): Promise<void> {
       }
       result.click();
       await waitFor("reopened editor document", () =>
-        root
-          .querySelector<HTMLElement>(".vault-editor")
-          ?.getAttribute("data-document-id"),
+        isSceneReady(root.querySelector(".vault-editor"))
+          ? root
+              .querySelector<HTMLElement>(".vault-editor")
+              ?.getAttribute("data-document-id")
+          : null,
       );
       // The tree is replaced by search results here, so check the editor's document id.
       await waitFor("reopened the suite drawing", () =>
+        isSceneReady(root.querySelector(".vault-editor")) &&
         root
           .querySelector<HTMLElement>(".vault-editor")
           ?.getAttribute("data-document-id")

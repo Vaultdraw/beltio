@@ -259,6 +259,9 @@ async function onePage(browser, { port, mode, timeoutMs, log, leak, leakOnly, sc
             editorId: document
               .querySelector(".vault-editor")
               ?.getAttribute("data-document-id"),
+            sceneReady: document
+              .querySelector(".vault-editor")
+              ?.getAttribute("data-scene-ready"),
             busy: !!document.querySelector(".vault-editor-container--busy"),
             loading: !!document.querySelector(".LoadingMessage"),
             marks: (window.__perfMarks || []).map((m) => m.name).join(","),

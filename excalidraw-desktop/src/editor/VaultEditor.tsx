@@ -877,6 +877,8 @@ const VaultEditorComponent = ({
       className="vault-editor"
       // The document whose scene is on screen (not yet the props' during a swap).
       data-document-id={loadedDocId ?? documentId}
+      // The scene named above has landed and no swap is running (see sceneReady.ts).
+      data-scene-ready={apiReady && !swapping ? "true" : "false"}
       onDropCapture={guardSceneDrop}
     >
       <LoadingLine active={loading || swapping} />
