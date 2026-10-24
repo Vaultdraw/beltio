@@ -29,7 +29,7 @@ import {
   importersVersion,
   subscribeImporters,
   type ImporterClash,
-} from "../../../plugins/importerMap";
+} from "../../../plugins/importerMapAdmin";
 import {
   installPluginFromFolder,
   reloadPluginList,

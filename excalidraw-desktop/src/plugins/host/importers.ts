@@ -10,12 +10,8 @@ import { appEvents } from "../../events/appEvents";
 import { applyOps, SceneOpsError } from "../../sceneOps";
 import { getActiveScene } from "../../sceneOps/sceneBus";
 import { toastStore } from "../../toasts/toastStore";
-import {
-  setImportCanceller,
-  setImportRunner,
-  type ImportItem,
-  type ImportTarget,
-} from "../importerMap";
+import { type ImportItem, type ImportTarget } from "../importerMap";
+import { setImportCanceller, setImportRunner } from "../importerMapAdmin";
 
 import {
   baseName,

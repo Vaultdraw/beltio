@@ -21,7 +21,7 @@ import { registerCommands } from "../../commands/registry";
 import { registerCommandHandlers } from "../../commands/handlerRegistry";
 import { panelFlag, togglePanel } from "../../slots/panelStore";
 import { toastStore } from "../../toasts/toastStore";
-import { claimImporter } from "../importerMap";
+import { claimImporter } from "../importerMapAdmin";
 import { registerPluginSettings } from "../settings/registry";
 
 import { ensureActive } from "./activation";

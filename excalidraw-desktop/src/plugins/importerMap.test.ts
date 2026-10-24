@@ -1,17 +1,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  claimImporter,
   findImporter,
   hasImporters,
-  importerClashes,
   importerExtensions,
-  resetImporterMap,
   runImports,
   setImporterOverrides,
+} from "./importerMap";
+import {
+  claimImporter,
+  importerClashes,
+  resetImporterMap,
   setImportRunner,
   subscribeImporters,
-} from "./importerMap";
+} from "./importerMapAdmin";
 
 const entry = (pluginId: string, importerId = "i", title = "T") => ({
   pluginId,

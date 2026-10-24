@@ -7,7 +7,7 @@ import {
   claimImporter,
   resetImporterMap,
   setImportRunner,
-} from "../plugins/importerMap";
+} from "../plugins/importerMapAdmin";
 
 import {
   IMPORT_ACCEPT,

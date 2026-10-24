@@ -12,7 +12,7 @@ import {
   claimImporter,
   resetImporterMap,
   setImportRunner,
-} from "../plugins/importerMap";
+} from "../plugins/importerMapAdmin";
 
 import { BLANK_SCENE } from "./fixtures";
 

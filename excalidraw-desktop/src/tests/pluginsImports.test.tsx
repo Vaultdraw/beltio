@@ -3,11 +3,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { ImportsSection } from "../components/settings/pages/Plugins";
 import { makePluginInfo } from "../plugins/host/fakeBackend";
-import {
-  claimImporter,
-  resetImporterMap,
-  setImporterOverrides,
-} from "../plugins/importerMap";
+import { setImporterOverrides } from "../plugins/importerMap";
+import { claimImporter, resetImporterMap } from "../plugins/importerMapAdmin";
 
 const plugin = (id: string, exts: string[]) =>
   makePluginInfo(id, {

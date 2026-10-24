@@ -7,8 +7,12 @@
  * - The `plugins.importers` config key picks the owner of an extension, or
  *   turns plugin handling off for it with "".
  * - Without the key, the first plugin id in sort order wins; the others are
- *   listed by `importerClashes()` for the Plugins page.
+ *   listed for the Plugins page (importerMapAdmin.ts).
  * - Lookups are O(1) per suffix; winners are resolved lazily after a change.
+ *
+ * Only what the editor and the shell need lives here (it ships in the main
+ * chunk). Claiming, clash listing and the runner setters are in
+ * importerMapAdmin.ts, which only the lazy plugin host and Plugins page load.
  */
 
 export interface ImporterEntry {
@@ -43,44 +47,40 @@ export type ImportRunner = (
   target: ImportTarget,
 ) => Promise<void>;
 
-export interface ImporterClash {
-  extension: string;
-  winner: ImporterEntry | null;
-  /** Plugins that claim the extension but do not handle it. */
-  others: ImporterEntry[];
-  /** `plugins.importers` names this plugin, but it does not import the extension. */
-  unknownChoice?: string;
-}
-
-/** extension -> every claim, in claim order */
-const claims = new Map<string, ImporterEntry[]>();
-/** extension -> the claim that handles it */
-let winners = new Map<string, ImporterEntry>();
-let overrides: Readonly<Record<string, string>> = {};
-let longestParts = 1;
-let runner: ImportRunner | null = null;
-let canceller: (() => boolean) | null = null;
-let version = 0;
-const listeners = new Set<() => void>();
-
-let dirty = false;
+/** Shared with importerMapAdmin.ts only. */
+export const importerState = {
+  /** extension -> every claim, in claim order */
+  claims: new Map<string, ImporterEntry[]>(),
+  /** extension -> the claim that handles it */
+  winners: new Map<string, ImporterEntry>(),
+  overrides: {} as Readonly<Record<string, string>>,
+  longestParts: 1,
+  runner: null as ImportRunner | null,
+  canceller: null as (() => boolean) | null,
+  version: 0,
+  listeners: new Set<() => void>(),
+  dirty: false,
+};
+const st = importerState;
 
 /** Marks the winners stale; they are resolved on the next read (claims come in bursts at host start). */
-const changed = () => {
-  dirty = true;
-  version++;
-  listeners.forEach((fn) => fn());
+export const importersChanged = () => {
+  st.dirty = true;
+  st.version++;
+  st.listeners.forEach((fn) => fn());
 };
 
 const resolveWinners = () => {
-  dirty = false;
+  st.dirty = false;
   const next = new Map<string, ImporterEntry>();
   let longest = 1;
-  for (const [ext, list] of claims) {
+  for (const [ext, list] of st.claims) {
     if (list.length === 0) {
       continue;
     }
-    const chosen = Object.hasOwn(overrides, ext) ? overrides[ext] : undefined;
+    const chosen = Object.hasOwn(st.overrides, ext)
+      ? st.overrides[ext]
+      : undefined;
     if (chosen === "") {
       continue;
     }
@@ -93,51 +93,17 @@ const resolveWinners = () => {
     next.set(ext, winner);
     longest = Math.max(longest, ext.split(".").length);
   }
-  winners = next;
-  longestParts = longest;
+  st.winners = next;
+  st.longestParts = longest;
 };
 
-const current = (): Map<string, ImporterEntry> => {
-  if (dirty) {
+/** The resolved winners (resolves first after a change). */
+export const currentWinners = (): Map<string, ImporterEntry> => {
+  if (st.dirty) {
     resolveWinners();
   }
-  return winners;
+  return st.winners;
 };
-
-/** Claims `extensions` for one importer; returns the disposer. */
-export function claimImporter(
-  entry: ImporterEntry,
-  extensions: readonly string[],
-): () => void {
-  const exts = [...new Set(extensions.map((e) => e.toLowerCase()))];
-  for (const ext of exts) {
-    const list = claims.get(ext) ?? [];
-    list.push(entry);
-    claims.set(ext, list);
-  }
-  changed();
-  let done = false;
-  return () => {
-    if (done) {
-      return;
-    }
-    done = true;
-    for (const ext of exts) {
-      const list = claims.get(ext);
-      if (!list) {
-        continue;
-      }
-      const i = list.indexOf(entry);
-      if (i >= 0) {
-        list.splice(i, 1);
-      }
-      if (list.length === 0) {
-        claims.delete(ext);
-      }
-    }
-    changed();
-  };
-}
 
 /** The `plugins.importers` config value: extension -> plugin id ("" = off). */
 export function setImporterOverrides(
@@ -149,22 +115,22 @@ export function setImporterOverrides(
       clean[k.toLowerCase().replace(/^\./, "")] = v;
     }
   }
-  overrides = clean;
-  changed();
+  st.overrides = clean;
+  importersChanged();
 }
 
 /** True when any extension is handled by a plugin (the drop path's one check). */
-export const hasImporters = (): boolean => current().size > 0;
+export const hasImporters = (): boolean => currentWinners().size > 0;
 
 /** The importer for a file name; the longest suffix wins (`excalidraw.md` before `md`). */
 export function findImporter(name: string): ImporterMatch | null {
-  const winners = current();
+  const winners = currentWinners();
   if (winners.size === 0) {
     return null;
   }
   const parts = name.toLowerCase().split(".");
   // parts[0] is the base name: a file called "txt" has no extension.
-  const first = Math.max(1, parts.length - longestParts);
+  const first = Math.max(1, parts.length - st.longestParts);
   for (let i = first; i < parts.length; i++) {
     const ext = parts.slice(i).join(".");
     const hit = winners.get(ext);
@@ -176,69 +142,20 @@ export function findImporter(name: string): ImporterMatch | null {
 }
 
 /** Extensions plugins handle now, for the picker's `accept`. */
-export const importerExtensions = (): string[] => [...current().keys()].sort();
-
-/** Extensions claimed by more than one plugin, or turned off by the config key. */
-export function importerClashes(): ImporterClash[] {
-  const winners = current();
-  const out: ImporterClash[] = [];
-  for (const [extension, list] of claims) {
-    const winner = winners.get(extension) ?? null;
-    const others = list.filter((e) => e !== winner);
-    const choice = Object.hasOwn(overrides, extension)
-      ? overrides[extension]
-      : "";
-    const unknownChoice =
-      choice && !list.some((e) => e.pluginId === choice) ? choice : undefined;
-    if (others.length > 0 || unknownChoice) {
-      out.push(
-        unknownChoice
-          ? { extension, winner, others, unknownChoice }
-          : { extension, winner, others },
-      );
-    }
-  }
-  return out.sort((a, b) => a.extension.localeCompare(b.extension));
-}
-
-/** The plugin host sets the runner when it starts; null clears it. */
-export function setImportRunner(next: ImportRunner | null): void {
-  runner = next;
-}
+export const importerExtensions = (): string[] =>
+  [...currentWinners().keys()].sort();
 
 /** Runs plugin imports; false when the plugin host is not running. */
 export async function runImports(
   items: readonly ImportItem[],
   target: ImportTarget,
 ): Promise<boolean> {
-  if (!runner || items.length === 0) {
+  if (!st.runner || items.length === 0) {
     return false;
   }
-  await runner(items, target);
+  await st.runner(items, target);
   return true;
 }
 
-/** The plugin host sets how to abort the running import. */
-export function setImportCanceller(next: (() => boolean) | null): void {
-  canceller = next;
-}
-
 /** "Import: Cancel": true when an import was running and is now aborted. */
-export const cancelImports = (): boolean => canceller?.() ?? false;
-
-/** For views (Plugins page): called after every change. */
-export const subscribeImporters = (fn: () => void): (() => void) => {
-  listeners.add(fn);
-  return () => void listeners.delete(fn);
-};
-
-export const importersVersion = (): number => version;
-
-/** Tests only. */
-export function resetImporterMap(): void {
-  claims.clear();
-  overrides = {};
-  runner = null;
-  canceller = null;
-  changed();
-}
+export const cancelImports = (): boolean => st.canceller?.() ?? false;

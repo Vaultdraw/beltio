@@ -55,7 +55,11 @@ describe("startup import graph", () => {
   ])("%s statically imports no plugin host/shared code", (entry) => {
     const files = [...graph(resolve(__dirname, entry))];
     expect(files.length).toBeGreaterThan(20);
-    const bad = files.filter((f) => /\/src\/plugins\/(host|shared)\//.test(f));
+    const bad = files.filter(
+      (f) =>
+        /\/src\/plugins\/(host|shared)\//.test(f) ||
+        /\/importerMapAdmin\.ts$/.test(f),
+    );
     expect(bad).toEqual([]);
   });
 });
