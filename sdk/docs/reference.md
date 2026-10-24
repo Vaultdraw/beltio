@@ -37,7 +37,7 @@ Every key, type and limit is in the generated [manifest reference](manifest.md).
 - `plugin.toml` is at most 64 KB. A manifest has at most 200 commands, 20 panels and 100 settings.
 - Unknown keys are errors, except tables named `x-*`, which are reserved for tools.
 - `permissions` is a declaration of what the plugin does to your files, not a sandbox. See [permissions.md](permissions.md).
-- Only the activation event `onStartupFinished` exists. `dev = true` makes the app reload the plugin when its files change; a packaged plugin must not set it.
+- Activation events: `onStartupFinished`, and since 0.6.0 `onDrop:<ext>` for an extension one of its importers declares. `dev = true` makes the app reload the plugin when its files change; a packaged plugin must not set it.
 - The settings entries have the shape of `SettingDecl` in `@vaultdraw/api`. The Rust side only checks that each has a `key` and a `type`. The app's settings registry validates the rest and reports problems on the Plugins page.
 
 ## Lifecycle
@@ -49,7 +49,7 @@ flowchart TD
   C -- no --> X[Nothing registered]
   C -- yes --> D[Stubs: commands, panels, settings]
   D --> E{First use?}
-  E -- "command, panel or onStartupFinished" --> F[Load main.js]
+  E -- "command, panel, importer file or onStartupFinished" --> F[Load main.js]
   F --> G["activate(ctx)"]
   G --> H[Plugin runs]
   H --> I{"Disable, reload or quit"}
@@ -145,6 +145,9 @@ interface PluginContext {
       cb: (payload: Readonly<AppEventMap[K]>) => void,
     ): Disposable;
   };
+  readonly vault: VaultApi; // since 0.6.0, see below
+  readonly workspace: WorkspaceApi; // since 0.6.0
+  readonly importers: ImportersApi; // since 0.6.0
   readonly host: {
     // since 0.2.0
     readonly app: string; // the app version
@@ -275,6 +278,98 @@ type AppEventMap = {
 - Ids come back in op order (labels excluded). The app always generates ids.
 - A `delete` wins over updates of the same id.
 - Any unknown property rejects the whole batch.
+
+## Vault, workspace and importers (since 0.6.0)
+
+Three parts of `ctx` and one event. Drawings are the only files they touch: other files (plain text, for example) are not in this API level.
+
+### ctx.vault
+
+Paths are vault-relative and use `/`. Permissions are listed in [permissions.md](permissions.md#which-calls-need-which-permission).
+
+```ts
+interface VaultEntry {
+  path: string; // vault-relative, "/"-separated
+  name: string;
+  kind: "drawing" | "folder";
+  modifiedAt: number; // ms since the epoch
+  size: number; // bytes; 0 for folders
+}
+
+interface VaultApi {
+  info(): { name: string; readOnly: boolean } | null; // free; never the path on disk
+  list(dir?: string): Promise<VaultEntry[]>; // needs vault.read
+  readDrawing(
+    path: string,
+  ): Promise<{ elements: readonly SceneElement[]; revision: string }>; // needs vault.read
+  createDrawing(
+    path: string,
+    ops: readonly SceneOp[],
+  ): Promise<{ path: string; revision: string; ids: string[] }>; // needs vault.write
+}
+```
+
+| Call | What it does |
+| --- | --- |
+| `info()` | The vault's name and whether it is read-only, or `null` when no vault is open. |
+| `list(dir)` | One folder (`""` is the root), folders first, then by name. Dot entries and symlinks are left out. |
+| `readDrawing(path)` | The drawing's elements as plain copies, and its revision. Files over 32 MiB are refused. |
+| `createDrawing(path, ops)` | A new drawing built from `add` ops. The path must not exist. Returns the ids of the new elements, in op order. |
+
+- `createDrawing` only creates. Plugins cannot overwrite, rename, move or delete a drawing, and cannot write any other file type.
+- `createDrawing` takes the same ops as `ctx.scene.batch` (`add` only, since nothing exists to update yet). The same batch rules apply.
+- Errors carry a `code`: `PERMISSION`, `INVALID_PATH`, `INVALID_ARGUMENT`, `NOT_FOUND`, `NAME_COLLISION`, `READ_ONLY`, `NO_VAULT`, `INVALID_FILE`, `IO_ERROR`.
+
+**Path rules** (checked before the call reaches the disk, the same rules in the app and the test host):
+
+| Rule | Limit |
+| --- | --- | --- |
+| Separator | `/` only. No `\` and no NUL. |
+| Length | At most 1024 bytes in UTF-8. |
+| Dot segments | No segment starts with a dot, so no `.`, `..` or hidden folders. |
+| Drawing paths | `list` takes a folder. `readDrawing` and `createDrawing` take a file that ends in `.excalidraw`. |
+| Segments | 1 to 255 bytes each. No control characters, `<>:" | ?\*`, no trailing dot or space, and no Windows device names (`CON`, `COM1`, …). |
+| Vault metadata | The `.excalidraw-vault` folder is never accepted. |
+| Create only | `createDrawing` refuses an existing path (`NAME_COLLISION`), also when it differs only by case. |
+
+### ctx.workspace
+
+```ts
+interface WorkspaceApi {
+  open(path: string, opts?: { newTab?: boolean }): Promise<void>; // free
+  activePath(): string | null; // free
+}
+```
+
+- `open` shows a drawing, in a new tab with `newTab: true`. It fails with `NOT_FOUND` when the drawing does not exist, and with `NO_VAULT` when no vault is open.
+- `activePath` gives the open drawing's vault-relative path, or `null`.
+
+### ctx.importers
+
+`register(id, importer)` gives the code for one importer declared in `plugin.toml`. An id that is not declared is refused. Full details, limits and the drop path are in [importers.md](importers.md).
+
+```ts
+interface Importer {
+  import(
+    input: ImportInput,
+    opts: ImportOptions,
+  ): Promise<ImportResult> | ImportResult;
+}
+type ImportResult = { ops: readonly SceneOp[] } | void;
+```
+
+- Return `{ ops }` to add content to the drawing. The app applies it as **one undo step** at the drop point.
+- Return nothing when the importer did its own work with `ctx.vault.createDrawing` or `ctx.workspace.open`.
+
+### The vault.changed event
+
+```ts
+"vault.changed": { paths: string[]; rescan: boolean }
+```
+
+- Sent when files in the vault change on disk, including the plugin's own writes and autosaves. Compare revisions if a change matters.
+- `paths` are vault-relative. `rescan: true` means the file watcher lost track, so every path may have changed.
+- Needs `vault.read`. Without it, `on` records a `PERMISSION` error on the plugin (Settings → Plugins shows it) and returns a subscription that never fires.
 
 ## Rules for plugin code
 

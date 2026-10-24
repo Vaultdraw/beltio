@@ -821,5 +821,18 @@ enabled = ["my-plugin"]
   | `plugins.storage_limit_kb` | `1024` | Most data one plugin may save, in KiB (64 to 16384). A save past it is refused. |
 
   Uninstalling a plugin keeps its data; **Delete data** on its Settings → Plugins row removes it.
+- **Importers:** `plugins.importers` picks which plugin imports a file extension when two plugins claim it. Without a key, the plugin whose id comes first in plain text order wins. It reloads when you edit it.
+
+  | Key | Default | Meaning |
+  | --- | --- | --- |
+  | `plugins.importers` | empty | A table of extension → plugin id, for example `txt = "text-import"`. `""` as the id turns plugin handling off for that extension, and the app's own behaviour returns. A plugin name that does not claim the extension is ignored. |
+
+  ```toml
+  [plugins.importers]
+  txt = "text-import"   # this plugin imports .txt files
+  md = ""               # no plugin imports .md files
+  ```
+
+  Settings → Plugins lists each extension that two plugins claim. See [importers.md](../sdk/docs/importers.md).
 - **Commands:** `plugins.openSettings`, `plugins.installFolder`, `plugins.reloadList`, `plugins.openFolder` (shows the plugins folder) and `plugins.deleteData` ("Delete data of a plugin…": opens Settings → Plugins at the first **Delete data** button). Like every command, you can rebind them in `[hotkeys]`.
 - **Writing a plugin:** the `vaultdraw-plugin` tool (`check`, `init`, `dev`) is described in `sdk/docs/getting-started.md`. It adds no config key.

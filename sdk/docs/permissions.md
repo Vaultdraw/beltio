@@ -22,12 +22,28 @@ permissions = ["vault.read", "vault.write"]   # optional, default []
 
 | Permission | Consent line | Gates |
 | --- | --- | --- |
-| `vault.read` | Read the drawings in your vault | Reading drawings other than the open one (arrives with the vault API) |
-| `vault.write` | Create drawings in your vault | Writing files, which have no undo (arrives with the vault API) |
+| `vault.read` | Read the drawings in your vault | Listing folders, reading drawings other than the open one, and the `vault.changed` event |
+| `vault.write` | Create drawings in your vault | Creating drawings. Files have no undo, so creating one needs this permission |
 
 At most 8, no duplicates. An unknown name is a manifest error, so an older app refuses a plugin that needs a newer one. The names `net`, `secret` and `control` are reserved for later and are refused today. `ctx.manifest.permissions` returns the list.
 
-Since API 0.3.0 the app checks them in its native layer: every native call of the plugin API goes through one gateway (`plugin_call`), which looks the method up in a fixed list, then refuses (`code: "PERMISSION"`) a call whose permission your `plugin.toml` does not declare or the user has not confirmed. The vault API that uses `vault.read` and `vault.write` comes next; `ctx.storage` needs no permission. Declaring them now means your plugin's consent line will not change when it does.
+Since API 0.3.0 the app checks them in its native layer: every native call of the plugin API goes through one gateway (`plugin_call`), which looks the method up in a fixed list, then refuses (`code: "PERMISSION"`) a call whose permission your `plugin.toml` does not declare or the user has not confirmed. `ctx.storage` needs no permission.
+
+## Which calls need which permission
+
+| Call                                          | Permission    | Since |
+| --------------------------------------------- | ------------- | ----- |
+| `ctx.vault.list(dir)`                         | `vault.read`  | 0.6.0 |
+| `ctx.vault.readDrawing(path)`                 | `vault.read`  | 0.6.0 |
+| `ctx.events.on("vault.changed", …)`           | `vault.read`  | 0.6.0 |
+| `ctx.vault.createDrawing(path, ops)`          | `vault.write` | 0.6.0 |
+| `ctx.vault.info()`                            | none          | 0.6.0 |
+| `ctx.workspace.open(path)` and `activePath()` | none          | 0.6.0 |
+| `ctx.importers.register(id, importer)`        | none          | 0.6.0 |
+| `ctx.storage.global`                          | none          | 0.3.0 |
+| `ctx.scene` (edits have undo)                 | none          | 0.1.0 |
+
+A call that needs a permission your `plugin.toml` does not declare fails with `code: "PERMISSION"`. An importer runs on a file the user chose, so its input needs no permission; an importer that calls `ctx.vault` still needs the permission for that call.
 
 ## What you see
 

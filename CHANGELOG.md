@@ -34,6 +34,15 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - New palette command **Plugins: Open plugins folder** (`plugins.openFolder`) shows the plugins folder in your file manager.
 - Only the first 6 plugin panel buttons show in the activity bar. The palette or Settings → Interface shows the others.
 - A plugin can declare `permissions` in `plugin.toml` (`vault.read`, `vault.write`). The enable dialog lists them in plain words, and the app remembers what you confirmed. An update that adds a write permission is switched off until you press **Review** in Settings → Plugins; an added read permission loads with a notice. A permission is a declaration, not a sandbox: plugins still run with full access. See `sdk/docs/permissions.md`.
+- Plugin API 0.6.0: `ctx.vault` lists folders (`list`), reads drawings (`readDrawing`), creates drawings (`createDrawing`, create only) and shows the vault's name and read-only state (`info`). Reading needs `vault.read`, creating needs `vault.write`. See `sdk/docs/reference.md`.
+- Plugin API 0.6.0: `ctx.workspace` opens a drawing (`open`, optionally in a new tab) and gives the open drawing's path (`activePath`). Both are free.
+- Plugin API 0.6.0: plugins can import file types. `[[contributes.importers]]` in `plugin.toml` declares them, and `ctx.importers.register` handles them. The plugin loads only when a matching file is dropped on a drawing or picked in **Import: File…**. An import is one undo step. See `sdk/docs/importers.md`.
+- Plugin API 0.6.0: `onDrop:<ext>` activation loads a plugin when a file with a declared extension arrives. It adds nothing an importer does not already do.
+- Plugin API 0.6.0: the `vault.changed` event reports vault files that changed on disk, as vault-relative paths with a `rescan` flag. It needs `vault.read`.
+- **Import: Cancel** (`plugins.cancelImport`) stops a running plugin import. It has no default shortcut and can be rebound in `[hotkeys]`.
+- **Import: File…** accepts the file types that plugins import, as well as PDFs and images.
+- `plugins.importers` in `config.toml` chooses which plugin imports an extension when two plugins claim it, or turns plugin handling off for it with `""`. It reloads when edited. Settings → Plugins lists the clashes.
+- `sdk/examples/text-import` is an example plugin: drop a `.txt` file and its text lands on the drawing in one undo step.
 
 ### Faster
 
