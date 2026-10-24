@@ -42,6 +42,15 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - Plugin API 0.6.0: plugins can import file types. `[[contributes.importers]]` in `plugin.toml` declares them, and `ctx.importers.register` handles them. The plugin loads only when a matching file is dropped on a drawing or picked in **Import: File…**. An import is one undo step. See `sdk/docs/importers.md`.
 - Plugin API 0.6.0: `onDrop:<ext>` activation loads a plugin when a file with a declared extension arrives. It adds nothing an importer does not already do.
 - Plugin API 0.6.0: the `vault.changed` event reports vault files that changed on disk, as vault-relative paths with a `rescan` flag. It needs `vault.read`.
+- Plugin API 0.4.0: `scene.batch` ops can name new elements with `ref`; the result's `refs` maps each ref to its id. Arrows bind to shapes with `start` and `end: { ref }`, placed on the outlines (rectangle, ellipse, diamond, text). See `sdk/docs/reference.md`.
+- Plugin API 0.4.0: the `group` op groups ids or `{ ref }` members (at least two). A label is grouped with its container. `createDrawing` takes groups and refs too.
+- Plugin API 0.4.0: plugin data on elements (`data`, at most 4 KiB as JSON) is stored under the key `data_key` in `plugin.toml`, default `plugins.<id>`. Read it with `scene.dataOf(id)` or `scene.get(ids, { data: true })`. `ctx.manifest.dataKey` gives the key.
+- Plugin API 0.4.0: `scene.get(ids, options)` returns more detail (groups, frame, label container, style, link, lock; points and data on request). `scene.dataOf(id)` and `scene.path()` are new.
+- Plugin API 0.4.0: `scene.batch(ops, { path })` applies only if that drawing is still active; otherwise it refuses with `DRAWING_CHANGED`.
+- Plugin API 0.4.0: new element properties `angle`, `strokeStyle`, `fillStyle`, `roundness`, `fontFamily`, `link` (`javascript:`, `data:`, `vbscript:` and `file:` refused) and `locked`.
+- Plugin API 0.4.0: scene refusals carry a `code`: `NOT_FOUND`, `READ_ONLY`, `DRAWING_CHANGED` or `INVALID_ARGUMENT`. Plugins can check `ctx.host.has("scene.path")` for the 0.4.0 batch additions.
+- New config key `plugins.scene_max_ops` (default 500, 1 to 1000) sets the most ops in one plugin `scene.batch`. It is read on every batch, so edits apply at once.
+- `sdk/examples/flow-diagram` is an example plugin: a panel button and a command insert a connected flow (boxes, bound arrows, one group) in one undo step.
 - **Import: Cancel** (`plugins.cancelImport`) stops a running plugin import. It has no default shortcut and can be rebound in `[hotkeys]`.
 - **Import: File…** accepts the file types that plugins import, as well as PDFs and images.
 - `plugins.importers` in `config.toml` chooses which plugin imports an extension when two plugins claim it, or turns plugin handling off for it with `""`. It reloads when edited. Settings → Plugins lists the clashes.

@@ -136,8 +136,17 @@ interface PluginContext {
       select: (els: readonly SceneElement[]) => T,
       isEqual?: (a: T, b: T) => boolean,
     ): T; // React hook for panels
-    batch(ops: readonly SceneOp[]): Promise<{ ids: string[] }>; // all or nothing, ONE undo step
+    batch(
+      ops: readonly SceneOp[],
+      options?: { path?: string },
+    ): Promise<{ ids: string[]; refs: Record<string, string> }>; // all or nothing, ONE undo step; since 0.4.0 also refs
     viewportCenter(): { x: number; y: number };
+    get(
+      ids: readonly string[],
+      options?: { points?: boolean; data?: boolean },
+    ): readonly SceneElementDetail[]; // since 0.4.0; missing ids are left out
+    dataOf(id: string): Json | undefined; // since 0.4.0; this plugin's data on an element
+    path(): string | null; // since 0.4.0; the active drawing's vault-relative path, null when none
   };
   readonly events: {
     on<K extends keyof AppEventMap>(
@@ -188,7 +197,15 @@ Notes:
 
 - `ctx.ui.toast(m)` shows "<plugin name>: m". Don't add your name yourself. The same message while it is still showing refreshes that toast instead of stacking a second one.
 - A stored setting value outside a declared `min` / `max`, or of the wrong type, reads as the default and is reported as a settings problem. `ctx.settings.set` rejects such a value.
-- `ctx.scene.batch` rejects when no drawing is open, when the drawing is read-only, or when an op is invalid. The error carries the problems in `issues` (`SceneOpIssue[]`: op index, key, message).
+- `ctx.scene.batch` rejects with a `code`:
+
+  | Code | When |
+  | --- | --- |
+  | `NOT_FOUND` | No drawing is open. |
+  | `READ_ONLY` | The drawing is read-only. |
+  | `DRAWING_CHANGED` | `options.path` is set and is not the active drawing (the user switched). |
+  | `INVALID_ARGUMENT` | An op is invalid. `issues` (`SceneOpIssue[]`: op index, key, message) lists every problem. Nothing is written. |
+
 - Events are delivered in order, on a microtask. Paths are vault-relative.
 - `ctx.host.has(name)` asks for a feature, not a version (like `has('nvim-0.9')` in Neovim). Names are a `ctx` member (`"theme"`), a member of one (`"theme.tokens"`) or an app event (`"drawing.saved"`). Unknown names give `false`. The list is generated from the `@since` tags (`sdk/api/testing/features.ts`).
 - `ctx.theme.tokens()` returns what the document shows now, as CSS strings: some are `rgba(...)` colours or shadows, not only `#rrggbb`. The table is frozen and is as of the last theme change (a CSS snippet that edits `--vault-*` by itself is not seen); read it again after `onChange`. The 41 names are API; each is described in [theme-tokens.md](theme-tokens.md).
@@ -242,12 +259,57 @@ interface NewElement {
   strokeWidth?: number;
   opacity?: number;
   points?: [number, number][];
+  angle?: number; // since 0.4.0: radians, -2π to 2π
+  strokeStyle?: "solid" | "dashed" | "dotted"; // since 0.4.0
+  fillStyle?: "hachure" | "cross-hatch" | "solid" | "zigzag"; // since 0.4.0
+  roundness?: "sharp" | "round"; // since 0.4.0; not on text
+  fontFamily?: FontFamilyName; // since 0.4.0
+  link?: string | null; // since 0.4.0; null removes it
+  locked?: boolean; // since 0.4.0
+  data?: Json | null; // since 0.4.0; this plugin's data, at most 4 KiB as JSON
+  start?: { ref: string }; // since 0.4.0; arrows only
+  end?: { ref: string }; // since 0.4.0; arrows only
 }
 
+type FontFamilyName =
+  | "Excalifont"
+  | "Nunito"
+  | "Lilita One"
+  | "Comic Shanns"
+  | "Virgil"
+  | "Helvetica"
+  | "Cascadia"
+  | "Liberation Sans";
+
 type SceneOp =
-  | { op: "add"; element: NewElement }
-  | { op: "update"; id: string; props: Partial<Omit<NewElement, "type">> }
-  | { op: "delete"; id: string };
+  | { op: "add"; element: NewElement; ref?: string } // since 0.4.0: ref names the new element in this batch
+  | { op: "update"; id: string; props: Partial<Omit<NewElement, "type" | "start" | "end">> }
+  | { op: "delete"; id: string }
+  | { op: "group"; ids: (string | { ref: string })[] }; // since 0.4.0; at least 2 members
+
+interface BatchResult {
+  ids: string[]; // added elements, in op order
+  refs: Record<string, string>; // since 0.4.0: each ref mapped to its new id
+}
+
+interface SceneElementDetail extends SceneElement {
+  // since 0.4.0; returned by scene.get()
+  groupIds: string[]; // innermost group first
+  frameId: string | null;
+  containerId: string | null; // the shape a label belongs to
+  locked: boolean;
+  link: string | null;
+  opacity: number;
+  strokeWidth: number;
+  strokeStyle: string;
+  fillStyle: string;
+  roundness: "sharp" | "round";
+  fontSize?: number; // text only
+  fontFamily?: string; // text only
+  fileId?: string | null; // images only
+  points?: [number, number][]; // lines and arrows, with { points: true }
+  data?: Json; // with { data: true }
+}
 
 type AppEventMap = {
   "vault.opened": { name: string };
@@ -264,13 +326,17 @@ type AppEventMap = {
 
 | Rule              | Limit                                                 |
 | ----------------- | ----------------------------------------------------- |
-| Ops per batch     | at most 500                                           |
+| Ops per batch     | at most 500 by default; `plugins.scene_max_ops` sets 1 to 1000 (since 0.4.0) |
 | Numbers           | finite, within ±1e7                                   |
 | `width`, `height` | 1 to 1e6                                              |
 | `text`            | at most 10 000 characters; required for text adds     |
 | `fontSize`        | 1 to 1000                                             |
 | `strokeWidth`     | 0 to 100                                              |
 | `opacity`         | 0 to 100                                              |
+| `angle`           | -2π to 2π radians (since 0.4.0)                       |
+| `roundness`       | not on text (since 0.4.0)                             |
+| `link`            | at most 2048 characters; `javascript:`, `data:`, `vbscript:` and `file:` refused (since 0.4.0) |
+| `data`            | JSON, at most 4096 bytes as UTF-8; needs a data key (since 0.4.0) |
 | Colours           | hex (3, 4, 6 or 8 digits), CSS names or `transparent` |
 
 - `text` on a shape becomes its bound label.
@@ -278,6 +344,55 @@ type AppEventMap = {
 - Ids come back in op order (labels excluded). The app always generates ids.
 - A `delete` wins over updates of the same id.
 - Any unknown property rejects the whole batch.
+
+**Since 0.4.0:**
+
+- **Refs.** An `add` may carry `ref` (1 to 64 letters, digits, `_`, `-`, `.` or `:`, unique in the batch). Use `{ ref }` where an id is needed (`start`, `end`, `group`). A plain string is always a real element id. The result's `refs` maps each ref to its new id.
+- **Bound arrows.** `start` and `end` take `{ ref }` only. The arrow sits on the outline of the shape and is bound to it, so moving the shape moves the arrow. Only rectangle, ellipse, diamond and text can be bound. Binding to an element already on the canvas is refused for now.
+- **Groups.** `group` lists two or more members: ids, or `{ ref }`. A label cannot be listed; list its container, which groups the label with it.
+- **Plugin data.** `data` is stored under the plugin's data key: `data_key` in `plugin.toml`, else `plugins.<id>`. Read it with `scene.dataOf(id)`, or with `scene.get(ids, { data: true })`. Set `data: null` to remove it.
+- **Path guard.** `scene.batch(ops, { path })` applies only if `path` is still the active drawing. Otherwise it rejects with `DRAWING_CHANGED`.
+- **Errors.** Refusals carry `code`: `NOT_FOUND`, `READ_ONLY`, `DRAWING_CHANGED` or `INVALID_ARGUMENT`. The table under "Notes" above lists them.
+
+### Connected diagrams (since 0.4.0)
+
+One `batch` call can add boxes, bind arrows to them and group the result. It is one undo step.
+
+```ts
+const path = ctx.scene.path();
+if (path === null) {
+  return; // no drawing is open
+}
+const { refs } = await ctx.scene.batch(
+  [
+    {
+      op: "add",
+      ref: "start",
+      element: { type: "rectangle", x: 0, y: 0, width: 160, height: 70, text: "Start", roundness: "round", data: { role: "start" } },
+    },
+    {
+      op: "add",
+      ref: "finish",
+      element: { type: "rectangle", x: 260, y: 0, width: 160, height: 70, text: "Finish", roundness: "round" },
+    },
+    {
+      op: "add",
+      ref: "link",
+      element: { type: "arrow", start: { ref: "start" }, end: { ref: "finish" } },
+    },
+    { op: "group", ids: [{ ref: "start" }, { ref: "finish" }, { ref: "link" }] },
+  ],
+  { path }, // refuses with DRAWING_CHANGED if the user switched drawings
+);
+
+const startId = refs.start; // real element id, usable in later batches
+const role = ctx.scene.dataOf(startId); // { role: "start" }
+```
+
+- `refs` is valid only for the batch that made it. Later batches use the real ids.
+- Each arrow's `start` and `end` must name an add in the same batch.
+- Only rectangle, ellipse, diamond and text can be bound.
+- The example plugin `sdk/examples/flow-diagram` does this with a panel button and a command.
 
 ## Vault, workspace and importers (since 0.6.0)
 
@@ -305,7 +420,7 @@ interface VaultApi {
   createDrawing(
     path: string,
     ops: readonly SceneOp[],
-  ): Promise<{ path: string; revision: string; ids: string[] }>; // needs vault.write
+  ): Promise<{ path: string; revision: string; ids: string[]; refs: Record<string, string> }>; // needs vault.write; refs since 0.4.0
 }
 ```
 
@@ -314,10 +429,10 @@ interface VaultApi {
 | `info()` | The vault's name and whether it is read-only, or `null` when no vault is open. |
 | `list(dir)` | One folder (`""` is the root), folders first, then by name. Dot entries and symlinks are left out. |
 | `readDrawing(path)` | The drawing's elements as plain copies, and its revision. Files over 32 MiB are refused. |
-| `createDrawing(path, ops)` | A new drawing built from `add` ops. The path must not exist. Returns the ids of the new elements, in op order. |
+| `createDrawing(path, ops)` | A new drawing built from `add` and `group` ops. The path must not exist. Returns the ids of the new elements, in op order, and `refs` (since 0.4.0). |
 
 - `createDrawing` only creates. Plugins cannot overwrite, rename, move or delete a drawing, and cannot write any other file type.
-- `createDrawing` takes the same ops as `ctx.scene.batch` (`add` only, since nothing exists to update yet). The same batch rules apply.
+- `createDrawing` takes the ops of `ctx.scene.batch` that can work on a new drawing: `add` and, since 0.4.0, `group`, with refs and `data`. `update` and `delete` are refused, because nothing exists yet to change. The same batch rules apply.
 - Errors carry a `code`: `PERMISSION`, `INVALID_PATH`, `INVALID_ARGUMENT`, `NOT_FOUND`, `NAME_COLLISION`, `READ_ONLY`, `NO_VAULT`, `INVALID_FILE`, `IO_ERROR`.
 
 **Path rules** (checked before the call reaches the disk, the same rules in the app and the test host):

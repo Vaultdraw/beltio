@@ -845,6 +845,17 @@ enabled = ["my-plugin"]
   | `plugins.storage_limit_kb` | `1024` | Most data one plugin may save, in KiB (64 to 16384). A save past it is refused. |
 
   Uninstalling a plugin keeps its data; **Delete data** on its Settings → Plugins row removes it.
+- **Scene writes:** `plugins.scene_max_ops` caps the number of ops in one plugin `scene.batch` call (read on every batch, so edits apply at once):
+
+  | Key | Default | Meaning |
+  | --- | --- | --- |
+  | `plugins.scene_max_ops` | `500` | Most ops in one plugin `scene.batch` call, an integer from 1 to 1000. A batch past it is refused with `INVALID_ARGUMENT`. |
+
+  ```toml
+  [plugins]
+  scene_max_ops = 1000
+  ```
+
 - **Importers:** `plugins.importers` picks which plugin imports a file extension when two plugins claim it. Without a key, the plugin whose id comes first in plain text order wins. It reloads when you edit it.
 
   | Key | Default | Meaning |
