@@ -1,3 +1,7 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -92,6 +96,29 @@ describe("canvas action commands", () => {
         flagged.map((c) => [c.id, [...conflicts.get(c.id)!.entries()]]),
         platform,
       ).toEqual([]);
+    }
+  });
+
+  it("get their own palette entry only when Excalidraw's palette lacks the action", () => {
+    const source = readFileSync(
+      path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "../../../packages/excalidraw/components/CommandPalette/commandPaletteItems.tsx",
+      ),
+      "utf8",
+    );
+    const listed = new Set(
+      [...source.matchAll(/actionManager\.actions\.(\w+)/g)].map((m) => m[1]),
+    );
+    // `actionLink` is imported directly; its action name is "hyperlink".
+    if (/^\s*actionLink,$/m.test(source)) {
+      listed.add("hyperlink");
+    }
+    for (const row of ACTION_TABLE) {
+      const command = getCommand(`canvas.${row.action}`)!;
+      expect(command.palette !== false, row.action).toBe(
+        !listed.has(row.action),
+      );
     }
   });
 

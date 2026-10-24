@@ -18,6 +18,13 @@ interface ActionRow {
   action: ActionName;
   title: string;
   keys: CommandKeys;
+  /**
+   * Listed by the palette as "Canvas: …". Default false: Excalidraw's own
+   * palette entry (editor provider) already lists the action, with its icon,
+   * its availability and the user's key, so a second entry would duplicate
+   * it. actionCommands.test.ts checks this against commandPaletteItems.tsx.
+   */
+  ownPaletteEntry?: true;
 }
 
 const keys = (...chords: string[]): CommandKeys => ({ default: chords });
@@ -54,11 +61,13 @@ export const ACTION_TABLE: readonly ActionRow[] = [
     action: "distributeHorizontally",
     title: "Distribute horizontally",
     keys: keys("Alt+H"),
+    ownPaletteEntry: true,
   },
   {
     action: "distributeVertically",
     title: "Distribute vertically",
     keys: keys("Alt+V"),
+    ownPaletteEntry: true,
   },
   {
     action: "sendBackward",
@@ -156,6 +165,7 @@ export const ACTION_COMMANDS: CommandDefinition[] = ACTION_TABLE.map((row) => ({
   title: `Canvas: ${row.title}`,
   category: "Canvas",
   keys: row.keys,
+  ...(row.ownPaletteEntry ? {} : { palette: false }),
   // Same scope as the tool keys: Excalidraw listened on the document, so the
   // keys work with focus on the body; a focused list, gallery or graph keeps
   // its own keys, and text fields keep theirs (Mod+A, Mod+D ...).

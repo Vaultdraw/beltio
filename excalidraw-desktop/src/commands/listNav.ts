@@ -32,6 +32,17 @@ export const LIST_ACTIONS = [
   "menu",
   "nextView",
   "exit",
+  // command audit (S8): the file tree's row menu items
+  "duplicate",
+  "saveAsTemplate",
+  "reveal",
+  "showAsGrid",
+  "localGraph",
+  "history",
+  "exportPng",
+  "exportSvg",
+  "exportPdf",
+  "saveCopy",
 ] as const;
 
 export type ListAction = typeof LIST_ACTIONS[number];

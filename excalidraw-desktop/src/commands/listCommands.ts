@@ -8,6 +8,8 @@ import { listCommandId, type ListAction } from "./listNav";
 import type { Chord, CommandDefinition } from "./types";
 
 export const FOCUS_TREE_COMMAND_ID = "navigator.focusTree";
+/** Command audit (S8): the search box's clear button. */
+export const CLEAR_SEARCH_COMMAND_ID = "navigator.clearSearch";
 
 const list = (
   action: ListAction,
@@ -48,11 +50,29 @@ export const LIST_COMMANDS: readonly CommandDefinition[] = [
   list("menu", "Show item menu", ["Shift+F10", "ContextMenu"]),
   list("nextView", "Switch view", ["Tab"]),
   list("exit", "Leave list", ["Escape"]),
+  // command audit (S8): the row menu's items, on the focused row (no keys)
+  list("duplicate", "Duplicate item", []),
+  list("saveAsTemplate", "Save item as template", []),
+  list("reveal", "Reveal item in file manager", []),
+  list("showAsGrid", "Show folder as grid", []),
+  list("localGraph", "Open local graph of item", []),
+  list("history", "Show item history", []),
+  list("exportPng", "Export item as PNG", []),
+  list("exportSvg", "Export item as SVG", []),
+  list("exportPdf", "Export item as PDF", []),
+  list("saveCopy", "Save a copy of item", []),
   {
     id: FOCUS_TREE_COMMAND_ID,
     title: "Navigator: Focus file tree",
     category: "Navigator",
     keys: { default: ["Mod+Alt+F"] },
+    when: ["vaultOpen", "!modalOpen"],
+  },
+  {
+    id: CLEAR_SEARCH_COMMAND_ID,
+    title: "Navigator: Clear search",
+    category: "Navigator",
+    keys: { default: [] },
     when: ["vaultOpen", "!modalOpen"],
   },
 ];

@@ -27,7 +27,10 @@ import { isNewTabClick } from "../tabs/newTabClick";
 import { useListKeys } from "../commands/useListKeys";
 import { focusList } from "../commands/listNav";
 import { registerCommandHandlers } from "../commands/handlerRegistry";
-import { FOCUS_TREE_COMMAND_ID } from "../commands/listCommands";
+import {
+  CLEAR_SEARCH_COMMAND_ID,
+  FOCUS_TREE_COMMAND_ID,
+} from "../commands/listCommands";
 import { focusCanvasIfIdle } from "../palette/focus";
 
 import {
@@ -521,6 +524,18 @@ export const VaultNavigator = ({
     create: onRowNewInside,
     menu: openRowMenu,
     exit: exitTree,
+    // command audit (S8): the row menu's items as list.* commands
+    row: {
+      duplicate: (path) => void onDuplicateDrawing(path),
+      reveal: (path) => void onRevealEntry(path),
+      showAsGrid: requestGallery,
+      saveAsTemplate: onSaveAsTemplate,
+      localGraph: onOpenLocalGraph && ((path) => void onOpenLocalGraph(path)),
+      history: onShowHistory && ((path) => void onShowHistory(path)),
+      export:
+        onExportDrawing &&
+        ((path, format) => void onExportDrawing(path, format)),
+    },
   };
   const treeKeys = useMemo(() => lazyTreeController(treeState), []);
   useListKeys(treeContainerRef, "tree", isSearching ? null : treeKeys);
@@ -547,6 +562,17 @@ export const VaultNavigator = ({
         },
       }),
     [exitTree, showNavigator],
+  );
+  // Offered only while there is a query to clear (command audit S8).
+  const hasQuery = searchQuery !== "";
+  useEffect(
+    () =>
+      hasQuery
+        ? registerCommandHandlers({
+            [CLEAR_SEARCH_COMMAND_ID]: () => setSearchQuery(""),
+          })
+        : undefined,
+    [hasQuery],
   );
   useEffect(() => {
     if (focusTreePending.current && !collapsed && !isSearching) {

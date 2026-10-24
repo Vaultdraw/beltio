@@ -197,3 +197,70 @@ describe("lazyTreeController", () => {
     expect(c.delete).toBeUndefined();
   });
 });
+
+describe("row menu items as list commands (command audit)", () => {
+  const row = () => ({
+    duplicate: vi.fn(),
+    reveal: vi.fn(),
+    showAsGrid: vi.fn(),
+    saveAsTemplate: vi.fn(),
+    localGraph: vi.fn(),
+    history: vi.fn(),
+    export: vi.fn(),
+  });
+
+  it("act on the focused drawing, like the row menu", () => {
+    const r = row();
+    const t = deps("c.excalidraw", { row: r });
+    t.run("duplicate");
+    t.run("reveal");
+    t.run("saveAsTemplate");
+    t.run("localGraph");
+    t.run("history");
+    t.run("exportPng");
+    t.run("exportSvg");
+    t.run("exportPdf");
+    t.run("saveCopy");
+    expect(r.duplicate).toHaveBeenCalledWith("c.excalidraw");
+    expect(r.reveal).toHaveBeenCalledWith("c.excalidraw");
+    expect(r.saveAsTemplate).toHaveBeenCalledWith("c.excalidraw");
+    expect(r.localGraph).toHaveBeenCalledWith("c.excalidraw");
+    expect(r.history).toHaveBeenCalledWith("c.excalidraw");
+    expect(r.export.mock.calls.map((c) => c[1])).toEqual([
+      "png",
+      "svg",
+      "pdf",
+      "copy",
+    ]);
+    expect(t.actions.showAsGrid).toBeUndefined();
+  });
+
+  it("offer only reveal and show as grid on a folder", () => {
+    const r = row();
+    const t = deps("b", { row: r });
+    t.run("showAsGrid");
+    t.run("reveal");
+    expect(r.showAsGrid).toHaveBeenCalledWith("b");
+    expect(r.reveal).toHaveBeenCalledWith("b");
+    for (const action of ["duplicate", "exportPng", "history"] as const) {
+      expect(t.actions[action], action).toBeUndefined();
+    }
+  });
+
+  it("need a focused row; duplicate is hidden when read-only", () => {
+    expect(deps(null, { row: row() }).actions.reveal).toBeUndefined();
+    const t = deps("c.excalidraw", { row: row(), readOnly: true });
+    expect(t.actions.duplicate).toBeUndefined();
+    expect(t.actions.exportPng).toBeDefined();
+  });
+
+  it("skip items the app does not provide", () => {
+    const { duplicate, reveal, showAsGrid } = row();
+    const t = deps("c.excalidraw", {
+      row: { duplicate, reveal, showAsGrid },
+    });
+    expect(t.actions.saveAsTemplate).toBeUndefined();
+    expect(t.actions.exportPdf).toBeUndefined();
+    expect(t.actions.duplicate).toBeDefined();
+  });
+});

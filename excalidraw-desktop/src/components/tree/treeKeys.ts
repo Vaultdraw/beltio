@@ -7,10 +7,12 @@
  * Safety: rename, delete, move and the menu need a focused row. With none,
  * they are not offered (the key passes, the palette hides them), even while
  * a drawing is open: navigation may start at the open drawing, edits never.
+ * The row menu's other items (duplicate, export ...) follow the same rule.
  */
 import { getParentPath } from "../../vault/treeStore";
 
 import type { ListAction } from "../../commands/listNav";
+import type { ExplorerExportFormat } from "../../export/exportFromFile";
 import type { VaultEntry } from "../../vault/types";
 import type { TreeRow } from "./flattenTree";
 
@@ -33,6 +35,19 @@ export interface TreeKeyDeps {
   create(parentFolder: string, kind: "drawing" | "folder"): void;
   menu(entry: VaultEntry): void;
   exit(): void;
+  /** Row menu items (command audit S8); absent = not offered. */
+  row?: TreeRowActions;
+}
+
+/** The row menu's items, each taking the focused row's path. */
+export interface TreeRowActions {
+  duplicate(path: string): void;
+  reveal(path: string): void;
+  showAsGrid(path: string): void;
+  saveAsTemplate?(path: string): void;
+  localGraph?(path: string): void;
+  history?(path: string): void;
+  export?(path: string, format: ExplorerExportFormat): void;
 }
 
 /** Everything the tree implements (it has no second view: Tab leaves it). */
@@ -55,6 +70,16 @@ export const TREE_ACTIONS: readonly TreeAction[] = [
   "move",
   "menu",
   "exit",
+  "duplicate",
+  "saveAsTemplate",
+  "reveal",
+  "showAsGrid",
+  "localGraph",
+  "history",
+  "exportPng",
+  "exportSvg",
+  "exportPdf",
+  "saveCopy",
 ];
 
 /**
@@ -149,6 +174,37 @@ export function treeActions(d: TreeKeyDeps): TreeActions {
     newFolder: createIn("folder"),
     menu: item ? () => d.menu(item) : undefined,
     exit: d.dragging ? undefined : d.exit,
+    ...rowMenuActions(item, d),
+  };
+}
+
+/** Same conditions as the row menu (VaultNavigator RowMenu). */
+function rowMenuActions(
+  item: VaultEntry | undefined,
+  d: TreeKeyDeps,
+): TreeActions {
+  const r = d.row;
+  if (!item || !r) {
+    return {};
+  }
+  const { path } = item;
+  const bind = (fn: ((path: string) => void) | undefined, when = true) =>
+    fn && when ? () => fn(path) : undefined;
+  if (item.kind === "folder") {
+    return { reveal: bind(r.reveal), showAsGrid: bind(r.showAsGrid) };
+  }
+  const exportAs = (format: ExplorerExportFormat) =>
+    r.export ? () => r.export?.(path, format) : undefined;
+  return {
+    duplicate: bind(r.duplicate, !d.readOnly),
+    saveAsTemplate: bind(r.saveAsTemplate),
+    reveal: bind(r.reveal),
+    localGraph: bind(r.localGraph),
+    history: bind(r.history),
+    exportPng: exportAs("png"),
+    exportSvg: exportAs("svg"),
+    exportPdf: exportAs("pdf"),
+    saveCopy: exportAs("copy"),
   };
 }
 

@@ -22,7 +22,7 @@ const apiWith = (items: ReturnType<typeof cmd>[]) =>
 
 describe("editor provider", () => {
   it("keeps available, non-excluded items with our shortcut notation", () => {
-    const align = cmd("alignLeft", true, "Cmd+Shift+Left");
+    const align = cmd("copyAsPng", true, "Cmd+Shift+Left");
     const api = apiWith([
       align,
       cmd("group", false),
@@ -35,11 +35,29 @@ describe("editor provider", () => {
       disabled: () => false,
     });
     const items = provider.items();
-    expect(items.map((i) => i.key)).toEqual(["editor:alignLeft"]);
+    expect(items.map((i) => i.key)).toEqual(["editor:copyAsPng"]);
     expect(items[0].group).toBe("Elements");
     expect(items[0].shortcut).toBe("⇧⌘←");
     void items[0].run();
     expect(align.perform).toHaveBeenCalled();
+  });
+
+  it("shows the user's key for actions that are canvas.* commands", () => {
+    const api = apiWith([
+      cmd("group", true, "Cmd+G"),
+      cmd("cut", true, "Cmd+X"),
+    ]);
+    const items = (overrides: Record<string, string[]>) =>
+      createEditorProvider(() => api, {
+        platform: "mac",
+        disabled: () => false,
+        overrides: () => overrides,
+      })
+        .items()
+        .map((i) => i.shortcut);
+    expect(items({})).toEqual(["⌘G", "⌘X"]);
+    expect(items({ "canvas.group": ["Alt+G"] })).toEqual(["⌥G", "⌘X"]);
+    expect(items({ "canvas.group": [] })).toEqual(["", "⌘X"]);
   });
 
   it("is empty without an editor or while disabled", () => {

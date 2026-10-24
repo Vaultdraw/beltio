@@ -88,6 +88,7 @@ export function useEditorPalette(options: Options): void {
       createEditorProvider(api, {
         platform,
         disabled: () => live.current.disabled,
+        overrides: () => getPreferences().hotkeys,
       }),
     );
     const unPens = registerPaletteProvider(

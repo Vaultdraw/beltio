@@ -8,9 +8,15 @@ import type {
   ExcalidrawImperativeAPI,
 } from "@excalidraw/excalidraw/types";
 
-import { excalidrawShortcutLabel } from "../shortcuts";
+import type { ActionName } from "@excalidraw/excalidraw/actions/types";
 
-import type { Platform } from "../../commands/types";
+import {
+  actionCommandId,
+  isHostOwnedAction,
+} from "../../commands/actionCommands";
+import { commandShortcutLabel, excalidrawShortcutLabel } from "../shortcuts";
+
+import type { HotkeyOverrides, Platform } from "../../commands/types";
 import type { PaletteItem, PaletteProvider } from "../types";
 
 /** Editor commands Vaultdraw does not offer, one reason each. */
@@ -32,15 +38,30 @@ interface Deps {
    * viewModeEnabled).
    */
   disabled(): boolean;
+  /**
+   * Live `[hotkeys]` overrides: an action that is a canvas.* command shows
+   * the user's key, not Excalidraw's. Default: no overrides.
+   */
+  overrides?(): HotkeyOverrides;
 }
 
-function toItem(cmd: EditorPaletteCommand, platform: Platform): PaletteItem {
+function toItem(
+  cmd: EditorPaletteCommand,
+  platform: Platform,
+  overrides: HotkeyOverrides,
+): PaletteItem {
   return {
     key: `editor:${cmd.id}`,
     title: cmd.label,
     keywords: cmd.keywords,
     group: cmd.category,
-    shortcut: excalidrawShortcutLabel(cmd.shortcut, platform),
+    shortcut: isHostOwnedAction(cmd.id)
+      ? commandShortcutLabel(
+          actionCommandId(cmd.id as ActionName),
+          overrides,
+          platform,
+        )
+      : excalidrawShortcutLabel(cmd.shortcut, platform),
     icon: cmd.icon,
     run: cmd.perform,
   };
@@ -57,10 +78,11 @@ export function createEditorProvider(
       if (!api || api.isDestroyed || deps.disabled()) {
         return [];
       }
+      const overrides = deps.overrides?.() ?? {};
       return api
         .getCommandPaletteItems()
         .filter((cmd) => cmd.available && !(cmd.id in EDITOR_PALETTE_EXCLUDED))
-        .map((cmd) => toItem(cmd, deps.platform));
+        .map((cmd) => toItem(cmd, deps.platform, overrides));
     },
   };
 }
