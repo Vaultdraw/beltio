@@ -34,18 +34,22 @@ describe("preferences write path keeps the written snapshot in the cache", () =>
     parse.mockRestore();
   });
 
-  it("the cached snapshot equals what a fresh parse of storage gives", () => {
+  it("the cached snapshot equals what a fresh parse of storage gives", async () => {
     const { win, store } = makeWin();
     addRecentVault("/vault/a", win);
     addRecentVault("/vault/b", win);
     const cached = getPreferences(win);
-    // a second window holding the same stored text parses it from scratch
+    expect(getRecentVaults(win)).toEqual(["/vault/b", "/vault/a"]);
+    // A fresh module instance has an empty parse cache, so it parses the text.
+    vi.resetModules();
+    const fresh = await import("./preferences");
     const win2 = makeWin();
     for (const k of Object.keys(store)) {
       win2.store[k] = store[k]!;
     }
-    expect(getRecentVaults(win)).toEqual(["/vault/b", "/vault/a"]);
-    expect(getPreferences(win2.win)).toEqual(cached);
+    const parsed = fresh.getPreferences(win2.win);
+    expect(parsed).not.toBe(cached);
+    expect(parsed).toEqual(cached);
   });
 
   it("untrusted updatePreferences still normalises on the next read", () => {
