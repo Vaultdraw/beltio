@@ -2,6 +2,7 @@
 //! JSON-RPC 2.0. Knows nothing about Tauri; the app plugs in through [`Dispatch`].
 
 use super::events::{Bus, Staged, Subscription};
+use super::policy;
 use serde_json::{json, Value};
 use std::io::{self, BufReader, Write};
 use std::os::fd::{AsRawFd, RawFd};
@@ -40,6 +41,8 @@ const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
 /// Per-connection state.
 pub(crate) struct Conn {
     role: String,
+    /// Rate limit of this connection (used by the `mcp` role only).
+    limiter: policy::Limiter,
     sub: Option<Subscription>,
     /// A subscription whose reply is being written; the snapshot and deltas follow it.
     staged: Option<Staged>,
@@ -47,7 +50,7 @@ pub(crate) struct Conn {
 
 impl Default for Conn {
     fn default() -> Self {
-        Self { role: roles::CLI.to_string(), sub: None, staged: None }
+        Self { role: roles::CLI.to_string(), limiter: policy::Limiter::default(), sub: None, staged: None }
     }
 }
 
@@ -209,15 +212,16 @@ fn handle_request(req: &Request, conn: &mut Conn, dispatch: &dyn Dispatch, bus: 
         conn.role = wanted.to_string();
         return Ok(json!({"api": API_LEVEL, "role": wanted}));
     }
-    // The AI interface has no master switch yet, so it is closed.
     let role = conn.role.clone();
-    if role == roles::MCP {
-        return Err(RpcError::app(codes::NOT_PERMITTED, "The AI interface is disabled"));
-    }
+    // The AI master switch and the `mcp` rate limit come before anything else, so a closed
+    // interface does not even reveal which methods exist.
+    policy::admit(&role, &mut conn.limiter)?;
     let spec = methods::find(&req.method).ok_or_else(|| RpcError::method_not_found(&req.method))?;
-    if !spec.roles.contains(&role.as_str()) {
+    if !spec.allows(&role) {
         return Err(RpcError::app(codes::NOT_PERMITTED, format!("Role '{role}' may not call {}", req.method)).with("method", req.method.clone()));
     }
+    // One window call at a time for the `mcp` role; held until the call returns.
+    let _slot = policy::window_slot(&role, spec)?;
     match req.method.as_str() {
         EVENTS_SUBSCRIBE => subscribe(req.params.as_ref(), conn, bus),
         EVENTS_UNSUBSCRIBE => {

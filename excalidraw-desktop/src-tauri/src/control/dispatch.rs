@@ -1,11 +1,11 @@
 //! The Tauri implementation of the control server's `Dispatch`.
 
 use super::bridge::{call_window, pending, CALL_TIMEOUT, STATE_TIMEOUT, WINDOW_LABEL};
-use super::{events, ops};
+use super::{events, ops, scene_route};
 use super::server::Dispatch;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Manager};
-use vaultdraw_protocol::methods::{self, APP_FOCUS, APP_OPEN, APP_STATUS, COMMAND_LIST, COMMAND_RUN, RPC_DISCOVER, URI_HANDLE};
+use vaultdraw_protocol::methods::{self, APP_FOCUS, APP_OPEN, APP_STATUS, COMMAND_LIST, COMMAND_RUN, RPC_DISCOVER, SCENE_APPLY, SCENE_GET, SCENE_READ, SCENE_SELECTION, URI_HANDLE};
 use vaultdraw_protocol::{codes, RpcError, API_LEVEL};
 
 pub(crate) struct TauriDispatch {
@@ -128,7 +128,7 @@ pub(crate) fn status_json(vault: Option<Value>, state: Option<Value>, window_rea
 }
 
 impl Dispatch for TauriDispatch {
-    fn call(&self, _role: &str, method: &str, params: Option<Value>) -> Result<Value, RpcError> {
+    fn call(&self, role: &str, method: &str, params: Option<Value>) -> Result<Value, RpcError> {
         match method {
             RPC_DISCOVER => Ok(methods::discover(super::APP_VERSION)),
             APP_STATUS => Ok(self.status()),
@@ -139,6 +139,7 @@ impl Dispatch for TauriDispatch {
                 super::uri::handle(&self.app, url, super::uri::Origin::Cli)
             }
             COMMAND_LIST | COMMAND_RUN => call_window(&self.app, method, params, CALL_TIMEOUT),
+            SCENE_READ | SCENE_GET | SCENE_SELECTION | SCENE_APPLY => scene_route::call(&self.app, role, method, params),
             // The C3 methods (vault, files, tabs, config, quit).
             _ => ops::call(&self.app, method, params),
         }

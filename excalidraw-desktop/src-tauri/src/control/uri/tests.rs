@@ -161,6 +161,7 @@ fn security_deny_list_is_pinned() {
         "file.trash", "file.move", "file.rename", "file.resolveConflict", "cli.install", "cli.installSystem", "tags.rename", "templates.saveDrawing",
         "vault.newFromTemplate", "file.importFile", "file.importPdf", "file.exportPng", "file.exportPdf", "app.quit", "File.Trash", "Links.OpenUri", "uri.run", "history.deleteAll", "x.discardChanges",
         "plugins.install", "links.openUri", "links.registerHandlers", "drawing.trashActive", "cli.uninstall",
+        "control.toggleMcp", "control.copyMcpSetup", "ai.toggle", "ai.toggleMcp",
     ] {
         assert!(is_denied(id), "{id} must be denied");
     }

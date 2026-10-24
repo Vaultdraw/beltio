@@ -115,7 +115,7 @@ const DENY_EXACT: &[&str] = &[
     "templates.saveDrawing",
     "vault.newFromTemplate",
 ];
-const DENY_PREFIX: &[&str] = &["file.import", "file.export", "links.openuri", "links.registerhandlers", "uri."];
+const DENY_PREFIX: &[&str] = &["file.import", "file.export", "links.openuri", "links.registerhandlers", "uri.", "control.", "ai."];
 const DENY_CONTAINS: &[&str] = &["quit", "delete", "discard", "trash", "remove", "install", "overwrite", "restore", "revert", "purge", "erase", "wipe"];
 
 pub(crate) fn is_denied(id: &str) -> bool {

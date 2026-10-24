@@ -3,6 +3,8 @@
 //! - `instance`: one app process per user (flock) and forwarding of later launches.
 //! - `server`: the Unix-socket JSON-RPC server, independent of Tauri (`Dispatch` trait).
 //! - `dispatch`: the Tauri implementation of `Dispatch`.
+//! - `policy`: the `mcp` role's gate (closed switch, rate limit, one window call at a time).
+//! - `scene_route`: `scene.*` calls to the window (`file` to `path`, who is asking).
 //! - `bridge`: calls into the window (`control-request` event, `control_reply` command).
 //! - `install`: the palette's "install CLI" symlink.
 //! - `ops` (glue on the running app) over `vault_ops`, `config_ops` and `target` (pure, tested).
@@ -23,6 +25,8 @@ pub(crate) mod install;
 pub(crate) mod instance;
 pub(crate) mod linux_handlers;
 pub(crate) mod ops;
+mod policy;
+mod scene_route;
 pub(crate) mod server;
 pub(crate) mod spool;
 pub(crate) mod uri;

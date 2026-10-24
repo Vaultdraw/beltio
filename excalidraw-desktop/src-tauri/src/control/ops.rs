@@ -144,6 +144,12 @@ fn with_path(params: Value, path: String) -> Value {
     Value::Object(map)
 }
 
+/// A `path` or `file` of `params` as a checked vault-relative path of an existing drawing.
+pub(super) fn resolve_file(app: &AppHandle, params: &Value) -> Result<String, RpcError> {
+    let v = active(app)?;
+    resolve(app, &v, params, Need::File)
+}
+
 fn window_with_target(app: &AppHandle, method: &str, params: Value, need: Need, timeout: Duration) -> Reply {
     let v = active(app)?;
     let path = resolve(app, &v, &params, need)?;
