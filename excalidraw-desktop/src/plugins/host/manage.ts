@@ -125,8 +125,11 @@ export async function uninstallPlugin(id: string): Promise<void> {
 }
 
 /** The user confirmed what a plugin declares (enable dialog, "Review"); the list refreshes so a held-back plugin loads. */
-export async function confirmPluginPermissions(id: string): Promise<void> {
-  await getPluginsBackend().consentConfirm(id);
+export async function confirmPluginPermissions(
+  id: string,
+  seen: string[],
+): Promise<void> {
+  await getPluginsBackend().consentConfirm(id, seen);
   await rescanPlugins();
 }
 

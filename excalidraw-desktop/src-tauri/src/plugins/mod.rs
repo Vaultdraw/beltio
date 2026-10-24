@@ -88,6 +88,10 @@ pub(crate) async fn plugins_list(app: AppHandle, rescan: Option<bool>) -> Result
         for p in &mut list.plugins {
             p.host_disabled = disabled.get(&p.manifest.id).cloned();
             p.review = review_of(p, &confirmed);
+            if p.source != scan::Source::Bundled && confirmed.contains_key(&p.manifest.id) {
+                // Best effort: a failed write only means the old record stays.
+                let _ = consent::prune(&state_dir, &p.manifest.id, &p.manifest.permissions);
+            }
         }
         Ok(list)
     })
@@ -123,12 +127,16 @@ pub(crate) async fn plugins_uninstall(app: AppHandle, id: String) -> Result<()> 
 }
 
 /// The user confirmed the permissions a plugin declares now (the enable dialog or "Review").
-/// The set comes from the scanned manifest, never from the caller.
+/// `seen` is the list the user was shown; it must equal what the manifest declares now, so a
+/// manifest that changed under an open dialog is never confirmed unseen (CONFLICT, review again).
 #[tauri::command]
-pub(crate) async fn plugins_consent_confirm(app: AppHandle, id: String) -> Result<()> {
+pub(crate) async fn plugins_consent_confirm(app: AppHandle, id: String, seen: Vec<String>) -> Result<()> {
     blocking(move || {
         let snap = snapshot(&app, true)?;
         let info = snap.list.plugins.iter().find(|p| p.manifest.id == id).ok_or_else(|| err("NOT_FOUND", "Plugin not found"))?;
+        if info.manifest.permissions != seen {
+            return Err(err("CONFLICT", "The plugin's permissions changed. Review them again."));
+        }
         consent::confirm(&config::resolve_dirs()?.state, &id, &info.manifest.permissions)
     })
     .await

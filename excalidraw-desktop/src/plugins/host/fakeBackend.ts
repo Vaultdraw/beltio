@@ -68,7 +68,7 @@ export function createFakeBackend(
       };
     },
     emitChanged: (id) => listeners.forEach((cb) => cb(id)),
-    consentConfirm: async (id) => {
+    consentConfirm: async (id, _seen) => {
       fake.consentCalls.push(id);
       fake.plugins = fake.plugins.map((p) =>
         p.id === id ? { ...p, review: { state: "ok", added: [] } } : p,

@@ -135,7 +135,10 @@ describe("Plugins settings page", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Enable" }));
     });
-    expect(h.confirm).toHaveBeenCalledWith("writer");
+    expect(h.confirm).toHaveBeenCalledWith("writer", [
+      "vault.read",
+      "vault.write",
+    ]);
     await vi.waitFor(() =>
       expect(getPreferences(window).pluginsEnabled).toEqual(["writer"]),
     );
@@ -165,7 +168,10 @@ describe("Plugins settings page", () => {
       within(dialog).getByText("Create drawings in your vault"),
     ).toBeTruthy();
     fireEvent.click(within(dialog).getByRole("button", { name: "Allow" }));
-    expect(h.confirm).toHaveBeenCalledWith("writer");
+    expect(h.confirm).toHaveBeenCalledWith("writer", [
+      "vault.read",
+      "vault.write",
+    ]);
   });
 
   it("shows no review line for a confirmed plugin", async () => {

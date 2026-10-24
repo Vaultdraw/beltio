@@ -6,7 +6,7 @@ import { updatePreferences } from "../../vault/preferences";
 
 import { ensureActive } from "./activation";
 import { makePluginInfo } from "./fakeBackend";
-import { needsReview, permissionText } from "./permissions";
+import { PERMISSION_TEXT, needsReview, permissionText } from "./permissions";
 import { startPluginHost } from "./start";
 import { setupHost, tick, withCommands } from "./testUtils";
 
@@ -85,6 +85,17 @@ describe("consent load gate", () => {
 });
 
 describe("consent text", () => {
+  it("covers exactly the permissions the manifest schema allows", async () => {
+    const schema = (await import(
+      "../../../../sdk/api/plugin.schema.json"
+    )) as unknown as {
+      default: { properties: { permissions: { items: { enum: string[] } } } };
+    };
+    expect(Object.keys(PERMISSION_TEXT).sort()).toEqual(
+      [...schema.default.properties.permissions.items.enum].sort(),
+    );
+  });
+
   it("has plain words per permission and falls back to the name", () => {
     expect(permissionText("vault.read")).toBe(
       "Read the drawings in your vault",

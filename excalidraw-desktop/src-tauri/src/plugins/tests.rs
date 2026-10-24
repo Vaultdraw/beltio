@@ -753,6 +753,10 @@ fn consent_record_round_trips_and_tolerates_damage() {
     assert_eq!(rec["other"], Vec::<String>::new());
     consent::confirm(state, "demo-plugin", &perms(&["vault.read"])).unwrap();
     assert_eq!(consent::load(state)["demo-plugin"], perms(&["vault.read"]), "a confirm replaces the set");
+    consent::confirm(state, "demo-plugin", &perms(&["vault.read", "vault.write"])).unwrap();
+    consent::prune(state, "demo-plugin", &perms(&["vault.read"])).unwrap();
+    assert_eq!(consent::load(state)["demo-plugin"], perms(&["vault.read"]), "a dropped permission leaves the record");
+    consent::prune(state, "never-there", &[]).unwrap();
     consent::forget(state, "demo-plugin").unwrap();
     consent::forget(state, "never-there").unwrap();
     assert!(!consent::load(state).contains_key("demo-plugin"));

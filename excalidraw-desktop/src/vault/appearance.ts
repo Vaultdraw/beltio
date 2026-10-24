@@ -153,7 +153,13 @@ export const appearanceListenerCount = (): number => appearanceListeners.size;
 /** Tells the listeners the tokens changed; tests that fake a theme call it too. */
 export const notifyAppearanceChanged = (): void => {
   appearanceVersion++;
-  appearanceListeners.forEach((cb) => cb());
+  appearanceListeners.forEach((cb) => {
+    try {
+      cb();
+    } catch (err) {
+      console.error("appearance listener failed", err);
+    }
+  });
 };
 
 /** Removes everything applyAppearance added (tests). */

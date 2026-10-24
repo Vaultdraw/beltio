@@ -94,7 +94,7 @@ function noticeNewPermissions(rt: PluginRuntime): void {
   rt.info = { ...rt.info, review: { state: "ok", added: [] } };
   toastStore.push({ message: `${name} now can: ${addedText(review.added)}.` });
   void getPluginsBackend()
-    .consentConfirm(id)
+    .consentConfirm(id, rt.info.permissions)
     .catch((err) => console.error("consentConfirm failed", err));
 }
 
@@ -103,7 +103,6 @@ async function activate(rt: PluginRuntime): Promise<boolean> {
   const gen = rt.gen;
   const win = hostWindow ?? window;
   try {
-    noticeNewPermissions(rt);
     rt.plugin ??= await loadPluginModule(rt.info);
     if (rt.gen !== gen) {
       return false;
@@ -119,6 +118,7 @@ async function activate(rt: PluginRuntime): Promise<boolean> {
     }
     rt.state = "active";
     runtimesChanged();
+    noticeNewPermissions(rt);
     return true;
   } catch (err) {
     if (rt.gen !== gen) {

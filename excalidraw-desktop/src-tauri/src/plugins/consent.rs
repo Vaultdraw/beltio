@@ -102,3 +102,16 @@ pub(crate) fn forget(state_dir: &Path, id: &str) -> Result<()> {
     }
     save(state_dir, &record)
 }
+
+/// Drops confirmed permissions the plugin no longer declares, so adding one back later is asked again.
+pub(crate) fn prune(state_dir: &Path, id: &str, declared: &[String]) -> Result<()> {
+    let _guard = crate::config::write_guard()?;
+    let mut record = load(state_dir);
+    let Some(old) = record.get(id) else { return Ok(()) };
+    let kept: Vec<String> = old.iter().filter(|p| declared.contains(p)).cloned().collect();
+    if kept.len() == old.len() {
+        return Ok(());
+    }
+    record.insert(id.to_string(), kept);
+    save(state_dir, &record)
+}

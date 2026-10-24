@@ -147,7 +147,7 @@ export const PluginsPage = () => {
       return;
     }
     run(`Could not save your choice for ${info.name}`, async () => {
-      await confirmPluginPermissions(info.id);
+      await confirmPluginPermissions(info.id, info.permissions);
       then();
     });
   };
