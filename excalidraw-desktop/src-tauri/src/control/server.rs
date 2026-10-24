@@ -46,11 +46,13 @@ pub(crate) struct Conn {
     sub: Option<Subscription>,
     /// A subscription whose reply is being written; the snapshot and deltas follow it.
     staged: Option<Staged>,
+    /// The AI switch, read per `mcp` request (injectable for tests).
+    mcp_open: fn() -> bool,
 }
 
 impl Default for Conn {
     fn default() -> Self {
-        Self { role: roles::CLI.to_string(), limiter: policy::Limiter::default(), sub: None, staged: None }
+        Self { role: roles::CLI.to_string(), limiter: policy::Limiter::default(), sub: None, staged: None, mcp_open: policy::mcp_enabled }
     }
 }
 
@@ -59,11 +61,13 @@ impl Default for Conn {
 pub(crate) struct ServerConfig {
     pub peer_uid: fn(RawFd) -> io::Result<u32>,
     pub my_uid: u32,
+    /// The AI switch (`ai.enabled` and `ai.mcp_enabled`); tests pin it.
+    pub mcp_open: fn() -> bool,
 }
 
 impl Default for ServerConfig {
     fn default() -> Self {
-        Self { peer_uid: vaultdraw_protocol::peer::peer_uid, my_uid: vaultdraw_protocol::peer::my_uid() }
+        Self { peer_uid: vaultdraw_protocol::peer::peer_uid, my_uid: vaultdraw_protocol::peer::my_uid(), mcp_open: policy::mcp_enabled }
     }
 }
 
@@ -134,7 +138,7 @@ fn serve_connection(stream: UnixStream, dispatch: &dyn Dispatch, bus: &Arc<Bus>,
     let _ = stream.set_write_timeout(Some(WRITE_TIMEOUT));
     let mut reader = BufReader::new(read_half);
     let writer: SharedWriter = Arc::new(Mutex::new(stream));
-    let mut conn = Conn::default();
+    let mut conn = Conn { mcp_open: cfg.mcp_open, ..Conn::default() };
     loop {
         let reply = match read_frame(&mut reader, MAX_FRAME_BYTES) {
             Ok(None) | Err(FrameError::Io(_)) => return,
@@ -218,7 +222,7 @@ fn handle_request(req: &Request, conn: &mut Conn, dispatch: &dyn Dispatch, bus: 
     let role = conn.role.clone();
     // The AI master switch and the `mcp` rate limit come before anything else, so a closed
     // interface does not even reveal which methods exist.
-    policy::admit(&role, &mut conn.limiter)?;
+    policy::admit(&role, &mut conn.limiter, conn.mcp_open)?;
     let spec = methods::find(&req.method).ok_or_else(|| RpcError::method_not_found(&req.method))?;
     if !spec.allows(&role) {
         return Err(RpcError::app(codes::NOT_PERMITTED, format!("Role '{role}' may not call {}", req.method)).with("method", req.method.clone()));
@@ -308,8 +312,13 @@ mod tests {
         let handle = start(&paths, Arc::new(Fake { bus: bus.clone() }), bus.clone(), cfg).unwrap();
         Rig { _dir: dir, paths, handle, bus }
     }
+    /// AI switch off: tests never read the developer's own config.
+    fn closed() -> ServerConfig {
+        ServerConfig { mcp_open: || false, ..ServerConfig::default() }
+    }
+
     fn rig() -> Rig {
-        rig_with(ServerConfig::default())
+        rig_with(closed())
     }
 
     fn raw(rig: &Rig) -> (UnixStream, BufReader<UnixStream>) {
@@ -364,6 +373,34 @@ mod tests {
         assert_eq!(recv(&mut r)["id"], 9);
     }
 
+    /// The AI switch as the test sets it (a fn pointer cannot capture).
+    static AI_SWITCH: AtomicBool = AtomicBool::new(false);
+
+    #[test]
+    fn mcp_role_follows_the_ai_switch_live() {
+        let rig = rig_with(ServerConfig { mcp_open: || AI_SWITCH.load(Ordering::SeqCst), ..closed() });
+        let (mut s, mut r) = raw(&rig);
+        send_line(&mut s, r#"{"jsonrpc":"2.0","id":1,"method":"rpc.hello","params":{"role":"mcp"}}"#);
+        assert_eq!(recv(&mut r)["result"]["role"], "mcp");
+        let status = |s: &mut UnixStream, r: &mut BufReader<UnixStream>, id: u32| {
+            send_line(s, &format!(r#"{{"jsonrpc":"2.0","id":{id},"method":"app.status"}}"#));
+            recv(r)
+        };
+        // Off (ai.enabled false, or ai.mcp_enabled false): refused before the method is looked up.
+        let e = status(&mut s, &mut r, 2);
+        assert_eq!(e["error"]["data"]["code"], "NOT_PERMITTED");
+        assert_eq!(e["error"]["message"], "The AI interface is disabled");
+        // On: the same connection works at once, no restart.
+        AI_SWITCH.store(true, Ordering::SeqCst);
+        assert_eq!(status(&mut s, &mut r, 3)["result"]["role"], "mcp");
+        // Still only the mcp method list.
+        send_line(&mut s, r#"{"jsonrpc":"2.0","id":4,"method":"command.list"}"#);
+        assert_eq!(recv(&mut r)["error"]["data"]["code"], "NOT_PERMITTED");
+        // Off again: closed at the next request.
+        AI_SWITCH.store(false, Ordering::SeqCst);
+        assert_eq!(status(&mut s, &mut r, 5)["error"]["message"], "The AI interface is disabled");
+    }
+
     #[test]
     fn roles_gate_methods_and_mcp_is_closed() {
         let rig = rig();
@@ -403,14 +440,14 @@ mod tests {
         let paths = InstancePaths::in_dir(dir.path());
         drop(UnixListener::bind(&paths.socket).unwrap()); // leaves a dead socket file
         assert!(Client::connect(&paths.socket).is_err());
-        let handle = start(&paths, Arc::new(Fake::default()), Arc::new(Bus::default()), ServerConfig::default()).unwrap();
+        let handle = start(&paths, Arc::new(Fake::default()), Arc::new(Bus::default()), closed()).unwrap();
         assert!(Client::connect(&paths.socket).unwrap().call("app.status", None).is_ok());
         handle.shutdown();
     }
 
     #[test]
     fn other_users_are_dropped() {
-        let rig = rig_with(ServerConfig { peer_uid: |_| Ok(vaultdraw_protocol::peer::my_uid() + 1), my_uid: vaultdraw_protocol::peer::my_uid() });
+        let rig = rig_with(ServerConfig { peer_uid: |_| Ok(vaultdraw_protocol::peer::my_uid() + 1), my_uid: vaultdraw_protocol::peer::my_uid(), ..closed() });
         let (mut s, mut r) = raw(&rig);
         send_line(&mut s, r#"{"jsonrpc":"2.0","id":1,"method":"app.status"}"#);
         assert!(read_frame(&mut r, 1 << 20).map(|f| f.is_none()).unwrap_or(true), "no reply for a foreign uid");

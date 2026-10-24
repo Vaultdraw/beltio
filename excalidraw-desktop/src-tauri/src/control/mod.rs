@@ -35,6 +35,7 @@ use std::io::Write;
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
 use tauri::AppHandle;
+use vaultdraw_core::control_settings::ControlSettings;
 
 /// App version reported by `rpc.discover`, `app.status` and `instance.json`.
 pub(crate) const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -83,24 +84,16 @@ pub(crate) fn spawn(app: &AppHandle) {
     }
 }
 
-/// The text of config.toml (1 MiB cap), or None when it cannot be found or read.
-pub(crate) fn config_text() -> Option<String> {
-    let dirs = crate::config::resolve_dirs().ok()?;
-    let path = dirs.config.join("config.toml");
-    crate::config::read_toml_text(&path, "config.toml", 1024 * 1024).ok()
+/// The control settings from the merged config layers (`overrides.toml` over `config.toml`),
+/// read now; `None` when the config folders cannot be resolved. One reader shared with
+/// `vaultdraw mcp` (`vaultdraw_core::control_settings`).
+pub(crate) fn control_settings() -> Option<ControlSettings> {
+    crate::config::resolve_dirs().ok().map(|dirs| vaultdraw_core::control_settings::control_settings(&dirs))
 }
 
-/// `[control] enabled` from config.toml; a missing or broken config means enabled.
+/// `[control] enabled` through the layers; a missing or broken config means enabled.
 fn control_enabled_in_config() -> bool {
-    config_text().map(|text| control_enabled(&text)).unwrap_or(true)
-}
-
-pub(crate) fn control_enabled(toml_text: &str) -> bool {
-    toml_text
-        .parse::<toml::Table>()
-        .ok()
-        .and_then(|t| t.get("control")?.get("enabled")?.as_bool())
-        .unwrap_or(true)
+    control_settings().is_none_or(|s| s.enabled)
 }
 
 /// Writes `bytes` to `path` through a same-directory temp file and a rename. No fsync: these
@@ -122,16 +115,6 @@ pub(crate) fn write_file_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn control_enabled_defaults_true_and_reads_switch() {
-        assert!(control_enabled(""));
-        assert!(control_enabled("not toml ["));
-        assert!(control_enabled("[control]\nroles = 1\n"));
-        assert!(!control_enabled("[control]\nenabled = false\n"));
-        assert!(control_enabled("[control]\nenabled = true\n"));
-        assert!(control_enabled("[control]\nenabled = \"no\"\n"));
-    }
 
     #[test]
     fn atomic_write_replaces_content() {

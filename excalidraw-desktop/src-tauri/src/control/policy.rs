@@ -1,6 +1,7 @@
 //! Who may call what, and how often: the gate every request passes after the role is known.
 //!
-//! - The `mcp` role (AI tools) is closed until the AI switch exists (C7b): `mcp_enabled()`.
+//! - The `mcp` role (AI tools) is accepted only while `ai.enabled` and `ai.mcp_enabled` are both
+//!   on (`mcp_enabled()`, read from the merged config layers at each request).
 //! - Once open, each `mcp` connection has a token bucket, and only one window call from all
 //!   `mcp` connections runs at a time, so an AI client cannot flood the editor.
 //! - `cli` and `uri` pass through untouched (the `uri` role has its own limiter in `uri.rs`).
@@ -19,9 +20,10 @@ const BURST: f64 = 40.0;
 /// Advice for a caller that found the single window slot busy.
 const SLOT_RETRY_MS: u64 = 250;
 
-/// The AI master switch. Closed in C7a; C7b reads `ai.enabled` from config.toml here.
+/// The AI switch: `ai.enabled` and `ai.mcp_enabled`, read from the merged config layers at
+/// each call (no cache, no watcher). Fails closed when the folders or a layer cannot be read.
 pub(crate) fn mcp_enabled() -> bool {
-    false
+    super::control_settings().is_some_and(|s| s.mcp_open())
 }
 
 /// A token bucket, one per connection.
@@ -56,9 +58,11 @@ impl Default for Limiter {
     }
 }
 
-/// Admits one request from `role`. Only the `mcp` role is ever refused here.
-pub(crate) fn admit(role: &str, limiter: &mut Limiter) -> Result<(), RpcError> {
-    admit_with(role, limiter, mcp_enabled(), Instant::now())
+/// Admits one request from `role`. Only the `mcp` role is ever refused here, and only it reads
+/// the switch (`switch` is not called for `cli` or `uri`).
+pub(crate) fn admit(role: &str, limiter: &mut Limiter, switch: fn() -> bool) -> Result<(), RpcError> {
+    let enabled = role == roles::MCP && switch();
+    admit_with(role, limiter, enabled, Instant::now())
 }
 
 fn admit_with(role: &str, limiter: &mut Limiter, enabled: bool, now: Instant) -> Result<(), RpcError> {
@@ -117,19 +121,10 @@ fn window_slot_in<'a>(slots: &'a Slots, role: &str, spec: &MethodSpec) -> Result
     }
 }
 
-/// `[control] notify_edits` from config.toml: show a notice when a script or AI tool edits the
-/// drawing. Anything but `false` (missing, broken, wrong type) means true.
-pub(crate) fn notify_edits(toml_text: &str) -> bool {
-    toml_text
-        .parse::<toml::Table>()
-        .ok()
-        .and_then(|t| t.get("control")?.get("notify_edits")?.as_bool())
-        .unwrap_or(true)
-}
-
-/// Reads `notify_edits` from the config file (1 MiB cap; unreadable means true).
+/// `[control] notify_edits` through the config layers: show a notice when a script or AI tool
+/// edits the drawing. Anything but `false` (missing, broken, wrong type) means true.
 pub(crate) fn notify_edits_in_config() -> bool {
-    super::config_text().map(|text| notify_edits(&text)).unwrap_or(true)
+    super::control_settings().is_none_or(|s| s.notify_edits)
 }
 
 #[cfg(test)]
@@ -150,9 +145,10 @@ mod tests {
         assert_eq!(e.message, "The AI interface is disabled");
         assert!(admit_with(roles::CLI, &mut l, false, t).is_ok());
         assert!(admit_with(roles::URI, &mut l, false, t).is_ok());
-        // The public entry point is closed in C7a.
-        assert!(!mcp_enabled());
-        assert!(admit(roles::MCP, &mut Limiter::default()).is_err());
+        // The entry point reads the switch only for the mcp role.
+        assert!(admit(roles::MCP, &mut Limiter::default(), || false).is_err());
+        assert!(admit(roles::MCP, &mut Limiter::default(), || true).is_ok());
+        assert!(admit(roles::CLI, &mut Limiter::default(), || panic!("cli must not read the switch")).is_ok());
     }
 
     #[test]
@@ -212,16 +208,6 @@ mod tests {
         assert!(window_slot_in(&slots, roles::MCP, window).is_ok());
     }
 
-    #[test]
-    fn notify_edits_is_true_unless_set_to_false() {
-        assert!(notify_edits(""));
-        assert!(notify_edits("not toml ["));
-        assert!(notify_edits("[control]\nnotify_edits = true\n"));
-        assert!(notify_edits("[control]\nnotify_edits = \"no\"\n"));
-        assert!(notify_edits("[control]\nenabled = false\n"));
-        assert!(!notify_edits("[control]\nnotify_edits = false\n"));
-    }
-
     /// Cost of what every request pays: the method lookup plus the admit check.
     #[test]
     fn policy_check_benchmark() {
@@ -230,7 +216,7 @@ mod tests {
         for _ in 0..5000 {
             let t = Instant::now();
             let spec = std::hint::black_box(find(std::hint::black_box(SCENE_APPLY)));
-            let ok = admit(std::hint::black_box(roles::CLI), &mut limiter).is_ok() && spec.is_some_and(|s| s.allows(roles::CLI));
+            let ok = admit(std::hint::black_box(roles::CLI), &mut limiter, mcp_enabled).is_ok() && spec.is_some_and(|s| s.allows(roles::CLI));
             samples.push(t.elapsed());
             assert!(ok);
         }

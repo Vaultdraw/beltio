@@ -3,6 +3,7 @@
 //! index. The desktop app and the `vaultdraw` CLI are thin shells over this crate.
 
 pub mod config;
+pub mod control_settings;
 pub mod drawing;
 pub mod error;
 pub mod fsops;
