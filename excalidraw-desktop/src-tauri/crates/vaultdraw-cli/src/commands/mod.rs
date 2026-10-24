@@ -5,6 +5,7 @@ mod events;
 mod export;
 mod files;
 mod tabs;
+mod uri;
 
 use crate::cli::{Cli, CmdAction, CmdArgs, Command};
 use crate::error::Fail;
@@ -51,6 +52,7 @@ pub fn run(cli: &Cli) -> Result<(), Fail> {
         Command::Tab { action } => tabs::run(cli, action),
         Command::Config { action } => app::config(cli, action),
         Command::Events { topic } => events::stream(cli, topic),
+        Command::Uri { url } => uri::run(cli, url),
         Command::Quit => app::quit(cli),
         Command::Vault { action } => app::vault(cli, action.as_ref()),
     }

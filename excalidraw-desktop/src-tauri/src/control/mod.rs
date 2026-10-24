@@ -7,6 +7,7 @@
 //! - `install`: the palette's "install CLI" symlink.
 //! - `ops` (glue on the running app) over `vault_ops`, `config_ops` and `target` (pure, tested).
 //! - `spool`: chunked spool files that carry large exports to the CLI.
+//! - `uri`: `vaultdraw://` links (policy, rate limit, queue) from every entry point.
 //! - `events`: the event bus with its single topic mask (zero cost while nobody subscribes).
 
 // Pure vault/file methods and target resolution live in `vaultdraw-core`.
@@ -20,6 +21,7 @@ pub(crate) mod instance;
 mod ops;
 pub(crate) mod server;
 pub(crate) mod spool;
+pub(crate) mod uri;
 
 use std::io::Write;
 use std::path::Path;

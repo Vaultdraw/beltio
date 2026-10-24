@@ -32,6 +32,10 @@ pub mod codes {
     pub const INVALID_FILE: &str = "INVALID_FILE";
     /// The result is over a size cap (`export.render`: 32 MiB of output; `export.spool` has no cap).
     pub const TOO_LARGE: &str = "TOO_LARGE";
+    /// `[control] uri_enabled = false`: links from outside are turned off.
+    pub const DISABLED: &str = "DISABLED";
+    /// Too many links in a short time (5 per 10 s) or the start-up queue is full.
+    pub const RATE_LIMITED: &str = "RATE_LIMITED";
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

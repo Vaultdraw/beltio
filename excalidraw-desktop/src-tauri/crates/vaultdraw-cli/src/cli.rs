@@ -120,6 +120,11 @@ pub enum Command {
         #[arg(long, value_delimiter = ',', value_name = "TOPICS")]
         topic: Vec<String>,
     },
+    /// Hand a vaultdraw:// link to the running app, as the OS would (open and search run now; switching vault, new and cmd ask you first)
+    Uri {
+        /// For example vaultdraw://open?file=Graphs/BFS
+        url: String,
+    },
     /// Quit the app (same save barrier as Cmd+Q)
     Quit,
     /// Show the open vault, or open another

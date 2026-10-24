@@ -5,7 +5,7 @@ use super::{events, ops};
 use super::server::Dispatch;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Manager};
-use vaultdraw_protocol::methods::{self, APP_FOCUS, APP_OPEN, APP_STATUS, COMMAND_LIST, COMMAND_RUN, RPC_DISCOVER};
+use vaultdraw_protocol::methods::{self, APP_FOCUS, APP_OPEN, APP_STATUS, COMMAND_LIST, COMMAND_RUN, RPC_DISCOVER, URI_HANDLE};
 use vaultdraw_protocol::{codes, RpcError, API_LEVEL};
 
 pub(crate) struct TauriDispatch {
@@ -36,8 +36,8 @@ impl TauriDispatch {
         Ok(json!({"focused": true}))
     }
 
-    /// Focuses the window and forwards each file path / `vaultdraw://` URI to it
-    /// (URI semantics are the window's business, see C6).
+    /// Focuses the window, then sends each `vaultdraw://` link to the link handler and each
+    /// file path to the window.
     fn open(&self, params: Option<Value>) -> Result<Value, RpcError> {
         let params = params.unwrap_or(Value::Null);
         let argv: Vec<&str> = params
@@ -50,12 +50,43 @@ impl TauriDispatch {
         let cwd = params.get("cwd").cloned().unwrap_or(Value::Null);
         self.focus()?;
         let mut handled = 0;
-        for target in argv.into_iter().filter(|a| !a.starts_with('-')) {
-            call_window(&self.app, "app.openTarget", Some(json!({"target": target, "cwd": cwd})), CALL_TIMEOUT)?;
+        for route in route_argv(&argv) {
+            match route {
+                Route::Link(url) => {
+                    // A refused link (off, rate limit, bad URL) already showed the user a notice;
+                    // failing here would make the second launch start a second app. Only a
+                    // window that is not ready yet is retried by the sender.
+                    if let Err(e) = super::uri::handle(&self.app, url, super::uri::Origin::Forwarded) {
+                        if e.app_code() == Some(codes::NOT_READY) {
+                            return Err(e);
+                        }
+                    }
+                }
+                Route::Path(target) => {
+                    call_window(&self.app, "app.openTarget", Some(json!({"target": target, "cwd": cwd})), CALL_TIMEOUT)?;
+                }
+            }
             handled += 1;
         }
         Ok(json!({"handled": handled}))
     }
+}
+
+/// Where one forwarded argv item goes.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum Route<'a> {
+    /// A `vaultdraw:` link: the policy handler (`uri::handle`).
+    Link(&'a str),
+    /// A file path: the window's `app.openTarget`.
+    Path(&'a str),
+}
+
+/// Flags are skipped, links and paths keep their order.
+pub(crate) fn route_argv<'a>(argv: &[&'a str]) -> Vec<Route<'a>> {
+    argv.iter()
+        .filter(|a| !a.starts_with('-'))
+        .map(|a| if super::uri::is_uri(a) { Route::Link(a) } else { Route::Path(a) })
+        .collect()
 }
 
 /// `app.status` result from its parts (kept pure for the golden test).
@@ -80,6 +111,10 @@ impl Dispatch for TauriDispatch {
             APP_STATUS => Ok(self.status()),
             APP_FOCUS => self.focus(),
             APP_OPEN => self.open(params),
+            URI_HANDLE => {
+                let url = params.as_ref().and_then(|p| p.get("url")).and_then(Value::as_str).ok_or_else(|| RpcError::invalid_params("url must be a string"))?;
+                super::uri::handle(&self.app, url, super::uri::Origin::Cli)
+            }
             COMMAND_LIST | COMMAND_RUN => call_window(&self.app, method, params, CALL_TIMEOUT),
             // The C3 methods (vault, files, tabs, config, quit).
             _ => ops::call(&self.app, method, params),
@@ -94,6 +129,16 @@ impl Dispatch for TauriDispatch {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn app_open_routes_links_to_the_policy_handler_and_paths_to_the_window() {
+        let r = route_argv(&["--flag", "/v/a.excalidraw", "vaultdraw://open?file=a", "-psn_0_1", "VAULTDRAW://new?path=x", "rel/b.excalidraw"]);
+        assert_eq!(
+            r,
+            [Route::Path("/v/a.excalidraw"), Route::Link("vaultdraw://open?file=a"), Route::Link("VAULTDRAW://new?path=x"), Route::Path("rel/b.excalidraw")]
+        );
+        assert!(route_argv(&[]).is_empty());
+    }
 
     #[test]
     fn status_golden_shape() {

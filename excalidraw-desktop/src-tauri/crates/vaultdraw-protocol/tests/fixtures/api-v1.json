@@ -229,6 +229,44 @@
       "window": false
     },
     {
+      "name": "uri.handle",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "status": {
+            "enum": [
+              "done",
+              "asking",
+              "queued"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli",
+        "uri"
+      ],
+      "summary": "Handle a vaultdraw:// link as if the OS had opened it: open and search run now; switching vault, new and cmd ask the user first (status asking); the reply never waits for a person",
+      "window": false
+    },
+    {
       "name": "command.list",
       "params": {
         "additionalProperties": true,

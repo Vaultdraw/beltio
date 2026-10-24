@@ -10,6 +10,7 @@ pub const RPC_HELLO: &str = "rpc.hello";
 pub const APP_STATUS: &str = "app.status";
 pub const APP_FOCUS: &str = "app.focus";
 pub const APP_OPEN: &str = "app.open";
+pub const URI_HANDLE: &str = "uri.handle";
 pub const COMMAND_LIST: &str = "command.list";
 pub const COMMAND_RUN: &str = "command.run";
 pub const VAULT_INFO: &str = "vault.info";
@@ -372,6 +373,14 @@ pub fn catalogue() -> Vec<MethodSpec> {
             window: false,
         },
         MethodSpec {
+            name: URI_HANDLE,
+            summary: "Handle a vaultdraw:// link as if the OS had opened it: open and search run now; switching vault, new and cmd ask the user first (status asking); the reply never waits for a person",
+            params: obj(json!({"url": {"type": "string"}}), &["url"]),
+            result: obj(json!({"status": {"type": "string", "enum": ["done", "asking", "queued"]}}), &["status"]),
+            roles: CLI_URI,
+            window: false,
+        },
+        MethodSpec {
             name: COMMAND_LIST,
             summary: "Every palette command: id, title, category, keys, when clauses, available now",
             params: none.clone(),
@@ -430,6 +439,17 @@ mod tests {
         assert!(find(FILE_OPEN).unwrap().roles.contains(&roles::URI));
         assert!(!find(FILE_READ).unwrap().roles.contains(&roles::URI));
         assert!(find(TAB_LIST).unwrap().window && !find(FILE_READ).unwrap().window);
+    }
+
+    /// The `uri` role (links, forwarded launches) reaches only focus, open, file.open and uri.handle:
+    /// a link can never call a write, trash, command or config method through its role.
+    #[test]
+    fn security_uri_role_reaches_only_the_link_methods() {
+        let mut allowed: Vec<_> = catalogue().into_iter().filter(|m| m.roles.contains(&roles::URI)).map(|m| m.name).collect();
+        allowed.sort();
+        assert_eq!(allowed, [APP_FOCUS, APP_OPEN, FILE_OPEN, RPC_DISCOVER, RPC_HELLO, URI_HANDLE]);
+        let m = find(URI_HANDLE).unwrap();
+        assert!(m.roles.contains(&roles::CLI) && !m.window);
     }
 
     #[test]
