@@ -1,0 +1,204 @@
+[
+  {
+    "path": "",
+    "kind": "folder",
+    "code": null,
+    "note": "the vault root"
+  },
+  {
+    "path": "",
+    "kind": "file",
+    "code": "INVALID_PATH",
+    "note": "a drawing needs a path"
+  },
+  {
+    "path": "a.excalidraw",
+    "kind": "file",
+    "code": null
+  },
+  {
+    "path": "sub/deep/b.excalidraw",
+    "kind": "file",
+    "code": null
+  },
+  {
+    "path": "Sub/UPPER.EXCALIDRAW",
+    "kind": "file",
+    "code": null,
+    "note": "suffix is case-insensitive"
+  },
+  {
+    "path": "日本/図.excalidraw",
+    "kind": "file",
+    "code": null,
+    "note": "non-ASCII names"
+  },
+  {
+    "path": "sub",
+    "kind": "folder",
+    "code": null
+  },
+  {
+    "path": "sub/deep",
+    "kind": "folder",
+    "code": null
+  },
+  {
+    "path": "a.txt",
+    "kind": "file",
+    "code": "INVALID_PATH",
+    "note": "not a drawing suffix"
+  },
+  {
+    "path": "a.excalidraw.md",
+    "kind": "file",
+    "code": "INVALID_PATH",
+    "note": "other types wait for a later API"
+  },
+  {
+    "path": "a.excalidraw.txt",
+    "kind": "file",
+    "code": "INVALID_PATH"
+  },
+  {
+    "path": "a",
+    "kind": "file",
+    "code": "INVALID_PATH",
+    "note": "the suffix is never added for plugins"
+  },
+  {
+    "path": ".git/x.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH",
+    "note": "dot folder"
+  },
+  {
+    "path": ".obsidian",
+    "kind": "folder",
+    "code": "INVALID_PATH"
+  },
+  {
+    "path": "sub/.hidden.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH",
+    "note": "dot file"
+  },
+  {
+    "path": "sub/.hidden/c.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH"
+  },
+  {
+    "path": ".excalidraw-vault/x.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH",
+    "note": "core metadata folder"
+  },
+  {
+    "path": "../x.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH"
+  },
+  {
+    "path": "sub/../x.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH"
+  },
+  {
+    "path": "./x.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH"
+  },
+  {
+    "path": "/abs/x.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH"
+  },
+  {
+    "path": "a\\b.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH",
+    "note": "backslash"
+  },
+  {
+    "path": "a//b.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH",
+    "note": "empty segment"
+  },
+  {
+    "path": "sub/",
+    "kind": "folder",
+    "code": "INVALID_PATH",
+    "note": "no trailing slash"
+  },
+  {
+    "path": "CON.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH",
+    "note": "Windows reserved name"
+  },
+  {
+    "path": "sub/nul.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH"
+  },
+  {
+    "path": "dir./x.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH",
+    "note": "trailing dot"
+  },
+  {
+    "path": "dir /x.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH",
+    "note": "trailing space"
+  },
+  {
+    "path": "bad?.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH"
+  },
+  {
+    "path": "a:b.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH"
+  },
+  {
+    "path": "a\u0000b.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH",
+    "note": "NUL"
+  },
+  {
+    "path": "a\tb.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH",
+    "note": "control character"
+  },
+  {
+    "path": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.excalidraw",
+    "kind": "file",
+    "code": null,
+    "note": "segment of 255 bytes"
+  },
+  {
+    "path": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH",
+    "note": "segment of 256 bytes"
+  },
+  {
+    "path": "a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/x.excalidraw",
+    "kind": "file",
+    "code": null,
+    "note": "exactly 1024 bytes"
+  },
+  {
+    "path": "a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/x.excalidraw",
+    "kind": "file",
+    "code": "INVALID_PATH",
+    "note": "over 1024 bytes"
+  }
+]

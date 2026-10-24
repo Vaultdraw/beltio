@@ -1,0 +1,12 @@
+# code: importer-extension-invalid
+# rust: Extension '.txt' is invalid
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+
+[[contributes.importers]]
+id = "text"
+title = "Plain text"
+extensions = [".txt"]

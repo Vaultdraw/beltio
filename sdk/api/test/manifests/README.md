@@ -29,7 +29,7 @@ Every file starts with two comment lines.
 | `min-app-invalid` | `min_app` is not a semantic version. |
 | `main-path-invalid` | `main` is not a safe relative path. |
 | `api-unsupported` | `api` is not the supported level. |
-| `activation-unknown` | Unknown activation event. |
+| `activation-unknown` | Unknown activation event, including `onDrop:<ext>` when no importer declares `<ext>`. |
 | `permission-invalid` | `permissions` is not a list of strings. |
 | `permission-unknown` | A permission name that does not exist. |
 | `permission-reserved` | `net`, `secret` or `control`: reserved for later. |
@@ -39,7 +39,9 @@ Every file starts with two comment lines.
 | `contribution-duplicate` | Two commands share an id. |
 | `title-invalid` | Empty command or panel title. |
 | `setting-invalid` | A setting has no `key` or `type`. |
-| `too-many` | More than 200 commands (also 20 panels, 100 settings). |
+| `too-many` | More than 200 commands (also 20 panels, 100 settings, 8 importers). |
+| `importer-extension-invalid` | An importer extension that is not lower case letters and digits with dots between parts (no leading dot, at most 32 bytes), or is repeated. |
+| `importer-extension-reserved` | An importer extension the app handles itself (`png`, `pdf`, `json`, `excalidraw`, ...). |
 | `manifest-too-large` | Over 64 KB. |
 | `dev-true` | `dev = true` in a packaged manifest. Rust accepts it; `check` reports it. |
 

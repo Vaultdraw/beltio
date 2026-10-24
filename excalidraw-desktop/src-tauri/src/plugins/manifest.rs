@@ -14,6 +14,19 @@ const MAX_TITLE: usize = 200;
 const MAX_TEXT: usize = 1000;
 const MAX_PATH: usize = 260;
 const MAX_PERMISSIONS: usize = 8;
+const MAX_IMPORTERS: usize = 8;
+const MAX_IMPORTER_EXTENSIONS: usize = 8;
+const MAX_EXTENSION: usize = 32;
+/// Activation event prefix: `onDrop:<ext>` is accepted only when an importer declares `<ext>`.
+const ON_DROP: &str = "onDrop:";
+
+/// Extensions the app handles itself, so no importer may claim them. The same list is in
+/// `plugin.schema.json` (`definitions.importer`, `not.enum`) and `sdk/cli/src/manifest.mjs`; a
+/// test ties it to the schema, and the web view's test ties it to `IMAGE_MIME_TYPES`.
+pub(crate) const RESERVED_EXTENSIONS: [&str; 16] = [
+    "excalidraw", "excalidrawlib", "json", "pdf", "jpeg", "svg", "png", "jpg", "gif", "webp", "bmp", "ico", "avif", "jfif", "excalidraw.png",
+    "excalidraw.svg",
+];
 
 /// Permissions a plugin may declare. A declaration and a consent line, not a sandbox.
 pub(crate) const PERMISSIONS: [&str; 2] = ["vault.read", "vault.write"];
@@ -57,6 +70,15 @@ pub(crate) struct Panel {
     pub group: Group,
 }
 
+/// A file kind a plugin imports: dropped or picked files with one of `extensions` go to it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Importer {
+    pub id: String,
+    pub title: String,
+    pub extensions: Vec<String>,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Contributes {
@@ -67,6 +89,9 @@ pub(crate) struct Contributes {
     /// Passed through; the TS settings registry validates the rest.
     #[serde(default)]
     pub settings: Vec<Json>,
+    /// Always sent to the web view, possibly empty.
+    #[serde(default)]
+    pub importers: Vec<Importer>,
 }
 
 fn yes() -> bool {
@@ -163,6 +188,48 @@ fn check_unique_ids<'a>(what: &str, ids: impl Iterator<Item = &'a str>) -> Resul
     Ok(())
 }
 
+/// `^[a-z0-9]+(\.[a-z0-9]+)*$`, at most 32 bytes.
+fn is_valid_extension(e: &str) -> bool {
+    e.len() <= MAX_EXTENSION && e.split('.').all(|part| !part.is_empty() && part.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit()))
+}
+
+fn check_importers(list: &[Importer]) -> Result<(), String> {
+    if list.len() > MAX_IMPORTERS {
+        return Err(format!("Too many importers (max {MAX_IMPORTERS})"));
+    }
+    check_unique_ids("importer", list.iter().map(|x| x.id.as_str()))?;
+    let mut seen = HashSet::new();
+    for x in list {
+        check_title("importer title", &x.title)?;
+        if x.extensions.is_empty() || x.extensions.len() > MAX_IMPORTER_EXTENSIONS {
+            return Err(format!("Importer '{}' needs 1 to {MAX_IMPORTER_EXTENSIONS} extensions", x.id));
+        }
+        for e in &x.extensions {
+            if !is_valid_extension(e) {
+                return Err(format!("Extension '{e}' is invalid (lower case letters and digits, dots between parts, at most {MAX_EXTENSION} bytes, no leading dot)"));
+            }
+            if RESERVED_EXTENSIONS.contains(&e.as_str()) {
+                return Err(format!("Extension '{e}' is handled by the app"));
+            }
+            if !seen.insert(e.as_str()) {
+                return Err(format!("Duplicate importer extension '{e}'"));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// `onStartupFinished`, or `onDrop:<ext>` for an extension one of `importers` declares.
+fn check_activation(events: &[String], importers: &[Importer]) -> Result<(), String> {
+    for a in events {
+        let covered = a.strip_prefix(ON_DROP).is_some_and(|ext| importers.iter().any(|i| i.extensions.iter().any(|e| e == ext)));
+        if a != "onStartupFinished" && !covered {
+            return Err(format!("Unknown activation event '{a}'"));
+        }
+    }
+    Ok(())
+}
+
 fn check_permissions(list: &[String]) -> Result<(), String> {
     if list.len() > MAX_PERMISSIONS {
         return Err(format!("Too many permissions (max {MAX_PERMISSIONS})"));
@@ -199,14 +266,13 @@ fn validate(raw: Raw) -> Result<Manifest, String> {
             return Err(format!("{what} is longer than {MAX_TEXT} characters"));
         }
     }
-    if let Some(a) = raw.activation.iter().find(|a| *a != "onStartupFinished") {
-        return Err(format!("Unknown activation event '{a}'"));
-    }
+    check_activation(&raw.activation, &raw.contributes.importers)?;
     check_permissions(&raw.permissions)?;
     let c = &raw.contributes;
     if c.commands.len() > MAX_COMMANDS || c.panels.len() > MAX_PANELS || c.settings.len() > MAX_SETTINGS {
         return Err(format!("Too many contributions (max {MAX_COMMANDS} commands, {MAX_PANELS} panels, {MAX_SETTINGS} settings)"));
     }
+    check_importers(&c.importers)?;
     check_unique_ids("command", c.commands.iter().map(|x| x.id.as_str()))?;
     check_unique_ids("panel", c.panels.iter().map(|x| x.id.as_str()))?;
     for x in &c.commands {

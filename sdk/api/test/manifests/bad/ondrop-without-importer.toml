@@ -1,0 +1,8 @@
+# code: activation-unknown
+# rust: Unknown activation event 'onDrop:txt'
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+activation = ["onDrop:txt"]

@@ -932,3 +932,289 @@ fn storage_refuses_symlinks() {
     std::os::unix::fs::symlink(&outside, t2.path().join("plugin-data")).unwrap();
     assert_eq!(storage::read(t2.path(), "kv").unwrap_err().code, "INVALID_PATH");
 }
+
+// ---- P4c1: importers in the manifest, plugin path rules, create-only vault calls ----
+
+use super::vault_paths::{self, Kind};
+use serde_json::{json, Value};
+use vaultdraw_core::{ops::vault_ops, Vault};
+
+fn importer(extensions: &str) -> String {
+    with(&format!("\n[[contributes.importers]]\nid = \"txt\"\ntitle = \"Text\"\nextensions = {extensions}\n"))
+}
+
+#[test]
+fn importers_parse_and_always_serialise() {
+    let m = manifest::parse(&importer(r#"["txt", "tar.gz"]"#)).unwrap();
+    assert_eq!(m.contributes.importers.len(), 1);
+    assert_eq!(m.contributes.importers[0].extensions, ["txt", "tar.gz"]);
+    let none = serde_json::to_value(manifest::parse(&minimal("my-plugin")).unwrap()).unwrap();
+    assert_eq!(none["contributes"]["importers"], json!([]));
+    let some = serde_json::to_value(&m).unwrap();
+    assert_eq!(some["contributes"]["importers"], json!([{"id": "txt", "title": "Text", "extensions": ["txt", "tar.gz"]}]));
+}
+
+#[test]
+fn importer_extension_rules() {
+    for e in ["Txt", ".txt", "tx t", "a..b", "a.", "", "t-x", "TXT", "日本"] {
+        bad(&importer(&format!("[\"{e}\"]")), "invalid");
+    }
+    bad(&importer(&format!("[\"{}\"]", "a".repeat(33))), "invalid");
+    assert!(manifest::parse(&importer(&format!("[\"{}\"]", "a".repeat(32)))).is_ok());
+    bad(&importer("[]"), "1 to 8 extensions");
+    bad(&importer(r#"["a","b","c","d","e","f","g","h","i"]"#), "1 to 8 extensions");
+    assert!(manifest::parse(&importer(r#"["a","b","c","d","e","f","g","h"]"#)).is_ok());
+    bad(&importer(r#"["txt", "txt"]"#), "Duplicate importer extension 'txt'");
+    // Unique across the plugin's importers, not only inside one.
+    bad(&with("\n[[contributes.importers]]\nid = \"a\"\ntitle = \"A\"\nextensions = [\"x\"]\n[[contributes.importers]]\nid = \"b\"\ntitle = \"B\"\nextensions = [\"x\"]\n"), "Duplicate importer extension");
+    bad(&with("\n[[contributes.importers]]\nid = \"a\"\ntitle = \"A\"\nextensions = [\"x\"]\n[[contributes.importers]]\nid = \"a\"\ntitle = \"B\"\nextensions = [\"y\"]\n"), "Duplicate importer id");
+    bad(&with("\n[[contributes.importers]]\nid = \"1a\"\ntitle = \"A\"\nextensions = [\"x\"]\n"), "importer id");
+    bad(&with("\n[[contributes.importers]]\nid = \"a\"\ntitle = \" \"\nextensions = [\"x\"]\n"), "importer title");
+    bad(&with("\n[[contributes.importers]]\nid = \"a\"\ntitle = \"A\"\nextensions = [\"x\"]\nkind = 1\n"), "kind");
+}
+
+#[test]
+fn importers_cannot_claim_what_the_app_handles() {
+    for e in manifest::RESERVED_EXTENSIONS {
+        bad(&importer(&format!("[\"{e}\"]")), &format!("Extension '{e}' is handled by the app"));
+    }
+    // Longer names that merely end in a reserved one are the plugin's to claim.
+    assert!(manifest::parse(&importer(r#"["data.json", "my.excalidraw"]"#)).is_ok());
+}
+
+#[test]
+fn reserved_extensions_match_the_schema_and_the_image_types() {
+    let schema: Value = serde_json::from_str(include_str!("../../../../sdk/api/plugin.schema.json")).unwrap();
+    let in_schema = &schema["definitions"]["importer"]["properties"]["extensions"]["items"]["not"]["enum"];
+    assert_eq!(in_schema, &json!(manifest::RESERVED_EXTENSIONS));
+    // Every key of IMAGE_MIME_TYPES (packages/common/src/constants.ts) is reserved.
+    let constants = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../packages/common/src/constants.ts")).unwrap();
+    let block = constants.split("export const IMAGE_MIME_TYPES = {").nth(1).unwrap().split('}').next().unwrap();
+    let keys: Vec<&str> = block.lines().filter_map(|l| l.trim().split(':').next()).filter(|k| !k.is_empty()).collect();
+    assert!(keys.len() >= 9, "{keys:?}");
+    for k in keys {
+        assert!(manifest::RESERVED_EXTENSIONS.contains(&k), "{k} is an image type the app handles");
+    }
+}
+
+#[test]
+fn too_many_importers() {
+    let many = |n: usize| with(&(0..n).map(|i| format!("\n[[contributes.importers]]\nid = \"i{i}\"\ntitle = \"T\"\nextensions = [\"e{i}\"]\n")).collect::<String>());
+    assert!(manifest::parse(&many(8)).is_ok());
+    bad(&many(9), "Too many importers");
+}
+
+#[test]
+fn on_drop_activation_needs_an_importer_for_the_extension() {
+    // `activation` is a top-level key, so it has to come before the tables.
+    let doc = |events: &str, ext: &str| format!("{}activation = {events}\n[[contributes.importers]]\nid = \"txt\"\ntitle = \"Text\"\nextensions = {ext}\n", minimal("my-plugin"));
+    assert!(manifest::parse(&doc(r#"["onDrop:txt"]"#, r#"["txt"]"#)).is_ok());
+    assert!(manifest::parse(&doc(r#"["onStartupFinished", "onDrop:tar.gz"]"#, r#"["tar.gz"]"#)).is_ok());
+    bad(&doc(r#"["onDrop:csv"]"#, r#"["txt"]"#), "Unknown activation event 'onDrop:csv'");
+    bad(&doc(r#"["onDrop:tar"]"#, r#"["tar.gz"]"#), "Unknown activation event");
+    bad(&doc(r#"["onFile:txt"]"#, r#"["txt"]"#), "Unknown activation event 'onFile:txt'");
+    bad(&doc(r#"["onDrop:"]"#, r#"["txt"]"#), "Unknown activation event");
+    bad(&format!("{}activation = [\"onDrop:txt\"]\n", minimal("my-plugin")), "Unknown activation event 'onDrop:txt'");
+}
+
+// ---- vault_paths ----
+
+fn corpus() -> Vec<(String, Kind, Option<String>)> {
+    let rows: Vec<Value> = serde_json::from_str(include_str!("../../../../sdk/api/test/vault-paths.json")).unwrap();
+    rows.iter()
+        .map(|r| {
+            let kind = match r["kind"].as_str().unwrap() {
+                "file" => Kind::File,
+                "folder" => Kind::Folder,
+                k => panic!("kind {k}"),
+            };
+            (r["path"].as_str().unwrap().to_string(), kind, r["code"].as_str().map(str::to_string))
+        })
+        .collect()
+}
+
+#[test]
+fn plugin_path_corpus() {
+    let rows = corpus();
+    assert!(rows.len() >= 30);
+    assert!(rows.iter().any(|r| r.2.is_none()) && rows.iter().any(|r| r.2.is_some()));
+    for (path, kind, code) in rows {
+        let got = vault_paths::check_plugin_path(&path, kind).err().map(|e| e.app_code().unwrap().to_string());
+        assert_eq!(got, code, "{path:?} ({kind:?})");
+    }
+}
+
+/// A vault in a temp folder, with the root canonical like the app's.
+fn vault(read_only: bool) -> (tempfile::TempDir, Vault) {
+    let d = tempdir().unwrap();
+    let v = Vault::new(d.path().canonicalize().unwrap(), "t".into(), read_only, None);
+    (d, v)
+}
+
+fn scene() -> Value {
+    json!({"type": "excalidraw", "version": 2, "elements": [], "appState": {}, "files": {}})
+}
+
+/// `vault.list` as a plugin gets it: path rules, the core call, the dot filter.
+fn plugin_list(v: &Vault, params: Value) -> Result<Vec<String>, gateway::GatewayError> {
+    let p = gateway::plugin_params("vault.list", Some(params))?;
+    let out = gateway::filter_list(vault_ops::list(v, p["dir"].as_str().unwrap(), p["recursive"].as_bool().unwrap())?);
+    Ok(out["entries"].as_array().unwrap().iter().map(|e| e["path"].as_str().unwrap().to_string()).collect())
+}
+
+fn plugin_read(v: &Vault, path: &str) -> Result<Value, gateway::GatewayError> {
+    let p = gateway::plugin_params("file.read", Some(json!({"path": path})))?;
+    Ok(vault_ops::read(v, p["path"].as_str().unwrap())?)
+}
+
+/// `file.write` as a plugin gets it: create only (what the control call runs after the rules).
+fn plugin_create(v: &Vault, path: &str) -> Result<(), gateway::GatewayError> {
+    let p = gateway::plugin_params("file.write", Some(json!({"path": path, "scene": scene()})))?;
+    assert_eq!(p["expectedRevision"], Value::Null);
+    vault_ops::write(v, p["path"].as_str().unwrap(), &p["scene"], None).map_err(|e| gateway::create_error(e.into()))?;
+    Ok(())
+}
+
+fn code<T: std::fmt::Debug>(r: Result<T, gateway::GatewayError>) -> String {
+    r.unwrap_err().code
+}
+
+#[test]
+fn plugin_params_keep_only_what_a_call_needs() {
+    let p = gateway::plugin_params("vault.list", Some(json!({"dir": "a", "recursive": true, "x": 1}))).unwrap();
+    assert_eq!(p, json!({"dir": "a", "recursive": false}));
+    assert_eq!(gateway::plugin_params("vault.list", None).unwrap(), json!({"dir": "", "recursive": false}));
+    assert_eq!(gateway::plugin_params("vault.list", Some(json!({"dir": null}))).unwrap()["dir"], "");
+    assert_eq!(code(gateway::plugin_params("vault.list", Some(json!({"dir": 3})))), "INVALID_ARGUMENT");
+    assert_eq!(code(gateway::plugin_params("vault.list", Some(json!({"dir": ".git"})))), "INVALID_PATH");
+    // A link-style `file` name must not reach the control call: only `path` does.
+    assert_eq!(code(gateway::plugin_params("file.read", Some(json!({"file": "Name"})))), "INVALID_ARGUMENT");
+    assert_eq!(gateway::plugin_params("file.read", Some(json!({"path": "a.excalidraw", "file": "x"}))).unwrap(), json!({"path": "a.excalidraw"}));
+    assert_eq!(code(gateway::plugin_params("file.read", Some(json!({"path": "a"})))), "INVALID_PATH");
+    assert_eq!(code(gateway::plugin_params("file.write", Some(json!({"file": "n", "scene": {}})))), "INVALID_ARGUMENT");
+    assert_eq!(code(gateway::plugin_params("file.write", Some(json!({"path": "a.txt", "scene": {}})))), "INVALID_PATH");
+    assert_eq!(code(gateway::plugin_params("file.write", Some(json!({"path": "a.excalidraw", "expectedRevision": "r"})))), "PERMISSION");
+    assert_eq!(code(gateway::plugin_params("file.read", Some(json!([1])))), "INVALID_ARGUMENT");
+}
+
+#[test]
+fn list_hides_dot_entries_and_symlinks() {
+    let (d, v) = vault(false);
+    let root = d.path();
+    for f in ["a.excalidraw", "B.EXCALIDRAW", ".hidden.excalidraw", "notes.txt"] {
+        fs::write(root.join(f), "x").unwrap();
+    }
+    for dir in ["sub", ".git", ".obsidian", ".excalidraw-vault"] {
+        fs::create_dir_all(root.join(dir)).unwrap();
+    }
+    fs::write(root.join("sub/c.excalidraw"), "x").unwrap();
+    fs::write(root.join("sub/.d.excalidraw"), "x").unwrap();
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(root.join("a.excalidraw"), root.join("link.excalidraw")).unwrap();
+        std::os::unix::fs::symlink(root.join("sub"), root.join("linkdir")).unwrap();
+    }
+    assert_eq!(plugin_list(&v, json!({})).unwrap(), ["sub", "a.excalidraw", "B.EXCALIDRAW"]);
+    assert_eq!(plugin_list(&v, json!({"dir": "sub", "recursive": true})).unwrap(), ["sub/c.excalidraw"]);
+    assert_eq!(code(plugin_list(&v, json!({"dir": ".git"}))), "INVALID_PATH");
+    assert_eq!(code(plugin_list(&v, json!({"dir": "nope"}))), "NOT_FOUND");
+    // Only the dot filter is the plugin's: the filter itself keeps plain entries and bad shapes alone.
+    assert_eq!(gateway::filter_list(json!({"entries": [{"path": "a/.x"}, {"path": "a/b"}]})), json!({"entries": [{"path": "a/b"}]}));
+    assert_eq!(gateway::filter_list(json!({"other": 1})), json!({"other": 1}));
+}
+
+#[cfg(unix)]
+#[test]
+fn symlinks_are_refused_for_read_and_create() {
+    let (d, v) = vault(false);
+    let root = d.path();
+    let outside = tempdir().unwrap();
+    fs::write(outside.path().join("o.excalidraw"), "x").unwrap();
+    fs::create_dir_all(root.join("real")).unwrap();
+    fs::write(root.join("real/a.excalidraw"), serde_json::to_string(&scene()).unwrap()).unwrap();
+    std::os::unix::fs::symlink(outside.path().join("o.excalidraw"), root.join("file-link.excalidraw")).unwrap();
+    std::os::unix::fs::symlink(outside.path(), root.join("dir-link")).unwrap();
+    std::os::unix::fs::symlink(root.join("real"), root.join("inner-link")).unwrap();
+    assert_eq!(code(plugin_read(&v, "file-link.excalidraw")), "INVALID_PATH");
+    assert_eq!(code(plugin_read(&v, "dir-link/o.excalidraw")), "INVALID_PATH");
+    assert_eq!(code(plugin_read(&v, "inner-link/a.excalidraw")), "INVALID_PATH");
+    assert_eq!(code(plugin_create(&v, "dir-link/new.excalidraw")), "INVALID_PATH");
+    assert_eq!(code(plugin_create(&v, "file-link.excalidraw")), "INVALID_PATH");
+    assert!(!outside.path().join("new.excalidraw").exists());
+    assert_eq!(fs::read_to_string(outside.path().join("o.excalidraw")).unwrap(), "x");
+    assert_eq!(code(plugin_list(&v, json!({"dir": "dir-link"}))), "INVALID_PATH");
+    assert!(plugin_read(&v, "real/a.excalidraw").is_ok());
+}
+
+#[test]
+fn create_makes_a_drawing_and_never_overwrites() {
+    let (d, v) = vault(false);
+    fs::create_dir_all(d.path().join("sub")).unwrap();
+    plugin_create(&v, "sub/new.excalidraw").unwrap();
+    assert_eq!(plugin_read(&v, "sub/new.excalidraw").unwrap()["scene"]["type"], "excalidraw");
+    let before = fs::read(d.path().join("sub/new.excalidraw")).unwrap();
+    // The same name, and the same name in another case: both are collisions.
+    assert_eq!(code(plugin_create(&v, "sub/new.excalidraw")), "NAME_COLLISION");
+    assert_eq!(code(plugin_create(&v, "sub/NEW.excalidraw")), "NAME_COLLISION");
+    assert_eq!(fs::read(d.path().join("sub/new.excalidraw")).unwrap(), before);
+    // A missing parent is NOT_FOUND and makes no folder.
+    assert_eq!(code(plugin_create(&v, "missing/new.excalidraw")), "NOT_FOUND");
+    assert!(!d.path().join("missing").exists());
+    // Path rules apply before anything touches the disk.
+    assert_eq!(code(plugin_create(&v, "sub/new.txt")), "INVALID_PATH");
+    assert_eq!(code(plugin_create(&v, ".git/new.excalidraw")), "INVALID_PATH");
+    assert_eq!(code(plugin_create(&v, &format!("{}.excalidraw", "a/".repeat(600)))), "INVALID_PATH");
+    assert!(!d.path().join(".git").exists());
+}
+
+#[test]
+fn create_in_a_read_only_vault_is_refused() {
+    let (d, v) = vault(true);
+    assert_eq!(code(plugin_create(&v, "a.excalidraw")), "READ_ONLY");
+    assert!(!d.path().join("a.excalidraw").exists());
+}
+
+#[test]
+fn read_refuses_non_drawings_and_missing_files() {
+    let (d, v) = vault(false);
+    fs::write(d.path().join("notes.txt"), "x").unwrap();
+    assert_eq!(code(plugin_read(&v, "notes.txt")), "INVALID_PATH");
+    assert_eq!(code(plugin_read(&v, "gone.excalidraw")), "NOT_FOUND");
+    assert_eq!(code(plugin_read(&v, ".excalidraw-vault/x.excalidraw")), "INVALID_PATH");
+}
+
+/// Budget: `vault.list` of 5000 drawings in one folder, p95 under 30 ms. Run with
+/// `cargo test -j 4 vault_list_5000 -- --ignored --nocapture` (the percentiles are printed).
+#[test]
+#[ignore = "timing run: prints p50 and p95 of vault.list over 5000 drawings"]
+fn vault_list_5000_drawings_timing() {
+    let (d, v) = vault(false);
+    for i in 0..5000 {
+        fs::write(d.path().join(format!("drawing-{i:05}.excalidraw")), "{}").unwrap();
+    }
+    for i in 0..10 {
+        fs::write(d.path().join(format!(".hidden-{i}.excalidraw")), "{}").unwrap();
+    }
+    assert_eq!(plugin_list(&v, json!({})).unwrap().len(), 5000);
+    let mut ms: Vec<f64> = (0..40)
+        .map(|_| {
+            let t = Instant::now();
+            let n = plugin_list(&v, json!({})).unwrap().len();
+            assert_eq!(n, 5000);
+            t.elapsed().as_secs_f64() * 1000.0
+        })
+        .collect();
+    ms.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let (p50, p95) = (ms[ms.len() / 2], ms[(ms.len() * 95 / 100).min(ms.len() - 1)]);
+    let mut core: Vec<f64> = (0..20)
+        .map(|_| {
+            let t = Instant::now();
+            let _ = vaultdraw_core::list_directory_in(&v, "").unwrap();
+            t.elapsed().as_secs_f64() * 1000.0
+        })
+        .collect();
+    core.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    println!("  of which the core's directory listing alone: p50 {:.2} ms", core[core.len() / 2]);
+    println!("vault.list 5000 drawings: p50 {p50:.2} ms, p95 {p95:.2} ms (budget p95 < 30 ms)");
+    assert!(p95 < 30.0 * 4.0, "p95 {p95:.1} ms is far over the 30 ms budget");
+}

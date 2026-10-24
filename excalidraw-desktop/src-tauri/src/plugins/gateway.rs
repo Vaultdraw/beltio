@@ -5,6 +5,7 @@
 //! (the same code as the CLI and MCP; it finds the active vault itself and works with the
 //! control socket off). Plugin-only rows (storage) are arms here. A permission is a seatbelt,
 //! not a sandbox: raw `invoke` still reaches every command (sdk/docs/permissions.md).
+use super::vault_paths::{check_plugin_path, has_dot_segment, Kind};
 use super::{consent, scan::PluginInfo, scan::Source, storage};
 use serde::Serialize;
 use serde_json::{Map, Value};
@@ -117,6 +118,71 @@ pub(crate) fn create_only(params: Option<Value>) -> Result<Value, GatewayError> 
     }
     map.insert("expectedRevision".into(), Value::Null);
     Ok(Value::Object(map))
+}
+
+/// The string `key` of `params`, which plugin calls must give as `path` (never the link-style `file`).
+fn path_param<'a>(params: &'a Map<String, Value>, key: &str) -> Result<&'a str, GatewayError> {
+    match params.get(key) {
+        Some(Value::String(s)) => Ok(s),
+        _ => Err(GatewayError::new("INVALID_ARGUMENT", format!("{key} must be a string"))),
+    }
+}
+
+/// The params a plugin's vault call hands to the control API: path rules checked first, and only
+/// the keys the call needs, so a link-style `file` name or `recursive: true` cannot get through.
+pub(crate) fn plugin_params(method: &str, params: Option<Value>) -> Result<Value, GatewayError> {
+    let checked = |path: &str, kind| check_plugin_path(path, kind).map_err(GatewayError::from);
+    match method {
+        VAULT_LIST => {
+            let map = object_params(params)?;
+            let dir = match map.get("dir") {
+                None | Some(Value::Null) => "",
+                _ => path_param(&map, "dir")?,
+            };
+            checked(dir, Kind::Folder)?;
+            Ok(serde_json::json!({ "dir": dir, "recursive": false }))
+        }
+        FILE_READ => {
+            let map = object_params(params)?;
+            let path = path_param(&map, "path")?;
+            checked(path, Kind::File)?;
+            Ok(serde_json::json!({ "path": path }))
+        }
+        FILE_WRITE => {
+            let map = object_params(Some(create_only(params)?))?;
+            let path = path_param(&map, "path")?;
+            checked(path, Kind::File)?;
+            Ok(serde_json::json!({ "path": path, "scene": map.get("scene").cloned().unwrap_or(Value::Null), "expectedRevision": null }))
+        }
+        _ => Ok(params.unwrap_or(Value::Null)),
+    }
+}
+
+fn object_params(params: Option<Value>) -> Result<Map<String, Value>, GatewayError> {
+    match params {
+        None | Some(Value::Null) => Ok(Map::new()),
+        Some(Value::Object(m)) => Ok(m),
+        Some(_) => Err(GatewayError::new("INVALID_ARGUMENT", "params must be an object")),
+    }
+}
+
+/// `file.write` for a plugin is create only, so the core's `CONFLICT` (the name already holds a
+/// drawing, saved or open and unsaved) reads as `NAME_COLLISION`, like the case-insensitive match.
+pub(crate) fn create_error(e: GatewayError) -> GatewayError {
+    if e.code == "CONFLICT" {
+        GatewayError::new("NAME_COLLISION", "A drawing with this name already exists")
+    } else {
+        e
+    }
+}
+
+/// `vault.list` for a plugin: entries whose path has a dot segment are removed (the core already
+/// skips symlinks and its metadata folder).
+pub(crate) fn filter_list(mut result: Value) -> Value {
+    if let Some(entries) = result.get_mut("entries").and_then(Value::as_array_mut) {
+        entries.retain(|e| e.get("path").and_then(Value::as_str).is_some_and(|p| !has_dot_segment(p)));
+    }
+    result
 }
 
 /// Runs a storage row for `plugin_id` in `state_dir`.

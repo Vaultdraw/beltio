@@ -14,6 +14,7 @@ mod scheme;
 mod state;
 mod storage;
 mod term;
+mod vault_paths;
 #[cfg(test)]
 mod tests;
 mod watch;
@@ -160,8 +161,13 @@ pub(crate) async fn plugin_call(
         let row = gateway::authorize(&method, &plugin_id, plugin, || consent::load(&state_dir))?;
         match row.route {
             gateway::Route::Control(m) => {
-                let params = if m == vaultdraw_protocol::methods::FILE_WRITE { Some(gateway::create_only(params)?) } else { params };
-                Ok(crate::control::ops::call(&app, m, params)?)
+                let params = gateway::plugin_params(m, params)?;
+                let result = crate::control::ops::call(&app, m, Some(params));
+                match m {
+                    vaultdraw_protocol::methods::VAULT_LIST => Ok(gateway::filter_list(result?)),
+                    vaultdraw_protocol::methods::FILE_WRITE => result.map_err(|e| gateway::create_error(e.into())),
+                    _ => Ok(result?),
+                }
             }
             route => gateway::storage_call(&state_dir, &plugin_id, route, &params.unwrap_or_default()),
         }

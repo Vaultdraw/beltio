@@ -1,0 +1,19 @@
+# code: none
+# rust: ok
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+activation = ["onStartupFinished", "onDrop:txt"]
+permissions = ["vault.read", "vault.write"]
+
+[[contributes.importers]]
+id = "text"
+title = "Plain text"
+extensions = ["txt", "text"]
+
+[[contributes.importers]]
+id = "tar"
+title = "Tar archives"
+extensions = ["tar.gz", "tgz"]

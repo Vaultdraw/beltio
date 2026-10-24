@@ -1,0 +1,12 @@
+# code: importer-extension-reserved
+# rust: Extension 'png' is handled by the app
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+
+[[contributes.importers]]
+id = "img"
+title = "Images"
+extensions = ["txt", "png"]

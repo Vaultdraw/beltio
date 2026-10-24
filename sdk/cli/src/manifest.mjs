@@ -14,6 +14,34 @@ const MAX_TITLE = 200;
 const MAX_TEXT = 1000;
 const MAX_PATH = 260;
 const MAX_PERMISSIONS = 8;
+const MAX_IMPORTERS = 8;
+const MAX_IMPORTER_EXTENSIONS = 8;
+const MAX_EXTENSION = 32;
+/** `onDrop:<ext>` is an activation event only when an importer declares `<ext>`. */
+const ON_DROP = "onDrop:";
+/**
+ * Extensions the app handles itself; no importer may claim them. Same list as `RESERVED_EXTENSIONS`
+ * in `manifest.rs` and `not.enum` of `definitions.importer` in `plugin.schema.json`.
+ */
+export const RESERVED_EXTENSIONS = [
+  "excalidraw",
+  "excalidrawlib",
+  "json",
+  "pdf",
+  "jpeg",
+  "svg",
+  "png",
+  "jpg",
+  "gif",
+  "webp",
+  "bmp",
+  "ico",
+  "avif",
+  "jfif",
+  "excalidraw.png",
+  "excalidraw.svg",
+];
+const IMPORTER_KEYS = new Set(["id", "title", "extensions"]);
 /** What a plugin may declare. */
 export const PERMISSIONS = ["vault.read", "vault.write"];
 /** Kept for later API revisions; an app that knows them as reserved refuses a manifest that uses one. */
@@ -56,6 +84,9 @@ export function isSafeRelPath(p) {
 }
 
 const chars = (s) => [...s].length;
+/** `^[a-z0-9]+(\.[a-z0-9]+)*$`, at most 32 bytes @param {string} e */
+const isValidExtension = (e) =>
+  Buffer.byteLength(e) <= MAX_EXTENSION && /^[a-z0-9]+(\.[a-z0-9]+)*$/.test(e);
 const isTable = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
 const isStringArray = (v) =>
   Array.isArray(v) && v.every((x) => typeof x === "string");
@@ -180,11 +211,14 @@ export function validateManifestText(text, file = "plugin.toml") {
     if (!isStringArray(doc.activation)) {
       err("activation-unknown", "activation must be a list of event names");
     } else {
+      const declared = declaredExtensions(doc.contributes);
       for (const a of doc.activation) {
-        if (a !== "onStartupFinished") {
+        const covered =
+          a.startsWith(ON_DROP) && declared.has(a.slice(ON_DROP.length));
+        if (a !== "onStartupFinished" && !covered) {
           err(
             "activation-unknown",
-            `Unknown activation event '${a}' (only onStartupFinished exists)`,
+            `Unknown activation event '${a}' (onStartupFinished, or onDrop:<ext> for an extension an importer declares)`,
           );
         }
       }
@@ -207,6 +241,66 @@ export function validateManifestText(text, file = "plugin.toml") {
     checkContributes(doc.contributes, err);
   }
   return { errors, warnings };
+}
+
+/** Extensions declared by well-formed importers (the rest is reported by `checkImporters`). @param {unknown} c */
+function declaredExtensions(c) {
+  const out = new Set();
+  const list = isTable(c) && Array.isArray(c.importers) ? c.importers : [];
+  for (const x of list) {
+    if (isTable(x) && isStringArray(x.extensions)) {
+      x.extensions.forEach((e) => out.add(e));
+    }
+  }
+  return out;
+}
+
+/**
+ * @param {Record<string, any>[]} importers
+ * @param {(code: string, message: string) => void} err
+ */
+function checkImporters(importers, err) {
+  const seen = new Set();
+  for (const x of importers) {
+    // id, title and unknown keys are checked with the other contributions.
+    if (!("extensions" in x)) {
+      err("missing-key", "An importer is missing 'extensions'");
+      continue;
+    }
+    if (
+      !isStringArray(x.extensions) ||
+      x.extensions.length < 1 ||
+      x.extensions.length > MAX_IMPORTER_EXTENSIONS
+    ) {
+      err(
+        "contribution-invalid",
+        `Importer ${show(
+          x.id,
+        )} needs 1 to ${MAX_IMPORTER_EXTENSIONS} extensions`,
+      );
+      continue;
+    }
+    for (const e of x.extensions) {
+      if (!isValidExtension(e)) {
+        err(
+          "importer-extension-invalid",
+          `Extension '${e}' is invalid (lower case letters and digits, dots between parts, at most ${MAX_EXTENSION} bytes, no leading dot)`,
+        );
+      } else if (RESERVED_EXTENSIONS.includes(e)) {
+        err(
+          "importer-extension-reserved",
+          `Extension '${e}' is handled by the app`,
+        );
+      } else if (seen.has(e)) {
+        err(
+          "importer-extension-invalid",
+          `Duplicate importer extension '${e}'`,
+        );
+      } else {
+        seen.add(e);
+      }
+    }
+  }
 }
 
 /**
@@ -252,10 +346,10 @@ function checkContributes(c, err) {
     return;
   }
   for (const k of Object.keys(c)) {
-    if (!["commands", "panels", "settings"].includes(k)) {
+    if (!["commands", "panels", "settings", "importers"].includes(k)) {
       err(
         "unknown-key",
-        `Unknown key 'contributes.${k}' (use commands, panels or settings)`,
+        `Unknown key 'contributes.${k}' (use commands, panels, settings or importers)`,
       );
     }
   }
@@ -277,6 +371,7 @@ function checkContributes(c, err) {
   const commands = list("commands");
   const panels = list("panels");
   const settings = list("settings");
+  const importers = list("importers");
   if (
     commands.length > MAX_COMMANDS ||
     panels.length > MAX_PANELS ||
@@ -287,9 +382,13 @@ function checkContributes(c, err) {
       `Too many contributions (max ${MAX_COMMANDS} commands, ${MAX_PANELS} panels, ${MAX_SETTINGS} settings)`,
     );
   }
+  if (importers.length > MAX_IMPORTERS) {
+    err("too-many", `Too many importers (max ${MAX_IMPORTERS})`);
+  }
   for (const [what, items, known] of /** @type {const} */ ([
     ["command", commands, COMMAND_KEYS],
     ["panel", panels, PANEL_KEYS],
+    ["importer", importers, IMPORTER_KEYS],
   ])) {
     const seen = new Set();
     for (const x of items) {
@@ -345,6 +444,7 @@ function checkContributes(c, err) {
       }
     }
   }
+  checkImporters(importers, err);
   for (const s of settings) {
     const field = (k) => typeof s[k] === "string" && s[k] !== "";
     if (!field("key") || !field("type")) {

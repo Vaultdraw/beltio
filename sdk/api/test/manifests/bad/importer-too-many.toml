@@ -1,0 +1,52 @@
+# code: too-many
+# rust: Too many importers
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+
+[[contributes.importers]]
+id = "i1"
+title = "Importer 1"
+extensions = ["e1"]
+
+[[contributes.importers]]
+id = "i2"
+title = "Importer 2"
+extensions = ["e2"]
+
+[[contributes.importers]]
+id = "i3"
+title = "Importer 3"
+extensions = ["e3"]
+
+[[contributes.importers]]
+id = "i4"
+title = "Importer 4"
+extensions = ["e4"]
+
+[[contributes.importers]]
+id = "i5"
+title = "Importer 5"
+extensions = ["e5"]
+
+[[contributes.importers]]
+id = "i6"
+title = "Importer 6"
+extensions = ["e6"]
+
+[[contributes.importers]]
+id = "i7"
+title = "Importer 7"
+extensions = ["e7"]
+
+[[contributes.importers]]
+id = "i8"
+title = "Importer 8"
+extensions = ["e8"]
+
+[[contributes.importers]]
+id = "i9"
+title = "Importer 9"
+extensions = ["e9"]
