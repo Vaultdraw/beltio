@@ -901,7 +901,7 @@ export const STATE_FIELDS = [
   "hasPanned",
 ] as const;
 
-type StateField = (typeof STATE_FIELDS)[number];
+type StateField = typeof STATE_FIELDS[number];
 export type PersistedState = DeepReadonly<Pick<VaultPreferences, StateField>>;
 
 export const show = (value: unknown) =>
