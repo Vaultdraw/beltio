@@ -1464,13 +1464,18 @@ function persist(
         if (changes.length > 0) {
           await rt.invoke("update_config", { changes });
         }
-        for (const grant of grants) {
-          refused.push(CONSENT_FIELDS[grant.key]);
-          const granted = await rt.invoke<boolean>("network_grant", {
-            key: grant.key.slice("network.".length),
-          });
+        if (grants.length > 0) {
+          // One native dialog for every grant of this change, so one click asks once.
+          const [first, ...rest] = grants.map((g) =>
+            g.key.slice("network.".length),
+          );
+          refused.push(...grants.map((g) => CONSENT_FIELDS[g.key]));
+          const granted = await rt.invoke<boolean>(
+            "network_grant",
+            rest.length > 0 ? { key: first, also: rest } : { key: first },
+          );
           if (granted) {
-            refused.pop();
+            refused.length = 0;
           }
         }
         revert();

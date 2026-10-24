@@ -96,18 +96,45 @@ fn grant_prompt(key: &str) -> (String, String) {
 
 /// Turns a consent key on after `confirm(title, text)` says yes. Returns whether it was granted;
 /// a refusal writes nothing. `key` is `enabled` or `allow_<purpose>`, without the `network.` prefix.
+#[cfg(test)]
 pub(crate) fn grant_in(dirs: &config::Dirs, key: &str, confirm: impl FnOnce(&str, &str) -> bool) -> Result<bool> {
-    let valid = key.len() <= 40
-        && is_consent_key(key)
-        && key.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_');
-    if !valid {
+    grant_all_in(dirs, &[key], confirm)
+}
+
+/// The same for several keys at once (the master switch and a purpose): one dialog, one answer,
+/// so a single click never shows the box twice. Every key is checked before anything is asked.
+pub(crate) fn grant_all_in(dirs: &config::Dirs, keys: &[&str], confirm: impl FnOnce(&str, &str) -> bool) -> Result<bool> {
+    let valid = |key: &str| {
+        key.len() <= 40
+            && is_consent_key(key)
+            && key.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+    };
+    let mut unique: Vec<&str> = Vec::new();
+    for key in keys {
+        if !unique.contains(key) {
+            unique.push(key);
+        }
+    }
+    if unique.is_empty() || unique.len() > 4 || !unique.iter().all(|k| valid(k)) {
         return Err(err("INVALID_ARGUMENT", "Not a network consent key"));
     }
-    let (title, text) = grant_prompt(key);
+    let (title, text) = if unique.len() == 1 {
+        grant_prompt(unique[0])
+    } else {
+        let prompts: Vec<(String, String)> = unique.iter().map(|k| grant_prompt(k)).collect();
+        (
+            prompts.iter().map(|(t, _)| t.trim_end_matches('?').to_string()).collect::<Vec<_>>().join(" and ") + "?",
+            prompts.iter().map(|(_, t)| t.as_str()).collect::<Vec<_>>().join("\n\n"),
+        )
+    };
     if !confirm(&title, &text) {
         return Ok(false);
     }
-    config::update_overrides_in(dirs, &[config::LayerChange { key: format!("network.{key}"), value: Value::Bool(true), default: None }])?;
+    let changes: Vec<config::LayerChange> = unique
+        .iter()
+        .map(|k| config::LayerChange { key: format!("network.{k}"), value: Value::Bool(true), default: None })
+        .collect();
+    config::update_overrides_in(dirs, &changes)?;
     Ok(true)
 }
 
@@ -732,6 +759,42 @@ mod tests {
         assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "NETWORK_DISABLED");
         assert!(grant_in(&dirs, "enabled", |_, _| true).unwrap());
         assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "");
+    }
+
+    #[test]
+    fn grant_several_keys_asks_once_and_writes_all() {
+        let t = tempfile::tempdir().unwrap();
+        let dirs = dirs_in(&t);
+        fs::create_dir_all(&dirs.config).unwrap();
+        fs::write(dirs.config.join("config.toml"), "[network]\nenabled = false\n").unwrap();
+        let mut asked = 0;
+        let mut text_seen = String::new();
+        let no = grant_all_in(&dirs, &["enabled", "allow_themes"], |_, text| {
+            asked += 1;
+            text_seen = text.to_string();
+            false
+        })
+        .unwrap();
+        assert!(!no);
+        assert_eq!(asked, 1);
+        assert!(text_seen.contains("network.enabled") && text_seen.contains("network.allow_themes"));
+        assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "NETWORK_DISABLED");
+        let yes = grant_all_in(&dirs, &["enabled", "allow_themes", "enabled"], |_, _| {
+            asked += 1;
+            true
+        })
+        .unwrap();
+        assert!(yes);
+        assert_eq!(asked, 2);
+        assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "");
+    }
+
+    #[test]
+    fn grant_several_keys_rejects_a_bad_one_without_asking() {
+        let t = tempfile::tempdir().unwrap();
+        let dirs = dirs_in(&t);
+        let r = grant_all_in(&dirs, &["enabled", "hotkeys"], |_, _| panic!("must not ask"));
+        assert_eq!(r.unwrap_err().code, "INVALID_ARGUMENT");
     }
 
     #[test]

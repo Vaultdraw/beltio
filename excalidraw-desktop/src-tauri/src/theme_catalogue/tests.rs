@@ -146,3 +146,27 @@ fn symlinked_cache_dir_refused() {
     assert!(index_in(&d, &format!("{base}/i"), 1000).is_err());
     assert_eq!(fs::read_dir(&target).unwrap().count(), 0);
 }
+
+#[test]
+fn preview_cache_evicts_the_least_recently_used() {
+    let tmp = tempdir().unwrap();
+    let d = dirs_in(tmp.path(), Some(ALLOW));
+    let (base, hits) = start(|_| Resp::ok(PNG));
+    let url = |n: &str| format!("{base}/{n}.png");
+    let file = |n: &str| cache_dir(&d).join(PREVIEWS_DIR).join(theme_install::sha256_hex(url(n).as_bytes()));
+    let age = |n: &str, secs: u64| {
+        let t = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(secs);
+        fs::File::options().write(true).open(file(n)).unwrap().set_modified(t).unwrap();
+    };
+    preview_in(&d, &url("a"), 1000, 2).unwrap();
+    preview_in(&d, &url("b"), 1000, 2).unwrap();
+    // a was written first (older), b later; then a is used again, so b is now the oldest use.
+    age("a", 1000);
+    age("b", 2000);
+    preview_in(&d, &url("a"), 1000, 2).unwrap();
+    assert_eq!(hits.load(Ordering::SeqCst), 2, "a came from the cache");
+    preview_in(&d, &url("c"), 1000, 2).unwrap();
+    assert!(file("a").exists(), "a was used last, so it stays");
+    assert!(!file("b").exists(), "b is the least recently used");
+    assert!(file("c").exists());
+}

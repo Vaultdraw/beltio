@@ -56,11 +56,15 @@ pub(crate) async fn update_config(changes: Vec<LayerChange>) -> Result<()> {
 }
 
 /// Turns `network.enabled` or `network.allow_<purpose>` on after a native confirmation dialog the
-/// page cannot click. `key` is `enabled` or `allow_<purpose>`. Ok(false) = the user said no.
+/// page cannot click. `key` (and each of `also`) is `enabled` or `allow_<purpose>`; all of them are
+/// confirmed in one dialog. Ok(false) = the user said no.
 #[tauri::command]
-pub(crate) async fn network_grant(key: String) -> Result<bool> {
+pub(crate) async fn network_grant(key: String, also: Option<Vec<String>>) -> Result<bool> {
     let dirs = resolve_dirs()?;
-    super::network::grant_in(&dirs, &key, |title, text| {
+    let mut keys = vec![key.as_str()];
+    keys.extend(also.iter().flatten().map(String::as_str));
+    // One dialog for all the keys, so a single click never asks twice.
+    super::network::grant_all_in(&dirs, &keys, |title, text| {
         rfd::MessageDialog::new()
             .set_level(rfd::MessageLevel::Info)
             .set_title(title)

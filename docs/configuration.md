@@ -346,16 +346,29 @@ sync_canvas = true      # canvas follows the theme too
 - **Cards** show a preview image or colour swatches, name, author, description, dark or light, credit and licence, and an **Installed** or **Update** badge.
 - **Find:** the search box matches name, author, tag and description; tag and mode filters narrow it further.
 - **Actions:** **Install**, **Update** (shown when the list has a newer file than the installed one), **Use** and **Remove**.
-- **Keys:** search is focused on open. Arrows move between cards, **Enter** installs or uses, **Delete** removes, **/** jumps back to search, **Escape** closes.
+- **Keys:** search is focused on open. Arrows move between cards, **Enter** installs or uses, **Delete** removes (**Shift+Delete** in the search box), **/** jumps back to search, **Escape** closes. All of them except Escape are commands you can rebind on the Hotkeys page (below).
 
 | Command | What it does |
 | --- | --- |
 | `Themes: Browse community themes` (`theme.browse`) | Opens the browser. |
 | `Themes: Refresh the community themes list` (`theme.browseRefresh`) | Fetches the list again, ignoring the cache. |
 
-Neither has a default key; bind them on the Hotkeys page.
+The two commands above have no default key; bind them on the Hotkeys page.
 
-Limits: the list needs network consent (see "Network"), and the CLI `vaultdraw theme install` does not exist yet.
+The keys inside the open browser are commands too. They exist only while the browser is open (context key `themeBrowser.open`), show in the palette and the Hotkeys page under **Themes**, and follow `[hotkeys]` in `config.toml`:
+
+| Command | Default key |
+| --- | --- |
+| `themeBrowser.next`, `themeBrowser.prev` | Right, Left |
+| `themeBrowser.down`, `themeBrowser.up` | Down, Up |
+| `themeBrowser.activate` (install, update or use) | Enter |
+| `themeBrowser.remove` | Delete, Shift+Delete |
+| `themeBrowser.search` | / |
+| `themeBrowser.close` | none (**Escape** closes every dialog and cannot be rebound) |
+
+In the search box plain keys are text, so only the movement keys and Enter work there, plus a Shift chord for remove.
+
+Limits: the list needs network consent (see "Network"), and the CLI `vaultdraw theme install` does not exist yet (the CLI has no network client or consent step). The preview cache keeps the 300 most recently used images.
 
 #### Installing more themes
 

@@ -27,6 +27,18 @@ import {
 import { reloadThemeRegistry } from "../theme/registry";
 import { getPreferences, updatePreferences } from "../vault/preferences";
 
+import {
+  THEME_BROWSER_COMMAND_IDS,
+  THEME_BROWSER_CONTEXT_KEY,
+} from "../commands/themeCommands";
+import { getCommand } from "../commands/commands";
+import { defineContextKey } from "../commands/contextKeys";
+import { registerCommandHandlers } from "../commands/handlerRegistry";
+import { chordFromEvent, detectPlatform } from "../commands/keys";
+import { effectiveKeys } from "../commands/keymap";
+import { useHotkeyOverrides } from "../commands/useCommands";
+import { useCommandShortcutLookup } from "../commands/useCommandShortcut";
+
 import { Dialog } from "./Dialog";
 
 import "./themeBrowser.css";
@@ -43,7 +55,17 @@ import type {
 } from "../theme/catalogue/types";
 
 /** Cards drawn at once; a longer result asks for a narrower search. */
+const B = THEME_BROWSER_COMMAND_IDS;
 const MAX_CARDS = 300;
+
+/** Dialog keys that still work from the search box (plain keys are text there). */
+const SEARCH_BOX_COMMANDS: ReadonlySet<string> = new Set([
+  THEME_BROWSER_COMMAND_IDS.next,
+  THEME_BROWSER_COMMAND_IDS.prev,
+  THEME_BROWSER_COMMAND_IDS.down,
+  THEME_BROWSER_COMMAND_IDS.up,
+  THEME_BROWSER_COMMAND_IDS.activate,
+]);
 const PREVIEW_PARALLEL = 4;
 
 type Phase =
@@ -326,54 +348,89 @@ export const ThemeBrowserDialog = ({
     return first === -1 ? items.length : first;
   };
 
+  const shortcut = useCommandShortcutLookup(win);
+  const key = (id: string) => shortcut(id) || "(unbound)";
+  const focusSearch = () => search.current?.focus();
+  const removeCurrent = () => {
+    if (current && statusOf(current) !== "available" && !busy) {
+      void remove(current);
+    }
+  };
+  /** Enter on a focused button presses that button; otherwise it acts on the card. */
+  const activate = () => {
+    const el = win.document.activeElement;
+    if (el instanceof HTMLButtonElement) {
+      el.click();
+    } else if (current) {
+      act(current);
+    }
+  };
+
+  const actions: Record<string, () => void> = {
+    [B.next]: () => move(1),
+    [B.prev]: () => move(-1),
+    [B.down]: () => move(columns()),
+    [B.up]: () => move(-columns()),
+    [B.activate]: activate,
+    [B.remove]: removeCurrent,
+    [B.search]: focusSearch,
+    [B.close]: () => onClose(),
+  };
+  const live = useRef(actions);
+  live.current = actions;
+
+  // The browser's keys are ordinary commands: palette, [hotkeys], rebindable.
+  useEffect(() => {
+    const handlers: Record<string, () => void> = {};
+    for (const id of Object.values(B)) {
+      handlers[id] = () => live.current[id]();
+    }
+    const unbind = registerCommandHandlers(handlers);
+    const undefine = defineContextKey(THEME_BROWSER_CONTEXT_KEY, () => true);
+    return () => {
+      unbind();
+      undefine();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The window dispatcher skips plain keys while a text field has focus, so
+  // the search box resolves them here from the same (rebindable) keymap.
+  const overrides = useHotkeyOverrides(win);
+  const platform = useMemo(() => detectPlatform(win), [win]);
+  const keyToCommand = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const id of Object.values(B)) {
+      const command = getCommand(id);
+      if (command) {
+        for (const chord of effectiveKeys(command, overrides, platform)) {
+          map.set(chord, id);
+        }
+      }
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overrides, platform]);
+
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (e.nativeEvent.isComposing || e.altKey || e.ctrlKey || e.metaKey) {
+    if (e.nativeEvent.isComposing || e.defaultPrevented) {
       return;
     }
-    if ((e.target as HTMLElement).tagName === "SELECT") {
+    const target = e.target as HTMLElement;
+    if (target.tagName === "SELECT" || target !== search.current) {
       return;
     }
-    const inInput = e.target === search.current;
-    const onButton = (e.target as HTMLElement).tagName === "BUTTON";
-    switch (e.key) {
-      case "ArrowRight":
-        e.preventDefault();
-        move(1);
-        break;
-      case "ArrowLeft":
-        e.preventDefault();
-        move(-1);
-        break;
-      case "ArrowDown":
-        e.preventDefault();
-        move(columns());
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        move(-columns());
-        break;
-      case "Enter":
-        if (!onButton && current) {
-          e.preventDefault();
-          act(current);
-        }
-        break;
-      case "Delete":
-        if (current && statusOf(current) !== "available" && !busy) {
-          // In the search box only Shift+Delete removes; plain Delete edits the text.
-          if (!inInput || e.shiftKey) {
-            e.preventDefault();
-            void remove(current);
-          }
-        }
-        break;
-      case "/":
-        if (!inInput) {
-          e.preventDefault();
-          search.current?.focus();
-        }
-        break;
-      default:
+    const chord = chordFromEvent(e.nativeEvent, platform);
+    const id = chord && keyToCommand.get(chord);
+    // In the search box plain keys are text, except the ones that move or open
+    // a card; removing needs Shift (Shift+Delete) so Delete still edits.
+    if (
+      id &&
+      (SEARCH_BOX_COMMANDS.has(id) ||
+        (id === B.remove && chord.includes("Shift")))
+    ) {
+      e.preventDefault();
+      live.current[id]();
     }
   };
 
@@ -580,8 +637,13 @@ export const ThemeBrowserDialog = ({
           </p>
         )}
         <p className="vault-tb__hint">
-          Arrows move, Enter installs or uses, Delete removes (Shift+Delete in
-          the search box), / searches.
+          {`${key(B.up)} ${key(B.down)} ${key(B.prev)} ${key(
+            B.next,
+          )} move, ${key(B.activate)} installs or uses, ${key(
+            B.remove,
+          )} removes (Shift+Delete in the search box), ${key(
+            B.search,
+          )} searches. Rebind them under Themes in Settings, Hotkeys.`}
         </p>
       </div>
     );

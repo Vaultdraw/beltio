@@ -95,7 +95,12 @@ const createBackend = (initial?: {
           }
           backend.config ??= {};
           backend.config.network ??= {};
-          backend.config.network[(args as any).key] = true;
+          for (const key of [
+            (args as any).key,
+            ...((args as any).also ?? []),
+          ]) {
+            backend.config.network[key] = true;
+          }
           return true;
         }
         case "write_state":
@@ -634,6 +639,49 @@ describe("settingsSync runtime", () => {
       { key: "enabled" },
     ]);
     expect(backend.callsOf("update_config")).toHaveLength(1);
+  });
+
+  it("asks once when the master switch and a purpose are granted together", async () => {
+    const backend = createBackend({
+      config: {
+        ...clone(DEFAULT_CONFIG),
+        network: { enabled: false, allow_themes: false },
+      },
+    });
+    await init(backend);
+    updatePreferences(
+      { networkEnabled: true, networkAllowThemes: true },
+      window,
+    );
+    await flushSettings();
+    expect(backend.callsOf("network_grant")).toEqual([
+      ["network_grant", { key: "enabled", also: ["allow_themes"] }],
+    ]);
+    expect(backend.config?.network).toEqual({
+      enabled: true,
+      allow_themes: true,
+    });
+    expect(getPreferences(window).networkEnabled).toBe(true);
+    expect(getPreferences(window).networkAllowThemes).toBe(true);
+  });
+
+  it("puts both switches back when the one dialog says no", async () => {
+    const backend = createBackend({
+      config: {
+        ...clone(DEFAULT_CONFIG),
+        network: { enabled: false, allow_themes: false },
+      },
+    });
+    backend.grantAnswer = false;
+    await init(backend);
+    updatePreferences(
+      { networkEnabled: true, networkAllowThemes: true },
+      window,
+    );
+    await flushSettings();
+    expect(backend.callsOf("network_grant")).toHaveLength(1);
+    expect(getPreferences(window).networkEnabled).toBe(false);
+    expect(getPreferences(window).networkAllowThemes).toBe(false);
   });
 
   it("puts a consent switch back when the native dialog says no", async () => {

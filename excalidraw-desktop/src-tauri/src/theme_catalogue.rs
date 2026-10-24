@@ -131,7 +131,7 @@ fn image_kind(b: &[u8]) -> bool {
         || (b.len() >= 12 && &b[..4] == b"RIFF" && &b[8..12] == b"WEBP")
 }
 
-/// Keeps the `keep` newest regular files (by modified time) of `dir`; temp files are left alone.
+/// Keeps the `keep` most recently used regular files (by modified time; a cache hit refreshes it) of `dir`; temp files are left alone.
 fn prune_dir(dir: &Path, keep: usize) {
     let Ok(rd) = fs::read_dir(dir) else { return };
     let mut files: Vec<(SystemTime, PathBuf)> = rd
@@ -151,10 +151,19 @@ fn prune_dir(dir: &Path, keep: usize) {
     }
 }
 
+/// Marks a cached file as just used, so pruning drops the least recently used. Best effort.
+fn touch(path: &Path) {
+    if let Ok(f) = fs::File::options().write(true).open(path) {
+        let _ = f.set_modified(SystemTime::now());
+    }
+}
+
 pub(crate) fn preview_in(dirs: &config::Dirs, url: &str, max_bytes: u64, keep: usize) -> Result<Vec<u8>> {
     let name = theme_install::sha256_hex(url.as_bytes());
     let dir = cache_dir(dirs).join(PREVIEWS_DIR);
-    if let Some(b) = read_regular(&dir.join(&name)).filter(|b| image_kind(b)) {
+    let cached = dir.join(&name);
+    if let Some(b) = read_regular(&cached).filter(|b| image_kind(b)) {
+        touch(&cached);
         return Ok(b);
     }
     network::ensure_network_allowed(dirs, PURPOSE)?;

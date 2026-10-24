@@ -8,6 +8,12 @@ import {
   waitFor,
 } from "@testing-library/react";
 
+import { readCustomContextKey } from "../commands/contextKeys";
+import { getRegisteredHandler } from "../commands/handlerRegistry";
+import {
+  THEME_BROWSER_COMMAND_IDS,
+  THEME_BROWSER_CONTEXT_KEY,
+} from "../commands/themeCommands";
 import { ThemeBrowserDialog } from "../components/ThemeBrowserDialog";
 import { entryUrl } from "../theme/catalogue/client";
 import { InstallError } from "../theme/install/types";
@@ -400,5 +406,44 @@ describe("ThemeBrowserDialog previews", () => {
       entryUrl(getPreferences().themesIndexUrl, "Vesper/shot.png"),
       expect.any(Number),
     );
+  });
+
+  describe("rebindable keys", () => {
+    const selected = (name: string) =>
+      screen.getByTestId(`theme-card-${name}`).getAttribute("aria-selected");
+
+    it("a [hotkeys] override replaces the default key", async () => {
+      prefs({ hotkeys: { "themeBrowser.next": ["J"] } });
+      await openReady();
+      key("ArrowRight");
+      expect(selected("Vesper")).toBe("true");
+      key("j");
+      expect(selected("Nordic")).toBe("true");
+      prefs({ hotkeys: {} });
+    });
+
+    it("the commands and their context key exist only while the browser is open", async () => {
+      const id = THEME_BROWSER_COMMAND_IDS.next;
+      expect(getRegisteredHandler(id)).toBeUndefined();
+      expect(readCustomContextKey(THEME_BROWSER_CONTEXT_KEY)).toBe(false);
+      const view = render(<ThemeBrowserDialog onClose={vi.fn()} />);
+      await screen.findByTestId("theme-card-Vesper");
+      expect(readCustomContextKey(THEME_BROWSER_CONTEXT_KEY)).toBe(true);
+      act(() => getRegisteredHandler(id)?.());
+      expect(selected("Nordic")).toBe("true");
+      act(() => getRegisteredHandler(THEME_BROWSER_COMMAND_IDS.prev)?.());
+      expect(selected("Vesper")).toBe("true");
+      view.unmount();
+      expect(getRegisteredHandler(id)).toBeUndefined();
+      expect(readCustomContextKey(THEME_BROWSER_CONTEXT_KEY)).toBe(false);
+    });
+
+    it("the close command closes the dialog", async () => {
+      const onClose = vi.fn();
+      render(<ThemeBrowserDialog onClose={onClose} />);
+      await screen.findByTestId("theme-card-Vesper");
+      act(() => getRegisteredHandler(THEME_BROWSER_COMMAND_IDS.close)?.());
+      expect(onClose).toHaveBeenCalled();
+    });
   });
 });
