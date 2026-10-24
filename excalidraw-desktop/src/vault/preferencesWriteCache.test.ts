@@ -41,7 +41,9 @@ describe("preferences write path keeps the written snapshot in the cache", () =>
     const cached = getPreferences(win);
     // a second window holding the same stored text parses it from scratch
     const win2 = makeWin();
-    for (const k of Object.keys(store)) win2.store[k] = store[k]!;
+    for (const k of Object.keys(store)) {
+      win2.store[k] = store[k]!;
+    }
     expect(getRecentVaults(win)).toEqual(["/vault/b", "/vault/a"]);
     expect(getPreferences(win2.win)).toEqual(cached);
   });
