@@ -126,7 +126,34 @@ export const applyAppearance = (
     );
   }
   applied = { doc, key, handle };
+  notifyAppearanceChanged();
   return true;
+};
+
+const appearanceListeners = new Set<() => void>();
+let appearanceVersion = 0;
+
+/** Rises with every applied change; readers cache against it instead of listening. */
+export const getAppearanceVersion = (): number => appearanceVersion;
+
+/**
+ * Called after the applied tokens change (theme, mode or accent). Nothing is
+ * stored or run until someone subscribes (the plugin theme API does).
+ */
+export const subscribeAppearance = (cb: () => void): (() => void) => {
+  appearanceListeners.add(cb);
+  return () => {
+    appearanceListeners.delete(cb);
+  };
+};
+
+/** Listeners now subscribed (the zero-cost test for plugins that never read the theme). */
+export const appearanceListenerCount = (): number => appearanceListeners.size;
+
+/** Tells the listeners the tokens changed; tests that fake a theme call it too. */
+export const notifyAppearanceChanged = (): void => {
+  appearanceVersion++;
+  appearanceListeners.forEach((cb) => cb());
 };
 
 /** Removes everything applyAppearance added (tests). */

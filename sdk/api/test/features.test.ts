@@ -9,9 +9,9 @@ import {
   generate,
   readFeatures,
 } from "../scripts/gen-features.mjs";
-import { API_REVISION, FEATURES } from "../generated/features";
+import { API_REVISION, FEATURES } from "../testing/features";
 
-describe("generated/features.ts", () => {
+describe("testing/features.ts", () => {
   it("matches the @since tags of sdk/api/src", () => {
     const actual: string = generate();
     if (process.env.UPDATE_FEATURES === "1") {
@@ -20,7 +20,7 @@ describe("generated/features.ts", () => {
     }
     expect(
       actual === fs.readFileSync(FEATURES_FILE, "utf8"),
-      "sdk/api/generated/features.ts is out of date. Run " +
+      "sdk/api/testing/features.ts is out of date. Run " +
         "`node sdk/api/scripts/gen-features.mjs` and commit it.",
     ).toBe(true);
   });

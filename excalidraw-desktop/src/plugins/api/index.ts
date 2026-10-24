@@ -7,11 +7,13 @@
 import type { Plugin } from "../../../../sdk/api/src/index";
 
 export type {
+  ApiVersion,
   AppEventMap,
   CommandContribution,
   CommandsApi,
   Disposable,
   EventsApi,
+  HostApi,
   LogApi,
   NewElement,
   PanelContribution,
@@ -20,6 +22,7 @@ export type {
   PluginContext,
   PluginContributions,
   PluginManifestInfo,
+  PluginPermission,
   SceneContextApi,
   SceneElement,
   SceneElementType,
@@ -30,6 +33,10 @@ export type {
   SettingScopeName,
   SettingsApi,
   SettingValue,
+  ThemeApi,
+  ThemeChange,
+  ThemeMode,
+  ThemeTokenName,
   UiApi,
 } from "../../../../sdk/api/src/index";
 

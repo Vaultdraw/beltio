@@ -10,6 +10,7 @@ import {
   validateSettingValue,
   type MockToast,
 } from "./rules";
+import { API_REVISION, FEATURES } from "./features";
 import { createSceneModel } from "./scene";
 
 import type {
@@ -19,10 +20,14 @@ import type {
   PluginContext,
   SettingDecl,
   SettingValue,
+  ThemeApi,
+  ThemeChange,
+  ThemeMode,
+  ThemeTokenName,
 } from "@vaultdraw/api";
 import type { ComponentType } from "react";
 import type { RenderResult } from "@testing-library/react";
-import type { PluginLogLine, TestPluginInfo } from "./types";
+import type { FakeTheme, PluginLogLine, TestPluginInfo } from "./types";
 
 const NOOP: Disposable = { dispose() {} };
 const LOG_RING = 100;
@@ -52,6 +57,7 @@ export const notSetUp = (what: string): Error =>
 export interface MockHost {
   info: TestPluginInfo;
   scene: ReturnType<typeof createSceneModel>["fake"];
+  theme: FakeTheme;
   log(): readonly PluginLogLine[];
   toasts(): string[];
   timers(): number;
@@ -192,6 +198,25 @@ export function createMockHost(
     return true;
   };
 
+  // --- theme: what ctx.theme reports; the test sets it ---
+  let themeMode: ThemeMode = "light";
+  let themeId = "default";
+  let themeTokens: Readonly<Record<ThemeTokenName, string>> | null = null;
+  const themeSubs = new Set<(e: ThemeChange) => void>();
+  const theme: FakeTheme = {
+    set(change) {
+      themeMode = change.mode ?? themeMode;
+      themeId = change.themeId ?? themeId;
+      if (change.tokens) {
+        themeTokens = Object.freeze({
+          ...themeTokens,
+          ...change.tokens,
+        }) as Readonly<Record<ThemeTokenName, string>>;
+      }
+      [...themeSubs].forEach((cb) => cb({ mode: themeMode, themeId }));
+    },
+  };
+
   // --- the context ---
   const createContext = () => {
     const subscriptions: Disposable[] = [];
@@ -258,8 +283,15 @@ export function createMockHost(
       run.forEach((job) => job());
     };
 
+    let hostApi: PluginContext["host"] | undefined;
+    let themeApi: ThemeApi | undefined;
     const ctx: PluginContext = {
-      manifest: { id, version: info.version, dir: info.dir },
+      manifest: {
+        id,
+        version: info.version,
+        dir: info.dir,
+        permissions: info.permissions,
+      },
       commands: {
         register(short, run) {
           if (!declaredCommands.has(short)) {
@@ -383,6 +415,38 @@ export function createMockHost(
             set.delete(listener);
           });
         },
+      },
+      // Built on first read, as in the app.
+      get host() {
+        return (hostApi ??= Object.freeze({
+          app: "0.0.0-mock",
+          api: Object.freeze({ level: 0 as const, revision: API_REVISION }),
+          has: (name: string) =>
+            typeof name === "string" && Object.hasOwn(FEATURES, name),
+        }));
+      },
+      get theme() {
+        return (themeApi ??= {
+          mode: () => themeMode,
+          tokens() {
+            if (!themeTokens) {
+              throw notSetUp(
+                "theme.tokens (call plugin.theme.set({ tokens }) first)",
+              );
+            }
+            return themeTokens;
+          },
+          onChange(cb) {
+            const safe = guard(cb, "theme.onChange");
+            let live = true;
+            const listener = (e: ThemeChange) => live && safe(e);
+            themeSubs.add(listener);
+            return track(() => {
+              live = false;
+              themeSubs.delete(listener);
+            });
+          },
+        });
       },
       subscriptions,
       setTimeout: timer(
@@ -579,6 +643,7 @@ export function createMockHost(
   return {
     info,
     scene: scene.fake,
+    theme,
     log: () => lines,
     toasts: () => toastQueue.map((t) => t.message),
     timers: () => activeTimers,
@@ -621,6 +686,10 @@ export function createMockHost(
       globalValues.clear();
       settingSubs.clear();
       eventSubs.clear();
+      themeSubs.clear();
+      themeMode = "light";
+      themeId = "default";
+      themeTokens = null;
       lines = [];
       errors = 0;
       scene.dispose();

@@ -16,6 +16,7 @@ import {
 } from "./errors";
 import { acquireGlobalGuards, guard, releaseGlobalGuards } from "./guard";
 import { loadPluginModule } from "./loader";
+import { addedText, needsReview } from "./permissions";
 
 import type { PluginInfo, PluginRuntime } from "./types";
 
@@ -68,7 +69,12 @@ export function ensureRuntime(info: PluginInfo): PluginRuntime {
 /** Resolves true once the plugin is active; false if it cannot be (never rejects). */
 export function ensureActive(id: string): Promise<boolean> {
   const rt = runtimes.get(id);
-  if (!rt || rt.state === "disabled" || rt.state === "failed") {
+  if (
+    !rt ||
+    rt.state === "disabled" ||
+    rt.state === "failed" ||
+    needsReview(rt.info)
+  ) {
     return Promise.resolve(false);
   }
   if (!rt.promise) {
@@ -79,11 +85,25 @@ export function ensureActive(id: string): Promise<boolean> {
   return rt.promise;
 }
 
+/** An update added read permissions only: load, tell the user once, and record it. */
+function noticeNewPermissions(rt: PluginRuntime): void {
+  const { id, name, review } = rt.info;
+  if (review.state !== "notice") {
+    return;
+  }
+  rt.info = { ...rt.info, review: { state: "ok", added: [] } };
+  toastStore.push({ message: `${name} now can: ${addedText(review.added)}.` });
+  void getPluginsBackend()
+    .consentConfirm(id)
+    .catch((err) => console.error("consentConfirm failed", err));
+}
+
 async function activate(rt: PluginRuntime): Promise<boolean> {
   const { id } = rt.info;
   const gen = rt.gen;
   const win = hostWindow ?? window;
   try {
+    noticeNewPermissions(rt);
     rt.plugin ??= await loadPluginModule(rt.info);
     if (rt.gen !== gen) {
       return false;

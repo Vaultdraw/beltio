@@ -32,6 +32,7 @@ const h = vi.hoisted(() => {
     clearHostDisabled: vi.fn(async () => {}),
     uninstallPlugin: vi.fn(async () => {}),
     runCommandById: vi.fn(async () => {}),
+    confirm: vi.fn(async () => {}),
   };
 });
 
@@ -39,6 +40,7 @@ vi.mock("../plugins/host/manage", () => ({
   getPluginsState: () => h.get(),
   subscribePluginsState: h.subscribe,
   clearHostDisabled: h.clearHostDisabled,
+  confirmPluginPermissions: h.confirm,
   uninstallPlugin: h.uninstallPlugin,
   reloadPlugin: vi.fn(async () => {}),
   rescanPlugins: vi.fn(async () => {}),
@@ -106,6 +108,80 @@ describe("Plugins settings page", () => {
     expect(screen.getByText(/not reviewed by Vaultdraw/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Enable" }));
     expect(getPreferences(window).pluginsEnabled).toEqual(["hello"]);
+  });
+
+  it("lists the declared permissions in the enable dialog and records the choice", async () => {
+    h.set(
+      state({
+        plugins: [
+          makePluginInfo("writer", {
+            name: "Writer",
+            permissions: ["vault.read", "vault.write"],
+            review: { state: "review", added: ["vault.read", "vault.write"] },
+          }),
+        ],
+      }),
+    );
+    await open();
+    fireEvent.click(screen.getByRole("switch", { name: "Enable Writer" }));
+    const dialog = screen.getByRole("dialog", { name: "Enable Writer?" });
+    expect(within(dialog).getByText(/not a limit/)).toBeTruthy();
+    expect(
+      within(dialog).getByText("Read the drawings in your vault"),
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByText("Create drawings in your vault"),
+    ).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Enable" }));
+    });
+    expect(h.confirm).toHaveBeenCalledWith("writer");
+    await vi.waitFor(() =>
+      expect(getPreferences(window).pluginsEnabled).toEqual(["writer"]),
+    );
+  });
+
+  it("shows needs review for an added write permission and confirms in one click", async () => {
+    updatePreferences({ pluginsEnabled: ["writer"] }, window);
+    h.set(
+      state({
+        plugins: [
+          makePluginInfo("writer", {
+            name: "Writer",
+            permissions: ["vault.read", "vault.write"],
+            review: { state: "review", added: ["vault.write"] },
+          }),
+        ],
+      }),
+    );
+    await open();
+    const row = screen.getByTestId("plugin-writer");
+    expect(within(row).getByText(/Needs review: new permission/)).toBeTruthy();
+    fireEvent.click(within(row).getByRole("button", { name: "Review Writer" }));
+    const dialog = screen.getByRole("dialog", {
+      name: "Writer wants new permissions",
+    });
+    expect(
+      within(dialog).getByText("Create drawings in your vault"),
+    ).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Allow" }));
+    expect(h.confirm).toHaveBeenCalledWith("writer");
+  });
+
+  it("shows no review line for a confirmed plugin", async () => {
+    h.set(
+      state({
+        plugins: [
+          makePluginInfo("calm", { name: "Calm", permissions: ["vault.read"] }),
+        ],
+      }),
+    );
+    await open();
+    const row = screen.getByTestId("plugin-calm");
+    expect(within(row).queryByText(/Needs review/)).toBeNull();
+    expect(within(row).getByTestId("plugin-calm-permissions").textContent).toBe(
+      "Says it can: Read the drawings in your vault",
+    );
   });
 
   it("enables a bundled plugin without a dialog", async () => {

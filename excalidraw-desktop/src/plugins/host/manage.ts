@@ -124,6 +124,12 @@ export async function uninstallPlugin(id: string): Promise<void> {
   await rescanPlugins();
 }
 
+/** The user confirmed what a plugin declares (enable dialog, "Review"); the list refreshes so a held-back plugin loads. */
+export async function confirmPluginPermissions(id: string): Promise<void> {
+  await getPluginsBackend().consentConfirm(id);
+  await rescanPlugins();
+}
+
 /** The user re-enabled a plugin the host had disabled after errors. */
 export async function clearHostDisabled(id: string): Promise<void> {
   await getPluginsBackend().setHostDisabled(id, null);

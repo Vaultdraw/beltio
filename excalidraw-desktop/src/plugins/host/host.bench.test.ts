@@ -83,4 +83,23 @@ describe("plugin host micro-benchmark", () => {
     );
     expect(overhead).toBeLessThan(0.1);
   });
+
+  it("ctx creation stays cheap: host and theme are built on first read only", async () => {
+    const { createPluginContext } = await import("./context");
+    const { ensureRuntime } = await import("./activation");
+    setupHost([], {});
+    const rt = ensureRuntime(makePluginInfo("bench-ctx"));
+    const make = () => createPluginContext(rt, window).dispose();
+    for (let i = 0; i < 500; i++) {
+      make();
+    }
+    const n = 5000;
+    const t = performance.now();
+    for (let i = 0; i < n; i++) {
+      make();
+    }
+    const perCtx = (performance.now() - t) / n;
+    console.info(`ctx creation: ${(perCtx * 1000).toFixed(1)} us`);
+    expect(perCtx).toBeLessThan(0.1);
+  });
 });

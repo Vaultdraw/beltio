@@ -8,6 +8,8 @@ export interface PluginsBackend {
   installFolder(path: string): Promise<PluginInfo>;
   uninstall(id: string): Promise<void>;
   setHostDisabled(id: string, reason: string | null): Promise<void>;
+  /** The user confirmed the permissions the plugin declares now (the set is read from its manifest). */
+  consentConfirm(id: string): Promise<void>;
   /** Records that this launch started fine (clears the crash counter). */
   launchOk(): Promise<void>;
   /** Arms safe mode for the next launch, then quits and relaunches. */
@@ -38,6 +40,9 @@ export function createTauriBackend(win?: Window | null): PluginsBackend {
     },
     setHostDisabled: async (id, reason) => {
       await call("plugins_set_host_disabled", { id, reason });
+    },
+    consentConfirm: async (id) => {
+      await call("plugins_consent_confirm", { id });
     },
     launchOk: async () => {
       await call("plugins_launch_ok", {});

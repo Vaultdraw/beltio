@@ -1,10 +1,11 @@
 /**
  * The plugin host's registry side: reconciles the plugin list and the enabled
- * ids into stub registrations. Disabled, incompatible or host-disabled
- * plugins register nothing.
+ * ids into stub registrations. Disabled, incompatible, host-disabled or
+ * needs-review plugins register nothing.
  */
 import { allRuntimes, ensureRuntime, stopPlugin } from "./activation";
 import { recordStubRegistration } from "./cost";
+import { needsReview } from "./permissions";
 import { registerStubs } from "./stubs";
 
 import type { PluginInfo } from "./types";
@@ -16,6 +17,7 @@ const wanted = (
 ) =>
   enabled.has(info.id) &&
   info.compatible &&
+  !needsReview(info) &&
   !info.hostDisabled &&
   state !== "disabled";
 

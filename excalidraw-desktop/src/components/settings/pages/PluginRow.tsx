@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 
+import { permissionText } from "../../../plugins/host/permissions";
 import { DeclaredSettingsPage } from "../declared/DeclaredSettingsPage";
 
 import { Switch } from "./controls";
@@ -45,6 +46,8 @@ export interface PluginRowProps {
   onReload: () => void;
   onOpenFolder: () => void;
   onUninstall: () => void;
+  /** Opens the dialog that confirms the permissions an update added. */
+  onReview: () => void;
 }
 
 const Badge = ({
@@ -86,6 +89,7 @@ export const PluginRow = ({
   onReload,
   onOpenFolder,
   onUninstall,
+  onReview,
 }: PluginRowProps) => {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -124,6 +128,28 @@ export const PluginRow = ({
                 </>
               )}
           </div>
+          {info.permissions.length > 0 && (
+            <div
+              className="vault-plugin__meta"
+              data-testid={`plugin-${info.id}-permissions`}
+            >
+              Says it can: {info.permissions.map(permissionText).join(", ")}
+            </div>
+          )}
+          {info.review.state === "review" && (
+            <div className="vault-plugin__problem" role="status">
+              Needs review: new permission{" "}
+              {info.review.added.map(permissionText).join(", ")}.{" "}
+              <button
+                type="button"
+                className="vault-btn vault-btn--sm"
+                aria-label={`Review ${info.name}`}
+                onClick={onReview}
+              >
+                Review
+              </button>
+            </div>
+          )}
           {blocked && (
             <div className="vault-plugin__problem" role="status">
               {blocked}

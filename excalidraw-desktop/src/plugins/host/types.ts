@@ -19,6 +19,13 @@ export interface PluginInfo {
   problem: string | null;
   hostDisabled: string | null;
   activation: string[];
+  /** What the manifest declares (`vault.read`, `vault.write`). */
+  permissions: string[];
+  /**
+   * Declared permissions against the consent record: `review` keeps the plugin
+   * off, `notice` loads it and tells the user once, `ok` is quiet.
+   */
+  review: { state: "ok" | "notice" | "review"; added: string[] };
   /** Dev plugins are watched and reloaded when their files change. */
   dev?: boolean;
   contributes: {

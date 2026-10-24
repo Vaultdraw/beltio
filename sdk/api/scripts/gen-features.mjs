@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Writes sdk/api/generated/features.ts: the names `ctx.host.has()` answers true for, each with the
+ * Writes sdk/api/testing/features.ts: the names `ctx.host.has()` answers true for, each with the
  * API revision that added it, read from the `@since` tags of sdk/api/src.
  * Run: node sdk/api/scripts/gen-features.mjs
  * The test sdk/api/test/features.test.ts fails when the committed file differs.
@@ -14,7 +14,7 @@ import ts from "typescript";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, "..");
 const srcDir = path.join(root, "src");
-export const FEATURES_FILE = path.join(root, "generated", "features.ts");
+export const FEATURES_FILE = path.join(root, "testing", "features.ts");
 
 const sinceOf = (node) => {
   const tag = ts.getJSDocTags(node).find((t) => t.tagName.text === "since");
@@ -112,5 +112,7 @@ ${rows.join("\n")}
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   fs.mkdirSync(path.dirname(FEATURES_FILE), { recursive: true });
   fs.writeFileSync(FEATURES_FILE, generate());
-  console.log(`wrote ${path.relative(process.cwd(), FEATURES_FILE)}`);
+  process.stdout.write(
+    `wrote ${path.relative(process.cwd(), FEATURES_FILE)}\n`,
+  );
 }

@@ -4,8 +4,11 @@ import type {
   NewElement,
   PanelContribution,
   PluginContributions,
+  PluginPermission,
   SettingDecl,
   SettingValue,
+  ThemeMode,
+  ThemeTokenName,
 } from "@vaultdraw/api";
 
 /**
@@ -16,6 +19,7 @@ export interface TestPluginInfo {
   id: string;
   name: string;
   version: string;
+  permissions: PluginPermission[];
   contributes: PluginContributions;
 }
 
@@ -31,6 +35,8 @@ export interface TestManifest {
   dir?: string;
   /** `["onStartupFinished"]` activates the plugin during `boot`. */
   activation?: string[];
+  /** What the manifest declares. The mock host records it; nothing is gated yet. */
+  permissions?: PluginPermission[];
   /** A dev plugin is stopped, not switched off for good, after repeated errors. */
   dev?: boolean;
   contributes?: {
@@ -94,6 +100,19 @@ export interface FakeScene {
   live(): readonly FakeElement[];
 }
 
+/** The colours a booted plugin reads from `ctx.theme`. */
+export interface FakeTheme {
+  /**
+   * Changes what `ctx.theme` reports and notifies `onChange` listeners.
+   * Until a test sets `tokens`, `tokens()` fails with "not set up in this test".
+   */
+  set(change: {
+    mode?: ThemeMode;
+    themeId?: string;
+    tokens?: Partial<Record<ThemeTokenName, string>>;
+  }): void;
+}
+
 /** The `events` side of a booted plugin. */
 export interface FakeEvents {
   /** Emits an app event as the app would. */
@@ -121,6 +140,7 @@ export interface TestPlugin {
   ): Promise<boolean>;
   scene: FakeScene;
   events: FakeEvents;
+  theme: FakeTheme;
   /** Lets timers, microtasks and one animation frame run (and React settle). */
   flush(): Promise<void>;
   /** Disables the plugin: `deactivate` runs and everything it registered is disposed. */

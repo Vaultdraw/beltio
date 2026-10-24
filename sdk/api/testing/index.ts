@@ -19,6 +19,7 @@ export type {
   FakeElementInput,
   FakeEvents,
   FakeScene,
+  FakeTheme,
   PanelView,
   PluginLogLine,
   TestManifest,
@@ -39,6 +40,7 @@ const normalise = (m: TestManifest) => {
     id: m.id,
     name: m.name ?? m.id,
     version: m.version ?? "0.1.0",
+    permissions: m.permissions ?? [],
     dir: m.dir ?? `/plugins/${m.id}`,
     dev: m.dev,
     activation: m.activation ?? [],
@@ -103,6 +105,7 @@ export async function boot(
       host.setSetting(key, value, scope),
     scene: host.scene,
     events: { emit: host.emit },
+    theme: host.theme,
     flush,
     disable,
     async dispose() {

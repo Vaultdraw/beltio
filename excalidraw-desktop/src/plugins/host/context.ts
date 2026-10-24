@@ -9,10 +9,18 @@ import { pluginSettingDecl } from "../settings/registry";
 
 import { errorText, logLine, reportPluginError } from "./errors";
 import { guard } from "./guard";
+import { createHostApi } from "./hostContext";
 import { runCommandById } from "./runner";
 import { createEventsApi, createSceneApi } from "./sceneContext";
+import { createThemeApi } from "./themeContext";
 
-import type { Disposable, PluginContext } from "../api";
+import type {
+  Disposable,
+  HostApi,
+  PluginContext,
+  PluginPermission,
+  ThemeApi,
+} from "../api";
 import type { PluginRuntime } from "./types";
 import type { PluginSettingValue } from "../../vault/pluginSettingsTable";
 
@@ -98,10 +106,18 @@ export function createPluginContext(
       logLine(id, level, a.map((x) => errorText(x)).join(" "));
     };
 
+  let hostApi: HostApi | undefined;
+  let themeApi: ThemeApi | undefined;
+
   const settingValue = (key: string) => getPluginSetting(id, key);
 
   const ctx: PluginContext = {
-    manifest: { id, version: info.version, dir: info.dir },
+    manifest: {
+      id,
+      version: info.version,
+      dir: info.dir,
+      permissions: info.permissions as PluginPermission[],
+    },
     commands: {
       register(short, run) {
         if (!declaredCommands.has(short)) {
@@ -183,6 +199,13 @@ export function createPluginContext(
     },
     scene: createSceneApi(id, track, isLive),
     events: createEventsApi(id, track, isLive),
+    // Built on first read: a plugin that never touches them costs nothing.
+    get host() {
+      return (hostApi ??= createHostApi());
+    },
+    get theme() {
+      return (themeApi ??= createThemeApi(id, win.document, track, isLive));
+    },
     subscriptions,
     setTimeout: timer(
       (fn, ms) => win.setTimeout(fn, ms),

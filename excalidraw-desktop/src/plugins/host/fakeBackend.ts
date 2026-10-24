@@ -9,6 +9,8 @@ export interface FakeBackend extends PluginsBackend {
   /** Folders `installFolder` can install, by path. */
   installable: Record<string, PluginInfo>;
   launchOkCalls: number;
+  /** Plugin ids the user confirmed the permissions of. */
+  consentCalls: string[];
   restarts: ("safe" | "normal")[];
   pickResult: string | null;
   opened: (string | null)[];
@@ -28,6 +30,7 @@ export function createFakeBackend(
     safeMode: null,
     installable: {},
     launchOkCalls: 0,
+    consentCalls: [],
     restarts: [],
     pickResult: null,
     opened: [],
@@ -65,6 +68,12 @@ export function createFakeBackend(
       };
     },
     emitChanged: (id) => listeners.forEach((cb) => cb(id)),
+    consentConfirm: async (id) => {
+      fake.consentCalls.push(id);
+      fake.plugins = fake.plugins.map((p) =>
+        p.id === id ? { ...p, review: { state: "ok", added: [] } } : p,
+      );
+    },
     uninstall: async (id) => {
       fake.plugins = fake.plugins.filter((p) => p.id !== id);
     },
@@ -99,6 +108,8 @@ export const makePluginInfo = (
   problem: null,
   hostDisabled: null,
   activation: [],
+  permissions: [],
+  review: { state: "ok", added: [] },
   contributes: { commands: [], panels: [], settings: [] },
   ...patch,
 });

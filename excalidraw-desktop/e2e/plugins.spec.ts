@@ -181,6 +181,39 @@ test("Plugins settings: enable through the consent dialog, run, disable", async 
   expect(errors).toEqual([]);
 });
 
+test("Plugins settings: a plugin that declares a write permission shows it in the consent dialog", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page, "?plugins=writer&enabled=none");
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
+
+  await page
+    .getByLabel("Vault File Navigator")
+    .getByRole("button", { name: "Settings" })
+    .click();
+  await page.getByRole("dialog").getByRole("tab", { name: "Plugins" }).click();
+  const row = page.getByTestId("plugin-writer");
+  await expect(row).toContainText(
+    "Says it can: Read the drawings in your vault",
+  );
+  await expect(row).toContainText("Needs review");
+
+  await row
+    .getByRole("switch", { name: "Enable Writer" })
+    .click({ force: true });
+  const consent = page.getByRole("dialog", { name: "Enable Writer?" });
+  await expect(consent).toContainText("Create drawings in your vault");
+  await expect(consent).toContainText("not a limit");
+  await consent.getByRole("button", { name: "Enable", exact: true }).click();
+
+  await expect(
+    row.getByRole("switch", { name: "Enable Writer" }),
+  ).toBeChecked();
+  await expect(row).not.toContainText("Needs review");
+  expect(errors).toEqual([]);
+});
+
 test("a plugin stamps a box through scene.batch: panel count follows, one Cmd+Z undoes it", async ({
   page,
 }) => {

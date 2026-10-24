@@ -14,8 +14,10 @@ import { vi } from "vitest";
 import { getRegisteredHandler } from "../../commands/handlerRegistry";
 import { appEvents, type AppEventMap } from "../../events/appEvents";
 import { toastStore } from "../../toasts/toastStore";
+import { notifyAppearanceChanged } from "../../vault/appearance";
 import { updatePreferences } from "../../vault/preferences";
 import { getPluginLog } from "../host/errors";
+import { resetThemeCache } from "../host/themeContext";
 import { makePluginInfo } from "../host/fakeBackend";
 import { pluginTimerCount } from "../host/context";
 import { PluginPanels } from "../host/PluginPanels";
@@ -25,7 +27,7 @@ import { setPluginSetting } from "../settings/pluginSettings";
 
 import { createFakeScene, type FakeScene } from "./fakeScene";
 
-import type { Plugin } from "../api";
+import type { Plugin, ThemeMode, ThemeTokenName } from "../api";
 import type { PluginInfo } from "../host/types";
 import type { PluginSettingValue } from "../../vault/pluginSettingsTable";
 
@@ -44,6 +46,18 @@ export type TestManifest = Partial<Omit<PluginInfo, "contributes">> & {
     settings?: PluginInfo["contributes"]["settings"];
   };
 };
+
+export interface FakeTheme {
+  /**
+   * Changes the colours the document shows (`html.dark`, `data-vault-theme`,
+   * custom properties) and notifies `ctx.theme.onChange` listeners.
+   */
+  set(change: {
+    mode?: ThemeMode;
+    themeId?: string;
+    tokens?: Partial<Record<ThemeTokenName, string>>;
+  }): void;
+}
 
 export interface FakeEvents {
   /** Emits on the real app event bus. */
@@ -69,6 +83,7 @@ export interface TestPlugin {
   ): Promise<boolean>;
   scene: FakeScene;
   events: FakeEvents;
+  theme: FakeTheme;
   /** act + fake-timer advance (when faked) + microtasks + one animation frame. */
   flush(): Promise<void>;
   /** Disables the plugin (disposes its context). */
@@ -113,6 +128,30 @@ async function flush(): Promise<void> {
     await Promise.resolve();
   });
 }
+
+const fakeTheme: FakeTheme = {
+  set({ mode, themeId, tokens }) {
+    const root = document.documentElement;
+    if (mode) {
+      root.classList.toggle("dark", mode === "dark");
+    }
+    if (themeId) {
+      root.dataset.vaultTheme = themeId;
+    }
+    for (const [name, value] of Object.entries(tokens ?? {})) {
+      root.style.setProperty(name, value);
+    }
+    notifyAppearanceChanged();
+  },
+};
+
+const resetFakeTheme = () => {
+  const root = document.documentElement;
+  root.classList.remove("dark");
+  delete root.dataset.vaultTheme;
+  root.removeAttribute("style");
+  resetThemeCache();
+};
 
 export async function boot(
   manifest: TestManifest,
@@ -160,6 +199,7 @@ export async function boot(
       setPluginSetting(id, key, value, scope),
     scene,
     events: { emit: (name, payload) => appEvents.emit(name, payload) },
+    theme: fakeTheme,
     flush,
     disable,
     async dispose() {
@@ -170,6 +210,7 @@ export async function boot(
       toastStore.clear();
       appEvents.clearCurrent();
       updatePreferences({ pluginsEnabled: [] });
+      resetFakeTheme();
     },
   };
 }

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { getPluginCosts } from "../../../plugins/host/cost";
 import {
   clearHostDisabled,
+  confirmPluginPermissions,
   getPluginsState,
   reloadPlugin,
   restartInSafeMode,
@@ -11,6 +12,7 @@ import {
   uninstallPlugin,
   type PluginsState,
 } from "../../../plugins/host/manage";
+import { permissionText } from "../../../plugins/host/permissions";
 import { runCommandById } from "../../../plugins/host/runner";
 import { pluginHostStarted } from "../../../plugins/hostFlag";
 import {
@@ -89,8 +91,18 @@ const report = (what: string, e: unknown) =>
 const run = (what: string, fn: () => Promise<unknown>) =>
   void fn().catch((e) => report(what, e));
 
+const LIMIT_NOTE =
+  "Permissions are what a plugin says it does, not a limit: plugins run with full access to your drawings and files.";
+
+/** The enable dialog text; with no permissions it keeps the plain warning. */
+const consentMessage = (info: PluginInfo): string =>
+  info.permissions.length === 0
+    ? `${info.name} is not reviewed by Vaultdraw. Plugins run with full access to your drawings and files. Enable?`
+    : `${info.name} is not reviewed by Vaultdraw. ${LIMIT_NOTE} It says it can:`;
+
 type Pending =
   | { kind: "enable"; info: PluginInfo }
+  | { kind: "review"; info: PluginInfo }
   | { kind: "uninstall"; info: PluginInfo }
   | null;
 
@@ -126,6 +138,19 @@ export const PluginsPage = () => {
     on && info.source !== "bundled"
       ? setPending({ kind: "enable", info })
       : setEnabled(info.id, on);
+
+  /** Records what the plugin declares, then runs `then`. */
+  const confirmThen = (info: PluginInfo, then: () => void) => {
+    setPending(null);
+    if (info.permissions.length === 0) {
+      then();
+      return;
+    }
+    run(`Could not save your choice for ${info.name}`, async () => {
+      await confirmPluginPermissions(info.id);
+      then();
+    });
+  };
 
   const uninstall = (info: PluginInfo) => {
     setEnabled(info.id, false);
@@ -198,6 +223,7 @@ export const PluginsPage = () => {
                   revealPluginFolder(info.dir),
                 )
               }
+              onReview={() => setPending({ kind: "review", info })}
               onUninstall={() => setPending({ kind: "uninstall", info })}
             />
           ))}
@@ -220,13 +246,23 @@ export const PluginsPage = () => {
       {pending?.kind === "enable" && (
         <ConfirmModal
           title={`Enable ${pending.info.name}?`}
-          message={`${pending.info.name} is not reviewed by Vaultdraw. Plugins run with full access to your drawings and files. Enable?`}
+          message={consentMessage(pending.info)}
+          details={pending.info.permissions.map(permissionText)}
           confirmLabel="Enable"
           onCancel={() => setPending(null)}
-          onConfirm={() => {
-            setEnabled(pending.info.id, true);
-            setPending(null);
-          }}
+          onConfirm={() =>
+            confirmThen(pending.info, () => setEnabled(pending.info.id, true))
+          }
+        />
+      )}
+      {pending?.kind === "review" && (
+        <ConfirmModal
+          title={`${pending.info.name} wants new permissions`}
+          message={`An update of ${pending.info.name} asks for more than you agreed to, so it is switched off. ${LIMIT_NOTE} It now says it can:`}
+          details={pending.info.permissions.map(permissionText)}
+          confirmLabel="Allow"
+          onCancel={() => setPending(null)}
+          onConfirm={() => confirmThen(pending.info, () => {})}
         />
       )}
       {pending?.kind === "uninstall" && (

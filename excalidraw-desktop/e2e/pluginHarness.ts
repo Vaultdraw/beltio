@@ -60,6 +60,13 @@ export const FIXTURES: Record<string, () => PluginInfo> = {
         ],
       },
     }),
+  // Declares a write permission: the enable dialog lists it (consent record, no module needed).
+  writer: () =>
+    makePluginInfo("writer", {
+      name: "Writer",
+      permissions: ["vault.read", "vault.write"],
+      review: { state: "review", added: ["vault.read", "vault.write"] },
+    }),
   counter: () =>
     makePluginInfo("counter", {
       name: "Counter",

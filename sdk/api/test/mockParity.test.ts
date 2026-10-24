@@ -293,3 +293,53 @@ describe("parity: host behaviour seen through both kits", () => {
     expect(mock.toasts).toEqual(["Parity: hello", "Parity: 42", "Parity: n=2"]);
   });
 });
+
+describe("parity: host and theme seen through both kits", () => {
+  const manifest = {
+    id: "par-ht",
+    permissions: ["vault.read"],
+    activation: ["onStartupFinished"],
+  } as const;
+
+  const observe = async (bootFn: (m: never, p: Plugin) => Promise<unknown>) => {
+    const seen: Record<string, unknown> = {};
+    const changes: unknown[] = [];
+    const t = (await bootFn(manifest as never, {
+      activate(ctx) {
+        seen.api = ctx.host.api;
+        seen.has = [
+          "theme.tokens",
+          "scene.batch",
+          "drawing.saved",
+          "vault.list",
+          "toString",
+        ].map((n) => ctx.host.has(n));
+        seen.permissions = ctx.manifest.permissions;
+        seen.mode = ctx.theme.mode();
+        ctx.theme.onChange((e) => changes.push(e));
+      },
+    })) as import("../testing").TestPlugin;
+    try {
+      t.theme.set({ mode: "dark", themeId: "cendre" });
+      t.theme.set({ tokens: { "--vault-text": "#fefefe" } });
+      seen.changes = changes;
+      await t.disable();
+      t.theme.set({ mode: "light" });
+      seen.afterDisable = changes.length;
+      return seen;
+    } finally {
+      await t.dispose();
+    }
+  };
+
+  it("has(), api, permissions, mode and onChange agree", async () => {
+    const real = await observe(bootHost as never);
+    const mock = await observe(bootMock as never);
+    expect(mock).toEqual(real);
+    expect(mock.has).toEqual([true, true, true, false, false]);
+    expect(mock.changes).toEqual([
+      { mode: "dark", themeId: "cendre" },
+      { mode: "dark", themeId: "cendre" },
+    ]);
+  });
+});

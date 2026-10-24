@@ -100,5 +100,5 @@ ${rows.join("\n")}
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   fs.writeFileSync(DOC_FILE, generate());
-  console.log(`wrote ${path.relative(process.cwd(), DOC_FILE)}`);
+  process.stdout.write(`wrote ${path.relative(process.cwd(), DOC_FILE)}\n`);
 }
