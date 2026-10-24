@@ -21,7 +21,7 @@ import { resolveOpenTarget } from "./control/openTarget";
 import { createAppFiles } from "./control/appFiles";
 import { createBusyCounter } from "./control/busyCounter";
 import { openVaultAtPath } from "./control/vaultOpen";
-import { getCommand } from "./commands/commands";
+import { getCommand, isBuiltinCommand } from "./commands/commands";
 import { LinkPromptHost, LinkRequestHost } from "./control/linkRequests";
 import { useControlBridge } from "./control/useControlBridge";
 import { useMenuCommands } from "./help/useMenuCommands";
@@ -1969,6 +1969,7 @@ export const VaultApp = ({
       vault: () => (vault ? { name: vault.name, path: vault.path } : null),
       recentVaults: () => getRecentVaults(win),
       commandTitle: (id) => getCommand(id)?.title ?? null,
+      isBuiltin: isBuiltinCommand,
       openSearch: (query) => {
         showNavigator();
         requestNavigator({ kind: "search", query });

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { ConfirmModal } from "../components/ConfirmModal";
 import { Dialog } from "../components/Dialog";
+import { toastStore } from "../toasts/toastStore";
 
 import type { AskSpec } from "./uriRun";
 
@@ -13,19 +14,58 @@ import type { AskSpec } from "./uriRun";
  */
 type Listener = () => void;
 
-export function createLinkRequests() {
+/** Questions waiting at most; the rest are dropped (one notice says how many). */
+export const MAX_PENDING_REQUESTS = 3;
+
+const sameRequest = (a: AskSpec, b: AskSpec) =>
+  a.title === b.title &&
+  a.confirmLabel === b.confirmLabel &&
+  a.details.length === b.details.length &&
+  a.details.every((d, i) => d === b.details[i]);
+
+export function createLinkRequests(
+  /** Tells the user that requests were dropped. */
+  notify: (message: string) => void = (message) => toastStore.push({ message }),
+) {
   let queue: readonly AskSpec[] = [];
+  let dropped = 0;
+  let seq = 0;
+  const ids = new WeakMap<AskSpec, number>();
   const listeners = new Set<Listener>();
   const set = (next: readonly AskSpec[]) => {
     queue = next;
     listeners.forEach((l) => l());
   };
   return {
-    ask: (spec: AskSpec) => set([...queue, spec]),
+    /** Queues a question. An identical one already waiting is merged; beyond the cap it is dropped. */
+    ask: (spec: AskSpec) => {
+      if (queue.some((q) => sameRequest(q, spec))) {
+        return;
+      }
+      if (queue.length >= MAX_PENDING_REQUESTS) {
+        dropped += 1;
+        if (dropped === 1) {
+          notify("Too many link requests: ignoring some");
+        }
+        return;
+      }
+      ids.set(spec, (seq += 1));
+      set([...queue, spec]);
+    },
+    /** A key that is new for every request, so each dialog starts its own guard time. */
+    keyOf: (spec: AskSpec): number => ids.get(spec) ?? 0,
     /** Closes the head request; runs its action only on confirm. */
     resolve: (confirmed: boolean) => {
       const [head, ...rest] = queue;
       set(rest);
+      if (rest.length === 0 && dropped > 0) {
+        notify(
+          `${dropped} more link request${
+            dropped === 1 ? " was" : "s were"
+          } dropped`,
+        );
+        dropped = 0;
+      }
       if (head && confirmed) {
         head.onConfirm();
       }
@@ -54,6 +94,8 @@ export const LinkRequestHost = ({
   }
   return (
     <ConfirmModal
+      key={store.keyOf(spec)}
+      guarded
       title={spec.title}
       message={spec.message}
       details={spec.details}
@@ -151,7 +193,8 @@ export const LinkPromptHost = ({
           onChange={(e) => setText(e.target.value)}
         />
         <span className="vd-dialog__hint">
-          Runs as if you had clicked it, without asking again.
+          Runs as if the system had opened it. It still asks before it creates,
+          runs a command or switches vault.
         </span>
       </div>
     </Dialog>

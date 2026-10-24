@@ -33,8 +33,8 @@ pub(crate) enum Origin {
     Forwarded,
     /// `vaultdraw uri <url>`: a script; it sees errors on its own terminal.
     Cli,
-    /// The user typed it into the palette: no confirmation, no rate limit, works when links
-    /// from outside are off.
+    /// The user typed it into the palette. It still asks before anything that changes state
+    /// (the command can be called by any script in the page), and is rate limited.
     User,
 }
 
@@ -50,6 +50,14 @@ impl Origin {
     fn queues(self) -> bool {
         self == Self::Os
     }
+    /// Own rate-limit bucket: a local script cannot starve links from the system.
+    fn bucket(self) -> usize {
+        match self {
+            Self::Os => 0,
+            Self::Forwarded | Self::Cli => 1,
+            Self::User => 2,
+        }
+    }
 }
 
 /// `[control]` keys read for each link.
@@ -63,16 +71,25 @@ impl Policy {
     /// No config: links on, nothing pre-approved. A config that exists but cannot be parsed
     /// fails closed (links off): a typo must not turn the user's off switch back on.
     pub(crate) fn from_toml(text: &str) -> Self {
+        let off = Self { enabled: false, allow: vec![] };
         let table = match text.parse::<toml::Table>() {
             Ok(t) => t,
             Err(_) if text.trim().is_empty() => toml::Table::new(),
-            Err(_) => return Self { enabled: false, allow: vec![] },
+            Err(_) => return off,
         };
-        let control = table.get("control").and_then(|c| c.as_table().cloned());
-        let enabled = control.as_ref().and_then(|c| c.get("uri_enabled")?.as_bool()).unwrap_or(true);
+        // No `[control]` at all: defaults. Present but not a table: fail closed.
+        let control = match table.get("control") {
+            None => toml::Table::new(),
+            Some(c) => match c.as_table() {
+                Some(t) => t.clone(),
+                None => return off,
+            },
+        };
+        // A wrongly typed switch (string, number) means off, never on.
+        let enabled = control.get("uri_enabled").map_or(true, |v| v.as_bool().unwrap_or(false));
         let allow = control
-            .as_ref()
-            .and_then(|c| c.get("uri_allow")?.as_array().cloned())
+            .get("uri_allow")
+            .and_then(|a| a.as_array())
             .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
             .unwrap_or_default();
         Self { enabled, allow }
@@ -83,7 +100,8 @@ impl Policy {
     }
 }
 
-/// Commands a link may never run on its own say-so, even after the user clicks Ask-Run:
+/// Commands a link may never run on its own say-so (plugin commands are not here: the window
+/// only runs built-in commands for a link unless the id is listed in `uri_allow`), even after the user clicks Ask-Run:
 /// destructive, system-level or link-related ones. Listing an id in `uri_allow` overrides this
 /// for that id (the user's file, the user's choice).
 const DENY_EXACT: &[&str] = &[
@@ -97,7 +115,7 @@ const DENY_EXACT: &[&str] = &[
     "templates.saveDrawing",
     "vault.newFromTemplate",
 ];
-const DENY_PREFIX: &[&str] = &["file.import", "file.export", "plugin.", "plugins.", "links.openuri", "links.registerhandlers", "uri."];
+const DENY_PREFIX: &[&str] = &["file.import", "file.export", "links.openuri", "links.registerhandlers", "uri."];
 const DENY_CONTAINS: &[&str] = &["quit", "delete", "discard", "trash", "remove", "install", "overwrite", "restore", "revert", "purge", "erase", "wipe"];
 
 pub(crate) fn is_denied(id: &str) -> bool {
@@ -149,7 +167,7 @@ pub(crate) trait Window {
 #[derive(Default)]
 struct State {
     queue: VecDeque<Value>,
-    limiter: Limiter,
+    limiters: [Limiter; 3],
 }
 
 #[derive(Default)]
@@ -163,23 +181,34 @@ fn notice(message: &str) -> Value {
 
 /// The plan for `req`, or the refusal text. Pure.
 pub(crate) fn plan_for(req: &UriRequest, policy: &Policy, origin: Origin) -> Result<Value, String> {
-    let user = origin == Origin::User;
     let mut plan = serde_json::to_value(req).map_err(|e| e.to_string())?;
-    let (allowed, allow_switch) = match req {
+    // Pre-approval comes only from `uri_allow`; nobody's own origin skips the question.
+    let allow_switch = policy.allows("switch-vault");
+    let allowed = match req {
         UriRequest::Cmd { id } => {
             let listed = policy.allows(id);
             if is_denied(id) && !listed {
                 return Err(format!("A link cannot run {} (blocked for links; allow it in control.uri_allow)", printable(id, 60)));
             }
-            (user || listed, user || policy.allows("switch-vault"))
+            listed
         }
-        UriRequest::New { .. } => (user || policy.allows("new"), user || policy.allows("switch-vault")),
-        _ => (true, user || policy.allows("switch-vault")),
+        UriRequest::New { .. } => policy.allows("new"),
+        _ => true,
     };
     plan["allowed"] = json!(allowed);
     plan["allowSwitch"] = json!(allow_switch);
     plan["origin"] = json!(origin.name());
     Ok(plan)
+}
+
+/// Will the window show a question for this plan? (Then it must not steal focus.)
+fn will_ask(plan: &Value) -> bool {
+    let flag = |k: &str| plan[k] == json!(true);
+    match plan["action"].as_str() {
+        Some("new" | "cmd") => !flag("allowed"),
+        Some("open" | "search") => plan.get("vault").is_some() && !flag("allowSwitch"),
+        _ => false,
+    }
 }
 
 impl Handler {
@@ -190,8 +219,8 @@ impl Handler {
         if !win.ready() && !origin.queues() {
             return Err(RpcError::app(codes::NOT_READY, "The app window is not ready yet"));
         }
-        if origin != Origin::User {
-            let verdict = self.state.lock().unwrap().limiter.check(now);
+        {
+            let verdict = self.state.lock().unwrap().limiters[origin.bucket()].check(now);
             if let Verdict::Limited(first) = verdict {
                 if first {
                     self.show(win, origin, toast, "Too many links at once: ignoring some (limit 5 per 10 seconds)");
@@ -199,7 +228,7 @@ impl Handler {
                 return Err(RpcError::app(codes::RATE_LIMITED, "Too many links at once (limit 5 per 10 seconds)"));
             }
         }
-        if !policy.enabled && origin != Origin::User {
+        if !policy.enabled {
             self.show(win, origin, toast, "Links from outside are turned off (control.uri_enabled)");
             return Err(RpcError::app(codes::DISABLED, "Links from outside are turned off (control.uri_enabled = false)"));
         }
@@ -217,7 +246,9 @@ impl Handler {
                 return Err(RpcError::app(codes::NOT_PERMITTED, msg));
             }
         };
-        if origin != Origin::User {
+        // Raise the window only for links that run at once: a dialog must not pop up under a
+        // key the user is still holding.
+        if origin != Origin::User && !will_ask(&plan) {
             win.focus();
         }
         if win.ready() {
@@ -294,6 +325,9 @@ impl Window for AppWindow<'_> {
     fn focus(&self) {
         use tauri::Manager;
         if let Some(w) = self.0.get_webview_window(super::bridge::WINDOW_LABEL) {
+            if w.is_focused().unwrap_or(false) {
+                return;
+            }
             let _ = w.show();
             let _ = w.unminimize();
             let _ = w.set_focus();

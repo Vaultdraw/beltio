@@ -47,6 +47,8 @@ export interface UriDeps {
   recentVaults: () => readonly string[];
   /** The command's title, or null when no such command exists. */
   commandTitle: (id: string) => string | null;
+  /** The app's own command (not one a plugin registered). */
+  isBuiltin: (id: string) => boolean;
   openSearch: (query: string) => void;
   ask: (spec: AskSpec) => void;
   notify: (message: string, kind?: "error") => void;
@@ -59,10 +61,17 @@ export type UriResult = { status: "done" | "asking" };
 /** How long a link waits for the vault to load on a cold start. */
 export const VAULT_WAIT_MS = 10_000;
 const POLL_MS = 50;
-const SHOWN_CHARS = 200;
+/** Longest text a dialog line shows whole; longer text keeps its start and its end. */
+export const SHOWN_CHARS = 400;
 
-const clip = (s: string): string =>
-  s.length > SHOWN_CHARS ? `${s.slice(0, SHOWN_CHARS)}…` : s;
+/** Middle ellipsis: the end of a path or id (the part that matters) is never cut off. */
+export const clip = (s: string): string => {
+  if (s.length <= SHOWN_CHARS) {
+    return s;
+  }
+  const head = Math.ceil((SHOWN_CHARS - 1) / 2);
+  return `${s.slice(0, head)}…${s.slice(s.length - (SHOWN_CHARS - 1 - head))}`;
+};
 
 const baseName = (path: string): string =>
   path.split(/[\\/]/).filter(Boolean).pop() ?? path;
@@ -184,6 +193,16 @@ export function createUriRunner(deps: UriDeps) {
       if (title === null) {
         return fail("NOT_FOUND", `Unknown command ${clip(id)}`, { id });
       }
+      // Links run only built-in commands, unless the user listed this exact id in uri_allow.
+      if (!deps.isBuiltin(id) && plan.allowed !== true) {
+        return fail(
+          "NOT_PERMITTED",
+          `A link can only run built-in commands (${clip(
+            id,
+          )} comes from a plugin; list it in control.uri_allow to allow it)`,
+          { id },
+        );
+      }
       lines.push(`Run the command "${clip(title)}" (${clip(id)})`);
       ask ||= plan.allowed !== true;
     }
@@ -196,8 +215,20 @@ export function createUriRunner(deps: UriDeps) {
       ask ||= plan.allowed !== true;
     }
 
+    const startPath = deps.vault()?.path ?? null;
     const exec = async (): Promise<void> => {
-      if (needSwitch && target) {
+      // Decided again now: the user may have switched vault while the question waited.
+      const nowOpen = deps.vault()?.path ?? null;
+      if (!target && nowOpen !== startPath) {
+        throw new ControlError(
+          "CONFLICT",
+          "The vault changed while the link was waiting: it was cancelled",
+        );
+      }
+      const mustSwitch =
+        !!target &&
+        (nowOpen === null || trimSlash(nowOpen) !== trimSlash(target.path));
+      if (mustSwitch && target) {
         const want = trimSlash(target.path);
         await deps.call("vault.open", { path: target.path });
         if (
@@ -219,7 +250,7 @@ export function createUriRunner(deps: UriDeps) {
           // Probed just now unless the user was asked (then re-check: it may exist by now).
           if (
             create &&
-            (ask || needSwitch) &&
+            (ask || mustSwitch) &&
             (await openIfExists(create, false))
           ) {
             return;

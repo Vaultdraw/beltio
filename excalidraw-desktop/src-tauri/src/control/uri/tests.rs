@@ -50,7 +50,7 @@ fn policy_defaults_and_reads_both_keys() {
     assert_eq!(Policy::from_toml("[control]\nenabled = false\n"), d, "the socket switch is not the link switch");
     let p = Policy::from_toml("[control]\nuri_enabled = false\nuri_allow = [\"new\", 3, \"appearance.toggleMode\"]\n");
     assert_eq!(p, Policy { enabled: false, allow: vec!["new".into(), "appearance.toggleMode".into()] });
-    assert_eq!(Policy::from_toml("[control]\nuri_enabled = \"no\"\nuri_allow = \"new\"\n"), d, "wrong types fall back to defaults");
+    assert_eq!(Policy::from_toml("[control]\nuri_allow = \"new\"\n"), d, "a wrong allow list means nothing is pre-approved");
 }
 
 #[test]
@@ -66,8 +66,8 @@ fn security_off_switch_refuses_everything_from_outside_with_a_notice() {
     assert!(w.notices()[0].contains("control.uri_enabled"));
     // Config is read per request: flipping it back works at once.
     assert!(go(&h, &w, "", OPEN, Origin::Os).is_ok());
-    // The user's own palette link still works.
-    assert!(go(&h, &w, cfg, OPEN, Origin::User).is_ok());
+    // The palette entry point is the same handler: it respects the switch too.
+    assert!(go(&h, &w, cfg, OPEN, Origin::User).is_err());
 }
 
 #[test]
@@ -122,12 +122,31 @@ fn uri_allow_entries_remove_the_prompt_for_exactly_that_entry() {
 }
 
 #[test]
-fn the_users_own_link_needs_no_confirmation() {
+fn security_the_users_own_link_still_asks_before_changing_anything() {
     let (h, w) = (Handler::default(), Fake::new(true));
-    go(&h, &w, "", NEW, Origin::User).unwrap();
-    let p = w.plans().pop().unwrap();
-    assert_eq!((p["allowed"].clone(), p["allowSwitch"].clone(), p["origin"].clone()), (json!(true), json!(true), json!("user")));
+    for url in [NEW, "vaultdraw://cmd?id=appearance.toggleMode", "vaultdraw://open?vault=DSA"] {
+        go(&h, &w, "", url, Origin::User).unwrap();
+        let p = w.plans().pop().unwrap();
+        assert_eq!(p["allowSwitch"], false, "{url}");
+        assert_eq!(p["allowed"], url.contains("open"), "{url}");
+        assert_eq!(p["origin"], "user");
+    }
     assert_eq!(w.focused.get(), 0, "typing a link does not steal focus");
+}
+
+#[test]
+fn security_a_link_that_asks_does_not_raise_the_window() {
+    let (h, w) = (Handler::default(), Fake::new(true));
+    let t0 = Instant::now();
+    let at = |i: u64| t0 + Duration::from_secs(i * 3);
+    for (i, url) in [NEW, "vaultdraw://cmd?id=appearance.toggleMode", "vaultdraw://open?vault=DSA&file=a", "vaultdraw://search?query=x&vault=DSA"].iter().enumerate() {
+        h.handle(&w, "", url, Origin::Os, at(i as u64)).unwrap();
+    }
+    assert_eq!(w.focused.get(), 0);
+    // Pre-approved or plain: raised.
+    h.handle(&w, "[control]\nuri_allow = [\"new\"]\n", NEW, Origin::Os, at(5)).unwrap();
+    h.handle(&w, "", OPEN, Origin::Os, at(6)).unwrap();
+    assert_eq!(w.focused.get(), 2);
 }
 
 // ---- Deny list ----
@@ -137,7 +156,7 @@ fn security_deny_list_is_pinned() {
     for id in [
         "file.trash", "file.move", "file.rename", "file.resolveConflict", "cli.install", "cli.installSystem", "tags.rename", "templates.saveDrawing",
         "vault.newFromTemplate", "file.importFile", "file.importPdf", "file.exportPng", "file.exportPdf", "app.quit", "File.Trash", "Links.OpenUri", "uri.run", "history.deleteAll", "x.discardChanges",
-        "plugins.install", "plugin.foo.run", "links.openUri", "links.registerHandlers", "drawing.trashActive", "cli.uninstall",
+        "plugins.install", "links.openUri", "links.registerHandlers", "drawing.trashActive", "cli.uninstall",
     ] {
         assert!(is_denied(id), "{id} must be denied");
     }
@@ -206,7 +225,7 @@ fn security_rate_limit_is_five_per_ten_seconds_with_one_notice() {
     let (h, w) = (Handler::default(), Fake::new(true));
     let t0 = Instant::now();
     for _ in 0..5 {
-        h.handle(&w, "", OPEN, Origin::Cli, t0).unwrap();
+        h.handle(&w, "", OPEN, Origin::Os, t0).unwrap();
     }
     let e = h.handle(&w, "", OPEN, Origin::Os, t0 + Duration::from_secs(1)).unwrap_err();
     assert_eq!(e.app_code(), Some(codes::RATE_LIMITED));
@@ -221,13 +240,20 @@ fn security_rate_limit_is_five_per_ten_seconds_with_one_notice() {
 }
 
 #[test]
-fn the_rate_limit_does_not_apply_to_the_users_own_links() {
+fn security_each_origin_group_has_its_own_rate_bucket() {
     let (h, w) = (Handler::default(), Fake::new(true));
     let t0 = Instant::now();
-    for _ in 0..12 {
+    // A local script uses up its own budget...
+    for _ in 0..5 {
+        h.handle(&w, "", OPEN, Origin::Cli, t0).unwrap();
+    }
+    assert!(h.handle(&w, "", OPEN, Origin::Forwarded, t0).is_err(), "Cli and Forwarded share one bucket");
+    // ...and links from the system and the palette still get through.
+    for _ in 0..5 {
+        h.handle(&w, "", OPEN, Origin::Os, t0).unwrap();
         h.handle(&w, "", OPEN, Origin::User, t0).unwrap();
     }
-    assert_eq!(w.plans().len(), 12);
+    assert!(h.handle(&w, "", OPEN, Origin::User, t0).is_err(), "the palette is limited too");
 }
 
 #[test]
@@ -327,9 +353,8 @@ fn handling_one_link_is_fast() {
     for i in 0..1000u64 {
         let t = Instant::now();
         // A fresh handler window each time: time the parse + policy + plan, not the limiter refusals.
-        let _ = h.handle(&w, "[control]\nuri_allow = [\"new\"]\n", OPEN, Origin::User, t0);
+        let _ = h.handle(&w, "[control]\nuri_allow = [\"new\"]\n", OPEN, Origin::User, t0 + RATE_WINDOW * i as u32);
         samples.push(t.elapsed());
-        let _ = i;
         w.sent.borrow_mut().clear();
     }
     samples.sort();
@@ -393,4 +418,22 @@ fn security_a_flood_while_links_are_off_cannot_flood_toasts() {
         let _ = h.handle(&w, "[control]\nuri_enabled = false\n", OPEN, Origin::Os, t0);
     }
     assert!(w.notices().len() <= RATE_LIMIT + 1, "{} notices", w.notices().len());
+}
+
+#[test]
+fn security_a_wrongly_typed_switch_or_table_means_off() {
+    for cfg in [
+        "[control]\nuri_enabled = \"false\"\n",
+        "[control]\nuri_enabled = \"true\"\n",
+        "[control]\nuri_enabled = 0\n",
+        "[control]\nuri_enabled = 1\n",
+        "[control]\nuri_enabled = []\n",
+        "control = true\n",
+        "control = \"yes\"\n",
+        "control = [1]\n",
+    ] {
+        assert!(!Policy::from_toml(cfg).enabled, "{cfg:?}");
+    }
+    assert!(Policy::from_toml("[control]\nuri_enabled = true\n").enabled);
+    assert!(Policy::from_toml("[other]\nx = 1\n").enabled);
 }

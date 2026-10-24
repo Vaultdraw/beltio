@@ -483,6 +483,45 @@
    "input": "vaultdraw://open?file=a%+Ab",
    "err": "invalid",
    "legacyFile": null
+  },
+  {
+   "name": "zero width space in path",
+   "input": "vaultdraw://open?file=a%E2%80%8Bb",
+   "err": "invalid",
+   "legacyFile": "a​b"
+  },
+  {
+   "name": "byte order mark",
+   "input": "vaultdraw://new?path=%EF%BB%BFa",
+   "err": "invalid"
+  },
+  {
+   "name": "soft hyphen in vault",
+   "input": "vaultdraw://search?query=a&vault=a%C2%ADb",
+   "err": "invalid"
+  },
+  {
+   "name": "word joiner in query",
+   "input": "vaultdraw://search?query=a%E2%81%A0b",
+   "err": "invalid"
+  },
+  {
+   "name": "drawing.open with dotdot",
+   "input": "vaultdraw://cmd?id=drawing.open:../x",
+   "err": "invalid"
+  },
+  {
+   "name": "drawing.open absolute",
+   "input": "vaultdraw://cmd?id=drawing.open:/etc/passwd",
+   "err": "invalid"
+  },
+  {
+   "name": "drawing.open relative",
+   "input": "vaultdraw://cmd?id=drawing.open:Graphs/BFS.excalidraw",
+   "ok": {
+    "action": "cmd",
+    "id": "drawing.open:Graphs/BFS.excalidraw"
+   }
   }
  ]
 }

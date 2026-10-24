@@ -2,7 +2,7 @@
 
 A `vaultdraw://` link opens a drawing, a search, a new drawing or a command in your running Vaultdraw. Use it from a note, a web page, a launcher or a script. Back to the [README](../README.md).
 
-Nothing happens behind your back: opening and searching only change what you see, and anything that writes or runs code asks you first.
+Nothing happens behind your back: opening and searching only change what you see, and anything that writes or runs a command asks you first. Invisible characters (zero-width spaces, direction overrides) in a link are refused.
 
 ## Links
 
@@ -24,9 +24,10 @@ Nothing happens behind your back: opening and searching only change what you see
 2. **Inside the vault only.** A drawing path is relative to the vault: no leading `/`, no drive letter, no `..`, no empty parts, no control characters.
 3. **No overwrite, no callbacks, no network.** A link never replaces a file, never calls back a URL (`x-success` is ignored) and never fetches anything.
 4. **One window asks about everything.** If a link wants to switch vault and create a drawing, one dialog lists both. The text is shown as plain text.
-5. **Blocked commands.** Even after you click Run, a link cannot run delete, move, rename, import, export, install or quit commands, or plugin commands.
-6. **Rate limit.** 5 links per 10 seconds.
-7. **Off switch.** `control.uri_enabled = false` in [config.toml](configuration.md#control-and-links) turns all of it off. `control.uri_allow` removes the question for what you trust.
+5. **Built-in commands only, and not the destructive ones.** A link can run only Vaultdraw's own commands, never a plugin's, unless you list that exact command id in `control.uri_allow`. Even after you click Run, it cannot run delete, move, rename, import, export, install or quit commands (listing the id in `uri_allow` overrides this too).
+6. **Rate limit.** 5 links per 10 seconds, counted separately for links from the system, from scripts (`vaultdraw uri` and forwarded launches) and from the palette. At most 3 questions wait at once; identical ones merge and the rest are dropped with one notice.
+7. **No accidental clicks.** A link's dialog starts with Cancel focused and ignores Confirm for the first 0.6 seconds, so a key you are still holding cannot confirm it. A link that asks does not bring the window to the front.
+8. **Off switch.** `control.uri_enabled = false` in [config.toml](configuration.md#control-and-links) turns all of it off. `control.uri_allow` removes the question for what you trust.
 
 ## How a link gets to the app
 
@@ -55,7 +56,7 @@ vaultdraw uri 'vaultdraw://open?file=Graphs/BFS'
 
 The command checks the link itself first (a bad link exits with code 2 before it connects), then hands it to the running app. It prints `done`, or `asking` when the app is waiting for you to confirm. It never waits for your answer. Exit codes are the same as the other commands (3 when Vaultdraw is not running).
 
-**Links: Open a vaultdraw:// link…** in the command palette does the same from inside the app. It runs as your own action, so it doesn't ask again.
+**Links: Open a vaultdraw:// link…** in the command palette does the same from inside the app. It goes through the same checks as any other link: it still asks before it creates a drawing, runs a command or switches vault, and it obeys the off switch and the rate limit.
 
 ## Not yet
 

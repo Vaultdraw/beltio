@@ -620,6 +620,15 @@ export const COMMANDS: readonly CommandDefinition[] = [
 ];
 
 registerCommands(COMMANDS);
+
+const BUILTIN_IDS: ReadonlySet<string> = new Set(COMMANDS.map((c) => c.id));
+
+/**
+ * True for the app's own commands (and `drawing.open:<path>`), false for
+ * anything a plugin registered. Links from outside may only run these.
+ */
+export const isBuiltinCommand = (id: string): boolean =>
+  BUILTIN_IDS.has(id) || parseDrawingOpenCommandId(id) !== null;
 export const BUILTIN_COMMANDS = COMMANDS;
 
 /** A registered command, or the "Open drawing" command of a `drawing.open:` id. */

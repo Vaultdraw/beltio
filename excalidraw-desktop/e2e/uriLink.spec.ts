@@ -32,6 +32,9 @@ test("a link that creates a drawing asks first", async ({ page }) => {
   ).toHaveCount(0);
 
   // The user clicks Create: the drawing exists, is in the tree and is the active tab.
+  // A link dialog ignores Confirm for 600 ms so a key still held cannot confirm it.
+  await expect(modal.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await page.waitForTimeout(700);
   await modal.getByRole("button", { name: "Create" }).click();
   await expect(modal).toBeHidden();
   await expect(

@@ -53,13 +53,14 @@ const uriDeps = (
   win: Window,
   part: () => Pick<
     UriDeps,
-    "vault" | "recentVaults" | "commandTitle" | "openSearch"
+    "vault" | "recentVaults" | "commandTitle" | "isBuiltin" | "openSearch"
   >,
 ): Omit<UriDeps, "call"> => ({
   // Each call asks `part()` again: the app shell's closures change every render.
   vault: () => part().vault(),
   recentVaults: () => part().recentVaults(),
   commandTitle: (id) => part().commandTitle(id),
+  isBuiltin: (id) => part().isBuiltin(id),
   openSearch: (query) => part().openSearch(query),
   ask: linkRequests.ask,
   notify: (message, kind) => toastStore.push({ message, kind }),
@@ -103,7 +104,7 @@ export function useControlBridge(
     /** Link effects only the app shell knows (see uriRun.ts). */
     uri?: Pick<
       UriDeps,
-      "vault" | "recentVaults" | "commandTitle" | "openSearch"
+      "vault" | "recentVaults" | "commandTitle" | "isBuiltin" | "openSearch"
     >;
     files?: ControlFiles;
     tabStore?: TabStore | null;

@@ -2,6 +2,9 @@ import { useEffect, useRef } from "react";
 
 import { Dialog } from "./Dialog";
 
+/** How long a guarded dialog ignores Confirm after it appears. */
+export const CONFIRM_GUARD_MS = 600;
+
 interface ConfirmModalProps {
   title: string;
   /** Names the item and says what will happen to it. */
@@ -12,6 +15,12 @@ interface ConfirmModalProps {
   cancelLabel?: string;
   /** Destructive: the confirm button is the one filled danger button. */
   isDanger?: boolean;
+  /**
+   * Asked by something other than the user's own action (a link from outside):
+   * focus starts on Cancel, and Confirm ignores clicks and Enter/Space for
+   * `GUARD_MS` after the dialog appears, so a key still held cannot confirm it.
+   */
+  guarded?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -23,6 +32,7 @@ export const ConfirmModal = ({
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   isDanger = false,
+  guarded = false,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) => {
@@ -31,8 +41,16 @@ export const ConfirmModal = ({
 
   // Destructive confirmations start on Cancel so a stray Enter is safe.
   useEffect(() => {
-    (isDanger ? cancelBtnRef : confirmBtnRef).current?.focus();
-  }, [isDanger]);
+    (isDanger || guarded ? cancelBtnRef : confirmBtnRef).current?.focus();
+  }, [isDanger, guarded]);
+
+  const shownAt = useRef(Date.now());
+  const confirm = () => {
+    if (guarded && Date.now() - shownAt.current < CONFIRM_GUARD_MS) {
+      return;
+    }
+    onConfirm();
+  };
 
   return (
     <Dialog
@@ -55,7 +73,7 @@ export const ConfirmModal = ({
             className={`vault-btn ${
               isDanger ? "vault-btn--danger" : "vault-btn--primary"
             }`}
-            onClick={onConfirm}
+            onClick={confirm}
           >
             {confirmLabel}
           </button>

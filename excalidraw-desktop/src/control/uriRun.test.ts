@@ -47,7 +47,12 @@ const make = (
     vault: () => open,
     recentVaults: () => ["/v/DSA", "/v/Notes", "/old/Work", "/new/Work"],
     commandTitle: (id) =>
-      id === "appearance.toggleMode" ? "Toggle mode" : null,
+      id === "appearance.toggleMode"
+        ? "Toggle mode"
+        : id === "my.plugin.run"
+        ? "Plugin run"
+        : null,
+    isBuiltin: (id) => id !== "my.plugin.run",
     openSearch: vi.fn(),
     ask: (s) => asks.push(s),
     notify: (m, k) => notes.push([m, k]),
@@ -216,17 +221,56 @@ describe("uriRun: what asks first", () => {
     expect(t.asks).toEqual([]);
   });
 
-  it("modal text is plain text, clipped at 200 characters", async () => {
+  it("modal text is plain text; a long value keeps its start and its end", async () => {
     const t = make();
     await t.run({
       action: "new",
-      path: `<img src=x onerror=alert(1)>${"a".repeat(400)}`,
+      path: `<img src=x onerror=alert(1)>${"a".repeat(800)}/the-end`,
       allowed: false,
     });
     const line = t.asks[0].details[0];
+    expect(line.endsWith('/the-end.excalidraw"')).toBe(true);
     expect(line.startsWith('Create the drawing "<img src=x')).toBe(true);
-    expect(line.length).toBeLessThan(260);
+    expect(line.length).toBeLessThan(460);
     expect(line).toContain("…");
+  });
+});
+
+describe("uriRun: commands and a changing vault", () => {
+  it("security: a plugin command is refused unless its exact id is allowed", async () => {
+    const t = make();
+    await expect(
+      t.run({ action: "cmd", id: "my.plugin.run", allowed: false }),
+    ).rejects.toMatchObject({ code: "NOT_PERMITTED" });
+    expect(t.asks).toEqual([]);
+    expect(t.calls).toEqual([]);
+    expect(t.notes[0][0]).toContain("built-in");
+    // Listed in control.uri_allow: the user's own choice, so it runs unasked.
+    await t.run({ action: "cmd", id: "my.plugin.run", allowed: true });
+    expect(names(t.calls)).toEqual(["command.run"]);
+  });
+
+  it("security: a queued question does not run in a vault the user switched to", async () => {
+    const t = make();
+    await t.run({ action: "cmd", id: "appearance.toggleMode", allowed: false });
+    t.setOpen({ name: "Notes", path: "/v/Notes" });
+    t.asks[0].onConfirm();
+    await vi.waitFor(() => expect(t.notes.at(-1)![1]).toBe("error"));
+    expect(t.notes.at(-1)![0]).toContain("vault changed");
+    expect(t.calls).toEqual([]);
+  });
+
+  it("a switch that already happened is not repeated at confirm time", async () => {
+    const t = make({}, ["x.excalidraw"]);
+    await t.run({
+      action: "open",
+      vault: "Notes",
+      file: "x",
+      allowSwitch: false,
+    });
+    t.setOpen({ name: "Notes", path: "/v/Notes" });
+    t.asks[0].onConfirm();
+    await vi.waitFor(() => expect(names(t.calls)).toEqual(["file.open"]));
   });
 });
 

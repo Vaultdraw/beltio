@@ -112,9 +112,29 @@ pub fn printable(s: &str, max: usize) -> String {
     }
 }
 
-/// Bidirectional controls: they can make a name read as another one.
+/// Invisible and bidirectional format characters (Unicode category Cf and look-alikes): they
+/// can make a name read as another one or hide in a path. Refused in every value.
 fn is_bidi(c: char) -> bool {
-    matches!(c, '\u{061C}' | '\u{200E}' | '\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}')
+    matches!(
+        c,
+        '\u{00AD}'
+            | '\u{0600}'..='\u{0605}'
+            | '\u{061C}'
+            | '\u{06DD}'
+            | '\u{070F}'
+            | '\u{08E2}'
+            | '\u{180E}'
+            | '\u{200B}'..='\u{200F}'
+            | '\u{202A}'..='\u{202E}'
+            | '\u{2060}'..='\u{2064}'
+            | '\u{2066}'..='\u{206F}'
+            | '\u{FEFF}'
+            | '\u{FFF9}'..='\u{FFFB}'
+            | '\u{110BD}'
+            | '\u{1D173}'..='\u{1D17A}'
+            | '\u{E0001}'
+            | '\u{E0020}'..='\u{E007F}'
+    )
 }
 
 /// Parses one URL. Pure: the same text always gives the same result.
@@ -157,6 +177,10 @@ pub fn parse(url: &str) -> Result<UriRequest, UriError> {
         "cmd" => {
             let id = q.get("id")?.ok_or(UriError::Missing("id"))?;
             command_id(&id)?;
+            // `drawing.open:<path>` carries a path: it follows the same rules as `file=`.
+            if let Some(path) = id.strip_prefix("drawing.open:") {
+                rel_path(path, "id")?;
+            }
             Ok(UriRequest::Cmd { id })
         }
         other => Err(UriError::UnknownAction(other.to_string())),
