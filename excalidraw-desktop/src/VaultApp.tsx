@@ -2200,6 +2200,19 @@ export const VaultApp = ({
         .slice(0, 6),
     [allIndexedEntries, templatesFolder],
   );
+  const vaultName = vault?.name ?? "";
+  const homeRecent = useMemo(
+    () =>
+      recentDrawings.map((entry) => ({
+        path: entry.path,
+        name: getBaseName(entry.path).replace(/\.excalidraw$/i, ""),
+        folder: getParentPath(entry.path) || vaultName,
+      })),
+    [recentDrawings, vaultName],
+  );
+  // The vault whose home pane was released (DeferredHome unmounts while a
+  // drawing is open; this keeps it from deferring again on close).
+  const homeReleasedRef = useRef<string | null>(null);
   // The palette's fallback list: built when the palette first renders after
   // an index change (never on vault open), then reused on every open.
   const drawingPathsRef = useRef<{
@@ -2432,17 +2445,11 @@ export const VaultApp = ({
                   vaultKey={vault.handle}
                   rootListed={directoryMap.has("")}
                   enabled={prefsNow.deferHomePane}
+                  releasedRef={homeReleasedRef}
                 >
                   <VaultHome
                     readOnly={vault.readOnly}
-                    recent={recentDrawings.map((entry) => ({
-                      path: entry.path,
-                      name: getBaseName(entry.path).replace(
-                        /\.excalidraw$/i,
-                        "",
-                      ),
-                      folder: getParentPath(entry.path) || vault.name,
-                    }))}
+                    recent={homeRecent}
                     onRun={(id) => commandRunner.run(id)}
                     onOpenDrawing={(path) => void handleOpenDrawing(path)}
                     ownerWindow={win}
