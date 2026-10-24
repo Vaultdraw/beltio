@@ -1105,6 +1105,23 @@ Plugins in the `plugins/` folder of the config folder.
 | `importers` | `[object Object]` | a table like { txt = "text-import" } (extension = plugin id, "" for none) |  | Which plugin imports a file extension when two plugins claim it; `""` turns plugin handling off for that extension. |
 | `storage_limit_kb` | `1024` | an integer between 64 and 16384 |  | Most data one plugin may save with `ctx.storage`, in KiB; a save past it is refused. |
 
+### `[ai]`
+
+AI features, off until you turn them on. See [AI](#ai).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `enabled` | `false` | true or false |  | The master switch; turning it on in Settings or with **AI: Toggle AI** first shows a warning. |
+| `mcp_enabled` | `true` | true or false |  | The AI tools interface (the `mcp` role of the control socket); it opens only while both keys are `true`. |
+
+### `[control]`
+
+Scripts and links from outside. The socket and link keys are read by the native side; see [Control and links](#control-and-links).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `notify_edits` | `true` | true or false |  | Show a notice when a script or AI tool edits the drawing on screen. |
+
 ### `[hotkeys]` and `[plugin.<id>]`
 
 Open tables: `[hotkeys]` takes one entry per command id (see [The `[hotkeys]` table](#the-hotkeys-table)), and `[plugin.<id>]` holds the settings a plugin declares. Their keys are not checked against this list.

@@ -247,6 +247,16 @@ autosave_delay_ms = 500
 # storage_limit_kb = 1024
 # Which plugin imports an extension when two claim it, like { txt = "text-import" }
 # importers = {}
+
+[ai]
+# The AI master switch; Settings and AI: Toggle AI show a warning first
+# enabled = false
+# The AI tools interface (mcp role of the control socket), open only while both are true
+# mcp_enabled = true
+
+[control]
+# Show a notice when a script or AI tool edits the drawing on screen
+# notify_edits = true
 "##;
 
 /// Serializes every config/state write within the process.

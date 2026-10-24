@@ -334,6 +334,28 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       },
     },
   },
+  {
+    table: "ai",
+    intro: "AI features, off until you turn them on. See [AI](#ai).",
+    keys: {
+      enabled: {
+        doc: "The master switch; turning it on in Settings or with **AI: Toggle AI** first shows a warning.",
+      },
+      mcp_enabled: {
+        doc: "The AI tools interface (the `mcp` role of the control socket); it opens only while both keys are `true`.",
+      },
+    },
+  },
+  {
+    table: "control",
+    intro:
+      "Scripts and links from outside. The socket and link keys are read by the native side; see [Control and links](#control-and-links).",
+    keys: {
+      notify_edits: {
+        doc: "Show a notice when a script or AI tool edits the drawing on screen.",
+      },
+    },
+  },
 ];
 
 const PER_VAULT_NOTE =
