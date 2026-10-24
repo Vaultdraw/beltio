@@ -207,6 +207,13 @@ const LINKS_COMMANDS: CommandDefinition[] = [
     when: ["drawingOpen", "!modalOpen"],
   },
   {
+    id: "links.openUri",
+    title: "Links: Open a vaultdraw:// link…",
+    category: "Links",
+    keys: { default: [] },
+    when: ["!modalOpen"],
+  },
+  {
     id: "links.hints",
     title: "Links: Show link hints",
     category: "Links",

@@ -54,6 +54,7 @@ const EXPECTED: Record<string, { title: string; keys: string[] }> = {
     title: "Links: Copy link to this drawing",
     keys: [],
   },
+  "links.openUri": { title: "Links: Open a vaultdraw:// link…", keys: [] },
   "links.hints": { title: "Links: Show link hints", keys: ["Shift+F"] },
   "links.toggleStyling": { title: "Links: Toggle link styling", keys: [] },
   "links.toggleHoverPreview": {

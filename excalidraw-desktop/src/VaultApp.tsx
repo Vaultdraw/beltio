@@ -21,6 +21,8 @@ import { resolveOpenTarget } from "./control/openTarget";
 import { createAppFiles } from "./control/appFiles";
 import { createBusyCounter } from "./control/busyCounter";
 import { openVaultAtPath } from "./control/vaultOpen";
+import { getCommand } from "./commands/commands";
+import { LinkPromptHost, LinkRequestHost } from "./control/linkRequests";
 import { useControlBridge } from "./control/useControlBridge";
 import { useMenuCommands } from "./help/useMenuCommands";
 import { useAppLinks } from "./links/useAppLinks";
@@ -1963,6 +1965,15 @@ export const VaultApp = ({
   }, []);
   useMenuCommands();
   useControlBridge(win, {
+    uri: {
+      vault: () => (vault ? { name: vault.name, path: vault.path } : null),
+      recentVaults: () => getRecentVaults(win),
+      commandTitle: (id) => getCommand(id)?.title ?? null,
+      openSearch: (query) => {
+        showNavigator();
+        requestNavigator({ kind: "search", query });
+      },
+    },
     tabStore: tabs.store,
     activePath: activeDoc?.path ?? null,
     files: createAppFiles({
@@ -2620,6 +2631,9 @@ export const VaultApp = ({
           }}
         />
       )}
+
+      <LinkRequestHost />
+      <LinkPromptHost />
 
       <Toasts />
     </div>

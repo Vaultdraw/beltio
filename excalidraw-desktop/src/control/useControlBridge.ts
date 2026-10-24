@@ -7,6 +7,8 @@ import { toastStore } from "../toasts/toastStore";
 import { onCommandRan } from "../commands/dispatcher";
 
 import { createControlBridge, type ControlDeps } from "./bridge";
+import { linkPrompt, linkRequests } from "./linkRequests";
+import { createUriRunner, type UriDeps, type UriPlan } from "./uriRun";
 
 import { commandInfos, createSnapshotSender } from "./commandsSnapshot";
 import { createWindowMethods } from "./windowMethods";
@@ -45,6 +47,30 @@ const scheduleSoon = (win: Window, cb: () => void): (() => void) => {
 
 const inTauri = (win: Window) => "__TAURI_INTERNALS__" in win;
 
+/** The window's own part of the link runner's deps; the dialogs and toasts are shared. */
+const uriDeps = (
+  win: Window,
+  part: () => Pick<
+    UriDeps,
+    "vault" | "recentVaults" | "commandTitle" | "openSearch"
+  >,
+): Omit<UriDeps, "call"> => ({
+  ...part(),
+  ask: linkRequests.ask,
+  notify: (message, kind) => toastStore.push({ message, kind }),
+  sleep: (ms) => new Promise((r) => win.setTimeout(r, ms)),
+});
+
+/** Palette handler: ask for a link, then let Rust run it as the user's own. */
+const openUri = () => {
+  linkPrompt.open((url) => {
+    // Rust shows every refusal itself (a notice in this window): nothing to add on failure.
+    void import("@tauri-apps/api/core")
+      .then(({ invoke }) => invoke("uri_open", { url }))
+      .catch(() => {});
+  });
+};
+
 /** Palette handlers: install the `vaultdraw` command (user PATH or /usr/local/bin). */
 const installCli = (system: boolean) => async () => {
   try {
@@ -69,6 +95,11 @@ const installCli = (system: boolean) => async () => {
 export function useControlBridge(
   win: Window | null,
   deps: Pick<ControlDeps, "runner" | "appState" | "openTarget"> & {
+    /** Link effects only the app shell knows (see uriRun.ts). */
+    uri?: Pick<
+      UriDeps,
+      "vault" | "recentVaults" | "commandTitle" | "openSearch"
+    >;
     files?: ControlFiles;
     tabStore?: TabStore | null;
     activePath?: string | null;
@@ -91,6 +122,7 @@ export function useControlBridge(
       registerCommandHandlers({
         [CLI_INSTALL_ID]: installCli(false),
         [CLI_INSTALL_SYSTEM_ID]: installCli(true),
+        "links.openUri": openUri,
       }),
     [],
   );
@@ -105,7 +137,18 @@ export function useControlBridge(
           ? (win as any)?.__controlMethodsSink
           : undefined;
       if (typeof sink === "function") {
-        sink(createWindowMethods(() => live.current.files as ControlFiles));
+        const methods = createWindowMethods(
+          () => live.current.files as ControlFiles,
+        );
+        const w = win as Window;
+        if (live.current.uri) {
+          const runner = createUriRunner({
+            ...uriDeps(w, () => live.current.uri!),
+            call: async (m, p) => methods[m](p),
+          });
+          methods["uri.run"] = (p) => runner.run(p as UriPlan);
+        }
+        sink(methods);
       }
       return;
     }
@@ -146,6 +189,9 @@ export function useControlBridge(
           appState: () => live.current.appState(),
           openTarget: (t, c) => live.current.openTarget(t, c),
           files: () => live.current.files as ControlFiles,
+          uri: live.current.uri
+            ? () => uriDeps(win, () => live.current.uri!)
+            : undefined,
           onReady: (topics) => winEvents.setTopics(topics),
         });
         const send = createSnapshotSender((commands) =>

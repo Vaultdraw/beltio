@@ -8,6 +8,7 @@ import { spoolBlob } from "../export/spoolBlob";
 import { commandInfos } from "./commandsSnapshot";
 import { ControlError, toControlError } from "./errors";
 import { objectParams, stringParam } from "./params";
+import { createUriRunner, type UriDeps, type UriPlan } from "./uriRun";
 import { createWindowMethods, type ControlFiles } from "./windowMethods";
 
 import type { CommandRunner } from "../commands/useCommands";
@@ -45,6 +46,11 @@ export interface ControlDeps {
   files?: () => ControlFiles;
   /** Window topics wanted when the bridge connected (see windowEvents). */
   onReady?: (topics: string[]) => void;
+  /**
+   * `vaultdraw://` link effects (see uriRun.ts); `call` is filled in here with
+   * this bridge's own handlers. Absent = `uri.run` is not registered.
+   */
+  uri?: () => Omit<UriDeps, "call">;
 }
 
 export function createControlBridge(deps: ControlDeps) {
@@ -87,6 +93,28 @@ export function createControlBridge(deps: ControlDeps) {
       ? createWindowMethods(deps.files, (blob) => spoolBlob(deps.invoke, blob))
       : {}),
   };
+
+  if (deps.uri) {
+    const uri = deps.uri;
+    // The link runner calls the very handlers the socket uses (file.open, file.create,
+    // vault.open, command.run), never a copy of them.
+    const runner = createUriRunner(
+      new Proxy({} as UriDeps, {
+        get: (_, key: string) =>
+          key === "call"
+            ? async (method: string, params: unknown) => {
+                const fn = handlers[method];
+                if (!fn) {
+                  throw new ControlError("NOT_FOUND", "Unknown window method");
+                }
+                return fn(params);
+              }
+            : uri()[key as keyof Omit<UriDeps, "call">],
+      }),
+    );
+    handlers["uri.run"] = (params) =>
+      runner.run(objectParams(params) as unknown as UriPlan);
+  }
 
   const reply = (rid: number, body: Record<string, unknown>) =>
     deps.invoke("control_reply", { rid, ...body }).catch(() => {});
