@@ -74,6 +74,17 @@ describe("consent load gate", () => {
     expect(msgs).toEqual(["noted now can: read the drawings in your vault."]);
   });
 
+  it("a failed record is logged and the plugin still loads", async () => {
+    const info = withReview("flaky", "notice", ["vault.read"], ["vault.read"]);
+    const { h } = await run([info]);
+    h.backend.consentConfirm = () => Promise.reject(new Error("disk"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await ensureActive("flaky")).toBe(true);
+    await tick();
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
   it("a confirmed plugin and a plugin with no permissions are quiet", async () => {
     const quiet = makePluginInfo("quiet");
     const ok = withReview("ok-one", "ok", ["vault.read"], []);

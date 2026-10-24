@@ -91,10 +91,13 @@ function noticeNewPermissions(rt: PluginRuntime): void {
   if (review.state !== "notice") {
     return;
   }
-  rt.info = { ...rt.info, review: { state: "ok", added: [] } };
   toastStore.push({ message: `${name} now can: ${addedText(review.added)}.` });
+  // Only after the backend recorded it: a failure keeps "notice", so the next scan says it again.
   void getPluginsBackend()
     .consentConfirm(id, rt.info.permissions)
+    .then(() => {
+      rt.info = { ...rt.info, review: { state: "ok", added: [] } };
+    })
     .catch((err) => console.error("consentConfirm failed", err));
 }
 

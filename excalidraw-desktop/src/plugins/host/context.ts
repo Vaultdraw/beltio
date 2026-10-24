@@ -116,7 +116,7 @@ export function createPluginContext(
       id,
       version: info.version,
       dir: info.dir,
-      permissions: info.permissions as PluginPermission[],
+      permissions: Object.freeze([...info.permissions]) as PluginPermission[],
     },
     commands: {
       register(short, run) {

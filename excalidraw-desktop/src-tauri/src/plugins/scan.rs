@@ -12,7 +12,7 @@ use std::{
 
 const MANIFEST_FILE: &str = "plugin.toml";
 const CACHE_FILE: &str = "plugins-cache.json";
-const CACHE_VERSION: u32 = 1;
+const CACHE_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
