@@ -43,6 +43,8 @@ export interface PluginInfo {
       group: "top" | "bottom";
     }[];
     settings: SettingDecl[];
+    /** File types the plugin imports (`[[contributes.importers]]`); absent from older backends. */
+    importers?: { id: string; title: string; extensions: string[] }[];
   };
 }
 
