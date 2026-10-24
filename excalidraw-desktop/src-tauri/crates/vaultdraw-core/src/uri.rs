@@ -114,7 +114,7 @@ pub fn printable(s: &str, max: usize) -> String {
 
 /// Invisible and bidirectional format characters (Unicode category Cf and look-alikes): they
 /// can make a name read as another one or hide in a path. Refused in every value.
-fn is_bidi(c: char) -> bool {
+pub fn is_bidi(c: char) -> bool {
     matches!(
         c,
         '\u{00AD}'

@@ -62,6 +62,15 @@ impl TauriDispatch {
                         }
                     }
                 }
+                Route::File(path) => {
+                    // Same handler as Finder opens: in-vault files open, others ask first.
+                    let Some(abs) = super::files::absolute(path, cwd.as_str()) else { continue };
+                    if let Err(e) = super::uri::handle_file(&self.app, &abs, super::uri::Origin::Forwarded) {
+                        if e.app_code() == Some(codes::NOT_READY) {
+                            return Err(e);
+                        }
+                    }
+                }
                 Route::Path(target) => {
                     call_window(&self.app, "app.openTarget", Some(json!({"target": target, "cwd": cwd})), CALL_TIMEOUT)?;
                 }
@@ -77,7 +86,9 @@ impl TauriDispatch {
 pub(crate) enum Route<'a> {
     /// A `vaultdraw:` link: the policy handler (`uri::handle`).
     Link(&'a str),
-    /// A file path: the window's `app.openTarget`.
+    /// A `.excalidraw` / `.excalidrawlib` path: the file handler (`uri::handle_file`).
+    File(&'a str),
+    /// Any other path: the window's `app.openTarget`.
     Path(&'a str),
 }
 
@@ -85,7 +96,15 @@ pub(crate) enum Route<'a> {
 pub(crate) fn route_argv<'a>(argv: &[&'a str]) -> Vec<Route<'a>> {
     argv.iter()
         .filter(|a| !a.starts_with('-'))
-        .map(|a| if super::uri::is_uri(a) { Route::Link(a) } else { Route::Path(a) })
+        .map(|a| {
+            if super::uri::is_uri(a) {
+                Route::Link(a)
+            } else if super::files::is_file_arg(a) {
+                Route::File(a)
+            } else {
+                Route::Path(a)
+            }
+        })
         .collect()
 }
 
@@ -132,10 +151,17 @@ mod tests {
 
     #[test]
     fn app_open_routes_links_to_the_policy_handler_and_paths_to_the_window() {
-        let r = route_argv(&["--flag", "/v/a.excalidraw", "vaultdraw://open?file=a", "-psn_0_1", "VAULTDRAW://new?path=x", "rel/b.excalidraw"]);
+        let r = route_argv(&["--flag", "/v/a.excalidraw", "vaultdraw://open?file=a", "-psn_0_1", "VAULTDRAW://new?path=x", "rel/b.excalidraw", "BFS", "l.excalidrawlib"]);
         assert_eq!(
             r,
-            [Route::Path("/v/a.excalidraw"), Route::Link("vaultdraw://open?file=a"), Route::Link("VAULTDRAW://new?path=x"), Route::Path("rel/b.excalidraw")]
+            [
+                Route::File("/v/a.excalidraw"),
+                Route::Link("vaultdraw://open?file=a"),
+                Route::Link("VAULTDRAW://new?path=x"),
+                Route::File("rel/b.excalidraw"),
+                Route::Path("BFS"),
+                Route::File("l.excalidrawlib")
+            ]
         );
         assert!(route_argv(&[]).is_empty());
     }

@@ -162,6 +162,8 @@ pub(crate) trait Window {
     fn run(&self, plan: Value) -> Result<Value, RpcError>;
     /// Brings the window to the front.
     fn focus(&self);
+    /// A file from the system was accepted: the window may read it once.
+    fn grant(&self, _path: &str) {}
 }
 
 #[derive(Default)]
@@ -212,8 +214,8 @@ fn will_ask(plan: &Value) -> bool {
 }
 
 impl Handler {
-    /// One link, from any entry point. `config_text` is `config.toml` as read just now.
-    pub(crate) fn handle(&self, win: &dyn Window, config_text: &str, url: &str, origin: Origin, now: Instant) -> Result<Value, RpcError> {
+    /// Checks every request from outside shares: window ready (or queued), rate limit, off switch.
+    fn admit(&self, win: &dyn Window, config_text: &str, origin: Origin, now: Instant, off_message: &str) -> Result<Policy, RpcError> {
         let policy = Policy::from_toml(config_text);
         let toast = origin != Origin::Cli;
         if !win.ready() && !origin.queues() {
@@ -229,9 +231,47 @@ impl Handler {
             }
         }
         if !policy.enabled {
-            self.show(win, origin, toast, "Links from outside are turned off (control.uri_enabled)");
-            return Err(RpcError::app(codes::DISABLED, "Links from outside are turned off (control.uri_enabled = false)"));
+            self.show(win, origin, toast, &format!("{off_message} (control.uri_enabled)"));
+            return Err(RpcError::app(codes::DISABLED, format!("{off_message} (control.uri_enabled = false)")));
         }
+        Ok(policy)
+    }
+
+    /// Sends a plan now, or queues it while the window starts.
+    fn deliver(&self, win: &dyn Window, plan: Value) -> Result<Value, RpcError> {
+        if win.ready() {
+            return win.run(plan);
+        }
+        self.enqueue(plan)?;
+        // The window may have become ready between the check and the enqueue: its
+        // ready hook would have found an empty queue, so drain here.
+        if win.ready() {
+            self.drain(win);
+        }
+        Ok(json!({"status": "queued"}))
+    }
+
+    /// One file the system opened (Finder, argv). Same switch, rate limit and queue as links.
+    /// The window decides what to do with it and asks before copying or switching vault.
+    pub(crate) fn handle_file(&self, win: &dyn Window, config_text: &str, path: &str, origin: Origin, now: Instant) -> Result<Value, RpcError> {
+        let toast = origin != Origin::Cli;
+        self.admit(win, config_text, origin, now, "Opening files from outside is turned off")?;
+        let plan = match super::files::plan_for(path, origin.name()) {
+            Ok(p) => p,
+            Err(msg) => {
+                self.show(win, origin, toast, &msg);
+                return Err(RpcError::invalid_params(msg));
+            }
+        };
+        win.grant(path);
+        win.focus();
+        self.deliver(win, plan)
+    }
+
+    /// One link, from any entry point. `config_text` is `config.toml` as read just now.
+    pub(crate) fn handle(&self, win: &dyn Window, config_text: &str, url: &str, origin: Origin, now: Instant) -> Result<Value, RpcError> {
+        let toast = origin != Origin::Cli;
+        let policy = self.admit(win, config_text, origin, now, "Links from outside are turned off (control.uri_enabled)")?;
         let req = match uri::parse(url) {
             Ok(r) => r,
             Err(e) => {
@@ -251,16 +291,7 @@ impl Handler {
         if origin != Origin::User && !will_ask(&plan) {
             win.focus();
         }
-        if win.ready() {
-            return win.run(plan);
-        }
-        self.enqueue(plan)?;
-        // The window may have become ready between the check and the enqueue: its
-        // ready hook would have found an empty queue, so drain here.
-        if win.ready() {
-            self.drain(win);
-        }
-        Ok(json!({"status": "queued"}))
+        self.deliver(win, plan)
     }
 
     /// Shows a refusal to the user: now, or queued while the window starts.
@@ -322,6 +353,9 @@ impl Window for AppWindow<'_> {
     fn run(&self, plan: Value) -> Result<Value, RpcError> {
         super::bridge::call_window(self.0, "uri.run", Some(plan), super::bridge::CALL_TIMEOUT)
     }
+    fn grant(&self, path: &str) {
+        super::files::grants().grant(path);
+    }
     fn focus(&self) {
         use tauri::Manager;
         if let Some(w) = self.0.get_webview_window(super::bridge::WINDOW_LABEL) {
@@ -356,30 +390,69 @@ pub(crate) fn is_uri(arg: &str) -> bool {
     arg.get(..10).is_some_and(|p| p.eq_ignore_ascii_case("vaultdraw:"))
 }
 
-/// macOS: links from the OS (Apple Event), on a worker thread so the main loop never waits for
-/// the window. Anything else (`file:` opens belong to C6b) is dropped.
+/// Something the system handed the app: a link or a file path.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Item {
+    Link(String),
+    File(String),
+}
+
+/// Sorts system-provided texts (links and `file:` URLs from an Apple Event, argv entries) into
+/// items, in order. A `file:` URL becomes its path; anything else is dropped.
+pub(crate) fn classify_opened(urls: impl IntoIterator<Item = String>, cwd: Option<&str>) -> Vec<Item> {
+    urls.into_iter()
+        .filter_map(|u| {
+            if is_uri(&u) {
+                Some(Item::Link(u))
+            } else if u.get(..5).is_some_and(|p| p.eq_ignore_ascii_case("file:")) {
+                let path = file_url_path(&u)?;
+                super::files::is_file_arg(&path).then_some(Item::File(path))
+            } else if !u.contains("://") && super::files::is_file_arg(&u) {
+                super::files::absolute(&u, cwd).map(Item::File)
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// The path in a `file:` URL (percent-decoded); `None` for any other text or a remote host.
+fn file_url_path(text: &str) -> Option<String> {
+    let url = tauri::Url::parse(text).ok()?;
+    url.to_file_path().ok().map(|p| p.to_string_lossy().into_owned())
+}
+
+/// macOS: links and files from the OS (Apple Event), on a worker thread so the main loop never
+/// waits for the window.
 #[cfg(target_os = "macos")]
 pub(crate) fn on_opened(app: &tauri::AppHandle, urls: Vec<tauri::Url>) {
-    let links: Vec<String> = urls.into_iter().map(String::from).filter(|u| is_uri(u)).collect();
-    spawn_links(app, links);
+    spawn_items(app, classify_opened(urls.into_iter().map(String::from), None));
 }
 
-/// Links in the first launch's own argv (Linux and Windows; `open -n` on macOS).
+/// Links and files in the first launch's own argv (Linux and Windows; `open -n` on macOS).
 pub(crate) fn on_startup_argv(app: &tauri::AppHandle) {
-    let links: Vec<String> = std::env::args().skip(1).filter(|a| is_uri(a)).collect();
-    spawn_links(app, links);
+    let cwd = std::env::current_dir().ok().map(|p| p.to_string_lossy().into_owned());
+    spawn_items(app, classify_opened(std::env::args().skip(1), cwd.as_deref()));
 }
 
-fn spawn_links(app: &tauri::AppHandle, links: Vec<String>) {
-    if links.is_empty() {
+fn spawn_items(app: &tauri::AppHandle, items: Vec<Item>) {
+    if items.is_empty() {
         return;
     }
     let app = app.clone();
     let _ = std::thread::Builder::new().name("uri-links".into()).spawn(move || {
-        for url in links {
-            let _ = handle(&app, &url, Origin::Os);
+        for item in items {
+            let _ = match item {
+                Item::Link(url) => handle(&app, &url, Origin::Os),
+                Item::File(path) => handle_file(&app, &path, Origin::Os),
+            };
         }
     });
+}
+
+/// Every file entry point calls this.
+pub(crate) fn handle_file(app: &tauri::AppHandle, path: &str, origin: Origin) -> Result<Value, RpcError> {
+    handler().handle_file(&AppWindow(app), &read_config_text(), path, origin, Instant::now())
 }
 
 /// The window just became ready: send the queue (a thread only when something waits).

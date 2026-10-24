@@ -94,7 +94,7 @@ fn inspect(path: &Path) -> Result<Option<u64>> {
 }
 
 /// Bounded read of a library file's bytes with a clear message for oversized files.
-fn read_library_bytes(path: &Path) -> Result<Vec<u8>> {
+pub(crate) fn read_library_bytes(path: &Path) -> Result<Vec<u8>> {
     let too_large = || err("INVALID_FILE", "The library file is larger than 64 MiB and cannot be loaded");
     if fs::metadata(path).map_err(ioerr)?.len() > MAX_LIBRARY_BYTES {
         return Err(too_large());
@@ -142,7 +142,7 @@ struct LibraryShape {
 }
 
 /// Accepts only an `excalidrawlib` object with `libraryItems` (or the legacy `library`) array.
-fn validate_library(json: &str) -> Result<()> {
+pub(crate) fn validate_library(json: &str) -> Result<()> {
     if json.len() as u64 > MAX_LIBRARY_BYTES {
         return Err(err("INVALID_FILE", "Library exceeds 64 MiB"));
     }

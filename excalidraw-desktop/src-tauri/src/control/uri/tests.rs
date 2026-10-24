@@ -5,11 +5,12 @@ struct Fake {
     ready: Cell<bool>,
     sent: RefCell<Vec<Value>>,
     focused: Cell<u32>,
+    granted: RefCell<Vec<String>>,
 }
 
 impl Fake {
     fn new(ready: bool) -> Self {
-        Self { ready: Cell::new(ready), sent: RefCell::default(), focused: Cell::new(0) }
+        Self { ready: Cell::new(ready), sent: RefCell::default(), focused: Cell::new(0), granted: RefCell::default() }
     }
     fn plans(&self) -> Vec<Value> {
         self.sent.borrow().iter().filter(|p| p["action"] != "notice").cloned().collect()
@@ -29,6 +30,9 @@ impl Window for Fake {
     }
     fn focus(&self) {
         self.focused.set(self.focused.get() + 1);
+    }
+    fn grant(&self, path: &str) {
+        self.granted.borrow_mut().push(path.to_string());
     }
 }
 
@@ -436,4 +440,87 @@ fn security_a_wrongly_typed_switch_or_table_means_off() {
     }
     assert!(Policy::from_toml("[control]\nuri_enabled = true\n").enabled);
     assert!(Policy::from_toml("[other]\nx = 1\n").enabled);
+}
+
+
+// ---- Files from the system ----
+
+fn file(h: &Handler, w: &Fake, cfg: &str, path: &str, o: Origin) -> Result<Value, RpcError> {
+    h.handle_file(w, cfg, path, o, Instant::now())
+}
+
+#[test]
+fn a_file_becomes_a_plan_and_a_single_use_grant() {
+    let (h, w) = (Handler::default(), Fake::new(true));
+    file(&h, &w, "", "/x/a.excalidraw", Origin::Os).unwrap();
+    let plans = w.plans();
+    assert_eq!(plans.len(), 1);
+    assert_eq!(plans[0]["action"], "file");
+    assert_eq!(plans[0]["path"], "/x/a.excalidraw");
+    assert_eq!(plans[0]["origin"], "os");
+    assert_eq!(*w.granted.borrow(), ["/x/a.excalidraw"]);
+}
+
+#[test]
+fn security_files_obey_the_off_switch_and_the_rate_limit() {
+    let (h, w) = (Handler::default(), Fake::new(true));
+    let off = "[control]\nuri_enabled = false\n";
+    let e = file(&h, &w, off, "/x/a.excalidraw", Origin::Os).unwrap_err();
+    assert_eq!(e.app_code(), Some(codes::DISABLED));
+    assert!(w.plans().is_empty() && w.granted.borrow().is_empty(), "nothing granted when refused");
+    assert!(w.notices()[0].contains("turned off"));
+    let (h, w) = (Handler::default(), Fake::new(true));
+    for _ in 0..RATE_LIMIT {
+        file(&h, &w, "", "/x/a.excalidraw", Origin::Os).unwrap();
+    }
+    assert_eq!(file(&h, &w, "", "/x/a.excalidraw", Origin::Os).unwrap_err().app_code(), Some(codes::RATE_LIMITED));
+}
+
+#[test]
+fn security_a_bad_file_path_is_refused_with_a_notice_and_no_grant() {
+    let (h, w) = (Handler::default(), Fake::new(true));
+    assert!(file(&h, &w, "", "/x/a.txt", Origin::Os).is_err());
+    assert!(file(&h, &w, "", "rel/a.excalidraw", Origin::Os).is_err());
+    assert!(w.plans().is_empty() && w.granted.borrow().is_empty());
+    assert_eq!(w.notices().len(), 2);
+}
+
+#[test]
+fn a_file_waits_for_the_window_in_order_with_links() {
+    let (h, w) = (Handler::default(), Fake::new(false));
+    go(&h, &w, "", OPEN, Origin::Os).unwrap();
+    file(&h, &w, "", "/x/a.excalidraw", Origin::Os).unwrap();
+    assert_eq!(h.queued(), 2);
+    w.ready.set(true);
+    h.drain(&w);
+    let p = w.plans();
+    assert_eq!((p[0]["action"].as_str(), p[1]["action"].as_str()), (Some("open"), Some("file")));
+    assert_eq!(file(&h, &Fake::new(false), "", "/x/a.excalidraw", Origin::Forwarded).unwrap_err().app_code(), Some(codes::NOT_READY));
+}
+
+#[test]
+fn opened_items_are_sorted_in_order() {
+    let items = classify_opened(
+        [
+            "vaultdraw://open?file=a".to_string(),
+            "file:///Users/me/My%20Notes/a.excalidraw".into(),
+            "file:///Users/me/lib.excalidrawlib".into(),
+            "file:///Users/me/readme.txt".into(),
+            "file://remote-host/x/a.excalidraw".into(),
+            "https://example.com/a.excalidraw".into(),
+            "rel/b.excalidraw".into(),
+            "-psn_0_1".into(),
+        ],
+        Some("/w"),
+    );
+    assert_eq!(
+        items,
+        [
+            Item::Link("vaultdraw://open?file=a".into()),
+            Item::File("/Users/me/My Notes/a.excalidraw".into()),
+            Item::File("/Users/me/lib.excalidrawlib".into()),
+            Item::File("/w/rel/b.excalidraw".into()),
+        ]
+    );
+    assert!(classify_opened(["rel/b.excalidraw".to_string()], None).is_empty(), "no cwd, no relative path");
 }
