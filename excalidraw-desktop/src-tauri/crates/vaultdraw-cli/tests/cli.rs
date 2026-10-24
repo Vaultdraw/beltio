@@ -316,3 +316,179 @@ fn completions_for_every_shell_and_man() {
     assert!(out(&o).contains(".TH vaultdraw"));
     assert_eq!(code(&vd(&["completions", "tcsh"], None, None)), 1);
 }
+
+// ---- scene read | get | selection | apply (live only) ----
+
+fn scene_elements() -> Value {
+    json!([
+        {"id": "a1", "type": "rectangle", "x": 10, "y": 20.25, "width": 100, "height": 50.5},
+        {"id": "t2", "type": "text", "x": -5, "y": 0, "width": 80, "height": 25, "text": "Hello world, this label is longer than forty characters"},
+    ])
+}
+
+fn scene_app(method: &str, params: &Value) -> Result<Value, (i64, String, Option<&'static str>)> {
+    match method {
+        "scene.read" => Ok(json!({"path": "a.excalidraw", "live": true, "readOnly": false, "version": "s1x", "total": 5, "returned": 2,
+            "truncated": true, "counts": {"rectangle": 4, "text": 1}, "elements": scene_elements(), "selection": [],
+            "viewport": {"x": 0, "y": 0, "width": 800, "height": 600, "zoom": 1}})),
+        "scene.get" => Ok(json!({"path": "a.excalidraw", "version": "s1x", "elements": [scene_elements()[0].clone()], "missing": ["zz"]})),
+        "scene.selection" => Ok(json!({"path": "a.excalidraw", "version": "s1x", "ids": ["a1"], "elements": [scene_elements()[0].clone()]})),
+        "scene.apply" => {
+            if params["dryRun"] == true {
+                Ok(json!({"path": "a.excalidraw", "live": true, "dryRun": true, "applied": 0, "valid": true, "version": "s1x"}))
+            } else if params["ifVersion"] == "stale" {
+                Err((-32000, "The drawing changed".into(), Some("CONFLICT")))
+            } else {
+                Ok(json!({"path": "a.excalidraw", "live": true, "applied": 2, "ids": ["n1", "n2"], "version": "s2y"}))
+            }
+        }
+        _ => Err((-32601, "Method not found".into(), None)),
+    }
+}
+
+fn last_request(f: &Fake) -> Value {
+    f.seen.lock().unwrap().last().cloned().unwrap()
+}
+
+#[test]
+fn scene_read_request_shape_and_human_output() {
+    let f = Fake::start(scene_app);
+    let o = vd(&["scene", "read"], Some(&f.socket), None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(last_request(&f)["method"], "scene.read");
+    assert_eq!(last_request(&f)["params"], json!({}));
+    let text = out(&o);
+    let lines: Vec<&str> = text.lines().collect();
+    assert_eq!(lines.len(), 3, "{text}");
+    assert_eq!(lines[0], "a1  rectangle  10,20.3  100\u{d7}50.5");
+    assert_eq!(lines[1], "t2  text       -5,0     80\u{d7}25     Hello world, this label is longer than f");
+    assert_eq!(lines[2], "2 of 5 elements, version s1x");
+
+    let o = vd(
+        &["scene", "read", "Graphs/BFS", "--scope", "viewport", "--type", "text,arrow", "--id", "a,b", "--limit", "50", "--offset", "10", "--json"],
+        Some(&f.socket),
+        None,
+    );
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(
+        last_request(&f)["params"],
+        json!({"path": "Graphs/BFS", "scope": "viewport", "types": ["text", "arrow"], "ids": ["a", "b"], "limit": 50, "offset": 10})
+    );
+    assert_eq!(parse(&out(&o))["version"], "s1x");
+    // A link-style name goes as `file`.
+    vd(&["scene", "read", "BFS"], Some(&f.socket), None);
+    assert_eq!(last_request(&f)["params"], json!({"file": "BFS"}));
+    // A bad scope is refused before anything is sent.
+    let before = f.seen.lock().unwrap().len();
+    assert_ne!(code(&vd(&["scene", "read", "--scope", "everything"], Some(&f.socket), None)), 0);
+    assert_eq!(f.seen.lock().unwrap().len(), before);
+}
+
+#[test]
+fn scene_get_and_selection() {
+    let f = Fake::start(scene_app);
+    let o = vd(&["scene", "get", "a1", "zz", "--in", "BFS"], Some(&f.socket), None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(last_request(&f)["method"], "scene.get");
+    assert_eq!(last_request(&f)["params"], json!({"file": "BFS", "ids": ["a1", "zz"]}));
+    assert_eq!(out(&o), "a1  rectangle  10,20.3  100\u{d7}50.5\nmissing: zz\n1 elements, version s1x\n");
+
+    let o = vd(&["scene", "selection", "a.excalidraw"], Some(&f.socket), None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(last_request(&f)["method"], "scene.selection");
+    assert_eq!(last_request(&f)["params"], json!({"path": "a.excalidraw"}));
+    assert_eq!(out(&o), "a1  rectangle  10,20.3  100\u{d7}50.5\n1 selected, version s1x\n");
+    vd(&["scene", "selection"], Some(&f.socket), None);
+    assert_eq!(last_request(&f)["params"], json!({}));
+    // get needs at least one id.
+    assert_ne!(code(&vd(&["scene", "get"], Some(&f.socket), None)), 0);
+}
+
+const OPS: &str = r#"[{"op":"add","element":{"type":"rectangle","x":0,"y":0,"width":10,"height":10}},{"op":"delete","id":"a1"}]"#;
+
+#[test]
+fn scene_apply_ops_from_stdin_and_object_form() {
+    let f = Fake::start(scene_app);
+    let o = vd_in(&["scene", "apply"], Some(&f.socket), None, OPS);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    let req = last_request(&f);
+    assert_eq!(req["method"], "scene.apply");
+    assert_eq!(req["params"], json!({"ops": serde_json::from_str::<Value>(OPS).unwrap()}));
+    assert_eq!(out(&o), "applied 2 changes (version s2y)\n");
+
+    let wrapped = format!(r#"{{"ops": {OPS}}}"#);
+    let o = vd_in(&["scene", "apply", "BFS", "--ops", "-", "--json"], Some(&f.socket), None, &wrapped);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(last_request(&f)["params"]["file"], "BFS");
+    assert_eq!(last_request(&f)["params"]["ops"].as_array().unwrap().len(), 2);
+    assert_eq!(parse(&out(&o))["ids"], json!(["n1", "n2"]));
+}
+
+#[test]
+fn scene_apply_ops_from_a_file_with_flags() {
+    let f = Fake::start(scene_app);
+    let file = f.dir.join("ops.json");
+    std::fs::write(&file, OPS).unwrap();
+    let o = vd(&["scene", "apply", "a.excalidraw", "--ops", file.to_str().unwrap(), "--if-version", "s1x"], Some(&f.socket), None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    let p = last_request(&f)["params"].clone();
+    assert_eq!((p["path"].clone(), p["ifVersion"].clone()), (json!("a.excalidraw"), json!("s1x")));
+    assert!(p.get("dryRun").is_none());
+
+    let o = vd(&["scene", "apply", "--ops", file.to_str().unwrap(), "--dry-run"], Some(&f.socket), None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(last_request(&f)["params"]["dryRun"], true);
+    assert_eq!(out(&o), "dry run: 2 ops valid\n");
+
+    // A stale version is the app's CONFLICT: exit 2 with its tag.
+    let o = vd(&["scene", "apply", "--ops", file.to_str().unwrap(), "--if-version", "stale"], Some(&f.socket), None);
+    assert_eq!(code(&o), 2);
+    assert_eq!(err(&o), "vaultdraw: The drawing changed (CONFLICT)\n");
+}
+
+#[test]
+fn scene_apply_bad_ops_are_cli_errors_and_send_nothing() {
+    let f = Fake::start(scene_app);
+    let o = vd_in(&["scene", "apply"], Some(&f.socket), None, "{not json");
+    assert_eq!(code(&o), 1);
+    assert!(err(&o).contains("stdin: not valid JSON"), "{}", err(&o));
+    let bad = f.dir.join("bad.json");
+    std::fs::write(&bad, "[1,").unwrap();
+    let o = vd(&["scene", "apply", "--ops", bad.to_str().unwrap()], Some(&f.socket), None);
+    assert_eq!(code(&o), 1);
+    assert!(err(&o).contains("bad.json: not valid JSON"), "{}", err(&o));
+    let o = vd(&["scene", "apply", "--ops", f.dir.join("missing.json").to_str().unwrap()], Some(&f.socket), None);
+    assert_eq!(code(&o), 1);
+    let o = vd_in(&["scene", "apply"], Some(&f.socket), None, r#"{"other": []}"#);
+    assert_eq!(code(&o), 1);
+    assert!(f.seen.lock().unwrap().is_empty(), "nothing reaches the app");
+}
+
+#[test]
+fn scene_print_request_for_every_subcommand() {
+    let f = Fake::start(scene_app);
+    let line = |args: &[&str], stdin: &str| {
+        let o = vd_in(args, Some(&f.socket), None, stdin);
+        assert_eq!(code(&o), 0, "{args:?}: {}", err(&o));
+        parse(&out(&o))
+    };
+    let v = line(&["scene", "read", "--print-request", "--scope", "selection"], "");
+    assert_eq!((v["method"].clone(), v["params"].clone()), (json!("scene.read"), json!({"scope": "selection"})));
+    let v = line(&["scene", "get", "--print-request", "a", "b"], "");
+    assert_eq!((v["method"].clone(), v["params"].clone()), (json!("scene.get"), json!({"ids": ["a", "b"]})));
+    let v = line(&["scene", "selection", "--print-request"], "");
+    assert_eq!((v["method"].clone(), v["params"].clone()), (json!("scene.selection"), json!({})));
+    let v = line(&["scene", "apply", "--print-request", "--dry-run", "--if-version", "s1x"], OPS);
+    assert_eq!(v["method"], "scene.apply");
+    assert_eq!((v["params"]["dryRun"].clone(), v["params"]["ifVersion"].clone()), (json!(true), json!("s1x")));
+    assert_eq!(v["params"]["ops"].as_array().unwrap().len(), 2);
+    assert!(f.seen.lock().unwrap().is_empty(), "print-request sends nothing");
+}
+
+#[test]
+fn scene_commands_exit_3_when_the_app_is_not_running() {
+    let o = vd(&["scene", "read"], None, None);
+    assert_eq!(code(&o), 3);
+    let o = vd_in(&["scene", "apply"], None, None, OPS);
+    assert_eq!(code(&o), 3);
+}

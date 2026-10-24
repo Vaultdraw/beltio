@@ -4,6 +4,7 @@ mod app;
 mod events;
 mod export;
 mod files;
+mod scene;
 mod tabs;
 mod uri;
 
@@ -48,6 +49,7 @@ pub fn run(cli: &Cli) -> Result<(), Fail> {
         Command::Export(args) => export::run(cli, args),
         Command::Links { target, backlinks } => files::links(cli, target, *backlinks),
         Command::Tags => files::tags(cli),
+        Command::Scene { action } => scene::run(cli, action),
         Command::Tabs => tabs::list(cli),
         Command::Tab { action } => tabs::run(cli, action),
         Command::Config { action } => app::config(cli, action),

@@ -102,6 +102,11 @@ pub enum Command {
     },
     /// Every tag in the vault with its drawing count
     Tags,
+    /// Read and edit the drawing on screen (live: needs the running app)
+    Scene {
+        #[command(subcommand)]
+        action: SceneAction,
+    },
     /// List open tabs
     Tabs,
     /// Focus or close a tab
@@ -206,6 +211,57 @@ pub enum CmdAction {
     Run {
         #[arg(value_name = "ID")]
         id: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum SceneAction {
+    /// List the elements of the drawing on screen (id, type, position, size, text)
+    Read {
+        /// The drawing (path or link-style name); default: the drawing on screen
+        target: Option<String>,
+        /// Which elements: all, in the visible area, or selected
+        #[arg(long, value_parser = ["all", "viewport", "selection"], value_name = "SCOPE")]
+        scope: Option<String>,
+        /// Only these element types, comma separated (rectangle, text, arrow ...)
+        #[arg(long = "type", value_delimiter = ',', value_name = "TYPES")]
+        types: Vec<String>,
+        /// Only these element ids, comma separated
+        #[arg(long = "id", value_delimiter = ',', value_name = "IDS")]
+        ids: Vec<String>,
+        /// Elements to return, 1 to 2000 (default 200)
+        #[arg(long, value_name = "N", value_parser = clap::value_parser!(u32).range(1..=2000))]
+        limit: Option<u32>,
+        /// Elements to skip (paging)
+        #[arg(long, value_name = "N")]
+        offset: Option<u32>,
+    },
+    /// Elements by id (1 to 100)
+    Get {
+        #[arg(required = true, num_args = 1.., value_name = "ID")]
+        ids: Vec<String>,
+        /// The drawing (path or link-style name); default: the drawing on screen
+        #[arg(long = "in", value_name = "TARGET")]
+        target: Option<String>,
+    },
+    /// The selected elements
+    Selection {
+        /// The drawing (path or link-style name); default: the drawing on screen
+        target: Option<String>,
+    },
+    /// Apply scene operations (a JSON array, or { "ops": [...] }) as one undo step
+    Apply {
+        /// The drawing (path or link-style name); default: the drawing on screen
+        target: Option<String>,
+        /// Operations file, or - for stdin
+        #[arg(long, value_name = "FILE", default_value = "-")]
+        ops: String,
+        /// Refuse with CONFLICT unless the drawing is still at this version (from scene read)
+        #[arg(long, value_name = "V")]
+        if_version: Option<String>,
+        /// Validate the operations without changing the drawing
+        #[arg(long)]
+        dry_run: bool,
     },
 }
 

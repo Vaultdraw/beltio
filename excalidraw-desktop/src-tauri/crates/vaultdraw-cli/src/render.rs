@@ -174,3 +174,64 @@ pub fn vault(v: &Value) -> String {
     let ro = if v.get("readOnly").and_then(Value::as_bool) == Some(true) { " [read-only]" } else { "" };
     format!("{} ({}){ro}", s(v, "name"), s(v, "path"))
 }
+
+/// A coordinate or size: whole numbers bare, else one decimal.
+fn num(v: Option<&Value>) -> String {
+    let n = v.and_then(Value::as_f64).unwrap_or(0.0);
+    format!("{}", (n * 10.0).round() / 10.0)
+}
+
+/// One element per line: `id  type  x,y  w×h  text` (text cut to 40 characters).
+fn element_rows(elements: &[Value]) -> String {
+    let rows: Vec<Vec<String>> = elements
+        .iter()
+        .map(|e| {
+            let text: String = s(e, "text").chars().map(|c| if c.is_control() { ' ' } else { c }).take(40).collect();
+            vec![
+                s(e, "id").to_string(),
+                s(e, "type").to_string(),
+                format!("{},{}", num(e.get("x")), num(e.get("y"))),
+                format!("{}\u{d7}{}", num(e.get("width")), num(e.get("height"))),
+                text,
+            ]
+        })
+        .collect();
+    table(&rows)
+}
+
+fn with_summary(lines: String, summary: String) -> String {
+    if lines.is_empty() {
+        summary
+    } else {
+        format!("{lines}\n{summary}")
+    }
+}
+
+/// `scene read`: the element lines, then `<returned> of <total> elements, version <v>`.
+pub fn scene_read(v: &Value) -> String {
+    let count = |k: &str| v.get(k).and_then(Value::as_u64).unwrap_or(0);
+    with_summary(element_rows(arr(v, "elements")), format!("{} of {} elements, version {}", count("returned"), count("total"), s(v, "version")))
+}
+
+/// `scene get`: the element lines, a `missing:` line for unknown ids, then a summary.
+pub fn scene_get(v: &Value) -> String {
+    let missing: Vec<&str> = arr(v, "missing").iter().filter_map(Value::as_str).collect();
+    let mut summary = format!("{} elements, version {}", arr(v, "elements").len(), s(v, "version"));
+    if !missing.is_empty() {
+        summary = format!("missing: {}\n{summary}", missing.join(", "));
+    }
+    with_summary(element_rows(arr(v, "elements")), summary)
+}
+
+/// `scene selection`: the element lines, then `<n> selected, version <v>`.
+pub fn scene_selection(v: &Value) -> String {
+    with_summary(element_rows(arr(v, "elements")), format!("{} selected, version {}", arr(v, "elements").len(), s(v, "version")))
+}
+
+/// `scene apply`: what changed, or for a dry run how many operations are valid.
+pub fn scene_apply(v: &Value, ops: usize) -> String {
+    if v.get("dryRun").and_then(Value::as_bool) == Some(true) {
+        return format!("dry run: {ops} ops valid");
+    }
+    format!("applied {} changes (version {})", v.get("applied").and_then(Value::as_u64).unwrap_or(0), s(v, "version"))
+}
