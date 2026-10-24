@@ -21,6 +21,8 @@ interface ConfirmModalProps {
    * `GUARD_MS` after the dialog appears, so a key still held cannot confirm it.
    */
   guarded?: boolean;
+  /** Further choices between Cancel and Confirm; guarded like Confirm. */
+  alternatives?: { label: string; onChoose: () => void }[];
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -33,6 +35,7 @@ export const ConfirmModal = ({
   cancelLabel = "Cancel",
   isDanger = false,
   guarded = false,
+  alternatives,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) => {
@@ -45,11 +48,12 @@ export const ConfirmModal = ({
   }, [isDanger, guarded]);
 
   const shownAt = useRef(Date.now());
+  const settled = () =>
+    !guarded || Date.now() - shownAt.current >= CONFIRM_GUARD_MS;
   const confirm = () => {
-    if (guarded && Date.now() - shownAt.current < CONFIRM_GUARD_MS) {
-      return;
+    if (settled()) {
+      onConfirm();
     }
-    onConfirm();
   };
 
   return (
@@ -67,6 +71,16 @@ export const ConfirmModal = ({
           >
             {cancelLabel}
           </button>
+          {alternatives?.map((alt) => (
+            <button
+              key={alt.label}
+              type="button"
+              className="vault-btn"
+              onClick={() => settled() && alt.onChoose()}
+            >
+              {alt.label}
+            </button>
+          ))}
           <button
             ref={confirmBtnRef}
             type="button"

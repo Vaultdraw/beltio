@@ -53,7 +53,14 @@ const uriDeps = (
   win: Window,
   part: () => Pick<
     UriDeps,
-    "vault" | "recentVaults" | "commandTitle" | "isBuiltin" | "openSearch"
+    | "vault"
+    | "recentVaults"
+    | "commandTitle"
+    | "isBuiltin"
+    | "openSearch"
+    | "exists"
+    | "addLibrary"
+    | "canAddVaultLibrary"
   >,
 ): Omit<UriDeps, "call"> => ({
   // Each call asks `part()` again: the app shell's closures change every render.
@@ -62,6 +69,16 @@ const uriDeps = (
   commandTitle: (id) => part().commandTitle(id),
   isBuiltin: (id) => part().isBuiltin(id),
   openSearch: (query) => part().openSearch(query),
+  exists: (path) => part().exists(path),
+  addLibrary: (json, scope) => part().addLibrary(json, scope),
+  canAddVaultLibrary: () => part().canAddVaultLibrary(),
+  readExternal: async (path, kind) => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    return (await invoke("external_file_read", { path, kind })) as {
+      name: string;
+      json: string;
+    };
+  },
   ask: linkRequests.ask,
   notify: (message, kind) => toastStore.push({ message, kind }),
   sleep: (ms) => new Promise((r) => win.setTimeout(r, ms)),
@@ -104,7 +121,14 @@ export function useControlBridge(
     /** Link effects only the app shell knows (see uriRun.ts). */
     uri?: Pick<
       UriDeps,
-      "vault" | "recentVaults" | "commandTitle" | "isBuiltin" | "openSearch"
+      | "vault"
+      | "recentVaults"
+      | "commandTitle"
+      | "isBuiltin"
+      | "openSearch"
+      | "exists"
+      | "addLibrary"
+      | "canAddVaultLibrary"
     >;
     files?: ControlFiles;
     tabStore?: TabStore | null;

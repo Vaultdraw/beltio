@@ -54,6 +54,16 @@ const make = (
         : null,
     isBuiltin: (id) => id !== "my.plugin.run",
     openSearch: vi.fn(),
+    readExternal: async (path, kind) => ({
+      name: path.split("/").pop() as string,
+      json:
+        kind === "library"
+          ? '{"type":"excalidrawlib","libraryItems":[{"id":"a"},{"id":"b"}]}'
+          : '{"type":"excalidraw","elements":[]}',
+    }),
+    exists: async (p) => drawings.includes(p),
+    addLibrary: async () => {},
+    canAddVaultLibrary: () => true,
     ask: (s) => asks.push(s),
     notify: (m, k) => notes.push([m, k]),
     sleep: async (ms) => {
@@ -416,5 +426,170 @@ describe("uriRun: cold start", () => {
     await expect(t.run({ action: "delete" as never })).rejects.toBeInstanceOf(
       ControlError,
     );
+  });
+});
+
+describe("uriRun: files from the system", () => {
+  const file = (path: string, kind: "drawing" | "library" = "drawing") => ({
+    action: "file" as const,
+    path,
+    kind,
+  });
+  const click = (spec: AskSpec, label?: string) =>
+    (label
+      ? spec.alternatives!.find((a) => a.label === label)!.run
+      : spec.onConfirm)();
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+
+  it("opens a file in the open vault at once, with the path inside the vault", async () => {
+    const t = make({}, ["Graphs/BFS.excalidraw"]);
+    expect(await t.run(file("/v/DSA/Graphs/BFS.excalidraw"))).toEqual({
+      status: "done",
+    });
+    expect(t.calls).toEqual([
+      ["file.open", { path: "Graphs/BFS.excalidraw", newTab: false }],
+    ]);
+    expect(t.asks).toEqual([]);
+  });
+
+  it("resolves dot segments before deciding where a file is", async () => {
+    const t = make({}, ["Graphs/BFS.excalidraw"]);
+    await t.run(file("/v/DSA/x/../Graphs/./BFS.excalidraw"));
+    expect(names(t.calls)).toEqual(["file.open"]);
+    const out = make();
+    await out.run(file("/v/DSA/../Other/a.excalidraw"));
+    expect(out.asks).toHaveLength(1);
+    expect(out.calls).toEqual([]);
+  });
+
+  it("a file in another recent vault asks before switching", async () => {
+    const t = make({}, ["a.excalidraw"]);
+    expect(await t.run(file("/v/Notes/a.excalidraw"))).toEqual({
+      status: "asking",
+    });
+    expect(t.calls).toEqual([]);
+    click(t.asks[0]);
+    await settle();
+    expect(t.calls).toEqual([
+      ["vault.open", { path: "/v/Notes" }],
+      ["file.open", { path: "a.excalidraw", newTab: false }],
+    ]);
+  });
+
+  it("outside every vault: three choices, nothing happens unanswered", async () => {
+    const t = make();
+    expect(await t.run(file("/tmp/dl/Idea.excalidraw"))).toEqual({
+      status: "asking",
+    });
+    expect(t.calls).toEqual([]);
+    const [spec] = t.asks;
+    expect(spec.confirmLabel).toBe("Copy into vault");
+    expect(spec.alternatives!.map((a) => a.label)).toEqual([
+      "Open its folder as a vault",
+    ]);
+    expect(spec.details).toEqual(["/tmp/dl/Idea.excalidraw"]);
+  });
+
+  it("Copy into vault creates a new drawing from the file and opens it", async () => {
+    const t = make();
+    await t.run(file("/tmp/dl/Idea.excalidraw"));
+    click(t.asks[0]);
+    await settle();
+    expect(t.calls).toEqual([
+      [
+        "file.create",
+        {
+          path: "Idea.excalidraw",
+          scene: { type: "excalidraw", elements: [] },
+        },
+      ],
+      ["file.open", { path: "Idea.excalidraw", newTab: false }],
+    ]);
+  });
+
+  it("Copy never overwrites: a taken name gets a number", async () => {
+    const t = make({}, ["Idea.excalidraw", "Idea 2.excalidraw"]);
+    await t.run(file("/tmp/dl/Idea.excalidraw"));
+    click(t.asks[0]);
+    await settle();
+    expect(t.calls[0][1]).toMatchObject({ path: "Idea 3.excalidraw" });
+  });
+
+  it("Copy is cancelled when the vault changed while the question waited", async () => {
+    const t = make();
+    await t.run(file("/tmp/dl/Idea.excalidraw"));
+    t.setOpen({ name: "Other", path: "/v/Other" });
+    click(t.asks[0]);
+    await settle();
+    expect(t.calls).toEqual([]);
+    expect(t.notes.some(([m, k]) => /changed/.test(m) && k === "error")).toBe(
+      true,
+    );
+  });
+
+  it("Open its folder as a vault switches to the folder, then opens the file", async () => {
+    const t = make();
+    await t.run(file("/tmp/dl/Idea.excalidraw"));
+    click(t.asks[0], "Open its folder as a vault");
+    await settle();
+    expect(t.calls).toEqual([
+      ["vault.open", { path: "/tmp/dl" }],
+      ["file.open", { path: "Idea.excalidraw", newTab: false }],
+    ]);
+  });
+
+  it("with no vault open the only choice is the folder", async () => {
+    const t = make();
+    t.setOpen(null);
+    await t.run(file("/tmp/dl/Idea.excalidraw"));
+    expect(t.asks[0].confirmLabel).toBe("Open its folder as a vault");
+    expect(t.asks[0].alternatives).toBeUndefined();
+  });
+
+  it("a relative path is refused", async () => {
+    const t = make();
+    await expect(t.run(file("a.excalidraw"))).rejects.toMatchObject({
+      code: "INVALID_PARAMS",
+    });
+  });
+
+  it("a library asks with the item count, default the personal library", async () => {
+    const add = vi.fn(async () => {});
+    const t = make({ addLibrary: add });
+    expect(await t.run(file("/tmp/x/shapes.excalidrawlib", "library"))).toEqual(
+      { status: "asking" },
+    );
+    expect(add).not.toHaveBeenCalled();
+    const [spec] = t.asks;
+    expect(spec.title).toBe("Add 2 items to the library?");
+    expect(spec.confirmLabel).toBe("Add to my library");
+    click(spec);
+    await settle();
+    expect(add).toHaveBeenCalledWith(expect.any(String), "personal");
+  });
+
+  it("the vault library is a second choice, only when it can take items", async () => {
+    const add = vi.fn(async () => {});
+    const t = make({ addLibrary: add });
+    await t.run(file("/tmp/x/shapes.excalidrawlib", "library"));
+    click(t.asks[0], "Add to this vault's library");
+    await settle();
+    expect(add).toHaveBeenCalledWith(expect.any(String), "vault");
+    const ro = make({ canAddVaultLibrary: () => false });
+    await ro.run(file("/tmp/x/shapes.excalidrawlib", "library"));
+    expect(ro.asks[0].alternatives).toBeUndefined();
+  });
+
+  it("an unreadable file tells the user and fails", async () => {
+    const t = make({
+      readExternal: async () => {
+        throw new Error("The file is not valid UTF-8");
+      },
+    });
+    await expect(
+      t.run(file("/tmp/x/bad.excalidrawlib", "library")),
+    ).rejects.toThrow("UTF-8");
+    expect(t.notes[0]).toEqual(["The file is not valid UTF-8", "error"]);
+    expect(t.asks).toEqual([]);
   });
 });

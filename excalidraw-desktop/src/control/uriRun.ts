@@ -13,7 +13,14 @@
 import { ControlError } from "./errors";
 import { withExt } from "./params";
 
-export type UriAction = "focus" | "open" | "search" | "new" | "cmd" | "notice";
+export type UriAction =
+  | "focus"
+  | "open"
+  | "search"
+  | "new"
+  | "cmd"
+  | "notice"
+  | "file";
 
 export interface UriPlan {
   action: UriAction;
@@ -30,6 +37,8 @@ export interface UriPlan {
   /** Switching vault may happen without asking. */
   allowSwitch?: boolean;
   origin?: string;
+  /** `file` only: what the system handed over. */
+  kind?: "drawing" | "library";
 }
 
 export interface AskSpec {
@@ -37,6 +46,8 @@ export interface AskSpec {
   message: string;
   details: string[];
   confirmLabel: string;
+  /** Further buttons (the dialog always has Cancel and the confirm button). */
+  alternatives?: { label: string; run: () => void }[];
   onConfirm: () => void;
 }
 
@@ -50,6 +61,16 @@ export interface UriDeps {
   /** The app's own command (not one a plugin registered). */
   isBuiltin: (id: string) => boolean;
   openSearch: (query: string) => void;
+  /** Files from the system (see `runFile`). */
+  readExternal: (
+    path: string,
+    kind: "drawing" | "library",
+  ) => Promise<{ name: string; json: string }>;
+  /** A drawing exists in the open vault. */
+  exists: (path: string) => Promise<boolean>;
+  /** Merges a library file's items into the personal or the vault library. */
+  addLibrary: (json: string, scope: "personal" | "vault") => Promise<void>;
+  canAddVaultLibrary: () => boolean;
   ask: (spec: AskSpec) => void;
   notify: (message: string, kind?: "error") => void;
   sleep?: (ms: number) => Promise<void>;
@@ -77,6 +98,43 @@ const baseName = (path: string): string =>
   path.split(/[\\/]/).filter(Boolean).pop() ?? path;
 
 const trimSlash = (path: string): string => path.replace(/[\\/]+$/, "");
+
+/** Resolves `.` and `..` in an absolute path (text only). */
+const normalizeAbs = (path: string): string => {
+  const out: string[] = [];
+  for (const part of path.split("/")) {
+    if (part === "..") {
+      out.pop();
+    } else if (part !== "" && part !== ".") {
+      out.push(part);
+    }
+  }
+  return `/${out.join("/")}`;
+};
+
+/** The path under `root`, or null when `path` is not inside it. */
+const insideRoot = (root: string, path: string): string | null => {
+  const r = normalizeAbs(root);
+  return path.startsWith(`${r === "/" ? "" : r}/`)
+    ? path.slice(r === "/" ? 1 : r.length + 1)
+    : null;
+};
+
+const MAX_COPY_SUFFIX = 100;
+
+/** Items in a library file (`libraryItems`, or the old `library`). */
+const libraryCount = (json: string): number => {
+  try {
+    const data = JSON.parse(json) as {
+      libraryItems?: unknown;
+      library?: unknown;
+    };
+    const items = data.libraryItems ?? data.library;
+    return Array.isArray(items) ? items.length : 0;
+  } catch {
+    return 0;
+  }
+};
 
 export function createUriRunner(deps: UriDeps) {
   const sleep =
@@ -156,6 +214,8 @@ export function createUriRunner(deps: UriDeps) {
         return { status: "done" };
       case "focus":
         return { status: "done" };
+      case "file":
+        return runFile(plan);
       case "open":
       case "search":
       case "new":
@@ -164,6 +224,166 @@ export function createUriRunner(deps: UriDeps) {
       default:
         return fail("INVALID_PARAMS", "Unknown link action");
     }
+  }
+
+  const report = (e: unknown) =>
+    deps.notify(e instanceof Error ? e.message : String(e), "error");
+
+  /**
+   * A file the system opened (Finder, Open With, argv). Inside the open vault it
+   * just opens. In another known vault, or outside every vault, it asks; copying
+   * into the vault and importing a library never happen unasked, and a copy never
+   * replaces a file (a numbered name is used). Returns at once with `asking`.
+   */
+  async function runFile(plan: UriPlan): Promise<UriResult> {
+    const raw = plan.path ?? "";
+    if (!raw.startsWith("/")) {
+      return fail("INVALID_PARAMS", "The file path must be absolute");
+    }
+    const path = normalizeAbs(raw);
+    const base = baseName(path);
+    if (plan.kind === "library") {
+      return askLibrary(path);
+    }
+    await waitFor(() => deps.vault() !== null);
+    const open = deps.vault();
+    const roots = new Map<string, { name: string; path: string }>();
+    for (const p of [open?.path, ...deps.recentVaults()]) {
+      if (p) {
+        roots.set(trimSlash(p), { name: baseName(p), path: p });
+      }
+    }
+    // The deepest vault that contains the file.
+    let home: { name: string; path: string; rel: string } | null = null;
+    for (const v of roots.values()) {
+      const rel = insideRoot(v.path, path);
+      if (
+        rel &&
+        (!home || normalizeAbs(v.path).length > normalizeAbs(home.path).length)
+      ) {
+        home = { ...v, rel };
+      }
+    }
+    const openFile = async (rel: string) => {
+      try {
+        await deps.call("file.open", { path: rel, newTab: false });
+      } catch (e) {
+        report(e);
+        throw e;
+      }
+    };
+    const switchTo = async (root: string) => {
+      const want = trimSlash(root);
+      await deps.call("vault.open", { path: root });
+      if (
+        !(await waitFor(() => trimSlash(deps.vault()?.path ?? "") === want))
+      ) {
+        throw new ControlError("TIMEOUT", "The vault did not open in time");
+      }
+    };
+    if (home && open && trimSlash(open.path) === trimSlash(home.path)) {
+      await openFile(home.rel);
+      return { status: "done" };
+    }
+    const startPath = open?.path ?? null;
+    if (home) {
+      const target = home;
+      deps.ask({
+        title: "Switch vault?",
+        message: "A file from outside is in another vault:",
+        details: [`Switch to the vault "${clip(target.name)}"`, clip(path)],
+        confirmLabel: "Switch and open",
+        onConfirm: () =>
+          void switchTo(target.path)
+            .then(() => openFile(target.rel))
+            .catch(report),
+      });
+      return { status: "asking" };
+    }
+    // Outside every vault we know of.
+    const dir = path.slice(0, path.length - base.length - 1) || "/";
+    const openFolder = () =>
+      void switchTo(dir)
+        .then(() => openFile(base))
+        .catch(report);
+    const copyIn = async () => {
+      if ((deps.vault()?.path ?? null) !== startPath) {
+        throw new ControlError(
+          "CONFLICT",
+          "The vault changed while the question waited: it was cancelled",
+        );
+      }
+      const file = await deps.readExternal(path, "drawing");
+      const scene = JSON.parse(file.json) as unknown;
+      const stem = base.replace(/\.excalidraw$/i, "");
+      let name = `${stem}.excalidraw`;
+      for (let n = 2; await deps.exists(name); n += 1) {
+        if (n > MAX_COPY_SUFFIX) {
+          throw new ControlError("CONFLICT", `Too many copies of "${stem}"`);
+        }
+        name = `${stem} ${n}.excalidraw`;
+      }
+      await deps.call("file.create", { path: name, scene });
+      await openFile(name);
+      deps.notify(`Copied "${clip(base)}" into the vault as "${clip(name)}"`);
+    };
+    const spec: AskSpec = {
+      title: "Open a file from outside your vaults?",
+      message: `"${clip(
+        base,
+      )}" is not in a vault you use. A drawing is opened from a vault; nothing is changed unless you choose:`,
+      details: [clip(path)],
+      confirmLabel: open ? "Copy into vault" : "Open its folder as a vault",
+      onConfirm: open ? () => void copyIn().catch(report) : openFolder,
+      ...(open
+        ? {
+            alternatives: [
+              { label: "Open its folder as a vault", run: openFolder },
+            ],
+          }
+        : {}),
+    };
+    deps.ask(spec);
+    return { status: "asking" };
+  }
+
+  async function askLibrary(path: string): Promise<UriResult> {
+    let file: { name: string; json: string };
+    try {
+      file = await deps.readExternal(path, "library");
+    } catch (e) {
+      report(e);
+      throw e;
+    }
+    const n = libraryCount(file.json);
+    const add = (scope: "personal" | "vault") => () =>
+      void deps
+        .addLibrary(file.json, scope)
+        .then(() =>
+          deps.notify(
+            `Added ${n} item${n === 1 ? "" : "s"} to the ${
+              scope === "vault" ? "vault" : "personal"
+            } library`,
+          ),
+        )
+        .catch(report);
+    deps.ask({
+      title: `Add ${n} item${n === 1 ? "" : "s"} to the library?`,
+      message: `"${clip(
+        file.name,
+      )}" is a library file. Its items are merged into a library; nothing is replaced.`,
+      details: [clip(path)],
+      confirmLabel: "Add to my library",
+      onConfirm: add("personal"),
+      ...(deps.canAddVaultLibrary()
+        ? {
+            alternatives: [
+              { label: "Add to this vault's library", run: add("vault") },
+            ],
+          }
+        : {}),
+    });
+    return { status: "asking" };
   }
 
   async function act(plan: UriPlan): Promise<UriResult> {
@@ -264,9 +484,6 @@ export function createUriRunner(deps: UriDeps) {
           await deps.call("command.run", { id: plan.id });
       }
     };
-    const report = (e: unknown) =>
-      deps.notify(e instanceof Error ? e.message : String(e), "error");
-
     if (!ask) {
       try {
         await exec();

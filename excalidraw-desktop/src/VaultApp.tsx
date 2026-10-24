@@ -21,6 +21,8 @@ import { resolveOpenTarget } from "./control/openTarget";
 import { createAppFiles } from "./control/appFiles";
 import { createBusyCounter } from "./control/busyCounter";
 import { openVaultAtPath } from "./control/vaultOpen";
+import { canAddVaultLibrary, importLibrary } from "./control/libraryImport";
+import { probeExists } from "./tabs/missingWatcher";
 import { getCommand, isBuiltinCommand } from "./commands/commands";
 import { LinkPromptHost, LinkRequestHost } from "./control/linkRequests";
 import { useControlBridge } from "./control/useControlBridge";
@@ -118,7 +120,7 @@ import { toHistorySettings } from "./history/historySettings";
 import { LibraryStore } from "./library/libraryStore";
 import { desktopLibraryRepository } from "./library/DesktopLibraryRepository";
 import VaultEditor from "./editor/VaultEditor";
-import { getEditorApi } from "./editor/editorApi";
+import { allEditorApis, getEditorApi } from "./editor/editorApi";
 import { desktopPdfBridge } from "./pdfImport/DesktopPdfBridge";
 import { usePdfImport } from "./pdfImport/usePdfImport";
 import { useCanvasImport } from "./canvasImport/useCanvasImport";
@@ -1974,6 +1976,25 @@ export const VaultApp = ({
         showNavigator();
         requestNavigator({ kind: "search", query });
       },
+      exists: (path) =>
+        probeExists(repository, vault?.handle ?? "", path).then(
+          (found) => found,
+          () => false,
+        ),
+      canAddVaultLibrary: () => canAddVaultLibrary(libraryStore),
+      addLibrary: (json, scope) =>
+        importLibrary(
+          {
+            store: libraryStore,
+            apis: allEditorApis,
+            parse: async (text) =>
+              (await import("@excalidraw/excalidraw")).loadLibraryFromBlob(
+                new Blob([text], { type: "application/json" }),
+              ),
+          },
+          json,
+          scope,
+        ),
     },
     tabStore: tabs.store,
     activePath: activeDoc?.path ?? null,

@@ -20,6 +20,9 @@ export const MAX_PENDING_REQUESTS = 3;
 const sameRequest = (a: AskSpec, b: AskSpec) =>
   a.title === b.title &&
   a.confirmLabel === b.confirmLabel &&
+  a.message === b.message &&
+  (a.alternatives ?? []).map((x) => x.label).join("|") ===
+    (b.alternatives ?? []).map((x) => x.label).join("|") &&
   a.details.length === b.details.length &&
   a.details.every((d, i) => d === b.details[i]);
 
@@ -55,7 +58,7 @@ export function createLinkRequests(
     /** A key that is new for every request, so each dialog starts its own guard time. */
     keyOf: (spec: AskSpec): number => ids.get(spec) ?? 0,
     /** Closes the head request; runs its action only on confirm. */
-    resolve: (confirmed: boolean) => {
+    resolve: (confirmed: boolean, choice?: number) => {
       const [head, ...rest] = queue;
       set(rest);
       if (rest.length === 0 && dropped > 0) {
@@ -67,7 +70,9 @@ export function createLinkRequests(
         dropped = 0;
       }
       if (head && confirmed) {
-        head.onConfirm();
+        const alt =
+          choice === undefined ? undefined : head.alternatives?.[choice];
+        (alt ? alt.run : head.onConfirm)();
       }
     },
     head: (): AskSpec | null => queue[0] ?? null,
@@ -100,6 +105,10 @@ export const LinkRequestHost = ({
       message={spec.message}
       details={spec.details}
       confirmLabel={spec.confirmLabel}
+      alternatives={spec.alternatives?.map((alt, i) => ({
+        label: alt.label,
+        onChoose: () => store.resolve(true, i),
+      }))}
       onConfirm={() => store.resolve(true)}
       onCancel={() => store.resolve(false)}
     />

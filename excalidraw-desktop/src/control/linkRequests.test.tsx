@@ -100,3 +100,48 @@ describe("link dialog guard", () => {
     expect(second).not.toHaveBeenCalled();
   });
 });
+
+describe("a question with more than one answer", () => {
+  it("security: the extra choice is guarded like Confirm and runs only its own action", () => {
+    vi.useFakeTimers();
+    const confirm = vi.fn();
+    const other = vi.fn();
+    const store = createLinkRequests(vi.fn());
+    store.ask({
+      ...spec(1, confirm),
+      confirmLabel: "Copy into vault",
+      alternatives: [{ label: "Open its folder as a vault", run: other }],
+    });
+    render(<LinkRequestHost store={store} />);
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Cancel" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open its folder as a vault" }),
+    );
+    expect(other).not.toHaveBeenCalled(); // inside the guard time
+    act(() => {
+      vi.advanceTimersByTime(CONFIRM_GUARD_MS + 1);
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open its folder as a vault" }),
+    );
+    expect(other).toHaveBeenCalledTimes(1);
+    expect(confirm).not.toHaveBeenCalled();
+    expect(store.head()).toBeNull();
+  });
+
+  it("Cancel runs nothing", () => {
+    const other = vi.fn();
+    const confirm = vi.fn();
+    const store = createLinkRequests(vi.fn());
+    store.ask({
+      ...spec(1, confirm),
+      alternatives: [{ label: "Other", run: other }],
+    });
+    render(<LinkRequestHost store={store} />);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(other).not.toHaveBeenCalled();
+    expect(confirm).not.toHaveBeenCalled();
+  });
+});
