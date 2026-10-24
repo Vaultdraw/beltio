@@ -1168,3 +1168,79 @@
 .vault-theme-problems__item--warning {
   color: var(--vault-warning);
 }
+
+/* ---- Where a value comes from (config.toml / overrides) ------------------ */
+
+.vault-source-chip {
+  padding: 0 6px;
+  border: 1px solid var(--vault-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--vault-text-muted);
+  font: inherit;
+  font-size: var(--vd-fs-small);
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.vault-source-chip[data-source="overrides"] {
+  border-color: var(--vault-primary);
+  color: var(--vault-primary);
+}
+
+.vault-source-chip:hover,
+.vault-source-chip[aria-expanded="true"] {
+  background: var(--vault-hover, rgba(127, 127, 127, 0.12));
+}
+
+.vault-source-chip:focus-visible {
+  outline: 2px solid var(--vault-primary);
+  outline-offset: 2px;
+}
+
+.vault-source-note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vd-space-2);
+  margin-top: 6px;
+  font-size: var(--vd-fs-small);
+  color: var(--vault-text-muted);
+  user-select: text;
+}
+
+.vault-source-note__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--vd-space-2);
+}
+
+/* Config files list (General). */
+.vault-config-layers {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--vd-space-2);
+}
+
+.vault-config-layer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--vd-space-2);
+  font-size: var(--vd-fs-small);
+}
+
+.vault-config-layer__name {
+  color: var(--vault-text);
+  font-weight: 500;
+}
+
+.vault-config-layer__status {
+  color: var(--vault-text-muted);
+}
+
+.vault-config-layer__status[data-status="error"] {
+  color: var(--vault-danger);
+}

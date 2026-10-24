@@ -143,6 +143,10 @@ export const useSettings = (): SettingsContextValue => {
   return value;
 };
 
+/** Like `useSettings`, but `null` outside <SettingsModal> (rows rendered alone). */
+export const useSettingsOptional = (): SettingsContextValue | null =>
+  useContext(SettingsContext);
+
 export interface SettingsControllerOptions {
   win: Window | null;
   doc: Document | null;

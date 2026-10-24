@@ -2,6 +2,21 @@ import { useState } from "react";
 
 import { checkKeyLabel, sameKeySequence } from "../../../commands/keySettings";
 import { updatePreferences } from "../../../vault/preferences";
+import { useSettingsOptional } from "../SettingsContext";
+
+/** Sequences named in config.toml and not (re)named in overrides.toml. */
+const labelsFromConfigToml = (
+  layers: readonly { kind: string; config: Record<string, unknown> | null }[],
+): Set<string> => {
+  const names = (kind: string) => {
+    const keys = layers.find((l) => l.kind === kind)?.config?.keys as
+      | { labels?: Record<string, unknown> }
+      | undefined;
+    return Object.keys(keys?.labels ?? {});
+  };
+  const over = new Set(names("overrides"));
+  return new Set(names("config").filter((seq) => !over.has(seq)));
+};
 
 /**
  * `[keys.labels]`: the names which-key shows for key groups. One row per label,
@@ -17,6 +32,9 @@ export const KeyLabels = ({
   const [sequence, setSequence] = useState("");
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // A name set in config.toml cannot be removed here (Settings only writes overrides.toml).
+  const layers = useSettingsOptional()?.settingsStatus.layers;
+  const fromFile = layers ? labelsFromConfigToml(layers) : new Set<string>();
   const rows = Object.entries(labels).sort(([a], [b]) => (a < b ? -1 : 1));
 
   const save = (next: Record<string, string>) =>
@@ -58,6 +76,15 @@ export const KeyLabels = ({
         {rows.map(([seq, label]) => (
           <li key={seq} className="vault-key-labels__row">
             <code className="vault-key-labels__seq">{seq}</code>
+            {fromFile.has(seq) && (
+              <span
+                className="vault-source-chip"
+                data-source="config"
+                title="Set in config.toml. Edit that file to remove it; a name changed here is saved apart and wins."
+              >
+                config.toml
+              </span>
+            )}
             <input
               className="vault-input vault-input--compact"
               aria-label={`Name for ${seq}`}
@@ -80,6 +107,12 @@ export const KeyLabels = ({
               type="button"
               className="vault-btn vault-btn--sm"
               aria-label={`Remove name for ${seq}`}
+              disabled={fromFile.has(seq)}
+              title={
+                fromFile.has(seq)
+                  ? "Set in config.toml: remove it there"
+                  : undefined
+              }
               onClick={() => {
                 const next = { ...labels };
                 delete next[seq];

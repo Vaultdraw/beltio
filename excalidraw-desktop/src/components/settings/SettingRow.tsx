@@ -1,5 +1,12 @@
+import { useState } from "react";
+
 import { IconRefresh } from "../Icons";
 
+import {
+  ConfigSourceChip,
+  ConfigSourceNote,
+  useConfigSource,
+} from "./ConfigSource";
 import { getSettingSchema } from "./schema";
 
 import type { ReactNode } from "react";
@@ -53,10 +60,25 @@ export const SettingRow = ({
   className,
   data,
 }: SettingRowProps) => {
-  const schema =
+  const schema: { label: string; description?: string; configKey?: string } =
     label === undefined
       ? getSettingSchema(id)
       : { label, description: undefined };
+  // Vault-scope rows show the vault's value, not the global files': no chip there.
+  const source = useConfigSource(
+    data?.["data-scope-state"] === undefined ? schema.configKey : undefined,
+  );
+  const [sourceOpen, setSourceOpen] = useState(false);
+  const chip = source && (
+    <ConfigSourceChip
+      source={source}
+      open={sourceOpen}
+      onToggle={() => setSourceOpen((open) => !open)}
+    />
+  );
+  const sourceNote = source && sourceOpen && (
+    <ConfigSourceNote source={source} />
+  );
   const classes = [
     layout === "block" ? "vault-setting-block" : "vault-setting-row",
     layout === "stacked" && "vault-setting-row--stacked",
@@ -81,12 +103,16 @@ export const SettingRow = ({
         {...data}
       >
         <div className="vault-setting-stacked-head">
-          <div className="vault-setting-label-line">{labelNode}</div>
+          <div className="vault-setting-label-line">
+            {labelNode}
+            {chip}
+          </div>
           {aside}
         </div>
         <div className="vault-setting-desc">
           {description ?? schema.description}
         </div>
+        {sourceNote}
         {children && <div className="vault-setting-wide">{children}</div>}
         {details}
       </div>
@@ -100,10 +126,14 @@ export const SettingRow = ({
       {...data}
     >
       <div className="vault-setting-info">
-        <div className="vault-setting-label-line">{labelNode}</div>
+        <div className="vault-setting-label-line">
+          {labelNode}
+          {chip}
+        </div>
         <div className="vault-setting-desc">
           {description ?? schema.description}
         </div>
+        {sourceNote}
         {details}
       </div>
       {layout === "block"

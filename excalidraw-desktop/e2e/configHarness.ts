@@ -27,6 +27,9 @@ const merge = (base: Table, higher: Table): Table => {
 export function startConfigHarness(win: Window) {
   const w = win as HarnessWindow;
   w.__e2eOverrides ??= {};
+  // The native watcher reports every write to overrides.toml, ours included.
+  const watchers: (() => void)[] = [];
+  const echo = () => setTimeout(() => watchers.forEach((cb) => cb()), 50);
   const invoke = (async (cmd: string, args?: Record<string, unknown>) => {
     if (cmd === "load_settings") {
       const base = w.__e2eConfig ?? {};
@@ -62,6 +65,12 @@ export function startConfigHarness(win: Window) {
         state: {},
       };
     }
+    if (cmd === "reset_overrides") {
+      const existed = Object.keys(w.__e2eOverrides ?? {}).length > 0;
+      w.__e2eOverrides = {};
+      echo();
+      return existed;
+    }
     if (cmd === "update_config") {
       const overrides = (w.__e2eOverrides ??= {});
       for (const change of (args?.changes ?? []) as {
@@ -86,12 +95,18 @@ export function startConfigHarness(win: Window) {
           overrides[table][name] = kept;
         }
       }
+      echo();
     }
     return null;
   }) as InvokeFn;
   return initSettings(win, {
     tauri: true,
     invoke,
-    listen: (async () => () => {}) as never,
+    listen: (async (_event: string, cb: () => void) => {
+      watchers.push(cb);
+      return () => {
+        watchers.splice(watchers.indexOf(cb), 1);
+      };
+    }) as never,
   });
 }

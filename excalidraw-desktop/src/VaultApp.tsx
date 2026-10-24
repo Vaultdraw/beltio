@@ -151,6 +151,7 @@ import { Toasts } from "./components/Toasts";
 import { toastStore } from "./toasts/toastStore";
 import { describeReadOnly } from "./vault/readOnlyReason";
 import { AiHost } from "./ai/AiHost";
+import { ConfigResetConfirm } from "./components/ConfigResetConfirm";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { VaultHome } from "./components/VaultHome";
 import { DeferredHome } from "./components/DeferredHome";
@@ -2758,6 +2759,7 @@ export const VaultApp = ({
 
       <LinkRequestHost />
       <LinkPromptHost />
+      <ConfigResetConfirm />
 
       <Toasts />
     </div>

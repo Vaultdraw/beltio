@@ -1,10 +1,14 @@
 import { useState } from "react";
 
+import { requestResetOverrides } from "../../../commands/configCommands";
 import {
   getSettingsStatus,
   isWarning,
   openConfigDir,
+  openConfigFile,
   reloadSettings,
+  revealOverrides,
+  type LayerPayload,
 } from "../../../vault/settingsSync";
 import { IconFolder, IconRefresh } from "../../Icons";
 import { useSettings, type SettingControls } from "../SettingsContext";
@@ -12,6 +16,57 @@ import { SettingRow } from "../SettingRow";
 
 const errorText = (err: unknown) =>
   err instanceof Error ? err.message : String(err);
+
+/** One line per config layer: name, path, status, and a button to open it. */
+const LayerList = ({
+  layers,
+  onOpen,
+}: {
+  layers: readonly LayerPayload[];
+  onOpen: (layer: LayerPayload) => void;
+}) => (
+  <ul className="vault-config-layers" aria-label="Config files">
+    {layers.map((layer) => {
+      const overrides = layer.kind === "overrides";
+      const status =
+        layer.status === "error"
+          ? "has an error"
+          : layer.status === "missing"
+          ? overrides
+            ? "not created yet (no Settings changes)"
+            : "missing"
+          : "loaded";
+      return (
+        <li key={layer.id} className="vault-config-layer">
+          <span>
+            <span className="vault-config-layer__name">
+              {overrides ? "overrides.toml" : "config.toml"}
+            </span>{" "}
+            <span
+              className="vault-config-layer__status"
+              data-status={layer.status}
+            >
+              {overrides ? "Settings changes, wins" : "yours, never edited"}
+              {" · "}
+              {status}
+            </span>
+            <code className="vault-config-path" title={layer.path}>
+              {layer.path}
+            </code>
+          </span>
+          <button
+            type="button"
+            className="vault-btn vault-btn--sm"
+            onClick={() => onOpen(layer)}
+            aria-label={`Open ${overrides ? "overrides.toml" : "config.toml"}`}
+          >
+            Open
+          </button>
+        </li>
+      );
+    })}
+  </ul>
+);
 
 const ConfigFileSetting = () => {
   const { settingsStatus, setSettingsStatus } = useSettings();
@@ -27,6 +82,18 @@ const ConfigFileSetting = () => {
     } catch (err) {
       setAction({
         message: `Could not open the config folder: ${errorText(err)}`,
+        type: "error",
+      });
+    }
+  };
+
+  const handleOpenLayer = async (layer: LayerPayload) => {
+    setAction(null);
+    try {
+      await (layer.kind === "overrides" ? revealOverrides() : openConfigFile());
+    } catch (err) {
+      setAction({
+        message: `Could not open ${layer.path}: ${errorText(err)}`,
         type: "error",
       });
     }
@@ -52,7 +119,7 @@ const ConfigFileSetting = () => {
             }
           : warnings
           ? {
-              message: `Reloaded config.toml with ${count(
+              message: `Reloaded the config files with ${count(
                 warnings,
                 "warning",
               )} (listed above).`,
@@ -60,8 +127,8 @@ const ConfigFileSetting = () => {
             }
           : {
               message: changed
-                ? "Reloaded config.toml."
-                : "config.toml is up to date.",
+                ? "Reloaded the config files."
+                : "The config files are up to date.",
               type: "info",
             },
       );
@@ -90,15 +157,14 @@ const ConfigFileSetting = () => {
       testId="settings-config-row"
       details={
         <>
-          <code className="vault-config-path">
-            {settingsStatus.configPath ?? "Unknown location"}
-          </code>
-          {settingsStatus.overridesPath && (
-            <code
-              className="vault-config-path"
-              title="Settings saves your changes here; it wins over config.toml. Safe to delete."
-            >
-              {settingsStatus.overridesPath}
+          {settingsStatus.layers?.length ? (
+            <LayerList
+              layers={settingsStatus.layers}
+              onOpen={(layer) => void handleOpenLayer(layer)}
+            />
+          ) : (
+            <code className="vault-config-path">
+              {settingsStatus.configPath ?? "Unknown location"}
             </code>
           )}
           {settingsStatus.problems.length > 0 && (
@@ -147,6 +213,14 @@ const ConfigFileSetting = () => {
         >
           <IconRefresh />
           <span>Reload</span>
+        </button>
+        <button
+          type="button"
+          className="vault-btn vault-btn--sm"
+          title="Delete overrides.toml: values go back to config.toml or the defaults"
+          onClick={requestResetOverrides}
+        >
+          <span>Reset all Settings changes</span>
         </button>
       </div>
     </SettingRow>

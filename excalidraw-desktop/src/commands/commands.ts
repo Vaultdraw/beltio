@@ -37,6 +37,7 @@ import { TAB_COMMANDS } from "./tabCommands";
 import { KEYS_COMMANDS } from "./keysCommands";
 import { LIST_COMMANDS } from "./listCommands";
 import { THUMBNAIL_COMMANDS } from "./thumbnailCommands";
+import { CONFIG_COMMANDS } from "./configCommands";
 import { MEMORY_COMMANDS } from "./memoryCommands";
 import { TOOL_COMMANDS } from "./toolCommands";
 
@@ -633,6 +634,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...GALLERY_COMMANDS,
   ...MEMORY_COMMANDS,
   ...AI_COMMANDS,
+  ...CONFIG_COMMANDS,
   ...HELP_COMMANDS,
 ];
 

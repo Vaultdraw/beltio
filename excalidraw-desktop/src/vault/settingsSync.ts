@@ -85,6 +85,7 @@ import {
   unknownKeyMessage,
   type KnownIndex,
 } from "./configKeys";
+import { sourceFileOf } from "./configSources";
 import { isTauriAvailable } from "./DesktopVaultRepository";
 import {
   attachPreferencesStore,
@@ -202,6 +203,11 @@ export interface SettingsStatus {
   statePath: string | null;
   /** Where Settings saves what you change (the state folder). */
   overridesPath?: string | null;
+  /**
+   * The config layers, lowest first. A layer that failed to parse on a reload keeps
+   * the content of its last good read, so chips still show where values come from.
+   */
+  layers?: LayerPayload[];
   problems: SettingsProblem[];
 }
 
@@ -1010,7 +1016,7 @@ export function configToPreferences(
       problems.push({
         kind: "invalid",
         key: mapping.key,
-        message: `config.toml: ${mapping.key} = ${show(
+        message: `${sourceFileOf(layers, mapping.key)}: ${mapping.key} = ${show(
           value,
         )} is not valid (expected ${
           typeof mapping.expected === "function"
@@ -1386,7 +1392,18 @@ function applyLoad(
 
   logProblems(loadProblems);
   rt.loadProblems = loadProblems;
+  // A layer that failed to parse keeps its last good content for the chips.
+  const previousLayers = status.layers;
+  const layers = result.layers?.map((l) =>
+    l.config
+      ? l
+      : {
+          ...l,
+          config: previousLayers?.find((p) => p.id === l.id)?.config ?? null,
+        },
+  );
   publishStatus(rt.win, {
+    layers,
     mode: "tauri",
     configDir: result.configDir ?? null,
     configPath: result.configPath ?? null,
@@ -1549,6 +1566,65 @@ export async function openConfigDir(): Promise<void> {
     throw new Error("The config folder is only available in the desktop app");
   }
   await rt.invoke("open_config_dir");
+}
+
+/** Open config.toml with the default app. */
+export async function openConfigFile(): Promise<void> {
+  await need("The config file").invoke("open_config_file");
+}
+
+/** Show overrides.toml (the Settings changes) in the file manager. */
+export async function revealOverrides(): Promise<void> {
+  await need("The Settings changes file").invoke("reveal_overrides");
+}
+
+/**
+ * Delete overrides.toml (every change made in Settings), then reload. config.toml
+ * is never touched. Returns whether a file existed.
+ */
+export async function resetOverrides(): Promise<boolean> {
+  const rt = need("Settings changes");
+  rt.localEdits++;
+  const existed = await enqueue(rt, () =>
+    rt.invoke<boolean>("reset_overrides"),
+  );
+  await reloadSettings();
+  return existed;
+}
+
+/**
+ * Drop the override of one config key: its value comes from config.toml again
+ * (`toDefault` pins the built-in default instead, even over a config.toml value).
+ * Only keys of the mapping table; the rest of overrides.toml stays as it is.
+ */
+export async function resetConfigKey(
+  key: string,
+  toDefault = false,
+): Promise<void> {
+  const rt = need("Settings");
+  const mapping = CONFIG_MAPPING.find((m) => m.key === key);
+  if (!mapping) {
+    throw new Error(`${key} is not a Settings key`);
+  }
+  const change: ConfigChange = toDefault
+    ? {
+        key,
+        value: null,
+        default: isToolField(mapping.field)
+          ? {}
+          : DEFAULT_PREFERENCES[mapping.field],
+      }
+    : { key, value: null };
+  rt.localEdits++;
+  await enqueue(rt, () => rt.invoke("update_config", { changes: [change] }));
+  await reloadSettings();
+}
+
+function need(what: string): Runtime {
+  if (!runtime) {
+    throw new Error(`${what} is only available in the desktop app`);
+  }
+  return runtime;
 }
 
 /** Write any pending state.json change now (e.g. before quitting). */

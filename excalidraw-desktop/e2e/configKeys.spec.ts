@@ -40,7 +40,7 @@ test("an unknown config.toml key is a warning in a toast and in Settings, and Re
   const reload = dialog.getByRole("button", { name: "Reload" });
   await reload.click();
   await expect(dialog.getByRole("status")).toHaveText(
-    "Reloaded config.toml with 1 warning (listed above).",
+    "Reloaded the config files with 1 warning (listed above).",
   );
 
   // The user fixes the typo in the file, then presses Reload.
@@ -49,6 +49,6 @@ test("an unknown config.toml key is a warning in a toast and in Settings, and Re
   });
   await reload.click();
   await expect(problems).toHaveCount(0);
-  await expect(dialog.getByRole("status")).toHaveText("Reloaded config.toml.");
+  await expect(dialog.getByRole("status")).toHaveText("Reloaded the config files.");
   expect(errors).toEqual([]);
 });
