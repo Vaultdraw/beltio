@@ -49,6 +49,8 @@ test("an unknown config.toml key is a warning in a toast and in Settings, and Re
   });
   await reload.click();
   await expect(problems).toHaveCount(0);
-  await expect(dialog.getByRole("status")).toHaveText("Reloaded the config files.");
+  await expect(dialog.getByRole("status")).toHaveText(
+    "Reloaded the config files.",
+  );
   expect(errors).toEqual([]);
 });
