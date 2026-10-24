@@ -126,6 +126,21 @@ pub fn layered_config_in(dirs: &Dirs) -> Option<Json> {
     merged(&read_layers(dirs).all)
 }
 
+/// The included files' tables, highest first, for readers that resolve their own keys over
+/// `config.toml` and `overrides.toml` (`control_settings`). Empty without an `[include]` table.
+pub fn included_tables(dirs: &Dirs) -> Vec<toml::Table> {
+    let layers = read_layers(dirs);
+    let mut out: Vec<toml::Table> = layers
+        .all
+        .iter()
+        .filter(|l| l.kind == KIND_INCLUDE)
+        .filter_map(|l| l.config.as_ref())
+        .filter_map(|j| toml::Value::try_from(j).ok()?.as_table().cloned())
+        .collect();
+    out.reverse();
+    out
+}
+
 /// Merges `higher` over `base`: tables key by key, everything else (scalars, arrays) replaced.
 /// `tools.<tool>` and `plugin.<id>` are replaced whole.
 pub fn merge_layer(base: &mut Json, higher: &Json) {

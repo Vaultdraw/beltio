@@ -47,7 +47,13 @@ pub enum Layer<'a> {
 pub fn control_settings(dirs: &Dirs) -> ControlSettings {
     let config = read_layer(&dirs.config_file(), "config.toml");
     let overrides = read_layer(&dirs.overrides_file(), OVERRIDES_FILE);
-    from_layers(layer(&config), layer(&overrides))
+    // Included files sit below config.toml; read only when it has an [include] table.
+    let includes = if matches!(&config, Some(Ok(t)) if t.contains("include")) {
+        crate::config::included_tables(dirs)
+    } else {
+        Vec::new()
+    };
+    resolve(includes, layer(&config), layer(&overrides))
 }
 
 /// `None` = missing, `Some(Err)` = unreadable, `Some(Ok)` = text.
@@ -71,6 +77,11 @@ fn layer(read: &Read) -> Layer<'_> {
 
 /// Pure resolution. Per key the higher layer (`overrides`) wins over `config`.
 pub fn from_layers(config: Layer, overrides: Layer) -> ControlSettings {
+    resolve(Vec::new(), config, overrides)
+}
+
+/// `includes` are the included files' tables, highest first, below `config`.
+fn resolve(includes: Vec<toml::Table>, config: Layer, overrides: Layer) -> ControlSettings {
     let parse = |l: Layer| -> Result<Option<toml::Table>, ()> {
         match l {
             Layer::Missing => Ok(None),
@@ -81,7 +92,8 @@ pub fn from_layers(config: Layer, overrides: Layer) -> ControlSettings {
     let (config, overrides) = (parse(config), parse(overrides));
     let broken = config.is_err() || overrides.is_err();
     // Higher layer first; a broken layer contributes nothing.
-    let layers: Vec<toml::Table> = [overrides, config].into_iter().filter_map(|l| l.ok().flatten()).collect();
+    let mut layers: Vec<toml::Table> = [overrides, config].into_iter().filter_map(|l| l.ok().flatten()).collect();
+    layers.extend(includes);
     let value = |table: &str, key: &str| layers.iter().find_map(|t| t.get(table)?.get(key).cloned());
     let soft = |table: &str, key: &str, default: bool| match value(table, key) {
         Some(v) => v.as_bool().unwrap_or(default),
@@ -167,6 +179,26 @@ mod tests {
         std::fs::create_dir_all(&d.config).unwrap();
         std::fs::create_dir_all(&d.state).unwrap();
         d
+    }
+
+    #[test]
+    fn included_files_sit_below_config_toml() {
+        let tmp = tempfile::tempdir().unwrap();
+        let d = dirs(tmp.path());
+        let (on, off) = ("[control]\nenabled = true\n", "[control]\nenabled = false\n");
+        std::fs::write(d.config.join("c.toml"), off).unwrap();
+        std::fs::write(d.config_file(), "[include]\nfiles = [\"c.toml\"]\n").unwrap();
+        assert!(!control_settings(&d).enabled, "off in an included file");
+        std::fs::write(d.config.join("c.toml"), on).unwrap();
+        assert!(control_settings(&d).enabled, "on in an included file");
+        std::fs::write(d.config.join("c.toml"), off).unwrap();
+        std::fs::write(d.config_file(), "[include]\nfiles = [\"c.toml\"]\n[control]\nenabled = true\n").unwrap();
+        assert!(control_settings(&d).enabled, "config.toml wins over the include");
+        std::fs::write(d.config.join("c.toml"), "[ai]\nenabled = true\n").unwrap();
+        std::fs::write(d.config_file(), "[include]\nfiles = [\"c.toml\"]\n").unwrap();
+        assert!(control_settings(&d).ai_enabled, "ai keys read from an include too");
+        std::fs::write(d.overrides_file(), "[ai]\nenabled = false\n").unwrap();
+        assert!(!control_settings(&d).ai_enabled, "overrides win over the include");
     }
 
     #[test]
