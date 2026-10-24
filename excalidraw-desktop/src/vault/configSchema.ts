@@ -57,6 +57,11 @@ const OVERRIDES: Readonly<Record<string, Schema>> = {
   "editor.font_size": { type: "number", exclusiveMinimum: 0, maximum: 1000 },
   "editor.stroke_width": { type: "number", exclusiveMinimum: 0, maximum: 1000 },
   "keys.leader": { type: "string", minLength: 1 },
+  // Extension -> plugin id ("" turns plugin handling off for it).
+  "plugins.importers": {
+    type: "object",
+    additionalProperties: { type: "string" },
+  },
 };
 
 /** Strips `(notes)`, keeping a parenthesis that holds the whole list. */

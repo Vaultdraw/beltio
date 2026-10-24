@@ -378,6 +378,11 @@
           "minimum": 100,
           "maximum": 50000
         },
+        "defer_home_pane": {
+          "description": "When a vault opens, paint the file tree first and the home pane one frame later, in the same place; `false` draws both together.",
+          "default": true,
+          "type": "boolean"
+        },
         "activity_bar": {
           "description": "Show the activity bar.",
           "default": true,
@@ -1266,18 +1271,68 @@
           "items": {
             "type": "string"
           }
+        },
+        "importers": {
+          "description": "Which plugin imports a file extension when two plugins claim it; `\"\"` turns plugin handling off for that extension.",
+          "default": {},
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "storage_limit_kb": {
+          "description": "Most data one plugin may save with `ctx.storage`, in KiB; a save past it is refused.",
+          "default": 1024,
+          "type": "integer",
+          "minimum": 64,
+          "maximum": 16384
+        }
+      }
+    },
+    "ai": {
+      "type": "object",
+      "description": "AI features, off until you turn them on. See [AI](#ai).",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "The master switch; turning it on in Settings or with **AI: Toggle AI** first shows a warning.",
+          "default": false,
+          "type": "boolean"
+        },
+        "mcp_enabled": {
+          "description": "The AI tools interface (the `mcp` role of the control socket); it opens only while both keys are `true`.",
+          "default": true,
+          "type": "boolean"
         }
       }
     },
     "control": {
       "type": "object",
-      "description": "The control socket for the `vaultdraw` command.",
+      "description": "Scripts and links from outside. The socket and link keys are read by the native side; see [Control and links](#control-and-links).",
       "additionalProperties": false,
       "properties": {
+        "notify_edits": {
+          "description": "Show a notice when a script or AI tool edits the drawing on screen.",
+          "default": true,
+          "type": "boolean"
+        },
         "enabled": {
           "description": "Start the control socket at launch; `false` turns the `vaultdraw` command's link to the app off.",
           "default": true,
           "type": "boolean"
+        },
+        "uri_enabled": {
+          "description": "`false` ignores every `vaultdraw://` link and every drawing or library file opened from outside.",
+          "default": true,
+          "type": "boolean"
+        },
+        "uri_allow": {
+          "description": "What a link may do without asking: \"new\", \"switch-vault\", or command ids.",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
