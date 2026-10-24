@@ -55,7 +55,7 @@ export const LIST_COMMANDS: readonly CommandDefinition[] = [
   list("saveAsTemplate", "Save item as template", []),
   list("reveal", "Reveal item in file manager", []),
   list("showAsGrid", "Show folder as grid", []),
-  list("localGraph", "Open local graph of item", []),
+  list("localGraph", "Show local graph of item", []),
   list("history", "Show item history", []),
   list("exportPng", "Export item as PNG", []),
   list("exportSvg", "Export item as SVG", []),

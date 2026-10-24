@@ -88,8 +88,11 @@ describe("usePageMode", () => {
       await new Promise((r) => setTimeout(r, 0));
     });
     expect(result.current.notice?.count).toBe(1);
-    act(() => result.current.notice!.onDismiss());
+    // command audit (S8): the palette command exists only while the notice shows
+    expect(getRegisteredHandler("page.dismissNotice")).toBeTypeOf("function");
+    act(() => getRegisteredHandler("page.dismissNotice")!());
     expect(result.current.notice).toBeNull();
+    expect(getRegisteredHandler("page.dismissNotice")).toBeUndefined();
     resetCanvasSync();
   });
 });

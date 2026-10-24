@@ -22,6 +22,9 @@ export const HISTORY_COMMAND_IDS = {
   deleteCheckpoint: "history.deleteCheckpoint",
   deleteAll: "history.deleteAll",
   excludeFromGit: "history.excludeFromGit",
+  // command audit (S8)
+  backToCurrent: "history.backToCurrent",
+  dismissGitNotice: "history.dismissGitNotice",
 } as const;
 
 const OPEN_DRAWING = ["drawingOpen", "!modalOpen"] as const;
@@ -102,5 +105,13 @@ export const HISTORY_COMMANDS: CommandDefinition[] = [
     "Exclude history from git",
     [],
     ["vaultOpen", "writable", "!modalOpen"],
+  ),
+  // command audit (S8)
+  command(I.backToCurrent, "Back to current version", [], [...OPEN_DRAWING]),
+  command(
+    I.dismissGitNotice,
+    "Dismiss the git notice",
+    [],
+    ["vaultOpen", "!modalOpen"],
   ),
 ];

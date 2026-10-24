@@ -35,6 +35,15 @@ const NEW_GROUP_COLOURS = [
   "#f08c00",
 ];
 
+/** Display and forces back to their defaults (the panel's reset button and the `graph.resetDisplay` command). */
+export const resetDisplayAndForces = (s: GraphSettings): GraphSettings => ({
+  ...s,
+  textFade: DEFAULT_GRAPH_SETTINGS.textFade,
+  nodeSize: DEFAULT_GRAPH_SETTINGS.nodeSize,
+  linkThickness: DEFAULT_GRAPH_SETTINGS.linkThickness,
+  forces: { ...DEFAULT_GRAPH_SETTINGS.forces },
+});
+
 export interface SettingsPanelProps {
   settings: GraphSettings;
   onChange: (next: GraphSettings) => void;
@@ -152,14 +161,7 @@ export function SettingsPanel({ settings: s, onChange }: SettingsPanelProps) {
       <button
         type="button"
         className="vd-graph__btn"
-        onClick={() =>
-          set({
-            textFade: DEFAULT_GRAPH_SETTINGS.textFade,
-            nodeSize: DEFAULT_GRAPH_SETTINGS.nodeSize,
-            linkThickness: DEFAULT_GRAPH_SETTINGS.linkThickness,
-            forces: { ...DEFAULT_GRAPH_SETTINGS.forces },
-          })
-        }
+        onClick={() => onChange(resetDisplayAndForces(s))}
       >
         Reset display and forces
       </button>

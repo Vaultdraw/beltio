@@ -440,6 +440,18 @@ The file tree's row menu items are commands too, with no default key. They act o
 | `list.exportPng` / `list.exportSvg` / `list.exportPdf` | Export the drawing |
 | `list.saveCopy` | Save a copy of the drawing |
 
+Other buttons that are now commands (no default key, offered only while their button is there):
+
+| Command id | Action |
+| --- | --- |
+| `history.backToCurrent` | Leave a history preview, back to the current version |
+| `history.dismissGitNotice` | Dismiss the "history inside a git repository" notice |
+| `graph.toggleArrows` / `graph.toggleColourBy` | Graph view: arrows on or off / colour by folder or mono |
+| `graph.toggleSettings` / `graph.resetDisplay` | Graph view: settings panel / reset display and forces |
+| `tags.toggleSection` | Collapse or expand the Tags section |
+| `templates.revealGlobal` | Open the global templates folder |
+| `page.dismissNotice` | Dismiss the "content outside the page" notice |
+
 Rename, delete, move and the row menu need a focused row: with none (even while a drawing is open) they do nothing and the key passes on. In the palette they appear under **List: …** once you have used a list, and act on the last list you used. Arrow-only or Emacs-style lists are one `[hotkeys]` edit away:
 
 ```toml

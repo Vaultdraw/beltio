@@ -19,6 +19,7 @@ import {
 } from "../vault/types";
 
 import { registerPurge } from "../memory/purgeRegistry";
+import { registerCommandHandlers } from "../commands/handlerRegistry";
 
 import { createGlobalTemplateStore } from "./globalTemplates";
 import { instantiateTemplate } from "./instantiate";
@@ -58,6 +59,14 @@ export function useTemplates(o: Options) {
   renderer.current ??= createThumbnailRenderer();
   useEffect(
     () => registerPurge("templateThumbnails", () => renderer.current?.clear()),
+    [],
+  );
+  // command audit (S8): "Templates: Open the global templates folder".
+  useEffect(
+    () =>
+      registerCommandHandlers({
+        "templates.revealGlobal": () => void globalStore.current?.reveal(),
+      }),
     [],
   );
 

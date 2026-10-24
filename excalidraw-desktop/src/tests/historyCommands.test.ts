@@ -13,7 +13,7 @@ const IDS = Object.values(HISTORY_COMMAND_IDS);
 
 describe("history commands", () => {
   it("defines every id once, in the registry, with History titles", () => {
-    expect(IDS).toHaveLength(15);
+    expect(IDS).toHaveLength(17);
     expect(HISTORY_COMMANDS.map((c) => c.id)).toEqual(IDS);
     expect(new Set(COMMANDS.map((c) => c.id)).size).toBe(COMMANDS.length);
     for (const id of IDS) {

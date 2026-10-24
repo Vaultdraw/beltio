@@ -16,7 +16,10 @@ import {
 
 import { useListKeys } from "../../commands/useListKeys";
 import { flattenTree, buildTagTree, type TagRow } from "../../tags/tagTree";
-import { registerTagSortToggle } from "../../tags/tagActions";
+import {
+  registerTagSectionToggle,
+  registerTagSortToggle,
+} from "../../tags/tagActions";
 import { loadPaneState, savePaneState } from "../../tags/tagPaneState";
 import {
   DEFAULT_TAGS_SETTINGS,
@@ -171,6 +174,13 @@ export const TagsPanel = ({
     persist({ sort: next });
   };
   useEffect(() => registerTagSortToggle(() => toggleSortRef.current()), []);
+  // command audit (S8): "Tags: Collapse or expand the tags section" flips it through the latest closure.
+  const toggleSectionRef = useRef(() => {});
+  toggleSectionRef.current = () => toggleSection();
+  useEffect(
+    () => registerTagSectionToggle(() => toggleSectionRef.current()),
+    [],
+  );
 
   const setNodeOpen = (key: string, wantOpen: boolean) =>
     setCollapsed((prev) => {

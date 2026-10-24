@@ -105,12 +105,22 @@ export function usePageMode(options: Options) {
 
   const dismiss = useCallback(() => setDismissed(true), []);
 
+  const noticeShown =
+    outsideCount > 0 && !dismissed && !options.readOnly && !options.disabled;
+  // command audit (S8): "Page: Dismiss the page notice" is offered only while the notice shows.
+  useEffect(
+    () =>
+      noticeShown
+        ? registerCommandHandlers({ "page.dismissNotice": dismiss })
+        : undefined,
+    [noticeShown, dismiss],
+  );
+
   return {
     onChange,
     reset,
-    notice:
-      outsideCount > 0 && !dismissed && !options.readOnly && !options.disabled
-        ? { count: outsideCount, onFit: fitContent, onDismiss: dismiss }
-        : null,
+    notice: noticeShown
+      ? { count: outsideCount, onFit: fitContent, onDismiss: dismiss }
+      : null,
   };
 }

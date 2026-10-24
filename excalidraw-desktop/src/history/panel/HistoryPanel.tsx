@@ -423,6 +423,8 @@ const HistoryPanel = ({
           }
         }),
       exportImage,
+      // command audit (S8)
+      backToCurrent: () => backToCurrent(),
     },
     { hasVersion: !!selected, hasSelection: selectionCount > 0 },
   );

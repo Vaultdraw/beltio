@@ -284,6 +284,14 @@ const TAGS_COMMANDS: CommandDefinition[] = [
     keys: { default: [] },
     when: ["vaultOpen", "!modalOpen"],
   },
+  // command audit (S8)
+  {
+    id: "tags.toggleSection",
+    title: "Tags: Collapse or expand the tags section",
+    category: "Tags",
+    keys: { default: [] },
+    when: ["vaultOpen", "!modalOpen"],
+  },
 ];
 
 /** The built-in commands (registered below; plugins register more at runtime). */
@@ -532,6 +540,22 @@ export const COMMANDS: readonly CommandDefinition[] = [
     category: "Templates",
     keys: { default: [] },
     when: ["drawingOpen"],
+  },
+  // command audit (S8)
+  {
+    id: "templates.revealGlobal",
+    title: "Templates: Open the global templates folder",
+    category: "Templates",
+    keys: { default: [] },
+    when: ["!modalOpen"],
+  },
+  // command audit (S8)
+  {
+    id: "page.dismissNotice",
+    title: "Page: Dismiss the page notice",
+    category: "Page",
+    keys: { default: [] },
+    when: ["drawingOpen", "writable", "!modalOpen"],
   },
   {
     id: "navigator.searchTags",

@@ -44,6 +44,16 @@ const EXPECTED: Record<string, { title: string; keys: string[] }> = {
   "graph.zoomIn": { title: "Graph: Zoom in", keys: ["Equal", "Shift+Equal"] },
   "graph.zoomOut": { title: "Graph: Zoom out", keys: ["Minus"] },
   "graph.close": { title: "Graph: Close graph", keys: ["Escape"] },
+  "graph.toggleArrows": { title: "Graph: Toggle arrows", keys: [] },
+  "graph.toggleColourBy": {
+    title: "Graph: Toggle colour by folder or mono",
+    keys: [],
+  },
+  "graph.toggleSettings": { title: "Graph: Toggle settings panel", keys: [] },
+  "graph.resetDisplay": {
+    title: "Graph: Reset display and forces",
+    keys: [],
+  },
 };
 const PLATFORMS: Platform[] = ["mac", "win", "linux"];
 

@@ -139,7 +139,10 @@ describe("Page command handlers", () => {
   it("every Page command except navigation has a handler", () => {
     const { handlers } = handlersFor(makeApi(null));
     for (const c of pageCommands) {
-      if (!["page.next", "page.previous"].includes(c.id)) {
+      // page.dismissNotice is bound by usePageMode while the notice shows
+      if (
+        !["page.next", "page.previous", "page.dismissNotice"].includes(c.id)
+      ) {
         expect(handlers[c.id], c.id).toBeTypeOf("function");
       }
     }

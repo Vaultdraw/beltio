@@ -31,6 +31,11 @@ export const GRAPH_VIEW_COMMAND_IDS = {
   zoomIn: "graph.zoomIn",
   zoomOut: "graph.zoomOut",
   close: "graph.close",
+  // command audit (S8): toolbar and settings-panel actions of the open view
+  toggleArrows: "graph.toggleArrows",
+  toggleColourBy: "graph.toggleColourBy",
+  toggleSettings: "graph.toggleSettings",
+  resetDisplay: "graph.resetDisplay",
 } as const;
 
 export const GRAPH_VIEW_IDS: readonly string[] = [
@@ -93,4 +98,9 @@ export const GRAPH_COMMANDS: CommandDefinition[] = [
   view(V.zoomIn, "Zoom in", ["Equal", "Shift+Equal"], true),
   view(V.zoomOut, "Zoom out", ["Minus"], true),
   view(V.close, "Close graph", ["Escape"]),
+  // command audit (S8)
+  view(V.toggleArrows, "Toggle arrows", []),
+  view(V.toggleColourBy, "Toggle colour by folder or mono", []),
+  view(V.toggleSettings, "Toggle settings panel", []),
+  view(V.resetDisplay, "Reset display and forces", []),
 ];

@@ -45,3 +45,18 @@ export function registerTagSortToggle(toggle: () => void): () => void {
 
 /** Flip the Tags pane between name and count order (no-op while it is not mounted). */
 export const toggleTagSort = () => toggleSort?.();
+
+let toggleSection: (() => void) | null = null;
+
+// command audit (S8): the mounted Tags pane binds its section toggle until the returned function is called.
+export function registerTagSectionToggle(toggle: () => void): () => void {
+  toggleSection = toggle;
+  return () => {
+    if (toggleSection === toggle) {
+      toggleSection = null;
+    }
+  };
+}
+
+/** Collapse or expand the Tags section (no-op while the pane is not mounted). */
+export const toggleTagSection = () => toggleSection?.();

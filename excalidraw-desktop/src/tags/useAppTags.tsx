@@ -13,7 +13,7 @@ import {
 
 import { registerCommandHandlers } from "../commands/handlerRegistry";
 
-import { focusTagsPane, toggleTagSort } from "./tagActions";
+import { focusTagsPane, toggleTagSection, toggleTagSort } from "./tagActions";
 import { runTagRename } from "./renameFlow";
 import { tagStore } from "./tagStore";
 
@@ -55,6 +55,7 @@ export function useAppTags(deps: AppTagsDeps) {
         "tags.rename": () => open(null),
         "tags.focusPane": focusTagsPane,
         "tags.toggleSort": toggleTagSort,
+        "tags.toggleSection": toggleTagSection,
       }),
     [open],
   );

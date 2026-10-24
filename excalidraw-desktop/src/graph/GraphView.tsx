@@ -17,7 +17,7 @@ import { GraphToolbar } from "./GraphToolbar";
 import { HoverCard } from "./HoverCard";
 import { resolveHint, type HintMap } from "./hints";
 import { type Direction } from "./keyboard";
-import { SettingsPanel } from "./SettingsPanel";
+import { resetDisplayAndForces, SettingsPanel } from "./SettingsPanel";
 import { useGraphSession } from "./useGraphSession";
 
 import "./graph.css";
@@ -187,6 +187,17 @@ export default function GraphView(props: GraphViewProps & GraphViewExtraProps) {
           [V.zoomIn]: zoom(ZOOM_STEP),
           [V.zoomOut]: zoom(1 / ZOOM_STEP),
           [V.close]: onClose,
+          // command audit (S8)
+          [V.toggleArrows]: () =>
+            props.onSettingsChange({ ...settings, arrows: !settings.arrows }),
+          [V.toggleColourBy]: () =>
+            props.onSettingsChange({
+              ...settings,
+              colourBy: settings.colourBy === "mono" ? "folder" : "mono",
+            }),
+          [V.toggleSettings]: () => setPanelOpen((v) => !v),
+          [V.resetDisplay]: () =>
+            props.onSettingsChange(resetDisplayAndForces(settings)),
         },
   );
 

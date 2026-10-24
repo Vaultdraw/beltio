@@ -18,6 +18,7 @@ export interface PanelActions {
   copySelection(): void;
   exportExcalidraw(): void | Promise<void>;
   exportImage(): void;
+  backToCurrent(): void;
 }
 
 export function usePanelCommands(
@@ -38,6 +39,8 @@ export function usePanelCommands(
         [I.restoreCopy]: run("restoreCopy"),
         [I.exportExcalidraw]: run("exportExcalidraw"),
         [I.exportImage]: run("exportImage"),
+        // command audit (S8)
+        [I.backToCurrent]: run("backToCurrent"),
       }),
       ...(hasVersion &&
         hasSelection && { [I.copySelection]: run("copySelection") }),
