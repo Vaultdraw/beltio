@@ -1,13 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { ExcalidrawElement } from "@excalidraw/element/types";
+
 import { projectScene } from "../sceneOps";
 import { makeElements } from "../sceneOps/testUtils";
 
-import { ControlError } from "./errors";
 import { createSceneMethods } from "./sceneMethods";
 import { sceneVersion } from "./sceneVersion";
 
-import type { ExcalidrawElement } from "@excalidraw/element/types";
+import type { ControlError } from "./errors";
+
 import type { ActiveScene } from "../sceneOps/sceneBus";
 
 /** A stateful fake editor: updateScene replaces the elements, like the real one. */
@@ -109,11 +111,7 @@ describe("scene methods: common errors", () => {
 
 describe("scene.read", () => {
   it("returns the projection, version, counts, viewport and selection", () => {
-    const f = fakeScene(
-      makeElements(3),
-      {},
-      { selectedElementIds: { [""]: true } },
-    );
+    const f = fakeScene(makeElements(3));
     const els = f.els();
     f.state.selectedElementIds = { [els[1].id]: true } as never;
     f.state.scrollX = -100;

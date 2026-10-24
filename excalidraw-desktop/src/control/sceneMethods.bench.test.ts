@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import type { ExcalidrawElement } from "@excalidraw/element/types";
+
 import { makeElements } from "../sceneOps/testUtils";
 
 import { createSceneMethods } from "./sceneMethods";
 
-import type { ExcalidrawElement } from "@excalidraw/element/types";
 import type { ActiveScene } from "../sceneOps/sceneBus";
 
 /** p50/p95 in ms of `runs` calls (after a short warm-up). */

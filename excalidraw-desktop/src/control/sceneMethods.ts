@@ -36,7 +36,7 @@ const DEFAULT_LIMIT = 200;
 const MAX_LIMIT = 2000;
 const MAX_GET_IDS = 100;
 const SCOPES = ["all", "viewport", "selection"] as const;
-type Scope = (typeof SCOPES)[number];
+type Scope = typeof SCOPES[number];
 
 const invalid = (message: string) =>
   new ControlError("INVALID_PARAMS", message);

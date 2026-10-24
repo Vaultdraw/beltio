@@ -2,11 +2,11 @@ import { Excalidraw } from "@excalidraw/excalidraw";
 import { act, fireEvent, render, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+
 import { projectScene } from "../sceneOps";
 
 import { createSceneMethods } from "./sceneMethods";
-
-import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
 const undo = () =>
   fireEvent.keyDown(document, { key: "z", code: "KeyZ", ctrlKey: true });

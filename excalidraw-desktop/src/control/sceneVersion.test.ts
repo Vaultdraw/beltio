@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import type { ExcalidrawElement } from "@excalidraw/element/types";
+
 import fixture from "../../src-tauri/crates/vaultdraw-protocol/tests/fixtures/scene-version.json";
 import { makeElements } from "../sceneOps/testUtils";
 
 import { cyrb53, hashScene, sceneVersion } from "./sceneVersion";
-
-import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 describe("sceneVersion", () => {
   it.each(fixture.cases)("fixture: $name", ({ elements, version }) => {
