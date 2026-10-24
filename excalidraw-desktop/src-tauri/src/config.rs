@@ -63,6 +63,50 @@ pub(crate) async fn open_config_dir() -> Result<()> {
     open_dir(&dirs.config)
 }
 
+/// Opens `config.toml` with the default app. It is created with the first launch; a missing
+/// file is an error that says so, not a new empty file.
+#[tauri::command]
+pub(crate) async fn open_config_file() -> Result<()> {
+    let path = resolve_dirs()?.config_file();
+    if !path.is_file() {
+        return Err(err("NOT_FOUND", format!("{} does not exist yet", path.display())));
+    }
+    launch(&[path.as_os_str()], false)
+}
+
+/// Shows `overrides.toml` in the file manager (its folder when the file does not exist yet:
+/// nothing was changed in Settings).
+#[tauri::command]
+pub(crate) async fn reveal_overrides() -> Result<()> {
+    let dirs = resolve_dirs()?;
+    let path = dirs.overrides_file();
+    if path.is_file() {
+        launch(&[path.as_os_str()], true)
+    } else {
+        open_dir(&dirs.state)
+    }
+}
+
+/// Deletes `overrides.toml` (the confirmed "reset Settings changes"); `config.toml` is untouched.
+/// Returns whether a file was deleted. The watcher reports the change like any other edit.
+#[tauri::command]
+pub(crate) async fn reset_overrides() -> Result<bool> {
+    reset_overrides_in(&resolve_dirs()?)
+}
+
+/// Opens a file with the platform's default app, or (`reveal`) selects it in the file manager.
+fn launch(args: &[&std::ffi::OsStr], reveal: bool) -> Result<()> {
+    #[cfg(target_os = "macos")]
+    let (program, lead): (&str, Vec<&std::ffi::OsStr>) = ("open", if reveal { vec!["-R".as_ref()] } else { vec![] });
+    #[cfg(target_os = "windows")]
+    let (program, lead): (&str, Vec<&std::ffi::OsStr>) = ("explorer", if reveal { vec!["/select,".as_ref()] } else { vec![] });
+    #[cfg(target_os = "linux")]
+    let (program, lead): (&str, Vec<&std::ffi::OsStr>) = ("xdg-open", vec![]);
+    #[cfg(target_os = "linux")]
+    let args: Vec<&std::ffi::OsStr> = if reveal { args.iter().filter_map(|a| Path::new(a).parent().map(Path::as_os_str)).collect() } else { args.to_vec() };
+    std::process::Command::new(program).args(lead).args(args).spawn().map(|_| ()).map_err(ioerr)
+}
+
 /// Creates `dir` if missing and opens it in the platform file manager.
 pub(crate) fn open_dir(dir: &Path) -> Result<()> {
     fs::create_dir_all(dir).map_err(ioerr)?;

@@ -34,7 +34,7 @@ pub struct LayerChange {
 }
 
 /// What reading one layer found.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LayerInfo {
     /// 0 = `config.toml`, 1 = `overrides.toml`.
@@ -247,6 +247,51 @@ pub fn update_overrides_in(dirs: &Dirs, changes: &[LayerChange]) -> Result<()> {
     Ok(())
 }
 
+/// Where a dotted key's value comes from, for `config get --source` and the Settings chips.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeySource {
+    /// `default` (no layer sets the key), `config.toml` or `overrides.toml`.
+    pub source: &'static str,
+    /// What a lower layer says when a higher one hides it (`file`, `value`).
+    pub hidden: Option<Json>,
+}
+
+fn layer_file(kind: &str) -> &'static str {
+    if kind == "overrides" { OVERRIDES_FILE } else { CONFIG_FILE }
+}
+
+/// The highest layer that sets `key` (a dotted path) and the value of the next layer down
+/// that also sets it. Layers that did not parse count as not setting anything.
+pub fn key_source(layers: &[LayerInfo], key: &str) -> KeySource {
+    // `lookup` knows the key forms with dots inside (`hotkeys.vault.newDrawing`); a plain path
+    // walk covers deeper keys such as `tools.arrow.roughness`.
+    fn walk<'a>(l: &'a LayerInfo, key: &str) -> Option<&'a Json> {
+        let c = l.config.as_ref()?;
+        lookup(c, key).or_else(|| key.split('.').try_fold(c, |v, part| v.get(part)))
+    }
+    let mut set = layers.iter().rev().filter_map(|l| walk(l, key).map(|v| (layer_file(l.kind), v)));
+    let Some((top, top_value)) = set.next() else {
+        return KeySource { source: "default", hidden: None };
+    };
+    let hidden = set
+        .next()
+        .filter(|(_, v)| !same_value(v, top_value))
+        .map(|(file, value)| serde_json::json!({"file": file, "value": value}));
+    KeySource { source: top, hidden }
+}
+
+/// Deletes `overrides.toml` (Settings changes, `Reset all Settings changes`). Never touches
+/// `config.toml`. A broken file is deleted too: it is the way out. Returns whether a file existed.
+pub fn reset_overrides_in(dirs: &Dirs) -> Result<bool> {
+    let _guard = write_guard()?;
+    match fs::remove_file(dirs.overrides_file()) {
+        Ok(()) => Ok(true),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(ioerr(e)),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -313,6 +358,51 @@ mod tests {
         assert!(same_value(&json!([1, {"a": 2.0}]), &json!([1.0, {"a": 2}])));
         assert!(!same_value(&json!(14), &json!(15)));
         assert!(!same_value(&json!("14"), &json!(14)));
+    }
+
+    #[test]
+    fn key_source_names_the_winning_layer_and_the_hidden_value() {
+        let t = tempdir().unwrap();
+        let d = dirs_in(t.path());
+        write_config(&d, "[editor]\nfont_size = 14\nroughness = 1\n[hotkeys]\n\"vault.newDrawing\" = [\"Mod+N\"]\n");
+        update_overrides_in(&d, &[set("editor.font_size", json!(20)), set("editor.roughness", json!(1.0)), set("saving.autosave_delay_ms", json!(900))]).unwrap();
+        let layers = read_layers(&d);
+        let hidden = key_source(&layers, "editor.font_size");
+        assert_eq!(hidden.source, "overrides.toml");
+        assert_eq!(hidden.hidden, Some(json!({"file": "config.toml", "value": 14})));
+        // `1.0` over `1` is redundant: it was never written.
+        assert_eq!(key_source(&layers, "editor.roughness"), KeySource { source: "config.toml", hidden: None });
+        assert_eq!(key_source(&layers, "saving.autosave_delay_ms"), KeySource { source: "overrides.toml", hidden: None });
+        assert_eq!(key_source(&layers, "hotkeys.vault.newDrawing").source, "config.toml");
+        assert_eq!(key_source(&layers, "interface.zoom"), KeySource { source: "default", hidden: None });
+    }
+
+    #[test]
+    fn a_broken_layer_sets_nothing_in_key_source() {
+        let t = tempdir().unwrap();
+        let d = dirs_in(t.path());
+        write_config(&d, "[editor]\nfont_size = 14\n");
+        fs::create_dir_all(&d.state).unwrap();
+        fs::write(d.overrides_file(), "[editor\n").unwrap();
+        assert_eq!(key_source(&read_layers(&d), "editor.font_size"), KeySource { source: "config.toml", hidden: None });
+    }
+
+    #[test]
+    fn reset_overrides_deletes_only_overrides_toml_even_when_it_is_broken() {
+        let t = tempdir().unwrap();
+        let d = dirs_in(t.path());
+        write_config(&d, "# mine\n[editor]\nfont_size = 14 # keep\n");
+        let before = fs::read(d.config.join(CONFIG_FILE)).unwrap();
+        assert!(!reset_overrides_in(&d).unwrap(), "nothing to delete");
+        update_overrides_in(&d, &[set("editor.font_size", json!(20))]).unwrap();
+        assert!(d.overrides_file().exists());
+        assert!(reset_overrides_in(&d).unwrap());
+        assert!(!d.overrides_file().exists());
+        assert_eq!(effective_config(&d)["editor"]["font_size"], json!(14));
+        fs::write(d.overrides_file(), "[editor\n").unwrap();
+        assert!(reset_overrides_in(&d).unwrap(), "a broken file is the case reset is for");
+        assert!(!d.overrides_file().exists());
+        assert_eq!(fs::read(d.config.join(CONFIG_FILE)).unwrap(), before, "config.toml bytes changed");
     }
 
     #[test]

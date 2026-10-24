@@ -332,7 +332,7 @@ pub struct LoadedSettings {
     overrides_error: Option<ConfigError>,
     overrides_path: String,
     /// Per-layer status, lowest layer first.
-    layers: Vec<LayerInfo>,
+    pub layers: Vec<LayerInfo>,
     state: Json,
 }
 

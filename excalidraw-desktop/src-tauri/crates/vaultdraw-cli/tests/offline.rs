@@ -210,6 +210,26 @@ fn config_get_and_set_work_without_the_app() {
 }
 
 #[test]
+fn config_get_source_and_path_all_name_the_layers() {
+    let e = env();
+    std::fs::write(e.config.join("config.toml"), "[editor]\nfont_size = 14\n").unwrap();
+    let before = std::fs::read(e.config.join("config.toml")).unwrap();
+    e.json(&["config", "set", "editor.font_size", "20"]);
+    let r = e.json(&["config", "get", "editor.font_size", "--source"]);
+    assert_eq!(r, json!({"key": "editor.font_size", "value": 20, "source": "overrides.toml", "hidden": {"file": "config.toml", "value": 14}}));
+    let o = e.run(&["--vault", e.root.to_str().unwrap(), "config", "get", "editor.font_size", "--source"]);
+    assert_eq!(String::from_utf8_lossy(&o.stdout).trim(), "20  (overrides.toml; config.toml says 14)");
+    let r = e.json(&["config", "get", "interface.zoom", "--source"]);
+    assert_eq!(r["source"], "default");
+    // `--source` needs a key.
+    assert_ne!(code(&e.run(&["config", "get", "--source"])), 0);
+    let o = e.run(&["config", "path", "--all"]);
+    let lines: Vec<String> = String::from_utf8_lossy(&o.stdout).lines().map(str::to_string).collect();
+    assert_eq!(lines, [e.config.join("config.toml").display().to_string(), e.state.join("overrides.toml").display().to_string()]);
+    assert_eq!(std::fs::read(e.config.join("config.toml")).unwrap(), before, "config.toml bytes changed");
+}
+
+#[test]
 fn app_live_never_goes_headless() {
     let e = env();
     let _held = e.hold_instance();

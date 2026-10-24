@@ -12,7 +12,9 @@ pub fn get(dirs: &Dirs, params: &Value) -> Result<Value, RpcError> {
         Some(Value::String(k)) if !k.is_empty() => Some(k.as_str()),
         Some(_) => return Err(RpcError::invalid_params("key must be a non-empty string")),
     };
-    let loaded = serde_json::to_value(config::load_settings_in(dirs).map_err(native_err)?).unwrap_or(Value::Null);
+    let settings = config::load_settings_in(dirs).map_err(native_err)?;
+    let layers = settings.layers.clone();
+    let loaded = serde_json::to_value(settings).unwrap_or(Value::Null);
     if let Some(message) = loaded["configError"]["message"].as_str() {
         return Err(RpcError::app("CONFIG_INVALID", format!("config.toml does not parse: {message}")));
     }
@@ -25,10 +27,21 @@ pub fn get(dirs: &Dirs, params: &Value) -> Result<Value, RpcError> {
         None => config.clone(),
         Some(k) => k.split('.').try_fold(config, |v, part| v.get(part)).cloned().unwrap_or(Value::Null),
     };
-    Ok(match warning {
-        Some(w) => json!({"key": key, "value": value, "warning": w}),
-        None => json!({"key": key, "value": value}),
-    })
+    let mut reply = json!({"key": key, "value": value});
+    if let Some(w) = warning {
+        reply["warning"] = json!(w);
+    }
+    // `source: true` adds the layer that wins, and what a lower layer says when it is hidden.
+    if params.get("source").and_then(Value::as_bool) == Some(true) {
+        if let Some(k) = key {
+            let found = config::key_source(&layers, k);
+            reply["source"] = json!(found.source);
+            if let Some(h) = found.hidden {
+                reply["hidden"] = h;
+            }
+        }
+    }
+    Ok(reply)
 }
 
 /// `config.set {changes: [{key, value}]}`: all-or-nothing, like `update_config`. Writes
@@ -79,6 +92,24 @@ mod tests {
         assert_eq!(r["value"], 14);
         assert!(r["warning"].as_str().unwrap().starts_with("overrides.toml is broken and ignored"));
         assert!(set(&d, &json!({"changes": [{"key": "editor.font_size", "value": 21}]})).is_err());
+    }
+
+    #[test]
+    fn get_with_source_names_the_layer_and_the_hidden_value() {
+        let (_t, d) = dirs();
+        fs::create_dir_all(&d.config).unwrap();
+        fs::write(d.config.join("config.toml"), "[editor]\nfont_size = 14\nroughness = 2\n").unwrap();
+        set(&d, &json!({"changes": [{"key": "editor.font_size", "value": 20}]})).unwrap();
+        let r = get(&d, &json!({"key": "editor.font_size", "source": true})).unwrap();
+        assert_eq!(r["value"], 20);
+        assert_eq!(r["source"], "overrides.toml");
+        assert_eq!(r["hidden"], json!({"file": "config.toml", "value": 14}));
+        let r = get(&d, &json!({"key": "editor.roughness", "source": true})).unwrap();
+        assert_eq!((r["source"].as_str(), r.get("hidden")), (Some("config.toml"), None));
+        let r = get(&d, &json!({"key": "interface.zoom", "source": true})).unwrap();
+        assert_eq!((r["source"].as_str(), r["value"].is_null()), (Some("default"), true));
+        // Without the flag the reply is as before.
+        assert!(get(&d, &json!({"key": "editor.font_size"})).unwrap().get("source").is_none());
     }
 
     #[test]

@@ -276,11 +276,20 @@ pub enum TabAction {
 #[derive(Subcommand, Debug)]
 pub enum ConfigAction {
     /// Print a value by dotted key (the whole config without a key)
-    Get { key: Option<String> },
+    Get {
+        key: Option<String>,
+        /// Also say where the value comes from (default, config.toml or overrides.toml)
+        #[arg(long, requires = "key")]
+        source: bool,
+    },
     /// Set a value (parsed as JSON, else taken as a string)
     Set { key: String, value: String },
     /// Print the config file path (no app needed)
-    Path,
+    Path {
+        /// Print every layer: config.toml, then overrides.toml (Settings changes)
+        #[arg(long)]
+        all: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
