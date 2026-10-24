@@ -104,8 +104,8 @@ describe("preferences -> config changes", () => {
       { key: "plugin.b", value: { z: true } },
     ]);
     expect(preferencesToConfigChanges(two, none)).toEqual([
-      { key: "plugin.a", value: null },
-      { key: "plugin.b", value: null },
+      { key: "plugin.a", value: null, default: {} },
+      { key: "plugin.b", value: null, default: {} },
     ]);
     expect(preferencesToConfigChanges(one, one)).toEqual([]);
   });
