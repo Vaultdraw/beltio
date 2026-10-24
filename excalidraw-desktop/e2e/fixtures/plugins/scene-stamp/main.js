@@ -21,7 +21,14 @@ const flowOps = (n) => {
       {
         op: "add",
         ref: `a${i}`,
-        element: { type: "rectangle", x, y, width: 100, height: 60, text: `Step ${i}` },
+        element: {
+          type: "rectangle",
+          x,
+          y,
+          width: 100,
+          height: 60,
+          text: `Step ${i}`,
+        },
       },
       {
         op: "add",
@@ -31,7 +38,11 @@ const flowOps = (n) => {
       {
         op: "add",
         ref: `c${i}`,
-        element: { type: "arrow", start: { ref: `a${i}` }, end: { ref: `b${i}` } },
+        element: {
+          type: "arrow",
+          start: { ref: `a${i}` },
+          end: { ref: `b${i}` },
+        },
       },
       {
         op: "add",
@@ -53,7 +64,9 @@ export default {
       const t0 = performance.now();
       await ctx.scene.batch(ops);
       const applied = performance.now() - t0;
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await new Promise((r) =>
+        requestAnimationFrame(() => requestAnimationFrame(r)),
+      );
       return { applied, painted: performance.now() - t0, ops: ops.length };
     };
     ctx.commands.register("stamp", () => ctx.scene.batch([box]));
