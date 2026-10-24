@@ -15,7 +15,9 @@ use std::{
     sync::Mutex,
 };
 
+mod includes;
 mod layers;
+pub use includes::*;
 pub use layers::*;
 
 pub(crate) const MAX_CONFIG_BYTES: u64 = 1024 * 1024;
@@ -333,6 +335,8 @@ pub struct LoadedSettings {
     overrides_path: String,
     /// Per-layer status, lowest layer first.
     pub layers: Vec<LayerInfo>,
+    /// Include problems that name no file of their own (cycles, depth, caps, `[include]` in overrides).
+    include_warnings: Vec<String>,
     state: Json,
 }
 
@@ -444,9 +448,8 @@ pub fn load_settings_in(dirs: &Dirs) -> Result<LoadedSettings> {
     }
     let config_path = dirs.config_file();
     let layers = read_layers(dirs);
-    let config = merged(&layers);
-    let [base, over] = &layers;
-    let (config_error, overrides_error) = (base.error.clone(), over.error.clone());
+    let config = merged(&layers.all);
+    let (config_error, overrides_error) = (layers.of_kind("config").error.clone(), layers.of_kind("overrides").error.clone());
     let state_path = dirs.state_file();
     Ok(LoadedSettings {
         config_dir: dirs.config.to_string_lossy().into_owned(),
@@ -456,7 +459,8 @@ pub fn load_settings_in(dirs: &Dirs) -> Result<LoadedSettings> {
         config_error,
         overrides_error,
         overrides_path: dirs.overrides_file().to_string_lossy().into_owned(),
-        layers: layers.into(),
+        layers: layers.all,
+        include_warnings: layers.warnings,
         state: read_state(&state_path),
     })
 }

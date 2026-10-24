@@ -5,6 +5,7 @@
 
 use super::*;
 
+pub const KIND_INCLUDE: &str = "include";
 pub const OVERRIDES_FILE: &str = "overrides.toml";
 const MAX_OVERRIDES_BYTES: u64 = 1024 * 1024;
 
@@ -37,19 +38,24 @@ pub struct LayerChange {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LayerInfo {
-    /// 0 = `config.toml`, 1 = `overrides.toml`.
+    /// 0 = `config.toml`, 1 = `overrides.toml`, 2 and up = included files.
     pub id: u8,
+    /// `config`, `overrides` or `include`.
     pub kind: &'static str,
+    /// File name (what a chip shows).
+    pub name: String,
     pub path: String,
     /// `ok`, `missing` or `error`.
     pub status: &'static str,
     pub error: Option<ConfigError>,
     /// The layer's own parsed content (`null` unless `ok`), for per-file checks.
     pub config: Option<Json>,
+    /// For an included file: the file that names it.
+    pub from: Option<String>,
 }
 
 pub(super) fn read_layer(id: u8, kind: &'static str, path: &Path, name: &str, max: u64) -> LayerInfo {
-    let mut info = LayerInfo { id, kind, path: path.to_string_lossy().into_owned(), status: "ok", error: None, config: None };
+    let mut info = LayerInfo { id, kind, name: name.to_owned(), path: path.to_string_lossy().into_owned(), status: "ok", error: None, config: None, from: None };
     match read_toml_text(path, name, max) {
         Ok(text) => match parse_config(&text) {
             Ok(json) => info.config = Some(json),
@@ -67,21 +73,57 @@ pub(super) fn read_layer(id: u8, kind: &'static str, path: &Path, name: &str, ma
     info
 }
 
-pub(super) fn read_layers(dirs: &Dirs) -> [LayerInfo; 2] {
-    [
-        read_layer(0, "config", &dirs.config_file(), CONFIG_FILE, MAX_CONFIG_BYTES),
-        read_layer(1, "overrides", &dirs.overrides_file(), OVERRIDES_FILE, MAX_OVERRIDES_BYTES),
-    ]
+/// Every layer, lowest first: included files, `config.toml`, `overrides.toml`. Nothing beyond
+/// the two files is read unless `config.toml` has an `[include]` table.
+pub(super) fn read_layers(dirs: &Dirs) -> Layers {
+    read_layers_with(dirs, super::includes::home_dir().as_deref())
 }
 
-/// The merged config of the layers that parsed, or `None` when none did.
+pub(super) fn read_layers_with(dirs: &Dirs, home: Option<&Path>) -> Layers {
+    let config = read_layer(0, "config", &dirs.config_file(), CONFIG_FILE, MAX_CONFIG_BYTES);
+    let overrides = read_layer(1, "overrides", &dirs.overrides_file(), OVERRIDES_FILE, MAX_OVERRIDES_BYTES);
+    let mut scan = match &config.config {
+        Some(c) => super::includes::scan_includes(&dirs.config_file(), c, home),
+        None => Default::default(),
+    };
+    if overrides.config.as_ref().is_some_and(|c| c.get("include").is_some()) {
+        scan.warnings.push("overrides.toml: [include] is only read in config.toml and the files it includes (ignored)".into());
+    }
+    let mut all = scan.layers;
+    all.push(config);
+    all.push(overrides);
+    Layers { all, warnings: scan.warnings }
+}
+
+pub(super) struct Layers {
+    pub all: Vec<LayerInfo>,
+    pub warnings: Vec<String>,
+}
+
+impl Layers {
+    pub fn of_kind(&self, kind: &str) -> &LayerInfo {
+        self.all.iter().find(|l| l.kind == kind).expect("config and overrides layers always exist")
+    }
+}
+
+/// The merged config of the layers that parsed, or `None` when none did. The `include` table
+/// only drives loading and is not part of the result.
 pub(super) fn merged(layers: &[LayerInfo]) -> Option<Json> {
     let mut parsed = layers.iter().filter_map(|l| l.config.as_ref());
     let mut out = parsed.next()?.clone();
     for higher in parsed {
         merge_layer(&mut out, higher);
     }
+    if let Some(map) = out.as_object_mut() {
+        map.remove("include");
+    }
     Some(out)
+}
+
+/// The effective config (all layers merged), read without creating any file. For startup
+/// decisions such as `[control] enabled`.
+pub fn layered_config_in(dirs: &Dirs) -> Option<Json> {
+    merged(&read_layers(dirs).all)
 }
 
 /// Merges `higher` over `base`: tables key by key, everything else (scalars, arrays) replaced.
@@ -206,12 +248,14 @@ fn plan_changes(lower: &Json, over: &Json, changes: &[LayerChange]) -> Vec<Confi
 pub fn update_overrides_in(dirs: &Dirs, changes: &[LayerChange]) -> Result<()> {
     let _guard = write_guard()?;
     ensure_config_files(dirs)?;
-    let base = read_layer(0, "config", &dirs.config_file(), CONFIG_FILE, MAX_CONFIG_BYTES);
+    // Everything below overrides.toml: the included files and config.toml, merged.
+    let below = read_layers(dirs);
+    let base = below.of_kind("config");
     if let Some(e) = &base.error {
         let at = e.line.map(|l| format!(" at line {l}")).unwrap_or_default();
         return Err(err("CONFIG_INVALID", format!("config.toml is broken{at}: {}. Fix it, then save again.", e.message)));
     }
-    let lower = base.config.unwrap_or(Json::Null);
+    let lower = merged(&below.all.iter().filter(|l| l.kind != "overrides").cloned().collect::<Vec<_>>()).unwrap_or(Json::Null);
     let path = dirs.overrides_file();
     let existing = match read_toml_text(&path, OVERRIDES_FILE, MAX_OVERRIDES_BYTES) {
         Ok(text) => Some(text),
@@ -257,14 +301,19 @@ pub fn update_overrides_in(dirs: &Dirs, changes: &[LayerChange]) -> Result<()> {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KeySource {
-    /// `default` (no layer sets the key), `config.toml` or `overrides.toml`.
-    pub source: &'static str,
+    /// `default` (no layer sets the key), `config.toml`, `overrides.toml` or an included file's path.
+    pub source: String,
     /// What a lower layer says when a higher one hides it (`file`, `value`).
     pub hidden: Option<Json>,
 }
 
-fn layer_file(kind: &str) -> &'static str {
-    if kind == "overrides" { OVERRIDES_FILE } else { CONFIG_FILE }
+/// How a layer is named in `config get --source`: the two fixed names, or an include's path.
+fn layer_file(l: &LayerInfo) -> String {
+    match l.kind {
+        "overrides" => OVERRIDES_FILE.into(),
+        KIND_INCLUDE => l.path.clone(),
+        _ => CONFIG_FILE.into(),
+    }
 }
 
 /// The highest layer that sets `key` (a dotted path) and the value of the next layer down
@@ -275,9 +324,9 @@ pub fn key_source(layers: &[LayerInfo], key: &str) -> KeySource {
     fn walk<'a>(l: &'a LayerInfo, key: &str) -> Option<&'a Json> {
         lookup_key(l.config.as_ref()?, key)
     }
-    let mut set = layers.iter().rev().filter_map(|l| walk(l, key).map(|v| (layer_file(l.kind), v)));
+    let mut set = layers.iter().rev().filter_map(|l| walk(l, key).map(|v| (layer_file(l), v)));
     let Some((top, top_value)) = set.next() else {
-        return KeySource { source: "default", hidden: None };
+        return KeySource { source: "default".into(), hidden: None };
     };
     let hidden = set
         .next()
@@ -371,15 +420,15 @@ mod tests {
         let d = dirs_in(t.path());
         write_config(&d, "[editor]\nfont_size = 14\nroughness = 1\n[hotkeys]\n\"vault.newDrawing\" = [\"Mod+N\"]\n");
         update_overrides_in(&d, &[set("editor.font_size", json!(20)), set("editor.roughness", json!(1.0)), set("saving.autosave_delay_ms", json!(900))]).unwrap();
-        let layers = read_layers(&d);
+        let layers = read_layers(&d).all;
         let hidden = key_source(&layers, "editor.font_size");
         assert_eq!(hidden.source, "overrides.toml");
         assert_eq!(hidden.hidden, Some(json!({"file": "config.toml", "value": 14})));
         // `1.0` over `1` is redundant: it was never written.
-        assert_eq!(key_source(&layers, "editor.roughness"), KeySource { source: "config.toml", hidden: None });
-        assert_eq!(key_source(&layers, "saving.autosave_delay_ms"), KeySource { source: "overrides.toml", hidden: None });
+        assert_eq!(key_source(&layers, "editor.roughness"), KeySource { source: "config.toml".into(), hidden: None });
+        assert_eq!(key_source(&layers, "saving.autosave_delay_ms"), KeySource { source: "overrides.toml".into(), hidden: None });
         assert_eq!(key_source(&layers, "hotkeys.vault.newDrawing").source, "config.toml");
-        assert_eq!(key_source(&layers, "interface.zoom"), KeySource { source: "default", hidden: None });
+        assert_eq!(key_source(&layers, "interface.zoom"), KeySource { source: "default".into(), hidden: None });
     }
 
     #[test]
@@ -389,7 +438,7 @@ mod tests {
         write_config(&d, "[editor]\nfont_size = 14\n");
         fs::create_dir_all(&d.state).unwrap();
         fs::write(d.overrides_file(), "[editor\n").unwrap();
-        assert_eq!(key_source(&read_layers(&d), "editor.font_size"), KeySource { source: "config.toml", hidden: None });
+        assert_eq!(key_source(&read_layers(&d).all, "editor.font_size"), KeySource { source: "config.toml".into(), hidden: None });
     }
 
     #[test]
