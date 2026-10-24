@@ -143,6 +143,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       thumbnail_max_elements: {
         doc: "Biggest drawing (in elements) that gets a thumbnail.",
       },
+      defer_home_pane: {
+        doc: "When a vault opens, paint the file tree first and the home pane one frame later, in the same place; `false` draws both together.",
+      },
       activity_bar: { doc: "Show the activity bar." },
       activity_bar_order: {
         doc: "Activity bar entry order: `library`, `history`, `graph`, `gallery`, `search`, `tags`, `templates`, `hotkeys`, `settings`; unlisted entries follow in their default order.",
@@ -323,6 +326,12 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
     intro: "Plugins in the `plugins/` folder of the config folder.",
     keys: {
       enabled: { doc: "Ids of the plugins to load." },
+      importers: {
+        doc: 'Which plugin imports a file extension when two plugins claim it; `""` turns plugin handling off for that extension.',
+      },
+      storage_limit_kb: {
+        doc: "Most data one plugin may save with `ctx.storage`, in KiB; a save past it is refused.",
+      },
     },
   },
 ];

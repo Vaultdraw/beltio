@@ -181,3 +181,19 @@ describe("[keys.labels]", () => {
     ).toEqual([]);
   });
 });
+
+describe("[control]", () => {
+  it("is not reported as unknown (the native side reads it)", async () => {
+    const { unknownKeyProblems } = await import("../vault/settingsSync");
+    expect(
+      unknownKeyProblems({
+        control: {
+          enabled: true,
+          uri_enabled: true,
+          uri_allow: ["new"],
+          notify_edits: false,
+        },
+      }),
+    ).toEqual([]);
+  });
+});

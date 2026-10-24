@@ -962,6 +962,7 @@ The app window around the canvas.
 | `show_tag_chips` | `true` | true or false |  | Show a drawing's tags as chips in the file navigator. |
 | `thumbnails` | `true` | true or false |  | Show drawing thumbnails (home, search, palette, gallery). |
 | `thumbnail_max_elements` | `8000` | an integer between 100 and 50000 |  | Biggest drawing (in elements) that gets a thumbnail. |
+| `defer_home_pane` | `true` | true or false |  | When a vault opens, paint the file tree first and the home pane one frame later, in the same place; `false` draws both together. |
 | `activity_bar` | `true` | true or false | yes | Show the activity bar. |
 | `activity_bar_order` | `[]` | a list of entry ids like ["library", "history"] | yes | Activity bar entry order: `library`, `history`, `graph`, `gallery`, `search`, `tags`, `templates`, `hotkeys`, `settings`; unlisted entries follow in their default order. |
 | `activity_bar_hidden` | `[]` | a list of entry ids like ["tags"] | yes | Activity bar entries to hide. |
@@ -1101,6 +1102,8 @@ Plugins in the `plugins/` folder of the config folder.
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
 | `enabled` | `[]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load. |
+| `importers` | `[object Object]` | a table like { txt = "text-import" } (extension = plugin id, "" for none) |  | Which plugin imports a file extension when two plugins claim it; `""` turns plugin handling off for that extension. |
+| `storage_limit_kb` | `1024` | an integer between 64 and 16384 |  | Most data one plugin may save with `ctx.storage`, in KiB; a save past it is refused. |
 
 ### `[hotkeys]` and `[plugin.<id>]`
 

@@ -112,6 +112,8 @@ autosave_delay_ms = 500
 # thumbnails = true
 # Biggest drawing (in elements) that gets a thumbnail, 100 to 50000
 # thumbnail_max_elements = 8000
+# Paint the file tree first, the home pane one frame later
+# defer_home_pane = true
 # Show the activity bar
 # activity_bar = true
 # Entry order: library, history, graph, gallery, search, tags, templates, hotkeys, settings
@@ -241,6 +243,10 @@ autosave_delay_ms = 500
 [plugins]
 # Ids of the plugins to load from the plugins/ folder, like ["hello-command"]
 # enabled = []
+# Most data one plugin may save, in KiB, 64 to 16384
+# storage_limit_kb = 1024
+# Which plugin imports an extension when two claim it, like { txt = "text-import" }
+# importers = {}
 "##;
 
 /// Serializes every config/state write within the process.

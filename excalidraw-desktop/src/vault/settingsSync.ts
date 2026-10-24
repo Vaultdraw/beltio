@@ -815,6 +815,14 @@ export const unknownKeyProblemsIn = (
     message: unknownKeyMessage(u, file),
   }));
 
+/** `[control]` keys, read by the native side (docs: "Control and links"). */
+const CONTROL_KEYS = [
+  "control.enabled",
+  "control.uri_enabled",
+  "control.uri_allow",
+  "control.notify_edits",
+];
+
 /** config.toml keys no mapping reads, as warnings (the rest still applies). */
 export const unknownKeyProblems = (
   config: Record<string, unknown>,
@@ -822,8 +830,9 @@ export const unknownKeyProblems = (
   unknownKeyProblemsIn(
     config,
     (knownKeys ??= buildKnownIndex(
-      // `[keys.labels]` holds free-text group names, read apart from the mapping.
-      [...CONFIG_MAPPING.map((m) => m.key), "keys.labels"],
+      // `[keys.labels]` holds free-text group names, read apart from the mapping;
+      // `[control]` is read only by the native side.
+      [...CONFIG_MAPPING.map((m) => m.key), "keys.labels", ...CONTROL_KEYS],
       TOOL_NESTED_KEYS,
     )),
     "config.toml",
