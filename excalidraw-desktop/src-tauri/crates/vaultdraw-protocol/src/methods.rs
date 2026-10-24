@@ -168,7 +168,7 @@ fn scene_methods() -> Vec<MethodSpec> {
             })),
             obj(
                 json!({
-                    "path": {"type": "string"},
+                    "path": {"type": ["string", "null"]},
                     "live": {"type": "boolean"},
                     "readOnly": {"type": "boolean"},
                     "version": {"type": "string"},
@@ -193,7 +193,7 @@ fn scene_methods() -> Vec<MethodSpec> {
             "Elements of the drawing on screen by id (1 to 100); ids that do not exist come back in missing",
             target(json!({"ids": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 100}})),
             obj(
-                json!({"path": {"type": "string"}, "version": {"type": "string"}, "elements": {"type": "array", "items": scene_element()}, "missing": strings.clone()}),
+                json!({"path": {"type": ["string", "null"]}, "version": {"type": "string"}, "elements": {"type": "array", "items": scene_element()}, "missing": strings.clone()}),
                 &["path", "version", "elements", "missing"],
             ),
             CLI_ONLY,
@@ -204,7 +204,7 @@ fn scene_methods() -> Vec<MethodSpec> {
             "The selected elements of the drawing on screen",
             target(json!({})),
             obj(
-                json!({"path": {"type": "string"}, "version": {"type": "string"}, "ids": strings, "elements": {"type": "array", "items": scene_element()}}),
+                json!({"path": {"type": ["string", "null"]}, "version": {"type": "string"}, "ids": strings, "elements": {"type": "array", "items": scene_element()}}),
                 &["path", "version", "ids", "elements"],
             ),
             CLI_ONLY,
@@ -222,7 +222,7 @@ fn scene_methods() -> Vec<MethodSpec> {
             })),
             obj(
                 json!({
-                    "path": {"type": "string"},
+                    "path": {"type": ["string", "null"]},
                     "live": {"type": "boolean"},
                     "applied": {"type": "integer"},
                     "ids": {"type": "array", "items": {"type": "string"}},
