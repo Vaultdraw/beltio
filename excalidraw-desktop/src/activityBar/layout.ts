@@ -110,7 +110,6 @@ export function hasShownActivityEntry(
   const hide = new Set(hidden);
   return entries.some(
     (e) =>
-      !hide.has(e.id) &&
-      !(e.defaultHidden === true && !hide.has(SHOWN + e.id)),
+      !hide.has(e.id) && !(e.defaultHidden === true && !hide.has(SHOWN + e.id)),
   );
 }
