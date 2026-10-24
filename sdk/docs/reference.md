@@ -368,8 +368,8 @@ type ImportResult = { ops: readonly SceneOp[] } | void;
 ```
 
 - Sent when files in the vault change on disk, including the plugin's own writes and autosaves. Compare revisions if a change matters.
-- `paths` are vault-relative. `rescan: true` means the file watcher lost track, so every path may have changed.
-- Needs `vault.read`. Without it, `on` records a `PERMISSION` error on the plugin (Settings → Plugins shows it) and returns a subscription that never fires.
+- `paths` are vault-relative drawings and folders. Other files and paths with a segment that starts with a dot are left out; a batch with nothing left is not sent. `rescan: true` means the file watcher lost track, so every path may have changed.
+- Needs `vault.read`. Without it, `on` records a `PERMISSION` error on the plugin (Settings → Plugins shows it) and returns a subscription that never fires. If an update removes `vault.read`, existing subscriptions stop receiving events.
 
 ## Rules for plugin code
 

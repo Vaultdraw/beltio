@@ -182,6 +182,17 @@ describe("importPickedFiles", () => {
     expect(s.notify).toHaveBeenCalledWith(expect.stringContaining("n.txt"));
   });
 
+  it("asks to open a drawing when no drawing path is known", async () => {
+    claimTxt();
+    const s = setup();
+    await importPickedFiles([file("n.txt", "")], undefined, {
+      ...s.options,
+      getPath: () => null,
+    });
+    expect(s.notify).toHaveBeenCalledTimes(1);
+    expect(s.notify).toHaveBeenCalledWith("Open a drawing to import n.txt.");
+  });
+
   it("does nothing on cancel (no files) or without an open drawing", async () => {
     const s = setup();
     await importPickedFiles([], undefined, s.options);

@@ -48,6 +48,8 @@ export interface ImporterClash {
   winner: ImporterEntry | null;
   /** Plugins that claim the extension but do not handle it. */
   others: ImporterEntry[];
+  /** `plugins.importers` names this plugin, but it does not import the extension. */
+  unknownChoice?: string;
 }
 
 /** extension -> every claim, in claim order */
@@ -183,8 +185,17 @@ export function importerClashes(): ImporterClash[] {
   for (const [extension, list] of claims) {
     const winner = winners.get(extension) ?? null;
     const others = list.filter((e) => e !== winner);
-    if (others.length > 0) {
-      out.push({ extension, winner, others });
+    const choice = Object.hasOwn(overrides, extension)
+      ? overrides[extension]
+      : "";
+    const unknownChoice =
+      choice && !list.some((e) => e.pluginId === choice) ? choice : undefined;
+    if (others.length > 0 || unknownChoice) {
+      out.push(
+        unknownChoice
+          ? { extension, winner, others, unknownChoice }
+          : { extension, winner, others },
+      );
     }
   }
   return out.sort((a, b) => a.extension.localeCompare(b.extension));

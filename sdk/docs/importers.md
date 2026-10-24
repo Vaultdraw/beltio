@@ -93,7 +93,8 @@ Notes on the flow:
 | --- | --- |
 | File size | 32 MiB or less (checked before the plugin loads). |
 | Imports at a time | One. A second drop while one runs shows "busy" and is not queued. |
-| Files in one drop | Run one after another. |
+| Files in one drop | Run one after another. Import: Cancel or a drawing switch stops the rest. |
+| Shift while dropping | Skips importers: Excalidraw's own drop handling runs. |
 | Ops per result | The batch limit: 500. |
 | Plugin code | Runs on the main thread, with full access. There is no progress view yet. |
 

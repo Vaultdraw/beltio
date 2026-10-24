@@ -5,9 +5,12 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { checkVaultPath } from "../../../../sdk/api/testing/vault";
+
 import { appEvents } from "../../events/appEvents";
 import { setWorkspaceBridge } from "../workspaceBridge";
 import { boot, type TestPlugin } from "../testing";
+
+import { getRuntime } from "./activation";
 
 import { getPluginsBackend } from "./backend";
 
@@ -247,6 +250,18 @@ describe("vault.changed gate", () => {
     t!.events.emit("vault.changed", { paths: ["a.excalidraw"], rescan: false });
     await t!.flush();
     expect(cb).toHaveBeenCalledWith({ paths: ["a.excalidraw"], rescan: false });
+  });
+
+  it("stops delivering when an update removes vault.read", async () => {
+    const cb = vi.fn();
+    await bootVault(
+      ["vault.read"],
+      (c) => void c.events.on("vault.changed", cb),
+    );
+    getRuntime("vp")!.info = { ...getRuntime("vp")!.info, permissions: [] };
+    t!.events.emit("vault.changed", { paths: ["a.excalidraw"], rescan: false });
+    await t!.flush();
+    expect(cb).not.toHaveBeenCalled();
   });
 });
 

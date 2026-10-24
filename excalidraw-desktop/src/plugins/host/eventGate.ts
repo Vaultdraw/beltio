@@ -18,11 +18,11 @@ export function createGatedEventsApi(
   const inner = createEventsApi(id, track, isLive);
   return {
     on(name, cb) {
-      // Read at call time: an update can change the declared permissions.
-      if (
-        name === "vault.changed" &&
-        !rt.info.permissions.includes("vault.read")
-      ) {
+      if (name !== "vault.changed") {
+        return inner.on(name, cb);
+      }
+      const allowed = () => rt.info.permissions.includes("vault.read");
+      if (!allowed()) {
         reportPluginError(
           id,
           permissionError(id, "vault.changed", "vault.read"),
@@ -30,7 +30,12 @@ export function createGatedEventsApi(
         );
         return NOOP;
       }
-      return inner.on(name, cb);
+      // Checked again per event: an update can remove the permission.
+      return inner.on(name, ((payload: never) => {
+        if (allowed()) {
+          (cb as (p: never) => void)(payload);
+        }
+      }) as typeof cb);
     },
   };
 }

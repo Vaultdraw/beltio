@@ -101,7 +101,14 @@ const extText = (extensions: readonly string[]) =>
 
 /** One sentence per extension that several plugins claim, or that config turned off. */
 export const clashText = (c: ImporterClash): string => {
-  const others = c.others.map((o) => o.title).join(", ");
+  const others = c.others.map((o) => o.pluginId).join(", ");
+  if (c.unknownChoice) {
+    return `plugins.importers sets .${c.extension} to ${
+      c.unknownChoice
+    }, which does not import it. ${
+      c.winner ? `${c.winner.pluginId} imports it instead.` : ""
+    }`.trim();
+  }
   return c.winner
     ? `.${c.extension} is claimed by ${c.winner.pluginId} and ${others}. ${c.winner.pluginId} imports it. Set plugins.importers in config.toml to choose.`
     : `.${c.extension} is not imported by plugins (plugins.importers is empty for it). Claimed by ${others}.`;

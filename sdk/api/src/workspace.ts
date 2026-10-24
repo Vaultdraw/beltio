@@ -6,7 +6,8 @@
 export interface WorkspaceApi {
   /**
    * Opens a drawing, in a new tab with `newTab`. Free. Fails with
-   * `NOT_FOUND` when the drawing does not exist.
+   * `NO_VAULT` when no vault is open, `NOT_FOUND` when the drawing does not
+   * exist, `IO_ERROR` when it could not be opened.
    *
    * @since 0.6.0
    */

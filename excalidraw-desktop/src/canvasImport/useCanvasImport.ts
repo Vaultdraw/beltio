@@ -58,12 +58,16 @@ export const importPickedFiles = async (
     await options.openPdf(plan.pdf);
   }
   const path = options.getPath?.() ?? null;
+  if (plan.plugin.length > 0 && path === null) {
+    const names = plan.plugin.map((i) => i.file.name).join(", ");
+    options.notify(`Open a drawing to import ${names}.`);
+  }
   const ran =
     plan.plugin.length > 0 &&
     path !== null &&
     (await runImports(plan.plugin, { path, at: at ?? viewportCentre(api) }));
   // Host not running: the plugin files are reported like any unknown file.
-  const unhandled = ran ? [] : plan.plugin.map((i) => i.file);
+  const unhandled = ran || path === null ? [] : plan.plugin.map((i) => i.file);
   const skipped = skippedMessage([...unhandled, ...plan.skipped]);
   if (skipped) {
     options.notify(skipped);

@@ -68,7 +68,10 @@ import {
 } from "./vault/treeStore";
 import { appEvents } from "./events/appEvents";
 import { cancelImports } from "./plugins/importerMap";
-import { setWorkspaceBridge } from "./plugins/workspaceBridge";
+import {
+  isPluginVisiblePath,
+  setWorkspaceBridge,
+} from "./plugins/workspaceBridge";
 import { useVaultDocument } from "./vault/useVaultDocument";
 import { useAppearance } from "./vault/useAppearance";
 import { runZoomCommand, useInterfaceZoom } from "./vault/useInterfaceZoom";
@@ -820,12 +823,11 @@ export const VaultApp = ({
         }
 
         if (appEvents.hasListeners("vault.changed")) {
-          appEvents.emit("vault.changed", {
-            paths: event.paths.filter(
-              (p) => !p.split("/").some((seg) => seg.startsWith(".")),
-            ),
-            rescan: !!event.rescan,
-          });
+          // What plugins may see: drawings and folders, no dot segments.
+          const paths = event.paths.filter(isPluginVisiblePath);
+          if (paths.length > 0 || event.rescan) {
+            appEvents.emit("vault.changed", { paths, rescan: !!event.rescan });
+          }
         }
 
         if (event.rescan) {

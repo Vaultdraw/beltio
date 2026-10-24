@@ -3,6 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { findImporter, runImports } from "../importerMap";
 import { boot, type TestPlugin } from "../testing";
 
+import { getRuntime } from "./activation";
+import { getImporter } from "./importerRegistry";
+
 import type { Importer, Plugin, PluginContext } from "../api";
 
 let t: TestPlugin | undefined;
@@ -214,6 +217,63 @@ describe("import runner", () => {
     expect(await done).toBeNull();
     expect(p.toasts()).toEqual(["Importer: the import was cancelled"]);
     expect(p.scene.live()).toHaveLength(0);
+  });
+
+  it("an importer that throws on abort is not reported as failed", async () => {
+    const gate = deferred();
+    const p = await bootImporter({
+      async import(_i, { signal }) {
+        await gate.promise;
+        if (signal.aborted) {
+          throw new DOMException("aborted", "AbortError");
+        }
+      },
+    });
+    const done = p.import("a.txt", "x");
+    await p.flush();
+    expect(p.cancelImport()).toBe(true);
+    gate.resolve();
+    await done;
+    expect(p.toasts()).toEqual(["Importer: the import was cancelled"]);
+    expect(p.log().some((l) => l.level === "error")).toBe(false);
+  });
+
+  it("Cancel during activation stops the import before the importer runs", async () => {
+    const gate = deferred();
+    const run = vi.fn();
+    t = await boot(
+      {
+        id: "imp",
+        name: "Importer",
+        contributes: { importers: [{ id: "txt", extensions: ["txt"] }] },
+      },
+      {
+        async activate(ctx) {
+          await gate.promise; // a slow first load
+          ctx.importers.register("txt", { import: run });
+        },
+      },
+    );
+    const done = t.import("a.txt", "x");
+    await t.flush();
+    expect(t.cancelImport()).toBe(true);
+    gate.resolve();
+    expect(await done).toBeNull();
+    expect(run).not.toHaveBeenCalled();
+    expect(t.toasts()).toEqual(["Importer: the import was cancelled"]);
+  });
+
+  it("a register call after the plugin stopped is ignored", async () => {
+    let ctx!: PluginContext;
+    const p = await bootImporter(
+      { import: () => undefined },
+      { register: false, activate: (c) => (ctx = c) },
+    );
+    await p.import("a.txt", "x");
+    const rt = getRuntime("imp")!;
+    await p.disable();
+    ctx.importers.register("txt", { import: () => undefined });
+    expect(getImporter(rt, "txt")).toBeUndefined();
   });
 
   it("stopping the plugin aborts its running import", async () => {

@@ -56,32 +56,44 @@ async function runOne(item: ImportItem, target: ImportTarget): Promise<void> {
     toast(importTooBigMessage(fileName));
     return;
   }
-  const loaded = await ensureActive(pluginId);
-  const rt = getRuntime(pluginId);
-  if (!loaded || !rt) {
-    toast(
-      `${
-        rt?.info.name ?? pluginId
-      } could not be loaded, so ${fileName} was not imported (see Settings, Plugins)`,
-      "error",
-    );
-    return;
-  }
-  const name = rt.info.name;
-  const importer = getImporter(rt, importerId);
-  if (!importer) {
-    const message = importMissingMessage(name, importerId);
-    reportPluginError(pluginId, new Error(message), "importer");
-    toast(message, "error");
-    return;
-  }
+  // Set up before loading the plugin, so Cancel and a drawing switch during
+  // activation are seen too.
   const controller = new AbortController();
   beginImport(pluginId, controller);
   const off = appEvents.on("drawing.opened", () => {
     halted = "switch";
     controller.abort("switch");
   });
+  const changed = (name: string) => {
+    logLine(pluginId, "warn", "DRAWING_CHANGED: nothing was applied");
+    toast(importChangedMessage(name), "error");
+  };
   try {
+    const loaded = await ensureActive(pluginId);
+    const rt = getRuntime(pluginId);
+    if (controller.signal.aborted) {
+      if (controller.signal.reason === "cancel") {
+        toast(importCancelledMessage(rt?.info.name ?? pluginId));
+      }
+      return;
+    }
+    if (!loaded || !rt) {
+      toast(
+        `${
+          rt?.info.name ?? pluginId
+        } could not be loaded, so ${fileName} was not imported (see Settings, Plugins)`,
+        "error",
+      );
+      return;
+    }
+    const name = rt.info.name;
+    const importer = getImporter(rt, importerId);
+    if (!importer) {
+      const message = importMissingMessage(name, importerId);
+      reportPluginError(pluginId, new Error(message), "importer");
+      toast(message, "error");
+      return;
+    }
     const input = makeImportInput(
       fileName,
       file.size,
@@ -97,6 +109,9 @@ async function runOne(item: ImportItem, target: ImportTarget): Promise<void> {
             path: target.path,
           });
         } catch (err) {
+          if (controller.signal.aborted) {
+            return undefined; // stopping on abort is the expected reaction
+          }
           toast(importFailedMessage(name, fileName, errorText(err)), "error");
           throw err;
         }
@@ -105,16 +120,12 @@ async function runOne(item: ImportItem, target: ImportTarget): Promise<void> {
       true,
     );
     const ops = resultOps(await run());
-    const changed = () => {
-      logLine(pluginId, "warn", "DRAWING_CHANGED: nothing was applied");
-      toast(importChangedMessage(name), "error");
-    };
     if (controller.signal.aborted) {
       const reason = controller.signal.reason;
       if (reason === "cancel") {
         toast(importCancelledMessage(name));
       } else if (reason === "switch" && ops) {
-        changed();
+        changed(name);
       }
       return;
     }
@@ -124,7 +135,7 @@ async function runOne(item: ImportItem, target: ImportTarget): Promise<void> {
     const scene = getActiveScene();
     if (!scene || scene.path !== target.path) {
       halted = "switch";
-      changed();
+      changed(name);
       return;
     }
     if (scene.readOnly) {
@@ -174,12 +185,12 @@ export async function runImportItems(
 
 /** "Import: Cancel": aborts the running import; true when one was running. */
 export function cancelRunningImport(): boolean {
-  const current = currentImport();
-  if (!current) {
+  if (!running) {
     return false;
   }
+  // Also stops the files not started yet, even between two of them.
   halted = "cancel";
-  current.controller.abort("cancel");
+  currentImport()?.controller.abort("cancel");
   return true;
 }
 

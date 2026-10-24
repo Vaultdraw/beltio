@@ -30,7 +30,7 @@ pub(crate) fn check_plugin_path(path: &str, kind: Kind) -> Result<(), RpcError> 
     if path.len() > MAX_PLUGIN_PATH {
         return Err(invalid("Path is longer than 1024 bytes"));
     }
-    if path.split('/').any(|s| s.starts_with('.')) {
+    if has_dot_segment(path) {
         return Err(invalid("Plugins cannot use paths with a segment that starts with a dot"));
     }
     if kind == Kind::File && !path.to_ascii_lowercase().ends_with(DRAWING_SUFFIX) {

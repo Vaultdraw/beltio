@@ -322,7 +322,10 @@ const VaultEditorComponent = ({
       if (plan.images.length) {
         void api!.insertImages(plan.images, at);
       }
-      setEditorError(skippedMessage(plan.skipped));
+      // A PDF reaches here only when the PDF import is unavailable.
+      setEditorError(
+        skippedMessage(plan.pdf ? [plan.pdf, ...plan.skipped] : plan.skipped),
+      );
       return true;
     },
     [],
@@ -340,7 +343,8 @@ const VaultEditorComponent = ({
         }
         return;
       }
-      if (hasImporters() && dropPluginFiles(event)) {
+      // Shift keeps Excalidraw's own handling (insert scene content).
+      if (!event.shiftKey && hasImporters() && dropPluginFiles(event)) {
         return;
       }
       // Files that carry a scene (.excalidraw/.json, or Excalidraw's

@@ -242,6 +242,9 @@ export function createPluginContext(
           if (!declaredImporters.has(importerId)) {
             return refuse("importer", importerId);
           }
+          if (!isLive()) {
+            return NOOP; // registered after the plugin stopped
+          }
           setImporter(rt, importerId, importer);
           return track(() => removeImporter(rt, importerId, importer));
         },

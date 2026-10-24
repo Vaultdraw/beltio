@@ -20,3 +20,16 @@ export function setWorkspaceBridge(next: WorkspaceBridge | null): void {
 }
 
 export const getWorkspaceBridge = (): WorkspaceBridge | null => bridge;
+
+/**
+ * A changed path plugins may hear about (`vault.changed`): no segment starts
+ * with a dot, and the last one is a drawing or has no extension (a folder).
+ */
+export const isPluginVisiblePath = (path: string): boolean => {
+  const segs = path.split("/");
+  if (segs.some((s) => s.startsWith("."))) {
+    return false;
+  }
+  const last = segs[segs.length - 1];
+  return !last.includes(".") || /\.excalidraw$/i.test(last);
+};

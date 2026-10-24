@@ -33,8 +33,9 @@ export interface VaultEntry {
 /**
  * The drawings of the open vault. Paths are vault-relative and use "/";
  * entries and segments that start with a dot are never listed or accepted.
- * Errors carry a `code`: `PERMISSION`, `INVALID_PATH`, `NOT_FOUND`,
- * `NAME_COLLISION`, `READ_ONLY`, `NO_VAULT`, `INVALID_FILE`.
+ * Errors carry a `code`: `PERMISSION`, `INVALID_ARGUMENT`, `INVALID_PATH`,
+ * `NOT_FOUND`, `NAME_COLLISION`, `READ_ONLY`, `NO_VAULT`, `INVALID_FILE`,
+ * `IO_ERROR`.
  *
  * @since 0.6.0
  */

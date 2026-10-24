@@ -33,10 +33,10 @@ const mount = (extra: Record<string, unknown> = {}) =>
     />,
   ).container.querySelector(".vault-editor") as HTMLElement;
 
-const drop = (el: HTMLElement, files: File[]) => {
+const drop = (el: HTMLElement, files: File[], shiftKey = false) => {
   const event = new Event("drop", { bubbles: true, cancelable: true }) as any;
   event.dataTransfer = { files };
-  event.shiftKey = false;
+  event.shiftKey = shiftKey;
   fireEvent(el, event);
   return event.defaultPrevented as boolean;
 };
@@ -68,6 +68,14 @@ describe("VaultEditor: dropping a file a plugin imports", () => {
     expect(items[0].file.name).toBe("hello.txt");
     expect(target.path).toBe("a.excalidraw");
     expect(target.at).toEqual({ x: expect.any(Number), y: expect.any(Number) });
+  });
+
+  it("Shift keeps Excalidraw's own handling", () => {
+    claim();
+    const run = vi.fn(async () => {});
+    setImportRunner(run);
+    expect(drop(mount(), [txt()], true)).toBe(false);
+    expect(run).not.toHaveBeenCalled();
   });
 
   it("a read-only drawing refuses with a message and runs nothing", () => {

@@ -67,6 +67,20 @@ describe("importerMap", () => {
     expect(importerClashes()[0].winner).toBeNull();
   });
 
+  it("reports a config choice that does not import the extension", () => {
+    claimImporter(entry("alpha"), ["txt"]);
+    setImporterOverrides({ txt: "typo" });
+    expect(findImporter("a.txt")?.pluginId).toBe("alpha");
+    expect(importerClashes()).toEqual([
+      {
+        extension: "txt",
+        winner: entry("alpha"),
+        others: [],
+        unknownChoice: "typo",
+      },
+    ]);
+  });
+
   it("notifies subscribers", () => {
     const fn = vi.fn();
     const off = subscribeImporters(fn);
