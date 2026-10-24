@@ -1459,6 +1459,11 @@ mod tests {
             }
             let Ok(Json::Object(kv)) = parse_config(body) else { continue };
             let (key, value) = kv.into_iter().next().unwrap();
+            // A table value (`# importers = {}`) is written as its own `[table.key]`
+            // section, never on the example line, so it has no line to round-trip.
+            if value.is_object() {
+                continue;
+            }
             found.push((table.clone(), key, value, line.to_string(), commented));
         }
         // The text scan sees exactly the parsed default's values.
@@ -1498,7 +1503,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 74, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 79, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();
