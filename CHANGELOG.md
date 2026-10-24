@@ -48,7 +48,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - The activity bar disappears when every entry is hidden, instead of leaving an empty 36 px strip. Showing one entry again (Settings → Interface) brings it back.
 - A plugin with `dev = true` is no longer switched off for good after three errors. It stops for the session, the disable is not saved, and the next save reloads it with a fresh error count.
 - Dev reload now also works for plugins in symlinked folders and in temp folders on macOS (watched paths are canonicalised).
-- An app started with `VAULTDRAW_VAULT` set opens only that vault and no longer reads or writes your own `recent-vault` (used by `dev --sandbox`; it changes nothing when the variable is unset).
+- An app started with both `VAULTDRAW_VAULT` and `VAULTDRAW_STATE_DIR` set opens only that vault and no longer reads or writes your own `recent-vault` (used by `dev --sandbox`; nothing changes when either variable is unset).
 
 ### Plugin SDK
 

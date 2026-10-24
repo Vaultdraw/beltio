@@ -374,6 +374,11 @@ export async function runCheck(dir, opts, out) {
   /** @type {import("./activate.mjs").ActivationResult | null} */
   let activation = null;
   if (opts.activate && r.ok) {
+    if (!opts.json) {
+      out(
+        "Note: --activate runs the plugin's code on this computer; use it only on plugins you trust.",
+      );
+    }
     const { activatePlugin } = await import("./activate.mjs");
     activation = await activatePlugin(dir, { timeoutMs: opts.timeoutMs });
     r.errors.push(...activation.errors);
@@ -406,10 +411,19 @@ export async function runCheck(dir, opts, out) {
     );
   } else {
     out(formatText(r, dir));
+    if (opts.activate && activation) {
+      for (const l of activation.log) {
+        out(`log | ${l.level}: ${l.text}`);
+      }
+    }
     if (opts.activate) {
       out(
         activation
-          ? `Activation: ran in ${activation.ms} ms; bound ${activation.commands.length} command${activation.commands.length === 1 ? "" : "s"} and ${activation.panels.length} panel${activation.panels.length === 1 ? "" : "s"}.`
+          ? `Activation: ran in ${activation.ms} ms; bound ${
+              activation.commands.length
+            } command${activation.commands.length === 1 ? "" : "s"} and ${
+              activation.panels.length
+            } panel${activation.panels.length === 1 ? "" : "s"}.`
           : "Activation: skipped because the static checks found errors.",
       );
     }

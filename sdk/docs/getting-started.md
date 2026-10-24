@@ -117,11 +117,12 @@ Sandbox: /tmp/vds-aB3dEf (removed when you stop)
 Vault:   /tmp/vds-aB3dEf/vault
 ```
 
-It makes `/tmp/vds-xxxxxx/` with `config/` (a `config.toml` that enables your plugin), `state/` and `vault/` with one drawing, copies the plugin in, starts the app, keeps copying on each save and removes the folder when the app closes or you press Ctrl+C. The app is found with `--app <path>`, then `$VAULTDRAW_APP`, then `/Applications/Vaultdraw.app` (macOS).
+It makes `/tmp/vds-xxxxxx/` with `config/` (a `config.toml` that enables your plugin), `state/` and `vault/` with one drawing, copies the plugin in, starts the app, keeps copying on each save and removes the folder when the app closes or you press Ctrl+C. The app is found with `--app <path>` (the binary, or the `.app` bundle on macOS), then `$VAULTDRAW_APP`, then `/Applications/Vaultdraw.app` (macOS).
 
-- **Your vault stays closed.** The app is started with `VAULTDRAW_CONFIG_DIR`, `VAULTDRAW_STATE_DIR` and `VAULTDRAW_VAULT` set to the sandbox. With `VAULTDRAW_VAULT` set, the app opens only that folder and never reads or writes your own `recent-vault`.
+- **Your vault stays closed.** The app is started with `VAULTDRAW_CONFIG_DIR`, `VAULTDRAW_STATE_DIR` and `VAULTDRAW_VAULT` set to the sandbox. When both `VAULTDRAW_VAULT` and `VAULTDRAW_STATE_DIR` are set, the app opens only that vault folder and never reads or writes your own `recent-vault`. (`VAULTDRAW_VAULT` alone, for example exported as a default for the offline CLI, changes nothing in the app window.)
 - **App version.** The app must have plugin support (0.1.2 or newer) and be at least `min_app`; otherwise `dev` stops and says so. Older apps ignore `VAULTDRAW_VAULT`, which is why the version is checked first.
-- **Limit.** The web view's own storage (window size, a few remembered UI choices) is still the app's normal one.
+- **Same machine, two apps.** The web view's storage is shared with your normal app, so avoid running the sandbox and your normal Vaultdraw at the same time.
+- **Limit.** The web view's own storage (window size, a few remembered UI choices) is still the normal one; it holds no vault, config or plugin data.
 - `--sandbox` cannot be combined with `--config-dir` or `--once`.
 
 ## The dev log

@@ -16,6 +16,7 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
@@ -50,11 +51,21 @@ export function findApp({ app, env, platform = process.platform }) {
       "Cannot find the Vaultdraw app. Pass --app <path to the app binary> or set VAULTDRAW_APP.",
     );
   }
-  const file = path.resolve(candidate);
+  let file = path.resolve(candidate);
+  if (
+    /\.app$/i.test(file) &&
+    existsSync(path.join(file, "Contents", "MacOS"))
+  ) {
+    // The natural thing to pass on macOS is the bundle; its binary has a fixed name.
+    file = path.join(file, "Contents", "MacOS", "excalidraw-vault");
+  }
   if (!existsSync(file)) {
     throw new EnvError(
       `The Vaultdraw app was not found at ${file}. Pass --app <path> or set VAULTDRAW_APP.`,
     );
+  }
+  if (statSync(file).isDirectory()) {
+    throw new EnvError(`${file} is a folder; pass the app binary.`);
   }
   return file;
 }
@@ -129,7 +140,10 @@ export function createSandbox(pluginId, o = {}) {
   for (const d of [config, state, vault]) {
     mkdirSync(d, { recursive: true });
   }
-  writeFileSync(path.join(base, MARKER), "created by vaultdraw-plugin dev --sandbox\n");
+  writeFileSync(
+    path.join(base, MARKER),
+    "created by vaultdraw-plugin dev --sandbox\n",
+  );
   writeFileSync(
     path.join(config, "config.toml"),
     `# Sandbox config made by vaultdraw-plugin dev --sandbox. Deleted on exit.\n[plugins]\nenabled = ["${pluginId}"]\n`,
@@ -198,7 +212,9 @@ export function launchApp(bin, sandboxEnv, log) {
     }
   });
   const exited = new Promise((resolve) => {
-    child.once("error", (error) => resolve({ code: null, signal: null, error }));
+    child.once("error", (error) =>
+      resolve({ code: null, signal: null, error }),
+    );
     // "close" comes after stderr ended, so the app's last lines are shown first.
     child.once("close", (code, signal) => {
       if (buf.trim()) {

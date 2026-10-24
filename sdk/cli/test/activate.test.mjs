@@ -13,8 +13,10 @@ version = "1.0.0"
 api = 0
 main = "main.js"
 ${extra}`;
-const cmd = (id) => `\n[[contributes.commands]]\nid = "${id}"\ntitle = "Demo ${id}"\n`;
-const panel = (id) => `\n[[contributes.panels]]\nid = "${id}"\ntitle = "Panel ${id}"\n`;
+const cmd = (id) =>
+  `\n[[contributes.commands]]\nid = "${id}"\ntitle = "Demo ${id}"\n`;
+const panel = (id) =>
+  `\n[[contributes.panels]]\nid = "${id}"\ntitle = "Panel ${id}"\n`;
 
 const plugin = (files) => {
   const dir = tmp("vdp-act-");
@@ -70,7 +72,10 @@ describe("check --activate", () => {
   });
 
   it("skips the activation when the static checks fail", () => {
-    const dir = plugin({ "plugin.toml": manifest("bogus = 1\n"), "main.js": OK });
+    const dir = plugin({
+      "plugin.toml": manifest("bogus = 1\n"),
+      "main.js": OK,
+    });
     const r = act(dir);
     expect(r.code).toBe(1);
     expect(r.out).toContain("Activation: skipped");
@@ -139,7 +144,10 @@ export default definePlugin({
   it("reports a load failure, a missing default export and a syntax error", () => {
     const manifestText = manifest(cmd("hello"));
     const cases = [
-      [`throw new Error("bad top level");\nexport default {};\n`, "activate-load-failed"],
+      [
+        `throw new Error("bad top level");\nexport default {};\n`,
+        "activate-load-failed",
+      ],
       [`export const x = 1;\n`, "activate-no-default"],
       [`export default { activate: 3 };\n`, "activate-no-default"],
       [`export default {{{\n`, "activate-load-failed"],
@@ -177,7 +185,7 @@ export default definePlugin({
       "plugin.toml": manifest(cmd("hello")),
       "main.js": OK.replace(
         'ctx.commands.register("hello"',
-        "ctx.scene.getElements();\n    ctx.commands.register(\"hello\"",
+        'ctx.scene.getElements();\n    ctx.commands.register("hello"',
       ),
     });
     const r = act(dir, "--json");
@@ -206,7 +214,10 @@ export default definePlugin({
   });
 
   it("refuses a zip and bad --timeout values with exit 2", () => {
-    const dir = plugin({ "plugin.toml": manifest(cmd("hello")), "main.js": OK });
+    const dir = plugin({
+      "plugin.toml": manifest(cmd("hello")),
+      "main.js": OK,
+    });
     expect(run(["check", dir, "--timeout", "500"]).code).toBe(2);
     expect(act(dir, "--timeout", "5").code).toBe(2);
     expect(act(dir, "--timeout", "abc").code).toBe(2);
@@ -217,9 +228,63 @@ export default definePlugin({
     expect(r.err).toContain("needs a plugin folder");
   });
 
+  it("is not fooled by a plugin that prints a lot", () => {
+    const dir = plugin({
+      "plugin.toml": manifest(cmd("hello")),
+      "main.js": `export default { activate(ctx) { for (let i = 0; i < 20000; i++) console.log("x".repeat(100)); ctx.commands.register("hello", () => {}); } };\n`,
+    });
+    expect(act(dir).code).toBe(0);
+  });
+
+  it("does not turn a slow deactivate into a timeout", () => {
+    const dir = plugin({
+      "plugin.toml": manifest(cmd("hello")),
+      "main.js": `export default { activate(ctx) { ctx.commands.register("hello", () => {}); }, deactivate() { return new Promise(() => {}); } };\n`,
+    });
+    const r = act(dir, "--timeout", "1500", "--json");
+    expect(r.code, r.out).toBe(0);
+    expect(JSON.parse(r.out).activation.commands).toEqual(["hello"]);
+  });
+
+  it("reports a throw after a skipped call as a warning, not an error", () => {
+    const dir = plugin({
+      "plugin.toml": manifest(cmd("hello")),
+      "main.js": `export default { activate(ctx) { const els = ctx.scene.getElements(); els.length; ctx.commands.register("hello", () => {}); } };\n`,
+    });
+    const r = act(dir, "--json");
+    expect(r.code, r.out).toBe(0);
+    expect(JSON.parse(r.out).warnings.map((w) => w.code)).toContain(
+      "activate-threw-after-skip",
+    );
+  });
+
+  it("handles re-exports and named imports of shared modules", () => {
+    const dir = plugin({
+      "plugin.toml": manifest(cmd("hello")),
+      "main.js": `import { definePlugin } from "@vaultdraw/api";\nexport { useState as us } from "react";\nimport { createElement as h, useMemo } from "react";\nexport default definePlugin({ activate(ctx) { ctx.commands.register("hello", () => h("div")); } });\n`,
+    });
+    expect(act(dir).code).toBe(0);
+  });
+
+  it("shows plugin logs in text mode and warns that it runs the code", () => {
+    const dir = plugin({
+      "plugin.toml": manifest(cmd("hello")),
+      "main.js": OK.replace(
+        'ctx.commands.register("hello"',
+        'ctx.log.info("hi there");\n    ctx.commands.register("hello"',
+      ),
+    });
+    const r = act(dir);
+    expect(r.out).toContain("log | info: hi there");
+    expect(r.out).toContain("runs the plugin's code");
+    expect(act(dir, "--json").out).not.toContain("runs the plugin's code");
+  });
+
   it("keeps its event list equal to the API", () => {
     const api = readFileSync(path.join(SDK, "api", "src", "events.ts"), "utf8");
-    const fromApi = [...api.matchAll(/^\s*"([a-z]+\.[a-z]+)":/gm)].map((m) => m[1]);
+    const fromApi = [...api.matchAll(/^\s*"([a-z]+\.[a-z]+)":/gm)].map(
+      (m) => m[1],
+    );
     const child = readFileSync(
       path.join(SDK, "cli", "src", "activateChild.mjs"),
       "utf8",

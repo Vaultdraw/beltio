@@ -118,14 +118,22 @@ async function main(argv, env = process.env) {
         return 2;
       }
       if (v.timeout !== undefined && !v.activate) {
-        err("--timeout only works with --activate. Run vaultdraw-plugin --help.");
+        err(
+          "--timeout only works with --activate. Run vaultdraw-plugin --help.",
+        );
         return 2;
       }
       let timeoutMs;
       if (v.timeout !== undefined) {
         timeoutMs = Number(v.timeout);
-        if (!Number.isInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 60000) {
-          err("--timeout must be a whole number of milliseconds from 100 to 60000.");
+        if (
+          !Number.isInteger(timeoutMs) ||
+          timeoutMs < 100 ||
+          timeoutMs > 60000
+        ) {
+          err(
+            "--timeout must be a whole number of milliseconds from 100 to 60000.",
+          );
           return 2;
         }
       }

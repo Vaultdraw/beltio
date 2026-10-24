@@ -7,7 +7,7 @@
  * and panels declared in plugin.toml. Anything that needs the real app (running other
  * commands, the scene, settings writes) is reported as a warning and does nothing.
  */
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, writeSync } from "node:fs";
 import { registerHooks } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -29,7 +29,8 @@ const KNOWN_NAMES = {
   "react/jsx-runtime": ["jsx", "jsxs", "Fragment"],
 };
 
-const NAMED_IMPORT = /import\s*(?:type\s+)?(?:[\w$]+\s*,\s*)?\{([^}]*)\}\s*from\s*["']([^"'\n]+)["']/g;
+const NAMED_IMPORT =
+  /(?:import\s*(?:type\s+)?(?:[\w$]+\s*,\s*)?|export\s*(?:type\s+)?)\{([^}]*)\}\s*from\s*["']([^"'\n]+)["']/g;
 
 /** @param {string} root @returns {string[]} the JavaScript files below `root` (bounded) */
 function jsFiles(root) {
@@ -37,7 +38,11 @@ function jsFiles(root) {
   const out = [];
   const walk = (dir) => {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
-      if (out.length >= 400 || e.name === "node_modules" || e.name.startsWith(".")) {
+      if (
+        out.length >= 400 ||
+        e.name === "node_modules" ||
+        e.name.startsWith(".")
+      ) {
         continue;
       }
       const p = path.join(dir, e.name);
@@ -69,7 +74,11 @@ function importedNames(root, shared) {
         continue;
       }
       for (const part of m[1].split(",")) {
-        const n = part.trim().replace(/^type\s+/, "").split(/\s+as\s+/)[0].trim();
+        const n = part
+          .trim()
+          .replace(/^type\s+/, "")
+          .split(/\s+as\s+/)[0]
+          .trim();
         if (/^[A-Za-z_$][\w$]*$/.test(n) && n !== "default") {
           names[m[2]].add(n);
         }
@@ -103,10 +112,13 @@ const text = (e) => (e instanceof Error ? e.message : String(e));
 
 /**
  * @param {{ root: string, main: string, shared: string[], manifest: any }} job
+ * @param {(mark: string, value: unknown) => void} emit sends a result to the parent
  */
-async function run(job) {
+async function run(job, emit) {
   const { root, main, shared, manifest } = job;
-  const commands = new Set((manifest.contributes?.commands ?? []).map((c) => c.id));
+  const commands = new Set(
+    (manifest.contributes?.commands ?? []).map((c) => c.id),
+  );
   const panels = new Set((manifest.contributes?.panels ?? []).map((p) => p.id));
   const settings = new Map(
     (manifest.contributes?.settings ?? []).map((s) => [s.key, s.default]),
@@ -183,15 +195,21 @@ async function run(job) {
     );
     return { dispose() {} };
   };
-  const logger = (level) => (...a) => {
-    logs.push({ level, text: a.map(text).join(" ") });
-  };
+  const logger =
+    (level) =>
+    (...a) => {
+      logs.push({ level, text: a.map(text).join(" ") });
+    };
   const timer = (set, clear) => (fn, ms) => {
     const h = set(() => {
       try {
         fn();
       } catch (e) {
-        add("warning", "activate-timer-error", `A timer callback threw: ${text(e)}`);
+        add(
+          "warning",
+          "activate-timer-error",
+          `A timer callback threw: ${text(e)}`,
+        );
       }
     }, ms);
     h?.unref?.();
@@ -203,7 +221,8 @@ async function run(job) {
   };
   const deep = (path) =>
     new Proxy(() => undefined, {
-      get: (_t, k) => (typeof k === "symbol" ? undefined : deep(`${path}.${k}`)),
+      get: (_t, k) =>
+        typeof k === "symbol" ? undefined : deep(`${path}.${k}`),
       apply: () => {
         unsupported(`ctx.${path}()`);
         return undefined;
@@ -211,11 +230,19 @@ async function run(job) {
     });
 
   const ctx = {
-    manifest: { id: manifest.id, version: manifest.version ?? "0.0.0", dir: root },
+    manifest: {
+      id: manifest.id,
+      version: manifest.version ?? "0.0.0",
+      dir: root,
+    },
     commands: {
       register(short, handler) {
         if (typeof short !== "string" || typeof handler !== "function") {
-          add("error", "activate-bad-call", "ctx.commands.register needs a command id and a function");
+          add(
+            "error",
+            "activate-bad-call",
+            "ctx.commands.register needs a command id and a function",
+          );
           return { dispose() {} };
         }
         if (!commands.has(short)) {
@@ -232,7 +259,11 @@ async function run(job) {
     panels: {
       register(short, component) {
         if (typeof short !== "string" || component === undefined) {
-          add("error", "activate-bad-call", "ctx.panels.register needs a panel id and a component");
+          add(
+            "error",
+            "activate-bad-call",
+            "ctx.panels.register needs a panel id and a component",
+          );
           return { dispose() {} };
         }
         if (!panels.has(short)) {
@@ -267,26 +298,39 @@ async function run(job) {
           add(
             "error",
             "activate-unknown-event",
-            `ctx.events.on('${String(name)}') names an event the app does not have; known events: ${EVENT_NAMES.join(", ")}`,
+            `ctx.events.on('${String(
+              name,
+            )}') names an event the app does not have; known events: ${EVENT_NAMES.join(
+              ", ",
+            )}`,
           );
         }
         return disposable(() => {});
       },
     },
     subscriptions,
-    setTimeout: timer(globalThis.setTimeout, globalThis.clearTimeout),
-    setInterval: timer(globalThis.setInterval, globalThis.clearInterval),
+    setTimeout: timer(setTimeout, clearTimeout),
+    setInterval: timer(setInterval, clearInterval),
   };
 
   const started = performance.now();
   /** @type {any} */
   let plugin;
   try {
-    const mod = await import(pathToFileURL(path.join(root, ...main.split("/"))).href);
+    const mod = await import(
+      pathToFileURL(path.join(root, ...main.split("/"))).href
+    );
     plugin = mod.default;
   } catch (e) {
     add("error", "activate-load-failed", `${main} failed to load: ${text(e)}`);
-    return { findings, commands: [], panels: [], logs, ms: 0 };
+    emit("@@vaultdraw-activate@@", {
+      findings,
+      commands: [],
+      panels: [],
+      logs,
+      ms: 0,
+    });
+    return;
   }
   if (!plugin || typeof plugin.activate !== "function") {
     add(
@@ -294,15 +338,35 @@ async function run(job) {
       "activate-no-default",
       `${main} must export a plugin as its default export, with an activate(ctx) function`,
     );
-    return { findings, commands: [], panels: [], logs, ms: 0 };
+    emit("@@vaultdraw-activate@@", {
+      findings,
+      commands: [],
+      panels: [],
+      logs,
+      ms: 0,
+    });
+    return;
   }
+  let incomplete = false;
   try {
     await plugin.activate(ctx);
   } catch (e) {
-    add("error", "activate-threw", `activate() threw: ${text(e)}`);
+    if (findings.some((f) => f.code === "activate-unsupported")) {
+      // The dry run returned nothing for a call that needs the app; the throw may come from that.
+      incomplete = true;
+      add(
+        "warning",
+        "activate-threw-after-skip",
+        `activate() threw (${text(
+          e,
+        )}) after using something the dry run cannot provide, so this may not be a bug in the plugin`,
+      );
+    } else {
+      add("error", "activate-threw", `activate() threw: ${text(e)}`);
+    }
   }
   const ms = Math.round(performance.now() - started);
-  for (const id of commands) {
+  for (const id of incomplete ? [] : commands) {
     if (!boundCommands.has(id)) {
       add(
         "error",
@@ -311,7 +375,7 @@ async function run(job) {
       );
     }
   }
-  for (const id of panels) {
+  for (const id of incomplete ? [] : panels) {
     if (!boundPanels.has(id)) {
       add(
         "error",
@@ -320,19 +384,23 @@ async function run(job) {
       );
     }
   }
-  const result = {
+  // The verdict goes out now, so a slow deactivate cannot turn it into a timeout.
+  emit("@@vaultdraw-activate@@", {
     findings,
     commands: [...boundCommands],
     panels: [...boundPanels],
     logs,
     ms,
-  };
+  });
+  const before = findings.length;
   // Leave the plugin the way the app does: deactivate (2 s), then dispose in reverse order.
   if (typeof plugin.deactivate === "function") {
     try {
       await Promise.race([
         Promise.resolve(plugin.deactivate()),
-        new Promise((resolve) => setTimeout(resolve, DEACTIVATE_TIMEOUT_MS).unref()),
+        new Promise((resolve) =>
+          setTimeout(resolve, DEACTIVATE_TIMEOUT_MS).unref(),
+        ),
       ]);
     } catch (e) {
       add("warning", "deactivate-threw", `deactivate() threw: ${text(e)}`);
@@ -342,25 +410,37 @@ async function run(job) {
     try {
       d.dispose();
     } catch (e) {
-      add("warning", "dispose-threw", `A subscription's dispose() threw: ${text(e)}`);
+      add(
+        "warning",
+        "dispose-threw",
+        `A subscription's dispose() threw: ${text(e)}`,
+      );
     }
   }
-  return result;
+  emit("@@vaultdraw-final@@", findings.slice(before));
 }
 
+/** Results go to file descriptor 3, so the plugin's own console output cannot mix with them. */
+const emit = (mark, value) => {
+  writeSync(3, `\n${mark}${JSON.stringify(value)}\n`);
+};
 const job = JSON.parse(process.argv[2]);
-let result;
 try {
-  result = await run(job);
+  await run(job, emit);
 } catch (e) {
-  result = {
-    findings: [{ level: "error", code: "activate-threw", message: `The dry run failed: ${text(e)}` }],
+  emit("@@vaultdraw-activate@@", {
+    findings: [
+      {
+        level: "error",
+        code: "activate-threw",
+        message: `The dry run failed: ${text(e)}`,
+      },
+    ],
     commands: [],
     panels: [],
     logs: [],
     ms: 0,
-  };
+  });
 }
-process.stdout.write(`\n@@vaultdraw-activate@@${JSON.stringify(result)}\n`);
-// A plugin may leave handles open; the result is out, so end now.
+// A plugin may leave handles open; the results are out, so end now.
 process.exit(0);

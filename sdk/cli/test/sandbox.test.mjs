@@ -80,7 +80,15 @@ const realHome = () => {
       .update(
         [cfg, st, realVault]
           .flatMap((d) =>
-            readdirSync(d, { recursive: true }).map((f) => `${f}:${readFileSync(path.join(d, f), { encoding: "utf8", flag: "r" })}`).concat(readdirSync(d, { recursive: true })),
+            readdirSync(d, { recursive: true })
+              .map(
+                (f) =>
+                  `${f}:${readFileSync(path.join(d, f), {
+                    encoding: "utf8",
+                    flag: "r",
+                  })}`,
+              )
+              .concat(readdirSync(d, { recursive: true })),
           )
           .join("|"),
       )
@@ -93,7 +101,10 @@ const sandboxRun = (plugin, app, env) => {
   const r = run(["dev", plugin, "--sandbox", "--app", app], {
     env: { FAKE_APP_OUT: out, ...env },
   });
-  return { ...r, rec: existsSync(out) ? JSON.parse(readFileSync(out, "utf8")) : null };
+  return {
+    ...r,
+    rec: existsSync(out) ? JSON.parse(readFileSync(out, "utf8")) : null,
+  };
 };
 
 describe("createSandbox and removeSandbox", () => {
@@ -101,11 +112,18 @@ describe("createSandbox and removeSandbox", () => {
     const sb = createSandbox("demo-plugin");
     try {
       expect(sb.base.length).toBeLessThan(30);
-      expect(readFileSync(path.join(sb.config, "config.toml"), "utf8")).toContain(
-        'enabled = ["demo-plugin"]',
-      );
+      expect(
+        readFileSync(path.join(sb.config, "config.toml"), "utf8"),
+      ).toContain('enabled = ["demo-plugin"]');
       expect(readdirSync(sb.vault)).toEqual(["Sandbox drawing.excalidraw"]);
-      expect(JSON.parse(readFileSync(path.join(sb.vault, "Sandbox drawing.excalidraw"), "utf8")).type).toBe("excalidraw");
+      expect(
+        JSON.parse(
+          readFileSync(
+            path.join(sb.vault, "Sandbox drawing.excalidraw"),
+            "utf8",
+          ),
+        ).type,
+      ).toBe("excalidraw");
       expect(sb.env).toEqual({
         VAULTDRAW_CONFIG_DIR: sb.config,
         VAULTDRAW_STATE_DIR: sb.state,
@@ -143,6 +161,20 @@ describe("findApp, readAppVersion, checkAppVersion", () => {
     expect(findApp({ env: { VAULTDRAW_APP: b } })).toBe(b);
     expect(() => findApp({ env: {}, platform: "linux" })).toThrow(/--app/);
     expect(() => findApp({ app: "/nope/app", env: {} })).toThrow(/not found/);
+  });
+
+  it("accepts a .app bundle path and refuses a folder", () => {
+    const root = tmp("vdp-bundle2-");
+    const bin = path.join(
+      root,
+      "V.app",
+      "Contents",
+      "MacOS",
+      "excalidraw-vault",
+    );
+    write(path.dirname(bin), { "excalidraw-vault": "" });
+    expect(findApp({ app: path.join(root, "V.app"), env: {} })).toBe(bin);
+    expect(() => findApp({ app: root, env: {} })).toThrow(/folder/);
   });
 
   it("reads the version from the macOS bundle", () => {
@@ -188,7 +220,7 @@ describe("dev --sandbox", { timeout: 30000 }, () => {
     expect(rec.plugins).toEqual(["demo-plugin"]);
     expect(rec.vaultFiles).toEqual(["Sandbox drawing.excalidraw"]);
     // The app's message is shown, and the folder is gone.
-    expect(r.out).toContain("app | fake app: opening " + rec.vault);
+    expect(r.out).toContain(`app | fake app: opening ${rec.vault}`);
     expect(r.out).toContain(`Vault:   ${rec.vault}`);
     expect(existsSync(base)).toBe(false);
     // The developer's real config, state and vault did not change.
@@ -197,7 +229,10 @@ describe("dev --sandbox", { timeout: 30000 }, () => {
 
   it("keeps the real vault out of reach: none of the sandbox paths is under the real home", () => {
     const real = realHome();
-    const r = sandboxRun(makePlugin(), fakeApp(), { HOME: real.home, FAKE_APP_MODE: "exit" });
+    const r = sandboxRun(makePlugin(), fakeApp(), {
+      HOME: real.home,
+      FAKE_APP_MODE: "exit",
+    });
     expect(r.code).toBe(0);
     for (const p of [r.rec.vault, r.rec.config, r.rec.state]) {
       expect(p.startsWith(real.home)).toBe(false);
@@ -212,16 +247,29 @@ describe("dev --sandbox", { timeout: 30000 }, () => {
     const s = start(["dev", plugin, "--sandbox", "--app", app], {
       env: { FAKE_APP_OUT: out, FAKE_APP_MODE: "wait" },
     });
-    await waitFor(() => existsSync(out) && s.output().includes("Watching"), 15000);
+    await waitFor(
+      () => existsSync(out) && s.output().includes("Watching"),
+      15000,
+    );
     const rec = JSON.parse(readFileSync(out, "utf8"));
     const base = path.dirname(rec.vault);
     expect(existsSync(base)).toBe(true);
     // A saved change reaches the sandbox copy.
-    writeFileSync(path.join(plugin, "main.js"), "export default { activate() {} };\n// edit\n");
-    await waitFor(() => readFileSync(path.join(rec.config, "plugins", "demo-plugin", "main.js"), "utf8").includes("// edit"), 8000);
+    writeFileSync(
+      path.join(plugin, "main.js"),
+      "export default { activate() {} };\n// edit\n",
+    );
+    await waitFor(
+      () =>
+        readFileSync(
+          path.join(rec.config, "plugins", "demo-plugin", "main.js"),
+          "utf8",
+        ).includes("// edit"),
+      8000,
+    );
     const end = await s.stop();
     expect(end.code).toBe(0);
-    await waitFor(() => existsSync(out + ".term"), 5000); // the app got SIGTERM
+    await waitFor(() => existsSync(`${out}.term`), 5000); // the app got SIGTERM
     expect(existsSync(base)).toBe(false);
   });
 
@@ -236,7 +284,13 @@ describe("dev --sandbox", { timeout: 30000 }, () => {
     const r = run(["dev", makePlugin(), "--sandbox", "--app", "/nope/app"]);
     expect(r.code).toBe(2);
     expect(r.err).toContain("not found");
-    const noPlugin = run(["dev", tmp("vdp-empty-"), "--sandbox", "--app", fakeApp()]);
+    const noPlugin = run([
+      "dev",
+      tmp("vdp-empty-"),
+      "--sandbox",
+      "--app",
+      fakeApp(),
+    ]);
     expect(noPlugin.code).toBe(1);
     expect(noPlugin.err).toContain("plugin.toml");
   });
@@ -248,7 +302,8 @@ describe("dev --sandbox", { timeout: 30000 }, () => {
     writeFileSync(bin, readFileSync(fakeApp()));
     chmodSync(bin, 0o755);
     write(path.join(root, "V.app", "Contents"), {
-      "Info.plist": "<key>CFBundleShortVersionString</key><string>0.1.1</string>",
+      "Info.plist":
+        "<key>CFBundleShortVersionString</key><string>0.1.1</string>",
     });
     const r = run(["dev", makePlugin(), "--sandbox", "--app", bin]);
     expect(r.code).toBe(1);
@@ -258,7 +313,9 @@ describe("dev --sandbox", { timeout: 30000 }, () => {
   it("rejects options that do not fit", () => {
     const p = makePlugin();
     expect(run(["dev", p, "--sandbox", "--config-dir", tmp()]).code).toBe(2);
-    expect(run(["dev", p, "--sandbox", "--once", "--app", fakeApp()]).code).toBe(2);
+    expect(
+      run(["dev", p, "--sandbox", "--once", "--app", fakeApp()]).code,
+    ).toBe(2);
     expect(run(["dev", p, "--app", fakeApp(), "--once"]).code).toBe(2);
   });
 });

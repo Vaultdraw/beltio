@@ -317,16 +317,26 @@ export async function runDev(dir, opts, out, err) {
  */
 async function runSandbox(dir, src, opts, out, err) {
   const sb = await import("./sandbox.mjs");
+  const manifestFile = path.join(src, "plugin.toml");
+  if (!existsSync(manifestFile)) {
+    err(
+      `There is no plugin.toml in ${src}. Run vaultdraw-plugin init to create a plugin.`,
+    );
+    return 1;
+  }
   let doc;
   try {
-    doc = parseToml(readFileSync(path.join(src, "plugin.toml"), "utf8"));
-  } catch {
-    // mirror() reports a missing or broken manifest in its usual words
-    return await mirror(dir, src, { ...opts, once: true }, out, err);
+    doc = parseToml(readFileSync(manifestFile, "utf8"));
+  } catch (e) {
+    err(`plugin.toml is not valid TOML (${/** @type {Error} */ (e).message}).`);
+    return 1;
   }
   const id = doc.id;
   if (typeof id !== "string" || !isValidPluginId(id)) {
-    return await mirror(dir, src, { ...opts, once: true }, out, err);
+    err(
+      "plugin.toml needs a valid id (a-z, 0-9 and -, 2 to 39 characters). Run vaultdraw-plugin check.",
+    );
+    return 1;
   }
   const bin = sb.findApp({ app: opts.app, env: opts.env });
   const version = sb.readAppVersion(bin);
@@ -359,7 +369,9 @@ async function runSandbox(dir, src, opts, out, err) {
         sandbox: true,
         signal: aborter.signal,
         onInstalled() {
-          out(`Starting ${bin} on the sandbox. Your own config, state and vaults are not used.`);
+          out(
+            `Starting ${bin} on the sandbox. Your own config, state and vaults are not used.`,
+          );
           app = sb.launchApp(bin, box.env, (l) => out(`app | ${l}`));
           void app.exited.then((r) => {
             if (r.error) {
@@ -553,6 +565,10 @@ async function mirror(dir, src, opts, out, err) {
     };
     process.once("SIGINT", stop);
     process.once("SIGTERM", stop);
+    if (opts.sandbox) {
+      // A closed terminal must still remove the sandbox.
+      process.once("SIGHUP", stop);
+    }
     if (opts.signal?.aborted) {
       stop();
     }

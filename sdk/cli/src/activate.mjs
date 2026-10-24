@@ -13,6 +13,7 @@ import { parseToml } from "./toml.mjs";
 
 export const DEFAULT_TIMEOUT_MS = 5000;
 const MARK = "@@vaultdraw-activate@@";
+const FINAL = "@@vaultdraw-final@@";
 /** `module.registerHooks` arrived in Node 22.15. */
 const MIN_NODE = "22.15";
 
@@ -40,7 +41,9 @@ export async function activatePlugin(dir, opts = {}) {
     );
   }
   const root = path.resolve(dir);
-  const manifest = parseToml(readFileSync(path.join(root, "plugin.toml"), "utf8"));
+  const manifest = parseToml(
+    readFileSync(path.join(root, "plugin.toml"), "utf8"),
+  );
   const main = String(manifest.main);
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const job = { root, main, shared: SHARED_SPECIFIERS, manifest };
@@ -52,25 +55,31 @@ export async function activatePlugin(dir, opts = {}) {
       cwd: root,
       // Only what Node needs; the plugin does not get your tokens by accident.
       env: { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "" },
-      stdio: ["ignore", "pipe", "pipe"],
+      // fd 3 carries the results; the plugin's own output is read only for a crash message.
+      stdio: ["ignore", "ignore", "pipe", "pipe"],
     },
   );
-  let stdout = "";
+  let results = "";
   let stderr = "";
-  child.stdout.on("data", (d) => {
-    if (stdout.length < 1_000_000) {
-      stdout += d;
+  child.stdio[3]?.on("data", (d) => {
+    if (results.length < 2_000_000) {
+      results += d;
+    }
+    // Once the verdict is in, the child only runs deactivate; give it a short grace period.
+    if (results.includes(MARK) && !grace) {
+      grace = setTimeout(() => child.kill("SIGKILL"), 3000);
     }
   });
-  child.stderr.on("data", (d) => {
+  child.stderr?.on("data", (d) => {
     if (stderr.length < 20_000) {
       stderr += d;
     }
   });
-  /** @type {"timeout" | null} */
-  let killed = null;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let grace;
+  let timedOut = false;
   const timer = setTimeout(() => {
-    killed = "timeout";
+    timedOut = true;
     child.kill("SIGKILL");
   }, timeoutMs);
   const code = await new Promise((resolve) => {
@@ -78,9 +87,19 @@ export async function activatePlugin(dir, opts = {}) {
     child.on("error", () => resolve(-1));
   });
   clearTimeout(timer);
+  clearTimeout(grace);
+  const stdout = results;
+  const killed = timedOut && !stdout.includes(MARK) ? "timeout" : null;
 
   /** @type {ActivationResult} */
-  const result = { errors: [], warnings: [], commands: [], panels: [], ms: 0, log: [] };
+  const result = {
+    errors: [],
+    warnings: [],
+    commands: [],
+    panels: [],
+    ms: 0,
+    log: [],
+  };
   if (killed) {
     result.errors.push({
       code: "activate-timeout",
@@ -89,17 +108,29 @@ export async function activatePlugin(dir, opts = {}) {
     });
     return result;
   }
-  const at = stdout.lastIndexOf(MARK);
+  const at = stdout.indexOf(MARK);
   if (at < 0) {
     const tail = stderr.trim().split("\n").slice(-3).join(" | ");
     result.errors.push({
       code: "activate-crashed",
       file: main,
-      message: `The plugin ended the dry run without a result (exit code ${code})${tail ? `: ${tail}` : ""}`,
+      message: `The plugin ended the dry run without a result (exit code ${code})${
+        tail ? `: ${tail}` : ""
+      }`,
     });
     return result;
   }
   const r = JSON.parse(stdout.slice(at + MARK.length).split("\n")[0]);
+  const fin = stdout.lastIndexOf(FINAL);
+  if (fin >= 0) {
+    try {
+      r.findings.push(
+        ...JSON.parse(stdout.slice(fin + FINAL.length).split("\n")[0]),
+      );
+    } catch {
+      // a cut-off last line: the verdict above still stands
+    }
+  }
   for (const f of r.findings) {
     (f.level === "error" ? result.errors : result.warnings).push({
       code: f.code,

@@ -351,7 +351,7 @@ The templates are `.tpl` files in `sdk/cli/templates/`; `init` strips the suffix
 | `zip-invalid` | error | Zip only: the archive breaks the strict reader's rules (see [packaging.md](packaging.md#check-a-zip)) |
 | `zip-layout` | error | Zip only: `plugin.toml` is inside a single top folder instead of at the zip root |
 
-With `--activate`, the codes below are added (only when the static checks found no errors). `activate-unsupported`, `activate-timer-error`, `deactivate-threw` and `dispose-threw` are warnings.
+With `--activate`, the codes below are added (only when the static checks found no errors). `activate-unsupported`, `activate-threw-after-skip`, `activate-timer-error`, `deactivate-threw` and `dispose-threw` are warnings.
 
 | Code | Kind | Meaning |
 | --- | --- | --- |
@@ -367,6 +367,7 @@ With `--activate`, the codes below are added (only when the static checks found 
 | `activate-unknown-event` | error | `ctx.events.on` names an event the app does not have |
 | `activate-bad-call` | error | `register` was called without an id and a function or component |
 | `activate-unsupported` | warning | The plugin used something that needs the running app (`ctx.scene`, `ctx.commands.execute`, `ctx.panels.open`, `ctx.settings.set`); it was skipped |
+| `activate-threw-after-skip` | warning | `activate()` threw after a skipped call; the dry run cannot tell whether the plugin is wrong, so declared commands are not compared |
 | `activate-timer-error`, `deactivate-threw`, `dispose-threw` | warning | A timer callback, `deactivate()` or a `dispose()` threw |
 
-`--activate` runs your plugin's code in a child process with your rights (the app does the same), so use it only on plugins you trust. The child gets a minimal environment (no tokens), and the timeout stops loops. It needs Node 22.15 or newer. The shared modules (`react`, `@vaultdraw/api` and the others the app provides) are stubs in this run, so panel components are not rendered; use the [mock host](testing.md) for behaviour tests.
+`--activate` runs your plugin's code in a child process with your rights (the app does the same), so use it only on plugins you trust. The CLI prints a note before it runs. The child gets a minimal environment (no tokens), and the timeout (which covers loading and `activate()`, not `deactivate()`) stops loops. It needs Node 22.15 or newer. The shared modules (`react`, `@vaultdraw/api` and the others the app provides) are stubs in this run, so panel components are not rendered; use the [mock host](testing.md) for behaviour tests.
