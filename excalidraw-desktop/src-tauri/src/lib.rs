@@ -296,9 +296,13 @@ fn remember_vault(app: &AppHandle, info: &VaultInfo) {
     if smoke::enabled() {
         return;
     }
-    if let Ok(dir) = app.path().app_config_dir() {
-        let _ = fs::create_dir_all(&dir);
-        let _ = fs::write(dir.join("recent-vault"), &info.path);
+    // An isolated instance (`$VAULTDRAW_VAULT`, e.g. `vaultdraw-plugin dev --sandbox`) never
+    // touches the user's real `recent-vault`; only the state-dir copy below is written.
+    if !vaultdraw_core::vault_path::is_isolated_with(|k| std::env::var_os(k)) {
+        if let Ok(dir) = app.path().app_config_dir() {
+            let _ = fs::create_dir_all(&dir);
+            let _ = fs::write(dir.join("recent-vault"), &info.path);
+        }
     }
     // The state-dir copy is what the offline CLI reads first (and isolates test/perf instances).
     // Best effort: a failure here never fails the open.
@@ -352,17 +356,20 @@ async fn choose_vault(
 async fn reopen_vault(app: AppHandle, state: State<'_, Service>) -> Result<Option<VaultInfo>> {
     #[cfg(feature = "smoke-test")]
     if smoke::enabled() { return Ok(None); }
-    let file = app
+    let tauri_dir = app
         .path()
         .app_config_dir()
-        .map_err(|e| err("IO_ERROR", e.to_string()))?
-        .join("recent-vault");
-    let path = match fs::read_to_string(file) {
-        Ok(p) => PathBuf::from(p.trim()),
-        Err(_) => return Ok(None),
-    };
-    if !path.is_dir() {
+        .map_err(|e| err("IO_ERROR", e.to_string()))?;
+    // With `$VAULTDRAW_VAULT` set (an isolated instance) only that folder opens: the user's
+    // real `recent-vault` is never read.
+    let Some(path) = vaultdraw_core::vault_path::gui_reopen_with(|k| std::env::var_os(k), || {
+        let text = fs::read_to_string(tauri_dir.join("recent-vault")).ok()?;
+        Some(PathBuf::from(text.trim())).filter(|p| p.is_dir())
+    }) else {
         return Ok(None);
+    };
+    if vaultdraw_core::vault_path::is_isolated_with(|k| std::env::var_os(k)) {
+        eprintln!("vaultdraw: isolated instance, opening the vault from VAULTDRAW_VAULT: {}", path.display());
     }
     open_vault(path, &app, &state).map(Some)
 }

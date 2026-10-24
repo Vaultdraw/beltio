@@ -96,6 +96,34 @@ pub fn resolve_with(explicit: Option<&Path>, get: impl Fn(&str) -> Option<OsStri
     Err(no_vault("no vault is known"))
 }
 
+/// True when `$VAULTDRAW_VAULT` is set and not empty: the instance is isolated (for example
+/// `vaultdraw-plugin dev --sandbox`) and must stay away from the user's real `recent-vault`.
+pub fn is_isolated_with(get: impl Fn(&str) -> Option<OsString>) -> bool {
+    get(ENV_VAULT).is_some_and(|v| !v.is_empty())
+}
+
+/// The vault the app window reopens at launch.
+///
+/// Without `$VAULTDRAW_VAULT`, the Tauri config dir's `recent-vault` (`tauri_recent`, read lazily).
+/// With it, only that folder: when it is not an absolute, existing directory the answer is `None`
+/// and `tauri_recent` is never called, so a wrong value can never open the user's real vault.
+pub fn gui_reopen_with(
+    get: impl Fn(&str) -> Option<OsString>,
+    tauri_recent: impl FnOnce() -> Option<PathBuf>,
+) -> Option<PathBuf> {
+    match get(ENV_VAULT).filter(|v| !v.is_empty()) {
+        None => tauri_recent(),
+        Some(p) => {
+            let p = PathBuf::from(p);
+            if p.is_absolute() {
+                as_vault_dir(&p).ok()
+            } else {
+                None
+            }
+        }
+    }
+}
+
 /// The ladder against the process environment and the real config/state dirs.
 pub fn resolve(explicit: Option<&Path>) -> Result<PathBuf> {
     let get = |k: &str| std::env::var_os(k);
@@ -243,5 +271,29 @@ mod tests {
         std::thread::sleep(std::time::Duration::from_millis(20));
         remember(&state, &b).unwrap();
         assert_eq!(fs::metadata(&file).unwrap().modified().unwrap(), before);
+    }
+
+    #[test]
+    fn isolated_gui_never_reads_the_real_recent_vault() {
+        let t = tempfile::tempdir().unwrap();
+        let sandbox = vault(t.path(), "sandbox");
+        let real = vault(t.path(), "real");
+        let sbx = sandbox.to_str().unwrap();
+        // Not isolated: the Tauri recent-vault decides, as before.
+        assert!(!is_isolated_with(env(&[])));
+        assert!(!is_isolated_with(env(&[("VAULTDRAW_VAULT", "")])));
+        assert_eq!(gui_reopen_with(env(&[]), || Some(real.clone())), Some(real.clone()));
+        assert_eq!(gui_reopen_with(env(&[("VAULTDRAW_VAULT", "")]), || Some(real.clone())), Some(real.clone()));
+        // Isolated: the named folder opens and the real one is never even looked up.
+        assert!(is_isolated_with(env(&[("VAULTDRAW_VAULT", sbx)])));
+        let got = gui_reopen_with(env(&[("VAULTDRAW_VAULT", sbx)]), || panic!("real recent-vault was read"));
+        assert_eq!(got, Some(sandbox.clone()));
+        // Isolated but wrong (missing, a file, relative): nothing opens, no fallback.
+        let file = t.path().join("a-file");
+        fs::write(&file, "x").unwrap();
+        for bad in [t.path().join("missing").to_str().unwrap(), file.to_str().unwrap(), "relative/dir"] {
+            let got = gui_reopen_with(env(&[("VAULTDRAW_VAULT", bad)]), || panic!("real recent-vault was read"));
+            assert_eq!(got, None, "{bad}");
+        }
     }
 }
