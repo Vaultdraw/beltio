@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { convertToExcalidrawElements } from "@excalidraw/excalidraw";
+
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import { projectScene } from "../sceneOps";
 import { makeElements } from "../sceneOps/testUtils";
 
+import { SCENE_METHOD_NAMES } from "./sceneLazy";
 import { createSceneMethods } from "./sceneMethods";
 import { sceneVersion } from "./sceneVersion";
 
@@ -421,5 +424,89 @@ describe("scene.apply", () => {
       b.m["scene.apply"]({ ops: [rect] });
       expect(b.notify.mock.calls[0][0]).toContain("to the drawing.");
     });
+  });
+});
+
+describe("scene methods: review fixes", () => {
+  it("method table matches SCENE_METHOD_NAMES exactly", () => {
+    expect(Object.keys(createSceneMethods()).sort()).toEqual(
+      [...SCENE_METHOD_NAMES].sort(),
+    );
+  });
+
+  it("viewport scope uses real bounds: an arrow reaching left of x is in view", () => {
+    const [arrow] = convertToExcalidrawElements([
+      {
+        type: "arrow",
+        x: 1100,
+        y: 100,
+        points: [
+          [0, 0],
+          [-300, 0],
+        ],
+      },
+    ] as never) as ExcalidrawElement[];
+    // projected box would be 1100..1400 (outside 0..1000); real bounds are 800..1100
+    const f = fakeScene([{ ...arrow, x: 1100, width: 300 } as never]);
+    const r = setup(f).m["scene.read"]({ scope: "viewport" }) as any;
+    expect(r.total).toBe(1);
+  });
+
+  it("viewport scope excludes an element truly outside", () => {
+    const f = fakeScene(makeElements(12));
+    f.state.scrollX = -5000;
+    const r = setup(f).m["scene.read"]({ scope: "viewport" }) as any;
+    expect(r.total).toBe(0);
+  });
+
+  const mk = (platform: string, path: string) =>
+    createSceneMethods({
+      active: () => fakeScene(makeElements(1), { path }).scene,
+      platform,
+    });
+
+  it("path compare is NFC-normalised", () => {
+    const m = mk("Linux", "notes/caf\u00e9.excalidraw");
+    const r = m["scene.read"]({ path: "notes/cafe\u0301.excalidraw" }) as any;
+    expect(r.live).toBe(true);
+  });
+
+  it("path compare is case-insensitive on Mac and Windows only", () => {
+    const ok = (pf: string) =>
+      mk(pf, "Notes/Plan.excalidraw")["scene.read"]({
+        path: "notes/plan.excalidraw",
+      });
+    expect((ok("MacIntel") as any).live).toBe(true);
+    expect((ok("Win32") as any).live).toBe(true);
+    expect(fail(() => ok("Linux x86_64"))).toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("null optional params count as absent", () => {
+    const { m } = setup();
+    const r = m["scene.read"]({
+      scope: null,
+      types: null,
+      ids: null,
+      limit: null,
+      offset: null,
+      path: null,
+    }) as any;
+    expect(r.total).toBe(5);
+    const a = m["scene.apply"]({
+      ops: [rect],
+      ifVersion: null,
+      dryRun: null,
+      notify: null,
+      by: null,
+      path: null,
+    }) as any;
+    expect(a.applied).toBe(1);
+  });
+
+  it("apply does not need the projection", () => {
+    const f = fakeScene();
+    const { m } = setup(f);
+    const a = m["scene.apply"]({ ops: [rect], dryRun: true }) as any;
+    expect(a.valid).toBe(true);
   });
 });

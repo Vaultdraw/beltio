@@ -3,6 +3,10 @@
  * scene.apply) over the P2c scene core. Loaded lazily by sceneLazy.ts, never
  * from the startup bundle. Pure: the active scene and the notice are injected.
  */
+import { getElementBounds } from "@excalidraw/element";
+
+import type { ElementsMap, ExcalidrawElement } from "@excalidraw/element/types";
+
 import { toastStore } from "../toasts/toastStore";
 import {
   applyOps,
@@ -30,6 +34,8 @@ type Handler = (params: unknown) => unknown;
 export interface SceneDeps {
   active?: () => ActiveScene | null;
   notify?: (message: string) => void;
+  /** navigator.platform; decides whether paths compare case-insensitively. */
+  platform?: string;
 }
 
 const DEFAULT_LIMIT = 200;
@@ -83,6 +89,18 @@ const stringList = (
   return v as string[];
 };
 
+/** A param whose value is null counts as absent (JSON clients send null). */
+const clean = (params: unknown): Record<string, unknown> => {
+  const p = objectParams(params);
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(p)) {
+    if (v !== null) {
+      out[k] = v;
+    }
+  }
+  return out;
+};
+
 const drawingName = (path: string | null): string => {
   if (!path) {
     return "the drawing";
@@ -108,6 +126,16 @@ export function createSceneMethods(
   const notify =
     deps.notify ?? ((message: string) => toastStore.push({ message }));
 
+  const platform =
+    deps.platform ??
+    (typeof navigator === "undefined" ? "" : navigator.platform ?? "");
+  const foldCase = /Mac|Win/.test(platform); // those file systems ignore case
+  const samePath = (a: string, b: string) => {
+    const x = a.normalize("NFC");
+    const y = b.normalize("NFC");
+    return foldCase ? x.toLowerCase() === y.toLowerCase() : x === y;
+  };
+
   /** The drawing on screen, or NOT_FOUND. `path` must name that drawing. */
   const resolve = (params: unknown) => {
     const path = optionalStringParam(params, "path");
@@ -117,7 +145,7 @@ export function createSceneMethods(
         reason: "no_drawing",
       });
     }
-    if (path !== undefined && path !== scene.path) {
+    if (path !== undefined && !(scene.path && samePath(path, scene.path))) {
       throw new ControlError(
         "NOT_FOUND",
         "Only the drawing on screen can be read or edited; open it first",
@@ -132,6 +160,18 @@ export function createSceneMethods(
     return { all, elements: projectScene(all), version: sceneVersion(all) };
   };
 
+  /** True when the element's real bounds (arrow points, rotation) meet the view. */
+  const inView = (
+    el: ExcalidrawElement,
+    map: ElementsMap,
+    v: { x: number; y: number; width: number; height: number },
+  ) => {
+    const [x1, y1, x2, y2] = getElementBounds(el, map);
+    return (
+      x2 >= v.x && x1 <= v.x + v.width && y2 >= v.y && y1 <= v.y + v.height
+    );
+  };
+
   const selectedIds = (
     scene: ActiveScene,
     elements: readonly SceneElement[],
@@ -140,7 +180,8 @@ export function createSceneMethods(
     return elements.filter((e) => sel[e.id]).map((e) => e.id);
   };
 
-  const read: Handler = (params) => {
+  const read: Handler = (raw) => {
+    const params = clean(raw);
     const scope = (objectParams(params).scope ?? "all") as Scope;
     if (!SCOPES.includes(scope)) {
       throw invalid("scope must be all, viewport or selection");
@@ -150,7 +191,7 @@ export function createSceneMethods(
     const limit = intParam(params, "limit", 1, MAX_LIMIT, DEFAULT_LIMIT);
     const offset = intParam(params, "offset", 0, Number.MAX_SAFE_INTEGER, 0);
     const scene = resolve(params);
-    const { elements, version } = snapshot(scene);
+    const { all, elements, version } = snapshot(scene);
     const app = scene.api.getAppState();
     const zoom = app.zoom.value;
     const viewport = {
@@ -165,6 +206,10 @@ export function createSceneMethods(
     const typeSet = types && new Set(types);
     const idSet = ids && new Set(ids);
     const selSet = scope === "selection" ? new Set(selection) : null;
+    const fullById =
+      scope === "viewport"
+        ? (new Map(all.map((e) => [e.id, e])) as ElementsMap)
+        : null;
     const matches = elements.filter((e) => {
       if (typeSet && !typeSet.has(e.type)) {
         return false;
@@ -176,12 +221,7 @@ export function createSceneMethods(
         return false;
       }
       if (scope === "viewport") {
-        return (
-          e.x + e.width >= viewport.x &&
-          e.x <= viewport.x + viewport.width &&
-          e.y + e.height >= viewport.y &&
-          e.y <= viewport.y + viewport.height
-        );
+        return inView(fullById!.get(e.id)!, fullById!, viewport);
       }
       return true;
     });
@@ -205,7 +245,8 @@ export function createSceneMethods(
     };
   };
 
-  const get: Handler = (params) => {
+  const get: Handler = (raw) => {
+    const params = clean(raw);
     const ids = stringList(params, "ids", MAX_GET_IDS, true)!;
     const scene = resolve(params);
     const { elements, version } = snapshot(scene);
@@ -223,7 +264,8 @@ export function createSceneMethods(
     return { path: scene.path, version, elements: found, missing };
   };
 
-  const selection: Handler = (params) => {
+  const selection: Handler = (raw) => {
+    const params = clean(raw);
     const scene = resolve(params);
     const { elements, version } = snapshot(scene);
     const ids = selectedIds(scene, elements);
@@ -236,8 +278,9 @@ export function createSceneMethods(
     };
   };
 
-  const apply: Handler = (params) => {
-    const p = objectParams(params);
+  const apply: Handler = (raw) => {
+    const params = clean(raw);
+    const p = params;
     const ops = p.ops;
     if (!Array.isArray(ops) || ops.length < 1 || ops.length > MAX_OPS) {
       throw invalid(`ops must be an array of 1 to ${MAX_OPS} operations`);
@@ -253,7 +296,8 @@ export function createSceneMethods(
     if (scene.readOnly) {
       throw new ControlError("READ_ONLY", "The drawing is read-only");
     }
-    const before = snapshot(scene);
+    const all = scene.api.getSceneElementsIncludingDeleted();
+    const before = { all, version: sceneVersion(all) };
     if (ifVersion !== undefined && ifVersion !== before.version) {
       throw new ControlError(
         "CONFLICT",
