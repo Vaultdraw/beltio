@@ -13,6 +13,11 @@ const MAX_SETTINGS = 100;
 const MAX_TITLE = 200;
 const MAX_TEXT = 1000;
 const MAX_PATH = 260;
+const MAX_PERMISSIONS = 8;
+/** What a plugin may declare. */
+export const PERMISSIONS = ["vault.read", "vault.write"];
+/** Kept for later API revisions; an app that knows them as reserved refuses a manifest that uses one. */
+const RESERVED_PERMISSIONS = ["net", "secret", "control"];
 
 export const TOP_KEYS = new Set([
   "id",
@@ -24,6 +29,7 @@ export const TOP_KEYS = new Set([
   "description",
   "author",
   "activation",
+  "permissions",
   "contributes",
   "dev",
 ]);
@@ -184,6 +190,9 @@ export function validateManifestText(text, file = "plugin.toml") {
       }
     }
   }
+  if ("permissions" in doc) {
+    checkPermissions(doc.permissions, err);
+  }
   if ("dev" in doc) {
     if (typeof doc.dev !== "boolean") {
       err("text-invalid", "dev must be true or false");
@@ -198,6 +207,39 @@ export function validateManifestText(text, file = "plugin.toml") {
     checkContributes(doc.contributes, err);
   }
   return { errors, warnings };
+}
+
+/**
+ * @param {unknown} list
+ * @param {(code: string, message: string) => void} err
+ */
+function checkPermissions(list, err) {
+  if (!isStringArray(list)) {
+    err("permission-invalid", "permissions must be a list of permission names");
+    return;
+  }
+  if (list.length > MAX_PERMISSIONS) {
+    err("permission-too-many", `Too many permissions (max ${MAX_PERMISSIONS})`);
+    return;
+  }
+  const seen = new Set();
+  for (const p of list) {
+    if (RESERVED_PERMISSIONS.includes(p)) {
+      err(
+        "permission-reserved",
+        `Permission '${p}' is reserved and cannot be used yet`,
+      );
+    } else if (!PERMISSIONS.includes(p)) {
+      err(
+        "permission-unknown",
+        `Unknown permission '${p}' (known: ${PERMISSIONS.join(", ")})`,
+      );
+    } else if (seen.has(p)) {
+      err("permission-duplicate", `Duplicate permission '${p}'`);
+    } else {
+      seen.add(p);
+    }
+  }
 }
 
 /**

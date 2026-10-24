@@ -34,16 +34,29 @@ export interface EventsApi {
     on<K extends keyof AppEventMap>(name: K, cb: (payload: Readonly<AppEventMap[K]>) => void): Disposable;
 }
 
+// host.ts
+export interface ApiVersion {
+    level: 0;
+    revision: string;
+}
+export interface HostApi {
+    readonly app: string;
+    readonly api: ApiVersion;
+    has(feature: string): boolean;
+}
+
 // index.ts
 export type { CommandsApi } from "./commands";
 export type { Disposable } from "./disposable";
 export type { AppEventMap, EventsApi } from "./events";
-export type { CommandContribution, PanelContribution, PluginContributions, PluginManifestInfo, } from "./manifest";
+export type { CommandContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
+export type { ApiVersion, HostApi } from "./host";
 export type { PanelsApi } from "./panels";
 export { definePlugin } from "./plugin";
 export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
 export type { NewElement, SceneContextApi, SceneElement, SceneElementType, SceneOp, SceneOpIssue, } from "./scene";
 export type { SelectOption, SettingDecl, SettingScopeName, SettingsApi, SettingValue, } from "./settings";
+export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
 export { SHARED_SPECIFIERS } from "./specifiers";
 
 // manifest.ts
@@ -52,7 +65,9 @@ export interface PluginManifestInfo {
     id: string;
     version: string;
     dir: string;
+    permissions: readonly PluginPermission[];
 }
+export type PluginPermission = "vault.read" | "vault.write";
 export interface CommandContribution {
     id: string;
     title: string;
@@ -85,10 +100,12 @@ export interface PanelsApi {
 import type { CommandsApi } from "./commands";
 import type { Disposable } from "./disposable";
 import type { EventsApi } from "./events";
+import type { HostApi } from "./host";
 import type { PluginManifestInfo } from "./manifest";
 import type { PanelsApi } from "./panels";
 import type { SceneContextApi } from "./scene";
 import type { SettingsApi } from "./settings";
+import type { ThemeApi } from "./theme";
 export interface UiApi {
     toast(message: string): void;
 }
@@ -107,6 +124,8 @@ export interface PluginContext {
     readonly log: LogApi;
     readonly scene: SceneContextApi;
     readonly events: EventsApi;
+    readonly host: HostApi;
+    readonly theme: ThemeApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;
     setInterval(fn: () => void, ms: number): Disposable;
@@ -205,3 +224,17 @@ export interface SettingsApi {
 
 // specifiers.ts
 export declare const SHARED_SPECIFIERS: readonly string[];
+
+// theme.ts
+import type { Disposable } from "./disposable";
+export type ThemeTokenName = "--vault-canvas" | "--vault-bg" | "--vault-surface" | "--vault-surface-hover" | "--vault-surface-active" | "--vault-border" | "--vault-border-strong" | "--vault-menu-bg" | "--vault-text" | "--vault-text-muted" | "--vault-text-faint" | "--vault-primary" | "--vault-primary-hover" | "--vault-primary-active" | "--vault-primary-light" | "--vault-primary-border" | "--vault-on-primary" | "--vault-on-danger" | "--vault-accent-text" | "--vault-success" | "--vault-success-bg" | "--vault-success-border" | "--vault-warning" | "--vault-warning-bg" | "--vault-warning-border" | "--vault-danger" | "--vault-danger-bg" | "--vault-danger-border" | "--vault-danger-hover" | "--vault-shadow-sm" | "--vault-shadow-md" | "--vault-shadow-lg" | "--vault-shadow-island" | "--vault-shadow-pop" | "--vault-scrim" | "--vault-hover" | "--vault-chip" | "--vault-chip-strong" | "--vault-sel" | "--vault-sel-strong" | "--vault-ring";
+export type ThemeMode = "light" | "dark";
+export interface ThemeChange {
+    mode: ThemeMode;
+    themeId: string;
+}
+export interface ThemeApi {
+    mode(): ThemeMode;
+    tokens(): Readonly<Record<ThemeTokenName, string>>;
+    onChange(cb: (e: ThemeChange) => void): Disposable;
+}

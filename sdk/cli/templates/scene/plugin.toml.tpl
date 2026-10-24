@@ -3,6 +3,7 @@ name = "__NAME__"
 version = "0.1.0"
 api = 0
 main = "main.js"
+permissions = []
 description = "A Vaultdraw plugin."
 
 [[contributes.commands]]

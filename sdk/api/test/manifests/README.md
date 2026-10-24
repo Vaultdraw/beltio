@@ -30,6 +30,11 @@ Every file starts with two comment lines.
 | `main-path-invalid` | `main` is not a safe relative path. |
 | `api-unsupported` | `api` is not the supported level. |
 | `activation-unknown` | Unknown activation event. |
+| `permission-invalid` | `permissions` is not a list of strings. |
+| `permission-unknown` | A permission name that does not exist. |
+| `permission-reserved` | `net`, `secret` or `control`: reserved for later. |
+| `permission-duplicate` | The same permission twice. |
+| `permission-too-many` | More than 8 permissions. |
 | `contribution-id-invalid` | Command or panel id has a bad shape. |
 | `contribution-duplicate` | Two commands share an id. |
 | `title-invalid` | Empty command or panel title. |

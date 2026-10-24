@@ -11,7 +11,9 @@ export type {
   PanelContribution,
   PluginContributions,
   PluginManifestInfo,
+  PluginPermission,
 } from "./manifest";
+export type { ApiVersion, HostApi } from "./host";
 export type { PanelsApi } from "./panels";
 export { definePlugin } from "./plugin";
 export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
@@ -30,4 +32,5 @@ export type {
   SettingsApi,
   SettingValue,
 } from "./settings";
+export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
 export { SHARED_SPECIFIERS } from "./specifiers";

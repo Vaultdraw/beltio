@@ -16,6 +16,7 @@ main = "main.js"
 description = "Says hello"
 author = "you"
 activation = []
+permissions = ["vault.read"]
 dev = false
 
 [[contributes.commands]]
@@ -61,6 +62,7 @@ The path is relative to the manifest. The `vaultdraw-plugin init` templates ship
 | `description` | string | no |  | 0 to 1000 chars | Optional. One line about the plugin. At most 1000 characters. |
 | `author` | string | no |  | 0 to 1000 chars | Optional. Who made the plugin. At most 1000 characters. |
 | `activation` | list of strings | no |  | items: `"onStartupFinished"` | Optional. By default a plugin loads on first use: one of its commands runs or one of its panels opens. List "onStartupFinished" to also activate it on an idle callback after startup. No other event exists. |
+| `permissions` | list of strings | no |  | items: `"vault.read"`, `"vault.write"`; at most 8 | Optional. What the plugin does to your files, shown in the enable dialog. A declaration and a consent record, not a sandbox: the app loads the plugin only while you have confirmed what it declares, and asks again when an update adds a write permission. At most 8. The names net, secret and control are reserved and refused for now. |
 | `dev` | boolean | no | `false` |  | Optional. true makes the app reload the plugin when its files change. `vaultdraw-plugin dev` adds it to the installed copy. A packaged plugin must not set it to true (error dev-true). |
 
 Tables named `x-*` are free for tools and ignored by the app and the CLI. Any other unknown key is an error (`unknown-key`).

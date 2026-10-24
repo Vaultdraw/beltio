@@ -22,6 +22,7 @@ main = "main.js"
 description = "Says hello"
 author = "you"
 activation = []
+permissions = ["vault.read"]
 dev = false
 
 [[contributes.commands]]

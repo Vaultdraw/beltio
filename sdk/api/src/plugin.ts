@@ -1,10 +1,12 @@
 import type { CommandsApi } from "./commands";
 import type { Disposable } from "./disposable";
 import type { EventsApi } from "./events";
+import type { HostApi } from "./host";
 import type { PluginManifestInfo } from "./manifest";
 import type { PanelsApi } from "./panels";
 import type { SceneContextApi } from "./scene";
 import type { SettingsApi } from "./settings";
+import type { ThemeApi } from "./theme";
 
 /**
  * Toast messages.
@@ -59,6 +61,10 @@ export interface PluginContext {
   readonly scene: SceneContextApi;
   /** @since 0.1.0 */
   readonly events: EventsApi;
+  /** @since 0.2.0 */
+  readonly host: HostApi;
+  /** @since 0.2.0 */
+  readonly theme: ThemeApi;
   /**
    * Disposed in reverse order on disable/reload/quit.
    *

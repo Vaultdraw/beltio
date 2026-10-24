@@ -68,6 +68,18 @@
         "enum": ["onStartupFinished"]
       }
     },
+    "permissions": {
+      "title": "Permissions",
+      "description": "Optional. What the plugin does to your files, shown in the enable dialog. A declaration and a consent record, not a sandbox: the app loads the plugin only while you have confirmed what it declares, and asks again when an update adds a write permission. At most 8. The names net, secret and control are reserved and refused for now.",
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "title": "Permission",
+        "description": "vault.read reads the drawings in your vault. vault.write creates drawings in your vault.",
+        "enum": ["vault.read", "vault.write"]
+      }
+    },
     "dev": {
       "title": "Development mode",
       "default": false,

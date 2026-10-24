@@ -12,7 +12,22 @@ export interface PluginManifestInfo {
   version: string;
   /** @since 0.1.0 */
   dir: string;
+  /**
+   * What the plugin declared in `plugin.toml`. A declaration, not a sandbox.
+   *
+   * @since 0.2.0
+   */
+  permissions: readonly PluginPermission[];
 }
+
+/**
+ * A permission a plugin can declare. `vault.read` reads the drawings in your
+ * vault, `vault.write` creates drawings in it. The names `net`, `secret` and
+ * `control` are reserved.
+ *
+ * @since 0.2.0
+ */
+export type PluginPermission = "vault.read" | "vault.write";
 
 /**
  * A command declared in `plugin.toml`.
