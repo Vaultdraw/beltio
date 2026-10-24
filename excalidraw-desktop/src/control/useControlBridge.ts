@@ -7,6 +7,7 @@ import { toastStore } from "../toasts/toastStore";
 import { onCommandRan } from "../commands/dispatcher";
 
 import { createControlBridge, type ControlDeps } from "./bridge";
+import { ControlError } from "./errors";
 import { linkPrompt, linkRequests } from "./linkRequests";
 import { createUriRunner, type UriDeps, type UriPlan } from "./uriRun";
 
@@ -148,7 +149,13 @@ export function useControlBridge(
         if (live.current.uri) {
           const runner = createUriRunner({
             ...uriDeps(w, () => live.current.uri!),
-            call: async (m, p) => methods[m](p),
+            call: async (m, p) => {
+              const fn = methods[m];
+              if (!fn) {
+                throw new ControlError("NOT_FOUND", "Unknown window method");
+              }
+              return fn(p);
+            },
           });
           methods["uri.run"] = (p) => runner.run(p as UriPlan);
         }

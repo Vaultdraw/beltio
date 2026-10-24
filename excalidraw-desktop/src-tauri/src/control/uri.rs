@@ -60,9 +60,15 @@ pub(crate) struct Policy {
 }
 
 impl Policy {
-    /// Missing or broken config: links on, nothing pre-approved.
+    /// No config: links on, nothing pre-approved. A config that exists but cannot be parsed
+    /// fails closed (links off): a typo must not turn the user's off switch back on.
     pub(crate) fn from_toml(text: &str) -> Self {
-        let control = text.parse::<toml::Table>().ok().and_then(|t| t.get("control").and_then(|c| c.as_table().cloned()));
+        let table = match text.parse::<toml::Table>() {
+            Ok(t) => t,
+            Err(_) if text.trim().is_empty() => toml::Table::new(),
+            Err(_) => return Self { enabled: false, allow: vec![] },
+        };
+        let control = table.get("control").and_then(|c| c.as_table().cloned());
         let enabled = control.as_ref().and_then(|c| c.get("uri_enabled")?.as_bool()).unwrap_or(true);
         let allow = control
             .as_ref()
@@ -91,12 +97,14 @@ const DENY_EXACT: &[&str] = &[
     "templates.saveDrawing",
     "vault.newFromTemplate",
 ];
-const DENY_PREFIX: &[&str] = &["file.import", "file.export", "plugin.", "plugins.", "links.openUri", "links.registerHandlers"];
-const DENY_CONTAINS: &[&str] = &["quit", "exit", "delete", "discard", "trash", "remove", "install", "overwrite", "restore", "revert", "purge", "erase", "wipe", "uri"];
+const DENY_PREFIX: &[&str] = &["file.import", "file.export", "plugin.", "plugins.", "links.openuri", "links.registerhandlers", "uri."];
+const DENY_CONTAINS: &[&str] = &["quit", "delete", "discard", "trash", "remove", "install", "overwrite", "restore", "revert", "purge", "erase", "wipe"];
 
 pub(crate) fn is_denied(id: &str) -> bool {
     let lower = id.to_ascii_lowercase();
-    DENY_EXACT.contains(&id) || DENY_PREFIX.iter().any(|p| id.starts_with(p)) || DENY_CONTAINS.iter().any(|c| lower.contains(c))
+    DENY_EXACT.iter().any(|e| e.eq_ignore_ascii_case(id))
+        || DENY_PREFIX.iter().any(|p| lower.starts_with(&p.to_ascii_lowercase()))
+        || DENY_CONTAINS.iter().any(|c| lower.contains(c))
 }
 
 /// Sliding window: at most `RATE_LIMIT` accepted requests per `RATE_WINDOW`. A refused request
@@ -179,10 +187,6 @@ impl Handler {
     pub(crate) fn handle(&self, win: &dyn Window, config_text: &str, url: &str, origin: Origin, now: Instant) -> Result<Value, RpcError> {
         let policy = Policy::from_toml(config_text);
         let toast = origin != Origin::Cli;
-        if !policy.enabled && origin != Origin::User {
-            self.show(win, origin, toast, "Links from outside are turned off (control.uri_enabled)");
-            return Err(RpcError::app(codes::DISABLED, "Links from outside are turned off (control.uri_enabled = false)"));
-        }
         if !win.ready() && !origin.queues() {
             return Err(RpcError::app(codes::NOT_READY, "The app window is not ready yet"));
         }
@@ -194,6 +198,10 @@ impl Handler {
                 }
                 return Err(RpcError::app(codes::RATE_LIMITED, "Too many links at once (limit 5 per 10 seconds)"));
             }
+        }
+        if !policy.enabled && origin != Origin::User {
+            self.show(win, origin, toast, "Links from outside are turned off (control.uri_enabled)");
+            return Err(RpcError::app(codes::DISABLED, "Links from outside are turned off (control.uri_enabled = false)"));
         }
         let req = match uri::parse(url) {
             Ok(r) => r,
@@ -216,6 +224,11 @@ impl Handler {
             return win.run(plan);
         }
         self.enqueue(plan)?;
+        // The window may have become ready between the check and the enqueue: its
+        // ready hook would have found an empty queue, so drain here.
+        if win.ready() {
+            self.drain(win);
+        }
         Ok(json!({"status": "queued"}))
     }
 
@@ -247,9 +260,15 @@ impl Handler {
     /// Sends everything queued while the window started, in order.
     pub(crate) fn drain(&self, win: &dyn Window) {
         let plans: Vec<Value> = self.state.lock().unwrap().queue.drain(..).collect();
-        for plan in plans {
-            if win.run(plan).is_err() && !win.ready() {
-                break;
+        let mut iter = plans.into_iter();
+        while let Some(plan) = iter.next() {
+            if win.run(plan.clone()).is_err() && !win.ready() {
+                // The window went away again: keep this one and the rest for the next ready.
+                let mut s = self.state.lock().unwrap();
+                for p in std::iter::once(plan).chain(iter).rev() {
+                    s.queue.push_front(p);
+                }
+                return;
             }
         }
     }
@@ -285,7 +304,12 @@ impl Window for AppWindow<'_> {
 /// `[control]` lives in config.toml: read it now (a missing or unreadable file means defaults).
 fn read_config_text() -> String {
     let Ok(dirs) = crate::config::resolve_dirs() else { return String::new() };
-    crate::config::read_toml_text(&dirs.config.join("config.toml"), "config.toml", 1024 * 1024).unwrap_or_default()
+    let path = dirs.config.join("config.toml");
+    if !path.exists() {
+        return String::new();
+    }
+    // Present but unreadable (too big, not UTF-8, I/O error): fail closed, links off.
+    crate::config::read_toml_text(&path, "config.toml", 1024 * 1024).unwrap_or_else(|_| "[control]\nuri_enabled = false\n".into())
 }
 
 /// Every entry point calls this.

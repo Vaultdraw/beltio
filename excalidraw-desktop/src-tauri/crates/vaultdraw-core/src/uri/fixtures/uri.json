@@ -477,6 +477,12 @@
    "name": "vault backslash",
    "input": "vaultdraw://search?query=a&vault=a%5Cb",
    "err": "invalid"
+  },
+  {
+   "name": "plus sign is not a hex digit",
+   "input": "vaultdraw://open?file=a%+Ab",
+   "err": "invalid",
+   "legacyFile": null
   }
  ]
 }

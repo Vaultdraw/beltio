@@ -209,6 +209,10 @@ fn decode(s: &str) -> Option<String> {
     while i < b.len() {
         if b[i] == b'%' {
             let hex = b.get(i + 1..i + 3)?;
+            // `from_str_radix` alone would accept "+A"; both must be hex digits.
+            if !hex.iter().all(u8::is_ascii_hexdigit) {
+                return None;
+            }
             let h = u8::from_str_radix(std::str::from_utf8(hex).ok()?, 16).ok()?;
             out.push(h);
             i += 3;

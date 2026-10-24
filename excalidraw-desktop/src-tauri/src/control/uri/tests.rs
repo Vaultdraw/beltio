@@ -45,7 +45,8 @@ const NEW: &str = "vaultdraw://new?path=Inbox/Idea";
 fn policy_defaults_and_reads_both_keys() {
     let d = Policy { enabled: true, allow: vec![] };
     assert_eq!(Policy::from_toml(""), d);
-    assert_eq!(Policy::from_toml("not toml ["), d);
+    assert_eq!(Policy::from_toml("   \n"), d);
+    assert!(!Policy::from_toml("not toml [").enabled, "a broken config fails closed");
     assert_eq!(Policy::from_toml("[control]\nenabled = false\n"), d, "the socket switch is not the link switch");
     let p = Policy::from_toml("[control]\nuri_enabled = false\nuri_allow = [\"new\", 3, \"appearance.toggleMode\"]\n");
     assert_eq!(p, Policy { enabled: false, allow: vec!["new".into(), "appearance.toggleMode".into()] });
@@ -135,12 +136,12 @@ fn the_users_own_link_needs_no_confirmation() {
 fn security_deny_list_is_pinned() {
     for id in [
         "file.trash", "file.move", "file.rename", "file.resolveConflict", "cli.install", "cli.installSystem", "tags.rename", "templates.saveDrawing",
-        "vault.newFromTemplate", "file.importFile", "file.importPdf", "file.exportPng", "file.exportPdf", "app.quit", "history.deleteAll", "x.discardChanges",
+        "vault.newFromTemplate", "file.importFile", "file.importPdf", "file.exportPng", "file.exportPdf", "app.quit", "File.Trash", "Links.OpenUri", "uri.run", "history.deleteAll", "x.discardChanges",
         "plugins.install", "plugin.foo.run", "links.openUri", "links.registerHandlers", "drawing.trashActive", "cli.uninstall",
     ] {
         assert!(is_denied(id), "{id} must be denied");
     }
-    for id in ["appearance.toggleMode", "view.zoomReset", "drawing.open:Graphs/BFS", "navigator.toggle", "settings.open", "links.back", "graph.open"] {
+    for id in ["appearance.toggleMode", "view.zoomReset", "drawing.open:Graphs/BFS", "navigator.toggle", "settings.open", "links.back", "graph.open", "security.audit", "view.exitFullscreen"] {
         assert!(!is_denied(id), "{id} must stay allowed");
     }
 }
@@ -335,4 +336,61 @@ fn handling_one_link_is_fast() {
     eprintln!("uri handle (config parse included) p50 {:?} p95 {:?}", samples[500], samples[950]);
     // Budget: p95 < 20 ms to hand the plan over; the bound is loose against load.
     assert!(samples[950] < Duration::from_millis(20));
+}
+
+#[test]
+fn a_plan_survives_a_window_that_goes_away_while_draining() {
+    struct Flaky(Fake);
+    impl Window for Flaky {
+        fn ready(&self) -> bool {
+            self.0.ready.get()
+        }
+        fn run(&self, plan: Value) -> Result<Value, RpcError> {
+            self.0.ready.set(false);
+            Err(RpcError::app(codes::NOT_READY, format!("gone {plan}")))
+        }
+        fn focus(&self) {}
+    }
+    let h = Handler::default();
+    let w = Fake::new(false);
+    let t0 = Instant::now();
+    for i in 0..3u64 {
+        h.handle(&w, "", OPEN, Origin::Os, t0 + Duration::from_secs(i * 3)).unwrap();
+    }
+    let f = Flaky(Fake::new(true));
+    h.drain(&f);
+    assert_eq!(h.queued(), 3, "nothing is lost");
+}
+
+#[test]
+fn a_plan_queued_just_as_the_window_becomes_ready_is_not_stranded() {
+    // `ready()` answers false for the first check, true afterwards.
+    struct Racy(Fake, Cell<u32>);
+    impl Window for Racy {
+        fn ready(&self) -> bool {
+            let n = self.1.get();
+            self.1.set(n + 1);
+            n >= 2
+        }
+        fn run(&self, plan: Value) -> Result<Value, RpcError> {
+            self.0.run(plan)
+        }
+        fn focus(&self) {}
+    }
+    let h = Handler::default();
+    let w = Racy(Fake::new(true), Cell::new(0));
+    let r = h.handle(&w, "", OPEN, Origin::Os, Instant::now()).unwrap();
+    assert_eq!(r["status"], "queued");
+    assert_eq!(h.queued(), 0);
+    assert_eq!(w.0.plans().len(), 1);
+}
+
+#[test]
+fn security_a_flood_while_links_are_off_cannot_flood_toasts() {
+    let (h, w) = (Handler::default(), Fake::new(true));
+    let t0 = Instant::now();
+    for _ in 0..200 {
+        let _ = h.handle(&w, "[control]\nuri_enabled = false\n", OPEN, Origin::Os, t0);
+    }
+    assert!(w.notices().len() <= RATE_LIMIT + 1, "{} notices", w.notices().len());
 }
