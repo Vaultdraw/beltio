@@ -9,11 +9,9 @@
 //! | `ai.enabled` | false | AI off (fail closed) |
 //! | `ai.mcp_enabled` | true | AI tools off (fail closed) |
 
-use crate::config::{read_toml_text, Dirs};
+use crate::config::{read_toml_text, Dirs, OVERRIDES_FILE};
 use std::path::Path;
 
-/// File name of the Settings layer in the state folder (the config-layers branch).
-const OVERRIDES_FILE: &str = "overrides.toml";
 const MAX_LAYER_BYTES: u64 = 1024 * 1024;
 
 /// What the control server needs to know, all keys resolved.
@@ -48,7 +46,7 @@ pub enum Layer<'a> {
 /// Reads both layers of `dirs` and resolves the settings.
 pub fn control_settings(dirs: &Dirs) -> ControlSettings {
     let config = read_layer(&dirs.config_file(), "config.toml");
-    let overrides = read_layer(&dirs.state.join(OVERRIDES_FILE), OVERRIDES_FILE);
+    let overrides = read_layer(&dirs.overrides_file(), OVERRIDES_FILE);
     from_layers(layer(&config), layer(&overrides))
 }
 
