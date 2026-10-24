@@ -67,11 +67,31 @@ const BINDABLE = new Set(["rectangle", "ellipse", "diamond", "text"]);
 export const dataKeyFor = (pluginId: string, declared?: string | null) =>
   declared ?? `plugins.${pluginId}`;
 
-/** null when `key` may be declared as a plugin data key, else why not. */
-export const dataKeyProblem = (key: unknown): string | null =>
-  typeof key === "string" && key.length <= MAX_DATA_KEY && DATA_KEY.test(key)
-    ? null
-    : `must be 1 to ${MAX_DATA_KEY} lower case letters, digits, "_" or "-", in parts joined by "."`;
+/**
+ * null when plugin `pluginId` may declare `key` as its data key, else why
+ * not. Keys under `plugins.` belong to the plugin of that id, so one plugin
+ * cannot read or write another's data by declaring its default key.
+ */
+export const dataKeyProblem = (
+  key: unknown,
+  pluginId?: string,
+): string | null => {
+  if (
+    typeof key !== "string" ||
+    key.length > MAX_DATA_KEY ||
+    !DATA_KEY.test(key)
+  ) {
+    return `must be 1 to ${MAX_DATA_KEY} lower case letters, digits, "_" or "-", in parts joined by "."`;
+  }
+  if (
+    pluginId !== undefined &&
+    (key === "plugins" || key.startsWith("plugins.")) &&
+    key !== `plugins.${pluginId}`
+  ) {
+    return `keys under "plugins." belong to the plugin of that id; use "plugins.${pluginId}" or another key`;
+  }
+  return null;
+};
 
 type Check = (v: unknown) => string | null;
 
@@ -386,6 +406,18 @@ export const validateOps = (
           op: i,
           key: "roundness",
           message: "not valid on text elements",
+        });
+      }
+      if (
+        isRecord(el.start) &&
+        isRecord(el.end) &&
+        el.start.ref !== undefined &&
+        el.start.ref === el.end.ref
+      ) {
+        issues.push({
+          op: i,
+          key: "end",
+          message: "start and end must name different elements",
         });
       }
       for (const key of ["start", "end"] as const) {

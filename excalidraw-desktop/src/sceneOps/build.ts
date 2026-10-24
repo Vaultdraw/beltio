@@ -73,7 +73,8 @@ export const withData = (
   if (data === null) {
     delete next[key];
   } else {
-    next[key] = data;
+    // A copy: the plugin must not keep a live handle on the drawing.
+    next[key] = structuredClone(data);
   }
   return Object.keys(next).length ? next : undefined;
 };
@@ -143,6 +144,8 @@ const toSkeleton = (
 };
 
 const ZOOM = { value: 1 } as never;
+/** Length of a one-ended arrow without a position, past the shape's outline. */
+const STUB = 100;
 
 const nearest = (points: GlobalPoint[], to: GlobalPoint) =>
   points.sort((a, b) => pointDistanceSq(a, to) - pointDistanceSq(b, to))[0];
@@ -170,7 +173,13 @@ const outlinePoint = (
  */
 const bindArrows = (
   built: ExcalidrawElement[],
-  bindings: { arrowId: string; startId?: string; endId?: string }[],
+  bindings: {
+    arrowId: string;
+    startId?: string;
+    endId?: string;
+    /** The arrow has its own x and y: a free end stays where it was put. */
+    placed: boolean;
+  }[],
 ): void => {
   if (!bindings.length) {
     return;
@@ -187,11 +196,17 @@ const bindArrows = (
     const start = b.startId ? map.get(b.startId) : undefined;
     const end = b.endId ? map.get(b.endId) : undefined;
     const last = arrow.points[arrow.points.length - 1];
-    const freeStart = pointFrom<GlobalPoint>(arrow.x, arrow.y);
-    const freeEnd = pointFrom<GlobalPoint>(
-      arrow.x + last[0],
-      arrow.y + last[1],
-    );
+    let freeStart = pointFrom<GlobalPoint>(arrow.x, arrow.y);
+    let freeEnd = pointFrom<GlobalPoint>(arrow.x + last[0], arrow.y + last[1]);
+    if (!b.placed) {
+      // A free end without a position: a short stub to the right of the shape
+      // (or coming from the left of it), next to the bound shape.
+      const anchor = (start ?? end)!;
+      const c = elementCenterPoint(anchor, map);
+      const reach = anchor.width / 2 + STUB;
+      freeEnd = pointFrom<GlobalPoint>(c[0] + reach, c[1]);
+      freeStart = pointFrom<GlobalPoint>(c[0] - reach, c[1]);
+    }
     const towardsEnd = end ? elementCenterPoint(end, map) : freeEnd;
     const towardsStart = start ? elementCenterPoint(start, map) : freeStart;
     const p1 = start ? outlinePoint(start, towardsEnd, map) : freeStart;
@@ -254,7 +269,7 @@ export interface BuiltAdds {
 /**
  * Elements missing x and/or y are shifted as a group so their bounding box is
  * centred at `center` (relative offsets kept). A given x or y stays absolute.
- * An arrow bound with `start`/`end` moves with the element it starts at.
+ * A bound arrow is drawn between its shapes after they are placed.
  */
 export const buildAdds = (
   adds: readonly Pick<AddOp, "element" | "ref">[],
@@ -279,21 +294,6 @@ export const buildAdds = (
     adds.map((a, i) => toSkeleton(a.element, ids[i], dataKey)),
     { regenerateIds: false },
   ) as ExcalidrawElement[];
-  bindArrows(
-    built,
-    adds.flatMap((a, i) =>
-      a.element.start || a.element.end
-        ? [
-            {
-              arrowId: ids[i],
-              startId: a.element.start && idOfRef.get(a.element.start.ref),
-              endId: a.element.end && idOfRef.get(a.element.end.ref),
-            },
-          ]
-        : [],
-    ),
-  );
-
   // Which add each built element belongs to (a label belongs to its container).
   const indexOfId = new Map(ids.map((id, i) => [id, i]));
   const owner = built.map((el) => {
@@ -315,20 +315,36 @@ export const buildAdds = (
   const group = built.filter(
     (_, k) => unplacedX(owner[k]) || unplacedY(owner[k]),
   );
-  if (!group.length) {
-    return { created: built, ids, refs };
+  let created = built;
+  if (group.length) {
+    const [x1, y1, x2, y2] = getCommonBounds(group);
+    const dx = center.x - (x1 + x2) / 2;
+    const dy = center.y - (y1 + y2) / 2;
+    // Each axis is placed on its own: a given x or y is never overwritten.
+    created = built.map((el, k) => {
+      const shiftX = unplacedX(owner[k]);
+      const shiftY = unplacedY(owner[k]);
+      return shiftX || shiftY
+        ? { ...el, x: shiftX ? el.x + dx : el.x, y: shiftY ? el.y + dy : el.y }
+        : el;
+    });
   }
-  const [x1, y1, x2, y2] = getCommonBounds(group);
-  const dx = center.x - (x1 + x2) / 2;
-  const dy = center.y - (y1 + y2) / 2;
-  // Each axis is placed on its own: a given x or y is never overwritten.
-  const created = built.map((el, k) => {
-    const shiftX = unplacedX(owner[k]);
-    const shiftY = unplacedY(owner[k]);
-    return shiftX || shiftY
-      ? { ...el, x: shiftX ? el.x + dx : el.x, y: shiftY ? el.y + dy : el.y }
-      : el;
-  });
+  // Bound arrows last, once every shape is where it ends up.
+  bindArrows(
+    created,
+    adds.flatMap((a, i) =>
+      a.element.start || a.element.end
+        ? [
+            {
+              arrowId: ids[i],
+              startId: a.element.start && idOfRef.get(a.element.start.ref),
+              endId: a.element.end && idOfRef.get(a.element.end.ref),
+              placed: a.element.x !== undefined && a.element.y !== undefined,
+            },
+          ]
+        : [],
+    ),
+  );
   return { created, ids, refs };
 };
 
@@ -370,17 +386,57 @@ export const applyGroups = (
   }
   for (const g of groups) {
     const groupId = randomId();
+    const targets = new Set<string>();
     for (const member of g.ids) {
       const id = typeof member === "string" ? member : refs[member.ref];
-      for (const target of [id, ...(labels.get(id) ?? [])]) {
-        const el = work.get(target);
-        if (el) {
-          work.set(
-            target,
-            newElementWith(el, { groupIds: [...el.groupIds, groupId] }),
-          );
+      const el = work.get(id);
+      if (!el) {
+        continue;
+      }
+      // A member already in a group brings its whole outermost group, as
+      // Excalidraw's Group action does, so groups stay nested.
+      const outer = el.groupIds[el.groupIds.length - 1];
+      if (outer) {
+        for (const other of work.values()) {
+          if (!other.isDeleted && other.groupIds.includes(outer)) {
+            targets.add(other.id);
+          }
         }
       }
+      targets.add(id);
+      for (const label of labels.get(id) ?? []) {
+        targets.add(label);
+      }
+    }
+    for (const target of targets) {
+      const el = work.get(target)!;
+      work.set(
+        target,
+        newElementWith(el, { groupIds: [...el.groupIds, groupId] }),
+      );
     }
   }
+};
+
+/**
+ * Builds the adds of a batch into `work` and applies its group ops (which may
+ * name elements already in `work`). Returns the new elements after grouping.
+ */
+export const buildBatch = (
+  ops: readonly SceneOp[],
+  center: { x: number; y: number },
+  dataKey: string | null,
+  work: Map<string, ExcalidrawElement>,
+): BuiltAdds => {
+  const adds = ops.filter((op): op is AddOp => op.op === "add");
+  const groups = ops.filter((op): op is GroupOp => op.op === "group");
+  const built = buildAdds(adds, center, dataKey);
+  if (!groups.length) {
+    return built;
+  }
+  for (const el of built.created) {
+    work.set(el.id, el);
+  }
+  applyGroups(groups, work, built.refs);
+  return { ...built, created: built.created.map((el) => work.get(el.id)!) };
 };

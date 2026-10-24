@@ -18,13 +18,7 @@ import type {
   ExcalidrawTextElement,
 } from "@excalidraw/element/types";
 
-import {
-  applyGroups,
-  buildAdds,
-  normalAngle,
-  roundnessFor,
-  withData,
-} from "./build";
+import { buildBatch, normalAngle, roundnessFor, withData } from "./build";
 import { validateOps } from "./validate";
 import { viewportCenter } from "./viewport";
 
@@ -134,34 +128,20 @@ export const applyOps = (
   const valid: SceneOp[] = validateOps(ops, byId, options);
   const dataKey = options.dataKey ?? null;
 
-  const adds: Extract<SceneOp, { op: "add" }>[] = [];
-  const groups: Extract<SceneOp, { op: "group" }>[] = [];
   const work: Work = new Map(byId);
   for (const op of valid) {
-    if (op.op === "add") {
-      adds.push(op);
-    } else if (op.op === "group") {
-      groups.push(op);
-    } else if (op.op === "delete") {
+    if (op.op === "delete") {
       work.set(op.id, newElementWith(work.get(op.id)!, { isDeleted: true }));
-    } else {
+    } else if (op.op === "update") {
       work.set(op.id, updated(work.get(op.id)!, op.props, work, dataKey));
     }
   }
 
-  const { created, ids, refs } = buildAdds(
-    adds,
-    viewportCenter(api.getAppState()),
-    dataKey,
-  );
-  let fresh = created;
-  if (groups.length) {
-    for (const el of created) {
-      work.set(el.id, el);
-    }
-    applyGroups(groups, work, refs);
-    fresh = created.map((el) => work.get(el.id)!);
-  }
+  const {
+    created: fresh,
+    ids,
+    refs,
+  } = buildBatch(valid, viewportCenter(api.getAppState()), dataKey, work);
   const merged = current.map((el) => work.get(el.id) ?? el);
   const elements = syncInvalidIndices([...merged, ...fresh]);
   api.updateScene({

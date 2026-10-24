@@ -717,6 +717,9 @@ fn data_key_is_optional_and_checked() {
         bad(&with(&format!("data_key = \"{bad_key}\"\n")), "data_key");
     }
     bad(&with("data_key = 3\n"), "data_key");
+    // `plugins.` keys belong to the plugin of that id ("my-plugin" in `with`).
+    bad(&with("data_key = \"plugins.flow-diagram\"\n"), "belongs to another plugin");
+    bad(&with("data_key = \"plugins\"\n"), "belongs to another plugin");
 }
 
 #[test]

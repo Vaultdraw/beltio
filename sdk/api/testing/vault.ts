@@ -308,9 +308,41 @@ export function createVaultModel(): VaultModel {
               "A drawing with that name already exists",
             );
           }
-          const made = store(
-            ops.flatMap((op) => (op.op === "add" ? [op.element] : [])),
-          );
+          const addOps = ops.flatMap((op) => (op.op === "add" ? [op] : []));
+          const made = store(addOps.map((op) => op.element));
+          // As the app: data under the plugin's key, group ops as group ids.
+          const byRef = new Map<string, number>();
+          addOps.forEach((op, i) => {
+            if (op.ref !== undefined) {
+              byRef.set(op.ref, i);
+            }
+          });
+          const els = made.elements.map((e, i) => {
+            const { data, ...rest } = addOps[i].element;
+            const out: Record<string, unknown> = {
+              ...e,
+              ...rest,
+              groupIds: [],
+            };
+            delete out.data;
+            if (data !== undefined && data !== null && dataKey) {
+              out.customData = { [dataKey]: structuredClone(data) };
+            }
+            return out;
+          });
+          let groupSeq = 0;
+          for (const op of ops) {
+            if (op.op === "group") {
+              const groupId = `vault-group-${++groupSeq}`;
+              for (const m of op.ids) {
+                const k = typeof m === "string" ? -1 : byRef.get(m.ref) ?? -1;
+                if (k >= 0) {
+                  els[k].groupIds = [...(els[k].groupIds as string[]), groupId];
+                }
+              }
+            }
+          }
+          made.elements = els as unknown as FakeElement[];
           drawings.set(path, made);
           const ids = made.elements.map((e) => e.id);
           const refs: Record<string, string> = {};

@@ -286,6 +286,10 @@ fn validate(raw: Raw) -> Result<Manifest, String> {
         if !is_valid_data_key(k) {
             return Err(format!("data_key '{k}' is invalid (lower case letters, digits, _ and -, parts joined by '.', at most {MAX_DATA_KEY} characters)"));
         }
+        // Keys under `plugins.` belong to the plugin of that id (no reading another plugin's data).
+        if (k == "plugins" || k.starts_with("plugins.")) && *k != format!("plugins.{}", raw.id) {
+            return Err(format!("data_key '{k}' belongs to another plugin: keys under 'plugins.' must be 'plugins.{}'", raw.id));
+        }
     }
     let c = &raw.contributes;
     if c.commands.len() > MAX_COMMANDS || c.panels.len() > MAX_PANELS || c.settings.len() > MAX_SETTINGS {

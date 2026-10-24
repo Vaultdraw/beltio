@@ -9,8 +9,7 @@ import {
 } from "../../../../sdk/api/testing/vault";
 import { utf8Length } from "../../../../sdk/api/testing/rules";
 import {
-  applyGroups,
-  buildAdds,
+  buildBatch,
   dataKeyFor,
   toSceneElement,
   validateOps,
@@ -66,15 +65,8 @@ export function createVaultApi(rt: PluginRuntime): VaultApi {
         dataKey,
         maxOps: getPreferences().pluginsSceneMaxOps,
       });
-      const adds = valid.flatMap((op) => (op.op === "add" ? [op] : []));
-      const groups = valid.flatMap((op) => (op.op === "group" ? [op] : []));
-      const built = buildAdds(adds, { x: 0, y: 0 }, dataKey);
-      let elements = built.created;
-      if (groups.length) {
-        const work = new Map(elements.map((e) => [e.id, e]));
-        applyGroups(groups, work, built.refs);
-        elements = elements.map((e) => work.get(e.id)!);
-      }
+      const built = buildBatch(valid, { x: 0, y: 0 }, dataKey, new Map());
+      const elements = built.created;
       const scene = JSON.parse(
         serializeAsJSON(elements, {}, {}, "local"),
       ) as Record<string, unknown>;

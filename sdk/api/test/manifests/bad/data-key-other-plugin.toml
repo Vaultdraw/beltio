@@ -1,0 +1,8 @@
+# code: data-key-reserved
+# rust: belongs to another plugin
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+data_key = "plugins.flow-diagram"

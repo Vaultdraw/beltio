@@ -39,6 +39,7 @@ const NOT_EXPRESSIBLE: Record<string, string> = {
   "manifest-too-large": "a limit on the size of the file, not of the document",
   "dev-true": "valid for the app; only a packaged manifest must not set it",
   "contribution-duplicate": "uniqueness of a property of array items",
+  "data-key-reserved": "depends on the plugin id (plugins.<id>)",
 };
 
 describe("plugin.schema.json", () => {

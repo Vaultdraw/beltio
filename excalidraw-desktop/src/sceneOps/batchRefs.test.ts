@@ -7,10 +7,13 @@ import type {
   ExcalidrawTextElement,
 } from "@excalidraw/element/types";
 
+import { DEFAULT_SCENE_MAX_OPS, MAX_SCENE_MAX_OPS } from "../vault/preferences";
+
 import { applyOps } from "./apply";
 import { elementData, sceneDetails } from "./project";
 import { makeElements, stubApi } from "./testUtils";
 import { SceneOpsError } from "./types";
+import { MAX_OPS, MAX_OPS_LIMIT } from "./validate";
 
 import type { SceneOp } from "./types";
 
@@ -117,10 +120,17 @@ describe("refs and bound arrows", () => {
       },
     ]);
     const a = get(result.refs.a);
+    const b = get(result.refs.b);
     const arrow = get(result.refs.ab) as ExcalidrawArrowElement;
-    // The arrow moves with its start (a), so it still starts at a.
-    expect(arrow.x).toBeGreaterThanOrEqual(a.x);
-    expect(arrow.x).toBeLessThanOrEqual(a.x + a.width + 20);
+    // Drawn after centring: it starts at a and ends at b.
+    const last = arrow.points[arrow.points.length - 1];
+    const inside = (x: number, y: number, el: ExcalidrawElement) =>
+      x >= el.x - 20 &&
+      x <= el.x + el.width + 20 &&
+      y >= el.y - 20 &&
+      y <= el.y + el.height + 20;
+    expect(inside(arrow.x, arrow.y, a)).toBe(true);
+    expect(inside(arrow.x + last[0], arrow.y + last[1], b)).toBe(true);
   });
 
   it("rejects bad refs and ends, all or nothing", () => {
@@ -176,7 +186,7 @@ describe("refs and bound arrows", () => {
 });
 
 describe("groups", () => {
-  it("groups new elements by ref and an existing one by id, labels included", () => {
+  it("groups new elements by ref and an existing one by id, labels included, whole groups", () => {
     const els = makeElements(1);
     const { result, out, get } = run(
       [
@@ -192,7 +202,8 @@ describe("groups", () => {
     const old = get(els[0].id);
     expect(a.groupIds).toHaveLength(2);
     expect(b.groupIds).toEqual(a.groupIds);
-    expect(old.groupIds).toEqual([a.groupIds[0]]);
+    // The second group took a's whole group, old element included.
+    expect(old.groupIds).toEqual(a.groupIds);
     expect(old.version).toBeGreaterThan(els[0].version);
     const label = out.find(
       (e) => (e as ExcalidrawTextElement).containerId === a.id,
@@ -342,6 +353,11 @@ describe("new props", () => {
 });
 
 describe("limits", () => {
+  it("plugins.scene_max_ops uses the same numbers as the rules (kept out of the main chunk)", () => {
+    expect(DEFAULT_SCENE_MAX_OPS).toBe(MAX_OPS);
+    expect(MAX_SCENE_MAX_OPS).toBe(MAX_OPS_LIMIT);
+  });
+
   it("uses maxOps clamped to 1..1000", () => {
     const { api } = stubApi([]);
     const ops = (n: number) =>
@@ -401,5 +417,107 @@ describe("sceneDetails", () => {
     expect(
       sceneDetails(out, [result.refs.ab], { data: true }, null)[0].data,
     ).toBeUndefined();
+  });
+});
+
+describe("review fixes", () => {
+  const ends = (a: ExcalidrawArrowElement) => {
+    const last = a.points[a.points.length - 1];
+    return { x1: a.x, y1: a.y, x2: a.x + last[0], y2: a.y + last[1] };
+  };
+  const near = (
+    p: { x: number; y: number },
+    el: ExcalidrawElement,
+    slack = 20,
+  ) =>
+    p.x >= el.x - slack &&
+    p.x <= el.x + el.width + slack &&
+    p.y >= el.y - slack &&
+    p.y <= el.y + el.height + slack;
+
+  it("an arrow between a placed and an unplaced shape touches both after centring", () => {
+    const { result, get } = run([
+      {
+        op: "add",
+        ref: "a",
+        element: { type: "rectangle", x: 2000, y: 2000, width: 80, height: 40 },
+      },
+      {
+        op: "add",
+        ref: "b",
+        element: { type: "rectangle", width: 80, height: 40 },
+      },
+      {
+        op: "add",
+        ref: "ab",
+        element: { type: "arrow", start: { ref: "a" }, end: { ref: "b" } },
+      },
+    ]);
+    const e = ends(get(result.refs.ab) as ExcalidrawArrowElement);
+    expect(near({ x: e.x1, y: e.y1 }, get(result.refs.a))).toBe(true);
+    expect(near({ x: e.x2, y: e.y2 }, get(result.refs.b))).toBe(true);
+  });
+
+  it("a one-ended arrow without a position is a short stub next to its shape", () => {
+    const { result, get } = run([
+      {
+        op: "add",
+        ref: "a",
+        element: { type: "rectangle", x: 5000, y: 5000, width: 80, height: 40 },
+      },
+      { op: "add", ref: "s", element: { type: "arrow", start: { ref: "a" } } },
+    ]);
+    const arrow = get(result.refs.s) as ExcalidrawArrowElement;
+    expect(near({ x: arrow.x, y: arrow.y }, get(result.refs.a))).toBe(true);
+    expect(arrow.width).toBeLessThan(200);
+    expect(arrow.startBinding?.elementId).toBe(result.refs.a);
+  });
+
+  it("start and end on the same element is refused", () => {
+    const { api } = stubApi([]);
+    expect(() =>
+      applyOps(
+        api,
+        [
+          box("r", 0),
+          {
+            op: "add",
+            element: { type: "arrow", start: { ref: "r" }, end: { ref: "r" } },
+          },
+        ],
+        { dataKey: KEY },
+      ),
+    ).toThrow(/different elements/);
+  });
+
+  it("data is copied in: changing the plugin's object later does not touch the drawing", () => {
+    const d = { step: 1 };
+    const { result, get } = run([
+      { op: "add", ref: "a", element: { type: "rectangle", data: d } },
+    ]);
+    const a = get(result.refs.a);
+    const u = { step: 2 };
+    const next = run([{ op: "update", id: a.id, props: { data: u } }], [a]);
+    d.step = 99;
+    u.step = 99;
+    expect(a.customData).toEqual({ [KEY]: { step: 1 } });
+    expect(next.get(a.id).customData).toEqual({ [KEY]: { step: 2 } });
+  });
+
+  it("grouping a member of a group takes the whole group, so groups stay nested", () => {
+    const first = run([
+      box("a", 0),
+      box("b", 200),
+      box("c", 400),
+      { op: "group", ids: [{ ref: "a" }, { ref: "b" }] },
+    ]);
+    const [a, b, c] = ["a", "b", "c"].map((r) =>
+      first.get(first.result.refs[r]),
+    );
+    const second = run([{ op: "group", ids: [a.id, c.id] }], [a, b, c]);
+    const g = (id: string) => second.get(id).groupIds;
+    expect(g(a.id)).toHaveLength(2);
+    expect(g(b.id)).toEqual(g(a.id)); // b came along with a's group
+    expect(g(c.id)).toEqual([g(a.id)[1]]);
   });
 });

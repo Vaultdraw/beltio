@@ -233,11 +233,22 @@ export function validateManifestText(text, file = "plugin.toml") {
   if ("permissions" in doc) {
     checkPermissions(doc.permissions, err);
   }
-  if ("data_key" in doc && !isValidDataKey(doc.data_key)) {
-    err(
-      "data-key-invalid",
-      "data_key must be lower case letters, digits, _ and -, parts joined by '.', at most 64 characters",
-    );
+  if ("data_key" in doc) {
+    const k = doc.data_key;
+    if (!isValidDataKey(k)) {
+      err(
+        "data-key-invalid",
+        "data_key must be lower case letters, digits, _ and -, parts joined by '.', at most 64 characters",
+      );
+    } else if (
+      (k === "plugins" || k.startsWith("plugins.")) &&
+      k !== `plugins.${doc.id}`
+    ) {
+      err(
+        "data-key-reserved",
+        `data_key '${k}' belongs to another plugin: keys under 'plugins.' must be 'plugins.${doc.id}'`,
+      );
+    }
   }
   if ("dev" in doc) {
     if (typeof doc.dev !== "boolean") {
