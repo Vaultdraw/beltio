@@ -53,6 +53,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Plugin SDK
 
+- **API revision 0.3.0** (additions only): `ctx.storage.global`, a key-value store of JSON values per plugin (`get`, `set`, `delete`, `keys`), saved in the app's state folder, never in a vault. Nothing is read until first use; writes are batched and flushed before quit. New key `plugins.storage_limit_kb` (default 1024). Settings → Plugins shows each plugin's data size with **Delete data**, and **Plugins: Delete data of a plugin…** (`plugins.deleteData`) opens it; uninstalling keeps the data. Native plugin calls now go through one gateway that checks the declared and confirmed permissions (`PERMISSION`). The mock host and the in-repo kit have `storage` (`data`, `seed`, `setLimitKb`); `check --activate` skips `ctx.storage` with a warning.
 - **API revision 0.2.0** (additions only): `ctx.host` (`app`, `api`, `has(feature)`), a read-only `ctx.theme` (`mode()`, `tokens()`, `onChange`), `ctx.manifest.permissions` and the manifest key `permissions`. Feature names for `has` are generated from the `@since` tags; the 41 theme token names are documented in `sdk/docs/theme-tokens.md`. The names `net`, `secret` and `control` are reserved as permissions. `check` reports `permission-*` codes; the mock host and the in-repo kit have `theme.set`.
 - `sdk/api`: the `@vaultdraw/api` types package (types only, not published yet).
 - `vaultdraw-plugin`: a command line tool with `check`, `init` and `dev`.

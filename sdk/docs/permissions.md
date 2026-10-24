@@ -27,7 +27,7 @@ permissions = ["vault.read", "vault.write"]   # optional, default []
 
 At most 8, no duplicates. An unknown name is a manifest error, so an older app refuses a plugin that needs a newer one. The names `net`, `secret` and `control` are reserved for later and are refused today. `ctx.manifest.permissions` returns the list.
 
-In this revision (API 0.2.0) no API checks a permission yet: the vault API that uses them comes next. Declaring them now means your plugin's consent line will not change when it does.
+Since API 0.3.0 the app checks them in its native layer: every native call of the plugin API goes through one gateway (`plugin_call`), which looks the method up in a fixed list, then refuses (`code: "PERMISSION"`) a call whose permission your `plugin.toml` does not declare or the user has not confirmed. The vault API that uses `vault.read` and `vault.write` comes next; `ctx.storage` needs no permission. Declaring them now means your plugin's consent line will not change when it does.
 
 ## What you see
 

@@ -5,6 +5,7 @@
 // ?plugins=stubs50 registers 50 inactive-by-use plugins (3 commands, 1 panel,
 // 4 settings each) whose modules must never be fetched.
 // ?enabled=none leaves every plugin off (the Plugins settings page turns them on).
+// ?pluginData=<ids> gives those plugins saved ctx.storage data (Delete data).
 import { registeredCommands } from "../src/commands/registry";
 import { ensureActive } from "../src/plugins/host";
 import {
@@ -165,9 +166,14 @@ export async function startPluginsHarness(
     await Promise.all(csv(params, "pluginsOff").map(manifestFor))
   ).flat();
   const infos = [...on, ...off];
-  setPluginsBackend(
-    createFakeBackend(infos, (id, path) => `${FIXTURE_PREFIX}${id}/${path}`),
+  const backend = createFakeBackend(
+    infos,
+    (id, path) => `${FIXTURE_PREFIX}${id}/${path}`,
   );
+  for (const id of csv(params, "pluginData")) {
+    backend.data[id] = JSON.stringify({ notes: "x".repeat(12 * 1024) });
+  }
+  setPluginsBackend(backend);
   updatePreferences(
     {
       pluginsEnabled:

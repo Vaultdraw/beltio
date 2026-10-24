@@ -22,6 +22,10 @@ export interface FakeBackend extends PluginsBackend {
   gatewayCalls: { pluginId: string; method: string; params: unknown }[];
 }
 
+/** An error as the gateway reports it (`code` plus message). */
+const coded = (code: string, message: string) =>
+  Object.assign(new Error(message), { code });
+
 export function createFakeBackend(
   plugins: PluginInfo[] = [],
   moduleUrl: (id: string, path: string) => string = (id, path) =>
@@ -44,21 +48,30 @@ export function createFakeBackend(
     pluginCall: async (pluginId, method, params) => {
       fake.gatewayCalls.push({ pluginId, method, params });
       if (!fake.plugins.some((p) => p.id === pluginId)) {
-        throw { code: "NOT_FOUND", message: `No installed plugin has the id "${pluginId}"` };
+        throw coded(
+          "NOT_FOUND",
+          `No installed plugin has the id "${pluginId}"`,
+        );
       }
       if (method === "storage.read") {
         const text = fake.data[pluginId];
-        return { data: text === undefined ? null : JSON.parse(text), corrupt: false };
+        return {
+          data: text === undefined ? null : JSON.parse(text),
+          corrupt: false,
+        };
       }
       if (method === "storage.write") {
         fake.data[pluginId] = String(params?.text);
         return null;
       }
-      throw { code: "NOT_FOUND", message: `Plugins cannot call "${method}"` };
+      throw coded("NOT_FOUND", `Plugins cannot call "${method}"`);
     },
     dataList: async () =>
       Object.entries(fake.data)
-        .map(([id, text]) => ({ id, bytes: new TextEncoder().encode(text).length }))
+        .map(([id, text]) => ({
+          id,
+          bytes: new TextEncoder().encode(text).length,
+        }))
         .sort((a, b) => a.id.localeCompare(b.id)),
     dataDelete: async (id) => {
       const had = id in fake.data;

@@ -234,7 +234,10 @@ export function createMockHost(
       async set(key: string, value: Json) {
         const text = encodeStorageValue(checkStorageKey(key), value);
         const next = new Map(stored).set(key, text);
-        checkStorageQuota(new TextEncoder().encode(composeStorage(next)).length, storageLimitKb);
+        checkStorageQuota(
+          new TextEncoder().encode(composeStorage(next)).length,
+          storageLimitKb,
+        );
         stored = next;
       },
       async delete(key: string) {

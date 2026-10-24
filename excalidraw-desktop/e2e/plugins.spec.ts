@@ -214,6 +214,32 @@ test("Plugins settings: a plugin that declares a write permission shows it in th
   expect(errors).toEqual([]);
 });
 
+test("Plugins settings: delete a plugin's saved data", async ({ page }) => {
+  const errors = trackErrors(page);
+  await openVault(page, "?plugins=hello&enabled=none&pluginData=hello");
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
+
+  await page
+    .getByLabel("Vault File Navigator")
+    .getByRole("button", { name: "Settings" })
+    .click();
+  await page.getByRole("dialog").getByRole("tab", { name: "Plugins" }).click();
+  const row = page.getByTestId("plugin-hello");
+  await row.getByRole("button", { name: /^Delete data of Hello/ }).click();
+
+  const confirm = page.getByRole("dialog", {
+    name: "Delete the data of Hello?",
+  });
+  await expect(confirm).toContainText("cannot be undone");
+  await confirm.getByRole("button", { name: "Delete data" }).click();
+
+  await expect(page.getByText("Deleted the data of Hello.")).toBeVisible();
+  await expect(
+    row.getByRole("button", { name: /^Delete data of Hello/ }),
+  ).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test("a plugin stamps a box through scene.batch: panel count follows, one Cmd+Z undoes it", async ({
   page,
 }) => {

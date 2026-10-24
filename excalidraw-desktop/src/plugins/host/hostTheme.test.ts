@@ -35,7 +35,7 @@ describe("ctx.host", () => {
       seen = ctx.host;
     });
     expect(seen!.app).toMatch(/^\d+\.\d+\.\d+/);
-    expect(seen!.api).toEqual({ level: 0, revision: "0.2.0" });
+    expect(seen!.api).toEqual({ level: 0, revision: "0.3.0" });
     expect(seen!.has("theme.tokens")).toBe(true);
     expect(seen!.has("commands.register")).toBe(true);
     expect(seen!.has("drawing.saved")).toBe(true);

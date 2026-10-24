@@ -159,6 +159,15 @@ interface PluginContext {
       cb: (e: { mode: "light" | "dark"; themeId: string }) => void,
     ): Disposable;
   };
+  readonly storage: {
+    // since 0.3.0: JSON values, saved on this computer
+    readonly global: {
+      get<T extends Json = Json>(key: string): Promise<T | undefined>;
+      set(key: string, value: Json): Promise<void>;
+      delete(key: string): Promise<void>;
+      keys(): Promise<string[]>;
+    };
+  };
   readonly log: {
     debug(...a: unknown[]): void;
     info(...a: unknown[]): void;
@@ -181,6 +190,12 @@ Notes:
 - `ctx.host.has(name)` asks for a feature, not a version (like `has('nvim-0.9')` in Neovim). Names are a `ctx` member (`"theme"`), a member of one (`"theme.tokens"`) or an app event (`"drawing.saved"`). Unknown names give `false`. The list is generated from the `@since` tags (`sdk/api/testing/features.ts`).
 - `ctx.theme.tokens()` returns what the document shows now, as CSS strings: some are `rgba(...)` colours or shadows, not only `#rrggbb`. The table is frozen and is as of the last theme change (a CSS snippet that edits `--vault-*` by itself is not seen); read it again after `onChange`. The 41 names are API; each is described in [theme-tokens.md](theme-tokens.md).
 - `ctx.host` and `ctx.theme` are built on first read, and nothing listens to theme changes until you call `onChange`. A plugin that never touches them pays nothing.
+- `ctx.storage.global` keeps data between runs, like Obsidian's `loadData`/`saveData` with VS Code's `globalState` interface. It is one JSON object per plugin in the app's state folder (`plugin-data/<id>/data.json`), the same in every vault, never inside a vault and not part of your config files.
+  - Values are JSON (`null`, booleans, finite numbers, strings, arrays, plain objects); `get` returns a fresh copy. A key is 1 to 256 characters.
+  - The whole object is limited to `plugins.storage_limit_kb` (1024 KiB by default, 64 to 16384). A `set` past it rejects with `code: "QUOTA"` and changes nothing; a bad key or value rejects with `code: "INVALID_ARGUMENT"`.
+  - Nothing is read until the first call. Writes reach the disk 600 ms after the last change (at most 2 s), are skipped when nothing changed, and are flushed when the plugin is disabled or reloaded and before the app quits.
+  - An unreadable file is renamed `data.json.bad`; the plugin starts empty and the user sees one notice.
+  - Uninstalling keeps the data. Settings → Plugins shows its size with a **Delete data** button, and **Plugins: Delete data of a plugin…** (`plugins.deleteData`) goes there.
 
 ### Scene and event types
 

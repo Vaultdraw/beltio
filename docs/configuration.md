@@ -812,5 +812,12 @@ enabled = ["my-plugin"]
 - **Zero cost when unused:** with an empty `enabled` list, no plugin code loads at startup.
 - **Safe mode:** after two crashed launches in a row with plugins enabled, the next launch loads no plugins and shows a banner. Holding Option at launch does the same. Use **Plugins: Restart in safe mode** (`plugins.restartSafeMode`) and **Plugins: Restart normally** (`plugins.restartNormally`) to switch.
 - **Dev reload:** with `dev = true` in a plugin's `plugin.toml`, saving its `main.js` or `plugin.toml` reloads it.
-- **Commands:** `plugins.openSettings`, `plugins.installFolder`, `plugins.reloadList` and `plugins.openFolder` (shows the plugins folder). Like every command, you can rebind them in `[hotkeys]`.
+- **Saved plugin data:** a plugin's `ctx.storage` lives in the state folder (`plugin-data/<id>/data.json`), not in `config.toml` and never in a vault. `storage_limit_kb` caps each plugin's data (it is read on every write, so edits apply at once):
+
+  | Key | Default | Meaning |
+  | --- | --- | --- |
+  | `plugins.storage_limit_kb` | `1024` | Most data one plugin may save, in KiB (64 to 16384). A save past it is refused. |
+
+  Uninstalling a plugin keeps its data; **Delete data** on its Settings → Plugins row removes it.
+- **Commands:** `plugins.openSettings`, `plugins.installFolder`, `plugins.reloadList`, `plugins.openFolder` (shows the plugins folder) and `plugins.deleteData` ("Delete data of a plugin…": opens Settings → Plugins at the first **Delete data** button). Like every command, you can rebind them in `[hotkeys]`.
 - **Writing a plugin:** the `vaultdraw-plugin` tool (`check`, `init`, `dev`) is described in `sdk/docs/getting-started.md`. It adds no config key.

@@ -33,6 +33,8 @@ const h = vi.hoisted(() => {
     uninstallPlugin: vi.fn(async () => {}),
     runCommandById: vi.fn(async () => {}),
     confirm: vi.fn(async () => {}),
+    sizes: new Map<string, number>(),
+    deleteData: vi.fn(async () => true),
   };
 });
 
@@ -48,6 +50,8 @@ vi.mock("../plugins/host/manage", () => ({
   revealPluginFolder: vi.fn(async () => {}),
   pickPluginFolder: vi.fn(async () => null),
   installPluginFolder: vi.fn(),
+  pluginDataSizes: vi.fn(async () => new Map(h.sizes)),
+  deletePluginData: h.deleteData,
 }));
 vi.mock("../plugins/host/runner", () => ({ runCommandById: h.runCommandById }));
 
@@ -280,5 +284,34 @@ describe("Plugins settings page", () => {
       fireEvent.click(screen.getByRole("button", { name: "Restart normally" }));
     });
     expect(h.runCommandById).toHaveBeenCalledWith("plugins.restartNormally");
+  });
+
+  it("deletes a plugin's saved data after a confirm, and the palette command focuses the button", async () => {
+    h.sizes = new Map([["hello", 12 * 1024]]);
+    h.set(state({ plugins: [makePluginInfo("hello", { name: "Hello" })] }));
+    const { takeDeleteDataRequest, pluginUiHandlers } = await import(
+      "../plugins/ui/pluginCommands"
+    );
+    pluginUiHandlers(() => {})["plugins.deleteData"]();
+    await open();
+    const button = await screen.findByRole("button", {
+      name: "Delete data of Hello (12 KB)",
+    });
+    expect(document.activeElement).toBe(button);
+    expect(takeDeleteDataRequest()).toBe(false);
+    fireEvent.click(button);
+    expect(
+      screen.getByRole("dialog", { name: "Delete the data of Hello?" })
+        .textContent,
+    ).toContain("12 KB");
+    h.sizes = new Map();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Delete data" }));
+    });
+    expect(h.deleteData).toHaveBeenCalledWith("hello");
+    expect(
+      screen.queryByRole("button", { name: /Delete data of Hello/ }),
+    ).toBeNull();
+    h.sizes = new Map();
   });
 });

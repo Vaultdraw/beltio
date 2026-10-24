@@ -298,6 +298,8 @@ async function run(job, emit) {
     // Need the running app (its version, features and colours): skipped with a warning.
     host: deep("host"),
     theme: deep("theme"),
+    // Reads and writes the app's state folder: skipped with a warning.
+    storage: deep("storage"),
     events: {
       on(name) {
         if (!EVENT_NAMES.includes(name)) {

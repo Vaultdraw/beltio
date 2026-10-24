@@ -118,10 +118,7 @@ type Pending =
   | null;
 
 /** Saved data sizes by plugin id; read when the page opens and after a delete. */
-const useDataSizes = (): [
-  Map<string, number> | null,
-  () => Promise<void>,
-] => {
+const useDataSizes = (): [Map<string, number> | null, () => Promise<void>] => {
   const [sizes, setSizes] = useState<Map<string, number> | null>(null);
   const refresh = useCallback(
     () =>
@@ -346,7 +343,9 @@ export const PluginsPage = () => {
       {pending?.kind === "deleteData" && (
         <ConfirmModal
           title={`Delete the data of ${pending.info.name}?`}
-          message={`This deletes what ${pending.info.name} saved (${formatDataSize(
+          message={`This deletes what ${
+            pending.info.name
+          } saved (${formatDataSize(
             pending.bytes,
           )}). Its settings in config.toml stay. This cannot be undone.`}
           confirmLabel="Delete data"

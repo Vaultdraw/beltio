@@ -56,6 +56,7 @@ export { definePlugin } from "./plugin";
 export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
 export type { NewElement, SceneContextApi, SceneElement, SceneElementType, SceneOp, SceneOpIssue, } from "./scene";
 export type { SelectOption, SettingDecl, SettingScopeName, SettingsApi, SettingValue, } from "./settings";
+export type { Json, StorageApi, StorageScope } from "./storage";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
 export { SHARED_SPECIFIERS } from "./specifiers";
 
@@ -105,6 +106,7 @@ import type { PluginManifestInfo } from "./manifest";
 import type { PanelsApi } from "./panels";
 import type { SceneContextApi } from "./scene";
 import type { SettingsApi } from "./settings";
+import type { StorageApi } from "./storage";
 import type { ThemeApi } from "./theme";
 export interface UiApi {
     toast(message: string): void;
@@ -126,6 +128,7 @@ export interface PluginContext {
     readonly events: EventsApi;
     readonly host: HostApi;
     readonly theme: ThemeApi;
+    readonly storage: StorageApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;
     setInterval(fn: () => void, ms: number): Disposable;
@@ -224,6 +227,20 @@ export interface SettingsApi {
 
 // specifiers.ts
 export declare const SHARED_SPECIFIERS: readonly string[];
+
+// storage.ts
+export type Json = null | boolean | number | string | readonly Json[] | {
+    readonly [key: string]: Json;
+};
+export interface StorageScope {
+    get<T extends Json = Json>(key: string): Promise<T | undefined>;
+    set(key: string, value: Json): Promise<void>;
+    delete(key: string): Promise<void>;
+    keys(): Promise<string[]>;
+}
+export interface StorageApi {
+    readonly global: StorageScope;
+}
 
 // theme.ts
 import type { Disposable } from "./disposable";

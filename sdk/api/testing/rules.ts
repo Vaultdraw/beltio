@@ -376,10 +376,16 @@ const isJson = (v: unknown, depth: number, seen: Set<object>): boolean => {
 /** Throws INVALID_ARGUMENT unless `key` is a non-empty string of at most 256 characters. */
 export const checkStorageKey = (key: unknown): string => {
   if (typeof key !== "string" || key.length === 0) {
-    throw new PluginApiError("INVALID_ARGUMENT", "A storage key must be a non-empty string");
+    throw new PluginApiError(
+      "INVALID_ARGUMENT",
+      "A storage key must be a non-empty string",
+    );
   }
   if (key.length > STORAGE_MAX_KEY) {
-    throw new PluginApiError("INVALID_ARGUMENT", `A storage key has at most ${STORAGE_MAX_KEY} characters`);
+    throw new PluginApiError(
+      "INVALID_ARGUMENT",
+      `A storage key has at most ${STORAGE_MAX_KEY} characters`,
+    );
   }
   return key;
 };
@@ -419,7 +425,9 @@ export const storageEntryBytes = (key: string, text: string): number =>
   utf8Length(JSON.stringify(key)) + utf8Length(text) + 2;
 
 /** The stored object's text: entries in insertion order. */
-export const composeStorage = (entries: ReadonlyMap<string, string>): string => {
+export const composeStorage = (
+  entries: ReadonlyMap<string, string>,
+): string => {
   let out = "{";
   let first = true;
   for (const [k, v] of entries) {
