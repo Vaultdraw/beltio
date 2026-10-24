@@ -55,7 +55,11 @@ const uriDeps = (
     "vault" | "recentVaults" | "commandTitle" | "openSearch"
   >,
 ): Omit<UriDeps, "call"> => ({
-  ...part(),
+  // Each call asks `part()` again: the app shell's closures change every render.
+  vault: () => part().vault(),
+  recentVaults: () => part().recentVaults(),
+  commandTitle: (id) => part().commandTitle(id),
+  openSearch: (query) => part().openSearch(query),
   ask: linkRequests.ask,
   notify: (message, kind) => toastStore.push({ message, kind }),
   sleep: (ms) => new Promise((r) => win.setTimeout(r, ms)),
