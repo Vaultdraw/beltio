@@ -4,6 +4,11 @@ import {
   declProblem,
   effectiveSetting,
   MAX_PLUGIN_ERRORS,
+  STORAGE_DEFAULT_LIMIT_KB,
+  checkStorageKey,
+  checkStorageQuota,
+  composeStorage,
+  encodeStorageValue,
   pushToast,
   toastMessage,
   undeclaredMessage,
@@ -16,8 +21,10 @@ import { createSceneModel } from "./scene";
 import type {
   AppEventMap,
   Disposable,
+  Json,
   Plugin,
   PluginContext,
+  StorageApi,
   SettingDecl,
   SettingValue,
   ThemeApi,
@@ -27,7 +34,12 @@ import type {
 } from "@vaultdraw/api";
 import type { ComponentType } from "react";
 import type { RenderResult } from "@testing-library/react";
-import type { FakeTheme, PluginLogLine, TestPluginInfo } from "./types";
+import type {
+  FakeStorage,
+  FakeTheme,
+  PluginLogLine,
+  TestPluginInfo,
+} from "./types";
 
 const NOOP: Disposable = { dispose() {} };
 const LOG_RING = 100;
@@ -58,6 +70,7 @@ export interface MockHost {
   info: TestPluginInfo;
   scene: ReturnType<typeof createSceneModel>["fake"];
   theme: FakeTheme;
+  storage: FakeStorage;
   log(): readonly PluginLogLine[];
   toasts(): string[];
   timers(): number;
@@ -197,6 +210,39 @@ export function createMockHost(
     [...settingSubs].forEach((cb) => cb());
     return true;
   };
+
+  // --- storage: ctx.storage.global in memory, JSON text per key as in the app ---
+  let stored = new Map<string, string>();
+  let storageLimitKb = STORAGE_DEFAULT_LIMIT_KB;
+  const storage: FakeStorage = {
+    data: () => JSON.parse(composeStorage(stored)),
+    seed(data) {
+      stored = new Map(
+        Object.entries(data).map(([k, v]) => [k, JSON.stringify(v)]),
+      );
+    },
+    setLimitKb(kb) {
+      storageLimitKb = kb;
+    },
+  };
+  const storageApi: StorageApi = Object.freeze({
+    global: Object.freeze({
+      async get<T extends Json = Json>(key: string) {
+        const text = stored.get(checkStorageKey(key));
+        return text === undefined ? undefined : (JSON.parse(text) as T);
+      },
+      async set(key: string, value: Json) {
+        const text = encodeStorageValue(checkStorageKey(key), value);
+        const next = new Map(stored).set(key, text);
+        checkStorageQuota(new TextEncoder().encode(composeStorage(next)).length, storageLimitKb);
+        stored = next;
+      },
+      async delete(key: string) {
+        stored.delete(checkStorageKey(key));
+      },
+      keys: async () => [...stored.keys()],
+    }),
+  });
 
   // --- theme: what ctx.theme reports; the test sets it ---
   let themeMode: ThemeMode = "light";
@@ -425,6 +471,7 @@ export function createMockHost(
             typeof name === "string" && Object.hasOwn(FEATURES, name),
         }));
       },
+      storage: storageApi,
       get theme() {
         return (themeApi ??= {
           mode: () => themeMode,
@@ -644,6 +691,7 @@ export function createMockHost(
     info,
     scene: scene.fake,
     theme,
+    storage,
     log: () => lines,
     toasts: () => toastQueue.map((t) => t.message),
     timers: () => activeTimers,
@@ -690,6 +738,8 @@ export function createMockHost(
       themeMode = "light";
       themeId = "default";
       themeTokens = null;
+      stored = new Map();
+      storageLimitKb = STORAGE_DEFAULT_LIMIT_KB;
       lines = [];
       errors = 0;
       scene.dispose();

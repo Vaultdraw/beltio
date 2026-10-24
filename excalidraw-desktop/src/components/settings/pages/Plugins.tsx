@@ -1,9 +1,18 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { getPluginCosts } from "../../../plugins/host/cost";
 import {
   clearHostDisabled,
   confirmPluginPermissions,
+  deletePluginData,
+  pluginDataSizes,
   getPluginsState,
   reloadPlugin,
   restartInSafeMode,
@@ -19,6 +28,7 @@ import {
   installPluginFromFolder,
   reloadPluginList,
 } from "../../../plugins/ui/pluginActions";
+import { takeDeleteDataRequest } from "../../../plugins/ui/pluginCommands";
 import { toastStore } from "../../../toasts/toastStore";
 import {
   getPreferences,
@@ -28,7 +38,7 @@ import {
 import { ConfirmModal } from "../../ConfirmModal";
 import { useSettings } from "../SettingsContext";
 
-import { PluginRow, type RuntimeState } from "./PluginRow";
+import { formatDataSize, PluginRow, type RuntimeState } from "./PluginRow";
 
 import "./plugins.css";
 
@@ -104,13 +114,56 @@ type Pending =
   | { kind: "enable"; info: PluginInfo }
   | { kind: "review"; info: PluginInfo }
   | { kind: "uninstall"; info: PluginInfo }
+  | { kind: "deleteData"; info: PluginInfo; bytes: number }
   | null;
+
+/** Saved data sizes by plugin id; read when the page opens and after a delete. */
+const useDataSizes = (): [
+  Map<string, number> | null,
+  () => Promise<void>,
+] => {
+  const [sizes, setSizes] = useState<Map<string, number> | null>(null);
+  const refresh = useCallback(
+    () =>
+      pluginDataSizes().then(setSizes, () => {
+        // No sizes: the page still works, it only shows no "Delete data" buttons.
+        setSizes(new Map());
+      }),
+    [],
+  );
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+  return [sizes, refresh];
+};
 
 export const PluginsPage = () => {
   const { win } = useSettings();
   const state = useManageState();
   const enabledIds = useEnabledIds();
   const [pending, setPending] = useState<Pending>(null);
+  const [dataSizes, refreshDataSizes] = useDataSizes();
+  const listRef = useRef<HTMLUListElement>(null);
+  const [focusDataRequest] = useState(takeDeleteDataRequest);
+  // Opened by "Plugins: Delete data of a plugin…": focus the first "Delete data" button.
+  const focusedOnce = useRef(false);
+  useEffect(() => {
+    if (!focusDataRequest || focusedOnce.current || !dataSizes) {
+      return;
+    }
+    if (dataSizes.size === 0) {
+      focusedOnce.current = true;
+      toastStore.push({ message: "No plugin has saved data." });
+      return;
+    }
+    const first = listRef.current?.querySelector<HTMLButtonElement>(
+      "[data-plugin-delete-data]",
+    );
+    if (first) {
+      focusedOnce.current = true;
+      first.focus();
+    }
+  }, [focusDataRequest, dataSizes, state.plugins]);
   // With no plugin enabled the host (and its list) starts on first visit.
   useEffect(() => {
     if (!pluginHostStarted.get()) {
@@ -199,7 +252,11 @@ export const PluginsPage = () => {
           use Install from folder…
         </p>
       ) : (
-        <ul className="vault-plugins__list" aria-label="Installed plugins">
+        <ul
+          ref={listRef}
+          className="vault-plugins__list"
+          aria-label="Installed plugins"
+        >
           {state.plugins.map((info) => (
             <PluginRow
               key={info.id}
@@ -225,6 +282,14 @@ export const PluginsPage = () => {
               }
               onReview={() => setPending({ kind: "review", info })}
               onUninstall={() => setPending({ kind: "uninstall", info })}
+              dataBytes={dataSizes?.get(info.id)}
+              onDeleteData={() =>
+                setPending({
+                  kind: "deleteData",
+                  info,
+                  bytes: dataSizes?.get(info.id) ?? 0,
+                })
+              }
             />
           ))}
         </ul>
@@ -275,6 +340,26 @@ export const PluginsPage = () => {
           onConfirm={() => {
             uninstall(pending.info);
             setPending(null);
+          }}
+        />
+      )}
+      {pending?.kind === "deleteData" && (
+        <ConfirmModal
+          title={`Delete the data of ${pending.info.name}?`}
+          message={`This deletes what ${pending.info.name} saved (${formatDataSize(
+            pending.bytes,
+          )}). Its settings in config.toml stay. This cannot be undone.`}
+          confirmLabel="Delete data"
+          isDanger
+          onCancel={() => setPending(null)}
+          onConfirm={() => {
+            const { info } = pending;
+            setPending(null);
+            run(`Could not delete the data of ${info.name}`, async () => {
+              await deletePluginData(info.id);
+              await refreshDataSizes();
+              toastStore.push({ message: `Deleted the data of ${info.name}.` });
+            });
           }}
         />
       )}

@@ -102,6 +102,9 @@ import {
   isVaultTheme,
   readLocalStoragePreferences,
   replaceStoredPreferences,
+  isPluginStorageKb,
+  MAX_PLUGIN_STORAGE_KB,
+  MIN_PLUGIN_STORAGE_KB,
   type DeepReadonly,
   type PreferencesSnapshot,
   type VaultPreferences,
@@ -212,6 +215,7 @@ type ConfigField =
   | "thumbnailMaxElements"
   | "activityBar"
   | "pluginsEnabled"
+  | "pluginsStorageLimitKb"
   | "activityBarOrder"
   | "activityBarHidden"
   | "navigatorSort"
@@ -358,6 +362,12 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     valid: (v) =>
       Array.isArray(v) &&
       v.every((x) => typeof x === "string" && isPluginId(x)),
+  },
+  {
+    field: "pluginsStorageLimitKb",
+    key: "plugins.storage_limit_kb",
+    expected: `an integer between ${MIN_PLUGIN_STORAGE_KB} and ${MAX_PLUGIN_STORAGE_KB}`,
+    valid: isPluginStorageKb,
   },
   {
     field: "defaultCanvasBackground",

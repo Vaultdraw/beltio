@@ -114,7 +114,7 @@ import { createDesktopThumbnailStore } from "./thumbnails/desktopStore";
 import { ThumbnailsRoot } from "./thumbnails/ThumbnailsRoot";
 import { HistoryHost } from "./history/HistoryHost";
 import { setAppCommandRunner } from "./commands/appRunner";
-import { pluginHostStarted } from "./plugins/hostFlag";
+import { flushPluginData, pluginHostStarted } from "./plugins/hostFlag";
 import { usePluginSettingProblems } from "./plugins/settings/usePluginSettingProblems";
 import { useHistoryEntry } from "./history/useHistoryEntry";
 import { desktopHistoryRepository } from "./history/DesktopHistoryRepository";
@@ -531,6 +531,7 @@ export const VaultApp = ({
         tabsRef.current?.prepareLeave();
         await docHookRef.current.flush();
         await libraryStore.flush();
+        await flushPluginData();
         await appWinRef.current?.destroy();
         setShowCloseDiscardConfirm(false);
       } catch {

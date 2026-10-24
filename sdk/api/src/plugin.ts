@@ -6,6 +6,7 @@ import type { PluginManifestInfo } from "./manifest";
 import type { PanelsApi } from "./panels";
 import type { SceneContextApi } from "./scene";
 import type { SettingsApi } from "./settings";
+import type { StorageApi } from "./storage";
 import type { ThemeApi } from "./theme";
 
 /**
@@ -65,6 +66,8 @@ export interface PluginContext {
   readonly host: HostApi;
   /** @since 0.2.0 */
   readonly theme: ThemeApi;
+  /** @since 0.3.0 */
+  readonly storage: StorageApi;
   /**
    * Disposed in reverse order on disable/reload/quit.
    *

@@ -32,5 +32,6 @@ export type {
   SettingsApi,
   SettingValue,
 } from "./settings";
+export type { Json, StorageApi, StorageScope } from "./storage";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
 export { SHARED_SPECIFIERS } from "./specifiers";

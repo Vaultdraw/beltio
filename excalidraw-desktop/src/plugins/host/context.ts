@@ -13,12 +13,14 @@ import { createHostApi } from "./hostContext";
 import { runCommandById } from "./runner";
 import { createEventsApi, createSceneApi } from "./sceneContext";
 import { createThemeApi } from "./themeContext";
+import { createStorageApi } from "./storageContext";
 
 import type {
   Disposable,
   HostApi,
   PluginContext,
   PluginPermission,
+  StorageApi,
   ThemeApi,
 } from "../api";
 import type { PluginRuntime } from "./types";
@@ -108,6 +110,7 @@ export function createPluginContext(
 
   let hostApi: HostApi | undefined;
   let themeApi: ThemeApi | undefined;
+  let storageApi: StorageApi | undefined;
 
   const settingValue = (key: string) => getPluginSetting(id, key);
 
@@ -205,6 +208,9 @@ export function createPluginContext(
     },
     get theme() {
       return (themeApi ??= createThemeApi(id, win.document, track, isLive));
+    },
+    get storage() {
+      return (storageApi ??= createStorageApi(rt, win, track));
     },
     subscriptions,
     setTimeout: timer(

@@ -19,6 +19,7 @@ export type {
   FakeElementInput,
   FakeEvents,
   FakeScene,
+  FakeStorage,
   FakeTheme,
   PanelView,
   PluginLogLine,
@@ -106,6 +107,7 @@ export async function boot(
     scene: host.scene,
     events: { emit: host.emit },
     theme: host.theme,
+    storage: host.storage,
     flush,
     disable,
     async dispose() {

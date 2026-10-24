@@ -133,6 +133,18 @@ export async function confirmPluginPermissions(
   await rescanPlugins();
 }
 
+/** Plugins with saved data and its size, by id. */
+export async function pluginDataSizes(): Promise<Map<string, number>> {
+  const list = await getPluginsBackend().dataList();
+  return new Map(list.map((d) => [d.id, d.bytes]));
+}
+
+/** "Delete data": the in-memory copy is dropped first, so nothing writes it back. */
+export async function deletePluginData(id: string): Promise<boolean> {
+  (await import("./storage")).resetPluginStore(id);
+  return getPluginsBackend().dataDelete(id);
+}
+
 /** The user re-enabled a plugin the host had disabled after errors. */
 export async function clearHostDisabled(id: string): Promise<void> {
   await getPluginsBackend().setHostDisabled(id, null);

@@ -48,7 +48,17 @@ export interface PluginRowProps {
   onUninstall: () => void;
   /** Opens the dialog that confirms the permissions an update added. */
   onReview: () => void;
+  /** Size of its saved data (`ctx.storage`); undefined when it has none. */
+  dataBytes?: number;
+  /** Asks to delete its saved data. */
+  onDeleteData?: () => void;
 }
+
+/** "12 KB" style size of saved data (at least 1 KB). */
+export const formatDataSize = (bytes: number): string =>
+  bytes >= 1024 * 1024
+    ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
 const Badge = ({
   kind,
@@ -90,6 +100,8 @@ export const PluginRow = ({
   onOpenFolder,
   onUninstall,
   onReview,
+  dataBytes,
+  onDeleteData,
 }: PluginRowProps) => {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -205,6 +217,19 @@ export const PluginRow = ({
             onClick={onReload}
           >
             Reload
+          </button>
+        )}
+        {dataBytes !== undefined && onDeleteData && (
+          <button
+            type="button"
+            className="vault-btn vault-btn--ghost vault-btn--sm"
+            aria-label={`Delete data of ${info.name} (${formatDataSize(
+              dataBytes,
+            )})`}
+            data-plugin-delete-data={info.id}
+            onClick={onDeleteData}
+          >
+            Delete data ({formatDataSize(dataBytes)})
           </button>
         )}
         {!bundled && (

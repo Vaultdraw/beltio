@@ -16,6 +16,10 @@ export interface FakeBackend extends PluginsBackend {
   opened: (string | null)[];
   /** Simulates a dev file change. */
   emitChanged(id: string): void;
+  /** Saved plugin data (`storage.global`) as the JSON text Rust would hold, by id. */
+  data: Record<string, string>;
+  /** Every gateway call, in order. */
+  gatewayCalls: { pluginId: string; method: string; params: unknown }[];
 }
 
 export function createFakeBackend(
@@ -34,6 +38,33 @@ export function createFakeBackend(
     restarts: [],
     pickResult: null,
     opened: [],
+    data: {},
+    gatewayCalls: [],
+    // The storage rows of the Rust gateway (plugins/gateway.rs); other rows are not faked.
+    pluginCall: async (pluginId, method, params) => {
+      fake.gatewayCalls.push({ pluginId, method, params });
+      if (!fake.plugins.some((p) => p.id === pluginId)) {
+        throw { code: "NOT_FOUND", message: `No installed plugin has the id "${pluginId}"` };
+      }
+      if (method === "storage.read") {
+        const text = fake.data[pluginId];
+        return { data: text === undefined ? null : JSON.parse(text), corrupt: false };
+      }
+      if (method === "storage.write") {
+        fake.data[pluginId] = String(params?.text);
+        return null;
+      }
+      throw { code: "NOT_FOUND", message: `Plugins cannot call "${method}"` };
+    },
+    dataList: async () =>
+      Object.entries(fake.data)
+        .map(([id, text]) => ({ id, bytes: new TextEncoder().encode(text).length }))
+        .sort((a, b) => a.id.localeCompare(b.id)),
+    dataDelete: async (id) => {
+      const had = id in fake.data;
+      delete fake.data[id];
+      return had;
+    },
     openDir: async (id) => {
       fake.opened.push(id);
     },

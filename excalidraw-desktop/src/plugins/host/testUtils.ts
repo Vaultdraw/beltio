@@ -15,6 +15,7 @@ import {
   type FakeBackend,
 } from "./fakeBackend";
 import { resetLoader, setModuleLoader } from "./loader";
+import { clearPluginStores } from "./storage";
 import { pluginTimerCount } from "./context";
 
 import type { Plugin } from "../api";
@@ -34,6 +35,7 @@ export function setupHost(
   resetCosts();
   resetErrors();
   resetLoader();
+  clearPluginStores();
   setActivationWindow(window);
   const backend = createFakeBackend(infos);
   setPluginsBackend(backend);

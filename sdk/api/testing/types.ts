@@ -1,6 +1,7 @@
 import type {
   AppEventMap,
   CommandContribution,
+  Json,
   NewElement,
   PanelContribution,
   PluginContributions,
@@ -113,6 +114,16 @@ export interface FakeTheme {
   }): void;
 }
 
+/** What a booted plugin keeps in `ctx.storage.global` (in memory; writes apply at once). */
+export interface FakeStorage {
+  /** A copy of the stored object. */
+  data(): Record<string, Json>;
+  /** Replaces the stored object, as if it had been saved in an earlier run. */
+  seed(data: Record<string, Json>): void;
+  /** Sets the limit in KiB (default 1024, as `plugins.storage_limit_kb`). */
+  setLimitKb(kb: number): void;
+}
+
 /** The `events` side of a booted plugin. */
 export interface FakeEvents {
   /** Emits an app event as the app would. */
@@ -141,6 +152,7 @@ export interface TestPlugin {
   scene: FakeScene;
   events: FakeEvents;
   theme: FakeTheme;
+  storage: FakeStorage;
   /** Lets timers, microtasks and one animation frame run (and React settle). */
   flush(): Promise<void>;
   /** Disables the plugin: `deactivate` runs and everything it registered is disposed. */

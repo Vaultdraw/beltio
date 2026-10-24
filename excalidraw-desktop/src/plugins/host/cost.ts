@@ -18,6 +18,16 @@ export interface PluginCost {
   mainBytes: number;
   /** Rough resident estimate: mainBytes x 6 once loaded. */
   estimatedBytes: number;
+  /** Native calls through the gateway, per method (time includes the round trip). */
+  gateway: Record<string, GatewayCost>;
+}
+
+export interface GatewayCost {
+  calls: number;
+  totalMs: number;
+  /** Bytes sent (request text the host already had at hand, such as storage writes). */
+  bytes: number;
+  slowCount: number;
 }
 
 const costs = new Map<string, PluginCost>();
@@ -35,6 +45,7 @@ const entry = (id: string): PluginCost => {
       registrations: { commands: 0, panels: 0, settings: 0 },
       mainBytes: 0,
       estimatedBytes: 0,
+      gateway: {},
     };
     costs.set(id, c);
   }
@@ -74,6 +85,22 @@ export function recordHandler(id: string, ms: number): void {
   }
 }
 
+export function recordGatewayCall(
+  id: string,
+  method: string,
+  ms: number,
+  bytes: number,
+): void {
+  const g = entry(id).gateway;
+  const m = (g[method] ??= { calls: 0, totalMs: 0, bytes: 0, slowCount: 0 });
+  m.calls++;
+  m.totalMs += ms;
+  m.bytes += bytes;
+  if (ms > SLOW_HANDLER_MS) {
+    m.slowCount++;
+  }
+}
+
 function measure(id: string, what: string, start: number, ms: number): void {
   try {
     performance.measure(`vaultdraw:plugin:${id}:${what}`, {
@@ -90,7 +117,13 @@ export const recordStubRegistration = (ms: number): void => {
 };
 export const getStubRegistrationMs = (): number => stubRegistrationMs;
 export const getPluginCosts = (): PluginCost[] =>
-  [...costs.values()].map((c) => ({ ...c, handlerMs: [...c.handlerMs] }));
+  [...costs.values()].map((c) => ({
+    ...c,
+    handlerMs: [...c.handlerMs],
+    gateway: Object.fromEntries(
+      Object.entries(c.gateway).map(([k, v]) => [k, { ...v }]),
+    ),
+  }));
 export const getPluginCost = (id: string): PluginCost | undefined =>
   costs.get(id);
 

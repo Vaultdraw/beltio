@@ -1,7 +1,7 @@
 // Generated from the @since tags of sdk/api/src by sdk/api/scripts/gen-features.mjs. Do not edit.
 
 /** The API revision of this build (the version of sdk/api/package.json). */
-export const API_REVISION = "0.2.0";
+export const API_REVISION = "0.3.0";
 
 /** Feature name to the revision that added it. `ctx.host.has(name)` is true for these. */
 export const FEATURES: Readonly<Record<string, string>> = {
@@ -44,6 +44,8 @@ export const FEATURES: Readonly<Record<string, string>> = {
   "settings.get": "0.1.0",
   "settings.onChange": "0.1.0",
   "settings.set": "0.1.0",
+  storage: "0.3.0",
+  "storage.global": "0.3.0",
   subscriptions: "0.1.0",
   theme: "0.2.0",
   "theme.mode": "0.2.0",

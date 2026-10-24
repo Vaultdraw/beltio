@@ -89,6 +89,11 @@ import {
 } from "./pluginSettingsTable";
 import { DEFAULT_SORT_ORDER, isSortOrder, type SortOrder } from "./sortOrder";
 
+/** `plugins.storage_limit_kb`: default and bounds (Rust refuses more than 16 MiB). */
+export const DEFAULT_PLUGIN_STORAGE_KB = 1024;
+export const MIN_PLUGIN_STORAGE_KB = 64;
+export const MAX_PLUGIN_STORAGE_KB = 16384;
+
 export type VaultTheme = "light" | "dark" | "system";
 
 /** Last-used image export options (machine state, not a user setting). */
@@ -200,6 +205,8 @@ interface VaultPreferencesBase {
   activityBarHidden: string[];
   /** Ids of enabled plugins (`[plugins] enabled`). */
   pluginsEnabled: string[];
+  /** Limit of each plugin's `ctx.storage.global`, in KiB (`plugins.storage_limit_kb`). */
+  pluginsStorageLimitKb: number;
   /** Global navigator sort order; a vault's settings.toml may override it. */
   navigatorSort: SortOrder;
   /** Folder for new drawings, relative to the vault root ("" = unset). A vault's settings.toml may override it. */
@@ -329,6 +336,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   activityBarOrder: [],
   activityBarHidden: [],
   pluginsEnabled: [],
+  pluginsStorageLimitKb: DEFAULT_PLUGIN_STORAGE_KB,
   navigatorSort: DEFAULT_SORT_ORDER,
   newDrawingFolder: "",
   templatesFolder: DEFAULT_TEMPLATES_FOLDER,
@@ -510,6 +518,11 @@ const isThumbMaxElements = (value: unknown) =>
   Number.isInteger(value) &&
   value >= MIN_THUMB_MAX_ELEMENTS &&
   value <= MAX_THUMB_MAX_ELEMENTS;
+export const isPluginStorageKb = (value: unknown) =>
+  typeof value === "number" &&
+  Number.isInteger(value) &&
+  value >= MIN_PLUGIN_STORAGE_KB &&
+  value <= MAX_PLUGIN_STORAGE_KB;
 const isString = (value: unknown) => typeof value === "string";
 const isBoolean = (value: unknown) => typeof value === "boolean";
 
@@ -647,6 +660,11 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       parsed.pluginsEnabled,
       isStringArray,
       d.pluginsEnabled,
+    ),
+    pluginsStorageLimitKb: pick(
+      parsed.pluginsStorageLimitKb,
+      isPluginStorageKb,
+      d.pluginsStorageLimitKb,
     ),
     navigatorSort: pick(parsed.navigatorSort, isSortOrder, d.navigatorSort),
     newDrawingFolder: pick(

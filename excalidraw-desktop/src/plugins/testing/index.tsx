@@ -15,9 +15,13 @@ import { getRegisteredHandler } from "../../commands/handlerRegistry";
 import { appEvents, type AppEventMap } from "../../events/appEvents";
 import { toastStore } from "../../toasts/toastStore";
 import { notifyAppearanceChanged } from "../../vault/appearance";
-import { updatePreferences } from "../../vault/preferences";
+import {
+  DEFAULT_PLUGIN_STORAGE_KB,
+  updatePreferences,
+} from "../../vault/preferences";
 import { getPluginLog } from "../host/errors";
 import { resetThemeCache } from "../host/themeContext";
+import { flushAllPluginStorage, resetPluginStore } from "../host/storage";
 import { makePluginInfo } from "../host/fakeBackend";
 import { pluginTimerCount } from "../host/context";
 import { PluginPanels } from "../host/PluginPanels";
@@ -27,7 +31,7 @@ import { setPluginSetting } from "../settings/pluginSettings";
 
 import { createFakeScene, type FakeScene } from "./fakeScene";
 
-import type { Plugin, ThemeMode, ThemeTokenName } from "../api";
+import type { Json, Plugin, ThemeMode, ThemeTokenName } from "../api";
 import type { PluginInfo } from "../host/types";
 import type { PluginSettingValue } from "../../vault/pluginSettingsTable";
 
@@ -59,6 +63,15 @@ export interface FakeTheme {
   }): void;
 }
 
+export interface FakeStorage {
+  /** The saved object (what the fake backend holds; `flush()` writes pending changes first). */
+  data(): Record<string, Json>;
+  /** Replaces the saved object, as if saved in an earlier run. */
+  seed(data: Record<string, Json>): void;
+  /** Sets `plugins.storage_limit_kb`. */
+  setLimitKb(kb: number): void;
+}
+
 export interface FakeEvents {
   /** Emits on the real app event bus. */
   emit<K extends keyof AppEventMap>(name: K, payload: AppEventMap[K]): void;
@@ -84,7 +97,8 @@ export interface TestPlugin {
   scene: FakeScene;
   events: FakeEvents;
   theme: FakeTheme;
-  /** act + fake-timer advance (when faked) + microtasks + one animation frame. */
+  storage: FakeStorage;
+  /** act + fake-timer advance (when faked) + microtasks + one animation frame + pending storage writes. */
   flush(): Promise<void>;
   /** Disables the plugin (disposes its context). */
   disable(): Promise<void>;
@@ -159,7 +173,7 @@ export async function boot(
 ): Promise<TestPlugin> {
   const info = normalise(manifest);
   const id = info.id;
-  setupHost([info], { [id]: module });
+  const { backend } = setupHost([info], { [id]: module });
   const host = await startPluginHost(window, (run) => run());
   const scene = createFakeScene("fake.excalidraw");
   enable([id]);
@@ -172,9 +186,13 @@ export async function boot(
     }
     return h;
   };
+  const flushAll = async () => {
+    await flush();
+    await act(() => flushAllPluginStorage());
+  };
   const disable = async () => {
     enable([]);
-    await flush();
+    await flushAll();
   };
 
   return {
@@ -200,7 +218,15 @@ export async function boot(
     scene,
     events: { emit: (name, payload) => appEvents.emit(name, payload) },
     theme: fakeTheme,
-    flush,
+    storage: {
+      data: () => JSON.parse(backend.data[id] ?? "{}"),
+      seed(data) {
+        backend.data[id] = JSON.stringify(data);
+        resetPluginStore(id);
+      },
+      setLimitKb: (kb) => updatePreferences({ pluginsStorageLimitKb: kb }),
+    },
+    flush: flushAll,
     disable,
     async dispose() {
       cleanup();
@@ -209,7 +235,10 @@ export async function boot(
       scene.dispose();
       toastStore.clear();
       appEvents.clearCurrent();
-      updatePreferences({ pluginsEnabled: [] });
+      updatePreferences({
+        pluginsEnabled: [],
+        pluginsStorageLimitKb: DEFAULT_PLUGIN_STORAGE_KB,
+      });
       resetFakeTheme();
     },
   };

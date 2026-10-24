@@ -24,6 +24,16 @@ export interface PluginsBackend {
   onChanged(cb: (id: string) => void): Promise<() => void>;
   /** URL the module of `path` inside plugin `id` is imported from. */
   moduleUrl(id: string, path: string): string;
+  /** The plugin API gateway (`plugin_call`): allowlist, permission and consent checked in Rust. */
+  pluginCall(
+    pluginId: string,
+    method: string,
+    params: Record<string, unknown> | null,
+  ): Promise<unknown>;
+  /** Plugins with saved data (`storage.global`) and its size in bytes. */
+  dataList(): Promise<{ id: string; bytes: number }[]>;
+  /** Deletes a plugin's saved data; resolves to whether there was any. */
+  dataDelete(id: string): Promise<boolean>;
 }
 
 const call = async <T>(cmd: string, args: Record<string, unknown>) =>
@@ -57,6 +67,11 @@ export function createTauriBackend(win?: Window | null): PluginsBackend {
       await call("plugins_open_dir", { id });
     },
     pickFolder: () => call<string | null>("plugins_pick_folder", {}),
+    pluginCall: (pluginId, method, params) =>
+      call<unknown>("plugin_call", { pluginId, method, params }),
+    dataList: () =>
+      call<{ id: string; bytes: number }[]>("plugins_data_list", {}),
+    dataDelete: (id) => call<boolean>("plugins_data_delete", { id }),
     onChanged: async (cb) =>
       (await import("@tauri-apps/api/event")).listen<{ id: string }>(
         "plugins://changed",
