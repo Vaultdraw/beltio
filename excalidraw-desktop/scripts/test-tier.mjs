@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
 import { impactedSpecs, listSpecNames } from "./e2e-impact.mjs";
+import { lintableFiles } from "./lint-files.mjs";
 
 const { values: o, positionals } = parseArgs({
   allowPositionals: true,
@@ -62,7 +63,9 @@ if (tier === "fast") {
   console.log(`base ${base.slice(0, 10)}; ${files.length} changed file(s)`);
   if (code.some(inDesktop) || pkgSrc.length) npx(desktop, "tsc (desktop, incremental)", tscIncremental("tsconfig.json", "desktop.tsbuildinfo"));
   if (pkgSrc.length) npx(root, "tsc (root, incremental)", tscIncremental("tsconfig.json", "root.tsbuildinfo"));
-  const lintable = code.filter((f) => /\.(js|tsx?)$/.test(f) && !f.startsWith("excalidraw-desktop/src-tauri/"));
+  // Plugin SDK (sdk/) is .mjs too; desktop .mjs stays out of the fast tier (not lint-clean on main yet).
+  const candidates = code.filter((f) => (/\.(js|tsx?)$/.test(f) || f.startsWith("sdk/")) && !f.startsWith("excalidraw-desktop/src-tauri/"));
+  const lintable = await lintableFiles(candidates, root); // ESLint-ignored files (generated .d.ts) never reach eslint
   if (lintable.length) npx(root, `eslint (${lintable.length} changed)`, eslint(lintable));
   // vitest related: the changed files plus every test that imports them (module graph).
   const rel = (fs) => fs.map((f) => path.join(root, f));
@@ -88,6 +91,8 @@ if (tier === "fast") {
   const e2eEnv = { E2E_WORKERS: process.env.E2E_WORKERS || "2" };
   npx(desktop, "tsc (desktop)", tscIncremental("tsconfig.json", "desktop.tsbuildinfo"));
   npx(root, "eslint (desktop)", eslint(["--ext", ".js,.ts,.tsx", "excalidraw-desktop"]));
+  // Plugin SDK and example plugins (sdk/) are linted when the folder exists; the CLI is .mjs, so include it.
+  if (existsSync(path.join(root, "sdk"))) npx(root, "eslint (sdk)", eslint(["--ext", ".js,.ts,.tsx,.mjs,.cjs", "sdk"]));
   npx(desktop, "vitest (desktop)", ["vitest", "run", ...vitestCaps]);
   step("perf lib tests", root, "node", ["--test", "excalidraw-desktop/perf/lib/*.test.mjs", "excalidraw-desktop/scripts/*.test.mjs"]);
   if (tier === "milestone") {
