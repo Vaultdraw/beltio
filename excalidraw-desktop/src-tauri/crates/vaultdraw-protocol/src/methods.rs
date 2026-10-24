@@ -4,6 +4,7 @@
 //! `UPDATE_GOLDEN=1 cargo test -p vaultdraw-protocol`).
 
 use serde_json::{json, Value};
+use std::sync::OnceLock;
 
 pub const RPC_DISCOVER: &str = "rpc.discover";
 pub const RPC_HELLO: &str = "rpc.hello";
@@ -35,6 +36,10 @@ pub const CONFIG_SET: &str = "config.set";
 pub const APP_QUIT: &str = "app.quit";
 pub const EVENTS_SUBSCRIBE: &str = "events.subscribe";
 pub const EVENTS_UNSUBSCRIBE: &str = "events.unsubscribe";
+pub const SCENE_READ: &str = "scene.read";
+pub const SCENE_GET: &str = "scene.get";
+pub const SCENE_SELECTION: &str = "scene.selection";
+pub const SCENE_APPLY: &str = "scene.apply";
 
 /// Connection roles (a connection declares one with `rpc.hello`; default `cli`).
 pub mod roles {
@@ -57,19 +62,62 @@ pub struct MethodSpec {
     pub roles: &'static [&'static str],
     /// Answered by the app's window (WebView bridge), not by Rust alone.
     pub window: bool,
+    /// The AI tool that exposes this method to the `mcp` role (`None`: not an AI tool).
+    pub mcp: Option<McpTool>,
+    /// Name and shape may still change; left out of the golden file.
+    pub experimental: bool,
+}
+
+/// How a method appears to AI clients (`vaultdraw mcp`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct McpTool {
+    pub name: &'static str,
+    /// The tool changes the drawing or the vault.
+    pub writes: bool,
 }
 
 impl MethodSpec {
+    /// Whether `role` may call this method by default: the declared roles, plus `mcp` for
+    /// every method that has an AI tool.
+    pub fn allows(&self, role: &str) -> bool {
+        self.roles.contains(&role) || (role == roles::MCP && self.mcp.is_some())
+    }
+
     pub fn to_json(&self) -> Value {
-        json!({
+        let mut effective: Vec<&str> = self.roles.to_vec();
+        if self.allows(roles::MCP) && !effective.contains(&roles::MCP) {
+            effective.push(roles::MCP);
+        }
+        let mut v = json!({
             "name": self.name,
             "summary": self.summary,
             "params": self.params,
             "result": self.result,
-            "roles": self.roles,
+            "roles": effective,
             "window": self.window,
-        })
+        });
+        if let Some(t) = &self.mcp {
+            v["mcp"] = json!({"tool": t.name, "writes": t.writes});
+        }
+        if self.experimental {
+            v["experimental"] = json!(true);
+        }
+        v
     }
+}
+
+/// The AI tool of a method, if it has one (one table, so the list is easy to audit).
+fn mcp_tool(method: &str) -> Option<McpTool> {
+    let (name, writes) = match method {
+        APP_STATUS => ("vaultdraw_status", false),
+        VAULT_LIST => ("list_drawings", false),
+        VAULT_SEARCH => ("search_vault", false),
+        SCENE_READ => ("read_drawing", false),
+        SCENE_SELECTION => ("get_selection", false),
+        SCENE_APPLY => ("edit_drawing", true),
+        _ => return None,
+    };
+    Some(McpTool { name, writes })
 }
 
 fn obj(props: Value, required: &[&str]) -> Value {
@@ -90,7 +138,104 @@ fn target(extra: Value) -> Value {
 }
 
 fn spec(name: &'static str, summary: &'static str, params: Value, result: Value, roles: &'static [&'static str], window: bool) -> MethodSpec {
-    MethodSpec { name, summary, params, result, roles, window }
+    MethodSpec { name, summary, params, result, roles, window, mcp: None, experimental: false }
+}
+
+fn scene_element() -> Value {
+    obj(
+        json!({"id": {"type": "string"}, "type": {"type": "string"}, "x": {"type": "number"}, "y": {"type": "number"}, "width": {"type": "number"}, "height": {"type": "number"}}),
+        &["id", "type"],
+    )
+}
+
+/// The live scene methods (window): read, get, selection, apply. Experimental until plugin step 4b.
+fn scene_methods() -> Vec<MethodSpec> {
+    let strings = json!({"type": "array", "items": {"type": "string"}});
+    let experimental = |mut m: MethodSpec| {
+        m.experimental = true;
+        m
+    };
+    vec![
+        experimental(spec(
+            SCENE_READ,
+            "Read the elements of the drawing on screen: scope (all, viewport, selection), type and id filters, paging",
+            target(json!({
+                "scope": {"type": "string", "enum": ["all", "viewport", "selection"]},
+                "types": strings.clone(),
+                "ids": strings.clone(),
+                "limit": {"type": "integer", "minimum": 1, "maximum": 2000},
+                "offset": {"type": "integer", "minimum": 0}
+            })),
+            obj(
+                json!({
+                    "path": {"type": "string"},
+                    "live": {"type": "boolean"},
+                    "readOnly": {"type": "boolean"},
+                    "version": {"type": "string"},
+                    "total": {"type": "integer"},
+                    "returned": {"type": "integer"},
+                    "truncated": {"type": "boolean"},
+                    "counts": {"type": "object"},
+                    "elements": {"type": "array", "items": scene_element()},
+                    "selection": strings.clone(),
+                    "viewport": obj(
+                        json!({"x": {"type": "number"}, "y": {"type": "number"}, "width": {"type": "number"}, "height": {"type": "number"}, "zoom": {"type": "number"}}),
+                        &["x", "y", "width", "height", "zoom"],
+                    )
+                }),
+                &["path", "live", "readOnly", "version", "total", "returned", "truncated", "counts", "elements", "selection", "viewport"],
+            ),
+            CLI_ONLY,
+            true,
+        )),
+        experimental(spec(
+            SCENE_GET,
+            "Elements of the drawing on screen by id (1 to 100); ids that do not exist come back in missing",
+            target(json!({"ids": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 100}})),
+            obj(
+                json!({"path": {"type": "string"}, "version": {"type": "string"}, "elements": {"type": "array", "items": scene_element()}, "missing": strings.clone()}),
+                &["path", "version", "elements", "missing"],
+            ),
+            CLI_ONLY,
+            true,
+        )),
+        experimental(spec(
+            SCENE_SELECTION,
+            "The selected elements of the drawing on screen",
+            target(json!({})),
+            obj(
+                json!({"path": {"type": "string"}, "version": {"type": "string"}, "ids": strings, "elements": {"type": "array", "items": scene_element()}}),
+                &["path", "version", "ids", "elements"],
+            ),
+            CLI_ONLY,
+            true,
+        )),
+        experimental(spec(
+            SCENE_APPLY,
+            "Apply 1 to 500 scene operations to the drawing on screen as one undo step; ifVersion refuses when the drawing changed, dryRun only validates",
+            target(json!({
+                "ops": {"type": "array", "items": {"type": "object"}, "minItems": 1, "maxItems": 500},
+                "ifVersion": {"type": "string"},
+                "dryRun": {"type": "boolean"},
+                "by": {"type": "string", "enum": ["cli", "mcp", "uri"]},
+                "notify": {"type": "boolean"}
+            })),
+            obj(
+                json!({
+                    "path": {"type": "string"},
+                    "live": {"type": "boolean"},
+                    "applied": {"type": "integer"},
+                    "ids": {"type": "array", "items": {"type": "string"}},
+                    "version": {"type": "string"},
+                    "dryRun": {"type": "boolean"},
+                    "valid": {"type": "boolean"}
+                }),
+                &["path", "live", "applied", "version"],
+            ),
+            CLI_ONLY,
+            true,
+        )),
+    ]
 }
 
 /// The C3 methods: vault, files, tabs, config, quit, events.
@@ -313,8 +458,13 @@ fn c3_methods() -> Vec<MethodSpec> {
     ]
 }
 
-/// Every method, in a stable order.
-pub fn catalogue() -> Vec<MethodSpec> {
+/// Every method, in a stable order. Built once; every request looks methods up here.
+pub fn catalogue() -> &'static [MethodSpec] {
+    static CATALOGUE: OnceLock<Vec<MethodSpec>> = OnceLock::new();
+    CATALOGUE.get_or_init(build_catalogue)
+}
+
+fn build_catalogue() -> Vec<MethodSpec> {
     let none = obj(json!({}), &[]);
     vec![
         MethodSpec {
@@ -327,6 +477,8 @@ pub fn catalogue() -> Vec<MethodSpec> {
             ),
             roles: &roles::ALL,
             window: false,
+            mcp: None,
+            experimental: false,
         },
         MethodSpec {
             name: RPC_HELLO,
@@ -335,6 +487,8 @@ pub fn catalogue() -> Vec<MethodSpec> {
             result: obj(json!({"api": {"type": "integer"}, "role": {"type": "string"}}), &["api", "role"]),
             roles: &roles::ALL,
             window: false,
+            mcp: None,
+            experimental: false,
         },
         MethodSpec {
             name: APP_STATUS,
@@ -355,6 +509,8 @@ pub fn catalogue() -> Vec<MethodSpec> {
             ),
             roles: CLI_ONLY,
             window: false,
+            mcp: None,
+            experimental: false,
         },
         MethodSpec {
             name: APP_FOCUS,
@@ -363,6 +519,8 @@ pub fn catalogue() -> Vec<MethodSpec> {
             result: obj(json!({"focused": {"type": "boolean"}}), &["focused"]),
             roles: CLI_URI,
             window: false,
+            mcp: None,
+            experimental: false,
         },
         MethodSpec {
             name: APP_OPEN,
@@ -371,6 +529,8 @@ pub fn catalogue() -> Vec<MethodSpec> {
             result: obj(json!({"handled": {"type": "integer"}}), &["handled"]),
             roles: CLI_URI,
             window: false,
+            mcp: None,
+            experimental: false,
         },
         MethodSpec {
             name: URI_HANDLE,
@@ -379,6 +539,8 @@ pub fn catalogue() -> Vec<MethodSpec> {
             result: obj(json!({"status": {"type": "string", "enum": ["done", "asking", "queued"]}}), &["status"]),
             roles: CLI_URI,
             window: false,
+            mcp: None,
+            experimental: false,
         },
         MethodSpec {
             name: COMMAND_LIST,
@@ -394,6 +556,8 @@ pub fn catalogue() -> Vec<MethodSpec> {
             ),
             roles: CLI_ONLY,
             window: true,
+            mcp: None,
+            experimental: false,
         },
         MethodSpec {
             name: COMMAND_RUN,
@@ -402,15 +566,22 @@ pub fn catalogue() -> Vec<MethodSpec> {
             result: obj(json!({"ran": {"type": "boolean"}, "id": {"type": "string"}}), &["ran", "id"]),
             roles: CLI_ONLY,
             window: true,
+            mcp: None,
+            experimental: false,
         },
     ]
     .into_iter()
     .chain(c3_methods())
+    .chain(scene_methods())
+    .map(|mut m| {
+        m.mcp = mcp_tool(m.name);
+        m
+    })
     .collect()
 }
 
-pub fn find(name: &str) -> Option<MethodSpec> {
-    catalogue().into_iter().find(|m| m.name == name)
+pub fn find(name: &str) -> Option<&'static MethodSpec> {
+    catalogue().iter().find(|m| m.name == name)
 }
 
 /// `rpc.discover` result for an app version.
@@ -452,6 +623,75 @@ mod tests {
         assert!(m.roles.contains(&roles::CLI) && !m.window);
     }
 
+    /// The `mcp` role reaches exactly these methods and tools (C7a keeps the role closed; this pins
+    /// what opening it would expose).
+    #[test]
+    fn security_mcp_role_reaches_only_the_pinned_tools() {
+        let mut allowed: Vec<_> = catalogue().iter().filter(|m| m.allows(roles::MCP)).map(|m| m.name).collect();
+        allowed.sort();
+        assert_eq!(allowed, [APP_STATUS, RPC_DISCOVER, RPC_HELLO, SCENE_APPLY, SCENE_READ, SCENE_SELECTION, VAULT_LIST, VAULT_SEARCH]);
+        let mut tools: Vec<_> = catalogue().iter().filter_map(|m| m.mcp.map(|t| (t.name, m.name, t.writes))).collect();
+        tools.sort();
+        assert_eq!(
+            tools,
+            [
+                ("edit_drawing", SCENE_APPLY, true),
+                ("get_selection", SCENE_SELECTION, false),
+                ("list_drawings", VAULT_LIST, false),
+                ("read_drawing", SCENE_READ, false),
+                ("search_vault", VAULT_SEARCH, false),
+                ("vaultdraw_status", APP_STATUS, false),
+            ]
+        );
+        // Only the apply tool writes; scene.get has no tool and stays CLI only.
+        assert!(!find(SCENE_GET).unwrap().allows(roles::MCP));
+        assert!(!find(SCENE_APPLY).unwrap().allows(roles::URI));
+    }
+
+    #[test]
+    fn to_json_lists_effective_roles_and_optional_keys() {
+        let status = find(APP_STATUS).unwrap().to_json();
+        assert_eq!(status["roles"], json!(["cli", "mcp"]));
+        assert_eq!(status["mcp"], json!({"tool": "vaultdraw_status", "writes": false}));
+        assert!(status.get("experimental").is_none());
+        let hello = find(RPC_HELLO).unwrap().to_json();
+        assert_eq!(hello["roles"], json!(["cli", "uri", "mcp"]));
+        assert!(hello.get("mcp").is_none());
+        let apply = find(SCENE_APPLY).unwrap().to_json();
+        assert_eq!((apply["experimental"].clone(), apply["window"].clone()), (json!(true), json!(true)));
+        assert_eq!(apply["roles"], json!(["cli", "mcp"]));
+        let tags = find(VAULT_TAGS).unwrap().to_json();
+        assert!(tags.get("mcp").is_none() && tags.get("experimental").is_none());
+    }
+
+    /// Cost of the per-request lookup (`find`) against building the table, which every request
+    /// paid before the `OnceLock`.
+    #[test]
+    fn catalogue_lookup_benchmark() {
+        use std::time::Instant;
+        let pct = |mut v: Vec<std::time::Duration>| {
+            v.sort();
+            (v[v.len() / 2], v[v.len() * 95 / 100])
+        };
+        let mut found = Vec::new();
+        for _ in 0..2000 {
+            let t = Instant::now();
+            let m = std::hint::black_box(find(std::hint::black_box(SCENE_APPLY)));
+            found.push(t.elapsed());
+            assert!(m.is_some());
+        }
+        let mut built = Vec::new();
+        for _ in 0..200 {
+            let t = Instant::now();
+            std::hint::black_box(build_catalogue());
+            built.push(t.elapsed());
+        }
+        let (f50, f95) = pct(found);
+        let (b50, b95) = pct(built);
+        eprintln!("methods::find (OnceLock): p50 {f50:?} p95 {f95:?}; building the catalogue once: p50 {b50:?} p95 {b95:?}");
+        assert!(f95 < std::time::Duration::from_micros(200), "lookup too slow: {f95:?}");
+    }
+
     #[test]
     fn names_are_unique_and_namespaced() {
         let all = catalogue();
@@ -479,7 +719,8 @@ mod tests {
     #[test]
     fn api_v1_golden() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/api-v1.json");
-        let current: Value = json!({"api": crate::API_LEVEL, "methods": catalogue().iter().map(MethodSpec::to_json).collect::<Vec<_>>()});
+        // Experimental methods (scene.*) may still change shape: they stay out of the golden file.
+        let current: Value = json!({"api": crate::API_LEVEL, "methods": catalogue().iter().filter(|m| !m.experimental).map(MethodSpec::to_json).collect::<Vec<_>>()});
         let pretty = serde_json::to_string_pretty(&current).unwrap() + "\n";
         let golden: Option<Value> = std::fs::read_to_string(&path).ok().map(|t| serde_json::from_str(&t).unwrap());
         if let Some(golden) = &golden {

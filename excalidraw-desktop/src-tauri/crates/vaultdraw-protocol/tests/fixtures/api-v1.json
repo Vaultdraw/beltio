@@ -83,6 +83,10 @@
       "window": false
     },
     {
+      "mcp": {
+        "tool": "vaultdraw_status",
+        "writes": false
+      },
       "name": "app.status",
       "params": {
         "additionalProperties": true,
@@ -157,7 +161,8 @@
         "type": "object"
       },
       "roles": [
-        "cli"
+        "cli",
+        "mcp"
       ],
       "summary": "Is the app running: version, pid, open vault, active drawing, tabs",
       "window": false
@@ -440,6 +445,10 @@
       "window": true
     },
     {
+      "mcp": {
+        "tool": "list_drawings",
+        "writes": false
+      },
       "name": "vault.list",
       "params": {
         "additionalProperties": true,
@@ -497,12 +506,17 @@
         "type": "object"
       },
       "roles": [
-        "cli"
+        "cli",
+        "mcp"
       ],
       "summary": "List drawings and folders under dir (vault-relative, default the root), optionally recursive",
       "window": false
     },
     {
+      "mcp": {
+        "tool": "search_vault",
+        "writes": false
+      },
       "name": "vault.search",
       "params": {
         "additionalProperties": true,
@@ -547,7 +561,8 @@
         "type": "object"
       },
       "roles": [
-        "cli"
+        "cli",
+        "mcp"
       ],
       "summary": "Search the vault (names, text, tags); each result has path plus the search hit fields",
       "window": false
