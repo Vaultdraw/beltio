@@ -54,8 +54,9 @@ import type {
   LoadedCatalogue,
 } from "../theme/catalogue/types";
 
-/** Cards drawn at once; a longer result asks for a narrower search. */
 const B = THEME_BROWSER_COMMAND_IDS;
+
+/** Cards drawn at once; a longer result asks for a narrower search. */
 const MAX_CARDS = 300;
 
 /** Dialog keys that still work from the search box (plain keys are text there). */

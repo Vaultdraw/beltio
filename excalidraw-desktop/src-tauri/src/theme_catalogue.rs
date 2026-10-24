@@ -151,9 +151,23 @@ fn prune_dir(dir: &Path, keep: usize) {
     }
 }
 
-/// Marks a cached file as just used, so pruning drops the least recently used. Best effort.
+/// Marks a cached file as just used, so pruning drops the least recently used. Best effort:
+/// only regular files (never a symlink or special file), and at most once a minute per file,
+/// so a screen of cached cards causes no writes.
 fn touch(path: &Path) {
-    if let Ok(f) = fs::File::options().write(true).open(path) {
+    const MIN_AGE: std::time::Duration = std::time::Duration::from_secs(60);
+    let Ok(m) = fs::symlink_metadata(path) else { return };
+    if !m.is_file() || m.modified().ok().and_then(|t| t.elapsed().ok()).is_some_and(|age| age < MIN_AGE) {
+        return;
+    }
+    let mut opts = fs::File::options();
+    opts.write(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
+    }
+    if let Ok(f) = opts.open(path) {
         let _ = f.set_modified(SystemTime::now());
     }
 }

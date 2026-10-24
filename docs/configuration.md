@@ -346,7 +346,7 @@ sync_canvas = true      # canvas follows the theme too
 - **Cards** show a preview image or colour swatches, name, author, description, dark or light, credit and licence, and an **Installed** or **Update** badge.
 - **Find:** the search box matches name, author, tag and description; tag and mode filters narrow it further.
 - **Actions:** **Install**, **Update** (shown when the list has a newer file than the installed one), **Use** and **Remove**.
-- **Keys:** search is focused on open. Arrows move between cards, **Enter** installs or uses, **Delete** removes (**Shift+Delete** in the search box), **/** jumps back to search, **Escape** closes. All of them except Escape are commands you can rebind on the Hotkeys page (below).
+- **Keys:** search is focused on open. Arrows move between cards, **Enter** installs or uses, **Delete** removes (**Shift+Delete** in the search box), **/** jumps back to search, **Escape** closes. They are commands you can rebind on the Hotkeys page (below). Escape always closes, like every dialog; `themeBrowser.close` adds one more key for it.
 
 | Command | What it does |
 | --- | --- |
@@ -364,7 +364,7 @@ The keys inside the open browser are commands too. They exist only while the bro
 | `themeBrowser.activate` (install, update or use) | Enter |
 | `themeBrowser.remove` | Delete, Shift+Delete |
 | `themeBrowser.search` | / |
-| `themeBrowser.close` | none (**Escape** closes every dialog and cannot be rebound) |
+| `themeBrowser.close` | none (an extra close key; **Escape** always closes) |
 
 In the search box plain keys are text, so only the movement keys and Enter work there, plus a Shift chord for remove.
 
