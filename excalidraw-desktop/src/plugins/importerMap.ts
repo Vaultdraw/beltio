@@ -174,8 +174,7 @@ export function findImporter(name: string): ImporterMatch | null {
 }
 
 /** Extensions plugins handle now, for the picker's `accept`. */
-export const importerExtensions = (): string[] =>
-  [...current().keys()].sort();
+export const importerExtensions = (): string[] => [...current().keys()].sort();
 
 /** Extensions claimed by more than one plugin, or turned off by the config key. */
 export function importerClashes(): ImporterClash[] {
