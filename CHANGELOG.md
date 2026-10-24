@@ -70,6 +70,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - Doc pages: `sdk/docs/testing.md` and `sdk/docs/packaging.md`.
 - A manifest test corpus that pins what `plugin.toml` accepts and refuses.
 - Two doc pages: `sdk/docs/reference.md` and `sdk/docs/getting-started.md`.
+- A lint (D7): official plugins, built-in extensions and example plugins may import only the public API, never app or editor internals.
 
 
 ## [0.1.2] - 2026-10-23

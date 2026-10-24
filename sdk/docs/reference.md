@@ -283,6 +283,17 @@ type AppEventMap = {
 3. `console.*` is not attributed to your plugin. Use `ctx.log` (see [Logging](#logging)).
 4. Keep `main.js` small. The host loads it only on first use, so unused plugins cost nothing, and a small bundle activates faster.
 
+## Official plugins use the same API
+
+Official plugins and the built-in extensions get no private door: they are built with the API third parties get (decision D7). ESLint enforces it in `test:fast` and `test:merge`.
+
+| Folder | Rule |
+| --- | --- |
+| `plugins/official/**`, `excalidraw-desktop/src/extensions/**`, `sdk/examples/*/**`, plugin fixtures | May not import `@excalidraw/*`, `excalidraw-desktop/**` or `packages/*/src/**`, by bare or relative path, `import` or `require`. |
+| `*.test.*`, `sdk/examples/testing/**` | Exempt: tests may reach the test harness. |
+
+If a plugin needs something the API lacks, grow the API; don't import around it. `sdk/api/test/publicApiLint.test.ts` proves the rule fails on an internal import.
+
 ## What the host adds for you
 
 - **Panels.** Every declared panel gets a palette command `<pluginId>.panel.<panelId>` ("Toggle <title> panel") and an activity-bar button `<pluginId>.<panelId>`. Panels open in a right-hand column. The panel's code loads, and the plugin activates, the first time it opens. A render error shows "This plugin panel crashed." and counts as a plugin error. Only the first 6 plugin panel buttons show in the activity bar by default.

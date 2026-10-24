@@ -9,3 +9,4 @@ packages/excalidraw/types
 dev-dist
 coverage
 sdk/api/etc/
+sdk/api/test/lint-fixtures/

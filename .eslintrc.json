@@ -59,6 +59,52 @@
           }
         ]
       }
+    },
+    {
+      "files": [
+        "sdk/examples/*/**/*.{js,jsx,ts,tsx}",
+        "plugins/official/**/*.{js,jsx,ts,tsx}",
+        "excalidraw-desktop/src/extensions/**/*.{js,jsx,ts,tsx}",
+        "excalidraw-desktop/src/smoke/plugins/**/*.{js,jsx,ts,tsx}",
+        "excalidraw-desktop/e2e/fixtures/plugins/**/*.{js,jsx,ts,tsx}"
+      ],
+      "excludedFiles": ["**/*.test.{js,jsx,ts,tsx}", "sdk/examples/testing/**"],
+      "settings": { "import/resolver": { "node": { "extensions": [".js", ".jsx", ".ts", ".tsx"] } } },
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@excalidraw/**", "excalidraw-desktop/**", "**/excalidraw-desktop/src/**", "**/packages/*/src/**"],
+                "message": "Official and example plugins use the public API (@vaultdraw/api) only, never editor or app internals (D7). Missing capability? Add it to the API."
+              }
+            ]
+          }
+        ],
+        "import/no-restricted-paths": [
+          "error",
+          {
+            "zones": [
+              {
+                "target": "./sdk/examples",
+                "from": ["./excalidraw-desktop", "./packages"],
+                "message": "Plugins use the public API only (D7)."
+              },
+              {
+                "target": "./plugins/official",
+                "from": ["./excalidraw-desktop", "./packages"],
+                "message": "Plugins use the public API only (D7)."
+              },
+              {
+                "target": "./excalidraw-desktop/src/extensions",
+                "from": ["./excalidraw-desktop/src/!(extensions)", "./packages"],
+                "message": "Built-in extensions use the public API only (D7)."
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }
