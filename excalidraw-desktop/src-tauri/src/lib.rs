@@ -442,27 +442,43 @@ fn parse_write_headers(headers: &tauri::http::HeaderMap) -> Result<WriteHeaders>
     };
     Ok(WriteHeaders { handle: required("x-handle")?, path: required("x-path")?, expected_revision: expected, operation_id: required("x-operation-id")? })
 }
-/// The raw body is the UTF-8 scene JSON; it is validated in place, never copied into a String.
-fn write_drawing_raw(v: &Vault, args: &WriteHeaders, body: &[u8]) -> Result<serde_json::Value> {
-    let json = std::str::from_utf8(body).map_err(|_| err("INVALID_FILE", "Drawing is not UTF-8 JSON"))?;
-    write_drawing_file(v, &args.path, json, args.expected_revision.as_deref(), &args.operation_id)
+/// The one drawing commit for the app, the control API and plugins: the read-only flag, the
+/// vault mutation guard, the atomic core write with its revision check, then (only after a
+/// successful commit) file history, `file.saved` and a memory release.
+pub(crate) fn commit_drawing(
+    v: &Vault,
+    history: Option<&history::HistoryService>,
+    path: &str,
+    json: &str,
+    expected_revision: Option<&str>,
+    operation_id: &str,
+) -> Result<serde_json::Value> {
+    writable(v)?;
+    let _mutation = mutation_guard(v)?;
+    let result = write_drawing_file(v, path, json, expected_revision, operation_id);
+    // File history: one clonefile + one queue push, only after a successful commit (errors ignored).
+    if let Some(rev) = result.as_ref().ok().and_then(|o| o["revision"].as_str()) {
+        let disk_len = result.as_ref().ok().and_then(|o| o["bytes"].as_u64()).unwrap_or(json.len() as u64);
+        if let Some(history) = history {
+            history.after_commit(&v.handle, path, rev, disk_len);
+        }
+        control::events::file_saved(path, rev);
+    }
+    memory::schedule_release();
+    result
 }
 #[tauri::command]
 async fn write_drawing(request: tauri::ipc::Request<'_>, state: State<'_, Service>, history: State<'_, history::HistoryService>) -> Result<serde_json::Value> {
     let args = parse_write_headers(request.headers())?;
     let body = clipboard::raw_body(&request)?;
     let v = vault_for(&state, &args.handle)?;
-    writable(&v)?;
-    let _mutation = mutation_guard(&v)?;
-    let result = write_drawing_raw(&v, &args, body);
-    // File history: one clonefile + one queue push, only after a successful commit (errors ignored).
-    if let Some(rev) = result.as_ref().ok().and_then(|o| o["revision"].as_str()) {
-        let disk_len = result.as_ref().ok().and_then(|o| o["bytes"].as_u64()).unwrap_or(body.len() as u64);
-        history.after_commit(&args.handle, &args.path, rev, disk_len);
-        control::events::file_saved(&args.path, rev);
-    }
-    memory::schedule_release();
-    result
+    write_drawing_raw(&v, Some(&history), &args, body)
+}
+/// The raw body is the UTF-8 scene JSON; it is validated in place, never copied into a String.
+fn write_drawing_raw(v: &Vault, history: Option<&history::HistoryService>, args: &WriteHeaders, body: &[u8]) -> Result<serde_json::Value> {
+    writable(v)?;
+    let json = std::str::from_utf8(body).map_err(|_| err("INVALID_FILE", "Drawing is not UTF-8 JSON"))?;
+    commit_drawing(v, history, &args.path, json, args.expected_revision.as_deref(), &args.operation_id)
 }
 #[tauri::command]
 async fn create_folder(handle: String, path: String, state: State<'_, Service>) -> Result<()> {
@@ -673,19 +689,42 @@ mod tests {
         h.remove("x-path");
         assert_eq!(parse_write_headers(&h).unwrap_err().code, "INVALID_ARGUMENT");
     }
+    /// The three `generate_handler!` lists (smoke build, test build, release) must register the
+    /// same app commands; the smoke list may add its own `smoke::`/`refresh_rate::`/clipboard probes.
+    #[test]
+    fn handler_lists_do_not_drift() {
+        let src = include_str!("lib.rs");
+        let lists: Vec<std::collections::BTreeSet<String>> = src
+            // Split so this test's own source does not match.
+            .split(concat!("tauri::generate_", "handler!["))
+            .skip(1)
+            .map(|rest| {
+                let body = &rest[..rest.find(']').unwrap()];
+                body.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect()
+            })
+            .collect();
+        assert_eq!(lists.len(), 3);
+        let probe = |s: &String| s.starts_with("smoke::") || s.starts_with("refresh_rate::") || s == "clipboard::smoke_read_clipboard";
+        let smoke: std::collections::BTreeSet<String> = lists[0].iter().filter(|s| !probe(s)).cloned().collect();
+        assert_eq!(smoke, lists[1], "smoke list differs from the test list");
+        assert_eq!(lists[1], lists[2], "test list differs from the release list");
+        for cmd in ["plugins::plugin_call", "plugins::plugins_data_list", "plugins::plugins_data_delete"] {
+            assert!(lists[2].contains(cmd), "{cmd}");
+        }
+    }
     #[test]
     fn raw_write_path_is_guarded_and_returns_revision() {
         let t = tempdir().unwrap(); let v = vault(t.path());
         let args = |expected: Option<&str>| WriteHeaders { handle: "test".into(), path: "a.excalidraw".into(), expected_revision: expected.map(str::to_owned), operation_id: "op".into() };
-        let created = write_drawing_raw(&v, &args(None), SCENE.as_bytes()).unwrap();
+        let created = write_drawing_raw(&v, None, &args(None), SCENE.as_bytes()).unwrap();
         assert_eq!(created["revision"], revision(SCENE.as_bytes()));
-        assert_eq!(write_drawing_raw(&v, &args(None), SCENE.as_bytes()).unwrap_err().code, "CONFLICT");
+        assert_eq!(write_drawing_raw(&v, None, &args(None), SCENE.as_bytes()).unwrap_err().code, "CONFLICT");
         let next = SCENE.replace("[]", "[{\"id\":1}]");
         let rev = created["revision"].as_str().unwrap().to_owned();
-        assert_eq!(write_drawing_raw(&v, &args(Some(&rev)), next.as_bytes()).unwrap()["revision"], revision(next.as_bytes()));
+        assert_eq!(write_drawing_raw(&v, None, &args(Some(&rev)), next.as_bytes()).unwrap()["revision"], revision(next.as_bytes()));
         assert_eq!(fs::read_to_string(t.path().join("a.excalidraw")).unwrap(), next);
-        assert_eq!(write_drawing_raw(&v, &args(Some(&rev)), SCENE.as_bytes()).unwrap_err().code, "CONFLICT");
-        assert_eq!(write_drawing_raw(&v, &args(None), &[0xff]).unwrap_err().code, "INVALID_FILE");
+        assert_eq!(write_drawing_raw(&v, None, &args(Some(&rev)), SCENE.as_bytes()).unwrap_err().code, "CONFLICT");
+        assert_eq!(write_drawing_raw(&v, None, &args(None), &[0xff]).unwrap_err().code, "INVALID_FILE");
     }
 
 }
@@ -822,7 +861,7 @@ pub fn run() {
                 templates::write_global_template, templates::open_global_templates_dir,
                 thumbs::thumbs_lookup, thumbs::thumbs_put, thumbs::thumbs_clear,
                 plugins::plugins_list, plugins::plugins_install_folder, plugins::plugins_uninstall, plugins::plugins_consent_confirm, plugins::plugins_set_host_disabled, plugins::plugins_open_dir,
-                plugins::plugins_pick_folder, plugins::plugins_dev_log, plugins::plugins_launch_ok, plugins::plugins_restart_safe_mode, plugins::plugins_restart, plugins::plugins_restart_cancel,
+                plugins::plugins_pick_folder, plugins::plugins_dev_log, plugins::plugins_launch_ok, plugins::plugins_restart_safe_mode, plugins::plugins_restart, plugins::plugins_restart_cancel, plugins::plugin_call, plugins::plugins_data_list, plugins::plugins_data_delete,
                 control::uri::uri_open, control::files::external_file_read, control::linux_handlers::links_handlers_plan, control::linux_handlers::links_handlers_apply, control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_spool_begin, control::bridge::control_spool_append, control::bridge::control_spool_abort, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event,
                 smoke::smoke_environment, smoke::smoke_log, smoke::smoke_finish, smoke::perf_process_ids,
                 refresh_rate::probes::perf_display_info, refresh_rate::probes::perf_native_input,
@@ -846,7 +885,7 @@ pub fn run() {
                 templates::write_global_template, templates::open_global_templates_dir,
                 thumbs::thumbs_lookup, thumbs::thumbs_put, thumbs::thumbs_clear,
                 plugins::plugins_list, plugins::plugins_install_folder, plugins::plugins_uninstall, plugins::plugins_consent_confirm, plugins::plugins_set_host_disabled, plugins::plugins_open_dir,
-                plugins::plugins_pick_folder, plugins::plugins_dev_log, plugins::plugins_launch_ok, plugins::plugins_restart_safe_mode, plugins::plugins_restart, plugins::plugins_restart_cancel,
+                plugins::plugins_pick_folder, plugins::plugins_dev_log, plugins::plugins_launch_ok, plugins::plugins_restart_safe_mode, plugins::plugins_restart, plugins::plugins_restart_cancel, plugins::plugin_call, plugins::plugins_data_list, plugins::plugins_data_delete,
                 control::uri::uri_open, control::files::external_file_read, control::linux_handlers::links_handlers_plan, control::linux_handlers::links_handlers_apply, control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_spool_begin, control::bridge::control_spool_append, control::bridge::control_spool_abort, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event
             ])
         };
@@ -867,7 +906,7 @@ pub fn run() {
             templates::write_global_template, templates::open_global_templates_dir,
                 thumbs::thumbs_lookup, thumbs::thumbs_put, thumbs::thumbs_clear,
                 plugins::plugins_list, plugins::plugins_install_folder, plugins::plugins_uninstall, plugins::plugins_consent_confirm, plugins::plugins_set_host_disabled, plugins::plugins_open_dir,
-                plugins::plugins_pick_folder, plugins::plugins_dev_log, plugins::plugins_launch_ok, plugins::plugins_restart_safe_mode, plugins::plugins_restart, plugins::plugins_restart_cancel,
+                plugins::plugins_pick_folder, plugins::plugins_dev_log, plugins::plugins_launch_ok, plugins::plugins_restart_safe_mode, plugins::plugins_restart, plugins::plugins_restart_cancel, plugins::plugin_call, plugins::plugins_data_list, plugins::plugins_data_delete,
                 control::uri::uri_open, control::files::external_file_read, control::linux_handlers::links_handlers_plan, control::linux_handlers::links_handlers_apply, control::bridge::control_ready, control::bridge::control_reply, control::bridge::control_spool_begin, control::bridge::control_spool_append, control::bridge::control_spool_abort, control::bridge::control_commands_snapshot, control::bridge::control_install_cli, control::events::control_event
         ]);
         startup_trace("builder configured");

@@ -22,7 +22,7 @@ pub(crate) mod files;
 pub(crate) mod install;
 pub(crate) mod instance;
 pub(crate) mod linux_handlers;
-mod ops;
+pub(crate) mod ops;
 pub(crate) mod server;
 pub(crate) mod spool;
 pub(crate) mod uri;

@@ -5,12 +5,14 @@
 
 mod consent;
 mod devlog;
+mod gateway;
 mod install;
 mod launch;
 mod manifest;
 mod scan;
 mod scheme;
 mod state;
+mod storage;
 mod term;
 #[cfg(test)]
 mod tests;
@@ -140,6 +142,49 @@ pub(crate) async fn plugins_consent_confirm(app: AppHandle, id: String, seen: Ve
         consent::confirm(&config::resolve_dirs()?.state, &id, &info.manifest.permissions)
     })
     .await
+}
+
+/// The plugin API's native entry point (gateway.rs): allowlist, permission and consent check,
+/// then the control API's code or a plugin-only row.
+#[tauri::command]
+pub(crate) async fn plugin_call(
+    app: AppHandle,
+    plugin_id: String,
+    method: String,
+    params: Option<serde_json::Value>,
+) -> std::result::Result<serde_json::Value, gateway::GatewayError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let snap = snapshot(&app, false)?;
+        let state_dir = config::resolve_dirs()?.state;
+        let plugin = snap.list.plugins.iter().find(|p| p.manifest.id == plugin_id);
+        let confirmed = if plugin.is_some_and(|p| p.source != scan::Source::Bundled) {
+            consent::load(&state_dir)
+        } else {
+            consent::Record::new()
+        };
+        let row = gateway::authorize(&method, &plugin_id, plugin, &confirmed)?;
+        match row.route {
+            gateway::Route::Control(m) => {
+                let params = if m == vaultdraw_protocol::methods::FILE_WRITE { Some(gateway::create_only(params)?) } else { params };
+                Ok(crate::control::ops::call(&app, m, params)?)
+            }
+            route => gateway::storage_call(&state_dir, &plugin_id, route, &params.unwrap_or_default()),
+        }
+    })
+    .await
+    .map_err(|e| gateway::GatewayError::new("INTERNAL", e.to_string()))?
+}
+
+/// Plugins with saved data (`storage.global`) and its size, for Settings → Plugins.
+#[tauri::command]
+pub(crate) async fn plugins_data_list() -> Result<Vec<storage::DataSize>> {
+    blocking(|| Ok(storage::sizes(&config::resolve_dirs()?.state))).await
+}
+
+/// "Delete data": removes a plugin's saved data. Returns whether there was any.
+#[tauri::command]
+pub(crate) async fn plugins_data_delete(id: String) -> Result<bool> {
+    blocking(move || storage::delete(&config::resolve_dirs()?.state, &id)).await
 }
 
 #[tauri::command]

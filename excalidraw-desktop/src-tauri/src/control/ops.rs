@@ -20,7 +20,7 @@ const QUIT_DELAY: Duration = Duration::from_millis(100);
 /// Rendering a drawing to a file (`export.render`) takes longer than the other window calls.
 const EXPORT_TIMEOUT: Duration = Duration::from_secs(120);
 
-pub(super) fn call(app: &AppHandle, method: &str, params: Option<Value>) -> Reply {
+pub(crate) fn call(app: &AppHandle, method: &str, params: Option<Value>) -> Reply {
     let params = params.unwrap_or(Value::Null);
     match method {
         VAULT_INFO => {
@@ -114,13 +114,11 @@ fn write(app: &AppHandle, params: &Value) -> Reply {
     let scene = params.get("scene").filter(|s| s.is_object()).ok_or_else(|| RpcError::invalid_params("scene must be a drawing object"))?;
     let expected = vault_ops::expected_revision(params)?;
     refuse_if_dirty(app, &path)?;
-    let (revision, len) = vault_ops::write(&v, &path, scene, expected)?;
-    if let Some(history) = app.try_state::<crate::history::HistoryService>() {
-        history.after_commit(&v.handle, &path, &revision, len);
-    }
-    events::file_saved(&path, &revision);
-    crate::memory::schedule_release();
-    Ok(json!({"path": path, "revision": revision}))
+    crate::writable(&v).map_err(native_err)?;
+    let json = serde_json::to_string(scene).map_err(|e| RpcError::invalid_params(e.to_string()))?;
+    let history = app.try_state::<crate::history::HistoryService>();
+    let done = crate::commit_drawing(&v, history.as_deref(), &path, &json, expected, &crate::random_id()).map_err(native_err)?;
+    Ok(json!({"path": path, "revision": done["revision"]}))
 }
 
 /// An open drawing with unsaved edits must not be overwritten behind the editor's back.

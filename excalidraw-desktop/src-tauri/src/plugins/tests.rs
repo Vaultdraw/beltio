@@ -764,3 +764,167 @@ fn consent_record_round_trips_and_tolerates_damage() {
     fs::write(state.join("plugin-consent.json"), "{ not json").unwrap();
     assert!(consent::load(state).is_empty(), "corrupt file means nothing confirmed");
 }
+
+// ---- P4a2: the gateway allowlist, consent check and storage.global ----
+
+use super::{gateway, storage};
+
+fn info_with(id: &str, permissions: &str, source: Source) -> scan::PluginInfo {
+    let d = tempdir().unwrap();
+    let dir = d.path().join(id);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(dir.join("plugin.toml"), format!("{}permissions = [{permissions}]\n", minimal(id))).unwrap();
+    fs::write(dir.join("main.js"), "export default {}").unwrap();
+    scan::info_for_dir(&dir, source, APP).unwrap()
+}
+
+fn record(id: &str, perms: &[&str]) -> consent::Record {
+    let mut r = consent::Record::new();
+    r.insert(id.into(), perms.iter().map(|s| s.to_string()).collect());
+    r
+}
+
+#[test]
+fn gateway_allowlist_maps_methods_to_permissions() {
+    let rows: Vec<(&str, Option<&str>)> = gateway::ALLOWLIST.iter().map(|r| (r.method, r.permission)).collect();
+    assert_eq!(
+        rows,
+        vec![
+            ("vault.list", Some("vault.read")),
+            ("file.read", Some("vault.read")),
+            ("file.write", Some("vault.write")),
+            ("storage.read", None),
+            ("storage.write", None),
+        ]
+    );
+    // Every permission a row needs is a name the manifest accepts.
+    for r in gateway::ALLOWLIST {
+        if let Some(p) = r.permission {
+            assert!(manifest::parse(&format!("{}permissions = [\"{p}\"]\n", minimal("ab"))).is_ok(), "{p}");
+        }
+    }
+}
+
+#[test]
+fn gateway_refuses_unknown_methods_and_plugins() {
+    let none = consent::Record::new();
+    let p = info_with("reader", "\"vault.read\"", Source::User);
+    let e = gateway::authorize("config.set", "reader", Some(&p), &none).unwrap_err();
+    assert_eq!(e.code, "NOT_FOUND");
+    let e = gateway::authorize("app.quit", "reader", Some(&p), &none).unwrap_err();
+    assert_eq!(e.code, "NOT_FOUND");
+    let e = gateway::authorize("storage.read", "ghost", None, &none).unwrap_err();
+    assert_eq!(e.code, "NOT_FOUND");
+    assert!(gateway::authorize("storage.read", "reader", Some(&p), &none).is_ok(), "storage is free");
+}
+
+#[test]
+fn gateway_checks_declared_and_confirmed_permissions() {
+    let p = info_with("reader", "\"vault.read\"", Source::User);
+    let none = consent::Record::new();
+    // Declared but never confirmed.
+    let e = gateway::authorize("vault.list", "reader", Some(&p), &none).unwrap_err();
+    assert_eq!((e.code.as_str(), e.detail["permission"].as_str()), ("PERMISSION", Some("vault.read")));
+    assert!(e.message.contains("not confirmed"), "{}", e.message);
+    // Confirmed.
+    let ok = record("reader", &["vault.read"]);
+    assert_eq!(gateway::authorize("file.read", "reader", Some(&p), &ok).unwrap().route, gateway::Route::Control("file.read"));
+    // Not declared, even if a stale record says confirmed.
+    let stale = record("reader", &["vault.read", "vault.write"]);
+    let e = gateway::authorize("file.write", "reader", Some(&p), &stale).unwrap_err();
+    assert!(e.code == "PERMISSION" && e.message.contains("does not declare"), "{}", e.message);
+    // Another plugin's record does not count.
+    let other = record("someone", &["vault.read"]);
+    assert_eq!(gateway::authorize("vault.list", "reader", Some(&p), &other).unwrap_err().code, "PERMISSION");
+    // Bundled plugins need no confirmation, but still the declaration.
+    let b = info_with("bundled-one", "\"vault.read\"", Source::Bundled);
+    assert!(gateway::authorize("vault.list", "bundled-one", Some(&b), &none).is_ok());
+    assert_eq!(gateway::authorize("file.write", "bundled-one", Some(&b), &none).unwrap_err().code, "PERMISSION");
+}
+
+#[test]
+fn gateway_file_write_is_create_only() {
+    use serde_json::json;
+    assert_eq!(gateway::create_only(None).unwrap(), json!({"expectedRevision": null}));
+    let p = gateway::create_only(Some(json!({"path": "a", "scene": {}}))).unwrap();
+    assert_eq!(p, json!({"path": "a", "scene": {}, "expectedRevision": null}));
+    assert!(gateway::create_only(Some(json!({"expectedRevision": null}))).is_ok());
+    assert_eq!(gateway::create_only(Some(json!({"expectedRevision": "abc"}))).unwrap_err().code, "PERMISSION");
+    assert_eq!(gateway::create_only(Some(json!([1]))).unwrap_err().code, "INVALID_ARGUMENT");
+}
+
+#[test]
+fn gateway_errors_keep_their_code_and_detail() {
+    use vaultdraw_protocol::{codes, RpcError};
+    let e: gateway::GatewayError = RpcError::app(codes::CONFLICT, "dirty").with("reason", "dirty").into();
+    assert_eq!((e.code.as_str(), e.detail["reason"].as_str()), ("CONFLICT", Some("dirty")));
+    let v = serde_json::to_value(&e).unwrap();
+    assert_eq!(v, serde_json::json!({"code": "CONFLICT", "message": "dirty", "reason": "dirty"}));
+    let e: gateway::GatewayError = RpcError::invalid_params("bad").into();
+    assert_eq!(e.code, "INVALID_ARGUMENT");
+}
+
+#[test]
+fn storage_is_lazy_and_round_trips() {
+    use serde_json::json;
+    let t = tempdir().unwrap();
+    let state = t.path();
+    assert_eq!(storage::read(state, "kv-one").unwrap(), json!({"data": null, "corrupt": false}));
+    assert!(!state.join("plugin-data").exists(), "a read creates nothing");
+    storage::write(state, "kv-one", r#"{"a":1,"b":[true,"x"]}"#).unwrap();
+    assert_eq!(storage::read(state, "kv-one").unwrap(), json!({"data": {"a": 1, "b": [true, "x"]}, "corrupt": false}));
+    assert_eq!(storage::sizes(state), vec![storage::DataSize { id: "kv-one".into(), bytes: 22 }]);
+    // Only the file, no temp leftovers.
+    assert_eq!(fs::read_dir(state.join("plugin-data/kv-one")).unwrap().count(), 1);
+    assert!(storage::delete(state, "kv-one").unwrap());
+    assert!(!storage::delete(state, "kv-one").unwrap());
+    assert!(storage::sizes(state).is_empty());
+}
+
+#[test]
+fn storage_refuses_bad_input() {
+    let t = tempdir().unwrap();
+    let state = t.path();
+    for id in ["../x", "A", "", "a/b"] {
+        assert_eq!(storage::write(state, id, "{}").unwrap_err().code, "INVALID_ARGUMENT", "{id}");
+        assert_eq!(storage::read(state, id).unwrap_err().code, "INVALID_ARGUMENT", "{id}");
+        assert_eq!(storage::delete(state, id).unwrap_err().code, "INVALID_ARGUMENT", "{id}");
+    }
+    assert_eq!(storage::write(state, "kv", "[1]").unwrap_err().code, "INVALID_ARGUMENT");
+    assert_eq!(storage::write(state, "kv", "{").unwrap_err().code, "INVALID_ARGUMENT");
+    let big = format!("{{\"a\":\"{}\"}}", "x".repeat(storage::MAX_BYTES as usize));
+    assert_eq!(storage::write(state, "kv", &big).unwrap_err().code, "QUOTA");
+    assert!(!state.join("plugin-data").exists());
+}
+
+#[test]
+fn storage_renames_a_corrupt_file_and_starts_empty() {
+    use serde_json::json;
+    let t = tempdir().unwrap();
+    let dir = t.path().join("plugin-data/kv");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(dir.join("data.json"), "{not json").unwrap();
+    assert_eq!(storage::read(t.path(), "kv").unwrap(), json!({"data": null, "corrupt": true}));
+    assert_eq!(fs::read_to_string(dir.join("data.json.bad")).unwrap(), "{not json");
+    assert!(!dir.join("data.json").exists());
+    // A JSON value that is not an object is corrupt too.
+    fs::write(dir.join("data.json"), "[1,2]").unwrap();
+    assert_eq!(storage::read(t.path(), "kv").unwrap()["corrupt"], true);
+}
+
+#[cfg(unix)]
+#[test]
+fn storage_refuses_symlinks() {
+    let t = tempdir().unwrap();
+    let outside = t.path().join("outside");
+    fs::create_dir_all(&outside).unwrap();
+    fs::create_dir_all(t.path().join("plugin-data")).unwrap();
+    std::os::unix::fs::symlink(&outside, t.path().join("plugin-data/kv")).unwrap();
+    assert_eq!(storage::write(t.path(), "kv", "{}").unwrap_err().code, "INVALID_PATH");
+    assert!(fs::read_dir(&outside).unwrap().next().is_none());
+    assert!(storage::sizes(t.path()).is_empty());
+    // The folder itself as a link.
+    let t2 = tempdir().unwrap();
+    std::os::unix::fs::symlink(&outside, t2.path().join("plugin-data")).unwrap();
+    assert_eq!(storage::read(t2.path(), "kv").unwrap_err().code, "INVALID_PATH");
+}
