@@ -176,3 +176,28 @@ describe("settingsSync layers", () => {
     expect(getSettingsStatus().problems).toEqual([]);
   });
 });
+
+describe("preferencesToConfigChanges: more hints", () => {
+  it("rebinding a command to its default chords is a reset, with the hint", () => {
+    const base = {
+      ...DEFAULT_PREFERENCES,
+      hotkeys: { "file.rename": ["Mod+R"] },
+    };
+    const probe = preferencesToConfigChanges(base, DEFAULT_PREFERENCES)[0]
+      .default as string[];
+    const back = { ...DEFAULT_PREFERENCES, hotkeys: { "file.rename": probe } };
+    expect(preferencesToConfigChanges(base, back)).toEqual([
+      { key: "hotkeys.file.rename", value: null, default: probe },
+    ]);
+  });
+
+  it("resetting a plugin's settings hints an empty table", () => {
+    const withPlugin = {
+      ...DEFAULT_PREFERENCES,
+      pluginSettings: { p: { a: 1 } },
+    };
+    expect(preferencesToConfigChanges(withPlugin, DEFAULT_PREFERENCES)).toEqual(
+      [{ key: "plugin.p", value: null, default: {} }],
+    );
+  });
+});

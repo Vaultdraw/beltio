@@ -13,11 +13,11 @@ pub fn get(dirs: &Dirs, params: &Value) -> Result<Value, RpcError> {
         Some(_) => return Err(RpcError::invalid_params("key must be a non-empty string")),
     };
     let loaded = serde_json::to_value(config::load_settings_in(dirs).map_err(native_err)?).unwrap_or(Value::Null);
-    for (field, file) in [("configError", "config.toml"), ("overridesError", "overrides.toml")] {
-        if let Some(message) = loaded[field]["message"].as_str() {
-            return Err(RpcError::app("CONFIG_INVALID", format!("{file} does not parse: {message}")));
-        }
+    if let Some(message) = loaded["configError"]["message"].as_str() {
+        return Err(RpcError::app("CONFIG_INVALID", format!("config.toml does not parse: {message}")));
     }
+    // A broken overrides.toml is skipped, as in the app; the reply says so.
+    let warning = loaded["overridesError"]["message"].as_str().map(|m| format!("overrides.toml is broken and ignored: {m}"));
     let Some(config) = loaded.get("config").filter(|c| !c.is_null()) else {
         return Err(RpcError::app("CONFIG_INVALID", "config.toml is unreadable"));
     };
@@ -25,7 +25,10 @@ pub fn get(dirs: &Dirs, params: &Value) -> Result<Value, RpcError> {
         None => config.clone(),
         Some(k) => k.split('.').try_fold(config, |v, part| v.get(part)).cloned().unwrap_or(Value::Null),
     };
-    Ok(json!({"key": key, "value": value}))
+    Ok(match warning {
+        Some(w) => json!({"key": key, "value": value, "warning": w}),
+        None => json!({"key": key, "value": value}),
+    })
 }
 
 /// `config.set {changes: [{key, value}]}`: all-or-nothing, like `update_config`. Writes
@@ -43,6 +46,7 @@ pub fn set(dirs: &Dirs, params: &Value) -> Result<Value, RpcError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     fn dirs() -> (tempfile::TempDir, Dirs) {
         let t = tempfile::tempdir().unwrap();
@@ -60,6 +64,21 @@ mod tests {
         let all = get(&d, &json!({})).unwrap();
         assert_eq!(all["key"], Value::Null);
         assert_eq!(all["value"]["control"]["enabled"], false);
+    }
+
+    #[test]
+    fn set_writes_overrides_only_and_a_broken_overrides_file_warns_on_get_and_refuses_set() {
+        let (_t, d) = dirs();
+        fs::create_dir_all(&d.config).unwrap();
+        fs::write(d.config.join("config.toml"), "[editor]\nfont_size = 14\n").unwrap();
+        set(&d, &json!({"changes": [{"key": "editor.font_size", "value": 20}]})).unwrap();
+        assert_eq!(fs::read_to_string(d.config.join("config.toml")).unwrap(), "[editor]\nfont_size = 14\n");
+        assert_eq!(get(&d, &json!({"key": "editor.font_size"})).unwrap()["value"], 20);
+        fs::write(d.overrides_file(), "[editor\n").unwrap();
+        let r = get(&d, &json!({"key": "editor.font_size"})).unwrap();
+        assert_eq!(r["value"], 14);
+        assert!(r["warning"].as_str().unwrap().starts_with("overrides.toml is broken and ignored"));
+        assert!(set(&d, &json!({"changes": [{"key": "editor.font_size", "value": 21}]})).is_err());
     }
 
     #[test]

@@ -156,32 +156,75 @@ pub fn with_head(head: &str, changes: &[ConfigChange], name: &str, max: u64) -> 
     Ok(text)
 }
 
+/// `tools.arrow.stroke_width` -> (`tools.arrow`, `stroke_width`): a key inside a whole-table
+/// unit. The unit is replaced whole by a higher layer, so such a change rewrites the table.
+fn nested_unit_key(key: &str) -> Option<(String, &str)> {
+    let mut parts = key.splitn(3, '.');
+    let (table, unit, field) = (parts.next()?, parts.next()?, parts.next()?);
+    (WHOLE_TABLE_UNITS.contains(&table) && !unit.is_empty() && !field.is_empty() && !field.contains('.'))
+        .then(|| (format!("{table}.{unit}"), field))
+}
+
+/// The `table.unit` table in effect now: the overrides' own, else the lower layer's, else empty.
+fn unit_table(lower: &Json, over: &Json, unit: &str) -> Json {
+    lookup(over, unit).or_else(|| lookup(lower, unit)).cloned().unwrap_or_else(|| Json::Object(Default::default()))
+}
+
+/// Turns Settings changes into plain edits of `overrides.toml` text (see [`effective`]).
+fn plan_changes(lower: &Json, over: &Json, changes: &[LayerChange]) -> Vec<ConfigChange> {
+    let mut units: std::collections::HashMap<String, Json> = Default::default();
+    let mut plain = Vec::with_capacity(changes.len());
+    for c in changes {
+        let Some((unit, field)) = nested_unit_key(&c.key) else {
+            plain.push(ConfigChange { key: c.key.clone(), value: effective(lower, c).unwrap_or(Json::Null) });
+            continue;
+        };
+        let mut table = units.remove(&unit).unwrap_or_else(|| unit_table(lower, over, &unit));
+        if let Some(fields) = table.as_object_mut() {
+            match &c.value {
+                Json::Null => fields.remove(field),
+                v => fields.insert(field.to_owned(), v.clone()),
+            };
+        }
+        let redundant = lookup(lower, &unit).is_some_and(|below| same_value(below, &table));
+        plain.push(ConfigChange { key: unit.clone(), value: if redundant { Json::Null } else { table.clone() } });
+        units.insert(unit, table);
+    }
+    plain
+}
+
 /// Applies Settings changes to `overrides.toml` (created with a header on the first write).
 /// Reads `config.toml` to drop values it already gives and to decide what "use the default"
-/// means; never writes `config.toml`.
+/// means; never writes `config.toml`. Refused while either file is broken, so a write is never
+/// decided against stale data and never overwrites a file the user has to fix.
 pub fn update_overrides_in(dirs: &Dirs, changes: &[LayerChange]) -> Result<()> {
     let _guard = write_guard()?;
     ensure_config_files(dirs)?;
-    let below = read_layer(0, "config", &dirs.config_file(), CONFIG_FILE, MAX_CONFIG_BYTES).config.unwrap_or(Json::Null);
-    let plain: Vec<ConfigChange> = changes
-        .iter()
-        .map(|c| ConfigChange { key: c.key.clone(), value: effective(&below, c).unwrap_or(Json::Null) })
-        .collect();
-    let only_removals = plain.iter().all(|c| c.value.is_null());
+    let base = read_layer(0, "config", &dirs.config_file(), CONFIG_FILE, MAX_CONFIG_BYTES);
+    if let Some(e) = &base.error {
+        let at = e.line.map(|l| format!(" at line {l}")).unwrap_or_default();
+        return Err(err("CONFIG_INVALID", format!("config.toml is broken{at}: {}. Fix it, then save again.", e.message)));
+    }
+    let lower = base.config.unwrap_or(Json::Null);
     let path = dirs.overrides_file();
     let existing = match read_toml_text(&path, OVERRIDES_FILE, MAX_OVERRIDES_BYTES) {
         Ok(text) => Some(text),
         Err(e) if e.code == "NOT_FOUND" => None,
         Err(e) => return Err(e),
     };
+    let current = match &existing {
+        Some(text) => parse_config(text).map_err(|e| {
+            let at = e.line.map(|l| format!(" at line {l}")).unwrap_or_default();
+            err("CONFIG_INVALID", format!("overrides.toml is broken{at}: {}. Open it to fix it, or reset the Settings changes.", e.message))
+        })?,
+        None => Json::Object(Default::default()),
+    };
+    let plain = plan_changes(&lower, &current, changes);
+    let only_removals = plain.iter().all(|c| c.value.is_null());
     let updated = match &existing {
         Some(text) => {
-            if let Err(e) = parse_config(text) {
-                let at = e.line.map(|l| format!(" at line {l}")).unwrap_or_default();
-                return Err(err("CONFIG_INVALID", format!("overrides.toml is broken{at}: {}. Open it to fix it, or reset the Settings changes.", e.message)));
-            }
             // A file holding only comments is rebuilt like a new one, so its comments stay on top.
-            let comments_only = matches!(parse_config(text), Ok(Json::Object(m)) if m.is_empty());
+            let comments_only = current.as_object().is_some_and(|m| m.is_empty());
             if comments_only && !only_removals {
                 with_head(text.trim_end(), &plain, OVERRIDES_FILE, MAX_OVERRIDES_BYTES)?
             } else {
@@ -426,6 +469,30 @@ mod tests {
         update_overrides_in(&d, &[set("editor.font_size", json!(20))]).unwrap();
         fs::remove_file(d.overrides_file()).unwrap();
         assert_eq!(effective_config(&d)["editor"]["font_size"], json!(14));
+    }
+
+    #[test]
+    fn a_key_inside_a_tool_or_plugin_table_rewrites_the_whole_table() {
+        let t = tempdir().unwrap();
+        let d = dirs_in(t.path());
+        write_config(&d, "[plugin.p]\na = 1\nb = 2\n[tools.arrow]\nstroke_width = 4\nroughness = 0\n");
+        update_overrides_in(&d, &[set("plugin.p.a", json!(9)), set("tools.arrow.roughness", json!(2)), set("tools.arrow.stroke_width", Json::Null)]).unwrap();
+        let cfg = effective_config(&d);
+        assert_eq!(cfg["plugin"]["p"], json!({"a": 9, "b": 2}), "b must survive");
+        assert_eq!(cfg["tools"]["arrow"], json!({"roughness": 2}));
+        // Putting the table back to what config.toml says drops the override.
+        update_overrides_in(&d, &[set("plugin.p.a", json!(1))]).unwrap();
+        assert!(!overrides(&d).contains("plugin"), "{}", overrides(&d));
+    }
+
+    #[test]
+    fn a_broken_config_toml_refuses_writes_too() {
+        let t = tempdir().unwrap();
+        let d = dirs_in(t.path());
+        write_config(&d, "[editor\n");
+        let e = update_overrides_in(&d, &[set("editor.font_size", json!(20))]).unwrap_err();
+        assert!(e.message.starts_with("config.toml is broken at line 1"), "{}", e.message);
+        assert!(!d.overrides_file().exists());
     }
 
     #[test]

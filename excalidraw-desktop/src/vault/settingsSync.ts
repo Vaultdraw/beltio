@@ -1087,9 +1087,10 @@ export function preferencesToConfigChanges(
     const was = prev.hotkeys[id];
     const now = next.hotkeys[id];
     if (!sameValue(was, now)) {
+      const fallback = hotkeyDefault(id);
       changes.push(
-        now === undefined
-          ? { key: `hotkeys.${id}`, value: null, default: hotkeyDefault(id) }
+        now === undefined || sameValue(now, fallback)
+          ? { key: `hotkeys.${id}`, value: null, default: fallback }
           : { key: `hotkeys.${id}`, value: now },
       );
     }
@@ -1105,9 +1106,12 @@ export function preferencesToConfigChanges(
       changes.push({ key: `keys.labels.${seq}`, value: now ?? null });
     }
   }
-  // [plugin.<id>]: one change per plugin; null deletes its table.
+  // [plugin.<id>]: one change per plugin; null resets its table (an empty
+  // table is the default, so the hint lets it beat a config.toml table).
   changes.push(
-    ...pluginSettingsChanges(prev.pluginSettings, next.pluginSettings),
+    ...pluginSettingsChanges(prev.pluginSettings, next.pluginSettings).map(
+      (c) => (c.value === null ? { ...c, default: {} } : c),
+    ),
   );
   return changes;
 }
