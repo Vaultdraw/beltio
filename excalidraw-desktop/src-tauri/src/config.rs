@@ -99,11 +99,18 @@ fn launch(args: &[&std::ffi::OsStr], reveal: bool) -> Result<()> {
     #[cfg(target_os = "macos")]
     let (program, lead): (&str, Vec<&std::ffi::OsStr>) = ("open", if reveal { vec!["-R".as_ref()] } else { vec![] });
     #[cfg(target_os = "windows")]
-    let (program, lead): (&str, Vec<&std::ffi::OsStr>) = ("explorer", if reveal { vec!["/select,".as_ref()] } else { vec![] });
+    let (program, lead): (&str, Vec<&std::ffi::OsStr>) = ("explorer", vec![]);
     #[cfg(target_os = "linux")]
     let (program, lead): (&str, Vec<&std::ffi::OsStr>) = ("xdg-open", vec![]);
     #[cfg(target_os = "linux")]
     let args: Vec<&std::ffi::OsStr> = if reveal { args.iter().filter_map(|a| Path::new(a).parent().map(Path::as_os_str)).collect() } else { args.to_vec() };
+    #[cfg(target_os = "windows")]
+    if reveal {
+        // Explorer wants one argument: `/select,<path>`.
+        let mut arg = std::ffi::OsString::from("/select,");
+        arg.push(args[0]);
+        return std::process::Command::new(program).arg(arg).spawn().map(|_| ()).map_err(ioerr);
+    }
     std::process::Command::new(program).args(lead).args(args).spawn().map(|_| ()).map_err(ioerr)
 }
 

@@ -25,7 +25,7 @@ pub fn get(dirs: &Dirs, params: &Value) -> Result<Value, RpcError> {
     };
     let value = match key {
         None => config.clone(),
-        Some(k) => k.split('.').try_fold(config, |v, part| v.get(part)).cloned().unwrap_or(Value::Null),
+        Some(k) => config::lookup_key(config, k).cloned().unwrap_or(Value::Null),
     };
     let mut reply = json!({"key": key, "value": value});
     if let Some(w) = warning {
@@ -110,6 +110,17 @@ mod tests {
         assert_eq!((r["source"].as_str(), r["value"].is_null()), (Some("default"), true));
         // Without the flag the reply is as before.
         assert!(get(&d, &json!({"key": "editor.font_size"})).unwrap().get("source").is_none());
+    }
+
+    #[test]
+    fn get_reads_dotted_hotkey_ids_and_deep_keys_like_the_source() {
+        let (_t, d) = dirs();
+        fs::create_dir_all(&d.config).unwrap();
+        fs::write(d.config.join("config.toml"), "[hotkeys]\n\"vault.newDrawing\" = [\"Mod+K\"]\n[tools.arrow]\nroughness = 2\n").unwrap();
+        let r = get(&d, &json!({"key": "hotkeys.vault.newDrawing", "source": true})).unwrap();
+        assert_eq!((r["value"].clone(), r["source"].as_str()), (json!(["Mod+K"]), Some("config.toml")));
+        let r = get(&d, &json!({"key": "tools.arrow.roughness", "source": true})).unwrap();
+        assert_eq!((r["value"].clone(), r["source"].as_str()), (json!(2), Some("config.toml")));
     }
 
     #[test]

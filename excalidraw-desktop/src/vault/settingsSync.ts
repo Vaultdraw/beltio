@@ -1395,7 +1395,7 @@ function applyLoad(
   // A layer that failed to parse keeps its last good content for the chips.
   const previousLayers = status.layers;
   const layers = result.layers?.map((l) =>
-    l.config
+    l.config || l.status !== "error"
       ? l
       : {
           ...l,
@@ -1584,7 +1584,6 @@ export async function revealOverrides(): Promise<void> {
  */
 export async function resetOverrides(): Promise<boolean> {
   const rt = need("Settings changes");
-  rt.localEdits++;
   const existed = await enqueue(rt, () =>
     rt.invoke<boolean>("reset_overrides"),
   );

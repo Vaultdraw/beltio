@@ -20,6 +20,16 @@ const fileOf = (layer: LayerPayload): "config.toml" | "overrides.toml" =>
 
 /** Looks `key` up in one layer's content; `hotkeys.<id>` keeps dots inside the id. */
 const lookup = (config: Record<string, unknown>, key: string) => {
+  // `keys.labels.<sequence>`: the sequence may hold dots.
+  if (key.startsWith("keys.labels.")) {
+    const labels = (
+      config.keys as { labels?: Record<string, unknown> } | undefined
+    )?.labels;
+    const seq = key.slice("keys.labels.".length);
+    return labels && Object.prototype.hasOwnProperty.call(labels, seq)
+      ? { value: labels[seq] }
+      : null;
+  }
   const dot = key.indexOf(".");
   const table = dot < 0 ? null : config[key.slice(0, dot)];
   const sub = dot < 0 ? key : key.slice(dot + 1);
@@ -29,9 +39,22 @@ const lookup = (config: Record<string, unknown>, key: string) => {
       : dot < 0
       ? config
       : null;
-  return holder && Object.prototype.hasOwnProperty.call(holder, sub)
-    ? { value: holder[sub] }
-    : null;
+  if (holder && Object.prototype.hasOwnProperty.call(holder, sub)) {
+    return { value: holder[sub] };
+  }
+  // Deeper paths (`tools.arrow.roughness`): a plain walk.
+  let node: unknown = config;
+  for (const part of key.split(".")) {
+    if (
+      !node ||
+      typeof node !== "object" ||
+      !Object.prototype.hasOwnProperty.call(node, part)
+    ) {
+      return null;
+    }
+    node = (node as Record<string, unknown>)[part];
+  }
+  return { value: node };
 };
 
 const same = (a: unknown, b: unknown): boolean =>

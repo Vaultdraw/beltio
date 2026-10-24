@@ -82,6 +82,16 @@ describe("keySource", () => {
     );
   });
 
+  it("finds keys.labels sequences and deeper paths", () => {
+    const c = layer("config", {
+      keys: { labels: { "<leader> f": "files" } },
+      tools: { arrow: { roughness: 2 } },
+    });
+    expect(keySource([c], "keys.labels.<leader> f").source).toBe("config.toml");
+    expect(keySource([c], "tools.arrow.roughness").value).toBe(2);
+    expect(keySource([c], "keys.labels.nope").source).toBe("default");
+  });
+
   it("sourceFileOf falls back to config.toml", () => {
     expect(sourceFileOf(undefined, "editor.font_size")).toBe("config.toml");
     expect(
@@ -174,6 +184,25 @@ describe("settingsSync: layers, resets and messages", () => {
     expect(over?.status).toBe("error");
     // Chips still know the override (the app keeps showing 20).
     expect(over?.config).toEqual({ editor: { font_size: 20 } });
+  });
+
+  it("a deleted overrides.toml no longer counts, a broken one keeps its last content", async () => {
+    const backend = await start(
+      payload({ editor: { font_size: 20 } }, [
+        layer("config", { editor: { font_size: 14 } }),
+        layer("overrides", { editor: { font_size: 20 } }),
+      ]),
+    );
+    backend.set(
+      payload({ editor: { font_size: 14 } }, [
+        layer("config", { editor: { font_size: 14 } }),
+        layer("overrides", null),
+      ]),
+    );
+    await reloadSettings();
+    expect(
+      getSettingsStatus().layers?.find((l) => l.kind === "overrides")?.config,
+    ).toBeNull();
   });
 
   it("resetConfigKey sends null with no hint, then reloads", async () => {

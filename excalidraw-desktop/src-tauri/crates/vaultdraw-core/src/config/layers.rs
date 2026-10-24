@@ -118,6 +118,12 @@ pub fn same_value(a: &Json, b: &Json) -> bool {
 
 /// The value a change key names in a parsed config (`table.key`, `hotkeys.<id>`,
 /// `keys.labels.<sequence>`, `tools.<tool>`).
+/// The value at a dotted key in a parsed config, in every key form (`hotkeys.vault.newDrawing`,
+/// `keys.labels.<sequence>`, deeper paths such as `tools.arrow.roughness`).
+pub fn lookup_key<'a>(config: &'a Json, key: &str) -> Option<&'a Json> {
+    lookup(config, key).or_else(|| key.split('.').try_fold(config, |v, part| v.get(part)))
+}
+
 fn lookup<'a>(config: &'a Json, key: &str) -> Option<&'a Json> {
     if let Some(seq) = key.strip_prefix("keys.labels.") {
         return config.get("keys")?.get("labels")?.get(seq);
@@ -267,8 +273,7 @@ pub fn key_source(layers: &[LayerInfo], key: &str) -> KeySource {
     // `lookup` knows the key forms with dots inside (`hotkeys.vault.newDrawing`); a plain path
     // walk covers deeper keys such as `tools.arrow.roughness`.
     fn walk<'a>(l: &'a LayerInfo, key: &str) -> Option<&'a Json> {
-        let c = l.config.as_ref()?;
-        lookup(c, key).or_else(|| key.split('.').try_fold(c, |v, part| v.get(part)))
+        lookup_key(l.config.as_ref()?, key)
     }
     let mut set = layers.iter().rev().filter_map(|l| walk(l, key).map(|v| (layer_file(l.kind), v)));
     let Some((top, top_value)) = set.next() else {
