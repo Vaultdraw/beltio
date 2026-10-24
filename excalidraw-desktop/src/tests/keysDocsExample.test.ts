@@ -1,5 +1,6 @@
 /**
- * The Vim-style example in docs/configuration.md must parse with the
+ * The Vim-style example in docs/configuration.md and the copyable preset
+ * docs/presets/vim.toml must parse with the
  * production parsers, use only real command ids and raise no key conflicts.
  */
 import { readFileSync } from "node:fs";
@@ -12,6 +13,7 @@ import { findConflicts } from "../commands/conflicts";
 import { configToPreferences } from "../vault/settingsSync";
 
 const DOC = resolve(__dirname, "../../../docs/configuration.md");
+const PRESET = resolve(__dirname, "../../../docs/presets/vim.toml");
 
 const exampleBlock = (): string => {
   const doc = readFileSync(DOC, "utf8");
@@ -69,8 +71,13 @@ const parseExample = (text: string): Record<string, unknown> => {
   return root;
 };
 
-describe("docs/configuration.md Vim-style example", () => {
-  const config = parseExample(exampleBlock());
+const SOURCES: ReadonlyArray<readonly [string, () => string]> = [
+  ["docs/configuration.md Vim-style example", exampleBlock],
+  ["docs/presets/vim.toml", () => readFileSync(PRESET, "utf8")],
+];
+
+describe.each(SOURCES)("%s", (_name, load) => {
+  const config = parseExample(load());
   const { values, problems } = configToPreferences(config);
 
   it("parses with no problems", () => {
@@ -113,6 +120,44 @@ describe("docs/configuration.md Vim-style example", () => {
   );
 
   it("never uses Mod+K", () => {
-    expect(exampleBlock()).not.toMatch(/Mod\+K\b/);
+    expect(load()).not.toMatch(/Mod\+K\b/);
+  });
+});
+
+describe("docs/presets/vim.toml", () => {
+  const { values } = configToPreferences(
+    parseExample(readFileSync(PRESET, "utf8")),
+  );
+
+  it("covers lists, leader, tabs, links, graph and tool keys", () => {
+    expect(values.hotkeys["list.first"]).toEqual(["G G", "Home"]);
+    expect(values.hotkeys["list.delete"]?.[0]).toBe("D D");
+    expect(values.hotkeys["palette.files"]).toContain("<leader> F F");
+    const ids = Object.keys(values.hotkeys);
+    for (const prefix of ["tabs.", "links.", "graph.", "tool.", "list."]) {
+      expect(
+        ids.some((id) => id.startsWith(prefix)),
+        prefix,
+      ).toBe(true);
+    }
+  });
+
+  it("keeps the default keys it does not change", () => {
+    expect(values.hotkeys["tool.rectangle"]).toContain("R");
+    expect(values.hotkeys["file.save"]).toContain("Mod+S");
+  });
+
+  it("labels every leader group it uses", () => {
+    const groups = new Set(
+      Object.values(values.hotkeys)
+        .flat()
+        .filter((k) => k.startsWith("<leader> ") && k.split(" ").length > 2)
+        .map((k) => k.split(" ").slice(0, 2).join(" ").toLowerCase()),
+    );
+    for (const g of groups) {
+      expect(
+        Object.keys(values.keysLabels).map((l) => l.toLowerCase()),
+      ).toContain(g);
+    }
   });
 });
