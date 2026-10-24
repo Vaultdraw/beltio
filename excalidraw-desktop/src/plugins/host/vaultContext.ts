@@ -8,7 +8,14 @@ import {
   requirePermission,
 } from "../../../../sdk/api/testing/vault";
 import { utf8Length } from "../../../../sdk/api/testing/rules";
-import { buildElements, toSceneElement, validateOps } from "../../sceneOps";
+import {
+  applyGroups,
+  buildAdds,
+  dataKeyFor,
+  toSceneElement,
+  validateOps,
+} from "../../sceneOps";
+import { getPreferences } from "../../vault/preferences";
 import { getWorkspaceBridge } from "../workspaceBridge";
 
 import { createGateway } from "./gateway";
@@ -21,9 +28,6 @@ interface ReadReply {
   revision: string;
   scene: { elements?: ExcalidrawElement[] };
 }
-
-const isBound = (e: ExcalidrawElement) =>
-  e.type === "text" && !!(e as { containerId?: string | null }).containerId;
 
 export function createVaultApi(rt: PluginRuntime): VaultApi {
   const id = rt.info.id;
@@ -56,10 +60,21 @@ export function createVaultApi(rt: PluginRuntime): VaultApi {
     async createDrawing(path, ops: readonly SceneOp[]) {
       need("file.write", "vault.write");
       checkVaultPath(path, "file");
-      // Refs-free ops only: nothing exists yet to update or delete.
-      const valid = validateOps(ops, new Map());
-      const adds = valid.flatMap((op) => (op.op === "add" ? [op.element] : []));
-      const elements = buildElements(adds, { x: 0, y: 0 });
+      // add and group ops only: nothing exists yet to update or delete.
+      const dataKey = dataKeyFor(id, rt.info.dataKey);
+      const valid = validateOps(ops, new Map(), {
+        dataKey,
+        maxOps: getPreferences().pluginsSceneMaxOps,
+      });
+      const adds = valid.flatMap((op) => (op.op === "add" ? [op] : []));
+      const groups = valid.flatMap((op) => (op.op === "group" ? [op] : []));
+      const built = buildAdds(adds, { x: 0, y: 0 }, dataKey);
+      let elements = built.created;
+      if (groups.length) {
+        const work = new Map(elements.map((e) => [e.id, e]));
+        applyGroups(groups, work, built.refs);
+        elements = elements.map((e) => work.get(e.id)!);
+      }
       const scene = JSON.parse(
         serializeAsJSON(elements, {}, {}, "local"),
       ) as Record<string, unknown>;
@@ -71,7 +86,8 @@ export function createVaultApi(rt: PluginRuntime): VaultApi {
       return {
         path: reply.path ?? path,
         revision: reply.revision,
-        ids: elements.filter((e) => !isBound(e)).map((e) => e.id),
+        ids: built.ids,
+        refs: built.refs,
       };
     },
   };

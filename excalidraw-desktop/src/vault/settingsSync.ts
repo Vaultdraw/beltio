@@ -106,7 +106,9 @@ import {
   replaceStoredPreferences,
   isPluginImporters,
   isPluginStorageKb,
+  isSceneMaxOps,
   MAX_PLUGIN_STORAGE_KB,
+  MAX_SCENE_MAX_OPS,
   MIN_PLUGIN_STORAGE_KB,
   type DeepReadonly,
   type PreferencesSnapshot,
@@ -221,6 +223,7 @@ type ConfigField =
   | "pluginsEnabled"
   | "pluginImporters"
   | "pluginsStorageLimitKb"
+  | "pluginsSceneMaxOps"
   | "activityBarOrder"
   | "activityBarHidden"
   | "navigatorSort"
@@ -391,6 +394,12 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "plugins.storage_limit_kb",
     expected: `an integer between ${MIN_PLUGIN_STORAGE_KB} and ${MAX_PLUGIN_STORAGE_KB}`,
     valid: isPluginStorageKb,
+  },
+  {
+    field: "pluginsSceneMaxOps",
+    key: "plugins.scene_max_ops",
+    expected: `an integer between 1 and ${MAX_SCENE_MAX_OPS}`,
+    valid: isSceneMaxOps,
   },
   {
     field: "defaultCanvasBackground",

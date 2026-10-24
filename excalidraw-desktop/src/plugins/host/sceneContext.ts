@@ -2,14 +2,22 @@
 import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 
 import { appEvents, type AppEventMap } from "../../events/appEvents";
-import { applyOps, SceneOpsError, viewportCenter } from "../../sceneOps";
+import {
+  applyOps,
+  elementData,
+  sceneDetails,
+  SceneOpsError,
+  viewportCenter,
+} from "../../sceneOps";
 import { getActiveScene, subscribeScene } from "../../sceneOps/sceneBus";
+
+import { PluginApiError } from "../../../../sdk/api/testing/rules";
 
 import { errorText, logLine, reportPluginError } from "./errors";
 import { guard } from "./guard";
 import { readScene } from "./sceneRead";
 
-import type { Disposable, PluginContext, SceneElement } from "../api";
+import type { Disposable, Json, PluginContext, SceneElement } from "../api";
 
 type Track = (fn: () => void) => Disposable;
 
@@ -57,13 +65,27 @@ function useScene<T>(
   return value;
 }
 
+/** What the scene API needs to know about its plugin. */
+export interface SceneOptions {
+  /** The customData key of the plugin (`ctx.manifest.dataKey`). */
+  dataKey: string;
+  /** `plugins.scene_max_ops`, read on every batch so edits apply at once. */
+  maxOps: () => number | undefined;
+}
+
 export function createSceneApi(
   id: string,
   track: Track,
   isLive: () => boolean = () => true,
+  options: SceneOptions = {
+    dataKey: `plugins.${id}`,
+    maxOps: () => undefined,
+  },
 ): PluginContext["scene"] {
-  const refusal = (what: string) => {
-    const err = new Error(`scene.batch: ${what}`);
+  const { dataKey } = options;
+  const refusal = (what: string, code?: string) => {
+    const text = `scene.batch: ${what}`;
+    const err = code ? new PluginApiError(code, text) : new Error(text);
     logLine(id, "error", errorText(err));
     return err;
   };
@@ -77,19 +99,29 @@ export function createSceneApi(
       return track(subscribeScene(safe));
     },
     useScene,
-    async batch(ops) {
+    async batch(ops, batchOptions) {
       if (!isLive()) {
         throw refusal("the plugin was stopped");
       }
       const scene = getActiveScene();
       if (!scene) {
-        throw refusal("no drawing is open");
+        throw refusal("no drawing is open", "NOT_FOUND");
+      }
+      const want = batchOptions?.path;
+      if (want !== undefined && want !== scene.path) {
+        throw refusal(
+          `another drawing is active than "${String(want)}"`,
+          "DRAWING_CHANGED",
+        );
       }
       if (scene.readOnly) {
-        throw refusal("the drawing is read-only");
+        throw refusal("the drawing is read-only", "READ_ONLY");
       }
       try {
-        return applyOps(scene.api, ops);
+        return applyOps(scene.api, ops, {
+          dataKey,
+          maxOps: options.maxOps(),
+        });
       } catch (err) {
         if (err instanceof SceneOpsError) {
           logLine(id, "error", `scene.batch: ${errorText(err)}`);
@@ -100,6 +132,32 @@ export function createSceneApi(
     viewportCenter() {
       const scene = getActiveScene();
       return scene ? viewportCenter(scene.api.getAppState()) : { x: 0, y: 0 };
+    },
+    get(ids, getOptions) {
+      const scene = getActiveScene();
+      if (!scene || !Array.isArray(ids) || ids.length === 0) {
+        return [];
+      }
+      return sceneDetails(
+        scene.api.getSceneElementsIncludingDeleted(),
+        ids.filter((x): x is string => typeof x === "string"),
+        { points: !!getOptions?.points, data: !!getOptions?.data },
+        dataKey,
+      );
+    },
+    dataOf(elementId) {
+      const scene = getActiveScene();
+      if (!scene || typeof elementId !== "string") {
+        return undefined;
+      }
+      return elementData(
+        scene.api.getSceneElementsIncludingDeleted(),
+        elementId,
+        dataKey,
+      ) as Json | undefined;
+    },
+    path() {
+      return getActiveScene()?.path ?? null;
     },
   };
 }

@@ -30,6 +30,7 @@ import {
   resultOps,
 } from "./importers";
 import { createSceneModel } from "./scene";
+import { dataKeyFor } from "./sceneRules";
 import { createVaultModel, permissionError } from "./vault";
 
 import type {
@@ -133,6 +134,7 @@ export function createMockHost(
   deps: PanelDeps | null,
 ): MockHost {
   const id = info.id;
+  const dataKey = dataKeyFor(id, info.dataKey);
   const scene = createSceneModel("fake.excalidraw");
   const vault = createVaultModel();
   // The scene model keeps its path private; the host needs it for imports and ctx.workspace.
@@ -404,6 +406,7 @@ export function createMockHost(
         version: info.version,
         dir: info.dir,
         permissions: info.permissions,
+        dataKey,
       },
       commands: {
         register(short, run) {
@@ -492,6 +495,7 @@ export function createMockHost(
           track,
           guard,
           logError: (text) => logLine("error", text),
+          dataKey,
         },
         () => {
           if (!deps) {
@@ -550,7 +554,7 @@ export function createMockHost(
       },
       storage: storageApi,
       get vault() {
-        return (vaultApi ??= vault.vaultApi(id, info.permissions));
+        return (vaultApi ??= vault.vaultApi(id, info.permissions, dataKey));
       },
       get workspace() {
         return (workspaceApi ??= vault.workspaceApi({
@@ -767,6 +771,7 @@ export function createMockHost(
       track: (fn) => ({ dispose: fn }),
       guard,
       logError: (text) => logLine("error", text),
+      dataKey,
     },
     () => {
       throw notSetUp("React hooks in an import");

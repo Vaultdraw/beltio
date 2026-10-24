@@ -1,9 +1,13 @@
-import { SceneOpsError, validateOps } from "./rules";
+import { PluginApiError } from "./rules";
+import { SceneOpsError, validateOps } from "./sceneRules";
 
 import type {
+  BatchResult,
   Disposable,
+  Json,
   SceneContextApi,
   SceneElement,
+  SceneElementDetail,
   SceneElementType,
   SceneOp,
 } from "@vaultdraw/api";
@@ -23,6 +27,8 @@ export interface ScenePlumbing {
     where: string,
   ): (...args: A) => void;
   logError(text: string): void;
+  /** The plugin's customData key (`ctx.manifest.dataKey`). */
+  dataKey?: string;
 }
 
 type Change = { reason: "edit" | "switch"; path: string | null };
@@ -30,7 +36,14 @@ type Change = { reason: "edit" | "switch"; path: string | null };
 /** The editor's element: the public fields plus the ones the host tracks. */
 type El = {
   -readonly [K in keyof FakeElement]: FakeElement[K];
-} & { angle: number; version: number; isDeleted?: boolean };
+} & {
+  angle: number;
+  version: number;
+  isDeleted?: boolean;
+  groupIds?: string[];
+  customData?: Record<string, unknown>;
+  [key: string]: unknown;
+};
 
 const KNOWN: ReadonlySet<string> = new Set([
   "rectangle",
@@ -79,8 +92,18 @@ const textSize = (text: string, fontSize = 20) => ({
 });
 
 /** A NewElement as an editor element (a text label becomes its own element). */
-const build = (input: FakeElementInput): El[] => {
-  const { type, text, id, points, ...rest } = input;
+const build = (input: FakeElementInput, dataKey?: string): El[] => {
+  const {
+    type,
+    text,
+    id,
+    points,
+    data,
+    start: _start,
+    end: _end,
+    roundness,
+    ...rest
+  } = input;
   const base: El = {
     id: id ?? `mock-${++ids}`,
     type,
@@ -93,7 +116,13 @@ const build = (input: FakeElementInput): El[] => {
     backgroundColor: input.backgroundColor ?? "transparent",
     version: ++clock,
   };
-  Object.assign(base, rest, { id: base.id, type });
+  Object.assign(base, rest, { id: base.id, type, groupIds: [] });
+  if (roundness) {
+    base.roundness = roundness;
+  }
+  if (data !== undefined && data !== null && dataKey) {
+    base.customData = { [dataKey]: structuredClone(data) };
+  }
   if (points) {
     Object.assign(base, sizeOfPoints(points));
   }
@@ -118,6 +147,7 @@ const build = (input: FakeElementInput): El[] => {
     type: "text",
     text,
     containerId: base.id,
+    groupIds: [],
     x: base.x + (base.width - size.width) / 2,
     y: base.y + (base.height - size.height) / 2,
     ...size,
@@ -231,20 +261,24 @@ export function createSceneModel(initialPath: string | null): SceneModel {
     live,
   };
 
-  const apply = (ops: readonly SceneOp[]): { ids: string[] } => {
+  let groupSeq = 0;
+  const apply = (ops: readonly SceneOp[], dataKey?: string): BatchResult => {
     const byId = new Map(elements.map((e) => [e.id, e]));
-    validateOps(ops, byId);
-    const adds: FakeElementInput[] = [];
+    validateOps(ops, byId, { dataKey: dataKey ?? null });
+    const adds: Extract<SceneOp, { op: "add" }>[] = [];
+    const groups: Extract<SceneOp, { op: "group" }>[] = [];
     const edits = new Map<string, El | "delete">();
     for (const op of ops) {
       if (op.op === "add") {
-        adds.push(op.element);
+        adds.push(op);
+      } else if (op.op === "group") {
+        groups.push(op);
       } else if (op.op === "delete") {
         edits.set(op.id, "delete");
       } else if (edits.get(op.id) !== "delete") {
         const base = (edits.get(op.id) as El | undefined) ?? byId.get(op.id)!;
         const next: El = { ...base, version: ++clock };
-        const { text, points, ...plain } = op.props;
+        const { text, points, data, ...plain } = op.props;
         Object.assign(next, plain);
         if (points) {
           Object.assign(next, sizeOfPoints(points));
@@ -252,11 +286,38 @@ export function createSceneModel(initialPath: string | null): SceneModel {
         if (text !== undefined && next.type === "text") {
           Object.assign(next, { text }, textSize(text, op.props.fontSize));
         }
+        if (data !== undefined && dataKey) {
+          const custom = { ...next.customData };
+          if (data === null) {
+            delete custom[dataKey];
+          } else {
+            custom[dataKey] = structuredClone(data);
+          }
+          next.customData = custom;
+        }
         edits.set(op.id, next);
       }
     }
     // Elements without x/y are shifted as a group onto the viewport centre.
-    const built = adds.map((a) => ({ a, els: build(a) }));
+    const built = adds.map((a) => ({
+      a: a.element,
+      els: build(a.element, dataKey),
+    }));
+    const refs: Record<string, string> = {};
+    adds.forEach((a, i) => {
+      if (a.ref !== undefined) {
+        refs[a.ref] = built[i].els[0].id;
+      }
+    });
+    // A bound arrow records what it is bound to (the editor computes the geometry).
+    built.forEach(({ a, els }) => {
+      if (a.start) {
+        els[0].startId = refs[a.start.ref];
+      }
+      if (a.end) {
+        els[0].endId = refs[a.end.ref];
+      }
+    });
     const unplaced = built.filter(
       (b) => b.a.x === undefined || b.a.y === undefined,
     );
@@ -272,7 +333,7 @@ export function createSceneModel(initialPath: string | null): SceneModel {
       );
     }
     const created = built.flatMap((b) => b.els);
-    const merged = elements.map((el) => {
+    let merged = elements.map((el) => {
       const edit = edits.get(el.id);
       if (!edit) {
         return el;
@@ -281,20 +342,95 @@ export function createSceneModel(initialPath: string | null): SceneModel {
         ? { ...el, isDeleted: true, version: ++clock }
         : edit;
     });
-    elements = [...merged, ...created];
+    const all = [...merged, ...created];
+    for (const g of groups) {
+      const groupId = `mock-group-${++groupSeq}`;
+      const members = new Set(
+        g.ids.map((m) => (typeof m === "string" ? m : refs[m.ref])),
+      );
+      for (let k = 0; k < all.length; k++) {
+        const e = all[k];
+        if (
+          members.has(e.id) ||
+          (e.containerId && members.has(e.containerId))
+        ) {
+          all[k] = {
+            ...e,
+            groupIds: [...(e.groupIds ?? []), groupId],
+            version: ++clock,
+          };
+        }
+      }
+    }
+    merged = all;
+    elements = merged;
     batches.push({
       captureUpdate: "IMMEDIATELY",
       elements: [...elements],
     });
     touch();
-    return { ids: created.filter((e) => !e.containerId).map((e) => e.id) };
+    return {
+      ids: built.map((b) => b.els[0].id),
+      refs,
+    };
+  };
+
+  /** `scene.get`'s copy of one element (the fields the mock tracks). */
+  const detail = (
+    el: El,
+    opts: { points?: boolean; data?: boolean },
+    dataKey?: string,
+  ): SceneElementDetail => {
+    const out: Record<string, unknown> = {
+      id: el.id,
+      type: KNOWN.has(el.type) ? el.type : "other",
+      x: el.x,
+      y: el.y,
+      width: el.width,
+      height: el.height,
+      angle: el.angle,
+      groupIds: [...(el.groupIds ?? [])],
+      frameId: null,
+      containerId: el.containerId ?? null,
+      locked: (el.locked as boolean | undefined) ?? false,
+      link: (el.link as string | null | undefined) ?? null,
+      opacity: (el.opacity as number | undefined) ?? 100,
+      strokeWidth: (el.strokeWidth as number | undefined) ?? 2,
+      strokeStyle: (el.strokeStyle as string | undefined) ?? "solid",
+      fillStyle: (el.fillStyle as string | undefined) ?? "solid",
+      roundness: el.roundness === "round" ? "round" : "sharp",
+    };
+    if (el.type === "text") {
+      out.text = el.text;
+      out.fontSize = (el.fontSize as number | undefined) ?? 20;
+      out.fontFamily = (el.fontFamily as string | undefined) ?? "Excalifont";
+    }
+    if (el.strokeColor !== undefined) {
+      out.strokeColor = el.strokeColor;
+    }
+    if (el.backgroundColor !== undefined) {
+      out.backgroundColor = el.backgroundColor;
+    }
+    if (opts.points && (el.type === "line" || el.type === "arrow")) {
+      out.points = (
+        (el.points as [number, number][] | undefined) ?? [
+          [0, 0],
+          [el.width, el.height],
+        ]
+      ).map((p) => [p[0], p[1]]);
+    }
+    if (opts.data && dataKey && el.customData?.[dataKey] !== undefined) {
+      out.data = structuredClone(el.customData[dataKey]);
+    }
+    return out as unknown as SceneElementDetail;
   };
 
   return {
     fake,
-    api({ track, guard, logError }, hooks) {
-      const refusal = (what: string) => {
-        const err = new Error(`scene.batch: ${what}`);
+    api({ track, guard, logError, dataKey }, hooks) {
+      const refusal = (what: string, code?: string) => {
+        const text = `scene.batch: ${what}`;
+        const err = code ? new PluginApiError(code, text) : new Error(text);
         logError(err.message);
         return err;
       };
@@ -343,15 +479,21 @@ export function createSceneModel(initialPath: string | null): SceneModel {
             getSnapshot,
           );
         },
-        async batch(ops) {
+        async batch(ops, options) {
           if (path === null) {
-            throw refusal("no drawing is open");
+            throw refusal("no drawing is open", "NOT_FOUND");
+          }
+          if (options?.path !== undefined && options.path !== path) {
+            throw refusal(
+              `another drawing is active than "${String(options.path)}"`,
+              "DRAWING_CHANGED",
+            );
           }
           if (readOnly) {
-            throw refusal("the drawing is read-only");
+            throw refusal("the drawing is read-only", "READ_ONLY");
           }
           try {
-            return apply(ops);
+            return apply(ops, dataKey);
           } catch (err) {
             if (err instanceof SceneOpsError) {
               logError(`scene.batch: ${err.message}`);
@@ -360,6 +502,33 @@ export function createSceneModel(initialPath: string | null): SceneModel {
           }
         },
         viewportCenter: () => (path === null ? { x: 0, y: 0 } : { ...CENTER }),
+        get(ids, options) {
+          if (path === null || !Array.isArray(ids)) {
+            return [];
+          }
+          const byId = new Map(live().map((e) => [e.id, e]));
+          const seen = new Set<string>();
+          const out: SceneElementDetail[] = [];
+          for (const id of ids) {
+            const el = byId.get(id);
+            if (el && !seen.has(id)) {
+              seen.add(id);
+              out.push(detail(el, options ?? {}, dataKey));
+            }
+          }
+          return out;
+        },
+        dataOf(id) {
+          if (path === null || !dataKey) {
+            return undefined;
+          }
+          const el = live().find((e) => e.id === id);
+          const value = el?.customData?.[dataKey];
+          return value === undefined
+            ? undefined
+            : (structuredClone(value) as Json);
+        },
+        path: () => path,
       };
     },
     dispose() {

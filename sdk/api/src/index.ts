@@ -26,8 +26,13 @@ export type { PanelsApi } from "./panels";
 export { definePlugin } from "./plugin";
 export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
 export type {
+  BatchOptions,
+  BatchResult,
+  ElementRef,
+  FontFamilyName,
   NewElement,
   SceneContextApi,
+  SceneElementDetail,
   SceneElement,
   SceneElementType,
   SceneOp,

@@ -22,6 +22,8 @@ export interface TestPluginInfo {
   name: string;
   version: string;
   permissions: PluginPermission[];
+  /** `data_key` as declared (null: the default `plugins.<id>`; `ctx.manifest.dataKey` has the key in use). */
+  dataKey?: string | null;
   contributes: PluginContributions;
 }
 
@@ -39,6 +41,8 @@ export interface TestManifest {
   activation?: string[];
   /** What the manifest declares. The mock host records it; nothing is gated yet. */
   permissions?: PluginPermission[];
+  /** `data_key` of plugin.toml; null or absent means `plugins.<id>`. */
+  dataKey?: string | null;
   /** A dev plugin is stopped, not switched off for good, after repeated errors. */
   dev?: boolean;
   contributes?: {

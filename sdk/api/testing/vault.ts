@@ -4,7 +4,8 @@
  * `check_plugin_path`, tied by sdk/api/test/vault-paths.json) and the
  * permission refusal.
  */
-import { PluginApiError, utf8Length, validateOps } from "./rules";
+import { PluginApiError, utf8Length } from "./rules";
+import { validateOps } from "./sceneRules";
 
 import type {
   PluginPermission,
@@ -176,7 +177,11 @@ export interface VaultModel {
   fake: FakeVault;
   workspace: FakeWorkspace;
   /** `ctx.vault` of one plugin. */
-  vaultApi(pluginId: string, permissions: readonly string[]): VaultApi;
+  vaultApi(
+    pluginId: string,
+    permissions: readonly string[],
+    dataKey?: string,
+  ): VaultApi;
   /** `ctx.workspace`: `open` makes the drawing active through the host. */
   workspaceApi(host: {
     activePath(): string | null;
@@ -267,7 +272,7 @@ export function createVaultModel(): VaultModel {
   return {
     fake,
     workspace,
-    vaultApi(pluginId, permissions) {
+    vaultApi(pluginId, permissions, dataKey) {
       return {
         info: () => (info ? { ...info } : null),
         async list(dir = "") {
@@ -292,7 +297,7 @@ export function createVaultModel(): VaultModel {
         async createDrawing(path, ops: readonly SceneOp[]) {
           requirePermission(pluginId, permissions, "file.write", "vault.write");
           checkVaultPath(path, "file");
-          validateOps(ops, new Map());
+          validateOps(ops, new Map(), { dataKey: dataKey ?? null });
           const v = needVault();
           if (v.readOnly) {
             throw new PluginApiError("READ_ONLY", "The vault is read-only");
@@ -307,11 +312,16 @@ export function createVaultModel(): VaultModel {
             ops.flatMap((op) => (op.op === "add" ? [op.element] : [])),
           );
           drawings.set(path, made);
-          return {
-            path,
-            revision: `r${made.revision}`,
-            ids: made.elements.map((e) => e.id),
-          };
+          const ids = made.elements.map((e) => e.id);
+          const refs: Record<string, string> = {};
+          ops
+            .flatMap((op) => (op.op === "add" ? [op] : []))
+            .forEach((op, i) => {
+              if (op.ref !== undefined) {
+                refs[op.ref] = ids[i];
+              }
+            });
+          return { path, revision: `r${made.revision}`, ids, refs };
         },
       };
     },

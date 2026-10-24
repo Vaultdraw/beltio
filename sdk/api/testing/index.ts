@@ -44,6 +44,7 @@ const normalise = (m: TestManifest) => {
     name: m.name ?? m.id,
     version: m.version ?? "0.1.0",
     permissions: m.permissions ?? [],
+    dataKey: m.dataKey ?? null,
     dir: m.dir ?? `/plugins/${m.id}`,
     dev: m.dev,
     activation: m.activation ?? [],

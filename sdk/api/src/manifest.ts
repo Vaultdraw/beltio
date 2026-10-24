@@ -18,6 +18,13 @@ export interface PluginManifestInfo {
    * @since 0.2.0
    */
   permissions: readonly PluginPermission[];
+  /**
+   * The key under which this plugin's element data is stored in a drawing:
+   * `data_key` from `plugin.toml`, else `plugins.<id>`.
+   *
+   * @since 0.4.0
+   */
+  dataKey: string;
 }
 
 /**

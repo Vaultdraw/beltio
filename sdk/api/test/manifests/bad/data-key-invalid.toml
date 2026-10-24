@@ -1,0 +1,8 @@
+# code: data-key-invalid
+# rust: data_key
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+data_key = "Latex"

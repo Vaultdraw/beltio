@@ -12,8 +12,8 @@ use std::{
 
 const MANIFEST_FILE: &str = "plugin.toml";
 const CACHE_FILE: &str = "plugins-cache.json";
-/// 3: manifests gained `contributes.importers`; older entries would hide them.
-const CACHE_VERSION: u32 = 3;
+/// 3: manifests gained `contributes.importers`; 4: `data_key`. Older entries would hide them.
+const CACHE_VERSION: u32 = 4;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]

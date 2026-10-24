@@ -26,6 +26,8 @@ export interface PluginInfo {
    * off, `notice` loads it and tells the user once, `ok` is quiet.
    */
   review: { state: "ok" | "notice" | "review"; added: string[] };
+  /** `data_key` from plugin.toml (null: the default `plugins.<id>`); absent from older backends. */
+  dataKey?: string | null;
   /** Dev plugins are watched and reloaded when their files change. */
   dev?: boolean;
   contributes: {

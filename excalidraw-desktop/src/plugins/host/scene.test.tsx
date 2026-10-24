@@ -144,6 +144,90 @@ describe("ctx.scene.batch", () => {
   });
 });
 
+describe("API revision 0.4.0: refs, groups, data, reads, path guard", () => {
+  const flow = [
+    {
+      op: "add",
+      ref: "a",
+      element: { ...rect, x: 0, y: 0, width: 80, height: 40, data: { n: 1 } },
+    },
+    {
+      op: "add",
+      ref: "b",
+      element: { ...rect, x: 200, y: 0, width: 80, height: 40 },
+    },
+    {
+      op: "add",
+      ref: "ab",
+      element: { type: "arrow", start: { ref: "a" }, end: { ref: "b" } },
+    },
+    { op: "group", ids: [{ ref: "a" }, { ref: "b" }, { ref: "ab" }] },
+  ] as const;
+
+  it("batch returns refs; get, dataOf and path read the result", async () => {
+    const ctx = await bootCtx((c) => void c.commands.register("go", () => {}));
+    expect(ctx.manifest.dataKey).toBe("plugins.sc");
+    expect(ctx.scene.path()).toBe("fake.excalidraw");
+    const { ids, refs } = await ctx.scene.batch(flow, {
+      path: "fake.excalidraw",
+    });
+    expect(ids).toEqual([refs.a, refs.b, refs.ab]);
+    expect(t!.scene.batches).toHaveLength(1);
+    const [a, ab] = ctx.scene.get([refs.a, refs.ab], { data: true });
+    expect(a.groupIds).toHaveLength(1);
+    expect(ab.groupIds).toEqual(a.groupIds);
+    expect(a.data).toEqual({ n: 1 });
+    expect(ctx.scene.dataOf(refs.a)).toEqual({ n: 1 });
+    expect(ctx.scene.dataOf(refs.b)).toBeUndefined();
+    expect(ctx.scene.get(["missing"])).toEqual([]);
+  });
+
+  it("the path guard rejects with DRAWING_CHANGED and writes nothing", async () => {
+    const ctx = await bootCtx((c) => void c.commands.register("go", () => {}));
+    await expect(
+      ctx.scene.batch(flow, { path: "Other.excalidraw" }),
+    ).rejects.toMatchObject({ code: "DRAWING_CHANGED" });
+    expect(t!.scene.batches).toHaveLength(0);
+    t!.scene.readOnly(true);
+    await expect(ctx.scene.batch(flow)).rejects.toMatchObject({
+      code: "READ_ONLY",
+    });
+    t!.scene.switchTo(null);
+    await expect(ctx.scene.batch(flow)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    expect(ctx.scene.path()).toBeNull();
+    expect(ctx.scene.get(["x"])).toEqual([]);
+    expect(ctx.scene.dataOf("x")).toBeUndefined();
+  });
+
+  it("a declared data_key is used for data", async () => {
+    let ctx!: PluginContext;
+    t = await boot(
+      {
+        id: "latexish",
+        dataKey: "latex",
+        contributes: { commands: [{ id: "go" }] },
+      },
+      {
+        activate(c) {
+          ctx = c;
+          c.commands.register("go", () => {});
+        },
+      },
+    );
+    await t.run("go");
+    expect(ctx.manifest.dataKey).toBe("latex");
+    const { ids } = await ctx.scene.batch([
+      { op: "add", element: { ...rect, data: { tex: "x^2" } } },
+    ]);
+    expect((t.scene.live()[0] as { customData?: unknown }).customData).toEqual({
+      latex: { tex: "x^2" },
+    });
+    expect(ctx.scene.dataOf(ids[0])).toEqual({ tex: "x^2" });
+  });
+});
+
 describe("a stopped plugin", () => {
   it("cannot change the drawing or subscribe through its old context", async () => {
     const ctx = await bootCtx((c) => void c.commands.register("go", () => {}));

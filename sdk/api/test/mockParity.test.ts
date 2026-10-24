@@ -24,10 +24,10 @@ import {
   declProblem,
   effectiveSetting,
   pushToast,
-  validateOps,
   validateSettingValue,
   type MockToast,
 } from "../testing/rules";
+import { validateOps } from "../testing/sceneRules";
 
 import type { Plugin } from "../src/index";
 import type { TestManifest, TestPlugin as SdkTestPlugin } from "../testing";
@@ -143,6 +143,10 @@ describe("parity: toast queue", () => {
 });
 
 describe("parity: scene ops", () => {
+  it("the app and the mock share one validator (sdk/api/testing/sceneRules.ts)", () => {
+    expect(realValidateOps).toBe(validateOps);
+  });
+
   const el = (type: string, isDeleted = false) => ({ type, isDeleted });
   const existing = new Map([
     ["r", el("rectangle")],

@@ -1,6 +1,6 @@
 /** Validates a batch and commits it as ONE scene update (one undo step). */
 import { CaptureUpdateAction } from "@excalidraw/excalidraw";
-import { getSizeFromPoints } from "@excalidraw/common";
+import { FONT_FAMILY, getSizeFromPoints } from "@excalidraw/common";
 import {
   computeBoundTextPosition,
   computeContainerDimensionForBoundText,
@@ -18,13 +18,23 @@ import type {
   ExcalidrawTextElement,
 } from "@excalidraw/element/types";
 
-import { buildElements } from "./build";
+import {
+  applyGroups,
+  buildAdds,
+  normalAngle,
+  roundnessFor,
+  withData,
+} from "./build";
 import { validateOps } from "./validate";
 import { viewportCenter } from "./viewport";
 
-import type { NewElement, SceneApi, SceneOp } from "./types";
+import type { BatchResult, NewElement, SceneApi, SceneOp } from "./types";
+import type { ValidateOptions } from "./validate";
 
-type Props = Partial<Omit<NewElement, "type">>;
+type Props = Partial<Omit<NewElement, "type" | "start" | "end">>;
+
+/** Options of one batch: the ops limit and the caller's data key. */
+export type ApplyOptions = ValidateOptions;
 
 /** Working copy of the scene: ops are applied to it in order, so later ops see earlier ones. */
 type Work = Map<string, ExcalidrawElement>;
@@ -65,16 +75,34 @@ const updated = (
   el: ExcalidrawElement,
   props: Props,
   work: Work,
+  dataKey: string | null,
 ): ExcalidrawElement => {
-  const { text, ...plain } = props;
+  const { text, data, roundness, angle, fontFamily, ...plain } = props;
   const patch: Record<string, unknown> = { ...plain };
   if (props.points && (el.type === "arrow" || el.type === "line")) {
     // The box follows the points (same rule as mutateElement), so bounds, selection and export stay right.
     Object.assign(patch, getSizeFromPoints(props.points as never));
   }
+  if (roundness) {
+    patch.roundness = roundnessFor(el.type, roundness);
+  }
+  if (angle !== undefined) {
+    patch.angle = normalAngle(angle);
+  }
+  if (fontFamily) {
+    patch.fontFamily = FONT_FAMILY[fontFamily];
+  }
+  if (data !== undefined && dataKey) {
+    patch.customData = withData(el.customData, dataKey, data);
+  }
   let next = newElementWith(el, patch as never);
-  if (text !== undefined && next.type === "text") {
+  const relayout =
+    text !== undefined ||
+    props.fontSize !== undefined ||
+    fontFamily !== undefined;
+  if (relayout && next.type === "text") {
     const label = next as ExcalidrawTextElement;
+    const value = text ?? label.originalText ?? label.text;
     const container = label.containerId
       ? work.get(label.containerId) ?? null
       : null;
@@ -82,11 +110,11 @@ const updated = (
       label,
       container as never,
       work as never,
-      text,
+      value,
     );
     next = newElementWith(next, {
-      text,
-      originalText: text,
+      text: value,
+      originalText: value,
       ...dims,
     } as never);
     work.set(next.id, next);
@@ -96,32 +124,49 @@ const updated = (
   return next;
 };
 
-export const applyOps = (api: SceneApi, ops: unknown): { ids: string[] } => {
+export const applyOps = (
+  api: SceneApi,
+  ops: unknown,
+  options: ApplyOptions = {},
+): BatchResult => {
   const current = api.getSceneElementsIncludingDeleted();
   const byId = new Map(current.map((e) => [e.id, e]));
-  const valid: SceneOp[] = validateOps(ops, byId);
+  const valid: SceneOp[] = validateOps(ops, byId, options);
+  const dataKey = options.dataKey ?? null;
 
-  const adds: NewElement[] = [];
+  const adds: Extract<SceneOp, { op: "add" }>[] = [];
+  const groups: Extract<SceneOp, { op: "group" }>[] = [];
   const work: Work = new Map(byId);
   for (const op of valid) {
     if (op.op === "add") {
-      adds.push(op.element);
+      adds.push(op);
+    } else if (op.op === "group") {
+      groups.push(op);
     } else if (op.op === "delete") {
       work.set(op.id, newElementWith(work.get(op.id)!, { isDeleted: true }));
     } else {
-      work.set(op.id, updated(work.get(op.id)!, op.props, work));
+      work.set(op.id, updated(work.get(op.id)!, op.props, work, dataKey));
     }
   }
 
-  const created = buildElements(adds, viewportCenter(api.getAppState()));
+  const { created, ids, refs } = buildAdds(
+    adds,
+    viewportCenter(api.getAppState()),
+    dataKey,
+  );
+  let fresh = created;
+  if (groups.length) {
+    for (const el of created) {
+      work.set(el.id, el);
+    }
+    applyGroups(groups, work, refs);
+    fresh = created.map((el) => work.get(el.id)!);
+  }
   const merged = current.map((el) => work.get(el.id) ?? el);
-  const elements = syncInvalidIndices([...merged, ...created]);
+  const elements = syncInvalidIndices([...merged, ...fresh]);
   api.updateScene({
     elements,
     captureUpdate: CaptureUpdateAction.IMMEDIATELY,
   });
-  return { ids: created.filter((e) => !isBound(e)).map((e) => e.id) };
+  return { ids, refs };
 };
-
-const isBound = (e: ExcalidrawElement) =>
-  e.type === "text" && !!(e as ExcalidrawTextElement).containerId;

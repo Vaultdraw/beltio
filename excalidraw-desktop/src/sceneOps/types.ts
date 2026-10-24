@@ -4,10 +4,11 @@
  */
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
-import type { SceneOpIssue } from "../../../sdk/api/src/index";
-
 export type {
+  BatchResult,
+  ElementRef,
   NewElement,
+  SceneElementDetail,
   SceneElement,
   SceneElementType,
   SceneOp,
@@ -15,19 +16,7 @@ export type {
 } from "../../../sdk/api/src/index";
 
 /** Thrown before anything is written; lists every problem found. */
-export class SceneOpsError extends Error {
-  readonly issues: SceneOpIssue[];
-
-  constructor(issues: SceneOpIssue[]) {
-    super(
-      issues
-        .map((i) => `op ${i.op}${i.key ? ` (${i.key})` : ""}: ${i.message}`)
-        .join("; "),
-    );
-    this.name = "SceneOpsError";
-    this.issues = issues;
-  }
-}
+export { SceneOpsError } from "../../../sdk/api/testing/sceneRules";
 
 /** The adapter seam: the only editor surface the core touches. */
 export type SceneApi = Pick<

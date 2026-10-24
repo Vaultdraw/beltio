@@ -703,6 +703,23 @@ fn permissions_default_to_none_and_parse() {
 }
 
 #[test]
+fn data_key_is_optional_and_checked() {
+    let plain = manifest::parse(&minimal("plain")).unwrap();
+    assert_eq!(plain.data_key, None);
+    assert!(serde_json::to_value(&plain).unwrap()["dataKey"].is_null());
+    for ok in ["latex", "plugins.my-plugin", "a_b.c-d.e1"] {
+        let m = manifest::parse(&with(&format!("data_key = \"{ok}\"\n"))).unwrap();
+        assert_eq!(m.data_key.as_deref(), Some(ok));
+        assert_eq!(serde_json::to_value(&m).unwrap()["dataKey"], serde_json::json!(ok));
+    }
+    let long = "a".repeat(65);
+    for bad_key in ["", "Latex", "1abc", "a..b", "a.", ".a", "a b", "a/b", long.as_str()] {
+        bad(&with(&format!("data_key = \"{bad_key}\"\n")), "data_key");
+    }
+    bad(&with("data_key = 3\n"), "data_key");
+}
+
+#[test]
 fn permission_rules() {
     bad(&with("permissions = [\"vault.delete\"]\n"), "unknown permission");
     for reserved in ["net", "secret", "control"] {

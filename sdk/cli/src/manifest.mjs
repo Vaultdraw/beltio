@@ -58,12 +58,18 @@ export const TOP_KEYS = new Set([
   "author",
   "activation",
   "permissions",
+  "data_key",
   "contributes",
   "dev",
 ]);
 const COMMAND_KEYS = new Set(["id", "title", "keys", "when", "palette"]);
 const PANEL_KEYS = new Set(["id", "title", "icon", "group"]);
 
+/** Same rule as the app's manifest.rs `is_valid_data_key`. @param {unknown} s */
+const isValidDataKey = (s) =>
+  typeof s === "string" &&
+  s.length <= 64 &&
+  /^[a-z][a-z0-9_-]*(\.[a-z0-9_-]+)*$/.test(s);
 /** `^[a-z0-9][a-z0-9-]{1,38}$` @param {string} s */
 export const isValidPluginId = (s) => /^[a-z0-9][a-z0-9-]{1,38}$/.test(s);
 /** `^[A-Za-z][A-Za-z0-9_-]{0,63}$` @param {string} s */
@@ -226,6 +232,12 @@ export function validateManifestText(text, file = "plugin.toml") {
   }
   if ("permissions" in doc) {
     checkPermissions(doc.permissions, err);
+  }
+  if ("data_key" in doc && !isValidDataKey(doc.data_key)) {
+    err(
+      "data-key-invalid",
+      "data_key must be lower case letters, digits, _ and -, parts joined by '.', at most 64 characters",
+    );
   }
   if ("dev" in doc) {
     if (typeof doc.dev !== "boolean") {

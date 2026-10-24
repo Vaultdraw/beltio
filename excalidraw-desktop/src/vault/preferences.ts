@@ -93,6 +93,9 @@ import { DEFAULT_SORT_ORDER, isSortOrder, type SortOrder } from "./sortOrder";
 export const DEFAULT_PLUGIN_STORAGE_KB = 1024;
 export const MIN_PLUGIN_STORAGE_KB = 64;
 export const MAX_PLUGIN_STORAGE_KB = 16384;
+/** `plugins.scene_max_ops`: ops per plugin batch (sceneRules MAX_OPS and MAX_OPS_LIMIT; a test keeps them equal). */
+export const DEFAULT_SCENE_MAX_OPS = 500;
+export const MAX_SCENE_MAX_OPS = 1000;
 
 export type VaultTheme = "light" | "dark" | "system";
 
@@ -211,6 +214,8 @@ interface VaultPreferencesBase {
   pluginImporters: Record<string, string>;
   /** Limit of each plugin's `ctx.storage.global`, in KiB (`plugins.storage_limit_kb`). */
   pluginsStorageLimitKb: number;
+  /** Most ops in one plugin `scene.batch` (`plugins.scene_max_ops`). */
+  pluginsSceneMaxOps: number;
   /** Global navigator sort order; a vault's settings.toml may override it. */
   navigatorSort: SortOrder;
   /** Folder for new drawings, relative to the vault root ("" = unset). A vault's settings.toml may override it. */
@@ -349,6 +354,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   pluginsEnabled: [],
   pluginImporters: {},
   pluginsStorageLimitKb: DEFAULT_PLUGIN_STORAGE_KB,
+  pluginsSceneMaxOps: DEFAULT_SCENE_MAX_OPS,
   navigatorSort: DEFAULT_SORT_ORDER,
   newDrawingFolder: "",
   templatesFolder: DEFAULT_TEMPLATES_FOLDER,
@@ -546,6 +552,11 @@ export const isPluginStorageKb = (value: unknown) =>
   Number.isInteger(value) &&
   value >= MIN_PLUGIN_STORAGE_KB &&
   value <= MAX_PLUGIN_STORAGE_KB;
+export const isSceneMaxOps = (value: unknown) =>
+  typeof value === "number" &&
+  Number.isInteger(value) &&
+  value >= 1 &&
+  value <= MAX_SCENE_MAX_OPS;
 const isString = (value: unknown) => typeof value === "string";
 const isBoolean = (value: unknown) => typeof value === "boolean";
 
@@ -694,6 +705,11 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       parsed.pluginsStorageLimitKb,
       isPluginStorageKb,
       d.pluginsStorageLimitKb,
+    ),
+    pluginsSceneMaxOps: pick(
+      parsed.pluginsSceneMaxOps,
+      isSceneMaxOps,
+      d.pluginsSceneMaxOps,
     ),
     navigatorSort: pick(parsed.navigatorSort, isSortOrder, d.navigatorSort),
     newDrawingFolder: pick(

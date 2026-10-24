@@ -86,7 +86,7 @@ export type { ImportersApi, Importer, ImportInput, ImportOptions, ImportResult, 
 export type { PanelsApi } from "./panels";
 export { definePlugin } from "./plugin";
 export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
-export type { NewElement, SceneContextApi, SceneElement, SceneElementType, SceneOp, SceneOpIssue, } from "./scene";
+export type { BatchOptions, BatchResult, ElementRef, FontFamilyName, NewElement, SceneContextApi, SceneElementDetail, SceneElement, SceneElementType, SceneOp, SceneOpIssue, } from "./scene";
 export type { SelectOption, SettingDecl, SettingScopeName, SettingsApi, SettingValue, } from "./settings";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
@@ -101,6 +101,7 @@ export interface PluginManifestInfo {
     version: string;
     dir: string;
     permissions: readonly PluginPermission[];
+    dataKey: string;
 }
 export type PluginPermission = "vault.read" | "vault.write";
 export interface CommandContribution {
@@ -187,6 +188,7 @@ export declare const definePlugin: (plugin: Plugin) => Plugin;
 
 // scene.ts
 import type { Disposable } from "./disposable";
+import type { Json } from "./storage";
 export type SceneElementType = "rectangle" | "ellipse" | "diamond" | "text" | "arrow" | "line" | "freedraw" | "image" | "frame" | "other";
 export interface SceneElement {
     readonly id: string;
@@ -213,18 +215,60 @@ export interface NewElement {
     strokeWidth?: number;
     opacity?: number;
     points?: [number, number][];
+    angle?: number;
+    strokeStyle?: "solid" | "dashed" | "dotted";
+    fillStyle?: "hachure" | "cross-hatch" | "solid" | "zigzag";
+    roundness?: "sharp" | "round";
+    fontFamily?: FontFamilyName;
+    link?: string | null;
+    locked?: boolean;
+    data?: Json | null;
+    start?: ElementRef;
+    end?: ElementRef;
 }
+export interface ElementRef {
+    ref: string;
+}
+export type FontFamilyName = "Excalifont" | "Nunito" | "Lilita One" | "Comic Shanns" | "Virgil" | "Helvetica" | "Cascadia" | "Liberation Sans";
 export type SceneOp = {
     op: "add";
     element: NewElement;
+    ref?: string;
 } | {
     op: "update";
     id: string;
-    props: Partial<Omit<NewElement, "type">>;
+    props: Partial<Omit<NewElement, "type" | "start" | "end">>;
 } | {
     op: "delete";
     id: string;
+} | {
+    op: "group";
+    ids: readonly (string | ElementRef)[];
 };
+export interface BatchResult {
+    ids: string[];
+    refs: Record<string, string>;
+}
+export interface BatchOptions {
+    path?: string;
+}
+export interface SceneElementDetail extends SceneElement {
+    readonly groupIds: readonly string[];
+    readonly frameId: string | null;
+    readonly containerId: string | null;
+    readonly locked: boolean;
+    readonly link: string | null;
+    readonly opacity: number;
+    readonly strokeWidth: number;
+    readonly strokeStyle: string;
+    readonly fillStyle: string;
+    readonly roundness: "sharp" | "round";
+    readonly fontSize?: number;
+    readonly fontFamily?: string;
+    readonly fileId?: string | null;
+    readonly points?: readonly (readonly [number, number])[];
+    readonly data?: Json;
+}
 export interface SceneOpIssue {
     op: number;
     key?: string;
@@ -237,13 +281,17 @@ export interface SceneContextApi {
         path: string | null;
     }) => void): Disposable;
     useScene<T>(select: (els: readonly SceneElement[]) => T, isEqual?: (a: T, b: T) => boolean): T;
-    batch(ops: readonly SceneOp[]): Promise<{
-        ids: string[];
-    }>;
+    batch(ops: readonly SceneOp[], options?: BatchOptions): Promise<BatchResult>;
     viewportCenter(): {
         x: number;
         y: number;
     };
+    get(ids: readonly string[], options?: {
+        points?: boolean;
+        data?: boolean;
+    }): readonly SceneElementDetail[];
+    dataOf(id: string): Json | undefined;
+    path(): string | null;
 }
 
 // settings.ts
@@ -325,6 +373,7 @@ export interface VaultApi {
         path: string;
         revision: string;
         ids: string[];
+        refs: Record<string, string>;
     }>;
 }
 

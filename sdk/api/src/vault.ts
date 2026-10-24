@@ -63,12 +63,18 @@ export interface VaultApi {
   ): Promise<{ elements: readonly SceneElement[]; revision: string }>;
   /**
    * Creates a new drawing (the path must end in `.excalidraw`) from `add`
-   * ops, and refuses when the path exists. Needs `vault.write`.
+   * ops (and, from 0.4.0, `group` ops with refs and `data`), and refuses when
+   * the path exists. Needs `vault.write`. `refs` maps each `ref` to its id.
    *
    * @since 0.6.0
    */
   createDrawing(
     path: string,
     ops: readonly SceneOp[],
-  ): Promise<{ path: string; revision: string; ids: string[] }>;
+  ): Promise<{
+    path: string;
+    revision: string;
+    ids: string[];
+    refs: Record<string, string>;
+  }>;
 }

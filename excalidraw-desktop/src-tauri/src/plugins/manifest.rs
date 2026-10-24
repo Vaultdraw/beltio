@@ -16,6 +16,7 @@ const MAX_PATH: usize = 260;
 const MAX_PERMISSIONS: usize = 8;
 const MAX_IMPORTERS: usize = 8;
 const MAX_IMPORTER_EXTENSIONS: usize = 8;
+const MAX_DATA_KEY: usize = 64;
 const MAX_EXTENSION: usize = 32;
 /// Activation event prefix: `onDrop:<ext>` is accepted only when an importer declares `<ext>`.
 const ON_DROP: &str = "onDrop:";
@@ -117,6 +118,9 @@ struct Raw {
     activation: Vec<String>,
     #[serde(default)]
     permissions: Vec<String>,
+    /// The customData key of the plugin's element data (default `plugins.<id>`).
+    #[serde(default)]
+    data_key: Option<String>,
     #[serde(default)]
     contributes: Contributes,
     /// Dev plugins are watched and reloaded when their files change.
@@ -139,6 +143,8 @@ pub(crate) struct Manifest {
     pub activation: Vec<String>,
     #[serde(default)]
     pub permissions: Vec<String>,
+    #[serde(default)]
+    pub data_key: Option<String>,
     pub contributes: Contributes,
     #[serde(default)]
     pub dev: bool,
@@ -249,6 +255,14 @@ fn check_permissions(list: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// `^[a-z][a-z0-9_-]*(\.[a-z0-9_-]+)*$`, at most 64 bytes (same rule as the host's `dataKeyProblem`).
+pub(crate) fn is_valid_data_key(k: &str) -> bool {
+    let b = k.as_bytes();
+    (1..=MAX_DATA_KEY).contains(&b.len())
+        && b[0].is_ascii_lowercase()
+        && k.split('.').all(|part| !part.is_empty() && part.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'_' || c == b'-'))
+}
+
 fn validate(raw: Raw) -> Result<Manifest, String> {
     if !is_valid_id(&raw.id) {
         return Err(format!("Plugin id '{}' is invalid (a-z, 0-9 and -, 2 to 39 characters)", raw.id));
@@ -268,6 +282,11 @@ fn validate(raw: Raw) -> Result<Manifest, String> {
     }
     check_activation(&raw.activation, &raw.contributes.importers)?;
     check_permissions(&raw.permissions)?;
+    if let Some(k) = &raw.data_key {
+        if !is_valid_data_key(k) {
+            return Err(format!("data_key '{k}' is invalid (lower case letters, digits, _ and -, parts joined by '.', at most {MAX_DATA_KEY} characters)"));
+        }
+    }
     let c = &raw.contributes;
     if c.commands.len() > MAX_COMMANDS || c.panels.len() > MAX_PANELS || c.settings.len() > MAX_SETTINGS {
         return Err(format!("Too many contributions (max {MAX_COMMANDS} commands, {MAX_PANELS} panels, {MAX_SETTINGS} settings)"));
@@ -298,6 +317,7 @@ fn validate(raw: Raw) -> Result<Manifest, String> {
         author: raw.author,
         activation: raw.activation,
         permissions: raw.permissions,
+        data_key: raw.data_key,
         contributes: raw.contributes,
         dev: raw.dev,
     })

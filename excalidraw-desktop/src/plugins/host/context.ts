@@ -1,7 +1,8 @@
 /** Builds the PluginContext of one plugin. Everything registered goes into `subscriptions`. */
 import { closePanel, openPanel } from "../../slots/panelStore";
 import { toastStore } from "../../toasts/toastStore";
-import { subscribePreferences } from "../../vault/preferences";
+import { dataKeyFor } from "../../sceneOps/validate";
+import { getPreferences, subscribePreferences } from "../../vault/preferences";
 import { subscribeVaultSettings } from "../../vault/vaultSettings";
 import { allowsScope } from "../settings/declaredSettings";
 import { getPluginSetting, setPluginSetting } from "../settings/pluginSettings";
@@ -56,6 +57,7 @@ export function createPluginContext(
 ): ContextHandle {
   const { info } = rt;
   const id = info.id;
+  const dataKey = dataKeyFor(id, info.dataKey);
   const subscriptions: Disposable[] = [];
   let stopped = false;
   const isLive = () => !stopped;
@@ -138,6 +140,7 @@ export function createPluginContext(
       version: info.version,
       dir: info.dir,
       permissions: Object.freeze([...info.permissions]) as PluginPermission[],
+      dataKey,
     },
     commands: {
       register(short, run) {
@@ -218,7 +221,10 @@ export function createPluginContext(
       warn: logger("warn"),
       error: logger("error"),
     },
-    scene: createSceneApi(id, track, isLive),
+    scene: createSceneApi(id, track, isLive, {
+      dataKey,
+      maxOps: () => getPreferences(win).pluginsSceneMaxOps,
+    }),
     events: createGatedEventsApi(rt, track, isLive),
     // Built on first read: a plugin that never touches them costs nothing.
     get host() {

@@ -7,7 +7,8 @@
  * "Import: Cancel".
  */
 import { appEvents } from "../../events/appEvents";
-import { applyOps, SceneOpsError } from "../../sceneOps";
+import { applyOps, dataKeyFor, SceneOpsError } from "../../sceneOps";
+import { getPreferences } from "../../vault/preferences";
 import { getActiveScene } from "../../sceneOps/sceneBus";
 import { toastStore } from "../../toasts/toastStore";
 import { type ImportItem, type ImportTarget } from "../importerMap";
@@ -140,7 +141,10 @@ async function runOne(item: ImportItem, target: ImportTarget): Promise<void> {
     }
     try {
       // The same path as ctx.scene.batch: one applyOps call is one undo step.
-      applyOps(scene.api, ops);
+      applyOps(scene.api, ops, {
+        dataKey: dataKeyFor(pluginId, rt.info.dataKey),
+        maxOps: getPreferences().pluginsSceneMaxOps,
+      });
     } catch (err) {
       if (err instanceof SceneOpsError) {
         reportPluginError(pluginId, err, `importer ${importerId}`);

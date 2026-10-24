@@ -81,6 +81,13 @@
         "enum": ["vault.read", "vault.write"]
       }
     },
+    "data_key": {
+      "title": "Data key",
+      "description": "Optional. The key under which the plugin keeps its own data on drawing elements (customData). Default plugins.<id>. Lower case letters, digits, _ and -, parts joined by a dot, at most 64 characters. A plugin that takes over existing drawings' data declares that data's key, such as latex.",
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z0-9_-]+)*$"
+    },
     "dev": {
       "title": "Development mode",
       "default": false,

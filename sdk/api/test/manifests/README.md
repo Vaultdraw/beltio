@@ -35,6 +35,7 @@ Every file starts with two comment lines.
 | `permission-reserved` | `net`, `secret` or `control`: reserved for later. |
 | `permission-duplicate` | The same permission twice. |
 | `permission-too-many` | More than 8 permissions. |
+| `data-key-invalid` | `data_key` is not lower case letters, digits, `_` and `-` in parts joined by `.` (at most 64 characters). |
 | `contribution-id-invalid` | Command or panel id has a bad shape. |
 | `contribution-duplicate` | Two commands share an id. |
 | `title-invalid` | Empty command or panel title. |

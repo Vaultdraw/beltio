@@ -1,0 +1,17 @@
+id = "flow-diagram"
+name = "Flow diagram"
+version = "0.1.0"
+api = 0
+main = "main.js"
+description = "Example: draws a connected flow (boxes, arrows bound to them, one group, plugin data) in one scene.batch, one undo step"
+author = "Vaultdraw"
+data_key = "plugins.flow-diagram"
+
+[[contributes.commands]]
+id = "insert"
+title = "Flow diagram: insert flow"
+
+[[contributes.panels]]
+id = "flow"
+title = "Flow diagram"
+icon = "page"

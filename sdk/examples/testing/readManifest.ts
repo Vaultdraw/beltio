@@ -27,6 +27,7 @@ const TOP_KEYS = new Set([
   "author",
   "activation",
   "dev",
+  "data_key",
 ]);
 const ARRAYS = ["commands", "panels", "settings", "importers"] as const;
 
@@ -118,6 +119,7 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
     source: "bundled",
     mainBytes,
     activation: (top.activation as string[] | undefined) ?? [],
+    dataKey: str("data_key"),
     contributes: {
       commands: arrays.commands.map((c) => ({
         id: c.id as string,
