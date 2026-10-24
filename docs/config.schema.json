@@ -1286,6 +1286,13 @@
           "type": "integer",
           "minimum": 64,
           "maximum": 16384
+        },
+        "scene_max_ops": {
+          "description": "Most ops in one plugin `scene.batch` call; a batch past it is refused.",
+          "default": 500,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
         }
       }
     },
