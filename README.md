@@ -77,6 +77,7 @@ The Excalidraw editor, plus what you need once you have more than one drawing:
 - Page mode (A4, Letter or custom pages) with PDF export, notebook paper, and PNG, SVG or clipboard export.
 - Mermaid diagrams and LaTeX formulas, converted offline. Everything works offline; there is no account and no telemetry.
 - A plain-text config folder you can edit by hand, and a `vaultdraw` command for the terminal.
+- `vaultdraw://` links that open a drawing, a search or a new drawing from a note, a web page or a script, asking first before anything writes ([details](docs/uri-scheme.md)).
 - Vim-style key sequences (`g g`, `<leader> f f`) with a which-key popup, and every tool key rebindable; nothing is bound until you write it.
 
 **Coming next:** plugins (AI, a shape generator and more).
