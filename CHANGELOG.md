@@ -33,6 +33,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - Palette commands: **Plugins: Open plugin settings**, **Install from folder…** and **Reload plugin list**.
 - New palette command **Plugins: Open plugins folder** (`plugins.openFolder`) shows the plugins folder in your file manager.
 - Only the first 6 plugin panel buttons show in the activity bar. The palette or Settings → Interface shows the others.
+- A plugin can declare `permissions` in `plugin.toml` (`vault.read`, `vault.write`). The enable dialog lists them in plain words, and the app remembers what you confirmed. An update that adds a write permission is switched off until you press **Review** in Settings → Plugins; an added read permission loads with a notice. A permission is a declaration, not a sandbox: plugins still run with full access. See `sdk/docs/permissions.md`.
 
 ### Faster
 
@@ -52,6 +53,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Plugin SDK
 
+- **API revision 0.2.0** (additions only): `ctx.host` (`app`, `api`, `has(feature)`), a read-only `ctx.theme` (`mode()`, `tokens()`, `onChange`), `ctx.manifest.permissions` and the manifest key `permissions`. Feature names for `has` are generated from the `@since` tags; the 41 theme token names are documented in `sdk/docs/theme-tokens.md`. The names `net`, `secret` and `control` are reserved as permissions. `check` reports `permission-*` codes; the mock host and the in-repo kit have `theme.set`.
 - `sdk/api`: the `@vaultdraw/api` types package (types only, not published yet).
 - `vaultdraw-plugin`: a command line tool with `check`, `init` and `dev`.
 - `@vaultdraw/api/testing`: a mock host. `boot(manifest, plugin)` runs a plugin under vitest with a fake scene, event bus, settings and toasts, and enforces the app's rules. `VAULTDRAW_TEST_HOST=mock` runs the example tests on it. See `sdk/docs/testing.md`.

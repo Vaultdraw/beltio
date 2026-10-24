@@ -33,9 +33,10 @@ keys = ["Mod+Alt+H"]        # optional default chords; [] = none
 
 Every key, type and limit is in the generated [manifest reference](manifest.md). It comes from `sdk/api/plugin.schema.json`, which editors can use for completion. In short:
 
-- Required: `id`, `name`, `version`, `api`, `main`. Optional: `min_app`, `description`, `author`, `activation`, `dev`.
+- Required: `id`, `name`, `version`, `api`, `main`. Optional: `min_app`, `description`, `author`, `activation`, `permissions`, `dev`.
 - `plugin.toml` is at most 64 KB. A manifest has at most 200 commands, 20 panels and 100 settings.
 - Unknown keys are errors, except tables named `x-*`, which are reserved for tools.
+- `permissions` is a declaration of what the plugin does to your files, not a sandbox. See [permissions.md](permissions.md).
 - Only the activation event `onStartupFinished` exists. `dev = true` makes the app reload the plugin when its files change; a packaged plugin must not set it.
 - The settings entries have the shape of `SettingDecl` in `@vaultdraw/api`. The Rust side only checks that each has a `key` and a `type`. The app's settings registry validates the rest and reports problems on the Plugins page.
 
@@ -102,7 +103,12 @@ interface Plugin {
 function definePlugin(plugin: Plugin): Plugin; // identity
 
 interface PluginContext {
-  readonly manifest: { id: string; version: string; dir: string };
+  readonly manifest: {
+    id: string;
+    version: string;
+    dir: string;
+    permissions: readonly ("vault.read" | "vault.write")[]; // since 0.2.0
+  };
   readonly commands: {
     /** Bind the handler of a command declared in plugin.toml (short id). */
     register(id: string, run: () => void | Promise<void>): Disposable;
@@ -139,6 +145,20 @@ interface PluginContext {
       cb: (payload: Readonly<AppEventMap[K]>) => void,
     ): Disposable;
   };
+  readonly host: {
+    // since 0.2.0
+    readonly app: string; // the app version
+    readonly api: { level: 0; revision: string }; // for example { level: 0, revision: "0.2.0" }
+    has(feature: string): boolean; // "theme.tokens", "scene.batch", "drawing.saved"
+  };
+  readonly theme: {
+    // since 0.2.0, read only
+    mode(): "light" | "dark";
+    tokens(): Readonly<Record<ThemeTokenName, string>>; // CSS strings, see theme-tokens.md
+    onChange(
+      cb: (e: { mode: "light" | "dark"; themeId: string }) => void,
+    ): Disposable;
+  };
   readonly log: {
     debug(...a: unknown[]): void;
     info(...a: unknown[]): void;
@@ -158,6 +178,9 @@ Notes:
 - A stored setting value outside a declared `min` / `max`, or of the wrong type, reads as the default and is reported as a settings problem. `ctx.settings.set` rejects such a value.
 - `ctx.scene.batch` rejects when no drawing is open, when the drawing is read-only, or when an op is invalid. The error carries the problems in `issues` (`SceneOpIssue[]`: op index, key, message).
 - Events are delivered in order, on a microtask. Paths are vault-relative.
+- `ctx.host.has(name)` asks for a feature, not a version (like `has('nvim-0.9')` in Neovim). Names are a `ctx` member (`"theme"`), a member of one (`"theme.tokens"`) or an app event (`"drawing.saved"`). Unknown names give `false`. The list is generated from the `@since` tags (`sdk/api/testing/features.ts`).
+- `ctx.theme.tokens()` returns what the document shows now, as CSS strings: some are `rgba(...)` colours or shadows, not only `#rrggbb`. The table is frozen; read it again after `onChange`. The 41 names are API; each is described in [theme-tokens.md](theme-tokens.md).
+- `ctx.host` and `ctx.theme` are built on first read, and nothing listens to theme changes until you call `onChange`. A plugin that never touches them pays nothing.
 
 ### Scene and event types
 
@@ -298,7 +321,8 @@ Dev log details:
 2. **v0 is experimental.** Additions are optional members, tagged `@since` with the revision that added them.
 3. **Changes and removals** happen only in a minor revision. They are listed under "Plugin API" in the [CHANGELOG](../../CHANGELOG.md), they show as a diff of `sdk/api/etc/api-surface.d.ts`, and they keep the old form for one release when that is cheap.
 4. **`min_app` is the author's choice.** `vaultdraw-plugin check` warns when it is lower than what the code uses.
-5. **Real guarantees** (deprecation windows, an N-1 shim) begin at 1.0.
+5. **Ask, don't compare versions:** `ctx.host.api.revision` is there to show, and `ctx.host.has(feature)` is how a plugin decides what to use.
+6. **Real guarantees** (deprecation windows, an N-1 shim) begin at 1.0.
 
 ## The `vaultdraw-plugin` tool
 
@@ -334,6 +358,11 @@ The templates are `.tpl` files in `sdk/cli/templates/`; `init` strips the suffix
 | `api-unsupported` | error | `api` is not a level the app implements (0) |
 | `text-invalid` | error | `description` or `author` is too long or not text, or `dev` is not true or false |
 | `activation-unknown` | error | `activation` is not a list, or names an event other than `onStartupFinished` |
+| `permission-invalid` | error | `permissions` is not a list of strings |
+| `permission-unknown` | error | A permission name that does not exist |
+| `permission-reserved` | error | `net`, `secret` or `control`: reserved for later |
+| `permission-duplicate` | error | The same permission twice |
+| `permission-too-many` | error | More than 8 permissions |
 | `dev-true` | error | `dev = true` in a plugin you ship; `vaultdraw-plugin dev` adds it to the installed copy |
 | `contribution-invalid` | error | A `contributes` entry has the wrong shape or type |
 | `contribution-id-invalid` | error | A command or panel id breaks the id rule |
@@ -366,7 +395,7 @@ With `--activate`, the codes below are added (only when the static checks found 
 | `activate-undeclared-panel` | error | The same for a panel |
 | `activate-unknown-event` | error | `ctx.events.on` names an event the app does not have |
 | `activate-bad-call` | error | `register` was called without an id and a function or component |
-| `activate-unsupported` | warning | The plugin used something that needs the running app (`ctx.scene`, `ctx.commands.execute`, `ctx.panels.open`, `ctx.settings.set`); it was skipped |
+| `activate-unsupported` | warning | The plugin used something that needs the running app (`ctx.scene`, `ctx.host`, `ctx.theme`, `ctx.commands.execute`, `ctx.panels.open`, `ctx.settings.set`); it was skipped |
 | `activate-threw-after-skip` | warning | `activate()` threw after a skipped call; the dry run cannot tell whether the plugin is wrong, so declared commands are not compared |
 | `activate-timer-error`, `deactivate-threw`, `dispose-threw` | warning | A timer callback, `deactivate()` or a `dispose()` threw |
 

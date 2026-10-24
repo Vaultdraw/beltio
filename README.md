@@ -82,7 +82,7 @@ The Excalidraw editor, plus what you need once you have more than one drawing:
 
 **Coming next:** plugins (AI, a shape generator and more).
 
-Writing a plugin? See [sdk/docs/getting-started.md](sdk/docs/getting-started.md). Testing and packaging are in [testing.md](sdk/docs/testing.md) and [packaging.md](sdk/docs/packaging.md).
+Writing a plugin? See [sdk/docs/getting-started.md](sdk/docs/getting-started.md). Testing and packaging are in [testing.md](sdk/docs/testing.md) and [packaging.md](sdk/docs/packaging.md). What a plugin may declare, and what that does and does not protect, is in [permissions.md](sdk/docs/permissions.md).
 
 ## How it fits together
 

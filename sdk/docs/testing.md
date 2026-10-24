@@ -53,7 +53,7 @@ The manifest argument takes `id` and what your test needs: `name` (default: the 
 
 | Member | What it does |
 | --- | --- |
-| `info` | The manifest after defaults: `id`, `name`, `version`, `contributes` |
+| `info` | The manifest after defaults: `id`, `name`, `version`, `permissions`, `contributes` |
 | `run(shortId)` | Runs a command like the palette does; resolves when the handler is done |
 | `openPanel(shortId)` | Renders a panel; returns a view with `unmount()` (a Testing Library `RenderResult` fits). Needs `react`, `react-dom` and `@testing-library/react` installed |
 | `toasts()` | Messages of the visible toasts. The host adds the prefix; equal messages are shown once |
@@ -62,6 +62,7 @@ The manifest argument takes `id` and what your test needs: `name` (default: the 
 | `setSetting(key, value, scope?)` | Writes a setting; `false` when the declaration refuses it |
 | `scene` | A fake editor: `setElements`, `emitChange`, `switchTo`, `readOnly`, `batches`, `live()` |
 | `events.emit(name, payload)` | Emits an app event such as `drawing.saved` |
+| `theme.set({ mode, themeId, tokens })` | Changes what `ctx.theme` reports and notifies `onChange`. Until a test sets `tokens`, the mock's `tokens()` fails with "not set up in this test" |
 | `flush()` | Lets timers, microtasks and one animation frame run, and React settle |
 | `disable()` | Like the user disabling it: `deactivate()` runs, everything registered is disposed |
 | `dispose()` | `disable()` plus removing what the kit made. Call it after every test |

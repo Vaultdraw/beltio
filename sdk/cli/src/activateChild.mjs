@@ -234,6 +234,9 @@ async function run(job, emit) {
       id: manifest.id,
       version: manifest.version ?? "0.0.0",
       dir: root,
+      permissions: Array.isArray(manifest.permissions)
+        ? manifest.permissions
+        : [],
     },
     commands: {
       register(short, handler) {
@@ -292,6 +295,9 @@ async function run(job, emit) {
       error: logger("error"),
     },
     scene: deep("scene"),
+    // Need the running app (its version, features and colours): skipped with a warning.
+    host: deep("host"),
+    theme: deep("theme"),
     events: {
       on(name) {
         if (!EVENT_NAMES.includes(name)) {
