@@ -125,6 +125,7 @@ vaultdraw status                 # is the app running, which vault, which drawin
 vaultdraw ls                     # list drawings and folders
 vaultdraw search "meeting"       # search names, text and tags
 vaultdraw open "Roadmap"         # open a drawing in the window
+vaultdraw new "Ideas/Sketch"     # new drawing with your paper and page defaults
 vaultdraw export "Roadmap" -o roadmap.svg   # render a drawing to PNG, SVG or PDF
 ```
 

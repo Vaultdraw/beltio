@@ -142,7 +142,7 @@ fn new_offline_creates_a_blank_drawing_and_appends_the_extension() {
     let r = e.ok(&["new", "sub/n"], "");
     assert_eq!(r, json!({"path": "sub/n.excalidraw"}));
     let blank: Value = serde_json::from_slice(&e.read("sub/n.excalidraw")).unwrap();
-    assert_eq!(blank, json!({"type":"excalidraw","version":2,"source":"vaultdraw-cli","elements":[],"appState":{},"files":{}}));
+    assert_eq!(blank, json!({"type":"excalidraw","version":2,"source":"vaultdraw-cli","elements":[],"appState":{"viewBackgroundColor":"#ffffff","viewBackgroundPattern":null,"pageSetup":null},"files":{}}));
 
     let o = e.run(&["new", "nofolder/x"], "");
     assert_eq!(code(&o), 2);
@@ -227,4 +227,38 @@ fn a_successful_write_leaves_no_temp_file_and_no_recovery_snapshot() {
     let rec = e.root.join(".excalidraw-vault/recovery");
     let left: Vec<_> = std::fs::read_dir(&rec).into_iter().flatten().flatten().collect();
     assert!(left.is_empty(), "recovery snapshots removed after commit: {left:?}");
+}
+
+#[test]
+fn new_offline_applies_the_paper_and_page_defaults_of_config_and_vault() {
+    let e = env();
+    std::fs::write(
+        e.config.join("config.toml"),
+        "[paper]\nstyle = \"grid\"\nspacing = 30\n[page]\nmode = \"page\"\nsize = \"a5\"\norientation = \"landscape\"\npaper_theme = \"old_school\"\n",
+    )
+    .unwrap();
+    e.ok(&["new", "paged"], "");
+    let s: Value = serde_json::from_slice(&e.read("paged.excalidraw")).unwrap();
+    let st = &s["appState"];
+    assert_eq!(st["viewBackgroundColor"], "#f8efd4");
+    assert_eq!(st["viewBackgroundPattern"]["type"], "grid");
+    assert_eq!(st["viewBackgroundPattern"]["spacing"], 30);
+    assert_eq!(st["viewBackgroundPattern"]["color"], "#8fb1d9");
+    assert_eq!(st["pageSetup"]["size"], "a5");
+    assert_eq!((st["pageSetup"]["width"].clone(), st["pageSetup"]["height"].clone()), (json!(794), json!(559)));
+    assert_eq!(st["pageSetup"]["paperTheme"], "oldSchool");
+
+    // The vault's own paper style wins over config.toml.
+    std::fs::create_dir_all(e.root.join(".excalidraw-vault")).unwrap();
+    std::fs::write(e.root.join(".excalidraw-vault/settings.toml"), "[paper]\nstyle = \"dots\"\n").unwrap();
+    e.ok(&["new", "vaulty"], "");
+    let s: Value = serde_json::from_slice(&e.read("vaulty.excalidraw")).unwrap();
+    assert_eq!(s["appState"]["viewBackgroundPattern"]["type"], "dots");
+    assert_eq!(s["appState"]["viewBackgroundPattern"]["spacing"], 20);
+
+    // `--from` keeps the given scene untouched.
+    let given = scene("mine");
+    e.ok(&["new", "given", "--from", "-"], &given.to_string());
+    let s: Value = serde_json::from_slice(&e.read("given.excalidraw")).unwrap();
+    assert_eq!(s["appState"], json!({}));
 }

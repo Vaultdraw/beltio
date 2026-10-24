@@ -44,9 +44,7 @@ import {
   setTheme,
   updatePreferences,
 } from "./vault/preferences";
-import { getDefaultBackgroundPattern } from "./vault/paperDefaults";
-import { getNewDrawingPageSetup } from "./vault/pageDefaults";
-import { getPageSetupPatch } from "./page/pageSetupChange";
+import { getNewDrawingPaper } from "./vault/newDrawingPaper";
 import { isPageCommandChecked } from "./page/pageStatus";
 import {
   getSettingsStatus,
@@ -1187,19 +1185,13 @@ export const VaultApp = ({
 
   const newDrawingAppState = () => {
     const prefs = getPreferences(win);
-    const paper = {
-      viewBackgroundColor:
-        prefs.defaultCanvasBackground ||
-        (appTheme === "dark" ? "#121212" : "#ffffff"),
-      viewBackgroundPattern: getDefaultBackgroundPattern(win),
-      pageSetup: null,
-    };
-    // Page mode default: the paper theme stamps the page colours
-    const pageSetup = getNewDrawingPageSetup(win);
+    const paper = getNewDrawingPaper(
+      win,
+      appTheme === "dark" ? "#121212" : "#ffffff",
+    );
     const initialAppState = {
       theme: appTheme,
       ...paper,
-      ...(pageSetup && getPageSetupPatch(paper, pageSetup)),
       currentItemFontFamily: prefs.defaultFontFamily,
       currentItemFontSize: prefs.defaultFontSize,
       currentItemStrokeColor: prefs.defaultStrokeColor,

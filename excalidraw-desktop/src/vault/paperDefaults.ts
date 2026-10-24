@@ -70,19 +70,24 @@ export function paperPrefsFromPattern(
  * open vault's style override applied. A vault style that differs from the
  * global one starts from its own preset spacing and major lines.
  */
-export function getDefaultBackgroundPattern(
-  win?: Window | null,
+export function patternForNewDrawing(
+  prefs: PaperPrefs,
+  paperStyle: PaperPrefs["paperStyle"],
 ): BackgroundPattern | null {
-  const prefs = getPreferences(win);
-  const paperStyle = resolveSetting(
-    "paperStyle",
-    getVaultSettingsSnapshot().overrides,
-    prefs,
-  );
   return patternFromPaperPrefs(
     paperStyle === prefs.paperStyle
       ? prefs
       : { ...prefs, paperStyle, paperSpacing: 0, paperMajorEvery: 0 },
+  );
+}
+
+export function getDefaultBackgroundPattern(
+  win?: Window | null,
+): BackgroundPattern | null {
+  const prefs = getPreferences(win);
+  return patternForNewDrawing(
+    prefs,
+    resolveSetting("paperStyle", getVaultSettingsSnapshot().overrides, prefs),
   );
 }
 

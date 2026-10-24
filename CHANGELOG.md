@@ -6,6 +6,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### New
 
+- `vaultdraw new <path>` now gives a blank drawing your `[paper]` and `[page]` defaults (pattern, page mode and size, paper theme, canvas colour, and the vault's paper style), the same as New drawing in the app, also when the app is closed. A parity test keeps the app and the command line in step.
 - The gallery grid and the graph view keys are commands too: `gallery.*` (move, open, parent, close, paging) and `graph.*` (move, open, hints, filter, local, depth, fit, zoom, close). Same default keys as before, listed in the palette and Hotkeys page, rebindable in `[hotkeys]`, and active only while that view has focus. `graph.fit` now has the default key `0` in the graph.
 - Deleting images gives their memory back. Image data of deleted images is released once no undo or redo step can restore it, about 20 seconds after you stop editing. Saved drawings are unchanged. `memory.free_unused_images` turns it off, `memory.undo_steps` (default 1000, 10 to 10000) sets how many undo steps a drawing keeps, and `Memory: Free unused images` does it on demand. Both keys are in Settings → Interface → Memory.
 - File tree keys: `j`/`k` move, `h`/`l` close and open folders, `Enter` opens, `r` renames, `a`/`A` create, `d` deletes, `m` moves, `g`/`G` jump, `Esc` goes back to the canvas. **Mod+Alt+F** focuses the tree.

@@ -9,6 +9,7 @@ pub mod fsops;
 pub mod instance;
 pub mod json_ascii;
 pub mod links;
+pub mod new_drawing;
 pub mod lock;
 pub mod migrate;
 pub mod ops;

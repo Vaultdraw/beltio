@@ -1,0 +1,818 @@
+{
+  "note": "Shared by newDrawingPaper.test.ts and vaultdraw-core new_drawing.rs. Regenerate: UPDATE_PARITY=1 vitest run src/tests/newDrawingPaper.test.ts",
+  "cases": [
+    {
+      "name": "defaults",
+      "config": {},
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": null
+      }
+    },
+    {
+      "name": "canvas background",
+      "config": {
+        "appearance": {
+          "canvas_background": "#121212"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#121212",
+        "viewBackgroundPattern": null,
+        "pageSetup": null
+      }
+    },
+    {
+      "name": "invalid canvas background",
+      "config": {
+        "appearance": {
+          "canvas_background": "not a colour!"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": null
+      }
+    },
+    {
+      "name": "paper grid preset",
+      "config": {
+        "paper": {
+          "style": "grid"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": {
+          "type": "grid",
+          "spacing": 20,
+          "color": null,
+          "opacity": 1,
+          "majorEvery": 5,
+          "marginLine": true
+        },
+        "pageSetup": null
+      }
+    },
+    {
+      "name": "paper lines preset",
+      "config": {
+        "paper": {
+          "style": "lines"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": {
+          "type": "lines",
+          "spacing": 32,
+          "color": null,
+          "opacity": 1,
+          "majorEvery": 1,
+          "marginLine": true
+        },
+        "pageSetup": null
+      }
+    },
+    {
+      "name": "paper dots preset",
+      "config": {
+        "paper": {
+          "style": "dots"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": {
+          "type": "dots",
+          "spacing": 20,
+          "color": null,
+          "opacity": 1,
+          "majorEvery": 1,
+          "marginLine": true
+        },
+        "pageSetup": null
+      }
+    },
+    {
+      "name": "paper graph preset",
+      "config": {
+        "paper": {
+          "style": "graph"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": {
+          "type": "graph",
+          "spacing": 16,
+          "color": null,
+          "opacity": 1,
+          "majorEvery": 5,
+          "marginLine": true
+        },
+        "pageSetup": null
+      }
+    },
+    {
+      "name": "paper isometric preset",
+      "config": {
+        "paper": {
+          "style": "isometric"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": {
+          "type": "isometric",
+          "spacing": 24,
+          "color": null,
+          "opacity": 1,
+          "majorEvery": 1,
+          "marginLine": true
+        },
+        "pageSetup": null
+      }
+    },
+    {
+      "name": "paper tuned",
+      "config": {
+        "paper": {
+          "style": "graph",
+          "spacing": 24,
+          "color": "#AABBCC",
+          "opacity": 0.4,
+          "major_every": 10,
+          "margin_line": false
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": {
+          "type": "graph",
+          "spacing": 24,
+          "color": "#aabbcc",
+          "opacity": 0.4,
+          "majorEvery": 10,
+          "marginLine": false
+        },
+        "pageSetup": null
+      }
+    },
+    {
+      "name": "paper invalid values fall back one by one",
+      "config": {
+        "paper": {
+          "style": "dots",
+          "spacing": 3,
+          "color": "red",
+          "opacity": 5,
+          "major_every": 2.5
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": {
+          "type": "dots",
+          "spacing": 20,
+          "color": null,
+          "opacity": 1,
+          "majorEvery": 1,
+          "marginLine": true
+        },
+        "pageSetup": null
+      }
+    },
+    {
+      "name": "paper unknown style",
+      "config": {
+        "paper": {
+          "style": "wavy"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": null
+      }
+    },
+    {
+      "name": "vault style differs: preset spacing",
+      "config": {
+        "paper": {
+          "style": "grid",
+          "spacing": 40,
+          "major_every": 8
+        }
+      },
+      "vault": {
+        "paper": {
+          "style": "dots"
+        }
+      },
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": {
+          "type": "dots",
+          "spacing": 20,
+          "color": null,
+          "opacity": 1,
+          "majorEvery": 1,
+          "marginLine": true
+        },
+        "pageSetup": null
+      }
+    },
+    {
+      "name": "vault style same: keeps tuning",
+      "config": {
+        "paper": {
+          "style": "grid",
+          "spacing": 40,
+          "major_every": 8
+        }
+      },
+      "vault": {
+        "paper": {
+          "style": "grid"
+        }
+      },
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": {
+          "type": "grid",
+          "spacing": 40,
+          "color": null,
+          "opacity": 1,
+          "majorEvery": 8,
+          "marginLine": true
+        },
+        "pageSetup": null
+      }
+    },
+    {
+      "name": "vault plain",
+      "config": {
+        "paper": {
+          "style": "grid"
+        }
+      },
+      "vault": {
+        "paper": {
+          "style": "plain"
+        }
+      },
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": null
+      }
+    },
+    {
+      "name": "vault invalid style ignored",
+      "config": {
+        "paper": {
+          "style": "grid"
+        }
+      },
+      "vault": {
+        "paper": {
+          "style": "bogus"
+        }
+      },
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": {
+          "type": "grid",
+          "spacing": 20,
+          "color": null,
+          "opacity": 1,
+          "majorEvery": 5,
+          "marginLine": true
+        },
+        "pageSetup": null
+      }
+    },
+    {
+      "name": "page normal mode",
+      "config": {
+        "page": {
+          "mode": "normal",
+          "size": "a3"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": null
+      }
+    },
+    {
+      "name": "page default setup",
+      "config": {
+        "page": {
+          "mode": "page"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "a4",
+          "orientation": "portrait",
+          "width": 794,
+          "height": 1123,
+          "pageCount": 1,
+          "paperTheme": "normal"
+        }
+      }
+    },
+    {
+      "name": "page letter landscape continuous",
+      "config": {
+        "page": {
+          "mode": "page",
+          "size": "letter",
+          "orientation": "landscape",
+          "layout": "continuous"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": {
+          "enabled": true,
+          "layout": "continuous",
+          "size": "letter",
+          "orientation": "landscape",
+          "width": 1056,
+          "height": 816,
+          "pageCount": 1,
+          "paperTheme": "normal"
+        }
+      }
+    },
+    {
+      "name": "page size a3",
+      "config": {
+        "page": {
+          "mode": "page",
+          "size": "a3"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "a3",
+          "orientation": "portrait",
+          "width": 1123,
+          "height": 1587,
+          "pageCount": 1,
+          "paperTheme": "normal"
+        }
+      }
+    },
+    {
+      "name": "page size a4",
+      "config": {
+        "page": {
+          "mode": "page",
+          "size": "a4"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "a4",
+          "orientation": "portrait",
+          "width": 794,
+          "height": 1123,
+          "pageCount": 1,
+          "paperTheme": "normal"
+        }
+      }
+    },
+    {
+      "name": "page size a5",
+      "config": {
+        "page": {
+          "mode": "page",
+          "size": "a5"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "a5",
+          "orientation": "portrait",
+          "width": 559,
+          "height": 794,
+          "pageCount": 1,
+          "paperTheme": "normal"
+        }
+      }
+    },
+    {
+      "name": "page size b5",
+      "config": {
+        "page": {
+          "mode": "page",
+          "size": "b5"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "b5",
+          "orientation": "portrait",
+          "width": 665,
+          "height": 945,
+          "pageCount": 1,
+          "paperTheme": "normal"
+        }
+      }
+    },
+    {
+      "name": "page size legal",
+      "config": {
+        "page": {
+          "mode": "page",
+          "size": "legal"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "legal",
+          "orientation": "portrait",
+          "width": 816,
+          "height": 1344,
+          "pageCount": 1,
+          "paperTheme": "normal"
+        }
+      }
+    },
+    {
+      "name": "page size tablet",
+      "config": {
+        "page": {
+          "mode": "page",
+          "size": "tablet"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "tablet",
+          "orientation": "portrait",
+          "width": 834,
+          "height": 1194,
+          "pageCount": 1,
+          "paperTheme": "normal"
+        }
+      }
+    },
+    {
+      "name": "page size tabletLarge",
+      "config": {
+        "page": {
+          "mode": "page",
+          "size": "tabletLarge"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "tabletLarge",
+          "orientation": "portrait",
+          "width": 1032,
+          "height": 1376,
+          "pageCount": 1,
+          "paperTheme": "normal"
+        }
+      }
+    },
+    {
+      "name": "page size phone",
+      "config": {
+        "page": {
+          "mode": "page",
+          "size": "phone"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "phone",
+          "orientation": "portrait",
+          "width": 393,
+          "height": 852,
+          "pageCount": 1,
+          "paperTheme": "normal"
+        }
+      }
+    },
+    {
+      "name": "page custom size",
+      "config": {
+        "page": {
+          "mode": "page",
+          "size": "custom",
+          "width": 600,
+          "height": 900
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "custom",
+          "orientation": "portrait",
+          "width": 600,
+          "height": 900,
+          "pageCount": 1,
+          "paperTheme": "normal"
+        }
+      }
+    },
+    {
+      "name": "page custom size, one side unset",
+      "config": {
+        "page": {
+          "mode": "page",
+          "size": "custom",
+          "width": 600
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "custom",
+          "orientation": "portrait",
+          "width": 600,
+          "height": 1123,
+          "pageCount": 1,
+          "paperTheme": "normal"
+        }
+      }
+    },
+    {
+      "name": "page custom size, invalid side",
+      "config": {
+        "page": {
+          "mode": "page",
+          "size": "custom",
+          "width": 50
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": null,
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "custom",
+          "orientation": "portrait",
+          "width": 794,
+          "height": 1123,
+          "pageCount": 1,
+          "paperTheme": "normal"
+        }
+      }
+    },
+    {
+      "name": "page old school on plain",
+      "config": {
+        "page": {
+          "mode": "page",
+          "paper_theme": "old_school"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#f8efd4",
+        "viewBackgroundPattern": {
+          "type": "lines",
+          "spacing": 32,
+          "color": "#8fb1d9",
+          "opacity": 1,
+          "majorEvery": 1,
+          "marginLine": true
+        },
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "a4",
+          "orientation": "portrait",
+          "width": 794,
+          "height": 1123,
+          "pageCount": 1,
+          "paperTheme": "oldSchool"
+        }
+      }
+    },
+    {
+      "name": "page old school recolours a pattern",
+      "config": {
+        "paper": {
+          "style": "dots",
+          "color": "#112233"
+        },
+        "page": {
+          "mode": "page",
+          "paper_theme": "old_school"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#f8efd4",
+        "viewBackgroundPattern": {
+          "type": "dots",
+          "spacing": 20,
+          "color": "#8fb1d9",
+          "opacity": 1,
+          "majorEvery": 1,
+          "marginLine": true
+        },
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "a4",
+          "orientation": "portrait",
+          "width": 794,
+          "height": 1123,
+          "pageCount": 1,
+          "paperTheme": "oldSchool"
+        }
+      }
+    },
+    {
+      "name": "page normal theme resets colours",
+      "config": {
+        "appearance": {
+          "canvas_background": "#222222"
+        },
+        "paper": {
+          "style": "grid",
+          "color": "#112233"
+        },
+        "page": {
+          "mode": "page",
+          "paper_theme": "normal"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": {
+          "type": "grid",
+          "spacing": 20,
+          "color": null,
+          "opacity": 1,
+          "majorEvery": 5,
+          "marginLine": true
+        },
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "a4",
+          "orientation": "portrait",
+          "width": 794,
+          "height": 1123,
+          "pageCount": 1,
+          "paperTheme": "normal"
+        }
+      }
+    },
+    {
+      "name": "page match theme resets colours",
+      "config": {
+        "paper": {
+          "style": "lines",
+          "color": "#112233"
+        },
+        "page": {
+          "mode": "page",
+          "paper_theme": "match"
+        }
+      },
+      "vault": {},
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": {
+          "type": "lines",
+          "spacing": 32,
+          "color": null,
+          "opacity": 1,
+          "majorEvery": 1,
+          "marginLine": true
+        },
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "a4",
+          "orientation": "portrait",
+          "width": 794,
+          "height": 1123,
+          "pageCount": 1,
+          "paperTheme": "match"
+        }
+      }
+    },
+    {
+      "name": "page with a vault style",
+      "config": {
+        "paper": {
+          "style": "grid"
+        },
+        "page": {
+          "mode": "page"
+        }
+      },
+      "vault": {
+        "paper": {
+          "style": "lines"
+        }
+      },
+      "expected": {
+        "viewBackgroundColor": "#ffffff",
+        "viewBackgroundPattern": {
+          "type": "lines",
+          "spacing": 32,
+          "color": null,
+          "opacity": 1,
+          "majorEvery": 1,
+          "marginLine": true
+        },
+        "pageSetup": {
+          "enabled": true,
+          "layout": "separate",
+          "size": "a4",
+          "orientation": "portrait",
+          "width": 794,
+          "height": 1123,
+          "pageCount": 1,
+          "paperTheme": "normal"
+        }
+      }
+    }
+  ]
+}

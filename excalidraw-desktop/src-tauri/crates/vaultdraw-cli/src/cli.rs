@@ -70,7 +70,7 @@ pub enum Command {
         #[arg(long)]
         wait: bool,
     },
-    /// Create a drawing, optionally from a scene file (or - for stdin); with the app closed, a blank plain-paper drawing
+    /// Create a drawing, optionally from a scene file (or - for stdin); a blank drawing gets your [paper] and [page] defaults (the app's, read from config.toml)
     New {
         path: String,
         #[arg(long, value_name = "FILE")]

@@ -130,10 +130,6 @@ fn search(v: &Vault, params: &Value) -> Result<Value, Fail> {
     to_json(SearchResponse { query: query.to_string(), results, total_matches: total as u32, status: status(v, &i), took_ms: ms(t) })
 }
 
-/// What `vaultdraw new` writes without `--from` (plain paper: the app's paper and item
-/// defaults live in the frontend preferences).
-const BLANK_SCENE: &str = r#"{"type":"excalidraw","version":2,"source":"vaultdraw-cli","elements":[],"appState":{},"files":{}}"#;
-
 /// The failure for a vault that cannot be locked for writing.
 fn lock_fail(reason: Option<ReadOnlyReason>, pid: Option<u32>) -> Fail {
     let reason = reason.unwrap_or(ReadOnlyReason::LockUnavailable);
@@ -201,8 +197,9 @@ fn file_create(v: &Vault, params: &Value) -> Result<Value, Fail> {
     let path = target::resolve(&v.root, params, Need::Nothing, &|_| None).map_err(rpc_fail)?;
     let blank: Value;
     let scene = match params.get("scene") {
+        // The app's `[paper]` / `[page]` defaults (and the vault's paper style), as the app applies them.
         None | Some(Value::Null) => {
-            blank = serde_json::from_str(BLANK_SCENE).map_err(|e| Fail::cli(e.to_string()))?;
+            blank = vaultdraw_core::new_drawing::blank_scene(&dirs()?.config, &v.root);
             &blank
         }
         Some(_) => scene_of(params)?,
