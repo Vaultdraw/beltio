@@ -23,7 +23,9 @@ export const cyrb53 = (str: string): number => {
   return 4294967296 * (2097151 & h2) + (h1 >>> 0);
 };
 
-type Versioned = Pick<ExcalidrawElement, "id" | "version" | "isDeleted">;
+type Versioned = Pick<ExcalidrawElement, "id" | "version"> & {
+  isDeleted?: boolean;
+};
 
 /** Uncached: "s" + base-36 cyrb53 of `id \0 version \1` per live element. */
 export const hashScene = (els: readonly Versioned[]): string => {
