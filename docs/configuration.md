@@ -788,6 +788,7 @@ Other programs reach a running Vaultdraw in two ways: the local control socket (
 enabled = true        # the local control socket, which the vaultdraw command uses
 uri_enabled = true    # false: ignore vaultdraw:// links and files opened from outside
 uri_allow = []        # run without asking: "new", "switch-vault", or command ids
+notify_edits = true   # show a notice when a script or AI tool edits the drawing on screen
 ```
 
 | Key | Default | What it does |
@@ -795,10 +796,11 @@ uri_allow = []        # run without asking: "new", "switch-vault", or command id
 | `control.enabled` | `true` | Starts the control socket when Vaultdraw launches. `false` turns off the `vaultdraw` command and forwarding of a second launch to the running app. Takes effect at the next launch. |
 | `control.uri_enabled` | `true` | `false` makes Vaultdraw ignore every `vaultdraw://` link and every `.excalidraw` or `.excalidrawlib` file opened from outside (the system, Finder, a web page, a script). Each one shows a notice instead, including one typed in **Links: Open a vaultdraw:// link…**. A value that is not `true` or `false`, or a `control` that is not a table, counts as off, and so does a `config.toml` that cannot be read. The macOS registration stays; the app just does nothing with it. |
 | `control.uri_allow` | `[]` | Things a link may do without asking (files from outside always ask before they are copied or imported). `"new"` creates drawings, `"switch-vault"` switches vault, and an entry with a dot (such as `"appearance.toggleMode"`) runs that command. Anything not listed asks first. A command listed here also overrides the block list, and it is the only way a link can run a plugin's command. |
+| `control.notify_edits` | `true` | Shows a notice when a script or AI tool edits the drawing on screen, for example "A script made 3 changes to Ideas. Undo reverts them." `false` hides the notice; the edit still happens. Read at each edit, so a change applies at once. Anything that is not `false` counts as `true`. |
 
 - **Live.** Both link keys are read each time a link arrives, so edits to `config.toml` apply at once. There is no watcher and no cost until a link comes in.
 - **What always asks.** Switching vault, `new` and `cmd` ask unless listed in `uri_allow`. Opening a drawing and searching never write, so they run at once.
-- **Blocked commands.** A link can run only built-in commands, and never ones that delete, move, rename, import, export, install or quit, or the link commands themselves, unless you list that exact id in `uri_allow`.
+- **Blocked commands.** A link can run only built-in commands, and never ones that delete, move, rename, import, export, install or quit, or the link commands themselves, or the `control.` and `ai.` commands, unless you list that exact id in `uri_allow`.
 - **Limit.** At most 5 links per 10 seconds are handled for each source (the system, scripts, the palette); the rest are dropped with one notice.
 
 ## Plugins (experimental)

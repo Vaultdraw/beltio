@@ -134,6 +134,23 @@ vaultdraw export "Roadmap" -o roadmap.svg   # render a drawing to PNG, SVG or PD
 
 `vaultdraw --help` lists everything.
 
+### Read and edit the drawing on screen
+
+The `scene` commands work on the drawing on screen. The app must be running.
+
+```bash
+vaultdraw scene read --scope selection            # elements in the selection (scope: all, viewport, selection)
+vaultdraw scene get 3fA9kLm2                      # elements by id (ids come from scene read)
+vaultdraw scene selection                         # the selected elements
+echo '[{"op":"add","element":{"type":"rectangle","width":120,"height":80}}]' | vaultdraw scene apply
+```
+
+- One `scene apply` is one undo step. Undo reverts the whole batch.
+- `--if-version <v>` refuses with a conflict when the drawing changed since you read it. The `version` is in the `scene read` output.
+- `--dry-run` checks the operations and changes nothing.
+- Operations are `add`, `update` (id and props) and `delete` (id). One call takes up to 500.
+- The `scene.*` methods are experimental. Their names and shapes may change before API level 2.
+
 ## Configuration
 
 Settings live in a plain-text folder (`~/.config/vaultdraw/config.toml`, plus `themes/`). Edit it by hand or in Settings, and the app reloads it live. The full reference is in [docs/configuration.md](docs/configuration.md).
