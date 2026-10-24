@@ -1069,6 +1069,7 @@ Theme, light or dark mode, and canvas colours.
 | `sync_canvas` | `false` | true or false |  | The canvas background, pencil and palette colours follow the theme. |
 | `canvas_background` | `"#ffffff"` | a colour like "#ffffff" |  | Canvas background for new drawings when `sync_canvas` is off. |
 | `accent_color` | `""` | a colour like "#6965db", or "" for the theme's own |  | Replaces the theme's primary colour, nudged for contrast; empty uses the theme's own. |
+| `snippets` | `[]` | a list of snippet names like ["wide-sidebar"] |  | CSS snippets to apply, by file name in `snippets/` without `.css`, in this order. See [CSS snippets](#css-snippets). |
 
 ### `[editor]`
 

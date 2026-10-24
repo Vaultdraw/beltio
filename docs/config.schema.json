@@ -51,6 +51,14 @@
               "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
             }
           ]
+        },
+        "snippets": {
+          "description": "CSS snippets to apply, by file name in `snippets/` without `.css`, in this order. See [CSS snippets](#css-snippets).",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

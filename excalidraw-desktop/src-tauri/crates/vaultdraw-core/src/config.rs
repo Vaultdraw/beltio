@@ -50,6 +50,8 @@ sync_canvas = false
 canvas_background = "#ffffff"
 # Replace the theme's primary colour, like "#6965db" ("" = the theme's own)
 # accent_color = ""
+# CSS snippets to apply, by file name in snippets/, like ["wide-sidebar"]
+# snippets = []
 
 [editor]
 # Defaults for new elements

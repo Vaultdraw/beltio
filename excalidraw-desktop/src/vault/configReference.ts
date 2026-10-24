@@ -52,6 +52,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       accent_color: {
         doc: "Replaces the theme's primary colour, nudged for contrast; empty uses the theme's own.",
       },
+      snippets: {
+        doc: "CSS snippets to apply, by file name in `snippets/` without `.css`, in this order. See [CSS snippets](#css-snippets).",
+      },
     },
   },
   {
