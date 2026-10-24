@@ -32,6 +32,8 @@ pub(crate) struct PluginInfo {
     pub compatible: bool,
     pub problem: Option<String>,
     pub host_disabled: Option<String>,
+    /// Set by `plugins_list`: declared permissions against the consent record.
+    pub review: super::consent::Review,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -166,6 +168,7 @@ pub(crate) fn info(l: Loaded, dir: &Path, source: Source, app_version: &str) -> 
         compatible,
         problem,
         host_disabled: None,
+        review: super::consent::Review::ok(),
     }
 }
 

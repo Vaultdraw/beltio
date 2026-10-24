@@ -3,6 +3,7 @@
 // `run()` (and thus the command wiring) is compiled out under `cfg(test)`.
 #![cfg_attr(test, allow(dead_code))]
 
+mod consent;
 mod devlog;
 mod install;
 mod launch;
@@ -71,15 +72,22 @@ async fn blocking<T: Send + 'static>(f: impl FnOnce() -> Result<T> + Send + 'sta
         .map_err(|e| err("INTERNAL", e.to_string()))?
 }
 
+fn review_of(p: &PluginInfo, confirmed: &consent::Record) -> consent::Review {
+    consent::review(&p.manifest.permissions, confirmed.get(&p.manifest.id), p.source == scan::Source::Bundled)
+}
+
 #[tauri::command]
 pub(crate) async fn plugins_list(app: AppHandle, rescan: Option<bool>) -> Result<PluginsList> {
     blocking(move || {
         let snap = snapshot(&app, rescan.unwrap_or(false))?;
-        let disabled = state::load(&config::resolve_dirs()?.state);
+        let state_dir = config::resolve_dirs()?.state;
+        let disabled = state::load(&state_dir);
+        let confirmed = consent::load(&state_dir);
         let mut list = snap.list.clone();
         list.safe_mode = launch::current();
         for p in &mut list.plugins {
             p.host_disabled = disabled.get(&p.manifest.id).cloned();
+            p.review = review_of(p, &confirmed);
         }
         Ok(list)
     })
@@ -92,7 +100,9 @@ pub(crate) async fn plugins_install_folder(app: AppHandle, path: String) -> Resu
         let user_root = roots(&app)?.user;
         let mut info = install::install_folder(&user_root, &PathBuf::from(path), APP_VERSION)?;
         rescan(&app)?;
-        info.host_disabled = state::load(&config::resolve_dirs()?.state).get(&info.manifest.id).cloned();
+        let state_dir = config::resolve_dirs()?.state;
+        info.host_disabled = state::load(&state_dir).get(&info.manifest.id).cloned();
+        info.review = review_of(&info, &consent::load(&state_dir));
         Ok(info)
     })
     .await
@@ -104,8 +114,22 @@ pub(crate) async fn plugins_uninstall(app: AppHandle, id: String) -> Result<()> 
         let user_root = roots(&app)?.user;
         let snap = snapshot(&app, true)?;
         install::uninstall(&user_root, snap.index.get(&id))?;
-        state::set_host_disabled(&config::resolve_dirs()?.state, &id, None)?;
+        let state_dir = config::resolve_dirs()?.state;
+        state::set_host_disabled(&state_dir, &id, None)?;
+        consent::forget(&state_dir, &id)?;
         rescan(&app).map(|_| ())
+    })
+    .await
+}
+
+/// The user confirmed the permissions a plugin declares now (the enable dialog or "Review").
+/// The set comes from the scanned manifest, never from the caller.
+#[tauri::command]
+pub(crate) async fn plugins_consent_confirm(app: AppHandle, id: String) -> Result<()> {
+    blocking(move || {
+        let snap = snapshot(&app, true)?;
+        let info = snap.list.plugins.iter().find(|p| p.manifest.id == id).ok_or_else(|| err("NOT_FOUND", "Plugin not found"))?;
+        consent::confirm(&config::resolve_dirs()?.state, &id, &info.manifest.permissions)
     })
     .await
 }

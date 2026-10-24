@@ -13,6 +13,17 @@ const MAX_SETTINGS: usize = 100;
 const MAX_TITLE: usize = 200;
 const MAX_TEXT: usize = 1000;
 const MAX_PATH: usize = 260;
+const MAX_PERMISSIONS: usize = 8;
+
+/// Permissions a plugin may declare. A declaration and a consent line, not a sandbox.
+pub(crate) const PERMISSIONS: [&str; 2] = ["vault.read", "vault.write"];
+/// Names kept for later API revisions: an app that knows them as reserved refuses a manifest that uses one.
+const RESERVED_PERMISSIONS: [&str; 3] = ["net", "secret", "control"];
+
+/// A write permission changes files with no undo: adding one needs the user's review.
+pub(crate) fn is_write_permission(p: &str) -> bool {
+    p.ends_with(".write")
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -80,6 +91,8 @@ struct Raw {
     #[serde(default)]
     activation: Vec<String>,
     #[serde(default)]
+    permissions: Vec<String>,
+    #[serde(default)]
     contributes: Contributes,
     /// Dev plugins are watched and reloaded when their files change.
     #[serde(default)]
@@ -99,6 +112,8 @@ pub(crate) struct Manifest {
     pub description: Option<String>,
     pub author: Option<String>,
     pub activation: Vec<String>,
+    #[serde(default)]
+    pub permissions: Vec<String>,
     pub contributes: Contributes,
     #[serde(default)]
     pub dev: bool,
@@ -148,6 +163,25 @@ fn check_unique_ids<'a>(what: &str, ids: impl Iterator<Item = &'a str>) -> Resul
     Ok(())
 }
 
+fn check_permissions(list: &[String]) -> Result<(), String> {
+    if list.len() > MAX_PERMISSIONS {
+        return Err(format!("Too many permissions (max {MAX_PERMISSIONS})"));
+    }
+    let mut seen = HashSet::new();
+    for p in list {
+        if RESERVED_PERMISSIONS.contains(&p.as_str()) {
+            return Err(format!("Permission '{p}' is reserved and cannot be used yet"));
+        }
+        if !PERMISSIONS.contains(&p.as_str()) {
+            return Err(format!("Unknown permission '{p}' (known: {})", PERMISSIONS.join(", ")));
+        }
+        if !seen.insert(p) {
+            return Err(format!("Duplicate permission '{p}'"));
+        }
+    }
+    Ok(())
+}
+
 fn validate(raw: Raw) -> Result<Manifest, String> {
     if !is_valid_id(&raw.id) {
         return Err(format!("Plugin id '{}' is invalid (a-z, 0-9 and -, 2 to 39 characters)", raw.id));
@@ -168,6 +202,7 @@ fn validate(raw: Raw) -> Result<Manifest, String> {
     if let Some(a) = raw.activation.iter().find(|a| *a != "onStartupFinished") {
         return Err(format!("Unknown activation event '{a}'"));
     }
+    check_permissions(&raw.permissions)?;
     let c = &raw.contributes;
     if c.commands.len() > MAX_COMMANDS || c.panels.len() > MAX_PANELS || c.settings.len() > MAX_SETTINGS {
         return Err(format!("Too many contributions (max {MAX_COMMANDS} commands, {MAX_PANELS} panels, {MAX_SETTINGS} settings)"));
@@ -196,6 +231,7 @@ fn validate(raw: Raw) -> Result<Manifest, String> {
         description: raw.description,
         author: raw.author,
         activation: raw.activation,
+        permissions: raw.permissions,
         contributes: raw.contributes,
         dev: raw.dev,
     })

@@ -1,4 +1,4 @@
-use super::{install, manifest, scan, scheme};
+use super::{consent, install, manifest, scan, scheme};
 use scan::{Index, Roots, Source};
 use std::{fs, path::{Path, PathBuf}, time::Instant};
 use super::{clear_restart, RESTART_PENDING};
@@ -685,4 +685,78 @@ fn manifest_corpus_example_plugins_parse() {
         }
     }
     assert!(n >= 5, "expected the five example manifests, found {n}");
+}
+
+// ---- permissions and the consent record ----
+
+fn perms(list: &[&str]) -> Vec<String> {
+    list.iter().map(|s| s.to_string()).collect()
+}
+
+#[test]
+fn permissions_default_to_none_and_parse() {
+    assert!(manifest::parse(&minimal("plain")).unwrap().permissions.is_empty());
+    let m = manifest::parse(&with("permissions = [\"vault.read\", \"vault.write\"]\n")).unwrap();
+    assert_eq!(m.permissions, perms(&["vault.read", "vault.write"]));
+    let json = serde_json::to_value(&m).unwrap();
+    assert_eq!(json["permissions"], serde_json::json!(["vault.read", "vault.write"]));
+}
+
+#[test]
+fn permission_rules() {
+    bad(&with("permissions = [\"vault.delete\"]\n"), "unknown permission");
+    for reserved in ["net", "secret", "control"] {
+        bad(&with(&format!("permissions = [\"{reserved}\"]\n")), "reserved");
+    }
+    bad(&with("permissions = [\"vault.read\", \"vault.read\"]\n"), "duplicate permission");
+    let nine = vec!["\"vault.read\""; 9].join(", ");
+    bad(&with(&format!("permissions = [{nine}]\n")), "too many permissions");
+    bad(&with("permissions = \"vault.read\"\n"), "permissions");
+}
+
+#[test]
+fn old_scan_cache_entries_without_permissions_still_load() {
+    let json = serde_json::to_value(manifest::parse(&minimal("plain")).unwrap()).unwrap();
+    let mut old = json.clone();
+    old.as_object_mut().unwrap().remove("permissions");
+    let m: manifest::Manifest = serde_json::from_value(old).unwrap();
+    assert!(m.permissions.is_empty());
+}
+
+#[test]
+fn review_compares_declared_with_confirmed() {
+    use consent::ReviewState::{Notice, Ok, Review};
+    let r = |declared: &[&str], confirmed: Option<&[&str]>, bundled| {
+        let c = confirmed.map(perms);
+        consent::review(&perms(declared), c.as_ref(), bundled)
+    };
+    assert_eq!(r(&[], None, false).state, Ok, "nothing declared needs no record");
+    assert_eq!(r(&["vault.read"], Some(&["vault.read"]), false).state, Ok);
+    assert_eq!(r(&["vault.read"], Some(&["vault.read", "vault.write"]), false).state, Ok, "fewer is fine");
+    let n = r(&["vault.read"], None, false);
+    assert_eq!((n.state, n.added), (Notice, perms(&["vault.read"])), "a new read permission is a notice");
+    let w = r(&["vault.read", "vault.write"], Some(&["vault.read"]), false);
+    assert_eq!((w.state, w.added), (Review, perms(&["vault.write"])), "an added write needs review");
+    assert_eq!(r(&["vault.write"], None, false).state, Review, "never confirmed counts as nothing confirmed");
+    assert_eq!(r(&["vault.write"], None, true).state, Ok, "bundled plugins need no prompt");
+}
+
+#[test]
+fn consent_record_round_trips_and_tolerates_damage() {
+    let dir = tempdir().unwrap();
+    let state = dir.path();
+    assert!(consent::load(state).is_empty(), "missing file");
+    consent::confirm(state, "demo-plugin", &perms(&["vault.write"])).unwrap();
+    consent::confirm(state, "other", &perms(&[])).unwrap();
+    let rec = consent::load(state);
+    assert_eq!(rec["demo-plugin"], perms(&["vault.write"]));
+    assert_eq!(rec["other"], Vec::<String>::new());
+    consent::confirm(state, "demo-plugin", &perms(&["vault.read"])).unwrap();
+    assert_eq!(consent::load(state)["demo-plugin"], perms(&["vault.read"]), "a confirm replaces the set");
+    consent::forget(state, "demo-plugin").unwrap();
+    consent::forget(state, "never-there").unwrap();
+    assert!(!consent::load(state).contains_key("demo-plugin"));
+    assert!(consent::confirm(state, "../evil", &[]).is_err(), "ids are validated");
+    fs::write(state.join("plugin-consent.json"), "{ not json").unwrap();
+    assert!(consent::load(state).is_empty(), "corrupt file means nothing confirmed");
 }

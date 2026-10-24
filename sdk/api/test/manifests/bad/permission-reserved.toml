@@ -1,0 +1,8 @@
+# code: permission-reserved
+# rust: reserved
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+permissions = ["net"]
