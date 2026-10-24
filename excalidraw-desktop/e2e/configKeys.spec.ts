@@ -29,7 +29,7 @@ test("an unknown config.toml key is a warning in a toast and in Settings, and Re
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("tab", { name: "General" }).click();
   const problems = dialog.getByRole("list", {
-    name: "Problems in config.toml",
+    name: "Problems in config files",
   });
   await expect(problems.getByRole("listitem")).toHaveText([message]);
   await expect(problems.getByRole("listitem")).toHaveClass(

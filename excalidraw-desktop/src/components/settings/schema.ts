@@ -77,7 +77,7 @@ export const DEFAULT_SETTINGS_PAGE: SettingsPageId = "appearance";
 
 /** Sections of the Tools page, in tab order: styled tools, then pen and laser. */
 export const TOOLS_SECTIONS = [...TOOL_DEFAULT_TOOLS, "pen", "laser"] as const;
-export type ToolsSection = typeof TOOLS_SECTIONS[number];
+export type ToolsSection = (typeof TOOLS_SECTIONS)[number];
 
 export const TOOLS_SECTION_LABELS: Record<ToolsSection, string> = {
   ...TOOL_LABELS,
@@ -123,8 +123,15 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     page: "general",
     label: "Config File",
     description:
-      "Settings live in a plain text file you can edit by hand; changes apply live.",
-    keywords: ["config.toml", "toml", "reload", "open config folder", "file"],
+      "Your config.toml is yours to edit by hand. What you change in Settings is saved to overrides.toml and wins over it. Changes apply live.",
+    keywords: [
+      "config.toml",
+      "overrides.toml",
+      "toml",
+      "reload",
+      "open config folder",
+      "file",
+    ],
   },
 
   // ---- Appearance ----

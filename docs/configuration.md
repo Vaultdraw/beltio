@@ -4,15 +4,16 @@ Everything you can change in Vaultdraw, in one place. Back to the [README](../RE
 
 All settings live in one folder, like kitty, Ghostty or Zed:
 
-| OS | Config folder | Machine state |
+| OS | Config folder | State folder (`state.json`, `overrides.toml`) |
 | --- | --- | --- |
-| macOS, Linux | `$XDG_CONFIG_HOME/vaultdraw`, else `~/.config/vaultdraw` | `$XDG_STATE_HOME/vaultdraw/state.json`, else `~/.local/state/vaultdraw/state.json` |
-| Windows | `%APPDATA%\Vaultdraw` | `%LOCALAPPDATA%\Vaultdraw\state.json` |
+| macOS, Linux | `$XDG_CONFIG_HOME/vaultdraw`, else `~/.config/vaultdraw` | `$XDG_STATE_HOME/vaultdraw`, else `~/.local/state/vaultdraw` |
+| Windows | `%APPDATA%\Vaultdraw` | `%LOCALAPPDATA%\Vaultdraw` |
 
 ```
-vaultdraw/
-├── config.toml   your settings
-└── themes/       colour themes
+config folder                 state folder
+vaultdraw/                    vaultdraw/
+├── config.toml   yours       ├── overrides.toml   what Settings saves
+└── themes/       themes      └── state.json       machine state
 ```
 
 `config.toml` is created on first launch, with every key listed and commented. The common keys and their defaults (the full list is [Every key](#every-key) below):
@@ -77,16 +78,47 @@ stroke_width = 3
 stroke_style = "dotted"
 ```
 
-- **Settings and the file stay in sync.** Changing something in Settings updates `config.toml` and keeps your comments and layout. Editing the file updates the app.
+- **Two files, two owners.** `config.toml` is yours: the app creates it once and never writes to it again. What you change in Settings goes to `overrides.toml` in the state folder, and wins over `config.toml`. See [Layers](#layers).
 - **Live reload.** Saved changes apply immediately, no restart needed. Delete a line to go back to its default.
 - **Typos are safe.** If the file can't be parsed, the app keeps the last good settings and shows a banner such as `config.toml line 7: <error>`. A value of the wrong type falls back to its default and is reported the same way. A key the app doesn't know, such as `zom` for `zoom` (or `stroke_colour` inside `[tools.arrow]`), is a warning: only that key is ignored, the rest applies, and a notice names the closest real key: `config.toml: unknown key interface.zom (ignored; did you mean interface.zoom?)`. A vault's `settings.toml` is checked the same way. Errors stay in the banner until fixed; every current error and warning is listed under **Settings → General → Config file**.
 - **Settings → Open config folder** opens the folder; **Reload** re-reads it.
 
 `state.json` holds machine state (recent vaults, navigator width, expanded folders, last-used image export options). It is not meant for hand editing.
 
+### Layers
+
+A setting's value comes from the first of these that sets it, highest first:
+
+| Layer | File | Written by |
+| --- | --- | --- |
+| Vault | `<vault>/.excalidraw-vault/settings.toml` | Settings, with **This vault** on (only the keys marked *per vault* in [Every key](#every-key)) |
+| Overrides | `overrides.toml` in the state folder | Settings, `vaultdraw config set`, the control API |
+| Your file | `config.toml` in the config folder | you, by hand |
+| Built-in | the app | nobody |
+
+```mermaid
+flowchart LR
+  D[Built-in default] --> C[config.toml]
+  C --> O[overrides.toml]
+  O --> V[Vault settings.toml]
+  V --> E[Value in effect]
+  S[Settings, CLI, control API] -- write --> O
+  Y[You, by hand] -- write --> C
+```
+
+- **Tables merge key by key.** A list or a value in a higher layer replaces the lower one. `[tools.<tool>]` and `[plugin.<id>]` are replaced as a whole, and `[hotkeys]` merges per command id.
+- **Settings never edits `config.toml`.** Your comments, order and layout stay as you wrote them, and a dotfiles checkout or a read-only config folder works.
+- **A Settings change that matches `config.toml` is not stored.** Changing a value back to what `config.toml` says removes it from `overrides.toml`. **Reset** (the default value) over a value that `config.toml` sets stores the default, so the default wins.
+- **`overrides.toml` is safe to delete.** Values fall back to `config.toml` at once. It starts with a header comment, is plain TOML, and reloads live like `config.toml`, so you can read or edit it too.
+- **Existing configs keep working.** Whatever Settings wrote to `config.toml` before stays there as the base layer; nothing is moved or rewritten. A newer Settings change to the same key goes to `overrides.toml` and wins.
+- **A broken file never loses your settings.** If either file fails to parse on reload, the app keeps the last good settings and the banner names the file (`overrides.toml line 2: ...`). At startup the file that parses still applies. While `overrides.toml` is broken Settings refuses to save, so a good write never overwrites it: fix the file or delete it.
+- **Unknown keys** are reported with the name of the file that holds them.
+- **Control switch.** `[control] enabled` is read through both files before the app starts the control socket, so `vaultdraw config set control.enabled false` holds at the next launch.
+- **Older versions** ignore `overrides.toml`, so a downgrade shows `config.toml` values only.
+
 ### Settings reference
 
-Everything here can be changed in **Settings** (Cmd/Ctrl+,) or by editing `config.toml`.
+Everything here can be changed in **Settings** (Cmd/Ctrl+,) or by editing `config.toml` (a Settings change wins over the file; see [Layers](#layers)).
 
 - **Accent colour** (Appearance, `appearance.accent_color`). Replaces the theme's primary colour in both light and dark mode, using a picker or a hex value. If the colour would be hard to read against the theme, it is nudged until it is, and Settings shows "Adjusted for contrast" with the colour actually used. **Reset** (or an empty value) goes back to the theme's own.
 - **Interface zoom** (Interface, `interface.zoom`). Scales the whole window from 50 % to 200 %. **Cmd/Ctrl+Shift + `+`**, **`-`** and **`0`** step by 10 and reset to 100 %. Plain **Cmd/Ctrl + `+`**, **`-`** and **`0`** still zoom the canvas, as in Excalidraw.
@@ -103,7 +135,7 @@ Navigator sort order, the default folder for new drawings, the templates folder,
 - **On:** the value is saved in `<vault>/.excalidraw-vault/settings.toml`, starting from the value currently in effect. Edits go there.
 - **Off:** the key is removed from that file and the global value applies again.
 
-The file lives inside the vault, so it travels with it when you copy, sync or back up the folder. Precedence is per-vault value, then `config.toml`, then the default. Like `config.toml` it is plain TOML, reloads live, keeps your comments, and a bad value is ignored with a notice while the rest still applies.
+The file lives inside the vault, so it travels with it when you copy, sync or back up the folder. Precedence is per-vault value, then `overrides.toml`, then `config.toml`, then the default (see [Layers](#layers)). Like `config.toml` it is plain TOML, reloads live, keeps your comments, and a bad value is ignored with a notice while the rest still applies.
 
 ```toml
 # <vault>/.excalidraw-vault/settings.toml

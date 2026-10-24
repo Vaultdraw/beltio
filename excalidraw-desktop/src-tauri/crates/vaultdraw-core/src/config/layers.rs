@@ -438,4 +438,34 @@ mod tests {
         update_overrides_in(&d, &[set("keys.labels.g g", json!("start")), set("keys.labels.g h", json!("home"))]).unwrap();
         assert_eq!(effective_config(&d)["keys"]["labels"], json!({"g g": "start", "g h": "home"}));
     }
+
+    /// Timing of `load_settings_in` (run with `--release --ignored --nocapture`).
+    #[test]
+    #[ignore]
+    fn bench_load_settings() {
+        let t = tempdir().unwrap();
+        let d = dirs_in(t.path());
+        load_settings_in(&d).unwrap();
+        let time = |label: &str, f: &dyn Fn()| {
+            let mut us: Vec<f64> = (0..3000)
+                .map(|_| {
+                    let start = std::time::Instant::now();
+                    f();
+                    start.elapsed().as_secs_f64() * 1e6
+                })
+                .collect();
+            us.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            println!("{label}: p50 {:.0} us, p95 {:.0} us", us[us.len() / 2], us[us.len() * 95 / 100]);
+        };
+        time("config.toml only, old path (read + parse)", &|| {
+            let _ = read_layer(0, "config", &d.config_file(), CONFIG_FILE, MAX_CONFIG_BYTES);
+        });
+        time("load_settings_in, no overrides.toml", &|| {
+            load_settings_in(&d).unwrap();
+        });
+        update_overrides_in(&d, &[set("editor.font_size", json!(33)), set("interface.zoom", json!(110)), set("saving.autosave_delay_ms", json!(800))]).unwrap();
+        time("load_settings_in, small overrides.toml", &|| {
+            load_settings_in(&d).unwrap();
+        });
+    }
 }

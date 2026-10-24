@@ -93,10 +93,18 @@ const ConfigFileSetting = () => {
           <code className="vault-config-path">
             {settingsStatus.configPath ?? "Unknown location"}
           </code>
+          {settingsStatus.overridesPath && (
+            <code
+              className="vault-config-path"
+              title="Settings saves your changes here; it wins over config.toml. Safe to delete."
+            >
+              {settingsStatus.overridesPath}
+            </code>
+          )}
           {settingsStatus.problems.length > 0 && (
             <ul
               className="vault-config-problems"
-              aria-label="Problems in config.toml"
+              aria-label="Problems in config files"
             >
               {settingsStatus.problems.map((problem) => (
                 <li

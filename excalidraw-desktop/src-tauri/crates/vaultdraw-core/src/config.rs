@@ -29,8 +29,9 @@ pub const TEMP_PREFIX: &str = ".excalidraw-tmp-";
 
 /// Written verbatim on first launch (when `config.toml` does not exist).
 pub const DEFAULT_CONFIG: &str = r##"# Vaultdraw configuration
-# Edit by hand or in Settings; changes apply live.
-# Delete a line to go back to its default.
+# Edit by hand; changes apply live. Delete a line to go back to its default.
+# This file is yours: Settings never writes to it. What you change in Settings
+# is saved to overrides.toml in the state folder, and wins over this file.
 
 [appearance]
 # Colour theme: a built-in name or a theme in the themes/ folder

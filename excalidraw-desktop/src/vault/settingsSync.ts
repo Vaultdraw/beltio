@@ -200,6 +200,8 @@ export interface SettingsStatus {
   configDir: string | null;
   configPath: string | null;
   statePath: string | null;
+  /** Where Settings saves what you change (the state folder). */
+  overridesPath?: string | null;
   problems: SettingsProblem[];
 }
 
@@ -882,7 +884,7 @@ export const STATE_FIELDS = [
   "hasPanned",
 ] as const;
 
-type StateField = (typeof STATE_FIELDS)[number];
+type StateField = typeof STATE_FIELDS[number];
 export type PersistedState = DeepReadonly<Pick<VaultPreferences, StateField>>;
 
 export const show = (value: unknown) =>
@@ -1385,6 +1387,7 @@ function applyLoad(
     configDir: result.configDir ?? null,
     configPath: result.configPath ?? null,
     statePath: result.statePath ?? null,
+    overridesPath: result.overridesPath ?? null,
     problems: [...loadProblems, ...rt.writeProblems],
   });
 
