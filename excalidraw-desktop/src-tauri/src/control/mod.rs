@@ -84,6 +84,19 @@ pub(crate) fn spawn(app: &AppHandle) {
     }
 }
 
+/// The control socket path and its state, for the debug info report. Reads only.
+pub(crate) fn socket_report() -> (Option<std::path::PathBuf>, String) {
+    let path = instance::paths().ok().map(|p| p.socket);
+    let state = if SERVER.get().is_some() {
+        "served by this app"
+    } else if !instance::holds_lock() {
+        "not served (another Vaultdraw holds the instance lock)"
+    } else {
+        "not served ([control] enabled = false, or it failed to start)"
+    };
+    (path, state.into())
+}
+
 /// The control settings from the merged config layers (`overrides.toml` over `config.toml`),
 /// read now; `None` when the config folders cannot be resolved. One reader shared with
 /// `vaultdraw mcp` (`vaultdraw_core::control_settings`).

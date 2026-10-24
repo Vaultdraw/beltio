@@ -102,6 +102,31 @@ pub(crate) async fn open_included_file(path: String) -> Result<()> {
 
 /// Deletes `overrides.toml` (the confirmed "reset Settings changes"); `config.toml` is untouched.
 /// Returns whether a file was deleted. The watcher reports the change like any other edit.
+/// "Config: Check config files": every layer against the schema, with lines. Reads only.
+#[tauri::command]
+pub(crate) async fn config_check() -> Result<CheckReport> {
+    Ok(check_config_in(&resolve_dirs()?))
+}
+
+/// "Config: Show debug info": the `vaultdraw doctor` report, from inside the app. Reads only.
+/// The vault is the one the control API acts on (the first open vault).
+#[tauri::command]
+pub(crate) async fn doctor_report(app: AppHandle) -> Result<DoctorReport> {
+    let dirs = resolve_dirs()?;
+    let (socket, socket_state) = crate::control::socket_report();
+    let input = DoctorInput {
+        cli_version: None,
+        app_version: Some(crate::control::APP_VERSION.into()),
+        app_state: "this app".into(),
+        api_level: vaultdraw_protocol::API_LEVEL,
+        socket,
+        socket_state,
+        vault_from: "the app".into(),
+        vault: crate::control_active_vault(&app).map(|v| v.root.clone()),
+    };
+    Ok(doctor_in(&dirs, &input))
+}
+
 #[tauri::command]
 pub(crate) async fn reset_overrides() -> Result<bool> {
     reset_overrides_in(&resolve_dirs()?)
