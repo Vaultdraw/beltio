@@ -83,13 +83,16 @@ pub(crate) fn spawn(app: &AppHandle) {
     }
 }
 
+/// The text of config.toml (1 MiB cap), or None when it cannot be found or read.
+pub(crate) fn config_text() -> Option<String> {
+    let dirs = crate::config::resolve_dirs().ok()?;
+    let path = dirs.config.join("config.toml");
+    crate::config::read_toml_text(&path, "config.toml", 1024 * 1024).ok()
+}
+
 /// `[control] enabled` from config.toml; a missing or broken config means enabled.
 fn control_enabled_in_config() -> bool {
-    let Ok(dirs) = crate::config::resolve_dirs() else { return true };
-    let path = dirs.config.join("config.toml");
-    crate::config::read_toml_text(&path, "config.toml", 1024 * 1024)
-        .map(|text| control_enabled(&text))
-        .unwrap_or(true)
+    config_text().map(|text| control_enabled(&text)).unwrap_or(true)
 }
 
 pub(crate) fn control_enabled(toml_text: &str) -> bool {

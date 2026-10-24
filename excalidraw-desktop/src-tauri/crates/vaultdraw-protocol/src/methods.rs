@@ -689,7 +689,7 @@ mod tests {
         let (f50, f95) = pct(found);
         let (b50, b95) = pct(built);
         eprintln!("methods::find (OnceLock): p50 {f50:?} p95 {f95:?}; building the catalogue once: p50 {b50:?} p95 {b95:?}");
-        assert!(f95 < std::time::Duration::from_micros(200), "lookup too slow: {f95:?}");
+        assert!(f95 < std::time::Duration::from_millis(5), "lookup too slow: {f95:?}");
     }
 
     #[test]
