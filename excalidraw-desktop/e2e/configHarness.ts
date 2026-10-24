@@ -10,6 +10,8 @@ type HarnessWindow = Window & {
   __e2eIncludes?: { name: string; path: string; config: Table | null }[];
   /** When set, overrides.toml "fails to parse" with this message (line 2). */
   __e2eOverridesBroken?: string | null;
+  /** The report `config_check` returns (default: a clean one). */
+  __e2eCheck?: Record<string, unknown>;
 };
 
 const merge = (base: Table, higher: Table): Table => {
@@ -88,6 +90,21 @@ export function startConfigHarness(win: Window) {
         ],
         state: {},
       };
+    }
+    if (cmd === "config_check") {
+      return (
+        w.__e2eCheck ?? {
+          ok: true,
+          errors: 0,
+          warnings: 0,
+          text: "No problems in 2 config files.",
+          files: [],
+          problems: [],
+        }
+      );
+    }
+    if (cmd === "doctor_report") {
+      return { text: "Vaultdraw doctor\nconfig: ok", report: {} };
     }
     if (cmd === "reset_overrides") {
       const existed = Object.keys(w.__e2eOverrides ?? {}).length > 0;

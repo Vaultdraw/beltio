@@ -4,6 +4,7 @@
  * key. Resetting asks first (a shared confirmation, also used by Settings → General).
  */
 import { toastStore } from "../toasts/toastStore";
+import { checkConfig, doctorReport } from "../vault/configReport";
 import {
   getSettingsStatus,
   isConfigFolderActive,
@@ -23,6 +24,8 @@ export const CONFIG_COMMAND_IDS = {
   openOverrides: "config.openOverrides",
   openFolder: "config.openFolder",
   resetOverrides: "config.resetOverrides",
+  check: "config.check",
+  debugInfo: "config.debugInfo",
 } as const;
 
 const I = CONFIG_COMMAND_IDS;
@@ -43,6 +46,8 @@ export const CONFIG_COMMANDS: CommandDefinition[] = [
   ),
   command(I.openFolder, "Config: Open config folder"),
   command(I.resetOverrides, "Config: Reset all Settings changes"),
+  command(I.check, "Config: Check config files"),
+  command(I.debugInfo, "Config: Show debug info"),
 ];
 
 // ---------------------------------------------------------------------------
@@ -84,6 +89,63 @@ export async function confirmResetOverrides(): Promise<void> {
     });
   } catch (err) {
     fail("Could not reset Settings changes", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The report dialog (config check, debug info): a tiny store; <ReportDialogHost>
+// in the app shell renders it, loaded on first use.
+// ---------------------------------------------------------------------------
+
+export type ReportTone = "ok" | "warning" | "error";
+export interface ReportRequest {
+  title: string;
+  text: string;
+  tone: ReportTone;
+}
+
+let report: ReportRequest | null = null;
+const reportListeners = new Set<() => void>();
+const setReport = (next: ReportRequest | null) => {
+  report = next;
+  reportListeners.forEach((l) => l());
+};
+
+export const subscribeReport = (listener: () => void) => {
+  reportListeners.add(listener);
+  return () => reportListeners.delete(listener);
+};
+export const getReport = () => report;
+export const openReport = (next: ReportRequest) => setReport(next);
+export const closeReport = () => setReport(null);
+
+/** Check the config files and show the report (command and Settings button). */
+export async function runConfigCheck(): Promise<void> {
+  if (!needsDesktop("Config check")) {
+    return;
+  }
+  try {
+    const result = await checkConfig();
+    openReport({
+      title: "Config check",
+      text: result.text,
+      tone:
+        result.errors > 0 ? "error" : result.warnings > 0 ? "warning" : "ok",
+    });
+  } catch (err) {
+    fail("Could not check the config files", err);
+  }
+}
+
+async function showDebugInfo(): Promise<void> {
+  if (!needsDesktop("Debug info")) {
+    return;
+  }
+  try {
+    const result = await doctorReport();
+    openReport({ title: "Debug info", text: result.text, tone: "ok" });
+  } catch (err) {
+    fail("Could not collect debug info", err);
   }
 }
 
@@ -163,4 +225,6 @@ export const CONFIG_COMMAND_HANDLERS: CommandHandlers = {
     "Could not open the config folder",
   ),
   [I.resetOverrides]: requestResetOverrides,
+  [I.check]: runConfigCheck,
+  [I.debugInfo]: showDebugInfo,
 };

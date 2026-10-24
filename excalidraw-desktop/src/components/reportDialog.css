@@ -1,0 +1,28 @@
+.vd-report__text {
+  margin: 0;
+  padding: var(--vd-space-2, 8px) var(--vd-space-3, 12px);
+  max-height: 50vh;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
+  user-select: text;
+  border-radius: 6px;
+  background: var(--vault-hover, rgba(127, 127, 127, 0.12));
+  border-left: 3px solid transparent;
+}
+
+.vd-report__text[data-tone="warning"] {
+  border-left-color: #d9a300;
+}
+
+.vd-report__text[data-tone="error"] {
+  border-left-color: #d64545;
+}
+
+.vd-report__status {
+  margin-right: auto;
+  font-size: 12px;
+  opacity: 0.8;
+}

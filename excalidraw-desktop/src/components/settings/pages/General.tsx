@@ -1,6 +1,9 @@
 import { useState } from "react";
 
-import { requestResetOverrides } from "../../../commands/configCommands";
+import {
+  requestResetOverrides,
+  runConfigCheck,
+} from "../../../commands/configCommands";
 import { layerFileName } from "../../../vault/configSources";
 import {
   getSettingsStatus,
@@ -228,6 +231,14 @@ const ConfigFileSetting = () => {
         >
           <IconRefresh />
           <span>Reload</span>
+        </button>
+        <button
+          type="button"
+          className="vault-btn vault-btn--sm"
+          title="Check the config files for unknown keys and invalid values, with line numbers"
+          onClick={() => void runConfigCheck()}
+        >
+          <span>Check</span>
         </button>
         <button
           type="button"
