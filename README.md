@@ -147,6 +147,7 @@ echo '[{"op":"add","element":{"type":"rectangle","width":120,"height":80}}]' | v
 
 - One `scene apply` is one undo step. Undo reverts the whole batch.
 - `--if-version <v>` refuses with a conflict when the drawing changed since you read it. The `version` is in the `scene read` output.
+- After a timeout, retry with `--if-version` so a late first call cannot apply twice.
 - `--dry-run` checks the operations and changes nothing.
 - Operations are `add`, `update` (id and props) and `delete` (id). One call takes up to 500.
 - The `scene.*` methods are experimental. Their names and shapes may change before API level 2.
