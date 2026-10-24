@@ -23,7 +23,6 @@ import {
 
 import { TabContextMenu } from "./TabContextMenu";
 import { TabListPopover } from "./TabListPopover";
-import { revealTab } from "./revealTab";
 import { tabLabels } from "./tabLabels";
 import { useActiveTab, useTabList } from "./tabStore";
 import { useStripDrag } from "./useStripDrag";
@@ -261,12 +260,11 @@ export const TabStrip = memo(
       return () => ro.disconnect();
     }, []);
 
-    // The first reveal (vault open) waits a frame: scrollIntoView forces a layout mid-render.
-    const revealedOnce = useRef(false);
     useLayoutEffect(() => {
-      const deferred = !revealedOnce.current;
-      revealedOnce.current = true;
-      return revealTab(tabElement(active.id), { deferred });
+      const el = tabElement(active.id);
+      if (el && typeof el.scrollIntoView === "function") {
+        el.scrollIntoView({ block: "nearest", inline: "nearest" });
+      }
     }, [active.id]);
 
     useEffect(() => {
