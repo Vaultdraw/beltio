@@ -7,16 +7,26 @@
  */
 import type { LayerPayload } from "./settingsSync";
 
-export type SourceFile = "default" | "config.toml" | "overrides.toml";
+/** `default`, `config.toml`, `overrides.toml` or the name of an included file. */
+export type SourceFile = string;
 
 export interface KeySource {
   source: SourceFile;
+  /** Full path of the winning file when it is an included file. */
+  path?: string;
   /** The value a lower layer sets when a higher layer hides it with another one. */
-  hidden?: { file: "config.toml" | "overrides.toml"; value: unknown };
+  hidden?: { file: string; value: unknown };
 }
 
-const fileOf = (layer: LayerPayload): "config.toml" | "overrides.toml" =>
-  layer.kind === "overrides" ? "overrides.toml" : "config.toml";
+/** The file a layer is read from, by name (an included file's own name). */
+export const layerFileName = (layer: LayerPayload): string =>
+  layer.kind === "overrides"
+    ? "overrides.toml"
+    : layer.kind === "include"
+    ? layer.name ?? layer.path.split(/[\\/]/).pop() ?? layer.path
+    : "config.toml";
+
+const fileOf = layerFileName;
 
 /** Looks `key` up in one layer's content; `hotkeys.<id>` keeps dots inside the id. */
 const lookup = (config: Record<string, unknown>, key: string) => {
@@ -69,7 +79,15 @@ export function keySource(
 ): KeySource & { value?: unknown } {
   const set = [...(layers ?? [])].reverse().flatMap((layer) => {
     const found = layer.config ? lookup(layer.config, key) : null;
-    return found ? [{ file: fileOf(layer), value: found.value }] : [];
+    return found
+      ? [
+          {
+            file: fileOf(layer),
+            path: layer.kind === "include" ? layer.path : undefined,
+            value: found.value,
+          },
+        ]
+      : [];
   });
   const [top, below] = set;
   if (!top) {
@@ -77,6 +95,7 @@ export function keySource(
   }
   return {
     source: top.file,
+    ...(top.path ? { path: top.path } : {}),
     value: top.value,
     ...(below && !same(below.value, top.value)
       ? { hidden: { file: below.file, value: below.value } }
@@ -88,7 +107,7 @@ export function keySource(
 export const sourceFileOf = (
   layers: readonly LayerPayload[] | undefined,
   key: string,
-): "config.toml" | "overrides.toml" => {
+): string => {
   const found = keySource(layers, key).source;
-  return found === "overrides.toml" ? found : "config.toml";
+  return found === "default" ? "config.toml" : found;
 };

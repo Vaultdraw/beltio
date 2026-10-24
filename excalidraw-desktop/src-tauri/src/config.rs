@@ -88,6 +88,18 @@ pub(crate) async fn reveal_overrides() -> Result<()> {
     }
 }
 
+/// Opens an included file with the default app. Only a file that `config.toml` (or a file it
+/// includes) names right now can be opened: the path comes from the page, so it is checked.
+#[tauri::command]
+pub(crate) async fn open_included_file(path: String) -> Result<()> {
+    let wanted = PathBuf::from(&path);
+    let found = layer_files(&resolve_dirs()?);
+    if !found.files.contains(&wanted) || !wanted.is_file() {
+        return Err(err("NOT_FOUND", format!("{path} is not an included file")));
+    }
+    launch(&[wanted.as_os_str()], false)
+}
+
 /// Deletes `overrides.toml` (the confirmed "reset Settings changes"); `config.toml` is untouched.
 /// Returns whether a file was deleted. The watcher reports the change like any other edit.
 #[tauri::command]

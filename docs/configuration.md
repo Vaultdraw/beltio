@@ -94,16 +94,19 @@ A setting's value comes from the first of these that sets it, highest first:
 | Vault | `<vault>/.excalidraw-vault/settings.toml` | Settings, with **This vault** on (only the keys marked *per vault* in [Every key](#every-key)) |
 | Overrides | `overrides.toml` in the state folder | Settings, `vaultdraw config set`, the control API |
 | Your file | `config.toml` in the config folder | you, by hand |
+| Included files | named by `[include]` in `config.toml` ([see below](#including-other-files)) | you, by hand |
 | Built-in | the app | nobody |
 
 ```mermaid
 flowchart LR
-  D[Built-in default] --> C[config.toml]
+  D[Built-in default] --> I[Included files]
+  I --> C[config.toml]
   C --> O[overrides.toml]
   O --> V[Vault settings.toml]
   V --> E[Value in effect]
   S[Settings, CLI, control API] -- write --> O
   Y[You, by hand] -- write --> C
+  Y -- write --> I
 ```
 
 - **Tables merge key by key.** A list or a value in a higher layer replaces the lower one. `[tools.<tool>]` and `[plugin.<id>]` are replaced as a whole, and `[hotkeys]` merges per command id.
@@ -114,8 +117,36 @@ flowchart LR
 - **A broken file never loses your settings.** If either file fails to parse on reload, the app keeps the last good settings and the banner names the file (`overrides.toml line 2: ...`). At startup the file that parses still applies. While either file is broken Settings refuses to save (it could not tell what your change means, and a good write must never overwrite a file you still have to fix): fix the file, or delete `overrides.toml`.
 - **Removing a value that `config.toml` sets.** A value in `config.toml` can be replaced from Settings (Reset stores the default), but a key with no default, such as a `[keys.labels]` entry, can only be removed in `config.toml` itself: Settings shows a `config.toml` chip on that name and disables its remove button. `vaultdraw config set <key> null` drops what Settings or the CLI stored in `overrides.toml`; it does not edit `config.toml`. A key inside `[tools.<tool>]` or `[plugin.<id>]` set from the CLI rewrites that whole table in `overrides.toml`, starting from the table in effect, so its other keys keep their values.
 - **Unknown keys** are reported with the name of the file that holds them.
-- **Control switch.** `[control] enabled` is read through both files before the app starts the control socket, so `vaultdraw config set control.enabled false` holds at the next launch.
+- **Control switch.** `[control] enabled` is read through every layer (included files, `config.toml`, `overrides.toml`) before the app starts the control socket, so `vaultdraw config set control.enabled false` holds at the next launch.
 - **Older versions** ignore `overrides.toml`, so a downgrade shows `config.toml` values only.
+
+### Including other files
+
+Split `config.toml` into pieces, or share part of it between machines, with `[include]` (like Alacritty's `import`). It is written by hand and costs nothing when absent: no file is read unless `config.toml` has the table.
+
+```toml
+# config.toml
+[include]
+files = [
+  "keys.toml",                         # next to config.toml
+  "machine/",                          # every *.toml directly inside, sorted by name
+  "~/dotfiles/vaultdraw/colors.toml",
+]
+```
+
+| Rule | Behaviour |
+| --- | --- |
+| Entries | A file, or a folder: its `*.toml` files, sorted by name, not its sub-folders. |
+| Paths | Relative to the folder of the file that lists them, or starting with `~` (your home folder). `${VAR}` and `~user` are not supported. |
+| Order | Later entries win over earlier ones. The file that includes wins over the files it includes. `overrides.toml` and the vault's settings win over all of them. |
+| Nesting | An included file can have its own `[include]`, up to 8 levels deep. Each file is read once, at its first place. |
+| Cycles | `a.toml` including `b.toml` including `a.toml` is skipped with a warning (`include cycle: a.toml -> b.toml -> a.toml`). |
+| Problems | A missing, unreadable, symlinked, oversize (over 1 MiB), non-UTF-8 or broken file is skipped with a warning that names it (and the line); everything else applies. Limits: 32 files and 4 MiB in all. |
+| Where | Only `config.toml` and the files it includes. An `[include]` in `overrides.toml` or in a vault's `settings.toml` is ignored (a cloned vault must not pull in files by path). |
+| Vaults | A path inside a vault (a folder with `.excalidraw-vault`) is refused. |
+| Symlinks | Refused, like a symlinked `config.toml`. |
+
+Nothing is loaded that you did not name: there is no automatic folder and no globbing. Vaultdraw never writes to an included file; Settings still saves to `overrides.toml`, and a change that matches what an include says is not stored. The chip beside a setting names the included file it comes from, **Settings → General → Config files** lists every included file with its status and an Open button, and `vaultdraw config get <key> --source` prints its path. Editing an included file, or creating a `*.toml` in an included folder, reloads live; if a folder cannot be watched, press **Reload**.
 
 ### Where a value comes from
 
@@ -124,6 +155,7 @@ Every setting with a config key shows a small chip beside its name when it is no
 | Chip says | Meaning | Actions |
 | --- | --- | --- |
 | `config.toml` | Your file sets it. A change made in Settings is saved apart and wins. | **Use default** (stores the default), **Open config.toml** |
+| the name of an included file, such as `colors.toml` | That included file sets it. | **Use default**, **Open** that file |
 | `overrides` | Settings saved it. | **Reset to default** |
 | `overrides ≠` | Settings saved it and hides a different `config.toml` value, which the note names (`config.toml says 14`). | **Reset to config.toml value**, **Open config.toml** |
 
@@ -133,7 +165,7 @@ Every setting with a config key shows a small chip beside its name when it is no
 
 | Command | Does |
 | --- | --- |
-| `config.reload` | Re-read `config.toml` and `overrides.toml` now |
+| `config.reload` | Re-read `config.toml`, the included files and `overrides.toml` now |
 | `config.openFile` | Open `config.toml` with the default app |
 | `config.openOverrides` | Show `overrides.toml` in the file manager (its folder if nothing was saved yet) |
 | `config.openFolder` | Open the config folder |
@@ -149,7 +181,7 @@ vaultdraw config get interface.zoom --source
 vaultdraw config path --all          # config.toml, then overrides.toml
 ```
 
-With `--json`, `get --source` adds `"source"` (`default`, `config.toml` or `overrides.toml`) and, when a higher file hides another value, `"hidden": {"file": ..., "value": ...}`. `--source` needs a key. A value shown as `null` with source `default` means no file sets the key.
+With `--json`, `get --source` adds `"source"` (`default`, `config.toml`, `overrides.toml` or the full path of an included file) and, when a higher file hides another value, `"hidden": {"file": ..., "value": ...}`. `--source` needs a key. A value shown as `null` with source `default` means no file sets the key.
 
 A value that fails validation is reported with the file it came from (`overrides.toml: editor.font_size = "big" is not valid ...`).
 

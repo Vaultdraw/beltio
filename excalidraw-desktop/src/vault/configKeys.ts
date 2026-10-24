@@ -7,7 +7,12 @@
  */
 
 /** config.toml tables whose keys are open (command ids, plugin ids): never checked. */
-export const OPEN_TABLES: ReadonlySet<string> = new Set(["hotkeys", "plugin"]);
+export const OPEN_TABLES: ReadonlySet<string> = new Set([
+  "hotkeys",
+  "plugin",
+  // `[include] files` is read by the Rust loader, not by a mapping.
+  "include",
+]);
 
 export interface UnknownKey {
   /** Dotted key as written: `table.key`, `table.sub.key`, `table` or a root key. */

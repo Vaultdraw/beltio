@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react";
 import { keySource, type KeySource } from "../../vault/configSources";
 import {
   openConfigFile,
+  openIncludedFile,
   resetConfigKey,
   type SettingsStatus,
 } from "../../vault/settingsSync";
@@ -42,11 +43,18 @@ export const ConfigSourceChip = ({
   onToggle: () => void;
 }) => {
   const fromOverrides = source.source === "overrides.toml";
+  const label = fromOverrides ? "overrides" : source.source;
   return (
     <button
       type="button"
       className="vault-source-chip"
-      data-source={fromOverrides ? "overrides" : "config"}
+      data-source={
+        fromOverrides
+          ? "overrides"
+          : source.source === "config.toml"
+          ? "config"
+          : "include"
+      }
       data-hides={source.hidden ? "true" : undefined}
       aria-expanded={open}
       aria-label={`Value from ${source.source}${
@@ -54,7 +62,7 @@ export const ConfigSourceChip = ({
       }`}
       onClick={onToggle}
     >
-      {fromOverrides ? "overrides" : "config.toml"}
+      {label}
       {source.hidden && <span aria-hidden="true"> ≠</span>}
     </button>
   );
@@ -100,15 +108,22 @@ export const ConfigSourceNote = ({
         : button("Reset to default", () => resetConfigKey(source.key)),
     );
   } else {
+    const file = source.source;
     text = (
       <>
-        Set in config.toml. Edit that file to change it; a change made here is
-        saved apart and wins over it.
+        Set in <code>{file}</code>. Edit that file to change it; a change made
+        here is saved apart and wins over it.
       </>
     );
     actions.push(button("Use default", () => resetConfigKey(source.key, true)));
   }
-  actions.push(button("Open config.toml", () => openConfigFile()));
+  actions.push(
+    fromOverrides || source.source === "config.toml"
+      ? button("Open config.toml", () => openConfigFile())
+      : button(`Open ${source.source}`, () =>
+          openIncludedFile(source.path ?? source.source),
+        ),
+  );
   return (
     <div className="vault-source-note" role="group" aria-label="Value source">
       <span>{text}</span>

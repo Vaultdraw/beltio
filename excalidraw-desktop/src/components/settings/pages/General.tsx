@@ -1,11 +1,13 @@
 import { useState } from "react";
 
 import { requestResetOverrides } from "../../../commands/configCommands";
+import { layerFileName } from "../../../vault/configSources";
 import {
   getSettingsStatus,
   isWarning,
   openConfigDir,
   openConfigFile,
+  openIncludedFile,
   reloadSettings,
   revealOverrides,
   type LayerPayload,
@@ -28,25 +30,33 @@ const LayerList = ({
   <ul className="vault-config-layers" aria-label="Config files">
     {layers.map((layer) => {
       const overrides = layer.kind === "overrides";
+      const included = layer.kind === "include";
+      const fileName = layerFileName(layer);
       const status =
         layer.status === "error"
-          ? "has an error"
+          ? "skipped, has an error"
           : layer.status === "missing"
-          ? overrides
+          ? included
+            ? "not found"
+            : overrides
             ? "not created yet (no Settings changes)"
             : "missing"
           : "loaded";
       return (
         <li key={layer.id} className="vault-config-layer">
           <span>
-            <span className="vault-config-layer__name">
-              {overrides ? "overrides.toml" : "config.toml"}
-            </span>{" "}
+            <span className="vault-config-layer__name">{fileName}</span>{" "}
             <span
               className="vault-config-layer__status"
               data-status={layer.status}
             >
-              {overrides ? "Settings changes, wins" : "yours, never edited"}
+              {overrides
+                ? "Settings changes, wins"
+                : included
+                ? `included by ${
+                    layer.from?.split(/[\\/]/).pop() ?? "config.toml"
+                  }`
+                : "yours, never edited"}
               {" · "}
               {status}
             </span>
@@ -58,7 +68,8 @@ const LayerList = ({
             type="button"
             className="vault-btn vault-btn--sm"
             onClick={() => onOpen(layer)}
-            aria-label={`Open ${overrides ? "overrides.toml" : "config.toml"}`}
+            aria-label={`Open ${fileName}`}
+            disabled={included && layer.status === "missing"}
           >
             Open
           </button>
@@ -90,7 +101,11 @@ const ConfigFileSetting = () => {
   const handleOpenLayer = async (layer: LayerPayload) => {
     setAction(null);
     try {
-      await (layer.kind === "overrides" ? revealOverrides() : openConfigFile());
+      await (layer.kind === "overrides"
+        ? revealOverrides()
+        : layer.kind === "include"
+        ? openIncludedFile(layer.path)
+        : openConfigFile());
     } catch (err) {
       setAction({
         message: `Could not open ${layer.path}: ${errorText(err)}`,

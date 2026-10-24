@@ -85,7 +85,7 @@ import {
   unknownKeyMessage,
   type KnownIndex,
 } from "./configKeys";
-import { sourceFileOf } from "./configSources";
+import { layerFileName, sourceFileOf } from "./configSources";
 import { isTauriAvailable } from "./DesktopVaultRepository";
 import {
   attachPreferencesStore,
@@ -153,7 +153,11 @@ export interface ConfigErrorPayload {
 /** One config layer as `load_settings` reports it (lowest first). */
 export interface LayerPayload {
   id: number;
-  kind: "config" | "overrides";
+  kind: "config" | "overrides" | "include";
+  /** File name: `config.toml`, `overrides.toml` or the included file's name. */
+  name?: string;
+  /** For an included file: the file that names it. */
+  from?: string | null;
   path: string;
   status: "ok" | "missing" | "error";
   error: ConfigErrorPayload | null;
@@ -161,8 +165,7 @@ export interface LayerPayload {
   config: Record<string, unknown> | null;
 }
 
-const layerFile = (layer: LayerPayload) =>
-  layer.kind === "overrides" ? "overrides.toml" : "config.toml";
+const layerFile = (layer: LayerPayload) => layerFileName(layer);
 
 export interface LoadSettingsResult {
   configDir: string;
@@ -174,6 +177,8 @@ export interface LoadSettingsResult {
   overridesError?: ConfigErrorPayload | null;
   overridesPath?: string;
   layers?: LayerPayload[];
+  /** Include problems that name no file (cycles, nesting, caps). */
+  includeWarnings?: string[];
   state: Record<string, unknown> | null;
 }
 
@@ -184,7 +189,13 @@ export interface ConfigChange {
   default?: unknown;
 }
 
-export type SettingsProblemKind = "parse" | "invalid" | "unknown" | "io";
+/** `include`: an included file or include rule was skipped (a warning, the rest applies). */
+export type SettingsProblemKind =
+  | "parse"
+  | "invalid"
+  | "unknown"
+  | "io"
+  | "include";
 
 export interface SettingsProblem {
   kind: SettingsProblemKind;
@@ -878,7 +889,7 @@ export const unknownKeyProblems = (
 
 /** Unknown keys are warnings; parse, invalid and io problems are errors. */
 export const isWarning = (problem: SettingsProblem): boolean =>
-  problem.kind === "unknown";
+  problem.kind === "unknown" || problem.kind === "include";
 
 export const STATE_FIELDS = [
   "recentVaults",
@@ -890,7 +901,7 @@ export const STATE_FIELDS = [
   "hasPanned",
 ] as const;
 
-type StateField = typeof STATE_FIELDS[number];
+type StateField = (typeof STATE_FIELDS)[number];
 export type PersistedState = DeepReadonly<Pick<VaultPreferences, StateField>>;
 
 export const show = (value: unknown) =>
@@ -1349,6 +1360,28 @@ async function flushState(rt: Runtime): Promise<void> {
  * changed. `includeState` is only set on startup: state.json belongs to this
  * process and is not watched, so reloads leave the in-memory state alone.
  */
+/** Warnings for included files that were skipped, and for include problems naming no file. */
+function includeProblems(result: LoadSettingsResult): SettingsProblem[] {
+  const rows = (result.layers ?? [])
+    .filter((l) => l.kind === "include" && l.status !== "ok" && l.error)
+    .map((l): SettingsProblem => {
+      const error = l.error as ConfigErrorPayload;
+      // Most messages already name the file; a TOML error carries only its line.
+      const text = error.message.includes(l.path)
+        ? error.message
+        : formatConfigError(error, l.path);
+      return {
+        kind: "include",
+        line: error.line,
+        message: `${text} (skipped)`,
+      };
+    });
+  const warnings = (result.includeWarnings ?? []).map(
+    (message): SettingsProblem => ({ kind: "include", message }),
+  );
+  return [...rows, ...warnings];
+}
+
 function applyLoad(
   rt: Runtime,
   result: LoadSettingsResult,
@@ -1373,8 +1406,10 @@ function applyLoad(
       message: formatConfigError(result.overridesError, "overrides.toml"),
     });
   }
+  loadProblems.push(...includeProblems(result));
   // A layer that fails to parse on a reload keeps the whole previous result;
-  // at startup the layers that parse apply.
+  // at startup the layers that parse apply. A broken included file is only a
+  // warning: that file is skipped and the rest applies.
   const keepPrevious =
     !includeState && !!(result.configError || result.overridesError);
   if (!keepPrevious && result.config && typeof result.config === "object") {
@@ -1399,7 +1434,9 @@ function applyLoad(
       ? l
       : {
           ...l,
-          config: previousLayers?.find((p) => p.id === l.id)?.config ?? null,
+          config:
+            previousLayers?.find((p) => p.id === l.id && p.path === l.path)
+              ?.config ?? null,
         },
   );
   publishStatus(rt.win, {
@@ -1571,6 +1608,11 @@ export async function openConfigDir(): Promise<void> {
 /** Open config.toml with the default app. */
 export async function openConfigFile(): Promise<void> {
   await need("The config file").invoke("open_config_file");
+}
+
+/** Open an included file with the default app (the backend checks it is one). */
+export async function openIncludedFile(path: string): Promise<void> {
+  await need("The included file").invoke("open_included_file", { path });
 }
 
 /** Show overrides.toml (the Settings changes) in the file manager. */
