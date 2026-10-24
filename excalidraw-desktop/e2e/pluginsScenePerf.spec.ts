@@ -117,3 +117,64 @@ test("scene.batch of 100 adds latency", async ({ page }) => {
   });
   expect(quantile(ms, 0.5)).toBeLessThan(200);
 });
+
+// Baseline for plugin step 4b: one batch of a connected flow (bound arrows,
+// one group, 40% text) on a small drawing (Graphs), timed from the call to the next
+// painted frame (two animation frames), at normal speed and at 4 times CPU
+// throttle (chromium only, through the DevTools protocol).
+test("scene.batch of a connected flow, 50 and 1000 elements, to the next paint", async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "CPU throttle needs chromium");
+  const RUNS = Number(process.env.SCENE_FLOW_RUNS) || 10;
+  await page.addInitScript(() => {
+    const key = "excalidraw-vault-preferences-v1";
+    const prefs = JSON.parse(localStorage.getItem(key) ?? "{}");
+    localStorage.setItem(
+      key,
+      JSON.stringify({ ...prefs, pluginsSceneMaxOps: 1000 }),
+    );
+  });
+  await openVault(page, "?plugins=scene-stamp");
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
+  await page
+    .locator(".vault-tree-item__name", { hasText: "DSA" })
+    .first()
+    .click();
+  await openDrawing(page, "Graphs");
+  // The plugin loads on first use: opening its panel activates it.
+  await page.getByRole("button", { name: "Stamp" }).click();
+  await page.waitForFunction(
+    () => typeof (window as any).__sceneStampFlow === "function",
+  );
+  const undo = page.locator("[data-testid='button-undo']").first();
+  const cdp = await page.context().newCDPSession(page);
+  for (const rate of [1, 4]) {
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate });
+    for (const n of [50, 1000]) {
+      const applied: number[] = [];
+      const painted: number[] = [];
+      for (let i = 0; i < RUNS; i++) {
+        const r = await page.evaluate(
+          (size) => (window as any).__sceneStampFlow(size),
+          n,
+        );
+        applied.push(r.applied);
+        painted.push(r.painted);
+        // Undo keeps the drawing small, so every run starts alike.
+        await undo.click();
+      }
+      report({
+        metric: `scene.flow${n}.ms`,
+        throttle: rate,
+        appliedP50: quantile(applied, 0.5),
+        appliedP95: quantile(applied, 0.95),
+        paintedP50: quantile(painted, 0.5),
+        paintedP95: quantile(painted, 0.95),
+        n: RUNS,
+      });
+    }
+  }
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+});
