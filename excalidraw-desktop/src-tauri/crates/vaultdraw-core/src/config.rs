@@ -16,9 +16,11 @@ use std::{
 };
 
 mod check;
+mod doctor;
 mod includes;
 mod layers;
 pub use check::*;
+pub use doctor::*;
 pub use includes::*;
 pub use layers::*;
 
