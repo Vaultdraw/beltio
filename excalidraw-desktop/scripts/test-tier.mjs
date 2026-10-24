@@ -95,7 +95,6 @@ if (tier === "fast") {
   if (existsSync(path.join(root, "sdk"))) npx(root, "eslint (sdk)", eslint(["--ext", ".js,.ts,.tsx,.mjs,.cjs", "sdk"]));
   npx(desktop, "vitest (desktop)", ["vitest", "run", ...vitestCaps]);
   // Example plugins (sdk/examples) are the plugin host's integration tests.
-  npx(root, "eslint (sdk)", eslint(["--ext", ".js,.ts,.tsx", "sdk"]));
   npx(root, "vitest (sdk examples)", ["vitest", "run", "sdk", ...vitestCaps]);
   step("perf lib tests", root, "node", ["--test", "excalidraw-desktop/perf/lib/*.test.mjs", "excalidraw-desktop/scripts/*.test.mjs"]);
   if (tier === "milestone") {
