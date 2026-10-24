@@ -29,6 +29,10 @@ export const markOpen = (step: OpenStep) => {
       for (const name of STEPS) {
         performance.clearMarks(PREFIX + name);
       }
+    } else {
+      // opens that skip "read" (tabs, create, reload from disk) replace
+      // their own step's mark: at most one mark per step, ever
+      performance.clearMarks(PREFIX + step);
     }
     performance.mark(PREFIX + step);
   } catch {

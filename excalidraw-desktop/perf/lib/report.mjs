@@ -39,7 +39,7 @@ function metricRows(result, catalogue) {
   const ids = Object.keys(result.metrics ?? {}).sort((a, b) => orderIndex(catalogue, a) - orderIndex(catalogue, b) || a.localeCompare(b));
   return ids.map((id) => {
     const m = result.metrics[id];
-    const spec = specFor(catalogue, id);
+    const spec = specFor(catalogue, id, result.mode);
     const showMax = !!spec?.report.includes("max");
     return [id, m.unit || spec?.unit || "", fmt(m.median, m.unit), fmt(m.p95, m.unit), showMax ? fmt(m.max, m.unit) : "", `${((m.cv ?? 0) * 100).toFixed(1)}`, m.noisy ? "NOISY" : "", spec ? budgetText(spec) : ""];
   });

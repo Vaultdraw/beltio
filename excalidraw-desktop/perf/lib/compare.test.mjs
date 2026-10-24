@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { compare, pickBaseline } from "./compare.mjs";
-import { loadCatalogue } from "./catalogue.mjs";
+import { loadCatalogue, specFor } from "./catalogue.mjs";
+import { resultTable } from "./report.mjs";
 
 const cat = loadCatalogue();
 const m = (o) => ({ metrics: o });
@@ -130,4 +131,9 @@ test("D9: packaged low-end open.* is report-only, open.*.ready and browser.open.
   assert.equal(row(compare(n1, n0, cat), "open.small", "median").status, "regressed");
   // an explicit mode argument wins (ab.mjs passes {metrics} only)
   assert.equal(compare({ metrics: slowFrames.metrics }, base, cat, "low-end").exitCode, 0);
+  // the result table shows no budget where the gate has none (it agrees with compare)
+  assert.deepEqual(specFor(cat, "open.small", "low-end").gate, []);
+  const line = (r, id) => resultTable(r, cat).split("\n").find((l) => l.trim().startsWith(id + " "));
+  assert.doesNotMatch(line({ mode: "low-end", metrics: { "open.small": mk(400) } }, "open.small"), /< 300/);
+  assert.match(line({ mode: "low-end", metrics: { "open.small.ready": mk(60) } }, "open.small.ready"), /< 300/);
 });

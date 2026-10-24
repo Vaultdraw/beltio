@@ -486,6 +486,35 @@ describe("VaultEditor scene swap", () => {
     ).toEqual(["c-r0"]);
     spy.mockRestore();
   });
+
+  it("still falls back when a step after the landing commit throws", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { landed, switchTo } = await mount({
+      documentId: "A",
+      json: scene("a"),
+    });
+    // throws on the swap's call; the rebuilt editor's own call gets nothing
+    const takeUndo = vi.fn<() => undefined>().mockImplementationOnce(() => {
+      throw new Error("bad undo snapshot");
+    });
+    await switchTo({
+      documentId: "B",
+      json: scene("b"),
+      restore: { takeUndo },
+    });
+    await waitFor(() => expect(takeUndo).toHaveBeenCalled());
+    // the landing's flush already ran the swap's cleanup: the error is still
+    // logged and the editor rebuilt, never swallowed
+    await waitFor(() =>
+      expect(spy).toHaveBeenCalledWith(
+        "[editor] scene swap failed, rebuilding the editor",
+        expect.any(Error),
+      ),
+    );
+    await landed("B");
+    await waitFor(() => expect(getEditorApi("B")).toBeTruthy());
+    spy.mockRestore();
+  });
 });
 
 describe("VaultEditor while the app is loading", () => {

@@ -297,7 +297,10 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
     ready: number;
   };
   /** Opens a root-level drawing via its tree row (click to 2 painted frames). */
-  const openByRow = async (path: string): Promise<OpenTiming> => {
+  const openByRow = async (
+    path: string,
+    recordBreakdown = false,
+  ): Promise<OpenTiming> => {
     const target = row(path);
     if (!target) {
       throw new Error(`Tree row not found: ${path}`);
@@ -318,14 +321,17 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
     // where the open's time went (report-only): vaultdraw:open:* marks, then
     // the harness's own steps (ready, paint1; ms = paint2). Under macOS
     // background QoS each painted frame waits for a ~100 ms frame timer.
-    const breakdown = (info.openBreakdown ??= []) as unknown[];
-    breakdown.push({
-      path,
-      ms: Math.round(elapsed),
-      ...readOpenMarks(t0),
-      ready: Math.round(ready),
-      paint1: Math.round(paint1),
-    });
+    // Only the open.* loop records one (not switch, leak or warm-up opens).
+    if (recordBreakdown) {
+      const breakdown = (info.openBreakdown ??= []) as unknown[];
+      breakdown.push({
+        path,
+        ms: Math.round(elapsed),
+        ...readOpenMarks(t0),
+        ready: Math.round(ready),
+        paint1: Math.round(paint1),
+      });
+    }
     fixEditorSize();
     return { total: elapsed, ready };
   };
@@ -793,7 +799,7 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
     const sizes = ["small", "medium", "large"] as const;
     for (let k = 0; k < iter.open; k++) {
       for (const size of sizes) {
-        const timing = await openByRow(openTargets[size]);
+        const timing = await openByRow(openTargets[size], true);
         push(`open.${size}`, timing.total);
         // the same open without the two-frame wait (report-only)
         push(`open.${size}.ready`, timing.ready);

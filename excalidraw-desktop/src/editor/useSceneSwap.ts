@@ -87,6 +87,9 @@ export function useSceneSwap(deps: SceneSwapDeps): void {
     const doc = hostEl?.ownerDocument;
     const win = doc?.defaultView;
     let cancelled = false;
+    // set inside the landing flush: from then on this swap's own errors must
+    // still fall back, although the flush already ran the cleanup
+    let landed = false;
     l.begin();
     if (!hostEl || !doc || !win) {
       l.fail(new Error("Editor window is not mounted"));
@@ -129,7 +132,9 @@ export function useSceneSwap(deps: SceneSwapDeps): void {
           captureUpdate: CaptureUpdateAction.NEVER,
         });
         // `loadedDocId` flips in this commit, so this effect's cleanup runs
-        // inside the flush (`cancelled`, `unblock`): nothing below reads it.
+        // inside the flush (`cancelled`, `unblock`); `landed` keeps the
+        // failure path for the steps below.
+        landed = true;
         l.landing(documentId);
       });
       markOpen("landed");
@@ -142,7 +147,7 @@ export function useSceneSwap(deps: SceneSwapDeps): void {
     };
 
     run().catch((cause) => {
-      if (!cancelled) {
+      if (!cancelled || landed) {
         unblock();
         l.fail(cause);
       }

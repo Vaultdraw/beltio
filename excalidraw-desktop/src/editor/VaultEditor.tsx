@@ -562,6 +562,7 @@ const VaultEditorComponent = ({
   const onInitialize = useCallback(
     (api: ExcalidrawImperativeAPI) => {
       setLibraryApi(api);
+      markOpen("landed");
       armScene(api, initialDocId.current);
       setLoadedDocId(initialDocId.current);
     },

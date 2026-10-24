@@ -130,7 +130,9 @@ try {
 } catch { /* best effort */ }
 const LOCKED_MSG = "screen is locked: the packaged app can't be measured (WebKit stops rendering hidden windows). Unlock the screen, or use --skip-app for Chromium-only numbers";
 
-const gatedNoisy = (metrics) => Object.entries(metrics).some(([id, m]) => m.noisy && specFor(catalogue, id));
+// a metric whose spec gates nothing in this mode (D9: packaged low-end open.<size>) never asks for extra runs
+const gated = (id) => (specFor(catalogue, id, mode)?.gate.length ?? 0) > 0;
+const gatedNoisy = (metrics) => Object.entries(metrics).some(([id, m]) => m.noisy && gated(id));
 
 // ---- app mode ----
 let appTarget = null;
@@ -180,15 +182,15 @@ async function collectApp(count, label) {
       if (label !== "warmup" && run.info?.openBreakdown) appOpenBreakdown.push(run.info.openBreakdown);
     };
     let r = await appTarget.runOne(rawApp.length + i + (label === "warmup" ? 1000 : 0));
-    keepBreakdown(r);
     if (r.errors.length) {
       // One retry: other sessions launch apps with the same bundle id and can quit ours from outside.
       const why = r.errors.join("; ");
       log(`app run failed (${why}); retrying once`);
       notes.push(`app ${label} run retried after: ${why}`);
       r = await appTarget.runOne(rawApp.length + i + 2000);
-      keepBreakdown(r);
     }
+    // one breakdown per run index: the retry's when there was one
+    keepBreakdown(r);
     if (r.errors.length) {
       // A run that failed twice is incomplete: never mix its partial samples into the result.
       if (label !== "warmup" || isRafStall(r.errors)) errors.push(...r.errors.map((e) => `app ${label} run: ${e}`));
@@ -249,7 +251,7 @@ const metrics = {
   ...aggregate(rawBrowser, unitOf(catalogue)),
 };
 for (const [id, m] of Object.entries(metrics)) if (!specFor(catalogue, id)) notes.push(`uncatalogued metric ${id} (not gated)`);
-const noisyIds = Object.entries(metrics).filter(([id, m]) => m.noisy && specFor(catalogue, id)).map(([id]) => id);
+const noisyIds = Object.entries(metrics).filter(([id, m]) => m.noisy && gated(id)).map(([id]) => id);
 if (noisyIds.length) notes.push(`still noisy: ${noisyIds.join(", ")}`);
 
 load.end = Math.round((loadAvg1() || load.end) * 100) / 100;
