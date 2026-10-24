@@ -371,6 +371,12 @@ autosave_delay_ms = 500
 [themes]
 # Largest theme file to install from the internet, in KB, 1 to 256
 # max_install_kb = 64
+# Community themes catalogue index (the browser lists it; downloads need the themes consent)
+# index_url = "https://raw.githubusercontent.com/Vaultdraw/themes/main/index.json"
+# Hours before the browser refetches the index, 0 = fetch every time it opens
+# index_ttl_hours = 24
+# Download preview images in the browser, false = colour swatches only
+# previews = true
 
 # To split this file, add an [include] table that lists other TOML files or folders
 # (relative to this file, or starting with ~). See "Including other files" in

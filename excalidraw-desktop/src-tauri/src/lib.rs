@@ -34,6 +34,7 @@ mod refresh_rate;
 mod templates;
 mod snippets;
 mod network;
+mod theme_catalogue;
 mod theme_install;
 mod themes;
 mod vault_settings;
@@ -900,7 +901,7 @@ pub fn run() {
                 write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
                 export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
                 config::load_settings, config::update_config, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
-                themes::list_themes, themes::open_themes_dir, theme_install::theme_resolve, theme_install::theme_fetch, theme_install::theme_write, theme_install::theme_installed, theme_install::theme_update_fetch, theme_install::theme_uninstall, snippets::list_snippets, snippets::open_snippets_dir,
+                themes::list_themes, themes::open_themes_dir, theme_install::theme_resolve, theme_install::theme_fetch, theme_install::theme_write, theme_install::theme_installed, theme_install::theme_update_fetch, theme_install::theme_uninstall, theme_catalogue::theme_catalogue_cached, theme_catalogue::theme_catalogue_index, theme_catalogue::theme_catalogue_preview, snippets::list_snippets, snippets::open_snippets_dir,
                 vault_settings::load_vault_settings, vault_settings::update_vault_settings,
                 services::services_start, search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
                 links::vault_links, links::vault_unlinked_mentions, links::resolve_link, links::links_plan_move, links::links_remeasure, links::links_remeasure_done, links::tags_plan_rename, links::rename_tag, links::vault_graph, links::graph_layout_load, links::graph_layout_save,
@@ -924,7 +925,7 @@ pub fn run() {
                 write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
                 export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
                 config::load_settings, config::update_config, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
-                themes::list_themes, themes::open_themes_dir, theme_install::theme_resolve, theme_install::theme_fetch, theme_install::theme_write, theme_install::theme_installed, theme_install::theme_update_fetch, theme_install::theme_uninstall, snippets::list_snippets, snippets::open_snippets_dir,
+                themes::list_themes, themes::open_themes_dir, theme_install::theme_resolve, theme_install::theme_fetch, theme_install::theme_write, theme_install::theme_installed, theme_install::theme_update_fetch, theme_install::theme_uninstall, theme_catalogue::theme_catalogue_cached, theme_catalogue::theme_catalogue_index, theme_catalogue::theme_catalogue_preview, snippets::list_snippets, snippets::open_snippets_dir,
                 vault_settings::load_vault_settings, vault_settings::update_vault_settings,
                 services::services_start, search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
                 links::vault_links, links::vault_unlinked_mentions, links::resolve_link, links::links_plan_move, links::links_remeasure, links::links_remeasure_done, links::tags_plan_rename, links::rename_tag, links::vault_graph, links::graph_layout_load, links::graph_layout_save,
@@ -945,7 +946,7 @@ pub fn run() {
             write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
             export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
             config::load_settings, config::update_config, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
-            themes::list_themes, themes::open_themes_dir, theme_install::theme_resolve, theme_install::theme_fetch, theme_install::theme_write, theme_install::theme_installed, theme_install::theme_update_fetch, theme_install::theme_uninstall, snippets::list_snippets, snippets::open_snippets_dir,
+            themes::list_themes, themes::open_themes_dir, theme_install::theme_resolve, theme_install::theme_fetch, theme_install::theme_write, theme_install::theme_installed, theme_install::theme_update_fetch, theme_install::theme_uninstall, theme_catalogue::theme_catalogue_cached, theme_catalogue::theme_catalogue_index, theme_catalogue::theme_catalogue_preview, snippets::list_snippets, snippets::open_snippets_dir,
             vault_settings::load_vault_settings, vault_settings::update_vault_settings,
             services::services_start, search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
                 links::vault_links, links::vault_unlinked_mentions, links::resolve_link, links::links_plan_move, links::links_remeasure, links::links_remeasure_done, links::tags_plan_rename, links::rename_tag, links::vault_graph, links::graph_layout_load, links::graph_layout_save,

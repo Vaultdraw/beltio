@@ -327,7 +327,7 @@ pub(crate) fn sanitize_name(name: &str) -> Result<&str> {
     Ok(name)
 }
 
-fn sha256_hex(bytes: &[u8]) -> String {
+pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
     hex::encode(Sha256::digest(bytes))
 }
 
@@ -484,7 +484,7 @@ fn themes_dir(dirs: &config::Dirs) -> PathBuf {
     dirs.config.join(config::THEMES_DIR)
 }
 
-fn is_real_dir(path: &Path) -> bool {
+pub(crate) fn is_real_dir(path: &Path) -> bool {
     fs::symlink_metadata(path).is_ok_and(|m| m.is_dir())
 }
 
@@ -610,7 +610,7 @@ pub(crate) fn update_fetch_in(dirs: &config::Dirs, ep: &Endpoints, name: &str, m
 // ---------------------------------------------------------------------------
 
 /// Runs blocking work (network, disk) off the async runtime's worker threads.
-async fn blocking<T: Send + 'static>(f: impl FnOnce(config::Dirs) -> Result<T> + Send + 'static) -> Result<T> {
+pub(crate) async fn blocking<T: Send + 'static>(f: impl FnOnce(config::Dirs) -> Result<T> + Send + 'static) -> Result<T> {
     let dirs = config::resolve_dirs()?;
     tauri::async_runtime::spawn_blocking(move || f(dirs))
         .await
