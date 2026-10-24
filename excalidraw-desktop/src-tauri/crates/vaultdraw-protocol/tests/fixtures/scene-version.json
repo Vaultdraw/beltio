@@ -1,0 +1,80 @@
+{
+  "cases": [
+    {
+      "name": "empty scene",
+      "elements": [],
+      "version": "swvjl67o803"
+    },
+    {
+      "name": "one element",
+      "elements": [
+        {
+          "id": "a",
+          "version": 1
+        }
+      ],
+      "version": "sjm323m91hv"
+    },
+    {
+      "name": "deleted elements are ignored",
+      "elements": [
+        {
+          "id": "a",
+          "version": 1
+        },
+        {
+          "id": "b",
+          "version": 7,
+          "isDeleted": true
+        },
+        {
+          "id": "c",
+          "version": 3
+        }
+      ],
+      "version": "sxtwhn8xhfn"
+    },
+    {
+      "name": "order matters",
+      "elements": [
+        {
+          "id": "c",
+          "version": 3
+        },
+        {
+          "id": "a",
+          "version": 1
+        }
+      ],
+      "version": "st2xk3kr1g9"
+    },
+    {
+      "name": "non-ascii id",
+      "elements": [
+        {
+          "id": "é-日本-😀",
+          "version": 12
+        },
+        {
+          "id": "plain",
+          "version": 2
+        }
+      ],
+      "version": "s1lp12htoons"
+    },
+    {
+      "name": "large version numbers",
+      "elements": [
+        {
+          "id": "x",
+          "version": 2147483647
+        },
+        {
+          "id": "y",
+          "version": 1000000007
+        }
+      ],
+      "version": "sz1zfwdchtp"
+    }
+  ]
+}
