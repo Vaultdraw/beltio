@@ -387,12 +387,23 @@ fn an_app_without_spool_support_still_works_through_base64() {
 #[test]
 fn the_spool_file_is_gone_after_each_outcome() {
     let dir = tempfile::tempdir().unwrap();
-    let f = Fake::start(app);
+    // Only this test's spool files count: the other tests of this binary share the folder and
+    // run in parallel, so counting the folder raced with them.
+    let made = std::sync::Arc::new(std::sync::Mutex::new(Vec::<String>::new()));
+    let f = Fake::start({
+        let made = made.clone();
+        move |m, p| {
+            let r = app(m, p);
+            if let Ok(v) = &r {
+                if let Some(s) = v.get("spool").and_then(Value::as_str) {
+                    made.lock().unwrap().push(s.to_string());
+                }
+            }
+            r
+        }
+    });
     let file = dir.path().join("o.png");
-    let spools = || {
-        let d = std::env::temp_dir().join(format!("vd-export-spool-test-{}", std::process::id())).join("export-spool");
-        std::fs::read_dir(d).map(|r| r.count()).unwrap_or(0)
-    };
+    let spools = || made.lock().unwrap().iter().filter(|p| std::path::Path::new(p.as_str()).exists()).count();
     // File, stdout, taken name (refused before the render), and a missing folder.
     for args in [vec!["export", "a", "-o", file.to_str().unwrap()], vec!["export", "a", "-o", "-", "--force"], vec!["export", "a", "-o", file.to_str().unwrap()]] {
         vd(&args, Some(&f.socket), None);
