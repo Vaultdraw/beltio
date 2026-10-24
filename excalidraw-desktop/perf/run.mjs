@@ -175,6 +175,7 @@ if (!skipApp && isScreenLocked()) {
   }
 }
 
+let hiddenAppRuns = 0;
 async function collectApp(count, label) {
   for (let i = 0; i < count; i++) {
     if (isScreenLocked()) {
@@ -214,6 +215,7 @@ async function collectApp(count, label) {
     }
     if (label === "warmup") continue;
     if (Object.keys(r.samples).length) rawApp.push(r.samples);
+    if (r.info?.window?.hidden) hiddenAppRuns++;
     if (r.info?.memoryTimeline) notes.push(`memory timeline (MB, now/peak per process): ${r.info.memoryTimeline.map((t) => `${t.mark} ${Object.entries(t.procs).map(([k, v]) => `${k}=${v.now}/${v.peak}`).join(" ")}`).join(" | ")}`);
   }
 }
@@ -272,6 +274,7 @@ const result = {
   load, metrics, raw: { app: rawApp, browser: rawBrowser, appOpenBreakdown }, notes, errors,
   ...(browserScenarios?.length ? { scenarios: browserScenarios } : {}),
   ...(appAborted ? { aborted: { app: appAborted } } : {}),
+  ...(rawApp.length ? { window: { hiddenRuns: hiddenAppRuns, runs: rawApp.length } } : {}),
 };
 
 const outFile = o.out ? path.resolve(o.out) : path.join(cacheDir, "results", `${new Date().toISOString().replace(/[:.]/g, "-")}-${mode}${variant ? `-${variant}` : ""}.json`);

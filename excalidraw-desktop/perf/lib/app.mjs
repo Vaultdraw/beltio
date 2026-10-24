@@ -8,6 +8,7 @@ import {
   applyBackgroundPolicy, trackChild, startMemoryPressure,
 } from "./procs.mjs";
 import { LEAK_PREFIX, leakSummary, leakTableText } from "./leak.mjs";
+import { parseWindowStateLog, windowSummary, HIDDEN_RUN_NOTE } from "./windowState.mjs";
 
 const BUNDLE_REL = "excalidraw-desktop/src-tauri/target/release/bundle/macos/Vaultdraw.app";
 /**
@@ -136,6 +137,7 @@ export async function runAppOnce({
   const errors = [];
   const notes = [];
   const marks = [];
+  const visibilities = [];
   const before = await snapshotWebKitPids();
   const env = { ...process.env, VAULTDRAW_PERF: "1", ...extraEnv, EXCALIDRAW_VAULT_SMOKE_DIR: vault, ...(modes.leak && altVault ? { EXCALIDRAW_VAULT_SMOKE_DIR_ALT: vaultAlt } : {}), VAULTDRAW_CONFIG_DIR: cfg, VAULTDRAW_STATE_DIR: state };
   // PERF_LOWEND_ROLES=app,webContent,gpu,network limits which processes get background QoS (attribution runs).
@@ -252,7 +254,10 @@ export async function runAppOnce({
     if (entry.step !== "perf-mark" || typeof name !== "string") return;
     marks.push({ name, wallMs: entry.details.wallMs, nodeMs: Date.now() });
     if (name.startsWith("phase:")) lastPhase = name;
-    if (name === "heartbeat") lastHeartbeat = entry.details;
+    if (name === "heartbeat") {
+      lastHeartbeat = entry.details;
+      visibilities.push(entry.details?.visibility);
+    }
     if (name === "slow-ipc") pendingSlow.set(entry.details.id, entry.details);
     if (name === "slow-ipc-done") pendingSlow.delete(entry.details.id);
     if (name === "pids") {
@@ -424,6 +429,11 @@ export async function runAppOnce({
     }
   }
   info.processBreakdown = breakdown;
+  // Hidden test windows keep rendering (hidden_render.rs); say so, since frame pacing is then not display-bound.
+  let nativeWindow = [];
+  try { nativeWindow = parseWindowStateLog(readFileSync(path.join(state, "window-state.jsonl"), "utf8")); } catch { /* older build */ }
+  info.window = windowSummary({ visibilities, native: nativeWindow });
+  if (info.window.hidden) notes.push(HIDDEN_RUN_NOTE);
   if (modes.typical && footprintAtEnd?.size) {
     // Per-process idle footprint of a typical vault, for comparison with other note apps.
     let total = 0;

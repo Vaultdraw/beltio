@@ -13,6 +13,8 @@ import {
 
 import { isSceneReady } from "../editor/sceneReady";
 
+import { waitUntilRendering } from "./visibilityGate";
+
 import {
   clipboardCopyStep,
   exportDialogOptionsStep,
@@ -287,30 +289,38 @@ export async function runDesktopSmoke(): Promise<void> {
     return;
   }
   // A locked screen or occluded window hides the WebView: requestAnimationFrame
-  // never fires and the editor cannot render, so the run would hang. Fail fast.
-  const visibleUntil = win.performance.now() + 15_000;
-  while (
-    doc.visibilityState !== "visible" &&
-    win.performance.now() < visibleUntil
-  ) {
-    await new Promise<void>((resolve) => win.setTimeout(resolve, 250));
-  }
-  if (doc.visibilityState !== "visible") {
-    try {
-      const { invoke } = await import("@tauri-apps/api/core");
-      await invoke("smoke_finish", {
-        status: 1,
-        details: {
-          startupFailure: `WebView is ${doc.visibilityState} (screen locked or window occluded): the packaged smoke test needs a visible window`,
-        },
-      });
-    } catch (finishError) {
-      console.error(
-        "Desktop smoke could not report hidden WebView",
-        finishError,
-      );
+  // never fires and the editor cannot render, so the run would hang. Fail fast,
+  // unless this test build keeps rendering while hidden (hidden_render.rs).
+  {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const hiddenRender = await invoke<{ hiddenRender?: boolean }>(
+      "smoke_environment",
+    )
+      .then((env) => env.hiddenRender === true)
+      .catch(() => false);
+    const gate = await waitUntilRendering(win, doc, hiddenRender);
+    if (!gate.ok) {
+      try {
+        await invoke("smoke_finish", {
+          status: 1,
+          details: { startupFailure: gate.reason },
+        });
+      } catch (finishError) {
+        console.error(
+          "Desktop smoke could not report hidden WebView",
+          finishError,
+        );
+      }
+      return;
     }
-    return;
+    if (gate.hidden) {
+      // Recorded in the report: frame pacing from this run is not tied to a display.
+      await invoke("smoke_log", {
+        step: "window",
+        ok: true,
+        details: { ranHidden: true },
+      }).catch(() => undefined);
+    }
   }
   const startedAt = win.performance.now();
   // Time from navigation start to the app being mounted and the runner starting.

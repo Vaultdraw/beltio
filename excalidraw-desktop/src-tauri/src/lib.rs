@@ -44,6 +44,8 @@ mod test_alloc;
 mod smoke;
 mod watchdog;
 mod window_chrome;
+#[cfg(feature = "smoke-test")]
+mod hidden_render;
 
 // Vault logic without a UI lives in `vaultdraw-core`; these re-exports keep the app's modules
 // (history, thumbs, links, ...) compiling against `crate::{err, safe_path, ...}` unchanged.
@@ -819,6 +821,12 @@ pub fn run() {
                 let builder = tauri::WebviewWindowBuilder::from_config(app.handle(), &window_config)?;
                 #[cfg(feature = "smoke-test")]
                 let builder = builder.focused(!smoke::background_test());
+                #[cfg(feature = "smoke-test")]
+                let builder = if smoke::hidden_render() && std::env::var("VAULTDRAW_HR_THROTTLE").ok().as_deref() != Some("0") {
+                    builder.background_throttling(tauri::utils::config::BackgroundThrottlingPolicy::Disabled)
+                } else {
+                    builder
+                };
                 #[cfg(target_os = "macos")]
                 let builder = {
                     let mtm = objc2::MainThreadMarker::new()
@@ -851,6 +859,10 @@ pub fn run() {
                         watchdog::smoke_driver::start(&main_window);
                     }
                 }
+                #[cfg(feature = "smoke-test")]
+                hidden_render::keep_window_on_a_display(&main_window);
+                #[cfg(feature = "smoke-test")]
+                hidden_render::watch_window_state(&main_window);
                 #[cfg(not(feature = "smoke-test"))]
                 watchdog::install(&main_window);
                 // Memory pressure: return free pages and let the webview purge its caches.

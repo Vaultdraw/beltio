@@ -73,7 +73,7 @@ pub fn smoke_environment() -> Result<Value, String> {
     // VAULTDRAW_PERF_DRAWINGS: extra probe drawings, JSON [{ path, pattern, elements }].
     let perf_suite = env::var("VAULTDRAW_PERF_SUITE").unwrap_or_default();
     let perf_drawings = env::var("VAULTDRAW_PERF_DRAWINGS").unwrap_or_default();
-    Ok(json!({ "enabled": true, "vaultPath": root.to_string_lossy(), "exportPath": root.join("smoke-exports").to_string_lossy(), "perfSuite": perf_suite, "perfDrawings": perf_drawings, "watchdogSmoke": crate::watchdog::smoke_requested() }))
+    Ok(json!({ "enabled": true, "vaultPath": root.to_string_lossy(), "exportPath": root.join("smoke-exports").to_string_lossy(), "perfSuite": perf_suite, "perfDrawings": perf_drawings, "hiddenRender": hidden_render(), "watchdogSmoke": crate::watchdog::smoke_requested() }))
 }
 
 #[tauri::command]
@@ -287,6 +287,12 @@ pub fn perf_foreground() -> bool {
     env::var("VAULTDRAW_PERF_FOREGROUND").ok().as_deref() == Some("1")
 }
 
+/// Test runs that keep rendering while hidden: background runs, and (experiment) foreground runs
+/// with `VAULTDRAW_HR_HARDEN_FG=1`.
+pub fn hidden_render() -> bool {
+    test_run() && (!perf_foreground() || env::var("VAULTDRAW_HR_HARDEN_FG").ok().as_deref() == Some("1"))
+}
+
 /// A test run that stays in the background (the default for smoke and perf runs).
 pub fn background_test() -> bool {
     test_run() && !foreground_test()
@@ -307,7 +313,7 @@ pub fn background_test_app(app: &mut tauri::App) {
 /// occluded, screen locked), and keep the process out of App Nap. Never takes focus.
 /// Every private selector is guarded.
 pub fn harden_test_webview(window: &tauri::WebviewWindow) {
-    if !test_run() || perf_foreground() {
+    if !hidden_render() {
         return;
     }
     #[cfg(target_os = "macos")]
