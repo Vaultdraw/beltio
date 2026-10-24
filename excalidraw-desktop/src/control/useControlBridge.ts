@@ -6,9 +6,13 @@ import { toastStore } from "../toasts/toastStore";
 
 import { onCommandRan } from "../commands/dispatcher";
 
+import { detectPlatform } from "../commands/keys";
+
 import { createControlBridge, type ControlDeps } from "./bridge";
 import { ControlError } from "./errors";
 import { linkPrompt, linkRequests } from "./linkRequests";
+
+import { registerHandlers } from "./registerHandlers";
 import { createUriRunner, type UriDeps, type UriPlan } from "./uriRun";
 
 import { commandInfos, createSnapshotSender } from "./commandsSnapshot";
@@ -73,6 +77,14 @@ const uriDeps = (
   addLibrary: (json, scope) => part().addLibrary(json, scope),
   canAddVaultLibrary: () => part().canAddVaultLibrary(),
   readExternal: async (path, kind) => {
+    // Browser e2e harness only (compiled out of every other build): a fake "file on disk".
+    const fake =
+      import.meta.env.VITE_APP_E2E === "true"
+        ? (win as any).__externalFiles?.[path]
+        : undefined;
+    if (fake) {
+      return fake as { name: string; json: string };
+    }
     const { invoke } = await import("@tauri-apps/api/core");
     return (await invoke("external_file_read", { path, kind })) as {
       name: string;
@@ -93,6 +105,17 @@ const openUri = () => {
       .catch(() => {});
   });
 };
+
+/** Palette handler (Linux): ask, then write the user's own desktop files. */
+const registerLinuxHandlers = () =>
+  void registerHandlers({
+    invoke: async (command) => {
+      const { invoke } = await import("@tauri-apps/api/core");
+      return invoke(command);
+    },
+    ask: linkRequests.ask,
+    notify: (message, kind) => toastStore.push({ message, kind }),
+  });
 
 /** Palette handlers: install the `vaultdraw` command (user PATH or /usr/local/bin). */
 const installCli = (system: boolean) => async () => {
@@ -153,8 +176,12 @@ export function useControlBridge(
         [CLI_INSTALL_ID]: installCli(false),
         [CLI_INSTALL_SYSTEM_ID]: installCli(true),
         "links.openUri": openUri,
+        // Only where it applies: on macOS the app bundle registers links and files.
+        ...(win && inTauri(win) && detectPlatform(win) === "linux"
+          ? { "links.registerHandlers": registerLinuxHandlers }
+          : {}),
       }),
-    [],
+    [win],
   );
 
   useEffect(() => {

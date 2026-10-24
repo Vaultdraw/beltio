@@ -214,6 +214,13 @@ const LINKS_COMMANDS: CommandDefinition[] = [
     when: ["!modalOpen"],
   },
   {
+    id: "links.registerHandlers",
+    title: "Links: Register Vaultdraw for links and files (Linux)",
+    category: "Links",
+    keys: { default: [] },
+    when: ["!modalOpen"],
+  },
+  {
     id: "links.hints",
     title: "Links: Show link hints",
     category: "Links",
