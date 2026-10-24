@@ -476,7 +476,6 @@ async fn write_drawing(request: tauri::ipc::Request<'_>, state: State<'_, Servic
 }
 /// The raw body is the UTF-8 scene JSON; it is validated in place, never copied into a String.
 fn write_drawing_raw(v: &Vault, history: Option<&history::HistoryService>, args: &WriteHeaders, body: &[u8]) -> Result<serde_json::Value> {
-    writable(v)?;
     let json = std::str::from_utf8(body).map_err(|_| err("INVALID_FILE", "Drawing is not UTF-8 JSON"))?;
     commit_drawing(v, history, &args.path, json, args.expected_revision.as_deref(), &args.operation_id)
 }

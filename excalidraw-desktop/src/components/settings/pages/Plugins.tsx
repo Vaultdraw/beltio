@@ -28,7 +28,8 @@ import {
   installPluginFromFolder,
   reloadPluginList,
 } from "../../../plugins/ui/pluginActions";
-import { takeDeleteDataRequest } from "../../../plugins/ui/pluginCommands";
+import { deleteDataRequest } from "../../../plugins/ui/pluginCommands";
+import { subscribeStorageWrites } from "../../../plugins/host/storage";
 import { toastStore } from "../../../toasts/toastStore";
 import {
   getPreferences,
@@ -130,6 +131,8 @@ const useDataSizes = (): [Map<string, number> | null, () => Promise<void>] => {
   );
   useEffect(() => {
     void refresh();
+    // A plugin that saves (or data deleted elsewhere) while the page is open.
+    return subscribeStorageWrites(() => void refresh());
   }, [refresh]);
   return [sizes, refresh];
 };
@@ -140,27 +143,30 @@ export const PluginsPage = () => {
   const enabledIds = useEnabledIds();
   const [pending, setPending] = useState<Pending>(null);
   const [dataSizes, refreshDataSizes] = useDataSizes();
-  const listRef = useRef<HTMLUListElement>(null);
-  const [focusDataRequest] = useState(takeDeleteDataRequest);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const dataRequest = useSyncExternalStore(
+    deleteDataRequest.subscribe,
+    deleteDataRequest.get,
+  );
   // Opened by "Plugins: Delete data of a plugin…": focus the first "Delete data" button.
-  const focusedOnce = useRef(false);
   useEffect(() => {
-    if (!focusDataRequest || focusedOnce.current || !dataSizes) {
+    if (!dataSizes || !deleteDataRequest.take()) {
       return;
     }
-    if (dataSizes.size === 0) {
-      focusedOnce.current = true;
-      toastStore.push({ message: "No plugin has saved data." });
-      return;
-    }
-    const first = listRef.current?.querySelector<HTMLButtonElement>(
+    const first = rootRef.current?.querySelector<HTMLButtonElement>(
       "[data-plugin-delete-data]",
     );
     if (first) {
-      focusedOnce.current = true;
       first.focus();
+    } else {
+      toastStore.push({ message: "No plugin has saved data." });
     }
-  }, [focusDataRequest, dataSizes, state.plugins]);
+  }, [dataRequest, dataSizes]);
+  const installed = new Set(state.plugins.map((p) => p.id));
+  const orphanData = [...(dataSizes ?? [])].filter(
+    ([id]) => !installed.has(id),
+  );
+
   // With no plugin enabled the host (and its list) starts on first visit.
   useEffect(() => {
     if (!pluginHostStarted.get()) {
@@ -208,7 +214,7 @@ export const PluginsPage = () => {
   };
 
   return (
-    <div className="vault-plugins" data-testid="plugins-page">
+    <div className="vault-plugins" data-testid="plugins-page" ref={rootRef}>
       {state.safeMode && (
         <SafeModeBanner
           safe={state.safeMode}
@@ -249,11 +255,7 @@ export const PluginsPage = () => {
           use Install from folder…
         </p>
       ) : (
-        <ul
-          ref={listRef}
-          className="vault-plugins__list"
-          aria-label="Installed plugins"
-        >
+        <ul className="vault-plugins__list" aria-label="Installed plugins">
           {state.plugins.map((info) => (
             <PluginRow
               key={info.id}
@@ -290,6 +292,39 @@ export const PluginsPage = () => {
             />
           ))}
         </ul>
+      )}
+
+      {orphanData.length > 0 && (
+        <section
+          aria-label="Saved data of removed plugins"
+          className="vault-plugins__errors"
+        >
+          <h3 className="vault-settings-heading">
+            Saved data of removed plugins
+          </h3>
+          <ul>
+            {orphanData.map(([id, bytes]) => (
+              <li key={id}>
+                <code>{id}</code> ({formatDataSize(bytes)}){" "}
+                <button
+                  type="button"
+                  className="vault-btn vault-btn--ghost vault-btn--sm"
+                  aria-label={`Delete data of ${id} (${formatDataSize(bytes)})`}
+                  data-plugin-delete-data={id}
+                  onClick={() =>
+                    setPending({
+                      kind: "deleteData",
+                      info: { id, name: id } as PluginInfo,
+                      bytes,
+                    })
+                  }
+                >
+                  Delete data
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {state.errors.length > 0 && (

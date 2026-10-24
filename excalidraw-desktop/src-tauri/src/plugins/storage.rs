@@ -12,6 +12,7 @@ use std::{fs, path::Path, path::PathBuf};
 const DIR: &str = "plugin-data";
 const FILE: &str = "data.json";
 const BAD: &str = "data.json.bad";
+const MAX_BACKUPS: u32 = 9;
 /// Hard ceiling: the largest `plugins.storage_limit_kb` allows (16384 KiB). The host enforces
 /// the configured limit; this one holds for any caller of the gateway.
 pub(crate) const MAX_BYTES: u64 = 16 * 1024 * 1024;
@@ -45,10 +46,22 @@ pub(crate) fn read(state_dir: &Path, id: &str) -> Result<Value> {
     match bytes.and_then(|b| serde_json::from_slice::<Value>(&b).ok()).filter(Value::is_object) {
         Some(data) => Ok(json!({"data": data, "corrupt": false})),
         None => {
-            fs::rename(&path, dir.join(BAD)).map_err(ioerr)?;
+            fs::rename(&path, backup_path(&dir)).map_err(ioerr)?;
             Ok(json!({"data": null, "corrupt": true}))
         }
     }
+}
+
+/// `data.json.bad`, or `data.json.bad.1` … `.9` when earlier backups exist (the last one is reused).
+fn backup_path(dir: &Path) -> PathBuf {
+    let first = dir.join(BAD);
+    if !first.exists() {
+        return first;
+    }
+    (1..=MAX_BACKUPS)
+        .map(|n| dir.join(format!("{BAD}.{n}")))
+        .find(|p| !p.exists())
+        .unwrap_or_else(|| dir.join(format!("{BAD}.{MAX_BACKUPS}")))
 }
 
 /// Replaces the plugin's data with `text`, which must be a JSON object of at most [`MAX_BYTES`].

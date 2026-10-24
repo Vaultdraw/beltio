@@ -809,13 +809,14 @@ fn gateway_allowlist_maps_methods_to_permissions() {
 fn gateway_refuses_unknown_methods_and_plugins() {
     let none = consent::Record::new();
     let p = info_with("reader", "\"vault.read\"", Source::User);
-    let e = gateway::authorize("config.set", "reader", Some(&p), &none).unwrap_err();
+    let e = gateway::authorize("config.set", "reader", Some(&p), || none.clone()).unwrap_err();
     assert_eq!(e.code, "NOT_FOUND");
-    let e = gateway::authorize("app.quit", "reader", Some(&p), &none).unwrap_err();
+    let e = gateway::authorize("app.quit", "reader", Some(&p), || none.clone()).unwrap_err();
     assert_eq!(e.code, "NOT_FOUND");
-    let e = gateway::authorize("storage.read", "ghost", None, &none).unwrap_err();
+    let e = gateway::authorize("storage.read", "ghost", None, || none.clone()).unwrap_err();
     assert_eq!(e.code, "NOT_FOUND");
-    assert!(gateway::authorize("storage.read", "reader", Some(&p), &none).is_ok(), "storage is free");
+    let unread = || -> consent::Record { panic!("free rows must not read the consent file") };
+    assert!(gateway::authorize("storage.read", "reader", Some(&p), unread).is_ok(), "storage is free");
 }
 
 #[test]
@@ -823,23 +824,23 @@ fn gateway_checks_declared_and_confirmed_permissions() {
     let p = info_with("reader", "\"vault.read\"", Source::User);
     let none = consent::Record::new();
     // Declared but never confirmed.
-    let e = gateway::authorize("vault.list", "reader", Some(&p), &none).unwrap_err();
+    let e = gateway::authorize("vault.list", "reader", Some(&p), || none.clone()).unwrap_err();
     assert_eq!((e.code.as_str(), e.detail["permission"].as_str()), ("PERMISSION", Some("vault.read")));
     assert!(e.message.contains("not confirmed"), "{}", e.message);
     // Confirmed.
     let ok = record("reader", &["vault.read"]);
-    assert_eq!(gateway::authorize("file.read", "reader", Some(&p), &ok).unwrap().route, gateway::Route::Control("file.read"));
+    assert_eq!(gateway::authorize("file.read", "reader", Some(&p), || ok.clone()).unwrap().route, gateway::Route::Control("file.read"));
     // Not declared, even if a stale record says confirmed.
     let stale = record("reader", &["vault.read", "vault.write"]);
-    let e = gateway::authorize("file.write", "reader", Some(&p), &stale).unwrap_err();
+    let e = gateway::authorize("file.write", "reader", Some(&p), || stale.clone()).unwrap_err();
     assert!(e.code == "PERMISSION" && e.message.contains("does not declare"), "{}", e.message);
     // Another plugin's record does not count.
     let other = record("someone", &["vault.read"]);
-    assert_eq!(gateway::authorize("vault.list", "reader", Some(&p), &other).unwrap_err().code, "PERMISSION");
+    assert_eq!(gateway::authorize("vault.list", "reader", Some(&p), || other.clone()).unwrap_err().code, "PERMISSION");
     // Bundled plugins need no confirmation, but still the declaration.
     let b = info_with("bundled-one", "\"vault.read\"", Source::Bundled);
-    assert!(gateway::authorize("vault.list", "bundled-one", Some(&b), &none).is_ok());
-    assert_eq!(gateway::authorize("file.write", "bundled-one", Some(&b), &none).unwrap_err().code, "PERMISSION");
+    assert!(gateway::authorize("vault.list", "bundled-one", Some(&b), || none.clone()).is_ok());
+    assert_eq!(gateway::authorize("file.write", "bundled-one", Some(&b), || none.clone()).unwrap_err().code, "PERMISSION");
 }
 
 #[test]
@@ -910,6 +911,9 @@ fn storage_renames_a_corrupt_file_and_starts_empty() {
     // A JSON value that is not an object is corrupt too.
     fs::write(dir.join("data.json"), "[1,2]").unwrap();
     assert_eq!(storage::read(t.path(), "kv").unwrap()["corrupt"], true);
+    // The first backup is kept; the second goes next to it.
+    assert_eq!(fs::read_to_string(dir.join("data.json.bad")).unwrap(), "{not json");
+    assert_eq!(fs::read_to_string(dir.join("data.json.bad.1")).unwrap(), "[1,2]");
 }
 
 #[cfg(unix)]

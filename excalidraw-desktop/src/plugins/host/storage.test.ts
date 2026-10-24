@@ -327,3 +327,55 @@ describe("ctx.storage through the real host", () => {
     ).rejects.toMatchObject({ code: "QUOTA" });
   });
 });
+
+describe("Delete data while a plugin runs", () => {
+  it("waits for a write in flight, blocks reads until the file is gone, then starts empty", async () => {
+    let disk: string | null = '{"a":1}';
+    let releaseWrite!: () => void;
+    const store = createPluginStore({
+      io: {
+        read: async () => ({
+          data: disk === null ? null : JSON.parse(disk),
+          corrupt: false,
+        }),
+        write: (text) =>
+          new Promise<void>((resolve) => {
+            releaseWrite = () => {
+              disk = text;
+              resolve();
+            };
+          }),
+      },
+      limitKb: () => 1024,
+      onCorrupt() {},
+      onWriteError() {},
+      setTimer: () => 0,
+      clearTimer() {},
+      now: () => 0,
+    });
+    await store.set("b", 2);
+    const flushing = store.flush();
+    for (let i = 0; i < 5; i++) {
+      await Promise.resolve(); // the write reaches Rust and has not finished
+    }
+    const order: string[] = [];
+    const wiped = store.wipe(async () => {
+      order.push("delete");
+      disk = null;
+      return true;
+    });
+    const read = store.keys().then((k) => {
+      order.push("read");
+      return k;
+    });
+    for (let i = 0; i < 5; i++) {
+      await Promise.resolve();
+    }
+    expect(order).toEqual([]);
+    releaseWrite();
+    await flushing;
+    expect(await wiped).toBe(true);
+    expect(await read).toEqual([]);
+    expect(order).toEqual(["delete", "read"]);
+  });
+});

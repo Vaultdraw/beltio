@@ -289,16 +289,16 @@ describe("Plugins settings page", () => {
   it("deletes a plugin's saved data after a confirm, and the palette command focuses the button", async () => {
     h.sizes = new Map([["hello", 12 * 1024]]);
     h.set(state({ plugins: [makePluginInfo("hello", { name: "Hello" })] }));
-    const { takeDeleteDataRequest, pluginUiHandlers } = await import(
+    const { deleteDataRequest, pluginUiHandlers } = await import(
       "../plugins/ui/pluginCommands"
     );
-    pluginUiHandlers(() => {})["plugins.deleteData"]();
+    pluginUiHandlers(() => {})["plugins.deleteData"]!();
     await open();
     const button = await screen.findByRole("button", {
       name: "Delete data of Hello (12 KB)",
     });
     expect(document.activeElement).toBe(button);
-    expect(takeDeleteDataRequest()).toBe(false);
+    expect(deleteDataRequest.take()).toBe(false);
     fireEvent.click(button);
     expect(
       screen.getByRole("dialog", { name: "Delete the data of Hello?" })
@@ -313,5 +313,28 @@ describe("Plugins settings page", () => {
       screen.queryByRole("button", { name: /Delete data of Hello/ }),
     ).toBeNull();
     h.sizes = new Map();
+  });
+
+  it("lists saved data of removed plugins, and a request reaches an open page once", async () => {
+    h.sizes = new Map([["gone", 3000]]);
+    h.set(state({ plugins: [makePluginInfo("hello", { name: "Hello" })] }));
+    await open();
+    const button = await screen.findByRole("button", {
+      name: "Delete data of gone (3 KB)",
+    });
+    const { pluginUiHandlers } = await import("../plugins/ui/pluginCommands");
+    await act(async () => {
+      pluginUiHandlers(() => {})["plugins.deleteData"]!();
+    });
+    expect(document.activeElement).toBe(button);
+    fireEvent.click(button);
+    h.sizes = new Map();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Delete data" }));
+    });
+    expect(h.deleteData).toHaveBeenCalledWith("gone");
+    expect(
+      screen.queryByRole("region", { name: "Saved data of removed plugins" }),
+    ).toBeNull();
   });
 });

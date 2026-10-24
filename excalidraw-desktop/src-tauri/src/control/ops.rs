@@ -114,7 +114,6 @@ fn write(app: &AppHandle, params: &Value) -> Reply {
     let scene = params.get("scene").filter(|s| s.is_object()).ok_or_else(|| RpcError::invalid_params("scene must be a drawing object"))?;
     let expected = vault_ops::expected_revision(params)?;
     refuse_if_dirty(app, &path)?;
-    crate::writable(&v).map_err(native_err)?;
     let json = serde_json::to_string(scene).map_err(|e| RpcError::invalid_params(e.to_string()))?;
     let history = app.try_state::<crate::history::HistoryService>();
     let done = crate::commit_drawing(&v, history.as_deref(), &path, &json, expected, &crate::random_id()).map_err(native_err)?;

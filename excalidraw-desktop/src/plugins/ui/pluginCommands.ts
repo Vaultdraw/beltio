@@ -36,13 +36,26 @@ export const PLUGIN_UI_COMMANDS: CommandDefinition[] = [
   command(I.deleteData, "Delete data of a plugin…"),
 ];
 
-let deleteDataRequested = false;
+// "Delete data of a plugin…" requests: a counter the Plugins page watches, so a
+// request reaches a page that is already open and never fires twice.
+let deleteDataRequests = 0;
+let deleteDataHandled = 0;
+const deleteDataListeners = new Set<() => void>();
 
-/** The Plugins page asks once whether it was opened by "Delete data of a plugin…". */
-export const takeDeleteDataRequest = (): boolean => {
-  const was = deleteDataRequested;
-  deleteDataRequested = false;
-  return was;
+export const deleteDataRequest = {
+  get: (): number => deleteDataRequests,
+  subscribe: (fn: () => void): (() => void) => {
+    deleteDataListeners.add(fn);
+    return () => void deleteDataListeners.delete(fn);
+  },
+  /** True once per request: the caller acts on it. */
+  take: (): boolean => {
+    if (deleteDataHandled >= deleteDataRequests) {
+      return false;
+    }
+    deleteDataHandled = deleteDataRequests;
+    return true;
+  },
 };
 
 /** `openSettings` is bound by the shell (it owns the Settings modal). */
@@ -55,7 +68,8 @@ export const pluginUiHandlers = (
   [I.openFolder]: () => void openPluginsFolder(),
   // Opens Settings → Plugins with the first "Delete data" button focused.
   [I.deleteData]: () => {
-    deleteDataRequested = true;
+    deleteDataRequests++;
+    deleteDataListeners.forEach((fn) => fn());
     openSettings();
   },
 });

@@ -76,12 +76,12 @@ impl From<RpcError> for GatewayError {
 
 /// Finds `method` and checks that `plugin` may call it. `plugin` is `None` when no installed
 /// plugin has the id. A gated row needs the permission declared in `plugin.toml` and confirmed
-/// by the user (bundled plugins need no confirmation).
+/// by the user (bundled plugins need no confirmation). `confirmed` loads the consent record.
 pub(crate) fn authorize(
     method: &str,
     plugin_id: &str,
     plugin: Option<&PluginInfo>,
-    confirmed: &consent::Record,
+    confirmed: impl FnOnce() -> consent::Record,
 ) -> Result<&'static Row, GatewayError> {
     let row = ALLOWLIST
         .iter()
@@ -97,8 +97,9 @@ pub(crate) fn authorize(
     if !plugin.manifest.permissions.iter().any(|p| p == permission) {
         return Err(refuse("which plugin.toml does not declare"));
     }
+    // The consent file is read only for gated rows of user plugins.
     let bundled = plugin.source == Source::Bundled;
-    if !bundled && !confirmed.get(plugin_id).is_some_and(|c| c.iter().any(|p| p == permission)) {
+    if !bundled && !confirmed().get(plugin_id).is_some_and(|c| c.iter().any(|p| p == permission)) {
         return Err(refuse("which you have not confirmed (Settings → Plugins)"));
     }
     Ok(row)

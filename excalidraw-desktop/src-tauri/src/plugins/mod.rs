@@ -157,12 +157,7 @@ pub(crate) async fn plugin_call(
         let snap = snapshot(&app, false)?;
         let state_dir = config::resolve_dirs()?.state;
         let plugin = snap.list.plugins.iter().find(|p| p.manifest.id == plugin_id);
-        let confirmed = if plugin.is_some_and(|p| p.source != scan::Source::Bundled) {
-            consent::load(&state_dir)
-        } else {
-            consent::Record::new()
-        };
-        let row = gateway::authorize(&method, &plugin_id, plugin, &confirmed)?;
+        let row = gateway::authorize(&method, &plugin_id, plugin, || consent::load(&state_dir))?;
         match row.route {
             gateway::Route::Control(m) => {
                 let params = if m == vaultdraw_protocol::methods::FILE_WRITE { Some(gateway::create_only(params)?) } else { params };

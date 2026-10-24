@@ -141,8 +141,8 @@ export async function pluginDataSizes(): Promise<Map<string, number>> {
 
 /** "Delete data": the in-memory copy is dropped first, so nothing writes it back. */
 export async function deletePluginData(id: string): Promise<boolean> {
-  (await import("./storage")).resetPluginStore(id);
-  return getPluginsBackend().dataDelete(id);
+  const { wipePluginStore } = await import("./storage");
+  return wipePluginStore(id, () => getPluginsBackend().dataDelete(id));
 }
 
 /** The user re-enabled a plugin the host had disabled after errors. */

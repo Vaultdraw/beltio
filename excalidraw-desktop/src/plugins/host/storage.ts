@@ -43,8 +43,14 @@ export interface StorageDeps {
 export interface PluginStore extends StorageScope {
   /** Writes pending changes now; resolves when the disk has them (or the write failed). */
   flush(): Promise<void>;
-  /** Forgets everything in memory and any pending write ("Delete data"). */
+  /** Forgets everything in memory and any pending write. */
   reset(): void;
+  /**
+   * "Delete data": drops memory and the pending write, waits for a write
+   * already sent, then runs `remove` (the native delete). Calls made meanwhile
+   * wait and then start from the empty store.
+   */
+  wipe<T>(remove: () => Promise<T>): Promise<T>;
 }
 
 export function createPluginStore(deps: StorageDeps): PluginStore {
@@ -58,10 +64,15 @@ export function createPluginStore(deps: StorageDeps): PluginStore {
   let timer: unknown = null;
   let firstChangeAt = 0;
   let writing: Promise<void> = Promise.resolve();
+  /** Set while "Delete data" runs: loads wait, so the old file is never read back. */
+  let wiping: Promise<void> | null = null;
 
   const load = (): Promise<Map<string, string>> => {
     if (entries) {
       return Promise.resolve(entries);
+    }
+    if (wiping) {
+      return wiping.then(load, load);
     }
     if (!loading) {
       const gen = generation;
@@ -87,7 +98,9 @@ export function createPluginStore(deps: StorageDeps): PluginStore {
           return map;
         },
         (err) => {
-          loading = null;
+          if (gen === generation) {
+            loading = null;
+          }
           throw err;
         },
       );
@@ -120,6 +133,7 @@ export function createPluginStore(deps: StorageDeps): PluginStore {
           if (gen === generation) {
             written = text;
           }
+          notifyWritten();
         },
         (err) => {
           if (gen === generation) {
@@ -147,6 +161,16 @@ export function createPluginStore(deps: StorageDeps): PluginStore {
       void writeNow();
     }, wait);
   };
+
+  function reset() {
+    generation++;
+    cancelTimer();
+    entries = null;
+    loading = null;
+    bytes = BRACES;
+    written = null;
+    dirty = false;
+  }
 
   return {
     async get<T extends Json = Json>(key: string) {
@@ -187,14 +211,22 @@ export function createPluginStore(deps: StorageDeps): PluginStore {
       return [...(await load()).keys()];
     },
     flush: () => writeNow(),
-    reset() {
-      generation++;
-      cancelTimer();
-      entries = null;
-      loading = null;
-      bytes = BRACES;
-      written = null;
-      dirty = false;
+    reset,
+    wipe(remove) {
+      reset();
+      const inFlight = writing;
+      const run = inFlight.then(remove, remove);
+      const gate = run.then(
+        () => undefined,
+        () => undefined,
+      );
+      wiping = gate;
+      void gate.then(() => {
+        if (wiping === gate) {
+          wiping = null;
+        }
+      });
+      return run;
     },
   };
 }
@@ -220,9 +252,31 @@ export const flushAllPluginStorage = async (): Promise<void> => {
   await Promise.all([...stores.values()].map((s) => s.flush()));
 };
 
-/** "Delete data": drop what is in memory so nothing writes the old data back. */
+/** Tests and the kit's `seed`: forget what is in memory. */
 export const resetPluginStore = (id: string): void => {
   stores.get(id)?.reset();
+};
+
+/** "Delete data" for `id`: through its store when it has one, so nothing writes the old data back. */
+export const wipePluginStore = <T>(
+  id: string,
+  remove: () => Promise<T>,
+): Promise<T> => {
+  const s = stores.get(id);
+  const run = s ? s.wipe(remove) : remove();
+  return run.finally(notifyWritten);
+};
+
+const writeListeners = new Set<() => void>();
+
+function notifyWritten(): void {
+  writeListeners.forEach((fn) => fn());
+}
+
+/** Called after a plugin's data reached the disk or was deleted (Settings refreshes sizes). */
+export const subscribeStorageWrites = (fn: () => void): (() => void) => {
+  writeListeners.add(fn);
+  return () => void writeListeners.delete(fn);
 };
 
 export const pluginStoreCount = (): number => stores.size;

@@ -2,8 +2,11 @@
 import { toastStore } from "../../toasts/toastStore";
 import { getPreferences } from "../../vault/preferences";
 
+import { utf8Length } from "../../../../sdk/api/testing/rules";
+
 import { errorText, logLine } from "./errors";
 import { createGateway } from "./gateway";
+
 import { createPluginStore, getPluginStore, limitKbOr } from "./storage";
 
 import type { Disposable, Json, StorageApi } from "../api";
@@ -23,7 +26,7 @@ export function createStorageApi(
           call<{ data: Record<string, Json> | null; corrupt: boolean }>(
             "storage.read",
           ),
-        write: (text) => call("storage.write", { text }, text.length),
+        write: (text) => call("storage.write", { text }, utf8Length(text)),
       },
       limitKb: () => limitKbOr(getPreferences(win).pluginsStorageLimitKb),
       onCorrupt: () => {
@@ -33,7 +36,7 @@ export function createStorageApi(
           "Saved data was unreadable; renamed it data.json.bad and started empty",
         );
         toastStore.push({
-          message: `${name}: its saved data was unreadable, so it starts empty (kept as data.json.bad).`,
+          message: `${name}: its saved data was unreadable, so it starts empty (kept as a data.json.bad file).`,
           kind: "error",
         });
       },
