@@ -74,7 +74,11 @@ export const loadCatalogue = async (
     };
   } catch (err) {
     const error = toInstallError(err);
-    if (cached && error.code !== "INVALID_INDEX") {
+    const keepsCache =
+      error.code !== "INVALID_INDEX" &&
+      error.code !== "NETWORK_NOT_ALLOWED" &&
+      error.code !== "NETWORK_DISABLED";
+    if (cached && keepsCache) {
       return { catalogue: cached, stale: true, notice: error.message };
     }
     throw error;
@@ -96,7 +100,10 @@ export const entryStatus = (
   if (!found) {
     return "available";
   }
-  return found.source.sha256 === entry.sha256 ? "installed" : "update";
+  // No hash (installed some other way): never offer to overwrite it.
+  return !found.source.sha256 || found.source.sha256 === entry.sha256
+    ? "installed"
+    : "update";
 };
 
 /**
@@ -120,7 +127,7 @@ export const installEntry = async (
       `${entry.name} changed after the list was made. Refresh the list and try again.`,
     );
   }
-  validateCandidate(got.json, entry.name);
+  const fileName = validateCandidate(got.json, entry.name);
   return installCandidate(
     backend,
     {
@@ -128,7 +135,11 @@ export const installEntry = async (
       fallbackName: entry.name,
       source: { url: got.url, sha256: got.sha256 },
     },
-    { replace: options.replace ?? false },
+    {
+      replace: options.replace ?? false,
+      // The list's name wins, so the card finds the theme it installed.
+      asName: fileName === entry.name ? undefined : entry.name,
+    },
   );
 };
 
@@ -136,19 +147,22 @@ export const installEntry = async (
 export const createLimiter = (limit: number) => {
   let running = 0;
   const waiting: (() => void)[] = [];
-  const next = () => {
-    running--;
-    waiting.shift()?.();
-  };
   return async <T>(job: () => Promise<T>): Promise<T> => {
     if (running >= limit) {
+      // The finishing job hands its slot over, so `running` never dips.
       await new Promise<void>((resolve) => waiting.push(resolve));
+    } else {
+      running++;
     }
-    running++;
     try {
       return await job();
     } finally {
-      next();
+      const wake = waiting.shift();
+      if (wake) {
+        wake();
+      } else {
+        running--;
+      }
     }
   };
 };

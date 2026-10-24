@@ -122,8 +122,11 @@ const openReady = async () => {
   await screen.findByTestId("theme-card-Vesper");
 };
 
-const key = (k: string) =>
-  fireEvent.keyDown(screen.getByLabelText("Search themes"), { key: k });
+const key = (k: string, extra: { shiftKey?: boolean } = {}) =>
+  fireEvent.keyDown(screen.getByLabelText("Search themes"), {
+    key: k,
+    ...extra,
+  });
 
 beforeEach(() => {
   installedList = [];
@@ -282,13 +285,15 @@ describe("ThemeBrowserDialog", () => {
     );
   });
 
-  it("Delete on an installed card uninstalls it", async () => {
+  it("Shift+Delete in the search box uninstalls; plain Delete does not", async () => {
     installedList = [{ name: "Vesper", source: { sha256: SHA_V } }];
     await openReady();
     expect(screen.getByTestId("theme-card-Vesper").textContent).toMatch(
       /Installed/,
     );
     key("Delete");
+    expect(install.uninstall).not.toHaveBeenCalled();
+    key("Delete", { shiftKey: true });
     await waitFor(() =>
       expect(install.uninstall).toHaveBeenCalledWith("Vesper"),
     );

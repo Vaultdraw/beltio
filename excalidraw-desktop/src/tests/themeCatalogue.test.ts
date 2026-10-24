@@ -97,6 +97,7 @@ describe("parseIndex", () => {
         theme({
           swatch: { dark: ["#fff", "red", "url(x)"], light: ["nope"] },
           previews: ["a.svg", "../x.png", "ok.webp"],
+          // eslint-disable-next-line no-script-url
           homepage: "javascript:alert(1)",
         }),
       ]),
@@ -284,6 +285,15 @@ describe("loadCatalogue", () => {
     ).rejects.toMatchObject({ code: "INVALID_INDEX" });
   });
 
+  it("shows the consent error instead of a stale list", async () => {
+    const b = catalogueBackend(raw([theme()]), async () => {
+      throw new InstallError("NETWORK_NOT_ALLOWED", "not allowed");
+    });
+    await expect(
+      loadCatalogue(b, { ...OPTS, force: true }),
+    ).rejects.toMatchObject({ code: "NETWORK_NOT_ALLOWED" });
+  });
+
   it("ignores an unreadable cache", async () => {
     const b = catalogueBackend(raw([], { json: "nope" }), async () =>
       raw([theme()]),
@@ -299,7 +309,9 @@ describe("install flow", () => {
   });
 
   const installBackend = (sha: string) => {
-    const write = vi.fn(async (r: { name: string }) => ({ name: r.name }));
+    const write = vi.fn(async (r: { name: string; json?: string }) => ({
+      name: r.name,
+    }));
     const fetch = vi.fn(async (ref: { kind: string; url?: string }) => ({
       json: MIDNIGHT,
       sha256: sha,
@@ -358,6 +370,24 @@ describe("install flow", () => {
     });
     expect(write).toHaveBeenCalledWith(
       expect.objectContaining({ replace: true }),
+    );
+  });
+
+  it("installs under the list's name when the file says another", async () => {
+    const { backend, write } = installBackend(SHA);
+    const name = await installEntry(
+      backend,
+      entry({ name: "Vesper Two", path: "Vesper/Vesper.json" }),
+      "https://r.test/o/main/index.json",
+      1024,
+    );
+    expect(name).toBe("Vesper Two");
+    expect(write.mock.calls[0][0].json).toContain('"Vesper Two"');
+  });
+
+  it("never offers to overwrite a theme with no recorded hash", () => {
+    expect(entryStatus(e, [{ name: "Vesper", source: {} as never }])).toBe(
+      "installed",
     );
   });
 

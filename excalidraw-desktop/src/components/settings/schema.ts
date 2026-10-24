@@ -88,7 +88,7 @@ export const DEFAULT_SETTINGS_PAGE: SettingsPageId = "appearance";
 
 /** Sections of the Tools page, in tab order: styled tools, then pen and laser. */
 export const TOOLS_SECTIONS = [...TOOL_DEFAULT_TOOLS, "pen", "laser"] as const;
-export type ToolsSection = (typeof TOOLS_SECTIONS)[number];
+export type ToolsSection = typeof TOOLS_SECTIONS[number];
 
 export const TOOLS_SECTION_LABELS: Record<ToolsSection, string> = {
   ...TOOL_LABELS,

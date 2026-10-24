@@ -1,6 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
-
 import { createHash } from "node:crypto";
+
+import { expect, test, type Page } from "@playwright/test";
 
 import { AFTER_AUTOSAVE_MS } from "./constants";
 import {

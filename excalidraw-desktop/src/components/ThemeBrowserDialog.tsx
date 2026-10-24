@@ -360,7 +360,8 @@ export const ThemeBrowserDialog = ({
         break;
       case "Delete":
         if (current && statusOf(current) !== "available" && !busy) {
-          if (!inInput || filters.query === "") {
+          // In the search box only Shift+Delete removes; plain Delete edits the text.
+          if (!inInput || e.shiftKey) {
             e.preventDefault();
             void remove(current);
           }
@@ -579,7 +580,8 @@ export const ThemeBrowserDialog = ({
           </p>
         )}
         <p className="vault-tb__hint">
-          Arrows move, Enter installs or uses, Delete removes, / searches.
+          Arrows move, Enter installs or uses, Delete removes (Shift+Delete in
+          the search box), / searches.
         </p>
       </div>
     );

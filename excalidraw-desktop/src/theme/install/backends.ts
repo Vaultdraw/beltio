@@ -175,7 +175,9 @@ export const browserBackend = (win: Window): InstallBackend => {
     installed: async () =>
       readStoredThemes(win).map(({ name, source }) => ({ name, source })),
     updateFetch: async (name, maxBytes) => {
-      const found = readStoredThemes(win).find((t) => t.name === name);
+      const found = readStoredThemes(win).find(
+        (t) => t.name.toLowerCase() === name.toLowerCase(),
+      );
       if (!found?.source.url) {
         throw new InstallError(
           "NOT_FOUND",
@@ -189,7 +191,9 @@ export const browserBackend = (win: Window): InstallBackend => {
     },
     uninstall: async (name) => {
       writeStoredThemes(
-        readStoredThemes(win).filter((t) => t.name !== name),
+        readStoredThemes(win).filter(
+          (t) => t.name.toLowerCase() !== name.toLowerCase(),
+        ),
         win,
       );
     },

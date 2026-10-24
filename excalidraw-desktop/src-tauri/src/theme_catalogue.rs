@@ -154,7 +154,7 @@ fn prune_dir(dir: &Path, keep: usize) {
 pub(crate) fn preview_in(dirs: &config::Dirs, url: &str, max_bytes: u64, keep: usize) -> Result<Vec<u8>> {
     let name = theme_install::sha256_hex(url.as_bytes());
     let dir = cache_dir(dirs).join(PREVIEWS_DIR);
-    if let Some(b) = read_regular(&dir.join(&name)) {
+    if let Some(b) = read_regular(&dir.join(&name)).filter(|b| image_kind(b)) {
         return Ok(b);
     }
     network::ensure_network_allowed(dirs, PURPOSE)?;
