@@ -57,6 +57,7 @@ let winners = new Map<string, ImporterEntry>();
 let overrides: Readonly<Record<string, string>> = {};
 let longestParts = 1;
 let runner: ImportRunner | null = null;
+let canceller: (() => boolean) | null = null;
 let version = 0;
 const listeners = new Set<() => void>();
 
@@ -189,6 +190,14 @@ export async function runImports(
   return true;
 }
 
+/** The plugin host sets how to abort the running import. */
+export function setImportCanceller(next: (() => boolean) | null): void {
+  canceller = next;
+}
+
+/** "Import: Cancel": true when an import was running and is now aborted. */
+export const cancelImports = (): boolean => canceller?.() ?? false;
+
 /** For views (Plugins page): called after every change. */
 export const subscribeImporters = (fn: () => void): (() => void) => {
   listeners.add(fn);
@@ -202,5 +211,6 @@ export function resetImporterMap(): void {
   claims.clear();
   overrides = {};
   runner = null;
+  canceller = null;
   resolveWinners();
 }
