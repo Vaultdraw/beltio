@@ -193,27 +193,6 @@ describe("TabStrip", () => {
     delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
   });
 
-  it("skips the first scroll when the first tab is active at mount", () => {
-    const store = storeWith(["a.excalidraw", "b.excalidraw"]);
-    act(() => store.update((s) => activate(s, "t1")));
-    const spy = vi.fn();
-    Element.prototype.scrollIntoView = spy;
-    setup(store);
-    expect(spy).not.toHaveBeenCalled();
-    act(() => store.update((s) => activate(s, "t2")));
-    expect(spy).toHaveBeenCalledTimes(1);
-    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
-  });
-
-  it("still scrolls at mount when a later tab is active", () => {
-    const store = storeWith(["a.excalidraw", "b.excalidraw"]);
-    const spy = vi.fn();
-    Element.prototype.scrollIntoView = spy;
-    setup(store);
-    expect(spy).toHaveBeenCalledWith({ block: "nearest", inline: "nearest" });
-    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
-  });
-
   it("does not re-render when only a tab's view changes", () => {
     const store = storeWith(["a.excalidraw", "b.excalidraw"]);
     let commits = 0;

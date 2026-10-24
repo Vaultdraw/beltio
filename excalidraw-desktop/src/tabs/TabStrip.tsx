@@ -260,17 +260,7 @@ export const TabStrip = memo(
       return () => ro.disconnect();
     }, []);
 
-    const revealed = useRef(false);
     useLayoutEffect(() => {
-      // First mount with the first tab active: the strip starts scrolled to
-      // the left, so the tab is already in view. Skipping the scroll avoids a
-      // synchronous layout in the middle of the render (about 10 ms at 4x CPU
-      // throttling on vault open).
-      const first = !revealed.current;
-      revealed.current = true;
-      if (first && latest.current.tabs[0]?.id === active.id) {
-        return;
-      }
       const el = tabElement(active.id);
       if (el && typeof el.scrollIntoView === "function") {
         el.scrollIntoView({ block: "nearest", inline: "nearest" });
