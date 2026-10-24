@@ -45,8 +45,13 @@ test("Linux bundles deb and AppImage and keeps the sidecar, resources and securi
   assert.equal(merged.identifier, "app.vaultdraw");
 });
 
-test("the base and the merged config are valid against the Tauri config schema", () => {
-  const Ajv = require("ajv");
+// ajv is only a transitive dependency (via eslint), so skip rather than fail if an install layout drops it.
+let Ajv = null;
+try {
+  Ajv = require("ajv");
+} catch {}
+
+test("the base and the merged config are valid against the Tauri config schema", { skip: !Ajv && "ajv is not installed" }, () => {
   const schema = readJson(require.resolve("@tauri-apps/cli/config.schema.json"));
   const validate = new Ajv({ strict: false, allErrors: true, unicodeRegExp: false, validateFormats: false }).compile(schema);
   assert.ok(validate(base), JSON.stringify(validate.errors, null, 2));
