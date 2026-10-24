@@ -104,7 +104,7 @@ const runPairs = async (from, to, into = results, tag = "") => {
 };
 let pairsDone = pairs;
 await runPairs(0, pairs);
-const failingNow = () => compare({ metrics: mergeSide(results.head, unit).metrics }, { metrics: mergeSide(results.base, unit).metrics }, catalogue).failing;
+const failingNow = () => compare({ metrics: mergeSide(results.head, unit).metrics }, { metrics: mergeSide(results.base, unit).metrics }, catalogue, mode).failing;
 if (!o["no-confirm"] && pairs < CONFIRM_PAIRS && failingNow().length) {
   log(`flagged after ${pairs} pair(s); confirming with ${CONFIRM_PAIRS} pairs`);
   await runPairs(pairs, CONFIRM_PAIRS);
@@ -124,7 +124,7 @@ const result = buildAbResult({
   ],
 });
 
-const cmp = compare(result, { metrics: baseSide.metrics }, catalogue);
+const cmp = compare(result, { metrics: baseSide.metrics }, catalogue, mode);
 const allLoads = [load.start, load.end, ...head.perRunLoad, ...baseSide.perRunLoad].filter(Number.isFinite);
 const quiet = allLoads.every((l) => l < load.threshold);
 const failingAll = (c, h, b) => [...c.failing, ...consistentShifts(c.rows, h.metrics, b.metrics)];
@@ -139,7 +139,7 @@ if (!o["no-reproduce"] && needsReproduction(blocking)) {
   await runPairs(0, CONFIRM_PAIRS, again, "repro-");
   const h2 = mergeSide(again.head, unit);
   const b2 = mergeSide(again.base, unit);
-  const failing2 = failingAll(compare({ metrics: h2.metrics }, { metrics: b2.metrics }, catalogue), h2, b2);
+  const failing2 = failingAll(compare({ metrics: h2.metrics }, { metrics: b2.metrics }, catalogue, mode), h2, b2);
   const loads2 = [load2.start, ...h2.perRunLoad, ...b2.perRunLoad].filter(Number.isFinite);
   repro = { ...reproduced(blocking, failing2), pairs: CONFIRM_PAIRS, failing: failing2, loads: loads2, h2, b2 };
   blocking = repro.blocking;

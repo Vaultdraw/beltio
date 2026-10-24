@@ -39,7 +39,7 @@ const pctDelta = (cur, base) => (base === 0 ? (cur === 0 ? 0 : Infinity) : ((cur
  * baseline value). If the baseline already breached it, it is reported loudly as "budget-preexisting" but does not
  * fail, otherwise a single historic miss would block every merge of the whole team.
  */
-export function compare(current, baseline, catalogue) {
+export function compare(current, baseline, catalogue, mode = current?.mode) {
   const rows = [];
   const cm = current?.metrics ?? {};
   const bm = baseline?.metrics ?? {};
@@ -47,7 +47,7 @@ export function compare(current, baseline, catalogue) {
     (a, b) => orderIndex(catalogue, a) - orderIndex(catalogue, b) || a.localeCompare(b),
   );
   for (const id of ids) {
-    const spec = specFor(catalogue, id);
+    const spec = specFor(catalogue, id, mode);
     if (!spec) continue;
     const c = cm[id];
     const b = bm[id];

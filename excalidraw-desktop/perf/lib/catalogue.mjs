@@ -8,13 +8,19 @@ export function loadCatalogue(file) {
   return JSON.parse(readFileSync(p, "utf8"));
 }
 
-/** Resolved spec for a metric id, or null when unknown. */
-export function specFor(catalogue, id) {
+/**
+ * Resolved spec for a metric id, or null when unknown.
+ * `mode` ("normal" | "low-end"): a metric with `packagedLowEnd` overrides applies them to the packaged app's own id
+ * in low-end mode only; `browser.<id>` (Chromium x4) keeps the base spec. Used for frame-timer-bound metrics
+ * (DECISIONS D9): the full packaged open waits for two painted frames, each ~107 ms under background QoS.
+ */
+export function specFor(catalogue, id, mode) {
   const d = catalogue.defaults ?? {};
   let raw = catalogue.metrics[id];
   if (!raw && id.startsWith("browser.")) raw = catalogue.metrics[id.slice("browser.".length)];
   if (!raw) return null;
   const unit = raw.unit ?? "ms";
+  if (mode === "low-end" && raw.packagedLowEnd && !id.startsWith("browser.")) raw = { ...raw, ...raw.packagedLowEnd };
   return {
     id,
     unit,

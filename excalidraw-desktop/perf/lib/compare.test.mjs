@@ -109,3 +109,25 @@ test("warn budget: a breach is reported as budget-warn and never fails", () => {
   const ok = compare(m({ "memory.leak.growthMB": mk(10, 10, { unit: "MB" }) }), m({}), cat);
   assert.equal(ok.rows.some((y) => y.status === "budget-warn"), false);
 });
+
+test("D9: packaged low-end open.* is report-only, open.*.ready and browser.open.* gate; normal mode gates the full open", () => {
+  const base = { mode: "low-end", metrics: { "open.small": mk(240), "open.small.ready": mk(60), "browser.open.small": mk(120) } };
+  const slowFrames = { mode: "low-end", metrics: { "open.small": mk(400), "open.small.ready": mk(61), "browser.open.small": mk(121) } };
+  const a = compare(slowFrames, base, cat);
+  assert.equal(a.exitCode, 0);
+  assert.ok(!a.rows.some((x) => x.metric === "open.small"));
+  const slowReady = { mode: "low-end", metrics: { "open.small": mk(240), "open.small.ready": mk(80), "browser.open.small": mk(120) } };
+  assert.equal(row(compare(slowReady, base, cat), "open.small.ready", "median").status, "regressed");
+  const slowChromium = { mode: "low-end", metrics: { "open.small": mk(240), "open.small.ready": mk(60), "browser.open.small": mk(150) } };
+  assert.equal(row(compare(slowChromium, base, cat), "browser.open.small", "median").status, "regressed");
+  // the budget (300 ms) on .ready fails when the baseline met it
+  const over = { mode: "low-end", metrics: { "open.medium.ready": mk(310, 320) } };
+  const ok = { mode: "low-end", metrics: { "open.medium.ready": mk(250, 260) } };
+  assert.equal(compare(over, ok, cat).exitCode, 1);
+  // normal mode keeps gating the full open
+  const n0 = { mode: "normal", metrics: { "open.small": mk(40) } };
+  const n1 = { mode: "normal", metrics: { "open.small": mk(60) } };
+  assert.equal(row(compare(n1, n0, cat), "open.small", "median").status, "regressed");
+  // an explicit mode argument wins (ab.mjs passes {metrics} only)
+  assert.equal(compare({ metrics: slowFrames.metrics }, base, cat, "low-end").exitCode, 0);
+});

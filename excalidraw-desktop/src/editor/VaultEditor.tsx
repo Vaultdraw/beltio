@@ -74,7 +74,6 @@ import { PANNED_CLASS, watchFirstPan } from "./panHint";
 import { renderImageExport } from "./imageExport";
 import { serializeSceneForSave } from "./sceneSerializer";
 import { getSaveSignature } from "./saveSignature";
-
 import { isSwapping, loadScene } from "./sceneSwap";
 import { blockEditorKeys } from "./inputGuard";
 import { LoadingLine } from "./LoadingLine";

@@ -25,19 +25,35 @@
     },
     "open.small": {
       "unit": "ms",
-      "budgets": [{ "stat": "median", "max": 300 }, { "stat": "p95", "max": 300 }]
+      "desc": "click to the editor ready and two painted frames. Packaged low-end: report-only (D9), gated on open.small.ready and Chromium x4.",
+      "budgets": [{ "stat": "median", "max": 300 }, { "stat": "p95", "max": 300 }],
+      "packagedLowEnd": { "gate": [], "report": ["median", "p95"], "budgets": [] }
     },
     "open.medium": {
       "unit": "ms",
-      "budgets": [{ "stat": "median", "max": 300 }, { "stat": "p95", "max": 300 }]
+      "desc": "click to the editor ready and two painted frames. Packaged low-end: report-only (D9), gated on open.medium.ready and Chromium x4.",
+      "budgets": [{ "stat": "median", "max": 300 }, { "stat": "p95", "max": 300 }],
+      "packagedLowEnd": { "gate": [], "report": ["median", "p95"], "budgets": [] }
     },
     "open.large": {
       "unit": "ms",
-      "desc": "No absolute budget by decision: the large drawing embeds ~18 MB of images, so only the 5% regression gate applies."
+      "desc": "No absolute budget by decision: the large drawing embeds ~18 MB of images, so only the 5% regression gate applies. Packaged low-end: report-only (D9), gated on open.large.ready and Chromium x4.",
+      "packagedLowEnd": { "gate": [], "report": ["median", "p95"] }
     },
-    "open.small.ready": { "unit": "ms", "desc": "report-only: open.small without the two painted frames (click to the editor ready with the new scene committed); packaged low-end frames wait for a ~100 ms frame timer each, see frame.rafInterval", "gate": [], "report": ["median", "p95"] },
-    "open.medium.ready": { "unit": "ms", "desc": "report-only: open.medium without the two painted frames", "gate": [], "report": ["median", "p95"] },
-    "open.large.ready": { "unit": "ms", "desc": "report-only: open.large without the two painted frames", "gate": [], "report": ["median", "p95"] },
+    "open.small.ready": {
+      "unit": "ms",
+      "desc": "click to the editor ready with the new scene committed (open.small without the two painted frames). Gates low-end open (D9): under background QoS each painted frame waits ~107 ms (frame.rafInterval), this does not.",
+      "budgets": [{ "stat": "median", "max": 300 }, { "stat": "p95", "max": 300 }]
+    },
+    "open.medium.ready": {
+      "unit": "ms",
+      "desc": "open.medium without the two painted frames; gates low-end open (D9)",
+      "budgets": [{ "stat": "median", "max": 300 }, { "stat": "p95", "max": 300 }]
+    },
+    "open.large.ready": {
+      "unit": "ms",
+      "desc": "open.large without the two painted frames; gates low-end open (D9). No absolute budget, like open.large."
+    },
     "switch.drawing": { "unit": "ms", "desc": "drawing A open, click drawing B (small<->medium alternating) in the navigator to B's canvas painted" },
     "switch.recent": { "unit": "ms", "desc": "as switch.drawing, for the A-B-A switch back to a recently opened drawing" },
     "settings.open": { "unit": "ms", "desc": "Cmd+, to settings page painted", "budgets": [{"stat": "median", "max": 100, "warn": true, "why": "product target < 100 ms; warning only"}, {"stat": "p95", "max": 100, "warn": true}] },
