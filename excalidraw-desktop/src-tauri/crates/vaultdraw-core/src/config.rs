@@ -266,10 +266,9 @@ autosave_delay_ms = 500
 # Show a notice when a script or AI tool edits the drawing on screen
 # notify_edits = true
 
-# Pull in other TOML files or folders (relative to this file, or starting with ~).
-# This file wins over what it includes; overrides.toml wins over both.
-# [include]
-# files = ["keys.toml", "machine/", "~/dotfiles/vaultdraw/colors.toml"]
+# To split this file, add an [include] table that lists other TOML files or folders
+# (relative to this file, or starting with ~). See "Including other files" in
+# docs/configuration.md. This file wins over what it includes.
 "##;
 
 /// Serializes every config/state write within the process.

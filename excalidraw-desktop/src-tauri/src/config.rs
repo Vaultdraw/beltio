@@ -169,9 +169,15 @@ impl IncludeFilter {
     }
 }
 
-/// The path and, when it resolves, its real path: events carry either form (macOS reports `/private/...`).
+/// Real path of `p`; for a file that does not exist yet, its real folder plus its name.
+fn real_path(p: &Path) -> Option<PathBuf> {
+    fs::canonicalize(p).ok().or_else(|| Some(fs::canonicalize(p.parent()?).ok()?.join(p.file_name()?)))
+}
+
+/// The path and, when it resolves, its real path: events carry either form (macOS reports
+/// `/private/...`), and a file created later arrives under its folder's real path.
 fn with_real(paths: impl IntoIterator<Item = PathBuf>) -> BTreeSet<PathBuf> {
-    paths.into_iter().flat_map(|p| [fs::canonicalize(&p).ok(), Some(p)]).flatten().collect()
+    paths.into_iter().flat_map(|p| [real_path(&p), Some(p)]).flatten().collect()
 }
 
 /// Drops events from outside the config and state folders that do not name an included file or

@@ -18,12 +18,20 @@ export interface KeySource {
   hidden?: { file: string; value: unknown };
 }
 
+const layerBaseName = (layer: LayerPayload): string => {
+  const name = layer.name ?? layer.path.split(/[\\/]/).pop() ?? layer.path;
+  return name === "config.toml" || name === "overrides.toml"
+    ? layer.path
+    : name;
+};
+
 /** The file a layer is read from, by name (an included file's own name). */
 export const layerFileName = (layer: LayerPayload): string =>
   layer.kind === "overrides"
     ? "overrides.toml"
     : layer.kind === "include"
-    ? layer.name ?? layer.path.split(/[\\/]/).pop() ?? layer.path
+    ? // An included file called config.toml or overrides.toml is named by its path.
+      layerBaseName(layer)
     : "config.toml";
 
 const fileOf = layerFileName;

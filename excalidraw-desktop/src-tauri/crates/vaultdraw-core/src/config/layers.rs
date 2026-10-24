@@ -109,7 +109,11 @@ impl Layers {
 /// The merged config of the layers that parsed, or `None` when none did. The `include` table
 /// only drives loading and is not part of the result.
 pub(super) fn merged(layers: &[LayerInfo]) -> Option<Json> {
-    let mut parsed = layers.iter().filter_map(|l| l.config.as_ref());
+    merged_refs(layers.iter())
+}
+
+pub(super) fn merged_refs<'a>(layers: impl Iterator<Item = &'a LayerInfo>) -> Option<Json> {
+    let mut parsed = layers.filter_map(|l| l.config.as_ref());
     let mut out = parsed.next()?.clone();
     for higher in parsed {
         merge_layer(&mut out, higher);
@@ -270,7 +274,7 @@ pub fn update_overrides_in(dirs: &Dirs, changes: &[LayerChange]) -> Result<()> {
         let at = e.line.map(|l| format!(" at line {l}")).unwrap_or_default();
         return Err(err("CONFIG_INVALID", format!("config.toml is broken{at}: {}. Fix it, then save again.", e.message)));
     }
-    let lower = merged(&below.all.iter().filter(|l| l.kind != "overrides").cloned().collect::<Vec<_>>()).unwrap_or(Json::Null);
+    let lower = merged_refs(below.all.iter().filter(|l| l.kind != "overrides")).unwrap_or(Json::Null);
     let path = dirs.overrides_file();
     let existing = match read_toml_text(&path, OVERRIDES_FILE, MAX_OVERRIDES_BYTES) {
         Ok(text) => Some(text),

@@ -96,18 +96,42 @@ fn display_name(path: &Path) -> String {
     path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| path.to_string_lossy().into_owned())
 }
 
+/// What a row is called: the file name, or the full path for an included file that shares a
+/// name with `config.toml` or `overrides.toml` (a chip must never be mistaken for those).
+fn row_name(path: &Path) -> String {
+    let name = display_name(path);
+    if name == CONFIG_FILE || name == super::layers::OVERRIDES_FILE {
+        path.to_string_lossy().into_owned()
+    } else {
+        name
+    }
+}
+
 impl Walk<'_> {
     fn row(&mut self, path: &Path, from: &Path, status: &'static str, message: String, line: Option<usize>, config: Option<Json>) {
+        // Rows that load nothing count against the cap too, so a long list of missing paths
+        // cannot grow the payload without bound. A file that did load always gets its row.
+        if status != "ok" && self.scan.layers.len() >= MAX_INCLUDE_FILES {
+            self.cap_warning();
+            return;
+        }
         self.scan.layers.push(LayerInfo {
             id: 0,
             kind: KIND_INCLUDE,
-            name: display_name(path),
+            name: row_name(path),
             path: path.to_string_lossy().into_owned(),
             status,
             error: (status != "ok").then_some(ConfigError { message, line }),
             config,
             from: Some(from.to_string_lossy().into_owned()),
         });
+    }
+
+    fn cap_warning(&mut self) {
+        if !self.capped {
+            self.capped = true;
+            self.scan.warnings.push(format!("more than {MAX_INCLUDE_FILES} include files; the rest are skipped"));
+        }
     }
 
     fn entries(&mut self, owner: &Path, config: &Json, depth: usize) {
@@ -163,13 +187,17 @@ impl Walk<'_> {
     }
 
     fn file(&mut self, path: &Path, from: &Path, depth: usize) {
+        // A symlink is refused before anything is recorded, so it cannot hide its real target.
+        if fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink()) {
+            return self.row(path, from, "error", format!("{} is a symbolic link; only regular files and folders are read", path.display()), None, None);
+        }
         let canonical = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
         if let Some(at) = self.stack.iter().position(|p| *p == canonical) {
             let chain: Vec<String> = self.stack[at..].iter().chain([&canonical]).map(|p| display_name(p)).collect();
             self.scan.warnings.push(format!("include cycle: {} (skipped)", chain.join(" -> ")));
             return;
         }
-        if !self.seen.insert(canonical.clone()) {
+        if self.seen.contains(&canonical) {
             return; // already loaded: each file loads once
         }
         if depth > MAX_INCLUDE_DEPTH {
@@ -177,12 +205,10 @@ impl Walk<'_> {
             return;
         }
         if self.scan.layers.len() >= MAX_INCLUDE_FILES {
-            if !self.capped {
-                self.capped = true;
-                self.scan.warnings.push(format!("more than {MAX_INCLUDE_FILES} include files; the rest are skipped"));
-            }
+            self.cap_warning();
             return;
         }
+        self.seen.insert(canonical.clone());
         let name = path.to_string_lossy().into_owned();
         let text = match read_toml_text(path, &name, MAX_CONFIG_BYTES) {
             Ok(t) => t,
@@ -429,6 +455,41 @@ mod tests {
         let bad: Vec<_> = layers.all.iter().filter(|l| l.kind == "include" && l.status == "error").collect();
         assert_eq!(bad.len(), 1);
         assert!(bad[0].error.as_ref().unwrap().message.contains("4 MiB"));
+    }
+
+    #[test]
+    fn hundreds_of_missing_paths_stay_under_the_cap() {
+        let e = env();
+        let list: Vec<String> = (0..400).map(|i| format!("\"none{i}.toml\"")).collect();
+        e.write("config/config.toml", &format!("[include]\nfiles = [{}]\n", list.join(", ")));
+        let layers = read_layers_with(&e.dirs, None);
+        let rows: Vec<_> = layers.all.iter().filter(|l| l.kind == "include").collect();
+        assert_eq!(rows.len(), MAX_INCLUDE_FILES);
+        assert!(layers.all.iter().map(|l| l.id).collect::<std::collections::HashSet<_>>().len() == layers.all.len(), "ids are unique");
+        assert!(layers.warnings.iter().any(|w| w.contains("more than 32")));
+    }
+
+    #[test]
+    fn an_included_file_named_config_toml_is_named_by_its_path() {
+        let e = env();
+        let nested = e.write("config/machine/config.toml", "[editor]\nfont_size = 3\n");
+        e.write("config/config.toml", "[include]\nfiles = [\"machine/config.toml\"]\n");
+        let l = e.load();
+        assert_eq!(l.layers[0].name, nested.to_string_lossy());
+        assert_eq!(l.layers[1].name, "config.toml");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_refused_symlink_does_not_hide_its_target() {
+        let e = env();
+        e.write("dots/real.toml", "[editor]\nfont_size = 3\n");
+        e.write("config/machine/keep.toml", "");
+        std::os::unix::fs::symlink(e.root.join("dots/real.toml"), e.root.join("config/machine/a.toml")).unwrap();
+        e.write("config/config.toml", &format!("[include]\nfiles = [\"machine/\", {:?}]\n", e.root.join("dots/real.toml").to_string_lossy()));
+        let l = e.load();
+        assert_eq!(l.config.unwrap()["editor"]["font_size"], 3, "the real file still loads");
+        assert!(l.layers.iter().any(|l| l.name == "a.toml" && l.status == "error"));
     }
 
     #[test]

@@ -103,6 +103,9 @@ describe("keySource with included files", () => {
       sourceFileOf([colors, cfg({}), over(null)], "editor.font_size"),
     ).toBe("colors.toml");
     expect(layerFileName({ ...colors, name: undefined })).toBe("colors.toml");
+    // An include called config.toml is named by its path, never mistaken for the real one.
+    const clash = base(2, "include", "/dots/config.toml", { a: {} });
+    expect(layerFileName(clash)).toBe("/dots/config.toml");
   });
 });
 
