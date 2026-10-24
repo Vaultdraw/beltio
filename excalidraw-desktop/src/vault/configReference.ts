@@ -332,6 +332,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       storage_limit_kb: {
         doc: "Most data one plugin may save with `ctx.storage`, in KiB; a save past it is refused.",
       },
+      scene_max_ops: {
+        doc: "Most ops in one plugin `scene.batch` call; a batch past it is refused.",
+      },
     },
   },
   {

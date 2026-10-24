@@ -247,6 +247,8 @@ autosave_delay_ms = 500
 # storage_limit_kb = 1024
 # Which plugin imports an extension when two claim it, like { txt = "text-import" }
 # importers = {}
+# Most ops in one plugin scene.batch call, 1 to 1000
+# scene_max_ops = 500
 
 [ai]
 # The AI master switch; Settings and AI: Toggle AI show a warning first
@@ -1503,7 +1505,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 79, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 80, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();
