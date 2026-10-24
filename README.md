@@ -151,6 +151,7 @@ echo '[{"op":"add","element":{"type":"rectangle","width":120,"height":80}}]' | v
 - `--dry-run` checks the operations and changes nothing.
 - Operations are `add`, `update` (id and props) and `delete` (id). One call takes up to 500.
 - The `scene.*` methods are experimental. Their names and shapes may change before API level 2.
+- AI apps will reach the same methods through the AI tools interface, which is refused unless you turn AI on in Settings → Control (off by default; see [AI](docs/configuration.md#ai)).
 
 ## Configuration
 
