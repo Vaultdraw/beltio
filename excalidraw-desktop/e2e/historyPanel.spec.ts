@@ -110,34 +110,37 @@ test("timeline arrows and previous/next commands step the preview", async ({
   await openPanelByShortcut(page);
   await selectRow(page, 0); // V3
   await expectColor(page, PREVIEW, ORANGE, true);
+  // Stops: 0 = V1, 1 = V2, 2 = V3, 3 = Current. Every step waits for the
+  // slider to report its stop AND for the settled preview before the next
+  // input, so a key or command never races the scrub settle timer.
+  const atStop = async (stop: number, colour: typeof RED) => {
+    await expect(slider(page)).toHaveAttribute("aria-valuenow", String(stop));
+    await expectColor(page, PREVIEW, colour, true);
+  };
+  await atStop(2, ORANGE);
 
   // Timeline: Left = older.
   await slider(page).focus();
   await page.keyboard.press("ArrowLeft");
+  await atStop(1, BLUE);
   await expectColor(page, PREVIEW, ORANGE, false);
-  await expectColor(page, PREVIEW, BLUE, true);
   await page.keyboard.press("ArrowLeft");
+  await atStop(0, RED);
   await expectColor(page, PREVIEW, BLUE, false);
-  await expectColor(page, PREVIEW, RED, true);
   await page.keyboard.press("ArrowRight");
-  await expectColor(page, PREVIEW, BLUE, true);
+  await atStop(1, BLUE);
   await page.keyboard.press("Home"); // oldest
+  await atStop(0, RED);
   await expectColor(page, PREVIEW, BLUE, false);
-  await expectColor(page, PREVIEW, RED, true);
 
   // Commands: Previous = older, Next = newer.
   await runPaletteCommand(page, "History: Next version");
-  diag(
-    `after-next ${await slider(page).getAttribute(
-      "aria-valuetext",
-    )} ${await slider(page).getAttribute("aria-valuenow")}`,
-  );
-  await expectColor(page, PREVIEW, BLUE, true);
+  await atStop(1, BLUE);
   await runPaletteCommand(page, "History: Next version");
-  await expectColor(page, PREVIEW, ORANGE, true);
+  await atStop(2, ORANGE);
   await runPaletteCommand(page, "History: Previous version");
+  await atStop(1, BLUE);
   await expectColor(page, PREVIEW, ORANGE, false);
-  await expectColor(page, PREVIEW, BLUE, true);
 });
 
 test("End leaves the preview and keeps focus on the slider; re-entering shows the version again", async ({

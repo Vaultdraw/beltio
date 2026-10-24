@@ -809,12 +809,20 @@ test("export: with Sync canvas with theme on, pattern colours are the standard o
   await settings
     .getByRole("switch", { name: /Sync canvas with theme/ })
     .click();
-  await page.keyboard.press("Escape");
-  await expect(settings).toHaveCount(0);
-  await page.waitForTimeout(400);
+  // Close with the button (the flow under test is the export, not Escape), and
+  // wait for the closed state and the themed canvas instead of a clock.
+  await settings.getByRole("button", { name: "Close Settings" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   // The screen now shows themed colours: the canvas differs from standard...
-  const synced = await analyse(page, { x: 0.35, y: 0.7, w: 0.5, h: 0.25 });
-  expect(synced.bg).not.toEqual([255, 255, 255]);
+  await expect
+    .poll(
+      async () =>
+        (
+          await analyse(page, { x: 0.35, y: 0.7, w: 0.5, h: 0.25 })
+        ).bg,
+      { timeout: 8000 },
+    )
+    .not.toEqual([255, 255, 255]);
 
   await openExportDialogFromMenu(page);
   await exportNow(page, "PNG");
