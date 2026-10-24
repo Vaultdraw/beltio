@@ -130,6 +130,8 @@ pub enum Command {
         /// For example vaultdraw://open?file=Graphs/BFS
         url: String,
     },
+    /// One read-only report for bug reports: versions, paths, config, extensions, index, socket (no app needed)
+    Doctor,
     /// Quit the app (same save barrier as Cmd+Q)
     Quit,
     /// Show the open vault, or open another
@@ -284,6 +286,14 @@ pub enum ConfigAction {
     },
     /// Set a value (parsed as JSON, else taken as a string)
     Set { key: String, value: String },
+    /// Check every config file against the schema: file, line, column, did-you-mean (no app needed)
+    Check {
+        /// Also fail (exit 1) on warnings, such as unknown keys
+        #[arg(long)]
+        strict: bool,
+    },
+    /// Print the JSON Schema of config.toml, for editors (no app needed)
+    Schema,
     /// Print the config file path (no app needed)
     Path {
         /// Print every layer: config.toml, then overrides.toml (Settings changes)

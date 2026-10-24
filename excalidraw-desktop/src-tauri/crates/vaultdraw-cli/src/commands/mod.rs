@@ -1,6 +1,7 @@
 //! One handler per subcommand. Each prints its own output and returns a `Fail` on error.
 
 mod app;
+mod diag;
 mod events;
 mod export;
 mod files;
@@ -8,7 +9,7 @@ mod scene;
 mod tabs;
 mod uri;
 
-use crate::cli::{Cli, CmdAction, CmdArgs, Command};
+use crate::cli::{Cli, CmdAction, CmdArgs, Command, ConfigAction};
 use crate::error::Fail;
 use crate::rpc::{request_line, resolve_socket, Rpc};
 use crate::{backend, render, snapshot};
@@ -52,7 +53,10 @@ pub fn run(cli: &Cli) -> Result<(), Fail> {
         Command::Scene { action } => scene::run(cli, action),
         Command::Tabs => tabs::list(cli),
         Command::Tab { action } => tabs::run(cli, action),
+        Command::Config { action: ConfigAction::Check { strict } } => diag::config_check(cli, *strict),
+        Command::Config { action: ConfigAction::Schema } => diag::config_schema(),
         Command::Config { action } => app::config(cli, action),
+        Command::Doctor => diag::doctor(cli),
         Command::Events { topic } => events::stream(cli, topic),
         Command::Uri { url } => uri::run(cli, url),
         Command::Quit => app::quit(cli),

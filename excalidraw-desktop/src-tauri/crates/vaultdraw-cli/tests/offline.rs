@@ -291,3 +291,70 @@ fn name_targets_resolve_through_the_index_like_the_app() {
     let p = target::resolve(&e.root, &json!({"file": "b"}), target::Need::File, &by).unwrap();
     assert_eq!(p, "sub/b.excalidraw");
 }
+
+/// Every file and folder under `dir`, to prove a command wrote nothing.
+fn tree(dir: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    for e in std::fs::read_dir(dir).unwrap().flatten() {
+        out.push(e.path());
+        if e.path().is_dir() {
+            out.extend(tree(&e.path()));
+        }
+    }
+    out.sort();
+    out
+}
+
+#[test]
+fn config_check_reports_lines_and_exits_by_severity() {
+    let e = env();
+    let o = e.run(&["config", "check"]);
+    assert_eq!(code(&o), 0, "no config file is fine: {}", err(&o));
+    std::fs::write(e.config.join("config.toml"), "[interface]\nzom = 1\n").unwrap();
+    let o = e.run(&["config", "check"]);
+    assert_eq!(code(&o), 0, "a warning alone passes");
+    let out = String::from_utf8_lossy(&o.stdout).into_owned();
+    assert!(out.contains("config.toml:2:1: warning: unknown key interface.zom"), "{out}");
+    assert!(out.contains("did you mean interface.zoom?"), "{out}");
+    let o = e.run(&["config", "check", "--strict"]);
+    assert_eq!(code(&o), 1, "--strict fails on warnings");
+    assert!(err(&o).contains("CONFIG_INVALID"), "{}", err(&o));
+    std::fs::write(e.config.join("config.toml"), "[interface]\nzoom = \"big\"\n").unwrap();
+    let before = tree(e.root.parent().unwrap());
+    let o = e.run(&["--json", "config", "check"]);
+    assert_eq!(code(&o), 1, "an error fails");
+    let v: Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(v["errors"], 1);
+    assert_eq!(v["problems"][0]["line"], 2);
+    assert_eq!(v["problems"][0]["key"], "interface.zoom");
+    assert_eq!(tree(e.root.parent().unwrap()), before, "config check writes nothing");
+}
+
+#[test]
+fn config_schema_prints_the_embedded_schema() {
+    let e = env();
+    let o = e.run(&["config", "schema"]);
+    assert_eq!(code(&o), 0);
+    let v: Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert!(v["properties"]["interface"]["properties"]["zoom"].is_object(), "{v}");
+}
+
+#[test]
+fn doctor_is_read_only_and_works_without_the_app() {
+    let e = env();
+    std::fs::write(e.config.join("config.toml"), "[interface]\nzoom = 120\n").unwrap();
+    let before = tree(e.root.parent().unwrap());
+    let v = e.root.to_str().unwrap();
+    let o = e.run(&["--vault", v, "doctor"]);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    let out = String::from_utf8_lossy(&o.stdout).into_owned();
+    assert!(out.contains("read-only: nothing was changed"), "{out}");
+    assert!(out.contains("interface.zoom = 120  (config.toml)"), "{out}");
+    assert!(out.contains("not running"), "{out}");
+    assert!(out.contains("(--vault)"), "{out}");
+    assert!(out.contains("no app (socket absent)"), "{out}");
+    let j = e.json(&["doctor"]);
+    assert_eq!(j["versions"]["appState"], "not running");
+    assert_eq!(j["config"]["changed"][0]["key"], "interface.zoom");
+    assert_eq!(tree(e.root.parent().unwrap()), before, "doctor writes nothing");
+}

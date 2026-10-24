@@ -28,6 +28,7 @@ pub fn config(cli: &Cli, action: &ConfigAction) -> Result<(), Fail> {
             read_request(cli, methods::CONFIG_SET, Some(p), |v| format!("changed {}", v.get("changed").and_then(Value::as_u64).unwrap_or(0)))
         }
         ConfigAction::Path { all } => config_path(cli, *all),
+        ConfigAction::Check { .. } | ConfigAction::Schema => unreachable!("handled in commands::diag"),
     }
 }
 
