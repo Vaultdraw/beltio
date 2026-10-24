@@ -185,6 +185,58 @@ With `--json`, `get --source` adds `"source"` (`default`, `config.toml`, `overri
 
 A value that fails validation is reported with the file it came from (`overrides.toml: editor.font_size = "big" is not valid ...`).
 
+### Checking your config
+
+`vaultdraw config check` reads every layer (included files, `config.toml`, `overrides.toml`) and reports each problem with its file, line and column, the same way the app judges it. It needs no running app, reads only, and never touches the network.
+
+```sh
+vaultdraw config check
+# config.toml:2:1: warning: unknown key interface.zom (ignored; did you mean interface.zoom?)
+# config.toml:3:1: error: interface.zoom = "big" is not valid (expected a whole number between 50 and 200)
+# 1 error, 1 warning in 1 config file.
+```
+
+| Exit code | When |
+| --- | --- |
+| 0 | No errors (warnings allowed) |
+| 1 | At least one error (a parse error, wrong type, value out of range); with `--strict`, also any warning (such as an unknown key) |
+
+`--json` prints the report as `{ok, errors, warnings, files, problems, text}`; each problem has `file`, `path`, `line`, `column`, `key`, `severity` and `message`. `--strict` suits a dotfiles check before you commit.
+
+In the app, **Config: Check config files** (palette) or **Check** in **Settings → General → Config files** shows the same report, with Copy.
+
+**Editor completion and checks.** The key table that drives the app also generates a JSON Schema of `config.toml`, so it can't drift from what the app accepts. Save it and point your editor at it:
+
+```sh
+vaultdraw config schema > ~/.config/vaultdraw/config.schema.json
+```
+
+Then put this first line in `config.toml` (read by taplo and the Even Better TOML extension; the app ignores it as a comment):
+
+```toml
+#:schema ./config.schema.json
+```
+
+The schema ships with the source as [`docs/config.schema.json`](config.schema.json). It has no URL to fetch: everything stays offline.
+
+```mermaid
+flowchart LR
+  T[Key table in the app] --> R[Every key reference]
+  T --> S[config.schema.json]
+  S --> CLI[vaultdraw config check]
+  S --> APP[Config: Check config files]
+  S --> ED[Your editor, via #:schema]
+```
+
+**Debug info for bug reports.** `vaultdraw doctor` (or **Config: Show debug info** in the palette) prints one read-only report: versions, the config, state and plugins folders, each config file's status, every key changed from its default and the file it comes from, installed and enabled extensions, the vault and its search index, and the control socket. It creates nothing, writes nothing, and works with the app closed; with the app running it asks the app for its version and vault (2-second limit). `--json` gives the same facts as JSON. Paste it into an issue; check it first, as it contains your folder paths.
+
+**Commands** (palette, no default keys, rebindable):
+
+| Command | Does |
+| --- | --- |
+| `config.check` | Check every config file and show the report |
+| `config.debugInfo` | Show the debug info report (the same as `vaultdraw doctor`) |
+
 ### Settings reference
 
 Everything here can be changed in **Settings** (Cmd/Ctrl+,) or by editing `config.toml` (a Settings change wins over the file; see [Layers](#layers)).
