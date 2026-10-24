@@ -43,6 +43,32 @@
       "../../LICENSE": "licenses/Excalidraw-MIT.txt"
     },
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "fileAssociations": [
+      {
+        "ext": ["excalidraw"],
+        "name": "Excalidraw drawing",
+        "description": "Excalidraw drawing",
+        "mimeType": "application/vnd.excalidraw+json",
+        "role": "Editor",
+        "rank": "Alternate",
+        "exportedType": {
+          "identifier": "app.vaultdraw.excalidraw",
+          "conformsTo": ["public.json"]
+        }
+      },
+      {
+        "ext": ["excalidrawlib"],
+        "name": "Excalidraw library",
+        "description": "Excalidraw library",
+        "mimeType": "application/vnd.excalidrawlib+json",
+        "role": "Viewer",
+        "rank": "Alternate",
+        "exportedType": {
+          "identifier": "app.vaultdraw.excalidrawlib",
+          "conformsTo": ["public.json"]
+        }
+      }
+    ],
     "macOS": {
       "signingIdentity": "-"
     }

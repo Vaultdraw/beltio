@@ -1,0 +1,11 @@
+[Desktop Entry]
+# Managed by Vaultdraw (command "Links: Register Vaultdraw for links and files"). Safe to delete.
+Type=Application
+Name=Vaultdraw
+Comment=Your Excalidraw drawings, in a folder you own
+Exec={{exec}} %U
+Icon=vaultdraw
+Terminal=false
+Categories=Graphics;Office;
+MimeType=application/vnd.excalidraw+json;application/vnd.excalidrawlib+json;x-scheme-handler/vaultdraw;
+StartupWMClass=excalidraw-vault

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Managed by Vaultdraw (command "Links: Register Vaultdraw for links and files"). Safe to delete. -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/vnd.excalidraw+json">
+    <comment>Excalidraw drawing</comment>
+    <sub-class-of type="application/json"/>
+    <glob pattern="*.excalidraw"/>
+  </mime-type>
+  <mime-type type="application/vnd.excalidrawlib+json">
+    <comment>Excalidraw library</comment>
+    <sub-class-of type="application/json"/>
+    <glob pattern="*.excalidrawlib"/>
+  </mime-type>
+</mime-info>

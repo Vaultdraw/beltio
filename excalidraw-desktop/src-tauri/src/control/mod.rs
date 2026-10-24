@@ -8,6 +8,7 @@
 //! - `ops` (glue on the running app) over `vault_ops`, `config_ops` and `target` (pure, tested).
 //! - `spool`: chunked spool files that carry large exports to the CLI.
 //! - `uri`: `vaultdraw://` links (policy, rate limit, queue) from every entry point.
+//! - `linux_handlers`: the opt-in `.desktop` and MIME files for Linux installs nothing registers.
 //! - `files`: files from the system (`.excalidraw`, `.excalidrawlib`): checks, grants, bounded read.
 //! - `events`: the event bus with its single topic mask (zero cost while nobody subscribes).
 
@@ -20,6 +21,7 @@ pub(crate) mod events;
 pub(crate) mod files;
 pub(crate) mod install;
 pub(crate) mod instance;
+pub(crate) mod linux_handlers;
 mod ops;
 pub(crate) mod server;
 pub(crate) mod spool;
