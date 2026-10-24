@@ -199,7 +199,9 @@ fn file_create(v: &Vault, params: &Value) -> Result<Value, Fail> {
     let scene = match params.get("scene") {
         // The app's `[paper]` / `[page]` defaults (and the vault's paper style), as the app applies them.
         None | Some(Value::Null) => {
-            blank = vaultdraw_core::new_drawing::blank_scene(&dirs()?.config, &v.root);
+            // An unresolvable config folder only means no defaults to read: still create the drawing.
+            let config_dir = dirs().map(|d| d.config).unwrap_or_default();
+            blank = vaultdraw_core::new_drawing::blank_scene(&config_dir, &v.root);
             &blank
         }
         Some(_) => scene_of(params)?,

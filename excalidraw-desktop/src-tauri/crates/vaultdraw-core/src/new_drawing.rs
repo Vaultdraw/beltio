@@ -9,12 +9,11 @@
 //! back to its default, field by field) and the vault's `settings.toml` (only `paper.style`
 //! can differ per vault). Output is the three appState fields the defaults decide.
 
-use crate::config::{parse_config, read_toml_text};
+use crate::config::{parse_config, read_toml_text, MAX_CONFIG_BYTES};
 use crate::paths::META_DIR;
 use serde_json::{json, Map, Value as Json};
 use std::path::Path;
 
-const MAX_CONFIG_BYTES: u64 = 1024 * 1024;
 const MAX_VAULT_SETTINGS_BYTES: u64 = 256 * 1024;
 
 /// Pattern presets: (type, spacing, major_every, margin_line).

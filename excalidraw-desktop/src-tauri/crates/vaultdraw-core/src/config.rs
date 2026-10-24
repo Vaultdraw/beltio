@@ -15,7 +15,7 @@ use std::{
     sync::Mutex,
 };
 
-const MAX_CONFIG_BYTES: u64 = 1024 * 1024;
+pub(crate) const MAX_CONFIG_BYTES: u64 = 1024 * 1024;
 const MAX_STATE_BYTES: u64 = 1024 * 1024;
 const MAX_CHANGES: usize = 256;
 const CONFIG_FILE: &str = "config.toml";
