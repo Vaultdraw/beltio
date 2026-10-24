@@ -5,6 +5,8 @@ import { copyFileSync, mkdirSync, chmodSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { cliBinaryName, planCliBuild } from "./cli-targets.mjs";
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const tauriDir = join(root, "src-tauri");
 const manifest = join(tauriDir, "Cargo.toml");
@@ -17,9 +19,9 @@ if (!triple) throw new Error("cannot determine the target triple from `rustc -vV
 
 // Respects CARGO_TARGET_DIR and the workspace target directory.
 const targetDir = JSON.parse(run("cargo", ["metadata", "--format-version", "1", "--no-deps", "--manifest-path", manifest])).target_directory;
-const exe = triple.includes("windows") ? ".exe" : "";
+const plan = planCliBuild(triple);
 const outDir = join(tauriDir, "binaries");
-const out = join(outDir, `vaultdraw-${triple}${exe}`);
+const out = join(outDir, plan.fileName);
 mkdirSync(outDir, { recursive: true });
 
 // Builds the CLI for one rustc target and returns the binary path.
@@ -30,13 +32,13 @@ const buildFor = (t) => {
     ["build", "--release", "-p", "vaultdraw-cli", "--manifest-path", manifest, ...(cross ? ["--target", t] : [])],
     { stdio: "inherit" },
   );
-  return join(targetDir, ...(cross ? [t] : []), "release", `vaultdraw-cli${exe}`);
+  return join(targetDir, ...(cross ? [t] : []), "release", cliBinaryName(t));
 };
 
-if (triple === "universal-apple-darwin") {
+if (plan.kind === "universal") {
   // `tauri build --target universal-apple-darwin` expects one fat sidecar under that name.
   // build.rs also checks the per-arch sidecar while compiling each slice, so keep those copies.
-  const slices = ["aarch64-apple-darwin", "x86_64-apple-darwin"].map((t) => {
+  const slices = plan.slices.map((t) => {
     const built = buildFor(t);
     const sliceOut = join(outDir, `vaultdraw-${t}`);
     copyFileSync(built, sliceOut);
