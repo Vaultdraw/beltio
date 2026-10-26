@@ -27,7 +27,7 @@ const insert = async (p: TestPlugin) => {
 
 describe("flow-diagram", () => {
   it("flowOps: four boxes with refs, three bound arrows and one group", () => {
-    const ops = flowOps({ x: 0, y: 0 });
+    const ops = flowOps({ x: 0, y: 0 }) as any[];
     expect(ops.filter((o) => o.op === "add")).toHaveLength(7);
     const group = ops.find((o) => o.op === "group")!;
     expect(group.ids).toHaveLength(7);
