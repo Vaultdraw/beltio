@@ -439,6 +439,7 @@ The page lists all commands with their keys as chips. Type in the filter to narr
 | `vault.newDrawing` | New drawing | ⌘N | Ctrl+N |
 | `vault.newFromTemplate` | Templates: New drawing from template | ⌥⌘N, ⌃⌥N | Ctrl+Alt+N |
 | `view.toggleNavigator` | Toggle navigator | ⌘\  | Ctrl+\  |
+| `layout.preset.focus` | Layout: Focus mode | ⇧⌘↩ | Ctrl+Shift+Enter |
 | `vault.switch` | Open another vault | — | — |
 | `file.revealInFinder` | Reveal drawing in Finder | — | — |
 | `file.duplicate` | Duplicate drawing | — | — |
@@ -773,6 +774,60 @@ Type a few letters, in order and not necessarily next to each other (`vdg` finds
 Commands mode lists Excalidraw's editor actions (tools, align, group, layers, flip, lock, grid, zen mode, canvas background, export image, clear canvas, …) with their shortcuts, and every Vaultdraw feature as a direct entry: `Theme: <name>`, `Mode: Light/Dark/System`, `Sync canvas with theme: On/Off`, `Paper: <style>`, `Pen: <name>`, `Insert: <library item>`, `Settings: <page>`, `Export: PNG/SVG`, `Save a copy`, `Templates: …`, `Sort: …`, new drawing or folder, rename, move, trash and more. Entries that can't run right now (nothing selected, read-only vault, no drawing open) are hidden.
 
 Excalidraw's separate command palette is not used.
+
+### User commands
+
+A user command gives a name to a list of existing commands, like Neovim's `:command` or a Helix key bound to several commands. Each `[commands.<name>]` table becomes the palette command `user.<name>`:
+
+```toml
+[commands.export-and-reveal]
+title = "Export PNG and reveal"            # palette label; the name if unset
+run = ["export.png", "file.revealInFinder"]  # command ids, run in order
+
+[hotkeys]
+"user.export-and-reveal" = ["Mod+Shift+E"]  # bind it like any command
+```
+
+- The steps run in order, and each one finishes before the next starts. If a step can't run right now (nothing open, read-only vault) or its id doesn't exist, the run stops there with a notice naming the step.
+- Any command id works, including a plugin's and another `user.` command. A command that ends up running itself is refused with a warning.
+- Names use letters, digits, `-` and `_`. At most 32 steps per command and 200 commands. A bad entry is reported and skipped; the others still apply. Edits apply live.
+- No arguments, conditions or scripts: for logic, write a plugin.
+- User commands are listed on the Hotkeys page under **User commands**. Links from outside (`vaultdraw://`) can't run them.
+
+## Layout and focus mode
+
+Hide the parts of the window you don't need, by hand or with a named preset. Focus mode is one preset.
+
+| Part | Its usual switch |
+| --- | --- |
+| `header` | `layout.header` (Settings → Interface → Header) |
+| `footer` | `layout.footer`: Excalidraw's zoom, undo and help bar (Settings → Interface → Editor footer) |
+| `activity_bar` | `interface.activity_bar` |
+| `tab_strip` | `tabs.show_strip` |
+| `navigator` | the navigator's collapse button and **Toggle navigator** |
+
+A preset lists only the parts it changes; the rest keep their usual switch:
+
+```toml
+[layout]
+preset = ""            # a preset to start with, e.g. "focus"; "" = none
+
+[layout.presets.focus]  # built in: hides all five parts. Your table replaces it.
+header = false
+navigator = false
+activity_bar = false
+tab_strip = false
+footer = false
+
+[layout.presets.reading]
+navigator = false
+footer = false
+```
+
+- **Layout: Focus mode** (**Cmd/Ctrl+Shift+Enter**) turns focus mode on and off. Every preset has a command, `layout.preset.<name>` ("Layout: reading"), which works the same way. **Layout: Default layout** leaves any preset.
+- While a preset is on, the usual toggles (Toggle navigator, Toggle activity bar, Show or hide tab strip, **Layout: Toggle header**, **Layout: Toggle editor footer**) show or hide that part for this session only, without changing your config. Searching or revealing a drawing in the file tree shows the navigator. With no preset on, the toggles change the usual switch as before.
+- The active preset is per window and not saved; `layout.preset` says which one a window starts with, and changing it in the file applies at once.
+- Hiding parts costs nothing: they are simply not drawn.
 
 ## Notebook backgrounds
 
@@ -1371,6 +1426,17 @@ Several drawings open at once.
 | `close_pinned` | `false` | true or false |  | Allow Cmd/Ctrl+W to close pinned tabs. |
 | `restore` | `true` | true or false | yes | Reopen the open tabs when a vault opens. |
 | `undo_budget_mb` | `32` | a whole number from 0 to 1024 (megabytes, 0 = no undo kept for background tabs) |  | Undo history kept for background tabs, in megabytes. |
+
+### `[layout]`
+
+Which parts of the window show, and presets such as focus mode. See [Layout and focus mode](#layout-and-focus-mode).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `header` | `true` | true or false |  | Show the vault header (title, save status, History and Graph buttons). |
+| `footer` | `true` | true or false |  | Show Excalidraw's footer (zoom, undo and redo, help). |
+| `preset` | `""` | a preset name like "focus", or "" for none (text) |  | A preset to apply at launch and whenever this value changes; `""` = none. |
+| `presets` | `focus` hides every part | tables of `part = true \| false` |  | Named presets, `[layout.presets.<name>]`, each listing the parts it shows or hides: `header`, `navigator`, `activity_bar`, `tab_strip`, `footer`. `focus` is built in. |
 
 ### `[memory]`
 

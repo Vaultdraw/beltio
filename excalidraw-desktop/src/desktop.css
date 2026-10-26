@@ -84,3 +84,8 @@ html.dark body {
   white-space: nowrap;
   user-select: none;
 }
+
+/* [layout] footer = false (or a preset): hide Excalidraw's zoom, undo and help bar. */
+.vault-app--no-footer .layer-ui__wrapper__footer {
+  display: none;
+}

@@ -2,6 +2,7 @@ import { pdfImportControls } from "../../../pdfImport/PdfImportSettings";
 
 import { servicesControls } from "../../../services/servicesSettingsControls";
 import { tabsControls } from "../../../tabs/tabsSettingsControls";
+import { layoutControls } from "../../../layout/layoutSettingsControls";
 import { memoryControls } from "../../../memory/memorySettingsControls";
 
 import { aboutControls } from "./About";
@@ -31,6 +32,7 @@ export const SETTING_CONTROLS: SettingControls = {
   ...interfaceControls,
   ...watchdogControls,
   ...tabsControls,
+  ...layoutControls,
   ...memoryControls,
   ...servicesControls,
   ...drawingControls,

@@ -276,6 +276,27 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
     },
   },
   {
+    table: "layout",
+    intro:
+      "Which parts of the window show, and presets such as focus mode. See [Layout and focus mode](#layout-and-focus-mode).",
+    keys: {
+      header: {
+        doc: "Show the vault header (title, save status, History and Graph buttons).",
+      },
+      footer: {
+        doc: "Show Excalidraw's footer (zoom, undo and redo, help).",
+      },
+      preset: {
+        doc: 'A preset to apply at launch and whenever this value changes; `""` = none.',
+      },
+      presets: {
+        doc: "Named presets, `[layout.presets.<name>]`, each listing the parts it shows or hides: `header`, `navigator`, `activity_bar`, `tab_strip`, `footer`. `focus` is built in.",
+        default: "`focus` hides every part",
+        accepts: "tables of `part = true | false`",
+      },
+    },
+  },
+  {
     table: "memory",
     intro: "Memory kept by open drawings. See [Memory](#memory).",
     keys: {

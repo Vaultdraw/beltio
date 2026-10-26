@@ -95,6 +95,8 @@ export interface AvailabilityOptions {
 export interface CommandRunner {
   /** Run a command if it is available; true when a handler ran. */
   run(id: string, options?: AvailabilityOptions): boolean;
+  /** Like run, and waits for an async handler to finish. */
+  runAndWait(id: string, options?: AvailabilityOptions): Promise<boolean>;
   isAvailable(id: string, options?: AvailabilityOptions): boolean;
   /** The `when` clauses of `id` that do not hold now (what makes it unavailable). */
   failedClauses(id: string, options?: AvailabilityOptions): string[];
@@ -216,7 +218,19 @@ export function useCommandDispatcher(
     [isAvailable, handlerFor],
   );
 
-  return { run, isAvailable, failedClauses, platform };
+  const runAndWait = useCallback(
+    async (id: string, options?: AvailabilityOptions) => {
+      const handler = handlerFor(id);
+      if (!handler || !isAvailable(id, options)) {
+        return false;
+      }
+      await runHandler(id, handler);
+      return true;
+    },
+    [isAvailable, handlerFor],
+  );
+
+  return { run, runAndWait, isAvailable, failedClauses, platform };
 }
 
 /**

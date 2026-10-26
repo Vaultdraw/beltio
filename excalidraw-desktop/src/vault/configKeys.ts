@@ -12,6 +12,8 @@ export const OPEN_TABLES: ReadonlySet<string> = new Set([
   "plugin",
   // `[include] files` is read by the Rust loader, not by a mapping.
   "include",
+  // `[commands.<name>]` user commands, checked by parseUserCommands.
+  "commands",
 ]);
 
 /**

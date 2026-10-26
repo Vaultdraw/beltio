@@ -41,6 +41,8 @@ import {
 import { TABS_MAPPINGS, type TabsField } from "../tabs/tabsSettings";
 import { MEMORY_MAPPINGS, type MemoryField } from "../memory/memorySettings";
 import { SEARCH_MAPPINGS, type SearchField } from "../search/searchSettings";
+import { LAYOUT_MAPPINGS, type LayoutField } from "../layout/layoutSettings";
+import { parseUserCommands } from "../commands/userCommands";
 import {
   LEADER_TOKEN,
   normalizeKeys,
@@ -343,6 +345,7 @@ type ConfigField =
   | TabsField
   | MemoryField
   | SearchField
+  | LayoutField
   | KeysField
   | ServicesField
   | ToolField;
@@ -880,6 +883,7 @@ export const CONFIG_MAPPING: readonly ConfigMapping[] = [
   ...TABS_MAPPINGS,
   ...MEMORY_MAPPINGS,
   ...SEARCH_MAPPINGS,
+  ...LAYOUT_MAPPINGS,
   ...KEYS_MAPPINGS,
   ...SERVICES_MAPPINGS,
   ...TOOL_MAPPINGS,
@@ -1043,7 +1047,7 @@ export function configToPreferences(
 ): {
   values: Pick<
     VaultPreferences,
-    ConfigField | "hotkeys" | "pluginSettings" | "keysLabels"
+    ConfigField | "hotkeys" | "pluginSettings" | "keysLabels" | "userCommands"
   >;
   problems: SettingsProblem[];
 } {
@@ -1079,6 +1083,8 @@ export function configToPreferences(
   problems.push(...keys.problems);
   const plugins = parsePluginTable(config.plugin, "config.toml");
   problems.push(...plugins.problems);
+  const user = parseUserCommands(config.commands);
+  problems.push(...user.problems);
   problems.push(
     ...(layers
       ? layers.flatMap((l) =>
@@ -1092,6 +1098,7 @@ export function configToPreferences(
       hotkeys: table.hotkeys,
       keysLabels: keys.labels,
       pluginSettings: plugins.settings,
+      userCommands: user.commands,
     },
     problems,
   };
@@ -1224,6 +1231,7 @@ const configSlice = (prefs: PreferencesSnapshot) => ({
     a < b ? -1 : 1,
   ),
   pluginSettings: sortedPluginSettings(prefs.pluginSettings),
+  userCommands: prefs.userCommands,
 });
 
 export function formatConfigError(

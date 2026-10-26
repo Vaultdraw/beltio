@@ -222,6 +222,17 @@ autosave_delay_ms = 500
 # Undo history kept for background tabs in MB, 0 to 1024 (0 = none)
 # undo_budget_mb = 32
 
+[layout]
+# Show the header above the canvas (title, save status, History, Graph)
+# header = true
+# Show Excalidraw's footer (zoom, undo and redo, help)
+# footer = true
+# A preset to apply at launch, like "focus" ("" = none)
+# preset = ""
+# Named presets, written as [layout.presets.<name>] tables that set header,
+# navigator, activity_bar, tab_strip or footer to true or false ("focus" is built in)
+# presets = {}
+
 [keys]
 # The key <leader> stands for in a sequence
 # leader = "Backslash"

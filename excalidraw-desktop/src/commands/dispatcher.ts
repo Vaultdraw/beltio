@@ -83,14 +83,18 @@ export const onCommandRan = (cb: (id: string) => void): (() => void) => {
 };
 
 /** Run a handler; a throw or rejection is logged, never propagated. */
-export function runHandler(id: string, handler: CommandHandler): void {
+/** Runs `handler`; an async one is returned settled (errors logged), so callers may wait. */
+export function runHandler(
+  id: string,
+  handler: CommandHandler,
+): Promise<void> | void {
   try {
     const result = handler();
     if (ranListeners.size > 0) {
       ranListeners.forEach((cb) => cb(id));
     }
     if (result && typeof (result as Promise<void>).catch === "function") {
-      (result as Promise<void>).catch((err) =>
+      return (result as Promise<void>).catch((err) =>
         console.error(`Command ${id} failed`, err),
       );
     }

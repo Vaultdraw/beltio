@@ -99,6 +99,8 @@ import { getRegisteredHandler } from "./commands/handlerRegistry";
 import { GRAPH_COMMAND_IDS } from "./commands/graphCommands";
 import { THUMBNAIL_COMMAND_IDS } from "./commands/thumbnailCommands";
 import { TabStrip } from "./tabs/TabStrip";
+import { useLayout, type Layout } from "./layout/useLayout";
+import { useUserCommands } from "./commands/useUserCommands";
 import { ActiveTabGate } from "./tabs/ActiveTabGate";
 import "./tabs/editorBody.css";
 import { ancestorFolders } from "./tabs/revealPath";
@@ -344,6 +346,8 @@ export const VaultApp = ({
     getNavigatorCollapsed(win),
   );
   const [searchFocusNonce, setSearchFocusNonce] = useState(0);
+  // Created below (it needs the tab strip state); toggles reach it here.
+  const layoutRef = useRef<Layout | null>(null);
   const [focusRequest, setFocusRequest] = useState<{
     path: string;
     elementId: string;
@@ -1144,6 +1148,9 @@ export const VaultApp = ({
 
   // Toggle navigator collapse
   const handleToggleNavigator = () => {
+    if (layoutRef.current?.toggleGoverned("navigator")) {
+      return;
+    }
     setNavigatorCollapsed((prev) => {
       const next = !prev;
       saveNavigatorCollapsed(next, win);
@@ -1824,6 +1831,7 @@ export const VaultApp = ({
 
   const showNavigator = () => {
     commitCanvasTextEdit(doc);
+    layoutRef.current?.reveal("navigator");
     setNavigatorCollapsed((collapsed) => {
       if (collapsed) {
         saveNavigatorCollapsed(false, win);
@@ -1855,6 +1863,9 @@ export const VaultApp = ({
   // global order, else config.toml.
   // Same rule for the activity bar toggle.
   const handleToggleActivityBar = () => {
+    if (layoutRef.current?.toggleGoverned("activity_bar")) {
+      return;
+    }
     if (vaultSettings.isOverridden("activityBar")) {
       void vaultSettings.setOverride("activityBar", !activityBarOn);
     } else {
@@ -1896,7 +1907,11 @@ export const VaultApp = ({
         void getRegisteredHandler(THUMBNAIL_COMMAND_IDS.galleryToggle)?.();
       }
     },
-    setShowStrip: (tabsShowStrip) => updatePreferences({ tabsShowStrip }, win),
+    setShowStrip: (tabsShowStrip) => {
+      if (!layoutRef.current?.toggleGoverned("tab_strip")) {
+        updatePreferences({ tabsShowStrip }, win);
+      }
+    },
     repository,
     revealInNavigator,
     openPalette: (newTab) => {
@@ -1911,6 +1926,17 @@ export const VaultApp = ({
     indexing: isIndexing,
   });
   tabsRef.current = tabs;
+  const layout = useLayout(
+    win,
+    {
+      navigator: !navigatorCollapsed,
+      activity_bar: activityBarShown,
+      tab_strip: tabs.showStrip,
+    },
+    (message) => toastStore.push({ message }),
+  );
+  layoutRef.current = layout;
+  const navigatorHidden = !layout.shown.navigator;
   const editorRestore = useMemo(
     () =>
       activeDoc
@@ -2073,6 +2099,11 @@ export const VaultApp = ({
     },
   });
   runnerRef.current = commandRunner;
+  useUserCommands(
+    win,
+    () => runnerRef.current,
+    (message) => toastStore.push({ message }),
+  );
   const pluginsStarted = useSyncExternalStore(
     pluginHostStarted.subscribe,
     pluginHostStarted.get,
@@ -2465,27 +2496,31 @@ export const VaultApp = ({
   const shell = (
     <div
       ref={setRootNode}
-      className={`vault-app ${isClosing ? "vault-app--closing" : ""}`}
+      className={`vault-app ${isClosing ? "vault-app--closing" : ""} ${
+        layout.shown.footer ? "" : "vault-app--no-footer"
+      }`}
     >
-      <VaultHeader
-        vault={vault}
-        activePath={activeDoc?.path ?? null}
-        saveStatus={saveStatus}
-        saveError={saveError}
-        recoveryCount={recoveryCount}
-        navigatorCollapsed={navigatorCollapsed}
-        onToggleNavigator={handleToggleNavigator}
-        onOpenConflict={() => setShowConflictDialog(true)}
-        onOpenRecovery={() => setShowRecoveryDialog(true)}
-        onSave={handleExplicitSave}
-        onToggleHistory={toggleHistory}
-        onRetryWritable={
-          repository.retryVault ? handleRetryWritable : undefined
-        }
-      />
+      {layout.shown.header && (
+        <VaultHeader
+          vault={vault}
+          activePath={activeDoc?.path ?? null}
+          saveStatus={saveStatus}
+          saveError={saveError}
+          recoveryCount={recoveryCount}
+          navigatorCollapsed={navigatorHidden}
+          onToggleNavigator={handleToggleNavigator}
+          onOpenConflict={() => setShowConflictDialog(true)}
+          onOpenRecovery={() => setShowRecoveryDialog(true)}
+          onSave={handleExplicitSave}
+          onToggleHistory={toggleHistory}
+          onRetryWritable={
+            repository.retryVault ? handleRetryWritable : undefined
+          }
+        />
+      )}
 
       <div className="vault-main">
-        {activityBarShown && (
+        {layout.shown.activity_bar && (
           <ActivityBar
             run={runCommand}
             isAvailable={isCommandAvailable}
@@ -2498,7 +2533,7 @@ export const VaultApp = ({
           />
         )}
         <div className="vault-editor-pane">
-          {tabs.showStrip && tabs.stripProps && (
+          {layout.shown.tab_strip && tabs.stripProps && (
             <TabStrip
               {...tabs.stripProps}
               activeStatus={saveStatus === "saving" ? "dirty" : saveStatus}
@@ -2638,7 +2673,7 @@ export const VaultApp = ({
         <VaultNavigator
           vault={vault}
           activePath={activeDoc?.path ?? null}
-          collapsed={navigatorCollapsed}
+          collapsed={navigatorHidden}
           onToggleCollapse={handleToggleNavigator}
           onOpenSettings={() => openSettings()}
           onOpenGraph={activityBarOn ? undefined : openGraph}
@@ -2687,7 +2722,7 @@ export const VaultApp = ({
                     void appLinks.openLink(path, elementId)
                   }
                   onCreate={(target) => void appLinks.createTarget(target)}
-                  visible={!navigatorCollapsed}
+                  visible={!navigatorHidden}
                 />
               </Suspense>
             ) : null

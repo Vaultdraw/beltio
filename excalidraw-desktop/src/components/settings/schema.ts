@@ -13,6 +13,7 @@ import {
 } from "../../history/historySettingsSchema";
 import { SERVICES_SETTINGS_SCHEMA } from "../../services/servicesSettingsSchema";
 import { TABS_SETTINGS_SCHEMA } from "../../tabs/tabsSettingsSchema";
+import { LAYOUT_SETTINGS_SCHEMA } from "../../layout/layoutSettingsSchema";
 import { MEMORY_SETTINGS_SCHEMA } from "../../memory/memorySettingsSchema";
 import {
   STYLE_KEY_LABELS,
@@ -758,6 +759,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
 
   ...HISTORY_SETTINGS_SCHEMA,
   ...TABS_SETTINGS_SCHEMA,
+  ...LAYOUT_SETTINGS_SCHEMA,
   ...MEMORY_SETTINGS_SCHEMA,
   ...SERVICES_SETTINGS_SCHEMA,
 

@@ -13,6 +13,8 @@
  */
 import { MAX_PEN_WIDTH, MIN_PEN_WIDTH } from "../pens/penPresets";
 
+import { LAYOUT_PARTS } from "../layout/layoutSettings";
+
 import { CONFIG_REFERENCE } from "./configReference";
 import { OPEN_TABLES } from "./configKeys";
 
@@ -61,6 +63,17 @@ const OVERRIDES: Readonly<Record<string, Schema>> = {
   "plugins.importers": {
     type: "object",
     additionalProperties: { type: "string" },
+  },
+  "layout.preset": { type: "string" },
+  "layout.presets": {
+    type: "object",
+    additionalProperties: {
+      type: "object",
+      additionalProperties: false,
+      properties: Object.fromEntries(
+        LAYOUT_PARTS.map((part) => [part, { type: "boolean" }]),
+      ),
+    },
   },
 };
 
@@ -215,6 +228,20 @@ const OPEN_TABLE_SCHEMAS: Readonly<Record<string, Schema>> = {
     type: "object",
     description: "[plugin.<id>]: the settings a plugin declares.",
     additionalProperties: { type: "object" },
+  },
+  commands: {
+    type: "object",
+    description:
+      "[commands.<name>]: a user command, palette id `user.<name>`, running existing commands in order.",
+    additionalProperties: {
+      type: "object",
+      additionalProperties: false,
+      required: ["run"],
+      properties: {
+        title: { type: "string", description: "Palette label." },
+        run: { ...stringList, minItems: 1, maxItems: 32 },
+      },
+    },
   },
   include: {
     type: "object",

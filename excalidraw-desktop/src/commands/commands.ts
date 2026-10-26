@@ -25,6 +25,8 @@ import { TOOL_DEFAULT_TOOLS, TOOL_LABELS } from "../toolDefaults/toolStyles";
 import { PLUGIN_UI_COMMANDS } from "../plugins/ui/pluginCommands";
 import { SORT_LABELS, SORT_ORDERS, type SortOrder } from "../vault/sortOrder";
 
+import { LAYOUT_COMMANDS } from "../layout/layoutCommands";
+
 import {
   drawingOpenCommands,
   makeDrawingOpenCommand,
@@ -673,6 +675,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...CONFIG_COMMANDS,
   ...HELP_COMMANDS,
   ...SNIPPET_COMMANDS,
+  ...LAYOUT_COMMANDS,
 ];
 
 registerCommands(COMMANDS);
