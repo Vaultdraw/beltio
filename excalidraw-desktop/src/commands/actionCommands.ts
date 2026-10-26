@@ -3,14 +3,16 @@
  * is an Excalidraw action; its default keys equal Excalidraw's own
  * (actionCommands.test.ts checks them against EXCALIDRAW_KEYS), so nothing
  * changes until the user rebinds. The open editor binds the handlers
- * (createActionHandlers) and then tells Excalidraw to skip these actions'
+ * (bindActionCommands) and then tells Excalidraw to skip these actions'
  * built-in keys (`UIOptions.hostActionKeys`), so `[hotkeys]` can rebind or
  * remove them like any other command.
  */
 import type { ActionName } from "@excalidraw/excalidraw/actions/types";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
-import type { CommandDefinition, CommandHandlers, CommandKeys } from "./types";
+import { registerCommandPrefixHandler } from "./handlerRegistry";
+
+import type { CommandDefinition, CommandKeys } from "./types";
 
 interface ActionRow {
   action: ActionName;
@@ -187,16 +189,20 @@ export const ACTION_COMMANDS: CommandDefinition[] = ACTION_TABLE.map((row) => ({
   repeat: true,
 }));
 
-/** Handlers for every `canvas.*` command, calling the editor's action hook. */
-export function createActionHandlers(
+const ACTION_PREFIX = "canvas.";
+
+/**
+ * Binds every `canvas.*` command with ONE prefix handler (no per-command
+ * closures, no handler-registry version bump, so nothing else re-renders when
+ * an editor opens): the action name is resolved from the id when a key is
+ * pressed. Returns the unbind function.
+ */
+export function bindActionCommands(
   api: Pick<ExcalidrawImperativeAPI, "runActionShortcut">,
-): CommandHandlers {
-  return Object.fromEntries(
-    ACTION_TABLE.map((row) => [
-      actionCommandId(row.action),
-      () => {
-        api.runActionShortcut(row.action);
-      },
-    ]),
-  );
+): () => void {
+  return registerCommandPrefixHandler(ACTION_PREFIX, (name) => {
+    if (HOST_ACTION_SET.has(name)) {
+      api.runActionShortcut(name as ActionName);
+    }
+  });
 }

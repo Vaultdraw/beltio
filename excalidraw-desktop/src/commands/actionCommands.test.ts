@@ -9,7 +9,7 @@ import {
   ACTION_KEYS_CONTEXT,
   ACTION_TABLE,
   HOST_ACTION_NAMES,
-  createActionHandlers,
+  bindActionCommands,
   isHostOwnedAction,
 } from "./actionCommands";
 import { COMMANDS, getCommand } from "./commands";
@@ -19,8 +19,8 @@ import { defineContextKey } from "./contextKeys";
 import { installCommandDispatcher } from "./dispatcher";
 import { EXCALIDRAW_KEYS } from "./excalidrawKeys";
 import {
+  commandHandlersVersion,
   getRegisteredHandler,
-  registerCommandHandlers,
 } from "./handlerRegistry";
 import { buildKeymap, effectiveKeys } from "./keymap";
 
@@ -122,15 +122,21 @@ describe("canvas action commands", () => {
     }
   });
 
-  it("handlers call runActionShortcut with the action name", () => {
+  it("one prefix handler calls runActionShortcut with the action name", () => {
     const runActionShortcut = vi.fn(() => true);
-    const handlers = createActionHandlers({ runActionShortcut });
-    expect(Object.keys(handlers).sort()).toEqual(
-      ACTION_COMMANDS.map((c) => c.id).sort(),
-    );
-    handlers["canvas.group"]?.();
-    handlers["canvas.alignLeft"]?.();
+    const before = commandHandlersVersion();
+    const unbind = bindActionCommands({ runActionShortcut });
+    // zero cost: no registry version bump, no per-command closures
+    expect(commandHandlersVersion()).toBe(before);
+    for (const c of ACTION_COMMANDS) {
+      expect(getRegisteredHandler(c.id), c.id).toBeTypeOf("function");
+    }
+    getRegisteredHandler("canvas.group")?.();
+    getRegisteredHandler("canvas.alignLeft")?.();
+    getRegisteredHandler("canvas.bogus")?.();
     expect(runActionShortcut.mock.calls).toEqual([["group"], ["alignLeft"]]);
+    unbind();
+    expect(getRegisteredHandler("canvas.group")).toBeUndefined();
   });
 });
 
@@ -142,9 +148,7 @@ describe("action keys through the real dispatcher", () => {
 
   const install = (overrides: Record<string, string[]> = {}) => {
     const undefine = defineContextKey(ACTION_KEYS_CONTEXT, () => true);
-    const unbindHandlers = registerCommandHandlers(
-      createActionHandlers({ runActionShortcut }),
-    );
+    const unbindHandlers = bindActionCommands({ runActionShortcut });
     unbind = () => {
       undefine();
       unbindHandlers();

@@ -40,7 +40,7 @@ import { hasImporters, runImports } from "../plugins/importerMap";
 import { useCanvasImportMenu } from "../canvasImport/useCanvasImportMenu";
 import {
   ACTION_KEYS_CONTEXT,
-  createActionHandlers,
+  bindActionCommands,
   HOST_ACTION_NAMES,
 } from "../commands/actionCommands";
 import { CommandMenuItem } from "../commands/CommandMenuItem";
@@ -520,11 +520,18 @@ const VaultEditorComponent = ({
   // only after the handlers are bound, so a key is never dead for a frame. No
   // API (or an Excalidraw without the hook) keeps the built-in keys.
   const [toolKeysBound, setToolKeysBound] = useState(false);
+  const hasActionHook = typeof libraryApi?.runActionShortcut === "function";
   useEffect(() => {
     if (!libraryApi || typeof libraryApi.activateToolShortcut !== "function") {
       return undefined;
     }
     const unbind = registerCommandHandlers(createToolHandlers(libraryApi));
+    // Action keys (canvas.* commands): one prefix handler, bound in this same
+    // effect so opening an editor costs one extra state flip, not two.
+    const unbindActions =
+      typeof libraryApi.runActionShortcut === "function"
+        ? bindActionCommands(libraryApi)
+        : undefined;
     // Not in a history preview, not while link hints are typing letters.
     const undefine = defineContextKey(
       TOOL_KEYS_CONTEXT,
@@ -532,33 +539,22 @@ const VaultEditorComponent = ({
         !document.activeElement?.closest("[data-testid='history-preview']") &&
         !document.querySelector(".vault-link-hint"),
     );
+    const undefineActions = unbindActions
+      ? defineContextKey(
+          ACTION_KEYS_CONTEXT,
+          () =>
+            !document.activeElement?.closest(
+              "[data-testid='history-preview']",
+            ) &&
+            !document.querySelector(".vault-link-hint") &&
+            libraryApi.getAppState().openDialog?.name !== "elementLinkSelector",
+        )
+      : undefined;
     setToolKeysBound(true);
     return () => {
       setToolKeysBound(false);
-      undefine();
-      unbind();
-    };
-  }, [libraryApi]);
-
-  // Action keys (canvas.* commands, command audit D5): same order as the tool
-  // keys. Excalidraw skips its own keys for these actions only once the
-  // handlers are bound.
-  const [actionKeysBound, setActionKeysBound] = useState(false);
-  useEffect(() => {
-    if (!libraryApi || typeof libraryApi.runActionShortcut !== "function") {
-      return undefined;
-    }
-    const unbind = registerCommandHandlers(createActionHandlers(libraryApi));
-    const undefine = defineContextKey(
-      ACTION_KEYS_CONTEXT,
-      () =>
-        !document.activeElement?.closest("[data-testid='history-preview']") &&
-        !document.querySelector(".vault-link-hint") &&
-        libraryApi.getAppState().openDialog?.name !== "elementLinkSelector",
-    );
-    setActionKeysBound(true);
-    return () => {
-      setActionKeysBound(false);
+      undefineActions?.();
+      unbindActions?.();
       undefine();
       unbind();
     };
@@ -1014,7 +1010,8 @@ const VaultEditorComponent = ({
         libraryUIOptions={libraryUIOptions}
         UIOptions={{
           toolShortcuts: !toolKeysBound,
-          hostActionKeys: actionKeysBound ? HOST_ACTION_NAMES : undefined,
+          hostActionKeys:
+            toolKeysBound && hasActionHook ? HOST_ACTION_NAMES : undefined,
           canvasActions: {
             toggleTheme: true,
             export: false,
