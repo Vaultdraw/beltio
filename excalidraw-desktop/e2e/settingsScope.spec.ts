@@ -116,7 +116,7 @@ test("palette opens Settings in either scope; vault scope is per-vault pages onl
   }
   await tab(page, "Appearance").click();
   await expect(row(page, "paper")).toBeVisible();
-  await expect(row(page, "colour-theme")).toHaveCount(0);
+  await expect(row(page, "colour-theme")).toBeVisible(); // per-vault theme (68be4277)
   await tab(page, "Tools").click();
   const tools = dialog(page).getByRole("tablist", { name: "Tools" });
   await expect(tools.getByRole("tab", { name: "Pen" })).toHaveCount(0);
