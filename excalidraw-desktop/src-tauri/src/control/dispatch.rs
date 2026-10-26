@@ -48,11 +48,12 @@ impl TauriDispatch {
             .map(|v| v.as_str().ok_or_else(|| RpcError::invalid_params("argv must be an array of strings")))
             .collect::<Result<_, _>>()?;
         let cwd = params.get("cwd").cloned().unwrap_or(Value::Null);
-        self.focus()?;
-        if crate::launch::argv_has_safe(&argv) {
-            // The window asks the user first: a safe start closes the open drawings.
-            let _ = self.app.emit(crate::launch::SAFE_REQUESTED_EVENT, ());
+        let wants_safe = crate::launch::argv_has_safe(&argv);
+        // The window must be listening, or the request is lost: the sender retries NOT_READY.
+        if wants_safe && !pending().is_ready() {
+            return Err(RpcError::app(codes::NOT_READY, "The app window is still starting"));
         }
+        self.focus()?;
         let mut handled = 0;
         for route in route_argv(&argv) {
             match route {
@@ -84,6 +85,12 @@ impl TauriDispatch {
                 }
             }
             handled += 1;
+        }
+        if wants_safe {
+            // Sent once, after every route succeeded: a retried request (NOT_READY above or
+            // from a route) has not sent it yet. The window asks the user first, because a
+            // safe start closes the open drawings.
+            let _ = self.app.emit(crate::launch::SAFE_REQUESTED_EVENT, ());
         }
         Ok(json!({"handled": handled}))
     }

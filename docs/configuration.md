@@ -1171,6 +1171,18 @@ To leave safe start, run "Restart normally" (command `app.restartNormally`) from
 | `VAULTDRAW_SAFE=1` | Start in safe start (core only). Empty, `0` and `false` mean off. |
 | `VAULTDRAW_NO_AUTO_SAFE=1` | Turn the crash counter off. Use it when a script kills the app on purpose, so it never counts as a crash. |
 
+### Finding the extension that causes a problem (bisect)
+
+Safe start tells you whether an extension is to blame; bisect tells you which one, the way VS Code does. It works on the built-in extensions that are on and your enabled plugins.
+
+1. **Settings → Extensions → Find a problem extension** (or the palette: **Extensions: Find the extension causing a problem (bisect)**). Vaultdraw saves your drawings and restarts with half of them off.
+2. Try what went wrong, then answer in the banner: **It still happens** or **It's gone**. Each answer restarts with half of the remaining suspects off.
+3. After about log2(n) restarts (4 for 9 extensions) the banner names the culprit and offers **Turn it off and restart**, or says the problem is not an extension.
+
+- Nothing in `config.toml` changes until you choose to turn the culprit off. **Stop** (or **Extensions bisect: Stop**) ends it at any step and restarts with everything as configured.
+- The state is kept in the state folder's launch file, so it survives restarts and crashes. Turned-off extensions start no service either.
+- The answers are palette commands too (`extensions.bisect.still`, `extensions.bisect.gone`, `extensions.bisect.stop`), offered only while a bisect runs. Bisect is not offered in safe start.
+
 ### `vaultdraw launch`
 
 ```

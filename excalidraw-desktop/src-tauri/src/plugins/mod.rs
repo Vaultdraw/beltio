@@ -298,12 +298,10 @@ pub(crate) fn on_exit<R: tauri::Runtime>(app: &AppHandle<R>) {
     crate::launch::mark_ok();
     if RESTART_PENDING.load(Ordering::SeqCst) {
         if crate::launch::normal_restart_pending() {
-            // Same as `app.restart()`, but the new process starts without `--safe`.
-            crate::launch::clear_safe_env();
+            // Same as `app.restart()`, but the new process starts without `--safe` and
+            // without `VAULTDRAW_SAFE`.
             app.cleanup_before_exit();
-            let mut env = app.env();
-            env.args_os = crate::launch::without_safe(std::mem::take(&mut env.args_os));
-            tauri::process::restart(&env);
+            crate::launch::restart_without_safe(&app.env());
         }
         app.restart();
     }

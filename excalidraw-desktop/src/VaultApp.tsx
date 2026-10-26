@@ -107,6 +107,8 @@ import { useLayout, type Layout } from "./layout/useLayout";
 import { useUserCommands } from "./commands/useUserCommands";
 import { useVaultThemeCommands } from "./theme/useVaultThemeCommands";
 import { useVaultAppearance } from "./theme/useVaultAppearance";
+import { registerBisectCommands } from "./extensionSwitches/bisectCommands";
+import { BisectBanner } from "./extensionSwitches/BisectBanner";
 import { ActiveTabGate } from "./tabs/ActiveTabGate";
 import "./tabs/editorBody.css";
 import { ancestorFolders } from "./tabs/revealPath";
@@ -293,6 +295,8 @@ export const VaultApp = ({
   // Safe start: "Restart in safe start" / "Restart normally", and a second
   // `vaultdraw launch --safe` while this window runs.
   useEffect(() => registerSafeStartCommands(), []);
+  // Extension bisect: Start, or the answers while one runs.
+  useEffect(() => registerBisectCommands(win), [win]);
   useEffect(() => {
     if (!isTauriAvailable(win)) {
       return undefined;
@@ -2645,6 +2649,7 @@ export const VaultApp = ({
               />
             )}
             <SafeStartBanner />
+            <BisectBanner win={win} />
             {globalAlert && (
               <Banner
                 kind={globalAlert.type}

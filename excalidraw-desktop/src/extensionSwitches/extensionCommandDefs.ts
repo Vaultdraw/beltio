@@ -3,6 +3,7 @@
  * extensionCommands.ts): one toggle per extension, rebindable in `[hotkeys]`,
  * and "Restore defaults".
  */
+import { BISECT_COMMANDS } from "./bisectCommandDefs";
 import { BUILTIN_EXTENSIONS, type ExtensionId } from "./registry";
 
 import type { CommandDefinition } from "../commands/types";
@@ -26,4 +27,5 @@ export const EXTENSION_COMMANDS: readonly CommandDefinition[] = [
     category: "Extensions",
     keys: { default: [] },
   },
+  ...BISECT_COMMANDS,
 ];

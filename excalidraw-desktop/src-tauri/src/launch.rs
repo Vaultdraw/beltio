@@ -70,6 +70,35 @@ struct Launch {
     safe_mode_next: bool,
     /// One-shot request from "Restart in safe start" (core scope).
     safe_start_next: bool,
+    /// An extension bisect in progress (kept across launches until it ends).
+    bisect: Option<Bisect>,
+}
+
+/// Extension bisect across restarts (VS Code style): the extensions in `off` are off this
+/// launch; the culprit is one of `suspects`. The webview runs the steps; Rust stores the state
+/// and starts no service of an extension in `off`.
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub(crate) struct Bisect {
+    pub candidates: Vec<String>,
+    pub suspects: Vec<String>,
+    pub off: Vec<String>,
+    pub step: u32,
+}
+
+/// Most extension ids a bisect may hold (built-in extensions plus plugins).
+const MAX_BISECT_IDS: usize = 256;
+
+impl Bisect {
+    /// Every id has the plugin id grammar, the lists are bounded, and suspects and off are
+    /// drawn from the candidates.
+    fn valid(&self) -> bool {
+        let ids_ok = |v: &[String]| v.len() <= MAX_BISECT_IDS && v.iter().all(|id| is_valid_plugin_id(id));
+        ids_ok(&self.candidates)
+            && ids_ok(&self.suspects)
+            && ids_ok(&self.off)
+            && self.suspects.iter().chain(&self.off).all(|id| self.candidates.contains(id))
+    }
 }
 
 /// What this launch was told by hand, read once from argv and the environment.
@@ -83,6 +112,18 @@ pub(crate) struct Triggers {
 
 /// This launch's safe start, set once by `begin`.
 static CURRENT: OnceLock<Option<SafeStart>> = OnceLock::new();
+/// The bisect this launch runs under, read once by `begin`.
+static BISECT: OnceLock<Option<Bisect>> = OnceLock::new();
+
+/// The extension bisect of this launch, if one is in progress.
+pub(crate) fn current_bisect() -> Option<Bisect> {
+    BISECT.get().cloned().flatten()
+}
+
+/// Ids a bisect turned off for this launch (empty when none runs).
+pub(crate) fn bisect_off() -> Vec<String> {
+    current_bisect().map(|b| b.off).unwrap_or_default()
+}
 
 pub(crate) fn current() -> Option<SafeStart> {
     CURRENT.get().cloned().flatten()
@@ -143,10 +184,13 @@ fn next_launch(prev: &Launch, enabled: &[String], t: Triggers) -> (Option<SafeSt
         // Safe start loads nothing, so the next launch starts from a clean counter.
         Some((reason, scope)) => {
             let mode = SafeStart { reason, scope, crashed_launches: crashed, plugins_at_crash: prev.plugins.clone() };
-            (Some(mode), Launch { in_progress: !t.no_auto, ..Launch::default() })
+            (Some(mode), Launch { in_progress: !t.no_auto, bisect: prev.bisect.clone(), ..Launch::default() })
         }
-        None if t.no_auto => (None, Launch::default()),
-        None => (None, Launch { in_progress: true, crashed_launches: crashed, plugins: enabled.to_vec(), ..Launch::default() }),
+        None if t.no_auto => (None, Launch { bisect: prev.bisect.clone(), ..Launch::default() }),
+        None => (
+            None,
+            Launch { in_progress: true, crashed_launches: crashed, plugins: enabled.to_vec(), bisect: prev.bisect.clone(), ..Launch::default() },
+        ),
     }
 }
 
@@ -181,6 +225,7 @@ pub(crate) fn begin() {
         Ok(dirs) => {
             let enabled = enabled_plugins(&dirs.config_file());
             let prev = load(&dirs.state);
+            let _ = BISECT.set(prev.bisect.clone().filter(Bisect::valid));
             let (mode, record) = next_launch(&prev, &enabled, triggers_now());
             if record != prev {
                 if let Err(e) = store(&dirs.state, &record) {
@@ -278,9 +323,43 @@ pub(crate) fn without_safe(args: Vec<std::ffi::OsString>) -> Vec<std::ffi::OsStr
     args.into_iter().filter(|a| a != SAFE_FLAG).collect()
 }
 
-/// Drops the safe env var from this process (the restarted app inherits the environment).
-pub(crate) fn clear_safe_env() {
-    std::env::remove_var(ENV_SAFE);
+/// Starts this app again without `--safe` and without `VAULTDRAW_SAFE` in the new process's
+/// environment, then exits. Like `tauri::process::restart`, but the variable is removed from the
+/// child's environment only: changing our own environment at exit would race other threads.
+pub(crate) fn restart_without_safe(env: &tauri::Env) -> ! {
+    use std::process::{exit, Command, Stdio};
+    let args: Vec<std::ffi::OsString> = without_safe(env.args_os.clone()).into_iter().skip(1).collect();
+    if let Ok(path) = tauri::process::current_binary(env) {
+        // An app bundle restarts through LaunchServices, as Tauri does, so launchd owns it.
+        #[cfg(target_os = "macos")]
+        if let Some(bundle) = app_bundle_of(&path) {
+            let opened = Command::new("/usr/bin/open")
+                .arg("-n")
+                .arg(bundle)
+                .arg("--args")
+                .args(&args)
+                .env_remove(ENV_SAFE)
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status();
+            if opened.is_ok_and(|s| s.success()) {
+                exit(0);
+            }
+        }
+        if let Err(e) = Command::new(path).args(&args).env_remove(ENV_SAFE).stdin(Stdio::null()).spawn() {
+            eprintln!("vaultdraw: restart failed: {e}");
+        }
+    }
+    exit(0);
+}
+
+/// `/…/Name.app` for a binary at `/…/Name.app/Contents/MacOS/name`.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn app_bundle_of(binary: &Path) -> Option<&Path> {
+    let macos = binary.parent()?;
+    let contents = macos.parent()?;
+    (macos.file_name()? == "MacOS" && contents.file_name()? == "Contents").then(|| contents.parent()).flatten()
 }
 
 /// The settings reply: what `load_settings` returns plus this launch's safe start.
@@ -290,10 +369,33 @@ pub(crate) struct WithSafeStart<T: Serialize> {
     #[serde(flatten)]
     pub inner: T,
     pub safe_start: Option<SafeStart>,
+    /// The extension bisect this launch runs under.
+    pub bisect: Option<Bisect>,
 }
 
 pub(crate) fn with_safe_start<T: Serialize>(inner: T) -> WithSafeStart<T> {
-    WithSafeStart { inner, safe_start: current() }
+    WithSafeStart { inner, safe_start: current(), bisect: current_bisect() }
+}
+
+fn set_bisect_in(dir: &Path, bisect: Option<Bisect>) -> Result<()> {
+    if bisect.as_ref().is_some_and(|b| !b.valid()) {
+        return Err(err("INVALID", "bisect state is not valid"));
+    }
+    let mut l = load(dir);
+    if l.bisect != bisect {
+        l.bisect = bisect;
+        store(dir, &l)?;
+    }
+    Ok(())
+}
+
+/// Stores the bisect state for the next launch (`None` ends it). The webview restarts after.
+#[tauri::command]
+pub(crate) async fn launch_bisect_set(bisect: Option<Bisect>) -> Result<()> {
+    let dirs = config::resolve_dirs()?;
+    tauri::async_runtime::spawn_blocking(move || set_bisect_in(&dirs.state, bisect))
+        .await
+        .map_err(|e| err("INTERNAL", e.to_string()))?
 }
 
 #[cfg(test)]
@@ -305,7 +407,7 @@ mod tests {
         v.iter().map(|s| s.to_string()).collect()
     }
     fn crashed(n: u32) -> Launch {
-        Launch { in_progress: true, crashed_launches: n, plugins: ids(&["a"]), safe_mode_next: false, safe_start_next: false }
+        Launch { in_progress: true, crashed_launches: n, plugins: ids(&["a"]), safe_mode_next: false, safe_start_next: false, bisect: None }
     }
 
     #[test]
@@ -474,6 +576,47 @@ mod tests {
         assert_eq!(without_safe(args), vec![std::ffi::OsString::from("app"), "x.excalidraw".into()]);
     }
 
+    fn bisect(off: &[&str]) -> Bisect {
+        Bisect { candidates: ids(&["graph", "links", "my-plugin"]), suspects: ids(&["graph", "links", "my-plugin"]), off: ids(off), step: 1 }
+    }
+
+    #[test]
+    fn bisect_survives_every_launch_transition() {
+        let prev = Launch { bisect: Some(bisect(&["graph"])), ..Launch::default() };
+        for t in [T::default(), T { flag: true, ..T::default() }, T { no_auto: true, ..T::default() }] {
+            let (_, next) = next_launch(&prev, &ids(&["my-plugin"]), t);
+            assert_eq!(next.bisect, prev.bisect, "{t:?}");
+        }
+    }
+
+    #[test]
+    fn bisect_state_is_validated_stored_and_cleared() {
+        let dir = tempfile::tempdir().unwrap();
+        set_bisect_in(dir.path(), Some(bisect(&["graph"]))).unwrap();
+        assert_eq!(load(dir.path()).bisect, Some(bisect(&["graph"])));
+        let mut bad = bisect(&["not-a-candidate"]);
+        assert!(set_bisect_in(dir.path(), Some(bad.clone())).is_err());
+        bad.off = vec!["Bad Id".into()];
+        assert!(set_bisect_in(dir.path(), Some(bad)).is_err());
+        set_bisect_in(dir.path(), None).unwrap();
+        assert_eq!(load(dir.path()).bisect, None);
+    }
+
+    #[test]
+    fn settings_reply_carries_the_bisect() {
+        let v = serde_json::to_value(WithSafeStart { inner: serde_json::json!({"a": 1}), safe_start: None, bisect: Some(bisect(&["links"])) }).unwrap();
+        assert_eq!(v["bisect"]["off"], serde_json::json!(["links"]));
+        assert_eq!(v["a"], 1);
+    }
+
+    #[test]
+    fn finds_the_app_bundle_of_a_binary() {
+        let p = Path::new("/Applications/Vaultdraw.app/Contents/MacOS/vaultdraw");
+        assert_eq!(app_bundle_of(p), Some(Path::new("/Applications/Vaultdraw.app")));
+        assert_eq!(app_bundle_of(Path::new("/usr/local/bin/vaultdraw")), None);
+        assert_eq!(app_bundle_of(Path::new("vaultdraw")), None);
+    }
+
     #[test]
     fn settings_reply_carries_safe_start_flat() {
         #[derive(Serialize)]
@@ -481,10 +624,10 @@ mod tests {
         struct Inner {
             config_dir: String,
         }
-        let none = serde_json::to_value(WithSafeStart { inner: Inner { config_dir: "/c".into() }, safe_start: None }).unwrap();
-        assert_eq!(none, serde_json::json!({"configDir": "/c", "safeStart": null}));
+        let none = serde_json::to_value(WithSafeStart { inner: Inner { config_dir: "/c".into() }, safe_start: None, bisect: None }).unwrap();
+        assert_eq!(none, serde_json::json!({"configDir": "/c", "safeStart": null, "bisect": null}));
         let s = SafeStart { reason: Reason::Flag, scope: Scope::Core, crashed_launches: 0, plugins_at_crash: ids(&["a"]) };
-        let some = serde_json::to_value(WithSafeStart { inner: Inner { config_dir: "/c".into() }, safe_start: Some(s) }).unwrap();
+        let some = serde_json::to_value(WithSafeStart { inner: Inner { config_dir: "/c".into() }, safe_start: Some(s), bisect: None }).unwrap();
         assert_eq!(
             some["safeStart"],
             serde_json::json!({"reason": "flag", "scope": "core", "crashedLaunches": 0, "pluginsAtCrash": ["a"]})

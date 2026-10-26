@@ -2,6 +2,8 @@
 import { scheduleIdle } from "../../platform/idle";
 import { getPreferences } from "../../vault/preferences";
 
+import { isBisectOff } from "../../extensionSwitches/bisectState";
+
 import { ensureActive } from "./activation";
 import { currentList } from "./pluginsState";
 
@@ -60,6 +62,10 @@ export function applyPlugins(
   if (safeMode) {
     return null;
   }
-  const { started } = syncPlugins(plugins, getPreferences(win).pluginsEnabled);
+  // An extension bisect turns some plugins off for this launch.
+  const enabled = getPreferences(win).pluginsEnabled.filter(
+    (id) => !isBisectOff(id),
+  );
+  const { started } = syncPlugins(plugins, enabled);
   return queueStartupActivations(plugins, started, schedule);
 }

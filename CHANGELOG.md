@@ -6,6 +6,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### New
 
+- Extension bisect: **Settings → Extensions → Find a problem extension** turns half of the extensions that are on (built-in ones and plugins) off and restarts; you answer "It still happens" or "It's gone" in a banner, and after a few restarts it names the one causing the problem and offers to turn it off. Your config is untouched until then; **Stop** ends it at any step. Also from the palette (`extensions.bisect.*`).
 - Extensions: turn built-in features off in **Settings → Extensions**, with **Extensions: Toggle …** in the palette, or under `[extensions]` in `config.toml` (`search`, `links`, `tags`, `graph`, `library`, `templates`, `formula`, `mermaid`, `pdf-import`; all on by default). Off means not loaded: no commands, no panels, and the vault index does not start unless an extension needs it. Changes apply at once. Renaming still updates links while `links.update_on_rename` is on.
 - Safe start: start with built-in extensions and plugins off by hand (`vaultdraw launch --safe`, `--safe`, `VAULTDRAW_SAFE=1`, or "Restart in safe start" in the command palette); a banner offers "Restart normally". `VAULTDRAW_NO_AUTO_SAFE=1` turns the crash counter off. See `docs/configuration.md`, sections Extensions and Safe start.
 - Per-vault theme: a vault can keep its own colour theme, light or dark mode and accent colour in its `settings.toml` (`[appearance] theme`, `mode`, `accent_color`), set in Settings → Appearance with the **This vault** scope or with **Appearance: Use the current theme for this vault only** / **Use the global theme in this vault**. Theme and mode commands write where the value lives. Hotkeys stay global.
@@ -94,6 +95,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- `vaultdraw launch --safe` reaching an app whose window is still starting is no longer lost, and is asked only once. A normal restart no longer edits the app's own environment while it exits; the new process just starts without `VAULTDRAW_SAFE`.
 - `control.uri_enabled` and `control.uri_allow` are now read through every config layer (included files, `config.toml`, `overrides.toml`), like `control.enabled`. Before, links read only `config.toml`, so turning links off from Settings or with `vaultdraw config set` did nothing. A broken `overrides.toml` now turns links off, as it does AI.
 - Renaming a tag across the vault no longer shows an extra "Updated N links" message next to "Renamed #a to #b" when the rewrite finishes very fast.
 - Drawings with more than 600 elements now get a thumbnail in the gallery, home, search and palette (up to 8,000 elements). Parsing, restoring, measuring and painting each run in short steps, so the app stays responsive while thumbnails draw.

@@ -6,6 +6,11 @@
  */
 import { useSyncExternalStore } from "react";
 
+import { beginBisect } from "../../../extensionSwitches/bisectCommands";
+import {
+  getBisect,
+  subscribeBisect,
+} from "../../../extensionSwitches/bisectState";
 import { restoreExtensionDefaults } from "../../../extensionSwitches/extensionCommands";
 import { EXTENSION_TEXT } from "../../../extensionSwitches/extensionsText";
 import {
@@ -85,6 +90,7 @@ export const ExtensionsPage = () => {
   // The switches as saved (not the effective set, which is all off in safe start).
   const ext = useGlobalPrefs(win);
   const safe = useSyncExternalStore(subscribeSafeStart, getSafeStart);
+  const bisect = useSyncExternalStore(subscribeBisect, getBisect);
   const [history, setHistory] = useGlobalPref(win, "historyEnabled");
   const [thumbnails, setThumbnails] = useGlobalPref(win, "thumbnails");
   const indexNeededBy = BUILTIN_EXTENSIONS.filter(
@@ -99,13 +105,25 @@ export const ExtensionsPage = () => {
       layout="stacked"
       testId="settings-extensions"
       aside={
-        <button
-          type="button"
-          className="vault-btn vault-btn--sm"
-          onClick={() => restoreExtensionDefaults(win)}
-        >
-          Restore defaults
-        </button>
+        <>
+          {!bisect && safe?.scope !== "core" && (
+            <button
+              type="button"
+              className="vault-btn vault-btn--sm"
+              title="Turns half of the extensions off and restarts, again and again, until the one causing a problem is found"
+              onClick={() => beginBisect(win)}
+            >
+              Find a problem extension
+            </button>
+          )}
+          <button
+            type="button"
+            className="vault-btn vault-btn--sm"
+            onClick={() => restoreExtensionDefaults(win)}
+          >
+            Restore defaults
+          </button>
+        </>
       }
     >
       {safe?.scope === "core" && (

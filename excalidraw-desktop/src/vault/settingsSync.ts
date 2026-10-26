@@ -41,6 +41,7 @@ import {
 import { TABS_MAPPINGS, type TabsField } from "../tabs/tabsSettings";
 import { MEMORY_MAPPINGS, type MemoryField } from "../memory/memorySettings";
 import { setSafeStart, type SafeStart } from "../safeStart/state";
+import { parseBisect, setBisect } from "../extensionSwitches/bisectState";
 import { SEARCH_MAPPINGS, type SearchField } from "../search/searchSettings";
 import {
   LAYOUT_MAPPINGS,
@@ -192,6 +193,8 @@ const layerFile = (layer: LayerPayload) => layerFileName(layer);
 export interface LoadSettingsResult {
   /** This launch's safe start (Rust launch check); null in a normal start. */
   safeStart?: SafeStart | null;
+  /** The extension bisect this launch runs under (launch.rs). */
+  bisect?: unknown;
   configDir: string;
   configPath: string;
   statePath: string;
@@ -1563,6 +1566,7 @@ export async function initSettings(
     result = await invoke<LoadSettingsResult>("load_settings");
     // Set before preferences hydrate, so no extension starts in safe start.
     setSafeStart(result.safeStart ?? null);
+    setBisect(parseBisect(result.bisect));
   } catch (err) {
     publishStatus(win, {
       ...browserStatus(),

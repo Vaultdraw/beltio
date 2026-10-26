@@ -13,17 +13,26 @@ import {
 
 import { isCoreSafeStart, subscribeSafeStart } from "../safeStart/state";
 
+import { isBisectOff, subscribeBisect } from "./bisectState";
+
 import { EXTENSION_FIELDS, EXTENSION_IDS, type ExtensionId } from "./registry";
 
 export type ExtensionSet = Readonly<Record<ExtensionId, boolean>>;
 
-/** Pure: the switches in `prefs`, or everything off in safe start. */
+/**
+ * Pure: the switches in `prefs`, or everything off in safe start; an
+ * extension bisect turns its `off` ids off for this launch.
+ */
 export const effectiveExtensions = (
   prefs: Pick<PreferencesSnapshot, typeof EXTENSION_FIELDS[ExtensionId]>,
   safe: boolean,
+  bisectOff: (id: string) => boolean = () => false,
 ): ExtensionSet =>
   Object.fromEntries(
-    EXTENSION_IDS.map((id) => [id, !safe && prefs[EXTENSION_FIELDS[id]]]),
+    EXTENSION_IDS.map((id) => [
+      id,
+      !safe && !bisectOff(id) && prefs[EXTENSION_FIELDS[id]],
+    ]),
   ) as Record<ExtensionId, boolean>;
 
 /** Core-only safe start (src/safeStart): every extension reads as off. */
@@ -35,7 +44,11 @@ let cached: ExtensionSet | null = null;
 
 /** The current effective set; the same object until a switch changes. */
 export function getExtensions(win?: Window | null): ExtensionSet {
-  const next = effectiveExtensions(getPreferences(win), isCoreSafeStart());
+  const next = effectiveExtensions(
+    getPreferences(win),
+    isCoreSafeStart(),
+    isBisectOff,
+  );
   const key = EXTENSION_IDS.map((id) => (next[id] ? "1" : "0")).join("");
   if (!cached || key !== cachedKey) {
     cachedKey = key;
@@ -50,9 +63,11 @@ export const isExtensionOn = (id: ExtensionId, win?: Window | null): boolean =>
 const subscribe = (listener: () => void) => {
   const offPrefs = subscribePreferences(listener);
   const offSafe = subscribeSafeStart(listener);
+  const offBisect = subscribeBisect(listener);
   return () => {
     offPrefs();
     offSafe();
+    offBisect();
   };
 };
 
