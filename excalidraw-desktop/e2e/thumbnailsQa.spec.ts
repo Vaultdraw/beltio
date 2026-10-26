@@ -141,10 +141,20 @@ test.describe("tree changes", () => {
   }) => {
     await openVault(page, "?seed=search&thumbs=1");
     const recent = page.getByLabel("Recent drawings");
-    await expect(recent.locator("img.vault-thumb")).toHaveCount(
-      await recent.locator("button.vault-recent__item").count(),
-      { timeout: 15_000 },
-    );
+    // The file list arrives after idle: re-read both counts until every item has its image.
+    await expect
+      .poll(
+        async () => {
+          const items = await recent
+            .locator("button.vault-recent__item")
+            .count();
+          const thumbs = await recent.locator("img.vault-thumb").count();
+          return items > 0 && items === thumbs;
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(true);
+    await page.waitForTimeout(500);
     const imgs = await recent.locator("img.vault-thumb").count();
     const before = await calls(page);
     await expandFolder(page, "DSA");
