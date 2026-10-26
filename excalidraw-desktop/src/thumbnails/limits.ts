@@ -12,3 +12,11 @@ export const DEFAULT_THUMB_MAX_ELEMENTS = 8000;
 export const MIN_THUMB_MAX_ELEMENTS = 100;
 /** Past this the JSON.parse alone is a long task even on a fast machine. */
 export const MAX_THUMB_MAX_ELEMENTS = 50000;
+
+/**
+ * Size cap of a vault's thumbnail cache on disk (`interface.thumbnail_cache_mb`).
+ * Past it the oldest thumbnails go first, down to 90% of the cap.
+ */
+export const DEFAULT_THUMB_CACHE_MB = 128;
+export const MIN_THUMB_CACHE_MB = 8;
+export const MAX_THUMB_CACHE_MB = 8192;

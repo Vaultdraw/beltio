@@ -7,6 +7,9 @@ use std::{
 };
 
 pub(super) const CAP_BYTES: u64 = 128 * 1024 * 1024;
+/// Bounds of the `interface.thumbnail_cache_mb` setting (the app validates the same range).
+pub(super) const MIN_CAP_MB: u64 = 8;
+pub(super) const MAX_CAP_MB: u64 = 8192;
 
 struct Item {
     path: PathBuf,

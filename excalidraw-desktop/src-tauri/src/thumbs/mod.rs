@@ -16,7 +16,10 @@ use std::{
     collections::HashMap,
     fs,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex, OnceLock},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc, Mutex, OnceLock,
+    },
     time::{Duration, SystemTime},
 };
 use store::{fail_path, png_path, validate_rev, Kind};
@@ -74,7 +77,8 @@ pub(crate) struct VaultThumbs {
     root: PathBuf,
     vault_id: String,
     cache: PathBuf,
-    cap: u64,
+    /// Cache size cap in bytes; a put may carry a new one (`interface.thumbnail_cache_mb`).
+    cap: AtomicU64,
     gc_min_age: Duration,
     debounce: Duration,
     inner: Mutex<Inner>,
@@ -95,7 +99,7 @@ impl VaultThumbs {
             root,
             vault_id,
             cache,
-            cap: gc::CAP_BYTES,
+            cap: AtomicU64::new(gc::CAP_BYTES),
             gc_min_age: GC_MIN_AGE,
             debounce: PERSIST_DEBOUNCE,
             inner: Mutex::new(Inner::default()),
@@ -244,6 +248,13 @@ impl VaultThumbs {
     }
 
     /// Store a rendered thumbnail (or fail marker) for revision `rev` of `path`.
+    /// Set the cache cap from a put's `x-cap-mb` (megabytes); out-of-range values are ignored.
+    pub(crate) fn set_cap_mb(&self, mb: u64) {
+        if (gc::MIN_CAP_MB..=gc::MAX_CAP_MB).contains(&mb) {
+            self.cap.store(mb * 1024 * 1024, Ordering::Relaxed);
+        }
+    }
+
     pub(crate) fn put(self: &Arc<Self>, path: &str, rev: &str, kind: Kind, render_version: u32, body: &[u8]) -> Result<PutResult> {
         validate_rev(rev)?;
         let written = store::write_entry(&self.cache, rev, kind, render_version, body)?;
@@ -273,7 +284,8 @@ impl VaultThumbs {
             None => gc::dir_size(&self.cache), // includes the file just written
         };
         inner.total_bytes = Some(total);
-        if total <= self.cap || inner.gc_running {
+        let cap = self.cap.load(Ordering::Relaxed);
+        if total <= cap || inner.gc_running {
             return;
         }
         inner.gc_running = true;
@@ -281,7 +293,7 @@ impl VaultThumbs {
         drop(inner);
         let me = Arc::clone(self);
         let spawned = std::thread::Builder::new().name("thumbs-gc".into()).spawn(move || {
-            let left = gc::run(&me.cache, &referenced, me.cap, me.gc_min_age);
+            let left = gc::run(&me.cache, &referenced, cap, me.gc_min_age);
             if let Ok(mut i) = me.lock() {
                 i.total_bytes = Some(left);
                 i.gc_running = false;
@@ -381,6 +393,9 @@ pub(crate) async fn thumbs_put(request: Request<'_>, svc: State<'_, Service>, th
         InvokeBody::Json(_) => Vec::new(), // rejected by validate_body (not a PNG / not empty)
     };
     let vt = vault_thumbs(&handle, &svc, &thumbs)?;
+    if let Some(mb) = h.get("x-cap-mb").and_then(|v| v.to_str().ok()).and_then(|v| v.parse::<u64>().ok()) {
+        vt.set_cap_mb(mb);
+    }
     blocking(move || vt.put(&path, &rev, kind, render_version, &body)).await
 }
 

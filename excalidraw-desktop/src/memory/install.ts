@@ -1,3 +1,5 @@
+import { getPreferences } from "../vault/preferences";
+
 import { registerPurge } from "./purgeRegistry";
 import { installPurgeTriggers } from "./triggers";
 
@@ -34,6 +36,13 @@ export function installMemoryManagement(win: Window): () => void {
       const stop = installPurgeTriggers({
         win,
         releaseNative: () => invoke("release_memory"),
+        getDelays: () => {
+          const p = getPreferences(win);
+          return {
+            hiddenMs: p.memoryHiddenPurgeS * 1000,
+            idleMs: p.memoryIdlePurgeS * 1000,
+          };
+        },
         onPressure: (handler) => {
           const pending = listen("memory-pressure", handler);
           return () => void pending.then((unlisten) => unlisten());

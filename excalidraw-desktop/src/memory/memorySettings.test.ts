@@ -91,3 +91,32 @@ describe("memory settings", () => {
     expect(MEMORY_SETTINGS_SCHEMA.every((r) => !r.perVault)).toBe(true);
   });
 });
+
+describe("memory purge delays", () => {
+  it("default to 120 and 180 seconds", () => {
+    const { values, problems } = configToPreferences({});
+    expect(problems).toEqual([]);
+    expect(values.memoryHiddenPurgeS).toBe(120);
+    expect(values.memoryIdlePurgeS).toBe(180);
+  });
+  it("read overrides, 0 allowed", () => {
+    const { values } = configToPreferences({
+      memory: { hidden_purge_s: 0, idle_purge_s: 30 },
+    });
+    expect(values.memoryHiddenPurgeS).toBe(0);
+    expect(values.memoryIdlePurgeS).toBe(30);
+  });
+  it.each([
+    ["hidden_purge_s", -1],
+    ["hidden_purge_s", 86401],
+    ["idle_purge_s", 1.5],
+    ["idle_purge_s", "60"],
+  ])("rejects memory.%s = %j and keeps the default", (name, bad) => {
+    const { values, problems } = configToPreferences({
+      memory: { [name]: bad },
+    });
+    expect(problems).toHaveLength(1);
+    expect(values.memoryHiddenPurgeS).toBe(120);
+    expect(values.memoryIdlePurgeS).toBe(180);
+  });
+});

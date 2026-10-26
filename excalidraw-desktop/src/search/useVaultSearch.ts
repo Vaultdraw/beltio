@@ -1,6 +1,9 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 
+import { getPreferences } from "../vault/preferences";
 import { errorMessage } from "../vault/types";
+
+import { SEARCH_DEFAULTS } from "./searchSettings";
 
 import type {
   IndexStatus,
@@ -9,7 +12,8 @@ import type {
   VaultSearch,
 } from "./types";
 
-export const SEARCH_DEBOUNCE_MS = 60;
+/** The default wait after a keystroke; `search.debounce_ms` overrides it. */
+export const SEARCH_DEBOUNCE_MS = SEARCH_DEFAULTS.searchDebounceMs;
 /** While the index is building, results are refreshed at most this often. */
 export const BUILDING_REFRESH_MS = 1000;
 
@@ -141,9 +145,11 @@ export function useVaultSearch(
     // An index-driven re-run keeps the typing debounce deadline: immediate
     // once the user has paused, otherwise the next keystroke cancels it (that
     // search sees the newest index), so it never lands inside typing frames.
+    // In-memory read of the config value: no cost per keystroke.
+    const debounceMs = getPreferences().searchDebounceMs;
     const delay = refreshPending.current
-      ? Math.max(0, SEARCH_DEBOUNCE_MS - (now - lastTyped.current))
-      : SEARCH_DEBOUNCE_MS;
+      ? Math.max(0, debounceMs - (now - lastTyped.current))
+      : debounceMs;
     refreshPending.current = false;
     if (!search || !handle || !trimmed) {
       setResponse(null);

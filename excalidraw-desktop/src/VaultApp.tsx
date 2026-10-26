@@ -284,7 +284,12 @@ export const VaultApp = ({
   );
   const vaultTagRename = tagRename === undefined ? defaultTagRename : tagRename;
   const defaultThumbs = useMemo(
-    () => (isTauriAvailable(win) ? createDesktopThumbnailStore() : null),
+    () =>
+      isTauriAvailable(win)
+        ? createDesktopThumbnailStore({
+            capMb: () => getPreferences(win).thumbnailCacheMb,
+          })
+        : null,
     [win],
   );
   const thumbStore = thumbnails === undefined ? defaultThumbs : thumbnails;

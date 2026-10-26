@@ -81,3 +81,27 @@ describe("purge triggers", () => {
     expect(releaseNative).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("purge triggers with configured delays", () => {
+  it("uses getDelays and treats 0 as off", async () => {
+    vi.useFakeTimers();
+    setVisibility("visible");
+    const spy2 = vi.mocked(purgeAll);
+    spy2.mockClear();
+    const delays = { hiddenMs: 1000, idleMs: 0 };
+    const stop = installPurgeTriggers({
+      win: window,
+      releaseNative: vi.fn(),
+      onPressure: () => () => {},
+      getDelays: () => delays,
+    });
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(spy2).not.toHaveBeenCalled(); // idle off
+    setVisibility("hidden");
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(spy2).toHaveBeenCalledTimes(1);
+    stop();
+    vi.useRealTimers();
+    setVisibility("visible");
+  });
+});

@@ -960,6 +960,18 @@ Big images are the largest thing a drawing keeps in memory. Vaultdraw releases a
 - **After the undo horizon.** Once a deletion is older than `undo_steps` steps, Cmd+Z can no longer restore it, and its image data is released. Restoring an older version from History still works: it brings its images back.
 - **Command.** `Memory: Free unused images` (in the command palette, rebindable) does it now, without the wait, and shows how much it freed.
 - Changes apply live: edit `config.toml` or Settings and the next idle pass uses the new values.
+- **When caches are freed.** `memory.hidden_purge_s` (default 120) is how long the window stays hidden before every cache is freed; `memory.idle_purge_s` (default 180) is how long without input before off-screen caches are freed. 0 turns a trigger off. Shorter values suit a 4 GB Mac.
+
+## Speed trade-offs
+
+Keys for people who tune speed against detail. Defaults are what the app always did; they are config-only (no Settings page) and apply live.
+
+| Key | Default | What it does |
+| --- | --- | --- |
+| `search.debounce_ms` | `60` | Wait after the last keystroke before a search runs, 0 to 2000. |
+| `search.max_drawings` | `50` | Drawings listed in results, 1 to 200. |
+| `search.max_snippets` | `5` | Matching elements shown per drawing, 1 to 5 (the index keeps 5). |
+| `interface.thumbnail_cache_mb` | `128` | Disk cap of a vault's thumbnail cache, 8 to 8192. Applies at the next thumbnail saved. |
 
 ## Control and links
 

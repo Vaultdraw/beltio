@@ -21,13 +21,24 @@ export interface TriggerDeps {
   releaseNative: () => Promise<void> | void;
   /** Subscribe to native memory-pressure events; returns an unsubscribe function. */
   onPressure: (handler: () => void) => () => void;
+  /**
+   * The delays in milliseconds, read each time a timer is armed so config edits apply live.
+   * 0 turns a trigger off. Defaults to the two constants above.
+   */
+  getDelays?: () => { hiddenMs: number; idleMs: number };
 }
+
+const DEFAULT_DELAYS = () => ({
+  hiddenMs: HIDDEN_PURGE_DELAY_MS,
+  idleMs: IDLE_PURGE_DELAY_MS,
+});
 
 /** Wire the purge triggers; returns a disposer. No polling: only timers and listeners. */
 export function installPurgeTriggers({
   win,
   releaseNative,
   onPressure,
+  getDelays = DEFAULT_DELAYS,
 }: TriggerDeps): () => void {
   const doc = win.document;
   let hiddenTimer: number | undefined;
@@ -46,11 +57,16 @@ export function installPurgeTriggers({
 
   const armIdle = (delay: number) => {
     win.clearTimeout(idleTimer);
-    idleTimer = win.setTimeout(onIdleTimer, delay);
+    idleTimer = delay > 0 ? win.setTimeout(onIdleTimer, delay) : undefined;
   };
   // A single timer that re-arms for the remainder: input handlers only store a timestamp.
   function onIdleTimer() {
-    const remaining = IDLE_PURGE_DELAY_MS - (Date.now() - lastInput);
+    const idleMs = getDelays().idleMs;
+    if (idleMs <= 0) {
+      idleTimer = undefined; // off; the next input re-arms it if the setting came back
+      return;
+    }
+    const remaining = idleMs - (Date.now() - lastInput);
     if (remaining > 0) {
       armIdle(remaining);
       return;
@@ -64,17 +80,20 @@ export function installPurgeTriggers({
     lastInput = Date.now();
     if (idlePurged) {
       idlePurged = false;
-      armIdle(IDLE_PURGE_DELAY_MS);
+      armIdle(getDelays().idleMs);
+    } else if (idleTimer === undefined) {
+      armIdle(getDelays().idleMs); // was off, or switched on since
     }
   };
   const onVisibility = () => {
     win.clearTimeout(hiddenTimer);
-    if (doc.visibilityState === "hidden") {
+    const hiddenMs = getDelays().hiddenMs;
+    if (doc.visibilityState === "hidden" && hiddenMs > 0) {
       hiddenTimer = win.setTimeout(() => {
         if (doc.visibilityState === "hidden") {
           void run("hidden");
         }
-      }, HIDDEN_PURGE_DELAY_MS);
+      }, hiddenMs);
     } else {
       onInput();
     }
@@ -84,7 +103,7 @@ export function installPurgeTriggers({
     win.addEventListener(type, onInput, { capture: true, passive: true });
   }
   doc.addEventListener("visibilitychange", onVisibility);
-  armIdle(IDLE_PURGE_DELAY_MS);
+  armIdle(getDelays().idleMs);
   const offPressure = onPressure(() => void run("pressure"));
   if (doc.visibilityState === "hidden") {
     onVisibility();

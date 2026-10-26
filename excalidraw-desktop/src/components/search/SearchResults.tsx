@@ -15,6 +15,7 @@ import { getParentPath, searchEntries } from "../../vault/treeStore";
 import { useThumbDarkClass } from "../../thumbnails/surfaces/darkInvert";
 import { SearchThumb } from "../../thumbnails/surfaces/SearchThumb";
 import { isNewTabClick } from "../../tabs/newTabClick";
+import { getPreferences } from "../../vault/preferences";
 import { IconFolder } from "../Icons";
 
 import "./SearchResults.css";
@@ -27,8 +28,6 @@ import type { ElementMatch, SearchHit, VaultSearch } from "../../search/types";
 import type { OpenTarget } from "../../tabs/types";
 import type { VaultEntry } from "../../vault/types";
 
-export const MAX_DRAWINGS = 50;
-export const MAX_SNIPPETS = 5;
 const MAX_FOLDERS = 5;
 
 export type SearchRow =
@@ -213,7 +212,12 @@ export const SearchResults = ({
   const thumbDark = useThumbDarkClass();
   const listId = `${baseId}-list`;
   const listRef = useRef<HTMLDivElement>(null);
-  const { response, loading, error } = useVaultSearch(search, handle, query);
+  // Result counts are config keys (`search.max_drawings`, `search.max_snippets`).
+  const { searchMaxDrawings: maxDrawings, searchMaxSnippets: maxSnippets } =
+    getPreferences();
+  const { response, loading, error } = useVaultSearch(search, handle, query, {
+    limit: maxDrawings,
+  });
 
   // In-memory name matching: folders always, drawings when there is no
   // native search (or it failed before producing any result).
@@ -237,14 +241,14 @@ export const SearchResults = ({
     if (useFallback) {
       const drawings = nameMatches.filter((e) => e.kind === "drawing");
       total = drawings.length;
-      hits = drawings.slice(0, MAX_DRAWINGS).map(entryToHit);
+      hits = drawings.slice(0, maxDrawings).map(entryToHit);
     } else {
       total = response?.totalMatches ?? 0;
-      hits = (response?.results ?? []).slice(0, MAX_DRAWINGS);
+      hits = (response?.results ?? []).slice(0, maxDrawings);
     }
     for (const hit of hits) {
       out.push({ kind: "drawing", key: `d:${hit.path}`, hit });
-      for (const match of hit.matches.slice(0, MAX_SNIPPETS)) {
+      for (const match of hit.matches.slice(0, maxSnippets)) {
         out.push({
           kind: "snippet",
           key: `s:${hit.path}:${match.elementId}`,
@@ -254,7 +258,7 @@ export const SearchResults = ({
       }
     }
     return { rows: out, drawingTotal: total };
-  }, [nameMatches, response, useFallback]);
+  }, [nameMatches, response, useFallback, maxDrawings, maxSnippets]);
 
   const [activeIndex, setActiveIndex] = useState(0);
   // New result set: start from the top again.
@@ -353,7 +357,7 @@ export const SearchResults = ({
   } else if (drawingTotal === 0) {
     statusText = "";
   } else {
-    const shown = Math.min(drawingTotal, MAX_DRAWINGS);
+    const shown = Math.min(drawingTotal, maxDrawings);
     statusText =
       drawingTotal > shown
         ? `${fmt(shown)} of ${fmt(drawingTotal)} drawings`

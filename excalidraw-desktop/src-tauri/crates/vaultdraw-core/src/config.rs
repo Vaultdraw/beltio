@@ -124,6 +124,8 @@ autosave_delay_ms = 500
 # thumbnails = true
 # Biggest drawing (in elements) that gets a thumbnail, 100 to 50000
 # thumbnail_max_elements = 8000
+# Size cap of a vault's thumbnail cache in megabytes, 8 to 8192 (oldest thumbnails go first)
+# thumbnail_cache_mb = 128
 # Paint the file tree first, the home pane one frame later
 # defer_home_pane = true
 # Show the activity bar
@@ -235,6 +237,18 @@ autosave_delay_ms = 500
 # free_unused_images = true
 # Undo steps kept per drawing, 10 to 10000 (older steps go, with the images only they could restore)
 # undo_steps = 1000
+# Seconds hidden before caches are freed, 0 to 86400 (0 = never)
+# hidden_purge_s = 120
+# Seconds without input before off-screen caches are freed, 0 to 86400 (0 = never)
+# idle_purge_s = 180
+
+[search]
+# Milliseconds to wait after a keystroke before searching, 0 to 2000
+# debounce_ms = 60
+# Most drawings listed in the results, 1 to 200
+# max_drawings = 50
+# Most matching elements shown per drawing, 1 to 5
+# max_snippets = 5
 
 [history]
 # Version history of each drawing (false = no versions at all)

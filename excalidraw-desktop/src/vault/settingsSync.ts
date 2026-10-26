@@ -22,7 +22,9 @@ import {
 } from "@excalidraw/excalidraw/data/pageSetup";
 
 import {
+  MAX_THUMB_CACHE_MB,
   MAX_THUMB_MAX_ELEMENTS,
+  MIN_THUMB_CACHE_MB,
   MIN_THUMB_MAX_ELEMENTS,
 } from "../thumbnails/limits";
 
@@ -38,6 +40,7 @@ import {
 } from "../history/historySettings";
 import { TABS_MAPPINGS, type TabsField } from "../tabs/tabsSettings";
 import { MEMORY_MAPPINGS, type MemoryField } from "../memory/memorySettings";
+import { SEARCH_MAPPINGS, type SearchField } from "../search/searchSettings";
 import {
   LEADER_TOKEN,
   normalizeKeys,
@@ -292,6 +295,7 @@ type ConfigField =
   | "deferHomePane"
   | "thumbnails"
   | "thumbnailMaxElements"
+  | "thumbnailCacheMb"
   | "activityBar"
   | "pluginsEnabled"
   | "pluginImporters"
@@ -330,6 +334,7 @@ type ConfigField =
   | HistoryField
   | TabsField
   | MemoryField
+  | SearchField
   | KeysField
   | ToolField;
 
@@ -428,6 +433,15 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
       isInt(v) &&
       (v as number) >= MIN_THUMB_MAX_ELEMENTS &&
       (v as number) <= MAX_THUMB_MAX_ELEMENTS,
+  },
+  {
+    field: "thumbnailCacheMb",
+    key: "interface.thumbnail_cache_mb",
+    expected: `an integer between ${MIN_THUMB_CACHE_MB} and ${MAX_THUMB_CACHE_MB} (megabytes)`,
+    valid: (v) =>
+      isInt(v) &&
+      (v as number) >= MIN_THUMB_CACHE_MB &&
+      (v as number) <= MAX_THUMB_CACHE_MB,
   },
   {
     field: "activityBar",
@@ -844,6 +858,7 @@ export const CONFIG_MAPPING: readonly ConfigMapping[] = [
   ...HISTORY_MAPPINGS,
   ...TABS_MAPPINGS,
   ...MEMORY_MAPPINGS,
+  ...SEARCH_MAPPINGS,
   ...KEYS_MAPPINGS,
   ...TOOL_MAPPINGS,
 ];

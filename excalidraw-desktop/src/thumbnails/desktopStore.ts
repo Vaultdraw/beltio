@@ -5,7 +5,11 @@ import type { InvokeFn } from "../vault/DesktopVaultRepository";
 import type { LookupResult, ThumbnailStore } from "./store";
 
 export const createDesktopThumbnailStore = (
-  opts: { invoke?: InvokeFn } = {},
+  opts: {
+    invoke?: InvokeFn;
+    /** The disk cap in megabytes (`interface.thumbnail_cache_mb`), read at every put. */
+    capMb?: () => number;
+  } = {},
 ): ThumbnailStore => ({
   async lookup(handle, paths, renderVersion, failVersion) {
     const invoke = await resolveInvoke(opts.invoke);
@@ -29,6 +33,7 @@ export const createDesktopThumbnailStore = (
         "x-revision": rev,
         "x-kind": png ? "png" : "fail",
         "x-render-version": String(renderVersion),
+        ...(opts.capMb ? { "x-cap-mb": String(opts.capMb()) } : {}),
       },
     });
     return res?.url ?? null;

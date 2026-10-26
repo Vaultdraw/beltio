@@ -326,7 +326,7 @@ fn put_over_cap_triggers_background_gc() {
     let mut vt = VaultThumbs::new(root.canonicalize().unwrap(), &state);
     {
         let m = Arc::get_mut(&mut vt).unwrap();
-        m.cap = 300;
+        m.cap = std::sync::atomic::AtomicU64::new(300);
         m.gc_min_age = Duration::ZERO;
     }
     let big = |n: usize| {
@@ -464,4 +464,22 @@ fn new_render_version_replaces_old_renderings_of_the_revision() {
     f.vt.put("b.excalidraw", &"ef".repeat(32), Kind::Fail, RV, &[]).unwrap();
     f.vt.put("b.excalidraw", &"ef".repeat(32), Kind::Png, RV, PNG).unwrap();
     assert!(fail_path(&f.vt.cache, &"ef".repeat(32), RV).exists());
+}
+
+#[test]
+fn cap_defaults_and_follows_a_valid_setting_only() {
+    use std::sync::atomic::Ordering::Relaxed;
+    let dir = tempdir().unwrap();
+    let root = dir.path().join("v");
+    fs::create_dir_all(&root).unwrap();
+    let vt = VaultThumbs::new(root.canonicalize().unwrap(), &dir.path().join("s"));
+    assert_eq!(vt.cap.load(Relaxed), 128 * 1024 * 1024, "default unchanged");
+    vt.set_cap_mb(64);
+    assert_eq!(vt.cap.load(Relaxed), 64 * 1024 * 1024);
+    for bad in [0, 7, 8193, u64::MAX] {
+        vt.set_cap_mb(bad);
+        assert_eq!(vt.cap.load(Relaxed), 64 * 1024 * 1024, "{bad} is ignored");
+    }
+    vt.set_cap_mb(8);
+    assert_eq!(vt.cap.load(Relaxed), 8 * 1024 * 1024);
 }

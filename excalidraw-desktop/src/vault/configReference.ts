@@ -146,6 +146,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       thumbnail_max_elements: {
         doc: "Biggest drawing (in elements) that gets a thumbnail.",
       },
+      thumbnail_cache_mb: {
+        doc: "Size cap of a vault's thumbnail cache on disk, in megabytes; the oldest thumbnails go first. Applies at the next thumbnail saved.",
+      },
       defer_home_pane: {
         doc: "When a vault opens, paint the file tree first and the home pane one frame later, in the same place; `false` draws both together.",
       },
@@ -275,6 +278,28 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       },
       undo_steps: {
         doc: "Undo steps kept per drawing; older steps go, with the images only they could restore.",
+      },
+      hidden_purge_s: {
+        doc: "Seconds the window stays hidden before the app frees its caches; 0 never does.",
+      },
+      idle_purge_s: {
+        doc: "Seconds without input, while visible, before off-screen caches are freed; 0 never does.",
+      },
+    },
+  },
+  {
+    table: "search",
+    intro:
+      "Search speed trade-offs. Lower counts and a longer wait cost less on a slow machine.",
+    keys: {
+      debounce_ms: {
+        doc: "Wait this long after the last keystroke before a search runs.",
+      },
+      max_drawings: {
+        doc: "Most drawings listed in the search results.",
+      },
+      max_snippets: {
+        doc: "Most matching elements shown under each drawing; the index keeps 5 per drawing, so 5 is the top.",
       },
     },
   },

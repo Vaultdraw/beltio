@@ -15,7 +15,10 @@ import {
 } from "@excalidraw/excalidraw/data/pageSetup";
 
 import {
+  DEFAULT_THUMB_CACHE_MB,
   DEFAULT_THUMB_MAX_ELEMENTS,
+  MAX_THUMB_CACHE_MB,
+  MIN_THUMB_CACHE_MB,
   MAX_THUMB_MAX_ELEMENTS,
   MIN_THUMB_MAX_ELEMENTS,
 } from "../thumbnails/limits";
@@ -44,6 +47,11 @@ import {
   normalizeMemoryPreferences,
   type MemoryPreferences,
 } from "../memory/memorySettings";
+import {
+  normalizeSearchPreferences,
+  SEARCH_DEFAULTS,
+  type SearchPreferences,
+} from "../search/searchSettings";
 import {
   TABS_DEFAULTS,
   normalizeTabsPreferences,
@@ -204,6 +212,8 @@ interface VaultPreferencesBase {
   thumbnails: boolean;
   /** Largest drawing (elements) that gets a PNG thumbnail; bigger ones keep the placeholder. */
   thumbnailMaxElements: number;
+  /** Size cap of a vault's thumbnail cache on disk, in megabytes. */
+  thumbnailCacheMb: number;
   /** Show the icon bar on the left edge. A vault's settings.toml may override it. */
   activityBar: boolean;
   /** Activity bar entry ids in display order; unlisted entries follow in default order. */
@@ -285,6 +295,7 @@ export type VaultPreferences = VaultPreferencesBase &
   HistoryPreferences &
   TabsPreferences &
   MemoryPreferences &
+  SearchPreferences &
   KeysPreferences &
   Record<ToolField, ToolStyle>;
 
@@ -351,6 +362,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   deferHomePane: true,
   thumbnails: true,
   thumbnailMaxElements: DEFAULT_THUMB_MAX_ELEMENTS,
+  thumbnailCacheMb: DEFAULT_THUMB_CACHE_MB,
   activityBar: true,
   activityBarOrder: [],
   activityBarHidden: [],
@@ -391,6 +403,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   ...HISTORY_DEFAULTS,
   ...TABS_DEFAULTS,
   ...MEMORY_DEFAULTS,
+  ...SEARCH_DEFAULTS,
   ...KEYS_DEFAULTS,
   ...emptyToolStyles(),
 };
@@ -537,6 +550,11 @@ const pick = <T>(
 
 const isNumber = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value);
+const isThumbCacheMb = (value: unknown) =>
+  typeof value === "number" &&
+  Number.isInteger(value) &&
+  value >= MIN_THUMB_CACHE_MB &&
+  value <= MAX_THUMB_CACHE_MB;
 const isThumbMaxElements = (value: unknown) =>
   typeof value === "number" &&
   Number.isInteger(value) &&
@@ -679,6 +697,11 @@ export function normalizePreferences(input: unknown): VaultPreferences {
     showTagChips: pick(parsed.showTagChips, isBoolean, d.showTagChips),
     deferHomePane: pick(parsed.deferHomePane, isBoolean, d.deferHomePane),
     thumbnails: pick(parsed.thumbnails, isBoolean, d.thumbnails),
+    thumbnailCacheMb: pick(
+      parsed.thumbnailCacheMb,
+      isThumbCacheMb,
+      d.thumbnailCacheMb,
+    ),
     thumbnailMaxElements: pick(
       parsed.thumbnailMaxElements,
       isThumbMaxElements,
@@ -797,6 +820,7 @@ export function normalizePreferences(input: unknown): VaultPreferences {
     ...normalizeHistoryPreferences(parsed as Record<string, unknown>),
     ...normalizeTabsPreferences(parsed as Record<string, unknown>),
     ...normalizeMemoryPreferences(parsed as Record<string, unknown>),
+    ...normalizeSearchPreferences(parsed as Record<string, unknown>),
     ...normalizeKeysPreferences(parsed as Record<string, unknown>),
     ...normalizeToolStyles(parsed as Partial<Record<ToolField, unknown>>),
   };
