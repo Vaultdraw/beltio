@@ -214,17 +214,54 @@ async function onePage(browser, { port, mode, timeoutMs, log, leak, leakOnly, sc
     const getMetrics = async () =>
       (await cdp.send("Performance.getMetrics")).metrics;
     const startMetrics = await getMetrics();
+    // Raw peak: the highest used heap seen by the 250 ms timer. It includes garbage that
+    // has not been collected yet, so it swings by 20-30 MB with GC timing (report-only).
+    // Retained peak (the gated jsHeapPeakMB): the highest heap right after a forced
+    // collection (CDP HeapProfiler.collectGarbage), taken at every phase mark and at the
+    // end. Collecting only at phase boundaries keeps the timed phases undisturbed.
     let peak = 0;
+    let retainedPeak = 0;
+    const usedHeap = async () => {
+      const { metrics } = await cdp.send("Performance.getMetrics");
+      return metrics.find((m) => m.name === "JSHeapUsedSize")?.value ?? 0;
+    };
     const sampleHeap = async () => {
       try {
-        const { metrics } = await cdp.send("Performance.getMetrics");
-        const v = metrics.find((m) => m.name === "JSHeapUsedSize")?.value ?? 0;
+        const v = await usedHeap();
         if (v > peak) {
           peak = v;
         }
       } catch {}
     };
-    const timer = setInterval(sampleHeap, 250);
+    let collecting = false;
+    let marksSeen = 0;
+    const sampleRetained = async () => {
+      try {
+        await cdp.send("HeapProfiler.collectGarbage");
+        const v = await usedHeap();
+        if (v > retainedPeak) {
+          retainedPeak = v;
+        }
+      } catch {}
+    };
+    const tick = async () => {
+      await sampleHeap();
+      if (collecting) {
+        return;
+      }
+      collecting = true;
+      try {
+        const n = await page.evaluate(() => (window.__perfMarks ?? []).length);
+        if (n > marksSeen) {
+          marksSeen = n;
+          await sampleRetained();
+        }
+      } catch {
+      } finally {
+        collecting = false;
+      }
+    };
+    const timer = setInterval(tick, 250);
     let result;
     let tasks = [];
     let marks = [];
@@ -286,6 +323,7 @@ async function onePage(browser, { port, mode, timeoutMs, log, leak, leakOnly, sc
         );
       }
       await sampleHeap();
+      await sampleRetained();
       endMetrics = await getMetrics();
       ({ result, tasks, marks, endT, leakHeap } = await page.evaluate(() => ({
         leakHeap: window.__leakHeap ?? [],
@@ -303,7 +341,8 @@ async function onePage(browser, { port, mode, timeoutMs, log, leak, leakOnly, sc
       marks,
       endT,
       leakHeap,
-      peakMB: peak / (1024 * 1024),
+      peakMB: retainedPeak / (1024 * 1024),
+      rawPeakMB: peak / (1024 * 1024),
       cdp: { start: startMetrics, end: endMetrics },
     };
   } finally {
@@ -392,7 +431,7 @@ export async function runBrowser({
           log(`[browser] ${error.message.slice(0, 300)}; retrying`);
         }
       }
-      const { result, tasks, marks, endT, leakHeap, peakMB, cdp } = page;
+      const { result, tasks, marks, endT, leakHeap, peakMB, rawPeakMB, cdp } = page;
       if (!info.cdpMetricNames) {
         info.cdpMetricNames = cdp.end.map((m) => m.name);
       }
@@ -404,6 +443,7 @@ export async function runBrowser({
         out[`browser.${k}`] = v;
       }
       out["browser.memory.jsHeapPeakMB"] = [peakMB];
+      out["browser.memory.jsHeapRawPeakMB"] = [rawPeakMB];
       const lt = longTaskStats(tasks, marks, endT);
       out["browser.longTasks.count"] = [lt.count];
       out["browser.longTasks.totalMs"] = [lt.totalMs];
