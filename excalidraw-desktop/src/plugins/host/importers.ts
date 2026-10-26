@@ -7,7 +7,12 @@
  * "Import: Cancel".
  */
 import { appEvents } from "../../events/appEvents";
-import { applyOps, dataKeyFor, SceneOpsError } from "../../sceneOps";
+import {
+  applyOps,
+  dataKeyFor,
+  hashImages,
+  SceneOpsError,
+} from "../../sceneOps";
 import { getPreferences } from "../../vault/preferences";
 import { getActiveScene } from "../../sceneOps/sceneBus";
 import { toastStore } from "../../toasts/toastStore";
@@ -129,6 +134,9 @@ async function runOne(item: ImportItem, target: ImportTarget): Promise<void> {
     if (!ops) {
       return;
     }
+    const maxOps = getPreferences().pluginsSceneMaxOps;
+    // Hashing images is async; the scene is looked at only after it, so the checks and the write stay in one step.
+    const images = await hashImages(ops, maxOps);
     const scene = getActiveScene();
     if (!scene || scene.path !== target.path) {
       halted = "switch";
@@ -143,7 +151,8 @@ async function runOne(item: ImportItem, target: ImportTarget): Promise<void> {
       // The same path as ctx.scene.batch: one applyOps call is one undo step.
       applyOps(scene.api, ops, {
         dataKey: dataKeyFor(pluginId, rt.info.dataKey),
-        maxOps: getPreferences().pluginsSceneMaxOps,
+        maxOps,
+        images,
       });
     } catch (err) {
       if (err instanceof SceneOpsError) {

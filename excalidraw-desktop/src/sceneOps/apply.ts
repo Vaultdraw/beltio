@@ -19,16 +19,21 @@ import type {
 } from "@excalidraw/element/types";
 
 import { buildBatch, normalAngle, roundnessFor, withData } from "./build";
+import { planImages } from "./images";
 import { validateOps } from "./validate";
 import { viewportCenter } from "./viewport";
 
 import type { BatchResult, NewElement, SceneApi, SceneOp } from "./types";
+import type { ImageHashes } from "./images";
 import type { ValidateOptions } from "./validate";
 
 type Props = Partial<Omit<NewElement, "type" | "start" | "end">>;
 
 /** Options of one batch: the ops limit and the caller's data key. */
-export type ApplyOptions = ValidateOptions;
+export type ApplyOptions = ValidateOptions & {
+  /** From `hashImages(ops)`; needed when the batch adds images. */
+  images?: ImageHashes;
+};
 
 /** Working copy of the scene: ops are applied to it in order, so later ops see earlier ones. */
 type Work = Map<string, ExcalidrawElement>;
@@ -125,8 +130,12 @@ export const applyOps = (
 ): BatchResult => {
   const current = api.getSceneElementsIncludingDeleted();
   const byId = new Map(current.map((e) => [e.id, e]));
-  const valid: SceneOp[] = validateOps(ops, byId, options);
+  const valid: SceneOp[] = validateOps(ops, byId, {
+    ...options,
+    allowImages: options.images !== undefined,
+  });
   const dataKey = options.dataKey ?? null;
+  const imagePlan = planImages(api, valid, options.images);
 
   const work: Work = new Map(byId);
   for (const op of valid) {
@@ -141,9 +150,18 @@ export const applyOps = (
     created: fresh,
     ids,
     refs,
-  } = buildBatch(valid, viewportCenter(api.getAppState()), dataKey, work);
+  } = buildBatch(
+    valid,
+    viewportCenter(api.getAppState()),
+    dataKey,
+    work,
+    imagePlan?.fileIds,
+  );
   const merged = current.map((el) => work.get(el.id) ?? el);
   const elements = syncInvalidIndices([...merged, ...fresh]);
+  if (imagePlan?.files.length) {
+    api.addFiles(imagePlan.files);
+  }
   api.updateScene({
     elements,
     captureUpdate: CaptureUpdateAction.IMMEDIATELY,

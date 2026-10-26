@@ -92,6 +92,26 @@ describe("import runner", () => {
     expect(batch?.elements).toHaveLength(3);
   });
 
+  it("an importer can return an image op (hashed, stored once, one undo step)", async () => {
+    const png = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 5,
+    ]);
+    const pic = {
+      op: "add",
+      element: {
+        type: "image",
+        width: 20,
+        height: 20,
+        image: { mime: "image/png", bytes: png },
+      },
+    } as const;
+    const p = await bootImporter({ import: () => ({ ops: [pic, pic] }) });
+    const batch = await p.import("a.txt", "x");
+    expect(batch?.elements).toHaveLength(2);
+    expect(p.scene.batches).toHaveLength(1);
+    expect(Object.keys(p.scene.files())).toHaveLength(1);
+  });
+
   it("passes the drawing path, a signal, the file name and decodes UTF-8 with replacement", async () => {
     let seen: unknown;
     const p = await bootImporter({

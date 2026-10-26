@@ -108,6 +108,8 @@ export interface FakeScene {
   readonly batches: FakeBatch[];
   /** Non-deleted elements as the editor holds them. */
   live(): readonly FakeElement[];
+  /** Pictures added with image elements, by SHA-1 (the editor's file store). */
+  files(): Record<string, { mime: string; bytes: Uint8Array }>;
 }
 
 /** The colours a booted plugin reads from `ctx.theme`. */

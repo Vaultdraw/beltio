@@ -6,6 +6,7 @@ import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
 export type {
   BatchResult,
+  ImageSource,
   ElementRef,
   NewElement,
   SceneElementDetail,
@@ -21,5 +22,9 @@ export { SceneOpsError } from "../../../sdk/api/testing/sceneRules";
 /** The adapter seam: the only editor surface the core touches. */
 export type SceneApi = Pick<
   ExcalidrawImperativeAPI,
-  "getAppState" | "getSceneElementsIncludingDeleted" | "updateScene"
+  | "getAppState"
+  | "getSceneElementsIncludingDeleted"
+  | "updateScene"
+  | "getFiles"
+  | "addFiles"
 >;

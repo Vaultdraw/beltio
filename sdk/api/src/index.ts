@@ -29,6 +29,7 @@ export type {
   BatchOptions,
   BatchResult,
   ElementRef,
+  ImageSource,
   FontFamilyName,
   NewElement,
   SceneContextApi,

@@ -86,7 +86,7 @@ export type { ImportersApi, Importer, ImportInput, ImportOptions, ImportResult, 
 export type { PanelsApi } from "./panels";
 export { definePlugin } from "./plugin";
 export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
-export type { BatchOptions, BatchResult, ElementRef, FontFamilyName, NewElement, SceneContextApi, SceneElementDetail, SceneElement, SceneElementType, SceneOp, SceneOpIssue, } from "./scene";
+export type { BatchOptions, BatchResult, ElementRef, ImageSource, FontFamilyName, NewElement, SceneContextApi, SceneElementDetail, SceneElement, SceneElementType, SceneOp, SceneOpIssue, } from "./scene";
 export type { SelectOption, SettingDecl, SettingScopeName, SettingsApi, SettingValue, } from "./settings";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
@@ -203,7 +203,7 @@ export interface SceneElement {
     readonly backgroundColor?: string;
 }
 export interface NewElement {
-    type: "rectangle" | "ellipse" | "diamond" | "text" | "arrow" | "line";
+    type: "rectangle" | "ellipse" | "diamond" | "text" | "arrow" | "line" | "image";
     x?: number;
     y?: number;
     width?: number;
@@ -223,8 +223,13 @@ export interface NewElement {
     link?: string | null;
     locked?: boolean;
     data?: Json | null;
+    image?: ImageSource;
     start?: ElementRef;
     end?: ElementRef;
+}
+export interface ImageSource {
+    mime: "image/png" | "image/jpeg" | "image/gif" | "image/webp" | "image/svg+xml";
+    bytes: Uint8Array;
 }
 export interface ElementRef {
     ref: string;

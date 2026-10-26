@@ -5,7 +5,10 @@
 import { newElement } from "@excalidraw/element";
 
 import type { ExcalidrawElement } from "@excalidraw/element/types";
-import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+import type {
+  BinaryFiles,
+  ExcalidrawImperativeAPI,
+} from "@excalidraw/excalidraw/types";
 
 import { registerEditorApi } from "../../editor/editorApi";
 
@@ -36,6 +39,8 @@ export interface FakeScene {
   readonly batches: FakeBatch[];
   /** Non-deleted elements as the editor holds them. */
   live(): readonly ExcalidrawElement[];
+  /** Pictures in the editor's file store, by SHA-1, with their bytes decoded (same shape as the SDK mock). */
+  files(): Record<string, { mime: string; bytes: Uint8Array }>;
   /** Unregisters the editor. */
   dispose(): void;
 }
@@ -68,6 +73,7 @@ export function createFakeScene(initialPath: string | null): FakeScene {
   let off: (() => void) | null = null;
   const listeners = new Set<() => void>();
   const batches: FakeBatch[] = [];
+  let store: BinaryFiles = {};
   const fire = () => [...listeners].forEach((cb) => cb());
 
   const api = {
@@ -80,6 +86,12 @@ export function createFakeScene(initialPath: string | null): FakeScene {
       scrollY: 0,
       zoom: { value: 1 },
     }),
+    getFiles: () => store,
+    addFiles(list: readonly { id: string }[]) {
+      for (const f of list) {
+        store = { ...store, [f.id]: f } as BinaryFiles;
+      }
+    },
     updateScene(data: {
       elements?: readonly ExcalidrawElement[];
       captureUpdate?: unknown;
@@ -127,6 +139,18 @@ export function createFakeScene(initialPath: string | null): FakeScene {
       readOnly = flag;
     },
     batches,
+    files: () =>
+      Object.fromEntries(
+        Object.entries(store).map(([id, f]) => [
+          id,
+          {
+            mime: f.mimeType,
+            bytes: Uint8Array.from(atob(f.dataURL.split(",")[1]), (c) =>
+              c.charCodeAt(0),
+            ),
+          },
+        ]),
+      ),
     live: () => elements.filter((e) => !e.isDeleted),
     dispose() {
       off?.();

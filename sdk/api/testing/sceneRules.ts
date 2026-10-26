@@ -17,6 +17,22 @@ export const MAX_SIZE = 1e6;
 export const MAX_TEXT = 10_000;
 /** Largest `data` of one element, as UTF-8 JSON. */
 export const MAX_DATA_BYTES = 4096;
+/** Largest single image, in bytes. */
+export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+/** Mirrors the native drawing cap (src-tauri/src/lib.rs MAX_DRAWING_BYTES). */
+export const MAX_DRAWING_BYTES = 32 * 1024 * 1024;
+/** Share of the cap an image batch may fill (room left for edits and annotations). */
+export const DRAWING_BYTES_HEADROOM = 0.9;
+/** Element JSON of one image. */
+export const IMAGE_ELEMENT_BYTES = 250;
+/** Image types a plugin may add (what the editor and the exports handle). */
+export const IMAGE_MIMES = [
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "image/svg+xml",
+] as const;
 const MAX_POINTS = 10_000;
 const MAX_LINK = 2048;
 const REF = /^[A-Za-z0-9_.:-]{1,64}$/;
@@ -53,6 +69,7 @@ export const FONT_NAMES = [
 ] as const;
 
 const ADD_TYPES = new Set([
+  "image",
   "rectangle",
   "ellipse",
   "diamond",
@@ -62,6 +79,75 @@ const ADD_TYPES = new Set([
 ]);
 /** What an arrow may bind to with `start`/`end`. */
 const BINDABLE = new Set(["rectangle", "ellipse", "diamond", "text"]);
+
+const startsWith = (b: Uint8Array, sig: readonly number[], at = 0) =>
+  b.length >= at + sig.length && sig.every((v, i) => b[at + i] === v);
+
+/** Does the start of `bytes` look like `mime`? (A cheap check; the editor still decodes it.) */
+export const looksLike = (mime: string, bytes: Uint8Array): boolean => {
+  switch (mime) {
+    case "image/png":
+      return startsWith(
+        bytes,
+        [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+      );
+    case "image/jpeg":
+      return startsWith(bytes, [0xff, 0xd8, 0xff]);
+    case "image/gif":
+      return startsWith(bytes, [0x47, 0x49, 0x46, 0x38]);
+    case "image/webp":
+      return (
+        startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) &&
+        startsWith(bytes, [0x57, 0x45, 0x42, 0x50], 8)
+      );
+    case "image/svg+xml": {
+      const head = new TextDecoder().decode(bytes.subarray(0, 1024));
+      return head.includes("<svg");
+    }
+    default:
+      return false;
+  }
+};
+
+/** A Uint8Array, also when it comes from another realm (a worker, a test window). */
+export const isBytes = (v: unknown): v is Uint8Array =>
+  Object.prototype.toString.call(v) === "[object Uint8Array]";
+
+/** Why `image` (the `image` prop of an added image) is not acceptable, or null. */
+export const imageProblem = (v: unknown): string | null => {
+  if (
+    !isRecord(v) ||
+    Object.keys(v).some((k) => k !== "mime" && k !== "bytes")
+  ) {
+    return "must be { mime, bytes }";
+  }
+  if (
+    typeof v.mime !== "string" ||
+    !(IMAGE_MIMES as readonly string[]).includes(v.mime)
+  ) {
+    return `mime must be one of ${IMAGE_MIMES.join(", ")}`;
+  }
+  if (!isBytes(v.bytes) || v.bytes.length === 0) {
+    return "bytes must be a non-empty Uint8Array";
+  }
+  if (v.bytes.length > MAX_IMAGE_BYTES) {
+    return `bytes are larger than ${MAX_IMAGE_BYTES} (${
+      MAX_IMAGE_BYTES / 1024 / 1024
+    } MiB)`;
+  }
+  if (!looksLike(v.mime, v.bytes)) {
+    return `bytes do not look like ${v.mime}`;
+  }
+  return null;
+};
+
+/** Bytes an image file adds to the drawing JSON: its data URL. */
+export const imageDataUrlBytes = (mime: string, byteLength: number): number =>
+  `data:${mime};base64,`.length + Math.ceil(byteLength / 3) * 4;
+
+/** The part of the drawing size an image batch is measured against. */
+export const imageBudget = (currentBytes: number): number =>
+  DRAWING_BYTES_HEADROOM * MAX_DRAWING_BYTES - currentBytes;
 
 /** The customData key of a plugin: the declared one, else `plugins.<id>`. */
 export const dataKeyFor = (pluginId: string, declared?: string | null) =>
@@ -92,6 +178,9 @@ export const dataKeyProblem = (
   }
   return null;
 };
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
 
 type Check = (v: unknown) => string | null;
 
@@ -188,10 +277,7 @@ const PROPS: Record<string, Check> = {
 };
 
 /** Props checked on their own (`data` needs the key; `start`/`end` need refs). */
-const SPECIAL = new Set(["type", "data", "start", "end"]);
-
-const isRecord = (v: unknown): v is Record<string, unknown> =>
-  typeof v === "object" && v !== null && !Array.isArray(v);
+const SPECIAL = new Set(["type", "data", "start", "end", "image"]);
 
 /** The part of an element the op rules look at. */
 export interface OpTarget {
@@ -205,6 +291,11 @@ export interface ValidateOptions {
   maxOps?: number;
   /** The caller's customData key; without one, `data` is refused. */
   dataKey?: string | null;
+  /**
+   * Whether `image` adds are allowed. Only a caller that can store the picture
+   * (the plugin `scene.batch`) says yes; `createDrawing` and the control API do not.
+   */
+  allowImages?: boolean;
 }
 
 /** The ops limit in force: `requested` clamped to 1..MAX_OPS_LIMIT. */
@@ -398,6 +489,51 @@ export const validateOps = (
       }
       checkProps(el, i, issues);
       checkData(el, i, issues, options.dataKey);
+      if (el.type === "image" && !options.allowImages) {
+        issues.push({
+          op: i,
+          key: "type",
+          message:
+            "images are not available here; use scene.batch on the open drawing",
+        });
+      } else if (el.type === "image") {
+        const problem = "image" in el ? imageProblem(el.image) : "is required";
+        if (problem) {
+          issues.push({ op: i, key: "image", message: problem });
+        }
+        for (const key of ["width", "height"]) {
+          if (!(key in el)) {
+            issues.push({
+              op: i,
+              key,
+              message: "is required on an image (the size to show it at)",
+            });
+          }
+        }
+        for (const key of [
+          "text",
+          "fontSize",
+          "fontFamily",
+          "points",
+          "roundness",
+          "start",
+          "end",
+        ]) {
+          if (key in el) {
+            issues.push({
+              op: i,
+              key,
+              message: "not valid on image elements",
+            });
+          }
+        }
+      } else if ("image" in el) {
+        issues.push({
+          op: i,
+          key: "image",
+          message: 'only valid when adding an element of type "image"',
+        });
+      }
       if (el.type === "text" && typeof el.text !== "string") {
         issues.push({ op: i, key: "text", message: "text elements need text" });
       }
@@ -440,6 +576,13 @@ export const validateOps = (
       checkProps(props, i, issues);
       if ("data" in props) {
         checkData(props, i, issues, options.dataKey);
+      }
+      if ("image" in props) {
+        issues.push({
+          op: i,
+          key: "image",
+          message: "only valid when adding an image; add a new image instead",
+        });
       }
       if ("start" in props || "end" in props) {
         for (const key of ["start", "end"]) {

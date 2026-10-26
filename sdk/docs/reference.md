@@ -204,6 +204,7 @@ Notes:
   | `NOT_FOUND` | No drawing is open. |
   | `READ_ONLY` | The drawing is read-only. |
   | `DRAWING_CHANGED` | `options.path` is set and is not the active drawing (the user switched). |
+  | `TOO_LARGE` | Since 0.7.0: the images would push the drawing past 90% of its 32 MiB size cap. Nothing is written. |
   | `INVALID_ARGUMENT` | An op is invalid. `issues` (`SceneOpIssue[]`: op index, key, message) lists every problem. Nothing is written. |
 
 - Events are delivered in order, on a microtask. Paths are vault-relative.
@@ -247,7 +248,7 @@ interface SceneElement {
 }
 
 interface NewElement {
-  type: "rectangle" | "ellipse" | "diamond" | "text" | "arrow" | "line";
+  type: "rectangle" | "ellipse" | "diamond" | "text" | "arrow" | "line" | "image"; // "image" since 0.7.0
   x?: number;
   y?: number;
   width?: number;
@@ -267,6 +268,7 @@ interface NewElement {
   link?: string | null; // since 0.4.0; null removes it
   locked?: boolean; // since 0.4.0
   data?: Json | null; // since 0.4.0; this plugin's data, at most 4 KiB as JSON
+  image?: { mime: "image/png" | "image/jpeg" | "image/gif" | "image/webp" | "image/svg+xml"; bytes: Uint8Array }; // since 0.7.0; images only
   start?: { ref: string }; // since 0.4.0; arrows only
   end?: { ref: string }; // since 0.4.0; arrows only
 }
@@ -353,6 +355,19 @@ type AppEventMap = {
 - **Plugin data.** `data` is stored under the plugin's data key: `data_key` in `plugin.toml`, else `plugins.<id>`. Read it with `scene.dataOf(id)`, or with `scene.get(ids, { data: true })`. Set `data: null` to remove it. Keys under `plugins.` belong to the plugin of that id: a plugin may declare `plugins.<its own id>` or any other key, never another plugin's.
 - **Path guard.** `scene.batch(ops, { path })` applies only if `path` is still the active drawing. Otherwise it rejects with `DRAWING_CHANGED`.
 - **Errors.** Refusals carry `code`: `NOT_FOUND`, `READ_ONLY`, `DRAWING_CHANGED` or `INVALID_ARGUMENT`. The table under "Notes" above lists them.
+
+### Images (since 0.7.0)
+
+`{ op: "add", element: { type: "image", width, height, image: { mime, bytes } } }` adds a picture.
+
+- `width` and `height` are required: the size it is shown at. `x` and `y` work as for any element.
+- `mime` is PNG, JPEG, GIF, WebP or SVG; `bytes` is a `Uint8Array` of at most 10 MiB whose first bytes must look like that type.
+- The bytes are hashed (SHA-1, as the editor does). The same picture added twice, or already in the drawing, is stored once; each add is still its own element.
+- The size cap counts the picture's base64 data URL plus the element. A batch that would take the drawing past 90% of 32 MiB is refused with `TOO_LARGE`, nothing written.
+- Arrows cannot bind to images. `image` is refused in an `update` (add a new image) and in `createDrawing` and the control API for now.
+- An importer's `{ ops }` may contain image ops too.
+- The hashing is asynchronous, then the checks and the write happen in one synchronous step. If the user switched drawings meanwhile, `options.path` rejects with `DRAWING_CHANGED`.
+- Check `ctx.host.api.revision` (0.7.0 or later) before relying on images.
 
 ### Connected diagrams (since 0.4.0)
 

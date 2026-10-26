@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { applyOps } from "./apply";
 import { buildElements } from "./build";
+import { hashImages } from "./images";
 import { projectScene, sceneDetails } from "./project";
 import { byId, makeElements, stubApi } from "./testUtils";
 import { validateOps } from "./validate";
@@ -153,5 +154,36 @@ describe("sceneOps micro-benchmark (jsdom)", () => {
     const r = measure(() => sceneDetails(els, ids, { data: true }, "k"), 200);
     report("sceneDetails 10 of 10k", r);
     expect(r.p95).toBeLessThan(5);
+  });
+
+  it("image op: 20 images of 100 KB (hash, check, encode, apply) at 10k", async () => {
+    const ops: SceneOp[] = Array.from({ length: 20 }, (_, i) => {
+      const bytes = new Uint8Array(100 * 1024);
+      bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+      bytes[100] = i; // distinct pictures
+      return {
+        op: "add",
+        element: {
+          type: "image",
+          width: 100,
+          height: 80,
+          image: { mime: "image/png", bytes },
+        },
+      } as SceneOp;
+    });
+    const times: number[] = [];
+    for (let run = 0; run < 8; run++) {
+      const { api } = stubApi(els);
+      const start = performance.now();
+      const images = await hashImages(ops);
+      applyOps(api, ops, { images });
+      times.push(performance.now() - start);
+    }
+    times.sort((a, b) => a - b);
+    report("image op, 20 x 100 KB (10k scene, stub api)", {
+      p50: times[4],
+      p95: times[7],
+    });
+    expect(times[7]).toBeLessThan(2000);
   });
 });

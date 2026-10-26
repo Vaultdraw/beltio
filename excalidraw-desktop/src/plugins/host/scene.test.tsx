@@ -228,6 +228,76 @@ describe("API revision 0.4.0: refs, groups, data, reads, path guard", () => {
   });
 });
 
+describe("API revision 0.7.0: images", () => {
+  const PNG = new Uint8Array([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 9,
+  ]);
+  const pic = (over: Record<string, unknown> = {}) =>
+    ({
+      op: "add",
+      element: {
+        type: "image",
+        width: 50,
+        height: 40,
+        image: { mime: "image/png", bytes: PNG },
+        ...over,
+      },
+    } as const);
+
+  it("adds an image through the scene write path, storing equal pictures once", async () => {
+    const ctx = await bootCtx((c) => void c.commands.register("go", () => {}));
+    const { ids } = await ctx.scene.batch([pic(), pic({ x: 300, y: 0 })]);
+    expect(ids).toHaveLength(2);
+    expect(t!.scene.batches).toHaveLength(1);
+    expect(Object.keys(t!.scene.files())).toHaveLength(1);
+    const [first] = Object.values(t!.scene.files());
+    expect(first.mime).toBe("image/png");
+    expect([...first.bytes]).toEqual([...PNG]);
+    expect(ctx.scene.elements().map((e) => e.type)).toEqual(["image", "image"]);
+    const [detail] = ctx.scene.get([ids[0]]);
+    expect(detail.fileId).toBe(Object.keys(t!.scene.files())[0]);
+    // The same picture again: a new element, no new file.
+    await ctx.scene.batch([pic()]);
+    expect(Object.keys(t!.scene.files())).toHaveLength(1);
+    expect(ctx.scene.elements()).toHaveLength(3);
+  });
+
+  it("refuses invalid images with INVALID_ARGUMENT and writes nothing", async () => {
+    const ctx = await bootCtx((c) => void c.commands.register("go", () => {}));
+    await expect(
+      ctx.scene.batch([
+        pic({ image: { mime: "image/png", bytes: new Uint8Array(9) } }),
+      ]),
+    ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+    expect(t!.scene.batches).toHaveLength(0);
+    expect(t!.scene.files()).toEqual({});
+  });
+
+  it("refuses with TOO_LARGE when the drawing would pass its cap", async () => {
+    const ctx = await bootCtx((c) => void c.commands.register("go", () => {}));
+    // Eleven distinct 3 MiB pictures are 44 MiB of data URLs, above the 28.8 MiB headroom.
+    const big = Array.from({ length: 11 }, (_, i) => {
+      const bytes = new Uint8Array(3 * 1024 * 1024);
+      bytes.set(PNG);
+      bytes[10] = i;
+      return pic({ image: { mime: "image/png", bytes } });
+    });
+    await expect(ctx.scene.batch(big)).rejects.toMatchObject({
+      code: "TOO_LARGE",
+    });
+    expect(t!.scene.batches).toHaveLength(0);
+    expect(t!.scene.files()).toEqual({});
+  });
+
+  it("looks at the drawing again after hashing: a switch during it is DRAWING_CHANGED", async () => {
+    const ctx = await bootCtx((c) => void c.commands.register("go", () => {}));
+    const pending = ctx.scene.batch([pic()], { path: "fake.excalidraw" });
+    t!.scene.switchTo("Other.excalidraw");
+    await expect(pending).rejects.toMatchObject({ code: "DRAWING_CHANGED" });
+    expect(t!.scene.batches).toHaveLength(0);
+  });
+});
+
 describe("a stopped plugin", () => {
   it("cannot change the drawing or subscribe through its old context", async () => {
     const ctx = await bootCtx((c) => void c.commands.register("go", () => {}));

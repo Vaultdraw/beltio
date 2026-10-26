@@ -5,6 +5,7 @@ import { appEvents, type AppEventMap } from "../../events/appEvents";
 import {
   applyOps,
   elementData,
+  hashImages,
   sceneDetails,
   SceneOpsError,
   viewportCenter,
@@ -117,13 +118,34 @@ export function createSceneApi(
       if (scene.readOnly) {
         throw refusal("the drawing is read-only", "READ_ONLY");
       }
+      const maxOps = options.maxOps();
+      // Hashing is async: look at the scene again afterwards, so the checks
+      // and the write happen in the same synchronous step.
+      const images = await hashImages(ops, maxOps);
+      let target = scene;
+      if (images.size) {
+        const now = getActiveScene();
+        if (!isLive()) {
+          throw refusal("the plugin was stopped");
+        }
+        if (!now) {
+          throw refusal("no drawing is open", "NOT_FOUND");
+        }
+        if (want !== undefined && want !== now.path) {
+          throw refusal(
+            `another drawing is active than "${String(want)}"`,
+            "DRAWING_CHANGED",
+          );
+        }
+        if (now.readOnly) {
+          throw refusal("the drawing is read-only", "READ_ONLY");
+        }
+        target = now;
+      }
       try {
-        return applyOps(scene.api, ops, {
-          dataKey,
-          maxOps: options.maxOps(),
-        });
+        return applyOps(target.api, ops, { dataKey, maxOps, images });
       } catch (err) {
-        if (err instanceof SceneOpsError) {
+        if (err instanceof SceneOpsError || err instanceof PluginApiError) {
           logLine(id, "error", `scene.batch: ${errorText(err)}`);
         }
         throw err;

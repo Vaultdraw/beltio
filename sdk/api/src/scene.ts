@@ -55,7 +55,15 @@ export interface SceneElement {
  */
 export interface NewElement {
   /** @since 0.1.0 */
-  type: "rectangle" | "ellipse" | "diamond" | "text" | "arrow" | "line";
+  type:
+    | "rectangle"
+    | "ellipse"
+    | "diamond"
+    | "text"
+    | "arrow"
+    | "line"
+    /** Needs `image`, `width` and `height`. @since 0.7.0 */
+    | "image";
   /** @since 0.1.0 */
   x?: number;
   /** @since 0.1.0 */
@@ -118,6 +126,16 @@ export interface NewElement {
    */
   data?: Json | null;
   /**
+   * The picture of an `image` element (and only of that). `width` and `height`
+   * are the size it is shown at. The bytes are hashed (SHA-1, as the editor
+   * does), so adding the same picture twice stores it once. A batch is
+   * refused with `TOO_LARGE` when the drawing would pass 90% of its 32 MiB
+   * size cap. Arrows cannot bind to images. Not valid in an `update`.
+   *
+   * @since 0.7.0
+   */
+  image?: ImageSource;
+  /**
    * Arrows only: bind the start to an element added in the same batch.
    *
    * @since 0.4.0
@@ -129,6 +147,24 @@ export interface NewElement {
    * @since 0.4.0
    */
   end?: ElementRef;
+}
+
+/**
+ * The picture of an added image: at most 10 MiB, PNG, JPEG, GIF, WebP or SVG;
+ * the bytes must look like the declared type.
+ *
+ * @since 0.7.0
+ */
+export interface ImageSource {
+  /** @since 0.7.0 */
+  mime:
+    | "image/png"
+    | "image/jpeg"
+    | "image/gif"
+    | "image/webp"
+    | "image/svg+xml";
+  /** @since 0.7.0 */
+  bytes: Uint8Array;
 }
 
 /**
@@ -308,7 +344,8 @@ export interface SceneContextApi {
   /**
    * Applies the ops as ONE undo step. Rejects: no drawing (`NOT_FOUND`),
    * read-only (`READ_ONLY`), invalid ops (`INVALID_ARGUMENT`, with `issues`),
-   * another drawing active than `options.path` (`DRAWING_CHANGED`).
+   * another drawing active than `options.path` (`DRAWING_CHANGED`), images that
+   * would push the drawing past its size cap (`TOO_LARGE`, since 0.7.0).
    *
    * @since 0.1.0
    */

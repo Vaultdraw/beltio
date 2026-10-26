@@ -1,5 +1,13 @@
 import { PluginApiError } from "./rules";
-import { SceneOpsError, validateOps } from "./sceneRules";
+import {
+  imageBudget,
+  imageDataUrlBytes,
+  IMAGE_ELEMENT_BYTES,
+  isBytes,
+  MAX_IMAGE_BYTES,
+  SceneOpsError,
+  validateOps,
+} from "./sceneRules";
 
 import type {
   BatchResult,
@@ -18,6 +26,34 @@ import type {
   FakeElementInput,
   FakeScene,
 } from "./types";
+
+const sha1Hex = async (bytes: Uint8Array): Promise<string> =>
+  Array.from(
+    new Uint8Array(
+      await globalThis.crypto.subtle.digest("SHA-1", bytes as BufferSource),
+    ),
+    (b) => b.toString(16).padStart(2, "0"),
+  ).join("");
+
+/** SHA-1 of every image add of `ops` (the editor names files this way). Unvalidated input: only plausible ones. */
+const hashImages = async (ops: unknown): Promise<Map<object, string>> => {
+  const out = new Map<object, string>();
+  if (!Array.isArray(ops)) {
+    return out;
+  }
+  for (const op of ops) {
+    const image = op?.element?.image;
+    if (
+      op?.op === "add" &&
+      op.element?.type === "image" &&
+      isBytes(image?.bytes) &&
+      image.bytes.length <= MAX_IMAGE_BYTES
+    ) {
+      out.set(op, await sha1Hex(image.bytes));
+    }
+  }
+  return out;
+};
 
 /** What the scene needs from the host: attribution and disposal. */
 export interface ScenePlumbing {
@@ -92,8 +128,13 @@ const textSize = (text: string, fontSize = 20) => ({
 });
 
 /** A NewElement as an editor element (a text label becomes its own element). */
-const build = (input: FakeElementInput, dataKey?: string): El[] => {
+const build = (
+  input: FakeElementInput,
+  dataKey?: string,
+  fileId?: string,
+): El[] => {
   const {
+    image: _image,
     type,
     text,
     id,
@@ -122,6 +163,9 @@ const build = (input: FakeElementInput, dataKey?: string): El[] => {
   }
   if (data !== undefined && data !== null && dataKey) {
     base.customData = { [dataKey]: structuredClone(data) };
+  }
+  if (type === "image") {
+    base.fileId = fileId ?? null;
   }
   if (points) {
     Object.assign(base, sizeOfPoints(points));
@@ -172,6 +216,8 @@ export function createSceneModel(initialPath: string | null): SceneModel {
   let frame: ReturnType<typeof setTimeout> | null = null;
   const listeners = new Set<(e: Change) => void>();
   const batches: FakeBatch[] = [];
+  /** Pictures of the drawing by SHA-1 (what the editor's file store holds). */
+  const files = new Map<string, { mime: string; bytes: Uint8Array }>();
 
   const sum = () => elements.reduce((n, e) => n + e.version, 0);
   const live = () => elements.filter((e) => !e.isDeleted);
@@ -259,12 +305,61 @@ export function createSceneModel(initialPath: string | null): SceneModel {
     },
     batches,
     live,
+    files: () =>
+      Object.fromEntries(
+        [...files].map(([id, f]) => [
+          id,
+          { mime: f.mime, bytes: new Uint8Array(f.bytes) },
+        ]),
+      ),
   };
 
   let groupSeq = 0;
-  const apply = (ops: readonly SceneOp[], dataKey?: string): BatchResult => {
+  const apply = (
+    ops: readonly SceneOp[],
+    dataKey?: string,
+    hashes?: ReadonlyMap<object, string>,
+  ): BatchResult => {
     const byId = new Map(elements.map((e) => [e.id, e]));
-    validateOps(ops, byId, { dataKey: dataKey ?? null });
+    validateOps(ops, byId, {
+      dataKey: dataKey ?? null,
+      allowImages: hashes !== undefined,
+    });
+    const fileIds = new Map<object, string>();
+    const fresh = new Map<string, { mime: string; bytes: Uint8Array }>();
+    let imageCount = 0;
+    for (const op of ops) {
+      if (op.op === "add" && op.element.type === "image") {
+        const id = hashes?.get(op);
+        if (!id) {
+          throw new PluginApiError("INVALID_ARGUMENT", "image was not hashed");
+        }
+        fileIds.set(op, id);
+        imageCount++;
+        if (!files.has(id) && !fresh.has(id)) {
+          fresh.set(id, op.element.image!);
+        }
+      }
+    }
+    if (imageCount) {
+      let current = JSON.stringify(live()).length;
+      for (const f of files.values()) {
+        current += imageDataUrlBytes(f.mime, f.bytes.length);
+      }
+      let added = imageCount * IMAGE_ELEMENT_BYTES;
+      for (const f of fresh.values()) {
+        added += imageDataUrlBytes(f.mime, f.bytes.length);
+      }
+      if (added > imageBudget(current)) {
+        throw new PluginApiError(
+          "TOO_LARGE",
+          "the images would push the drawing past its size cap",
+        );
+      }
+      for (const [id, f] of fresh) {
+        files.set(id, { mime: f.mime, bytes: new Uint8Array(f.bytes) });
+      }
+    }
     const adds: Extract<SceneOp, { op: "add" }>[] = [];
     const groups: Extract<SceneOp, { op: "group" }>[] = [];
     const edits = new Map<string, El | "delete">();
@@ -301,7 +396,7 @@ export function createSceneModel(initialPath: string | null): SceneModel {
     // Elements without x/y are shifted as a group onto the viewport centre.
     const built = adds.map((a) => ({
       a: a.element,
-      els: build(a.element, dataKey),
+      els: build(a.element, dataKey, fileIds.get(a)),
     }));
     const refs: Record<string, string> = {};
     adds.forEach((a, i) => {
@@ -492,8 +587,15 @@ export function createSceneModel(initialPath: string | null): SceneModel {
           if (readOnly) {
             throw refusal("the drawing is read-only", "READ_ONLY");
           }
+          const hashes = await hashImages(ops);
+          if (path === null) {
+            throw refusal("no drawing is open", "NOT_FOUND");
+          }
+          if (readOnly) {
+            throw refusal("the drawing is read-only", "READ_ONLY");
+          }
           try {
-            return apply(ops, dataKey);
+            return apply(ops, dataKey, hashes);
           } catch (err) {
             if (err instanceof SceneOpsError) {
               logError(`scene.batch: ${err.message}`);

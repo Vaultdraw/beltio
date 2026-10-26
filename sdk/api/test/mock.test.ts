@@ -368,6 +368,53 @@ describe("mock host: events and scene", () => {
     expect(seen).toBe(2); // the box and its label
   });
 
+  it("scene.batch adds images (hashed, stored once) and refuses what passes the cap", async () => {
+    const PNG = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1,
+    ]);
+    const pic = (bytes = PNG) =>
+      ({
+        op: "add",
+        element: {
+          type: "image",
+          width: 10,
+          height: 10,
+          image: { mime: "image/png", bytes },
+        },
+      } as const);
+    let tooLarge = "";
+    let invalid = "";
+    p = await boot(
+      { id: "a", contributes: commands("go") },
+      withCommand(async (ctx) => {
+        await ctx.scene.batch([pic(), pic()]);
+        try {
+          await ctx.scene.batch([pic(new Uint8Array(9))]);
+        } catch (err) {
+          invalid = (err as { code: string }).code;
+        }
+        try {
+          await ctx.scene.batch(
+            Array.from({ length: 11 }, (_, i) => {
+              const b = new Uint8Array(3 * 1024 * 1024);
+              b.set(PNG);
+              b[10] = i;
+              return pic(b);
+            }),
+          );
+        } catch (err) {
+          tooLarge = (err as { code: string }).code;
+        }
+      }),
+    );
+    await p.run("go");
+    expect(Object.keys(p.scene.files())).toHaveLength(1);
+    expect(p.scene.live()).toHaveLength(2);
+    expect(invalid).toBe("INVALID_ARGUMENT");
+    expect(tooLarge).toBe("TOO_LARGE");
+    expect(p.scene.batches).toHaveLength(1);
+  });
+
   it("onChange fires once per frame and on a drawing switch", async () => {
     const seen: string[] = [];
     p = await boot(

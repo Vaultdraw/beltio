@@ -2,7 +2,7 @@
 import { convertToExcalidrawElements } from "@excalidraw/excalidraw";
 
 import type { ExcalidrawElement } from "@excalidraw/element/types";
-import type { AppState } from "@excalidraw/excalidraw/types";
+import type { AppState, BinaryFiles } from "@excalidraw/excalidraw/types";
 
 import type { SceneApi } from "./types";
 
@@ -23,8 +23,20 @@ export const byId = (els: readonly ExcalidrawElement[]) =>
 export const stubApi = (
   els: readonly ExcalidrawElement[] = [],
   appState: Partial<AppState> = {},
+  files: BinaryFiles = {},
 ) => {
-  const updateScene = vi.fn();
+  const order: string[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateScene = vi.fn((..._args: any[]) => {
+    order.push("updateScene");
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const addFiles = vi.fn((list: readonly any[]) => {
+    order.push("addFiles");
+    for (const f of list) {
+      files = { ...files, [f.id]: f } as BinaryFiles;
+    }
+  });
   const api = {
     getAppState: () =>
       ({
@@ -36,7 +48,9 @@ export const stubApi = (
         ...appState,
       } as AppState),
     getSceneElementsIncludingDeleted: () => els,
+    getFiles: () => files,
+    addFiles,
     updateScene,
   } as unknown as SceneApi;
-  return { api, updateScene };
+  return { api, updateScene, addFiles, order };
 };

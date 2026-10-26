@@ -83,8 +83,10 @@ const toSkeleton = (
   e: NewElement,
   id: string,
   dataKey: string | null,
+  fileId?: string,
 ): ExcalidrawElementSkeleton => {
   const {
+    image,
     text,
     points,
     fontFamily,
@@ -102,6 +104,12 @@ const toSkeleton = (
     x: e.x ?? 0,
     y: e.y ?? 0,
   };
+  if (e.type === "image") {
+    // The file is added to the editor by applyOps (src/sceneOps/images.ts).
+    sk.fileId = fileId;
+    sk.status = "saved";
+  }
+  void image;
   const family = fontFamily ? FONT_FAMILY[fontFamily] : undefined;
   if (e.type === "text") {
     sk.text = text ?? "";
@@ -275,6 +283,7 @@ export const buildAdds = (
   adds: readonly Pick<AddOp, "element" | "ref">[],
   center: { x: number; y: number },
   dataKey: string | null = null,
+  fileIds?: ReadonlyMap<object, string>,
 ): BuiltAdds => {
   if (!adds.length) {
     return { created: [], ids: [], refs: {} };
@@ -291,7 +300,7 @@ export const buildAdds = (
     }
   });
   const built = convertToExcalidrawElements(
-    adds.map((a, i) => toSkeleton(a.element, ids[i], dataKey)),
+    adds.map((a, i) => toSkeleton(a.element, ids[i], dataKey, fileIds?.get(a))),
     { regenerateIds: false },
   ) as ExcalidrawElement[];
   // Which add each built element belongs to (a label belongs to its container).
@@ -427,10 +436,11 @@ export const buildBatch = (
   center: { x: number; y: number },
   dataKey: string | null,
   work: Map<string, ExcalidrawElement>,
+  fileIds?: ReadonlyMap<object, string>,
 ): BuiltAdds => {
   const adds = ops.filter((op): op is AddOp => op.op === "add");
   const groups = ops.filter((op): op is GroupOp => op.op === "group");
-  const built = buildAdds(adds, center, dataKey);
+  const built = buildAdds(adds, center, dataKey, fileIds);
   if (!groups.length) {
     return built;
   }
