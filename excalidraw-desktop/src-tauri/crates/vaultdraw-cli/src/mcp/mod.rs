@@ -57,8 +57,14 @@ fn handle_line(cli: &Cli, line: &str, client: &mut String) -> Option<Value> {
     };
     let id = msg.get("id").cloned().filter(|i| !i.is_null());
     let params = msg.get("params").cloned().unwrap_or(Value::Null);
+    // A message without an id is a notification: never run a tool or answer for it.
+    let id = id.or_else(|| {
+        if method.starts_with("notifications/") {
+            dispatch(cli, method, &params, client).ok();
+        }
+        None
+    })?;
     let outcome = dispatch(cli, method, &params, client);
-    let id = id?; // a notification: no reply, whatever happened
     Some(match outcome {
         Ok(result) => json!({"jsonrpc": "2.0", "id": id, "result": result}),
         Err((code, message)) => error(id, code, &message),

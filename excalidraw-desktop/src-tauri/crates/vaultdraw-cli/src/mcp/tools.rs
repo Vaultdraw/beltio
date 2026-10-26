@@ -48,6 +48,9 @@ fn input_schema(method: &str) -> Value {
             props.remove(k);
         }
     }
+    if let Some(req) = schema.get_mut("required").and_then(Value::as_array_mut) {
+        req.retain(|k| !k.as_str().is_some_and(|k| HIDDEN.contains(&k)));
+    }
     schema["additionalProperties"] = json!(false);
     schema
 }
@@ -156,7 +159,7 @@ fn status(cli: &Cli, client: &str, switch: Option<ControlSettings>) -> Result<Va
         out["ai"]["howToEnable"] = json!(HOW_TO_ENABLE);
         return Ok(out);
     }
-    let rpc = backend_rpc(cli)?;
+    let Ok(rpc) = backend_rpc(cli) else { return Ok(out) };
     let asked = (|| {
         let mut c = rpc.connect()?;
         hello(&rpc, &mut c, client)?;
@@ -167,12 +170,13 @@ fn status(cli: &Cli, client: &str, switch: Option<ControlSettings>) -> Result<Va
             for (k, v) in app {
                 out[&k] = v;
             }
-            out["ai"] = json!({"enabled": true});
+            if !out["ai"].is_object() {
+                out["ai"] = json!({"enabled": true});
+            }
             Ok(out)
         }
         Ok(_) => Ok(out),
-        Err(f) if f.not_running() => Ok(out),
-        Err(f) => Err(f),
+        Err(_) => Ok(out), // status answers in every state
     }
 }
 
