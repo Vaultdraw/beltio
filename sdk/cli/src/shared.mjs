@@ -9,4 +9,10 @@ export const SHARED_SPECIFIERS = [
   "react-dom",
   "react-dom/client",
   "@vaultdraw/api",
+  "@codemirror/state",
+  "@codemirror/view",
+  "@codemirror/language",
+  "@codemirror/commands",
+  "@lezer/common",
+  "@lezer/highlight",
 ];

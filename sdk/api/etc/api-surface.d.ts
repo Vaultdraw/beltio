@@ -83,12 +83,15 @@ export type { AppEventMap, EventsApi } from "./events";
 export type { CommandContribution, ImporterContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
 export type { ApiVersion, HostApi } from "./host";
 export type { ImportersApi, Importer, ImportInput, ImportOptions, ImportResult, } from "./importers";
+export type { ByteRange, MarkdownApi, MarkdownParseOptions, NoteBlock, NoteBlockBase, NoteDoc, NoteFrontmatter, NoteInline, NoteLink, NoteStats, } from "./markdown";
+export type { FlowItem, FlowOptions, FlowPlacement, PageGeometry, PageRequest, PageSizeName, PagesApi, } from "./pages";
 export type { PanelsApi } from "./panels";
 export { definePlugin } from "./plugin";
 export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
 export type { BatchOptions, BatchResult, ElementRef, ImageSource, FontFamilyName, NewElement, SceneContextApi, SceneElementDetail, SceneElement, SceneElementType, SceneOp, SceneOpIssue, } from "./scene";
 export type { SelectOption, SettingDecl, SettingScopeName, SettingsApi, SettingValue, } from "./settings";
 export type { Json, StorageApi, StorageScope } from "./storage";
+export type { FontsApi, TextApi, TextFont } from "./text";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
 export type { VaultApi, VaultEntry } from "./vault";
 export type { WorkspaceApi } from "./workspace";
@@ -129,6 +132,157 @@ export interface PluginContributions {
     importers?: ImporterContribution[];
 }
 
+// markdown.ts
+export type ByteRange = readonly [number, number];
+export interface NoteFrontmatter {
+    readonly range: ByteRange;
+    readonly raw: string;
+    readonly tags: readonly string[];
+    readonly aliases: readonly string[];
+    readonly properties: Readonly<Record<string, string>>;
+}
+export interface NoteStats {
+    readonly words: number;
+    readonly blocks: number;
+    readonly droppedEmphasis: number;
+    readonly droppedHtml: number;
+}
+export interface NoteInline {
+    readonly kind: "wikilink" | "link" | "tag" | "math" | "footnoteRef";
+    readonly start: number;
+    readonly end: number;
+    readonly target: string;
+    readonly alias?: string;
+    readonly heading?: string;
+    readonly blockRef?: string;
+}
+export interface NoteBlockBase {
+    readonly range: ByteRange;
+    readonly blockId?: string;
+}
+export type NoteBlock = NoteBlockBase & ({
+    kind: "heading";
+    level: number;
+    text: string;
+    inline?: readonly NoteInline[];
+} | {
+    kind: "paragraph";
+    text: string;
+    inline?: readonly NoteInline[];
+} | {
+    kind: "listItem";
+    ordered: boolean;
+    marker: string;
+    depth: number;
+    task: "none" | "open" | "done";
+    text: string;
+    inline?: readonly NoteInline[];
+} | {
+    kind: "code";
+    code: true;
+    lang?: string;
+    text: string;
+} | {
+    kind: "blockquote";
+    blocks: readonly NoteBlock[];
+} | {
+    kind: "callout";
+    calloutType: string;
+    title: string;
+    foldState: "none" | "open" | "closed";
+    blocks: readonly NoteBlock[];
+} | {
+    kind: "thematicBreak";
+} | {
+    kind: "table";
+    align: readonly ("none" | "left" | "center" | "right")[];
+    header: readonly string[];
+    rows: readonly (readonly string[])[];
+    cols: number;
+    cellCount: number;
+} | {
+    kind: "image";
+    target: string;
+    remote: boolean;
+    alt?: string;
+    width?: number;
+    height?: number;
+} | {
+    kind: "embed";
+    target: string;
+    heading?: string;
+    blockRef?: string;
+    alt?: string;
+    width?: number;
+    height?: number;
+} | {
+    kind: "math";
+    latex: string;
+} | {
+    kind: "footnoteDef";
+    label: string;
+    blocks: readonly NoteBlock[];
+} | {
+    kind: "html";
+    text: string;
+});
+export interface NoteLink {
+    readonly kind: "wikilink" | "embed" | "link";
+    readonly target: string;
+    readonly alias?: string;
+    readonly heading?: string;
+    readonly blockRef?: string;
+    readonly range: ByteRange;
+}
+export interface NoteDoc {
+    readonly schemaVersion: number;
+    readonly frontmatter?: NoteFrontmatter;
+    readonly blocks: readonly NoteBlock[];
+    readonly links: readonly NoteLink[];
+    readonly tags: readonly string[];
+    readonly stats: NoteStats;
+}
+export interface MarkdownParseOptions {
+    softBreakNewline?: boolean;
+}
+export interface MarkdownApi {
+    parse(text: string, options?: MarkdownParseOptions): Promise<NoteDoc>;
+}
+
+// pages.ts
+export type PageSizeName = "a3" | "a4" | "a5" | "b5" | "letter" | "legal" | "tablet" | "tabletLarge" | "phone";
+export interface PageRequest {
+    size?: PageSizeName | {
+        width: number;
+        height: number;
+    };
+    orientation?: "portrait" | "landscape";
+    layout?: "separate" | "continuous";
+}
+export interface PageGeometry {
+    readonly width: number;
+    readonly height: number;
+    readonly gap: number;
+    readonly pitch: number;
+}
+export interface FlowItem {
+    height: number;
+    spaceBefore?: number;
+    breakBefore?: boolean;
+    keepWithNext?: boolean;
+}
+export interface FlowOptions {
+    contentHeight: number;
+}
+export interface FlowPlacement {
+    readonly page: number;
+    readonly y: number;
+}
+export interface PagesApi {
+    geometry(request?: PageRequest): PageGeometry;
+    flow(items: readonly FlowItem[], options: FlowOptions): FlowPlacement[];
+}
+
 // panels.ts
 import type { ComponentType } from "react";
 import type { Disposable } from "./disposable";
@@ -144,11 +298,14 @@ import type { Disposable } from "./disposable";
 import type { EventsApi } from "./events";
 import type { HostApi } from "./host";
 import type { ImportersApi } from "./importers";
+import type { MarkdownApi } from "./markdown";
 import type { PluginManifestInfo } from "./manifest";
+import type { PagesApi } from "./pages";
 import type { PanelsApi } from "./panels";
 import type { SceneContextApi } from "./scene";
 import type { SettingsApi } from "./settings";
 import type { StorageApi } from "./storage";
+import type { FontsApi, TextApi } from "./text";
 import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
 import type { WorkspaceApi } from "./workspace";
@@ -176,6 +333,10 @@ export interface PluginContext {
     readonly vault: VaultApi;
     readonly workspace: WorkspaceApi;
     readonly importers: ImportersApi;
+    readonly markdown: MarkdownApi;
+    readonly text: TextApi;
+    readonly fonts: FontsApi;
+    readonly pages: PagesApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;
     setInterval(fn: () => void, ms: number): Disposable;
@@ -339,6 +500,20 @@ export interface StorageScope {
 }
 export interface StorageApi {
     readonly global: StorageScope;
+}
+
+// text.ts
+import type { FontFamilyName } from "./scene";
+export interface TextFont {
+    family: FontFamilyName;
+    size: number;
+}
+export interface TextApi {
+    measure(font: TextFont, strings: readonly string[]): Float64Array;
+    lineHeight(family: FontFamilyName): number;
+}
+export interface FontsApi {
+    ensure(families: readonly FontFamilyName[], text?: string): Promise<void>;
 }
 
 // theme.ts

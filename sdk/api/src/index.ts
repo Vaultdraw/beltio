@@ -22,6 +22,27 @@ export type {
   ImportOptions,
   ImportResult,
 } from "./importers";
+export type {
+  ByteRange,
+  MarkdownApi,
+  MarkdownParseOptions,
+  NoteBlock,
+  NoteBlockBase,
+  NoteDoc,
+  NoteFrontmatter,
+  NoteInline,
+  NoteLink,
+  NoteStats,
+} from "./markdown";
+export type {
+  FlowItem,
+  FlowOptions,
+  FlowPlacement,
+  PageGeometry,
+  PageRequest,
+  PageSizeName,
+  PagesApi,
+} from "./pages";
 export type { PanelsApi } from "./panels";
 export { definePlugin } from "./plugin";
 export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
@@ -47,6 +68,7 @@ export type {
   SettingValue,
 } from "./settings";
 export type { Json, StorageApi, StorageScope } from "./storage";
+export type { FontsApi, TextApi, TextFont } from "./text";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
 export type { VaultApi, VaultEntry } from "./vault";
 export type { WorkspaceApi } from "./workspace";

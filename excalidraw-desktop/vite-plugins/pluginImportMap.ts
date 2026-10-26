@@ -39,10 +39,14 @@ export const shimSource = (
   names: readonly string[],
   hasDefault: boolean,
   defaultIsNamespace: boolean,
+  lazy = false,
 ): string => {
   const named = names.filter((n) => n !== "default" && IDENTIFIER.test(n));
+  const key = JSON.stringify(globalKey);
   const lines = [
-    `const m = globalThis.__vaultdraw[${JSON.stringify(globalKey)}];`,
+    lazy
+      ? `const m = await globalThis.__vaultdraw.load(${key});`
+      : `const m = globalThis.__vaultdraw[${key}];`,
   ];
   if (hasDefault) {
     lines.push(`export default ${defaultIsNamespace ? "m" : "m.default"};`);
@@ -80,7 +84,7 @@ const apiExports = async (root: string): Promise<string[]> => {
 
 const buildShims = async (root: string): Promise<Map<string, string>> => {
   const shims = new Map<string, string>();
-  for (const { specifier, globalKey } of SHARED_MODULES) {
+  for (const { specifier, globalKey, lazy } of SHARED_MODULES) {
     const isApp = specifier === "@vaultdraw/api";
     const names = isApp
       ? await apiExports(root)
@@ -90,8 +94,9 @@ const buildShims = async (root: string): Promise<Map<string, string>> => {
       shimSource(
         globalKey,
         names,
-        isApp ? names.includes("default") : true,
-        !isApp,
+        isApp ? names.includes("default") : !lazy,
+        !isApp && !lazy,
+        lazy,
       ),
     );
   }

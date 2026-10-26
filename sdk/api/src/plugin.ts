@@ -3,11 +3,14 @@ import type { Disposable } from "./disposable";
 import type { EventsApi } from "./events";
 import type { HostApi } from "./host";
 import type { ImportersApi } from "./importers";
+import type { MarkdownApi } from "./markdown";
 import type { PluginManifestInfo } from "./manifest";
+import type { PagesApi } from "./pages";
 import type { PanelsApi } from "./panels";
 import type { SceneContextApi } from "./scene";
 import type { SettingsApi } from "./settings";
 import type { StorageApi } from "./storage";
+import type { FontsApi, TextApi } from "./text";
 import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
 import type { WorkspaceApi } from "./workspace";
@@ -77,6 +80,14 @@ export interface PluginContext {
   readonly workspace: WorkspaceApi;
   /** @since 0.6.0 */
   readonly importers: ImportersApi;
+  /** @since 0.8.0 */
+  readonly markdown: MarkdownApi;
+  /** @since 0.8.0 */
+  readonly text: TextApi;
+  /** @since 0.8.0 */
+  readonly fonts: FontsApi;
+  /** @since 0.8.0 */
+  readonly pages: PagesApi;
   /**
    * Disposed in reverse order on disable/reload/quit.
    *

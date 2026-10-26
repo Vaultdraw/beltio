@@ -85,7 +85,7 @@ export default definePlugin({
 });
 ```
 
-These bare imports resolve inside the app, to one shared copy (through an import map): `react`, `react/jsx-runtime`, `react-dom`, `react-dom/client`, `@vaultdraw/api`. Everything else must be bundled into `main.js`, or loaded with a relative import from the plugin folder.
+These bare imports resolve inside the app, to one shared copy (through an import map): `react`, `react/jsx-runtime`, `react-dom`, `react-dom/client`, `@vaultdraw/api`, and CodeMirror: `@codemirror/state`, `@codemirror/view`, `@codemirror/language`, `@codemirror/commands`, `@lezer/common`, `@lezer/highlight`. The CodeMirror modules load on first import, so they cost nothing until a plugin uses them. Everything else must be bundled into `main.js`, or loaded with a relative import from the plugin folder.
 
 ## API
 

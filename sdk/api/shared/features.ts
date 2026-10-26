@@ -1,7 +1,7 @@
 // Generated from the @since tags of sdk/api/src by sdk/api/scripts/gen-features.mjs. Do not edit.
 
 /** The API revision of this build (the version of sdk/api/package.json). */
-export const API_REVISION = "0.7.0";
+export const API_REVISION = "0.8.0";
 
 /** Feature name to the revision that added it. `ctx.host.has(name)` is true for these. */
 export const FEATURES: Readonly<Record<string, string>> = {
@@ -14,6 +14,8 @@ export const FEATURES: Readonly<Record<string, string>> = {
   "drawing.saved": "0.1.0",
   events: "0.1.0",
   "events.on": "0.1.0",
+  fonts: "0.8.0",
+  "fonts.ensure": "0.8.0",
   host: "0.2.0",
   "host.api": "0.2.0",
   "host.app": "0.2.0",
@@ -31,6 +33,11 @@ export const FEATURES: Readonly<Record<string, string>> = {
   "manifest.id": "0.1.0",
   "manifest.permissions": "0.2.0",
   "manifest.version": "0.1.0",
+  markdown: "0.8.0",
+  "markdown.parse": "0.8.0",
+  pages: "0.8.0",
+  "pages.flow": "0.8.0",
+  "pages.geometry": "0.8.0",
   panels: "0.1.0",
   "panels.close": "0.1.0",
   "panels.open": "0.1.0",
@@ -53,6 +60,9 @@ export const FEATURES: Readonly<Record<string, string>> = {
   storage: "0.3.0",
   "storage.global": "0.3.0",
   subscriptions: "0.1.0",
+  text: "0.8.0",
+  "text.lineHeight": "0.8.0",
+  "text.measure": "0.8.0",
   theme: "0.2.0",
   "theme.mode": "0.2.0",
   "theme.onChange": "0.2.0",

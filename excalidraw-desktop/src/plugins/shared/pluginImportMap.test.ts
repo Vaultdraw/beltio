@@ -94,6 +94,19 @@ describe("shim sources", () => {
     expect(jsx).toEqual(expect.arrayContaining(["jsx", "jsxs", "Fragment"]));
   });
 
+  it.each(SHARED_MODULES.filter((m) => m.lazy).map((m) => m.specifier))(
+    "%s lazy shim awaits load and covers every runtime key",
+    (spec) => {
+      const keys = Object.keys(req(spec)).filter((k) =>
+        /^[A-Za-z_$][\w$]*$/.test(k),
+      );
+      const src = shimSource(spec, Object.keys(req(spec)), false, false, true);
+      expect(src).toContain(`await globalThis.__vaultdraw.load("${spec}")`);
+      expect(src).not.toContain("export default");
+      expect(exportedNames(src).sort()).toEqual(keys.sort());
+    },
+  );
+
   it("api shim re-exports named exports and a real default only", () => {
     const src = shimSource(
       "@vaultdraw/api",

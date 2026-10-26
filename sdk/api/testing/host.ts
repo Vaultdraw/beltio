@@ -35,18 +35,31 @@ import { permissionError } from "../shared/vaultPaths";
 import { createSceneModel } from "./scene";
 import { panelsRoot, type PanelDeps } from "./panels";
 import { createVaultModel } from "./vault";
+import { fakeParseMarkdown, markdownParams } from "../shared/markdown";
+import { flowPages, pageGeometry } from "../shared/pages";
+import {
+  LINE_HEIGHTS,
+  checkFamilies,
+  checkFamily,
+  checkFont,
+  checkStrings,
+  fakeMeasure,
+} from "../shared/text";
 
 import type {
   AppEventMap,
   Disposable,
+  FontFamilyName,
   Importer,
   ImportersApi,
   Json,
+  MarkdownParseOptions,
   Plugin,
   PluginContext,
   StorageApi,
   SettingDecl,
   SettingValue,
+  TextFont,
   ThemeApi,
   ThemeChange,
   ThemeMode,
@@ -596,6 +609,33 @@ export function createMockHost(
             });
           },
         });
+      },
+      // markdown, text, fonts, pages: stateless, built per read (cheap objects).
+      get markdown() {
+        return {
+          async parse(text: string, options?: MarkdownParseOptions) {
+            const p = markdownParams(text, options);
+            return fakeParseMarkdown(p.text, p);
+          },
+        };
+      },
+      get text() {
+        return {
+          measure: (font: TextFont, strings: readonly string[]) =>
+            fakeMeasure(checkFont(font), checkStrings(strings)),
+          lineHeight: (family: FontFamilyName) =>
+            LINE_HEIGHTS[checkFamily(family)],
+        };
+      },
+      get fonts() {
+        return {
+          async ensure(families: readonly FontFamilyName[], text?: string) {
+            checkFamilies(families, text);
+          },
+        };
+      },
+      get pages() {
+        return { geometry: pageGeometry, flow: flowPages };
       },
       get theme() {
         return (themeApi ??= {

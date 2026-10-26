@@ -8,6 +8,8 @@ import { allowsScope } from "../settings/declaredSettings";
 import { getPluginSetting, setPluginSetting } from "../settings/pluginSettings";
 import { pluginSettingDecl } from "../settings/registry";
 
+import { flowPages, pageGeometry } from "../../../../sdk/api/shared/pages";
+
 import { errorText, logLine, reportPluginError } from "./errors";
 import { guard } from "./guard";
 import { createHostApi } from "./hostContext";
@@ -19,7 +21,10 @@ import {
   removeImporter,
   setImporter,
 } from "./importerRegistry";
+
+import { createMarkdownApi } from "./markdownContext";
 import { createSceneApi } from "./sceneContext";
+import { createFontsApi, createTextApi } from "./textContext";
 import { createThemeApi } from "./themeContext";
 import { createStorageApi } from "./storageContext";
 import { createVaultApi } from "./vaultContext";
@@ -27,11 +32,15 @@ import { createWorkspaceApi } from "./workspaceContext";
 
 import type {
   Disposable,
+  FontsApi,
   HostApi,
   ImportersApi,
+  MarkdownApi,
+  PagesApi,
   PluginContext,
   PluginPermission,
   StorageApi,
+  TextApi,
   ThemeApi,
   VaultApi,
   WorkspaceApi,
@@ -129,6 +138,10 @@ export function createPluginContext(
   let themeApi: ThemeApi | undefined;
   let storageApi: StorageApi | undefined;
   let vaultApi: VaultApi | undefined;
+  let markdownApi: MarkdownApi | undefined;
+  let textApi: TextApi | undefined;
+  let fontsApi: FontsApi | undefined;
+  let pagesApi: PagesApi | undefined;
   let workspaceApi: WorkspaceApi | undefined;
   let importersApi: ImportersApi | undefined;
 
@@ -255,6 +268,21 @@ export function createPluginContext(
           return track(() => removeImporter(rt, importerId, importer));
         },
       });
+    },
+    get markdown() {
+      return (markdownApi ??= createMarkdownApi(id));
+    },
+    get text() {
+      return (textApi ??= createTextApi());
+    },
+    get fonts() {
+      return (fontsApi ??= createFontsApi(win.document));
+    },
+    get pages() {
+      return (pagesApi ??= Object.freeze({
+        geometry: pageGeometry,
+        flow: flowPages,
+      }));
     },
     subscriptions,
     setTimeout: timer(

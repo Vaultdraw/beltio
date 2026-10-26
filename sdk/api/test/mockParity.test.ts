@@ -517,3 +517,31 @@ describe("parity: vault, workspace and importers seen through both kits", () => 
     expect(mock[0].text).toContain("vault.changed needs the permission");
   });
 });
+
+describe("API 0.8.0 tables equal the editor's", () => {
+  it("page sizes and the gap", async () => {
+    const { PAGE_SIZES, PAGE_GAP } = await import("../shared/pages");
+    const editor = await import(
+      "../../../packages/excalidraw/data/pageSetup"
+    );
+    expect(Object.keys(PAGE_SIZES).sort()).toEqual(
+      [...editor.PAGE_SIZE_PRESET_IDS].sort(),
+    );
+    for (const [id, size] of Object.entries(PAGE_SIZES)) {
+      const p = editor.PAGE_SIZE_PRESETS[id as keyof typeof PAGE_SIZES];
+      expect(size).toEqual({ width: p.width, height: p.height });
+    }
+    expect(PAGE_GAP).toBe(editor.PAGE_GAP);
+  });
+
+  it("line heights", async () => {
+    const { LINE_HEIGHTS } = await import("../shared/text");
+    const { FONT_FAMILY, getLineHeight } = await import(
+      "../../../packages/common/src/index"
+    );
+    for (const [family, lh] of Object.entries(LINE_HEIGHTS)) {
+      expect(getLineHeight(FONT_FAMILY[family as keyof typeof FONT_FAMILY]))
+        .toBe(lh);
+    }
+  });
+});

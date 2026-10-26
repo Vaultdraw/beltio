@@ -9,6 +9,11 @@ export interface SharedModule {
   specifier: string;
   /** Key on `window.__vaultdraw`. */
   globalKey: string;
+  /**
+   * Loaded on first import by a plugin (shim awaits `__vaultdraw.load(key)`);
+   * nothing of it is fetched or run at startup.
+   */
+  lazy?: boolean;
 }
 
 export const SHARED_MODULES: readonly SharedModule[] = [
@@ -17,6 +22,24 @@ export const SHARED_MODULES: readonly SharedModule[] = [
   { specifier: "react-dom", globalKey: "react-dom" },
   { specifier: "react-dom/client", globalKey: "react-dom/client" },
   { specifier: "@vaultdraw/api", globalKey: "@vaultdraw/api" },
+  {
+    specifier: "@codemirror/state",
+    globalKey: "@codemirror/state",
+    lazy: true,
+  },
+  { specifier: "@codemirror/view", globalKey: "@codemirror/view", lazy: true },
+  {
+    specifier: "@codemirror/language",
+    globalKey: "@codemirror/language",
+    lazy: true,
+  },
+  {
+    specifier: "@codemirror/commands",
+    globalKey: "@codemirror/commands",
+    lazy: true,
+  },
+  { specifier: "@lezer/common", globalKey: "@lezer/common", lazy: true },
+  { specifier: "@lezer/highlight", globalKey: "@lezer/highlight", lazy: true },
 ];
 
 /** Folder (app-root relative, no leading slash) the shim files are served from. */

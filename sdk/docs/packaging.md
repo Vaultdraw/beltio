@@ -23,7 +23,7 @@ vaultdraw-plugin build [dir] [--watch]
   entry = "src/index.ts"
   ```
 
-- Format is ESM for `es2022`. The shared modules (`react`, `react/jsx-runtime`, `react-dom`, `react-dom/client`, `@vaultdraw/api`) stay imports; the app provides them. Everything else is bundled in. JSX uses the automatic runtime.
+- Format is ESM for `es2022`. The shared modules (`react`, `react/jsx-runtime`, `react-dom`, `react-dom/client`, `@vaultdraw/api`, `@codemirror/state`, `@codemirror/view`, `@codemirror/language`, `@codemirror/commands`, `@lezer/common`, `@lezer/highlight`) stay imports; the app provides them (the CodeMirror ones load on first import). Everything else is bundled in. JSX uses the automatic runtime.
 - The command prints each output with its size and warns above 100 KB. It exits 1 when esbuild reports errors or no entry exists, and 2 when esbuild is not installed or the folder is missing.
 - `--watch` rebuilds on every change and prints `rebuilt` with the time when the bundle changed. `dev` does the same for a project that has a source entry and no `main` file next to `plugin.toml`: it builds into `dist/` and mirrors `dist/` into the plugins folder.
 - esbuild is the one dependency. It is loaded from your project first (`npm install --save-dev esbuild`), then from next to the command.

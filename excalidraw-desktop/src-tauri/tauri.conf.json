@@ -31,7 +31,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' tauri: asset:; connect-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost vdthumb: http://vdthumb.localhost data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline' vdplugin: http://vdplugin.localhost; script-src 'self' 'wasm-unsafe-eval' 'sha256-dlVP/8hLKT3yhwEll4jkPqIPe1aQphBq9dmOlX7keIk=' vdplugin: http://vdplugin.localhost; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'",
+      "csp": "default-src 'self' tauri: asset:; connect-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost vdthumb: http://vdthumb.localhost data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline' vdplugin: http://vdplugin.localhost; script-src 'self' 'wasm-unsafe-eval' 'sha256-8lAFP6TonNzdJTBUQZsAVha6+NLZ+7CWYHKQ2wjh10c=' vdplugin: http://vdplugin.localhost; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'",
       "dangerousDisableAssetCspModification": ["style-src"]
     }
   },

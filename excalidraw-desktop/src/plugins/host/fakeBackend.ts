@@ -1,4 +1,9 @@
 /** In-memory PluginsBackend for vitest and the e2e harness. */
+import {
+  fakeParseMarkdown,
+  markdownParams,
+} from "../../../../sdk/api/shared/markdown";
+
 import type { PluginsBackend } from "./backend";
 import type { PluginInfo, SafeModeInfo } from "./types";
 
@@ -136,7 +141,7 @@ export function createFakeBackend(
     drawings: {},
     vaultReadOnly: false,
     vaultOpen: true,
-    // The storage rows of the Rust gateway (plugins/gateway.rs); other rows are not faked.
+    // The storage, vault and markdown rows of the Rust gateway (plugins/gateway.rs).
     pluginCall: async (pluginId, method, params) => {
       fake.gatewayCalls.push({ pluginId, method, params });
       if (!fake.plugins.some((p) => p.id === pluginId)) {
@@ -155,6 +160,13 @@ export function createFakeBackend(
           );
         }
         return vaultCall(fake, method, params);
+      }
+      if (method === "markdown.parse") {
+        // The Rust parser is not in the browser: the testing kit's stand-in.
+        const p = markdownParams(params?.text, {
+          softBreakNewline: params?.softBreakNewline as boolean | undefined,
+        });
+        return fakeParseMarkdown(p.text, p);
       }
       if (method === "storage.read") {
         const text = fake.data[pluginId];
