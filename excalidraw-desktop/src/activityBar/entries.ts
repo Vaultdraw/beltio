@@ -23,6 +23,7 @@ import {
 import { registerActivityEntries } from "./activityBarRegistry";
 import { galleryPanelStore, graphPanelStore } from "./panelStores";
 
+import type { ExtensionId } from "../extensionSwitches/registry";
 import type { ComponentType, SVGProps } from "react";
 
 export type ActivityGroup = "top" | "bottom";
@@ -50,6 +51,8 @@ export interface ActivityEntry {
   needsDrawing?: boolean;
   /** Hidden until the user shows it (see layout.ts); plugin panels past the cap. */
   defaultHidden?: boolean;
+  /** Built-in extension the entry belongs to: hidden while it is off. */
+  extension?: ExtensionId;
 }
 
 export const OPEN_DRAWING = "Open a drawing first";
@@ -61,6 +64,7 @@ export const ACTIVITY_ENTRIES: readonly ActivityEntry[] = [
     icon: IconLibrary,
     commandId: "library.toggle",
     group: "top",
+    extension: "library",
     active: libraryPanelStore,
     needsDrawing: true,
   },
@@ -82,6 +86,7 @@ export const ACTIVITY_ENTRIES: readonly ActivityEntry[] = [
     icon: IconGraph,
     commandId: "graph.open",
     group: "top",
+    extension: "graph",
     active: graphPanelStore,
   },
   {
@@ -105,6 +110,7 @@ export const ACTIVITY_ENTRIES: readonly ActivityEntry[] = [
     icon: IconTag,
     commandId: "tags.focusPane",
     group: "top",
+    extension: "tags",
   },
   {
     id: "templates",
@@ -112,6 +118,7 @@ export const ACTIVITY_ENTRIES: readonly ActivityEntry[] = [
     icon: IconTemplate,
     commandId: "vault.newFromTemplate",
     group: "top",
+    extension: "templates",
   },
   {
     id: "hotkeys",
@@ -140,6 +147,8 @@ export interface EntryContext {
   isAvailable(commandId: string): boolean;
   /** First chord label, "" when unassigned. */
   shortcut(commandId: string): string;
+  /** Built-in extension switch; omitted = all on. */
+  isExtensionOn?(id: ExtensionId): boolean;
 }
 
 export interface EntryState {
@@ -154,6 +163,9 @@ export function resolveEntryState(
   entry: ActivityEntry,
   ctx: EntryContext,
 ): EntryState {
+  if (entry.extension && ctx.isExtensionOn?.(entry.extension) === false) {
+    return { hidden: true, disabled: true, title: entry.label };
+  }
   if (entry.needsDrawing && !ctx.drawingOpen) {
     return {
       hidden: false,

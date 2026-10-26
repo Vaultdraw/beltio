@@ -18,6 +18,7 @@ import { linksControls } from "./Links";
 import { tagsControls } from "./TagsSettings";
 import { pageControls } from "./Page";
 import { pluginsControls } from "./pluginsEntry";
+import { extensionsControls } from "./extensionsEntry";
 import { pensControls } from "./Pens";
 import { toolDefaultsControls } from "./ToolDefaults";
 import { watchdogControls } from "./Watchdog";
@@ -44,6 +45,7 @@ export const SETTING_CONTROLS: SettingControls = {
   ...tagsControls,
   ...historyControls,
   ...hotkeysControls,
+  ...extensionsControls,
   ...pluginsControls,
   ...controlControls,
   ...aboutControls,

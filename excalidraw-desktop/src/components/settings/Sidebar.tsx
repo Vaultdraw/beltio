@@ -17,6 +17,7 @@ import {
   IconPlug,
   IconSearch,
   IconSettings,
+  IconToggles,
   IconTools,
 } from "../Icons";
 
@@ -38,6 +39,7 @@ export const PAGE_ICONS: Record<SettingsPageId, ReactNode> = {
   links: <IconLink {...NAV_ICON} />,
   history: <IconHistory {...NAV_ICON} />,
   hotkeys: <IconKeyboard {...NAV_ICON} />,
+  extensions: <IconToggles {...NAV_ICON} />,
   plugins: <IconPlug {...NAV_ICON} />,
   control: <IconLock {...NAV_ICON} />,
   about: <IconInfo {...NAV_ICON} />,

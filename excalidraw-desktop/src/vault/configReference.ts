@@ -334,6 +334,28 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
     },
   },
   {
+    table: "extensions",
+    intro:
+      "Built-in extensions, on (`true`) or off (`false`). Off means not loaded: no memory, no work, no commands. Changes apply live. See [Extensions](#extensions).",
+    keys: {
+      search: {
+        doc: "Search inside drawings from the file tree and the palette; off searches file names only.",
+      },
+      links: {
+        doc: "Links between drawings: the links dock, `[[` autocomplete, link styling, hints, back and forward. Renaming still updates links per `links.update_on_rename`.",
+      },
+      tags: { doc: "Tags: the tags pane, tag chips, tag search and rename." },
+      graph: { doc: "Graph view." },
+      library: { doc: "The library sidebar and inserting library items." },
+      templates: {
+        doc: "New drawing from a template, and saving a drawing as one.",
+      },
+      formula: { doc: "Insert and edit LaTeX formulas." },
+      mermaid: { doc: "Mermaid to Excalidraw." },
+      "pdf-import": { doc: "Import PDF pages into a drawing." },
+    },
+  },
+  {
     table: "keys",
     intro:
       'Key sequences and the which-key popup. `[keys.labels]` names sequence groups (`"<leader> f" = "files"`); its entries are free text and are not checked. See [Key sequences, leader and which-key](#key-sequences-leader-and-which-key).',

@@ -48,26 +48,37 @@ interface Options {
   createFromJson: (parent: string, name: string, json: string) => Promise<void>;
   newBlank: () => void;
   onError: (message: string) => void;
+  /** `extensions.templates`: off = no picker, no save dialog, no renderer. */
+  enabled?: boolean;
 }
 
 export function useTemplates(o: Options) {
+  const enabled = o.enabled ?? true;
   const globalStore = useRef<GlobalTemplateStore | null>(null);
-  globalStore.current ??= createGlobalTemplateStore();
   const renderer = useRef<ReturnType<typeof createThumbnailRenderer> | null>(
     null,
   );
-  renderer.current ??= createThumbnailRenderer();
-  useEffect(
-    () => registerPurge("templateThumbnails", () => renderer.current?.clear()),
-    [],
-  );
+  if (enabled) {
+    globalStore.current ??= createGlobalTemplateStore();
+    renderer.current ??= createThumbnailRenderer();
+  }
+  useEffect(() => {
+    if (!enabled) {
+      // Turned off live: drop what the picker cached.
+      renderer.current?.clear();
+      return undefined;
+    }
+    return registerPurge("templateThumbnails", () => renderer.current?.clear());
+  }, [enabled]);
   // command audit (S8): "Templates: Open the global templates folder".
   useEffect(
     () =>
-      registerCommandHandlers({
-        "templates.revealGlobal": () => void globalStore.current?.reveal(),
-      }),
-    [],
+      enabled
+        ? registerCommandHandlers({
+            "templates.revealGlobal": () => void globalStore.current?.reveal(),
+          })
+        : undefined,
+    [enabled],
   );
 
   const pickerRef = useRef<TemplatePickerHandle>(null);
@@ -76,7 +87,7 @@ export function useTemplates(o: Options) {
 
   const deps = useMemo(
     () =>
-      vault
+      vault && enabled
         ? {
             repository,
             handle: vault.handle,
@@ -84,7 +95,7 @@ export function useTemplates(o: Options) {
             global: globalStore.current!,
           }
         : null,
-    [vault, folder, repository],
+    [vault, folder, repository, enabled],
   );
 
   const openPicker = useCallback(() => pickerRef.current?.open(), []);
@@ -154,7 +165,7 @@ export function useTemplates(o: Options) {
           onRevealGlobal={() => void globalStore.current!.reveal()}
         />
       )}
-      {saveTarget && vault && (
+      {enabled && saveTarget && vault && (
         <SaveTemplateModal
           defaultName={saveTarget
             .split("/")

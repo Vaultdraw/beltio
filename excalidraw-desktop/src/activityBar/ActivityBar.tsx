@@ -11,6 +11,7 @@ import {
   type PointerEvent,
 } from "react";
 
+import { useExtensions } from "../extensionSwitches/useExtensions";
 import {
   commandHandlersVersion,
   subscribeCommandHandlers,
@@ -98,6 +99,7 @@ export const ActivityBar = memo(
     win = null,
   }: Props) => {
     const entries = useActivityEntries();
+    const extensions = useExtensions(win);
     const shortcut = useCommandShortcutLookup(win);
     const handlersVersion = useSyncExternalStore(
       subscribeCommandHandlers,
@@ -116,6 +118,7 @@ export const ActivityBar = memo(
               hasHandler,
               isAvailable,
               shortcut,
+              isExtensionOn: (id) => extensions[id],
             });
             return state.hidden ? [] : [{ entry, state }];
           },
@@ -132,6 +135,7 @@ export const ActivityBar = memo(
         hiddenIds,
         handlersVersion,
         entries,
+        extensions,
       ],
     );
     const [current, setCurrent] = useState<string | null>(null);

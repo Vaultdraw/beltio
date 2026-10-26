@@ -34,6 +34,7 @@ export type SettingsPageId =
   | "links"
   | "history"
   | "hotkeys"
+  | "extensions"
   | "plugins"
   | "control"
   | "about";
@@ -70,6 +71,13 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
   { id: "links", label: "Links", group: "Options" },
   ...HISTORY_SETTINGS_PAGES,
   { id: "hotkeys", label: "Hotkeys", group: "Options" },
+  {
+    id: "extensions",
+    label: "Extensions",
+    group: "Options",
+    intro:
+      "Built-in features you can turn off. Off means not loaded: no memory, no work. Changes apply at once.",
+  },
   { id: "plugins", label: "Plugins", group: "Options" },
   { id: "control", label: "Control", group: "Options" },
   { id: "about", label: "About", group: "Options" },
@@ -771,6 +779,32 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     description:
       "Assign keyboard shortcuts to commands; changes are saved to [hotkeys] in config.toml.",
     keywords: ["shortcuts", "keyboard", "keybindings", "keys", "commands"],
+  },
+
+  // ---- Extensions ----
+  {
+    id: "extensions-list",
+    page: "extensions",
+    label: "Built-in extensions",
+    description:
+      "Turn search, links, tags, graph view, library, templates, history, thumbnails, formulas, Mermaid and PDF import on or off. Saved under [extensions].",
+    keywords: [
+      "extension",
+      "feature",
+      "disable",
+      "turn off",
+      "minimal",
+      "safe start",
+      "graph",
+      "formula",
+      "mermaid",
+      "pdf",
+      "library",
+      "templates",
+      "tags",
+      "search",
+      "links",
+    ],
   },
 
   // ---- Plugins ----

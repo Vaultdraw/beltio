@@ -34,6 +34,12 @@ import { OnMount } from "./services/OnMount";
 import { DesktopVaultTagRename } from "./tags/DesktopVaultTagRename";
 import { scheduleIdle } from "./platform/idle";
 import { useAppTags } from "./tags/useAppTags";
+import { useExtensions } from "./extensionSwitches/useExtensions";
+import { SafeStartBanner } from "./safeStart/SafeStartBanner";
+import {
+  listenSafeStartRequests,
+  registerSafeStartCommands,
+} from "./safeStart/commands";
 import { usePalettePick } from "./palette/usePalettePick";
 import {
   addRecentVault,
@@ -279,6 +285,32 @@ export const VaultApp = ({
     [win],
   );
   const vaultSearch = search === undefined ? defaultSearch : search;
+  // Built-in extensions (`[extensions]`, live). Off = not created: hooks below
+  // get `enabled: false`, hosts are not mounted, commands lose their handler.
+  const ext = useExtensions(win);
+  /** Full-text search UI; off = name-only search in the file tree and palette. */
+  const searchUi = ext.search ? vaultSearch : null;
+  // Safe start: "Restart in safe start" / "Restart normally", and a second
+  // `vaultdraw launch --safe` while this window runs.
+  useEffect(() => registerSafeStartCommands(), []);
+  useEffect(() => {
+    if (!isTauriAvailable(win)) {
+      return undefined;
+    }
+    let off: (() => void) | null = null;
+    let disposed = false;
+    void listenSafeStartRequests().then((unlisten) => {
+      if (disposed) {
+        unlisten();
+      } else {
+        off = unlisten;
+      }
+    });
+    return () => {
+      disposed = true;
+      off?.();
+    };
+  }, [win]);
   const defaultLinks = useMemo(
     () => (isTauriAvailable(win) ? new DesktopVaultLinks() : null),
     [win],
@@ -315,7 +347,16 @@ export const VaultApp = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vaultHandle]);
   // search.start / links.start (D8): native services start lazily.
-  useLazyServices(win, vault?.handle ?? null, vaultSearch, vaultLinks);
+  // Only services an enabled extension needs start by themselves (the native
+  // side applies the same rule at vault open, services.rs `wanted_of`).
+  const linksWanted = ext.links || ext.graph;
+  const indexWanted = linksWanted || ext.search || ext.tags;
+  useLazyServices(
+    win,
+    vault?.handle ?? null,
+    indexWanted ? vaultSearch : null,
+    linksWanted ? vaultLinks : null,
+  );
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
   const [loadingVault, setLoadingVault] = useState(false);
   const [globalAlert, setGlobalAlert] = useState<{
@@ -517,9 +558,13 @@ export const VaultApp = ({
   }, [problemText]);
 
   // Refs for tracking active lifecycle, generations, and loaded folders
+  const libraryOn = ext.library;
   useEffect(() => {
-    void libraryStore.setVault(vault?.handle ?? null, vault?.readOnly ?? false);
-  }, [libraryStore, vault?.handle, vault?.readOnly]);
+    void libraryStore.setVault(
+      libraryOn ? vault?.handle ?? null : null,
+      vault?.readOnly ?? false,
+    );
+  }, [libraryStore, libraryOn, vault?.handle, vault?.readOnly]);
 
   const vaultRef = useRef<VaultInfo | null>(vault);
   vaultRef.current = vault;
@@ -1399,6 +1444,7 @@ export const VaultApp = ({
   };
 
   const templates = useTemplates({
+    enabled: ext.templates,
     repository,
     vault,
     folder: templatesFolder,
@@ -1432,6 +1478,7 @@ export const VaultApp = ({
   );
   const palettePick = usePalettePick();
   const appLinks = useAppLinks({
+    enabled: ext.links,
     links: vaultLinks,
     search: vaultSearch,
     repository,
@@ -1469,11 +1516,15 @@ export const VaultApp = ({
     },
   });
   const tagsSettings = useMemo(
-    () => getTagsSettings(prefsNow),
+    () => {
+      const t = getTagsSettings(prefsNow);
+      return ext.tags ? t : { ...t, autocomplete: false };
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [prefsNow.tagAutocomplete, prefsNow.tagPaneSort],
+    [prefsNow.tagAutocomplete, prefsNow.tagPaneSort, ext.tags],
   );
   const appTags = useAppTags({
+    enabled: ext.tags,
     api: vaultTagRename,
     links: vaultLinks,
     handle: vault?.handle ?? null,
@@ -1493,9 +1544,17 @@ export const VaultApp = ({
   });
   const editorLinks = useMemo(
     () =>
-      vaultLinks
+      vaultLinks && (ext.links || ext.tags)
         ? {
-            settings: linksSettings,
+            // Links off, Tags on: the wiring stays for `#` autocomplete only.
+            settings: ext.links
+              ? linksSettings
+              : {
+                  ...linksSettings,
+                  autocomplete: false,
+                  styleLinks: false,
+                  hoverPreview: "off" as const,
+                },
             tagsSettings,
             names: appLinks.names,
             onNeedNames: needFileList,
@@ -1516,6 +1575,8 @@ export const VaultApp = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       vaultLinks,
+      ext.links,
+      ext.tags,
       linksSettings,
       tagsSettings,
       appLinks.names,
@@ -1982,7 +2043,13 @@ export const VaultApp = ({
   const importFile = useCanvasImport({
     getApi: () => (activeDoc ? getEditorApi(activeDoc.id) : undefined),
     getDocument: () => doc ?? document,
-    openPdf: openPdfFile,
+    openPdf: ext["pdf-import"]
+      ? openPdfFile
+      : () =>
+          setGlobalAlert({
+            message: "PDF import is off (Settings → Extensions)",
+            type: "error",
+          }),
     getPath: () => activeDoc?.path ?? null,
     notify: (message) => setGlobalAlert({ message, type: "error" }),
   });
@@ -2009,7 +2076,7 @@ export const VaultApp = ({
         return handleNewDrawing();
       }
     },
-    newFromTemplate: () => openTemplatePicker(),
+    newFromTemplate: ext.templates ? () => openTemplatePicker() : undefined,
     switchVault: () => {
       if (idle) {
         return handleSwitchVault();
@@ -2046,22 +2113,26 @@ export const VaultApp = ({
         return handleExportDrawing(activeDoc.path, format);
       }
     },
-    importPdf: startPdfImport,
+    importPdf: ext["pdf-import"] ? startPdfImport : undefined,
     importFile: () => importFile(),
     cancelImport: () => {
       if (!cancelImports()) {
         toastStore.push({ message: "No import is running" });
       }
     },
-    saveActiveAsTemplate: () => {
-      if (activeDoc) {
-        templates.requestSave(activeDoc.path);
-      }
-    },
-    searchTags: () => {
-      showNavigator();
-      requestNavigator({ kind: "search", query: tagQuery("") });
-    },
+    saveActiveAsTemplate: ext.templates
+      ? () => {
+          if (activeDoc) {
+            templates.requestSave(activeDoc.path);
+          }
+        }
+      : undefined,
+    searchTags: ext.tags
+      ? () => {
+          showNavigator();
+          requestNavigator({ kind: "search", query: tagQuery("") });
+        }
+      : undefined,
     newFolder: () => requestNavigator({ kind: "newFolder" }),
     newDrawingInFolder: () => requestNavigator({ kind: "newDrawingInFolder" }),
     collapseAllFolders: handleCollapseAllFolders,
@@ -2559,6 +2630,7 @@ export const VaultApp = ({
                 dismissLabel="Dismiss settings problem"
               />
             )}
+            <SafeStartBanner />
             {globalAlert && (
               <Banner
                 kind={globalAlert.type}
@@ -2593,14 +2665,14 @@ export const VaultApp = ({
                   theme={appTheme}
                   onThemeChange={handleCanvasThemeChange}
                   onOpenSettings={openSettings}
-                  onOpenGraph={openGraph}
+                  onOpenGraph={ext.graph ? openGraph : undefined}
                   onToggleHistory={toggleHistory}
                   focusRequest={
                     focusRequest?.path === activeDoc.path ? focusRequest : null
                   }
-                  library={libraryBundle}
+                  library={libraryOn ? libraryBundle : undefined}
                   links={editorLinks}
-                  pdfImport={pdfControls}
+                  pdfImport={ext["pdf-import"] ? pdfControls : undefined}
                   onImportFile={importFile}
                   restore={editorRestore}
                 />
@@ -2638,20 +2710,22 @@ export const VaultApp = ({
               onOpenChange={handleGalleryOpenChange}
               onClosed={focusCanvas}
             />
-            <GraphHost
-              handle={vault.handle}
-              currentPath={activeDoc?.path ?? null}
-              themeKey={appearance.snapshot.key}
-              shortcutFor={graphShortcutFor}
-              onOpenDrawing={(path, opts) =>
-                path === activeDoc?.path && !opts
-                  ? undefined
-                  : handleOpenDrawing(path, opts)
-              }
-              onOpenChange={handleGraphOpenChange}
-              onClosed={focusCanvas}
-              {...graph}
-            />
+            {ext.graph && (
+              <GraphHost
+                handle={vault.handle}
+                currentPath={activeDoc?.path ?? null}
+                themeKey={appearance.snapshot.key}
+                shortcutFor={graphShortcutFor}
+                onOpenDrawing={(path, opts) =>
+                  path === activeDoc?.path && !opts
+                    ? undefined
+                    : handleOpenDrawing(path, opts)
+                }
+                onOpenChange={handleGraphOpenChange}
+                onClosed={focusCanvas}
+                {...graph}
+              />
+            )}
           </div>
         </div>
 
@@ -2681,12 +2755,15 @@ export const VaultApp = ({
           collapsed={navigatorHidden}
           onToggleCollapse={handleToggleNavigator}
           onOpenSettings={() => openSettings()}
-          onOpenGraph={layout.shown.activity_bar ? undefined : openGraph}
+          onOpenGraph={
+            layout.shown.activity_bar || !ext.graph ? undefined : openGraph
+          }
           graphOpen={graphOpen}
-          onOpenLocalGraph={openLocalGraph}
+          onOpenLocalGraph={ext.graph ? openLocalGraph : undefined}
           onShowHistory={showHistory}
           onOpenDrawing={handleOpenDrawing}
-          search={vaultSearch}
+          search={searchUi}
+          tagSearch={ext.tags ? vaultSearch ?? undefined : null}
           onOpenSearchResult={handleOpenSearchResult}
           searchFocusNonce={searchFocusNonce}
           request={navigatorRequest}
@@ -2695,7 +2772,7 @@ export const VaultApp = ({
           onRenameEntry={handleRenameEntry}
           onMoveEntry={handleMoveEntry}
           onDuplicateDrawing={handleDuplicateDrawing}
-          onSaveAsTemplate={templates.requestSave}
+          onSaveAsTemplate={ext.templates ? templates.requestSave : undefined}
           onTrashEntry={handleTrashEntry}
           onRevealEntry={handleRevealEntry}
           onExportDrawing={handleExportDrawing}
@@ -2705,7 +2782,9 @@ export const VaultApp = ({
           confirmDelete={confirmDelete}
           showTagChips={showTagChips}
           tagsDefaultSort={tagsSettings.paneSort}
-          onRenameTag={vaultTagRename ? appTags.renameTag : undefined}
+          onRenameTag={
+            vaultTagRename && ext.tags ? appTags.renameTag : undefined
+          }
           treeNodes={treeNodes}
           expandedFolders={expandedFolders}
           onToggleFolder={handleToggleFolder}
@@ -2715,7 +2794,7 @@ export const VaultApp = ({
           onNeedIndex={needFileList}
           ownerDocument={doc}
           dockSlot={
-            vaultLinks && appLinks.dockVisible ? (
+            vaultLinks && ext.links && appLinks.dockVisible ? (
               <Suspense fallback={null}>
                 <LinksDock
                   ref={appLinks.dockRef}
@@ -2783,7 +2862,7 @@ export const VaultApp = ({
       {(switcher || palettePick.pick) && (
         <QuickSwitcher
           key={palettePick.pick ? "pick" : "palette"}
-          search={vaultSearch}
+          search={searchUi}
           handle={vault.handle}
           fallbackPaths={drawingPaths()}
           initialMode={palettePick.pick ? "files" : switcher ?? "files"}

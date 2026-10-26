@@ -8,6 +8,9 @@ import {
   resetPaletteProviders,
 } from "../palette/registry";
 import { getRegisteredHandler } from "../commands/handlerRegistry";
+import { LibraryStore } from "../library/libraryStore";
+
+import type { LibraryRepository } from "../library/types";
 
 const rect = (id: string, x: number, y: number) => ({
   id,
@@ -100,11 +103,33 @@ describe("editor palette provider", () => {
   });
 
   it("binds paper and library handlers while mounted", () => {
-    const { unmount } = mount();
+    const repository: LibraryRepository = {
+      readLibrary: async () => ({
+        json: null,
+        revision: null,
+        unchanged: false,
+        path: "",
+        readOnly: true,
+      }),
+      writeLibrary: async () => ({ revision: "" }),
+      pickLibraryFile: async () => null,
+      exportFile: async () => false,
+      subscribe: async () => () => {},
+    };
+    const { unmount } = mount({
+      library: { store: new LibraryStore(repository), repository },
+    });
     expect(getRegisteredHandler("paper.grid")).toBeTypeOf("function");
     expect(getRegisteredHandler("paper.settings")).toBeTypeOf("function");
     expect(getRegisteredHandler("library.toggle")).toBeTypeOf("function");
     unmount();
     expect(getRegisteredHandler("paper.grid")).toBeUndefined();
+    expect(getRegisteredHandler("library.toggle")).toBeUndefined();
+  });
+
+  it("offers no library toggle without a persisted library (extensions.library off)", () => {
+    mount();
+    expect(getRegisteredHandler("paper.grid")).toBeTypeOf("function");
+    expect(getRegisteredHandler("library.toggle")).toBeUndefined();
   });
 });

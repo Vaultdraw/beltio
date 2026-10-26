@@ -1115,6 +1115,68 @@ Big images are the largest thing a drawing keeps in memory. Vaultdraw releases a
 - Changes apply live: edit `config.toml` or Settings and the next idle pass uses the new values.
 - **When caches are freed.** `memory.hidden_purge_s` (default 120) is how long the window stays hidden before every cache is freed; `memory.idle_purge_s` (default 180) is how long without input before off-screen caches are freed. 0 turns a trigger off. Shorter values suit a 4 GB Mac.
 
+## Extensions
+
+Built-in features you can turn off. Off means not loaded: the feature registers no command, starts no service and uses no memory. Turn them on or off in **Settings → Extensions**, with the palette ("Extensions: Toggle Graph view", one command per extension, rebindable in `[hotkeys]`), or in `config.toml`. Changes apply at once.
+
+```toml
+[extensions]
+graph = false
+pdf-import = false
+```
+
+| Key | What turns off |
+| --- | --- |
+| `extensions.search` | Search inside drawings. The file tree and the palette still find drawings by name. |
+| `extensions.links` | The links dock, `[[` autocomplete, link styling, hints, back and forward. Renaming still updates links while `links.update_on_rename` is on, and drawing hotkeys (`drawing.open:`) still work. |
+| `extensions.tags` | The tags pane, tag chips, tag search and tag rename. |
+| `extensions.graph` | Graph view. |
+| `extensions.library` | The library sidebar and inserting library items. |
+| `extensions.templates` | New from template and Save as template. |
+| `extensions.formula` | Inserting and editing LaTeX formulas. Existing formulas stay as images. |
+| `extensions.mermaid` | Mermaid to Excalidraw. |
+| `extensions.pdf-import` | PDF import. |
+
+- Every extension is on by default.
+- History and thumbnails keep their own keys: `history.enabled` and `interface.thumbnails`. The Extensions page shows them too.
+- The vault index starts only when an extension that needs it is on (search, tags, links or graph view). Turning one off stops its use at once; an index that is already running stops when the vault is reopened.
+- "Extensions: Restore defaults" turns every extension back on.
+
+## Safe start
+
+
+A safe start opens Vaultdraw with every built-in extension off and no plugins loaded. Use it when something you turned on breaks the app. It changes nothing on disk: your `config.toml` and your settings stay as they are, and a normal restart brings everything back.
+
+A banner at the top says "Safe start" and why. It has two buttons: "Restart normally" and "Open config folder".
+
+**Ways to start in safe start (all manual)**
+
+| Way | How |
+| --- | --- |
+| Command palette | "Restart in safe start (core only)" (command `app.restartSafe`). It saves your open drawings first. |
+| Command line | `vaultdraw launch --safe`. If Vaultdraw is already running, it asks you to confirm and then restarts. |
+| App argument | Start the app with `--safe` (macOS: `open -a Vaultdraw --args --safe`). |
+| Environment | Set `VAULTDRAW_SAFE=1` before the app starts. |
+
+To leave safe start, run "Restart normally" (command `app.restartNormally`) from the palette or the banner. Neither command has a default key; bind one in `[hotkeys]` if you want.
+
+**Plugin safe mode is separate and unchanged.** After two crashed launches with plugins on, or with Option held at launch, only plugins stay off; built-in extensions keep running. "Restart in safe mode" (command `plugins.restartSafeMode`) does the same by hand. The banner for a core safe start shows only for the core kind.
+
+**Environment variables**
+
+| Variable | Effect |
+| --- | --- |
+| `VAULTDRAW_SAFE=1` | Start in safe start (core only). Empty, `0` and `false` mean off. |
+| `VAULTDRAW_NO_AUTO_SAFE=1` | Turn the crash counter off. Use it when a script kills the app on purpose, so it never counts as a crash. |
+
+### `vaultdraw launch`
+
+```
+vaultdraw launch [--safe]
+```
+
+Starts Vaultdraw, or brings the running one to the front. It is the only command that starts the app. With `--safe` it starts in safe start; a running app asks you to confirm first. On macOS it uses `open -a Vaultdraw`; on Linux it runs `excalidraw-vault`. Set `VAULTDRAW_APP` to the app's path (or, on macOS, its bundle name) to use another one.
+
 ## Speed trade-offs
 
 Keys for people who tune speed against detail. Defaults are what the app always did; they are config-only (no Settings page) and apply live.
@@ -1461,6 +1523,22 @@ Search speed trade-offs. Lower counts and a longer wait cost less on a slow mach
 | `max_drawings` | `50` | a whole number from 1 to 200 |  | Most drawings listed in the search results. |
 | `max_snippets` | `5` | a whole number from 1 to 5 |  | Most matching elements shown under each drawing; the index keeps 5 per drawing, so 5 is the top. |
 | `start` | `"idle"` | "open", "idle" or "use" |  | When the search index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first search). Tags show once it has started. See [Startup](#startup). |
+
+### `[extensions]`
+
+Built-in extensions, on (`true`) or off (`false`). Off means not loaded: no memory, no work, no commands. Changes apply live. See [Extensions](#extensions).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `search` | `true` | true or false |  | Search inside drawings from the file tree and the palette; off searches file names only. |
+| `links` | `true` | true or false |  | Links between drawings: the links dock, `[[` autocomplete, link styling, hints, back and forward. Renaming still updates links per `links.update_on_rename`. |
+| `tags` | `true` | true or false |  | Tags: the tags pane, tag chips, tag search and rename. |
+| `graph` | `true` | true or false |  | Graph view. |
+| `library` | `true` | true or false |  | The library sidebar and inserting library items. |
+| `templates` | `true` | true or false |  | New drawing from a template, and saving a drawing as one. |
+| `formula` | `true` | true or false |  | Insert and edit LaTeX formulas. |
+| `mermaid` | `true` | true or false |  | Mermaid to Excalidraw. |
+| `pdf-import` | `true` | true or false |  | Import PDF pages into a drawing. |
 
 ### `[keys]`
 

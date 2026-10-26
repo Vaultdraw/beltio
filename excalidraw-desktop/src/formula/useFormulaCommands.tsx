@@ -33,6 +33,8 @@ type DialogState =
 type Options = {
   apiRef: RefObject<ExcalidrawImperativeAPI | null>;
   readOnly?: boolean;
+  /** `extensions.formula`: off = no handlers, formula images edit as images. */
+  enabled?: boolean;
 };
 
 /** Exactly one selected, unlocked formula image, else null. */
@@ -54,15 +56,19 @@ function formulaTarget(el: ExcalidrawImageElement): Target | null {
   return data && !el.locked ? { element: el, data } : null;
 }
 
-export function useFormulaCommands({ apiRef, readOnly = false }: Options): {
+export function useFormulaCommands({
+  apiRef,
+  readOnly = false,
+  enabled = true,
+}: Options): {
   onImageEdit: (el: ExcalidrawImageElement) => boolean;
   dialog: ReactNode;
   /** Closes the dialog (another document is being shown). */
   close: () => void;
 } {
   const [state, setState] = useState<DialogState | null>(null);
-  const live = useRef({ readOnly });
-  live.current = { readOnly };
+  const live = useRef({ readOnly, enabled });
+  live.current = { readOnly, enabled };
 
   const open = useCallback((next: DialogState) => {
     void loadDialog().then(() => setState(next));
@@ -76,7 +82,12 @@ export function useFormulaCommands({ apiRef, readOnly = false }: Options): {
   const onImageEdit = useCallback(
     (el: ExcalidrawImageElement) => {
       const api = apiRef.current;
-      if (!api || live.current.readOnly || api.getAppState().viewModeEnabled) {
+      if (
+        !api ||
+        !live.current.enabled ||
+        live.current.readOnly ||
+        api.getAppState().viewModeEnabled
+      ) {
         return false;
       }
       const target = formulaTarget(el);
@@ -89,30 +100,30 @@ export function useFormulaCommands({ apiRef, readOnly = false }: Options): {
     [apiRef, openEdit],
   );
 
-  useEffect(
-    () =>
-      registerCommandHandlers({
-        [FORMULA_COMMAND_IDS.insert]: () => {
-          const api = apiRef.current;
-          if (!api || live.current.readOnly) {
-            return;
-          }
-          open({
-            mode: "insert",
-            color: api.getAppState().currentItemStrokeColor,
-          });
-        },
-        [FORMULA_COMMAND_IDS.edit]: () => {
-          const api = apiRef.current;
-          const target =
-            api && !live.current.readOnly && getSelectedFormula(api);
-          if (target) {
-            openEdit(target);
-          }
-        },
-      }),
-    [apiRef, open, openEdit],
-  );
+  useEffect(() => {
+    if (!enabled) {
+      return undefined;
+    }
+    return registerCommandHandlers({
+      [FORMULA_COMMAND_IDS.insert]: () => {
+        const api = apiRef.current;
+        if (!api || live.current.readOnly) {
+          return;
+        }
+        open({
+          mode: "insert",
+          color: api.getAppState().currentItemStrokeColor,
+        });
+      },
+      [FORMULA_COMMAND_IDS.edit]: () => {
+        const api = apiRef.current;
+        const target = api && !live.current.readOnly && getSelectedFormula(api);
+        if (target) {
+          openEdit(target);
+        }
+      },
+    });
+  }, [apiRef, open, openEdit, enabled]);
 
   const close = useCallback(() => setState(null), []);
 

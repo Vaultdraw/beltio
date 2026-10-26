@@ -26,6 +26,7 @@ import { PLUGIN_UI_COMMANDS } from "../plugins/ui/pluginCommands";
 import { SORT_LABELS, SORT_ORDERS, type SortOrder } from "../vault/sortOrder";
 
 import { LAYOUT_COMMANDS } from "../layout/layoutCommands";
+import { EXTENSION_COMMANDS } from "../extensionSwitches/extensionCommandDefs";
 
 import {
   drawingOpenCommands,
@@ -670,6 +671,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...THUMBNAIL_COMMANDS,
   ...GALLERY_COMMANDS,
   ...MEMORY_COMMANDS,
+  ...EXTENSION_COMMANDS,
   ...AI_COMMANDS,
   ...WATCHDOG_COMMANDS,
   ...CONFIG_COMMANDS,

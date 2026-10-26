@@ -40,6 +40,7 @@ import {
 } from "../history/historySettings";
 import { TABS_MAPPINGS, type TabsField } from "../tabs/tabsSettings";
 import { MEMORY_MAPPINGS, type MemoryField } from "../memory/memorySettings";
+import { setSafeStart, type SafeStart } from "../safeStart/state";
 import { SEARCH_MAPPINGS, type SearchField } from "../search/searchSettings";
 import {
   LAYOUT_MAPPINGS,
@@ -48,6 +49,10 @@ import {
 } from "../layout/layoutSettings";
 import { LAYOUT_PRESET_PREFIX } from "../layout/layoutCommands";
 import { parseUserCommands } from "../commands/userCommands";
+import {
+  EXTENSION_MAPPINGS,
+  type ExtensionField,
+} from "../extensionSwitches/extensionSettings";
 import {
   LEADER_TOKEN,
   normalizeKeys,
@@ -185,6 +190,8 @@ export interface LayerPayload {
 const layerFile = (layer: LayerPayload) => layerFileName(layer);
 
 export interface LoadSettingsResult {
+  /** This launch's safe start (Rust launch check); null in a normal start. */
+  safeStart?: SafeStart | null;
   configDir: string;
   configPath: string;
   statePath: string;
@@ -351,6 +358,7 @@ type ConfigField =
   | MemoryField
   | SearchField
   | LayoutField
+  | ExtensionField
   | KeysField
   | ServicesField
   | ToolField;
@@ -889,6 +897,7 @@ export const CONFIG_MAPPING: readonly ConfigMapping[] = [
   ...MEMORY_MAPPINGS,
   ...SEARCH_MAPPINGS,
   ...LAYOUT_MAPPINGS,
+  ...EXTENSION_MAPPINGS,
   ...KEYS_MAPPINGS,
   ...SERVICES_MAPPINGS,
   ...TOOL_MAPPINGS,
@@ -1552,6 +1561,8 @@ export async function initSettings(
   try {
     ({ invoke, listen } = await resolveDeps(deps));
     result = await invoke<LoadSettingsResult>("load_settings");
+    // Set before preferences hydrate, so no extension starts in safe start.
+    setSafeStart(result.safeStart ?? null);
   } catch (err) {
     publishStatus(win, {
       ...browserStatus(),

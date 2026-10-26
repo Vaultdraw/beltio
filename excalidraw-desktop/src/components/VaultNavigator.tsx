@@ -121,6 +121,11 @@ interface VaultNavigatorProps {
   onOpenDrawing: (path: string, opts?: { target: OpenTarget }) => unknown;
   /** Vault-wide search backend; null = name-only search over the loaded tree. */
   search?: VaultSearch | null;
+  /**
+   * Source of the tags pane and tag chips; null = tags off
+   * (`extensions.tags`). Omitted: `search`.
+   */
+  tagSearch?: VaultSearch | null;
   onOpenSearchResult?: (
     path: string,
     match?: ElementMatch,
@@ -187,6 +192,7 @@ export const VaultNavigator = ({
   onToggleCollapse,
   onOpenDrawing,
   search = null,
+  tagSearch,
   onOpenSearchResult,
   searchFocusNonce = 0,
   request = null,
@@ -349,7 +355,8 @@ export const VaultNavigator = ({
       onNeedIndex?.();
     }
   }, [isSearching, onNeedIndex]);
-  const { tags, byPath: tagsByPath } = useVaultTags(search, vault.handle);
+  const tagSource = tagSearch === undefined ? search : tagSearch;
+  const { tags, byPath: tagsByPath } = useVaultTags(tagSource, vault.handle);
   const filterByTag = (key: string) => setSearchQuery(tagQuery(key));
   const tagsPanelRef = useRef<TagsPanelHandle>(null);
   // Palette "Tag: #x" entries, the dock chips and a focus command reach the
@@ -755,7 +762,7 @@ export const VaultNavigator = ({
         </div>
       </div>
 
-      {(!isSearching || isTagFilter) && (
+      {tagSearch !== null && (!isSearching || isTagFilter) && (
         <TagsPanel
           ref={tagsPanelRef}
           key={vault.path}
@@ -783,7 +790,12 @@ export const VaultNavigator = ({
           <SearchResults
             query={searchQuery.trim()}
             inputRef={searchInputRef}
-            search={search}
+            // Tag filters (`tag:#x`) use the tags source even with full-text
+            // search off (`extensions.search`).
+            search={
+              search ??
+              (searchQuery.trim().startsWith("tag:#") ? tagSource : null)
+            }
             handle={vault.handle}
             allIndexedEntries={allIndexedEntries}
             activePath={activePath}

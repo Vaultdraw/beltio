@@ -1280,6 +1280,58 @@
         }
       }
     },
+    "extensions": {
+      "type": "object",
+      "description": "Built-in extensions, on (`true`) or off (`false`). Off means not loaded: no memory, no work, no commands. Changes apply live. See [Extensions](#extensions).",
+      "additionalProperties": false,
+      "properties": {
+        "search": {
+          "description": "Search inside drawings from the file tree and the palette; off searches file names only.",
+          "default": true,
+          "type": "boolean"
+        },
+        "links": {
+          "description": "Links between drawings: the links dock, `[[` autocomplete, link styling, hints, back and forward. Renaming still updates links per `links.update_on_rename`.",
+          "default": true,
+          "type": "boolean"
+        },
+        "tags": {
+          "description": "Tags: the tags pane, tag chips, tag search and rename.",
+          "default": true,
+          "type": "boolean"
+        },
+        "graph": {
+          "description": "Graph view.",
+          "default": true,
+          "type": "boolean"
+        },
+        "library": {
+          "description": "The library sidebar and inserting library items.",
+          "default": true,
+          "type": "boolean"
+        },
+        "templates": {
+          "description": "New drawing from a template, and saving a drawing as one.",
+          "default": true,
+          "type": "boolean"
+        },
+        "formula": {
+          "description": "Insert and edit LaTeX formulas.",
+          "default": true,
+          "type": "boolean"
+        },
+        "mermaid": {
+          "description": "Mermaid to Excalidraw.",
+          "default": true,
+          "type": "boolean"
+        },
+        "pdf-import": {
+          "description": "Import PDF pages into a drawing.",
+          "default": true,
+          "type": "boolean"
+        }
+      }
+    },
     "keys": {
       "type": "object",
       "description": "Key sequences and the which-key popup. `[keys.labels]` names sequence groups (`\"<leader> f\" = \"files\"`); its entries are free text and are not checked. See [Key sequences, leader and which-key](#key-sequences-leader-and-which-key).",

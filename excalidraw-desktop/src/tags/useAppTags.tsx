@@ -35,6 +35,8 @@ export type AppTagsDeps = {
   flushActive(): Promise<unknown>;
   notify(message: string, type: "info" | "error"): void;
   doc: Document | null;
+  /** `extensions.tags`: off = no tag commands and no rename dialog. */
+  enabled?: boolean;
 };
 
 export function useAppTags(deps: AppTagsDeps) {
@@ -49,15 +51,18 @@ export function useAppTags(deps: AppTagsDeps) {
   }, []);
   const close = useCallback(() => setDialog(null), []);
 
+  const enabled = deps.enabled ?? true;
   useEffect(
     () =>
-      registerCommandHandlers({
-        "tags.rename": () => open(null),
-        "tags.focusPane": focusTagsPane,
-        "tags.toggleSort": toggleTagSort,
-        "tags.toggleSection": toggleTagSection,
-      }),
-    [open],
+      enabled
+        ? registerCommandHandlers({
+            "tags.rename": () => open(null),
+            "tags.focusPane": focusTagsPane,
+            "tags.toggleSort": toggleTagSort,
+            "tags.toggleSection": toggleTagSection,
+          })
+        : undefined,
+    [open, enabled],
   );
 
   const confirm = async (from: TagRef, to: string) => {
@@ -81,7 +86,7 @@ export function useAppTags(deps: AppTagsDeps) {
   };
 
   const element =
-    dialog && deps.api && deps.handle ? (
+    enabled && dialog && deps.api && deps.handle ? (
       <Suspense fallback={null}>
         <RenameTagDialog
           api={deps.api}

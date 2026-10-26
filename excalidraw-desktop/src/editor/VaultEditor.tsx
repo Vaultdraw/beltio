@@ -69,6 +69,7 @@ import { usePens } from "../pens/usePens";
 import { readDrawingStyles } from "../toolDefaults/drawingStyles";
 import { useToolDefaults } from "../toolDefaults/useToolDefaults";
 import { useFormulaCommands } from "../formula/useFormulaCommands";
+import { useExtension } from "../extensionSwitches/useExtensions";
 import { useMemoryRetention } from "../memory/useMemoryRetention";
 import { markOpen } from "../perf/openMarks";
 
@@ -249,9 +250,20 @@ const VaultEditorComponent = ({
     libraryStore: library?.store ?? null,
   });
 
+  const formulaOn = useExtension("formula");
+  const mermaidOn = useExtension("mermaid");
+  // Mermaid turned off while its dialog is open: close it (the editor stops
+  // rendering it, so a stale openDialog would otherwise linger).
+  useEffect(() => {
+    const api = apiRef.current;
+    if (!mermaidOn && api?.getAppState().openDialog?.name === "ttd") {
+      api.updateScene({ appState: { openDialog: null } });
+    }
+  }, [mermaidOn, apiRef]);
   const formula = useFormulaCommands({
     apiRef,
     readOnly: readOnly || disabled,
+    enabled: formulaOn,
   });
 
   useMemoryRetention({ apiRef, active: apiReady && !disabled });
@@ -873,15 +885,18 @@ const VaultEditorComponent = ({
   // Excalidraw's memo bails out only when `children` is the same element tree,
   // so rebuild it only when something it shows changes (not on every
   // VaultApp render, e.g. each autosave status change).
+  const hasLibrary = !!library;
   const editorChildren = useMemo(
     () => (
       <>
         {/* A book, not Excalidraw's "panel" glyph, which reads as a sidebar toggle. */}
-        <DefaultSidebar.Trigger
-          icon={<IconLibrary />}
-          title="Library"
-          tab={DEFAULT_SIDEBAR.defaultTab}
-        />
+        {hasLibrary && (
+          <DefaultSidebar.Trigger
+            icon={<IconLibrary />}
+            title="Library"
+            tab={DEFAULT_SIDEBAR.defaultTab}
+          />
+        )}
         {/* Mirrors excalidraw.com's menu, with vault-safe export actions
               instead of open/save-as (the vault file is always the source). */}
         <MainMenu>
@@ -967,6 +982,7 @@ const VaultEditorComponent = ({
       paperDialogOpen,
       pageSetupOpen,
       formula.dialog,
+      hasLibrary,
     ],
   );
 
@@ -1012,6 +1028,7 @@ const VaultEditorComponent = ({
           toolShortcuts: !toolKeysBound,
           hostActionKeys:
             toolKeysBound && hasActionHook ? HOST_ACTION_NAMES : undefined,
+          tools: { image: true, mermaid: mermaidOn },
           canvasActions: {
             toggleTheme: true,
             export: false,

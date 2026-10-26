@@ -7,6 +7,7 @@ import {
   type SettingsTarget,
 } from "../components/settings/schema";
 import { setSettingsScope } from "../components/settings/settingsScope";
+import { EXTENSION_COMMAND_HANDLERS } from "../extensionSwitches/extensionCommands";
 import { HELP_COMMAND_IDS, HELP_LINK_HANDLERS } from "../help/helpCommands";
 import { PEN_COMMAND_HANDLERS } from "../pens/penCommands";
 import { pluginUiHandlers } from "../plugins/ui/pluginCommands";
@@ -31,7 +32,8 @@ export interface AppCommandActions {
   toggleNavigator(): void;
   toggleActivityBar(): void;
   newDrawing(): void | Promise<void>;
-  newFromTemplate(): void | Promise<void>;
+  /** Off with `extensions.templates`: no handler = not offered. */
+  newFromTemplate?: () => void | Promise<void>;
   switchVault(): void | Promise<void>;
   revealActive(): void | Promise<void>;
   duplicateActive(): void | Promise<void>;
@@ -42,13 +44,16 @@ export interface AppCommandActions {
   setMode(mode: "light" | "dark" | "system"): void;
   setSyncCanvas(on: boolean): void;
   exportActive(format: "png" | "svg" | "pdf" | "copy"): void | Promise<void>;
-  importPdf(): void | Promise<void>;
+  /** Off with `extensions.pdf-import`. */
+  importPdf?: () => void | Promise<void>;
   /** Pick PDFs/images: PDF -> import dialog, images -> viewport centre. */
   importFile(): void | Promise<void>;
   /** "Import: Cancel": aborts the running plugin import. */
   cancelImport(): void;
-  saveActiveAsTemplate(): void;
-  searchTags(): void;
+  /** Off with `extensions.templates`. */
+  saveActiveAsTemplate?: () => void;
+  /** Off with `extensions.tags`. */
+  searchTags?: () => void;
   newFolder(): void;
   newDrawingInFolder(): void;
   collapseAllFolders(): void;
@@ -138,6 +143,7 @@ export function appCommandHandlers(
     ...PEN_COMMAND_HANDLERS,
     ...CONFIG_COMMAND_HANDLERS,
     ...HELP_LINK_HANDLERS,
+    ...EXTENSION_COMMAND_HANDLERS,
     [HELP_COMMAND_IDS.about]: () => actions.openSettingsPage("about"),
     ...pluginUiHandlers(() => actions.openSettingsPage("plugins")),
   };

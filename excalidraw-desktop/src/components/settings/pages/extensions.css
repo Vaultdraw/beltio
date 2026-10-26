@@ -1,0 +1,56 @@
+/* Settings → Extensions */
+.vault-extensions__group + .vault-extensions__group {
+  margin-top: var(--vd-space-3);
+}
+
+.vault-extensions__heading {
+  margin: 0 0 var(--vd-space-1);
+  font-size: var(--vd-fs-small);
+  font-weight: 600;
+  color: var(--vault-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.vault-extensions {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vault-extensions__item {
+  display: flex;
+  align-items: center;
+  gap: var(--vd-space-2);
+  padding: 8px 0;
+  border-top: 1px solid var(--vault-border);
+}
+
+.vault-extensions__item:first-child {
+  border-top: 0;
+}
+
+.vault-extensions__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.vault-extensions__desc,
+.vault-extensions__note {
+  font-size: var(--vd-fs-small);
+  color: var(--vault-text-muted);
+}
+
+.vault-extensions__note {
+  font-style: italic;
+}
+
+.vault-extensions__safe {
+  margin: 0 0 var(--vd-space-2);
+  color: var(--vault-warning, var(--vault-text-muted));
+}

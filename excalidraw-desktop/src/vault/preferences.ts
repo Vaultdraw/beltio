@@ -53,6 +53,11 @@ import {
   type SearchPreferences,
 } from "../search/searchSettings";
 import {
+  EXTENSION_DEFAULTS,
+  normalizeExtensionPreferences,
+  type ExtensionPreferences,
+} from "../extensionSwitches/extensionSettings";
+import {
   TABS_DEFAULTS,
   normalizeTabsPreferences,
   type TabsPreferences,
@@ -316,6 +321,7 @@ export type VaultPreferences = VaultPreferencesBase &
   TabsPreferences &
   MemoryPreferences &
   SearchPreferences &
+  ExtensionPreferences &
   KeysPreferences &
   ServicesPreferences &
   LayoutPreferences &
@@ -429,6 +435,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   ...TABS_DEFAULTS,
   ...MEMORY_DEFAULTS,
   ...SEARCH_DEFAULTS,
+  ...EXTENSION_DEFAULTS,
   ...KEYS_DEFAULTS,
   ...SERVICES_DEFAULTS,
   ...LAYOUT_DEFAULTS,
@@ -858,6 +865,7 @@ export function normalizePreferences(input: unknown): VaultPreferences {
     ...normalizeTabsPreferences(parsed as Record<string, unknown>),
     ...normalizeMemoryPreferences(parsed as Record<string, unknown>),
     ...normalizeSearchPreferences(parsed as Record<string, unknown>),
+    ...normalizeExtensionPreferences(parsed as Record<string, unknown>),
     ...normalizeKeysPreferences(parsed as Record<string, unknown>),
     ...normalizeServicesPreferences(parsed as Record<string, unknown>),
     ...normalizeLayoutPreferences(parsed as Record<string, unknown>),

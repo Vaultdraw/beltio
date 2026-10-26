@@ -44,6 +44,12 @@ import type { VaultRepository, VaultEntry, VaultInfo } from "../vault/types";
 
 export type AppLinksDeps = {
   links: VaultLinks | null;
+  /**
+   * `extensions.links`. Off: no dock, no link commands, no re-measure, no
+   * names list. Rename/move still rewrites links per `links.update_on_rename`
+   * (a core behaviour), and `drawing.open:` commands still work.
+   */
+  enabled?: boolean;
   search: Pick<VaultSearch, "subscribe"> | null;
   repository: VaultRepository;
   vault: VaultInfo | null;
@@ -114,8 +120,9 @@ export function useAppLinks(deps: AppLinksDeps) {
   const live = useRef(deps);
   live.current = deps;
   const { links, vault, win } = deps;
+  const enabled = deps.enabled ?? true;
   const handle = vault?.handle ?? null;
-  const names = useStableNames(deps.entries, links !== null);
+  const names = useStableNames(deps.entries, links !== null && enabled);
   const histories = useMemo(() => new NavHistories(), []);
   /** The active tab's history, read live (never stale across an await). */
   const activeHistory = useCallback(() => {
@@ -125,9 +132,8 @@ export function useAppLinks(deps: AppLinksDeps) {
   const bridge = useRef<EditorLinksBridge | null>(null);
   const dockRef = useRef<LinksDockHandle | null>(null);
 
-  const [dockVisible, setDockVisibleState] = useState(() =>
-    getDockVisible(win),
-  );
+  const [dockPref, setDockVisibleState] = useState(() => getDockVisible(win));
+  const dockVisible = enabled && dockPref;
   const [dockFocus, setDockFocus] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [confirm, setConfirm] = useState<PendingConfirm | null>(null);
@@ -326,8 +332,9 @@ export function useAppLinks(deps: AppLinksDeps) {
     }
   }, []);
 
+  const rewritesOnRename = deps.settings.updateOnRename !== false;
   useEffect(() => {
-    if (!links) {
+    if (!links || !(enabled || rewritesOnRename)) {
       return undefined;
     }
     let off: (() => void) | undefined;
@@ -343,7 +350,7 @@ export function useAppLinks(deps: AppLinksDeps) {
           () => live.current.notify,
           () => live.current.vault?.handle,
         );
-        if (done.rewritten > 0) {
+        if (done.rewritten > 0 && live.current.enabled !== false) {
           void fetchRemeasure();
         }
       })
@@ -359,19 +366,25 @@ export function useAppLinks(deps: AppLinksDeps) {
       disposed = true;
       off?.();
     };
-  }, [links, fetchRemeasure]);
+  }, [links, fetchRemeasure, enabled, rewritesOnRename]);
 
   // Fetch the re-measure set once per vault, after the first index pass.
   const fetchedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (!links || !handle || deps.indexing || fetchedFor.current === handle) {
+    if (
+      !links ||
+      !enabled ||
+      !handle ||
+      deps.indexing ||
+      fetchedFor.current === handle
+    ) {
       return;
     }
     fetchedFor.current = handle;
     const timers = win ?? window;
     const t = timers.setTimeout(() => void fetchRemeasure(), 1000);
     return () => timers.clearTimeout(t);
-  }, [links, handle, deps.indexing, win, fetchRemeasure]);
+  }, [links, enabled, handle, deps.indexing, win, fetchRemeasure]);
 
   const remeasureIdsFor = (path: string | null): readonly string[] | null =>
     (path && remeasureSet.current.get(path)) || null;
@@ -460,7 +473,10 @@ export function useAppLinks(deps: AppLinksDeps) {
         d.notify(`Could not copy: ${errorMessage(err)}`, "error");
       }
     };
-    const stopHandlers = registerCommandHandlers({
+    if (!enabled) {
+      return undefined;
+    }
+    return registerCommandHandlers({
       "links.toggleDock": () => toggleRef.current(),
       "links.back": () => go("back"),
       "links.forward": () => go("forward"),
@@ -485,15 +501,15 @@ export function useAppLinks(deps: AppLinksDeps) {
         }
       },
     });
-    const stopPrefix = registerCommandPrefixHandler(
-      DRAWING_OPEN_PREFIX,
-      (path) => openLink(path),
-    );
-    return () => {
-      stopHandlers();
-      stopPrefix();
-    };
-  }, [go, openLink]);
+  }, [go, enabled]);
+  // `drawing.open:<path>` (hotkeys bound to a drawing) is core: always bound.
+  useEffect(
+    () =>
+      registerCommandPrefixHandler(DRAWING_OPEN_PREFIX, (path) =>
+        openLink(path),
+      ),
+    [openLink],
+  );
   const toggleRef = useRef(toggleDock);
   toggleRef.current = toggleDock;
 

@@ -525,6 +525,15 @@ export const IconPlug = strokeIcon(
   <path d="M12 22v-5M9 8V2M15 8V2M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z" />,
 );
 
+/** Extensions: toggles (Lucide "toggle-right"). */
+export const IconToggles = strokeIcon(
+  14,
+  <>
+    <rect width="20" height="12" x="2" y="6" rx="6" />
+    <circle cx="16" cy="12" r="2" />
+  </>,
+);
+
 /** Links: two chain links (Lucide "link"). */
 export const IconLink = strokeIcon(
   14,
