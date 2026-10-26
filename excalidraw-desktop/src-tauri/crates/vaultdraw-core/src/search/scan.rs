@@ -4,6 +4,7 @@
 use super::extract::{extract_doc, fingerprint_parts, parse_scene_prefix, Prefix, FINGERPRINT_EDGE_BYTES};
 use super::index::DocEntry;
 use crate::error::{err, ioerr, Result};
+use crate::fsbulk::read_dir_entries;
 use crate::paths::{now_ms, validate_relative, MAX_DRAWING_BYTES, META_DIR};
 use std::{
     fs,
@@ -30,7 +31,37 @@ pub fn is_drawing_name(name: &str) -> bool {
 }
 
 /// Lists one folder: its drawings go to `files`, its subfolders (with their depth) to `dirs`.
+/// One bulk directory read supplies names, types, sizes and times (`fsbulk`: on macOS no
+/// `stat` per file). If that read fails part way (an entry removed between the listing and
+/// its `stat` on the fallback path), the folder is listed again one entry at a time, so one
+/// vanished file never hides the rest of the folder from the index.
 fn scan_dir(root: &Path, dir: &str, depth: usize, dirs: &mut Vec<(String, usize)>, files: &mut Vec<Found>) {
+    let mut accept = |name: &str, is_dir: bool| {
+        // A name that is not valid UTF-8 reaches us with U+FFFD in it and could not be opened
+        // again by that name: skip it, as the per-entry path does.
+        !name.contains('\u{FFFD}')
+            && !name.starts_with(".excalidraw-tmp-")
+            && !(dir.is_empty() && name.eq_ignore_ascii_case(META_DIR))
+            && if is_dir { depth < MAX_DEPTH } else { is_drawing_name(name) }
+    };
+    let Ok(raw) = read_dir_entries(&root.join(dir), &mut accept) else {
+        return scan_dir_each(root, dir, depth, dirs, files);
+    };
+    for e in raw {
+        let child = if dir.is_empty() { e.name } else { format!("{dir}/{}", e.name) };
+        if validate_relative(&child).is_err() {
+            continue;
+        }
+        if e.is_dir {
+            dirs.push((child, depth + 1));
+        } else {
+            files.push(Found { path: child, size: e.size, mtime: e.modified_ms });
+        }
+    }
+}
+
+/// [`scan_dir`] one entry at a time, skipping entries that fail: `read_dir` plus a `stat` per drawing.
+fn scan_dir_each(root: &Path, dir: &str, depth: usize, dirs: &mut Vec<(String, usize)>, files: &mut Vec<Found>) {
     let Ok(entries) = fs::read_dir(root.join(dir)) else { return };
     for entry in entries.flatten() {
         let Ok(name) = entry.file_name().into_string() else { continue };
@@ -277,6 +308,93 @@ pub fn needs_parse(existing: Option<&DocEntry>, f: &Found, racy_before: u64) -> 
 mod tests {
     use super::*;
     use crate::search::extract::fingerprint8;
+
+    /// `walk` built on the per-entry listing, the reference the bulk listing must match.
+    fn walk_each(root: &Path) -> Vec<Found> {
+        let mut out = Vec::new();
+        let mut stack = vec![(String::new(), 0usize)];
+        while let Some((dir, depth)) = stack.pop() {
+            scan_dir_each(root, &dir, depth, &mut stack, &mut out);
+        }
+        out
+    }
+
+    fn sorted(v: Vec<Found>) -> Vec<(String, u64, u64)> {
+        let mut k: Vec<_> = v.into_iter().map(|f| (f.path, f.size, f.mtime)).collect();
+        k.sort();
+        k
+    }
+
+    #[test]
+    fn bulk_scan_lists_what_the_per_entry_scan_lists() {
+        let t = tempfile::tempdir().unwrap();
+        let r = t.path();
+        for d in ["a/b/c", ".excalidraw-vault", "x/.excalidraw-vault", "trail. "] {
+            fs::create_dir_all(r.join(d)).unwrap();
+        }
+        for (i, f) in [
+            "top.excalidraw",
+            "UP.EXCALIDRAW",
+            "a/one.excalidraw",
+            "a/b/c/deep.excalidraw",
+            "a/notes.txt",
+            ".excalidraw-tmp-1.excalidraw",
+            "a/.excalidraw-tmp-2.excalidraw",
+            ".excalidraw-vault/meta.excalidraw",
+            "x/.excalidraw-vault/kept.excalidraw",
+            "trail. /in.excalidraw",
+            ".excalidraw",
+        ]
+        .iter()
+        .enumerate()
+        {
+            fs::write(r.join(f), "z".repeat(i * 10)).unwrap();
+        }
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(r.join("a"), r.join("link")).unwrap();
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(r.join("top.excalidraw"), r.join("link.excalidraw")).unwrap();
+        let want = sorted(walk_each(r));
+        let got = sorted(walk(r, ""));
+        assert_eq!(got, want);
+        let paths: Vec<&str> = got.iter().map(|f| f.0.as_str()).collect();
+        assert_eq!(
+            paths,
+            ["UP.EXCALIDRAW", "a/b/c/deep.excalidraw", "a/one.excalidraw", "top.excalidraw"],
+            "no temp files, no metadata folder at any depth, no symlinks, no invalid folder names"
+        );
+    }
+
+    #[test]
+    fn a_missing_folder_scans_to_nothing() {
+        let t = tempfile::tempdir().unwrap();
+        assert!(walk(&t.path().join("missing"), "").is_empty());
+    }
+
+    /// Reported, not asserted (wall clock under load): bulk vs per-entry listing of 3000 drawings.
+    #[test]
+    fn scan_cost_report() {
+        let t = tempfile::tempdir().unwrap();
+        for i in 0..3000 {
+            let d = t.path().join(format!("f{}", i % 30));
+            fs::create_dir_all(&d).unwrap();
+            fs::write(d.join(format!("d{i}.excalidraw")), "{}").unwrap();
+        }
+        let time = |f: &dyn Fn() -> usize| {
+            let mut v: Vec<_> = (0..15)
+                .map(|_| {
+                    let s = std::time::Instant::now();
+                    assert_eq!(f(), 3000);
+                    s.elapsed()
+                })
+                .collect();
+            v.sort();
+            (v[7], v[14])
+        };
+        let bulk = time(&|| walk(t.path(), "").len());
+        let each = time(&|| walk_each(t.path()).len());
+        eprintln!("scan 3000 drawings: bulk p50 {:?} max {:?}; per entry p50 {:?} max {:?}", bulk.0, bulk.1, each.0, each.1);
+    }
 
     fn drawing(n_text: usize, blob_bytes: usize) -> String {
         let els: Vec<String> = (0..n_text).map(|i| format!(r#"{{"id":"t{i}","type":"text","text":"word{i} padding","originalText":"word{i} padding","isDeleted":false}}"#)).collect();

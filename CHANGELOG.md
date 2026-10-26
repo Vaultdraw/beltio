@@ -75,6 +75,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Faster
 
+- The search indexer lists each folder with one bulk directory read on macOS, the same read the file tree uses, instead of one file-system query per drawing: listing 3,000 drawings took about 20% less time in a unit benchmark. A drawing removed while a folder is being listed no longer matters: that folder is listed again one entry at a time.
 - Opening a vault shows the file tree sooner on a slow CPU: the home pane now draws one frame after the tree, in the same place (about 10 ms sooner at 4x CPU slowdown). `interface.defer_home_pane = false` draws both together.
 - `vaultdraw search` and the first in-app search on a vault with no index are faster on a 5,000-drawing vault: about 240 ms instead of 360 ms at background priority and 10 to 17% faster at normal priority, with 20 to 30% less CPU. The indexer now reads each drawing only up to its elements instead of the whole file with its embedded images, opens files relative to their folder, and reads on up to 8 threads. The index is still stored outside your vault and is still safe to delete.
 - Switching between drawings is faster on a slow CPU: the editor now shows the new drawing in one render instead of two. On a 4x-throttled CPU, switching back and forth takes 6 to 12% less time (median) and 11% less at the slow end (95th percentile).
