@@ -50,12 +50,27 @@ pub fn is_windows_reserved_name(part: &str) -> bool {
     let stem = part.split('.').next().unwrap_or(part).to_ascii_uppercase();
     matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL" | "COM1" | "COM2" | "COM3" | "COM4" | "COM5" | "COM6" | "COM7" | "COM8" | "COM9" | "LPT1" | "LPT2" | "LPT3" | "LPT4" | "LPT5" | "LPT6" | "LPT7" | "LPT8" | "LPT9")
 }
+/// Longest vault-relative path `validate_relative` accepts, in bytes.
+pub const MAX_REL_PATH_BYTES: usize = 4096;
+/// True when one path component breaks the vault's naming rules (empty, dots, too long, a
+/// trailing dot or space, control or reserved characters, Windows device names).
+#[inline]
+pub fn component_is_invalid(part: &str) -> bool {
+    part.is_empty()
+        || part == "."
+        || part == ".."
+        || part.len() > 255
+        || part.ends_with('.')
+        || part.ends_with(' ')
+        || part.chars().any(|c| c.is_control() || "<>:\"|?*".contains(c))
+        || is_windows_reserved_name(part)
+}
 #[inline]
 pub fn validate_relative(path: &str) -> Result<Vec<String>> {
     if path.is_empty() {
         return Ok(Vec::new());
     }
-    if path.len() > 4096
+    if path.len() > MAX_REL_PATH_BYTES
         || path.starts_with('/')
         || path.starts_with('\\')
         || path.contains('\\')
@@ -68,15 +83,7 @@ pub fn validate_relative(path: &str) -> Result<Vec<String>> {
     }
     let mut out = Vec::new();
     for part in path.split('/') {
-        if part.is_empty()
-            || part == "."
-            || part == ".."
-            || part.len() > 255
-            || part.ends_with('.')
-            || part.ends_with(' ')
-            || part.chars().any(|c| c.is_control() || "<>:\"|?*".contains(c))
-            || is_windows_reserved_name(part)
-        {
+        if component_is_invalid(part) {
             return Err(err("INVALID_PATH", "Path contains an invalid component"));
         }
         if part.eq_ignore_ascii_case(META_DIR) {

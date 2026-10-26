@@ -2,8 +2,9 @@
 //! the control API and the CLI.
 
 use crate::error::{err, ioerr, Result};
+use crate::fsbulk::read_dir_entries;
 use crate::fsops::{current_revision, ensure_json, ensure_no_sibling_collision, write_atomic, write_atomic_new};
-use crate::paths::{now_ms, random_id, revision, safe_path, validate_relative, MAX_DRAWING_BYTES, META_DIR};
+use crate::paths::{component_is_invalid, random_id, revision, safe_path, MAX_DRAWING_BYTES, MAX_REL_PATH_BYTES, META_DIR};
 use crate::recovery::{create_recovery, remove_recovery};
 use crate::vault::Vault;
 use serde::Serialize;
@@ -23,48 +24,47 @@ pub struct VaultEntry {
     pub modified_at: u64,
     pub size: u64,
 }
-/// The entries of one vault folder (the UI file tree and `vault.list` share this).
+/// The entries of one vault folder (the UI file tree and `vault.list` share this). One bulk
+/// directory read supplies names, types, sizes and times (see `fsbulk`); names are checked
+/// per component, since the folder's own path was validated by `safe_path`.
 pub fn list_directory_in(v: &Vault, path: &str) -> Result<Vec<VaultEntry>> {
     let dir = safe_path(&v.root, path, false)?;
     if !dir.is_dir() {
         return Err(err("NOT_FOUND", "Directory not found"));
     }
-    let mut out = Vec::new();
-    for item in fs::read_dir(dir).map_err(ioerr)? {
-        let item = item.map_err(ioerr)?;
-        let meta = item.file_type().map_err(ioerr)?;
-        if meta.is_symlink() {
-            continue;
-        }
-        let name = item.file_name().to_string_lossy().into_owned();
-        if name.eq_ignore_ascii_case(META_DIR)
-            || (!meta.is_dir() && !name.to_ascii_lowercase().ends_with(".excalidraw"))
-        {
-            continue;
-        }
-        let rel = item
-            .path()
-            .strip_prefix(&v.root)
-            .map_err(|e| err("INVALID_PATH", e.to_string()))?
-            .to_string_lossy()
-            .replace('\\', "/");
-        if validate_relative(&rel).is_err() {
-            continue;
-        }
-        let md = item.metadata().map_err(ioerr)?;
-        out.push(VaultEntry {
-            path: rel,
-            name,
-            kind: if meta.is_dir() { "folder" } else { "drawing" }.into(),
-            modified_at: md.modified().map(now_ms).unwrap_or_default(),
-            size: if meta.is_file() { md.len() } else { 0 },
-        });
-    }
-    out.sort_by(|a, b| {
-        (a.kind != "folder", a.name.to_lowercase())
-            .cmp(&(b.kind != "folder", b.name.to_lowercase()))
-    });
+    let prefix_len = if path.is_empty() { 0 } else { path.len() + 1 };
+    let mut accept = |name: &str, is_dir: bool| {
+        !name.eq_ignore_ascii_case(META_DIR)
+            && (is_dir || is_excalidraw_name(name))
+            && !component_is_invalid(name)
+            && prefix_len + name.len() <= MAX_REL_PATH_BYTES
+    };
+    let raw = read_dir_entries(&dir, &mut accept).map_err(ioerr)?;
+    let mut out: Vec<VaultEntry> = raw
+        .into_iter()
+        .map(|e| {
+            let mut rel = String::with_capacity(prefix_len + e.name.len());
+            if prefix_len > 0 {
+                rel.push_str(path);
+                rel.push('/');
+            }
+            rel.push_str(&e.name);
+            VaultEntry {
+                path: rel,
+                name: e.name,
+                kind: if e.is_dir { "folder" } else { "drawing" }.into(),
+                modified_at: e.modified_ms,
+                size: e.size,
+            }
+        })
+        .collect();
+    // Folders first, then names case-insensitively; the exact name breaks ties so the order
+    // never depends on the file system's read order.
+    out.sort_by_cached_key(|e| (e.kind != "folder", e.name.to_lowercase(), e.name.clone()));
     Ok(out)
+}
+fn is_excalidraw_name(name: &str) -> bool {
+    name.len() >= 11 && name.get(name.len() - 11..).is_some_and(|e| e.eq_ignore_ascii_case(".excalidraw"))
 }
 /// Hex SHA-256 length; the read frame is `<revision hex>\n<json bytes>`.
 pub const REVISION_HEX_LEN: usize = 64;

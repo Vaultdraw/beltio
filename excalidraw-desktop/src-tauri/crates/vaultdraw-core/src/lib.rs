@@ -6,6 +6,7 @@ pub mod config;
 pub mod control_settings;
 pub mod drawing;
 pub mod error;
+pub mod fsbulk;
 pub mod fsops;
 pub mod instance;
 pub mod json_ascii;

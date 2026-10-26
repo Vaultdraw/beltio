@@ -234,3 +234,94 @@ fn webview_text_is_ascii_while_disk_and_revision_stay_raw_utf8() {
     // read_drawing_parts (CLI, templates) stays raw.
     assert_eq!(read_drawing_parts(&v.root, "a.excalidraw").unwrap().json, raw);
 }
+
+/// Directory listing cost on a generated folder: `cargo test --release -p vaultdraw-core
+/// bench_list_directory -- --ignored --nocapture` (warm cache; `LIST_N` sets the file count).
+#[test]
+#[ignore]
+fn bench_list_directory() {
+    use std::time::Instant;
+    let n: usize = std::env::var("LIST_N").ok().and_then(|s| s.parse().ok()).unwrap_or(5000);
+    let t = tempdir().unwrap();
+    let v = vault(t.path());
+    for i in 0..n {
+        fs::write(t.path().join(format!("Drawing {i:05} {}.excalidraw", ["alpha", "Beta", "gamma"][i % 3])), SCENE).unwrap();
+    }
+    for i in 0..20 {
+        fs::create_dir(t.path().join(format!("Folder {i}"))).unwrap();
+    }
+    let mut ms: Vec<f64> = (0..60)
+        .map(|_| {
+            let s = Instant::now();
+            let l = list_directory_in(&v, "").unwrap();
+            assert_eq!(l.len(), n + 20);
+            s.elapsed().as_secs_f64() * 1000.0
+        })
+        .collect();
+    ms.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    println!("list_directory_in {n} files: p50 {:.2} ms, p95 {:.2} ms, min {:.2} ms", ms[ms.len() / 2], ms[ms.len() * 95 / 100], ms[0]);
+}
+
+fn mixed_folder(root: &Path) {
+    fs::write(root.join("b.excalidraw"), SCENE).unwrap();
+    fs::write(root.join("A.EXCALIDRAW"), "x".repeat(5000)).unwrap();
+    fs::write(root.join("Zoë ✏️ notes.excalidraw"), SCENE).unwrap();
+    fs::write(root.join("readme.md"), "hi").unwrap();
+    fs::write(root.join(".excalidraw-tmp-1"), "t").unwrap();
+    fs::create_dir(root.join("Sub")).unwrap();
+    fs::create_dir(root.join("alpha")).unwrap();
+    fs::create_dir(root.join(META_DIR)).unwrap();
+    fs::write(root.join("Sub").join("inner.excalidraw"), SCENE).unwrap();
+    fs::write(root.join("CON.excalidraw"), SCENE).unwrap();
+    fs::write(root.join("trailing .excalidraw "), SCENE).unwrap();
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(root.join("b.excalidraw"), root.join("link.excalidraw")).unwrap();
+        std::os::unix::fs::symlink(root.join("Sub"), root.join("linkdir")).unwrap();
+    }
+}
+
+#[test]
+fn list_directory_filters_sorts_and_reports_sizes() {
+    let t = tempdir().unwrap();
+    mixed_folder(t.path());
+    let v = vault(t.path());
+    let l = list_directory_in(&v, "").unwrap();
+    let names: Vec<(&str, &str)> = l.iter().map(|e| (e.kind.as_str(), e.name.as_str())).collect();
+    assert_eq!(
+        names,
+        vec![
+            ("folder", "alpha"),
+            ("folder", "Sub"),
+            ("drawing", "A.EXCALIDRAW"),
+            ("drawing", "b.excalidraw"),
+            ("drawing", "Zoë ✏️ notes.excalidraw"),
+        ]
+    );
+    let big = l.iter().find(|e| e.name == "A.EXCALIDRAW").unwrap();
+    assert_eq!(big.size, 5000);
+    assert!(big.modified_at > 1_600_000_000_000);
+    assert_eq!(l.iter().find(|e| e.name == "Sub").unwrap().size, 0);
+    let sub = list_directory_in(&v, "Sub").unwrap();
+    assert_eq!(sub.len(), 1);
+    assert_eq!(sub[0].path, "Sub/inner.excalidraw");
+    assert!(list_directory_in(&v, "missing").is_err());
+}
+
+#[test]
+fn bulk_directory_read_matches_the_read_dir_fallback() {
+    let t = tempdir().unwrap();
+    mixed_folder(t.path());
+    for i in 0..700 {
+        fs::write(t.path().join(format!("many {i:04}.excalidraw")), "y".repeat(i)).unwrap();
+    }
+    let mut accept = |_: &str, _: bool| true;
+    let key = |e: &crate::fsbulk::RawEntry| (e.name.clone(), e.is_dir, e.size, e.modified_ms);
+    let mut a: Vec<_> = crate::fsbulk::read_dir_entries(t.path(), &mut accept).unwrap().iter().map(key).collect();
+    let mut b: Vec<_> = crate::fsbulk::read_dir_fallback(t.path(), &mut accept).unwrap().iter().map(key).collect();
+    a.sort();
+    b.sort();
+    assert_eq!(a.len(), b.len());
+    assert_eq!(a, b);
+    assert!(a.iter().all(|e| !e.0.starts_with("link")), "symlinks are skipped");
+}
