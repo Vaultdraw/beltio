@@ -1266,6 +1266,11 @@ export type UIOptions = Partial<{
   canvasActions: CanvasActions;
   tools: {
     image: boolean;
+    /**
+     * "Mermaid to Excalidraw" in the extra tools menu and the command
+     * palette, and its dialog. @default true
+     */
+    mermaid?: boolean;
   };
   /**
    * Optionally control the editor form factor and desktop UI mode from the host app.

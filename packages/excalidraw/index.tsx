@@ -144,6 +144,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     },
     tools: {
       image: props.UIOptions?.tools?.image ?? true,
+      mermaid: props.UIOptions?.tools?.mermaid ?? true,
     },
   };
 

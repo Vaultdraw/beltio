@@ -349,13 +349,17 @@ export const MobileToolbar = ({ app, setAppState }: MobileToolbarProps) => {
             Generate
           </div>
           {app.props.aiEnabled !== false && <TTDDialogTriggerTunnel.Out />}
-          <DropdownMenu.Item
-            onSelect={() => app.setOpenDialog({ name: "ttd", tab: "mermaid" })}
-            icon={mermaidLogoIcon}
-            data-testid="toolbar-embeddable"
-          >
-            {t("toolBar.mermaidToExcalidraw")}
-          </DropdownMenu.Item>
+          {app.props.UIOptions.tools?.mermaid !== false && (
+            <DropdownMenu.Item
+              onSelect={() =>
+                app.setOpenDialog({ name: "ttd", tab: "mermaid" })
+              }
+              icon={mermaidLogoIcon}
+              data-testid="toolbar-embeddable"
+            >
+              {t("toolBar.mermaidToExcalidraw")}
+            </DropdownMenu.Item>
+          )}
           {app.props.aiEnabled !== false && app.plugins.diagramToCode && (
             <>
               <DropdownMenu.Item

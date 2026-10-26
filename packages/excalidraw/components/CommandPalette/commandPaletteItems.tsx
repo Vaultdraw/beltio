@@ -454,6 +454,7 @@ export const getCommandPaletteItems = ({
       category: DEFAULT_CATEGORIES.tools,
       icon: mermaidLogoIcon,
       viewMode: false,
+      predicate: appProps.UIOptions.tools?.mermaid !== false,
       perform: () => {
         setAppState((state) => ({
           ...state,
