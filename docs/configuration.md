@@ -1067,7 +1067,7 @@ mcp_enabled = true    # the AI tools interface (MCP), used only while enabled is
 - **Fails closed.** If `config.toml` or `overrides.toml` exists but cannot be read or parsed, AI counts as off until the file is fixed.
 - **Rate limit.** An AI connection may send 20 requests per second (bursts of 40) and run one edit in the app at a time. This guards against a runaway loop; it is not a security boundary.
 - **Honest limit.** A program declares the `mcp` role itself when it connects. The switch stops AI apps that use the AI tools interface, but an AI app that can run shell commands as you can call the `vaultdraw` command like any other program you run. Only give such an app access you would give a script.
-- **Not yet.** The `vaultdraw mcp` command that AI apps connect through comes in a later version; this switch is already in place for it.
+- **The command.** AI apps connect through `vaultdraw mcp`: see [AI tools (MCP)](mcp.md). It reads both keys before every tool call, so a switch change applies at once and the disk reads (Vaultdraw closed) obey it too.
 
 ## Plugins (experimental)
 

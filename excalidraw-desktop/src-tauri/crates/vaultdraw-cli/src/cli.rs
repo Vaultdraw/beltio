@@ -107,6 +107,8 @@ pub enum Command {
         #[command(subcommand)]
         action: SceneAction,
     },
+    /// Run the AI tools server (MCP) on standard input and output; started by an AI client, off until AI is turned on in Vaultdraw
+    Mcp,
     /// List open tabs
     Tabs,
     /// Focus or close a tab

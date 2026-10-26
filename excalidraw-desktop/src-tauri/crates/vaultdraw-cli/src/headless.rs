@@ -51,7 +51,7 @@ pub fn open_vault(cli: &Cli) -> Result<Vault, Fail> {
     Ok(Vault::new(root, handle, false, None))
 }
 
-fn dirs() -> Result<Dirs, Fail> {
+pub fn dirs() -> Result<Dirs, Fail> {
     vaultdraw_core::config::resolve_dirs_with(|k| std::env::var_os(k), cfg!(windows), None).map_err(native_fail)
 }
 

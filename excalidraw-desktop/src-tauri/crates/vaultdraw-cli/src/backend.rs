@@ -58,7 +58,7 @@ fn offline_refused() -> Fail {
 
 /// Runs one call against the app (`on_app`, on a connected client) or, with no app, on disk
 /// (`headless`). The one place that knows the socket / instance-lock rule.
-fn route(
+pub(crate) fn route(
     cli: &Cli,
     rpc: &Rpc,
     on_app: impl FnOnce(&mut Client) -> Result<Value, Fail>,

@@ -6,6 +6,7 @@ mod cli;
 mod commands;
 mod error;
 mod headless;
+mod mcp;
 mod render;
 mod rpc;
 mod snapshot;

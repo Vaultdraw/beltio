@@ -51,6 +51,7 @@ pub fn run(cli: &Cli) -> Result<(), Fail> {
         Command::Links { target, backlinks } => files::links(cli, target, *backlinks),
         Command::Tags => files::tags(cli),
         Command::Scene { action } => scene::run(cli, action),
+        Command::Mcp => crate::mcp::run(cli),
         Command::Tabs => tabs::list(cli),
         Command::Tab { action } => tabs::run(cli, action),
         Command::Config { action: ConfigAction::Check { strict } } => diag::config_check(cli, *strict),
