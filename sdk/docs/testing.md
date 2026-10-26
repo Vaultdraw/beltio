@@ -104,6 +104,8 @@ Put `vi.useRealTimers()` in `afterEach`. `flush()` works with and without fake t
 
 Anything the mock does not provide fails with a message that starts `not set up in this test:`. It never returns an empty result instead. Examples: `ctx.commands.execute` of a command that is not the plugin's own, `openPanel` or `ctx.scene.useScene` without the React packages, and `openPanel` for a panel the manifest does not declare. Declare it or install the package first.
 
+The mock's text stand-ins are simple, so check what they can show. `ctx.markdown.parse` uses a small parser that knows headings, paragraphs, `#tags` and `[[wikilinks]]` only: no frontmatter, no other block kinds, no links other than wikilinks, and zero for both dropped counts. `ctx.text.measure` counts every character as `size * 0.5` wide, so width tests check your wiring, not real widths; `lineHeight` returns the editor's real values. `ctx.fonts.ensure` checks its arguments and loads nothing. `ctx.pages` is the real paginator and page geometry, shared with the app.
+
 A plugin with no command or panel to trigger activation needs `activation = ["onStartupFinished"]` to be active after `boot`.
 
 ## Same tests, real host

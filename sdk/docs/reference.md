@@ -501,6 +501,114 @@ type ImportResult = { ops: readonly SceneOp[] } | void;
 - `paths` are vault-relative drawings and folders. Other files and paths with a segment that starts with a dot are left out; a batch with nothing left is not sent. `rescan: true` means the file watcher lost track, so every path may have changed.
 - Needs `vault.read`. Without it, `on` records a `PERMISSION` error on the plugin (Settings → Plugins shows it) and returns a subscription that never fires. If an update removes `vault.read`, existing subscriptions stop receiving events.
 
+## Markdown, text and pages (since 0.8.0)
+
+Four parts of `ctx`: the Markdown parser, text measuring, font loading and page layout. None of them needs a permission. Only `markdown.parse` makes a native call; `text`, `fonts` and `pages` run in the plugin's own code, with the editor's rules.
+
+### ctx.markdown
+
+```ts
+interface MarkdownApi {
+  parse(text: string, options?: MarkdownParseOptions): Promise<NoteDoc>; // free
+}
+interface MarkdownParseOptions {
+  softBreakNewline?: boolean; // a soft line break in a paragraph becomes "\n", not a space
+}
+```
+
+`parse` reads Markdown as the app does: CommonMark, GFM and the Obsidian dialect. It returns a `NoteDoc`:
+
+| Field | What it holds |
+| --- | --- |
+| `schemaVersion` | `1` today. It rises when a field changes meaning. |
+| `frontmatter` | The YAML between the `---` fences, when the note has one: `range`, `raw`, `tags`, `aliases` and `properties` (every top-level key as a string; lists joined with ", "). |
+| `blocks` | Top-level blocks in order. Kinds: `heading`, `paragraph`, `listItem`, `code`, `blockquote`, `callout`, `thematicBreak`, `table`, `image`, `embed`, `math`, `footnoteDef` and `html`. Containers (`blockquote`, `callout`, `footnoteDef`) hold their children in `blocks`. |
+| `links` | Every wikilink, embed and Markdown link: `kind`, `target`, and optionally `alias`, `heading` and `blockRef`, plus `range`. |
+| `tags` | Frontmatter tags, then inline `#tags`, without `#`. Tags never come from code. |
+| `stats` | `words`, `blocks` (nested ones included), `droppedEmphasis` and `droppedHtml` (the count of removed markers and HTML comments). |
+
+Each block has a `range`, and a `blockId` when the block ends with `^block-id`. Block text is plain: emphasis markers are removed, and links and tags are marked in `inline`.
+
+- **Two kinds of offsets.** A `range` is `[start, end]` in UTF-8 bytes of the text you passed (a leading byte order mark is skipped but counted). An `inline` span's `start` and `end` are UTF-16 indexes into that block's `text`, the same as `String.slice` takes. Do not mix them.
+- **Limit:** 16 MiB of UTF-8 text per call. A larger text is refused with `INVALID_ARGUMENT`.
+- **Speed:** one native call; the parser takes about 1 ms for 50,000 words.
+
+### ctx.text
+
+```ts
+interface TextApi {
+  measure(font: TextFont, strings: readonly string[]): Float64Array; // free
+  lineHeight(family: FontFamilyName): number; // free
+}
+interface TextFont {
+  family: FontFamilyName;
+  size: number; // scene pixels, 1 to 1000
+}
+```
+
+| Call | What it does |
+| --- | --- |
+| `measure(font, strings)` | The width of each string on one line, in scene pixels, in the same order as `strings`. It uses the editor's own measure. |
+| `lineHeight(family)` | The editor's line height for the family, as a multiple of the font size. A line is `size * lineHeight` pixels tall. |
+
+- Load the font first with `ctx.fonts.ensure`. Without it, the widths come from the fallback font.
+- Each `measure` call takes at most 100,000 strings and 4,000,000 characters in all. A size outside 1 to 1000 or an unknown family is refused with `INVALID_ARGUMENT`.
+
+### ctx.fonts
+
+```ts
+interface FontsApi {
+  ensure(families: readonly FontFamilyName[], text?: string): Promise<void>; // free
+}
+```
+
+- Resolves when the families are ready. A font split by script loads only the parts that cover `text`. With no `text`, that is printable ASCII.
+- Fails with `FONT_UNAVAILABLE` after 10 seconds.
+
+### ctx.pages
+
+```ts
+interface PagesApi {
+  geometry(request?: PageRequest): PageGeometry; // free
+  flow(items: readonly FlowItem[], options: FlowOptions): FlowPlacement[]; // free
+}
+interface PageRequest {
+  size?: PageSizeName | { width: number; height: number }; // default "a4"; custom sides 100 to 5000 px
+  orientation?: "portrait" | "landscape"; // default "portrait"; ignored for a custom size
+  layout?: "separate" | "continuous"; // default "separate"
+}
+interface PageGeometry {
+  width: number;
+  height: number;
+  gap: number; // 40 px between separate pages, 0 for a continuous roll
+  pitch: number; // height + gap; page i starts at (0, i * pitch)
+}
+```
+
+`PageSizeName` is `a3`, `a4`, `a5`, `b5`, `letter`, `legal`, `tablet`, `tabletLarge` or `phone`, the sizes the editor offers.
+
+`flow` paginates items. Each item is `{ height, spaceBefore?, breakBefore?, keepWithNext? }`, and `options` is `{ contentHeight }`, the height free on each page (page height minus margins).
+
+- **Greedy.** An item goes on the current page if it fits, otherwise on the next page.
+- **`spaceBefore`** is dropped at the top of a page.
+- **`breakBefore`** starts a new page with that item, unless the page is still empty.
+- **`keepWithNext`** chains (a heading and its first line, say) move together when the chain fits on one page. A chain taller than a page breaks inside, once its first item fits.
+- **Oversized items.** An item taller than `contentHeight` gets a page of its own and overflows it. Split such items before you flow them.
+- **Result.** One `{ page, y }` per item: the page index and the offset from the top of that page's content area.
+- **Limits:** at most 1,000,000 items per call. The time is linear: about 3 ms for 50,000 words of lines.
+
+**Example: a width table for a worker.** Measure each character once, then send the widths to the worker. The transfer list moves the buffer, so nothing is copied.
+
+```ts
+const font = { family: "Excalifont" as const, size: 20 };
+await ctx.fonts.ensure([font.family]); // printable ASCII by default
+const chars = Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i));
+const widths = ctx.text.measure(font, chars); // one width per character
+worker.postMessage({ chars, widths }, [widths.buffer]); // transfer, no copy
+```
+
+The worker sums widths from the table to wrap lines, and never calls the canvas itself.
+
 ## Rules for plugin code
 
 1. Use `ctx.setTimeout`, `ctx.setInterval` and `ctx.subscriptions` instead of raw timers and listeners. Then disabling a plugin leaves nothing running.

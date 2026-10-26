@@ -42,6 +42,7 @@ Since API 0.3.0 the app checks them in its native layer: every native call of th
 | `ctx.importers.register(id, importer)`        | none          | 0.6.0 |
 | `ctx.storage.global`                          | none          | 0.3.0 |
 | `ctx.scene` (edits have undo)                 | none          | 0.1.0 |
+| `ctx.markdown.parse(text, options)`           | none          | 0.8.0 |
 
 A call that needs a permission your `plugin.toml` does not declare fails with `code: "PERMISSION"`. An importer runs on a file the user chose, so its input needs no permission; an importer that calls `ctx.vault` still needs the permission for that call.
 
@@ -54,6 +55,8 @@ A call that needs a permission your `plugin.toml` does not declare fails with `c
 5. **Uninstall** removes the record.
 
 Editing `pluginsEnabled` by hand does not skip this: a plugin whose declared permissions are not covered by the record stays off until you confirm it on the Plugins page.
+
+None of `ctx.markdown`, `ctx.text`, `ctx.fonts` and `ctx.pages` needs a permission. Only `markdown.parse` makes a native call; the other three make none.
 
 ## Checking them
 

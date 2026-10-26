@@ -32,11 +32,10 @@ import {
 import { dataKeyFor, MAX_OPS_LIMIT } from "../shared/sceneRules";
 import { permissionError } from "../shared/vaultPaths";
 
-import { createSceneModel } from "./scene";
-import { panelsRoot, type PanelDeps } from "./panels";
-import { createVaultModel } from "./vault";
 import { fakeParseMarkdown, markdownParams } from "../shared/markdown";
+
 import { flowPages, pageGeometry } from "../shared/pages";
+
 import {
   LINE_HEIGHTS,
   checkFamilies,
@@ -45,6 +44,10 @@ import {
   checkStrings,
   fakeMeasure,
 } from "../shared/text";
+
+import { createSceneModel } from "./scene";
+import { panelsRoot, type PanelDeps } from "./panels";
+import { createVaultModel } from "./vault";
 
 import type {
   AppEventMap,

@@ -111,7 +111,10 @@ describe("ctx.fonts", () => {
     const load = vi.spyOn(Fonts, "loadElementsFonts").mockResolvedValue([]);
     await ctx.fonts.ensure(["Excalifont", "Excalifont", "Cascadia"], "héllo");
     expect(load).toHaveBeenCalledTimes(1);
-    const probes = load.mock.calls[0][0];
+    const probes = load.mock.calls[0][0] as unknown as readonly {
+      type: string;
+      fontFamily: number;
+    }[];
     expect(probes.map((p) => p.fontFamily)).toEqual([
       FONT_FAMILY.Excalifont,
       FONT_FAMILY.Cascadia,

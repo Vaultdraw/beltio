@@ -521,9 +521,7 @@ describe("parity: vault, workspace and importers seen through both kits", () => 
 describe("API 0.8.0 tables equal the editor's", () => {
   it("page sizes and the gap", async () => {
     const { PAGE_SIZES, PAGE_GAP } = await import("../shared/pages");
-    const editor = await import(
-      "../../../packages/excalidraw/data/pageSetup"
-    );
+    const editor = await import("../../../packages/excalidraw/data/pageSetup");
     expect(Object.keys(PAGE_SIZES).sort()).toEqual(
       [...editor.PAGE_SIZE_PRESET_IDS].sort(),
     );
@@ -540,8 +538,9 @@ describe("API 0.8.0 tables equal the editor's", () => {
       "../../../packages/common/src/index"
     );
     for (const [family, lh] of Object.entries(LINE_HEIGHTS)) {
-      expect(getLineHeight(FONT_FAMILY[family as keyof typeof FONT_FAMILY]))
-        .toBe(lh);
+      expect(
+        getLineHeight(FONT_FAMILY[family as keyof typeof FONT_FAMILY]),
+      ).toBe(lh);
     }
   });
 });
