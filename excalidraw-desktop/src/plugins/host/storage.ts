@@ -16,7 +16,7 @@ import {
   composeStorage,
   encodeStorageValue,
   storageEntryBytes,
-} from "../../../../sdk/api/testing/rules";
+} from "../../../../sdk/api/shared/rules";
 
 import type { Json, StorageScope } from "../api";
 

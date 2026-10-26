@@ -345,6 +345,44 @@ describe("mock host: events and scene", () => {
     expect(p.log()[0].text).toBe(`scene.batch: ${error}`);
   });
 
+  it("scene.batch and createDrawing use plugins.scene_max_ops like the app", async () => {
+    const rects = (n: number) =>
+      Array.from({ length: n }, () => ({
+        op: "add" as const,
+        element: { type: "rectangle" as const, width: 10, height: 10 },
+      }));
+    const run = async (n: number, sceneMaxOps?: number) => {
+      const out: string[] = [];
+      await p?.dispose();
+      p = await boot(
+        { id: "a", permissions: ["vault.write"], contributes: commands("go") },
+        withCommand(async (ctx) => {
+          for (const call of [
+            () => ctx.scene.batch(rects(n)),
+            () => ctx.vault.createDrawing(`n${n}.excalidraw`, rects(n)),
+          ]) {
+            out.push(
+              await call().then(
+                () => "ok",
+                (e: Error) => e.message,
+              ),
+            );
+          }
+        }),
+        { sceneMaxOps },
+      );
+      await p.run("go");
+      return out;
+    };
+    const tooMany = (max: number) =>
+      `op -1: at most ${max} ops per batch (plugins.scene_max_ops)`;
+    expect(await run(500)).toEqual(["ok", "ok"]);
+    expect(await run(501)).toEqual([tooMany(500), tooMany(500)]);
+    expect(await run(501, 1000)).toEqual(["ok", "ok"]);
+    expect(await run(3, 2)).toEqual([tooMany(2), tooMany(2)]);
+    expect(await run(501, 5000)).toEqual([tooMany(500), tooMany(500)]);
+  });
+
   it("scene.batch writes one batch and the plugin reads it back", async () => {
     let ids: string[] = [];
     let seen = 0;

@@ -2,7 +2,7 @@
 
 Test your plugin under vitest with no app running. `boot` starts it in memory against a mock host: a fake scene, event bus, settings and toasts.
 
-> **Status.** `@vaultdraw/api/testing` is not on npm yet (like `vaultdraw-plugin`). `init --template` copies the kit into your project as `vaultdraw/testing/`, and the template's `tsconfig.json` and `vitest.config.ts` map `@vaultdraw/api/testing` to it. In this repo, the vitest alias points the same import at the in-repo host kit (see [Same tests, real host](#same-tests-real-host)). The calls below are the same in all three.
+> **Status.** `@vaultdraw/api/testing` is not on npm yet (like `vaultdraw-plugin`). `init --template` copies the kit into your project as `vaultdraw/testing/` (with `vaultdraw/shared/`, the rules it shares with the app), and the template's `tsconfig.json` and `vitest.config.ts` map `@vaultdraw/api/testing` to it. In this repo, the vitest alias points the same import at the in-repo host kit (see [Same tests, real host](#same-tests-real-host)). The calls below are the same in all three.
 
 ## A first test
 
@@ -48,6 +48,8 @@ it("says hello", async () => {
 4. `dispose()` in `afterEach` removes everything the test created.
 
 The manifest argument takes `id` and what your test needs: `name` (default: the id), `version` (default `0.1.0`), `dir`, `activation`, `dev` and `contributes`. Commands and panels may be bare `{ id }`; their title defaults to the id. A parsed `plugin.toml` fits too. The examples in `sdk/examples/*/main.test.ts` read their own `plugin.toml` with `readExample`.
+
+A third argument sets the app settings a user would set in `config.toml`: `boot(manifest, plugin, { sceneMaxOps: 1000 })` is `plugins.scene_max_ops = 1000` (ops per scene batch, 1 to 1000, default 500; another value is ignored, as the app's config ignores it). The mock applies the same limit as the app, to `ctx.scene.batch`, imports and `ctx.vault.createDrawing`.
 
 ## What a booted plugin offers
 

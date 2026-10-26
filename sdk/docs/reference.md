@@ -208,7 +208,7 @@ Notes:
   | `INVALID_ARGUMENT` | An op is invalid. `issues` (`SceneOpIssue[]`: op index, key, message) lists every problem. Nothing is written. |
 
 - Events are delivered in order, on a microtask. Paths are vault-relative.
-- `ctx.host.has(name)` asks for a feature, not a version (like `has('nvim-0.9')` in Neovim). Names are a `ctx` member (`"theme"`), a member of one (`"theme.tokens"`) or an app event (`"drawing.saved"`). Unknown names give `false`. The list is generated from the `@since` tags (`sdk/api/testing/features.ts`).
+- `ctx.host.has(name)` asks for a feature, not a version (like `has('nvim-0.9')` in Neovim). Names are a `ctx` member (`"theme"`), a member of one (`"theme.tokens"`) or an app event (`"drawing.saved"`). Unknown names give `false`. The list is generated from the `@since` tags (`sdk/api/shared/features.ts`).
 - `ctx.theme.tokens()` returns what the document shows now, as CSS strings: some are `rgba(...)` colours or shadows, not only `#rrggbb`. The table is frozen and is as of the last theme change (a CSS snippet that edits `--vault-*` by itself is not seen); read it again after `onChange`. The 41 names are API; each is described in [theme-tokens.md](theme-tokens.md).
 - `ctx.host` and `ctx.theme` are built on first read, and nothing listens to theme changes until you call `onChange`. A plugin that never touches them pays nothing.
 - `ctx.storage.global` keeps data between runs, like Obsidian's `loadData`/`saveData` with VS Code's `globalState` interface. It is one JSON object per plugin in the app's state folder (`plugin-data/<id>/data.json`), the same in every vault, never inside a vault and not part of your config files.

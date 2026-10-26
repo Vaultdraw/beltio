@@ -11,9 +11,15 @@ import { createMockHost } from "./host";
 import { loadPanelDeps } from "./panels";
 
 import type { Plugin } from "@vaultdraw/api";
-import type { TestManifest, TestPlugin, TestPluginInfo } from "./types";
+import type {
+  BootOptions,
+  TestManifest,
+  TestPlugin,
+  TestPluginInfo,
+} from "./types";
 
 export type {
+  BootOptions,
   FakeBatch,
   FakeElement,
   FakeElementInput,
@@ -72,15 +78,16 @@ const normalise = (m: TestManifest) => {
   return info;
 };
 
-/** Boots `plugin` with `manifest` in a mock host (activation stays lazy unless the manifest says otherwise). */
+/** Boots `plugin` with `manifest` in a mock host (activation stays lazy unless the manifest says otherwise). `options` are the app settings of the test. */
 export async function boot(
   manifest: TestManifest,
   plugin: Plugin,
+  options: BootOptions = {},
 ): Promise<TestPlugin> {
   const info = normalise(manifest);
   const deps =
     info.contributes.panels.length > 0 ? await loadPanelDeps() : null;
-  const host = createMockHost(info, plugin, deps);
+  const host = createMockHost(info, plugin, deps, options);
   await host.startup();
 
   /** Timers, microtasks and one frame; fake timers (sinon based) are advanced. */

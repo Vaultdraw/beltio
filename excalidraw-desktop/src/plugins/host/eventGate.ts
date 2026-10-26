@@ -1,5 +1,5 @@
 /** `ctx.events` with the permission check of `vault.changed` in front. */
-import { permissionError } from "../../../../sdk/api/testing/vault";
+import { permissionError } from "../../../../sdk/api/shared/vaultPaths";
 
 import { reportPluginError } from "./errors";
 import { createEventsApi } from "./sceneContext";

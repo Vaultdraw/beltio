@@ -12,7 +12,7 @@ import {
 } from "../../sceneOps";
 import { getActiveScene, subscribeScene } from "../../sceneOps/sceneBus";
 
-import { PluginApiError } from "../../../../sdk/api/testing/rules";
+import { PluginApiError } from "../../../../sdk/api/shared/rules";
 
 import { errorText, logLine, reportPluginError } from "./errors";
 import { guard } from "./guard";

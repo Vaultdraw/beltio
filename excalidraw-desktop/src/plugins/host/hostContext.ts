@@ -1,5 +1,5 @@
 /** `ctx.host`: app version, API level and revision, and `has(feature)`. */
-import { API_REVISION, FEATURES } from "../../../../sdk/api/testing/features";
+import { API_REVISION, FEATURES } from "../../../../sdk/api/shared/features";
 import { APP_VERSION } from "../../appVersion";
 
 import type { HostApi } from "../api";

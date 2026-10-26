@@ -9,7 +9,7 @@ import {
   IMAGE_MIMES,
   MAX_DRAWING_BYTES,
   MAX_IMAGE_BYTES,
-} from "../../../sdk/api/testing/sceneRules";
+} from "../../../sdk/api/shared/sceneRules";
 import {
   DRAWING_BYTES_HEADROOM as PDF_HEADROOM,
   MAX_DRAWING_BYTES as PDF_MAX,

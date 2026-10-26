@@ -22,6 +22,7 @@ import { toastStore } from "../../toasts/toastStore";
 import { notifyAppearanceChanged } from "../../vault/appearance";
 import {
   DEFAULT_PLUGIN_STORAGE_KB,
+  DEFAULT_SCENE_MAX_OPS,
   updatePreferences,
 } from "../../vault/preferences";
 import { getPluginLog } from "../host/errors";
@@ -223,7 +224,12 @@ const resetFakeTheme = () => {
 export async function boot(
   manifest: TestManifest,
   module: Plugin,
+  /** App settings of the test, as in the mock host: `sceneMaxOps` is `plugins.scene_max_ops`. */
+  options: { sceneMaxOps?: number } = {},
 ): Promise<TestPlugin> {
+  if (options.sceneMaxOps !== undefined) {
+    updatePreferences({ pluginsSceneMaxOps: options.sceneMaxOps });
+  }
   const info = normalise(manifest);
   const id = info.id;
   const { backend } = setupHost([info], { [id]: module });
@@ -370,6 +376,7 @@ export async function boot(
       updatePreferences({
         pluginsEnabled: [],
         pluginsStorageLimitKb: DEFAULT_PLUGIN_STORAGE_KB,
+        pluginsSceneMaxOps: DEFAULT_SCENE_MAX_OPS,
       });
       resetFakeTheme();
     },

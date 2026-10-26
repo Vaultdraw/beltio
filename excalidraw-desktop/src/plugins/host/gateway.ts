@@ -5,7 +5,7 @@
  * (src-tauri/src/plugins/gateway.rs); errors arrive as `{ code, message }`
  * and are rethrown as an Error with `code` (and any detail, such as `reason`).
  */
-import { PluginApiError } from "../../../../sdk/api/testing/rules";
+import { PluginApiError } from "../../../../sdk/api/shared/rules";
 
 import { getPluginsBackend } from "./backend";
 import { recordGatewayCall } from "./cost";

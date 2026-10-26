@@ -17,7 +17,7 @@ export type {
 } from "../../../sdk/api/src/index";
 
 /** Thrown before anything is written; lists every problem found. */
-export { SceneOpsError } from "../../../sdk/api/testing/sceneRules";
+export { SceneOpsError } from "../../../sdk/api/shared/sceneRules";
 
 /** The adapter seam: the only editor surface the core touches. */
 export type SceneApi = Pick<

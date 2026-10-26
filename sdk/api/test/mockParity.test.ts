@@ -1,5 +1,5 @@
 /**
- * The mock host writes the host's pure rules again (sdk/api/testing/rules.ts).
+ * The mock host writes the host's pure rules again (sdk/api/shared/rules.ts).
  * These tables run the same cases through the app's code and through the mock
  * and require equal results, so a change on one side fails here.
  */
@@ -26,8 +26,8 @@ import {
   pushToast,
   validateSettingValue,
   type MockToast,
-} from "../testing/rules";
-import { validateOps } from "../testing/sceneRules";
+} from "../shared/rules";
+import { validateOps } from "../shared/sceneRules";
 
 import type { Plugin } from "../src/index";
 import type { TestManifest, TestPlugin as SdkTestPlugin } from "../testing";
@@ -143,7 +143,7 @@ describe("parity: toast queue", () => {
 });
 
 describe("parity: scene ops", () => {
-  it("the app and the mock share one validator (sdk/api/testing/sceneRules.ts)", () => {
+  it("the app and the mock share one validator (sdk/api/shared/sceneRules.ts)", () => {
     expect(realValidateOps).toBe(validateOps);
   });
 

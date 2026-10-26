@@ -1,4 +1,4 @@
-import { PluginApiError } from "./rules";
+import { PluginApiError } from "../shared/rules";
 import {
   imageBudget,
   imageDataUrlBytes,
@@ -7,7 +7,7 @@ import {
   MAX_IMAGE_BYTES,
   SceneOpsError,
   validateOps,
-} from "./sceneRules";
+} from "../shared/sceneRules";
 
 import type {
   BatchResult,
@@ -207,7 +207,11 @@ const isFull = (e: FakeElementInput | FakeElement): e is FakeElement =>
   "version" in e;
 
 /** The fake editor plus the plugin-facing scene API. */
-export function createSceneModel(initialPath: string | null): SceneModel {
+export function createSceneModel(
+  initialPath: string | null,
+  /** `plugins.scene_max_ops` of the test (undefined: the app's default). */
+  maxOps: () => number | undefined = () => undefined,
+): SceneModel {
   let elements: El[] = [];
   let path = initialPath;
   let readOnly = false;
@@ -324,6 +328,7 @@ export function createSceneModel(initialPath: string | null): SceneModel {
     validateOps(ops, byId, {
       dataKey: dataKey ?? null,
       allowImages: hashes !== undefined,
+      maxOps: maxOps(),
     });
     const fileIds = new Map<object, string>();
     const fresh = new Map<string, { mime: string; bytes: Uint8Array }>();

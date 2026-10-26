@@ -1,6 +1,6 @@
 /** `ctx.workspace`: open a drawing and read the active path, through the shell's bridge. */
-import { PluginApiError } from "../../../../sdk/api/testing/rules";
-import { checkVaultPath } from "../../../../sdk/api/testing/vault";
+import { PluginApiError } from "../../../../sdk/api/shared/rules";
+import { checkVaultPath } from "../../../../sdk/api/shared/vaultPaths";
 import { getWorkspaceBridge } from "../workspaceBridge";
 
 import type { WorkspaceApi } from "../api";

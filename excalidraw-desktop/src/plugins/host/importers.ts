@@ -31,7 +31,7 @@ import {
   makeImportInput,
   MAX_IMPORT_BYTES,
   resultOps,
-} from "../../../../sdk/api/testing/importers";
+} from "../../../../sdk/api/shared/importers";
 
 import { ensureActive, getRuntime } from "./activation";
 import { errorText, logLine, reportPluginError } from "./errors";

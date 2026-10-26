@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { checkVaultPath } from "../../../../sdk/api/testing/vault";
+import { checkVaultPath } from "../../../../sdk/api/shared/vaultPaths";
 
 import { appEvents } from "../../events/appEvents";
 import { setWorkspaceBridge } from "../workspaceBridge";

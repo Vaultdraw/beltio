@@ -1,6 +1,6 @@
 /**
  * Pure, all-or-nothing validation of a batch of scene ops. One copy for the
- * app, the control API and the plugin mock host: sdk/api/testing/sceneRules.ts.
+ * app, the control API and the plugin mock host: sdk/api/shared/sceneRules.ts.
  */
 export {
   dataKeyFor,
@@ -14,8 +14,8 @@ export {
   MAX_TEXT,
   opsLimit,
   validateOps,
-} from "../../../sdk/api/testing/sceneRules";
+} from "../../../sdk/api/shared/sceneRules";
 export type {
   OpTarget,
   ValidateOptions,
-} from "../../../sdk/api/testing/sceneRules";
+} from "../../../sdk/api/shared/sceneRules";

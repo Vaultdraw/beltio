@@ -1,4 +1,3 @@
-import { panelsRoot, type PanelDeps } from "./panels";
 import {
   allowsScope,
   declProblem,
@@ -14,8 +13,8 @@ import {
   undeclaredMessage,
   validateSettingValue,
   type MockToast,
-} from "./rules";
-import { API_REVISION, FEATURES } from "./features";
+} from "../shared/rules";
+import { API_REVISION, FEATURES } from "../shared/features";
 import {
   baseName,
   importBusyMessage,
@@ -28,10 +27,14 @@ import {
   makeImportInput,
   MAX_IMPORT_BYTES,
   resultOps,
-} from "./importers";
+} from "../shared/importers";
+
+import { dataKeyFor, MAX_OPS_LIMIT } from "../shared/sceneRules";
+import { permissionError } from "../shared/vaultPaths";
+
 import { createSceneModel } from "./scene";
-import { dataKeyFor } from "./sceneRules";
-import { createVaultModel, permissionError } from "./vault";
+import { panelsRoot, type PanelDeps } from "./panels";
+import { createVaultModel } from "./vault";
 
 import type {
   AppEventMap,
@@ -52,6 +55,7 @@ import type {
 import type { ComponentType } from "react";
 import type { RenderResult } from "@testing-library/react";
 import type {
+  BootOptions,
   FakeBatch,
   FakeScene,
   FakeStorage,
@@ -132,11 +136,22 @@ export function createMockHost(
   },
   plugin: Plugin,
   deps: PanelDeps | null,
+  options: BootOptions = {},
 ): MockHost {
   const id = info.id;
   const dataKey = dataKeyFor(id, info.dataKey);
-  const scene = createSceneModel("fake.excalidraw");
-  const vault = createVaultModel();
+  // The same limit as the app's host: `plugins.scene_max_ops`, where a value that is not
+  // a whole number from 1 to MAX_OPS_LIMIT is refused by the config and the default applies.
+  const requested = options.sceneMaxOps;
+  const sceneMaxOps =
+    Number.isInteger(requested) &&
+    requested! >= 1 &&
+    requested! <= MAX_OPS_LIMIT
+      ? requested
+      : undefined;
+  const maxOps = () => sceneMaxOps;
+  const scene = createSceneModel("fake.excalidraw", maxOps);
+  const vault = createVaultModel(maxOps);
   // The scene model keeps its path private; the host needs it for imports and ctx.workspace.
   let activePath: string | null = "fake.excalidraw";
   let sceneReadOnly = false;

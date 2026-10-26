@@ -194,12 +194,16 @@ function initTemplate(id, template, parent, out) {
     "vaultdraw/vaultdraw-api.d.ts",
     wrapApiTypes(readFileSync(surfaceFile, "utf8")),
   );
-  // The test kit: a few .ts/.tsx files, copied as they are (tests of the kit stay behind).
-  const kit = path.join(sdkRoot(), "api", "testing");
-  if (existsSync(kit) && statSync(kit).isDirectory()) {
+  // The test kit and the rules it shares with the app: a few .ts/.tsx files, copied as they
+  // are (tests of the kit stay behind). `testing/` imports `../shared/`.
+  for (const dir of ["testing", "shared"]) {
+    const kit = path.join(sdkRoot(), "api", dir);
+    if (!existsSync(kit) || !statSync(kit).isDirectory()) {
+      continue;
+    }
     for (const f of allFiles(kit).filter((f) => !/\.test\./.test(f))) {
       put(
-        `vaultdraw/testing/${f}`,
+        `vaultdraw/${dir}/${f}`,
         readFileSync(path.join(kit, ...f.split("/"))),
       );
     }

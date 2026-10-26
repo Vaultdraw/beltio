@@ -6,8 +6,8 @@ import type { ExcalidrawElement } from "@excalidraw/element/types";
 import {
   checkVaultPath,
   requirePermission,
-} from "../../../../sdk/api/testing/vault";
-import { utf8Length } from "../../../../sdk/api/testing/rules";
+} from "../../../../sdk/api/shared/vaultPaths";
+import { utf8Length } from "../../../../sdk/api/shared/rules";
 import {
   buildBatch,
   dataKeyFor,

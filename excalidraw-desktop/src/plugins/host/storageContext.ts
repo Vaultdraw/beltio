@@ -2,7 +2,7 @@
 import { toastStore } from "../../toasts/toastStore";
 import { getPreferences } from "../../vault/preferences";
 
-import { utf8Length } from "../../../../sdk/api/testing/rules";
+import { utf8Length } from "../../../../sdk/api/shared/rules";
 
 import { errorText, logLine } from "./errors";
 import { createGateway } from "./gateway";

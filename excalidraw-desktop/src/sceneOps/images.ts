@@ -20,8 +20,8 @@ import {
   MAX_DRAWING_BYTES,
   MAX_IMAGE_BYTES,
   opsLimit,
-} from "../../../sdk/api/testing/sceneRules";
-import { PluginApiError } from "../../../sdk/api/testing/rules";
+} from "../../../sdk/api/shared/sceneRules";
+import { PluginApiError } from "../../../sdk/api/shared/rules";
 import { currentDrawingBytes } from "../pdfImport/budget";
 
 import type { SceneApi, SceneOp } from "./types";

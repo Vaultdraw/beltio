@@ -56,6 +56,12 @@ export interface TestManifest {
   };
 }
 
+/** App settings the test sets for the mock host, as a user would in `config.toml`. */
+export interface BootOptions {
+  /** `plugins.scene_max_ops`: ops per scene batch, 1 to 1000 (default 500), as in the app. */
+  sceneMaxOps?: number;
+}
+
 /** One line of the plugin's log (`ctx.log` and errors attributed to it). */
 export interface PluginLogLine {
   level: "debug" | "info" | "warn" | "error";
