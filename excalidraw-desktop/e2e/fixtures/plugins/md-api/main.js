@@ -2,7 +2,8 @@ import { createElement as h, useState } from "react";
 
 // Plugin API 0.8.0 through one button: parse a note, measure, paginate, and
 // import CodeMirror through the lazy shared module.
-const NOTE = "# Plan\n\nShip the parser #idea and link [[Roadmap|the roadmap]].";
+const NOTE =
+  "# Plan\n\nShip the parser #idea and link [[Roadmap|the roadmap]].";
 
 function MarkdownPanel({ ctx }) {
   const [out, setOut] = useState("");
@@ -14,10 +15,9 @@ function MarkdownPanel({ ctx }) {
       "abcd",
     ]);
     const page = ctx.pages.geometry({ size: "a4" });
-    const placed = ctx.pages.flow(
-      [{ height: 600 }, { height: 600 }],
-      { contentHeight: page.height - 100 },
-    );
+    const placed = ctx.pages.flow([{ height: 600 }, { height: 600 }], {
+      contentHeight: page.height - 100,
+    });
     const { EditorState } = await import("@codemirror/state");
     const cm = EditorState.create({ doc: NOTE }).doc.lines;
     setOut(
@@ -34,7 +34,11 @@ function MarkdownPanel({ ctx }) {
   return h(
     "div",
     { style: { padding: 12 } },
-    h("button", { onClick: () => run().catch((e) => setOut(`error: ${e}`)) }, "Parse sample"),
+    h(
+      "button",
+      { onClick: () => run().catch((e) => setOut(`error: ${e}`)) },
+      "Parse sample",
+    ),
     h("output", { "data-testid": "md-out" }, out),
   );
 }
