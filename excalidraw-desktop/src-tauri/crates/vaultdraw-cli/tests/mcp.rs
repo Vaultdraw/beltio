@@ -199,6 +199,11 @@ fn calls_reach_the_app_as_the_mcp_role() {
     let seen = fake.seen.lock().unwrap().clone();
     let hellos: Vec<&Value> = seen.iter().filter(|r| r["method"] == "rpc.hello").collect();
     assert!(!hellos.is_empty() && hellos.iter().all(|h| h["params"]["role"] == "mcp" && h["params"]["client"] == "cursor"));
+    // The role comes first on every connection, before the `--vault` check's vault.info.
+    for (i, r) in seen.iter().enumerate().filter(|(_, r)| r["method"] == "vault.info") {
+        assert!(i > 0 && seen[i - 1]["method"] == "rpc.hello", "vault.info before rpc.hello: {seen:?}");
+    }
+    assert!(seen.iter().any(|r| r["method"] == "vault.info"), "the --vault check ran");
     let read = seen.iter().find(|r| r["method"] == "scene.read").unwrap();
     assert_eq!(read["params"], json!({"scope": "viewport", "limit": 5}), "unknown arguments are dropped");
     let apply = seen.iter().find(|r| r["method"] == "scene.apply").unwrap();
