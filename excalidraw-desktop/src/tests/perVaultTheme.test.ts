@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { COMMANDS } from "../commands/commands";
 import { getRegisteredHandler } from "../commands/handlerRegistry";
+import { useVaultAppearance } from "../theme/useVaultAppearance";
+
 import { useVaultThemeCommands } from "../theme/useVaultThemeCommands";
 import { VAULT_THEME_COMMAND_IDS } from "../theme/vaultThemeCommands";
 
@@ -14,6 +16,8 @@ import {
   parseVaultSettings,
   resolveSettings,
 } from "../vault/vaultSettings";
+
+import type { VaultOverrides } from "../vault/vaultSettings";
 
 const global = Object.fromEntries(
   PER_VAULT_FIELDS.map((f) => [f, DEFAULT_PREFERENCES[f]]),
@@ -66,15 +70,18 @@ describe("per-vault theme", () => {
 });
 
 describe("per-vault theme commands", () => {
-  it("pin copies the shown theme, mode and accent; reset removes them", async () => {
-    const setOverride = vi.fn(async () => true);
+  it("pin copies the shown theme, mode and accent in one write; reset removes the overridden ones", async () => {
+    const setOverrides = vi.fn(async () => true);
     const vaultSettings = {
-      overrides: {},
+      overrides: { colorTheme: "Nord" },
+      loaded: true,
       problems: [],
       global,
       effective: { ...global, colorTheme: "Nord", theme: "dark" as const },
-      isOverridden: () => false,
-      setOverride,
+      isOverridden: (f: string) => f === "colorTheme",
+      setOverride: vi.fn(async () => true),
+      setOverrides,
+      setEffective: vi.fn(),
     };
     const notify = vi.fn();
     const { unmount } = renderHook(() =>
@@ -84,20 +91,49 @@ describe("per-vault theme commands", () => {
       expect.arrayContaining(Object.values(VAULT_THEME_COMMAND_IDS)),
     );
     await getRegisteredHandler(VAULT_THEME_COMMAND_IDS.pin)?.();
-    expect(setOverride.mock.calls).toEqual([
-      ["colorTheme", "Nord"],
-      ["theme", "dark"],
-      ["accentColor", ""],
+    expect(setOverrides.mock.calls).toEqual([
+      [{ colorTheme: "Nord", theme: "dark", accentColor: "" }],
     ]);
-    setOverride.mockClear();
     await getRegisteredHandler(VAULT_THEME_COMMAND_IDS.reset)?.();
-    expect(setOverride.mock.calls).toEqual([
-      ["colorTheme", null],
-      ["theme", null],
-      ["accentColor", null],
+    expect(setOverrides.mock.calls[1]).toEqual([{ colorTheme: null }]);
+    expect(notify.mock.calls.map((c) => c[0])).toEqual([
+      "This vault keeps its own theme",
+      "This vault uses the global theme",
     ]);
-    expect(notify).toHaveBeenCalledTimes(2);
+    setOverrides.mockResolvedValueOnce(false);
+    await getRegisteredHandler(VAULT_THEME_COMMAND_IDS.pin)?.();
+    expect(notify).toHaveBeenLastCalledWith(
+      "Could not save this vault's theme",
+    );
     unmount();
     expect(getRegisteredHandler(VAULT_THEME_COMMAND_IDS.pin)).toBeUndefined();
+  });
+});
+
+describe("vault appearance while settings.toml loads", () => {
+  it("uses the last overrides seen for the vault, then the loaded ones", () => {
+    window.localStorage.clear();
+    const { result, rerender } = renderHook(
+      (props: { loaded: boolean; overrides: VaultOverrides }) =>
+        useVaultAppearance(window, "vault-a", props),
+      {
+        initialProps: {
+          loaded: true,
+          overrides: {
+            theme: "dark",
+            navigatorSort: "name_desc",
+          } as VaultOverrides,
+        },
+      },
+    );
+    expect(result.current).toEqual({ theme: "dark" });
+    // Reopening: not loaded yet, the cache answers.
+    rerender({ loaded: false, overrides: {} });
+    expect(result.current).toEqual({ theme: "dark" });
+    // Loaded with no override: the global look, and the cache forgets it.
+    rerender({ loaded: true, overrides: {} });
+    expect(result.current).toEqual({});
+    rerender({ loaded: false, overrides: {} });
+    expect(result.current).toEqual({});
   });
 });

@@ -248,22 +248,18 @@ export const useSettingsController = ({
   }, [win]);
 
   // Theme, mode and accent can be per vault: in vault scope they edit the
-  // vault's settings.toml (scopedWrite), otherwise config as before.
-  const scopedWrite = (
-    field: "theme" | "colorTheme" | "accentColor",
-    value: string,
-  ): boolean => {
-    if (scope !== "vault") {
-      return false;
-    }
-    void vaultSettings.setOverride(field, value as never);
-    return true;
-  };
-
+  // vault's settings.toml through setScopedValue, otherwise config as before.
   const setMode = (next: VaultTheme) => {
-    if (!scopedWrite("theme", next)) {
+    if (scope === "vault") {
+      setScopedValue("theme", next);
+    } else {
       setModeState(next);
       setTheme(next, win);
+    }
+    // The window keeps the vault's mode while the vault overrides it.
+    if (scope === "global" && vaultSettings.isOverridden("theme")) {
+      onAppearanceChanged?.();
+      return;
     }
     const resolved = resolveTheme(next, win);
     const targetDoc =
@@ -276,7 +272,9 @@ export const useSettingsController = ({
   const selectColourTheme = (entry: ThemeEntry) => {
     // summary.key is the value stored in appearance.theme.
     const { key } = entry.summary;
-    if (!scopedWrite("colorTheme", key)) {
+    if (scope === "vault") {
+      setScopedValue("colorTheme", key);
+    } else {
       setColorThemeState(key);
       updatePreferences({ colorTheme: key }, win);
     }
@@ -290,7 +288,9 @@ export const useSettingsController = ({
   };
 
   const setAccentColor = (hex: string) => {
-    if (!scopedWrite("accentColor", hex)) {
+    if (scope === "vault") {
+      setScopedValue("accentColor", hex);
+    } else {
       setAccentColorState(hex);
       updatePreferences({ accentColor: hex }, win);
     }

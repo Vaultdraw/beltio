@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 
-import { getPreferences, subscribePreferences } from "./preferences";
+import {
+  getPreferences,
+  subscribePreferences,
+  updatePreferences,
+} from "./preferences";
 import {
   attachVaultSettings,
   detachVaultSettings,
@@ -8,7 +12,9 @@ import {
   PER_VAULT_FIELDS,
   resolveSettings,
   setVaultOverride,
+  setVaultOverrides,
   subscribeVaultSettings,
+  type VaultOverrideChanges,
   type EffectiveVaultSettings,
   type VaultField,
   type VaultOverrides,
@@ -26,8 +32,27 @@ const globalsKey = (win: Window | null | undefined): string => {
   return JSON.stringify(PER_VAULT_FIELDS.map((field) => prefs[field]));
 };
 
+/**
+ * Write `field` where its value lives: the vault's settings.toml when the
+ * vault overrides it, else the global config (overrides.toml).
+ */
+export const writeEffectiveSetting = <F extends VaultField>(
+  win: Window | null | undefined,
+  overrides: VaultOverrides,
+  field: F,
+  value: VaultPreferences[F],
+): void => {
+  if (overrides[field] !== undefined) {
+    void setVaultOverride(field, value);
+  } else {
+    updatePreferences({ [field]: value } as Partial<VaultPreferences>, win);
+  }
+};
+
 export interface UseVaultSettings {
   overrides: VaultOverrides;
+  /** The open vault's settings.toml has been read (false while it loads). */
+  loaded: boolean;
   problems: SettingsProblem[];
   /** The global (config.toml) values, whatever the vault overrides. */
   global: EffectiveVaultSettings;
@@ -37,6 +62,13 @@ export interface UseVaultSettings {
     field: F,
     value: VaultPreferences[F] | null,
   ) => Promise<boolean>;
+  /** Several overrides in one write: all or none. */
+  setOverrides: (changes: VaultOverrideChanges) => Promise<boolean>;
+  /** Write where the value lives (vault override or global). */
+  setEffective: <F extends VaultField>(
+    field: F,
+    value: VaultPreferences[F],
+  ) => void;
 }
 
 /**
@@ -81,13 +113,21 @@ export function useVaultSettings(
     (field: VaultField) => overrides[field] !== undefined,
     [overrides],
   );
+  const setEffective = useCallback(
+    <F extends VaultField>(field: F, value: VaultPreferences[F]) =>
+      writeEffectiveSetting(win, overrides, field, value),
+    [win, overrides],
+  );
 
   return {
     overrides,
+    loaded: current && snapshot.loaded,
     problems,
     global,
     effective,
     isOverridden,
     setOverride: setVaultOverride,
+    setOverrides: setVaultOverrides,
+    setEffective,
   };
 }

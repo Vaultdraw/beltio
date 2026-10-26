@@ -6,11 +6,17 @@ import {
   PER_VAULT_FIELDS,
   resolveSettings,
   setVaultOverride,
+  setVaultOverrides,
   subscribeVaultSettings,
   type VaultField,
 } from "./vaultSettings";
 
-import type { UseVaultSettings } from "./useVaultSettings";
+import {
+  writeEffectiveSetting,
+  type UseVaultSettings,
+} from "./useVaultSettings";
+
+import type { VaultPreferences } from "./preferences";
 
 /** The global values of the per-vault fields as one comparable string. */
 const globalsKey = (win: Window | null | undefined): string => {
@@ -25,7 +31,7 @@ const globalsKey = (win: Window | null | undefined): string => {
 export function useVaultSettingsView(
   win: Window | null | undefined,
 ): UseVaultSettings {
-  const { overrides, problems } = useSyncExternalStore(
+  const { overrides, problems, loaded } = useSyncExternalStore(
     subscribeVaultSettings,
     getVaultSettingsSnapshot,
   );
@@ -49,12 +55,21 @@ export function useVaultSettingsView(
     [overrides],
   );
 
+  const setEffective = useCallback(
+    <F extends VaultField>(field: F, value: VaultPreferences[F]) =>
+      writeEffectiveSetting(win, overrides, field, value),
+    [win, overrides],
+  );
+
   return {
     overrides,
+    loaded,
     problems,
     global,
     effective,
     isOverridden,
     setOverride: setVaultOverride,
+    setOverrides: setVaultOverrides,
+    setEffective,
   };
 }

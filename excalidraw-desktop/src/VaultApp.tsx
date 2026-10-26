@@ -54,7 +54,6 @@ import {
   removeRecentVault,
   setExpandedFolders as saveExpandedFolders,
   setNavigatorCollapsed as saveNavigatorCollapsed,
-  setTheme,
   updatePreferences,
 } from "./vault/preferences";
 import { getNewDrawingPaper } from "./vault/newDrawingPaper";
@@ -107,6 +106,7 @@ import { TabStrip } from "./tabs/TabStrip";
 import { useLayout, type Layout } from "./layout/useLayout";
 import { useUserCommands } from "./commands/useUserCommands";
 import { useVaultThemeCommands } from "./theme/useVaultThemeCommands";
+import { useVaultAppearance } from "./theme/useVaultAppearance";
 import { ActiveTabGate } from "./tabs/ActiveTabGate";
 import "./tabs/editorBody.css";
 import { ancestorFolders } from "./tabs/revealPath";
@@ -423,11 +423,11 @@ export const VaultApp = ({
   const vaultSettings = useVaultSettings(win, vault);
   // Colour theme + mode: tokens, html.dark, canvas sync (see useAppearance);
   // the vault may override theme, mode and accent.
-  const appearance = useAppearance(doc, win, {
-    colorTheme: vaultSettings.overrides.colorTheme,
-    theme: vaultSettings.overrides.theme,
-    accentColor: vaultSettings.overrides.accentColor,
-  });
+  const appearance = useAppearance(
+    doc,
+    win,
+    useVaultAppearance(win, vault?.handle ?? null, vaultSettings),
+  );
   useSnippets(doc, win);
   const { refresh: refreshAppearance } = appearance;
   const appTheme = appearance.snapshot.mode;
@@ -453,17 +453,14 @@ export const VaultApp = ({
     activityBarHidden,
   );
 
+  const { setEffective: setEffectiveSetting } = vaultSettings;
   const handleCanvasThemeChange = useCallback(
     (newTheme: "light" | "dark" | "system") => {
       // Write where the value lives: this vault if it overrides the mode.
-      if (vaultSettings.isOverridden("theme")) {
-        void vaultSettings.setOverride("theme", newTheme);
-      } else {
-        setTheme(newTheme, win);
-      }
+      setEffectiveSetting("theme", newTheme);
       refreshAppearance();
     },
-    [win, refreshAppearance, vaultSettings],
+    [refreshAppearance, setEffectiveSetting],
   );
 
   // Stable identities keep VaultEditor's memo intact across autosave status ticks.
@@ -2369,11 +2366,7 @@ export const VaultApp = ({
     colorTheme: vaultSettings.effective.colorTheme,
     // Write where the value lives: this vault if it overrides the theme.
     selectTheme: (key) => {
-      if (vaultSettings.isOverridden("colorTheme")) {
-        void vaultSettings.setOverride("colorTheme", key);
-      } else {
-        updatePreferences({ colorTheme: key }, win);
-      }
+      setEffectiveSetting("colorTheme", key);
       refreshAppearance();
     },
   };

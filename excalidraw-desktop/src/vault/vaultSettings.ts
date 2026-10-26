@@ -394,48 +394,72 @@ export function detachVaultSettings(): void {
  * true when the write succeeded, false when it was refused (the problem is
  * recorded in the snapshot).
  */
-export async function setVaultOverride<F extends VaultField>(
+export function setVaultOverride<F extends VaultField>(
   field: F,
   value: VaultPreferences[F] | null,
+): Promise<boolean> {
+  return setVaultOverrides({ [field]: value } as VaultOverrideChanges);
+}
+
+/** Several fields at once: `null` removes a field's override. */
+export type VaultOverrideChanges = {
+  [F in VaultField]?: VaultPreferences[F] | null;
+};
+
+/**
+ * Like setVaultOverride for several fields, in one file write and one reload,
+ * so they change together or not at all.
+ */
+export async function setVaultOverrides(
+  changes: VaultOverrideChanges,
 ): Promise<boolean> {
   const s = session;
   if (!s) {
     return false;
   }
-  const { key, valid, expected } = mappingOf(field);
-  if (value !== null && !valid(value)) {
-    s.writeProblems = [
-      {
-        kind: "invalid",
-        key,
-        message: `settings.toml: ${key} = ${show(
-          value,
-        )} is not valid (expected ${describe(expected, value)})`,
-      },
-    ];
-    publish(s, snapshot.loaded);
-    return false;
+  const entries = Object.entries(changes) as [VaultField, unknown][];
+  for (const [field, value] of entries) {
+    const { key, valid, expected } = mappingOf(field);
+    if (value !== null && !valid(value)) {
+      s.writeProblems = [
+        {
+          kind: "invalid",
+          key,
+          message: `settings.toml: ${key} = ${show(
+            value,
+          )} is not valid (expected ${describe(expected, value)})`,
+        },
+      ];
+      publish(s, snapshot.loaded);
+      return false;
+    }
   }
   s.generation++; // any in-flight load predates this edit
-  const overrides = { ...s.overrides };
-  if (value === null) {
-    delete overrides[field];
-  } else {
-    overrides[field] = value;
+  const overrides: Record<string, unknown> = { ...s.overrides };
+  for (const [field, value] of entries) {
+    if (value === null) {
+      delete overrides[field];
+    } else {
+      overrides[field] = value;
+    }
   }
-  s.overrides = overrides;
+  s.overrides = overrides as VaultOverrides;
   if (!s.invoke) {
     publish(s, true);
     return true;
   }
   s.writeProblems = [];
   publish(s, snapshot.loaded);
+  const keys = entries.map(([field]) => mappingOf(field).key);
   return enqueue(s, async () => {
     let ok = true;
     try {
       await s.invoke!("update_vault_settings", {
         handle: s.handle,
-        changes: [{ key, value }],
+        changes: entries.map(([field, value]) => ({
+          key: mappingOf(field).key,
+          value,
+        })),
       });
     } catch (error) {
       ok = false;
@@ -443,10 +467,10 @@ export async function setVaultOverride<F extends VaultField>(
         s.writeProblems = [
           {
             kind: "io",
-            key,
-            message: `settings.toml: could not save ${key}: ${messageOf(
-              error,
-            )}`,
+            key: keys[0],
+            message: `settings.toml: could not save ${keys.join(
+              ", ",
+            )}: ${messageOf(error)}`,
           },
         ];
       }
