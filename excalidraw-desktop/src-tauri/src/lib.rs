@@ -822,6 +822,13 @@ pub fn run() {
                 #[cfg(feature = "smoke-test")]
                 smoke::harden_test_webview(&main_window);
                 // Hang watchdog: hooks WebKit's responsiveness callbacks; no thread or timer.
+                // Test builds skip it (an unanswered modal dialog would stall a smoke or perf
+                // run on a loaded machine) unless VAULTDRAW_WATCHDOG=1 asks for it.
+                #[cfg(feature = "smoke-test")]
+                if std::env::var("VAULTDRAW_WATCHDOG").as_deref() == Ok("1") {
+                    watchdog::install(&main_window);
+                }
+                #[cfg(not(feature = "smoke-test"))]
                 watchdog::install(&main_window);
                 // Memory pressure: return free pages and let the webview purge its caches.
                 pressure::start(app.handle());

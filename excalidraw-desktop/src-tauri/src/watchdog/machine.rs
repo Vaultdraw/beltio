@@ -61,6 +61,8 @@ pub enum Event {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
+    /// A new hang: note its start time (for the record).
+    HangStarted,
     /// Sleep this long, then send `GraceElapsed` with the same generation.
     StartGrace { generation: u64, waits: u32 },
     ShowDialog,
@@ -81,11 +83,13 @@ pub struct Machine {
     waits: u32,
     /// The dialog was shown in this hang, and the last choice made in it.
     last_choice: Option<Choice>,
+    /// CloseDialog was already sent for the open dialog (WebKit may flip twice in one loop).
+    close_sent: bool,
 }
 
 impl Machine {
     pub const fn new() -> Self {
-        Self { generation: 0, unresponsive: false, dialog_open: false, waits: 0, last_choice: None }
+        Self { generation: 0, unresponsive: false, dialog_open: false, waits: 0, last_choice: None, close_sent: false }
     }
 
     #[cfg(test)]
@@ -103,17 +107,19 @@ impl Machine {
                 self.unresponsive = true;
                 self.waits = 0;
                 self.last_choice = None;
-                vec![self.grace()]
+                vec![Action::HangStarted, self.grace()]
             }
             Event::Responsive => {
                 self.generation += 1;
                 let was = std::mem::replace(&mut self.unresponsive, false);
                 let mut actions = Vec::new();
-                if self.dialog_open {
+                let closing = self.dialog_open && !self.close_sent;
+                if closing {
+                    self.close_sent = true;
                     actions.push(Action::CloseDialog);
                 }
                 // The hang reached the dialog: record how it ended.
-                if was && (self.last_choice.take().is_some() || self.dialog_open) {
+                if was && (self.last_choice.take().is_some() || closing) {
                     actions.push(Action::Record(Choice::Recovered));
                 }
                 self.waits = 0;
@@ -132,15 +138,18 @@ impl Machine {
                     return Vec::new();
                 }
                 if !check.enabled {
-                    // Off: ignore this hang until WebKit says it is over (a duplicate signal does
-                    // nothing); the next hang reads the setting again.
+                    // Off: forget this hang (WebKit may never send Responsive, e.g. after a crash);
+                    // the next signal reads the setting again.
+                    self.generation += 1;
+                    self.unresponsive = false;
                     return Vec::new();
                 }
                 if !check.visible || check.slept {
-                    self.waits = self.waits.saturating_add(1);
+                    // Look again after one more grace; the Wait back-off is for Wait answers only.
                     return vec![self.grace()];
                 }
                 self.dialog_open = true;
+                self.close_sent = false;
                 vec![Action::ShowDialog]
             }
             Event::DialogClosed(choice) => {
@@ -148,6 +157,7 @@ impl Machine {
                     return Vec::new();
                 }
                 self.dialog_open = false;
+                self.close_sent = false;
                 match choice {
                     Choice::Quit => vec![Action::Record(Choice::Quit), Action::Quit],
                     Choice::Wait => {
@@ -178,7 +188,7 @@ mod tests {
 
     fn start(m: &mut Machine) -> u64 {
         match m.on(Event::Unresponsive).as_slice() {
-            [Action::StartGrace { generation, waits: 0 }] => *generation,
+            [Action::HangStarted, Action::StartGrace { generation, waits: 0 }] => *generation,
             other => panic!("expected a grace, got {other:?}"),
         }
     }
@@ -227,8 +237,8 @@ mod tests {
         let mut m = Machine::new();
         let g = start(&mut m);
         assert!(elapsed(&mut m, g, Check { enabled: false, ..HUNG }).is_empty());
-        assert!(m.on(Event::Unresponsive).is_empty(), "same hang, no new grace");
-        assert!(m.on(Event::Responsive).is_empty());
+        assert!(elapsed(&mut m, g, HUNG).is_empty(), "the hang is forgotten");
+        // No Responsive ever comes (the web process crashed): the next signal still works.
         start(&mut m);
     }
 
@@ -236,9 +246,10 @@ mod tests {
     fn hidden_or_asleep_rechecks_later_with_backoff() {
         let mut m = Machine::new();
         let g = start(&mut m);
-        assert_eq!(elapsed(&mut m, g, Check { visible: false, ..HUNG }), [Action::StartGrace { generation: g, waits: 1 }]);
-        assert_eq!(elapsed(&mut m, g, Check { slept: true, ..HUNG }), [Action::StartGrace { generation: g, waits: 2 }]);
+        assert_eq!(elapsed(&mut m, g, Check { visible: false, ..HUNG }), [Action::StartGrace { generation: g, waits: 0 }]);
+        assert_eq!(elapsed(&mut m, g, Check { slept: true, ..HUNG }), [Action::StartGrace { generation: g, waits: 0 }]);
         assert_eq!(elapsed(&mut m, g, HUNG), [Action::ShowDialog]);
+        assert_eq!(m.on(Event::DialogClosed(Choice::Wait)), [Action::StartGrace { generation: g, waits: 1 }], "Wait backs off from the start");
     }
 
     #[test]
@@ -260,7 +271,19 @@ mod tests {
         assert!(m.on(Event::DialogClosed(Choice::Recovered)).is_empty());
         assert!(!m.dialog_open());
         // The back-off resets: the next hang starts at the base grace.
-        assert_eq!(m.on(Event::Unresponsive), [Action::StartGrace { generation: g + 2, waits: 0 }]);
+        assert_eq!(m.on(Event::Unresponsive), [Action::HangStarted, Action::StartGrace { generation: g + 2, waits: 0 }]);
+    }
+
+    #[test]
+    fn a_double_flip_closes_the_dialog_once() {
+        let mut m = Machine::new();
+        let g = start(&mut m);
+        elapsed(&mut m, g, HUNG);
+        assert_eq!(m.on(Event::Responsive), [Action::CloseDialog, Action::Record(Choice::Recovered)]);
+        assert_eq!(m.on(Event::Unresponsive).len(), 2, "a new hang starts its grace");
+        assert!(m.on(Event::Responsive).is_empty(), "no second abortModal");
+        m.on(Event::DialogClosed(Choice::Recovered));
+        assert!(!m.dialog_open());
     }
 
     #[test]

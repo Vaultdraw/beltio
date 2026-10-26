@@ -92,6 +92,11 @@ fn dispatch(event: Event) {
 
 fn run(action: Action) {
     match action {
+        Action::HangStarted => {
+            if let Ok(mut start) = HANG_START.lock() {
+                *start = Some(Instant::now());
+            }
+        }
         Action::StartGrace { generation, waits } => start_grace(generation, waits),
         Action::ShowDialog => {
             let choice = show_alert();
@@ -227,14 +232,22 @@ fn show_alert() -> Choice {
     }
 }
 
-extern "C" fn on_unresponsive(_this: *mut AnyObject, _cmd: Sel, _webview: *mut AnyObject) {
-    if let Ok(mut start) = HANG_START.lock() {
-        start.get_or_insert_with(Instant::now);
-    }
-    dispatch(Event::Unresponsive);
+/// The methods live on wry's shared delegate class: only the main window's view counts.
+fn is_main_view(webview: *mut AnyObject) -> bool {
+    let main = WEBVIEW.load(Ordering::SeqCst);
+    !main.is_null() && main == webview
 }
 
-extern "C" fn on_responsive(_this: *mut AnyObject, _cmd: Sel, _webview: *mut AnyObject) {
+extern "C" fn on_unresponsive(_this: *mut AnyObject, _cmd: Sel, webview: *mut AnyObject) {
+    if is_main_view(webview) {
+        dispatch(Event::Unresponsive);
+    }
+}
+
+extern "C" fn on_responsive(_this: *mut AnyObject, _cmd: Sel, webview: *mut AnyObject) {
+    if !is_main_view(webview) {
+        return;
+    }
     dispatch(Event::Responsive);
     // After a hang that never reached the dialog, nothing took the start time.
     if let Ok(mut start) = HANG_START.lock() {
@@ -266,8 +279,15 @@ unsafe fn guard_and_hook(view: *mut AnyObject) -> Result<(), String> {
     }
     let cls = object_getClass(delegate);
     let types = c"v@:@";
-    class_addMethod(cls, unresponsive, on_unresponsive as *const c_void, types.as_ptr());
-    class_addMethod(cls, responsive, on_responsive as *const c_void, types.as_ptr());
+    for (name, sel, imp) in [
+        (UNRESPONSIVE_SEL, unresponsive, on_unresponsive as *const c_void),
+        (RESPONSIVE_SEL, responsive, on_responsive as *const c_void),
+    ] {
+        // NO means the class already has this method (a newer wry?): ours would never run.
+        if !class_addMethod(cls, sel, imp, types.as_ptr()).as_bool() {
+            return Err(format!("the navigation delegate already implements {}", name.to_string_lossy()));
+        }
+    }
     // WebKit caches what the delegate answers when it is set: set it again.
     let _: () = msg_send![view, setNavigationDelegate: delegate];
     Ok(())

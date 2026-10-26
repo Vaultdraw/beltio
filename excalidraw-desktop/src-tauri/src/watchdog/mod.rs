@@ -57,10 +57,18 @@ pub fn settings_from(tables: &[toml::Table]) -> Settings {
     Settings {
         enabled: value("enabled").and_then(|v| v.as_bool()).unwrap_or(d.enabled),
         grace_ms: value("grace_ms")
-            .and_then(|v| v.as_integer())
-            .and_then(|n| u64::try_from(n).ok())
+            .and_then(whole_number)
             .filter(|n| (MIN_GRACE_MS..=MAX_GRACE_MS).contains(n))
             .unwrap_or(d.grace_ms),
+    }
+}
+
+/// An integer, or a float with no fraction (`8000.0`): the Settings page accepts both.
+fn whole_number(v: &toml::Value) -> Option<u64> {
+    match v {
+        toml::Value::Integer(n) => u64::try_from(*n).ok(),
+        toml::Value::Float(f) if f.fract() == 0.0 && *f >= 0.0 && *f <= u64::MAX as f64 => Some(*f as u64),
+        _ => None,
     }
 }
 
@@ -154,6 +162,8 @@ mod tests {
         assert_eq!(s.grace_ms, DEFAULT_GRACE_MS);
         let s = settings_from(&tables(&["[watchdog]\ngrace_ms = 1000\n"]));
         assert_eq!(s.grace_ms, 1000, "range ends are allowed");
+        let s = settings_from(&tables(&["[watchdog]\ngrace_ms = 8000.0\n"]));
+        assert_eq!(s.grace_ms, 8000, "a whole float counts, like in Settings");
     }
 
     #[test]
