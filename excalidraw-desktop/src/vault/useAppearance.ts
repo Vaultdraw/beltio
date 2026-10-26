@@ -24,7 +24,7 @@ import {
 } from "../theme/registry";
 
 import { applyAppearance, computeAppearance } from "./appearance";
-import { getPreferences } from "./preferences";
+import { getPreferences, type VaultPreferences } from "./preferences";
 import { PREFERENCES_CHANGED_EVENT } from "./settingsSync";
 
 import type { AppearanceSnapshot } from "./appearance";
@@ -36,10 +36,23 @@ export interface AppearanceState {
   refresh: () => void;
 }
 
+/** What the open vault overrides (`<vault>/.excalidraw-vault/settings.toml`). */
+export type VaultAppearance = Partial<
+  Pick<VaultPreferences, "colorTheme" | "theme" | "accentColor">
+>;
+
+const NO_VAULT_APPEARANCE: VaultAppearance = {};
+
 export const useAppearance = (
   doc: Document | null,
   win: Window | null,
+  vaultAppearance: VaultAppearance = NO_VAULT_APPEARANCE,
 ): AppearanceState => {
+  const {
+    colorTheme: vaultTheme,
+    theme: vaultMode,
+    accentColor: vaultAccent,
+  } = vaultAppearance;
   const [registry, setRegistry] = useState<ThemeRegistry>(getThemeRegistry);
   const [tick, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
@@ -74,7 +87,13 @@ export const useAppearance = (
 
   const shown = useRef<AppearanceSnapshot | null>(null);
   const snapshot = useMemo(() => {
-    const prefs = getPreferences(win);
+    const global = getPreferences(win);
+    const prefs = {
+      ...global,
+      colorTheme: vaultTheme ?? global.colorTheme,
+      theme: vaultMode ?? global.theme,
+      accentColor: vaultAccent ?? global.accentColor,
+    };
     // A lazy built-in still loading: keep the current look (no flash of
     // Default); THEMES_CHANGED_EVENT brings a new registry when it lands.
     const { entry } = resolveSelectedTheme(registry, prefs.colorTheme);
@@ -87,7 +106,7 @@ export const useAppearance = (
     return computeAppearance(prefs, registry, win);
     // `tick` re-reads preferences after local edits and OS changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [registry, tick, win]);
+  }, [registry, tick, win, vaultTheme, vaultMode, vaultAccent]);
   shown.current = snapshot;
 
   // Layout effect: tokens land before the browser paints the new state.

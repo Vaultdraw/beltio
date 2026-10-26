@@ -42,6 +42,9 @@ describe("per-vault schema rows", () => {
     const flagged = SETTINGS_SCHEMA.filter((s) => s.perVault).map((s) => s.id);
     expect(flagged.sort()).toEqual(
       [
+        "mode",
+        "colour-theme",
+        "accent-colour",
         "sort-order",
         "activity-bar",
         "activity-bar-entries",

@@ -14,6 +14,7 @@ import { ColorSwatches, Segmented, Switch } from "./controls";
 import { useCanvasTheme } from "./useCanvasTheme";
 import { PaperSetting } from "./PaperSetting";
 import { SnippetsSetting } from "./Snippets";
+import { useScopedRowProps } from "./scopedRow";
 
 import type { CSSProperties } from "react";
 
@@ -36,8 +37,9 @@ const CANVAS_BG_COLORS = [
 
 const ModeSetting = () => {
   const { mode, setMode } = useSettings();
+  const scoped = useScopedRowProps("mode", "theme");
   return (
-    <SettingRow id="mode">
+    <SettingRow id="mode" {...scoped}>
       <Segmented
         label="Mode"
         options={MODES.map((m) => ({ label: m.label, val: m.key }))}
@@ -51,8 +53,14 @@ const ModeSetting = () => {
 const ColourThemeSetting = () => {
   const { registry, selection, selectColourTheme } = useSettings();
   const userThemeProblems = registry.fileProblems;
+  const scoped = useScopedRowProps("colour-theme", "colorTheme");
   return (
-    <SettingRow id="colour-theme" layout="block" testId="settings-theme">
+    <SettingRow
+      id="colour-theme"
+      layout="block"
+      testId="settings-theme"
+      {...scoped}
+    >
       <ThemePicker
         themes={registry.themes}
         selectedKey={selection.entry.key}
@@ -140,6 +148,15 @@ const AccentSetting = () => {
   const { swatches, custom } = accentSwatches(own, accentColor);
   const [draft, setDraft] = useState<string | null>(null);
   const shown = draft ?? accentColor;
+  const scoped = useScopedRowProps(
+    "accent-colour",
+    "accentColor",
+    accentColor && resolved.adjusted ? (
+      <div className="vault-setting-note" role="status">
+        Adjusted for contrast: {resolved.primary}
+      </div>
+    ) : undefined,
+  );
   const commitDraft = () => {
     const text = (draft ?? "").trim();
     setDraft(null);
@@ -150,17 +167,7 @@ const AccentSetting = () => {
     }
   };
   return (
-    <SettingRow
-      id="accent-colour"
-      testId="settings-accent"
-      details={
-        accentColor && resolved.adjusted ? (
-          <div className="vault-setting-note" role="status">
-            Adjusted for contrast: {resolved.primary}
-          </div>
-        ) : undefined
-      }
-    >
+    <SettingRow id="accent-colour" testId="settings-accent" {...scoped}>
       <div className="vault-accent" role="group" aria-label="Accent">
         {swatches.map((sw) => (
           <button

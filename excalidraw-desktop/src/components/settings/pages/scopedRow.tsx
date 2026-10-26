@@ -89,6 +89,35 @@ export const ScopeErrors = () => {
 };
 
 /**
+ * Props that make a plain SettingRow show its vault scope (badge, inherited
+ * style, write errors), for rows whose control is not a ScopedRow child.
+ */
+export const useScopedRowProps = (
+  id: string,
+  field: VaultField,
+  details?: ReactNode,
+) => {
+  const attrs = useScopeAttrs(field);
+  return {
+    data: attrs,
+    className:
+      attrs["data-scope-state"] === "inherited"
+        ? "vault-setting-row--inherited"
+        : undefined,
+    details: (
+      <>
+        {details}
+        <ScopeBadge
+          field={field}
+          resetLabel={`Reset ${getSettingSchema(id).label} to global`}
+        />
+        <ScopeErrors />
+      </>
+    ),
+  };
+};
+
+/**
  * A row whose value can be stored per vault. It shows and edits the value of
  * the current scope (global config, or the vault's override); the Settings
  * header owns the scope switch.

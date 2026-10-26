@@ -119,6 +119,9 @@ describe("parse and merge", () => {
       resolveSetting("navigatorSort", { navigatorSort: "modified_asc" }, prefs),
     ).toBe("modified_asc");
     expect(resolveSettings({ newDrawingFolder: "A" }, prefs)).toEqual({
+      colorTheme: "Default",
+      theme: "system",
+      accentColor: "",
       activityBar: true,
       activityBarOrder: [],
       activityBarHidden: [],

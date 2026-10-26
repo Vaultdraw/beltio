@@ -51,7 +51,6 @@ import {
   getNavigatorCollapsed,
   getPreferences,
   getRecentVaults,
-  getTheme,
   removeRecentVault,
   setExpandedFolders as saveExpandedFolders,
   setNavigatorCollapsed as saveNavigatorCollapsed,
@@ -107,6 +106,7 @@ import { THUMBNAIL_COMMAND_IDS } from "./commands/thumbnailCommands";
 import { TabStrip } from "./tabs/TabStrip";
 import { useLayout, type Layout } from "./layout/useLayout";
 import { useUserCommands } from "./commands/useUserCommands";
+import { useVaultThemeCommands } from "./theme/useVaultThemeCommands";
 import { ActiveTabGate } from "./tabs/ActiveTabGate";
 import "./tabs/editorBody.css";
 import { ancestorFolders } from "./tabs/revealPath";
@@ -419,8 +419,15 @@ export const VaultApp = ({
       ...action,
       nonce: (prev?.nonce ?? 0) + 1,
     }));
-  // Colour theme + mode: tokens, html.dark, canvas sync (see useAppearance).
-  const appearance = useAppearance(doc, win);
+  // Per-vault settings.toml overrides merged over config.toml (vault > global).
+  const vaultSettings = useVaultSettings(win, vault);
+  // Colour theme + mode: tokens, html.dark, canvas sync (see useAppearance);
+  // the vault may override theme, mode and accent.
+  const appearance = useAppearance(doc, win, {
+    colorTheme: vaultSettings.overrides.colorTheme,
+    theme: vaultSettings.overrides.theme,
+    accentColor: vaultSettings.overrides.accentColor,
+  });
   useSnippets(doc, win);
   const { refresh: refreshAppearance } = appearance;
   const appTheme = appearance.snapshot.mode;
@@ -428,8 +435,9 @@ export const VaultApp = ({
   // reach it through this ref.
   const thumbServiceRef = useRef<ThumbnailService | null>(null);
   useInterfaceZoom(win);
-  // Per-vault settings.toml overrides merged over config.toml (vault > global).
-  const vaultSettings = useVaultSettings(win, vault);
+  useVaultThemeCommands(vaultSettings, (message) =>
+    toastStore.push({ message }),
+  );
   const { navigatorSort, newDrawingFolder, templatesFolder } =
     vaultSettings.effective;
   // One preferences read per render (localStorage parse + normalise).
@@ -447,10 +455,15 @@ export const VaultApp = ({
 
   const handleCanvasThemeChange = useCallback(
     (newTheme: "light" | "dark" | "system") => {
-      setTheme(newTheme, win);
+      // Write where the value lives: this vault if it overrides the mode.
+      if (vaultSettings.isOverridden("theme")) {
+        void vaultSettings.setOverride("theme", newTheme);
+      } else {
+        setTheme(newTheme, win);
+      }
       refreshAppearance();
     },
-    [win, refreshAppearance],
+    [win, refreshAppearance, vaultSettings],
   );
 
   // Stable identities keep VaultEditor's memo intact across autosave status ticks.
@@ -2330,11 +2343,15 @@ export const VaultApp = ({
     checked: (_id: string): boolean => false,
     registry: appearance.registry,
     refreshAppearance,
+    colorTheme: vaultSettings.effective.colorTheme,
+    selectTheme: (_key: string): void => undefined,
   });
   paletteLive.current = {
     checked: (id) => {
       if (id.startsWith("appearance.mode.")) {
-        return getTheme(win) === id.slice("appearance.mode.".length);
+        return (
+          vaultSettings.effective.theme === id.slice("appearance.mode.".length)
+        );
       }
       if (id.startsWith("appearance.syncCanvas.")) {
         return getPreferences(win).syncCanvas === id.endsWith(".on");
@@ -2349,6 +2366,16 @@ export const VaultApp = ({
     },
     registry: appearance.registry,
     refreshAppearance,
+    colorTheme: vaultSettings.effective.colorTheme,
+    // Write where the value lives: this vault if it overrides the theme.
+    selectTheme: (key) => {
+      if (vaultSettings.isOverridden("colorTheme")) {
+        void vaultSettings.setOverride("colorTheme", key);
+      } else {
+        updatePreferences({ colorTheme: key }, win);
+      }
+      refreshAppearance();
+    },
   };
   useEffect(() => {
     const live = () => paletteLive.current;
@@ -2373,14 +2400,8 @@ export const VaultApp = ({
         createThemesProvider({
           registry: () => live().registry,
           currentKey: () =>
-            resolveSelectedTheme(
-              live().registry,
-              getPreferences(win).colorTheme,
-            ).entry.key,
-          select: (key) => {
-            updatePreferences({ colorTheme: key }, win);
-            live().refreshAppearance();
-          },
+            resolveSelectedTheme(live().registry, live().colorTheme).entry.key,
+          select: (key) => live().selectTheme(key),
         }),
       ),
     ];

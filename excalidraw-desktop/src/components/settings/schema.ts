@@ -152,6 +152,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     description: "Light, dark, or follow macOS.",
     keywords: ["dark", "light", "system", "theme", "colour scheme", "color"],
     configKey: "appearance.mode",
+    perVault: true,
   },
   {
     id: "sync-canvas",
@@ -178,6 +179,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
       "Overrides the theme's primary colour. The first swatch is the theme's own.",
     keywords: ["accent", "colour", "color", "primary", "highlight", "brand"],
     configKey: "appearance.accent_color",
+    perVault: true,
   },
   {
     id: "paper",
@@ -208,6 +210,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
       "Colours for the whole app. Every theme works in light and dark mode.",
     keywords: ["color", "theme", "palette", "noctalia", "skin"],
     configKey: "appearance.theme",
+    perVault: true,
   },
   {
     id: "themes-folder",

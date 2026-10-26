@@ -36,6 +36,10 @@ import {
 import type { VaultPreferences } from "./preferences";
 
 export const PER_VAULT_FIELDS = [
+  // Colour theme, light/dark mode and accent (Obsidian keeps them per vault).
+  "colorTheme",
+  "theme",
+  "accentColor",
   "navigatorSort",
   "activityBar",
   "activityBarOrder",

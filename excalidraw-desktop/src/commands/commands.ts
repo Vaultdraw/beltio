@@ -27,6 +27,7 @@ import { SORT_LABELS, SORT_ORDERS, type SortOrder } from "../vault/sortOrder";
 
 import { LAYOUT_COMMANDS } from "../layout/layoutCommands";
 import { EXTENSION_COMMANDS } from "../extensionSwitches/extensionCommandDefs";
+import { VAULT_THEME_COMMANDS } from "../theme/vaultThemeCommands";
 
 import {
   drawingOpenCommands,
@@ -678,6 +679,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...HELP_COMMANDS,
   ...SNIPPET_COMMANDS,
   ...LAYOUT_COMMANDS,
+  ...VAULT_THEME_COMMANDS,
 ];
 
 registerCommands(COMMANDS);

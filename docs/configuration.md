@@ -298,7 +298,7 @@ Notes:
 
 #### Per-vault settings
 
-Navigator sort order, the default folder for new drawings, the templates folder, the paper style and each tool's default style can differ per vault. Those rows have a **This vault** switch:
+The colour theme, light or dark mode and the accent colour, navigator sort order, the default folder for new drawings, the templates folder, the paper style and each tool's default style can differ per vault. Hotkeys stay global. Those rows have a **This vault** switch:
 
 - **On:** the value is saved in `<vault>/.excalidraw-vault/settings.toml`, starting from the value currently in effect. Edits go there.
 - **Off:** the key is removed from that file and the global value applies again.
@@ -324,6 +324,8 @@ theme = "Tokyo Night"   # theme name, case-insensitive
 mode = "system"         # light | dark | system (follows the OS)
 sync_canvas = true      # canvas follows the theme too
 ```
+
+**One theme per vault:** in Settings → Appearance, switch the scope to **This vault** and pick a theme, mode or accent; it is saved in that vault's `settings.toml` (`[appearance] theme`, `mode`, `accent_color`) and applies when the vault opens. **Appearance: Use the current theme for this vault only** and **Appearance: Use the global theme in this vault** do the same from the palette. Theme files stay in the config folder's `themes/`.
 
 **Built-in themes:** Default, Dracula, Tokyo Night, Catppuccin, Everforest, Gruvbox, Nord, Rosé Pine, Solarized. If `theme` names a theme that doesn't exist, Vaultdraw uses Default and shows a warning.
 
@@ -1313,11 +1315,11 @@ Theme, light or dark mode, and canvas colours.
 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
-| `theme` | `"Default"` | a theme name |  | Colour theme: a built-in name or a theme in `themes/`. |
-| `mode` | `"system"` | "light", "dark" or "system" |  | Light, dark, or follow the system. |
+| `theme` | `"Default"` | a theme name | yes | Colour theme: a built-in name or a theme in `themes/`. |
+| `mode` | `"system"` | "light", "dark" or "system" | yes | Light, dark, or follow the system. |
 | `sync_canvas` | `false` | true or false |  | The canvas background, pencil and palette colours follow the theme. |
 | `canvas_background` | `"#ffffff"` | a colour like "#ffffff" |  | Canvas background for new drawings when `sync_canvas` is off. |
-| `accent_color` | `""` | a colour like "#6965db", or "" for the theme's own |  | Replaces the theme's primary colour, nudged for contrast; empty uses the theme's own. |
+| `accent_color` | `""` | a colour like "#6965db", or "" for the theme's own | yes | Replaces the theme's primary colour, nudged for contrast; empty uses the theme's own. |
 | `snippets` | `[]` | a list of snippet names like ["wide-sidebar"] |  | CSS snippets to apply, by file name in `snippets/` without `.css`, in this order. See [CSS snippets](#css-snippets). |
 
 ### `[editor]`

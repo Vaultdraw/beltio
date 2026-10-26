@@ -183,7 +183,6 @@ export const useSettingsController = ({
     () => themeRegistry ?? getThemeRegistry(),
     [themeRegistry],
   );
-  const selection = resolveSelectedTheme(registry, colorTheme);
   const [defaults, setDefaultsState] = useState(() => getEditorDefaults(win));
   const [autosaveDelay, setAutosaveDelayState] = useState(
     () => getPreferences(win).autosaveDelayMs,
@@ -248,9 +247,24 @@ export const useSettingsController = ({
     };
   }, [win]);
 
+  // Theme, mode and accent can be per vault: in vault scope they edit the
+  // vault's settings.toml (scopedWrite), otherwise config as before.
+  const scopedWrite = (
+    field: "theme" | "colorTheme" | "accentColor",
+    value: string,
+  ): boolean => {
+    if (scope !== "vault") {
+      return false;
+    }
+    void vaultSettings.setOverride(field, value as never);
+    return true;
+  };
+
   const setMode = (next: VaultTheme) => {
-    setModeState(next);
-    setTheme(next, win);
+    if (!scopedWrite("theme", next)) {
+      setModeState(next);
+      setTheme(next, win);
+    }
     const resolved = resolveTheme(next, win);
     const targetDoc =
       doc ?? (typeof document !== "undefined" ? document : null);
@@ -262,8 +276,10 @@ export const useSettingsController = ({
   const selectColourTheme = (entry: ThemeEntry) => {
     // summary.key is the value stored in appearance.theme.
     const { key } = entry.summary;
-    setColorThemeState(key);
-    updatePreferences({ colorTheme: key }, win);
+    if (!scopedWrite("colorTheme", key)) {
+      setColorThemeState(key);
+      updatePreferences({ colorTheme: key }, win);
+    }
     onAppearanceChanged?.();
   };
 
@@ -274,8 +290,10 @@ export const useSettingsController = ({
   };
 
   const setAccentColor = (hex: string) => {
-    setAccentColorState(hex);
-    updatePreferences({ accentColor: hex }, win);
+    if (!scopedWrite("accentColor", hex)) {
+      setAccentColorState(hex);
+      updatePreferences({ accentColor: hex }, win);
+    }
     onAppearanceChanged?.();
   };
 
@@ -351,6 +369,15 @@ export const useSettingsController = ({
   ): EffectiveVaultSettings[F] =>
     (scope === "vault" ? vaultSettings.effective : vaultSettings.global)[field];
 
+  // The values shown follow the scope, like scopedValue.
+  const shown = scope === "vault" ? vaultSettings.effective : null;
+  const shownMode = shown ? shown.theme : mode;
+  const selection = resolveSelectedTheme(
+    registry,
+    shown ? shown.colorTheme : colorTheme,
+  );
+  const shownAccent = shown ? shown.accentColor : accentColor;
+
   const resetToGlobal = (field: VaultField) => {
     void vaultSettings.setOverride(field, null);
   };
@@ -370,14 +397,14 @@ export const useSettingsController = ({
     vault,
     onRevealVault,
     onRevealRecovery,
-    mode,
+    mode: shownMode,
     setMode,
     registry,
     selection,
     selectColourTheme,
     syncCanvas,
     setSyncCanvas,
-    accentColor,
+    accentColor: shownAccent,
     setAccentColor,
     zoom,
     setZoom,
