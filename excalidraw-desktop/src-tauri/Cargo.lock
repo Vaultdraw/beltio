@@ -1116,6 +1116,7 @@ dependencies = [
 name = "excalidraw-vault"
 version = "0.1.2"
 dependencies = [
+ "block2",
  "crc32fast",
  "fs2",
  "hex",

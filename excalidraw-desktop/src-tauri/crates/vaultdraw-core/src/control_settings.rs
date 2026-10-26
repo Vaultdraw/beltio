@@ -51,6 +51,19 @@ pub enum Layer<'a> {
 
 /// Reads both layers of `dirs` and resolves the settings.
 pub fn control_settings(dirs: &Dirs) -> ControlSettings {
+    let (includes, config, overrides) = read_layers(dirs);
+    resolve(includes, layer(&config), layer(&overrides))
+}
+
+/// The merged config tables of `dirs`, highest layer first (`overrides.toml`, `config.toml`,
+/// then included files); a broken or unreadable layer is skipped. For other native readers
+/// (the hang watchdog) that look keys up at the point of use with the same precedence.
+pub fn layered_tables(dirs: &Dirs) -> Vec<toml::Table> {
+    let (includes, config, overrides) = read_layers(dirs);
+    stack(includes, layer(&config), layer(&overrides)).0
+}
+
+fn read_layers(dirs: &Dirs) -> (Vec<toml::Table>, Read, Read) {
     let config = read_layer(&dirs.config_file(), "config.toml");
     let overrides = read_layer(&dirs.overrides_file(), OVERRIDES_FILE);
     // Included files sit below config.toml; read only when it has an [include] table.
@@ -59,7 +72,7 @@ pub fn control_settings(dirs: &Dirs) -> ControlSettings {
     } else {
         Vec::new()
     };
-    resolve(includes, layer(&config), layer(&overrides))
+    (includes, config, overrides)
 }
 
 /// `None` = missing, `Some(Err)` = unreadable, `Some(Ok)` = text.
@@ -88,18 +101,7 @@ pub fn from_layers(config: Layer, overrides: Layer) -> ControlSettings {
 
 /// `includes` are the included files' tables, highest first, below `config`.
 fn resolve(includes: Vec<toml::Table>, config: Layer, overrides: Layer) -> ControlSettings {
-    let parse = |l: Layer| -> Result<Option<toml::Table>, ()> {
-        match l {
-            Layer::Missing => Ok(None),
-            Layer::Text(t) => t.parse::<toml::Table>().map(Some).map_err(|_| ()),
-            Layer::Unreadable => Err(()),
-        }
-    };
-    let (config, overrides) = (parse(config), parse(overrides));
-    let broken = config.is_err() || overrides.is_err();
-    // Higher layer first; a broken layer contributes nothing.
-    let mut layers: Vec<toml::Table> = [overrides, config].into_iter().filter_map(|l| l.ok().flatten()).collect();
-    layers.extend(includes);
+    let (layers, broken) = stack(includes, config, overrides);
     let value = |table: &str, key: &str| layers.iter().find_map(|t| t.get(table)?.get(key).cloned());
     let soft = |table: &str, key: &str, default: bool| match value(table, key) {
         Some(v) => v.as_bool().unwrap_or(default),
@@ -134,6 +136,23 @@ fn resolve(includes: Vec<toml::Table>, config: Layer, overrides: Layer) -> Contr
         uri_enabled,
         uri_allow,
     }
+}
+
+/// The parsed layers, highest first, and whether any layer was broken.
+fn stack(includes: Vec<toml::Table>, config: Layer, overrides: Layer) -> (Vec<toml::Table>, bool) {
+    let parse = |l: Layer| -> Result<Option<toml::Table>, ()> {
+        match l {
+            Layer::Missing => Ok(None),
+            Layer::Text(t) => t.parse::<toml::Table>().map(Some).map_err(|_| ()),
+            Layer::Unreadable => Err(()),
+        }
+    };
+    let (config, overrides) = (parse(config), parse(overrides));
+    let broken = config.is_err() || overrides.is_err();
+    // Higher layer first; a broken layer contributes nothing.
+    let mut layers: Vec<toml::Table> = [overrides, config].into_iter().filter_map(|l| l.ok().flatten()).collect();
+    layers.extend(includes);
+    (layers, broken)
 }
 
 #[cfg(test)]
@@ -285,6 +304,21 @@ mod tests {
         std::fs::remove_file(d.state.join(OVERRIDES_FILE)).unwrap();
         std::fs::create_dir(d.state.join(OVERRIDES_FILE)).unwrap();
         assert!(!control_settings(&d).mcp_open(), "a folder in its place fails closed");
+    }
+
+    #[test]
+    fn layered_tables_put_overrides_first_and_skip_broken_layers() {
+        let tmp = tempfile::tempdir().unwrap();
+        let d = dirs(tmp.path());
+        assert!(layered_tables(&d).is_empty(), "no files");
+        std::fs::write(d.config_file(), "[watchdog]\ngrace_ms = 2000\n").unwrap();
+        std::fs::write(d.overrides_file(), "[watchdog]\nenabled = false\n").unwrap();
+        let t = layered_tables(&d);
+        assert_eq!(t.len(), 2);
+        assert_eq!(t[0]["watchdog"]["enabled"].as_bool(), Some(false), "overrides first");
+        assert_eq!(t[1]["watchdog"]["grace_ms"].as_integer(), Some(2000));
+        std::fs::write(d.overrides_file(), "broken [").unwrap();
+        assert_eq!(layered_tables(&d).len(), 1, "a broken layer is skipped");
     }
 
     #[test]

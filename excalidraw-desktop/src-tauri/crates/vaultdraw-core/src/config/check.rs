@@ -508,7 +508,7 @@ mod tests {
     #[test]
     fn the_embedded_schema_parses_and_knows_every_table() {
         let s = check_schema();
-        for t in ["appearance", "editor", "interface", "hotkeys", "plugin", "include", "control", "tools", "pens"] {
+        for t in ["appearance", "editor", "interface", "hotkeys", "plugin", "include", "control", "tools", "pens", "watchdog"] {
             assert!(s["properties"].get(t).is_some(), "{t}");
         }
     }

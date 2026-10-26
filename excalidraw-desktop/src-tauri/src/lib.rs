@@ -37,6 +37,7 @@ mod thumbs;
 mod test_alloc;
 #[cfg(feature = "smoke-test")]
 mod smoke;
+mod watchdog;
 
 // Vault logic without a UI lives in `vaultdraw-core`; these re-exports keep the app's modules
 // (history, thumbs, links, ...) compiling against `crate::{err, safe_path, ...}` unchanged.
@@ -820,8 +821,8 @@ pub fn run() {
                 control::uri::on_startup_argv(app.handle());
                 #[cfg(feature = "smoke-test")]
                 smoke::harden_test_webview(&main_window);
-                #[cfg(not(feature = "smoke-test"))]
-                let _ = main_window;
+                // Hang watchdog: hooks WebKit's responsiveness callbacks; no thread or timer.
+                watchdog::install(&main_window);
                 // Memory pressure: return free pages and let the webview purge its caches.
                 pressure::start(app.handle());
                 // Live-reload of the config folder, started off the setup path (it creates the
@@ -855,7 +856,7 @@ pub fn run() {
             builder.invoke_handler(tauri::generate_handler![
                 choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
                 write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
-                export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, list_recovery, discard_recovery,
+                export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
                 config::load_settings, config::update_config, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
                 themes::list_themes, themes::open_themes_dir, snippets::list_snippets, snippets::open_snippets_dir,
                 vault_settings::load_vault_settings, vault_settings::update_vault_settings,
@@ -879,7 +880,7 @@ pub fn run() {
             builder.invoke_handler(tauri::generate_handler![
                 choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
                 write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
-                export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, list_recovery, discard_recovery,
+                export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
                 config::load_settings, config::update_config, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
                 themes::list_themes, themes::open_themes_dir, snippets::list_snippets, snippets::open_snippets_dir,
                 vault_settings::load_vault_settings, vault_settings::update_vault_settings,
@@ -900,7 +901,7 @@ pub fn run() {
         let builder = builder.invoke_handler(tauri::generate_handler![
             choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
             write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
-            export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, list_recovery, discard_recovery,
+            export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
             config::load_settings, config::update_config, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
             themes::list_themes, themes::open_themes_dir, snippets::list_snippets, snippets::open_snippets_dir,
             vault_settings::load_vault_settings, vault_settings::update_vault_settings,
@@ -932,6 +933,10 @@ pub fn run() {
                 return;
             }
             if let tauri::RunEvent::ExitRequested { api, .. } = event {
+                // Quit from the hang dialog: the page can't answer the save round trip.
+                if watchdog::force_quit() {
+                    return;
+                }
                 // The test runner intentionally exits after writing its report.
                 #[cfg(feature = "smoke-test")]
                 if smoke::enabled() {

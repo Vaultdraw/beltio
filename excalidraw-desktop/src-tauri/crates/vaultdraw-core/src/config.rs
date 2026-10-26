@@ -295,6 +295,12 @@ autosave_delay_ms = 500
 # Show a notice when a script or AI tool edits the drawing on screen
 # notify_edits = true
 
+[watchdog]
+# A Wait / Quit dialog when the page stops answering (macOS); off with enabled = false
+# enabled = true
+# How long the page must stay unresponsive first, in milliseconds (1000 to 60000)
+# grace_ms = 5000
+
 # To split this file, add an [include] table that lists other TOML files or folders
 # (relative to this file, or starting with ~). See "Including other files" in
 # docs/configuration.md. This file wins over what it includes.
@@ -1448,11 +1454,11 @@ mod tests {
 
     #[test]
     fn default_config_documents_upcoming_tables_without_values() {
-        for section in ["[interface]\n# Whole-app zoom", "# zoom = 100", "[navigator]\n", "# sort = \"name_asc\"", "[files]\n", "# new_drawing_folder = \"\"", "# templates_folder = \"Templates\"", "[paper]\n# Paper for new drawings", "# style = \"plain\"", "# major_every = 0", "[page]\n# Page mode for new drawings", "# mode = \"normal\"", "# paper_theme = \"normal\"", "[pdf_import]\n# Import PDF pages", "# max_side = 1440", "# pixel_budget_mp = 60", "[hotkeys]\n", "# \"vault.newDrawing\" = [\"Mod+N\"]"] {
+        for section in ["[interface]\n# Whole-app zoom", "# zoom = 100", "[navigator]\n", "# sort = \"name_asc\"", "[files]\n", "# new_drawing_folder = \"\"", "# templates_folder = \"Templates\"", "[paper]\n# Paper for new drawings", "# style = \"plain\"", "# major_every = 0", "[page]\n# Page mode for new drawings", "# mode = \"normal\"", "# paper_theme = \"normal\"", "[pdf_import]\n# Import PDF pages", "# max_side = 1440", "# pixel_budget_mp = 60", "[hotkeys]\n", "# \"vault.newDrawing\" = [\"Mod+N\"]", "[watchdog]\n", "# grace_ms = 5000"] {
             assert!(DEFAULT_CONFIG.contains(section), "{section}");
         }
         let v = parse_config(DEFAULT_CONFIG).unwrap();
-        for table in ["paper", "page", "pdf_import", "interface", "navigator", "files", "hotkeys"] {
+        for table in ["paper", "page", "pdf_import", "interface", "navigator", "files", "hotkeys", "watchdog"] {
             assert_eq!(v[table], json!({}), "{table}");
         }
     }
@@ -1552,7 +1558,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 91, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 93, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();

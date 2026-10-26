@@ -1440,6 +1440,25 @@
         }
       }
     },
+    "watchdog": {
+      "type": "object",
+      "description": "The hang watchdog: a Wait / Quit dialog when the page stops answering. See [Hang watchdog](#hang-watchdog).",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Show a Wait / Quit dialog when the page stops answering (macOS; Linux later).",
+          "default": true,
+          "type": "boolean"
+        },
+        "grace_ms": {
+          "description": "How long the page must stay unresponsive (after WebKit's own 3 s) before the dialog appears, in milliseconds. Applies from the next hang.",
+          "default": 5000,
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 60000
+        }
+      }
+    },
     "hotkeys": {
       "type": "object",
       "description": "One entry per command id: a list of keys like [\"Mod+S\"] or key sequences like [\"g g\"]; [] removes the default keys.",
