@@ -21,6 +21,7 @@ import { WatchdogHost } from "./WatchdogHost";
 const invokeMock = vi.fn();
 vi.mock("../vault/DesktopVaultRepository", () => ({
   loadTauriInvoke: async () => invokeMock,
+  isTauriAvailable: () => false,
 }));
 
 const lastToast = () => toastStore.getSnapshot().toasts.at(-1)?.message;
