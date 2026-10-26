@@ -64,6 +64,19 @@ pub(crate) fn route(
     on_app: impl FnOnce(&mut Client) -> Result<Value, Fail>,
     headless: impl FnOnce() -> Result<Value, Fail>,
 ) -> Result<Value, Fail> {
+    route_as(cli, rpc, |_| Ok(()), on_app, headless)
+}
+
+/// [`route`] with `greet` run first on a fresh app connection, before any other call (the
+/// `--vault` check included): `vaultdraw mcp` declares its role there, and the app takes the
+/// role from the first message.
+pub(crate) fn route_as(
+    cli: &Cli,
+    rpc: &Rpc,
+    greet: impl FnOnce(&mut Client) -> Result<(), Fail>,
+    on_app: impl FnOnce(&mut Client) -> Result<Value, Fail>,
+    headless: impl FnOnce() -> Result<Value, Fail>,
+) -> Result<Value, Fail> {
     if cli.offline {
         if app_live() {
             return Err(offline_refused());
@@ -74,6 +87,7 @@ pub(crate) fn route(
     loop {
         match rpc.connect() {
             Ok(mut client) => {
+                greet(&mut client)?;
                 check_vault(cli, rpc, &mut client)?;
                 return on_app(&mut client);
             }

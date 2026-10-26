@@ -127,10 +127,8 @@ fn run(cli: &Cli, client: &str, method: &str, mut params: Value) -> Result<Value
     }
     let rpc = backend_rpc(cli)?;
     let live_only = !matches!(method, methods::VAULT_LIST | methods::VAULT_SEARCH);
-    let on_app = |c: &mut vaultdraw_protocol::Client| {
-        hello(&rpc, c, client)?;
-        rpc.call_on(c, method, Some(params.clone()))
-    };
+    let greet = |c: &mut vaultdraw_protocol::Client| hello(&rpc, c, client);
+    let on_app = |c: &mut vaultdraw_protocol::Client| rpc.call_on(c, method, Some(params.clone()));
     let on_disk = || {
         if live_only {
             Err(Fail::new(crate::error::EXIT_NOT_RUNNING, "Vaultdraw is not running: this tool reads the drawing on screen", "NOT_RUNNING"))
@@ -138,7 +136,7 @@ fn run(cli: &Cli, client: &str, method: &str, mut params: Value) -> Result<Value
             headless::call(cli, method, Some(params.clone()))
         }
     };
-    backend::route(cli, &rpc, on_app, on_disk)
+    backend::route_as(cli, &rpc, greet, on_app, on_disk)
 }
 
 fn backend_rpc(cli: &Cli) -> Result<Rpc, Fail> {
