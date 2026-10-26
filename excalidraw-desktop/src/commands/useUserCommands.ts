@@ -28,6 +28,8 @@ export const userCommandDefinitions = (
     title: command.title || name,
     category: USER_COMMAND_CATEGORY,
     keys: { default: [] },
+    // A key does nothing while a dialog is open; the palette may still run it.
+    when: ["!modalOpen"],
   }));
 
 export function useUserCommands(
@@ -64,7 +66,7 @@ export function useUserCommands(
           live.current.notify(
             `${command.title || name} stopped at step ${result.step}: ${
               result.id
-            } is not available`,
+            } could not run`,
           );
         }
       },

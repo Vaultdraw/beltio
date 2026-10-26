@@ -9,7 +9,7 @@
  * (`interface.activity_bar`), the tab strip (`tabs.show_strip`) and the
  * navigator (its collapse state) keep the switches they already had.
  */
-import type { ConfigMapping } from "../vault/settingsSync";
+import type { ConfigMapping, SettingsProblem } from "../vault/settingsSync";
 
 export const LAYOUT_PARTS = [
   "header",
@@ -76,39 +76,80 @@ const isTable = (v: unknown): v is Record<string, unknown> =>
 const isPart = (key: string): key is LayoutPart =>
   (LAYOUT_PARTS as readonly string[]).includes(key);
 
-/** Why `value` is not a valid `[layout.presets]` table, or null. */
-export function presetsProblem(value: unknown): string | null {
-  if (!isTable(value)) {
-    return "a table of presets like [layout.presets.reading]";
+/** Why one preset entry is not valid, or null. */
+function entryProblem(name: string, preset: unknown): string | null {
+  if (!isPresetName(name)) {
+    return `preset names use letters, digits, - and _ ("${name}")`;
   }
-  const names = Object.keys(value);
-  if (names.length > MAX_PRESETS) {
-    return `at most ${MAX_PRESETS} presets`;
+  if (!isTable(preset)) {
+    return `[layout.presets.${name}] must be a table`;
   }
-  for (const name of names) {
-    if (!isPresetName(name)) {
-      return `preset names use letters, digits, - and _ ("${name}")`;
+  for (const [part, shown] of Object.entries(preset)) {
+    if (!isPart(part)) {
+      return `layout.presets.${name}.${part} is not a part (${LAYOUT_PARTS.join(
+        ", ",
+      )})`;
     }
-    const preset = value[name];
-    if (!isTable(preset)) {
-      return `[layout.presets.${name}] must be a table`;
-    }
-    for (const [part, shown] of Object.entries(preset)) {
-      if (!isPart(part)) {
-        return `layout.presets.${name}.${part} is not a part (${LAYOUT_PARTS.join(
-          ", ",
-        )})`;
-      }
-      if (typeof shown !== "boolean") {
-        return `layout.presets.${name}.${part} must be true or false`;
-      }
+    if (typeof shown !== "boolean") {
+      return `layout.presets.${name}.${part} must be true or false`;
     }
   }
   return null;
 }
 
+/** Why the whole `[layout.presets]` value is unusable, or null. */
+export function presetsProblem(value: unknown): string | null {
+  if (!isTable(value)) {
+    return "a table of presets like [layout.presets.reading]";
+  }
+  return Object.keys(value).length > MAX_PRESETS
+    ? `at most ${MAX_PRESETS} presets`
+    : null;
+}
+
+/**
+ * The valid entries of a `[layout.presets]` table, and one message per bad
+ * entry: a typo in one preset never drops the others.
+ */
+export function splitPresets(value: unknown): {
+  presets: LayoutPresets;
+  problems: string[];
+} {
+  if (presetsProblem(value) !== null) {
+    return { presets: {}, problems: [] };
+  }
+  const presets: Record<string, LayoutPreset> = {};
+  const problems: string[] = [];
+  for (const [name, preset] of Object.entries(value as object)) {
+    const why = entryProblem(name, preset);
+    if (why) {
+      problems.push(why);
+    } else {
+      presets[name] = preset as LayoutPreset;
+    }
+  }
+  return { presets, problems };
+}
+
 export const isPresets = (v: unknown): v is LayoutPresets =>
-  presetsProblem(v) === null;
+  presetsProblem(v) === null &&
+  Object.entries(v as object).every(([n, p]) => entryProblem(n, p) === null);
+
+/** Per-entry problems of `[layout.presets]` in a parsed config (the mapping keeps the rest). */
+export function layoutPresetProblems(
+  config: Record<string, unknown>,
+  file = "config.toml",
+): SettingsProblem[] {
+  const layout = config.layout;
+  if (!isTable(layout)) {
+    return [];
+  }
+  return splitPresets(layout.presets).problems.map((message) => ({
+    kind: "invalid",
+    key: "layout.presets",
+    message: `${file}: ${message}; that preset is ignored`,
+  }));
+}
 
 const isBool = (v: unknown): v is boolean => typeof v === "boolean";
 // Any text: a name that matches no preset is reported when it is applied.
@@ -137,6 +178,9 @@ export const LAYOUT_MAPPINGS: readonly ConfigMapping[] = [
     field: "layoutPresets",
     key: "layout.presets",
     expected: (value: unknown) => presetsProblem(value) ?? "valid presets",
+    // Bad entries are dropped here and reported by layoutPresetProblems.
+    normalize: (value: unknown) =>
+      presetsProblem(value) === null ? splitPresets(value).presets : value,
     valid: isPresets,
   },
 ];

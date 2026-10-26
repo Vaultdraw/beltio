@@ -1907,6 +1907,7 @@ export const VaultApp = ({
         void getRegisteredHandler(THUMBNAIL_COMMAND_IDS.galleryToggle)?.();
       }
     },
+    isStripShown: () => layoutRef.current?.shown.tab_strip ?? false,
     setShowStrip: (tabsShowStrip) => {
       if (!layoutRef.current?.toggleGoverned("tab_strip")) {
         updatePreferences({ tabsShowStrip }, win);
@@ -2500,7 +2501,11 @@ export const VaultApp = ({
         layout.shown.footer ? "" : "vault-app--no-footer"
       }`}
     >
-      {layout.shown.header && (
+      {/* A save problem keeps the header: it is where the user is told. */}
+      {(layout.shown.header ||
+        !!saveError ||
+        saveStatus === "conflict" ||
+        saveStatus === "error") && (
         <VaultHeader
           vault={vault}
           activePath={activeDoc?.path ?? null}
@@ -2676,7 +2681,7 @@ export const VaultApp = ({
           collapsed={navigatorHidden}
           onToggleCollapse={handleToggleNavigator}
           onOpenSettings={() => openSettings()}
-          onOpenGraph={activityBarOn ? undefined : openGraph}
+          onOpenGraph={layout.shown.activity_bar ? undefined : openGraph}
           graphOpen={graphOpen}
           onOpenLocalGraph={openLocalGraph}
           onShowHistory={showHistory}

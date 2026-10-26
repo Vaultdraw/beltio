@@ -83,23 +83,40 @@ export const onCommandRan = (cb: (id: string) => void): (() => void) => {
 };
 
 /** Run a handler; a throw or rejection is logged, never propagated. */
-/** Runs `handler`; an async one is returned settled (errors logged), so callers may wait. */
-export function runHandler(
-  id: string,
-  handler: CommandHandler,
-): Promise<void> | void {
+export function runHandler(id: string, handler: CommandHandler): void {
   try {
     const result = handler();
     if (ranListeners.size > 0) {
       ranListeners.forEach((cb) => cb(id));
     }
     if (result && typeof (result as Promise<void>).catch === "function") {
-      return (result as Promise<void>).catch((err) =>
+      (result as Promise<void>).catch((err) =>
         console.error(`Command ${id} failed`, err),
       );
     }
   } catch (err) {
     console.error(`Command ${id} failed`, err);
+  }
+}
+
+/**
+ * Run a handler and wait for it: true when it finished, false when it threw
+ * or rejected (logged). For callers that chain commands.
+ */
+export async function runHandlerAndWait(
+  id: string,
+  handler: CommandHandler,
+): Promise<boolean> {
+  try {
+    const result = handler();
+    if (ranListeners.size > 0) {
+      ranListeners.forEach((cb) => cb(id));
+    }
+    await result;
+    return true;
+  } catch (err) {
+    console.error(`Command ${id} failed`, err);
+    return false;
   }
 }
 

@@ -8,6 +8,7 @@ import {
   normalizeLayoutPreferences,
   presetsProblem,
   shownParts,
+  splitPresets,
 } from "./layoutSettings";
 import {
   getLayoutState,
@@ -43,23 +44,39 @@ describe("layout settings", () => {
     });
   });
 
-  it("reports a bad preset and keeps the defaults", () => {
+  it("drops only the bad preset, with a problem; the others apply", () => {
     const { values, problems } = configToPreferences({
-      layout: { presets: { reading: { navigatr: false } } },
+      layout: {
+        presets: { reading: { navigatr: false }, clean: { header: false } },
+      },
     });
-    expect(values.layoutPresets).toEqual({});
+    expect(values.layoutPresets).toEqual({ clean: { header: false } });
     expect(problems).toHaveLength(1);
     expect(problems[0].message).toContain(
       "layout.presets.reading.navigatr is not a part",
     );
   });
 
-  it("explains every kind of bad presets table", () => {
+  it("explains every kind of bad preset", () => {
     expect(presetsProblem(1)).toContain("a table");
-    expect(presetsProblem({ "a b": {} })).toContain("preset names");
-    expect(presetsProblem({ a: 1 })).toContain("must be a table");
-    expect(presetsProblem({ a: { header: "no" } })).toContain("true or false");
-    expect(presetsProblem({ a: { header: false } })).toBeNull();
+    expect(splitPresets({ "a b": {} }).problems[0]).toContain("preset names");
+    expect(splitPresets({ a: 1 }).problems[0]).toContain("must be a table");
+    expect(splitPresets({ a: { header: "no" } }).problems[0]).toContain(
+      "true or false",
+    );
+    expect(splitPresets({ a: { header: false } })).toEqual({
+      presets: { a: { header: false } },
+      problems: [],
+    });
+  });
+
+  it("accepts a [hotkeys] binding for a user preset's command", () => {
+    const { values, problems } = configToPreferences({
+      layout: { presets: { reading: { header: false } } },
+      hotkeys: { "layout.preset.reading": ["Mod+Shift+R"] },
+    });
+    expect(problems).toEqual([]);
+    expect(values.hotkeys["layout.preset.reading"]).toEqual(["Mod+Shift+R"]);
   });
 
   it("normalizes stored values", () => {

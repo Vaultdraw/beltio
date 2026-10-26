@@ -827,6 +827,8 @@ footer = false
 - **Layout: Focus mode** (**Cmd/Ctrl+Shift+Enter**) turns focus mode on and off. Every preset has a command, `layout.preset.<name>` ("Layout: reading"), which works the same way. **Layout: Default layout** leaves any preset.
 - While a preset is on, the usual toggles (Toggle navigator, Toggle activity bar, Show or hide tab strip, **Layout: Toggle header**, **Layout: Toggle editor footer**) show or hide that part for this session only, without changing your config. Searching or revealing a drawing in the file tree shows the navigator. With no preset on, the toggles change the usual switch as before.
 - The active preset is per window and not saved; `layout.preset` says which one a window starts with, and changing it in the file applies at once.
+- A save problem (a conflict or a failed save) brings the header back while it lasts, so you are always told.
+- A bad preset entry, such as a typo in a part name, is reported and only that preset is skipped.
 - Hiding parts costs nothing: they are simply not drawn.
 
 ## Notebook backgrounds

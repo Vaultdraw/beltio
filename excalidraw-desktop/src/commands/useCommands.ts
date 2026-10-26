@@ -25,6 +25,7 @@ import {
   cancelPendingSequence,
   installCommandDispatcher,
   runHandler,
+  runHandlerAndWait,
 } from "./dispatcher";
 import { getRegisteredHandler } from "./handlerRegistry";
 import { detectPlatform } from "./keys";
@@ -224,8 +225,7 @@ export function useCommandDispatcher(
       if (!handler || !isAvailable(id, options)) {
         return false;
       }
-      await runHandler(id, handler);
-      return true;
+      return runHandlerAndWait(id, handler);
     },
     [isAvailable, handlerFor],
   );

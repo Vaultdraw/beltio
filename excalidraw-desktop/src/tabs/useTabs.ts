@@ -72,6 +72,8 @@ export interface UseTabsArgs {
   runCommand: (id: string) => boolean;
   /** Closes the graph / gallery overlay when a tab is clicked under it. */
   closeOverlays: () => void;
+  /** Whether the strip is on screen (a layout preset may hide or show it). */
+  isStripShown?: () => boolean;
   /** Persists a preference (the strip toggle). */
   setShowStrip: (value: TabsSettings["tabsShowStrip"]) => void;
   /** Watcher events and existence probes for the missing-file marks. */
@@ -346,7 +348,9 @@ export function useTabs(args: UseTabsArgs): TabsApi {
         newTabPosition: () => live.current.settings.tabsNewTabPosition,
         copyPath,
         signals,
-        stripVisible: () => live.current.settings.tabsShowStrip === "always",
+        stripVisible: () =>
+          live.current.isStripShown?.() ??
+          live.current.settings.tabsShowStrip === "always",
         revealInNavigator: (path) => live.current.revealInNavigator(path),
         openPalette: (newTab) => live.current.openPalette(newTab),
         toggleStrip: () =>

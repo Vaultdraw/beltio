@@ -41,7 +41,12 @@ import {
 import { TABS_MAPPINGS, type TabsField } from "../tabs/tabsSettings";
 import { MEMORY_MAPPINGS, type MemoryField } from "../memory/memorySettings";
 import { SEARCH_MAPPINGS, type SearchField } from "../search/searchSettings";
-import { LAYOUT_MAPPINGS, type LayoutField } from "../layout/layoutSettings";
+import {
+  LAYOUT_MAPPINGS,
+  layoutPresetProblems,
+  type LayoutField,
+} from "../layout/layoutSettings";
+import { LAYOUT_PRESET_PREFIX } from "../layout/layoutCommands";
 import { parseUserCommands } from "../commands/userCommands";
 import {
   LEADER_TOKEN,
@@ -1027,7 +1032,12 @@ export function parseHotkeysTable(table: unknown): {
     if (chords.length === 0 && value.length > 0) {
       continue;
     }
-    if (!isCommandId(id) && isBuiltinNamespace(id)) {
+    // A user preset's command registers after the config is read.
+    if (
+      !isCommandId(id) &&
+      isBuiltinNamespace(id) &&
+      !id.startsWith(LAYOUT_PRESET_PREFIX)
+    ) {
       problems.push(hotkeyProblem(key, `hotkeys: unknown command ${id}`));
     }
     hotkeys[id] = chords;
@@ -1085,6 +1095,9 @@ export function configToPreferences(
   problems.push(...plugins.problems);
   const user = parseUserCommands(config.commands);
   problems.push(...user.problems);
+  problems.push(
+    ...layoutPresetProblems(config, sourceFileOf(layers, "layout.presets")),
+  );
   problems.push(
     ...(layers
       ? layers.flatMap((l) =>

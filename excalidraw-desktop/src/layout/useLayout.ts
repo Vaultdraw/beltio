@@ -82,6 +82,7 @@ export function useLayout(
     } else if (presets[layoutPreset]) {
       setActivePreset(layoutPreset);
     } else {
+      setActivePreset(null);
       notifyRef.current(`Unknown layout preset "${layoutPreset}"`);
     }
     // Only the value: editing a preset's table keeps the session choice.

@@ -171,19 +171,23 @@ export function normalizeUserCommandsPreferences(
 }
 
 export interface StepRunner {
-  /** Run `id` if available and wait for it; false when it could not run. */
-  runAndWait(id: string): Promise<boolean>;
+  /**
+   * Run `id` if available and wait for it; false when it could not run or
+   * failed. Steps run as the palette runs commands (`fromPalette`), so a
+   * user command started from an open palette can run every step.
+   */
+  runAndWait(id: string, options?: { fromPalette?: boolean }): Promise<boolean>;
 }
 
 export type RunResult = { ok: true } | { ok: false; step: number; id: string };
 
-/** Run the steps in order, waiting for each; stop at the first that can't run. */
+/** Run the steps in order, waiting for each; stop at the first that can't run or fails. */
 export async function runSteps(
   steps: readonly string[],
   runner: StepRunner,
 ): Promise<RunResult> {
   for (let i = 0; i < steps.length; i++) {
-    if (!(await runner.runAndWait(steps[i]))) {
+    if (!(await runner.runAndWait(steps[i], { fromPalette: true }))) {
       return { ok: false, step: i + 1, id: steps[i] };
     }
   }
