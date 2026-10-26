@@ -91,13 +91,6 @@ import { tagQuery } from "./tags/types";
 import { useTemplates } from "./templates/useTemplates";
 import { isInTemplatesFolder } from "./templates/listTemplates";
 import {
-  ROOT_PRIME_WAIT_MS,
-  settleWithin,
-  startRootPrime,
-  takeRootPrime,
-} from "./vault/rootPrime";
-
-import {
   ensureFolder,
   folderChain,
   resolveNewDrawingParent,
@@ -180,8 +173,6 @@ import { DeferredHome } from "./components/DeferredHome";
 
 import "./components/VaultShell.css";
 import "./components/shell.css";
-
-import type { RootPrime } from "./vault/rootPrime";
 
 import type { OpenTarget } from "./tabs/types";
 import type { TabsApi } from "./tabs/useTabs";
@@ -588,8 +579,6 @@ export const VaultApp = ({
   const vaultRef = useRef<VaultInfo | null>(vault);
   vaultRef.current = vault;
   const vaultGeneration = useRef(0);
-  // The root listing started before the shell mounts (vault/rootPrime.ts).
-  const rootPrimeRef = useRef<RootPrime | null>(null);
   const directoryMapRef = useRef(directoryMap);
   directoryMapRef.current = directoryMap;
   const indexTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -742,18 +731,13 @@ export const VaultApp = ({
 
   // Load a directory's entries with generation check and error surfacing
   const loadDirectory = useCallback(
-    async (
-      dirPath: string,
-      expectedGen?: number,
-      started?: Promise<VaultEntry[]>,
-    ) => {
+    async (dirPath: string, expectedGen?: number) => {
       if (!vault) {
         return;
       }
       const gen = expectedGen ?? vaultGeneration.current;
       try {
-        const items = await (started ??
-          repository.listDirectory(vault.handle, dirPath));
+        const items = await repository.listDirectory(vault.handle, dirPath);
         if (gen !== vaultGeneration.current) {
           return;
         }
@@ -879,12 +863,6 @@ export const VaultApp = ({
           return;
         }
         if (reopened) {
-          // List the root while the shell mounts (no wait: reopen runs at startup).
-          rootPrimeRef.current = startRootPrime(
-            repository,
-            reopened.handle,
-            vaultGeneration.current,
-          );
           setVault(reopened);
           addRecentVault(reopened.path, win);
         }
@@ -915,12 +893,8 @@ export const VaultApp = ({
     const initialSet = new Set(["", ...savedExpanded]);
     setExpandedFolders(initialSet);
 
-    // Load root directory and expanded folders. A root listing started
-    // before the shell mounted is reused (or is already in the map).
-    const prime = takeRootPrime(rootPrimeRef, vault.handle, currentGen);
-    if (!prime?.applied) {
-      void loadDirectory("", currentGen, prime?.items);
-    }
+    // Load root directory and expanded folders
+    void loadDirectory("", currentGen);
     for (const folder of savedExpanded) {
       if (folder) {
         void loadDirectory(folder, currentGen);
@@ -1110,18 +1084,8 @@ export const VaultApp = ({
         await libraryStore.flush();
         await repository.releaseVault(oldVault.handle);
       }
-      // List the root before mounting the shell: when it answers within a
-      // couple of frames, the tree rows render together with the shell.
-      const prime = startRootPrime(
-        repository,
-        chosen.handle,
-        vaultGeneration.current,
-      );
-      rootPrimeRef.current = prime;
-      const rootItems = await settleWithin(prime.items, ROOT_PRIME_WAIT_MS);
-      prime.applied = rootItems !== null;
       // Immediately reset directory cache and indexes
-      setDirectoryMap(rootItems ? new Map([["", rootItems]]) : new Map());
+      setDirectoryMap(new Map());
       setAllIndexedEntries([]);
       setRecoveryCount(0);
       setVault(chosen);
