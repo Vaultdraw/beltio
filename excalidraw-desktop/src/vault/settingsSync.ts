@@ -56,6 +56,7 @@ import {
   type ServicesField,
 } from "../services/servicesSettings";
 import { PDF_IMPORT_LIMITS } from "../pdfImport/types";
+import { WATCHDOG_LIMITS } from "../watchdog/limits";
 import { inRange, LASER_LIMITS } from "../pens/laserSettings";
 import {
   isPenPresets,
@@ -120,6 +121,7 @@ import {
   isPdfPixelBudgetMp,
   isPdfQuality,
   isPdfWarnPages,
+  isWatchdogGraceMs,
   isUpdateOnRename,
   isPaperOpacity,
   isPaperSpacing,
@@ -324,6 +326,8 @@ type ConfigField =
   | "aiEnabled"
   | "aiMcpEnabled"
   | "controlNotifyEdits"
+  | "watchdogEnabled"
+  | "watchdogGraceMs"
   | "pdfMaxSide"
   | "pdfFormat"
   | "pdfQuality"
@@ -762,6 +766,18 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "control.notify_edits",
     expected: "true or false",
     valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "watchdogEnabled",
+    key: "watchdog.enabled",
+    expected: "true or false",
+    valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "watchdogGraceMs",
+    key: "watchdog.grace_ms",
+    expected: `a whole number of milliseconds between ${WATCHDOG_LIMITS.graceMs.min} and ${WATCHDOG_LIMITS.graceMs.max}`,
+    valid: isWatchdogGraceMs,
   },
   {
     field: "pdfMaxSide",

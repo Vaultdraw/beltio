@@ -19,6 +19,7 @@ import { pageControls } from "./Page";
 import { pluginsControls } from "./pluginsEntry";
 import { pensControls } from "./Pens";
 import { toolDefaultsControls } from "./ToolDefaults";
+import { watchdogControls } from "./Watchdog";
 
 import type { SettingControls } from "../SettingsContext";
 
@@ -28,6 +29,7 @@ export const SETTING_CONTROLS: SettingControls = {
   ...appearanceControls,
   ...pageControls,
   ...interfaceControls,
+  ...watchdogControls,
   ...tabsControls,
   ...memoryControls,
   ...servicesControls,

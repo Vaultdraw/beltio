@@ -45,6 +45,7 @@ import { LIST_COMMANDS } from "./listCommands";
 import { THUMBNAIL_COMMANDS } from "./thumbnailCommands";
 import { CONFIG_COMMANDS } from "./configCommands";
 import { MEMORY_COMMANDS } from "./memoryCommands";
+import { WATCHDOG_COMMANDS } from "./watchdogCommands";
 import { TOOL_COMMANDS } from "./toolCommands";
 // command audit (D5): Excalidraw action keys
 import { ACTION_COMMANDS } from "./actionCommands";
@@ -668,6 +669,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...GALLERY_COMMANDS,
   ...MEMORY_COMMANDS,
   ...AI_COMMANDS,
+  ...WATCHDOG_COMMANDS,
   ...CONFIG_COMMANDS,
   ...HELP_COMMANDS,
   ...SNIPPET_COMMANDS,

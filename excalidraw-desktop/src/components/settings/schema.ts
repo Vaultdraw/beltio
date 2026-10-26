@@ -817,6 +817,40 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     configKey: "control.notify_edits",
   },
 
+  // ---- Hang watchdog (Interface) ----
+  {
+    id: "watchdog-enabled",
+    page: "interface",
+    label: "Hang watchdog",
+    description:
+      "Show a Wait / Quit dialog when the page stops answering (macOS).",
+    keywords: [
+      "hang",
+      "freeze",
+      "frozen",
+      "not responding",
+      "watchdog",
+      "quit",
+    ],
+    configKey: "watchdog.enabled",
+  },
+  {
+    id: "watchdog-grace",
+    page: "interface",
+    label: "Hang watchdog delay",
+    description:
+      "How long the page must stay unresponsive, after WebKit's own 3 s, before the dialog appears.",
+    keywords: [
+      "hang",
+      "freeze",
+      "not responding",
+      "watchdog",
+      "delay",
+      "grace",
+    ],
+    configKey: "watchdog.grace_ms",
+  },
+
   // ---- About ----
   {
     id: "about-info",

@@ -399,6 +399,19 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       },
     },
   },
+  {
+    table: "watchdog",
+    intro:
+      "The hang watchdog: a Wait / Quit dialog when the page stops answering. See [Hang watchdog](#hang-watchdog).",
+    keys: {
+      enabled: {
+        doc: "Show a Wait / Quit dialog when the page stops answering (macOS; Linux later).",
+      },
+      grace_ms: {
+        doc: "How long the page must stay unresponsive (after WebKit's own 3 s) before the dialog appears, in milliseconds. Applies from the next hang.",
+      },
+    },
+  },
 ];
 
 const PER_VAULT_NOTE =

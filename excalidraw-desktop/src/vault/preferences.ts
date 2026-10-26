@@ -75,6 +75,7 @@ import {
   type PdfImportSettings,
 } from "../pdfImport/types";
 import { DEFAULT_TEMPLATES_FOLDER } from "../templates/types";
+import { WATCHDOG_LIMITS } from "../watchdog/limits";
 import {
   DEFAULT_LASER,
   LASER_LIMITS,
@@ -271,6 +272,10 @@ interface VaultPreferencesBase {
   aiMcpEnabled: boolean;
   /** control.notify_edits: notice when a script or AI tool edits the drawing */
   controlNotifyEdits: boolean;
+  /** watchdog.enabled: the native hang dialog (the native side reads the key itself) */
+  watchdogEnabled: boolean;
+  /** watchdog.grace_ms: how long the page stays unresponsive before the dialog */
+  watchdogGraceMs: number;
   /** pdf_import.max_side */
   pdfMaxSide: number;
   /** pdf_import.format */
@@ -393,6 +398,8 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   aiEnabled: false,
   aiMcpEnabled: true,
   controlNotifyEdits: true,
+  watchdogEnabled: true,
+  watchdogGraceMs: 5000,
   pdfMaxSide: DEFAULT_PDF_IMPORT_SETTINGS.maxSide,
   pdfFormat: DEFAULT_PDF_IMPORT_SETTINGS.format,
   pdfQuality: DEFAULT_PDF_IMPORT_SETTINGS.quality,
@@ -468,6 +475,9 @@ export const isPdfWarnPages = (v: unknown) =>
   Number.isInteger(v) && inRange(v, PDF_IMPORT_LIMITS.warnPages);
 export const isPdfPixelBudgetMp = (v: unknown) =>
   inRange(v, PDF_IMPORT_LIMITS.pixelBudgetMp);
+
+export const isWatchdogGraceMs = (v: unknown) =>
+  Number.isInteger(v) && inRange(v, WATCHDOG_LIMITS.graceMs);
 
 export const isTagSort = (v: unknown): v is TagSort =>
   v === "name" || v === "count";
@@ -794,6 +804,12 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       parsed.controlNotifyEdits,
       isBoolean,
       d.controlNotifyEdits,
+    ),
+    watchdogEnabled: pick(parsed.watchdogEnabled, isBoolean, d.watchdogEnabled),
+    watchdogGraceMs: pick(
+      parsed.watchdogGraceMs,
+      isWatchdogGraceMs,
+      d.watchdogGraceMs,
     ),
     pdfMaxSide: pick(parsed.pdfMaxSide, isPdfMaxSide, d.pdfMaxSide),
     pdfFormat: pick(parsed.pdfFormat, isPdfFormat, d.pdfFormat),

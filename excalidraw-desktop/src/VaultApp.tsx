@@ -156,6 +156,7 @@ import { Toasts } from "./components/Toasts";
 import { toastStore } from "./toasts/toastStore";
 import { describeReadOnly } from "./vault/readOnlyReason";
 import { AiHost } from "./ai/AiHost";
+import { WatchdogHost } from "./watchdog/WatchdogHost";
 import { ConfigResetConfirm } from "./components/ConfigResetConfirm";
 import { ReportDialogHost } from "./components/ReportDialogHost";
 import { ConfirmModal } from "./components/ConfirmModal";
@@ -2737,6 +2738,7 @@ export const VaultApp = ({
 
       {/* After Settings: the warning must stack above it. */}
       <AiHost win={win} />
+      <WatchdogHost win={win} />
 
       {(switcher || palettePick.pick) && (
         <QuickSwitcher

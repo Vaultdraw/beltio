@@ -197,3 +197,15 @@ describe("[control]", () => {
     ).toEqual([]);
   });
 });
+
+describe("[watchdog]", () => {
+  it("is a known table with both keys", async () => {
+    const { unknownKeyProblems } = await import("../vault/settingsSync");
+    expect(
+      unknownKeyProblems({ watchdog: { enabled: true, grace_ms: 5000 } }),
+    ).toEqual([]);
+    expect(
+      unknownKeyProblems({ watchdog: { nope: 1 } }).map((p) => p.key),
+    ).toEqual(["watchdog.nope"]);
+  });
+});
