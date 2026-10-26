@@ -1,0 +1,5 @@
+/* The safe-start banner reuses the 32 px banner strip (components/feedback.css). */
+.vd-safe-start .vault-btn {
+  flex: none;
+  white-space: nowrap;
+}

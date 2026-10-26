@@ -134,6 +134,12 @@ pub enum Command {
     },
     /// One read-only report for bug reports: versions, paths, config, extensions, index, socket (no app needed)
     Doctor,
+    /// Start Vaultdraw, or focus it when it runs. --safe starts with the built-in extensions and plugins off (a running app asks you first). The only command that starts the app
+    Launch {
+        /// Safe start: built-in extensions and plugins off; nothing in your config is changed
+        #[arg(long)]
+        safe: bool,
+    },
     /// Quit the app (same save barrier as Cmd+Q)
     Quit,
     /// Show the open vault, or open another

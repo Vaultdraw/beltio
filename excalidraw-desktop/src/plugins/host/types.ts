@@ -51,7 +51,8 @@ export interface PluginInfo {
 }
 
 export interface SafeModeInfo {
-  reason: "user" | "crashes" | "modifier";
+  reason: "user" | "crashes" | "modifier" | "flag" | "env";
+  scope?: "plugins" | "core";
   crashedLaunches: number;
   pluginsAtCrash: string[];
 }

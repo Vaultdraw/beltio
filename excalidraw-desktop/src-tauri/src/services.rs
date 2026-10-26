@@ -106,14 +106,39 @@ pub(crate) fn modes_of(config: &Json) -> Modes {
     Modes { search: mode(config, "search", Mode::Idle), links: mode(config, "links", Mode::Idle), history: mode(config, "history", Mode::Open) }
 }
 
-/// The global config.toml, or `null` when missing or invalid (every key then defaults).
+/// The merged config (config.toml, then the Settings `overrides.toml`), or `null` when
+/// missing or invalid (every key then defaults).
 #[cfg_attr(test, allow(dead_code))]
 pub(crate) fn read_config() -> Json {
-    config::resolve_dirs()
-        .ok()
-        .and_then(|d| config::read_toml_text(&d.config.join("config.toml"), "config.toml", 1024 * 1024).ok())
-        .and_then(|text| config::parse_config(&text).ok())
-        .unwrap_or(Json::Null)
+    config::resolve_dirs().map(|d| config::read_merged_config(&d)).unwrap_or(Json::Null)
+}
+
+// ---- which services the enabled extensions need ----
+
+/// Services wanted by the built-in extensions that are on (`[extensions]`, missing = on).
+/// An unwanted service is never started at vault open or when idle; a query that needs it
+/// (a rename rewriting links, a CLI call) still starts it on demand.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct Wanted {
+    /// The vault index (full-text search, tags, and the link index built from it).
+    pub index: bool,
+    /// The link index (links, graph).
+    pub links: bool,
+}
+
+pub(crate) fn wanted_of(config: &Json, core_safe_start: bool) -> Wanted {
+    if core_safe_start {
+        return Wanted { index: false, links: false };
+    }
+    let on = |id: &str| config.get("extensions").and_then(|t| t.get(id)).and_then(Json::as_bool).unwrap_or(true);
+    let links = on("links") || on("graph");
+    Wanted { index: links || on("search") || on("tags"), links }
+}
+
+/// This launch is a core-only safe start: no extension service starts by itself.
+#[cfg_attr(test, allow(dead_code))]
+pub(crate) fn core_safe_start() -> bool {
+    crate::launch::current().is_some_and(|s| s.scope == crate::launch::Scope::Core)
 }
 
 /// History settings as the webview would send them: `[history]` of config.toml, overridden
@@ -177,15 +202,29 @@ pub(crate) fn start(service: Service, handle: &str, search: &search::SearchServi
 
 /// At vault open: starts natively every service whose mode is "open".
 #[cfg_attr(test, allow(dead_code))]
-pub(crate) fn start_open(modes: &Modes, handle: &str, app: &tauri::AppHandle) {
+pub(crate) fn start_open(modes: &Modes, wanted: &Wanted, handle: &str, app: &tauri::AppHandle) {
     use tauri::Manager as _;
     let (Some(search), Some(history)) = (app.try_state::<search::SearchService>(), app.try_state::<history::HistoryService>()) else { return };
-    for (mode, service) in [(modes.history, Service::History), (modes.search, Service::Search), (modes.links, Service::Links)] {
-        if mode == Mode::Open {
-            start(service, handle, &search, &history);
-        }
+    for service in open_starts(modes, wanted) {
+        start(service, handle, &search, &history);
     }
 }
+
+/// The services `start_open` starts: mode "open" and wanted by an enabled extension.
+pub(crate) fn open_starts(modes: &Modes, wanted: &Wanted) -> Vec<Service> {
+    let mut out = Vec::new();
+    for (mode, service, want) in [
+        (modes.history, Service::History, true),
+        (modes.search, Service::Search, wanted.index),
+        (modes.links, Service::Links, wanted.links),
+    ] {
+        if mode == Mode::Open && want {
+            out.push(service);
+        }
+    }
+    out
+}
+
 
 #[tauri::command]
 #[cfg_attr(test, allow(dead_code))]
@@ -261,6 +300,29 @@ mod tests {
         let closed = pending.ensure("a", move |_| p.cancel("a"));
         assert!(closed);
         assert!(!pending.ensure("a", |_| panic!("not pending any more")));
+    }
+
+    #[test]
+    fn unwanted_services_never_start_at_open() {
+        let all_open = Modes { search: Mode::Open, links: Mode::Open, history: Mode::Open };
+        let none = wanted_of(&Json::Null, false);
+        assert_eq!(none, Wanted { index: true, links: true });
+        assert_eq!(open_starts(&all_open, &none), vec![Service::History, Service::Search, Service::Links]);
+        // Search off, tags and links on: the index still runs for them.
+        let cfg = serde_json::json!({"extensions": {"search": false}});
+        assert_eq!(wanted_of(&cfg, false), Wanted { index: true, links: true });
+        // Links and graph off: no link index; search alone keeps the index.
+        let cfg = serde_json::json!({"extensions": {"links": false, "graph": false}});
+        assert_eq!(wanted_of(&cfg, false), Wanted { index: true, links: false });
+        // Everything that needs the index off: nothing but history starts.
+        let cfg = serde_json::json!({"extensions": {"links": false, "graph": false, "search": false, "tags": false}});
+        let w = wanted_of(&cfg, false);
+        assert_eq!(w, Wanted { index: false, links: false });
+        assert_eq!(open_starts(&all_open, &w), vec![Service::History]);
+        // Core safe start: no extension service, whatever the config says.
+        assert_eq!(wanted_of(&Json::Null, true), Wanted { index: false, links: false });
+        // A bad value counts as the default (on).
+        assert!(wanted_of(&serde_json::json!({"extensions": {"search": "no", "tags": false, "links": false, "graph": false}}), false).index);
     }
 
     #[test]

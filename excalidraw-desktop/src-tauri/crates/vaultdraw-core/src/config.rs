@@ -257,6 +257,18 @@ autosave_delay_ms = 500
 # Seconds without input before off-screen caches are freed, 0 to 86400 (0 = never)
 # idle_purge_s = 180
 
+[extensions]
+# Built-in extensions: false = not loaded at all (no memory, no work). Changes apply live.
+# search = true       # search inside drawings (off: file names only)
+# links = true        # links dock, [[ autocomplete, link styling, hints
+# tags = true         # tags pane, tag chips, tag search and rename
+# graph = true        # graph view
+# library = true      # library sidebar
+# templates = true    # new from template, save as template
+# formula = true      # LaTeX formulas
+# mermaid = true      # Mermaid to Excalidraw
+# pdf-import = true   # PDF import
+
 [search]
 # Milliseconds to wait after a keystroke before searching, 0 to 2000
 # debounce_ms = 60
@@ -489,6 +501,12 @@ fn read_state(path: &Path) -> Json {
         .and_then(|bytes| serde_json::from_slice::<Json>(&bytes).ok())
         .filter(Json::is_object)
         .unwrap_or_else(empty)
+}
+
+/// The merged config as the webview sees it (`config.toml` with its includes, then
+/// `overrides.toml` over it), read only; `Null` when nothing parses.
+pub fn read_merged_config(dirs: &Dirs) -> Json {
+    merged(&read_layers(dirs).all).unwrap_or(Json::Null)
 }
 
 pub fn load_settings_in(dirs: &Dirs) -> Result<LoadedSettings> {
@@ -1569,7 +1587,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 96, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 105, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();

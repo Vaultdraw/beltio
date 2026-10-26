@@ -4,7 +4,7 @@ use super::bridge::{call_window, pending, CALL_TIMEOUT, STATE_TIMEOUT, WINDOW_LA
 use super::{events, ops, scene_route};
 use super::server::Dispatch;
 use serde_json::{json, Value};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use vaultdraw_protocol::methods::{self, APP_FOCUS, APP_OPEN, APP_STATUS, COMMAND_LIST, COMMAND_RUN, RPC_DISCOVER, SCENE_APPLY, SCENE_GET, SCENE_READ, SCENE_SELECTION, URI_HANDLE};
 use vaultdraw_protocol::{codes, RpcError, API_LEVEL};
 
@@ -49,6 +49,10 @@ impl TauriDispatch {
             .collect::<Result<_, _>>()?;
         let cwd = params.get("cwd").cloned().unwrap_or(Value::Null);
         self.focus()?;
+        if crate::launch::argv_has_safe(&argv) {
+            // The window asks the user first: a safe start closes the open drawings.
+            let _ = self.app.emit(crate::launch::SAFE_REQUESTED_EVENT, ());
+        }
         let mut handled = 0;
         for route in route_argv(&argv) {
             match route {
@@ -153,6 +157,14 @@ impl Dispatch for TauriDispatch {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn forwarded_safe_flag_is_seen_and_not_routed_as_a_target() {
+        let argv = ["--safe", "/v/a.excalidraw"];
+        assert!(crate::launch::argv_has_safe(argv));
+        assert_eq!(route_argv(&argv), vec![Route::File("/v/a.excalidraw")]);
+        assert!(!crate::launch::argv_has_safe(["/v/a.excalidraw"]));
+    }
 
     #[test]
     fn app_open_routes_links_to_the_policy_handler_and_paths_to_the_window() {

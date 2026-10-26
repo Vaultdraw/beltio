@@ -7,8 +7,8 @@ mod consent;
 mod devlog;
 mod gateway;
 mod install;
-mod launch;
 mod manifest;
+pub(crate) use manifest::is_valid_id as is_valid_plugin_id;
 mod scan;
 mod scheme;
 mod state;
@@ -87,7 +87,7 @@ pub(crate) async fn plugins_list(app: AppHandle, rescan: Option<bool>) -> Result
         let disabled = state::load(&state_dir);
         let confirmed = consent::load(&state_dir);
         let mut list = snap.list.clone();
-        list.safe_mode = launch::current();
+        list.safe_mode = crate::launch::current();
         for p in &mut list.plugins {
             p.host_disabled = disabled.get(&p.manifest.id).cloned();
             p.review = review_of(p, &confirmed);
@@ -239,7 +239,7 @@ pub(crate) async fn plugins_pick_folder() -> Result<Option<String>> {
 #[tauri::command]
 pub(crate) async fn plugins_launch_ok() -> Result<()> {
     blocking(|| {
-        launch::mark_ok();
+        crate::launch::mark_ok();
         Ok(())
     })
     .await
@@ -249,6 +249,7 @@ static RESTART_PENDING: AtomicBool = AtomicBool::new(false);
 
 /// Forgets a restart whose quit was not confirmed. Returns whether one was pending.
 fn clear_restart() -> bool {
+    crate::launch::set_normal_restart(false);
     RESTART_PENDING.swap(false, Ordering::SeqCst)
 }
 
@@ -257,13 +258,13 @@ fn clear_restart() -> bool {
 #[tauri::command]
 pub(crate) async fn plugins_restart_cancel() -> Result<()> {
     if clear_restart() {
-        blocking(launch::cancel_safe_mode).await?;
+        blocking(crate::launch::cancel_safe_mode).await?;
     }
     Ok(())
 }
 
 /// Restart through the normal quit path so open drawings are flushed first.
-fn restart<R: tauri::Runtime>(app: &AppHandle<R>) {
+pub(crate) fn restart<R: tauri::Runtime>(app: &AppHandle<R>) {
     RESTART_PENDING.store(true, Ordering::SeqCst);
     if app.webview_windows().is_empty() {
         app.exit(0);
@@ -274,26 +275,36 @@ fn restart<R: tauri::Runtime>(app: &AppHandle<R>) {
 
 #[tauri::command]
 pub(crate) async fn plugins_restart_safe_mode(app: AppHandle) -> Result<()> {
-    blocking(launch::request_safe_mode).await?;
+    blocking(crate::launch::request_safe_mode).await?;
     restart(&app);
     Ok(())
 }
 
 #[tauri::command]
 pub(crate) fn plugins_restart(app: AppHandle) {
+    // A restart the user asks for is a normal one: it never carries `--safe` along.
+    crate::launch::set_normal_restart(true);
     restart(&app);
 }
 
 /// Setup hook, before the webview loads: crash counter and safe-mode decision.
 pub(crate) fn on_setup() {
-    launch::begin();
+    crate::launch::begin();
     term::install();
 }
 
 /// Exit hook: a clean exit clears the in-progress flag; a pending restart relaunches the app.
 pub(crate) fn on_exit<R: tauri::Runtime>(app: &AppHandle<R>) {
-    launch::mark_ok();
+    crate::launch::mark_ok();
     if RESTART_PENDING.load(Ordering::SeqCst) {
+        if crate::launch::normal_restart_pending() {
+            // Same as `app.restart()`, but the new process starts without `--safe`.
+            crate::launch::clear_safe_env();
+            app.cleanup_before_exit();
+            let mut env = app.env();
+            env.args_os = crate::launch::without_safe(std::mem::take(&mut env.args_os));
+            tauri::process::restart(&env);
+        }
         app.restart();
     }
 }

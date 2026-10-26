@@ -43,8 +43,8 @@ struct ConfigChangeEvent {
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
-pub(crate) async fn load_settings() -> Result<LoadedSettings> {
-    load_settings_in(&resolve_dirs()?)
+pub(crate) async fn load_settings() -> Result<crate::launch::WithSafeStart<LoadedSettings>> {
+    load_settings_in(&resolve_dirs()?).map(crate::launch::with_safe_start)
 }
 
 #[tauri::command]

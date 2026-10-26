@@ -5,6 +5,7 @@ mod diag;
 mod events;
 mod export;
 mod files;
+mod launch;
 mod scene;
 mod tabs;
 mod uri;
@@ -60,6 +61,7 @@ pub fn run(cli: &Cli) -> Result<(), Fail> {
         Command::Doctor => diag::doctor(cli),
         Command::Events { topic } => events::stream(cli, topic),
         Command::Uri { url } => uri::run(cli, url),
+        Command::Launch { safe } => launch::run(cli, *safe),
         Command::Quit => app::quit(cli),
         Command::Vault { action } => app::vault(cli, action.as_ref()),
     }

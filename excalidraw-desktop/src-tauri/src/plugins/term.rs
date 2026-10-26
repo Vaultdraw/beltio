@@ -82,7 +82,7 @@ pub(crate) fn install() {
     {
         let sigs = [libc::SIGTERM, libc::SIGINT, libc::SIGHUP];
         imp::watch(&sigs, |sig| {
-            super::launch::mark_ok();
+            crate::launch::mark_ok();
             imp::finish(sig);
         });
     }

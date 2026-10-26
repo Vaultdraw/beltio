@@ -50,7 +50,7 @@ pub(crate) struct PluginsList {
     pub errors: Vec<ScanError>,
     pub scan_ms: f64,
     /// Set by `plugins_list`: this launch's safe mode, if any.
-    pub safe_mode: Option<super::launch::SafeMode>,
+    pub safe_mode: Option<crate::launch::SafeStart>,
 }
 
 /// Where the scheme handler and uninstall find a plugin.
