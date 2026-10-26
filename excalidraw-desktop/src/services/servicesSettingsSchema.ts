@@ -49,4 +49,12 @@ export const SERVICES_SETTINGS_SCHEMA: readonly SettingSchema[] = [
     keywords: ["history", "versions"],
     configKey: "history.start",
   }),
+  row({
+    id: "services-files-list-start",
+    label: "Start file list",
+    description:
+      "When every folder of the vault is listed (the file tree itself always loads at once). The list feeds recent drawings on the home page, the file switcher, link suggestions and the move dialog; on first use, the first of those starts it.",
+    keywords: ["files", "list", "recent", "switcher", "scan", "walk"],
+    configKey: "files.list_start",
+  }),
 ];

@@ -32,6 +32,8 @@ export type EditorLinksWiring = {
   settings: LinksSettings;
   /** Stable identity: changes only when the drawing list changes. */
   names: readonly string[];
+  /** Asked when a link action needs `names` (starts a lazy file list). */
+  onNeedNames?(): void;
   currentPath: string | null;
   callbacks: EditorLinksCallbacks;
   links: VaultLinks | null;
@@ -88,6 +90,7 @@ export function useVaultEditorLinks(
     containerEl,
     settings: wiring?.settings ?? OFF,
     names: wiring?.names ?? NO_NAMES,
+    onNeedNames: wiring?.onNeedNames,
     currentPath,
     callbacks: wiring?.callbacks ?? NO_CALLBACKS,
     links: wiring?.links,

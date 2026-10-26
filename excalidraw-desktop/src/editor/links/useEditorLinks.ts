@@ -62,6 +62,11 @@ export type UseEditorLinksOptions = {
   settings: LinksSettings;
   /** Vault drawing paths (the palette's names list). */
   names: readonly string[];
+  /**
+   * Called when an action reads `names` (autocomplete, new links), so a
+   * lazily started file list (files.list_start = "use") starts.
+   */
+  onNeedNames?: () => void;
   currentPath: string | null;
   callbacks: EditorLinksCallbacks;
   /** Optional: asked when the name list does not know a target. */
@@ -149,7 +154,10 @@ export function useEditorLinks(opts: UseEditorLinksOptions) {
         setAutocomplete(
           new Engine({
             container: containerEl,
-            getNames: () => latest.current.names,
+            getNames: () => {
+              latest.current.onNeedNames?.();
+              return latest.current.names;
+            },
             getResolver: () => resolverRef.current,
             getSettings: () => latest.current.settings,
             getCurrentPath: () => latest.current.currentPath,
@@ -231,6 +239,7 @@ export function useEditorLinks(opts: UseEditorLinksOptions) {
   /** "Link selection to drawing...": write the link on every selected element. */
   const linkSelectionTo = useCallback((targetPath: string): number => {
     const { api, settings, currentPath } = latest.current;
+    latest.current.onNeedNames?.();
     if (!api) {
       return 0;
     }
@@ -251,6 +260,7 @@ export function useEditorLinks(opts: UseEditorLinksOptions) {
   /** The text to put inside `[[...]]` for the drawing at `path`. */
   const targetFor = useCallback((path: string): string => {
     const { settings, currentPath } = latest.current;
+    latest.current.onNeedNames?.();
     return linkTargetFor(
       path,
       currentPath,

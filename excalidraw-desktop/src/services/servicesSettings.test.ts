@@ -18,15 +18,18 @@ const KEYS = {
   searchStart: "search.start",
   linksStart: "links.start",
   historyStart: "history.start",
+  filesListStart: "files.list_start",
 } as const;
 
 describe("servicesSettings", () => {
-  it("defaults are idle / idle / open", () => {
+  it("defaults are idle / idle / open / idle", () => {
     expect(SERVICES_DEFAULTS).toEqual({
       searchStart: "idle",
       linksStart: "idle",
       historyStart: "open",
+      filesListStart: "idle",
     });
+    expect(DEFAULT_PREFERENCES.filesListStart).toBe("idle");
     expect(DEFAULT_PREFERENCES.searchStart).toBe("idle");
     expect(DEFAULT_PREFERENCES.historyStart).toBe("open");
   });
@@ -57,8 +60,14 @@ describe("servicesSettings", () => {
         searchStart: "use",
         linksStart: "bogus",
         historyStart: 3,
+        filesListStart: "use",
       }),
-    ).toEqual({ searchStart: "use", linksStart: "idle", historyStart: "open" });
+    ).toEqual({
+      searchStart: "use",
+      linksStart: "idle",
+      historyStart: "open",
+      filesListStart: "use",
+    });
     expect(normalizeServicesPreferences({})).toEqual(SERVICES_DEFAULTS);
   });
 

@@ -1,6 +1,6 @@
 /**
  * When each vault service starts (D8): `[search] start`, `[links] start`,
- * `[history] start` in config.toml. Pure data; preferences.ts and
+ * `[history] start` and `[files] list_start` in config.toml. Pure data; preferences.ts and
  * settingsSync.ts spread `SERVICES_DEFAULTS`, `normalizeServicesPreferences`
  * and `SERVICES_MAPPINGS` in.
  *
@@ -20,6 +20,7 @@ export const SERVICES_FIELDS = [
   "searchStart",
   "linksStart",
   "historyStart",
+  "filesListStart",
 ] as const;
 export type ServicesField = typeof SERVICES_FIELDS[number];
 
@@ -30,12 +31,19 @@ export interface ServicesPreferences {
   linksStart: StartMode;
   /** history.start */
   historyStart: StartMode;
+  /**
+   * files.list_start: the webview's walk of every vault folder (the file
+   * list behind recent drawings, the file switcher, link names and the move
+   * dialog). The file tree itself always loads at open.
+   */
+  filesListStart: StartMode;
 }
 
 export const SERVICES_DEFAULTS: ServicesPreferences = {
   searchStart: "idle",
   linksStart: "idle",
   historyStart: "open",
+  filesListStart: "idle",
 };
 
 const mapping = (field: ServicesField, key: string): ConfigMapping => ({
@@ -49,6 +57,7 @@ export const SERVICES_MAPPINGS: readonly ConfigMapping[] = [
   mapping("searchStart", "search.start"),
   mapping("linksStart", "links.start"),
   mapping("historyStart", "history.start"),
+  mapping("filesListStart", "files.list_start"),
 ];
 
 /** Stored preferences -> valid start modes; bad ones default. */

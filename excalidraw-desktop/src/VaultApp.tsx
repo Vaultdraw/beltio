@@ -28,7 +28,9 @@ import { LinkPromptHost, LinkRequestHost } from "./control/linkRequests";
 import { useControlBridge } from "./control/useControlBridge";
 import { useMenuCommands } from "./help/useMenuCommands";
 import { useAppLinks } from "./links/useAppLinks";
-import { useLazyServices } from "./services/useLazyServices";
+import { useLazyServices, useStartMode } from "./services/useLazyServices";
+import { useServiceStart } from "./services/useServiceStart";
+import { OnMount } from "./services/OnMount";
 import { DesktopVaultTagRename } from "./tags/DesktopVaultTagRename";
 import { scheduleIdle } from "./platform/idle";
 import { useAppTags } from "./tags/useAppTags";
@@ -704,12 +706,23 @@ export const VaultApp = ({
     [repository, vault, rebaseFolders],
   );
 
-  // Background indexing with cancellation and generation guard
+  // files.list_start: the vault whose file list walk has started. Until then
+  // the walk (scanVaultMetadata) and its watcher rescans are skipped; the
+  // tree itself loads folder by folder either way.
+  const listStartedFor = useRef<string | null>(null);
+  // The open vault's walk context (cancellation + generation), for a start
+  // that comes after vault open (idle or first use).
+  const scanContext = useRef<{ signal: AbortSignal; gen: number } | null>(null);
+
+  // Background indexing with cancellation and generation guard. Every call
+  // (vault open, or a refresh after a change made in the app) counts as a
+  // start of the file list.
   const startIndexing = useCallback(
     (signal?: AbortSignal, expectedGen?: number) => {
       if (!vault) {
         return;
       }
+      listStartedFor.current = vault.handle;
       const gen = expectedGen ?? vaultGeneration.current;
       setIsIndexing(true);
       const isCurrent = () =>
@@ -828,8 +841,13 @@ export const VaultApp = ({
       }
     }
 
-    // Start background scan and check recovery
-    startIndexing(abortController.signal, currentGen);
+    // Background scan per files.list_start (started by useServiceStart
+    // below; re-run here only when this vault's list already started), and
+    // check recovery.
+    scanContext.current = { signal: abortController.signal, gen: currentGen };
+    if (listStartedFor.current === vault.handle) {
+      startIndexing(abortController.signal, currentGen);
+    }
     void refreshRecovery(currentGen);
 
     // Watcher subscription: handle late .then(off) cleanup
@@ -841,7 +859,11 @@ export const VaultApp = ({
         clearTimeout(indexTimeoutRef.current);
       }
       indexTimeoutRef.current = setTimeout(() => {
-        if (!disposed && currentGen === vaultGeneration.current) {
+        if (
+          !disposed &&
+          currentGen === vaultGeneration.current &&
+          listStartedFor.current === vault.handle
+        ) {
           startIndexing(abortController.signal, currentGen);
         }
       }, 500);
@@ -959,6 +981,28 @@ export const VaultApp = ({
       unsubscribe?.();
     };
   }, [loadDirectory, refreshRecovery, repository, startIndexing, vault, win]);
+
+  // files.list_start (declared after the vault effect, so "open" starts
+  // with this vault's scan context in place).
+  const fileListMode = useStartMode(win, "filesListStart");
+  const fileList = useServiceStart(
+    win,
+    vault?.handle ?? null,
+    fileListMode,
+    (h) => {
+      const ctx = scanContext.current;
+      if (listStartedFor.current !== h && ctx) {
+        startIndexing(ctx.signal, ctx.gen);
+      }
+    },
+  );
+  const needFileList = fileList.activate;
+  // Opening the file switcher or palette is a use of the file list.
+  useEffect(() => {
+    if (switcher) {
+      needFileList();
+    }
+  }, [switcher, needFileList]);
 
   // Safely switch vaults: flush and close old doc BEFORE releasing old vault handle
   // `sameVault`: swap the current vault's handle for a fresh one (Retry writable).
@@ -1446,6 +1490,7 @@ export const VaultApp = ({
             settings: linksSettings,
             tagsSettings,
             names: appLinks.names,
+            onNeedNames: needFileList,
             currentPath: activeDoc?.path ?? null,
             callbacks: appLinks.editorCallbacks,
             links: vaultLinks,
@@ -2116,9 +2161,20 @@ export const VaultApp = ({
       tabs: tabs.store?.getState().tabs.length ?? (activeDoc ? 1 : 0),
     }),
     openTarget: async (target, cwd) => {
+      // Before the file list is complete (files.list_start, or a walk in
+      // progress) any drawing path is tried; opening reports a missing one.
+      const listed =
+        !!vault && listStartedFor.current === vault.handle && !isIndexing;
+      if (!listed) {
+        needFileList();
+      }
       const path = vault
         ? resolveOpenTarget(target, cwd, vault.path, (p) =>
-            allIndexedEntries.some((e) => e.kind === "drawing" && e.path === p),
+            listed
+              ? allIndexedEntries.some(
+                  (e) => e.kind === "drawing" && e.path === p,
+                )
+              : p.toLowerCase().endsWith(".excalidraw"),
           )
         : null;
       if (path === null) {
@@ -2517,6 +2573,7 @@ export const VaultApp = ({
                   enabled={prefsNow.deferHomePane}
                   releasedRef={homeReleasedRef}
                 >
+                  {fileListMode === "use" && <OnMount run={needFileList} />}
                   <VaultHome
                     readOnly={vault.readOnly}
                     recent={homeRecent}
@@ -2614,6 +2671,7 @@ export const VaultApp = ({
           onExpandFolder={handleExpandFolder}
           allIndexedEntries={allIndexedEntries}
           isIndexing={isIndexing}
+          onNeedIndex={needFileList}
           ownerDocument={doc}
           dockSlot={
             vaultLinks && appLinks.dockVisible ? (

@@ -153,6 +153,8 @@ interface VaultNavigatorProps {
   onExpandFolder: (folderPath: string) => void;
   allIndexedEntries: VaultEntry[];
   isIndexing?: boolean;
+  /** Starts the vault file list if it waits for first use (files.list_start). */
+  onNeedIndex?: () => void;
   onRefresh?: () => void;
   onOpenSettings?: () => void;
   sortOrder: SortOrder;
@@ -204,6 +206,7 @@ export const VaultNavigator = ({
   onExpandFolder,
   allIndexedEntries,
   isIndexing = false,
+  onNeedIndex,
   onRefresh,
   onOpenSettings,
   sortOrder,
@@ -232,6 +235,12 @@ export const VaultNavigator = ({
 
   const [renameTarget, setRenameTarget] = useState<VaultEntry | null>(null);
   const [moveTarget, setMoveTarget] = useState<VaultEntry | null>(null);
+  // The move dialog lists every folder: it needs the vault file list.
+  useEffect(() => {
+    if (moveTarget) {
+      onNeedIndex?.();
+    }
+  }, [moveTarget, onNeedIndex]);
   const [trashTarget, setTrashTarget] = useState<VaultEntry | null>(null);
   const [menu, setMenu] = useState<RowMenuState | null>(null);
   const [sortMenu, setSortMenu] = useState<{ x: number; y: number } | null>(
@@ -286,6 +295,7 @@ export const VaultNavigator = ({
 
   // Names already in a folder, from the loaded tree plus the search index.
   const namesInFolder = (folder: string): string[] => {
+    onNeedIndex?.();
     const names = allIndexedEntries
       .filter((e) => getParentPath(e.path) === folder)
       .map((e) => e.name);
@@ -333,6 +343,12 @@ export const VaultNavigator = ({
   );
 
   const isSearching = searchQuery.trim() !== "";
+  // Name matches in the results come from the vault file list.
+  useEffect(() => {
+    if (isSearching) {
+      onNeedIndex?.();
+    }
+  }, [isSearching, onNeedIndex]);
   const { tags, byPath: tagsByPath } = useVaultTags(search, vault.handle);
   const filterByTag = (key: string) => setSearchQuery(tagQuery(key));
   const tagsPanelRef = useRef<TagsPanelHandle>(null);

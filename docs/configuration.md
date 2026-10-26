@@ -253,13 +253,14 @@ Everything here can be changed in **Settings** (Cmd/Ctrl+,) or by editing `confi
 
 #### Startup
 
-Settings → General → **Startup** chooses when three background services start, so opening a vault does not pay for work you may not use. Each has three buttons: **On open**, **When idle** and **On first use**. All three apply live.
+Settings → General → **Startup** chooses when four background services start, so opening a vault does not pay for work you may not use. Each has three buttons: **On open**, **When idle** and **On first use**. All apply live.
 
 | Key | Default | Starts |
 | --- | --- | --- |
 | `search.start` | `"idle"` | the search index |
 | `links.start` | `"idle"` | the link index (backlinks, link lookup, graph) |
 | `history.start` | `"open"` | file history (versions and checkpoints) |
+| `files.list_start` | `"idle"` | the file list: a walk of every vault folder (the file tree itself always loads at open) |
 
 Values for each key:
 
@@ -276,6 +277,9 @@ start = "idle"     # open | idle | use
 
 [history]
 start = "open"     # open | idle | use
+
+[files]
+list_start = "idle"  # open | idle | use
 ```
 
 What `"use"` means for each service:
@@ -283,6 +287,7 @@ What `"use"` means for each service:
 - **Search:** the first search (navigator search, quick switcher or CLI query). Until the index starts, the navigator's tag list is empty; it fills in once the index starts.
 - **Links:** the first links action (backlinks dock, link lookup, graph, or a rename that updates links). That action waits for the index. Starting links also starts search, because the link index is built from it, and pre-builds the link index.
 - **History:** the first edit or save of a drawing, a rename or move, or the first history action (panel or checkpoint). It starts with the vault's own history settings. Settings → History shows storage use once history has started.
+- **File list:** the first thing that needs every drawing's name: the home page's Recent drawings, the file switcher or palette, a navigator search, `[[` link suggestions or a new link, the move dialog or a drag in the tree, a change made in the app (new, rename, move, duplicate, delete) or `vaultdraw open`. Until it starts, Recent and link suggestions are empty, and `vaultdraw open` tries the path as given.
 
 Notes:
 
@@ -1271,6 +1276,7 @@ Creating and deleting drawings.
 | `confirm_delete` | `true` | true or false |  | Ask before moving a drawing to the Trash. |
 | `new_drawing_folder` | `""` | a folder path inside the vault like "Sketches/Inbox", or "" | yes | Folder for new drawings, relative to the vault root; empty puts them next to the open drawing. |
 | `templates_folder` | `"Templates"` | a non-empty folder path inside the vault like "Templates" | yes | Vault folder holding your templates. See [Templates](#templates). |
+| `list_start` | `"idle"` | "open", "idle" or "use" |  | When every vault folder is listed for recent drawings, the file switcher, link suggestions and the move dialog: `open`, `idle` or `use` (the first of those). The file tree loads at open either way. See [Startup](#startup). |
 
 ### `[links]`
 

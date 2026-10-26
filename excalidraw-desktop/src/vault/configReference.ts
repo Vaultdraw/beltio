@@ -179,6 +179,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       templates_folder: {
         doc: "Vault folder holding your templates. See [Templates](#templates).",
       },
+      list_start: {
+        doc: "When every vault folder is listed for recent drawings, the file switcher, link suggestions and the move dialog: `open`, `idle` or `use` (the first of those). The file tree loads at open either way. See [Startup](#startup).",
+      },
     },
   },
   {

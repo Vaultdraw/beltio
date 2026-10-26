@@ -63,4 +63,13 @@ export const servicesControls: SettingControls = {
       />
     ),
   },
+  "services-files-list-start": {
+    Component: () => (
+      <StartSetting
+        id="services-files-list-start"
+        field="filesListStart"
+        label="Start file list"
+      />
+    ),
+  },
 };

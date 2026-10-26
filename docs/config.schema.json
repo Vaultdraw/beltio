@@ -459,6 +459,16 @@
           "default": "Templates",
           "type": "string",
           "minLength": 1
+        },
+        "list_start": {
+          "description": "When every vault folder is listed for recent drawings, the file switcher, link suggestions and the move dialog: `open`, `idle` or `use` (the first of those). The file tree loads at open either way. See [Startup](#startup).",
+          "default": "idle",
+          "type": "string",
+          "enum": [
+            "open",
+            "idle",
+            "use"
+          ]
         }
       }
     },

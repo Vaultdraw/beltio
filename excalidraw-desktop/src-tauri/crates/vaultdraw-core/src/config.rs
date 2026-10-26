@@ -146,6 +146,8 @@ autosave_delay_ms = 500
 # new_drawing_folder = ""
 # Vault folder holding your templates, relative to the vault root (empty falls back to "Templates")
 # templates_folder = "Templates"
+# When every vault folder is listed (recent drawings, file switcher, link suggestions): open | idle | use
+# list_start = "idle"
 
 [hotkeys]
 # Override a command's keys; [] removes them. Example:
@@ -1468,7 +1470,7 @@ mod tests {
             "{out}"
         );
         assert!(
-            out.contains("# activity_bar_hidden = []\n\n[navigator]\n# name_asc | name_desc | modified_desc | modified_asc\nsort = \"modified_desc\"\n\n[files]\n# Ask before moving a drawing to the Trash\n# confirm_delete = true\n# Folder for new drawings, relative to the vault root (empty = next to the open drawing)\nnew_drawing_folder = \"Inbox\"\n# Vault folder holding your templates, relative to the vault root (empty falls back to \"Templates\")\n# templates_folder = \"Templates\"\n\n[hotkeys]\n"),
+            out.contains("# activity_bar_hidden = []\n\n[navigator]\n# name_asc | name_desc | modified_desc | modified_asc\nsort = \"modified_desc\"\n\n[files]\n# Ask before moving a drawing to the Trash\n# confirm_delete = true\n# Folder for new drawings, relative to the vault root (empty = next to the open drawing)\nnew_drawing_folder = \"Inbox\"\n# Vault folder holding your templates, relative to the vault root (empty falls back to \"Templates\")\n# templates_folder = \"Templates\"\n# When every vault folder is listed (recent drawings, file switcher, link suggestions): open | idle | use\n# list_start = \"idle\"\n\n[hotkeys]\n"),
             "{out}"
         );
         assert_eq!(out.matches("[interface]").count(), 1);
@@ -1550,7 +1552,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 90, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 91, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();
