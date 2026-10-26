@@ -213,15 +213,6 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
     },
   },
   {
-    table: "search",
-    intro: "The search index. See [Startup](#startup).",
-    keys: {
-      start: {
-        doc: "When the search index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first search). Tags show once it has started.",
-      },
-    },
-  },
-  {
     table: "pens",
     intro: "Saved pens of the freedraw tool (Alt+1 to Alt+9 by default).",
     keys: {
@@ -312,6 +303,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       },
       max_snippets: {
         doc: "Most matching elements shown under each drawing; the index keeps 5 per drawing, so 5 is the top.",
+      },
+      start: {
+        doc: "When the search index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first search). Tags show once it has started. See [Startup](#startup).",
       },
     },
   },

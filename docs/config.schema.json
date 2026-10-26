@@ -579,23 +579,6 @@
         }
       }
     },
-    "search": {
-      "type": "object",
-      "description": "The search index. See [Startup](#startup).",
-      "additionalProperties": false,
-      "properties": {
-        "start": {
-          "description": "When the search index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first search). Tags show once it has started.",
-          "default": "idle",
-          "type": "string",
-          "enum": [
-            "open",
-            "idle",
-            "use"
-          ]
-        }
-      }
-    },
     "pens": {
       "type": "object",
       "description": "Saved pens of the freedraw tool (Alt+1 to Alt+9 by default).",
@@ -1226,6 +1209,16 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 5
+        },
+        "start": {
+          "description": "When the search index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first search). Tags show once it has started. See [Startup](#startup).",
+          "default": "idle",
+          "type": "string",
+          "enum": [
+            "open",
+            "idle",
+            "use"
+          ]
         }
       }
     },

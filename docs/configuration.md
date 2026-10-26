@@ -1298,14 +1298,6 @@ Creating and deleting drawings.
 | `autocomplete` | `true` | true or false |  | Suggest existing tags while typing `#`. |
 | `pane_sort` | `"name"` | "name" or "count" |  | Order of the Tags pane: by name or by use count. |
 
-### `[search]`
-
-The search index. See [Startup](#startup).
-
-| Key | Default | Accepts | Per vault | What it does |
-| --- | --- | --- | --- | --- |
-| `start` | `"idle"` | "open", "idle" or "use" |  | When the search index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first search). Tags show once it has started. |
-
 ### `[pens]`
 
 Saved pens of the freedraw tool (Alt+1 to Alt+9 by default).
@@ -1374,6 +1366,7 @@ Search speed trade-offs. Lower counts and a longer wait cost less on a slow mach
 | `debounce_ms` | `60` | a whole number from 0 to 2000 (milliseconds) |  | Wait this long after the last keystroke before a search runs. |
 | `max_drawings` | `50` | a whole number from 1 to 200 |  | Most drawings listed in the search results. |
 | `max_snippets` | `5` | a whole number from 1 to 5 |  | Most matching elements shown under each drawing; the index keeps 5 per drawing, so 5 is the top. |
+| `start` | `"idle"` | "open", "idle" or "use" |  | When the search index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first search). Tags show once it has started. See [Startup](#startup). |
 
 ### `[keys]`
 

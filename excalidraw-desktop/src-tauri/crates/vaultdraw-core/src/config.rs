@@ -220,10 +220,6 @@ autosave_delay_ms = 500
 # Undo history kept for background tabs in MB, 0 to 1024 (0 = none)
 # undo_budget_mb = 32
 
-[search]
-# When the search index starts: open (vault open) | idle (once the app is idle) | use (first search)
-# start = "idle"   # tags show once it has started
-
 [keys]
 # The key <leader> stands for in a sequence
 # leader = "Backslash"
@@ -255,6 +251,8 @@ autosave_delay_ms = 500
 # max_drawings = 50
 # Most matching elements shown per drawing, 1 to 5
 # max_snippets = 5
+# When the search index starts: open (vault open) | idle (once the app is idle) | use (first search)
+# start = "idle"   # tags show once it has started
 
 [history]
 # Version history of each drawing (false = no versions at all)
