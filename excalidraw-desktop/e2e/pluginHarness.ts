@@ -77,6 +77,17 @@ export const FIXTURES: Record<string, () => PluginInfo> = {
         settings: [],
       },
     }),
+  "md-api": () =>
+    makePluginInfo("md-api", {
+      name: "Markdown API",
+      contributes: {
+        commands: [],
+        panels: [
+          { id: "markdown", title: "Markdown API", icon: null, group: "top" },
+        ],
+        settings: [],
+      },
+    }),
   crashy: () =>
     makePluginInfo("crashy", {
       name: "Crashy",
