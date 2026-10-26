@@ -47,6 +47,7 @@ import type { TagsSettings } from "../../tags/types";
 import type { OpenTarget } from "../../tabs/types";
 import type { LinkOpenCallbacks } from "./onLinkOpen";
 import type { ReadDrawing } from "./preview/previewThumbnails";
+import type { LinkResolver } from "../../links/resolve";
 import type { WikiAutocomplete } from "./wikiAutocomplete";
 import type { TextLike } from "./textLinkHitTest";
 
@@ -67,6 +68,12 @@ export type UseEditorLinksOptions = {
    * lazily started file list (files.list_start = "use") starts.
    */
   onNeedNames?: () => void;
+  /**
+   * False while `names` is not yet the vault's complete file list. Link
+   * styling then draws every link as resolved (no false "broken" look) and
+   * `[[` suggestions wait. Default: true.
+   */
+  namesReady?: boolean;
   currentPath: string | null;
   callbacks: EditorLinksCallbacks;
   /** Optional: asked when the name list does not know a target. */
@@ -101,6 +108,11 @@ export function useEditorLinks(opts: UseEditorLinksOptions) {
   const resolver = useMemo(() => createResolver(opts.names), [opts.names]);
   const resolverRef = useRef(resolver);
   resolverRef.current = resolver;
+  const namesReady = opts.namesReady !== false;
+  const styleResolver = useMemo(
+    () => (namesReady ? resolver : provisionalResolver(resolver, latest)),
+    [resolver, namesReady],
+  );
 
   const openRaw = useMemo(
     () =>
@@ -158,6 +170,7 @@ export function useEditorLinks(opts: UseEditorLinksOptions) {
               latest.current.onNeedNames?.();
               return latest.current.names;
             },
+            namesReady: () => latest.current.namesReady !== false,
             getResolver: () => resolverRef.current,
             getSettings: () => latest.current.settings,
             getCurrentPath: () => latest.current.currentPath,
@@ -173,6 +186,10 @@ export function useEditorLinks(opts: UseEditorLinksOptions) {
       cancelled = true;
     };
   }, [containerEl]);
+  // The list finished loading: an open `[[` popup can suggest now.
+  useEffect(() => {
+    autocomplete?.namesChanged();
+  }, [autocomplete, namesReady, opts.names]);
   const autocompleteOn =
     opts.settings.autocomplete ||
     (opts.tagsSettings ?? DEFAULT_TAGS_SETTINGS).autocomplete;
@@ -188,7 +205,7 @@ export function useEditorLinks(opts: UseEditorLinksOptions) {
     api: opts.styleApi === undefined ? opts.api : opts.styleApi,
     enabled: opts.settings.styleLinks,
     linkColor: opts.settings.linkColor,
-    resolver,
+    resolver: styleResolver,
     currentPath:
       opts.stylePath === undefined ? opts.currentPath : opts.stylePath,
   });
@@ -236,38 +253,47 @@ export function useEditorLinks(opts: UseEditorLinksOptions) {
     [openRaw],
   );
 
-  /** "Link selection to drawing...": write the link on every selected element. */
-  const linkSelectionTo = useCallback((targetPath: string): number => {
-    const { api, settings, currentPath } = latest.current;
-    latest.current.onNeedNames?.();
-    if (!api) {
-      return 0;
-    }
-    const target = linkTargetFor(
-      targetPath,
-      currentPath,
-      resolverRef.current,
-      settings.newLinkFormat,
-    );
-    const ids = Object.keys(api.getAppState().selectedElementIds);
-    return setElementLinks(
-      api,
-      ids,
-      shapeLinkValue(target, settings.shapeLinkFormat),
-    );
-  }, []);
+  /**
+   * "Link selection to drawing...": write the link on every selected element.
+   * `names`: the complete file list when the caller waited for it.
+   */
+  const linkSelectionTo = useCallback(
+    (targetPath: string, names?: readonly string[] | null): number => {
+      const { api, settings, currentPath } = latest.current;
+      latest.current.onNeedNames?.();
+      if (!api) {
+        return 0;
+      }
+      const target = linkTargetFor(
+        targetPath,
+        currentPath,
+        names ? createResolver(names) : resolverRef.current,
+        settings.newLinkFormat,
+      );
+      const ids = Object.keys(api.getAppState().selectedElementIds);
+      return setElementLinks(
+        api,
+        ids,
+        shapeLinkValue(target, settings.shapeLinkFormat),
+      );
+    },
+    [],
+  );
 
   /** The text to put inside `[[...]]` for the drawing at `path`. */
-  const targetFor = useCallback((path: string): string => {
-    const { settings, currentPath } = latest.current;
-    latest.current.onNeedNames?.();
-    return linkTargetFor(
-      path,
-      currentPath,
-      resolverRef.current,
-      settings.newLinkFormat,
-    );
-  }, []);
+  const targetFor = useCallback(
+    (path: string, names?: readonly string[] | null): string => {
+      const { settings, currentPath } = latest.current;
+      latest.current.onNeedNames?.();
+      return linkTargetFor(
+        path,
+        currentPath,
+        names ? createResolver(names) : resolverRef.current,
+        settings.newLinkFormat,
+      );
+    },
+    [],
+  );
 
   const applyEdits = useCallback((edits: readonly ElementEdit[]): number => {
     const api = latest.current.api;
@@ -307,4 +333,23 @@ export function useEditorLinks(opts: UseEditorLinksOptions) {
     remeasure,
     overlays,
   };
+}
+
+/**
+ * The resolver link styling uses while the file list is still loading: a
+ * target the partial list does not know counts as resolved (styled as a
+ * normal link, not as broken), and asks for the list. Styling switches to
+ * the real resolver once the list is complete.
+ */
+export function provisionalResolver(
+  resolver: LinkResolver,
+  latest: { current: { onNeedNames?: () => void } },
+): LinkResolver {
+  const r = Object.create(resolver) as LinkResolver;
+  r.resolveTarget = (from, target, relative) => {
+    queueMicrotask(() => latest.current.onNeedNames?.());
+    const res = resolver.resolveTarget(from, target, relative);
+    return res.path !== null ? res : { ...res, path: target };
+  };
+  return r;
 }

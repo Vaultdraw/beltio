@@ -57,6 +57,8 @@ export type AppLinksDeps = {
   doc: Document | null;
   settings: LinksSettings;
   entries: readonly VaultEntry[];
+  /** The complete file list (waits for files.list_start); link writers use it. */
+  loadEntries?(): Promise<readonly VaultEntry[]>;
   indexing: boolean;
   activePath: string | null;
   navigatorCollapsed: boolean;
@@ -460,10 +462,11 @@ export function useAppLinks(deps: AppLinksDeps) {
       if (!d.activePath) {
         return;
       }
+      const entries = d.loadEntries ? await d.loadEntries() : d.entries;
       const target = linkTargetFor(
         d.activePath,
         null,
-        createResolver(drawingNames(d.entries)),
+        createResolver(drawingNames(entries)),
         d.settings.newLinkFormat,
       );
       try {

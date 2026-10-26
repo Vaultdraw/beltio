@@ -34,6 +34,10 @@ export type EditorLinksWiring = {
   names: readonly string[];
   /** Asked when a link action needs `names` (starts a lazy file list). */
   onNeedNames?(): void;
+  /** False while `names` is not yet the vault's complete list. Default true. */
+  namesReady?: boolean;
+  /** The complete names list (waits for it); link writers use it. */
+  loadNames?(): Promise<readonly string[]>;
   currentPath: string | null;
   callbacks: EditorLinksCallbacks;
   links: VaultLinks | null;
@@ -91,6 +95,7 @@ export function useVaultEditorLinks(
     settings: wiring?.settings ?? OFF,
     names: wiring?.names ?? NO_NAMES,
     onNeedNames: wiring?.onNeedNames,
+    namesReady: wiring?.namesReady,
     currentPath,
     callbacks: wiring?.callbacks ?? NO_CALLBACKS,
     links: wiring?.links,
@@ -115,16 +120,18 @@ export function useVaultEditorLinks(
       "links.linkSelection": async () => {
         const path = await pick("Link selection to drawing…");
         if (path) {
-          live.current.controller.linkSelectionTo(path);
+          const names = await live.current.wiring?.loadNames?.();
+          live.current.controller.linkSelectionTo(path, names);
         }
       },
       "links.insert": async () => {
         const { api: a, containerEl: el } = live.current;
         const caret = a ? captureCaret(a, el) : null;
         const path = await pick("Insert link to drawing…");
+        const names = path ? await live.current.wiring?.loadNames?.() : null;
         const { api: b, controller: c } = live.current;
         if (path && b) {
-          insertLinkText(b, caret, wikiLink(c.targetFor(path)));
+          insertLinkText(b, caret, wikiLink(c.targetFor(path, names)));
         }
       },
       "links.openUnderSelection": () => {

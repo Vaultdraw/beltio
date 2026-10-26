@@ -176,6 +176,12 @@ export function caretViewportPoint(
 export interface WikiAutocompleteDeps {
   container: HTMLElement;
   getNames(): readonly string[];
+  /**
+   * False while the names are not yet the vault's complete list: `[[`
+   * suggestions wait (no wrong short names, no "Create" for a drawing that
+   * exists). Default: true.
+   */
+  namesReady?(): boolean;
   getResolver(): LinkResolver;
   getSettings(): LinksSettings;
   getCurrentPath(): string | null;
@@ -205,7 +211,8 @@ export class WikiAutocomplete {
 
   constructor(private readonly deps: WikiAutocompleteDeps) {
     const links: SuggestTrigger = {
-      enabled: () => deps.getSettings().autocomplete,
+      enabled: () =>
+        deps.getSettings().autocomplete && (deps.namesReady?.() ?? true),
       find: findOpenLink,
       suggest: (open: OpenLink) => {
         if (open.inLabel) {
@@ -224,6 +231,13 @@ export class WikiAutocomplete {
         getTags: deps.getTags,
       }),
     ];
+  }
+
+  /** The names list changed (for example it finished loading): re-suggest. */
+  namesChanged(): void {
+    if (this.textarea && !this.inserting) {
+      this.refresh();
+    }
   }
 
   get state() {

@@ -27,7 +27,7 @@ import { getCommand, isBuiltinCommand } from "./commands/commands";
 import { LinkPromptHost, LinkRequestHost } from "./control/linkRequests";
 import { useControlBridge } from "./control/useControlBridge";
 import { useMenuCommands } from "./help/useMenuCommands";
-import { useAppLinks } from "./links/useAppLinks";
+import { drawingNames, useAppLinks } from "./links/useAppLinks";
 import { useLazyServices, useStartMode } from "./services/useLazyServices";
 import { useServiceStart } from "./services/useServiceStart";
 import { OnMount } from "./services/OnMount";
@@ -777,6 +777,13 @@ export const VaultApp = ({
   // The open vault's walk context (cancellation + generation), for a start
   // that comes after vault open (idle or first use).
   const scanContext = useRef<{ signal: AbortSignal; gen: number } | null>(null);
+  // The vault whose file list has been walked completely at least once, and
+  // the callers waiting for it (link writers: see whenFileList).
+  const listCompleteRef = useRef<string | null>(null);
+  const [listCompleteFor, setListCompleteFor] = useState<string | null>(null);
+  const listWaiters = useRef<((entries: readonly VaultEntry[]) => void)[]>([]);
+  const entriesRef = useRef<readonly VaultEntry[]>(allIndexedEntries);
+  entriesRef.current = allIndexedEntries;
 
   // Background indexing with cancellation and generation guard. Every call
   // (vault open, or a refresh after a change made in the app) counts as a
@@ -786,13 +793,17 @@ export const VaultApp = ({
       if (!vault) {
         return;
       }
-      listStartedFor.current = vault.handle;
+      const handle = vault.handle;
+      listStartedFor.current = handle;
       const gen = expectedGen ?? vaultGeneration.current;
       setIsIndexing(true);
       const isCurrent = () =>
         gen === vaultGeneration.current && !signal?.aborted;
+      // Partial snapshots only until this vault's first complete list: a
+      // rescan keeps the complete list until its own result replaces it, so
+      // link names never come from a half-walked vault.
       const throttle = createProgressThrottle((snapshot) => {
-        if (isCurrent()) {
+        if (isCurrent() && listCompleteRef.current !== handle) {
           setAllIndexedEntries(snapshot);
         }
       });
@@ -803,6 +814,14 @@ export const VaultApp = ({
           throttle.cancel();
           if (isCurrent()) {
             setAllIndexedEntries(finalList);
+            entriesRef.current = finalList;
+            listCompleteRef.current = handle;
+            setListCompleteFor(handle);
+            const waiting = listWaiters.current;
+            listWaiters.current = [];
+            for (const w of waiting) {
+              w(finalList);
+            }
           }
           setIsIndexing(false);
         })
@@ -1061,6 +1080,32 @@ export const VaultApp = ({
     },
   );
   const needFileList = fileList.activate;
+  const fileListReady = !!vault && listCompleteFor === vault.handle;
+  /**
+   * The vault's complete file list: at once when it has been walked, else
+   * after starting the walk (files.list_start) and waiting for it. Link
+   * writers use it so a link's short name never comes from a partial list.
+   * A walk that never finishes (closed vault) gives the current list after
+   * 15 s rather than hanging the action.
+   */
+  const whenFileList = useCallback((): Promise<readonly VaultEntry[]> => {
+    const handle = vaultRef.current?.handle ?? null;
+    if (handle !== null && listCompleteRef.current === handle) {
+      return Promise.resolve(entriesRef.current);
+    }
+    needFileList();
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        listWaiters.current = listWaiters.current.filter((w) => w !== done);
+        resolve(entriesRef.current);
+      }, 15_000);
+      const done = (entries: readonly VaultEntry[]) => {
+        clearTimeout(timer);
+        resolve(entries);
+      };
+      listWaiters.current.push(done);
+    });
+  }, [needFileList]);
   // Opening the file switcher or palette is a use of the file list.
   useEffect(() => {
     if (switcher) {
@@ -1501,6 +1546,7 @@ export const VaultApp = ({
     doc,
     settings: linksSettings,
     entries: allIndexedEntries,
+    loadEntries: whenFileList,
     indexing: isIndexing,
     activePath: activeDoc?.path ?? null,
     navigatorCollapsed,
@@ -1572,6 +1618,8 @@ export const VaultApp = ({
             tagsSettings,
             names: appLinks.names,
             onNeedNames: needFileList,
+            namesReady: fileListReady,
+            loadNames: () => whenFileList().then(drawingNames),
             currentPath: activeDoc?.path ?? null,
             callbacks: appLinks.editorCallbacks,
             links: vaultLinks,
@@ -1594,6 +1642,7 @@ export const VaultApp = ({
       linksSettings,
       tagsSettings,
       appLinks.names,
+      fileListReady,
       appLinks.editorCallbacks,
       activeDoc?.path,
       vault?.handle,
