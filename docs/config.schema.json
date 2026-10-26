@@ -545,6 +545,16 @@
             "modifier",
             "off"
           ]
+        },
+        "start": {
+          "description": "When the link index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first links action). Starting links also starts search. See [Startup](#startup).",
+          "default": "idle",
+          "type": "string",
+          "enum": [
+            "open",
+            "idle",
+            "use"
+          ]
         }
       }
     },
@@ -565,6 +575,23 @@
           "enum": [
             "name",
             "count"
+          ]
+        }
+      }
+    },
+    "search": {
+      "type": "object",
+      "description": "The search index. See [Startup](#startup).",
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "description": "When the search index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first search). Tags show once it has started.",
+          "default": "idle",
+          "type": "string",
+          "enum": [
+            "open",
+            "idle",
+            "use"
           ]
         }
       }
@@ -1313,6 +1340,16 @@
           "description": "Highlight what changed in the History preview.",
           "default": true,
           "type": "boolean"
+        },
+        "start": {
+          "description": "When file history starts: `open` (vault open), `idle` or `use` (first edit or history action). Edits made before it starts are not versioned. See [Startup](#startup).",
+          "default": "open",
+          "type": "string",
+          "enum": [
+            "open",
+            "idle",
+            "use"
+          ]
         }
       }
     },

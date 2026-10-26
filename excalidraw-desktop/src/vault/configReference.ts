@@ -199,6 +199,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       },
       color: { doc: "Link colour; `accent` uses the theme accent." },
       hover_preview: { doc: "When the hover preview card shows." },
+      start: {
+        doc: "When the link index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first links action). Starting links also starts search. See [Startup](#startup).",
+      },
     },
   },
   {
@@ -207,6 +210,15 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
     keys: {
       autocomplete: { doc: "Suggest existing tags while typing `#`." },
       pane_sort: { doc: "Order of the Tags pane: by name or by use count." },
+    },
+  },
+  {
+    table: "search",
+    intro: "The search index. See [Startup](#startup).",
+    keys: {
+      start: {
+        doc: "When the search index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first search). Tags show once it has started.",
+      },
     },
   },
   {
@@ -346,6 +358,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       },
       highlight_changes: {
         doc: "Highlight what changed in the History preview.",
+      },
+      start: {
+        doc: "When file history starts: `open` (vault open), `idle` or `use` (first edit or history action). Edits made before it starts are not versioned. See [Startup](#startup).",
       },
     },
   },

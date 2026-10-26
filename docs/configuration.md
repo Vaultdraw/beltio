@@ -1287,6 +1287,7 @@ Creating and deleting drawings.
 | `style_links` | `true` | true or false |  | Draw `[[links]]` in text with the link colour and an underline. |
 | `color` | `"accent"` | "accent" or a hex colour like "#6965db" |  | Link colour; `accent` uses the theme accent. |
 | `hover_preview` | `"always"` | "always", "modifier" or "off" |  | When the hover preview card shows. |
+| `start` | `"idle"` | "open", "idle" or "use" |  | When the link index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first links action). Starting links also starts search. See [Startup](#startup). |
 
 ### `[tags]`
 
@@ -1296,6 +1297,14 @@ Creating and deleting drawings.
 | --- | --- | --- | --- | --- |
 | `autocomplete` | `true` | true or false |  | Suggest existing tags while typing `#`. |
 | `pane_sort` | `"name"` | "name" or "count" |  | Order of the Tags pane: by name or by use count. |
+
+### `[search]`
+
+The search index. See [Startup](#startup).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `start` | `"idle"` | "open", "idle" or "use" |  | When the search index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first search). Tags show once it has started. |
 
 ### `[pens]`
 
@@ -1393,6 +1402,7 @@ Version history of each drawing, kept in the vault. Older versions thin out: eve
 | `keep_weekly_weeks` | `0` | a whole number from 0 to 5200 (0 = keep weekly versions forever) | yes | Then keep one version per week for this many weeks. |
 | `size_cap_mb` | `500` | a whole number from 0 to 1000000 (megabytes, 0 = no cap) | yes | Size cap of a vault's history in megabytes; the oldest versions go first. |
 | `highlight_changes` | `true` | true or false | yes | Highlight what changed in the History preview. |
+| `start` | `"open"` | "open", "idle" or "use" |  | When file history starts: `open` (vault open), `idle` or `use` (first edit or history action). Edits made before it starts are not versioned. See [Startup](#startup). |
 
 ### `[plugins]`
 
