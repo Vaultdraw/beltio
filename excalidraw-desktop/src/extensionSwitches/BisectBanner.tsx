@@ -1,5 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 
+import { getSafeStart, subscribeSafeStart } from "../safeStart/state";
+
 import { stepsFor } from "./bisect";
 import {
   answer,
@@ -25,6 +27,7 @@ const Button = ({ label, onClick }: { label: string; onClick: () => void }) => (
 export const BisectBanner = ({ win }: { win?: Window | null }) => {
   const state = useSyncExternalStore(subscribeBisect, getBisect);
   const result = useSyncExternalStore(subscribeBisectResult, getBisectResult);
+  const safe = useSyncExternalStore(subscribeSafeStart, getSafeStart);
   if (!state) {
     return null;
   }
@@ -36,7 +39,7 @@ export const BisectBanner = ({ win }: { win?: Window | null }) => {
       <>
         <Button
           label={`Turn ${extensionLabel(result.id)} off and restart`}
-          onClick={() => turnOffAndStop(result.id, win)}
+          onClick={() => void turnOffAndStop(result.id, win)}
         />
         <Button label="Restart without changes" onClick={stopBisect} />
       </>
@@ -45,9 +48,13 @@ export const BisectBanner = ({ win }: { win?: Window | null }) => {
     text =
       "The problem happens with every extension on and off: it is not an extension.";
     buttons = <Button label="Restart normally" onClick={stopBisect} />;
+  } else if (safe) {
+    // Everything is off in a safe start: an answer now would mislead the bisect.
+    text = `Extension bisect, step ${state.step}, is paused: this is a safe start, so every extension is off. Restart to go on, or stop.`;
+    buttons = <Button label="Stop" onClick={stopBisect} />;
   } else {
     const left = Math.max(1, stepsFor(state.suspects.length));
-    text = `Extension bisect, step ${state.step} (about ${left} more): ${
+    text = `Extension bisect, step ${state.step} (at most ${left} more): ${
       state.off.length
     } of ${state.candidates.length} off (${state.off
       .map(extensionLabel)

@@ -54,8 +54,19 @@ impl TauriDispatch {
             return Err(RpcError::app(codes::NOT_READY, "The app window is still starting"));
         }
         self.focus()?;
+        let out = self.open_routes(&argv, &cwd);
+        // Sent once: not when the sender will retry (NOT_READY), whatever else a route did. The
+        // window asks the user first, because a safe start closes the open drawings.
+        if wants_safe && !matches!(&out, Err(e) if e.app_code() == Some(codes::NOT_READY)) {
+            let _ = self.app.emit(crate::launch::SAFE_REQUESTED_EVENT, ());
+        }
+        out
+    }
+
+    /// Sends each `vaultdraw://` link to the link handler and each file path to the window.
+    fn open_routes(&self, argv: &[&str], cwd: &Value) -> Result<Value, RpcError> {
         let mut handled = 0;
-        for route in route_argv(&argv) {
+        for route in route_argv(argv) {
             match route {
                 Route::Link(url) => {
                     // A refused link (off, rate limit, bad URL) already showed the user a notice;
@@ -85,12 +96,6 @@ impl TauriDispatch {
                 }
             }
             handled += 1;
-        }
-        if wants_safe {
-            // Sent once, after every route succeeded: a retried request (NOT_READY above or
-            // from a route) has not sent it yet. The window asks the user first, because a
-            // safe start closes the open drawings.
-            let _ = self.app.emit(crate::launch::SAFE_REQUESTED_EVENT, ());
         }
         Ok(json!({"handled": handled}))
     }

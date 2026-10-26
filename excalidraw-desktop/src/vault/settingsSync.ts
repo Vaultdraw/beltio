@@ -1561,13 +1561,19 @@ export async function initSettings(
   let invoke: InvokeFn;
   let listen: ListenFn;
   let result: LoadSettingsResult;
+  let reachedNative: InvokeFn | null = null;
   try {
     ({ invoke, listen } = await resolveDeps(deps));
+    reachedNative = invoke;
     result = await invoke<LoadSettingsResult>("load_settings");
     // Set before preferences hydrate, so no extension starts in safe start.
     setSafeStart(result.safeStart ?? null);
     setBisect(parseBisect(result.bisect));
   } catch (err) {
+    // The vault services still follow a running bisect: show it, so it can be stopped.
+    void reachedNative?.<unknown>("launch_bisect_get")
+      .then((b) => setBisect(parseBisect(b)))
+      .catch(() => undefined);
     publishStatus(win, {
       ...browserStatus(),
       problems: [

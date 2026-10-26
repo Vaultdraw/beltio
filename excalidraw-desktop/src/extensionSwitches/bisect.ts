@@ -26,9 +26,12 @@ export type BisectNext =
   /** The problem stayed with every suspect on: not an extension. */
   | { kind: "none" };
 
-/** Ceiling of log2: restarts a bisect of `n` candidates needs at most. */
+/**
+ * Answers a bisect of `n` suspects needs at most: one per halving, plus one
+ * to confirm a last suspect that stayed on.
+ */
 export const stepsFor = (n: number): number =>
-  n <= 1 ? 0 : Math.ceil(Math.log2(n));
+  n <= 1 ? 1 : Math.ceil(Math.log2(n)) + 1;
 
 const halve = (suspects: readonly string[]): string[] =>
   suspects.slice(0, Math.ceil(suspects.length / 2));

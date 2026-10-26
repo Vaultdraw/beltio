@@ -301,7 +301,7 @@ pub(crate) fn on_exit<R: tauri::Runtime>(app: &AppHandle<R>) {
             // Same as `app.restart()`, but the new process starts without `--safe` and
             // without `VAULTDRAW_SAFE`.
             app.cleanup_before_exit();
-            crate::launch::restart_without_safe(&app.env());
+            crate::launch::restart_without_safe(app.env());
         }
         app.restart();
     }

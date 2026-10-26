@@ -1177,11 +1177,12 @@ Safe start tells you whether an extension is to blame; bisect tells you which on
 
 1. **Settings → Extensions → Find a problem extension** (or the palette: **Extensions: Find the extension causing a problem (bisect)**). Vaultdraw saves your drawings and restarts with half of them off.
 2. Try what went wrong, then answer in the banner: **It still happens** or **It's gone**. Each answer restarts with half of the remaining suspects off.
-3. After about log2(n) restarts (4 for 9 extensions) the banner names the culprit and offers **Turn it off and restart**, or says the problem is not an extension.
+3. After at most log2(n) + 1 answers (5 for 9 extensions) the banner names the culprit and offers **Turn it off and restart**, or says the problem is not an extension.
 
 - Nothing in `config.toml` changes until you choose to turn the culprit off. **Stop** (or **Extensions bisect: Stop**) ends it at any step and restarts with everything as configured.
 - The state is kept in the state folder's launch file, so it survives restarts and crashes. Turned-off extensions start no service either.
-- The answers are palette commands too (`extensions.bisect.still`, `extensions.bisect.gone`, `extensions.bisect.stop`), offered only while a bisect runs. Bisect is not offered in safe start.
+- Only what runs counts: built-in extensions that are on, and enabled plugins that are installed, compatible and not waiting for a permission review.
+- The answers are palette commands too (`extensions.bisect.still`, `extensions.bisect.gone`, `extensions.bisect.stop`), offered only while a bisect runs. Bisect is not offered in a safe start or plugin safe mode; if one happens during a bisect (for example after two crashes), the banner pauses the questions until the next normal start.
 
 ### `vaultdraw launch`
 

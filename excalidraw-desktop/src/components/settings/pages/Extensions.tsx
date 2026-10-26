@@ -106,12 +106,12 @@ export const ExtensionsPage = () => {
       testId="settings-extensions"
       aside={
         <>
-          {!bisect && safe?.scope !== "core" && (
+          {!bisect && !safe && (
             <button
               type="button"
               className="vault-btn vault-btn--sm"
               title="Turns half of the extensions off and restarts, again and again, until the one causing a problem is found"
-              onClick={() => beginBisect(win)}
+              onClick={() => void beginBisect(win)}
             >
               Find a problem extension
             </button>

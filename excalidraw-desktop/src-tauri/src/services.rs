@@ -126,12 +126,8 @@ pub(crate) struct Wanted {
     pub links: bool,
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
-pub(crate) fn wanted_of(config: &Json, core_safe_start: bool) -> Wanted {
-    wanted_with_off(config, core_safe_start, &[])
-}
-
-/// Like `wanted_of`, with the extensions an extension bisect turned off this launch.
+/// The extension services this launch wants: none in a core safe start; otherwise each one whose
+/// extension is on in config and not turned off by an extension bisect (`bisect_off`).
 pub(crate) fn wanted_with_off(config: &Json, core_safe_start: bool, bisect_off: &[String]) -> Wanted {
     if core_safe_start {
         return Wanted { index: false, links: false };
@@ -314,28 +310,28 @@ mod tests {
     #[test]
     fn unwanted_services_never_start_at_open() {
         let all_open = Modes { search: Mode::Open, links: Mode::Open, history: Mode::Open };
-        let none = wanted_of(&Json::Null, false);
+        let none = wanted_with_off(&Json::Null, false, &[]);
         assert_eq!(none, Wanted { index: true, links: true });
         assert_eq!(open_starts(&all_open, &none), vec![Service::History, Service::Search, Service::Links]);
         // Search off, tags and links on: the index still runs for them.
         let cfg = serde_json::json!({"extensions": {"search": false}});
-        assert_eq!(wanted_of(&cfg, false), Wanted { index: true, links: true });
+        assert_eq!(wanted_with_off(&cfg, false, &[]), Wanted { index: true, links: true });
         // Links and graph off: no link index; search alone keeps the index.
         let cfg = serde_json::json!({"extensions": {"links": false, "graph": false}});
-        assert_eq!(wanted_of(&cfg, false), Wanted { index: true, links: false });
+        assert_eq!(wanted_with_off(&cfg, false, &[]), Wanted { index: true, links: false });
         // Everything that needs the index off: nothing but history starts.
         let cfg = serde_json::json!({"extensions": {"links": false, "graph": false, "search": false, "tags": false}});
-        let w = wanted_of(&cfg, false);
+        let w = wanted_with_off(&cfg, false, &[]);
         assert_eq!(w, Wanted { index: false, links: false });
         assert_eq!(open_starts(&all_open, &w), vec![Service::History]);
         // Core safe start: no extension service, whatever the config says.
-        assert_eq!(wanted_of(&Json::Null, true), Wanted { index: false, links: false });
+        assert_eq!(wanted_with_off(&Json::Null, true, &[]), Wanted { index: false, links: false });
         let off = vec!["links".to_string(), "graph".to_string()];
         assert_eq!(wanted_with_off(&Json::Null, false, &off), Wanted { index: true, links: false });
         let all = vec!["links".into(), "graph".into(), "search".into(), "tags".into()];
         assert_eq!(wanted_with_off(&Json::Null, false, &all), Wanted { index: false, links: false });
         // A bad value counts as the default (on).
-        assert!(wanted_of(&serde_json::json!({"extensions": {"search": "no", "tags": false, "links": false, "graph": false}}), false).index);
+        assert!(wanted_with_off(&serde_json::json!({"extensions": {"search": "no", "tags": false, "links": false, "graph": false}}), false, &[]).index);
     }
 
     #[test]

@@ -223,9 +223,14 @@ pub(crate) fn begin() {
     let started = Instant::now();
     let mode = match config::resolve_dirs() {
         Ok(dirs) => {
-            let enabled = enabled_plugins(&dirs.config_file());
+            let mut enabled = enabled_plugins(&dirs.config_file());
             let prev = load(&dirs.state);
-            let _ = BISECT.set(prev.bisect.clone().filter(Bisect::valid));
+            let bisect = prev.bisect.clone().filter(Bisect::valid);
+            // A plugin the bisect turned off does not load: a crash is not its fault.
+            if let Some(b) = &bisect {
+                enabled.retain(|id| !b.off.contains(id));
+            }
+            let _ = BISECT.set(bisect);
             let (mode, record) = next_launch(&prev, &enabled, triggers_now());
             if record != prev {
                 if let Err(e) = store(&dirs.state, &record) {
@@ -323,39 +328,26 @@ pub(crate) fn without_safe(args: Vec<std::ffi::OsString>) -> Vec<std::ffi::OsStr
     args.into_iter().filter(|a| a != SAFE_FLAG).collect()
 }
 
-/// Starts this app again without `--safe` and without `VAULTDRAW_SAFE` in the new process's
-/// environment, then exits. Like `tauri::process::restart`, but the variable is removed from the
-/// child's environment only: changing our own environment at exit would race other threads.
-pub(crate) fn restart_without_safe(env: &tauri::Env) -> ! {
-    use std::process::{exit, Command, Stdio};
-    let args: Vec<std::ffi::OsString> = without_safe(env.args_os.clone()).into_iter().skip(1).collect();
-    if let Ok(path) = tauri::process::current_binary(env) {
-        // An app bundle restarts through LaunchServices, as Tauri does, so launchd owns it.
-        #[cfg(target_os = "macos")]
-        if let Some(bundle) = app_bundle_of(&path) {
-            let opened = Command::new("/usr/bin/open")
-                .arg("-n")
-                .arg(bundle)
-                .arg("--args")
-                .args(&args)
-                .env_remove(ENV_SAFE)
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .status();
-            if opened.is_ok_and(|s| s.success()) {
-                exit(0);
+/// Starts this app again without `--safe` and without `VAULTDRAW_SAFE`, then exits. An app bundle
+/// restarts through Tauri (LaunchServices: the new app gets launchd's environment, not ours). A
+/// bare binary is spawned here with the variable removed from the child's environment only:
+/// changing our own environment at exit would race other threads.
+pub(crate) fn restart_without_safe(mut env: tauri::Env) -> ! {
+    env.args_os = without_safe(std::mem::take(&mut env.args_os));
+    match tauri::process::current_binary(&env) {
+        Ok(path) if app_bundle_of(&path).is_none() => {
+            let spawned =
+                std::process::Command::new(path).args(env.args_os.iter().skip(1)).env_remove(ENV_SAFE).stdin(std::process::Stdio::null()).spawn();
+            if let Err(e) = spawned {
+                eprintln!("vaultdraw: restart failed: {e}");
             }
+            std::process::exit(0);
         }
-        if let Err(e) = Command::new(path).args(&args).env_remove(ENV_SAFE).stdin(Stdio::null()).spawn() {
-            eprintln!("vaultdraw: restart failed: {e}");
-        }
+        _ => tauri::process::restart(&env),
     }
-    exit(0);
 }
 
 /// `/…/Name.app` for a binary at `/…/Name.app/Contents/MacOS/name`.
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 fn app_bundle_of(binary: &Path) -> Option<&Path> {
     let macos = binary.parent()?;
     let contents = macos.parent()?;
@@ -387,6 +379,12 @@ fn set_bisect_in(dir: &Path, bisect: Option<Bisect>) -> Result<()> {
         store(dir, &l)?;
     }
     Ok(())
+}
+
+/// The bisect of this launch, for a webview that could not read the settings reply.
+#[tauri::command]
+pub(crate) fn launch_bisect_get() -> Option<Bisect> {
+    current_bisect()
 }
 
 /// Stores the bisect state for the next launch (`None` ends it). The webview restarts after.

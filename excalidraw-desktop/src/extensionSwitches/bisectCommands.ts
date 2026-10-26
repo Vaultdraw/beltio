@@ -10,7 +10,9 @@ import {
   updatePreferences,
   type VaultPreferences,
 } from "../vault/preferences";
-import { isCoreSafeStart } from "../safeStart/state";
+import { getSafeStart, subscribeSafeStart } from "../safeStart/state";
+import { flushSettings } from "../vault/settingsSync";
+import { isPluginId } from "../vault/pluginSettingsTable";
 
 import {
   answerBisect,
@@ -56,19 +58,52 @@ const report = (e: unknown) =>
     kind: "error",
   });
 
-/** What is on now and can be bisected: built-in extensions and enabled plugins. */
-export function bisectCandidates(win?: Window | null): string[] {
+/** A plugin as the host lists it: what decides whether it runs. */
+export interface RunnablePlugin {
+  id: string;
+  compatible: boolean;
+  hostDisabled: string | null;
+  review: { state: string };
+}
+
+/**
+ * What runs now and can be bisected: built-in extensions that are on, and
+ * enabled plugins that are installed, not disabled by the host and not
+ * waiting for a permission review.
+ */
+export function bisectCandidates(
+  win: Window | null | undefined,
+  plugins: readonly RunnablePlugin[],
+): string[] {
   const prefs = getPreferences(win);
+  const runnable = new Set(
+    plugins
+      .filter(
+        (p) =>
+          p.compatible &&
+          p.hostDisabled === null &&
+          p.review.state !== "review",
+      )
+      .map((p) => p.id),
+  );
   return [
     ...BUILTIN_EXTENSIONS.filter((e) => prefs[EXTENSION_FIELDS[e.id]]).map(
       (e) => e.id as string,
     ),
-    ...prefs.pluginsEnabled,
+    ...prefs.pluginsEnabled.filter((id) => isPluginId(id) && runnable.has(id)),
   ];
 }
 
-export function beginBisect(win?: Window | null): void {
-  const state = startBisect(bisectCandidates(win));
+/** Bisect needs every extension running as configured: not in any safe start. */
+export const canBisect = (): boolean => getSafeStart() === null;
+
+export async function beginBisect(win?: Window | null): Promise<void> {
+  if (!canBisect()) {
+    return;
+  }
+  // Loaded on use: the plugin host's list of what is installed.
+  const { currentList } = await import("../plugins/host/pluginsState");
+  const state = startBisect(bisectCandidates(win, currentList().plugins));
   if (!state) {
     toastStore.push({ message: "No extension is on: nothing to bisect." });
     return;
@@ -78,7 +113,8 @@ export function beginBisect(win?: Window | null): void {
 
 export function answer(a: BisectAnswer): void {
   const state = getBisect();
-  if (!state) {
+  // In a safe start everything is off: an answer would judge the wrong half.
+  if (!state || !canBisect()) {
     return;
   }
   const next = answerBisect(state, a);
@@ -95,7 +131,10 @@ export function stopBisect(): void {
 }
 
 /** Turn the culprit off in config, then end the bisect and restart. */
-export function turnOffAndStop(id: string, win?: Window | null): void {
+export async function turnOffAndStop(
+  id: string,
+  win?: Window | null,
+): Promise<void> {
   if (isExtensionId(id)) {
     updatePreferences(
       { [EXTENSION_FIELDS[id]]: false } as Partial<VaultPreferences>,
@@ -111,6 +150,8 @@ export function turnOffAndStop(id: string, win?: Window | null): void {
       win,
     );
   }
+  // The config write must land before the app quits.
+  await flushSettings().catch(() => undefined);
   stopBisect();
 }
 
@@ -119,22 +160,29 @@ export function registerBisectCommands(win?: Window | null): () => void {
   let off: (() => void) | null = null;
   const sync = () => {
     off?.();
-    off = getBisect()
+    const running = getBisect() !== null;
+    off = running
       ? registerCommandHandlers({
-          [BISECT_COMMAND_IDS.still]: () => answer("still"),
-          [BISECT_COMMAND_IDS.gone]: () => answer("gone"),
+          ...(canBisect()
+            ? {
+                [BISECT_COMMAND_IDS.still]: () => answer("still"),
+                [BISECT_COMMAND_IDS.gone]: () => answer("gone"),
+              }
+            : {}),
           [BISECT_COMMAND_IDS.stop]: stopBisect,
         })
-      : isCoreSafeStart()
-      ? null
-      : registerCommandHandlers({
-          [BISECT_COMMAND_IDS.start]: () => beginBisect(win),
-        });
+      : canBisect()
+      ? registerCommandHandlers({
+          [BISECT_COMMAND_IDS.start]: () => void beginBisect(win),
+        })
+      : null;
   };
   sync();
   const unsubscribe = subscribeBisect(sync);
+  const unsubscribeSafe = subscribeSafeStart(sync);
   return () => {
     unsubscribe();
+    unsubscribeSafe();
     off?.();
     off = null;
   };

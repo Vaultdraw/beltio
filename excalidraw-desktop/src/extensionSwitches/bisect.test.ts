@@ -9,6 +9,7 @@ import {
   type BisectNext,
   type BisectState,
 } from "./bisect";
+import { bisectCandidates } from "./bisectCommands";
 import { parseBisect } from "./bisectState";
 import { effectiveExtensions } from "./useExtensions";
 
@@ -35,7 +36,7 @@ describe("extension bisect", () => {
     for (const culprit of IDS) {
       const { next, restarts } = run(IDS, culprit);
       expect(next).toEqual({ kind: "found", id: culprit });
-      expect(restarts).toBeLessThanOrEqual(stepsFor(IDS.length) + 1);
+      expect(restarts).toBeLessThanOrEqual(stepsFor(IDS.length));
     }
   });
 
@@ -69,5 +70,39 @@ describe("extension bisect", () => {
     expect(set.graph).toBe(false);
     expect(set.links).toBe(false);
     expect(set.search).toBe(true);
+  });
+
+  it("bisects only what runs: plugins installed, compatible, not held back", () => {
+    window.localStorage.clear();
+    const plugin = (id: string, extra = {}) => ({
+      id,
+      compatible: true,
+      hostDisabled: null,
+      review: { state: "ok" },
+      ...extra,
+    });
+    const prefs = JSON.parse(
+      window.localStorage.getItem("excalidraw-vault-preferences-v1") ?? "{}",
+    );
+    window.localStorage.setItem(
+      "excalidraw-vault-preferences-v1",
+      JSON.stringify({
+        ...prefs,
+        extGraph: false,
+        pluginsEnabled: ["good", "missing", "held", "off", "Bad Id"],
+      }),
+    );
+    const ids = bisectCandidates(window, [
+      plugin("good"),
+      plugin("held", { review: { state: "review" } }),
+      plugin("off", { hostDisabled: "crashed" }),
+    ]);
+    expect(ids).not.toContain("graph");
+    expect(ids).toContain("search");
+    expect(ids.filter((id) => !/^[a-z]+$/.test(id) || id === "good")).toEqual([
+      "pdf-import",
+      "good",
+    ]);
+    window.localStorage.clear();
   });
 });
