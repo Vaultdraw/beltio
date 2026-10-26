@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "frontmatter": {
+    "range": [
+      0,
+      105
+    ],
+    "raw": "title: \"Quoted Title\"\ntags: [alpha, '#beta', gamma/sub]\naliases: [One, \"Two Words\"]\nstatus: draft\n",
+    "tags": [
+      "alpha",
+      "beta",
+      "gamma/sub"
+    ],
+    "aliases": [
+      "One",
+      "Two Words"
+    ],
+    "properties": {
+      "aliases": "One, Two Words",
+      "status": "draft",
+      "tags": "alpha, #beta, gamma/sub",
+      "title": "Quoted Title"
+    }
+  },
+  "blocks": [
+    {
+      "range": [
+        106,
+        113
+      ],
+      "kind": "heading",
+      "level": 1,
+      "text": "Body"
+    },
+    {
+      "range": [
+        114,
+        146
+      ],
+      "kind": "paragraph",
+      "text": "Text with #body-tag and #alpha.",
+      "inline": [
+        {
+          "kind": "tag",
+          "start": 10,
+          "end": 19,
+          "target": "body-tag"
+        },
+        {
+          "kind": "tag",
+          "start": 24,
+          "end": 30,
+          "target": "alpha"
+        }
+      ]
+    }
+  ],
+  "links": [],
+  "tags": [
+    "alpha",
+    "beta",
+    "gamma/sub",
+    "body-tag"
+  ],
+  "stats": {
+    "words": 6,
+    "blocks": 2,
+    "droppedEmphasis": 0,
+    "droppedHtml": 0
+  }
+}

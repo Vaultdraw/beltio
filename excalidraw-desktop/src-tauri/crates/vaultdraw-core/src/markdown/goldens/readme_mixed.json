@@ -1,0 +1,257 @@
+{
+  "schemaVersion": 1,
+  "frontmatter": {
+    "range": [
+      0,
+      23
+    ],
+    "raw": "tags: [project]\n",
+    "tags": [
+      "project"
+    ],
+    "aliases": [],
+    "properties": {
+      "tags": "project"
+    }
+  },
+  "blocks": [
+    {
+      "range": [
+        24,
+        44
+      ],
+      "kind": "heading",
+      "level": 1,
+      "text": "Project Alpha"
+    },
+    {
+      "range": [
+        45,
+        163
+      ],
+      "kind": "paragraph",
+      "text": "A short description with a website, a [[Roadmap]] link and #status/active tag.",
+      "inline": [
+        {
+          "kind": "link",
+          "start": 27,
+          "end": 34,
+          "target": "https://example.org"
+        },
+        {
+          "kind": "wikilink",
+          "start": 38,
+          "end": 49,
+          "target": "Roadmap"
+        },
+        {
+          "kind": "tag",
+          "start": 59,
+          "end": 73,
+          "target": "status/active"
+        }
+      ]
+    },
+    {
+      "range": [
+        170,
+        181
+      ],
+      "kind": "heading",
+      "level": 2,
+      "text": "Install"
+    },
+    {
+      "range": [
+        182,
+        203
+      ],
+      "kind": "listItem",
+      "ordered": true,
+      "marker": "1.",
+      "depth": 0,
+      "task": "none",
+      "text": "Run cargo build"
+    },
+    {
+      "range": [
+        203,
+        265
+      ],
+      "kind": "listItem",
+      "ordered": true,
+      "marker": "2.",
+      "depth": 0,
+      "task": "none",
+      "text": "Run the tests:"
+    },
+    {
+      "range": [
+        225,
+        263
+      ],
+      "kind": "code",
+      "code": true,
+      "lang": "sh",
+      "text": "cargo test # not a tag"
+    },
+    {
+      "range": [
+        265,
+        277
+      ],
+      "kind": "heading",
+      "level": 2,
+      "text": "Features"
+    },
+    {
+      "range": [
+        278,
+        289
+      ],
+      "kind": "listItem",
+      "ordered": false,
+      "marker": "-",
+      "depth": 0,
+      "task": "done",
+      "text": "Fast"
+    },
+    {
+      "range": [
+        289,
+        344
+      ],
+      "kind": "listItem",
+      "ordered": false,
+      "marker": "-",
+      "depth": 0,
+      "task": "open",
+      "text": "Offline first"
+    },
+    {
+      "range": [
+        311,
+        344
+      ],
+      "kind": "listItem",
+      "ordered": false,
+      "marker": "-",
+      "depth": 1,
+      "task": "none",
+      "text": "works on the worst laptop"
+    },
+    {
+      "range": [
+        344,
+        385
+      ],
+      "kind": "callout",
+      "calloutType": "tip",
+      "title": "Remember",
+      "foldState": "none",
+      "blocks": [
+        {
+          "range": [
+            364,
+            385
+          ],
+          "kind": "paragraph",
+          "text": "Read the docs first."
+        }
+      ]
+    },
+    {
+      "range": [
+        386,
+        437
+      ],
+      "kind": "table",
+      "align": [
+        "none",
+        "none"
+      ],
+      "header": [
+        "Option",
+        "Default"
+      ],
+      "rows": [
+        [
+          "mode",
+          "fast"
+        ]
+      ],
+      "cols": 2,
+      "cellCount": 4
+    },
+    {
+      "range": [
+        438,
+        442
+      ],
+      "kind": "thematicBreak"
+    },
+    {
+      "range": [
+        443,
+        478
+      ],
+      "kind": "html",
+      "text": "<div align=\"center\">raw html</div>"
+    },
+    {
+      "range": [
+        479,
+        495
+      ],
+      "kind": "image",
+      "target": "logo.png",
+      "remote": false,
+      "width": 64
+    },
+    {
+      "range": [
+        497,
+        512
+      ],
+      "kind": "paragraph",
+      "text": "Last line",
+      "blockId": "end"
+    }
+  ],
+  "links": [
+    {
+      "kind": "link",
+      "target": "https://example.org",
+      "range": [
+        72,
+        102
+      ]
+    },
+    {
+      "kind": "wikilink",
+      "target": "Roadmap",
+      "range": [
+        106,
+        117
+      ]
+    },
+    {
+      "kind": "embed",
+      "target": "logo.png",
+      "range": [
+        479,
+        495
+      ]
+    }
+  ],
+  "tags": [
+    "project",
+    "status/active"
+  ],
+  "stats": {
+    "words": 42,
+    "blocks": 17,
+    "droppedEmphasis": 2,
+    "droppedHtml": 1
+  }
+}

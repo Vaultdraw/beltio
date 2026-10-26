@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "frontmatter": {
+    "range": [
+      0,
+      112
+    ],
+    "raw": "tags:\n  - one\n  - \"two\"\n  - '#three'\naliases:\n  - A1\n  - A 2\ncssclasses:\n  - wide\nnote: |\n  multi\n  line\n",
+    "tags": [
+      "one",
+      "two",
+      "three"
+    ],
+    "aliases": [
+      "A1",
+      "A 2"
+    ],
+    "properties": {
+      "aliases": "A1, A 2",
+      "cssclasses": "wide",
+      "note": "multi\nline",
+      "tags": "one, two, #three"
+    }
+  },
+  "blocks": [
+    {
+      "range": [
+        114,
+        122
+      ],
+      "kind": "paragraph",
+      "text": "Content"
+    }
+  ],
+  "links": [],
+  "tags": [
+    "one",
+    "two",
+    "three"
+  ],
+  "stats": {
+    "words": 1,
+    "blocks": 1,
+    "droppedEmphasis": 0,
+    "droppedHtml": 0
+  }
+}

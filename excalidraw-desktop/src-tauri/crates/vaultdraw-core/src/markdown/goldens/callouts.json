@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "range": [
+        0,
+        70
+      ],
+      "kind": "callout",
+      "calloutType": "note",
+      "title": "A titled note",
+      "foldState": "none",
+      "blocks": [
+        {
+          "range": [
+            26,
+            70
+          ],
+          "kind": "paragraph",
+          "text": "Body text with [[Link]] and a second line",
+          "inline": [
+            {
+              "kind": "wikilink",
+              "start": 15,
+              "end": 23,
+              "target": "Link"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "range": [
+        71,
+        106
+      ],
+      "kind": "callout",
+      "calloutType": "tip",
+      "title": "Folded tip",
+      "foldState": "closed",
+      "blocks": [
+        {
+          "range": [
+            94,
+            106
+          ],
+          "kind": "paragraph",
+          "text": "hidden body"
+        }
+      ]
+    },
+    {
+      "range": [
+        107,
+        134
+      ],
+      "kind": "callout",
+      "calloutType": "warning",
+      "title": "Open warning",
+      "foldState": "open",
+      "blocks": []
+    },
+    {
+      "range": [
+        135,
+        167
+      ],
+      "kind": "callout",
+      "calloutType": "note",
+      "title": "Note",
+      "foldState": "none",
+      "blocks": [
+        {
+          "range": [
+            147,
+            167
+          ],
+          "kind": "paragraph",
+          "text": "Bare uppercase note"
+        }
+      ]
+    },
+    {
+      "range": [
+        168,
+        247
+      ],
+      "kind": "callout",
+      "calloutType": "faq",
+      "title": "Nested",
+      "foldState": "none",
+      "blocks": [
+        {
+          "range": [
+            186,
+            225
+          ],
+          "kind": "callout",
+          "calloutType": "info",
+          "title": "Inner callout",
+          "foldState": "none",
+          "blocks": [
+            {
+              "range": [
+                214,
+                225
+              ],
+              "kind": "paragraph",
+              "text": "inner body"
+            }
+          ]
+        },
+        {
+          "range": [
+            229,
+            247
+          ],
+          "kind": "listItem",
+          "ordered": false,
+          "marker": "-",
+          "depth": 0,
+          "task": "none",
+          "text": "list in callout"
+        }
+      ]
+    },
+    {
+      "range": [
+        248,
+        288
+      ],
+      "kind": "blockquote",
+      "blocks": [
+        {
+          "range": [
+            250,
+            264
+          ],
+          "kind": "paragraph",
+          "text": "A plain quote"
+        },
+        {
+          "range": [
+            266,
+            288
+          ],
+          "kind": "blockquote",
+          "blocks": [
+            {
+              "range": [
+                268,
+                288
+              ],
+              "kind": "paragraph",
+              "text": "with a nested quote"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "kind": "wikilink",
+      "target": "Link",
+      "range": [
+        41,
+        49
+      ]
+    }
+  ],
+  "tags": [],
+  "stats": {
+    "words": 41,
+    "blocks": 15,
+    "droppedEmphasis": 0,
+    "droppedHtml": 0
+  }
+}

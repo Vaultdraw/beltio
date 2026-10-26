@@ -1,0 +1,3 @@
+﻿# BOM heading
+
+text #bomtag

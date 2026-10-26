@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "range": [
+        3,
+        17
+      ],
+      "kind": "heading",
+      "level": 1,
+      "text": "BOM heading"
+    },
+    {
+      "range": [
+        18,
+        31
+      ],
+      "kind": "paragraph",
+      "text": "text #bomtag",
+      "inline": [
+        {
+          "kind": "tag",
+          "start": 5,
+          "end": 12,
+          "target": "bomtag"
+        }
+      ]
+    }
+  ],
+  "links": [],
+  "tags": [
+    "bomtag"
+  ],
+  "stats": {
+    "words": 4,
+    "blocks": 2,
+    "droppedEmphasis": 0,
+    "droppedHtml": 0
+  }
+}

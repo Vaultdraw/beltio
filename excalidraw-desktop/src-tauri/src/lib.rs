@@ -20,6 +20,7 @@ mod external;
 mod links;
 mod search;
 mod library;
+mod markdown;
 mod memory;
 mod pdf_import;
 mod plugins;
@@ -855,7 +856,7 @@ pub fn run() {
                 search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
                 links::vault_links, links::vault_unlinked_mentions, links::resolve_link, links::links_plan_move, links::links_remeasure, links::links_remeasure_done, links::tags_plan_rename, links::rename_tag, links::vault_graph, links::graph_layout_load, links::graph_layout_save,
                 history::history_configure, history::history_status, history::history_opened, history::history_list, history::history_snapshot, history::history_checkpoint, history::history_read_version, history::history_read_blob, history::history_snapshot_bytes, history::history_restore_copy, history::history_export_file, history::history_delete_checkpoint, history::history_delete_all, history::history_exclude_from_git,
-                library::read_library, library::write_library, library::pick_library_file,
+                library::read_library, library::write_library, library::pick_library_file, markdown::markdown_parse, markdown::markdown_parse_file,
                 pdf_import::pdf_pick, pdf_import::pdf_open_bytes, pdf_import::pdf_render_page, pdf_import::pdf_unlock, pdf_import::pdf_close,
                 templates::list_global_templates, templates::read_global_template,
                 templates::write_global_template, templates::open_global_templates_dir,
@@ -879,7 +880,7 @@ pub fn run() {
                 search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
                 links::vault_links, links::vault_unlinked_mentions, links::resolve_link, links::links_plan_move, links::links_remeasure, links::links_remeasure_done, links::tags_plan_rename, links::rename_tag, links::vault_graph, links::graph_layout_load, links::graph_layout_save,
                 history::history_configure, history::history_status, history::history_opened, history::history_list, history::history_snapshot, history::history_checkpoint, history::history_read_version, history::history_read_blob, history::history_snapshot_bytes, history::history_restore_copy, history::history_export_file, history::history_delete_checkpoint, history::history_delete_all, history::history_exclude_from_git,
-                library::read_library, library::write_library, library::pick_library_file,
+                library::read_library, library::write_library, library::pick_library_file, markdown::markdown_parse, markdown::markdown_parse_file,
                 pdf_import::pdf_pick, pdf_import::pdf_open_bytes, pdf_import::pdf_render_page, pdf_import::pdf_unlock, pdf_import::pdf_close,
                 templates::list_global_templates, templates::read_global_template,
                 templates::write_global_template, templates::open_global_templates_dir,
@@ -900,7 +901,7 @@ pub fn run() {
             search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
                 links::vault_links, links::vault_unlinked_mentions, links::resolve_link, links::links_plan_move, links::links_remeasure, links::links_remeasure_done, links::tags_plan_rename, links::rename_tag, links::vault_graph, links::graph_layout_load, links::graph_layout_save,
                 history::history_configure, history::history_status, history::history_opened, history::history_list, history::history_snapshot, history::history_checkpoint, history::history_read_version, history::history_read_blob, history::history_snapshot_bytes, history::history_restore_copy, history::history_export_file, history::history_delete_checkpoint, history::history_delete_all, history::history_exclude_from_git,
-            library::read_library, library::write_library, library::pick_library_file,
+            library::read_library, library::write_library, library::pick_library_file, markdown::markdown_parse, markdown::markdown_parse_file,
                 pdf_import::pdf_pick, pdf_import::pdf_open_bytes, pdf_import::pdf_render_page, pdf_import::pdf_unlock, pdf_import::pdf_close,
             templates::list_global_templates, templates::read_global_template,
             templates::write_global_template, templates::open_global_templates_dir,

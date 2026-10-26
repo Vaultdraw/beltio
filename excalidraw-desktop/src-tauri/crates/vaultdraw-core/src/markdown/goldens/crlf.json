@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "range": [
+        0,
+        14
+      ],
+      "kind": "heading",
+      "level": 1,
+      "text": "CRLF title"
+    },
+    {
+      "range": [
+        16,
+        49
+      ],
+      "kind": "paragraph",
+      "text": "Para one with [[Link]] and #tag",
+      "inline": [
+        {
+          "kind": "wikilink",
+          "start": 14,
+          "end": 22,
+          "target": "Link"
+        },
+        {
+          "kind": "tag",
+          "start": 27,
+          "end": 31,
+          "target": "tag"
+        }
+      ]
+    },
+    {
+      "range": [
+        51,
+        63
+      ],
+      "kind": "listItem",
+      "ordered": false,
+      "marker": "-",
+      "depth": 0,
+      "task": "open",
+      "text": "task"
+    },
+    {
+      "range": [
+        63,
+        77
+      ],
+      "kind": "listItem",
+      "ordered": false,
+      "marker": "-",
+      "depth": 0,
+      "task": "done",
+      "text": "done"
+    },
+    {
+      "range": [
+        77,
+        96
+      ],
+      "kind": "code",
+      "code": true,
+      "text": "#define X"
+    },
+    {
+      "range": [
+        100,
+        121
+      ],
+      "kind": "callout",
+      "calloutType": "note",
+      "title": "T",
+      "foldState": "none",
+      "blocks": [
+        {
+          "range": [
+            115,
+            121
+          ],
+          "kind": "paragraph",
+          "text": "body"
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "kind": "wikilink",
+      "target": "Link",
+      "range": [
+        30,
+        38
+      ]
+    }
+  ],
+  "tags": [
+    "tag"
+  ],
+  "stats": {
+    "words": 13,
+    "blocks": 7,
+    "droppedEmphasis": 0,
+    "droppedHtml": 0
+  }
+}

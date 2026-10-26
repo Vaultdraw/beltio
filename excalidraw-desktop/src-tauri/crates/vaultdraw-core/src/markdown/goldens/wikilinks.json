@@ -1,0 +1,225 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "range": [
+        0,
+        109
+      ],
+      "kind": "paragraph",
+      "text": "See [[Note]] and [[Note|an alias]] and [[Note#Heading]] and [[Note#Heading|with alias]] and [[Note#^blk-1]].",
+      "inline": [
+        {
+          "kind": "wikilink",
+          "start": 4,
+          "end": 12,
+          "target": "Note"
+        },
+        {
+          "kind": "wikilink",
+          "start": 17,
+          "end": 34,
+          "target": "Note",
+          "alias": "an alias"
+        },
+        {
+          "kind": "wikilink",
+          "start": 39,
+          "end": 55,
+          "target": "Note",
+          "heading": "Heading"
+        },
+        {
+          "kind": "wikilink",
+          "start": 60,
+          "end": 87,
+          "target": "Note",
+          "alias": "with alias",
+          "heading": "Heading"
+        },
+        {
+          "kind": "wikilink",
+          "start": 92,
+          "end": 107,
+          "target": "Note",
+          "blockRef": "blk-1"
+        }
+      ]
+    },
+    {
+      "range": [
+        110,
+        224
+      ],
+      "kind": "paragraph",
+      "text": "A label link, a relative link, https://auto.link and #tag/nested here.",
+      "inline": [
+        {
+          "kind": "link",
+          "start": 2,
+          "end": 7,
+          "target": "https://example.com/a%20b"
+        },
+        {
+          "kind": "link",
+          "start": 16,
+          "end": 24,
+          "target": "other.md"
+        },
+        {
+          "kind": "link",
+          "start": 31,
+          "end": 48,
+          "target": "https://auto.link"
+        },
+        {
+          "kind": "tag",
+          "start": 53,
+          "end": 64,
+          "target": "tag/nested"
+        }
+      ]
+    },
+    {
+      "range": [
+        225,
+        299
+      ],
+      "kind": "paragraph",
+      "text": "Footnote-ish text with $x^2$ inline math and a  inside.",
+      "inline": [
+        {
+          "kind": "math",
+          "start": 23,
+          "end": 28,
+          "target": "x^2"
+        }
+      ]
+    },
+    {
+      "range": [
+        327,
+        372
+      ],
+      "kind": "paragraph",
+      "text": "Äpfel [[Übung]] 😀 [[Emoji 😀]] #tägs",
+      "inline": [
+        {
+          "kind": "wikilink",
+          "start": 6,
+          "end": 15,
+          "target": "Übung"
+        },
+        {
+          "kind": "wikilink",
+          "start": 19,
+          "end": 31,
+          "target": "Emoji 😀"
+        },
+        {
+          "kind": "tag",
+          "start": 32,
+          "end": 37,
+          "target": "tägs"
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "kind": "wikilink",
+      "target": "Note",
+      "range": [
+        4,
+        12
+      ]
+    },
+    {
+      "kind": "wikilink",
+      "target": "Note",
+      "alias": "an alias",
+      "range": [
+        17,
+        34
+      ]
+    },
+    {
+      "kind": "wikilink",
+      "target": "Note",
+      "heading": "Heading",
+      "range": [
+        39,
+        55
+      ]
+    },
+    {
+      "kind": "wikilink",
+      "target": "Note",
+      "alias": "with alias",
+      "heading": "Heading",
+      "range": [
+        60,
+        87
+      ]
+    },
+    {
+      "kind": "wikilink",
+      "target": "Note",
+      "blockRef": "blk-1",
+      "range": [
+        92,
+        107
+      ]
+    },
+    {
+      "kind": "link",
+      "target": "https://example.com/a%20b",
+      "range": [
+        112,
+        146
+      ]
+    },
+    {
+      "kind": "link",
+      "target": "other.md",
+      "range": [
+        155,
+        175
+      ]
+    },
+    {
+      "kind": "link",
+      "target": "https://auto.link",
+      "range": [
+        182,
+        201
+      ]
+    },
+    {
+      "kind": "wikilink",
+      "target": "Übung",
+      "range": [
+        334,
+        344
+      ]
+    },
+    {
+      "kind": "wikilink",
+      "target": "Emoji 😀",
+      "range": [
+        350,
+        364
+      ]
+    }
+  ],
+  "tags": [
+    "tag/nested",
+    "tägs"
+  ],
+  "stats": {
+    "words": 37,
+    "blocks": 4,
+    "droppedEmphasis": 0,
+    "droppedHtml": 0
+  }
+}

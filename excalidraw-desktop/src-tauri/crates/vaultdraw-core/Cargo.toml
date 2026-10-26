@@ -12,6 +12,7 @@ sha2 = "0.10"
 hex = "0.4"
 fs2 = "0.4"
 memchr = "2"
+pulldown-cmark = { version = "0.13.4", default-features = false }
 unicode-normalization = "0.1"
 postcard = { version = "1", features = ["use-std"] }
 crc32fast = "1"

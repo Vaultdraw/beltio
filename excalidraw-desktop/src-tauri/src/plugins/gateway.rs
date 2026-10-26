@@ -19,6 +19,8 @@ pub(crate) enum Route {
     Control(&'static str),
     StorageRead,
     StorageWrite,
+    /// `vaultdraw_core::markdown::parse_markdown` on `params.text` (pure: no vault access).
+    MarkdownParse,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -36,6 +38,7 @@ pub(crate) const ALLOWLIST: &[Row] = &[
     Row { method: FILE_WRITE, permission: Some("vault.write"), route: Route::Control(FILE_WRITE) },
     Row { method: "storage.read", permission: None, route: Route::StorageRead },
     Row { method: "storage.write", permission: None, route: Route::StorageWrite },
+    Row { method: "markdown.parse", permission: None, route: Route::MarkdownParse },
 ];
 
 /// An error as the host sees it: `{code, message, ...detail}` (detail such as `reason: "dirty"`).
@@ -197,6 +200,23 @@ pub(crate) fn storage_call(state_dir: &std::path::Path, plugin_id: &str, route: 
             storage::write(state_dir, plugin_id, text)?;
             Ok(Value::Null)
         }
-        Route::Control(_) => Err(GatewayError::new("INTERNAL", "not a storage row")),
+        Route::Control(_) | Route::MarkdownParse => Err(GatewayError::new("INTERNAL", "not a storage row")),
     }
+}
+
+/// `markdown.parse`: `{ text, softBreakNewline? }` to a `NoteDoc` (16 MiB cap, like notes on disk).
+pub(crate) fn markdown_call(params: Option<Value>) -> Result<Value, GatewayError> {
+    let map = object_params(params)?;
+    let text = map
+        .get("text")
+        .and_then(Value::as_str)
+        .ok_or_else(|| GatewayError::new("INVALID_ARGUMENT", "text must be a string"))?;
+    let soft = match map.get("softBreakNewline") {
+        None | Some(Value::Null) => None,
+        Some(Value::Bool(b)) => Some(*b),
+        Some(_) => return Err(GatewayError::new("INVALID_ARGUMENT", "softBreakNewline must be a boolean")),
+    };
+    crate::markdown::check_size(text)?;
+    let doc = vaultdraw_core::markdown::parse_markdown(text, &crate::markdown::options(soft));
+    serde_json::to_value(doc).map_err(|e| GatewayError::new("INTERNAL", e.to_string()))
 }

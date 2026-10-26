@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "range": [
+        0,
+        67
+      ],
+      "kind": "code",
+      "code": true,
+      "lang": "c",
+      "text": "#include <stdio.h>\n#define MAX 10\nint main() { return 0; }"
+    },
+    {
+      "range": [
+        69,
+        131
+      ],
+      "kind": "code",
+      "code": true,
+      "lang": "python",
+      "text": "# comment, not a tag\nprint(\"#notatag\")"
+    },
+    {
+      "range": [
+        137,
+        157
+      ],
+      "kind": "code",
+      "code": true,
+      "text": "indented #code line"
+    },
+    {
+      "range": [
+        158,
+        246
+      ],
+      "kind": "paragraph",
+      "text": "A real #tag after code and #inlinecode not a tag. Colour #ff00aa is not a tag either.",
+      "inline": [
+        {
+          "kind": "tag",
+          "start": 7,
+          "end": 11,
+          "target": "tag"
+        }
+      ]
+    }
+  ],
+  "links": [],
+  "tags": [
+    "tag"
+  ],
+  "stats": {
+    "words": 17,
+    "blocks": 4,
+    "droppedEmphasis": 0,
+    "droppedHtml": 0
+  }
+}

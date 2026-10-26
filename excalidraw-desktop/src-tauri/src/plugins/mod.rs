@@ -169,6 +169,7 @@ pub(crate) async fn plugin_call(
                     _ => Ok(result?),
                 }
             }
+            gateway::Route::MarkdownParse => gateway::markdown_call(params),
             route => gateway::storage_call(&state_dir, &plugin_id, route, &params.unwrap_or_default()),
         }
     })

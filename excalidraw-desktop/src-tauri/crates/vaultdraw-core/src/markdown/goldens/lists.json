@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "range": [
+        0,
+        15
+      ],
+      "kind": "listItem",
+      "ordered": false,
+      "marker": "-",
+      "depth": 0,
+      "task": "none",
+      "text": "plain bullet"
+    },
+    {
+      "range": [
+        15,
+        31
+      ],
+      "kind": "listItem",
+      "ordered": false,
+      "marker": "-",
+      "depth": 0,
+      "task": "open",
+      "text": "open task"
+    },
+    {
+      "range": [
+        31,
+        122
+      ],
+      "kind": "listItem",
+      "ordered": false,
+      "marker": "-",
+      "depth": 0,
+      "task": "done",
+      "text": "done task with bold"
+    },
+    {
+      "range": [
+        63,
+        104
+      ],
+      "kind": "listItem",
+      "ordered": false,
+      "marker": "-",
+      "depth": 1,
+      "task": "none",
+      "text": "nested bullet"
+    },
+    {
+      "range": [
+        83,
+        104
+      ],
+      "kind": "listItem",
+      "ordered": false,
+      "marker": "-",
+      "depth": 2,
+      "task": "none",
+      "text": "deeper #nested-tag",
+      "inline": [
+        {
+          "kind": "tag",
+          "start": 7,
+          "end": 18,
+          "target": "nested-tag"
+        }
+      ]
+    },
+    {
+      "range": [
+        106,
+        122
+      ],
+      "kind": "listItem",
+      "ordered": false,
+      "marker": "-",
+      "depth": 1,
+      "task": "none",
+      "text": "second nested"
+    },
+    {
+      "range": [
+        122,
+        137
+      ],
+      "kind": "listItem",
+      "ordered": false,
+      "marker": "*",
+      "depth": 0,
+      "task": "none",
+      "text": "star marker"
+    },
+    {
+      "range": [
+        137,
+        146
+      ],
+      "kind": "listItem",
+      "ordered": true,
+      "marker": "1.",
+      "depth": 0,
+      "task": "none",
+      "text": "first"
+    },
+    {
+      "range": [
+        146,
+        176
+      ],
+      "kind": "listItem",
+      "ordered": true,
+      "marker": "2.",
+      "depth": 0,
+      "task": "none",
+      "text": "second"
+    },
+    {
+      "range": [
+        159,
+        176
+      ],
+      "kind": "listItem",
+      "ordered": true,
+      "marker": "1)",
+      "depth": 1,
+      "task": "none",
+      "text": "inner ordered"
+    },
+    {
+      "range": [
+        176,
+        195
+      ],
+      "kind": "listItem",
+      "ordered": true,
+      "marker": "3.",
+      "depth": 0,
+      "task": "none",
+      "text": "third",
+      "blockId": "item-id"
+    },
+    {
+      "range": [
+        195,
+        262
+      ],
+      "kind": "listItem",
+      "ordered": false,
+      "marker": "-",
+      "depth": 0,
+      "task": "none",
+      "text": "loose item"
+    },
+    {
+      "range": [
+        211,
+        234
+      ],
+      "kind": "paragraph",
+      "text": "continuation paragraph"
+    },
+    {
+      "range": [
+        237,
+        261
+      ],
+      "kind": "code",
+      "code": true,
+      "text": "code in item"
+    },
+    {
+      "range": [
+        262,
+        269
+      ],
+      "kind": "listItem",
+      "ordered": false,
+      "marker": "-",
+      "depth": 0,
+      "task": "none",
+      "text": "last"
+    }
+  ],
+  "links": [],
+  "tags": [
+    "nested-tag"
+  ],
+  "stats": {
+    "words": 26,
+    "blocks": 15,
+    "droppedEmphasis": 1,
+    "droppedHtml": 0
+  }
+}

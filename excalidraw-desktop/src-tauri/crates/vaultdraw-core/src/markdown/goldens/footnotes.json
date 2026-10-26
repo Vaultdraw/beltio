@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "range": [
+        0,
+        41
+      ],
+      "kind": "paragraph",
+      "text": "Claim one[1] and claim two[note] here.",
+      "inline": [
+        {
+          "kind": "footnoteRef",
+          "start": 9,
+          "end": 12,
+          "target": "1"
+        },
+        {
+          "kind": "footnoteRef",
+          "start": 26,
+          "end": 32,
+          "target": "note"
+        }
+      ]
+    },
+    {
+      "range": [
+        42,
+        78
+      ],
+      "kind": "footnoteDef",
+      "label": "1",
+      "blocks": [
+        {
+          "range": [
+            48,
+            78
+          ],
+          "kind": "paragraph",
+          "text": "First footnote with bold."
+        }
+      ]
+    },
+    {
+      "range": [
+        78,
+        119
+      ],
+      "kind": "footnoteDef",
+      "label": "note",
+      "blocks": [
+        {
+          "range": [
+            87,
+            118
+          ],
+          "kind": "paragraph",
+          "text": "Second footnote continues."
+        }
+      ]
+    },
+    {
+      "range": [
+        119,
+        148
+      ],
+      "kind": "listItem",
+      "ordered": false,
+      "marker": "-",
+      "depth": 0,
+      "task": "open",
+      "text": "task with footnote[1]",
+      "inline": [
+        {
+          "kind": "footnoteRef",
+          "start": 18,
+          "end": 21,
+          "target": "1"
+        }
+      ]
+    }
+  ],
+  "links": [],
+  "tags": [],
+  "stats": {
+    "words": 16,
+    "blocks": 6,
+    "droppedEmphasis": 1,
+    "droppedHtml": 0
+  }
+}

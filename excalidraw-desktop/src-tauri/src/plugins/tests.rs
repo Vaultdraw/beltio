@@ -815,6 +815,7 @@ fn gateway_allowlist_maps_methods_to_permissions() {
             ("file.write", Some("vault.write")),
             ("storage.read", None),
             ("storage.write", None),
+            ("markdown.parse", None),
         ]
     );
     // Every permission a row needs is a name the manifest accepts.
@@ -1237,4 +1238,22 @@ fn vault_list_5000_drawings_timing() {
     println!("  of which the core's directory listing alone: p50 {:.2} ms", core[core.len() / 2]);
     println!("vault.list 5000 drawings: p50 {p50:.2} ms, p95 {p95:.2} ms (budget p95 < 30 ms)");
     assert!(p95 < 30.0 * 4.0, "p95 {p95:.1} ms is far over the 30 ms budget");
+}
+
+#[test]
+fn gateway_markdown_parse_needs_no_permission_and_checks_params() {
+    let none = consent::Record::new();
+    let p = info_with("md", "", Source::User);
+    let row = gateway::authorize("markdown.parse", "md", Some(&p), || none.clone()).unwrap();
+    assert_eq!(row.route, gateway::Route::MarkdownParse);
+    let doc = gateway::markdown_call(Some(serde_json::json!({ "text": "# Hi #tag\n\n[[Note|alias]]" }))).unwrap();
+    assert_eq!(doc["schemaVersion"], 1);
+    assert_eq!(doc["blocks"][0]["kind"], "heading");
+    assert_eq!(doc["tags"][0], "tag");
+    assert_eq!(doc["links"][0]["target"], "Note");
+    for bad in [serde_json::json!({}), serde_json::json!({ "text": 3 }), serde_json::json!({ "text": "x", "softBreakNewline": "yes" }), serde_json::json!([1])] {
+        assert_eq!(gateway::markdown_call(Some(bad)).unwrap_err().code, "INVALID_ARGUMENT");
+    }
+    let big = "a".repeat(vaultdraw_core::markdown::MAX_MARKDOWN_BYTES as usize + 1);
+    assert_eq!(gateway::markdown_call(Some(serde_json::json!({ "text": big }))).unwrap_err().code, "INVALID_ARGUMENT");
 }

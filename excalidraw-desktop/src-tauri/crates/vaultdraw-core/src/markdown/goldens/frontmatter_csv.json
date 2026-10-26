@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "frontmatter": {
+    "range": [
+      0,
+      66
+    ],
+    "raw": "tags: red, green blue\nalias: Solo Name\ncreated: 2026-10-27\n",
+    "tags": [
+      "red",
+      "green",
+      "blue"
+    ],
+    "aliases": [
+      "Solo Name"
+    ],
+    "properties": {
+      "alias": "Solo Name",
+      "created": "2026-10-27",
+      "tags": "red, green blue"
+    }
+  },
+  "blocks": [
+    {
+      "range": [
+        67,
+        78
+      ],
+      "kind": "paragraph",
+      "text": "Body only."
+    }
+  ],
+  "links": [],
+  "tags": [
+    "red",
+    "green",
+    "blue"
+  ],
+  "stats": {
+    "words": 2,
+    "blocks": 1,
+    "droppedEmphasis": 0,
+    "droppedHtml": 0
+  }
+}

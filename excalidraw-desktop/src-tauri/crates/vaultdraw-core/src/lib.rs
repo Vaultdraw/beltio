@@ -11,6 +11,7 @@ pub mod instance;
 pub mod json_ascii;
 pub mod links;
 pub mod lock;
+pub mod markdown;
 pub mod migrate;
 pub mod new_drawing;
 pub mod ops;
