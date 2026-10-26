@@ -386,6 +386,13 @@
           "minimum": 100,
           "maximum": 50000
         },
+        "thumbnail_cache_mb": {
+          "description": "Size cap of a vault's thumbnail cache on disk, in megabytes; the oldest thumbnails go first. Applies at the next thumbnail saved.",
+          "default": 128,
+          "type": "integer",
+          "minimum": 8,
+          "maximum": 8192
+        },
         "defer_home_pane": {
           "description": "When a vault opens, paint the file tree first and the home pane one frame later, in the same place; `false` draws both together.",
           "default": true,
@@ -1150,6 +1157,48 @@
           "type": "integer",
           "minimum": 10,
           "maximum": 10000
+        },
+        "hidden_purge_s": {
+          "description": "Seconds the window stays hidden before the app frees its caches; 0 never does.",
+          "default": 120,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 86400
+        },
+        "idle_purge_s": {
+          "description": "Seconds without input, while visible, before off-screen caches are freed; 0 never does.",
+          "default": 180,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 86400
+        }
+      }
+    },
+    "search": {
+      "type": "object",
+      "description": "Search speed trade-offs. Lower counts and a longer wait cost less on a slow machine.",
+      "additionalProperties": false,
+      "properties": {
+        "debounce_ms": {
+          "description": "Wait this long after the last keystroke before a search runs.",
+          "default": 60,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "max_drawings": {
+          "description": "Most drawings listed in the search results.",
+          "default": 50,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        },
+        "max_snippets": {
+          "description": "Most matching elements shown under each drawing; the index keeps 5 per drawing, so 5 is the top.",
+          "default": 5,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
         }
       }
     },

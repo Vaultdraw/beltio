@@ -15,10 +15,12 @@ import {
 import { MEMORY_SETTINGS_SCHEMA } from "./memorySettingsSchema";
 
 describe("memory settings", () => {
-  it("defaults: free unused images on, 1000 undo steps", () => {
+  it("defaults: free unused images on, 1000 undo steps, 120 s and 180 s purge delays", () => {
     expect(MEMORY_DEFAULTS).toEqual({
       memoryFreeUnusedImages: true,
       memoryUndoSteps: 1000,
+      memoryHiddenPurgeS: 120,
+      memoryIdlePurgeS: 180,
     });
     const { values, problems } = configToPreferences({});
     expect(problems).toEqual([]);
@@ -81,10 +83,14 @@ describe("memory settings", () => {
     });
   });
 
-  it("every config key has a settings row, none per vault", () => {
-    const keys = CONFIG_MAPPING.filter((m) => m.key.startsWith("memory.")).map(
-      (m) => m.key,
-    );
+  it("every config key has a settings row, none per vault (the purge delays are config-only)", () => {
+    const configOnly = ["memory.hidden_purge_s", "memory.idle_purge_s"];
+    const keys = CONFIG_MAPPING.filter(
+      (m) => m.key.startsWith("memory.") && !configOnly.includes(m.key),
+    ).map((m) => m.key);
+    for (const key of configOnly) {
+      expect(CONFIG_MAPPING.map((m) => m.key)).toContain(key);
+    }
     expect(MEMORY_SETTINGS_SCHEMA.map((r) => r.configKey).sort()).toEqual(
       keys.sort(),
     );

@@ -1157,6 +1157,7 @@ The app window around the canvas.
 | `show_tag_chips` | `true` | true or false |  | Show a drawing's tags as chips in the file navigator. |
 | `thumbnails` | `true` | true or false |  | Show drawing thumbnails (home, search, palette, gallery). |
 | `thumbnail_max_elements` | `8000` | an integer between 100 and 50000 |  | Biggest drawing (in elements) that gets a thumbnail. |
+| `thumbnail_cache_mb` | `128` | an integer between 8 and 8192 (megabytes) |  | Size cap of a vault's thumbnail cache on disk, in megabytes; the oldest thumbnails go first. Applies at the next thumbnail saved. |
 | `defer_home_pane` | `true` | true or false |  | When a vault opens, paint the file tree first and the home pane one frame later, in the same place; `false` draws both together. |
 | `activity_bar` | `true` | true or false | yes | Show the activity bar. |
 | `activity_bar_order` | `[]` | a list of entry ids like ["library", "history"] | yes | Activity bar entry order: `library`, `history`, `graph`, `gallery`, `search`, `tags`, `templates`, `hotkeys`, `settings`; unlisted entries follow in their default order. |
@@ -1261,6 +1262,18 @@ Memory kept by open drawings. See [Memory](#memory).
 | --- | --- | --- | --- | --- |
 | `free_unused_images` | `true` | true or false |  | Release image data that no element and no undo or redo step can restore. |
 | `undo_steps` | `1000` | a whole number from 10 to 10000 (undo steps kept per drawing) |  | Undo steps kept per drawing; older steps go, with the images only they could restore. |
+| `hidden_purge_s` | `120` | a whole number from 0 to 86400 (seconds, 0 = never) |  | Seconds the window stays hidden before the app frees its caches; 0 never does. |
+| `idle_purge_s` | `180` | a whole number from 0 to 86400 (seconds, 0 = never) |  | Seconds without input, while visible, before off-screen caches are freed; 0 never does. |
+
+### `[search]`
+
+Search speed trade-offs. Lower counts and a longer wait cost less on a slow machine.
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `debounce_ms` | `60` | a whole number from 0 to 2000 (milliseconds) |  | Wait this long after the last keystroke before a search runs. |
+| `max_drawings` | `50` | a whole number from 1 to 200 |  | Most drawings listed in the search results. |
+| `max_snippets` | `5` | a whole number from 1 to 5 |  | Most matching elements shown under each drawing; the index keeps 5 per drawing, so 5 is the top. |
 
 ### `[keys]`
 
