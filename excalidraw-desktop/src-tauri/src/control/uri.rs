@@ -1,9 +1,10 @@
 //! `vaultdraw://` links: the one place every entry point ends up (macOS Apple Event, argv of the
 //! first launch, a forwarded second launch, `uri.handle` from the CLI, the palette's "open a
-//! link"). It reads `[control]` for each request (live, no watcher), refuses or rate-limits,
+//! link"). It reads `[control]` for each request through the config layers (includes, `config.toml`,
+//! `overrides.toml`; live, no watcher), refuses or rate-limits,
 //! applies the deny list, and hands the window a small plan (`uri.run`). The window runs the
 //! plan through its normal handlers and asks the user before anything that changes state.
-//! Nothing here touches the network or the file system besides reading `config.toml`.
+//! Nothing here touches the network or the file system besides reading the config files.
 //!
 //! Plan fields: the parsed request (`action`, `vault`, `file`, `newTab`, `query`, `path`, `id`)
 //! plus `allowed` (run `new` / `cmd` without asking), `allowSwitch` (switch vault without
@@ -68,31 +69,17 @@ pub(crate) struct Policy {
 }
 
 impl Policy {
-    /// No config: links on, nothing pre-approved. A config that exists but cannot be parsed
-    /// fails closed (links off): a typo must not turn the user's off switch back on.
+    /// The link keys of the merged settings (`vaultdraw_core::control_settings`, which fails
+    /// closed: a broken layer or a wrongly typed switch turns links off).
+    pub(crate) fn from_settings(s: &vaultdraw_core::control_settings::ControlSettings) -> Self {
+        Self { enabled: s.uri_enabled, allow: s.uri_allow.clone() }
+    }
+
+    /// One `config.toml` text and nothing else (tests).
+    #[cfg(test)]
     pub(crate) fn from_toml(text: &str) -> Self {
-        let off = Self { enabled: false, allow: vec![] };
-        let table = match text.parse::<toml::Table>() {
-            Ok(t) => t,
-            Err(_) if text.trim().is_empty() => toml::Table::new(),
-            Err(_) => return off,
-        };
-        // No `[control]` at all: defaults. Present but not a table: fail closed.
-        let control = match table.get("control") {
-            None => toml::Table::new(),
-            Some(c) => match c.as_table() {
-                Some(t) => t.clone(),
-                None => return off,
-            },
-        };
-        // A wrongly typed switch (string, number) means off, never on.
-        let enabled = control.get("uri_enabled").map_or(true, |v| v.as_bool().unwrap_or(false));
-        let allow = control
-            .get("uri_allow")
-            .and_then(|a| a.as_array())
-            .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
-            .unwrap_or_default();
-        Self { enabled, allow }
+        use vaultdraw_core::control_settings::{from_layers, Layer};
+        Self::from_settings(&from_layers(Layer::Text(text), Layer::Missing))
     }
 
     fn allows(&self, entry: &str) -> bool {
@@ -215,8 +202,8 @@ fn will_ask(plan: &Value) -> bool {
 
 impl Handler {
     /// Checks every request from outside shares: window ready (or queued), rate limit, off switch.
-    fn admit(&self, win: &dyn Window, config_text: &str, origin: Origin, now: Instant, off_message: &str) -> Result<Policy, RpcError> {
-        let policy = Policy::from_toml(config_text);
+    fn admit(&self, win: &dyn Window, policy: &Policy, origin: Origin, now: Instant, off_message: &str) -> Result<Policy, RpcError> {
+        let policy = policy.clone();
         let toast = origin != Origin::Cli;
         if !win.ready() && !origin.queues() {
             return Err(RpcError::app(codes::NOT_READY, "The app window is not ready yet"));
@@ -253,9 +240,9 @@ impl Handler {
 
     /// One file the system opened (Finder, argv). Same switch, rate limit and queue as links.
     /// The window decides what to do with it and asks before copying or switching vault.
-    pub(crate) fn handle_file(&self, win: &dyn Window, config_text: &str, path: &str, origin: Origin, now: Instant) -> Result<Value, RpcError> {
+    pub(crate) fn handle_file(&self, win: &dyn Window, policy: &Policy, path: &str, origin: Origin, now: Instant) -> Result<Value, RpcError> {
         let toast = origin != Origin::Cli;
-        self.admit(win, config_text, origin, now, "Opening files from outside is turned off")?;
+        self.admit(win, policy, origin, now, "Opening files from outside is turned off")?;
         // The same normalized text is granted and sent, so the window's read matches the grant.
         let normalized;
         let path = if path.starts_with('/') {
@@ -276,10 +263,10 @@ impl Handler {
         self.deliver(win, plan)
     }
 
-    /// One link, from any entry point. `config_text` is `config.toml` as read just now.
-    pub(crate) fn handle(&self, win: &dyn Window, config_text: &str, url: &str, origin: Origin, now: Instant) -> Result<Value, RpcError> {
+    /// One link, from any entry point. `policy` is the `[control]` link keys as read just now.
+    pub(crate) fn handle(&self, win: &dyn Window, policy: &Policy, url: &str, origin: Origin, now: Instant) -> Result<Value, RpcError> {
         let toast = origin != Origin::Cli;
-        let policy = self.admit(win, config_text, origin, now, "Links from outside are turned off (control.uri_enabled)")?;
+        let policy = self.admit(win, policy, origin, now, "Links from outside are turned off (control.uri_enabled)")?;
         let req = match uri::parse(url) {
             Ok(r) => r,
             Err(e) => {
@@ -377,20 +364,15 @@ impl Window for AppWindow<'_> {
     }
 }
 
-/// `[control]` lives in config.toml: read it now (a missing or unreadable file means defaults).
-fn read_config_text() -> String {
-    let Ok(dirs) = crate::config::resolve_dirs() else { return String::new() };
-    let path = dirs.config.join("config.toml");
-    if !path.exists() {
-        return String::new();
-    }
-    // Present but unreadable (too big, not UTF-8, I/O error): fail closed, links off.
-    crate::config::read_toml_text(&path, "config.toml", 1024 * 1024).unwrap_or_else(|_| "[control]\nuri_enabled = false\n".into())
+/// The link keys, read now through every config layer. Config folders that cannot be resolved
+/// mean defaults (links on, nothing pre-approved); an unreadable or broken file means links off.
+fn read_policy() -> Policy {
+    super::control_settings().map_or(Policy { enabled: true, allow: vec![] }, |s| Policy::from_settings(&s))
 }
 
 /// Every entry point calls this.
 pub(crate) fn handle(app: &tauri::AppHandle, url: &str, origin: Origin) -> Result<Value, RpcError> {
-    handler().handle(&AppWindow(app), &read_config_text(), url, origin, Instant::now())
+    handler().handle(&AppWindow(app), &read_policy(), url, origin, Instant::now())
 }
 
 /// True for text that is a `vaultdraw:` link (scheme only; the parser decides the rest).
@@ -460,7 +442,7 @@ fn spawn_items(app: &tauri::AppHandle, items: Vec<Item>) {
 
 /// Every file entry point calls this.
 pub(crate) fn handle_file(app: &tauri::AppHandle, path: &str, origin: Origin) -> Result<Value, RpcError> {
-    handler().handle_file(&AppWindow(app), &read_config_text(), path, origin, Instant::now())
+    handler().handle_file(&AppWindow(app), &read_policy(), path, origin, Instant::now())
 }
 
 /// The window just became ready: send the queue (a thread only when something waits).

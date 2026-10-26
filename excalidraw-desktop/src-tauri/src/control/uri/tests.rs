@@ -37,7 +37,7 @@ impl Window for Fake {
 }
 
 fn go(h: &Handler, w: &Fake, cfg: &str, url: &str, o: Origin) -> Result<Value, RpcError> {
-    h.handle(w, cfg, url, o, Instant::now())
+    h.handle(w, &Policy::from_toml(cfg), url, o, Instant::now())
 }
 
 const OPEN: &str = "vaultdraw://open?file=a";
@@ -144,12 +144,12 @@ fn security_a_link_that_asks_does_not_raise_the_window() {
     let t0 = Instant::now();
     let at = |i: u64| t0 + Duration::from_secs(i * 3);
     for (i, url) in [NEW, "vaultdraw://cmd?id=appearance.toggleMode", "vaultdraw://open?vault=DSA&file=a", "vaultdraw://search?query=x&vault=DSA"].iter().enumerate() {
-        h.handle(&w, "", url, Origin::Os, at(i as u64)).unwrap();
+        h.handle(&w, &Policy::from_toml(""), url, Origin::Os, at(i as u64)).unwrap();
     }
     assert_eq!(w.focused.get(), 0);
     // Pre-approved or plain: raised.
-    h.handle(&w, "[control]\nuri_allow = [\"new\"]\n", NEW, Origin::Os, at(5)).unwrap();
-    h.handle(&w, "", OPEN, Origin::Os, at(6)).unwrap();
+    h.handle(&w, &Policy::from_toml("[control]\nuri_allow = [\"new\"]\n"), NEW, Origin::Os, at(5)).unwrap();
+    h.handle(&w, &Policy::from_toml(""), OPEN, Origin::Os, at(6)).unwrap();
     assert_eq!(w.focused.get(), 2);
 }
 
@@ -197,7 +197,7 @@ fn security_bad_links_never_reach_the_window_as_plans() {
     .enumerate()
     {
         // Spread over time: the rate limit is not what is under test here.
-        let e = h.handle(&w, "", url, Origin::Os, t0 + Duration::from_secs(i as u64 * 3)).unwrap_err();
+        let e = h.handle(&w, &Policy::from_toml(""), url, Origin::Os, t0 + Duration::from_secs(i as u64 * 3)).unwrap_err();
         assert_eq!(e.code, vaultdraw_protocol::INVALID_PARAMS, "{url}");
     }
     assert!(w.plans().is_empty());
@@ -230,17 +230,17 @@ fn security_rate_limit_is_five_per_ten_seconds_with_one_notice() {
     let (h, w) = (Handler::default(), Fake::new(true));
     let t0 = Instant::now();
     for _ in 0..5 {
-        h.handle(&w, "", OPEN, Origin::Os, t0).unwrap();
+        h.handle(&w, &Policy::from_toml(""), OPEN, Origin::Os, t0).unwrap();
     }
-    let e = h.handle(&w, "", OPEN, Origin::Os, t0 + Duration::from_secs(1)).unwrap_err();
+    let e = h.handle(&w, &Policy::from_toml(""), OPEN, Origin::Os, t0 + Duration::from_secs(1)).unwrap_err();
     assert_eq!(e.app_code(), Some(codes::RATE_LIMITED));
     for _ in 0..3 {
-        assert!(h.handle(&w, "", OPEN, Origin::Os, t0 + Duration::from_secs(2)).is_err());
+        assert!(h.handle(&w, &Policy::from_toml(""), OPEN, Origin::Os, t0 + Duration::from_secs(2)).is_err());
     }
     assert_eq!(w.plans().len(), 5);
     assert_eq!(w.notices().len(), 1, "one burst, one notice");
     // After the window passes, links work again.
-    assert!(h.handle(&w, "", OPEN, Origin::Os, t0 + RATE_WINDOW + Duration::from_millis(1)).is_ok());
+    assert!(h.handle(&w, &Policy::from_toml(""), OPEN, Origin::Os, t0 + RATE_WINDOW + Duration::from_millis(1)).is_ok());
     assert_eq!(w.plans().len(), 6);
 }
 
@@ -250,15 +250,15 @@ fn security_each_origin_group_has_its_own_rate_bucket() {
     let t0 = Instant::now();
     // A local script uses up its own budget...
     for _ in 0..5 {
-        h.handle(&w, "", OPEN, Origin::Cli, t0).unwrap();
+        h.handle(&w, &Policy::from_toml(""), OPEN, Origin::Cli, t0).unwrap();
     }
-    assert!(h.handle(&w, "", OPEN, Origin::Forwarded, t0).is_err(), "Cli and Forwarded share one bucket");
+    assert!(h.handle(&w, &Policy::from_toml(""), OPEN, Origin::Forwarded, t0).is_err(), "Cli and Forwarded share one bucket");
     // ...and links from the system and the palette still get through.
     for _ in 0..5 {
-        h.handle(&w, "", OPEN, Origin::Os, t0).unwrap();
-        h.handle(&w, "", OPEN, Origin::User, t0).unwrap();
+        h.handle(&w, &Policy::from_toml(""), OPEN, Origin::Os, t0).unwrap();
+        h.handle(&w, &Policy::from_toml(""), OPEN, Origin::User, t0).unwrap();
     }
-    assert!(h.handle(&w, "", OPEN, Origin::User, t0).is_err(), "the palette is limited too");
+    assert!(h.handle(&w, &Policy::from_toml(""), OPEN, Origin::User, t0).is_err(), "the palette is limited too");
 }
 
 #[test]
@@ -266,13 +266,13 @@ fn a_refused_request_is_not_counted_so_the_window_frees_itself() {
     let (h, w) = (Handler::default(), Fake::new(true));
     let t0 = Instant::now();
     for _ in 0..5 {
-        h.handle(&w, "", OPEN, Origin::Os, t0).unwrap();
+        h.handle(&w, &Policy::from_toml(""), OPEN, Origin::Os, t0).unwrap();
     }
     for i in 0..50 {
-        let _ = h.handle(&w, "", OPEN, Origin::Os, t0 + Duration::from_millis(100 * i));
+        let _ = h.handle(&w, &Policy::from_toml(""), OPEN, Origin::Os, t0 + Duration::from_millis(100 * i));
     }
     // 5 s after the first accepted burst, hammering did not extend the window.
-    assert!(h.handle(&w, "", OPEN, Origin::Os, t0 + RATE_WINDOW).is_ok());
+    assert!(h.handle(&w, &Policy::from_toml(""), OPEN, Origin::Os, t0 + RATE_WINDOW).is_ok());
 }
 
 #[test]
@@ -280,7 +280,7 @@ fn queue_holds_until_ready_then_drains_in_order() {
     let (h, w) = (Handler::default(), Fake::new(false));
     let t0 = Instant::now();
     for (i, name) in ["a", "b", "c"].iter().enumerate() {
-        let r = h.handle(&w, "", &format!("vaultdraw://open?file={name}"), Origin::Os, t0 + Duration::from_secs(i as u64 * 3)).unwrap();
+        let r = h.handle(&w, &Policy::from_toml(""), &format!("vaultdraw://open?file={name}"), Origin::Os, t0 + Duration::from_secs(i as u64 * 3)).unwrap();
         assert_eq!(r["status"], "queued");
     }
     assert!(w.plans().is_empty());
@@ -299,7 +299,7 @@ fn security_queue_is_capped_at_sixteen() {
     let t0 = Instant::now();
     let mut refused = 0;
     for i in 0..30u64 {
-        let r = h.handle(&w, "", OPEN, Origin::Os, t0 + Duration::from_secs(i * 3));
+        let r = h.handle(&w, &Policy::from_toml(""), OPEN, Origin::Os, t0 + Duration::from_secs(i * 3));
         if r.is_err() {
             refused += 1;
         }
@@ -314,14 +314,14 @@ fn a_socket_caller_gets_not_ready_instead_of_a_queue_and_spends_no_budget() {
     let t0 = Instant::now();
     for o in [Origin::Cli, Origin::Forwarded] {
         for _ in 0..20 {
-            let e = h.handle(&w, "", OPEN, o, t0).unwrap_err();
+            let e = h.handle(&w, &Policy::from_toml(""), OPEN, o, t0).unwrap_err();
             assert_eq!(e.app_code(), Some(codes::NOT_READY));
         }
     }
     assert_eq!(h.queued(), 0);
     w.ready.set(true);
     for _ in 0..5 {
-        h.handle(&w, "", OPEN, Origin::Cli, t0).unwrap();
+        h.handle(&w, &Policy::from_toml(""), OPEN, Origin::Cli, t0).unwrap();
     }
 }
 
@@ -358,7 +358,7 @@ fn handling_one_link_is_fast() {
     for i in 0..1000u64 {
         let t = Instant::now();
         // A fresh handler window each time: time the parse + policy + plan, not the limiter refusals.
-        let _ = h.handle(&w, "[control]\nuri_allow = [\"new\"]\n", OPEN, Origin::User, t0 + RATE_WINDOW * i as u32);
+        let _ = h.handle(&w, &Policy::from_toml("[control]\nuri_allow = [\"new\"]\n"), OPEN, Origin::User, t0 + RATE_WINDOW * i as u32);
         samples.push(t.elapsed());
         w.sent.borrow_mut().clear();
     }
@@ -385,7 +385,7 @@ fn a_plan_survives_a_window_that_goes_away_while_draining() {
     let w = Fake::new(false);
     let t0 = Instant::now();
     for i in 0..3u64 {
-        h.handle(&w, "", OPEN, Origin::Os, t0 + Duration::from_secs(i * 3)).unwrap();
+        h.handle(&w, &Policy::from_toml(""), OPEN, Origin::Os, t0 + Duration::from_secs(i * 3)).unwrap();
     }
     let f = Flaky(Fake::new(true));
     h.drain(&f);
@@ -409,7 +409,7 @@ fn a_plan_queued_just_as_the_window_becomes_ready_is_not_stranded() {
     }
     let h = Handler::default();
     let w = Racy(Fake::new(true), Cell::new(0));
-    let r = h.handle(&w, "", OPEN, Origin::Os, Instant::now()).unwrap();
+    let r = h.handle(&w, &Policy::from_toml(""), OPEN, Origin::Os, Instant::now()).unwrap();
     assert_eq!(r["status"], "queued");
     assert_eq!(h.queued(), 0);
     assert_eq!(w.0.plans().len(), 1);
@@ -420,7 +420,7 @@ fn security_a_flood_while_links_are_off_cannot_flood_toasts() {
     let (h, w) = (Handler::default(), Fake::new(true));
     let t0 = Instant::now();
     for _ in 0..200 {
-        let _ = h.handle(&w, "[control]\nuri_enabled = false\n", OPEN, Origin::Os, t0);
+        let _ = h.handle(&w, &Policy::from_toml("[control]\nuri_enabled = false\n"), OPEN, Origin::Os, t0);
     }
     assert!(w.notices().len() <= RATE_LIMIT + 1, "{} notices", w.notices().len());
 }
@@ -447,7 +447,7 @@ fn security_a_wrongly_typed_switch_or_table_means_off() {
 // ---- Files from the system ----
 
 fn file(h: &Handler, w: &Fake, cfg: &str, path: &str, o: Origin) -> Result<Value, RpcError> {
-    h.handle_file(w, cfg, path, o, Instant::now())
+    h.handle_file(w, &Policy::from_toml(cfg), path, o, Instant::now())
 }
 
 #[test]

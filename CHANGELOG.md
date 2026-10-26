@@ -80,6 +80,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- `control.uri_enabled` and `control.uri_allow` are now read through every config layer (included files, `config.toml`, `overrides.toml`), like `control.enabled`. Before, links read only `config.toml`, so turning links off from Settings or with `vaultdraw config set` did nothing. A broken `overrides.toml` now turns links off, as it does AI.
 - Renaming a tag across the vault no longer shows an extra "Updated N links" message next to "Renamed #a to #b" when the rewrite finishes very fast.
 - Drawings with more than 600 elements now get a thumbnail in the gallery, home, search and palette (up to 8,000 elements). Parsing, restoring, measuring and painting each run in short steps, so the app stays responsive while thumbnails draw.
 - The activity bar disappears when every entry is hidden, instead of leaving an empty 36 px strip. Showing one entry again (Settings → Interface) brings it back.

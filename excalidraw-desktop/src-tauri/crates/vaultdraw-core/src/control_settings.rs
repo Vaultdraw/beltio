@@ -8,6 +8,8 @@
 //! | `control.notify_edits` | true | counts as unset |
 //! | `ai.enabled` | false | AI off (fail closed) |
 //! | `ai.mcp_enabled` | true | AI tools off (fail closed) |
+//! | `control.uri_enabled` | true | links off (fail closed); a `control` that is not a table too |
+//! | `control.uri_allow` | `[]` | nothing pre-approved (non-string entries are skipped) |
 
 use crate::config::{read_toml_text, Dirs, OVERRIDES_FILE};
 use std::path::Path;
@@ -15,7 +17,7 @@ use std::path::Path;
 const MAX_LAYER_BYTES: u64 = 1024 * 1024;
 
 /// What the control server needs to know, all keys resolved.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ControlSettings {
     /// `[control] enabled`: the control socket starts.
     pub enabled: bool,
@@ -25,6 +27,10 @@ pub struct ControlSettings {
     pub ai_enabled: bool,
     /// `[ai] mcp_enabled`: the AI tools interface under the master switch.
     pub ai_mcp_enabled: bool,
+    /// `[control] uri_enabled`: `vaultdraw://` links and files opened from outside are handled.
+    pub uri_enabled: bool,
+    /// `[control] uri_allow`: what a link may do without asking (the highest layer's list wins whole).
+    pub uri_allow: Vec<String>,
 }
 
 impl ControlSettings {
@@ -107,11 +113,26 @@ fn resolve(includes: Vec<toml::Table>, config: Layer, overrides: Layer) -> Contr
                 None => default,
             }
     };
+    // Links fail closed too: a broken layer, a `control` that is not a table in any layer, or a
+    // switch that is not a boolean turns them off, so a typo never re-enables what the user disabled.
+    let control_ok = layers.iter().all(|t| t.get("control").is_none_or(toml::Value::is_table));
+    let uri_enabled = !broken
+        && control_ok
+        && match value("control", "uri_enabled") {
+            Some(v) => v.as_bool() == Some(true),
+            None => true,
+        };
+    let uri_allow = match value("control", "uri_allow") {
+        Some(toml::Value::Array(a)) if control_ok => a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect(),
+        _ => Vec::new(),
+    };
     ControlSettings {
         enabled: soft("control", "enabled", true),
         notify_edits: soft("control", "notify_edits", true),
         ai_enabled: strict("enabled", false),
         ai_mcp_enabled: strict("mcp_enabled", true),
+        uri_enabled,
+        uri_allow,
     }
 }
 
@@ -125,7 +146,17 @@ mod tests {
     #[test]
     fn defaults_with_no_files() {
         let s = from_layers(Missing, Missing);
-        assert_eq!(s, ControlSettings { enabled: true, notify_edits: true, ai_enabled: false, ai_mcp_enabled: true });
+        assert_eq!(
+            s,
+            ControlSettings {
+                enabled: true,
+                notify_edits: true,
+                ai_enabled: false,
+                ai_mcp_enabled: true,
+                uri_enabled: true,
+                uri_allow: vec![]
+            }
+        );
         assert!(!s.mcp_open(), "AI is off by default");
     }
 
@@ -152,10 +183,10 @@ mod tests {
     }
 
     #[test]
-    fn a_broken_layer_closes_ai_only() {
+    fn a_broken_layer_closes_ai_and_links_only() {
         for (c, o) in [(Text("not toml ["), Text(ON)), (Text(ON), Text("broken [")), (Unreadable, Text(ON)), (Text(ON), Unreadable)] {
             let s = from_layers(c, o);
-            assert!(!s.ai_enabled && !s.ai_mcp_enabled && !s.mcp_open(), "{c:?} {o:?}");
+            assert!(!s.ai_enabled && !s.ai_mcp_enabled && !s.mcp_open() && !s.uri_enabled, "{c:?} {o:?}");
             assert!(s.enabled && s.notify_edits, "the other keys keep their defaults");
         }
         let s = from_layers(Text("[control]\nenabled = false\n"), Text("broken ["));
@@ -172,6 +203,38 @@ mod tests {
         assert!(!s.ai_enabled, "ai must be a table");
         let s = from_layers(Text("[control]\nenabled = \"no\"\nnotify_edits = 0\n"), Missing);
         assert!(s.enabled && s.notify_edits);
+    }
+
+    #[test]
+    fn links_switch_and_allow_list_come_from_every_layer() {
+        let s = from_layers(Text("[control]\nuri_enabled = false\nuri_allow = [\"new\", 3, \"a.b\"]\n"), Missing);
+        assert!(!s.uri_enabled);
+        assert_eq!(s.uri_allow, vec!["new".to_string(), "a.b".into()], "non-strings skipped");
+        let s = from_layers(Text("[control]\nuri_enabled = false\n"), Text("[control]\nuri_enabled = true\n"));
+        assert!(s.uri_enabled, "Settings turned links back on");
+        let s = from_layers(Text("[control]\nuri_allow = [\"new\"]\n"), Text("[control]\nuri_allow = [\"switch-vault\"]\n"));
+        assert_eq!(s.uri_allow, vec!["switch-vault".to_string()], "the higher layer's list wins whole");
+        let s = from_layers(Text("[control]\nuri_allow = [\"new\"]\n"), Text("[control]\nenabled = true\n"));
+        assert_eq!(s.uri_allow, vec!["new".to_string()], "unset in overrides falls through");
+        assert!(from_layers(Text("[control]\nenabled = false\n"), Missing).uri_enabled, "the socket switch is not the link switch");
+    }
+
+    #[test]
+    fn links_fail_closed() {
+        for (c, o) in [
+            (Text("not toml ["), Missing),
+            (Missing, Text("broken [")),
+            (Unreadable, Missing),
+            (Missing, Unreadable),
+            (Text("control = 1\n"), Missing),
+            (Missing, Text("control = \"x\"\n")),
+            (Text("[control]\nuri_enabled = \"true\"\n"), Missing),
+            (Text("[control]\nuri_enabled = 1\n"), Missing),
+        ] {
+            assert!(!from_layers(c, o).uri_enabled, "{c:?} {o:?}");
+        }
+        assert!(from_layers(Text("   \n"), Missing).uri_enabled, "an empty config.toml is defaults");
+        assert!(from_layers(Text("[control]\nuri_allow = \"new\"\n"), Missing).uri_allow.is_empty(), "a wrong list pre-approves nothing");
     }
 
     fn dirs(root: &Path) -> Dirs {
@@ -199,6 +262,12 @@ mod tests {
         assert!(control_settings(&d).ai_enabled, "ai keys read from an include too");
         std::fs::write(d.overrides_file(), "[ai]\nenabled = false\n").unwrap();
         assert!(!control_settings(&d).ai_enabled, "overrides win over the include");
+        std::fs::remove_file(d.overrides_file()).unwrap();
+        std::fs::write(d.config.join("c.toml"), "[control]\nuri_enabled = false\nuri_allow = [\"new\"]\n").unwrap();
+        let s = control_settings(&d);
+        assert!(!s.uri_enabled && s.uri_allow == ["new"], "link keys read from an include");
+        std::fs::write(d.overrides_file(), "[control]\nuri_enabled = true\n").unwrap();
+        assert!(control_settings(&d).uri_enabled, "overrides win over the include for links too");
     }
 
     #[test]
