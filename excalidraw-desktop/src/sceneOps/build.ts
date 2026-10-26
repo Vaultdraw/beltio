@@ -39,7 +39,7 @@ import type {
   NonDeleted,
 } from "@excalidraw/element/types";
 
-import type { NewElement, SceneOp } from "./types";
+import type { ElementId, ElementRef, NewElement, SceneOp } from "./types";
 
 const CONTAINERS = new Set(["rectangle", "ellipse", "diamond", "arrow"]);
 const TURN = 2 * Math.PI;
@@ -174,25 +174,47 @@ const outlinePoint = (
   return hit.length ? nearest(hit, to) : center;
 };
 
+/** One arrow to draw and bind: its ends are new elements or ones on the canvas. */
+interface Binding {
+  arrowId: string;
+  startId?: string;
+  endId?: string;
+  /** The arrow has its own x and y: a free end stays where it was put. */
+  placed: boolean;
+}
+
 /**
  * Puts each bound arrow on a straight line between the outlines of its start
- * and end, then binds it with Excalidraw's own binding (the elements are
- * fresh, so they are changed in place, as the converter does).
+ * and end, then binds it with Excalidraw's own binding, which also lists the
+ * arrow in the target's `boundElements`. New elements are changed in place,
+ * as the converter does. A target already on the canvas is copied out of
+ * `canvas` first (never the editor's own object) and the bound copy written
+ * back, so it goes out in the same scene update (one undo step). Only the
+ * named targets are copied: the cost follows the batch, not the drawing.
  */
 const bindArrows = (
   built: ExcalidrawElement[],
-  bindings: {
-    arrowId: string;
-    startId?: string;
-    endId?: string;
-    /** The arrow has its own x and y: a free end stays where it was put. */
-    placed: boolean;
-  }[],
+  bindings: readonly Binding[],
+  canvas?: Map<string, ExcalidrawElement>,
 ): void => {
   if (!bindings.length) {
     return;
   }
-  const scene = new Scene(built, { skipValidation: true });
+  const fresh = new Set(built.map((el) => el.id));
+  const targets = new Map<string, ExcalidrawElement>();
+  if (canvas) {
+    for (const b of bindings) {
+      for (const id of [b.startId, b.endId]) {
+        const el = id && !fresh.has(id) ? canvas.get(id) : undefined;
+        if (el && !targets.has(id!)) {
+          targets.set(id!, { ...el });
+        }
+      }
+    }
+  }
+  const scene = new Scene([...built, ...targets.values()], {
+    skipValidation: true,
+  });
   const map = scene.getNonDeletedElementsMap();
   for (const b of bindings) {
     const arrow = map.get(b.arrowId) as
@@ -203,6 +225,10 @@ const bindArrows = (
     }
     const start = b.startId ? map.get(b.startId) : undefined;
     const end = b.endId ? map.get(b.endId) : undefined;
+    if (!start && !end) {
+      // Nothing to bind to (validated callers never get here).
+      continue;
+    }
     const last = arrow.points[arrow.points.length - 1];
     let freeStart = pointFrom<GlobalPoint>(arrow.x, arrow.y);
     let freeEnd = pointFrom<GlobalPoint>(arrow.x + last[0], arrow.y + last[1]);
@@ -263,6 +289,9 @@ const bindArrows = (
       );
     }
   }
+  for (const [id, el] of targets) {
+    canvas!.set(id, el);
+  }
 };
 
 export interface BuiltAdds {
@@ -277,13 +306,16 @@ export interface BuiltAdds {
 /**
  * Elements missing x and/or y are shifted as a group so their bounding box is
  * centred at `center` (relative offsets kept). A given x or y stays absolute.
- * A bound arrow is drawn between its shapes after they are placed.
+ * A bound arrow is drawn between its shapes after they are placed. Arrows
+ * bound with `{ id }` take their targets from `canvas` (id -> element) and
+ * write the bound targets back into it.
  */
 export const buildAdds = (
   adds: readonly Pick<AddOp, "element" | "ref">[],
   center: { x: number; y: number },
   dataKey: string | null = null,
   fileIds?: ReadonlyMap<object, string>,
+  canvas?: Map<string, ExcalidrawElement>,
 ): BuiltAdds => {
   if (!adds.length) {
     return { created: [], ids: [], refs: {} };
@@ -313,14 +345,22 @@ export const buildAdds = (
     const container = (el as { containerId?: string | null }).containerId;
     return container ? indexOfId.get(container) ?? -1 : -1;
   });
+  // A bound arrow is placed with the new element it is bound to; one bound
+  // only to elements on the canvas is drawn from them and never centred (-1).
   const placedBy = adds.map((a, i) => {
-    const bound = a.element.start ?? a.element.end;
-    return bound ? indexOfRef.get(bound.ref) ?? i : i;
+    const { start, end } = a.element;
+    if (!start && !end) {
+      return i;
+    }
+    const ref = [start, end].find((e): e is ElementRef => !!e && "ref" in e);
+    return ref ? indexOfRef.get(ref.ref) ?? i : -1;
   });
-  const unplacedX = (i: number) =>
-    i >= 0 && adds[placedBy[i]].element.x === undefined;
-  const unplacedY = (i: number) =>
-    i >= 0 && adds[placedBy[i]].element.y === undefined;
+  const unplaced = (i: number, axis: "x" | "y") =>
+    i >= 0 && placedBy[i] >= 0 && adds[placedBy[i]].element[axis] === undefined;
+  const unplacedX = (i: number) => unplaced(i, "x");
+  const unplacedY = (i: number) => unplaced(i, "y");
+  const idOf = (end: ElementRef | ElementId | undefined) =>
+    end && ("ref" in end ? idOfRef.get(end.ref) : end.id);
   const group = built.filter(
     (_, k) => unplacedX(owner[k]) || unplacedY(owner[k]),
   );
@@ -346,13 +386,14 @@ export const buildAdds = (
         ? [
             {
               arrowId: ids[i],
-              startId: a.element.start && idOfRef.get(a.element.start.ref),
-              endId: a.element.end && idOfRef.get(a.element.end.ref),
+              startId: idOf(a.element.start),
+              endId: idOf(a.element.end),
               placed: a.element.x !== undefined && a.element.y !== undefined,
             },
           ]
         : [],
     ),
+    canvas,
   );
   return { created, ids, refs };
 };
@@ -429,7 +470,8 @@ export const applyGroups = (
 
 /**
  * Builds the adds of a batch into `work` and applies its group ops (which may
- * name elements already in `work`). Returns the new elements after grouping.
+ * name elements already in `work`). Elements on the canvas that an arrow
+ * binds to are updated in `work`. Returns the new elements after grouping.
  */
 export const buildBatch = (
   ops: readonly SceneOp[],
@@ -440,7 +482,7 @@ export const buildBatch = (
 ): BuiltAdds => {
   const adds = ops.filter((op): op is AddOp => op.op === "add");
   const groups = ops.filter((op): op is GroupOp => op.op === "group");
-  const built = buildAdds(adds, center, dataKey, fileIds);
+  const built = buildAdds(adds, center, dataKey, fileIds, work);
   if (!groups.length) {
     return built;
   }

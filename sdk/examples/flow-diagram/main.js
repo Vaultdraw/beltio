@@ -4,6 +4,8 @@
 // flow, and each box carries this plugin's own `data` (read back with
 // scene.dataOf). The `path` option refuses the write if the user switched to
 // another drawing meanwhile. The panel's button and the command do the same.
+// "Add a step" (API 0.9.0) extends a flow already on the canvas: its arrow
+// starts at the last box with `{ id }`, an element that is not in the batch.
 import { createElement as h } from "react";
 import { definePlugin } from "@vaultdraw/api";
 
@@ -44,6 +46,44 @@ export function flowOps(c, steps = STEPS) {
   return [...boxes, ...arrows, group];
 }
 
+/**
+ * The ops for one more step after `last` (a box on the canvas whose data is
+ * `{ step }`): a new box to its right and an arrow bound to both (exported for
+ * tests).
+ */
+export function stepOps(last, step) {
+  return [
+    {
+      op: "add",
+      ref: "next",
+      element: {
+        type: "rectangle",
+        x: last.x + last.width + GAP,
+        y: last.y,
+        width: last.width,
+        height: last.height,
+        text: `Step ${step + 1}`,
+        roundness: "round",
+        data: { step },
+      },
+    },
+    {
+      op: "add",
+      ref: "link",
+      element: { type: "arrow", start: { id: last.id }, end: { ref: "next" } },
+    },
+    // Grouping with the last box takes its whole flow along, so the longer
+    // flow still moves as one.
+    { op: "group", ids: [last.id, { ref: "next" }, { ref: "link" }] },
+  ];
+}
+
+/** `{ id }` ends need plugin API 0.9.0 or later. */
+const canBindToCanvas = (revision) => {
+  const [, minor] = String(revision).split(".").map(Number);
+  return minor >= 9;
+};
+
 export default definePlugin({
   activate(ctx) {
     const insert = async () => {
@@ -66,6 +106,44 @@ export default definePlugin({
       }
     };
 
+    const addStep = async () => {
+      const path = ctx.scene.path();
+      if (path === null) {
+        ctx.ui.toast("Open a drawing first");
+        return null;
+      }
+      // The flow's last box: the highest step in this plugin's data.
+      let last = null;
+      let lastStep = -1;
+      for (const el of ctx.scene.elements()) {
+        const data = el.type === "rectangle" ? ctx.scene.dataOf(el.id) : null;
+        if (data && typeof data.step === "number" && data.step > lastStep) {
+          last = el;
+          lastStep = data.step;
+        }
+      }
+      if (!last) {
+        ctx.ui.toast("Insert a flow first");
+        return null;
+      }
+      if (!canBindToCanvas(ctx.host.api.revision)) {
+        ctx.ui.toast(
+          "Adding a step needs a newer Vaultdraw (plugin API 0.9.0)",
+        );
+        return null;
+      }
+      try {
+        return await ctx.scene.batch(stepOps(last, lastStep + 1), { path });
+      } catch (err) {
+        ctx.ui.toast(
+          err && err.code === "READ_ONLY"
+            ? "This drawing is read-only"
+            : "Could not add the step",
+        );
+        return null;
+      }
+    };
+
     function Panel() {
       return h(
         "div",
@@ -76,10 +154,13 @@ export default definePlugin({
           "Draws a four-step flow on the open drawing.",
         ),
         h("button", { type: "button", onClick: insert }, "Insert flow"),
+        " ",
+        h("button", { type: "button", onClick: addStep }, "Add a step"),
       );
     }
 
     ctx.panels.register("flow", Panel);
     ctx.commands.register("insert", insert);
+    ctx.commands.register("extend", addStep);
   },
 });

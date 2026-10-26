@@ -49,6 +49,7 @@ export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
 export type {
   BatchOptions,
   BatchResult,
+  ElementId,
   ElementRef,
   ImageSource,
   FontFamilyName,

@@ -79,6 +79,12 @@ const ADD_TYPES = new Set([
 ]);
 /** What an arrow may bind to with `start`/`end`. */
 const BINDABLE = new Set(["rectangle", "ellipse", "diamond", "text"]);
+/**
+ * What an arrow may bind to on the canvas (`{ id }`): the same shapes plus
+ * images, which the editor binds to as well (the converter cannot, so a new
+ * image is not bindable with `{ ref }`).
+ */
+const BINDABLE_ON_CANVAS = new Set([...BINDABLE, "image"]);
 
 const startsWith = (b: Uint8Array, sig: readonly number[], at = 0) =>
   b.length >= at + sig.length && sig.every((v, i) => b[at + i] === v);
@@ -283,6 +289,7 @@ const SPECIAL = new Set(["type", "data", "start", "end", "image"]);
 export interface OpTarget {
   type: string;
   isDeleted?: boolean;
+  locked?: boolean;
   containerId?: string | null;
 }
 
@@ -434,22 +441,46 @@ export const validateOps = (
     return el;
   };
 
+  // Canvas ids named by `start`/`end`; checked against deletes after the walk.
+  const boundIds: { id: string; op: number; key: string }[] = [];
   const checkEnd = (end: unknown, op: number, key: "start" | "end") => {
     if (!isRecord(end) || Object.keys(end).length !== 1) {
       issues.push({
         op,
         key,
-        message: "must be { ref } naming an element added in this batch",
+        message:
+          "must be { ref } naming an element added in this batch or { id } naming one on the canvas",
       });
       return;
     }
     if ("id" in end) {
-      issues.push({
-        op,
-        key,
-        message:
-          "binding to an element already on the canvas is not supported yet; add it in this batch and use { ref }",
-      });
+      const target = liveTarget(end.id, op, key);
+      if (!target) {
+        return;
+      }
+      if (!BINDABLE_ON_CANVAS.has(target.type)) {
+        issues.push({
+          op,
+          key,
+          message:
+            "an arrow binds only to a rectangle, ellipse, diamond, image or text",
+        });
+      } else if (target.locked) {
+        issues.push({
+          op,
+          key,
+          message:
+            "element is locked; the editor does not bind arrows to locked elements",
+        });
+      } else if (target.type === "text" && target.containerId) {
+        issues.push({
+          op,
+          key,
+          message: "this text is a label; bind to the shape that holds it",
+        });
+      } else {
+        boundIds.push({ id: end.id as string, op, key });
+      }
       return;
     }
     const type = typeof end.ref === "string" ? refs.get(end.ref) : undefined;
@@ -547,8 +578,8 @@ export const validateOps = (
       if (
         isRecord(el.start) &&
         isRecord(el.end) &&
-        el.start.ref !== undefined &&
-        el.start.ref === el.end.ref
+        ((el.start.ref !== undefined && el.start.ref === el.end.ref) ||
+          (el.start.id !== undefined && el.start.id === el.end.id))
       ) {
         issues.push({
           op: i,
@@ -692,6 +723,17 @@ export const validateOps = (
       });
     }
   });
+  // A bound element deleted later in the same batch would leave the arrow
+  // bound to nothing.
+  for (const b of boundIds) {
+    if (deleted.has(b.id)) {
+      issues.push({
+        op: b.op,
+        key: b.key,
+        message: "element is deleted later in this batch",
+      });
+    }
+  }
   if (issues.length) {
     throw new SceneOpsError(issues);
   }

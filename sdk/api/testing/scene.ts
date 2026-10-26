@@ -13,6 +13,7 @@ import type {
   BatchResult,
   Disposable,
   Json,
+  NewElement,
   SceneContextApi,
   SceneElement,
   SceneElementDetail,
@@ -409,17 +410,49 @@ export function createSceneModel(
         refs[a.ref] = built[i].els[0].id;
       }
     });
-    // A bound arrow records what it is bound to (the editor computes the geometry).
+    // A bound arrow records what it is bound to (the editor computes the
+    // geometry); its target lists the arrow in boundElements, as the editor's
+    // binding does, for new elements and elements on the canvas alike.
+    const endId = (end: NonNullable<NewElement["start"]>) =>
+      "ref" in end ? refs[end.ref] : end.id;
+    const freshById = new Map(built.map((b) => [b.els[0].id, b.els[0]]));
     built.forEach(({ a, els }) => {
-      if (a.start) {
-        els[0].startId = refs[a.start.ref];
-      }
-      if (a.end) {
-        els[0].endId = refs[a.end.ref];
+      for (const [key, end] of [
+        ["startId", a.start],
+        ["endId", a.end],
+      ] as const) {
+        if (!end) {
+          continue;
+        }
+        const id = endId(end);
+        els[0][key] = id;
+        const arrowRef = { id: els[0].id, type: "arrow" };
+        const fresh = freshById.get(id);
+        if (fresh) {
+          fresh.boundElements = [
+            ...((fresh.boundElements as object[] | undefined) ?? []),
+            arrowRef,
+          ];
+        } else {
+          const base = (edits.get(id) as El | undefined) ?? byId.get(id)!;
+          edits.set(id, {
+            ...base,
+            boundElements: [
+              ...((base.boundElements as object[] | undefined) ?? []),
+              arrowRef,
+            ],
+            version: ++clock,
+          });
+        }
       }
     });
+    // An arrow bound only to elements on the canvas is drawn from them, so it
+    // is not centred with the rest (as in the app).
+    const onCanvasOnly = (e: NewElement) =>
+      (e.start || e.end) &&
+      ![e.start, e.end].some((end) => end && "ref" in end);
     const unplaced = built.filter(
-      (b) => b.a.x === undefined || b.a.y === undefined,
+      (b) => (b.a.x === undefined || b.a.y === undefined) && !onCanvasOnly(b.a),
     );
     if (unplaced.length > 0) {
       const box = bounds(unplaced.map((b) => b.els[0]));
@@ -448,11 +481,23 @@ export function createSceneModel(
       const members = new Set(
         g.ids.map((m) => (typeof m === "string" ? m : refs[m.ref])),
       );
+      // A member already in a group brings its whole outermost group, as the
+      // app (and Excalidraw's Group action) does.
+      const outer = new Set<string>();
+      for (const e of all) {
+        const top = e.groupIds?.[e.groupIds.length - 1];
+        if (members.has(e.id) && top) {
+          outer.add(top);
+        }
+      }
       for (let k = 0; k < all.length; k++) {
         const e = all[k];
+        const top = e.groupIds?.[e.groupIds.length - 1];
         if (
-          members.has(e.id) ||
-          (e.containerId && members.has(e.containerId))
+          !e.isDeleted &&
+          (members.has(e.id) ||
+            (e.containerId && members.has(e.containerId)) ||
+            (top !== undefined && outer.has(top)))
         ) {
           all[k] = {
             ...e,

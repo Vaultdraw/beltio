@@ -136,17 +136,19 @@ export interface NewElement {
    */
   image?: ImageSource;
   /**
-   * Arrows only: bind the start to an element added in the same batch.
+   * Arrows only: bind the start to an element added in the same batch
+   * (`{ ref }`) or, since 0.9.0, to one already on the canvas (`{ id }`).
    *
    * @since 0.4.0
    */
-  start?: ElementRef;
+  start?: ElementRef | ElementId;
   /**
-   * Arrows only: bind the end to an element added in the same batch.
+   * Arrows only: bind the end to an element added in the same batch
+   * (`{ ref }`) or, since 0.9.0, to one already on the canvas (`{ id }`).
    *
    * @since 0.4.0
    */
-  end?: ElementRef;
+  end?: ElementRef | ElementId;
 }
 
 /**
@@ -176,6 +178,21 @@ export interface ImageSource {
 export interface ElementRef {
   /** @since 0.4.0 */
   ref: string;
+}
+
+/**
+ * Names an element already on the canvas as an arrow's `start` or `end`. It
+ * must exist, not be deleted (also not later in the same batch), and be a
+ * rectangle, ellipse, diamond, image or text that is not a shape's label. The
+ * arrow is drawn between the two outlines and bound as if the user had drawn
+ * it: the element lists the arrow in its bound elements and moving it moves
+ * the arrow. One undo step removes the arrow and the binding.
+ *
+ * @since 0.9.0
+ */
+export interface ElementId {
+  /** @since 0.9.0 */
+  id: string;
 }
 
 /**

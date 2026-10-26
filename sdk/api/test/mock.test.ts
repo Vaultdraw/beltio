@@ -453,6 +453,69 @@ describe("mock host: events and scene", () => {
     expect(p.scene.batches).toHaveLength(1);
   });
 
+  it("scene.batch binds arrows to elements already on the canvas, like the app", async () => {
+    let arrowId = "";
+    let refused: string[] = [];
+    p = await boot(
+      { id: "a", contributes: commands("go") },
+      withCommand(async (ctx) => {
+        const { ids } = await ctx.scene.batch([
+          { op: "add", element: { type: "rectangle", x: 0, y: 0 } },
+          { op: "add", element: { type: "rectangle", x: 300, y: 0 } },
+          { op: "add", element: { type: "line", x: 0, y: 200 } },
+        ]);
+        arrowId = (
+          await ctx.scene.batch([
+            {
+              op: "add",
+              element: {
+                type: "arrow",
+                start: { id: ids[0] },
+                end: { id: ids[1] },
+              },
+            },
+          ])
+        ).ids[0];
+        try {
+          await ctx.scene.batch([
+            { op: "add", element: { type: "arrow", start: { id: ids[2] } } },
+            { op: "add", element: { type: "arrow", start: { id: "nope" } } },
+            {
+              op: "add",
+              element: { type: "arrow", start: { id: ids[0] } },
+            },
+            { op: "delete", id: ids[0] },
+          ]);
+        } catch (err) {
+          refused = (
+            err as { issues: { key: string; message: string }[] }
+          ).issues.map((i) => `${i.key}: ${i.message}`);
+        }
+      }),
+    );
+    await p.run("go");
+    const live = p.scene.live() as unknown as {
+      id: string;
+      type: string;
+      startId?: string;
+      endId?: string;
+      boundElements?: { id: string }[];
+    }[];
+    const arrow = live.find((e) => e.id === arrowId)!;
+    const boxes = live.filter((e) => e.type === "rectangle");
+    expect(arrow.startId).toBe(boxes[0].id);
+    expect(arrow.endId).toBe(boxes[1].id);
+    for (const box of boxes) {
+      expect(box.boundElements?.map((b) => b.id)).toEqual([arrowId]);
+    }
+    expect(refused[0]).toMatch(/^start: an arrow binds only to/);
+    expect(refused.slice(1)).toEqual([
+      "start: no such element",
+      "start: element is deleted later in this batch",
+    ]);
+    expect(p.scene.batches).toHaveLength(2);
+  });
+
   it("onChange fires once per frame and on a drawing switch", async () => {
     const seen: string[] = [];
     p = await boot(

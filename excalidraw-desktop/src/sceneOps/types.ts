@@ -7,6 +7,7 @@ import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 export type {
   BatchResult,
   ImageSource,
+  ElementId,
   ElementRef,
   NewElement,
   SceneElementDetail,

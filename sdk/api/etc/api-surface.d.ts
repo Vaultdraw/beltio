@@ -88,7 +88,7 @@ export type { FlowItem, FlowOptions, FlowPlacement, PageGeometry, PageRequest, P
 export type { PanelsApi } from "./panels";
 export { definePlugin } from "./plugin";
 export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
-export type { BatchOptions, BatchResult, ElementRef, ImageSource, FontFamilyName, NewElement, SceneContextApi, SceneElementDetail, SceneElement, SceneElementType, SceneOp, SceneOpIssue, } from "./scene";
+export type { BatchOptions, BatchResult, ElementId, ElementRef, ImageSource, FontFamilyName, NewElement, SceneContextApi, SceneElementDetail, SceneElement, SceneElementType, SceneOp, SceneOpIssue, } from "./scene";
 export type { SelectOption, SettingDecl, SettingScopeName, SettingsApi, SettingValue, } from "./settings";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { FontsApi, TextApi, TextFont } from "./text";
@@ -385,8 +385,8 @@ export interface NewElement {
     locked?: boolean;
     data?: Json | null;
     image?: ImageSource;
-    start?: ElementRef;
-    end?: ElementRef;
+    start?: ElementRef | ElementId;
+    end?: ElementRef | ElementId;
 }
 export interface ImageSource {
     mime: "image/png" | "image/jpeg" | "image/gif" | "image/webp" | "image/svg+xml";
@@ -394,6 +394,9 @@ export interface ImageSource {
 }
 export interface ElementRef {
     ref: string;
+}
+export interface ElementId {
+    id: string;
 }
 export type FontFamilyName = "Excalifont" | "Nunito" | "Lilita One" | "Comic Shanns" | "Virgil" | "Helvetica" | "Cascadia" | "Liberation Sans";
 export type SceneOp = {

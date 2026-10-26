@@ -71,6 +71,41 @@ describe("flow-diagram", () => {
     expect(p.scene.live().filter((e) => e.type === "arrow")).toHaveLength(3);
   });
 
+  it("add a step: binds a new arrow to the flow's last box on the canvas", async () => {
+    const p = await start();
+    await insert(p);
+    await p.run("extend");
+    await p.flush();
+    expect(p.scene.batches).toHaveLength(2);
+    const els = p.scene.live() as any[];
+    const boxes = els.filter((e) => e.type === "rectangle");
+    expect(boxes).toHaveLength(5);
+    const ship = boxes.find(
+      (b) => b.customData?.["plugins.flow-diagram"]?.step === 3,
+    );
+    const next = boxes.find(
+      (b) => b.customData?.["plugins.flow-diagram"]?.step === 4,
+    );
+    // The app's host kit keeps Excalidraw bindings; the SDK mock keeps ids.
+    const startOf = (e: any) => e.startBinding?.elementId ?? e.startId;
+    const endOf = (e: any) => e.endBinding?.elementId ?? e.endId;
+    const arrow = els.find((e) => e.type === "arrow" && endOf(e) === next.id);
+    expect(startOf(arrow)).toBe(ship.id);
+    expect(ship.boundElements.map((b: any) => b.id)).toContain(arrow.id);
+    expect(next.x).toBeGreaterThan(ship.x);
+    // The longer flow is still one unit: every element shares the outer group.
+    const outer = (e: any) => (e.groupIds ?? []).at(-1);
+    expect(new Set(els.map(outer)).size).toBe(1);
+  });
+
+  it("add a step without a flow: a toast, nothing written", async () => {
+    const p = await start();
+    await p.run("extend");
+    await p.flush();
+    expect(p.scene.batches).toHaveLength(0);
+    expect(p.toasts().join(" ")).toMatch(/Insert a flow first/);
+  });
+
   it("without a drawing: a toast, nothing written", async () => {
     const p = await start();
     p.scene.switchTo(null);

@@ -11,6 +11,10 @@ data_key = "plugins.flow-diagram"
 id = "insert"
 title = "Flow diagram: insert flow"
 
+[[contributes.commands]]
+id = "extend"
+title = "Flow diagram: add a step"
+
 [[contributes.panels]]
 id = "flow"
 title = "Flow diagram"

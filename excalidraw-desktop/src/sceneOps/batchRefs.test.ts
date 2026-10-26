@@ -164,8 +164,8 @@ describe("refs and bound arrows", () => {
       issues([
         box("a", 0),
         { op: "add", element: { type: "arrow", end: { id: "x" } } },
-      ])[0],
-    ).toMatch(/already on the canvas/);
+      ]),
+    ).toEqual(["end: no such element"]);
     expect(
       issues([
         { op: "add", ref: "l", element: { type: "line" } },

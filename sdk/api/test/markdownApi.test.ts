@@ -186,7 +186,7 @@ describe("the mock host", () => {
       },
     );
     try {
-      expect(ctx.host.api.revision).toBe("0.8.0");
+      expect(ctx.host.api.revision).toBe("0.9.0");
       for (const f of [
         "markdown.parse",
         "text.measure",

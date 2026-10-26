@@ -269,8 +269,8 @@ interface NewElement {
   locked?: boolean; // since 0.4.0
   data?: Json | null; // since 0.4.0; this plugin's data, at most 4 KiB as JSON
   image?: { mime: "image/png" | "image/jpeg" | "image/gif" | "image/webp" | "image/svg+xml"; bytes: Uint8Array }; // since 0.7.0; images only
-  start?: { ref: string }; // since 0.4.0; arrows only
-  end?: { ref: string }; // since 0.4.0; arrows only
+  start?: { ref: string } | { id: string }; // since 0.4.0; arrows only; { id } since 0.9.0
+  end?: { ref: string } | { id: string }; // since 0.4.0; arrows only; { id } since 0.9.0
 }
 
 type FontFamilyName =
@@ -350,7 +350,7 @@ type AppEventMap = {
 **Since 0.4.0:**
 
 - **Refs.** An `add` may carry `ref` (1 to 64 letters, digits, `_`, `-`, `.` or `:`, unique in the batch). Use `{ ref }` where an id is needed (`start`, `end`, `group`). A plain string is always a real element id. The result's `refs` maps each ref to its new id.
-- **Bound arrows.** `start` and `end` take `{ ref }` only. The arrow sits on the outline of the shape and is bound to it, so moving the shape moves the arrow. Only rectangle, ellipse, diamond and text can be bound. Binding to an element already on the canvas is refused for now.
+- **Bound arrows.** `start` and `end` take `{ ref }` (an element added in the batch) or, since 0.9.0, `{ id }` (one already on the canvas). The arrow sits on the outline of the shape and is bound to it, so moving the shape moves the arrow. See [Arrows to elements on the canvas](#arrows-to-elements-on-the-canvas-since-090).
 - **Groups.** `group` lists two or more members: ids, or `{ ref }`. A label cannot be listed; list its container, which groups the label with it.
 - **Plugin data.** `data` is stored under the plugin's data key: `data_key` in `plugin.toml`, else `plugins.<id>`. Read it with `scene.dataOf(id)`, or with `scene.get(ids, { data: true })`. Set `data: null` to remove it. Keys under `plugins.` belong to the plugin of that id: a plugin may declare `plugins.<its own id>` or any other key, never another plugin's.
 - **Path guard.** `scene.batch(ops, { path })` applies only if `path` is still the active drawing. Otherwise it rejects with `DRAWING_CHANGED`.
@@ -364,7 +364,7 @@ type AppEventMap = {
 - `mime` is PNG, JPEG, GIF, WebP or SVG; `bytes` is a `Uint8Array` of at most 10 MiB whose first bytes must look like that type.
 - The bytes are hashed (SHA-1, as the editor does). The same picture added twice, or already in the drawing, is stored once; each add is still its own element.
 - The size cap counts the picture's base64 data URL plus the element. A batch that would take the drawing past 90% of 32 MiB is refused with `TOO_LARGE`, nothing written.
-- Arrows cannot bind to images. `image` is refused in an `update` (add a new image) and in `createDrawing` and the control API for now.
+- New images cannot be bound with `{ ref }`; an image already on the canvas can, with `{ id }` (since 0.9.0). `image` is refused in an `update` (add a new image) and in `createDrawing` and the control API for now.
 - An importer's `{ ops }` may contain image ops too.
 - The hashing is asynchronous, then the checks and the write happen in one synchronous step. If the user switched drawings meanwhile, `options.path` rejects with `DRAWING_CHANGED`.
 - Check `ctx.host.api.revision` (0.7.0 or later) before relying on images.
@@ -405,9 +405,28 @@ const role = ctx.scene.dataOf(startId); // { role: "start" }
 ```
 
 - `refs` is valid only for the batch that made it. Later batches use the real ids.
-- Each arrow's `start` and `end` must name an add in the same batch, and two different elements. An arrow with only one bound end and no `x`/`y` becomes a short stub beside its shape.
-- Only rectangle, ellipse, diamond and text can be bound.
+- Each arrow's `start` and `end` name an add in the same batch (`{ ref }`) or an element on the canvas (`{ id }`, since 0.9.0), and two different elements. An arrow with only one bound end and no `x`/`y` becomes a short stub beside its shape.
+- With `{ ref }`, only rectangle, ellipse, diamond and text can be bound.
 - The example plugin `sdk/examples/flow-diagram` does this with a panel button and a command.
+
+### Arrows to elements on the canvas (since 0.9.0)
+
+`start` and `end` take `{ id }` to bind to an element that is already in the drawing. Mix it freely with `{ ref }`.
+
+```ts
+const [a, b] = ctx.scene.selection(); // two shapes the user picked
+await ctx.scene.batch([
+  { op: "add", element: { type: "arrow", start: { id: a.id }, end: { id: b.id }, text: "uses" } },
+]);
+```
+
+- The element must exist, not be deleted (also not by a later op of the same batch) and be a rectangle, ellipse, diamond, image or free text. A shape's label is refused: bind to the shape.
+- The arrow is drawn on the straight line between the two outlines and bound with Excalidraw's own binding: the element lists the arrow in its bound elements, its other arrows and its label are kept, and moving it later moves the arrow.
+- An `update` earlier in the batch (say, moving the shape) is applied first; the arrow is drawn to the new place.
+- An arrow bound only to elements on the canvas is not centred with the rest of the batch: it is drawn from them.
+- One undo removes the arrow and its bindings. Only the named elements are touched, so the cost follows the batch, not the drawing.
+- Check `ctx.host.api.revision` (0.9.0 or later) before relying on it. Older hosts refuse `{ id }` with `INVALID_ARGUMENT`.
+- `vault.createDrawing` makes a new drawing, so `{ id }` there always fails with "no such element".
 
 ## Vault, workspace and importers (since 0.6.0)
 
