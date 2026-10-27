@@ -1166,6 +1166,25 @@ pdf-import = false
 - The vault index starts only when an extension that needs it is on (search, tags, links or graph view). Turning one off stops its use at once; an index that is already running stops when the vault is reopened.
 - "Extensions: Restore defaults" turns every extension back on.
 
+## Notes
+
+Markdown notes (`.md`) open in a tab, in a reading view or an editor. The `notes` extension (`[extensions] notes`, on by default) adds them; off, nothing of it loads. The reading view and the editor are separate lazy chunks, and the Vim keys, formulas and images load only when a note uses them.
+
+- **Reading view:** CommonMark with tables, task lists and code blocks coloured by language, plus Obsidian's `[[links]]` (a link to a missing note creates it), `![[embeds]]` of notes (a heading or `^block` too) and images, callouts (`> [!note]`, foldable with `+` or `-`), `#tags`, `==highlights==`, `$math$` and front matter shown as properties. The HTML is sanitised: no scripts, styles or frames. Images from the web are not loaded unless `notes.remote_images` is on, so a note never makes a request by itself.
+- **Editor:** CodeMirror 6 with Markdown colouring. Notes are written only through the guarded save: it checks the revision it read, so a note changed outside the app is never overwritten. A conflict shows a banner with **Reload from disk** and **Keep mine**; every replaced version is kept in `.excalidraw-vault/note-history/`.
+- **Vim keys:** `notes.vim` (or **Notes: Toggle Vim keys**) turns on the Vim mode of the editor; `:w` saves.
+
+| Command | Default key | Does |
+| --- | --- | --- |
+| `notes.toggleEdit` | Cmd/Ctrl+E | Switch between reading and editing |
+| `notes.save` | Cmd/Ctrl+S | Save now |
+| `notes.reload` | | Re-read the note from disk |
+| `notes.toggleVim` | | Vim keys on or off |
+| `notes.toggleLineWrap` | | Line wrap on or off |
+| `notes.toggleLineNumbers` | | Line numbers on or off |
+
+They are offered only while a note tab is shown. Keys are in [`[notes]`](#notes-1) below.
+
 ## Safe start
 
 
