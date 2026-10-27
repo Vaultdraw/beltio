@@ -33,6 +33,15 @@ const drag = async (page: Page, fx: number, fy: number, dx: number, dy = 0) => {
   await page.mouse.up();
 };
 
+/** Clicks the Draw tool until it sticks: a scene swap right after open can reset the tool. */
+const pickFreedraw = (page: Page) =>
+  expect(async () => {
+    await page
+      .locator(".vault-editor [data-testid='toolbar-freedraw']")
+      .click();
+    await expect(pensBar(page)).toBeVisible({ timeout: 1500 });
+  }).toPass({ timeout: 20000 });
+
 const pensBar = (page: Page) => page.getByRole("toolbar", { name: "Pens" });
 
 test.beforeEach(async ({ page }) => {
@@ -47,7 +56,7 @@ test.beforeEach(async ({ page }) => {
 test("pen bar shows only with the freedraw tool", async ({ page }) => {
   const errors = trackErrors(page);
   await expect(pensBar(page)).toHaveCount(0);
-  await page.locator(".vault-editor [data-testid='toolbar-freedraw']").click();
+  await pickFreedraw(page);
   await expect(pensBar(page)).toBeVisible();
   await page.locator(".vault-editor [data-testid='toolbar-rectangle']").click();
   await expect(pensBar(page)).toHaveCount(0);
@@ -56,7 +65,7 @@ test("pen bar shows only with the freedraw tool", async ({ page }) => {
 
 test("a pen chosen in the bar styles the stroke", async ({ page }) => {
   const errors = trackErrors(page);
-  await page.locator(".vault-editor [data-testid='toolbar-freedraw']").click();
+  await pickFreedraw(page);
   await pensBar(page).getByRole("button", { name: "Red pen" }).click();
   await expect(
     pensBar(page).getByRole("button", { name: "Red pen" }),
@@ -76,7 +85,7 @@ test("a pen chosen in the bar styles the stroke", async ({ page }) => {
 test("a pen's colour does not leak into the next shape", async ({ page }) => {
   const errors = trackErrors(page);
   const before = new Set((await live(page)).map((el: any) => el.id));
-  await page.locator(".vault-editor [data-testid='toolbar-freedraw']").click();
+  await pickFreedraw(page);
   await page.keyboard.press("Alt+Digit5");
   await drag(page, 0.3, 0.7, 200);
   await page.locator(".vault-editor [data-testid='toolbar-rectangle']").click();
@@ -92,7 +101,7 @@ test("a pen's colour does not leak into the next shape", async ({ page }) => {
 
 test("Alt+2 selects the marker while drawing", async ({ page }) => {
   const errors = trackErrors(page);
-  await page.locator(".vault-editor [data-testid='toolbar-freedraw']").click();
+  await pickFreedraw(page);
   await page.keyboard.press("Alt+Digit2");
   await expect(
     pensBar(page).getByRole("button", { name: "Marker" }),
@@ -116,7 +125,7 @@ test("highlighter lands beneath the ink and shapes drawn before it", async ({
   // A zero-height rectangle would be discarded, so end it lower.
   await drag(page, 0.3, 0.5, 200, 60);
   await page.keyboard.press("Escape");
-  await page.locator(".vault-editor [data-testid='toolbar-freedraw']").click();
+  await pickFreedraw(page);
   await page.keyboard.press("Alt+Digit4");
   await drag(page, 0.3, 0.7, 200);
   await page.keyboard.press("Alt+Digit5");
@@ -144,7 +153,7 @@ test("the pen bar's settings link opens the Tools page on the Pen section", asyn
   page,
 }) => {
   const errors = trackErrors(page);
-  await page.locator(".vault-editor [data-testid='toolbar-freedraw']").click();
+  await pickFreedraw(page);
   await pensBar(page).getByRole("button", { name: "Pens settings" }).click();
   await expect(page.locator("#settings-title")).toHaveText("Tools");
   await expect(page.getByTestId("tools-pen")).toBeVisible();
