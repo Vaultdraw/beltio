@@ -11,6 +11,7 @@ import {
   pushToast,
   toastMessage,
   undeclaredMessage,
+  type UndeclaredKind,
   validateSettingValue,
   type MockToast,
 } from "../shared/rules";
@@ -472,16 +473,7 @@ export function createMockHost(
       subscriptions.push(d);
       return d;
     };
-    const refuse = (
-      what:
-        | "command"
-        | "panel"
-        | "importer"
-        | "status bar item"
-        | "view"
-        | "tool",
-      short: string,
-    ): Disposable => {
+    const refuse = (what: UndeclaredKind, short: string): Disposable => {
       reportError(new Error(undeclaredMessage(what, short)), "register");
       return NOOP;
     };

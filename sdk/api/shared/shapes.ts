@@ -2,7 +2,7 @@
  * The pure part of `ctx.shapes`, shared by the app host and the mock host: turn a shape's
  * `render` output into scene ops. Both hosts run the same code, so a plugin test and the app agree.
  */
-import { PluginApiError } from "./rules";
+import { PluginApiError, type UndeclaredKind } from "./rules";
 
 import type {
   Disposable,
@@ -138,7 +138,7 @@ export function createShapesApi(
   decls: readonly ShapeDecl[],
   scene: Pick<SceneContextApi, "batch" | "viewportCenter" | "get" | "dataOf">,
   track: (fn: () => void) => Disposable,
-  refuse: (what: string, short: string) => Disposable,
+  refuse: (what: UndeclaredKind, short: string) => Disposable,
   onRegister?: (shapeId: string, insert: () => Promise<unknown>) => () => void,
 ): ShapesApi {
   const declared = new Map(decls.map((d) => [d.id, d] as const));

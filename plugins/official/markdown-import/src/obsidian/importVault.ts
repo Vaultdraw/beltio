@@ -294,9 +294,7 @@ export async function importObsidianVault(
     try {
       const doc = await ctx.markdown.parse(report);
       const parts = await layout(doc, signal);
-      const to = await writeUnique(REPORT_PATH, (p) =>
-        writePart(parts[0] ?? EMPTY_PART, p),
-      );
+      const to = await writePart(parts[0] ?? EMPTY_PART, REPORT_PATH);
       result.report = to;
     } catch (err) {
       fail(REPORT_PATH, err);

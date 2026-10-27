@@ -110,11 +110,19 @@ export const pushToast = (
 
 // --- declared contributions -----------------------------------------------
 
+/** Kinds of contribution a plugin can register without declaring them in plugin.toml. */
+export type UndeclaredKind =
+  | "command"
+  | "panel"
+  | "importer"
+  | "status bar item"
+  | "view"
+  | "tool"
+  | "shape";
+
 /** The error when a plugin registers something plugin.toml does not declare. */
-export const undeclaredMessage = (
-  what: "command" | "panel" | "importer" | "status bar item" | "view" | "tool",
-  short: string,
-) => `${what} "${short}" is not declared in plugin.toml`;
+export const undeclaredMessage = (what: UndeclaredKind, short: string) =>
+  `${what} "${short}" is not declared in plugin.toml`;
 
 // --- ctx.storage: the key-value rules (the app imports these, so the mock and the app agree) ---
 
