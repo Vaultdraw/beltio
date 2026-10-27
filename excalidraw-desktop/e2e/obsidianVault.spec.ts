@@ -46,13 +46,15 @@ test("an Obsidian-style vault lists its notes and opens an Excalidraw plugin fil
     page.getByRole("menuitem", { name: "Reveal in file manager" }),
   ).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Rename" })).toHaveCount(0);
-  await expect(page.getByRole("menuitem", { name: "Move to Trash" })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole("menuitem", { name: "Move to Trash" }),
+  ).toHaveCount(0);
   await page.keyboard.press("Escape");
 
   // The Excalidraw plugin file opens as a drawing, read-only, with a notice.
-  await treeRow(page, "Plugin Sketch").locator(".vault-tree-item__name").click();
+  await treeRow(page, "Plugin Sketch")
+    .locator(".vault-tree-item__name")
+    .click();
   await expect(page.locator(".vault-editor canvas.interactive")).toBeVisible();
   await expect(page.getByTestId("excalidraw-md-banner")).toContainText(
     "read-only",

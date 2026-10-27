@@ -6,6 +6,7 @@
  * can run before the native Rust backend and UI workers land.
  */
 import { fileKind } from "../vault/fileKind";
+
 import type {
   DrawingFile,
   RecoveryEntry,
@@ -181,7 +182,9 @@ export class FakeVaultRepository implements VaultRepository {
   /** A Markdown note (listed as `note`; it has no drawing content). */
   seedNote(path: string): void {
     assertValidRelativePath(path);
-    this.seedFolder(path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
+    this.seedFolder(
+      path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "",
+    );
     this.notes.add(path);
   }
 
@@ -306,7 +309,10 @@ export class FakeVaultRepository implements VaultRepository {
           rows.set(rest, {
             path: filePath,
             name: rest,
-            kind: fileKind(filePath) === "excalidrawMd" ? "excalidrawMd" : "drawing",
+            kind:
+              fileKind(filePath) === "excalidrawMd"
+                ? "excalidrawMd"
+                : "drawing",
             modifiedAt: this.mtimes.get(filePath) ?? Date.now(),
             size: row.json.length,
           });

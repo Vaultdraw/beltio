@@ -123,7 +123,10 @@ if (params.get("seed") !== "empty") {
     repository.seedNote("Ideas.md");
     repository.seedNote("Daily/2026-10-27.md");
     repository.seedDrawing("Drawings/Sketch.excalidraw", SAMPLE_SCENE);
-    repository.seedDrawing("Drawings/Plugin Sketch.excalidraw.md", SAMPLE_SCENE);
+    repository.seedDrawing(
+      "Drawings/Plugin Sketch.excalidraw.md",
+      SAMPLE_SCENE,
+    );
   }
   if (params.get("seed") === "search") {
     // Opt-in (?seed=search): keeps other specs' drawing counts unchanged.
