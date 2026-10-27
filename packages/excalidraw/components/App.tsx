@@ -3916,6 +3916,11 @@ class App extends React.Component<AppProps, AppState> {
           initialized: true,
         },
       }));
+    } else {
+      // The toolbar renders from this mode: show it now. Otherwise the next
+      // unrelated render (often the user's first click on a tool) swaps the
+      // toolbar buttons under the pointer and the click is lost.
+      this.setState({});
     }
   };
 
@@ -3949,6 +3954,11 @@ class App extends React.Component<AppProps, AppState> {
 
     this.excalidrawContainerValue.container =
       this.excalidrawContainerRef.current;
+
+    // The constructor ran before the container existed, so the form factor
+    // and toolbar mode are still the defaults: measure now, before the first
+    // paint, rather than on the first ResizeObserver callback.
+    this.refreshEditorInterface();
 
     if (isTestEnv() || isDevEnv()) {
       const setState = this.setState.bind(this);
