@@ -37,7 +37,6 @@ import {
   parseDrawingOpenCommandId,
 } from "./drawingCommands";
 import { EDITOR_COMMANDS } from "./editorCommands";
-import { GRAPH_COMMANDS } from "./graphCommands";
 import {
   getRegisteredCommand,
   isLegacyCommandId,
@@ -668,7 +667,6 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...LINKS_COMMANDS,
   ...TAGS_COMMANDS,
   ...HISTORY_COMMANDS,
-  ...GRAPH_COMMANDS,
   ...PLUGIN_UI_COMMANDS,
   ...TAB_COMMANDS,
   ...LIST_COMMANDS,

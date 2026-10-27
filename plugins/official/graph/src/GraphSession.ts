@@ -42,7 +42,7 @@ import {
 import { FLAG_UNRESOLVED } from "./types";
 import { assignNodeHints, visibleHintNodes, type HintMap } from "./hints";
 
-import type { OpenTarget } from "../tabs/types";
+import type { OpenTarget } from "./settings";
 
 import type { FrameLoopDeps } from "./frameLoop";
 import type { LayoutCallbacks, LayoutStart } from "./layoutClient";

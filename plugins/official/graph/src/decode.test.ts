@@ -3,15 +3,17 @@ import { resolve } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import fixture from "../../src-tauri/src/links/fixtures/graph_small.json";
+import fixture from "../../../../excalidraw-desktop/src-tauri/src/links/fixtures/graph_small.json";
 
-import { DesktopVaultGraph } from "./DesktopVaultGraph";
 import { decodeGraph, GraphDecodeError } from "./decode";
 import { fakeGraph } from "./fakeGraph";
 import { FLAG_ORPHAN, FLAG_TAG, FLAG_UNRESOLVED } from "./types";
 
 const bin = readFileSync(
-  resolve(__dirname, "../../src-tauri/src/links/fixtures/graph_small.bin"),
+  resolve(
+    __dirname,
+    "../../../../excalidraw-desktop/src-tauri/src/links/fixtures/graph_small.bin",
+  ),
 );
 
 describe("decodeGraph (Rust fixture)", () => {
@@ -83,29 +85,5 @@ describe("fakeGraph", () => {
     expect(a.flags.some((f) => f & FLAG_TAG)).toBe(true);
     expect(a.flags.some((f) => f & FLAG_ORPHAN)).toBe(true);
     expect(a.folderName(0)).toBe("");
-  });
-});
-
-describe("DesktopVaultGraph", () => {
-  it("maps methods to commands, raw bodies and the handle header", async () => {
-    const invoke = vi.fn(async (cmd: string) => {
-      if (cmd === "vault_graph") {
-        return bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.length);
-      }
-      if (cmd === "graph_layout_load") {
-        return new ArrayBuffer(0);
-      }
-      return undefined;
-    });
-    const client = new DesktopVaultGraph({ invoke: invoke as never });
-    expect((await client.graph("h")).nodeCount).toBe(fixture.nodeCount);
-    expect((await client.loadLayout("h")).length).toBe(0);
-    const bytes = new Uint8Array([1, 2]);
-    await client.saveLayout("h", bytes);
-    expect(invoke.mock.calls).toEqual([
-      ["vault_graph", { handle: "h" }],
-      ["graph_layout_load", { handle: "h" }],
-      ["graph_layout_save", bytes, { headers: { handle: "h" } }],
-    ]);
   });
 });

@@ -12,7 +12,7 @@ import {
   type ShownNode,
 } from "./GraphSession";
 
-import type { OpenTarget } from "../tabs/types";
+import type { OpenTarget } from "./settings";
 
 export interface UseGraphSessionOptions {
   handle: string;

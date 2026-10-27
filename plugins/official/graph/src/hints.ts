@@ -3,10 +3,33 @@
  * generator (`assignLabels`: uniform length, prefix-free). Importance order = most links first,
  * so the busiest nodes get the first (shortest-to-type) labels.
  */
-import { DEFAULT_LINKS_SETTINGS } from "../links/types";
-import { assignLabels } from "../editor/links/linkHints";
-
 import type { CameraState } from "./renderer/types";
+
+const DEFAULT_HINT_CHARS = "asdfghjkl";
+
+/** Uniform-length, prefix-free labels (so a typed prefix is never an exact hit); the same rule as the editor's link hints. */
+function assignLabels(count: number, hintChars: string): string[] {
+  const chars = [...new Set(hintChars.toLowerCase())];
+  if (chars.length === 0) {
+    chars.push(...DEFAULT_HINT_CHARS);
+  }
+  const n = chars.length;
+  let length = 1;
+  while (n ** length < count && length < 4) {
+    length++;
+  }
+  const out: string[] = [];
+  for (let i = 0; i < count; i++) {
+    let label = "";
+    let rest = i;
+    for (let k = 0; k < length; k++) {
+      label = chars[rest % n] + label;
+      rest = Math.floor(rest / n);
+    }
+    out.push(label);
+  }
+  return out;
+}
 
 export const MAX_HINT_NODES = 400;
 
@@ -61,7 +84,7 @@ export type HintMap = {
 
 export function assignNodeHints(
   ids: readonly number[],
-  chars: string = DEFAULT_LINKS_SETTINGS.hintChars,
+  chars: string = DEFAULT_HINT_CHARS,
 ): HintMap {
   const cap = hintCapacity(chars);
   const used = ids.slice(0, cap);

@@ -10,13 +10,16 @@ import {
   renderHook,
   screen,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GraphViewButton } from "../components/GraphViewButton";
 import { VaultNavigator } from "../components/VaultNavigator";
 import { GRAPH_COMMAND_IDS } from "../commands/graphCommands";
+import { registerCommands } from "../commands/registry";
 import { setHotkeyOverride } from "../commands/useCommands";
-import { useGraphEntry } from "../graph/useGraphEntry";
+import { officialCommandDefs } from "../plugins/boot";
+import { OFFICIAL_PLUGINS } from "../plugins/officialPlugins";
+import { useGraphEntry } from "../commands/useGraphEntry";
 
 import type { ComponentProps } from "react";
 
@@ -68,6 +71,15 @@ const navProps = (
   confirmDelete: true,
   ...over,
 });
+
+// The graph's commands come from the official plugin's stubs (registered at boot in the app).
+let releaseGraphStubs: () => void;
+beforeEach(() => {
+  releaseGraphStubs = registerCommands(
+    officialCommandDefs(OFFICIAL_PLUGINS.find((p) => p.id === "graph")!),
+  );
+});
+afterEach(() => releaseGraphStubs());
 
 describe("GraphViewButton", () => {
   it("names the command and its current key, following a rebind", () => {

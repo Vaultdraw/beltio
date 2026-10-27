@@ -13,7 +13,9 @@ import { registerCommandHandlers } from "../commands/handlerRegistry";
 import { getRegisteredCommand, registerCommands } from "../commands/registry";
 import { scheduleIdle } from "../platform/idle";
 import { toastStore } from "../toasts/toastStore";
-import { getPreferences, subscribePreferences } from "../vault/preferences";
+import { subscribePreferences } from "../vault/preferences";
+
+import { enabledPluginIds } from "./enabledIds";
 
 import { pluginHostStarted } from "./hostFlag";
 import { addMenuItems } from "./menuRegistry";
@@ -25,7 +27,7 @@ import {
   type OfficialPlugin,
 } from "./officialPlugins";
 
-import type { WhenClause } from "../commands/types";
+import type { CommandDefinition, WhenClause } from "../commands/types";
 
 const onIdle = (win: Window, run: () => void) =>
   scheduleIdle(win, run, { fallbackMs: 200 });
@@ -78,21 +80,26 @@ async function runOfficialCommand(win: Window, fullId: string): Promise<void> {
   }
 }
 
+/** The command definitions of an official plugin's stubs (its plugin.toml, as the table lists it). */
+export const officialCommandDefs = (
+  plugin: OfficialPlugin,
+): CommandDefinition[] =>
+  plugin.commands.map((c) => ({
+    id: `${plugin.id}.${c.id}`,
+    title: c.title,
+    category: plugin.name,
+    keys: { default: c.keys ?? ([] as string[]) },
+    ...(c.when ? { when: c.when as WhenClause[] } : {}),
+    ...(c.repeat ? { repeat: true } : {}),
+  }));
+
 /** Commands and file types of one official plugin as stubs: no plugin code runs. */
 function registerOfficialStubs(win: Window, plugin: OfficialPlugin) {
   const handlers: Record<string, () => Promise<void>> = {};
-  const defs = plugin.commands.map((c) => {
-    const id = `${plugin.id}.${c.id}`;
-    handlers[id] = () => runOfficialCommand(win, id);
-    return {
-      id,
-      title: c.title,
-      category: plugin.name,
-      keys: { default: c.keys ?? [] },
-      ...(c.when ? { when: c.when as WhenClause[] } : {}),
-      ...(c.repeat ? { repeat: true } : {}),
-    };
-  });
+  const defs = officialCommandDefs(plugin);
+  for (const d of defs) {
+    handlers[d.id] = () => runOfficialCommand(win, d.id);
+  }
   const offs = [registerCommands(defs), registerCommandHandlers(handlers)];
   if (plugin.menus) {
     offs.push(
@@ -125,9 +132,8 @@ function syncOfficialStubs(win: Window): void {
   if (pluginHostStarted.get()) {
     return;
   }
-  const on = OFFICIAL_PLUGINS.filter((p) =>
-    getPreferences(win).pluginsEnabled.includes(p.id),
-  );
+  const enabled = enabledPluginIds(win);
+  const on = OFFICIAL_PLUGINS.filter((p) => enabled.includes(p.id));
   const offs = on.map((p) => registerOfficialStubs(win, p));
   releaseStubs = () => offs.forEach((off) => off());
 }
@@ -140,7 +146,7 @@ let releaseActivity: (() => void) | null = null;
 function syncOfficialActivity(win: Window): void {
   releaseActivity?.();
   const on = OFFICIAL_PLUGINS.filter(
-    (p) => p.activity && getPreferences(win).pluginsEnabled.includes(p.id),
+    (p) => p.activity && enabledPluginIds(win).includes(p.id),
   );
   releaseActivity = on.length
     ? registerActivityEntries(
@@ -167,10 +173,10 @@ export function bootPlugins(win: Window): void {
   syncOfficialStubs(win);
   syncOfficialActivity(win);
   // Enabling or disabling an official plugin (Settings, or an old saved list) updates its stubs.
-  let listed = JSON.stringify(getPreferences(win).pluginsEnabled);
+  let listed = JSON.stringify(enabledPluginIds(win));
   stopListSync?.();
   stopListSync = subscribePreferences(() => {
-    const now = JSON.stringify(getPreferences(win).pluginsEnabled);
+    const now = JSON.stringify(enabledPluginIds(win));
     if (now !== listed) {
       listed = now;
       syncOfficialStubs(win);
@@ -179,7 +185,7 @@ export function bootPlugins(win: Window): void {
   });
   // Official plugins alone don't start the host: only their first use does.
   const enabled = () =>
-    getPreferences(win).pluginsEnabled.some((id) => !isOfficialPluginId(id));
+    enabledPluginIds(win).some((id) => !isOfficialPluginId(id));
   if (enabled()) {
     onIdle(win, () => start(win));
     return;

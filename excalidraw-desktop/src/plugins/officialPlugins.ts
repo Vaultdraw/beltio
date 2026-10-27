@@ -56,6 +56,11 @@ export interface OfficialPlugin {
   cancelCommand?: string;
   menus?: OfficialMenu[];
   activity?: OfficialActivity;
+  /**
+   * The `[extensions]` switch that turns this plugin on and off (same id). The plugin runs only
+   * while the switch is on (and the extension set is not in safe start or bisect).
+   */
+  extension?: "graph";
 }
 
 export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
@@ -122,6 +127,158 @@ export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
       command: "toggle",
       after: "graph",
     },
+  },
+  {
+    id: "graph",
+    name: "Graph",
+    /** The `[extensions] graph` switch (Settings, Extensions) turns this plugin on and off. */
+    extension: "graph",
+    importers: [],
+    commands: [
+      {
+        id: "open",
+        title: "Graph: Open graph view",
+        keys: ["Mod+Alt+G"],
+        when: ["vaultOpen", "!modalOpen"],
+      },
+      {
+        id: "openLocal",
+        title: "Graph: Open local graph",
+        keys: ["Mod+Alt+L"],
+        when: ["drawingOpen", "!modalOpen"],
+      },
+      {
+        id: "toggleOrphans",
+        title: "Graph: Toggle orphans",
+        when: ["vaultOpen", "!modalOpen"],
+      },
+      {
+        id: "toggleTags",
+        title: "Graph: Toggle tags",
+        when: ["vaultOpen", "!modalOpen"],
+      },
+      {
+        id: "toggleUnresolved",
+        title: "Graph: Toggle unresolved links",
+        when: ["vaultOpen", "!modalOpen"],
+      },
+      {
+        id: "fit",
+        title: "Graph: Fit graph to view",
+        keys: ["0"],
+        when: ["graphFocus", "!modalOpen"],
+      },
+      {
+        id: "moveLeft",
+        title: "Graph: Focus node to the left",
+        keys: ["H", "ArrowLeft"],
+        when: ["graphFocus", "!modalOpen"],
+        repeat: true,
+      },
+      {
+        id: "moveRight",
+        title: "Graph: Focus node to the right",
+        keys: ["L", "ArrowRight"],
+        when: ["graphFocus", "!modalOpen"],
+        repeat: true,
+      },
+      {
+        id: "moveUp",
+        title: "Graph: Focus node above",
+        keys: ["K", "ArrowUp"],
+        when: ["graphFocus", "!modalOpen"],
+        repeat: true,
+      },
+      {
+        id: "moveDown",
+        title: "Graph: Focus node below",
+        keys: ["J", "ArrowDown"],
+        when: ["graphFocus", "!modalOpen"],
+        repeat: true,
+      },
+      {
+        id: "openNode",
+        title: "Graph: Open focused node",
+        keys: ["Enter"],
+        when: ["graphFocus", "!modalOpen"],
+      },
+      {
+        id: "focusFilter",
+        title: "Graph: Focus the filter",
+        keys: ["Slash"],
+        when: ["graphFocus", "!modalOpen"],
+      },
+      {
+        id: "toggleLocal",
+        title: "Graph: Switch between global and local graph",
+        keys: ["Shift+L"],
+        when: ["graphFocus", "!modalOpen"],
+      },
+      {
+        id: "depth1",
+        title: "Graph: Local depth 1",
+        keys: ["1"],
+        when: ["graphFocus", "!modalOpen"],
+      },
+      {
+        id: "depth2",
+        title: "Graph: Local depth 2",
+        keys: ["2"],
+        when: ["graphFocus", "!modalOpen"],
+      },
+      {
+        id: "depth3",
+        title: "Graph: Local depth 3",
+        keys: ["3"],
+        when: ["graphFocus", "!modalOpen"],
+      },
+      {
+        id: "hints",
+        title: "Graph: Show link hints",
+        keys: ["F", "Shift+F"],
+        when: ["graphFocus", "!modalOpen"],
+      },
+      {
+        id: "zoomIn",
+        title: "Graph: Zoom in",
+        keys: ["Equal", "Shift+Equal"],
+        when: ["graphFocus", "!modalOpen"],
+        repeat: true,
+      },
+      {
+        id: "zoomOut",
+        title: "Graph: Zoom out",
+        keys: ["Minus"],
+        when: ["graphFocus", "!modalOpen"],
+        repeat: true,
+      },
+      {
+        id: "close",
+        title: "Graph: Close graph",
+        keys: ["Escape"],
+        when: ["graphFocus", "!modalOpen"],
+      },
+      {
+        id: "toggleArrows",
+        title: "Graph: Toggle arrows",
+        when: ["graphFocus", "!modalOpen"],
+      },
+      {
+        id: "toggleColourBy",
+        title: "Graph: Toggle colour by folder or mono",
+        when: ["graphFocus", "!modalOpen"],
+      },
+      {
+        id: "toggleSettings",
+        title: "Graph: Toggle settings panel",
+        when: ["graphFocus", "!modalOpen"],
+      },
+      {
+        id: "resetDisplay",
+        title: "Graph: Reset display and forces",
+        when: ["graphFocus", "!modalOpen"],
+      },
+    ],
   },
 ];
 

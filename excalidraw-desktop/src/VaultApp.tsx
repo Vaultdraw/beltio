@@ -130,7 +130,6 @@ import { WhichKeyHost } from "./keys/WhichKeyHost";
 import { drawingOpenCommandId } from "./commands/drawingCommands";
 import { detectPlatform, formatChordWords } from "./commands/keys";
 import { commandShortcutLabel } from "./palette/shortcuts";
-import { useCommandShortcutLookup } from "./commands/useCommandShortcut";
 import {
   collectPaletteItems,
   registerPaletteProvider,
@@ -141,12 +140,12 @@ import { createThemesProvider } from "./palette/providers/themes";
 import { resolveSelectedTheme } from "./theme/registry";
 import {
   closeOverlay,
+  getOverlay,
   hasOverlay,
   subscribeOverlay,
 } from "./plugins/overlayStore";
 import { FolderProvider } from "./plugins/folderContext";
-import { GraphHost, type GraphHostProps } from "./graph/GraphHost";
-import { useGraphEntry } from "./graph/useGraphEntry";
+import { useGraphEntry } from "./commands/useGraphEntry";
 import { createDesktopThumbnailStore } from "./thumbnails/desktopStore";
 import { ThumbnailsRoot } from "./thumbnails/ThumbnailsRoot";
 import { HistoryHost } from "./history/HistoryHost";
@@ -281,8 +280,6 @@ export interface VaultAppProps {
   libraryRepository?: LibraryRepository;
   /** File history; defaults to the native service. */
   history?: HistoryRepository;
-  /** Tests / e2e: graph source and settings transport instead of the native ones. */
-  graph?: Pick<GraphHostProps, "graphSource" | "invoke" | "onSession">;
   /** PDF import (native renderer); defaults to the desktop bridge. */
   pdf?: PdfBridge;
   /** Thumbnail cache; defaults to the native one under Tauri, else none (text UI). */
@@ -299,7 +296,6 @@ export const VaultApp = ({
   initialVault = null,
   libraryRepository = desktopLibraryRepository,
   history = desktopHistoryRepository,
-  graph,
   pdf = desktopPdfBridge,
   thumbnails,
 }: VaultAppProps) => {
@@ -2062,20 +2058,14 @@ export const VaultApp = ({
 
   // Graph view (D14): it takes over the canvas area; the editor stays mounted
   // but frozen (no key or pointer handling) and hidden, so closing is instant.
-  const [graphOpen, setGraphOpen] = useState(false);
+  // The graph is the official graph plugin's overlay (plugins/official/graph).
   const pluginOverlayOpen = useSyncExternalStore(subscribeOverlay, hasOverlay);
-  const mainCovered = graphOpen || pluginOverlayOpen;
-  // One cover at a time: a plugin overlay and the built-in graph close each other.
-  useEffect(() => {
-    if (pluginOverlayOpen && graphOpen) {
-      void getRegisteredHandler(GRAPH_COMMAND_IDS.open)?.();
-    }
-  }, [pluginOverlayOpen]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (graphOpen) {
-      closeOverlay();
-    }
-  }, [graphOpen]);
+  const graphOpen = useSyncExternalStore(
+    subscribeOverlay,
+    () => getOverlay()?.pluginId === "graph",
+  );
+  useEffect(() => graphPanelStore.publish(graphOpen), [graphOpen]);
+  const mainCovered = pluginOverlayOpen;
   const { effective: effectiveSettings } = vaultSettings;
   const tabs = useTabs({
     vault,
@@ -2089,12 +2079,7 @@ export const VaultApp = ({
     closeDocument: closeDoc,
     notify: (message) => toastStore.push({ message }),
     runCommand: (id) => runnerRef.current?.run(id) ?? false,
-    closeOverlays: () => {
-      if (graphOpen) {
-        void getRegisteredHandler(GRAPH_COMMAND_IDS.open)?.();
-      }
-      closeOverlay();
-    },
+    closeOverlays: () => closeOverlay(),
     isStripShown: () => layoutRef.current?.shown.tab_strip ?? false,
     setShowStrip: (tabsShowStrip) => {
       if (!layoutRef.current?.toggleGoverned("tab_strip")) {
@@ -2177,11 +2162,6 @@ export const VaultApp = ({
     // The restore belongs to one mounted document.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [activeDoc?.id, tabs.restoreFor],
-  );
-  const shortcutLabel = useCommandShortcutLookup(win);
-  const graphShortcutFor = useCallback(
-    (path: string) => shortcutLabel(drawingOpenCommandId(path)) || null,
-    [shortcutLabel],
   );
   const focusCanvas = useCallback(
     () =>
@@ -2560,10 +2540,6 @@ export const VaultApp = ({
       runnerRef.current?.isAvailable(id, { fromPalette: true }) ?? false,
     [],
   );
-  const handleGraphOpenChange = useCallback((open: boolean) => {
-    setGraphOpen(open);
-    graphPanelStore.publish(open);
-  }, []);
   // UI entry points (navigator, main menu, row menu) dispatch the graph commands.
   const runCommand = useCallback(
     (id: string) => runnerRef.current?.run(id) ?? false,
@@ -3006,22 +2982,6 @@ export const VaultApp = ({
                   <PluginOverlayHost onClosed={focusCanvas} />
                 </FolderProvider>
               </Suspense>
-            )}
-            {ext.graph && (
-              <GraphHost
-                handle={vault.handle}
-                currentPath={activeDoc?.path ?? null}
-                themeKey={appearance.snapshot.key}
-                shortcutFor={graphShortcutFor}
-                onOpenDrawing={(path, opts) =>
-                  path === activeDoc?.path && !opts
-                    ? undefined
-                    : handleOpenDrawing(path, opts)
-                }
-                onOpenChange={handleGraphOpenChange}
-                onClosed={focusCanvas}
-                {...graph}
-              />
             )}
           </div>
         </div>

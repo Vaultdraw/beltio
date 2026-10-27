@@ -4,12 +4,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render } from "@testing-library/react";
 import { useRef } from "react";
 
+import { OFFICIAL_PLUGINS } from "../plugins/officialPlugins";
+import { officialCommandDefs } from "../plugins/boot";
+
 import { BUILTIN_COMMANDS } from "./commands";
+
 import { findConflicts, whenCanOverlap } from "./conflicts";
 import { readContext } from "./context";
-import { GRAPH_VIEW_IDS, GRAPH_VIEW_COMMAND_IDS as V } from "./graphCommands";
 import { installListKeysForTests } from "./listKeysForTests";
 import { useViewCommands, type ViewActions } from "./useViewCommands";
+// The graph's in-view command ids (the plugin's: plugins/official/graph/src/commandIds.ts).
+const V = {
+  left: "graph.moveLeft",
+  right: "graph.moveRight",
+  up: "graph.moveUp",
+  down: "graph.moveDown",
+  close: "graph.close",
+} as const;
+const GRAPH_VIEW_IDS: readonly string[] = [...Object.values(V), "graph.fit"];
 
 const APP = { vaultOpen: true, drawingOpen: true, writable: true };
 
@@ -31,9 +43,13 @@ function View({
   );
 }
 
+const GRAPH_DEFS = officialCommandDefs(
+  OFFICIAL_PLUGINS.find((p) => p.id === "graph")!,
+);
+
 let uninstall: () => void;
 beforeEach(() => {
-  uninstall = installListKeysForTests();
+  uninstall = installListKeysForTests("mac", window, GRAPH_DEFS);
 });
 afterEach(() => uninstall());
 
@@ -55,7 +71,11 @@ describe("view scopes", () => {
     expect(whenCanOverlap(["galleryFocus"], ["listFocus"])).toBe(false);
     expect(whenCanOverlap(["graphFocus"], ["galleryFocus"])).toBe(false);
     expect(whenCanOverlap(["graphFocus"], ["graphFocus"])).toBe(true);
-    const conflicts = findConflicts(BUILTIN_COMMANDS, {}, "mac");
+    const conflicts = findConflicts(
+      [...BUILTIN_COMMANDS, ...GRAPH_DEFS],
+      {},
+      "mac",
+    );
     expect(conflicts.get("graph.moveDown")?.get("J")).toBeUndefined();
   });
 });
@@ -106,7 +126,7 @@ describe("useViewCommands through the dispatcher", () => {
 
   it("every graph default key is a plain chord with a focus scope", () => {
     for (const id of GRAPH_VIEW_IDS) {
-      const c = BUILTIN_COMMANDS.find((x) => x.id === id)!;
+      const c = GRAPH_DEFS.find((x) => x.id === id)!;
       expect(c.when).toContain("graphFocus");
     }
   });

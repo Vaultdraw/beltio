@@ -1,12 +1,18 @@
-import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
-import { COMMANDS, getCommand } from "../commands/commands";
-import { findConflicts } from "../commands/conflicts";
-import { buildKeymap, effectiveKeys } from "../commands/keymap";
-import { createCommandsProvider } from "../palette/providers/commands";
+import { describe, expect, it } from "vitest";
 
-import type { Platform } from "../commands/types";
+import { COMMANDS } from "../../../../excalidraw-desktop/src/commands/commands";
+import { findConflicts } from "../../../../excalidraw-desktop/src/commands/conflicts";
+import { parseManifest } from "../../../../sdk/examples/testing/readManifest";
 
+import type {
+  CommandDefinition,
+  Platform,
+} from "../../../../excalidraw-desktop/src/commands/types";
+
+// The graph's commands, as plugin.toml declares them: the ids, titles and keys the app always had.
 const EXPECTED: Record<string, { title: string; keys: string[] }> = {
   "graph.open": { title: "Graph: Open graph view", keys: ["Mod+Alt+G"] },
   "graph.openLocal": { title: "Graph: Open local graph", keys: ["Mod+Alt+L"] },
@@ -57,52 +63,56 @@ const EXPECTED: Record<string, { title: string; keys: string[] }> = {
 };
 const PLATFORMS: Platform[] = ["mac", "win", "linux"];
 
-describe("Graph commands", () => {
-  it.each(Object.entries(EXPECTED))("registers %s", (id, want) => {
-    const command = getCommand(id)!;
+const info = parseManifest(
+  readFileSync(path.resolve(__dirname, "../plugin.toml"), "utf8"),
+);
+const declared = info.contributes.commands;
+const defs: CommandDefinition[] = declared.map((c) => ({
+  id: `graph.${c.id}`,
+  title: c.title,
+  category: info.name,
+  keys: { default: c.keys },
+  when: c.when as CommandDefinition["when"],
+  ...(c.repeat ? { repeat: true } : {}),
+}));
+
+describe("Graph plugin commands", () => {
+  it.each(Object.entries(EXPECTED))("declares %s", (id, want) => {
+    const command = defs.find((d) => d.id === id)!;
     expect(command.title).toBe(want.title);
-    expect(command.category).toBe("Graph");
     expect(command.keys.default).toEqual(want.keys);
   });
 
-  it("registers exactly the expected Graph commands", () => {
-    expect(
-      COMMANDS.filter((c) => c.category === "Graph")
-        .map((c) => c.id)
-        .sort(),
-    ).toEqual(Object.keys(EXPECTED).sort());
+  it("declares exactly the expected commands, in the Graph category", () => {
+    expect(defs.map((c) => c.id).sort()).toEqual(Object.keys(EXPECTED).sort());
+    expect(new Set(defs.map((d) => d.category))).toEqual(new Set(["Graph"]));
   });
 
   it.each(PLATFORMS)("has no conflicts with the defaults on %s", (platform) => {
-    expect(findConflicts(COMMANDS, {}, platform).size).toBe(0);
+    expect(findConflicts([...COMMANDS, ...defs], {}, platform).size).toBe(0);
   });
 
   it("opens and closes only inside an open vault, local needs a drawing", () => {
-    expect(getCommand("graph.open")?.when).toEqual(["vaultOpen", "!modalOpen"]);
-    expect(getCommand("graph.openLocal")?.when).toEqual([
-      "drawingOpen",
-      "!modalOpen",
-    ]);
+    const by = (id: string) => defs.find((d) => d.id === id)!;
+    expect(by("graph.open").when).toEqual(["vaultOpen", "!modalOpen"]);
+    expect(by("graph.openLocal").when).toEqual(["drawingOpen", "!modalOpen"]);
   });
 
-  it("is rebindable and shows up in the palette", () => {
-    const overrides = { "graph.open": ["Mod+Shift+G"], "graph.fit": ["Mod+0"] };
-    expect(effectiveKeys(getCommand("graph.open")!, overrides, "mac")).toEqual([
-      "Mod+Shift+G",
-    ]);
-    const keymap = buildKeymap(COMMANDS, overrides, "mac");
-    expect(keymap).toBeTruthy();
-    const provider = createCommandsProvider({
-      runner: {
-        run: vi.fn(() => true),
-        isAvailable: () => true,
-        platform: "mac",
-      },
-      overrides: () => overrides,
-    });
-    const titles = provider.items().map((i) => i.title);
-    for (const want of Object.values(EXPECTED)) {
-      expect(titles).toContain(want.title);
-    }
+  it("repeats the movement and zoom keys while held, and only those", () => {
+    expect(
+      defs
+        .filter((d) => d.repeat)
+        .map((d) => d.id)
+        .sort(),
+    ).toEqual(
+      [
+        "graph.moveLeft",
+        "graph.moveRight",
+        "graph.moveUp",
+        "graph.moveDown",
+        "graph.zoomIn",
+        "graph.zoomOut",
+      ].sort(),
+    );
   });
 });

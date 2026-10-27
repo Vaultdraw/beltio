@@ -7,7 +7,7 @@
 import { FLAG_UNRESOLVED } from "./types";
 
 import type { GraphData } from "./types";
-import type { DesktopVaultGraph } from "./DesktopVaultGraph";
+import type { GraphSource } from "./GraphSession";
 
 export const LAYOUT_VERSION = 1;
 const NODE_BYTES = 12;
@@ -86,14 +86,14 @@ export function decodeLayout(bytes: Uint8Array): SavedLayout {
 }
 
 export async function loadLayout(
-  client: Pick<DesktopVaultGraph, "loadLayout">,
+  client: Pick<GraphSource, "loadLayout">,
   handle: string,
 ): Promise<SavedLayout> {
   return decodeLayout(await client.loadLayout(handle));
 }
 
 export async function saveLayout(
-  client: Pick<DesktopVaultGraph, "saveLayout">,
+  client: Pick<GraphSource, "saveLayout">,
   handle: string,
   graph: GraphData,
   positions: Float32Array,

@@ -41,10 +41,19 @@ interface Transport {
   close(): void;
 }
 
+/** The layout worker's bundle, injected by the plugin's build (the app's CSP allows a worker only from a blob). */
+declare const __GRAPH_WORKER_SOURCE__: string | undefined;
+const workerSource = (): string | null =>
+  typeof __GRAPH_WORKER_SOURCE__ === "string" && __GRAPH_WORKER_SOURCE__
+    ? __GRAPH_WORKER_SOURCE__
+    : null;
+
 function workerTransport(onMessage: (m: FromLayout) => void): Transport {
-  const worker = new Worker(new URL("./layout.worker.ts", import.meta.url), {
-    type: "module",
-  });
+  const url = URL.createObjectURL(
+    new Blob([workerSource()!], { type: "text/javascript" }),
+  );
+  const worker = new Worker(url);
+  URL.revokeObjectURL(url);
   worker.onmessage = (e: MessageEvent<FromLayout>) => onMessage(e.data);
   return {
     send: (msg, transfer = []) => worker.postMessage(msg, transfer),
@@ -94,7 +103,8 @@ export class LayoutClient {
 
   constructor(
     private readonly cb: LayoutCallbacks,
-    private readonly inThread = typeof Worker === "undefined",
+    private readonly inThread = typeof Worker === "undefined" ||
+      workerSource() === null,
   ) {}
 
   start(init: LayoutStart): void {

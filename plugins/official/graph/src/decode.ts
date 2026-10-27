@@ -1,8 +1,9 @@
-import { DRAWING_EXT } from "../vault/fileKind";
-
+/** A drawing file's extension (the app's `DRAWING_EXT`). */
 import { FLAG_TAG, FLAG_UNRESOLVED } from "./types";
 
 import type { Adjacency, GraphData } from "./types";
+
+const DRAWING_EXT = ".excalidraw";
 
 const MAGIC = 0x31474456; // "VDG1" little-endian
 const VERSION = 1;

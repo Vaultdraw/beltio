@@ -1,12 +1,10 @@
 /**
  * Per-vault graph settings in `<vault>/.excalidraw-vault/settings.toml`
- * under `[graph]` (D15/D17), through the existing `load_vault_settings` /
- * `update_vault_settings` commands (comment-preserving TOML, unknown keys
- * kept). Keys are flat (`graph.force_repel`), values equal to the default are
- * removed so the file only holds what the user changed.
+ * under `[graph]` (D15/D17), through the plugin API's own-table calls
+ * (`ctx.vault.table`: comment-preserving TOML, unknown keys kept). Keys are
+ * flat (`force_repel`), values equal to the default are removed so the file
+ * only holds what the user changed.
  */
-import { resolveInvoke, type InvokeFn } from "../vault/DesktopVaultRepository";
-
 import { DEFAULT_FORCE_SETTINGS } from "./barnesHut";
 import {
   DEFAULT_GRAPH_SETTINGS,
@@ -20,6 +18,12 @@ const MAX_TEXT = 256;
 
 type Json = Record<string, unknown>;
 type Change = { key: string; value: unknown };
+
+/** The plugin's own vault settings table (`ctx.vault.table`). */
+export interface SettingsTable {
+  read(): Promise<Record<string, unknown>>;
+  update(changes: readonly Change[]): Promise<void>;
+}
 
 const num =
   (min: number, max: number) =>
@@ -179,10 +183,9 @@ export const freshGraphSettings = (): GraphSettings => ({
   forces: { ...F },
 });
 
-/** A whole settings.toml (as JSON) -> valid settings; unknown keys ignored, bad values -> defaults. */
-export function parseGraphSettings(json: unknown): GraphSettings {
+/** The `[graph]` table (as JSON) -> valid settings; unknown keys ignored, bad values -> defaults. */
+export function parseGraphSettings(table: unknown): GraphSettings {
   const out = freshGraphSettings();
-  const table = (json as Json | null)?.graph;
   if (!table || typeof table !== "object" || Array.isArray(table)) {
     return out;
   }
@@ -198,7 +201,7 @@ export function parseGraphSettings(json: unknown): GraphSettings {
 const same = (a: unknown, b: unknown) =>
   JSON.stringify(a) === JSON.stringify(b);
 
-/** `update_vault_settings` changes turning `prev` into `next`; defaults are removed (null). */
+/** own-table changes turning `prev` into `next`; defaults are removed (null). */
 export function graphSettingsChanges(
   prev: GraphSettings,
   next: GraphSettings,
@@ -208,7 +211,7 @@ export function graphSettingsChanges(
     const value = f.get(next);
     if (!same(f.get(prev), value)) {
       changes.push({
-        key: `graph.${f.key}`,
+        key: f.key,
         value: same(value, f.def) ? null : value,
       });
     }
@@ -218,15 +221,10 @@ export function graphSettingsChanges(
 
 /** Read this vault's graph settings; any failure yields the defaults. */
 export async function loadGraphSettings(
-  handle: string,
-  invokeFn?: InvokeFn,
+  table: SettingsTable,
 ): Promise<GraphSettings> {
   try {
-    const invoke = await resolveInvoke(invokeFn);
-    const loaded = await invoke<{ settings: unknown }>("load_vault_settings", {
-      handle,
-    });
-    return parseGraphSettings(loaded?.settings);
+    return parseGraphSettings(await table.read());
   } catch {
     return freshGraphSettings();
   }
@@ -241,9 +239,8 @@ export interface GraphSettingsSaver {
 
 /** Debounced writer; `saved` is what the file holds now (the loaded settings). */
 export function createGraphSettingsSaver(
-  handle: string,
+  table: SettingsTable,
   saved: GraphSettings,
-  invokeFn?: InvokeFn,
   delay = GRAPH_SAVE_DELAY_MS,
 ): GraphSettingsSaver {
   let pending: GraphSettings | null = null;
@@ -260,8 +257,7 @@ export function createGraphSettingsSaver(
     last = next;
     queue = queue.then(async () => {
       try {
-        const invoke = await resolveInvoke(invokeFn);
-        await invoke("update_vault_settings", { handle, changes });
+        await table.update(changes);
       } catch {
         last = before; // the next save re-sends the full diff
       }

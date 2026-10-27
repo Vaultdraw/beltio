@@ -38,11 +38,12 @@ import { deleteDataRequest } from "../../../plugins/ui/pluginCommands";
 import { subscribeStorageWrites } from "../../../plugins/host/storage";
 import { toastStore } from "../../../toasts/toastStore";
 import {
-  getPreferences,
   subscribePreferences,
   updatePreferences,
 } from "../../../vault/preferences";
 import { ConfirmModal } from "../../ConfirmModal";
+import { EXTENSION_FIELDS } from "../../../extensionSwitches/registry";
+import { enabledPluginIds, extensionOf } from "../../../plugins/enabledIds";
 import { useSettings } from "../SettingsContext";
 
 import { formatDataSize, PluginRow, type RuntimeState } from "./PluginRow";
@@ -91,7 +92,7 @@ export const SafeModeBanner = ({
 const useEnabledIds = (): string[] => {
   const { win } = useSettings();
   const key = useSyncExternalStore(subscribePreferences, () =>
-    JSON.stringify(getPreferences(win).pluginsEnabled),
+    JSON.stringify(enabledPluginIds(win)),
   );
   return useMemo(() => JSON.parse(key) as string[], [key]);
 };
@@ -241,7 +242,13 @@ export const PluginsPage = () => {
     [state],
   );
 
-  const setEnabled = (id: string, on: boolean) =>
+  const setEnabled = (id: string, on: boolean) => {
+    // A plugin tied to an `[extensions]` switch is turned on and off with that switch.
+    const ext = extensionOf(id);
+    if (ext) {
+      updatePreferences({ [EXTENSION_FIELDS[ext]]: on }, win);
+      return;
+    }
     updatePreferences(
       {
         pluginsEnabled: on
@@ -250,6 +257,7 @@ export const PluginsPage = () => {
       },
       win,
     );
+  };
 
   const toggle = (info: PluginInfo, on: boolean) =>
     on && info.source !== "bundled"

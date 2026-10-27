@@ -3,11 +3,14 @@
  * `GraphData` the native `vault_graph` decodes to (drawings by path, then unresolved ghosts), keeps
  * the layout bytes in memory, and fakes the settings.toml commands the per-vault graph settings use.
  */
-import { createGraphData } from "../graph/decode";
-import { FLAG_ORPHAN, FLAG_UNRESOLVED } from "../graph/types";
+import { createGraphData } from "../../../plugins/official/graph/src/decode";
+import {
+  FLAG_ORPHAN,
+  FLAG_UNRESOLVED,
+} from "../../../plugins/official/graph/src/types";
 
-import type { GraphSource } from "../graph/GraphSession";
-import type { GraphData } from "../graph/types";
+import type { GraphSource } from "../../../plugins/official/graph/src/GraphSession";
+import type { GraphData } from "../../../plugins/official/graph/src/types";
 import type { VaultLinks } from "../links/types";
 import type { InvokeFn } from "../vault/DesktopVaultRepository";
 import type { VaultRepository } from "../vault/types";

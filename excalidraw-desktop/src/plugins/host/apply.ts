@@ -1,8 +1,9 @@
 /** Applies the current plugin list and enabled ids to the registries (stubs). */
 import { scheduleIdle } from "../../platform/idle";
-import { getPreferences } from "../../vault/preferences";
 
 import { isBisectOff } from "../../extensionSwitches/bisectState";
+
+import { enabledPluginIds } from "../enabledIds";
 
 import { ensureActive } from "./activation";
 import { currentList } from "./pluginsState";
@@ -63,9 +64,7 @@ export function applyPlugins(
     return null;
   }
   // An extension bisect turns some plugins off for this launch.
-  const enabled = getPreferences(win).pluginsEnabled.filter(
-    (id) => !isBisectOff(id),
-  );
+  const enabled = enabledPluginIds(win).filter((id) => !isBisectOff(id));
   const { started } = syncPlugins(plugins, enabled);
   return queueStartupActivations(plugins, started, schedule);
 }

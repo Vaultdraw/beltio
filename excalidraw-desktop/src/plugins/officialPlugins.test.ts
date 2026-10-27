@@ -95,6 +95,12 @@ describe("the official plugin table (startup stubs)", () => {
     }
   });
 
+  it("the graph follows the [extensions] graph switch", () => {
+    expect(OFFICIAL_PLUGINS.find((p) => p.id === "graph")?.extension).toBe(
+      "graph",
+    );
+  });
+
   it("markdown-import never claims excalidraw.md", () => {
     const exts = OFFICIAL_PLUGINS.flatMap((p) =>
       p.importers.flatMap((i) => i.extensions),

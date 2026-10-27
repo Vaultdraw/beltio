@@ -10,13 +10,15 @@ import { installCommandDispatcher } from "./dispatcher";
 import { getRegisteredHandler } from "./handlerRegistry";
 import { buildKeymap } from "./keymap";
 
-import type { Platform } from "./types";
+import type { CommandDefinition, Platform } from "./types";
 
 export function installListKeysForTests(
   platform: Platform = "mac",
   win: Window = window,
+  /** Commands of plugins (for example the official graph's stubs) on top of the built-in ones. */
+  extra: CommandDefinition[] = [],
 ): () => void {
-  const keymap = buildKeymap(BUILTIN_COMMANDS, {}, platform);
+  const keymap = buildKeymap([...BUILTIN_COMMANDS, ...extra], {}, platform);
   return installCommandDispatcher(win, {
     platform,
     getKeymap: () => keymap,

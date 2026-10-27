@@ -3,11 +3,17 @@
  * pan and wheel zoom. Listeners exist only while the graph is open (the returned function
  * removes them).
  */
-import { clickTarget } from "../tabs/newTabClick";
-
 import { GLIDE_START, wheelZoomFactor } from "./camera";
 
+import type { OpenTarget } from "./settings";
+
 import type { GraphSession } from "./GraphSession";
+
+/** Cmd/Ctrl+click opens in a new tab; a plain click uses the current one. */
+const clickTarget = (e: {
+  metaKey: boolean;
+  ctrlKey: boolean;
+}): OpenTarget | undefined => (e.metaKey || e.ctrlKey ? "new" : undefined);
 
 const CLICK_SLOP = 4;
 /** Velocity window (ms) and max age of the last move for a release to glide. */

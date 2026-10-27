@@ -2,7 +2,8 @@
  * The management snapshot: the last plugin list plus live runtime states.
  * Cached, so `getPluginsState` is stable between changes (useSyncExternalStore).
  */
-import { getPreferences, subscribePreferences } from "../../vault/preferences";
+import { subscribePreferences } from "../../vault/preferences";
+import { enabledPluginIds } from "../enabledIds";
 
 import { allRuntimes, subscribeRuntimes } from "./activation";
 
@@ -33,7 +34,7 @@ export function setPluginsList(next: PluginsList): void {
 }
 
 function compute(): PluginsState {
-  const enabled = new Set(getPreferences().pluginsEnabled);
+  const enabled = new Set(enabledPluginIds());
   const states = new Map(allRuntimes().map((rt) => [rt.info.id, rt.state]));
   const runtime: PluginsState["runtime"] = {};
   for (const p of list.plugins) {
@@ -52,9 +53,9 @@ export function subscribePluginsState(cb: () => void): () => void {
   listeners.add(cb);
   if (!detach) {
     const offRuntime = subscribeRuntimes(invalidate);
-    let key = JSON.stringify(getPreferences().pluginsEnabled);
+    let key = JSON.stringify(enabledPluginIds());
     const offPrefs = subscribePreferences(() => {
-      const next = JSON.stringify(getPreferences().pluginsEnabled);
+      const next = JSON.stringify(enabledPluginIds());
       if (next !== key) {
         key = next;
         invalidate();

@@ -1,5 +1,6 @@
 /** Starts the plugin host after the first frame; nothing here runs on the startup path. */
-import { getPreferences, subscribePreferences } from "../../vault/preferences";
+import { subscribePreferences } from "../../vault/preferences";
+import { enabledPluginIds } from "../enabledIds";
 import { markPluginHostStarted } from "../hostFlag";
 import { exposeSharedModules } from "../shared/exposeShared";
 
@@ -52,7 +53,7 @@ export async function startPluginHost(
   let startupDone = Promise.resolve();
   let last: string | null = null;
   const apply = () => {
-    const enabled = getPreferences(win).pluginsEnabled;
+    const enabled = enabledPluginIds(win);
     const key = JSON.stringify(enabled);
     if (key === last) {
       return;

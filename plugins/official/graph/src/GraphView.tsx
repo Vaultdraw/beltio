@@ -2,16 +2,16 @@
  * The graph view (lazy chunk): toolbar, stage with the GPU canvas and the label overlay, hover
  * card, hint badges and the Vim key handling. All engine work lives in GraphSession.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
 import {
-  GRAPH_COMMAND_IDS,
-  GRAPH_VIEW_COMMAND_IDS,
-  GRAPH_VIEW_IDS,
-} from "../commands/graphCommands";
-import { useViewCommands } from "../commands/useViewCommands";
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
-import { DesktopVaultGraph } from "./DesktopVaultGraph";
+import { GRAPH_COMMAND_IDS, GRAPH_VIEW_COMMAND_IDS } from "./commandIds";
 import { type GraphSession, type GraphSource } from "./GraphSession";
 import { GraphToolbar } from "./GraphToolbar";
 import { HoverCard } from "./HoverCard";
@@ -19,14 +19,15 @@ import { resolveHint, type HintMap } from "./hints";
 import { type Direction } from "./keyboard";
 import { resetDisplayAndForces, SettingsPanel } from "./SettingsPanel";
 import { useGraphSession } from "./useGraphSession";
+import { useViewCommands } from "./viewBus";
 
-import "./graph.css";
+import graphCss from "./graph.css";
 
 import type { GraphViewProps } from "./settings";
 
 export interface GraphViewExtraProps {
-  /** Tests / e2e: a fake graph source (default: the native vault graph). */
-  source?: GraphSource;
+  /** Where the graph and its layout cache come from. */
+  source: GraphSource;
   /** Tests / e2e: skip WebGL. */
   forceCanvas2d?: boolean;
   /** Tests / e2e: receives the live session once the graph is ready (null on close). */
@@ -43,14 +44,25 @@ type HintState = {
 
 const ZOOM_STEP = 1.25;
 
+/** Adds the plugin's stylesheet to the document while the view is mounted. */
+function useStyle(ref: React.RefObject<HTMLElement | null>, css: string) {
+  useLayoutEffect(() => {
+    const doc = ref.current?.ownerDocument ?? document;
+    const style = doc.createElement("style");
+    style.dataset.pluginStyle = "graph";
+    style.textContent = css;
+    doc.head.appendChild(style);
+    return () => style.remove();
+  }, [ref, css]);
+}
+
 const isField = (t: EventTarget | null) =>
   t instanceof HTMLElement &&
   (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT");
 
 export default function GraphView(props: GraphViewProps & GraphViewExtraProps) {
   const { settings, mode, onClose, onOpen } = props;
-  const defaultSource = useMemo(() => new DesktopVaultGraph(), []);
-  const source = props.source ?? defaultSource;
+  const { source } = props;
   const rootRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLInputElement>(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -159,12 +171,12 @@ export default function GraphView(props: GraphViewProps & GraphViewExtraProps) {
   const depth = (d: 1 | 2 | 3) => () =>
     props.onSettingsChange({ ...settings, localDepth: d });
   const zoom = (f: number) => () => sessionRef.current?.zoomCentre(f);
-  useViewCommands(
-    rootRef,
-    GRAPH_VIEW_IDS,
-    hints
-      ? // graph.fit (host-bound) stays live in hint mode: feed its key to the hints.
-        { [GRAPH_COMMAND_IDS.fit]: () => onHintKey("0", hints) }
+  // While hints show, the view's scope changes (data-keyscope below), so the graph.* keys are
+  // not claimed and every key reaches onKeyDown as a hint letter.
+  useViewCommands(rootRef, {
+    [GRAPH_COMMAND_IDS.fit]: () => sessionRef.current?.userFit(),
+    ...(hints
+      ? {}
       : {
           [V.left]: move("left"),
           [V.right]: move("right"),
@@ -198,8 +210,9 @@ export default function GraphView(props: GraphViewProps & GraphViewExtraProps) {
           [V.toggleSettings]: () => setPanelOpen((v) => !v),
           [V.resetDisplay]: () =>
             props.onSettingsChange(resetDisplayAndForces(settings)),
-        },
-  );
+        }),
+  });
+  useStyle(rootRef, graphCss);
 
   const session = sessionRef.current;
   const hintLetters =
@@ -214,7 +227,7 @@ export default function GraphView(props: GraphViewProps & GraphViewExtraProps) {
       role="application"
       aria-label="Graph view"
       data-testid="graph-view"
-      data-keyscope="graph"
+      data-keyscope={hints ? "graph-hints" : "graph"}
       onKeyDown={onKeyDown}
     >
       <GraphToolbar

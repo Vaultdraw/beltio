@@ -5,7 +5,8 @@
  */
 import { DEFAULT_FORCE_SETTINGS, type ForceSettings } from "./barnesHut";
 
-import type { OpenTarget } from "../tabs/types";
+/** Where a drawing opens: the current tab or a new one. */
+export type OpenTarget = "current" | "new";
 
 /** A colour group: nodes matching `query` (`path:`, `tag:#x`, or a name) get `colour`. */
 export type GraphColourGroup = { query: string; colour: string };
