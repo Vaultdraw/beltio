@@ -36,6 +36,7 @@ export type {
   TestManifest,
   TestPlugin,
   TestPluginInfo,
+  ToolDriver,
 } from "./types";
 
 /** One animation frame is 16 ms; the scene notifies once per frame. */
@@ -78,6 +79,12 @@ const normalise = (m: TestManifest) => {
       menus: (c.menus ?? []).map((x) => ({
         title: null,
         kinds: [],
+        ...x,
+      })),
+      tools: (c.tools ?? []).map((x) => ({
+        title: x.id,
+        icon: null,
+        cursor: null,
         ...x,
       })),
       toolbar: (c.toolbar ?? []).map((x) => ({
@@ -137,6 +144,7 @@ export async function boot(
     info,
     run: host.run,
     openPanel: host.openPanel,
+    tool: host.tool,
     menuItems: host.menuItems,
     chooseMenuItem: host.chooseMenuItem,
     notes: host.notes,

@@ -18,6 +18,8 @@ export interface ToolbarButton {
   priority: number;
   /** Full command id (`<pluginId>.<command>`). */
   command: string;
+  /** Set for a canvas tool: the button shows pressed while that tool is chosen. */
+  toolKey?: string;
 }
 
 const NONE: readonly ToolbarButton[] = [];

@@ -16,6 +16,7 @@ import type { FoldersApi } from "./folders";
 import type { FontsApi, TextApi } from "./text";
 import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
+import type { ToolsApi } from "./tools";
 import type { ViewsApi } from "./views";
 import type { WorkspaceApi } from "./workspace";
 
@@ -100,6 +101,8 @@ export interface PluginContext {
   readonly views: ViewsApi;
   /** @since 0.12.0 */
   readonly menus: MenusApi;
+  /** Canvas tools declared with `[[contributes.tools]]`. @since 0.15.0 */
+  readonly tools: ToolsApi;
   /**
    * Disposed in reverse order on disable/reload/quit.
    *

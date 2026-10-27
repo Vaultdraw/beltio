@@ -32,6 +32,11 @@
   cursor: pointer;
 }
 
+.plugin-toolbar__button[aria-pressed="true"] {
+  background: var(--vault-selected, var(--vault-hover));
+  border-color: var(--vault-border);
+}
+
 .plugin-toolbar__button:hover {
   background: var(--vault-hover);
 }

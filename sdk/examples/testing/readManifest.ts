@@ -39,6 +39,7 @@ const ARRAYS = [
   "views",
   "menus",
   "toolbar",
+  "tools",
 ] as const;
 
 /** Drop a trailing `# comment` that is not inside a basic string. */
@@ -88,6 +89,7 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
     views: [],
     menus: [],
     toolbar: [],
+    tools: [],
   };
   let current: Table = top;
   let extra = false;
@@ -161,6 +163,19 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
         command: m.command as string,
         title: (m.title as string | undefined) ?? null,
         kinds: (m.kinds as ("drawing" | "note" | "folder")[] | undefined) ?? [],
+      })),
+      tools: arrays.tools.map((x) => ({
+        id: x.id as string,
+        title: x.title as string,
+        icon: (x.icon as string | undefined) ?? null,
+        cursor:
+          (x.cursor as
+            | "crosshair"
+            | "default"
+            | "pointer"
+            | "grab"
+            | "text"
+            | undefined) ?? null,
       })),
       toolbar: arrays.toolbar.map((x) => ({
         command: x.command as string,

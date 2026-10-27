@@ -1396,3 +1396,27 @@ fn toolbar_rules() {
     let many: String = (0..9).map(|i| format!("\n[[contributes.commands]]\nid = \"c{i}\"\ntitle = \"C\"\n[[contributes.toolbar]]\ncommand = \"c{i}\"\n")).collect();
     bad(&with(&many), "Too many toolbar");
 }
+
+// ---- P7: canvas tools in the manifest ----
+
+fn tool(extra: &str) -> String {
+    with(&format!("\n[[contributes.tools]]\nid = \"pen\"\ntitle = \"Pen\"\n{extra}"))
+}
+
+#[test]
+fn tools_parse_and_serialise() {
+    let m = manifest::parse(&tool("icon = \"M4 4h16\"\ncursor = \"grab\"\n")).unwrap();
+    let v = serde_json::to_value(&m).unwrap();
+    assert_eq!(v["contributes"]["tools"][0], json!({"id": "pen", "title": "Pen", "icon": "M4 4h16", "cursor": "grab"}));
+    assert!(manifest::parse(&minimal("a-b")).unwrap().contributes.tools.is_empty());
+}
+
+#[test]
+fn tool_rules() {
+    bad(&tool("cursor = \"wait\"\n"), "unknown");
+    bad(&tool("icon = \"<x>\"\n"), "path data");
+    bad(&tool("[[contributes.tools]]\nid = \"pen\"\ntitle = \"Again\"\n"), "pen");
+    bad(&with("\n[[contributes.tools]]\nid = \"t\"\ntitle = \" \"\n"), "title");
+    let many: String = (0..9).map(|i| format!("\n[[contributes.tools]]\nid = \"t{i}\"\ntitle = \"T\"\n")).collect();
+    bad(&with(&many), "Too many tools");
+}

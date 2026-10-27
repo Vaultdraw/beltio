@@ -12,6 +12,7 @@ export type {
   MenuContribution,
   StatusBarContribution,
   ToolbarContribution,
+  ToolContribution,
   ViewContribution,
   PanelContribution,
   PluginContributions,
@@ -92,6 +93,7 @@ export type {
 } from "./settings";
 export type { StatusBarApi, StatusBarState } from "./statusBar";
 export type { MenuTarget, MenusApi } from "./menus";
+export type { ToolHandlers, ToolPoint, ToolsApi } from "./tools";
 export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { FontsApi, TextApi, TextFont } from "./text";

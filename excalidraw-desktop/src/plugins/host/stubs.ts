@@ -26,9 +26,11 @@ import { registerTabKind } from "../../tabs/tabKinds";
 import { claimImporter } from "../importerMapAdmin";
 import { addMenuItems, beginMenuRun } from "../menuRegistry";
 import { addToolbarButtons } from "../toolbarRegistry";
+import { addToolStubs, type ToolStub } from "../toolRegistry";
 import { registerPluginSettings } from "../settings/registry";
 
 import { ensureActive } from "./activation";
+import { releasePluginTools, toggleTool } from "./toolEngine";
 import { setRegistrationCounts } from "./cost";
 import { reportPluginError, reportPluginProblem, errorText } from "./errors";
 import { guard } from "./guard";
@@ -119,6 +121,41 @@ const stubHandler = (rt: PluginRuntime, short: string) => () =>
         ok ? runReal(rt, short) : undefined,
       );
 
+/** Declared tools: palette commands (added to `defs`/`handlers`), toolbar buttons and the stubs the engine reads. */
+function registerToolStubs(
+  rt: PluginRuntime,
+  stubs: readonly ToolStub[],
+  defs: CommandDefinition[],
+  handlers: CommandHandlers,
+  disposers: (() => void)[],
+): void {
+  const id = rt.info.id;
+  for (const t of stubs) {
+    handlers[t.command] = () => toggleTool(t, () => ensureActive(id));
+    defs.push({
+      id: t.command,
+      title: `Tool: ${t.title}`,
+      category: rt.info.name,
+      keys: { default: [] },
+    });
+  }
+  disposers.push(addToolStubs(stubs));
+  disposers.push(
+    addToolbarButtons(
+      stubs.map((t) => ({
+        pluginId: id,
+        pluginName: rt.info.name,
+        title: t.title,
+        icon: t.icon,
+        priority: 0,
+        command: t.command,
+        toolKey: t.key,
+      })),
+    ),
+  );
+  disposers.push(() => releasePluginTools(id));
+}
+
 /** Returns one disposer for everything registered; also stored on `rt`. */
 export function registerStubs(rt: PluginRuntime): () => void {
   const { info } = rt;
@@ -177,6 +214,20 @@ export function registerStubs(rt: PluginRuntime): () => void {
     };
   });
 
+  // Declared tools: a palette command that toggles the tool and a toolbar button; the plugin loads on first use.
+  const toolStubs: ToolStub[] = (info.contributes.tools ?? []).map((t) => ({
+    key: `${id}.${t.id}`,
+    pluginId: id,
+    pluginName: info.name,
+    id: t.id,
+    title: t.title,
+    icon: t.icon,
+    cursor: t.cursor ?? "crosshair",
+    command: `${id}.tool.${t.id}`,
+  }));
+  if (toolStubs.length > 0) {
+    registerToolStubs(rt, toolStubs, defs, handlers, disposers);
+  }
   disposers.push(registerCommands(defs));
   disposers.push(registerCommandHandlers(handlers));
   disposers.push(registerActivityEntries(entries));

@@ -47,6 +47,9 @@ const MAX_VIEWS = 8;
 const MAX_MENUS = 16;
 const MAX_TOOLBAR = 8;
 const MAX_ICON = 1000;
+const MAX_TOOLS = 8;
+const TOOL_KEYS = new Set(["id", "title", "icon", "cursor"]);
+const TOOL_CURSORS = ["crosshair", "default", "pointer", "grab", "text"];
 const TOOLBAR_KEYS = new Set(["command", "title", "icon", "priority"]);
 const MENU_KEYS = new Set(["surface", "command", "title", "kinds"]);
 const MENU_SURFACES = ["tree", "tab", "canvas"];
@@ -504,6 +507,56 @@ function checkToolbar(buttons, commands, err) {
 }
 
 /**
+ * @param {Record<string, any>[]} tools
+ * @param {(code: string, message: string) => void} err
+ */
+function checkTools(tools, err) {
+  const seen = new Set();
+  for (const x of tools) {
+    for (const k of Object.keys(x)) {
+      if (!TOOL_KEYS.has(k)) {
+        err("unknown-key", `Unknown key '${k}' in a tool`);
+      }
+    }
+    for (const k of ["id", "title"]) {
+      if (!(k in x)) {
+        err("missing-key", `A tool is missing '${k}'`);
+      }
+    }
+    if ("id" in x) {
+      if (typeof x.id !== "string" || !/^[A-Za-z][A-Za-z0-9_-]*$/.test(x.id)) {
+        err("contribution-id-invalid", `tool id ${show(x.id)} is invalid`);
+      } else if (seen.has(x.id)) {
+        err("contribution-duplicate", `Duplicate tool id ${show(x.id)}`);
+      }
+      seen.add(x.id);
+    }
+    if (
+      "title" in x &&
+      (typeof x.title !== "string" ||
+        x.title.trim() === "" ||
+        chars(x.title) > MAX_TITLE)
+    ) {
+      err("title-invalid", `tool title must be 1 to ${MAX_TITLE} characters`);
+    }
+    if (
+      "icon" in x &&
+      (typeof x.icon !== "string" ||
+        x.icon.length > MAX_ICON ||
+        !/^[A-Za-z0-9 .,+-]+$/.test(x.icon))
+    ) {
+      err("contribution-invalid", "tool icon must be SVG path data");
+    }
+    if ("cursor" in x && !TOOL_CURSORS.includes(x.cursor)) {
+      err(
+        "contribution-invalid",
+        `tool cursor must be one of ${TOOL_CURSORS.join(", ")}`,
+      );
+    }
+  }
+}
+
+/**
  * @param {Record<string, any>[]} views
  * @param {(code: string, message: string) => void} err
  */
@@ -596,11 +649,12 @@ function checkContributes(c, err) {
         "views",
         "menus",
         "toolbar",
+        "tools",
       ].includes(k)
     ) {
       err(
         "unknown-key",
-        `Unknown key 'contributes.${k}' (use commands, panels, settings, importers, status_bar, views, menus or toolbar)`,
+        `Unknown key 'contributes.${k}' (use commands, panels, settings, importers, status_bar, views, menus, toolbar or tools)`,
       );
     }
   }
@@ -627,6 +681,10 @@ function checkContributes(c, err) {
   const views = list("views");
   const menus = list("menus");
   const toolbar = list("toolbar");
+  const tools = list("tools");
+  if (tools.length > MAX_TOOLS) {
+    err("too-many", `Too many tools (max ${MAX_TOOLS})`);
+  }
   if (toolbar.length > MAX_TOOLBAR) {
     err("too-many", `Too many toolbar buttons (max ${MAX_TOOLBAR})`);
   }
@@ -718,6 +776,7 @@ function checkContributes(c, err) {
   checkViews(views, err);
   checkMenus(menus, commands, err);
   checkToolbar(toolbar, commands, err);
+  checkTools(tools, err);
   for (const s of settings) {
     const field = (k) => typeof s[k] === "string" && s[k] !== "";
     if (!field("key") || !field("type")) {

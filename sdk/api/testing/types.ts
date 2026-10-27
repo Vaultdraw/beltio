@@ -4,7 +4,9 @@ import type {
   ImporterContribution,
   MenuContribution,
   ToolbarContribution,
+  ToolContribution,
   MenuTarget,
+  ToolPoint,
   StatusBarContribution,
   ViewContribution,
   Json,
@@ -66,6 +68,7 @@ export interface TestManifest {
       id: string;
       extensions: string[];
     })[];
+    tools?: (Partial<ToolContribution> & { id: string; title?: string })[];
     toolbar?: (Partial<ToolbarContribution> & { command: string })[];
     status_bar?: (Partial<StatusBarContribution> & { id: string })[];
   };
@@ -219,6 +222,27 @@ export interface StatusBarShown {
   command: string | null;
 }
 
+/** Pointer events for one tool; each resolves when the handler is done. */
+export interface ToolDriver {
+  down(
+    x: number,
+    y: number,
+    mods?: Partial<Omit<ToolPoint, "x" | "y">>,
+  ): Promise<void>;
+  move(
+    x: number,
+    y: number,
+    mods?: Partial<Omit<ToolPoint, "x" | "y">>,
+  ): Promise<void>;
+  up(
+    x: number,
+    y: number,
+    mods?: Partial<Omit<ToolPoint, "x" | "y">>,
+  ): Promise<void>;
+  /** Cuts the gesture short, as choosing another tool does. */
+  cancel(): Promise<void>;
+}
+
 export interface TestPlugin {
   info: TestPluginInfo;
   /** Runs a command by short id (as the palette does); resolves when its handler is done. */
@@ -236,6 +260,8 @@ export interface TestPlugin {
     title: string,
     target?: Partial<Omit<MenuTarget, "surface">>,
   ): Promise<void>;
+  /** Drives a declared tool as a pointer would: loads the plugin, then calls its handlers (scene coordinates). */
+  tool(id: string): ToolDriver;
   /** The notes a view can read, by vault-relative path. */
   notes: {
     seed(path: string, text: string): void;

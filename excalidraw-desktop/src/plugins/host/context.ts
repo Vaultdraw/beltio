@@ -11,6 +11,7 @@ import { pluginSettingDecl } from "../settings/registry";
 import { cleanStatus } from "../../../../sdk/api/shared/statusBar";
 
 import { getMenuTarget } from "../menuRegistry";
+import { setToolHandlers } from "../toolRegistry";
 import { PluginApiError } from "../../../../sdk/api/shared/rules";
 import { claimsPath } from "../../../../sdk/api/shared/viewNames";
 import { checkVaultPath } from "../../../../sdk/api/shared/vaultPaths";
@@ -54,6 +55,7 @@ import type {
   TextApi,
   ThemeApi,
   MenusApi,
+  ToolsApi,
   VaultApi,
   ViewsApi,
   WorkspaceApi,
@@ -168,6 +170,7 @@ export function createPluginContext(
   let statusBarApi: StatusBarApi | undefined;
   let viewsApi: ViewsApi | undefined;
   let menusApi: MenusApi | undefined;
+  let toolsApi: ToolsApi | undefined;
 
   const settingValue = (key: string) => getPluginSetting(id, key);
 
@@ -321,6 +324,16 @@ export function createPluginContext(
         };
       }
       return statusBarApi;
+    },
+    get tools() {
+      return (toolsApi ??= {
+        register(toolId, h) {
+          if (!(info.contributes.tools ?? []).some((t) => t.id === toolId)) {
+            return refuse("tool", toolId);
+          }
+          return track(setToolHandlers(`${id}.${toolId}`, h));
+        },
+      });
     },
     get menus() {
       return (menusApi ??= { target: () => getMenuTarget(id) });

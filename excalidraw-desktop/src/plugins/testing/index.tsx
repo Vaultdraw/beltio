@@ -25,6 +25,8 @@ import { tabKindFor } from "../../tabs/tabKinds";
 import { TabKindView } from "../../tabs/TabKindView";
 import { isPanelOpen } from "../../slots/panelStore";
 import { getMenuItems, runMenuItem } from "../menuRegistry";
+import { getToolHandlers, getToolStub } from "../toolRegistry";
+import { ensureActive } from "../host/activation";
 import { getStatusItems } from "../host/statusBarRegistry";
 import { notifyAppearanceChanged } from "../../vault/appearance";
 import {
@@ -51,6 +53,7 @@ import type {
   Json,
   NewElement,
   MenuTarget,
+  ToolPoint,
   Plugin,
   StatusBarContribution,
   ThemeMode,
@@ -80,14 +83,27 @@ export type TestManifest = Partial<Omit<PluginInfo, "contributes">> & {
       surface: MenuDecl["surface"];
       command: string;
     })[];
+    tools?: (Partial<ToolDecl> & { id: string })[];
     toolbar?: (Partial<ToolbarDecl> & { command: string })[];
     views?: (Partial<ViewDecl> & { id: string; extensions: string[] })[];
     status_bar?: (Partial<StatusBarContribution> & { id: string })[];
   };
 };
 
+type ToolDecl = NonNullable<PluginInfo["contributes"]["tools"]>[number];
 type ToolbarDecl = NonNullable<PluginInfo["contributes"]["toolbar"]>[number];
 type ImporterDecl = NonNullable<PluginInfo["contributes"]["importers"]>[number];
+
+type Mods = Partial<Omit<ToolPoint, "x" | "y">>;
+
+/** Pointer events for one tool; each resolves when the handler is done. */
+export interface ToolDriver {
+  down(x: number, y: number, mods?: Mods): Promise<void>;
+  move(x: number, y: number, mods?: Mods): Promise<void>;
+  up(x: number, y: number, mods?: Mods): Promise<void>;
+  /** Cuts the gesture short, as choosing another tool does. */
+  cancel(): Promise<void>;
+}
 
 export interface FakeTheme {
   /**
@@ -188,6 +204,8 @@ export interface TestPlugin {
     title: string,
     target?: Partial<Omit<MenuTarget, "surface">>,
   ): Promise<void>;
+  /** Drives a declared tool as a pointer would: loads the plugin, then calls its handlers (scene coordinates). */
+  tool(id: string): ToolDriver;
   /** The notes a view can read, by vault-relative path. */
   notes: {
     seed(path: string, text: string): void;
@@ -263,6 +281,12 @@ const normalise = (m: TestManifest): PluginInfo => {
       settings: c.settings ?? [],
       importers: (c.importers ?? []).map((x) => ({ title: x.id, ...x })),
       menus: (c.menus ?? []).map((x) => ({ title: null, kinds: [], ...x })),
+      tools: (c.tools ?? []).map((x) => ({
+        title: x.id,
+        icon: null,
+        cursor: null,
+        ...x,
+      })),
       toolbar: (c.toolbar ?? []).map((x) => ({
         title: null,
         icon: null,
@@ -527,6 +551,35 @@ export async function boot(
     notes: {
       seed: (path, text) => noteFiles.setOnDisk(path, text),
       text: (path) => noteFiles.textOf(path),
+    },
+    tool(toolId) {
+      const key = `${id}.${toolId}`;
+      const drive =
+        (phase: "pointerDown" | "pointerMove" | "pointerUp") =>
+        async (x: number, y: number, mods: Mods = {}) => {
+          if (!getToolStub(key)) {
+            throw new Error(`no tool "${toolId}" is declared`);
+          }
+          await act(async () => {
+            await ensureActive(id);
+            await getToolHandlers(key)?.[phase]?.({
+              x,
+              y,
+              shiftKey: false,
+              altKey: false,
+              modKey: false,
+              ...mods,
+            });
+          });
+        };
+      return {
+        down: drive("pointerDown"),
+        move: drive("pointerMove"),
+        up: drive("pointerUp"),
+        async cancel() {
+          getToolHandlers(key)?.cancel?.();
+        },
+      };
     },
     async openView(path) {
       const kind = tabKindFor(path);

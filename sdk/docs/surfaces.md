@@ -8,9 +8,10 @@ Plugins can add small pieces of interface. Each is declared in `plugin.toml`, so
 | [View of a note type](#views) | `[[contributes.views]]` | `ctx.views.register` | 0.11.0 |
 | [Context menu item](#context-menus) | `[[contributes.menus]]` | `ctx.menus.target` | 0.12.0 |
 | [Toolbar button](#toolbar) | `[[contributes.toolbar]]` | none | 0.14.0 |
+| [Canvas tool](#canvas-tools) | `[[contributes.tools]]` | `ctx.tools.register` | 0.15.0 |
 | [Opening a panel or view](#layout) | none | `ctx.views.open` | 0.13.0 |
 
-## Migration (0.9.0 to 0.14.0)
+## Migration (0.9.0 to 0.15.0)
 
 Everything here is additive: a plugin written for 0.9.0 runs unchanged. To use a surface in a plugin that must also run on an older app, ask for the feature and fall back:
 
@@ -25,8 +26,9 @@ if (ctx.host.has("statusBar")) ctx.statusBar.set("clock", { text });
 | 0.12.0 | context menu items | `ctx.host.has("menus")` |
 | 0.13.0 | `ctx.views.open` | `ctx.host.has("views.open")` |
 | 0.14.0 | toolbar buttons | `min_app` only (manifest table, no runtime call) |
+| 0.15.0 | canvas tools | `ctx.host.has("tools")` |
 
-An older app refuses a `plugin.toml` with a table it does not know (`status_bar`, `views`, `menus`, `toolbar`), so set `min_app` to the app version that ships the revision you use; `vaultdraw-plugin check` warns when it is lower.
+An older app refuses a `plugin.toml` with a table it does not know (`status_bar`, `views`, `menus`, `toolbar`, `tools`), so set `min_app` to the app version that ships the revision you use; `vaultdraw-plugin check` warns when it is lower.
 
 ## Status bar
 
@@ -167,3 +169,31 @@ priority = 0                    # higher first
 - **User control.** `plugins.toolbar = false` hides the strip; the palette command `Toggle plugin toolbar` does the same.
 
 Example: [`sdk/examples/toolbar-demo`](../examples/toolbar-demo/plugin.toml).
+
+## Canvas tools
+
+A plugin adds a tool that gets the pointer on the canvas. Each tool has a toolbar button (pressed while the tool is chosen) and a palette command, `Tool: <title>`, which can be given a key and toggles the tool.
+
+```toml
+[[contributes.tools]]
+id = "box"
+title = "Box"
+icon = "M5 5h14v14H5z"     # SVG path data, as for toolbar buttons
+cursor = "crosshair"       # crosshair (default), default, pointer, grab or text
+```
+
+```js
+ctx.tools.register("box", {
+  pointerDown(p) { /* p.x, p.y in scene coordinates; p.shiftKey, p.altKey, p.modKey */ },
+  pointerMove(p) { /* while the pointer is down, at most once per frame */ },
+  async pointerUp(p) { await ctx.scene.batch([ /* ops */ ]); },
+  cancel() { /* another tool was chosen, or the plugin was turned off */ },
+});
+```
+
+- **Zero cost.** Nothing is attached until a plugin tool is first chosen; the plugin loads then. Move and release listeners exist only while the pointer is down.
+- **One use.** Like Excalidraw's own tools, a plugin tool goes back to selecting after one gesture unless the tool lock is on.
+- **Drawing.** Draw with `ctx.scene.batch` (one undo step). A tool is refused in a read-only drawing.
+- **Limits.** At most 8 tools per plugin. Tools use Excalidraw's built-in custom tool, so nothing changes in the editor package.
+
+Example: [`sdk/examples/tool-demo`](../examples/tool-demo/plugin.toml). In tests, `plugin.tool("box")` returns `down`, `move`, `up` and `cancel`.

@@ -155,6 +155,22 @@ export interface ToolbarContribution {
 }
 
 /**
+ * A canvas tool declared in plugin.toml (`[[contributes.tools]]`).
+ *
+ * @since 0.15.0
+ */
+export interface ToolContribution {
+  /** @since 0.15.0 */
+  id: string;
+  /** @since 0.15.0 */
+  title: string;
+  /** SVG path data on a 24 by 24 grid, or null for the first letter of the title. @since 0.15.0 */
+  icon: string | null;
+  /** The pointer while the tool is active; null is `crosshair`. @since 0.15.0 */
+  cursor: "crosshair" | "default" | "pointer" | "grab" | "text" | null;
+}
+
+/**
  * Everything a plugin declares it adds to the app.
  *
  * @since 0.1.0
@@ -196,4 +212,10 @@ export interface PluginContributions {
    * @since 0.14.0
    */
   toolbar?: ToolbarContribution[];
+  /**
+   * Absent when the app that reads the manifest is older than 0.15.0.
+   *
+   * @since 0.15.0
+   */
+  tools?: ToolContribution[];
 }

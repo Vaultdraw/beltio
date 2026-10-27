@@ -154,6 +154,13 @@
           "type": "array",
           "maxItems": 8,
           "items": { "$ref": "#/definitions/toolbarButton" }
+        },
+        "tools": {
+          "title": "Canvas tools",
+          "description": "Tools the plugin adds, written as [[contributes.tools]]. At most 8. Each gets a palette command and a toolbar button; the plugin receives the pointer while its tool is active (ctx.tools.register).",
+          "type": "array",
+          "maxItems": 8,
+          "items": { "$ref": "#/definitions/tool" }
         }
       },
       "additionalProperties": false
@@ -178,6 +185,43 @@
     }
   },
   "definitions": {
+    "tool": {
+      "title": "Canvas tool",
+      "description": "A tool that receives the pointer on the canvas while it is active.",
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": {
+          "title": "Tool id",
+          "description": "Short id, unique among the plugin's tools. Pass it to ctx.tools.register.",
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+        },
+        "title": {
+          "title": "Tool title",
+          "description": "The name in the toolbar tooltip and the palette command. 1 to 200 characters, not blank.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "\\S"
+        },
+        "icon": {
+          "title": "Tool icon",
+          "description": "SVG path data (the d attribute) on a 24 by 24 grid: letters, digits, spaces and . , + - only, 1 to 1000 characters. Default: the first letter of the title.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "pattern": "^[A-Za-z0-9 .,+-]+$"
+        },
+        "cursor": {
+          "title": "Tool cursor",
+          "description": "The pointer shown over the canvas while the tool is active. Default: crosshair.",
+          "type": "string",
+          "enum": ["crosshair", "default", "pointer", "grab", "text"]
+        }
+      },
+      "additionalProperties": false
+    },
     "toolbarButton": {
       "title": "Toolbar button",
       "description": "A button that runs a command. A command has at most one button.",

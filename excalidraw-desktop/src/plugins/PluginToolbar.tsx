@@ -3,6 +3,7 @@ import { useSyncExternalStore } from "react";
 
 import { getPreferences, subscribePreferences } from "../vault/preferences";
 
+import { getActiveToolKey, subscribeActiveTool } from "./toolRegistry";
 import {
   getToolbarButtons,
   runToolbarButton,
@@ -20,6 +21,10 @@ export function PluginToolbar({ win }: { win: Window }) {
     subscribeToolbarButtons,
     getToolbarButtons,
   );
+  const activeTool = useSyncExternalStore(
+    subscribeActiveTool,
+    getActiveToolKey,
+  );
   if (!enabled || buttons.length === 0) {
     return null;
   }
@@ -36,6 +41,7 @@ export function PluginToolbar({ win }: { win: Window }) {
           type="button"
           className="plugin-toolbar__button"
           aria-label={b.title}
+          aria-pressed={b.toolKey ? b.toolKey === activeTool : undefined}
           title={`${b.title} (${b.pluginName})`}
           data-testid={`plugin-toolbar-${b.command}`}
           onClick={() => runToolbarButton(b)}

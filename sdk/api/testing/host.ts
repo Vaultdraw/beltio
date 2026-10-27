@@ -64,6 +64,7 @@ import type {
   Json,
   MarkdownParseOptions,
   MenuTarget,
+  ToolHandlers,
   Plugin,
   ViewProps,
   PluginContext,
@@ -90,6 +91,7 @@ import type {
   PluginLogLine,
   StatusBarShown,
   TestPluginInfo,
+  ToolDriver,
 } from "./types";
 
 const NOOP: Disposable = { dispose() {} };
@@ -146,6 +148,8 @@ export interface MockHost {
     surface: MenuTarget["surface"],
     kind?: "drawing" | "note" | "folder",
   ): { title: string; command: string }[];
+  /** Drives a declared tool as a pointer would: loads the plugin, then calls its handlers (scene coordinates). */
+  tool(id: string): ToolDriver;
   /** Chooses a menu item by its text, as the user would; `target` is what `ctx.menus.target()` returns. */
   chooseMenuItem(
     surface: MenuTarget["surface"],
@@ -288,6 +292,10 @@ export function createMockHost(
   );
   const viewNotes = createViewNotes();
   const opened_views: { path: string; newTab: boolean }[] = [];
+  const declaredTools = new Set(
+    (info.contributes.tools ?? []).map((t) => t.id),
+  );
+  const toolHandlers = new Map<string, ToolHandlers>();
   const menuItems = (info.contributes.menus ?? []).map((m) => ({
     ...m,
     title:
@@ -512,6 +520,7 @@ export function createMockHost(
     let importersApi: ImportersApi | undefined;
     let statusBarApi: PluginContext["statusBar"] | undefined;
     let viewsApi: PluginContext["views"] | undefined;
+    let toolsApi: PluginContext["tools"] | undefined;
     let menusApi: PluginContext["menus"] | undefined;
     let pagesApi: PluginContext["pages"] | undefined;
     let foldersApi: PluginContext["folders"] | undefined;
@@ -692,6 +701,21 @@ export function createMockHost(
             return track(() => {
               if (importerImpls.get(importerId) === importer) {
                 importerImpls.delete(importerId);
+              }
+            });
+          },
+        });
+      },
+      get tools() {
+        return (toolsApi ??= {
+          register(toolId, handlers) {
+            if (!declaredTools.has(toolId)) {
+              return refuse("tool", toolId);
+            }
+            toolHandlers.set(toolId, handlers);
+            return track(() => {
+              if (toolHandlers.get(toolId) === handlers) {
+                toolHandlers.delete(toolId);
               }
             });
           },
@@ -1202,6 +1226,37 @@ export function createMockHost(
         view ??= mount(deps);
       });
       return view!;
+    },
+    tool(toolId) {
+      const drive =
+        (phase: "pointerDown" | "pointerMove" | "pointerUp") =>
+        async (x: number, y: number, mods = {}) => {
+          if (!declaredTools.has(toolId)) {
+            throw new Error(`no tool "${toolId}" is declared`);
+          }
+          if (!(await ensureActive())) {
+            return;
+          }
+          const point = {
+            x,
+            y,
+            shiftKey: false,
+            altKey: false,
+            modKey: false,
+            ...mods,
+          };
+          await act(async () => {
+            await toolHandlers.get(toolId)?.[phase]?.(point);
+          });
+        };
+      return {
+        down: drive("pointerDown"),
+        move: drive("pointerMove"),
+        up: drive("pointerUp"),
+        async cancel() {
+          toolHandlers.get(toolId)?.cancel?.();
+        },
+      };
     },
     menuItems: (surface, kind) =>
       menuItems
