@@ -49,6 +49,7 @@ fn scan_dir(root: &Path, dir: &str, depth: usize, dirs: &mut Vec<(String, usize)
         // A name that is not valid UTF-8 reaches us with U+FFFD in it and could not be opened
         // again by that name: skip it, as the per-entry path does.
         !name.contains('\u{FFFD}')
+            && !crate::filekind::is_hidden_name(name)
             && !name.starts_with(".excalidraw-tmp-")
             && !(dir.is_empty() && name.eq_ignore_ascii_case(META_DIR))
             && if is_dir { depth < MAX_DEPTH && !is_skipped_dir(name) } else { is_indexed_name(name) }

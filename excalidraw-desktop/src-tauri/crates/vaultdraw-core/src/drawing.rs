@@ -52,10 +52,11 @@ pub fn list_directory_in(v: &Vault, path: &str) -> Result<Vec<VaultEntry>> {
                 rel.push('/');
             }
             rel.push_str(&e.name);
+            let kind = if e.is_dir { "folder" } else { crate::filekind::file_kind(&e.name).as_str() };
             VaultEntry {
                 path: rel,
                 name: e.name,
-                kind: if e.is_dir { "folder" } else { crate::filekind::file_kind(&e.name).as_str() }.into(),
+                kind: kind.into(),
                 modified_at: e.modified_ms,
                 size: e.size,
             }

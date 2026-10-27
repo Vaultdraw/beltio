@@ -295,6 +295,7 @@ fn list_directory_filters_sorts_and_reports_sizes() {
             ("folder", "Sub"),
             ("drawing", "A.EXCALIDRAW"),
             ("drawing", "b.excalidraw"),
+            ("note", "readme.md"),
             ("drawing", "Zoë ✏️ notes.excalidraw"),
         ]
     );
