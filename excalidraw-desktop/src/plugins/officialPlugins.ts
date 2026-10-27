@@ -36,6 +36,8 @@ export interface OfficialActivity {
   icon: "gallery" | "graph";
   /** Short command id. */
   command: string;
+  /** The built-in entry it sits behind by default. */
+  after?: string;
 }
 
 export interface OfficialImporter {
@@ -118,6 +120,7 @@ export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
       label: "Gallery",
       icon: "gallery",
       command: "toggle",
+      after: "graph",
     },
   },
 ];

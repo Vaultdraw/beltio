@@ -39,10 +39,25 @@ export function registerActivityEntries(
   return () => disposers.forEach((d) => d());
 }
 
+/** Moves each entry that names an `after` id to just behind it (kept at the end when that id is absent). */
+export function placeAfter(
+  list: readonly ActivityEntry[],
+): readonly ActivityEntry[] {
+  if (!list.some((e) => e.after)) {
+    return list;
+  }
+  const out = list.filter((e) => !e.after);
+  for (const e of list.filter((x) => x.after)) {
+    const at = out.findIndex((x) => x.id === e.after);
+    out.splice(at < 0 ? out.length : at + 1, 0, e);
+  }
+  return out;
+}
+
 export function useActivityEntries(): readonly ActivityEntry[] {
   const top = useSlot(activityBarRegistry, "activityBar.top");
   const bottom = useSlot(activityBarRegistry, "activityBar.bottom");
-  return useMemo(() => [...top, ...bottom], [top, bottom]);
+  return useMemo(() => placeAfter([...top, ...bottom]), [top, bottom]);
 }
 
 /** The rail shows when it is on and some entry is not hidden by the user. */

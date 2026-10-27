@@ -150,6 +150,7 @@ function syncOfficialActivity(win: Window): void {
           icon: ACTIVITY_ICONS[p.activity!.icon],
           commandId: `${p.id}.${p.activity!.command}`,
           group: "top" as const,
+          ...(p.activity!.after ? { after: p.activity!.after } : {}),
           active: {
             subscribe: subscribeOverlay,
             get: () => getOverlay()?.pluginId === p.id,

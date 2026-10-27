@@ -1,0 +1,54 @@
+// No ?plugins: the app's default official plugin (the gallery) is listed by the fake backend so
+// its stubs work. Kept apart from pluginHarness.ts, whose imports would load the plugin host.
+// @ts-expect-error the CLI is plain .mjs
+import { parseToml } from "../../sdk/cli/src/toml.mjs";
+import galleryToml from "../../plugins/official/gallery/plugin.toml?raw";
+import { setPluginsBackend } from "../src/plugins/host/backend";
+import {
+  createFakeBackend,
+  makePluginInfo,
+} from "../src/plugins/host/fakeBackend";
+
+/**
+ * No ?plugins: the app's default official plugins (the gallery) can be listed by the fake backend,
+ * so their stubs work. Nothing starts until one is used (the host loads on first use).
+ */
+export async function installDefaultBackend(win: Window): Promise<void> {
+  const { bootPlugins } = await import("../src/plugins/boot");
+  // The manifest is bundled into the harness: listing it fetches nothing.
+  const doc = parseToml(galleryToml);
+  const infos = [
+    makePluginInfo("gallery", {
+      name: doc.name,
+      version: doc.version,
+      source: "bundled",
+      contributes: {
+        commands: doc.contributes.commands.map((x: any) => ({
+          id: x.id,
+          title: x.title,
+          keys: x.keys ?? [],
+          when: x.when ?? [],
+          palette: x.palette ?? true,
+          repeat: x.repeat ?? false,
+        })),
+        panels: [],
+        menus: doc.contributes.menus.map((x: any) => ({
+          surface: x.surface,
+          command: x.command,
+          title: x.title ?? null,
+          kinds: x.kinds ?? [],
+        })),
+        settings: [],
+      },
+    }),
+  ];
+  setPluginsBackend(
+    createFakeBackend(
+      infos,
+      (id, path) => `/e2e-plugins/${id}/${path}`,
+      (path, scene) =>
+        (win as any).__vaultRepo?.seedDrawing(path, JSON.stringify(scene)),
+    ),
+  );
+  bootPlugins(win); // the stubs, as main.tsx does in the app
+}

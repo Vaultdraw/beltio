@@ -41,6 +41,8 @@ export interface ActivityEntry {
   /** Run through the command dispatcher, like the palette. */
   commandId: string;
   group: ActivityGroup;
+  /** Sit right after the entry with this id (a plugin keeps the place a built-in had); else registration order. */
+  after?: string;
   /** The panel this opens is showing: the button is pressed. */
   active?: ActiveStore;
   /**

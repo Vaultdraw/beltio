@@ -93,6 +93,12 @@ export const ExtensionsPage = () => {
   const bisect = useSyncExternalStore(subscribeBisect, getBisect);
   const [history, setHistory] = useGlobalPref(win, "historyEnabled");
   const [thumbnails, setThumbnails] = useGlobalPref(win, "thumbnails");
+  // Official plugins are switched through the plugin list (`plugins.enabled`).
+  const [enabledPlugins, setEnabledPlugins] = useGlobalPref(
+    win,
+    "pluginsEnabled",
+  );
+  const galleryOn = enabledPlugins.includes("gallery");
   const indexNeededBy = BUILTIN_EXTENSIONS.filter(
     (e) =>
       ["search", "tags", "links", "graph"].includes(e.id) &&
@@ -153,6 +159,24 @@ export const ExtensionsPage = () => {
         />
       </Group>
       <Group label="Optional">
+        <Row
+          id="gallery"
+          title="Gallery"
+          description="A grid of drawing thumbnails for a folder (Mod+Alt+E). Loads only when opened."
+          note={
+            !galleryOn
+              ? "Off: no Gallery button, commands or code."
+              : undefined
+          }
+          checked={galleryOn}
+          onChange={(on) =>
+            setEnabledPlugins(
+              on
+                ? [...enabledPlugins.filter((x) => x !== "gallery"), "gallery"]
+                : enabledPlugins.filter((x) => x !== "gallery"),
+            )
+          }
+        />
         {BUILTIN_EXTENSIONS.filter((e) => e.kind === "official").map((e) => (
           <ExtensionRow key={e.id} ext={e} />
         ))}
