@@ -41,6 +41,7 @@ type Options = {
 export function useEditorPalette(options: Options): void {
   const live = useRef(options);
   live.current = options;
+  const hasLibrary = options.libraryStore !== null;
 
   useEffect(() => {
     const platform = detectPlatform();
@@ -74,6 +75,21 @@ export function useEditorPalette(options: Options): void {
     const unbind = registerCommandHandlers({
       ...paper,
       "paper.settings": () => live.current.openPaperSettings(),
+      // Only with a persisted library: off (`extensions.library`) = not
+      // offered. Bound in this one layer so editor open notifies once.
+      ...(hasLibrary
+        ? {
+            "library.toggle": () => {
+              // The sidebar opens on its library tab, so a tab-less toggle
+              // would never match the open state and could not close it: force.
+              const current = live.current.apiRef.current;
+              current?.toggleSidebar({
+                ...DEFAULT_SIDEBAR,
+                force: !current.getAppState().openSidebar,
+              });
+            },
+          }
+        : {}),
     });
     const unEditor = registerPaletteProvider(
       createEditorProvider(api, {
@@ -127,24 +143,5 @@ export function useEditorPalette(options: Options): void {
       unPens();
       unLibrary();
     };
-  }, []);
-
-  // Only with a persisted library: off (`extensions.library`) = not offered.
-  const hasLibrary = options.libraryStore !== null;
-  useEffect(() => {
-    if (!hasLibrary) {
-      return undefined;
-    }
-    return registerCommandHandlers({
-      "library.toggle": () => {
-        // The sidebar opens on its library tab, so a tab-less toggle would
-        // never match the open state and could not close it: force instead.
-        const current = live.current.apiRef.current;
-        current?.toggleSidebar({
-          ...DEFAULT_SIDEBAR,
-          force: !current.getAppState().openSidebar,
-        });
-      },
-    });
   }, [hasLibrary]);
 }
