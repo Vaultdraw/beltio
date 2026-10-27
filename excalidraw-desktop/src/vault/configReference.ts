@@ -329,7 +329,7 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
         doc: "Most matching elements shown under each drawing; the index keeps 5 per drawing, so 5 is the top.",
       },
       notes: {
-        doc: "Search the Markdown notes (`.md`) of the vault, with their `#tags`, links and headings. Read when the index starts (reopen the vault).",
+        doc: "Search the Markdown notes (`.md`) of the vault, with their `#tags`, links and headings. Off until notes can be opened from the results. Read when the index starts (reopen the vault).",
       },
       note_text_mb: {
         doc: "Megabytes of note text the index keeps in memory (48 holds about 20,000 notes). Past it a note keeps its name, headings, tags and links. Read when the index starts; 0 keeps only those.",

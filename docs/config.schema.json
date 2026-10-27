@@ -1269,8 +1269,8 @@
           "maximum": 5
         },
         "notes": {
-          "description": "Search the Markdown notes (`.md`) of the vault, with their `#tags`, links and headings. Read when the index starts (reopen the vault).",
-          "default": true,
+          "description": "Search the Markdown notes (`.md`) of the vault, with their `#tags`, links and headings. Off until notes can be opened from the results. Read when the index starts (reopen the vault).",
+          "default": false,
           "type": "boolean"
         },
         "note_text_mb": {

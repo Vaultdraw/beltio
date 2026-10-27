@@ -904,6 +904,12 @@ Matching rules:
 
 The index is stored outside the vault, in the state folder (`~/.local/state/vaultdraw/index/` by default; `VAULTDRAW_STATE_DIR` changes the folder). Nothing is written into your vault. The index is rebuilt automatically when it is missing or damaged, and it is safe to delete. When a large vault is indexed for the first time, the status line shows progress, such as "Indexing 1,234 of 5,000 drawings…", and results cover only the drawings indexed so far. The index starts according to `search.start` (default: once the app is idle); see [Startup](#startup).
 
+### Markdown notes in search
+
+With `search.notes = true`, search also reads the Markdown notes (`.md`) of the vault: their lines (code blocks included), `#tags`, frontmatter `tags:`, headings and links. Tags inside code blocks and inline code are not tags. The folders `.obsidian`, `.trash` and `.git` are skipped, and so are `.excalidraw.md` files. A note's name is searched without `.md`.
+
+Note text is kept in memory for speed: 20,000 notes of about 2.5 KB use about 120 MB and answer a search in about 10 ms (measured 2026-10-27). `search.note_text_mb` (default 48) caps it; past the cap the newest notes keep their full text and older ones keep their name, headings, tags and links. `search.notes = true` turns it on (it is off until notes can be opened from the search results). Both are read when the index starts, so reopen the vault after changing them.
+
 ## Links and backlinks
 
 Link drawings to each other, as in a wiki. A link is plain text in the drawing, so it stays readable in any editor, and the drawing keeps working when you copy it elsewhere.
@@ -922,6 +928,22 @@ Typing `[[` in a text element opens a list of drawings that narrows as you type:
 | Esc                     | Close the list   |
 
 The last row, **Create 'x'**, makes a new drawing in the default folder for new drawings. Cmd+clicking an unresolved link offers the same. Set `links.autocomplete = false` to turn the list off.
+
+
+### Links in Markdown notes
+
+A link resolves by the kind of file it is written in, and a written extension always wins.
+
+| Written in | Link | Opens |
+| --- | --- | --- |
+| a note | `[[X]]`, `[[X\|alias]]`, `[[X#Heading]]`, `[[X#^block]]` | the note `X.md` |
+| a note | `[[X.excalidraw]]` | the drawing `X.excalidraw` |
+| a note | `![[image.png]]`, `[[paper.pdf]]` | that file, found by path, then folder, then name |
+| a note | `[text](Folder/X.md)`, `[text](../X.md)` | the note, relative to the note's folder |
+| a drawing | `[[X]]` | the drawing `X.excalidraw`, as before |
+| a drawing | `[[X.md]]` | the note `X.md` |
+
+When several files share a name, the one in the link's own folder wins for attachments and the shortest path wins for notes; a folder in the link (`[[Folder/X]]`) narrows it. Matching ignores case and accents. Links inside code blocks and inline code are not links. Renaming or moving a note or a drawing rewrites the links in notes that point at it, the same as for drawings; each note is replaced through a guarded write that keeps a copy of the previous text in `.excalidraw-vault/note-history` (the last 20 per note) and refuses to overwrite a note that changed elsewhere meanwhile. A tag rename does not edit notes.
 
 ### How links look
 
@@ -1201,7 +1223,7 @@ Keys for people who tune speed against detail. Defaults are what the app always 
 | `search.debounce_ms` | `60` | Wait after the last keystroke before a search runs, 0 to 2000. |
 | `search.max_drawings` | `50` | Drawings listed in results, 1 to 200. |
 | `search.max_snippets` | `5` | Matching elements shown per drawing, 1 to 5 (the index keeps 5). |
-| `search.notes` | `true` | Index the Markdown notes (`.md`) of the vault: their text, `#tags`, frontmatter tags, links and headings. Read when the index starts, so reopen the vault after changing it. A vault with no notes pays nothing either way. |
+| `search.notes` | `false` | Index the Markdown notes (`.md`) of the vault: their text, `#tags`, frontmatter tags, links and headings. Off until notes can be opened from the results (a result for a note cannot open yet). Read when the index starts, so reopen the vault after changing it. |
 | `search.note_text_mb` | `48` | Megabytes of note text the index keeps in memory, 0 to 4096; 48 holds about 20,000 notes. Past it a note keeps its name, headings, tags and links, and the newest notes keep their full text. Read when the index starts. |
 | `interface.thumbnail_cache_mb` | `128` | Disk cap of a vault's thumbnail cache, 8 to 8192. Applies at the next thumbnail saved. |
 
@@ -1539,7 +1561,7 @@ Search speed trade-offs. Lower counts and a longer wait cost less on a slow mach
 | `debounce_ms` | `60` | a whole number from 0 to 2000 (milliseconds) |  | Wait this long after the last keystroke before a search runs. |
 | `max_drawings` | `50` | a whole number from 1 to 200 |  | Most drawings listed in the search results. |
 | `max_snippets` | `5` | a whole number from 1 to 5 |  | Most matching elements shown under each drawing; the index keeps 5 per drawing, so 5 is the top. |
-| `notes` | `true` | true or false |  | Search the Markdown notes (`.md`) of the vault, with their `#tags`, links and headings. Read when the index starts (reopen the vault). |
+| `notes` | `false` | true or false |  | Search the Markdown notes (`.md`) of the vault, with their `#tags`, links and headings. Off until notes can be opened from the results. Read when the index starts (reopen the vault). |
 | `note_text_mb` | `48` | a whole number from 0 to 4096 |  | Megabytes of note text the index keeps in memory (48 holds about 20,000 notes). Past it a note keeps its name, headings, tags and links. Read when the index starts; 0 keeps only those. |
 | `start` | `"idle"` | "open", "idle" or "use" |  | When the search index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first search). Tags show once it has started. See [Startup](#startup). |
 
