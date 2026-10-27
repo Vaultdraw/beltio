@@ -14,6 +14,10 @@ pub enum ItemKind {
     Frame,
     /// An image element carrying `customData.latex.source` (a LaTeX formula).
     Formula,
+    /// One line of a Markdown note (searched, never read for tags or links: the parser did that).
+    Note,
+    /// One line inside a fenced or indented code block of a note (searched only).
+    Code,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

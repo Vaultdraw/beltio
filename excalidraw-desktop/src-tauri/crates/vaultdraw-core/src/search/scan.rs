@@ -30,6 +30,17 @@ pub fn is_drawing_name(name: &str) -> bool {
     name.len() > 11 && name.get(name.len() - 11..).is_some_and(|e| e.eq_ignore_ascii_case(".excalidraw"))
 }
 
+/// Files the index reads: drawings and Markdown notes.
+pub fn is_indexed_name(name: &str) -> bool {
+    is_drawing_name(name) || super::notes::is_note_name(name)
+}
+
+/// Folders of other tools that hold notes which are not the user's: Obsidian's settings and
+/// trash, git's objects.
+pub fn is_skipped_dir(name: &str) -> bool {
+    matches!(name, ".obsidian" | ".trash" | ".git")
+}
+
 /// Lists one folder: its drawings go to `files`, its subfolders (with their depth) to `dirs`.
 /// One bulk directory read supplies names, types, sizes and times (`fsbulk`: on macOS no
 /// `stat` per file). If that read fails part way (an entry removed between the listing and
@@ -42,7 +53,7 @@ fn scan_dir(root: &Path, dir: &str, depth: usize, dirs: &mut Vec<(String, usize)
         !name.contains('\u{FFFD}')
             && !name.starts_with(".excalidraw-tmp-")
             && !(dir.is_empty() && name.eq_ignore_ascii_case(META_DIR))
-            && if is_dir { depth < MAX_DEPTH } else { is_drawing_name(name) }
+            && if is_dir { depth < MAX_DEPTH && !is_skipped_dir(name) } else { is_indexed_name(name) }
     };
     let Ok(raw) = read_dir_entries(&root.join(dir), &mut accept) else {
         return scan_dir_each(root, dir, depth, dirs, files);
@@ -71,10 +82,10 @@ fn scan_dir_each(root: &Path, dir: &str, depth: usize, dirs: &mut Vec<(String, u
         }
         let child = if dir.is_empty() { name.clone() } else { format!("{dir}/{name}") };
         if ft.is_dir() {
-            if depth < MAX_DEPTH && validate_relative(&child).is_ok() {
+            if depth < MAX_DEPTH && !is_skipped_dir(&name) && validate_relative(&child).is_ok() {
                 dirs.push((child, depth + 1));
             }
-        } else if ft.is_file() && is_drawing_name(&name) && validate_relative(&child).is_ok() {
+        } else if ft.is_file() && is_indexed_name(&name) && validate_relative(&child).is_ok() {
             if let Ok(md) = entry.metadata() {
                 files.push(Found { path: child, size: md.len(), mtime: md.modified().map(now_ms).unwrap_or(0) });
             }
@@ -236,7 +247,28 @@ fn read_entry_from(file: &mut fs::File, rel: &str, stat: (u64, u64), buf: &mut V
 }
 
 pub fn parse(root: &Path, f: &Found, buf: &mut Vec<u8>) -> Option<(String, DocEntry)> {
+    if super::notes::is_note_name(&f.path) {
+        return finish(f, read_note_entry(&mut fs::File::open(root.join(&f.path)).map_err(ioerr).ok()?, f, buf));
+    }
     finish(f, read_entry(&root.join(&f.path), &f.path, f.stat(), buf))
+}
+
+/// Largest note the index reads (the parser's own cap); a bigger one stays findable by name.
+const MAX_NOTE_INDEX_BYTES: u64 = crate::markdown::MAX_MARKDOWN_BYTES;
+
+/// Reads a whole note and builds its entry. The stat is the one the walk saw.
+fn read_note_entry(file: &mut fs::File, f: &Found, buf: &mut Vec<u8>) -> Result<DocEntry> {
+    let md = file.metadata().map_err(ioerr)?;
+    if !md.is_file() || md.len() > MAX_NOTE_INDEX_BYTES {
+        return Err(err("INVALID_FILE", "Not a readable note"));
+    }
+    buf.clear();
+    file.take(MAX_NOTE_INDEX_BYTES + 1).read_to_end(buf).map_err(ioerr)?;
+    let r = Ok(super::notes::note_entry_from_bytes(&f.path, f.stat(), buf));
+    if buf.capacity() > KEEP_BUF {
+        *buf = Vec::new();
+    }
+    r
 }
 
 fn finish(f: &Found, r: Result<DocEntry>) -> Option<(String, DocEntry)> {
@@ -270,6 +302,7 @@ pub fn parse_in(root: &Path, f: &Found, buf: &mut Vec<u8>, dir: &mut DirHandle) 
         }
         if let Some((_, d)) = &dir.open {
             return match open_at(d, name) {
+                Ok(mut file) if super::notes::is_note_name(name) => finish(f, read_note_entry(&mut file, f, buf)),
                 Ok(mut file) => finish(f, read_entry_open(&mut file, &f.path, f.stat(), buf)),
                 Err(e) => finish(f, Err(ioerr(e))),
             };

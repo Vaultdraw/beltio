@@ -11,7 +11,7 @@
 //! and then maintained by `search::Index::{upsert, remove, retain}`.
 
 use super::grammar::{parse_link_field, text_links, FieldForm};
-use super::resolve::{base_of, dir_of, key_of_path, key_of_rel, key_of_target};
+use super::resolve::{base_of, dir_of, is_note_path, key_of_note_target, key_of_path, key_of_rel, key_of_target, note_link_target};
 use super::types::LinkKind;
 use crate::search::{DocEntry, ItemKind};
 use std::{
@@ -66,6 +66,15 @@ pub struct RawLink<'a> {
 /// Every drawing link of `doc` (text links first, in item order; then link fields).
 pub fn raw_links<'a>(path: &str, doc: &'a DocEntry) -> Vec<RawLink<'a>> {
     let mut out = Vec::new();
+    if is_note_path(path) {
+        let dir = dir_of(path);
+        for e in &doc.elinks {
+            let Some(t) = note_link_target(&e.link) else { continue };
+            let (key, rel) = key_of_note_target(dir, t);
+            out.push(RawLink { elem: &e.element_id, kind: LinkKind::Shape, rel, key });
+        }
+        return out;
+    }
     for item in doc.items.iter().filter(|i| i.kind == ItemKind::Text) {
         text_links(&item.text, |l| out.push(RawLink { elem: &item.element_id, kind: LinkKind::Text, rel: false, key: key_of_target(l.target) }));
     }

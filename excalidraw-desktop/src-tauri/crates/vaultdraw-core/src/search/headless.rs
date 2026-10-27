@@ -63,7 +63,11 @@ pub fn parse_parallel(root: &Path, pending: &[&Found]) -> Vec<(String, DocEntry)
             }
         });
     }
-    out.into_inner().unwrap_or_else(|p| p.into_inner())
+    let mut all = out.into_inner().unwrap_or_else(|p| p.into_inner());
+    // Newest first, so when the note text budget runs out it is the oldest notes that keep only
+    // their headings, tags and links.
+    all.sort_by(|a, b| b.1.stat.1.cmp(&a.1.stat.1));
+    all
 }
 
 /// The index of the vault at `root` (a canonical vault path), using `snapshot_path` as the cache.

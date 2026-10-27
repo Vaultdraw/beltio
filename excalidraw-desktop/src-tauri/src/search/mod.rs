@@ -20,7 +20,7 @@ pub(crate) use vaultdraw_core::search::{find_tags, key_under, tag_key};
 // Shared with file history (one vault-id derivation, one walker, one QoS helper).
 pub(crate) use vaultdraw_core::search::vault_id;
 #[allow(unused_imports)] // `walk` is used by file-history relink (H3)
-pub(crate) use vaultdraw_core::search::{is_drawing_name, walk};
+pub(crate) use vaultdraw_core::search::{is_drawing_name, is_indexed_name, walk};
 pub(crate) use worker::lower_priority;
 #[allow(unused_imports)]
 pub(crate) use vaultdraw_core::search::{normalize, NORMALIZER_VERSION};

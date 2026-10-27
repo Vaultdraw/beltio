@@ -1,6 +1,6 @@
 //! In-memory vault index: normalised text per drawing + linear substring scan.
 
-use super::extract::{ElementLink, TextItem};
+use super::extract::{ElementLink, ItemKind, TextItem};
 use super::packed::{ItemRef, PackedItems};
 use crate::links::LinkIndex;
 use super::normalize::{fold_with_map, normalize, Folded};
@@ -19,6 +19,7 @@ const MAX_MATCHES: usize = 5;
 const SNIPPET_CHARS: usize = 120;
 const SNIPPET_LEAD: usize = 40;
 const DRAWING_EXT: &str = ".excalidraw";
+const NOTE_EXT: &str = ".md";
 
 fn split_path(path: &str) -> (&str, &str) {
     match path.rfind('/') {
@@ -28,11 +29,21 @@ fn split_path(path: &str) -> (&str, &str) {
 }
 
 fn file_stem(name: &str) -> &str {
-    let cut = name.len().saturating_sub(DRAWING_EXT.len());
-    match name.get(cut..) {
-        Some(ext) if ext.eq_ignore_ascii_case(DRAWING_EXT) => &name[..cut],
-        _ => name,
+    for ext in [DRAWING_EXT, NOTE_EXT] {
+        let cut = name.len().saturating_sub(ext.len());
+        if let Some(e) = name.get(cut..) {
+            if e.eq_ignore_ascii_case(ext) {
+                return &name[..cut];
+            }
+        }
     }
+    name
+}
+
+/// Tags come from the items a drawing's text lives in; a note's lines are skipped (its tags are
+/// one `Text` item written from the parser's code-free list).
+fn tag_texts<'a>(items: impl Iterator<Item = (ItemKind, &'a str)>) -> impl Iterator<Item = &'a str> {
+    items.filter(|(k, _)| !matches!(k, ItemKind::Note | ItemKind::Code)).map(|(_, t)| t)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -86,10 +97,22 @@ impl DocEntry {
             kept.push(item);
         }
         buf.shrink_to_fit();
-        let tags = doc_tags(kept.iter().map(|i| &*i.text));
+        let tags = doc_tags(tag_texts(kept.iter().map(|i| (i.kind, &*i.text))));
         let mut d = DocEntry { stat, parsed: true, items: PackedItems::pack(kept), elinks: Vec::new(), hash8: [0; 8], buf, name_norm: String::new(), stem_off: 0, bounds, tags };
         d.derive_name(path);
         d
+    }
+
+    /// The same note keeping only what is cheap: headings, tags and links (the full text no
+    /// longer fits the budget). Other entries are returned as they are.
+    pub fn lightened(self, path: &str) -> DocEntry {
+        let items: Vec<TextItem> = self
+            .items
+            .iter()
+            .filter(|i| i.kind == ItemKind::Text || (i.kind == ItemKind::Note && i.text.trim_start().starts_with('#')))
+            .map(|i| TextItem { element_id: i.element_id.into(), container_id: i.container_id.map(Into::into), kind: i.kind, text: i.text.into() })
+            .collect();
+        DocEntry::new(path, self.stat, items).with_links(self.elinks, self.hash8)
     }
 
     /// Attaches the element links and content hash of the parsed file.
@@ -120,7 +143,7 @@ impl DocEntry {
     /// Rebuilds derived fields after deserialisation; false if the entry is inconsistent.
     pub fn rebuild(&mut self, path: &str) -> bool {
         self.derive_name(path);
-        self.tags = doc_tags(self.items.iter().map(|i| i.text));
+        self.tags = doc_tags(tag_texts(self.items.iter().map(|i| (i.kind, i.text))));
         self.bounds.clear();
         if !self.buf.is_empty() {
             self.bounds.push(0);
@@ -327,11 +350,38 @@ pub struct Index {
     generation: u64,
     /// Encoded `vault_graph` bytes for one generation; dropped by every mutation.
     graph_cache: crate::links::GraphCache,
+    /// Normalised text bytes held for notes (full or lightened), kept in step by every mutation.
+    note_bytes: usize,
+    /// Most note text the index keeps in memory (`None`: [`DEFAULT_NOTE_BUDGET`]).
+    note_budget: Option<usize>,
+}
+
+/// Note text kept in memory by default: about 48 MB of normalised text, roughly 20,000 notes
+/// of 2.5 KB (the 2026-10-27 spike: 118 MB of heap and a 10 ms query at 20,000 notes; reading
+/// the files for every query took 370 ms). Past it a note keeps its name, headings, tags and links.
+pub const DEFAULT_NOTE_BUDGET: usize = 48 * 1024 * 1024;
+
+fn note_cost(path: &str, d: &DocEntry) -> usize {
+    if super::notes::is_note_name(path) {
+        d.buf.len()
+    } else {
+        0
+    }
 }
 
 impl Index {
     pub fn from_docs(mut docs: HashMap<String, DocEntry>) -> Option<Index> {
-        docs.iter_mut().all(|(p, d)| d.rebuild(p)).then_some(Index { docs, links: None, generation: 0, graph_cache: Default::default() })
+        let ok = docs.iter_mut().all(|(p, d)| d.rebuild(p));
+        let note_bytes = docs.iter().map(|(p, d)| note_cost(p, d)).sum();
+        ok.then_some(Index { docs, links: None, generation: 0, graph_cache: Default::default(), note_bytes, note_budget: None })
+    }
+    /// Sets the note text budget in bytes (0 keeps only name, headings, tags and links of every note).
+    pub fn set_note_budget(&mut self, bytes: usize) {
+        self.note_budget = Some(bytes);
+    }
+    /// Normalised note text held in memory, in bytes.
+    pub fn note_bytes(&self) -> usize {
+        self.note_bytes
     }
     pub fn links(&self) -> Option<&LinkIndex> {
         self.links.as_deref()
@@ -384,8 +434,16 @@ impl Index {
     pub fn contains(&self, path: &str) -> bool {
         self.docs.contains_key(path)
     }
-    pub fn upsert(&mut self, path: String, entry: DocEntry) {
+    pub fn upsert(&mut self, path: String, mut entry: DocEntry) {
         self.bump();
+        if let Some(old) = self.docs.get(&path) {
+            self.note_bytes -= note_cost(&path, old);
+        }
+        let cost = note_cost(&path, &entry);
+        if cost > 0 && self.note_bytes + cost > self.note_budget.unwrap_or(DEFAULT_NOTE_BUDGET) {
+            entry = entry.lightened(&path);
+        }
+        self.note_bytes += note_cost(&path, &entry);
         if let Some(l) = self.links.as_deref_mut() {
             l.upsert(&path, &entry);
         }
@@ -396,7 +454,13 @@ impl Index {
         if let Some(l) = self.links.as_deref_mut() {
             l.remove(path);
         }
-        self.docs.remove(path).is_some()
+        match self.docs.remove(path) {
+            Some(d) => {
+                self.note_bytes -= note_cost(path, &d);
+                true
+            }
+            None => false,
+        }
     }
     /// Removes everything under `prefix` (pass a directory path ending in `/`).
     pub fn remove_prefix(&mut self, prefix: &str) -> usize {
@@ -406,13 +470,16 @@ impl Index {
         self.bump();
         let before = self.docs.len();
         let mut removed: Vec<String> = Vec::new();
-        self.docs.retain(|p, _| {
+        let mut freed = 0;
+        self.docs.retain(|p, d| {
             let k = keep(p);
             if !k {
                 removed.push(p.clone());
+                freed += note_cost(p, d);
             }
             k
         });
+        self.note_bytes -= freed;
         if let Some(l) = self.links.as_deref_mut() {
             l.remove_many(removed.iter().map(String::as_str));
         }
@@ -436,7 +503,7 @@ impl Index {
             }
         }
         for (new, mut d) in taken {
-            if !super::scan::is_drawing_name(&new) {
+            if !super::scan::is_indexed_name(&new) {
                 continue;
             }
             d.set_path(&new);
@@ -449,7 +516,9 @@ impl Index {
         if let Some(l) = self.links.as_deref_mut() {
             l.remove(path);
         }
-        self.docs.remove(path)
+        let d = self.docs.remove(path)?;
+        self.note_bytes -= note_cost(path, &d);
+        Some(d)
     }
     /// `(drawings with content indexed, drawings known)`.
     pub fn counts(&self) -> (usize, usize) {
@@ -470,7 +539,7 @@ impl Index {
                     continue;
                 }
                 let idx = d.bounds.partition_point(|&b| b as usize <= m).saturating_sub(1);
-                if idx == last || d.items.get(idx).kind != super::extract::ItemKind::Text {
+                if idx == last || !matches!(d.items.get(idx).kind, super::extract::ItemKind::Text | super::extract::ItemKind::Note) {
                     continue;
                 }
                 last = idx;

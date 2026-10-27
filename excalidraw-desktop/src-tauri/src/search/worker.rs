@@ -7,7 +7,7 @@ use super::types::IndexState;
 use super::{store, Emitter, Update, VaultIndex};
 use crate::now_ms;
 use vaultdraw_core::search::scan::{needs_parse, parse, Found};
-use vaultdraw_core::search::is_drawing_name;
+use vaultdraw_core::search::is_indexed_name;
 use vaultdraw_core::search::headless::RACY_MS;
 use vaultdraw_core::search::walk;
 use std::{
@@ -151,10 +151,12 @@ impl Worker {
                 }
             }
         }
-        let pending: Vec<&Found> = {
+        let mut pending: Vec<&Found> = {
             let index = self.shared.read();
             found.iter().filter(|f| needs_parse(index.get(&f.path), f, racy_before)).collect()
         };
+        // Newest first: when the note text budget runs out, the oldest notes keep only their headings.
+        pending.sort_by(|a, b| b.mtime.cmp(&a.mtime));
         if pending.is_empty() {
             return changed;
         }
@@ -251,7 +253,7 @@ impl Worker {
                 index.remove(rel) | (index.remove_prefix(&format!("{rel}/")) > 0)
             }
             Some(m) if m.is_dir() => self.sync_subtree(rel, racy_before, false),
-            Some(m) if m.is_file() && is_drawing_name(rel) => {
+            Some(m) if m.is_file() && is_indexed_name(rel) => {
                 if m.len() < self.defer.min_bytes {
                     self.deferred.remove(rel);
                     return self.apply_file(rel, racy_before);

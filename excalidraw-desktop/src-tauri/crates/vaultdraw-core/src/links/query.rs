@@ -2,7 +2,7 @@
 
 use super::grammar::{parse_link_field, strip_ext, text_links, text_links_vec, FieldForm, TextLink};
 use super::index::{LinkIndex, NONE};
-use super::resolve::{dir_of, key_of_rel, key_of_target, name_of};
+use super::resolve::{dir_of, is_note_path, key_of_note_target, key_of_rel, key_of_target, name_of, note_link_target};
 use super::types::{BackLink, LinkKind, LinksResponse, MentionsResponse, OutLink, Resolution};
 use crate::search::{normalize, word_snippet, DocEntry, Index, ItemKind};
 use std::collections::HashMap;
@@ -81,6 +81,22 @@ fn first_line(text: &str) -> String {
 
 fn outgoing_of(li: &LinkIndex, path: &str, doc: &DocEntry) -> Vec<OutLink> {
     let mut out = Vec::new();
+    if is_note_path(path) {
+        let dir = dir_of(path);
+        for e in &doc.elinks {
+            let Some(t) = note_link_target(&e.link) else { continue };
+            let (key, _) = key_of_note_target(dir, t);
+            out.push(OutLink {
+                element_id: e.element_id.to_string(),
+                container_id: None,
+                kind: LinkKind::Shape,
+                target: strip_ext(t.strip_suffix(".md").unwrap_or(t)).to_string(),
+                label: None,
+                resolved: path_of(li, li.resolve(&key)),
+            });
+        }
+        return out;
+    }
     for item in doc.items.iter().filter(|i| i.kind == ItemKind::Text) {
         text_links(&item.text, |l| {
             let d = li.resolve(&key_of_target(l.target));
@@ -175,7 +191,7 @@ pub fn mentions_response(index: &Index, path: &str, limit: usize) -> MentionsRes
         if let Some(d) = li.find_doc(path).filter(|_| !needle.is_empty()) {
             let mut cands: Vec<(String, usize)> = Vec::new();
             index.for_each_word_match(&needle, |p, doc, idx| {
-                if p != path && !text_links_vec(doc.items.get(idx).text).iter().any(|l| li.resolve(&key_of_target(l.target)) == d) {
+                if p != path && !text_links_vec(doc.items.get(idx).text).iter().any(|l| li.resolve(&if is_note_path(p) { key_of_note_target(dir_of(p), l.target).0 } else { key_of_target(l.target) }) == d) {
                     cands.push((p.to_string(), idx));
                 }
                 cands.len() < MAX_MENTION_CANDIDATES
@@ -202,6 +218,22 @@ pub fn resolve_raw(index: &Index, from_path: &str, raw: &str) -> Resolution {
     let none = Resolution { path: None, candidates: Vec::new() };
     let Some(li) = index.links() else { return none };
     let raw = raw.trim();
+    if is_note_path(from_path) || raw.to_ascii_lowercase().ends_with(".md") {
+        // Written in a note, or naming a note: `[[x]]`, `[[x#Heading|alias]]`, `x.md`.
+        let body = raw.strip_prefix("![[").or_else(|| raw.strip_prefix("[[")).map(|r| r.trim_end_matches("]]")).unwrap_or(raw);
+        let body = body.split('|').next().unwrap_or(body);
+        let body = body.split('#').next().unwrap_or(body).trim();
+        if !body.is_empty() && (is_note_path(from_path) || !body.starts_with("vaultdraw:")) {
+            let (key, _) = key_of_note_target(dir_of(from_path), body);
+            let d = li.resolve(&key);
+            let mut candidates: Vec<String> = li.candidates(&key).into_iter().map(|c| li.path(c).to_string()).collect();
+            candidates.sort();
+            if candidates.len() < 2 {
+                candidates.clear();
+            }
+            return Resolution { path: path_of(li, d), candidates };
+        }
+    }
     let key = match parse_link_field(raw) {
         Some(f) if f.form == FieldForm::Rel => key_of_rel(dir_of(from_path), &f.target),
         Some(f) => key_of_target(&f.target),

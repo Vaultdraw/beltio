@@ -2,7 +2,7 @@
 
 use crate::search::normalize;
 
-use super::grammar::strip_ext;
+use super::grammar::{has_ext, strip_ext};
 
 pub fn dir_of(path: &str) -> &str {
     path.rfind('/').map_or("", |i| &path[..i])
@@ -20,6 +20,35 @@ pub fn base_of(nk: &str) -> &str {
 /// Key of a link target as written in a text or `[[x]]`/URL link: leading `/` dropped, normalised.
 pub fn key_of_target(t: &str) -> String {
     normalize(strip_ext(t.trim()).trim_start_matches('/'))
+}
+
+/// True for a note (`x.md`): its links follow the note rule, a drawing's keep their meaning.
+pub fn is_note_path(path: &str) -> bool {
+    crate::search::notes::is_note_name(path)
+}
+
+/// The target of an element link written in a note (`\u{1}` + target as written).
+pub fn note_link_target(link: &str) -> Option<&str> {
+    link.strip_prefix(crate::search::notes::NOTE_LINK_MARK)
+}
+
+/// Key of a link target written in a note. A written extension wins: `x.md` is a note,
+/// `x.excalidraw` a drawing, `x.png` an attachment (never in the index, so it stays
+/// unresolved here); a name with no known extension means `x.md`, as in Obsidian.
+/// `rel` is true for `./x` and `../x`, resolved from the note's folder `dir`.
+pub fn key_of_note_target(dir: &str, t: &str) -> (String, bool) {
+    let t = t.trim();
+    let rel = t.starts_with("./") || t.starts_with("../");
+    let t = if rel { join_rel(dir, t) } else { t.trim_start_matches('/').to_string() };
+    if has_ext(&t) {
+        return (normalize(strip_ext(&t)), rel);
+    }
+    let n = normalize(&t);
+    if n.ends_with(".md") || crate::search::notes::is_attachment_ext(&n) {
+        (n, rel)
+    } else {
+        (n + ".md", rel)
+    }
 }
 
 /// Normalised vault path without extension.

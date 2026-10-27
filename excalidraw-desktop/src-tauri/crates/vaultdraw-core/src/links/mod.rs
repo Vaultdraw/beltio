@@ -9,6 +9,8 @@ pub mod resolve;
 #[doc(hidden)]
 pub mod testkit;
 #[cfg(test)]
+mod note_tests;
+#[cfg(test)]
 mod tests;
 pub mod types;
 
