@@ -389,7 +389,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       templates: {
         doc: "New drawing from a template, and saving a drawing as one.",
       },
-      formula: { doc: "Insert and edit LaTeX formulas." },
+      formula: {
+        doc: "The formula plugin: insert and edit LaTeX formulas, and render `$…$` in notes (off: notes show the TeX source).",
+      },
       mermaid: {
         doc: "Mermaid to Excalidraw (the official mermaid plugin: dialog, menu entries, paste conversion and the mermaid.to_drawing method).",
       },

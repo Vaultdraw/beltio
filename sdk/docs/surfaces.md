@@ -13,7 +13,7 @@ Plugins can add small pieces of interface. Each is declared in `plugin.toml`, so
 | [Opening a panel or view](#layout) | none | `ctx.views.open` | 0.13.0 |
 | [Overlay over the drawing area](#overlays) | none | `ctx.overlays.open` | 0.17.0 |
 
-## Migration (0.9.0 to 0.17.0)
+## Migration (0.9.0 to 0.24.0)
 
 Everything here is additive: a plugin written for 0.9.0 runs unchanged. To use a surface in a plugin that must also run on an older app, ask for the feature and fall back:
 
@@ -37,6 +37,7 @@ if (ctx.host.has("statusBar")) ctx.statusBar.set("clock", { text });
 | 0.21.0 | `ctx.workspace.openShortcut` | `ctx.host.has("workspace.openShortcut")` |
 | 0.22.0 | `ctx.methods`, `[[contributes.methods]]`, permission `control` | `ctx.host.has("methods")` |
 | 0.23.0 | `ctx.diagrams.mermaidToElements` (the editor's Mermaid converter, as scene ops) | `ctx.host.has("diagrams")` |
+| 0.24.0 | `ctx.math` (TeX renderer), `ctx.scene.selection`, `ctx.scene.currentStrokeColor`, modal overlays | `ctx.host.has("math")` |
 
 An older app refuses a `plugin.toml` with a table it does not know (`status_bar`, `views`, `menus`, `toolbar`, `tools`, `shapes`, `methods`), so set `min_app` to the app version that ships the revision you use; `vaultdraw-plugin check` warns when it is lower.
 
@@ -177,6 +178,7 @@ ctx.commands.register("toggle", () => {
 - **Closing.** `close()` (also passed to the component), `dispose()`, opening a drawing or tab, or the plugin stopping. `onClose` runs once, whichever way.
 - **Errors.** A component that throws shows "This plugin overlay crashed." and the error is attributed to the plugin.
 - **Free until used.** The app loads no code and adds no element until an overlay opens. Keys and a toolbar button come from the plugin's commands and `[[contributes.toolbar]]`.
+- **Dialogs (since 0.24.0).** `ctx.overlays.open(component, { modal: true })` is a dialog instead of a cover: the drawing stays visible and usable behind it, and the component draws its own scrim and frame (the app's `vault-modal-backdrop vd-dialog-scrim` classes give the look of its own dialogs). The official formula plugin's insert and edit dialog is one.
 - **Focus.** The app focuses the drawing when the overlay closes. Handle Escape and keys inside your component.
 
 Example: [`sdk/examples/overlay-demo`](../examples/overlay-demo/plugin.toml). In tests, `plugin.overlay()` returns the open overlay (`null` when none): `render()` mounts it and `close()` closes it.
@@ -278,3 +280,24 @@ await ctx.shapes.update(id, { label: "Done" });                    // draws agai
 - **Limits.** At most 8 shapes per plugin.
 
 Example: [`sdk/examples/shape-demo`](../examples/shape-demo/plugin.toml). In tests, `plugin.insertShape("badge")` runs the insert command and `plugin.scene` shows the result.
+
+## Math
+
+`ctx.math` is the TeX renderer, since 0.24.0. One plugin provides it, the official `formula` plugin; the notes view and any other plugin call it.
+
+```ts
+const r = await ctx.math.render({ source: String.raw`\int_0^1 x^2\,dx`, display: true, color: "#1e1e1e" });
+if (r === null) ctx.ui.toast("The formula plugin is off");
+else if (r.ok) use(r.svg, r.width, r.height);
+else ctx.log.warn(r.error);
+
+// A plugin that has its own renderer provides it:
+ctx.math.provide(async (req) => ({ ok: true, svg, width, height }));
+```
+
+- **`render` resolves to `null`** when no plugin provides a renderer (the formula plugin is off). Show the TeX source then; the app's notes view does.
+- **Lazy.** Nothing loads until the first render. With the formula plugin on, the first call from the notes view starts it; MathJax runs in a worker the plugin stops after five idle minutes.
+- **`provide`** makes the plugin the renderer; the latest provider wins and stopping the plugin removes it.
+- Also new in 0.24.0: `ctx.scene.selection()` (ids of the selected elements) and `ctx.scene.currentStrokeColor()` (the colour a new element gets).
+
+In tests, `plugin.renderMath(request)` calls `ctx.math.render`, `plugin.scene.select(ids)` selects, and `plugin.scene.strokeColor(c)` sets the stroke colour.

@@ -36,8 +36,10 @@ export const EXTENSION_TEXT: Record<ExtensionId, ExtensionText> = {
     description: "New drawing from a template, and saving a drawing as one.",
   },
   formula: {
-    description: "Insert and edit LaTeX formulas as images.",
-    offNote: "Existing formulas stay as images; they just can't be edited.",
+    description:
+      "Insert and edit LaTeX formulas as images, and render $…$ in notes.",
+    offNote:
+      "Existing formulas stay as images, they just can't be edited; notes show the TeX source.",
   },
   mermaid: {
     description: "Turn Mermaid diagram code into Excalidraw shapes.",

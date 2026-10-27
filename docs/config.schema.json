@@ -1405,7 +1405,7 @@
           "type": "boolean"
         },
         "formula": {
-          "description": "Insert and edit LaTeX formulas.",
+          "description": "The formula plugin: insert and edit LaTeX formulas, and render `$…$` in notes (off: notes show the TeX source).",
           "default": true,
           "type": "boolean"
         },
@@ -1561,7 +1561,8 @@
             "markdown-import",
             "gallery",
             "graph",
-            "mermaid"
+            "mermaid",
+            "formula"
           ],
           "type": "array",
           "items": {

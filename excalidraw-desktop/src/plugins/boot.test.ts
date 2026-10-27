@@ -112,6 +112,7 @@ describe("official plugins (on by default, no startup cost)", () => {
       "gallery",
       "graph",
       "mermaid",
+      "formula",
     ]);
     const { win, flush, queue } = fakeWin(true);
     bootPlugins(win);
