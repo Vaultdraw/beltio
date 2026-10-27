@@ -544,3 +544,219 @@ describe("API 0.8.0 tables equal the editor's", () => {
     }
   });
 });
+
+describe("parity: page documents, buildScene, scrollTo and folders seen through both kits (0.9.0)", () => {
+  const code = (p: Promise<unknown>) =>
+    p.then(
+      () => "ok",
+      (e: { code?: string }) => e.code ?? "no code",
+    );
+  const line = (page: number, y: number, text: string) =>
+    ({
+      type: "text",
+      page,
+      x: 40,
+      y,
+      width: 500,
+      height: 25,
+      text,
+      fontSize: 20,
+      fontFamily: "Helvetica",
+      lineHeight: 1.25,
+    } as const);
+  /** The element fields both kits must agree on (ids, seeds and clocks differ). */
+  const shape = (e: Record<string, unknown>) => ({
+    type: e.type,
+    x: e.x,
+    y: e.y,
+    width: e.width,
+    height: e.height,
+    text: e.text,
+    autoResize: e.autoResize,
+    fontFamily: e.fontFamily,
+    lineHeight: e.lineHeight,
+    strokeColor: e.strokeColor,
+    backgroundColor: e.backgroundColor,
+    link: e.link,
+  });
+
+  const observe = async (
+    bootFn: (m: never, p: Plugin) => Promise<unknown>,
+    permissions: string[],
+  ) => {
+    let ctx!: import("../src/index").PluginContext;
+    const t = (await bootFn(
+      {
+        id: "par-pages",
+        permissions,
+        activation: ["onStartupFinished"],
+      } as never,
+      {
+        activate(c) {
+          ctx = c;
+        },
+      },
+    )) as import("../testing").TestPlugin;
+    try {
+      const out: Record<string, unknown> = {};
+      t.vault.seed({ "Note.excalidraw": [] });
+      const doc = await ctx.pages.createDocument({ name: "Note" });
+      out.path = doc.path;
+      out.active = ctx.workspace.activePath();
+      doc.append([line(0, 0, "a"), line(2, 10, "c")], 3);
+      doc.append([line(0, 30, "b")], 1);
+      await t.flush();
+      out.live = (t.scene.live() as unknown as Record<string, unknown>[]).map(
+        shape,
+      );
+      out.pageCount = (
+        t.scene.appState().pageSetup as { pageCount: number }
+      ).pageCount;
+      out.badItem = (() => {
+        try {
+          doc.append([{ type: "text" } as never], 1);
+          return "ok";
+        } catch (e) {
+          return (e as { code: string }).code;
+        }
+      })();
+      ctx.scene.scrollTo((t.scene.live()[0] as { id: string }).id);
+      out.scrolled = t.scene.scrolledTo().length;
+      const done = await doc.finish();
+      out.finishedPath = done.path;
+      out.revisionKind = typeof done.revision;
+      out.saves = t.vault.saves();
+      out.saved = t.vault.drawings()[doc.path].length;
+      out.savedSetup = t.vault.pageSetup(doc.path)?.pageCount;
+      out.appendAfter = (() => {
+        try {
+          doc.append([], 1);
+          return "ok";
+        } catch (e) {
+          return (e as { code: string }).code;
+        }
+      })();
+      const quiet = await ctx.pages.createDocument({
+        name: "Quiet",
+        open: false,
+        setup: { size: "a5" },
+      });
+      quiet.append([line(1, 0, "q")], 2);
+      await quiet.finish();
+      out.quiet = t.vault.drawings()["Quiet.excalidraw"].length;
+      out.quietSetup = t.vault.pageSetup("Quiet.excalidraw");
+      out.quietOpened = t.workspace.opened().length;
+      const scene = (await ctx.pages.buildScene(
+        [
+          line(0, 0, "x"),
+          {
+            type: "rect",
+            page: 0,
+            x: 1,
+            y: 2,
+            width: 3,
+            height: 4,
+            fill: "quote",
+          },
+          { type: "line", page: 1, x: 0, y: 0, width: 10, height: 0 },
+          {
+            type: "image",
+            page: 0,
+            x: 0,
+            y: 0,
+            width: 5,
+            height: 5,
+            mimeType: "image/png",
+            alt: "alt",
+            target: "p.png",
+          },
+        ],
+        { pageCount: 2 },
+      )) as { elements: Record<string, unknown>[]; appState: unknown };
+      out.built = scene.elements.map(shape);
+      out.builtSetup = scene.appState;
+      out.builtBad = await code(ctx.pages.buildScene([], { pageCount: 0 }));
+      out.noVaultCreate = await (async () => {
+        t.vault.setVault(null);
+        const c = await code(ctx.pages.createDocument({ name: "n" }));
+        t.vault.setVault({ name: "mock-vault", readOnly: false });
+        return c;
+      })();
+
+      // folders
+      t.folders.setSource({
+        name: "Src",
+        files: { "a.md": "# a", "p.png": new Uint8Array([7]), ".git/x": "" },
+      });
+      t.folders.setNewVault("New");
+      out.pickSource = await code(ctx.folders.pickSource());
+      if (out.pickSource === "ok") {
+        const src = (await ctx.folders.pickSource())!;
+        out.srcList = (await src.list()).map((e) => [e.path, e.size]);
+        out.srcText = await src.readText("a.md");
+        out.srcMissing = await code(src.readText("zz"));
+        out.srcBadPath = await code(src.readText("../a"));
+        const target = (await ctx.folders.pickTarget({ kind: "newVault" }))!;
+        out.target = [target.name, target.kind];
+        out.write = await code(target.writeDrawing("d.excalidraw", scene));
+        out.writeAgain = await code(target.writeDrawing("d.excalidraw", scene));
+        out.writeBad = await code(target.writeDrawing("d.md", scene));
+        out.copy = await code(target.copyFrom(src, "p.png", "att/p.png"));
+        out.copyForeign = await code(
+          target.copyFrom({ name: "x" } as never, "p.png", "q.png"),
+        );
+        await target.open();
+        out.openedVaults = t.workspace.openedVaults();
+        out.targets = t.folders
+          .targets()
+          .map((x) => [x.name, x.kind, Object.keys(x.files).sort()]);
+        const folder = (await ctx.folders.pickTarget({
+          kind: "vaultFolder",
+          path: "Imp",
+        }))!;
+        out.folder = [folder.name, folder.kind];
+        out.folderWrite = await code(
+          folder.writeDrawing("e.excalidraw", scene),
+        );
+        out.inVault = Object.keys(t.vault.drawings()).includes(
+          "Imp/e.excalidraw",
+        );
+        await folder.open();
+        out.revealed = t.workspace.revealed();
+        t.vault.setVault({ name: "ro", readOnly: true });
+        out.folderReadOnly = await code(
+          ctx.folders.pickTarget({ kind: "vaultFolder", path: "x" }),
+        );
+      }
+      return out;
+    } finally {
+      await t.dispose();
+    }
+  };
+
+  it("with folders.import: the same results and codes", async () => {
+    const real = await observe(bootHost as never, ["folders.import"]);
+    const mock = await observe(bootMock as never, ["folders.import"]);
+    expect(mock).toEqual(real);
+    expect(mock.path).toBe("Note 2.excalidraw");
+    expect(mock.pageCount).toBe(3);
+    expect(mock.saves).toEqual(["Note 2.excalidraw"]);
+    expect(mock.writeAgain).toBe("NAME_COLLISION");
+    expect(mock.openedVaults).toEqual(["/fake/vaults/New"]);
+  });
+
+  it("without the permission: the same PERMISSION refusals", async () => {
+    const real = await observe(bootHost as never, []);
+    const mock = await observe(bootMock as never, []);
+    expect(mock).toEqual(real);
+    expect(mock.pickSource).toBe("PERMISSION");
+  });
+
+  it("font ids equal the editor's", async () => {
+    const { FONT_IDS } = await import("../shared/pageItems");
+    const { FONT_FAMILY } = await import("../../../packages/common/src/index");
+    for (const [name, id] of Object.entries(FONT_IDS)) {
+      expect(FONT_FAMILY[name as keyof typeof FONT_FAMILY]).toBe(id);
+    }
+  });
+});

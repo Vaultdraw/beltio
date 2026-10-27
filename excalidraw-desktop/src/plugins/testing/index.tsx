@@ -275,7 +275,11 @@ export async function boot(
   const saves: string[] = [];
   let revisionSeq = 0;
   const parse = (json: string) =>
-    JSON.parse(json) as { elements?: ExcalidrawElement[]; appState?: Record<string, unknown>; files?: Record<string, unknown> };
+    JSON.parse(json) as {
+      elements?: ExcalidrawElement[];
+      appState?: Record<string, unknown>;
+      files?: Record<string, unknown>;
+    };
   const store = (path: string, sceneData: Record<string, unknown>) => {
     const revision = `rev-${++revisionSeq}`;
     backend.drawings[path] = { scene: sceneData, revision };
@@ -288,7 +292,10 @@ export async function boot(
     elements: scene.live(),
     appState: scene.appState(),
     files: Object.fromEntries(
-      Object.entries(scene.files()).map(([id, f]) => [id, { id, mimeType: f.mime }]),
+      Object.entries(scene.files()).map(([id, f]) => [
+        id,
+        { id, mimeType: f.mime },
+      ]),
     ),
   });
   setWorkspaceBridge({
@@ -368,8 +375,11 @@ export async function boot(
     },
     saves: () => [...saves],
     pageSetup: (path) =>
-      (backend.drawings[path]?.scene.appState as Record<string, unknown> | undefined)
-        ?.pageSetup as Record<string, unknown> | undefined,
+      (
+        backend.drawings[path]?.scene.appState as
+          | Record<string, unknown>
+          | undefined
+      )?.pageSetup as Record<string, unknown> | undefined,
   };
   const folders: FakeFolders = {
     setSource(folder) {

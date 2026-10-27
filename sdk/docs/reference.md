@@ -628,6 +628,127 @@ worker.postMessage({ chars, widths }, [widths.buffer]); // transfer, no copy
 
 The worker sums widths from the table to wrap lines, and never calls the canvas itself.
 
+## Page documents, scrolling and folders (since 0.9.0)
+
+Three additions for plugins that turn other files into drawings: a page-mode drawing filled while the user watches (`ctx.pages.createDocument`), the same drawing as JSON for writing elsewhere (`ctx.pages.buildScene`), a scroll to an element (`ctx.scene.scrollTo`), and folders outside the vault (`ctx.folders`, permission `folders.import`).
+
+### Page items
+
+The plugin lays the content out (wrapped lines, boxes, rules, pictures) and hands the host **page items**: scene pixels relative to the page's top-left corner, with the page index. The host never measures or re-wraps text: a text item arrives wrapped (lines joined by `"\n"`) and sized, and becomes a text element with `autoResize: false`. Colours follow the theme: `tone` and `fill` map to the editor's default palette.
+
+```ts
+type PageItem =
+  | { type: "text"; page; x; y; width; height; text: string; fontSize: number; fontFamily: FontFamilyName;
+      lineHeight: number; align?: "left" | "center" | "right"; tone?: "normal" | "muted" | "code" | "link";
+      link?: string; data?: Record<string, unknown> }      // data at most 4 KiB as JSON, under the plugin's data key
+  | { type: "rect"; page; x; y; width; height; fill: "code" | "quote" | "callout" | "table" | "none"; stroke?: "none" | "thin" }
+  | { type: "line"; page; x; y; width; height }            // from (x, y) to (x + width, y + height)
+  | { type: "image"; page; x; y; width; height; mimeType: string; bytes?: Uint8Array; alt?: string; target: string };
+```
+
+| Rule | Limit |
+| --- | --- |
+| Items per `append` or `buildScene` call | 100,000 |
+| `page` | a whole number, 0 to 499; `pageCount` 1 to 500 |
+| `text` | at most 10,000 characters; `fontSize` 1 to 1000; `lineHeight` as `ctx.text.lineHeight` gives it |
+| `link` and `target` | at most 2,048 characters; `javascript:`, `data:`, `vbscript:` and `file:` are refused |
+| `image.bytes` | at most 10 MiB, PNG, JPEG, GIF, WebP or SVG, and the bytes must look like `mimeType`. Without bytes the item becomes a box with the `alt` text, linked to `target` |
+
+A bad item fails the whole call with `INVALID_ARGUMENT` (naming the item), and nothing of that call is applied.
+
+### ctx.pages.createDocument
+
+```ts
+createDocument(options: { name: string; parent?: string; setup?: PageRequest; open?: boolean }): Promise<PageDocument>;
+interface PageDocument {
+  readonly path: string;                                      // "Note (imported) 2.excalidraw": the name is de-duplicated
+  append(items: readonly PageItem[], pageCount: number): void; // queued; one updateScene per frame
+  finish(): Promise<{ path: string; revision: string }>;      // applies the rest, saves once
+  abort(): Promise<void>;                                     // drops what is queued, keeps and saves what was applied
+}
+```
+
+- `name` is the drawing's name without `.excalidraw`; a taken name gets ` 2`, ` 3`, … `parent` is a vault folder (`""` the root); by default the drawing goes where "New drawing" puts one. `setup` is a `PageRequest` (A4 portrait, separate pages by default).
+- The drawing opens at once as a tiny page-mode stub (no elements), so **append page 1 first**: it is on screen in the next frame while the rest is still coming.
+- `append` queues; **one frame applies everything queued with one scene update**, with no undo entries (an import is not an edit to undo step by step). `pageCount` is the number of pages the items reach; the drawing grows to it and never shrinks.
+- The app saves in the background as it does for typing, and `finish()` saves once more and resolves to the saved revision. Autosave may run between frames: that is fine, nothing is lost.
+- If the user closes or switches the drawing while items are still coming, what was applied is saved by that switch and the rest is dropped; `finish()` still resolves with the path. Disabling the plugin aborts the document.
+- `open: false` collects the items in memory and writes the file once on `finish()`; nothing opens. Use it for background conversions.
+- Errors: `NO_VAULT`, `READ_ONLY`, `INVALID_ARGUMENT` (name, parent, setup, items, page count). After `finish()` or `abort()`, `append` throws.
+
+```ts
+const doc = await ctx.pages.createDocument({ name: `${note} (imported)`, setup: { size: "a4" } });
+doc.append(firstPage, 1);           // on screen next frame
+for (const part of rest) {
+  doc.append(part.items, part.pages); // the worker keeps producing
+}
+const { path } = await doc.finish();
+```
+
+### ctx.pages.buildScene
+
+```ts
+buildScene(items: readonly PageItem[], options: { setup?: PageRequest; pageCount: number }): Promise<object>;
+```
+
+The whole drawing as `.excalidraw` JSON: `elements`, `appState.pageSetup` (page mode on, `pageCount` pages) and `files` with a data URL per distinct picture. Nothing opens and no native call is made. Write it with `TargetFolder.writeDrawing` or keep it. Rejects with `INVALID_ARGUMENT`.
+
+### ctx.scene.scrollTo
+
+```ts
+scrollTo(id: string): void; // free
+```
+
+Selects the element and brings it into view, as opening a search result does (a bound label focuses its container). Nothing happens for an unknown id or when no drawing is open. Use it for "next heading" commands: keep the heading ids from `scene.elements()` or the plugin's `data`.
+
+### ctx.folders
+
+Needs the permission `folders.import` (bundled plugins need no consent). Every call fails with `PERMISSION` without it.
+
+```ts
+interface FoldersApi {
+  pickSource(options?: { title?: string }): Promise<SourceFolder | null>;  // native folder dialog; null = cancelled
+  pickTarget(options: { kind: "newVault"; title?: string } | { kind: "vaultFolder"; path: string }): Promise<TargetFolder | null>;
+}
+interface SourceFolder {            // read-only; the source is never written
+  readonly name: string;
+  list(): Promise<{ path: string; size: number; modifiedAt: number }[]>; // recursive, at most 100,000; dot entries and symlinks skipped
+  readText(path: string): Promise<string>;                               // UTF-8 (lossy), at most 64 MiB
+  readBytes(path: string): Promise<Uint8Array>;                          // at most 64 MiB
+}
+interface TargetFolder {
+  readonly name: string;
+  readonly kind: "newVault" | "vaultFolder";
+  writeDrawing(path: string, scene: object): Promise<void>;              // create-only (NAME_COLLISION); path ends in .excalidraw
+  copyFrom(source: SourceFolder, from: string, to: string): Promise<void>; // create-only, copied natively
+  open(): Promise<void>;                                                 // newVault: the app opens it; vaultFolder: reveals it in the tree
+}
+```
+
+| Target | What it is | `open()` |
+| --- | --- | --- |
+| `newVault` | A save dialog; the folder must not exist or be empty, and is created | Opens that folder as the vault |
+| `vaultFolder` | A folder of the open vault (`path`, created when missing); `NO_VAULT` when none is open, `READ_ONLY` when it is | Expands the file tree to it |
+
+- Handles live for the session and never leave the plugin as paths: `name` is all a plugin sees of where a folder is.
+- Paths inside a folder are relative, "/"-separated, with no `..` and no segment that starts with a dot (`INVALID_PATH`); a missing file is `NOT_FOUND`.
+- `copyFrom` takes only a `SourceFolder` from `pickSource` (`INVALID_ARGUMENT` otherwise). The bytes never pass through the plugin.
+
+```ts
+const src = await ctx.folders.pickSource({ title: "Obsidian vault" });
+const target = src && (await ctx.folders.pickTarget({ kind: "newVault" }));
+if (!src || !target) return;
+for (const file of await src.list()) {
+  if (file.path.endsWith(".md")) {
+    const items = layout(await ctx.markdown.parse(await src.readText(file.path)));
+    await target.writeDrawing(file.path.replace(/\.md$/, ".excalidraw"), await ctx.pages.buildScene(items.list, { pageCount: items.pages }));
+  } else {
+    await target.copyFrom(src, file.path, file.path);
+  }
+}
+await target.open();
+```
+
 ## Rules for plugin code
 
 1. Use `ctx.setTimeout`, `ctx.setInterval` and `ctx.subscriptions` instead of raw timers and listeners. Then disabling a plugin leaves nothing running.

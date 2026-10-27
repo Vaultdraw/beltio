@@ -66,12 +66,15 @@ export interface FoldersModel {
   reset(): void;
 }
 
-export function createFoldersModel(vault: VaultModel, vaultState: {
-  open(): boolean;
-  readOnly(): boolean;
-  hasDrawing(path: string): boolean;
-  putDrawing(path: string, scene: object): void;
-}): FoldersModel {
+export function createFoldersModel(
+  vault: VaultModel,
+  vaultState: {
+    open(): boolean;
+    readOnly(): boolean;
+    hasDrawing(path: string): boolean;
+    putDrawing(path: string, scene: object): void;
+  },
+): FoldersModel {
   const store = createFakeFolderStore(vaultState);
   const fake: FakeFolders = {
     setSource(folder) {
@@ -81,7 +84,10 @@ export function createFoldersModel(vault: VaultModel, vaultState: {
       store.newVaultPick = name;
     },
     targets: () =>
-      Object.values(store.targets).map((t) => ({ ...t, files: { ...t.files } })),
+      Object.values(store.targets).map((t) => ({
+        ...t,
+        files: { ...t.files },
+      })),
   };
   const call = <T>(
     method: string,
@@ -102,21 +108,30 @@ export function createFoldersModel(vault: VaultModel, vaultState: {
           name,
           async list() {
             need("folders.list");
-            return (await call<{ entries: FolderEntry[] }>("folders.list", { handle }))
-              .entries;
+            return (
+              await call<{ entries: FolderEntry[] }>("folders.list", { handle })
+            ).entries;
           },
           async readText(path) {
             need("folders.readText");
             const rel = checkRelative(path);
-            return (await call<{ text: string }>("folders.readText", { handle, path: rel }))
-              .text;
+            return (
+              await call<{ text: string }>("folders.readText", {
+                handle,
+                path: rel,
+              })
+            ).text;
           },
           async readBytes(path) {
             need("folders.readBytes");
             const rel = checkRelative(path);
             return fromBase64(
-              (await call<{ base64: string }>("folders.readBytes", { handle, path: rel }))
-                .base64,
+              (
+                await call<{ base64: string }>("folders.readBytes", {
+                  handle,
+                  path: rel,
+                })
+              ).base64,
             );
           },
         };
@@ -136,7 +151,9 @@ export function createFoldersModel(vault: VaultModel, vaultState: {
             need("folders.writeDrawing");
             checkVaultPath(path, "file");
             if (!scene || typeof scene !== "object" || Array.isArray(scene)) {
-              throw bad("scene must be an object (as pages.buildScene returns)");
+              throw bad(
+                "scene must be an object (as pages.buildScene returns)",
+              );
             }
             await call(
               "folders.writeDrawing",
@@ -188,7 +205,9 @@ export function createFoldersModel(vault: VaultModel, vaultState: {
               "folders.pickNewVault",
               t === undefined ? {} : { title: t },
             );
-            return reply ? target(reply.handle, reply.name, "newVault", null) : null;
+            return reply
+              ? target(reply.handle, reply.name, "newVault", null)
+              : null;
           }
           if (options.kind === "vaultFolder") {
             need("folders.vaultTarget");

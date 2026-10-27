@@ -133,6 +133,9 @@ export const checkPageItems = (items: unknown): readonly PageItem[] => {
     if (!isRecord(it)) {
       throw bad(`${at} must be an object`);
     }
+    if (!["text", "rect", "line", "image"].includes(String(it.type))) {
+      throw bad(`${at}.type must be "text", "rect", "line" or "image"`);
+    }
     checkBox(it, at);
     switch (it.type) {
       case "text": {
@@ -508,4 +511,3 @@ export const sha1Hex = async (bytes: Uint8Array): Promise<string> => {
     b.toString(16).padStart(2, "0"),
   ).join("");
 };
-

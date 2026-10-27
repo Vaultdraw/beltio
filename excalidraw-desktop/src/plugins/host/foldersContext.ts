@@ -178,7 +178,9 @@ export function createFoldersApi(rt: PluginRuntime): FoldersApi {
           "folders.pickNewVault",
           t === undefined ? {} : { title: t },
         );
-        return reply ? target(reply.handle, reply.name, "newVault", null) : null;
+        return reply
+          ? target(reply.handle, reply.name, "newVault", null)
+          : null;
       }
       if (options.kind === "vaultFolder") {
         need("folders.vaultTarget");

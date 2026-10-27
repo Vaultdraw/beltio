@@ -17,13 +17,14 @@ A plugin lists in `plugin.toml` what it does to your files. The app shows the li
 ## Declare them
 
 ```toml
-permissions = ["vault.read", "vault.write"]   # optional, default []
+permissions = ["vault.read", "vault.write", "folders.import"]   # optional, default []
 ```
 
 | Permission | Consent line | Gates |
 | --- | --- | --- |
 | `vault.read` | Read the drawings in your vault | Listing folders, reading drawings other than the open one, and the `vault.changed` event |
 | `vault.write` | Create drawings in your vault | Creating drawings. Files have no undo, so creating one needs this permission |
+| `folders.import` | Read a folder you pick and write into a destination you pick | `ctx.folders` (since 0.9.0): listing and reading a folder the user chose in a dialog, and create-only writes into a new vault or a folder of the open vault. The source is never written |
 
 At most 8, no duplicates. An unknown name is a manifest error, so an older app refuses a plugin that needs a newer one. The names `net`, `secret` and `control` are reserved for later and are refused today. `ctx.manifest.permissions` returns the list.
 
@@ -43,6 +44,11 @@ Since API 0.3.0 the app checks them in its native layer: every native call of th
 | `ctx.storage.global`                          | none          | 0.3.0 |
 | `ctx.scene` (edits have undo)                 | none          | 0.1.0 |
 | `ctx.markdown.parse(text, options)`           | none          | 0.8.0 |
+| `ctx.pages.createDocument(options)`           | none (the drawing opens in the editor, as "New drawing") | 0.9.0 |
+| `ctx.pages.buildScene(items, options)`        | none (no native call) | 0.9.0 |
+| `ctx.scene.scrollTo(id)`                      | none          | 0.9.0 |
+| `ctx.folders.pickSource(options)` and every `SourceFolder` call | `folders.import` | 0.9.0 |
+| `ctx.folders.pickTarget(options)` and every `TargetFolder` call | `folders.import` | 0.9.0 |
 
 A call that needs a permission your `plugin.toml` does not declare fails with `code: "PERMISSION"`. An importer runs on a file the user chose, so its input needs no permission; an importer that calls `ctx.vault` still needs the permission for that call.
 
@@ -56,7 +62,7 @@ A call that needs a permission your `plugin.toml` does not declare fails with `c
 
 Editing `pluginsEnabled` by hand does not skip this: a plugin whose declared permissions are not covered by the record stays off until you confirm it on the Plugins page.
 
-None of `ctx.markdown`, `ctx.text`, `ctx.fonts` and `ctx.pages` needs a permission. Only `markdown.parse` makes a native call; the other three make none.
+None of `ctx.markdown`, `ctx.text`, `ctx.fonts` and `ctx.pages` needs a permission. Only `markdown.parse` makes a native call; the other three make none (`pages.createDocument` goes through the app's own "New drawing" path, not the gateway). `ctx.folders` is the one area gated by `folders.import`: its rows (`folders.pickSource`, `list`, `readText`, `readBytes`, `pickNewVault`, `vaultTarget`, `writeDrawing`, `copy`) run in the native layer, and a source handle has no write row.
 
 ## Checking them
 

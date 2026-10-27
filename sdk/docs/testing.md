@@ -62,7 +62,10 @@ A third argument sets the app settings a user would set in `config.toml`: `boot(
 | `timers()` | How many timers the plugin has scheduled |
 | `log()` | The plugin's `ctx.log` lines and attributed errors, as `{ level, text }`. Keeps the last 100 |
 | `setSetting(key, value, scope?)` | Writes a setting; `false` when the declaration refuses it |
-| `scene` | A fake editor: `setElements`, `emitChange`, `switchTo`, `readOnly`, `batches`, `live()` |
+| `scene` | A fake editor: `setElements`, `emitChange`, `switchTo`, `readOnly`, `batches`, `live()`, `files()`, `scrolledTo()` (ids passed to `ctx.scene.scrollTo`), `appState()` (what a page document set, such as `pageSetup`) |
+| `vault` | An in-memory vault: `seed`, `drawings()`, `setVault`, `saves()` (paths a page document saved on `finish`/`abort`), `pageSetup(path)` |
+| `workspace` | `opened()`, plus `openedVaults()` and `revealed()` for `TargetFolder.open()` |
+| `folders` | What `ctx.folders` sees: `setSource(folder \| null)` for the next `pickSource`, `setNewVault(name \| null)` for the next `pickTarget({ kind: "newVault" })`, `targets()` for what was written |
 | `events.emit(name, payload)` | Emits an app event such as `drawing.saved` |
 | `theme.set({ mode, themeId, tokens })` | Changes what `ctx.theme` reports and notifies `onChange`. Until a test sets `tokens`, the mock's `tokens()` fails with "not set up in this test" |
 | `flush()` | Lets timers, microtasks and one animation frame run, and React settle |
@@ -104,7 +107,7 @@ Put `vi.useRealTimers()` in `afterEach`. `flush()` works with and without fake t
 
 Anything the mock does not provide fails with a message that starts `not set up in this test:`. It never returns an empty result instead. Examples: `ctx.commands.execute` of a command that is not the plugin's own, `openPanel` or `ctx.scene.useScene` without the React packages, and `openPanel` for a panel the manifest does not declare. Declare it or install the package first.
 
-The mock's text stand-ins are simple, so check what they can show. `ctx.markdown.parse` uses a small parser that knows headings, paragraphs, `#tags` and `[[wikilinks]]` only: no frontmatter, no other block kinds, no links other than wikilinks, and zero for both dropped counts. `ctx.text.measure` counts every character as `size * 0.5` wide, so width tests check your wiring, not real widths; `lineHeight` returns the editor's real values. `ctx.fonts.ensure` checks its arguments and loads nothing. `ctx.pages` is the real paginator and page geometry, shared with the app.
+The mock's text stand-ins are simple, so check what they can show. `ctx.markdown.parse` uses a small parser that knows headings, paragraphs, `#tags` and `[[wikilinks]]` only: no frontmatter, no other block kinds, no links other than wikilinks, and zero for both dropped counts. `ctx.text.measure` counts every character as `size * 0.5` wide, so width tests check your wiring, not real widths; `lineHeight` returns the editor's real values. `ctx.fonts.ensure` checks its arguments and loads nothing. `ctx.pages` is the real paginator, page geometry and page-item builder, shared with the app: `createDocument` opens a drawing in the fake scene (one frame per `flush()`), `buildScene` returns the same element shapes as the app (ids and seeds differ). `ctx.folders` runs over an in-memory folder store with the app's error codes; a new vault's `open()` records a path under `workspace.openedVaults()`.
 
 A plugin with no command or panel to trigger activation needs `activation = ["onStartupFinished"]` to be active after `boot`.
 

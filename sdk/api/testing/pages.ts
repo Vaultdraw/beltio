@@ -69,10 +69,9 @@ export interface PagesDeps {
   activePath(): string | null;
 }
 
-export function createPagesMock(deps: PagesDeps): Pick<
-  PagesApi,
-  "createDocument" | "buildScene"
-> {
+export function createPagesMock(
+  deps: PagesDeps,
+): Pick<PagesApi, "createDocument" | "buildScene"> {
   const { vault, scene, dataKey, track } = deps;
   const build = (
     items: readonly PageItem[],
