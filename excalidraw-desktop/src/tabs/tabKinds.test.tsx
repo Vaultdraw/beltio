@@ -3,7 +3,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ActiveTabGate } from "./ActiveTabGate";
 import { createTabsRuntime } from "./tabController";
-import { getTabKinds, isKindPath, registerTabKind, tabKindFor } from "./tabKinds";
+import {
+  getTabKinds,
+  isKindPath,
+  registerTabKind,
+  tabKindFor,
+} from "./tabKinds";
 import { createTabStore } from "./tabStore";
 import { openPath } from "./tabsModel";
 
@@ -132,6 +137,8 @@ describe("ActiveTabGate with a kind", () => {
         <div>home</div>
       </ActiveTabGate>,
     );
-    await waitFor(() => expect(screen.getByRole("alert").textContent).toMatch(/chunk gone/));
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toMatch(/chunk gone/),
+    );
   });
 });

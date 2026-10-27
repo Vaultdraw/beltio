@@ -422,8 +422,7 @@ export function useTabs(args: UseTabsArgs): TabsApi {
       });
       return (
         l.docHook.getActive()?.path === path ||
-        (isKindPath(path) &&
-          getActiveTab(rt.store.getState()).path === path) ||
+        (isKindPath(path) && getActiveTab(rt.store.getState()).path === path) ||
         (t === "new" && !!findByPath(rt.store.getState(), path))
       );
     },

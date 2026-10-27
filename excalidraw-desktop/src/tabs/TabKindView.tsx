@@ -7,10 +7,7 @@ import { lazy, Suspense } from "react";
 import type { ComponentType } from "react";
 import type { TabKind, TabKindViewProps } from "./tabKinds";
 
-const lazyViews = new WeakMap<
-  TabKind,
-  ComponentType<TabKindViewProps>
->();
+const lazyViews = new WeakMap<TabKind, ComponentType<TabKindViewProps>>();
 
 const viewOf = (kind: TabKind): ComponentType<TabKindViewProps> => {
   let view = lazyViews.get(kind);
