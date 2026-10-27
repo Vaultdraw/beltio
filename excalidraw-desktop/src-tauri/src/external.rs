@@ -36,11 +36,54 @@ pub(crate) fn open_external_url(url: String) -> Result<()> {
     let program = "explorer";
     #[cfg(target_os = "linux")]
     let program = "xdg-open";
-    std::process::Command::new(program)
-        .arg(url)
-        .spawn()
-        .map(|_| ())
-        .map_err(ioerr)
+    spawn_reaped(std::process::Command::new(program).arg(url)).map_err(ioerr)
+}
+
+/// Starts a launcher (`open`, `xdg-open`, ...) and reaps it on a short-lived thread, so the finished
+/// child never lingers as a zombie for the life of the app.
+pub(crate) fn spawn_reaped(cmd: &mut std::process::Command) -> std::io::Result<()> {
+    let mut child = cmd.spawn()?;
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
+    Ok(())
+}
+
+/// `file://` URI of an absolute path, percent-encoding everything but unreserved characters and `/`.
+#[cfg(any(target_os = "linux", test))]
+fn file_uri(path: &std::path::Path) -> String {
+    use std::os::unix::ffi::OsStrExt;
+    let mut uri = String::from("file://");
+    for &b in path.as_os_str().as_bytes() {
+        if b.is_ascii_alphanumeric() || b"-._~/".contains(&b) {
+            uri.push(b as char);
+        } else {
+            uri.push_str(&format!("%{b:02X}"));
+        }
+    }
+    uri
+}
+
+/// Linux: shows `path` selected in the file manager through the FileManager1 D-Bus interface
+/// (Nautilus, Dolphin, Nemo, Thunar, ...); falls back to opening the parent folder with `xdg-open`.
+#[cfg(target_os = "linux")]
+pub(crate) fn reveal_linux(path: &std::path::Path) -> Result<()> {
+    let uri = file_uri(path);
+    let parent = path.parent().unwrap_or(path).to_path_buf();
+    std::thread::spawn(move || {
+        let shown = std::process::Command::new("dbus-send")
+            .args(["--session", "--print-reply", "--reply-timeout=2000", "--dest=org.freedesktop.FileManager1", "/org/freedesktop/FileManager1", "org.freedesktop.FileManager1.ShowItems"])
+            .arg(format!("array:string:{uri}"))
+            .arg("string:")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .is_ok_and(|s| s.success());
+        if !shown {
+            let _ = std::process::Command::new("xdg-open").arg(parent).status();
+        }
+    });
+    Ok(())
 }
 
 #[derive(Serialize)]
@@ -196,5 +239,14 @@ mod tests {
     #[test]
     fn system_info_has_arch() {
         assert!(!system_info().arch.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod reveal_tests {
+    #[test]
+    fn file_uri_encodes_spaces_and_unicode() {
+        let u = super::file_uri(std::path::Path::new("/v/my dir/é#1.excalidraw"));
+        assert_eq!(u, "file:///v/my%20dir/%C3%A9%231.excalidraw");
     }
 }

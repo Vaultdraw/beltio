@@ -147,9 +147,9 @@ fn launch(args: &[&std::ffi::OsStr], reveal: bool) -> Result<()> {
         // Explorer wants one argument: `/select,<path>`.
         let mut arg = std::ffi::OsString::from("/select,");
         arg.push(args[0]);
-        return std::process::Command::new(program).arg(arg).spawn().map(|_| ()).map_err(ioerr);
+        return crate::external::spawn_reaped(std::process::Command::new(program).arg(arg)).map_err(ioerr);
     }
-    std::process::Command::new(program).args(lead).args(args).spawn().map(|_| ()).map_err(ioerr)
+    crate::external::spawn_reaped(std::process::Command::new(program).args(lead).args(args)).map_err(ioerr)
 }
 
 /// Creates `dir` if missing and opens it in the platform file manager.
@@ -162,11 +162,7 @@ pub(crate) fn open_dir(dir: &Path) -> Result<()> {
     let program = "explorer";
     #[cfg(target_os = "linux")]
     let program = "xdg-open";
-    std::process::Command::new(program)
-        .arg(dir)
-        .spawn()
-        .map(|_| ())
-        .map_err(ioerr)
+    crate::external::spawn_reaped(std::process::Command::new(program).arg(dir)).map_err(ioerr)
 }
 
 // ---------------------------------------------------------------------------

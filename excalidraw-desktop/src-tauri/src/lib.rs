@@ -587,15 +587,9 @@ async fn reveal_entry(handle: String, path: String, state: State<'_, Service>) -
         vec!["/select,".to_string(), p.to_string_lossy().into_owned()],
     );
     #[cfg(target_os = "linux")]
-    let (program, args) = (
-        "xdg-open",
-        vec![p.parent().unwrap_or(&p).to_string_lossy().into_owned()],
-    );
-    std::process::Command::new(program)
-        .args(args)
-        .spawn()
-        .map(|_| ())
-        .map_err(ioerr)
+    return external::reveal_linux(&p);
+    #[cfg(not(target_os = "linux"))]
+    external::spawn_reaped(std::process::Command::new(program).args(args)).map_err(ioerr)
 }
 #[tauri::command]
 async fn export_file(request: tauri::ipc::Request<'_>) -> Result<bool> {
