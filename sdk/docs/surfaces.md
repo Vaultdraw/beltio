@@ -9,9 +9,10 @@ Plugins can add small pieces of interface. Each is declared in `plugin.toml`, so
 | [Context menu item](#context-menus) | `[[contributes.menus]]` | `ctx.menus.target` | 0.12.0 |
 | [Toolbar button](#toolbar) | `[[contributes.toolbar]]` | none | 0.14.0 |
 | [Canvas tool](#canvas-tools) | `[[contributes.tools]]` | `ctx.tools.register` | 0.15.0 |
+| [Custom shape](#custom-shapes) | `[[contributes.shapes]]` | `ctx.shapes.register` | 0.16.0 |
 | [Opening a panel or view](#layout) | none | `ctx.views.open` | 0.13.0 |
 
-## Migration (0.9.0 to 0.15.0)
+## Migration (0.9.0 to 0.16.0)
 
 Everything here is additive: a plugin written for 0.9.0 runs unchanged. To use a surface in a plugin that must also run on an older app, ask for the feature and fall back:
 
@@ -27,8 +28,9 @@ if (ctx.host.has("statusBar")) ctx.statusBar.set("clock", { text });
 | 0.13.0 | `ctx.views.open` | `ctx.host.has("views.open")` |
 | 0.14.0 | toolbar buttons | `min_app` only (manifest table, no runtime call) |
 | 0.15.0 | canvas tools | `ctx.host.has("tools")` |
+| 0.16.0 | custom shapes | `ctx.host.has("shapes")` |
 
-An older app refuses a `plugin.toml` with a table it does not know (`status_bar`, `views`, `menus`, `toolbar`, `tools`), so set `min_app` to the app version that ships the revision you use; `vaultdraw-plugin check` warns when it is lower.
+An older app refuses a `plugin.toml` with a table it does not know (`status_bar`, `views`, `menus`, `toolbar`, `tools`, `shapes`), so set `min_app` to the app version that ships the revision you use; `vaultdraw-plugin check` warns when it is lower.
 
 ## Status bar
 
@@ -197,3 +199,34 @@ ctx.tools.register("box", {
 - **Limits.** At most 8 tools per plugin. Tools use Excalidraw's built-in custom tool, so nothing changes in the editor package.
 
 Example: [`sdk/examples/tool-demo`](../examples/tool-demo/plugin.toml). In tests, `plugin.tool("box")` returns `down`, `move`, `up` and `cancel`.
+
+## Custom shapes
+
+A plugin adds a shape it draws itself. The command `Insert shape: <title>` and a toolbar button add it to the open drawing in one undo step.
+
+```toml
+[[contributes.shapes]]
+id = "badge"
+title = "Badge"
+icon = "M12 3l2.5 5.5L20 9z"   # for the toolbar button, as for tools
+width = 120                     # size of a new shape (8 to 4000), default 160 by 100
+height = 120
+```
+
+```js
+ctx.shapes.register("badge", {
+  defaults: { label: "New" },
+  render(props, { width, height }) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">...</svg>`;
+  },
+});
+await ctx.shapes.insert("badge", { label: "Hi" }, { x: 0, y: 0 }); // resolves to the element id
+await ctx.shapes.update(id, { label: "Done" });                    // draws again, new id
+```
+
+- **The file does not change.** A shape is an ordinary image element (an SVG picture) with the shape name and its props as the plugin's element data (at most 4 KiB). Without the plugin the drawing opens and shows the last picture; with it, `update` draws the shape again.
+- **Safe.** `render` returns one SVG document of at most 200 KiB. It is drawn as an image, so it never runs script or loads anything.
+- **Not live.** A shape is drawn when you insert or update it, not on every frame. A resize scales the picture; call `update` to draw it at the new size.
+- **Limits.** At most 8 shapes per plugin.
+
+Example: [`sdk/examples/shape-demo`](../examples/shape-demo/plugin.toml). In tests, `plugin.insertShape("badge")` runs the insert command and `plugin.scene` shows the result.

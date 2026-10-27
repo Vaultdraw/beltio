@@ -115,7 +115,7 @@ export interface ImportersApi {
 export type { CommandsApi } from "./commands";
 export type { Disposable } from "./disposable";
 export type { AppEventMap, EventsApi } from "./events";
-export type { CommandContribution, ImporterContribution, MenuContribution, StatusBarContribution, ToolbarContribution, ToolContribution, ViewContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
+export type { CommandContribution, ImporterContribution, MenuContribution, StatusBarContribution, ToolbarContribution, ToolContribution, ShapeContribution, ViewContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
 export type { FolderEntry, FoldersApi, PickSourceOptions, PickTargetOptions, SourceFolder, TargetFolder, } from "./folders";
 export type { ApiVersion, HostApi } from "./host";
 export type { ImportersApi, Importer, ImportInput, ImportOptions, ImportResult, } from "./importers";
@@ -128,6 +128,7 @@ export type { BatchOptions, BatchResult, ElementId, ElementRef, ImageSource, Fon
 export type { SelectOption, SettingDecl, SettingScopeName, SettingsApi, SettingValue, } from "./settings";
 export type { StatusBarApi, StatusBarState } from "./statusBar";
 export type { MenuTarget, MenusApi } from "./menus";
+export type { ShapeDef, ShapesApi } from "./shapes";
 export type { ToolHandlers, ToolPoint, ToolsApi } from "./tools";
 export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
@@ -195,6 +196,13 @@ export interface ToolContribution {
     icon: string | null;
     cursor: "crosshair" | "default" | "pointer" | "grab" | "text" | null;
 }
+export interface ShapeContribution {
+    id: string;
+    title: string;
+    icon: string | null;
+    width: number;
+    height: number;
+}
 export interface PluginContributions {
     commands: CommandContribution[];
     panels: PanelContribution[];
@@ -205,6 +213,7 @@ export interface PluginContributions {
     menus?: MenuContribution[];
     toolbar?: ToolbarContribution[];
     tools?: ToolContribution[];
+    shapes?: ShapeContribution[];
 }
 
 // markdown.ts
@@ -471,6 +480,7 @@ import type { FoldersApi } from "./folders";
 import type { FontsApi, TextApi } from "./text";
 import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
+import type { ShapesApi } from "./shapes";
 import type { ToolsApi } from "./tools";
 import type { ViewsApi } from "./views";
 import type { WorkspaceApi } from "./workspace";
@@ -507,6 +517,7 @@ export interface PluginContext {
     readonly views: ViewsApi;
     readonly menus: MenusApi;
     readonly tools: ToolsApi;
+    readonly shapes: ShapesApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;
     setInterval(fn: () => void, ms: number): Disposable;
@@ -657,6 +668,27 @@ export interface SettingsApi {
     get<T = unknown>(key: string): T;
     set(key: string, value: unknown): Promise<void>;
     onChange(key: string, cb: (value: unknown) => void): Disposable;
+}
+
+// shapes.ts
+import type { Disposable } from "./disposable";
+import type { Json } from "./storage";
+export interface ShapeDef {
+    render(props: Json, size: {
+        width: number;
+        height: number;
+    }): string;
+    defaults?: Json;
+}
+export interface ShapesApi {
+    register(id: string, def: ShapeDef): Disposable;
+    insert(id: string, props?: Json, at?: {
+        x?: number;
+        y?: number;
+        width?: number;
+        height?: number;
+    }): Promise<string>;
+    update(elementId: string, props: Json): Promise<string>;
 }
 
 // specifiers.ts

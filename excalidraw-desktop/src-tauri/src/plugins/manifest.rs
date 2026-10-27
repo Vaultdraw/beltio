@@ -20,6 +20,8 @@ const MAX_VIEWS: usize = 8;
 const MAX_MENUS: usize = 16;
 const MAX_TOOLBAR: usize = 8;
 const MAX_TOOLS: usize = 8;
+const MAX_SHAPES: usize = 8;
+const SHAPE_SIDE: std::ops::RangeInclusive<u32> = 8..=4000;
 const TOOL_CURSORS: [&str; 5] = ["crosshair", "default", "pointer", "grab", "text"];
 const MAX_ICON: usize = 1000;
 const TREE_KINDS: [&str; 3] = ["drawing", "note", "folder"];
@@ -136,6 +138,29 @@ pub(crate) struct ToolDecl {
     pub cursor: Option<String>,
 }
 
+/// A custom shape (`[[contributes.shapes]]`): the plugin draws it as SVG (`ctx.shapes.register`).
+/// `width` and `height` are the size of a new shape.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct ShapeDecl {
+    pub id: String,
+    pub title: String,
+    #[serde(default)]
+    pub icon: Option<String>,
+    #[serde(default = "default_shape_width")]
+    pub width: u32,
+    #[serde(default = "default_shape_height")]
+    pub height: u32,
+}
+
+fn default_shape_width() -> u32 {
+    160
+}
+
+fn default_shape_height() -> u32 {
+    100
+}
+
 /// A view of a file type in the main pane (`[[contributes.views]]`): notes whose name ends in one of
 /// `extensions` (`kanban.md`) open in the plugin's component instead of the Markdown note view.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -193,6 +218,8 @@ pub(crate) struct Contributes {
     pub toolbar: Vec<ToolbarItem>,
     #[serde(default)]
     pub tools: Vec<ToolDecl>,
+    #[serde(default)]
+    pub shapes: Vec<ShapeDecl>,
 }
 
 fn yes() -> bool {
@@ -407,6 +434,23 @@ fn check_tools(list: &[ToolDecl]) -> Result<(), String> {
     Ok(())
 }
 
+fn check_shapes(list: &[ShapeDecl]) -> Result<(), String> {
+    if list.len() > MAX_SHAPES {
+        return Err(format!("Too many shapes (max {MAX_SHAPES})"));
+    }
+    check_unique_ids("shape", list.iter().map(|x| x.id.as_str()))?;
+    for x in list {
+        check_title("shape title", &x.title)?;
+        if let Some(i) = &x.icon {
+            check_icon("Shape", i)?;
+        }
+        if !SHAPE_SIDE.contains(&x.width) || !SHAPE_SIDE.contains(&x.height) {
+            return Err(format!("Shape '{}' width and height must be between {} and {}", x.id, SHAPE_SIDE.start(), SHAPE_SIDE.end()));
+        }
+    }
+    Ok(())
+}
+
 fn check_toolbar(list: &[ToolbarItem], commands: &[Command]) -> Result<(), String> {
     if list.len() > MAX_TOOLBAR {
         return Err(format!("Too many toolbar buttons (max {MAX_TOOLBAR})"));
@@ -521,6 +565,7 @@ fn validate(raw: Raw) -> Result<Manifest, String> {
     check_menus(&c.menus, &c.commands)?;
     check_toolbar(&c.toolbar, &c.commands)?;
     check_tools(&c.tools)?;
+    check_shapes(&c.shapes)?;
     check_unique_ids("command", c.commands.iter().map(|x| x.id.as_str()))?;
     check_unique_ids("panel", c.panels.iter().map(|x| x.id.as_str()))?;
     for x in &c.commands {

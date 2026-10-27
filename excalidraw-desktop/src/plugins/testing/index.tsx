@@ -83,6 +83,7 @@ export type TestManifest = Partial<Omit<PluginInfo, "contributes">> & {
       surface: MenuDecl["surface"];
       command: string;
     })[];
+    shapes?: (Partial<ShapeDecl> & { id: string })[];
     tools?: (Partial<ToolDecl> & { id: string })[];
     toolbar?: (Partial<ToolbarDecl> & { command: string })[];
     views?: (Partial<ViewDecl> & { id: string; extensions: string[] })[];
@@ -90,6 +91,7 @@ export type TestManifest = Partial<Omit<PluginInfo, "contributes">> & {
   };
 };
 
+type ShapeDecl = NonNullable<PluginInfo["contributes"]["shapes"]>[number];
 type ToolDecl = NonNullable<PluginInfo["contributes"]["tools"]>[number];
 type ToolbarDecl = NonNullable<PluginInfo["contributes"]["toolbar"]>[number];
 type ImporterDecl = NonNullable<PluginInfo["contributes"]["importers"]>[number];
@@ -206,6 +208,8 @@ export interface TestPlugin {
   ): Promise<void>;
   /** Drives a declared tool as a pointer would: loads the plugin, then calls its handlers (scene coordinates). */
   tool(id: string): ToolDriver;
+  /** Runs the "Insert shape" command of a declared shape, as the palette or its toolbar button does. */
+  insertShape(shapeId: string): Promise<void>;
   /** The notes a view can read, by vault-relative path. */
   notes: {
     seed(path: string, text: string): void;
@@ -281,6 +285,13 @@ const normalise = (m: TestManifest): PluginInfo => {
       settings: c.settings ?? [],
       importers: (c.importers ?? []).map((x) => ({ title: x.id, ...x })),
       menus: (c.menus ?? []).map((x) => ({ title: null, kinds: [], ...x })),
+      shapes: (c.shapes ?? []).map((x) => ({
+        title: x.id,
+        icon: null,
+        width: 160,
+        height: 100,
+        ...x,
+      })),
       tools: (c.tools ?? []).map((x) => ({
         title: x.id,
         icon: null,
@@ -551,6 +562,11 @@ export async function boot(
     notes: {
       seed: (path, text) => noteFiles.setOnDisk(path, text),
       text: (path) => noteFiles.textOf(path),
+    },
+    async insertShape(shapeId) {
+      await act(async () => {
+        await handler(`${id}.shape.${shapeId}`)();
+      });
     },
     tool(toolId) {
       const key = `${id}.${toolId}`;

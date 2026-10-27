@@ -12,10 +12,13 @@ import { cleanStatus } from "../../../../sdk/api/shared/statusBar";
 
 import { getMenuTarget } from "../menuRegistry";
 import { setToolHandlers } from "../toolRegistry";
+import { setShapeInserter } from "../shapeRegistry";
 import { PluginApiError } from "../../../../sdk/api/shared/rules";
 import { claimsPath } from "../../../../sdk/api/shared/viewNames";
 import { checkVaultPath } from "../../../../sdk/api/shared/vaultPaths";
 import { getWorkspaceBridge } from "../workspaceBridge";
+
+import { createShapesApi } from "../../../../sdk/api/shared/shapes";
 
 import { errorText, logLine, reportPluginError } from "./errors";
 import { guard } from "./guard";
@@ -56,6 +59,7 @@ import type {
   ThemeApi,
   MenusApi,
   ToolsApi,
+  ShapesApi,
   VaultApi,
   ViewsApi,
   WorkspaceApi,
@@ -171,6 +175,7 @@ export function createPluginContext(
   let viewsApi: ViewsApi | undefined;
   let menusApi: MenusApi | undefined;
   let toolsApi: ToolsApi | undefined;
+  let shapesApi: ShapesApi | undefined;
 
   const settingValue = (key: string) => getPluginSetting(id, key);
 
@@ -324,6 +329,15 @@ export function createPluginContext(
         };
       }
       return statusBarApi;
+    },
+    get shapes() {
+      return (shapesApi ??= createShapesApi(
+        info.contributes.shapes ?? [],
+        ctx.scene,
+        track,
+        refuse,
+        (shapeId, insert) => setShapeInserter(`${id}.${shapeId}`, insert),
+      ));
     },
     get tools() {
       return (toolsApi ??= {

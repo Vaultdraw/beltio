@@ -27,6 +27,7 @@ import { claimImporter } from "../importerMapAdmin";
 import { addMenuItems, beginMenuRun } from "../menuRegistry";
 import { addToolbarButtons } from "../toolbarRegistry";
 import { addToolStubs, type ToolStub } from "../toolRegistry";
+import { getShapeInserter } from "../shapeRegistry";
 import { registerPluginSettings } from "../settings/registry";
 
 import { ensureActive } from "./activation";
@@ -156,6 +157,53 @@ function registerToolStubs(
   disposers.push(() => releasePluginTools(id));
 }
 
+/** Declared shapes: "Insert shape: <title>" commands and toolbar buttons. */
+function registerShapeStubs(
+  rt: PluginRuntime,
+  defs: CommandDefinition[],
+  handlers: CommandHandlers,
+  disposers: (() => void)[],
+): void {
+  const { id, name } = rt.info;
+  const buttons = (rt.info.contributes.shapes ?? []).map((s) => {
+    const command = `${id}.shape.${s.id}`;
+    const run = async () => {
+      const ok = rt.state === "active" || (await ensureActive(id));
+      const insert = ok ? getShapeInserter(`${id}.${s.id}`) : undefined;
+      if (!ok) {
+        return;
+      }
+      try {
+        if (!insert) {
+          throw new Error(`shape ${s.id} declared but not registered`);
+        }
+        await insert();
+      } catch (err) {
+        toastStore.push({
+          message: `${name}: ${errorText(err)}`,
+          kind: "error",
+        });
+      }
+    };
+    handlers[command] = run;
+    defs.push({
+      id: command,
+      title: `Insert shape: ${s.title}`,
+      category: name,
+      keys: { default: [] },
+    });
+    return {
+      pluginId: id,
+      pluginName: name,
+      title: s.title,
+      icon: s.icon,
+      priority: 0,
+      command,
+    };
+  });
+  disposers.push(addToolbarButtons(buttons));
+}
+
 /** Returns one disposer for everything registered; also stored on `rt`. */
 export function registerStubs(rt: PluginRuntime): () => void {
   const { info } = rt;
@@ -227,6 +275,11 @@ export function registerStubs(rt: PluginRuntime): () => void {
   }));
   if (toolStubs.length > 0) {
     registerToolStubs(rt, toolStubs, defs, handlers, disposers);
+  }
+  // Declared shapes: a palette command and a toolbar button that insert the shape; the plugin loads on first use.
+  const shapes = info.contributes.shapes ?? [];
+  if (shapes.length > 0) {
+    registerShapeStubs(rt, defs, handlers, disposers);
   }
   disposers.push(registerCommands(defs));
   disposers.push(registerCommandHandlers(handlers));

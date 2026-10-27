@@ -81,6 +81,13 @@ const normalise = (m: TestManifest) => {
         kinds: [],
         ...x,
       })),
+      shapes: (c.shapes ?? []).map((x) => ({
+        title: x.id,
+        icon: null,
+        width: 160,
+        height: 100,
+        ...x,
+      })),
       tools: (c.tools ?? []).map((x) => ({
         title: x.id,
         icon: null,
@@ -145,6 +152,7 @@ export async function boot(
     run: host.run,
     openPanel: host.openPanel,
     tool: host.tool,
+    insertShape: host.insertShape,
     menuItems: host.menuItems,
     chooseMenuItem: host.chooseMenuItem,
     notes: host.notes,

@@ -48,6 +48,8 @@ const MAX_MENUS = 16;
 const MAX_TOOLBAR = 8;
 const MAX_ICON = 1000;
 const MAX_TOOLS = 8;
+const MAX_SHAPES = 8;
+const SHAPE_KEYS = new Set(["id", "title", "icon", "width", "height"]);
 const TOOL_KEYS = new Set(["id", "title", "icon", "cursor"]);
 const TOOL_CURSORS = ["crosshair", "default", "pointer", "grab", "text"];
 const TOOLBAR_KEYS = new Set(["command", "title", "icon", "priority"]);
@@ -557,6 +559,58 @@ function checkTools(tools, err) {
 }
 
 /**
+ * @param {Record<string, any>[]} shapes
+ * @param {(code: string, message: string) => void} err
+ */
+function checkShapes(shapes, err) {
+  const seen = new Set();
+  for (const x of shapes) {
+    for (const k of Object.keys(x)) {
+      if (!SHAPE_KEYS.has(k)) {
+        err("unknown-key", `Unknown key '${k}' in a shape`);
+      }
+    }
+    for (const k of ["id", "title"]) {
+      if (!(k in x)) {
+        err("missing-key", `A shape is missing '${k}'`);
+      }
+    }
+    if ("id" in x) {
+      if (typeof x.id !== "string" || !/^[A-Za-z][A-Za-z0-9_-]*$/.test(x.id)) {
+        err("contribution-id-invalid", `shape id ${show(x.id)} is invalid`);
+      } else if (seen.has(x.id)) {
+        err("contribution-duplicate", `Duplicate shape id ${show(x.id)}`);
+      }
+      seen.add(x.id);
+    }
+    if (
+      "title" in x &&
+      (typeof x.title !== "string" ||
+        x.title.trim() === "" ||
+        chars(x.title) > MAX_TITLE)
+    ) {
+      err("title-invalid", `shape title must be 1 to ${MAX_TITLE} characters`);
+    }
+    if (
+      "icon" in x &&
+      (typeof x.icon !== "string" ||
+        x.icon.length > MAX_ICON ||
+        !/^[A-Za-z0-9 .,+-]+$/.test(x.icon))
+    ) {
+      err("contribution-invalid", "shape icon must be SVG path data");
+    }
+    for (const k of ["width", "height"]) {
+      if (k in x && !(Number.isInteger(x[k]) && x[k] >= 8 && x[k] <= 4000)) {
+        err(
+          "contribution-invalid",
+          `shape ${k} must be an integer from 8 to 4000`,
+        );
+      }
+    }
+  }
+}
+
+/**
  * @param {Record<string, any>[]} views
  * @param {(code: string, message: string) => void} err
  */
@@ -650,11 +704,12 @@ function checkContributes(c, err) {
         "menus",
         "toolbar",
         "tools",
+        "shapes",
       ].includes(k)
     ) {
       err(
         "unknown-key",
-        `Unknown key 'contributes.${k}' (use commands, panels, settings, importers, status_bar, views, menus, toolbar or tools)`,
+        `Unknown key 'contributes.${k}' (use commands, panels, settings, importers, status_bar, views, menus, toolbar, tools or shapes)`,
       );
     }
   }
@@ -682,6 +737,10 @@ function checkContributes(c, err) {
   const menus = list("menus");
   const toolbar = list("toolbar");
   const tools = list("tools");
+  const shapes = list("shapes");
+  if (shapes.length > MAX_SHAPES) {
+    err("too-many", `Too many shapes (max ${MAX_SHAPES})`);
+  }
   if (tools.length > MAX_TOOLS) {
     err("too-many", `Too many tools (max ${MAX_TOOLS})`);
   }
@@ -777,6 +836,7 @@ function checkContributes(c, err) {
   checkMenus(menus, commands, err);
   checkToolbar(toolbar, commands, err);
   checkTools(tools, err);
+  checkShapes(shapes, err);
   for (const s of settings) {
     const field = (k) => typeof s[k] === "string" && s[k] !== "";
     if (!field("key") || !field("type")) {

@@ -1420,3 +1420,27 @@ fn tool_rules() {
     let many: String = (0..9).map(|i| format!("\n[[contributes.tools]]\nid = \"t{i}\"\ntitle = \"T\"\n")).collect();
     bad(&with(&many), "Too many tools");
 }
+
+// ---- P7: custom shapes in the manifest ----
+
+fn shape(extra: &str) -> String {
+    with(&format!("\n[[contributes.shapes]]\nid = \"card\"\ntitle = \"Card\"\n{extra}"))
+}
+
+#[test]
+fn shapes_parse_and_serialise() {
+    let m = manifest::parse(&shape("width = 200\n")).unwrap();
+    let v = serde_json::to_value(&m).unwrap();
+    assert_eq!(v["contributes"]["shapes"][0], json!({"id": "card", "title": "Card", "icon": null, "width": 200, "height": 100}));
+    assert!(manifest::parse(&minimal("a-b")).unwrap().contributes.shapes.is_empty());
+}
+
+#[test]
+fn shape_rules() {
+    bad(&shape("width = 2\n"), "between");
+    bad(&shape("height = 5000\n"), "between");
+    bad(&shape("icon = \"<x>\"\n"), "path data");
+    bad(&shape("[[contributes.shapes]]\nid = \"card\"\ntitle = \"Again\"\n"), "card");
+    let many: String = (0..9).map(|i| format!("\n[[contributes.shapes]]\nid = \"s{i}\"\ntitle = \"S\"\n")).collect();
+    bad(&with(&many), "Too many shapes");
+}

@@ -5,6 +5,7 @@ import type {
   MenuContribution,
   ToolbarContribution,
   ToolContribution,
+  ShapeContribution,
   MenuTarget,
   ToolPoint,
   StatusBarContribution,
@@ -68,6 +69,7 @@ export interface TestManifest {
       id: string;
       extensions: string[];
     })[];
+    shapes?: (Partial<ShapeContribution> & { id: string })[];
     tools?: (Partial<ToolContribution> & { id: string; title?: string })[];
     toolbar?: (Partial<ToolbarContribution> & { command: string })[];
     status_bar?: (Partial<StatusBarContribution> & { id: string })[];
@@ -262,6 +264,8 @@ export interface TestPlugin {
   ): Promise<void>;
   /** Drives a declared tool as a pointer would: loads the plugin, then calls its handlers (scene coordinates). */
   tool(id: string): ToolDriver;
+  /** Runs the "Insert shape" command of a declared shape, as the palette or its toolbar button does. */
+  insertShape(shapeId: string): Promise<void>;
   /** The notes a view can read, by vault-relative path. */
   notes: {
     seed(path: string, text: string): void;

@@ -33,6 +33,7 @@ import { dataKeyFor, MAX_OPS_LIMIT } from "../shared/sceneRules";
 import { cleanStatus, type CleanStatus } from "../shared/statusBar";
 import { createViewNotes } from "../shared/viewFiles";
 import { PluginApiError } from "../shared/rules";
+import { createShapesApi } from "../shared/shapes";
 import { claimsPath } from "../shared/viewNames";
 import { checkVaultPath, permissionError } from "../shared/vaultPaths";
 
@@ -150,6 +151,8 @@ export interface MockHost {
   ): { title: string; command: string }[];
   /** Drives a declared tool as a pointer would: loads the plugin, then calls its handlers (scene coordinates). */
   tool(id: string): ToolDriver;
+  /** Runs the "Insert shape" command of a declared shape, as the palette or its toolbar button does. */
+  insertShape(shapeId: string): Promise<void>;
   /** Chooses a menu item by its text, as the user would; `target` is what `ctx.menus.target()` returns. */
   chooseMenuItem(
     surface: MenuTarget["surface"],
@@ -296,6 +299,7 @@ export function createMockHost(
     (info.contributes.tools ?? []).map((t) => t.id),
   );
   const toolHandlers = new Map<string, ToolHandlers>();
+  const shapeInserters = new Map<string, () => Promise<unknown>>();
   const menuItems = (info.contributes.menus ?? []).map((m) => ({
     ...m,
     title:
@@ -521,6 +525,7 @@ export function createMockHost(
     let statusBarApi: PluginContext["statusBar"] | undefined;
     let viewsApi: PluginContext["views"] | undefined;
     let toolsApi: PluginContext["tools"] | undefined;
+    let shapesApi: PluginContext["shapes"] | undefined;
     let menusApi: PluginContext["menus"] | undefined;
     let pagesApi: PluginContext["pages"] | undefined;
     let foldersApi: PluginContext["folders"] | undefined;
@@ -705,6 +710,18 @@ export function createMockHost(
             });
           },
         });
+      },
+      get shapes() {
+        return (shapesApi ??= createShapesApi(
+          info.contributes.shapes ?? [],
+          ctx.scene,
+          track,
+          refuse,
+          (shapeId, insert) => {
+            shapeInserters.set(shapeId, insert);
+            return () => shapeInserters.delete(shapeId);
+          },
+        ));
       },
       get tools() {
         return (toolsApi ??= {
@@ -1226,6 +1243,19 @@ export function createMockHost(
         view ??= mount(deps);
       });
       return view!;
+    },
+    async insertShape(shapeId) {
+      if (!(info.contributes.shapes ?? []).some((s) => s.id === shapeId)) {
+        throw new Error(`no shape "${shapeId}" is declared`);
+      }
+      if (!(await ensureActive())) {
+        return;
+      }
+      const insert = shapeInserters.get(shapeId);
+      if (!insert) {
+        throw new Error(`shape ${shapeId} declared but not registered`);
+      }
+      await act(() => insert());
     },
     tool(toolId) {
       const drive =

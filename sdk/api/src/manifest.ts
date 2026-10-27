@@ -171,6 +171,24 @@ export interface ToolContribution {
 }
 
 /**
+ * A custom shape declared in plugin.toml (`[[contributes.shapes]]`).
+ *
+ * @since 0.16.0
+ */
+export interface ShapeContribution {
+  /** @since 0.16.0 */
+  id: string;
+  /** @since 0.16.0 */
+  title: string;
+  /** SVG path data on a 24 by 24 grid for its toolbar button, or null for the first letter of the title. @since 0.16.0 */
+  icon: string | null;
+  /** Size of a new shape. @since 0.16.0 */
+  width: number;
+  /** @since 0.16.0 */
+  height: number;
+}
+
+/**
  * Everything a plugin declares it adds to the app.
  *
  * @since 0.1.0
@@ -218,4 +236,10 @@ export interface PluginContributions {
    * @since 0.15.0
    */
   tools?: ToolContribution[];
+  /**
+   * Absent when the app that reads the manifest is older than 0.16.0.
+   *
+   * @since 0.16.0
+   */
+  shapes?: ShapeContribution[];
 }

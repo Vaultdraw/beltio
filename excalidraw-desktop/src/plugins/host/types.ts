@@ -3,6 +3,7 @@ import type {
   MenuContribution,
   ToolbarContribution,
   ToolContribution,
+  ShapeContribution,
   Plugin,
   PluginPermission,
   StatusBarContribution,
@@ -65,6 +66,8 @@ export interface PluginInfo {
     toolbar?: ToolbarContribution[];
     /** Canvas tools (`[[contributes.tools]]`); absent from older backends. */
     tools?: ToolContribution[];
+    /** Custom shapes (`[[contributes.shapes]]`); absent from older backends. */
+    shapes?: ShapeContribution[];
   };
 }
 

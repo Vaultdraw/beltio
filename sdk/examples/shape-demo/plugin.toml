@@ -1,0 +1,22 @@
+id = "shape-demo"
+name = "Shape demo"
+version = "0.1.0"
+api = 0
+min_app = "0.1.2"
+main = "main.js"
+description = "Example: a custom shape the plugin draws as SVG"
+author = "Vaultdraw"
+
+[[contributes.commands]]
+id = "done"
+title = "Shape demo: mark every badge Done"
+
+# A shape gets the palette command "Insert shape: Badge" and a toolbar button. In the
+# drawing it is an image element that keeps its last picture, so the file still opens
+# (and looks the same) when this plugin is not installed.
+[[contributes.shapes]]
+id = "badge"
+title = "Badge"
+icon = "M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"
+width = 120
+height = 120

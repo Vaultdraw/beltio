@@ -16,6 +16,7 @@ import type { FoldersApi } from "./folders";
 import type { FontsApi, TextApi } from "./text";
 import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
+import type { ShapesApi } from "./shapes";
 import type { ToolsApi } from "./tools";
 import type { ViewsApi } from "./views";
 import type { WorkspaceApi } from "./workspace";
@@ -103,6 +104,8 @@ export interface PluginContext {
   readonly menus: MenusApi;
   /** Canvas tools declared with `[[contributes.tools]]`. @since 0.15.0 */
   readonly tools: ToolsApi;
+  /** Custom shapes declared with `[[contributes.shapes]]`. @since 0.16.0 */
+  readonly shapes: ShapesApi;
   /**
    * Disposed in reverse order on disable/reload/quit.
    *

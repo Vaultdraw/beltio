@@ -161,6 +161,13 @@
           "type": "array",
           "maxItems": 8,
           "items": { "$ref": "#/definitions/tool" }
+        },
+        "shapes": {
+          "title": "Custom shapes",
+          "description": "Shapes the plugin draws as SVG, written as [[contributes.shapes]]. At most 8. Each gets a palette command \"Insert shape: <title>\" and a toolbar button; provide the drawing with ctx.shapes.register.",
+          "type": "array",
+          "maxItems": 8,
+          "items": { "$ref": "#/definitions/shape" }
         }
       },
       "additionalProperties": false
@@ -185,6 +192,51 @@
     }
   },
   "definitions": {
+    "shape": {
+      "title": "Custom shape",
+      "description": "A shape the plugin draws as SVG. In the drawing it is an image element that keeps its last picture, so the file opens without the plugin.",
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": {
+          "title": "Shape id",
+          "description": "Short id, unique among the plugin's shapes. Pass it to ctx.shapes.register.",
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+        },
+        "title": {
+          "title": "Shape title",
+          "description": "The name in the palette command and the toolbar tooltip. 1 to 200 characters, not blank.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "\\S"
+        },
+        "icon": {
+          "title": "Shape icon",
+          "description": "SVG path data (the d attribute) on a 24 by 24 grid: letters, digits, spaces and . , + - only, 1 to 1000 characters. Default: the first letter of the title.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "pattern": "^[A-Za-z0-9 .,+-]+$"
+        },
+        "width": {
+          "title": "Shape width",
+          "description": "Width of a new shape in scene units, 8 to 4000. Default 160.",
+          "type": "integer",
+          "minimum": 8,
+          "maximum": 4000
+        },
+        "height": {
+          "title": "Shape height",
+          "description": "Height of a new shape in scene units, 8 to 4000. Default 100.",
+          "type": "integer",
+          "minimum": 8,
+          "maximum": 4000
+        }
+      },
+      "additionalProperties": false
+    },
     "tool": {
       "title": "Canvas tool",
       "description": "A tool that receives the pointer on the canvas while it is active.",
