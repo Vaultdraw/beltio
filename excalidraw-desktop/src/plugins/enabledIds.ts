@@ -1,8 +1,8 @@
 /**
  * The plugin ids that are on right now: the saved `plugins.enabled` list, except that an official
- * plugin tied to an `[extensions]` switch (officialPlugins.ts `extension`) follows that switch
- * instead (it is on while the effective extension set has it on: not in safe start or bisect).
- * One place, so the stubs, the host and Settings agree.
+ * plugin tied to an `[extensions]` switch (officialPlugins.ts `extension`) is on only while that
+ * switch is on too (the effective extension set: not in safe start or bisect) and it is not in
+ * `plugins.disabled`. One place, so the stubs, the host and Settings agree.
  */
 import { getExtensions } from "../extensionSwitches/useExtensions";
 import { getPreferences } from "../vault/preferences";
@@ -19,11 +19,8 @@ export function enabledPluginIds(win?: Window | null): string[] {
     return [...listed];
   }
   const ext = getExtensions(win);
-  const linked = new Set(LINKED.map(([id]) => id));
-  return [
-    ...listed.filter((id) => !linked.has(id)),
-    ...LINKED.filter(([, key]) => ext[key]).map(([id]) => id),
-  ];
+  const off = new Set(LINKED.filter(([, key]) => !ext[key]).map(([id]) => id));
+  return listed.filter((id) => !off.has(id));
 }
 
 /** True when `id` is an official plugin that an `[extensions]` switch controls. */

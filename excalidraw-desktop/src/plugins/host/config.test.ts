@@ -12,22 +12,28 @@ describe("[plugins] enabled", () => {
     expect(configToPreferences({}).values.pluginsEnabled).toEqual([
       "markdown-import",
       "gallery",
+      "graph",
     ]);
     expect(
       configToPreferences({ plugins: { enabled: [] } }).values.pluginsEnabled,
-    ).toEqual(["markdown-import", "gallery"]); // an old list: official plugins are on
+    ).toEqual(["markdown-import", "gallery", "graph"]); // an old list: official plugins are on
     const ok = configToPreferences({ plugins: { enabled: ["hello-command"] } });
     expect(ok.values.pluginsEnabled).toEqual([
       "hello-command",
       "markdown-import",
       "gallery",
+      "graph",
     ]);
     expect(ok.problems).toEqual([]);
   });
 
   it("rejects bad ids with a problem", () => {
     const bad = configToPreferences({ plugins: { enabled: ["Bad Id"] } });
-    expect(bad.values.pluginsEnabled).toEqual(["markdown-import", "gallery"]);
+    expect(bad.values.pluginsEnabled).toEqual([
+      "markdown-import",
+      "gallery",
+      "graph",
+    ]);
     expect(bad.problems[0].key).toBe("plugins.enabled");
   });
 

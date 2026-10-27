@@ -244,19 +244,16 @@ export const PluginsPage = () => {
   );
 
   const setEnabled = (id: string, on: boolean) => {
-    // A plugin tied to an `[extensions]` switch is turned on and off with that switch.
-    const ext = extensionOf(id);
-    if (ext) {
-      updatePreferences({ [EXTENSION_FIELDS[ext]]: on }, win);
-      return;
-    }
-    // The saved list, not the derived one (which also holds the switch-driven plugins).
+    // The saved list, not the derived one (which leaves out plugins whose switch is off).
     const saved = getPreferences(win).pluginsEnabled;
+    // A plugin tied to an `[extensions]` switch also turns that switch.
+    const ext = extensionOf(id);
     updatePreferences(
       {
         pluginsEnabled: on
           ? [...new Set([...saved, id])]
           : saved.filter((x) => x !== id),
+        ...(ext ? { [EXTENSION_FIELDS[ext]]: on } : {}),
       },
       win,
     );

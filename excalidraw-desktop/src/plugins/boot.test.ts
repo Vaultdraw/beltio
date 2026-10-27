@@ -110,6 +110,7 @@ describe("official plugins (on by default, no startup cost)", () => {
     expect(getPreferences(window).pluginsEnabled).toEqual([
       "markdown-import",
       "gallery",
+      "graph",
     ]);
     const { win, flush, queue } = fakeWin(true);
     bootPlugins(win);

@@ -1559,7 +1559,8 @@
           "description": "Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`.",
           "default": [
             "markdown-import",
-            "gallery"
+            "gallery",
+            "graph"
           ],
           "type": "array",
           "items": {

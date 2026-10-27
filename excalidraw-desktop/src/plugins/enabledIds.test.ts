@@ -8,14 +8,19 @@ import { bootPlugins } from "./boot";
 import { enabledPluginIds, extensionOf, isExtensionLinked } from "./enabledIds";
 
 afterEach(() =>
-  updatePreferences({ extGraph: true, pluginsEnabled: ["markdown-import"] }),
+  updatePreferences({
+    extGraph: true,
+    pluginsEnabled: ["markdown-import", "graph"],
+  }),
 );
 
 describe("an official plugin tied to an [extensions] switch", () => {
-  it("is on while the switch is on, whatever plugins.enabled lists", () => {
-    updatePreferences({ extGraph: true, pluginsEnabled: [] });
+  it("is on only while the switch is on and plugins.enabled lists it", () => {
+    updatePreferences({ extGraph: true, pluginsEnabled: ["graph"] });
     expect(enabledPluginIds()).toEqual(["graph"]);
     updatePreferences({ extGraph: false, pluginsEnabled: ["graph"] });
+    expect(enabledPluginIds()).toEqual([]);
+    updatePreferences({ extGraph: true, pluginsEnabled: [] });
     expect(enabledPluginIds()).toEqual([]);
     expect(isExtensionLinked("graph")).toBe(true);
     expect(isExtensionLinked("markdown-import")).toBe(false);
@@ -23,7 +28,7 @@ describe("an official plugin tied to an [extensions] switch", () => {
   });
 
   it("registers its commands as stubs only while on, and loads nothing either way", () => {
-    updatePreferences({ extGraph: false });
+    updatePreferences({ extGraph: false, pluginsEnabled: ["graph"] });
     bootPlugins(window);
     expect(getRegisteredCommand("graph.open")).toBeUndefined();
     updatePreferences({ extGraph: true });
