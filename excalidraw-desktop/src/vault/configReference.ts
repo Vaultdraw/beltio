@@ -454,7 +454,7 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
         doc: "Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`.",
       },
       disabled: {
-        doc: "Official plugins you turned off, like `[\"gallery\"]`. Settings writes it; a new official plugin is on until you list it here.",
+        doc: 'Official plugins you turned off, like `["gallery"]`. Settings writes it; a new official plugin is on until you list it here.',
       },
       importers: {
         doc: 'Which plugin imports a file extension when two plugins claim it; `""` turns plugin handling off for that extension.',
