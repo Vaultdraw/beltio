@@ -1268,6 +1268,18 @@
           "minimum": 1,
           "maximum": 5
         },
+        "notes": {
+          "description": "Search the Markdown notes (`.md`) of the vault, with their `#tags`, links and headings. Read when the index starts (reopen the vault).",
+          "default": true,
+          "type": "boolean"
+        },
+        "note_text_mb": {
+          "description": "Megabytes of note text the index keeps in memory (48 holds about 20,000 notes). Past it a note keeps its name, headings, tags and links. Read when the index starts; 0 keeps only those.",
+          "default": 48,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
         "start": {
           "description": "When the search index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first search). Tags show once it has started. See [Startup](#startup).",
           "default": "idle",

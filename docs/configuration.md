@@ -1201,6 +1201,8 @@ Keys for people who tune speed against detail. Defaults are what the app always 
 | `search.debounce_ms` | `60` | Wait after the last keystroke before a search runs, 0 to 2000. |
 | `search.max_drawings` | `50` | Drawings listed in results, 1 to 200. |
 | `search.max_snippets` | `5` | Matching elements shown per drawing, 1 to 5 (the index keeps 5). |
+| `search.notes` | `true` | Index the Markdown notes (`.md`) of the vault: their text, `#tags`, frontmatter tags, links and headings. Read when the index starts, so reopen the vault after changing it. A vault with no notes pays nothing either way. |
+| `search.note_text_mb` | `48` | Megabytes of note text the index keeps in memory, 0 to 4096; 48 holds about 20,000 notes. Past it a note keeps its name, headings, tags and links, and the newest notes keep their full text. Read when the index starts. |
 | `interface.thumbnail_cache_mb` | `128` | Disk cap of a vault's thumbnail cache, 8 to 8192. Applies at the next thumbnail saved. |
 
 ## Control and links
@@ -1537,6 +1539,8 @@ Search speed trade-offs. Lower counts and a longer wait cost less on a slow mach
 | `debounce_ms` | `60` | a whole number from 0 to 2000 (milliseconds) |  | Wait this long after the last keystroke before a search runs. |
 | `max_drawings` | `50` | a whole number from 1 to 200 |  | Most drawings listed in the search results. |
 | `max_snippets` | `5` | a whole number from 1 to 5 |  | Most matching elements shown under each drawing; the index keeps 5 per drawing, so 5 is the top. |
+| `notes` | `true` | true or false |  | Search the Markdown notes (`.md`) of the vault, with their `#tags`, links and headings. Read when the index starts (reopen the vault). |
+| `note_text_mb` | `48` | a whole number from 0 to 4096 |  | Megabytes of note text the index keeps in memory (48 holds about 20,000 notes). Past it a note keeps its name, headings, tags and links. Read when the index starts; 0 keeps only those. |
 | `start` | `"idle"` | "open", "idle" or "use" |  | When the search index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first search). Tags show once it has started. See [Startup](#startup). |
 
 ### `[extensions]`

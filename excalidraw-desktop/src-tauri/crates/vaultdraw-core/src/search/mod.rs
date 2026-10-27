@@ -16,7 +16,7 @@ pub mod types;
 
 pub use extract::{extract_items, ElementLink, ItemKind, TextItem};
 pub use headless::load_or_build;
-pub use index::{word_snippet, DocEntry, Index};
+pub use index::{word_snippet, DocEntry, Index, DEFAULT_NOTE_BUDGET};
 pub use normalize::{normalize, NORMALIZER_VERSION};
 pub use scan::{is_drawing_name, is_indexed_name, walk};
 pub use store::vault_id;

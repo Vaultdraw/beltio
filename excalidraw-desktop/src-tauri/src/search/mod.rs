@@ -127,6 +127,29 @@ impl VaultIndex {
     }
 }
 
+/// `[search] notes` and `note_text_mb` of config.toml: index Markdown notes, and how much of their
+/// text to keep in memory (past it a note keeps its name, headings, tags and links).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct NotesConfig {
+    pub enabled: bool,
+    pub budget_bytes: usize,
+}
+
+impl Default for NotesConfig {
+    fn default() -> Self {
+        NotesConfig { enabled: true, budget_bytes: vaultdraw_core::search::DEFAULT_NOTE_BUDGET }
+    }
+}
+
+impl NotesConfig {
+    pub(crate) fn from_config(config: &serde_json::Value) -> NotesConfig {
+        let t = config.get("search");
+        let enabled = t.and_then(|t| t.get("notes")).and_then(serde_json::Value::as_bool).unwrap_or(true);
+        let mb = t.and_then(|t| t.get("note_text_mb")).and_then(serde_json::Value::as_u64).map_or(48, |m| m.min(4096));
+        NotesConfig { enabled, budget_bytes: (mb as usize) * 1024 * 1024 }
+    }
+}
+
 /// What a pending vault needs to start: root, emitter, snapshot path.
 type Pending = (PathBuf, Emitter, Option<PathBuf>);
 
@@ -198,7 +221,12 @@ impl SearchService {
     fn start_deferring(&self, handle: &str, root: PathBuf, emit: Emitter, snapshot: Option<PathBuf>, defer: worker::Defer) {
         let (tx, rx) = mpsc::channel();
         let shared = Arc::new(VaultIndex { index: RwLock::new(Index::default()), state: Mutex::new(IndexState::Loading), tx, stop: AtomicBool::new(false), changed: Condvar::new(), root: root.clone(), attachments: Mutex::new(None) });
-        let worker = worker::Worker { handle: handle.to_string(), root, shared: shared.clone(), rx, emit, snapshot, last_emit: Instant::now(), dirty_since: None, defer, deferred: Default::default() };
+        // Tests never read the owner's config.
+        #[cfg(not(test))]
+        let notes = NotesConfig::from_config(&crate::services::read_config());
+        #[cfg(test)]
+        let notes = NotesConfig::default();
+        let worker = worker::Worker { handle: handle.to_string(), root, shared: shared.clone(), rx, emit, snapshot, last_emit: Instant::now(), dirty_since: None, defer, deferred: Default::default(), notes };
         if let Err(e) = std::thread::Builder::new().name("vaultdraw-search".into()).spawn(move || worker.run()) {
             eprintln!("vaultdraw: search indexer not started: {e}");
             return;

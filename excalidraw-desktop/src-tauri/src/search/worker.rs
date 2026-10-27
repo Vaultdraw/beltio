@@ -60,6 +60,7 @@ pub(super) struct Worker {
     pub defer: Defer,
     /// Big changed files and when each is due for re-indexing (reset by every new event).
     pub deferred: HashMap<String, Instant>,
+    pub notes: super::NotesConfig,
 }
 
 impl Worker {
@@ -123,6 +124,7 @@ impl Worker {
             *self.shared.write() = index;
             racy_before = saved_at.saturating_sub(RACY_MS);
         }
+        self.shared.write().set_note_budget(self.notes.budget_bytes);
         self.emit(true);
         if self.sync_subtree("", racy_before, true) {
             self.save();
@@ -132,7 +134,10 @@ impl Worker {
 
     /// Re-reads `rel` (a directory, or "" for the whole vault) and brings the index in line.
     fn sync_subtree(&mut self, rel: &str, racy_before: u64, report: bool) -> bool {
-        let found = walk(&self.root, rel);
+        let mut found = walk(&self.root, rel);
+        if !self.notes.enabled {
+            found.retain(|f| !vaultdraw_core::search::notes::is_note_name(&f.path));
+        }
         let prefix = if rel.is_empty() { String::new() } else { format!("{rel}/") };
         let present: HashSet<&str> = found.iter().map(|f| f.path.as_str()).collect();
         let removed = self.shared.write().retain(|p| !p.starts_with(&prefix) || present.contains(p)) > 0;
@@ -254,7 +259,7 @@ impl Worker {
                 index.remove(rel) | (index.remove_prefix(&format!("{rel}/")) > 0)
             }
             Some(m) if m.is_dir() => self.sync_subtree(rel, racy_before, false),
-            Some(m) if m.is_file() && is_indexed_name(rel) => {
+            Some(m) if m.is_file() && is_indexed_name(rel) && (self.notes.enabled || !vaultdraw_core::search::notes::is_note_name(rel)) => {
                 if m.len() < self.defer.min_bytes {
                     self.deferred.remove(rel);
                     return self.apply_file(rel, racy_before);

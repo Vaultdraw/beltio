@@ -19,7 +19,8 @@ export type ElementMatch = {
   elementId: string;
   /** Bound text: the shape/arrow it labels. */
   containerId: string | null;
-  kind: "text" | "frame" | "formula";
+  /** "note" and "code" are lines of a Markdown note (`id` is `L<line number>`). */
+  kind: "text" | "frame" | "formula" | "note" | "code";
   snippet: string;
   highlights: HighlightRange[];
 };
@@ -27,7 +28,7 @@ export type ElementMatch = {
 export type SearchHit = {
   /** Vault-relative, forward slashes. */
   path: string;
-  /** File name including ".excalidraw". */
+  /** File name including ".excalidraw" or ".md". */
   name: string;
   score: number;
   nameHighlights: HighlightRange[];
