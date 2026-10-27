@@ -9,7 +9,7 @@ use super::index::{LinkIndex, NONE};
 use super::resolve::{dir_of, key_of_target, rel_path};
 use super::rewrite::Replace;
 use super::types::RePointed;
-use crate::search::{is_drawing_name, DocEntry, Index};
+use crate::search::{is_indexed_name, DocEntry, Index};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 
@@ -41,7 +41,7 @@ pub(crate) struct Plan {
 
 /// Link field text of `elem` in the drawing at `path`.
 fn field_text<'a>(docs: &'a HashMap<String, DocEntry>, path: &str, elem: &str) -> Option<&'a str> {
-    docs.get(path)?.elinks.iter().find(|l| &*l.element_id == elem).map(|l| &*l.link)
+    docs.get(path)?.elinks.iter().find(|l| &*l.element_id == elem).map(|l| super::resolve::note_link_target(&l.link).unwrap_or(&l.link))
 }
 
 /// The text of the link as written in `elem` that has `key`.
@@ -58,13 +58,19 @@ fn written_target(docs: &HashMap<String, DocEntry>, path: &str, elem: &str, key:
             return found;
         }
     }
-    let f = parse_link_field(field_text(docs, path, elem)?)?;
+    let text = field_text(docs, path, elem)?;
+    if super::resolve::is_note_path(path) {
+        return Some(strip_ext(text.strip_suffix(".md").unwrap_or(text)).to_string());
+    }
+    let f = parse_link_field(text)?;
     Some(f.target)
 }
 
 /// New relative text for a relative link whose old text was `old`.
 fn rel_text(old: &str, new_dir: &str, target_stem: &str) -> String {
-    let mut p = format!("{}{EXT}", rel_path(new_dir, target_stem));
+    // A note's stem keeps its `.md`; a drawing's stem has no extension.
+    let ext = if super::resolve::is_note_path(target_stem) { "" } else { EXT };
+    let mut p = format!("{}{ext}", rel_path(new_dir, target_stem));
     if !old.starts_with("./") && !old.starts_with("../") {
         if let Some(rest) = p.strip_prefix("./") {
             p = rest.to_string();
@@ -99,7 +105,7 @@ struct RelSource {
 fn moves_of(index: &Index, from: &str, to: &str) -> Vec<(String, String)> {
     let docs = index.docs();
     if docs.contains_key(from) {
-        return if is_drawing_name(to) { vec![(from.to_string(), to.to_string())] } else { Vec::new() };
+        return if is_indexed_name(to) { vec![(from.to_string(), to.to_string())] } else { Vec::new() };
     }
     let prefix = format!("{from}/");
     let mut v: Vec<(String, String)> = docs.keys().filter(|p| p.starts_with(&prefix)).map(|p| (p.clone(), format!("{to}/{}", &p[prefix.len()..]))).collect();

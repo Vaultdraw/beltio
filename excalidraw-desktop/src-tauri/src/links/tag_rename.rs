@@ -73,6 +73,10 @@ pub(crate) fn plan(index: &Index, from: &str, to: &str) -> Result<TagPlan> {
     let mut keys: BTreeSet<&str> = BTreeSet::new();
     let mut doc_keys: Vec<&str> = Vec::new();
     for (path, tags) in index.tag_docs() {
+        // Notes are not edited by a tag rename (their tags sit in prose, code and frontmatter).
+        if vaultdraw_core::search::notes::is_note_name(path) {
+            continue;
+        }
         doc_keys.clear();
         for t in tags {
             if key_under(&t.key, &from_key) {

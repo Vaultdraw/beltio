@@ -153,6 +153,9 @@ pub fn walk_parallel(root: &Path, threads: usize) -> Vec<Found> {
 
 /// Parsed entry for one drawing file's bytes (unparseable files stay findable by name).
 pub fn entry_from_bytes(path: &str, stat: (u64, u64), bytes: &[u8]) -> DocEntry {
+    if super::notes::is_note_name(path) {
+        return super::notes::note_entry_from_bytes(path, stat, bytes);
+    }
     match extract_doc(bytes) {
         Ok(x) => DocEntry::new(path, stat, x.items).with_links(x.elinks, x.hash8),
         Err(_) => DocEntry::new(path, stat, Vec::new()),

@@ -7,6 +7,7 @@
 
 mod journal;
 mod layout_store;
+mod note_rewrite;
 mod plan;
 mod rewrite;
 mod tag_rename;
@@ -132,6 +133,9 @@ fn failure(path: &str, code: &str, message: impl Into<String>) -> RewriteFailure
 
 /// Rewrites one closed drawing; `Ok(None)` when nothing needed changing.
 fn rewrite_file(v: &Vault, f: &FilePlan, tag: Option<&TagRule>, hooks: &Hooks, parents: &mut std::collections::BTreeSet<PathBuf>) -> std::result::Result<Option<(u32, Vec<String>)>, RewriteFailure> {
+    if resolve::is_note_path(&f.to_path) {
+        return rewrite_note_file(v, f, tag, hooks);
+    }
     let fail = |e: crate::NativeError| failure(&f.to_path, if e.code == "CONFLICT" { "CONFLICT" } else if e.code == "INVALID_FILE" { "INVALID_FILE" } else { "IO" }, e.message);
     let abs = crate::safe_path(&v.root, &f.to_path, false).map_err(fail)?;
     let bytes = match crate::read_bounded(&abs, MAX_DRAWING_BYTES) {
@@ -153,7 +157,26 @@ fn rewrite_file(v: &Vault, f: &FilePlan, tag: Option<&TagRule>, hooks: &Hooks, p
     Ok(Some((out.links, out.text_elements)))
 }
 
-/// Rewrites `files` (closed drawings) and finishes the job: re-measure set, journal, event.
+/// Rewrites the links of one note through the guarded write (revision check, history copy,
+/// atomic rename). A tag rename never edits notes.
+fn rewrite_note_file(v: &Vault, f: &FilePlan, tag: Option<&TagRule>, hooks: &Hooks) -> std::result::Result<Option<(u32, Vec<String>)>, RewriteFailure> {
+    use vaultdraw_core::note_file::{read_note_file, write_note_file};
+    let fail = |e: crate::NativeError| failure(&f.to_path, if e.code == "CONFLICT" { "CONFLICT" } else if e.code == "INVALID_FILE" || e.code == "INVALID_PATH" { "INVALID_FILE" } else { "IO" }, e.message);
+    if tag.is_some() {
+        return Ok(None);
+    }
+    let note = match read_note_file(&v.root, &f.to_path) {
+        Ok(n) => n,
+        Err(e) if e.code == "NOT_FOUND" => return Ok(None),
+        Err(e) => return Err(fail(e)),
+    };
+    let Some(out) = note_rewrite::rewrite_note(&note.content, f) else { return Ok(None) };
+    let w = write_note_file(v, &f.to_path, &out.text, Some(&note.revision)).map_err(fail)?;
+    (hooks.indexed)(&f.to_path, (w.bytes, w.mtime_ms), out.text.as_bytes());
+    Ok(Some((out.links, Vec::new())))
+}
+
+/// Rewrites `files` (closed drawings and notes) and finishes the job: re-measure set, journal, event.
 /// `tag` switches the rewriter to tag mode (the files carry no element lists then).
 fn run_job(v: &Vault, files: &[FilePlan], tag: Option<&TagRule>, job_id: u32, hooks: &Hooks, state: &LinksState) -> RewriteDone {
     let started = Instant::now();

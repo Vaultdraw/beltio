@@ -1076,3 +1076,62 @@ mod tag_rename_tests {
         assert!(!s.contains("tag"));
     }
 }
+
+// ---------------------------------------------------------------- notes
+
+#[test]
+fn renaming_a_note_or_a_drawing_rewrites_the_links_in_notes_with_history() {
+    let day = "---\ntags: [daily]\n---\nSee [[Old]] and [[Old#Part|shown]] and ![[Old]] and [[Map.excalidraw]].\r\nAlso [md](Old.md) and `[[Old]]`\n";
+    let e = env(&[
+        ("Old.md", "# Part\n".to_string()),
+        ("Daily.md", day.to_string()),
+        ("sub/Deep.md", "[[Old]] [[Map]]\n".to_string()),
+        ("Map.excalidraw", scene(&[text_el("m", "x")])),
+        ("draw.excalidraw", scene(&[text_el("t", "to [[Old]] and [[Old.md]]")])),
+    ]);
+    let (r, h) = e.mv("Old.md", "New Name.md", None, |_| {});
+    assert_eq!(r.planned_files, 3, "two notes by `Old` and the drawing that wrote `[[Old.md]]`; its plain `[[Old]]` is not a note link");
+    h.unwrap().join().unwrap();
+    assert!(e.root.join("New Name.md").exists() && !e.root.join("Old.md").exists());
+    assert_eq!(read(&e.root, "Daily.md"), "---\ntags: [daily]\n---\nSee [[New Name]] and [[New Name#Part|shown]] and ![[New Name]] and [[Map.excalidraw]].\r\nAlso [md](New%20Name.md) and `[[Old]]`\n");
+    assert_eq!(read(&e.root, "sub/Deep.md"), "[[New Name]] [[Map]]\n");
+    // The drawing's `[[Old]]` kept its meaning (no drawing Old exists: unresolved before and after);
+    // its written `[[Old.md]]` named the note and followed the rename.
+    let d: serde_json::Value = serde_json::from_str(&read(&e.root, "draw.excalidraw")).unwrap();
+    assert_eq!(d["elements"][0]["originalText"], "to [[Old]] and [[New Name.md]]");
+    // History copies hold the notes as they were; nothing else was created in the vault.
+    let hist = e.root.join(".excalidraw-vault/note-history");
+    let copies: usize = fs::read_dir(&hist).unwrap().flatten().map(|d| fs::read_dir(d.path()).unwrap().count()).sum();
+    assert_eq!(copies, 2);
+    let done = e.done.lock().unwrap().clone();
+    assert_eq!((done[0].failed.len(), done[0].rewritten), (0, 3));
+    // The index follows: backlinks of the renamed note.
+    let vi = e.search.vault("h").unwrap();
+    let resp = query::links_response(&vi.read(), "New Name.md");
+    let mut from: Vec<_> = resp.backlinks.iter().map(|b| b.path.as_str()).collect();
+    from.sort();
+    from.dedup();
+    assert_eq!(from, vec!["Daily.md", "draw.excalidraw", "sub/Deep.md"]);
+}
+
+#[test]
+fn a_note_edited_elsewhere_keeps_the_edit_and_gets_the_new_link() {
+    // The rewrite reads the note as it is when it writes (never the plan's copy), so an edit made
+    // in Obsidian meanwhile is kept; the revision check inside the write covers the last instant.
+    let e = env(&[("Old.md", "x".into()), ("A.md", "[[Old]]\n".into())]);
+    let root = e.root.clone();
+    let (_, h) = e.mv("Old.md", "New.md", None, |_| {});
+    fs::write(root.join("A.md"), "[[Old]] edited in Obsidian\n").unwrap();
+    h.unwrap().join().unwrap();
+    let a = read(&e.root, "A.md");
+    assert!(a == "[[Old]] edited in Obsidian\n" || a == "[[New]] edited in Obsidian\n" || a == "[[New]]\n", "never a blend: {a:?}");
+}
+
+#[test]
+fn moving_a_folder_of_notes_keeps_relative_links_working() {
+    let e = env(&[("a/One.md", "[[./Two]] [[../Top]]\n".into()), ("a/Two.md", "".into()), ("Top.md", "".into())]);
+    fs::create_dir_all(e.root.join("a/b")).unwrap();
+    e.mv_wait("a/One.md", "a/b/One.md", None);
+    // Two.md stayed in a/, so from a/b/ it is one folder up.
+    assert_eq!(read(&e.root, "a/b/One.md"), "[[../Two]] [[../../Top]]\n");
+}
