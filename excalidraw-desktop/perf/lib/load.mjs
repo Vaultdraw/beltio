@@ -1,5 +1,7 @@
 // Machine-load helpers: the quiet-machine gate used before perf measurements.
 import { execFileSync } from "node:child_process";
+import os from "node:os";
+import { isLinux } from "./linux.mjs";
 
 export const DEFAULT_QUIET_LOAD = 3.5;
 export const DEFAULT_QUIET_WAIT_S = 300;
@@ -11,6 +13,7 @@ export function parseLoadAvg(text) {
 }
 
 export function loadAvg1() {
+  if (isLinux) return os.loadavg()[0]; // /proc/loadavg; the macOS path keeps its sysctl probe
   try {
     return parseLoadAvg(execFileSync("sysctl", ["-n", "vm.loadavg"], { encoding: "utf8" }));
   } catch {

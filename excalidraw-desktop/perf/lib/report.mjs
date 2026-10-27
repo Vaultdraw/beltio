@@ -2,10 +2,12 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { specFor, orderIndex } from "./catalogue.mjs";
+import { isLinux, machineInfoLinux } from "./linux.mjs";
 
 const sysctl = (k) => { try { return execFileSync("sysctl", ["-n", k], { encoding: "utf8" }).trim(); } catch { return ""; } };
 
 export function machineInfo() {
+  if (isLinux) return machineInfoLinux();
   const memBytes = Number(sysctl("hw.memsize")) || 0;
   let os = "";
   try { os = execFileSync("sw_vers", [], { encoding: "utf8" }).trim().split("\n").map((l) => l.split(":").pop().trim()).join(" "); } catch { /* ignore */ }
@@ -78,7 +80,7 @@ export function comparisonTable(rows) {
 }
 
 export function machineLines(m) {
-  return [`${m.brand}, ${m.memGB} GB RAM, ${m.perfCores}P + ${m.efficiencyCores}E cores`, `macOS ${m.os}`];
+  return [`${m.brand}, ${m.memGB} GB RAM, ${m.perfCores}P + ${m.efficiencyCores}E cores`, m.platform === "linux" ? `${m.os}` : `macOS ${m.os}`];
 }
 
 export function baselineMarkdown(combined, catalogue) {

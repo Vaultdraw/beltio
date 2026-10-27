@@ -1,8 +1,9 @@
-// Process discovery + RSS / CPU-time sampling via ps. macOS only.
+// Process discovery + RSS / CPU-time sampling via ps. macOS; every Linux difference is an `isLinux` branch into linux.mjs.
 import { execFile, spawn } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { isLinux, listProcessesLinux, sampleProcsLinux, sampleFootprintLinux, webKitHelpersOf } from "./linux.mjs";
 
 const run = (cmd, args) =>
   new Promise((resolve) => {
@@ -42,6 +43,7 @@ export function parsePsList(text) {
 }
 
 export async function listProcesses() {
+  if (isLinux) return listProcessesLinux();
   const { stdout } = await run("ps", ["-axo", "pid=,ppid=,comm="]);
   return parsePsList(stdout);
 }
@@ -49,6 +51,7 @@ export async function listProcesses() {
 export const isWebKitHelper = (p) => /com\.apple\.WebKit\.(WebContent|GPU|Networking)\.xpc\/Contents\/MacOS\/com\.apple\.WebKit\.(WebContent|GPU|Networking)$/.test(p.comm);
 
 export async function snapshotWebKitPids() {
+  if (isLinux) return new Set(); // Linux helpers are children of the app: no pre-spawn snapshot needed
   return new Set((await listProcesses()).filter(isWebKitHelper).map((p) => p.pid));
 }
 
@@ -59,12 +62,19 @@ export async function snapshotWebKitPids() {
  * same window would be picked up too; run perf on a quiet machine and not concurrently with other WebKit apps.
  */
 export async function discoverWebKitHelpers(beforeSet) {
+  if (isLinux) throw new Error("discoverWebKitHelpers is macOS-only; use discoverLinuxHelpers(appPid)");
   return (await listProcesses()).filter((p) => isWebKitHelper(p) && !beforeSet.has(p.pid)).map((p) => p.pid);
+}
+
+/** Linux: WebKitGTK helpers of the app, verified by the parent-pid chain. [{pid, role}] with role webContent|network|gpu. */
+export async function discoverLinuxHelpers(appPid) {
+  return webKitHelpersOf(await listProcesses(), appPid);
 }
 
 /** Sample rss (KB) and cumulative cpu seconds. Dead pids are simply absent from the result. */
 export async function sampleProcs(pids) {
   if (!pids.length) return new Map();
+  if (isLinux) return sampleProcsLinux(pids);
   const { stdout } = await run("ps", ["-o", "pid=,rss=,time=", "-p", pids.join(",")]);
   return parsePsSample(stdout);
 }
@@ -88,6 +98,7 @@ export function parseFootprintJson(text) {
 /** phys_footprint and lifetime phys_footprint_peak (what Activity Monitor's Memory column is based on). ~50 ms, no root. */
 export async function sampleFootprint(pids) {
   if (!pids.length) return new Map();
+  if (isLinux) return sampleFootprintLinux(pids); // PSS now, VmHWM as the lifetime peak
   const dir = await mkdtemp(path.join(tmpdir(), "perf-footprint-"));
   const file = path.join(dir, "fp.json");
   try {
@@ -101,6 +112,7 @@ export async function sampleFootprint(pids) {
 }
 
 export async function applyBackgroundPolicy(pid) {
+  if (isLinux) return true; // the low-end scope / nice level is inherited by the helpers (linux.lowEndCommand)
   const { err } = await run("taskpolicy", ["-b", "-p", String(pid)]);
   return !err;
 }
@@ -132,6 +144,10 @@ export function trackChild(child) {
  * reports whether it could apply.
  */
 export function startMemoryPressure({ seconds = 60, log = () => {} } = {}) {
+  if (isLinux) {
+    // No memory_pressure on Linux; the low-end scope's MemoryHigh is the stand-in (see linux.lowEndCommand).
+    return { child: null, applied: false, stop() {}, note: () => "memory_pressure -S does not exist on Linux: skipped (low-end uses the cgroup MemoryHigh cap instead)" };
+  }
   const child = trackChild(spawn("memory_pressure", ["-S", "-l", "warn", "-s", String(seconds)], { stdio: ["ignore", "pipe", "pipe"] }));
   let text = "";
   const onData = (d) => { if (text.length < 8192) text += d; };

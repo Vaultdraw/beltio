@@ -15,6 +15,7 @@ import { buildPerfApp, reuseBuiltApp, runAppOnce, gitInfo, perfCacheDir, isScree
 import { waitQuiet, loadAvg1, loadNote, loadSummary, DEFAULT_QUIET_LOAD, DEFAULT_QUIET_WAIT_S } from "./lib/load.mjs";
 import { parseScenarioList, scenarioNames } from "./lib/scenarios.mjs";
 import { machineInfo, resultTable, comparisonTable, updateBaseline } from "./lib/report.mjs";
+import { isLinux } from "./lib/linux.mjs";
 
 const HELP = `Usage: node excalidraw-desktop/perf/run.mjs [options]
 
@@ -66,6 +67,13 @@ const HELP = `Usage: node excalidraw-desktop/perf/run.mjs [options]
                          field: vault-open, tree-expand, search, open, switch, settings, palette, save, pan-zoom, typing
   --skip-scenarios a,..  Chromium mode: run all scenarios except these. ab.mjs sets --scenarios itself (see its --help)
   --quick                1 run, no warmup, no extra noise runs (harness smoke test)
+
+Linux (scripts/linux-perf.sh wraps all of this): --app --no-build --skip-browser measures the plain release binary
+  (PERF_APP_BIN, else <CARGO_TARGET_DIR or src-tauri/target>/release/excalidraw-vault, built with --features smoke-test)
+  on the DISPLAY in the environment (Xvfb). --low-end = systemd-run --user --scope CPUQuota=25% MemoryHigh=1G
+  (PERF_LOWEND_CPU_QUOTA, PERF_LOWEND_MEMORY_HIGH; nice -n 19 + taskset when systemd-run is unavailable); no
+  memory_pressure, caffeinate or screen-lock check. PERF_APP_TIMEOUT_MS overrides the per-run timeout on slow VMs.
+  Baseline: personal/perf/linux/baseline.json (numbers are only comparable within the same machine).
 
 Recommended merge gate: node excalidraw-desktop/perf/ab.mjs --base <ref> (interleaved base/head A/B in one session; bisect only after a
 confirmed regression). Wall-clock metrics swing with machine load; browser.cpu.* / browser.count.* (CDP CPU time, event counts) are load-insensitive.
@@ -130,8 +138,8 @@ if (!load.quiet && o["require-quiet"]) {
 }
 
 // Keep the display awake (and the session from idle-locking) for the whole run: a locked or
-// sleeping screen hides the WebView, which stops requestAnimationFrame in the packaged app.
-try {
+// sleeping screen hides the WebView, which stops requestAnimationFrame in the packaged app. (Not on Linux: Xvfb.)
+if (!isLinux) try {
   spawn("caffeinate", ["-dimsu", "-t", "7200", "-w", String(process.pid)], { stdio: "ignore", detached: false }).on("error", () => {});
 } catch { /* best effort */ }
 const LOCKED_MSG = "screen is locked: the packaged app can't be measured (WebKit stops rendering hidden windows). Unlock the screen, or use --skip-app for Chromium-only numbers";
@@ -163,6 +171,7 @@ if (!skipApp && isScreenLocked()) {
       runOne: async (i) => {
         const r = await runAppOnce({
           appPath: built.appPath, pristineVault: vaultDir, lowEnd: mode === "low-end", runIndex: i,
+          ...(isLinux ? { binary: built.binary, runsDir: path.join(cacheDir, "runs") } : {}),
           keepRuns: !!o["keep-runs"], memoryPressure: mode === "low-end" || !!o["memory-pressure"], log, modes, altVault, configToml: process.env.PERF_CONFIG_TOML ? readFileSync(process.env.PERF_CONFIG_TOML, "utf8") : undefined,
         });
         for (const n of r.notes) if (!notes.includes(n)) notes.push(n);

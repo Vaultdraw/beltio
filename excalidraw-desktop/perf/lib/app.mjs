@@ -5,8 +5,9 @@ import { rm, mkdir } from "node:fs/promises";
 import path from "node:path";
 import {
   snapshotWebKitPids, discoverWebKitHelpers, listProcesses, sampleProcs, sampleFootprint,
-  applyBackgroundPolicy, trackChild, startMemoryPressure,
+  applyBackgroundPolicy, trackChild, startMemoryPressure, discoverLinuxHelpers,
 } from "./procs.mjs";
+import { isLinux, linuxPerfBinary, lowEndCommand, systemdRunWorks, binaryExists } from "./linux.mjs";
 import { LEAK_PREFIX, leakSummary, leakTableText } from "./leak.mjs";
 import { parseWindowStateLog, windowSummary, HIDDEN_RUN_NOTE } from "./windowState.mjs";
 
@@ -21,6 +22,9 @@ export const vaultDirName = (modes = {}) =>
 export const BINARY_REL = "Contents/MacOS/excalidraw-vault";
 const MARK_PREFIX = "VAULTDRAW_SMOKE_LOG ";
 
+let systemdOk;
+const systemdAvailable = () => (systemdOk ??= systemdRunWorks());
+
 const sh = (cmd, args, opts) =>
   new Promise((resolve, reject) => {
     execFile(cmd, args, opts, (err, stdout, stderr) => (err ? reject(Object.assign(err, { stderr })) : resolve(String(stdout))));
@@ -28,6 +32,7 @@ const sh = (cmd, args, opts) =>
 
 /** True when the macOS session's screen is locked (WKWebView then throttles rAF/timers). */
 export function isScreenLocked() {
+  if (isLinux) return false; // Xvfb (or any X display) has no session lock the WebView would notice
   try {
     const out = execFileSync("ioreg", ["-n", "Root", "-d1", "-a"], { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 });
     return /CGSSessionScreenIsLocked<\/key>\s*<true\/>/.test(out);
@@ -66,6 +71,9 @@ function tail(file, n = 40) {
 const TEST_APP_CONFIG = "src-tauri/tauri.test.conf.json";
 
 export async function buildPerfApp({ wtRoot, log = () => {} }) {
+  if (isLinux) {
+    throw new Error(`on Linux build the perf binary with scripts/linux-perf.sh (cargo build --release --features smoke-test) and pass --no-build; expected ${linuxPerfBinary(wtRoot)}`);
+  }
   const logDir = path.join(perfCacheDir(wtRoot), "logs");
   mkdirSync(logDir, { recursive: true });
   const logFile = path.join(logDir, `build-${new Date().toISOString().replace(/[:.]/g, "-")}.log`);
@@ -97,6 +105,12 @@ export async function buildPerfApp({ wtRoot, log = () => {} }) {
 }
 
 export function reuseBuiltApp({ wtRoot }) {
+  if (isLinux) {
+    // A plain binary, not a bundle: `binary` goes straight to runAppOnce; appPath only names its folder.
+    const bin = linuxPerfBinary(wtRoot);
+    if (!binaryExists(bin)) throw new Error(`--no-build given but no perf binary at ${bin} (PERF_APP_BIN or CARGO_TARGET_DIR select another); build it with scripts/linux-perf.sh`);
+    return { appPath: path.dirname(bin), binary: bin, git: gitInfo(wtRoot), reused: true };
+  }
   const dest = perfAppPath(wtRoot);
   if (!existsSync(path.join(dest, BINARY_REL))) {
     throw new Error(`--no-build given but no perf app at ${dest}; run once without --no-build`);
@@ -117,6 +131,7 @@ export async function runAppOnce({
   const bin = binary ?? path.join(appPath, BINARY_REL);
   runsDir ??= path.join(path.dirname(path.dirname(appPath)), "runs");
   timeoutMs ??= (lowEnd ? 360_000 : 180_000) + (modes.leak ? 180_000 : 0) + (modes.ablate ? 240_000 : 0);
+  if (isLinux && Number(process.env.PERF_APP_TIMEOUT_MS) > 0) timeoutMs = Number(process.env.PERF_APP_TIMEOUT_MS); // slow VMs
   const runDir = path.join(runsDir, `${new Date().toISOString().replace(/[:.]/g, "-")}-${runIndex}`);
   const vault = path.join(runDir, vaultDirName(modes));
   const vaultAlt = path.join(runDir, "vault-alt");
@@ -129,10 +144,10 @@ export async function runAppOnce({
   // PERF_SNIPPETS_DIR (env, memory diagnosis): copy CSS snippets into the temp config dir (pair with
   // PERF_CONFIG_TOML setting [appearance] snippets = [...]) to try a CSS change without a rebuild.
   if (process.env.PERF_SNIPPETS_DIR) cpSync(process.env.PERF_SNIPPETS_DIR, path.join(cfg, "snippets"), { recursive: true });
-  await sh("cp", ["-cR", pristineVault, vault]); // APFS clone
+  await sh("cp", isLinux ? ["-a", "--reflink=auto", pristineVault, vault] : ["-cR", pristineVault, vault]); // APFS clone (reflink where the Linux filesystem has it)
   // Leak mode: second vault for the in-app vault switch. The app only uses it when its smoke-mode
   // choose_vault honours EXCALIDRAW_VAULT_SMOKE_DIR_ALT (otherwise the scenario reports "unavailable").
-  if (modes.leak && altVault) await sh("cp", ["-cR", altVault, vaultAlt]);
+  if (modes.leak && altVault) await sh("cp", isLinux ? ["-a", "--reflink=auto", altVault, vaultAlt] : ["-cR", altVault, vaultAlt]);
 
   const errors = [];
   const notes = [];
@@ -142,14 +157,21 @@ export async function runAppOnce({
   const env = { ...process.env, VAULTDRAW_PERF: "1", ...extraEnv, EXCALIDRAW_VAULT_SMOKE_DIR: vault, ...(modes.leak && altVault ? { EXCALIDRAW_VAULT_SMOKE_DIR_ALT: vaultAlt } : {}), VAULTDRAW_CONFIG_DIR: cfg, VAULTDRAW_STATE_DIR: state };
   // PERF_LOWEND_ROLES=app,webContent,gpu,network limits which processes get background QoS (attribution runs).
   const lowRoles = process.env.PERF_LOWEND_ROLES ? new Set(process.env.PERF_LOWEND_ROLES.split(",")) : null;
-  const [cmd, args] = lowEnd && (!lowRoles || lowRoles.has("app")) ? ["taskpolicy", ["-c", process.env.PERF_LOWEND_APP_QOS || "background", bin]] : [bin, []];
+  let [cmd, args] = lowEnd && (!lowRoles || lowRoles.has("app")) ? ["taskpolicy", ["-c", process.env.PERF_LOWEND_APP_QOS || "background", bin]] : [bin, []];
+  if (isLinux && lowEnd) {
+    // cgroup CPU quota + soft memory cap (PERF_LOWEND_CPU_QUOTA, PERF_LOWEND_MEMORY_HIGH), else nice + taskset.
+    const le = lowEndCommand(bin, { systemd: systemdAvailable(), cpuQuota: process.env.PERF_LOWEND_CPU_QUOTA || undefined, memoryHigh: process.env.PERF_LOWEND_MEMORY_HIGH || undefined });
+    [cmd, args] = [le.cmd, le.args];
+    notes.push(le.note);
+    if (lowRoles) notes.push("PERF_LOWEND_ROLES is macOS-only; on Linux the whole process tree shares the low-end limit");
+  }
 
   const mp = memoryPressure ? startMemoryPressure({ seconds: Math.ceil(timeoutMs / 1000), log }) : null;
   const spawnWallMs = Date.now();
   const child = trackChild(spawn(cmd, args, { env, stdio: ["ignore", "pipe", "pipe"] }));
   const appPid = child.pid;
-  // Display on and no idle sleep for the lifetime of the app (it exits on its own).
-  try {
+  // Display on and no idle sleep for the lifetime of the app (it exits on its own). Not on Linux (Xvfb never sleeps).
+  if (!isLinux) try {
     const caf = trackChild(spawn("caffeinate", ["-dimsu", "-w", String(appPid)], { stdio: "ignore" }));
     caf.on("error", () => {});
   } catch { /* best effort */ }
@@ -203,6 +225,15 @@ export async function runAppOnce({
   }
   async function rediscover() {
     if (exactPids) return;
+    if (isLinux) {
+      // Children of the app process, by role; the app may spawn the network process later, so keep looking.
+      for (const { pid, role } of await discoverLinuxHelpers(appPid)) {
+        if (helpers.has(pid)) continue;
+        helpers.add(pid);
+        pidsInfo = { ...(pidsInfo ?? { app: appPid }), [role in (pidsInfo ?? {}) ? `${role}${pid}` : role]: pid };
+      }
+      return;
+    }
     const found = await discoverWebKitHelpers(before);
     for (const pid of found) {
       if (helpers.has(pid)) continue;
@@ -218,6 +249,14 @@ export async function runAppOnce({
     appPidResolved = true;
     const procs = await listProcesses();
     const me = procs.find((p) => p.pid === appPid);
+    if (isLinux) {
+      // systemd-run / nice / taskset exec the app in place; should one of them fork instead, follow to the child.
+      if (me && /^(systemd-run|nice|taskset)\b/.test(me.comm)) {
+        const kid = procs.find((p) => p.ppid === appPid && !/^(systemd-run|nice|taskset)\b/.test(p.comm));
+        if (kid) notes.push(`${me.comm.split(" ")[0]} did not exec; app pid is child ${kid.pid} (samples cover the wrapper's children)`);
+      }
+      return;
+    }
     if (me && /taskpolicy$/.test(me.comm)) {
       const kid = procs.find((p) => p.ppid === appPid);
       if (kid) { helpers.delete(kid.pid); notes.push(`taskpolicy did not exec; app pid is child ${kid.pid}`); }
@@ -329,8 +368,8 @@ export async function runAppOnce({
   let stallSampleFile = null;
   const killTimer = setTimeout(async () => {
     timedOut = true;
-    // Where is the native side stuck? Sample the app for 3 s before killing it.
-    try {
+    // Where is the native side stuck? Sample the app for 3 s before killing it (macOS `sample`; nothing on Linux).
+    if (!isLinux) try {
       const logDir = path.join(path.dirname(runsDir), "logs");
       mkdirSync(logDir, { recursive: true });
       stallSampleFile = path.join(logDir, `stall-sample-${path.basename(runDir)}.txt`);
@@ -446,6 +485,7 @@ export async function runAppOnce({
   }
   if (Object.keys(breakdown).length) notes.push(`per process: ${JSON.stringify(breakdown)}`);
   if (exactPids) notes.push(`WebKit helpers from perf_process_ids (exact): ${helpers.size}`);
+  else if (isLinux && helpers.size) notes.push(`WebKitGTK helpers found as children of the app process (exact): ${[...helpers].map(roleOf).join(", ")}; memory = PSS from /proc smaps_rollup, peak = VmHWM (peak RSS)`);
   else if (helpers.size) notes.push(`perf_process_ids unavailable; WebKit helpers attributed by pid-diff (${helpers.size}; may include other apps' helpers)`);
   else notes.push("no WebKit helper processes discovered (RSS/CPU cover the app process only)");
 
