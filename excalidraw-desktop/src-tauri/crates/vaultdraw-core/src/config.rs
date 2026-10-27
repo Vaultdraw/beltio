@@ -331,9 +331,11 @@ autosave_delay_ms = 500
 
 [plugins]
 # Ids of the plugins to load from the plugins/ folder, like ["hello-command"].
-# The official markdown-import plugin is on by default and loads on first use;
-# `enabled = []` turns it off, and a list of your own plugins should keep "markdown-import" in it.
-# enabled = ["markdown-import"]
+# Official plugins (markdown-import, gallery) are on by default and load on first use;
+# turn one off in Settings, Extensions, or list it in `disabled`.
+# enabled = ["markdown-import", "gallery"]
+# Official plugins you turned off, like ["gallery"]; a new official plugin is on until listed here.
+# disabled = []
 # Most data one plugin may save, in KiB, 64 to 16384
 # storage_limit_kb = 1024
 # Which plugin imports an extension when two claim it, like { txt = "text-import" }
@@ -1645,7 +1647,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 127, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 130, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();

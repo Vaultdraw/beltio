@@ -99,6 +99,11 @@ import {
   type PdfImageFormat,
   type PdfImportSettings,
 } from "../pdfImport/types";
+import {
+  disabledOfficial,
+  OFFICIAL_IDS,
+  resolveOfficial,
+} from "../plugins/officialPlugins";
 import { DEFAULT_TEMPLATES_FOLDER } from "../templates/types";
 import { WATCHDOG_LIMITS } from "../watchdog/limits";
 
@@ -268,6 +273,8 @@ interface VaultPreferencesBase {
   activityBarHidden: string[];
   /** Ids of enabled plugins (`[plugins] enabled`). */
   pluginsEnabled: string[];
+  /** Official plugins the user turned off (see plugins/officialPlugins.ts). */
+  pluginsDisabled: string[];
   /** `[plugins] importers`: file extension -> plugin id ("" = no plugin handles it). */
   pluginImporters: Record<string, string>;
   /** Limit of each plugin's `ctx.storage.global`, in KiB (`plugins.storage_limit_kb`). */
@@ -438,7 +445,8 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   activityBarOrder: [],
   activityBarHidden: [],
   // Official plugins are on by default and load on first use (plugins/officialPlugins.ts).
-  pluginsEnabled: ["markdown-import", "gallery"],
+  pluginsEnabled: [...OFFICIAL_IDS],
+  pluginsDisabled: [],
   pluginImporters: {},
   pluginsStorageLimitKb: DEFAULT_PLUGIN_STORAGE_KB,
   pluginsSceneMaxOps: DEFAULT_SCENE_MAX_OPS,
@@ -849,11 +857,13 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       isStringArray,
       d.activityBarHidden,
     ),
-    pluginsEnabled: pick(
-      parsed.pluginsEnabled,
-      isStringArray,
-      d.pluginsEnabled,
-    ),
+    ...(() => {
+      const r = resolveOfficial(
+        pick(parsed.pluginsEnabled, isStringArray, undefined),
+        pick(parsed.pluginsDisabled, isStringArray, undefined),
+      );
+      return { pluginsEnabled: r.enabled, pluginsDisabled: r.disabled };
+    })(),
     pluginImporters: pick(
       parsed.pluginImporters,
       isPluginImporters,
@@ -1207,6 +1217,13 @@ export function updatePreferences(
   win?: Window | null,
   trusted = false,
 ): PreferencesSnapshot {
+  // Changing the enabled list records which official plugins that leaves off.
+  if (partial.pluginsEnabled && !partial.pluginsDisabled) {
+    partial = {
+      ...partial,
+      pluginsDisabled: disabledOfficial(partial.pluginsEnabled),
+    };
+  }
   if (memoryStore) {
     const prev = memoryStore.prefs;
     const next = toSnapshot(prev, { ...prev, ...partial });

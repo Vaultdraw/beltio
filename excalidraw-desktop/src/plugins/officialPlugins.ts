@@ -125,6 +125,46 @@ export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
   },
 ];
 
+/**
+ * Official plugins are on unless the user turned one off: `plugins.disabled` lists the ones
+ * switched off on purpose, `plugins.enabled` holds the user's own (third-party) plugins and the
+ * official ones that are on. A new official plugin is in neither list, so it counts as on.
+ */
+export const OFFICIAL_IDS: readonly string[] = OFFICIAL_PLUGINS.map(
+  (p) => p.id,
+);
+
+/** Official plugins that existed before `plugins.disabled` did: an old `plugins.enabled` list governed these. */
+const LEGACY_OFFICIAL: readonly string[] = ["markdown-import"];
+
+/**
+ * The enabled list and the disabled-official list to use, from what was saved (undefined: not
+ * saved). An old config that has only `enabled` is migrated once: a legacy official plugin it
+ * does not name was turned off, so it stays off; official plugins newer than the list are on.
+ */
+export function resolveOfficial(
+  savedEnabled: readonly string[] | undefined,
+  savedDisabled: readonly string[] | undefined,
+): { enabled: string[]; disabled: string[] } {
+  const enabled = [...(savedEnabled ?? [])];
+  const disabled = (
+    savedDisabled ??
+    (savedEnabled
+      ? LEGACY_OFFICIAL.filter((id) => !savedEnabled.includes(id))
+      : [])
+  ).filter((id) => OFFICIAL_IDS.includes(id));
+  for (const id of OFFICIAL_IDS) {
+    if (!disabled.includes(id) && !enabled.includes(id)) {
+      enabled.push(id);
+    }
+  }
+  return { enabled: enabled.filter((id) => !disabled.includes(id)), disabled };
+}
+
+/** The official plugins a given enabled list leaves off: what to record as `plugins.disabled`. */
+export const disabledOfficial = (enabled: readonly string[]): string[] =>
+  OFFICIAL_IDS.filter((id) => !enabled.includes(id));
+
 export const isOfficialPluginId = (id: string): boolean =>
   OFFICIAL_PLUGINS.some((p) => p.id === id);
 

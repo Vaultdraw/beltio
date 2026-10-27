@@ -4,6 +4,10 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Fixed
+
+- **Official plugins stay on after an upgrade.** Official plugins (markdown-import, gallery, later the graph) are on unless you turn one off: Settings writes the ones you switched off to `plugins.disabled`, and `plugins.enabled` keeps your own plugins. A saved `plugins.enabled` that predates an official plugin no longer hides it; an old list that left out markdown-import keeps it off. "Restore defaults" on the Extensions page turns every official plugin back on.
+
 ### New
 
 - **Plugin API 0.19.0: a plugin's own table in the vault settings.** `ctx.vault.table.read/update` reads and changes `[<plugin id>]` in `<vault>/.excalidraw-vault/settings.toml` (comments and other tables stay). Only plugins that ship with the app may use it, so the graph extension keeps its `[graph]` table as it is today.

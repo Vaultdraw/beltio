@@ -98,6 +98,7 @@ import {
 } from "../toolDefaults/toolStyles";
 
 import { setImporterOverrides } from "../plugins/importerMap";
+import { resolveOfficial } from "../plugins/officialPlugins";
 
 import { isWindowDecorations } from "./windowChrome";
 
@@ -338,6 +339,7 @@ type ConfigField =
   | "thumbnailCacheMb"
   | "activityBar"
   | "pluginsEnabled"
+  | "pluginsDisabled"
   | "pluginImporters"
   | "pluginsStorageLimitKb"
   | "pluginsSceneMaxOps"
@@ -551,6 +553,14 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     field: "pluginsEnabled",
     key: "plugins.enabled",
     expected: 'a list of plugin ids like ["hello-command"]',
+    valid: (v) =>
+      Array.isArray(v) &&
+      v.every((x) => typeof x === "string" && isPluginId(x)),
+  },
+  {
+    field: "pluginsDisabled",
+    key: "plugins.disabled",
+    expected: 'a list of official plugin ids you turned off, like ["gallery"]',
     valid: (v) =>
       Array.isArray(v) &&
       v.every((x) => typeof x === "string" && isPluginId(x)),
@@ -1177,6 +1187,17 @@ export function configToPreferences(
       });
     }
   }
+  // Official plugins are on unless turned off (plugins/officialPlugins.ts); an old list is migrated.
+  const resolved = resolveOfficial(
+    readDotted(config, "plugins.enabled").present
+      ? (values.pluginsEnabled as string[])
+      : undefined,
+    readDotted(config, "plugins.disabled").present
+      ? (values.pluginsDisabled as string[])
+      : undefined,
+  );
+  values.pluginsEnabled = resolved.enabled;
+  values.pluginsDisabled = resolved.disabled;
   const table = parseHotkeysTable(config.hotkeys);
   problems.push(...table.problems);
   const keys = parseKeysExtras(config.keys);

@@ -1556,11 +1556,19 @@
       "additionalProperties": false,
       "properties": {
         "enabled": {
-          "description": "Ids of the plugins to load.",
+          "description": "Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`.",
           "default": [
             "markdown-import",
             "gallery"
           ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "disabled": {
+          "description": "Official plugins you turned off, like `[\"gallery\"]`. Settings writes it; a new official plugin is on until you list it here.",
+          "default": [],
           "type": "array",
           "items": {
             "type": "string"

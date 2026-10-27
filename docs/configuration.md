@@ -598,7 +598,7 @@ Rename, delete, move and the row menu need a focused row: with none (even while 
 
 ### Gallery keys
 
-The gallery is an official plugin (`gallery`, on by default). Turn it off in Settings, Extensions (or remove `gallery` from `plugins.enabled`) and its activity bar button, commands and code go away. `gallery.toggle` (`Mod+Alt+E`) opens and closes it, and `gallery.show-folder` opens a folder (also "Show as grid" in a folder's menu). They replace `thumbnails.galleryToggle` and `thumbnails.galleryOpen`: rebind a key you had set on the old ids. The grid's keys are `gallery.*` commands that work only while the grid has focus. Rebind them like any command.
+The gallery is an official plugin (`gallery`, on by default). Turn it off in Settings, Extensions (it is then listed in `plugins.disabled`) and its activity bar button, commands and code go away. `gallery.toggle` (`Mod+Alt+E`) opens and closes it, and `gallery.show-folder` opens a folder (also "Show as grid" in a folder's menu). They replace `thumbnails.galleryToggle` and `thumbnails.galleryOpen`: rebind a key you had set on the old ids. The grid's keys are `gallery.*` commands that work only while the grid has focus. Rebind them like any command.
 
 | Command id | Action | Default keys |
 | --- | --- | --- |
@@ -1792,7 +1792,8 @@ Plugins in the `plugins/` folder of the config folder.
 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
-| `enabled` | `["markdown-import", "gallery"]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load. |
+| `enabled` | `["markdown-import", "gallery"]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`. |
+| `disabled` | `[]` | a list of official plugin ids you turned off, like ["gallery"] |  | Official plugins you turned off, like `["gallery"]`. Settings writes it; a new official plugin is on until you list it here. |
 | `importers` | `[object Object]` | a table like { txt = "text-import" } (extension = plugin id, "" for none) |  | Which plugin imports a file extension when two plugins claim it; `""` turns plugin handling off for that extension. |
 | `storage_limit_kb` | `1024` | an integer between 64 and 16384 |  | Most data one plugin may save with `ctx.storage`, in KiB; a save past it is refused. |
 | `scene_max_ops` | `500` | an integer between 1 and 1000 |  | Most ops in one plugin `scene.batch` call; a batch past it is refused. |

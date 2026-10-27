@@ -2,6 +2,7 @@
  * Handlers of the extension commands (extensionCommandDefs.ts). They write `[extensions]` like Settings does; the change applies
  * live. The palette's fuzzy filter ("ext tog") is the picker.
  */
+import { OFFICIAL_IDS } from "../plugins/officialPlugins";
 import { toastStore } from "../toasts/toastStore";
 import { getPreferences, updatePreferences } from "../vault/preferences";
 
@@ -34,7 +35,15 @@ export function toggleExtension(id: ExtensionId, win?: Window | null): void {
 }
 
 export function restoreExtensionDefaults(win?: Window | null): void {
-  updatePreferences({ ...EXTENSION_DEFAULTS }, win);
+  // Official plugins (the gallery, markdown import) come back on too; the user's own plugins stay as they are.
+  const enabled = getPreferences(win).pluginsEnabled;
+  updatePreferences(
+    {
+      ...EXTENSION_DEFAULTS,
+      pluginsEnabled: [...new Set([...enabled, ...OFFICIAL_IDS])],
+    },
+    win,
+  );
   toastStore.push({ message: `Extensions restored to defaults${safeNote()}` });
 }
 

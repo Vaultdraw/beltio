@@ -450,7 +450,12 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
     table: "plugins",
     intro: "Plugins in the `plugins/` folder of the config folder.",
     keys: {
-      enabled: { doc: "Ids of the plugins to load." },
+      enabled: {
+        doc: "Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`.",
+      },
+      disabled: {
+        doc: "Official plugins you turned off, like `[\"gallery\"]`. Settings writes it; a new official plugin is on until you list it here.",
+      },
       importers: {
         doc: 'Which plugin imports a file extension when two plugins claim it; `""` turns plugin handling off for that extension.',
       },
