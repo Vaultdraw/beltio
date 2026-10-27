@@ -15,9 +15,13 @@ describe("[plugins] enabled", () => {
     ]);
     expect(
       configToPreferences({ plugins: { enabled: [] } }).values.pluginsEnabled,
-    ).toEqual(["gallery"]); // an old list: markdown-import was left out (off), the newer gallery is on
+    ).toEqual(["markdown-import", "gallery"]); // an old list: official plugins are on
     const ok = configToPreferences({ plugins: { enabled: ["hello-command"] } });
-    expect(ok.values.pluginsEnabled).toEqual(["hello-command", "gallery"]);
+    expect(ok.values.pluginsEnabled).toEqual([
+      "hello-command",
+      "markdown-import",
+      "gallery",
+    ]);
     expect(ok.problems).toEqual([]);
   });
 

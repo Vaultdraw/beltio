@@ -6,7 +6,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
-- **Official plugins stay on after an upgrade.** Official plugins (markdown-import, gallery, later the graph) are on unless you turn one off: Settings writes the ones you switched off to `plugins.disabled`, and `plugins.enabled` keeps your own plugins. A saved `plugins.enabled` that predates an official plugin no longer hides it; an old list that left out markdown-import keeps it off. "Restore defaults" on the Extensions page turns every official plugin back on.
+- **Official plugins stay on after an upgrade.** Official plugins (markdown-import, gallery, later the graph) are on unless you turn one off: Settings writes the ones you switched off to `plugins.disabled`, and `plugins.enabled` keeps your own plugins. A saved `plugins.enabled` that predates an official plugin no longer hides it; every official plugin is on after an upgrade, because none shipped in a release before this (markdown-import first ships in 0.2.0). "Restore defaults" on the Extensions page turns every official plugin back on.
 
 ### New
 

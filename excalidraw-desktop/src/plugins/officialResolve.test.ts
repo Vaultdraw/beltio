@@ -16,10 +16,10 @@ describe("official plugins are on unless turned off", () => {
     expect(v.pluginsDisabled).toEqual([]);
   });
 
-  it("a legacy official plugin the old list left out stays off", () => {
+  it("an old list gets every official plugin on, markdown-import included", () => {
     const v = prefs({ plugins: { enabled: [] } });
-    expect(v.pluginsEnabled).toEqual(["gallery"]);
-    expect(v.pluginsDisabled).toEqual(["markdown-import"]);
+    expect(v.pluginsEnabled).toEqual(["markdown-import", "gallery"]);
+    expect(v.pluginsDisabled).toEqual([]);
   });
 
   it("a plugin in plugins.disabled stays off, a new one is on", () => {

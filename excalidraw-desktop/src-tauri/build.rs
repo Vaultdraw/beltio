@@ -40,6 +40,11 @@ fn ensure_official_plugin_dirs() {
         if !dir.exists() {
             std::fs::create_dir_all(&dir).expect("create the official plugin dist folder");
         }
+        // A release build must ship the plugin's real code (`npm run build` builds it first):
+        // an empty folder would silently drop the plugin from the app.
+        if std::env::var("PROFILE").is_ok_and(|p| p == "release") && !dir.join("main.js").exists() {
+            panic!("official plugin {id} is not built: run `node plugins/official/build.mjs` first");
+        }
     }
 }
 

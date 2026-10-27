@@ -134,8 +134,11 @@ export const OFFICIAL_IDS: readonly string[] = OFFICIAL_PLUGINS.map(
   (p) => p.id,
 );
 
-/** Official plugins that existed before `plugins.disabled` did: an old `plugins.enabled` list governed these. */
-const LEGACY_OFFICIAL: readonly string[] = ["markdown-import"];
+/**
+ * Official plugins that shipped in a release before `plugins.disabled` did: an old `plugins.enabled`
+ * list governed these. None yet (markdown-import first ships in 0.2.0, with this mechanism).
+ */
+const LEGACY_OFFICIAL: readonly string[] = [];
 
 /**
  * The enabled list and the disabled-official list to use, from what was saved (undefined: not
