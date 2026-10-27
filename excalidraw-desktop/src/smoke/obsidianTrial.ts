@@ -69,7 +69,10 @@ export async function runObsidianTrial(): Promise<void> {
     );
     await log("interactive");
     const open = Array.from(root.querySelectorAll("button")).find(
-      (b) => b.textContent?.trim() === "Open Vault Folder",
+      (b) =>
+        b.getAttribute("aria-label") === "Open Vault Folder" ||
+        b.title === "Open Vault Folder" ||
+        b.textContent?.trim() === "Open Vault Folder",
     );
     if (!open) {
       throw new Error("no Open Vault Folder button");
