@@ -1245,6 +1245,7 @@ Keys for people who tune speed against detail. Defaults are what the app always 
 | `search.notes` | `false` | Index the Markdown notes (`.md`) of the vault: their text, `#tags`, frontmatter tags, links and headings. Read when the index starts, so reopen the vault after changing it. |
 | `search.note_text_mb` | `48` | Megabytes of note text the index keeps in memory, 0 to 4096; 48 holds about 20,000 notes. Past it a note keeps its name, headings, tags and links, and the newest notes keep their full text. Read when the index starts. |
 | `interface.thumbnail_cache_mb` | `128` | Disk cap of a vault's thumbnail cache, 8 to 8192. Applies at the next thumbnail saved. |
+| `files.speculative_open` | `true` | Press on a drawing in the file tree, a tab or the switcher (mouse down) and the app reads and parses it before you release, so the switch lands sooner. Holds one drawing for about 2 seconds; a drag cancels it; nothing runs when it is off or you do not click. Applies live; also in Settings > Files. |
 
 ## Control and links
 
@@ -1517,6 +1518,7 @@ Creating and deleting drawings.
 | `new_drawing_folder` | `""` | a folder path inside the vault like "Sketches/Inbox", or "" | yes | Folder for new drawings, relative to the vault root; empty puts them next to the open drawing. |
 | `templates_folder` | `"Templates"` | a non-empty folder path inside the vault like "Templates" | yes | Vault folder holding your templates. See [Templates](#templates). |
 | `list_start` | `"idle"` | "open", "idle" or "use" |  | When every vault folder is listed for recent drawings, the file switcher, link suggestions and the move dialog: `open`, `idle` or `use` (the first of those). The file tree loads at open either way. See [Startup](#startup). |
+| `speculative_open` | `true` | true or false |  | Read and parse a drawing when you press on it in the file tree, a tab or the switcher, before the click lands, so it opens sooner. Holds one drawing for a moment; costs nothing when off or unused. See [Speed trade-offs](#speed-trade-offs). |
 
 ### `[links]`
 

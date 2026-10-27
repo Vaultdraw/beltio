@@ -469,6 +469,11 @@
             "idle",
             "use"
           ]
+        },
+        "speculative_open": {
+          "description": "Read and parse a drawing when you press on it in the file tree, a tab or the switcher, before the click lands, so it opens sooner. Holds one drawing for a moment; costs nothing when off or unused. See [Speed trade-offs](#speed-trade-offs).",
+          "default": true,
+          "type": "boolean"
         }
       }
     },

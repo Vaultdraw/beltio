@@ -182,6 +182,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       list_start: {
         doc: "When every vault folder is listed for recent drawings, the file switcher, link suggestions and the move dialog: `open`, `idle` or `use` (the first of those). The file tree loads at open either way. See [Startup](#startup).",
       },
+      speculative_open: {
+        doc: "Read and parse a drawing when you press on it in the file tree, a tab or the switcher, before the click lands, so it opens sooner. Holds one drawing for a moment; costs nothing when off or unused. See [Speed trade-offs](#speed-trade-offs).",
+      },
     },
   },
   {
