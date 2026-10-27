@@ -12,6 +12,9 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **Plugin API 0.18.0: the vault graph as bytes.** `ctx.vault.graph.read()` returns the whole link graph in one binary call, and `graph.layout.load/save` keeps a graph view's layout per vault. Needs `vault.read` (and `vault.write` to save). New native command `plugin_call_raw` carries bytes with the same allowlist, permission and consent checks as `plugin_call`, so a graph of 50k notes does not go through JSON.
 
 - **Plugin API 0.19.0: thumbnails and folders.** `ctx.thumbnails` (hooks over the app's one thumbnail service, no extra memory) and `ctx.workspace.useFolder` (sorted, live folder entries) for plugin views that show drawings. Docs in `sdk/docs/surfaces.md`.
+- **The Gallery is now an official extension.** It ships in the app, stays on by default and switches off in Settings, Extensions: off, its activity bar button, commands and code are gone and it costs nothing. Same grid, keys and thumbnails (they still come from the app's one thumbnail service). Commands `thumbnails.galleryToggle` and `thumbnails.galleryOpen` are now `gallery.toggle` and `gallery.show-folder`; a saved config list that does not name `gallery` in `plugins.enabled` needs it added. Plugin commands can now declare `repeat = true` in `plugin.toml` (run again while the key is held).
+
+- **Plugin API 0.18.0: thumbnails and folders.** `ctx.thumbnails` (hooks over the app's one thumbnail service, no extra memory) and `ctx.workspace.useFolder` (sorted, live folder entries) for plugin views that show drawings. Docs in `sdk/docs/surfaces.md`.
 
 - **Plugin API 0.17.0: overlays.** `ctx.overlays.open(component)` shows a plugin view over the whole drawing area (the editor stays loaded but frozen behind it), the surface the graph and gallery extensions use. Nothing to declare and nothing loaded until one opens. Example `overlay-demo`, docs in `sdk/docs/surfaces.md`.
 

@@ -156,6 +156,7 @@ export interface CommandContribution {
     keys: string[];
     when: string[];
     palette: boolean;
+    repeat?: boolean;
 }
 export interface PanelContribution {
     id: string;

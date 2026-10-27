@@ -37,7 +37,6 @@ describe("ACTIVITY_ENTRIES", () => {
       "library",
       "history",
       "graph",
-      "gallery",
       "search",
       "tags",
       "templates",
@@ -46,7 +45,7 @@ describe("ACTIVITY_ENTRIES", () => {
   });
 
   it("gives toggling panel entries an active store", () => {
-    for (const id of ["library", "history", "graph", "gallery"]) {
+    for (const id of ["library", "history", "graph"]) {
       expect(ACTIVITY_ENTRIES.find((e) => e.id === id)?.active).toBeDefined();
     }
   });

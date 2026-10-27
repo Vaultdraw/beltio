@@ -43,7 +43,7 @@ export interface TreeKeyDeps {
 export interface TreeRowActions {
   duplicate(path: string): void;
   reveal(path: string): void;
-  showAsGrid(path: string): void;
+  showAsGrid?(path: string): void;
   saveAsTemplate?(path: string): void;
   localGraph?(path: string): void;
   history?(path: string): void;

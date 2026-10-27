@@ -1,0 +1,105 @@
+id = "gallery"
+name = "Gallery"
+version = "0.1.0"
+api = 0
+min_app = "0.1.0"
+main = "main.js"
+description = "A keyboard-driven grid of drawing thumbnails for a folder"
+author = "Vaultdraw"
+
+[[contributes.commands]]
+id = "toggle"
+title = "Gallery: Toggle grid view"
+keys = ["Mod+Alt+KeyE"]
+
+[[contributes.commands]]
+id = "show-folder"
+title = "Gallery: Show folder as grid"
+
+[[contributes.menus]]
+surface = "tree"
+command = "show-folder"
+title = "Show as grid"
+kinds = ["folder"]
+
+[[contributes.commands]]
+id = "left"
+title = "Gallery: Move left"
+keys = ["H", "ArrowLeft"]
+when = ["galleryFocus", "!modalOpen"]
+repeat = true
+palette = false
+
+[[contributes.commands]]
+id = "right"
+title = "Gallery: Move right"
+keys = ["L", "ArrowRight"]
+when = ["galleryFocus", "!modalOpen"]
+repeat = true
+palette = false
+
+[[contributes.commands]]
+id = "up"
+title = "Gallery: Move up"
+keys = ["K", "ArrowUp"]
+when = ["galleryFocus", "!modalOpen"]
+repeat = true
+palette = false
+
+[[contributes.commands]]
+id = "down"
+title = "Gallery: Move down"
+keys = ["J", "ArrowDown"]
+when = ["galleryFocus", "!modalOpen"]
+repeat = true
+palette = false
+
+[[contributes.commands]]
+id = "first"
+title = "Gallery: Go to first"
+keys = ["Home"]
+when = ["galleryFocus", "!modalOpen"]
+palette = false
+
+[[contributes.commands]]
+id = "last"
+title = "Gallery: Go to last"
+keys = ["End"]
+when = ["galleryFocus", "!modalOpen"]
+palette = false
+
+[[contributes.commands]]
+id = "pageUp"
+title = "Gallery: Page up"
+keys = ["PageUp"]
+when = ["galleryFocus", "!modalOpen"]
+repeat = true
+palette = false
+
+[[contributes.commands]]
+id = "pageDown"
+title = "Gallery: Page down"
+keys = ["PageDown"]
+when = ["galleryFocus", "!modalOpen"]
+repeat = true
+palette = false
+
+[[contributes.commands]]
+id = "open"
+title = "Gallery: Open tile"
+keys = ["Enter"]
+when = ["galleryFocus", "!modalOpen"]
+palette = false
+
+[[contributes.commands]]
+id = "parent"
+title = "Gallery: Go to parent folder"
+keys = ["Backspace"]
+when = ["galleryFocus", "!modalOpen"]
+palette = false
+
+[[contributes.commands]]
+id = "close"
+title = "Gallery: Close gallery"
+keys = ["Escape"]
+when = ["galleryFocus", "!modalOpen"]

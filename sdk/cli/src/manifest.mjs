@@ -79,7 +79,14 @@ export const TOP_KEYS = new Set([
   "contributes",
   "dev",
 ]);
-const COMMAND_KEYS = new Set(["id", "title", "keys", "when", "palette"]);
+const COMMAND_KEYS = new Set([
+  "id",
+  "title",
+  "keys",
+  "when",
+  "palette",
+  "repeat",
+]);
 const PANEL_KEYS = new Set(["id", "title", "icon", "group"]);
 
 /** Same rule as the app's manifest.rs `is_valid_data_key`. @param {unknown} s */
@@ -821,6 +828,9 @@ function checkContributes(c, err) {
       }
       if ("palette" in x && typeof x.palette !== "boolean") {
         err("contribution-invalid", `${what} palette must be true or false`);
+      }
+      if ("repeat" in x && typeof x.repeat !== "boolean") {
+        err("contribution-invalid", `${what} repeat must be true or false`);
       }
       if ("icon" in x && typeof x.icon !== "string") {
         err("contribution-invalid", `${what} icon must be a string`);

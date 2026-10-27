@@ -1,0 +1,55 @@
+/* Drawing thumbnails. Sizes are the display box; images are 2x (384 px). */
+.vault-thumb {
+  display: block;
+  flex: none;
+  box-sizing: border-box;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #fff; /* thumbnails are rendered opaque, standard light colours */
+  border: 1px solid var(--vault-border);
+  user-select: none;
+}
+
+.vault-thumb--sm {
+  width: 48px;
+  height: 36px;
+  border-radius: 4px;
+}
+
+.vault-thumb--md {
+  width: 192px;
+  height: 144px;
+}
+
+.vault-thumb--lg {
+  width: 384px;
+  height: 288px;
+  max-width: 100%;
+}
+
+.vault-thumb--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vault-surface-active);
+  color: var(--vault-text-faint);
+}
+
+.vault-thumb--placeholder > svg {
+  width: 40%;
+  max-width: 32px;
+  height: auto;
+}
+
+.vault-thumb--placeholder[data-state="loading"] > svg {
+  opacity: 0.5;
+}
+
+/*
+ * Dark mode: a surface puts this class once on its container (one compositor
+ * layer) and every .vault-thumb img inside gets Excalidraw's canvas filter.
+ * Not applied while "Sync canvas with theme" is on (the surface decides).
+ */
+.vault-thumb-dark-invert img.vault-thumb {
+  filter: invert(93%) hue-rotate(180deg);
+}

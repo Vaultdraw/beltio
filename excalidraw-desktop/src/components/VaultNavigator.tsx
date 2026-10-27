@@ -24,8 +24,6 @@ import { tagStore } from "../tags/tagStore";
 import { registerPaletteProvider } from "../palette/registry";
 import { createTagsProvider } from "../palette/providers/tags";
 
-import { requestGallery } from "../thumbnails/gallery/openRequest";
-
 import { isNewTabClick } from "../tabs/newTabClick";
 import { useListKeys } from "../commands/useListKeys";
 import { focusList } from "../commands/listNav";
@@ -571,7 +569,15 @@ export const VaultNavigator = ({
     row: {
       duplicate: (path) => void onDuplicateDrawing(path),
       reveal: (path) => void onRevealEntry(path),
-      showAsGrid: requestGallery,
+      // The Gallery plugin's menu item, run for the focused folder; absent while the plugin is off.
+      showAsGrid: (path) => {
+        const item = getMenuItems("tree").find(
+          (i) => i.command === "gallery.show-folder",
+        );
+        if (item) {
+          runMenuItem(item, { surface: "tree", path, kind: "folder" });
+        }
+      },
       saveAsTemplate: onSaveAsTemplate,
       localGraph: onOpenLocalGraph && ((path) => void onOpenLocalGraph(path)),
       history: onShowHistory && ((path) => void onShowHistory(path)),
@@ -1517,8 +1523,6 @@ const RowMenu = ({
         (isFolder || isDrawing) &&
         item("Move to…", <IconMove />, () => onMove(entry))}
       {item("Reveal in file manager", <IconReveal />, () => onReveal(entry))}
-      {isFolder &&
-        item("Show as grid", <IconDrawing />, () => requestGallery(entry.path))}
       {isDrawing &&
         onOpenLocalGraph &&
         item("Open local graph", <IconGraph />, () => onOpenLocalGraph(entry))}

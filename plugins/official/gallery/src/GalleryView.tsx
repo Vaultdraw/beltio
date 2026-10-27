@@ -1,6 +1,6 @@
 /**
  * Folder gallery: a windowed, keyboard-driven grid of thumbnail tiles (subfolders
- * first). Lazy chunk; the always-loaded part is GalleryHost.
+ * first). The plugin's overlay (main.tsx) holds the folder state around it.
  */
 import {
   memo,
@@ -12,21 +12,9 @@ import {
   useState,
 } from "react";
 
-import { stripDrawingExt } from "../../vault/fileKind";
-
-import {
-  GALLERY_COMMAND_IDS,
-  GALLERY_MOVES,
-  galleryCommandId,
-  type GalleryMove,
-} from "../../commands/galleryCommands";
-import { useViewCommands } from "../../commands/useViewCommands";
-import { IconDrawing, IconFolder } from "../../components/Icons";
-import { getBaseName } from "../../vault/treeStore";
-import { useThumbnail, useThumbnailService } from "../context";
-import { useThumbDarkClass } from "../surfaces/darkInvert";
-
-import "../thumbnails.css";
+import { GALLERY_MOVES, galleryCommandId, type GalleryMove } from "./commands";
+import { IconDrawing, IconFolder } from "./icons";
+import { useViewCommands } from "./useViewCommands";
 
 import {
   computeGridWindow,
@@ -39,9 +27,7 @@ import {
 import { moveIndex } from "./keyboard";
 import { createScrollSettle, type ScrollSettle } from "./scrollSettle";
 
-import "./gallery.css";
-
-import type { VaultEntry } from "../../vault/types";
+import type { FolderItem as VaultEntry, PluginContext } from "@vaultdraw/api";
 
 export const TILE_WIDTH = 192;
 export const TILE_HEIGHT = 190; // 144 thumbnail + name
@@ -51,6 +37,8 @@ const PADDING = 16;
 const FALLBACK = { width: 1000, height: 600 };
 
 export interface GalleryViewProps {
+  /** The plugin's context: thumbnails and command handlers. */
+  ctx: PluginContext;
   /** Folder path ("" = vault root). */
   folder: string;
   vaultName: string;
@@ -64,17 +52,21 @@ export interface GalleryViewProps {
   onClose: () => void;
 }
 
+const baseName = (path: string) => path.slice(path.lastIndexOf("/") + 1);
+const stripDrawingExt = (name: string) => name.replace(/\.excalidraw$/i, "");
 const displayName = (e: VaultEntry) =>
-  e.kind === "folder" ? e.name : stripDrawingExt(getBaseName(e.path));
+  e.kind === "folder" ? e.name : stripDrawingExt(baseName(e.path));
 
 const Tile = memo(
   ({
+    ctx,
     entry,
     index,
     active,
     deferred,
     onActivate,
   }: {
+    ctx: PluginContext;
     entry: VaultEntry;
     index: number;
     active: boolean;
@@ -82,14 +74,14 @@ const Tile = memo(
     deferred: boolean;
     onActivate: (index: number) => void;
   }) => {
-    const service = useThumbnailService();
+    const thumbsOn = ctx.thumbnails.useEnabled();
     const isDrawing = entry.kind === "drawing";
     const [started, setStarted] = useState(!deferred);
     if (!started && !deferred) {
       setStarted(true);
     }
-    const state = useThumbnail(
-      service && isDrawing && started ? entry.path : null,
+    const state = ctx.thumbnails.use(
+      thumbsOn && isDrawing && started ? entry.path : null,
       "visible",
     );
     const status = started ? state.status : "loading";
@@ -135,6 +127,7 @@ const Tile = memo(
 Tile.displayName = "GalleryTile";
 
 export default function GalleryView({
+  ctx,
   folder,
   vaultName,
   items,
@@ -145,7 +138,7 @@ export default function GalleryView({
   onClose,
 }: GalleryViewProps) {
   const scroller = useRef<HTMLDivElement>(null);
-  const dark = useThumbDarkClass();
+  const dark = ctx.thumbnails.useDarkClass();
   const [size, setSize] = useState(FALLBACK);
   const [scrollTop, setScrollTop] = useState(0);
   const [flying, setFlying] = useState(false);
@@ -284,7 +277,7 @@ export default function GalleryView({
     onParent,
     onClose,
   ]);
-  useViewCommands(scroller, GALLERY_COMMAND_IDS, actions);
+  useViewCommands(scroller, actions);
 
   const mounted: VaultEntry[] = items.slice(win.first, win.last + 1);
   const rows: { row: number; start: number }[] = [];
@@ -351,6 +344,7 @@ export default function GalleryView({
                     .map((entry, i) => (
                       <Tile
                         key={entry.path}
+                        ctx={ctx}
                         entry={entry}
                         index={start + i}
                         active={start + i === current}

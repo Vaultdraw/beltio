@@ -7,7 +7,6 @@ import { useRef } from "react";
 import { BUILTIN_COMMANDS } from "./commands";
 import { findConflicts, whenCanOverlap } from "./conflicts";
 import { readContext } from "./context";
-import { GALLERY_COMMANDS } from "./galleryCommands";
 import { GRAPH_VIEW_IDS, GRAPH_VIEW_COMMAND_IDS as V } from "./graphCommands";
 import { installListKeysForTests } from "./listKeysForTests";
 import { useViewCommands, type ViewActions } from "./useViewCommands";
@@ -57,7 +56,6 @@ describe("view scopes", () => {
     expect(whenCanOverlap(["graphFocus"], ["galleryFocus"])).toBe(false);
     expect(whenCanOverlap(["graphFocus"], ["graphFocus"])).toBe(true);
     const conflicts = findConflicts(BUILTIN_COMMANDS, {}, "mac");
-    expect(conflicts.get("gallery.down")?.get("J")).toBeUndefined();
     expect(conflicts.get("graph.moveDown")?.get("J")).toBeUndefined();
   });
 });
@@ -106,10 +104,7 @@ describe("useViewCommands through the dispatcher", () => {
     expect(down).not.toHaveBeenCalled();
   });
 
-  it("every graph and gallery default key is a plain chord with a focus scope", () => {
-    for (const c of [...GALLERY_COMMANDS]) {
-      expect(c.when).toContain("galleryFocus");
-    }
+  it("every graph default key is a plain chord with a focus scope", () => {
     for (const id of GRAPH_VIEW_IDS) {
       const c = BUILTIN_COMMANDS.find((x) => x.id === id)!;
       expect(c.when).toContain("graphFocus");

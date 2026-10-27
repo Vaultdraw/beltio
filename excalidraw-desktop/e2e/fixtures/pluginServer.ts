@@ -85,6 +85,7 @@ const readOfficial = async (id: string) => {
         keys: x.keys ?? [],
         when: x.when ?? [],
         palette: x.palette ?? true,
+        repeat: x.repeat ?? false,
       })),
       panels: [],
       settings: c.settings ?? [],

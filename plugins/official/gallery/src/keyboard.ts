@@ -1,5 +1,5 @@
 /** Gallery movement: pure index maths for the `gallery.*` commands (galleryCommands.ts). */
-import type { GalleryMove } from "../../commands/galleryCommands";
+import type { GalleryMove } from "./commands";
 
 export interface KeyContext {
   index: number;

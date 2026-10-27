@@ -46,6 +46,8 @@ export interface PluginInfo {
       keys: string[];
       when: string[];
       palette: boolean;
+      /** Absent from older backends. */
+      repeat?: boolean;
     }[];
     panels: {
       id: string;

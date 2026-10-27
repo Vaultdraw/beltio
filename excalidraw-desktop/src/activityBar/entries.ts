@@ -5,7 +5,6 @@
  */
 import { libraryPanelStore } from "../library/libraryPanelState";
 import {
-  IconGallery,
   IconGraph,
   IconHistory,
   IconKeyboard,
@@ -21,7 +20,7 @@ import {
 } from "../history/historyPanelState";
 
 import { registerActivityEntries } from "./activityBarRegistry";
-import { galleryPanelStore, graphPanelStore } from "./panelStores";
+import { graphPanelStore } from "./panelStores";
 
 import type { ExtensionId } from "../extensionSwitches/registry";
 import type { ComponentType, SVGProps } from "react";
@@ -88,14 +87,6 @@ export const ACTIVITY_ENTRIES: readonly ActivityEntry[] = [
     group: "top",
     extension: "graph",
     active: graphPanelStore,
-  },
-  {
-    id: "gallery",
-    label: "Gallery",
-    icon: IconGallery,
-    commandId: "thumbnails.galleryToggle",
-    group: "top",
-    active: galleryPanelStore,
   },
   {
     id: "search",

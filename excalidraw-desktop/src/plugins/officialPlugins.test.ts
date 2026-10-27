@@ -30,10 +30,21 @@ describe("the official plugin table (startup stubs)", () => {
         (c: { palette?: boolean }) => c.palette !== false,
       );
       expect(plugin.commands).toEqual(
-        listed.map((c: { id: string; title: string }) => ({
-          id: c.id,
-          title: c.title,
-        })),
+        listed.map(
+          (c: {
+            id: string;
+            title: string;
+            keys?: string[];
+            when?: string[];
+            repeat?: boolean;
+          }) => ({
+            id: c.id,
+            title: c.title,
+            ...(c.keys?.length ? { keys: c.keys } : {}),
+            ...(c.when?.length ? { when: c.when } : {}),
+            ...(c.repeat ? { repeat: true } : {}),
+          }),
+        ),
       );
       if (plugin.cancelCommand) {
         expect(
@@ -42,6 +53,23 @@ describe("the official plugin table (startup stubs)", () => {
           ),
         ).toBe(true);
       }
+      expect(
+        (plugin.menus ?? []).map((m) => [
+          m.surface,
+          m.command,
+          m.title,
+          m.kinds,
+        ]),
+      ).toEqual(
+        (doc.contributes.menus ?? []).map(
+          (m: {
+            surface: string;
+            command: string;
+            title: string;
+            kinds: string[];
+          }) => [m.surface, m.command, m.title, m.kinds],
+        ),
+      );
       expect(plugin.importers).toEqual(
         doc.contributes.importers.map(
           (i: { id: string; title: string; extensions: string[] }) => ({
@@ -55,10 +83,14 @@ describe("the official plugin table (startup stubs)", () => {
     },
   );
 
-  it("no command has a default key (all rebindable, none taken)", () => {
+  it("default keys are only those the table lists (all rebindable)", () => {
     for (const p of OFFICIAL_PLUGINS) {
       for (const c of manifest(p.id).contributes.commands) {
-        expect(c.keys ?? []).toEqual([]);
+        const row = p.commands.find((x) => x.id === c.id);
+        // A command hidden from the palette has no startup stub: its keys apply once the plugin runs.
+        if (row || (c.keys ?? []).length === 0) {
+          expect(c.keys ?? []).toEqual(row?.keys ?? []);
+        }
       }
     }
   });

@@ -60,6 +60,8 @@ pub(crate) struct Command {
     pub when: Vec<String>,
     #[serde(default = "yes")]
     pub palette: bool,
+    #[serde(default)]
+    pub repeat: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]

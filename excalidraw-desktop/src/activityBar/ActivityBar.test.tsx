@@ -12,7 +12,6 @@ import { libraryPanelStore } from "../library/libraryPanelState";
 import { IconSearch } from "../components/Icons";
 
 import { activityBarRegistry } from "./activityBarRegistry";
-import { galleryPanelStore } from "./panelStores";
 import { ActivityBar } from "./ActivityBar";
 
 afterEach(cleanup);
@@ -46,17 +45,6 @@ describe("ActivityBar", () => {
     expect(screen.queryByTestId("activity-bar-tags")).toBeNull();
     fireEvent.click(screen.getByTestId("activity-bar-graph"));
     expect(run).toHaveBeenCalledWith("graph.open");
-  });
-
-  it("gallery runs the toggle command and shows pressed while open", () => {
-    const run = setup();
-    fireEvent.click(screen.getByTestId("activity-bar-gallery"));
-    expect(run).toHaveBeenCalledWith("thumbnails.galleryToggle");
-    const button = screen.getByTestId("activity-bar-gallery");
-    expect(button).toHaveAttribute("aria-pressed", "false");
-    act(() => galleryPanelStore.publish(true));
-    expect(button).toHaveAttribute("aria-pressed", "true");
-    act(() => galleryPanelStore.publish(false));
   });
 
   it("follows the configured order and hides entries", () => {

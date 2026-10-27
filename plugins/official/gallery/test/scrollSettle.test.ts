@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createScrollSettle, SETTLE_MS } from "./scrollSettle";
+import { createScrollSettle, SETTLE_MS } from "../src/scrollSettle";
 
 describe("createScrollSettle", () => {
   beforeEach(() => vi.useFakeTimers());

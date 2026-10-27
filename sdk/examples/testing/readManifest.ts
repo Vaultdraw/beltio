@@ -147,6 +147,7 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
         keys: (c.keys as string[] | undefined) ?? [],
         when: (c.when as string[] | undefined) ?? [],
         palette: (c.palette as boolean | undefined) ?? true,
+        repeat: (c.repeat as boolean | undefined) ?? false,
       })),
       panels: arrays.panels.map((p) => ({
         id: p.id as string,

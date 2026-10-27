@@ -79,6 +79,7 @@ Palette commands, written as [[contributes.commands]]. At most 200. A command de
 | `keys` | list of strings | no |  |  | Optional default chords in config notation, for example "Mod+Alt+H". An empty list means none. Users can rebind them. |
 | `when` | list of strings | no |  |  | Optional. Built-in or namespaced context keys that must hold for the command to be available, for example "vaultOpen". |
 | `palette` | boolean | no | `true` |  | Optional, default true. false hides the command from the command palette. |
+| `repeat` | boolean | no | `false` |  | Optional, default false. true runs the command again while its key is held down (cursor moves). |
 
 ## `[[contributes.panels]]`
 

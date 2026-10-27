@@ -598,7 +598,7 @@ Rename, delete, move and the row menu need a focused row: with none (even while 
 
 ### Gallery keys
 
-The gallery grid's keys are `gallery.*` commands. They work only while the grid has focus. Rebind them like any command.
+The gallery is an official plugin (`gallery`, on by default). Turn it off in Settings, Extensions (or remove `gallery` from `plugins.enabled`) and its activity bar button, commands and code go away. `gallery.toggle` (`Mod+Alt+E`) opens and closes it, and `gallery.show-folder` opens a folder (also "Show as grid" in a folder's menu). They replace `thumbnails.galleryToggle` and `thumbnails.galleryOpen`: rebind a key you had set on the old ids. The grid's keys are `gallery.*` commands that work only while the grid has focus. Rebind them like any command.
 
 | Command id | Action | Default keys |
 | --- | --- | --- |

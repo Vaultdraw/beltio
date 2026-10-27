@@ -13,6 +13,29 @@ export interface OfficialCommand {
   /** The short id in plugin.toml; the registered id is `<plugin id>.<id>`. */
   id: string;
   title: string;
+  /** Default keys, as in plugin.toml (none when absent). */
+  keys?: string[];
+  when?: string[];
+  repeat?: boolean;
+}
+
+/** A context menu item shown before the plugin loads (`[[contributes.menus]]`). */
+export interface OfficialMenu {
+  surface: "tree" | "tab" | "canvas";
+  command: string;
+  title: string;
+  kinds: string[];
+}
+
+/** An activity bar button that runs one of the plugin's commands; `active` while its overlay is open. */
+export interface OfficialActivity {
+  /** The entry id (also its place in the `interface.activity_bar` order). */
+  id: string;
+  label: string;
+  /** A built-in icon name (boot.ts ACTIVITY_ICONS). */
+  icon: "gallery" | "graph";
+  /** Short command id. */
+  command: string;
 }
 
 export interface OfficialImporter {
@@ -29,6 +52,8 @@ export interface OfficialPlugin {
   importers: OfficialImporter[];
   commands: OfficialCommand[];
   cancelCommand?: string;
+  menus?: OfficialMenu[];
+  activity?: OfficialActivity;
 }
 
 export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
@@ -61,6 +86,39 @@ export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
     ],
     /** A hidden command the core "Import: Cancel" runs for imports that are not file imports. */
     cancelCommand: "cancel-import",
+  },
+  {
+    id: "gallery",
+    name: "Gallery",
+    importers: [],
+    commands: [
+      {
+        id: "toggle",
+        title: "Gallery: Toggle grid view",
+        keys: ["Mod+Alt+KeyE"],
+      },
+      { id: "show-folder", title: "Gallery: Show folder as grid" },
+      {
+        id: "close",
+        title: "Gallery: Close gallery",
+        keys: ["Escape"],
+        when: ["galleryFocus", "!modalOpen"],
+      },
+    ],
+    menus: [
+      {
+        surface: "tree",
+        command: "show-folder",
+        title: "Show as grid",
+        kinds: ["folder"],
+      },
+    ],
+    activity: {
+      id: "gallery",
+      label: "Gallery",
+      icon: "gallery",
+      command: "toggle",
+    },
   },
 ];
 

@@ -34,7 +34,9 @@ export const FolderProvider = ({
 }) => <FolderContext.Provider value={value}>{children}</FolderContext.Provider>;
 
 /** The sorted entries of `path` (templates folder left out), loading it when needed. */
-export function useFolderEntries(path: string): readonly VaultEntry[] | undefined {
+export function useFolderEntries(
+  path: string,
+): readonly VaultEntry[] | undefined {
   const src = useContext(FolderContext);
   const entries = src?.directoryMap.get(path);
   const load = src?.loadDirectory;

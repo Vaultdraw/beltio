@@ -1,0 +1,11 @@
+{
+  "name": "@vaultdraw/plugin-gallery",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The official gallery plugin: a keyboard-driven grid of drawing thumbnails for a folder",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node ../../../sdk/cli/bin/vaultdraw-plugin.mjs check dist"
+  }
+}

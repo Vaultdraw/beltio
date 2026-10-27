@@ -510,6 +510,12 @@
           "default": true,
           "description": "Optional, default true. false hides the command from the command palette.",
           "type": "boolean"
+        },
+        "repeat": {
+          "title": "Repeat while held",
+          "default": false,
+          "description": "Optional, default false. true runs the command again while its key is held down (cursor moves).",
+          "type": "boolean"
         }
       },
       "additionalProperties": false

@@ -220,6 +220,7 @@ export function registerStubs(rt: PluginRuntime): () => void {
       keys: { default: c.keys },
       when: c.when as WhenClause[],
       palette: c.palette,
+      ...(c.repeat ? { repeat: true } : {}),
     };
   });
 

@@ -408,7 +408,10 @@ export function createVaultModel(
         // The seeded drawings directly in `path` (folders are not modelled).
         useFolder: (path) =>
           [...drawings.keys()]
-            .filter((p) => p.slice(0, p.lastIndexOf("/") + 1) === (path ? `${path}/` : ""))
+            .filter(
+              (p) =>
+                p.slice(0, p.lastIndexOf("/") + 1) === (path ? `${path}/` : ""),
+            )
             .sort()
             .map((p) => ({
               path: p,

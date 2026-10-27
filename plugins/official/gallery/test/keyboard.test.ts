@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { moveIndex, type KeyContext } from "./keyboard";
+import { moveIndex, type KeyContext } from "../src/keyboard";
 
 const c = (over: Partial<KeyContext> = {}): KeyContext => ({
   index: 5,

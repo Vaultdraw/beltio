@@ -102,12 +102,11 @@ import {
 import { commitCanvasTextEdit } from "./commands/context";
 import { ActivityBar } from "./activityBar/ActivityBar";
 import { useActivityBarShown } from "./activityBar/activityBarRegistry";
-import { galleryPanelStore, graphPanelStore } from "./activityBar/panelStores";
+import { graphPanelStore } from "./activityBar/panelStores";
 import { getRegisteredHandler } from "./commands/handlerRegistry";
 import { closeInstallDialog } from "./theme/install/installStore";
 import { useThemeInstall } from "./theme/install/useThemeInstall";
 import { GRAPH_COMMAND_IDS } from "./commands/graphCommands";
-import { THUMBNAIL_COMMAND_IDS } from "./commands/thumbnailCommands";
 import { TabStrip } from "./tabs/TabStrip";
 import { useLayout, type Layout } from "./layout/useLayout";
 import { useUserCommands } from "./commands/useUserCommands";
@@ -143,8 +142,8 @@ import {
   hasOverlay,
   subscribeOverlay,
 } from "./plugins/overlayStore";
+import { FolderProvider } from "./plugins/folderContext";
 import { GraphHost, type GraphHostProps } from "./graph/GraphHost";
-import { GalleryHost } from "./thumbnails/gallery/GalleryHost";
 import { useGraphEntry } from "./graph/useGraphEntry";
 import { createDesktopThumbnailStore } from "./thumbnails/desktopStore";
 import { ThumbnailsRoot } from "./thumbnails/ThumbnailsRoot";
@@ -2062,23 +2061,19 @@ export const VaultApp = ({
   // Graph view (D14): it takes over the canvas area; the editor stays mounted
   // but frozen (no key or pointer handling) and hidden, so closing is instant.
   const [graphOpen, setGraphOpen] = useState(false);
-  const [galleryOpen, setGalleryOpen] = useState(false);
   const pluginOverlayOpen = useSyncExternalStore(subscribeOverlay, hasOverlay);
-  const mainCovered = graphOpen || galleryOpen || pluginOverlayOpen;
-  // One cover at a time: a plugin overlay and the built-in graph or gallery close each other.
+  const mainCovered = graphOpen || pluginOverlayOpen;
+  // One cover at a time: a plugin overlay and the built-in graph close each other.
   useEffect(() => {
     if (pluginOverlayOpen && graphOpen) {
       void getRegisteredHandler(GRAPH_COMMAND_IDS.open)?.();
     }
-    if (pluginOverlayOpen && galleryOpen) {
-      void getRegisteredHandler(THUMBNAIL_COMMAND_IDS.galleryToggle)?.();
-    }
   }, [pluginOverlayOpen]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (graphOpen || galleryOpen) {
+    if (graphOpen) {
       closeOverlay();
     }
-  }, [graphOpen, galleryOpen]);
+  }, [graphOpen]);
   const { effective: effectiveSettings } = vaultSettings;
   const tabs = useTabs({
     vault,
@@ -2095,9 +2090,6 @@ export const VaultApp = ({
     closeOverlays: () => {
       if (graphOpen) {
         void getRegisteredHandler(GRAPH_COMMAND_IDS.open)?.();
-      }
-      if (galleryOpen) {
-        void getRegisteredHandler(THUMBNAIL_COMMAND_IDS.galleryToggle)?.();
       }
       closeOverlay();
     },
@@ -2559,10 +2551,6 @@ export const VaultApp = ({
       runnerRef.current?.isAvailable(id, { fromPalette: true }) ?? false,
     [],
   );
-  const handleGalleryOpenChange = useCallback((open: boolean) => {
-    setGalleryOpen(open);
-    galleryPanelStore.publish(open);
-  }, []);
   const handleGraphOpenChange = useCallback((open: boolean) => {
     setGraphOpen(open);
     graphPanelStore.publish(open);
@@ -2996,21 +2984,18 @@ export const VaultApp = ({
                 </DeferredHome>
               </ActiveTabGate>
             )}
-            <GalleryHost
-              handle={vault.handle}
-              vaultName={vault.name}
-              directoryMap={directoryMap}
-              loadDirectory={loadDirectory}
-              sort={navigatorSort}
-              templatesFolder={templatesFolder}
-              activePath={activeDoc?.path ?? null}
-              onOpenDrawing={handleOpenDrawing}
-              onOpenChange={handleGalleryOpenChange}
-              onClosed={focusCanvas}
-            />
             {pluginOverlayOpen && (
               <Suspense fallback={null}>
-                <PluginOverlayHost onClosed={focusCanvas} />
+                <FolderProvider
+                  value={{
+                    directoryMap,
+                    loadDirectory,
+                    sort: navigatorSort,
+                    templatesFolder,
+                  }}
+                >
+                  <PluginOverlayHost onClosed={focusCanvas} />
+                </FolderProvider>
               </Suspense>
             )}
             {ext.graph && (

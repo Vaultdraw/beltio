@@ -7,7 +7,7 @@ import {
   sameWindow,
   scrollTopToReveal,
   type GridMetrics,
-} from "./gridWindow";
+} from "../src/gridWindow";
 
 const m = (over: Partial<GridMetrics> = {}): GridMetrics => ({
   viewportWidth: 1000,
