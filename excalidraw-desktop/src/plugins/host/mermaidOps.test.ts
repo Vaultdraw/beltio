@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { buildBatch, validateOps } from "../../sceneOps";
+
 import { skeletonsToOps } from "./mermaidOps";
 
 const flow = [
@@ -84,5 +86,20 @@ describe("skeletonsToOps (Mermaid result as plugin scene ops)", () => {
       height: 0,
       skipped: 0,
     });
+  });
+
+  it("the ops pass the scene validator and build into elements with bound arrows", () => {
+    const r = skeletonsToOps(flow as never);
+    const valid = validateOps(r.ops, new Map(), {
+      dataKey: null,
+      maxOps: 1000,
+    });
+    const built = buildBatch(valid, { x: 0, y: 0 }, null, new Map());
+    const types = built.created.map((e) => e.type);
+    expect(types).toContain("arrow");
+    expect(types).toContain("rectangle");
+    const arrow = built.created.find((e) => e.type === "arrow") as any;
+    expect(arrow.startBinding?.elementId).toBeTruthy();
+    expect(arrow.endBinding?.elementId).toBeTruthy();
   });
 });
