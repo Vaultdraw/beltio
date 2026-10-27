@@ -31,6 +31,8 @@ if (ctx.host.has("statusBar")) ctx.statusBar.set("clock", { text });
 | 0.15.0 | canvas tools | `ctx.host.has("tools")` |
 | 0.16.0 | custom shapes | `ctx.host.has("shapes")` |
 | 0.17.0 | overlays | `ctx.host.has("overlays")` |
+| 0.18.0 | `ctx.vault.graph` (graph bytes, layout) | `ctx.host.has("vault.graph")` |
+| 0.19.0 | `ctx.vault.table` (own vault settings table) | `ctx.host.has("vault.table")` |
 
 An older app refuses a `plugin.toml` with a table it does not know (`status_bar`, `views`, `menus`, `toolbar`, `tools`, `shapes`), so set `min_app` to the app version that ships the revision you use; `vaultdraw-plugin check` warns when it is lower.
 
