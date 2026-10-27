@@ -19,6 +19,7 @@ import { getActiveScene } from "../../sceneOps/sceneBus";
 import { viewportCenter } from "../../sceneOps/viewport";
 import { appEvents, type AppEventMap } from "../../events/appEvents";
 import { toastStore } from "../../toasts/toastStore";
+import { getStatusItems } from "../host/statusBarRegistry";
 import { notifyAppearanceChanged } from "../../vault/appearance";
 import {
   DEFAULT_PLUGIN_STORAGE_KB,
@@ -44,6 +45,7 @@ import type {
   Json,
   NewElement,
   Plugin,
+  StatusBarContribution,
   ThemeMode,
   ThemeTokenName,
 } from "../api";
@@ -67,6 +69,7 @@ export type TestManifest = Partial<Omit<PluginInfo, "contributes">> & {
       id: string;
       extensions: string[];
     })[];
+    status_bar?: (Partial<StatusBarContribution> & { id: string })[];
   };
 };
 
@@ -140,12 +143,27 @@ export interface FakeEvents {
   emit<K extends keyof AppEventMap>(name: K, payload: AppEventMap[K]): void;
 }
 
+/** A status bar item as the user would see it. */
+export interface StatusBarShown {
+  id: string;
+  title: string;
+  text: string;
+  tooltip: string | null;
+  tone: "normal" | "muted" | "warn" | "error";
+  /** Short command id a click runs, or null. */
+  command: string | null;
+}
+
 export interface TestPlugin {
   info: PluginInfo;
   /** Runs a command by short id (as the palette does); resolves when its handler is done. */
   run(shortId: string): Promise<void>;
   /** Opens a panel by short id and renders the plugin panels host. */
   openPanel(shortId: string): Promise<RenderResult>;
+  /** The status bar items that currently have text. */
+  statusBar(): StatusBarShown[];
+  /** Clicks a status bar item: runs its declared command. */
+  clickStatusBar(id: string): Promise<void>;
   /** Messages of the visible toasts. */
   toasts(): string[];
   /** Timers the plugin currently has scheduled. */
@@ -205,6 +223,13 @@ const normalise = (m: TestManifest): PluginInfo => {
       })),
       settings: c.settings ?? [],
       importers: (c.importers ?? []).map((x) => ({ title: x.id, ...x })),
+      status_bar: (c.status_bar ?? []).map((x) => ({
+        title: x.id,
+        align: "right" as const,
+        priority: 0,
+        command: null,
+        ...x,
+      })),
     },
   } as Partial<PluginInfo>);
 };
@@ -425,6 +450,32 @@ export async function boot(
       const view = render(<PluginPanels />);
       await flush();
       return view;
+    },
+    statusBar: () =>
+      getStatusItems()
+        .filter((i) => i.pluginId === id)
+        .map((i) => {
+          const short = i.key.slice(id.length + 1);
+          return {
+            id: short,
+            title: i.title,
+            text: i.text,
+            tooltip: i.tooltip ?? i.title,
+            tone: i.tone,
+            command: i.command ? i.command.slice(id.length + 1) : null,
+          };
+        }),
+    async clickStatusBar(short) {
+      const item = getStatusItems().find((i) => i.key === `${id}.${short}`);
+      if (!item) {
+        throw new Error(`status bar item "${short}" is not shown`);
+      }
+      if (item.command) {
+        const command = item.command;
+        await act(async () => {
+          await handler(command)();
+        });
+      }
     },
     toasts: () => toastStore.getSnapshot().toasts.map((t) => t.message),
     timers: pluginTimerCount,

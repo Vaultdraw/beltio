@@ -126,6 +126,13 @@
           "type": "array",
           "maxItems": 8,
           "items": { "$ref": "#/definitions/importer" }
+        },
+        "status_bar": {
+          "title": "Status bar items",
+          "description": "Items in the status bar, written as [[contributes.status_bar]]. At most 8. The bar shows only while an item has text. Fill an item with ctx.statusBar.set.",
+          "type": "array",
+          "maxItems": 8,
+          "items": { "$ref": "#/definitions/statusItem" }
         }
       },
       "additionalProperties": false
@@ -150,6 +157,48 @@
     }
   },
   "definitions": {
+    "statusItem": {
+      "title": "Status bar item",
+      "description": "A slot in the status bar. The plugin sets its text with ctx.statusBar.set(id, { text }) and the item disappears when cleared.",
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": {
+          "title": "Status item id",
+          "description": "Short id, unique among the plugin's status bar items. Same rule as a command id.",
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+        },
+        "title": {
+          "title": "Status item title",
+          "description": "Names the item in the Plugins page and is its default tooltip. 1 to 200 characters, not blank.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "\\S"
+        },
+        "align": {
+          "title": "Side",
+          "description": "\"left\" or \"right\" side of the bar. Default \"right\".",
+          "type": "string",
+          "enum": ["left", "right"],
+          "default": "right"
+        },
+        "priority": {
+          "title": "Priority",
+          "description": "Sort order inside a side; a higher number sits nearer the left edge. Default 0.",
+          "type": "integer",
+          "default": 0
+        },
+        "command": {
+          "title": "Click command",
+          "description": "Short id of a command this plugin declares. It runs when the user clicks the item.",
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+        }
+      },
+      "additionalProperties": false
+    },
     "importer": {
       "title": "Importer",
       "description": "A file kind the plugin imports. Register its handler with ctx.importers.register in activate(). Files whose name ends in one of the extensions go to it; the longest matching extension wins.",

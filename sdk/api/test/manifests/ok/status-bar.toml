@@ -1,0 +1,22 @@
+# code: none
+# rust: ok
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+
+[[contributes.commands]]
+id = "go"
+title = "Go"
+
+[[contributes.status_bar]]
+id = "clock"
+title = "Clock"
+align = "left"
+priority = -2
+command = "go"
+
+[[contributes.status_bar]]
+id = "plain"
+title = "Plain"

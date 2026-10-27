@@ -9,6 +9,7 @@ import type { PagesApi } from "./pages";
 import type { PanelsApi } from "./panels";
 import type { SceneContextApi } from "./scene";
 import type { SettingsApi } from "./settings";
+import type { StatusBarApi } from "./statusBar";
 import type { StorageApi } from "./storage";
 import type { FoldersApi } from "./folders";
 import type { FontsApi, TextApi } from "./text";
@@ -91,6 +92,8 @@ export interface PluginContext {
   readonly pages: PagesApi;
   /** @since 0.9.0 */
   readonly folders: FoldersApi;
+  /** @since 0.10.0 */
+  readonly statusBar: StatusBarApi;
   /**
    * Disposed in reverse order on disable/reload/quit.
    *

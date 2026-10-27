@@ -41,7 +41,9 @@ Every file starts with two comment lines.
 | `contribution-duplicate` | Two commands share an id. |
 | `title-invalid` | Empty command or panel title. |
 | `setting-invalid` | A setting has no `key` or `type`. |
-| `too-many` | More than 200 commands (also 20 panels, 100 settings, 8 importers). |
+| `too-many` | More than 200 commands (also 20 panels, 100 settings, 8 importers, 8 status bar items). |
+| `contribution-invalid` | Among others: a status bar item with an `align` other than `left` or `right`. |
+| `status-command-unknown` | A status bar item whose `command` is not one of the plugin's commands. |
 | `importer-extension-invalid` | An importer extension that is not lower case letters and digits with dots between parts (no leading dot, at most 32 bytes), or is repeated. |
 | `importer-extension-reserved` | An importer extension the app handles itself (`png`, `pdf`, `json`, `excalidraw`, ...). |
 | `manifest-too-large` | Over 64 KB. |

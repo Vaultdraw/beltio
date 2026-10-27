@@ -274,6 +274,8 @@ interface VaultPreferencesBase {
   pluginsStorageLimitKb: number;
   /** Most ops in one plugin `scene.batch` (`plugins.scene_max_ops`). */
   pluginsSceneMaxOps: number;
+  /** Show the plugin status bar while an item has text (`plugins.status_bar`). */
+  pluginsStatusBar: boolean;
   /** Global navigator sort order; a vault's settings.toml may override it. */
   navigatorSort: SortOrder;
   /** Folder for new drawings, relative to the vault root ("" = unset). A vault's settings.toml may override it. */
@@ -438,6 +440,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   pluginImporters: {},
   pluginsStorageLimitKb: DEFAULT_PLUGIN_STORAGE_KB,
   pluginsSceneMaxOps: DEFAULT_SCENE_MAX_OPS,
+  pluginsStatusBar: true,
   navigatorSort: DEFAULT_SORT_ORDER,
   newDrawingFolder: "",
   templatesFolder: DEFAULT_TEMPLATES_FOLDER,
@@ -862,6 +865,11 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       parsed.pluginsSceneMaxOps,
       isSceneMaxOps,
       d.pluginsSceneMaxOps,
+    ),
+    pluginsStatusBar: pick(
+      parsed.pluginsStatusBar,
+      isBoolean,
+      d.pluginsStatusBar,
     ),
     navigatorSort: pick(parsed.navigatorSort, isSortOrder, d.navigatorSort),
     newDrawingFolder: pick(

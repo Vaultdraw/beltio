@@ -213,6 +213,11 @@ const PluginPanels = lazy(() =>
     default: m.PluginPanels,
   })),
 );
+const PluginStatusBar = lazy(() =>
+  import("./plugins/host/PluginPanels").then((m) => ({
+    default: m.PluginStatusBar,
+  })),
+);
 // The dock loads on demand: nothing about links is in the startup bundle.
 const LinksDock = lazy(() =>
   import("./components/links/LinksDock").then((m) => ({
@@ -3099,6 +3104,11 @@ export const VaultApp = ({
           }
         />
       </div>
+      {pluginsStarted && win && (
+        <Suspense fallback={null}>
+          <PluginStatusBar win={win} />
+        </Suspense>
+      )}
 
       {showConflictDialog && activeDoc && (
         <ConflictDialog

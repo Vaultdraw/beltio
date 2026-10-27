@@ -1586,6 +1586,11 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 1000
+        },
+        "status_bar": {
+          "description": "Show the status bar plugins fill with `ctx.statusBar`. It appears only while a plugin item has text.",
+          "default": true,
+          "type": "boolean"
         }
       }
     },

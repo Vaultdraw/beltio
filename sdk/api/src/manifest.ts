@@ -91,6 +91,24 @@ export interface ImporterContribution {
 }
 
 /**
+ * A status bar item declared in plugin.toml (`[[contributes.status_bar]]`).
+ *
+ * @since 0.10.0
+ */
+export interface StatusBarContribution {
+  /** @since 0.10.0 */
+  id: string;
+  /** @since 0.10.0 */
+  title: string;
+  /** @since 0.10.0 */
+  align: "left" | "right";
+  /** @since 0.10.0 */
+  priority: number;
+  /** Short id of the command a click runs, or null. @since 0.10.0 */
+  command: string | null;
+}
+
+/**
  * Everything a plugin declares it adds to the app.
  *
  * @since 0.1.0
@@ -108,4 +126,10 @@ export interface PluginContributions {
    * @since 0.6.0
    */
   importers?: ImporterContribution[];
+  /**
+   * Absent when the app that reads the manifest is older than 0.10.0.
+   *
+   * @since 0.10.0
+   */
+  status_bar?: StatusBarContribution[];
 }

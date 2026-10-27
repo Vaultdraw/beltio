@@ -341,6 +341,7 @@ type ConfigField =
   | "pluginImporters"
   | "pluginsStorageLimitKb"
   | "pluginsSceneMaxOps"
+  | "pluginsStatusBar"
   | "activityBarOrder"
   | "activityBarHidden"
   | "navigatorSort"
@@ -571,6 +572,12 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "plugins.scene_max_ops",
     expected: `an integer between 1 and ${MAX_SCENE_MAX_OPS}`,
     valid: isSceneMaxOps,
+  },
+  {
+    field: "pluginsStatusBar",
+    key: "plugins.status_bar",
+    expected: "true or false",
+    valid: (v) => typeof v === "boolean",
   },
   {
     field: "defaultCanvasBackground",

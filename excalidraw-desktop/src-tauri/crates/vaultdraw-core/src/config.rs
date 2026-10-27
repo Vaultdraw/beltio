@@ -340,6 +340,8 @@ autosave_delay_ms = 500
 # importers = {}
 # Most ops in one plugin scene.batch call, 1 to 1000
 # scene_max_ops = 500
+# Show the status bar plugins fill (only while an item has text)
+# status_bar = true
 
 [ai]
 # The AI master switch; Settings and AI: Toggle AI show a warning first

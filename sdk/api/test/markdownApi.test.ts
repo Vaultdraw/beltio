@@ -1,6 +1,7 @@
 /** API 0.8.0 rules: the paginator, page geometry, text and markdown checks, and the mock's members. */
 import { describe, expect, it } from "vitest";
 
+import { API_REVISION } from "../shared/features";
 import { boot } from "../testing";
 import { fakeParseMarkdown, markdownParams } from "../shared/markdown";
 import { flowPages, pageGeometry } from "../shared/pages";
@@ -186,7 +187,7 @@ describe("the mock host", () => {
       },
     );
     try {
-      expect(ctx.host.api.revision).toBe("0.9.0");
+      expect(ctx.host.api.revision).toBe(API_REVISION);
       for (const f of [
         "markdown.parse",
         "text.measure",

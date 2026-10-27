@@ -29,7 +29,13 @@ const TOP_KEYS = new Set([
   "dev",
   "data_key",
 ]);
-const ARRAYS = ["commands", "panels", "settings", "importers"] as const;
+const ARRAYS = [
+  "commands",
+  "panels",
+  "settings",
+  "importers",
+  "status_bar",
+] as const;
 
 /** Drop a trailing `# comment` that is not inside a basic string. */
 const stripComment = (line: string): string => {
@@ -74,6 +80,7 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
     panels: [],
     settings: [],
     importers: [],
+    status_bar: [],
   };
   let current: Table = top;
   let extra = false;
@@ -139,6 +146,13 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
         id: i.id as string,
         title: i.title as string,
         extensions: i.extensions as string[],
+      })),
+      status_bar: arrays.status_bar.map((x) => ({
+        id: x.id as string,
+        title: x.title as string,
+        align: (x.align as "left" | "right" | undefined) ?? "right",
+        priority: (x.priority as number | undefined) ?? 0,
+        command: (x.command as string | undefined) ?? null,
       })),
     },
   });

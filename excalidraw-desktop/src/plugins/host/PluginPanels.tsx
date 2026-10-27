@@ -15,6 +15,9 @@ import "./pluginPanels.css";
 
 import type { ComponentType, ReactNode } from "react";
 
+// Shares this chunk: the status bar loads with the panel host, and draws nothing until an item has text.
+export { PluginStatusBar } from "./PluginStatusBar";
+
 /** Attributes a render error of a plugin component to the plugin. */
 class PluginBoundary extends Component<
   { pluginId: string; children: ReactNode },

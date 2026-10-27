@@ -8,11 +8,14 @@ import { allowsScope } from "../settings/declaredSettings";
 import { getPluginSetting, setPluginSetting } from "../settings/pluginSettings";
 import { pluginSettingDecl } from "../settings/registry";
 
+import { cleanStatus } from "../../../../sdk/api/shared/statusBar";
+
 import { errorText, logLine, reportPluginError } from "./errors";
 import { guard } from "./guard";
 import { createHostApi } from "./hostContext";
 import { runCommandById } from "./runner";
 import { createGatedEventsApi } from "./eventGate";
+import { clearPluginStatus, setStatusItem } from "./statusBarRegistry";
 import {
   abortPluginImport,
   clearImporters,
@@ -40,6 +43,7 @@ import type {
   PagesApi,
   PluginContext,
   PluginPermission,
+  StatusBarApi,
   StorageApi,
   TextApi,
   ThemeApi,
@@ -97,6 +101,9 @@ export function createPluginContext(
   const declaredImporters = new Set(
     (info.contributes.importers ?? []).map((i) => i.id),
   );
+  const declaredStatus = new Map(
+    (info.contributes.status_bar ?? []).map((s) => [s.id, s] as const),
+  );
   const panelId = (short: string) => `${id}.${short}`;
 
   const timer =
@@ -146,6 +153,7 @@ export function createPluginContext(
   let foldersApi: FoldersApi | undefined;
   let workspaceApi: WorkspaceApi | undefined;
   let importersApi: ImportersApi | undefined;
+  let statusBarApi: StatusBarApi | undefined;
 
   const settingValue = (key: string) => getPluginSetting(id, key);
 
@@ -271,6 +279,35 @@ export function createPluginContext(
         },
       });
     },
+    get statusBar() {
+      if (!statusBarApi) {
+        const set: StatusBarApi["set"] = (itemId, state) => {
+          const decl = declaredStatus.get(itemId);
+          if (!decl) {
+            refuse("status bar item", itemId);
+            return;
+          }
+          if (isLive()) {
+            setStatusItem(id, info.name, decl, cleanStatus(state));
+          }
+        };
+        const clear: StatusBarApi["clear"] = (itemId) => {
+          const decl = declaredStatus.get(itemId);
+          if (decl) {
+            setStatusItem(id, info.name, decl, null);
+          }
+        };
+        statusBarApi = {
+          set,
+          clear,
+          show(itemId, state) {
+            set(itemId, state);
+            return track(() => clear(itemId));
+          },
+        };
+      }
+      return statusBarApi;
+    },
     get markdown() {
       return (markdownApi ??= createMarkdownApi(id));
     },
@@ -308,6 +345,7 @@ export function createPluginContext(
       stopped = true;
       abortPluginImport(id);
       clearImporters(rt);
+      clearPluginStatus(id);
       while (subscriptions.length > 0) {
         const d = subscriptions.pop()!;
         try {

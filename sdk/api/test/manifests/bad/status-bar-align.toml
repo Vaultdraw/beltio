@@ -1,0 +1,12 @@
+# code: contribution-invalid
+# rust: unknown variant
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+
+[[contributes.status_bar]]
+id = "clock"
+title = "Clock"
+align = "middle"

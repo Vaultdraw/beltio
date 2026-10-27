@@ -460,6 +460,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       scene_max_ops: {
         doc: "Most ops in one plugin `scene.batch` call; a batch past it is refused.",
       },
+      status_bar: {
+        doc: "Show the status bar plugins fill with `ctx.statusBar`. It appears only while a plugin item has text.",
+      },
     },
   },
   {

@@ -42,6 +42,8 @@ export const RESERVED_EXTENSIONS = [
   "excalidraw.svg",
 ];
 const IMPORTER_KEYS = new Set(["id", "title", "extensions"]);
+const MAX_STATUS_ITEMS = 8;
+const STATUS_KEYS = new Set(["id", "title", "align", "priority", "command"]);
 /** What a plugin may declare. */
 export const PERMISSIONS = ["vault.read", "vault.write", "folders.import"];
 /** Kept for later API revisions; an app that knows them as reserved refuses a manifest that uses one. */
@@ -360,6 +362,37 @@ function checkPermissions(list, err) {
 }
 
 /**
+ * @param {Record<string, any>[]} items
+ * @param {Record<string, any>[]} commands
+ * @param {(code: string, message: string) => void} err
+ */
+function checkStatusBar(items, commands, err) {
+  const ids = new Set(commands.map((c) => c.id));
+  for (const x of items) {
+    if ("align" in x && x.align !== "left" && x.align !== "right") {
+      err(
+        "contribution-invalid",
+        'status bar item align must be "left" or "right"',
+      );
+    }
+    if ("priority" in x && !Number.isInteger(x.priority)) {
+      err(
+        "contribution-invalid",
+        "status bar item priority must be an integer",
+      );
+    }
+    if ("command" in x && !ids.has(x.command)) {
+      err(
+        "status-command-unknown",
+        `Status bar item ${show(x.id)} names command ${show(
+          x.command,
+        )}, which the plugin does not declare`,
+      );
+    }
+  }
+}
+
+/**
  * @param {unknown} c
  * @param {(code: string, message: string) => void} err
  */
@@ -369,10 +402,12 @@ function checkContributes(c, err) {
     return;
   }
   for (const k of Object.keys(c)) {
-    if (!["commands", "panels", "settings", "importers"].includes(k)) {
+    if (
+      !["commands", "panels", "settings", "importers", "status_bar"].includes(k)
+    ) {
       err(
         "unknown-key",
-        `Unknown key 'contributes.${k}' (use commands, panels, settings or importers)`,
+        `Unknown key 'contributes.${k}' (use commands, panels, settings, importers or status_bar)`,
       );
     }
   }
@@ -395,6 +430,10 @@ function checkContributes(c, err) {
   const panels = list("panels");
   const settings = list("settings");
   const importers = list("importers");
+  const statusBar = list("status_bar");
+  if (statusBar.length > MAX_STATUS_ITEMS) {
+    err("too-many", `Too many status bar items (max ${MAX_STATUS_ITEMS})`);
+  }
   if (
     commands.length > MAX_COMMANDS ||
     panels.length > MAX_PANELS ||
@@ -412,6 +451,7 @@ function checkContributes(c, err) {
     ["command", commands, COMMAND_KEYS],
     ["panel", panels, PANEL_KEYS],
     ["importer", importers, IMPORTER_KEYS],
+    ["status bar item", statusBar, STATUS_KEYS],
   ])) {
     const seen = new Set();
     for (const x of items) {
@@ -468,6 +508,7 @@ function checkContributes(c, err) {
     }
   }
   checkImporters(importers, err);
+  checkStatusBar(statusBar, commands, err);
   for (const s of settings) {
     const field = (k) => typeof s[k] === "string" && s[k] !== "";
     if (!field("key") || !field("type")) {

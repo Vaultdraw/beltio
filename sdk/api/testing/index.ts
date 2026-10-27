@@ -32,6 +32,7 @@ export type {
   FakeWorkspace,
   PanelView,
   PluginLogLine,
+  StatusBarShown,
   TestManifest,
   TestPlugin,
   TestPluginInfo,
@@ -74,6 +75,13 @@ const normalise = (m: TestManifest) => {
         title: x.id,
         ...x,
       })),
+      status_bar: (c.status_bar ?? []).map((x) => ({
+        title: x.id,
+        align: "right" as const,
+        priority: 0,
+        command: null,
+        ...x,
+      })),
     },
   };
   return info;
@@ -114,6 +122,16 @@ export async function boot(
     info,
     run: host.run,
     openPanel: host.openPanel,
+    statusBar: host.statusBar,
+    async clickStatusBar(id) {
+      const item = host.statusBar().find((x) => x.id === id);
+      if (!item) {
+        throw new Error(`status bar item "${id}" is not shown`);
+      }
+      if (item.command) {
+        await host.run(item.command);
+      }
+    },
     toasts: host.toasts,
     timers: host.timers,
     log: host.log,

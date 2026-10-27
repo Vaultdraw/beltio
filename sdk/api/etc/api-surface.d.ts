@@ -115,7 +115,7 @@ export interface ImportersApi {
 export type { CommandsApi } from "./commands";
 export type { Disposable } from "./disposable";
 export type { AppEventMap, EventsApi } from "./events";
-export type { CommandContribution, ImporterContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
+export type { CommandContribution, ImporterContribution, StatusBarContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
 export type { FolderEntry, FoldersApi, PickSourceOptions, PickTargetOptions, SourceFolder, TargetFolder, } from "./folders";
 export type { ApiVersion, HostApi } from "./host";
 export type { ImportersApi, Importer, ImportInput, ImportOptions, ImportResult, } from "./importers";
@@ -126,6 +126,7 @@ export { definePlugin } from "./plugin";
 export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
 export type { BatchOptions, BatchResult, ElementId, ElementRef, ImageSource, FontFamilyName, NewElement, SceneContextApi, SceneElementDetail, SceneElement, SceneElementType, SceneOp, SceneOpIssue, } from "./scene";
 export type { SelectOption, SettingDecl, SettingScopeName, SettingsApi, SettingValue, } from "./settings";
+export type { StatusBarApi, StatusBarState } from "./statusBar";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { FontsApi, TextApi, TextFont } from "./text";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
@@ -161,11 +162,19 @@ export interface ImporterContribution {
     title: string;
     extensions: string[];
 }
+export interface StatusBarContribution {
+    id: string;
+    title: string;
+    align: "left" | "right";
+    priority: number;
+    command: string | null;
+}
 export interface PluginContributions {
     commands: CommandContribution[];
     panels: PanelContribution[];
     settings: SettingDecl[];
     importers?: ImporterContribution[];
+    status_bar?: StatusBarContribution[];
 }
 
 // markdown.ts
@@ -411,6 +420,7 @@ import type { PagesApi } from "./pages";
 import type { PanelsApi } from "./panels";
 import type { SceneContextApi } from "./scene";
 import type { SettingsApi } from "./settings";
+import type { StatusBarApi } from "./statusBar";
 import type { StorageApi } from "./storage";
 import type { FoldersApi } from "./folders";
 import type { FontsApi, TextApi } from "./text";
@@ -446,6 +456,7 @@ export interface PluginContext {
     readonly fonts: FontsApi;
     readonly pages: PagesApi;
     readonly folders: FoldersApi;
+    readonly statusBar: StatusBarApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;
     setInterval(fn: () => void, ms: number): Disposable;
@@ -600,6 +611,19 @@ export interface SettingsApi {
 
 // specifiers.ts
 export declare const SHARED_SPECIFIERS: readonly string[];
+
+// statusBar.ts
+import type { Disposable } from "./disposable";
+export interface StatusBarState {
+    text: string;
+    tooltip?: string;
+    tone?: "normal" | "muted" | "warn" | "error";
+}
+export interface StatusBarApi {
+    set(id: string, state: StatusBarState): void;
+    clear(id: string): void;
+    show(id: string, state: StatusBarState): Disposable;
+}
 
 // storage.ts
 export type Json = null | boolean | number | string | readonly Json[] | {

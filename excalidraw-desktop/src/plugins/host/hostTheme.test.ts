@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { API_REVISION } from "../../../../sdk/api/shared/features";
 import { TOKEN_NAMES } from "../../theme/types";
 import { appearanceListenerCount } from "../../vault/appearance";
 import { boot, type TestPlugin } from "../testing";
@@ -36,7 +37,7 @@ describe("ctx.host", () => {
       seen = ctx.host;
     });
     expect(seen!.app).toMatch(/^\d+\.\d+\.\d+/);
-    expect(seen!.api).toEqual({ level: 0, revision: "0.9.0" });
+    expect(seen!.api).toEqual({ level: 0, revision: API_REVISION });
     expect(seen!.has("theme.tokens")).toBe(true);
     expect(seen!.has("commands.register")).toBe(true);
     expect(seen!.has("drawing.saved")).toBe(true);

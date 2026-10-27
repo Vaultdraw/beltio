@@ -1288,3 +1288,32 @@ fn gateway_folders_rows_need_the_import_permission_and_consent() {
     // A write permission for the review dialog: adding it later needs the user's confirmation.
     assert!(manifest::is_write_permission("folders.import"));
 }
+
+// ---- P6: status bar items in the manifest ----
+
+fn sbar(extra: &str) -> String {
+    with(&format!("\n[[contributes.commands]]\nid = \"go\"\ntitle = \"Go\"\n[[contributes.status_bar]]\nid = \"clock\"\ntitle = \"Clock\"\n{extra}"))
+}
+
+#[test]
+fn status_bar_items_parse_and_serialise() {
+    let m = manifest::parse(&sbar("align = \"left\"\npriority = 5\ncommand = \"go\"\n")).unwrap();
+    let item = &m.contributes.status_bar[0];
+    assert_eq!((item.id.as_str(), item.priority, item.command.as_deref()), ("clock", 5, Some("go")));
+    let v = serde_json::to_value(&m).unwrap();
+    assert_eq!(v["contributes"]["status_bar"][0]["align"], json!("left"));
+    // Defaults: right-aligned, priority 0, no command.
+    let d = manifest::parse(&sbar("")).unwrap();
+    assert_eq!(serde_json::to_value(&d).unwrap()["contributes"]["status_bar"][0]["align"], json!("right"));
+    assert_eq!(d.contributes.status_bar[0].priority, 0);
+}
+
+#[test]
+fn status_bar_rules() {
+    bad(&sbar("command = \"nope\"\n"), "does not declare");
+    bad(&sbar("align = \"middle\"\n"), "unknown variant");
+    bad(&sbar("color = \"red\"\n"), "unknown field");
+    bad(&with("\n[[contributes.status_bar]]\nid = \"a\"\ntitle = \"A\"\n[[contributes.status_bar]]\nid = \"a\"\ntitle = \"B\"\n"), "Duplicate status bar item id");
+    let many: String = (0..9).map(|i| format!("\n[[contributes.status_bar]]\nid = \"s{i}\"\ntitle = \"S\"\n")).collect();
+    bad(&with(&many), "Too many status bar items");
+}

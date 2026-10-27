@@ -9,6 +9,7 @@ export type { AppEventMap, EventsApi } from "./events";
 export type {
   CommandContribution,
   ImporterContribution,
+  StatusBarContribution,
   PanelContribution,
   PluginContributions,
   PluginManifestInfo,
@@ -86,6 +87,7 @@ export type {
   SettingsApi,
   SettingValue,
 } from "./settings";
+export type { StatusBarApi, StatusBarState } from "./statusBar";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { FontsApi, TextApi, TextFont } from "./text";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";

@@ -2,6 +2,7 @@ import type {
   AppEventMap,
   CommandContribution,
   ImporterContribution,
+  StatusBarContribution,
   Json,
   NewElement,
   PanelContribution,
@@ -53,6 +54,7 @@ export interface TestManifest {
       id: string;
       extensions: string[];
     })[];
+    status_bar?: (Partial<StatusBarContribution> & { id: string })[];
   };
 }
 
@@ -193,12 +195,27 @@ export interface FakeEvents {
 }
 
 /** A plugin booted in a test. The real host and the mock host both implement it. */
+/** A status bar item as the user would see it. */
+export interface StatusBarShown {
+  id: string;
+  title: string;
+  text: string;
+  tooltip: string | null;
+  tone: "normal" | "muted" | "warn" | "error";
+  /** Short command id a click runs, or null. */
+  command: string | null;
+}
+
 export interface TestPlugin {
   info: TestPluginInfo;
   /** Runs a command by short id (as the palette does); resolves when its handler is done. */
   run(shortId: string): Promise<void>;
   /** Opens a panel by short id and renders it. */
   openPanel(shortId: string): Promise<PanelView>;
+  /** The status bar items that currently have text. */
+  statusBar(): StatusBarShown[];
+  /** Clicks a status bar item: runs its declared command. */
+  clickStatusBar(id: string): Promise<void>;
   /** Messages of the visible toasts. */
   toasts(): string[];
   /** Timers the plugin currently has scheduled. */

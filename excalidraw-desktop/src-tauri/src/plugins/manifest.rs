@@ -15,6 +15,7 @@ const MAX_TEXT: usize = 1000;
 const MAX_PATH: usize = 260;
 const MAX_PERMISSIONS: usize = 8;
 const MAX_IMPORTERS: usize = 8;
+const MAX_STATUS_ITEMS: usize = 8;
 const MAX_IMPORTER_EXTENSIONS: usize = 8;
 const MAX_DATA_KEY: usize = 64;
 const MAX_EXTENSION: usize = 32;
@@ -80,6 +81,29 @@ pub(crate) struct Importer {
     pub extensions: Vec<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum Align {
+    Left,
+    #[default]
+    Right,
+}
+
+/// A status bar item (`[[contributes.status_bar]]`): the plugin fills it with `ctx.statusBar.set`.
+/// `command` (a command id of this plugin) runs when the user clicks the item.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct StatusItem {
+    pub id: String,
+    pub title: String,
+    #[serde(default)]
+    pub align: Align,
+    #[serde(default)]
+    pub priority: i32,
+    #[serde(default)]
+    pub command: Option<String>,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Contributes {
@@ -93,6 +117,9 @@ pub(crate) struct Contributes {
     /// Always sent to the web view, possibly empty.
     #[serde(default)]
     pub importers: Vec<Importer>,
+    /// `[[contributes.status_bar]]`; the web view gets the same key.
+    #[serde(default)]
+    pub status_bar: Vec<StatusItem>,
 }
 
 fn yes() -> bool {
@@ -225,6 +252,22 @@ fn check_importers(list: &[Importer]) -> Result<(), String> {
     Ok(())
 }
 
+fn check_status_bar(list: &[StatusItem], commands: &[Command]) -> Result<(), String> {
+    if list.len() > MAX_STATUS_ITEMS {
+        return Err(format!("Too many status bar items (max {MAX_STATUS_ITEMS})"));
+    }
+    check_unique_ids("status bar item", list.iter().map(|x| x.id.as_str()))?;
+    for x in list {
+        check_title("status bar item title", &x.title)?;
+        if let Some(c) = &x.command {
+            if !commands.iter().any(|d| &d.id == c) {
+                return Err(format!("Status bar item '{}' names command '{c}', which the plugin does not declare", x.id));
+            }
+        }
+    }
+    Ok(())
+}
+
 /// `onStartupFinished`, or `onDrop:<ext>` for an extension one of `importers` declares.
 fn check_activation(events: &[String], importers: &[Importer]) -> Result<(), String> {
     for a in events {
@@ -296,6 +339,7 @@ fn validate(raw: Raw) -> Result<Manifest, String> {
         return Err(format!("Too many contributions (max {MAX_COMMANDS} commands, {MAX_PANELS} panels, {MAX_SETTINGS} settings)"));
     }
     check_importers(&c.importers)?;
+    check_status_bar(&c.status_bar, &c.commands)?;
     check_unique_ids("command", c.commands.iter().map(|x| x.id.as_str()))?;
     check_unique_ids("panel", c.panels.iter().map(|x| x.id.as_str()))?;
     for x in &c.commands {

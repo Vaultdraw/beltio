@@ -30,6 +30,7 @@ import {
 } from "../shared/importers";
 
 import { dataKeyFor, MAX_OPS_LIMIT } from "../shared/sceneRules";
+import { cleanStatus, type CleanStatus } from "../shared/statusBar";
 import { permissionError } from "../shared/vaultPaths";
 
 import { fakeParseMarkdown, markdownParams } from "../shared/markdown";
@@ -82,6 +83,7 @@ import type {
   FakeVault,
   FakeWorkspace,
   PluginLogLine,
+  StatusBarShown,
   TestPluginInfo,
 } from "./types";
 
@@ -127,6 +129,7 @@ export interface MockHost {
   ): Promise<FakeBatch | null>;
   cancelImport(): boolean;
   log(): readonly PluginLogLine[];
+  statusBar(): StatusBarShown[];
   toasts(): string[];
   timers(): number;
   /** Runs onStartupFinished activation, as the app does after launch. */
@@ -249,6 +252,10 @@ export function createMockHost(
     ),
   );
   const importerImpls = new Map<string, Importer>();
+  const declaredStatus = new Map(
+    (info.contributes.status_bar ?? []).map((i) => [i.id, i] as const),
+  );
+  const statusItems = new Map<string, CleanStatus>();
 
   // --- log, errors, toasts ---
   const logLine = (level: PluginLogLine["level"], text: string) => {
@@ -386,6 +393,12 @@ export function createMockHost(
   // --- the context ---
   const createContext = () => {
     const subscriptions: Disposable[] = [];
+    let ctxStopped = false;
+    subscriptions.push({
+      dispose() {
+        ctxStopped = true;
+      },
+    });
     const track = (fn: () => void): Disposable => {
       let done = false;
       const d = {
@@ -400,7 +413,7 @@ export function createMockHost(
       return d;
     };
     const refuse = (
-      what: "command" | "panel" | "importer",
+      what: "command" | "panel" | "importer" | "status bar item",
       short: string,
     ): Disposable => {
       reportError(new Error(undeclaredMessage(what, short)), "register");
@@ -457,6 +470,7 @@ export function createMockHost(
     let vaultApi: PluginContext["vault"] | undefined;
     let workspaceApi: PluginContext["workspace"] | undefined;
     let importersApi: ImportersApi | undefined;
+    let statusBarApi: PluginContext["statusBar"] | undefined;
     let pagesApi: PluginContext["pages"] | undefined;
     let foldersApi: PluginContext["folders"] | undefined;
     const ctx: PluginContext = {
@@ -641,6 +655,32 @@ export function createMockHost(
           },
         });
       },
+      get statusBar() {
+        return (statusBarApi ??= {
+          set(itemId, state) {
+            if (!declaredStatus.has(itemId)) {
+              refuse("status bar item", itemId);
+              return;
+            }
+            if (ctxStopped) {
+              return;
+            }
+            const clean = cleanStatus(state);
+            if (clean) {
+              statusItems.set(itemId, clean);
+            } else {
+              statusItems.delete(itemId);
+            }
+          },
+          clear(itemId) {
+            statusItems.delete(itemId);
+          },
+          show(itemId, state) {
+            this.set(itemId, state);
+            return track(() => statusItems.delete(itemId));
+          },
+        });
+      },
       // markdown, text, fonts, pages: stateless, built per read (cheap objects).
       get markdown() {
         return {
@@ -804,6 +844,7 @@ export function createMockHost(
     handlers.clear();
     components.clear();
     importerImpls.clear();
+    statusItems.clear();
   };
 
   const stop = (): Promise<void> => {
@@ -1034,6 +1075,14 @@ export function createMockHost(
       return true;
     },
     log: () => lines,
+    statusBar: () =>
+      [...statusItems].map(([itemId, v]) => ({
+        id: itemId,
+        title: declaredStatus.get(itemId)?.title ?? itemId,
+        ...v,
+        tooltip: v.tooltip ?? declaredStatus.get(itemId)?.title ?? null,
+        command: declaredStatus.get(itemId)?.command ?? null,
+      })),
     toasts: () => toastQueue.map((t) => t.message),
     timers: () => activeTimers,
     act,
@@ -1084,6 +1133,7 @@ export function createMockHost(
       activePath = "fake.excalidraw";
       sceneReadOnly = false;
       importerImpls.clear();
+      statusItems.clear();
       stored = new Map();
       storageLimitKb = STORAGE_DEFAULT_LIMIT_KB;
       lines = [];

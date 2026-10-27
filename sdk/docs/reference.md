@@ -520,6 +520,10 @@ type ImportResult = { ops: readonly SceneOp[] } | void;
 - `paths` are vault-relative drawings and folders. Other files and paths with a segment that starts with a dot are left out; a batch with nothing left is not sent. `rescan: true` means the file watcher lost track, so every path may have changed.
 - Needs `vault.read`. Without it, `on` records a `PERMISSION` error on the plugin (Settings → Plugins shows it) and returns a subscription that never fires. If an update removes `vault.read`, existing subscriptions stop receiving events.
 
+## Status bar, views, menus (since 0.10.0)
+
+`ctx.statusBar` fills items declared with `[[contributes.status_bar]]`. Details, limits and examples are in [surfaces.md](surfaces.md).
+
 ## Markdown, text and pages (since 0.8.0)
 
 Four parts of `ctx`: the Markdown parser, text measuring, font loading and page layout. None of them needs a permission. Only `markdown.parse` makes a native call; `text`, `fonts` and `pages` run in the plugin's own code, with the editor's rules.
