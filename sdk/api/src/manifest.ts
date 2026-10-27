@@ -53,7 +53,7 @@ export interface CommandContribution {
   when: string[];
   /** @since 0.1.0 */
   palette: boolean;
-  /** Runs again while the key is held (cursor moves). Absent or false: once per press. @since 0.19.0 */
+  /** Runs again while the key is held (cursor moves). Absent or false: once per press. @since 0.20.0 */
   repeat?: boolean;
 }
 
