@@ -1845,6 +1845,9 @@ Installing themes from the internet. See [Installing more themes](#installing-mo
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
 | `max_install_kb` | `64` | a whole number of KiB between 1 and 256 |  | Largest theme file to accept, in KB (1 to 256). |
+| `index_url` | `"https://raw.githubusercontent.com/Vaultdraw/themes/main/index.json"` | an https address |  | The community themes index the theme browser lists (an https address). Needs the themes consent. |
+| `index_ttl_hours` | `24` | a whole number of hours between 0 and 720 |  | Hours before the browser fetches the index again; 0 fetches every time it opens. |
+| `previews` | `true` | true or false |  | Download preview images in the browser; `false` shows colour swatches only. |
 
 ### `[hotkeys]` and `[plugin.<id>]`
 

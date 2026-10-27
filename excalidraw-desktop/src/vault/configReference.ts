@@ -529,6 +529,15 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       max_install_kb: {
         doc: "Largest theme file to accept, in KB (1 to 256).",
       },
+      index_url: {
+        doc: "The community themes index the theme browser lists (an https address). Needs the themes consent.",
+      },
+      index_ttl_hours: {
+        doc: "Hours before the browser fetches the index again; 0 fetches every time it opens.",
+      },
+      previews: {
+        doc: "Download preview images in the browser; `false` shows colour swatches only.",
+      },
     },
   },
 ];

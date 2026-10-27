@@ -1698,6 +1698,23 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 256
+        },
+        "index_url": {
+          "description": "The community themes index the theme browser lists (an https address). Needs the themes consent.",
+          "default": "https://raw.githubusercontent.com/Vaultdraw/themes/main/index.json",
+          "type": "string"
+        },
+        "index_ttl_hours": {
+          "description": "Hours before the browser fetches the index again; 0 fetches every time it opens.",
+          "default": 24,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 720
+        },
+        "previews": {
+          "description": "Download preview images in the browser; `false` shows colour swatches only.",
+          "default": true,
+          "type": "boolean"
         }
       }
     },
