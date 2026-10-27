@@ -6,11 +6,23 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { allCommands, getCommand } from "../commands/commands";
 import { findConflicts } from "../commands/conflicts";
+import { registerCommands } from "../commands/registry";
+import { officialCommandDefs } from "../plugins/boot";
+import { OFFICIAL_PLUGINS } from "../plugins/officialPlugins";
 import { configToPreferences } from "../vault/settingsSync";
+
+// The graph's commands come from the official plugin's stubs (registered at boot in the app).
+let releaseGraphStubs: () => void;
+beforeAll(() => {
+  releaseGraphStubs = registerCommands(
+    officialCommandDefs(OFFICIAL_PLUGINS.find((p) => p.id === "graph")!),
+  );
+});
+afterAll(() => releaseGraphStubs());
 
 const DOC = resolve(__dirname, "../../../docs/configuration.md");
 const PRESET = resolve(__dirname, "../../../docs/presets/vim.toml");

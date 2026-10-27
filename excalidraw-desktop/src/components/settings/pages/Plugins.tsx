@@ -38,6 +38,7 @@ import { deleteDataRequest } from "../../../plugins/ui/pluginCommands";
 import { subscribeStorageWrites } from "../../../plugins/host/storage";
 import { toastStore } from "../../../toasts/toastStore";
 import {
+  getPreferences,
   subscribePreferences,
   updatePreferences,
 } from "../../../vault/preferences";
@@ -249,11 +250,13 @@ export const PluginsPage = () => {
       updatePreferences({ [EXTENSION_FIELDS[ext]]: on }, win);
       return;
     }
+    // The saved list, not the derived one (which also holds the switch-driven plugins).
+    const saved = getPreferences(win).pluginsEnabled;
     updatePreferences(
       {
         pluginsEnabled: on
-          ? [...new Set([...enabledIds, id])]
-          : enabledIds.filter((x) => x !== id),
+          ? [...new Set([...saved, id])]
+          : saved.filter((x) => x !== id),
       },
       win,
     );
