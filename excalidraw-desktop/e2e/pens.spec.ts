@@ -33,14 +33,8 @@ const drag = async (page: Page, fx: number, fy: number, dx: number, dy = 0) => {
   await page.mouse.up();
 };
 
-/** Clicks the Draw tool until it sticks: a scene swap right after open can reset the tool. */
 const pickFreedraw = (page: Page) =>
-  expect(async () => {
-    await page
-      .locator(".vault-editor [data-testid='toolbar-freedraw']")
-      .click();
-    await expect(pensBar(page)).toBeVisible({ timeout: 1500 });
-  }).toPass({ timeout: 20000 });
+  page.locator(".vault-editor [data-testid='toolbar-freedraw']").click();
 
 const pensBar = (page: Page) => page.getByRole("toolbar", { name: "Pens" });
 

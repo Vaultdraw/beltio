@@ -92,13 +92,23 @@ export const reloadVault = async (page: Page) => {
 };
 
 export const openDrawing = async (page: Page, name: string) => {
-  await page
+  const item = page
     .locator(".vault-tree-item__name", { hasText: name })
-    .first()
-    .click();
-  await expect(page.locator(".vault-editor canvas.interactive")).toBeVisible();
-  // Excalidraw initializes asynchronously (fonts + initialData promise).
-  await page.waitForTimeout(500);
+    .first();
+  const path = await item.getAttribute("title");
+  await item.click();
+  const editor = page.locator(".vault-editor");
+  await expect(editor.locator("canvas.interactive")).toBeVisible();
+  // The clicked drawing's scene has landed and no swap or load is running:
+  // the editor's own state, not a fixed wait.
+  if (path) {
+    await expect(editor).toHaveAttribute(
+      "data-document-id",
+      new RegExp(`:${path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`),
+    );
+  }
+  await expect(editor).toHaveAttribute("data-scene-ready", "true");
+  await expect(editor).toHaveAttribute("data-loading", "false");
 };
 
 /** Read a drawing's JSON straight from the in-memory vault. */

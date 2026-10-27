@@ -1047,6 +1047,8 @@ const VaultEditorComponent = ({
       data-document-id={loadedDocId ?? documentId}
       // The scene named above has landed and no swap is running (see sceneReady.ts).
       data-scene-ready={apiReady && !swapping ? "true" : "false"}
+      // The app is still reading or closing a document: input is blocked.
+      data-loading={loading ? "true" : "false"}
       onDropCapture={guardSceneDrop}
     >
       <LoadingLine active={loading || swapping} />
