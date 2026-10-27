@@ -96,16 +96,34 @@ function registerOfficialStubs(win: Window, plugin: OfficialPlugin) {
   return () => offs.reverse().forEach((off) => off());
 }
 
+/** Registers the stubs of the official plugins the enabled list names (none once the host runs). */
+function syncOfficialStubs(win: Window): void {
+  releaseOfficialStubs();
+  if (pluginHostStarted.get()) {
+    return;
+  }
+  const on = OFFICIAL_PLUGINS.filter((p) =>
+    getPreferences(win).pluginsEnabled.includes(p.id),
+  );
+  const offs = on.map((p) => registerOfficialStubs(win, p));
+  releaseStubs = () => offs.forEach((off) => off());
+}
+
+let stopListSync: (() => void) | null = null;
+
 export function bootPlugins(win: Window): void {
   setImportHostStarter(() => ensurePluginHost(win));
-  releaseOfficialStubs();
-  if (!pluginHostStarted.get()) {
-    const on = OFFICIAL_PLUGINS.filter((p) =>
-      getPreferences(win).pluginsEnabled.includes(p.id),
-    );
-    const offs = on.map((p) => registerOfficialStubs(win, p));
-    releaseStubs = () => offs.forEach((off) => off());
-  }
+  syncOfficialStubs(win);
+  // Enabling or disabling an official plugin (Settings, or an old saved list) updates its stubs.
+  let listed = JSON.stringify(getPreferences(win).pluginsEnabled);
+  stopListSync?.();
+  stopListSync = subscribePreferences(() => {
+    const now = JSON.stringify(getPreferences(win).pluginsEnabled);
+    if (now !== listed) {
+      listed = now;
+      syncOfficialStubs(win);
+    }
+  });
   // Official plugins alone don't start the host: only their first use does.
   const enabled = () =>
     getPreferences(win).pluginsEnabled.some((id) => !isOfficialPluginId(id));

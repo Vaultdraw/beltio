@@ -11,6 +11,7 @@ import { getRegisteredHandler } from "../commands/handlerRegistry";
 import { isSceneReady } from "../editor/sceneReady";
 
 const COMMAND = "markdown-import.obsidian-new-vault";
+let bootedByHand: string | null = null;
 
 export async function runObsidianTrial(): Promise<void> {
   const win = window;
@@ -87,7 +88,35 @@ export async function runObsidianTrial(): Promise<void> {
       "import command",
       () => getRegisteredHandler(COMMAND),
       30_000,
-    );
+    ).catch(async (e: unknown) => {
+      // Diagnose, then try once more after booting the plugin stubs by hand (rAF does it in a normal run).
+      const { bootPlugins } = await import("../plugins/boot");
+      bootPlugins(win);
+      await log("trial:booted-by-hand");
+      const late = getRegisteredHandler(COMMAND);
+      if (late) {
+        bootedByHand = String(e);
+        return late;
+      }
+      const host = await import("../plugins/host");
+      throw new Error(
+        `${String(e)}; visibility=${
+          doc.visibilityState
+        } focus=${doc.hasFocus()} pluginsEnabled=${JSON.stringify(
+          (await import("../vault/preferences")).getPreferences(win)
+            .pluginsEnabled,
+        )} started=${
+          win.performance.getEntriesByName("vaultdraw:plugins:started").length
+        } costs=${JSON.stringify(
+          host.getPluginCosts(),
+        )} problems=${JSON.stringify(
+          host.getPluginProblems("markdown-import"),
+        )} log=${JSON.stringify(host.getPluginLog("markdown-import")).slice(
+          0,
+          600,
+        )}`,
+      );
+    });
     await log("trial:import-begin");
     const t0 = win.performance.now();
     void Promise.resolve(handler()).catch((e: unknown) =>
@@ -149,6 +178,7 @@ export async function runObsidianTrial(): Promise<void> {
       status: errors.length ? 1 : 0,
       details: {
         trial: {
+          bootedByHand,
           importMs,
           toast: toastText,
           treeRows: doc.querySelectorAll(".vault-tree-item").length,

@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { installMemoryManagement } from "./memory/install";
 import { installCanvasTracker } from "./perf/canvasTracker";
 import { installNativeContextMenuSuppression } from "./platform/nativeContextMenu";
+import { frameOrTimeout } from "./platform/frameOrTimeout";
 import { waitAtMost } from "./platform/waitAtMost";
 import { bootPlugins } from "./plugins/boot";
 import { getPreferences, getTheme, resolveTheme } from "./vault/preferences";
@@ -145,7 +146,8 @@ void initSettings(ownerWindow)
     mark("render-called");
     ownerWindow.requestAnimationFrame(() => mark("first-frame"));
     // Plugin host loads only when a plugin is enabled.
-    ownerWindow.requestAnimationFrame(() => bootPlugins(ownerWindow));
+    // A frame, or one second: a hidden window gets no frames and must still get its plugin commands.
+    frameOrTimeout(ownerWindow, () => bootPlugins(ownerWindow));
     if (import.meta.env.VITE_APP_OBSIDIAN_TRIAL === "true") {
       ownerWindow.setTimeout(() => {
         void import("./smoke/obsidianTrial")

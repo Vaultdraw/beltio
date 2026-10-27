@@ -40,6 +40,22 @@ describe("bootPlugins", () => {
     updatePreferences({ pluginsEnabled: [] }, window);
   });
 
+  it("official stubs follow the enabled list: a late enable registers them, a disable drops them", () => {
+    const { win } = fakeWin(true);
+    bootPlugins(win);
+    expect(getRegisteredHandler("markdown-import.obsidian-new-vault")).toBe(
+      undefined,
+    );
+    updatePreferences({ pluginsEnabled: ["markdown-import"] }, window);
+    expect(
+      getRegisteredHandler("markdown-import.obsidian-new-vault"),
+    ).toBeTypeOf("function");
+    updatePreferences({ pluginsEnabled: [] }, window);
+    expect(getRegisteredHandler("markdown-import.obsidian-new-vault")).toBe(
+      undefined,
+    );
+  });
+
   it("imports nothing while no plugin is enabled", async () => {
     const { win, flush, queue } = fakeWin(true);
     bootPlugins(win);
