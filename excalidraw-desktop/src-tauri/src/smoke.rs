@@ -73,7 +73,7 @@ pub fn smoke_environment() -> Result<Value, String> {
     // VAULTDRAW_PERF_DRAWINGS: extra probe drawings, JSON [{ path, pattern, elements }].
     let perf_suite = env::var("VAULTDRAW_PERF_SUITE").unwrap_or_default();
     let perf_drawings = env::var("VAULTDRAW_PERF_DRAWINGS").unwrap_or_default();
-    Ok(json!({ "enabled": true, "vaultPath": root.to_string_lossy(), "exportPath": root.join("smoke-exports").to_string_lossy(), "perfSuite": perf_suite, "perfDrawings": perf_drawings }))
+    Ok(json!({ "enabled": true, "vaultPath": root.to_string_lossy(), "exportPath": root.join("smoke-exports").to_string_lossy(), "perfSuite": perf_suite, "perfDrawings": perf_drawings, "watchdogSmoke": crate::watchdog::smoke_requested() }))
 }
 
 #[tauri::command]
@@ -120,7 +120,7 @@ pub fn smoke_finish(app: AppHandle, status: i32, details: Option<Value>) -> Resu
 
 /// Pids of this app and its WebKit helper processes (WKWebView private API), for exact perf attribution.
 #[cfg(target_os = "macos")]
-fn webkit_pids(ptr: *mut std::ffi::c_void) -> (Option<i32>, Option<i32>, Option<i32>) {
+pub(crate) fn webkit_pids(ptr: *mut std::ffi::c_void) -> (Option<i32>, Option<i32>, Option<i32>) {
     use objc2::runtime::AnyObject;
     use objc2::{msg_send, sel};
     if ptr.is_null() {

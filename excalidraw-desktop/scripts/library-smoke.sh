@@ -2,7 +2,7 @@
 # Runs the packaged smoke app (built with --features smoke-test) once. At milestones
 # (SMOKE_MILESTONE=1) it runs a second time against the same config + vault dirs to
 # prove the library persists across a restart, then a third time under
-# taskpolicy -c background (low-end). Prints each report summary.
+# taskpolicy -c background (low-end), then scripts/watchdog-smoke.sh. Prints each report summary.
 # Usage: [SMOKE_MILESTONE=1] scripts/library-smoke.sh   (run from anywhere; holds the shared build lock)
 set -u
 HERE=$(cd "$(dirname "$0")/.." && pwd)
@@ -39,6 +39,8 @@ run run1 env
 if [ "${SMOKE_MILESTONE:-0}" = 1 ]; then
   run run2 env
   run run3-lowend taskpolicy -c background
+  # Hang watchdog: dialog on a hung page, Cmd+Q quits (skips itself unless the Mac is idle).
+  sh "$HERE/scripts/watchdog-smoke.sh"
 fi
 ls -la "$C/config/library.excalidrawlib" "$D/library.excalidrawlib"
 kill $CAF 2>/dev/null

@@ -825,8 +825,13 @@ pub fn run() {
                 // Test builds skip it (an unanswered modal dialog would stall a smoke or perf
                 // run on a loaded machine) unless VAULTDRAW_WATCHDOG=1 asks for it.
                 #[cfg(feature = "smoke-test")]
-                if std::env::var("VAULTDRAW_WATCHDOG").as_deref() == Ok("1") {
+                if std::env::var("VAULTDRAW_WATCHDOG").as_deref() == Ok("1") || watchdog::smoke_requested() {
                     watchdog::install(&main_window);
+                    // Packaged check (scripts/watchdog-smoke.sh): hangs the page on purpose.
+                    #[cfg(target_os = "macos")]
+                    if watchdog::smoke_requested() {
+                        watchdog::smoke_driver::start(&main_window);
+                    }
                 }
                 #[cfg(not(feature = "smoke-test"))]
                 watchdog::install(&main_window);

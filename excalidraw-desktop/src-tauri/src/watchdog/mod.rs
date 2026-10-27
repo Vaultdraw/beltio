@@ -10,6 +10,8 @@
 pub mod machine;
 #[cfg(target_os = "macos")]
 mod macos;
+#[cfg(all(feature = "smoke-test", target_os = "macos"))]
+pub mod smoke_driver;
 
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -34,6 +36,13 @@ pub fn install(window: &tauri::WebviewWindow) {
     macos::install(window);
     #[cfg(not(target_os = "macos"))]
     let _ = window;
+}
+
+/// `VAULTDRAW_WATCHDOG_SMOKE=1` in a smoke-test build: the packaged hang check
+/// (`scripts/watchdog-smoke.sh`). Smoke-test builds only; release builds don't have it.
+#[cfg(feature = "smoke-test")]
+pub fn smoke_requested() -> bool {
+    std::env::var("VAULTDRAW_WATCHDOG_SMOKE").as_deref() == Ok("1")
 }
 
 /// `[watchdog]`, resolved.

@@ -34,6 +34,8 @@ const COMMAND_MODIFIER: usize = 1 << 20;
 
 static APP: OnceLock<AppHandle> = OnceLock::new();
 static WEBVIEW: AtomicPtr<AnyObject> = AtomicPtr::new(std::ptr::null_mut());
+/// True while the alert is up (one store per hang). The smoke driver polls it.
+static DIALOG_UP: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 static MACHINE: Mutex<Machine> = Mutex::new(Machine::new());
 /// When the current hang started (the unresponsive signal), for the record.
 static HANG_START: Mutex<Option<Instant>> = Mutex::new(None);
@@ -219,7 +221,9 @@ fn show_alert() -> Choice {
         });
         let monitor: Option<Retained<AnyObject>> =
             msg_send![class!(NSEvent), addLocalMonitorForEventsMatchingMask: KEY_DOWN_MASK, handler: &*block];
+        DIALOG_UP.store(true, Ordering::SeqCst);
         let response: isize = msg_send![&*alert, runModal];
+        DIALOG_UP.store(false, Ordering::SeqCst);
         if let Some(m) = monitor {
             let _: () = msg_send![class!(NSEvent), removeMonitor: &*m];
         }
@@ -230,6 +234,18 @@ fn show_alert() -> Choice {
         RESPONSE_WAIT => Choice::Wait,
         _ => Choice::Recovered, // aborted by the responsive callback
     }
+}
+
+/// Whether the alert is on screen now. Only the packaged smoke check reads it.
+#[cfg(feature = "smoke-test")]
+pub(super) fn dialog_up() -> bool {
+    DIALOG_UP.load(Ordering::SeqCst)
+}
+
+/// The main window's web view once the hook is installed, else null.
+#[cfg(feature = "smoke-test")]
+pub(super) fn main_view() -> *mut AnyObject {
+    WEBVIEW.load(Ordering::SeqCst)
 }
 
 /// The methods live on wry's shared delegate class: only the main window's view counts.

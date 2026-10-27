@@ -71,6 +71,7 @@ type SmokeEnvironment = {
   enabled: boolean;
   vaultPath: string;
   exportPath: string;
+  watchdogSmoke?: boolean;
 };
 
 type Native = {
@@ -555,6 +556,10 @@ export async function runDesktopSmoke(): Promise<void> {
     const env = await call("smoke_environment");
     if (!env.enabled || !env.vaultPath) {
       throw new Error("Native smoke environment is not enabled");
+    }
+    if (env.watchdogSmoke) {
+      // scripts/watchdog-smoke.sh hangs this page on purpose: stay idle, native ends the run.
+      await new Promise<never>(() => {});
     }
     // Resumed after the page-reload step's location.reload(): run only that step.
     const resumed = takeReloadMarker(win.sessionStorage, Date.now());
