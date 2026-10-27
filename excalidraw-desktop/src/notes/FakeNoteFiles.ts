@@ -107,7 +107,9 @@ export class FakeNoteFiles implements NoteFiles {
         list.shift();
       }
       this.history.set(path, list);
-      historyCopy = `.excalidraw-vault/note-history/${path}/${this.clock}-${curRev?.slice(0, 12)}.md`;
+      historyCopy = `.excalidraw-vault/note-history/${path}/${
+        this.clock
+      }-${curRev?.slice(0, 12)}.md`;
     }
     const mtimeMs = ++this.clock;
     this.files.set(path, { text: content, mtimeMs });

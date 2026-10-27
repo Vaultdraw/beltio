@@ -67,13 +67,16 @@ describe("DesktopNoteFiles", () => {
   it("calls the native commands and maps CONFLICT to NoteConflictError", async () => {
     const invoke = vi.fn(async (cmd: string) => {
       if (cmd === "write_note") {
-        throw { code: "CONFLICT", message: "changed" };
+        throw Object.assign(new Error("changed"), { code: "CONFLICT" });
       }
       return { content: "x", revision: "r", mtimeMs: 1, size: 1 };
     });
     const d = new DesktopNoteFiles(invoke as never);
     expect((await d.read("h", "a.md")).revision).toBe("r");
-    expect(invoke).toHaveBeenCalledWith("read_note", { handle: "h", path: "a.md" });
+    expect(invoke).toHaveBeenCalledWith("read_note", {
+      handle: "h",
+      path: "a.md",
+    });
     await expect(d.write("h", "a.md", "t", "r")).rejects.toBeInstanceOf(
       NoteConflictError,
     );

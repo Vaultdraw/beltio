@@ -276,6 +276,10 @@ autosave_delay_ms = 500
 # max_drawings = 50
 # Most matching elements shown per drawing, 1 to 5
 # max_snippets = 5
+# Search the Markdown notes (.md) of the vault, with their #tags and links (read when the index starts)
+# notes = false
+# Megabytes of note text kept in memory, 0 to 4096 (past it a note keeps its name, headings, tags and links)
+# note_text_mb = 48
 # When the search index starts: open (vault open) | idle (once the app is idle) | use (first search)
 # start = "idle"   # tags show once it has started
 
@@ -1587,7 +1591,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 105, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 107, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();
