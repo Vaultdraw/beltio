@@ -29,8 +29,53 @@ pub(crate) fn asset_file(root: &Path, path: &str) -> Result<PathBuf> {
     Ok(full)
 }
 
-fn read_asset(root: &Path, path: &str) -> Result<Vec<u8>> {
-    let full = asset_file(root, path)?;
+/// Walk limit when an image is found by its bare name.
+const MAX_WALK: usize = 100_000;
+
+/// The vault-relative path of the image `target` names, as seen from the note in folder `from`:
+/// next to the note, from the vault root, else the closest file with that name (Obsidian's rule).
+pub(crate) fn locate(root: &Path, from: &str, target: &str) -> Result<String> {
+    let target = target.trim().trim_start_matches('/');
+    let dir = from.rsplit_once('/').map_or("", |(d, _)| d);
+    for cand in [if dir.is_empty() { target.to_string() } else { format!("{dir}/{target}") }, target.to_string()] {
+        if asset_file(root, &cand).map(|f| f.is_file()).unwrap_or(false) {
+            return Ok(cand);
+        }
+    }
+    asset_file(root, target)?; // path and extension rules before any walk
+    let name = target.rsplit('/').next().unwrap_or(target).to_lowercase();
+    let mut best: Option<(usize, String)> = None;
+    let mut stack = vec![(root.to_path_buf(), String::new())];
+    let mut seen = 0usize;
+    while let Some((path, rel)) = stack.pop() {
+        let Ok(rd) = std::fs::read_dir(&path) else { continue };
+        for entry in rd.flatten() {
+            seen += 1;
+            if seen > MAX_WALK {
+                return best.map(|b| b.1).ok_or_else(|| err("NOT_FOUND", "Image not found"));
+            }
+            let fname = entry.file_name().to_string_lossy().to_string();
+            if fname.starts_with('.') {
+                continue;
+            }
+            let Ok(ft) = entry.file_type() else { continue };
+            let child = if rel.is_empty() { fname.clone() } else { format!("{rel}/{fname}") };
+            if ft.is_dir() {
+                stack.push((entry.path(), child));
+            } else if ft.is_file() && fname.to_lowercase() == name {
+                let shared = child.split('/').zip(dir.split('/')).take_while(|(a, b)| a == b).count();
+                if best.as_ref().map_or(true, |(s, p)| shared > *s || (shared == *s && child.len() < p.len())) {
+                    best = Some((shared, child));
+                }
+            }
+        }
+    }
+    best.map(|b| b.1).ok_or_else(|| err("NOT_FOUND", "Image not found"))
+}
+
+fn read_asset(root: &Path, from: &str, target: &str) -> Result<Vec<u8>> {
+    let path = locate(root, from, target)?;
+    let full = asset_file(root, &path)?;
     let real = full.canonicalize().map_err(|_| err("NOT_FOUND", "Image not found"))?;
     let base = root.canonicalize().map_err(|_| err("NOT_FOUND", "Vault not found"))?;
     if !real.starts_with(&base) {
@@ -43,11 +88,11 @@ fn read_asset(root: &Path, path: &str) -> Result<Vec<u8>> {
     std::fs::read(&real).map_err(|e| err("IO", &e.to_string()))
 }
 
-/// The raw bytes of a vault image, off the async runtime.
+/// The raw bytes of the vault image `target` (a name or path as written in the note at `from`), off the async runtime.
 #[tauri::command]
-pub(crate) async fn read_note_asset(handle: String, path: String, state: State<'_, Service>) -> Result<tauri::ipc::Response> {
+pub(crate) async fn read_note_asset(handle: String, from: String, target: String, state: State<'_, Service>) -> Result<tauri::ipc::Response> {
     let root = vault_for(&state, &handle)?.root.clone();
-    let bytes = tauri::async_runtime::spawn_blocking(move || read_asset(&root, &path))
+    let bytes = tauri::async_runtime::spawn_blocking(move || read_asset(&root, &from, &target))
         .await
         .map_err(|e| err("INTERNAL", &e.to_string()))??;
     Ok(tauri::ipc::Response::new(bytes))
@@ -72,14 +117,16 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("pics")).unwrap();
         std::fs::write(dir.join("pics/a.png"), [1u8, 2, 3]).unwrap();
-        assert_eq!(read_asset(&dir, "pics/a.png").unwrap(), vec![1, 2, 3]);
-        assert_eq!(read_asset(&dir, "pics/missing.png").unwrap_err().code, "NOT_FOUND");
+        assert_eq!(read_asset(&dir, "n.md", "pics/a.png").unwrap(), vec![1, 2, 3]);
+        assert_eq!(read_asset(&dir, "n.md", "a.png").unwrap(), vec![1, 2, 3], "by bare name");
+        assert_eq!(read_asset(&dir, "pics/n.md", "a.PNG").unwrap(), vec![1, 2, 3], "next to the note");
+        assert_eq!(read_asset(&dir, "n.md", "pics/missing.png").unwrap_err().code, "NOT_FOUND");
         #[cfg(unix)]
         {
             let outside = std::env::temp_dir().join(format!("vd-outside-{}.png", std::process::id()));
             std::fs::write(&outside, [9u8]).unwrap();
             std::os::unix::fs::symlink(&outside, dir.join("pics/link.png")).unwrap();
-            assert_eq!(read_asset(&dir, "pics/link.png").unwrap_err().code, "INVALID_PATH");
+            assert_eq!(read_asset(&dir, "n.md", "pics/link.png").unwrap_err().code, "INVALID_PATH");
             let _ = std::fs::remove_file(&outside);
         }
         let _ = std::fs::remove_dir_all(&dir);

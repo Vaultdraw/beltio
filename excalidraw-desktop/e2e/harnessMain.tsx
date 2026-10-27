@@ -15,6 +15,10 @@ import {
   E2E_SNIPPETS,
   FakeSnippetSource,
 } from "../src/tests/fakeSnippetSource";
+import { setNoteFiles } from "../src/notes/noteBackend";
+import { FakeNoteFiles } from "../src/notes/FakeNoteFiles";
+import welcomeNote from "../src/vault/fixtures/obsidian-vault/Welcome.md?raw";
+import ideasNote from "../src/vault/fixtures/obsidian-vault/Ideas.md?raw";
 import { FakePdfBridge } from "../src/tests/fakePdfBridge";
 import { toastStore } from "../src/toasts/toastStore";
 import { FakeVaultRepository } from "../src/tests/fakeVaultRepository";
@@ -122,6 +126,14 @@ if (params.get("seed") !== "empty") {
     repository.seedNote("Welcome.md");
     repository.seedNote("Ideas.md");
     repository.seedNote("Daily/2026-10-27.md");
+    // The notes' text, read and written through the in-memory NoteFiles.
+    const noteFiles = new FakeNoteFiles();
+    noteFiles.setOnDisk("Welcome.md", welcomeNote);
+    noteFiles.setOnDisk("Ideas.md", ideasNote);
+    noteFiles.setOnDisk("Daily/2026-10-27.md", "# Daily\n");
+    setNoteFiles(noteFiles);
+    (ownerWindow as unknown as { __noteFiles: FakeNoteFiles }).__noteFiles =
+      noteFiles;
     repository.seedDrawing("Drawings/Sketch.excalidraw", SAMPLE_SCENE);
     repository.seedDrawing(
       "Drawings/Plugin Sketch.excalidraw.md",

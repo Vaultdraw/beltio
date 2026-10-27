@@ -28,8 +28,9 @@ export const isImagePath = (path: string): boolean =>
 export function createAssetUrls(handle: string | null) {
   const urls = new Map<string, Promise<string | null>>();
   return {
-    url(path: string): Promise<string | null> {
-      let hit = urls.get(path);
+    url(from: string, path: string): Promise<string | null> {
+      const key = `${from}\n${path}`;
+      let hit = urls.get(key);
       if (!hit) {
         hit = (async () => {
           if (handle === null || !isTauriAvailable(window)) {
@@ -42,7 +43,7 @@ export function createAssetUrls(handle: string | null) {
           try {
             const bytes = await invoke<ArrayBuffer | number[]>(
               "read_note_asset",
-              { handle, path },
+              { handle, from, target: path },
             );
             const ext = path.slice(path.lastIndexOf(".") + 1).toLowerCase();
             const data =
@@ -56,7 +57,7 @@ export function createAssetUrls(handle: string | null) {
             return null;
           }
         })();
-        urls.set(path, hit);
+        urls.set(key, hit);
       }
       return hit;
     },

@@ -79,6 +79,10 @@ const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
   const assets = useMemo(() => createAssetUrls(vault.handle), [vault.handle]);
   useEffect(() => () => assets.dispose(), [assets]);
 
+  // Links resolve against the whole vault: start the file walk if it has not run.
+  const ensurePaths = vault.ensurePaths;
+  useEffect(() => ensurePaths?.(), [ensurePaths]);
+
   // ---- load --------------------------------------------------------------
   const load = useCallback(async () => {
     if (vault.handle === null) {
@@ -209,7 +213,7 @@ const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
           return null;
         }
       },
-      imageUrl: (p) => assets.url(p),
+      imageUrl: (p) => assets.url(path, p),
       renderNested: (t) =>
         sanitizeNoteHtml(
           renderNoteHtml(t, {
@@ -240,15 +244,18 @@ const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
       if (/^[a-z][a-z0-9+.-]*:|^\/\//i.test(src) || src.startsWith("#")) {
         continue;
       }
-      const target = links.resolve(path, decodeURI(src));
       img.removeAttribute("src");
-      if (target) {
-        void assets
-          .url(target)
-          .then((u) => u && img.isConnected && (img.src = u));
+      let target = src;
+      try {
+        target = decodeURI(src);
+      } catch {
+        // keep the text as written
       }
+      void assets
+        .url(path, target)
+        .then((u) => u && img.isConnected && (img.src = u));
     }
-  }, [html, mode, nestedDeps, assets, links, path, prefs.notesFontSize]);
+  }, [html, mode, nestedDeps, assets, path, prefs.notesFontSize]);
 
   // ---- reading view clicks ----------------------------------------------
   const onReadingClick = useCallback(

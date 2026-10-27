@@ -18,6 +18,8 @@ export interface TabKindVault {
   handle: string | null;
   /** Every file path in the vault, vault-relative; cheap to call, stable between changes. */
   paths: () => readonly string[];
+  /** Starts the vault-wide file walk when it has not run (paths() is partial until then). */
+  ensurePaths?: () => void;
 }
 
 /** What the host gives a kind's view. */

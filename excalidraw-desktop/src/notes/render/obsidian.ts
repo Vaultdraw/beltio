@@ -102,7 +102,8 @@ const embed: TokenizerAndRendererExtension = {
     );
     // `![[pic.png|300]]` / `![[pic.png|alt|300x200]]`
     const kind = IMAGE.test(target) ? "image" : "note";
-    const path = ctx.resolve(target);
+    // Images are found by the backend (next to the note, by name); notes by the link index.
+    const path = kind === "image" ? target : ctx.resolve(target);
     const attrs = `data-embed="${kind}" data-target="${esc(target)}"${
       path ? ` data-path="${esc(path)}"` : ""
     }${heading ? ` data-heading="${esc(heading)}"` : ""}${

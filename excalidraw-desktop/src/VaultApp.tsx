@@ -112,6 +112,7 @@ import { useVaultThemeCommands } from "./theme/useVaultThemeCommands";
 import { useVaultAppearance } from "./theme/useVaultAppearance";
 import { registerBisectCommands } from "./extensionSwitches/bisectCommands";
 import { BisectBanner } from "./extensionSwitches/BisectBanner";
+import { listNotePaths } from "./notes/noteScan";
 import { useNotes } from "./notes/useNotes";
 import { ActiveTabGate } from "./tabs/ActiveTabGate";
 import "./tabs/editorBody.css";
@@ -2064,13 +2065,40 @@ export const VaultApp = ({
 
   // Markdown notes: a tab kind while `[extensions] notes` is on.
   useNotes();
+  const needFileListRef = useRef(needFileList);
+  needFileListRef.current = needFileList;
+  const [noteList, setNoteList] = useState<{
+    handle: string;
+    paths: string[];
+  } | null>(null);
+  const noteScanAt = useRef(0);
+  const scanNotes = useCallback(() => {
+    const h = vault?.handle;
+    if (!h || Date.now() - noteScanAt.current < 10_000) {
+      return;
+    }
+    noteScanAt.current = Date.now();
+    void listNotePaths(repository, h).then((paths) =>
+      setNoteList({ handle: h, paths }),
+    );
+  }, [vault?.handle, repository]);
   const kindVault = useMemo(
     () => ({
       handle: vault?.handle ?? null,
-      paths: () =>
-        allIndexedEntries.filter((e) => e.kind !== "folder").map((e) => e.path),
+      ensurePaths: () => {
+        needFileListRef.current();
+        scanNotes();
+      },
+      paths: () => [
+        ...allIndexedEntries
+          .filter((e) => e.kind !== "folder")
+          .map((e) => e.path),
+        ...(noteList && noteList.handle === vault?.handle
+          ? noteList.paths
+          : []),
+      ],
     }),
-    [vault?.handle, allIndexedEntries],
+    [vault?.handle, allIndexedEntries, noteList, scanNotes],
   );
   tabsRef.current = tabs;
   const layout = useLayout(
@@ -2865,12 +2893,16 @@ export const VaultApp = ({
           activePath={activeDoc?.path ?? null}
           collapsed={navigatorHidden}
           onToggleCollapse={handleToggleNavigator}
-          onOpenNote={() =>
+          onOpenNote={(path, opts) => {
+            if (ext.notes && tabs.enabled) {
+              return tabs.open(path, opts?.target);
+            }
             toastStore.push({
-              message:
-                "Notes open with the notes extension, which is not installed.",
-            })
-          }
+              message: ext.notes
+                ? "Notes open in tabs: turn on tabs.enabled."
+                : "Markdown notes are turned off (Settings, Extensions).",
+            });
+          }}
           onOpenSettings={() => openSettings()}
           onOpenGraph={
             layout.shown.activity_bar || !ext.graph ? undefined : openGraph

@@ -61,5 +61,31 @@ test("an Obsidian-style vault lists its notes and opens an Excalidraw plugin fil
   );
   await expect(page.locator(".vault-editor-container--readonly")).toBeVisible();
 
+  // A note opens in a tab: rendered, with its [[link]] working.
+  await treeRow(page, "Welcome").locator(".vault-tree-item__name").click();
+  const reading = page.getByTestId("note-reading");
+  await expect(reading.getByRole("heading", { name: "Welcome" })).toBeVisible();
+  await reading.getByText("Ideas", { exact: true }).click();
+  await expect(reading.getByRole("heading", { name: "Ideas" })).toBeVisible();
+  await expect(page.getByTestId("note-properties")).toContainText("tags");
+
+  // Edit it: the file on disk changes through the guarded save.
+  await page.getByRole("button", { name: "Edit note" }).click();
+  await page.getByTestId("note-editor").locator(".cm-content").click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type("\n- three added in the editor\n");
+  await expect(page.getByTestId("note-status")).toHaveAttribute(
+    "data-status",
+    "saved",
+  );
+  const onDisk = await page.evaluate(() =>
+    (
+      window as unknown as { __noteFiles: { textOf(p: string): string } }
+    ).__noteFiles.textOf("Ideas.md"),
+  );
+  expect(onDisk).toContain("- three added in the editor");
+  await page.getByRole("button", { name: "Show reading view" }).click();
+  await expect(reading).toContainText("three added in the editor");
+
   expect(errors).toEqual([]);
 });
