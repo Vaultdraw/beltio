@@ -59,6 +59,33 @@ export interface VaultGraphApi {
 }
 
 /**
+ * One change to the plugin's own vault settings table.
+ *
+ * @since 0.19.0
+ */
+export interface VaultTableChange {
+  /** A plain key of the table (letters, digits, `_`, `-`); no dots. @since 0.19.0 */
+  key: string;
+  /** A string, number, boolean, list or table; `null` removes the key. @since 0.19.0 */
+  value: unknown;
+}
+
+/**
+ * The plugin's own table in the open vault's `.excalidraw-vault/settings.toml`: `[<plugin id>]`.
+ * Only plugins that ship with the app may use it (a plugin from anywhere else keeps scalar
+ * settings under `[plugin.<id>]` with `contributes.settings`). Comments and other tables in the
+ * file stay as they are.
+ *
+ * @since 0.19.0
+ */
+export interface VaultTableApi {
+  /** The table as an object, `{}` when there is none. Needs `vault.read`. @since 0.19.0 */
+  read(): Promise<Record<string, unknown>>;
+  /** Applies the changes in one write. Needs `vault.write`; refused in a read-only vault. @since 0.19.0 */
+  update(changes: readonly VaultTableChange[]): Promise<void>;
+}
+
+/**
  * The drawings of the open vault. Paths are vault-relative and use "/";
  * entries and segments that start with a dot are never listed or accepted.
  * Errors carry a `code`: `PERMISSION`, `INVALID_ARGUMENT`, `INVALID_PATH`,
@@ -111,4 +138,10 @@ export interface VaultApi {
    * @since 0.18.0
    */
   readonly graph: VaultGraphApi;
+  /**
+   * The plugin's own table in the vault's settings file (bundled plugins only).
+   *
+   * @since 0.19.0
+   */
+  readonly table: VaultTableApi;
 }

@@ -1,7 +1,7 @@
 // Generated from the @since tags of sdk/api/src by sdk/api/scripts/gen-features.mjs. Do not edit.
 
 /** The API revision of this build (the version of sdk/api/package.json). */
-export const API_REVISION = "0.18.0";
+export const API_REVISION = "0.19.0";
 
 /** Feature name to the revision that added it. `ctx.host.has(name)` is true for these. */
 export const FEATURES: Readonly<Record<string, string>> = {
@@ -97,6 +97,7 @@ export const FEATURES: Readonly<Record<string, string>> = {
   "vault.list": "0.6.0",
   "vault.opened": "0.1.0",
   "vault.readDrawing": "0.6.0",
+  "vault.table": "0.19.0",
   views: "0.11.0",
   "views.open": "0.13.0",
   "views.register": "0.11.0",

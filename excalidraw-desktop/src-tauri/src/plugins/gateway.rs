@@ -26,6 +26,9 @@ pub(crate) enum Route {
     Folders,
     /// `plugin_call_raw`: binary bodies in and out (graph bytes, layout bytes); never `plugin_call`.
     Raw,
+    /// `vault_settings::own_table_*`: the plugin's own table `[<plugin id>]` of the vault's
+    /// settings.toml. Bundled plugins only (a user plugin keeps `[plugin.<id>]` settings).
+    OwnSettings,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -44,6 +47,8 @@ pub(crate) const ALLOWLIST: &[Row] = &[
     Row { method: "vault.graph", permission: Some("vault.read"), route: Route::Raw },
     Row { method: "vault.graphLayout.load", permission: Some("vault.read"), route: Route::Raw },
     Row { method: "vault.graphLayout.save", permission: Some("vault.write"), route: Route::Raw },
+    Row { method: "vault.settings.read", permission: Some("vault.read"), route: Route::OwnSettings },
+    Row { method: "vault.settings.update", permission: Some("vault.write"), route: Route::OwnSettings },
     Row { method: "storage.read", permission: None, route: Route::StorageRead },
     Row { method: "storage.write", permission: None, route: Route::StorageWrite },
     Row { method: "markdown.parse", permission: None, route: Route::MarkdownParse },
@@ -221,7 +226,7 @@ pub(crate) fn storage_call(state_dir: &std::path::Path, plugin_id: &str, route: 
             storage::write(state_dir, plugin_id, text)?;
             Ok(Value::Null)
         }
-        Route::Control(_) | Route::MarkdownParse | Route::Folders | Route::Raw => Err(GatewayError::new("INTERNAL", "not a storage row")),
+        Route::Control(_) | Route::MarkdownParse | Route::Folders | Route::Raw | Route::OwnSettings => Err(GatewayError::new("INTERNAL", "not a storage row")),
     }
 }
 
@@ -259,3 +264,31 @@ pub(crate) fn raw_call(app: &tauri::AppHandle, method: &str, body: &[u8]) -> Res
         _ => Err(GatewayError::new("NOT_FOUND", format!("Plugins cannot call \"{method}\""))),
     }
 }
+
+/// The plugin gateway's `vault.settings.read` / `vault.settings.update`: the plugin's own table
+/// `[<plugin_id>]` of the open vault's settings.toml. `update` takes `{changes: [{key, value}]}`
+/// with keys relative to the table (`force_repel`, not `graph.force_repel`); null removes a key.
+pub(crate) fn own_table_call(
+    app: &tauri::AppHandle,
+    plugin_id: &str,
+    method: &str,
+    params: Option<Value>,
+) -> Result<Value, GatewayError> {
+    let v = crate::control_active_vault(app).ok_or_else(|| GatewayError::new("NO_VAULT", "No vault is open"))?;
+    if method == "vault.settings.read" {
+        let loaded = crate::vault_settings::load_vault_settings_at(&v.root);
+        let table = loaded.settings.as_ref().and_then(|s| s.get(plugin_id)).cloned().unwrap_or_else(|| Value::Object(Default::default()));
+        return Ok(table);
+    }
+    let raw = params.as_ref().and_then(|p| p.get("changes")).cloned().unwrap_or(Value::Null);
+    let list = raw.as_array().ok_or_else(|| GatewayError::new("INVALID_ARGUMENT", "changes must be a list"))?;
+    let mut changes = Vec::with_capacity(list.len());
+    for c in list {
+        let key = c.get("key").and_then(Value::as_str).filter(|k| !k.is_empty() && !k.contains(['.', ' ', '[', ']', '"'])).ok_or_else(|| GatewayError::new("INVALID_ARGUMENT", "each change needs a plain key"))?;
+        changes.push(crate::config::ConfigChange { key: format!("{plugin_id}.{key}"), value: c.get("value").cloned().unwrap_or(Value::Null) });
+    }
+    let _mutation = crate::mutation_guard(&v)?;
+    crate::vault_settings::update_vault_settings_at(&v, &changes)?;
+    Ok(Value::Null)
+}
+

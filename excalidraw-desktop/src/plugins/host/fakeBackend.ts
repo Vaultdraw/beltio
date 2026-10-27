@@ -40,6 +40,8 @@ export interface FakeBackend extends PluginsBackend {
   /** The graph bytes `vault.graph` returns, and the saved layout bytes (`vault.graphLayout.*`). */
   graphBytes: Uint8Array;
   graphLayout: Uint8Array;
+  /** The plugin tables of the vault settings.toml (`vault.settings.*`), by plugin id. */
+  vaultTables: Record<string, Record<string, unknown>>;
   /** The `folders.*` rows' state: what the pickers return next, the sources and targets handed out. */
   folders: FakeFolderStore;
 }
@@ -168,6 +170,7 @@ export function createFakeBackend(
     gatewayCalls: [],
     graphBytes: new Uint8Array(0),
     graphLayout: new Uint8Array(0),
+    vaultTables: {},
     drawings: {},
     vaultReadOnly: false,
     vaultOpen: true,
@@ -234,6 +237,41 @@ export function createFakeBackend(
           );
         }
         return vaultCall(fake, method, params);
+      }
+      if (
+        method === "vault.settings.read" ||
+        method === "vault.settings.update"
+      ) {
+        const plugin = fake.plugins.find((p) => p.id === pluginId)!;
+        const need =
+          method === "vault.settings.read" ? "vault.read" : "vault.write";
+        if (!plugin.permissions.includes(need)) {
+          throw coded(
+            "PERMISSION",
+            `${pluginId}: ${method} needs the permission "${need}", which plugin.toml does not declare`,
+          );
+        }
+        if (!fake.vaultOpen) {
+          throw coded("NO_VAULT", "No vault is open");
+        }
+        const table = (fake.vaultTables[pluginId] ??= {});
+        if (method === "vault.settings.read") {
+          return structuredClone(table);
+        }
+        if (fake.vaultReadOnly) {
+          throw coded("READ_ONLY", "The vault is read-only");
+        }
+        for (const c of (params?.changes ?? []) as {
+          key: string;
+          value: unknown;
+        }[]) {
+          if (c.value === null || c.value === undefined) {
+            delete table[c.key];
+          } else {
+            table[c.key] = structuredClone(c.value);
+          }
+        }
+        return null;
       }
       if (FOLDER_ROWS.has(method)) {
         const plugin = fake.plugins.find((p) => p.id === pluginId)!;

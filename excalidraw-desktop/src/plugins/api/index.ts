@@ -113,6 +113,8 @@ export type {
   UiApi,
   VaultApi,
   VaultGraphApi,
+  VaultTableApi,
+  VaultTableChange,
   VaultEntry,
   WorkspaceApi,
 } from "../../../../sdk/api/src/index";

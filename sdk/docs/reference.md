@@ -455,6 +455,10 @@ interface VaultApi {
     path: string,
     ops: readonly SceneOp[],
   ): Promise<{ path: string; revision: string; ids: string[]; refs: Record<string, string> }>; // needs vault.write; refs since 0.4.0
+  table: {
+    read(): Promise<Record<string, unknown>>; // needs vault.read; since 0.19.0, bundled plugins only
+    update(changes: readonly { key: string; value: unknown }[]): Promise<void>; // needs vault.write
+  };
   graph: {
     read(): Promise<Uint8Array>; // needs vault.read; since 0.18.0
     layout: {
@@ -474,6 +478,8 @@ interface VaultApi {
 
 | `graph.read()` | The whole link graph of the open vault as bytes (the app's `VDG1` export), in one binary call. Starts the link index on first use. Since 0.18.0. |
 | `graph.layout.load()` / `save(bytes)` | A graph view's saved layout, kept per vault in the app's state folder (never in the vault). Empty when none; saving empty clears it. Since 0.18.0. |
+
+| `table.read()` / `table.update(changes)` | The plugin's own table `[<plugin id>]` in the vault's `settings.toml` (comments and other tables stay). `null` removes a key. Only plugins that ship with the app may use it; others keep scalar settings under `[plugin.<id>]` (`contributes.settings`). Since 0.19.0. |
 
 - `createDrawing` only creates. Plugins cannot overwrite, rename, move or delete a drawing, and cannot write any other file type.
 - `createDrawing` takes the ops of `ctx.scene.batch` that can work on a new drawing: `add` and, since 0.4.0, `group`, with refs and `data`. `update` and `delete` are refused, because nothing exists yet to change. The same batch rules apply.

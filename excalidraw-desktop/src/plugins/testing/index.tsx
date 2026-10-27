@@ -148,6 +148,8 @@ export interface FakeVault {
   setGraph(bytes: Uint8Array): void;
   /** The layout bytes `ctx.vault.graph.layout.save` stored (empty when none). */
   graphLayout(): Uint8Array;
+  /** The plugin's own vault settings table (`ctx.vault.table`), as the file would hold it. */
+  table(): Record<string, unknown>;
 }
 
 /** What `ctx.workspace` and the folders' `open()` did. */
@@ -495,6 +497,7 @@ export async function boot(
       backend.graphBytes = new Uint8Array(bytes);
     },
     graphLayout: () => new Uint8Array(backend.graphLayout),
+    table: () => structuredClone(backend.vaultTables[info.id] ?? {}),
     saves: () => [...saves],
     pageSetup: (path) =>
       (

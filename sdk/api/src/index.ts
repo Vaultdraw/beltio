@@ -106,6 +106,12 @@ export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { FontsApi, TextApi, TextFont } from "./text";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
-export type { VaultApi, VaultEntry, VaultGraphApi } from "./vault";
+export type {
+  VaultApi,
+  VaultEntry,
+  VaultGraphApi,
+  VaultTableApi,
+  VaultTableChange,
+} from "./vault";
 export type { WorkspaceApi } from "./workspace";
 export { SHARED_SPECIFIERS } from "./specifiers";

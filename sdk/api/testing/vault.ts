@@ -127,6 +127,7 @@ export function createVaultModel(
   let saves: string[] = [];
   let graph = new Uint8Array(0);
   let graphLayout = new Uint8Array(0);
+  let tableData: Record<string, unknown> = {};
 
   const needVault = () => {
     if (!info) {
@@ -159,6 +160,7 @@ export function createVaultModel(
       graph = new Uint8Array(bytes);
     },
     graphLayout: () => new Uint8Array(graphLayout),
+    table: () => structuredClone(tableData),
     saves: () => [...saves],
     pageSetup: (path) =>
       drawings.get(path)?.appState?.pageSetup as
@@ -242,6 +244,36 @@ export function createVaultModel(
     vaultApi(pluginId, permissions, dataKey) {
       return {
         info: () => (info ? { ...info } : null),
+        table: {
+          async read() {
+            requirePermission(
+              pluginId,
+              permissions,
+              "vault.settings.read",
+              "vault.read",
+            );
+            needVault();
+            return structuredClone(tableData);
+          },
+          async update(changes) {
+            requirePermission(
+              pluginId,
+              permissions,
+              "vault.settings.update",
+              "vault.write",
+            );
+            if (needVault().readOnly) {
+              throw new PluginApiError("READ_ONLY", "The vault is read-only");
+            }
+            for (const c of changes) {
+              if (c.value === null || c.value === undefined) {
+                delete tableData[c.key];
+              } else {
+                tableData[c.key] = structuredClone(c.value);
+              }
+            }
+          },
+        },
         graph: {
           async read() {
             requirePermission(
@@ -388,6 +420,7 @@ export function createVaultModel(
       saves = [];
       graph = new Uint8Array(0);
       graphLayout = new Uint8Array(0);
+      tableData = {};
     },
   };
 }

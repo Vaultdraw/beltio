@@ -173,6 +173,12 @@ pub(crate) async fn plugin_call(
             gateway::Route::MarkdownParse => gateway::markdown_call(params),
             gateway::Route::Folders => crate::import_folder::folders_call(&app, &method, params),
             gateway::Route::Raw => Err(gateway::GatewayError::new("INVALID_ARGUMENT", format!("\"{method}\" returns bytes: it goes through plugin_call_raw"))),
+            gateway::Route::OwnSettings => {
+                if plugin.is_none_or(|p| p.source != scan::Source::Bundled) {
+                    return Err(gateway::GatewayError::new("PERMISSION", "Only the plugins that ship with the app keep their own table in the vault settings; use [plugin.<id>] settings"));
+                }
+                gateway::own_table_call(&app, &plugin_id, &method, params)
+            }
             route => gateway::storage_call(&state_dir, &plugin_id, route, &params.unwrap_or_default()),
         }
     })

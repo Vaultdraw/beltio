@@ -37,6 +37,16 @@ export function createVaultApi(rt: PluginRuntime): VaultApi {
     requirePermission(id, rt.info.permissions, method, permission);
   return {
     info: () => getWorkspaceBridge()?.vault() ?? null,
+    table: {
+      async read() {
+        need("vault.settings.read", "vault.read");
+        return call<Record<string, unknown>>("vault.settings.read");
+      },
+      async update(changes) {
+        need("vault.settings.update", "vault.write");
+        await call("vault.settings.update", { changes });
+      },
+    },
     graph: {
       async read() {
         need("vault.graph", "vault.read");

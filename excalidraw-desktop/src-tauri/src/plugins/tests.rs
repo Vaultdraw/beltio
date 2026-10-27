@@ -816,6 +816,8 @@ fn gateway_allowlist_maps_methods_to_permissions() {
             ("vault.graph", Some("vault.read")),
             ("vault.graphLayout.load", Some("vault.read")),
             ("vault.graphLayout.save", Some("vault.write")),
+            ("vault.settings.read", Some("vault.read")),
+            ("vault.settings.update", Some("vault.write")),
             ("storage.read", None),
             ("storage.write", None),
             ("markdown.parse", None),

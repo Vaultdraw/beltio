@@ -343,3 +343,25 @@ describe("ctx.vault.graph (raw bytes)", () => {
     ).rejects.toMatchObject({ code: "PERMISSION" });
   });
 });
+
+describe("ctx.vault.table (own settings table)", () => {
+  it("reads, updates and removes keys, with the permission checks", async () => {
+    const p = await bootVault(["vault.read", "vault.write"]);
+    expect(await ctx.vault.table.read()).toEqual({});
+    await ctx.vault.table.update([
+      { key: "force_repel", value: 3 },
+      { key: "groups", value: [{ query: "tag:a", colour: "#fff" }] },
+    ]);
+    expect(await ctx.vault.table.read()).toEqual({
+      force_repel: 3,
+      groups: [{ query: "tag:a", colour: "#fff" }],
+    });
+    await ctx.vault.table.update([{ key: "force_repel", value: null }]);
+    expect(Object.keys(p.vault.table())).toEqual(["groups"]);
+    await t?.dispose();
+    await bootVault(["vault.read"]);
+    await expect(
+      ctx.vault.table.update([{ key: "a", value: 1 }]),
+    ).rejects.toMatchObject({ code: "PERMISSION" });
+  });
+});
