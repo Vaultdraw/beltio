@@ -13,6 +13,8 @@ import {
 
 import { isSceneReady } from "../editor/sceneReady";
 
+import { getAppCommandRunner } from "../commands/appRunner";
+
 import { waitUntilRendering } from "./visibilityGate";
 
 import {
@@ -673,6 +675,32 @@ export async function runDesktopSmoke(): Promise<void> {
     vaultForReport = vault;
     const activeVault = vault;
     await runPluginsSmoke({ win, step, mark, waitFor });
+    // The graph is an official plugin: its first command loads it from the bundle (vdplugin://),
+    // the view covers the drawing area with the graph read as bytes, and the same command closes it.
+    await step("graph-plugin", async () => {
+      const run = getAppCommandRunner();
+      if (!run?.("graph.open")) {
+        throw new Error("graph.open is not available");
+      }
+      const view = await waitFor(
+        "graph view",
+        () => win.document.querySelector('[data-testid="graph-view"]'),
+        30_000,
+      );
+      const loaded = win.performance
+        .getEntriesByType("resource")
+        .some((e) => e.name.includes("/graph/main.js"));
+      run("graph.open");
+      await waitFor(
+        "graph view closed",
+        () => (win.document.contains(view) ? null : true),
+        10_000,
+      );
+      if (!loaded) {
+        throw new Error("the graph plugin was not loaded from the bundle");
+      }
+      return { loadedFromBundle: loaded };
+    });
     const runId = Math.floor(win.Date.now()).toString(36);
     const nested = `smoke-suite-${runId}/nested`;
     const filePath = `${nested}/ipc-fixture.excalidraw`;
