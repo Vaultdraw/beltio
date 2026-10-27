@@ -57,6 +57,19 @@ describe("useVaultDocument open/create/change/flush", () => {
     expect(disk.json).toBe(BLANK_SCENE);
   });
 
+  it("a replaced document's text is released, so a stale render closure keeps nothing big", async () => {
+    const repo = new FakeVaultRepository();
+    repo.seedDrawing("a.excalidraw", SAMPLE_SCENE);
+    repo.seedDrawing("b.excalidraw", BLANK_SCENE);
+    const { result } = renderHook(() => useVaultDocument(repo, vaultOf(repo)));
+    await openPath(result, "a.excalidraw");
+    const first = result.current.document?.source;
+    expect(first?.json).toBe(SAMPLE_SCENE);
+    await openPath(result, "b.excalidraw");
+    expect(first?.json).toBe("");
+    expect(result.current.document?.source.json).toBe(BLANK_SCENE);
+  });
+
   it("create() uses create-only writes and activates the new document", async () => {
     const repo = new FakeVaultRepository();
     const { result } = renderHook(() => useVaultDocument(repo, vaultOf(repo)));

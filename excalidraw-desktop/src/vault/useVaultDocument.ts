@@ -72,6 +72,20 @@ const withoutSource = ({
   source: _source,
   ...rest
 }: Active): Omit<Active, "source"> => rest;
+/**
+ * A replaced activation's document text. React keeps the previous render's props (and
+ * so its closures, which capture the whole old document) in the old fiber until a later
+ * render, so an old drawing's text stayed in memory after a switch. Emptying it here
+ * keeps whatever still points at the old activation at a few bytes.
+ */
+const releaseActive = (old: Active | null) => {
+  if (!old) {
+    return;
+  }
+  old.source.json = "";
+  old.currentJson = "";
+  old.savedJson = "";
+};
 const operationId = () =>
   `vault-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const isNotFound = (error: unknown) =>
@@ -158,6 +172,7 @@ export const useVaultDocument = (
       const next: Active | null = fresh
         ? { ...fresh, source: { json: fresh.savedJson } }
         : null;
+      const replaced = active.current;
       active.current = next;
       if (next) {
         appEvents.emit("drawing.opened", { path: next.path });
@@ -172,6 +187,7 @@ export const useVaultDocument = (
             }
           : null,
       );
+      releaseActive(replaced === next ? null : replaced);
       setCurrentStatus("saved", null);
       if (!next) {
         return;
@@ -758,6 +774,7 @@ export const useVaultDocument = (
         if (mine !== generation.current) {
           return;
         }
+        releaseActive(active.current);
         active.current = null;
         setDocument(null);
         setCurrentStatus("saved", null);
