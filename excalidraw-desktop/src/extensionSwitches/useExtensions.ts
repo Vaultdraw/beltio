@@ -13,7 +13,7 @@ import {
 
 import { isCoreSafeStart, subscribeSafeStart } from "../safeStart/state";
 
-import { isBisectOff, subscribeBisect } from "./bisectState";
+import { getBisect, isBisectOff, subscribeBisect } from "./bisectState";
 
 import { EXTENSION_FIELDS, EXTENSION_IDS, type ExtensionId } from "./registry";
 
@@ -41,14 +41,28 @@ export const isExtensionsSafeOverlay = (): boolean => isCoreSafeStart();
 // ---- snapshot, stable while nothing changes ------------------------------
 let cachedKey = "";
 let cached: ExtensionSet | null = null;
+let lastPrefs: PreferencesSnapshot | null = null;
+let lastSafe = false;
+let lastBisect: ReturnType<typeof getBisect> = null;
 
 /** The current effective set; the same object until a switch changes. */
 export function getExtensions(win?: Window | null): ExtensionSet {
-  const next = effectiveExtensions(
-    getPreferences(win),
-    isCoreSafeStart(),
-    isBisectOff,
-  );
+  // Snapshot reads run on every render of every subscriber: skip the rebuild
+  // while the preferences object and safe start are unchanged (and the bisect state).
+  const prefs = getPreferences(win);
+  const safe = isCoreSafeStart();
+  if (
+    cached &&
+    prefs === lastPrefs &&
+    safe === lastSafe &&
+    getBisect() === lastBisect
+  ) {
+    return cached;
+  }
+  lastPrefs = prefs;
+  lastSafe = safe;
+  lastBisect = getBisect();
+  const next = effectiveExtensions(prefs, safe, isBisectOff);
   const key = EXTENSION_IDS.map((id) => (next[id] ? "1" : "0")).join("");
   if (!cached || key !== cachedKey) {
     cachedKey = key;

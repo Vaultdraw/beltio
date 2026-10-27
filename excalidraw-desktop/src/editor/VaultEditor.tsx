@@ -69,7 +69,7 @@ import { usePens } from "../pens/usePens";
 import { readDrawingStyles } from "../toolDefaults/drawingStyles";
 import { useToolDefaults } from "../toolDefaults/useToolDefaults";
 import { useFormulaCommands } from "../formula/useFormulaCommands";
-import { useExtension } from "../extensionSwitches/useExtensions";
+import { useExtensions } from "../extensionSwitches/useExtensions";
 import { useMemoryRetention } from "../memory/useMemoryRetention";
 import { markOpen } from "../perf/openMarks";
 
@@ -250,8 +250,15 @@ const VaultEditorComponent = ({
     libraryStore: library?.store ?? null,
   });
 
-  const formulaOn = useExtension("formula");
-  const mermaidOn = useExtension("mermaid");
+  // One subscription for both switches; the set object is stable until a
+  // switch changes, so it never re-renders the editor on open.
+  const { formula: formulaOn, mermaid: mermaidOn } = useExtensions();
+  // Stable: Excalidraw's memo compares UIOptions entries by reference, and a
+  // new `tools` object per render would re-render the whole editor.
+  const uiTools = useMemo(
+    () => ({ image: true, mermaid: mermaidOn }),
+    [mermaidOn],
+  );
   // Mermaid turned off while its dialog is open: close it (the editor stops
   // rendering it, so a stale openDialog would otherwise linger).
   useEffect(() => {
@@ -1028,7 +1035,7 @@ const VaultEditorComponent = ({
           toolShortcuts: !toolKeysBound,
           hostActionKeys:
             toolKeysBound && hasActionHook ? HOST_ACTION_NAMES : undefined,
-          tools: { image: true, mermaid: mermaidOn },
+          tools: uiTools,
           canvasActions: {
             toggleTheme: true,
             export: false,

@@ -386,6 +386,16 @@ const areEqual = (prevProps: ExcalidrawProps, nextProps: ExcalidrawProps) => {
     if (key === "getFormFactor") {
       return true;
     }
+    if (key === "tools") {
+      // semantic, so hosts inlining `tools: { … }` don't bust the memo
+      const a = prevUIOptions.tools;
+      const b = nextUIOptions.tools;
+      return (
+        a === b ||
+        ((a?.image ?? true) === (b?.image ?? true) &&
+          (a?.mermaid ?? true) === (b?.mermaid ?? true))
+      );
+    }
     if (key === "canvasActions") {
       const canvasOptionKeys = Object.keys(
         prevUIOptions.canvasActions!,
