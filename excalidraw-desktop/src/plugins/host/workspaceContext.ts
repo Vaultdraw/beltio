@@ -22,6 +22,7 @@ export function createWorkspaceApi(): WorkspaceApi {
       }
     },
     activePath: () => getWorkspaceBridge()?.activePath() ?? null,
+    openShortcut: (path) => getWorkspaceBridge()?.openShortcut(path) ?? null,
     useFolder: (path) => {
       checkVaultPath(path, "folder");
       return useFolderEntries(path);

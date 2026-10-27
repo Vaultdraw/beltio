@@ -12,6 +12,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 - **Plugin commands from the command line.** `vaultdraw plugin commands [plugin]` lists installed plugins and what they declare (with enabled and loaded state); `vaultdraw plugin run <plugin>.<command>` runs one, loading the plugin on first use. New control methods `plugin.commands` and `plugin.run` (CLI role only).
 - **Plugin API 0.20.0.** A command in `plugin.toml` can set `repeat = true` to run again while its key is held, and `ctx.workspace.openShortcut(path)` returns the key label bound to opening a drawing (it follows the user's own bindings). Both are used by the graph extension.
+- **Plugin API 0.21.0.** `ctx.workspace.openShortcut(path)` returns the key label bound to opening a drawing (it follows the user's own bindings). The graph extension uses it for the shortcut row in its hover card.
 
 - **Plugin API 0.19.0: a plugin's own table in the vault settings.** `ctx.vault.table.read/update` reads and changes `[<plugin id>]` in `<vault>/.excalidraw-vault/settings.toml` (comments and other tables stay). Only plugins that ship with the app may use it, so the graph extension keeps its `[graph]` table as it is today.
 

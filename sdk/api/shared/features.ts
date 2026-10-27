@@ -1,7 +1,7 @@
 // Generated from the @since tags of sdk/api/src by sdk/api/scripts/gen-features.mjs. Do not edit.
 
 /** The API revision of this build (the version of sdk/api/package.json). */
-export const API_REVISION = "0.20.0";
+export const API_REVISION = "0.21.0";
 
 /** Feature name to the revision that added it. `ctx.host.has(name)` is true for these. */
 export const FEATURES: Readonly<Record<string, string>> = {
@@ -108,5 +108,6 @@ export const FEATURES: Readonly<Record<string, string>> = {
   workspace: "0.6.0",
   "workspace.activePath": "0.6.0",
   "workspace.open": "0.6.0",
+  "workspace.openShortcut": "0.21.0",
   "workspace.useFolder": "0.20.0",
 };

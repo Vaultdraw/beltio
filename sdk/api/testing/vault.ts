@@ -405,6 +405,7 @@ export function createVaultModel(
           host.opened(path);
         },
         activePath: () => host.activePath(),
+        openShortcut: () => null,
         // The seeded drawings directly in `path` (folders are not modelled).
         useFolder: (path) =>
           [...drawings.keys()]

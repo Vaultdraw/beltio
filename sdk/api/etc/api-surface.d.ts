@@ -881,6 +881,7 @@ export interface WorkspaceApi {
         newTab?: boolean;
     }): Promise<void>;
     activePath(): string | null;
+    openShortcut(path: string): string | null;
     useFolder(path: string): readonly FolderItem[] | undefined;
 }
 export interface FolderItem {

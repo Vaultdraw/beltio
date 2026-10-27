@@ -23,7 +23,14 @@ describe("parseManifest", () => {
       mainBytes: 42,
     });
     expect(info.contributes.commands).toEqual([
-      { id: "go", title: "Go", keys: [], when: [], palette: true },
+      {
+        id: "go",
+        title: "Go",
+        keys: [],
+        when: [],
+        palette: true,
+        repeat: false,
+      },
     ]);
     expect(info.contributes.panels).toEqual([
       { id: "p", title: "P", icon: null, group: "top" },

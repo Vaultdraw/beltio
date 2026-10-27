@@ -19,6 +19,13 @@ export interface WorkspaceApi {
    */
   activePath(): string | null;
   /**
+   * The key label bound to "open this drawing" (in the user's notation for the platform, for
+   * example "Ctrl+Alt+1"), or null when none is. Follows the user's own key bindings. Free.
+   *
+   * @since 0.21.0
+   */
+  openShortcut(path: string): string | null;
+  /**
    * React hook: the entries of a folder, in the navigator's sort order, without the templates
    * folder, loading the folder if needed and updating when it changes. `undefined` until
    * the folder is listed. Call it while rendering a component the plugin gave the app.
