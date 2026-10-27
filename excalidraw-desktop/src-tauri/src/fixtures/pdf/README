@@ -1,0 +1,4 @@
+Encrypted PDF fixtures for the Linux pdf_import tests (the macOS tests make theirs with CoreGraphics).
+Made once from the one-page red-square PDF of `raw_pdf("[0 0 200 100]", "")` with qpdf:
+  qpdf --encrypt secret owner 256 -- plain.pdf locked.pdf        (user password "secret")
+  qpdf --encrypt "" owner 256 --extract=n -- plain.pdf restricted.pdf   (no prompt, copying off)

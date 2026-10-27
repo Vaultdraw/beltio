@@ -40,5 +40,6 @@ Linux support is being built without a Linux machine at hand, so treat it as unt
 - `src-tauri/tauri.linux.conf.json` is merged over `tauri.conf.json` by the Tauri CLI on Linux (arrays such as `windows` are replaced whole, `null` deletes a key). It drops the macOS-only window keys and builds `deb` and `appimage` bundles. `scripts/tauri-linux-conf.test.mjs` merges the two files the same way and checks the result against Tauri's config schema.
 - `scripts/build-cli.mjs` builds the `vaultdraw` sidecar for the target triple (for example `x86_64-unknown-linux-gnu`) and names it `vaultdraw-<triple>`. The naming is in `scripts/cli-targets.mjs`, tested by `scripts/cli-targets.test.mjs`.
 - Build needs the WebKitGTK 4.1 and GTK 3 development packages (on Debian and Ubuntu: `libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev librsvg2-dev patchelf`).
+- PDF import loads `libpoppler-glib.so.8` with `dlopen` on first use (`src-tauri/src/pdf_import.rs`, module `linux`), so building needs no poppler headers and running needs no poppler until a PDF is imported. The `.deb` and `.rpm` declare the runtime package; `cargo test --lib pdf` needs `libpoppler-glib8` installed.
 - Bug reports show the distribution from `/etc/os-release` as the system version.
 

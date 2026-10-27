@@ -53,6 +53,12 @@ objc2-core-foundation = { version = "0.3", default-features = false, features = 
 objc2-core-graphics = { version = "0.3", default-features = false, features = ["std", "CGPDFDocument", "CGPDFPage", "CGPDFContext", "CGContext", "CGBitmapContext", "CGColorSpace", "CGImage", "CGDataProvider", "CGAffineTransform", "CGGeometry", "CGBase"] }
 objc2-web-kit = { version = "0.3", features = ["WKWebViewConfiguration", "WKPreferences", "WKWebsiteDataStore"] }
 
+# Linux PDF import (pdf_import::linux): poppler-glib is loaded with dlopen at first use; the
+# PNG and JPEG encoders are pure Rust (png is already in the tree through muda).
+[target.'cfg(target_os = "linux")'.dependencies]
+png = "0.18"
+jpeg-encoder = "0.7"
+
 # Hardware SHA-256 on Apple Silicon / ARM (about 4x faster revision hashing of large drawings).
 [target.'cfg(all(target_arch = "aarch64", target_vendor = "apple"))'.dependencies]
 sha2 = { version = "0.10", features = ["asm"] }

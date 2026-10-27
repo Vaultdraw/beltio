@@ -1120,6 +1120,7 @@ dependencies = [
  "crc32fast",
  "fs2",
  "hex",
+ "jpeg-encoder",
  "libc",
  "memchr",
  "notify",
@@ -1129,6 +1130,7 @@ dependencies = [
  "objc2-core-graphics",
  "objc2-foundation",
  "objc2-web-kit",
+ "png 0.18.1",
  "postcard",
  "rfd",
  "semver",
@@ -2119,6 +2121,12 @@ dependencies = [
  "getrandom 0.4.3",
  "libc",
 ]
+
+[[package]]
+name = "jpeg-encoder"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0370574b86f7eca156b9f298392b5e69a23f8c86f3f865add60bbc2e79467a6"
 
 [[package]]
 name = "js-sys"

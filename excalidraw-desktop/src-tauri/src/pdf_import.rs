@@ -1,4 +1,5 @@
-//! PDF import: opens PDFs and renders single pages to JPEG/PNG bytes with CoreGraphics + ImageIO.
+//! PDF import: opens PDFs and renders single pages to JPEG/PNG bytes with CoreGraphics + ImageIO
+//! (macOS) or poppler-glib + cairo (Linux, `linux` module).
 #![cfg_attr(test, allow(dead_code))]
 //!
 //! CGPDFDocument/CGPDFPage are not `Send`, so ONE owner thread ("pdf-import") holds every open
@@ -681,12 +682,590 @@ pub(crate) mod mac {
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "linux")]
+pub(crate) mod linux {
+    //! Linux: poppler-glib renders pages into a cairo image surface; the PNG/JPEG encoders are
+    //! pure Rust. libpoppler-glib is loaded with `dlopen` on first use, so the app starts and
+    //! runs without it and the only cost of an unused PDF import is nothing at all.
+    use super::*;
+    use crate::NativeError;
+    use std::collections::{HashMap, VecDeque};
+    use std::ffi::{c_char, c_int, c_void, CStr, CString};
+    use std::os::unix::ffi::OsStrExt;
+    use std::path::{Path, PathBuf};
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::mpsc::{self, Sender, SyncSender};
+    use std::sync::OnceLock;
+
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    pub enum Format {
+        Jpeg,
+        Png,
+    }
+
+    #[repr(C)]
+    struct GError {
+        domain: u32,
+        code: c_int,
+        message: *mut c_char,
+    }
+
+    const CAIRO_FORMAT_RGB24: c_int = 1;
+    const POPPLER_ERROR_ENCRYPTED: c_int = 1;
+    const LIB_NAME: &CStr = c"libpoppler-glib.so.8";
+
+    type Ptr = *mut c_void;
+
+    /// The poppler-glib, GLib and cairo entry points used here, resolved from one `dlopen`
+    /// handle (`dlsym` on a handle also searches the libraries it links).
+    #[allow(non_snake_case)]
+    struct Lib {
+        poppler_document_new_from_file: unsafe extern "C" fn(*const c_char, *const c_char, *mut *mut GError) -> Ptr,
+        poppler_document_get_n_pages: unsafe extern "C" fn(Ptr) -> c_int,
+        poppler_document_get_page: unsafe extern "C" fn(Ptr, c_int) -> Ptr,
+        poppler_page_get_size: unsafe extern "C" fn(Ptr, *mut f64, *mut f64),
+        poppler_page_render: unsafe extern "C" fn(Ptr, Ptr),
+        poppler_error_quark: unsafe extern "C" fn() -> u32,
+        g_object_unref: unsafe extern "C" fn(Ptr),
+        g_error_free: unsafe extern "C" fn(*mut GError),
+        g_free: unsafe extern "C" fn(Ptr),
+        g_filename_to_uri: unsafe extern "C" fn(*const c_char, *const c_char, *mut *mut GError) -> *mut c_char,
+        cairo_image_surface_create: unsafe extern "C" fn(c_int, c_int, c_int) -> Ptr,
+        cairo_surface_status: unsafe extern "C" fn(Ptr) -> c_int,
+        cairo_surface_flush: unsafe extern "C" fn(Ptr),
+        cairo_surface_destroy: unsafe extern "C" fn(Ptr),
+        cairo_image_surface_get_data: unsafe extern "C" fn(Ptr) -> *mut u8,
+        cairo_image_surface_get_stride: unsafe extern "C" fn(Ptr) -> c_int,
+        cairo_create: unsafe extern "C" fn(Ptr) -> Ptr,
+        cairo_status: unsafe extern "C" fn(Ptr) -> c_int,
+        cairo_destroy: unsafe extern "C" fn(Ptr),
+        cairo_set_source_rgb: unsafe extern "C" fn(Ptr, f64, f64, f64),
+        cairo_paint: unsafe extern "C" fn(Ptr),
+        cairo_scale: unsafe extern "C" fn(Ptr, f64, f64),
+    }
+
+    macro_rules! load_lib {
+        ($handle:expr, { $($name:ident),* $(,)? }) => {{
+            Lib {
+                $($name: {
+                    let sym = unsafe { libc::dlsym($handle, concat!(stringify!($name), "\0").as_ptr().cast()) };
+                    if sym.is_null() {
+                        return Err(format!("{} not found in {}", stringify!($name), LIB_NAME.to_string_lossy()));
+                    }
+                    // SAFETY: the signature matches the C declaration of this symbol.
+                    unsafe { std::mem::transmute::<Ptr, _>(sym) }
+                },)*
+            }
+        }};
+    }
+
+    fn load() -> std::result::Result<Lib, String> {
+        let handle = unsafe { libc::dlopen(LIB_NAME.as_ptr(), libc::RTLD_NOW | libc::RTLD_LOCAL) };
+        if handle.is_null() {
+            let reason = unsafe { libc::dlerror() };
+            let reason = if reason.is_null() { String::new() } else { unsafe { CStr::from_ptr(reason) }.to_string_lossy().into_owned() };
+            return Err(format!("could not load {} ({reason})", LIB_NAME.to_string_lossy()));
+        }
+        Ok(load_lib!(handle, {
+            poppler_document_new_from_file, poppler_document_get_n_pages, poppler_document_get_page,
+            poppler_page_get_size, poppler_page_render, poppler_error_quark,
+            g_object_unref, g_error_free, g_free, g_filename_to_uri,
+            cairo_image_surface_create, cairo_surface_status, cairo_surface_flush, cairo_surface_destroy,
+            cairo_image_surface_get_data, cairo_image_surface_get_stride,
+            cairo_create, cairo_status, cairo_destroy, cairo_set_source_rgb, cairo_paint, cairo_scale,
+        }))
+    }
+
+    /// Loaded once, on the first PDF command; never at startup.
+    fn lib() -> Result<&'static Lib> {
+        static LIB: OnceLock<std::result::Result<Lib, String>> = OnceLock::new();
+        LIB.get_or_init(load)
+            .as_ref()
+            .map_err(|e| err("PDF_UNAVAILABLE", format!("PDF import needs poppler (package libpoppler-glib8 or poppler-glib): {e}")))
+    }
+
+    enum OpenError {
+        Encrypted,
+        Other(String),
+    }
+
+    /// Opens `path` with poppler; `password` None tries the empty user password.
+    fn open_file(lib: &Lib, path: &Path, password: Option<&str>) -> std::result::Result<Ptr, OpenError> {
+        let c_path = CString::new(path.as_os_str().as_bytes()).map_err(|_| OpenError::Other("path contains NUL".into()))?;
+        let c_pass = match password {
+            Some(p) => Some(CString::new(p).map_err(|_| OpenError::Encrypted)?),
+            None => None,
+        };
+        let mut gerr: *mut GError = std::ptr::null_mut();
+        let uri = unsafe { (lib.g_filename_to_uri)(c_path.as_ptr(), std::ptr::null(), &mut gerr) };
+        if uri.is_null() {
+            return Err(OpenError::Other(take_error(lib, gerr)));
+        }
+        let doc = unsafe { (lib.poppler_document_new_from_file)(uri, c_pass.as_ref().map_or(std::ptr::null(), |p| p.as_ptr()), &mut gerr) };
+        unsafe { (lib.g_free)(uri.cast()) };
+        if doc.is_null() {
+            let encrypted = !gerr.is_null() && unsafe { (*gerr).domain == (lib.poppler_error_quark)() && (*gerr).code == POPPLER_ERROR_ENCRYPTED };
+            let message = take_error(lib, gerr);
+            return Err(if encrypted { OpenError::Encrypted } else { OpenError::Other(message) });
+        }
+        Ok(doc)
+    }
+
+    /// Message of a GError (freed here), or "" for null.
+    fn take_error(lib: &Lib, gerr: *mut GError) -> String {
+        if gerr.is_null() {
+            return String::new();
+        }
+        let message = unsafe { (*gerr).message };
+        let text = if message.is_null() { String::new() } else { unsafe { CStr::from_ptr(message) }.to_string_lossy().into_owned() };
+        unsafe { (lib.g_error_free)(gerr) };
+        text
+    }
+
+    /// One rendered page: `h` rows of `stride` bytes, 4 bytes per pixel (cairo RGB24: B, G, R, x).
+    pub(super) struct Bitmap {
+        pub w: usize,
+        pub h: usize,
+        pub stride: usize,
+        pub bgrx: Vec<u8>,
+    }
+
+    impl Bitmap {
+        pub fn pixel(&self, x: usize, y: usize) -> [u8; 3] {
+            let p = &self.bgrx[y * self.stride + x * 4..];
+            [p[2], p[1], p[0]]
+        }
+
+        /// One gray byte per pixel when every pixel is neutral, else None.
+        fn gray(&self) -> Option<Vec<u8>> {
+            if !is_neutral_rgbx(&self.bgrx, self.w, self.h, self.stride, NEUTRAL_TOLERANCE) {
+                return None;
+            }
+            Some((0..self.h).flat_map(|y| self.bgrx[y * self.stride..][..self.w * 4].chunks_exact(4).map(|p| p[2])).collect())
+        }
+
+        fn rgb(&self) -> Vec<u8> {
+            let mut out = Vec::with_capacity(self.w * self.h * 3);
+            for y in 0..self.h {
+                for p in self.bgrx[y * self.stride..][..self.w * 4].chunks_exact(4) {
+                    out.extend_from_slice(&[p[2], p[1], p[0]]);
+                }
+            }
+            out
+        }
+    }
+
+    /// Encodes `channels` (1 = gray, 3 = RGB) pixels; JPEG quality 0..1 is ignored for PNG.
+    fn encode(data: &[u8], w: usize, h: usize, channels: u8, format: Format, quality: f32) -> Result<Vec<u8>> {
+        let failed = |e: String| err("PDF_PAGE_FAILED", format!("Could not encode the page image: {e}"));
+        let mut out = Vec::new();
+        match format {
+            Format::Png => {
+                let mut enc = png::Encoder::new(&mut out, w as u32, h as u32);
+                enc.set_color(if channels == 1 { png::ColorType::Grayscale } else { png::ColorType::Rgb });
+                enc.set_depth(png::BitDepth::Eight);
+                let mut writer = enc.write_header().map_err(|e| failed(e.to_string()))?;
+                writer.write_image_data(data).map_err(|e| failed(e.to_string()))?;
+                writer.finish().map_err(|e| failed(e.to_string()))?;
+            }
+            Format::Jpeg => {
+                let (Ok(w16), Ok(h16)) = (u16::try_from(w), u16::try_from(h)) else {
+                    return Err(failed("page too large for JPEG".into()));
+                };
+                let q = (quality * 100.0).round().clamp(1.0, 100.0) as u8;
+                let colour = if channels == 1 { jpeg_encoder::ColorType::Luma } else { jpeg_encoder::ColorType::Rgb };
+                jpeg_encoder::Encoder::new(&mut out, q).encode(data, w16, h16, colour).map_err(|e| failed(e.to_string()))?;
+            }
+        }
+        Ok(out)
+    }
+
+    pub(super) struct Doc {
+        /// Null while the document is locked (the empty password was refused).
+        doc: Ptr,
+        /// Reopened with the password on unlock.
+        path: PathBuf,
+        temp: bool,
+        name: String,
+        byte_size: u64,
+    }
+
+    impl Drop for Doc {
+        fn drop(&mut self) {
+            if !self.doc.is_null() {
+                if let Ok(lib) = lib() {
+                    unsafe { (lib.g_object_unref)(self.doc) };
+                }
+            }
+            if self.temp {
+                let _ = std::fs::remove_file(&self.path);
+            }
+        }
+    }
+
+    impl Doc {
+        pub(super) fn locked(&self) -> bool {
+            self.doc.is_null()
+        }
+
+        /// Tries `password`; the password is never stored or logged.
+        pub(super) fn unlock(&mut self, password: &str) -> bool {
+            let Ok(lib) = lib() else { return false };
+            match open_file(lib, &self.path, Some(password)) {
+                Ok(doc) => {
+                    self.doc = doc;
+                    true
+                }
+                Err(_) => false,
+            }
+        }
+
+        /// Page sizes and counts; an unlocked document only.
+        pub(super) fn describe(&self, token: u32) -> Result<PdfInfo> {
+            let lib = lib()?;
+            let page_count = unsafe { (lib.poppler_document_get_n_pages)(self.doc) }.max(0) as usize;
+            if page_count == 0 {
+                return Err(err("PDF_INVALID", "The PDF has no pages"));
+            }
+            let mut pages = Vec::with_capacity(page_count);
+            for i in 0..page_count as u32 {
+                let (w, h) = self.page_size(i)?;
+                // Invalid sizes are reported here as a default and fail on render.
+                let valid = w.is_finite() && h.is_finite() && w > 0.0 && h > 0.0;
+                pages.push(PdfPageInfo { width_pt: if valid { w } else { 612.0 }, height_pt: if valid { h } else { 792.0 } });
+            }
+            Ok(PdfInfo { token, name: self.name.clone(), page_count, pages, byte_size: self.byte_size, locked: false })
+        }
+
+        /// Owned reference to page `index` (0-based); released by the caller.
+        fn page(&self, lib: &Lib, index: u32) -> Result<Ptr> {
+            let page = c_int::try_from(index).ok().map(|i| unsafe { (lib.poppler_document_get_page)(self.doc, i) }).unwrap_or(std::ptr::null_mut());
+            if page.is_null() {
+                return Err(err("PDF_PAGE_FAILED", format!("Page {} not found", index + 1)));
+            }
+            Ok(page)
+        }
+
+        /// Size in points of the crop box (clipped to the media box) after /Rotate: poppler
+        /// applies both in `poppler_page_get_size` and `poppler_page_render`.
+        fn page_size(&self, index: u32) -> Result<(f64, f64)> {
+            let lib = lib()?;
+            let page = self.page(lib, index)?;
+            let (mut w, mut h) = (0.0f64, 0.0f64);
+            unsafe {
+                (lib.poppler_page_get_size)(page, &mut w, &mut h);
+                (lib.g_object_unref)(page);
+            }
+            Ok((w, h))
+        }
+
+        /// Draws page `index` scaled into a white `w` x `h` bitmap.
+        pub(super) fn draw(&self, index: u32, w: usize, h: usize) -> Result<Bitmap> {
+            let lib = lib()?;
+            let failed = |what: &str| err("PDF_PAGE_FAILED", format!("Could not {what} the page bitmap"));
+            let page = self.page(lib, index)?;
+            let (mut wp, mut hp) = (0.0f64, 0.0f64);
+            unsafe { (lib.poppler_page_get_size)(page, &mut wp, &mut hp) };
+            let result = (|| {
+                if !(wp > 0.0 && hp > 0.0) {
+                    return Err(err("PDF_PAGE_FAILED", "The page has no valid size"));
+                }
+                let surface = unsafe { (lib.cairo_image_surface_create)(CAIRO_FORMAT_RGB24, w as c_int, h as c_int) };
+                let out = (|| {
+                    if unsafe { (lib.cairo_surface_status)(surface) } != 0 {
+                        return Err(failed("create"));
+                    }
+                    let cr = unsafe { (lib.cairo_create)(surface) };
+                    unsafe {
+                        (lib.cairo_set_source_rgb)(cr, 1.0, 1.0, 1.0);
+                        (lib.cairo_paint)(cr);
+                        (lib.cairo_scale)(cr, w as f64 / wp, h as f64 / hp);
+                        (lib.poppler_page_render)(page, cr);
+                    }
+                    let status = unsafe { (lib.cairo_status)(cr) };
+                    unsafe {
+                        (lib.cairo_destroy)(cr);
+                        (lib.cairo_surface_flush)(surface);
+                    }
+                    if status != 0 {
+                        return Err(failed("draw"));
+                    }
+                    let data = unsafe { (lib.cairo_image_surface_get_data)(surface) };
+                    let stride = unsafe { (lib.cairo_image_surface_get_stride)(surface) };
+                    if data.is_null() || stride <= 0 {
+                        return Err(failed("read"));
+                    }
+                    let stride = stride as usize;
+                    let bgrx = unsafe { std::slice::from_raw_parts(data, stride * h) }.to_vec();
+                    Ok(Bitmap { w, h, stride, bgrx })
+                })();
+                unsafe { (lib.cairo_surface_destroy)(surface) };
+                out
+            })();
+            unsafe { (lib.g_object_unref)(page) };
+            result
+        }
+
+        pub(super) fn render(&self, index: u32, max_side: u32, format: Format, quality: f32) -> Result<Vec<u8>> {
+            if self.locked() {
+                return Err(err("PDF_ENCRYPTED", "This PDF is password protected"));
+            }
+            let (wp, hp) = self.page_size(index)?;
+            let (w, h) = target_size(wp, hp, max_side).ok_or_else(|| err("PDF_PAGE_FAILED", "The page has no valid size"))?;
+            // The bitmap is dropped before encoding: one bitmap at a time.
+            let (gray, rgb) = {
+                let bitmap = self.draw(index, w, h)?;
+                match bitmap.gray() {
+                    Some(gray) => (Some(gray), None),
+                    None => (None, Some(bitmap.rgb())),
+                }
+            };
+            if let Some(gray) = gray {
+                let best = encode(&gray, w, h, 1, format, quality)?;
+                // Monochrome text/line art is far smaller (and sharper) as a gray PNG than as a JPEG.
+                if format == Format::Jpeg {
+                    if let Ok(png) = encode(&gray, w, h, 1, Format::Png, 1.0) {
+                        if png.len() < best.len() {
+                            return Ok(png);
+                        }
+                    }
+                }
+                return Ok(best);
+            }
+            encode(&rgb.expect("colour or gray"), w, h, 3, format, quality)
+        }
+    }
+
+    enum Req {
+        Open { path: PathBuf, name: String, temp: bool, reply: SyncSender<Result<PdfInfo>> },
+        Render { token: u32, index: u32, max_side: u32, format: Format, quality: f32, reply: SyncSender<Result<Vec<u8>>> },
+        Unlock { token: u32, password: String, reply: SyncSender<Result<PdfInfo>> },
+        Close { token: u32, reply: SyncSender<()> },
+    }
+
+    fn open_doc(path: &Path, name: String, temp: bool, token: u32) -> Result<(Doc, PdfInfo)> {
+        // From here the temp file belongs to `Doc` (or is removed on error by the guard below).
+        let result = (|| {
+            let byte_size = std::fs::metadata(path).map_err(crate::ioerr)?.len();
+            if byte_size > MAX_BYTES_FILE {
+                return Err(err("PDF_TOO_LARGE", "The PDF is larger than 512 MiB"));
+            }
+            let lib = lib()?;
+            let doc = match open_file(lib, path, None) {
+                Ok(doc) => doc,
+                // Kept open and locked: the dialog asks for a password (`pdf_unlock`).
+                Err(OpenError::Encrypted) => std::ptr::null_mut(),
+                Err(OpenError::Other(_)) => return Err(err("PDF_INVALID", "This is not a readable PDF")),
+            };
+            let doc = Doc { doc, path: path.to_path_buf(), temp, name, byte_size };
+            if doc.locked() {
+                let info = PdfInfo { token, name: doc.name.clone(), page_count: 0, pages: vec![], byte_size, locked: true };
+                return Ok((doc, info));
+            }
+            let info = doc.describe(token)?;
+            Ok((doc, info))
+        })();
+        if result.is_err() && temp {
+            let _ = std::fs::remove_file(path);
+        }
+        result
+    }
+
+    fn owner_loop(rx: mpsc::Receiver<Req>) {
+        let mut docs: HashMap<u32, Doc> = HashMap::new();
+        let mut order: VecDeque<u32> = VecDeque::new();
+        let mut next_token: u32 = 1;
+        while let Ok(req) = rx.recv() {
+            match req {
+                Req::Open { path, name, temp, reply } => {
+                    let token = next_token;
+                    let out = open_doc(&path, name, temp, token).map(|(doc, info)| {
+                        next_token = next_token.wrapping_add(1).max(1);
+                        docs.insert(token, doc);
+                        order.push_back(token);
+                        while order.len() > MAX_OPEN_DOCS {
+                            if let Some(old) = order.pop_front() {
+                                docs.remove(&old);
+                            }
+                        }
+                        info
+                    });
+                    let _ = reply.send(out);
+                }
+                Req::Render { token, index, max_side, format, quality, reply } => {
+                    let out = match docs.get(&token) {
+                        None => Err(err("PDF_BAD_TOKEN", "The PDF is no longer open")),
+                        Some(doc) => doc.render(index, max_side, format, quality),
+                    };
+                    let _ = reply.send(out);
+                }
+                Req::Unlock { token, password, reply } => {
+                    let out = match docs.get_mut(&token) {
+                        None => Err(err("PDF_BAD_TOKEN", "The PDF is no longer open")),
+                        Some(doc) => {
+                            if doc.locked() && !doc.unlock(&password) {
+                                Err(err("PDF_BAD_PASSWORD", "Wrong password"))
+                            } else {
+                                doc.describe(token)
+                            }
+                        }
+                    };
+                    let _ = reply.send(out);
+                }
+                Req::Close { token, reply } => {
+                    docs.remove(&token);
+                    order.retain(|t| *t != token);
+                    let _ = reply.send(());
+                }
+            }
+        }
+    }
+
+    /// Handle to the owner thread. Dropping every handle stops the thread and deletes temp files.
+    pub struct Service {
+        tx: Sender<Req>,
+        temp_dir: PathBuf,
+    }
+
+    fn stopped() -> NativeError {
+        err("PDF_PAGE_FAILED", "The PDF worker stopped")
+    }
+
+    impl Service {
+        pub fn spawn(temp_dir: PathBuf) -> Service {
+            let (tx, rx) = mpsc::channel();
+            std::thread::Builder::new()
+                .name("pdf-import".into())
+                .spawn(move || owner_loop(rx))
+                .expect("spawn pdf-import thread");
+            Service { tx, temp_dir }
+        }
+
+        fn ask<T>(&self, make: impl FnOnce(SyncSender<T>) -> Req) -> Result<T> {
+            let (reply, rx) = mpsc::sync_channel(1);
+            self.tx.send(make(reply)).map_err(|_| stopped())?;
+            rx.recv().map_err(|_| stopped())
+        }
+
+        pub fn open_path(&self, path: &Path, name: &str) -> Result<PdfInfo> {
+            self.ask(|reply| Req::Open { path: path.to_path_buf(), name: name.into(), temp: false, reply })?
+        }
+
+        pub fn open_bytes(&self, name: &str, bytes: &[u8]) -> Result<PdfInfo> {
+            if bytes.len() > MAX_BYTES_IPC {
+                return Err(err("PDF_TOO_LARGE", "Dropped PDFs are limited to 128 MiB"));
+            }
+            static COUNTER: AtomicU64 = AtomicU64::new(0);
+            std::fs::create_dir_all(&self.temp_dir).map_err(crate::ioerr)?;
+            let path = self.temp_dir.join(format!("{}.pdf", COUNTER.fetch_add(1, Ordering::Relaxed)));
+            write_private(&path, bytes).map_err(|e| {
+                let _ = std::fs::remove_file(&path);
+                crate::ioerr(e)
+            })?;
+            // The owner thread now owns the temp file and deletes it on close, eviction or error.
+            self.ask(|reply| Req::Open { path, name: name.into(), temp: true, reply })?
+        }
+
+        pub fn render(&self, token: u32, index: u32, max_side: u32, format: &str, quality: f32) -> Result<Vec<u8>> {
+            let format = match format {
+                "jpeg" | "jpg" => Format::Jpeg,
+                "png" => Format::Png,
+                other => return Err(err("INVALID_ARGUMENT", format!("Unknown image format {other}"))),
+            };
+            let max_side = max_side.clamp(MIN_SIDE, MAX_SIDE);
+            let quality = if quality.is_nan() { 0.85 } else { quality.clamp(0.3, 1.0) };
+            self.ask(|reply| Req::Render { token, index, max_side, format, quality, reply })?
+        }
+
+        pub fn unlock(&self, token: u32, password: String) -> Result<PdfInfo> {
+            self.ask(|reply| Req::Unlock { token, password, reply })?
+        }
+
+        pub fn close(&self, token: u32) -> Result<()> {
+            self.ask(|reply| Req::Close { token, reply })
+        }
+    }
+
+    fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+        use std::io::Write;
+        use std::os::unix::fs::OpenOptionsExt;
+        let mut file = std::fs::OpenOptions::new().write(true).create_new(true).mode(0o600).open(path)?;
+        file.write_all(bytes)
+    }
+
+    /// `<tmp>/vaultdraw-pdf-import/<pid>`; stale folders of earlier runs (older than a day) are swept.
+    fn temp_root() -> PathBuf {
+        let root = std::env::temp_dir().join("vaultdraw-pdf-import");
+        if let Ok(entries) = std::fs::read_dir(&root) {
+            let day = std::time::Duration::from_secs(24 * 3600);
+            for entry in entries.flatten() {
+                let old = entry.metadata().and_then(|m| m.modified()).ok().and_then(|t| t.elapsed().ok()).is_some_and(|age| age > day);
+                if old {
+                    let _ = std::fs::remove_dir_all(entry.path());
+                }
+            }
+        }
+        root.join(std::process::id().to_string())
+    }
+
+    fn service() -> &'static Service {
+        static SERVICE: OnceLock<Service> = OnceLock::new();
+        SERVICE.get_or_init(|| Service::spawn(temp_root()))
+    }
+
+    fn file_name(path: &Path) -> String {
+        path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()
+    }
+
+    /// Runs blocking work (channel wait) off the async runtime.
+    async fn blocking<T: Send + 'static>(f: impl FnOnce() -> Result<T> + Send + 'static) -> Result<T> {
+        tauri::async_runtime::spawn_blocking(f)
+            .await
+            .map_err(|e| err("PDF_PAGE_FAILED", e.to_string()))?
+    }
+
+    pub async fn pick() -> Result<Option<PdfInfo>> {
+        #[cfg(feature = "smoke-test")]
+        let picked = if crate::smoke::enabled() {
+            Some(crate::smoke::pdf_import_path().map_err(|e| err("SMOKE_CONFIG", e))?)
+        } else {
+            rfd::FileDialog::new().set_title("Import PDF").add_filter("PDF", &["pdf"]).pick_file()
+        };
+        #[cfg(not(feature = "smoke-test"))]
+        let picked = rfd::FileDialog::new().set_title("Import PDF").add_filter("PDF", &["pdf"]).pick_file();
+        let Some(path) = picked else { return Ok(None) };
+        blocking(move || service().open_path(&path, &file_name(&path)).map(Some)).await
+    }
+
+    pub async fn open_bytes(name: String, bytes: Vec<u8>) -> Result<PdfInfo> {
+        blocking(move || service().open_bytes(&name, &bytes)).await
+    }
+
+    pub async fn render(token: u32, index: u32, max_side: u32, format: String, quality: f32) -> Result<Vec<u8>> {
+        blocking(move || service().render(token, index, max_side, &format, quality)).await
+    }
+
+    pub async fn unlock(token: u32, password: String) -> Result<PdfInfo> {
+        blocking(move || service().unlock(token, password)).await
+    }
+
+    pub async fn close(token: u32) -> Result<()> {
+        blocking(move || service().close(token)).await
+    }
+
+    #[cfg(test)]
+    pub(super) fn open_for_test(path: &Path) -> Doc {
+        let doc = open_file(lib().unwrap(), path, None).ok().unwrap_or(std::ptr::null_mut());
+        Doc { doc, path: path.to_path_buf(), temp: false, name: String::new(), byte_size: 0 }
+    }
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
 mod native {
     use super::*;
 
     fn unsupported<T>() -> Result<T> {
-        Err(err("PDF_INVALID", "PDF import is only available on macOS"))
+        Err(err("PDF_UNAVAILABLE", "PDF import is only available on macOS and Linux"))
     }
     pub async fn pick() -> Result<Option<PdfInfo>> {
         unsupported()
@@ -707,6 +1286,9 @@ mod native {
 
 #[cfg(target_os = "macos")]
 use mac as native;
+
+#[cfg(target_os = "linux")]
+use linux as native;
 
 #[tauri::command]
 pub async fn pdf_pick() -> Result<Option<PdfInfo>> {
@@ -1111,5 +1693,339 @@ mod tests {
             "BENCH 100 pages @1440 jpeg 0.85: p50 {:.1} ms, p95 {:.1} ms, total {:.0} ms, bytes/page p50 {}, peak RSS {:.1} MiB (before {:.1})",
             times[49], times[94], total_ms, sizes[49], peak_rss_mib(), rss_before
         );
+    }
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod linux_tests {
+    //! The macOS tests, with handwritten PDFs instead of CoreGraphics-made ones. The encrypted
+    //! fixtures were made once with `qpdf --encrypt` (see `fixtures/pdf/README`).
+    use super::linux::*;
+    use super::*;
+    use std::path::Path;
+    use tempfile::tempdir;
+
+    /// A `user` password of "secret", owner "owner" (unlock prompt).
+    const LOCKED_PDF: &[u8] = include_bytes!("fixtures/pdf/locked.pdf");
+    /// Empty user password, owner "owner", copying not allowed (no prompt).
+    const RESTRICTED_PDF: &[u8] = include_bytes!("fixtures/pdf/restricted.pdf");
+
+    fn code<T: std::fmt::Debug>(r: Result<T>) -> String {
+        r.expect_err("expected an error").code
+    }
+
+    fn svc(dir: &Path) -> Service {
+        Service::spawn(dir.join("tmp"))
+    }
+
+    /// Handwritten PDF: one page per (w, h) with a red 50x50 square at the lower-left corner.
+    fn raw_pdf_pages(sizes: &[(f64, f64)], extra: &str) -> Vec<u8> {
+        let content = "1 0 0 rg 0 0 50 50 re f";
+        let mut objs = vec!["<< /Type /Catalog /Pages 2 0 R >>".to_string()];
+        let kids: Vec<String> = (0..sizes.len()).map(|i| format!("{} 0 R", 3 + 2 * i)).collect();
+        objs.push(format!("<< /Type /Pages /Kids [{}] /Count {} >>", kids.join(" "), sizes.len()));
+        for (i, (w, h)) in sizes.iter().enumerate() {
+            objs.push(format!("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {w} {h}] {extra} /Contents {} 0 R >>", 4 + 2 * i));
+            objs.push(format!("<< /Length {} >>\nstream\n{content}\nendstream", content.len()));
+        }
+        assemble(&objs)
+    }
+
+    /// One 200x100 page with a red square at the lower-left; `media` and `extra` go in the page dict.
+    fn raw_pdf(media: &str, extra: &str) -> Vec<u8> {
+        let content = "1 0 0 rg 0 0 50 50 re f";
+        assemble(&[
+            "<< /Type /Catalog /Pages 2 0 R >>".to_string(),
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_string(),
+            format!("<< /Type /Page /Parent 2 0 R /MediaBox {media} {extra} /Contents 4 0 R >>"),
+            format!("<< /Length {} >>\nstream\n{content}\nendstream", content.len()),
+        ])
+    }
+
+    /// Like `raw_pdf` with custom page content (no colour unless the content sets it).
+    fn raw_pdf_with(content: &str) -> Vec<u8> {
+        assemble(&[
+            "<< /Type /Catalog /Pages 2 0 R >>".to_string(),
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_string(),
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>".to_string(),
+            format!("<< /Length {} >>\nstream\n{content}\nendstream", content.len()),
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>".to_string(),
+        ])
+    }
+
+    fn assemble(objs: &[String]) -> Vec<u8> {
+        let mut out = b"%PDF-1.4\n".to_vec();
+        let mut offsets = vec![];
+        for (i, o) in objs.iter().enumerate() {
+            offsets.push(out.len());
+            out.extend_from_slice(format!("{} 0 obj\n{o}\nendobj\n", i + 1).as_bytes());
+        }
+        let xref = out.len();
+        out.extend_from_slice(format!("xref\n0 {}\n0000000000 65535 f \n", objs.len() + 1).as_bytes());
+        for off in offsets {
+            out.extend_from_slice(format!("{off:010} 00000 n \n").as_bytes());
+        }
+        out.extend_from_slice(format!("trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n", objs.len() + 1).as_bytes());
+        out
+    }
+
+    /// RGB at (x, y) of the page drawn at `w` x `h` (row 0 = top).
+    fn pixel(doc: &Doc, index: u32, w: usize, h: usize, x: usize, y: usize) -> [u8; 3] {
+        doc.draw(index, w, h).unwrap().pixel(x, y)
+    }
+
+    const A4: (f64, f64) = (595.0, 842.0);
+    const LAND: (f64, f64) = (842.0, 595.0);
+    const LETTER: (f64, f64) = (612.0, 792.0);
+
+    #[test]
+    fn pure_math() {
+        assert_eq!(display_size(100.0, 200.0, 90), (200.0, 100.0));
+        assert_eq!(display_size(100.0, 200.0, -90), (200.0, 100.0));
+        assert_eq!(target_size(595.0, 842.0, 1440), Some((1018, 1440)));
+        assert_eq!(target_size(842.0, 595.0, 1440), Some((1440, 1018)));
+        assert_eq!(target_size(1.0, 10000.0, 1440), Some((1, 1440)));
+        assert_eq!(target_size(0.0, 10.0, 1440), None);
+        assert_eq!(target_size(f64::NAN, 10.0, 1440), None);
+        let (w, h) = target_size(100.0, 100.0, 8192).unwrap();
+        assert!(w * h <= 16_000_000);
+        assert_eq!(intersect((0.0, 0.0, 10.0, 10.0), (5.0, 5.0, 10.0, 10.0)), Some((5.0, 5.0, 5.0, 5.0)));
+        let m = page_transform((0.0, 0.0, 200.0, 100.0), 90, 100.0, 200.0);
+        let map = |x: f64, y: f64| (m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]);
+        assert_eq!(map(0.0, 0.0), (0.0, 200.0));
+    }
+
+    #[test]
+    fn info_sizes_and_render_formats() {
+        let dir = tempdir().unwrap();
+        let pdf = dir.path().join("mixed.pdf");
+        std::fs::write(&pdf, raw_pdf_pages(&[A4, LAND, LETTER], "")).unwrap();
+        let s = svc(dir.path());
+        let info = s.open_path(&pdf, "mixed.pdf").unwrap();
+        assert_eq!((info.page_count, info.name.as_str()), (3, "mixed.pdf"));
+        assert_eq!(info.pages[0], PdfPageInfo { width_pt: 595.0, height_pt: 842.0 });
+        assert_eq!(info.pages[1], PdfPageInfo { width_pt: 842.0, height_pt: 595.0 });
+        assert!(info.byte_size > 100);
+        let json = serde_json::to_value(&info).unwrap();
+        assert!(json["pageCount"] == 3 && json["pages"][0]["widthPt"] == 595.0 && json["byteSize"].is_number());
+
+        let jpeg = s.render(info.token, 0, 800, "jpeg", 0.85).unwrap();
+        assert_eq!(&jpeg[..3], &[0xFF, 0xD8, 0xFF]);
+        let png = s.render(info.token, 1, 600, "png", 1.0).unwrap();
+        assert_eq!(&png[..8], &[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]);
+        // PNG IHDR holds the pixel size: long side == max_side, landscape keeps aspect.
+        let (w, h) = (u32::from_be_bytes(png[16..20].try_into().unwrap()), u32::from_be_bytes(png[20..24].try_into().unwrap()));
+        assert_eq!((w, h), (600, 424));
+        // Out-of-range max_side/quality are clamped, not rejected.
+        assert!(s.render(info.token, 2, 1, "jpeg", 9.0).is_ok());
+        assert_eq!(code(s.render(info.token, 3, 800, "jpeg", 0.8)), "PDF_PAGE_FAILED");
+        assert_eq!(code(s.render(info.token, 0, 800, "gif", 0.8)), "INVALID_ARGUMENT");
+    }
+
+    #[test]
+    fn orientation_red_square_is_bottom_left() {
+        let dir = tempdir().unwrap();
+        let pdf = dir.path().join("p.pdf");
+        std::fs::write(&pdf, raw_pdf_pages(&[A4], "")).unwrap();
+        let doc = open_for_test(&pdf);
+        let (w, h) = (298, 421);
+        // PDF origin is the lower-left corner; row 0 of the bitmap is the top.
+        assert_eq!(pixel(&doc, 0, w, h, 5, h - 5), [255, 0, 0]);
+        assert_eq!(pixel(&doc, 0, w, h, 5, 5), [255, 255, 255]);
+        assert_eq!(pixel(&doc, 0, w, h, w - 5, h - 5), [255, 255, 255]);
+    }
+
+    #[test]
+    fn rotate_and_cropbox_are_honoured() {
+        let dir = tempdir().unwrap();
+        let s = svc(dir.path());
+        let rotated = dir.path().join("rot.pdf");
+        std::fs::write(&rotated, raw_pdf("[0 0 200 100]", "/Rotate 90")).unwrap();
+        let info = s.open_path(&rotated, "rot.pdf").unwrap();
+        assert_eq!(info.pages[0], PdfPageInfo { width_pt: 100.0, height_pt: 200.0 });
+        let doc = open_for_test(&rotated);
+        // Lower-left square turns into the top-left one under a 90 degree clockwise rotation.
+        assert_eq!(pixel(&doc, 0, 100, 200, 10, 10), [255, 0, 0]);
+        assert_eq!(pixel(&doc, 0, 100, 200, 90, 190), [255, 255, 255]);
+
+        let cropped = dir.path().join("crop.pdf");
+        std::fs::write(&cropped, raw_pdf("[0 0 200 200]", "/CropBox [50 50 150 150]")).unwrap();
+        let info = s.open_path(&cropped, "crop.pdf").unwrap();
+        assert_eq!(info.pages[0], PdfPageInfo { width_pt: 100.0, height_pt: 100.0 });
+        // The square (0..50) lies outside the crop box: all white.
+        let doc = open_for_test(&cropped);
+        assert_eq!(pixel(&doc, 0, 100, 100, 5, 95), [255, 255, 255]);
+        // CropBox beyond the MediaBox is intersected with it.
+        let wide = dir.path().join("wide.pdf");
+        std::fs::write(&wide, raw_pdf("[0 0 200 200]", "/CropBox [100 100 400 400]")).unwrap();
+        let info = s.open_path(&wide, "wide.pdf").unwrap();
+        // macOS (CoreGraphics) intersects the two boxes (100x100); poppler ignores a crop box that
+        // leaves the media box and shows the whole page (200x200). Either is a usable import.
+        assert_eq!(info.pages[0], PdfPageInfo { width_pt: 200.0, height_pt: 200.0 });
+    }
+
+    #[test]
+    fn invalid_files_and_tokens() {
+        let dir = tempdir().unwrap();
+        let s = svc(dir.path());
+        let bad = dir.path().join("bad.pdf");
+        std::fs::write(&bad, b"this is not a pdf").unwrap();
+        assert_eq!(code(s.open_path(&bad, "bad.pdf")), "PDF_INVALID");
+        assert_eq!(code(s.open_path(&dir.path().join("missing.pdf"), "m")), "NOT_FOUND");
+        assert_eq!(code(s.render(42, 0, 800, "jpeg", 0.8)), "PDF_BAD_TOKEN");
+        s.close(42).unwrap();
+        assert_eq!(code(s.open_bytes("x.pdf", b"garbage")), "PDF_INVALID");
+        // A failed open from bytes leaves no temp file behind.
+        let left = std::fs::read_dir(dir.path().join("tmp")).map(|d| d.count()).unwrap_or(0);
+        assert_eq!(left, 0);
+    }
+
+    #[test]
+    fn eviction_close_and_temp_files() {
+        let dir = tempdir().unwrap();
+        let s = svc(dir.path());
+        let bytes = raw_pdf("[0 0 200 100]", "");
+        let temp_count = || std::fs::read_dir(dir.path().join("tmp")).map(|d| d.count()).unwrap_or(0);
+        let infos: Vec<_> = (0..5).map(|i| s.open_bytes(&format!("d{i}.pdf"), &bytes).unwrap()).collect();
+        // The 5th open evicted the 1st (max 4 open) and deleted its temp file.
+        assert_eq!(code(s.render(infos[0].token, 0, 200, "jpeg", 0.8)), "PDF_BAD_TOKEN");
+        assert!(s.render(infos[1].token, 0, 200, "jpeg", 0.8).is_ok());
+        assert_eq!(temp_count(), 4);
+        s.close(infos[4].token).unwrap();
+        assert_eq!(temp_count(), 3);
+        assert_eq!(code(s.render(infos[4].token, 0, 200, "jpeg", 0.8)), "PDF_BAD_TOKEN");
+        // Tokens never repeat.
+        let tokens: std::collections::HashSet<_> = infos.iter().map(|i| i.token).collect();
+        assert_eq!(tokens.len(), 5);
+        drop(s);
+        // Dropping the service stops the thread, which deletes the rest.
+        for _ in 0..50 {
+            if temp_count() == 0 {
+                return;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        panic!("temp files were not removed");
+    }
+
+    #[test]
+    fn dropped_pdf_over_the_cap_is_rejected() {
+        let dir = tempdir().unwrap();
+        let s = svc(dir.path());
+        let big = vec![0u8; 128 * 1024 * 1024 + 1];
+        assert_eq!(code(s.open_bytes("big.pdf", &big)), "PDF_TOO_LARGE");
+    }
+
+    #[test]
+    fn neutral_detection() {
+        // 3x2 pixels, stride 16 (4 bytes of row padding).
+        let mut buf = vec![255u8; 16 * 2];
+        assert!(is_neutral_rgbx(&buf, 3, 2, 16, 2));
+        buf[16 + 4] = 250;
+        assert!(!is_neutral_rgbx(&buf, 3, 2, 16, 2));
+        assert!(is_neutral_rgbx(&buf, 3, 2, 16, 5));
+        let mut pad = vec![255u8; 16 * 2];
+        pad[12] = 0;
+        assert!(is_neutral_rgbx(&pad, 3, 2, 16, 2));
+    }
+
+    /// Component count of a baseline JPEG (SOF0/SOF2 marker).
+    fn jpeg_components(j: &[u8]) -> u8 {
+        let mut i = 2;
+        while i + 9 < j.len() {
+            assert_eq!(j[i], 0xFF);
+            let marker = j[i + 1];
+            if marker == 0xC0 || marker == 0xC2 {
+                return j[i + 9];
+            }
+            i += 2 + usize::from(u16::from_be_bytes([j[i + 2], j[i + 3]]));
+        }
+        panic!("no SOF marker");
+    }
+
+    #[test]
+    fn monochrome_pages_encode_as_gray_and_colour_pages_stay_rgb() {
+        let dir = tempdir().unwrap();
+        let s = svc(dir.path());
+        let mono = dir.path().join("mono.pdf");
+        std::fs::write(&mono, raw_pdf_with("0 g 20 20 100 40 re f 0.5 g 20 80 100 10 re f")).unwrap();
+        let info = s.open_path(&mono, "mono.pdf").unwrap();
+        let gray = s.render(info.token, 0, 400, "jpeg", 0.85).unwrap();
+        // A JPEG request returns whichever gray encoding is smaller (a PNG for line art).
+        if gray[0] == 0xFF {
+            assert_eq!(jpeg_components(&gray), 1);
+        } else {
+            assert_eq!(gray[25], 0, "gray PNG");
+        }
+        let png = s.render(info.token, 0, 400, "png", 1.0).unwrap();
+        assert_eq!(png[25], 0, "PNG colour type 0 = grayscale");
+        let colour = dir.path().join("colour.pdf");
+        std::fs::write(&colour, raw_pdf("[0 0 200 100]", "")).unwrap();
+        let info = s.open_path(&colour, "colour.pdf").unwrap();
+        let rgb = s.render(info.token, 0, 400, "jpeg", 0.85).unwrap();
+        assert_eq!(jpeg_components(&rgb), 3);
+        let rgb_png = s.render(info.token, 0, 400, "png", 1.0).unwrap();
+        assert_eq!(rgb_png[25], 2, "PNG colour type 2 = RGB");
+    }
+
+    /// Decodes a PNG and returns the gray value of pixel (x, y) (grayscale output only).
+    fn decode_gray_png(bytes: &[u8], x: usize, y: usize) -> u8 {
+        let decoder = png::Decoder::new(std::io::Cursor::new(bytes));
+        let mut reader = decoder.read_info().unwrap();
+        let mut buf = vec![0; reader.output_buffer_size().unwrap()];
+        let info = reader.next_frame(&mut buf).unwrap();
+        assert_eq!(info.color_type, png::ColorType::Grayscale);
+        buf[y * info.line_size + x]
+    }
+
+    #[test]
+    fn gray_output_decodes_with_correct_tones() {
+        let dir = tempdir().unwrap();
+        let s = svc(dir.path());
+        // 200x100 page: black block at the bottom-left, mid-gray strip at the top-right.
+        let pdf = dir.path().join("tones.pdf");
+        std::fs::write(&pdf, raw_pdf_with("0 g 0 0 100 50 re f 0.5 g 100 50 100 50 re f")).unwrap();
+        let info = s.open_path(&pdf, "tones.pdf").unwrap();
+        // bitmap is 400x200 (row 0 = top); black block covers x<200, y>=100.
+        let bytes = s.render(info.token, 0, 400, "png", 1.0).unwrap();
+        let near = |v: u8, want: i32| (i32::from(v) - want).abs() <= 6;
+        assert!(near(decode_gray_png(&bytes, 100, 150), 0), "black stays black");
+        assert!(near(decode_gray_png(&bytes, 300, 50), 128), "mid gray stays mid gray");
+        assert!(near(decode_gray_png(&bytes, 350, 150), 255), "white stays white");
+        // The line-art page is smallest as the gray PNG: the JPEG request returns a PNG here.
+        let png = s.render(info.token, 0, 400, "jpeg", 0.85).unwrap();
+        assert_eq!(&png[..4], &[0x89, b'P', b'N', b'G']);
+    }
+
+    #[test]
+    fn password_flow_and_restricted_pdfs() {
+        let dir = tempdir().unwrap();
+        let s = svc(dir.path());
+        let locked = dir.path().join("locked.pdf");
+        std::fs::write(&locked, LOCKED_PDF).unwrap();
+        let info = s.open_path(&locked, "locked.pdf").unwrap();
+        assert!(info.locked && info.page_count == 0 && info.pages.is_empty());
+        assert!(serde_json::to_value(&info).unwrap()["locked"] == true);
+        assert_eq!(code(s.render(info.token, 0, 200, "jpeg", 0.8)), "PDF_ENCRYPTED");
+        assert_eq!(code(s.unlock(info.token, "nope".into())), "PDF_BAD_PASSWORD");
+        assert_eq!(code(s.unlock(info.token, "bad\0nul".into())), "PDF_BAD_PASSWORD");
+        let open = s.unlock(info.token, "secret".into()).unwrap();
+        assert!(!open.locked && open.page_count == 1 && open.token == info.token);
+        assert_eq!(&s.render(info.token, 0, 200, "jpeg", 0.8).unwrap()[..3], &[0xFF, 0xD8, 0xFF]);
+        // Unlocking twice is harmless.
+        assert!(s.unlock(info.token, "".into()).is_ok());
+        assert_eq!(code(s.unlock(999, "x".into())), "PDF_BAD_TOKEN");
+        // Copy-protected with an empty user password: opens without a prompt and renders.
+        let restricted = dir.path().join("restricted.pdf");
+        std::fs::write(&restricted, RESTRICTED_PDF).unwrap();
+        let info = s.open_path(&restricted, "restricted.pdf").unwrap();
+        assert!(!info.locked && info.page_count == 1);
+        assert!(s.render(info.token, 0, 200, "png", 1.0).is_ok());
+        // A locked drop from bytes keeps (and later removes) its temp file.
+        let info = s.open_bytes("l.pdf", LOCKED_PDF).unwrap();
+        assert!(info.locked);
+        assert_eq!(std::fs::read_dir(dir.path().join("tmp")).map(|d| d.count()).unwrap_or(0), 1);
+        s.close(info.token).unwrap();
+        assert_eq!(std::fs::read_dir(dir.path().join("tmp")).map(|d| d.count()).unwrap_or(0), 0);
     }
 }

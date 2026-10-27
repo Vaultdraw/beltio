@@ -19,7 +19,11 @@
     "linux": {
       "deb": {
         "section": "graphics",
-        "priority": "optional"
+        "priority": "optional",
+        "depends": ["libpoppler-glib8"]
+      },
+      "rpm": {
+        "depends": ["poppler-glib"]
       },
       "appimage": {
         "bundleMediaFramework": false
