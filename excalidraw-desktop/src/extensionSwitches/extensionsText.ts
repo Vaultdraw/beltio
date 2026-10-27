@@ -45,4 +45,10 @@ export const EXTENSION_TEXT: Record<ExtensionId, ExtensionText> = {
   "pdf-import": {
     description: "Import PDF pages into a drawing as images.",
   },
+  notes: {
+    description:
+      "Open Markdown notes (.md) in a tab: a reading view with [[links]], callouts and formulas, and a CodeMirror editor.",
+    offNote:
+      "Notes in the vault stay as files; a .md opens in your default app.",
+  },
 };

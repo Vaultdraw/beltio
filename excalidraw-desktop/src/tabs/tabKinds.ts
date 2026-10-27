@@ -12,12 +12,21 @@
 import type { ComponentType } from "react";
 import type { OpenTarget } from "./types";
 
+/** What a kind's view may ask of the open vault. */
+export interface TabKindVault {
+  /** Backend handle of the open vault (null in the browser preview). */
+  handle: string | null;
+  /** Every file path in the vault, vault-relative; cheap to call, stable between changes. */
+  paths: () => readonly string[];
+}
+
 /** What the host gives a kind's view. */
 export interface TabKindViewProps {
   /** Vault-relative path of the file in this tab. */
   path: string;
   /** Opens another vault file in the current or a new tab. */
   openPath: (path: string, opts?: { target?: OpenTarget }) => void;
+  vault: TabKindVault;
 }
 
 export interface TabKind {

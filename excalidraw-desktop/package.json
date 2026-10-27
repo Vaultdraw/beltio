@@ -3,7 +3,7 @@
   "version": "0.1.2",
   "private": true,
   "type": "module",
-  "description": "Vaultdraw — offline Tauri 2 desktop shell around the real Excalidraw editor. User-selected filesystem vault; no cloud, telemetry, or accounts.",
+  "description": "Vaultdraw \u2014 offline Tauri 2 desktop shell around the real Excalidraw editor. User-selected filesystem vault; no cloud, telemetry, or accounts.",
   "engines": {
     "node": ">=18.0.0"
   },
@@ -24,7 +24,16 @@
     "test:milestone": "node scripts/test-tier.mjs milestone"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.0.0",
+    "@codemirror/language": "^6.0.0",
+    "@codemirror/search": "^6.5.0",
+    "@codemirror/state": "^6.0.0",
+    "@codemirror/view": "^6.0.0",
+    "@replit/codemirror-vim": "^6.4.0",
     "@tauri-apps/api": "^2.12.2",
+    "dompurify": "^3.2.5",
+    "katex": "^0.16.22",
+    "marked": "^16.2.1",
     "mathjax-full": "3.2.2",
     "react": "19.0.0",
     "react-dom": "19.0.0"

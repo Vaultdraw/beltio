@@ -39,6 +39,7 @@ import {
   type HistoryField,
 } from "../history/historySettings";
 import { TABS_MAPPINGS, type TabsField } from "../tabs/tabsSettings";
+import { NOTES_MAPPINGS, type NotesField } from "../notes/notesSettings";
 import { MEMORY_MAPPINGS, type MemoryField } from "../memory/memorySettings";
 import { setSafeStart, type SafeStart } from "../safeStart/state";
 import { parseBisect, setBisect } from "../extensionSwitches/bisectState";
@@ -358,6 +359,7 @@ type ConfigField =
   | "laserLength"
   | HistoryField
   | TabsField
+  | NotesField
   | MemoryField
   | SearchField
   | LayoutField
@@ -897,6 +899,7 @@ export const CONFIG_MAPPING: readonly ConfigMapping[] = [
   ...CORE_MAPPING,
   ...HISTORY_MAPPINGS,
   ...TABS_MAPPINGS,
+  ...NOTES_MAPPINGS,
   ...MEMORY_MAPPINGS,
   ...SEARCH_MAPPINGS,
   ...LAYOUT_MAPPINGS,

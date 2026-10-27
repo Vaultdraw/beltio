@@ -155,7 +155,10 @@ describe("keymap", () => {
 
   it("buildKeymap maps normalised chords in registry order", () => {
     const map = buildKeymap(COMMANDS, {}, "mac");
-    expect(map.get("Mod+S")?.map((c) => c.id)).toEqual(["file.save"]);
+    expect(map.get("Mod+S")?.map((c) => c.id)).toEqual([
+      "file.save",
+      "notes.save",
+    ]);
     expect(map.get("Mod+Shift+Equal")?.map((c) => c.id)).toEqual([
       "view.zoomIn",
     ]);
@@ -169,6 +172,7 @@ describe("keymap", () => {
       "file.save",
       "vault.newDrawing",
       "file.duplicate",
+      "notes.save",
     ]);
     expect(shared.has("Mod+N")).toBe(false);
   });

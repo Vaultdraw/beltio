@@ -29,6 +29,8 @@ import { LAYOUT_COMMANDS } from "../layout/layoutCommands";
 import { EXTENSION_COMMANDS } from "../extensionSwitches/extensionCommandDefs";
 import { VAULT_THEME_COMMANDS } from "../theme/vaultThemeCommands";
 
+import { NOTES_COMMANDS } from "../notes/notesCommands";
+
 import {
   drawingOpenCommands,
   makeDrawingOpenCommand,
@@ -673,6 +675,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...GALLERY_COMMANDS,
   ...MEMORY_COMMANDS,
   ...EXTENSION_COMMANDS,
+  ...NOTES_COMMANDS,
   ...AI_COMMANDS,
   ...WATCHDOG_COMMANDS,
   ...CONFIG_COMMANDS,

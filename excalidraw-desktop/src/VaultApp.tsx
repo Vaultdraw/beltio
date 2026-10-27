@@ -112,6 +112,7 @@ import { useVaultThemeCommands } from "./theme/useVaultThemeCommands";
 import { useVaultAppearance } from "./theme/useVaultAppearance";
 import { registerBisectCommands } from "./extensionSwitches/bisectCommands";
 import { BisectBanner } from "./extensionSwitches/BisectBanner";
+import { useNotes } from "./notes/useNotes";
 import { ActiveTabGate } from "./tabs/ActiveTabGate";
 import "./tabs/editorBody.css";
 import { ancestorFolders } from "./tabs/revealPath";
@@ -2060,6 +2061,17 @@ export const VaultApp = ({
     entries: allIndexedEntries,
     indexing: isIndexing,
   });
+
+  // Markdown notes: a tab kind while `[extensions] notes` is on.
+  useNotes();
+  const kindVault = useMemo(
+    () => ({
+      handle: vault?.handle ?? null,
+      paths: () =>
+        allIndexedEntries.filter((e) => e.kind !== "folder").map((e) => e.path),
+    }),
+    [vault?.handle, allIndexedEntries],
+  );
   tabsRef.current = tabs;
   const layout = useLayout(
     win,
@@ -2777,7 +2789,7 @@ export const VaultApp = ({
                 />
               </div>
             ) : (
-              <ActiveTabGate {...tabs.gateProps}>
+              <ActiveTabGate {...tabs.gateProps} kindVault={kindVault}>
                 <DeferredHome
                   win={win ?? window}
                   vaultKey={vault.handle}

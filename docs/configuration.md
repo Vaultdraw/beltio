@@ -1530,6 +1530,23 @@ Several drawings open at once.
 | `restore` | `true` | true or false | yes | Reopen the open tabs when a vault opens. |
 | `undo_budget_mb` | `32` | a whole number from 0 to 1024 (megabytes, 0 = no undo kept for background tabs) |  | Undo history kept for background tabs, in megabytes. |
 
+### `[notes]`
+
+Markdown notes: the reading view and the editor. See [Notes](#notes).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `open_in` | `"reading"` | "reading" or "editing" |  | What a note shows when it opens: the reading view or the editor. |
+| `vim` | `false` | true or false |  | Vim keys in the note editor. |
+| `line_wrap` | `true` | true or false |  | Wrap long lines in the editor. |
+| `line_numbers` | `false` | true or false |  | Show line numbers in the editor. |
+| `font_size` | `16` | a whole number from 10 to 32 (pixels) |  | Text size of notes, in pixels. |
+| `readable_width` | `760` | a whole number from 0 to 2000 (pixels, 0 = the whole pane) |  | Widest the reading text gets, in pixels; 0 uses the whole pane. |
+| `autosave_ms` | `800` | a whole number from 0 to 60000 (milliseconds, 0 = save only with the save command) |  | Save this long after the last keystroke; 0 saves only with `Notes: Save`. |
+| `highlight_code` | `true` | true or false |  | Colour code blocks in the reading view. |
+| `math` | `true` | true or false |  | Render `$…$` and `$$…$$` as formulas in the reading view. |
+| `remote_images` | `false` | true or false |  | Load images from `http(s)` addresses. Off keeps notes fully offline: the image shows its alt text instead. |
+
 ### `[layout]`
 
 Which parts of the window show, and presets such as focus mode. See [Layout and focus mode](#layout-and-focus-mode).
@@ -1580,6 +1597,7 @@ Built-in extensions, on (`true`) or off (`false`). Off means not loaded: no memo
 | `formula` | `true` | true or false |  | Insert and edit LaTeX formulas. |
 | `mermaid` | `true` | true or false |  | Mermaid to Excalidraw. |
 | `pdf-import` | `true` | true or false |  | Import PDF pages into a drawing. |
+| `notes` | `true` | true or false |  | Markdown notes: open a `.md` file in a tab with a reading view and an editor. See [Notes](#notes). |
 
 ### `[keys]`
 

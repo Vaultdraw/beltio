@@ -276,6 +276,33 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
     },
   },
   {
+    table: "notes",
+    intro:
+      "Markdown notes: the reading view and the editor. See [Notes](#notes).",
+    keys: {
+      open_in: {
+        doc: "What a note shows when it opens: the reading view or the editor.",
+      },
+      vim: { doc: "Vim keys in the note editor." },
+      line_wrap: { doc: "Wrap long lines in the editor." },
+      line_numbers: { doc: "Show line numbers in the editor." },
+      font_size: { doc: "Text size of notes, in pixels." },
+      readable_width: {
+        doc: "Widest the reading text gets, in pixels; 0 uses the whole pane.",
+      },
+      autosave_ms: {
+        doc: "Save this long after the last keystroke; 0 saves only with `Notes: Save`.",
+      },
+      highlight_code: { doc: "Colour code blocks in the reading view." },
+      math: {
+        doc: "Render `$…$` and `$$…$$` as formulas in the reading view.",
+      },
+      remote_images: {
+        doc: "Load images from `http(s)` addresses. Off keeps notes fully offline: the image shows its alt text instead.",
+      },
+    },
+  },
+  {
     table: "layout",
     intro:
       "Which parts of the window show, and presets such as focus mode. See [Layout and focus mode](#layout-and-focus-mode).",
@@ -359,6 +386,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       formula: { doc: "Insert and edit LaTeX formulas." },
       mermaid: { doc: "Mermaid to Excalidraw." },
       "pdf-import": { doc: "Import PDF pages into a drawing." },
+      notes: {
+        doc: "Markdown notes: open a `.md` file in a tab with a reading view and an editor. See [Notes](#notes).",
+      },
     },
   },
   {

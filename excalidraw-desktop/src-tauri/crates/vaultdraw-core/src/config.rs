@@ -222,6 +222,28 @@ autosave_delay_ms = 500
 # Undo history kept for background tabs in MB, 0 to 1024 (0 = none)
 # undo_budget_mb = 32
 
+[notes]
+# What a note shows when it opens: reading | editing
+# open_in = "reading"
+# Vim keys in the note editor
+# vim = false
+# Wrap long lines in the editor
+# line_wrap = true
+# Show line numbers in the editor
+# line_numbers = false
+# Text size of notes in pixels, 10 to 32
+# font_size = 16
+# Widest the reading text gets in pixels, 0 to 2000 (0 = the whole pane)
+# readable_width = 760
+# Save this many milliseconds after the last keystroke, 0 to 60000 (0 = only with Notes: Save)
+# autosave_ms = 800
+# Colour code blocks in the reading view
+# highlight_code = true
+# Render $...$ and $$...$$ as formulas
+# math = true
+# Load images from http(s) addresses (false keeps notes fully offline)
+# remote_images = false
+
 [layout]
 # Show the header above the canvas (title, save status, History, Graph)
 # header = true
@@ -268,6 +290,7 @@ autosave_delay_ms = 500
 # formula = true      # LaTeX formulas
 # mermaid = true      # Mermaid to Excalidraw
 # pdf-import = true   # PDF import
+# notes = true        # Markdown notes: reading view and editor
 
 [search]
 # Milliseconds to wait after a keystroke before searching, 0 to 2000
@@ -1591,7 +1614,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 107, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 118, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();

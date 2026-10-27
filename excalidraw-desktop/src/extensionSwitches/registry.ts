@@ -22,6 +22,7 @@ export const EXTENSION_IDS = [
   "formula",
   "mermaid",
   "pdf-import",
+  "notes",
 ] as const;
 
 export type ExtensionId = typeof EXTENSION_IDS[number];
@@ -37,6 +38,7 @@ export const EXTENSION_FIELDS = {
   formula: "extFormula",
   mermaid: "extMermaid",
   "pdf-import": "extPdfImport",
+  notes: "extNotes",
 } as const;
 
 export type ExtensionField = typeof EXTENSION_FIELDS[ExtensionId];
@@ -66,6 +68,7 @@ export const BUILTIN_EXTENSIONS: readonly BuiltinExtension[] = [
     defaultOn: true,
   },
   { id: "pdf-import", title: "PDF import", kind: "official", defaultOn: true },
+  { id: "notes", title: "Markdown notes", kind: "official", defaultOn: true },
 ];
 
 export const isExtensionId = (v: unknown): v is ExtensionId =>

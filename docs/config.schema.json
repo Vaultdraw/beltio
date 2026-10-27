@@ -1161,6 +1161,73 @@
         }
       }
     },
+    "notes": {
+      "type": "object",
+      "description": "Markdown notes: the reading view and the editor. See [Notes](#notes).",
+      "additionalProperties": false,
+      "properties": {
+        "open_in": {
+          "description": "What a note shows when it opens: the reading view or the editor.",
+          "default": "reading",
+          "type": "string",
+          "enum": [
+            "reading",
+            "editing"
+          ]
+        },
+        "vim": {
+          "description": "Vim keys in the note editor.",
+          "default": false,
+          "type": "boolean"
+        },
+        "line_wrap": {
+          "description": "Wrap long lines in the editor.",
+          "default": true,
+          "type": "boolean"
+        },
+        "line_numbers": {
+          "description": "Show line numbers in the editor.",
+          "default": false,
+          "type": "boolean"
+        },
+        "font_size": {
+          "description": "Text size of notes, in pixels.",
+          "default": 16,
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 32
+        },
+        "readable_width": {
+          "description": "Widest the reading text gets, in pixels; 0 uses the whole pane.",
+          "default": 760,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "autosave_ms": {
+          "description": "Save this long after the last keystroke; 0 saves only with `Notes: Save`.",
+          "default": 800,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 60000
+        },
+        "highlight_code": {
+          "description": "Colour code blocks in the reading view.",
+          "default": true,
+          "type": "boolean"
+        },
+        "math": {
+          "description": "Render `$…$` and `$$…$$` as formulas in the reading view.",
+          "default": true,
+          "type": "boolean"
+        },
+        "remote_images": {
+          "description": "Load images from `http(s)` addresses. Off keeps notes fully offline: the image shows its alt text instead.",
+          "default": false,
+          "type": "boolean"
+        }
+      }
+    },
     "layout": {
       "type": "object",
       "description": "Which parts of the window show, and presets such as focus mode. See [Layout and focus mode](#layout-and-focus-mode).",
@@ -1339,6 +1406,11 @@
         },
         "pdf-import": {
           "description": "Import PDF pages into a drawing.",
+          "default": true,
+          "type": "boolean"
+        },
+        "notes": {
+          "description": "Markdown notes: open a `.md` file in a tab with a reading view and an editor. See [Notes](#notes).",
           "default": true,
           "type": "boolean"
         }

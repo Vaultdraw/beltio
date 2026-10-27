@@ -63,6 +63,11 @@ import {
   type TabsPreferences,
 } from "../tabs/tabsSettings";
 import {
+  NOTES_DEFAULTS,
+  normalizeNotesPreferences,
+  type NotesPreferences,
+} from "../notes/notesSettings";
+import {
   SERVICES_DEFAULTS,
   normalizeServicesPreferences,
   type ServicesPreferences,
@@ -319,6 +324,7 @@ interface VaultPreferencesBase {
 export type VaultPreferences = VaultPreferencesBase &
   HistoryPreferences &
   TabsPreferences &
+  NotesPreferences &
   MemoryPreferences &
   SearchPreferences &
   ExtensionPreferences &
@@ -433,6 +439,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   laserLength: DEFAULT_LASER.length,
   ...HISTORY_DEFAULTS,
   ...TABS_DEFAULTS,
+  ...NOTES_DEFAULTS,
   ...MEMORY_DEFAULTS,
   ...SEARCH_DEFAULTS,
   ...EXTENSION_DEFAULTS,
@@ -863,6 +870,7 @@ export function normalizePreferences(input: unknown): VaultPreferences {
     ),
     ...normalizeHistoryPreferences(parsed as Record<string, unknown>),
     ...normalizeTabsPreferences(parsed as Record<string, unknown>),
+    ...normalizeNotesPreferences(parsed as Record<string, unknown>),
     ...normalizeMemoryPreferences(parsed as Record<string, unknown>),
     ...normalizeSearchPreferences(parsed as Record<string, unknown>),
     ...normalizeExtensionPreferences(parsed as Record<string, unknown>),

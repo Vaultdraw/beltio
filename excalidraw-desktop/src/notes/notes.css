@@ -1,0 +1,333 @@
+/* Notes: the tab view, the reading view and the editor. Loaded with NoteView. */
+.note-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  background: var(--vault-bg);
+  color: var(--vault-text);
+  user-select: text;
+  font-size: var(--note-font-size, 16px);
+}
+
+.note-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--vd-space-3);
+  padding: var(--vd-space-2) var(--vd-space-4);
+  border-bottom: 1px solid var(--vault-border);
+  font-size: var(--vd-fs-small);
+}
+
+.note-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-meta {
+  margin-left: auto;
+  color: var(--vault-text-muted);
+  white-space: nowrap;
+}
+
+.note-toggle,
+.note-banner button {
+  font: inherit;
+  padding: 2px var(--vd-space-3);
+  border: 1px solid var(--vault-border);
+  border-radius: var(--vd-radius-control);
+  background: var(--vault-surface);
+  color: var(--vault-text);
+  cursor: pointer;
+}
+
+.note-toggle:hover,
+.note-banner button:hover {
+  background: var(--vault-hover);
+}
+
+.note-toggle[aria-pressed="true"] {
+  border-color: var(--vault-primary-border);
+  color: var(--vault-primary);
+}
+
+.note-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--vd-space-3);
+  padding: var(--vd-space-2) var(--vd-space-4);
+  background: var(--vault-warning-bg);
+  border-bottom: 1px solid var(--vault-warning-border);
+  font-size: var(--vd-fs-small);
+}
+
+.note-banner-error {
+  background: var(--vault-danger-bg);
+  border-bottom-color: var(--vault-danger-border);
+}
+
+.note-banner span {
+  flex: 1 1 auto;
+}
+
+.note-reading {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: var(--vd-space-4) var(--vd-space-4) 64px;
+  overflow: auto;
+  line-height: 1.65;
+  outline: none;
+}
+
+.note-editor-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--vd-space-4);
+  box-sizing: border-box;
+}
+
+.note-editor {
+  height: 100%;
+}
+
+.note-loading {
+  flex: 1 1 auto;
+}
+
+.note-properties {
+  margin: 0 0 var(--vd-space-4);
+  padding: var(--vd-space-2) var(--vd-space-3);
+  border: 1px solid var(--vault-border);
+  border-radius: var(--vd-radius-control);
+  font-size: var(--vd-fs-small);
+}
+
+.note-property {
+  display: flex;
+  gap: var(--vd-space-3);
+}
+
+.note-property dt {
+  flex: 0 0 8em;
+  color: var(--vault-text-muted);
+}
+
+.note-property dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.note-body > :first-child {
+  margin-top: 0;
+}
+
+.note-body h1,
+.note-body h2,
+.note-body h3,
+.note-body h4,
+.note-body h5,
+.note-body h6 {
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+
+.note-body h1 { font-size: 1.8em; }
+.note-body h2 { font-size: 1.45em; }
+.note-body h3 { font-size: 1.2em; }
+.note-body h4,
+.note-body h5,
+.note-body h6 { font-size: 1em; }
+
+.note-body p,
+.note-body ul,
+.note-body ol,
+.note-body pre,
+.note-body table,
+.note-body blockquote {
+  margin: 0 0 0.9em;
+}
+
+.note-body ul,
+.note-body ol {
+  padding-left: 1.6em;
+}
+
+.note-body li > input[type="checkbox"] {
+  margin-right: 0.4em;
+}
+
+.note-body a {
+  color: var(--vault-primary);
+}
+
+.note-body a.wikilink.unresolved {
+  opacity: 0.65;
+  text-decoration-style: dashed;
+}
+
+.note-body code {
+  font-family: var(--vd-mono, ui-monospace, Menlo, monospace);
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--vault-chip);
+}
+
+.note-body pre {
+  padding: var(--vd-space-3);
+  border: 1px solid var(--vault-border);
+  border-radius: var(--vd-radius-control);
+  background: var(--vault-surface);
+  overflow: auto;
+}
+
+.note-body pre code {
+  padding: 0;
+  background: none;
+}
+
+.tok-comment { color: var(--vault-text-faint); font-style: italic; }
+.tok-string { color: #3a8f5a; }
+.tok-number { color: #b9651b; }
+.tok-keyword { color: var(--vault-primary); font-weight: 600; }
+html.dark .tok-string { color: #7fd09a; }
+html.dark .tok-number { color: #f0a868; }
+
+.note-body blockquote {
+  padding-left: var(--vd-space-3);
+  border-left: 3px solid var(--vault-border-strong);
+  color: var(--vault-text-muted);
+}
+
+.note-body table {
+  border-collapse: collapse;
+}
+
+.note-body th,
+.note-body td {
+  padding: 4px 10px;
+  border: 1px solid var(--vault-border);
+}
+
+.note-body img {
+  max-width: 100%;
+}
+
+.note-body hr {
+  border: none;
+  border-top: 1px solid var(--vault-border);
+  margin: 1.5em 0;
+}
+
+.note-body mark {
+  background: var(--vault-warning-bg);
+  color: inherit;
+  border-radius: 2px;
+}
+
+.note-tag {
+  display: inline-block;
+  padding: 0 0.5em;
+  border-radius: var(--vd-radius-chip);
+  background: var(--vault-primary-light);
+  color: var(--vault-primary);
+  font-size: 0.9em;
+}
+
+.note-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--vd-space-2);
+  margin-top: var(--vd-space-4);
+}
+
+.note-image-blocked {
+  color: var(--vault-text-muted);
+  font-style: italic;
+}
+
+.note-math-block {
+  text-align: center;
+  margin: 0.8em 0;
+  overflow-x: auto;
+}
+
+.note-math-img {
+  vertical-align: middle;
+}
+
+.note-math-error {
+  color: var(--vault-danger);
+}
+
+.note-embed.unresolved {
+  color: var(--vault-text-muted);
+  font-style: italic;
+}
+
+.note-embed-note.embedded {
+  display: block;
+  margin: 0 0 0.9em;
+  padding: 0 var(--vd-space-3);
+  border-left: 3px solid var(--vault-primary-border);
+  background: var(--vault-surface);
+  border-radius: 0 var(--vd-radius-control) var(--vd-radius-control) 0;
+}
+
+.callout {
+  margin: 0 0 0.9em;
+  border: 1px solid var(--callout-color, var(--vault-primary-border));
+  border-left-width: 4px;
+  border-radius: var(--vd-radius-control);
+  background: color-mix(in srgb, var(--callout-color, var(--vault-primary)) 8%, transparent);
+}
+
+.callout-title {
+  padding: 6px var(--vd-space-3);
+  font-weight: 600;
+  color: var(--callout-color, var(--vault-primary));
+}
+
+details.callout > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.callout-body {
+  padding: 0 var(--vd-space-3);
+}
+
+.callout-body > :last-child {
+  margin-bottom: var(--vd-space-3);
+}
+
+.callout[data-callout="warning"],
+.callout[data-callout="caution"],
+.callout[data-callout="attention"] { --callout-color: #d98e04; }
+.callout[data-callout="danger"],
+.callout[data-callout="error"],
+.callout[data-callout="bug"],
+.callout[data-callout="failure"],
+.callout[data-callout="fail"],
+.callout[data-callout="missing"] { --callout-color: #d64545; }
+.callout[data-callout="tip"],
+.callout[data-callout="hint"],
+.callout[data-callout="success"],
+.callout[data-callout="check"],
+.callout[data-callout="done"] { --callout-color: #2f9e6a; }
+.callout[data-callout="quote"],
+.callout[data-callout="cite"] { --callout-color: #8a8f98; }
+.callout[data-callout="question"],
+.callout[data-callout="help"],
+.callout[data-callout="faq"] { --callout-color: #b08800; }
+.callout[data-callout="example"] { --callout-color: #7a5af8; }
