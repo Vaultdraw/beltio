@@ -312,10 +312,13 @@ const plugin: Plugin = definePlugin({
               result.unsupportedImages +
               result.missingImages;
             ctx.ui.toast(
-              `Imported ${result.notes} notes and ${result.drawings} drawings from ${source.name}` +
-                (noPicture
+              `Imported ${result.notes} notes and ${
+                result.drawings
+              } drawings from ${source.name}${
+                noPicture
                   ? ` (${noPicture} images left as boxes: ${result.oversizedImages} over 4 MB, ${result.unsupportedImages} unsupported type, ${result.missingImages} not found)`
-                  : ""),
+                  : ""
+              }`,
             );
           }
           await target.open();

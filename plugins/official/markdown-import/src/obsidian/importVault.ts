@@ -102,7 +102,10 @@ export async function importObsidianVault(
   };
 
   /** Fills `bytes` of image items from the vault's attachments. */
-  const fillImages = async (items: PageItem[], fromDir: string): Promise<void> => {
+  const fillImages = async (
+    items: PageItem[],
+    fromDir: string,
+  ): Promise<void> => {
     for (const item of items) {
       if (item.type !== "image" || item.bytes) {
         continue;

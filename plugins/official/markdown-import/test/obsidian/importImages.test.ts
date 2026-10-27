@@ -7,7 +7,10 @@ import { describe, expect, test } from "vitest";
 
 import { fakeParseMarkdown } from "../../../../../sdk/api/shared/markdown";
 import { buildWidthTable, layoutNote } from "../../src/layout/index";
-import { importObsidianVault, MAX_EMBED_BYTES } from "../../src/obsidian/importVault";
+import {
+  importObsidianVault,
+  MAX_EMBED_BYTES,
+} from "../../src/obsidian/importVault";
 import { defaultOptions, fakeMeasure } from "../layout/fixtures";
 
 import type { NoteDoc, SourceFolder, TargetFolder } from "@vaultdraw/api";
@@ -29,7 +32,12 @@ const parse = (text: string): NoteDoc => {
   const blocks = text.split("\n").map((line, i) => {
     const m = /^IMG (.+)$/.exec(line);
     return m
-      ? ({ kind: "image", target: m[1], remote: /^https?:/.test(m[1]), range: [i, i] } as never)
+      ? ({
+          kind: "image",
+          target: m[1],
+          remote: /^https?:/.test(m[1]),
+          range: [i, i],
+        } as never)
       : ({ kind: "paragraph", text: line, range: [i, i] } as never);
   });
   return { ...fakeParseMarkdown(""), blocks };
@@ -47,7 +55,11 @@ const source = (files: Record<string, string | number>): SourceFolder => {
   return {
     name: "v",
     async list() {
-      return [...data].map(([path, b]) => ({ path, size: b.length, modifiedAt: 1 }));
+      return [...data].map(([path, b]) => ({
+        path,
+        size: b.length,
+        modifiedAt: 1,
+      }));
     },
     async readText(p) {
       return new TextDecoder().decode(data.get(p)!);
@@ -85,7 +97,8 @@ const run = async (files: Record<string, string | number>) => {
     onProgress: () => {},
     layout: async (doc) => {
       const opts = defaultOptions();
-      return layoutNote(doc, buildWidthTable(fakeMeasure, doc, opts), opts).parts;
+      return layoutNote(doc, buildWidthTable(fakeMeasure, doc, opts), opts)
+        .parts;
     },
   });
   const embedded = (note: string) =>
@@ -121,18 +134,27 @@ describe("image forms in an import", () => {
   });
 
   test("a note's own folder wins over a same-named file elsewhere", async () => {
-    const files = { "a/Note.md": "IMG pic.png", "a/pic.png": 5, "b/pic.png": 9 };
+    const files = {
+      "a/Note.md": "IMG pic.png",
+      "a/pic.png": 5,
+      "b/pic.png": 9,
+    };
     const { embedded } = await run(files);
     expect(embedded("a/Note.excalidraw")[0].bytes).toHaveLength(5);
   });
 
   test("over the cap, unsupported and remote images are counted, not embedded", async () => {
     const { r, embedded } = await run({
-      "Note.md": "IMG big.png\nIMG x.avif\nIMG https://example.com/r.png\nIMG gone.png",
+      "Note.md":
+        "IMG big.png\nIMG x.avif\nIMG https://example.com/r.png\nIMG gone.png",
       "big.png": MAX_EMBED_BYTES + 1,
       "x.avif": 10,
     });
     expect(embedded("Note.excalidraw").filter((i) => i.bytes)).toHaveLength(0);
-    expect(r).toMatchObject({ oversizedImages: 1, unsupportedImages: 1, missingImages: 1 });
+    expect(r).toMatchObject({
+      oversizedImages: 1,
+      unsupportedImages: 1,
+      missingImages: 1,
+    });
   });
 });

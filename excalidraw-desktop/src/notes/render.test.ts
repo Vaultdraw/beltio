@@ -102,10 +102,16 @@ describe("other Obsidian syntax", () => {
         "| ![[d.svg\\|40]] | ![[Ünï/e e.png]] |",
       ].join("\n"),
     );
-    const targets = [...out.matchAll(/data-embed="image" data-target="([^"]+)"/g)].map(
-      (m) => m[1],
-    );
-    expect(targets).toEqual(["a.png", "b.gif", "c.webp", "d.svg", "Ünï/e e.png"]);
+    const targets = [
+      ...out.matchAll(/data-embed="image" data-target="([^"]+)"/g),
+    ].map((m) => m[1]);
+    expect(targets).toEqual([
+      "a.png",
+      "b.gif",
+      "c.webp",
+      "d.svg",
+      "Ünï/e e.png",
+    ]);
     expect(out).toContain('data-alias="40"');
   });
 

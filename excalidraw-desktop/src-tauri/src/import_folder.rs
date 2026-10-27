@@ -72,11 +72,20 @@ fn title(map: &Map<String, Value>, default: &str) -> std::result::Result<String,
 
 /// Native folder picker for a source. `None` when cancelled.
 fn pick_source_dir(title: &str) -> Option<std::path::PathBuf> {
+    // Trial builds (`smoke-test`, `scripts/obsidian-trial.mjs`) answer the dialog from the environment.
+    #[cfg(feature = "smoke-test")]
+    if let Some(p) = std::env::var_os("VAULTDRAW_TRIAL_SRC").filter(|p| !p.is_empty()) {
+        return Some(p.into());
+    }
     rfd::FileDialog::new().set_title(title).pick_folder()
 }
 
 /// Native save dialog for a new vault folder. `None` when cancelled.
 fn pick_new_vault_dir(title: &str) -> Option<std::path::PathBuf> {
+    #[cfg(feature = "smoke-test")]
+    if let Some(p) = std::env::var_os("VAULTDRAW_TRIAL_OUT").filter(|p| !p.is_empty()) {
+        return Some(p.into());
+    }
     rfd::FileDialog::new().set_title(title).set_file_name("Imported vault").save_file()
 }
 

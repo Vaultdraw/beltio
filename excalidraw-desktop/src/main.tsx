@@ -146,7 +146,19 @@ void initSettings(ownerWindow)
     ownerWindow.requestAnimationFrame(() => mark("first-frame"));
     // Plugin host loads only when a plugin is enabled.
     ownerWindow.requestAnimationFrame(() => bootPlugins(ownerWindow));
-    if (import.meta.env.VITE_APP_PERF_TEST === "true") {
+    if (import.meta.env.VITE_APP_OBSIDIAN_TRIAL === "true") {
+      ownerWindow.setTimeout(() => {
+        void import("./smoke/obsidianTrial")
+          .then(({ runObsidianTrial }) => runObsidianTrial())
+          .catch(async (error: unknown) => {
+            const { invoke } = await import("@tauri-apps/api/core");
+            await invoke("smoke_finish", {
+              status: 1,
+              details: { startupFailure: String(error) },
+            });
+          });
+      }, 100);
+    } else if (import.meta.env.VITE_APP_PERF_TEST === "true") {
       ownerWindow.setTimeout(() => {
         void import("./perf/runDesktopPerf")
           .then(({ runDesktopPerf }) => runDesktopPerf())
