@@ -37,6 +37,7 @@ const ARRAYS = [
   "importers",
   "status_bar",
   "views",
+  "menus",
 ] as const;
 
 /** Drop a trailing `# comment` that is not inside a basic string. */
@@ -84,6 +85,7 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
     importers: [],
     status_bar: [],
     views: [],
+    menus: [],
   };
   let current: Table = top;
   let extra = false;
@@ -151,6 +153,12 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
         id: i.id as string,
         title: i.title as string,
         extensions: i.extensions as string[],
+      })),
+      menus: arrays.menus.map((m) => ({
+        surface: m.surface as "tree" | "tab" | "canvas",
+        command: m.command as string,
+        title: (m.title as string | undefined) ?? null,
+        kinds: (m.kinds as ("drawing" | "note" | "folder")[] | undefined) ?? [],
       })),
       views: arrays.views.map((v) => ({
         id: v.id as string,

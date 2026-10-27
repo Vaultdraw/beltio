@@ -23,6 +23,7 @@ import { panelFlag, togglePanel } from "../../slots/panelStore";
 import { toastStore } from "../../toasts/toastStore";
 import { registerTabKind } from "../../tabs/tabKinds";
 import { claimImporter } from "../importerMapAdmin";
+import { addMenuItems, beginMenuRun } from "../menuRegistry";
 import { registerPluginSettings } from "../settings/registry";
 
 import { ensureActive } from "./activation";
@@ -91,10 +92,17 @@ function runReal(rt: PluginRuntime, short: string) {
     throw err;
   };
   const run = () => {
+    // A menu item that started this command makes its target readable until the command ends.
+    const end = beginMenuRun(id, `${id}.${short}`);
     try {
       const result = handler();
-      return result instanceof Promise ? result.catch(failed) : result;
+      if (result instanceof Promise) {
+        return result.catch(failed).finally(end);
+      }
+      end();
+      return result;
     } catch (err) {
+      end();
       return failed(err);
     }
   };
@@ -187,6 +195,19 @@ export function registerStubs(rt: PluginRuntime): () => void {
       ),
     );
   }
+  // Declared menu items are shown by the menus themselves; choosing one runs a stub command.
+  const menus = (info.contributes.menus ?? []).map((m) => ({
+    pluginId: id,
+    pluginName: info.name,
+    surface: m.surface,
+    title:
+      m.title ??
+      info.contributes.commands.find((c) => c.id === m.command)?.title ??
+      m.command,
+    command: `${id}.${m.command}`,
+    kinds: m.kinds,
+  }));
+  disposers.push(addMenuItems(menus));
   // A declared view claims its note names now; the plugin loads when the first such tab shows.
   for (const v of info.contributes.views ?? []) {
     const names = v.extensions.map((e) => e.toLowerCase());

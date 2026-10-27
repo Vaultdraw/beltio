@@ -11,6 +11,7 @@ import { createPortal } from "react-dom";
 
 import { entryDisplayName, stripDrawingExt } from "../vault/fileKind";
 
+import { getMenuItems, runMenuItem } from "../plugins/menuRegistry";
 import { getPreferences, updatePreferences } from "../vault/preferences";
 import { SORT_LABELS, SORT_ORDERS, type SortOrder } from "../vault/sortOrder";
 import { checkTreeDrop, getParentPath } from "../vault/treeStore";
@@ -1477,6 +1478,12 @@ const RowMenu = ({
     />
   );
 
+  // Items plugins declared for tree rows (`[[contributes.menus]]`), filtered by the row's kind.
+  const rowKind = isFolder ? "folder" : isDrawing ? "drawing" : "note";
+  const pluginItems = getMenuItems("tree").filter(
+    (it) => it.kinds.length === 0 || it.kinds.includes(rowKind),
+  );
+
   return (
     <MenuPopup
       x={state.x}
@@ -1539,6 +1546,29 @@ const RowMenu = ({
         <>
           <div className="vault-menu__separator" role="separator" />
           {item("Move to Trash", <IconTrash />, () => onTrash(entry), true)}
+        </>
+      )}
+      {pluginItems.length > 0 && (
+        <>
+          <div className="vault-menu__separator" role="separator" />
+          {pluginItems.map((it) => (
+            <MenuItem
+              key={it.command + it.title}
+              label={it.title}
+              icon={null}
+              onSelect={() => {
+                onClose();
+                runMenuItem(it, {
+                  surface: "tree",
+                  path: entry.path,
+                  kind:
+                    entry.kind === "excalidrawMd"
+                      ? "other"
+                      : (rowKind as "drawing" | "note" | "folder"),
+                });
+              }}
+            />
+          ))}
         </>
       )}
     </MenuPopup>

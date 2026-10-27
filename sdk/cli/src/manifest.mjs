@@ -44,6 +44,10 @@ export const RESERVED_EXTENSIONS = [
 const IMPORTER_KEYS = new Set(["id", "title", "extensions"]);
 const MAX_STATUS_ITEMS = 8;
 const MAX_VIEWS = 8;
+const MAX_MENUS = 16;
+const MENU_KEYS = new Set(["surface", "command", "title", "kinds"]);
+const MENU_SURFACES = ["tree", "tab", "canvas"];
+const TREE_KINDS = ["drawing", "note", "folder"];
 const NOTE_EXTENSIONS = ["md", "markdown", "excalidraw.md"];
 const STATUS_KEYS = new Set(["id", "title", "align", "priority", "command"]);
 const VIEW_KEYS = new Set(["id", "title", "extensions"]);
@@ -365,6 +369,79 @@ function checkPermissions(list, err) {
 }
 
 /**
+ * @param {Record<string, any>[]} menus
+ * @param {Record<string, any>[]} commands
+ * @param {(code: string, message: string) => void} err
+ */
+function checkMenus(menus, commands, err) {
+  const ids = new Set(commands.map((c) => c.id));
+  const seen = new Set();
+  for (const x of menus) {
+    for (const k of Object.keys(x)) {
+      if (!MENU_KEYS.has(k)) {
+        err("unknown-key", `Unknown key '${k}' in a menu item`);
+      }
+    }
+    for (const k of ["surface", "command"]) {
+      if (!(k in x)) {
+        err("missing-key", `A menu item is missing '${k}'`);
+      }
+    }
+    if ("surface" in x && !MENU_SURFACES.includes(x.surface)) {
+      err(
+        "contribution-invalid",
+        `menu item surface must be one of ${MENU_SURFACES.join(", ")}`,
+      );
+    }
+    if ("command" in x && !ids.has(x.command)) {
+      err(
+        "menu-command-unknown",
+        `Menu item names command ${show(
+          x.command,
+        )}, which the plugin does not declare`,
+      );
+    }
+    if (
+      "title" in x &&
+      (typeof x.title !== "string" ||
+        x.title.trim() === "" ||
+        chars(x.title) > MAX_TITLE)
+    ) {
+      err(
+        "title-invalid",
+        `menu item title must be 1 to ${MAX_TITLE} characters`,
+      );
+    }
+    if ("kinds" in x) {
+      if (
+        !isStringArray(x.kinds) ||
+        !x.kinds.every((k) => TREE_KINDS.includes(k))
+      ) {
+        err(
+          "contribution-invalid",
+          `menu item kinds must be a list of ${TREE_KINDS.join(", ")}`,
+        );
+      } else if (x.kinds.length > 0 && x.surface !== "tree") {
+        err(
+          "contribution-invalid",
+          "menu item kinds applies to the tree surface only",
+        );
+      }
+    }
+    const key = `${x.surface}/${x.command}`;
+    if (seen.has(key)) {
+      err(
+        "contribution-duplicate",
+        `Duplicate menu item for command ${show(
+          x.command,
+        )} on the same surface`,
+      );
+    }
+    seen.add(key);
+  }
+}
+
+/**
  * @param {Record<string, any>[]} views
  * @param {(code: string, message: string) => void} err
  */
@@ -455,11 +532,12 @@ function checkContributes(c, err) {
         "importers",
         "status_bar",
         "views",
+        "menus",
       ].includes(k)
     ) {
       err(
         "unknown-key",
-        `Unknown key 'contributes.${k}' (use commands, panels, settings, importers, status_bar or views)`,
+        `Unknown key 'contributes.${k}' (use commands, panels, settings, importers, status_bar, views or menus)`,
       );
     }
   }
@@ -484,6 +562,10 @@ function checkContributes(c, err) {
   const importers = list("importers");
   const statusBar = list("status_bar");
   const views = list("views");
+  const menus = list("menus");
+  if (menus.length > MAX_MENUS) {
+    err("too-many", `Too many menu items (max ${MAX_MENUS})`);
+  }
   if (views.length > MAX_VIEWS) {
     err("too-many", `Too many views (max ${MAX_VIEWS})`);
   }
@@ -567,6 +649,7 @@ function checkContributes(c, err) {
   checkImporters(importers, err);
   checkStatusBar(statusBar, commands, err);
   checkViews(views, err);
+  checkMenus(menus, commands, err);
   for (const s of settings) {
     const field = (k) => typeof s[k] === "string" && s[k] !== "";
     if (!field("key") || !field("type")) {

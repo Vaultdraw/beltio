@@ -123,6 +123,22 @@ export interface ViewContribution {
 }
 
 /**
+ * A context menu item declared in plugin.toml (`[[contributes.menus]]`).
+ *
+ * @since 0.12.0
+ */
+export interface MenuContribution {
+  /** @since 0.12.0 */
+  surface: "tree" | "tab" | "canvas";
+  /** Short id of the command it runs. @since 0.12.0 */
+  command: string;
+  /** The item's text, or null for the command's title. @since 0.12.0 */
+  title: string | null;
+  /** Tree rows it shows for; empty means all. @since 0.12.0 */
+  kinds: ("drawing" | "note" | "folder")[];
+}
+
+/**
  * Everything a plugin declares it adds to the app.
  *
  * @since 0.1.0
@@ -152,4 +168,10 @@ export interface PluginContributions {
    * @since 0.11.0
    */
   views?: ViewContribution[];
+  /**
+   * Absent when the app that reads the manifest is older than 0.12.0.
+   *
+   * @since 0.12.0
+   */
+  menus?: MenuContribution[];
 }

@@ -6,6 +6,8 @@
 
 import { useLayoutEffect, useRef } from "react";
 
+import { getMenuItems, runMenuItem } from "../plugins/menuRegistry";
+
 import type { TabId } from "./types";
 
 export type TabMenuAction =
@@ -39,7 +41,11 @@ export interface TabContextMenuProps extends TabMenuHandlers {
 const MENU_WIDTH = 210;
 const ITEM_HEIGHT = 28;
 
-type Entry = { action: TabMenuAction | "sep"; label: string; run?: () => void };
+type Entry = {
+  action: TabMenuAction | "sep" | `plugin:${number}`;
+  label: string;
+  run?: () => void;
+};
 
 export const buildEntries = ({
   tab,
@@ -89,6 +95,14 @@ export const buildEntries = ({
         },
     ],
     [{ action: "newWindow", label: "Open in new window" }],
+    // Items plugins declared (`[[contributes.menus]]`); none without plugins.
+    getMenuItems("tab").map(
+      (item, i): Entry => ({
+        action: `plugin:${i}`,
+        label: item.title,
+        run: () => runMenuItem(item, { surface: "tab", path: tab.path }),
+      }),
+    ),
   ];
   const out: Entry[] = [];
   for (const g of groups) {

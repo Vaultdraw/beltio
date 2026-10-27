@@ -1344,3 +1344,30 @@ fn view_extension_rules() {
     let many: String = (0..9).map(|i| format!("\n[[contributes.views]]\nid = \"v{i}\"\ntitle = \"V\"\nextensions = [\"v{i}.md\"]\n")).collect();
     bad(&with(&many), "Too many views");
 }
+
+// ---- P6: context menu items in the manifest ----
+
+fn menu(extra: &str) -> String {
+    with(&format!("\n[[contributes.commands]]\nid = \"go\"\ntitle = \"Go\"\n[[contributes.menus]]\nsurface = \"tree\"\ncommand = \"go\"\n{extra}"))
+}
+
+#[test]
+fn menus_parse_and_serialise() {
+    let m = manifest::parse(&menu("title = \"Do it\"\nkinds = [\"note\"]\n")).unwrap();
+    assert_eq!(m.contributes.menus[0].kinds, ["note"]);
+    let v = serde_json::to_value(&m).unwrap();
+    assert_eq!(v["contributes"]["menus"][0], json!({"surface": "tree", "command": "go", "title": "Do it", "kinds": ["note"]}));
+    assert!(manifest::parse(&minimal("a-b")).unwrap().contributes.menus.is_empty());
+}
+
+#[test]
+fn menu_rules() {
+    bad(&menu("kinds = [\"file\"]\n"), "unknown");
+    bad(&menu("title = \"\"\n"), "title");
+    bad(&with("\n[[contributes.menus]]\nsurface = \"tab\"\ncommand = \"nope\"\n"), "does not declare");
+    bad(&with("\n[[contributes.commands]]\nid = \"go\"\ntitle = \"Go\"\n[[contributes.menus]]\nsurface = \"tab\"\ncommand = \"go\"\nkinds = [\"note\"]\n"), "tree surface only");
+    bad(&with("\n[[contributes.commands]]\nid = \"go\"\ntitle = \"Go\"\n[[contributes.menus]]\nsurface = \"toolbar\"\ncommand = \"go\"\n"), "unknown variant");
+    bad(&menu("[[contributes.menus]]\nsurface = \"tree\"\ncommand = \"go\"\n"), "Duplicate menu item");
+    let many: String = (0..17).map(|i| format!("\n[[contributes.menus]]\nsurface = \"canvas\"\ncommand = \"c{i}\"\n")).collect();
+    bad(&with(&many), "Too many menu items");
+}

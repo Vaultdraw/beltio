@@ -140,6 +140,13 @@
           "type": "array",
           "maxItems": 8,
           "items": { "$ref": "#/definitions/view" }
+        },
+        "menus": {
+          "title": "Menu items",
+          "description": "Items the plugin adds to right-click menus, written as [[contributes.menus]]. At most 16. Each runs one of the plugin's commands; the app adds it without loading plugin code. Read where it was chosen with ctx.menus.target().",
+          "type": "array",
+          "maxItems": 16,
+          "items": { "$ref": "#/definitions/menu" }
         }
       },
       "additionalProperties": false
@@ -164,6 +171,47 @@
     }
   },
   "definitions": {
+    "menu": {
+      "title": "Menu item",
+      "description": "A command in a right-click menu. A surface and command pair appears once.",
+      "type": "object",
+      "required": ["surface", "command"],
+      "properties": {
+        "surface": {
+          "title": "Menu surface",
+          "description": "Where the item appears: \"tree\" (a file or folder row in the navigator), \"tab\" (a tab) or \"canvas\" (the drawing's right-click menu).",
+          "type": "string",
+          "enum": ["tree", "tab", "canvas"]
+        },
+        "command": {
+          "title": "Menu command",
+          "description": "Short id of a command this plugin declares. It runs when the item is chosen.",
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+        },
+        "title": {
+          "title": "Menu item title",
+          "description": "The text of the item. Default: the command's title. 1 to 200 characters, not blank.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "\\S"
+        },
+        "kinds": {
+          "title": "Row kinds",
+          "description": "Tree surface only: show the item for these rows only. Any of \"drawing\", \"note\", \"folder\". Empty or absent means all.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "title": "Row kind",
+            "description": "One kind of tree row.",
+            "type": "string",
+            "enum": ["drawing", "note", "folder"]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "view": {
       "title": "View",
       "description": "A view of one note type. Provide its component with ctx.views.register in activate().",

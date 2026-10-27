@@ -6,6 +6,7 @@ Plugins can add small pieces of interface. Each is declared in `plugin.toml`, so
 | --- | --- | --- | --- |
 | [Status bar item](#status-bar) | `[[contributes.status_bar]]` | `ctx.statusBar.set` | 0.10.0 |
 | [View of a note type](#views) | `[[contributes.views]]` | `ctx.views.register` | 0.11.0 |
+| [Context menu item](#context-menus) | `[[contributes.menus]]` | `ctx.menus.target` | 0.12.0 |
 
 ## Status bar
 
@@ -68,3 +69,39 @@ ctx.views.register("checklist", ({ path, file, openPath }) => {
 - **Notes off.** Notes appear in the file tree while the notes extension is on; turn it off and the note files are not listed, so views have nothing to open.
 
 Example: [`sdk/examples/checklist-view`](../examples/checklist-view/plugin.toml). In tests, `plugin.notes.seed(path, text)` puts a note on the fake disk and `plugin.openView(path)` opens it in its view.
+
+## Context menus
+
+A plugin adds an item to the right-click menu of a file row in the navigator, a tab, or the canvas. The item runs one of the plugin's commands, so it is also in the palette and can be given a key.
+
+```toml
+[[contributes.commands]]
+id = "where"
+title = "Menu demo: where was I chosen?"
+
+[[contributes.menus]]
+surface = "tree"                 # "tree", "tab" or "canvas"
+command = "where"                # a command this plugin declares
+title = "Where was I chosen?"    # optional; default: the command's title
+kinds = ["drawing", "note"]      # optional, tree only; default: all rows (drawing, note, folder)
+```
+
+```ts
+ctx.commands.register("where", () => {
+  const t = ctx.menus.target(); // { surface, path, kind?, at? } or null
+  ctx.ui.toast(t ? `${t.surface}: ${t.path}` : "Not from a menu");
+});
+```
+
+| Surface | Where | `target()` |
+| --- | --- | --- |
+| `tree` | a file or folder row (right-click or "More actions") | `path` of the row, `kind` of `drawing`, `note`, `folder` or `other` |
+| `tab` | a tab | `path` of the tab (null for the home tab) |
+| `canvas` | the drawing's right-click menu | `path` of the open drawing, `at` the click in scene coordinates |
+
+- **Lazy.** The app adds the items without loading the plugin; it loads when an item is chosen. With no plugin item a menu is exactly as before.
+- **`target()`** answers only while the command that a menu item started is running. From the palette or a key it returns null, so handle both.
+- **Order.** Plugin items come last, after a separator, in the order plugins registered. A surface and command pair appears once per plugin; at most 16 items per plugin.
+- **No title clash check.** Two plugins can add items with the same text; the menu shows both.
+
+Example: [`sdk/examples/menu-demo`](../examples/menu-demo/plugin.toml). In tests, `plugin.menuItems(surface, kind)` lists the items and `plugin.chooseMenuItem(surface, title, target)` chooses one.

@@ -23,6 +23,7 @@ import { FakeNoteFiles } from "../../notes/FakeNoteFiles";
 import { setNoteFiles } from "../../notes/noteBackend";
 import { tabKindFor } from "../../tabs/tabKinds";
 import { TabKindView } from "../../tabs/TabKindView";
+import { getMenuItems, runMenuItem } from "../menuRegistry";
 import { getStatusItems } from "../host/statusBarRegistry";
 import { notifyAppearanceChanged } from "../../vault/appearance";
 import {
@@ -48,6 +49,7 @@ import { createFakeScene, type FakeScene } from "./fakeScene";
 import type {
   Json,
   NewElement,
+  MenuTarget,
   Plugin,
   StatusBarContribution,
   ThemeMode,
@@ -72,6 +74,10 @@ export type TestManifest = Partial<Omit<PluginInfo, "contributes">> & {
     importers?: (Partial<ImporterDecl> & {
       id: string;
       extensions: string[];
+    })[];
+    menus?: (Partial<MenuDecl> & {
+      surface: MenuDecl["surface"];
+      command: string;
     })[];
     views?: (Partial<ViewDecl> & { id: string; extensions: string[] })[];
     status_bar?: (Partial<StatusBarContribution> & { id: string })[];
@@ -148,6 +154,7 @@ export interface FakeEvents {
   emit<K extends keyof AppEventMap>(name: K, payload: AppEventMap[K]): void;
 }
 
+type MenuDecl = NonNullable<PluginInfo["contributes"]["menus"]>[number];
 type ViewDecl = NonNullable<PluginInfo["contributes"]["views"]>[number];
 
 /** A status bar item as the user would see it. */
@@ -167,6 +174,17 @@ export interface TestPlugin {
   run(shortId: string): Promise<void>;
   /** Opens a panel by short id and renders the plugin panels host. */
   openPanel(shortId: string): Promise<RenderResult>;
+  /** The menu items shown on a surface (for tree rows, those that apply to `kind`). */
+  menuItems(
+    surface: MenuTarget["surface"],
+    kind?: "drawing" | "note" | "folder",
+  ): { title: string; command: string }[];
+  /** Chooses a menu item by its text, as the user would; `target` is what `ctx.menus.target()` returns. */
+  chooseMenuItem(
+    surface: MenuTarget["surface"],
+    title: string,
+    target?: Partial<Omit<MenuTarget, "surface">>,
+  ): Promise<void>;
   /** The notes a view can read, by vault-relative path. */
   notes: {
     seed(path: string, text: string): void;
@@ -239,6 +257,7 @@ const normalise = (m: TestManifest): PluginInfo => {
       })),
       settings: c.settings ?? [],
       importers: (c.importers ?? []).map((x) => ({ title: x.id, ...x })),
+      menus: (c.menus ?? []).map((x) => ({ title: null, kinds: [], ...x })),
       views: (c.views ?? []).map((x) => ({ title: x.id, ...x })),
       status_bar: (c.status_bar ?? []).map((x) => ({
         title: x.id,
@@ -470,6 +489,29 @@ export async function boot(
       const view = render(<PluginPanels />);
       await flush();
       return view;
+    },
+    menuItems: (surface, kind) =>
+      getMenuItems(surface)
+        .filter(
+          (m) =>
+            m.pluginId === id &&
+            (m.kinds.length === 0 || (!!kind && m.kinds.includes(kind))),
+        )
+        .map((m) => ({
+          title: m.title,
+          command: m.command.slice(id.length + 1),
+        })),
+    async chooseMenuItem(surface, title, target = {}) {
+      const item = getMenuItems(surface).find(
+        (m) => m.pluginId === id && m.title === title,
+      );
+      if (!item) {
+        throw new Error(`no ${surface} menu item "${title}"`);
+      }
+      await act(async () => {
+        runMenuItem(item, { surface, path: null, ...target });
+      });
+      await flush();
     },
     notes: {
       seed: (path, text) => noteFiles.setOnDisk(path, text),

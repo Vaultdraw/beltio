@@ -75,6 +75,11 @@ const normalise = (m: TestManifest) => {
         title: x.id,
         ...x,
       })),
+      menus: (c.menus ?? []).map((x) => ({
+        title: null,
+        kinds: [],
+        ...x,
+      })),
       views: (c.views ?? []).map((x) => ({ title: x.id, ...x })),
       status_bar: (c.status_bar ?? []).map((x) => ({
         title: x.id,
@@ -126,6 +131,8 @@ export async function boot(
     info,
     run: host.run,
     openPanel: host.openPanel,
+    menuItems: host.menuItems,
+    chooseMenuItem: host.chooseMenuItem,
     notes: host.notes,
     openView: host.openView,
     openedFromViews: host.openedFromViews,

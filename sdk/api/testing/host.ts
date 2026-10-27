@@ -61,6 +61,7 @@ import type {
   ImportersApi,
   Json,
   MarkdownParseOptions,
+  MenuTarget,
   Plugin,
   ViewProps,
   PluginContext,
@@ -138,6 +139,17 @@ export interface MockHost {
   startup(): Promise<void>;
   run(short: string): Promise<void>;
   openPanel(short: string): Promise<RenderResult>;
+  /** The menu items shown on a surface (for tree rows, those that apply to `kind`). */
+  menuItems(
+    surface: MenuTarget["surface"],
+    kind?: "drawing" | "note" | "folder",
+  ): { title: string; command: string }[];
+  /** Chooses a menu item by its text, as the user would; `target` is what `ctx.menus.target()` returns. */
+  chooseMenuItem(
+    surface: MenuTarget["surface"],
+    title: string,
+    target?: Partial<Omit<MenuTarget, "surface">>,
+  ): Promise<void>;
   /** The notes a view can read, by vault-relative path. */
   notes: {
     seed(path: string, text: string): void;
@@ -272,6 +284,14 @@ export function createMockHost(
   );
   const viewNotes = createViewNotes();
   const opened_views: { path: string; newTab: boolean }[] = [];
+  const menuItems = (info.contributes.menus ?? []).map((m) => ({
+    ...m,
+    title:
+      m.title ??
+      info.contributes.commands.find((c) => c.id === m.command)?.title ??
+      m.command,
+  }));
+  let menuTarget: MenuTarget | null = null;
 
   // --- log, errors, toasts ---
   const logLine = (level: PluginLogLine["level"], text: string) => {
@@ -488,6 +508,7 @@ export function createMockHost(
     let importersApi: ImportersApi | undefined;
     let statusBarApi: PluginContext["statusBar"] | undefined;
     let viewsApi: PluginContext["views"] | undefined;
+    let menusApi: PluginContext["menus"] | undefined;
     let pagesApi: PluginContext["pages"] | undefined;
     let foldersApi: PluginContext["folders"] | undefined;
     const ctx: PluginContext = {
@@ -671,6 +692,9 @@ export function createMockHost(
             });
           },
         });
+      },
+      get menus() {
+        return (menusApi ??= { target: () => menuTarget });
       },
       get views() {
         return (viewsApi ??= {
@@ -1143,6 +1167,28 @@ export function createMockHost(
         view ??= mount(deps);
       });
       return view!;
+    },
+    menuItems: (surface, kind) =>
+      menuItems
+        .filter(
+          (m) =>
+            m.surface === surface &&
+            (m.kinds.length === 0 || (!!kind && m.kinds.includes(kind))),
+        )
+        .map((m) => ({ title: m.title, command: m.command })),
+    async chooseMenuItem(surface, title, target = {}) {
+      const item = menuItems.find(
+        (m) => m.surface === surface && m.title === title,
+      );
+      if (!item) {
+        throw new Error(`no ${surface} menu item "${title}"`);
+      }
+      menuTarget = { surface, path: null, ...target };
+      try {
+        await act(() => runCommand(item.command));
+      } finally {
+        menuTarget = null;
+      }
     },
     notes: { seed: viewNotes.seed, text: viewNotes.text },
     async openView(path) {

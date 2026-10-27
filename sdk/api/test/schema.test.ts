@@ -40,6 +40,8 @@ const NOT_EXPRESSIBLE: Record<string, string> = {
   "dev-true": "valid for the app; only a packaged manifest must not set it",
   "contribution-duplicate": "uniqueness of a property of array items",
   "data-key-reserved": "depends on the plugin id (plugins.<id>)",
+  "menu-command-unknown":
+    "a reference to a command id declared elsewhere in the manifest",
   "status-command-unknown":
     "a reference to a command id declared elsewhere in the manifest",
 };

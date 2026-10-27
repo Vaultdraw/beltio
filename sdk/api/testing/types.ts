@@ -2,6 +2,8 @@ import type {
   AppEventMap,
   CommandContribution,
   ImporterContribution,
+  MenuContribution,
+  MenuTarget,
   StatusBarContribution,
   ViewContribution,
   Json,
@@ -54,6 +56,10 @@ export interface TestManifest {
     importers?: (Partial<ImporterContribution> & {
       id: string;
       extensions: string[];
+    })[];
+    menus?: (Partial<MenuContribution> & {
+      surface: MenuContribution["surface"];
+      command: string;
     })[];
     views?: (Partial<ViewContribution> & {
       id: string;
@@ -217,6 +223,17 @@ export interface TestPlugin {
   run(shortId: string): Promise<void>;
   /** Opens a panel by short id and renders it. */
   openPanel(shortId: string): Promise<PanelView>;
+  /** The menu items shown on a surface (for tree rows, those that apply to `kind`). */
+  menuItems(
+    surface: MenuTarget["surface"],
+    kind?: "drawing" | "note" | "folder",
+  ): { title: string; command: string }[];
+  /** Chooses a menu item by its text, as the user would; `target` is what `ctx.menus.target()` returns. */
+  chooseMenuItem(
+    surface: MenuTarget["surface"],
+    title: string,
+    target?: Partial<Omit<MenuTarget, "surface">>,
+  ): Promise<void>;
   /** The notes a view can read, by vault-relative path. */
   notes: {
     seed(path: string, text: string): void;

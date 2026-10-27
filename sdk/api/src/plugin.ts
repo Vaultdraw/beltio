@@ -4,6 +4,7 @@ import type { EventsApi } from "./events";
 import type { HostApi } from "./host";
 import type { ImportersApi } from "./importers";
 import type { MarkdownApi } from "./markdown";
+import type { MenusApi } from "./menus";
 import type { PluginManifestInfo } from "./manifest";
 import type { PagesApi } from "./pages";
 import type { PanelsApi } from "./panels";
@@ -97,6 +98,8 @@ export interface PluginContext {
   readonly statusBar: StatusBarApi;
   /** @since 0.11.0 */
   readonly views: ViewsApi;
+  /** @since 0.12.0 */
+  readonly menus: MenusApi;
   /**
    * Disposed in reverse order on disable/reload/quit.
    *

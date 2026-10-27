@@ -9,6 +9,7 @@ export type { AppEventMap, EventsApi } from "./events";
 export type {
   CommandContribution,
   ImporterContribution,
+  MenuContribution,
   StatusBarContribution,
   ViewContribution,
   PanelContribution,
@@ -89,6 +90,7 @@ export type {
   SettingValue,
 } from "./settings";
 export type { StatusBarApi, StatusBarState } from "./statusBar";
+export type { MenuTarget, MenusApi } from "./menus";
 export type { ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { FontsApi, TextApi, TextFont } from "./text";

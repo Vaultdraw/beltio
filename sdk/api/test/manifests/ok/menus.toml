@@ -1,0 +1,25 @@
+# code: none
+# rust: ok
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+
+[[contributes.commands]]
+id = "go"
+title = "Go"
+
+[[contributes.menus]]
+surface = "tree"
+command = "go"
+title = "Go there"
+kinds = ["note", "drawing"]
+
+[[contributes.menus]]
+surface = "tab"
+command = "go"
+
+[[contributes.menus]]
+surface = "canvas"
+command = "go"

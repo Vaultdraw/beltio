@@ -17,6 +17,8 @@ const MAX_PERMISSIONS: usize = 8;
 const MAX_IMPORTERS: usize = 8;
 const MAX_STATUS_ITEMS: usize = 8;
 const MAX_VIEWS: usize = 8;
+const MAX_MENUS: usize = 16;
+const TREE_KINDS: [&str; 3] = ["drawing", "note", "folder"];
 const MAX_IMPORTER_EXTENSIONS: usize = 8;
 const MAX_DATA_KEY: usize = 64;
 const MAX_EXTENSION: usize = 32;
@@ -82,6 +84,27 @@ pub(crate) struct Importer {
     pub extensions: Vec<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum Surface {
+    Tree,
+    Tab,
+    Canvas,
+}
+
+/// A context menu item (`[[contributes.menus]]`): runs a command of the plugin from a right-click menu.
+/// `kinds` (tree only) limits it to `drawing`, `note` or `folder` rows; empty means all.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct MenuItem {
+    pub surface: Surface,
+    pub command: String,
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub kinds: Vec<String>,
+}
+
 /// A view of a file type in the main pane (`[[contributes.views]]`): notes whose name ends in one of
 /// `extensions` (`kanban.md`) open in the plugin's component instead of the Markdown note view.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -133,6 +156,8 @@ pub(crate) struct Contributes {
     pub status_bar: Vec<StatusItem>,
     #[serde(default)]
     pub views: Vec<View>,
+    #[serde(default)]
+    pub menus: Vec<MenuItem>,
 }
 
 fn yes() -> bool {
@@ -294,6 +319,31 @@ fn check_views(list: &[View]) -> Result<(), String> {
     Ok(())
 }
 
+fn check_menus(list: &[MenuItem], commands: &[Command]) -> Result<(), String> {
+    if list.len() > MAX_MENUS {
+        return Err(format!("Too many menu items (max {MAX_MENUS})"));
+    }
+    let mut seen = HashSet::new();
+    for x in list {
+        if !commands.iter().any(|c| c.id == x.command) {
+            return Err(format!("Menu item names command '{}', which the plugin does not declare", x.command));
+        }
+        if let Some(t) = &x.title {
+            check_title("menu item title", t)?;
+        }
+        if !x.kinds.is_empty() && x.surface != Surface::Tree {
+            return Err("Menu item 'kinds' applies to the tree surface only".into());
+        }
+        if let Some(k) = x.kinds.iter().find(|k| !TREE_KINDS.contains(&k.as_str())) {
+            return Err(format!("Menu item kind '{k}' is unknown (use drawing, note or folder)"));
+        }
+        if !seen.insert((x.surface, x.command.as_str())) {
+            return Err(format!("Duplicate menu item for command '{}' on the same surface", x.command));
+        }
+    }
+    Ok(())
+}
+
 fn check_status_bar(list: &[StatusItem], commands: &[Command]) -> Result<(), String> {
     if list.len() > MAX_STATUS_ITEMS {
         return Err(format!("Too many status bar items (max {MAX_STATUS_ITEMS})"));
@@ -383,6 +433,7 @@ fn validate(raw: Raw) -> Result<Manifest, String> {
     check_importers(&c.importers)?;
     check_status_bar(&c.status_bar, &c.commands)?;
     check_views(&c.views)?;
+    check_menus(&c.menus, &c.commands)?;
     check_unique_ids("command", c.commands.iter().map(|x| x.id.as_str()))?;
     check_unique_ids("panel", c.panels.iter().map(|x| x.id.as_str()))?;
     for x in &c.commands {

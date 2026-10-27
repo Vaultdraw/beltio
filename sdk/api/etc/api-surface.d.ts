@@ -115,7 +115,7 @@ export interface ImportersApi {
 export type { CommandsApi } from "./commands";
 export type { Disposable } from "./disposable";
 export type { AppEventMap, EventsApi } from "./events";
-export type { CommandContribution, ImporterContribution, StatusBarContribution, ViewContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
+export type { CommandContribution, ImporterContribution, MenuContribution, StatusBarContribution, ViewContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
 export type { FolderEntry, FoldersApi, PickSourceOptions, PickTargetOptions, SourceFolder, TargetFolder, } from "./folders";
 export type { ApiVersion, HostApi } from "./host";
 export type { ImportersApi, Importer, ImportInput, ImportOptions, ImportResult, } from "./importers";
@@ -127,6 +127,7 @@ export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
 export type { BatchOptions, BatchResult, ElementId, ElementRef, ImageSource, FontFamilyName, NewElement, SceneContextApi, SceneElementDetail, SceneElement, SceneElementType, SceneOp, SceneOpIssue, } from "./scene";
 export type { SelectOption, SettingDecl, SettingScopeName, SettingsApi, SettingValue, } from "./settings";
 export type { StatusBarApi, StatusBarState } from "./statusBar";
+export type { MenuTarget, MenusApi } from "./menus";
 export type { ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { FontsApi, TextApi, TextFont } from "./text";
@@ -175,6 +176,12 @@ export interface ViewContribution {
     title: string;
     extensions: string[];
 }
+export interface MenuContribution {
+    surface: "tree" | "tab" | "canvas";
+    command: string;
+    title: string | null;
+    kinds: ("drawing" | "note" | "folder")[];
+}
 export interface PluginContributions {
     commands: CommandContribution[];
     panels: PanelContribution[];
@@ -182,6 +189,7 @@ export interface PluginContributions {
     importers?: ImporterContribution[];
     status_bar?: StatusBarContribution[];
     views?: ViewContribution[];
+    menus?: MenuContribution[];
 }
 
 // markdown.ts
@@ -299,6 +307,20 @@ export interface MarkdownParseOptions {
 }
 export interface MarkdownApi {
     parse(text: string, options?: MarkdownParseOptions): Promise<NoteDoc>;
+}
+
+// menus.ts
+export interface MenuTarget {
+    surface: "tree" | "tab" | "canvas";
+    path: string | null;
+    kind?: "drawing" | "note" | "folder" | "other";
+    at?: {
+        x: number;
+        y: number;
+    };
+}
+export interface MenusApi {
+    target(): MenuTarget | null;
 }
 
 // pages.ts
@@ -422,6 +444,7 @@ import type { EventsApi } from "./events";
 import type { HostApi } from "./host";
 import type { ImportersApi } from "./importers";
 import type { MarkdownApi } from "./markdown";
+import type { MenusApi } from "./menus";
 import type { PluginManifestInfo } from "./manifest";
 import type { PagesApi } from "./pages";
 import type { PanelsApi } from "./panels";
@@ -466,6 +489,7 @@ export interface PluginContext {
     readonly folders: FoldersApi;
     readonly statusBar: StatusBarApi;
     readonly views: ViewsApi;
+    readonly menus: MenusApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;
     setInterval(fn: () => void, ms: number): Disposable;

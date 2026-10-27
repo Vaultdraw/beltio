@@ -10,6 +10,8 @@ import { pluginSettingDecl } from "../settings/registry";
 
 import { cleanStatus } from "../../../../sdk/api/shared/statusBar";
 
+import { getMenuTarget } from "../menuRegistry";
+
 import { errorText, logLine, reportPluginError } from "./errors";
 import { guard } from "./guard";
 import { createHostApi } from "./hostContext";
@@ -47,6 +49,7 @@ import type {
   StorageApi,
   TextApi,
   ThemeApi,
+  MenusApi,
   VaultApi,
   ViewsApi,
   WorkspaceApi,
@@ -160,6 +163,7 @@ export function createPluginContext(
   let importersApi: ImportersApi | undefined;
   let statusBarApi: StatusBarApi | undefined;
   let viewsApi: ViewsApi | undefined;
+  let menusApi: MenusApi | undefined;
 
   const settingValue = (key: string) => getPluginSetting(id, key);
 
@@ -313,6 +317,9 @@ export function createPluginContext(
         };
       }
       return statusBarApi;
+    },
+    get menus() {
+      return (menusApi ??= { target: () => getMenuTarget(id) });
     },
     get views() {
       return (viewsApi ??= {

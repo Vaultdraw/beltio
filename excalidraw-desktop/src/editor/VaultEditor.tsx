@@ -31,6 +31,7 @@ import type {
   ExcalidrawImperativeAPI,
   ImageExportRequest,
 } from "@excalidraw/excalidraw/types";
+import type { HostContextMenuItem } from "@excalidraw/excalidraw/components/ContextMenu";
 
 import { stripDrawingExt } from "../vault/fileKind";
 
@@ -48,6 +49,7 @@ import {
 } from "../plugins/importerMap";
 import { OBSIDIAN_IMPORT_COMMAND_ID } from "../plugins/officialPlugins";
 import { useCanvasImportMenu } from "../canvasImport/useCanvasImportMenu";
+import { getMenuItems, runMenuItem } from "../plugins/menuRegistry";
 import {
   ACTION_KEYS_CONTEXT,
   bindActionCommands,
@@ -104,6 +106,7 @@ import { LoadingLine } from "./LoadingLine";
 import { useSceneSwap } from "./useSceneSwap";
 
 import type { EditorLinksWiring } from "./links/useVaultEditorLinks";
+
 import type { ScenePoint } from "../canvasImport/useCanvasImport";
 import type { SettingsTarget } from "../components/settings/schema";
 import type { LibraryStore } from "../library/libraryStore";
@@ -314,9 +317,34 @@ const VaultEditorComponent = ({
     );
   }, []);
 
-  const canvasContextMenuItems = useCanvasImportMenu(
+  const importMenuItems = useCanvasImportMenu(
     onImportFile,
     !readOnly && !disabled,
+  );
+  const menuPathRef = useRef(path);
+  menuPathRef.current = path;
+  /** The import item plus the items plugins declared for the canvas menu (none without plugins). */
+  const canvasContextMenuItems = useCallback(
+    (at: ScenePoint): HostContextMenuItem[] => {
+      const base = importMenuItems(at);
+      const plugin = getMenuItems("canvas");
+      return plugin.length === 0
+        ? base
+        : [
+            ...base,
+            ...plugin.map((it) => ({
+              name: `plugin-menu-${it.command}`,
+              label: it.title,
+              onSelect: () =>
+                runMenuItem(it, {
+                  surface: "canvas",
+                  path: menuPathRef.current ?? null,
+                  at: { x: at.x, y: at.y },
+                }),
+            })),
+          ];
+    },
+    [importMenuItems],
   );
   const pdfImportRef = useRef(pdfImport);
   pdfImportRef.current = pdfImport;
