@@ -822,7 +822,7 @@ pub fn run() {
                 #[cfg(feature = "smoke-test")]
                 let builder = builder.focused(!smoke::background_test());
                 #[cfg(feature = "smoke-test")]
-                let builder = if smoke::hidden_render() && std::env::var("VAULTDRAW_HR_THROTTLE").ok().as_deref() != Some("0") {
+                let builder = if smoke::hidden_render() {
                     builder.background_throttling(tauri::utils::config::BackgroundThrottlingPolicy::Disabled)
                 } else {
                     builder
@@ -859,8 +859,6 @@ pub fn run() {
                         watchdog::smoke_driver::start(&main_window);
                     }
                 }
-                #[cfg(feature = "smoke-test")]
-                hidden_render::keep_window_on_a_display(&main_window);
                 #[cfg(feature = "smoke-test")]
                 hidden_render::watch_window_state(&main_window);
                 #[cfg(not(feature = "smoke-test"))]

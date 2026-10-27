@@ -287,10 +287,9 @@ pub fn perf_foreground() -> bool {
     env::var("VAULTDRAW_PERF_FOREGROUND").ok().as_deref() == Some("1")
 }
 
-/// Test runs that keep rendering while hidden: background runs, and (experiment) foreground runs
-/// with `VAULTDRAW_HR_HARDEN_FG=1`.
+/// Test runs that try to keep rendering while hidden: background runs (not `--foreground`).
 pub fn hidden_render() -> bool {
-    test_run() && (!perf_foreground() || env::var("VAULTDRAW_HR_HARDEN_FG").ok().as_deref() == Some("1"))
+    test_run() && !perf_foreground()
 }
 
 /// A test run that stays in the background (the default for smoke and perf runs).
