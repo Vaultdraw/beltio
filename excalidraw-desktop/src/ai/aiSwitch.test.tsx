@@ -174,7 +174,7 @@ describe("AI switch", () => {
   });
 
   it("ai.copyMcpSetup copies the server entry and says what is still needed", async () => {
-    const writeText = vi.fn(() => Promise.resolve());
+    const writeText = vi.fn((_text: string) => Promise.resolve());
     Object.defineProperty(window.navigator, "clipboard", {
       value: { writeText },
       configurable: true,
@@ -182,7 +182,7 @@ describe("AI switch", () => {
     render(<AiHost win={window} />);
     run("ai.copyMcpSetup");
     await vi.waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
-    const copied = JSON.parse(writeText.mock.calls[0][0] as string);
+    const copied = JSON.parse(writeText.mock.calls[0][0]);
     expect(copied).toEqual({
       mcpServers: { vaultdraw: { command: "vaultdraw", args: ["mcp"] } },
     });
