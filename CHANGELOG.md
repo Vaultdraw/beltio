@@ -157,7 +157,7 @@ The plugin platform, Markdown notes with Obsidian vaults, Linux builds and memor
 ### Known limitations
 
 - The macOS build is still unsigned: right-click, Open the first time (or System Settings, Privacy & Security, Open Anyway).
-- Linux: x86_64 `.deb` and AppImage only; Linux arm64 is not built. Four Linux end-to-end tests still fail (see the release notes).
+- Linux: x86_64 `.deb` and AppImage only; Linux arm64 is not built. Four Linux end-to-end tests still fail: history panel copy/paste, the which-key popup, a page-mode drag clamp and a keystroke-speed test under emulation.
 - Plugins and the plugin API are still experimental; no automatic update yet.
 
 ## [0.1.2] - 2026-10-23

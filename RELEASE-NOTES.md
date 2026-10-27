@@ -24,6 +24,6 @@ Plugins, Markdown notes and Obsidian vaults, Linux builds, and memory work. Your
 ## Known limits
 
 - The macOS build is unsigned. First open: right-click, Open, or System Settings, Privacy & Security, Open Anyway.
-- Linux arm64 is not built. The Linux builds are new: the Linux end-to-end run still has a few known failures (see the release checklist).
+- Linux arm64 is not built. The Linux builds are new: the Linux end-to-end run still has 4 known failures (history panel copy/paste, the which-key popup, a page-mode drag clamp, a keystroke-speed test under emulation); a fix is in progress.
 - Plugins and the plugin API are experimental. No automatic update.
-- Memory: a typical session peaks near 550 MB in total, above the 400 MB goal.
+- Memory: everyday use (3 drawings, packaged, foreground) peaks at 336 MB in total, under the 400 MB goal, and idles near 220 MB. A 5,000-drawing vault still peaks high (about 900 MB; confirmation run pending).
