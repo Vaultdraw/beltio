@@ -12,7 +12,6 @@ import {
 import type { GraphSource } from "../../../plugins/official/graph/src/GraphSession";
 import type { GraphData } from "../../../plugins/official/graph/src/types";
 import type { VaultLinks } from "../links/types";
-import type { InvokeFn } from "../vault/DesktopVaultRepository";
 import type { VaultRepository } from "../vault/types";
 
 const EXT = ".excalidraw";
@@ -183,35 +182,4 @@ export class FakeVaultGraph implements GraphSource {
     this.layout = bytes;
     this.saves++;
   }
-}
-
-/** In-memory settings.toml behind `load_vault_settings` / `update_vault_settings` (dotted keys). */
-export function fakeVaultSettingsInvoke(
-  store: Record<string, unknown> = {},
-): InvokeFn & { store: Record<string, unknown> } {
-  const fn = (async (cmd: string, args?: unknown) => {
-    if (cmd === "load_vault_settings") {
-      const nested: Record<string, Record<string, unknown>> = {};
-      for (const [key, value] of Object.entries(store)) {
-        const [table, k] = key.split(".");
-        (nested[table] ??= {})[k] = value;
-      }
-      return { settings: nested };
-    }
-    if (cmd === "update_vault_settings") {
-      const { changes } = args as {
-        changes: { key: string; value: unknown }[];
-      };
-      for (const c of changes) {
-        if (c.value === null) {
-          delete store[c.key];
-        } else {
-          store[c.key] = c.value;
-        }
-      }
-    }
-    return undefined;
-  }) as InvokeFn & { store: Record<string, unknown> };
-  fn.store = store;
-  return fn;
 }

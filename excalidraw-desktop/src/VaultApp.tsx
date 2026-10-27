@@ -106,7 +106,6 @@ import { graphPanelStore } from "./activityBar/panelStores";
 import { getRegisteredHandler } from "./commands/handlerRegistry";
 import { closeInstallDialog } from "./theme/install/installStore";
 import { useThemeInstall } from "./theme/install/useThemeInstall";
-import { GRAPH_COMMAND_IDS } from "./commands/graphCommands";
 import { TabStrip } from "./tabs/TabStrip";
 import { useLayout, type Layout } from "./layout/useLayout";
 import { useUserCommands } from "./commands/useUserCommands";
@@ -2470,7 +2469,7 @@ export const VaultApp = ({
       },
     });
     return () => setWorkspaceBridge(null);
-  }, []);
+  }, [win]);
   useControlBridge(win, {
     uri: {
       vault: () => (vault ? { name: vault.name, path: vault.path } : null),

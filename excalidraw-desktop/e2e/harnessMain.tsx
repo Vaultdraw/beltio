@@ -22,10 +22,7 @@ import ideasNote from "../src/vault/fixtures/obsidian-vault/Ideas.md?raw";
 import { FakePdfBridge } from "../src/tests/fakePdfBridge";
 import { toastStore } from "../src/toasts/toastStore";
 import { FakeVaultRepository } from "../src/tests/fakeVaultRepository";
-import {
-  FakeVaultGraph,
-  fakeVaultSettingsInvoke,
-} from "../src/tests/fakeVaultGraph";
+import { FakeVaultGraph } from "../src/tests/fakeVaultGraph";
 import { FakeVaultLinks } from "../src/tests/fakeVaultLinks";
 import { FakeVaultSearch } from "../src/tests/fakeVaultSearch";
 import { SAMPLE_SCENE, SEARCH_SCENE } from "../src/tests/fixtures";
