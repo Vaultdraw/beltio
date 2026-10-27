@@ -28,7 +28,11 @@ export default function PluginOverlayHost({
   const { Component } = entry;
   const close = () => closeOverlay(entry);
   return (
-    <div style={STYLE} data-plugin-overlay={entry.pluginId}>
+    <div
+      className="vd-plugin-overlay"
+      style={STYLE}
+      data-plugin-overlay={entry.pluginId}
+    >
       <PluginBoundary pluginId={entry.pluginId} what="overlay">
         <Component close={close} />
       </PluginBoundary>
