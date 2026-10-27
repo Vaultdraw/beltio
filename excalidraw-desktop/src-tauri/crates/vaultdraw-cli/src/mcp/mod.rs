@@ -6,6 +6,7 @@
 //! client asks `server/discover`) and the earlier ones (an `initialize` request first). Every
 //! other method is the same in both: `ping`, `tools/list`, `tools/call`.
 
+mod plugin_tools;
 mod tools;
 
 use crate::cli::Cli;
@@ -33,7 +34,7 @@ const CLIENT_META: &str = "io.modelcontextprotocol/clientInfo";
 /// What one message needs next: an answer now, or a tool call to run.
 enum Step {
     Reply(Option<Value>),
-    Call { id: Value, params: Value, client: String },
+    Call { id: Value, method: &'static str, params: Value, client: String },
 }
 
 /// Runs until the input closes. Tool calls run one at a time on a worker thread, so a slow call
@@ -45,11 +46,11 @@ pub fn run(cli: &Cli) -> Result<(), Fail> {
         let Ok(mut o) = out.lock() else { return false };
         writeln!(o, "{reply}").and_then(|()| o.flush()).is_ok()
     };
-    let (tx, rx) = mpsc::channel::<(Value, Value, String)>();
+    let (tx, rx) = mpsc::channel::<(Value, &'static str, Value, String)>();
     std::thread::scope(|scope| {
         scope.spawn(|| {
-            for (id, params, client) in rx {
-                if !write(&finish_call(cli, id, &params, &client)) {
+            for (id, method, params, client) in rx {
+                if !write(&finish_call(cli, id, method, &params, &client)) {
                     break; // the client is gone
                 }
             }
@@ -71,8 +72,8 @@ pub fn run(cli: &Cli) -> Result<(), Fail> {
                     Ok(msg) if msg.is_array() => handle_value(cli, &msg, &mut client),
                     Ok(msg) => match step(&msg, &mut client) {
                         Step::Reply(r) => r,
-                        Step::Call { id, params, client } => {
-                            if tx.send((id, params, client)).is_err() {
+                        Step::Call { id, method, params, client } => {
+                            if tx.send((id, method, params, client)).is_err() {
                                 break;
                             }
                             None
@@ -113,12 +114,13 @@ fn handle_value(cli: &Cli, msg: &Value, client: &mut String) -> Option<Value> {
 fn run_inline(cli: &Cli, msg: &Value, client: &mut String) -> Option<Value> {
     match step(msg, client) {
         Step::Reply(r) => r,
-        Step::Call { id, params, client } => Some(finish_call(cli, id, &params, &client)),
+        Step::Call { id, method, params, client } => Some(finish_call(cli, id, method, &params, &client)),
     }
 }
 
-fn finish_call(cli: &Cli, id: Value, params: &Value, client: &str) -> Value {
-    match call_tool(cli, params, client) {
+fn finish_call(cli: &Cli, id: Value, method: &str, params: &Value, client: &str) -> Value {
+    let result = if method == "tools/list" { Ok(json!({"tools": tools::list_all(cli, client)})) } else { call_tool(cli, params, client) };
+    match result {
         Ok(result) => json!({"jsonrpc": "2.0", "id": id, "result": result}),
         Err((code, message)) => error(id, code, &message),
     }
@@ -149,8 +151,11 @@ fn step(msg: &Value, client: &mut String) -> Step {
         }
         return Step::Reply(None);
     };
-    if method == "tools/call" {
-        return Step::Call { id, params: params.clone(), client: client_of(&params, client) };
+    // Both reach the app (a call runs a tool; the list asks it which plugin tools exist), so both
+    // run on the worker thread, in order, and never hold up `ping`.
+    if method == "tools/call" || method == "tools/list" {
+        let method = if method == "tools/call" { "tools/call" } else { "tools/list" };
+        return Step::Call { id, method, params: params.clone(), client: client_of(&params, client) };
     }
     Step::Reply(Some(match dispatch(method, &params, client) {
         Ok(result) => json!({"jsonrpc": "2.0", "id": id, "result": result}),
@@ -169,7 +174,6 @@ fn dispatch(method: &str, params: &Value, client: &mut String) -> Reply {
         "server/discover" => Ok(discover()),
         "initialize" => Ok(initialize(params, client)),
         "ping" => Ok(json!({})),
-        "tools/list" => Ok(json!({"tools": tools::list()})),
         m if m.starts_with("notifications/") => Ok(Value::Null),
         m => Err((NOT_FOUND, format!("method not found: {m}"))),
     }

@@ -297,6 +297,20 @@ pub enum PluginAction {
     },
     /// Run a plugin command by its full id (<plugin>.<command>); the plugin loads on first use
     Run { id: String },
+    /// List the methods enabled plugins expose to programs (needs the app)
+    Methods {
+        /// Only this plugin (its id)
+        plugin: Option<String>,
+    },
+    /// Call a plugin method: JSON in (an argument, or - for standard input), JSON out
+    Call {
+        /// The plugin's id
+        plugin: String,
+        /// The method's name (see `plugin methods`)
+        method: String,
+        /// Params as a JSON value, or - to read them from standard input (default: {})
+        params: Option<String>,
+    },
 }
 
 #[derive(Subcommand, Debug)]

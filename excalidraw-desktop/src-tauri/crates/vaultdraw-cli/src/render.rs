@@ -105,6 +105,20 @@ pub fn plugin_commands(v: &Value) -> String {
     lines.join("\n")
 }
 
+/// `plugin methods`: one line per method.
+pub fn plugin_methods(v: &Value) -> String {
+    let rows = arr(v, "methods");
+    if rows.is_empty() {
+        return "no plugin methods".to_string();
+    }
+    let mut table_rows = vec![vec!["METHOD".to_string(), "TITLE".to_string(), "AI".to_string(), "WRITES".to_string()]];
+    let yes = |m: &Value, k: &str| if m.get(k).and_then(Value::as_bool) == Some(true) { "yes" } else { "no" }.to_string();
+    for m in rows {
+        table_rows.push(vec![format!("{}.{}", s(m, "plugin"), s(m, "method")), s(m, "title").to_string(), yes(m, "mcp"), yes(m, "write")]);
+    }
+    table(&table_rows)
+}
+
 fn arr<'a>(v: &'a Value, key: &str) -> &'a [Value] {
     v.get(key).and_then(Value::as_array).map(Vec::as_slice).unwrap_or(&[])
 }

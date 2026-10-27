@@ -10,6 +10,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### New
 
+- **Plugin API 0.21.0: methods other programs can call.** A plugin declares `[[contributes.methods]]` (needs the new permission `control`) and answers with `ctx.methods.register(name, handler)`: JSON in, JSON out, a timeout, and the plugin loads on the first call. `vaultdraw plugin methods` lists them and `vaultdraw plugin call <plugin> <method> [json]` runs one; the control socket has `plugin.methods` and `plugin.call`. A method with `mcp = true` also appears as an AI tool (`<plugin>__<method>`) while Settings > AI is on and Vaultdraw is running. The test harness gets `callMethod`, and the example plugin `flow-from-text` shows two methods (Mermaid-style text to a flowchart, an element count).
+
 - **Plugin commands from the command line.** `vaultdraw plugin commands [plugin]` lists installed plugins and what they declare (with enabled and loaded state); `vaultdraw plugin run <plugin>.<command>` runs one, loading the plugin on first use. New control methods `plugin.commands` and `plugin.run` (CLI role only).
 - **Plugin API 0.20.0.** A command in `plugin.toml` can set `repeat = true` to run again while its key is held, and `ctx.workspace.openShortcut(path)` returns the key label bound to opening a drawing (it follows the user's own bindings). Both are used by the graph extension.
 - **Plugin API 0.21.0.** `ctx.workspace.openShortcut(path)` returns the key label bound to opening a drawing (it follows the user's own bindings). The graph extension uses it for the shortcut row in its hover card.

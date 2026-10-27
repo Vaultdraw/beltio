@@ -16,6 +16,8 @@ pub const COMMAND_LIST: &str = "command.list";
 pub const COMMAND_RUN: &str = "command.run";
 pub const PLUGIN_COMMANDS: &str = "plugin.commands";
 pub const PLUGIN_RUN: &str = "plugin.run";
+pub const PLUGIN_METHODS: &str = "plugin.methods";
+pub const PLUGIN_CALL: &str = "plugin.call";
 pub const VAULT_INFO: &str = "vault.info";
 pub const VAULT_OPEN: &str = "vault.open";
 pub const VAULT_LIST: &str = "vault.list";
@@ -130,6 +132,7 @@ fn obj(props: Value, required: &[&str]) -> Value {
 
 const CLI_ONLY: &[&str] = &[roles::CLI];
 const CLI_URI: &[&str] = &[roles::CLI, roles::URI];
+const CLI_MCP: &[&str] = &[roles::CLI, roles::MCP];
 
 /// Params for methods that take a file target: `path` (exact, vault-relative) or `file`
 /// (link-style name); neither is required at schema level, the method needs one of them.
@@ -281,6 +284,29 @@ fn plugin_methods() -> Vec<MethodSpec> {
             obj(json!({"id": {"type": "string"}}), &["id"]),
             obj(json!({"ran": {"type": "boolean"}, "id": {"type": "string"}, "plugin": {"type": "string"}}), &["ran", "id", "plugin"]),
             CLI_ONLY,
+            true,
+        ),
+        spec(
+            PLUGIN_METHODS,
+            "Methods enabled plugins expose (permission control): id, title, description, params schema, whether AI apps may call them (mcp) and whether they write; plugin narrows to one id. The mcp role sees only methods with mcp = true",
+            obj(json!({"plugin": {"type": "string"}}), &[]),
+            obj(
+                json!({"methods": {"type": "array", "items": obj(json!({
+                    "plugin": {"type": "string"}, "method": {"type": "string"}, "title": {"type": "string"},
+                    "description": {"type": ["string", "null"]}, "params": {"type": ["object", "null"]},
+                    "mcp": {"type": "boolean"}, "write": {"type": "boolean"}
+                }), &["plugin", "method", "title", "mcp", "write"])}}),
+                &["methods"],
+            ),
+            CLI_MCP,
+            true,
+        ),
+        spec(
+            PLUGIN_CALL,
+            "Call a method an enabled plugin exposes: JSON params in, JSON result out. The plugin loads on first call; a slow one fails with TIMEOUT. The mcp role may call only methods with mcp = true",
+            obj(json!({"plugin": {"type": "string"}, "method": {"type": "string"}, "params": {}}), &["plugin", "method"]),
+            obj(json!({"plugin": {"type": "string"}, "method": {"type": "string"}, "result": {}}), &["plugin", "method", "result"]),
+            CLI_MCP,
             true,
         ),
     ]
@@ -678,7 +704,10 @@ mod tests {
     fn security_mcp_role_reaches_only_the_pinned_tools() {
         let mut allowed: Vec<_> = catalogue().iter().filter(|m| m.allows(roles::MCP)).map(|m| m.name).collect();
         allowed.sort();
-        assert_eq!(allowed, [APP_STATUS, RPC_DISCOVER, RPC_HELLO, SCENE_APPLY, SCENE_CREATE, SCENE_READ, SCENE_SELECTION, VAULT_LIST, VAULT_SEARCH]);
+        assert_eq!(
+            allowed,
+            [APP_STATUS, PLUGIN_CALL, PLUGIN_METHODS, RPC_DISCOVER, RPC_HELLO, SCENE_APPLY, SCENE_CREATE, SCENE_READ, SCENE_SELECTION, VAULT_LIST, VAULT_SEARCH]
+        );
         let mut tools: Vec<_> = catalogue().iter().filter_map(|m| m.mcp.map(|t| (t.name, m.name, t.writes))).collect();
         tools.sort();
         assert_eq!(

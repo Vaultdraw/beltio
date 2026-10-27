@@ -4,12 +4,14 @@
  * @packageDocumentation
  */
 export type { CommandsApi } from "./commands";
+export type { MethodsApi } from "./methods";
 export type { Disposable } from "./disposable";
 export type { AppEventMap, EventsApi } from "./events";
 export type {
   CommandContribution,
   ImporterContribution,
   MenuContribution,
+  MethodContribution,
   StatusBarContribution,
   ToolbarContribution,
   ToolContribution,

@@ -85,6 +85,8 @@ export type {
   FolderItem,
   ToolbarContribution,
   ToolContribution,
+  MethodContribution,
+  MethodsApi,
   ShapeContribution,
   ShapeDef,
   ShapesApi,

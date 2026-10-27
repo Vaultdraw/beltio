@@ -504,6 +504,121 @@
       "window": true
     },
     {
+      "name": "plugin.methods",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "plugin": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "methods": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "description": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "mcp": {
+                  "type": "boolean"
+                },
+                "method": {
+                  "type": "string"
+                },
+                "params": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "plugin": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "write": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "plugin",
+                "method",
+                "title",
+                "mcp",
+                "write"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "methods"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli",
+        "mcp"
+      ],
+      "summary": "Methods enabled plugins expose (permission control): id, title, description, params schema, whether AI apps may call them (mcp) and whether they write; plugin narrows to one id. The mcp role sees only methods with mcp = true",
+      "window": true
+    },
+    {
+      "name": "plugin.call",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "method": {
+            "type": "string"
+          },
+          "params": {},
+          "plugin": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plugin",
+          "method"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "method": {
+            "type": "string"
+          },
+          "plugin": {
+            "type": "string"
+          },
+          "result": {}
+        },
+        "required": [
+          "plugin",
+          "method",
+          "result"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli",
+        "mcp"
+      ],
+      "summary": "Call a method an enabled plugin exposes: JSON params in, JSON result out. The plugin loads on first call; a slow one fails with TIMEOUT. The mcp role may call only methods with mcp = true",
+      "window": true
+    },
+    {
       "name": "vault.info",
       "params": {
         "additionalProperties": true,

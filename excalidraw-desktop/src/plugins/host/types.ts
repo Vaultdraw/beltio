@@ -3,6 +3,8 @@ import type {
   MenuContribution,
   ToolbarContribution,
   ToolContribution,
+  Json,
+  MethodContribution,
   ShapeContribution,
   Plugin,
   PluginPermission,
@@ -70,6 +72,8 @@ export interface PluginInfo {
     tools?: ToolContribution[];
     /** Custom shapes (`[[contributes.shapes]]`); absent from older backends. */
     shapes?: ShapeContribution[];
+    /** Methods other programs can call (`[[contributes.methods]]`); absent from older backends. */
+    methods?: MethodContribution[];
   };
 }
 
@@ -105,6 +109,8 @@ export interface PluginsState {
 }
 
 /** Mutable per-plugin runtime record (activation.ts owns the transitions). */
+export type MethodHandler = (params: Json) => Json | Promise<Json>;
+
 export interface PluginRuntime {
   info: PluginInfo;
   state: ActivationState;
@@ -115,6 +121,8 @@ export interface PluginRuntime {
   plugin: Plugin | null;
   /** Real handlers the plugin registered, by short command id. */
   handlers: Map<string, CommandHandler>;
+  /** Method handlers the plugin registered (`ctx.methods.register`), by method id. */
+  methods: Map<string, MethodHandler>;
   /** Panel components the plugin registered, by short panel id. */
   components: Map<string, ComponentType>;
   /** Disposes the plugin context (reverse order). */

@@ -49,6 +49,16 @@ const MAX_TOOLBAR = 8;
 const MAX_ICON = 1000;
 const MAX_TOOLS = 8;
 const MAX_SHAPES = 8;
+const MAX_METHODS = 16;
+const METHOD_KEYS = new Set([
+  "id",
+  "title",
+  "description",
+  "params",
+  "mcp",
+  "write",
+  "timeout_ms",
+]);
 const SHAPE_KEYS = new Set(["id", "title", "icon", "width", "height"]);
 const TOOL_KEYS = new Set(["id", "title", "icon", "cursor"]);
 const TOOL_CURSORS = ["crosshair", "default", "pointer", "grab", "text"];
@@ -60,9 +70,14 @@ const NOTE_EXTENSIONS = ["md", "markdown", "excalidraw.md"];
 const STATUS_KEYS = new Set(["id", "title", "align", "priority", "command"]);
 const VIEW_KEYS = new Set(["id", "title", "extensions"]);
 /** What a plugin may declare. */
-export const PERMISSIONS = ["vault.read", "vault.write", "folders.import"];
+export const PERMISSIONS = [
+  "vault.read",
+  "vault.write",
+  "folders.import",
+  "control",
+];
 /** Kept for later API revisions; an app that knows them as reserved refuses a manifest that uses one. */
-const RESERVED_PERMISSIONS = ["net", "secret", "control"];
+const RESERVED_PERMISSIONS = ["net", "secret"];
 
 export const TOP_KEYS = new Set([
   "id",
@@ -285,7 +300,10 @@ export function validateManifestText(text, file = "plugin.toml") {
     }
   }
   if ("contributes" in doc) {
-    checkContributes(doc.contributes, err);
+    checkContributes(doc.contributes, err, {
+      control:
+        Array.isArray(doc.permissions) && doc.permissions.includes("control"),
+    });
   }
   return { errors, warnings };
 }
@@ -566,6 +584,75 @@ function checkTools(tools, err) {
 }
 
 /**
+ * @param {Record<string, any>[]} methods
+ * @param {boolean} control the plugin declares the permission `control`
+ * @param {(code: string, message: string) => void} err
+ */
+function checkMethods(methods, control, err) {
+  if (methods.length > MAX_METHODS) {
+    err("too-many", `Too many methods (max ${MAX_METHODS})`);
+  }
+  if (methods.length > 0 && !control) {
+    err(
+      "permission-missing",
+      "Declaring methods needs the permission 'control'",
+    );
+  }
+  const seen = new Set();
+  for (const x of methods) {
+    for (const k of Object.keys(x)) {
+      if (!METHOD_KEYS.has(k)) {
+        err("unknown-key", `Unknown key '${k}' in a method`);
+      }
+    }
+    for (const k of ["id", "title"]) {
+      if (!(k in x)) {
+        err("missing-key", `A method is missing '${k}'`);
+      }
+    }
+    if ("id" in x) {
+      if (typeof x.id !== "string" || !/^[a-z][a-z0-9_]{0,47}$/.test(x.id)) {
+        err(
+          "contribution-id-invalid",
+          `method id ${show(
+            x.id,
+          )} must be lowercase letters, digits and _, starting with a letter (at most 48)`,
+        );
+      } else if (seen.has(x.id)) {
+        err("contribution-duplicate", `Duplicate method id ${show(x.id)}`);
+      }
+      seen.add(x.id);
+    }
+    if (
+      "title" in x &&
+      (typeof x.title !== "string" ||
+        x.title.trim() === "" ||
+        chars(x.title) > MAX_TITLE)
+    ) {
+      err("title-invalid", `method title must be 1 to ${MAX_TITLE} characters`);
+    }
+    if ("params" in x && !isTable(x.params)) {
+      err("contribution-invalid", "method params must be a JSON Schema table");
+    }
+    for (const k of ["mcp", "write"]) {
+      if (k in x && typeof x[k] !== "boolean") {
+        err("contribution-invalid", `method ${k} must be true or false`);
+      }
+    }
+    if (
+      "timeout_ms" in x &&
+      !(
+        Number.isInteger(x.timeout_ms) &&
+        x.timeout_ms >= 100 &&
+        x.timeout_ms <= 120000
+      )
+    ) {
+      err("contribution-invalid", "method timeout_ms must be 100 to 120000");
+    }
+  }
+}
+
+/**
  * @param {Record<string, any>[]} shapes
  * @param {(code: string, message: string) => void} err
  */
@@ -693,8 +780,9 @@ function checkStatusBar(items, commands, err) {
 /**
  * @param {unknown} c
  * @param {(code: string, message: string) => void} err
+ * @param {{ control: boolean }} extras what the rest of the manifest declares
  */
-function checkContributes(c, err) {
+function checkContributes(c, err, extras) {
   if (!isTable(c)) {
     err("contribution-invalid", "contributes must be a table");
     return;
@@ -712,11 +800,12 @@ function checkContributes(c, err) {
         "toolbar",
         "tools",
         "shapes",
+        "methods",
       ].includes(k)
     ) {
       err(
         "unknown-key",
-        `Unknown key 'contributes.${k}' (use commands, panels, settings, importers, status_bar, views, menus, toolbar, tools or shapes)`,
+        `Unknown key 'contributes.${k}' (use commands, panels, settings, importers, status_bar, views, menus, toolbar, tools, shapes or methods)`,
       );
     }
   }
@@ -745,6 +834,7 @@ function checkContributes(c, err) {
   const toolbar = list("toolbar");
   const tools = list("tools");
   const shapes = list("shapes");
+  const methods = list("methods");
   if (shapes.length > MAX_SHAPES) {
     err("too-many", `Too many shapes (max ${MAX_SHAPES})`);
   }
@@ -847,6 +937,7 @@ function checkContributes(c, err) {
   checkToolbar(toolbar, commands, err);
   checkTools(tools, err);
   checkShapes(shapes, err);
+  checkMethods(methods, extras.control, err);
   for (const s of settings) {
     const field = (k) => typeof s[k] === "string" && s[k] !== "";
     if (!field("key") || !field("type")) {

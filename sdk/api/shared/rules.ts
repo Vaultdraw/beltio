@@ -118,7 +118,8 @@ export type UndeclaredKind =
   | "status bar item"
   | "view"
   | "tool"
-  | "shape";
+  | "shape"
+  | "method";
 
 /** The error when a plugin registers something plugin.toml does not declare. */
 export const undeclaredMessage = (what: UndeclaredKind, short: string) =>

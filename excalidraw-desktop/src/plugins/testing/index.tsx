@@ -28,7 +28,7 @@ import { getMenuItems, runMenuItem } from "../menuRegistry";
 import { closeOverlay, getOverlay } from "../overlayStore";
 import PluginOverlayHost from "../PluginOverlayHost";
 import { getToolHandlers, getToolStub } from "../toolRegistry";
-import { ensureActive } from "../host/activation";
+import { ensureActive, getRuntime } from "../host/activation";
 import { getStatusItems } from "../host/statusBarRegistry";
 import { notifyAppearanceChanged } from "../../vault/appearance";
 import {
@@ -86,6 +86,7 @@ export type TestManifest = Partial<Omit<PluginInfo, "contributes">> & {
       command: string;
     })[];
     shapes?: (Partial<ShapeDecl> & { id: string })[];
+    methods?: (Partial<MethodDecl> & { id: string })[];
     tools?: (Partial<ToolDecl> & { id: string })[];
     toolbar?: (Partial<ToolbarDecl> & { command: string })[];
     views?: (Partial<ViewDecl> & { id: string; extensions: string[] })[];
@@ -93,6 +94,7 @@ export type TestManifest = Partial<Omit<PluginInfo, "contributes">> & {
   };
 };
 
+type MethodDecl = NonNullable<PluginInfo["contributes"]["methods"]>[number];
 type ShapeDecl = NonNullable<PluginInfo["contributes"]["shapes"]>[number];
 type ToolDecl = NonNullable<PluginInfo["contributes"]["tools"]>[number];
 type ToolbarDecl = NonNullable<PluginInfo["contributes"]["toolbar"]>[number];
@@ -201,6 +203,8 @@ export interface TestPlugin {
   info: PluginInfo;
   /** Runs a command by short id (as the palette does); resolves when its handler is done. */
   run(shortId: string): Promise<void>;
+  /** Calls a method the plugin declares (`[[contributes.methods]]`) and returns its JSON result. */
+  callMethod(name: string, params?: Json): Promise<Json>;
   /** Opens a panel by short id and renders the plugin panels host. */
   openPanel(shortId: string): Promise<RenderResult>;
   /** The menu items shown on a surface (for tree rows, those that apply to `kind`). */
@@ -300,6 +304,12 @@ const normalise = (m: TestManifest): PluginInfo => {
         icon: null,
         width: 160,
         height: 100,
+        ...x,
+      })),
+      methods: (c.methods ?? []).map((x) => ({
+        title: x.id,
+        mcp: false,
+        write: false,
         ...x,
       })),
       tools: (c.tools ?? []).map((x) => ({
@@ -543,6 +553,25 @@ export async function boot(
       await act(async () => {
         await handler(`${id}.${short}`)();
       });
+    },
+    async callMethod(name, params = {}) {
+      const declared = (info.contributes.methods ?? []).some(
+        (m) => m.id === name,
+      );
+      if (!declared || !(await ensureActive(id))) {
+        throw new Error(
+          `no method "${id}.${name}" (declared in the manifest?)`,
+        );
+      }
+      const fn = getRuntime(id)?.methods.get(name);
+      if (!fn) {
+        throw new Error(`method ${id}.${name} declared but not registered`);
+      }
+      const result = await fn(params);
+      if (result === undefined) {
+        throw new Error(`method ${id}.${name} returned nothing (return JSON)`);
+      }
+      return JSON.parse(JSON.stringify(result)) as Json;
     },
     async openPanel(short) {
       await act(async () => {

@@ -21,6 +21,8 @@ const MAX_MENUS: usize = 16;
 const MAX_TOOLBAR: usize = 8;
 const MAX_TOOLS: usize = 8;
 const MAX_SHAPES: usize = 8;
+const MAX_METHODS: usize = 16;
+const METHOD_TIMEOUT_MS: std::ops::RangeInclusive<u32> = 100..=120_000;
 const SHAPE_SIDE: std::ops::RangeInclusive<u32> = 8..=4000;
 const TOOL_CURSORS: [&str; 5] = ["crosshair", "default", "pointer", "grab", "text"];
 const MAX_ICON: usize = 1000;
@@ -40,13 +42,13 @@ pub(crate) const RESERVED_EXTENSIONS: [&str; 16] = [
 ];
 
 /// Permissions a plugin may declare. A declaration and a consent line, not a sandbox.
-pub(crate) const PERMISSIONS: [&str; 3] = ["vault.read", "vault.write", "folders.import"];
+pub(crate) const PERMISSIONS: [&str; 4] = ["vault.read", "vault.write", "folders.import", "control"];
 /// Names kept for later API revisions: an app that knows them as reserved refuses a manifest that uses one.
-const RESERVED_PERMISSIONS: [&str; 3] = ["net", "secret", "control"];
+const RESERVED_PERMISSIONS: [&str; 2] = ["net", "secret"];
 
 /// A write permission changes files with no undo: adding one needs the user's review.
 pub(crate) fn is_write_permission(p: &str) -> bool {
-    p.ends_with(".write") || p == "folders.import"
+    p.ends_with(".write") || p == "folders.import" || p == "control"
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -163,6 +165,28 @@ fn default_shape_height() -> u32 {
     100
 }
 
+/// A method other programs can call (`[[contributes.methods]]`, permission `control`): the `vaultdraw`
+/// command, scripts and, with `mcp = true` while AI is on, AI apps. The plugin answers with
+/// `ctx.methods.register`; JSON in, JSON out. `params` is an optional JSON Schema (an object) for the input.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct MethodDecl {
+    pub id: String,
+    pub title: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub params: Option<Json>,
+    /// Offer the method to AI apps as a tool (only while `ai.enabled`).
+    #[serde(default)]
+    pub mcp: bool,
+    /// The method changes the vault or a drawing (AI clients are told).
+    #[serde(default)]
+    pub write: bool,
+    #[serde(default)]
+    pub timeout_ms: Option<u32>,
+}
+
 /// A view of a file type in the main pane (`[[contributes.views]]`): notes whose name ends in one of
 /// `extensions` (`kanban.md`) open in the plugin's component instead of the Markdown note view.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -222,6 +246,8 @@ pub(crate) struct Contributes {
     pub tools: Vec<ToolDecl>,
     #[serde(default)]
     pub shapes: Vec<ShapeDecl>,
+    #[serde(default)]
+    pub methods: Vec<MethodDecl>,
 }
 
 fn yes() -> bool {
@@ -453,6 +479,33 @@ fn check_shapes(list: &[ShapeDecl]) -> Result<(), String> {
     Ok(())
 }
 
+fn check_methods(list: &[MethodDecl], permissions: &[String]) -> Result<(), String> {
+    if list.len() > MAX_METHODS {
+        return Err(format!("Too many methods (max {MAX_METHODS})"));
+    }
+    if !list.is_empty() && !permissions.iter().any(|p| p == "control") {
+        return Err("Declaring methods needs the permission 'control'".into());
+    }
+    check_unique_ids("method", list.iter().map(|x| x.id.as_str()))?;
+    for x in list {
+        check_title("method title", &x.title)?;
+        let b = x.id.as_bytes();
+        if b.len() > 48 || !b[0].is_ascii_lowercase() || !b.iter().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'_') {
+            return Err(format!("Method id '{}' must be lowercase letters, digits and _, starting with a letter (at most 48)", x.id));
+        }
+        if x.description.as_ref().is_some_and(|d| d.len() > MAX_TEXT) {
+            return Err(format!("Method '{}' description is too long (max {MAX_TEXT} characters)", x.id));
+        }
+        if x.params.as_ref().is_some_and(|p| !p.is_object()) {
+            return Err(format!("Method '{}' params must be a JSON Schema object", x.id));
+        }
+        if x.timeout_ms.is_some_and(|t| !METHOD_TIMEOUT_MS.contains(&t)) {
+            return Err(format!("Method '{}' timeout_ms must be between {} and {}", x.id, METHOD_TIMEOUT_MS.start(), METHOD_TIMEOUT_MS.end()));
+        }
+    }
+    Ok(())
+}
+
 fn check_toolbar(list: &[ToolbarItem], commands: &[Command]) -> Result<(), String> {
     if list.len() > MAX_TOOLBAR {
         return Err(format!("Too many toolbar buttons (max {MAX_TOOLBAR})"));
@@ -568,6 +621,7 @@ fn validate(raw: Raw) -> Result<Manifest, String> {
     check_toolbar(&c.toolbar, &c.commands)?;
     check_tools(&c.tools)?;
     check_shapes(&c.shapes)?;
+    check_methods(&c.methods, &raw.permissions)?;
     check_unique_ids("command", c.commands.iter().map(|x| x.id.as_str()))?;
     check_unique_ids("panel", c.panels.iter().map(|x| x.id.as_str()))?;
     for x in &c.commands {

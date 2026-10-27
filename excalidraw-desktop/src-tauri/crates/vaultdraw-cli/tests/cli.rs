@@ -27,6 +27,11 @@ fn app(method: &str, params: &Value) -> Result<Value, (i64, String, Option<&'sta
         "plugin.commands" => Ok(json!({"plugins":[
             {"id":"hello","name":"Hello","version":"1.0.0","enabled":true,"state":"idle","commands":[{"id":"hello.say","title":"Say hello"}]},
             {"id":"off","name":"Off","version":"0.1.0","enabled":false,"state":"idle","commands":[]}]})),
+        "plugin.methods" => Ok(json!({"methods":[{"plugin":"hello","method":"greet","title":"Greet","mcp":true,"write":false}]})),
+        "plugin.call" => match params["method"].as_str() {
+            Some("greet") => Ok(json!({"plugin":"hello","method":"greet","result":{"said":params["params"]}})),
+            _ => Err((-32000, "No method".into(), Some("NOT_FOUND"))),
+        },
         "plugin.run" => match params["id"].as_str() {
             Some("hello.say") => Ok(json!({"ran":true,"id":"hello.say","plugin":"hello"})),
             _ => Err((-32000, "No plugin command".into(), Some("NOT_FOUND"))),
@@ -516,4 +521,25 @@ fn plugin_commands_and_run() {
     assert_ne!(code(&o), 0);
     let o = vd(&["plugin", "run", "a.b", "--print-request"], None, None);
     assert_eq!(out(&o), "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"plugin.run\",\"params\":{\"id\":\"a.b\"}}\n");
+}
+
+#[test]
+fn plugin_methods_and_call() {
+    let f = Fake::start(app);
+    let o = vd(&["plugin", "methods"], Some(&f.socket), None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert!(out(&o).contains("hello.greet") && out(&o).contains("Greet"), "{}", out(&o));
+    let o = vd(&["plugin", "call", "hello", "greet", r#"{"to":"you"}"#, "--json"], Some(&f.socket), None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(parse(&out(&o))["result"], json!({"said": {"to": "you"}}));
+    // No params means {}; the human output is the plugin's JSON.
+    let o = vd(&["plugin", "call", "hello", "greet"], Some(&f.socket), None);
+    assert_eq!(parse(&out(&o)), json!({"said": {}}));
+    // Params that are not JSON never reach the app.
+    let before = f.seen.lock().unwrap().len();
+    let o = vd(&["plugin", "call", "hello", "greet", "{oops"], Some(&f.socket), None);
+    assert_eq!(code(&o), 1);
+    assert_eq!(f.seen.lock().unwrap().len(), before);
+    let o = vd(&["plugin", "call", "hello", "nope"], Some(&f.socket), None);
+    assert_ne!(code(&o), 0);
 }

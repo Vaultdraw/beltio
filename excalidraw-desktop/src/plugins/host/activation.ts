@@ -54,6 +54,7 @@ export function ensureRuntime(info: PluginInfo): PluginRuntime {
       gen: 0,
       plugin: null,
       handlers: new Map(),
+      methods: new Map(),
       components: new Map(),
       disposeContext: null,
       disposeStubs: null,
@@ -167,6 +168,7 @@ export async function deactivate(rt: PluginRuntime): Promise<void> {
     releaseGlobalGuards();
   }
   rt.handlers.clear();
+  rt.methods.clear();
   rt.components.clear();
 }
 

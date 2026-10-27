@@ -1,11 +1,11 @@
 //! The Tauri implementation of the control server's `Dispatch`.
 
-use super::bridge::{call_window, pending, CALL_TIMEOUT, STATE_TIMEOUT, WINDOW_LABEL};
+use super::bridge::{call_window, pending, CALL_TIMEOUT, PLUGIN_CALL_TIMEOUT, STATE_TIMEOUT, WINDOW_LABEL};
 use super::{events, ops, scene_route};
 use super::server::Dispatch;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter, Manager};
-use vaultdraw_protocol::methods::{self, APP_FOCUS, APP_OPEN, APP_STATUS, COMMAND_LIST, COMMAND_RUN, PLUGIN_COMMANDS, PLUGIN_RUN, RPC_DISCOVER, SCENE_APPLY, SCENE_CREATE, SCENE_GET, SCENE_READ, SCENE_SELECTION, URI_HANDLE};
+use vaultdraw_protocol::methods::{self, APP_FOCUS, APP_OPEN, APP_STATUS, COMMAND_LIST, COMMAND_RUN, PLUGIN_CALL, PLUGIN_COMMANDS, PLUGIN_METHODS, PLUGIN_RUN, RPC_DISCOVER, SCENE_APPLY, SCENE_CREATE, SCENE_GET, SCENE_READ, SCENE_SELECTION, URI_HANDLE};
 use vaultdraw_protocol::{codes, RpcError, API_LEVEL};
 
 pub(crate) struct TauriDispatch {
@@ -128,6 +128,16 @@ pub(crate) fn route_argv<'a>(argv: &[&'a str]) -> Vec<Route<'a>> {
         .collect()
 }
 
+/// `params` as an object with `by` set to the caller's role.
+pub(crate) fn with_caller(params: Option<Value>, role: &str) -> Value {
+    let mut map = match params {
+        Some(Value::Object(m)) => m,
+        _ => Default::default(),
+    };
+    map.insert("by".into(), Value::String(role.to_string()));
+    Value::Object(map)
+}
+
 /// `app.status` result from its parts (kept pure for the golden test).
 pub(crate) fn status_json(vault: Option<Value>, state: Option<Value>, window_ready: bool) -> Value {
     let field = |name: &str| state.as_ref().and_then(|s| s.get(name)).cloned().unwrap_or(Value::Null);
@@ -155,6 +165,8 @@ impl Dispatch for TauriDispatch {
                 super::uri::handle(&self.app, url, super::uri::Origin::Cli)
             }
             COMMAND_LIST | COMMAND_RUN | PLUGIN_COMMANDS | PLUGIN_RUN => call_window(&self.app, method, params, CALL_TIMEOUT),
+            // The window decides what an AI app may call, so it is told who asks (overwriting any `by` the caller sent).
+            PLUGIN_METHODS | PLUGIN_CALL => call_window(&self.app, method, Some(with_caller(params, role)), PLUGIN_CALL_TIMEOUT),
             SCENE_READ | SCENE_GET | SCENE_SELECTION | SCENE_APPLY => scene_route::call(&self.app, role, method, params),
             SCENE_CREATE => scene_route::create(&self.app, params),
             // The C3 methods (vault, files, tabs, config, quit).
@@ -194,6 +206,12 @@ mod tests {
             ]
         );
         assert!(route_argv(&[]).is_empty());
+    }
+
+    #[test]
+    fn caller_role_overwrites_a_forged_by() {
+        assert_eq!(with_caller(Some(json!({"plugin": "p", "by": "cli"})), "mcp"), json!({"plugin": "p", "by": "mcp"}));
+        assert_eq!(with_caller(None, "cli"), json!({"by": "cli"}));
     }
 
     #[test]

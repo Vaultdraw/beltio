@@ -64,6 +64,7 @@ import type {
   ThumbnailsApi,
   ToolsApi,
   ShapesApi,
+  MethodsApi,
   VaultApi,
   ViewsApi,
   WorkspaceApi,
@@ -126,6 +127,9 @@ export function createPluginContext(
   const declaredStatus = new Map(
     (info.contributes.status_bar ?? []).map((s) => [s.id, s] as const),
   );
+  const declaredMethods = new Set(
+    (info.contributes.methods ?? []).map((m) => m.id),
+  );
   const panelId = (short: string) => `${id}.${short}`;
 
   const timer =
@@ -180,6 +184,7 @@ export function createPluginContext(
   let menusApi: MenusApi | undefined;
   let toolsApi: ToolsApi | undefined;
   let shapesApi: ShapesApi | undefined;
+  let methodsApi: MethodsApi | undefined;
   let overlaysApi: OverlaysApi | undefined;
   let thumbnailsApi: ThumbnailsApi | undefined;
 
@@ -335,6 +340,21 @@ export function createPluginContext(
         };
       }
       return statusBarApi;
+    },
+    get methods() {
+      return (methodsApi ??= {
+        register(name, handler) {
+          if (!declaredMethods.has(name)) {
+            return refuse("method", name);
+          }
+          rt.methods.set(name, handler);
+          return track(() => {
+            if (rt.methods.get(name) === handler) {
+              rt.methods.delete(name);
+            }
+          });
+        },
+      });
     },
     get shapes() {
       return (shapesApi ??= createShapesApi(

@@ -6,6 +6,7 @@ import type {
   ToolbarContribution,
   ToolContribution,
   ShapeContribution,
+  MethodContribution,
   MenuTarget,
   ToolPoint,
   StatusBarContribution,
@@ -70,6 +71,7 @@ export interface TestManifest {
       extensions: string[];
     })[];
     shapes?: (Partial<ShapeContribution> & { id: string })[];
+    methods?: (Partial<MethodContribution> & { id: string })[];
     tools?: (Partial<ToolContribution> & { id: string; title?: string })[];
     toolbar?: (Partial<ToolbarContribution> & { command: string })[];
     status_bar?: (Partial<StatusBarContribution> & { id: string })[];
@@ -255,6 +257,8 @@ export interface TestPlugin {
   info: TestPluginInfo;
   /** Runs a command by short id (as the palette does); resolves when its handler is done. */
   run(shortId: string): Promise<void>;
+  /** Calls a method the plugin declares (`[[contributes.methods]]`) and returns its JSON result. */
+  callMethod(name: string, params?: Json): Promise<Json>;
   /** Opens a panel by short id and renders it. */
   openPanel(shortId: string): Promise<PanelView>;
   /** The menu items shown on a surface (for tree rows, those that apply to `kind`). */

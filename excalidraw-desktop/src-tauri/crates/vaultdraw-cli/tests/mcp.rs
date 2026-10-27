@@ -293,3 +293,47 @@ fn a_modern_client_name_in_meta_reaches_the_app() {
     assert!(seen.iter().any(|r| r["method"] == "rpc.hello" && r["params"]["client"] == "zed"), "{seen:?}");
     s.finish();
 }
+
+/// Methods a plugin offers with `mcp = true` become tools while AI is on and the app runs; a call
+/// goes through `plugin.call` as the `mcp` role, and nothing reaches the app while AI is off.
+#[test]
+fn plugin_methods_are_tools_while_ai_is_on() {
+    let fake = |_: ()| {
+        Fake::start(|method, params| match method {
+            "rpc.hello" => Ok(json!({"api": 1, "role": params["role"]})),
+            "plugin.methods" => Ok(json!({"methods": [
+                {"plugin": "mermaid", "method": "to_drawing", "title": "To drawing", "description": "Mermaid to drawing", "params": {"type": "object", "properties": {"text": {"type": "string"}}}, "mcp": true, "write": true}
+            ]})),
+            "plugin.call" => Ok(json!({"plugin": "mermaid", "method": "to_drawing", "result": {"echo": params["params"]}})),
+            _ => Err((-32000, "no".into(), Some("NOT_PERMITTED"))),
+        })
+    };
+    // On: listed after the seven built-in tools, and callable.
+    let e = env(Some(ON));
+    let f = fake(());
+    let mut s = Session::start(&e, Some(&f.socket));
+    let list = s.ask("tools/list", json!({}))["result"].clone();
+    let n = names(&list);
+    assert_eq!(n.len(), 8);
+    assert_eq!(n[7], "mermaid__to_drawing");
+    assert_eq!(list["tools"][7]["annotations"]["readOnlyHint"], false);
+    let r = s.tool("mermaid__to_drawing", json!({"text": "graph TD; A-->B"}));
+    assert_eq!(r["isError"], false);
+    assert_eq!(r["structuredContent"], json!({"echo": {"text": "graph TD; A-->B"}}));
+    let seen = f.seen.lock().unwrap().clone();
+    let call = seen.iter().find(|r| r["method"] == "plugin.call").unwrap();
+    assert_eq!(call["params"]["plugin"], "mermaid");
+    assert!(seen.iter().any(|r| r["method"] == "rpc.hello" && r["params"]["role"] == "mcp"));
+    let missing = s.ask("tools/call", json!({"name": "mermaid__nope", "arguments": {}}));
+    assert!(missing["error"].is_object(), "an unknown plugin tool is a protocol error");
+    s.finish();
+    // Off: the seven tools only, and no call reaches the app.
+    let e = env(None);
+    let f = fake(());
+    let mut s = Session::start(&e, Some(&f.socket));
+    assert_eq!(names(&s.ask("tools/list", json!({}))["result"]).len(), 7);
+    let r = s.tool("mermaid__to_drawing", json!({}));
+    assert_eq!(r["structuredContent"]["code"], "DISABLED");
+    assert!(f.seen.lock().unwrap().is_empty());
+    s.finish();
+}

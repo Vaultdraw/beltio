@@ -167,7 +167,12 @@ vaultdraw plugin commands            # installed plugins, enabled or not, and th
 vaultdraw plugin run hello.say       # run one by its full id; the plugin loads on first use
 ```
 
-Needs the app running. A disabled plugin is refused (`UNAVAILABLE`); nothing loads until you run a command.
+```bash
+vaultdraw plugin methods                                   # methods plugins expose to programs (and whether AI apps may call them)
+vaultdraw plugin call mermaid to_drawing '{"text":"graph TD; A-->B"}'   # JSON in (or - for stdin), JSON out
+```
+
+Needs the app running. A disabled plugin is refused (`UNAVAILABLE`); nothing loads until you run a command or call a method. A plugin declares its methods in `plugin.toml` and needs the `control` permission; see the [plugin reference](sdk/docs/reference.md#methods-other-programs-can-call-since-0210).
 
 ## Configuration
 

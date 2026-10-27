@@ -71,14 +71,14 @@
     },
     "permissions": {
       "title": "Permissions",
-      "description": "Optional. What the plugin does to your files, shown in the enable dialog. A declaration and a consent record, not a sandbox: the app loads the plugin only while you have confirmed what it declares, and asks again when an update adds a write permission. At most 8. The names net, secret and control are reserved and refused for now.",
+      "description": "Optional. What the plugin does to your files, shown in the enable dialog. A declaration and a consent record, not a sandbox: the app loads the plugin only while you have confirmed what it declares, and asks again when an update adds a write permission. At most 8. The names net and secret are reserved and refused for now.",
       "type": "array",
       "maxItems": 8,
       "uniqueItems": true,
       "items": {
         "title": "Permission",
-        "description": "vault.read reads the drawings in your vault. vault.write creates drawings in your vault. folders.import reads a folder you pick and writes into a destination you pick (ctx.folders).",
-        "enum": ["vault.read", "vault.write", "folders.import"]
+        "description": "vault.read reads the drawings in your vault. vault.write creates drawings in your vault. folders.import reads a folder you pick and writes into a destination you pick (ctx.folders). control lets other programs (the vaultdraw command, scripts, AI apps you allow) call the methods the plugin declares.",
+        "enum": ["vault.read", "vault.write", "folders.import", "control"]
       }
     },
     "data_key": {
@@ -168,6 +168,13 @@
           "type": "array",
           "maxItems": 8,
           "items": { "$ref": "#/definitions/shape" }
+        },
+        "methods": {
+          "title": "Methods",
+          "description": "Methods other programs can call, written as [[contributes.methods]]. At most 16. Needs the permission control. The plugin answers with ctx.methods.register; it loads on the first call.",
+          "type": "array",
+          "maxItems": 16,
+          "items": { "$ref": "#/definitions/method" }
         }
       },
       "additionalProperties": false
@@ -192,6 +199,57 @@
     }
   },
   "definitions": {
+    "method": {
+      "title": "Method",
+      "description": "A method the vaultdraw command, scripts and (with mcp = true, while AI is on) AI apps can call: JSON in, JSON out.",
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": {
+          "title": "Method id",
+          "description": "Name unique among the plugin's methods: lower case letters, digits and _, starting with a letter, at most 48. Pass it to ctx.methods.register.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "title": {
+          "title": "Method title",
+          "description": "A short name. 1 to 200 characters, not blank.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "\\S"
+        },
+        "description": {
+          "title": "Method description",
+          "description": "What the method does and returns; AI apps read it as the tool description. At most 1000 characters.",
+          "type": "string",
+          "maxLength": 1000
+        },
+        "params": {
+          "title": "Method params",
+          "description": "A JSON Schema (an object) for the input, written as [contributes.methods.params]. AI apps use it as the tool's input schema.",
+          "type": "object"
+        },
+        "mcp": {
+          "title": "Offer to AI apps",
+          "description": "true offers the method to AI apps as a tool, only while Settings > AI is on. Default false.",
+          "type": "boolean"
+        },
+        "write": {
+          "title": "Writes",
+          "description": "true tells AI apps the method changes the vault or a drawing. Default false.",
+          "type": "boolean"
+        },
+        "timeout_ms": {
+          "title": "Timeout",
+          "description": "Milliseconds before a call fails with TIMEOUT, 100 to 120000. Default 30000.",
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 120000
+        }
+      },
+      "additionalProperties": false
+    },
     "shape": {
       "title": "Custom shape",
       "description": "A shape the plugin draws as SVG. In the drawing it is an image element that keeps its last picture, so the file opens without the plugin.",

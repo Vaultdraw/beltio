@@ -26,6 +26,8 @@ Claude Code: `claude mcp add vaultdraw -- vaultdraw mcp`. The palette command **
 | `edit_drawing` | 1 to 500 scene operations, all or nothing (`ifVersion`, `dryRun`). On screen: one undo step. Another drawing (`path` or `file`): saved like a save, with history | yes |
 | `create_drawing` | A new drawing from 1 to 500 operations; nothing is created if one is invalid; refuses an existing name | yes |
 
+Plugins can add tools. A plugin that declares a method with `mcp = true` (and the `control` permission) shows up as a tool named `<plugin>__<method>`, listed only while AI is on and Vaultdraw is running, and runs inside the app like any plugin command. Plugin tools need Vaultdraw running; a tool that writes says so in its annotations. The rest of the list never changes. See [plugin methods](../sdk/docs/reference.md#methods-other-programs-can-call-since-0210).
+
 The scene methods behind the live tools are experimental, like `vaultdraw scene`. `vaultdraw mcp` never starts Vaultdraw; a live tool with the app closed answers `NOT_RUNNING`.
 
 ```mermaid

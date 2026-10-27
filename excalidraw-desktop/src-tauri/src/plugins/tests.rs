@@ -725,7 +725,7 @@ fn data_key_is_optional_and_checked() {
 #[test]
 fn permission_rules() {
     bad(&with("permissions = [\"vault.delete\"]\n"), "unknown permission");
-    for reserved in ["net", "secret", "control"] {
+    for reserved in ["net", "secret"] {
         bad(&with(&format!("permissions = [\"{reserved}\"]\n")), "reserved");
     }
     bad(&with("permissions = [\"vault.read\", \"vault.read\"]\n"), "duplicate permission");
@@ -1448,6 +1448,36 @@ fn shape_rules() {
     bad(&shape("[[contributes.shapes]]\nid = \"card\"\ntitle = \"Again\"\n"), "card");
     let many: String = (0..9).map(|i| format!("\n[[contributes.shapes]]\nid = \"s{i}\"\ntitle = \"S\"\n")).collect();
     bad(&with(&many), "Too many shapes");
+}
+
+// ---- C8: methods other programs can call ----
+
+fn method(extra: &str) -> String {
+    with(&format!("permissions = [\"control\"]\n\n[[contributes.methods]]\nid = \"to_drawing\"\ntitle = \"To drawing\"\n{extra}"))
+}
+
+#[test]
+fn methods_parse_and_serialise() {
+    let m = manifest::parse(&method("mcp = true\nwrite = true\ntimeout_ms = 5000\n")).unwrap();
+    let v = serde_json::to_value(&m).unwrap();
+    assert_eq!(
+        v["contributes"]["methods"][0],
+        json!({"id": "to_drawing", "title": "To drawing", "description": null, "params": null, "mcp": true, "write": true, "timeout_ms": 5000})
+    );
+    assert!(manifest::parse(&minimal("a-b")).unwrap().contributes.methods.is_empty());
+    assert!(manifest::is_write_permission("control"));
+}
+
+#[test]
+fn method_rules() {
+    // Methods need the permission, and the id and limits are checked.
+    bad(&with("\n[[contributes.methods]]\nid = \"m\"\ntitle = \"M\"\n"), "permission 'control'");
+    bad(&method("timeout_ms = 5\n"), "timeout_ms");
+    bad(&method("params = \"x\"\n"), "json schema object");
+    bad(&method("[[contributes.methods]]\nid = \"to_drawing\"\ntitle = \"Again\"\n"), "to_drawing");
+    bad(&with("permissions = [\"control\"]\n\n[[contributes.methods]]\nid = \"Bad-Id\"\ntitle = \"B\"\n"), "lowercase");
+    let many: String = (0..17).map(|i| format!("\n[[contributes.methods]]\nid = \"m{i}\"\ntitle = \"M\"\n")).collect();
+    bad(&with(&format!("permissions = [\"control\"]\n{many}")), "Too many methods");
 }
 
 #[test]

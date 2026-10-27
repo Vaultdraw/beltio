@@ -12,6 +12,8 @@ use vaultdraw_protocol::{codes, RpcError};
 
 pub(crate) const WINDOW_LABEL: &str = "main";
 pub(crate) const CALL_TIMEOUT: Duration = Duration::from_secs(30);
+/// A plugin method may declare up to 120 s itself (`timeout_ms`); the window enforces it, this only bounds the wait.
+pub(crate) const PLUGIN_CALL_TIMEOUT: Duration = Duration::from_secs(125);
 pub(crate) const STATE_TIMEOUT: Duration = Duration::from_millis(500);
 
 type Reply = Result<Value, RpcError>;

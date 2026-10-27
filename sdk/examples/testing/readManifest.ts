@@ -13,7 +13,7 @@ import { makePluginInfo } from "../../../excalidraw-desktop/src/plugins/host/fak
 
 import type { PluginInfo } from "../../../excalidraw-desktop/src/plugins/host/types";
 
-type Value = string | number | boolean | string[];
+type Value = string | number | boolean | string[] | { [key: string]: Value };
 type Table = Record<string, Value>;
 
 const TOP_KEYS = new Set([
@@ -41,6 +41,7 @@ const ARRAYS = [
   "toolbar",
   "tools",
   "shapes",
+  "methods",
 ] as const;
 
 /** Drop a trailing `# comment` that is not inside a basic string. */
@@ -92,6 +93,7 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
     toolbar: [],
     tools: [],
     shapes: [],
+    methods: [],
   };
   let current: Table = top;
   let extra = false;
@@ -101,7 +103,25 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
     if (!line) {
       return;
     }
+    // `[contributes.methods.params.properties.text]`: a nested table of the last method's schema.
+    const schemaTable =
+      /^\[contributes\.methods\.params((?:\.[\w-]+)*)\]$/.exec(line);
     const header = /^\[\[contributes\.(\w+)\]\]$/.exec(line);
+    if (schemaTable) {
+      const method = arrays.methods.at(-1);
+      if (!method) {
+        throw new Error(
+          `plugin.toml: params table before a method at ${where}`,
+        );
+      }
+      let node = ((method.params as Table | undefined) ??= {});
+      for (const key of schemaTable[1].split(".").filter(Boolean)) {
+        node = (node[key] as Table | undefined) ??= {};
+      }
+      current = node;
+      extra = false;
+      return;
+    }
     if (header && (ARRAYS as readonly string[]).includes(header[1])) {
       current = {};
       extra = false;
@@ -173,6 +193,15 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
         icon: (x.icon as string | undefined) ?? null,
         width: (x.width as number | undefined) ?? 160,
         height: (x.height as number | undefined) ?? 100,
+      })),
+      methods: arrays.methods.map((x) => ({
+        id: x.id as string,
+        title: x.title as string,
+        description: (x.description as string | undefined) ?? null,
+        params: (x.params as Record<string, unknown> | undefined) ?? null,
+        mcp: (x.mcp as boolean | undefined) ?? false,
+        write: (x.write as boolean | undefined) ?? false,
+        timeout_ms: (x.timeout_ms as number | undefined) ?? null,
       })),
       tools: arrays.tools.map((x) => ({
         id: x.id as string,

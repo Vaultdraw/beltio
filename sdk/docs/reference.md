@@ -770,6 +770,44 @@ for (const file of await src.list()) {
 await target.open();
 ```
 
+## Methods other programs can call (since 0.21.0)
+
+A plugin can expose JSON methods to the `vaultdraw` command, scripts on the control socket and, if you allow it, AI apps. Declare them in `plugin.toml`, bind them in `activate`. The plugin loads on the first call; nothing runs until then.
+
+```toml
+permissions = ["control"]
+
+[[contributes.methods]]
+id = "to_drawing"                    # lower case letters, digits, _
+title = "Mermaid text to a drawing"
+description = "Draw the diagram in `text` and return the new drawing's path."
+mcp = true                           # offer to AI apps (only while Settings > AI is on); default false
+write = true                         # tells AI apps it changes the vault; default false
+timeout_ms = 30000                   # 100 to 120000; default 30000
+
+[contributes.methods.params]         # optional JSON Schema of the input
+type = "object"
+required = ["text"]
+properties = { text = { type = "string" } }
+```
+
+```ts
+ctx.methods.register("to_drawing", async (params) => {
+  // params is the caller's JSON ({} when none); return JSON.
+  return { path: "Diagrams/new.excalidraw" };
+});
+```
+
+| Rule | Detail |
+| --- | --- |
+| Input and output | JSON. A result that is `undefined` or larger than 4 MiB fails the call. |
+| Errors | A throw becomes `PLUGIN_ERROR` with your message; a late answer becomes `TIMEOUT`. The plugin is not disabled for either. |
+| Who may call | The `vaultdraw plugin call <id> <method> [json]` command and the control method `plugin.call` always. AI apps only for `mcp = true`, only while `ai.enabled` is on, as the tool `<plugin>__<method>`. |
+| Validation | The schema is advertised (to AI apps as the tool's input), not enforced: check `params` in your handler. |
+| Disabled plugin | `UNAVAILABLE`. A plugin that has not been confirmed (see [permissions](permissions.md)) is refused the same way. |
+
+The example `sdk/examples/flow-from-text` has two methods: `draw` turns Mermaid-style edges (`A --> B`) into a flowchart on the open drawing, `count` counts the elements on screen. `vaultdraw plugin methods` lists what is callable now. Test a method with `callMethod(name, params)` on the booted test plugin (`@vaultdraw/api/testing`).
+
 ## Rules for plugin code
 
 1. Use `ctx.setTimeout`, `ctx.setInterval` and `ctx.subscriptions` instead of raw timers and listeners. Then disabling a plugin leaves nothing running.

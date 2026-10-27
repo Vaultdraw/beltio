@@ -17,7 +17,7 @@ A plugin lists in `plugin.toml` what it does to your files. The app shows the li
 ## Declare them
 
 ```toml
-permissions = ["vault.read", "vault.write", "folders.import"]   # optional, default []
+permissions = ["vault.read", "vault.write", "folders.import", "control"]   # optional, default []
 ```
 
 | Permission | Consent line | Gates |
@@ -25,8 +25,9 @@ permissions = ["vault.read", "vault.write", "folders.import"]   # optional, defa
 | `vault.read` | Read the drawings in your vault | Listing folders, reading drawings other than the open one, and the `vault.changed` event |
 | `vault.write` | Create drawings in your vault | Creating drawings. Files have no undo, so creating one needs this permission |
 | `folders.import` | Read a folder you pick and write into a destination you pick | `ctx.folders` (since 0.9.0): listing and reading a folder the user chose in a dialog, and create-only writes into a new vault or a folder of the open vault. The source is never written |
+| `control` | Let the vaultdraw command, scripts and the AI apps you allow call its methods | `[[contributes.methods]]` and `ctx.methods` (since 0.21.0): other programs call the methods the plugin declares. A plugin that declares methods must declare `control`. Adding it in an update needs review, like a write permission |
 
-At most 8, no duplicates. An unknown name is a manifest error, so an older app refuses a plugin that needs a newer one. The names `net`, `secret` and `control` are reserved for later and are refused today. `ctx.manifest.permissions` returns the list.
+At most 8, no duplicates. An unknown name is a manifest error, so an older app refuses a plugin that needs a newer one. The names `net` and `secret` are reserved for later and are refused today. `ctx.manifest.permissions` returns the list.
 
 Since API 0.3.0 the app checks them in its native layer: every native call of the plugin API goes through one gateway (`plugin_call`), which looks the method up in a fixed list, then refuses (`code: "PERMISSION"`) a call whose permission your `plugin.toml` does not declare or the user has not confirmed. `ctx.storage` needs no permission.
 
@@ -53,6 +54,7 @@ Since API 0.3.0 the app checks them in its native layer: every native call of th
 | `ctx.scene.scrollTo(id)`                      | none          | 0.9.0 |
 | `ctx.folders.pickSource(options)` and every `SourceFolder` call | `folders.import` | 0.9.0 |
 | `ctx.folders.pickTarget(options)` and every `TargetFolder` call | `folders.import` | 0.9.0 |
+| `ctx.methods.register(name, handler)` | `control` (declared with the method) | 0.21.0 |
 
 A call that needs a permission your `plugin.toml` does not declare fails with `code: "PERMISSION"`. An importer runs on a file the user chose, so its input needs no permission; an importer that calls `ctx.vault` still needs the permission for that call.
 

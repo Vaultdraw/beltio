@@ -145,6 +145,8 @@ export interface MockHost {
   /** Runs onStartupFinished activation, as the app does after launch. */
   startup(): Promise<void>;
   run(short: string): Promise<void>;
+  /** Calls a method the plugin declares, as the control socket does: JSON in, JSON out. */
+  callMethod(name: string, params?: Json): Promise<Json>;
   openPanel(short: string): Promise<RenderResult>;
   /** The menu items shown on a surface (for tree rows, those that apply to `kind`). */
   menuItems(
@@ -564,6 +566,19 @@ export function createMockHost(
           throw notSetUp(
             `command "${fullId}" (the mock host runs only this plugin's own commands)`,
           );
+        },
+      },
+      methods: {
+        register(name, handler) {
+          if (!declaredMethods.has(name)) {
+            return refuse("method", name);
+          }
+          methodHandlers.set(name, handler);
+          return track(() => {
+            if (methodHandlers.get(name) === handler) {
+              methodHandlers.delete(name);
+            }
+          });
         },
       },
       panels: {
@@ -1072,6 +1087,31 @@ export function createMockHost(
     };
     return guard(run, `command ${short}`)();
   };
+  const declaredMethods = new Set(
+    (info.contributes.methods ?? []).map((m) => m.id),
+  );
+  const methodHandlers = new Map<
+    string,
+    (params: Json) => Json | Promise<Json>
+  >();
+  /** What the app does for `plugin.call`: loads the plugin, runs the handler, keeps JSON only. */
+  async function callMethod(name: string, params: Json = {}): Promise<Json> {
+    if (!enabled || !declaredMethods.has(name)) {
+      throw new Error(`no method "${id}.${name}" (declared in the manifest?)`);
+    }
+    if (state !== "active" && !(await ensureActive())) {
+      throw new Error(`plugin ${id} is not active`);
+    }
+    const handler = methodHandlers.get(name);
+    if (!handler) {
+      throw new Error(`method ${id}.${name} declared but not registered`);
+    }
+    const result = await handler(params);
+    if (result === undefined) {
+      throw new Error(`method ${id}.${name} returned nothing (return JSON)`);
+    }
+    return JSON.parse(JSON.stringify(result)) as Json;
+  }
   async function runCommand(short: string): Promise<void> {
     if (!enabled || !declaredCommands.has(short)) {
       throw new Error(
@@ -1264,6 +1304,7 @@ export function createMockHost(
       }
     },
     run: (short) => act(() => runCommand(short)),
+    callMethod: (name, params) => act(() => callMethod(name, params)),
     async openPanel(short) {
       if (!enabled || !declaredPanels.has(short)) {
         throw new Error(

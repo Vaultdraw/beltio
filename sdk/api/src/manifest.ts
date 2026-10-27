@@ -31,11 +31,16 @@ export interface PluginManifestInfo {
  * A permission a plugin can declare. `vault.read` reads the drawings in your
  * vault, `vault.write` creates drawings in it, `folders.import` (since 0.9.0)
  * reads a folder you pick and writes into a destination you pick
- * (`ctx.folders`). The names `net`, `secret` and `control` are reserved.
+ * (`ctx.folders`), `control` (since 0.21.0) lets other programs call the
+ * plugin's declared methods (`ctx.methods`). The names `net` and `secret` are reserved.
  *
  * @since 0.2.0
  */
-export type PluginPermission = "vault.read" | "vault.write" | "folders.import";
+export type PluginPermission =
+  | "vault.read"
+  | "vault.write"
+  | "folders.import"
+  | "control";
 
 /**
  * A command declared in `plugin.toml`.
@@ -191,6 +196,29 @@ export interface ShapeContribution {
 }
 
 /**
+ * A method other programs can call, declared in plugin.toml (`[[contributes.methods]]`, needs the
+ * permission `control`).
+ *
+ * @since 0.21.0
+ */
+export interface MethodContribution {
+  /** Lower case letters, digits and `_`. @since 0.21.0 */
+  id: string;
+  /** @since 0.21.0 */
+  title: string;
+  /** @since 0.21.0 */
+  description?: string | null;
+  /** JSON Schema of the input. @since 0.21.0 */
+  params?: Record<string, unknown> | null;
+  /** Offered to AI apps as a tool while AI is on. @since 0.21.0 */
+  mcp: boolean;
+  /** Changes the vault or a drawing. @since 0.21.0 */
+  write: boolean;
+  /** Milliseconds before a call fails with TIMEOUT. @since 0.21.0 */
+  timeout_ms?: number | null;
+}
+
+/**
  * Everything a plugin declares it adds to the app.
  *
  * @since 0.1.0
@@ -244,4 +272,10 @@ export interface PluginContributions {
    * @since 0.16.0
    */
   shapes?: ShapeContribution[];
+  /**
+   * Absent when the app that reads the manifest is older than 0.21.0.
+   *
+   * @since 0.21.0
+   */
+  methods?: MethodContribution[];
 }

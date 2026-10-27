@@ -7,6 +7,7 @@
 //! switch: clients cache it, so a list that was empty while off would stay empty after the user
 //! turns it on. Instead every tool but `vaultdraw_status` answers `DISABLED` while off.
 
+use super::plugin_tools;
 use crate::backend;
 use crate::cli::Cli;
 use crate::error::{Fail, EXIT_REFUSED};
@@ -75,6 +76,52 @@ pub fn list() -> Vec<Value> {
         .collect()
 }
 
+/// `tools/list` with the tools plugins offer: read from the running app, so none while AI is off or
+/// the app is closed (the built-in seven never change).
+pub fn list_all(cli: &Cli, client: &str) -> Vec<Value> {
+    let mut tools = list();
+    if let Some((rpc, mut c)) = plugin_session(cli, client) {
+        if let Ok(v) = rpc.call_on(&mut c, methods::PLUGIN_METHODS, None) {
+            tools.extend(plugin_tools::from_result(&v).iter().map(plugin_tools::to_json));
+        }
+    }
+    tools
+}
+
+/// A connection with the `mcp` role declared, only while the AI switch is open and the app runs.
+fn plugin_session(cli: &Cli, client: &str) -> Option<(Rpc, vaultdraw_protocol::Client)> {
+    if !settings().is_some_and(|s| s.mcp_open()) {
+        return None;
+    }
+    let rpc = backend_rpc(cli).ok()?;
+    let mut c = rpc.connect().ok()?;
+    hello(&rpc, &mut c, client).ok()?;
+    Some((rpc, c))
+}
+
+/// A tool a plugin offers: found again in the app's current list, then run with `plugin.call`.
+fn call_plugin(cli: &Cli, client: &str, tool: &str, args: Value) -> Option<Result<Value, Fail>> {
+    if !tool.contains("__") {
+        return None;
+    }
+    if !settings().is_some_and(|s| s.mcp_open()) {
+        return Some(Err(disabled()));
+    }
+    let asked = (|| {
+        let (rpc, mut c) = plugin_session(cli, client).ok_or_else(|| Fail::new(crate::error::EXIT_NOT_RUNNING, "Vaultdraw is not running", "NOT_RUNNING"))?;
+        let listed = rpc.call_on(&mut c, methods::PLUGIN_METHODS, None)?;
+        let Some(t) = plugin_tools::from_result(&listed).into_iter().find(|t| t.name == tool) else { return Ok(None) };
+        let params = json!({"plugin": t.plugin, "method": t.method, "params": args});
+        let out = rpc.call_on(&mut c, methods::PLUGIN_CALL, Some(params))?;
+        Ok(Some(plugin_tools::as_object(out.get("result").cloned().unwrap_or(Value::Null))))
+    })();
+    match asked {
+        Ok(Some(v)) => Some(Ok(v)),
+        Ok(None) => None,
+        Err(f) => Some(Err(f)),
+    }
+}
+
 /// The tool's method, or `None` for an unknown tool.
 fn method_of(tool: &str) -> Option<&'static str> {
     TOOLS.iter().map(|(m, _)| *m).find(|m| tool_name(m) == tool)
@@ -105,7 +152,7 @@ fn settings() -> Option<ControlSettings> {
 
 /// Runs one tool; `None` when there is no such tool.
 pub fn call(cli: &Cli, client: &str, tool: &str, args: Value) -> Option<Result<Value, Fail>> {
-    let method = method_of(tool)?;
+    let Some(method) = method_of(tool) else { return call_plugin(cli, client, tool, args) };
     let params = filter(method, args);
     Some(run(cli, client, method, params))
 }
@@ -150,7 +197,7 @@ fn backend_rpc(cli: &Cli) -> Result<Rpc, Fail> {
 }
 
 /// Declares the `mcp` role on a fresh connection.
-fn hello(rpc: &Rpc, c: &mut vaultdraw_protocol::Client, client: &str) -> Result<(), Fail> {
+pub(super) fn hello(rpc: &Rpc, c: &mut vaultdraw_protocol::Client, client: &str) -> Result<(), Fail> {
     rpc.call_on(c, methods::RPC_HELLO, Some(json!({"role": roles::MCP, "client": client}))).map(|_| ())
 }
 

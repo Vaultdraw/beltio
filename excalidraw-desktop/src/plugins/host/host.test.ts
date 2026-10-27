@@ -120,6 +120,29 @@ describe("activation", () => {
     await t.dispose();
   });
 
+  it("methods: bound on activation, undeclared refused, cleared on dispose", async () => {
+    const t = await bootPlugin(
+      {
+        id: "hello",
+        permissions: ["control"],
+        activation: ["onStartupFinished"],
+        contributes: { methods: [{ id: "echo" }] },
+      },
+      {
+        activate(ctx) {
+          ctx.methods.register("echo", (p) => ({ got: p }));
+          ctx.methods.register("nope", () => 1);
+        },
+      },
+    );
+    expect(await t.callMethod("echo", { a: 1 })).toEqual({ got: { a: 1 } });
+    expect(getRuntime("hello")!.methods.has("nope")).toBe(false);
+    expect(pluginErrorCount("hello")).toBe(1);
+    const rt = getRuntime("hello")!;
+    await t.dispose();
+    expect(rt.methods.size).toBe(0);
+  });
+
   it("declared but unregistered command: attributed error and toast", async () => {
     await boot([withCommands("hello", "say")], { hello: { activate() {} } });
     enable(["hello"]);

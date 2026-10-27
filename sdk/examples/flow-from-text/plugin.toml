@@ -1,0 +1,31 @@
+id = "flow-from-text"
+name = "Flow from text"
+version = "0.1.0"
+api = 0
+main = "main.js"
+description = "Example: methods other programs call (vaultdraw plugin call, AI apps). Draws a flowchart from Mermaid-style edges (A --> B) on the open drawing"
+author = "Vaultdraw"
+permissions = ["control"]
+
+# A method is JSON in, JSON out. `mcp = true` offers it to AI apps (only while Settings > AI is on).
+[[contributes.methods]]
+id = "draw"
+title = "Draw a flowchart from text"
+description = "Draws a flowchart on the drawing on screen from Mermaid-style edges, one chain per line or separated by ;, for example `graph LR; A[Idea] --> B[Draft] --> C[Ship]`. Node labels go in [], (), or {}. Returns the node and arrow counts. Edits the drawing on screen as one undo step."
+mcp = true
+write = true
+timeout_ms = 10000
+
+[contributes.methods.params]
+type = "object"
+required = ["text"]
+
+[contributes.methods.params.properties.text]
+type = "string"
+description = "Mermaid-style flowchart edges"
+
+[[contributes.methods]]
+id = "count"
+title = "Count the elements on screen"
+description = "How many elements the drawing on screen has, by type."
+mcp = true

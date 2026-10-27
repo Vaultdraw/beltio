@@ -40,6 +40,8 @@ export const FEATURES: Readonly<Record<string, string>> = {
   "markdown.parse": "0.8.0",
   menus: "0.12.0",
   "menus.target": "0.12.0",
+  methods: "0.21.0",
+  "methods.register": "0.21.0",
   overlays: "0.17.0",
   "overlays.open": "0.17.0",
   pages: "0.8.0",

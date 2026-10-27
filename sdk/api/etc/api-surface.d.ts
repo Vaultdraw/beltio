@@ -113,9 +113,10 @@ export interface ImportersApi {
 
 // index.ts
 export type { CommandsApi } from "./commands";
+export type { MethodsApi } from "./methods";
 export type { Disposable } from "./disposable";
 export type { AppEventMap, EventsApi } from "./events";
-export type { CommandContribution, ImporterContribution, MenuContribution, StatusBarContribution, ToolbarContribution, ToolContribution, ShapeContribution, ViewContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
+export type { CommandContribution, ImporterContribution, MenuContribution, MethodContribution, StatusBarContribution, ToolbarContribution, ToolContribution, ShapeContribution, ViewContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
 export type { FolderEntry, FoldersApi, PickSourceOptions, PickTargetOptions, SourceFolder, TargetFolder, } from "./folders";
 export type { ApiVersion, HostApi } from "./host";
 export type { ImportersApi, Importer, ImportInput, ImportOptions, ImportResult, } from "./importers";
@@ -149,7 +150,7 @@ export interface PluginManifestInfo {
     permissions: readonly PluginPermission[];
     dataKey: string;
 }
-export type PluginPermission = "vault.read" | "vault.write" | "folders.import";
+export type PluginPermission = "vault.read" | "vault.write" | "folders.import" | "control";
 export interface CommandContribution {
     id: string;
     title: string;
@@ -206,6 +207,15 @@ export interface ShapeContribution {
     width: number;
     height: number;
 }
+export interface MethodContribution {
+    id: string;
+    title: string;
+    description?: string | null;
+    params?: Record<string, unknown> | null;
+    mcp: boolean;
+    write: boolean;
+    timeout_ms?: number | null;
+}
 export interface PluginContributions {
     commands: CommandContribution[];
     panels: PanelContribution[];
@@ -217,6 +227,7 @@ export interface PluginContributions {
     toolbar?: ToolbarContribution[];
     tools?: ToolContribution[];
     shapes?: ShapeContribution[];
+    methods?: MethodContribution[];
 }
 
 // markdown.ts
@@ -348,6 +359,13 @@ export interface MenuTarget {
 }
 export interface MenusApi {
     target(): MenuTarget | null;
+}
+
+// methods.ts
+import type { Disposable } from "./disposable";
+import type { Json } from "./storage";
+export interface MethodsApi {
+    register(name: string, handler: (params: Json) => Json | Promise<Json>): Disposable;
 }
 
 // overlays.ts
@@ -483,6 +501,7 @@ export interface PanelsApi {
 
 // plugin.ts
 import type { CommandsApi } from "./commands";
+import type { MethodsApi } from "./methods";
 import type { Disposable } from "./disposable";
 import type { EventsApi } from "./events";
 import type { HostApi } from "./host";
@@ -540,6 +559,7 @@ export interface PluginContext {
     readonly menus: MenusApi;
     readonly tools: ToolsApi;
     readonly shapes: ShapesApi;
+    readonly methods: MethodsApi;
     readonly overlays: OverlaysApi;
     readonly thumbnails: ThumbnailsApi;
     readonly subscriptions: Disposable[];

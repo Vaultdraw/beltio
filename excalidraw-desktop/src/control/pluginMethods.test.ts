@@ -8,11 +8,39 @@ const plugin = (id: string, enabled: boolean) => ({
   id,
   name: id.toUpperCase(),
   version: "1.0.0",
+  permissions: ["control"],
+  review: { state: "ok", added: [] },
   contributes: {
     commands: [{ id: "go", title: "Go", keys: [], when: [], palette: true }],
+    methods: [
+      { id: "echo", title: "Echo", mcp: true, write: false },
+      { id: "secret", title: "Secret", mcp: false, write: true },
+      { id: "slow", title: "Slow", mcp: true, write: false, timeout_ms: 100 },
+      { id: "bad", title: "Bad", mcp: true, write: false },
+      { id: "none", title: "None", mcp: true, write: false },
+    ],
   },
   enabled,
 });
+
+const handlers = new Map<string, (p: unknown) => unknown>([
+  ["echo", (p) => ({ got: p })],
+  ["secret", () => "s"],
+  ["slow", () => new Promise(() => {})],
+  [
+    "bad",
+    () => {
+      throw new Error("boom");
+    },
+  ],
+  ["none", () => undefined],
+]);
+const ensureActive = vi.fn(async (_id: string) => true);
+vi.mock("../plugins/host/activation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../plugins/host/activation")>()),
+  ensureActive: (id: string) => ensureActive(id),
+  getRuntime: () => ({ methods: handlers }),
+}));
 
 vi.mock("../vault/preferences", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../vault/preferences")>()),
@@ -82,5 +110,69 @@ describe("plugin control methods", () => {
       code: "UNAVAILABLE",
       data: { failed: ["drawingOpen"] },
     });
+  });
+
+  it("lists the methods of enabled plugins; an AI app sees only mcp ones", async () => {
+    const { m } = make();
+    const all = (await m["plugin.methods"]({})) as any;
+    expect(all.methods.map((x: any) => `${x.plugin}.${x.method}`)).toEqual([
+      "on.echo",
+      "on.secret",
+      "on.slow",
+      "on.bad",
+      "on.none",
+    ]);
+    const ai = (await m["plugin.methods"]({ by: "mcp" })) as any;
+    expect(ai.methods.map((x: any) => x.method)).not.toContain("secret");
+    expect(ai.methods[0]).toMatchObject({ plugin: "on", write: false });
+  });
+
+  it("calls a method: lazy activation, JSON in and out", async () => {
+    const { m } = make();
+    const r = await m["plugin.call"]({
+      plugin: "on",
+      method: "echo",
+      params: { a: 1 },
+    });
+    expect(r).toEqual({
+      plugin: "on",
+      method: "echo",
+      result: { got: { a: 1 } },
+    });
+    expect(ensureActive).toHaveBeenCalledWith("on");
+    // No params means {}.
+    expect(
+      (await m["plugin.call"]({ plugin: "on", method: "echo" })) as any,
+    ).toMatchObject({ result: { got: {} } });
+  });
+
+  it("refuses unknown, disabled and not-offered methods", async () => {
+    const { m } = make();
+    await expect(
+      m["plugin.call"]({ plugin: "on", method: "zz" }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      m["plugin.call"]({ plugin: "off", method: "echo" }),
+    ).rejects.toMatchObject({ code: "UNAVAILABLE" });
+    // The command line may call it; an AI app is told it does not exist.
+    await expect(
+      m["plugin.call"]({ plugin: "on", method: "secret" }),
+    ).resolves.toMatchObject({ result: "s" });
+    await expect(
+      m["plugin.call"]({ plugin: "on", method: "secret", by: "mcp" }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("times out, reports a throw and refuses a result that is not JSON", async () => {
+    const { m } = make();
+    await expect(
+      m["plugin.call"]({ plugin: "on", method: "slow" }),
+    ).rejects.toMatchObject({ code: "TIMEOUT" });
+    await expect(
+      m["plugin.call"]({ plugin: "on", method: "bad" }),
+    ).rejects.toMatchObject({ code: "PLUGIN_ERROR" });
+    await expect(
+      m["plugin.call"]({ plugin: "on", method: "none" }),
+    ).rejects.toMatchObject({ code: "PLUGIN_ERROR" });
   });
 });

@@ -11,6 +11,8 @@ export const PERMISSION_TEXT: Readonly<Record<string, string>> = {
   "vault.write": "Create drawings in your vault",
   "folders.import":
     "Read a folder you pick and write into a destination you pick",
+  control:
+    "Let the vaultdraw command, scripts and the AI apps you allow call its methods",
 };
 
 /** The consent line of one permission (the raw name for one this app does not know). */
