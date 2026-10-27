@@ -31,6 +31,7 @@ import { drawingNames, useAppLinks } from "./links/useAppLinks";
 import { useLazyServices, useStartMode } from "./services/useLazyServices";
 import { useServiceStart } from "./services/useServiceStart";
 import { OnMount } from "./services/OnMount";
+import { waitForInputQuiet } from "./services/inputQuiet";
 import { DesktopVaultTagRename } from "./tags/DesktopVaultTagRename";
 import { scheduleIdle } from "./platform/idle";
 import { useAppTags } from "./tags/useAppTags";
@@ -807,8 +808,12 @@ export const VaultApp = ({
           setAllIndexedEntries(snapshot);
         }
       });
-      scanVaultMetadata(repository, vault.handle, signal, (progress) =>
-        throttle.push(progress),
+      scanVaultMetadata(
+        repository,
+        vault.handle,
+        signal,
+        (progress) => throttle.push(progress),
+        () => waitForInputQuiet(win ?? window),
       )
         .then((finalList) => {
           throttle.cancel();
@@ -830,7 +835,7 @@ export const VaultApp = ({
           setIsIndexing(false);
         });
     },
-    [repository, vault],
+    [repository, vault, win],
   );
 
   // Refresh recovery count with generation guard

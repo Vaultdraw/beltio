@@ -166,7 +166,15 @@ impl Worker {
             if self.stopped() {
                 return changed;
             }
-            let docs: Vec<_> = chunk.iter().filter_map(|f| parse(&self.root, f, &mut buf)).collect();
+            // Each document is a small unit: pause while the user is listing folders or opening
+            // a drawing (bounded; at least one document between pauses).
+            let docs: Vec<_> = chunk
+                .iter()
+                .filter_map(|f| {
+                    crate::ui_activity::yield_to_ui();
+                    parse(&self.root, f, &mut buf)
+                })
+                .collect();
             {
                 let mut index = self.shared.write();
                 for (path, doc) in docs {

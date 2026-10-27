@@ -34,6 +34,7 @@ mod themes;
 mod vault_settings;
 mod history;
 mod thumbs;
+mod ui_activity;
 #[cfg(test)]
 mod test_alloc;
 #[cfg(feature = "smoke-test")]
@@ -427,11 +428,13 @@ async fn list_directory(
     path: String,
     state: State<'_, Service>,
 ) -> Result<Vec<VaultEntry>> {
+    ui_activity::touch();
     let v = vault_for(&state, &handle)?;
     list_directory_in(&v, &path)
 }
 #[tauri::command]
 async fn read_drawing(handle: String, path: String, state: State<'_, Service>) -> Result<tauri::ipc::Response> {
+    ui_activity::touch();
     let v = vault_for(&state, &handle)?;
     let framed = read_drawing_file(&v.root, &path)?;
     memory::schedule_release();

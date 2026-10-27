@@ -1,3 +1,5 @@
+import { INPUT_EVENTS } from "./inputQuiet";
+
 /**
  * Runs `run` once the app is idle after a vault opens, like lazy.nvim's
  * `VeryLazy` or VS Code's `onStartupFinished`: after the first paint (two
@@ -13,8 +15,6 @@ export interface IdleOptions {
 
 export const IDLE_QUIET_MS = 1000;
 export const IDLE_DEADLINE_MS = 5000;
-
-const INPUT_EVENTS = ["keydown", "pointerdown", "wheel"] as const;
 
 type IdleWindow = Window & {
   requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;

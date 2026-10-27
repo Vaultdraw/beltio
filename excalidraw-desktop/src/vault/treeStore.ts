@@ -195,13 +195,16 @@ export function checkTreeDrop(
 
 /**
  * Crawls vault directory metadata recursively for background search indexing.
- * Cancellable via AbortSignal.
+ * Cancellable via AbortSignal. `pause` runs before each folder after the
+ * first: background callers pass one that waits for user input to go quiet,
+ * so the walk never competes with a click or a key press.
  */
 export async function scanVaultMetadata(
   repository: VaultRepository,
   handle: string,
   signal?: AbortSignal,
   onProgress?: (entries: VaultEntry[]) => void,
+  pause?: () => Promise<void>,
 ): Promise<VaultEntry[]> {
   const all: VaultEntry[] = [];
   const queue: string[] = [""];
@@ -211,6 +214,12 @@ export async function scanVaultMetadata(
       break;
     }
     const dir = queue.shift()!;
+    if (pause && dir !== "") {
+      await pause();
+      if (signal?.aborted) {
+        break;
+      }
+    }
     try {
       const items = await repository.listDirectory(handle, dir);
       for (const item of items) {

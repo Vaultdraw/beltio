@@ -147,7 +147,8 @@ describe("whenIdle", () => {
     whenIdle(win, () => {}, { quietMs: 10 });
     paint(win);
     vi.advanceTimersByTime(10);
-    expect(spy).toHaveBeenCalledTimes(3);
+    // keydown, pointerdown, wheel and click (INPUT_EVENTS)
+    expect(spy).toHaveBeenCalledTimes(4);
   });
   it("fires at the deadline even when animation frames never run (hidden window)", () => {
     // Review #1: WebKit pauses requestAnimationFrame while hidden or minimised.

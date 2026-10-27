@@ -108,3 +108,53 @@ describe("scan + throttle", () => {
     }
   });
 });
+
+describe("scan yields to input", () => {
+  it("waits on pause before each subfolder (not the root) and lists nothing while paused", async () => {
+    const repo = new FakeVaultRepository();
+    repo.seedDrawing("a/x.excalidraw", BLANK_SCENE);
+    repo.seedDrawing("b/y.excalidraw", BLANK_SCENE);
+    const listed = vi.spyOn(repo, "listDirectory");
+    let release!: () => void;
+    const pause = vi.fn(
+      () =>
+        new Promise<void>((r) => {
+          release = r;
+        }),
+    );
+    const scan = scanVaultMetadata(
+      repo,
+      repo.handle,
+      undefined,
+      undefined,
+      pause,
+    );
+    await vi.waitFor(() => expect(pause).toHaveBeenCalledTimes(1));
+    // Only the root was listed; the walk waits for input to go quiet.
+    expect(listed.mock.calls.map(([, p]) => p)).toEqual([""]);
+    release();
+    await vi.waitFor(() => expect(pause).toHaveBeenCalledTimes(2));
+    expect(listed.mock.calls.map(([, p]) => p)).toEqual(["", "a"]);
+    release();
+    const final = await scan;
+    expect(final.map((e) => e.path).sort()).toEqual(
+      ["a", "a/x.excalidraw", "b", "b/y.excalidraw"].sort(),
+    );
+  });
+
+  it("an abort during a pause ends the walk with nothing", async () => {
+    const repo = new FakeVaultRepository();
+    repo.seedDrawing("a/x.excalidraw", BLANK_SCENE);
+    const controller = new AbortController();
+    const scan = scanVaultMetadata(
+      repo,
+      repo.handle,
+      controller.signal,
+      undefined,
+      async () => {
+        controller.abort();
+      },
+    );
+    expect(await scan).toEqual([]);
+  });
+});

@@ -349,12 +349,14 @@ export const VaultNavigator = ({
   );
 
   const isSearching = searchQuery.trim() !== "";
-  // Name matches in the results come from the vault file list.
+  // Without native search, name matches come from the vault file list. With
+  // it, only folder matches do: they fill in once the list has loaded, and a
+  // search does not start the folder walk while the index answers it.
   useEffect(() => {
-    if (isSearching) {
+    if (isSearching && !search) {
       onNeedIndex?.();
     }
-  }, [isSearching, onNeedIndex]);
+  }, [isSearching, search, onNeedIndex]);
   const tagSource = tagSearch === undefined ? search : tagSearch;
   const { tags, byPath: tagsByPath } = useVaultTags(tagSource, vault.handle);
   const filterByTag = (key: string) => setSearchQuery(tagQuery(key));
