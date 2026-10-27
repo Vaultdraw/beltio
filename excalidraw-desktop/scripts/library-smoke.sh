@@ -5,6 +5,7 @@
 # taskpolicy -c background (low-end), then scripts/watchdog-smoke.sh. Prints each report summary.
 # Usage: [SMOKE_MILESTONE=1] scripts/library-smoke.sh   (run from anywhere; holds the shared build lock)
 set -u
+FAILED=0   # set by any launch that fails the strict check; the script exits non-zero then
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 WT=$(cd "$HERE/.." && pwd)
 # One lock shared by every worktree: it lives in the main checkout (parent of git common dir).
@@ -26,7 +27,8 @@ run() { # label, prefix...
   start=$(date +%s)
   # perl alarm: a hung WebView (rAF stops when the window is occluded) must not hold the lock forever.
   lockf -k "$LOCK" env EXCALIDRAW_VAULT_SMOKE_DIR="$D" VAULTDRAW_CONFIG_DIR="$C/config" VAULTDRAW_STATE_DIR="$C/state" "$@" perl -e 'alarm 900; exec {$ARGV[0]} @ARGV' "$APP"
-  echo "== $label: exit=$? wall=$(( $(date +%s) - start ))s"
+  code=$?
+  echo "== $label: exit=$code wall=$(( $(date +%s) - start ))s"
   cp "$D/smoke-report.json" "$D/smoke-report-$label.json" 2>/dev/null
   node -e '
 const r=require(process.argv[1]);const a=r.details||r;
@@ -34,6 +36,8 @@ console.log("status",r.status,"elapsedMs",a.elapsedMs);
 const all=r.steps||a.records||[];
 for(const s of all){if(!s.ok||/^library/.test(s.step))console.log(s.ok?"ok  ":"FAIL",s.step,JSON.stringify(s.details).slice(0,400))}
 const f=all.filter(s=>!s.ok);console.log("failed steps:",f.length,"pageErrors:",(a.pageErrors||[]).length)' "$D/smoke-report-$label.json"
+  # The gate: strict per-launch check (exit 0, 0 failed steps, no perf errors, window visible).
+  node "$HERE/scripts/smoke-check.mjs" "$label" "$code" "$D/smoke-report-$label.json" "$C/state" || FAILED=1
 }
 run run1 env
 if [ "${SMOKE_MILESTONE:-0}" = 1 ]; then
@@ -44,3 +48,7 @@ if [ "${SMOKE_MILESTONE:-0}" = 1 ]; then
 fi
 ls -la "$C/config/library.excalidrawlib" "$D/library.excalidrawlib"
 kill $CAF 2>/dev/null
+# library.excalidrawlib must exist after the relaunch (milestone runs prove persistence).
+if [ "${SMOKE_MILESTONE:-0}" = 1 ] && [ ! -s "$D/library.excalidrawlib" ]; then echo "SMOKE: FAIL - library.excalidrawlib missing after relaunch"; FAILED=1; fi
+if [ "$FAILED" = 0 ]; then echo "SMOKE: PASS"; else echo "SMOKE: FAIL (exit code is the gate)"; fi
+exit $FAILED

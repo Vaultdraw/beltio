@@ -265,7 +265,12 @@ if (!skipBrowser) {
 }
 
 if ((o.scenarios || o["skip-scenarios"]) && !skipApp) notes.push("--scenarios/--skip-scenarios apply to Chromium mode only; the packaged app ran every scenario");
-const metrics = {
+// INVALID: a packaged run whose window stalled (rAF) or, in --foreground mode, was hidden measured
+// nothing real. Report INVALID, no numbers, exit non-zero (the milestone gate is this exit code).
+const invalid = [];
+if (appAborted || isRafStall(errors)) invalid.push(appAborted || "rAF stalled (window hidden/occluded or display asleep)");
+if (hiddenAppRuns > 0 && process.env.VAULTDRAW_PERF_FOREGROUND === "1") invalid.push(`${hiddenAppRuns}/${rawApp.length} foreground run(s) had a hidden window`);
+const metrics = invalid.length ? {} : {
   ...aggregate(rawApp, unitOf(catalogue)),
   ...aggregate(rawBrowser, unitOf(catalogue)),
 };
@@ -280,6 +285,7 @@ if (lnote) notes.push(lnote);
 const result = {
   version: 1, mode, createdAt: new Date().toISOString(), git, machine: machineInfo(),
   config: { runs: rawApp.length || rawBrowser.length, warmup, fixtureHash, drawingCount: modes.typical ? 50 : config.drawingCount, ...(variant ? { variant } : {}) },
+  ...(invalid.length ? { invalid } : {}),
   load, metrics, raw: { app: rawApp, browser: rawBrowser, appOpenBreakdown }, notes, errors,
   ...(browserScenarios?.length ? { scenarios: browserScenarios } : {}),
   ...(appAborted ? { aborted: { app: appAborted } } : {}),
@@ -291,12 +297,16 @@ mkdirSync(path.dirname(outFile), { recursive: true });
 writeFileSync(outFile, JSON.stringify(result, null, 2) + "\n");
 
 console.log(`\nVaultdraw perf - ${mode} - ${rawApp.length || rawBrowser.length} measured run(s) + ${warmup} warmup - ${git.sha.slice(0, 10)}${git.dirty ? " (dirty)" : ""}`);
-console.log(resultTable(result, catalogue));
+if (!invalid.length) console.log(resultTable(result, catalogue));
 console.log(loadSummary(load));
 for (const n of notes) console.log(`note: ${n}`);
 
 let exitCode = 0;
-if (o.compare) {
+if (invalid.length) {
+  console.log(`\nINVALID RUN (no numbers reported): ${invalid.join("; ")}`);
+  exitCode = 1;
+}
+if (o.compare && !invalid.length) {
   const { baseline, warnings } = pickBaseline(JSON.parse(readFileSync(o.compare, "utf8")), mode, result.machine);
   for (const w of warnings) console.log(`WARNING: ${w}`);
   const cmp = compare(result, baseline, catalogue);
