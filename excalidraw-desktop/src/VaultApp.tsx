@@ -128,6 +128,8 @@ import {
 } from "./commands/useCommands";
 import { WhichKeyHost } from "./keys/WhichKeyHost";
 import { drawingOpenCommandId } from "./commands/drawingCommands";
+import { detectPlatform, formatChordWords } from "./commands/keys";
+import { commandShortcutLabel } from "./palette/shortcuts";
 import { useCommandShortcutLookup } from "./commands/useCommandShortcut";
 import {
   collectPaletteItems,
@@ -2408,6 +2410,13 @@ export const VaultApp = ({
         return f ? { name: f.name, readOnly: f.readOnly } : null;
       },
       activePath: () => appFilesRef.current.active()?.path ?? null,
+      openShortcut: (path) =>
+        commandShortcutLabel(
+          drawingOpenCommandId(path),
+          getPreferences(win).hotkeys,
+          detectPlatform(win),
+          formatChordWords,
+        ) || null,
       drawingExists: (path) => appFilesRef.current.drawingExists(path),
       openDrawing: (path, newTab) =>
         appFilesRef.current.openDrawing(path, newTab),

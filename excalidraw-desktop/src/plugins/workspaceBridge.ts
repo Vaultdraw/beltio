@@ -10,6 +10,8 @@ export interface WorkspaceBridge {
   vault(): { name: string; readOnly: boolean } | null;
   /** The active drawing's vault-relative path, or null. */
   activePath(): string | null;
+  /** The key label bound to opening `path`, or null. */
+  openShortcut(path: string): string | null;
   drawingExists(path: string): Promise<boolean>;
   /** Same core as the control method `file.open`; false when it failed. */
   openDrawing(path: string, newTab: boolean): Promise<boolean>;

@@ -462,6 +462,7 @@ export async function boot(
     revealFolder: async (path) => {
       revealed.push(path);
     },
+    openShortcut: () => null,
   });
   const sceneOf = (els: readonly (NewElement & { id?: string })[]) => ({
     type: "excalidraw",
