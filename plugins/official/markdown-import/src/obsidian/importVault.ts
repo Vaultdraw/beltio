@@ -33,6 +33,24 @@ const EMBEDDABLE = new Set([
   "image/svg+xml",
 ]);
 
+/** Native copies in flight at once: enough to hide the call latency, few enough to keep the disk calm. */
+export const COPY_CONCURRENCY = 4;
+
+/** Longest stretch of import work before the loop gives the main thread back. */
+const SLICE_MS = 12;
+
+/** A turn of the event loop: queued input, timers and paints run before the import goes on. */
+const yieldToInput = (): Promise<void> =>
+  new Promise((resolve) => {
+    // A message task, not setTimeout: nested timers are clamped to 4 ms.
+    const { port1, port2 } = new MessageChannel();
+    port1.onmessage = () => {
+      port1.close();
+      resolve();
+    };
+    port2.postMessage(0);
+  });
+
 const REMOTE = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 
 const dirOf = (path: string): string =>
@@ -136,6 +154,9 @@ export async function importObsidianVault(
 
   const importNote = async (item: PlanItem): Promise<void> => {
     let doc = await ctx.markdown.parse(await source.readText(item.path));
+    if (signal.aborted) {
+      return;
+    }
     if (settings.obsidianLinks === "drawing") {
       const r = rewriteLinks(doc, resolver);
       doc = r.doc;
@@ -165,48 +186,64 @@ export async function importObsidianVault(
     result.notes++;
   };
 
+  /** One copy-kind item (a drawing conversion, a drawing, an attachment): the native side does the work. */
+  const copyItem = async (item: PlanItem): Promise<() => void> => {
+    const to = await writeUnique(item.target, (p) =>
+      item.kind === "excalidrawMd"
+        ? target.convertDrawing(source, item.path, p)
+        : target.copyFrom(source, item.path, p),
+    );
+    // Recorded in plan order by the caller, so `written` and `first` do not depend on timing.
+    return () => {
+      wrote(to);
+      if (item.kind === "attachment") {
+        result.attachments++;
+      } else {
+        result.drawings++;
+      }
+    };
+  };
+
   const total = plan.items.length;
   let done = 0;
-  for (const item of plan.items) {
+  let sliceStart = performance.now();
+  for (let i = 0; i < total; ) {
     if (signal.aborted) {
       result.cancelled = true;
       break;
     }
-    opts.onProgress(done, total, stem(item.path));
-    try {
-      switch (item.kind) {
-        case "note":
-          await importNote(item);
-          break;
-        case "excalidrawMd":
-          wrote(
-            await writeUnique(item.target, (p) =>
-              target.convertDrawing(source, item.path, p),
-            ),
-          );
-          result.drawings++;
-          break;
-        case "drawing":
-          wrote(
-            await writeUnique(item.target, (p) =>
-              target.copyFrom(source, item.path, p),
-            ),
-          );
-          result.drawings++;
-          break;
-        case "attachment":
-          wrote(
-            await writeUnique(item.target, (p) =>
-              target.copyFrom(source, item.path, p),
-            ),
-          );
-          result.attachments++;
-          break;
-      }
-    } catch (err) {
-      fail(item.path, err);
+    // Let input and painting in: never more than ~SLICE_MS of work between two turns of the loop.
+    if (performance.now() - sliceStart > SLICE_MS) {
+      await yieldToInput();
+      sliceStart = performance.now();
+      continue;
     }
-    done++;
+    const item = plan.items[i];
+    opts.onProgress(done, total, stem(item.path));
+    if (item.kind === "note") {
+      try {
+        await importNote(item);
+      } catch (err) {
+        fail(item.path, err);
+      }
+      i++;
+      done++;
+      continue;
+    }
+    // A run of copy items goes out COPY_CONCURRENCY at a time (each is a native call).
+    const batch = plan.items
+      .slice(i, i + COPY_CONCURRENCY)
+      .filter((b) => b.kind !== "note");
+    const outcomes = await Promise.allSettled(batch.map(copyItem));
+    outcomes.forEach((o, k) => {
+      if (o.status === "fulfilled") {
+        o.value();
+      } else {
+        fail(batch[k].path, o.reason);
+      }
+    });
+    i += batch.length;
+    done += batch.length;
   }
   if (signal.aborted) {
     result.cancelled = true;

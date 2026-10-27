@@ -10,7 +10,10 @@ import { describe, expect, test } from "vitest";
 
 import { fakeExtractScene } from "../../../../../sdk/api/shared/fakeFolders";
 import { fakeParseMarkdown } from "../../../../../sdk/api/shared/markdown";
-import { importObsidianVault } from "../../src/obsidian/importVault";
+import {
+  COPY_CONCURRENCY,
+  importObsidianVault,
+} from "../../src/obsidian/importVault";
 import { buildWidthTable, layoutNote } from "../../src/layout/index";
 import { defaultOptions, fakeMeasure } from "../layout/fixtures";
 
@@ -321,5 +324,85 @@ describe("importObsidianVault", () => {
     await go();
     expect(progress[0]).toEqual([0, 8, "Empty.md"]);
     expect(progress.at(-1)).toEqual([8, 8, ""]);
+  });
+
+  describe("a large vault", () => {
+    /** 40 attachments and 6 notes in a source that answers after a short delay. */
+    const bigRun = (over: Partial<ObsidianImportOptions> = {}) => {
+      const files = new Map<string, string>();
+      for (let i = 0; i < 6; i++) {
+        files.set(`n${i}.md`, `# Note ${i}\n\nbody`);
+      }
+      for (let i = 0; i < 40; i++) {
+        files.set(`a/f${String(i).padStart(2, "0")}.bin`, "x");
+      }
+      const source: SourceFolder = {
+        name: "big",
+        async list() {
+          return [...files].map(([p, t]) => ({
+            path: p,
+            size: t.length,
+            modifiedAt: 1,
+          }));
+        },
+        async readText(p) {
+          return files.get(p)!;
+        },
+        async readBytes(p) {
+          return new TextEncoder().encode(files.get(p)!);
+        },
+      };
+      const out = memoryTarget();
+      let inFlight = 0;
+      let peak = 0;
+      const copyFrom = out.target.copyFrom;
+      out.target.copyFrom = async (src, from, to) => {
+        peak = Math.max(peak, ++inFlight);
+        await new Promise((r) => setTimeout(r, 2));
+        try {
+          if (from === "a/f07.bin") {
+            throw new Error("disk full");
+          }
+          await copyFrom(src, from, to);
+        } finally {
+          inFlight--;
+        }
+      };
+      const base = run({ source, target: out.target, ...over });
+      return { ...base, out, peak: () => peak };
+    };
+
+    test("copies run a few at a time, never more than the bound, and `written` keeps plan order", async () => {
+      const { go, out, peak } = bigRun();
+      const r = await go();
+      expect(peak()).toBeGreaterThan(1);
+      expect(peak()).toBeLessThanOrEqual(COPY_CONCURRENCY);
+      expect(r.attachments).toBe(39);
+      expect(r.errors).toEqual([{ path: "a/f07.bin", message: "disk full" }]);
+      const names = r.written.filter((w) => w.startsWith("a/"));
+      expect(names).toEqual([...names].sort());
+      expect(r.written.slice(0, 6)).toEqual(
+        Array.from({ length: 6 }, (_, i) => `n${i}.excalidraw`),
+      );
+      expect(out.files.size).toBe(6 + 39);
+      expect(r.first).toBe("n0.excalidraw");
+    });
+
+    test("cancel in the middle of the copies stops within one batch", async () => {
+      const ac = new AbortController();
+      const { go, out } = bigRun({ signal: ac.signal });
+      const copy = out.target.copyFrom;
+      let n = 0;
+      out.target.copyFrom = async (...a) => {
+        if (++n === 10) {
+          ac.abort("cancel");
+        }
+        await copy(...a);
+      };
+      const r = await go();
+      expect(r.cancelled).toBe(true);
+      expect(r.attachments).toBeLessThan(10 + COPY_CONCURRENCY);
+      expect(r.attachments).toBeGreaterThanOrEqual(9);
+    });
   });
 });
