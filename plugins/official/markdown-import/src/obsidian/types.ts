@@ -76,6 +76,10 @@ export interface ObsidianImportResult {
   unresolvedLinks: number;
   /** Embedded images (notes and drawings) whose file was not found. */
   missingImages: number;
+  /** Images over the embed cap (4 MiB): the drawing keeps a placeholder box, the file is still copied. */
+  oversizedImages: number;
+  /** Images of a type a drawing cannot hold (AVIF, BMP, ICO): placeholder box, file copied. */
+  unsupportedImages: number;
   errors: ImportError[];
   /** True when the signal fired: what was written stays, the rest was not started. */
   cancelled: boolean;

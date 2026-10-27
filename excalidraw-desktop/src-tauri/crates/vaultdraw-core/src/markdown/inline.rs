@@ -373,7 +373,7 @@ impl Inl {
                 ctx.dropped_emphasis += 1;
             }
             Tag::Link { link_type: LinkType::WikiLink { has_pothole }, dest_url, .. } => {
-                self.wiki = Some(WikiCap { dest: dest_url.to_string(), has_pothole, range: range.clone(), alias: String::new() });
+                self.wiki = Some(WikiCap { dest: dest_url.trim_end_matches('\\').to_string(), has_pothole, range: range.clone(), alias: String::new() });
             }
             Tag::Link { dest_url, .. } => {
                 let target = decode_dest(&dest_url);
@@ -392,7 +392,9 @@ impl Inl {
                     LinkType::WikiLink { has_pothole } => (true, has_pothole),
                     _ => (false, true),
                 };
-                self.img = Some(ImgCap { wiki, has_pothole, dest: dest_url.to_string(), range: range.clone(), alt: String::new() });
+                // In a table cell Obsidian wants `\|` for the alias bar: the backslash is not part of the target.
+                let dest = if wiki { dest_url.trim_end_matches('\\').to_string() } else { dest_url.to_string() };
+                self.img = Some(ImgCap { wiki, has_pothole, dest, range: range.clone(), alt: String::new() });
             }
             _ => return false,
         }

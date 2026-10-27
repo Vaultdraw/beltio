@@ -37,6 +37,27 @@ const MAX_WALK: usize = 100_000;
 pub(crate) fn locate(root: &Path, from: &str, target: &str) -> Result<String> {
     let target = target.trim().trim_start_matches('/');
     let dir = from.rsplit_once('/').map_or("", |(d, _)| d);
+    // `./pic.png` and `../pics/pic.png` are relative to the note's folder; the rest of the rules see a plain path.
+    if target.starts_with("./") || target.starts_with("../") {
+        let mut parts: Vec<&str> = dir.split('/').filter(|p| !p.is_empty()).collect();
+        let mut inside = true;
+        for part in target.split('/') {
+            match part {
+                "" | "." => {}
+                ".." => inside &= parts.pop().is_some(),
+                p => parts.push(p),
+            }
+        }
+        if inside {
+            let joined = parts.join("/");
+            if asset_file(root, &joined).map(|f| f.is_file()).unwrap_or(false) {
+                return Ok(joined);
+            }
+        }
+        // Not there: Obsidian then falls back to the name alone.
+        let name = target.rsplit('/').next().unwrap_or(target).to_string();
+        return locate(root, from, &name);
+    }
     for cand in [if dir.is_empty() { target.to_string() } else { format!("{dir}/{target}") }, target.to_string()] {
         if asset_file(root, &cand).map(|f| f.is_file()).unwrap_or(false) {
             return Ok(cand);
@@ -109,6 +130,28 @@ mod tests {
         for bad in ["", "/a.png", "a\\b.png", "../a.png", "pics/../a.png", ".obsidian/a.png", "pics/.x/a.png", "a.txt", "a.md", "noext", "pics//a.png"] {
             assert!(asset_file(root, bad).is_err(), "{bad}");
         }
+    }
+
+    #[test]
+    fn relative_forms_resolve_from_the_notes_folder() {
+        let dir = std::env::temp_dir().join(format!("vd-rel-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        for d in ["a/b", "pics", "my folder", "Ünï"] {
+            std::fs::create_dir_all(dir.join(d)).unwrap();
+        }
+        std::fs::write(dir.join("a/b/x.png"), [1u8]).unwrap();
+        std::fs::write(dir.join("a/y.gif"), [2u8]).unwrap();
+        std::fs::write(dir.join("pics/z.webp"), [3u8]).unwrap();
+        std::fs::write(dir.join("my folder/s p.svg"), [4u8]).unwrap();
+        std::fs::write(dir.join("Ünï/u.png"), [5u8]).unwrap();
+        assert_eq!(read_asset(&dir, "a/n.md", "./b/x.png").unwrap(), vec![1]);
+        assert_eq!(read_asset(&dir, "a/b/n.md", "../y.gif").unwrap(), vec![2]);
+        assert_eq!(read_asset(&dir, "a/b/n.md", "../../pics/z.webp").unwrap(), vec![3]);
+        assert_eq!(read_asset(&dir, "a/n.md", "../../../pics/z.webp").unwrap(), vec![3], "leaving the vault falls back to the name");
+        assert_eq!(read_asset(&dir, "n.md", "my folder/s p.svg").unwrap(), vec![4]);
+        assert_eq!(read_asset(&dir, "a/n.md", "Ünï/u.png").unwrap(), vec![5]);
+        assert_eq!(read_asset(&dir, "n.md", "u.png").unwrap(), vec![5], "by name in a non-ASCII folder");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

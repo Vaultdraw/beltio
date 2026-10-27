@@ -24,6 +24,20 @@ import type { PageItem } from "../layout/types";
 /** Images above this size are not embedded (the drawing keeps a placeholder). */
 export const MAX_EMBED_BYTES = 4 * 1024 * 1024;
 
+/** The picture types a drawing can hold (the scene API's list). */
+const EMBEDDABLE = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "image/svg+xml",
+]);
+
+const REMOTE = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
+
+const dirOf = (path: string): string =>
+  path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
+
 const message = (err: unknown): string =>
   err instanceof Error ? err.message : String(err);
 
@@ -54,6 +68,8 @@ export async function importObsidianVault(
     skipped: plan.skipped,
     unresolvedLinks: 0,
     missingImages: 0,
+    oversizedImages: 0,
+    unsupportedImages: 0,
     errors: [],
     cancelled: false,
     written: [],
@@ -86,16 +102,26 @@ export async function importObsidianVault(
   };
 
   /** Fills `bytes` of image items from the vault's attachments. */
-  const fillImages = async (items: PageItem[]): Promise<void> => {
+  const fillImages = async (items: PageItem[], fromDir: string): Promise<void> => {
     for (const item of items) {
       if (item.type !== "image" || item.bytes) {
         continue;
       }
-      const hit = resolver.resolve(item.target, ["attachment"]);
+      if (REMOTE.test(item.target)) {
+        continue; // never fetched: the import is offline
+      }
+      if (!EMBEDDABLE.has(item.mimeType)) {
+        result.unsupportedImages++;
+        continue;
+      }
+      const written = item.target.split(/[?#]/)[0];
+      const hit = resolver.resolve(written, ["attachment"], fromDir);
       const size = hit ? sizes.get(hit.path) : undefined;
       if (!hit || size === undefined) {
         result.missingImages++;
-      } else if (size <= MAX_EMBED_BYTES) {
+      } else if (size > MAX_EMBED_BYTES) {
+        result.oversizedImages++;
+      } else {
         try {
           item.bytes = await source.readBytes(hit.path);
         } catch {
@@ -120,7 +146,7 @@ export async function importObsidianVault(
       if (signal.aborted) {
         return;
       }
-      await fillImages(part.items);
+      await fillImages(part.items, dirOf(item.path));
       const scene = await ctx.pages.buildScene(part.items, {
         setup,
         pageCount: Math.max(1, part.pageCount),

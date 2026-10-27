@@ -96,8 +96,26 @@ export class LinkResolver {
     }
   }
 
-  /** Obsidian's rule: exact path, else the unique or shortest path with that basename. */
-  resolve(written: string, kinds?: readonly ItemKind[]): Resolved | null {
+  /**
+   * Obsidian's rule: exact path, else the unique or shortest path with that basename.
+   * With `fromDir` (the note's folder), `./x`, `../x` and plain `x` are tried from that folder first.
+   */
+  resolve(
+    written: string,
+    kinds?: readonly ItemKind[],
+    fromDir?: string,
+  ): Resolved | null {
+    if (fromDir !== undefined) {
+      const rel = relativeTo(fromDir, written);
+      const hit = rel === null ? undefined : this.byPath.get(fold(rel));
+      if (hit && (!kinds || kinds.includes(hit.item.kind))) {
+        return hit.item;
+      }
+      // `../x` or `./x` that did not land on a file: the name alone is what Obsidian falls back to.
+      if (/^\.{1,2}\//.test(written)) {
+        return this.resolve(written.replace(/^(?:\.{1,2}\/)+/, ""), kinds);
+      }
+    }
     for (const key of keysOfTarget(written)) {
       const exact = this.byPath.get(key);
       if (exact && (!kinds || kinds.includes(exact.item.kind))) {
@@ -128,6 +146,24 @@ export class LinkResolver {
     return null;
   }
 }
+
+/** `written` resolved against the folder `dir` (`..` and `.` applied), or null when it leaves the vault. */
+export const relativeTo = (dir: string, written: string): string | null => {
+  const parts = written.startsWith("/") ? [] : dir.split("/").filter(Boolean);
+  for (const part of written.split("/")) {
+    if (part === "" || part === ".") {
+      continue;
+    }
+    if (part === "..") {
+      if (parts.pop() === undefined) {
+        return null;
+      }
+    } else {
+      parts.push(part);
+    }
+  }
+  return parts.join("/");
+};
 
 /** The target path without `.excalidraw`: what a Vaultdraw link names. */
 const linkTarget = (target: string): string =>

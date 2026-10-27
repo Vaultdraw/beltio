@@ -97,7 +97,21 @@ fn read_excalidraw_md_disk(root: &Path, path: &str) -> Result<Vec<u8>> {
     let p = safe_path(root, path, false)?;
     let bytes = crate::fsops::read_bounded(&p, MAX_DRAWING_BYTES)?;
     let text = std::str::from_utf8(&bytes).map_err(|_| err("INVALID_FILE", "Note is not UTF-8 text"))?;
-    let scene = crate::excalidraw_md::extract_scene(text)?;
+    // Images the file names are put into the scene; the vault is only listed when there are any.
+    let mut vault: Option<(crate::import_folder::SourceFolder, Vec<crate::import_folder::Entry>)> = None;
+    let scene = crate::excalidraw_md::extract_scene_with(text, |_, target| {
+        if vault.is_none() {
+            let src = crate::import_folder::SourceFolder::open(root).ok()?;
+            let entries = src.list().ok()?.entries;
+            vault = Some((src, entries));
+        }
+        let (src, entries) = vault.as_ref()?;
+        let found = crate::import_folder::find_image(entries, path, target)?;
+        if found.size > crate::import_folder::MAX_EMBED_BYTES {
+            return None;
+        }
+        src.read_bytes(&found.path).ok()
+    })?;
     let mut buf = Vec::with_capacity(FRAME_PREFIX_LEN + scene.len());
     buf.extend_from_slice(hex::encode(Sha256::digest(&bytes)).as_bytes());
     buf.push(b'\n');

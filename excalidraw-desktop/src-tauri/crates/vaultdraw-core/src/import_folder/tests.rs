@@ -228,3 +228,41 @@ fn convert_drawing_decodes_excalidraw_md_create_only_and_leaves_the_source_alone
     assert!(!out.path().join("v/P.excalidraw").exists());
     assert_eq!(tree_hash(t.path()), before);
 }
+
+#[test]
+fn convert_drawing_embeds_the_images_an_excalidraw_md_names() {
+    let t = tempdir().unwrap();
+    fs::create_dir_all(t.path().join("Drawings")).unwrap();
+    fs::create_dir_all(t.path().join("00 - Attachments/Pasted")).unwrap();
+    fs::write(t.path().join("00 - Attachments/Pasted/Pasted image 1.png"), [1u8, 2, 3]).unwrap();
+    fs::write(t.path().join("Drawings/local.gif"), [4u8]).unwrap();
+    fs::write(t.path().join("big.webp"), vec![0u8; (MAX_EMBED_BYTES + 1) as usize]).unwrap();
+    let md = "## Embedded Files\naa11: [[Pasted image 1.png]]\nbb22: [[local.gif|200]]\ncc33: [[big.webp]]\ndd44: [[missing.png]]\n\n%%\n## Drawing\n```json\n{\"type\":\"excalidraw\",\"version\":2,\"elements\":[],\"appState\":{},\"files\":{}}\n```\n%%\n";
+    fs::write(t.path().join("Drawings/S.excalidraw.md"), md).unwrap();
+    let before = tree_hash(t.path());
+    let src = SourceFolder::open(t.path()).unwrap();
+    let out = tempdir().unwrap();
+    let dst = TargetFolder::new_vault(&out.path().join("v")).unwrap();
+    dst.convert_drawing(&src, "Drawings/S.excalidraw.md", "Drawings/S.excalidraw").unwrap();
+    let v: serde_json::Value = serde_json::from_str(&fs::read_to_string(out.path().join("v/Drawings/S.excalidraw")).unwrap()).unwrap();
+    let files = v["files"].as_object().unwrap();
+    assert_eq!(files["aa11"]["dataURL"], "data:image/png;base64,AQID");
+    assert_eq!(files["bb22"]["mimeType"], "image/gif");
+    assert!(!files.contains_key("cc33"), "over the cap");
+    assert!(!files.contains_key("dd44"), "not found");
+    assert_eq!(tree_hash(t.path()), before);
+}
+
+#[test]
+fn opening_an_excalidraw_md_in_place_shows_its_images() {
+    let t = tempdir().unwrap();
+    fs::create_dir_all(t.path().join("D")).unwrap();
+    fs::write(t.path().join("pic.png"), [1u8, 2, 3]).unwrap();
+    let md = "## Embedded Files\naa11: [[pic.png]]\n\n%%\n## Drawing\n```json\n{\"type\":\"excalidraw\",\"version\":2,\"elements\":[],\"appState\":{},\"files\":{}}\n```\n%%\n";
+    fs::write(t.path().join("D/S.excalidraw.md"), md).unwrap();
+    let before = tree_hash(t.path());
+    let frame = crate::drawing::read_drawing_file(t.path(), "D/S.excalidraw.md").unwrap();
+    let body = String::from_utf8(frame).unwrap();
+    assert!(body.contains("data:image/png;base64,AQID"), "{body}");
+    assert_eq!(tree_hash(t.path()), before);
+}

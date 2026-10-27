@@ -272,9 +272,42 @@ impl TargetFolder {
     /// Converts the Obsidian Excalidraw file `from` (`*.excalidraw.md`, plain or compressed) in
     /// `source` into the scene file `to` here, create-only. The decoder is `excalidraw_md`.
     pub fn convert_drawing(&self, source: &SourceFolder, from: &str, to: &str) -> Result<()> {
-        let scene = crate::excalidraw_md::extract_scene(&source.read_text(from)?)?;
+        let text = source.read_text(from)?;
+        // The listing is only read when the file embeds images.
+        let mut index: Option<Vec<Entry>> = None;
+        let scene = crate::excalidraw_md::extract_scene_with(&text, |_, target| {
+            let entries = index.get_or_insert_with(|| source.list().map(|l| l.entries).unwrap_or_default());
+            let found = find_image(entries, from, target)?;
+            if found.size > MAX_EMBED_BYTES {
+                return None;
+            }
+            source.read_bytes(&found.path).ok()
+        })?;
         self.write_drawing(to, &scene)
     }
+}
+
+/// Largest image put into a converted drawing (the same cap as the notes import).
+pub const MAX_EMBED_BYTES: u64 = 4 * 1024 * 1024;
+
+/// The source file an `## Embedded Files` target names, Obsidian's way: the path from the vault
+/// root or from the drawing's folder, else the closest file with that name (case-insensitive).
+pub(crate) fn find_image<'a>(entries: &'a [Entry], from: &str, target: &str) -> Option<&'a Entry> {
+    let target = target.trim().trim_start_matches('/');
+    let dir = from.rsplit_once('/').map_or("", |(d, _)| d);
+    let near = if dir.is_empty() { target.to_string() } else { format!("{dir}/{target}") };
+    let same = |a: &str, b: &str| a.to_lowercase() == b.to_lowercase();
+    if let Some(e) = entries.iter().find(|e| e.path == near || e.path == target) {
+        return Some(e);
+    }
+    let name = target.rsplit('/').next().unwrap_or(target);
+    entries
+        .iter()
+        .filter(|e| same(e.path.rsplit('/').next().unwrap_or(&e.path), name) && (!target.contains('/') || e.path.to_lowercase().ends_with(&format!("/{}", target.to_lowercase()))))
+        .min_by_key(|e| {
+            let shared = e.path.split('/').zip(dir.split('/')).take_while(|(a, b)| a == b).count();
+            (std::cmp::Reverse(shared), e.path.len())
+        })
 }
 
 /// Session handles for sources and targets. Handles are opaque strings; a source handle can

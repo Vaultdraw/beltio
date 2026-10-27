@@ -13,6 +13,12 @@ const MAX_SCENE_CHARS: usize = 64 * 1024 * 1024;
 
 /// The scene JSON of an `.excalidraw.md` file's text.
 pub fn extract_scene(text: &str) -> Result<String> {
+    extract_scene_with(text, |_, _| None)
+}
+
+/// Like [`extract_scene`], with the images the file embeds: `image(id, target)` returns the bytes
+/// for an `## Embedded Files` entry (or `None`: the element then shows as a broken image).
+pub fn extract_scene_with(text: &str, mut image: impl FnMut(&str, &str) -> Option<Vec<u8>>) -> Result<String> {
     let (compressed, body) = drawing_block(text).ok_or_else(|| {
         err("INVALID_FILE", "No Excalidraw drawing data found in this note (expected a ```json or ```compressed-json block under \"## Drawing\")")
     })?;
@@ -27,7 +33,74 @@ pub fn extract_scene(text: &str) -> Result<String> {
         return Err(err("INVALID_FILE", "The Excalidraw data has no elements"));
     }
     restore_text(&mut scene, &text_elements(text));
+    for (id, target) in embedded_images(text) {
+        if let Some(data) = image(&id, &target) {
+            let ext = target.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default();
+            insert_file(&mut scene, &id, &ext, &data);
+        }
+    }
     serde_json::to_string(&scene).map_err(|e| err("INTERNAL", e.to_string()))
+}
+
+/// `## Embedded Files`: `fileId: [[path/to/image.png|100%]]` lines -> (file id, image target).
+/// Other kinds of entry (LaTeX, embedded notes) are left out.
+pub fn embedded_images(text: &str) -> Vec<(String, String)> {
+    let Some(i) = text.find("## Embedded Files") else { return Vec::new() };
+    let rest = &text[i + "## Embedded Files".len()..];
+    let end = rest.find("\n%%").or_else(|| rest.find("\n## ")).unwrap_or(rest.len());
+    let mut out = Vec::new();
+    for line in rest[..end].lines() {
+        let Some((id, link)) = line.trim().split_once(": ") else { continue };
+        let link = link.trim().trim_start_matches('!');
+        let Some(inner) = link.strip_prefix("[[").and_then(|l| l.strip_suffix("]]")) else { continue };
+        let target = inner.split(['|', '#']).next().unwrap_or("").trim();
+        let ext = target.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default();
+        if !id.is_empty() && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-') && mime_of(&ext).is_some() {
+            out.push((id.to_string(), target.to_string()));
+        }
+    }
+    out
+}
+
+/// The MIME type a drawing can hold for an image extension.
+pub fn mime_of(ext: &str) -> Option<&'static str> {
+    Some(match ext {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "svg" => "image/svg+xml",
+        _ => return None,
+    })
+}
+
+/// Standard base64 with padding.
+pub fn base64_encode(bytes: &[u8]) -> String {
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let n = (chunk[0] as u32) << 16 | (*chunk.get(1).unwrap_or(&0) as u32) << 8 | *chunk.get(2).unwrap_or(&0) as u32;
+        for k in 0..4 {
+            if k <= chunk.len() {
+                out.push(B64[(n >> (18 - 6 * k) & 63) as usize] as char);
+            } else {
+                out.push('=');
+            }
+        }
+    }
+    out
+}
+
+/// Puts `data` (an image's bytes) into the scene's `files` under `id`.
+pub fn insert_file(scene: &mut Value, id: &str, ext: &str, data: &[u8]) {
+    let Some(mime) = mime_of(ext) else { return };
+    let Some(obj) = scene.as_object_mut() else { return };
+    let files = obj.entry("files").or_insert_with(|| Value::Object(Default::default()));
+    if let Some(files) = files.as_object_mut() {
+        files.insert(
+            id.to_string(),
+            serde_json::json!({ "mimeType": mime, "id": id, "dataURL": format!("data:{mime};base64,{}", base64_encode(data)), "created": 0 }),
+        );
+    }
 }
 
 /// `(compressed, block body)` of the first json / compressed-json fence after `## Drawing`.
@@ -210,6 +283,27 @@ mod tests {
         assert_eq!(a, b);
         assert_eq!(a["elements"].as_array().unwrap().len(), 2);
         assert_eq!(a["elements"][1]["text"], "Héllo ✓ wörld");
+    }
+
+    #[test]
+    fn embedded_images_are_listed_and_put_into_files() {
+        let md = "## Embedded Files\nab12: [[pics/a b.png|100%]]\ncd34: [[Other note]]\nef56: $$x^2$$\n\n%%\n## Drawing\n```json\n{\"elements\":[{\"id\":\"i\",\"type\":\"image\",\"fileId\":\"ab12\"}]}\n```\n%%\n";
+        assert_eq!(embedded_images(md), vec![("ab12".to_string(), "pics/a b.png".to_string())]);
+        let mut asked = Vec::new();
+        let v: Value = serde_json::from_str(
+            &extract_scene_with(md, |id, t| {
+                asked.push((id.to_string(), t.to_string()));
+                Some(vec![1, 2, 3, 4])
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(asked.len(), 1);
+        assert_eq!(v["files"]["ab12"]["dataURL"], "data:image/png;base64,AQIDBA==");
+        assert_eq!(v["files"]["ab12"]["mimeType"], "image/png");
+        assert_eq!(base64_encode(b"ab"), "YWI=");
+        assert_eq!(base64_encode(b"abc"), "YWJj");
+        assert_eq!(base64_encode(b""), "");
     }
 
     #[test]

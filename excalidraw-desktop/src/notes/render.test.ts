@@ -87,6 +87,28 @@ describe("other Obsidian syntax", () => {
     expect(out).toContain('data-display="1"');
   });
 
+  it("image embeds show in callouts, lists, tables and quotes, with their width", () => {
+    const out = html(
+      [
+        "> [!note] T",
+        "> ![[a.png|120]]",
+        "",
+        "- item ![[b.gif]]",
+        "",
+        "1. ![[c.webp|50x20]]",
+        "",
+        "| x | y |",
+        "|---|---|",
+        "| ![[d.svg\\|40]] | ![[Ünï/e e.png]] |",
+      ].join("\n"),
+    );
+    const targets = [...out.matchAll(/data-embed="image" data-target="([^"]+)"/g)].map(
+      (m) => m[1],
+    );
+    expect(targets).toEqual(["a.png", "b.gif", "c.webp", "d.svg", "Ünï/e e.png"]);
+    expect(out).toContain('data-alias="40"');
+  });
+
   it("math off leaves dollars alone", () => {
     const out = sanitizeNoteHtml(
       renderNoteHtml("costs $5 and $6", { ...ctx(), math: false }),

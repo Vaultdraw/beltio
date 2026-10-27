@@ -285,3 +285,45 @@ fn markdown_speed_50k_words() {
     }
     println!("markdown_speed_50k_words: {} KB, best of 15 = {best:.2} ms", text.len() / 1024);
 }
+
+/// Every image block of a note, wherever it nests (callouts, lists, tables, quotes): `target`s in document order.
+fn image_targets(doc: &NoteDoc) -> Vec<(String, Option<u32>)> {
+    fn walk(v: &serde_json::Value, out: &mut Vec<(String, Option<u32>)>) {
+        match v {
+            serde_json::Value::Object(m) => {
+                if m.get("kind").and_then(|k| k.as_str()) == Some("image") {
+                    out.push((m["target"].as_str().unwrap().to_string(), m.get("width").and_then(|w| w.as_u64()).map(|w| w as u32)));
+                }
+                for x in m.values() {
+                    walk(x, out);
+                }
+            }
+            serde_json::Value::Array(a) => a.iter().for_each(|x| walk(x, out)),
+            _ => {}
+        }
+    }
+    let mut out = Vec::new();
+    walk(&serde_json::to_value(doc).unwrap(), &mut out);
+    out
+}
+
+#[test]
+fn image_forms_everywhere() {
+    let src = "![[a.png]]\n\n![[b.png|300]]\n\n![alt](pics/c.png)\n\n![](./d.gif)\n\n![](../e.webp)\n\n![](my%20folder/f%20g.svg)\n\n![](<my folder/h.png>)\n\n![[Ünï/i.png|alt|20x10]]\n\n\
+> [!note] T\n> ![[j.png]]\n> ![k](k.png)\n\n- item\n  ![[l.png]]\n- ![](m.png)\n\n1. ![[n.png|50]]\n\n| a | b |\n|---|---|\n| ![[o.png\\|40]] | ![p](p.png) |\n";
+    let got = image_targets(&parse(src));
+    let names: Vec<&str> = got.iter().map(|(t, _)| t.as_str()).collect();
+    println!("{got:?}");
+    assert_eq!(
+        names,
+        ["a.png", "b.png", "pics/c.png", "./d.gif", "../e.webp", "my folder/f g.svg", "my folder/h.png", "Ünï/i.png", "j.png", "k.png", "l.png", "m.png", "n.png", "o.png", "p.png"]
+    );
+    assert_eq!(got[1].1, Some(300));
+}
+
+#[test]
+fn escaped_pipe_in_a_table_cell_keeps_the_target_clean() {
+    let doc = parse("| a |\n|---|\n| [[Note\\|the note]] ![[o.png\\|40]] |\n");
+    assert_eq!(image_targets(&doc), vec![("o.png".to_string(), Some(40))]);
+    assert!(doc.links.iter().any(|l| l.target == "Note"), "{:?}", doc.links.iter().map(|l| &l.target).collect::<Vec<_>>());
+}

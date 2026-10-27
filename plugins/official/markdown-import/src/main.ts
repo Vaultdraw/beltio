@@ -307,8 +307,15 @@ const plugin: Plugin = definePlugin({
               `Import cancelled after ${result.notes} notes (they stay in ${target.name})`,
             );
           } else {
+            const noPicture =
+              result.oversizedImages +
+              result.unsupportedImages +
+              result.missingImages;
             ctx.ui.toast(
-              `Imported ${result.notes} notes and ${result.drawings} drawings from ${source.name}`,
+              `Imported ${result.notes} notes and ${result.drawings} drawings from ${source.name}` +
+                (noPicture
+                  ? ` (${noPicture} images left as boxes: ${result.oversizedImages} over 4 MB, ${result.unsupportedImages} unsupported type, ${result.missingImages} not found)`
+                  : ""),
             );
           }
           await target.open();
