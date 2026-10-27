@@ -124,7 +124,7 @@ test("renaming a parent tag renames children, the open drawing (undoable) and cl
   const canvas = page.locator(".vault-editor canvas.interactive");
   const box = (await canvas.boundingBox())!;
   await page.mouse.click(box.x + box.width - 40, box.y + box.height - 40);
-  await page.keyboard.press("ControlOrMeta+z");
+  await page.keyboard.press("Meta+z");
   await page.waitForTimeout(AFTER_AUTOSAVE_MS);
   await expect
     .poll(() => texts(page, "DSA/Tagged Graphs.excalidraw"))
@@ -169,7 +169,7 @@ test("r renames from the keyboard; the Tags commands are in the palette and on t
   await page.keyboard.press("Escape");
   await expect(dialog(page)).toHaveCount(0);
 
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   const palette = page.getByRole("dialog", { name: "Command palette" });
   await palette.getByRole("combobox").fill(">Tags:");
   for (const title of [
@@ -181,7 +181,7 @@ test("r renames from the keyboard; the Tags commands are in the palette and on t
   }
   await page.keyboard.press("Escape");
 
-  await page.keyboard.press("ControlOrMeta+Comma");
+  await page.keyboard.press("Meta+Comma");
   await page.getByRole("tab", { name: "Hotkeys" }).click();
   for (const id of ["tags.rename", "tags.focusPane", "tags.toggleSort"]) {
     await expect(

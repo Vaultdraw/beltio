@@ -26,7 +26,7 @@ const PAGES = [
 ] as const;
 
 const openSettings = async (page: Page) => {
-  await page.keyboard.press("ControlOrMeta+Comma");
+  await page.keyboard.press("Meta+Comma");
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   return dialog;

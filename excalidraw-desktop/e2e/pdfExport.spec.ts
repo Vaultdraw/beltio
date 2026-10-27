@@ -346,7 +346,7 @@ test.describe("PDF export perf", () => {
           );
         });
         const palette = page.getByRole("dialog", { name: "Command palette" });
-        await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+        await page.keyboard.press("Meta+Shift+KeyP");
         await page.keyboard.type("Export: PDF");
         await expect(palette.getByRole("option").first()).toContainText(
           "Export: PDF",

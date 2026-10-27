@@ -21,7 +21,7 @@ test("hello-command: palette and hotkey show the greeting toast", async ({
   await openVaultWithPlugins(page, "hello-command");
   const toast = page.getByText("Hello, Vaultdraw!");
 
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   await expect(palette(page)).toBeVisible();
   await page.keyboard.type("say hello");
   await expect(palette(page).getByRole("option").first()).toContainText(
@@ -32,7 +32,7 @@ test("hello-command: palette and hotkey show the greeting toast", async ({
 
   // Wait for the first toast to go away, so the hotkey must show a new one.
   await expect(toast).toHaveCount(0, { timeout: 15_000 });
-  await page.keyboard.press("ControlOrMeta+Alt+Shift+KeyH");
+  await page.keyboard.press("Meta+Alt+Shift+KeyH");
   await expect(toast).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -54,7 +54,7 @@ test("focus-timer: panel counts down, stop, and the palette command restarts it"
   await page.getByRole("button", { name: "Stop" }).click();
   await expect(timer).toHaveText("25:00");
 
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   await expect(palette(page)).toBeVisible();
   await page.keyboard.type("Focus timer: start");
   await expect(palette(page).getByRole("option").first()).toContainText(

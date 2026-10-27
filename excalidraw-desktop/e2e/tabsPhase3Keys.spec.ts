@@ -22,7 +22,7 @@ import {
 // tabs.spec.ts.
 const C = "Gamma";
 const D = "Delta";
-const MOD = "ControlOrMeta";
+const MOD = "Meta";
 const FOUR = {
   ...PAIR,
   [`${C}.excalidraw`]: sceneJson([{ id: "c-rect", x: 200, y: 120 }]),

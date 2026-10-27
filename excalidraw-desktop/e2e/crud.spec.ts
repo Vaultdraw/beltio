@@ -178,7 +178,7 @@ test("2c. keyboard only: palette command and menu key create inside the focused 
 }) => {
   const errors = trackErrors(page);
   await treeRow(page, "DSA").click();
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   await page.keyboard.type("new drawing in selected");
   await page.keyboard.press("Enter");
   const dialog = page.getByRole("dialog");
@@ -209,7 +209,7 @@ test("2d. Escape closes every dialog, however it was opened", async ({
 
   // Same dialog from the palette command, focus anywhere.
   await treeRow(page, "DSA").click();
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   await page.keyboard.type("new drawing in selected");
   await page.keyboard.press("Enter");
   await expect(dialog).toContainText("New Drawing in /DSA");

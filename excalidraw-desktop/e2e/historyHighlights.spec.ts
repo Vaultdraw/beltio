@@ -207,9 +207,9 @@ test.describe("change highlights", () => {
       .toBe(true);
 
     const panned = await overlayColor(page, ONLY_IN_VERSION);
-    await page.keyboard.down("ControlOrMeta");
+    await page.keyboard.down("Meta");
     await page.mouse.wheel(0, -200); // zoom
-    await page.keyboard.up("ControlOrMeta");
+    await page.keyboard.up("Meta");
     await expect
       .poll(async () => (await overlayColor(page, ONLY_IN_VERSION)).count)
       .not.toBe(panned.count);

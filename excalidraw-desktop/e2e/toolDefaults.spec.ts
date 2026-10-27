@@ -56,7 +56,7 @@ const drawAndRead = async (page: Page, type: string, fy: number, fx = 0.3) => {
 
 /** Settings > Tools, on one tool's tab (one section is shown at a time). */
 const openToolDefaults = async (page: Page, tool = "Arrow") => {
-  await page.keyboard.press("ControlOrMeta+Comma");
+  await page.keyboard.press("Meta+Comma");
   await page.getByRole("tab", { name: "Tools", exact: true }).click();
   await expect(page.getByTestId("tool-defaults-page")).toBeVisible();
   await page
@@ -94,7 +94,7 @@ const palette = (page: Page) =>
   page.getByRole("dialog", { name: "Command palette" });
 
 const runCommand = async (page: Page, query: string, title: string) => {
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   await expect(palette(page)).toBeVisible();
   await page.keyboard.type(query);
   await expect(palette(page).getByRole("option").first()).toContainText(title);
@@ -248,14 +248,14 @@ test("style application adds no history entries", async ({ page }) => {
     .first();
   await expect(undo).toBeDisabled();
   const before = (await live(page)).length;
-  await page.keyboard.press("ControlOrMeta+KeyZ");
+  await page.keyboard.press("Meta+KeyZ");
   await page.waitForTimeout(AFTER_AUTOSAVE_MS);
   expect((await live(page)).length).toBe(before);
 
   // Drawing creates exactly one entry: undo removes the arrow, not styles.
   await page.keyboard.press("a");
   await drawAndRead(page, "arrow", 0.4);
-  await page.keyboard.press("ControlOrMeta+KeyZ");
+  await page.keyboard.press("Meta+KeyZ");
   await expect.poll(async () => (await live(page)).length).toBe(before);
   await page.evaluate(() =>
     (window as any).__updatePreferences({ toolRectangle: {}, toolArrow: {} }),

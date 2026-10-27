@@ -214,7 +214,7 @@ test("Cmd/Ctrl+Shift+F focuses the search box from the canvas", async ({
     .locator(".vault-editor canvas.interactive")
     .click({ position: { x: 600, y: 500 } });
   await expect(searchBox(page)).not.toBeFocused();
-  await page.keyboard.press("ControlOrMeta+Shift+KeyF");
+  await page.keyboard.press("Meta+Shift+KeyF");
   await expect(searchBox(page)).toBeFocused();
 });
 
@@ -222,7 +222,7 @@ test("Cmd/Ctrl+Shift+F expands a collapsed navigator", async ({ page }) => {
   const nav = page.getByLabel("Vault File Navigator");
   await page.getByRole("button", { name: "Hide Navigator" }).click();
   await expect(nav).toHaveAttribute("aria-hidden", "true");
-  await page.keyboard.press("ControlOrMeta+Shift+KeyF");
+  await page.keyboard.press("Meta+Shift+KeyF");
   await expect(nav).toHaveAttribute("aria-hidden", "false");
   await expect(searchBox(page)).toBeFocused();
   await page.keyboard.type("dijk");

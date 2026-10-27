@@ -77,7 +77,7 @@ const liveElements = async (page: Page) =>
 
 /** Commands mode (Cmd+Shift+P, input starts as ">"), then type `query`. */
 const runCommand = async (page: Page, query: string, expectFirst: string) => {
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   await expect(palette(page)).toBeVisible();
   await expect(input(page)).toHaveValue(">");
   await page.keyboard.type(query);
@@ -117,7 +117,7 @@ test.describe("editor, theme and mode commands", () => {
     await seedTwoRects(page);
     await openDrawing(page, "Graphs");
     await focusCanvas(page);
-    await page.keyboard.press("ControlOrMeta+KeyA");
+    await page.keyboard.press("Meta+KeyA");
 
     await runCommand(page, "align left", "Align left");
     await page.keyboard.press("Enter");
@@ -131,7 +131,7 @@ test.describe("editor, theme and mode commands", () => {
     // alignment actions and Excalidraw reports two selected elements.
     await expect(page.locator(".selected-shape-actions")).toBeVisible();
     // Typing ">" in files mode switches to commands.
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await page.keyboard.type(">align right");
     await expect(options(page).first()).toContainText("Align right");
     await page.keyboard.press("Escape");
@@ -178,12 +178,12 @@ test.describe("editor, theme and mode commands", () => {
       (await readScene(page, DRAWING)).appState.gridModeEnabled === true;
     expect(await grid()).toBe(false);
     await runCommand(page, "toggle grid", "Toggle grid");
-    await page.keyboard.press("ControlOrMeta+Enter");
+    await page.keyboard.press("Meta+Enter");
     await expect(palette(page)).toBeVisible();
     await expect(input(page)).toBeFocused();
     await page.waitForTimeout(AFTER_AUTOSAVE_MS);
     await expect.poll(grid).toBe(true);
-    await page.keyboard.press("ControlOrMeta+Enter");
+    await page.keyboard.press("Meta+Enter");
     await expect(palette(page)).toBeVisible();
     await page.waitForTimeout(AFTER_AUTOSAVE_MS);
     await expect.poll(grid).toBe(false);
@@ -196,7 +196,7 @@ test.describe("opening, shortcuts and focus", () => {
   }) => {
     const errors = trackErrors(page);
     await openVault(page);
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await expect(palette(page)).toBeVisible();
     await page.keyboard.type("introduction");
     await expect(options(page).first()).toContainText("01 Introduction");
@@ -211,7 +211,7 @@ test.describe("opening, shortcuts and focus", () => {
     expect(errors).toEqual([]);
   });
 
-  for (const chord of ["ControlOrMeta+Slash", "ControlOrMeta+Shift+KeyP"]) {
+  for (const chord of ["Meta+Slash", "Meta+Shift+KeyP"]) {
     test(`${chord} opens our commands mode, never Excalidraw's palette`, async ({
       page,
     }) => {
@@ -235,7 +235,7 @@ test.describe("opening, shortcuts and focus", () => {
   test("Escape closes and focus returns to the canvas", async ({ page }) => {
     await openGraphs(page);
     await focusCanvas(page);
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await expect(palette(page)).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(palette(page)).toHaveCount(0);
@@ -252,7 +252,7 @@ test.describe("opening, shortcuts and focus", () => {
 
   test("Tab drills a theme into '>Theme: '", async ({ page }) => {
     await openVault(page);
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     await page.keyboard.type("theme");
     // The "Family: Theme" row leads; Tab browses it (so does a Theme: row).
     await expect(options(page).first()).toContainText("Family: Theme");
@@ -309,7 +309,7 @@ test("'Insert: <library item>' inserts it on the canvas", async ({ page }) => {
   // The library loads lazily (idle), so retry until the entry is listed.
   await expect(async () => {
     await page.keyboard.press("Escape");
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     await expect(palette(page)).toBeVisible();
     await page.keyboard.type("kanban");
     await expect(options(page).first()).toContainText("Insert: Kanban card", {
@@ -348,7 +348,7 @@ test.describe("two modes: Cmd+P files, Cmd+Shift+P commands", () => {
   }) => {
     const errors = trackErrors(page);
     await openGraphs(page);
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await expect(input(page)).toHaveValue("");
     await expect(input(page)).toHaveAccessibleName("Go to drawing");
     await expect(options(page).first()).toBeVisible();
@@ -381,7 +381,7 @@ test.describe("two modes: Cmd+P files, Cmd+Shift+P commands", () => {
 
   test("Cmd+Shift+P lists commands only", async ({ page }) => {
     await openVault(page);
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     await expect(input(page)).toHaveValue(">");
     await expect(palette(page).getByText("Search commands")).toBeVisible();
     await expect(palette(page).getByText("Open settings")).toBeVisible();
@@ -393,24 +393,24 @@ test.describe("two modes: Cmd+P files, Cmd+Shift+P commands", () => {
   test("the same shortcut closes, the other one switches", async ({ page }) => {
     await openGraphs(page);
     await focusCanvas(page);
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await page.keyboard.type("graphs");
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     await expect(input(page)).toHaveValue(">");
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await expect(input(page)).toHaveValue("");
     await expect(input(page)).toBeFocused();
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await expect(palette(page)).toHaveCount(0);
 
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     await expect(input(page)).toHaveValue(">");
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     await expect(palette(page)).toHaveCount(0);
 
-    await page.keyboard.press("ControlOrMeta+Slash");
+    await page.keyboard.press("Meta+Slash");
     await expect(input(page)).toHaveValue(">");
-    await page.keyboard.press("ControlOrMeta+Slash");
+    await page.keyboard.press("Meta+Slash");
     await expect(palette(page)).toHaveCount(0);
     await expect
       .poll(() =>
@@ -429,16 +429,16 @@ test.describe("two modes: Cmd+P files, Cmd+Shift+P commands", () => {
     await seedHotkeys(page, { "palette.files": ["Mod+K"] });
     await openGraphs(page);
     await focusCanvas(page);
-    await page.keyboard.press("ControlOrMeta+KeyK");
+    await page.keyboard.press("Meta+KeyK");
     await expect(input(page)).toHaveValue("");
     await expect(input(page)).toHaveAccessibleName("Go to drawing");
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     await expect(input(page)).toHaveValue(">");
-    await page.keyboard.press("ControlOrMeta+KeyK");
+    await page.keyboard.press("Meta+KeyK");
     await expect(input(page)).toHaveValue("");
-    await page.keyboard.press("ControlOrMeta+KeyK");
+    await page.keyboard.press("Meta+KeyK");
     await expect(palette(page)).toHaveCount(0);
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await page.waitForTimeout(300);
     await expect(palette(page)).toHaveCount(0);
   });
@@ -449,14 +449,14 @@ test.describe("two modes: Cmd+P files, Cmd+Shift+P commands", () => {
     await seedHotkeys(page, { "palette.quickSwitcher": ["Mod+K"] });
     await openGraphs(page);
     await focusCanvas(page);
-    await page.keyboard.press("ControlOrMeta+KeyK");
+    await page.keyboard.press("Meta+KeyK");
     await expect(palette(page)).toBeVisible();
     await expect(input(page)).toHaveAccessibleName("Go to drawing");
     await page.keyboard.press("Escape");
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     await expect(input(page)).toHaveValue(">");
     await page.keyboard.press("Escape");
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await page.waitForTimeout(300);
     await expect(palette(page)).toHaveCount(0);
   });
@@ -464,7 +464,7 @@ test.describe("two modes: Cmd+P files, Cmd+Shift+P commands", () => {
 
 test.describe("navigator collapsed", () => {
   const collapse = async (page: Page) => {
-    await page.keyboard.press("ControlOrMeta+Backslash");
+    await page.keyboard.press("Meta+Backslash");
     await expect(page.getByLabel("Vault File Navigator")).toHaveAttribute(
       "aria-hidden",
       "true",
@@ -527,7 +527,7 @@ test.describe("navigator collapsed", () => {
     await dialog.locator("button[type=submit]").click();
     await expect(dialog).toHaveCount(0);
     // Expand the navigator: the folder exists.
-    await page.keyboard.press("ControlOrMeta+Backslash");
+    await page.keyboard.press("Meta+Backslash");
     await expect(
       page.locator(".vault-tree-item__name", { hasText: "Palette Folder" }),
     ).toBeVisible();
@@ -541,7 +541,7 @@ test("perf: palette on 5,000 drawings with an open editor", async ({
   test.setTimeout(120_000);
   await openGraphs(page, "?seed=names5k");
   await focusCanvas(page);
-  await page.keyboard.press("ControlOrMeta+KeyA");
+  await page.keyboard.press("Meta+KeyA");
 
   const open = await page.evaluate(async () => {
     const t0 = performance.now();
@@ -583,7 +583,7 @@ test("perf: palette on 5,000 drawings with an open editor", async ({
   // Editor items are in the list (opened from the canvas with a drawing open).
   await page.keyboard.type(">align");
   await expect(palette(page).getByText("Align left").first()).toBeVisible();
-  await page.keyboard.press("ControlOrMeta+KeyA");
+  await page.keyboard.press("Meta+KeyA");
   await page.keyboard.press("Backspace");
 
   const samples = await page.evaluate(async () => {

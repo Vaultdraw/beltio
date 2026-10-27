@@ -82,7 +82,7 @@ test("opens from the palette and from Mod+Shift+H, lists the versions", async ({
 
   await openPanelByShortcut(page);
   await expect(rows(page)).toHaveCount(3);
-  await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+  await page.keyboard.press("Meta+Shift+KeyH");
   await expect(panel(page)).toHaveCount(0);
   expect(errors).toEqual([]);
 });
@@ -267,7 +267,7 @@ test("Restore > Replace puts the version in the drawing, saves a Before restore 
   const box = await canvasBox(page);
   await page.mouse.click(box.x + box.width - 40, box.y + box.height - 40);
   const w2 = await writeCount(page);
-  await page.keyboard.press("ControlOrMeta+KeyZ");
+  await page.keyboard.press("Meta+KeyZ");
   await expectColor(page, MAIN, GREEN, true);
   await expectColor(page, MAIN, BLUE, false);
   await waitSaved(page, w2);
@@ -343,7 +343,7 @@ test("Cmd+C in the preview and Cmd+V in the main editor paste the shape", async 
   const at = await colorOn(page, PREVIEW, ORANGE);
   await page.mouse.click(at.x, at.y);
   await expect(page.getByTestId("history-copy-selection")).toBeEnabled();
-  await page.keyboard.press("ControlOrMeta+KeyC");
+  await page.keyboard.press("Meta+KeyC");
 
   diag(`focus-in-preview ${await focusInfo(page)}`);
   await page.keyboard.press("Escape"); // back to current
@@ -357,7 +357,7 @@ test("Cmd+C in the preview and Cmd+V in the main editor paste the shape", async 
   const box = await canvasBox(page);
   await page.mouse.click(box.x + box.width * 0.6, box.y + box.height * 0.75);
   const w0 = await writeCount(page);
-  await page.keyboard.press("ControlOrMeta+KeyV");
+  await page.keyboard.press("Meta+KeyV");
   await expectColor(page, MAIN, ORANGE, true);
   await waitSaved(page, w0);
 });

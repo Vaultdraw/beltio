@@ -21,7 +21,7 @@ test("a rebound gallery key closes the gallery; the old default no longer does",
   await expect(gallery).toBeVisible();
 
   // The rebound key closes it, and the palette lists it with that shortcut.
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   const palette = page.getByRole("dialog", { name: "Command palette" });
   await palette.getByRole("combobox").fill(">gallery: close");
   await expect(

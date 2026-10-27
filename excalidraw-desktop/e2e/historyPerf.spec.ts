@@ -114,7 +114,7 @@ test("history main-thread cost: checkpoint and automatic versions", async ({
   // Checkpoint: nothing is pending, so the flush is a no-op.
   const samples: number[] = [];
   for (let i = 0; i < RUNS; i++) {
-    await page.keyboard.press("ControlOrMeta+Alt+KeyS");
+    await page.keyboard.press("Meta+Alt+KeyS");
     const dialog = page.getByRole("dialog", { name: "Create checkpoint" });
     await dialog.getByLabel("Name").fill(`perf ${i}`);
     await page.waitForTimeout(150);
@@ -306,7 +306,7 @@ test.describe("H2 panel, preview and restore", () => {
             obs.observe(document.body, { childList: true, subtree: true });
           });
         });
-        await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+        await page.keyboard.press("Meta+Shift+KeyH");
         const ms = await page.evaluate(() => (window as any).__open as number);
         (i === 0 && rate === 1 ? cold : samples).push(ms);
         await page.keyboard.press("Escape");
@@ -332,7 +332,7 @@ test.describe("H2 panel, preview and restore", () => {
       ]);
       await installProbes(page);
       const cdp = await page.context().newCDPSession(page);
-      await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+      await page.keyboard.press("Meta+Shift+KeyH");
       await expect(rows(page)).toHaveCount(2);
       for (const rate of THROTTLES) {
         await throttle(cdp, rate);
@@ -369,7 +369,7 @@ test.describe("H2 panel, preview and restore", () => {
     await setup(page, sentinelScene(200, RED), versions);
     await installProbes(page);
     const cdp = await page.context().newCDPSession(page);
-    await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+    await page.keyboard.press("Meta+Shift+KeyH");
     await expect(rows(page)).toHaveCount(80);
     await rows(page).nth(0).click();
     await expect(preview(page)).toBeVisible();
@@ -415,7 +415,7 @@ test.describe("H2 panel, preview and restore", () => {
     ]);
     await installProbes(page);
     const cdp = await page.context().newCDPSession(page);
-    await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+    await page.keyboard.press("Meta+Shift+KeyH");
     await expect(rows(page)).toHaveCount(4);
     const slider = page.getByRole("slider", { name: "Version timeline" });
 
@@ -499,7 +499,7 @@ test.describe("H2 panel, preview and restore", () => {
               setTimeout(() => resolve(-1), 20_000);
             });
           });
-          await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+          await page.keyboard.press("Meta+Shift+KeyH");
           const ms = await page.evaluate(
             () => (window as any).__thumb as number,
           );
@@ -531,7 +531,7 @@ test.describe("H2 panel, preview and restore", () => {
     await page.waitForTimeout(1500);
 
     const before = await heapMb(cdp);
-    await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+    await page.keyboard.press("Meta+Shift+KeyH");
     await expect(rows(page)).toHaveCount(6);
     await rows(page).nth(0).click();
     await paintMs(page, PREVIEW_SCOPE, BLUE);

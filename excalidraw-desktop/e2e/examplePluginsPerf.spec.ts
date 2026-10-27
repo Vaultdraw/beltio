@@ -135,7 +135,7 @@ const use = async (page: Page, ex: Pick<Example, "id" | "panel">) => {
     ex.id,
   );
   if (ex.id === "focus-timer") {
-    await page.keyboard.press("ControlOrMeta+Alt+Shift+KeyT");
+    await page.keyboard.press("Meta+Alt+Shift+KeyT");
     await expect(page.getByRole("timer")).toHaveText(/^2[45]:\d\d$/);
   } else if (ex.id === "word-count" && ex.panel) {
     await togglePanel(page, ex.panel);
@@ -366,7 +366,7 @@ test("word-count: cost per scene edit, panel open vs closed vs no plugin", async
     nudge: async (page: Page) => {
       const box = await canvasBox(page);
       await page.mouse.click(box.x + 40, box.y + box.height - 60);
-      await page.keyboard.press("ControlOrMeta+KeyA");
+      await page.keyboard.press("Meta+KeyA");
       for (let i = 0; i < EDITS; i++) {
         await page.keyboard.press("ArrowRight");
         await page.waitForTimeout(40);
@@ -466,7 +466,7 @@ test("stamp: flow from palette Enter to the scene carrying the 8 new elements", 
         },
       });
     });
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     await page.keyboard.type("stamp: insert flow");
     await expect(
       page.getByRole("dialog", { name: "Command palette" }).getByRole("option"),
@@ -487,7 +487,7 @@ test("stamp: flow from palette Enter to the scene carrying the 8 new elements", 
       (window as any).__plugins.ensureActive("scene-watch"),
     );
     cold.push(await flow(page));
-    await page.keyboard.press("ControlOrMeta+KeyZ");
+    await page.keyboard.press("Meta+KeyZ");
     await page.waitForTimeout(300);
     warm.push(await flow(page));
     await page.close();

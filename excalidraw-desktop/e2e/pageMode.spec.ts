@@ -227,7 +227,7 @@ test("blocking: nothing starts in the surround, drags clamp to the page, duplica
   await page.keyboard.press("v");
   const edge = await toClient(page, 670, 140);
   await page.mouse.click(edge.x, edge.y);
-  await page.keyboard.press("ControlOrMeta+d");
+  await page.keyboard.press("Meta+d");
   await page.waitForTimeout(600);
   els = (await live(page)).elements;
   expect(els.length).toBe(3);
@@ -236,10 +236,10 @@ test("blocking: nothing starts in the surround, drags clamp to the page, duplica
   }
 
   // copy, then paste with the pointer near the right edge
-  await page.keyboard.press("ControlOrMeta+c");
+  await page.keyboard.press("Meta+c");
   const near = await toClient(page, 780, 700);
   await page.mouse.move(near.x, near.y);
-  await page.keyboard.press("ControlOrMeta+v");
+  await page.keyboard.press("Meta+v");
   await page.waitForTimeout(700);
   els = (await live(page)).elements;
   expect(els.length).toBeGreaterThanOrEqual(4);
@@ -445,7 +445,7 @@ test("palette: page commands exist and the current choice has a check mark", asy
   const palette = page.getByRole("dialog", { name: "Command palette" });
   const first = async (query: string) => {
     if (!(await palette.isVisible())) {
-      await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+      await page.keyboard.press("Meta+Shift+KeyP");
       await expect(palette).toBeVisible();
     }
     await page.keyboard.press("ControlOrMeta+a");
@@ -498,7 +498,7 @@ test("Settings > Page defaults give a NEW drawing that setup; Normal default giv
       );
     });
     // The header button is gone; the command (Mod+N) creates in the current folder.
-    await page.keyboard.press("ControlOrMeta+KeyN");
+    await page.keyboard.press("Meta+KeyN");
     await expect(
       page.locator(".vault-editor canvas.interactive"),
     ).toBeVisible();

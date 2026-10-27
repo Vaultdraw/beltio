@@ -99,7 +99,7 @@ test("Cmd+Option+S asks for a name and lists the checkpoint in the panel", async
   await page.locator(".vault-editor canvas.interactive").click({
     position: { x: 700, y: 600 },
   });
-  await page.keyboard.press("ControlOrMeta+Alt+KeyS");
+  await page.keyboard.press("Meta+Alt+KeyS");
   const dialog = page.getByRole("dialog", { name: "Create checkpoint" });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByLabel("Name")).toBeFocused();
@@ -111,7 +111,7 @@ test("Cmd+Option+S asks for a name and lists the checkpoint in the panel", async
     "Checkpoint saved: Before the big change",
   );
 
-  await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+  await page.keyboard.press("Meta+Shift+KeyH");
   await expect(panel(page)).toBeVisible();
   const row = panel(page).getByRole("listitem");
   await expect(row).toHaveCount(1);
@@ -129,7 +129,7 @@ test("Cmd+Option+S asks for a name and lists the checkpoint in the panel", async
 test("Escape cancels the checkpoint dialog without a version", async ({
   page,
 }) => {
-  await page.keyboard.press("ControlOrMeta+Alt+KeyS");
+  await page.keyboard.press("Meta+Alt+KeyS");
   const dialog = page.getByRole("dialog", { name: "Create checkpoint" });
   await expect(dialog).toBeVisible();
   await page.keyboard.press("Escape");
@@ -144,11 +144,11 @@ test("clearing the canvas (Cmd+Delete) leaves a Before clear canvas version", as
   // One committed save first, so the previous state is known to history.
   await nextSave(page, () => drawRectangle(page));
   await nextSave(page, async () => {
-    await page.keyboard.press("ControlOrMeta+Delete");
+    await page.keyboard.press("Meta+Delete");
     await page.getByRole("button", { name: "Confirm" }).click();
   });
 
-  await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+  await page.keyboard.press("Meta+Shift+KeyH");
   await expect(panel(page)).toBeVisible();
   const rows = panel(page).getByRole("listitem");
   await expect(rows).toHaveCount(1);
@@ -157,7 +157,7 @@ test("clearing the canvas (Cmd+Delete) leaves a Before clear canvas version", as
 });
 
 test("the palette lists the History commands", async ({ page }) => {
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   const palette = page.getByRole("dialog", { name: "Command palette" });
   await palette.getByRole("combobox").fill(">History:");
   const options = palette.getByRole("option");
@@ -175,7 +175,7 @@ test("the palette lists the History commands", async ({ page }) => {
 });
 
 test("the palette runs Time travel and opens the panel", async ({ page }) => {
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   const palette = page.getByRole("dialog", { name: "Command palette" });
   await palette.getByRole("combobox").fill(">History: Time travel");
   await page.keyboard.press("Enter");

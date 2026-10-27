@@ -71,8 +71,7 @@ export const source = (page: Page) => dialog(page).getByLabel("LaTeX");
 
 export const previewSrc = (page: Page) => preview(page).getAttribute("src");
 
-export const confirmKey = (page: Page) =>
-  page.keyboard.press("ControlOrMeta+Enter");
+export const confirmKey = (page: Page) => page.keyboard.press("Meta+Enter");
 
 export const insertViaPalette = async (page: Page, tex: string) => {
   await runCommand(page, "Formula: Insert formula");

@@ -15,7 +15,7 @@ const openVaultWithPlugins = async (page: Page, plugins: string) => {
 };
 
 const openCommands = async (page: Page, query: string) => {
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   await expect(palette(page)).toBeVisible();
   await page.keyboard.type(query);
 };
@@ -262,7 +262,7 @@ test("a plugin stamps a box through scene.batch: panel count follows, one Cmd+Z 
   await page.keyboard.press("Enter");
   await expect(count).toHaveText(`Elements: ${before + 1}`);
 
-  await page.keyboard.press("ControlOrMeta+KeyZ");
+  await page.keyboard.press("Meta+KeyZ");
   await expect(count).toHaveText(`Elements: ${before}`);
   expect(errors).toEqual([]);
 });

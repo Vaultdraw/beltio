@@ -75,7 +75,7 @@ const drawRectangle = async (page: Page) => {
 };
 
 const openHotkeysPage = async (page: Page) => {
-  await page.keyboard.press("ControlOrMeta+Comma");
+  await page.keyboard.press("Meta+Comma");
   await expect(settingsModal(page)).toBeVisible();
   await page.getByRole("tab", { name: "Hotkeys" }).click();
   await expect(page.getByLabel("Filter hotkeys")).toBeVisible();
@@ -231,12 +231,12 @@ test.describe("default chords", () => {
     const before = await liveElementCount(page);
     await drawRectangle(page);
     await expect.poll(() => liveElementCount(page)).toBe(before + 1);
-    await page.keyboard.press("ControlOrMeta+z");
+    await page.keyboard.press("Meta+z");
     await expect.poll(() => liveElementCount(page)).toBe(before);
 
     // Cmd+Shift+P (Excalidraw's own palette chord) opens Vaultdraw's palette;
     // Excalidraw's palette is never mounted.
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     await expect(palette(page)).toBeVisible();
     await expect(page.locator(".command-palette-dialog")).toHaveCount(0);
     await page.keyboard.press("Escape");
@@ -247,11 +247,11 @@ test.describe("default chords", () => {
   test("Cmd/Ctrl+, opens Settings and Cmd/Ctrl+Shift+F focuses the navigator search", async ({
     page,
   }) => {
-    await page.keyboard.press("ControlOrMeta+Comma");
+    await page.keyboard.press("Meta+Comma");
     await expect(settingsModal(page)).toBeVisible();
     await closeSettings(page);
 
-    await page.keyboard.press("ControlOrMeta+Shift+KeyF");
+    await page.keyboard.press("Meta+Shift+KeyF");
     await expect(
       page.getByPlaceholder("Search drawings and text…"),
     ).toBeFocused();
@@ -261,20 +261,20 @@ test.describe("default chords", () => {
     page,
   }) => {
     const before = await drawingCount(page);
-    await page.keyboard.press("ControlOrMeta+KeyN");
+    await page.keyboard.press("Meta+KeyN");
     await expect.poll(() => drawingCount(page)).toBe(before + 1);
 
     const nav = page.getByLabel("Vault File Navigator", { exact: true });
     const width = async () => (await nav.boundingBox())?.width ?? 0;
     expect(await width()).toBeGreaterThan(100);
-    await page.keyboard.press("ControlOrMeta+Backslash");
+    await page.keyboard.press("Meta+Backslash");
     await expect.poll(width).toBeLessThan(2);
-    await page.keyboard.press("ControlOrMeta+Backslash");
+    await page.keyboard.press("Meta+Backslash");
     await expect.poll(width).toBeGreaterThan(100);
   });
 
   test("Cmd/Ctrl+Alt+N opens the template picker", async ({ page }) => {
-    await page.keyboard.press("ControlOrMeta+Alt+KeyN");
+    await page.keyboard.press("Meta+Alt+KeyN");
     await expect(page.locator(".template-picker")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.locator(".template-picker")).toHaveCount(0);
@@ -283,20 +283,20 @@ test.describe("default chords", () => {
   test("Cmd/Ctrl+Shift+= / - / 0 change the interface zoom", async ({
     page,
   }) => {
-    await page.keyboard.press("ControlOrMeta+Comma");
+    await page.keyboard.press("Meta+Comma");
     await expect(settingsModal(page)).toBeVisible();
     await page.getByRole("tab", { name: "Interface" }).click();
     const readout = (value: number) =>
       page.getByText(`${value} %`, { exact: true });
     await expect(readout(100)).toBeVisible();
 
-    await page.keyboard.press("ControlOrMeta+Shift+Equal");
+    await page.keyboard.press("Meta+Shift+Equal");
     await expect(readout(110)).toBeVisible();
-    await page.keyboard.press("ControlOrMeta+Shift+Minus");
-    await page.keyboard.press("ControlOrMeta+Shift+Minus");
+    await page.keyboard.press("Meta+Shift+Minus");
+    await page.keyboard.press("Meta+Shift+Minus");
     await expect(readout(90)).toBeVisible();
     expect((await prefs(page)).zoom).toBe(90);
-    await page.keyboard.press("ControlOrMeta+Shift+Digit0");
+    await page.keyboard.press("Meta+Shift+Digit0");
     await expect(readout(100)).toBeVisible();
   });
 });
@@ -310,7 +310,7 @@ test("Cmd/Ctrl+S outside the text editor saves immediately", async ({
   await openGraphs(page, "?autosave=60000");
   const before = await liveElementCount(page);
   await drawRectangle(page);
-  await page.keyboard.press("ControlOrMeta+s");
+  await page.keyboard.press("Meta+s");
   await expect
     .poll(() => liveElementCount(page), { timeout: 5000 })
     .toBe(before + 1);
@@ -352,7 +352,7 @@ test("Cmd/Ctrl+Shift+S saves to the vault once, without Excalidraw's download", 
   const before = await liveElementCount(page);
   await drawRectangle(page);
   await tracked.reset();
-  await page.keyboard.press("ControlOrMeta+Shift+KeyS");
+  await page.keyboard.press("Meta+Shift+KeyS");
   await expect
     .poll(() => liveElementCount(page), { timeout: 5000 })
     .toBe(before + 1);
@@ -415,7 +415,7 @@ test.describe("Hotkeys settings page", () => {
     await expect(chips(page, "vault.newDrawing")).toHaveCount(1);
     await add(page, "New drawing").click();
     await expect(page.getByText("Press keys…")).toBeVisible();
-    await page.keyboard.press("ControlOrMeta+Alt+KeyJ");
+    await page.keyboard.press("Meta+Alt+KeyJ");
     await expect(chips(page, "vault.newDrawing")).toHaveCount(2);
     expect((await prefs(page)).hotkeys["vault.newDrawing"]).toEqual([
       "Mod+N",
@@ -425,10 +425,10 @@ test.describe("Hotkeys settings page", () => {
 
     await closeSettings(page);
     const before = await drawingCount(page);
-    await page.keyboard.press("ControlOrMeta+Alt+KeyJ");
+    await page.keyboard.press("Meta+Alt+KeyJ");
     await expect.poll(() => drawingCount(page)).toBe(before + 1);
     await page.waitForTimeout(20);
-    await page.keyboard.press("ControlOrMeta+KeyN");
+    await page.keyboard.press("Meta+KeyN");
     await expect.poll(() => drawingCount(page)).toBe(before + 2);
 
     // Remove the default with the x button: only the new chord works.
@@ -442,10 +442,10 @@ test.describe("Hotkeys settings page", () => {
       "Mod+Alt+J",
     ]);
     await closeSettings(page);
-    await page.keyboard.press("ControlOrMeta+KeyN");
+    await page.keyboard.press("Meta+KeyN");
     await page.waitForTimeout(300);
     expect(await drawingCount(page)).toBe(before + 2);
-    await page.keyboard.press("ControlOrMeta+Alt+KeyJ");
+    await page.keyboard.press("Meta+Alt+KeyJ");
     await expect.poll(() => drawingCount(page)).toBe(before + 3);
 
     // Reset restores exactly the default.
@@ -457,10 +457,10 @@ test.describe("Hotkeys settings page", () => {
     expect((await prefs(page)).hotkeys["vault.newDrawing"]).toBeUndefined();
     await closeSettings(page);
     await page.waitForTimeout(20);
-    await page.keyboard.press("ControlOrMeta+KeyN");
+    await page.keyboard.press("Meta+KeyN");
     await expect.poll(() => drawingCount(page)).toBe(before + 4);
     await page.waitForTimeout(20);
-    await page.keyboard.press("ControlOrMeta+Alt+KeyJ");
+    await page.keyboard.press("Meta+Alt+KeyJ");
     await page.waitForTimeout(300);
     expect(await drawingCount(page)).toBe(before + 4);
     expect(errors).toEqual([]);
@@ -468,16 +468,16 @@ test.describe("Hotkeys settings page", () => {
 
   test("a binding survives a reload", async ({ page }) => {
     await add(page, "Toggle navigator").click();
-    await page.keyboard.press("ControlOrMeta+Alt+KeyB");
+    await page.keyboard.press("Meta+Alt+KeyB");
     await expect(chips(page, "view.toggleNavigator")).toHaveCount(2);
 
     await reloadVault(page);
-    await page.keyboard.press("ControlOrMeta+Comma");
+    await page.keyboard.press("Meta+Comma");
     await page.getByRole("tab", { name: "Hotkeys" }).click();
     await expect(chips(page, "view.toggleNavigator")).toHaveCount(2);
     await closeSettings(page);
     const nav = page.getByLabel("Vault File Navigator", { exact: true });
-    await page.keyboard.press("ControlOrMeta+Alt+KeyB");
+    await page.keyboard.press("Meta+Alt+KeyB");
     await expect
       .poll(async () => (await nav.boundingBox())?.width ?? 0)
       .toBeLessThan(2);
@@ -486,14 +486,14 @@ test.describe("Hotkeys settings page", () => {
   test("recording a chord never executes it", async ({ page }) => {
     // Zoom has no `when` clause, so it would run under Settings if recording leaked.
     await add(page, "New drawing").click();
-    await page.keyboard.press("ControlOrMeta+Shift+Equal");
+    await page.keyboard.press("Meta+Shift+Equal");
     await expect(chips(page, "vault.newDrawing")).toHaveCount(2);
     expect((await prefs(page)).zoom ?? 100).toBe(100);
 
     // Cmd+, belongs to Open settings: recording it keeps Settings as it is.
     const before = await drawingCount(page);
     await add(page, "New drawing").click();
-    await page.keyboard.press("ControlOrMeta+Comma");
+    await page.keyboard.press("Meta+Comma");
     await expect(chips(page, "vault.newDrawing")).toHaveCount(3);
     await expect(settingsModal(page)).toBeVisible();
     await expect(page.locator(".vault-settings-modal")).toHaveCount(1);
@@ -524,8 +524,8 @@ test.describe("Hotkeys settings page", () => {
   });
 
   for (const [label, chord] of [
-    ["Cmd/Ctrl+Q", "ControlOrMeta+KeyQ"],
-    ["Cmd/Ctrl+Shift+W", "ControlOrMeta+Shift+KeyW"],
+    ["Cmd/Ctrl+Q", "Meta+KeyQ"],
+    ["Cmd/Ctrl+Shift+W", "Meta+Shift+KeyW"],
   ] as const) {
     test(`refuses the reserved chord ${label} with a message`, async ({
       page,
@@ -541,7 +541,7 @@ test.describe("Hotkeys settings page", () => {
       await expect(page.getByRole("alert")).toContainText(/^Can't use .+: .+/);
       await expect(chips(page, "vault.newDrawing")).toHaveCount(1);
       // Still recording: the next valid key is accepted.
-      await page.keyboard.press("ControlOrMeta+Alt+KeyJ");
+      await page.keyboard.press("Meta+Alt+KeyJ");
       await expect(chips(page, "vault.newDrawing")).toHaveCount(2);
       await expect(page.getByRole("alert")).toHaveCount(0);
     });
@@ -564,7 +564,7 @@ test.describe("Hotkeys settings page", () => {
     await expect(pending).toContainText("Press keys…");
     await expect(pending).toContainText("Esc");
     await expect(pending).toContainText("cancels");
-    await page.keyboard.press("ControlOrMeta+Comma");
+    await page.keyboard.press("Meta+Comma");
 
     const conflicted = row(page, "vault.newDrawing");
     await expect(conflicted).toHaveClass(/vault-hotkeys__row--conflict/);
@@ -605,7 +605,7 @@ test.describe("Hotkeys settings page", () => {
       0,
     );
     await add(page, "New drawing").click();
-    await page.keyboard.press("ControlOrMeta+Comma");
+    await page.keyboard.press("Meta+Comma");
     const badge = page.getByRole("button", { name: /^Conflicts/ });
     await expect(badge).toContainText("2");
     await badge.click();

@@ -186,7 +186,7 @@ for (const rate of [1, 4]) {
 
     // Open the gallery at the vault root, move to the big folder and enter it:
     // time from that Enter to the first tile image and to every visible tile ready.
-    await page.keyboard.press("ControlOrMeta+Alt+KeyE");
+    await page.keyboard.press("Meta+Alt+KeyE");
     const grid = page.getByRole("grid", { name: /Gallery/ });
     await expect(grid).toBeFocused();
     await page.evaluate(() => {
@@ -416,7 +416,7 @@ test("startup: thumbnails on vs off, no IPC and no gallery chunk before a surfac
         );
         galleryBefore = js.filter((u) => /gallery/i.test(u)).length;
         const before = js.length;
-        await page.keyboard.press("ControlOrMeta+Alt+KeyE");
+        await page.keyboard.press("Meta+Alt+KeyE");
         await expect(page.getByTestId("gallery-view")).toBeVisible();
         jsAfterOpen = js.length - before;
         galleryChunkLoaded ||= js.some((u) => /gallery/i.test(u));

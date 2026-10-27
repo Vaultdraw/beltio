@@ -45,7 +45,7 @@ test("pressing on a drawing reads it ahead; the setting turns that off", async (
   await expect(page.locator(".vault-editor canvas.interactive")).toBeVisible();
   expect(await reads(intro)).toBe(1); // the click opened from the read ahead
 
-  await page.keyboard.press("ControlOrMeta+Comma");
+  await page.keyboard.press("Meta+Comma");
   const modal = page.locator(".vault-settings-modal");
   await expect(modal).toBeVisible();
   await page.getByRole("tab", { name: "Files" }).click();

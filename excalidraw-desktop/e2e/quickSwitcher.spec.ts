@@ -46,7 +46,7 @@ test.describe("Cmd/Ctrl+P", () => {
     await openGraphs(page);
     const box = await canvasBox(page);
     await page.mouse.click(box.x + box.width * 0.8, box.y + box.height * 0.9);
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await expect(switcher(page)).toBeVisible();
     await expect(input(page)).toBeFocused();
     await expectNoPaletteToast(page);
@@ -65,7 +65,7 @@ test.describe("Cmd/Ctrl+P", () => {
       steps: 6,
     });
     await page.mouse.up();
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await expect(switcher(page)).toBeVisible();
     await expectNoPaletteToast(page);
     await page.keyboard.press("Escape");
@@ -85,11 +85,11 @@ test.describe("Cmd/Ctrl+P", () => {
     );
     await expect(page.locator(textarea)).toBeFocused();
     await page.keyboard.type("keep this text");
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await expect(switcher(page)).toBeVisible();
     await expectNoPaletteToast(page);
     await expect(input(page)).toHaveValue("");
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await expect(switcher(page)).toHaveCount(0);
 
     await expect
@@ -111,7 +111,7 @@ test.describe("fuzzy open", () => {
       page,
     }) => {
       const errors = trackErrors(page);
-      await page.keyboard.press("ControlOrMeta+KeyP");
+      await page.keyboard.press("Meta+KeyP");
       await expect(switcher(page)).toBeVisible();
       await page.keyboard.type(query);
       await expect(options(page).first()).toContainText("01 Introduction");
@@ -137,7 +137,7 @@ test.describe("commands and keyboard", () => {
   test('">" restricts to commands and Enter runs Open settings', async ({
     page,
   }) => {
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await page.keyboard.type(">open settings");
     // One merged list: no "Drawings" / "Commands" group headers, no drawings.
     await expect(switcher(page).getByRole("group")).toHaveCount(0);
@@ -150,14 +150,14 @@ test.describe("commands and keyboard", () => {
   test("Family: Theme row browses on Tab; Create row makes a drawing", async ({
     page,
   }) => {
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     await page.keyboard.type("family theme");
     await expect(options(page).first()).toContainText("Tab browse");
     await page.keyboard.press("Tab");
     await expect(input(page)).toHaveValue(/^>Theme: /);
     await expect(options(page).first()).toContainText("Theme: ");
     await page.keyboard.press("Escape");
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await page.keyboard.type("Fresh Idea");
     await expect(switcher(page).locator(".vault-quick__group")).toHaveText([
       "Create",
@@ -168,7 +168,7 @@ test.describe("commands and keyboard", () => {
   });
 
   test("arrow keys wrap around the list", async ({ page }) => {
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await page.keyboard.type(">");
     const count = await options(page).count();
     expect(count).toBeGreaterThan(2);
@@ -193,15 +193,15 @@ test.describe("commands and keyboard", () => {
     const search = page.getByPlaceholder("Search drawings and text…");
     await search.click();
     await expect(search).toBeFocused();
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await expect(input(page)).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(switcher(page)).toHaveCount(0);
     await expect(search).toBeFocused();
 
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await expect(switcher(page)).toBeVisible();
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await expect(switcher(page)).toHaveCount(0);
     await expect(search).toBeFocused();
   });

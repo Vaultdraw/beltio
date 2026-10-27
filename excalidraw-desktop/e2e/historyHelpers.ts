@@ -134,7 +134,7 @@ export const preview = (page: Page) => page.getByTestId("history-preview");
 export const rows = (page: Page) => panel(page).getByRole("listitem");
 
 export const openPanelByShortcut = async (page: Page) => {
-  await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+  await page.keyboard.press("Meta+Shift+KeyH");
   await expect(panel(page)).toBeVisible();
 };
 
@@ -143,7 +143,7 @@ export const runPaletteCommand = async (
   title: string,
   query = title,
 ) => {
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   const palette = page.getByRole("dialog", { name: "Command palette" });
   await palette.getByRole("combobox").fill(`>${query}`);
   // Click the option itself: Enter would run whichever row is highlighted.

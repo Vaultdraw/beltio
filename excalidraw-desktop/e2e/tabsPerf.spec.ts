@@ -23,7 +23,7 @@ const RATES = (process.env.PERF_RATES ?? "1,4").split(",").map(Number);
 const ROUNDS = Number(process.env.PERF_ROUNDS ?? 4);
 const PER_ROUND = Number(process.env.PERF_PER_ROUND ?? 5);
 const RESTORE_RUNS = Number(process.env.PERF_RESTORE_RUNS ?? 15);
-const MOD = "ControlOrMeta";
+const MOD = "Meta";
 
 test.skip(!PERF, "set E2E_PERF=1 to run the tabs measurements");
 test.describe.configure({ timeout: 600_000 });

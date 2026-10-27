@@ -4,6 +4,14 @@
     <meta charset="utf-8" />
     <title>Vaultdraw (e2e)</title>
     <!-- Dev-only Playwright harness: real VaultApp over an in-memory vault. Not part of the Tauri build. -->
+    <script>
+      // The tests emulate Safari on macOS (Desktop Safari user agent) and press "Meta"
+      // chords. Playwright WebKit on Linux still reports navigator.platform "Linux", so
+      // Excalidraw would expect Ctrl; make it agree with the user agent.
+      if (/Macintosh/.test(navigator.userAgent) && !/Mac/.test(navigator.platform)) {
+        Object.defineProperty(navigator, "platform", { get: () => "MacIntel" });
+      }
+    </script>
     <style>
       html,
       body {

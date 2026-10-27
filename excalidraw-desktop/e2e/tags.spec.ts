@@ -266,7 +266,7 @@ test("palette lists Tag: #x entries and choosing one applies the filter", async 
   page,
 }) => {
   const errors = trackErrors(page);
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   const dialog = page.getByRole("dialog", { name: "Command palette" });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("combobox").fill(">Tag: #Inter");
@@ -283,7 +283,7 @@ test("palette lists Tag: #x entries and choosing one applies the filter", async 
 test("palette entry via keyboard (Enter) applies a nested tag", async ({
   page,
 }) => {
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   const dialog = page.getByRole("dialog", { name: "Command palette" });
   await dialog.getByRole("combobox").fill(">Tag: #dsa/graphs");
   await expect(

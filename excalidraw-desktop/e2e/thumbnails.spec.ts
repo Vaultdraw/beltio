@@ -63,7 +63,7 @@ test.describe("search results", () => {
 test.describe("palette preview", () => {
   test("shows the highlighted drawing beside the palette", async ({ page }) => {
     await openVault(page, "?seed=search&thumbs=1");
-    await page.keyboard.press("ControlOrMeta+KeyP");
+    await page.keyboard.press("Meta+KeyP");
     await expect(switcher(page)).toBeVisible();
     await page.keyboard.type("shortest");
     await expect(
@@ -108,7 +108,7 @@ test.describe("setting and commands", () => {
     await openVault(page, "?seed=search&thumbs=1");
     await expect(thumbs(page).first()).toBeVisible({ timeout: 15_000 });
 
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     await expect(switcher(page)).toBeVisible();
     await page.keyboard.type("Thumbnails:");
     const options = switcher(page).getByRole("option");
@@ -132,7 +132,7 @@ test.describe("setting and commands", () => {
     await openVault(page, "?seed=search&thumbs=1");
     await expect(thumbs(page).first()).toBeVisible({ timeout: 15_000 });
     const before = await putCount(page);
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     await page.keyboard.type("Clear cache for this vault");
     await switcher(page)
       .getByRole("option")

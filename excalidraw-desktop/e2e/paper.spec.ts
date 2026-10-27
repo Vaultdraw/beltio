@@ -554,7 +554,7 @@ test("zooming scales the pattern period; the snap grid replaces the pattern", as
     .locator(".vault-editor canvas.interactive")
     .boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.keyboard.press("ControlOrMeta+'");
+  await page.keyboard.press("Meta+'");
   // Minor snap lines are dashed, so only the solid major lines (every
   // gridSize 20 x gridStep 5 = 100 px) span the whole rect.
   await expect
@@ -564,19 +564,19 @@ test("zooming scales the pattern period; the snap grid replaces the pattern", as
   expect(Math.abs(period(grid.cols, 1) - 100 * grid.dpr)).toBeLessThan(1.5);
   await shot(page, "snapgrid", "light");
 
-  await page.keyboard.press("ControlOrMeta+'");
+  await page.keyboard.press("Meta+'");
   await expect
     .poll(async () => centres((await analyse(page)).cols, 1).length)
     .toBe(0);
   expectStyle("lines", await analyse(page));
 
   // Zoom in: ctrl+wheel
-  await page.keyboard.down("ControlOrMeta");
+  await page.keyboard.down("Meta");
   for (let i = 0; i < 3; i++) {
     await page.mouse.wheel(0, -300);
     await page.waitForTimeout(50);
   }
-  await page.keyboard.up("ControlOrMeta");
+  await page.keyboard.up("Meta");
   await page.waitForTimeout(400);
   const zoomed = await analyse(page);
   const ratio = period(zoomed.rows) / period(base.rows);

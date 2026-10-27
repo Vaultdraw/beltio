@@ -216,7 +216,7 @@ const palette = (page: Page) =>
 
 /** Runs a palette command by its title (commands mode, first match must be it). */
 export const runCommand = async (page: Page, title: string) => {
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   await expect(palette(page)).toBeVisible();
   await page.keyboard.type(title);
   await expect(palette(page).getByRole("option").first()).toContainText(title);

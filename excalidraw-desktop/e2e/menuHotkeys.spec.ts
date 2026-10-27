@@ -26,12 +26,12 @@ test("main menu shows Vaultdraw hotkeys and follows rebinding", async ({
   await page.keyboard.press("Escape");
 
   // Rebind settings.open on the Hotkeys page, then re-open the menu.
-  await page.keyboard.press("ControlOrMeta+Comma");
+  await page.keyboard.press("Meta+Comma");
   await page.getByRole("tab", { name: "Hotkeys" }).click();
   await page
     .getByRole("button", { name: "Add hotkey for Open settings", exact: true })
     .click();
-  await page.keyboard.press("ControlOrMeta+Alt+KeyJ");
+  await page.keyboard.press("Meta+Alt+KeyJ");
   // Drop the default chords (mac has a Ctrl alias too): the new one is shown.
   const chips = page
     .locator('.vault-hotkeys__row[data-command-id="settings.open"]')

@@ -98,7 +98,7 @@ test("pan frame p95 with a scene.onChange subscriber is within 5% of none", asyn
 test("scene.batch of 100 adds latency", async ({ page }) => {
   await openBig(page, "scene-stamp");
   for (let i = 0; i < BATCHES; i++) {
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     await page.keyboard.type("stamp: add 100");
     await page.keyboard.press("Enter");
     await page.waitForFunction(

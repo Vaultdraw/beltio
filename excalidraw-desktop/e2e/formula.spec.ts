@@ -70,7 +70,7 @@ test.describe("formula", () => {
     // 2. shortcut + $$ delimiters
     await page.keyboard.press("Escape");
     await focusCanvas(page);
-    await page.keyboard.press("ControlOrMeta+Shift+KeyM");
+    await page.keyboard.press("Meta+Shift+KeyM");
     await expect(dialog(page)).toBeVisible();
     await source(page).fill("$$a^2+b^2=c^2$$");
     await expect(preview(page)).toBeVisible();
@@ -142,7 +142,7 @@ test.describe("formula", () => {
 
     // undo restores in one step
     // (no focusCanvas click here: deselecting is itself an undo entry)
-    await page.keyboard.press("ControlOrMeta+KeyZ");
+    await page.keyboard.press("Meta+KeyZ");
     await expect
       .poll(async () => (await images(page))[0]?.fileId)
       .toBe(before.fileId);

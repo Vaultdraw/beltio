@@ -152,11 +152,11 @@ test("palette command: dialog shows name and pages, Import adds 3 locked images 
 
   // ONE undo removes all three pages
   await focusCanvas(page);
-  await page.keyboard.press("ControlOrMeta+KeyZ");
+  await page.keyboard.press("Meta+KeyZ");
   await expect.poll(async () => (await liveImages(page)).length).toBe(0);
   await expect.poll(async () => (await scene(page)).images.length).toBe(0);
   expect((await live(page)).elements.map((e) => e.id)).toEqual(["a"]);
-  await page.keyboard.press("ControlOrMeta+Shift+KeyZ");
+  await page.keyboard.press("Meta+Shift+KeyZ");
   await expect.poll(async () => (await liveImages(page)).length).toBe(3);
   expect(errors).toEqual([]);
 });
@@ -438,7 +438,7 @@ test.describe("read-only vault", () => {
       .first()
       .click();
     await openDrawing(page, "Graphs");
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     const palette = page.getByRole("dialog", { name: "Command palette" });
     await expect(palette).toBeVisible();
     await page.keyboard.type("Import: PDF");

@@ -340,7 +340,7 @@ test.describe("deleting history", () => {
     const errors = trackErrors(page);
     await openPanelByShortcut(page);
     await expect(rows(page)).toHaveCount(3);
-    await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+    await page.keyboard.press("Meta+Shift+KeyH");
     await expect(panel(page)).toHaveCount(0);
 
     await openSettings(page);
@@ -437,7 +437,7 @@ test.describe("deleting history", () => {
 
     // An automatic version is selected: the command is not offered.
     await rows(page).last().click();
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     const palette = page.getByRole("dialog", { name: "Command palette" });
     await palette.getByRole("combobox").fill(">Delete this checkpoint");
     await expect(
@@ -474,7 +474,7 @@ test.describe("panel notices", () => {
     await openPanelByShortcut(page);
     await expect(rows(page)).toHaveCount(2);
     await expect(notice).toHaveCount(0);
-    await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+    await page.keyboard.press("Meta+Shift+KeyH");
     await expect(panel(page)).toHaveCount(0);
 
     await setGitRepo(page, true);
@@ -490,7 +490,7 @@ test.describe("panel notices", () => {
     expect(Object.values(stored)).toEqual([true]);
 
     // Closing and reopening the panel keeps it hidden.
-    await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+    await page.keyboard.press("Meta+Shift+KeyH");
     await expect(panel(page)).toHaveCount(0);
     await openPanelByShortcut(page);
     await expect(notice).toHaveCount(0);
@@ -551,7 +551,7 @@ test.describe("panel notices", () => {
     // Closing is a toggle: wait until the panel is really gone before the next
     // press (and before patching), or two quick presses can land on one state.
     const closePanel = async () => {
-      await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+      await page.keyboard.press("Meta+Shift+KeyH");
       await expect(panel(page)).toHaveCount(0);
     };
 

@@ -107,7 +107,7 @@ const seed = async (
     drawings.forEach((d) => repo.seedDrawing(d, json));
   }, items);
   // Refresh lives in the command palette now (no header button).
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   await page.keyboard.type("navigator: refresh files");
   await page.keyboard.press("Enter");
   for (const p of [...(items.folders ?? []), ...(items.drawings ?? [])]) {

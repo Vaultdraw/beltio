@@ -38,7 +38,7 @@ const typeAndCommit = async (page: Page, text: string) => {
 
 /** Settings (This vault scope) > Tools > Text: stroke colour orange. */
 const setVaultTextColour = async (page: Page) => {
-  await page.keyboard.press("ControlOrMeta+Comma");
+  await page.keyboard.press("Meta+Comma");
   await page.getByRole("radio", { name: "This vault" }).click();
   await page.getByRole("tab", { name: "Tools", exact: true }).click();
   await page

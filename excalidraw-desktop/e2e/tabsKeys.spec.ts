@@ -28,13 +28,10 @@ const TRIO = {
   ...PAIR,
   [`${C}.excalidraw`]: sceneJson([{ id: "c-rect", x: 200, y: 120 }]),
 };
-const MOD = "ControlOrMeta";
-const NEXT =
-  process.platform === "darwin"
-    ? `${MOD}+Shift+BracketRight`
-    : `${MOD}+PageDown`;
-const PREV =
-  process.platform === "darwin" ? `${MOD}+Shift+BracketLeft` : `${MOD}+PageUp`;
+const MOD = "Meta";
+// The harness emulates Safari on macOS on every host, so the mac chords apply.
+const NEXT = `${MOD}+Shift+BracketRight`;
+const PREV = `${MOD}+Shift+BracketLeft`;
 
 /** Opens A, B, C each in its own tab (Cmd+click), C active. */
 const openTrio = async (page: Page) => {

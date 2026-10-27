@@ -113,7 +113,7 @@ test("vault open and the palette render no monospace text", async ({
   await openVault(page);
   await expect(page.locator(".vault-home .vault-kbd").first()).toBeVisible();
   expect(await monoTextIn(page, "#root")).toEqual([]);
-  await page.keyboard.press("ControlOrMeta+KeyP");
+  await page.keyboard.press("Meta+KeyP");
   const palette = page.getByRole("dialog", { name: "Command palette" });
   await expect(palette.locator(".vault-kbd").first()).toBeVisible();
   expect(await monoTextIn(page, "body")).toEqual([]);

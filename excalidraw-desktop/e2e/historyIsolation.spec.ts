@@ -142,18 +142,18 @@ test("keys, clipboard, drag and double-click in the preview change nothing", asy
   // Select, select all, then every destructive key.
   await page.mouse.click(orange.x, orange.y);
   diag(`after click panel=${await panel(page).count()}`);
-  await page.keyboard.press("ControlOrMeta+KeyA");
+  await page.keyboard.press("Meta+KeyA");
   diag(`after Mod+A panel=${await panel(page).count()}`);
   for (const key of [
     "Delete",
     "Backspace",
-    "ControlOrMeta+KeyX",
-    "ControlOrMeta+KeyV",
-    "ControlOrMeta+KeyD",
-    "ControlOrMeta+KeyZ",
-    "ControlOrMeta+Shift+KeyZ",
-    "ControlOrMeta+KeyG",
-    "ControlOrMeta+Alt+KeyC",
+    "Meta+KeyX",
+    "Meta+KeyV",
+    "Meta+KeyD",
+    "Meta+KeyZ",
+    "Meta+Shift+KeyZ",
+    "Meta+KeyG",
+    "Meta+Alt+KeyC",
     "ArrowRight",
     "Shift+ArrowDown",
   ]) {
@@ -165,7 +165,7 @@ test("keys, clipboard, drag and double-click in the preview change nothing", asy
     );
   }
   // Clear canvas shortcut must not reach any confirm dialog.
-  await page.keyboard.press("ControlOrMeta+Delete");
+  await page.keyboard.press("Meta+Delete");
   await page.waitForTimeout(400);
   diag(`confirm ${JSON.stringify(await confirmWhere(page))}`);
   // BUG-I1: Mod+Delete in the preview opens the clear-canvas confirm.
@@ -274,7 +274,7 @@ test("keys in the preview do not reach the main editor's shortcuts", async ({
       "toolbar-rectangle",
     )}`,
   );
-  for (const key of ["KeyR", "KeyO", "KeyT", "ControlOrMeta+KeyA"]) {
+  for (const key of ["KeyR", "KeyO", "KeyT", "Meta+KeyA"]) {
     await page.keyboard.press(key);
     const sel = await selectionToolChecked(page);
     diag(`after ${key} main selection tool active=${sel}`);
@@ -288,7 +288,7 @@ test("keys in the preview do not reach the main editor's shortcuts", async ({
   }
 
   // Palette and panel shortcuts still work from the preview (app level).
-  await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+  await page.keyboard.press("Meta+Shift+KeyH");
   await expect(
     page.getByRole("complementary", { name: "History" }),
   ).toHaveCount(0);

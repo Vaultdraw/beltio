@@ -30,13 +30,18 @@ if (!process.env.E2E_PORT) {
 }
 const port = process.env.E2E_PORT;
 
+// E2E_TIMEOUT_FACTOR slows every timeout for emulated machines (the Linux x86_64 VM
+// on an Apple-silicon Mac runs under Rosetta, about 2x slower). Default 1.
+const factor = Number(process.env.E2E_TIMEOUT_FACTOR) || 1;
+
 const viewport = { width: 1280, height: 850 };
 
 export default defineConfig({
   testDir: "./e2e",
   testIgnore: full ? [] : ["gallery.spec.ts"],
   globalTeardown: "./e2e/teardown.ts",
-  timeout: 60_000,
+  timeout: 60_000 * factor,
+  expect: { timeout: 5_000 * factor },
   fullyParallel: process.env.E2E_FULLY_PARALLEL === "1",
   workers: Number(process.env.E2E_WORKERS) || 4,
   reporter: [["list"]],

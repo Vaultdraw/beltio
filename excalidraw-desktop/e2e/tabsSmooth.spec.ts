@@ -58,7 +58,7 @@ const RATE = Number(process.env.SMOOTH_RATE ?? 1);
 const WINDOW_MS = 500;
 const PRE_MS = 50;
 const SETTLE_MS = 700;
-const MOD = "ControlOrMeta";
+const MOD = "Meta";
 
 test.describe.configure({ timeout: 300_000 });
 

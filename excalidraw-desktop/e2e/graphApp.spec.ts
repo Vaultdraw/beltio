@@ -129,7 +129,7 @@ test("Graph commands are in Cmd+Shift+P and on the Hotkeys page", async ({
   page,
 }) => {
   await openLinksVault(page, "Hub");
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   await expect(palette(page)).toBeVisible();
   await palette(page).getByRole("combobox").fill(">graph");
   const options = palette(page).getByRole("option");
@@ -137,7 +137,7 @@ test("Graph commands are in Cmd+Shift+P and on the Hotkeys page", async ({
   await expect(options.filter({ hasText: "Open local graph" })).toBeVisible();
   await expect(options.filter({ hasText: "Fit graph to view" })).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.keyboard.press("ControlOrMeta+Comma");
+  await page.keyboard.press("Meta+Comma");
   await page.getByRole("tab", { name: "Hotkeys" }).click();
   for (const id of ["graph.open", "graph.openLocal", "graph.fit"]) {
     await expect(
@@ -159,7 +159,7 @@ test("graph.fit refits through the palette without a synthetic key", async ({
   const s0 = await page.evaluate(
     () => (window as any).__graphApp.scale as number,
   );
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   await palette(page).getByRole("combobox").fill(">fit graph");
   await page.keyboard.press("Enter");
   await page.waitForTimeout(500);
@@ -180,7 +180,7 @@ test("theme change recolours the graph (light and dark screenshots)", async ({
   const light = await stage.screenshot({ path: `${SHOTS}/app-light.png` });
   // Dracula follows the system scheme: dark mode gives its dark variant.
   await page.emulateMedia({ colorScheme: "dark" });
-  await page.keyboard.press("ControlOrMeta+Comma");
+  await page.keyboard.press("Meta+Comma");
   const dialog = page.locator(".vault-settings-modal");
   await expect(dialog).toBeVisible();
   await dialog.getByRole("radio", { name: "Dracula" }).click();
@@ -202,7 +202,7 @@ test("per-vault graph settings persist to settings.toml across a reload", async 
   await graph(page).getByRole("button", { name: "Settings" }).click();
   await page.keyboard.press("Escape");
   // Toggle orphans through the palette command (same path as the toolbar).
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   await palette(page).getByRole("combobox").fill(">toggle orphans");
   await page.keyboard.press("Enter");
   await expect
@@ -233,7 +233,7 @@ test("per-vault graph settings persist to settings.toml across a reload", async 
     () => (window as unknown as Win).__graphApp!.nodeCount,
   );
   await page.keyboard.press("Escape");
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   await palette(page).getByRole("combobox").fill(">toggle orphans");
   await page.keyboard.press("Enter");
   await page.waitForTimeout(600);

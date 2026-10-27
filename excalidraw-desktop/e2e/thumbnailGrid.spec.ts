@@ -16,7 +16,7 @@ const switcher = (page: Page) =>
   page.getByRole("dialog", { name: "Command palette" });
 
 const openGallery = async (page: Page) => {
-  await page.keyboard.press("ControlOrMeta+Alt+KeyE");
+  await page.keyboard.press("Meta+Alt+KeyE");
   await expect(gallery(page)).toBeVisible();
   await expect(grid(page)).toBeFocused();
 };
@@ -82,7 +82,7 @@ test.describe("gallery grid", () => {
     await page.getByRole("menuitem", { name: "Show as grid" }).click();
     await expect(gallery(page)).toContainText("DSA");
     await expect(cells(page)).toHaveCount(3);
-    await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+    await page.keyboard.press("Meta+Shift+KeyP");
     await expect(switcher(page)).toBeVisible();
     await page.keyboard.type("Gallery:");
     const options = switcher(page).getByRole("option");

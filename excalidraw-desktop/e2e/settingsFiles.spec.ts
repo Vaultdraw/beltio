@@ -8,7 +8,7 @@ const settingsModal = (page: import("@playwright/test").Page) =>
 test.describe("Settings > Files", () => {
   test.beforeEach(async ({ page }) => {
     await openVault(page);
-    await page.keyboard.press("ControlOrMeta+Comma");
+    await page.keyboard.press("Meta+Comma");
     await expect(settingsModal(page)).toBeVisible();
     await page.getByRole("tab", { name: "Files" }).click();
   });

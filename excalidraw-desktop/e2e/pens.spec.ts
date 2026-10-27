@@ -162,7 +162,7 @@ test("pen keys are rebindable commands listed on the Hotkeys page", async ({
   page,
 }) => {
   const errors = trackErrors(page);
-  await page.keyboard.press("ControlOrMeta+Comma");
+  await page.keyboard.press("Meta+Comma");
   await page.getByRole("tab", { name: "Hotkeys" }).click();
   await expect(
     page.locator('.vault-hotkeys__row[data-command-id="pen.select9"]'),

@@ -86,7 +86,7 @@ test("Cmd/Ctrl+S while typing commits and saves (matches excalidraw.com)", async
   const box = await canvasBox(page);
   await page.mouse.dblclick(box.x + box.width * 0.5, box.y + box.height * 0.8);
   await page.keyboard.type("Saved mid-edit", { delay: 20 });
-  await page.keyboard.press("ControlOrMeta+s");
+  await page.keyboard.press("Meta+s");
   await expect
     .poll(() => textElements(page), { timeout: 5000 })
     .toContain("Saved mid-edit");

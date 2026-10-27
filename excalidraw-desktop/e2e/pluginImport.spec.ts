@@ -115,7 +115,7 @@ test("a dropped .txt is imported by the text-import plugin, in one undo step", a
   expect(Math.abs(texts[0].y - expected.y)).toBeLessThan(2);
 
   await focusCanvas(page);
-  await page.keyboard.press("ControlOrMeta+KeyZ");
+  await page.keyboard.press("Meta+KeyZ");
   await expect.poll(() => readTexts(page)).toEqual([]);
   expect(errors).toEqual([]);
 });

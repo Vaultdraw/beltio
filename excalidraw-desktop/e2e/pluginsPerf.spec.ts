@@ -102,7 +102,7 @@ for (const rate of RATES) {
 
 /** Palette Enter -> first toast push, timed in-page (no Playwright round trip inside). */
 const firstCommandMs = async (page: Page, id: string) => {
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   const palette = page.getByRole("dialog", { name: "Command palette" });
   await expect(palette).toBeVisible();
   await page.keyboard.type(`${id.replace("size", "Size ")}: run`);

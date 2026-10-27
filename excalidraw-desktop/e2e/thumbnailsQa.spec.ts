@@ -40,7 +40,7 @@ const expandFolder = async (page: Page, name: string) => {
 const gallery = (page: Page) => page.getByTestId("gallery-view");
 const cells = (page: Page) => page.getByRole("gridcell");
 const openGallery = async (page: Page) => {
-  await page.keyboard.press("ControlOrMeta+Alt+KeyE");
+  await page.keyboard.press("Meta+Alt+KeyE");
   await expect(gallery(page)).toBeVisible();
   await expect(page.getByRole("grid", { name: /Gallery/ })).toBeFocused();
 };
@@ -95,7 +95,7 @@ test.describe("render bursts and the live editor", () => {
     const paints = () =>
       page.evaluate(() => (window as any).__paints as number);
     const p0 = await paints();
-    await page.keyboard.press("ControlOrMeta+Equal"); // zoom in: one real repaint
+    await page.keyboard.press("Meta+Equal"); // zoom in: one real repaint
     await expect.poll(paints).toBeGreaterThan(p0);
 
     // Burst: 12 uncached drawings appear in the search results at once.

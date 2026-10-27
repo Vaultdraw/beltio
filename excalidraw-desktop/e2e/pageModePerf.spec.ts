@@ -427,7 +427,7 @@ test("drag cost of one element on 2000 elements: page mode vs normal", async ({
           Math.abs(moved.x - 385) + Math.abs(moved.y - 230),
         ).toBeGreaterThan(4);
         await page.mouse.up();
-        await page.keyboard.press("ControlOrMeta+z");
+        await page.keyboard.press("Meta+z");
         if (rep > 0) {
           result.push(...times);
         }

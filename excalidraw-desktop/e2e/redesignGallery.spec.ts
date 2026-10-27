@@ -110,20 +110,20 @@ for (const theme of THEMES) {
 
     const palette = page.getByRole("dialog", { name: "Command palette" });
     await surface("05", "palette-files", async () => {
-      await page.keyboard.press("ControlOrMeta+KeyP");
+      await page.keyboard.press("Meta+KeyP");
       await expect(palette).toBeVisible();
       await palette.getByRole("combobox").fill("gra");
       await page.waitForTimeout(250);
     });
     await surface("06", "palette-commands", async () => {
-      await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+      await page.keyboard.press("Meta+Shift+KeyP");
       await expect(palette).toBeVisible();
       await palette.getByRole("combobox").fill(">theme");
       await page.waitForTimeout(250);
     });
 
     await surface("14", "palette-family", async () => {
-      await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+      await page.keyboard.press("Meta+Shift+KeyP");
       await expect(palette).toBeVisible();
       await palette.getByRole("combobox").fill(">theme");
       await page.waitForTimeout(150);

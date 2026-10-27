@@ -88,7 +88,7 @@ export const treeName = (page: Page, name: string): Locator =>
 export const clickTree = (
   page: Page,
   name: string,
-  modifiers: Array<"ControlOrMeta" | "Shift"> = [],
+  modifiers: Array<"Meta" | "Shift"> = [],
 ) => treeName(page, name).click({ modifiers });
 
 export const strip = (page: Page) => page.getByTestId("vault-tabs");

@@ -34,7 +34,7 @@ const printStats = (name: string, xs: number[]) => {
 /** Palette command -> first preview, on a freshly loaded page (cold worker). */
 const coldRun = async (page: Page, i: number, tag: string) => {
   await openEmpty(page, `Perf${tag}${i}.excalidraw`);
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   await page.keyboard.type("Formula: Insert formula");
   await expect(
     page

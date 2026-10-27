@@ -107,7 +107,7 @@ test("1. undo survives autosave", async ({ page }, info) => {
   await page.waitForTimeout(AFTER_AUTOSAVE_MS);
   await waitForSaved(page);
 
-  await page.keyboard.press("ControlOrMeta+z");
+  await page.keyboard.press("Meta+z");
   await page.waitForTimeout(AFTER_AUTOSAVE_MS);
   await waitForSaved(page);
   await expect
@@ -339,7 +339,7 @@ test("8. keyboard shortcuts work immediately on a new drawing", async ({
 }, info) => {
   const errors = trackErrors(page);
   // The header button is gone; the command (Mod+N) creates in the current folder.
-  await page.keyboard.press("ControlOrMeta+KeyN");
+  await page.keyboard.press("Meta+KeyN");
   await expect(page.locator(canvas)).toBeVisible();
   await page.waitForTimeout(500);
 
@@ -411,7 +411,7 @@ test("10. zoom shortcut changes the zoom label and drawing still works", async (
   const label = page.locator(".vault-editor .reset-zoom-button");
   await expect(label).toContainText("100%");
 
-  await page.keyboard.press("ControlOrMeta+=");
+  await page.keyboard.press("Meta+=");
   await expect(label).not.toContainText("100%", { timeout: 3000 });
   await expect(label).toContainText(/110%/);
 

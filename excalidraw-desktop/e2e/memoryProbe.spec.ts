@@ -225,7 +225,7 @@ test("memory probe: typical 300-element drawing with 2 images", async ({
 
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("ControlOrMeta+s");
+  await page.keyboard.press("Meta+s");
   await phase("select-move-save");
 
   await page.keyboard.press("Escape");
@@ -242,8 +242,8 @@ test("memory probe: typical 300-element drawing with 2 images", async ({
   await page.keyboard.up("Shift");
   await phase("pan");
 
-  await page.keyboard.press("ControlOrMeta+=");
-  await page.keyboard.press("ControlOrMeta+=");
+  await page.keyboard.press("Meta+=");
+  await page.keyboard.press("Meta+=");
   await phase("zoom-in-x2");
 
   await phase("idle");

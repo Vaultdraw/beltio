@@ -111,10 +111,10 @@ test("Canvas: Group selection rebound on the Hotkeys page: the old key stops, th
   // Select both rectangles on the canvas.
   const box = await canvasBox(page);
   await page.mouse.click(box.x + box.width * 0.9, box.y + box.height * 0.9);
-  await page.keyboard.press("ControlOrMeta+KeyA");
+  await page.keyboard.press("Meta+KeyA");
 
   // The old key no longer groups (Excalidraw's own Mod+G is off too).
-  await page.keyboard.press("ControlOrMeta+KeyG");
+  await page.keyboard.press("Meta+KeyG");
   await page.waitForTimeout(AFTER_AUTOSAVE_MS);
   expect(await savedGroups(page)).toEqual([0, 0]);
 

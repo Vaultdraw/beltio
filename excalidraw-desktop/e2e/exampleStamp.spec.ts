@@ -26,7 +26,7 @@ test("stamp: flow and note are one undo step each", async ({ page }) => {
   await openDrawing(page, "Graphs");
   const before = await count(page)();
 
-  await page.keyboard.press("ControlOrMeta+Shift+KeyP");
+  await page.keyboard.press("Meta+Shift+KeyP");
   await expect(palette(page)).toBeVisible();
   await page.keyboard.type("stamp: insert flow");
   await expect(palette(page).getByRole("option").first()).toContainText(
@@ -39,12 +39,12 @@ test("stamp: flow and note are one undo step each", async ({ page }) => {
     .map((el: any) => el.text);
   expect(texts).toEqual(expect.arrayContaining(["Start", "Step", "Done"]));
 
-  await page.keyboard.press("ControlOrMeta+KeyZ");
+  await page.keyboard.press("Meta+KeyZ");
   await expect.poll(count(page)).toBe(before);
 
-  await page.keyboard.press("ControlOrMeta+Alt+Shift+KeyS");
+  await page.keyboard.press("Meta+Alt+Shift+KeyS");
   await expect.poll(count(page)).toBe(before + 2);
-  await page.keyboard.press("ControlOrMeta+KeyZ");
+  await page.keyboard.press("Meta+KeyZ");
   await expect.poll(count(page)).toBe(before);
   expect(errors).toEqual([]);
 });

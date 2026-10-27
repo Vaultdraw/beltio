@@ -79,7 +79,7 @@ test("undoing a PDF import releases the decoded images; redo re-decodes them", a
   const imported = { ...(await cacheSize(page)), heapMb: await heapMb(page) };
 
   await focusCanvas(page);
-  await page.keyboard.press("ControlOrMeta+KeyZ");
+  await page.keyboard.press("Meta+KeyZ");
   await expect.poll(() => images(page)).toBe(0);
   const undone = { ...(await cacheSize(page)), heapMb: await heapMb(page) };
 
@@ -92,7 +92,7 @@ test("undoing a PDF import releases the decoded images; redo re-decodes them", a
     .toBe(0);
   const pruned = { ...(await cacheSize(page)), heapMb: await heapMb(page) };
 
-  await page.keyboard.press("ControlOrMeta+Shift+KeyZ");
+  await page.keyboard.press("Meta+Shift+KeyZ");
   await expect.poll(() => images(page)).toBe(PAGES);
   await expect
     .poll(async () => (await cacheSize(page)).decoded, { timeout: 30_000 })

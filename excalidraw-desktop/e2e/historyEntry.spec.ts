@@ -42,10 +42,10 @@ test("header button: hidden without a drawing, shows the key, toggles the panel"
   await expect(button(page)).toHaveAttribute("aria-pressed", "false");
 
   // The shortcut drives the same state.
-  await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+  await page.keyboard.press("Meta+Shift+KeyH");
   await expect(panel(page)).toBeVisible();
   await expect(button(page)).toHaveAttribute("aria-pressed", "true");
-  await page.keyboard.press("ControlOrMeta+Shift+KeyH");
+  await page.keyboard.press("Meta+Shift+KeyH");
   await expect(panel(page)).toHaveCount(0);
 
   // The canvas main menu item shows the same key and opens the panel too.

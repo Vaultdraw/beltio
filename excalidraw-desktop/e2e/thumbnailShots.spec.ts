@@ -18,7 +18,7 @@ test.describe("thumbnail shots", () => {
       await page.waitForTimeout(500);
       await page.screenshot({ path: `${SHOTS}/thumbs-${theme}-1-home.png` });
 
-      await page.keyboard.press("ControlOrMeta+Alt+KeyE");
+      await page.keyboard.press("Meta+Alt+KeyE");
       await expect(page.getByRole("grid", { name: /Gallery/ })).toBeFocused();
       await page.keyboard.press("Enter");
       await expect(page.getByTestId("gallery-count")).toHaveText("3 items");
@@ -31,7 +31,7 @@ test.describe("thumbnail shots", () => {
       });
       await page.keyboard.press("Escape");
 
-      await page.keyboard.press("ControlOrMeta+p");
+      await page.keyboard.press("Meta+p");
       await page.keyboard.type("graph");
       await page.waitForTimeout(800);
       await page.screenshot({
@@ -39,7 +39,7 @@ test.describe("thumbnail shots", () => {
       });
       await page.keyboard.press("Escape");
 
-      await page.keyboard.press("ControlOrMeta+Shift+KeyF");
+      await page.keyboard.press("Meta+Shift+KeyF");
       await page.keyboard.type("dijkstra");
       await page.waitForTimeout(800);
       await page.screenshot({ path: `${SHOTS}/thumbs-${theme}-4-search.png` });
