@@ -3,8 +3,10 @@ import { Fragment } from "react";
 import { WELCOME_LINKS } from "../help/aboutLinks";
 import { HELP_LINK_HANDLERS } from "../help/helpCommands";
 import { isTauriAvailable } from "../vault/DesktopVaultRepository";
+import { isCustomChrome } from "../vault/windowChrome";
 
 import { IconAlert, IconClose, IconFolder, IconPlus } from "./Icons";
+import { WindowControls } from "./WindowControls";
 
 import "./home.css";
 
@@ -37,6 +39,11 @@ export const Onboarding = ({
     <div className="vault-onboarding">
       {/* Empty title-bar strip so the window can be dragged before a vault opens. */}
       <div className="vault-titlebar-drag" data-tauri-drag-region />
+      {isCustomChrome(ownerWindow) && (
+        <div className="vault-onboarding__window-controls">
+          <WindowControls />
+        </div>
+      )}
       <div className="vault-onboarding__card">
         <div className="vault-onboarding__logo" aria-hidden="true" />
         <h1 className="vault-onboarding__title" aria-label="Vaultdraw">

@@ -188,6 +188,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
   width: 100%;
   height: 100%;
   padding: 24px;
@@ -425,4 +426,14 @@ html.dark .vault-onboarding__logo {
 .vault-onboarding__link:focus-visible {
   color: var(--vault-text-muted);
   text-decoration: underline;
+}
+
+/* Linux custom title bar: window buttons before a vault is open. */
+.vault-onboarding__window-controls {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  height: var(--vault-header-height);
+  display: flex;
+  align-items: center;
 }
