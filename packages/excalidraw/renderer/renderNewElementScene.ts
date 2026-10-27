@@ -1,3 +1,5 @@
+import rough from "roughjs/bin/rough";
+
 import { throttleRAF } from "@excalidraw/common";
 
 import {
@@ -16,10 +18,25 @@ import {
 import { frameClip } from "./staticScene";
 
 import type { NewElementSceneRenderConfig } from "../scene/types";
+import type { RoughCanvas } from "roughjs/bin/canvas";
+
+// Arrows and lines are drawn straight onto the context (no per-element
+// bitmap), and rough.js strokes onto the canvas its RoughCanvas was made for.
+// The editor's shared `rc` belongs to the static canvas, so using it here drew
+// the element being created on the static canvas at scene (0, 0) until pointer
+// up. This canvas gets its own, made once.
+const roughCanvases = new WeakMap<HTMLCanvasElement, RoughCanvas>();
+export const getNewElementRoughCanvas = (canvas: HTMLCanvasElement) => {
+  let rc = roughCanvases.get(canvas);
+  if (!rc) {
+    rc = rough.canvas(canvas);
+    roughCanvases.set(canvas, rc);
+  }
+  return rc;
+};
 
 const _renderNewElementScene = ({
   canvas,
-  rc,
   newElement,
   elementsMap,
   allElementsMap,
@@ -79,7 +96,7 @@ const _renderNewElementScene = ({
         renderTargetElement,
         elementsMap,
         allElementsMap,
-        rc,
+        getNewElementRoughCanvas(canvas),
         context,
         renderConfig,
         appState,
