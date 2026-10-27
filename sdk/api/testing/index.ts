@@ -159,6 +159,7 @@ export async function boot(
     openView: host.openView,
     openedFromViews: host.openedFromViews,
     openPanelIds: host.openPanelIds,
+    overlay: host.overlay,
     statusBar: host.statusBar,
     async clickStatusBar(id) {
       const item = host.statusBar().find((x) => x.id === id);

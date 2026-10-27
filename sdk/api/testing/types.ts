@@ -277,6 +277,8 @@ export interface TestPlugin {
   openedFromViews(): { path: string; newTab: boolean }[];
   /** Short ids of the panels that are open. */
   openPanelIds(): string[];
+  /** The open overlay (`ctx.overlays.open`), or null. `render()` mounts its component. */
+  overlay(): { close(): void; render(): PanelView } | null;
   /** The status bar items that currently have text. */
   statusBar(): StatusBarShown[];
   /** Clicks a status bar item: runs its declared command. */

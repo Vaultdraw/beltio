@@ -18,6 +18,7 @@ import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
 import type { ShapesApi } from "./shapes";
 import type { ToolsApi } from "./tools";
+import type { OverlaysApi } from "./overlays";
 import type { ViewsApi } from "./views";
 import type { WorkspaceApi } from "./workspace";
 
@@ -106,6 +107,8 @@ export interface PluginContext {
   readonly tools: ToolsApi;
   /** Custom shapes declared with `[[contributes.shapes]]`. @since 0.16.0 */
   readonly shapes: ShapesApi;
+  /** Views that cover the drawing area. @since 0.17.0 */
+  readonly overlays: OverlaysApi;
   /**
    * Disposed in reverse order on disable/reload/quit.
    *

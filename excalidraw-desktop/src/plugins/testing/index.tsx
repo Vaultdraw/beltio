@@ -25,6 +25,8 @@ import { tabKindFor } from "../../tabs/tabKinds";
 import { TabKindView } from "../../tabs/TabKindView";
 import { isPanelOpen } from "../../slots/panelStore";
 import { getMenuItems, runMenuItem } from "../menuRegistry";
+import { closeOverlay, getOverlay } from "../overlayStore";
+import PluginOverlayHost from "../PluginOverlayHost";
 import { getToolHandlers, getToolStub } from "../toolRegistry";
 import { ensureActive } from "../host/activation";
 import { getStatusItems } from "../host/statusBarRegistry";
@@ -221,6 +223,8 @@ export interface TestPlugin {
   openedFromViews(): { path: string; newTab: boolean }[];
   /** Short ids of the panels that are open. */
   openPanelIds(): string[];
+  /** The open overlay (`ctx.overlays.open`) of this plugin, or null. `render()` mounts it. */
+  overlay(): { close(): void; render(): RenderResult } | null;
   /** The status bar items that currently have text. */
   statusBar(): StatusBarShown[];
   /** Clicks a status bar item: runs its declared command. */
@@ -619,6 +623,16 @@ export async function boot(
       return shown!;
     },
     openedFromViews: () => viewOpened.map((o) => ({ ...o })),
+    overlay() {
+      const open = getOverlay();
+      if (!open || open.pluginId !== id) {
+        return null;
+      }
+      return {
+        close: () => closeOverlay(open),
+        render: () => render(<PluginOverlayHost onClosed={() => {}} />),
+      };
+    },
     openPanelIds: () =>
       info.contributes.panels
         .map((p) => p.id)

@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 
 /** `what` names the surface in the message and the error log: "panel" (default) or "view". */
 export class PluginBoundary extends Component<
-  { pluginId: string; what?: "panel" | "view"; children: ReactNode },
+  { pluginId: string; what?: "panel" | "view" | "overlay"; children: ReactNode },
   { failed: boolean }
 > {
   state = { failed: false };

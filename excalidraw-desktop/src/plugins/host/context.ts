@@ -11,6 +11,7 @@ import { pluginSettingDecl } from "../settings/registry";
 import { cleanStatus } from "../../../../sdk/api/shared/statusBar";
 
 import { getMenuTarget } from "../menuRegistry";
+import { closeOverlay, getOverlay, showOverlay } from "../overlayStore";
 import { setToolHandlers } from "../toolRegistry";
 import { setShapeInserter } from "../shapeRegistry";
 import { PluginApiError } from "../../../../sdk/api/shared/rules";
@@ -58,6 +59,7 @@ import type {
   TextApi,
   ThemeApi,
   MenusApi,
+  OverlaysApi,
   ToolsApi,
   ShapesApi,
   VaultApi,
@@ -176,6 +178,7 @@ export function createPluginContext(
   let menusApi: MenusApi | undefined;
   let toolsApi: ToolsApi | undefined;
   let shapesApi: ShapesApi | undefined;
+  let overlaysApi: OverlaysApi | undefined;
 
   const settingValue = (key: string) => getPluginSetting(id, key);
 
@@ -346,6 +349,29 @@ export function createPluginContext(
             return refuse("tool", toolId);
           }
           return track(setToolHandlers(`${id}.${toolId}`, h));
+        },
+      });
+    },
+    get overlays() {
+      return (overlaysApi ??= {
+        open(component, options) {
+          const entry = {
+            pluginId: id,
+            Component: component,
+            onClose: options?.onClose,
+          };
+          if (isLive()) {
+            showOverlay(entry);
+          }
+          const close = () => closeOverlay(entry);
+          track(close); // the plugin stopping closes its overlay
+          return {
+            close,
+            get isOpen() {
+              return getOverlay() === entry;
+            },
+            dispose: close,
+          };
         },
       });
     },

@@ -67,6 +67,7 @@ import type {
   MenuTarget,
   ToolHandlers,
   Plugin,
+  OverlayProps,
   ViewProps,
   PluginContext,
   StorageApi,
@@ -170,6 +171,8 @@ export interface MockHost {
   openedFromViews(): { path: string; newTab: boolean }[];
   /** Short ids of the panels that are open. */
   openPanelIds(): string[];
+  /** The open overlay (`ctx.overlays.open`), or null. */
+  overlay(): { close(): void; render(): RenderResult } | null;
   setSetting(
     key: string,
     value: SettingValue,
@@ -258,6 +261,11 @@ export function createMockHost(
   let disposeContext: (() => void) | null = null;
   const handlers = new Map<string, () => void | Promise<void>>();
   const components = new Map<string, ComponentType>();
+  let overlay: {
+    component: ComponentType<OverlayProps>;
+    onClose?: () => void;
+  } | null = null;
+  let overlayClose: (() => void) | null = null;
   let lines: PluginLogLine[] = [];
   let errors = 0;
   let toastQueue: MockToast[] = [];
@@ -465,7 +473,7 @@ export function createMockHost(
       return d;
     };
     const refuse = (
-      what: "command" | "panel" | "importer" | "status bar item" | "view",
+      what: "command" | "panel" | "importer" | "status bar item" | "view" | "tool",
       short: string,
     ): Disposable => {
       reportError(new Error(undeclaredMessage(what, short)), "register");
@@ -526,6 +534,7 @@ export function createMockHost(
     let viewsApi: PluginContext["views"] | undefined;
     let toolsApi: PluginContext["tools"] | undefined;
     let shapesApi: PluginContext["shapes"] | undefined;
+    let overlaysApi: PluginContext["overlays"] | undefined;
     let menusApi: PluginContext["menus"] | undefined;
     let pagesApi: PluginContext["pages"] | undefined;
     let foldersApi: PluginContext["folders"] | undefined;
@@ -735,6 +744,30 @@ export function createMockHost(
                 toolHandlers.delete(toolId);
               }
             });
+          },
+        });
+      },
+      get overlays() {
+        return (overlaysApi ??= {
+          open(component, options) {
+            overlayClose?.();
+            const entry = { component, onClose: options?.onClose };
+            overlay = entry;
+            const close = () => {
+              if (overlay === entry) {
+                overlay = null;
+                entry.onClose?.();
+              }
+            };
+            overlayClose = close;
+            track(close);
+            return {
+              close,
+              get isOpen() {
+                return overlay === entry;
+              },
+              dispose: close,
+            };
           },
         });
       },
@@ -1369,6 +1402,25 @@ export function createMockHost(
     },
     openedFromViews: () => opened_views.map((o) => ({ ...o })),
     openPanelIds: () => [...openPanels],
+    overlay() {
+      const open = overlay;
+      if (!open) {
+        return null;
+      }
+      return {
+        close: () => overlayClose?.(),
+        render() {
+          if (!deps) {
+            throw notSetUp("overlays need react and @testing-library/react");
+          }
+          return deps.rtl.render(
+            deps.react.createElement(open.component, {
+              close: () => overlayClose?.(),
+            }),
+          );
+        },
+      };
+    },
     setSetting: writeSetting,
     emit(name, payload) {
       [...(eventSubs.get(name) ?? [])].forEach((cb) => cb(payload));

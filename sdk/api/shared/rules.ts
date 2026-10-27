@@ -112,7 +112,7 @@ export const pushToast = (
 
 /** The error when a plugin registers something plugin.toml does not declare. */
 export const undeclaredMessage = (
-  what: "command" | "panel" | "importer" | "status bar item" | "view",
+  what: "command" | "panel" | "importer" | "status bar item" | "view" | "tool",
   short: string,
 ) => `${what} "${short}" is not declared in plugin.toml`;
 

@@ -11,8 +11,9 @@ Plugins can add small pieces of interface. Each is declared in `plugin.toml`, so
 | [Canvas tool](#canvas-tools) | `[[contributes.tools]]` | `ctx.tools.register` | 0.15.0 |
 | [Custom shape](#custom-shapes) | `[[contributes.shapes]]` | `ctx.shapes.register` | 0.16.0 |
 | [Opening a panel or view](#layout) | none | `ctx.views.open` | 0.13.0 |
+| [Overlay over the drawing area](#overlays) | none | `ctx.overlays.open` | 0.17.0 |
 
-## Migration (0.9.0 to 0.16.0)
+## Migration (0.9.0 to 0.17.0)
 
 Everything here is additive: a plugin written for 0.9.0 runs unchanged. To use a surface in a plugin that must also run on an older app, ask for the feature and fall back:
 
@@ -29,6 +30,7 @@ if (ctx.host.has("statusBar")) ctx.statusBar.set("clock", { text });
 | 0.14.0 | toolbar buttons | `min_app` only (manifest table, no runtime call) |
 | 0.15.0 | canvas tools | `ctx.host.has("tools")` |
 | 0.16.0 | custom shapes | `ctx.host.has("shapes")` |
+| 0.17.0 | overlays | `ctx.host.has("overlays")` |
 
 An older app refuses a `plugin.toml` with a table it does not know (`status_bar`, `views`, `menus`, `toolbar`, `tools`, `shapes`), so set `min_app` to the app version that ships the revision you use; `vaultdraw-plugin check` warns when it is lower.
 
@@ -148,6 +150,30 @@ await ctx.views.open("checklist", { path: "Lists/groceries.checklist.md", newTab
 - **Command.** The example's `Checklist: open the list` is a palette command that calls `ctx.views.open`.
 
 In tests, `plugin.openPanelIds()` lists the open panels and `plugin.workspace.opened()` lists the notes opened in the main pane.
+
+## Overlays
+
+An overlay is a view that covers the whole drawing area, like the graph or the gallery: the editor stays loaded but frozen and hidden behind it, so closing is instant. There is nothing to declare in `plugin.toml`; a command the user ran opens it.
+
+```ts
+import { createElement as h } from "react";
+
+ctx.commands.register("toggle", () => {
+  const shown = ctx.overlays.open(
+    ({ close }) => h("button", { onClick: close }, "Close"),
+    { onClose: () => ctx.log.info("closed") },
+  );
+  // shown.isOpen, shown.close(), shown.dispose()
+});
+```
+
+- **One at a time.** Opening an overlay closes the previous one, and the app's own graph or gallery (opening those closes the overlay).
+- **Closing.** `close()` (also passed to the component), `dispose()`, opening a drawing or tab, or the plugin stopping. `onClose` runs once, whichever way.
+- **Errors.** A component that throws shows "This plugin overlay crashed." and the error is attributed to the plugin.
+- **Free until used.** The app loads no code and adds no element until an overlay opens. Keys and a toolbar button come from the plugin's commands and `[[contributes.toolbar]]`.
+- **Focus.** The app focuses the drawing when the overlay closes. Handle Escape and keys inside your component.
+
+Example: [`sdk/examples/overlay-demo`](../examples/overlay-demo/plugin.toml). In tests, `plugin.overlay()` returns the open overlay (`null` when none): `render()` mounts it and `close()` closes it.
 
 ## Toolbar
 

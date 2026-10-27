@@ -138,6 +138,11 @@ import { focusCanvasIfIdle } from "./palette/focus";
 import { createCommandsProvider } from "./palette/providers/commands";
 import { createThemesProvider } from "./palette/providers/themes";
 import { resolveSelectedTheme } from "./theme/registry";
+import {
+  closeOverlay,
+  hasOverlay,
+  subscribeOverlay,
+} from "./plugins/overlayStore";
 import { GraphHost, type GraphHostProps } from "./graph/GraphHost";
 import { GalleryHost } from "./thumbnails/gallery/GalleryHost";
 import { useGraphEntry } from "./graph/useGraphEntry";
@@ -213,6 +218,7 @@ const PluginPanels = lazy(() =>
     default: m.PluginPanels,
   })),
 );
+const PluginOverlayHost = lazy(() => import("./plugins/PluginOverlayHost"));
 const PluginStatusBar = lazy(() =>
   import("./plugins/host/PluginPanels").then((m) => ({
     default: m.PluginStatusBar,
@@ -2057,7 +2063,25 @@ export const VaultApp = ({
   // but frozen (no key or pointer handling) and hidden, so closing is instant.
   const [graphOpen, setGraphOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
-  const mainCovered = graphOpen || galleryOpen;
+  const pluginOverlayOpen = useSyncExternalStore(
+    subscribeOverlay,
+    hasOverlay,
+  );
+  const mainCovered = graphOpen || galleryOpen || pluginOverlayOpen;
+  // One cover at a time: a plugin overlay and the built-in graph or gallery close each other.
+  useEffect(() => {
+    if (pluginOverlayOpen && graphOpen) {
+      void getRegisteredHandler(GRAPH_COMMAND_IDS.open)?.();
+    }
+    if (pluginOverlayOpen && galleryOpen) {
+      void getRegisteredHandler(THUMBNAIL_COMMAND_IDS.galleryToggle)?.();
+    }
+  }, [pluginOverlayOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (graphOpen || galleryOpen) {
+      closeOverlay();
+    }
+  }, [graphOpen, galleryOpen]);
   const { effective: effectiveSettings } = vaultSettings;
   const tabs = useTabs({
     vault,
@@ -2078,6 +2102,7 @@ export const VaultApp = ({
       if (galleryOpen) {
         void getRegisteredHandler(THUMBNAIL_COMMAND_IDS.galleryToggle)?.();
       }
+      closeOverlay();
     },
     isStripShown: () => layoutRef.current?.shown.tab_strip ?? false,
     setShowStrip: (tabsShowStrip) => {
@@ -2986,6 +3011,11 @@ export const VaultApp = ({
               onOpenChange={handleGalleryOpenChange}
               onClosed={focusCanvas}
             />
+            {pluginOverlayOpen && (
+              <Suspense fallback={null}>
+                <PluginOverlayHost onClosed={focusCanvas} />
+              </Suspense>
+            )}
             {ext.graph && (
               <GraphHost
                 handle={vault.handle}

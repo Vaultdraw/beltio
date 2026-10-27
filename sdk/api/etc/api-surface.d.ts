@@ -129,6 +129,7 @@ export type { SelectOption, SettingDecl, SettingScopeName, SettingsApi, SettingV
 export type { StatusBarApi, StatusBarState } from "./statusBar";
 export type { MenuTarget, MenusApi } from "./menus";
 export type { ShapeDef, ShapesApi } from "./shapes";
+export type { OverlayHandle, OverlayOptions, OverlayProps, OverlaysApi, } from "./overlays";
 export type { ToolHandlers, ToolPoint, ToolsApi } from "./tools";
 export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
@@ -347,6 +348,23 @@ export interface MenusApi {
     target(): MenuTarget | null;
 }
 
+// overlays.ts
+import type { ComponentType } from "react";
+import type { Disposable } from "./disposable";
+export interface OverlayProps {
+    close(): void;
+}
+export interface OverlayOptions {
+    onClose?(): void;
+}
+export interface OverlayHandle extends Disposable {
+    close(): void;
+    readonly isOpen: boolean;
+}
+export interface OverlaysApi {
+    open(component: ComponentType<OverlayProps>, options?: OverlayOptions): OverlayHandle;
+}
+
 // pages.ts
 import type { FontFamilyName } from "./scene";
 export type PageSizeName = "a3" | "a4" | "a5" | "b5" | "letter" | "legal" | "tablet" | "tabletLarge" | "phone";
@@ -482,6 +500,7 @@ import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
 import type { ShapesApi } from "./shapes";
 import type { ToolsApi } from "./tools";
+import type { OverlaysApi } from "./overlays";
 import type { ViewsApi } from "./views";
 import type { WorkspaceApi } from "./workspace";
 export interface UiApi {
@@ -518,6 +537,7 @@ export interface PluginContext {
     readonly menus: MenusApi;
     readonly tools: ToolsApi;
     readonly shapes: ShapesApi;
+    readonly overlays: OverlaysApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;
     setInterval(fn: () => void, ms: number): Disposable;

@@ -6,6 +6,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### New
 
+- **Plugin API 0.17.0: overlays.** `ctx.overlays.open(component)` shows a plugin view over the whole drawing area (the editor stays loaded but frozen behind it), the surface the graph and gallery extensions use. Nothing to declare and nothing loaded until one opens. Example `overlay-demo`, docs in `sdk/docs/surfaces.md`.
+
 - Import Obsidian vault…: when a file fails or an image stays a box (missing, over 4 MB, unsupported type), the import writes `Import report` into the target with each file or image and the reason, and the final message names it. Key `obsidian_report` (default on) under `[plugin.markdown-import]`. Each note's scene is built, written and released before the next one starts.
 
 - **Install themes.** **Settings → Appearance → Install from URL…** (and the command `Themes: Install from URL or GitHub repo`) downloads a theme file or lists the themes in a GitHub repo, checks the file, and installs it into your `themes/` folder with a record of where it came from. `Themes: Check installed themes for updates` and `Themes: Remove an installed theme` keep them tidy. The Vaultdraw/themes repo has over a hundred more palettes, credited to their authors. Host names that resolve to private, loopback or link-local addresses are refused, repo themes update from the branch they were installed from, and `example.com/x.json` without `https://` gets a clear message.
