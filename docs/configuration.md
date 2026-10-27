@@ -1296,12 +1296,12 @@ mcp_enabled = true    # the AI tools interface (MCP), used only while enabled is
 
 When the page stops answering, Vaultdraw shows a native **Wait** or **Quit** dialog instead of leaving you with a frozen window.
 
-- **Where it works.** macOS only for now; Linux later.
+- **Where it works.** macOS and Linux (WebKitGTK 2.34 or newer).
 - **When it appears.** About 3 s (WebKit's own check) plus `watchdog.grace_ms` (default 5 s) after the first ignored input. It never triggers while you are idle: WebKit starts its timer on input.
 - **Wait** (Return, Escape or a click) keeps the app open and asks again if the page is still stuck: after 3, 6, then 12 times the grace (15, 30, then 60 s by default; never more than 60 s).
-- **Quit** (Cmd+Q or a click) closes the app at once. Edits since the last autosave are lost. A plain `q` does nothing, so typing into the frozen page can't quit by accident.
-- **It closes itself** as soon as the page answers again. No dialog while the window is hidden or minimised, and the time the Mac sleeps doesn't count.
-- **Nothing runs while the app is healthy:** no timer, no thread. A hang that reached the dialog is written to `last-hang.json` in the state folder (time, length, choice); it never leaves your Mac.
+- **Quit** (Cmd+Q on macOS, Ctrl+Q on Linux, or a click) closes the app at once. Edits since the last autosave are lost. A plain `q` does nothing, so typing into the frozen page can't quit by accident.
+- **It closes itself** as soon as the page answers again. No dialog while the window is hidden or minimised, and the time the machine sleeps doesn't count.
+- **Nothing runs while the app is healthy:** no timer, no thread. A hang that reached the dialog is written to `last-hang.json` in the state folder (time, length, choice); it never leaves your machine.
 - **Live.** The app reads the keys when a hang happens, from `config.toml`, its includes and `overrides.toml`. A change to `grace_ms` applies from the next hang.
 - **Off.** `[watchdog] enabled = false`, or Settings → Interface → **Hang watchdog**, or the palette command **Hang watchdog: Turn on or off** (`watchdog.toggle`).
 - **Last hang.** **Hang watchdog: Show the last hang** (`watchdog.showLastHang`) shows when it happened, how long the page was stuck and what you chose. Both commands have no default keys; bind them in Settings → Hotkeys or `[hotkeys]`.
@@ -1732,7 +1732,7 @@ The hang watchdog: a Wait / Quit dialog when the page stops answering. See [Hang
 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
-| `enabled` | `true` | true or false |  | Show a Wait / Quit dialog when the page stops answering (macOS; Linux later). |
+| `enabled` | `true` | true or false |  | Show a Wait / Quit dialog when the page stops answering (macOS and Linux). |
 | `grace_ms` | `5000` | a whole number of milliseconds between 1000 and 60000 |  | How long the page must stay unresponsive (after WebKit's own 3 s) before the dialog appears, in milliseconds. Applies from the next hang. |
 
 ### `[hotkeys]` and `[plugin.<id>]`

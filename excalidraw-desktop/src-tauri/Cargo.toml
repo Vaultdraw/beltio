@@ -55,9 +55,13 @@ objc2-web-kit = { version = "0.3", features = ["WKWebViewConfiguration", "WKPref
 
 # Linux PDF import (pdf_import::linux): poppler-glib is loaded with dlopen at first use; the
 # PNG and JPEG encoders are pure Rust (png is already in the tree through muda).
+# Hang watchdog (`watchdog/linux.rs`): the same webkit2gtk/gtk/glib versions wry 0.57 already pulls in.
 [target.'cfg(target_os = "linux")'.dependencies]
 png = "0.18"
 jpeg-encoder = "0.7"
+webkit2gtk = "2.0"
+gtk = "0.18"
+glib = "0.18"
 
 # Hardware SHA-256 on Apple Silicon / ARM (about 4x faster revision hashing of large drawings).
 [target.'cfg(all(target_arch = "aarch64", target_vendor = "apple"))'.dependencies]

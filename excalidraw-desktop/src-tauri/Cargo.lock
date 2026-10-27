@@ -1119,6 +1119,8 @@ dependencies = [
  "block2",
  "crc32fast",
  "fs2",
+ "glib",
+ "gtk",
  "hex",
  "jpeg-encoder",
  "libc",
@@ -1146,6 +1148,7 @@ dependencies = [
  "unicode-normalization",
  "vaultdraw-core",
  "vaultdraw-protocol",
+ "webkit2gtk",
  "zstd",
 ]
 

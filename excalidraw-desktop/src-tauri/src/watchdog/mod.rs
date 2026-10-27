@@ -1,17 +1,19 @@
 //! Hang watchdog: when the page stops answering, a native Wait / Quit dialog.
 //!
 //! The trigger is WebKit's own responsiveness signal (macOS: the private
-//! `_webViewWebProcessDidBecome{Unresponsive,Responsive}:` delegate callbacks, guarded), so an
+//! `_webViewWebProcessDidBecome{Unresponsive,Responsive}:` delegate callbacks, guarded; Linux:
+//! WebKitGTK's public `is-web-process-responsive` property, `linux.rs`), so an
 //! idle or healthy app pays nothing: no thread, no timer. A hang starts one short-lived grace
 //! thread. Settings (`[watchdog] enabled`, `grace_ms`) are read from the config layers when a
 //! hang starts, so they are always live. Design: `personal/feature/hang-watchdog/PLAN.md`.
-//! Linux (`is-web-process-responsive`) is not built yet: no test machine.
 
 pub mod machine;
 #[cfg(target_os = "macos")]
 mod macos;
 #[cfg(all(feature = "smoke-test", target_os = "macos"))]
 pub mod smoke_driver;
+#[cfg(target_os = "linux")]
+mod linux;
 
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -34,7 +36,9 @@ pub fn force_quit() -> bool {
 pub fn install(window: &tauri::WebviewWindow) {
     #[cfg(target_os = "macos")]
     macos::install(window);
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "linux")]
+    linux::install(window);
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
     let _ = window;
 }
 
