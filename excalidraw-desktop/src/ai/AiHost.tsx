@@ -1,5 +1,5 @@
 /**
- * App-level AI switch wiring for VaultApp: registers the two palette commands
+ * App-level AI switch wiring for VaultApp: registers the three palette commands
  * and shows the privacy warning while one is pending. Nothing runs at startup
  * or idle beyond two handler registrations.
  */
@@ -14,6 +14,7 @@ import {
   subscribeAiWarning,
   toggleAi,
   toggleMcp,
+  copyMcpSetup,
 } from "./aiSwitch";
 import { AiWarningDialog } from "./AiWarningDialog";
 
@@ -22,6 +23,7 @@ export const AiHost = ({ win }: { win: Window | null }) => {
     const stop = registerCommandHandlers({
       [AI_COMMAND_IDS.toggle]: () => toggleAi(win),
       [AI_COMMAND_IDS.toggleMcp]: () => toggleMcp(win),
+      [AI_COMMAND_IDS.copyMcpSetup]: () => copyMcpSetup(win),
     });
     return () => {
       stop();

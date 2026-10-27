@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   act,
@@ -104,6 +104,7 @@ describe("AI commands", () => {
     for (const [id, title] of [
       ["ai.toggle", "AI: Toggle AI"],
       ["ai.toggleMcp", "AI: Toggle AI tools interface (MCP)"],
+      ["ai.copyMcpSetup", "AI: Copy the AI app setup (MCP server config)"],
     ]) {
       const command = getCommand(id)!;
       expect(command.title).toBe(title);
@@ -170,6 +171,28 @@ describe("AI switch", () => {
     expect(toastStore.getSnapshot().toasts.at(-1)?.message).toBe(
       "AI tools interface (MCP) turned on. It applies once AI is on",
     );
+  });
+
+  it("ai.copyMcpSetup copies the server entry and says what is still needed", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(window.navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    render(<AiHost win={window} />);
+    run("ai.copyMcpSetup");
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const copied = JSON.parse(writeText.mock.calls[0][0] as string);
+    expect(copied).toEqual({
+      mcpServers: { vaultdraw: { command: "vaultdraw", args: ["mcp"] } },
+    });
+    await vi.waitFor(() =>
+      expect(toastStore.getSnapshot().toasts.at(-1)?.message).toContain(
+        "Turn on AI in Settings",
+      ),
+    );
+    // Copying changes no setting.
+    expect(prefs().aiEnabled).toBe(false);
   });
 
   it("an unanswered warning does not come back after the host unmounts", () => {

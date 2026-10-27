@@ -4,6 +4,7 @@ import type { CommandDefinition } from "../commands/types";
 export const AI_COMMAND_IDS = {
   toggle: "ai.toggle",
   toggleMcp: "ai.toggleMcp",
+  copyMcpSetup: "ai.copyMcpSetup",
 } as const;
 
 export const AI_COMMANDS: CommandDefinition[] = [
@@ -17,6 +18,13 @@ export const AI_COMMANDS: CommandDefinition[] = [
   {
     id: AI_COMMAND_IDS.toggleMcp,
     title: "AI: Toggle AI tools interface (MCP)",
+    category: "AI",
+    keys: { default: [] },
+    when: ["vaultOpen", "!modalOpen"],
+  },
+  {
+    id: AI_COMMAND_IDS.copyMcpSetup,
+    title: "AI: Copy the AI app setup (MCP server config)",
     category: "AI",
     keys: { default: [] },
     when: ["vaultOpen", "!modalOpen"],

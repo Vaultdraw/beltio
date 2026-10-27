@@ -73,3 +73,30 @@ export const toggleMcp = (win?: Window | null) => {
     }`,
   });
 };
+
+/** The server entry most AI apps take (see docs/mcp.md). */
+export const MCP_SETUP_SNIPPET = JSON.stringify(
+  { mcpServers: { vaultdraw: { command: "vaultdraw", args: ["mcp"] } } },
+  null,
+  2,
+);
+
+/**
+ * `ai.copyMcpSetup`: copies the config an AI app needs to start `vaultdraw mcp`.
+ * Copying changes nothing and works while AI is off; the tools still answer
+ * DISABLED until the user turns AI on, and the toast says so.
+ */
+export const copyMcpSetup = async (win?: Window | null) => {
+  const clipboard = (win ?? window).navigator.clipboard;
+  const on = getPreferences(win).aiEnabled;
+  try {
+    await clipboard.writeText(MCP_SETUP_SNIPPET);
+    toastStore.push({
+      message: `AI app setup copied. Paste it into the AI app's MCP settings${
+        on ? "" : ". Turn on AI in Settings for the tools to answer"
+      }`,
+    });
+  } catch {
+    toastStore.push({ message: "Could not copy the AI app setup" });
+  }
+};

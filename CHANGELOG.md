@@ -6,6 +6,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### New
 
+- **Copy the AI app setup.** The palette command `AI: Copy the AI app setup (MCP server config)` (`ai.copyMcpSetup`) copies the `mcpServers` entry for `vaultdraw mcp`. `vaultdraw mcp` now also answers JSON-RPC batches, survives a line that is not UTF-8, keeps answering `ping` while a tool call is slow, and reads a modern client's name from each request.
+
 - **Plugin API 0.17.0: overlays.** `ctx.overlays.open(component)` shows a plugin view over the whole drawing area (the editor stays loaded but frozen behind it), the surface the graph and gallery extensions use. Nothing to declare and nothing loaded until one opens. Example `overlay-demo`, docs in `sdk/docs/surfaces.md`.
 
 - **Scene commands reach every drawing.** `vaultdraw scene read|get|apply <drawing>` and the AI tools `read_drawing` and `edit_drawing` now work on a drawing that is not on screen (saved like a normal save, history kept), and the new `vaultdraw scene create` and AI tool `create_drawing` make a drawing from scene operations in one step, leaving no blank file if an operation is invalid. `scene read` and `scene get` of a named drawing (and the `read_drawing` tool) also work with Vaultdraw closed, using a Rust copy of the element projection kept in step with the app by a shared test file. Everything else needs the app running.
