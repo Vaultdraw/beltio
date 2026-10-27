@@ -721,6 +721,7 @@ interface TargetFolder {
   readonly kind: "newVault" | "vaultFolder";
   writeDrawing(path: string, scene: object): Promise<void>;              // create-only (NAME_COLLISION); path ends in .excalidraw
   copyFrom(source: SourceFolder, from: string, to: string): Promise<void>; // create-only, copied natively
+  convertDrawing(source: SourceFolder, from: string, to: string): Promise<void>; // an Obsidian .excalidraw.md file → a .excalidraw drawing, create-only
   open(): Promise<void>;                                                 // newVault: the app opens it; vaultFolder: reveals it in the tree
 }
 ```

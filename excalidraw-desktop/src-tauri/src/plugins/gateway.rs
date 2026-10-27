@@ -50,6 +50,7 @@ pub(crate) const ALLOWLIST: &[Row] = &[
     Row { method: "folders.vaultTarget", permission: Some(FOLDERS_IMPORT), route: Route::Folders },
     Row { method: "folders.writeDrawing", permission: Some(FOLDERS_IMPORT), route: Route::Folders },
     Row { method: "folders.copy", permission: Some(FOLDERS_IMPORT), route: Route::Folders },
+    Row { method: "folders.convertDrawing", permission: Some(FOLDERS_IMPORT), route: Route::Folders },
     Row { method: "folders.release", permission: Some(FOLDERS_IMPORT), route: Route::Folders },
 ];
 

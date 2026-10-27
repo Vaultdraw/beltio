@@ -268,6 +268,13 @@ impl TargetFolder {
             std::io::copy(&mut reader, f).map(|_| ())
         })
     }
+
+    /// Converts the Obsidian Excalidraw file `from` (`*.excalidraw.md`, plain or compressed) in
+    /// `source` into the scene file `to` here, create-only. The decoder is `excalidraw_md`.
+    pub fn convert_drawing(&self, source: &SourceFolder, from: &str, to: &str) -> Result<()> {
+        let scene = crate::excalidraw_md::extract_scene(&source.read_text(from)?)?;
+        self.write_drawing(to, &scene)
+    }
 }
 
 /// Session handles for sources and targets. Handles are opaque strings; a source handle can

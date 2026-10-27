@@ -174,6 +174,19 @@ export function createFoldersModel(
               to: checkRelative(to),
             });
           },
+          async convertDrawing(from, fromPath, to) {
+            need("folders.convertDrawing");
+            const sourceHandle = sources.get(from as object);
+            if (!sourceHandle) {
+              throw bad("source must be a folder from folders.pickSource");
+            }
+            await call("folders.convertDrawing", {
+              source: sourceHandle,
+              from: checkRelative(fromPath),
+              target: handle,
+              to: checkRelative(to),
+            });
+          },
           async open() {
             if (kind === "newVault") {
               vault.openedVault(store.root(handle));

@@ -824,6 +824,7 @@ fn gateway_allowlist_maps_methods_to_permissions() {
             ("folders.vaultTarget", Some("folders.import")),
             ("folders.writeDrawing", Some("folders.import")),
             ("folders.copy", Some("folders.import")),
+            ("folders.convertDrawing", Some("folders.import")),
             ("folders.release", Some("folders.import")),
         ]
     );

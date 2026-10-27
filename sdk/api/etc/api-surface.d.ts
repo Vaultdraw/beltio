@@ -65,6 +65,7 @@ export interface TargetFolder {
     readonly kind: "newVault" | "vaultFolder";
     writeDrawing(path: string, scene: object): Promise<void>;
     copyFrom(source: SourceFolder, from: string, to: string): Promise<void>;
+    convertDrawing(source: SourceFolder, from: string, to: string): Promise<void>;
     open(): Promise<void>;
 }
 export interface FoldersApi {

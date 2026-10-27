@@ -209,3 +209,22 @@ fn listing_stops_at_the_cap() {
     assert_eq!(src.list().unwrap().entries.len(), 3);
     assert!(MAX_ENTRIES >= 100_000);
 }
+
+#[test]
+fn convert_drawing_decodes_excalidraw_md_create_only_and_leaves_the_source_alone() {
+    let t = tempdir().unwrap();
+    let md = "---\nexcalidraw-plugin: parsed\n---\n\n## Drawing\n```json\n{\"type\":\"excalidraw\",\"version\":2,\"elements\":[],\"appState\":{},\"files\":{}}\n```\n";
+    fs::write(t.path().join("Sketch.excalidraw.md"), md).unwrap();
+    fs::write(t.path().join("Plain.excalidraw.md"), "# not a drawing").unwrap();
+    let before = tree_hash(t.path());
+    let src = SourceFolder::open(t.path()).unwrap();
+    let out = tempdir().unwrap();
+    let dst = TargetFolder::new_vault(&out.path().join("v")).unwrap();
+    dst.convert_drawing(&src, "Sketch.excalidraw.md", "Sketch.excalidraw").unwrap();
+    let v: serde_json::Value = serde_json::from_str(&fs::read_to_string(out.path().join("v/Sketch.excalidraw")).unwrap()).unwrap();
+    assert_eq!(v["type"], "excalidraw");
+    assert_eq!(dst.convert_drawing(&src, "Sketch.excalidraw.md", "Sketch.excalidraw").unwrap_err().code, "NAME_COLLISION");
+    assert_eq!(dst.convert_drawing(&src, "Plain.excalidraw.md", "P.excalidraw").unwrap_err().code, "INVALID_FILE");
+    assert!(!out.path().join("v/P.excalidraw").exists());
+    assert_eq!(tree_hash(t.path()), before);
+}

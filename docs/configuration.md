@@ -1375,6 +1375,33 @@ enabled = ["my-plugin"]
 - **Commands:** `plugins.openSettings`, `plugins.installFolder`, `plugins.reloadList`, `plugins.openFolder` (shows the plugins folder) and `plugins.deleteData` ("Delete data of a plugin…": opens Settings → Plugins at the first **Delete data** button). Like every command, you can rebind them in `[hotkeys]`.
 - **Writing a plugin:** the `vaultdraw-plugin` tool (`check`, `init`, `dev`) is described in `sdk/docs/getting-started.md`. It adds no config key.
 
+## Markdown import
+
+The official `markdown-import` plugin (bundled, on by default, loads only when you import) turns a `.md` note into a page-mode drawing and an Obsidian vault into drawings in your vault. Settings live in `[plugin.markdown-import]` and are read at each import, so a change applies to the next one.
+
+```toml
+[plugin.markdown-import]
+font = "default"             # "default" (your drawing font) or "document" (plain sans)
+font_size = 16               # 8 to 72
+page_size = "a4"             # a3, a4, a5, b5, letter or legal
+part_elements = 1000         # 200 to 20000: a longer note is split into parts
+obsidian_attachments = true  # copy images and other files of an Obsidian vault
+obsidian_links = "drawing"   # "drawing": [[links]] point at the converted drawings; "text": keep as written
+obsidian_excalidraw = true   # convert .excalidraw.md drawings
+```
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `font` | `"default"` | Body font of imported notes. |
+| `font_size` | `16` | Body text size, between 8 and 72. |
+| `page_size` | `"a4"` | Page size of the drawing. |
+| `part_elements` | `1000` | Elements per drawing; a longer note continues in `Note (part 2).excalidraw`. |
+| `obsidian_attachments` | `true` | Copy every other file of the vault (images, PDFs) next to the drawings. |
+| `obsidian_links` | `"drawing"` | Rewrite `[[Note]]` and `[[Note\|alias]]` to the converted drawing's path, `![[image.png]]` embeds the image (up to 4 MB). `"text"` leaves them as written. |
+| `obsidian_excalidraw` | `true` | Convert `Name.excalidraw.md` (plain or compressed) to `Name.excalidraw`. |
+
+**Import Obsidian vault…** (main menu, palette command `markdown-import.obsidian`) asks for the vault folder and imports into a folder of the open vault named like it; **Import Obsidian vault into a new vault…** (`markdown-import.obsidian-new-vault`) creates a new vault. The folder structure is kept, `.obsidian`, `.trash` and `.git` are skipped, and the source is only read. Nothing is overwritten: a name that exists gets `Name 2`. **Import: Cancel Obsidian import** stops after the current file. Turn the plugin off with `[plugins] enabled`.
+
 <!-- BEGIN GENERATED: config keys (edit excalidraw-desktop/src/vault/configReference.ts, then run yarn docs:config in excalidraw-desktop) -->
 
 ## Every key

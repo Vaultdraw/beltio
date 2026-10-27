@@ -1,12 +1,11 @@
 /**
  * The seams to the other engineers' modules: the layout (src/layout, src/worker) and the
  * Obsidian vault import (src/obsidian). main.ts and commands.ts import only from here.
- *
- * `importObsidianVault` is a STUB until src/obsidian lands: it refuses. Replace its body
- * with a re-export of the real function (the signature below is the contract).
  */
 
 import { buildWidthTable } from "./layout/index";
+import { importObsidianVault as importVault } from "./obsidian/importVault";
+import { fontFamilyOf } from "./settings";
 import { createLayoutClient, LayoutAbortedError } from "./worker/client";
 
 import type {
@@ -23,6 +22,11 @@ import type {
   PageItem,
 } from "./layout/types";
 import type { ImportSettings } from "./settings";
+import type {
+  LaidOutPart,
+  NoteLayout,
+  ObsidianImportResult,
+} from "./obsidian/types";
 
 export interface LayoutOptions {
   family: FontFamilyName;
@@ -121,21 +125,37 @@ export interface ObsidianImportOptions {
   target: TargetFolder;
   settings: ImportSettings;
   signal: AbortSignal;
-  /** Called as notes are converted. */
+  /** Called before each file: "Importing 12 of 340: Note". */
   onProgress(done: number, total: number, current: string): void;
 }
 
-export interface ObsidianImportResult {
-  notes: number;
-  drawings: number;
-  attachments: number;
-  skipped: number;
-  /** The first note's path in the target, to open. */
-  first?: string;
-}
+/** Each note through the worker layout, collected per part (a drawing each). */
+const workerLayout =
+  (opts: ObsidianImportOptions): NoteLayout =>
+  async (doc, signal) => {
+    const { ctx, settings } = opts;
+    const lo: LayoutOptions = {
+      family: fontFamilyOf(settings),
+      fontSize: settings.fontSize,
+      page: ctx.pages.geometry({ size: settings.pageSize, layout: "separate" }),
+      partElements: settings.partElements,
+      measure: (f, s) => ctx.text.measure(f, s),
+      signal,
+    };
+    const parts: LaidOutPart[] = [];
+    for await (const batch of layoutNoteStream(doc, lo)) {
+      const part = (parts[batch.part - 1] ??= { items: [], pageCount: 1 });
+      part.items.push(...batch.items);
+      part.pageCount = batch.pageCount;
+    }
+    return parts;
+  };
 
 export async function importObsidianVault(
-  _opts: ObsidianImportOptions,
+  opts: ObsidianImportOptions,
 ): Promise<ObsidianImportResult> {
-  throw new Error("The Obsidian vault import is not in this build yet");
+  await opts.ctx.fonts.ensure([fontFamilyOf(opts.settings)]);
+  return importVault({ ...opts, layout: workerLayout(opts) });
 }
+
+export type { ObsidianImportResult } from "./obsidian/types";

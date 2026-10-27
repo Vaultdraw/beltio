@@ -87,6 +87,15 @@ export interface TargetFolder {
    */
   copyFrom(source: SourceFolder, from: string, to: string): Promise<void>;
   /**
+   * Converts an Obsidian Excalidraw file (`*.excalidraw.md`, plain or
+   * compressed) of a source folder into the drawing `to` (ends in
+   * `.excalidraw`), natively. Create-only; `INVALID_FILE` when the file holds
+   * no drawing.
+   *
+   * @since 0.9.0
+   */
+  convertDrawing(source: SourceFolder, from: string, to: string): Promise<void>;
+  /**
    * A new vault: the app opens it. A vault folder: the app reveals it in the
    * file tree.
    *

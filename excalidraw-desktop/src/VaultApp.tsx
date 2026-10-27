@@ -2415,10 +2415,10 @@ export const VaultApp = ({
       revealFolder: async (path) => {
         const { loadDirectory: load, handleExpandFolder: expand } =
           shellRef.current;
+        // Every folder on the way is reloaded, the root too: a folder just created by an import
+        // is not in the root listing the tree already holds.
         for (const folder of ["", ...ancestorFolders(path), path]) {
-          if (folder !== "" || path === "") {
-            await load(folder);
-          }
+          await load(folder);
           if (folder !== "") {
             expand(folder);
           }

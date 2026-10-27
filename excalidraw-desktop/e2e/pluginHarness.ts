@@ -180,6 +180,8 @@ export async function startPluginsHarness(
   const backend = createFakeBackend(
     infos,
     (id, path) => `${FIXTURE_PREFIX}${id}/${path}`,
+    (path, scene) =>
+      (win as any).__vaultRepo?.seedDrawing(path, JSON.stringify(scene)),
   );
   for (const id of csv(params, "pluginData")) {
     backend.data[id] = JSON.stringify({ notes: "x".repeat(12 * 1024) });
@@ -197,6 +199,8 @@ export async function startPluginsHarness(
   const host = await startPluginHost(win, (run) => win.setTimeout(run, 0));
   (win as any).__plugins = {
     host,
+    /** The fake backend: `folders.sourcePick` seeds what the next folder dialog returns. */
+    backend,
     ensureActive,
     getPluginCosts,
     getStubRegistrationMs,

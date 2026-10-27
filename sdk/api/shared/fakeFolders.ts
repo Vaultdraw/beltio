@@ -40,6 +40,25 @@ const relative = (path: unknown): string => {
   return p;
 };
 
+/**
+ * A stand-in for `vaultdraw_core::excalidraw_md::extract_scene`: plain ```json blocks only
+ * (the compressed form is the Rust decoder's job, tested there).
+ */
+export const fakeExtractScene = (text: string): object => {
+  const m = /```json\s*\n([\s\S]*?)\n```/.exec(
+    text.slice(Math.max(0, text.indexOf("## Drawing"))),
+  );
+  try {
+    const scene = JSON.parse(m?.[1] ?? "") as { elements?: unknown };
+    if (Array.isArray(scene.elements)) {
+      return scene;
+    }
+  } catch {
+    // falls through to the coded error
+  }
+  throw coded("INVALID_FILE", "No Excalidraw drawing data found in this note");
+};
+
 export interface FakeFolderStore {
   /** What the next `folders.pickSource` returns (null: cancelled). */
   sourcePick: FakeFolder | null;
@@ -172,6 +191,24 @@ export function createFakeFolderStore(vault: {
             throw coded("NOT_FOUND", `File not found: ${from}`);
           }
           put(t, relative(params?.to), asBytes(v).slice());
+          return {};
+        }
+        case "folders.convertDrawing": {
+          const s = sourceOf(params?.source);
+          const t = targetOf(params?.target);
+          const from = relative(params?.from);
+          const to = relative(params?.to);
+          const v = s.files[from];
+          if (v === undefined) {
+            throw coded("NOT_FOUND", `File not found: ${from}`);
+          }
+          if (!to.endsWith(".excalidraw")) {
+            throw coded(
+              "INVALID_PATH",
+              "Drawing paths must end in .excalidraw",
+            );
+          }
+          put(t, to, fakeExtractScene(new TextDecoder().decode(asBytes(v))));
           return {};
         }
         default:

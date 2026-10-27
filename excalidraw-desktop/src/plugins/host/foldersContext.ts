@@ -142,6 +142,19 @@ export function createFoldersApi(rt: PluginRuntime): FoldersApi {
           to: checkRelative(to),
         });
       },
+      async convertDrawing(from, fromPath, to) {
+        need("folders.convertDrawing");
+        const sourceHandle = sources.get(from as object);
+        if (!sourceHandle) {
+          throw bad("source must be a folder from folders.pickSource");
+        }
+        await call("folders.convertDrawing", {
+          source: sourceHandle,
+          from: checkRelative(fromPath),
+          target: handle,
+          to: checkRelative(to),
+        });
+      },
       async open() {
         const bridge = getWorkspaceBridge();
         if (!bridge) {

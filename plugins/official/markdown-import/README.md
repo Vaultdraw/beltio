@@ -12,6 +12,25 @@ Turns a Markdown note into a page-mode drawing, and an Obsidian vault into a Vau
 | Import Obsidian vault… | pick a vault folder; its notes become drawings in a folder of this vault |
 | Import Obsidian vault into a new vault… | the same, into a new vault |
 
+### Obsidian vault import
+
+| Source file | Result |
+| --- | --- |
+| `Note.md` | `Note.excalidraw`, page-mode; parts when long |
+| `Sketch.excalidraw.md` | `Sketch.excalidraw` (decoded natively, plain or compressed) |
+| `Sketch.excalidraw` and other files | copied natively (attachments only when `obsidian_attachments` is on) |
+| `.obsidian/`, `.trash/`, `.git/`, any dot entry | skipped |
+
+`[[Note]]`, `[[folder/Note|alias]]` and `[[Note#Heading]]` resolve the Obsidian way (exact path, then the shortest path with that name, case-insensitive) and are rewritten to `[[path|label]]`; links that match nothing stay as text. `![[image.png]]` embeds the image from the vault (up to 4 MB, else a placeholder). The source is only read, every write is create-only (a taken name becomes `Name 2`), one failing file is reported and the rest go on. Code: `src/obsidian/` (`plan.ts`, `links.ts`, `importVault.ts`); tests: `test/obsidian/` with a fixture vault.
+
+```mermaid
+flowchart LR
+  S[source.list] --> P[planImport] --> R[LinkResolver]
+  R --> N[note: parse, rewrite links, layout, buildScene, writeDrawing]
+  R --> D[.excalidraw.md: convertDrawing]
+  R --> A[other files: copyFrom]
+```
+
 Long notes are split into parts of about 1,000 elements: `Note (imported, part 2).excalidraw`. Import: Cancel stops either import.
 
 ## Commands

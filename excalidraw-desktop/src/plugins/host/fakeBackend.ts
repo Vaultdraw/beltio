@@ -60,6 +60,7 @@ const FOLDER_ROWS = new Set([
   "folders.vaultTarget",
   "folders.writeDrawing",
   "folders.copy",
+  "folders.convertDrawing",
 ]);
 
 /** The vault rows of the Rust gateway, over `fake.drawings`. */
@@ -140,6 +141,8 @@ export function createFakeBackend(
   plugins: PluginInfo[] = [],
   moduleUrl: (id: string, path: string) => string = (id, path) =>
     `fake://plugin/${id}/${path}`,
+  /** Also told of every drawing a vault-folder import target writes (the e2e harness seeds the app's repo). */
+  onPutDrawing?: (path: string, scene: object) => void,
 ): FakeBackend {
   const listeners = new Set<(id: string) => void>();
   const fake: FakeBackend = {
@@ -166,6 +169,7 @@ export function createFakeBackend(
           scene: scene as Record<string, unknown>,
           revision: `rev-${Object.keys(fake.drawings).length + 1}`,
         };
+        onPutDrawing?.(path, scene);
       },
     }),
     // The storage, vault and markdown rows of the Rust gateway (plugins/gateway.rs).

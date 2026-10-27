@@ -65,7 +65,7 @@ The Excalidraw editor, plus what you need once you have more than one drawing:
     </td>
     <td width="50%" valign="top">
       <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/import-dark.webp"><img src="docs/assets/screenshots/import-light.webp" alt="The Import PDF dialog choosing pages 1 to 5"></picture>
-      <br><b>File import</b><br>Drop images and PDFs from Finder onto the canvas. PDF pages become images you can write on, rendered offline.
+      <br><b>File import</b><br>Drop images and PDFs from Finder onto the canvas. PDF pages become images you can write on, rendered offline. A Markdown note becomes a page-mode drawing, and **Import Obsidian vault…** converts a whole Obsidian vault (links, images and Excalidraw drawings) into your vault; the original is never touched.
     </td>
   </tr>
 </table>

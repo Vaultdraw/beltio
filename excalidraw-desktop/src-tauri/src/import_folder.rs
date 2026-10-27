@@ -6,7 +6,7 @@
 //! `{entries, truncated}`; `folders.readText {handle, path}` → `{text}`; `folders.readBytes
 //! {handle, path}` → `{base64}`; `folders.pickNewVault {title?}` → `{handle, name} | null`;
 //! `folders.vaultTarget {path}` → `{handle, name}`; `folders.writeDrawing {handle, path, scene}`
-//! → `{}`; `folders.copy {source, from, target, to}` → `{}`; `folders.release {handle}` → `{}`.
+//! → `{}`; `folders.copy {source, from, target, to}` → `{}`; `folders.convertDrawing {source, from, target, to}` → `{}`; `folders.release {handle}` → `{}`.
 use crate::plugins::GatewayError;
 use crate::{err, Result};
 use serde_json::{json, Map, Value};
@@ -24,6 +24,7 @@ pub(crate) const ROWS: &[&str] = &[
     "folders.vaultTarget",
     "folders.writeDrawing",
     "folders.copy",
+    "folders.convertDrawing",
     "folders.release",
 ];
 
@@ -133,6 +134,12 @@ pub(crate) fn folders_call(app: &AppHandle, method: &str, params: Option<Value>)
             let src = reg.source(string(&map, "source")?)?;
             let dst = reg.target(string(&map, "target")?)?;
             dst.copy_from(&src, string(&map, "from")?, string(&map, "to")?)?;
+            Ok(json!({}))
+        }
+        "folders.convertDrawing" => {
+            let src = reg.source(string(&map, "source")?)?;
+            let dst = reg.target(string(&map, "target")?)?;
+            dst.convert_drawing(&src, string(&map, "from")?, string(&map, "to")?)?;
             Ok(json!({}))
         }
         "folders.release" => {

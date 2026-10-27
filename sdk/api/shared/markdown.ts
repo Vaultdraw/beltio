@@ -7,7 +7,12 @@
  */
 import { PluginApiError, utf8Length } from "./rules";
 
-import type { MarkdownParseOptions, NoteBlock, NoteDoc } from "@vaultdraw/api";
+import type {
+  MarkdownParseOptions,
+  NoteBlock,
+  NoteDoc,
+  NoteInline,
+} from "@vaultdraw/api";
 
 /** The largest text the parser takes, in UTF-8 bytes (the Rust limit). */
 export const MAX_MARKDOWN_BYTES = 16 * 1024 * 1024;
@@ -49,6 +54,24 @@ export const markdownParams = (
 const TAG = /(^|\s)#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/gu;
 const WIKILINK = /\[\[([^\]|#]+)(?:#([^\]|]+))?(?:\|([^\]]+))?\]\]/g;
 
+/** Wikilink spans over the literal text, as the Rust parser reports them. */
+const wikilinkSpans = (text: string): NoteInline[] =>
+  [...text.matchAll(WIKILINK)].map((m) => ({
+    kind: "wikilink" as const,
+    start: m.index!,
+    end: m.index! + m[0].length,
+    target: m[1].trim(),
+    ...(m[2] ? { heading: m[2] } : {}),
+    ...(m[3] ? { alias: m[3] } : {}),
+  }));
+
+const withSpans = <T extends { text: string }>(
+  block: T,
+): T & { inline?: NoteInline[] } => {
+  const inline = block.text.startsWith("![[") ? [] : wikilinkSpans(block.text);
+  return inline.length ? { ...block, inline } : block;
+};
+
 /** A small stand-in for the Rust parser (see the file comment). */
 export const fakeParseMarkdown = (
   text: string,
@@ -89,14 +112,16 @@ export const fakeParseMarkdown = (
     const heading = /^(#{1,6})\s+(.*)$/s.exec(body);
     const flat = options?.softBreakNewline ? body : body.replace(/\n/g, " ");
     blocks.push(
-      heading
-        ? {
-            kind: "heading",
-            level: heading[1].length,
-            text: heading[2].trim(),
-            range,
-          }
-        : { kind: "paragraph", text: flat, range },
+      withSpans(
+        heading
+          ? {
+              kind: "heading" as const,
+              level: heading[1].length,
+              text: heading[2].trim(),
+              range,
+            }
+          : { kind: "paragraph" as const, text: flat, range },
+      ),
     );
   }
   return {
