@@ -1702,7 +1702,8 @@
         "index_url": {
           "description": "The community themes index the theme browser lists (an https address). Needs the themes consent.",
           "default": "https://raw.githubusercontent.com/Vaultdraw/themes/main/index.json",
-          "type": "string"
+          "type": "string",
+          "pattern": "^(https://|http://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?(/|$))[^ ]+$"
         },
         "index_ttl_hours": {
           "description": "Hours before the browser fetches the index again; 0 fetches every time it opens.",

@@ -38,6 +38,7 @@ const FOCUS_SCOPES: readonly string[] = [
   "listFocus",
   "galleryFocus",
   "graphFocus",
+  "themeBrowser.open",
 ];
 
 /** Two `when` lists can hold together unless one needs X and the other !X, or they need different focus scopes. */

@@ -32,6 +32,7 @@ const LOOSER_THAN_APP = new Set([
   "plugins.enabled",
   "interface.activity_bar_order",
   "interface.activity_bar_hidden",
+  "themes.index_url",
 ]);
 
 /** Values around each limit the schema states, plus wrong types. */
