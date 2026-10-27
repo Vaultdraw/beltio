@@ -479,6 +479,16 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
     },
   },
   {
+    table: "window",
+    intro:
+      "The window's title bar on Linux. The native side reads it at launch, so a change needs a restart. See [Window title bar (Linux)](#window-title-bar-linux).",
+    keys: {
+      decorations: {
+        doc: "Linux only: `custom` hides the system title bar and the app header carries minimize, maximize and close; `native` keeps the system title bar. Needs a restart; ignored on macOS and Windows.",
+      },
+    },
+  },
+  {
     table: "watchdog",
     intro:
       "The hang watchdog: a Wait / Quit dialog when the page stops answering. See [Hang watchdog](#hang-watchdog).",

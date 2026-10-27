@@ -1,9 +1,12 @@
 import { stripDrawingExt } from "../vault/fileKind";
 import { useCommandShortcut } from "../commands/useCommandShortcut";
 
+import { isCustomChrome } from "../vault/windowChrome";
+
 import { HistoryButton } from "./HistoryButton";
 import { IconAlert, IconHistory, IconSidebar } from "./Icons";
 import { ReadOnlyBadge } from "./readonly/ReadOnlyBadge";
+import { WindowControls } from "./WindowControls";
 
 import type { SaveStatus, VaultInfo } from "../vault/types";
 
@@ -198,6 +201,7 @@ export const VaultHeader = ({
         >
           <IconSidebar />
         </button>
+        {isCustomChrome(window) && <WindowControls />}
       </div>
     </header>
   );

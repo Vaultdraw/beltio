@@ -708,3 +708,69 @@ export const IconGallery = strokeIcon(
     <rect width="7" height="7" x="3" y="14" rx="1" />
   </>,
 );
+
+export const IconWindowMinimize = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <line x1="5" y1="19" x2="19" y2="19" />
+  </svg>
+);
+
+export const IconWindowMaximize = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <rect x="4" y="4" width="16" height="16" rx="2" ry="2" />
+  </svg>
+);
+
+export const IconWindowRestore = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <rect x="3" y="8" width="13" height="13" rx="2" ry="2" />
+    <path d="M8 8V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-3" />
+  </svg>
+);
+
+export const IconWindowClose = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <line x1="6" y1="6" x2="18" y2="18" />
+    <line x1="18" y1="6" x2="6" y2="18" />
+  </svg>
+);

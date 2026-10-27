@@ -96,6 +96,7 @@ import {
 } from "../pdfImport/types";
 import { DEFAULT_TEMPLATES_FOLDER } from "../templates/types";
 import { WATCHDOG_LIMITS } from "../watchdog/limits";
+
 import {
   DEFAULT_LASER,
   LASER_LIMITS,
@@ -116,6 +117,8 @@ import {
   type ToolField,
   type ToolStyle,
 } from "../toolDefaults/toolStyles";
+
+import { isWindowDecorations, type WindowDecorations } from "./windowChrome";
 
 import {
   normalizePluginSettings,
@@ -296,6 +299,8 @@ interface VaultPreferencesBase {
   watchdogEnabled: boolean;
   /** watchdog.grace_ms: how long the page stays unresponsive before the dialog */
   watchdogGraceMs: number;
+  /** window.decorations: Linux title bar, "custom" (in-app buttons) or "native"; read by the native side at launch */
+  windowDecorations: WindowDecorations;
   /** pdf_import.max_side */
   pdfMaxSide: number;
   /** pdf_import.format */
@@ -425,6 +430,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   controlNotifyEdits: true,
   watchdogEnabled: true,
   watchdogGraceMs: 5000,
+  windowDecorations: "custom",
   pdfMaxSide: DEFAULT_PDF_IMPORT_SETTINGS.maxSide,
   pdfFormat: DEFAULT_PDF_IMPORT_SETTINGS.format,
   pdfQuality: DEFAULT_PDF_IMPORT_SETTINGS.quality,
@@ -839,6 +845,11 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       parsed.watchdogGraceMs,
       isWatchdogGraceMs,
       d.watchdogGraceMs,
+    ),
+    windowDecorations: pick(
+      parsed.windowDecorations,
+      isWindowDecorations,
+      d.windowDecorations,
     ),
     pdfMaxSide: pick(parsed.pdfMaxSide, isPdfMaxSide, d.pdfMaxSide),
     pdfFormat: pick(parsed.pdfFormat, isPdfFormat, d.pdfFormat),

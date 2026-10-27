@@ -1312,6 +1312,22 @@ enabled = true     # show the Wait / Quit dialog
 grace_ms = 5000    # 1000 to 60000
 ```
 
+## Window title bar (Linux)
+
+On Linux the system title bar used to sit above Vaultdraw's own header, two bars in a row. Now there is one.
+
+- **`custom` (default).** The window is created without the system title bar. The app header is the title bar: drag it to move the window, double-click it to maximize or restore, and use the minimize, maximize and close buttons at its right end. The buttons are focusable and have labels. Resizing works from the window edges. The palette commands **Window: Minimize** (`window.minimize`) and **Window: Maximize or restore** (`window.toggleMaximize`) have no default keys; bind them in Settings → Hotkeys or `[hotkeys]`.
+- **`native`.** The system title bar, as before.
+- **Restart required.** The window is built once at launch, so a change takes effect the next time Vaultdraw starts. Settings → Interface → **Window title bar** writes the same key.
+- **Header hidden.** With `[layout] header = false` the header, and so the title bar, is gone; keep `native` if you hide the header.
+- **Cost.** One small read of the config at startup, on Linux only.
+- **Other systems.** macOS keeps its overlay title bar and the key is ignored; the two commands do nothing outside the custom title bar.
+
+```toml
+[window]
+decorations = "custom"   # or "native"
+```
+
 ## Plugins (experimental)
 
 Plugins are folders in `plugins/` inside the config folder (`~/.config/vaultdraw/plugins/`). Only the ones listed in `config.toml` run:
@@ -1674,6 +1690,14 @@ Scripts and links from outside. The socket and link keys are read by the native 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
 | `notify_edits` | `true` | true or false |  | Show a notice when a script or AI tool edits the drawing on screen. |
+
+### `[window]`
+
+The window's title bar on Linux. The native side reads it at launch, so a change needs a restart. See [Window title bar (Linux)](#window-title-bar-linux).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `decorations` | `"custom"` | "custom" or "native" |  | Linux only: `custom` hides the system title bar and the app header carries minimize, maximize and close; `native` keeps the system title bar. Needs a restart; ignored on macOS and Windows. |
 
 ### `[watchdog]`
 

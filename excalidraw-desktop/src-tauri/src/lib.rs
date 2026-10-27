@@ -43,6 +43,7 @@ mod test_alloc;
 #[cfg(feature = "smoke-test")]
 mod smoke;
 mod watchdog;
+mod window_chrome;
 
 // Vault logic without a UI lives in `vaultdraw-core`; these re-exports keep the app's modules
 // (history, thumbs, links, ...) compiling against `crate::{err, safe_path, ...}` unchanged.
@@ -823,6 +824,13 @@ pub fn run() {
                     let mtm = objc2::MainThreadMarker::new()
                         .ok_or("window setup must run on the main thread")?;
                     builder.with_webview_configuration(webview_configuration(mtm))
+                };
+                // Linux: one title bar. `custom` builds the window undecorated and tells the page.
+                #[cfg(target_os = "linux")]
+                let builder = if window_chrome::custom() {
+                    builder.decorations(false).initialization_script(window_chrome::CUSTOM_CHROME_SCRIPT)
+                } else {
+                    builder
                 };
                 startup_trace("window config ready");
                 let main_window = builder.build()?;

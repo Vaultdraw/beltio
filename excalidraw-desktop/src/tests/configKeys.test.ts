@@ -209,3 +209,15 @@ describe("[watchdog]", () => {
     ).toEqual(["watchdog.nope"]);
   });
 });
+
+describe("[window]", () => {
+  it("is a known table with decorations", async () => {
+    const { unknownKeyProblems } = await import("../vault/settingsSync");
+    expect(unknownKeyProblems({ window: { decorations: "native" } })).toEqual(
+      [],
+    );
+    expect(
+      unknownKeyProblems({ window: { nope: 1 } }).map((p) => p.key),
+    ).toEqual(["window.nope"]);
+  });
+});

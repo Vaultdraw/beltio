@@ -8,6 +8,7 @@ import { waitAtMost } from "./platform/waitAtMost";
 import { bootPlugins } from "./plugins/boot";
 import { getPreferences, getTheme, resolveTheme } from "./vault/preferences";
 import { initSettings } from "./vault/settingsSync";
+import { applyChromeClass } from "./vault/windowChrome";
 
 import "./desktop.css";
 
@@ -68,6 +69,10 @@ installNativeContextMenuSuppression(ownerWindow);
 if (/Mac/.test(ownerWindow.navigator.userAgent)) {
   ownerDocument.documentElement.classList.add("vault-macos");
 }
+// Linux with `[window] decorations = "custom"`: the window has no system
+// title bar (the native side says so before the page loads), the header has
+// its own window buttons.
+applyChromeClass(ownerDocument, ownerWindow);
 if (ownerWindow.matchMedia("(prefers-color-scheme: dark)").matches) {
   ownerDocument.documentElement.classList.add("dark");
 }

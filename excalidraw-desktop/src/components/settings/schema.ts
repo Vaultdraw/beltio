@@ -890,6 +890,27 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     configKey: "watchdog.grace_ms",
   },
 
+  // ---- Window title bar (Interface, Linux) ----
+  {
+    id: "window-decorations",
+    page: "interface",
+    label: "Window title bar",
+    description:
+      "Linux only. Custom: one bar, the app header carries minimize, maximize and close. Native: the system title bar above the app header. Applies after a restart.",
+    keywords: [
+      "title bar",
+      "titlebar",
+      "decorations",
+      "window",
+      "chrome",
+      "linux",
+      "minimize",
+      "maximize",
+      "close",
+    ],
+    configKey: "window.decorations",
+  },
+
   // ---- About ----
   {
     id: "about-info",

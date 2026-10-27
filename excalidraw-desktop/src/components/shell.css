@@ -21,6 +21,25 @@ html.vault-macos .vault-header {
   padding-left: 86px;
 }
 
+/* Linux custom chrome: the header is the only title bar; window buttons sit at the right edge. */
+html.vault-linux-custom .vault-header {
+  padding-right: 4px;
+}
+
+.vault-window-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
+  padding-left: 6px;
+  border-left: 1px solid var(--vault-border);
+}
+
+.vault-window-controls__close:hover {
+  background: #e5484d;
+  color: #fff;
+}
+
 .vault-header__left {
   display: flex;
   align-items: center;

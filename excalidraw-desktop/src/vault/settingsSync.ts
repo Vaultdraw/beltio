@@ -71,6 +71,7 @@ import {
 } from "../services/servicesSettings";
 import { PDF_IMPORT_LIMITS } from "../pdfImport/types";
 import { WATCHDOG_LIMITS } from "../watchdog/limits";
+
 import { inRange, LASER_LIMITS } from "../pens/laserSettings";
 import {
   isPenPresets,
@@ -93,6 +94,8 @@ import {
 } from "../toolDefaults/toolStyles";
 
 import { setImporterOverrides } from "../plugins/importerMap";
+
+import { isWindowDecorations } from "./windowChrome";
 
 import {
   isPluginId,
@@ -346,6 +349,7 @@ type ConfigField =
   | "controlNotifyEdits"
   | "watchdogEnabled"
   | "watchdogGraceMs"
+  | "windowDecorations"
   | "pdfMaxSide"
   | "pdfFormat"
   | "pdfQuality"
@@ -799,6 +803,12 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "watchdog.grace_ms",
     expected: `a whole number of milliseconds between ${WATCHDOG_LIMITS.graceMs.min} and ${WATCHDOG_LIMITS.graceMs.max}`,
     valid: isWatchdogGraceMs,
+  },
+  {
+    field: "windowDecorations",
+    key: "window.decorations",
+    expected: '"custom" or "native"',
+    valid: isWindowDecorations,
   },
   {
     field: "pdfMaxSide",

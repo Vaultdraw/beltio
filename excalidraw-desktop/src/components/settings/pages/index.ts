@@ -22,6 +22,7 @@ import { extensionsControls } from "./extensionsEntry";
 import { pensControls } from "./Pens";
 import { toolDefaultsControls } from "./ToolDefaults";
 import { watchdogControls } from "./Watchdog";
+import { windowChromeControls } from "./WindowChrome";
 
 import type { SettingControls } from "../SettingsContext";
 
@@ -32,6 +33,7 @@ export const SETTING_CONTROLS: SettingControls = {
   ...pageControls,
   ...interfaceControls,
   ...watchdogControls,
+  ...windowChromeControls,
   ...tabsControls,
   ...layoutControls,
   ...memoryControls,
