@@ -1671,6 +1671,36 @@
         }
       }
     },
+    "network": {
+      "type": "object",
+      "description": "The internet is used only for features you allow, and only when you use them. See [Network](#network).",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Master switch: `false` blocks every download, whatever else is allowed. Turning it on from Settings asks in a native dialog.",
+          "default": true,
+          "type": "boolean"
+        },
+        "allow_themes": {
+          "description": "Allow theme downloads. Absent means ask on first use; `true` allows, `false` refuses. Turning it on asks in a native dialog.",
+          "type": "boolean"
+        }
+      }
+    },
+    "themes": {
+      "type": "object",
+      "description": "Installing themes from the internet. See [Installing more themes](#installing-more-themes).",
+      "additionalProperties": false,
+      "properties": {
+        "max_install_kb": {
+          "description": "Largest theme file to accept, in KB (1 to 256).",
+          "default": 64,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
+        }
+      }
+    },
     "hotkeys": {
       "type": "object",
       "description": "One entry per command id: a list of keys like [\"Mod+S\"] or key sequences like [\"g g\"]; [] removes the default keys.",

@@ -49,6 +49,8 @@ const stringList: Schema = { type: "array", items: { type: "string" } };
 
 /** Keys whose `expected` text cannot be read as a type, or reads too loosely. */
 const OVERRIDES: Readonly<Record<string, Schema>> = {
+  "network.allow_themes": { type: "boolean" },
+  "themes.max_install_kb": { type: "integer", minimum: 1, maximum: 256 },
   "appearance.theme": { type: "string", minLength: 1 },
   "appearance.accent_color": orConst("", fmt("hex3or6")),
   "paper.color": orConst("", fmt("hex6")),

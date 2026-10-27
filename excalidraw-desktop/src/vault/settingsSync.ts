@@ -1409,7 +1409,10 @@ const CONSENT_FIELDS: Readonly<Record<string, ConfigField>> = {
   "network.allow_themes": "networkAllowThemes",
 };
 const isConsentGrant = (change: ConfigChange) =>
-  change.value === true && change.key in CONSENT_FIELDS;
+  (change.value === true ||
+    // Switching back to the default (true) is sent as "use the default".
+    (change.value === null && change.default === true)) &&
+  change.key in CONSENT_FIELDS;
 
 function persist(
   rt: Runtime,

@@ -507,6 +507,29 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       },
     },
   },
+  {
+    table: "network",
+    intro:
+      "The internet is used only for features you allow, and only when you use them. See [Network](#network).",
+    keys: {
+      enabled: {
+        doc: "Master switch: `false` blocks every download, whatever else is allowed. Turning it on from Settings asks in a native dialog.",
+      },
+      allow_themes: {
+        doc: "Allow theme downloads. Absent means ask on first use; `true` allows, `false` refuses. Turning it on asks in a native dialog.",
+        default: "unset (ask)",
+      },
+    },
+  },
+  {
+    table: "themes",
+    intro: "Installing themes from the internet. See [Installing more themes](#installing-more-themes).",
+    keys: {
+      max_install_kb: {
+        doc: "Largest theme file to accept, in KB (1 to 256).",
+      },
+    },
+  },
 ];
 
 const PER_VAULT_NOTE =

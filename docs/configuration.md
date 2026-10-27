@@ -1782,6 +1782,23 @@ The hang watchdog: a Wait / Quit dialog when the page stops answering. See [Hang
 | `enabled` | `true` | true or false |  | Show a Wait / Quit dialog when the page stops answering (macOS; Linux later). |
 | `grace_ms` | `5000` | a whole number of milliseconds between 1000 and 60000 |  | How long the page must stay unresponsive (after WebKit's own 3 s) before the dialog appears, in milliseconds. Applies from the next hang. |
 
+### `[network]`
+
+The internet is used only for features you allow, and only when you use them. See [Network](#network).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `enabled` | `true` | true or false |  | Master switch: `false` blocks every download, whatever else is allowed. Turning it on from Settings asks in a native dialog. |
+| `allow_themes` | unset (ask) | true or false (leave it out to be asked) |  | Allow theme downloads. Absent means ask on first use; `true` allows, `false` refuses. Turning it on asks in a native dialog. |
+
+### `[themes]`
+
+Installing themes from the internet. See [Installing more themes](#installing-more-themes).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `max_install_kb` | `64` | a whole number of KiB between 1 and 256 |  | Largest theme file to accept, in KB (1 to 256). |
+
 ### `[hotkeys]` and `[plugin.<id>]`
 
 Open tables: `[hotkeys]` takes one entry per command id (see [The `[hotkeys]` table](#the-hotkeys-table)), and `[plugin.<id>]` holds the settings a plugin declares. Their keys are not checked against this list.
