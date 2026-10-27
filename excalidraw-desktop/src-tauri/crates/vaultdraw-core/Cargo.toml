@@ -1,6 +1,6 @@
 [package]
 name = "vaultdraw-core"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2021"
 description = "Vaultdraw vault logic without a UI: paths, atomic writes, recovery, vault lock, search and links index"
 publish = false

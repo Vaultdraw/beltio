@@ -103,7 +103,7 @@ Everything stays on your Mac. Back up, sync or version the vault folder with any
 
 ## Install
 
-1. **[Download Vaultdraw for macOS](https://github.com/Vaultdraw/vaultdraw/releases/download/v0.1.2/Vaultdraw_0.1.2_universal.dmg)** (DMG, 57 MB). Older and newer versions are on the [releases page](https://github.com/Vaultdraw/vaultdraw/releases).
+1. **[Download Vaultdraw for macOS](https://github.com/Vaultdraw/vaultdraw/releases/download/v0.2.0/Vaultdraw_0.2.0_universal.dmg)** (DMG, 57 MB). Older and newer versions are on the [releases page](https://github.com/Vaultdraw/vaultdraw/releases).
 2. Open it and drag Vaultdraw to Applications.
 
 Or with Homebrew, which also installs the `vaultdraw` command:
