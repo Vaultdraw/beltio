@@ -9,6 +9,8 @@
   },
   "scripts": {
     "dev": "vite",
+    "build:plugins": "node ../plugins/official/build.mjs",
+    "prebuild": "node ../plugins/official/build.mjs",
     "build": "vite build",
     "preview": "vite preview --port 1420",
     "tauri": "tauri",

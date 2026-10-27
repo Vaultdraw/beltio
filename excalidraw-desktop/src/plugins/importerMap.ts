@@ -30,8 +30,8 @@ export interface ImporterMatch extends ImporterEntry {
 
 /** Where an import goes: the drawing it targets and a scene point. */
 export interface ImportTarget {
-  /** Vault-relative path of the drawing the result goes into. */
-  path: string;
+  /** Vault-relative path of the drawing the result goes into; null with no drawing open (only importers that make their own drawing run). */
+  path: string | null;
   /** Scene coordinates: the drop point, or the viewport centre for the picker. */
   at: { x: number; y: number };
 }
@@ -57,6 +57,8 @@ export const importerState = {
   longestParts: 1,
   runner: null as ImportRunner | null,
   canceller: null as (() => boolean) | null,
+  /** Starts the plugin host on demand (set by boot.ts), so a bundled plugin loads on its first import. */
+  starter: null as (() => Promise<void>) | null,
   version: 0,
   listeners: new Set<() => void>(),
   dirty: false,
@@ -119,6 +121,41 @@ export function setImporterOverrides(
   importersChanged();
 }
 
+/** Claims `extensions` for one importer; returns the disposer. Plugin stubs and boot.ts's official-plugin stubs call it. */
+export function claimImporter(
+  entry: ImporterEntry,
+  extensions: readonly string[],
+): () => void {
+  const exts = [...new Set(extensions.map((e) => e.toLowerCase()))];
+  for (const ext of exts) {
+    const list = st.claims.get(ext) ?? [];
+    list.push(entry);
+    st.claims.set(ext, list);
+  }
+  importersChanged();
+  let done = false;
+  return () => {
+    if (done) {
+      return;
+    }
+    done = true;
+    for (const ext of exts) {
+      const list = st.claims.get(ext);
+      if (!list) {
+        continue;
+      }
+      const i = list.indexOf(entry);
+      if (i >= 0) {
+        list.splice(i, 1);
+      }
+      if (list.length === 0) {
+        st.claims.delete(ext);
+      }
+    }
+    importersChanged();
+  };
+}
+
 /** True when any extension is handled by a plugin (the drop path's one check). */
 export const hasImporters = (): boolean => currentWinners().size > 0;
 
@@ -145,12 +182,18 @@ export function findImporter(name: string): ImporterMatch | null {
 export const importerExtensions = (): string[] =>
   [...currentWinners().keys()].sort();
 
-/** Runs plugin imports; false when the plugin host is not running. */
+/** Runs plugin imports (starting the plugin host first when needed); false when it could not run. */
 export async function runImports(
   items: readonly ImportItem[],
   target: ImportTarget,
 ): Promise<boolean> {
-  if (!st.runner || items.length === 0) {
+  if (items.length === 0) {
+    return false;
+  }
+  if (!st.runner && st.starter) {
+    await st.starter();
+  }
+  if (!st.runner) {
     return false;
   }
   await st.runner(items, target);
@@ -159,3 +202,12 @@ export async function runImports(
 
 /** "Import: Cancel": true when an import was running and is now aborted. */
 export const cancelImports = (): boolean => st.canceller?.() ?? false;
+
+/** Set by boot.ts: how to start the plugin host when an import needs it. */
+export const setImportHostStarter = (
+  fn: (() => Promise<void>) | null,
+): void => {
+  st.starter = fn;
+};
+
+export { createsOwnDrawing } from "./officialPlugins";

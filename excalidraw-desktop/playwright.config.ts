@@ -48,7 +48,7 @@ export default defineConfig({
   },
   webServer: {
     command:
-      "npx vite build --config vite.e2e.config.mts --logLevel warn && npx vite preview --config vite.e2e.config.mts",
+      "node ../plugins/official/build.mjs --quiet --no-check && npx vite build --config vite.e2e.config.mts --logLevel warn && npx vite preview --config vite.e2e.config.mts",
     url: `http://localhost:${port}/e2e.html`,
     reuseExistingServer: false,
     timeout: 180_000,

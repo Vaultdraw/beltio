@@ -1547,7 +1547,9 @@
       "properties": {
         "enabled": {
           "description": "Ids of the plugins to load.",
-          "default": [],
+          "default": [
+            "markdown-import"
+          ],
           "type": "array",
           "items": {
             "type": "string"

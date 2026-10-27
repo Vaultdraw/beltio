@@ -8,8 +8,13 @@ import {
 } from "../../vault/settingsSync";
 
 describe("[plugins] enabled", () => {
-  it("defaults to none and parses valid ids", () => {
-    expect(configToPreferences({}).values.pluginsEnabled).toEqual([]);
+  it("defaults to the official markdown-import and parses valid ids; [] turns it off", () => {
+    expect(configToPreferences({}).values.pluginsEnabled).toEqual([
+      "markdown-import",
+    ]);
+    expect(
+      configToPreferences({ plugins: { enabled: [] } }).values.pluginsEnabled,
+    ).toEqual([]);
     const ok = configToPreferences({ plugins: { enabled: ["hello-command"] } });
     expect(ok.values.pluginsEnabled).toEqual(["hello-command"]);
     expect(ok.problems).toEqual([]);
@@ -17,7 +22,7 @@ describe("[plugins] enabled", () => {
 
   it("rejects bad ids with a problem", () => {
     const bad = configToPreferences({ plugins: { enabled: ["Bad Id"] } });
-    expect(bad.values.pluginsEnabled).toEqual([]);
+    expect(bad.values.pluginsEnabled).toEqual(["markdown-import"]);
     expect(bad.problems[0].key).toBe("plugins.enabled");
   });
 

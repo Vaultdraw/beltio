@@ -326,8 +326,10 @@ autosave_delay_ms = 500
 # start = "open"
 
 [plugins]
-# Ids of the plugins to load from the plugins/ folder, like ["hello-command"]
-# enabled = []
+# Ids of the plugins to load from the plugins/ folder, like ["hello-command"].
+# The official markdown-import plugin is on by default and loads on first use;
+# `enabled = []` turns it off, and a list of your own plugins should keep "markdown-import" in it.
+# enabled = ["markdown-import"]
 # Most data one plugin may save, in KiB, 64 to 16384
 # storage_limit_kb = 1024
 # Which plugin imports an extension when two claim it, like { txt = "text-import" }

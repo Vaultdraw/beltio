@@ -37,6 +37,6 @@
       "@excalidraw/utils/*": ["./packages/utils/src/*"]
     }
   },
-  "include": ["packages", "excalidraw-desktop/src", "sdk", "setupTests.ts"],
+  "include": ["packages", "excalidraw-desktop/src", "sdk", "plugins", "setupTests.ts"],
   "exclude": ["dist", "types", "tests"]
 }

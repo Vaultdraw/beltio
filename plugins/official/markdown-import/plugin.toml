@@ -1,0 +1,107 @@
+id = "markdown-import"
+name = "Markdown import"
+version = "0.1.0"
+api = 0
+main = "main.js"
+description = "Turn a Markdown note, or a whole Obsidian vault, into page-mode drawings"
+author = "Vaultdraw"
+permissions = ["folders.import"]
+
+[[contributes.importers]]
+id = "md"
+title = "Markdown"
+extensions = ["md", "markdown"]
+
+[[contributes.commands]]
+id = "import"
+title = "Import: Markdown…"
+
+[[contributes.commands]]
+id = "import-clipboard"
+title = "Import: Markdown from clipboard"
+
+[[contributes.commands]]
+id = "import-document-font"
+title = "Import: Markdown with the Document font"
+
+[[contributes.commands]]
+id = "next-heading"
+title = "Markdown: Next heading"
+
+[[contributes.commands]]
+id = "previous-heading"
+title = "Markdown: Previous heading"
+
+[[contributes.commands]]
+id = "timings"
+title = "Import: Show timings"
+
+[[contributes.commands]]
+id = "obsidian"
+title = "Import Obsidian vault…"
+
+[[contributes.commands]]
+id = "obsidian-new-vault"
+title = "Import Obsidian vault into a new vault…"
+
+# Called by the core "Import: Cancel"; not listed in the palette.
+[[contributes.commands]]
+id = "cancel-import"
+title = "Import: Cancel Obsidian import"
+palette = false
+
+[[contributes.settings]]
+key = "font"
+type = "select"
+title = "Font"
+description = "The font of imported notes: your default drawing font, or the Document font."
+default = "default"
+options = [{ value = "default", label = "Default drawing font" }, { value = "document", label = "Document font" }]
+
+[[contributes.settings]]
+key = "font_size"
+type = "int"
+title = "Font size"
+description = "Body text size of imported notes, in pixels."
+default = 16
+min = 8
+max = 72
+
+[[contributes.settings]]
+key = "page_size"
+type = "select"
+title = "Page size"
+description = "The page size of imported notes."
+default = "a4"
+options = [{ value = "a3", label = "A3" }, { value = "a4", label = "A4" }, { value = "a5", label = "A5" }, { value = "b5", label = "B5" }, { value = "letter", label = "Letter" }, { value = "legal", label = "Legal" }]
+
+[[contributes.settings]]
+key = "part_elements"
+type = "int"
+title = "Elements per drawing"
+description = "A long note is split into drawings (parts) of about this many elements."
+default = 1000
+min = 200
+max = 20000
+
+[[contributes.settings]]
+key = "obsidian_attachments"
+type = "bool"
+title = "Obsidian: copy attachments"
+description = "Copy the images and files a note uses when importing an Obsidian vault."
+default = true
+
+[[contributes.settings]]
+key = "obsidian_links"
+type = "select"
+title = "Obsidian: links"
+description = "Keep [[links]] as links between drawings, or leave them as plain text."
+default = "drawing"
+options = [{ value = "drawing", label = "Links between drawings" }, { value = "text", label = "Plain text" }]
+
+[[contributes.settings]]
+key = "obsidian_excalidraw"
+type = "bool"
+title = "Obsidian: copy Excalidraw drawings"
+description = "Convert .excalidraw.md drawings of an Obsidian vault into drawings."
+default = true

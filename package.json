@@ -45,6 +45,7 @@
   "prettier": "@excalidraw/prettier-config",
   "scripts": {
     "start": "yarn desktop:dev",
+    "build:plugins": "node plugins/official/build.mjs",
     "desktop:dev": "yarn --cwd excalidraw-desktop tauri dev",
     "desktop:build": "yarn --cwd excalidraw-desktop tauri build",
     "desktop:test": "yarn --cwd excalidraw-desktop test",

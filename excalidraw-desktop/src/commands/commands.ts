@@ -526,7 +526,8 @@ export const COMMANDS: readonly CommandDefinition[] = [
     title: "Import: File…",
     category: "File",
     keys: { default: [] },
-    when: ["drawingOpen", "writable"],
+    // No drawing needed: Markdown makes its own (the picker then refuses images and PDFs).
+    when: ["vaultOpen", "writable"],
   },
   {
     id: "plugins.cancelImport",

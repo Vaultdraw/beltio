@@ -1,0 +1,11 @@
+{
+  "name": "@vaultdraw/plugin-markdown-import",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The official markdown-import plugin: Markdown notes and Obsidian vaults to page-mode drawings",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node ../../../sdk/cli/bin/vaultdraw-plugin.mjs check dist"
+  }
+}

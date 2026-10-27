@@ -4,12 +4,15 @@
  * with the plugin host or the Plugins page, never at startup.
  */
 import {
-  importersChanged,
   importerState as st,
   currentWinners,
+  importersChanged,
   type ImporterEntry,
   type ImportRunner,
 } from "./importerMap";
+
+// Lives in importerMap.ts (boot.ts claims the official plugins' file types at startup).
+export { claimImporter } from "./importerMap";
 
 export interface ImporterClash {
   extension: string;
@@ -18,41 +21,6 @@ export interface ImporterClash {
   others: ImporterEntry[];
   /** `plugins.importers` names this plugin, but it does not import the extension. */
   unknownChoice?: string;
-}
-
-/** Claims `extensions` for one importer; returns the disposer. */
-export function claimImporter(
-  entry: ImporterEntry,
-  extensions: readonly string[],
-): () => void {
-  const exts = [...new Set(extensions.map((e) => e.toLowerCase()))];
-  for (const ext of exts) {
-    const list = st.claims.get(ext) ?? [];
-    list.push(entry);
-    st.claims.set(ext, list);
-  }
-  importersChanged();
-  let done = false;
-  return () => {
-    if (done) {
-      return;
-    }
-    done = true;
-    for (const ext of exts) {
-      const list = st.claims.get(ext);
-      if (!list) {
-        continue;
-      }
-      const i = list.indexOf(entry);
-      if (i >= 0) {
-        list.splice(i, 1);
-      }
-      if (list.length === 0) {
-        st.claims.delete(ext);
-      }
-    }
-    importersChanged();
-  };
 }
 
 /** Extensions claimed by more than one plugin, turned off, or set to a plugin that does not claim them. */

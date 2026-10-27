@@ -401,7 +401,8 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   activityBar: true,
   activityBarOrder: [],
   activityBarHidden: [],
-  pluginsEnabled: [],
+  // Official plugins are on by default and load on first use (plugins/officialPlugins.ts).
+  pluginsEnabled: ["markdown-import"],
   pluginImporters: {},
   pluginsStorageLimitKb: DEFAULT_PLUGIN_STORAGE_KB,
   pluginsSceneMaxOps: DEFAULT_SCENE_MAX_OPS,

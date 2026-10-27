@@ -9,7 +9,7 @@ import { viewportCoordsToSceneCoords } from "@excalidraw/common";
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
-import { runImports } from "../plugins/importerMap";
+import { createsOwnDrawing, runImports } from "../plugins/importerMap";
 
 import { importAccept, planImport, skippedMessage } from "./importFiles";
 import { pickFiles } from "./pickFiles";
@@ -46,11 +46,31 @@ export const importPickedFiles = async (
     "getApi" | "openPdf" | "notify" | "getPath"
   >,
 ) => {
-  const api = options.getApi();
-  if (!api || !files.length) {
+  if (!files.length) {
     return;
   }
+  const api = options.getApi();
   const plan = planImport(files);
+  // Importers that make their own drawing (Markdown) run with no drawing open.
+  const own = plan.plugin.filter((i) => createsOwnDrawing(i.match.pluginId));
+  const inDrawing = plan.plugin.filter((i) => !own.includes(i));
+  if (!api) {
+    // Home pane: only own-drawing importers can run.
+    const rest = [
+      ...plan.images,
+      ...(plan.pdf ? [plan.pdf] : []),
+      ...inDrawing.map((i) => i.file),
+    ];
+    if (own.length) {
+      await runImports(own, { path: null, at: at ?? { x: 0, y: 0 } });
+    }
+    if (rest.length) {
+      options.notify(
+        `Open a drawing to import ${rest.map((f) => f.name).join(", ")}.`,
+      );
+    }
+    return;
+  }
   if (plan.images.length) {
     await api.insertImages(plan.images, at);
   }
@@ -58,16 +78,23 @@ export const importPickedFiles = async (
     await options.openPdf(plan.pdf);
   }
   const path = options.getPath?.() ?? null;
-  if (plan.plugin.length > 0 && path === null) {
-    const names = plan.plugin.map((i) => i.file.name).join(", ");
+  if (inDrawing.length > 0 && path === null) {
+    const names = inDrawing.map((i) => i.file.name).join(", ");
     options.notify(`Open a drawing to import ${names}.`);
   }
-  const ran =
-    plan.plugin.length > 0 &&
+  let ran = true;
+  if (own.length > 0) {
+    ran = await runImports(own, { path, at: at ?? viewportCentre(api) });
+  }
+  const ranInDrawing =
+    inDrawing.length > 0 &&
     path !== null &&
-    (await runImports(plan.plugin, { path, at: at ?? viewportCentre(api) }));
+    (await runImports(inDrawing, { path, at: at ?? viewportCentre(api) }));
   // Host not running: the plugin files are reported like any unknown file.
-  const unhandled = ran || path === null ? [] : plan.plugin.map((i) => i.file);
+  const unhandled = [
+    ...(ran ? [] : own.map((i) => i.file)),
+    ...(ranInDrawing || path === null ? [] : inDrawing.map((i) => i.file)),
+  ];
   const skipped = skippedMessage([...unhandled, ...plan.skipped]);
   if (skipped) {
     options.notify(skipped);
@@ -79,10 +106,7 @@ export const useCanvasImport = (options: CanvasImportOptions) => {
   const live = useRef(options);
   live.current = options;
   return useCallback(async (at?: ScenePoint) => {
-    const { getApi, getDocument, pick = pickFiles } = live.current;
-    if (!getApi()) {
-      return;
-    }
+    const { getDocument, pick = pickFiles } = live.current;
     const files = await pick(getDocument(), importAccept());
     await importPickedFiles(files, at, live.current);
   }, []);

@@ -16,7 +16,11 @@ import {
 import { getPreferences } from "../../vault/preferences";
 import { getActiveScene } from "../../sceneOps/sceneBus";
 import { toastStore } from "../../toasts/toastStore";
-import { type ImportItem, type ImportTarget } from "../importerMap";
+import {
+  createsOwnDrawing,
+  type ImportItem,
+  type ImportTarget,
+} from "../importerMap";
 import { setImportCanceller, setImportRunner } from "../importerMapAdmin";
 
 import {
@@ -32,6 +36,8 @@ import {
   MAX_IMPORT_BYTES,
   resultOps,
 } from "../../../../sdk/api/shared/importers";
+
+import { OFFICIAL_PLUGINS } from "../officialPlugins";
 
 import { ensureActive, getRuntime } from "./activation";
 import { errorText, logLine, reportPluginError } from "./errors";
@@ -62,10 +68,14 @@ async function runOne(item: ImportItem, target: ImportTarget): Promise<void> {
   // activation are seen too.
   const controller = new AbortController();
   beginImport(pluginId, controller);
-  const off = appEvents.on("drawing.opened", () => {
-    halted = "switch";
-    controller.abort("switch");
-  });
+  // An importer that makes its own drawing opens it itself: that is not a switch away.
+  const own = createsOwnDrawing(pluginId);
+  const off = own
+    ? () => {}
+    : appEvents.on("drawing.opened", () => {
+        halted = "switch";
+        controller.abort("switch");
+      });
   const changed = (name: string) => {
     logLine(pluginId, "warn", "DRAWING_CHANGED: nothing was applied");
     toast(importChangedMessage(name), "error");
@@ -108,7 +118,7 @@ async function runOne(item: ImportItem, target: ImportTarget): Promise<void> {
           return await importer.import(input, {
             signal: controller.signal,
             at: target.at,
-            path: target.path,
+            path: target.path ?? "",
           });
         } catch (err) {
           if (controller.signal.aborted) {
@@ -138,7 +148,7 @@ async function runOne(item: ImportItem, target: ImportTarget): Promise<void> {
     // Hashing images is async; the scene is looked at only after it, so the checks and the write stay in one step.
     const images = await hashImages(ops, maxOps);
     const scene = getActiveScene();
-    if (!scene || scene.path !== target.path) {
+    if (!scene || target.path === null || scene.path !== target.path) {
       halted = "switch";
       changed(name);
       return;
@@ -195,12 +205,26 @@ export async function runImportItems(
 /** "Import: Cancel": aborts the running import; true when one was running. */
 export function cancelRunningImport(): boolean {
   if (!running) {
-    return false;
+    return cancelPluginImport();
   }
   // Also stops the files not started yet, even between two of them.
   halted = "cancel";
   currentImport()?.controller.abort("cancel");
   return true;
+}
+
+/** Imports a plugin runs as its own command (an Obsidian vault) stop through its declared cancel command. */
+function cancelPluginImport(): boolean {
+  for (const plugin of OFFICIAL_PLUGINS) {
+    const handler = plugin.cancelCommand
+      ? getRuntime(plugin.id)?.handlers.get(plugin.cancelCommand)
+      : undefined;
+    // The handler answers true when it stopped something.
+    if (handler && (handler() as unknown) === true) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /** The host sets the runner and the canceller on start and clears them on stop. */

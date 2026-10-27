@@ -206,6 +206,35 @@ describe("import runner", () => {
     expect(p.toasts()[0]).toContain("DRAWING_CHANGED");
   });
 
+  it("an official importer that makes its own drawing is not aborted by the drawing it opens", async () => {
+    const gate = deferred();
+    let signal!: AbortSignal;
+    t = await boot(
+      {
+        id: "markdown-import",
+        name: "Markdown import",
+        contributes: { importers: [{ id: "md", extensions: ["md"] }] },
+      },
+      {
+        activate(ctx) {
+          ctx.importers.register("md", {
+            async import(_i, opts) {
+              signal = opts.signal;
+              await gate.promise;
+            },
+          });
+        },
+      },
+    );
+    const done = t.import("a.md", "# x");
+    await t.flush();
+    t.events.emit("drawing.opened", { path: "a (imported).excalidraw" });
+    expect(signal.aborted).toBe(false);
+    gate.resolve();
+    await done;
+    expect(t.toasts()).toEqual([]);
+  });
+
   it("refuses to apply when the active drawing is no longer the target", async () => {
     const p = await bootImporter({
       async import() {

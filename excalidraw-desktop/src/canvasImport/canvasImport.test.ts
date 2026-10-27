@@ -193,15 +193,84 @@ describe("importPickedFiles", () => {
     expect(s.notify).toHaveBeenCalledWith("Open a drawing to import n.txt.");
   });
 
-  it("does nothing on cancel (no files) or without an open drawing", async () => {
+  it("does nothing on cancel (no files); without a drawing, images ask for one", async () => {
     const s = setup();
     await importPickedFiles([], undefined, s.options);
+    expect(s.notify).not.toHaveBeenCalled();
     await importPickedFiles([png()], undefined, {
       ...s.options,
       getApi: () => undefined,
     });
     expect(s.api.insertImages).not.toHaveBeenCalled();
     expect(s.openPdf).not.toHaveBeenCalled();
+    expect(s.notify).toHaveBeenCalledWith("Open a drawing to import a.png.");
+  });
+
+  describe("an importer that makes its own drawing (Markdown)", () => {
+    const claimMd = () =>
+      claimImporter(
+        { pluginId: "markdown-import", importerId: "md", title: "Markdown" },
+        ["md", "markdown"],
+      );
+
+    it("runs with no drawing open, with a null path", async () => {
+      claimMd();
+      const run = vi.fn(async () => {});
+      setImportRunner(run);
+      const s = setup();
+      const note = file("Note.md", "text/markdown");
+      await importPickedFiles([note], undefined, {
+        ...s.options,
+        getApi: () => undefined,
+      });
+      expect(run).toHaveBeenCalledWith(
+        [expect.objectContaining({ file: note })],
+        {
+          path: null,
+          at: { x: 0, y: 0 },
+        },
+      );
+      expect(s.notify).not.toHaveBeenCalled();
+    });
+
+    it("runs with a drawing open that has no path yet, and still asks for one for other importers", async () => {
+      claimMd();
+      claimTxt();
+      const run = vi.fn(async () => {});
+      setImportRunner(run);
+      const s = setup();
+      await importPickedFiles(
+        [file("n.markdown", ""), file("n.txt", "")],
+        undefined,
+        {
+          ...s.options,
+          getApi: () =>
+            ({
+              ...s.api,
+              getAppState: () => ({
+                offsetLeft: 0,
+                offsetTop: 0,
+                width: 0,
+                height: 0,
+                zoom: { value: 1 },
+                scrollX: 0,
+                scrollY: 0,
+              }),
+            } as never),
+          getPath: () => null,
+        },
+      );
+      expect(run).toHaveBeenCalledTimes(1);
+      expect(s.notify).toHaveBeenCalledWith("Open a drawing to import n.txt.");
+    });
+
+    it("is claimed for .md and .markdown, so the picker accepts them", () => {
+      claimMd();
+      expect(importAccept().split(",")).toEqual(
+        expect.arrayContaining([".md", ".markdown"]),
+      );
+      expect(planImport([file("a.md", "")]).plugin).toHaveLength(1);
+    });
   });
 
   it("tells the user about files it can't import", async () => {
@@ -235,11 +304,11 @@ describe("canvas menu item and command", () => {
     );
   });
 
-  it("is a rebindable palette command for a writable open drawing", () => {
+  it("is a rebindable palette command for a writable vault (no drawing needed for Markdown)", () => {
     expect(getCommand(IMPORT_FILE_COMMAND_ID)).toMatchObject({
       title: "Import: File…",
       category: "File",
-      when: ["drawingOpen", "writable"],
+      when: ["vaultOpen", "writable"],
       keys: { default: [] },
     });
     expect(

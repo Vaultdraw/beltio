@@ -38,7 +38,11 @@ import {
   planImport,
   skippedMessage,
 } from "../canvasImport/importFiles";
-import { hasImporters, runImports } from "../plugins/importerMap";
+import {
+  createsOwnDrawing,
+  hasImporters,
+  runImports,
+} from "../plugins/importerMap";
 import { useCanvasImportMenu } from "../canvasImport/useCanvasImportMenu";
 import {
   ACTION_KEYS_CONTEXT,
@@ -330,23 +334,41 @@ const VaultEditorComponent = ({
       }
       const { path: target, readOnly: locked } = dropRef.current;
       const api = apiRef.current;
-      if (!locked && (!api || !target)) {
+      // Importers that make their own drawing (Markdown) never touch this scene: they run even when it is read-only.
+      const own = plan.plugin.filter((i) =>
+        createsOwnDrawing(i.match.pluginId),
+      );
+      if (own.length === 0 && !locked && (!api || !target)) {
         return false; // no scene is shown yet: today's behaviour
       }
       event.preventDefault();
       event.stopPropagation();
-      if (locked) {
-        setEditorError("This drawing is read-only");
+      const at = api
+        ? viewportCoordsToSceneCoords(event, api.getAppState())
+        : { x: 0, y: 0 };
+      if (own.length > 0) {
+        void runImports(own, { path: target ?? null, at }).then((ran) => {
+          if (!ran) {
+            setEditorError(skippedMessage(own.map((i) => i.file)));
+          }
+        });
+      }
+      const inDrawing = plan.plugin.filter((i) => !own.includes(i));
+      if (locked || !api || !target) {
+        if (inDrawing.length > 0 || own.length === 0) {
+          setEditorError("This drawing is read-only");
+        }
         return true;
       }
-      const at = viewportCoordsToSceneCoords(event, api!.getAppState());
-      void runImports(plan.plugin, { path: target!, at }).then((ran) => {
-        if (!ran) {
-          setEditorError(skippedMessage(plan.plugin.map((i) => i.file)));
-        }
-      });
+      if (inDrawing.length > 0) {
+        void runImports(inDrawing, { path: target, at }).then((ran) => {
+          if (!ran) {
+            setEditorError(skippedMessage(inDrawing.map((i) => i.file)));
+          }
+        });
+      }
       if (plan.images.length) {
-        void api!.insertImages(plan.images, at);
+        void api.insertImages(plan.images, at);
       }
       // A PDF reaches here only when the PDF import is unavailable.
       setEditorError(
