@@ -14,6 +14,7 @@ import {
 import { SERVICES_SETTINGS_SCHEMA } from "../../services/servicesSettingsSchema";
 import { TABS_SETTINGS_SCHEMA } from "../../tabs/tabsSettingsSchema";
 import { LAYOUT_SETTINGS_SCHEMA } from "../../layout/layoutSettingsSchema";
+import { SPECULATIVE_SETTINGS_SCHEMA } from "../../speculative/speculativeSettingsSchema";
 import { MEMORY_SETTINGS_SCHEMA } from "../../memory/memorySettingsSchema";
 import {
   STYLE_KEY_LABELS,
@@ -773,6 +774,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   ...LAYOUT_SETTINGS_SCHEMA,
   ...MEMORY_SETTINGS_SCHEMA,
   ...SERVICES_SETTINGS_SCHEMA,
+  ...SPECULATIVE_SETTINGS_SCHEMA,
 
   // ---- Hotkeys ----
   {

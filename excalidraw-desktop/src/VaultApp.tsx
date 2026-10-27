@@ -19,6 +19,7 @@ import {
 import { DesktopVaultSearch } from "./search/DesktopVaultSearch";
 import { DesktopVaultLinks } from "./links/DesktopVaultLinks";
 import { useLinkDisplayPrefs } from "./links/useLinkDisplayPrefs";
+import { useSpeculativeOpen } from "./speculative/useSpeculativeOpen";
 import { resolveOpenTarget } from "./control/openTarget";
 import { createAppFiles } from "./control/appFiles";
 import { createBusyCounter } from "./control/busyCounter";
@@ -628,6 +629,13 @@ export const VaultApp = ({
 
   const docHookRef = useRef(docHook);
   docHookRef.current = docHook;
+  useSpeculativeOpen(
+    doc,
+    prefsNow.filesSpeculativeOpen,
+    repository,
+    vault?.handle ?? null,
+    activeDoc?.path ?? null,
+  );
   const tabsRef = useRef<TabsApi | null>(null);
 
   // One close path serves both window close and app-wide Quit. Keep the editor

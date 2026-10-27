@@ -68,6 +68,11 @@ import {
   type NotesPreferences,
 } from "../notes/notesSettings";
 import {
+  SPECULATIVE_DEFAULTS,
+  normalizeSpeculativePreferences,
+  type SpeculativePreferences,
+} from "../speculative/speculativeSettings";
+import {
   SERVICES_DEFAULTS,
   normalizeServicesPreferences,
   type ServicesPreferences,
@@ -335,6 +340,7 @@ export type VaultPreferences = VaultPreferencesBase &
   ExtensionPreferences &
   KeysPreferences &
   ServicesPreferences &
+  SpeculativePreferences &
   LayoutPreferences &
   UserCommandsPreferences &
   Record<ToolField, ToolStyle>;
@@ -452,6 +458,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   ...EXTENSION_DEFAULTS,
   ...KEYS_DEFAULTS,
   ...SERVICES_DEFAULTS,
+  ...SPECULATIVE_DEFAULTS,
   ...LAYOUT_DEFAULTS,
   ...USER_COMMANDS_DEFAULTS,
   ...emptyToolStyles(),
@@ -888,6 +895,7 @@ export function normalizePreferences(input: unknown): VaultPreferences {
     ...normalizeExtensionPreferences(parsed as Record<string, unknown>),
     ...normalizeKeysPreferences(parsed as Record<string, unknown>),
     ...normalizeServicesPreferences(parsed as Record<string, unknown>),
+    ...normalizeSpeculativePreferences(parsed as Record<string, unknown>),
     ...normalizeLayoutPreferences(parsed as Record<string, unknown>),
     ...normalizeUserCommandsPreferences(parsed as Record<string, unknown>),
     ...normalizeToolStyles(parsed as Partial<Record<ToolField, unknown>>),

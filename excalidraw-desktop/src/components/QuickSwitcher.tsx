@@ -213,6 +213,7 @@ const RowView = memo(
         id={id}
         role="option"
         aria-selected={active}
+        data-open-path={row.kind === "drawing" ? row.drawing.path : undefined}
         className={`vault-quick__row${
           active ? " vault-quick__row--active" : ""
         }`}

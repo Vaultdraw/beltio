@@ -15,6 +15,8 @@ import type { ExcalidrawElement } from "@excalidraw/element/types";
 import { baseStyleAppState } from "../toolDefaults/baseStyle";
 import { getPreferences } from "../vault/preferences";
 
+import { takeSpeculativeScene } from "../speculative/speculativeOpen";
+
 import { exportOptionsToAppState, loadExportOptions } from "./exportOptions";
 
 export type SceneView = { scrollX: number; scrollY: number; zoom: number };
@@ -67,6 +69,15 @@ export const loadScene = async (
   json: string,
   view: SceneView | undefined,
 ): Promise<LoadedScene> => {
+  // parsed ahead on pointer-down (speculative/): only the app state is left to do
+  const ahead = await takeSpeculativeScene(json);
+  if (ahead) {
+    return {
+      elements: ahead.elements,
+      appState: withDocumentAppState(ahead.appState, view),
+      files: ahead.files,
+    };
+  }
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
   const scene = loadFromJSONText(json, null, null);
   return {

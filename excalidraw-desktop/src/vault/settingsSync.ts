@@ -66,6 +66,10 @@ import {
   type KeysField,
 } from "../commands/keySettings";
 import {
+  SPECULATIVE_MAPPINGS,
+  type SpeculativeField,
+} from "../speculative/speculativeSettings";
+import {
   SERVICES_MAPPINGS,
   type ServicesField,
 } from "../services/servicesSettings";
@@ -370,6 +374,7 @@ type ConfigField =
   | ExtensionField
   | KeysField
   | ServicesField
+  | SpeculativeField
   | ToolField;
 
 export interface ConfigMapping {
@@ -916,6 +921,7 @@ export const CONFIG_MAPPING: readonly ConfigMapping[] = [
   ...EXTENSION_MAPPINGS,
   ...KEYS_MAPPINGS,
   ...SERVICES_MAPPINGS,
+  ...SPECULATIVE_MAPPINGS,
   ...TOOL_MAPPINGS,
 ];
 

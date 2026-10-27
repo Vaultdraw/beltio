@@ -8,6 +8,8 @@ import { markOpen } from "../perf/openMarks";
 import { flushEditorSerialization } from "../editor/editorFlush";
 import { createOutsideFallback } from "../history/outsideFallback";
 
+import { takeSpeculativeRead } from "../speculative/speculativeOpen";
+
 import {
   errorMessage,
   type SaveStatus,
@@ -265,10 +267,11 @@ export const useVaultDocument = (
       setLoading(true);
       try {
         markOpen("read");
-        const loaded = await repositoryRef.current.readDrawing(
-          currentVault.handle,
-          path,
-        );
+        // started on pointer-down when speculative open is on (speculative/)
+        const ahead = takeSpeculativeRead(currentVault.handle, path);
+        const loaded =
+          (ahead && (await ahead.catch(() => null))) ||
+          (await repositoryRef.current.readDrawing(currentVault.handle, path));
         markOpen("read-done");
         if (
           mine !== generation.current ||
