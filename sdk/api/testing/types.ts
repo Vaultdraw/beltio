@@ -3,6 +3,7 @@ import type {
   CommandContribution,
   ImporterContribution,
   StatusBarContribution,
+  ViewContribution,
   Json,
   NewElement,
   PanelContribution,
@@ -51,6 +52,10 @@ export interface TestManifest {
     panels?: (Partial<PanelContribution> & { id: string })[];
     settings?: SettingDecl[];
     importers?: (Partial<ImporterContribution> & {
+      id: string;
+      extensions: string[];
+    })[];
+    views?: (Partial<ViewContribution> & {
       id: string;
       extensions: string[];
     })[];
@@ -212,6 +217,15 @@ export interface TestPlugin {
   run(shortId: string): Promise<void>;
   /** Opens a panel by short id and renders it. */
   openPanel(shortId: string): Promise<PanelView>;
+  /** The notes a view can read, by vault-relative path. */
+  notes: {
+    seed(path: string, text: string): void;
+    text(path: string): string | undefined;
+  };
+  /** Opens a note in the view declared for its name, as a tab would, and renders it. */
+  openView(path: string): Promise<PanelView>;
+  /** Files a view asked to open with `openPath`. */
+  openedFromViews(): { path: string; newTab: boolean }[];
   /** The status bar items that currently have text. */
   statusBar(): StatusBarShown[];
   /** Clicks a status bar item: runs its declared command. */

@@ -48,9 +48,11 @@ import type {
   TextApi,
   ThemeApi,
   VaultApi,
+  ViewsApi,
   WorkspaceApi,
 } from "../api";
 import type { PluginRuntime } from "./types";
+import type { ComponentType } from "react";
 import type { PluginSettingValue } from "../../vault/pluginSettingsTable";
 
 const NOOP: Disposable = { dispose() {} };
@@ -100,6 +102,9 @@ export function createPluginContext(
   const declaredPanels = new Set(info.contributes.panels.map((p) => p.id));
   const declaredImporters = new Set(
     (info.contributes.importers ?? []).map((i) => i.id),
+  );
+  const declaredViews = new Set(
+    (info.contributes.views ?? []).map((v) => v.id),
   );
   const declaredStatus = new Map(
     (info.contributes.status_bar ?? []).map((s) => [s.id, s] as const),
@@ -154,6 +159,7 @@ export function createPluginContext(
   let workspaceApi: WorkspaceApi | undefined;
   let importersApi: ImportersApi | undefined;
   let statusBarApi: StatusBarApi | undefined;
+  let viewsApi: ViewsApi | undefined;
 
   const settingValue = (key: string) => getPluginSetting(id, key);
 
@@ -307,6 +313,22 @@ export function createPluginContext(
         };
       }
       return statusBarApi;
+    },
+    get views() {
+      return (viewsApi ??= {
+        register(short, component) {
+          if (!declaredViews.has(short)) {
+            return refuse("view", short);
+          }
+          const key = `view:${short}`;
+          rt.components.set(key, component as ComponentType);
+          return track(() => {
+            if (rt.components.get(key) === component) {
+              rt.components.delete(key);
+            }
+          });
+        },
+      });
     },
     get markdown() {
       return (markdownApi ??= createMarkdownApi(id));

@@ -1,0 +1,12 @@
+# code: view-extension-invalid
+# rust: must end in '.md'
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+
+[[contributes.views]]
+id = "board"
+title = "Board"
+extensions = ["csv"]

@@ -133,6 +133,13 @@
           "type": "array",
           "maxItems": 8,
           "items": { "$ref": "#/definitions/statusItem" }
+        },
+        "views": {
+          "title": "Views",
+          "description": "Views of a note type in the main pane, written as [[contributes.views]]. At most 8. A note whose name ends in one of the extensions opens in the plugin's component. The plugin loads when the first such tab is shown.",
+          "type": "array",
+          "maxItems": 8,
+          "items": { "$ref": "#/definitions/view" }
         }
       },
       "additionalProperties": false
@@ -157,6 +164,45 @@
     }
   },
   "definitions": {
+    "view": {
+      "title": "View",
+      "description": "A view of one note type. Provide its component with ctx.views.register in activate().",
+      "type": "object",
+      "required": ["id", "title", "extensions"],
+      "properties": {
+        "id": {
+          "title": "View id",
+          "description": "Short id, unique among the plugin's views. Same rule as a command id.",
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+        },
+        "title": {
+          "title": "View title",
+          "description": "Names the view in messages. 1 to 200 characters, not blank.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "\\S"
+        },
+        "extensions": {
+          "title": "View extensions",
+          "description": "Lower case name endings of the notes the view shows, each ending in \".md\" with a name before it, such as \"kanban.md\". 1 to 8, unique in the plugin. \"md\", \"markdown\" and \"excalidraw.md\" belong to the app.",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "title": "View extension",
+            "description": "One note name ending, such as kanban.md.",
+            "type": "string",
+            "maxLength": 32,
+            "pattern": "^[a-z0-9]+(\\.[a-z0-9]+)*\\.md$",
+            "not": { "enum": ["md", "markdown", "excalidraw.md"] }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "statusItem": {
       "title": "Status bar item",
       "description": "A slot in the status bar. The plugin sets its text with ctx.statusBar.set(id, { text }) and the item disappears when cleared.",

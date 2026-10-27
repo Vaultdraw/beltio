@@ -115,7 +115,7 @@ export interface ImportersApi {
 export type { CommandsApi } from "./commands";
 export type { Disposable } from "./disposable";
 export type { AppEventMap, EventsApi } from "./events";
-export type { CommandContribution, ImporterContribution, StatusBarContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
+export type { CommandContribution, ImporterContribution, StatusBarContribution, ViewContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
 export type { FolderEntry, FoldersApi, PickSourceOptions, PickTargetOptions, SourceFolder, TargetFolder, } from "./folders";
 export type { ApiVersion, HostApi } from "./host";
 export type { ImportersApi, Importer, ImportInput, ImportOptions, ImportResult, } from "./importers";
@@ -127,6 +127,7 @@ export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
 export type { BatchOptions, BatchResult, ElementId, ElementRef, ImageSource, FontFamilyName, NewElement, SceneContextApi, SceneElementDetail, SceneElement, SceneElementType, SceneOp, SceneOpIssue, } from "./scene";
 export type { SelectOption, SettingDecl, SettingScopeName, SettingsApi, SettingValue, } from "./settings";
 export type { StatusBarApi, StatusBarState } from "./statusBar";
+export type { ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { FontsApi, TextApi, TextFont } from "./text";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
@@ -169,12 +170,18 @@ export interface StatusBarContribution {
     priority: number;
     command: string | null;
 }
+export interface ViewContribution {
+    id: string;
+    title: string;
+    extensions: string[];
+}
 export interface PluginContributions {
     commands: CommandContribution[];
     panels: PanelContribution[];
     settings: SettingDecl[];
     importers?: ImporterContribution[];
     status_bar?: StatusBarContribution[];
+    views?: ViewContribution[];
 }
 
 // markdown.ts
@@ -426,6 +433,7 @@ import type { FoldersApi } from "./folders";
 import type { FontsApi, TextApi } from "./text";
 import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
+import type { ViewsApi } from "./views";
 import type { WorkspaceApi } from "./workspace";
 export interface UiApi {
     toast(message: string): void;
@@ -457,6 +465,7 @@ export interface PluginContext {
     readonly pages: PagesApi;
     readonly folders: FoldersApi;
     readonly statusBar: StatusBarApi;
+    readonly views: ViewsApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;
     setInterval(fn: () => void, ms: number): Disposable;
@@ -692,6 +701,29 @@ export interface VaultApi {
         ids: string[];
         refs: Record<string, string>;
     }>;
+}
+
+// views.ts
+import type { ComponentType } from "react";
+import type { Disposable } from "./disposable";
+export interface ViewFile {
+    read(): Promise<{
+        text: string;
+        revision: string;
+    }>;
+    write(text: string, expectedRevision: string): Promise<{
+        revision: string;
+    }>;
+}
+export interface ViewProps {
+    path: string;
+    file: ViewFile;
+    openPath(path: string, opts?: {
+        target?: "current" | "new";
+    }): void;
+}
+export interface ViewsApi {
+    register(id: string, component: ComponentType<ViewProps>): Disposable;
 }
 
 // workspace.ts

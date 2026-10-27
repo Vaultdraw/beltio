@@ -1,10 +1,10 @@
 /** Mounts the panels plugins declared; a panel's code loads when it first opens. */
-import { Component, useCallback, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 import { PanelHost } from "../../slots/PanelHost";
 import { closePanel, usePanelOpen } from "../../slots/panelStore";
 
-import { reportPluginError } from "./errors";
+import { PluginBoundary } from "./PluginBoundary";
 import {
   getPluginPanels,
   subscribePluginPanels,
@@ -13,33 +13,10 @@ import {
 
 import "./pluginPanels.css";
 
-import type { ComponentType, ReactNode } from "react";
+import type { ComponentType } from "react";
 
 // Shares this chunk: the status bar loads with the panel host, and draws nothing until an item has text.
 export { PluginStatusBar } from "./PluginStatusBar";
-
-/** Attributes a render error of a plugin component to the plugin. */
-class PluginBoundary extends Component<
-  { pluginId: string; children: ReactNode },
-  { failed: boolean }
-> {
-  state = { failed: false };
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-  componentDidCatch(error: Error) {
-    reportPluginError(this.props.pluginId, error, "panel render");
-  }
-  render() {
-    return this.state.failed ? (
-      <div className="vault-panel-error" role="alert">
-        This plugin panel crashed.
-      </div>
-    ) : (
-      this.props.children
-    );
-  }
-}
 
 const wrapped = new WeakMap<ComponentType, ComponentType>();
 

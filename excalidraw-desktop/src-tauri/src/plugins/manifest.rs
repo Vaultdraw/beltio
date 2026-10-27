@@ -16,6 +16,7 @@ const MAX_PATH: usize = 260;
 const MAX_PERMISSIONS: usize = 8;
 const MAX_IMPORTERS: usize = 8;
 const MAX_STATUS_ITEMS: usize = 8;
+const MAX_VIEWS: usize = 8;
 const MAX_IMPORTER_EXTENSIONS: usize = 8;
 const MAX_DATA_KEY: usize = 64;
 const MAX_EXTENSION: usize = 32;
@@ -81,6 +82,16 @@ pub(crate) struct Importer {
     pub extensions: Vec<String>,
 }
 
+/// A view of a file type in the main pane (`[[contributes.views]]`): notes whose name ends in one of
+/// `extensions` (`kanban.md`) open in the plugin's component instead of the Markdown note view.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct View {
+    pub id: String,
+    pub title: String,
+    pub extensions: Vec<String>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum Align {
@@ -120,6 +131,8 @@ pub(crate) struct Contributes {
     /// `[[contributes.status_bar]]`; the web view gets the same key.
     #[serde(default)]
     pub status_bar: Vec<StatusItem>,
+    #[serde(default)]
+    pub views: Vec<View>,
 }
 
 fn yes() -> bool {
@@ -252,6 +265,35 @@ fn check_importers(list: &[Importer]) -> Result<(), String> {
     Ok(())
 }
 
+/// Names the Markdown note view owns: a plugin view needs a longer suffix such as `kanban.md`.
+const NOTE_EXTENSIONS: [&str; 3] = ["md", "markdown", "excalidraw.md"];
+
+fn check_views(list: &[View]) -> Result<(), String> {
+    if list.len() > MAX_VIEWS {
+        return Err(format!("Too many views (max {MAX_VIEWS})"));
+    }
+    check_unique_ids("view", list.iter().map(|x| x.id.as_str()))?;
+    let mut seen = HashSet::new();
+    for x in list {
+        check_title("view title", &x.title)?;
+        if x.extensions.is_empty() || x.extensions.len() > MAX_IMPORTER_EXTENSIONS {
+            return Err(format!("View '{}' needs 1 to {MAX_IMPORTER_EXTENSIONS} extensions", x.id));
+        }
+        for e in &x.extensions {
+            if !is_valid_extension(e) {
+                return Err(format!("Extension '{e}' is invalid (lower case letters and digits, dots between parts, at most {MAX_EXTENSION} bytes, no leading dot)"));
+            }
+            if NOTE_EXTENSIONS.contains(&e.as_str()) || !e.ends_with(".md") {
+                return Err(format!("View extension '{e}' must end in '.md' with a name before it, like 'kanban.md' (only notes open in views for now)"));
+            }
+            if !seen.insert(e.as_str()) {
+                return Err(format!("Duplicate view extension '{e}'"));
+            }
+        }
+    }
+    Ok(())
+}
+
 fn check_status_bar(list: &[StatusItem], commands: &[Command]) -> Result<(), String> {
     if list.len() > MAX_STATUS_ITEMS {
         return Err(format!("Too many status bar items (max {MAX_STATUS_ITEMS})"));
@@ -340,6 +382,7 @@ fn validate(raw: Raw) -> Result<Manifest, String> {
     }
     check_importers(&c.importers)?;
     check_status_bar(&c.status_bar, &c.commands)?;
+    check_views(&c.views)?;
     check_unique_ids("command", c.commands.iter().map(|x| x.id.as_str()))?;
     check_unique_ids("panel", c.panels.iter().map(|x| x.id.as_str()))?;
     for x in &c.commands {

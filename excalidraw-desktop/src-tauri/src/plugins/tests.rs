@@ -1317,3 +1317,30 @@ fn status_bar_rules() {
     let many: String = (0..9).map(|i| format!("\n[[contributes.status_bar]]\nid = \"s{i}\"\ntitle = \"S\"\n")).collect();
     bad(&with(&many), "Too many status bar items");
 }
+
+// ---- P6: views in the manifest ----
+
+fn view(extensions: &str) -> String {
+    with(&format!("\n[[contributes.views]]\nid = \"board\"\ntitle = \"Board\"\nextensions = {extensions}\n"))
+}
+
+#[test]
+fn views_parse_and_serialise() {
+    let m = manifest::parse(&view(r#"["kanban.md", "board.md"]"#)).unwrap();
+    assert_eq!(m.contributes.views[0].extensions, ["kanban.md", "board.md"]);
+    assert_eq!(serde_json::to_value(&m).unwrap()["contributes"]["views"][0]["id"], json!("board"));
+    assert!(manifest::parse(&minimal("a-b")).unwrap().contributes.views.is_empty());
+}
+
+#[test]
+fn view_extension_rules() {
+    bad(&view(r#"["md"]"#), "must end in '.md'");
+    bad(&view(r#"["excalidraw.md"]"#), "must end in '.md'");
+    bad(&view(r#"["csv"]"#), "must end in '.md'");
+    bad(&view(r#"[".kanban.md"]"#), "invalid");
+    bad(&view("[]"), "1 to 8 extensions");
+    bad(&view(r#"["a.md", "a.md"]"#), "Duplicate view extension");
+    bad(&with("\n[[contributes.views]]\nid = \"a\"\ntitle = \"A\"\nextensions = [\"x.md\"]\n[[contributes.views]]\nid = \"b\"\ntitle = \"B\"\nextensions = [\"x.md\"]\n"), "Duplicate view extension");
+    let many: String = (0..9).map(|i| format!("\n[[contributes.views]]\nid = \"v{i}\"\ntitle = \"V\"\nextensions = [\"v{i}.md\"]\n")).collect();
+    bad(&with(&many), "Too many views");
+}

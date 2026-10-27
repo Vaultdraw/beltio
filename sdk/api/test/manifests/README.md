@@ -41,11 +41,12 @@ Every file starts with two comment lines.
 | `contribution-duplicate` | Two commands share an id. |
 | `title-invalid` | Empty command or panel title. |
 | `setting-invalid` | A setting has no `key` or `type`. |
-| `too-many` | More than 200 commands (also 20 panels, 100 settings, 8 importers, 8 status bar items). |
+| `too-many` | More than 200 commands (also 20 panels, 100 settings, 8 importers, 8 status bar items, 8 views). |
 | `contribution-invalid` | Among others: a status bar item with an `align` other than `left` or `right`. |
 | `status-command-unknown` | A status bar item whose `command` is not one of the plugin's commands. |
 | `importer-extension-invalid` | An importer extension that is not lower case letters and digits with dots between parts (no leading dot, at most 32 bytes), or is repeated. |
 | `importer-extension-reserved` | An importer extension the app handles itself (`png`, `pdf`, `json`, `excalidraw`, ...). |
+| `view-extension-invalid` | A view extension that is not a lower case name ending in `.md` with a name before it (`kanban.md`), is one the app owns (`md`, `markdown`, `excalidraw.md`), or is repeated. |
 | `manifest-too-large` | Over 64 KB. |
 | `dev-true` | `dev = true` in a packaged manifest. Rust accepts it; `check` reports it. |
 

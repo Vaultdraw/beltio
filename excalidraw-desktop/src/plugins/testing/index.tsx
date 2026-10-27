@@ -19,6 +19,10 @@ import { getActiveScene } from "../../sceneOps/sceneBus";
 import { viewportCenter } from "../../sceneOps/viewport";
 import { appEvents, type AppEventMap } from "../../events/appEvents";
 import { toastStore } from "../../toasts/toastStore";
+import { FakeNoteFiles } from "../../notes/FakeNoteFiles";
+import { setNoteFiles } from "../../notes/noteBackend";
+import { tabKindFor } from "../../tabs/tabKinds";
+import { TabKindView } from "../../tabs/TabKindView";
 import { getStatusItems } from "../host/statusBarRegistry";
 import { notifyAppearanceChanged } from "../../vault/appearance";
 import {
@@ -69,6 +73,7 @@ export type TestManifest = Partial<Omit<PluginInfo, "contributes">> & {
       id: string;
       extensions: string[];
     })[];
+    views?: (Partial<ViewDecl> & { id: string; extensions: string[] })[];
     status_bar?: (Partial<StatusBarContribution> & { id: string })[];
   };
 };
@@ -143,6 +148,8 @@ export interface FakeEvents {
   emit<K extends keyof AppEventMap>(name: K, payload: AppEventMap[K]): void;
 }
 
+type ViewDecl = NonNullable<PluginInfo["contributes"]["views"]>[number];
+
 /** A status bar item as the user would see it. */
 export interface StatusBarShown {
   id: string;
@@ -160,6 +167,15 @@ export interface TestPlugin {
   run(shortId: string): Promise<void>;
   /** Opens a panel by short id and renders the plugin panels host. */
   openPanel(shortId: string): Promise<RenderResult>;
+  /** The notes a view can read, by vault-relative path. */
+  notes: {
+    seed(path: string, text: string): void;
+    text(path: string): string | undefined;
+  };
+  /** Opens a note in the view declared for its name, as a tab would, and renders it. */
+  openView(path: string): Promise<RenderResult>;
+  /** Files a view asked to open with `openPath`. */
+  openedFromViews(): { path: string; newTab: boolean }[];
   /** The status bar items that currently have text. */
   statusBar(): StatusBarShown[];
   /** Clicks a status bar item: runs its declared command. */
@@ -223,6 +239,7 @@ const normalise = (m: TestManifest): PluginInfo => {
       })),
       settings: c.settings ?? [],
       importers: (c.importers ?? []).map((x) => ({ title: x.id, ...x })),
+      views: (c.views ?? []).map((x) => ({ title: x.id, ...x })),
       status_bar: (c.status_bar ?? []).map((x) => ({
         title: x.id,
         align: "right" as const,
@@ -284,6 +301,9 @@ export async function boot(
   const info = normalise(manifest);
   const id = info.id;
   const { backend } = setupHost([info], { [id]: module });
+  const noteFiles = new FakeNoteFiles();
+  setNoteFiles(noteFiles);
+  const viewOpened: { path: string; newTab: boolean }[] = [];
   const host = await startPluginHost(window, (run) => run());
   const scene = createFakeScene("fake.excalidraw");
   enable([id]);
@@ -451,6 +471,32 @@ export async function boot(
       await flush();
       return view;
     },
+    notes: {
+      seed: (path, text) => noteFiles.setOnDisk(path, text),
+      text: (path) => noteFiles.textOf(path),
+    },
+    async openView(path) {
+      const kind = tabKindFor(path);
+      if (!kind) {
+        throw new Error(`no view is declared for ${path}`);
+      }
+      let shown: RenderResult | undefined;
+      await act(async () => {
+        shown = render(
+          <TabKindView
+            kind={kind}
+            path={path}
+            openPath={(p, o) =>
+              viewOpened.push({ path: p, newTab: o?.target === "new" })
+            }
+            vault={{ handle: "mock-handle", paths: () => [] }}
+          />,
+        );
+      });
+      await flush();
+      return shown!;
+    },
+    openedFromViews: () => viewOpened.map((o) => ({ ...o })),
     statusBar: () =>
       getStatusItems()
         .filter((i) => i.pluginId === id)
@@ -533,6 +579,7 @@ export async function boot(
       cleanup();
       await disable();
       host.stop();
+      setNoteFiles(null);
       setWorkspaceBridge(null);
       scene.dispose();
       toastStore.clear();

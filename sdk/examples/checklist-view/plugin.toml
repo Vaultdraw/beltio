@@ -1,0 +1,14 @@
+id = "checklist-view"
+name = "Checklist view"
+version = "0.1.0"
+api = 0
+min_app = "0.1.2"
+main = "main.js"
+description = "Example: a view for notes named *.checklist.md, with clickable check boxes"
+author = "Vaultdraw"
+permissions = ["vault.read", "vault.write"]
+
+[[contributes.views]]
+id = "checklist"
+title = "Checklist"
+extensions = ["checklist.md"]

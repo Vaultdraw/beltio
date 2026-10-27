@@ -15,6 +15,7 @@ import type { FoldersApi } from "./folders";
 import type { FontsApi, TextApi } from "./text";
 import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
+import type { ViewsApi } from "./views";
 import type { WorkspaceApi } from "./workspace";
 
 /**
@@ -94,6 +95,8 @@ export interface PluginContext {
   readonly folders: FoldersApi;
   /** @since 0.10.0 */
   readonly statusBar: StatusBarApi;
+  /** @since 0.11.0 */
+  readonly views: ViewsApi;
   /**
    * Disposed in reverse order on disable/reload/quit.
    *

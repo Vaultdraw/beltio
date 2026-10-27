@@ -43,7 +43,10 @@ export const RESERVED_EXTENSIONS = [
 ];
 const IMPORTER_KEYS = new Set(["id", "title", "extensions"]);
 const MAX_STATUS_ITEMS = 8;
+const MAX_VIEWS = 8;
+const NOTE_EXTENSIONS = ["md", "markdown", "excalidraw.md"];
 const STATUS_KEYS = new Set(["id", "title", "align", "priority", "command"]);
+const VIEW_KEYS = new Set(["id", "title", "extensions"]);
 /** What a plugin may declare. */
 export const PERMISSIONS = ["vault.read", "vault.write", "folders.import"];
 /** Kept for later API revisions; an app that knows them as reserved refuses a manifest that uses one. */
@@ -362,6 +365,48 @@ function checkPermissions(list, err) {
 }
 
 /**
+ * @param {Record<string, any>[]} views
+ * @param {(code: string, message: string) => void} err
+ */
+function checkViews(views, err) {
+  const seen = new Set();
+  for (const x of views) {
+    if (!("extensions" in x)) {
+      err("missing-key", "A view is missing 'extensions'");
+      continue;
+    }
+    if (
+      !isStringArray(x.extensions) ||
+      x.extensions.length < 1 ||
+      x.extensions.length > MAX_IMPORTER_EXTENSIONS
+    ) {
+      err(
+        "contribution-invalid",
+        `View ${show(x.id)} needs 1 to ${MAX_IMPORTER_EXTENSIONS} extensions`,
+      );
+      continue;
+    }
+    for (const e of x.extensions) {
+      if (!isValidExtension(e)) {
+        err(
+          "view-extension-invalid",
+          `Extension '${e}' is invalid (lower case letters and digits, dots between parts, at most ${MAX_EXTENSION} bytes, no leading dot)`,
+        );
+      } else if (NOTE_EXTENSIONS.includes(e) || !e.endsWith(".md")) {
+        err(
+          "view-extension-invalid",
+          `View extension '${e}' must end in '.md' with a name before it, like 'kanban.md' (only notes open in views for now)`,
+        );
+      } else if (seen.has(e)) {
+        err("view-extension-invalid", `Duplicate view extension '${e}'`);
+      } else {
+        seen.add(e);
+      }
+    }
+  }
+}
+
+/**
  * @param {Record<string, any>[]} items
  * @param {Record<string, any>[]} commands
  * @param {(code: string, message: string) => void} err
@@ -403,11 +448,18 @@ function checkContributes(c, err) {
   }
   for (const k of Object.keys(c)) {
     if (
-      !["commands", "panels", "settings", "importers", "status_bar"].includes(k)
+      ![
+        "commands",
+        "panels",
+        "settings",
+        "importers",
+        "status_bar",
+        "views",
+      ].includes(k)
     ) {
       err(
         "unknown-key",
-        `Unknown key 'contributes.${k}' (use commands, panels, settings, importers or status_bar)`,
+        `Unknown key 'contributes.${k}' (use commands, panels, settings, importers, status_bar or views)`,
       );
     }
   }
@@ -431,6 +483,10 @@ function checkContributes(c, err) {
   const settings = list("settings");
   const importers = list("importers");
   const statusBar = list("status_bar");
+  const views = list("views");
+  if (views.length > MAX_VIEWS) {
+    err("too-many", `Too many views (max ${MAX_VIEWS})`);
+  }
   if (statusBar.length > MAX_STATUS_ITEMS) {
     err("too-many", `Too many status bar items (max ${MAX_STATUS_ITEMS})`);
   }
@@ -452,6 +508,7 @@ function checkContributes(c, err) {
     ["panel", panels, PANEL_KEYS],
     ["importer", importers, IMPORTER_KEYS],
     ["status bar item", statusBar, STATUS_KEYS],
+    ["view", views, VIEW_KEYS],
   ])) {
     const seen = new Set();
     for (const x of items) {
@@ -509,6 +566,7 @@ function checkContributes(c, err) {
   }
   checkImporters(importers, err);
   checkStatusBar(statusBar, commands, err);
+  checkViews(views, err);
   for (const s of settings) {
     const field = (k) => typeof s[k] === "string" && s[k] !== "";
     if (!field("key") || !field("type")) {

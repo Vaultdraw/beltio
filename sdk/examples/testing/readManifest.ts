@@ -26,6 +26,7 @@ const TOP_KEYS = new Set([
   "description",
   "author",
   "activation",
+  "permissions",
   "dev",
   "data_key",
 ]);
@@ -35,6 +36,7 @@ const ARRAYS = [
   "settings",
   "importers",
   "status_bar",
+  "views",
 ] as const;
 
 /** Drop a trailing `# comment` that is not inside a basic string. */
@@ -81,6 +83,7 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
     settings: [],
     importers: [],
     status_bar: [],
+    views: [],
   };
   let current: Table = top;
   let extra = false;
@@ -126,6 +129,8 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
     source: "bundled",
     mainBytes,
     activation: (top.activation as string[] | undefined) ?? [],
+    permissions:
+      (top.permissions as PluginInfo["permissions"] | undefined) ?? [],
     dataKey: str("data_key"),
     contributes: {
       commands: arrays.commands.map((c) => ({
@@ -146,6 +151,11 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
         id: i.id as string,
         title: i.title as string,
         extensions: i.extensions as string[],
+      })),
+      views: arrays.views.map((v) => ({
+        id: v.id as string,
+        title: v.title as string,
+        extensions: v.extensions as string[],
       })),
       status_bar: arrays.status_bar.map((x) => ({
         id: x.id as string,

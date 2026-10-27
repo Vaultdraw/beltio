@@ -1,5 +1,10 @@
 import type { SettingDecl } from "../settings/declaredSettings";
-import type { Plugin, PluginPermission, StatusBarContribution } from "../api";
+import type {
+  Plugin,
+  PluginPermission,
+  StatusBarContribution,
+  ViewContribution,
+} from "../api";
 import type { CommandHandler } from "../../commands/types";
 import type { ComponentType } from "react";
 
@@ -49,6 +54,8 @@ export interface PluginInfo {
     importers?: { id: string; title: string; extensions: string[] }[];
     /** Status bar items (`[[contributes.status_bar]]`); absent from older backends. */
     status_bar?: StatusBarContribution[];
+    /** Note views (`[[contributes.views]]`); absent from older backends. */
+    views?: ViewContribution[];
   };
 }
 

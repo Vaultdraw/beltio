@@ -21,6 +21,7 @@ import { registerCommands } from "../../commands/registry";
 import { registerCommandHandlers } from "../../commands/handlerRegistry";
 import { panelFlag, togglePanel } from "../../slots/panelStore";
 import { toastStore } from "../../toasts/toastStore";
+import { registerTabKind } from "../../tabs/tabKinds";
 import { claimImporter } from "../importerMapAdmin";
 import { registerPluginSettings } from "../settings/registry";
 
@@ -36,7 +37,9 @@ import type {
   CommandHandlers,
   WhenClause,
 } from "../../commands/types";
+import type { ViewProps } from "../api";
 import type { PluginRuntime } from "./types";
+import type { ComponentType } from "react";
 
 const ICONS: Record<string, ActivityEntry["icon"]> = {
   library: IconLibrary,
@@ -53,6 +56,8 @@ const ICONS: Record<string, ActivityEntry["icon"]> = {
 };
 
 /** Plugin panel buttons shown in the activity bar by default; the rest are opt-in. */
+/** Plugin views win a tie with the built-in note view (priority 0). */
+export const PLUGIN_VIEW_PRIORITY = 10;
 export const ACTIVITY_BAR_PLUGIN_CAP = 6;
 const shownPanelEntries = new Set<string>();
 
@@ -180,6 +185,36 @@ export function registerStubs(rt: PluginRuntime): () => void {
         { pluginId: id, importerId: imp.id, title: imp.title },
         imp.extensions,
       ),
+    );
+  }
+  // A declared view claims its note names now; the plugin loads when the first such tab shows.
+  for (const v of info.contributes.views ?? []) {
+    const names = v.extensions.map((e) => e.toLowerCase());
+    disposers.push(
+      registerTabKind({
+        id: `${id}.${v.id}`,
+        pluginId: id,
+        priority: PLUGIN_VIEW_PRIORITY,
+        matches: (path) => {
+          const base = path.slice(path.lastIndexOf("/") + 1).toLowerCase();
+          return names.some((n) => base === n || base.endsWith(`.${n}`));
+        },
+        load: async () => {
+          const ok = await ensureActive(id);
+          const component = ok ? rt.components.get(`view:${v.id}`) : undefined;
+          if (!component) {
+            throw new Error(`view ${id}.${v.id} declared but not registered`);
+          }
+          const { asKindView } = await import("./pluginViews");
+          return {
+            default: asKindView(
+              id,
+              rt.info.permissions,
+              component as ComponentType<ViewProps>,
+            ),
+          };
+        },
+      }),
     );
   }
   setRegistrationCounts(

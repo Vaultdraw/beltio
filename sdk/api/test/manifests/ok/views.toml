@@ -1,0 +1,12 @@
+# code: none
+# rust: ok
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+
+[[contributes.views]]
+id = "board"
+title = "Board"
+extensions = ["kanban.md", "board.md"]

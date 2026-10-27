@@ -109,6 +109,20 @@ export interface StatusBarContribution {
 }
 
 /**
+ * A view declared in plugin.toml (`[[contributes.views]]`).
+ *
+ * @since 0.11.0
+ */
+export interface ViewContribution {
+  /** @since 0.11.0 */
+  id: string;
+  /** @since 0.11.0 */
+  title: string;
+  /** Note name endings such as `kanban.md`. @since 0.11.0 */
+  extensions: string[];
+}
+
+/**
  * Everything a plugin declares it adds to the app.
  *
  * @since 0.1.0
@@ -132,4 +146,10 @@ export interface PluginContributions {
    * @since 0.10.0
    */
   status_bar?: StatusBarContribution[];
+  /**
+   * Absent when the app that reads the manifest is older than 0.11.0.
+   *
+   * @since 0.11.0
+   */
+  views?: ViewContribution[];
 }

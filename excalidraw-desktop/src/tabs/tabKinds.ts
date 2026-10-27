@@ -37,6 +37,8 @@ export interface TabKind {
   /** `<pluginId>.<kind>`, unique. */
   id: string;
   pluginId: string;
+  /** A higher priority wins a tie between kinds that match the same file (default 0, plugin views 10). */
+  priority?: number;
   /** Says whether this kind shows the file at `path` (a cheap, pure check). */
   matches: (path: string) => boolean;
   /** Loads the view; called on the first tab of this kind that is shown. */
@@ -55,7 +57,13 @@ export function registerTabKind(kind: TabKind): () => void {
   if (kinds.some((k) => k.id === kind.id)) {
     throw new Error(`Tab kind "${kind.id}" is already registered`);
   }
-  kinds = [...kinds, kind];
+  // Highest priority first; kinds of equal priority keep their registration order.
+  const rank = kind.priority ?? 0;
+  const at = kinds.findIndex((k) => (k.priority ?? 0) < rank);
+  kinds =
+    at === -1
+      ? [...kinds, kind]
+      : [...kinds.slice(0, at), kind, ...kinds.slice(at)];
   emit();
   return () => {
     if (kinds.includes(kind)) {
@@ -65,7 +73,7 @@ export function registerTabKind(kind: TabKind): () => void {
   };
 }
 
-/** The kind that shows `path`, or undefined (the editor opens it). First registered wins. */
+/** The kind that shows `path`, or undefined (the editor opens it). Highest priority, then first registered, wins. */
 export function tabKindFor(path: string | null): TabKind | undefined {
   if (path === null || kinds.length === 0 || DRAWING.test(path)) {
     return undefined;

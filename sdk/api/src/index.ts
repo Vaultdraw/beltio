@@ -10,6 +10,7 @@ export type {
   CommandContribution,
   ImporterContribution,
   StatusBarContribution,
+  ViewContribution,
   PanelContribution,
   PluginContributions,
   PluginManifestInfo,
@@ -88,6 +89,7 @@ export type {
   SettingValue,
 } from "./settings";
 export type { StatusBarApi, StatusBarState } from "./statusBar";
+export type { ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { FontsApi, TextApi, TextFont } from "./text";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";

@@ -31,6 +31,7 @@ import {
 
 import { dataKeyFor, MAX_OPS_LIMIT } from "../shared/sceneRules";
 import { cleanStatus, type CleanStatus } from "../shared/statusBar";
+import { createViewNotes } from "../shared/viewFiles";
 import { permissionError } from "../shared/vaultPaths";
 
 import { fakeParseMarkdown, markdownParams } from "../shared/markdown";
@@ -61,6 +62,7 @@ import type {
   Json,
   MarkdownParseOptions,
   Plugin,
+  ViewProps,
   PluginContext,
   StorageApi,
   SettingDecl,
@@ -71,7 +73,7 @@ import type {
   ThemeMode,
   ThemeTokenName,
 } from "@vaultdraw/api";
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import type { RenderResult } from "@testing-library/react";
 import type {
   BootOptions,
@@ -136,6 +138,15 @@ export interface MockHost {
   startup(): Promise<void>;
   run(short: string): Promise<void>;
   openPanel(short: string): Promise<RenderResult>;
+  /** The notes a view can read, by vault-relative path. */
+  notes: {
+    seed(path: string, text: string): void;
+    text(path: string): string | undefined;
+  };
+  /** Opens a note in the view declared for its name, as a tab would, and renders it. */
+  openView(path: string): Promise<RenderResult>;
+  /** Files the view asked to open with `openPath`. */
+  openedFromViews(): { path: string; newTab: boolean }[];
   setSetting(
     key: string,
     value: SettingValue,
@@ -256,6 +267,11 @@ export function createMockHost(
     (info.contributes.status_bar ?? []).map((i) => [i.id, i] as const),
   );
   const statusItems = new Map<string, CleanStatus>();
+  const declaredViews = new Map(
+    (info.contributes.views ?? []).map((v) => [v.id, v] as const),
+  );
+  const viewNotes = createViewNotes();
+  const opened_views: { path: string; newTab: boolean }[] = [];
 
   // --- log, errors, toasts ---
   const logLine = (level: PluginLogLine["level"], text: string) => {
@@ -413,7 +429,7 @@ export function createMockHost(
       return d;
     };
     const refuse = (
-      what: "command" | "panel" | "importer" | "status bar item",
+      what: "command" | "panel" | "importer" | "status bar item" | "view",
       short: string,
     ): Disposable => {
       reportError(new Error(undeclaredMessage(what, short)), "register");
@@ -471,6 +487,7 @@ export function createMockHost(
     let workspaceApi: PluginContext["workspace"] | undefined;
     let importersApi: ImportersApi | undefined;
     let statusBarApi: PluginContext["statusBar"] | undefined;
+    let viewsApi: PluginContext["views"] | undefined;
     let pagesApi: PluginContext["pages"] | undefined;
     let foldersApi: PluginContext["folders"] | undefined;
     const ctx: PluginContext = {
@@ -650,6 +667,21 @@ export function createMockHost(
             return track(() => {
               if (importerImpls.get(importerId) === importer) {
                 importerImpls.delete(importerId);
+              }
+            });
+          },
+        });
+      },
+      get views() {
+        return (viewsApi ??= {
+          register(viewId, component) {
+            if (!declaredViews.has(viewId)) {
+              return refuse("view", viewId);
+            }
+            components.set(`view:${viewId}`, component as ComponentType);
+            return track(() => {
+              if (components.get(`view:${viewId}`) === component) {
+                components.delete(`view:${viewId}`);
               }
             });
           },
@@ -1112,6 +1144,64 @@ export function createMockHost(
       });
       return view!;
     },
+    notes: { seed: viewNotes.seed, text: viewNotes.text },
+    async openView(path) {
+      const base = path.slice(path.lastIndexOf("/") + 1).toLowerCase();
+      const found = [...declaredViews.values()].find((v) =>
+        v.extensions.some((e) => base === e || base.endsWith(`.${e}`)),
+      );
+      if (!enabled || !found) {
+        throw new Error(`no view is declared for ${path}`);
+      }
+      if (!deps) {
+        throw notSetUp("views need react and @testing-library/react");
+      }
+      const d = deps;
+      let shown: RenderResult | undefined;
+      await act(async () => {
+        const ok = await ensureActive();
+        const C = ok
+          ? (components.get(`view:${found.id}`) as
+              | ComponentType<ViewProps>
+              | undefined)
+          : undefined;
+        if (!C) {
+          throw new Error(`view ${id}.${found.id} declared but not registered`);
+        }
+        const { createElement: h, Component } = d.react;
+        class Boundary extends Component<
+          { children?: ReactNode },
+          { failed: boolean }
+        > {
+          state = { failed: false };
+          static getDerivedStateFromError() {
+            return { failed: true };
+          }
+          componentDidCatch(error: Error) {
+            reportError(error, "view render");
+          }
+          render() {
+            return this.state.failed
+              ? h("div", { role: "alert" }, "This plugin view crashed.")
+              : this.props.children;
+          }
+        }
+        shown = d.rtl.render(
+          h(
+            Boundary,
+            null,
+            h(C, {
+              path,
+              file: viewNotes.file(id, info.permissions, path),
+              openPath: (p, o) =>
+                opened_views.push({ path: p, newTab: o?.target === "new" }),
+            }),
+          ),
+        );
+      });
+      return shown!;
+    },
+    openedFromViews: () => opened_views.map((o) => ({ ...o })),
     setSetting: writeSetting,
     emit(name, payload) {
       [...(eventSubs.get(name) ?? [])].forEach((cb) => cb(payload));

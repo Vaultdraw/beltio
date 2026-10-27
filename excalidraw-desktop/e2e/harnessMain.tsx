@@ -140,6 +140,18 @@ if (params.get("seed") !== "empty") {
       SAMPLE_SCENE,
     );
   }
+  if (params.get("seed") === "checklist") {
+    // Opt-in (?seed=checklist): one note a plugin view claims (sdk/examples/checklist-view).
+    repository.seedNote("Groceries.checklist.md");
+    const noteFiles = new FakeNoteFiles();
+    noteFiles.setOnDisk(
+      "Groceries.checklist.md",
+      "# Groceries\n- [ ] milk\n- [x] eggs\n",
+    );
+    setNoteFiles(noteFiles);
+    (ownerWindow as unknown as { __noteFiles: FakeNoteFiles }).__noteFiles =
+      noteFiles;
+  }
   if (params.get("seed") === "search") {
     // Opt-in (?seed=search): keeps other specs' drawing counts unchanged.
     repository.seedDrawing("DSA/Shortest Paths.excalidraw", SEARCH_SCENE);

@@ -5,6 +5,7 @@ Plugins can add small pieces of interface. Each is declared in `plugin.toml`, so
 | Surface | Declare | Fill | Since |
 | --- | --- | --- | --- |
 | [Status bar item](#status-bar) | `[[contributes.status_bar]]` | `ctx.statusBar.set` | 0.10.0 |
+| [View of a note type](#views) | `[[contributes.views]]` | `ctx.views.register` | 0.11.0 |
 
 ## Status bar
 
@@ -36,3 +37,34 @@ const handle = ctx.statusBar.show("clock", { text: "Busy" }); // handle.dispose(
 - **Activation.** The item is empty until the plugin runs. Add `activation = ["onStartupFinished"]` for an item that should show from launch, or set it when one of the plugin's commands first runs.
 
 Example: [`sdk/examples/status-clock`](../examples/status-clock/plugin.toml). In tests, `plugin.statusBar()` lists the shown items and `plugin.clickStatusBar(id)` clicks one.
+
+## Views
+
+A view shows one kind of note in the main pane, in a tab, instead of the Markdown note view. A note belongs to a view when its name ends in one of the view's `extensions`, for example `groceries.checklist.md` for `checklist.md`.
+
+```toml
+permissions = ["vault.read", "vault.write"]   # what the view's file access needs
+
+[[contributes.views]]
+id = "checklist"                 # short id, unique in the plugin
+title = "Checklist"
+extensions = ["checklist.md"]    # each ends in ".md" with a name before it
+```
+
+```ts
+import { createElement as h } from "react";
+
+ctx.views.register("checklist", ({ path, file, openPath }) => {
+  // file.read() -> { text, revision }; file.write(text, revision) -> { revision }
+  return h("p", null, path);
+});
+```
+
+- **Lazy.** The app claims the names when the plugin is enabled and loads nothing. The plugin loads when the first matching tab is shown. A plugin view wins over the built-in note view for its names.
+- **Props.** `path` is the vault-relative path. `openPath(path, { target })` opens another file in the current or a new tab. `file` reads and saves the note.
+- **Guarded file access.** `file.read()` needs `vault.read`; `file.write()` needs `vault.write`. Without the permission the call rejects with a `PERMISSION` error. A write passes the revision the view read: if the file changed on disk since (an edit in another program), it is refused with `CONFLICT` and nothing is overwritten, so a view should reload. Each save keeps the previous text in the vault's file history, like the note view.
+- **Names.** Only notes (`.md`) are vault files a view can show for now, so every extension ends in `.md` with a name before it (`kanban.md`). `md`, `markdown` and `excalidraw.md` belong to the app. Two views cannot claim the same name in one plugin; if two plugins claim it, the one enabled first wins.
+- **Errors.** A view that throws while rendering shows "This plugin view crashed." and the error is attributed to the plugin.
+- **Notes off.** Notes appear in the file tree while the notes extension is on; turn it off and the note files are not listed, so views have nothing to open.
+
+Example: [`sdk/examples/checklist-view`](../examples/checklist-view/plugin.toml). In tests, `plugin.notes.seed(path, text)` puts a note on the fake disk and `plugin.openView(path)` opens it in its view.

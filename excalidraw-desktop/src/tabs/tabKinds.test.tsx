@@ -34,6 +34,16 @@ const register = (k: TabKind) => {
 };
 afterEach(() => disposers.splice(0).forEach((off) => off()));
 
+describe("tab kind priority", () => {
+  it("a higher priority wins a tie; equal priorities keep the registration order", () => {
+    register(kind({ id: "a", pluginId: "a" }));
+    register(kind({ id: "plugin", pluginId: "p", priority: 10 }));
+    register(kind({ id: "b", pluginId: "b" }));
+    expect(tabKindFor("x.md")?.id).toBe("plugin");
+    expect(getTabKinds().map((k) => k.id)).toEqual(["plugin", "a", "b"]);
+  });
+});
+
 describe("tab kind registry", () => {
   it("matches nothing until a kind is registered, and again after dispose", () => {
     expect(tabKindFor("a.md")).toBeUndefined();

@@ -75,6 +75,7 @@ const normalise = (m: TestManifest) => {
         title: x.id,
         ...x,
       })),
+      views: (c.views ?? []).map((x) => ({ title: x.id, ...x })),
       status_bar: (c.status_bar ?? []).map((x) => ({
         title: x.id,
         align: "right" as const,
@@ -95,7 +96,10 @@ export async function boot(
 ): Promise<TestPlugin> {
   const info = normalise(manifest);
   const deps =
-    info.contributes.panels.length > 0 ? await loadPanelDeps() : null;
+    info.contributes.panels.length > 0 ||
+    (info.contributes.views ?? []).length > 0
+      ? await loadPanelDeps()
+      : null;
   const host = createMockHost(info, plugin, deps, options);
   await host.startup();
 
@@ -122,6 +126,9 @@ export async function boot(
     info,
     run: host.run,
     openPanel: host.openPanel,
+    notes: host.notes,
+    openView: host.openView,
+    openedFromViews: host.openedFromViews,
     statusBar: host.statusBar,
     async clickStatusBar(id) {
       const item = host.statusBar().find((x) => x.id === id);
