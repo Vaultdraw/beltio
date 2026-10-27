@@ -4,10 +4,10 @@
  * empty array, so the menus cost nothing without plugins. Choosing an item runs
  * the plugin's command, which reads where it was chosen with `ctx.menus.target()`.
  */
+import { getAppCommandRunner } from "../commands/appRunner";
+import { runHandler } from "../commands/dispatcher";
+import { getRegisteredHandler } from "../commands/handlerRegistry";
 import { toastStore } from "../toasts/toastStore";
-
-import { errorText } from "./host/errors";
-import { runCommandById } from "./host/runner";
 
 import type { MenuTarget } from "./api";
 
@@ -59,6 +59,25 @@ export function getMenuItems(surface: MenuSurface): readonly MenuItemStub[] {
   return list;
 }
 
+/**
+ * Runs a command by id the way the palette does. No plugin host import here: the menus load with
+ * the app, and the plugin host must stay out of the startup graph (startupGraph.test.ts).
+ */
+function runCommand(id: string): void {
+  const runner = getAppCommandRunner();
+  if (runner) {
+    if (!runner(id)) {
+      throw new Error(`Command "${id}" is unknown or not available now`);
+    }
+    return;
+  }
+  const handler = getRegisteredHandler(id);
+  if (!handler) {
+    throw new Error(`Command "${id}" is unknown or not available now`);
+  }
+  runHandler(id, handler);
+}
+
 const targets = new Map<string, MenuTarget>();
 /** A chosen item whose command has not started yet (the plugin may still be loading). */
 let pending: { command: string; target: MenuTarget; at: number } | null = null;
@@ -95,11 +114,15 @@ export function beginMenuRun(pluginId: string, command: string): () => void {
 /** Runs the item's command; the command reads `target` through `ctx.menus.target()`. */
 export function runMenuItem(item: MenuItemStub, target: MenuTarget): void {
   pending = { command: item.command, target, at: performance.now() };
-  runCommandById(item.command).catch((err) => {
+  try {
+    runCommand(item.command);
+  } catch (err) {
     pending = null;
     toastStore.push({
-      message: `${item.pluginName}: ${errorText(err)}`,
+      message: `${item.pluginName}: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
       kind: "error",
     });
-  });
+  }
 }

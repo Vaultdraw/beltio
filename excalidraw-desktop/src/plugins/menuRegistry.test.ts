@@ -11,8 +11,8 @@ import {
   type MenuItemStub,
 } from "./menuRegistry";
 
-vi.mock("./host/runner", () => ({
-  runCommandById: vi.fn(async () => {}),
+vi.mock("../commands/appRunner", () => ({
+  getAppCommandRunner: () => () => true,
 }));
 
 const stub = (over: Partial<MenuItemStub> = {}): MenuItemStub => ({
