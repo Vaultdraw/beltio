@@ -1,6 +1,6 @@
 // Build the perf .app, run it once against a cloned vault, collect live marks + node-side metrics.
 import { spawn, execFile, execFileSync } from "node:child_process";
-import { createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { cpSync, createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { rm, mkdir } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -125,6 +125,9 @@ export async function runAppOnce({
   await mkdir(cfg, { recursive: true });
   await mkdir(state, { recursive: true });
   if (configToml) writeFileSync(path.join(cfg, "config.toml"), configToml);
+  // PERF_SNIPPETS_DIR (env, memory diagnosis): copy CSS snippets into the temp config dir (pair with
+  // PERF_CONFIG_TOML setting [appearance] snippets = [...]) to try a CSS change without a rebuild.
+  if (process.env.PERF_SNIPPETS_DIR) cpSync(process.env.PERF_SNIPPETS_DIR, path.join(cfg, "snippets"), { recursive: true });
   await sh("cp", ["-cR", pristineVault, vault]); // APFS clone
   // Leak mode: second vault for the in-app vault switch. The app only uses it when its smoke-mode
   // choose_vault honours EXCALIDRAW_VAULT_SMOKE_DIR_ALT (otherwise the scenario reports "unavailable").

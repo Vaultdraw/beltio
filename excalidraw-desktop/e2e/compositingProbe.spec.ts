@@ -50,7 +50,7 @@ const surfaces = (pids: number[]) => {
   return {
     tags: Object.fromEntries(Object.entries(tags).map(([k, v]) => [k, r(v)])),
     dims: Object.entries(dims)
-      .filter(([k]) => !k.includes("Canvas"))
+      .filter(([k]) => process.env.PM2_ALL || !k.includes("Canvas"))
       .map(([k, n]) => `${k} x${n}`)
       .join(", "),
   };
@@ -66,6 +66,14 @@ const VARIANTS: [string, string][] = [
   ],
   ["topbar-none", ".excalidraw .App-top-bar{display:none!important}"],
   ["tabs-none", ".vault-tabs{display:none!important}"],
+  // PM2_EXTRA="name=css|name2=css" adds variants without editing this file.
+  ...(process.env.PM2_EXTRA ?? "")
+    .split("|")
+    .filter(Boolean)
+    .map((v): [string, string] => {
+      const i = v.indexOf("=");
+      return [v.slice(0, i), v.slice(i + 1)];
+    }),
 ];
 const SEL = (
   process.env.PM2_VARIANTS ?? VARIANTS.map((v) => v[0]).join(",")
