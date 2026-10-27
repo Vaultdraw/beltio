@@ -107,7 +107,10 @@ describe("official plugins (on by default, no startup cost)", () => {
   });
 
   it("is enabled by default, yet boot starts no host and registers stubs", () => {
-    expect(getPreferences(window).pluginsEnabled).toEqual(["markdown-import"]);
+    expect(getPreferences(window).pluginsEnabled).toEqual([
+      "markdown-import",
+      "gallery",
+    ]);
     const { win, flush, queue } = fakeWin(true);
     bootPlugins(win);
     flush();

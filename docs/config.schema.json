@@ -1558,7 +1558,8 @@
         "enabled": {
           "description": "Ids of the plugins to load.",
           "default": [
-            "markdown-import"
+            "markdown-import",
+            "gallery"
           ],
           "type": "array",
           "items": {

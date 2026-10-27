@@ -733,6 +733,9 @@ if (params.has("graph")) {
         m.startPluginsHarness(ownerWindow, params),
       );
     }
+    return import("./pluginHarness").then((m) =>
+      m.installDefaultBackend(ownerWindow),
+    );
   });
 }
 

@@ -167,6 +167,22 @@ async function manifestFor(name: string): Promise<PluginInfo[]> {
   return res.ok ? [(await res.json()) as PluginInfo] : [];
 }
 
+/**
+ * No ?plugins: the app's default official plugins (the gallery) can be listed by the fake backend,
+ * so their stubs work. Nothing starts until one is used (the host loads on first use).
+ */
+export async function installDefaultBackend(win: Window): Promise<void> {
+  const infos = await manifestFor("gallery");
+  setPluginsBackend(
+    createFakeBackend(
+      infos,
+      (id, path) => `${FIXTURE_PREFIX}${id}/${path}`,
+      (path, scene) =>
+        (win as any).__vaultRepo?.seedDrawing(path, JSON.stringify(scene)),
+    ),
+  );
+}
+
 export async function startPluginsHarness(
   win: Window,
   params: URLSearchParams,

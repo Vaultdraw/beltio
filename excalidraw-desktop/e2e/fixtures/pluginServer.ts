@@ -88,6 +88,12 @@ const readOfficial = async (id: string) => {
         repeat: x.repeat ?? false,
       })),
       panels: [],
+      menus: (c.menus ?? []).map((x: any) => ({
+        surface: x.surface,
+        command: x.command,
+        title: x.title ?? null,
+        kinds: x.kinds ?? [],
+      })),
       settings: c.settings ?? [],
       importers: (c.importers ?? []).map((x: any) => ({
         id: x.id,

@@ -1792,7 +1792,7 @@ Plugins in the `plugins/` folder of the config folder.
 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
-| `enabled` | `["markdown-import"]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load. |
+| `enabled` | `["markdown-import", "gallery"]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load. |
 | `importers` | `[object Object]` | a table like { txt = "text-import" } (extension = plugin id, "" for none) |  | Which plugin imports a file extension when two plugins claim it; `""` turns plugin handling off for that extension. |
 | `storage_limit_kb` | `1024` | an integer between 64 and 16384 |  | Most data one plugin may save with `ctx.storage`, in KiB; a save past it is refused. |
 | `scene_max_ops` | `500` | an integer between 1 and 1000 |  | Most ops in one plugin `scene.batch` call; a batch past it is refused. |

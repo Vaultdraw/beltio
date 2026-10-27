@@ -71,7 +71,7 @@ describe("the official plugin table (startup stubs)", () => {
         ),
       );
       expect(plugin.importers).toEqual(
-        doc.contributes.importers.map(
+        (doc.contributes.importers ?? []).map(
           (i: { id: string; title: string; extensions: string[] }) => ({
             id: i.id,
             title: i.title,

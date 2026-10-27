@@ -11,6 +11,7 @@ describe("[plugins] enabled", () => {
   it("defaults to the official markdown-import and parses valid ids; [] turns it off", () => {
     expect(configToPreferences({}).values.pluginsEnabled).toEqual([
       "markdown-import",
+      "gallery",
     ]);
     expect(
       configToPreferences({ plugins: { enabled: [] } }).values.pluginsEnabled,
@@ -22,7 +23,7 @@ describe("[plugins] enabled", () => {
 
   it("rejects bad ids with a problem", () => {
     const bad = configToPreferences({ plugins: { enabled: ["Bad Id"] } });
-    expect(bad.values.pluginsEnabled).toEqual(["markdown-import"]);
+    expect(bad.values.pluginsEnabled).toEqual(["markdown-import", "gallery"]);
     expect(bad.problems[0].key).toBe("plugins.enabled");
   });
 
