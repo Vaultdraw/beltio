@@ -214,11 +214,16 @@ export async function runDesktopPerf(): Promise<void> {
       details: { name, wallMs: Date.now(), perfMs: win.performance.now() },
     });
     if (layerDump) {
+      const counters = await (
+        win as unknown as { __perfMemCounters?: () => Promise<unknown> }
+      ).__perfMemCounters?.().catch(() => null);
       layerDump = await invoke<boolean>("perf_layer_tree", {
         label: name,
         dom: `${layerCensus(
           doc,
-        )}\n== canvases\n${canvasCensus()}\n== footprint peak rises\n${footprintTraceText()}`,
+        )}\n== canvases\n${canvasCensus()}\n== mem counters\n${JSON.stringify(
+          counters,
+        )}\n== footprint peak rises\n${footprintTraceText()}`,
       }).catch(() => false);
     }
   };
