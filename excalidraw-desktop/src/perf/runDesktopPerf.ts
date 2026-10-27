@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import fixturesConfig from "../../perf/fixtures.config.json";
 import { desktopRepository } from "../vault/DesktopVaultRepository";
 
+import { canvasCensus } from "./canvasTracker";
 import { installIpcTrace } from "./ipcTrace";
 import { runPerfScenarios } from "./perfScenarios";
 
@@ -114,18 +115,105 @@ export function modesFromVaultPath(vaultPath: string): PerfModes {
   };
 }
 
+/** Elements likely to get their own compositing layer, with their size (memory diagnosis only). */
+export function layerCensus(doc: Document): string {
+  const win = doc.defaultView;
+  if (!win) {
+    return "";
+  }
+  const lines: string[] = [];
+  for (const el of Array.from(doc.querySelectorAll<HTMLElement>("body *"))) {
+    const rect = el.getBoundingClientRect();
+    if (rect.width * rect.height < 40_000) {
+      continue;
+    }
+    const cs = win.getComputedStyle(el);
+    const why: string[] = [];
+    if (el instanceof HTMLCanvasElement) {
+      why.push(`canvas ${el.width}x${el.height}`);
+    }
+    if (el.tagName === "IFRAME" || el.tagName === "VIDEO") {
+      why.push(el.tagName.toLowerCase());
+    }
+    if (cs.position === "fixed" || cs.position === "sticky") {
+      why.push(cs.position);
+    }
+    if (cs.transform !== "none") {
+      why.push(`transform ${cs.transform}`);
+    }
+    if (cs.willChange !== "auto") {
+      why.push(`will-change ${cs.willChange}`);
+    }
+    if (cs.opacity !== "1") {
+      why.push(`opacity ${cs.opacity}`);
+    }
+    if (cs.filter !== "none") {
+      why.push("filter");
+    }
+    const backdrop =
+      cs.getPropertyValue("backdrop-filter") ||
+      cs.getPropertyValue("-webkit-backdrop-filter");
+    if (backdrop && backdrop !== "none") {
+      why.push("backdrop-filter");
+    }
+    if (cs.animationName !== "none") {
+      why.push(`animation ${cs.animationName}`);
+    }
+    if (cs.isolation === "isolate" || cs.mixBlendMode !== "normal") {
+      why.push("isolate/blend");
+    }
+    if (cs.contain !== "none") {
+      why.push(`contain ${cs.contain}`);
+    }
+    if (
+      /(auto|scroll)/.test(cs.overflowY + cs.overflowX) &&
+      (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth)
+    ) {
+      why.push(`scroller ${el.scrollWidth}x${el.scrollHeight}`);
+    }
+    if (why.length) {
+      const cls =
+        typeof el.className === "string"
+          ? el.className.split(/\s+/).slice(0, 3).join(".")
+          : "";
+      lines.push(
+        `${el.tagName.toLowerCase()}.${cls} ${Math.round(
+          rect.width,
+        )}x${Math.round(rect.height)}@${Math.round(rect.x)},${Math.round(
+          rect.y,
+        )} hidden=${
+          cs.visibility === "hidden" || cs.display === "none"
+        } | ${why.join("; ")}`,
+      );
+    }
+  }
+  lines.push(
+    `window ${win.innerWidth}x${win.innerHeight} dpr ${win.devicePixelRatio}`,
+  );
+  return lines.join("\n");
+}
+
 /** Packaged-app perf run (VITE_APP_PERF_TEST=true). Reports through the smoke bridge. */
 export async function runDesktopPerf(): Promise<void> {
   const win = window;
   const doc = win.document;
   const sleep = (ms: number) =>
     new Promise<void>((resolve) => win.setTimeout(resolve, ms));
-  const mark = (name: string) =>
-    invoke<void>("smoke_log", {
+  // Memory diagnosis (VAULTDRAW_PERF_LAYER_DIR): layer tree + DOM census per mark; off after the first "unset".
+  let layerDump = true;
+  const mark = async (name: string) => {
+    await invoke<void>("smoke_log", {
       step: "perf-mark",
       ok: true,
       details: { name, wallMs: Date.now(), perfMs: win.performance.now() },
     });
+    if (layerDump) {
+      layerDump = await invoke<boolean>("perf_layer_tree", {
+        label: name,
+        dom: `${layerCensus(doc)}\n== canvases\n${canvasCensus()}`,
+      }).catch(() => false);
+    }
+  };
 
   const markPids = async () => {
     try {

@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { installMemoryManagement } from "./memory/install";
+import { installCanvasTracker } from "./perf/canvasTracker";
 import { installNativeContextMenuSuppression } from "./platform/nativeContextMenu";
 import { waitAtMost } from "./platform/waitAtMost";
 import { bootPlugins } from "./plugins/boot";
@@ -9,6 +10,11 @@ import { getPreferences, getTheme, resolveTheme } from "./vault/preferences";
 import { initSettings } from "./vault/settingsSync";
 
 import "./desktop.css";
+
+// Perf builds track canvases for the memory probe (VAULTDRAW_PERF_LAYER_DIR).
+if (import.meta.env.VITE_APP_PERF_TEST === "true") {
+  installCanvasTracker(window);
+}
 
 // Smoke builds collect CSP violations for the plugin smoke step.
 if (import.meta.env.VITE_APP_SMOKE_TEST === "true") {

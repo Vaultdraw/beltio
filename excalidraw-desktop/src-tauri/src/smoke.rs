@@ -184,6 +184,62 @@ pub async fn perf_process_ids(window: tauri::WebviewWindow) -> Result<Value, Str
     Ok(json!({ "app": std::process::id(), "webContent": web, "network": network, "gpu": gpu }))
 }
 
+/// Memory diagnosis only (`VAULTDRAW_PERF_LAYER_DIR=<dir>`): writes the WKWebView's UI-side layer
+/// tree (`_caLayerTreeAsText`, a WebKit testing selector, guarded) to `<dir>/<label>.txt`.
+/// Returns false when the variable is unset, so the caller stops asking.
+#[tauri::command]
+pub async fn perf_layer_tree(window: tauri::WebviewWindow, label: String, dom: Option<String>) -> Result<bool, String> {
+    let Some(dir) = env::var_os("VAULTDRAW_PERF_LAYER_DIR").filter(|d| !d.is_empty()) else {
+        return Ok(false);
+    };
+    let (tx, rx) = std::sync::mpsc::channel::<String>();
+    #[cfg(target_os = "macos")]
+    window
+        .with_webview(move |webview| {
+            use objc2::runtime::AnyObject;
+            use objc2::msg_send;
+            use objc2_foundation::NSString;
+            let ptr = webview.inner();
+            let mut out = String::new();
+            if !ptr.is_null() {
+                // SAFETY: live WKWebView from wry on the main thread; selectors guarded.
+                unsafe {
+                    let view: &AnyObject = &*(ptr as *mut AnyObject);
+                    for name in ["_caLayerTreeAsText", "_scrollingTreeAsText"] {
+                        let s = objc2::runtime::Sel::register(&std::ffi::CString::new(name).unwrap());
+                        let responds: bool = msg_send![view, respondsToSelector: s];
+                        if !responds {
+                            out.push_str(&format!("== {name}: not available\n"));
+                            continue;
+                        }
+                        let text: *mut NSString = if name == "_caLayerTreeAsText" {
+                            msg_send![view, _caLayerTreeAsText]
+                        } else {
+                            msg_send![view, _scrollingTreeAsText]
+                        };
+                        let text = if text.is_null() { String::new() } else { (*text).to_string() };
+                        out.push_str(&format!("== {name}\n{text}\n"));
+                    }
+                }
+            }
+            let _ = tx.send(out);
+        })
+        .map_err(|e| e.to_string())?;
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (&window, &tx);
+    }
+    let mut text = rx.recv_timeout(std::time::Duration::from_secs(5)).unwrap_or_default();
+    if let Some(dom) = dom {
+        text.push_str("== dom census\n");
+        text.push_str(&dom);
+    }
+    let safe: String = label.chars().map(|c| if c.is_ascii_alphanumeric() || c == '-' { c } else { '_' }).collect();
+    let path = PathBuf::from(dir).join(format!("{}-{safe}.txt", std::process::id()));
+    fs::write(&path, text).map_err(|e| e.to_string())?;
+    Ok(true)
+}
+
 /// A smoke or perf run (as opposed to the smoke-test build launched by hand).
 pub fn test_run() -> bool {
     enabled() || env::var("VAULTDRAW_PERF").ok().as_deref() == Some("1")
