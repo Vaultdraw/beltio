@@ -8,6 +8,7 @@
 // ?pluginData=<ids> gives those plugins saved ctx.storage data (Delete data).
 import { registeredCommands } from "../src/commands/registry";
 import { ensureActive } from "../src/plugins/host";
+import { getPluginLog } from "../src/plugins/host/errors";
 import {
   getPluginCosts,
   getStubRegistrationMs,
@@ -203,6 +204,7 @@ export async function startPluginsHarness(
     backend,
     ensureActive,
     getPluginCosts,
+    getPluginLog,
     getStubRegistrationMs,
     hasCommand: (id: string) => registeredCommands().some((c) => c.id === id),
   };

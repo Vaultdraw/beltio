@@ -133,7 +133,7 @@ const plugin: Plugin = definePlugin({
         parts: part,
         elements,
       };
-      ctx.log.info("markdown import", last);
+      ctx.log.info(`markdown import ${JSON.stringify(last)}`);
     }
 
     // The importer: a .md file picked or dropped anywhere (no drawing needs to be open).
@@ -251,7 +251,7 @@ const plugin: Plugin = definePlugin({
           return;
         }
         const t = last;
-        ctx.log.info("import timings", t);
+        ctx.log.info(`import timings ${JSON.stringify(t)}`);
         ctx.ui.toast(
           `${t.name}: table ${ms(t.tableMs)}, parse ${ms(
             t.parseMs,
