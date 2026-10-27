@@ -98,6 +98,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- An arrow or line no longer shows at the top-left corner (scene 0,0) while you drag it and jumps into place on release: the preview is now drawn where you started. A new end-to-end spec (`shapesMatrix`) draws every shape tool in every stroke style, width, roughness, fill, edge and arrowhead and checks it while dragging, after saving and reopening, in dark mode, zoomed, and in the SVG export.
+
 - Library: an edit to `library.excalidrawlib` made outside the app now shows up live when your config folder is reached through a symlink (stowed dotfiles, a linked folder). The change event arrived under the real path and was dropped.
 
 - `vaultdraw launch --safe` reaching an app whose window is still starting is no longer lost, and is asked only once. A normal restart no longer edits the app's own environment while it exits; the new process just starts without `VAULTDRAW_SAFE`.
