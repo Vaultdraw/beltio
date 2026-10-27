@@ -1,3 +1,5 @@
+import { DRAWING_EXT } from "../vault/fileKind";
+
 import { FLAG_TAG, FLAG_UNRESOLVED } from "./types";
 
 import type { Adjacency, GraphData } from "./types";
@@ -5,7 +7,7 @@ import type { Adjacency, GraphData } from "./types";
 const MAGIC = 0x31474456; // "VDG1" little-endian
 const VERSION = 1;
 const HEADER_WORDS = 8;
-const EXT = ".excalidraw";
+const EXT = DRAWING_EXT;
 
 export class GraphDecodeError extends Error {
   constructor(message: string) {

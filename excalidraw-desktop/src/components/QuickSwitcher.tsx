@@ -20,6 +20,8 @@ import {
   useState,
 } from "react";
 
+import { stripDrawingExt } from "../vault/fileKind";
+
 import { chordFromEvent } from "../commands/keys";
 import {
   getCommand,
@@ -83,7 +85,6 @@ const MODE_TEXT: Record<
   },
 };
 const NO_ITEMS: readonly PaletteItem[] = [];
-const EXTENSION = /\.excalidraw$/i;
 const DRILL_SEPARATOR = ": ";
 /** Rows painted before the rest of the (capped) result list is added. */
 const FIRST_ROWS = 24;
@@ -153,7 +154,7 @@ const RowView = memo(
     if (row.kind === "drawing") {
       const { path } = row.drawing;
       const slash = path.lastIndexOf("/");
-      const nameEnd = path.replace(EXTENSION, "").length;
+      const nameEnd = stripDrawingExt(path).length;
       body = (
         <>
           <span className="vault-quick__icon">

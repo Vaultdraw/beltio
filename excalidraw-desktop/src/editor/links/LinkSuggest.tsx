@@ -1,12 +1,13 @@
 import { useSyncExternalStore } from "react";
 
+import { stripDrawingExt } from "../../vault/fileKind";
+
 import "./links.css";
 
 import type { ReactNode } from "react";
 
 import type { SuggestRow, WikiAutocomplete } from "./wikiAutocomplete";
 
-const EXT = /\.excalidraw$/i;
 const POPUP_WIDTH = 320;
 const POPUP_MAX_HEIGHT = 280;
 
@@ -56,7 +57,7 @@ function Row({ row }: { row: SuggestRow }) {
     return <TagRow row={row} />;
   }
   const path = row.path;
-  const end = EXT.test(path) ? path.length - ".excalidraw".length : path.length;
+  const end = stripDrawingExt(path).length;
   const slash = path.lastIndexOf("/") + 1;
   const marks = new Set(row.positions);
   return (

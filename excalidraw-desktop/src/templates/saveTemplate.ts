@@ -1,3 +1,4 @@
+import { DRAWING_EXT } from "../vault/fileKind";
 import { ensureFolder } from "../vault/newDrawing";
 import { getCleanDrawingName, validateEntryName } from "../vault/treeStore";
 import { joinPath } from "../vault/types";
@@ -6,7 +7,7 @@ import { listTemplates, type TemplateDeps } from "./listTemplates";
 
 import type { TemplateEntry } from "./types";
 
-const EXT = ".excalidraw";
+const EXT = DRAWING_EXT;
 const MAX_ATTEMPTS = 50;
 
 export async function saveAsTemplate(

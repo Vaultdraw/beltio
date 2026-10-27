@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 
+import { stripDrawingExt } from "../../vault/fileKind";
+
 import { Highlighted } from "../../search/highlight";
 import { useVaultSearch } from "../../search/useVaultSearch";
 import { getParentPath, searchEntries } from "../../vault/treeStore";
@@ -52,7 +54,7 @@ interface Props {
   onOpenFolder: (path: string) => void;
 }
 
-const stripExt = (name: string) => name.replace(/\.excalidraw$/i, "");
+const stripExt = (name: string) => stripDrawingExt(name);
 const fmt = formatCount;
 
 const entryToHit = (entry: VaultEntry): SearchHit => ({

@@ -7,6 +7,8 @@
  * - Link field: `[[x]]`, `vaultdraw://open?file=x`, `./x.excalidraw`,
  *   `x.excalidraw`. Anything else (web URLs, `/...`) is not a vault link.
  */
+import { hasDrawingExt, stripDrawingExt } from "../vault/fileKind";
+
 import { decodeVaultUrl, VAULT_URL_PREFIX } from "./linkUri";
 
 export const MAX_LINK_CHARS = 256;
@@ -21,9 +23,7 @@ export type LinkSpan = {
 
 export type LinkField = { target: string; relative?: boolean };
 
-const EXTENSION = /\.excalidraw$/i;
-
-export const stripExtension = (target: string) => target.replace(EXTENSION, "");
+export const stripExtension = (target: string) => stripDrawingExt(target);
 
 /** `inner` of `[[inner]]` -> target/label, or null when it is not a link. */
 function parseInner(
@@ -106,7 +106,7 @@ export function parseLinkField(
   if (/^[a-z][a-z0-9+.-]*:/i.test(raw) || raw.startsWith("/")) {
     return null;
   }
-  if (EXTENSION.test(raw)) {
+  if (hasDrawingExt(raw)) {
     return { target: stripExtension(raw), relative: true };
   }
   return null;

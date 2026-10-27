@@ -5,6 +5,7 @@
  * contract from `../vault/types.ts` with an in-memory filesystem so QA tests
  * can run before the native Rust backend and UI workers land.
  */
+import { fileKind } from "../vault/fileKind";
 import type {
   DrawingFile,
   RecoveryEntry,
@@ -75,6 +76,15 @@ export function assertValidDrawingPath(path: string): void {
   if (!path.endsWith(".excalidraw")) {
     throw makeError("INVALID_PATH", `drawing must end in .excalidraw: ${path}`);
   }
+}
+
+/** Like the native reader: `.excalidraw` drawings and read-only Obsidian `.excalidraw.md` files. */
+function assertReadableDrawingPath(path: string): void {
+  if (fileKind(path) === "excalidrawMd") {
+    assertValidRelativePath(path);
+    return;
+  }
+  assertValidDrawingPath(path);
 }
 
 type FileRow = { json: string; revision: string };
@@ -158,7 +168,7 @@ export class FakeVaultRepository implements VaultRepository {
 
   /** Seed helper: create folder chain implicitly. */
   seedDrawing(path: string, json: string): string {
-    assertValidDrawingPath(path);
+    assertReadableDrawingPath(path);
     const parent = path.includes("/")
       ? path.slice(0, path.lastIndexOf("/"))
       : "";
@@ -167,6 +177,15 @@ export class FakeVaultRepository implements VaultRepository {
     this.files.set(path, { json, revision });
     return revision;
   }
+
+  /** A Markdown note (listed as `note`; it has no drawing content). */
+  seedNote(path: string): void {
+    assertValidRelativePath(path);
+    this.seedFolder(path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
+    this.notes.add(path);
+  }
+
+  private notes = new Set<string>();
 
   seedFolder(path: string): void {
     if (path === "") {
@@ -287,9 +306,23 @@ export class FakeVaultRepository implements VaultRepository {
           rows.set(rest, {
             path: filePath,
             name: rest,
-            kind: "drawing",
+            kind: fileKind(filePath) === "excalidrawMd" ? "excalidrawMd" : "drawing",
             modifiedAt: this.mtimes.get(filePath) ?? Date.now(),
             size: row.json.length,
+          });
+        }
+      }
+    }
+    for (const notePath of this.notes) {
+      if (notePath.startsWith(prefix)) {
+        const rest = notePath.slice(prefix.length);
+        if (rest && !rest.includes("/")) {
+          rows.set(rest, {
+            path: notePath,
+            name: rest,
+            kind: "note",
+            modifiedAt: Date.now(),
+            size: 0,
           });
         }
       }
@@ -299,7 +332,7 @@ export class FakeVaultRepository implements VaultRepository {
 
   async readDrawing(handle: string, path: string): Promise<DrawingFile> {
     this.ensureOpen(handle);
-    assertValidDrawingPath(path);
+    assertReadableDrawingPath(path);
     await this.delay();
     const row = this.files.get(path);
     if (!row) {

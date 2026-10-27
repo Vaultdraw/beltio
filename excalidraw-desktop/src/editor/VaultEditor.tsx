@@ -31,6 +31,8 @@ import type {
   ImageExportRequest,
 } from "@excalidraw/excalidraw/types";
 
+import { stripDrawingExt } from "../vault/fileKind";
+
 import {
   isPdfFile,
   planImport,
@@ -831,7 +833,7 @@ const VaultEditorComponent = ({
       return;
     }
     const ownerDocument = mounted.ownerDocument;
-    const baseName = nameRef.current.replace(/\.excalidraw$/i, "") || "Drawing";
+    const baseName = stripDrawingExt(nameRef.current) || "Drawing";
     exportingRef.current = true;
     setExporting(true);
     try {

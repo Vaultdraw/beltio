@@ -1,6 +1,7 @@
+import { DRAWING_EXT } from "../vault/fileKind";
 import { decodeVaultUrl } from "../links/linkUri";
 
-const EXT = ".excalidraw";
+const EXT = DRAWING_EXT;
 
 const normalize = (path: string): string => {
   const out: string[] = [];

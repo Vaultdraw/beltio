@@ -9,6 +9,8 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { fileKind, stripDrawingExt } from "./vault/fileKind";
+
 import { errorMessage, isNotFoundError } from "./vault/types";
 import {
   desktopRepository,
@@ -364,6 +366,9 @@ export const VaultApp = ({
   );
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
   const [loadingVault, setLoadingVault] = useState(false);
+  const [dismissedMdBanner, setDismissedMdBanner] = useState<string | null>(
+    null,
+  );
   const [globalAlert, setGlobalAlert] = useState<{
     message: string;
     type: "error" | "info";
@@ -2507,7 +2512,7 @@ export const VaultApp = ({
     () =>
       recentDrawings.map((entry) => ({
         path: entry.path,
-        name: getBaseName(entry.path).replace(/\.excalidraw$/i, ""),
+        name: stripDrawingExt(getBaseName(entry.path)),
         folder: getParentPath(entry.path) || vaultName,
       })),
     [recentDrawings, vaultName],
@@ -2712,6 +2717,17 @@ export const VaultApp = ({
                 dismissLabel="Dismiss alert"
               />
             )}
+            {activeDoc &&
+              fileKind(activeDoc.path) === "excalidrawMd" &&
+              dismissedMdBanner !== activeDoc.path && (
+                <Banner
+                  kind="info"
+                  testId="excalidraw-md-banner"
+                  onDismiss={() => setDismissedMdBanner(activeDoc.path)}
+                  dismissLabel="Dismiss notice"
+                  message="Obsidian Excalidraw drawing: shown read-only so the plugin's file stays intact. Use Save a copy to edit it as a .excalidraw drawing."
+                />
+              )}
             {activeDoc ? (
               <div
                 // Loading blocks the pointer here (CSS), never through
@@ -2720,7 +2736,9 @@ export const VaultApp = ({
                 // the document hook flushes again before it is replaced.
                 inert={mainCovered}
                 className={`vault-editor-container ${
-                  vault.readOnly ? "vault-editor-container--readonly" : ""
+                  vault.readOnly || fileKind(activeDoc.path) === "excalidrawMd"
+                    ? "vault-editor-container--readonly"
+                    : ""
                 } ${editorLoading ? "vault-editor-container--busy" : ""}`}
               >
                 <EditorComponent
@@ -2732,8 +2750,16 @@ export const VaultApp = ({
                   onChange={changeDoc}
                   onExport={exportEditorFile}
                   loading={editorLoading}
-                  readOnly={vault.readOnly || isClosing || mainCovered}
-                  documentReadOnly={vault.readOnly}
+                  readOnly={
+                    vault.readOnly ||
+                    fileKind(activeDoc.path) === "excalidrawMd" ||
+                    isClosing ||
+                    mainCovered
+                  }
+                  documentReadOnly={
+                    vault.readOnly ||
+                    fileKind(activeDoc.path) === "excalidrawMd"
+                  }
                   disabled={isClosing || mainCovered}
                   theme={appTheme}
                   onThemeChange={handleCanvasThemeChange}
@@ -2827,6 +2853,12 @@ export const VaultApp = ({
           activePath={activeDoc?.path ?? null}
           collapsed={navigatorHidden}
           onToggleCollapse={handleToggleNavigator}
+          onOpenNote={() =>
+            toastStore.push({
+              message:
+                "Notes open with the notes extension, which is not installed.",
+            })
+          }
           onOpenSettings={() => openSettings()}
           onOpenGraph={
             layout.shown.activity_bar || !ext.graph ? undefined : openGraph

@@ -6,20 +6,18 @@
  * The palette's ranking only knows names, so there is no "Also matches text
  * inside" group: content hits live in the navigator search.
  */
+import { stripDrawingExt } from "../vault/fileKind";
+
 import type { PaletteMode, RankedRow } from "./rank";
 
 export const createKey = (name: string) => `create:${name}`;
 
-const EXTENSION = /\.excalidraw$/i;
 /** Characters that would turn a typed name into a path. */
 const NOT_A_NAME = /[\\/:]/;
 
 /** `name` as the file's base name without extension, lower case. */
 const baseName = (path: string) =>
-  path
-    .slice(path.lastIndexOf("/") + 1)
-    .replace(EXTENSION, "")
-    .toLowerCase();
+  stripDrawingExt(path.slice(path.lastIndexOf("/") + 1)).toLowerCase();
 
 /** Rows plus a Create row when `query` is a fresh, valid drawing name. */
 export function withCreateRow(
@@ -28,7 +26,7 @@ export function withCreateRow(
   mode: PaletteMode,
   enabled: boolean,
 ): RankedRow[] {
-  const name = query.trim().replace(EXTENSION, "");
+  const name = stripDrawingExt(query.trim());
   if (!enabled || mode !== "files" || !name || NOT_A_NAME.test(name)) {
     return rows;
   }

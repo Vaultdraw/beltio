@@ -2,11 +2,11 @@
  * Tabs (F5): pure label helpers for the strip. No React, no IO.
  */
 
+import { entryDisplayName } from "../vault/fileKind";
+
 import type { Tab } from "./types";
 
 export const HOME_TAB_LABEL = "New tab";
-
-const EXTENSION = /\.excalidraw$/i;
 
 /** File name without the `.excalidraw` extension; home tab => "New tab". */
 export const tabName = (path: string | null): string => {
@@ -14,7 +14,7 @@ export const tabName = (path: string | null): string => {
     return HOME_TAB_LABEL;
   }
   const base = path.split("/").pop() ?? path;
-  return base.replace(EXTENSION, "") || base;
+  return entryDisplayName(base) || base;
 };
 
 /** "Intro · DP/" style suffix from the `depth` closest parent folders. */

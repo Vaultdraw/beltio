@@ -12,6 +12,8 @@ import {
   useState,
 } from "react";
 
+import { stripDrawingExt } from "../../vault/fileKind";
+
 import {
   GALLERY_COMMAND_IDS,
   GALLERY_MOVES,
@@ -63,9 +65,7 @@ export interface GalleryViewProps {
 }
 
 const displayName = (e: VaultEntry) =>
-  e.kind === "folder"
-    ? e.name
-    : getBaseName(e.path).replace(/\.excalidraw$/i, "");
+  e.kind === "folder" ? e.name : stripDrawingExt(getBaseName(e.path));
 
 const Tile = memo(
   ({

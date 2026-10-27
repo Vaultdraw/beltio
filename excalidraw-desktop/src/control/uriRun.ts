@@ -10,6 +10,8 @@
  * link wants. `vault` is matched by folder name against the open and recent
  * vaults only. Run returns at once with `asking`; it never waits for a person.
  */
+import { stripDrawingExt } from "../vault/fileKind";
+
 import { ControlError } from "./errors";
 import { withExt } from "./params";
 
@@ -315,7 +317,7 @@ export function createUriRunner(deps: UriDeps) {
       }
       const file = await deps.readExternal(path, "drawing");
       const scene = JSON.parse(file.json) as unknown;
-      const stem = base.replace(/\.excalidraw$/i, "").trim() || "Imported";
+      const stem = stripDrawingExt(base).trim() || "Imported";
       let name = `${stem}.excalidraw`;
       for (let n = 2; await deps.exists(name); n += 1) {
         if (n > MAX_COPY_SUFFIX) {

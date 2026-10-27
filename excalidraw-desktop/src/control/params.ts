@@ -1,6 +1,8 @@
+import { DRAWING_EXT } from "../vault/fileKind";
+
 import { ControlError } from "./errors";
 
-export const EXT = ".excalidraw";
+export const EXT = DRAWING_EXT;
 
 export const objectParams = (params: unknown): Record<string, unknown> => {
   if (params && typeof params === "object" && !Array.isArray(params)) {

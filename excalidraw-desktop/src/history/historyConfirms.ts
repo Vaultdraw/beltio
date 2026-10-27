@@ -1,8 +1,10 @@
+import { stripDrawingExt } from "../vault/fileKind";
+
 /** Wording of the destructive history confirmations (command, panel, settings). */
 
 /** "Sketches/plan.excalidraw" -> "plan". */
 export const drawingName = (path: string): string =>
-  (path.split("/").pop() ?? path).replace(/\.excalidraw$/i, "");
+  stripDrawingExt(path.split("/").pop() ?? path);
 
 export const deleteAllConfirm = (path: string) => ({
   title: "Delete all history",

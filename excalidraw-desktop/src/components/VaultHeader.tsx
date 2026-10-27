@@ -1,3 +1,4 @@
+import { stripDrawingExt } from "../vault/fileKind";
 import { useCommandShortcut } from "../commands/useCommandShortcut";
 
 import { HistoryButton } from "./HistoryButton";
@@ -91,7 +92,7 @@ export const VaultHeader = ({
                 title={fileName}
                 data-tauri-drag-region
               >
-                {fileName.replace(/\.excalidraw$/i, "")}
+                {stripDrawingExt(fileName)}
               </span>
             </span>
           )}

@@ -1,3 +1,4 @@
+import { hasDrawingExt } from "../vault/fileKind";
 /**
  * What the plugin host may ask the vault shell (`ctx.vault.info`,
  * `ctx.workspace`). VaultApp sets it; the host reads it. No imports, so the
@@ -31,5 +32,5 @@ export const isPluginVisiblePath = (path: string): boolean => {
     return false;
   }
   const last = segs[segs.length - 1];
-  return !last.includes(".") || /\.excalidraw$/i.test(last);
+  return !last.includes(".") || hasDrawingExt(last);
 };

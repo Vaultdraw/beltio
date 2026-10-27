@@ -14,10 +14,13 @@ export type VaultInfo = {
   lockHolderPid?: number | null;
 };
 
+/** What the tree lists: folders, drawings (`.excalidraw`), Markdown notes and Obsidian Excalidraw files (`.excalidraw.md`). */
+export type EntryKind = "folder" | "drawing" | "note" | "excalidrawMd";
+
 export type VaultEntry = {
   path: string;
   name: string;
-  kind: "folder" | "drawing";
+  kind: EntryKind;
   modifiedAt: number;
   size: number;
 };

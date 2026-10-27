@@ -1,3 +1,4 @@
+import { stripDrawingExt } from "./fileKind";
 import { DEFAULT_SORT_ORDER, sortEntries, type SortOrder } from "./sortOrder";
 import { joinPath, type VaultEntry, type VaultRepository } from "./types";
 
@@ -182,9 +183,8 @@ export function checkTreeDrop(
           : "the vault root";
         return {
           allowed: false,
-          reason: `"${source.name.replace(
-            /\.excalidraw$/i,
-            "",
+          reason: `"${stripDrawingExt(
+            source.name,
           )}" already exists in ${where}`,
         };
       }
@@ -226,7 +226,10 @@ export async function scanVaultMetadata(
         if (signal?.aborted) {
           break;
         }
-        all.push(item);
+        // Notes are not drawings: the flat index (search, switcher) keeps drawings and folders.
+        if (item.kind !== "note") {
+          all.push(item);
+        }
         if (item.kind === "folder") {
           queue.push(item.path);
         }

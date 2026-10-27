@@ -117,6 +117,14 @@ if (params.get("seed") !== "empty") {
     SAMPLE_SCENE,
   );
   repository.seedDrawing("DSA/Graphs.excalidraw", SAMPLE_SCENE);
+  if (params.get("seed") === "obsidian") {
+    // Opt-in (?seed=obsidian): an Obsidian-style vault (notes, an Excalidraw plugin drawing).
+    repository.seedNote("Welcome.md");
+    repository.seedNote("Ideas.md");
+    repository.seedNote("Daily/2026-10-27.md");
+    repository.seedDrawing("Drawings/Sketch.excalidraw", SAMPLE_SCENE);
+    repository.seedDrawing("Drawings/Plugin Sketch.excalidraw.md", SAMPLE_SCENE);
+  }
   if (params.get("seed") === "search") {
     // Opt-in (?seed=search): keeps other specs' drawing counts unchanged.
     repository.seedDrawing("DSA/Shortest Paths.excalidraw", SEARCH_SCENE);

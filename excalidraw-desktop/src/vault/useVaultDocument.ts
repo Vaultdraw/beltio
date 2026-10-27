@@ -14,6 +14,7 @@ import {
   type VaultInfo,
   type VaultRepository,
 } from "./types";
+import { isWritableDrawing } from "./fileKind";
 import { SaveCoordinator } from "./saveCoordinator";
 
 import type { HistoryRepository } from "../history/types";
@@ -197,7 +198,10 @@ export const useVaultDocument = (
         idleMs: autosaveDelayMsRef.current,
         target: () => {
           const current = active.current;
-          return current && !current.deleted && !vaultRef.current?.readOnly
+          return current &&
+            !current.deleted &&
+            !vaultRef.current?.readOnly &&
+            isWritableDrawing(current.path)
             ? {
                 handle: current.handle,
                 path: current.path,
@@ -376,6 +380,7 @@ export const useVaultDocument = (
       if (
         !current ||
         vaultRef.current?.readOnly ||
+        !isWritableDrawing(current.path) ||
         current.currentJson === json
       ) {
         return;

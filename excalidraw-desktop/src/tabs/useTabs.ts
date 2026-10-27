@@ -9,6 +9,8 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
+import { stripDrawingExt } from "../vault/fileKind";
+
 import { registerCommandHandlers } from "../commands/handlerRegistry";
 import { TAB_COMMAND_IDS } from "../commands/tabCommands";
 import { getEditorApi } from "../editor/editorApi";
@@ -476,9 +478,7 @@ export function useTabs(args: UseTabsArgs): TabsApi {
         void open(path, opts?.target);
       },
       onSearch: (path: string) =>
-        live.current.searchFor(
-          (path.split("/").pop() ?? path).replace(/\.excalidraw$/i, ""),
-        ),
+        live.current.searchFor(stripDrawingExt(path.split("/").pop() ?? path)),
     };
   }, [runtime, open]);
 

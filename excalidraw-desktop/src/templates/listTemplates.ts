@@ -1,8 +1,9 @@
+import { DRAWING_EXT } from "../vault/fileKind";
 import { errorMessage, type VaultRepository } from "../vault/types";
 
 import type { GlobalTemplateStore, TemplateEntry } from "./types";
 
-const EXT = ".excalidraw";
+const EXT = DRAWING_EXT;
 
 const byName = (a: TemplateEntry, b: TemplateEntry) =>
   a.name.toLowerCase().localeCompare(b.name.toLowerCase()) ||

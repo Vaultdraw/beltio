@@ -16,6 +16,8 @@ import { isPageModeOn } from "@excalidraw/excalidraw/data/pageSetup";
 
 import type { ImageExportRequest } from "@excalidraw/excalidraw/types";
 
+import { stripDrawingExt } from "../vault/fileKind";
+
 import { emptyCanvasError } from "../export/exportError";
 
 import { withStandardCanvasColors } from "./canvasSync";
@@ -37,7 +39,7 @@ export const exportFileName = (
   extension: "png" | "svg" | "pdf",
   embedScene: boolean,
 ) => {
-  const base = drawingName.replace(/\.excalidraw$/i, "") || "Drawing";
+  const base = stripDrawingExt(drawingName) || "Drawing";
   return `${base}${embedScene ? ".excalidraw" : ""}.${extension}`;
 };
 

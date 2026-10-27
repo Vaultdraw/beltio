@@ -9,6 +9,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { entryDisplayName, stripDrawingExt } from "../vault/fileKind";
+
 import { getPreferences, updatePreferences } from "../vault/preferences";
 import { SORT_LABELS, SORT_ORDERS, type SortOrder } from "../vault/sortOrder";
 import { checkTreeDrop, getParentPath } from "../vault/treeStore";
@@ -41,6 +43,7 @@ import {
   IconCheck,
   IconCopy,
   IconDrawing,
+  IconNote,
   IconEdit,
   IconExportDocument,
   IconExportImage,
@@ -91,7 +94,7 @@ import type { DragSource } from "./tree/useTreeDrag";
 
 import type { ElementMatch, VaultSearch } from "../search/types";
 
-import type { VaultEntry, VaultInfo } from "../vault/types";
+import type { EntryKind, VaultEntry, VaultInfo } from "../vault/types";
 
 import type { ExplorerExportFormat } from "../export/exportFromFile";
 
@@ -119,6 +122,8 @@ interface VaultNavigatorProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   onOpenDrawing: (path: string, opts?: { target: OpenTarget }) => unknown;
+  /** A Markdown note was chosen in the tree (the notes plugin handles it; nothing opens without it). */
+  onOpenNote?: (path: string, opts?: { target: OpenTarget }) => unknown;
   /** Vault-wide search backend; null = name-only search over the loaded tree. */
   search?: VaultSearch | null;
   /**
@@ -191,6 +196,7 @@ export const VaultNavigator = ({
   collapsed,
   onToggleCollapse,
   onOpenDrawing,
+  onOpenNote,
   search = null,
   tagSearch,
   onOpenSearchResult,
@@ -462,6 +468,8 @@ export const VaultNavigator = ({
     () => flattenTree(treeNodes, expandedFolders),
     [treeNodes, expandedFolders],
   );
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
   const treeWindow = useTreeWindow(treeContainerRef, rows.length, !isSearching);
   const { scrollToRow } = treeWindow;
   // Keyboard focus moves between rows that may be outside the mounted window.
@@ -472,21 +480,30 @@ export const VaultNavigator = ({
   }, [focusedPath, rows, scrollToRow]);
 
   // Row handlers keep one identity so memoised rows skip unrelated renders.
-  const live = useRef({ onOpenDrawing, onToggleFolder });
-  live.current = { onOpenDrawing, onToggleFolder };
-  const onRowSelect = useCallback(
-    (path: string, kind: "folder" | "drawing", newTab?: boolean) => {
-      setFocusedPath(path);
-      if (kind === "drawing") {
-        void live.current.onOpenDrawing(
-          path,
-          newTab ? { target: "new" } : undefined,
-        );
+  const live = useRef({ onOpenDrawing, onOpenNote, onToggleFolder });
+  live.current = { onOpenDrawing, onOpenNote, onToggleFolder };
+  /** Opens a file row by its kind: drawings and Obsidian Excalidraw files as drawings, notes via the notes hook. */
+  const openEntry = useCallback(
+    (path: string, kind: EntryKind, newTab?: boolean) => {
+      const opts = newTab ? { target: "new" as const } : undefined;
+      if (kind === "note") {
+        void live.current.onOpenNote?.(path, opts);
       } else {
-        live.current.onToggleFolder(path);
+        void live.current.onOpenDrawing(path, opts);
       }
     },
     [],
+  );
+  const onRowSelect = useCallback(
+    (path: string, kind: EntryKind, newTab?: boolean) => {
+      setFocusedPath(path);
+      if (kind === "folder") {
+        live.current.onToggleFolder(path);
+      } else {
+        openEntry(path, kind, newTab);
+      }
+    },
+    [openEntry],
   );
   const onRowToggle = useCallback(
     (path: string) => live.current.onToggleFolder(path),
@@ -509,12 +526,12 @@ export const VaultNavigator = ({
   // Tree keys are `list.*` commands (rebindable in [hotkeys]). The controller
   // is stable and computes actions from this snapshot only on demand.
   const openRow = useCallback(
-    (path: string, newTab: boolean) =>
-      void live.current.onOpenDrawing(
-        path,
-        newTab ? { target: "new" } : undefined,
-      ),
-    [],
+    (path: string, newTab: boolean) => {
+      const kind = rowsRef.current.find((r) => r.entry.path === path)?.entry
+        .kind;
+      openEntry(path, kind ?? "drawing", newTab);
+    },
+    [openEntry],
   );
   const openRowMenu = useCallback(
     (entry: VaultEntry) => {
@@ -895,7 +912,7 @@ export const VaultNavigator = ({
           >
             <span className="vault-tree-drag-ghost__name">
               {drag.source.kind === "folder" ? <IconFolder /> : <IconDrawing />}
-              {drag.source.name.replace(/\.excalidraw$/i, "")}
+              {stripDrawingExt(drag.source.name)}
             </span>
             {drag.targetFolder !== null && (
               <span className="vault-tree-drag-ghost__hint">
@@ -1024,7 +1041,7 @@ export const VaultNavigator = ({
       {renameTarget && (
         <RenameModal
           initialName={renameTarget.name}
-          kind={renameTarget.kind}
+          kind={renameTarget.kind === "folder" ? "folder" : "drawing"}
           onRename={async (newName) => {
             await onRenameEntry(renameTarget.path, newName);
             setRenameTarget(null);
@@ -1037,7 +1054,7 @@ export const VaultNavigator = ({
       {moveTarget && (
         <MoveModal
           sourcePath={moveTarget.path}
-          sourceKind={moveTarget.kind}
+          sourceKind={moveTarget.kind === "folder" ? "folder" : "drawing"}
           folders={allFolderPaths}
           onMove={async (destFolder) => {
             await onMoveEntry(moveTarget.path, destFolder);
@@ -1079,11 +1096,7 @@ interface TreeRowsProps {
   activePath: string | null;
   focusedPath: string | null;
   readOnly: boolean;
-  onSelect: (
-    path: string,
-    kind: "folder" | "drawing",
-    newTab?: boolean,
-  ) => void;
+  onSelect: (path: string, kind: EntryKind, newTab?: boolean) => void;
   onToggleFolder: (path: string) => void;
   onNewInside: (folderPath: string, kind: "folder" | "drawing") => void;
   onOpenMenu: (entry: VaultEntry, x: number, y: number) => void;
@@ -1198,7 +1211,11 @@ const TreeRow = memo(
         style={{ "--depth": depth } as React.CSSProperties}
         data-tree-path={entry.path}
         data-tree-kind={entry.kind}
-        onPointerDown={(e) => onRowPointerDown(e, entry)}
+        onPointerDown={(e) => {
+          if (isFolder || entry.kind === "drawing") {
+            onRowPointerDown(e, entry);
+          }
+        }}
         onPointerEnter={() => setHovered(true)}
         onPointerLeave={() => setHovered(false)}
         onFocus={() => setFocusWithin(true)}
@@ -1238,12 +1255,12 @@ const TreeRow = memo(
             </span>
           ) : (
             <span className="vault-tree-item__icon">
-              <IconDrawing />
+              {entry.kind === "note" ? <IconNote /> : <IconDrawing />}
             </span>
           )}
 
           <span className="vault-tree-item__name" title={entry.path}>
-            {isFolder ? entry.name : entry.name.replace(/\.excalidraw$/i, "")}
+            {isFolder ? entry.name : entryDisplayName(entry.name)}
           </span>
           {tags && <TagChips tags={tags} onFilter={onFilterTag} />}
         </div>
@@ -1440,6 +1457,8 @@ const RowMenu = ({
 }: RowMenuProps) => {
   const { entry } = state;
   const isFolder = entry.kind === "folder";
+  // Notes and Obsidian Excalidraw files only offer "Reveal" from the tree (no edits, no exports).
+  const isDrawing = entry.kind === "drawing";
 
   const item = (
     label: string,
@@ -1476,26 +1495,30 @@ const RowMenu = ({
           )}
         </>
       )}
-      {!isFolder &&
+      {isDrawing &&
         !readOnly &&
         item("Duplicate", <IconCopy />, () => onDuplicate(entry))}
-      {!isFolder &&
+      {isDrawing &&
         onSaveAsTemplate &&
         item("Save as template…", <IconTemplate />, () =>
           onSaveAsTemplate(entry),
         )}
-      {!readOnly && item("Rename", <IconEdit />, () => onRename(entry))}
-      {!readOnly && item("Move to…", <IconMove />, () => onMove(entry))}
+      {!readOnly &&
+        (isFolder || isDrawing) &&
+        item("Rename", <IconEdit />, () => onRename(entry))}
+      {!readOnly &&
+        (isFolder || isDrawing) &&
+        item("Move to…", <IconMove />, () => onMove(entry))}
       {item("Reveal in file manager", <IconReveal />, () => onReveal(entry))}
       {isFolder &&
         item("Show as grid", <IconDrawing />, () => requestGallery(entry.path))}
-      {!isFolder &&
+      {isDrawing &&
         onOpenLocalGraph &&
         item("Open local graph", <IconGraph />, () => onOpenLocalGraph(entry))}
-      {!isFolder &&
+      {isDrawing &&
         onShowHistory &&
         item("History", <IconHistory />, () => onShowHistory(entry))}
-      {!isFolder && onExport && (
+      {isDrawing && onExport && (
         <>
           <div className="vault-menu__separator" role="separator" />
           {item("Export as PNG…", <IconExportImage />, () =>
@@ -1512,7 +1535,7 @@ const RowMenu = ({
           )}
         </>
       )}
-      {!readOnly && (
+      {!readOnly && (isFolder || isDrawing) && (
         <>
           <div className="vault-menu__separator" role="separator" />
           {item("Move to Trash", <IconTrash />, () => onTrash(entry), true)}

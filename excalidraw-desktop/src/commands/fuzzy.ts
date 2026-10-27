@@ -1,3 +1,4 @@
+import { DRAWING_EXT, hasDrawingExt } from "../vault/fileKind";
 /**
  * Fuzzy scorer for the quick switcher (Cmd+P): ranks drawing paths and command
  * titles with one function. Case/diacritics-insensitive subsequence matching,
@@ -9,7 +10,6 @@
  */
 
 const COMBINING_MARKS = /\p{M}/gu;
-const EXTENSION = /\.excalidraw$/i;
 
 const NEG = -0x3fffffff;
 const MATCH = 16;
@@ -59,9 +59,8 @@ const fold = (s: string) =>
 /** Precompute everything that does not depend on the query. Call once per item. */
 export function prepare(text: string): Prepared {
   let origEnd = text.length;
-  const ext = EXTENSION.exec(text);
-  if (ext && ext.index > 0) {
-    origEnd = ext.index;
+  if (hasDrawingExt(text) && text.length > DRAWING_EXT.length) {
+    origEnd = text.length - DRAWING_EXT.length;
   }
   const origBase =
     Math.max(

@@ -15,6 +15,8 @@ import {
   useState,
 } from "react";
 
+import { stripDrawingExt } from "../../vault/fileKind";
+
 import { useListKeys } from "../../commands/useListKeys";
 import { IconChevronDown, IconChevronRight } from "../Icons";
 import { DrawingTags } from "../tags/TagChips";
@@ -75,7 +77,7 @@ const TITLES: Record<Section, string> = {
   unresolved: "Unresolved links",
 };
 
-const stripExt = (p: string) => p.replace(/\.excalidraw$/i, "");
+const stripExt = (p: string) => stripDrawingExt(p);
 const baseName = (p: string) => stripExt(p.slice(p.lastIndexOf("/") + 1));
 const folderOf = (p: string) =>
   p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "";
