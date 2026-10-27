@@ -1,6 +1,7 @@
 import type { SettingDecl } from "../settings/declaredSettings";
 import type {
   MenuContribution,
+  ToolbarContribution,
   Plugin,
   PluginPermission,
   StatusBarContribution,
@@ -59,6 +60,8 @@ export interface PluginInfo {
     views?: ViewContribution[];
     /** Context menu items (`[[contributes.menus]]`); absent from older backends. */
     menus?: MenuContribution[];
+    /** Toolbar buttons (`[[contributes.toolbar]]`); absent from older backends. */
+    toolbar?: ToolbarContribution[];
   };
 }
 

@@ -76,6 +76,7 @@ import { copyToClipboard } from "../vault/clipboard";
 import { getPreferences, updatePreferences } from "../vault/preferences";
 
 import { PenBar } from "../pens/PenBar";
+import { PluginToolbar } from "../plugins/PluginToolbar";
 
 import { usePens } from "../pens/usePens";
 import { readDrawingStyles } from "../toolDefaults/drawingStyles";
@@ -1124,6 +1125,7 @@ const VaultEditorComponent = ({
         {editorChildren}
       </Excalidraw>
       {editorLinks.overlays}
+      {!readOnly && !disabled && <PluginToolbar win={window} />}
       {pageMode.notice && <PageNotice {...pageMode.notice} />}
       {pens.freedrawActive && !readOnly && !disabled && (
         <PenBar

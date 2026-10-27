@@ -1371,3 +1371,28 @@ fn menu_rules() {
     let many: String = (0..17).map(|i| format!("\n[[contributes.menus]]\nsurface = \"canvas\"\ncommand = \"c{i}\"\n")).collect();
     bad(&with(&many), "Too many menu items");
 }
+
+// ---- P7: toolbar buttons in the manifest ----
+
+fn toolbar(extra: &str) -> String {
+    with(&format!("\n[[contributes.commands]]\nid = \"go\"\ntitle = \"Go\"\n[[contributes.toolbar]]\ncommand = \"go\"\n{extra}"))
+}
+
+#[test]
+fn toolbar_parses_and_serialises() {
+    let m = manifest::parse(&toolbar("title = \"Do it\"\nicon = \"M4 4h16v16H4z\"\npriority = 3\n")).unwrap();
+    let v = serde_json::to_value(&m).unwrap();
+    assert_eq!(v["contributes"]["toolbar"][0], json!({"command": "go", "title": "Do it", "icon": "M4 4h16v16H4z", "priority": 3}));
+    assert!(manifest::parse(&minimal("a-b")).unwrap().contributes.toolbar.is_empty());
+}
+
+#[test]
+fn toolbar_rules() {
+    bad(&toolbar("icon = \"<svg/>\"\n"), "path data");
+    bad(&toolbar("icon = \"\"\n"), "path data");
+    bad(&toolbar("title = \" \"\n"), "title");
+    bad(&with("\n[[contributes.toolbar]]\ncommand = \"nope\"\n"), "does not declare");
+    bad(&toolbar("[[contributes.toolbar]]\ncommand = \"go\"\n"), "Duplicate toolbar");
+    let many: String = (0..9).map(|i| format!("\n[[contributes.commands]]\nid = \"c{i}\"\ntitle = \"C\"\n[[contributes.toolbar]]\ncommand = \"c{i}\"\n")).collect();
+    bad(&with(&many), "Too many toolbar");
+}

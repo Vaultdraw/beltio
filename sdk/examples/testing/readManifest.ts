@@ -38,6 +38,7 @@ const ARRAYS = [
   "status_bar",
   "views",
   "menus",
+  "toolbar",
 ] as const;
 
 /** Drop a trailing `# comment` that is not inside a basic string. */
@@ -86,6 +87,7 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
     status_bar: [],
     views: [],
     menus: [],
+    toolbar: [],
   };
   let current: Table = top;
   let extra = false;
@@ -159,6 +161,12 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
         command: m.command as string,
         title: (m.title as string | undefined) ?? null,
         kinds: (m.kinds as ("drawing" | "note" | "folder")[] | undefined) ?? [],
+      })),
+      toolbar: arrays.toolbar.map((x) => ({
+        command: x.command as string,
+        title: (x.title as string | undefined) ?? null,
+        icon: (x.icon as string | undefined) ?? null,
+        priority: (x.priority as number | undefined) ?? 0,
       })),
       views: arrays.views.map((v) => ({
         id: v.id as string,

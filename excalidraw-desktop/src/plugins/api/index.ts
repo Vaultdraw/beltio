@@ -80,6 +80,7 @@ export type {
   SettingValue,
   SourceFolder,
   MenuContribution,
+  ToolbarContribution,
   MenuTarget,
   MenusApi,
   StatusBarApi,

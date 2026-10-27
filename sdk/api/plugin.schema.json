@@ -147,6 +147,13 @@
           "type": "array",
           "maxItems": 16,
           "items": { "$ref": "#/definitions/menu" }
+        },
+        "toolbar": {
+          "title": "Toolbar buttons",
+          "description": "Buttons the plugin adds to a strip over the canvas, written as [[contributes.toolbar]]. At most 8. Each runs one of the plugin's commands; the app draws it without loading plugin code.",
+          "type": "array",
+          "maxItems": 8,
+          "items": { "$ref": "#/definitions/toolbarButton" }
         }
       },
       "additionalProperties": false
@@ -171,6 +178,42 @@
     }
   },
   "definitions": {
+    "toolbarButton": {
+      "title": "Toolbar button",
+      "description": "A button that runs a command. A command has at most one button.",
+      "type": "object",
+      "required": ["command"],
+      "properties": {
+        "command": {
+          "title": "Button command",
+          "description": "Short id of a command this plugin declares. It runs when the button is clicked.",
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+        },
+        "title": {
+          "title": "Button title",
+          "description": "The tooltip. Default: the command's title. 1 to 200 characters, not blank.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "\\S"
+        },
+        "icon": {
+          "title": "Button icon",
+          "description": "SVG path data (the d attribute) on a 24 by 24 grid: letters, digits, spaces and . , + - only, 1 to 1000 characters. Default: the first letter of the title.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "pattern": "^[A-Za-z0-9 .,+-]+$"
+        },
+        "priority": {
+          "title": "Button priority",
+          "description": "Higher comes first. Default 0.",
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
     "menu": {
       "title": "Menu item",
       "description": "A command in a right-click menu. A surface and command pair appears once.",

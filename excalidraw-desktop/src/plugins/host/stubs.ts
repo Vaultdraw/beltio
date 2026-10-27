@@ -25,6 +25,7 @@ import { claimsPath } from "../../../../sdk/api/shared/viewNames";
 import { registerTabKind } from "../../tabs/tabKinds";
 import { claimImporter } from "../importerMapAdmin";
 import { addMenuItems, beginMenuRun } from "../menuRegistry";
+import { addToolbarButtons } from "../toolbarRegistry";
 import { registerPluginSettings } from "../settings/registry";
 
 import { ensureActive } from "./activation";
@@ -209,6 +210,25 @@ export function registerStubs(rt: PluginRuntime): () => void {
     kinds: m.kinds,
   }));
   disposers.push(addMenuItems(menus));
+  // Declared toolbar buttons are drawn by the editor strip; a click runs a stub command.
+  disposers.push(
+    addToolbarButtons(
+      (info.contributes.toolbar ?? []).map((b) => {
+        const title =
+          b.title ??
+          info.contributes.commands.find((c) => c.id === b.command)?.title ??
+          b.command;
+        return {
+          pluginId: id,
+          pluginName: info.name,
+          title,
+          icon: b.icon,
+          priority: b.priority,
+          command: `${id}.${b.command}`,
+        };
+      }),
+    ),
+  );
   // A declared view claims its note names now; the plugin loads when the first such tab shows.
   for (const v of info.contributes.views ?? []) {
     disposers.push(

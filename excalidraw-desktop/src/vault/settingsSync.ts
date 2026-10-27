@@ -342,6 +342,7 @@ type ConfigField =
   | "pluginsStorageLimitKb"
   | "pluginsSceneMaxOps"
   | "pluginsStatusBar"
+  | "pluginsToolbar"
   | "activityBarOrder"
   | "activityBarHidden"
   | "navigatorSort"
@@ -576,6 +577,12 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
   {
     field: "pluginsStatusBar",
     key: "plugins.status_bar",
+    expected: "true or false",
+    valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "pluginsToolbar",
+    key: "plugins.toolbar",
     expected: "true or false",
     valid: (v) => typeof v === "boolean",
   },

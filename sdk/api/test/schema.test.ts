@@ -42,6 +42,8 @@ const NOT_EXPRESSIBLE: Record<string, string> = {
   "data-key-reserved": "depends on the plugin id (plugins.<id>)",
   "menu-command-unknown":
     "a reference to a command id declared elsewhere in the manifest",
+  "toolbar-command-unknown":
+    "a reference to a command id declared elsewhere in the manifest",
   "status-command-unknown":
     "a reference to a command id declared elsewhere in the manifest",
 };

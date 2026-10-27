@@ -80,11 +80,13 @@ export type TestManifest = Partial<Omit<PluginInfo, "contributes">> & {
       surface: MenuDecl["surface"];
       command: string;
     })[];
+    toolbar?: (Partial<ToolbarDecl> & { command: string })[];
     views?: (Partial<ViewDecl> & { id: string; extensions: string[] })[];
     status_bar?: (Partial<StatusBarContribution> & { id: string })[];
   };
 };
 
+type ToolbarDecl = NonNullable<PluginInfo["contributes"]["toolbar"]>[number];
 type ImporterDecl = NonNullable<PluginInfo["contributes"]["importers"]>[number];
 
 export interface FakeTheme {
@@ -261,6 +263,12 @@ const normalise = (m: TestManifest): PluginInfo => {
       settings: c.settings ?? [],
       importers: (c.importers ?? []).map((x) => ({ title: x.id, ...x })),
       menus: (c.menus ?? []).map((x) => ({ title: null, kinds: [], ...x })),
+      toolbar: (c.toolbar ?? []).map((x) => ({
+        title: null,
+        icon: null,
+        priority: 0,
+        ...x,
+      })),
       views: (c.views ?? []).map((x) => ({ title: x.id, ...x })),
       status_bar: (c.status_bar ?? []).map((x) => ({
         title: x.id,

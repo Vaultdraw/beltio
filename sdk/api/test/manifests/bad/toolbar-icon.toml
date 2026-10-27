@@ -1,0 +1,15 @@
+# code: contribution-invalid
+# rust: path data
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+
+[[contributes.commands]]
+id = "go"
+title = "Go"
+
+[[contributes.toolbar]]
+command = "go"
+icon = "<svg onload=x>"

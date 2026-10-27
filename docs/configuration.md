@@ -1794,6 +1794,7 @@ Plugins in the `plugins/` folder of the config folder.
 | `importers` | `[object Object]` | a table like { txt = "text-import" } (extension = plugin id, "" for none) |  | Which plugin imports a file extension when two plugins claim it; `""` turns plugin handling off for that extension. |
 | `storage_limit_kb` | `1024` | an integer between 64 and 16384 |  | Most data one plugin may save with `ctx.storage`, in KiB; a save past it is refused. |
 | `scene_max_ops` | `500` | an integer between 1 and 1000 |  | Most ops in one plugin `scene.batch` call; a batch past it is refused. |
+| `toolbar` | `true` | true or false |  | Show the strip of buttons plugins declare with `[[contributes.toolbar]]`. It appears only while a plugin declares a button. |
 | `status_bar` | `true` | true or false |  | Show the status bar plugins fill with `ctx.statusBar`. It appears only while a plugin item has text. |
 
 ### `[ai]`

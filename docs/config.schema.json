@@ -1587,6 +1587,11 @@
           "minimum": 1,
           "maximum": 1000
         },
+        "toolbar": {
+          "description": "Show the strip of buttons plugins declare with `[[contributes.toolbar]]`. It appears only while a plugin declares a button.",
+          "default": true,
+          "type": "boolean"
+        },
         "status_bar": {
           "description": "Show the status bar plugins fill with `ctx.statusBar`. It appears only while a plugin item has text.",
           "default": true,

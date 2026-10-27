@@ -342,6 +342,8 @@ autosave_delay_ms = 500
 # scene_max_ops = 500
 # Show the status bar plugins fill (only while an item has text)
 # status_bar = true
+# Show the strip of toolbar buttons plugins declare (only while one exists)
+# toolbar = true
 
 [ai]
 # The AI master switch; Settings and AI: Toggle AI show a warning first

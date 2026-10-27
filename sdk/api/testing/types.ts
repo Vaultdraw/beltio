@@ -3,6 +3,7 @@ import type {
   CommandContribution,
   ImporterContribution,
   MenuContribution,
+  ToolbarContribution,
   MenuTarget,
   StatusBarContribution,
   ViewContribution,
@@ -65,6 +66,7 @@ export interface TestManifest {
       id: string;
       extensions: string[];
     })[];
+    toolbar?: (Partial<ToolbarContribution> & { command: string })[];
     status_bar?: (Partial<StatusBarContribution> & { id: string })[];
   };
 }

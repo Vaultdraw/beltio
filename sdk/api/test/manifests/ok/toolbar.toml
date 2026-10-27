@@ -1,0 +1,17 @@
+# code: none
+# rust: ok
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 0
+main = "main.js"
+
+[[contributes.commands]]
+id = "go"
+title = "Go"
+
+[[contributes.toolbar]]
+command = "go"
+title = "Go there"
+icon = "M4 4h16v16H4z"
+priority = 2

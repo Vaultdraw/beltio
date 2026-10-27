@@ -115,7 +115,7 @@ export interface ImportersApi {
 export type { CommandsApi } from "./commands";
 export type { Disposable } from "./disposable";
 export type { AppEventMap, EventsApi } from "./events";
-export type { CommandContribution, ImporterContribution, MenuContribution, StatusBarContribution, ViewContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
+export type { CommandContribution, ImporterContribution, MenuContribution, StatusBarContribution, ToolbarContribution, ViewContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
 export type { FolderEntry, FoldersApi, PickSourceOptions, PickTargetOptions, SourceFolder, TargetFolder, } from "./folders";
 export type { ApiVersion, HostApi } from "./host";
 export type { ImportersApi, Importer, ImportInput, ImportOptions, ImportResult, } from "./importers";
@@ -182,6 +182,12 @@ export interface MenuContribution {
     title: string | null;
     kinds: ("drawing" | "note" | "folder")[];
 }
+export interface ToolbarContribution {
+    command: string;
+    title: string | null;
+    icon: string | null;
+    priority: number;
+}
 export interface PluginContributions {
     commands: CommandContribution[];
     panels: PanelContribution[];
@@ -190,6 +196,7 @@ export interface PluginContributions {
     status_bar?: StatusBarContribution[];
     views?: ViewContribution[];
     menus?: MenuContribution[];
+    toolbar?: ToolbarContribution[];
 }
 
 // markdown.ts

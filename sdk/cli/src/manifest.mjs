@@ -45,6 +45,9 @@ const IMPORTER_KEYS = new Set(["id", "title", "extensions"]);
 const MAX_STATUS_ITEMS = 8;
 const MAX_VIEWS = 8;
 const MAX_MENUS = 16;
+const MAX_TOOLBAR = 8;
+const MAX_ICON = 1000;
+const TOOLBAR_KEYS = new Set(["command", "title", "icon", "priority"]);
 const MENU_KEYS = new Set(["surface", "command", "title", "kinds"]);
 const MENU_SURFACES = ["tree", "tab", "canvas"];
 const TREE_KINDS = ["drawing", "note", "folder"];
@@ -442,6 +445,65 @@ function checkMenus(menus, commands, err) {
 }
 
 /**
+ * @param {Record<string, any>[]} buttons
+ * @param {Record<string, any>[]} commands
+ * @param {(code: string, message: string) => void} err
+ */
+function checkToolbar(buttons, commands, err) {
+  const ids = new Set(commands.map((c) => c.id));
+  const seen = new Set();
+  for (const x of buttons) {
+    for (const k of Object.keys(x)) {
+      if (!TOOLBAR_KEYS.has(k)) {
+        err("unknown-key", `Unknown key '${k}' in a toolbar button`);
+      }
+    }
+    if (!("command" in x)) {
+      err("missing-key", "A toolbar button is missing 'command'");
+    } else if (!ids.has(x.command)) {
+      err(
+        "toolbar-command-unknown",
+        `Toolbar button names command ${show(
+          x.command,
+        )}, which the plugin does not declare`,
+      );
+    }
+    if (
+      "title" in x &&
+      (typeof x.title !== "string" ||
+        x.title.trim() === "" ||
+        chars(x.title) > MAX_TITLE)
+    ) {
+      err(
+        "title-invalid",
+        `toolbar button title must be 1 to ${MAX_TITLE} characters`,
+      );
+    }
+    if (
+      "icon" in x &&
+      (typeof x.icon !== "string" ||
+        x.icon.length > MAX_ICON ||
+        !/^[A-Za-z0-9 .,+-]+$/.test(x.icon))
+    ) {
+      err(
+        "contribution-invalid",
+        "toolbar icon must be SVG path data (letters, digits, spaces and . , + -)",
+      );
+    }
+    if ("priority" in x && !Number.isInteger(x.priority)) {
+      err("contribution-invalid", "toolbar priority must be an integer");
+    }
+    if (seen.has(x.command)) {
+      err(
+        "contribution-duplicate",
+        `Duplicate toolbar button for command ${show(x.command)}`,
+      );
+    }
+    seen.add(x.command);
+  }
+}
+
+/**
  * @param {Record<string, any>[]} views
  * @param {(code: string, message: string) => void} err
  */
@@ -533,11 +595,12 @@ function checkContributes(c, err) {
         "status_bar",
         "views",
         "menus",
+        "toolbar",
       ].includes(k)
     ) {
       err(
         "unknown-key",
-        `Unknown key 'contributes.${k}' (use commands, panels, settings, importers, status_bar, views or menus)`,
+        `Unknown key 'contributes.${k}' (use commands, panels, settings, importers, status_bar, views, menus or toolbar)`,
       );
     }
   }
@@ -563,6 +626,10 @@ function checkContributes(c, err) {
   const statusBar = list("status_bar");
   const views = list("views");
   const menus = list("menus");
+  const toolbar = list("toolbar");
+  if (toolbar.length > MAX_TOOLBAR) {
+    err("too-many", `Too many toolbar buttons (max ${MAX_TOOLBAR})`);
+  }
   if (menus.length > MAX_MENUS) {
     err("too-many", `Too many menu items (max ${MAX_MENUS})`);
   }
@@ -650,6 +717,7 @@ function checkContributes(c, err) {
   checkStatusBar(statusBar, commands, err);
   checkViews(views, err);
   checkMenus(menus, commands, err);
+  checkToolbar(toolbar, commands, err);
   for (const s of settings) {
     const field = (k) => typeof s[k] === "string" && s[k] !== "";
     if (!field("key") || !field("type")) {

@@ -18,6 +18,8 @@ const MAX_IMPORTERS: usize = 8;
 const MAX_STATUS_ITEMS: usize = 8;
 const MAX_VIEWS: usize = 8;
 const MAX_MENUS: usize = 16;
+const MAX_TOOLBAR: usize = 8;
+const MAX_ICON: usize = 1000;
 const TREE_KINDS: [&str; 3] = ["drawing", "note", "folder"];
 const MAX_IMPORTER_EXTENSIONS: usize = 8;
 const MAX_DATA_KEY: usize = 64;
@@ -105,6 +107,20 @@ pub(crate) struct MenuItem {
     pub kinds: Vec<String>,
 }
 
+/// A toolbar button (`[[contributes.toolbar]]`): runs a command of the plugin. `icon` is SVG path data
+/// on a 24 by 24 grid (never markup); without it the button shows the first letter of its title.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct ToolbarItem {
+    pub command: String,
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub icon: Option<String>,
+    #[serde(default)]
+    pub priority: i32,
+}
+
 /// A view of a file type in the main pane (`[[contributes.views]]`): notes whose name ends in one of
 /// `extensions` (`kanban.md`) open in the plugin's component instead of the Markdown note view.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -158,6 +174,8 @@ pub(crate) struct Contributes {
     pub views: Vec<View>,
     #[serde(default)]
     pub menus: Vec<MenuItem>,
+    #[serde(default)]
+    pub toolbar: Vec<ToolbarItem>,
 }
 
 fn yes() -> bool {
@@ -344,6 +362,33 @@ fn check_menus(list: &[MenuItem], commands: &[Command]) -> Result<(), String> {
     Ok(())
 }
 
+fn check_toolbar(list: &[ToolbarItem], commands: &[Command]) -> Result<(), String> {
+    if list.len() > MAX_TOOLBAR {
+        return Err(format!("Too many toolbar buttons (max {MAX_TOOLBAR})"));
+    }
+    let mut seen = HashSet::new();
+    for x in list {
+        if !commands.iter().any(|c| c.id == x.command) {
+            return Err(format!("Toolbar button names command '{}', which the plugin does not declare", x.command));
+        }
+        if let Some(t) = &x.title {
+            check_title("toolbar button title", t)?;
+        }
+        if let Some(i) = &x.icon {
+            let ok = !i.trim().is_empty()
+                && i.len() <= MAX_ICON
+                && i.chars().all(|c| c.is_ascii_alphanumeric() || " .,+-".contains(c));
+            if !ok {
+                return Err(format!("Toolbar icon must be SVG path data (letters, digits, spaces and . , + -; 1 to {MAX_ICON} characters)"));
+            }
+        }
+        if !seen.insert(x.command.as_str()) {
+            return Err(format!("Duplicate toolbar button for command '{}'", x.command));
+        }
+    }
+    Ok(())
+}
+
 fn check_status_bar(list: &[StatusItem], commands: &[Command]) -> Result<(), String> {
     if list.len() > MAX_STATUS_ITEMS {
         return Err(format!("Too many status bar items (max {MAX_STATUS_ITEMS})"));
@@ -434,6 +479,7 @@ fn validate(raw: Raw) -> Result<Manifest, String> {
     check_status_bar(&c.status_bar, &c.commands)?;
     check_views(&c.views)?;
     check_menus(&c.menus, &c.commands)?;
+    check_toolbar(&c.toolbar, &c.commands)?;
     check_unique_ids("command", c.commands.iter().map(|x| x.id.as_str()))?;
     check_unique_ids("panel", c.panels.iter().map(|x| x.id.as_str()))?;
     for x in &c.commands {

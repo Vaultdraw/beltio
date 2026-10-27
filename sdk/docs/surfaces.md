@@ -7,9 +7,10 @@ Plugins can add small pieces of interface. Each is declared in `plugin.toml`, so
 | [Status bar item](#status-bar) | `[[contributes.status_bar]]` | `ctx.statusBar.set` | 0.10.0 |
 | [View of a note type](#views) | `[[contributes.views]]` | `ctx.views.register` | 0.11.0 |
 | [Context menu item](#context-menus) | `[[contributes.menus]]` | `ctx.menus.target` | 0.12.0 |
+| [Toolbar button](#toolbar) | `[[contributes.toolbar]]` | none | 0.14.0 |
 | [Opening a panel or view](#layout) | none | `ctx.views.open` | 0.13.0 |
 
-## Migration (0.9.0 to 0.13.0)
+## Migration (0.9.0 to 0.14.0)
 
 Everything here is additive: a plugin written for 0.9.0 runs unchanged. To use a surface in a plugin that must also run on an older app, ask for the feature and fall back:
 
@@ -23,8 +24,9 @@ if (ctx.host.has("statusBar")) ctx.statusBar.set("clock", { text });
 | 0.11.0 | views | `ctx.host.has("views")` |
 | 0.12.0 | context menu items | `ctx.host.has("menus")` |
 | 0.13.0 | `ctx.views.open` | `ctx.host.has("views.open")` |
+| 0.14.0 | toolbar buttons | `min_app` only (manifest table, no runtime call) |
 
-An older app refuses a `plugin.toml` with a table it does not know (`status_bar`, `views`, `menus`), so set `min_app` to the app version that ships the revision you use; `vaultdraw-plugin check` warns when it is lower.
+An older app refuses a `plugin.toml` with a table it does not know (`status_bar`, `views`, `menus`, `toolbar`), so set `min_app` to the app version that ships the revision you use; `vaultdraw-plugin check` warns when it is lower.
 
 ## Status bar
 
@@ -142,3 +144,26 @@ await ctx.views.open("checklist", { path: "Lists/groceries.checklist.md", newTab
 - **Command.** The example's `Checklist: open the list` is a palette command that calls `ctx.views.open`.
 
 In tests, `plugin.openPanelIds()` lists the open panels and `plugin.workspace.opened()` lists the notes opened in the main pane.
+
+## Toolbar
+
+A plugin adds a button to a strip over the canvas (top right, under the app's toolbar). A click runs one of the plugin's commands, so the action is also in the palette and can be given a key.
+
+```toml
+[[contributes.commands]]
+id = "count"
+title = "Count clicks"
+
+[[contributes.toolbar]]
+command = "count"
+title = "Count clicks"          # tooltip; default: the command's title
+icon = "M12 5v14M5 12h14"       # SVG path data, 24 by 24 grid; default: first letter of the title
+priority = 0                    # higher first
+```
+
+- **Zero cost.** The strip exists only while a plugin declares a button, and the plugin loads on the first click.
+- **Icons are path data,** never markup: letters, digits, spaces and `. , + -`, at most 1000 characters. The app draws it with the theme's text colour.
+- **Limits.** At most 8 buttons per plugin, one per command.
+- **User control.** `plugins.toolbar = false` hides the strip; the palette command `Toggle plugin toolbar` does the same.
+
+Example: [`sdk/examples/toolbar-demo`](../examples/toolbar-demo/plugin.toml).

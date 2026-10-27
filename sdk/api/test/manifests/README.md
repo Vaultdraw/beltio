@@ -41,8 +41,9 @@ Every file starts with two comment lines.
 | `contribution-duplicate` | Two commands share an id. |
 | `title-invalid` | Empty command or panel title. |
 | `setting-invalid` | A setting has no `key` or `type`. |
-| `too-many` | More than 200 commands (also 20 panels, 100 settings, 8 importers, 8 status bar items, 8 views, 16 menu items). |
+| `too-many` | More than 200 commands (also 20 panels, 100 settings, 8 importers, 8 status bar items, 8 views, 16 menu items, 8 toolbar buttons). |
 | `contribution-invalid` | Among others: a status bar item with an `align` other than `left` or `right`, or a menu item with an unknown `surface`. |
+| `toolbar-command-unknown` | A toolbar button whose `command` is not one of the plugin's commands. |
 | `menu-command-unknown` | A menu item whose `command` is not one of the plugin's commands. |
 | `status-command-unknown` | A status bar item whose `command` is not one of the plugin's commands. |
 | `importer-extension-invalid` | An importer extension that is not lower case letters and digits with dots between parts (no leading dot, at most 32 bytes), or is repeated. |

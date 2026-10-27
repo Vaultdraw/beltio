@@ -63,7 +63,7 @@ export function getMenuItems(surface: MenuSurface): readonly MenuItemStub[] {
  * Runs a command by id the way the palette does. No plugin host import here: the menus load with
  * the app, and the plugin host must stay out of the startup graph (startupGraph.test.ts).
  */
-function runCommand(id: string): void {
+export function runCommand(id: string): void {
   const runner = getAppCommandRunner();
   if (runner) {
     if (!runner(id)) {

@@ -1,0 +1,19 @@
+id = "toolbar-demo"
+name = "Toolbar demo"
+version = "0.1.0"
+api = 0
+min_app = "0.1.2"
+main = "main.js"
+description = "Example: a button in the strip over the canvas"
+author = "Vaultdraw"
+
+[[contributes.commands]]
+id = "count"
+title = "Toolbar demo: count clicks"
+
+# A button for the command. icon is SVG path data on a 24 by 24 grid; without it the
+# button shows the first letter of the title.
+[[contributes.toolbar]]
+command = "count"
+title = "Count clicks"
+icon = "M12 5v14M5 12h14"

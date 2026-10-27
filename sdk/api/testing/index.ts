@@ -80,6 +80,12 @@ const normalise = (m: TestManifest) => {
         kinds: [],
         ...x,
       })),
+      toolbar: (c.toolbar ?? []).map((x) => ({
+        title: null,
+        icon: null,
+        priority: 0,
+        ...x,
+      })),
       views: (c.views ?? []).map((x) => ({ title: x.id, ...x })),
       status_bar: (c.status_bar ?? []).map((x) => ({
         title: x.id,

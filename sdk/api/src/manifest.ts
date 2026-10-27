@@ -139,6 +139,22 @@ export interface MenuContribution {
 }
 
 /**
+ * A toolbar button declared in plugin.toml (`[[contributes.toolbar]]`).
+ *
+ * @since 0.14.0
+ */
+export interface ToolbarContribution {
+  /** Short id of the command a click runs. @since 0.14.0 */
+  command: string;
+  /** Tooltip and label, or null for the command's title. @since 0.14.0 */
+  title: string | null;
+  /** SVG path data on a 24 by 24 grid, or null for the first letter of the title. @since 0.14.0 */
+  icon: string | null;
+  /** Higher comes first. @since 0.14.0 */
+  priority: number;
+}
+
+/**
  * Everything a plugin declares it adds to the app.
  *
  * @since 0.1.0
@@ -174,4 +190,10 @@ export interface PluginContributions {
    * @since 0.12.0
    */
   menus?: MenuContribution[];
+  /**
+   * Absent when the app that reads the manifest is older than 0.14.0.
+   *
+   * @since 0.14.0
+   */
+  toolbar?: ToolbarContribution[];
 }

@@ -11,6 +11,7 @@ export type {
   ImporterContribution,
   MenuContribution,
   StatusBarContribution,
+  ToolbarContribution,
   ViewContribution,
   PanelContribution,
   PluginContributions,
