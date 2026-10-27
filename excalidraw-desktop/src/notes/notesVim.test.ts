@@ -24,7 +24,7 @@ describe("notes-vim", () => {
     });
     const cm = getCM(view)!;
     expect(cm.state.vim?.insertMode).toBeFalsy();
-    Vim.handleEx(cm, "w");
+    Vim.handleEx(cm as never, "w");
     expect(save).toHaveBeenCalledTimes(1);
     view.destroy();
   });

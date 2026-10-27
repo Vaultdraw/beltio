@@ -171,10 +171,7 @@ const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
   }, [ready, text]);
 
   // ---- rendering ---------------------------------------------------------
-  const links = useMemo(
-    () => createNoteLinkIndex(vault.paths()),
-    [vault, path],
-  );
+  const links = useMemo(() => createNoteLinkIndex(vault.paths()), [vault]);
   const html = useMemo(() => {
     if (!ready || mode !== "reading") {
       return "";
