@@ -10,9 +10,21 @@ export const EXCALIDRAW_MD_EXT = ".excalidraw.md";
 /** drawing: `*.excalidraw`; note: `*.md`; excalidrawMd: Obsidian Excalidraw plugin `*.excalidraw.md`. */
 export type FileKind = "drawing" | "note" | "excalidrawMd" | "other";
 
-const endsWithCi = (name: string, ext: string): boolean =>
-  name.length >= ext.length &&
-  name.slice(name.length - ext.length).toLowerCase() === ext;
+/** `ext` is lower case ASCII; compares without allocating (it runs per item on large lists). */
+const endsWithCi = (name: string, ext: string): boolean => {
+  const offset = name.length - ext.length;
+  if (offset < 0) {
+    return false;
+  }
+  for (let i = 0; i < ext.length; i++) {
+    const c = name.charCodeAt(offset + i);
+    // ASCII upper case to lower case; other code units compare as they are.
+    if ((c >= 65 && c <= 90 ? c + 32 : c) !== ext.charCodeAt(i)) {
+      return false;
+    }
+  }
+  return true;
+};
 
 /** `name` (a file name or vault-relative path) ends with `.excalidraw`, in any case. */
 export const hasDrawingExt = (name: string): boolean =>
