@@ -3,7 +3,6 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-// @ts-expect-error plain .mjs reader shared with the plugin CLI
 import { parseToml } from "../../../sdk/cli/src/toml.mjs";
 
 import {

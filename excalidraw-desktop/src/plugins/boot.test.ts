@@ -127,6 +127,7 @@ describe("official plugins (on by default, no startup cost)", () => {
         {
           id: "markdown-import.import",
           title: "Import: Markdown…",
+          category: "Markdown import",
           keys: { default: [] },
         },
       ]);

@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import {
@@ -38,11 +39,14 @@ import {
   planImport,
   skippedMessage,
 } from "../canvasImport/importFiles";
+import { getAppCommandRunner } from "../commands/appRunner";
+import { getRegisteredCommand, subscribeCommands } from "../commands/registry";
 import {
   createsOwnDrawing,
   hasImporters,
   runImports,
 } from "../plugins/importerMap";
+import { OBSIDIAN_IMPORT_COMMAND_ID } from "../plugins/officialPlugins";
 import { useCanvasImportMenu } from "../canvasImport/useCanvasImportMenu";
 import {
   ACTION_KEYS_CONTEXT,
@@ -917,6 +921,12 @@ const VaultEditorComponent = ({
   // so rebuild it only when something it shows changes (not on every
   // VaultApp render, e.g. each autosave status change).
   const hasLibrary = !!library;
+  // The official markdown-import plugin's command exists as a stub from boot, so this costs no plugin code.
+  const hasObsidianImport = useSyncExternalStore(
+    subscribeCommands,
+    () => !!getRegisteredCommand(OBSIDIAN_IMPORT_COMMAND_ID),
+    () => false,
+  );
   const editorChildren = useMemo(
     () => (
       <>
@@ -948,6 +958,17 @@ const VaultEditorComponent = ({
               disabled={!canImportPdf}
             >
               Import PDF…
+            </CommandMenuItem>
+          )}
+          {hasObsidianImport && (
+            <CommandMenuItem
+              commandId={OBSIDIAN_IMPORT_COMMAND_ID}
+              icon={LoadIcon}
+              onSelect={() =>
+                void getAppCommandRunner()?.(OBSIDIAN_IMPORT_COMMAND_ID)
+              }
+            >
+              Import Obsidian vault…
             </CommandMenuItem>
           )}
           <MainMenu.DefaultItems.SearchMenu />
@@ -1009,6 +1030,7 @@ const VaultEditorComponent = ({
       canToggleHistory,
       canImportPdf,
       hasPdfImport,
+      hasObsidianImport,
       saveCopy,
       paperDialogOpen,
       pageSetupOpen,

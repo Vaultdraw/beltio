@@ -92,12 +92,12 @@ const plugin: Plugin = definePlugin({
         signal,
       };
       const base = `${stem(fileName)} (imported`;
-      let current: PageDocument | null = null;
+      const cur: { doc: PageDocument | null } = { doc: null };
       let part = 0;
       let firstPage: number | null = null;
       let elements = 0;
       const open = async (n: number) => {
-        current = await ctx.pages.createDocument({
+        cur.doc = await ctx.pages.createDocument({
           name: n === 1 ? `${base})` : `${base}, part ${n})`,
           setup,
           open: n === 1,
@@ -110,22 +110,22 @@ const plugin: Plugin = definePlugin({
             break;
           }
           if (batch.part !== part) {
-            await current?.finish();
+            await cur.doc?.finish();
             await open(batch.part);
           }
-          current!.append(batch.items, batch.pageCount);
+          cur.doc!.append(batch.items, batch.pageCount);
           elements += batch.items.length;
           firstPage ??= performance.now() - t0;
         }
       } catch (err) {
-        await current?.abort();
+        await cur.doc?.abort();
         throw err;
       }
       if (signal.aborted) {
-        await current?.abort();
+        await cur.doc?.abort();
         throw abortError();
       }
-      await current?.finish();
+      await cur.doc?.finish();
       last = {
         name: fileName,
         parseMs: t2 - t1,

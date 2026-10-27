@@ -72,3 +72,6 @@ export const createsOwnDrawing = (pluginId: string): boolean =>
   OFFICIAL_PLUGINS.some(
     (p) => p.id === pluginId && p.importers.some((i) => i.ownDrawing),
   );
+
+/** The main menu's "Import Obsidian vault…" item runs this command (shown while the plugin is on). */
+export const OBSIDIAN_IMPORT_COMMAND_ID = "markdown-import.obsidian";
