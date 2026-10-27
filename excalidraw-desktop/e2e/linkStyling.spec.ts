@@ -92,11 +92,22 @@ test("links are drawn in the accent colour with an underline; unresolved are fai
   const diff = Math.abs(scan.hue - expectedHue);
   expect(Math.min(diff, 360 - diff)).toBeLessThan(25);
 
-  const notes = await clusterStats(page, cs[0]);
-  const ghost = await clusterStats(page, cs[1]);
-  // underline: a row of link-coloured pixels spanning most of the name
-  const width = cs[0].x1 - cs[0].x0;
-  expect(notes.underlineRun).toBeGreaterThan(width * 0.4);
+  // underline: a row of link-coloured pixels spanning most of the name.
+  // Re-scan on every poll: a late repaint (web font swap) moves the clusters,
+  // so stats read from a stale scan can miss the underline.
+  let notes = await clusterStats(page, cs[0]);
+  let ghost = await clusterStats(page, cs[1]);
+  await expect
+    .poll(async () => {
+      const now = clusters(await scanCanvas(page));
+      if (now.length !== 2) {
+        return 0;
+      }
+      notes = await clusterStats(page, now[0]);
+      ghost = await clusterStats(page, now[1]);
+      return notes.underlineRun / (now[0].x1 - now[0].x0);
+    })
+    .toBeGreaterThan(0.4);
   // unresolved: fainter and dashed (shorter longest row than the solid one)
   expect(ghost.maxChroma).toBeLessThan(notes.maxChroma * 0.9);
   expect(ghost.underlineRun).toBeLessThan(notes.underlineRun * 0.5);
