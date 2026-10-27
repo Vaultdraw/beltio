@@ -170,8 +170,8 @@ pub(crate) fn write_snapshot(path: &std::path::Path, commands: &Value) -> std::i
 
 #[tauri::command]
 pub(crate) async fn control_install_cli(system: bool) -> crate::Result<Value> {
-    let path = super::install::install_cli(system)?;
-    Ok(json!({"path": path}))
+    let done = super::install::install_cli_report(system)?;
+    Ok(json!({"path": done.path, "message": done.message()}))
 }
 
 #[cfg(test)]

@@ -266,7 +266,8 @@ fn window_commands_still_need_the_app() {
         vec!["quit"],
     ] {
         let mut child = e.cmd().args(["--vault", v]).args(&args).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
-        std::io::Write::write_all(&mut child.stdin.take().unwrap(), b"{}").unwrap();
+        // The command may exit before reading its input (EPIPE on Linux): that is fine.
+        let _ = std::io::Write::write_all(&mut child.stdin.take().unwrap(), b"{}");
         let o = child.wait_with_output().unwrap();
         assert_eq!(code(&o), 3, "{args:?}: {}", err(&o));
         assert!(err(&o).contains("(NOT_RUNNING)"), "{args:?}: {}", err(&o));

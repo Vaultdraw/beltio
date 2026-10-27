@@ -161,6 +161,18 @@ describe("useControlBridge", () => {
         "Installed 'vaultdraw' command at /Users/me/.local/bin/vaultdraw",
     });
 
+    // Linux AppImage: Rust sends its own line (the command is a copy); the toast shows it.
+    invoke.mockResolvedValueOnce({
+      path: "/home/me/.local/bin/vaultdraw",
+      message:
+        "Installed 'vaultdraw' command at /home/me/.local/bin/vaultdraw as a copy",
+    });
+    await getRegisteredHandler(CLI_INSTALL_ID)!();
+    expect(toastStore.getSnapshot().toasts.at(-1)).toMatchObject({
+      message:
+        "Installed 'vaultdraw' command at /home/me/.local/bin/vaultdraw as a copy",
+    });
+
     invoke.mockRejectedValueOnce(new Error("Permission denied"));
     await getRegisteredHandler(CLI_INSTALL_SYSTEM_ID)!();
     expect(invoke).toHaveBeenLastCalledWith("control_install_cli", {

@@ -121,10 +121,12 @@ const registerLinuxHandlers = () =>
 const installCli = (system: boolean) => async () => {
   try {
     const { invoke } = await import("@tauri-apps/api/core");
-    const { path } = (await invoke("control_install_cli", { system })) as {
-      path: string;
-    };
-    toastStore.push({ message: `Installed 'vaultdraw' command at ${path}` });
+    const { path, message } = (await invoke("control_install_cli", {
+      system,
+    })) as { path: string; message?: string };
+    toastStore.push({
+      message: message ?? `Installed 'vaultdraw' command at ${path}`,
+    });
   } catch (e) {
     toastStore.push({
       message: e instanceof Error ? e.message : String(e),

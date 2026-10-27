@@ -43,4 +43,18 @@ mod tests {
         let (a, _b) = std::os::unix::net::UnixStream::pair().unwrap();
         assert_eq!(peer_uid(a.as_raw_fd()).unwrap(), my_uid());
     }
+
+    #[test]
+    fn accepted_connection_reports_the_connecting_user() {
+        use std::os::unix::net::{UnixListener, UnixStream};
+        let t = tempfile::tempdir().unwrap();
+        let path = t.path().join("c.sock");
+        let l = UnixListener::bind(&path).unwrap();
+        let _c = UnixStream::connect(&path).unwrap();
+        let (srv, _) = l.accept().unwrap();
+        // The server's view (SO_PEERCRED on Linux, getpeereid on macOS) of a connecting process.
+        assert_eq!(peer_uid(srv.as_raw_fd()).unwrap(), my_uid());
+        // A uid that is not mine is what the server refuses.
+        assert_ne!(peer_uid(srv.as_raw_fd()).unwrap(), my_uid().wrapping_add(1));
+    }
 }

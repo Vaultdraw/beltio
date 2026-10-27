@@ -187,4 +187,36 @@ mod tests {
         ensure_private_dir(&d).unwrap();
         assert_eq!(std::fs::metadata(&d).unwrap().permissions().mode() & 0o777, 0o700);
     }
+
+    #[cfg(unix)]
+    #[test]
+    fn private_dir_refuses_a_symlink_and_another_users_dir() {
+        let t = tempfile::tempdir().unwrap();
+        let real = t.path().join("real");
+        std::fs::create_dir(&real).unwrap();
+        let link = t.path().join("link");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+        // A symlinked runtime dir is never trusted (symlink_metadata is not a directory).
+        assert!(ensure_private_dir(&link).is_err());
+        // /usr (any root-owned directory) belongs to another user unless the tests run as root.
+        if crate::peer::my_uid() != 0 {
+            let e = ensure_private_dir(Path::new("/usr")).unwrap_err();
+            assert_eq!(e.kind(), std::io::ErrorKind::PermissionDenied);
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_socket_at_the_length_limit_binds_on_this_system() {
+        // 103 bytes is the portable cap (macOS 104 with the NUL, Linux 108): it must bind everywhere.
+        let t = tempfile::tempdir().unwrap();
+        let base = t.path().to_str().unwrap().len();
+        let leaf = "s".repeat(MAX_SOCKET_PATH - base - 1);
+        let p = InstancePaths { socket: t.path().join(&leaf), ..InstancePaths::in_dir(t.path()) };
+        assert_eq!(p.socket.as_os_str().len(), MAX_SOCKET_PATH);
+        assert!(p.check_socket_len().is_ok());
+        let l = std::os::unix::net::UnixListener::bind(&p.socket).unwrap();
+        assert!(std::os::unix::net::UnixStream::connect(&p.socket).is_ok());
+        drop(l);
+    }
 }
