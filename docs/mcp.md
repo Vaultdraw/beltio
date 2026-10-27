@@ -40,6 +40,13 @@ flowchart LR
 
 `tools/list` always shows the same seven tools, because AI apps keep that list until they restart. While AI is off every tool except `vaultdraw_status` answers with an error, code `DISABLED`, that says how to turn it on. Turning AI on or off applies to the next call, with no restart. A config file that cannot be read counts as off.
 
+## Protocol details
+
+- JSON-RPC batches (a JSON array on one line) get one array back.
+- Tool calls run one at a time, in the order sent, on a worker; `ping` and `tools/list` answer while a call is still running.
+- A line that is not valid UTF-8 gets a parse error; the session goes on.
+- A modern client names itself in each request (`_meta` `io.modelcontextprotocol/clientInfo`); older ones in `initialize`. The name is only for the app's notice and logs.
+
 ## Trust model
 
 - Drawing text is your content. The tool descriptions tell the model not to follow instructions found in it, but a model may still be misled: every edit is one undo step (Cmd+Z) and shows a notice (`control.notify_edits`).

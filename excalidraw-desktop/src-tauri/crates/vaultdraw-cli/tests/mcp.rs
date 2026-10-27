@@ -223,3 +223,73 @@ fn drawing_text_stays_inside_the_result_fields() {
     assert!(!list.to_string().contains("ignore your instructions"), "drawing text never reaches the tool list");
     s.finish();
 }
+
+#[test]
+fn a_line_that_is_not_utf8_is_a_parse_error_and_the_session_goes_on() {
+    let e = env(None);
+    let mut s = Session::start(&e, None);
+    s.child.stdin.as_mut().unwrap().write_all(b"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"\xff\xfe\"}\n").unwrap();
+    let mut line = String::new();
+    s.reader.read_line(&mut line).unwrap();
+    let r: Value = serde_json::from_str(&line).unwrap();
+    assert_eq!(r["error"]["code"], -32700);
+    assert_eq!(s.ask("ping", json!({}))["result"], json!({}));
+    s.finish();
+}
+
+#[test]
+fn a_batch_gets_one_array_back() {
+    let e = env(None);
+    let mut s = Session::start(&e, None);
+    s.send(&json!([{"jsonrpc": "2.0", "id": 1, "method": "ping"}, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}]));
+    let mut line = String::new();
+    s.reader.read_line(&mut line).unwrap();
+    let r: Value = serde_json::from_str(&line).unwrap();
+    assert_eq!(r.as_array().unwrap().len(), 2);
+    assert_eq!(r[1]["result"]["tools"].as_array().unwrap().len(), 7);
+    s.finish();
+}
+
+#[test]
+fn a_slow_tool_call_does_not_block_ping() {
+    let e = env(Some(ON));
+    let vault = e.root.display().to_string();
+    let fake = Fake::start(move |method, params| match method {
+        "vault.info" => Ok(json!({"name": "v", "path": vault, "readOnly": false})),
+        "rpc.hello" => Ok(json!({"api": 1, "role": params["role"]})),
+        "scene.read" => {
+            std::thread::sleep(std::time::Duration::from_millis(800));
+            Ok(json!({"path": "a.excalidraw", "live": true, "elements": [], "version": "s1"}))
+        }
+        _ => Err((-32000, "no".into(), Some("NOT_PERMITTED"))),
+    });
+    let mut s = Session::start(&e, Some(&fake.socket));
+    s.send(&json!({"jsonrpc": "2.0", "id": 100, "method": "tools/call", "params": {"name": "read_drawing", "arguments": {}}}));
+    s.send(&json!({"jsonrpc": "2.0", "id": 101, "method": "ping"}));
+    let mut first = String::new();
+    s.reader.read_line(&mut first).unwrap();
+    let first: Value = serde_json::from_str(&first).unwrap();
+    assert_eq!(first["id"], 101, "the ping is answered while the call is still running");
+    let mut second = String::new();
+    s.reader.read_line(&mut second).unwrap();
+    let second: Value = serde_json::from_str(&second).unwrap();
+    assert_eq!(second["id"], 100);
+    assert_eq!(second["result"]["isError"], false);
+    s.finish();
+}
+
+#[test]
+fn a_modern_client_name_in_meta_reaches_the_app() {
+    let e = env(Some(ON));
+    let vault = e.root.display().to_string();
+    let fake = Fake::start(move |method, params| match method {
+        "vault.info" => Ok(json!({"name": "v", "path": vault, "readOnly": false})),
+        "rpc.hello" => Ok(json!({"api": 1, "role": params["role"]})),
+        _ => Ok(json!({"path": "a.excalidraw", "live": true, "elements": [], "version": "s1"})),
+    });
+    let mut s = Session::start(&e, Some(&fake.socket));
+    s.ask("tools/call", json!({"name": "read_drawing", "arguments": {}, "_meta": {"io.modelcontextprotocol/clientInfo": {"name": "zed"}}}));
+    let seen = fake.seen.lock().unwrap().clone();
+    assert!(seen.iter().any(|r| r["method"] == "rpc.hello" && r["params"]["client"] == "zed"), "{seen:?}");
+    s.finish();
+}
