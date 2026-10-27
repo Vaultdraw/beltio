@@ -15,15 +15,23 @@
     ]
   },
   "bundle": {
-    "targets": ["deb", "appimage"],
+    "targets": [
+      "deb",
+      "appimage"
+    ],
     "linux": {
       "deb": {
         "section": "graphics",
         "priority": "optional",
-        "depends": ["libpoppler-glib8"]
+        "depends": [
+          "libpoppler-glib8"
+        ],
+        "desktopTemplate": "linux/bundle.desktop"
       },
       "rpm": {
-        "depends": ["poppler-glib"]
+        "depends": [
+          "poppler-glib"
+        ]
       },
       "appimage": {
         "bundleMediaFramework": false

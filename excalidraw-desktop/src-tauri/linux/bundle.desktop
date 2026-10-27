@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name={{name}}
+Comment=Your Excalidraw drawings, in a folder you own
+Exec={{exec}} %U
+Icon={{icon}}
+Terminal=false
+Categories=Graphics;Office;
+MimeType=application/vnd.excalidraw+json;application/vnd.excalidrawlib+json;x-scheme-handler/vaultdraw;
+StartupWMClass=excalidraw-vault
