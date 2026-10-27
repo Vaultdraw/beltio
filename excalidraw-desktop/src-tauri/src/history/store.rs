@@ -140,11 +140,40 @@ pub fn clone_file(src: &Path, dst: &Path) -> io::Result<()> {
         }
         Err(io::Error::last_os_error())
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "linux")]
+    {
+        clone_file_linux(src, dst)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
     {
         let _ = (src, dst);
         Err(io::Error::from(io::ErrorKind::Unsupported))
     }
+}
+
+/// Linux: a reflink (`FICLONE`, instant on btrfs/xfs) when the filesystem supports it, else a plain
+/// copy (`io::copy` uses `copy_file_range`). The copy keeps the source's mtime, as `clonefile` does,
+/// so the outside-change check can match size and mtime without hashing. Fails with `AlreadyExists`
+/// like `clonefile`; a half-written destination is removed.
+#[cfg(target_os = "linux")]
+fn clone_file_linux(src: &Path, dst: &Path) -> io::Result<()> {
+    use std::os::fd::AsRawFd;
+    const FICLONE: libc::c_ulong = 0x4004_9409;
+    let mut from = File::open(src)?;
+    let mtime = from.metadata()?.modified().ok();
+    let mut to = fs::OpenOptions::new().write(true).create_new(true).open(dst)?;
+    // SAFETY: both descriptors are open for the duration of the call; FICLONE takes the source fd.
+    let reflinked = unsafe { libc::ioctl(to.as_raw_fd(), FICLONE, from.as_raw_fd()) } == 0;
+    let done = if reflinked { Ok(()) } else { io::copy(&mut from, &mut to).map(|_| ()) };
+    let done = done.and_then(|()| match mtime {
+        Some(t) => to.set_modified(t),
+        None => Ok(()),
+    });
+    if done.is_err() {
+        drop(to);
+        let _ = fs::remove_file(dst);
+    }
+    done
 }
 
 pub fn clone_unsupported(e: &io::Error) -> bool {

@@ -101,7 +101,7 @@ fn hourly_tier_keeps_the_newest_of_each_local_hour_even_when_a_local_hour_repeat
         if (utc(2027, 11, 7, 5, 0)..utc(2027, 11, 7, 7, 0)).contains(&from) {
             continue;
         }
-        let n = k.iter().filter(|t| (from..from + HOUR_MS).contains(t)).count();
+        let n = k.iter().filter(|t| (from..from + HOUR_MS).contains(*t)).count();
         assert_eq!(n, 1, "hour starting {from}");
     }
 }

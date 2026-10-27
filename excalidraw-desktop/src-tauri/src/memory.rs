@@ -158,6 +158,16 @@ pub(crate) fn footprint_bytes() -> u64 {
     u64::from_le_bytes(buf[PHYS_FOOTPRINT_OFFSET..PHYS_FOOTPRINT_OFFSET + 8].try_into().unwrap())
 }
 
+/// Resident set size of this process in bytes, from `/proc/self/statm` (test helper on Linux).
+#[cfg(all(test, target_os = "linux"))]
+pub(crate) fn footprint_bytes() -> u64 {
+    let pages = std::fs::read_to_string("/proc/self/statm")
+        .ok()
+        .and_then(|s| s.split_whitespace().nth(1).and_then(|v| v.parse::<u64>().ok()))
+        .unwrap_or(0);
+    pages * 4096
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
