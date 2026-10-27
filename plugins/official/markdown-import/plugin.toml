@@ -105,3 +105,10 @@ type = "bool"
 title = "Obsidian: copy Excalidraw drawings"
 description = "Convert .excalidraw.md drawings of an Obsidian vault into drawings."
 default = true
+
+[[contributes.settings]]
+key = "obsidian_report"
+type = "bool"
+title = "Obsidian: write an import report"
+description = "Write \"Import report\" into the target when files fail or images stay boxes."
+default = true

@@ -14,7 +14,10 @@
 import { LinkResolver, rewriteLinks } from "./links";
 import { partPath, planImport, type PlanItem } from "./plan";
 
+import { buildReport, REPORT_PATH } from "./report";
+
 import type {
+  ImageIssue,
   LaidOutPart,
   ObsidianImportOptions,
   ObsidianImportResult,
@@ -50,6 +53,11 @@ const yieldToInput = (): Promise<void> =>
     };
     port2.postMessage(0);
   });
+
+/** Most rows the import report lists per kind of problem. */
+export const MAX_REPORT_ROWS = 2000;
+
+const EMPTY_PART: LaidOutPart = { items: [], pageCount: 1 };
 
 const REMOTE = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 
@@ -88,6 +96,7 @@ export async function importObsidianVault(
     missingImages: 0,
     oversizedImages: 0,
     unsupportedImages: 0,
+    imageIssues: [],
     errors: [],
     cancelled: false,
     written: [],
@@ -98,6 +107,24 @@ export async function importObsidianVault(
   const wrote = (path: string) => {
     result.written.push(path);
     result.first ??= path;
+  };
+
+  /** Notes the report lists are capped: a vault with thousands of missing images must not grow the list without bound. */
+  const noteIssue = (
+    note: string,
+    image: string,
+    reason: ImageIssue["reason"],
+  ) => {
+    result[
+      reason === "oversized"
+        ? "oversizedImages"
+        : reason === "unsupported"
+          ? "unsupportedImages"
+          : "missingImages"
+    ]++;
+    if (result.imageIssues.length < MAX_REPORT_ROWS) {
+      result.imageIssues.push({ note, image, reason });
+    }
   };
 
   /** Create-only write; on a name that already exists, the next free name. */
@@ -123,6 +150,7 @@ export async function importObsidianVault(
   const fillImages = async (
     items: PageItem[],
     fromDir: string,
+    note: string,
   ): Promise<void> => {
     for (const item of items) {
       if (item.type !== "image" || item.bytes) {
@@ -132,24 +160,39 @@ export async function importObsidianVault(
         continue; // never fetched: the import is offline
       }
       if (!EMBEDDABLE.has(item.mimeType)) {
-        result.unsupportedImages++;
+        noteIssue(note, item.target, "unsupported");
         continue;
       }
       const written = item.target.split(/[?#]/)[0];
       const hit = resolver.resolve(written, ["attachment"], fromDir);
       const size = hit ? sizes.get(hit.path) : undefined;
       if (!hit || size === undefined) {
-        result.missingImages++;
+        noteIssue(note, item.target, "missing");
       } else if (size > MAX_EMBED_BYTES) {
-        result.oversizedImages++;
+        noteIssue(note, item.target, "oversized");
       } else {
         try {
           item.bytes = await source.readBytes(hit.path);
         } catch {
-          result.missingImages++;
+          noteIssue(note, item.target, "missing");
         }
       }
     }
+  };
+
+  /**
+   * Builds one part's scene and writes it. The scene (with its base64 images) lives only inside
+   * this call, and the caller drops the part (and its image bytes) once it is written.
+   */
+  const writePart = async (
+    part: LaidOutPart,
+    wanted: string,
+  ): Promise<string> => {
+    const scene = await ctx.pages.buildScene(part.items, {
+      setup,
+      pageCount: Math.max(1, part.pageCount),
+    });
+    return writeUnique(wanted, (p) => target.writeDrawing(p, scene));
   };
 
   const importNote = async (item: PlanItem): Promise<void> => {
@@ -170,18 +213,13 @@ export async function importObsidianVault(
       if (signal.aborted) {
         return;
       }
-      await fillImages(part.items, dirOf(item.path));
-      const scene = await ctx.pages.buildScene(part.items, {
-        setup,
-        pageCount: Math.max(1, part.pageCount),
-      });
+      await fillImages(part.items, dirOf(item.path), item.path);
       const wanted =
         i === 0 ? item.target : plan.namer.claim(partPath(item.target, i + 1));
-      const to = await writeUnique(wanted, (p) =>
-        target.writeDrawing(p, scene),
-      );
+      const to = await writePart(part, wanted);
       wrote(to);
       result.drawings++;
+      parts[i] = EMPTY_PART; // this part's items are done: let the laid-out data go
     }
     result.notes++;
   };
@@ -249,6 +287,21 @@ export async function importObsidianVault(
     result.cancelled = true;
   }
   opts.onProgress(done, total, "");
+  const report = settings.obsidianReport
+    ? buildReport(source.name, result)
+    : null;
+  if (report) {
+    try {
+      const doc = await ctx.markdown.parse(report);
+      const parts = await layout(doc, signal);
+      const to = await writeUnique(REPORT_PATH, (p) =>
+        writePart(parts[0] ?? EMPTY_PART, p),
+      );
+      result.report = to;
+    } catch (err) {
+      fail(REPORT_PATH, err);
+    }
+  }
   result.ms = performance.now() - t0;
   return result;
 }

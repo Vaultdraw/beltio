@@ -318,6 +318,10 @@ const plugin: Plugin = definePlugin({
                 noPicture
                   ? ` (${noPicture} images left as boxes: ${result.oversizedImages} over 4 MB, ${result.unsupportedImages} unsupported type, ${result.missingImages} not found)`
                   : ""
+              }${
+                result.report
+                  ? `. See "${result.report.replace(/\.excalidraw$/, "")}" in ${target.name} for details`
+                  : ""
               }`,
             );
           }

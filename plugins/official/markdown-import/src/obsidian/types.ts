@@ -57,6 +57,15 @@ export interface ObsidianImportOptions {
   layout?: NoteLayout;
 }
 
+/** One embedded image that did not become a picture in its drawing. */
+export interface ImageIssue {
+  /** Source path of the note or drawing that embeds it. */
+  note: string;
+  /** The reference as written. */
+  image: string;
+  reason: "missing" | "oversized" | "unsupported";
+}
+
 export interface ImportError {
   /** Source path of the file that failed. */
   path: string;
@@ -80,7 +89,11 @@ export interface ObsidianImportResult {
   oversizedImages: number;
   /** Images of a type a drawing cannot hold (AVIF, BMP, ICO): placeholder box, file copied. */
   unsupportedImages: number;
+  /** The images behind the three counts above, capped (see MAX_REPORT_ROWS). */
+  imageIssues: ImageIssue[];
   errors: ImportError[];
+  /** Target path of the written import report; unset when nothing went wrong. */
+  report?: string;
   /** True when the signal fired: what was written stays, the rest was not started. */
   cancelled: boolean;
   /** Target path of the first drawing written, to open. */

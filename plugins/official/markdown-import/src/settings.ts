@@ -16,6 +16,8 @@ export interface ImportSettings {
   obsidianAttachments: boolean;
   obsidianLinks: ObsidianLinks;
   obsidianExcalidraw: boolean;
+  /** Write `Import report` when something did not import cleanly (unset counts as off). */
+  obsidianReport?: boolean;
 }
 
 /** The user's default drawing font is Excalifont; the Document font is the plain sans. */
@@ -53,6 +55,7 @@ export function readSettings(ctx: PluginContext): ImportSettings {
     obsidianAttachments: bool(get("obsidian_attachments"), true),
     obsidianLinks: oneOf(get("obsidian_links"), ["drawing", "text"], "drawing"),
     obsidianExcalidraw: bool(get("obsidian_excalidraw"), true),
+    obsidianReport: bool(get("obsidian_report"), true),
   };
 }
 

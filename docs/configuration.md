@@ -1480,6 +1480,7 @@ part_elements = 1000         # 200 to 20000: a longer note is split into parts
 obsidian_attachments = true  # copy images and other files of an Obsidian vault
 obsidian_links = "drawing"   # "drawing": [[links]] point at the converted drawings; "text": keep as written
 obsidian_excalidraw = true   # convert .excalidraw.md drawings
+obsidian_report = true       # write "Import report" when files fail or images stay boxes
 ```
 
 | Key | Default | Meaning |
@@ -1491,6 +1492,7 @@ obsidian_excalidraw = true   # convert .excalidraw.md drawings
 | `obsidian_attachments` | `true` | Copy every other file of the vault (images, PDFs) next to the drawings. |
 | `obsidian_links` | `"drawing"` | Rewrite `[[Note]]` and `[[Note\|alias]]` to the converted drawing's path, `![[image.png]]` embeds the image (up to 4 MB). `"text"` leaves them as written. |
 | `obsidian_excalidraw` | `true` | Convert `Name.excalidraw.md` (plain or compressed) to `Name.excalidraw`. |
+| `obsidian_report` | `true` | When a file fails or an image stays a box, write `Import report` (a drawing at the root of the target) listing each file or image and the reason. Nothing is written for a clean import. |
 
 **Import Obsidian vault…** (main menu, palette command `markdown-import.obsidian`) asks for the vault folder and imports into a folder of the open vault named like it; **Import Obsidian vault into a new vault…** (`markdown-import.obsidian-new-vault`) creates a new vault. The folder structure is kept, `.obsidian`, `.trash` and `.git` are skipped, and the source is only read. Nothing is overwritten: a name that exists gets `Name 2`. Images (`![[pic.png]]`, `![[pic.png|300]]`, `![alt](path/pic.png)`, relative `./` and `../` paths, folders with spaces or accents, PNG, JPEG, GIF, WebP and SVG) are embedded in the drawing, looked up next to the note, then by path, then by name anywhere in the vault; an image over 4 MB, of another type or missing stays a box, and the final message says how many. Images inside `.excalidraw.md` files are embedded the same way. **Import: Cancel Obsidian import** stops after the current file. Turn the plugin off with `[plugins] enabled`.
 
