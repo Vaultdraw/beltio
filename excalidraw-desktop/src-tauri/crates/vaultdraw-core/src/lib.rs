@@ -14,6 +14,7 @@ pub mod links;
 pub mod lock;
 pub mod markdown;
 pub mod migrate;
+pub mod note_file;
 pub mod new_drawing;
 pub mod ops;
 pub mod paths;
