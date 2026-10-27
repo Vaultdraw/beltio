@@ -2,25 +2,26 @@
  * The seams to the other engineers' modules: the layout (src/layout, src/worker) and the
  * Obsidian vault import (src/obsidian). main.ts and commands.ts import only from here.
  *
- * STUB: until those land, `layoutNoteStream` stacks every block as one plain text on
- * pages and `importObsidianVault` refuses. Replace each body with a re-export of the real
- * function (the signatures below are the contract) when it is committed.
+ * `importObsidianVault` is a STUB until src/obsidian lands: it refuses. Replace its body
+ * with a re-export of the real function (the signature below is the contract).
  */
+
+import { buildWidthTable } from "./layout/index";
+import { createLayoutClient, LayoutAbortedError } from "./worker/client";
+
 import type {
   FontFamilyName,
-  NoteBlock,
   NoteDoc,
   PageGeometry,
   PluginContext,
 } from "@vaultdraw/api";
 
-import type { PageItem, SourceFolder, TargetFolder } from "./api09";
+import type { SourceFolder, TargetFolder } from "./api09";
+import type {
+  LayoutOptions as LayoutEngineOptions,
+  PageItem,
+} from "./layout/types";
 import type { ImportSettings } from "./settings";
-
-/** The worker bundle as a string, injected by build.mjs (empty until src/worker/entry.ts exists). */
-declare const __MD_WORKER_SOURCE__: string;
-export const WORKER_SOURCE: string =
-  typeof __MD_WORKER_SOURCE__ === "string" ? __MD_WORKER_SOURCE__ : "";
 
 export interface LayoutOptions {
   family: FontFamilyName;
@@ -29,7 +30,6 @@ export interface LayoutOptions {
   /** About this many elements per part (drawing). */
   partElements: number;
   measure: PluginContext["text"]["measure"];
-  lineHeight: number;
   signal: AbortSignal;
 }
 
@@ -41,43 +41,76 @@ export interface LayoutBatch {
   part: number;
 }
 
-/** Streams the laid-out note: page 1 first, then batches. */
+/** Page margin in scene pixels (an A4 page is 794 wide). */
+const PAGE_MARGIN = 56;
+
+/** Streams the laid-out note: page 1 first, then the rest, in a worker when there is one. */
 export async function* layoutNoteStream(
   doc: NoteDoc,
   opts: LayoutOptions,
 ): AsyncGenerator<LayoutBatch> {
-  const margin = 48;
-  let y = margin;
-  const items: PageItem[] = [];
-  const text = (b: NoteBlock): string =>
-    "text" in b && typeof b.text === "string" ? b.text : "";
-  for (const block of doc.blocks) {
-    if (opts.signal.aborted) {
-      return;
-    }
-    const t = text(block);
-    if (!t) {
-      continue;
-    }
-    const level = block.kind === "heading" ? block.level : 0;
-    const fontSize = level ? opts.fontSize + (7 - level) * 2 : opts.fontSize;
-    const height = Math.ceil(fontSize * opts.lineHeight);
-    items.push({
-      type: "text",
-      page: 0,
-      x: margin,
-      y,
-      width: opts.page.width - margin * 2,
-      height,
-      text: t,
-      fontSize,
-      fontFamily: opts.family,
-      lineHeight: opts.lineHeight,
-      ...(level ? { data: { heading: level } } : {}),
+  const fonts = {
+    body: opts.family,
+    heading: opts.family,
+    code: "Cascadia" as FontFamilyName,
+  };
+  const layout: LayoutEngineOptions = {
+    fonts,
+    fontSize: opts.fontSize,
+    page: {
+      width: opts.page.width,
+      height: opts.page.height,
+      margin: PAGE_MARGIN,
+    },
+    partElements: opts.partElements,
+  };
+  const table = buildWidthTable(opts.measure, doc, layout);
+  const queue: LayoutBatch[] = [];
+  let wake: (() => void) | null = null;
+  let finished = false;
+  let failure: unknown = null;
+  const poke = () => {
+    wake?.();
+    wake = null;
+  };
+  const run = createLayoutClient()
+    .layout({
+      doc,
+      table,
+      opts: layout,
+      signal: opts.signal,
+      onEvent(ev) {
+        if (ev.type === "page") {
+          queue.push({
+            items: ev.items,
+            pageCount: ev.pageCount,
+            part: ev.partIndex + 1,
+          });
+          poke();
+        }
+      },
+    })
+    .catch((err: unknown) => {
+      failure = err;
+    })
+    .finally(() => {
+      finished = true;
+      poke();
     });
-    y += height + 12;
+  while (true) {
+    const next = queue.shift();
+    if (next) {
+      yield next;
+    } else if (finished) {
+      break;
+    } else {
+      await new Promise<void>((r) => (wake = r));
+    }
   }
-  yield { items, pageCount: 1, part: 1 };
+  await run;
+  if (failure && !(failure instanceof LayoutAbortedError)) {
+    throw failure;
+  }
 }
 
 export interface ObsidianImportOptions {

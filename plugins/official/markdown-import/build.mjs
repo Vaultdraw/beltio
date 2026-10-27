@@ -10,7 +10,6 @@
 import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
-  existsSync,
   mkdirSync,
   rmSync,
   statSync,
@@ -18,7 +17,7 @@ import {
 } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(root, "../../..");
@@ -33,32 +32,20 @@ const SHARED = [
   "@vaultdraw/api",
 ];
 
-const common = {
-  bundle: true,
-  format: "esm",
-  target: "es2022",
-  platform: "browser",
-  logLevel: "error",
-  write: false,
-};
-
-let workerSrc = "";
-const workerEntry = path.join(root, "src/worker/entry.ts");
-if (existsSync(workerEntry)) {
-  const w = await esbuild.build({
-    ...common,
-    entryPoints: [workerEntry],
-    format: "iife",
-    minify: true,
-  });
-  workerSrc = w.outputFiles[0].text;
-}
+// The layout's own esbuild options (src/worker/esbuild.mjs): the editor's wrapText bundles
+// through a small shim of @excalidraw/common, so no DOM code reaches the worker.
+const { workerBundleOptions, layoutBundleOptions } = await import(
+  pathToFileURL(path.join(root, "src/worker/esbuild.mjs")).href
+);
+const worker = await esbuild.build({ ...workerBundleOptions(), write: false });
+const workerSrc = worker.outputFiles[0].text;
 
 const main = await esbuild.build({
-  ...common,
+  ...layoutBundleOptions(workerSrc),
   entryPoints: [path.join(root, "src/main.ts")],
   external: SHARED,
-  define: { __MD_WORKER_SOURCE__: JSON.stringify(workerSrc) },
+  platform: "browser",
+  write: false,
   minify: false,
 });
 

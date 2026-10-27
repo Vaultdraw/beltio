@@ -4,7 +4,6 @@
  * building the drawing is the host's (ctx.pages.createDocument).
  */
 import { definePlugin } from "@vaultdraw/api";
-import type { ImportInput, Plugin } from "@vaultdraw/api";
 
 import { registerCommands } from "./commands";
 import {
@@ -13,6 +12,8 @@ import {
   type LayoutOptions,
 } from "./deps";
 import { fontFamilyOf, readSettings, type ImportSettings } from "./settings";
+
+import type { ImportInput, Plugin } from "@vaultdraw/api";
 
 import type { Ctx09, PageDocument } from "./api09";
 
@@ -88,7 +89,6 @@ const plugin: Plugin = definePlugin({
         page: ctx.pages.geometry(setup),
         partElements: settings.partElements,
         measure: (f, s) => ctx.text.measure(f, s),
-        lineHeight: ctx.text.lineHeight(family),
         signal,
       };
       const base = `${stem(fileName)} (imported`;
