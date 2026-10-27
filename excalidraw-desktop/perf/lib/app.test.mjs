@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -50,7 +51,14 @@ test("runAppOnce reports missing smoke-report", async () => {
 
 test("runAppOnce kills on timeout", async () => {
   const { vault, runsDir } = setup();
-  const r = await runAppOnce({ appPath: "unused", binary: fake, pristineVault: vault, runsDir, timeoutMs: 1500, env: { FAKE_MODE: "hang" } });
+  // The harness timer is wall-clock from spawn and the fake needs a process start plus 300 ms to
+  // print its mark, so a fixed 1500 ms misses the mark when the machine is busy. Scale the budget
+  // by how long a bare node start takes right now (the part load stretches).
+  const t0 = performance.now();
+  spawnSync(process.execPath, ["-e", "0"]);
+  const nodeStartMs = performance.now() - t0;
+  const timeoutMs = Math.round(1500 + nodeStartMs * 20);
+  const r = await runAppOnce({ appPath: "unused", binary: fake, pristineVault: vault, runsDir, timeoutMs, env: { FAKE_MODE: "hang" } });
   assert.ok(r.errors.some((e) => /timeout/.test(e)));
   assert.equal(r.samples["startup.coldToInteractive"]?.length, 1);
 });
