@@ -64,21 +64,6 @@ const selectTool = async (page: Page, tool: string) => {
   }
 };
 
-/** Opens the compact panel's "Stroke" popover (stroke style, width, ...). */
-const withPopover = async (
-  page: Page,
-  trigger: string,
-  fn: (pop: ReturnType<Page["locator"]>) => Promise<void>,
-) => {
-  await page
-    .locator(
-      `section.selected-shape-actions button.properties-trigger[title='${trigger}']`,
-    )
-    .click();
-  await fn(page.locator("div.selected-shape-actions, .properties-content"));
-  await page.keyboard.press("Escape");
-};
-
 /**
  * One option of the open style popover by its title. "Solid" is both a fill
  * and a stroke style: the fill group comes first.
