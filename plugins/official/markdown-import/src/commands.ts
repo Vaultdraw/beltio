@@ -1,8 +1,8 @@
 /** The palette commands. Every one is rebindable and has no default key. */
-import type { Ctx09 } from "./api09";
+import type { PluginContext } from "@vaultdraw/api";
 import type { Importing } from "./main";
 
-export function registerCommands(ctx: Ctx09, imp: Importing): void {
+export function registerCommands(ctx: PluginContext, imp: Importing): void {
   const reg = (id: string, run: () => void | Promise<void> | boolean) =>
     ctx.subscriptions.push(
       ctx.commands.register(id, run as () => void | Promise<void>),

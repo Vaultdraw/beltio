@@ -13,9 +13,7 @@ import {
 } from "./deps";
 import { fontFamilyOf, readSettings, type ImportSettings } from "./settings";
 
-import type { ImportInput, Plugin } from "@vaultdraw/api";
-
-import type { Ctx09, PageDocument } from "./api09";
+import type { ImportInput, PageDocument, Plugin } from "@vaultdraw/api";
 
 export interface Timings {
   name: string;
@@ -62,7 +60,7 @@ function pickMarkdownFile(): Promise<File | null> {
 
 const plugin: Plugin = definePlugin({
   activate(base) {
-    const ctx = base as Ctx09;
+    const ctx = base;
     let last: Timings | null = null;
     let obsidianAbort: AbortController | null = null;
 

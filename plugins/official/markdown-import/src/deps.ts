@@ -14,9 +14,10 @@ import type {
   NoteDoc,
   PageGeometry,
   PluginContext,
+  SourceFolder,
+  TargetFolder,
 } from "@vaultdraw/api";
 
-import type { SourceFolder, TargetFolder } from "./api09";
 import type {
   LayoutOptions as LayoutEngineOptions,
   PageItem,
@@ -73,6 +74,7 @@ export async function* layoutNoteStream(
     wake?.();
     wake = null;
   };
+  const waitForBatch = () => new Promise<void>((r) => (wake = r));
   const run = createLayoutClient()
     .layout({
       doc,
@@ -104,7 +106,7 @@ export async function* layoutNoteStream(
     } else if (finished) {
       break;
     } else {
-      await new Promise<void>((r) => (wake = r));
+      await waitForBatch();
     }
   }
   await run;
