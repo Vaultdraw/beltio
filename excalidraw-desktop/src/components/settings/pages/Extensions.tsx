@@ -164,9 +164,7 @@ export const ExtensionsPage = () => {
           title="Gallery"
           description="A grid of drawing thumbnails for a folder (Mod+Alt+E). Loads only when opened."
           note={
-            !galleryOn
-              ? "Off: no Gallery button, commands or code."
-              : undefined
+            !galleryOn ? "Off: no Gallery button, commands or code." : undefined
           }
           checked={galleryOn}
           onChange={(on) =>
