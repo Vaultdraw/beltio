@@ -41,7 +41,7 @@ export const SEARCH_DEFAULTS: SearchPreferences = {
   searchDebounceMs: 60,
   searchMaxDrawings: 50,
   searchMaxSnippets: 5,
-  searchNotes: false,
+  searchNotes: true,
   searchNoteTextMb: 48,
 };
 

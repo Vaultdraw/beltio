@@ -300,7 +300,7 @@ autosave_delay_ms = 500
 # Most matching elements shown per drawing, 1 to 5
 # max_snippets = 5
 # Search the Markdown notes (.md) of the vault, with their #tags and links (read when the index starts)
-# notes = false
+# notes = true
 # Megabytes of note text kept in memory, 0 to 4096 (past it a note keeps its name, headings, tags and links)
 # note_text_mb = 48
 # When the search index starts: open (vault open) | idle (once the app is idle) | use (first search)
