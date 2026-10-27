@@ -19,6 +19,7 @@ import { pickRestoreView } from "./restoreView";
 import { createStripSignals } from "./stripSignals";
 import { buildTabHandlers } from "./tabHandlers";
 import { createTabsRuntime } from "./tabController";
+import { isKindPath } from "./tabKinds";
 import { findByPath, getActiveTab } from "./tabsModel";
 import { createWorkspaceStore, deserialize, serialize } from "./workspaceStore";
 
@@ -115,7 +116,10 @@ export interface TabsApi {
   getActiveId: () => string | null;
   openIds: () => ReadonlySet<string>;
   /** Props of <ActiveTabGate>: the placeholder for a missing active tab. */
-  gateProps: Pick<ActiveTabGateProps, "store" | "onClose" | "onSearch"> | null;
+  gateProps: Pick<
+    ActiveTabGateProps,
+    "store" | "onClose" | "onSearch" | "onOpenPath"
+  > | null;
   /** Open a drawing per the opening rules; true when it is now shown (or opened in the background). */
   open: (path: string, target?: OpenTarget) => Promise<boolean>;
   /** Before creating a document: keep the outgoing tab's view and undo. */
@@ -166,6 +170,7 @@ export function useTabs(args: UseTabsArgs): TabsApi {
             undoBudgetBytes: live.current.settings.tabsUndoBudgetMb * MB,
             openDocument: (path) => live.current.openDocument(path),
             closeDocument: () => live.current.closeDocument(),
+            isCustomKind: isKindPath,
             flushDocument: () => live.current.docHook.flush(),
             currentDocument: () => {
               const a = live.current.docHook.getActive();
@@ -417,6 +422,8 @@ export function useTabs(args: UseTabsArgs): TabsApi {
       });
       return (
         l.docHook.getActive()?.path === path ||
+        (isKindPath(path) &&
+          getActiveTab(rt.store.getState()).path === path) ||
         (t === "new" && !!findByPath(rt.store.getState(), path))
       );
     },
@@ -466,12 +473,15 @@ export function useTabs(args: UseTabsArgs): TabsApi {
     return {
       store,
       onClose: () => void controller.close(getActiveTab(store.getState()).id),
+      onOpenPath: (path: string, opts?: { target?: OpenTarget }) => {
+        void open(path, opts?.target);
+      },
       onSearch: (path: string) =>
         live.current.searchFor(
           (path.split("/").pop() ?? path).replace(/\.excalidraw$/i, ""),
         ),
     };
-  }, [runtime]);
+  }, [runtime, open]);
 
   // The editor mounted before the current one (see restoreFor).
   const mountedDoc = useRef<MountedDoc | null>(null);

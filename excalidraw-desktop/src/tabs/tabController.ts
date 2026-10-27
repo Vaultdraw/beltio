@@ -71,6 +71,11 @@ export type TabsControllerDeps = {
    * the revision, the undo is (correctly, but uselessly) dropped on return.
    */
   flushDocument?: () => Promise<void>;
+  /**
+   * A path a tab kind shows (see tabKinds.ts): no document is opened for it,
+   * the editor is closed like for the home tab, and the gate renders the view.
+   */
+  isCustomKind?: (path: string) => boolean;
   /** Called after every change that matters (debounced by the caller). */
   session?: { save: (state: TabsState) => void };
 };
@@ -310,6 +315,10 @@ export class TabsController {
     return { id: tab.id, path: tab.path };
   }
 
+  private custom(tab: Tab): boolean {
+    return tab.path !== null && (this.deps.isCustomKind?.(tab.path) ?? false);
+  }
+
   /** The active tab when it still needs a switch, else null. */
   private pending(state: TabsState): Tab | null {
     const tab = getActiveTab(state);
@@ -318,7 +327,7 @@ export class TabsController {
       l &&
       l.tabId === tab.id &&
       l.path === tab.path &&
-      (l.shown || tab.path === null || tab.missing)
+      (l.shown || tab.path === null || tab.missing || this.custom(tab))
     ) {
       return null;
     }
@@ -452,7 +461,7 @@ export class TabsController {
           return;
         }
         try {
-          if (target.path === null || target.missing) {
+          if (target.path === null || target.missing || this.custom(target)) {
             await this.deps.closeDocument();
             this.loaded = { tabId: target.id, path: target.path, shown: false };
           } else {
