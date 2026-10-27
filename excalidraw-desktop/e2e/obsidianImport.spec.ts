@@ -1,19 +1,58 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { clickMainMenuItem, openVault, trackErrors } from "./helpers";
-import { seedAndOpen } from "./pageHelpers";
+import { live, near, pixelAtScene, seedAndOpen } from "./pageHelpers";
 
 // "Import Obsidian vault…" through the real UI: click the main-menu entry, the (fake) folder
 // dialog returns a small Obsidian vault, and the converted notes and drawing land in a folder
 // of the open vault, with their links rewritten to the converted drawings. The source folder is
 // only read: its files are identical afterwards.
 
+// A red 40x40 SVG: a picture a drawing can hold, made of text so the fake source can carry it.
+// (The e2e Markdown parser is a stand-in without image blocks, so the picture check is on the converted
+// drawing; images inside notes are covered by the plugin's unit tests and the packaged run.)
+const PIC = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#ff0000"/></svg>`;
+const PIC_URL = `data:image/svg+xml;base64,${Buffer.from(PIC).toString("base64")}`;
+
 const SKETCH = JSON.stringify({
   type: "excalidraw",
   version: 2,
-  elements: [],
+  elements: [
+    {
+      id: "img1",
+      type: "image",
+      x: 0,
+      y: 0,
+      width: 120,
+      height: 120,
+      angle: 0,
+      strokeColor: "transparent",
+      backgroundColor: "transparent",
+      fillStyle: "solid",
+      strokeWidth: 1,
+      strokeStyle: "solid",
+      roughness: 0,
+      opacity: 100,
+      groupIds: [],
+      frameId: null,
+      roundness: null,
+      seed: 1,
+      version: 1,
+      versionNonce: 1,
+      isDeleted: false,
+      boundElements: null,
+      updated: 1,
+      link: null,
+      locked: false,
+      status: "saved",
+      fileId: "f1",
+      scale: [1, 1],
+    },
+  ],
   appState: {},
-  files: {},
+  files: {
+    f1: { id: "f1", mimeType: "image/svg+xml", dataURL: PIC_URL, created: 1 },
+  },
 });
 
 const SOURCE = {
@@ -23,7 +62,7 @@ const SOURCE = {
       "# Home\n\nSee [[Projects/Plan]] and [[Plan|the plan]] and [[Sketch]].\n",
     "Projects/Plan.md": "# Plan\n\nBack to [[Home]].\n",
     "Drawings/Sketch.excalidraw.md": `## Drawing\n\`\`\`json\n${SKETCH}\n\`\`\`\n`,
-    "attachments/pic.png": "not really a png",
+    "attachments/pic.svg": PIC,
     ".obsidian/app.json": "{}",
   } as Record<string, string>,
 };
@@ -89,6 +128,28 @@ test("main menu → Import Obsidian vault… converts a vault into a folder, lin
   const texts = (await readTexts(page)).join("\n");
   expect(texts).toContain("[[Projects/Plan]]");
   expect(texts).toContain("[[Drawings/Sketch|Sketch]]");
+
+  // The converted drawing keeps its embedded picture too.
+  await row(page, "Obsidian Notes/Drawings/Sketch.excalidraw").click();
+  await expect
+    .poll(
+      async () => {
+        const img = (await live(page)).elements.find((e) => e.type === "image");
+        return img
+          ? near(
+              await pixelAtScene(
+                page,
+                img.x + img.width / 2,
+                img.y + img.height / 2,
+              ),
+              [255, 0, 0],
+              40,
+            )
+          : false;
+      },
+      { timeout: 20_000 },
+    )
+    .toBe(true);
 
   // The source was only read.
   const after = await page.evaluate(
