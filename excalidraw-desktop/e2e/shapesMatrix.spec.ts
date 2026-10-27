@@ -623,7 +623,7 @@ test("dark theme and zoom 2: dotted, dashed and solid shapes draw where they are
   expect(errors).toEqual([]);
 });
 
-test("text, frame and image are drawn where they are placed", async ({
+test("text and frame are drawn where they are placed", async ({
   page,
 }) => {
   const errors = trackErrors(page);
