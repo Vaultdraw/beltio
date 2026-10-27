@@ -33,12 +33,36 @@ type StaticCanvasProps = {
 const StaticCanvas = (props: StaticCanvasProps) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const isComponentMounted = useRef(false);
+  /**
+   * On mount appState still has the window's size (the editor measures its
+   * container right after). Drawing at it allocates a full-window buffer plus
+   * a display buffer that the first measure drops again (~38 MB at 2x). When
+   * the container is already laid out at another size, size the canvas to it
+   * and skip that one render; the measure's re-render draws.
+   */
+  const skipMountRender = useRef(false);
 
   useEffect(() => {
-    props.canvas.style.width = `${props.appState.width}px`;
-    props.canvas.style.height = `${props.appState.height}px`;
-    props.canvas.width = props.appState.width * props.scale;
-    props.canvas.height = props.appState.height * props.scale;
+    let width = props.appState.width;
+    let height = props.appState.height;
+    if (!isComponentMounted.current) {
+      const box = wrapperRef.current
+        ?.closest(".excalidraw")
+        ?.getBoundingClientRect();
+      if (
+        box &&
+        box.width > 0 &&
+        box.height > 0 &&
+        (box.width !== width || box.height !== height)
+      ) {
+        ({ width, height } = box);
+        skipMountRender.current = true;
+      }
+    }
+    props.canvas.style.width = `${width}px`;
+    props.canvas.style.height = `${height}px`;
+    props.canvas.width = width * props.scale;
+    props.canvas.height = height * props.scale;
     // free the backing store on unmount (WebKit holds it until GC); StrictMode
     // re-runs this effect, which restores the size
     const canvas = props.canvas;
@@ -61,6 +85,11 @@ const StaticCanvas = (props: StaticCanvasProps) => {
 
       wrapper.replaceChildren(canvas);
       canvas.classList.add("excalidraw__canvas", "static");
+    }
+
+    if (skipMountRender.current) {
+      skipMountRender.current = false;
+      return;
     }
 
     renderStaticScene(
