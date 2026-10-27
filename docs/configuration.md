@@ -995,7 +995,7 @@ The index is stored outside the vault, in the state folder (`~/.local/state/vaul
 
 With `search.notes = true`, search also reads the Markdown notes (`.md`) of the vault: their lines (code blocks included), `#tags`, frontmatter `tags:`, headings and links. Tags inside code blocks and inline code are not tags. The folders `.obsidian`, `.trash` and `.git` are skipped, and so are `.excalidraw.md` files. A note's name is searched without `.md`.
 
-Note text is kept in memory for speed: 20,000 notes of about 2.5 KB use about 120 MB and answer a search in about 10 ms (measured 2026-10-27). `search.note_text_mb` (default 48) caps it; past the cap the newest notes keep their full text and older ones keep their name, headings, tags and links. `search.notes = true` turns it on (it is off until notes can be opened from the search results). Both are read when the index starts, so reopen the vault after changing them.
+Note text is kept in memory for speed. Without the cap, 20,000 notes of about 2.5 KB use about 120 MB and answer a search in about 10 ms (measured 2026-10-27); 800 notes of 100 KB at the old 48 MB default added 145 MB to the app (2026-10-28), so the default is 16. `search.note_text_mb` (default 16) caps it; past the cap the newest notes keep their full text and older ones keep their name, headings, tags and links. `search.notes = true` turns it on (it is off until notes can be opened from the search results). Both are read when the index starts, so reopen the vault after changing them.
 
 ## Links and backlinks
 
@@ -1334,7 +1334,7 @@ Keys for people who tune speed against detail. Defaults are what the app always 
 | `search.max_drawings` | `50` | Drawings listed in results, 1 to 200. |
 | `search.max_snippets` | `5` | Matching elements shown per drawing, 1 to 5 (the index keeps 5). |
 | `search.notes` | `false` | Index the Markdown notes (`.md`) of the vault: their text, `#tags`, frontmatter tags, links and headings. Read when the index starts, so reopen the vault after changing it. |
-| `search.note_text_mb` | `48` | Megabytes of note text the index keeps in memory, 0 to 4096; 48 holds about 20,000 notes. Past it a note keeps its name, headings, tags and links, and the newest notes keep their full text. Read when the index starts. |
+| `search.note_text_mb` | `16` | Megabytes of note text the index keeps in memory, 0 to 4096; 16 holds about 6,500 notes. Past it a note keeps its name, headings, tags and links, and the newest notes keep their full text. Read when the index starts. |
 | `interface.thumbnail_cache_mb` | `128` | Disk cap of a vault's thumbnail cache, 8 to 8192. Applies at the next thumbnail saved. |
 | `files.speculative_open` | `true` | Press on a drawing in the file tree, a tab or the switcher (mouse down) and the app reads and parses it before you release, so the switch lands sooner. Holds one drawing for about 2 seconds; a drag cancels it; nothing runs when it is off or you do not click. Applies live; also in Settings > Files. |
 
@@ -1737,7 +1737,7 @@ Search speed trade-offs. Lower counts and a longer wait cost less on a slow mach
 | `max_drawings` | `50` | a whole number from 1 to 200 |  | Most drawings listed in the search results. |
 | `max_snippets` | `5` | a whole number from 1 to 5 |  | Most matching elements shown under each drawing; the index keeps 5 per drawing, so 5 is the top. |
 | `notes` | `true` | true or false |  | Search the Markdown notes (`.md`) of the vault, with their `#tags`, links and headings. Read when the index starts (reopen the vault). |
-| `note_text_mb` | `48` | a whole number from 0 to 4096 |  | Megabytes of note text the index keeps in memory (48 holds about 20,000 notes). Past it a note keeps its name, headings, tags and links. Read when the index starts; 0 keeps only those. |
+| `note_text_mb` | `16` | a whole number from 0 to 4096 |  | Megabytes of note text the index keeps in memory (16 holds about 6,500 notes). Past it a note keeps its name, headings, tags and links. Read when the index starts; 0 keeps only those. |
 | `start` | `"idle"` | "open", "idle" or "use" |  | When the search index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first search). Tags show once it has started. See [Startup](#startup). |
 
 ### `[extensions]`

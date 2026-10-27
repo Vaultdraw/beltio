@@ -934,3 +934,14 @@ fn headless_load_or_build_equals_the_worker_index() {
     }
     assert_eq!(serde_json::to_value(headless.tag_summary()).unwrap(), serde_json::to_value(worker.tag_summary()).unwrap());
 }
+
+#[test]
+fn notes_config_defaults_to_a_16_mb_text_budget() {
+    let d = NotesConfig::from_config(&serde_json::json!({}));
+    assert!(d.enabled);
+    assert_eq!(d.budget_bytes, 16 * 1024 * 1024);
+    assert_eq!(d, NotesConfig::default());
+    let c = NotesConfig::from_config(&serde_json::json!({"search": {"notes": false, "note_text_mb": 48}}));
+    assert!(!c.enabled);
+    assert_eq!(c.budget_bytes, 48 * 1024 * 1024);
+}

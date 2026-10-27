@@ -365,7 +365,7 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
         doc: "Search the Markdown notes (`.md`) of the vault, with their `#tags`, links and headings. Read when the index starts (reopen the vault).",
       },
       note_text_mb: {
-        doc: "Megabytes of note text the index keeps in memory (48 holds about 20,000 notes). Past it a note keeps its name, headings, tags and links. Read when the index starts; 0 keeps only those.",
+        doc: "Megabytes of note text the index keeps in memory (16 holds about 6,500 notes). Past it a note keeps its name, headings, tags and links. Read when the index starts; 0 keeps only those.",
       },
       start: {
         doc: "When the search index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first search). Tags show once it has started. See [Startup](#startup).",

@@ -145,7 +145,7 @@ impl NotesConfig {
     pub(crate) fn from_config(config: &serde_json::Value) -> NotesConfig {
         let t = config.get("search");
         let enabled = t.and_then(|t| t.get("notes")).and_then(serde_json::Value::as_bool).unwrap_or(true);
-        let mb = t.and_then(|t| t.get("note_text_mb")).and_then(serde_json::Value::as_u64).map_or(48, |m| m.min(4096));
+        let mb = t.and_then(|t| t.get("note_text_mb")).and_then(serde_json::Value::as_u64).map_or(16, |m| m.min(4096));
         NotesConfig { enabled, budget_bytes: (mb as usize) * 1024 * 1024 }
     }
 }

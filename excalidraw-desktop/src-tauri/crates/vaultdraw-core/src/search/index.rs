@@ -356,10 +356,10 @@ pub struct Index {
     note_budget: Option<usize>,
 }
 
-/// Note text kept in memory by default: about 48 MB of normalised text, roughly 20,000 notes
+/// Note text kept in memory by default: about 16 MB of normalised text, roughly 6,500 notes
 /// of 2.5 KB (the 2026-10-27 spike: 118 MB of heap and a 10 ms query at 20,000 notes; reading
 /// the files for every query took 370 ms). Past it a note keeps its name, headings, tags and links.
-pub const DEFAULT_NOTE_BUDGET: usize = 48 * 1024 * 1024;
+pub const DEFAULT_NOTE_BUDGET: usize = 16 * 1024 * 1024;
 
 fn note_cost(path: &str, d: &DocEntry) -> usize {
     if super::notes::is_note_name(path) {

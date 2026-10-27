@@ -158,11 +158,14 @@ if (!skipApp && isScreenLocked()) {
   try {
     const { ensureVault } = await import(pathToFileURL(path.join(here, "lib", "fixtures.mjs")).href);
     const extra = await import(pathToFileURL(path.join(here, "lib", "extraVaults.mjs")).href);
-    const { vaultDir, manifest } = modes.everyday
+    let { vaultDir, manifest } = modes.everyday
       ? await extra.ensureEverydayVault({ cacheDir: fixturesDir, config: typicalConfig })
       : modes.typical
       ? await extra.ensureTypicalVault({ cacheDir: fixturesDir, config: typicalConfig })
       : await ensureVault({ cacheDir: fixturesDir, config, log });
+    // PERF_NOTES=<count>[x<kb>] (env, notes-scale): add that many Markdown notes (default 2.5 KB) to the typical vault.
+    const notesSpec = process.env.PERF_NOTES?.match(/^(\d+)(?:x([\d.]+))?$/);
+    if (notesSpec) vaultDir = (await extra.ensureNotesVault({ cacheDir: fixturesDir, baseVault: vaultDir, count: Number(notesSpec[1]), kb: Number(notesSpec[2] ?? 2.5) })).vaultDir;
     if (manifest?.hash) fixtureHash = String(manifest.hash).slice(0, 12);
     const altVault = modes.leak ? (await extra.ensureAltVault({ cacheDir: fixturesDir, seed: config.seed })).vaultDir : undefined;
     const built = o["no-build"] ? reuseBuiltApp({ wtRoot }) : await buildPerfApp({ wtRoot, log });

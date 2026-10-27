@@ -127,3 +127,42 @@ export function ensureAltVault({ cacheDir, seed }) {
     },
   });
 }
+
+const NOTE_WORDS = ("the of and to in is that for it with as was on be at by this have from or one had not but what all were when we there can an your which their said if do will each about how up out them then she many some so these would other into has more her two like him see time could no make than first been its who now people my made over did down only way find use may water long little very after words called just where most know get through back much before go good new write our used me man too any day same right look think also around another came come work three word must because does part even place well such here take why things help put years different away again off went old number great tell men say small every found still between name should home big give air line set own under read last never us left end along while might next sound below saw something thought both few those always looked show large often together asked house don't world going want school important until form food keep children feet land side without boy once animals life enough took sometimes four head above kind began almost live page got earth need far hand high year mother light parts country father let night following picture being study second eyes soon times story boys since white days ever paper hard near sentence better best across during today however sure knew try told young sun thing whole hear example heard several change answer room sea against top turned learn point city play toward five using himself usually").split(" ");
+
+/** Deterministic Markdown notes: headings, #tags, [[links]], one code block; about `kb` KB each, 100 per folder. */
+export function noteText(rng, i, count, kb) {
+  const pick = () => NOTE_WORDS[Math.floor(rng() * NOTE_WORDS.length)];
+  const sentence = () => { const n = 6 + Math.floor(rng() * 10); const w = Array.from({ length: n }, pick); w[0] = w[0][0].toUpperCase() + w[0].slice(1); return `${w.join(" ")}.`; };
+  const target = kb * 1024;
+  let out = `---\ntags: [${pick()}, ${pick()}]\n---\n# Note ${i}: ${pick()} ${pick()}\n\n`;
+  let h = 0;
+  while (out.length < target) {
+    if (out.length > 0 && Math.floor(out.length / 700) > h) { h = Math.floor(out.length / 700); out += `\n## ${pick()} ${pick()}\n\n`; }
+    let para = Array.from({ length: 3 + Math.floor(rng() * 4) }, sentence).join(" ");
+    if (rng() < 0.3) para += ` See [[note-${Math.floor(rng() * count)}]] #${pick()}`;
+    out += `${para}\n\n`;
+    if (rng() < 0.05) out += "```js\nconst x = " + Math.floor(rng() * 1000) + ";\nconsole.log(x);\n```\n\n";
+  }
+  return out;
+}
+
+/** `baseVault` cloned plus `count` notes of about `kb` KB in folders of 100 (`Notes-N/note-i.md`). Cached by arguments. */
+export async function ensureNotesVault({ cacheDir, baseVault, count, kb }) {
+  const name = `notes-${count}x${kb}k`;
+  const vaultDir = path.join(cacheDir, `${name}-${path.basename(baseVault)}`);
+  if (await exists(path.join(vaultDir, COMPLETE_MARKER + "-notes"))) return { vaultDir };
+  const tmpDir = `${vaultDir}.tmp-${process.pid}`;
+  await fs.rm(tmpDir, { recursive: true, force: true });
+  await fs.cp(baseVault, tmpDir, { recursive: true });
+  const rng = mulberry32(hashSeed(20261028, name));
+  for (let i = 0; i < count; i++) {
+    const dir = path.join(tmpDir, `Notes-${Math.floor(i / 100)}`);
+    if (i % 100 === 0) await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, `note-${i}.md`), noteText(rng, i, count, kb));
+  }
+  await fs.writeFile(path.join(tmpDir, COMPLETE_MARKER + "-notes"), "");
+  await fs.rm(vaultDir, { recursive: true, force: true });
+  await fs.rename(tmpDir, vaultDir);
+  return { vaultDir };
+}

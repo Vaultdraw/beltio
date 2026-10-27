@@ -1351,8 +1351,8 @@
           "type": "boolean"
         },
         "note_text_mb": {
-          "description": "Megabytes of note text the index keeps in memory (48 holds about 20,000 notes). Past it a note keeps its name, headings, tags and links. Read when the index starts; 0 keeps only those.",
-          "default": 48,
+          "description": "Megabytes of note text the index keeps in memory (16 holds about 6,500 notes). Past it a note keeps its name, headings, tags and links. Read when the index starts; 0 keeps only those.",
+          "default": 16,
           "type": "integer",
           "minimum": 0,
           "maximum": 4096

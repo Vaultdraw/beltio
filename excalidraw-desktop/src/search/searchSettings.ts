@@ -42,7 +42,7 @@ export const SEARCH_DEFAULTS: SearchPreferences = {
   searchMaxDrawings: 50,
   searchMaxSnippets: 5,
   searchNotes: true,
-  searchNoteTextMb: 48,
+  searchNoteTextMb: 16,
 };
 
 const intIn =
