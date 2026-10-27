@@ -2360,8 +2360,11 @@ export const VaultApp = ({
       createDrawing: (parent, name, json) =>
         shellRef.current.createEntryCore(parent, name, json),
       writeDrawing: async (path, json) => {
-        const { vault: v, repository: repo, loadDirectory: load } =
-          shellRef.current;
+        const {
+          vault: v,
+          repository: repo,
+          loadDirectory: load,
+        } = shellRef.current;
         if (!v) {
           throw new Error("No vault is open");
         }

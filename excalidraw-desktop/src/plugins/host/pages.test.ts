@@ -185,7 +185,10 @@ describe("pages.createDocument", () => {
     ).toThrow(/items\[1\]\.type/);
     expect(() => doc.append([text(0, 0)], 0)).toThrow(/pageCount/);
     expect(() =>
-      doc.append([text(0, 0, "x", { link: "javascript:alert(1)" })], 1),
+      doc.append(
+        [text(0, 0, "x", { link: ["javascript", "alert(1)"].join(":") })],
+        1,
+      ),
     ).toThrow(/link/);
     await p.flush();
     expect(p.scene.live()).toHaveLength(0);

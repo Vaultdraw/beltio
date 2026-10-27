@@ -25,6 +25,7 @@ describe("layout budgets", () => {
     const table = buildWidthTable(fakeMeasure, note50k, opts);
     const { parts, stats } = layoutNote(note50k, table, opts);
     const perThousand = (stats.elements / stats.words) * 1000;
+    // eslint-disable-next-line no-console -- bench output
     console.log(
       `50k words: ${stats.elements} elements, ${stats.pages} pages, ${
         parts.length
@@ -89,6 +90,7 @@ describe("layout budgets", () => {
     }
     const ms = performance.now() - t0;
     gen.return(undefined);
+    // eslint-disable-next-line no-console -- bench output
     console.log(`first page of 50k words after ${ms.toFixed(2)} ms`);
     expect(first).toMatchObject({
       type: "page",

@@ -20,6 +20,7 @@ describe("layout bench", () => {
     const t1 = performance.now();
     const { stats } = layoutNote(doc, table, opts);
     const t2 = performance.now();
+    // eslint-disable-next-line no-console -- bench output
     console.log(
       `${words} words: table ${(t1 - t0).toFixed(1)} ms, layout ${(
         t2 - t1

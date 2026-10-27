@@ -103,7 +103,10 @@ const CENTER = { x: VIEWPORT.width / 2, y: VIEWPORT.height / 2 };
 export interface SceneModel {
   fake: FakeScene;
   /** Adds editor elements (a page document's frame) and merges app state. */
-  append(elements: readonly FakeElement[], appState?: Record<string, unknown>): void;
+  append(
+    elements: readonly FakeElement[],
+    appState?: Record<string, unknown>,
+  ): void;
   /** Replaces the app state (a load). */
   setAppState(appState: Record<string, unknown>): void;
   /** `ctx.scene` of one plugin. */

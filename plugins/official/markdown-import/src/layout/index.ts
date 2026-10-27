@@ -19,7 +19,7 @@ import { PartCutter } from "./parts";
 import { Wrapper } from "./wrap";
 
 import type { NoteDoc } from "@vaultdraw/api";
-import type { Mapped, MappedList, MappedText } from "./blocks";
+import type { MappedList, MappedText } from "./blocks";
 import type { Role } from "./fonts";
 import type { Container, Entry, TextBlock } from "./paginate";
 import type {

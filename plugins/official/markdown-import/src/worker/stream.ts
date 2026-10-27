@@ -154,6 +154,7 @@ export async function* layoutNoteBatches(
       }
       return f.stats;
     }
+    // eslint-disable-next-line no-loop-func -- one waiter at a time, woken by the worker
     await new Promise<void>((r) => {
       wake = r;
     });
