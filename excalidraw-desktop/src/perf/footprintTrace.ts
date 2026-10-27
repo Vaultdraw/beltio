@@ -15,6 +15,11 @@ export function setPerfStep(name: string): void {
   step = name;
 }
 
+/** The step running now (for other perf-only probes). */
+export function perfStep(): string {
+  return step;
+}
+
 export function startFootprintTrace(
   win: Window,
   pids: Record<string, number | null | undefined>,

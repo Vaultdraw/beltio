@@ -183,6 +183,43 @@ function longTaskStats(tasks, marks, endT) {
 }
 
 /** Page URL: leak flags plus the scenario filter (?scenarios= allow-list, ?skip= deny-list). */
+/**
+ * Memory diagnosis (PERF_HEAP_PROBE=<dir>): at every perf mark, after a forced GC, append
+ * the retained JS heap and the page's own counters (window.__perfMemCounters: scene, image
+ * dataURLs, element bitmaps, canvases) to <dir>/probe.jsonl. PERF_HEAP_SNAPSHOT=a,b also
+ * writes a heap snapshot at the marks whose name contains one of a, b (analyse with
+ * perf/lib/heapStrings.mjs). Off by default; costs nothing when unset.
+ */
+let heapProbeRuns = 0;
+function makeHeapProbe(dir, snapshotAt, log) {
+  const wanted = (snapshotAt ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const run = ++heapProbeRuns;
+  return {
+    async onMark(page, cdp, usedHeap) {
+      await fs.mkdir(dir, { recursive: true });
+      const marks = await page.evaluate(() => (window.__perfMarks ?? []).map((m) => m.name));
+      const mark = marks[marks.length - 1] ?? "?";
+      const counters = await page
+        .evaluate(() => window.__perfMemCounters?.())
+        .catch((e) => ({ error: String(e) }));
+      const heapMB = Math.round((await usedHeap()) / 1e5) / 10;
+      const row = { run, mark, heapMB, counters };
+      await fs.appendFile(path.join(dir, "probe.jsonl"), `${JSON.stringify(row)}\n`);
+      log?.(`[heap] ${mark} ${heapMB} MB ${JSON.stringify(counters)}`);
+      if (wanted.some((w) => mark.includes(w))) {
+        const file = path.join(dir, `run${run}-${mark.replace(/[^\w.-]+/g, "_")}.heapsnapshot`);
+        const chunks = [];
+        const onChunk = ({ chunk }) => chunks.push(chunk);
+        cdp.on("HeapProfiler.addHeapSnapshotChunk", onChunk);
+        await cdp.send("HeapProfiler.takeHeapSnapshot", { reportProgress: false });
+        cdp.off("HeapProfiler.addHeapSnapshotChunk", onChunk);
+        await fs.writeFile(file, chunks.join(""));
+        log?.(`[heap] snapshot ${file}`);
+      }
+    },
+  };
+}
+
 export function pageUrl(port, { leak, leakOnly, scenarios, skipScenarios } = {}) {
   const q = new URLSearchParams();
   if (leak) q.set("leak", "1");
@@ -221,6 +258,9 @@ async function onePage(browser, { port, mode, timeoutMs, log, leak, leakOnly, sc
     // end. Collecting only at phase boundaries keeps the timed phases undisturbed.
     let peak = 0;
     let retainedPeak = 0;
+    const heapProbe = process.env.PERF_HEAP_PROBE
+      ? makeHeapProbe(process.env.PERF_HEAP_PROBE, process.env.PERF_HEAP_SNAPSHOT, log)
+      : null;
     const usedHeap = async () => {
       const { metrics } = await cdp.send("Performance.getMetrics");
       return metrics.find((m) => m.name === "JSHeapUsedSize")?.value ?? 0;
@@ -255,6 +295,9 @@ async function onePage(browser, { port, mode, timeoutMs, log, leak, leakOnly, sc
         if (n > marksSeen) {
           marksSeen = n;
           await sampleRetained();
+          if (heapProbe) {
+            await heapProbe.onMark(page, cdp, usedHeap);
+          }
         }
       } catch {
       } finally {

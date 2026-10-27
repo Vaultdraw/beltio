@@ -7,6 +7,7 @@
 import { isSceneReady } from "../editor/sceneReady";
 
 import { runLeakScenario } from "./leakScenario";
+import { installMemCounters } from "./memCounters";
 import { collectFrames, countLong } from "./perfStats";
 import { readOpenMarks } from "./openMarks";
 import { refreshRateSamples, runRefreshRateProbe } from "./refreshRate";
@@ -84,6 +85,7 @@ const OPEN_TIMEOUT = 30_000;
 
 export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
   const { root, doc, win, config } = ctx;
+  installMemCounters(win);
   const iter = { ...DEFAULTS, ...ctx.iterations };
   const samples: PerfSamples = {};
   const info: Record<string, unknown> = {};
