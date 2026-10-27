@@ -2,6 +2,7 @@
 // its stubs work. Kept apart from pluginHarness.ts, whose imports would load the plugin host.
 // @ts-expect-error the CLI is plain .mjs
 import { parseToml } from "../../sdk/cli/src/toml.mjs";
+import formulaToml from "../../plugins/official/formula/plugin.toml?raw";
 import galleryToml from "../../plugins/official/gallery/plugin.toml?raw";
 import { setPluginsBackend } from "../src/plugins/host/backend";
 import {
@@ -10,18 +11,19 @@ import {
 } from "../src/plugins/host/fakeBackend";
 
 /**
- * No ?plugins: the app's default official plugins (the gallery) can be listed by the fake backend,
+ * No ?plugins: the app's default official plugins (the gallery and formula) can be listed by the fake backend,
  * so their stubs work. Nothing starts until one is used (the host loads on first use).
  */
 export async function installDefaultBackend(win: Window): Promise<void> {
   const { bootPlugins } = await import("../src/plugins/boot");
-  // The manifest is bundled into the harness: listing it fetches nothing.
-  const doc = parseToml(galleryToml);
-  const infos = [
-    makePluginInfo("gallery", {
+  // The manifests are bundled into the harness: listing them fetches nothing.
+  const infoOf = (id: string, toml: string) => {
+    const doc = parseToml(toml);
+    return makePluginInfo(id, {
       name: doc.name,
       version: doc.version,
       source: "bundled",
+      dataKey: doc.data_key ?? null,
       contributes: {
         commands: doc.contributes.commands.map((x: any) => ({
           id: x.id,
@@ -32,7 +34,7 @@ export async function installDefaultBackend(win: Window): Promise<void> {
           repeat: x.repeat ?? false,
         })),
         panels: [],
-        menus: doc.contributes.menus.map((x: any) => ({
+        menus: (doc.contributes.menus ?? []).map((x: any) => ({
           surface: x.surface,
           command: x.command,
           title: x.title ?? null,
@@ -40,7 +42,11 @@ export async function installDefaultBackend(win: Window): Promise<void> {
         })),
         settings: [],
       },
-    }),
+    });
+  };
+  const infos = [
+    infoOf("gallery", galleryToml),
+    infoOf("formula", formulaToml),
   ];
   setPluginsBackend(
     createFakeBackend(

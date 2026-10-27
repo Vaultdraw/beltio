@@ -1,9 +1,6 @@
 /** Off means not created: a hook whose extension is off binds no handler. */
 import { cleanup, renderHook } from "@testing-library/react";
-import { createRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
 import { getRegisteredHandler } from "../commands/handlerRegistry";
 import { editFormulaImage, setFormulaEditRunner } from "../plugins/formulaEdit";
@@ -25,8 +22,16 @@ describe("extension off: no handlers", () => {
     expect(run).toHaveBeenCalledWith("formula.edit");
     // View mode, a locked image and a plain image are left to the editor.
     expect(editFormulaImage(window, el, true)).toBe(false);
-    expect(editFormulaImage(window, { locked: true, customData: { latex: {} } } as never, false)).toBe(false);
-    expect(editFormulaImage(window, { customData: {} } as never, false)).toBe(false);
+    expect(
+      editFormulaImage(
+        window,
+        { locked: true, customData: { latex: {} } } as never,
+        false,
+      ),
+    ).toBe(false);
+    expect(editFormulaImage(window, { customData: {} } as never, false)).toBe(
+      false,
+    );
     setFormulaEditRunner(null);
     expect(editFormulaImage(window, el, false)).toBe(false);
   });

@@ -34,7 +34,7 @@ fn ensure_cli_sidecar() {
 /// then missing from that dev build until `node plugins/official/build.mjs` runs.
 fn ensure_official_plugin_dirs() {
     // One entry per official plugin listed in tauri.conf.json `bundle.resources`.
-    for id in ["markdown-import", "gallery", "graph"] {
+    for id in ["markdown-import", "gallery", "graph", "formula"] {
         let dir = Path::new("../../plugins/official").join(id).join("dist");
         println!("cargo:rerun-if-changed={}", dir.display());
         if !dir.exists() {

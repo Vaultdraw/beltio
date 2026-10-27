@@ -44,7 +44,8 @@
       "../../plugins/official/markdown-import/dist": "plugins/markdown-import",
       "../../plugins/official/gallery/dist": "plugins/gallery",
       "../../plugins/official/graph/dist": "plugins/graph",
-      "../../plugins/official/mermaid/dist": "plugins/mermaid"
+      "../../plugins/official/mermaid/dist": "plugins/mermaid",
+      "../../plugins/official/formula/dist": "plugins/formula"
     },
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
     "fileAssociations": [

@@ -14,10 +14,11 @@ describe("[plugins] enabled", () => {
       "gallery",
       "graph",
       "mermaid",
+      "formula",
     ]);
     expect(
       configToPreferences({ plugins: { enabled: [] } }).values.pluginsEnabled,
-    ).toEqual(["markdown-import", "gallery", "graph", "mermaid"]); // an old list: official plugins are on
+    ).toEqual(["markdown-import", "gallery", "graph", "mermaid", "formula"]); // an old list: official plugins are on
     const ok = configToPreferences({ plugins: { enabled: ["hello-command"] } });
     expect(ok.values.pluginsEnabled).toEqual([
       "hello-command",
@@ -25,6 +26,7 @@ describe("[plugins] enabled", () => {
       "gallery",
       "graph",
       "mermaid",
+      "formula",
     ]);
     expect(ok.problems).toEqual([]);
   });
@@ -36,6 +38,7 @@ describe("[plugins] enabled", () => {
       "gallery",
       "graph",
       "mermaid",
+      "formula",
     ]);
     expect(bad.problems[0].key).toBe("plugins.enabled");
   });

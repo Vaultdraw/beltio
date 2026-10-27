@@ -131,7 +131,8 @@ test.describe("formula", () => {
       .not.toBe(before.fileId);
     s = await scene(page);
     const after = s.elements.find((e) => e.type === "image")!;
-    expect(after.id).toBe(before.id);
+    // The plugin draws the edit as a replacement element (new id, same centre, one undo step).
+    expect(after.id).not.toBe(before.id);
     expect(after.customData.latex.source).toBe(
       String.raw`\sum_{n=1}^{\infty} \frac1{n^2}`,
     );

@@ -64,9 +64,15 @@ describe("formula plugin", () => {
 
   it("provides ctx.math: null before the plugin runs, the render after", async () => {
     p = await boot(manifest(), plugin);
-    expect(await p.renderMath({ source: "x", display: true, color: "#000" })).toBeNull();
+    expect(
+      await p.renderMath({ source: "x", display: true, color: "#000" }),
+    ).toBeNull();
     await p.run("provide");
-    const r = await p.renderMath({ source: "x^2", display: true, color: "#000" });
+    const r = await p.renderMath({
+      source: "x^2",
+      display: true,
+      color: "#000",
+    });
     expect(r).toMatchObject({ ok: true, width: 30 });
   });
 
@@ -100,7 +106,11 @@ describe("formula plugin", () => {
     await confirm("x^2", "Insert");
     cleanup();
     await waitFor(() => expect(p!.scene.live()).toHaveLength(1));
-    const first = p.scene.live()[0] as never as { id: string; x: number; width: number };
+    const first = p.scene.live()[0] as never as {
+      id: string;
+      x: number;
+      width: number;
+    };
     const batches = p.scene.batches.length;
 
     p.scene.select([first.id]);
@@ -111,7 +121,10 @@ describe("formula plugin", () => {
     );
     await confirm("x^2+y^2", "Save");
     await waitFor(() => expect(p!.scene.batches.length).toBe(batches + 1));
-    const live = p.scene.live() as never as { id: string; customData: { latex: { source: string } } }[];
+    const live = p.scene.live() as never as {
+      id: string;
+      customData: { latex: { source: string } };
+    }[];
     expect(live).toHaveLength(1);
     expect(live[0].id).not.toBe(first.id);
     expect(live[0].customData.latex.source).toBe("x^2+y^2");

@@ -126,6 +126,7 @@ export interface ImportersApi {
 // index.ts
 export type { CommandsApi } from "./commands";
 export type { MethodsApi } from "./methods";
+export type { MathApi, MathRequest, MathResult } from "./math";
 export type { Disposable } from "./disposable";
 export type { AppEventMap, EventsApi } from "./events";
 export type { CommandContribution, ImporterContribution, MenuContribution, MethodContribution, StatusBarContribution, ToolbarContribution, ToolContribution, ShapeContribution, ViewContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
@@ -360,6 +361,27 @@ export interface MarkdownApi {
     parse(text: string, options?: MarkdownParseOptions): Promise<NoteDoc>;
 }
 
+// math.ts
+import type { Disposable } from "./disposable";
+export interface MathRequest {
+    source: string;
+    display: boolean;
+    color: string;
+}
+export type MathResult = {
+    ok: true;
+    svg: string;
+    width: number;
+    height: number;
+} | {
+    ok: false;
+    error: string;
+};
+export interface MathApi {
+    render(request: MathRequest): Promise<MathResult | null>;
+    provide(renderer: (request: MathRequest) => Promise<MathResult>): Disposable;
+}
+
 // menus.ts
 export interface MenuTarget {
     surface: "tree" | "tab" | "canvas";
@@ -389,6 +411,7 @@ export interface OverlayProps {
 }
 export interface OverlayOptions {
     onClose?(): void;
+    modal?: boolean;
 }
 export interface OverlayHandle extends Disposable {
     close(): void;
@@ -520,6 +543,7 @@ import type { EventsApi } from "./events";
 import type { HostApi } from "./host";
 import type { ImportersApi } from "./importers";
 import type { MarkdownApi } from "./markdown";
+import type { MathApi } from "./math";
 import type { MenusApi } from "./menus";
 import type { PluginManifestInfo } from "./manifest";
 import type { PagesApi } from "./pages";
@@ -574,6 +598,7 @@ export interface PluginContext {
     readonly tools: ToolsApi;
     readonly shapes: ShapesApi;
     readonly methods: MethodsApi;
+    readonly math: MathApi;
     readonly overlays: OverlaysApi;
     readonly thumbnails: ThumbnailsApi;
     readonly diagrams: DiagramsApi;
@@ -702,6 +727,8 @@ export interface SceneContextApi {
     dataOf(id: string): Json | undefined;
     path(): string | null;
     scrollTo(id: string): void;
+    selection(): readonly string[];
+    currentStrokeColor(): string;
 }
 
 // settings.ts

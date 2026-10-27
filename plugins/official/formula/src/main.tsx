@@ -7,7 +7,11 @@ import { definePlugin } from "@vaultdraw/api";
 
 import FormulaDialog from "./FormulaDialog";
 import dialogCss from "./FormulaDialog.css";
-import { insertFormula, replaceFormula, selectedFormula } from "./insertFormula";
+import {
+  insertFormula,
+  replaceFormula,
+  selectedFormula,
+} from "./insertFormula";
 import { disposeFormulaRenderer, renderFormula } from "./renderer";
 
 import type { OverlayHandle, PluginContext } from "@vaultdraw/api";
@@ -36,7 +40,9 @@ export default definePlugin({
     ctx.math.provide((req) => renderFormula(req));
 
     const fail = (e: unknown) =>
-      ctx.ui.toast(e instanceof Error ? e.message : "Could not place the formula");
+      ctx.ui.toast(
+        e instanceof Error ? e.message : "Could not place the formula",
+      );
 
     const open = (what: Mode) => {
       shown?.close();

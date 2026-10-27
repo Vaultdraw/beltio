@@ -96,7 +96,9 @@ export function DialogFrame({
         }
       }}
     >
-      <div className={`vault-modal vd-dialog${className ? ` ${className}` : ""}`}>
+      <div
+        className={`vault-modal vd-dialog${className ? ` ${className}` : ""}`}
+      >
         <div className="vault-modal__header vd-dialog__header">
           <div className="vd-dialog__heading">
             <h3 id={titleId} className="vault-modal__title vd-dialog__title">

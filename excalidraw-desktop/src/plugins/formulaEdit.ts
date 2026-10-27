@@ -3,9 +3,9 @@
  * for every image double-click, so it stays tiny and imports nothing from the plugin host (the
  * host loads only when an edit really starts).
  */
-import { enabledPluginIds } from "./enabledIds";
-
 import type { ExcalidrawImageElement } from "@excalidraw/element/types";
+
+import { enabledPluginIds } from "./enabledIds";
 
 /** Runs a command of an official plugin, starting the host first (set by boot). */
 let runner: ((fullId: string) => Promise<void>) | null = null;

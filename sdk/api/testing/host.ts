@@ -273,9 +273,8 @@ export function createMockHost(
     onClose?: () => void;
   } | null = null;
   let overlayClose: (() => void) | null = null;
-  let mathProvider:
-    | ((request: MathRequest) => Promise<MathResult>)
-    | null = null;
+  let mathProvider: ((request: MathRequest) => Promise<MathResult>) | null =
+    null;
   let lines: PluginLogLine[] = [];
   let errors = 0;
   let toastQueue: MockToast[] = [];
@@ -577,7 +576,8 @@ export function createMockHost(
         },
       },
       math: {
-        render: async (request) => (mathProvider ? mathProvider(request) : null),
+        render: async (request) =>
+          mathProvider ? mathProvider(request) : null,
         provide(renderer) {
           mathProvider = renderer;
           return track(() => {
@@ -1477,7 +1477,8 @@ export function createMockHost(
     },
     openedFromViews: () => opened_views.map((o) => ({ ...o })),
     openPanelIds: () => [...openPanels],
-    renderMath: async (request) => (mathProvider ? mathProvider(request) : null),
+    renderMath: async (request) =>
+      mathProvider ? mathProvider(request) : null,
     overlay() {
       const open = overlay;
       if (!open) {
