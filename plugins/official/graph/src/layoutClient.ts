@@ -112,8 +112,7 @@ export class LayoutClient {
 
   constructor(
     private readonly cb: LayoutCallbacks,
-    private readonly inThread = typeof Worker === "undefined" ||
-      workerSource() === null,
+    private readonly inThread = typeof Worker === "undefined",
   ) {}
 
   start(init: LayoutStart): void {
