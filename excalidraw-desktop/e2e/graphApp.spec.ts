@@ -2,7 +2,12 @@ import { mkdirSync } from "node:fs";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { breadcrumbs, expectOpen, openLinksVault } from "./linksHelpers";
+import {
+  breadcrumbs,
+  expectOpen,
+  GRAPH_PLUGIN,
+  openLinksVault,
+} from "./linksHelpers";
 import { personalPath } from "./mainCheckout";
 
 // The graph inside the real VaultApp (fake links, fake vault_graph, fake settings.toml; no Rust).
@@ -64,7 +69,7 @@ test.beforeAll(() => mkdirSync(SHOTS, { recursive: true }));
 test("Mod+Alt+G opens the graph over the canvas, hover shows name and shortcut row, Esc returns", async ({
   page,
 }) => {
-  await openLinksVault(page, "Hub");
+  await openLinksVault(page, "Hub", null, GRAPH_PLUGIN);
   const canvas = page.locator(".vault-editor canvas.interactive");
   const before = await canvas.screenshot();
   await openGraph(page);
@@ -90,7 +95,7 @@ test("Mod+Alt+G opens the graph over the canvas, hover shows name and shortcut r
 test("Enter opens the hovered drawing and closes the graph; click does too", async ({
   page,
 }) => {
-  await openLinksVault(page, "Hub");
+  await openLinksVault(page, "Hub", null, GRAPH_PLUGIN);
   await openGraph(page);
   await hover(page, "Alpha.excalidraw");
   await page.keyboard.press("Enter");
@@ -108,7 +113,7 @@ test("Enter opens the hovered drawing and closes the graph; click does too", asy
 test("Mod+Alt+L opens the local graph around the current drawing", async ({
   page,
 }) => {
-  await openLinksVault(page, "Hub");
+  await openLinksVault(page, "Hub", null, GRAPH_PLUGIN);
   await openGraph(page);
   const all = await page.evaluate(
     () => (window as unknown as Win).__graphApp!.nodeCount,
@@ -128,7 +133,7 @@ test("Mod+Alt+L opens the local graph around the current drawing", async ({
 test("Graph commands are in Cmd+Shift+P and on the Hotkeys page", async ({
   page,
 }) => {
-  await openLinksVault(page, "Hub");
+  await openLinksVault(page, "Hub", null, GRAPH_PLUGIN);
   await page.keyboard.press("Meta+Shift+KeyP");
   await expect(palette(page)).toBeVisible();
   await palette(page).getByRole("combobox").fill(">graph");
@@ -149,7 +154,7 @@ test("Graph commands are in Cmd+Shift+P and on the Hotkeys page", async ({
 test("graph.fit refits through the palette without a synthetic key", async ({
   page,
 }) => {
-  await openLinksVault(page, "Hub");
+  await openLinksVault(page, "Hub", null, GRAPH_PLUGIN);
   await openGraph(page);
   const scale = () =>
     page.evaluate(() => (window as unknown as Win).__graphApp!.nodeCount);
@@ -172,7 +177,7 @@ test("graph.fit refits through the palette without a synthetic key", async ({
 test("theme change recolours the graph (light and dark screenshots)", async ({
   page,
 }) => {
-  await openLinksVault(page, "Hub");
+  await openLinksVault(page, "Hub", null, GRAPH_PLUGIN);
   await openGraph(page);
   await hover(page, "Alpha.excalidraw");
   await page.waitForTimeout(250);
@@ -197,7 +202,7 @@ test("theme change recolours the graph (light and dark screenshots)", async ({
 test("per-vault graph settings persist to settings.toml across a reload", async ({
   page,
 }) => {
-  await openLinksVault(page, "Hub");
+  await openLinksVault(page, "Hub", null, GRAPH_PLUGIN);
   await openGraph(page);
   await graph(page).getByRole("button", { name: "Settings" }).click();
   await page.keyboard.press("Escape");
@@ -218,6 +223,7 @@ test("per-vault graph settings persist to settings.toml across a reload", async 
     )
     .toBe(false);
   await page.reload();
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
   await expect(page.getByLabel("Vault File Navigator")).toBeVisible();
   await page
     .locator(".vault-tree-item__name", { hasText: "Hub" })

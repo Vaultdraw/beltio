@@ -635,17 +635,16 @@ const graphStore = (() => {
     return {};
   }
 })();
-const graphInvokeBase = fakeVaultSettingsInvoke(graphStore);
-const graphInvoke = (async (cmd: string, args?: any, opts?: any) => {
-  const out = await graphInvokeBase(cmd, args, opts);
-  if (cmd === "update_vault_settings") {
-    ownerWindow.sessionStorage.setItem(
-      GRAPH_STORE_KEY,
-      JSON.stringify(graphStore),
-    );
-  }
-  return out;
-}) as typeof graphInvokeBase;
+// The graph plugin reads these through the fake plugin backend (pluginHarness.ts, `?plugins=graph`).
+(ownerWindow as any).__graphBytes = () => graphSource.bytes(repository.handle);
+(ownerWindow as any).__graphPersist = () =>
+  ownerWindow.sessionStorage.setItem(
+    GRAPH_STORE_KEY,
+    JSON.stringify(graphStore),
+  );
+(ownerWindow as any).__graphOnSession = (session: unknown) => {
+  (ownerWindow as any).__graphApp = session;
+};
 (ownerWindow as any).__graphSource = graphSource;
 (ownerWindow as any).__graphSettingsToml = graphStore;
 
@@ -758,13 +757,6 @@ function mountVaultApp() {
           history={historyRepository}
           pdf={pdfBridge}
           thumbnails={thumbnailStore ?? null}
-          graph={{
-            graphSource,
-            invoke: graphInvoke,
-            onSession: (session) => {
-              (ownerWindow as any).__graphApp = session;
-            },
-          }}
         />
       </StrictMode>,
     );

@@ -21,7 +21,7 @@ import { resetDisplayAndForces, SettingsPanel } from "./SettingsPanel";
 import { useGraphSession } from "./useGraphSession";
 import { useViewCommands } from "./viewBus";
 
-import graphCss from "./graph.css";
+import graphCss from "./graph.css?raw";
 
 import type { GraphViewProps } from "./settings";
 

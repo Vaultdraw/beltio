@@ -17,6 +17,64 @@ import type { VaultRepository } from "../vault/types";
 
 const EXT = ".excalidraw";
 
+/** Encodes a graph as the native `vault_graph` payload (the inverse of the plugin's `decodeGraph`). */
+export function encodeGraph(g: GraphData): Uint8Array {
+  const enc = new TextEncoder();
+  const labels = Array.from({ length: g.nodeCount }, (_, i) =>
+    enc.encode(g.label(i)),
+  );
+  const folders = Array.from({ length: g.folderCount }, (_, f) =>
+    enc.encode(g.folderName(f)),
+  );
+  const nodeOff = new Uint32Array(g.nodeCount + 1);
+  let at = 0;
+  labels.forEach((l, i) => {
+    nodeOff[i] = at;
+    at += l.length;
+  });
+  nodeOff[g.nodeCount] = at;
+  const folderOff = new Uint32Array(g.folderCount + 1);
+  folders.forEach((l, i) => {
+    folderOff[i] = at;
+    at += l.length;
+  });
+  folderOff[g.folderCount] = at;
+  const blob = new Uint8Array(at);
+  [...labels, ...folders].reduce((pos, b) => {
+    blob.set(b, pos);
+    return pos + b.length;
+  }, 0);
+  const head = new Uint32Array([
+    0x31474456,
+    1,
+    g.nodeCount,
+    g.edgeCount,
+    g.folderCount,
+    at,
+    0,
+    0,
+  ]);
+  const parts = [
+    head,
+    g.folder,
+    g.outDeg,
+    g.inDeg,
+    g.flags,
+    g.edges,
+    nodeOff,
+    folderOff,
+  ];
+  const words = parts.reduce((n, p) => n + p.length, 0);
+  const out = new Uint8Array(words * 4 + at);
+  let pos = 0;
+  for (const p of parts) {
+    out.set(new Uint8Array(p.buffer, p.byteOffset, p.byteLength), pos);
+    pos += p.byteLength;
+  }
+  out.set(blob, pos);
+  return out;
+}
+
 async function drawingPaths(repo: VaultRepository, handle: string) {
   const out: string[] = [];
   const walk = async (dir: string): Promise<void> => {
@@ -110,6 +168,11 @@ export class FakeVaultGraph implements GraphSource {
       },
       { label: (i) => labels[i], folderName: (f) => folders[f] },
     );
+  }
+
+  /** The `vault_graph` payload (VDG1) of the same graph: what `ctx.vault.graph.read()` returns. */
+  async bytes(handle: string): Promise<Uint8Array> {
+    return encodeGraph(await this.graph(handle));
   }
 
   async loadLayout(): Promise<Uint8Array> {

@@ -4,14 +4,27 @@ import { createRoot } from "react-dom/client";
 import { BUILTIN_COMMANDS } from "../src/commands/commands";
 import { readContext } from "../src/commands/context";
 import { installCommandDispatcher } from "../src/commands/dispatcher";
-import { getRegisteredHandler } from "../src/commands/handlerRegistry";
+import {
+  getRegisteredHandler,
+  registerCommandHandlers,
+} from "../src/commands/handlerRegistry";
 import { buildKeymap } from "../src/commands/keymap";
 import "../src/components/VaultShell.css";
-import { fakeGraph } from "../src/graph/fakeGraph";
-import { DEFAULT_GRAPH_SETTINGS } from "../src/graph/settings";
+import { officialCommandDefs } from "../src/plugins/boot";
+import { OFFICIAL_PLUGINS } from "../src/plugins/officialPlugins";
+import { fakeGraph } from "../../plugins/official/graph/src/fakeGraph";
+import { GRAPH_VIEW_IDS } from "../../plugins/official/graph/src/commandIds";
+import { runViewCommand } from "../../plugins/official/graph/src/viewBus";
+import { DEFAULT_GRAPH_SETTINGS } from "../../plugins/official/graph/src/settings";
 
-import type { GraphSession, GraphSource } from "../src/graph/GraphSession";
-import type { GraphMode, GraphSettings } from "../src/graph/settings";
+import type {
+  GraphSession,
+  GraphSource,
+} from "../../plugins/official/graph/src/GraphSession";
+import type {
+  GraphMode,
+  GraphSettings,
+} from "../../plugins/official/graph/src/settings";
 
 /**
  * Graph e2e/perf harness (`e2e.html?graph=N`): mounts the real GraphView over `fakeGraph(N)` and
@@ -54,7 +67,20 @@ export function mountGraphHarness(root: HTMLElement, params: URLSearchParams) {
 
   // No app shell here: the real dispatcher with the built-in keymap, so the
   // graph.* keys reach the view as they do in the app.
-  const keymap = buildKeymap(BUILTIN_COMMANDS, {}, "linux");
+  const keymap = buildKeymap(
+    [
+      ...BUILTIN_COMMANDS,
+      ...officialCommandDefs(OFFICIAL_PLUGINS.find((p) => p.id === "graph")!),
+    ],
+    {},
+    "linux",
+  );
+  // The plugin registers these through ctx.commands; here they run the mounted view's actions.
+  registerCommandHandlers(
+    Object.fromEntries(
+      GRAPH_VIEW_IDS.map((id) => [id, () => void runViewCommand(id)]),
+    ),
+  );
   installCommandDispatcher(window, {
     platform: "linux",
     getKeymap: () => keymap,
@@ -99,7 +125,7 @@ export function mountGraphHarness(root: HTMLElement, params: URLSearchParams) {
   function Harness({
     GraphView,
   }: {
-    GraphView: typeof import("../src/graph/GraphView").default;
+    GraphView: typeof import("../../plugins/official/graph/src/GraphView").default;
   }) {
     const [shown, setShown] = useState(params.get("shown") !== "0");
     const [mode, setMode] = useState<GraphMode>(
@@ -154,11 +180,13 @@ export function mountGraphHarness(root: HTMLElement, params: URLSearchParams) {
     );
   }
 
-  void import("../src/graph/GraphView").then(({ default: GraphView }) => {
-    createRoot(root).render(
-      <StrictMode>
-        <Harness GraphView={GraphView} />
-      </StrictMode>,
-    );
-  });
+  void import("../../plugins/official/graph/src/GraphView").then(
+    ({ default: GraphView }) => {
+      createRoot(root).render(
+        <StrictMode>
+          <Harness GraphView={GraphView} />
+        </StrictMode>,
+      );
+    },
+  );
 }

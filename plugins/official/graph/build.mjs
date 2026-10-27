@@ -52,7 +52,22 @@ const main = await esbuild.build({
   format: "esm",
   platform: "browser",
   external: SHARED,
-  loader: { ".css": "text" },
+  // `import css from "./x.css?raw"` (Vite's spelling, also used by the app's tests) is the file's text.
+  plugins: [
+    {
+      name: "css-raw",
+      setup(build) {
+        build.onResolve({ filter: /\.css\?raw$/ }, (args) => ({
+          path: path.resolve(args.resolveDir, args.path.replace(/\?raw$/, "")),
+          namespace: "css-raw",
+        }));
+        build.onLoad({ filter: /.*/, namespace: "css-raw" }, async (args) => ({
+          contents: (await import("node:fs")).readFileSync(args.path, "utf8"),
+          loader: "text",
+        }));
+      },
+    },
+  ],
   define: { ...common.define, __GRAPH_WORKER_SOURCE__: JSON.stringify(workerSrc) },
   write: false,
   minify: false,

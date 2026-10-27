@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { openLinksVault, cmdClick, SEED } from "./linksHelpers";
+import { GRAPH_PLUGIN, openLinksVault, cmdClick, SEED } from "./linksHelpers";
 import {
   A,
   B,
@@ -418,7 +418,7 @@ test.describe("new-tab opening from graph, search and links", () => {
     page,
   }) => {
     const errors = trackErrors(page);
-    await openLinksVault(page, "Hub");
+    await openLinksVault(page, "Hub", null, GRAPH_PLUGIN);
     await page.keyboard.press("Meta+Alt+g");
     const graph = page.getByTestId("graph-view");
     await expect(graph).toBeVisible();
@@ -514,7 +514,7 @@ test.describe("layout under the strip", () => {
   test("with the graph open the strip is clickable and the overlay toolbar starts below it", async ({
     page,
   }) => {
-    await openLinksVault(page, "Hub");
+    await openLinksVault(page, "Hub", null, GRAPH_PLUGIN);
     await page.keyboard.press("Meta+Alt+g");
     await expect(page.getByTestId("graph-view")).toBeVisible();
     const strip = (await page.getByTestId("vault-tabs").boundingBox())!;

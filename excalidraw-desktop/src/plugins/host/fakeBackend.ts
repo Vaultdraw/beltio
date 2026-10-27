@@ -42,6 +42,11 @@ export interface FakeBackend extends PluginsBackend {
   graphLayout: Uint8Array;
   /** The plugin tables of the vault settings.toml (`vault.settings.*`), by plugin id. */
   vaultTables: Record<string, Record<string, unknown>>;
+  /** Tests: where `vault.graph` gets its bytes (default: `graphBytes`). */
+  graphSource?: () => Promise<Uint8Array>;
+  /** Tests: told after every own-table update / layout save (to persist or mirror them). */
+  onVaultTable?: (pluginId: string, table: Record<string, unknown>) => void;
+  onGraphLayout?: (bytes: Uint8Array) => void;
   /** The `folders.*` rows' state: what the pickers return next, the sources and targets handed out. */
   folders: FakeFolderStore;
 }
@@ -210,12 +215,13 @@ export function createFakeBackend(
         throw coded("NO_VAULT", "No vault is open");
       }
       if (method === "vault.graph") {
-        return fake.graphBytes;
+        return fake.graphSource ? await fake.graphSource() : fake.graphBytes;
       }
       if (method === "vault.graphLayout.load") {
         return fake.graphLayout;
       }
       fake.graphLayout = new Uint8Array(body ?? []);
+      fake.onGraphLayout?.(fake.graphLayout);
       return new Uint8Array(0);
     },
     // The storage, vault and markdown rows of the Rust gateway (plugins/gateway.rs).
@@ -271,6 +277,7 @@ export function createFakeBackend(
             table[c.key] = structuredClone(c.value);
           }
         }
+        fake.onVaultTable?.(pluginId, structuredClone(table));
         return null;
       }
       if (FOLDER_ROWS.has(method)) {

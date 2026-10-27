@@ -49,11 +49,20 @@ const workerSource = (): string | null =>
     : null;
 
 function workerTransport(onMessage: (m: FromLayout) => void): Transport {
-  const url = URL.createObjectURL(
-    new Blob([workerSource()!], { type: "text/javascript" }),
-  );
-  const worker = new Worker(url);
-  URL.revokeObjectURL(url);
+  const source = workerSource();
+  let worker: Worker;
+  if (source) {
+    const url = URL.createObjectURL(
+      new Blob([source], { type: "text/javascript" }),
+    );
+    worker = new Worker(url);
+    URL.revokeObjectURL(url);
+  } else {
+    // Outside the plugin build (the app's end-to-end and perf harness, built by Vite).
+    worker = new Worker(new URL("./layout.worker.ts", import.meta.url), {
+      type: "module",
+    });
+  }
   worker.onmessage = (e: MessageEvent<FromLayout>) => onMessage(e.data);
   return {
     send: (msg, transfer = []) => worker.postMessage(msg, transfer),

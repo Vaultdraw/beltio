@@ -187,6 +187,34 @@ export async function startPluginsHarness(
   for (const id of csv(params, "pluginData")) {
     backend.data[id] = JSON.stringify({ notes: "x".repeat(12 * 1024) });
   }
+  // The graph plugin's data (see harnessMain.tsx): the fake links as VDG1 bytes, the layout cache
+  // in memory, and `[graph]` settings mirrored into the flat `graph.*` store the specs read.
+  const graphBytes = (win as any).__graphBytes;
+  if (graphBytes) {
+    const store = (win as any).__graphSettingsToml as Record<string, unknown>;
+    const source = (win as any).__graphSource;
+    backend.graphSource = graphBytes;
+    backend.graphLayout = source.layout;
+    backend.onGraphLayout = (bytes) => {
+      source.layout = bytes;
+      source.saves++;
+    };
+    backend.vaultTables.graph = Object.fromEntries(
+      Object.entries(store).map(([k, v]) => [k.replace(/^graph\./, ""), v]),
+    );
+    backend.onVaultTable = (id, table) => {
+      if (id !== "graph") {
+        return;
+      }
+      for (const k of Object.keys(store)) {
+        delete store[k];
+      }
+      for (const [k, v] of Object.entries(table)) {
+        store[`graph.${k}`] = v;
+      }
+      (win as any).__graphPersist?.();
+    };
+  }
   setPluginsBackend(backend);
   updatePreferences(
     {

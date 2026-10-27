@@ -16,15 +16,23 @@ export const seedPrefs = (page: Page, prefs: Record<string, unknown>) =>
     [PREFS_KEY, prefs] as const,
   );
 
+/** The graph is an official plugin: its specs start the fake plugin host with it (`?plugins=graph`). */
+export const GRAPH_PLUGIN = "&plugins=graph";
+
 export const openLinksVault = async (
   page: Page,
   drawing: string | null = "Hub",
   prefs: Record<string, unknown> | null = null,
+  /** More query parameters, for example `&plugins=graph` for the graph specs. */
+  extra = "",
 ) => {
   if (prefs) {
     await seedPrefs(page, prefs);
   }
-  await openVault(page, "?seed=links");
+  await openVault(page, `?seed=links${extra}`);
+  if (extra.includes("plugins=")) {
+    await page.waitForFunction(() => (window as any).__pluginsReady === true);
+  }
   if (drawing) {
     await openDrawing(page, drawing);
   }

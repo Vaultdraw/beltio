@@ -2,7 +2,7 @@ import { mkdirSync } from "node:fs";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { expectOpen, openLinksVault } from "./linksHelpers";
+import { expectOpen, GRAPH_PLUGIN, openLinksVault } from "./linksHelpers";
 import { personalPath } from "./mainCheckout";
 
 // Graph view UI entry points (toimprove #22): navigator button, main menu and
@@ -56,7 +56,7 @@ test.beforeAll(() => mkdirSync(SHOTS, { recursive: true }));
 test("activity bar button opens the graph, shows its key, toggles; Esc returns", async ({
   page,
 }) => {
-  await openLinksVault(page, "Hub");
+  await openLinksVault(page, "Hub", null, GRAPH_PLUGIN);
   await expect(
     navigator(page).getByRole("button", { name: "Graph view", exact: true }),
   ).toHaveCount(0);
@@ -87,7 +87,7 @@ test("activity bar button opens the graph, shows its key, toggles; Esc returns",
 test("main menu Graph view shows the key and opens the graph; Esc returns", async ({
   page,
 }) => {
-  await openLinksVault(page, "Hub");
+  await openLinksVault(page, "Hub", null, GRAPH_PLUGIN);
   await page.getByTestId("main-menu-trigger").click();
   const item = page.getByRole("menuitem", { name: /Graph view/ });
   await expect(item).toContainText(/(Cmd\+Option\+G|Ctrl\+Alt\+G)/);
@@ -102,7 +102,7 @@ test("main menu Graph view shows the key and opens the graph; Esc returns", asyn
 test("row menu Open local graph opens that drawing's local graph; Esc returns", async ({
   page,
 }) => {
-  await openLinksVault(page, "Hub");
+  await openLinksVault(page, "Hub", null, GRAPH_PLUGIN);
   const row = navigator(page)
     .locator(".vault-tree-item__name", { hasText: /^Alpha$/ })
     .first();

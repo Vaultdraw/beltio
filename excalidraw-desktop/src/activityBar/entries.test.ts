@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { getCommand } from "../commands/commands";
+import { registerCommands } from "../commands/registry";
+import { officialCommandDefs } from "../plugins/boot";
+import { OFFICIAL_PLUGINS } from "../plugins/officialPlugins";
 
 import {
   ACTIVITY_ENTRIES,
@@ -25,9 +28,14 @@ describe("ACTIVITY_ENTRIES", () => {
   });
 
   it("runs only registered commands", () => {
+    // The graph's commands come from the official plugin's stubs (registered at boot in the app).
+    const release = registerCommands(
+      officialCommandDefs(OFFICIAL_PLUGINS.find((p) => p.id === "graph")!),
+    );
     for (const e of ACTIVITY_ENTRIES) {
       expect(getCommand(e.commandId), e.commandId).toBeDefined();
     }
+    release();
   });
 
   it("lists the expected entries by group", () => {
