@@ -243,6 +243,8 @@ export interface TestPlugin {
   openView(path: string): Promise<PanelView>;
   /** Files a view asked to open with `openPath`. */
   openedFromViews(): { path: string; newTab: boolean }[];
+  /** Short ids of the panels that are open. */
+  openPanelIds(): string[];
   /** The status bar items that currently have text. */
   statusBar(): StatusBarShown[];
   /** Clicks a status bar item: runs its declared command. */

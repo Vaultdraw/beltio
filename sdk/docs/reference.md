@@ -522,7 +522,7 @@ type ImportResult = { ops: readonly SceneOp[] } | void;
 
 ## Status bar, views, menus (since 0.10.0)
 
-`ctx.statusBar` fills items declared with `[[contributes.status_bar]]`, and (since 0.11.0) `ctx.views` provides the component of a note view declared with `[[contributes.views]]`, and (since 0.12.0) `ctx.menus.target()` tells a command started from a context menu item where it was chosen. Details, limits and examples are in [surfaces.md](surfaces.md).
+`ctx.statusBar` fills items declared with `[[contributes.status_bar]]`, and (since 0.11.0) `ctx.views` provides the component of a note view declared with `[[contributes.views]]`, and (since 0.12.0) `ctx.menus.target()` tells a command started from a context menu item where it was chosen, and (since 0.13.0) `ctx.views.open` opens a panel at the side or a note in a view in the main pane. Details, limits and examples are in [surfaces.md](surfaces.md).
 
 ## Markdown, text and pages (since 0.8.0)
 

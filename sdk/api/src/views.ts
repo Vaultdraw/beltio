@@ -52,6 +52,27 @@ export interface ViewProps {
 }
 
 /**
+ * Where and what `ctx.views.open` opens.
+ *
+ * @since 0.13.0
+ */
+export interface OpenViewOptions {
+  /**
+   * The note to open in a view (required for a view, ignored for a panel). It must have a name
+   * the view claims.
+   *
+   * @since 0.13.0
+   */
+  path?: string;
+  /**
+   * Open the note in a new tab instead of the current one. Default false.
+   *
+   * @since 0.13.0
+   */
+  newTab?: boolean;
+}
+
+/**
  * Views: provide the React component of a view declared in plugin.toml
  * (`[[contributes.views]]`). A note whose name ends in one of the view's
  * extensions (for example `kanban.md`) opens in the component instead of the
@@ -66,4 +87,13 @@ export interface ViewsApi {
    * @since 0.11.0
    */
   register(id: string, component: ComponentType<ViewProps>): Disposable;
+  /**
+   * Opens a declared panel or view by short id: a panel opens in the side area (the same as
+   * `ctx.panels.open`); a view opens the note at `options.path` in the main pane, in a tab. Tabs
+   * must be on for a view. An id that is neither is refused, and a `path` the view does not claim
+   * rejects with `INVALID_ARGUMENT`.
+   *
+   * @since 0.13.0
+   */
+  open(id: string, options?: OpenViewOptions): Promise<void>;
 }

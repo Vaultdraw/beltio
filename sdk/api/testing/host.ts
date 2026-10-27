@@ -32,7 +32,9 @@ import {
 import { dataKeyFor, MAX_OPS_LIMIT } from "../shared/sceneRules";
 import { cleanStatus, type CleanStatus } from "../shared/statusBar";
 import { createViewNotes } from "../shared/viewFiles";
-import { permissionError } from "../shared/vaultPaths";
+import { PluginApiError } from "../shared/rules";
+import { claimsPath } from "../shared/viewNames";
+import { checkVaultPath, permissionError } from "../shared/vaultPaths";
 
 import { fakeParseMarkdown, markdownParams } from "../shared/markdown";
 
@@ -159,6 +161,8 @@ export interface MockHost {
   openView(path: string): Promise<RenderResult>;
   /** Files the view asked to open with `openPath`. */
   openedFromViews(): { path: string; newTab: boolean }[];
+  /** Short ids of the panels that are open. */
+  openPanelIds(): string[];
   setSetting(
     key: string,
     value: SettingValue,
@@ -709,6 +713,37 @@ export function createMockHost(
               }
             });
           },
+          async open(viewId, options) {
+            if (declaredPanels.has(viewId)) {
+              openPanels.add(viewId);
+              panelsChanged();
+              return;
+            }
+            const view = declaredViews.get(viewId);
+            if (!view) {
+              throw new PluginApiError(
+                "INVALID_ARGUMENT",
+                `"${viewId}" is not a panel or view declared in plugin.toml`,
+              );
+            }
+            const path = options?.path;
+            if (
+              typeof path !== "string" ||
+              !claimsPath(view.extensions, path)
+            ) {
+              throw new PluginApiError(
+                "INVALID_ARGUMENT",
+                `view "${viewId}" shows notes named *.${view.extensions.join(
+                  ", *.",
+                )}; open() needs a path like that`,
+              );
+            }
+            checkVaultPath(path, "folder"); // the path rules; the claimed name is checked above
+            if (!vault.isOpen()) {
+              throw new PluginApiError("NO_VAULT", "No vault is open");
+            }
+            vault.recordOpened(path, options?.newTab === true);
+          },
         });
       },
       get statusBar() {
@@ -1248,6 +1283,7 @@ export function createMockHost(
       return shown!;
     },
     openedFromViews: () => opened_views.map((o) => ({ ...o })),
+    openPanelIds: () => [...openPanels],
     setSetting: writeSetting,
     emit(name, payload) {
       [...(eventSubs.get(name) ?? [])].forEach((cb) => cb(payload));

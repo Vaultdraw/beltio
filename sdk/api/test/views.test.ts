@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { boot } from "../testing";
 
-import type { Plugin, ViewProps } from "../src/index";
+import type { Plugin, PluginContext, ViewProps } from "../src/index";
 import type { TestPlugin } from "../testing";
 
 const manifest = (permissions: ("vault.read" | "vault.write")[]) => ({
@@ -94,5 +94,46 @@ describe("mock host: ctx.views", () => {
   it("no view is declared for another name", async () => {
     p = await boot(manifest([]), plugin);
     await expect(p.openView("x.md")).rejects.toThrow(/no view is declared/);
+  });
+
+  it("views.open: a panel id opens the side panel, a view id opens the note in the main pane", async () => {
+    let ctx!: PluginContext;
+    p = await boot(
+      {
+        id: "lay",
+        activation: ["onStartupFinished"],
+        contributes: {
+          panels: [{ id: "side" }],
+          views: [{ id: "b", extensions: ["kanban.md"] }],
+        },
+      },
+      {
+        activate(c) {
+          ctx = c;
+        },
+      },
+    );
+    await ctx.views.open("side");
+    expect(p.openPanelIds()).toEqual(["side"]);
+    await ctx.views.open("b", { path: "x/y.kanban.md", newTab: true });
+    expect(p.workspace.opened()).toEqual([
+      { path: "x/y.kanban.md", newTab: true },
+    ]);
+    for (const [id, opts] of [
+      ["b", { path: "y.md" }],
+      ["b", {}],
+      ["nope", {}],
+    ] as const) {
+      await expect(ctx.views.open(id, opts)).rejects.toMatchObject({
+        code: "INVALID_ARGUMENT",
+      });
+    }
+    await expect(
+      ctx.views.open("b", { path: "../y.kanban.md" }),
+    ).rejects.toMatchObject({ code: "INVALID_PATH" });
+    p.vault.setVault(null);
+    await expect(
+      ctx.views.open("b", { path: "z.kanban.md" }),
+    ).rejects.toMatchObject({ code: "NO_VAULT" });
   });
 });

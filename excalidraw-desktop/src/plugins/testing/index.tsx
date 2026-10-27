@@ -23,6 +23,7 @@ import { FakeNoteFiles } from "../../notes/FakeNoteFiles";
 import { setNoteFiles } from "../../notes/noteBackend";
 import { tabKindFor } from "../../tabs/tabKinds";
 import { TabKindView } from "../../tabs/TabKindView";
+import { isPanelOpen } from "../../slots/panelStore";
 import { getMenuItems, runMenuItem } from "../menuRegistry";
 import { getStatusItems } from "../host/statusBarRegistry";
 import { notifyAppearanceChanged } from "../../vault/appearance";
@@ -194,6 +195,8 @@ export interface TestPlugin {
   openView(path: string): Promise<RenderResult>;
   /** Files a view asked to open with `openPath`. */
   openedFromViews(): { path: string; newTab: boolean }[];
+  /** Short ids of the panels that are open. */
+  openPanelIds(): string[];
   /** The status bar items that currently have text. */
   statusBar(): StatusBarShown[];
   /** Clicks a status bar item: runs its declared command. */
@@ -539,6 +542,10 @@ export async function boot(
       return shown!;
     },
     openedFromViews: () => viewOpened.map((o) => ({ ...o })),
+    openPanelIds: () =>
+      info.contributes.panels
+        .map((p) => p.id)
+        .filter((short) => isPanelOpen(`${id}.${short}`)),
     statusBar: () =>
       getStatusItems()
         .filter((i) => i.pluginId === id)

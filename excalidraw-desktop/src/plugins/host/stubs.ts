@@ -21,6 +21,7 @@ import { registerCommands } from "../../commands/registry";
 import { registerCommandHandlers } from "../../commands/handlerRegistry";
 import { panelFlag, togglePanel } from "../../slots/panelStore";
 import { toastStore } from "../../toasts/toastStore";
+import { claimsPath } from "../../../../sdk/api/shared/viewNames";
 import { registerTabKind } from "../../tabs/tabKinds";
 import { claimImporter } from "../importerMapAdmin";
 import { addMenuItems, beginMenuRun } from "../menuRegistry";
@@ -210,16 +211,12 @@ export function registerStubs(rt: PluginRuntime): () => void {
   disposers.push(addMenuItems(menus));
   // A declared view claims its note names now; the plugin loads when the first such tab shows.
   for (const v of info.contributes.views ?? []) {
-    const names = v.extensions.map((e) => e.toLowerCase());
     disposers.push(
       registerTabKind({
         id: `${id}.${v.id}`,
         pluginId: id,
         priority: PLUGIN_VIEW_PRIORITY,
-        matches: (path) => {
-          const base = path.slice(path.lastIndexOf("/") + 1).toLowerCase();
-          return names.some((n) => base === n || base.endsWith(`.${n}`));
-        },
+        matches: (path) => claimsPath(v.extensions, path),
         load: async () => {
           const ok = await ensureActive(id);
           const component = ok ? rt.components.get(`view:${v.id}`) : undefined;

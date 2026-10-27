@@ -26,6 +26,43 @@ describe("checklist-view", () => {
     expect(activate).not.toHaveBeenCalled();
   });
 
+  it("the open command asks the app to show the list in the main pane", async () => {
+    p = await boot(readExample("checklist-view"), plugin);
+    await p.run("open");
+    expect(p.workspace.opened()).toEqual([
+      { path: "Groceries.checklist.md", newTab: false },
+    ]);
+    await p.setSetting("list", "Lists/other.checklist.md");
+    await p.run("open");
+    expect(p.workspace.opened().at(-1)?.path).toBe("Lists/other.checklist.md");
+    expect(p.log().filter((l) => l.level === "error")).toEqual([]);
+  });
+
+  it("open refuses a note the view does not claim, and an unknown id", async () => {
+    const failures: string[] = [];
+    const record = (e: { code: string }) => void failures.push(e.code);
+    p = await boot(readExample("checklist-view"), {
+      async activate(ctx) {
+        ctx.views.register("checklist", () => null);
+        ctx.commands.register("open", async () => {
+          for (const args of [
+            ["checklist", { path: "plain.md" }],
+            ["checklist", {}],
+            ["nope", {}],
+          ] as const) {
+            await ctx.views.open(args[0], args[1]).catch(record);
+          }
+        });
+      },
+    });
+    await p.run("open");
+    expect(failures).toEqual([
+      "INVALID_ARGUMENT",
+      "INVALID_ARGUMENT",
+      "INVALID_ARGUMENT",
+    ]);
+  });
+
   it("shows the boxes and a click saves the note with the revision it read", async () => {
     p = await boot(readExample("checklist-view"), plugin);
     p.notes.seed(PATH, TEXT);

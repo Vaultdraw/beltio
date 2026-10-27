@@ -11,6 +11,10 @@ import { pluginSettingDecl } from "../settings/registry";
 import { cleanStatus } from "../../../../sdk/api/shared/statusBar";
 
 import { getMenuTarget } from "../menuRegistry";
+import { PluginApiError } from "../../../../sdk/api/shared/rules";
+import { claimsPath } from "../../../../sdk/api/shared/viewNames";
+import { checkVaultPath } from "../../../../sdk/api/shared/vaultPaths";
+import { getWorkspaceBridge } from "../workspaceBridge";
 
 import { errorText, logLine, reportPluginError } from "./errors";
 import { guard } from "./guard";
@@ -334,6 +338,38 @@ export function createPluginContext(
               rt.components.delete(key);
             }
           });
+        },
+        async open(short, options) {
+          if (declaredPanels.has(short)) {
+            openPanel(panelId(short));
+            return;
+          }
+          const view = (info.contributes.views ?? []).find(
+            (v) => v.id === short,
+          );
+          if (!view) {
+            throw new PluginApiError(
+              "INVALID_ARGUMENT",
+              `"${short}" is not a panel or view declared in plugin.toml`,
+            );
+          }
+          const path = options?.path;
+          if (typeof path !== "string" || !claimsPath(view.extensions, path)) {
+            throw new PluginApiError(
+              "INVALID_ARGUMENT",
+              `view "${short}" shows notes named *.${view.extensions.join(
+                ", *.",
+              )}; open() needs a path like that`,
+            );
+          }
+          checkVaultPath(path, "folder"); // the path rules; the claimed name is checked above
+          const bridge = getWorkspaceBridge();
+          if (!bridge?.vault()) {
+            throw new PluginApiError("NO_VAULT", "No vault is open");
+          }
+          if (!(await bridge.openDrawing(path, options?.newTab === true))) {
+            throw new PluginApiError("IO_ERROR", `Could not open ${path}`);
+          }
         },
       });
     },

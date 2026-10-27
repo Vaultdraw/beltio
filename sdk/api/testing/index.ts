@@ -136,6 +136,7 @@ export async function boot(
     notes: host.notes,
     openView: host.openView,
     openedFromViews: host.openedFromViews,
+    openPanelIds: host.openPanelIds,
     statusBar: host.statusBar,
     async clickStatusBar(id) {
       const item = host.statusBar().find((x) => x.id === id);

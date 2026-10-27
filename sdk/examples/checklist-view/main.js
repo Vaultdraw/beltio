@@ -92,5 +92,9 @@ function Checklist({ path, file }) {
 export default definePlugin({
   activate(ctx) {
     ctx.views.register("checklist", Checklist);
+    // Ask the app to open a note in the view, in the main pane (a panel id would open it at the side).
+    ctx.commands.register("open", () =>
+      ctx.views.open("checklist", { path: ctx.settings.get("list") }),
+    );
   },
 });

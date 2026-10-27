@@ -128,7 +128,7 @@ export type { BatchOptions, BatchResult, ElementId, ElementRef, ImageSource, Fon
 export type { SelectOption, SettingDecl, SettingScopeName, SettingsApi, SettingValue, } from "./settings";
 export type { StatusBarApi, StatusBarState } from "./statusBar";
 export type { MenuTarget, MenusApi } from "./menus";
-export type { ViewFile, ViewProps, ViewsApi } from "./views";
+export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { FontsApi, TextApi, TextFont } from "./text";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
@@ -746,8 +746,13 @@ export interface ViewProps {
         target?: "current" | "new";
     }): void;
 }
+export interface OpenViewOptions {
+    path?: string;
+    newTab?: boolean;
+}
 export interface ViewsApi {
     register(id: string, component: ComponentType<ViewProps>): Disposable;
+    open(id: string, options?: OpenViewOptions): Promise<void>;
 }
 
 // workspace.ts

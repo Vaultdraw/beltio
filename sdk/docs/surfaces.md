@@ -7,6 +7,7 @@ Plugins can add small pieces of interface. Each is declared in `plugin.toml`, so
 | [Status bar item](#status-bar) | `[[contributes.status_bar]]` | `ctx.statusBar.set` | 0.10.0 |
 | [View of a note type](#views) | `[[contributes.views]]` | `ctx.views.register` | 0.11.0 |
 | [Context menu item](#context-menus) | `[[contributes.menus]]` | `ctx.menus.target` | 0.12.0 |
+| [Opening a panel or view](#layout) | none | `ctx.views.open` | 0.13.0 |
 
 ## Status bar
 
@@ -105,3 +106,22 @@ ctx.commands.register("where", () => {
 - **No title clash check.** Two plugins can add items with the same text; the menu shows both.
 
 Example: [`sdk/examples/menu-demo`](../examples/menu-demo/plugin.toml). In tests, `plugin.menuItems(surface, kind)` lists the items and `plugin.chooseMenuItem(surface, title, target)` chooses one.
+
+## Layout
+
+A plugin can ask the app to show one of its panels or views. There are two places: the **side** area (panels) and the **main pane** (views, as tabs).
+
+```ts
+// A panel declared with [[contributes.panels]]: opens in the side area, like ctx.panels.open.
+await ctx.views.open("timer");
+
+// A view declared with [[contributes.views]]: opens the note in the main pane, in a tab.
+await ctx.views.open("checklist", { path: "Lists/groceries.checklist.md", newTab: true });
+```
+
+- **Panel or view.** The id is the short id from `plugin.toml`. A panel id opens the panel (same as `ctx.panels.open`). A view id needs `path`, a note the view claims; the note opens in the current tab, or a new one with `newTab: true`.
+- **Errors.** `INVALID_ARGUMENT` for an id that is neither, or a path the view does not claim; `INVALID_PATH` for a bad path; `NO_VAULT` when no vault is open; `IO_ERROR` when the app could not open it (views need tabs turned on).
+- **The user stays in control.** Panels also have a palette command (`Toggle <title> panel`), and every file opens through the normal tab rules. Call `open` from a command so the user chose it; do not open views at startup.
+- **Command.** The example's `Checklist: open the list` is a palette command that calls `ctx.views.open`.
+
+In tests, `plugin.openPanelIds()` lists the open panels and `plugin.workspace.opened()` lists the notes opened in the main pane.

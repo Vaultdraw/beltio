@@ -91,7 +91,7 @@ export type {
 } from "./settings";
 export type { StatusBarApi, StatusBarState } from "./statusBar";
 export type { MenuTarget, MenusApi } from "./menus";
-export type { ViewFile, ViewProps, ViewsApi } from "./views";
+export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { FontsApi, TextApi, TextFont } from "./text";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";

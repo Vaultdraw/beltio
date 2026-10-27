@@ -12,3 +12,13 @@ permissions = ["vault.read", "vault.write"]
 id = "checklist"
 title = "Checklist"
 extensions = ["checklist.md"]
+
+[[contributes.commands]]
+id = "open"
+title = "Checklist: open the list"
+
+[[contributes.settings]]
+key = "list"
+type = "string"
+title = "Checklist to open"
+default = "Groceries.checklist.md"

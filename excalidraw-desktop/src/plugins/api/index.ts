@@ -57,6 +57,7 @@ export type {
   PageTextItem,
   PageTextTone,
   PagesApi,
+  OpenViewOptions,
   PanelContribution,
   PanelsApi,
   PickSourceOptions,

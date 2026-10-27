@@ -105,6 +105,10 @@ export interface VaultModel {
     activePath(): string | null;
     opened(path: string): void;
   }): WorkspaceApi;
+  /** A view opened a note in the main pane (`ctx.views.open`): shows in `workspace.opened()`. */
+  recordOpened(path: string, newTab: boolean): void;
+  /** The vault is open (else `ctx.views.open` fails with NO_VAULT). */
+  isOpen(): boolean;
   reset(): void;
 }
 
@@ -331,6 +335,10 @@ export function createVaultModel(
         activePath: () => host.activePath(),
       };
     },
+    recordOpened(path, newTab) {
+      opened.push({ path, newTab });
+    },
+    isOpen: () => info !== null,
     reset() {
       drawings.clear();
       info = { ...DEFAULT_INFO };
