@@ -37,6 +37,9 @@ const HELP = `Usage: node excalidraw-desktop/perf/run.mjs [options]
   --memory-pressure      run 'memory_pressure -S' (simulated; needs root, else noted and ignored) in normal mode too
   --keep-runs            keep per-run vault clones under .cache/perf/runs
   PERF_MEM_TIMELINE=1    (env) note per-process footprint at every phase boundary
+  VAULTDRAW_PERF_LAYER_DIR=<d> (env, memory diagnosis) the app writes <d>/<pid>-<mark>.txt at every perf mark: WebKit layer
+                         tree, DOM elements likely to be composited, big canvases and their resizes, and every rise of a
+                         process's lifetime footprint peak (sampled every 50 ms) with the perf step that was running
   --quiet-load X         quiet gate: wait for 1-min load average < X before measuring (default ${DEFAULT_QUIET_LOAD})
   --quiet-wait S         wait up to S seconds for it (default ${DEFAULT_QUIET_WAIT_S}; 0 = don't wait), then measure anyway
   --require-quiet        exit 1 instead of measuring when the machine never got quiet
