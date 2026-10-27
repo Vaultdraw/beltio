@@ -167,7 +167,7 @@ pub(crate) fn webkit_pids(ptr: *mut std::ffi::c_void) -> (Option<i32>, Option<i3
 /// Async so the main thread stays free to run the with_webview closure.
 #[tauri::command]
 pub async fn perf_process_ids(window: tauri::WebviewWindow) -> Result<Value, String> {
-    let (tx, rx) = std::sync::mpsc::channel();
+    let (tx, rx) = std::sync::mpsc::channel::<(Option<i32>, Option<i32>, Option<i32>)>();
     #[cfg(target_os = "macos")]
     window
         .with_webview(move |webview| {
