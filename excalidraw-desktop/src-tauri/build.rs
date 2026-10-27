@@ -33,10 +33,13 @@ fn ensure_cli_sidecar() {
 /// and `tauri dev` get an empty folder so they keep working without that step; the plugin is
 /// then missing from that dev build until `node plugins/official/build.mjs` runs.
 fn ensure_official_plugin_dirs() {
-    let dir = Path::new("../../plugins/official/markdown-import/dist");
-    println!("cargo:rerun-if-changed={}", dir.display());
-    if !dir.exists() {
-        std::fs::create_dir_all(dir).expect("create the official plugin dist folder");
+    // One entry per official plugin listed in tauri.conf.json `bundle.resources`.
+    for id in ["markdown-import", "gallery"] {
+        let dir = Path::new("../../plugins/official").join(id).join("dist");
+        println!("cargo:rerun-if-changed={}", dir.display());
+        if !dir.exists() {
+            std::fs::create_dir_all(&dir).expect("create the official plugin dist folder");
+        }
     }
 }
 
