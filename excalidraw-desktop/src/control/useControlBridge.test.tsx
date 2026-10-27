@@ -84,6 +84,7 @@ describe("useControlBridge", () => {
         "scene.get",
         "scene.selection",
         "scene.apply",
+        "scene.onFile",
       ]) {
         expect(typeof methods[name]).toBe("function");
       }

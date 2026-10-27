@@ -102,7 +102,7 @@ fn modern_client_discovers_and_lists_tools() {
     let d = s.ask("server/discover", json!({"_meta": {"io.modelcontextprotocol/clientInfo": {"name": "t"}}}));
     assert_eq!(d["result"]["supportedVersions"][0], "2026-07-28");
     let list = s.ask("tools/list", json!({}))["result"].clone();
-    assert_eq!(names(&list), ["vaultdraw_status", "list_drawings", "search_vault", "read_drawing", "get_selection", "edit_drawing"]);
+    assert_eq!(names(&list), ["vaultdraw_status", "list_drawings", "search_vault", "read_drawing", "get_selection", "edit_drawing", "create_drawing"]);
     s.finish();
 }
 
@@ -128,7 +128,7 @@ fn off_by_default_every_tool_says_disabled_and_nothing_touches_the_app() {
     let e = env(None);
     let fake = Fake::start(|_, _| Ok(json!({})));
     let mut s = Session::start(&e, Some(&fake.socket));
-    for tool in ["list_drawings", "search_vault", "read_drawing", "get_selection", "edit_drawing"] {
+    for tool in ["list_drawings", "search_vault", "read_drawing", "get_selection", "edit_drawing", "create_drawing"] {
         let r = s.tool(tool, json!({"query": "x", "ops": [{"op": "add"}]}));
         assert_eq!(r["isError"], true, "{tool}");
         assert_eq!(r["structuredContent"]["code"], "DISABLED", "{tool}");

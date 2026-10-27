@@ -3,6 +3,7 @@
  * scene.apply) over the P2c scene core. Loaded lazily by sceneLazy.ts, never
  * from the startup bundle. Pure: the active scene and the notice are injected.
  */
+import { restoreElements } from "@excalidraw/excalidraw";
 import { getElementBounds } from "@excalidraw/element";
 
 import type { ElementsMap, ExcalidrawElement } from "@excalidraw/element/types";
@@ -338,10 +339,104 @@ export function createSceneMethods(
     }
   };
 
+  /**
+   * The file route: the same read, get and apply on a drawing that is not on
+   * screen. Rust sends the parsed scene (`file.read`); nothing here touches the
+   * editor or the disk. An apply returns the new `elements` and `files` for
+   * Rust to write back (`file.write` with the revision it read).
+   */
+  const onFile: Handler = (raw) => {
+    const params = clean(raw);
+    const method = params.method;
+    if (method !== "read" && method !== "get" && method !== "apply") {
+      throw invalid("method must be read, get or apply");
+    }
+    const path = optionalStringParam(params, "path") ?? null;
+    const file = params.scene;
+    if (!file || typeof file !== "object" || Array.isArray(file)) {
+      throw invalid("scene must be an object");
+    }
+    const sceneFile = file as {
+      elements?: unknown;
+      appState?: Record<string, unknown>;
+      files?: Record<string, unknown>;
+    };
+    const rawElements = Array.isArray(sceneFile.elements)
+      ? sceneFile.elements
+      : [];
+    let elements: readonly ExcalidrawElement[] = restoreElements(
+      rawElements as never,
+      null,
+    );
+    let files = { ...(sceneFile.files ?? {}) } as Record<string, unknown>;
+    const app = sceneFile.appState ?? {};
+    const num = (v: unknown, d: number) =>
+      typeof v === "number" && Number.isFinite(v) ? v : d;
+    const zoom = (app.zoom as { value?: unknown } | undefined)?.value;
+    const appState = {
+      scrollX: num(app.scrollX, 0),
+      scrollY: num(app.scrollY, 0),
+      width: 1280,
+      height: 800,
+      zoom: { value: num(zoom, 1) || 1 },
+      selectedElementIds: {},
+    };
+    let changed = false;
+    const api = {
+      getAppState: () => appState,
+      getSceneElementsIncludingDeleted: () => elements,
+      getFiles: () => files,
+      addFiles: (list: readonly { id: string }[]) => {
+        files = { ...files, ...Object.fromEntries(list.map((f) => [f.id, f])) };
+      },
+      updateScene: (u: { elements?: readonly ExcalidrawElement[] }) => {
+        if (u.elements) {
+          elements = u.elements;
+          changed = true;
+        }
+      },
+    } as unknown as ActiveScene["api"];
+    const memory = createSceneMethods({
+      ...deps,
+      active: () => ({ api, path, readOnly: false }),
+      notify: () => {},
+    });
+    const inner = { ...params };
+    delete inner.method;
+    delete inner.scene;
+    if (method === "read") {
+      const scope = inner.scope ?? "all";
+      if (scope !== "all") {
+        throw invalid(
+          "scope viewport and selection need the drawing on screen; open it first",
+        );
+      }
+    }
+    const result = memory[`scene.${method}`]({
+      ...inner,
+      notify: false,
+    }) as Record<string, unknown>;
+    result.live = false;
+    if (method === "read") {
+      delete result.viewport;
+      delete result.selection;
+    }
+    if (method === "apply") {
+      if (changed) {
+        result.scene = {
+          elements: elements.filter((e) => !e.isDeleted),
+          files,
+        };
+      }
+    }
+    return result;
+  };
+
   return {
     "scene.read": read,
     "scene.get": get,
     "scene.selection": selection,
     "scene.apply": apply,
+    "scene.onFile": onFile,
   };
 }

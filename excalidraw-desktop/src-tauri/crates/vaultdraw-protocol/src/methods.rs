@@ -40,6 +40,7 @@ pub const SCENE_READ: &str = "scene.read";
 pub const SCENE_GET: &str = "scene.get";
 pub const SCENE_SELECTION: &str = "scene.selection";
 pub const SCENE_APPLY: &str = "scene.apply";
+pub const SCENE_CREATE: &str = "scene.create";
 
 /// Connection roles (a connection declares one with `rpc.hello`; default `cli`).
 pub mod roles {
@@ -115,6 +116,7 @@ fn mcp_tool(method: &str) -> Option<McpTool> {
         SCENE_READ => ("read_drawing", false),
         SCENE_SELECTION => ("get_selection", false),
         SCENE_APPLY => ("edit_drawing", true),
+        SCENE_CREATE => ("create_drawing", true),
         _ => return None,
     };
     Some(McpTool { name, writes })
@@ -234,6 +236,14 @@ fn scene_methods() -> Vec<MethodSpec> {
             ),
             CLI_ONLY,
             true,
+        )),
+        experimental(spec(
+            SCENE_CREATE,
+            "Create a new drawing from 1 to 500 scene operations in one step (no blank file is left behind when the operations are invalid); the path may omit .excalidraw",
+            obj(json!({"path": {"type": "string"}, "ops": {"type": "array", "items": {"type": "object"}, "minItems": 1, "maxItems": 500}}), &["path", "ops"]),
+            obj(json!({"path": {"type": "string"}, "applied": {"type": "integer"}, "ids": {"type": "array", "items": {"type": "string"}}, "version": {"type": "string"}, "revision": {}}), &["path", "applied"]),
+            CLI_ONLY,
+            false,
         )),
     ]
 }
@@ -629,12 +639,13 @@ mod tests {
     fn security_mcp_role_reaches_only_the_pinned_tools() {
         let mut allowed: Vec<_> = catalogue().iter().filter(|m| m.allows(roles::MCP)).map(|m| m.name).collect();
         allowed.sort();
-        assert_eq!(allowed, [APP_STATUS, RPC_DISCOVER, RPC_HELLO, SCENE_APPLY, SCENE_READ, SCENE_SELECTION, VAULT_LIST, VAULT_SEARCH]);
+        assert_eq!(allowed, [APP_STATUS, RPC_DISCOVER, RPC_HELLO, SCENE_APPLY, SCENE_CREATE, SCENE_READ, SCENE_SELECTION, VAULT_LIST, VAULT_SEARCH]);
         let mut tools: Vec<_> = catalogue().iter().filter_map(|m| m.mcp.map(|t| (t.name, m.name, t.writes))).collect();
         tools.sort();
         assert_eq!(
             tools,
             [
+                ("create_drawing", SCENE_CREATE, true),
                 ("edit_drawing", SCENE_APPLY, true),
                 ("get_selection", SCENE_SELECTION, false),
                 ("list_drawings", VAULT_LIST, false),

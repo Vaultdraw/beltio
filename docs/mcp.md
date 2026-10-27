@@ -21,11 +21,12 @@ Claude Code: `claude mcp add vaultdraw -- vaultdraw mcp`. Use the full path of `
 | `vaultdraw_status` | Running or not, open vault and drawing, and whether AI tools are on (answers while off) | no |
 | `list_drawings` | Drawings and folders of the vault | no (reads the folder) |
 | `search_vault` | Search names, text and tags | no (reads the folder) |
-| `read_drawing` | Elements of the drawing on screen (`scope`, `types`, `ids`, `limit`, `offset`) | yes |
+| `read_drawing` | Elements of the drawing on screen, or of another drawing with `path` or `file` (`scope`, `types`, `ids`, `limit`, `offset`) | only for the drawing on screen (a named drawing is read from disk) |
 | `get_selection` | The elements you have selected | yes |
-| `edit_drawing` | 1 to 500 scene operations, all or nothing, as one undo step (`ifVersion`, `dryRun`) | yes |
+| `edit_drawing` | 1 to 500 scene operations, all or nothing (`ifVersion`, `dryRun`). On screen: one undo step. Another drawing (`path` or `file`): saved like a save, with history | yes |
+| `create_drawing` | A new drawing from 1 to 500 operations; nothing is created if one is invalid; refuses an existing name | yes |
 
-The scene methods behind the three live tools are experimental, like `vaultdraw scene`. `vaultdraw mcp` never starts Vaultdraw; a live tool with the app closed answers `NOT_RUNNING`.
+The scene methods behind the live tools are experimental, like `vaultdraw scene`. `vaultdraw mcp` never starts Vaultdraw; a live tool with the app closed answers `NOT_RUNNING`.
 
 ```mermaid
 flowchart LR
@@ -37,12 +38,12 @@ flowchart LR
 
 ## While AI is off
 
-`tools/list` always shows the same six tools, because AI apps keep that list until they restart. While AI is off every tool except `vaultdraw_status` answers with an error, code `DISABLED`, that says how to turn it on. Turning AI on or off applies to the next call, with no restart. A config file that cannot be read counts as off.
+`tools/list` always shows the same seven tools, because AI apps keep that list until they restart. While AI is off every tool except `vaultdraw_status` answers with an error, code `DISABLED`, that says how to turn it on. Turning AI on or off applies to the next call, with no restart. A config file that cannot be read counts as off.
 
 ## Trust model
 
 - Drawing text is your content. The tool descriptions tell the model not to follow instructions found in it, but a model may still be misled: every edit is one undo step (Cmd+Z) and shows a notice (`control.notify_edits`).
-- There is no tool to delete, move or overwrite files, change settings or run commands.
+- Editing another drawing writes its file the way a save does (revision checked, previous version kept in history, refused while it is open with unsaved changes). There is no tool to delete, move or overwrite files, change settings or run commands.
 - `vaultdraw mcp` talks only over standard input and output and your user-only control socket. It makes no network calls. The AI app's own network use is outside Vaultdraw.
 - The `mcp` role is declared by the connecting program. An AI app that can run shell commands as you can use the `vaultdraw` command like any program you run.
 - An AI connection is limited to 20 requests a second and one edit in the app at a time.

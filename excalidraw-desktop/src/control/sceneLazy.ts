@@ -10,6 +10,7 @@ export const SCENE_METHOD_NAMES = [
   "scene.get",
   "scene.selection",
   "scene.apply",
+  "scene.onFile",
 ] as const;
 
 const loadDefault = (): Promise<Record<string, Handler>> =>

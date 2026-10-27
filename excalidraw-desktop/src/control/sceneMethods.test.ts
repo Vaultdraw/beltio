@@ -510,3 +510,103 @@ describe("scene methods: review fixes", () => {
     expect(a.valid).toBe(true);
   });
 });
+
+describe("scene.onFile (the file route: a drawing that is not on screen)", () => {
+  const file = () => ({
+    type: "excalidraw",
+    version: 2,
+    elements: makeElements(3),
+    appState: {},
+    files: {},
+  });
+  const m = createSceneMethods({ active: () => null, notify: vi.fn() });
+
+  it("reads elements from a parsed scene, not live", () => {
+    const f = file();
+    const r = m["scene.onFile"]({
+      method: "read",
+      path: "a.excalidraw",
+      scene: f,
+    }) as Record<string, unknown>;
+    expect(r.live).toBe(false);
+    expect(r.total).toBe(3);
+    expect(r.version).toBe(sceneVersion(f.elements));
+    expect(r.viewport).toBeUndefined();
+    expect(r.selection).toBeUndefined();
+  });
+
+  it("refuses the viewport and selection scopes", () => {
+    const e = fail(() =>
+      m["scene.onFile"]({
+        method: "read",
+        path: "a.excalidraw",
+        scene: file(),
+        scope: "viewport",
+      }),
+    );
+    expect(e.code).toBe("INVALID_PARAMS");
+  });
+
+  it("gets elements by id", () => {
+    const f = file();
+    const r = m["scene.onFile"]({
+      method: "get",
+      path: "a.excalidraw",
+      scene: f,
+      ids: [f.elements[0].id, "nope"],
+    }) as { elements: unknown[]; missing: string[] };
+    expect(r.elements).toHaveLength(1);
+    expect(r.missing).toEqual(["nope"]);
+  });
+
+  it("applies ops and returns the new elements without deleted ones", () => {
+    const f = file();
+    const r = m["scene.onFile"]({
+      method: "apply",
+      path: "a.excalidraw",
+      scene: f,
+      ops: [rect, { op: "delete", id: f.elements[0].id }],
+    }) as {
+      applied: number;
+      live: boolean;
+      scene: { elements: { id: string }[] };
+    };
+    expect(r.live).toBe(false);
+    expect(r.applied).toBe(2);
+    expect(r.scene.elements).toHaveLength(3);
+    expect(r.scene.elements.some((e) => e.id === f.elements[0].id)).toBe(false);
+  });
+
+  it("dry run returns no scene; a stale ifVersion is a CONFLICT", () => {
+    const f = file();
+    const dry = m["scene.onFile"]({
+      method: "apply",
+      path: "a.excalidraw",
+      scene: f,
+      ops: [rect],
+      dryRun: true,
+    }) as Record<string, unknown>;
+    expect(dry.valid).toBe(true);
+    expect(dry.scene).toBeUndefined();
+    const e = fail(() =>
+      m["scene.onFile"]({
+        method: "apply",
+        path: "a.excalidraw",
+        scene: f,
+        ops: [rect],
+        ifVersion: "sstale",
+      }),
+    );
+    expect(e.code).toBe("CONFLICT");
+  });
+
+  it("an empty scene works (create_drawing)", () => {
+    const r = m["scene.onFile"]({
+      method: "apply",
+      path: "new.excalidraw",
+      scene: { elements: [] },
+      ops: [rect],
+    }) as { scene: { elements: unknown[] } };
+    expect(r.scene.elements).toHaveLength(1);
+  });
+});

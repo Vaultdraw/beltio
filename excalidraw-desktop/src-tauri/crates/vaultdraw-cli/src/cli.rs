@@ -259,6 +259,14 @@ pub enum SceneAction {
         /// The drawing (path or link-style name); default: the drawing on screen
         target: Option<String>,
     },
+    /// Create a new drawing from scene operations (a JSON array, or { "ops": [...] }); needs the app running, leaves no blank file when an operation is invalid
+    Create {
+        /// The new drawing's path (the .excalidraw ending is optional)
+        path: String,
+        /// Operations file, or - for stdin
+        #[arg(long, value_name = "FILE", default_value = "-")]
+        ops: String,
+    },
     /// Apply scene operations (a JSON array, or { "ops": [...] }) as one undo step
     Apply {
         /// The drawing (path or link-style name); default: the drawing on screen

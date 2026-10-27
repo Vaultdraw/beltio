@@ -139,21 +139,23 @@ vaultdraw doctor                 # one read-only report for bug reports
 
 `vaultdraw --help` lists everything.
 
-### Read and edit the drawing on screen
+### Read and edit drawings
 
-The `scene` commands work on the drawing on screen. The app must be running.
+The `scene` commands work on the drawing on screen, or on any drawing of the vault when you name it (`vaultdraw scene read Plan`). A drawing that is not on screen is read from disk and an edit is saved like any other save (history keeps the old version; an open drawing with unsaved changes is refused). `scene read` and `scene get` of a named drawing also work with the app closed (read from disk, never live). Everything else needs the app running.
 
 ```bash
 vaultdraw scene read --scope selection            # elements in the selection (scope: all, viewport, selection)
 vaultdraw scene get 3fA9kLm2                      # elements by id (ids come from scene read)
 vaultdraw scene selection                         # the selected elements
 echo '[{"op":"add","element":{"type":"rectangle","width":120,"height":80}}]' | vaultdraw scene apply
+echo '[...]' | vaultdraw scene create Ideas/new   # a new drawing from operations; nothing is created if one is invalid
 ```
 
 - One `scene apply` is one undo step. Undo reverts the whole batch.
 - `--if-version <v>` refuses with a conflict when the drawing changed since you read it. The `version` is in the `scene read` output.
 - After a timeout, retry with `--if-version` so a late first call cannot apply twice.
 - `--dry-run` checks the operations and changes nothing.
+- A drawing that is not on screen has no viewport or selection, so `--scope viewport|selection` and `scene selection` need it on screen. Edits to it show no notice, because you are not looking at it.
 - Operations are `add`, `update` (id and props) and `delete` (id). One call takes up to 500.
 - The `scene.*` methods are experimental. Their names and shapes may change before API level 2.
 - AI apps will reach the same methods through the AI tools interface, which is refused unless you turn AI on in Settings → Control (off by default; see [AI](docs/configuration.md#ai)).

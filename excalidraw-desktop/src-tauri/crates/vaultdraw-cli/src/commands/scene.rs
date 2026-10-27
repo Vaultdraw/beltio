@@ -1,7 +1,7 @@
 //! `vaultdraw scene read|get|selection|apply`: the drawing on screen, live. No headless
 //! fallback: with no app running these exit 3 like every other live command.
 
-use super::{request, target};
+use super::{read_request, request, target};
 use crate::cli::{Cli, SceneAction};
 use crate::error::Fail;
 use crate::render;
@@ -12,6 +12,17 @@ use vaultdraw_protocol::methods;
 /// Params with the optional target (`path` or `file`) filled in.
 fn with_target(cli: &Cli, t: Option<&str>) -> Map<String, Value> {
     t.map(|t| target(cli, t)).unwrap_or_default()
+}
+
+/// A read that names a drawing can come from disk with the app closed; one without a target is
+/// the drawing on screen and needs the app.
+fn read_or_request(cli: &Cli, method: &str, p: Map<String, Value>, human: impl Fn(&Value) -> String) -> Result<(), Fail> {
+    let p = Value::Object(p);
+    if crate::headless::names_a_drawing(&p) {
+        read_request(cli, method, Some(p), human)
+    } else {
+        request(cli, method, Some(p), human, false)
+    }
 }
 
 pub fn run(cli: &Cli, action: &SceneAction) -> Result<(), Fail> {
@@ -33,15 +44,21 @@ pub fn run(cli: &Cli, action: &SceneAction) -> Result<(), Fail> {
             if let Some(n) = offset {
                 p.insert("offset".into(), json!(n));
             }
-            request(cli, methods::SCENE_READ, Some(Value::Object(p)), render::scene_read, false)
+            read_or_request(cli, methods::SCENE_READ, p, render::scene_read)
         }
         SceneAction::Get { ids, target } => {
             let mut p = with_target(cli, target.as_deref());
             p.insert("ids".into(), json!(ids));
-            request(cli, methods::SCENE_GET, Some(Value::Object(p)), render::scene_get, false)
+            read_or_request(cli, methods::SCENE_GET, p, render::scene_get)
         }
         SceneAction::Selection { target } => {
             request(cli, methods::SCENE_SELECTION, Some(Value::Object(with_target(cli, target.as_deref()))), render::scene_selection, false)
+        }
+        SceneAction::Create { path, ops } => {
+            let ops = read_ops(ops)?;
+            let count = ops.len();
+            let p = json!({"path": path, "ops": ops});
+            request(cli, methods::SCENE_CREATE, Some(p), |v| render::scene_apply(v, count), false)
         }
         SceneAction::Apply { target, ops, if_version, dry_run } => {
             let ops = read_ops(ops)?;

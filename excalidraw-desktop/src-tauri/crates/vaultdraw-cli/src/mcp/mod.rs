@@ -1,5 +1,5 @@
 //! `vaultdraw mcp`: a Model Context Protocol server on standard input and output, started by an
-//! AI client and gone when it closes the input. It translates six tool calls into control API
+//! AI client and gone when it closes the input. It translates seven tool calls into control API
 //! calls (see `tools`). Only valid JSON lines go to standard output; notes go to standard error.
 //!
 //! Both protocol eras are served by one small branch: the 2026-07-28 revision (no handshake, the
