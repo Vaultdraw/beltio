@@ -183,6 +183,9 @@ export function createPagesApi(
   };
 
   /** The drawing is open in the editor: items land through `updateScene`, one frame at a time. */
+  /** How long a new document waits for its editor to become the active scene. */
+  const MOUNT_WAIT_MS = 10_000;
+
   const liveSession = async (
     bridge: NonNullable<ReturnType<typeof getWorkspaceBridge>>,
     parent: string,
@@ -197,6 +200,10 @@ export function createPagesApi(
     let frameQueued = false;
     let closed = false;
     let done = false;
+    // The new tab's editor mounts a few frames after createDrawing returns: until it is the
+    // active scene once, wait (up to MOUNT_WAIT_MS) instead of treating it as closed.
+    let mounted = false;
+    const mountDeadline = Date.now() + MOUNT_WAIT_MS;
     const idle: (() => void)[] = [];
     const settle = () => {
       idle.splice(0).forEach((r) => r());
@@ -207,6 +214,14 @@ export function createPagesApi(
       const chunks = queue;
       queue = [];
       const scene = getActiveScene();
+      if (!mounted && scene?.path !== path && Date.now() < mountDeadline) {
+        queue = chunks.concat(queue);
+        schedule();
+        return;
+      }
+      if (scene?.path === path) {
+        mounted = true;
+      }
       if (!scene || scene.path !== path) {
         // Closed or switched mid-stream: what was applied was saved by the switch; the rest is dropped.
         closed = true;
