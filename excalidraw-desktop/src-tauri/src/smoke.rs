@@ -240,6 +240,34 @@ pub async fn perf_layer_tree(window: tauri::WebviewWindow, label: String, dom: O
     Ok(true)
 }
 
+/// Memory diagnosis: `[pid, phys_footprint, lifetime max phys_footprint]` in bytes per pid
+/// (`proc_pid_rusage`, microseconds per call, so the page can sample it every few ms).
+#[tauri::command]
+pub fn perf_footprint(pids: Vec<i32>) -> Vec<[u64; 3]> {
+    #[cfg(target_os = "macos")]
+    {
+        extern "C" {
+            fn proc_pid_rusage(pid: i32, flavor: i32, buffer: *mut u8) -> i32;
+        }
+        const RUSAGE_INFO_V4: i32 = 4;
+        let field = |buf: &[u8], at: usize| u64::from_le_bytes(buf[at..at + 8].try_into().unwrap());
+        pids.into_iter()
+            .filter_map(|pid| {
+                let mut buf = [0u8; 512];
+                // SAFETY: the buffer is larger than rusage_info_v4 (296 bytes).
+                let rc = unsafe { proc_pid_rusage(pid, RUSAGE_INFO_V4, buf.as_mut_ptr()) };
+                // ri_phys_footprint at 72, ri_lifetime_max_phys_footprint at 240.
+                (rc == 0).then(|| [pid as u64, field(&buf, 72), field(&buf, 240)])
+            })
+            .collect()
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = pids;
+        Vec::new()
+    }
+}
+
 /// A smoke or perf run (as opposed to the smoke-test build launched by hand).
 pub fn test_run() -> bool {
     enabled() || env::var("VAULTDRAW_PERF").ok().as_deref() == Some("1")

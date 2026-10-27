@@ -11,6 +11,7 @@ import { collectFrames, countLong } from "./perfStats";
 import { readOpenMarks } from "./openMarks";
 import { refreshRateSamples, runRefreshRateProbe } from "./refreshRate";
 import { scenarioSelected } from "./scenarioFilter";
+import { setPerfStep } from "./footprintTrace";
 import { runTypicalScenarios } from "./typicalScenarios";
 
 import type {
@@ -307,6 +308,7 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
     }
     const previousId = editorId();
     const t0 = now();
+    setPerfStep(`open ${path}`);
     target.click();
     await waitUntil(
       `editor for ${path}`,
@@ -413,6 +415,7 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
       return;
     }
     await ctx.mark(`phase:${name}`);
+    setPerfStep(name);
     log(`scenario ${name}`);
     const started = now();
     try {
@@ -489,6 +492,7 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
 
   // 5. save ----------------------------------------------------------------------------
   const saveOnce = async (path: string, metric: string) => {
+    setPerfStep(`save ${path}`);
     const canvas = interactiveCanvas();
     if (!canvas) {
       throw new Error("No interactive canvas for save");

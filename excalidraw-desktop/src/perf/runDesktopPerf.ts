@@ -4,6 +4,11 @@ import fixturesConfig from "../../perf/fixtures.config.json";
 import { desktopRepository } from "../vault/DesktopVaultRepository";
 
 import { canvasCensus } from "./canvasTracker";
+import {
+  footprintTraceText,
+  setPerfStep,
+  startFootprintTrace,
+} from "./footprintTrace";
 import { installIpcTrace } from "./ipcTrace";
 import { runPerfScenarios } from "./perfScenarios";
 
@@ -210,7 +215,9 @@ export async function runDesktopPerf(): Promise<void> {
     if (layerDump) {
       layerDump = await invoke<boolean>("perf_layer_tree", {
         label: name,
-        dom: `${layerCensus(doc)}\n== canvases\n${canvasCensus()}`,
+        dom: `${layerCensus(
+          doc,
+        )}\n== canvases\n${canvasCensus()}\n== footprint peak rises\n${footprintTraceText()}`,
       }).catch(() => false);
     }
   };
@@ -278,6 +285,13 @@ export async function runDesktopPerf(): Promise<void> {
     }
     await mark("interactive");
     await markPids();
+    if (layerDump) {
+      setPerfStep("onboarding");
+      startFootprintTrace(
+        win,
+        await invoke<Record<string, number | null>>("perf_process_ids"),
+      );
+    }
 
     // Heartbeat: tells a stalled run apart (hidden/occluded WebView stops rAF, JS hang, IPC hang).
     // Stall diagnostics stop before the idle window. No rAF loop here: one would keep the WebView
