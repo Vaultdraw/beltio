@@ -227,6 +227,7 @@ impl Worker {
             return false;
         }
         let racy_before = now_ms(SystemTime::now()).saturating_sub(RACY_MS);
+        self.shared.drop_attachments();
         let changed = if rescan {
             let c = self.sync_subtree("", racy_before, true);
             self.set_state(IndexState::Ready);

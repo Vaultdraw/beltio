@@ -54,9 +54,21 @@ pub(crate) struct VaultIndex {
     stop: AtomicBool,
     /// Signalled on every state change and on shutdown (`wait_ready`).
     changed: Condvar,
+    root: PathBuf,
+    /// Names of the vault's attachments, built by the first attachment link and dropped by every change.
+    attachments: Mutex<Option<Arc<vaultdraw_core::links::attach::AttachmentIndex>>>,
 }
 
 impl VaultIndex {
+    /// The attachment name map (`![[image.png]]`), built on first use.
+    pub(crate) fn attachments(&self) -> Arc<vaultdraw_core::links::attach::AttachmentIndex> {
+        let mut g = self.attachments.lock().unwrap_or_else(|p| p.into_inner());
+        g.get_or_insert_with(|| Arc::new(vaultdraw_core::links::attach::AttachmentIndex::build(&self.root))).clone()
+    }
+    /// Called when files changed: the map is rebuilt the next time a link needs it.
+    pub(crate) fn drop_attachments(&self) {
+        *self.attachments.lock().unwrap_or_else(|p| p.into_inner()) = None;
+    }
     pub(crate) fn read(&self) -> RwLockReadGuard<'_, Index> {
         self.index.read().unwrap_or_else(|p| p.into_inner())
     }
@@ -185,7 +197,7 @@ impl SearchService {
 
     fn start_deferring(&self, handle: &str, root: PathBuf, emit: Emitter, snapshot: Option<PathBuf>, defer: worker::Defer) {
         let (tx, rx) = mpsc::channel();
-        let shared = Arc::new(VaultIndex { index: RwLock::new(Index::default()), state: Mutex::new(IndexState::Loading), tx, stop: AtomicBool::new(false), changed: Condvar::new() });
+        let shared = Arc::new(VaultIndex { index: RwLock::new(Index::default()), state: Mutex::new(IndexState::Loading), tx, stop: AtomicBool::new(false), changed: Condvar::new(), root: root.clone(), attachments: Mutex::new(None) });
         let worker = worker::Worker { handle: handle.to_string(), root, shared: shared.clone(), rx, emit, snapshot, last_emit: Instant::now(), dirty_since: None, defer, deferred: Default::default() };
         if let Err(e) = std::thread::Builder::new().name("vaultdraw-search".into()).spawn(move || worker.run()) {
             eprintln!("vaultdraw: search indexer not started: {e}");

@@ -1,6 +1,7 @@
 //! Links between drawings, query side: grammar, the link index, the graph export, resolution
 //! and the backlinks/mentions queries. Rewriting files on rename stays in the app.
 
+pub mod attach;
 pub mod grammar;
 pub mod graph;
 pub mod index;

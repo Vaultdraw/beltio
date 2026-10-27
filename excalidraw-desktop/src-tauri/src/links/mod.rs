@@ -402,6 +402,11 @@ pub(crate) async fn resolve_link(handle: String, from_path: String, raw: String,
     if raw.len() > 4096 {
         return Ok(Resolution { path: None, candidates: Vec::new() });
     }
+    // `![[image.png]]` and `[[paper.pdf]]` name files that are not in the search index.
+    if let Some(target) = vaultdraw_core::links::attach::attachment_target(&raw) {
+        let path = vi.attachments().resolve(&from_path, &target);
+        return Ok(Resolution { path, candidates: Vec::new() });
+    }
     Ok(with_links(&vi, |i| query::resolve_raw(i, &from_path, &raw)))
 }
 
