@@ -95,6 +95,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- Library: an edit to `library.excalidrawlib` made outside the app now shows up live when your config folder is reached through a symlink (stowed dotfiles, a linked folder). The change event arrived under the real path and was dropped.
+
 - `vaultdraw launch --safe` reaching an app whose window is still starting is no longer lost, and is asked only once. A normal restart no longer edits the app's own environment while it exits; the new process just starts without `VAULTDRAW_SAFE`.
 - `control.uri_enabled` and `control.uri_allow` are now read through every config layer (included files, `config.toml`, `overrides.toml`), like `control.enabled`. Before, links read only `config.toml`, so turning links off from Settings or with `vaultdraw config set` did nothing. A broken `overrides.toml` now turns links off, as it does AI.
 - Renaming a tag across the vault no longer shows an extra "Updated N links" message next to "Renamed #a to #b" when the rewrite finishes very fast.
