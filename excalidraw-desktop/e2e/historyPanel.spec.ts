@@ -329,6 +329,10 @@ test("Copy to drawing brings a selected preview shape into the main scene", asyn
   expect(await savedLive(page)).toContain("c");
 });
 
+// Native clipboard chords: WebKitGTK fires copy/paste on Ctrl, not Meta (the
+// harness only fakes the platform for the app's own shortcuts).
+const clipMod = process.platform === "linux" ? "Control" : "Meta";
+
 test("Cmd+C in the preview and Cmd+V in the main editor paste the shape", async ({
   page,
   context,
@@ -343,7 +347,7 @@ test("Cmd+C in the preview and Cmd+V in the main editor paste the shape", async 
   const at = await colorOn(page, PREVIEW, ORANGE);
   await page.mouse.click(at.x, at.y);
   await expect(page.getByTestId("history-copy-selection")).toBeEnabled();
-  await page.keyboard.press("Meta+KeyC");
+  await page.keyboard.press(`${clipMod}+KeyC`);
 
   diag(`focus-in-preview ${await focusInfo(page)}`);
   await page.keyboard.press("Escape"); // back to current
@@ -357,7 +361,7 @@ test("Cmd+C in the preview and Cmd+V in the main editor paste the shape", async 
   const box = await canvasBox(page);
   await page.mouse.click(box.x + box.width * 0.6, box.y + box.height * 0.75);
   const w0 = await writeCount(page);
-  await page.keyboard.press("Meta+KeyV");
+  await page.keyboard.press(`${clipMod}+KeyV`);
   await expectColor(page, MAIN, ORANGE, true);
   await waitSaved(page, w0);
 });

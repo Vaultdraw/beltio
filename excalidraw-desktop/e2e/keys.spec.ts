@@ -64,9 +64,10 @@ test("a recorded key sequence shows the which-key popup and picks a tool", async
   await page.mouse.click(box.x + box.width * 0.8, box.y + box.height * 0.8);
   await page.keyboard.press("g");
 
+  // One assertion, not two: the pending sequence expires after keys.timeout_ms
+  // (1 s), which a slow (emulated) machine can pass between two checks.
   const popup = page.getByRole("status", { name: "Key sequence options" });
-  await expect(popup).toBeVisible();
-  await expect(popup).toContainText("Rectangle");
+  await expect(popup.filter({ hasText: "Rectangle" })).toBeVisible();
 
   await page.keyboard.press("r");
   await expect(popup).toHaveCount(0);

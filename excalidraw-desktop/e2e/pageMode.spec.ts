@@ -199,6 +199,9 @@ test("vertical-only scroll, centred zoom, zoom-out floor, resize keeps the lock"
   expect((await live(page)).scrollX).toBeCloseTo(before, 3);
 });
 
+// WebKitGTK fires copy/paste on Ctrl, not Meta.
+const clipMod = process.platform === "linux" ? "Control" : "Meta";
+
 test("blocking: nothing starts in the surround, drags clamp to the page, duplicate and paste end inside", async ({
   page,
 }) => {
@@ -236,10 +239,10 @@ test("blocking: nothing starts in the surround, drags clamp to the page, duplica
   }
 
   // copy, then paste with the pointer near the right edge
-  await page.keyboard.press("Meta+c");
+  await page.keyboard.press(`${clipMod}+c`);
   const near = await toClient(page, 780, 700);
   await page.mouse.move(near.x, near.y);
-  await page.keyboard.press("Meta+v");
+  await page.keyboard.press(`${clipMod}+v`);
   await page.waitForTimeout(700);
   els = (await live(page)).elements;
   expect(els.length).toBeGreaterThanOrEqual(4);
