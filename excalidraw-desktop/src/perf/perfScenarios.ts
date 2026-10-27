@@ -46,6 +46,8 @@ export type PerfContext = {
     open: number;
     /** drawing switches measured by the switch scenario (alternating small/medium) */
     switches: number;
+    /** switchPress scenario: medium/large switches, each preceded by a pointer-down */
+    pressSwitches: number;
     save: number;
     typingChars: number;
     panMs: number;
@@ -75,6 +77,7 @@ const DEFAULTS = {
   // 40 alternating switches: 2 cold + 38 warm (19 per size). Enough for a stable p95
   // of the switch.landing.* / switch.commit.* metrics (personal/feature/switch-metric/REPORT.md).
   switches: 40,
+  pressSwitches: 20,
   save: 3,
   typingChars: 40,
   panMs: 2000,
@@ -82,6 +85,8 @@ const DEFAULTS = {
 };
 
 const OPEN_TIMEOUT = 30_000;
+/** Pointer-down to click of a human press (typical 60-120 ms). */
+const PRESS_LEAD_MS = 80;
 
 export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
   const { root, doc, win, config } = ctx;
@@ -316,12 +321,21 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
   const openByRow = async (
     path: string,
     recordBreakdown = false,
+    /** a human press: pointer-down this many ms before the click (0 = a bare click()) */
+    leadMs = 0,
   ): Promise<OpenTiming> => {
     const target = row(path);
     if (!target) {
       throw new Error(`Tree row not found: ${path}`);
     }
     const previousId = editorId();
+    if (leadMs > 0) {
+      const r = target.getBoundingClientRect();
+      const at = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      pointer(target, "pointerdown", at.x, at.y);
+      await sleep(leadMs);
+      pointer(target, "pointerup", at.x, at.y, 0);
+    }
     const t0 = now();
     setPerfStep(`open ${path}`);
     target.click();
@@ -842,7 +856,13 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
     const seen = new Set<string>();
     for (let k = 0; k < iter.switches; k++) {
       const target = pair[k % 2];
-      const { total, ready, landing } = await openByRow(target);
+      // the first switch to each drawing is a human press (pointer-down, then
+      // the click), as a real first open is; the rest are bare clicks
+      const { total, ready, landing } = await openByRow(
+        target,
+        false,
+        seen.has(target) ? 0 : PRESS_LEAD_MS,
+      );
       // report-only, kept for continuity: two painted frames, so frame-quantised.
       push(seen.has(target) ? "switch.recent" : "switch.drawing", total);
       // gated: warm switches only, split by drawing size (the two sizes are two
@@ -856,6 +876,23 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
         push("switch.landing.cold", landing);
       }
       seen.add(target);
+      await sleep(300);
+    }
+  });
+
+  // 4b2. switch with a press ---------------------------------------------------------
+  // The same alternating switches, each as a human press: pointer-down PRESS_LEAD_MS
+  // before the click. A change that starts work on pointer-down (speculative open) shows
+  // here, not in `switch`, whose warm switches are bare clicks (the no-regression guard).
+  await scenario("switchPress", async () => {
+    const pair = [openTargets.medium, openTargets.large];
+    await ensureOpen(pair[0]);
+    await sleep(300);
+    for (let k = 0; k < iter.pressSwitches; k++) {
+      const target = pair[(k + 1) % 2];
+      const size = target === openTargets.medium ? "medium" : "large";
+      const { landing } = await openByRow(target, false, PRESS_LEAD_MS);
+      push(`switch.press.${size}`, landing);
       await sleep(300);
     }
   });
