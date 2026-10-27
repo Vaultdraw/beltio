@@ -10,6 +10,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### New
 
+- **Plugin commands from the command line.** `vaultdraw plugin commands [plugin]` lists installed plugins and what they declare (with enabled and loaded state); `vaultdraw plugin run <plugin>.<command>` runs one, loading the plugin on first use. New control methods `plugin.commands` and `plugin.run` (CLI role only).
+
 - **Plugin API 0.19.0: a plugin's own table in the vault settings.** `ctx.vault.table.read/update` reads and changes `[<plugin id>]` in `<vault>/.excalidraw-vault/settings.toml` (comments and other tables stay). Only plugins that ship with the app may use it, so the graph extension keeps its `[graph]` table as it is today.
 
 - **Copy the AI app setup.** The palette command `AI: Copy the AI app setup (MCP server config)` (`ai.copyMcpSetup`) copies the `mcpServers` entry for `vaultdraw mcp`. `vaultdraw mcp` now also answers JSON-RPC batches, survives a line that is not UTF-8, keeps answering `ping` while a tool call is slow, and reads a modern client's name from each request.

@@ -6,6 +6,7 @@ mod events;
 mod export;
 mod files;
 mod launch;
+mod plugin;
 mod scene;
 mod tabs;
 mod uri;
@@ -53,6 +54,7 @@ pub fn run(cli: &Cli) -> Result<(), Fail> {
         Command::Tags => files::tags(cli),
         Command::Scene { action } => scene::run(cli, action),
         Command::Mcp => crate::mcp::run(cli),
+        Command::Plugin { action } => plugin::run(cli, action),
         Command::Tabs => tabs::list(cli),
         Command::Tab { action } => tabs::run(cli, action),
         Command::Config { action: ConfigAction::Check { strict } } => diag::config_check(cli, *strict),

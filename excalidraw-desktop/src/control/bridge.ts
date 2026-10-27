@@ -8,6 +8,7 @@ import { spoolBlob } from "../export/spoolBlob";
 import { commandInfos } from "./commandsSnapshot";
 import { ControlError, toControlError } from "./errors";
 import { objectParams, stringParam } from "./params";
+import { createPluginMethods } from "./pluginMethods";
 import { createLazySceneMethods } from "./sceneLazy";
 import { createUriRunner, type UriDeps, type UriPlan } from "./uriRun";
 import { createWindowMethods, type ControlFiles } from "./windowMethods";
@@ -92,6 +93,7 @@ export function createControlBridge(deps: ControlDeps) {
       }
       return { opened: true };
     },
+    ...createPluginMethods(deps.runner),
     ...(deps.files
       ? createWindowMethods(deps.files, (blob) => spoolBlob(deps.invoke, blob))
       : {}),

@@ -14,6 +14,8 @@ pub const APP_OPEN: &str = "app.open";
 pub const URI_HANDLE: &str = "uri.handle";
 pub const COMMAND_LIST: &str = "command.list";
 pub const COMMAND_RUN: &str = "command.run";
+pub const PLUGIN_COMMANDS: &str = "plugin.commands";
+pub const PLUGIN_RUN: &str = "plugin.run";
 pub const VAULT_INFO: &str = "vault.info";
 pub const VAULT_OPEN: &str = "vault.open";
 pub const VAULT_LIST: &str = "vault.list";
@@ -245,6 +247,42 @@ fn scene_methods() -> Vec<MethodSpec> {
             CLI_ONLY,
             false,
         )),
+    ]
+}
+
+/// Plugin commands (window): list what plugins declare, run one. Nothing here loads a plugin
+/// until a command runs.
+fn plugin_methods() -> Vec<MethodSpec> {
+    let command = obj(
+        json!({"id": {"type": "string"}, "title": {"type": "string"}, "keys": {"type": "array", "items": {"type": "string"}}, "palette": {"type": "boolean"}}),
+        &["id", "title"],
+    );
+    let plugin = obj(
+        json!({
+            "id": {"type": "string"}, "name": {"type": "string"}, "version": {"type": "string"},
+            "enabled": {"type": "boolean"},
+            "state": {"type": "string", "enum": ["idle", "loading", "active", "failed", "disabled"]},
+            "commands": {"type": "array", "items": command}
+        }),
+        &["id", "name", "enabled", "state", "commands"],
+    );
+    vec![
+        spec(
+            PLUGIN_COMMANDS,
+            "Installed plugins and the commands each declares, with whether the plugin is enabled and its state; plugin narrows to one id",
+            obj(json!({"plugin": {"type": "string"}}), &[]),
+            obj(json!({"plugins": {"type": "array", "items": plugin}}), &["plugins"]),
+            CLI_ONLY,
+            true,
+        ),
+        spec(
+            PLUGIN_RUN,
+            "Run a plugin's command by its full id (<plugin>.<command>); the plugin must be enabled (it loads on first use)",
+            obj(json!({"id": {"type": "string"}}), &["id"]),
+            obj(json!({"ran": {"type": "boolean"}, "id": {"type": "string"}, "plugin": {"type": "string"}}), &["ran", "id", "plugin"]),
+            CLI_ONLY,
+            true,
+        ),
     ]
 }
 
@@ -581,6 +619,7 @@ fn build_catalogue() -> Vec<MethodSpec> {
         },
     ]
     .into_iter()
+    .chain(plugin_methods())
     .chain(c3_methods())
     .chain(scene_methods())
     .map(|mut m| {

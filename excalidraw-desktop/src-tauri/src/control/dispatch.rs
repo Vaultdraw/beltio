@@ -5,7 +5,7 @@ use super::{events, ops, scene_route};
 use super::server::Dispatch;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter, Manager};
-use vaultdraw_protocol::methods::{self, APP_FOCUS, APP_OPEN, APP_STATUS, COMMAND_LIST, COMMAND_RUN, RPC_DISCOVER, SCENE_APPLY, SCENE_CREATE, SCENE_GET, SCENE_READ, SCENE_SELECTION, URI_HANDLE};
+use vaultdraw_protocol::methods::{self, APP_FOCUS, APP_OPEN, APP_STATUS, COMMAND_LIST, COMMAND_RUN, PLUGIN_COMMANDS, PLUGIN_RUN, RPC_DISCOVER, SCENE_APPLY, SCENE_CREATE, SCENE_GET, SCENE_READ, SCENE_SELECTION, URI_HANDLE};
 use vaultdraw_protocol::{codes, RpcError, API_LEVEL};
 
 pub(crate) struct TauriDispatch {
@@ -154,7 +154,7 @@ impl Dispatch for TauriDispatch {
                 let url = params.as_ref().and_then(|p| p.get("url")).and_then(Value::as_str).ok_or_else(|| RpcError::invalid_params("url must be a string"))?;
                 super::uri::handle(&self.app, url, super::uri::Origin::Cli)
             }
-            COMMAND_LIST | COMMAND_RUN => call_window(&self.app, method, params, CALL_TIMEOUT),
+            COMMAND_LIST | COMMAND_RUN | PLUGIN_COMMANDS | PLUGIN_RUN => call_window(&self.app, method, params, CALL_TIMEOUT),
             SCENE_READ | SCENE_GET | SCENE_SELECTION | SCENE_APPLY => scene_route::call(&self.app, role, method, params),
             SCENE_CREATE => scene_route::create(&self.app, params),
             // The C3 methods (vault, files, tabs, config, quit).

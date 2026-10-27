@@ -109,6 +109,11 @@ pub enum Command {
     },
     /// Run the AI tools server (MCP) on standard input and output; started by an AI client, off until AI is turned on in Vaultdraw
     Mcp,
+    /// Plugin commands: list what plugins declare, run one
+    Plugin {
+        #[command(subcommand)]
+        action: PluginAction,
+    },
     /// List open tabs
     Tabs,
     /// Focus or close a tab
@@ -281,6 +286,17 @@ pub enum SceneAction {
         #[arg(long)]
         dry_run: bool,
     },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum PluginAction {
+    /// List installed plugins and their commands (needs the app: it knows which are enabled)
+    Commands {
+        /// Only this plugin (its id)
+        plugin: Option<String>,
+    },
+    /// Run a plugin command by its full id (<plugin>.<command>); the plugin loads on first use
+    Run { id: String },
 }
 
 #[derive(Subcommand, Debug)]

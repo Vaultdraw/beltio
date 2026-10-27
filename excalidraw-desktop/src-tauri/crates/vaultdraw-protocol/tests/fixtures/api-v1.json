@@ -371,6 +371,139 @@
       "window": true
     },
     {
+      "name": "plugin.commands",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "plugin": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "plugins": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "commands": {
+                  "items": {
+                    "additionalProperties": true,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "keys": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "palette": {
+                        "type": "boolean"
+                      },
+                      "title": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "state": {
+                  "enum": [
+                    "idle",
+                    "loading",
+                    "active",
+                    "failed",
+                    "disabled"
+                  ],
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "enabled",
+                "state",
+                "commands"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "plugins"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Installed plugins and the commands each declares, with whether the plugin is enabled and its state; plugin narrows to one id",
+      "window": true
+    },
+    {
+      "name": "plugin.run",
+      "params": {
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "result": {
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "plugin": {
+            "type": "string"
+          },
+          "ran": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ran",
+          "id",
+          "plugin"
+        ],
+        "type": "object"
+      },
+      "roles": [
+        "cli"
+      ],
+      "summary": "Run a plugin's command by its full id (<plugin>.<command>); the plugin must be enabled (it loads on first use)",
+      "window": true
+    },
+    {
       "name": "vault.info",
       "params": {
         "additionalProperties": true,

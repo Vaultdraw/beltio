@@ -160,6 +160,15 @@ echo '[...]' | vaultdraw scene create Ideas/new   # a new drawing from operation
 - The `scene.*` methods are experimental. Their names and shapes may change before API level 2.
 - AI apps will reach the same methods through the AI tools interface, which is refused unless you turn AI on in Settings → Control (off by default; see [AI](docs/configuration.md#ai)).
 
+### Plugin commands
+
+```bash
+vaultdraw plugin commands            # installed plugins, enabled or not, and the commands each declares
+vaultdraw plugin run hello.say       # run one by its full id; the plugin loads on first use
+```
+
+Needs the app running. A disabled plugin is refused (`UNAVAILABLE`); nothing loads until you run a command.
+
 ## Configuration
 
 Settings live in a plain-text folder (`~/.config/vaultdraw/config.toml`, plus `themes/`). Edit it by hand or in Settings (Settings saves to its own `overrides.toml`, so your `config.toml` is never rewritten), and the app reloads it live. A chip beside each setting says which file its value comes from. The full reference is in [docs/configuration.md](docs/configuration.md).

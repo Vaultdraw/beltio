@@ -88,6 +88,23 @@ pub fn commands(list: &[Value]) -> String {
     table(&rows)
 }
 
+/// `plugin commands`: one block per plugin, its commands indented.
+pub fn plugin_commands(v: &Value) -> String {
+    let plugins = arr(v, "plugins");
+    if plugins.is_empty() {
+        return "no plugins installed".to_string();
+    }
+    let mut lines = Vec::new();
+    for p in plugins {
+        let on = p.get("enabled").and_then(Value::as_bool) == Some(true);
+        lines.push(format!("{} {} ({}){}", s(p, "id"), s(p, "version"), s(p, "state"), if on { "" } else { " [disabled]" }));
+        for c in arr(p, "commands") {
+            lines.push(format!("  {}  {}", s(c, "id"), s(c, "title")));
+        }
+    }
+    lines.join("\n")
+}
+
 fn arr<'a>(v: &'a Value, key: &str) -> &'a [Value] {
     v.get(key).and_then(Value::as_array).map(Vec::as_slice).unwrap_or(&[])
 }

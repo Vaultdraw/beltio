@@ -24,6 +24,13 @@ fn app(method: &str, params: &Value) -> Result<Value, (i64, String, Option<&'sta
             Some(id) => Err((-32000, "Command is not available now".into(), Some(if id == "nope" { "NOT_FOUND" } else { "UNAVAILABLE" }))),
             None => Err((-32602, "id required".into(), None)),
         },
+        "plugin.commands" => Ok(json!({"plugins":[
+            {"id":"hello","name":"Hello","version":"1.0.0","enabled":true,"state":"idle","commands":[{"id":"hello.say","title":"Say hello"}]},
+            {"id":"off","name":"Off","version":"0.1.0","enabled":false,"state":"idle","commands":[]}]})),
+        "plugin.run" => match params["id"].as_str() {
+            Some("hello.say") => Ok(json!({"ran":true,"id":"hello.say","plugin":"hello"})),
+            _ => Err((-32000, "No plugin command".into(), Some("NOT_FOUND"))),
+        },
         _ => Err((-32601, "Method not found".into(), None)),
     }
 }
@@ -491,4 +498,22 @@ fn scene_commands_exit_3_when_the_app_is_not_running() {
     assert_eq!(code(&o), 3);
     let o = vd_in(&["scene", "apply"], None, None, OPS);
     assert_eq!(code(&o), 3);
+}
+
+#[test]
+fn plugin_commands_and_run() {
+    let f = Fake::start(app);
+    let o = vd(&["plugin", "commands"], Some(&f.socket), None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(out(&o), "hello 1.0.0 (idle)\n  hello.say  Say hello\noff 0.1.0 (idle) [disabled]\n");
+    let o = vd(&["plugin", "commands", "hello", "--json"], Some(&f.socket), None);
+    assert_eq!(parse(&out(&o))["plugins"][0]["id"], "hello");
+    assert_eq!(f.seen.lock().unwrap().last().unwrap()["params"], json!({"plugin": "hello"}));
+    let o = vd(&["plugin", "run", "hello.say"], Some(&f.socket), None);
+    assert_eq!(code(&o), 0, "{}", err(&o));
+    assert_eq!(out(&o), "ran hello.say\n");
+    let o = vd(&["plugin", "run", "nope.x"], Some(&f.socket), None);
+    assert_ne!(code(&o), 0);
+    let o = vd(&["plugin", "run", "a.b", "--print-request"], None, None);
+    assert_eq!(out(&o), "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"plugin.run\",\"params\":{\"id\":\"a.b\"}}\n");
 }
