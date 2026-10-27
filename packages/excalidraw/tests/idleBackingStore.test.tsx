@@ -29,8 +29,21 @@ describe("idle backing store (unit)", () => {
     vi.useRealTimers();
   });
 
+  it("shrinks at once when it has not painted since it got its size", () => {
+    const canvas = makeCanvas();
+    renderWithIdleBackingStore(canvas, () => 0);
+    expect(canvas.width).toBe(1);
+    expect(canvas.height).toBe(1);
+    // a new size (resize) counts as fresh again
+    renderWithIdleBackingStore(canvas, () => draw(canvas));
+    canvas.width = 300;
+    renderWithIdleBackingStore(canvas, () => 0);
+    expect(canvas.width).toBe(1);
+  });
+
   it("shrinks to 1x1 after 2 s of empty renders", () => {
     const canvas = makeCanvas();
+    renderWithIdleBackingStore(canvas, () => draw(canvas));
     renderWithIdleBackingStore(canvas, () => 0);
     vi.advanceTimersByTime(IDLE_SHRINK_MS - 1);
     expect(canvas.width).toBe(200);
@@ -41,6 +54,7 @@ describe("idle backing store (unit)", () => {
 
   it("keeps empty renders from restarting the timer", () => {
     const canvas = makeCanvas();
+    renderWithIdleBackingStore(canvas, () => draw(canvas));
     renderWithIdleBackingStore(canvas, () => 0);
     vi.advanceTimersByTime(1500);
     renderWithIdleBackingStore(canvas, () => 0);
@@ -149,17 +163,16 @@ describe("idle backing store (editor)", () => {
     vi.useRealTimers();
   });
 
-  it("is full size with a selection, 1x1 when idle, and full again on select", async () => {
+  it("is 1x1 from mount with nothing to draw, full on select, 1x1 again when idle", async () => {
     const { container, unmount } = await render(<Excalidraw />);
     const canvas =
       container.querySelector<HTMLCanvasElement>("canvas.interactive")!;
-    const fullWidth = canvas.width;
-    expect(fullWidth).toBeGreaterThan(1);
-
-    // nothing selected: shrinks after the idle window
-    await new Promise((r) => setTimeout(r, IDLE_SHRINK_MS + 300));
+    // nothing to draw since mount: never kept at full size
     expect(canvas.width).toBe(1);
     expect(canvas.style.width).not.toBe("");
+    const fullWidth = Math.round(
+      parseFloat(canvas.style.width) * window.devicePixelRatio,
+    );
 
     const rect = API.createElement({
       type: "rectangle",
@@ -176,6 +189,13 @@ describe("idle backing store (editor)", () => {
     // a selection is on screen: it must not shrink
     await new Promise((r) => setTimeout(r, IDLE_SHRINK_MS + 300));
     expect(canvas.width).toBe(fullWidth);
+
+    // deselect: shrinks after the idle window, not at once
+    API.setSelectedElements([]);
+    await new Promise((r) => setTimeout(r, 100));
+    expect(canvas.width).toBe(fullWidth);
+    await new Promise((r) => setTimeout(r, IDLE_SHRINK_MS + 300));
+    expect(canvas.width).toBe(1);
 
     unmount();
     expect(canvas.width).toBe(0);

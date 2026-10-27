@@ -30,6 +30,14 @@ type State = {
   timer: ReturnType<typeof setTimeout> | null;
   /** full backing size remembered while the canvas is shrunk */
   full: { width: number; height: number } | null;
+  /**
+   * The backing size the canvas last painted at. A canvas that has not
+   * painted since it got its size (editor mount, window resize) is shrunk at
+   * once instead of after `IDLE_SHRINK_MS`: it is not being interacted with,
+   * and shrinking before the next composite means WebKit never makes display
+   * buffers for an empty full-window canvas (up to 4 of them at mount).
+   */
+  paintedAt: string | null;
 };
 
 const states = new WeakMap<HTMLCanvasElement, State>();
@@ -37,7 +45,7 @@ const states = new WeakMap<HTMLCanvasElement, State>();
 const getState = (canvas: HTMLCanvasElement): State => {
   let state = states.get(canvas);
   if (!state) {
-    state = { timer: null, full: null };
+    state = { timer: null, full: null, paintedAt: null };
     states.set(canvas, state);
   }
   return state;
@@ -103,6 +111,9 @@ const countPaints = <T>(
   return { result, paints: counter.paints };
 };
 
+const sizeKey = (canvas: HTMLCanvasElement) =>
+  `${canvas.width}x${canvas.height}`;
+
 const shrink = (canvas: HTMLCanvasElement, state: State) => {
   state.timer = null;
   // released (0x0) or already resized by React: nothing to do
@@ -143,8 +154,14 @@ export const renderWithIdleBackingStore = <T>(
       state.full = null;
       ({ result } = countPaints(canvas, render));
     }
-  } else if (!shrunk && state.timer === null && canvas.width > 1) {
-    state.timer = setTimeout(() => shrink(canvas, state), IDLE_SHRINK_MS);
+    state.paintedAt = sizeKey(canvas);
+  } else if (!shrunk && canvas.width > 1) {
+    if (state.paintedAt !== sizeKey(canvas)) {
+      clearTimer(state);
+      shrink(canvas, state);
+    } else if (state.timer === null) {
+      state.timer = setTimeout(() => shrink(canvas, state), IDLE_SHRINK_MS);
+    }
   }
   return result;
 };
@@ -155,5 +172,6 @@ export const cancelIdleBackingStore = (canvas: HTMLCanvasElement) => {
   if (state) {
     clearTimer(state);
     state.full = null;
+    state.paintedAt = null;
   }
 };
