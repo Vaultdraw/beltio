@@ -57,6 +57,9 @@ const HELP = `Usage: node excalidraw-desktop/perf/run.mjs [options]
                          folders + one 300-element drawing with 2 images; cold start, open, save, pan, idle footprint per
                          process (memory.typical.*) for comparison with other note apps. Replaces the stress scenarios.
   --foreground           (or PERF_FOREGROUND=1) launch the perf app as a normal foreground app (no accessory/hidden-rendering hardening); default unchanged
+  --everyday             (or PERF_EVERYDAY=1) the owner's typical use (implies --typical): the typical vault plus 3 note drawings
+                         of 12 shapes and 100 lines of text each; opens all 3 in tabs, switches back, types a note, saves, pans,
+                         then the idle footprint. Same memory.* metrics as --typical.
   PERF_TYPICAL_GAP_MS=N  (env) typical mode: ms between the warm drawing opens (default 300), e.g. 2000 for a human pace
   PERF_CONFIG_TOML=<f>   (env) config.toml for the perf app's temp config dir (e.g. [interface] thumbnails = false)
   --scenarios a,b,..     Chromium mode: run only these scenarios (vault-open always runs). Names as in the result's "scenarios"
@@ -76,7 +79,7 @@ const { values: o } = parseArgs({
     "low-end": { type: "boolean" }, runs: { type: "string" }, warmup: { type: "string" }, compare: { type: "string" },
     out: { type: "string" }, "update-baseline": { type: "string" }, "no-build": { type: "boolean" },
     "skip-browser": { type: "boolean" }, "skip-app": { type: "boolean" }, "memory-pressure": { type: "boolean" },
-    "keep-runs": { type: "boolean" }, "quiet-load": { type: "string" }, "quiet-wait": { type: "string" }, "require-quiet": { type: "boolean" }, leak: { type: "boolean" }, "leak-only": { type: "boolean" }, scenarios: { type: "string" }, "skip-scenarios": { type: "string" }, typical: { type: "boolean" }, ablate: { type: "boolean" }, foreground: { type: "boolean" }, quick: { type: "boolean" }, app: { type: "boolean" }, milestone: { type: "boolean" }, help: { type: "boolean", short: "h" },
+    "keep-runs": { type: "boolean" }, "quiet-load": { type: "string" }, "quiet-wait": { type: "string" }, "require-quiet": { type: "boolean" }, leak: { type: "boolean" }, "leak-only": { type: "boolean" }, scenarios: { type: "string" }, "skip-scenarios": { type: "string" }, typical: { type: "boolean" }, everyday: { type: "boolean" }, ablate: { type: "boolean" }, foreground: { type: "boolean" }, quick: { type: "boolean" }, app: { type: "boolean" }, milestone: { type: "boolean" }, help: { type: "boolean", short: "h" },
   },
 });
 if (o.help) { console.log(HELP); process.exit(0); }
@@ -88,9 +91,9 @@ const fixturesDir = process.env.PERF_FIXTURES_DIR ? path.resolve(process.env.PER
 if (o.foreground || process.env.PERF_FOREGROUND === "1") process.env.VAULTDRAW_PERF_FOREGROUND = "1";
 const mode = o["low-end"] ? "low-end" : "normal";
 const leakOnly = !!(o["leak-only"] || process.env.PERF_LEAK_ONLY === "1");
-const modes = { leak: leakOnly || !!(o.leak || process.env.PERF_LEAK === "1"), leakOnly, typical: !!(o.typical || o.ablate || process.env.PERF_TYPICAL === "1" || process.env.PERF_ABLATE === "1"), ablate: !!(o.ablate || process.env.PERF_ABLATE === "1"), warmGapMs: Number(process.env.PERF_TYPICAL_GAP_MS) || undefined };
+const modes = { leak: leakOnly || !!(o.leak || process.env.PERF_LEAK === "1"), leakOnly, typical: !!(o.typical || o.ablate || o.everyday || process.env.PERF_TYPICAL === "1" || process.env.PERF_ABLATE === "1" || process.env.PERF_EVERYDAY === "1"), everyday: !!(o.everyday || process.env.PERF_EVERYDAY === "1"), ablate: !!(o.ablate || process.env.PERF_ABLATE === "1"), warmGapMs: Number(process.env.PERF_TYPICAL_GAP_MS) || undefined };
 if (modes.ablate) process.env.PERF_MEM_TIMELINE = "1";
-const variant = [modes.leakOnly ? "leak-only" : modes.leak && "leak", modes.typical && "typical", modes.ablate && "ablate", modes.warmGapMs && `gap${modes.warmGapMs}`].filter(Boolean).join("+");
+const variant = [modes.leakOnly ? "leak-only" : modes.leak && "leak", modes.typical && "typical", modes.everyday && "everyday", modes.ablate && "ablate", modes.warmGapMs && `gap${modes.warmGapMs}`].filter(Boolean).join("+");
 const runs = o.quick ? 1 : Number(o.runs ?? (o.milestone ? 4 : 2));
 const warmup = o.quick ? 0 : Number(o.warmup ?? (o.milestone ? 1 : 0));
 // Packaged-app runs open windows on the user's screen: only on request or at milestones.
@@ -147,7 +150,9 @@ if (!skipApp && isScreenLocked()) {
   try {
     const { ensureVault } = await import(pathToFileURL(path.join(here, "lib", "fixtures.mjs")).href);
     const extra = await import(pathToFileURL(path.join(here, "lib", "extraVaults.mjs")).href);
-    const { vaultDir, manifest } = modes.typical
+    const { vaultDir, manifest } = modes.everyday
+      ? await extra.ensureEverydayVault({ cacheDir: fixturesDir, config: typicalConfig })
+      : modes.typical
       ? await extra.ensureTypicalVault({ cacheDir: fixturesDir, config: typicalConfig })
       : await ensureVault({ cacheDir: fixturesDir, config, log });
     if (manifest?.hash) fixtureHash = String(manifest.hash).slice(0, 12);

@@ -113,6 +113,7 @@ export function modesFromVaultPath(vaultPath: string): PerfModes {
     leak: leakOnly || tokens.includes("leak"),
     leakOnly,
     typical: tokens.includes("typical"),
+    everyday: tokens.includes("everyday"),
     ablate: tokens.includes("ablate"),
     warmGapMs:
       Number(tokens.find((token) => /^gap\d+$/.test(token))?.slice(3)) ||

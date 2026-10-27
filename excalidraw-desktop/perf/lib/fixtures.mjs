@@ -194,6 +194,19 @@ function makeText(rng, x, y, idx) {
   return el;
 }
 
+/** A note: one text element of `lines` lines (everyday vault). */
+function textBlock(rng, x, y, idx, lines) {
+  const el = makeText(rng, x, y, idx);
+  const text = Array.from({ length: lines }, () => rng.pick(SENTENCES)).join("\n");
+  const longest = Math.max(...text.split("\n").map((l) => l.length));
+  el.fontSize = 16;
+  el.width = Math.ceil(longest * 16 * 0.55);
+  el.height = Math.ceil(lines * 16 * 1.25);
+  el.text = text;
+  el.originalText = text;
+  return el;
+}
+
 function makeShape(rng, x, y, idx) {
   const type = rng.pick(["rectangle", "rectangle", "ellipse", "diamond"]);
   const el = baseElement(rng, type, x, y, rng.int(60, 260), rng.int(40, 160), idx);
@@ -737,4 +750,4 @@ export async function ensureVault({ cacheDir, config, log = console.log }) {
 }
 
 // Building blocks reused by extraVaults.mjs.
-export { mulberry32, hashSeed, ordinaryScene, imageHeavyScene, openTargetScene, fileNameFor, sceneJson, generateElements };
+export { mulberry32, hashSeed, textBlock, ordinaryScene, imageHeavyScene, openTargetScene, fileNameFor, sceneJson, generateElements };

@@ -13,6 +13,8 @@ export type PerfModes = {
   leak?: boolean;
   leakOnly?: boolean;
   typical?: boolean;
+  /** typical mode, the owner's everyday use: 3 small note drawings in tabs (implies typical). */
+  everyday?: boolean;
   /** Memory ablation probe after the typical open (implies typical). */
   ablate?: boolean;
   /** typical mode: ms between the warm opens (vault token `gap<ms>`) */

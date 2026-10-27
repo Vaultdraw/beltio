@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { GENERATOR_VERSION, mulberry32, hashSeed, ordinaryScene, imageHeavyScene, fileNameFor } from "./fixtures.mjs";
+import { GENERATOR_VERSION, mulberry32, hashSeed, ordinaryScene, imageHeavyScene, fileNameFor, generateElements, sceneJson, textBlock } from "./fixtures.mjs";
 
 const COMPLETE_MARKER = ".perf-fixture-complete";
 const EXT = ".excalidraw";
@@ -84,6 +84,33 @@ export function ensureTypicalVault({ cacheDir, config }) {
         totalBytes: bytes + targetBytes,
         target: { path: target.path, bytes: targetBytes, elements: heavy.elements, images: heavy.images },
       };
+    },
+  });
+}
+
+/** The owner's typical use (2026-10-27): drawings of 12 shapes and about 100 lines of text, in `Notes/`. */
+export const EVERYDAY_NOTES = ["Notes/everyday-a.excalidraw", "Notes/everyday-b.excalidraw", "Notes/everyday-c.excalidraw"];
+
+/** 12 shapes in view at zoom 1 plus four 25-line text blocks (two in view, two below). */
+export function everydayScene(rng) {
+  const shapes = generateElements(rng, 12, 0, 900, 700, null);
+  const texts = [[960, 40], [1300, 40], [40, 760], [700, 760]].map(([x, y], i) => textBlock(rng, x, y, shapes.length + i, 25));
+  return sceneJson([...shapes, ...texts], {}, { scrollX: 0, scrollY: 0, zoom: { value: 1 } });
+}
+
+/** The typical vault plus the everyday note drawings (EVERYDAY_NOTES). */
+export function ensureEverydayVault({ cacheDir, config }) {
+  return ensureCached({
+    cacheDir, name: "everyday", config: { ...config, everyday: EVERYDAY_NOTES },
+    fill: async (root) => {
+      const target = config.target;
+      const plan = planPaths(config.seed, config.folders, config.rootDrawings, [target.path, ...EVERYDAY_NOTES]);
+      let bytes = 0;
+      for (const { rel } of plan) bytes += await writeScene(root, rel, ordinaryScene(mulberry32(hashSeed(config.seed, rel))));
+      const heavy = imageHeavyScene(mulberry32(hashSeed(config.seed, "target", target.path)), target.path, target.imageTotalMB);
+      bytes += await writeScene(root, target.path, heavy.json);
+      for (const rel of EVERYDAY_NOTES) bytes += await writeScene(root, rel, everydayScene(mulberry32(hashSeed(config.seed, "everyday", rel))));
+      return { drawingCount: plan.length + 1 + EVERYDAY_NOTES.length, folders: [...Object.keys(config.folders), "Notes"], totalBytes: bytes, notes: EVERYDAY_NOTES };
     },
   });
 }

@@ -8,6 +8,7 @@
 import typicalConfig from "../../perf/typical.config.json";
 
 import { runAblation } from "./ablateScenarios";
+import { runEverydayScenarios } from "./everydayScenarios";
 import { expandFolder, openVaultFolder } from "./perfKit";
 import { countLong } from "./perfStats";
 
@@ -37,6 +38,12 @@ export async function runTypicalScenarios(
       .treeRows()
       .filter((item) => !(item.dataset.treePath ?? "").includes("/")).length;
   });
+
+  if (kit.modes.everyday) {
+    // The owner's typical use replaces the big-drawing open, save and pan.
+    await runEverydayScenarios(kit);
+    return;
+  }
 
   await scenario("typical-open", async () => {
     const dir = parentOf(target.path);
