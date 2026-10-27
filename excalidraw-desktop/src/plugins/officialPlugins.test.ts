@@ -26,7 +26,7 @@ describe("the official plugin table (startup stubs)", () => {
       const doc = manifest(id);
       expect(doc.id).toBe(id);
       expect(doc.name).toBe(plugin.name);
-      const listed = doc.contributes.commands.filter(
+      const listed = (doc.contributes.commands ?? []).filter(
         (c: { palette?: boolean }) => c.palette !== false,
       );
       expect(plugin.commands).toEqual(
@@ -85,7 +85,7 @@ describe("the official plugin table (startup stubs)", () => {
 
   it("default keys are only those the table lists (all rebindable)", () => {
     for (const p of OFFICIAL_PLUGINS) {
-      for (const c of manifest(p.id).contributes.commands) {
+      for (const c of manifest(p.id).contributes.commands ?? []) {
         const row = p.commands.find((x) => x.id === c.id);
         // A command hidden from the palette has no startup stub: its keys apply once the plugin runs.
         if (row || (c.keys ?? []).length === 0) {

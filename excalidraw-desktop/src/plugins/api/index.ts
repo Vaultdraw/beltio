@@ -82,6 +82,8 @@ export type {
   MenuContribution,
   ThumbnailState,
   ThumbnailsApi,
+  DiagramsApi,
+  MermaidDrawing,
   FolderItem,
   ToolbarContribution,
   ToolContribution,

@@ -5,6 +5,18 @@ export interface CommandsApi {
     execute(fullId: string): Promise<void>;
 }
 
+// diagrams.ts
+import type { SceneOp } from "./scene";
+export interface MermaidDrawing {
+    ops: SceneOp[];
+    width: number;
+    height: number;
+    skipped: number;
+}
+export interface DiagramsApi {
+    mermaidToElements(text: string): Promise<MermaidDrawing>;
+}
+
 // disposable.ts
 export interface Disposable {
     dispose(): void;
@@ -131,6 +143,7 @@ export type { StatusBarApi, StatusBarState } from "./statusBar";
 export type { MenuTarget, MenusApi } from "./menus";
 export type { ShapeDef, ShapesApi } from "./shapes";
 export type { OverlayHandle, OverlayOptions, OverlayProps, OverlaysApi, } from "./overlays";
+export type { DiagramsApi, MermaidDrawing } from "./diagrams";
 export type { ThumbnailState, ThumbnailsApi } from "./thumbnails";
 export type { ToolHandlers, ToolPoint, ToolsApi } from "./tools";
 export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
@@ -520,6 +533,7 @@ import type { FontsApi, TextApi } from "./text";
 import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
 import type { ShapesApi } from "./shapes";
+import type { DiagramsApi } from "./diagrams";
 import type { ThumbnailsApi } from "./thumbnails";
 import type { ToolsApi } from "./tools";
 import type { OverlaysApi } from "./overlays";
@@ -562,6 +576,7 @@ export interface PluginContext {
     readonly methods: MethodsApi;
     readonly overlays: OverlaysApi;
     readonly thumbnails: ThumbnailsApi;
+    readonly diagrams: DiagramsApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;
     setInterval(fn: () => void, ms: number): Disposable;

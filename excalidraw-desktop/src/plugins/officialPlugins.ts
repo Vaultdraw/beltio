@@ -60,7 +60,7 @@ export interface OfficialPlugin {
    * The `[extensions]` switch that turns this plugin on and off (same id). The plugin runs only
    * while the switch is on (and the extension set is not in safe start or bisect).
    */
-  extension?: "graph";
+  extension?: "graph" | "mermaid";
 }
 
 export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
@@ -279,6 +279,14 @@ export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
         when: ["graphFocus", "!modalOpen"],
       },
     ],
+  },
+  {
+    id: "mermaid",
+    name: "Mermaid",
+    /** The `[extensions] mermaid` switch (Settings, Extensions) turns this plugin on and off. */
+    extension: "mermaid",
+    importers: [],
+    commands: [],
   },
 ];
 

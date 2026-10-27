@@ -808,6 +808,10 @@ ctx.methods.register("to_drawing", async (params) => {
 
 The example `sdk/examples/flow-from-text` has two methods: `draw` turns Mermaid-style edges (`A --> B`) into a flowchart on the open drawing, `count` counts the elements on screen. `vaultdraw plugin methods` lists what is callable now. Test a method with `callMethod(name, params)` on the booted test plugin (`@vaultdraw/api/testing`).
 
+## Diagram converters (since 0.23.0)
+
+`ctx.diagrams.mermaidToElements(text)` converts Mermaid text with the editor's own Mermaid-to-Excalidraw converter and answers `{ ops, width, height, skipped }`. `ops` are `add` ops for `ctx.scene.batch` or `ctx.vault.createDrawing`, the diagram's top left at 0, 0: shapes and text with their labels, straight arrows between shapes bound to them, bent arrows as points. `skipped` counts elements the ops cannot carry (pictures). It rejects with the converter's message for text it cannot read, and while the user has Mermaid off (`[extensions] mermaid`). The converter chunk loads on the first call; it needs no permission. The official `mermaid` plugin's `to_drawing` method is built on it.
+
 ## Rules for plugin code
 
 1. Use `ctx.setTimeout`, `ctx.setInterval` and `ctx.subscriptions` instead of raw timers and listeners. Then disabling a plugin leaves nothing running.

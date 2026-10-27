@@ -111,6 +111,7 @@ describe("official plugins (on by default, no startup cost)", () => {
       "markdown-import",
       "gallery",
       "graph",
+      "mermaid",
     ]);
     const { win, flush, queue } = fakeWin(true);
     bootPlugins(win);

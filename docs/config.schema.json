@@ -1410,7 +1410,7 @@
           "type": "boolean"
         },
         "mermaid": {
-          "description": "Mermaid to Excalidraw.",
+          "description": "Mermaid to Excalidraw (the official mermaid plugin: dialog, menu entries, paste conversion and the mermaid.to_drawing method).",
           "default": true,
           "type": "boolean"
         },
@@ -1560,7 +1560,8 @@
           "default": [
             "markdown-import",
             "gallery",
-            "graph"
+            "graph",
+            "mermaid"
           ],
           "type": "array",
           "items": {

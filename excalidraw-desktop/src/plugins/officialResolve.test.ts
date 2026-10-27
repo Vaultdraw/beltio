@@ -17,13 +17,19 @@ describe("official plugins are on unless turned off", () => {
       "mine",
       "gallery",
       "graph",
+      "mermaid",
     ]);
     expect(v.pluginsDisabled).toEqual([]);
   });
 
   it("an old list gets every official plugin on, markdown-import included", () => {
     const v = prefs({ plugins: { enabled: [] } });
-    expect(v.pluginsEnabled).toEqual(["markdown-import", "gallery", "graph"]);
+    expect(v.pluginsEnabled).toEqual([
+      "markdown-import",
+      "gallery",
+      "graph",
+      "mermaid",
+    ]);
     expect(v.pluginsDisabled).toEqual([]);
   });
 
@@ -31,26 +37,31 @@ describe("official plugins are on unless turned off", () => {
     const v = prefs({
       plugins: { enabled: ["markdown-import"], disabled: ["gallery"] },
     });
-    expect(v.pluginsEnabled).toEqual(["markdown-import", "graph"]);
+    expect(v.pluginsEnabled).toEqual(["markdown-import", "graph", "mermaid"]);
     expect(v.pluginsDisabled).toEqual(["gallery"]);
   });
 
   it("nothing saved: every official plugin is on", () => {
     expect(resolveOfficial(undefined, undefined)).toEqual({
-      enabled: ["markdown-import", "gallery", "graph"],
+      enabled: ["markdown-import", "gallery", "graph", "mermaid"],
       disabled: [],
     });
   });
 
   it("turning one off records it; Restore defaults turns all official plugins on", () => {
     updatePreferences({ pluginsEnabled: ["markdown-import", "mine"] });
-    expect(getPreferences().pluginsDisabled).toEqual(["gallery", "graph"]);
+    expect(getPreferences().pluginsDisabled).toEqual([
+      "gallery",
+      "graph",
+      "mermaid",
+    ]);
     restoreExtensionDefaults();
     expect(getPreferences().pluginsEnabled).toEqual([
       "markdown-import",
       "mine",
       "gallery",
       "graph",
+      "mermaid",
     ]);
     expect(getPreferences().pluginsDisabled).toEqual([]);
   });

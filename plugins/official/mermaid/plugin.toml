@@ -1,0 +1,31 @@
+id = "mermaid"
+name = "Mermaid"
+version = "0.1.0"
+api = 0
+min_app = "0.2.0"
+main = "main.js"
+description = "Mermaid diagrams to drawings: a method other programs and AI apps call"
+author = "Vaultdraw"
+permissions = ["control", "vault.write"]
+
+# The Mermaid to Excalidraw dialog, the More tools entry and pasting Mermaid text stay in the
+# editor; this plugin owns their on/off switch ([extensions] mermaid) and the converter API.
+[[contributes.methods]]
+id = "to_drawing"
+title = "Mermaid text to a drawing"
+description = "Turns Mermaid diagram text (flowchart, sequence, class, state, ER diagram...) into Excalidraw shapes with the editor's own Mermaid converter. With `path` (ending in .excalidraw) it creates that new drawing in the vault; without it, it adds the diagram to the drawing on screen as one undo step. Returns the path (when created) and the number of elements."
+mcp = true
+write = true
+timeout_ms = 20000
+
+[contributes.methods.params]
+type = "object"
+required = ["text"]
+
+[contributes.methods.params.properties.text]
+type = "string"
+description = "The Mermaid diagram text"
+
+[contributes.methods.params.properties.path]
+type = "string"
+description = "Optional new drawing to create, for example diagrams/flow.excalidraw. Omit to draw on the drawing on screen."

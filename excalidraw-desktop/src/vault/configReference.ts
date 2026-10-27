@@ -390,7 +390,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
         doc: "New drawing from a template, and saving a drawing as one.",
       },
       formula: { doc: "Insert and edit LaTeX formulas." },
-      mermaid: { doc: "Mermaid to Excalidraw." },
+      mermaid: {
+        doc: "Mermaid to Excalidraw (the official mermaid plugin: dialog, menu entries, paste conversion and the mermaid.to_drawing method).",
+      },
       "pdf-import": { doc: "Import PDF pages into a drawing." },
       notes: {
         doc: "Markdown notes: open a `.md` file in a tab with a reading view and an editor. See [Notes](#notes).",

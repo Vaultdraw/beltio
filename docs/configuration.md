@@ -1755,7 +1755,7 @@ Built-in extensions, on (`true`) or off (`false`). Off means not loaded: no memo
 | `library` | `true` | true or false |  | The library sidebar and inserting library items. |
 | `templates` | `true` | true or false |  | New drawing from a template, and saving a drawing as one. |
 | `formula` | `true` | true or false |  | Insert and edit LaTeX formulas. |
-| `mermaid` | `true` | true or false |  | Mermaid to Excalidraw. |
+| `mermaid` | `true` | true or false |  | Mermaid to Excalidraw (the official mermaid plugin: dialog, menu entries, paste conversion and the mermaid.to_drawing method). |
 | `pdf-import` | `true` | true or false |  | Import PDF pages into a drawing. |
 | `notes` | `true` | true or false |  | Markdown notes: open a `.md` file in a tab with a reading view and an editor. See [Notes](#notes). |
 
@@ -1794,7 +1794,7 @@ Plugins in the `plugins/` folder of the config folder.
 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
-| `enabled` | `["markdown-import", "gallery", "graph"]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`. |
+| `enabled` | `["markdown-import", "gallery", "graph", "mermaid"]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`. |
 | `disabled` | `[]` | a list of official plugin ids you turned off, like ["gallery"] |  | Official plugins you turned off, like `["gallery"]`. Settings writes it; a new official plugin is on until you list it here. |
 | `importers` | `[object Object]` | a table like { txt = "text-import" } (extension = plugin id, "" for none) |  | Which plugin imports a file extension when two plugins claim it; `""` turns plugin handling off for that extension. |
 | `storage_limit_kb` | `1024` | an integer between 64 and 16384 |  | Most data one plugin may save with `ctx.storage`, in KiB; a save past it is refused. |

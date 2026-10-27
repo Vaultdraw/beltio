@@ -77,6 +77,7 @@ import { getPreferences, updatePreferences } from "../vault/preferences";
 
 import { PenBar } from "../pens/PenBar";
 import { PluginToolbar } from "../plugins/PluginToolbar";
+import { usePluginOn } from "../plugins/usePluginOn";
 
 import { usePens } from "../pens/usePens";
 import { readDrawingStyles } from "../toolDefaults/drawingStyles";
@@ -266,7 +267,9 @@ const VaultEditorComponent = ({
 
   // One subscription for both switches; the set object is stable until a
   // switch changes, so it never re-renders the editor on open.
-  const { formula: formulaOn, mermaid: mermaidOn } = useExtensions();
+  const { formula: formulaOn } = useExtensions();
+  // Mermaid is the official mermaid plugin: on while its switch and the plugin list allow it.
+  const mermaidOn = usePluginOn("mermaid");
   // Stable: Excalidraw's memo compares UIOptions entries by reference, and a
   // new `tools` object per render would re-render the whole editor.
   const uiTools = useMemo(

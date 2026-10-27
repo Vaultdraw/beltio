@@ -1,13 +1,15 @@
 // Generated from the @since tags of sdk/api/src by sdk/api/scripts/gen-features.mjs. Do not edit.
 
 /** The API revision of this build (the version of sdk/api/package.json). */
-export const API_REVISION = "0.22.0";
+export const API_REVISION = "0.23.0";
 
 /** Feature name to the revision that added it. `ctx.host.has(name)` is true for these. */
 export const FEATURES: Readonly<Record<string, string>> = {
   commands: "0.1.0",
   "commands.execute": "0.1.0",
   "commands.register": "0.1.0",
+  diagrams: "0.23.0",
+  "diagrams.mermaidToElements": "0.23.0",
   "drawing.deleted": "0.1.0",
   "drawing.opened": "0.1.0",
   "drawing.renamed": "0.1.0",

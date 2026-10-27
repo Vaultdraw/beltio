@@ -536,6 +536,7 @@ export function createMockHost(
     let shapesApi: PluginContext["shapes"] | undefined;
     let overlaysApi: PluginContext["overlays"] | undefined;
     let thumbnailsApi: PluginContext["thumbnails"] | undefined;
+    let diagramsApi: PluginContext["diagrams"] | undefined;
     let menusApi: PluginContext["menus"] | undefined;
     let pagesApi: PluginContext["pages"] | undefined;
     let foldersApi: PluginContext["folders"] | undefined;
@@ -767,6 +768,14 @@ export function createMockHost(
           use: () => ({ status: "none", url: null }),
           useEnabled: () => false,
           useDarkClass: () => "",
+        });
+      },
+      get diagrams() {
+        // The real converter runs in the app: tests give the plugin their own result.
+        return (diagramsApi ??= {
+          mermaidToElements: async () => {
+            throw new Error("ctx.diagrams is not available in the test host");
+          },
         });
       },
       get overlays() {
