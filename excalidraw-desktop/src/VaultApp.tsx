@@ -114,6 +114,7 @@ import { useVaultAppearance } from "./theme/useVaultAppearance";
 import { registerBisectCommands } from "./extensionSwitches/bisectCommands";
 import { BisectBanner } from "./extensionSwitches/BisectBanner";
 import { listNotePaths } from "./notes/noteScan";
+import { isNotePath } from "./notes/register";
 import { useNotes } from "./notes/useNotes";
 import { ActiveTabGate } from "./tabs/ActiveTabGate";
 import "./tabs/editorBody.css";
@@ -1371,6 +1372,8 @@ export const VaultApp = ({
       setIsBusy(false);
     }
   };
+  // Tabs off: a note replaces the home pane (no tab strip to hold it).
+  const [plainNote, setPlainNote] = useState<string | null>(null);
   const handleOpenDrawing = async (
     drawingPath: string,
     opts?: { target?: OpenTarget },
@@ -1973,6 +1976,10 @@ export const VaultApp = ({
     setShowSettingsModal(true);
   }, []);
 
+  const openTagSearch = (query: string) => {
+    showNavigator();
+    requestNavigator({ kind: "search", query });
+  };
   const showNavigator = () => {
     commitCanvasTextEdit(doc);
     layoutRef.current?.reveal("navigator");
@@ -2109,6 +2116,11 @@ export const VaultApp = ({
     [vault?.handle, allIndexedEntries, noteList, scanNotes],
   );
   tabsRef.current = tabs;
+  useEffect(() => {
+    if (activeDoc || tabs.enabled || !ext.notes) {
+      setPlainNote(null);
+    }
+  }, [activeDoc, tabs.enabled, ext.notes]);
   const layout = useLayout(
     win,
     {
@@ -2441,10 +2453,7 @@ export const VaultApp = ({
       recentVaults: () => getRecentVaults(win),
       commandTitle: (id) => getCommand(id)?.title ?? null,
       isBuiltin: isBuiltinCommand,
-      openSearch: (query) => {
-        showNavigator();
-        requestNavigator({ kind: "search", query });
-      },
+      openSearch: openTagSearch,
       exists: (path) => probeExists(repository, vault?.handle ?? "", path),
       canAddVaultLibrary: () => canAddVaultLibrary(libraryStore),
       addLibrary: (json, scope) =>
@@ -2911,7 +2920,20 @@ export const VaultApp = ({
                 />
               </div>
             ) : (
-              <ActiveTabGate {...tabs.gateProps} kindVault={kindVault}>
+              <ActiveTabGate
+                {...tabs.gateProps}
+                kindVault={kindVault}
+                onOpenSearch={openTagSearch}
+                plainPath={tabs.enabled ? null : plainNote}
+                onOpenPath={
+                  tabs.enabled
+                    ? tabs.gateProps?.onOpenPath
+                    : (path, opts) =>
+                        isNotePath(path)
+                          ? setPlainNote(path)
+                          : void handleOpenDrawing(path, opts)
+                }
+              >
                 <DeferredHome
                   win={win ?? window}
                   vaultKey={vault.handle}
@@ -2991,10 +3013,15 @@ export const VaultApp = ({
             if (ext.notes && tabs.enabled) {
               return tabs.open(path, opts?.target);
             }
+            if (ext.notes) {
+              // Tabs off: show the note in the main pane instead.
+              void (activeDoc ? closeDoc() : Promise.resolve()).then(() =>
+                setPlainNote(path),
+              );
+              return;
+            }
             toastStore.push({
-              message: ext.notes
-                ? "Notes open in tabs: turn on tabs.enabled."
-                : "Markdown notes are turned off (Settings, Extensions).",
+              message: "Markdown notes are turned off (Settings, Extensions).",
             });
           }}
           onOpenSettings={() => openSettings()}

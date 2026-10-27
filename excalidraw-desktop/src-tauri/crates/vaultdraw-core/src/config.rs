@@ -245,6 +245,8 @@ autosave_delay_ms = 500
 # math = true
 # Load images from http(s) addresses (false keeps notes fully offline)
 # remote_images = false
+# Tick task checkboxes by clicking them in the reading view
+# toggle_tasks = true
 
 [layout]
 # Show the header above the canvas (title, save status, History, Graph)

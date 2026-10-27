@@ -17,6 +17,7 @@ export const NOTES_FIELDS = [
   "notesHighlightCode",
   "notesMath",
   "notesRemoteImages",
+  "notesToggleTasks",
 ] as const;
 export type NotesField = typeof NOTES_FIELDS[number];
 
@@ -44,6 +45,8 @@ export interface NotesPreferences {
   notesMath: boolean;
   /** Load images from http(s) addresses. Off keeps the note fully offline. */
   notesRemoteImages: boolean;
+  /** Tick task checkboxes in the reading view (written through the guarded save). */
+  notesToggleTasks: boolean;
 }
 
 export const NOTES_DEFAULTS: NotesPreferences = {
@@ -57,6 +60,7 @@ export const NOTES_DEFAULTS: NotesPreferences = {
   notesHighlightCode: true,
   notesMath: true,
   notesRemoteImages: false,
+  notesToggleTasks: true,
 };
 
 const isBool = (v: unknown): v is boolean => typeof v === "boolean";
@@ -78,6 +82,7 @@ const VALID: Record<NotesField, (v: unknown) => boolean> = {
   notesHighlightCode: isBool,
   notesMath: isBool,
   notesRemoteImages: isBool,
+  notesToggleTasks: isBool,
 };
 
 const bool = (field: NotesField, key: string): ConfigMapping => ({
@@ -125,6 +130,7 @@ export const NOTES_MAPPINGS: readonly ConfigMapping[] = [
   bool("notesHighlightCode", "notes.highlight_code"),
   bool("notesMath", "notes.math"),
   bool("notesRemoteImages", "notes.remote_images"),
+  bool("notesToggleTasks", "notes.toggle_tasks"),
 ];
 
 /** Stored (localStorage) preferences -> valid notes fields; bad ones default. */

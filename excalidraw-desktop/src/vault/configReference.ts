@@ -303,6 +303,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       remote_images: {
         doc: "Load images from `http(s)` addresses. Off keeps notes fully offline: the image shows its alt text instead.",
       },
+      toggle_tasks: {
+        doc: "Tick `- [ ]` task checkboxes by clicking them in the reading view. The change is saved through the guarded save; off leaves them read-only.",
+      },
     },
   },
   {

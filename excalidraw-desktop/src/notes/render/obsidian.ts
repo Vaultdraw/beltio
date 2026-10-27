@@ -72,16 +72,26 @@ const wikilink: TokenizerAndRendererExtension = {
     return m ? { type: "wikilink", raw: m[0], inner: m[1] } : undefined;
   },
   renderer(token) {
-    const { target, heading, alias } = splitWikilink(
+    const { target, heading, blockRef, alias } = splitWikilink(
       (token as unknown as { inner: string }).inner,
     );
     const path = target ? ctx.resolve(target) : "";
     const label =
       alias ||
-      (heading ? (target ? `${target} > ${heading}` : heading) : target);
+      (heading
+        ? target
+          ? `${target} > ${heading}`
+          : heading
+        : blockRef
+        ? target
+          ? `${target} > ^${blockRef}`
+          : `^${blockRef}`
+        : target);
     const data = `data-target="${esc(target)}"${
       heading ? ` data-heading="${esc(heading)}"` : ""
-    }${path ? ` data-path="${esc(path)}"` : ""}`;
+    }${blockRef ? ` data-block="${esc(blockRef)}"` : ""}${
+      path ? ` data-path="${esc(path)}"` : ""
+    }`;
     return `<a class="wikilink${
       path === null ? " unresolved" : ""
     }" href="#" ${data}>${esc(label)}</a>`;

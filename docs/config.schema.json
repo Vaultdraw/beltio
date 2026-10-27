@@ -1230,6 +1230,11 @@
           "description": "Load images from `http(s)` addresses. Off keeps notes fully offline: the image shows its alt text instead.",
           "default": false,
           "type": "boolean"
+        },
+        "toggle_tasks": {
+          "description": "Tick `- [ ]` task checkboxes by clicking them in the reading view. The change is saved through the guarded save; off leaves them read-only.",
+          "default": true,
+          "type": "boolean"
         }
       }
     },

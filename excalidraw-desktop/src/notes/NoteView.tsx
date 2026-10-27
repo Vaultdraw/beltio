@@ -30,7 +30,15 @@ import { createAssetUrls } from "./noteAssets";
 import { parseNoteDoc } from "./noteDoc";
 import { getNoteFiles } from "./noteBackend";
 import { NoteConflictError } from "./noteFiles";
+import {
+  findAnchorElement,
+  onAnchorQueued,
+  queueAnchor,
+  takeAnchor,
+  hasAnchor,
+} from "./noteAnchor";
 import { createNoteLinkIndex } from "./noteLinks";
+import { taskLines, toggleTask } from "./noteTasks";
 import { NoteSaver, type SaveStatus } from "./noteSaver";
 import { NOTES_ACTIVE_KEY, NOTES_COMMAND_IDS as ID } from "./notesCommands";
 import { hydrateEmbeds, hydrateMath, type EmbedDeps } from "./render/hydrate";
@@ -58,12 +66,15 @@ const STATUS_TEXT: Record<SaveStatus, string> = {
 };
 
 type Mode = "reading" | "editing";
-type Loaded = { text: string; revision: string } | { error: string } | null;
+type Loaded =
+  | { text: string; revision: string; path: string }
+  | { error: string }
+  | null;
 
 const usePrefs = () =>
   useSyncExternalStore(subscribePreferences, () => cachedPreferences());
 
-const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
+const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
   const prefs = usePrefs();
   const [loaded, setLoaded] = useState<Loaded>(null);
   const [text, setText] = useState("");
@@ -93,7 +104,11 @@ const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
       const file = await getNoteFiles().read(vault.handle, path);
       draft.current = file.content;
       setText(file.content);
-      setLoaded({ text: file.content, revision: file.revision });
+      setLoaded({
+        text: file.content,
+        revision: file.revision,
+        path,
+      });
       if (saver.current) {
         saver.current.rebase(file.content, file.revision);
       }
@@ -202,6 +217,10 @@ const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
     prefs.notesRemoteImages,
   ]);
 
+  // One object per html: a fresh one would make React rewrite the DOM that
+  // the effects below have already changed (math, embeds, task boxes).
+  const bodyHtml = useMemo(() => ({ __html: html }), [html]);
+
   const nestedDeps = useMemo<EmbedDeps>(
     () => ({
       noteText: async (p) => {
@@ -257,10 +276,102 @@ const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
     }
   }, [html, mode, nestedDeps, assets, path, prefs.notesFontSize]);
 
+  // ---- scroll to a [[Note#Heading]] / [[Note#^block]] target ---------------
+  const [anchorTick, setAnchorTick] = useState(0);
+  useEffect(() => onAnchorQueued(() => setAnchorTick((n) => n + 1)), []);
+  useEffect(() => {
+    const root = reading.current;
+    // `ready.path`: a tab that navigates keeps this view mounted while the
+    // new note loads, and the old note's page must not take the anchor.
+    if (
+      !root ||
+      mode !== "reading" ||
+      !html ||
+      ready?.path !== path ||
+      !hasAnchor(path)
+    ) {
+      return;
+    }
+    const anchor = takeAnchor(path);
+    const el = anchor ? findAnchorElement(root, anchor) : null;
+    if (!el) {
+      return;
+    }
+    // Again after layout settles (a tab's pane may still be sizing).
+    const go = () => el.isConnected && el.scrollIntoView({ block: "start" });
+    go();
+    const timers = [60, 250].map((ms) => window.setTimeout(go, ms));
+    el.classList.add("note-anchor-flash");
+    const t = window.setTimeout(
+      () => el.classList.remove("note-anchor-flash"),
+      1600,
+    );
+    return () => [t, ...timers].forEach((id) => window.clearTimeout(id));
+  }, [html, mode, path, ready, anchorTick]);
+
+  // ---- task checkboxes: clickable only when `notes.toggle_tasks` is on -----
+  useEffect(() => {
+    const root = reading.current;
+    if (!root || mode !== "reading" || !html || !prefs.notesToggleTasks) {
+      return;
+    }
+    for (const box of root.querySelectorAll<HTMLInputElement>(
+      'input[type="checkbox"]',
+    )) {
+      if (!box.closest(".note-embed")) {
+        box.disabled = false;
+        box.classList.add("note-task");
+      }
+    }
+  }, [html, mode, prefs.notesToggleTasks]);
+
+  const tickTask = useCallback((box: HTMLInputElement) => {
+    const root = reading.current;
+    const s = saver.current;
+    if (!root || !s) {
+      return;
+    }
+    const boxes = [
+      ...root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+    ].filter((b) => !b.closest(".note-embed"));
+    const index = boxes.indexOf(box);
+    const source = draft.current;
+    const next =
+      index >= 0 && boxes.length === taskLines(source).length
+        ? toggleTask(source, index)
+        : null;
+    if (next === null) {
+      toastStore.push({
+        message: "Could not match that checkbox to the note. Edit it instead.",
+      });
+      return;
+    }
+    // Saved like any edit: the revision is checked, a conflict shows the banner.
+    draft.current = next;
+    setText(next);
+    s.change(next);
+    void s.flush();
+  }, []);
+
   // ---- reading view clicks ----------------------------------------------
   const onReadingClick = useCallback(
     (e: React.MouseEvent<HTMLElement>) => {
-      const a = (e.target as HTMLElement).closest("a");
+      const el = e.target as HTMLElement;
+      if (
+        el instanceof HTMLInputElement &&
+        el.type === "checkbox" &&
+        cachedPreferences().notesToggleTasks
+      ) {
+        e.preventDefault();
+        tickTask(el);
+        return;
+      }
+      const chip = el.closest<HTMLElement>("[data-tag]");
+      if (chip && openSearch) {
+        openSearch(`tag:#${chip.dataset.tag}`);
+        return;
+      }
+      const a = el.closest("a");
       if (!a) {
         return;
       }
@@ -277,18 +388,16 @@ const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
       const heading = a.dataset.heading;
       const dest = a.dataset.path;
       const newTab = e.metaKey || e.ctrlKey;
-      if (!target && heading) {
-        const id = heading
-          .toLowerCase()
-          .trim()
-          .replace(/[^\p{L}\p{N}\s-]/gu, "")
-          .replace(/\s+/g, "-");
-        reading.current
-          ?.querySelector(`[id="${CSS.escape(id)}"]`)
-          ?.scrollIntoView({ block: "start" });
+      const block = a.dataset.block;
+      if (!target && (heading || block)) {
+        // A link to a place in this note.
+        queueAnchor(path, { heading, block });
         return;
       }
       if (dest) {
+        if (heading || block) {
+          queueAnchor(dest, { heading, block });
+        }
         openPath(dest, { target: newTab ? "new" : "current" });
         return;
       }
@@ -319,7 +428,7 @@ const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
             }),
         );
     },
-    [openPath, path, handle],
+    [openPath, openSearch, tickTask, path, handle],
   );
 
   // ---- commands ----------------------------------------------------------
@@ -465,14 +574,11 @@ const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
               ))}
             </dl>
           )}
-          <div
-            className="note-body"
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
+          <div className="note-body" dangerouslySetInnerHTML={bodyHtml} />
           {doc && doc.tags.length > 0 && (
             <footer className="note-tags" aria-label="Tags">
               {doc.tags.map((t) => (
-                <span key={t} className="note-tag">
+                <span key={t} className="note-tag" data-tag={t}>
                   #{t}
                 </span>
               ))}

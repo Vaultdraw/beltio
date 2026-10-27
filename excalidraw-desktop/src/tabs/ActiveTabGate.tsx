@@ -25,6 +25,10 @@ export interface ActiveTabGateProps {
   onOpenPath?: (path: string, opts?: { target?: OpenTarget }) => void;
   /** The open vault, for a tab kind's view. */
   kindVault?: TabKindVault;
+  /** Opens the vault search with a query (a note's tag chip). */
+  onOpenSearch?: (query: string) => void;
+  /** Tabs off: the file a tab kind shows instead of the children. */
+  plainPath?: string | null;
   children: ReactNode;
 }
 
@@ -36,6 +40,7 @@ const Gate = ({
   onSearch,
   onOpenPath,
   kindVault,
+  onOpenSearch,
   children,
 }: ActiveTabGateProps & { store: TabStore }) => {
   // A kind registered later (an extension turned on) re-renders the gate.
@@ -59,6 +64,7 @@ const Gate = ({
         kind={kind}
         path={tab.path}
         openPath={(path, opts) => onOpenPath?.(path, opts)}
+        openSearch={onOpenSearch}
         vault={kindVault ?? NO_VAULT}
       />
     );
@@ -66,5 +72,34 @@ const Gate = ({
   return <>{children}</>;
 };
 
+const PlainKind = ({
+  path,
+  onOpenPath,
+  onOpenSearch,
+  kindVault,
+  children,
+}: ActiveTabGateProps & { path: string }) => {
+  useSyncExternalStore(subscribeTabKinds, getTabKinds);
+  const kind = tabKindFor(path);
+  return kind ? (
+    <TabKindView
+      key={path}
+      kind={kind}
+      path={path}
+      openPath={(p, opts) => onOpenPath?.(p, opts)}
+      openSearch={onOpenSearch}
+      vault={kindVault ?? NO_VAULT}
+    />
+  ) : (
+    <>{children}</>
+  );
+};
+
 export const ActiveTabGate = (props: ActiveTabGateProps) =>
-  props.store ? <Gate {...props} store={props.store} /> : <>{props.children}</>;
+  props.store ? (
+    <Gate {...props} store={props.store} />
+  ) : props.plainPath ? (
+    <PlainKind {...props} path={props.plainPath} />
+  ) : (
+    <>{props.children}</>
+  );

@@ -65,9 +65,29 @@ test("an Obsidian-style vault lists its notes and opens an Excalidraw plugin fil
   await treeRow(page, "Welcome").locator(".vault-tree-item__name").click();
   const reading = page.getByTestId("note-reading");
   await expect(reading.getByRole("heading", { name: "Welcome" })).toBeVisible();
-  await reading.getByText("Ideas", { exact: true }).click();
+  // A [[Note#Heading]] link opens the note scrolled to that heading.
+  await reading.getByText("Ideas > Later").click();
+  await expect(
+    reading.getByRole("heading", { name: "Later" }),
+  ).toBeInViewport();
   await expect(reading.getByRole("heading", { name: "Ideas" })).toBeVisible();
   await expect(page.getByTestId("note-properties")).toContainText("tags");
+
+  // Ticking a task in the reading view writes through the guarded save.
+  await reading.getByRole("checkbox").first().click();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (
+          window as unknown as { __noteFiles: { textOf(p: string): string } }
+        ).__noteFiles.textOf("Ideas.md"),
+      ),
+    )
+    .toContain("- [x] ship the follow-ups");
+  await expect(page.getByTestId("note-status")).toHaveAttribute(
+    "data-status",
+    "saved",
+  );
 
   // Edit it: the file on disk changes through the guarded save.
   await page.getByRole("button", { name: "Edit note" }).click();

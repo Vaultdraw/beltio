@@ -1172,6 +1172,10 @@ Markdown notes (`.md`) open in a tab, in a reading view or an editor. The `notes
 
 - **Reading view:** CommonMark with tables, task lists and code blocks coloured by language, plus Obsidian's `[[links]]` (a link to a missing note creates it), `![[embeds]]` of notes (a heading or `^block` too) and images, callouts (`> [!note]`, foldable with `+` or `-`), `#tags`, `==highlights==`, `$math$` and front matter shown as properties. The HTML is sanitised: no scripts, styles or frames. Images from the web are not loaded unless `notes.remote_images` is on, so a note never makes a request by itself.
 - **Editor:** CodeMirror 6 with Markdown colouring. Notes are written only through the guarded save: it checks the revision it read, so a note changed outside the app is never overwritten. A conflict shows a banner with **Reload from disk** and **Keep mine**; every replaced version is kept in `.excalidraw-vault/note-history/`.
+- **Links to a place:** `[[Note#Heading]]` opens the note and scrolls to that heading; `[[Note#^block]]` scrolls to the paragraph or list item ending in `^block`. `[[#Heading]]` scrolls within the note.
+- **Tasks:** click a `- [ ]` checkbox in the reading view to tick it. The line is rewritten through the guarded save (revision checked, so a conflict shows the usual banner). Turn it off with `notes.toggle_tasks`.
+- **Tags:** click a tag chip to search the vault for that tag (`tag:#name`).
+- **Tabs off:** with `tabs.enabled = false` a note opens in the main pane in place of the home screen; opening a drawing brings the editor back.
 - **Vim keys:** `notes.vim` (or **Notes: Toggle Vim keys**) turns on the Vim mode of the editor; `:w` saves.
 
 | Command | Default key | Does |
@@ -1610,6 +1614,7 @@ Markdown notes: the reading view and the editor. See [Notes](#notes).
 | `highlight_code` | `true` | true or false |  | Colour code blocks in the reading view. |
 | `math` | `true` | true or false |  | Render `$…$` and `$$…$$` as formulas in the reading view. |
 | `remote_images` | `false` | true or false |  | Load images from `http(s)` addresses. Off keeps notes fully offline: the image shows its alt text instead. |
+| `toggle_tasks` | `true` | true or false |  | Tick `- [ ]` task checkboxes by clicking them in the reading view. The change is saved through the guarded save; off leaves them read-only. |
 
 ### `[layout]`
 
@@ -1734,7 +1739,7 @@ The hang watchdog: a Wait / Quit dialog when the page stops answering. See [Hang
 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
-| `enabled` | `true` | true or false |  | Show a Wait / Quit dialog when the page stops answering (macOS and Linux). |
+| `enabled` | `true` | true or false |  | Show a Wait / Quit dialog when the page stops answering (macOS; Linux later). |
 | `grace_ms` | `5000` | a whole number of milliseconds between 1000 and 60000 |  | How long the page must stay unresponsive (after WebKit's own 3 s) before the dialog appears, in milliseconds. Applies from the next hang. |
 
 ### `[hotkeys]` and `[plugin.<id>]`

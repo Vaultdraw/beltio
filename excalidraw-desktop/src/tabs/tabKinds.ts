@@ -28,6 +28,8 @@ export interface TabKindViewProps {
   path: string;
   /** Opens another vault file in the current or a new tab. */
   openPath: (path: string, opts?: { target?: OpenTarget }) => void;
+  /** Opens the vault search with `query` (for example `tag:#idea`). */
+  openSearch?: (query: string) => void;
   vault: TabKindVault;
 }
 

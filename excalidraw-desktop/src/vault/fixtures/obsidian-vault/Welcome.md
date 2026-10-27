@@ -1,3 +1,3 @@
 # Welcome
 
-See [[Ideas]] and [[Drawings/Sketch]]. #welcome
+See [[Ideas]], [[Ideas#Later]] and [[Drawings/Sketch]]. #welcome

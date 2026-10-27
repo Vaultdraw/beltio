@@ -195,3 +195,97 @@ describe("NoteView", () => {
     expect(screen.queryByTestId("note-reading")).toBeNull();
   });
 });
+
+describe("NoteView follow-ups", () => {
+  const T = [
+    "---",
+    "tags: [idea]",
+    "---",
+    "- [ ] first",
+    "- [x] second",
+    "",
+    "Jump [[#Deep]] and [[#^blk]] and [[Other#Part]]",
+    "",
+    "## Deep",
+    "",
+    "Block text ^blk",
+    "",
+  ].join("\n");
+  const mountT = (openSearch = vi.fn()) => {
+    files.setOnDisk("t.md", T);
+    const open = vi.fn();
+    render(
+      <NoteView
+        path="t.md"
+        openPath={open}
+        openSearch={openSearch}
+        vault={vault}
+      />,
+    );
+    return { open, openSearch };
+  };
+
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    updatePreferences({ notesToggleTasks: true });
+  });
+
+  it("scrolls to a heading and a block of the same note, and queues one for another note", async () => {
+    const { open } = mountT();
+    await screen.findByTestId("note-reading");
+    const scroll = vi.mocked(Element.prototype.scrollIntoView);
+    fireEvent.click(screen.getByText("Deep", { selector: "a" }));
+    await waitFor(() => expect(scroll).toHaveBeenCalledTimes(1));
+    expect(scroll.mock.instances[0]).toHaveProperty("id", "deep");
+    fireEvent.click(screen.getByText("^blk"));
+    await waitFor(() => expect(scroll).toHaveBeenCalledTimes(2));
+    expect((scroll.mock.instances[1] as unknown as HTMLElement).tagName).toBe(
+      "P",
+    );
+    fireEvent.click(screen.getByText("Other > Part"));
+    expect(open).toHaveBeenLastCalledWith("Other.md", { target: "current" });
+    const { takeAnchor } = await import("./noteAnchor");
+    expect(takeAnchor("Other.md")).toEqual({
+      heading: "Part",
+      block: undefined,
+    });
+  });
+
+  it("ticks a task through the guarded write; a conflict shows the banner", async () => {
+    mountT();
+    await screen.findByTestId("note-reading");
+    const boxes = () =>
+      document.querySelectorAll<HTMLInputElement>("input.note-task");
+    await waitFor(() => expect(boxes().length).toBe(2));
+    expect(boxes()[0].disabled).toBe(false);
+    fireEvent.click(boxes()[0]);
+    await waitFor(() => expect(files.textOf("t.md")).toContain("- [x] first"));
+    expect(files.textOf("t.md")).toContain("- [x] second");
+    // Changed outside the app: the next tick must not overwrite it.
+    files.setOnDisk("t.md", `${files.textOf("t.md")}outside\n`);
+    await waitFor(() => expect(boxes().length).toBe(2));
+    fireEvent.click(boxes()[1]);
+    await waitFor(() =>
+      expect(screen.getByTestId("note-status").dataset.status).toBe("conflict"),
+    );
+    expect(files.textOf("t.md")).toContain("outside");
+    expect(files.textOf("t.md")).toContain("- [x] second");
+  });
+
+  it("leaves tasks read-only when notes.toggle_tasks is off", async () => {
+    updatePreferences({ notesToggleTasks: false });
+    mountT();
+    const reading = await screen.findByTestId("note-reading");
+    expect(
+      reading.querySelector<HTMLInputElement>('input[type="checkbox"]')
+        ?.disabled,
+    ).toBe(true);
+  });
+
+  it("a tag chip opens the search for that tag", async () => {
+    const { openSearch } = mountT();
+    await screen.findByTestId("note-reading");
+    fireEvent.click(await screen.findByText("#idea"));
+    expect(openSearch).toHaveBeenCalledWith("tag:#idea");
+  });
+});

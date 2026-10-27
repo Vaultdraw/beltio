@@ -331,3 +331,29 @@ details.callout > summary {
 .callout[data-callout="help"],
 .callout[data-callout="faq"] { --callout-color: #b08800; }
 .callout[data-callout="example"] { --callout-color: #7a5af8; }
+
+.note-tag[data-tag] {
+  cursor: pointer;
+}
+.note-tag[data-tag]:hover {
+  text-decoration: underline;
+}
+.note-reading input.note-task {
+  cursor: pointer;
+}
+.note-anchor-flash {
+  animation: note-anchor-flash 1.6s ease-out;
+}
+@keyframes note-anchor-flash {
+  from {
+    background: color-mix(in srgb, var(--color-primary, #6965db) 28%, transparent);
+  }
+  to {
+    background: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .note-anchor-flash {
+    animation: none;
+  }
+}
