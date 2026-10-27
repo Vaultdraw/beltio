@@ -28,7 +28,8 @@ import { subscribePreferences, updatePreferences } from "../vault/preferences";
 
 import { createAssetUrls } from "./noteAssets";
 import { parseNoteDoc } from "./noteDoc";
-import { NoteConflictError, readNote, writeNote } from "./noteFiles";
+import { getNoteFiles } from "./noteBackend";
+import { NoteConflictError } from "./noteFiles";
 import { createNoteLinkIndex } from "./noteLinks";
 import { NoteSaver, type SaveStatus } from "./noteSaver";
 import { NOTES_ACTIVE_KEY, NOTES_COMMAND_IDS as ID } from "./notesCommands";
@@ -85,7 +86,7 @@ const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
       return;
     }
     try {
-      const file = await readNote(vault.handle, path);
+      const file = await getNoteFiles().read(vault.handle, path);
       draft.current = file.content;
       setText(file.content);
       setLoaded({ text: file.content, revision: file.revision });
@@ -111,7 +112,7 @@ const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
     const s = new NoteSaver(
       {
         write: (content, revision) =>
-          writeNote(handle, path, content, revision),
+          getNoteFiles().write(handle, path, content, revision),
         delayMs: () => cachedPreferences().notesAutosaveMs,
         onStatus: (st, message) => setStatus({ s: st, message }),
       },
@@ -135,21 +136,23 @@ const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
       if (!s || s.state !== "saved" || handle === null) {
         return;
       }
-      void readNote(handle, path).then(
-        (file) => {
-          if (
-            saver.current === s &&
-            s.state === "saved" &&
-            file.content !== draft.current
-          ) {
-            draft.current = file.content;
-            setText(file.content);
-            s.rebase(file.content, file.revision);
-            editor.current?.setText(file.content);
-          }
-        },
-        () => {},
-      );
+      void getNoteFiles()
+        .read(handle, path)
+        .then(
+          (file) => {
+            if (
+              saver.current === s &&
+              s.state === "saved" &&
+              file.content !== draft.current
+            ) {
+              draft.current = file.content;
+              setText(file.content);
+              s.rebase(file.content, file.revision);
+              editor.current?.setText(file.content);
+            }
+          },
+          () => {},
+        );
     };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
@@ -199,7 +202,9 @@ const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
     () => ({
       noteText: async (p) => {
         try {
-          return stripFrontmatter((await readNote(handle ?? "", p)).content);
+          return stripFrontmatter(
+            (await getNoteFiles().read(handle ?? "", p)).content,
+          );
         } catch {
           return null;
         }
@@ -292,18 +297,20 @@ const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
         toastStore.push({ message: `Cannot create a note named "${target}"` });
         return;
       }
-      void writeNote(handle, created, "", null).then(
-        () => openPath(created, { target: newTab ? "new" : "current" }),
-        (err: unknown) =>
-          toastStore.push({
-            message:
-              err instanceof NoteConflictError
-                ? `"${target}" already exists`
-                : `Could not create "${target}": ${
-                    err instanceof Error ? err.message : String(err)
-                  }`,
-          }),
-      );
+      void getNoteFiles()
+        .write(handle, created, "", null)
+        .then(
+          () => openPath(created, { target: newTab ? "new" : "current" }),
+          (err: unknown) =>
+            toastStore.push({
+              message:
+                err instanceof NoteConflictError
+                  ? `"${target}" already exists`
+                  : `Could not create "${target}": ${
+                      err instanceof Error ? err.message : String(err)
+                    }`,
+            }),
+        );
     },
     [openPath, path, handle],
   );
@@ -356,7 +363,7 @@ const NoteView = ({ path, openPath, vault }: TabKindViewProps) => {
       return;
     }
     try {
-      const disk = await readNote(handle, path);
+      const disk = await getNoteFiles().read(handle, path);
       saver.current.adoptRevision(disk.revision);
       await saver.current.flush();
     } catch (err) {

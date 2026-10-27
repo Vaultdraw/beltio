@@ -6,12 +6,12 @@
  */
 import { NoteConflictError } from "./noteFiles";
 
-import type { NoteWriteResult } from "./noteFiles";
+import type { NoteWritten } from "./noteFiles";
 
 export type SaveStatus = "saved" | "dirty" | "saving" | "conflict" | "error";
 
 export interface NoteSaverDeps {
-  write: (content: string, revision: string) => Promise<NoteWriteResult>;
+  write: (content: string, revision: string) => Promise<NoteWritten>;
   /** Wait after the last change; 0 = only an explicit save. Read on every change. */
   delayMs: () => number;
   onStatus: (status: SaveStatus, message?: string) => void;

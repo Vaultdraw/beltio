@@ -16,7 +16,7 @@ import { readCustomContextKey } from "../commands/contextKeys";
 import { updatePreferences } from "../vault/preferences";
 
 import { FakeNoteFiles } from "./FakeNoteFiles";
-import { setNoteFiles } from "./noteFiles";
+import { setNoteFiles } from "./noteBackend";
 import NoteView from "./NoteView";
 import { NOTES_ACTIVE_KEY, NOTES_COMMAND_IDS } from "./notesCommands";
 
@@ -52,7 +52,9 @@ Range.prototype.getClientRects = emptyRects as never;
 Range.prototype.getBoundingClientRect = () => new DOMRect();
 
 beforeEach(() => {
-  files = new FakeNoteFiles({ "n.md": NOTE, "Other.md": "other" });
+  files = new FakeNoteFiles();
+  files.setOnDisk("n.md", NOTE);
+  files.setOnDisk("Other.md", "other");
   setNoteFiles(files);
   updatePreferences({
     notesOpenIn: "reading",
@@ -97,7 +99,7 @@ describe("NoteView", () => {
     await waitFor(() =>
       expect(open).toHaveBeenLastCalledWith("Ghost.md", { target: "current" }),
     );
-    expect(files.text("Ghost.md")).toBe("");
+    expect(files.textOf("Ghost.md")).toBe("");
   });
 
   it("edits and saves through the guarded write, then reads back", async () => {
@@ -120,7 +122,9 @@ describe("NoteView", () => {
         changes: { from: view.state.doc.length, insert: "More text\n" },
       });
     });
-    await waitFor(() => expect(files.text("n.md")).toBe(`${NOTE}More text\n`));
+    await waitFor(() =>
+      expect(files.textOf("n.md")).toBe(`${NOTE}More text\n`),
+    );
     await waitFor(() =>
       expect(screen.getByTestId("note-status").dataset.status).toBe("saved"),
     );
@@ -140,19 +144,19 @@ describe("NoteView", () => {
     const view = EditorView.findFromDOM(
       content.closest(".cm-editor") as HTMLElement,
     )!;
-    files.externalWrite("n.md", "changed elsewhere");
+    files.setOnDisk("n.md", "changed elsewhere");
     act(() => {
       view.dispatch({ changes: { from: 0, insert: "mine " } });
     });
     expect((await screen.findByRole("alert")).textContent).toMatch(
       /changed on disk/i,
     );
-    expect(files.text("n.md")).toBe("changed elsewhere");
+    expect(files.textOf("n.md")).toBe("changed elsewhere");
     fireEvent.click(screen.getByRole("button", { name: "Reload from disk" }));
     await waitFor(() =>
       expect(view.state.doc.toString()).toBe("changed elsewhere"),
     );
-    expect(files.text("n.md")).toBe("changed elsewhere");
+    expect(files.textOf("n.md")).toBe("changed elsewhere");
   });
 
   it("binds its commands while mounted and only then", async () => {
@@ -171,10 +175,11 @@ describe("NoteView", () => {
   });
 
   it("shows an error and retries when the note cannot be read", async () => {
-    files.files.delete("n.md");
+    files = new FakeNoteFiles();
+    setNoteFiles(files);
     mount();
     expect(await screen.findByRole("alert")).toBeTruthy();
-    files.externalWrite("n.md", "back");
+    files.setOnDisk("n.md", "back");
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect((await screen.findByTestId("note-reading")).textContent).toContain(
       "back",

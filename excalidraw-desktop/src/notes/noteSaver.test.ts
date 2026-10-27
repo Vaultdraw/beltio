@@ -5,7 +5,8 @@ import { NoteConflictError } from "./noteFiles";
 import { NoteSaver } from "./noteSaver";
 
 const setup = async (delay = 50) => {
-  const files = new FakeNoteFiles({ "n.md": "one" });
+  const files = new FakeNoteFiles();
+  files.setOnDisk("n.md", "one");
   const first = await files.read("h", "n.md");
   const statuses: string[] = [];
   const timers: (() => void)[] = [];
@@ -30,10 +31,10 @@ describe("NoteSaver", () => {
     const { files, saver, statuses, timers } = await setup();
     saver.change("two");
     expect(statuses).toEqual(["dirty"]);
-    expect(files.text("n.md")).toBe("one");
+    expect(files.textOf("n.md")).toBe("one");
     timers.at(-1)!();
     await saver.flush();
-    expect(files.text("n.md")).toBe("two");
+    expect(files.textOf("n.md")).toBe("two");
     expect(saver.state).toBe("saved");
   });
 
@@ -42,7 +43,7 @@ describe("NoteSaver", () => {
     saver.change("two");
     expect(timers).toHaveLength(0);
     await saver.flush();
-    expect(files.text("n.md")).toBe("two");
+    expect(files.textOf("n.md")).toBe("two");
   });
 
   it("typing back to the saved text is saved again without a write", async () => {
@@ -51,36 +52,36 @@ describe("NoteSaver", () => {
     saver.change("one");
     expect(saver.state).toBe("saved");
     await saver.flush();
-    expect(files.writes).toHaveLength(0);
+    expect(files.copiesOf("n.md")).toHaveLength(0);
   });
 
   it("a change on disk stops saving and never overwrites", async () => {
     const { files, saver } = await setup();
-    files.externalWrite("n.md", "theirs");
+    files.setOnDisk("n.md", "theirs");
     saver.change("mine");
     await saver.flush();
     expect(saver.state).toBe("conflict");
-    expect(files.text("n.md")).toBe("theirs");
+    expect(files.textOf("n.md")).toBe("theirs");
     saver.change("mine 2");
     await saver.flush();
-    expect(files.text("n.md")).toBe("theirs");
+    expect(files.textOf("n.md")).toBe("theirs");
   });
 
   it("keep mine adopts the disk revision and writes", async () => {
     const { files, saver } = await setup();
-    files.externalWrite("n.md", "theirs");
+    files.setOnDisk("n.md", "theirs");
     saver.change("mine");
     await saver.flush();
     const disk = await files.read("h", "n.md");
     saver.adoptRevision(disk.revision);
     await saver.flush();
-    expect(files.text("n.md")).toBe("mine");
+    expect(files.textOf("n.md")).toBe("mine");
     expect(saver.state).toBe("saved");
   });
 
   it("rebase takes the disk text as the new base", async () => {
     const { files, saver } = await setup();
-    files.externalWrite("n.md", "theirs");
+    files.setOnDisk("n.md", "theirs");
     saver.change("mine");
     await saver.flush();
     const disk = await files.read("h", "n.md");
@@ -88,7 +89,7 @@ describe("NoteSaver", () => {
     expect(saver.state).toBe("saved");
     saver.change("theirs plus");
     await saver.flush();
-    expect(files.text("n.md")).toBe("theirs plus");
+    expect(files.textOf("n.md")).toBe("theirs plus");
   });
 
   it("text typed while a write runs is written next", async () => {
@@ -98,7 +99,7 @@ describe("NoteSaver", () => {
     saver.change("ab");
     await p;
     await saver.flush();
-    expect(files.text("n.md")).toBe("ab");
+    expect(files.textOf("n.md")).toBe("ab");
   });
 
   it("reports a failed write", async () => {
