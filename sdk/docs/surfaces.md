@@ -9,6 +9,23 @@ Plugins can add small pieces of interface. Each is declared in `plugin.toml`, so
 | [Context menu item](#context-menus) | `[[contributes.menus]]` | `ctx.menus.target` | 0.12.0 |
 | [Opening a panel or view](#layout) | none | `ctx.views.open` | 0.13.0 |
 
+## Migration (0.9.0 to 0.13.0)
+
+Everything here is additive: a plugin written for 0.9.0 runs unchanged. To use a surface in a plugin that must also run on an older app, ask for the feature and fall back:
+
+```ts
+if (ctx.host.has("statusBar")) ctx.statusBar.set("clock", { text });
+```
+
+| Revision | Adds | Ask with |
+| --- | --- | --- |
+| 0.10.0 | status bar items | `ctx.host.has("statusBar")` |
+| 0.11.0 | views | `ctx.host.has("views")` |
+| 0.12.0 | context menu items | `ctx.host.has("menus")` |
+| 0.13.0 | `ctx.views.open` | `ctx.host.has("views.open")` |
+
+An older app refuses a `plugin.toml` with a table it does not know (`status_bar`, `views`, `menus`), so set `min_app` to the app version that ships the revision you use; `vaultdraw-plugin check` warns when it is lower.
+
 ## Status bar
 
 A thin bar at the bottom of the window. It exists only while at least one item has text, and the user can switch it off (`plugins.status_bar = false`, or the palette command **Toggle plugin status bar**).
