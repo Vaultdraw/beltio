@@ -523,7 +523,8 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
   },
   {
     table: "themes",
-    intro: "Installing themes from the internet. See [Installing more themes](#installing-more-themes).",
+    intro:
+      "Installing themes from the internet. See [Installing more themes](#installing-more-themes).",
     keys: {
       max_install_kb: {
         doc: "Largest theme file to accept, in KB (1 to 256).",

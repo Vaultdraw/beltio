@@ -1,0 +1,77 @@
+{
+  "name": "Cendre",
+  "author": "Aejkatappaja (Cendre, MIT)",
+  "dark": {
+    "mPrimary": "#ea9875",
+    "mOnPrimary": "#171311",
+    "mSecondary": "#fcba81",
+    "mOnSecondary": "#171311",
+    "mTertiary": "#99af6b",
+    "mOnTertiary": "#171311",
+    "mError": "#d1766e",
+    "mOnError": "#171311",
+    "mSurface": "#171311",
+    "mOnSurface": "#e6d5c2",
+    "mSurfaceVariant": "#201b19",
+    "mOnSurfaceVariant": "#a09384",
+    "mOutline": "#73665b",
+    "terminal": {
+      "normal": {
+        "black": "#201b19",
+        "red": "#d1766e",
+        "green": "#99af6b",
+        "yellow": "#fcba81",
+        "blue": "#58bdff",
+        "magenta": "#9480ba",
+        "cyan": "#4e89a2",
+        "white": "#a09384"
+      },
+      "bright": {
+        "black": "#73665b",
+        "red": "#d25780",
+        "green": "#43b16a",
+        "yellow": "#f4a21c",
+        "blue": "#8bcfff",
+        "magenta": "#a692cd",
+        "cyan": "#20c9cb",
+        "white": "#e6d5c2"
+      },
+      "foreground": "#e6d5c2",
+      "background": "#171311",
+      "selectionFg": "#e6d5c2",
+      "selectionBg": "#2f1e17",
+      "cursorText": "#171311",
+      "cursor": "#ea9875"
+    }
+  },
+  "light": {
+    "mSurface": "#fbf5f2",
+    "mOnSurface": "#382b1c",
+    "mSurfaceVariant": "#f0e9e6",
+    "mOnSurfaceVariant": "#6f6355",
+    "mOutline": "#9b8e82",
+    "mShadow": "#000000",
+    "mPrimary": "#ca7a58",
+    "mSecondary": "#c08149",
+    "mTertiary": "#819653",
+    "mError": "#d0756e",
+    "terminal": {
+      "normal": {
+        "red": "#d0756e",
+        "green": "#819653",
+        "yellow": "#c08149",
+        "blue": "#2b96d6",
+        "magenta": "#9480ba",
+        "cyan": "#4e89a2"
+      },
+      "bright": {
+        "red": "#d25780",
+        "green": "#31a25c",
+        "yellow": "#c58000",
+        "blue": "#5395c3",
+        "magenta": "#9985c0",
+        "cyan": "#009fa1"
+      }
+    }
+  }
+}

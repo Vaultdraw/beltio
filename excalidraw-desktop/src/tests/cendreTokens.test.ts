@@ -1,15 +1,25 @@
 import { describe, expect, it } from "vitest";
 
-import { loadBuiltinThemes } from "../theme";
+import { parseThemeFile } from "../theme/normalize";
 import { contrastRatio } from "../theme/color";
 import { CONTRAST, deriveTokens } from "../theme/tokens";
 
 // Cendre omits mHover/mOnHover/mShadow. The navigator's hover, chip and
 // selected tints and its accent icon come from on-surface and primary, so they
 // must still be readable in every depth and mode.
-// Built-in themes load on demand: resolve them once, before the cases are made.
-const cendres = (await loadBuiltinThemes()).filter((t) =>
-  t.id.startsWith("cendre"),
+// Cendre lives in the themes repo now; its three palettes are kept here as fixtures.
+const files = import.meta.glob("./fixtures/cendre/*.json", {
+  eager: true,
+  import: "default",
+}) as Record<string, unknown>;
+const cendres = Object.entries(files).map(([path, json]) =>
+  parseThemeFile(
+    json,
+    path
+      .split("/")
+      .pop()!
+      .replace(/\.json$/, ""),
+  ),
 );
 
 describe("Cendre navigator tokens", () => {
