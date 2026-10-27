@@ -41,6 +41,14 @@ export interface FakeScene {
   live(): readonly ExcalidrawElement[];
   /** Pictures in the editor's file store, by SHA-1, with their bytes decoded (same shape as the SDK mock). */
   files(): Record<string, { mime: string; bytes: Uint8Array }>;
+  /** Ids `ctx.scene.scrollTo` asked the shell to focus, in order. */
+  scrolledTo(): string[];
+  /** The app state fields `updateScene` set (such as `pageSetup`). */
+  appState(): Record<string, unknown>;
+  /** Records a `scrollTo` (the shell's focus path, called by the bridge). */
+  recordScroll(id: string): void;
+  /** Sets app state fields as a load would (the bridge's create path). */
+  updateAppState(next: Record<string, unknown>): void;
   /** Unregisters the editor. */
   dispose(): void;
 }
@@ -74,6 +82,8 @@ export function createFakeScene(initialPath: string | null): FakeScene {
   const listeners = new Set<() => void>();
   const batches: FakeBatch[] = [];
   let store: BinaryFiles = {};
+  let appState: Record<string, unknown> = {};
+  const scrolled: string[] = [];
   const fire = () => [...listeners].forEach((cb) => cb());
 
   const api = {
@@ -85,6 +95,7 @@ export function createFakeScene(initialPath: string | null): FakeScene {
       scrollX: 0,
       scrollY: 0,
       zoom: { value: 1 },
+      ...appState,
     }),
     getFiles: () => store,
     addFiles(list: readonly { id: string }[]) {
@@ -94,8 +105,12 @@ export function createFakeScene(initialPath: string | null): FakeScene {
     },
     updateScene(data: {
       elements?: readonly ExcalidrawElement[];
+      appState?: Record<string, unknown>;
       captureUpdate?: unknown;
     }) {
+      if (data.appState) {
+        appState = { ...appState, ...data.appState };
+      }
       if (data.elements) {
         elements = [...data.elements];
         batches.push({ captureUpdate: data.captureUpdate, elements });
@@ -152,6 +167,14 @@ export function createFakeScene(initialPath: string | null): FakeScene {
         ]),
       ),
     live: () => elements.filter((e) => !e.isDeleted),
+    scrolledTo: () => [...scrolled],
+    appState: () => ({ ...appState }),
+    recordScroll: (id) => {
+      scrolled.push(id);
+    },
+    updateAppState: (next) => {
+      appState = { ...appState, ...next };
+    },
     dispose() {
       off?.();
       off = null;

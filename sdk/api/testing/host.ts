@@ -45,6 +45,8 @@ import {
   fakeMeasure,
 } from "../shared/text";
 
+import { createFoldersModel } from "./folders";
+import { createPagesMock } from "./pages";
 import { createSceneModel } from "./scene";
 import { panelsRoot, type PanelDeps } from "./panels";
 import { createVaultModel } from "./vault";
@@ -73,6 +75,7 @@ import type { RenderResult } from "@testing-library/react";
 import type {
   BootOptions,
   FakeBatch,
+  FakeFolders,
   FakeScene,
   FakeStorage,
   FakeTheme,
@@ -115,6 +118,7 @@ export interface MockHost {
   storage: FakeStorage;
   vault: FakeVault;
   workspace: FakeWorkspace;
+  folders: FakeFolders;
   /** Drops a file on the active drawing; resolves to the scene write it made, or null. */
   importFile(
     fileName: string,
@@ -168,6 +172,28 @@ export function createMockHost(
   const maxOps = () => sceneMaxOps;
   const scene = createSceneModel("fake.excalidraw", maxOps);
   const vault = createVaultModel(maxOps);
+  const folders = createFoldersModel(vault, {
+    open: () => vault.fake.setVault !== undefined && vaultIsOpen(),
+    readOnly: () => vaultReadOnly(),
+    hasDrawing: (path) => vault.has(path),
+    putDrawing: (path, sceneData) => {
+      const d = sceneData as { elements?: unknown[]; appState?: unknown };
+      vault.put(
+        path,
+        (d.elements ?? []) as never,
+        (d.appState ?? {}) as Record<string, unknown>,
+      );
+    },
+  });
+  const vaultIsOpen = () => {
+    try {
+      vault.needVault();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const vaultReadOnly = () => vaultIsOpen() && vault.needVault().readOnly;
   // The scene model keeps its path private; the host needs it for imports and ctx.workspace.
   let activePath: string | null = "fake.excalidraw";
   let sceneReadOnly = false;
@@ -431,6 +457,8 @@ export function createMockHost(
     let vaultApi: PluginContext["vault"] | undefined;
     let workspaceApi: PluginContext["workspace"] | undefined;
     let importersApi: ImportersApi | undefined;
+    let pagesApi: PluginContext["pages"] | undefined;
+    let foldersApi: PluginContext["folders"] | undefined;
     const ctx: PluginContext = {
       manifest: {
         id,
@@ -638,7 +666,26 @@ export function createMockHost(
         };
       },
       get pages() {
-        return { geometry: pageGeometry, flow: flowPages };
+        return (pagesApi ??= Object.freeze({
+          geometry: pageGeometry,
+          flow: flowPages,
+          ...createPagesMock({
+            vault,
+            scene,
+            dataKey,
+            track,
+            activePath: () => activePath,
+            activate: (path) => {
+              fakeScene.switchTo(path);
+              [...(eventSubs.get("drawing.opened") ?? [])].forEach((cb) =>
+                cb({ path }),
+              );
+            },
+          }),
+        }));
+      },
+      get folders() {
+        return (foldersApi ??= folders.api(id, info.permissions));
       },
       get theme() {
         return (themeApi ??= {
@@ -977,6 +1024,7 @@ export function createMockHost(
     storage,
     vault: vault.fake,
     workspace: vault.workspace,
+    folders: folders.fake,
     importFile,
     cancelImport() {
       if (!importing) {
@@ -1032,6 +1080,7 @@ export function createMockHost(
       themeId = "default";
       themeTokens = null;
       vault.reset();
+      folders.reset();
       activePath = "fake.excalidraw";
       sceneReadOnly = false;
       importerImpls.clear();

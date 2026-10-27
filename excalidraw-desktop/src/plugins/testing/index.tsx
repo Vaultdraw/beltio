@@ -101,13 +101,38 @@ export interface FakeVault {
   ): void;
   /** The drawings now (seeded or created by the plugin), by path. */
   drawings(): Record<string, readonly ExcalidrawElement[]>;
+  /** Paths saved by the shell (a page document's `finish`), in order. */
+  saves(): string[];
+  /** The saved page setup of a drawing (its `appState.pageSetup`), or undefined. */
+  pageSetup(path: string): Record<string, unknown> | undefined;
   /** The open vault; null = no vault is open. Default: a writable "mock-vault". */
   setVault(info: { name: string; readOnly: boolean } | null): void;
 }
 
-/** What `ctx.workspace` did. */
+/** What `ctx.workspace` and the folders' `open()` did. */
 export interface FakeWorkspace {
   opened(): { path: string; newTab: boolean }[];
+  /** Absolute paths opened as a vault by `TargetFolder.open()` (new vaults). */
+  openedVaults(): string[];
+  /** Vault folders revealed in the tree by `TargetFolder.open()`. */
+  revealed(): string[];
+}
+
+/** What `ctx.folders` sees: the fake backend's sources and targets. */
+export interface FakeFolders {
+  /** What the next `folders.pickSource` returns (null: the user cancels): files by relative path, text or bytes. */
+  setSource(
+    folder: { name: string; files: Record<string, string | Uint8Array> } | null,
+  ): void;
+  /** What the next `pickTarget({ kind: "newVault" })` returns: the vault's name (null: cancelled). */
+  setNewVault(name: string | null): void;
+  /** Every target handed out, with what was written into it. */
+  targets(): {
+    name: string;
+    kind: "newVault" | "vaultFolder";
+    path: string | null;
+    files: Record<string, object | Uint8Array>;
+  }[];
 }
 
 export interface FakeEvents {
@@ -138,6 +163,7 @@ export interface TestPlugin {
   storage: FakeStorage;
   vault: FakeVault;
   workspace: FakeWorkspace;
+  folders: FakeFolders;
   /**
    * Drops a file on the drawing as the app does: finds the importer by
    * extension, runs the real import runner and resolves to the scene write
@@ -244,6 +270,27 @@ export async function boot(
     readOnly: false,
   };
   const opened: { path: string; newTab: boolean }[] = [];
+  const openedVaults: string[] = [];
+  const revealed: string[] = [];
+  const saves: string[] = [];
+  let revisionSeq = 0;
+  const parse = (json: string) =>
+    JSON.parse(json) as { elements?: ExcalidrawElement[]; appState?: Record<string, unknown>; files?: Record<string, unknown> };
+  const store = (path: string, sceneData: Record<string, unknown>) => {
+    const revision = `rev-${++revisionSeq}`;
+    backend.drawings[path] = { scene: sceneData, revision };
+    return revision;
+  };
+  /** The open drawing as the app would save it: live elements, app state, files. */
+  const snapshot = (): Record<string, unknown> => ({
+    type: "excalidraw",
+    version: 2,
+    elements: scene.live(),
+    appState: scene.appState(),
+    files: Object.fromEntries(
+      Object.entries(scene.files()).map(([id, f]) => [id, { id, mimeType: f.mime }]),
+    ),
+  });
   setWorkspaceBridge({
     vault: () => vaultInfo,
     activePath: () => getActiveScene()?.path ?? null,
@@ -253,6 +300,40 @@ export async function boot(
       scene.switchTo(path);
       appEvents.emit("drawing.opened", { path });
       return true;
+    },
+    newDrawingParent: async () => (vaultInfo ? "" : null),
+    createDrawing: async (parent, name, json) => {
+      const path = parent ? `${parent}/${name}` : name;
+      if (path in backend.drawings) {
+        throw new Error(`Already exists: ${path}`);
+      }
+      const data = parse(json);
+      store(path, data as Record<string, unknown>);
+      scene.switchTo(path);
+      scene.setElements(data.elements ?? []);
+      scene.updateAppState(data.appState ?? {});
+      appEvents.emit("drawing.opened", { path });
+    },
+    writeDrawing: async (path, json) => {
+      if (path in backend.drawings) {
+        throw new Error(`Already exists: ${path}`);
+      }
+      return store(path, parse(json) as Record<string, unknown>);
+    },
+    flushDrawing: async (path) => {
+      if (getActiveScene()?.path !== path) {
+        return null;
+      }
+      saves.push(path);
+      return store(path, snapshot());
+    },
+    drawingRevision: async (path) => backend.drawings[path]?.revision ?? null,
+    focusElement: (_path, elementId) => scene.recordScroll(elementId),
+    openVaultFolder: async (handle) => {
+      openedVaults.push(await backend.importTargetRoot(handle));
+    },
+    revealFolder: async (path) => {
+      revealed.push(path);
     },
   });
   const sceneOf = (els: readonly (NewElement & { id?: string })[]) => ({
@@ -285,6 +366,23 @@ export async function boot(
       backend.vaultOpen = next !== null;
       backend.vaultReadOnly = next?.readOnly === true;
     },
+    saves: () => [...saves],
+    pageSetup: (path) =>
+      (backend.drawings[path]?.scene.appState as Record<string, unknown> | undefined)
+        ?.pageSetup as Record<string, unknown> | undefined,
+  };
+  const folders: FakeFolders = {
+    setSource(folder) {
+      backend.folders.sourcePick = folder;
+    },
+    setNewVault(name) {
+      backend.folders.newVaultPick = name;
+    },
+    targets: () =>
+      Object.values(backend.folders.targets).map((t) => ({
+        ...t,
+        files: { ...t.files },
+      })),
   };
 
   const handler = (full: string) => {
@@ -327,7 +425,12 @@ export async function boot(
     events: { emit: (name, payload) => appEvents.emit(name, payload) },
     theme: fakeTheme,
     vault,
-    workspace: { opened: () => opened.map((o) => ({ ...o })) },
+    workspace: {
+      opened: () => opened.map((o) => ({ ...o })),
+      openedVaults: () => [...openedVaults],
+      revealed: () => [...revealed],
+    },
+    folders,
     async import(fileName, content, at) {
       const match = findImporter(fileName);
       const active = getActiveScene();

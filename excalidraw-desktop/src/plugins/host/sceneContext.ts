@@ -11,6 +11,7 @@ import {
   viewportCenter,
 } from "../../sceneOps";
 import { getActiveScene, subscribeScene } from "../../sceneOps/sceneBus";
+import { getWorkspaceBridge } from "../workspaceBridge";
 
 import { PluginApiError } from "../../../../sdk/api/shared/rules";
 
@@ -180,6 +181,14 @@ export function createSceneApi(
     },
     path() {
       return getActiveScene()?.path ?? null;
+    },
+    scrollTo(elementId) {
+      const scene = getActiveScene();
+      if (!scene?.path || typeof elementId !== "string" || !isLive()) {
+        return;
+      }
+      // The shell's focus path (search results): select, then scroll into view.
+      getWorkspaceBridge()?.focusElement(scene.path, elementId);
     },
   };
 }

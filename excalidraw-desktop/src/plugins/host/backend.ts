@@ -30,6 +30,8 @@ export interface PluginsBackend {
     method: string,
     params: Record<string, unknown> | null,
   ): Promise<unknown>;
+  /** The absolute path behind an import target handle (`folders.pickTarget`), for opening it as a vault. Core only. */
+  importTargetRoot(handle: string): Promise<string>;
   /** Plugins with saved data (`storage.global`) and its size in bytes. */
   dataList(): Promise<{ id: string; bytes: number }[]>;
   /** Deletes a plugin's saved data; resolves to whether there was any. */
@@ -69,6 +71,8 @@ export function createTauriBackend(win?: Window | null): PluginsBackend {
     pickFolder: () => call<string | null>("plugins_pick_folder", {}),
     pluginCall: (pluginId, method, params) =>
       call<unknown>("plugin_call", { pluginId, method, params }),
+    importTargetRoot: (handle) =>
+      call<string>("import_target_root", { handle }),
     dataList: () =>
       call<{ id: string; bytes: number }[]>("plugins_data_list", {}),
     dataDelete: (id) => call<boolean>("plugins_data_delete", { id }),

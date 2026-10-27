@@ -116,6 +116,10 @@ export interface FakeScene {
   live(): readonly FakeElement[];
   /** Pictures added with image elements, by SHA-1 (the editor's file store). */
   files(): Record<string, { mime: string; bytes: Uint8Array }>;
+  /** Ids `ctx.scene.scrollTo` asked the app to focus, in order. */
+  scrolledTo(): string[];
+  /** The app state fields a page document set (such as `pageSetup`). */
+  appState(): Record<string, unknown>;
 }
 
 /** The colours a booted plugin reads from `ctx.theme`. */
@@ -149,12 +153,37 @@ export interface FakeVault {
   drawings(): Record<string, readonly FakeElement[]>;
   /** The open vault; null = no vault is open (`NO_VAULT`). Default: a writable "mock-vault". */
   setVault(info: { name: string; readOnly: boolean } | null): void;
+  /** Paths the app saved for a page document (`finish` and `abort`), in order. */
+  saves(): string[];
+  /** The saved page setup of a drawing (`appState.pageSetup`), or undefined. */
+  pageSetup(path: string): Record<string, unknown> | undefined;
 }
 
-/** What `ctx.workspace` did. */
+/** What `ctx.workspace` and `TargetFolder.open()` did. */
 export interface FakeWorkspace {
   /** Every `open` call that succeeded. */
   opened(): { path: string; newTab: boolean }[];
+  /** Folders opened as a vault by `TargetFolder.open()` (new vaults), as absolute paths. */
+  openedVaults(): string[];
+  /** Vault folders revealed in the tree by `TargetFolder.open()`. */
+  revealed(): string[];
+}
+
+/** What `ctx.folders` sees, seedable. */
+export interface FakeFolders {
+  /** What the next `folders.pickSource` returns (null: the user cancels): files by relative path, text or bytes. */
+  setSource(
+    folder: { name: string; files: Record<string, string | Uint8Array> } | null,
+  ): void;
+  /** What the next `pickTarget({ kind: "newVault" })` returns: the vault's name (null: cancelled). */
+  setNewVault(name: string | null): void;
+  /** Every target handed out, with what was written into it (a vault folder's drawings also show in `vault.drawings()`). */
+  targets(): {
+    name: string;
+    kind: "newVault" | "vaultFolder";
+    path: string | null;
+    files: Record<string, object | Uint8Array>;
+  }[];
 }
 
 /** The `events` side of a booted plugin. */
@@ -188,6 +217,7 @@ export interface TestPlugin {
   storage: FakeStorage;
   vault: FakeVault;
   workspace: FakeWorkspace;
+  folders: FakeFolders;
   /**
    * Drops a file on the drawing as the app does: finds the importer by file
    * extension, loads the plugin, runs it and applies the returned ops as one

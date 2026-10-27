@@ -43,7 +43,7 @@ export const RESERVED_EXTENSIONS = [
 ];
 const IMPORTER_KEYS = new Set(["id", "title", "extensions"]);
 /** What a plugin may declare. */
-export const PERMISSIONS = ["vault.read", "vault.write"];
+export const PERMISSIONS = ["vault.read", "vault.write", "folders.import"];
 /** Kept for later API revisions; an app that knows them as reserved refuses a manifest that uses one. */
 const RESERVED_PERMISSIONS = ["net", "secret", "control"];
 

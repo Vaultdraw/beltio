@@ -38,6 +38,40 @@ export interface EventsApi {
     on<K extends keyof AppEventMap>(name: K, cb: (payload: Readonly<AppEventMap[K]>) => void): Disposable;
 }
 
+// folders.ts
+export interface FolderEntry {
+    path: string;
+    size: number;
+    modifiedAt: number;
+}
+export interface PickSourceOptions {
+    title?: string;
+}
+export type PickTargetOptions = {
+    kind: "newVault";
+    title?: string;
+} | {
+    kind: "vaultFolder";
+    path: string;
+};
+export interface SourceFolder {
+    readonly name: string;
+    list(): Promise<FolderEntry[]>;
+    readText(path: string): Promise<string>;
+    readBytes(path: string): Promise<Uint8Array>;
+}
+export interface TargetFolder {
+    readonly name: string;
+    readonly kind: "newVault" | "vaultFolder";
+    writeDrawing(path: string, scene: object): Promise<void>;
+    copyFrom(source: SourceFolder, from: string, to: string): Promise<void>;
+    open(): Promise<void>;
+}
+export interface FoldersApi {
+    pickSource(options?: PickSourceOptions): Promise<SourceFolder | null>;
+    pickTarget(options: PickTargetOptions): Promise<TargetFolder | null>;
+}
+
 // host.ts
 export interface ApiVersion {
     level: 0;
@@ -81,10 +115,11 @@ export type { CommandsApi } from "./commands";
 export type { Disposable } from "./disposable";
 export type { AppEventMap, EventsApi } from "./events";
 export type { CommandContribution, ImporterContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
+export type { FolderEntry, FoldersApi, PickSourceOptions, PickTargetOptions, SourceFolder, TargetFolder, } from "./folders";
 export type { ApiVersion, HostApi } from "./host";
 export type { ImportersApi, Importer, ImportInput, ImportOptions, ImportResult, } from "./importers";
 export type { ByteRange, MarkdownApi, MarkdownParseOptions, NoteBlock, NoteBlockBase, NoteDoc, NoteFrontmatter, NoteInline, NoteLink, NoteStats, } from "./markdown";
-export type { FlowItem, FlowOptions, FlowPlacement, PageGeometry, PageRequest, PageSizeName, PagesApi, } from "./pages";
+export type { BuildSceneOptions, CreateDocumentOptions, FlowItem, FlowOptions, FlowPlacement, PageDocument, PageGeometry, PageImageItem, PageItem, PageLineItem, PageRectFill, PageRectItem, PageRequest, PageSizeName, PageTextItem, PageTextTone, PagesApi, } from "./pages";
 export type { PanelsApi } from "./panels";
 export { definePlugin } from "./plugin";
 export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
@@ -106,7 +141,7 @@ export interface PluginManifestInfo {
     permissions: readonly PluginPermission[];
     dataKey: string;
 }
-export type PluginPermission = "vault.read" | "vault.write";
+export type PluginPermission = "vault.read" | "vault.write" | "folders.import";
 export interface CommandContribution {
     id: string;
     title: string;
@@ -250,6 +285,7 @@ export interface MarkdownApi {
 }
 
 // pages.ts
+import type { FontFamilyName } from "./scene";
 export type PageSizeName = "a3" | "a4" | "a5" | "b5" | "letter" | "legal" | "tablet" | "tabletLarge" | "phone";
 export interface PageRequest {
     size?: PageSizeName | {
@@ -281,6 +317,76 @@ export interface FlowPlacement {
 export interface PagesApi {
     geometry(request?: PageRequest): PageGeometry;
     flow(items: readonly FlowItem[], options: FlowOptions): FlowPlacement[];
+    createDocument(options: CreateDocumentOptions): Promise<PageDocument>;
+    buildScene(items: readonly PageItem[], options: BuildSceneOptions): Promise<object>;
+}
+export type PageTextTone = "normal" | "muted" | "code" | "link";
+export type PageRectFill = "code" | "quote" | "callout" | "table" | "none";
+export interface PageTextItem {
+    type: "text";
+    page: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    text: string;
+    fontSize: number;
+    fontFamily: FontFamilyName;
+    lineHeight: number;
+    align?: "left" | "center" | "right";
+    tone?: PageTextTone;
+    link?: string;
+    data?: Record<string, unknown>;
+}
+export interface PageRectItem {
+    type: "rect";
+    page: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    fill: PageRectFill;
+    stroke?: "none" | "thin";
+}
+export interface PageLineItem {
+    type: "line";
+    page: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+export interface PageImageItem {
+    type: "image";
+    page: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    mimeType: string;
+    bytes?: Uint8Array;
+    alt?: string;
+    target: string;
+}
+export type PageItem = PageTextItem | PageRectItem | PageLineItem | PageImageItem;
+export interface CreateDocumentOptions {
+    name: string;
+    parent?: string;
+    setup?: PageRequest;
+    open?: boolean;
+}
+export interface PageDocument {
+    readonly path: string;
+    append(items: readonly PageItem[], pageCount: number): void;
+    finish(): Promise<{
+        path: string;
+        revision: string;
+    }>;
+    abort(): Promise<void>;
+}
+export interface BuildSceneOptions {
+    setup?: PageRequest;
+    pageCount: number;
 }
 
 // panels.ts
@@ -305,6 +411,7 @@ import type { PanelsApi } from "./panels";
 import type { SceneContextApi } from "./scene";
 import type { SettingsApi } from "./settings";
 import type { StorageApi } from "./storage";
+import type { FoldersApi } from "./folders";
 import type { FontsApi, TextApi } from "./text";
 import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
@@ -337,6 +444,7 @@ export interface PluginContext {
     readonly text: TextApi;
     readonly fonts: FontsApi;
     readonly pages: PagesApi;
+    readonly folders: FoldersApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;
     setInterval(fn: () => void, ms: number): Disposable;
@@ -461,6 +569,7 @@ export interface SceneContextApi {
     }): readonly SceneElementDetail[];
     dataOf(id: string): Json | undefined;
     path(): string | null;
+    scrollTo(id: string): void;
 }
 
 // settings.ts

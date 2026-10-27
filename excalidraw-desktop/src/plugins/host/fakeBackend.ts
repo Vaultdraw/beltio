@@ -1,8 +1,11 @@
 /** In-memory PluginsBackend for vitest and the e2e harness. */
+import { createFakeFolderStore } from "../../../../sdk/api/shared/fakeFolders";
 import {
   fakeParseMarkdown,
   markdownParams,
 } from "../../../../sdk/api/shared/markdown";
+
+import type { FakeFolderStore } from "../../../../sdk/api/shared/fakeFolders";
 
 import type { PluginsBackend } from "./backend";
 import type { PluginInfo, SafeModeInfo } from "./types";
@@ -34,6 +37,8 @@ export interface FakeBackend extends PluginsBackend {
   vaultOpen: boolean;
   /** Every gateway call, in order. */
   gatewayCalls: { pluginId: string; method: string; params: unknown }[];
+  /** The `folders.*` rows' state: what the pickers return next, the sources and targets handed out. */
+  folders: FakeFolderStore;
 }
 
 /** An error as the gateway reports it (`code` plus message). */
@@ -45,6 +50,17 @@ const VAULT_ROWS: Record<string, "vault.read" | "vault.write"> = {
   "file.read": "vault.read",
   "file.write": "vault.write",
 };
+
+const FOLDER_ROWS = new Set([
+  "folders.pickSource",
+  "folders.list",
+  "folders.readText",
+  "folders.readBytes",
+  "folders.pickNewVault",
+  "folders.vaultTarget",
+  "folders.writeDrawing",
+  "folders.copy",
+]);
 
 /** The vault rows of the Rust gateway, over `fake.drawings`. */
 function vaultCall(
@@ -141,6 +157,17 @@ export function createFakeBackend(
     drawings: {},
     vaultReadOnly: false,
     vaultOpen: true,
+    folders: createFakeFolderStore({
+      open: () => fake.vaultOpen,
+      readOnly: () => fake.vaultReadOnly,
+      hasDrawing: (path) => path in fake.drawings,
+      putDrawing(path, scene) {
+        fake.drawings[path] = {
+          scene: scene as Record<string, unknown>,
+          revision: `rev-${Object.keys(fake.drawings).length + 1}`,
+        };
+      },
+    }),
     // The storage, vault and markdown rows of the Rust gateway (plugins/gateway.rs).
     pluginCall: async (pluginId, method, params) => {
       fake.gatewayCalls.push({ pluginId, method, params });
@@ -160,6 +187,16 @@ export function createFakeBackend(
           );
         }
         return vaultCall(fake, method, params);
+      }
+      if (FOLDER_ROWS.has(method)) {
+        const plugin = fake.plugins.find((p) => p.id === pluginId)!;
+        if (!plugin.permissions.includes("folders.import")) {
+          throw coded(
+            "PERMISSION",
+            `${pluginId}: ${method} needs the permission "folders.import", which plugin.toml does not declare`,
+          );
+        }
+        return fake.folders.call(method, params);
       }
       if (method === "markdown.parse") {
         // The Rust parser is not in the browser: the testing kit's stand-in.
@@ -181,6 +218,7 @@ export function createFakeBackend(
       }
       throw coded("NOT_FOUND", `Plugins cannot call "${method}"`);
     },
+    importTargetRoot: async (handle) => fake.folders.root(handle),
     dataList: async () =>
       Object.entries(fake.data)
         .map(([id, text]) => ({

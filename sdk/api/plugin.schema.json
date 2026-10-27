@@ -77,8 +77,8 @@
       "uniqueItems": true,
       "items": {
         "title": "Permission",
-        "description": "vault.read reads the drawings in your vault. vault.write creates drawings in your vault.",
-        "enum": ["vault.read", "vault.write"]
+        "description": "vault.read reads the drawings in your vault. vault.write creates drawings in your vault. folders.import reads a folder you pick and writes into a destination you pick (ctx.folders).",
+        "enum": ["vault.read", "vault.write", "folders.import"]
       }
     },
     "data_key": {

@@ -14,6 +14,14 @@ export type {
   PluginManifestInfo,
   PluginPermission,
 } from "./manifest";
+export type {
+  FolderEntry,
+  FoldersApi,
+  PickSourceOptions,
+  PickTargetOptions,
+  SourceFolder,
+  TargetFolder,
+} from "./folders";
 export type { ApiVersion, HostApi } from "./host";
 export type {
   ImportersApi,
@@ -35,12 +43,22 @@ export type {
   NoteStats,
 } from "./markdown";
 export type {
+  BuildSceneOptions,
+  CreateDocumentOptions,
   FlowItem,
   FlowOptions,
   FlowPlacement,
+  PageDocument,
   PageGeometry,
+  PageImageItem,
+  PageItem,
+  PageLineItem,
+  PageRectFill,
+  PageRectItem,
   PageRequest,
   PageSizeName,
+  PageTextItem,
+  PageTextTone,
   PagesApi,
 } from "./pages";
 export type { PanelsApi } from "./panels";

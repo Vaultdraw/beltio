@@ -2328,6 +2328,24 @@ export const VaultApp = ({
   });
   const appFilesRef = useRef(appFiles);
   appFilesRef.current = appFiles;
+  // The shell pieces the plugin host's bridge reaches, read live (they are
+  // re-created per render).
+  const shellRef = useRef({
+    vault,
+    repository,
+    prepareNewDrawingParent,
+    createEntryCore,
+    loadDirectory,
+    handleExpandFolder,
+  });
+  shellRef.current = {
+    vault,
+    repository,
+    prepareNewDrawingParent,
+    createEntryCore,
+    loadDirectory,
+    handleExpandFolder,
+  };
   useEffect(() => {
     setWorkspaceBridge({
       vault: () => {
@@ -2338,6 +2356,71 @@ export const VaultApp = ({
       drawingExists: (path) => appFilesRef.current.drawingExists(path),
       openDrawing: (path, newTab) =>
         appFilesRef.current.openDrawing(path, newTab),
+      newDrawingParent: () => shellRef.current.prepareNewDrawingParent(),
+      createDrawing: (parent, name, json) =>
+        shellRef.current.createEntryCore(parent, name, json),
+      writeDrawing: async (path, json) => {
+        const { vault: v, repository: repo, loadDirectory: load } =
+          shellRef.current;
+        if (!v) {
+          throw new Error("No vault is open");
+        }
+        const created = await repo.writeDrawing({
+          handle: v.handle,
+          path,
+          json,
+          expectedRevision: null,
+          operationId: `pages-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2)}`,
+        });
+        await load(getParentPath(path));
+        return created.revision;
+      },
+      flushDrawing: async (path) => {
+        const doc = docHookRef.current;
+        if (doc.getActive()?.path !== path) {
+          return null;
+        }
+        await doc.flush({ commitText: false });
+        return doc.getActive()?.revision ?? null;
+      },
+      drawingRevision: async (path) => {
+        const { vault: v, repository: repo } = shellRef.current;
+        if (!v) {
+          return null;
+        }
+        try {
+          return (await repo.readRevision?.(v.handle, path)) ?? null;
+        } catch {
+          return null;
+        }
+      },
+      focusElement: (path, elementId) =>
+        setFocusRequest({
+          path,
+          elementId,
+          containerId: null,
+          nonce: ++focusNonceRef.current,
+        }),
+      openVaultFolder: async (handle) => {
+        // Lazy: the plugin host backend is not part of the startup graph.
+        const { getPluginsBackend } = await import("./plugins/host/backend");
+        const root = await getPluginsBackend().importTargetRoot(handle);
+        await appFilesRef.current.openVault(root);
+      },
+      revealFolder: async (path) => {
+        const { loadDirectory: load, handleExpandFolder: expand } =
+          shellRef.current;
+        for (const folder of ["", ...ancestorFolders(path), path]) {
+          if (folder !== "" || path === "") {
+            await load(folder);
+          }
+          if (folder !== "") {
+            expand(folder);
+          }
+        }
+      },
     });
     return () => setWorkspaceBridge(null);
   }, []);

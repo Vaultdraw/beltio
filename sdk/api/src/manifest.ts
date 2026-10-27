@@ -29,12 +29,13 @@ export interface PluginManifestInfo {
 
 /**
  * A permission a plugin can declare. `vault.read` reads the drawings in your
- * vault, `vault.write` creates drawings in it. The names `net`, `secret` and
- * `control` are reserved.
+ * vault, `vault.write` creates drawings in it, `folders.import` (since 0.9.0)
+ * reads a folder you pick and writes into a destination you pick
+ * (`ctx.folders`). The names `net`, `secret` and `control` are reserved.
  *
  * @since 0.2.0
  */
-export type PluginPermission = "vault.read" | "vault.write";
+export type PluginPermission = "vault.read" | "vault.write" | "folders.import";
 
 /**
  * A command declared in `plugin.toml`.

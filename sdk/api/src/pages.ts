@@ -1,7 +1,9 @@
 /**
- * `ctx.pages`: page sizes and a paginator, for plugins that lay content out
- * on the editor's pages (page mode).
+ * `ctx.pages`: page sizes, a paginator, and (since 0.9.0) page documents:
+ * drawings built from laid-out items, streamed into the open editor or
+ * written whole.
  */
+import type { FontFamilyName } from "./scene";
 
 /**
  * The page sizes the editor offers.
@@ -112,4 +114,228 @@ export interface PagesApi {
    * @since 0.8.0
    */
   flow(items: readonly FlowItem[], options: FlowOptions): FlowPlacement[];
+  /**
+   * A new page-mode drawing in the open vault, opened from memory and filled
+   * through `append`; saved by the app in the background and once more on
+   * `finish()`. Rejects with `NO_VAULT`, `READ_ONLY` or `INVALID_ARGUMENT`.
+   *
+   * @since 0.9.0
+   */
+  createDocument(options: CreateDocumentOptions): Promise<PageDocument>;
+  /**
+   * The whole drawing as `.excalidraw` JSON (elements, `appState.pageSetup`,
+   * and a file per picture), for writing elsewhere, such as an import target.
+   * Nothing opens. Rejects with `INVALID_ARGUMENT`.
+   *
+   * @since 0.9.0
+   */
+  buildScene(
+    items: readonly PageItem[],
+    options: BuildSceneOptions,
+  ): Promise<object>;
+}
+
+/**
+ * The tones the host paints text in, with the editor's default palette: the
+ * drawing follows the theme, no colours are stamped in.
+ *
+ * @since 0.9.0
+ */
+export type PageTextTone = "normal" | "muted" | "code" | "link";
+
+/**
+ * What a box is filled with (the editor's default palette).
+ *
+ * @since 0.9.0
+ */
+export type PageRectFill = "code" | "quote" | "callout" | "table" | "none";
+
+/**
+ * A text already wrapped by the plugin: lines joined by `"\n"`, sized by the
+ * plugin's own measuring. The host never measures or re-wraps it.
+ *
+ * @since 0.9.0
+ */
+export interface PageTextItem {
+  /** @since 0.9.0 */
+  type: "text";
+  /** Page index, from 0. @since 0.9.0 */
+  page: number;
+  /** Scene pixels from the page's top-left corner. @since 0.9.0 */
+  x: number;
+  /** @since 0.9.0 */
+  y: number;
+  /** @since 0.9.0 */
+  width: number;
+  /** @since 0.9.0 */
+  height: number;
+  /** At most 10,000 characters. @since 0.9.0 */
+  text: string;
+  /** @since 0.9.0 */
+  fontSize: number;
+  /** @since 0.9.0 */
+  fontFamily: FontFamilyName;
+  /** A multiple of the font size, as `ctx.text.lineHeight` gives it. @since 0.9.0 */
+  lineHeight: number;
+  /** @since 0.9.0 */
+  align?: "left" | "center" | "right";
+  /** @since 0.9.0 */
+  tone?: PageTextTone;
+  /** A link opened from the text (`javascript:`, `data:`, `vbscript:` and `file:` are refused). @since 0.9.0 */
+  link?: string;
+  /** The plugin's own data on the element (at most 4 KiB as JSON), as `NewElement.data`. @since 0.9.0 */
+  data?: Record<string, unknown>;
+}
+
+/**
+ * A filled box behind text (a code block, a quote, a callout, a table).
+ *
+ * @since 0.9.0
+ */
+export interface PageRectItem {
+  /** @since 0.9.0 */
+  type: "rect";
+  /** @since 0.9.0 */
+  page: number;
+  /** @since 0.9.0 */
+  x: number;
+  /** @since 0.9.0 */
+  y: number;
+  /** @since 0.9.0 */
+  width: number;
+  /** @since 0.9.0 */
+  height: number;
+  /** @since 0.9.0 */
+  fill: PageRectFill;
+  /** Default "none". @since 0.9.0 */
+  stroke?: "none" | "thin";
+}
+
+/**
+ * A straight line from `(x, y)` to `(x + width, y + height)`: a rule, a table grid.
+ *
+ * @since 0.9.0
+ */
+export interface PageLineItem {
+  /** @since 0.9.0 */
+  type: "line";
+  /** @since 0.9.0 */
+  page: number;
+  /** @since 0.9.0 */
+  x: number;
+  /** @since 0.9.0 */
+  y: number;
+  /** @since 0.9.0 */
+  width: number;
+  /** @since 0.9.0 */
+  height: number;
+}
+
+/**
+ * A picture. With `bytes`, an image element and its file (at most 10 MiB, PNG,
+ * JPEG, GIF, WebP or SVG, the bytes must look like `mimeType`). Without, a
+ * placeholder box with the `alt` text, linked to `target`.
+ *
+ * @since 0.9.0
+ */
+export interface PageImageItem {
+  /** @since 0.9.0 */
+  type: "image";
+  /** @since 0.9.0 */
+  page: number;
+  /** @since 0.9.0 */
+  x: number;
+  /** @since 0.9.0 */
+  y: number;
+  /** @since 0.9.0 */
+  width: number;
+  /** @since 0.9.0 */
+  height: number;
+  /** @since 0.9.0 */
+  mimeType: string;
+  /** @since 0.9.0 */
+  bytes?: Uint8Array;
+  /** @since 0.9.0 */
+  alt?: string;
+  /** Where the picture came from (the placeholder's link). @since 0.9.0 */
+  target: string;
+}
+
+/**
+ * One item of a laid-out page, as the plugin's layout produced it. Coordinates
+ * are scene pixels relative to the page's top-left corner.
+ *
+ * @since 0.9.0
+ */
+export type PageItem =
+  | PageTextItem
+  | PageRectItem
+  | PageLineItem
+  | PageImageItem;
+
+/**
+ * Options of `pages.createDocument`.
+ *
+ * @since 0.9.0
+ */
+export interface CreateDocumentOptions {
+  /**
+   * The drawing's name without the extension. A name already taken gets a
+   * number: `Note (imported) 2.excalidraw`.
+   *
+   * @since 0.9.0
+   */
+  name: string;
+  /** Vault folder (`""` is the root). Default: where a new drawing goes. @since 0.9.0 */
+  parent?: string;
+  /** The page size and layout. Default: A4, portrait, separate pages. @since 0.9.0 */
+  setup?: PageRequest;
+  /**
+   * Open the drawing and stream into it (the default). With `false` the items
+   * are collected and written once on `finish()`, and nothing opens.
+   *
+   * @since 0.9.0
+   */
+  open?: boolean;
+}
+
+/**
+ * A page-mode drawing being filled. Items are queued and applied one frame
+ * at a time, so the first page shows while the rest is still coming.
+ *
+ * @since 0.9.0
+ */
+export interface PageDocument {
+  /** The drawing's vault-relative path, name de-duplicated. @since 0.9.0 */
+  readonly path: string;
+  /**
+   * Queues items; `pageCount` is the number of pages they reach (the drawing
+   * grows to it, never shrinks). Invalid items are refused with
+   * `INVALID_ARGUMENT` and nothing of that call is queued.
+   *
+   * @since 0.9.0
+   */
+  append(items: readonly PageItem[], pageCount: number): void;
+  /**
+   * Applies what is queued, then saves once. Resolves to the path and the
+   * saved revision. If the user closed the drawing while items were still
+   * coming, what was applied stays saved and the rest is dropped.
+   *
+   * @since 0.9.0
+   */
+  finish(): Promise<{ path: string; revision: string }>;
+  /** Drops what is still queued, keeps and saves what was applied. @since 0.9.0 */
+  abort(): Promise<void>;
+}
+
+/**
+ * Options of `pages.buildScene`.
+ *
+ * @since 0.9.0
+ */
+export interface BuildSceneOptions {
+  /** @since 0.9.0 */
+  setup?: PageRequest;
+  /** Pages in the drawing, 1 or more. @since 0.9.0 */
+  pageCount: number;
 }

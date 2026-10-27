@@ -9,6 +9,8 @@ import type { PluginInfo } from "./types";
 export const PERMISSION_TEXT: Readonly<Record<string, string>> = {
   "vault.read": "Read the drawings in your vault",
   "vault.write": "Create drawings in your vault",
+  "folders.import":
+    "Read a folder you pick and write into a destination you pick",
 };
 
 /** The consent line of one permission (the raw name for one this app does not know). */

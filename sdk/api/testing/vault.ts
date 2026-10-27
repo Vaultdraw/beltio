@@ -27,6 +27,7 @@ interface Stored {
   elements: FakeElement[];
   revision: number;
   modifiedAt: number;
+  appState?: Record<string, unknown>;
 }
 
 const KNOWN: ReadonlySet<string> = new Set([
@@ -78,6 +79,21 @@ const project = (el: FakeElement): SceneElement => {
 export interface VaultModel {
   fake: FakeVault;
   workspace: FakeWorkspace;
+  /** The page-document side: create-only writes with app state, saves, revisions. */
+  has(path: string): boolean;
+  /** Writes (or replaces, for a save) a drawing with editor elements and app state; returns the revision. */
+  put(
+    path: string,
+    elements: readonly FakeElement[],
+    appState: Record<string, unknown>,
+    save?: boolean,
+  ): string;
+  revision(path: string): string | null;
+  /** The open vault, or throws NO_VAULT. */
+  needVault(): { name: string; readOnly: boolean };
+  /** Records a `TargetFolder.open()`. */
+  openedVault(path: string): void;
+  revealed(path: string): void;
   /** `ctx.vault` of one plugin. */
   vaultApi(
     pluginId: string,
@@ -102,6 +118,9 @@ export function createVaultModel(
   const drawings = new Map<string, Stored>();
   let info: { name: string; readOnly: boolean } | null = { ...DEFAULT_INFO };
   let opened: { path: string; newTab: boolean }[] = [];
+  let openedVaults: string[] = [];
+  let revealedFolders: string[] = [];
+  let saves: string[] = [];
 
   const needVault = () => {
     if (!info) {
@@ -130,9 +149,16 @@ export function createVaultModel(
     setVault(next) {
       info = next ? { ...next } : null;
     },
+    saves: () => [...saves],
+    pageSetup: (path) =>
+      drawings.get(path)?.appState?.pageSetup as
+        | Record<string, unknown>
+        | undefined,
   };
   const workspace: FakeWorkspace = {
     opened: () => opened.map((o) => ({ ...o })),
+    openedVaults: () => [...openedVaults],
+    revealed: () => [...revealedFolders],
   };
 
   const list = (dir: string): VaultEntry[] => {
@@ -177,6 +203,32 @@ export function createVaultModel(
   return {
     fake,
     workspace,
+    has: (path) => drawings.has(path),
+    put(path, elements, appState, save = false) {
+      const prev = drawings.get(path);
+      const next: Stored = {
+        elements: [...elements],
+        revision: (prev?.revision ?? 0) + 1,
+        modifiedAt: Date.now(),
+        appState,
+      };
+      drawings.set(path, next);
+      if (save) {
+        saves.push(path);
+      }
+      return `r${next.revision}`;
+    },
+    revision(path) {
+      const d = drawings.get(path);
+      return d ? `r${d.revision}` : null;
+    },
+    needVault,
+    openedVault(path) {
+      openedVaults.push(path);
+    },
+    revealed(path) {
+      revealedFolders.push(path);
+    },
     vaultApi(pluginId, permissions, dataKey) {
       return {
         info: () => (info ? { ...info } : null),
@@ -283,6 +335,9 @@ export function createVaultModel(
       drawings.clear();
       info = { ...DEFAULT_INFO };
       opened = [];
+      openedVaults = [];
+      revealedFolders = [];
+      saves = [];
     },
   };
 }

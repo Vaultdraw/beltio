@@ -1,7 +1,8 @@
 import { hasDrawingExt } from "../vault/fileKind";
 /**
  * What the plugin host may ask the vault shell (`ctx.vault.info`,
- * `ctx.workspace`). VaultApp sets it; the host reads it. No imports, so the
+ * `ctx.workspace`, `ctx.pages.createDocument`, `ctx.scene.scrollTo`,
+ * `ctx.folders`). VaultApp sets it; the host reads it. No imports, so the
  * startup graph stays free of plugin host code.
  */
 export interface WorkspaceBridge {
@@ -12,6 +13,29 @@ export interface WorkspaceBridge {
   drawingExists(path: string): Promise<boolean>;
   /** Same core as the control method `file.open`; false when it failed. */
   openDrawing(path: string, newTab: boolean): Promise<boolean>;
+  /**
+   * The folder a new drawing goes to (the `files.new_drawing_folder`
+   * setting, created when missing, else next to the open drawing). null when
+   * no vault is open or the folder could not be created (the app showed why).
+   */
+  newDrawingParent(): Promise<string | null>;
+  /** Writes a new drawing from scene JSON and opens it, as the UI's "New drawing" does. */
+  createDrawing(parent: string, name: string, json: string): Promise<void>;
+  /** Writes a new drawing from scene JSON without opening it; resolves to its revision. */
+  writeDrawing(path: string, json: string): Promise<string>;
+  /**
+   * Saves pending edits when `path` is the open drawing and resolves to the
+   * revision on disk after; null when the drawing is not open.
+   */
+  flushDrawing(path: string): Promise<string | null>;
+  /** The revision of a drawing on disk, null when it does not exist. */
+  drawingRevision(path: string): Promise<string | null>;
+  /** Selects an element of the open drawing and scrolls it into view (the search-result path). */
+  focusElement(path: string, elementId: string): void;
+  /** Opens the folder behind an import target handle as the vault (`import_target_root`). */
+  openVaultFolder(handle: string): Promise<void>;
+  /** Expands the file tree down to `path` (a vault-relative folder). */
+  revealFolder(path: string): Promise<void>;
 }
 
 let bridge: WorkspaceBridge | null = null;

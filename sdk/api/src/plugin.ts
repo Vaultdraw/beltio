@@ -10,6 +10,7 @@ import type { PanelsApi } from "./panels";
 import type { SceneContextApi } from "./scene";
 import type { SettingsApi } from "./settings";
 import type { StorageApi } from "./storage";
+import type { FoldersApi } from "./folders";
 import type { FontsApi, TextApi } from "./text";
 import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
@@ -88,6 +89,8 @@ export interface PluginContext {
   readonly fonts: FontsApi;
   /** @since 0.8.0 */
   readonly pages: PagesApi;
+  /** @since 0.9.0 */
+  readonly folders: FoldersApi;
   /**
    * Disposed in reverse order on disable/reload/quit.
    *

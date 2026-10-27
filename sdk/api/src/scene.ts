@@ -396,4 +396,12 @@ export interface SceneContextApi {
    * @since 0.4.0
    */
   path(): string | null;
+  /**
+   * Selects an element of the active drawing and brings it into view (a bound
+   * label focuses its container). Nothing happens for an unknown id or when
+   * no drawing is open.
+   *
+   * @since 0.9.0
+   */
+  scrollTo(id: string): void;
 }

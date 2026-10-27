@@ -297,7 +297,7 @@ describe("ctx.workspace", () => {
       activePath: () => null,
       drawingExists: async () => true,
       openDrawing: async () => false,
-    });
+    } as never);
     await expect(ctx.workspace.open("a.excalidraw")).rejects.toMatchObject({
       code: "IO_ERROR",
     });

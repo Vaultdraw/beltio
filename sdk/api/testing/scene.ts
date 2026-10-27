@@ -102,6 +102,10 @@ const CENTER = { x: VIEWPORT.width / 2, y: VIEWPORT.height / 2 };
 
 export interface SceneModel {
   fake: FakeScene;
+  /** Adds editor elements (a page document's frame) and merges app state. */
+  append(elements: readonly FakeElement[], appState?: Record<string, unknown>): void;
+  /** Replaces the app state (a load). */
+  setAppState(appState: Record<string, unknown>): void;
   /** `ctx.scene` of one plugin. */
   api(plumbing: ScenePlumbing, hooks: () => Hooks): SceneContextApi;
   dispose(): void;
@@ -221,6 +225,8 @@ export function createSceneModel(
   let frame: ReturnType<typeof setTimeout> | null = null;
   const listeners = new Set<(e: Change) => void>();
   const batches: FakeBatch[] = [];
+  let appState: Record<string, unknown> = {};
+  const scrolled: string[] = [];
   /** Pictures of the drawing by SHA-1 (what the editor's file store holds). */
   const files = new Map<string, { mime: string; bytes: Uint8Array }>();
 
@@ -317,6 +323,8 @@ export function createSceneModel(
           { mime: f.mime, bytes: new Uint8Array(f.bytes) },
         ]),
       ),
+    scrolledTo: () => [...scrolled],
+    appState: () => ({ ...appState }),
   };
 
   let groupSeq = 0;
@@ -572,6 +580,16 @@ export function createSceneModel(
 
   return {
     fake,
+    append(els, next) {
+      elements = [...elements, ...(els as unknown as El[])];
+      if (next) {
+        appState = { ...appState, ...next };
+      }
+      touch();
+    },
+    setAppState(next) {
+      appState = { ...next };
+    },
     api({ track, guard, logError, dataKey }, hooks) {
       const refusal = (what: string, code?: string) => {
         const text = `scene.batch: ${what}`;
@@ -681,6 +699,12 @@ export function createSceneModel(
             : (structuredClone(value) as Json);
         },
         path: () => path,
+        scrollTo(id) {
+          if (path === null || typeof id !== "string") {
+            return;
+          }
+          scrolled.push(id);
+        },
       };
     },
     dispose() {

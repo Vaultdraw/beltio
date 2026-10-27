@@ -8,8 +8,6 @@ import { allowsScope } from "../settings/declaredSettings";
 import { getPluginSetting, setPluginSetting } from "../settings/pluginSettings";
 import { pluginSettingDecl } from "../settings/registry";
 
-import { flowPages, pageGeometry } from "../../../../sdk/api/shared/pages";
-
 import { errorText, logLine, reportPluginError } from "./errors";
 import { guard } from "./guard";
 import { createHostApi } from "./hostContext";
@@ -22,7 +20,9 @@ import {
   setImporter,
 } from "./importerRegistry";
 
+import { createFoldersApi } from "./foldersContext";
 import { createMarkdownApi } from "./markdownContext";
+import { createPagesApi } from "./pagesContext";
 import { createSceneApi } from "./sceneContext";
 import { createFontsApi, createTextApi } from "./textContext";
 import { createThemeApi } from "./themeContext";
@@ -32,6 +32,7 @@ import { createWorkspaceApi } from "./workspaceContext";
 
 import type {
   Disposable,
+  FoldersApi,
   FontsApi,
   HostApi,
   ImportersApi,
@@ -142,6 +143,7 @@ export function createPluginContext(
   let textApi: TextApi | undefined;
   let fontsApi: FontsApi | undefined;
   let pagesApi: PagesApi | undefined;
+  let foldersApi: FoldersApi | undefined;
   let workspaceApi: WorkspaceApi | undefined;
   let importersApi: ImportersApi | undefined;
 
@@ -279,10 +281,13 @@ export function createPluginContext(
       return (fontsApi ??= createFontsApi(win.document));
     },
     get pages() {
-      return (pagesApi ??= Object.freeze({
-        geometry: pageGeometry,
-        flow: flowPages,
+      return (pagesApi ??= createPagesApi(track, isLive, {
+        dataKey,
+        frame: (cb) => win.requestAnimationFrame(cb),
       }));
+    },
+    get folders() {
+      return (foldersApi ??= createFoldersApi(rt));
     },
     subscriptions,
     setTimeout: timer(
