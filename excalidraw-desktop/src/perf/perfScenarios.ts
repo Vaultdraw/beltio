@@ -43,6 +43,8 @@ export type PerfContext = {
   scenarioFilter?: ScenarioFilter;
   iterations?: Partial<{
     open: number;
+    /** drawing switches measured by the switch scenario (alternating small/medium) */
+    switches: number;
     save: number;
     typingChars: number;
     panMs: number;
@@ -69,6 +71,9 @@ type PerfResult = {
 
 const DEFAULTS = {
   open: 3,
+  // 40 alternating switches: 2 cold + 38 warm (19 per size). Enough for a stable p95
+  // of the switch.landing.* / switch.commit.* metrics (personal/feature/switch-metric/REPORT.md).
+  switches: 40,
   save: 3,
   typingChars: 40,
   panMs: 2000,
@@ -92,19 +97,18 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
   const sleep = (ms: number) =>
     new Promise<void>((resolve) => win.setTimeout(resolve, ms));
 
-  /** rAF with a watchdog: a hidden/occluded window stops rAF, so fail fast instead of hanging. */
-  const raf = () =>
-    new Promise<void>((resolve, reject) => {
+  /** rAF (with a stall watchdog) resolving with `performance.now()` read inside the callback (no microtask lag). */
+  const rafAt = () =>
+    new Promise<number>((resolve, reject) => {
       let fired = false;
       win.requestAnimationFrame(() => {
         fired = true;
-        resolve();
+        resolve(now());
       });
       win.setTimeout(() => {
         if (fired) {
           return;
         }
-        // Grace period: a long main-thread block delays timer and frame alike.
         win.setTimeout(() => {
           if (!fired) {
             reject(new Error("rAF stalled (window hidden/occluded?)"));
@@ -113,10 +117,12 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
       }, 2000);
     });
 
-  /** rAF, then a macrotask: resolves once the frame that followed the DOM change was produced. */
-  const afterPaint = async () => {
-    await raf();
-    await new Promise<void>((resolve) => {
+  /** rAF with a watchdog: a hidden/occluded window stops rAF, so fail fast instead of hanging. */
+  const raf = () => rafAt().then(() => undefined);
+
+  /** A macrotask: runs once the frame produced after the rAF callback is done. */
+  const macrotask = () =>
+    new Promise<void>((resolve) => {
       const channel = new win.MessageChannel();
       channel.port1.onmessage = () => {
         channel.port1.close();
@@ -124,6 +130,11 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
       };
       channel.port2.postMessage(0);
     });
+
+  /** rAF, then a macrotask: resolves once the frame that followed the DOM change was produced. */
+  const afterPaint = async () => {
+    await raf();
+    await macrotask();
   };
 
   /** Resolves as soon as `cond` holds: checked on every DOM mutation (before paint) plus a 25ms poll. */
@@ -294,8 +305,10 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
   type OpenTiming = {
     /** click to the editor ready and 2 painted frames (the open.* metric) */
     total: number;
-    /** click to the editor ready (new scene committed), no frame wait */
+    /** click to the editor ready (new scene committed), no frame wait: sub-frame */
     ready: number;
+    /** click to the first rAF callback after the scene committed (performance.now in the callback) */
+    landing: number;
   };
   /** Opens a root-level drawing via its tree row (click to 2 painted frames). */
   const openByRow = async (
@@ -316,7 +329,10 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
       OPEN_TIMEOUT,
     );
     const ready = now() - t0;
-    await afterPaint();
+    // first rAF after the scene landed: stamped inside the callback, then the
+    // macrotask that finishes the afterPaint() (same ops as before).
+    const landing = (await rafAt()) - t0;
+    await macrotask();
     const paint1 = now() - t0;
     await afterPaint();
     const elapsed = now() - t0;
@@ -335,7 +351,7 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
       });
     }
     fixEditorSize();
-    return { total: elapsed, ready };
+    return { total: elapsed, ready, landing };
   };
   const isOpen = (path: string) => {
     const id = editorId();
@@ -822,10 +838,21 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
     await ensureOpen(pair[1]);
     await sleep(300);
     const seen = new Set<string>();
-    for (let k = 0; k < iter.open * 4; k++) {
+    for (let k = 0; k < iter.switches; k++) {
       const target = pair[k % 2];
-      const { total } = await openByRow(target);
+      const { total, ready, landing } = await openByRow(target);
+      // report-only, kept for continuity: two painted frames, so frame-quantised.
       push(seen.has(target) ? "switch.recent" : "switch.drawing", total);
+      // gated: warm switches only, split by drawing size (the two sizes are two
+      // different distributions, so one mixed median would describe neither).
+      // The first switch to each drawing is cold (JIT, first parse): switch.landing.cold.
+      const size = target === openTargets.small ? "small" : "medium";
+      if (seen.has(target)) {
+        push(`switch.landing.${size}`, landing);
+        push(`switch.commit.${size}`, ready);
+      } else {
+        push("switch.landing.cold", landing);
+      }
       seen.add(target);
       await sleep(300);
     }
