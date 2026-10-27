@@ -109,7 +109,7 @@ export interface PluginContext {
   readonly tools: ToolsApi;
   /** Custom shapes declared with `[[contributes.shapes]]`. @since 0.16.0 */
   readonly shapes: ShapesApi;
-  /** Methods other programs can call, declared with `[[contributes.methods]]`. Needs the permission `control`. @since 0.21.0 */
+  /** Methods other programs can call, declared with `[[contributes.methods]]`. Needs the permission `control`. @since 0.22.0 */
   readonly methods: MethodsApi;
   /** Views that cover the drawing area. @since 0.17.0 */
   readonly overlays: OverlaysApi;

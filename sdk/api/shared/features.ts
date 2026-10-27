@@ -1,7 +1,7 @@
 // Generated from the @since tags of sdk/api/src by sdk/api/scripts/gen-features.mjs. Do not edit.
 
 /** The API revision of this build (the version of sdk/api/package.json). */
-export const API_REVISION = "0.21.0";
+export const API_REVISION = "0.22.0";
 
 /** Feature name to the revision that added it. `ctx.host.has(name)` is true for these. */
 export const FEATURES: Readonly<Record<string, string>> = {
@@ -40,8 +40,8 @@ export const FEATURES: Readonly<Record<string, string>> = {
   "markdown.parse": "0.8.0",
   menus: "0.12.0",
   "menus.target": "0.12.0",
-  methods: "0.21.0",
-  "methods.register": "0.21.0",
+  methods: "0.22.0",
+  "methods.register": "0.22.0",
   overlays: "0.17.0",
   "overlays.open": "0.17.0",
   pages: "0.8.0",

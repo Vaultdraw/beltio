@@ -172,7 +172,7 @@ vaultdraw plugin methods                                   # methods plugins exp
 vaultdraw plugin call mermaid to_drawing '{"text":"graph TD; A-->B"}'   # JSON in (or - for stdin), JSON out
 ```
 
-Needs the app running. A disabled plugin is refused (`UNAVAILABLE`); nothing loads until you run a command or call a method. A plugin declares its methods in `plugin.toml` and needs the `control` permission; see the [plugin reference](sdk/docs/reference.md#methods-other-programs-can-call-since-0210).
+Needs the app running. A disabled plugin is refused (`UNAVAILABLE`); nothing loads until you run a command or call a method. A plugin declares its methods in `plugin.toml` and needs the `control` permission; see the [plugin reference](sdk/docs/reference.md#methods-other-programs-can-call-since-0220).
 
 ## Configuration
 

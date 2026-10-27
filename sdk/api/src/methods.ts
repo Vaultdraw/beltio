@@ -7,7 +7,7 @@ import type { Json } from "./storage";
  * method with `mcp = true` while the user has AI turned on, AI apps reach them. The plugin
  * loads on the first call; nothing runs until then.
  *
- * @since 0.21.0
+ * @since 0.22.0
  */
 export interface MethodsApi {
   /**
@@ -16,7 +16,7 @@ export interface MethodsApi {
    * or an answer later than the method's `timeout_ms` (default 30 s) fails the call with a
    * message the caller sees.
    *
-   * @since 0.21.0
+   * @since 0.22.0
    */
   register(
     name: string,

@@ -770,7 +770,7 @@ for (const file of await src.list()) {
 await target.open();
 ```
 
-## Methods other programs can call (since 0.21.0)
+## Methods other programs can call (since 0.22.0)
 
 A plugin can expose JSON methods to the `vaultdraw` command, scripts on the control socket and, if you allow it, AI apps. Declare them in `plugin.toml`, bind them in `activate`. The plugin loads on the first call; nothing runs until then.
 
