@@ -1,0 +1,46 @@
+# Linux checks: typecheck, unit tests, cargo tests, the functional end-to-end suite on
+# Playwright WebKit under Xvfb, and a bundle smoke (deb, AppImage).
+# Written 2026-10-27 from a verified run in a Debian 12 x86_64 VM (see
+# personal/feature/linux-e2e/REPORT.md). Enabling it (pushing this file) is an owner action.
+name: linux
+on:
+  push: { branches: [main] }
+  pull_request:
+concurrency: { group: linux-${{ github.ref }}, cancel-in-progress: true }
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults: { run: { working-directory: excalidraw-desktop } }
+    env:
+      CI: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: yarn, cache-dependency-path: yarn.lock }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: excalidraw-desktop/src-tauri }
+      - name: System libraries for Tauri 2 and Xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
+            libxdo-dev patchelf xdg-utils desktop-file-utils xvfb
+      - run: npx --yes yarn@1.22.22 install --frozen-lockfile
+        working-directory: .
+      - run: npx --yes yarn@1.22.22 test:typecheck
+        working-directory: .
+      - run: node --test scripts/*.test.mjs perf/lib/*.test.mjs
+      - run: npx vitest run --maxWorkers=2 --minWorkers=1
+      - run: cargo test --workspace -j 2 --manifest-path src-tauri/Cargo.toml
+      - run: npx playwright install --with-deps webkit
+      - name: Functional end-to-end suite (WebKit, Xvfb)
+        run: xvfb-run -a -s "-screen 0 1280x850x24" npx playwright test
+        env: { E2E_WORKERS: "2" }
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: e2e-results, path: .cache/e2e-results-*, if-no-files-found: ignore }
+      - name: Bundle (deb, AppImage) as a smoke check
+        run: npx --yes yarn@1.22.22 tauri build --ci
+      - run: desktop-file-validate src-tauri/linux/vaultdraw.desktop
