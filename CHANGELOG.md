@@ -7,6 +7,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 ### New
 
 - **Copy the AI app setup.** The palette command `AI: Copy the AI app setup (MCP server config)` (`ai.copyMcpSetup`) copies the `mcpServers` entry for `vaultdraw mcp`. `vaultdraw mcp` now also answers JSON-RPC batches, survives a line that is not UTF-8, keeps answering `ping` while a tool call is slow, and reads a modern client's name from each request.
+- **Plugin API 0.18.0: the vault graph as bytes.** `ctx.vault.graph.read()` returns the whole link graph in one binary call, and `graph.layout.load/save` keeps a graph view's layout per vault. Needs `vault.read` (and `vault.write` to save). New native command `plugin_call_raw` carries bytes with the same allowlist, permission and consent checks as `plugin_call`, so a graph of 50k notes does not go through JSON.
 
 - **Plugin API 0.17.0: overlays.** `ctx.overlays.open(component)` shows a plugin view over the whole drawing area (the editor stays loaded but frozen behind it), the surface the graph and gallery extensions use. Nothing to declare and nothing loaded until one opens. Example `overlay-demo`, docs in `sdk/docs/surfaces.md`.
 

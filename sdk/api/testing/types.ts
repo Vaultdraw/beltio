@@ -173,6 +173,10 @@ export interface FakeVault {
   drawings(): Record<string, readonly FakeElement[]>;
   /** The open vault; null = no vault is open (`NO_VAULT`). Default: a writable "mock-vault". */
   setVault(info: { name: string; readOnly: boolean } | null): void;
+  /** The bytes `ctx.vault.graph.read()` returns. */
+  setGraph(bytes: Uint8Array): void;
+  /** The layout bytes `ctx.vault.graph.layout.save` stored (empty when none). */
+  graphLayout(): Uint8Array;
   /** Paths the app saved for a page document (`finish` and `abort`), in order. */
   saves(): string[];
   /** The saved page setup of a drawing (`appState.pageSetup`), or undefined. */

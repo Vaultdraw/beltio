@@ -455,6 +455,13 @@ interface VaultApi {
     path: string,
     ops: readonly SceneOp[],
   ): Promise<{ path: string; revision: string; ids: string[]; refs: Record<string, string> }>; // needs vault.write; refs since 0.4.0
+  graph: {
+    read(): Promise<Uint8Array>; // needs vault.read; since 0.18.0
+    layout: {
+      load(): Promise<Uint8Array>; // needs vault.read
+      save(bytes: Uint8Array): Promise<void>; // needs vault.write
+    };
+  };
 }
 ```
 
@@ -464,6 +471,9 @@ interface VaultApi {
 | `list(dir)` | One folder (`""` is the root), folders first, then by name. Dot entries and symlinks are left out. |
 | `readDrawing(path)` | The drawing's elements as plain copies, and its revision. Files over 32 MiB are refused. |
 | `createDrawing(path, ops)` | A new drawing built from `add` and `group` ops. The path must not exist. Returns the ids of the new elements, in op order, and `refs` (since 0.4.0). |
+
+| `graph.read()` | The whole link graph of the open vault as bytes (the app's `VDG1` export), in one binary call. Starts the link index on first use. Since 0.18.0. |
+| `graph.layout.load()` / `save(bytes)` | A graph view's saved layout, kept per vault in the app's state folder (never in the vault). Empty when none; saving empty clears it. Since 0.18.0. |
 
 - `createDrawing` only creates. Plugins cannot overwrite, rename, move or delete a drawing, and cannot write any other file type.
 - `createDrawing` takes the ops of `ctx.scene.batch` that can work on a new drawing: `add` and, since 0.4.0, `group`, with refs and `data`. `update` and `delete` are refused, because nothing exists yet to change. The same batch rules apply.

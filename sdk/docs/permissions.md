@@ -39,6 +39,8 @@ Since API 0.3.0 the app checks them in its native layer: every native call of th
 | `ctx.events.on("vault.changed", …)`           | `vault.read`  | 0.6.0 |
 | `ctx.vault.createDrawing(path, ops)`          | `vault.write` | 0.6.0 |
 | `ctx.vault.info()`                            | none          | 0.6.0 |
+| `ctx.vault.graph.read()`, `graph.layout.load()` | `vault.read`  | 0.18.0 |
+| `ctx.vault.graph.layout.save(bytes)`          | `vault.write` | 0.18.0 |
 | `ctx.workspace.open(path)` and `activePath()` | none          | 0.6.0 |
 | `ctx.importers.register(id, importer)`        | none          | 0.6.0 |
 | `ctx.storage.global`                          | none          | 0.3.0 |

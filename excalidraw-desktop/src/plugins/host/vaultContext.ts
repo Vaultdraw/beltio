@@ -17,7 +17,7 @@ import {
 import { getPreferences } from "../../vault/preferences";
 import { getWorkspaceBridge } from "../workspaceBridge";
 
-import { createGateway } from "./gateway";
+import { createGateway, createRawGateway } from "./gateway";
 
 import type { SceneElement, SceneOp, VaultApi, VaultEntry } from "../api";
 import type { PluginRuntime } from "./types";
@@ -31,11 +31,28 @@ interface ReadReply {
 export function createVaultApi(rt: PluginRuntime): VaultApi {
   const id = rt.info.id;
   const call = createGateway(id);
+  const raw = createRawGateway(id);
   // Read at call time: an update can change the declared permissions.
   const need = (method: string, permission: "vault.read" | "vault.write") =>
     requirePermission(id, rt.info.permissions, method, permission);
   return {
     info: () => getWorkspaceBridge()?.vault() ?? null,
+    graph: {
+      async read() {
+        need("vault.graph", "vault.read");
+        return raw("vault.graph");
+      },
+      layout: {
+        async load() {
+          need("vault.graphLayout.load", "vault.read");
+          return raw("vault.graphLayout.load");
+        },
+        async save(bytes) {
+          need("vault.graphLayout.save", "vault.write");
+          await raw("vault.graphLayout.save", bytes);
+        },
+      },
+    },
     async list(dir = "") {
       need("vault.list", "vault.read");
       checkVaultPath(dir, "folder");

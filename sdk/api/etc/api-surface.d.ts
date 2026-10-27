@@ -135,7 +135,7 @@ export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { FontsApi, TextApi, TextFont } from "./text";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
-export type { VaultApi, VaultEntry } from "./vault";
+export type { VaultApi, VaultEntry, VaultGraphApi } from "./vault";
 export type { WorkspaceApi } from "./workspace";
 export { SHARED_SPECIFIERS } from "./specifiers";
 
@@ -797,6 +797,13 @@ export interface VaultEntry {
     modifiedAt: number;
     size: number;
 }
+export interface VaultGraphApi {
+    read(): Promise<Uint8Array>;
+    readonly layout: {
+        load(): Promise<Uint8Array>;
+        save(bytes: Uint8Array): Promise<void>;
+    };
+}
 export interface VaultApi {
     info(): {
         name: string;
@@ -813,6 +820,7 @@ export interface VaultApi {
         ids: string[];
         refs: Record<string, string>;
     }>;
+    readonly graph: VaultGraphApi;
 }
 
 // views.ts

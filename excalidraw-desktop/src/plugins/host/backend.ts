@@ -30,6 +30,12 @@ export interface PluginsBackend {
     method: string,
     params: Record<string, unknown> | null,
   ): Promise<unknown>;
+  /** The binary gateway (`plugin_call_raw`): bytes in and out, same checks as `pluginCall`. */
+  pluginCallRaw(
+    pluginId: string,
+    method: string,
+    body?: Uint8Array,
+  ): Promise<Uint8Array>;
   /** The absolute path behind an import target handle (`folders.pickTarget`), for opening it as a vault. Core only. */
   importTargetRoot(handle: string): Promise<string>;
   /** Plugins with saved data (`storage.global`) and its size in bytes. */
@@ -71,6 +77,17 @@ export function createTauriBackend(win?: Window | null): PluginsBackend {
     pickFolder: () => call<string | null>("plugins_pick_folder", {}),
     pluginCall: (pluginId, method, params) =>
       call<unknown>("plugin_call", { pluginId, method, params }),
+    pluginCallRaw: async (pluginId, method, body) => {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const reply = await invoke<ArrayBuffer | number[]>(
+        "plugin_call_raw",
+        body ?? new Uint8Array(0),
+        { headers: { "plugin-id": pluginId, method } },
+      );
+      return Array.isArray(reply)
+        ? Uint8Array.from(reply)
+        : new Uint8Array(reply);
+    },
     importTargetRoot: (handle) =>
       call<string>("import_target_root", { handle }),
     dataList: () =>

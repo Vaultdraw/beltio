@@ -813,6 +813,9 @@ fn gateway_allowlist_maps_methods_to_permissions() {
             ("vault.list", Some("vault.read")),
             ("file.read", Some("vault.read")),
             ("file.write", Some("vault.write")),
+            ("vault.graph", Some("vault.read")),
+            ("vault.graphLayout.load", Some("vault.read")),
+            ("vault.graphLayout.save", Some("vault.write")),
             ("storage.read", None),
             ("storage.write", None),
             ("markdown.parse", None),
@@ -1443,4 +1446,21 @@ fn shape_rules() {
     bad(&shape("[[contributes.shapes]]\nid = \"card\"\ntitle = \"Again\"\n"), "card");
     let many: String = (0..9).map(|i| format!("\n[[contributes.shapes]]\nid = \"s{i}\"\ntitle = \"S\"\n")).collect();
     bad(&with(&many), "Too many shapes");
+}
+
+#[test]
+fn raw_rows_need_their_permission_and_are_not_json_routes() {
+    let none = consent::Record::new();
+    let reader = info_with("reader", "\"vault.read\"", Source::Bundled);
+    for m in ["vault.graph", "vault.graphLayout.load"] {
+        assert_eq!(gateway::authorize(m, "reader", Some(&reader), || none.clone()).unwrap().route, gateway::Route::Raw, "{m}");
+    }
+    // Saving the layout writes: a read-only plugin is refused.
+    let e = gateway::authorize("vault.graphLayout.save", "reader", Some(&reader), || none.clone()).unwrap_err();
+    assert_eq!(e.code, "PERMISSION");
+    let writer = info_with("writer", "\"vault.read\", \"vault.write\"", Source::Bundled);
+    assert!(gateway::authorize("vault.graphLayout.save", "writer", Some(&writer), || none.clone()).is_ok());
+    // A user plugin needs the confirmation too.
+    let user = info_with("user", "\"vault.read\"", Source::User);
+    assert_eq!(gateway::authorize("vault.graph", "user", Some(&user), || none.clone()).unwrap_err().code, "PERMISSION");
 }

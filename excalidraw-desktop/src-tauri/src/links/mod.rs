@@ -447,9 +447,24 @@ pub(crate) async fn links_remeasure_done(handle: String, path: String, state: St
 #[tauri::command]
 #[cfg_attr(test, allow(dead_code))]
 pub(crate) async fn vault_graph(handle: String, search: State<'_, SearchService>) -> Result<tauri::ipc::Response> {
-    let vi = vault_index(&search, &handle)?;
+    Ok(tauri::ipc::Response::new(graph_bytes(&search, &handle)?))
+}
+
+/// The graph bytes behind `vault_graph` (also the plugin gateway's raw route `vault.graph`).
+pub(crate) fn graph_bytes(search: &SearchService, handle: &str) -> Result<Vec<u8>> {
+    let vi = vault_index(search, handle)?;
     let bytes = with_links(&vi, |i| i.graph_bytes(graph::export).unwrap_or_default());
-    Ok(tauri::ipc::Response::new(bytes.to_vec()))
+    Ok(bytes.to_vec())
+}
+
+/// Saved layout bytes of a vault (also the plugin gateway's raw route `vault.graphLayout.load`).
+pub(crate) fn layout_bytes(v: &Vault) -> Vec<u8> {
+    graph_dir_for(v).map(|d| layout_store::load(&d)).unwrap_or_default()
+}
+
+/// Saves layout bytes of a vault; empty clears (also the plugin gateway's `vault.graphLayout.save`).
+pub(crate) fn layout_write(v: &Vault, bytes: &[u8]) -> Result<()> {
+    layout_store::save(&graph_dir_for(v)?, bytes)
 }
 
 fn graph_dir_for(v: &Vault) -> Result<PathBuf> {
@@ -462,7 +477,7 @@ fn graph_dir_for(v: &Vault) -> Result<PathBuf> {
 #[cfg_attr(test, allow(dead_code))]
 pub(crate) async fn graph_layout_load(handle: String, state: State<'_, crate::Service>) -> Result<tauri::ipc::Response> {
     let v = crate::vault_for(&state, &handle)?;
-    Ok(tauri::ipc::Response::new(graph_dir_for(&v).map(|d| layout_store::load(&d)).unwrap_or_default()))
+    Ok(tauri::ipc::Response::new(layout_bytes(&v)))
 }
 
 /// Saves the layout: raw request body, vault handle in the `handle` header (empty body clears).
@@ -474,5 +489,5 @@ pub(crate) async fn graph_layout_save(request: tauri::ipc::Request<'_>, state: S
         return Err(err("INVALID_ARGUMENT", "Expected a raw binary body"));
     };
     let v = crate::vault_for(&state, &handle)?;
-    layout_store::save(&graph_dir_for(&v)?, bytes)
+    layout_write(&v, bytes)
 }

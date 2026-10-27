@@ -316,3 +316,30 @@ describe("lazy getters", () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("ctx.vault.graph (raw bytes)", () => {
+  it("reads the graph and saves a layout, with the permission checks", async () => {
+    const p = await bootVault(["vault.read", "vault.write"]);
+    const bytes = Uint8Array.from([86, 68, 71, 49, 7]);
+    p.vault.setGraph(bytes);
+    expect([...(await ctx.vault.graph.read())]).toEqual([...bytes]);
+    expect((await ctx.vault.graph.layout.load()).byteLength).toBe(0);
+    await ctx.vault.graph.layout.save(Uint8Array.from([1, 2, 3]));
+    expect([...(await ctx.vault.graph.layout.load())]).toEqual([1, 2, 3]);
+    expect([...p.vault.graphLayout()]).toEqual([1, 2, 3]);
+    await ctx.vault.graph.layout.save(new Uint8Array(0));
+    expect(p.vault.graphLayout().byteLength).toBe(0);
+  });
+
+  it("refuses without vault.read, and a save without vault.write", async () => {
+    await bootVault([]);
+    await expect(ctx.vault.graph.read()).rejects.toMatchObject({
+      code: "PERMISSION",
+    });
+    await t?.dispose();
+    await bootVault(["vault.read"]);
+    await expect(
+      ctx.vault.graph.layout.save(Uint8Array.from([1])),
+    ).rejects.toMatchObject({ code: "PERMISSION" });
+  });
+});

@@ -172,11 +172,41 @@ pub(crate) async fn plugin_call(
             }
             gateway::Route::MarkdownParse => gateway::markdown_call(params),
             gateway::Route::Folders => crate::import_folder::folders_call(&app, &method, params),
+            gateway::Route::Raw => Err(gateway::GatewayError::new("INVALID_ARGUMENT", format!("\"{method}\" returns bytes: it goes through plugin_call_raw"))),
             route => gateway::storage_call(&state_dir, &plugin_id, route, &params.unwrap_or_default()),
         }
     })
     .await
     .map_err(|e| gateway::GatewayError::new("INTERNAL", e.to_string()))?
+}
+
+/// The plugin API's binary entry point: the same allowlist, permission and consent checks as
+/// `plugin_call`, but the body goes in and out as raw bytes (the graph is megabytes at 50k notes,
+/// and JSON would cost far more than it carries). Headers: `plugin-id`, `method`.
+#[tauri::command]
+pub(crate) async fn plugin_call_raw(
+    app: AppHandle,
+    request: tauri::ipc::Request<'_>,
+) -> std::result::Result<tauri::ipc::Response, gateway::GatewayError> {
+    let plugin_id = crate::clipboard::header(&request, "plugin-id")?;
+    let method = crate::clipboard::header(&request, "method")?;
+    let body: Vec<u8> = match request.body() {
+        tauri::ipc::InvokeBody::Raw(b) => b.clone(),
+        _ => Vec::new(),
+    };
+    let bytes = tauri::async_runtime::spawn_blocking(move || {
+        let snap = snapshot(&app, false)?;
+        let state_dir = config::resolve_dirs()?.state;
+        let plugin = snap.list.plugins.iter().find(|p| p.manifest.id == plugin_id);
+        let row = gateway::authorize(&method, &plugin_id, plugin, || consent::load(&state_dir))?;
+        if row.route != gateway::Route::Raw {
+            return Err(gateway::GatewayError::new("INVALID_ARGUMENT", format!("\"{method}\" is a JSON method: use plugin_call")));
+        }
+        gateway::raw_call(&app, &method, &body)
+    })
+    .await
+    .map_err(|e| gateway::GatewayError::new("INTERNAL", e.to_string()))??;
+    Ok(tauri::ipc::Response::new(bytes))
 }
 
 /// Plugins with saved data (`storage.global`) and its size, for Settings → Plugins.

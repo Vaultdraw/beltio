@@ -24,6 +24,8 @@ pub(crate) enum Route {
     /// `crate::import_folder::folders_call`: capability-scoped source and target folders for
     /// importers (read-only source handles, create-only targets).
     Folders,
+    /// `plugin_call_raw`: binary bodies in and out (graph bytes, layout bytes); never `plugin_call`.
+    Raw,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -39,6 +41,9 @@ pub(crate) const ALLOWLIST: &[Row] = &[
     Row { method: VAULT_LIST, permission: Some("vault.read"), route: Route::Control(VAULT_LIST) },
     Row { method: FILE_READ, permission: Some("vault.read"), route: Route::Control(FILE_READ) },
     Row { method: FILE_WRITE, permission: Some("vault.write"), route: Route::Control(FILE_WRITE) },
+    Row { method: "vault.graph", permission: Some("vault.read"), route: Route::Raw },
+    Row { method: "vault.graphLayout.load", permission: Some("vault.read"), route: Route::Raw },
+    Row { method: "vault.graphLayout.save", permission: Some("vault.write"), route: Route::Raw },
     Row { method: "storage.read", permission: None, route: Route::StorageRead },
     Row { method: "storage.write", permission: None, route: Route::StorageWrite },
     Row { method: "markdown.parse", permission: None, route: Route::MarkdownParse },
@@ -216,7 +221,7 @@ pub(crate) fn storage_call(state_dir: &std::path::Path, plugin_id: &str, route: 
             storage::write(state_dir, plugin_id, text)?;
             Ok(Value::Null)
         }
-        Route::Control(_) | Route::MarkdownParse | Route::Folders => Err(GatewayError::new("INTERNAL", "not a storage row")),
+        Route::Control(_) | Route::MarkdownParse | Route::Folders | Route::Raw => Err(GatewayError::new("INTERNAL", "not a storage row")),
     }
 }
 
@@ -235,4 +240,22 @@ pub(crate) fn markdown_call(params: Option<Value>) -> Result<Value, GatewayError
     crate::markdown::check_size(text)?;
     let doc = vaultdraw_core::markdown::parse_markdown(text, &crate::markdown::options(soft));
     serde_json::to_value(doc).map_err(|e| GatewayError::new("INTERNAL", e.to_string()))
+}
+
+/// Runs a `Route::Raw` method against the open vault (the one the control API calls active).
+pub(crate) fn raw_call(app: &tauri::AppHandle, method: &str, body: &[u8]) -> Result<Vec<u8>, GatewayError> {
+    use tauri::Manager as _;
+    let vault = crate::control_active_vault(app).ok_or_else(|| GatewayError::new("NO_VAULT", "No vault is open"))?;
+    match method {
+        "vault.graph" => {
+            let search = app.try_state::<crate::search::SearchService>().ok_or_else(|| GatewayError::new("INTERNAL", "Search service unavailable"))?;
+            Ok(crate::links::graph_bytes(&search, &vault.handle)?)
+        }
+        "vault.graphLayout.load" => Ok(crate::links::layout_bytes(&vault)),
+        "vault.graphLayout.save" => {
+            crate::links::layout_write(&vault, body)?;
+            Ok(Vec::new())
+        }
+        _ => Err(GatewayError::new("NOT_FOUND", format!("Plugins cannot call \"{method}\""))),
+    }
 }

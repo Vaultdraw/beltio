@@ -144,6 +144,10 @@ export interface FakeVault {
   pageSetup(path: string): Record<string, unknown> | undefined;
   /** The open vault; null = no vault is open. Default: a writable "mock-vault". */
   setVault(info: { name: string; readOnly: boolean } | null): void;
+  /** The bytes `ctx.vault.graph.read()` returns. */
+  setGraph(bytes: Uint8Array): void;
+  /** The layout bytes `ctx.vault.graph.layout.save` stored (empty when none). */
+  graphLayout(): Uint8Array;
 }
 
 /** What `ctx.workspace` and the folders' `open()` did. */
@@ -487,6 +491,10 @@ export async function boot(
       backend.vaultOpen = next !== null;
       backend.vaultReadOnly = next?.readOnly === true;
     },
+    setGraph(bytes) {
+      backend.graphBytes = new Uint8Array(bytes);
+    },
+    graphLayout: () => new Uint8Array(backend.graphLayout),
     saves: () => [...saves],
     pageSetup: (path) =>
       (

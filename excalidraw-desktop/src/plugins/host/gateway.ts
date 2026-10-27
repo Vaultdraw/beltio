@@ -47,3 +47,29 @@ export const createGateway =
       recordGatewayCall(pluginId, method, performance.now() - t0, bytes);
     }
   };
+
+export type RawGatewayCall = (
+  method: string,
+  body?: Uint8Array,
+) => Promise<Uint8Array>;
+
+/** The binary twin of `createGateway`: `plugin_call_raw`, timed and counted the same way. */
+export const createRawGateway =
+  (pluginId: string): RawGatewayCall =>
+  async (method, body) => {
+    const t0 = performance.now();
+    let size = body?.byteLength ?? 0;
+    try {
+      const out = await getPluginsBackend().pluginCallRaw(
+        pluginId,
+        method,
+        body,
+      );
+      size += out.byteLength;
+      return out;
+    } catch (err) {
+      throw toApiError(err);
+    } finally {
+      recordGatewayCall(pluginId, method, performance.now() - t0, size);
+    }
+  };

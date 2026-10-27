@@ -125,6 +125,8 @@ export function createVaultModel(
   let openedVaults: string[] = [];
   let revealedFolders: string[] = [];
   let saves: string[] = [];
+  let graph = new Uint8Array(0);
+  let graphLayout = new Uint8Array(0);
 
   const needVault = () => {
     if (!info) {
@@ -153,6 +155,10 @@ export function createVaultModel(
     setVault(next) {
       info = next ? { ...next } : null;
     },
+    setGraph(bytes) {
+      graph = new Uint8Array(bytes);
+    },
+    graphLayout: () => new Uint8Array(graphLayout),
     saves: () => [...saves],
     pageSetup: (path) =>
       drawings.get(path)?.appState?.pageSetup as
@@ -236,6 +242,40 @@ export function createVaultModel(
     vaultApi(pluginId, permissions, dataKey) {
       return {
         info: () => (info ? { ...info } : null),
+        graph: {
+          async read() {
+            requirePermission(
+              pluginId,
+              permissions,
+              "vault.graph",
+              "vault.read",
+            );
+            needVault();
+            return new Uint8Array(graph);
+          },
+          layout: {
+            async load() {
+              requirePermission(
+                pluginId,
+                permissions,
+                "vault.graphLayout.load",
+                "vault.read",
+              );
+              needVault();
+              return new Uint8Array(graphLayout);
+            },
+            async save(bytes) {
+              requirePermission(
+                pluginId,
+                permissions,
+                "vault.graphLayout.save",
+                "vault.write",
+              );
+              needVault();
+              graphLayout = new Uint8Array(bytes);
+            },
+          },
+        },
         async list(dir = "") {
           requirePermission(pluginId, permissions, "vault.list", "vault.read");
           checkVaultPath(dir, "folder");
@@ -346,6 +386,8 @@ export function createVaultModel(
       openedVaults = [];
       revealedFolders = [];
       saves = [];
+      graph = new Uint8Array(0);
+      graphLayout = new Uint8Array(0);
     },
   };
 }

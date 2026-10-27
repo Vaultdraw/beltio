@@ -31,6 +31,34 @@ export interface VaultEntry {
 }
 
 /**
+ * The vault's link graph, as bytes. The format is the app's `VDG1` graph export (a compact binary
+ * table of notes, drawings, tags and links); a plugin that draws a graph decodes it itself.
+ *
+ * @since 0.18.0
+ */
+export interface VaultGraphApi {
+  /**
+   * The whole graph of the open vault in one call. Needs `vault.read`. Starts the link index if
+   * it is not running yet, so the first call can take a moment on a large vault.
+   *
+   * @since 0.18.0
+   */
+  read(): Promise<Uint8Array>;
+  /**
+   * A place to keep a graph view's computed layout so it opens instantly next time. The app keeps
+   * it per vault in its state folder (never inside the vault); the bytes are the plugin's own format.
+   *
+   * @since 0.18.0
+   */
+  readonly layout: {
+    /** The saved bytes, empty when none. Needs `vault.read`. @since 0.18.0 */
+    load(): Promise<Uint8Array>;
+    /** Replaces the saved bytes; empty clears. Needs `vault.write`. @since 0.18.0 */
+    save(bytes: Uint8Array): Promise<void>;
+  };
+}
+
+/**
  * The drawings of the open vault. Paths are vault-relative and use "/";
  * entries and segments that start with a dot are never listed or accepted.
  * Errors carry a `code`: `PERMISSION`, `INVALID_ARGUMENT`, `INVALID_PATH`,
@@ -77,4 +105,10 @@ export interface VaultApi {
     ids: string[];
     refs: Record<string, string>;
   }>;
+  /**
+   * The vault's link graph.
+   *
+   * @since 0.18.0
+   */
+  readonly graph: VaultGraphApi;
 }

@@ -112,6 +112,7 @@ export type {
   ThemeTokenName,
   UiApi,
   VaultApi,
+  VaultGraphApi,
   VaultEntry,
   WorkspaceApi,
 } from "../../../../sdk/api/src/index";

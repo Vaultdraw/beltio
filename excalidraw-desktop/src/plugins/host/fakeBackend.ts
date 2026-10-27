@@ -37,6 +37,9 @@ export interface FakeBackend extends PluginsBackend {
   vaultOpen: boolean;
   /** Every gateway call, in order. */
   gatewayCalls: { pluginId: string; method: string; params: unknown }[];
+  /** The graph bytes `vault.graph` returns, and the saved layout bytes (`vault.graphLayout.*`). */
+  graphBytes: Uint8Array;
+  graphLayout: Uint8Array;
   /** The `folders.*` rows' state: what the pickers return next, the sources and targets handed out. */
   folders: FakeFolderStore;
 }
@@ -50,6 +53,12 @@ const VAULT_ROWS: Record<string, "vault.read" | "vault.write"> = {
   "file.read": "vault.read",
   "file.write": "vault.write",
 };
+
+const RAW_ROWS = new Set([
+  "vault.graph",
+  "vault.graphLayout.load",
+  "vault.graphLayout.save",
+]);
 
 const FOLDER_ROWS = new Set([
   "folders.pickSource",
@@ -157,6 +166,8 @@ export function createFakeBackend(
     opened: [],
     data: {},
     gatewayCalls: [],
+    graphBytes: new Uint8Array(0),
+    graphLayout: new Uint8Array(0),
     drawings: {},
     vaultReadOnly: false,
     vaultOpen: true,
@@ -172,6 +183,38 @@ export function createFakeBackend(
         onPutDrawing?.(path, scene);
       },
     }),
+    pluginCallRaw: async (pluginId, method, body) => {
+      fake.gatewayCalls.push({ pluginId, method, params: body ?? null });
+      const plugin = fake.plugins.find((p) => p.id === pluginId);
+      if (!plugin) {
+        throw coded(
+          "NOT_FOUND",
+          `No installed plugin has the id "${pluginId}"`,
+        );
+      }
+      const need =
+        method === "vault.graphLayout.save" ? "vault.write" : "vault.read";
+      if (!RAW_ROWS.has(method)) {
+        throw coded("NOT_FOUND", `Plugins cannot call "${method}"`);
+      }
+      if (!plugin.permissions.includes(need)) {
+        throw coded(
+          "PERMISSION",
+          `${pluginId}: ${method} needs the permission "${need}", which plugin.toml does not declare`,
+        );
+      }
+      if (!fake.vaultOpen) {
+        throw coded("NO_VAULT", "No vault is open");
+      }
+      if (method === "vault.graph") {
+        return fake.graphBytes;
+      }
+      if (method === "vault.graphLayout.load") {
+        return fake.graphLayout;
+      }
+      fake.graphLayout = new Uint8Array(body ?? []);
+      return new Uint8Array(0);
+    },
     // The storage, vault and markdown rows of the Rust gateway (plugins/gateway.rs).
     pluginCall: async (pluginId, method, params) => {
       fake.gatewayCalls.push({ pluginId, method, params });
