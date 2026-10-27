@@ -17,6 +17,7 @@ import type { FontsApi, TextApi } from "./text";
 import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
 import type { ShapesApi } from "./shapes";
+import type { ThumbnailsApi } from "./thumbnails";
 import type { ToolsApi } from "./tools";
 import type { OverlaysApi } from "./overlays";
 import type { ViewsApi } from "./views";
@@ -109,6 +110,8 @@ export interface PluginContext {
   readonly shapes: ShapesApi;
   /** Views that cover the drawing area. @since 0.17.0 */
   readonly overlays: OverlaysApi;
+  /** Drawing previews. @since 0.20.0 */
+  readonly thumbnails: ThumbnailsApi;
   /**
    * Disposed in reverse order on disable/reload/quit.
    *

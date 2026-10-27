@@ -130,13 +130,14 @@ export type { StatusBarApi, StatusBarState } from "./statusBar";
 export type { MenuTarget, MenusApi } from "./menus";
 export type { ShapeDef, ShapesApi } from "./shapes";
 export type { OverlayHandle, OverlayOptions, OverlayProps, OverlaysApi, } from "./overlays";
+export type { ThumbnailState, ThumbnailsApi } from "./thumbnails";
 export type { ToolHandlers, ToolPoint, ToolsApi } from "./tools";
 export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { FontsApi, TextApi, TextFont } from "./text";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
 export type { VaultApi, VaultEntry, VaultGraphApi, VaultTableApi, VaultTableChange, } from "./vault";
-export type { WorkspaceApi } from "./workspace";
+export type { FolderItem, WorkspaceApi } from "./workspace";
 export { SHARED_SPECIFIERS } from "./specifiers";
 
 // manifest.ts
@@ -499,6 +500,7 @@ import type { FontsApi, TextApi } from "./text";
 import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
 import type { ShapesApi } from "./shapes";
+import type { ThumbnailsApi } from "./thumbnails";
 import type { ToolsApi } from "./tools";
 import type { OverlaysApi } from "./overlays";
 import type { ViewsApi } from "./views";
@@ -538,6 +540,7 @@ export interface PluginContext {
     readonly tools: ToolsApi;
     readonly shapes: ShapesApi;
     readonly overlays: OverlaysApi;
+    readonly thumbnails: ThumbnailsApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;
     setInterval(fn: () => void, ms: number): Disposable;
@@ -769,6 +772,17 @@ export interface ThemeApi {
     onChange(cb: (e: ThemeChange) => void): Disposable;
 }
 
+// thumbnails.ts
+export interface ThumbnailState {
+    status: "loading" | "ready" | "none";
+    url: string | null;
+}
+export interface ThumbnailsApi {
+    use(path: string | null, priority?: "visible" | "near"): ThumbnailState;
+    useEnabled(): boolean;
+    useDarkClass(): string;
+}
+
 // tools.ts
 import type { Disposable } from "./disposable";
 export interface ToolPoint {
@@ -866,4 +880,10 @@ export interface WorkspaceApi {
         newTab?: boolean;
     }): Promise<void>;
     activePath(): string | null;
+    useFolder(path: string): readonly FolderItem[] | undefined;
+}
+export interface FolderItem {
+    path: string;
+    name: string;
+    kind: "drawing" | "folder" | "note" | "excalidrawMd";
 }

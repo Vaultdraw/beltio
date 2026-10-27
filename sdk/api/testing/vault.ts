@@ -405,6 +405,16 @@ export function createVaultModel(
           host.opened(path);
         },
         activePath: () => host.activePath(),
+        // The seeded drawings directly in `path` (folders are not modelled).
+        useFolder: (path) =>
+          [...drawings.keys()]
+            .filter((p) => p.slice(0, p.lastIndexOf("/") + 1) === (path ? `${path}/` : ""))
+            .sort()
+            .map((p) => ({
+              path: p,
+              name: p.slice(p.lastIndexOf("/") + 1),
+              kind: "drawing" as const,
+            })),
       };
     },
     recordOpened(path, newTab) {

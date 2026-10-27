@@ -33,6 +33,7 @@ if (ctx.host.has("statusBar")) ctx.statusBar.set("clock", { text });
 | 0.17.0 | overlays | `ctx.host.has("overlays")` |
 | 0.18.0 | `ctx.vault.graph` (graph bytes, layout) | `ctx.host.has("vault.graph")` |
 | 0.19.0 | `ctx.vault.table` (own vault settings table) | `ctx.host.has("vault.table")` |
+| 0.20.0 | `ctx.thumbnails`, `ctx.workspace.useFolder`, command `repeat` | `ctx.host.has("thumbnails")` |
 
 An older app refuses a `plugin.toml` with a table it does not know (`status_bar`, `views`, `menus`, `toolbar`, `tools`, `shapes`), so set `min_app` to the app version that ships the revision you use; `vaultdraw-plugin check` warns when it is lower.
 
@@ -176,6 +177,22 @@ ctx.commands.register("toggle", () => {
 - **Focus.** The app focuses the drawing when the overlay closes. Handle Escape and keys inside your component.
 
 Example: [`sdk/examples/overlay-demo`](../examples/overlay-demo/plugin.toml). In tests, `plugin.overlay()` returns the open overlay (`null` when none): `render()` mounts it and `close()` closes it.
+
+## Thumbnails and folders
+
+For a view or overlay that shows drawings (a gallery), two hooks give the app's data. Call them while rendering a component the plugin gave the app.
+
+```ts
+const { Thumb } = ...; // your component
+function Tile({ path }) {
+  const t = ctx.thumbnails.use(path, "visible"); // { status: "loading" | "ready" | "none", url }
+  return t.url ? h("img", { src: t.url }) : h("span", null, path);
+}
+const entries = ctx.workspace.useFolder("Notes"); // [{ path, name, kind }] or undefined while loading
+```
+
+- **Shared and free.** Thumbnails come from the app's one service (shared cache and render queue), so a plugin adds no memory. `ctx.thumbnails.useEnabled()` is false when the user turned thumbnails off; `useDarkClass()` gives the container class that fits dark themes.
+- **Folders.** `useFolder` lists a folder in the navigator's sort order without the templates folder, loads it if needed and updates when it changes. Since 0.20.0.
 
 ## Toolbar
 

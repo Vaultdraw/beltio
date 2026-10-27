@@ -18,4 +18,26 @@ export interface WorkspaceApi {
    * @since 0.6.0
    */
   activePath(): string | null;
+  /**
+   * React hook: the entries of a folder, in the navigator's sort order, without the templates
+   * folder, loading the folder if needed and updating when it changes. `undefined` until
+   * the folder is listed. Call it while rendering a component the plugin gave the app.
+   *
+   * @since 0.20.0
+   */
+  useFolder(path: string): readonly FolderItem[] | undefined;
+}
+
+/**
+ * One entry of a folder.
+ *
+ * @since 0.20.0
+ */
+export interface FolderItem {
+  /** Vault-relative, "/"-separated. @since 0.20.0 */
+  path: string;
+  /** @since 0.20.0 */
+  name: string;
+  /** `note` is a Markdown note, `excalidrawMd` a drawing kept in a Markdown file. @since 0.20.0 */
+  kind: "drawing" | "folder" | "note" | "excalidrawMd";
 }

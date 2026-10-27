@@ -42,6 +42,7 @@ import { createFontsApi, createTextApi } from "./textContext";
 import { createThemeApi } from "./themeContext";
 import { createStorageApi } from "./storageContext";
 import { createVaultApi } from "./vaultContext";
+import { createThumbnailsApi } from "./thumbnailsContext";
 import { createWorkspaceApi } from "./workspaceContext";
 
 import type {
@@ -60,6 +61,7 @@ import type {
   ThemeApi,
   MenusApi,
   OverlaysApi,
+  ThumbnailsApi,
   ToolsApi,
   ShapesApi,
   VaultApi,
@@ -179,6 +181,7 @@ export function createPluginContext(
   let toolsApi: ToolsApi | undefined;
   let shapesApi: ShapesApi | undefined;
   let overlaysApi: OverlaysApi | undefined;
+  let thumbnailsApi: ThumbnailsApi | undefined;
 
   const settingValue = (key: string) => getPluginSetting(id, key);
 
@@ -351,6 +354,9 @@ export function createPluginContext(
           return track(setToolHandlers(`${id}.${toolId}`, h));
         },
       });
+    },
+    get thumbnails() {
+      return (thumbnailsApi ??= createThumbnailsApi());
     },
     get overlays() {
       return (overlaysApi ??= {

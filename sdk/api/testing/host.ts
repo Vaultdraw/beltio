@@ -533,6 +533,7 @@ export function createMockHost(
     let toolsApi: PluginContext["tools"] | undefined;
     let shapesApi: PluginContext["shapes"] | undefined;
     let overlaysApi: PluginContext["overlays"] | undefined;
+    let thumbnailsApi: PluginContext["thumbnails"] | undefined;
     let menusApi: PluginContext["menus"] | undefined;
     let pagesApi: PluginContext["pages"] | undefined;
     let foldersApi: PluginContext["folders"] | undefined;
@@ -743,6 +744,14 @@ export function createMockHost(
               }
             });
           },
+        });
+      },
+      get thumbnails() {
+        // No thumbnail service in tests: previews are off.
+        return (thumbnailsApi ??= {
+          use: () => ({ status: "none", url: null }),
+          useEnabled: () => false,
+          useDarkClass: () => "",
         });
       },
       get overlays() {

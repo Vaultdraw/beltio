@@ -101,6 +101,7 @@ export type {
   OverlayProps,
   OverlaysApi,
 } from "./overlays";
+export type { ThumbnailState, ThumbnailsApi } from "./thumbnails";
 export type { ToolHandlers, ToolPoint, ToolsApi } from "./tools";
 export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
@@ -113,5 +114,5 @@ export type {
   VaultTableApi,
   VaultTableChange,
 } from "./vault";
-export type { WorkspaceApi } from "./workspace";
+export type { FolderItem, WorkspaceApi } from "./workspace";
 export { SHARED_SPECIFIERS } from "./specifiers";

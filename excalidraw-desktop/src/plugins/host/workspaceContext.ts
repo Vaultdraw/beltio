@@ -1,6 +1,7 @@
 /** `ctx.workspace`: open a drawing and read the active path, through the shell's bridge. */
 import { PluginApiError } from "../../../../sdk/api/shared/rules";
 import { checkVaultPath } from "../../../../sdk/api/shared/vaultPaths";
+import { useFolderEntries } from "../folderContext";
 import { getWorkspaceBridge } from "../workspaceBridge";
 
 import type { WorkspaceApi } from "../api";
@@ -21,5 +22,9 @@ export function createWorkspaceApi(): WorkspaceApi {
       }
     },
     activePath: () => getWorkspaceBridge()?.activePath() ?? null,
+    useFolder: (path) => {
+      checkVaultPath(path, "folder");
+      return useFolderEntries(path);
+    },
   };
 }
