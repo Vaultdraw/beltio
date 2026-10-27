@@ -90,7 +90,7 @@ fn has_clone(dir: &Path, key: &str) -> bool {
         rd.flatten().any(|e| {
             let n = e.file_name();
             let n = n.to_string_lossy();
-            n.ends_with(".excalidraw") && (n.starts_with(&pending) || n.starts_with(&open))
+            n.ends_with(crate::filekind::DRAWING_EXT) && (n.starts_with(&pending) || n.starts_with(&open))
         })
     })
 }

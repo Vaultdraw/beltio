@@ -142,14 +142,24 @@ pub fn read_bounded(path: &Path, limit: u64) -> Result<Vec<u8>> {
 pub fn sync_dirs<'a>(dirs: impl IntoIterator<Item = &'a PathBuf>) {
     for d in dirs { if let Ok(f) = File::open(d) { let _ = f.sync_all(); } }
 }
+/// Refuses a path with a dot-named component (`.obsidian`, `.trash`, `.git`): those are never written,
+/// listed or watched, so a file or folder created there would silently vanish from the tree.
+pub fn reject_hidden(path: &str) -> Result<()> {
+    if crate::filekind::has_hidden_component(path) {
+        return Err(err("INVALID_PATH", "Names starting with a dot are reserved and never listed or written"));
+    }
+    Ok(())
+}
 pub fn create_folder_at(root: &Path, path: &str) -> Result<()> {
     if path.is_empty() { return Err(err("INVALID_PATH", "Cannot create the vault root")); }
+    reject_hidden(path)?;
     let p = safe_path(root, path, true)?;
     ensure_no_sibling_collision(&p)?;
     fs::create_dir(p).map_err(ioerr)
 }
 pub fn move_entry_paths(root: &Path, from: &str, to: &str) -> Result<()> {
     if from.is_empty() || to.is_empty() || from == to || to.starts_with(&format!("{from}/")) { return Err(err("INVALID_PATH", "Cannot move an entry into itself")); }
+    reject_hidden(to)?;
     let src = safe_path(root, from, false)?;
     let dst = safe_path(root, to, true)?;
     if !src.exists() { return Err(err("NOT_FOUND", "Source entry not found")); }

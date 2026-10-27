@@ -116,7 +116,7 @@ impl VaultThumbs {
 
     /// Drawing file for a vault-relative path (None = gone, not a drawing, reserved or a symlink).
     fn drawing_file(&self, path: &str) -> Option<PathBuf> {
-        if !path.to_ascii_lowercase().ends_with(".excalidraw") {
+        if !vaultdraw_core::has_drawing_ext(path) {
             return None;
         }
         crate::safe_path(&self.root, path, false).ok()

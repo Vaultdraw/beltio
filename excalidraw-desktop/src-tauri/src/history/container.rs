@@ -71,7 +71,7 @@ fn bad(msg: &str) -> crate::NativeError {
 /// the app's `validate_relative` / `safe_path` before any use).
 pub fn is_sane_relative_path(p: &str) -> bool {
     p.len() <= 4096
-        && p.ends_with(".excalidraw")
+        && p.ends_with(vaultdraw_core::DRAWING_EXT)
         && !p.starts_with('/')
         && !p.bytes().any(|b| b == 0 || b == b'\\' || b < 0x20)
         && p.split('/').all(|part| !part.is_empty() && part != "." && part != "..")

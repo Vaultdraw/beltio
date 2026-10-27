@@ -18,7 +18,7 @@ use std::{
 };
 
 const TEMPLATES_DIR: &str = "templates";
-const EXTENSION: &str = ".excalidraw";
+const EXTENSION: &str = vaultdraw_core::DRAWING_EXT;
 
 /// Serializes template writes within the process.
 static WRITE_LOCK: Mutex<()> = Mutex::new(());
@@ -43,7 +43,7 @@ fn templates_dir() -> Result<PathBuf> {
 /// A template name is one valid path component ending in `.excalidraw`.
 fn validate_name(name: &str) -> Result<()> {
     let single = validate_relative(name)?.len() == 1;
-    if !single || !name.to_ascii_lowercase().ends_with(EXTENSION) {
+    if !single || !vaultdraw_core::has_drawing_ext(name) {
         return Err(err("INVALID_PATH", "Template names must be a single file name ending in .excalidraw"));
     }
     Ok(())

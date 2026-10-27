@@ -86,10 +86,7 @@ fn utc_stamp(ms: u64) -> String {
 /// File name without folder and without the `.excalidraw` extension, shortened to leave room for a suffix.
 fn stem_of(path: &str) -> String {
     let file = path.rsplit('/').next().unwrap_or(path);
-    let stem = match file.len().checked_sub(".excalidraw".len()) {
-        Some(at) if file.is_char_boundary(at) && file[at..].eq_ignore_ascii_case(".excalidraw") => &file[..at],
-        _ => file,
-    };
+    let stem = vaultdraw_core::filekind::strip_drawing_ext(file);
     let mut end = stem.len().min(150);
     while !stem.is_char_boundary(end) {
         end -= 1;

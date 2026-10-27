@@ -13,7 +13,7 @@ pub fn list(cli: &Cli) -> Result<(), Fail> {
 
 /// A tab argument is an id unless it looks like a file target (or `--path`/`--file` say so).
 fn tab_params(cli: &Cli, arg: &str) -> Value {
-    let like_target = cli.force_path || cli.force_file || arg.contains('/') || arg.ends_with(".excalidraw");
+    let like_target = cli.force_path || cli.force_file || arg.contains('/') || arg.ends_with(vaultdraw_core::DRAWING_EXT);
     if like_target {
         Value::Object(target(cli, arg))
     } else {

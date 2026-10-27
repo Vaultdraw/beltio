@@ -164,6 +164,10 @@ fn classify_vault_event(root: &Path, p: &Path) -> WatchedPath {
     if text.starts_with(&format!("{META_DIR}/")) || text == format!("{META_DIR}.lock") {
         return WatchedPath::Ignore;
     }
+    // Dot-folders (`.obsidian`, `.trash`, `.git`) are never reported: Obsidian rewrites them constantly.
+    if vaultdraw_core::filekind::has_hidden_component(&text) {
+        return WatchedPath::Ignore;
+    }
     if validate_relative(&text).is_ok() {
         WatchedPath::Entry(text)
     } else {
@@ -676,6 +680,9 @@ mod tests {
         assert_eq!(c("library.excalidrawlib"), WatchedPath::Library);
         assert_eq!(c("sub/library.excalidrawlib"), WatchedPath::Entry("sub/library.excalidrawlib".into()));
         assert_eq!(c("Library.excalidrawlib"), WatchedPath::Entry("Library.excalidrawlib".into()));
+        assert_eq!(c(".obsidian/workspace.json"), WatchedPath::Ignore);
+        assert_eq!(c("notes/.trash/a.md"), WatchedPath::Ignore);
+        assert_eq!(c("notes/a.md"), WatchedPath::Entry("notes/a.md".into()));
         assert_eq!(c(".excalidraw-tmp-1-2"), WatchedPath::Ignore);
         assert_eq!(c("a/b.excalidraw"), WatchedPath::Entry("a/b.excalidraw".into()));
         assert_eq!(c("a/.excalidraw-tmp-1"), WatchedPath::Ignore);

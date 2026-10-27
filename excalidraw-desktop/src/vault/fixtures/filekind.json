@@ -1,0 +1,29 @@
+{
+  "kinds": [
+    ["a.excalidraw", "drawing"],
+    ["Dir/A.EXCALIDRAW", "drawing"],
+    [".excalidraw", "drawing"],
+    ["a.md", "note"],
+    ["a.MD", "note"],
+    ["a.excalidraw.md", "excalidrawMd"],
+    ["Dir/Sketch.Excalidraw.MD", "excalidrawMd"],
+    ["a.excalidraw.png", "other"],
+    ["a.png", "other"],
+    ["md", "other"],
+    ["", "other"],
+    ["é", "other"]
+  ],
+  "hidden": [
+    [".obsidian", true],
+    [".trash", true],
+    [".git", true],
+    ["notes", false],
+    ["a.excalidraw", false]
+  ],
+  "strip": [
+    ["Graphs/BFS.excalidraw", "Graphs/BFS"],
+    ["X.Excalidraw", "X"],
+    ["x.md", "x.md"],
+    ["x", "x"]
+  ]
+}

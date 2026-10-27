@@ -9,17 +9,13 @@ use memchr::{memchr3, memmem};
 use std::sync::OnceLock;
 
 pub const MAX_BODY_CHARS: usize = 256;
-pub const EXT: &str = ".excalidraw";
+pub const EXT: &str = crate::filekind::DRAWING_EXT;
 pub const VAULT_URL: &str = "vaultdraw://open?";
 /// Longest scanned body: 256 chars of up to 4 bytes, plus the closing brackets.
 const SCAN_BYTES: usize = MAX_BODY_CHARS * 4 + 2;
 
 pub fn strip_ext(s: &str) -> &str {
-    let cut = s.len().saturating_sub(EXT.len());
-    match s.get(cut..) {
-        Some(e) if e.eq_ignore_ascii_case(EXT) => &s[..cut],
-        _ => s,
-    }
+    crate::filekind::strip_drawing_ext(s)
 }
 
 pub fn has_ext(s: &str) -> bool {

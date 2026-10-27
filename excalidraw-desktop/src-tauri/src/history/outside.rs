@@ -19,7 +19,7 @@ use std::{io::Write, sync::mpsc, time::Duration};
 const SNAPSHOT_WAIT: Duration = Duration::from_secs(20);
 
 fn is_drawing(p: &str) -> bool {
-    p.len() > 11 && p.get(p.len() - 11..).is_some_and(|e| e.eq_ignore_ascii_case(".excalidraw"))
+    vaultdraw_core::filekind::is_drawing_name(p)
 }
 
 /// Watcher batch of vault paths (runs on the watcher thread: must only queue work, ≤ 20 µs/path).

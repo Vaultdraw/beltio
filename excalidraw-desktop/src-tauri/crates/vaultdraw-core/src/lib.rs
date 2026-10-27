@@ -6,6 +6,8 @@ pub mod config;
 pub mod control_settings;
 pub mod drawing;
 pub mod error;
+pub mod excalidraw_md;
+pub mod filekind;
 pub mod fsbulk;
 pub mod fsops;
 pub mod instance;
@@ -27,6 +29,7 @@ pub mod vault_path;
 
 pub use drawing::*;
 pub use error::{err, ioerr, NativeError, Result};
+pub use filekind::{file_kind, has_drawing_ext, FileKind, DRAWING_EXT};
 pub use fsops::*;
 pub use paths::*;
 pub use recovery::*;

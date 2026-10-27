@@ -34,8 +34,11 @@ pub fn list_directory_in(v: &Vault, path: &str) -> Result<Vec<VaultEntry>> {
     }
     let prefix_len = if path.is_empty() { 0 } else { path.len() + 1 };
     let mut accept = |name: &str, is_dir: bool| {
-        !name.eq_ignore_ascii_case(META_DIR)
-            && (is_dir || is_excalidraw_name(name))
+        // Names starting with a dot (`.obsidian`, `.trash`, `.git`, the metadata folder) are never listed;
+        // files are listed when they are drawings or Markdown notes.
+        !crate::filekind::is_hidden_name(name)
+            && !name.eq_ignore_ascii_case(META_DIR)
+            && (is_dir || crate::filekind::file_kind(name) != crate::filekind::FileKind::Other)
             && !component_is_invalid(name)
             && prefix_len + name.len() <= MAX_REL_PATH_BYTES
     };
@@ -52,7 +55,7 @@ pub fn list_directory_in(v: &Vault, path: &str) -> Result<Vec<VaultEntry>> {
             VaultEntry {
                 path: rel,
                 name: e.name,
-                kind: if e.is_dir { "folder" } else { "drawing" }.into(),
+                kind: if e.is_dir { "folder" } else { crate::filekind::file_kind(&e.name).as_str() }.into(),
                 modified_at: e.modified_ms,
                 size: e.size,
             }
@@ -63,9 +66,6 @@ pub fn list_directory_in(v: &Vault, path: &str) -> Result<Vec<VaultEntry>> {
     out.sort_by_cached_key(|e| (e.kind != "folder", e.name.to_lowercase(), e.name.clone()));
     Ok(out)
 }
-fn is_excalidraw_name(name: &str) -> bool {
-    name.len() >= 11 && name.get(name.len() - 11..).is_some_and(|e| e.eq_ignore_ascii_case(".excalidraw"))
-}
 /// Hex SHA-256 length; the read frame is `<revision hex>\n<json bytes>`.
 pub const REVISION_HEX_LEN: usize = 64;
 pub const FRAME_PREFIX_LEN: usize = REVISION_HEX_LEN + 1;
@@ -73,7 +73,8 @@ pub const FRAME_PREFIX_LEN: usize = REVISION_HEX_LEN + 1;
 /// read straight into the buffer after a placeholder prefix, hashed in place and validated
 /// as UTF-8 JSON without further copies. The body is the raw file (see `read_drawing_file`).
 pub fn read_drawing_disk(root: &Path, path: &str) -> Result<Vec<u8>> {
-    if !path.to_ascii_lowercase().ends_with(".excalidraw") { return Err(err("INVALID_PATH", "Only .excalidraw files can be read as drawings")); }
+    if crate::filekind::file_kind(path) == crate::filekind::FileKind::ExcalidrawMd { return read_excalidraw_md_disk(root, path); }
+    if !crate::filekind::has_drawing_ext(path) { return Err(err("INVALID_PATH", "Only .excalidraw files can be read as drawings")); }
     let p = safe_path(root, path, false)?;
     let file = File::open(&p).map_err(ioerr)?;
     let meta = file.metadata().map_err(ioerr)?;
@@ -87,6 +88,19 @@ pub fn read_drawing_disk(root: &Path, path: &str) -> Result<Vec<u8>> {
     let digest = Sha256::digest(&buf[FRAME_PREFIX_LEN..]);
     hex::encode_to_slice(digest, &mut buf[..REVISION_HEX_LEN]).map_err(|e| err("INTERNAL", e.to_string()))?;
     buf[REVISION_HEX_LEN] = b'\n';
+    Ok(buf)
+}
+/// Frame for an Obsidian Excalidraw plugin file (`.excalidraw.md`): the revision is the hash of the
+/// Markdown file's bytes, the body is the scene extracted from it. Read-only: saves to this path are refused.
+fn read_excalidraw_md_disk(root: &Path, path: &str) -> Result<Vec<u8>> {
+    let p = safe_path(root, path, false)?;
+    let bytes = crate::fsops::read_bounded(&p, MAX_DRAWING_BYTES)?;
+    let text = std::str::from_utf8(&bytes).map_err(|_| err("INVALID_FILE", "Note is not UTF-8 text"))?;
+    let scene = crate::excalidraw_md::extract_scene(text)?;
+    let mut buf = Vec::with_capacity(FRAME_PREFIX_LEN + scene.len());
+    buf.extend_from_slice(hex::encode(Sha256::digest(&bytes)).as_bytes());
+    buf.push(b'\n');
+    buf.extend_from_slice(scene.as_bytes());
     Ok(buf)
 }
 /// Webview read frame: `<revision of the disk bytes>\n<pure-ASCII json>` (non-ASCII as `\uXXXX`,
@@ -122,7 +136,7 @@ pub fn read_drawing_parts(root: &Path, path: &str) -> Result<DrawingFile> {
 }
 /// Revision of a drawing without sending its content; `None` when the file is missing.
 pub fn drawing_revision_at(root: &Path, path: &str) -> Result<Option<String>> {
-    if !path.to_ascii_lowercase().ends_with(".excalidraw") { return Err(err("INVALID_PATH", "Only .excalidraw files have drawing revisions")); }
+    if !crate::filekind::has_drawing_ext(path) && crate::filekind::file_kind(path) != crate::filekind::FileKind::ExcalidrawMd { return Err(err("INVALID_PATH", "Only .excalidraw files have drawing revisions")); }
     match safe_path(root, path, true) {
         Ok(p) => current_revision(&p),
         Err(e) if e.code == "NOT_FOUND" => Ok(None),
@@ -140,7 +154,8 @@ where F: FnOnce(&Path, &[u8], bool) -> Result<()> {
     let bytes = crate::json_ascii::unescape_non_ascii(json.as_bytes());
     let json = std::str::from_utf8(&bytes).map_err(|_| err("INVALID_FILE", "Drawing is not UTF-8 JSON"))?;
     ensure_json(json)?;
-    if path.is_empty() || !path.to_ascii_lowercase().ends_with(".excalidraw") { return Err(err("INVALID_PATH", "Drawing filenames must end in .excalidraw")); }
+    if path.is_empty() || !crate::filekind::has_drawing_ext(path) { return Err(err("INVALID_PATH", "Drawing filenames must end in .excalidraw")); }
+    crate::fsops::reject_hidden(path)?;
     if operation_id.is_empty() || operation_id.len() > 200 { return Err(err("INVALID_ARGUMENT", "Invalid operation id")); }
     let p = safe_path(&v.root, path, true)?;
     if current_revision(&p)?.as_deref() != expected_revision { return Err(err("CONFLICT", "Drawing changed on disk; save was not applied")); }
@@ -167,7 +182,8 @@ pub fn write_drawing_file_rewrite(v: &Vault, path: &str, json: &str, expected_re
     let bytes = crate::json_ascii::unescape_non_ascii(json.as_bytes());
     let json = std::str::from_utf8(&bytes).map_err(|_| err("INVALID_FILE", "Drawing is not UTF-8 JSON"))?;
     ensure_json(json)?;
-    if path.is_empty() || !path.to_ascii_lowercase().ends_with(".excalidraw") { return Err(err("INVALID_PATH", "Drawing filenames must end in .excalidraw")); }
+    if path.is_empty() || !crate::filekind::has_drawing_ext(path) { return Err(err("INVALID_PATH", "Drawing filenames must end in .excalidraw")); }
+    crate::fsops::reject_hidden(path)?;
     let p = safe_path(&v.root, path, false)?;
     if current_revision(&p)?.as_deref() != Some(expected_revision) { return Err(err("CONFLICT", "Drawing changed on disk; rewrite was not applied")); }
     let parent = p.parent().ok_or_else(|| err("INVALID_PATH", "File has no parent"))?.to_path_buf();

@@ -480,7 +480,7 @@ impl RelinkRun {
         let Ok(rd) = std::fs::read_dir(vh.root.join(dir)) else { return };
         for e in rd.flatten() {
             let (Ok(name), Ok(ft)) = (e.file_name().into_string(), e.file_type()) else { continue };
-            if ft.is_symlink() || name.starts_with(".excalidraw-tmp-") || (dir.is_empty() && name.eq_ignore_ascii_case(crate::META_DIR)) {
+            if ft.is_symlink() || name.starts_with(".excalidraw-tmp-") || (dir.is_empty() && name.eq_ignore_ascii_case(crate::META_DIR)) || vaultdraw_core::filekind::is_hidden_name(&name) {
                 continue;
             }
             let child = if dir.is_empty() { name.clone() } else { format!("{dir}/{name}") };
@@ -488,7 +488,7 @@ impl RelinkRun {
                 if depth < MAX_WALK_DEPTH {
                     self.stack.push((child, depth + 1));
                 }
-            } else if ft.is_file() && name.len() > 11 && name.get(name.len() - 11..).is_some_and(|x| x.eq_ignore_ascii_case(".excalidraw")) && !vh.read_index().has_lineage(&child) {
+            } else if ft.is_file() && vaultdraw_core::filekind::is_drawing_name(&name) && !vh.read_index().has_lineage(&child) {
                 let Ok(md) = e.metadata() else { continue };
                 if self.wants_size(md.len()) {
                     self.queue.push((child, md.len()));

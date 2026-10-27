@@ -26,9 +26,7 @@ impl Found {
     }
 }
 
-pub fn is_drawing_name(name: &str) -> bool {
-    name.len() > 11 && name.get(name.len() - 11..).is_some_and(|e| e.eq_ignore_ascii_case(".excalidraw"))
-}
+pub use crate::filekind::is_drawing_name;
 
 /// Files the index reads: drawings and Markdown notes.
 pub fn is_indexed_name(name: &str) -> bool {
@@ -78,6 +76,10 @@ fn scan_dir_each(root: &Path, dir: &str, depth: usize, dirs: &mut Vec<(String, u
         let Ok(name) = entry.file_name().into_string() else { continue };
         let Ok(ft) = entry.file_type() else { continue };
         if ft.is_symlink() || name.starts_with(".excalidraw-tmp-") || (dir.is_empty() && name.eq_ignore_ascii_case(META_DIR)) {
+            continue;
+        }
+        // Dot names (`.obsidian`, `.trash`, `.git`) are never walked.
+        if crate::filekind::is_hidden_name(&name) {
             continue;
         }
         let child = if dir.is_empty() { name.clone() } else { format!("{dir}/{name}") };

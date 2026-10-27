@@ -17,7 +17,9 @@ pub fn list(v: &Vault, dir: &str, recursive: bool) -> Result<Value, RpcError> {
     let mut entries = Vec::new();
     let mut pending = vec![dir.trim_end_matches('/').to_string()];
     while let Some(d) = pending.pop() {
-        let level = crate::list_directory_in(v, &d).map_err(native_err)?;
+        // The control API still lists drawings and folders only; the tree also lists Markdown notes.
+        let mut level = crate::list_directory_in(v, &d).map_err(native_err)?;
+        level.retain(|e| e.kind == "folder" || e.kind == "drawing");
         if recursive {
             pending.extend(level.iter().filter(|e| e.kind == "folder").map(|e| e.path.clone()));
         }

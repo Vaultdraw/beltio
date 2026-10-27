@@ -75,7 +75,7 @@ pub(super) fn rpc(cli: &Cli) -> Result<Rpc, Fail> {
 /// Params of a file target: `{path}` for anything with a `/` or a `.excalidraw` suffix, else
 /// `{file}` (a link-style name); `--path` / `--file` force either. One place, every command.
 pub(super) fn target(cli: &Cli, t: &str) -> serde_json::Map<String, Value> {
-    let by_path = cli.force_path || (!cli.force_file && (t.contains('/') || t.ends_with(".excalidraw")));
+    let by_path = cli.force_path || (!cli.force_file && (t.contains('/') || t.ends_with(vaultdraw_core::DRAWING_EXT)));
     let mut m = serde_json::Map::new();
     m.insert(if by_path { "path" } else { "file" }.into(), json!(t));
     m

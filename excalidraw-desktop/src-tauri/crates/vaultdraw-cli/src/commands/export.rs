@@ -225,8 +225,8 @@ fn out_path(dir: &Path, path: &str, format: &str) -> Option<PathBuf> {
     if path.is_empty() || vaultdraw_core::validate_relative(path).is_err() {
         return None;
     }
-    let cut = path.len().checked_sub(".excalidraw".len())?;
-    if !path.is_char_boundary(cut) || !path[cut..].eq_ignore_ascii_case(".excalidraw") || cut == 0 || path[..cut].ends_with('/') {
+    let cut = path.len().checked_sub(vaultdraw_core::DRAWING_EXT.len())?;
+    if !vaultdraw_core::has_drawing_ext(path) || cut == 0 || path[..cut].ends_with('/') {
         return None;
     }
     Some(dir.join(format!("{}.{format}", &path[..cut])))
@@ -280,7 +280,7 @@ fn check_pdf_options(args: &ExportArgs, format: &str) -> Result<(), Fail> {
 /// the format.
 fn file_name_for(target: &str, format: &str, embed_scene: bool) -> String {
     let name = target.rsplit('/').next().unwrap_or(target);
-    let base = if name.to_ascii_lowercase().ends_with(".excalidraw") { &name[..name.len() - ".excalidraw".len()] } else { name };
+    let base = vaultdraw_core::filekind::strip_drawing_ext(name);
     let base = if base.is_empty() { "Drawing" } else { base };
     let embed = if embed_scene && format != "pdf" { ".excalidraw" } else { "" };
     format!("{base}{embed}.{format}")

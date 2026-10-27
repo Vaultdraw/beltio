@@ -11,7 +11,7 @@ use crate::{err, ioerr, read_bounded, safe_path, save_with_dialog, vault_for, Re
 /// Reads the drawing at `path` (vault-relative) and returns its file name and
 /// raw bytes.
 fn read_copy_source(root: &Path, path: &str) -> Result<(String, Vec<u8>)> {
-    if !path.to_ascii_lowercase().ends_with(".excalidraw") {
+    if !vaultdraw_core::has_drawing_ext(path) {
         return Err(err("INVALID_PATH", "Only .excalidraw drawings can be copied"));
     }
     let p = safe_path(root, path, false)?;

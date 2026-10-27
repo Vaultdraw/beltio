@@ -6,7 +6,7 @@ use serde_json::Value;
 use std::path::Path;
 use vaultdraw_protocol::{codes, RpcError};
 
-const EXT: &str = ".excalidraw";
+const EXT: &str = crate::filekind::DRAWING_EXT;
 
 /// What a resolved target must be on disk.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -33,7 +33,7 @@ fn not_found(target: &str) -> RpcError {
 pub fn resolve_path(root: &Path, path: &str, need: Need) -> Result<String, RpcError> {
     let mut rel = path.to_string();
     let full = crate::safe_path(root, &rel, true).map_err(native_err)?;
-    if !rel.to_ascii_lowercase().ends_with(EXT) && !full.is_file() && !(need == Need::Entry && full.is_dir()) {
+    if !crate::filekind::has_drawing_ext(&rel) && !full.is_file() && !(need == Need::Entry && full.is_dir()) {
         rel.push_str(EXT);
     }
     let full = crate::safe_path(root, &rel, true).map_err(native_err)?;
