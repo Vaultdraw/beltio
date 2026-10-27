@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 use vaultdraw_core::config::Dirs;
 use vaultdraw_core::links;
+use vaultdraw_core::scene_project;
 use vaultdraw_core::ops::target::{self, native_err, Need};
 use vaultdraw_core::ops::{config_ops, vault_ops};
 use vaultdraw_core::search::{store, Index, IndexState, IndexStatus, Scope, SearchResponse, TagsResponse};
@@ -104,15 +105,35 @@ pub fn call(cli: &Cli, method: &str, params: Option<Value>) -> Result<Value, Fai
             to_json(links::links_of(&i, &path))
         }
         methods::FILE_READ => {
-            // `{path}` targets need no index; only a link-style name does.
-            let path = if params.get("path").is_some_and(|p| !p.is_null()) {
-                target::resolve(&v.root, &params, Need::File, &|_| None).map_err(rpc_fail)?
-            } else {
-                resolve(&v, &index_with_links(&v)?, &params)?
-            };
+            let path = file_path(&v, &params)?;
             vault_ops::read(&v, &path).map_err(rpc_fail)
         }
+        methods::SCENE_READ | methods::SCENE_GET => {
+            if !names_a_drawing(&params) {
+                return Err(Fail::new(crate::error::EXIT_NOT_RUNNING, "Vaultdraw is not running: the drawing on screen needs it (name a drawing to read it from disk)", "NOT_RUNNING"));
+            }
+            let path = file_path(&v, &params)?;
+            let read = vault_ops::read(&v, &path).map_err(rpc_fail)?;
+            let scene = &read["scene"];
+            let out = if method == methods::SCENE_READ { scene_project::read(&path, scene, v.read_only, &params) } else { scene_project::get(&path, scene, &params) };
+            out.map_err(rpc_fail)
+        }
         _ => Err(Fail::cli(format!("{method} cannot run without the app"))),
+    }
+}
+
+/// A `path` or `file` target in the params (otherwise the drawing on screen is meant).
+pub fn names_a_drawing(params: &Value) -> bool {
+    ["path", "file"].iter().any(|k| params.get(k).is_some_and(|v| !v.is_null()))
+}
+
+/// The checked vault-relative path of the drawing the params name. A `{path}` needs no index;
+/// only a link-style name does.
+fn file_path(v: &Vault, params: &Value) -> Result<String, Fail> {
+    if params.get("path").is_some_and(|p| !p.is_null()) {
+        target::resolve(&v.root, params, Need::File, &|_| None).map_err(rpc_fail)
+    } else {
+        resolve(v, &index_with_links(v)?, params)
     }
 }
 

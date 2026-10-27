@@ -22,6 +22,7 @@ pub mod new_drawing;
 pub mod ops;
 pub mod paths;
 pub mod recovery;
+pub mod scene_project;
 pub mod search;
 pub mod staging;
 pub mod uri;

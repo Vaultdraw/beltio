@@ -254,6 +254,25 @@ fn offline_with_a_live_app_is_refused() {
 }
 
 #[test]
+fn scene_read_and_get_of_a_named_drawing_work_with_the_app_closed() {
+    let e = env();
+    let r = e.json(&["scene", "read", "a"]);
+    assert_eq!((r["path"].as_str(), r["live"].as_bool(), r["total"].as_u64()), (Some("a.excalidraw"), Some(false), Some(2)));
+    assert!(r["version"].as_str().unwrap().starts_with('s'));
+    assert_eq!(e.json(&["scene", "read", "a", "--type", "text"])["counts"], json!({"text": 1}));
+    let g = e.json(&["scene", "get", "t0", "nope", "--in", "sub/b.excalidraw"]);
+    assert_eq!(g["elements"][0]["text"], "beta foo #graph #dp");
+    assert_eq!(g["missing"], json!(["nope"]));
+    // The drawing on screen has no offline answer.
+    let v = e.root.to_str().unwrap();
+    let o = e.run(&["--vault", v, "scene", "read"]);
+    assert_eq!(code(&o), 3, "{}", err(&o));
+    assert!(err(&o).contains("NOT_RUNNING"), "{}", err(&o));
+    let o = e.run(&["--vault", v, "scene", "read", "a", "--scope", "viewport"]);
+    assert_ne!(code(&o), 0);
+}
+
+#[test]
 fn window_commands_still_need_the_app() {
     let e = env();
     let v = e.root.to_str().unwrap();
