@@ -20,7 +20,7 @@ test("a plugin overlay covers the drawing area and closes with its button", asyn
   await expect(page.getByText("Hello from an overlay")).toBeVisible();
   await expect(page.locator(".vault-editor-body--covered")).toHaveCount(1);
 
-  await page.getByRole("button", { name: "Close" }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByText("Hello from an overlay")).toHaveCount(0);
   await expect(page.locator(".vault-editor-body--covered")).toHaveCount(0);
   expect(errors).toEqual([]);
