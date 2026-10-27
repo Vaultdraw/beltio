@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "range": [
+        0,
+        8
+      ],
+      "kind": "paragraph",
+      "text": "Before."
+    },
+    {
+      "range": [
+        9,
+        43
+      ],
+      "kind": "math",
+      "latex": "\\int_0^1 x^2 \\, dx = \\frac13"
+    },
+    {
+      "range": [
+        45,
+        52
+      ],
+      "kind": "math",
+      "latex": "a+b",
+      "blockId": "eq-1"
+    },
+    {
+      "range": [
+        60,
+        115
+      ],
+      "kind": "paragraph",
+      "text": "Inline $E = mc^2$ and a price of $5 and $6 stay prose.",
+      "inline": [
+        {
+          "kind": "math",
+          "start": 7,
+          "end": 17,
+          "target": "E = mc^2"
+        }
+      ]
+    }
+  ],
+  "links": [],
+  "tags": [],
+  "stats": {
+    "words": 14,
+    "blocks": 4,
+    "droppedEmphasis": 0,
+    "droppedHtml": 0
+  }
+}

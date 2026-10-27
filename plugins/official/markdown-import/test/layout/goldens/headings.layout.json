@@ -1,0 +1,147 @@
+{
+ "parts": [
+  {
+   "title": "",
+   "items": [
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 48,
+     "width": 698,
+     "height": 40,
+     "text": "Title with bold and italic",
+     "fontSize": 32,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "heading": 1
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 98,
+     "width": 698,
+     "height": 20,
+     "text": "Intro paragraph with highlight, gone and inline #code.",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 138,
+     "width": 698,
+     "height": 30,
+     "text": "Second level #topic",
+     "fontSize": 24,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "heading": 2
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 188,
+     "width": 698,
+     "height": 25,
+     "text": "Third",
+     "fontSize": 20,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "heading": 3
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 233,
+     "width": 698,
+     "height": 22.5,
+     "text": "Fourth",
+     "fontSize": 18,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "heading": 4
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 275.5,
+     "width": 698,
+     "height": 20,
+     "text": "Fifth",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "heading": 5
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 315.5,
+     "width": 698,
+     "height": 20,
+     "text": "Sixth",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "heading": 6
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 355.5,
+     "width": 698,
+     "height": 40,
+     "text": "Setext Heading",
+     "fontSize": 32,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "heading": 1
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 405.5,
+     "width": 698,
+     "height": 20,
+     "text": "Last paragraph",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    }
+   ],
+   "pageCount": 1
+  }
+ ],
+ "stats": {
+  "words": 24,
+  "blocks": 9,
+  "elements": 9,
+  "pages": 1,
+  "parts": 1,
+  "skipped": 0
+ }
+}

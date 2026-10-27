@@ -1,0 +1,66 @@
+{
+ "parts": [
+  {
+   "title": "",
+   "items": [
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 48,
+     "width": 698,
+     "height": 40,
+     "text": "See [[Note]] and [[Note|an alias]] and [[Note#Heading]] and [[Note#Heading|with\nalias]] and [[Note#^blk-1]].",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 98,
+     "width": 698,
+     "height": 20,
+     "text": "A label link, a relative link, https://auto.link and #tag/nested here.",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 128,
+     "width": 698,
+     "height": 20,
+     "text": "Footnote-ish text with $x^2$ inline math and a  inside.",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 158,
+     "width": 698,
+     "height": 20,
+     "text": "Äpfel [[Übung]] 😀 [[Emoji 😀]] #tägs",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    }
+   ],
+   "pageCount": 1
+  }
+ ],
+ "stats": {
+  "words": 37,
+  "blocks": 4,
+  "elements": 4,
+  "pages": 1,
+  "parts": 1,
+  "skipped": 0
+ }
+}

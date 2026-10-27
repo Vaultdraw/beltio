@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "range": [
+        0,
+        12
+      ],
+      "kind": "image",
+      "target": "pic.png",
+      "remote": false
+    },
+    {
+      "range": [
+        14,
+        30
+      ],
+      "kind": "image",
+      "target": "pic.png",
+      "remote": false,
+      "width": 100
+    },
+    {
+      "range": [
+        32,
+        52
+      ],
+      "kind": "image",
+      "target": "pic.png",
+      "remote": false,
+      "width": 100,
+      "height": 200
+    },
+    {
+      "range": [
+        54,
+        79
+      ],
+      "kind": "image",
+      "target": "pic.png",
+      "remote": false,
+      "alt": "alt text",
+      "width": 300
+    },
+    {
+      "range": [
+        81,
+        115
+      ],
+      "kind": "image",
+      "target": "assets/my pic.png",
+      "remote": false,
+      "alt": "alt",
+      "width": 120,
+      "height": 80
+    },
+    {
+      "range": [
+        117,
+        132
+      ],
+      "kind": "embed",
+      "target": "Other Note"
+    },
+    {
+      "range": [
+        134,
+        157
+      ],
+      "kind": "embed",
+      "target": "Other Note",
+      "heading": "Heading"
+    },
+    {
+      "range": [
+        159,
+        183
+      ],
+      "kind": "embed",
+      "target": "Other Note",
+      "blockRef": "blockid"
+    },
+    {
+      "range": [
+        185,
+        204
+      ],
+      "kind": "embed",
+      "target": "doc.pdf",
+      "heading": "page=3"
+    },
+    {
+      "range": [
+        206,
+        242
+      ],
+      "kind": "image",
+      "target": "https://example.com/x.png",
+      "remote": true,
+      "alt": "remote"
+    },
+    {
+      "range": [
+        244,
+        287
+      ],
+      "kind": "paragraph",
+      "text": "Text before  text after."
+    },
+    {
+      "range": [
+        256,
+        274
+      ],
+      "kind": "image",
+      "target": "inline.png",
+      "remote": false,
+      "width": 50
+    }
+  ],
+  "links": [
+    {
+      "kind": "embed",
+      "target": "pic.png",
+      "range": [
+        0,
+        12
+      ]
+    },
+    {
+      "kind": "embed",
+      "target": "pic.png",
+      "range": [
+        14,
+        30
+      ]
+    },
+    {
+      "kind": "embed",
+      "target": "pic.png",
+      "range": [
+        32,
+        52
+      ]
+    },
+    {
+      "kind": "embed",
+      "target": "pic.png",
+      "alias": "alt text",
+      "range": [
+        54,
+        79
+      ]
+    },
+    {
+      "kind": "embed",
+      "target": "assets/my pic.png",
+      "range": [
+        81,
+        115
+      ]
+    },
+    {
+      "kind": "embed",
+      "target": "Other Note",
+      "range": [
+        117,
+        132
+      ]
+    },
+    {
+      "kind": "embed",
+      "target": "Other Note",
+      "heading": "Heading",
+      "range": [
+        134,
+        157
+      ]
+    },
+    {
+      "kind": "embed",
+      "target": "Other Note",
+      "blockRef": "blockid",
+      "range": [
+        159,
+        183
+      ]
+    },
+    {
+      "kind": "embed",
+      "target": "doc.pdf",
+      "heading": "page=3",
+      "range": [
+        185,
+        204
+      ]
+    },
+    {
+      "kind": "embed",
+      "target": "https://example.com/x.png",
+      "range": [
+        206,
+        242
+      ]
+    },
+    {
+      "kind": "embed",
+      "target": "inline.png",
+      "range": [
+        256,
+        274
+      ]
+    }
+  ],
+  "tags": [],
+  "stats": {
+    "words": 4,
+    "blocks": 12,
+    "droppedEmphasis": 0,
+    "droppedHtml": 0
+  }
+}

@@ -1,0 +1,96 @@
+{
+ "parts": [
+  {
+   "title": "",
+   "items": [
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 48,
+     "y": 48,
+     "width": 698,
+     "height": 70.4,
+     "fill": "code"
+    },
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 48,
+     "y": 118.4,
+     "width": 698,
+     "height": 53.6,
+     "fill": "code"
+    },
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 48,
+     "y": 172,
+     "width": 698,
+     "height": 36.8,
+     "fill": "code"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 58,
+     "width": 678,
+     "height": 50.4,
+     "text": "#include <stdio.h>\n#define MAX 10\nint main() { return 0; }",
+     "fontSize": 14,
+     "fontFamily": "Cascadia",
+     "lineHeight": 1.2,
+     "tone": "code"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 128.4,
+     "width": 678,
+     "height": 33.6,
+     "text": "# comment, not a tag\nprint(\"#notatag\")",
+     "fontSize": 14,
+     "fontFamily": "Cascadia",
+     "lineHeight": 1.2,
+     "tone": "code"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 182,
+     "width": 678,
+     "height": 16.8,
+     "text": "indented #code line",
+     "fontSize": 14,
+     "fontFamily": "Cascadia",
+     "lineHeight": 1.2,
+     "tone": "code"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 218.8,
+     "width": 698,
+     "height": 20,
+     "text": "A real #tag after code and #inlinecode not a tag. Colour #ff00aa is not a tag either.",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    }
+   ],
+   "pageCount": 1
+  }
+ ],
+ "stats": {
+  "words": 17,
+  "blocks": 4,
+  "elements": 7,
+  "pages": 1,
+  "parts": 1,
+  "skipped": 0
+ }
+}

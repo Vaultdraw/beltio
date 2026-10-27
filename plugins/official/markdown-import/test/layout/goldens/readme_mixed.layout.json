@@ -1,0 +1,233 @@
+{
+ "parts": [
+  {
+   "title": "",
+   "items": [
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 48,
+     "y": 218,
+     "width": 698,
+     "height": 36.8,
+     "fill": "code"
+    },
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 48,
+     "y": 374.8,
+     "width": 698,
+     "height": 70,
+     "fill": "callout"
+    },
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 48,
+     "y": 444.8,
+     "width": 698,
+     "height": 70.4,
+     "fill": "table"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 48,
+     "width": 698,
+     "height": 40,
+     "text": "Project Alpha",
+     "fontSize": 32,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "heading": 1
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 98,
+     "width": 698,
+     "height": 20,
+     "text": "A short description with a website, a [[Roadmap]] link and #status/active tag.",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 138,
+     "width": 698,
+     "height": 30,
+     "text": "Install",
+     "fontSize": 24,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "heading": 2
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 178,
+     "width": 698,
+     "height": 40,
+     "text": "1. Run cargo build\n2. Run the tests:",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 228,
+     "width": 678,
+     "height": 16.8,
+     "text": "cargo test # not a tag",
+     "fontSize": 14,
+     "fontFamily": "Cascadia",
+     "lineHeight": 1.2,
+     "tone": "code"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 274.8,
+     "width": 698,
+     "height": 30,
+     "text": "Features",
+     "fontSize": 24,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "heading": 2
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 314.8,
+     "width": 698,
+     "height": 40,
+     "text": "☑ Fast\n☐ Offline first",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 72,
+     "y": 354.8,
+     "width": 674,
+     "height": 20,
+     "text": "• works on the worst laptop",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 384.8,
+     "width": 678,
+     "height": 20,
+     "text": "Remember",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "callout": "tip"
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 414.8,
+     "width": 678,
+     "height": 20,
+     "text": "Read the docs first.",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 454.8,
+     "width": 678,
+     "height": 50.4,
+     "text": "Option │ Default\n───────┼────────\nmode   │ fast   ",
+     "fontSize": 14,
+     "fontFamily": "Cascadia",
+     "lineHeight": 1.2
+    },
+    {
+     "type": "line",
+     "page": 0,
+     "x": 48,
+     "y": 535.2,
+     "width": 698,
+     "height": 0
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 555.2,
+     "width": 698,
+     "height": 20,
+     "text": "<div align=\"center\">raw html</div>",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "tone": "muted"
+    },
+    {
+     "type": "image",
+     "page": 0,
+     "x": 48,
+     "y": 585.2,
+     "width": 64,
+     "height": 40,
+     "mimeType": "image/png",
+     "target": "logo.png"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 635.2,
+     "width": 698,
+     "height": 20,
+     "text": "Last line",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    }
+   ],
+   "pageCount": 1
+  }
+ ],
+ "stats": {
+  "words": 42,
+  "blocks": 17,
+  "elements": 18,
+  "pages": 1,
+  "parts": 1,
+  "skipped": 0
+ }
+}

@@ -1,0 +1,148 @@
+{
+ "parts": [
+  {
+   "title": "",
+   "items": [
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 48,
+     "y": 318,
+     "width": 698,
+     "height": 36.8,
+     "fill": "code"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 48,
+     "width": 698,
+     "height": 60,
+     "text": "• plain bullet\n☐ open task\n☑ done task with bold",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 72,
+     "y": 108,
+     "width": 674,
+     "height": 20,
+     "text": "• nested bullet",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 96,
+     "y": 128,
+     "width": 650,
+     "height": 20,
+     "text": "• deeper #nested-tag",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 72,
+     "y": 148,
+     "width": 674,
+     "height": 20,
+     "text": "• second nested",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 168,
+     "width": 698,
+     "height": 60,
+     "text": "• star marker\n1. first\n2. second",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 72,
+     "y": 228,
+     "width": 674,
+     "height": 20,
+     "text": "1) inner ordered",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 248,
+     "width": 698,
+     "height": 40,
+     "text": "3. third\n• loose item",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 298,
+     "width": 698,
+     "height": 20,
+     "text": "continuation paragraph",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 328,
+     "width": 678,
+     "height": 16.8,
+     "text": "code in item",
+     "fontSize": 14,
+     "fontFamily": "Cascadia",
+     "lineHeight": 1.2,
+     "tone": "code"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 364.8,
+     "width": 698,
+     "height": 20,
+     "text": "• last",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    }
+   ],
+   "pageCount": 1
+  }
+ ],
+ "stats": {
+  "words": 26,
+  "blocks": 15,
+  "elements": 11,
+  "pages": 1,
+  "parts": 1,
+  "skipped": 0
+ }
+}

@@ -1,0 +1,51 @@
+{
+ "parts": [
+  {
+   "title": "",
+   "items": [
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 48,
+     "y": 48,
+     "width": 698,
+     "height": 104,
+     "fill": "table"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 58,
+     "width": 678,
+     "height": 84,
+     "text": "Name  │ Qty │    Note    \n──────┼─────┼────────────\nApple │   3 │  [[Fruit]] \nPear  │  12 │ #fresh code\nFig   │     │            ",
+     "fontSize": 14,
+     "fontFamily": "Cascadia",
+     "lineHeight": 1.2
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 162,
+     "width": 698,
+     "height": 20,
+     "text": "Paragraph after.",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    }
+   ],
+   "pageCount": 1
+  }
+ ],
+ "stats": {
+  "words": 13,
+  "blocks": 2,
+  "elements": 3,
+  "pages": 1,
+  "parts": 1,
+  "skipped": 0
+ }
+}

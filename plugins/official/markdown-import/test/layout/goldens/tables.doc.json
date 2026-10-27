@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "range": [
+        0,
+        118
+      ],
+      "kind": "table",
+      "align": [
+        "left",
+        "right",
+        "center"
+      ],
+      "header": [
+        "Name",
+        "Qty",
+        "Note"
+      ],
+      "rows": [
+        [
+          "Apple",
+          "3",
+          "[[Fruit]]"
+        ],
+        [
+          "Pear",
+          "12",
+          "#fresh code"
+        ],
+        [
+          "Fig",
+          "",
+          ""
+        ]
+      ],
+      "cols": 3,
+      "cellCount": 12
+    },
+    {
+      "range": [
+        119,
+        136
+      ],
+      "kind": "paragraph",
+      "text": "Paragraph after."
+    }
+  ],
+  "links": [
+    {
+      "kind": "wikilink",
+      "target": "Fruit",
+      "range": [
+        60,
+        69
+      ]
+    }
+  ],
+  "tags": [
+    "fresh"
+  ],
+  "stats": {
+    "words": 13,
+    "blocks": 2,
+    "droppedEmphasis": 1,
+    "droppedHtml": 0
+  }
+}

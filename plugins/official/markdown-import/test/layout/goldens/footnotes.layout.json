@@ -1,0 +1,76 @@
+{
+ "parts": [
+  {
+   "title": "",
+   "items": [
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 48,
+     "width": 698,
+     "height": 20,
+     "text": "Claim one[1] and claim two[note] here.",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 78,
+     "width": 698,
+     "height": 20,
+     "text": "☐ task with footnote[1]",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "line",
+     "page": 0,
+     "x": 48,
+     "y": 128,
+     "width": 698,
+     "height": 0
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 148,
+     "width": 698,
+     "height": 20,
+     "text": "[1] First footnote with bold.",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "tone": "muted"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 178,
+     "width": 698,
+     "height": 20,
+     "text": "[note] Second footnote continues.",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "tone": "muted"
+    }
+   ],
+   "pageCount": 1
+  }
+ ],
+ "stats": {
+  "words": 16,
+  "blocks": 6,
+  "elements": 5,
+  "pages": 1,
+  "parts": 1,
+  "skipped": 0
+ }
+}

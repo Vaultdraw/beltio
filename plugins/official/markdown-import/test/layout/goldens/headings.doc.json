@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "range": [
+        0,
+        39
+      ],
+      "kind": "heading",
+      "level": 1,
+      "text": "Title with bold and italic",
+      "blockId": "h1"
+    },
+    {
+      "range": [
+        40,
+        105
+      ],
+      "kind": "paragraph",
+      "text": "Intro paragraph with highlight, gone and inline #code."
+    },
+    {
+      "range": [
+        106,
+        129
+      ],
+      "kind": "heading",
+      "level": 2,
+      "text": "Second level #topic",
+      "inline": [
+        {
+          "kind": "tag",
+          "start": 13,
+          "end": 19,
+          "target": "topic"
+        }
+      ]
+    },
+    {
+      "range": [
+        129,
+        139
+      ],
+      "kind": "heading",
+      "level": 3,
+      "text": "Third"
+    },
+    {
+      "range": [
+        139,
+        151
+      ],
+      "kind": "heading",
+      "level": 4,
+      "text": "Fourth"
+    },
+    {
+      "range": [
+        151,
+        163
+      ],
+      "kind": "heading",
+      "level": 5,
+      "text": "Fifth"
+    },
+    {
+      "range": [
+        163,
+        176
+      ],
+      "kind": "heading",
+      "level": 6,
+      "text": "Sixth"
+    },
+    {
+      "range": [
+        177,
+        207
+      ],
+      "kind": "heading",
+      "level": 1,
+      "text": "Setext Heading"
+    },
+    {
+      "range": [
+        208,
+        231
+      ],
+      "kind": "paragraph",
+      "text": "Last paragraph",
+      "blockId": "para-1"
+    }
+  ],
+  "links": [],
+  "tags": [
+    "topic"
+  ],
+  "stats": {
+    "words": 24,
+    "blocks": 9,
+    "droppedEmphasis": 4,
+    "droppedHtml": 0
+  }
+}

@@ -1,0 +1,264 @@
+{
+ "parts": [
+  {
+   "title": "",
+   "items": [
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 48,
+     "y": 48,
+     "width": 698,
+     "height": 70,
+     "fill": "callout"
+    },
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 48,
+     "y": 118,
+     "width": 698,
+     "height": 70,
+     "fill": "callout"
+    },
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 48,
+     "y": 188,
+     "width": 698,
+     "height": 40,
+     "fill": "callout"
+    },
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 48,
+     "y": 228,
+     "width": 698,
+     "height": 70,
+     "fill": "callout"
+    },
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 48,
+     "y": 298,
+     "width": 698,
+     "height": 140,
+     "fill": "callout"
+    },
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 48,
+     "y": 448,
+     "width": 698,
+     "height": 90,
+     "fill": "quote"
+    },
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 58,
+     "y": 328,
+     "width": 678,
+     "height": 70,
+     "fill": "callout"
+    },
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 58,
+     "y": 488,
+     "width": 678,
+     "height": 50,
+     "fill": "quote"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 58,
+     "width": 678,
+     "height": 20,
+     "text": "A titled note",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "callout": "note"
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 88,
+     "width": 678,
+     "height": 20,
+     "text": "Body text with [[Link]] and a second line",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 128,
+     "width": 678,
+     "height": 20,
+     "text": "Folded tip",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "callout": "tip"
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 158,
+     "width": 678,
+     "height": 20,
+     "text": "hidden body",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 198,
+     "width": 678,
+     "height": 20,
+     "text": "Open warning",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "callout": "warning"
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 238,
+     "width": 678,
+     "height": 20,
+     "text": "Note",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "callout": "note"
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 268,
+     "width": 678,
+     "height": 20,
+     "text": "Bare uppercase note",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 308,
+     "width": 678,
+     "height": 20,
+     "text": "Nested",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "callout": "faq"
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 68,
+     "y": 338,
+     "width": 658,
+     "height": 20,
+     "text": "Inner callout",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "data": {
+      "callout": "info"
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 68,
+     "y": 368,
+     "width": 658,
+     "height": 20,
+     "text": "inner body",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 408,
+     "width": 678,
+     "height": 20,
+     "text": "• list in callout",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 58,
+     "y": 458,
+     "width": 678,
+     "height": 20,
+     "text": "A plain quote",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 68,
+     "y": 498,
+     "width": 658,
+     "height": 20,
+     "text": "with a nested quote",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    }
+   ],
+   "pageCount": 1
+  }
+ ],
+ "stats": {
+  "words": 41,
+  "blocks": 15,
+  "elements": 21,
+  "pages": 1,
+  "parts": 1,
+  "skipped": 0
+ }
+}

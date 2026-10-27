@@ -1,0 +1,68 @@
+{
+ "parts": [
+  {
+   "title": "",
+   "items": [
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 48,
+     "width": 698,
+     "height": 20,
+     "text": "Before.",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 78,
+     "width": 698,
+     "height": 16.8,
+     "text": "\\int_0^1 x^2 \\, dx = \\frac13",
+     "fontSize": 14,
+     "fontFamily": "Cascadia",
+     "lineHeight": 1.2,
+     "tone": "code"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 104.8,
+     "width": 698,
+     "height": 16.8,
+     "text": "a+b",
+     "fontSize": 14,
+     "fontFamily": "Cascadia",
+     "lineHeight": 1.2,
+     "tone": "code"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 131.6,
+     "width": 698,
+     "height": 20,
+     "text": "Inline $E = mc^2$ and a price of $5 and $6 stay prose.",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25
+    }
+   ],
+   "pageCount": 1
+  }
+ ],
+ "stats": {
+  "words": 14,
+  "blocks": 4,
+  "elements": 4,
+  "pages": 1,
+  "parts": 1,
+  "skipped": 0
+ }
+}
