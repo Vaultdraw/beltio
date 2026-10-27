@@ -2063,10 +2063,7 @@ export const VaultApp = ({
   // but frozen (no key or pointer handling) and hidden, so closing is instant.
   const [graphOpen, setGraphOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
-  const pluginOverlayOpen = useSyncExternalStore(
-    subscribeOverlay,
-    hasOverlay,
-  );
+  const pluginOverlayOpen = useSyncExternalStore(subscribeOverlay, hasOverlay);
   const mainCovered = graphOpen || galleryOpen || pluginOverlayOpen;
   // One cover at a time: a plugin overlay and the built-in graph or gallery close each other.
   useEffect(() => {

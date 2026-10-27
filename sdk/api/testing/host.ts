@@ -473,7 +473,13 @@ export function createMockHost(
       return d;
     };
     const refuse = (
-      what: "command" | "panel" | "importer" | "status bar item" | "view" | "tool",
+      what:
+        | "command"
+        | "panel"
+        | "importer"
+        | "status bar item"
+        | "view"
+        | "tool",
       short: string,
     ): Disposable => {
       reportError(new Error(undeclaredMessage(what, short)), "register");
