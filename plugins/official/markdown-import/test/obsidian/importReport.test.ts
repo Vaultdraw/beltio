@@ -72,7 +72,7 @@ const run = async (files: Record<string, string | number>, on = true) => {
         },
       },
       pages: {
-        geometry: () => ({ width: 794, height: 1123 }) as never,
+        geometry: () => ({ width: 794, height: 1123 } as never),
         buildScene: async () => ({}),
       },
     } as never,

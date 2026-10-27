@@ -119,8 +119,8 @@ export async function importObsidianVault(
       reason === "oversized"
         ? "oversizedImages"
         : reason === "unsupported"
-          ? "unsupportedImages"
-          : "missingImages"
+        ? "unsupportedImages"
+        : "missingImages"
     ]++;
     if (result.imageIssues.length < MAX_REPORT_ROWS) {
       result.imageIssues.push({ note, image, reason });

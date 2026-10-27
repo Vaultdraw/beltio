@@ -320,7 +320,9 @@ const plugin: Plugin = definePlugin({
                   : ""
               }${
                 result.report
-                  ? `. See "${result.report.replace(/\.excalidraw$/, "")}" in ${target.name} for details`
+                  ? `. See "${result.report.replace(/\.excalidraw$/, "")}" in ${
+                      target.name
+                    } for details`
                   : ""
               }`,
             );

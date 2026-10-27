@@ -12,7 +12,9 @@ import { live, near, pixelAtScene, seedAndOpen } from "./pageHelpers";
 // (The e2e Markdown parser is a stand-in without image blocks, so the picture check is on the converted
 // drawing; images inside notes are covered by the plugin's unit tests and the packaged run.)
 const PIC = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#ff0000"/></svg>`;
-const PIC_URL = `data:image/svg+xml;base64,${Buffer.from(PIC).toString("base64")}`;
+const PIC_URL = `data:image/svg+xml;base64,${Buffer.from(PIC).toString(
+  "base64",
+)}`;
 
 const SKETCH = JSON.stringify({
   type: "excalidraw",
