@@ -10,6 +10,7 @@ pub mod excalidraw_md;
 pub mod filekind;
 pub mod fsbulk;
 pub mod fsops;
+pub mod import_folder;
 pub mod instance;
 pub mod json_ascii;
 pub mod links;

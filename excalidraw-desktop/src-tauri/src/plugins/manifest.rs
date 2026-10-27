@@ -30,13 +30,13 @@ pub(crate) const RESERVED_EXTENSIONS: [&str; 16] = [
 ];
 
 /// Permissions a plugin may declare. A declaration and a consent line, not a sandbox.
-pub(crate) const PERMISSIONS: [&str; 2] = ["vault.read", "vault.write"];
+pub(crate) const PERMISSIONS: [&str; 3] = ["vault.read", "vault.write", "folders.import"];
 /// Names kept for later API revisions: an app that knows them as reserved refuses a manifest that uses one.
 const RESERVED_PERMISSIONS: [&str; 3] = ["net", "secret", "control"];
 
 /// A write permission changes files with no undo: adding one needs the user's review.
 pub(crate) fn is_write_permission(p: &str) -> bool {
-    p.ends_with(".write")
+    p.ends_with(".write") || p == "folders.import"
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

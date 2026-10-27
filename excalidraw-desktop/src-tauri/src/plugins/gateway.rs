@@ -21,6 +21,9 @@ pub(crate) enum Route {
     StorageWrite,
     /// `vaultdraw_core::markdown::parse_markdown` on `params.text` (pure: no vault access).
     MarkdownParse,
+    /// `crate::import_folder::folders_call`: capability-scoped source and target folders for
+    /// importers (read-only source handles, create-only targets).
+    Folders,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -39,7 +42,19 @@ pub(crate) const ALLOWLIST: &[Row] = &[
     Row { method: "storage.read", permission: None, route: Route::StorageRead },
     Row { method: "storage.write", permission: None, route: Route::StorageWrite },
     Row { method: "markdown.parse", permission: None, route: Route::MarkdownParse },
+    Row { method: "folders.pickSource", permission: Some(FOLDERS_IMPORT), route: Route::Folders },
+    Row { method: "folders.list", permission: Some(FOLDERS_IMPORT), route: Route::Folders },
+    Row { method: "folders.readText", permission: Some(FOLDERS_IMPORT), route: Route::Folders },
+    Row { method: "folders.readBytes", permission: Some(FOLDERS_IMPORT), route: Route::Folders },
+    Row { method: "folders.pickNewVault", permission: Some(FOLDERS_IMPORT), route: Route::Folders },
+    Row { method: "folders.vaultTarget", permission: Some(FOLDERS_IMPORT), route: Route::Folders },
+    Row { method: "folders.writeDrawing", permission: Some(FOLDERS_IMPORT), route: Route::Folders },
+    Row { method: "folders.copy", permission: Some(FOLDERS_IMPORT), route: Route::Folders },
+    Row { method: "folders.release", permission: Some(FOLDERS_IMPORT), route: Route::Folders },
 ];
+
+/// The one permission every `folders.*` row needs: pick folders, read one, create files in another.
+pub(crate) const FOLDERS_IMPORT: &str = "folders.import";
 
 /// An error as the host sees it: `{code, message, ...detail}` (detail such as `reason: "dirty"`).
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -200,7 +215,7 @@ pub(crate) fn storage_call(state_dir: &std::path::Path, plugin_id: &str, route: 
             storage::write(state_dir, plugin_id, text)?;
             Ok(Value::Null)
         }
-        Route::Control(_) | Route::MarkdownParse => Err(GatewayError::new("INTERNAL", "not a storage row")),
+        Route::Control(_) | Route::MarkdownParse | Route::Folders => Err(GatewayError::new("INTERNAL", "not a storage row")),
     }
 }
 

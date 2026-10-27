@@ -816,8 +816,20 @@ fn gateway_allowlist_maps_methods_to_permissions() {
             ("storage.read", None),
             ("storage.write", None),
             ("markdown.parse", None),
+            ("folders.pickSource", Some("folders.import")),
+            ("folders.list", Some("folders.import")),
+            ("folders.readText", Some("folders.import")),
+            ("folders.readBytes", Some("folders.import")),
+            ("folders.pickNewVault", Some("folders.import")),
+            ("folders.vaultTarget", Some("folders.import")),
+            ("folders.writeDrawing", Some("folders.import")),
+            ("folders.copy", Some("folders.import")),
+            ("folders.release", Some("folders.import")),
         ]
     );
+    // The folders rows and the module that serves them name the same methods.
+    let folders: Vec<&str> = gateway::ALLOWLIST.iter().filter(|r| r.route == gateway::Route::Folders).map(|r| r.method).collect();
+    assert_eq!(folders, crate::import_folder::ROWS);
     // Every permission a row needs is a name the manifest accepts.
     for r in gateway::ALLOWLIST {
         if let Some(p) = r.permission {
@@ -1256,4 +1268,22 @@ fn gateway_markdown_parse_needs_no_permission_and_checks_params() {
     }
     let big = "a".repeat(vaultdraw_core::markdown::MAX_MARKDOWN_BYTES as usize + 1);
     assert_eq!(gateway::markdown_call(Some(serde_json::json!({ "text": big }))).unwrap_err().code, "INVALID_ARGUMENT");
+}
+
+#[test]
+fn gateway_folders_rows_need_the_import_permission_and_consent() {
+    let none = consent::Record::new();
+    let reader = info_with("reader", "\"vault.read\"", Source::User);
+    let e = gateway::authorize("folders.list", "reader", Some(&reader), || none.clone()).unwrap_err();
+    assert_eq!((e.code.as_str(), e.detail["permission"].as_str()), ("PERMISSION", Some("folders.import")));
+    let importer = info_with("importer", "\"folders.import\"", Source::User);
+    let e = gateway::authorize("folders.writeDrawing", "importer", Some(&importer), || none.clone()).unwrap_err();
+    assert_eq!(e.code, "PERMISSION");
+    let ok = gateway::authorize("folders.writeDrawing", "importer", Some(&importer), || record("importer", &["folders.import"])).unwrap();
+    assert_eq!(ok.route, gateway::Route::Folders);
+    let bundled = info_with("official", "\"folders.import\"", Source::Bundled);
+    let unread = || -> consent::Record { panic!("bundled plugins never read the consent file") };
+    assert!(gateway::authorize("folders.copy", "official", Some(&bundled), unread).is_ok());
+    // A write permission for the review dialog: adding it later needs the user's confirmation.
+    assert!(manifest::is_write_permission("folders.import"));
 }

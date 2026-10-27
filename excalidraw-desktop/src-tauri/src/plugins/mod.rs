@@ -6,6 +6,7 @@
 mod consent;
 mod devlog;
 mod gateway;
+pub(crate) use gateway::GatewayError;
 mod install;
 mod manifest;
 pub(crate) use manifest::is_valid_id as is_valid_plugin_id;
@@ -170,6 +171,7 @@ pub(crate) async fn plugin_call(
                 }
             }
             gateway::Route::MarkdownParse => gateway::markdown_call(params),
+            gateway::Route::Folders => crate::import_folder::folders_call(&app, &method, params),
             route => gateway::storage_call(&state_dir, &plugin_id, route, &params.unwrap_or_default()),
         }
     })
