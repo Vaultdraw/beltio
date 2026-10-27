@@ -182,6 +182,17 @@ export function createSceneApi(
     path() {
       return getActiveScene()?.path ?? null;
     },
+    selection() {
+      const scene = getActiveScene();
+      return scene
+        ? Object.keys(scene.api.getAppState().selectedElementIds ?? {})
+        : [];
+    },
+    currentStrokeColor() {
+      return (
+        getActiveScene()?.api.getAppState().currentItemStrokeColor ?? "#1e1e1e"
+      );
+    },
     scrollTo(elementId) {
       const scene = getActiveScene();
       if (!scene?.path || typeof elementId !== "string" || !isLive()) {

@@ -26,6 +26,7 @@ import { TabKindView } from "../../tabs/TabKindView";
 import { isPanelOpen } from "../../slots/panelStore";
 import { getMenuItems, runMenuItem } from "../menuRegistry";
 import { closeOverlay, getOverlay } from "../overlayStore";
+import { renderMath } from "../mathService";
 import PluginOverlayHost from "../PluginOverlayHost";
 import { getToolHandlers, getToolStub } from "../toolRegistry";
 import { ensureActive, getRuntime } from "../host/activation";
@@ -53,6 +54,8 @@ import { createFakeScene, type FakeScene } from "./fakeScene";
 
 import type {
   Json,
+  MathRequest,
+  MathResult,
   NewElement,
   MenuTarget,
   ToolPoint,
@@ -233,6 +236,8 @@ export interface TestPlugin {
   openedFromViews(): { path: string; newTab: boolean }[];
   /** Short ids of the panels that are open. */
   openPanelIds(): string[];
+  /** Renders TeX through `ctx.math` (the provider a plugin set, else null). */
+  renderMath(request: MathRequest): Promise<MathResult | null>;
   /** The open overlay (`ctx.overlays.open`) of this plugin, or null. `render()` mounts it. */
   overlay(): { close(): void; render(): RenderResult } | null;
   /** The status bar items that currently have text. */
@@ -664,6 +669,7 @@ export async function boot(
       return shown!;
     },
     openedFromViews: () => viewOpened.map((o) => ({ ...o })),
+    renderMath: (request) => renderMath(request),
     overlay() {
       const open = getOverlay();
       if (!open || open.pluginId !== id) {

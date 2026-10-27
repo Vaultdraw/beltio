@@ -166,6 +166,7 @@ export async function boot(
     openView: host.openView,
     openedFromViews: host.openedFromViews,
     openPanelIds: host.openPanelIds,
+    renderMath: host.renderMath,
     overlay: host.overlay,
     statusBar: host.statusBar,
     async clickStatusBar(id) {

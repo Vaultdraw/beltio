@@ -4,6 +4,9 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { PluginBoundary } from "./host/PluginBoundary";
 import { closeOverlay, getOverlay, subscribeOverlay } from "./overlayStore";
 
+/** A modal dialog draws its own scrim and frame over the drawing. */
+const MODAL_STYLE = { display: "contents" } as const;
+
 const STYLE = {
   position: "absolute",
   inset: 0,
@@ -30,7 +33,7 @@ export default function PluginOverlayHost({
   return (
     <div
       className="vd-plugin-overlay"
-      style={STYLE}
+      style={entry.modal ? MODAL_STYLE : STYLE}
       data-plugin-overlay={entry.pluginId}
     >
       <PluginBoundary pluginId={entry.pluginId} what="overlay">

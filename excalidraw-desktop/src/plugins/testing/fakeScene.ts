@@ -43,6 +43,10 @@ export interface FakeScene {
   files(): Record<string, { mime: string; bytes: Uint8Array }>;
   /** Ids `ctx.scene.scrollTo` asked the shell to focus, in order. */
   scrolledTo(): string[];
+  /** Selects elements as the user would (`ctx.scene.selection`). */
+  select(ids: readonly string[]): void;
+  /** Sets the stroke colour a new element gets (`ctx.scene.currentStrokeColor`). */
+  strokeColor(color: string): void;
   /** The app state fields `updateScene` set (such as `pageSetup`). */
   appState(): Record<string, unknown>;
   /** Records a `scrollTo` (the shell's focus path, called by the bridge). */
@@ -168,6 +172,15 @@ export function createFakeScene(initialPath: string | null): FakeScene {
       ),
     live: () => elements.filter((e) => !e.isDeleted),
     scrolledTo: () => [...scrolled],
+    select(ids: readonly string[]) {
+      appState = {
+        ...appState,
+        selectedElementIds: Object.fromEntries(ids.map((id) => [id, true])),
+      };
+    },
+    strokeColor(color: string) {
+      appState = { ...appState, currentItemStrokeColor: color };
+    },
     appState: () => ({ ...appState }),
     recordScroll: (id) => {
       scrolled.push(id);

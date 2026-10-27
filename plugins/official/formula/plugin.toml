@@ -1,0 +1,27 @@
+id = "formula"
+name = "Formula"
+version = "0.1.0"
+api = 0
+min_app = "0.2.0"
+main = "main.js"
+description = "LaTeX formulas as images in a drawing, and the TeX renderer the notes view uses"
+author = "Vaultdraw"
+# Formula images made by the app before this plugin keep their data under `latex`.
+data_key = "latex"
+
+[[contributes.commands]]
+id = "insert"
+title = "Formula: Insert formula"
+keys = ["Mod+Shift+M"]
+when = ["drawingOpen", "writable", "!modalOpen"]
+
+[[contributes.commands]]
+id = "edit"
+title = "Formula: Edit formula"
+when = ["drawingOpen", "writable", "!modalOpen"]
+
+# Starts the plugin so the notes view can render `$...$`; hidden from the palette.
+[[contributes.commands]]
+id = "provide"
+title = "Formula: Start the renderer"
+palette = false

@@ -38,17 +38,22 @@ export async function hydrateMath(
   if (nodes.length === 0) {
     return;
   }
-  const [{ renderFormula }, { svgToDataURL, FONT_PX }] = await Promise.all([
-    import("../../formula/renderer"),
-    import("../../formula/svgPost"),
+  const [{ renderMath }, { svgToDataURL, MATH_FONT_PX }] = await Promise.all([
+    import("../../plugins/mathService"),
+    import("./mathImage"),
   ]);
   const color = toHex(getComputedStyle(root).color);
   await Promise.all(
     nodes.map(async (el) => {
       const source = el.dataset.math ?? "";
       const display = el.dataset.display === "1";
-      const result = await renderFormula({ source, display, color });
+      const result = await renderMath({ source, display, color });
       if (!root.isConnected || !el.isConnected) {
+        return;
+      }
+      if (!result) {
+        // The formula plugin is off: the TeX source stays as text.
+        el.classList.add("note-math-source");
         return;
       }
       if (!result.ok) {
@@ -60,7 +65,7 @@ export async function hydrateMath(
       img.className = "note-math-img";
       img.alt = source;
       img.src = svgToDataURL(result.svg);
-      const k = fontPx / FONT_PX;
+      const k = fontPx / MATH_FONT_PX;
       img.width = Math.round(result.width * k * 100) / 100;
       img.height = Math.round(result.height * k * 100) / 100;
       el.replaceChildren(img);

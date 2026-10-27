@@ -404,4 +404,16 @@ export interface SceneContextApi {
    * @since 0.9.0
    */
   scrollTo(id: string): void;
+  /**
+   * Ids of the selected elements of the active drawing, [] when none or no drawing is open.
+   *
+   * @since 0.23.0
+   */
+  selection(): readonly string[];
+  /**
+   * The stroke colour the editor gives a new element (what the user last picked).
+   *
+   * @since 0.23.0
+   */
+  currentStrokeColor(): string;
 }

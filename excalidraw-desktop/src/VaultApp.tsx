@@ -141,6 +141,7 @@ import {
   closeOverlay,
   getOverlay,
   hasOverlay,
+  hasCoveringOverlay,
   subscribeOverlay,
 } from "./plugins/overlayStore";
 import { FolderProvider } from "./plugins/folderContext";
@@ -2064,7 +2065,10 @@ export const VaultApp = ({
     () => getOverlay()?.pluginId === "graph",
   );
   useEffect(() => graphPanelStore.publish(graphOpen), [graphOpen]);
-  const mainCovered = pluginOverlayOpen;
+  const mainCovered = useSyncExternalStore(
+    subscribeOverlay,
+    hasCoveringOverlay,
+  );
   const { effective: effectiveSettings } = vaultSettings;
   const tabs = useTabs({
     vault,

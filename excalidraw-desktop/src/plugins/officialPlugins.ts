@@ -60,7 +60,7 @@ export interface OfficialPlugin {
    * The `[extensions]` switch that turns this plugin on and off (same id). The plugin runs only
    * while the switch is on (and the extension set is not in safe start or bisect).
    */
-  extension?: "graph" | "mermaid";
+  extension?: "graph" | "mermaid" | "formula";
 }
 
 export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
@@ -287,6 +287,26 @@ export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
     extension: "mermaid",
     importers: [],
     commands: [],
+  },
+  {
+    id: "formula",
+    name: "Formula",
+    /** The `[extensions] formula` switch (Settings, Extensions) turns this plugin on and off. */
+    extension: "formula",
+    importers: [],
+    commands: [
+      {
+        id: "insert",
+        title: "Formula: Insert formula",
+        keys: ["Mod+Shift+M"],
+        when: ["drawingOpen", "writable", "!modalOpen"],
+      },
+      {
+        id: "edit",
+        title: "Formula: Edit formula",
+        when: ["drawingOpen", "writable", "!modalOpen"],
+      },
+    ],
   },
 ];
 

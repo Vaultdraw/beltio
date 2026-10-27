@@ -5,6 +5,7 @@
  */
 export type { CommandsApi } from "./commands";
 export type { MethodsApi } from "./methods";
+export type { MathApi, MathRequest, MathResult } from "./math";
 export type { Disposable } from "./disposable";
 export type { AppEventMap, EventsApi } from "./events";
 export type {

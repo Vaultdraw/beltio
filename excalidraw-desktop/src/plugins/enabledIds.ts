@@ -28,5 +28,7 @@ export const isExtensionLinked = (id: string): boolean =>
   LINKED.some(([linked]) => linked === id);
 
 /** The `[extensions]` key behind a linked plugin id. */
-export const extensionOf = (id: string): "graph" | "mermaid" | undefined =>
+export const extensionOf = (
+  id: string,
+): "graph" | "mermaid" | "formula" | undefined =>
   LINKED.find(([linked]) => linked === id)?.[1];

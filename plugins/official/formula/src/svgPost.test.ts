@@ -1,9 +1,9 @@
 import fs from "fs";
 import path from "path";
 
-import { normalizeSVG } from "../../../packages/element/src/image";
+import { normalizeSVG } from "../../../../packages/element/src/image";
 
-import { hashSvg, postProcessSvg, svgToDataURL } from "./svgPost";
+import { postProcessSvg, svgToDataURL } from "./svgPost";
 
 const fx = (n: string) =>
   fs.readFileSync(path.join(__dirname, "__fixtures__", `${n}.svg`), "utf8");
@@ -61,8 +61,6 @@ describe("postProcessSvg", () => {
       Uint8Array.from(bin, (c) => c.charCodeAt(0)),
     );
     expect(text).toBe(svg);
-    expect(await hashSvg(svg)).toMatch(/^[0-9a-f]{40}$/);
-    expect(await hashSvg(svg)).toBe(await hashSvg(svg));
   });
 
   it("falls back on unsafe colours and bad input", () => {

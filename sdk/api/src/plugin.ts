@@ -5,6 +5,7 @@ import type { EventsApi } from "./events";
 import type { HostApi } from "./host";
 import type { ImportersApi } from "./importers";
 import type { MarkdownApi } from "./markdown";
+import type { MathApi } from "./math";
 import type { MenusApi } from "./menus";
 import type { PluginManifestInfo } from "./manifest";
 import type { PagesApi } from "./pages";
@@ -112,6 +113,8 @@ export interface PluginContext {
   readonly shapes: ShapesApi;
   /** Methods other programs can call, declared with `[[contributes.methods]]`. Needs the permission `control`. @since 0.22.0 */
   readonly methods: MethodsApi;
+  /** The TeX renderer. @since 0.23.0 */
+  readonly math: MathApi;
   /** Views that cover the drawing area. @since 0.17.0 */
   readonly overlays: OverlaysApi;
   /** Drawing previews. @since 0.20.0 */

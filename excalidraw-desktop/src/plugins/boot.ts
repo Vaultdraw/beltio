@@ -16,6 +16,8 @@ import { toastStore } from "../toasts/toastStore";
 import { subscribePreferences } from "../vault/preferences";
 
 import { enabledPluginIds } from "./enabledIds";
+import { setFormulaEditRunner } from "./formulaEdit";
+import { setMathStarter } from "./mathService";
 
 import { pluginHostStarted } from "./hostFlag";
 import { addMenuItems } from "./menuRegistry";
@@ -168,8 +170,19 @@ function syncOfficialActivity(win: Window): void {
 
 let stopListSync: (() => void) | null = null;
 
+/** Starts the formula plugin (when on) so it provides `ctx.math` to the notes view. */
+async function startFormulaPlugin(win: Window): Promise<void> {
+  if (!enabledPluginIds(win).includes("formula")) {
+    return;
+  }
+  await ensurePluginHost(win);
+  getAppCommandRunner()?.("formula.provide");
+}
+
 export function bootPlugins(win: Window): void {
   setImportHostStarter(() => ensurePluginHost(win));
+  setMathStarter(() => startFormulaPlugin(win));
+  setFormulaEditRunner((id) => runOfficialCommand(win, id));
   syncOfficialStubs(win);
   syncOfficialActivity(win);
   // Enabling or disabling an official plugin (Settings, or an old saved list) updates its stubs.

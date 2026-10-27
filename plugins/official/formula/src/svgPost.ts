@@ -58,14 +58,3 @@ const toBase64 = (bytes: Uint8Array): string => {
 /** UTF-8 safe `data:image/svg+xml;base64,...` */
 export const svgToDataURL = (svg: string): string =>
   `data:image/svg+xml;base64,${toBase64(new TextEncoder().encode(svg))}`;
-
-/** SHA-1 hex of the SVG's UTF-8 bytes. */
-export const hashSvg = async (svg: string): Promise<string> => {
-  const digest = await crypto.subtle.digest(
-    "SHA-1",
-    new TextEncoder().encode(svg),
-  );
-  return Array.from(new Uint8Array(digest), (b) =>
-    b.toString(16).padStart(2, "0"),
-  ).join("");
-};

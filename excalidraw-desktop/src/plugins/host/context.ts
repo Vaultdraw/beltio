@@ -14,6 +14,7 @@ import { getMenuTarget } from "../menuRegistry";
 import { closeOverlay, getOverlay, showOverlay } from "../overlayStore";
 import { setToolHandlers } from "../toolRegistry";
 import { setShapeInserter } from "../shapeRegistry";
+import { renderMath, setMathProvider } from "../mathService";
 import { PluginApiError } from "../../../../sdk/api/shared/rules";
 import { claimsPath } from "../../../../sdk/api/shared/viewNames";
 import { checkVaultPath } from "../../../../sdk/api/shared/vaultPaths";
@@ -67,6 +68,7 @@ import type {
   ToolsApi,
   ShapesApi,
   MethodsApi,
+  MathApi,
   VaultApi,
   ViewsApi,
   WorkspaceApi,
@@ -187,6 +189,7 @@ export function createPluginContext(
   let toolsApi: ToolsApi | undefined;
   let shapesApi: ShapesApi | undefined;
   let methodsApi: MethodsApi | undefined;
+  let mathApi: MathApi | undefined;
   let overlaysApi: OverlaysApi | undefined;
   let thumbnailsApi: ThumbnailsApi | undefined;
   let diagramsApi: DiagramsApi | undefined;
@@ -344,6 +347,17 @@ export function createPluginContext(
       }
       return statusBarApi;
     },
+    get math() {
+      return (mathApi ??= {
+        render: (request) => renderMath(request),
+        provide(renderer) {
+          if (!isLive()) {
+            return { dispose() {} };
+          }
+          return track(setMathProvider(renderer));
+        },
+      });
+    },
     get methods() {
       return (methodsApi ??= {
         register(name, handler) {
@@ -391,6 +405,7 @@ export function createPluginContext(
             pluginId: id,
             Component: component,
             onClose: options?.onClose,
+            modal: options?.modal === true,
           };
           if (isLive()) {
             showOverlay(entry);

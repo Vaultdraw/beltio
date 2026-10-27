@@ -31,6 +31,7 @@ import type {
   ExcalidrawImperativeAPI,
   ImageExportRequest,
 } from "@excalidraw/excalidraw/types";
+import type { ExcalidrawImageElement } from "@excalidraw/element/types";
 import type { HostContextMenuItem } from "@excalidraw/excalidraw/components/ContextMenu";
 
 import { stripDrawingExt } from "../vault/fileKind";
@@ -82,7 +83,7 @@ import { usePluginOn } from "../plugins/usePluginOn";
 import { usePens } from "../pens/usePens";
 import { readDrawingStyles } from "../toolDefaults/drawingStyles";
 import { useToolDefaults } from "../toolDefaults/useToolDefaults";
-import { useFormulaCommands } from "../formula/useFormulaCommands";
+import { editFormulaImage } from "../plugins/formulaEdit";
 import { useExtensions } from "../extensionSwitches/useExtensions";
 import { useMemoryRetention } from "../memory/useMemoryRetention";
 import { markOpen } from "../perf/openMarks";
@@ -267,7 +268,6 @@ const VaultEditorComponent = ({
 
   // One subscription for both switches; the set object is stable until a
   // switch changes, so it never re-renders the editor on open.
-  const { formula: formulaOn } = useExtensions();
   // Mermaid is the official mermaid plugin: on while its switch and the plugin list allow it.
   const mermaidOn = usePluginOn("mermaid");
   // Stable: Excalidraw's memo compares UIOptions entries by reference, and a
@@ -284,11 +284,18 @@ const VaultEditorComponent = ({
       api.updateScene({ appState: { openDialog: null } });
     }
   }, [mermaidOn, apiRef]);
-  const formula = useFormulaCommands({
-    apiRef,
-    readOnly: readOnly || disabled,
-    enabled: formulaOn,
-  });
+  // Double-click on a formula image: the formula plugin (when on) opens its editor.
+  const onImageEdit = useCallback(
+    (el: ExcalidrawImageElement) => {
+      const api = apiRef.current;
+      const win = host.current?.ownerDocument.defaultView;
+      if (!api || !win || readOnly || disabled) {
+        return false;
+      }
+      return editFormulaImage(win, el, api.getAppState().viewModeEnabled);
+    },
+    [apiRef, host, readOnly, disabled],
+  );
 
   useMemoryRetention({ apiRef, active: apiReady && !disabled });
 
@@ -744,7 +751,6 @@ const VaultEditorComponent = ({
   const resetPens = pens.reset;
   const resetToolDefaults = toolDefaults.reset;
   const resetPageMode = pageMode.reset;
-  const closeFormula = formula.close;
   useSceneSwap({
     documentId,
     loadedDocId,
@@ -775,7 +781,6 @@ const VaultEditorComponent = ({
       // the new drawing's own style picks; the old drawing's are gone
       loadDrawingStyles(readDrawingStyles(json));
       resetPageMode();
-      closeFormula();
       setPageSetupOpen(false);
       setPaperDialogOpen(false);
       setEditorError(null);
@@ -1039,7 +1044,6 @@ const VaultEditorComponent = ({
           <PaperMenuItem onOpenSettings={() => setPaperDialogOpen(true)} />
           <PageMenuItem onOpenSetup={() => setPageSetupOpen(true)} />
         </MainMenu>
-        {formula.dialog}
         {pageSetupOpen && (
           <PageSetupDialog
             onClose={() => setPageSetupOpen(false)}
@@ -1066,7 +1070,6 @@ const VaultEditorComponent = ({
       saveCopy,
       paperDialogOpen,
       pageSetupOpen,
-      formula.dialog,
       hasLibrary,
     ],
   );
@@ -1096,7 +1099,7 @@ const VaultEditorComponent = ({
         onChange={onEditorChange}
         onInitialize={onInitialize}
         onExcalidrawAPI={onExcalidrawAPI}
-        onImageEdit={formula.onImageEdit}
+        onImageEdit={onImageEdit}
         canvasContextMenuItems={canvasContextMenuItems}
         validateEmbeddable={false}
         viewModeEnabled={readOnly}

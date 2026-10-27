@@ -9,6 +9,8 @@ export interface OverlayEntry {
   pluginId: string;
   Component: ComponentType<{ close(): void }>;
   onClose?: () => void;
+  /** A dialog: the drawing stays usable behind it (no cover). */
+  modal?: boolean;
 }
 
 let current: OverlayEntry | null = null;
@@ -17,6 +19,9 @@ const emit = () => listeners.forEach((l) => l());
 
 export const getOverlay = (): OverlayEntry | null => current;
 export const hasOverlay = (): boolean => current !== null;
+/** An overlay that covers the drawing area (not a modal dialog). */
+export const hasCoveringOverlay = (): boolean =>
+  current !== null && !current.modal;
 
 export const subscribeOverlay = (l: () => void) => {
   listeners.add(l);

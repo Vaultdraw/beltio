@@ -12,6 +12,8 @@ import type {
   StatusBarContribution,
   ViewContribution,
   Json,
+  MathRequest,
+  MathResult,
   NewElement,
   PanelContribution,
   PluginContributions,
@@ -140,6 +142,10 @@ export interface FakeScene {
   files(): Record<string, { mime: string; bytes: Uint8Array }>;
   /** Ids `ctx.scene.scrollTo` asked the app to focus, in order. */
   scrolledTo(): string[];
+  /** Selects elements as the user would (`ctx.scene.selection`). */
+  select(ids: readonly string[]): void;
+  /** Sets the stroke colour a new element gets (`ctx.scene.currentStrokeColor`). */
+  strokeColor(color: string): void;
   /** The app state fields a page document set (such as `pageSetup`). */
   appState(): Record<string, unknown>;
 }
@@ -287,6 +293,8 @@ export interface TestPlugin {
   openedFromViews(): { path: string; newTab: boolean }[];
   /** Short ids of the panels that are open. */
   openPanelIds(): string[];
+  /** Renders TeX through `ctx.math` (the provider this plugin set, else null). */
+  renderMath(request: MathRequest): Promise<MathResult | null>;
   /** The open overlay (`ctx.overlays.open`), or null. `render()` mounts its component. */
   overlay(): { close(): void; render(): PanelView } | null;
   /** The status bar items that currently have text. */

@@ -327,6 +327,15 @@ export function createSceneModel(
         ]),
       ),
     scrolledTo: () => [...scrolled],
+    select(ids) {
+      appState = {
+        ...appState,
+        selectedElementIds: Object.fromEntries(ids.map((id) => [id, true])),
+      };
+    },
+    strokeColor(color) {
+      appState = { ...appState, currentItemStrokeColor: color };
+    },
     appState: () => ({ ...appState }),
   };
 
@@ -702,6 +711,14 @@ export function createSceneModel(
             : (structuredClone(value) as Json);
         },
         path: () => path,
+        selection: () =>
+          path === null
+            ? []
+            : Object.keys(
+                (appState.selectedElementIds as Record<string, true>) ?? {},
+              ),
+        currentStrokeColor: () =>
+          (appState.currentItemStrokeColor as string | undefined) ?? "#1e1e1e",
         scrollTo(id) {
           if (path === null || typeof id !== "string") {
             return;

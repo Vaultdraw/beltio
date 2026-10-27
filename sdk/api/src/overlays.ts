@@ -25,6 +25,13 @@ export interface OverlayOptions {
    * @since 0.17.0
    */
   onClose?(): void;
+  /**
+   * A dialog: the drawing stays visible and usable behind it (no cover, no freeze), and the
+   * component draws its own scrim and frame. Default false (a view that covers the drawing area).
+   *
+   * @since 0.23.0
+   */
+  modal?: boolean;
 }
 
 /**

@@ -4,7 +4,6 @@
  * Hotkeys page lists commands in.
  */
 import { AI_COMMANDS } from "../ai/aiCommands";
-import { FORMULA_COMMANDS } from "../formula/formulaCommands";
 import { HELP_COMMANDS } from "../help/helpCommands";
 import { HISTORY_COMMANDS } from "../history/historyCommands";
 import { SETTINGS_PAGES } from "../components/settings/schema";
@@ -670,7 +669,6 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...PLUGIN_UI_COMMANDS,
   ...TAB_COMMANDS,
   ...LIST_COMMANDS,
-  ...FORMULA_COMMANDS,
   ...THUMBNAIL_COMMANDS,
   ...MEMORY_COMMANDS,
   ...EXTENSION_COMMANDS,

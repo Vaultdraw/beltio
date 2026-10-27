@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { Dialog } from "../components/Dialog";
-
+import { DialogFrame } from "./DialogFrame";
 import { renderFormula, warmFormulaRenderer } from "./renderer";
 import { svgToDataURL } from "./svgPost";
 import { parseFormulaInput } from "./types";
 
-import "./FormulaDialog.css";
-
 import type { FormulaRender } from "./types";
-import type { RenderedFormula } from "./insertFormula";
+import type { RenderedFormula } from "./types";
 
 export const PREVIEW_DEBOUNCE_MS = 120;
 
@@ -116,7 +113,7 @@ const FormulaDialog = ({
         }
       }}
     >
-      <Dialog
+      <DialogFrame
         title={title}
         titleId="formula-dialog-title"
         onClose={onCancel}
@@ -178,7 +175,7 @@ const FormulaDialog = ({
             {error}
           </div>
         )}
-      </Dialog>
+      </DialogFrame>
     </div>
   );
 };

@@ -17,10 +17,26 @@ type WorkerLike = {
   onerror: ((e: unknown) => void) | null;
 };
 
-const defaultFactory = (): WorkerLike =>
-  new Worker(new URL("./formula.worker.ts", import.meta.url), {
+/** The worker's bundle, injected by the plugin's build (the app's CSP allows a worker only from a blob). */
+declare const __FORMULA_WORKER_SOURCE__: string | undefined;
+
+const defaultFactory = (): WorkerLike => {
+  if (
+    typeof __FORMULA_WORKER_SOURCE__ === "string" &&
+    __FORMULA_WORKER_SOURCE__
+  ) {
+    const url = URL.createObjectURL(
+      new Blob([__FORMULA_WORKER_SOURCE__], { type: "text/javascript" }),
+    );
+    const w = new Worker(url);
+    URL.revokeObjectURL(url);
+    return w as unknown as WorkerLike;
+  }
+  // Outside the plugin build (the app's end-to-end run, built by Vite).
+  return new Worker(new URL("./formula.worker.ts", import.meta.url), {
     type: "module",
   }) as unknown as WorkerLike;
+};
 
 let factory: () => WorkerLike = defaultFactory;
 let worker: WorkerLike | null = null;

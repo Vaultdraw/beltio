@@ -64,6 +64,8 @@ import type {
   Importer,
   ImportersApi,
   Json,
+  MathRequest,
+  MathResult,
   MarkdownParseOptions,
   MenuTarget,
   ToolHandlers,
@@ -174,6 +176,8 @@ export interface MockHost {
   openedFromViews(): { path: string; newTab: boolean }[];
   /** Short ids of the panels that are open. */
   openPanelIds(): string[];
+  /** Renders TeX through `ctx.math` (the provider the plugin set, else null). */
+  renderMath(request: MathRequest): Promise<MathResult | null>;
   /** The open overlay (`ctx.overlays.open`), or null. */
   overlay(): { close(): void; render(): RenderResult } | null;
   setSetting(
@@ -269,6 +273,9 @@ export function createMockHost(
     onClose?: () => void;
   } | null = null;
   let overlayClose: (() => void) | null = null;
+  let mathProvider:
+    | ((request: MathRequest) => Promise<MathResult>)
+    | null = null;
   let lines: PluginLogLine[] = [];
   let errors = 0;
   let toastQueue: MockToast[] = [];
@@ -567,6 +574,17 @@ export function createMockHost(
           throw notSetUp(
             `command "${fullId}" (the mock host runs only this plugin's own commands)`,
           );
+        },
+      },
+      math: {
+        render: async (request) => (mathProvider ? mathProvider(request) : null),
+        provide(renderer) {
+          mathProvider = renderer;
+          return track(() => {
+            if (mathProvider === renderer) {
+              mathProvider = null;
+            }
+          });
         },
       },
       methods: {
@@ -1459,6 +1477,7 @@ export function createMockHost(
     },
     openedFromViews: () => opened_views.map((o) => ({ ...o })),
     openPanelIds: () => [...openPanels],
+    renderMath: async (request) => (mathProvider ? mathProvider(request) : null),
     overlay() {
       const open = overlay;
       if (!open) {

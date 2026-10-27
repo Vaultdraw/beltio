@@ -81,3 +81,27 @@ export type WorkerIn =
   | { id: number; req: FormulaRequest }
   | { id: number; warm: true };
 export type WorkerOut = { id: number; result: FormulaRender | null };
+
+/** What the dialog hands back: the render plus the settings it was made with. */
+export type RenderedFormula = {
+  svg: string;
+  width: number;
+  height: number;
+  source: string;
+  display: boolean;
+  color: string;
+};
+
+/** `FormulaData` from a rendered formula (what the element stores under `latex`). */
+export const toFormulaData = (r: RenderedFormula): FormulaData => ({
+  v: 1,
+  source: r.source,
+  display: r.display,
+  color: r.color,
+  width: r.width,
+  height: r.height,
+});
+
+/** `getFormulaData` for a plain data value (what `ctx.scene.dataOf` returns). */
+export const parseFormulaData = (raw: unknown): FormulaData | null =>
+  getFormulaData({ customData: { latex: raw as Record<string, unknown> } });
