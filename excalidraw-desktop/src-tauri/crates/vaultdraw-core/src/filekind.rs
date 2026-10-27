@@ -219,12 +219,14 @@ mod tests {
     }
 
     #[test]
-    fn the_index_walk_skips_dot_folders_and_finds_only_drawings() {
+    fn the_index_walk_skips_dot_folders() {
         let d = fixture_copy();
         fs::write(d.path().join(".obsidian/hidden.excalidraw"), "{}").unwrap();
         fs::write(d.path().join(".trash/gone.excalidraw"), "{}").unwrap();
         let paths: Vec<String> = crate::search::scan::walk(d.path(), "").into_iter().map(|f| f.path).collect();
-        assert_eq!(paths, ["Drawings/Sketch.excalidraw"]);
+        let mut paths = paths;
+        paths.sort();
+        assert_eq!(paths, ["Daily/2026-10-27.md", "Drawings/Sketch.excalidraw", "Ideas.md", "Welcome.md"]);
     }
 
     #[test]

@@ -33,10 +33,9 @@ pub fn is_indexed_name(name: &str) -> bool {
     is_drawing_name(name) || super::notes::is_note_name(name)
 }
 
-/// Folders of other tools that hold notes which are not the user's: Obsidian's settings and
-/// trash, git's objects.
+/// Folders never walked: every dot name (`.obsidian`, `.trash`, `.git`, ...), see `filekind`.
 pub fn is_skipped_dir(name: &str) -> bool {
-    matches!(name, ".obsidian" | ".trash" | ".git")
+    crate::filekind::is_hidden_name(name)
 }
 
 /// Lists one folder: its drawings go to `files`, its subfolders (with their depth) to `dirs`.
