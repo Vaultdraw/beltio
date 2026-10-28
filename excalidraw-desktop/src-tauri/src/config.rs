@@ -336,7 +336,14 @@ fn is_temp_file(p: &Path) -> bool {
 fn split_library_paths(roots: &[PathBuf], paths: Vec<String>) -> (Vec<String>, bool) {
     let is_library = |p: &str| {
         let p = Path::new(p);
-        p.parent().is_some_and(|d| roots.iter().any(|r| r == d)) && p.file_name().is_some_and(|n| n == super::library::LIBRARY_FILE)
+        let in_root = p.parent().is_some_and(|d| roots.iter().any(|r| r == d));
+        let in_libraries = p.parent().is_some_and(|d| {
+            d.file_name().is_some_and(|n| n == super::library::LIBRARIES_DIR)
+                && d.parent().is_some_and(|dd| roots.iter().any(|r| r == dd))
+        });
+        (in_root && p.file_name().is_some_and(|n| n == super::library::LIBRARY_FILE))
+            || (in_root && p.file_name().is_some_and(|n| n == super::library::LIBRARIES_DIR))
+            || (in_libraries && p.extension().is_some_and(|e| e == "excalidrawlib"))
     };
     let is_lock = |p: &str| Path::new(p).file_name().is_some_and(|n| n == super::library::LOCK_FILE);
     let (library, rest): (Vec<String>, Vec<String>) = paths.into_iter().partition(|p| is_library(p));

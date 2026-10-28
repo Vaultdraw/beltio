@@ -11,7 +11,7 @@
 
 use super::{
     config, err, ioerr, mutation_guard, read_bounded, revision, vault_for, write_atomic, write_atomic_new,
-    writable, Result, Service,
+    writable, Result, Service, META_DIR,
 };
 use fs2::FileExt;
 use serde::{Deserialize, Serialize};
@@ -69,14 +69,118 @@ pub(crate) fn emit_change(app: &AppHandle, handle: Option<String>) {
 enum Scope {
     Personal,
     Vault,
+    /// A folder listed in `[library] folders`; the handle is its path.
+    Folder,
 }
 impl Scope {
     fn parse(scope: &str) -> Result<Scope> {
         match scope {
             "personal" => Ok(Scope::Personal),
             "vault" => Ok(Scope::Vault),
-            _ => Err(err("INVALID_PATH", "Library scope must be \"personal\" or \"vault\"")),
+            "folder" => Ok(Scope::Folder),
+            _ => Err(err("INVALID_PATH", "Library scope must be \"personal\", \"vault\" or \"folder\"")),
         }
+    }
+}
+
+/// Folder that holds the named libraries of the config folder.
+pub(crate) const LIBRARIES_DIR: &str = "libraries";
+const LIB_EXT: &str = ".excalidrawlib";
+
+/// A library name becomes a file name: plain, short, no path parts.
+fn valid_name(name: &str) -> Result<&str> {
+    let ok = !name.is_empty()
+        && name.chars().count() <= 64
+        && name == name.trim()
+        && !name.starts_with('.')
+        && !name.chars().any(|c| c.is_control() || matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|'));
+    if ok {
+        Ok(name)
+    } else {
+        Err(err("INVALID_PATH", "A library name must be 1-64 characters, with no slashes, colons or leading dot"))
+    }
+}
+
+/// `~/x` and `~` expand to the home folder; the result must be absolute.
+fn folder_path(raw: &str) -> Result<PathBuf> {
+    let expanded = match raw.strip_prefix('~') {
+        Some(rest) if rest.is_empty() || rest.starts_with('/') => {
+            let home = std::env::var_os("HOME").ok_or_else(|| err("INVALID_PATH", "No home folder"))?;
+            PathBuf::from(home).join(rest.trim_start_matches('/'))
+        }
+        _ => PathBuf::from(raw),
+    };
+    if expanded.is_absolute() {
+        Ok(expanded)
+    } else {
+        Err(err("INVALID_PATH", "A library folder must be an absolute path (or start with ~/)"))
+    }
+}
+
+/// Where a scope keeps its file: the default library (`name` None) or a named one.
+struct Located {
+    path: PathBuf,
+    read_only: bool,
+    vault: Option<std::sync::Arc<crate::Vault>>,
+}
+
+fn locate(scope: Scope, handle: Option<String>, name: Option<&str>, state: &Service) -> Result<Located> {
+    let file = |n: &str| format!("{n}{LIB_EXT}");
+    match scope {
+        Scope::Personal => {
+            let (default, read_only) = personal_target()?;
+            let path = match name {
+                None => default,
+                Some(n) => default.with_file_name(LIBRARIES_DIR).join(file(valid_name(n)?)),
+            };
+            Ok(Located { path, read_only, vault: None })
+        }
+        Scope::Vault => {
+            let v = vault_for(state, &vault_handle(handle)?)?;
+            let path = match name {
+                None => v.root.join(LIBRARY_FILE),
+                Some(n) => v.root.join(META_DIR).join(LIBRARIES_DIR).join(file(valid_name(n)?)),
+            };
+            Ok(Located { path, read_only: v.read_only, vault: Some(v) })
+        }
+        Scope::Folder => {
+            let dir = folder_path(&vault_handle(handle)?)?;
+            let n = valid_name(name.ok_or_else(|| err("INVALID_PATH", "A library name is required"))?)?;
+            let read_only = fs::metadata(&dir).is_ok_and(|m| m.permissions().readonly());
+            Ok(Located { path: dir.join(file(n)), read_only, vault: None })
+        }
+    }
+}
+
+/// Names of the `*.excalidrawlib` files in `dir`, sorted, regular files only.
+fn list_names(dir: &Path) -> Vec<String> {
+    let Ok(rd) = fs::read_dir(dir) else { return Vec::new() };
+    let mut out: Vec<String> = rd
+        .flatten()
+        .filter(|e| e.file_type().is_ok_and(|t| t.is_file()))
+        .filter_map(|e| {
+            let n = e.file_name().to_string_lossy().into_owned();
+            let stem = n.strip_suffix(LIB_EXT)?.to_owned();
+            (valid_name(&stem).is_ok()).then_some(stem)
+        })
+        .collect();
+    out.sort_by_key(|n| n.to_lowercase());
+    out
+}
+
+/// Runs `f` on the located path under the right write guards (config lock, vault mutation).
+fn with_write<T>(loc: &Located, f: impl FnOnce(&Path) -> Result<T>) -> Result<T> {
+    let dir = loc.path.parent().ok_or_else(|| err("INVALID_PATH", "Library has no folder"))?;
+    if let Some(v) = &loc.vault {
+        writable(v)?;
+        let _mutation = mutation_guard(v)?;
+        fs::create_dir_all(dir).map_err(ioerr)?;
+        f(&loc.path)
+    } else {
+        let _guard = config::write_guard()?;
+        fs::create_dir_all(dir).map_err(ioerr)?;
+        let _lock = lock_exclusive(&dir.join(LOCK_FILE))?;
+        f(&loc.path)
     }
 }
 
@@ -202,16 +306,11 @@ pub(crate) async fn read_library(
     scope: String,
     handle: Option<String>,
     known_revision: Option<String>,
+    name: Option<String>,
     state: State<'_, Service>,
 ) -> Result<LibraryRead> {
-    let (path, read_only) = match Scope::parse(&scope)? {
-        Scope::Personal => personal_target()?,
-        Scope::Vault => {
-            let v = vault_for(&state, &vault_handle(handle)?)?;
-            (v.root.join(LIBRARY_FILE), v.read_only)
-        }
-    };
-    read_library_at(&path, known_revision.as_deref(), read_only)
+    let loc = locate(Scope::parse(&scope)?, handle, name.as_deref(), &state)?;
+    read_library_at(&loc.path, known_revision.as_deref(), loc.read_only)
 }
 
 #[tauri::command]
@@ -220,24 +319,81 @@ pub(crate) async fn write_library(
     handle: Option<String>,
     json: String,
     expected_revision: Option<String>,
+    name: Option<String>,
     state: State<'_, Service>,
 ) -> Result<LibraryWritten> {
-    match Scope::parse(&scope)? {
-        Scope::Personal => {
-            let (path, _) = personal_target()?;
-            let _guard = config::write_guard()?;
-            let dir = path.parent().ok_or_else(|| err("INVALID_PATH", "Library has no folder"))?;
-            fs::create_dir_all(dir).map_err(ioerr)?;
-            let _lock = lock_exclusive(&dir.join(LOCK_FILE))?;
-            write_library_at(&path, &json, expected_revision.as_deref())
-        }
-        Scope::Vault => {
-            let v = vault_for(&state, &vault_handle(handle)?)?;
-            writable(&v)?;
-            let _mutation = mutation_guard(&v)?;
-            write_library_at(&v.root.join(LIBRARY_FILE), &json, expected_revision.as_deref())
-        }
+    let loc = locate(Scope::parse(&scope)?, handle, name.as_deref(), &state)?;
+    with_write(&loc, |p| write_library_at(p, &json, expected_revision.as_deref()))
+}
+
+/// Names of the named libraries of a scope (the default file is not listed).
+#[tauri::command]
+pub(crate) async fn list_libraries(
+    scope: String,
+    handle: Option<String>,
+    state: State<'_, Service>,
+) -> Result<Vec<String>> {
+    let scope = Scope::parse(&scope)?;
+    let dir = match scope {
+        Scope::Personal => personal_target()?.0.with_file_name(LIBRARIES_DIR),
+        Scope::Vault => vault_for(&state, &vault_handle(handle)?)?.root.join(META_DIR).join(LIBRARIES_DIR),
+        Scope::Folder => folder_path(&vault_handle(handle)?)?,
+    };
+    Ok(list_names(&dir))
+}
+
+/// Creates an empty named library; fails with CONFLICT when the name is taken.
+#[tauri::command]
+pub(crate) async fn create_library(
+    scope: String,
+    handle: Option<String>,
+    name: String,
+    state: State<'_, Service>,
+) -> Result<LibraryWritten> {
+    let loc = locate(Scope::parse(&scope)?, handle, Some(&name), &state)?;
+    with_write(&loc, |p| write_library_at(p, EMPTY_LIBRARY, None))
+}
+
+/// Renames a named library file; fails with CONFLICT when the new name is taken.
+#[tauri::command]
+pub(crate) async fn rename_library(
+    scope: String,
+    handle: Option<String>,
+    name: String,
+    new_name: String,
+    state: State<'_, Service>,
+) -> Result<()> {
+    let scope = Scope::parse(&scope)?;
+    let from = locate(scope, handle.clone(), Some(&name), &state)?;
+    let to = locate(scope, handle, Some(&new_name), &state)?;
+    with_write(&from, |p| rename_at(p, &to.path))
+}
+
+/// Deletes a named library file.
+#[tauri::command]
+pub(crate) async fn delete_library(
+    scope: String,
+    handle: Option<String>,
+    name: String,
+    state: State<'_, Service>,
+) -> Result<()> {
+    let loc = locate(Scope::parse(&scope)?, handle, Some(&name), &state)?;
+    with_write(&loc, |p| {
+        inspect(p)?;
+        fs::remove_file(p).map_err(ioerr)
+    })
+}
+
+const EMPTY_LIBRARY: &str = "{\n  \"type\": \"excalidrawlib\",\n  \"version\": 2,\n  \"source\": \"vaultdraw\",\n  \"libraryItems\": []\n}\n";
+
+fn rename_at(from: &Path, to: &Path) -> Result<()> {
+    if inspect(from)?.is_none() {
+        return Err(err("NOT_FOUND", "That library no longer exists"));
     }
+    if fs::symlink_metadata(to).is_ok() {
+        return Err(err("CONFLICT", "A library with that name already exists"));
+    }
+    fs::rename(from, to).map_err(ioerr)
 }
 
 /// Native open dialog for importing a library; `None` when cancelled.
@@ -404,7 +560,50 @@ mod tests {
     }
 
     #[test]
+    fn names_are_plain_file_names() {
+        for ok in ["Flow", "Arrows 2", "a.b", "日本語"] {
+            assert!(valid_name(ok).is_ok(), "{ok}");
+        }
+        for bad in ["", " x", "x ", ".hidden", "a/b", "a\\b", "..", "a:b", "x\ny", &"n".repeat(65)] {
+            assert!(valid_name(bad).is_err(), "{bad:?}");
+        }
+    }
+
+    #[test]
+    fn lists_only_library_files_sorted() {
+        let t = tempdir().unwrap();
+        for f in ["b.excalidrawlib", "A.excalidrawlib", "notes.txt", ".hid.excalidrawlib"] {
+            fs::write(t.path().join(f), LIB).unwrap();
+        }
+        fs::create_dir(t.path().join("dir.excalidrawlib")).unwrap();
+        assert_eq!(list_names(t.path()), vec!["A".to_string(), "b".to_string()]);
+        assert!(list_names(&t.path().join("missing")).is_empty());
+    }
+
+    #[test]
+    fn create_rename_delete() {
+        let t = tempdir().unwrap();
+        let a = t.path().join("a.excalidrawlib");
+        let b = t.path().join("b.excalidrawlib");
+        write_library_at(&a, EMPTY_LIBRARY, None).unwrap();
+        assert_eq!(code(write_library_at(&a, EMPTY_LIBRARY, None)), "CONFLICT");
+        rename_at(&a, &b).unwrap();
+        assert!(!a.exists() && b.exists());
+        write_library_at(&a, LIB, None).unwrap();
+        assert_eq!(code(rename_at(&a, &b)), "CONFLICT");
+        assert_eq!(code(rename_at(&t.path().join("zz.excalidrawlib"), &t.path().join("y.excalidrawlib"))), "NOT_FOUND");
+    }
+
+    #[test]
+    fn folder_paths() {
+        assert!(folder_path("relative/dir").is_err());
+        assert_eq!(folder_path("/abs/dir").unwrap(), PathBuf::from("/abs/dir"));
+        assert!(folder_path("~/Libs").unwrap().is_absolute());
+    }
+
+    #[test]
     fn scope_parsing() {
+        assert_eq!(Scope::parse("folder").unwrap(), Scope::Folder);
         assert_eq!(Scope::parse("personal").unwrap(), Scope::Personal);
         assert_eq!(Scope::parse("vault").unwrap(), Scope::Vault);
         assert!(Scope::parse("other").is_err());
