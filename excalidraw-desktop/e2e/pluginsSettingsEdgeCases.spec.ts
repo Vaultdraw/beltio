@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
 
+import { MIDNIGHT_THEME } from "./fixtures/themeServer";
 import {
   canvasBox,
   clickMainMenuItem,
@@ -690,4 +691,121 @@ test("config.toml edits reload live: plugins, extensions and keys follow, a brok
   // The Settings change made during the error survived.
   await expect(page.getByTestId("activity-bar-gallery")).toHaveCount(0);
   expect(errors).toEqual([]);
+});
+
+const rootVar = (page: Page, name: string) =>
+  page.evaluate(
+    (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
+    name,
+  );
+const themeName = (page: Page) =>
+  page.evaluate(() => document.documentElement.dataset.vaultTheme ?? "");
+
+test("themes: switch, browse, install from a URL with the network refused and then allowed", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  const requests: string[] = [];
+  page.on("request", (r) => {
+    if (/e2e-themes|raw\.githubusercontent/.test(r.url())) {
+      requests.push(new URL(r.url()).pathname);
+    }
+  });
+  const DAYBREAK = JSON.stringify({
+    name: "Daybreak",
+    author: "E2E",
+    light: { mPrimary: "#d9480f", mOnPrimary: "#ffffff", mSurface: "#fff8f0", mOnSurface: "#2b2118" },
+  });
+  const sha = (t: string) => createHash("sha256").update(t).digest("hex");
+  await page.route("**/e2e-themes/Broken.json", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "{ not json" }),
+  );
+  await page.route("**/e2e-themes/Missing.json", (route) =>
+    route.fulfill({ status: 404, body: "not found" }),
+  );
+  await page.route("https://raw.githubusercontent.com/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const files: Record<string, string> = {
+      "/Vaultdraw/themes/main/index.json": JSON.stringify({
+        schemaVersion: 1,
+        themes: [
+          { name: "Daybreak", path: "Daybreak/Daybreak.json", author: "E2E", description: "Warm light", tags: ["light"], modes: ["light"], swatch: { light: ["#fff8f0", "#2b2118", "#d9480f"] }, sha256: sha(DAYBREAK), previews: [] },
+          { name: "Tampered", path: "Tampered/Tampered.json", author: "E2E", description: "Wrong checksum", tags: ["dark"], modes: ["dark"], swatch: { dark: ["#000000", "#ffffff", "#ff0000"] }, sha256: sha("something else"), previews: [] },
+        ],
+      }),
+      "/Vaultdraw/themes/main/Daybreak/Daybreak.json": DAYBREAK,
+      "/Vaultdraw/themes/main/Tampered/Tampered.json": MIDNIGHT_THEME,
+    };
+    const body = files[path];
+    return route.fulfill(
+      body === undefined
+        ? { status: 404, body: "not found" }
+        : { status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body },
+    );
+  });
+  await openGraphsDrawing(page);
+  const defaultBg = await rootVar(page, "--vault-bg");
+  await openSettingsTab(page, "Appearance");
+  const radio = (name: string) => settingsModal(page).getByRole("radio", { name, exact: true });
+
+  // Switch between built-in themes, and back.
+  await radio("Dracula").click();
+  await expect(radio("Dracula")).toHaveAttribute("aria-checked", "true");
+  await expect.poll(() => themeName(page)).toBe("Dracula");
+  const draculaBg = await rootVar(page, "--vault-bg");
+  expect(draculaBg).not.toBe(defaultBg);
+  await radio("Default").click();
+  await expect.poll(() => themeName(page)).not.toBe("Dracula");
+  await expect.poll(() => rootVar(page, "--vault-bg")).toBe(defaultBg);
+  expect((await prefs(page)).colorTheme).toBe("Default");
+
+  // Install from URL: refuse the network first; nothing is requested, nothing saved.
+  await settingsModal(page).getByRole("button", { name: "Install from URL..." }).click();
+  const install = page.getByTestId("theme-install-dialog");
+  await expect(install.getByTestId("theme-install-consent")).toBeVisible();
+  await install.getByRole("button", { name: "Not now" }).click();
+  await expect(install).toHaveCount(0);
+  expect(requests).toEqual([]);
+  expect((await prefs(page)).networkAllowThemes).not.toBe(true);
+  // The theme browser asks too, and also refuses cleanly.
+  await settingsModal(page).getByRole("button", { name: "Install more themes..." }).click();
+  const browser = page.getByTestId("theme-browser-dialog");
+  await expect(browser.getByTestId("theme-browser-consent")).toBeVisible();
+  await browser.getByRole("button", { name: "Not now" }).click();
+  await expect(browser).toHaveCount(0);
+  expect(requests).toEqual([]);
+
+  // Allow once: bad addresses give a message, a good one installs and applies.
+  await settingsModal(page).getByRole("button", { name: "Install from URL..." }).click();
+  await install.getByRole("button", { name: "Allow" }).click();
+  const origin = new URL(page.url()).origin;
+  for (const bad of ["Missing.json", "Broken.json"]) {
+    await install.getByLabel("Address or GitHub repo").fill(`${origin}/e2e-themes/${bad}`);
+    await install.getByRole("button", { name: "Look up" }).click();
+    await expect(install.getByRole("alert")).toBeVisible();
+  }
+  await install.getByLabel("Address or GitHub repo").fill(`${origin}/e2e-themes/Midnight.json`);
+  await install.getByRole("button", { name: "Look up" }).click();
+  await install.getByRole("button", { name: "Install", exact: true }).click();
+  await expect(install.getByTestId("theme-install-done")).toContainText("Midnight");
+  await install.getByRole("button", { name: "Use it" }).click();
+  await expect.poll(() => themeName(page)).toBe("Midnight");
+  expect((await prefs(page)).networkAllowThemes).toBe(true);
+
+  // The browser no longer asks: it lists, filters, refuses a bad checksum and installs a good theme.
+  requests.length = 0;
+  await settingsModal(page).getByRole("button", { name: "Install more themes..." }).click();
+  await expect(browser.getByTestId("theme-browser-consent")).toHaveCount(0);
+  await expect(browser.getByTestId("theme-browser-status")).toContainText("2 of 2 themes");
+  await browser.getByLabel("Search themes").fill("zzz-nothing");
+  await expect(browser.getByTestId("theme-browser-status")).toContainText("0 of 2 themes");
+  await browser.getByLabel("Search themes").fill("");
+  await browser.getByTestId("theme-card-Tampered").getByRole("button", { name: "Install", exact: true }).click();
+  await expect(browser.getByTestId("theme-card-Tampered")).not.toContainText("Installed");
+  await browser.getByTestId("theme-card-Daybreak").getByRole("button", { name: "Install", exact: true }).click();
+  await expect(browser.getByTestId("theme-card-Daybreak")).toContainText("Installed");
+  await browser.getByTestId("theme-card-Daybreak").getByRole("button", { name: "Use", exact: true }).click();
+  await expect.poll(() => themeName(page)).toBe("Daybreak");
+  expect(requests[0]).toBe("/Vaultdraw/themes/main/index.json");
+  expect(errors.filter((e) => !/404|Failed to load resource|checksum|JSON/i.test(e))).toEqual([]);
 });
