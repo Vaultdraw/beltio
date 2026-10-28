@@ -632,7 +632,7 @@ const renameAlphaWith = async (
   await page.waitForTimeout(1200); // rewrites run in the background
 };
 
-test("links follow a rename: every form is rewritten, or none when links are off", async ({
+test("links follow a rename: every form is rewritten; off the links extension it still follows, update_on_rename false leaves them", async ({
   page,
   context,
 }) => {
@@ -1299,6 +1299,7 @@ test("search: names, text, accents, emoji, odd characters, tags, and a deleted d
   await page.keyboard.press("Escape");
   await expect(box).toHaveValue("");
   await expect(rowByName(page, "Alpha plan")).toBeVisible();
+  expect(errors).toEqual([]);
 });
 
 test("favourites follow a rename and drop a deleted drawing", async ({
