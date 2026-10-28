@@ -266,3 +266,38 @@ fn opening_an_excalidraw_md_in_place_shows_its_images() {
     assert!(body.contains("data:image/png;base64,AQID"), "{body}");
     assert_eq!(tree_hash(t.path()), before);
 }
+
+#[cfg(unix)]
+#[test]
+fn a_linked_attachments_folder_outside_the_source_is_followed_read_only() {
+    let t = tempdir().unwrap();
+    fixture(t.path());
+    let outside = tempfile::Builder::new().prefix("outside").tempdir().unwrap();
+    fs::create_dir_all(outside.path().join("pics/deep")).unwrap();
+    fs::write(outside.path().join("pics/a.png"), b"\x89PNG\r\n\x1a\nA").unwrap();
+    fs::write(outside.path().join("pics/deep/b.png"), b"\x89PNG\r\n\x1a\nB").unwrap();
+    fs::write(outside.path().join("secret.txt"), b"no").unwrap();
+    std::os::unix::fs::symlink(outside.path().join("pics"), t.path().join("Assets")).unwrap();
+    // A link that loops back, one into the source, one to a parent and one into a hidden folder are skipped.
+    std::os::unix::fs::symlink(t.path(), outside.path().join("pics/back")).unwrap();
+    std::os::unix::fs::symlink(t.path().join("Projects"), t.path().join("Inside")).unwrap();
+    std::os::unix::fs::symlink(t.path().parent().unwrap(), t.path().join("Up")).unwrap();
+    let hidden = tempfile::Builder::new().prefix("hidden").tempdir().unwrap();
+    fs::create_dir_all(hidden.path().join(".ssh")).unwrap();
+    fs::write(hidden.path().join(".ssh/id"), b"key").unwrap();
+    std::os::unix::fs::symlink(hidden.path().join(".ssh"), t.path().join("Keys")).unwrap();
+    let src = SourceFolder::open(t.path()).unwrap();
+    let paths: Vec<String> = src.list().unwrap().entries.into_iter().map(|e| e.path).collect();
+    assert_eq!(
+        paths,
+        vec!["Assets/a.png", "Assets/deep/b.png", "Home.md", "Projects/Alpha/Plan.md", "attachments/pic.png"]
+    );
+    assert_eq!(src.read_bytes("Assets/a.png").unwrap(), b"\x89PNG\r\n\x1a\nA");
+    assert_eq!(src.read_bytes("Assets/deep/b.png").unwrap(), b"\x89PNG\r\n\x1a\nB");
+    // Not listed, so not readable: the rest of the linked folder's parent, other links, escapes.
+    for bad in ["Assets/../secret.txt", "Keys/id", "Up/x", "Inside/Alpha/Plan.md", "Assets/back/Home.md"] {
+        assert!(src.read_bytes(bad).is_err(), "{bad}");
+    }
+    // The source and the linked folder are only read.
+    assert_eq!(fs::read(outside.path().join("secret.txt")).unwrap(), b"no");
+}

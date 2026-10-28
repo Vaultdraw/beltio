@@ -67,6 +67,9 @@ fn check_rel(path: &str) -> Result<()> {
 pub struct SourceFolder {
     root: PathBuf,
     name: String,
+    /// Real paths of the folder links `list` followed (a vault whose attachments folder is a link to
+    /// somewhere else). Reads may reach files under these as well as under `root`.
+    linked: std::sync::Mutex<Vec<PathBuf>>,
 }
 
 impl SourceFolder {
@@ -78,7 +81,7 @@ impl SourceFolder {
         }
         let root = root.canonicalize().map_err(ioerr)?;
         let name = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-        Ok(SourceFolder { root, name })
+        Ok(SourceFolder { root, name, linked: std::sync::Mutex::new(Vec::new()) })
     }
 
     pub fn name(&self) -> &str {
@@ -90,11 +93,18 @@ impl SourceFolder {
     }
 
     /// Every regular file under the folder, recursively, in path order. Entries whose name starts
-    /// with a dot and symbolic links (files or folders) are skipped. Stops at [`MAX_ENTRIES`].
+    /// with a dot and symbolic links to files are skipped. A symbolic link to a FOLDER outside the
+    /// source is followed (read only: people keep attachments in a linked folder, as Obsidian
+    /// allows); one that points inside the source (already listed), at a parent of it, or through a
+    /// hidden folder is skipped, and each real folder is walked once, so a loop cannot repeat.
+    /// Stops at [`MAX_ENTRIES`].
     pub fn list(&self) -> Result<Listing> {
         let mut entries = Vec::new();
         let mut truncated = false;
         let mut stack = vec![(self.root.clone(), String::new())];
+        let mut seen: std::collections::HashSet<PathBuf> = std::collections::HashSet::from([self.root.clone()]);
+        let mut linked = self.linked.lock().unwrap();
+        linked.clear();
         while let Some((dir, rel)) = stack.pop() {
             let mut children: Vec<(String, PathBuf)> = Vec::new();
             for item in fs::read_dir(&dir).map_err(ioerr)? {
@@ -113,7 +123,12 @@ impl SourceFolder {
                 let ft = meta.file_type();
                 let child_rel = if rel.is_empty() { name } else { format!("{rel}/{name}") };
                 if ft.is_symlink() {
-                    continue;
+                    if let Some(real) = self.followable_dir(&path) {
+                        if seen.insert(real.clone()) {
+                            linked.push(real);
+                            stack.push((path, child_rel));
+                        }
+                    }
                 } else if ft.is_dir() {
                     stack.push((path, child_rel));
                 } else if ft.is_file() {
@@ -140,15 +155,47 @@ impl SourceFolder {
         Ok(Listing { entries, truncated })
     }
 
-    /// The absolute path of `path` inside the source: validated, no symlink in any component.
+    /// The real folder a symbolic link points at, when `list` may follow it (see `list`).
+    fn followable_dir(&self, link: &Path) -> Option<PathBuf> {
+        let real = fs::canonicalize(link).ok()?;
+        if !fs::metadata(&real).ok()?.is_dir() || real.starts_with(&self.root) || self.root.starts_with(&real) {
+            return None;
+        }
+        // Never into a hidden folder (`.ssh`, `.config`, ...), whatever the link is called.
+        if real.components().any(|c| c.as_os_str().to_string_lossy().starts_with('.')) {
+            return None;
+        }
+        Some(real)
+    }
+
+    /// The absolute path of `path` inside the source: validated; the only symbolic links allowed in
+    /// it are the folder links `list` followed, and the file must really sit in the source or under
+    /// one of them.
     fn resolve(&self, path: &str) -> Result<PathBuf> {
         check_rel(path)?;
-        let p = safe_path(&self.root, path, false)?;
-        let meta = fs::symlink_metadata(&p).map_err(ioerr)?;
+        let parts = validate_relative(path)?;
+        let linked = self.linked.lock().unwrap().clone();
+        let mut cur = self.root.clone();
+        for (i, part) in parts.iter().enumerate() {
+            cur.push(part);
+            let meta = fs::symlink_metadata(&cur).map_err(ioerr)?;
+            if meta.file_type().is_symlink() {
+                // Only a folder link `list` followed, and never the last part (a file link).
+                let ok = i + 1 < parts.len() && fs::canonicalize(&cur).is_ok_and(|r| linked.contains(&r));
+                if !ok {
+                    return Err(err("INVALID_PATH", "Symbolic links are not allowed in a vault"));
+                }
+            }
+        }
+        let real = fs::canonicalize(&cur).map_err(ioerr)?;
+        if !(real.starts_with(&self.root) || linked.iter().any(|l| real.starts_with(l))) {
+            return Err(err("INVALID_PATH", "Path escapes the selected vault"));
+        }
+        let meta = fs::symlink_metadata(&cur).map_err(ioerr)?;
         if !meta.file_type().is_file() {
             return Err(err("NOT_FOUND", "Not a regular file"));
         }
-        Ok(p)
+        Ok(cur)
     }
 
     /// The file as text (lossy UTF-8), at most [`MAX_TEXT_BYTES`].

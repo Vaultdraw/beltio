@@ -900,6 +900,8 @@ fn gateway_allowlist_maps_methods_to_permissions() {
             ("pdf.render", Some("pdf")),
             ("pdf.unlock", Some("pdf")),
             ("pdf.close", Some("pdf")),
+            ("network.askImages", Some("network.images")),
+            ("network.fetchImage", Some("network.images")),
             ("storage.read", None),
             ("storage.write", None),
             ("markdown.parse", None),

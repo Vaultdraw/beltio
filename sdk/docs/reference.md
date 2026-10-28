@@ -554,6 +554,19 @@ interface VaultExportsApi {
 
 Paths follow the path rules above: no dot segments, no `.excalidraw-vault`, no symbolic links. A file must end in `.svg` or `.png`. The official `auto-export` plugin is built on this.
 
+### ctx.network (since 0.31.0)
+
+Pictures from the web, for a plugin whose notes show them. Needs the permission `network.images`. The app asks the user in a native dialog (the page cannot click it) that names the sites, once, and writes `network.allow_images`; a plugin that asks again while it is on gets `true` without a dialog.
+
+```ts
+interface NetworkApi {
+  askImages(urls: readonly string[]): Promise<boolean>; // false: the user said no
+  fetchImage(url: string): Promise<Uint8Array>;
+}
+```
+
+`fetchImage` rejects with `NETWORK_NOT_ALLOWED` or `NETWORK_DISABLED` (ask first), `INVALID_URL` (not https, or a private or local address), `REDIRECT_REFUSED`, `PRIVATE_ADDRESS` (the name resolves to one), `TOO_LARGE` (over 10 MiB), `NOT_AN_IMAGE` (the bytes are not PNG, JPEG, GIF, WebP or SVG), `HTTP_STATUS`, `NETWORK_TIMEOUT` or `NETWORK_ERROR`. Ask once per task, not per picture, and remember a "no".
+
 ### ctx.present and ctx.scene.fitTo (since 0.29.0)
 
 Full-screen presenting of the open drawing, and zooming the view to an element. The official `frames` plugin is built on them.
