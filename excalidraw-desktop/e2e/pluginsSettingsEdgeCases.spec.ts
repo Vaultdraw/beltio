@@ -2,7 +2,13 @@ import { createHash } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { openDrawing, openVault, reloadVault, trackErrors } from "./helpers";
+import {
+  canvasBox,
+  openDrawing,
+  openVault,
+  reloadVault,
+  trackErrors,
+} from "./helpers";
 
 // One broad spec for plugins, extensions, settings, commands, keys, themes and profiles (owner,
 // 2026-10-28): few tests, each checking many things in one pass, all through visible UI.
@@ -363,4 +369,160 @@ test("plugin permission review, consent, a crashing plugin and the registry brow
   expect((await prefs(page)).networkAllowPlugins).toBe(true);
   // Only the failures this test caused on purpose: the crashing plugin and the failing downloads.
   expect(errors.filter((e) => !/kaboom|500|checksum|Failed to load resource/i.test(e))).toEqual([]);
+});
+
+/** Is the toolbar's `name` tool the active one. */
+const toolActive = (page: Page, name: string) =>
+  page.evaluate((id) => {
+    const el = document.querySelector<HTMLElement>(
+      `.vault-editor [data-testid='toolbar-${id}']`,
+    );
+    if (!el) {
+      return null;
+    }
+    const input = el instanceof HTMLInputElement ? el : el.querySelector("input");
+    if (input) {
+      return input.checked;
+    }
+    return (
+      el.classList.contains("selected") ||
+      el.classList.contains("is-selected") ||
+      el.getAttribute("aria-checked") === "true" ||
+      el.getAttribute("data-state") === "on" ||
+      el.getAttribute("aria-pressed") === "true"
+    );
+  }, name);
+
+const hotkeyRow = (page: Page, id: string) =>
+  page.locator(`.vault-hotkeys__row[data-command-id="${id}"]`);
+
+test("commands and keys: every command is listed and rebindable, old ids still bind, sequences, prefixes and conflicts behave", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openGraphsDrawing(page);
+  await expect
+    .poll(() => hits(page, "Gallery").then((t) => t.length), { timeout: 15_000 })
+    .toBeGreaterThan(0);
+
+  // 1. The palette reaches a spread of commands from every area (a typed query, no shortcut).
+  const SAMPLE = [
+    "Save", "Tabs: Close tab", "Search", "Tags: Focus tags pane", "Templates: Open the global templates folder",
+    "Extensions: Toggle Graph view", "Extensions: Toggle Formulas", "Gallery: Toggle grid view", "Favourites: Open favourite 1",
+    "Frames: Present from the current frame", "Formula: Insert formula", "Import: Markdown…", "Import: PDF…", "Graph: Open graph view",
+    "Insert table from clipboard", "Auto-export: Export all drawings now", "Plugins: Open plugin settings", "View: Focus mode",
+    "Layout: Default layout", "Themes: Remove an installed theme", "Tool: Rectangle", "Tool: Ellipse", "Open settings",
+    "Navigator: Focus file tree", "Config: Reload config files",
+  ];
+  const input = () => paletteDialog(page).locator("input").first();
+  await page.keyboard.press("Meta+Shift+KeyP");
+  await expect(input()).toBeFocused();
+  const unreachable: string[] = [];
+  for (const title of SAMPLE) {
+    await input().fill(`>${title}`);
+    const ok = await expect
+      .poll(async () => (await paletteDialog(page).getByRole("option").allTextContents()).some((t) => t.startsWith(title)), { timeout: 1500 })
+      .toBe(true)
+      .then(() => true, () => false);
+    if (!ok) {
+      unreachable.push(title);
+    }
+  }
+  await page.keyboard.press("Escape");
+  expect(unreachable).toEqual([]);
+
+  // 2. The Hotkeys page lists every command once, each with an Add button: all are rebindable.
+  await openSettingsTab(page, "Hotkeys");
+  const listing = await page.locator(".vault-hotkeys__row").evaluateAll((rows) =>
+    rows.map((r) => ({
+      id: r.getAttribute("data-command-id"),
+      add: r.querySelector('button[aria-label^="Add hotkey for"]') !== null,
+    })),
+  );
+  expect(listing.length).toBeGreaterThan(300);
+  expect(new Set(listing.map((r) => r.id)).size).toBe(listing.length);
+  expect(listing.filter((r) => !r.add).map((r) => r.id)).toEqual([]);
+  await closeSettings(page);
+
+  // 3. Keys saved under old command ids still bind to the renamed commands.
+  await page.evaluate((k) => {
+    const p = JSON.parse(window.localStorage.getItem(k) ?? "{}");
+    p.hotkeys = {
+      ...(p.hotkeys ?? {}),
+      "thumbnails.galleryToggle": ["Alt+Shift+Q"],
+      "thumbnails.galleryOpen": ["Alt+Shift+W"],
+      "file.importPdf": ["Alt+Shift+E"],
+    };
+    window.localStorage.setItem(k, JSON.stringify(p));
+  }, PREFS_KEY);
+  await reloadVault(page);
+  await openGraphsAgain(page);
+  await openSettingsTab(page, "Hotkeys");
+  await page.getByLabel("Filter hotkeys").fill("Gallery");
+  await expect(hotkeyRow(page, "gallery.toggle")).toContainText("Q");
+  await expect(hotkeyRow(page, "gallery.show-folder")).toContainText("W");
+  await page.getByLabel("Filter hotkeys").fill("PDF");
+  await expect(hotkeyRow(page, "pdf-import.import")).toContainText("E");
+  await closeSettings(page);
+  await page.keyboard.press("Alt+Shift+Q");
+  await expect(page.getByTestId("gallery-view")).toBeVisible();
+  await page.keyboard.press("Alt+Shift+Q");
+  await expect(page.getByTestId("gallery-view")).toHaveCount(0);
+
+  // 4. Sequences: "g r" is Rectangle, a lone "g" is Ellipse; the shorter one is flagged as a prefix warning.
+  const bind = async (title: string, keys: string[], sequence: boolean) => {
+    await openSettingsTab(page, "Hotkeys");
+    await page.getByLabel("Filter hotkeys").fill(title);
+    await page.getByRole("button", { name: `Add hotkey for ${title}`, exact: true }).click();
+    if (sequence) {
+      await page.getByRole("button", { name: "Sequence", exact: true }).click();
+    }
+    for (const k of keys) {
+      await (sequence ? page.keyboard.type(k) : page.keyboard.press(k));
+    }
+    if (sequence) {
+      await page.keyboard.press("Enter");
+    }
+  };
+  await bind("Tool: Rectangle", ["g", "r"], true);
+  await bind("Tool: Ellipse", ["g"], true);
+  await page.getByLabel("Filter hotkeys").fill("Tool: Ellipse");
+  await expect(hotkeyRow(page, "tool.ellipse")).toHaveClass(/vault-hotkeys__row--conflict/);
+  await expect(hotkeyRow(page, "tool.ellipse").getByTestId("conflict-sentence")).toBeVisible();
+  await closeSettings(page);
+
+  await page.locator(".vault-editor [data-testid='toolbar-diamond']").click();
+  await expect.poll(() => toolActive(page, "diamond")).toBe(true);
+  const box = await canvasBox(page);
+  await page.mouse.click(box.x + box.width * 0.8, box.y + box.height * 0.8);
+  // The full sequence.
+  await page.keyboard.press("g");
+  await expect(page.getByRole("status", { name: "Key sequence options" })).toBeVisible();
+  await page.keyboard.press("r");
+  await expect.poll(() => toolActive(page, "rectangle")).toBe(true);
+  // Escape cancels a pending sequence: nothing runs.
+  await page.locator(".vault-editor [data-testid='toolbar-diamond']").click();
+  await page.mouse.click(box.x + box.width * 0.8, box.y + box.height * 0.8);
+  await page.keyboard.press("g");
+  await expect(page.getByRole("status", { name: "Key sequence options" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("status", { name: "Key sequence options" })).toHaveCount(0);
+  await page.waitForTimeout(150);
+  expect(await toolActive(page, "rectangle")).toBe(false);
+  expect(await toolActive(page, "ellipse")).toBe(false);
+  // A lone "g" waits for the timeout, then runs the shorter binding (Ellipse).
+  await page.keyboard.press("g");
+  await expect.poll(() => toolActive(page, "ellipse"), { timeout: 5000 }).toBe(true);
+
+  // 5. A chord bound to two commands is a conflict on both rows, and Reset all removes the lot.
+  await bind("Tool: Diamond", ["Meta+Comma"], false);
+  await page.getByLabel("Filter hotkeys").fill("");
+  await page.getByRole("button", { name: /^Conflicts/ }).click();
+  await expect(hotkeyRow(page, "settings.open")).toBeVisible();
+  await expect(hotkeyRow(page, "tool.diamond")).toBeVisible();
+  await page.getByRole("button", { name: /^All/ }).click();
+  await page.getByRole("button", { name: /^Reset all/ }).click();
+  await page.getByRole("button", { name: /^Reset \d+\? Click again/ }).click();
+  expect(Object.keys((await prefs(page)).hotkeys ?? {})).toEqual([]);
+  expect(errors).toEqual([]);
 });
