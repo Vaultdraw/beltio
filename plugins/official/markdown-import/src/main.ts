@@ -324,6 +324,10 @@ const plugin: Plugin = definePlugin({
               `Imported ${result.notes} notes and ${
                 result.drawings
               } drawings from ${source.name}${
+                written.name !== source.name
+                  ? ` (it was imported before, so this copy is in "${written.name}")`
+                  : ""
+              }${
                 noPicture
                   ? ` (${noPicture} images left as boxes: ${result.oversizedImages} over 4 MB, ${result.unsupportedImages} unsupported type, ${result.missingImages} not found)`
                   : ""
