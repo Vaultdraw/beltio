@@ -1305,6 +1305,22 @@ exclude = "Private, Scratch"
 - **Safe paths.** Only `.svg` and `.png` files are written, moved or deleted, never in a folder that starts with a dot, never through a symbolic link. A folder of exports is moved or removed only when it holds nothing but exports.
 - **Limits.** Exports run on the main thread (the editor's exporter needs a canvas), so a very large drawing can cost a short pause while it renders in idle time. An empty drawing is not exported.
 
+
+### Table (official plugin)
+
+An official plugin (`table`, in `plugins/official/table`) that turns pasted tabular text into a table of ordinary Excalidraw shapes (a group of a rectangle, a shaded header row, grid lines and one text per cell, in your current stroke colour, font and size), so the file opens in any Excalidraw. It recognises tab-separated cells (spreadsheets), CSV with quotes (comma or semicolon) and Markdown pipe tables. It loads on the first paste of multi-line text or when its command runs, never at launch. Changes apply live.
+
+```toml
+[plugin.table]
+on_paste = "ask"       # "ask" (default), "always" or "never"
+max_col_width = 260    # widest column in pixels, 80 to 1000; longer text wraps
+```
+
+- `ask`: the text pastes as usual and a toast offers **Insert as table**, which swaps the pasted text for the table in one undo step. `always`: the table replaces the paste. `never`: pastes are left alone. A normal paste is never changed without `always`.
+- **Command** (palette, rebindable): `table.insert-from-clipboard` ("Insert table from clipboard") reads the clipboard text and inserts the table at the centre of the view.
+- Limits: 200 rows, 30 columns and about 400 filled cells per paste. Excalidraw text has no bold, so the header row is shaded with a heavier rule under it.
+- Turn the plugin off with `plugins.disabled`; the plugin sees only the text of a paste of plain text (permission `clipboard`).
+
 ## Templates
 
 A template is an ordinary `.excalidraw` file, so any drawing can become one, and a template can be opened and edited like any other drawing.
@@ -1965,7 +1981,7 @@ Plugins in the `plugins/` folder of the config folder.
 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
-| `enabled` | `["markdown-import", "gallery", "graph", "mermaid", "formula", "pdf-import", "favourites", "auto-export"]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`. |
+| `enabled` | `["markdown-import", "gallery", "graph", "mermaid", "formula", "pdf-import", "favourites", "auto-export", "table"]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`. |
 | `disabled` | `[]` | a list of official plugin ids you turned off, like ["gallery"] |  | Official plugins you turned off, like `["gallery"]`. Settings writes it; a new official plugin is on until you list it here. |
 | `importers` | `[object Object]` | a table like { txt = "text-import" } (extension = plugin id, "" for none) |  | Which plugin imports a file extension when two plugins claim it; `""` turns plugin handling off for that extension. |
 | `storage_limit_kb` | `1024` | an integer between 64 and 16384 |  | Most data one plugin may save with `ctx.storage`, in KiB; a save past it is refused. |

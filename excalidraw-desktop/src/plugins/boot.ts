@@ -16,6 +16,7 @@ import { openPanel, panelFlag, togglePanel } from "../slots/panelStore";
 import { toastStore } from "../toasts/toastStore";
 import { getPreferences, subscribePreferences } from "../vault/preferences";
 
+import { setPasteStarter } from "./clipboard/pasteRouter";
 import { enabledPluginIds } from "./enabledIds";
 import { setFormulaEditRunner } from "./formulaEdit";
 import { setMathStarter } from "./mathService";
@@ -246,7 +247,35 @@ function wantsStart(id: string, win: Window): boolean {
   return !!key && getPreferences(win).pluginSettings[id]?.[key] === true;
 }
 
+/**
+ * The first multi-line paste: starts the host and activates the plugins that see pastes (an official
+ * one with `pasteHook`, or any enabled plugin declaring `activation = ["onPaste"]`). Nothing runs if
+ * none is on, so a launch and every other paste cost nothing.
+ */
+async function startPasteHandlers(win: Window): Promise<void> {
+  const enabled = enabledPluginIds(win);
+  const official = OFFICIAL_PLUGINS.filter(
+    (p) => p.pasteHook && enabled.includes(p.id),
+  ).map((p) => p.id);
+  if (official.length === 0 && !pluginHostStarted.get()) {
+    return;
+  }
+  await ensurePluginHost(win);
+  const { allRuntimes, ensureActive } = await import("./host/activation");
+  const ids = new Set(official);
+  for (const rt of allRuntimes()) {
+    if (
+      rt.info.activation.includes("onPaste") &&
+      enabled.includes(rt.info.id)
+    ) {
+      ids.add(rt.info.id);
+    }
+  }
+  await Promise.all([...ids].map((id) => ensureActive(id)));
+}
+
 export function bootPlugins(win: Window): void {
+  setPasteStarter(() => startPasteHandlers(win));
   setImportHostStarter(() => ensurePluginHost(win));
   setMathStarter(() => startFormulaPlugin(win));
   setFormulaEditRunner((id) => runOfficialCommand(win, id));

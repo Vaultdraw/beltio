@@ -20,6 +20,7 @@ import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
 import type { ShapesApi } from "./shapes";
 import type { DiagramsApi } from "./diagrams";
+import type { ClipboardApi, ToastOptions } from "./clipboard";
 import type { PdfApi } from "./pdf";
 import type { ThumbnailsApi } from "./thumbnails";
 import type { ToolsApi } from "./tools";
@@ -38,7 +39,7 @@ export interface UiApi {
    *
    * @since 0.1.0
    */
-  toast(message: string): void;
+  toast(message: string, options?: ToastOptions): void;
 }
 
 /**
@@ -124,6 +125,8 @@ export interface PluginContext {
   readonly diagrams: DiagramsApi;
   /** Open PDF files and render their pages natively. Needs the permission `pdf`. @since 0.26.0 */
   readonly pdf: PdfApi;
+  /** Read the clipboard and see pastes of text. Needs the permission `clipboard`. @since 0.28.0 */
+  readonly clipboard: ClipboardApi;
   /**
    * Disposed in reverse order on disable/reload/quit.
    *

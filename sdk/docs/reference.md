@@ -497,6 +497,24 @@ interface VaultApi {
 | Vault metadata | The `.excalidraw-vault` folder is never accepted. |
 | Create only | `createDrawing` refuses an existing path (`NAME_COLLISION`), also when it differs only by case. |
 
+### ctx.clipboard (since 0.28.0)
+
+Needs the permission `clipboard`. Declare `activation = ["onPaste"]` so the plugin loads on the first paste of multi-line text and not at launch.
+
+```ts
+const text = await ctx.clipboard.readText();            // "" when empty or refused
+ctx.clipboard.onPaste(({ text }) => {
+  if (!looksLikeMine(text)) return "pass";               // the editor pastes as usual
+  ctx.ui.toast("Convert it?", { action: { label: "Convert", run: () => {} } });
+  return "pass";                                         // or "handled" to skip the editor's paste
+});
+```
+
+- A handler sees only the text of a paste of plain multi-line text, never copied shapes or images. The first to return `"handled"` wins; one that throws or takes over 1.5 seconds is skipped.
+- `ctx.scene.currentTextStyle()` returns `{ fontFamily, fontSize }` of the next text the user would draw.
+- `ctx.ui.toast(message, { action })` adds a button that stays about eight seconds.
+- In tests: `plugin.clipboard.text`, `plugin.clipboard.paste(text)` (true when handled), `plugin.clipboard.toastButtons()` and `plugin.clipboard.clickToast(label)`.
+
 ### ctx.vault.exports (since 0.27.0)
 
 The app's own SVG and PNG export of a drawing, written into the vault as a `.svg` or `.png` file. These are the only files besides drawings a plugin can write.

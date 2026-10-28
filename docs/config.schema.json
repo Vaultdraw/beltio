@@ -1614,7 +1614,8 @@
             "formula",
             "pdf-import",
             "favourites",
-            "auto-export"
+            "auto-export",
+            "table"
           ],
           "type": "array",
           "items": {

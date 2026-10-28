@@ -44,6 +44,7 @@ import { createThemeApi } from "./themeContext";
 import { createStorageApi } from "./storageContext";
 import { createVaultApi } from "./vaultContext";
 import { createDiagramsApi } from "./diagramsContext";
+import { createClipboardApi } from "./clipboardContext";
 import { createPdfApi } from "./pdfContext";
 import { createThumbnailsApi } from "./thumbnailsContext";
 import { createWorkspaceApi } from "./workspaceContext";
@@ -64,6 +65,7 @@ import type {
   ThemeApi,
   MenusApi,
   OverlaysApi,
+  ClipboardApi,
   PdfApi,
   ThumbnailsApi,
   DiagramsApi,
@@ -196,6 +198,7 @@ export function createPluginContext(
   let thumbnailsApi: ThumbnailsApi | undefined;
   let diagramsApi: DiagramsApi | undefined;
   let pdfApi: PdfApi | undefined;
+  let clipboardApi: ClipboardApi | undefined;
 
   const settingValue = (key: string) => getPluginSetting(id, key);
 
@@ -277,8 +280,25 @@ export function createPluginContext(
       },
     },
     ui: {
-      toast: (message) =>
-        toastStore.push({ message: `${info.name}: ${String(message)}` }),
+      toast: (message, options) => {
+        const action = options?.action;
+        toastStore.push({
+          message: `${info.name}: ${String(message)}`,
+          ...(action && typeof action.run === "function"
+            ? {
+                action: {
+                  label: String(action.label).slice(0, 40),
+                  // The toast outlives nothing: a click after the plugin stopped does nothing.
+                  run: () => {
+                    if (isLive()) {
+                      action.run();
+                    }
+                  },
+                },
+              }
+            : {}),
+        });
+      },
     },
     log: {
       debug: logger("debug"),
@@ -403,6 +423,9 @@ export function createPluginContext(
     },
     get pdf() {
       return (pdfApi ??= createPdfApi(rt));
+    },
+    get clipboard() {
+      return (clipboardApi ??= createClipboardApi(rt, track, isLive));
     },
     get overlays() {
       return (overlaysApi ??= {

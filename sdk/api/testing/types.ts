@@ -1,3 +1,4 @@
+import type { FakeClipboard } from "./clipboard";
 import type {
   AppEventMap,
   CommandContribution,
@@ -348,6 +349,8 @@ export interface TestPlugin {
   workspace: FakeWorkspace;
   folders: FakeFolders;
   pdf: FakePdf;
+  /** `ctx.clipboard` in tests: set `text`, call `paste`, click a toast button. */
+  clipboard: FakeClipboard;
   /**
    * Drops a file on the drawing as the app does: finds the importer by file
    * extension, loads the plugin, runs it and applies the returned ops as one

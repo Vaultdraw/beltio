@@ -12,6 +12,7 @@ import {
 import type {
   BatchResult,
   Disposable,
+  FontFamilyName,
   Json,
   NewElement,
   SceneContextApi,
@@ -738,6 +739,12 @@ export function createSceneModel(
               ),
         currentStrokeColor: () =>
           (appState.currentItemStrokeColor as string | undefined) ?? "#1e1e1e",
+        currentTextStyle: () => ({
+          fontFamily:
+            (appState.currentItemFontFamily as FontFamilyName | undefined) ??
+            "Excalifont",
+          fontSize: (appState.currentItemFontSize as number | undefined) ?? 20,
+        }),
         placePages(sizes) {
           // No page mode in the mock: boxes stack below the content, 40 px apart.
           const els = path === null ? [] : live();

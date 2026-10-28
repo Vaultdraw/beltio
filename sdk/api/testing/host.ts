@@ -53,6 +53,7 @@ import {
 
 import { createFoldersModel } from "./folders";
 import { createPagesMock } from "./pages";
+import { createClipboardModel, type FakeClipboard } from "./clipboard";
 import { createPdfModel } from "./pdf";
 import { createSceneModel } from "./scene";
 import { loadPanelDeps, panelsRoot, type PanelDeps } from "./panels";
@@ -137,6 +138,8 @@ export interface MockHost {
   folders: FakeFolders;
   /** What `ctx.pdf` serves (needs the permission `pdf`). */
   pdf: FakePdf;
+  /** What `ctx.clipboard` serves (needs the permission `clipboard`). */
+  clipboard: FakeClipboard;
   /** Drops a file on the active drawing; resolves to the scene write it made, or null. */
   importFile(
     fileName: string,
@@ -224,6 +227,7 @@ export function createMockHost(
   const scene = createSceneModel("fake.excalidraw", maxOps);
   const vault = createVaultModel(maxOps);
   const pdfModel = createPdfModel();
+  const clipboardModel = createClipboardModel();
   const folders = createFoldersModel(vault, {
     open: () => vault.fake.setVault !== undefined && vaultIsOpen(),
     readOnly: () => vaultReadOnly(),
@@ -552,6 +556,7 @@ export function createMockHost(
     let thumbnailsApi: PluginContext["thumbnails"] | undefined;
     let diagramsApi: PluginContext["diagrams"] | undefined;
     let pdfApi: PluginContext["pdf"] | undefined;
+    let clipboardApi: PluginContext["clipboard"] | undefined;
     let menusApi: PluginContext["menus"] | undefined;
     let pagesApi: PluginContext["pages"] | undefined;
     let foldersApi: PluginContext["folders"] | undefined;
@@ -662,7 +667,17 @@ export function createMockHost(
         },
       },
       ui: {
-        toast: (message) => toast(toastMessage(info.name, message)),
+        toast: (message, options) => {
+          const text = toastMessage(info.name, message);
+          toast(text);
+          if (options?.action) {
+            clipboardModel.addToastButton(
+              text,
+              options.action.label,
+              options.action.run,
+            );
+          }
+        },
       },
       log: {
         debug: logger("debug"),
@@ -804,6 +819,9 @@ export function createMockHost(
             throw new Error("ctx.diagrams is not available in the test host");
           },
         });
+      },
+      get clipboard() {
+        return (clipboardApi ??= clipboardModel.api(id, info.permissions));
       },
       get pdf() {
         // No native renderer in tests: set one up with `pdf` on the mock host.
@@ -1315,6 +1333,9 @@ export function createMockHost(
   };
 
   const startupIds = info.activation.includes("onStartupFinished");
+  clipboardModel.setActivator(
+    info.activation.includes("onPaste") ? ensureActive : null,
+  );
   decls = declaredSettings(id, info.contributes.settings, (text) =>
     logLine("warn", text),
   );
@@ -1328,6 +1349,7 @@ export function createMockHost(
     workspace: vault.workspace,
     folders: folders.fake,
     pdf: pdfModel.fake,
+    clipboard: clipboardModel.fake,
     importFile,
     cancelImport() {
       if (!importing) {
@@ -1541,6 +1563,7 @@ export function createMockHost(
       vault.reset();
       folders.reset();
       pdfModel.reset();
+      clipboardModel.reset();
       activePath = "fake.excalidraw";
       sceneReadOnly = false;
       importerImpls.clear();

@@ -100,6 +100,7 @@ import { rememberExportOptions } from "./exportOptions";
 import { focusElement } from "./focusElement";
 import { PANNED_CLASS, watchFirstPan } from "./panHint";
 import { renderImageExport } from "./imageExport";
+import { onEditorPaste } from "./pastePlugins";
 import { serializeSceneForSave } from "./sceneSerializer";
 import { getSaveSignature } from "./saveSignature";
 import { isSwapping, loadScene } from "./sceneSwap";
@@ -1092,6 +1093,7 @@ const VaultEditorComponent = ({
         onInitialize={onInitialize}
         onExcalidrawAPI={onExcalidrawAPI}
         onImageEdit={onImageEdit}
+        onPaste={onEditorPaste}
         canvasContextMenuItems={canvasContextMenuItems}
         validateEmbeddable={false}
         viewModeEnabled={readOnly}

@@ -1,10 +1,13 @@
 // Generated from the @since tags of sdk/api/src by sdk/api/scripts/gen-features.mjs. Do not edit.
 
 /** The API revision of this build (the version of sdk/api/package.json). */
-export const API_REVISION = "0.27.0";
+export const API_REVISION = "0.28.0";
 
 /** Feature name to the revision that added it. `ctx.host.has(name)` is true for these. */
 export const FEATURES: Readonly<Record<string, string>> = {
+  clipboard: "0.28.0",
+  "clipboard.onPaste": "0.28.0",
+  "clipboard.readText": "0.28.0",
   commands: "0.1.0",
   "commands.execute": "0.1.0",
   "commands.register": "0.1.0",
@@ -65,6 +68,7 @@ export const FEATURES: Readonly<Record<string, string>> = {
   scene: "0.1.0",
   "scene.batch": "0.1.0",
   "scene.currentStrokeColor": "0.24.0",
+  "scene.currentTextStyle": "0.28.0",
   "scene.dataOf": "0.4.0",
   "scene.elements": "0.1.0",
   "scene.get": "0.4.0",

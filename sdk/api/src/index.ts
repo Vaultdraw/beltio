@@ -115,6 +115,12 @@ export type {
   PdfPageSize,
   PdfRenderOptions,
 } from "./pdf";
+export type {
+  ClipboardApi,
+  PasteEvent,
+  PasteResult,
+  ToastOptions,
+} from "./clipboard";
 export type { ToolHandlers, ToolPoint, ToolsApi } from "./tools";
 export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";

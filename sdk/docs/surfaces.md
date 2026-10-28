@@ -41,6 +41,7 @@ if (ctx.host.has("statusBar")) ctx.statusBar.set("clock", { text });
 | 0.25.0 | `scene.batch` `update` can change an image's picture in place (`image` prop); `ctx.shapes.update` and the formula plugin keep the element id | `ctx.host.revision >= "0.25.0"` |
 | 0.26.0 | `ctx.pdf`, permission `pdf`, `ctx.scene.placePages`, `ctx.scene.sizeBytes`, `batch` options `pageCount` and `reveal`, `.pdf` importers | `ctx.host.has("pdf")` |
 | 0.27.0 | `ctx.vault.exports` (`render`, `move`, `remove`): SVG and PNG exports of drawings, written into the vault | `ctx.host.has("vault.exports")` |
+| 0.28.0 | `ctx.clipboard` (`readText`, `onPaste`), permission `clipboard`, activation `onPaste`, `ctx.scene.currentTextStyle()`, toast action buttons (`ctx.ui.toast(message, { action })`) | `ctx.host.has("clipboard")` |
 
 An older app refuses a `plugin.toml` with a table it does not know (`status_bar`, `views`, `menus`, `toolbar`, `tools`, `shapes`, `methods`), so set `min_app` to the app version that ships the revision you use; `vaultdraw-plugin check` warns when it is lower.
 

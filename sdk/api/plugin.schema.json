@@ -60,13 +60,13 @@
     },
     "activation": {
       "title": "Activation events",
-      "description": "Optional. By default a plugin loads on first use: one of its commands runs or one of its panels opens, or a file with an extension one of its importers declares is dropped or picked. List \"onStartupFinished\" to also activate it on an idle callback after startup. \"onDrop:<ext>\" is accepted only for an extension an importer declares, and adds nothing the importer does not already do. No other event exists.",
+      "description": "Optional. By default a plugin loads on first use: one of its commands runs or one of its panels opens, or a file with an extension one of its importers declares is dropped or picked. List \"onStartupFinished\" to also activate it on an idle callback after startup. \"onPaste\" (API 0.28.0) loads it on the first paste of multi-line text, for a plugin that uses ctx.clipboard.onPaste. \"onDrop:<ext>\" is accepted only for an extension an importer declares, and adds nothing the importer does not already do. No other event exists.",
       "type": "array",
       "items": {
         "title": "Activation event",
-        "description": "The event name: onStartupFinished, or onDrop:<ext> for a declared importer extension.",
+        "description": "The event name: onStartupFinished, onPaste, or onDrop:<ext> for a declared importer extension.",
         "type": "string",
-        "pattern": "^(onStartupFinished|onDrop:[a-z0-9]+(\\.[a-z0-9]+)*)$"
+        "pattern": "^(onStartupFinished|onPaste|onDrop:[a-z0-9]+(\\.[a-z0-9]+)*)$"
       }
     },
     "permissions": {
@@ -77,8 +77,8 @@
       "uniqueItems": true,
       "items": {
         "title": "Permission",
-        "description": "vault.read reads the drawings in your vault. vault.write creates drawings in your vault. folders.import reads a folder you pick and writes into a destination you pick (ctx.folders). control lets other programs (the vaultdraw command, scripts, AI apps you allow) call the methods the plugin declares. pdf opens PDF files you pick and renders their pages (ctx.pdf).",
-        "enum": ["vault.read", "vault.write", "folders.import", "control", "pdf"]
+        "description": "vault.read reads the drawings in your vault. vault.write creates drawings in your vault. folders.import reads a folder you pick and writes into a destination you pick (ctx.folders). control lets other programs (the vaultdraw command, scripts, AI apps you allow) call the methods the plugin declares. pdf opens PDF files you pick and renders their pages (ctx.pdf). clipboard reads the clipboard text and sees pasted text (ctx.clipboard).",
+        "enum": ["vault.read", "vault.write", "folders.import", "control", "pdf", "clipboard"]
       }
     },
     "data_key": {

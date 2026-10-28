@@ -73,7 +73,7 @@ export const projectScene = (
   return cached;
 };
 
-const FONT_NAME = new Map<number, string>(
+export const FONT_NAME = new Map<number, string>(
   Object.entries(FONT_FAMILY).map(([name, n]) => [n as number, name]),
 );
 

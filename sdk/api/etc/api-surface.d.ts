@@ -1,3 +1,20 @@
+// clipboard.ts
+import type { Disposable } from "./disposable";
+export interface PasteEvent {
+    readonly text: string;
+}
+export type PasteResult = "handled" | "pass" | void;
+export interface ClipboardApi {
+    readText(): Promise<string>;
+    onPaste(cb: (event: PasteEvent) => PasteResult | Promise<PasteResult>): Disposable;
+}
+export interface ToastOptions {
+    action?: {
+        label: string;
+        run: () => void;
+    };
+}
+
 // commands.ts
 import type { Disposable } from "./disposable";
 export interface CommandsApi {
@@ -147,6 +164,7 @@ export type { OverlayHandle, OverlayOptions, OverlayProps, OverlaysApi, } from "
 export type { DiagramsApi, MermaidDrawing } from "./diagrams";
 export type { ThumbnailState, ThumbnailsApi } from "./thumbnails";
 export type { PdfApi, PdfDocument, PdfImportSettings, PdfPageSize, PdfRenderOptions, } from "./pdf";
+export type { ClipboardApi, PasteEvent, PasteResult, ToastOptions, } from "./clipboard";
 export type { ToolHandlers, ToolPoint, ToolsApi } from "./tools";
 export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
@@ -165,7 +183,7 @@ export interface PluginManifestInfo {
     permissions: readonly PluginPermission[];
     dataKey: string;
 }
-export type PluginPermission = "vault.read" | "vault.write" | "folders.import" | "control" | "pdf";
+export type PluginPermission = "vault.read" | "vault.write" | "folders.import" | "control" | "pdf" | "clipboard";
 export interface CommandContribution {
     id: string;
     title: string;
@@ -593,6 +611,7 @@ import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
 import type { ShapesApi } from "./shapes";
 import type { DiagramsApi } from "./diagrams";
+import type { ClipboardApi, ToastOptions } from "./clipboard";
 import type { PdfApi } from "./pdf";
 import type { ThumbnailsApi } from "./thumbnails";
 import type { ToolsApi } from "./tools";
@@ -600,7 +619,7 @@ import type { OverlaysApi } from "./overlays";
 import type { ViewsApi } from "./views";
 import type { WorkspaceApi } from "./workspace";
 export interface UiApi {
-    toast(message: string): void;
+    toast(message: string, options?: ToastOptions): void;
 }
 export interface LogApi {
     debug(...a: unknown[]): void;
@@ -639,6 +658,7 @@ export interface PluginContext {
     readonly thumbnails: ThumbnailsApi;
     readonly diagrams: DiagramsApi;
     readonly pdf: PdfApi;
+    readonly clipboard: ClipboardApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;
     setInterval(fn: () => void, ms: number): Disposable;
@@ -780,6 +800,10 @@ export interface SceneContextApi {
     scrollTo(id: string): void;
     selection(): readonly string[];
     currentStrokeColor(): string;
+    currentTextStyle(): {
+        fontFamily: FontFamilyName;
+        fontSize: number;
+    };
     placePages(sizes: readonly {
         width: number;
         height: number;

@@ -475,6 +475,14 @@ export interface SceneContextApi {
    */
   currentStrokeColor(): string;
   /**
+   * The font family and size a new text gets (the drawing's current text settings), so inserted
+   * text matches what the user would draw next. A family the API does not name comes back as
+   * "Excalifont".
+   *
+   * @since 0.28.0
+   */
+  currentTextStyle(): { fontFamily: FontFamilyName; fontSize: number };
+  /**
    * Where to put `sizes.length` page pictures (a size is in scene pixels) in the active drawing,
    * following its page mode. Pure: nothing changes until you `batch` the images at the returned
    * boxes. With no drawing open the boxes start at the origin.

@@ -75,6 +75,7 @@ export const PERMISSIONS = [
   "folders.import",
   "control",
   "pdf",
+  "clipboard",
 ];
 /** Kept for later API revisions; an app that knows them as reserved refuses a manifest that uses one. */
 const RESERVED_PERMISSIONS = ["net", "secret"];
@@ -260,10 +261,10 @@ export function validateManifestText(text, file = "plugin.toml") {
       for (const a of doc.activation) {
         const covered =
           a.startsWith(ON_DROP) && declared.has(a.slice(ON_DROP.length));
-        if (a !== "onStartupFinished" && !covered) {
+        if (a !== "onStartupFinished" && a !== "onPaste" && !covered) {
           err(
             "activation-unknown",
-            `Unknown activation event '${a}' (onStartupFinished, or onDrop:<ext> for an extension an importer declares)`,
+            `Unknown activation event '${a}' (onStartupFinished, onPaste, or onDrop:<ext> for an extension an importer declares)`,
           );
         }
       }

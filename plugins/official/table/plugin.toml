@@ -1,0 +1,32 @@
+id = "table"
+name = "Table"
+version = "0.1.0"
+api = 0
+min_app = "0.2.0"
+main = "main.js"
+description = "Turn pasted spreadsheet cells, CSV or a Markdown table into a table of ordinary Excalidraw shapes"
+author = "Vaultdraw"
+permissions = ["clipboard"]
+activation = ["onPaste"]
+
+[[contributes.commands]]
+id = "insert-from-clipboard"
+title = "Insert table from clipboard"
+when = ["drawingOpen"]
+
+[[contributes.settings]]
+key = "on_paste"
+type = "select"
+title = "When you paste a table"
+description = "Ask offers \"Insert as table\" after the text is pasted, Always inserts the table instead of the text, Never leaves pastes alone."
+default = "ask"
+options = [{ value = "ask", label = "Ask" }, { value = "always", label = "Always insert a table" }, { value = "never", label = "Never" }]
+
+[[contributes.settings]]
+key = "max_col_width"
+type = "int"
+title = "Widest column"
+description = "Cell text wraps when a column would be wider than this, in pixels."
+default = 260
+min = 80
+max = 1000

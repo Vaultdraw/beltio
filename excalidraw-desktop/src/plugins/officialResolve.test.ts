@@ -22,6 +22,7 @@ describe("official plugins are on unless turned off", () => {
       "pdf-import",
       "favourites",
       "auto-export",
+      "table",
     ]);
     expect(v.pluginsDisabled).toEqual([]);
   });
@@ -37,6 +38,7 @@ describe("official plugins are on unless turned off", () => {
       "pdf-import",
       "favourites",
       "auto-export",
+      "table",
     ]);
     expect(v.pluginsDisabled).toEqual([]);
   });
@@ -53,6 +55,7 @@ describe("official plugins are on unless turned off", () => {
       "pdf-import",
       "favourites",
       "auto-export",
+      "table",
     ]);
     expect(v.pluginsDisabled).toEqual(["gallery"]);
   });
@@ -68,6 +71,7 @@ describe("official plugins are on unless turned off", () => {
         "pdf-import",
         "favourites",
         "auto-export",
+        "table",
       ],
       disabled: [],
     });
@@ -83,6 +87,7 @@ describe("official plugins are on unless turned off", () => {
       "pdf-import",
       "favourites",
       "auto-export",
+      "table",
     ]);
     restoreExtensionDefaults();
     expect(getPreferences().pluginsEnabled).toEqual([
@@ -95,6 +100,7 @@ describe("official plugins are on unless turned off", () => {
       "pdf-import",
       "favourites",
       "auto-export",
+      "table",
     ]);
     expect(getPreferences().pluginsDisabled).toEqual([]);
   });

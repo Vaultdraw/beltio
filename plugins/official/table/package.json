@@ -1,0 +1,11 @@
+{
+  "name": "@vaultdraw/plugin-table",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The official table plugin: pasted tables as Excalidraw shapes",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node ../../../sdk/cli/bin/vaultdraw-plugin.mjs check dist"
+  }
+}

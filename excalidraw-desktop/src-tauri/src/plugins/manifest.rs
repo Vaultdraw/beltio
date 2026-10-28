@@ -42,7 +42,7 @@ pub(crate) const RESERVED_EXTENSIONS: [&str; 15] = [
 ];
 
 /// Permissions a plugin may declare. A declaration and a consent line, not a sandbox.
-pub(crate) const PERMISSIONS: [&str; 5] = ["vault.read", "vault.write", "folders.import", "control", "pdf"];
+pub(crate) const PERMISSIONS: [&str; 6] = ["vault.read", "vault.write", "folders.import", "control", "pdf", "clipboard"];
 /// Names kept for later API revisions: an app that knows them as reserved refuses a manifest that uses one.
 const RESERVED_PERMISSIONS: [&str; 2] = ["net", "secret"];
 
@@ -544,11 +544,11 @@ fn check_status_bar(list: &[StatusItem], commands: &[Command]) -> Result<(), Str
     Ok(())
 }
 
-/// `onStartupFinished`, or `onDrop:<ext>` for an extension one of `importers` declares.
+/// `onStartupFinished`, `onPaste` (the permission `clipboard` is the one that makes it useful), or `onDrop:<ext>` for an extension one of `importers` declares.
 fn check_activation(events: &[String], importers: &[Importer]) -> Result<(), String> {
     for a in events {
         let covered = a.strip_prefix(ON_DROP).is_some_and(|ext| importers.iter().any(|i| i.extensions.iter().any(|e| e == ext)));
-        if a != "onStartupFinished" && !covered {
+        if a != "onStartupFinished" && a != "onPaste" && !covered {
             return Err(format!("Unknown activation event '{a}'"));
         }
     }

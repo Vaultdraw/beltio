@@ -5,6 +5,7 @@ import { parseToml } from "../../sdk/cli/src/toml.mjs";
 import favouritesToml from "../../plugins/official/favourites/plugin.toml?raw";
 import formulaToml from "../../plugins/official/formula/plugin.toml?raw";
 import autoExportToml from "../../plugins/official/auto-export/plugin.toml?raw";
+import tableToml from "../../plugins/official/table/plugin.toml?raw";
 import galleryToml from "../../plugins/official/gallery/plugin.toml?raw";
 import pdfImportToml from "../../plugins/official/pdf-import/plugin.toml?raw";
 import { setPluginsBackend } from "../src/plugins/host/backend";
@@ -76,6 +77,7 @@ export async function installDefaultBackend(win: Window): Promise<void> {
     infoOf("formula", formulaToml),
     infoOf("pdf-import", pdfImportToml),
     infoOf("auto-export", autoExportToml),
+    infoOf("table", tableToml),
   ];
   const backend = createFakeBackend(
     infos,

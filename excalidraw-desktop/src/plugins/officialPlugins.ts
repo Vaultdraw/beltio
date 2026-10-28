@@ -79,6 +79,11 @@ export interface OfficialPlugin {
    * While it is false (the default) nothing loads.
    */
   startWhen?: string;
+  /**
+   * The plugin sees pastes (`ctx.clipboard.onPaste`, `activation = ["onPaste"]`): the first paste of
+   * multi-line text starts it, so it costs nothing at launch.
+   */
+  pasteHook?: boolean;
 }
 
 export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
@@ -413,6 +418,19 @@ export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
       {
         id: "export-current",
         title: "Auto-export: Export this drawing now",
+        when: ["drawingOpen"],
+      },
+    ],
+  },
+  {
+    id: "table",
+    name: "Table",
+    pasteHook: true,
+    importers: [],
+    commands: [
+      {
+        id: "insert-from-clipboard",
+        title: "Insert table from clipboard",
         when: ["drawingOpen"],
       },
     ],

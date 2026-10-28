@@ -18,6 +18,7 @@ import type {
   TestPluginInfo,
 } from "./types";
 
+export type { FakeClipboard } from "./clipboard";
 export type {
   BootOptions,
   FakeBatch,
@@ -192,6 +193,7 @@ export async function boot(
     workspace: host.workspace,
     folders: host.folders,
     pdf: host.pdf,
+    clipboard: host.clipboard,
     import: host.importFile,
     cancelImport: host.cancelImport,
     flush,

@@ -45,6 +45,7 @@ import { pluginTimerCount } from "../host/context";
 import { PluginPanels } from "../host/PluginPanels";
 import { startPluginHost } from "../host/start";
 import { enable, setupHost } from "../host/testUtils";
+import { routePaste, setPasteStarter } from "../clipboard/pasteRouter";
 import { findImporter, runImports } from "../importerMap";
 import { cancelImports } from "../importerMap";
 import { setWorkspaceBridge } from "../workspaceBridge";
@@ -174,6 +175,14 @@ export interface FakeWorkspace {
 }
 
 /** What `ctx.pdf` sees: documents made up from page sizes (see sdk/api/testing/types.ts). */
+/** What `ctx.clipboard` sees (see sdk/api/testing/clipboard.ts). */
+export interface FakeClipboard {
+  text: string;
+  paste(text: string): Promise<boolean>;
+  toastButtons(): { message: string; label: string }[];
+  clickToast(label: string): boolean;
+}
+
 export interface FakePdf {
   /** The document the next `pick()` returns (null: the user cancels). `open()` uses its pages too. */
   nextPick: { name: string; pages: PdfPageSize[] } | null;
@@ -292,6 +301,7 @@ export interface TestPlugin {
   workspace: FakeWorkspace;
   folders: FakeFolders;
   pdf: FakePdf;
+  clipboard: FakeClipboard;
   /**
    * Drops a file on the drawing as the app does: finds the importer by
    * extension, runs the real import runner and resolves to the scene write
@@ -577,6 +587,38 @@ export async function boot(
   backend.pdf = bridge;
   const docName = (token: number) =>
     bridge.names.get(token) ?? `document ${token}`;
+  const clipboard: FakeClipboard = {
+    text: "",
+    paste: async (text) => {
+      // As in the app: the first multi-line paste activates a plugin that declares onPaste.
+      setPasteStarter(
+        info.activation.includes("onPaste")
+          ? async () => void (await ensureActive(id))
+          : null,
+      );
+      return routePaste(text);
+    },
+    toastButtons: () =>
+      toastStore
+        .getSnapshot()
+        .toasts.filter((t) => t.action)
+        .map((t) => ({ message: t.message, label: t.action!.label })),
+    clickToast(label) {
+      const t = toastStore
+        .getSnapshot()
+        .toasts.find((x) => x.action?.label === label);
+      if (!t) {
+        return false;
+      }
+      toastStore.dismiss(t.id);
+      t.action!.run();
+      return true;
+    },
+  };
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { readText: async () => clipboard.text },
+  });
   const pdf: FakePdf = {
     get nextPick(): { name: string; pages: PdfPageSize[] } | null {
       return null;
@@ -828,6 +870,7 @@ export async function boot(
     },
     folders,
     pdf,
+    clipboard,
     async import(fileName, content, at) {
       const match = findImporter(fileName);
       const active = getActiveScene();
@@ -873,6 +916,8 @@ export async function boot(
       setWorkspaceBridge(null);
       scene.dispose();
       toastStore.clear();
+      delete (navigator as { clipboard?: unknown }).clipboard;
+      setPasteStarter(null);
       appEvents.clearCurrent();
       updatePreferences({
         pluginsEnabled: [],

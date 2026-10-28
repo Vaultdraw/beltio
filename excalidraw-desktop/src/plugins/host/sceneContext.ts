@@ -11,6 +11,7 @@ import {
   viewportCenter,
 } from "../../sceneOps";
 import { currentDrawingBytes } from "../../sceneOps/drawingBytes";
+import { FONT_NAME } from "../../sceneOps/project";
 import { planPagePlacement } from "../../sceneOps/placePages";
 import { getActiveScene, subscribeScene } from "../../sceneOps/sceneBus";
 import { getWorkspaceBridge } from "../workspaceBridge";
@@ -21,7 +22,13 @@ import { errorText, logLine, reportPluginError } from "./errors";
 import { guard } from "./guard";
 import { readScene } from "./sceneRead";
 
-import type { Disposable, Json, PluginContext, SceneElement } from "../api";
+import type {
+  Disposable,
+  FontFamilyName,
+  Json,
+  PluginContext,
+  SceneElement,
+} from "../api";
 
 type Track = (fn: () => void) => Disposable;
 
@@ -210,6 +217,14 @@ export function createSceneApi(
       return (
         getActiveScene()?.api.getAppState().currentItemStrokeColor ?? "#1e1e1e"
       );
+    },
+    currentTextStyle() {
+      const s = getActiveScene()?.api.getAppState();
+      const name = FONT_NAME.get(s?.currentItemFontFamily as number);
+      return {
+        fontFamily: (name ?? "Excalifont") as FontFamilyName,
+        fontSize: s?.currentItemFontSize ?? 20,
+      };
     },
     placePages(sizes) {
       const valid =

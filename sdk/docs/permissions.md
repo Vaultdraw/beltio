@@ -17,7 +17,7 @@ A plugin lists in `plugin.toml` what it does to your files. The app shows the li
 ## Declare them
 
 ```toml
-permissions = ["vault.read", "vault.write", "folders.import", "control", "pdf"]   # optional, default []
+permissions = ["vault.read", "vault.write", "folders.import", "control", "pdf", "clipboard"]   # optional, default []
 ```
 
 | Permission | Consent line | Gates |
@@ -26,6 +26,7 @@ permissions = ["vault.read", "vault.write", "folders.import", "control", "pdf"] 
 | `vault.write` | Create drawings and write export images in your vault | Creating drawings, and writing `.svg` and `.png` export images (`ctx.vault.exports`). Files have no undo, so creating one needs this permission |
 | `folders.import` | Read a folder you pick and write into a destination you pick | `ctx.folders` (since 0.9.0): listing and reading a folder the user chose in a dialog, and create-only writes into a new vault or a folder of the open vault. The source is never written |
 | `control` | Let the vaultdraw command, scripts and the AI apps you allow call its methods | `[[contributes.methods]]` and `ctx.methods` (since 0.22.0): other programs call the methods the plugin declares. A plugin that declares methods must declare `control`. Adding it in an update needs review, like a write permission |
+| `clipboard` | Read the clipboard text and see the text you paste | `ctx.clipboard` (since 0.28.0): `readText()` and `onPaste(cb)` for multi-line plain text; copied shapes and images never reach a plugin. Not a write permission, so adding it needs no review |
 | `pdf` | Open PDF files you pick and draw their pages | `ctx.pdf` (since 0.26.0): a native file dialog for a PDF, opening PDF bytes, and rendering pages to pictures with the app's renderer. It reads the file you pick or the bytes you pass and writes nothing, so adding it needs no review |
 
 At most 8, no duplicates. An unknown name is a manifest error, so an older app refuses a plugin that needs a newer one. The names `net` and `secret` are reserved for later and are refused today. `ctx.manifest.permissions` returns the list.
@@ -59,6 +60,7 @@ Since API 0.3.0 the app checks them in its native layer: every native call of th
 | `ctx.folders.pickTarget(options)` and every `TargetFolder` call | `folders.import` | 0.9.0 |
 | `ctx.methods.register(name, handler)` | `control` (declared with the method) | 0.22.0 |
 | `ctx.pdf.pick()`, `ctx.pdf.open(name, bytes)` and every `PdfDocument` call | `pdf` | 0.26.0 |
+| `ctx.clipboard.readText()`, `ctx.clipboard.onPaste(cb)` | `clipboard` | 0.28.0 |
 | `ctx.pdf.settings()`, `ctx.scene.placePages(sizes)`, `ctx.scene.sizeBytes()` | none | 0.26.0 |
 
 A call that needs a permission your `plugin.toml` does not declare fails with `code: "PERMISSION"`. An importer runs on a file the user chose, so its input needs no permission; an importer that calls `ctx.vault` still needs the permission for that call.
