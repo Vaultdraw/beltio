@@ -84,7 +84,9 @@ export class NoteSaver {
   /** Writes now when there is something to write; resolves when it is on disk. */
   async flush(): Promise<void> {
     this.cancel();
-    if (this.inflight) {
+    // Several callers can wait on one write (blur, Cmd+E, closing): each wakes in turn and
+    // re-checks, so only one starts the next write, against the revision the last one returned.
+    while (this.inflight) {
       await this.inflight;
     }
     if (this.status === "conflict" || this.latest === this.saved) {
@@ -92,7 +94,7 @@ export class NoteSaver {
     }
     const content = this.latest;
     this.set("saving");
-    this.inflight = (async () => {
+    const write = (async () => {
       try {
         const result = await this.deps.write(content, this.revision);
         this.revision = result.revision;
@@ -106,10 +108,13 @@ export class NoteSaver {
         }
       }
     })();
+    this.inflight = write;
     try {
-      await this.inflight;
+      await write;
     } finally {
-      this.inflight = null;
+      if (this.inflight === write) {
+        this.inflight = null;
+      }
     }
     // Typed during the write: write again (or schedule it).
     if (this.status === "dirty") {
