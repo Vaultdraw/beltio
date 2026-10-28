@@ -2,13 +2,13 @@ import { getPluginsBackend } from "../plugins/host/backend";
 import { flushSettings } from "../vault/settingsSync";
 
 /** The running canvases were created with this memory.low_memory_canvas value. */
-export const runningLowMemoryCanvas = (win: Window): boolean =>
-  win.EXCALIDRAW_LOW_MEMORY_CANVAS === true;
+export const runningLowMemoryCanvas = (win: Window | null): boolean =>
+  win?.EXCALIDRAW_LOW_MEMORY_CANVAS === true;
 
 /** The saved low-memory canvas value differs from the running one: a restart applies it. */
 export const lowMemoryCanvasNeedsRestart = (
   saved: boolean,
-  win: Window,
+  win: Window | null,
 ): boolean => saved !== runningLowMemoryCanvas(win);
 
 /** Saves pending settings, then quits and relaunches the app (command `app.restart`). */
