@@ -164,6 +164,8 @@
 .excalidraw .HintViewer {
   font-size: 11.5px;
   color: var(--vault-text-faint);
+  /* Clear of the canvas edge, so the key chip never straddles it. */
+  margin-top: 0.75rem;
 }
 
 .excalidraw .HintViewer kbd,
@@ -177,7 +179,8 @@
   padding: 3px 5px;
   border-radius: var(--vd-radius-chip);
   border: 1px solid var(--vault-border);
-  background: var(--vault-chip);
+  /* Opaque: the hint sits over the canvas, whatever colour its paper is. */
+  background: var(--vault-surface);
   color: var(--vault-text-muted);
 }
 

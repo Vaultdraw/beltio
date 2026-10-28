@@ -66,6 +66,7 @@ export const FILL_COLORS: Readonly<Record<PageRectFill, string>> = {
 
 /** Rules and placeholder boxes: gray 400. */
 export const LINE_COLOR = "#ced4da";
+/** The placeholder's family when no text item says otherwise. */
 const PLACEHOLDER_FONT: FontFamilyName = "Helvetica";
 const PLACEHOLDER_FONT_SIZE = 16;
 const PLACEHOLDER_LINE_HEIGHT = 1.25;
@@ -366,6 +367,8 @@ export const buildPageElements = (
   const elements: Record<string, unknown>[] = [];
   const files: BuiltFile[] = [];
   const seen = new Set<string>(known);
+  // A picture placeholder reads in the family of the text around it.
+  const textFamily = items.find((i) => i.type === "text")?.fontFamily;
   for (const it of items) {
     const y = it.page * pitch + it.y;
     switch (it.type) {
@@ -460,7 +463,7 @@ export const buildPageElements = (
           ),
           it.alt || it.target,
           PLACEHOLDER_FONT_SIZE,
-          PLACEHOLDER_FONT,
+          textFamily ?? PLACEHOLDER_FONT,
           PLACEHOLDER_LINE_HEIGHT,
           "left",
         );

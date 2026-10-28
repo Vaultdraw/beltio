@@ -10,7 +10,11 @@
  */
 import type { BackgroundPattern } from "@excalidraw/excalidraw/data/backgroundPattern";
 
-import type { PageSetup } from "@excalidraw/excalidraw/data/pageSetup";
+import {
+  PAPER_THEME_COLORS,
+  type PageSetup,
+  type PaperTheme,
+} from "@excalidraw/excalidraw/data/pageSetup";
 
 import { getPageSetupPatch } from "../page/pageSetupChange";
 
@@ -63,5 +67,50 @@ export const getNewDrawingPaper = (
     prefs,
     resolveSetting("paperStyle", getVaultSettingsSnapshot().overrides, prefs),
     themeBackground,
+  );
+};
+
+/**
+ * How an imported drawing looks: the paper and tool defaults a new drawing
+ * gets, so a note imported in the dark theme is not a white page in a
+ * hand-drawn font. Imports are always page-mode drawings: they take the
+ * paper theme of the default page setup when that is "Page" mode, and
+ * "Match current theme" (the page follows the app theme on screen) when the
+ * default is Normal. The file keeps the paper theme's own colours (the page
+ * fill and pattern colour), like a drawing made in the app.
+ */
+export type ImportDrawingLook = {
+  paperTheme: PaperTheme;
+  viewBackgroundColor: string;
+  viewBackgroundPattern: BackgroundPattern | null;
+};
+
+export function importDrawingLook(
+  prefs: PaperPrefs &
+    PagePrefs &
+    Pick<VaultPreferences, "defaultCanvasBackground">,
+  paperStyle: PaperPrefs["paperStyle"],
+): ImportDrawingLook {
+  const paper = newDrawingPaper(prefs, paperStyle, "#ffffff");
+  const paperTheme = paper.pageSetup?.paperTheme ?? "match";
+  const colors = PAPER_THEME_COLORS[paperTheme];
+  const pattern = paper.viewBackgroundPattern;
+  return {
+    paperTheme,
+    viewBackgroundColor: colors.background,
+    viewBackgroundPattern: pattern
+      ? { ...pattern, color: colors.patternColor }
+      : null,
+  };
+}
+
+/** The look of a drawing imported now: live preferences and the open vault's paper override. */
+export const getImportDrawingLook = (
+  win: Window | null | undefined,
+): ImportDrawingLook => {
+  const prefs = getPreferences(win);
+  return importDrawingLook(
+    prefs,
+    resolveSetting("paperStyle", getVaultSettingsSnapshot().overrides, prefs),
   );
 };

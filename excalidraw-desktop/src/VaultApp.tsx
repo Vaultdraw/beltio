@@ -61,7 +61,10 @@ import {
   setNavigatorCollapsed as saveNavigatorCollapsed,
   updatePreferences,
 } from "./vault/preferences";
-import { getNewDrawingPaper } from "./vault/newDrawingPaper";
+import {
+  getImportDrawingLook,
+  getNewDrawingPaper,
+} from "./vault/newDrawingPaper";
 import { isPageCommandChecked } from "./page/pageStatus";
 import {
   getSettingsStatus,
@@ -2575,6 +2578,7 @@ export const VaultApp = ({
     repository,
     prepareNewDrawingParent,
     createEntryCore,
+    newDrawingAppState,
     loadDirectory,
     handleExpandFolder,
   });
@@ -2583,6 +2587,7 @@ export const VaultApp = ({
     repository,
     prepareNewDrawingParent,
     createEntryCore,
+    newDrawingAppState,
     loadDirectory,
     handleExpandFolder,
   };
@@ -2604,6 +2609,8 @@ export const VaultApp = ({
       openDrawing: (path, newTab) =>
         appFilesRef.current.openDrawing(path, newTab),
       newDrawingParent: () => shellRef.current.prepareNewDrawingParent(),
+      importLook: () => getImportDrawingLook(win),
+      newDrawingState: () => shellRef.current.newDrawingAppState(),
       createDrawing: (parent, name, json) =>
         shellRef.current.createEntryCore(parent, name, json),
       writeDrawing: async (path, json) => {

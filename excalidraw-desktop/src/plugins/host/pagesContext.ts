@@ -26,6 +26,8 @@ import { buildPageItems, hashPageItemImages } from "../../sceneOps/pageText";
 import { getActiveScene } from "../../sceneOps/sceneBus";
 import { getWorkspaceBridge } from "../workspaceBridge";
 
+import type { ImportDrawingLook } from "../../vault/newDrawingPaper";
+
 import type {
   CreateDocumentOptions,
   Disposable,
@@ -69,19 +71,31 @@ const checkSetup = (setup: unknown): PageRequest | undefined => {
 const filesRecord = (files: readonly { id: string }[]): BinaryFiles =>
   Object.fromEntries(files.map((f) => [f.id, f])) as unknown as BinaryFiles;
 
-/** `.excalidraw` JSON for elements and pictures, page mode on, as the app saves it. */
+/**
+ * `.excalidraw` JSON for elements and pictures, page mode on, as the app saves it.
+ * `look` (the host's import look) gives the drawing the paper and tool defaults a
+ * new drawing gets; without it the editor's plain defaults stay.
+ */
 const sceneJson = (
   elements: readonly unknown[],
   files: readonly { id: string }[],
   setup: PageRequest | undefined,
   pageCount: number,
-): string =>
-  serializeAsJSON(
+  look?: ImportDrawingLook,
+): string => {
+  const pageSetup = pageSetupFor(setup, pageCount);
+  const { paperTheme, ...rest } = look ?? {};
+  const appState = {
+    ...rest,
+    pageSetup: paperTheme ? { ...pageSetup, paperTheme } : pageSetup,
+  };
+  return serializeAsJSON(
     elements as never,
-    { pageSetup: pageSetupFor(setup, pageCount) } as never,
+    appState as never,
     filesRecord(files),
     "local",
   );
+};
 
 /** One `append` call: items plus their image hashes once known. */
 interface Chunk {
@@ -193,7 +207,7 @@ export function createPagesApi(
     path: string,
     setup: PageRequest | undefined,
   ): Promise<PageDocument> => {
-    await bridge.createDrawing(parent, fileName, sceneJson([], [], setup, 1));
+    await bridge.createDrawing(parent, fileName, sceneJson([], [], setup, 1, bridge.importLook?.()));
     let queue: Chunk[] = [];
     let pageCount = 1;
     let appliedPages = 1;
@@ -361,7 +375,7 @@ export function createPagesApi(
       await intake.settled();
       const revision = await bridge.writeDrawing(
         path,
-        sceneJson(elements, files, setup, pageCount),
+        sceneJson(elements, files, setup, pageCount, bridge.importLook?.()),
       );
       return { path, revision };
     };
@@ -407,7 +421,13 @@ export function createPagesApi(
       const fileIds = await hashPageItemImages(checked);
       const built = buildPageItems(checked, { setup, dataKey, fileIds });
       return JSON.parse(
-        sceneJson(built.elements, built.files, setup, pageCount),
+        sceneJson(
+          built.elements,
+          built.files,
+          setup,
+          pageCount,
+          getWorkspaceBridge()?.importLook?.(),
+        ),
       ) as object;
     },
   };

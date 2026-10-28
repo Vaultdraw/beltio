@@ -7,9 +7,32 @@ import type {
 
 export type ObsidianLinks = "drawing" | "text";
 
+/** The font choices that name a family: the `font` setting values and their families. */
+export const FONT_CHOICES = {
+  excalifont: "Excalifont",
+  nunito: "Nunito",
+  "comic-shanns": "Comic Shanns",
+  virgil: "Virgil",
+  helvetica: "Helvetica",
+  cascadia: "Cascadia",
+} as const satisfies Record<string, FontFamilyName>;
+
+export type FontChoice = keyof typeof FONT_CHOICES;
+
+const FONT_VALUES = [
+  "default",
+  "document",
+  ...(Object.keys(FONT_CHOICES) as FontChoice[]),
+] as const;
+
 export interface ImportSettings {
-  /** "document" switches to the Document font. */
-  font: "default" | "document";
+  /**
+   * "default" follows the user's drawing font (`drawingFont`); "document" is the
+   * Document font; any other value names a family.
+   */
+  font: (typeof FONT_VALUES)[number];
+  /** The family a new drawing's text gets (Settings → Drawing → Font), read with the settings. */
+  drawingFont?: FontFamilyName;
   fontSize: number;
   pageSize: PageSizeName;
   partElements: number;
@@ -20,7 +43,7 @@ export interface ImportSettings {
   obsidianReport?: boolean;
 }
 
-/** The user's default drawing font is Excalifont; the Document font is the plain sans. */
+/** The fallback drawing font (Excalifont); the Document font is the plain sans. */
 export const DEFAULT_FONT: FontFamilyName = "Excalifont";
 export const DOCUMENT_FONT: FontFamilyName = "Liberation Sans";
 
@@ -44,11 +67,21 @@ const int = (v: unknown, d: number, min: number, max: number): number =>
 const bool = (v: unknown, d: boolean): boolean =>
   typeof v === "boolean" ? v : d;
 
+/** The user's current drawing font; Excalifont when the host cannot say. */
+const drawingFontOf = (ctx: PluginContext): FontFamilyName => {
+  try {
+    return ctx.scene.currentTextStyle().fontFamily;
+  } catch {
+    return DEFAULT_FONT;
+  }
+};
+
 /** Read on every import, so a change in Settings applies to the next one (live reload). */
 export function readSettings(ctx: PluginContext): ImportSettings {
   const get = (key: string): unknown => ctx.settings.get(key);
   return {
-    font: oneOf(get("font"), ["default", "document"], "default"),
+    font: oneOf(get("font"), FONT_VALUES, "default"),
+    drawingFont: drawingFontOf(ctx),
     fontSize: int(get("font_size"), 16, 8, 72),
     pageSize: oneOf(get("page_size"), PAGE_SIZES, "a4"),
     partElements: int(get("part_elements"), 1000, 200, 20000),
@@ -59,5 +92,11 @@ export function readSettings(ctx: PluginContext): ImportSettings {
   };
 }
 
-export const fontFamilyOf = (s: Pick<ImportSettings, "font">): FontFamilyName =>
-  s.font === "document" ? DOCUMENT_FONT : DEFAULT_FONT;
+export const fontFamilyOf = (
+  s: Pick<ImportSettings, "font" | "drawingFont">,
+): FontFamilyName =>
+  s.font === "document"
+    ? DOCUMENT_FONT
+    : s.font === "default"
+    ? s.drawingFont ?? DEFAULT_FONT
+    : FONT_CHOICES[s.font];

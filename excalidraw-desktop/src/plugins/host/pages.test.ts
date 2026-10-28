@@ -6,6 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { buildPageItems } from "../../sceneOps/pageText";
+import { getWorkspaceBridge } from "../workspaceBridge";
 import { boot, type TestPlugin } from "../testing";
 
 import type { PageItem, PluginContext } from "../api";
@@ -67,6 +68,25 @@ describe("pages.createDocument", () => {
       size: "a4",
     });
     expect(ctx.scene.elements()).toEqual([]);
+    await doc.finish();
+  });
+
+  it("a document starts with the host's import look: paper theme and background", async () => {
+    const p = await bootPages();
+    const bridge = getWorkspaceBridge()!;
+    bridge.importLook = () => ({
+      paperTheme: "oldSchool",
+      viewBackgroundColor: "#f8efd4",
+      viewBackgroundPattern: null,
+    });
+    const doc = await ctx.pages.createDocument({ name: "Look" });
+    expect(p.vault.pageSetup(doc.path)).toMatchObject({
+      enabled: true,
+      paperTheme: "oldSchool",
+    });
+    expect(p.scene.appState()).toMatchObject({
+      viewBackgroundColor: "#f8efd4",
+    });
     await doc.finish();
   });
 
@@ -245,6 +265,33 @@ describe("pages.createDocument", () => {
     expect(p.scene.files()[fileId]).toMatchObject({ mime: "image/png" });
     expect(live[1]).toMatchObject({ link: "missing.bmp" });
     expect(live[2]).toMatchObject({ text: "a diagram", link: "missing.bmp" });
+    await doc.finish();
+  });
+
+  it("a picture placeholder reads in the family of the note's text", async () => {
+    const p = await bootPages();
+    const doc = await ctx.pages.createDocument({ name: "F" });
+    doc.append(
+      [
+        text(0, 0, "body", { fontFamily: "Nunito" }),
+        {
+          type: "image",
+          page: 0,
+          x: 0,
+          y: 100,
+          width: 100,
+          height: 80,
+          mimeType: "image/bmp",
+          alt: "chip",
+          target: "chip.bmp",
+        },
+      ],
+      1,
+    );
+    await p.flush();
+    const live = p.scene.live() as unknown as Record<string, unknown>[];
+    const label = live.find((e) => e.text === "chip")!;
+    expect(label.fontFamily).toBe(6); // Nunito
     await doc.finish();
   });
 

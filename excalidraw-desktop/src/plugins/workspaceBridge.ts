@@ -1,4 +1,6 @@
 import { hasDrawingExt } from "../vault/fileKind";
+
+import type { ImportDrawingLook } from "../vault/newDrawingPaper";
 /**
  * What the plugin host may ask the vault shell (`ctx.vault.info`,
  * `ctx.workspace`, `ctx.pages.createDocument`, `ctx.scene.scrollTo`,
@@ -21,6 +23,10 @@ export interface WorkspaceBridge {
    * no vault is open or the folder could not be created (the app showed why).
    */
   newDrawingParent(): Promise<string | null>;
+  /** The paper and tool defaults an imported drawing starts with (what a new drawing gets). */
+  importLook?(): ImportDrawingLook;
+  /** The appState a blank new drawing starts with (paper, page setup, tool defaults). */
+  newDrawingState?(): Record<string, unknown>;
   /** Writes a new drawing from scene JSON and opens it, as the UI's "New drawing" does. */
   createDrawing(parent: string, name: string, json: string): Promise<void>;
   /** Writes a new drawing from scene JSON without opening it; resolves to its revision. */

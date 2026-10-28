@@ -1751,7 +1751,7 @@ The official `markdown-import` plugin (bundled, on by default, loads only when y
 
 ```toml
 [plugin.markdown-import]
-font = "default"             # "default" (your drawing font) or "document" (plain sans)
+font = "default"             # "default" (follow your drawing font), "document" (plain sans), or excalifont, nunito, comic-shanns, virgil, helvetica, cascadia
 font_size = 16               # 8 to 72
 page_size = "a4"             # a3, a4, a5, b5, letter or legal
 part_elements = 1000         # 200 to 20000: a longer note is split into parts
@@ -1763,7 +1763,7 @@ obsidian_report = true       # write "Import report" when files fail or images s
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `font` | `"default"` | Body font of imported notes. |
+| `font` | `"default"` | Body font of imported notes. `"default"` follows your drawing font (Settings, Drawing, Font), so an import reads like a note you typed; or pick `"document"` or a named font. Picture placeholders use the same font. |
 | `font_size` | `16` | Body text size, between 8 and 72. |
 | `page_size` | `"a4"` | Page size of the drawing. |
 | `part_elements` | `1000` | Elements per drawing; a longer note continues in `Note (part 2).excalidraw`. |
@@ -1771,6 +1771,8 @@ obsidian_report = true       # write "Import report" when files fail or images s
 | `obsidian_links` | `"drawing"` | Rewrite `[[Note]]` and `[[Note\|alias]]` to the converted drawing's path, `![[image.png]]` embeds the image (up to 4 MB). `"text"` leaves them as written. |
 | `obsidian_excalidraw` | `true` | Convert `Name.excalidraw.md` (plain or compressed) to `Name.excalidraw`. |
 | `obsidian_report` | `true` | When a file fails or an image stays a box, write `Import report` (a drawing at the root of the target) listing each file or image and the reason. Nothing is written for a clean import. |
+
+Imported drawings start like a new drawing: your paper theme (the default page setup's when its mode is Page, otherwise Match current theme, so the page follows the app theme), background pattern and tool defaults. Notes imported before this keep their stored white page; set Paper to Match current theme in Page setup to switch one.
 
 **Import Obsidian vault…** (main menu, palette command `markdown-import.obsidian`) asks for the vault folder and imports into a folder of the open vault named like it; **Import Obsidian vault into a new vault…** (`markdown-import.obsidian-new-vault`) creates a new vault. The folder structure is kept, `.obsidian`, `.trash` and `.git` are skipped, and the source is only read. Nothing is overwritten. Importing the same vault again goes into a fresh folder (`<Vault> (import 2)`, then 3, ...), so the links point inside it; any other name that exists gets `Name 2`. Images (`![[pic.png]]`, `![[pic.png|300]]`, `![alt](path/pic.png)`, relative `./` and `../` paths, folders with spaces or accents, PNG, JPEG, GIF, WebP and SVG) are embedded in the drawing, looked up next to the note, then by path, then by name anywhere in the vault; an image over 4 MB, of another type or missing stays a box, and the final message says how many. Images inside `.excalidraw.md` files are embedded the same way. **Import: Cancel Obsidian import** stops after the current file. Turn the plugin off with `[plugins] enabled`.
 

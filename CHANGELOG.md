@@ -22,6 +22,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 - **Checkmarks no longer overlap the label** in the canvas right-click menu ("Arrow binding", "Snap to midpoints" and the other checked items).
 
+- **Imported notes follow your theme and font.** A Markdown or Obsidian import used to open as a white page in a hand-drawn font whatever your settings; it now starts like a new drawing (your paper theme, so a dark theme gives a dark page, and your drawing font). The Markdown import `font` setting follows your drawing font by default and can name any font; picture placeholders use the note's font. Drawings created by plugins start with your paper and font defaults too. The editor hint "Option-click to cycle selection" no longer draws its key box over the edge.
+
 - **Theme install and the command line.** Theme names with invisible or text-direction characters are refused (they could pose as another name); uninstalling a theme removes only the files the install wrote and keeps anything you added to its folder. `vaultdraw export --out-dir --embed-scene` names files `X.excalidraw.png`, like a single export.
 
 - **Search finds decomposed Japanese and Korean names and text.** Kana with a separate voicing mark (e.g. か + dakuten, common in file names copied from older Mac disks or zip files) and Korean written as separate jamo now match what you type. The search index rebuilds once on the first launch after the update.

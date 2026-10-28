@@ -100,7 +100,12 @@ export function createVaultApi(rt: PluginRuntime): VaultApi {
       const built = buildBatch(valid, { x: 0, y: 0 }, dataKey, new Map());
       const elements = built.created;
       const scene = JSON.parse(
-        serializeAsJSON(elements, {}, {}, "local"),
+        serializeAsJSON(
+          elements,
+          (getWorkspaceBridge()?.newDrawingState?.() ?? {}) as never,
+          {},
+          "local",
+        ),
       ) as Record<string, unknown>;
       const reply = await call<{ path: string; revision: string }>(
         "file.write",

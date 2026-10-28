@@ -55,7 +55,7 @@ Every command is in the palette (Cmd+P) and has no default key; bind them in `[h
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `font` | `default` | `default` (your drawing font) or `document` |
+| `font` | `default` | `default` (follow your drawing font), `document`, or `excalifont`, `nunito`, `comic-shanns`, `virgil`, `helvetica`, `cascadia` |
 | `font_size` | `16` | body text size |
 | `page_size` | `a4` | page size of the drawing |
 | `part_elements` | `1000` | elements per drawing before a long note splits |

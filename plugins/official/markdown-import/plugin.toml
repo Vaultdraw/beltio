@@ -54,9 +54,9 @@ palette = false
 key = "font"
 type = "select"
 title = "Font"
-description = "The font of imported notes: your default drawing font, or the Document font."
+description = "The font of imported notes: your drawing font (Settings, Drawing), the Document font, or a font you pick."
 default = "default"
-options = [{ value = "default", label = "Default drawing font" }, { value = "document", label = "Document font" }]
+options = [{ value = "default", label = "Follow my drawing font" }, { value = "document", label = "Document font" }, { value = "excalifont", label = "Excalifont (hand-drawn)" }, { value = "nunito", label = "Nunito" }, { value = "comic-shanns", label = "Comic Shanns" }, { value = "virgil", label = "Virgil" }, { value = "helvetica", label = "Helvetica" }, { value = "cascadia", label = "Cascadia (code)" }]
 
 [[contributes.settings]]
 key = "font_size"
