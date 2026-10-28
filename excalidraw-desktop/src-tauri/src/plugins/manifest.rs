@@ -42,7 +42,7 @@ pub(crate) const RESERVED_EXTENSIONS: [&str; 15] = [
 ];
 
 /// Permissions a plugin may declare. A declaration and a consent line, not a sandbox.
-pub(crate) const PERMISSIONS: [&str; 6] = ["vault.read", "vault.write", "folders.import", "control", "pdf", "clipboard"];
+pub(crate) const PERMISSIONS: [&str; 7] = ["vault.read", "vault.write", "folders.import", "control", "pdf", "clipboard", "network.images"];
 /// Names kept for later API revisions: an app that knows them as reserved refuses a manifest that uses one.
 const RESERVED_PERMISSIONS: [&str; 2] = ["net", "secret"];
 

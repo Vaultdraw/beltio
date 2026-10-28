@@ -13,6 +13,7 @@ import type {
   TextApi,
 } from "@vaultdraw/api";
 import type { PageItem } from "../layout/types";
+import type { WebImages } from "../webImages";
 import type { ImportSettings } from "../settings";
 
 export type { FolderEntry, SourceFolder, TargetFolder };
@@ -55,6 +56,8 @@ export interface ObsidianImportOptions {
   onProgress(done: number, total: number, current: string): void;
   /** The layout; defaults to E1's worker layout built from `ctx`. */
   layout?: NoteLayout;
+  /** Downloads web pictures (once the user allows it); unset: they stay labelled boxes. */
+  web?: WebImages;
   /**
    * An earlier import already holds the first file: the plan's names (and the
    * links rewritten to them) belong to that import, so the whole import moves

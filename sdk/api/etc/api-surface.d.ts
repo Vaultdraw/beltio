@@ -177,6 +177,7 @@ export type { DiagramsApi, MermaidDrawing } from "./diagrams";
 export type { ThumbnailState, ThumbnailsApi } from "./thumbnails";
 export type { PdfApi, PdfDocument, PdfImportSettings, PdfPageSize, PdfRenderOptions, } from "./pdf";
 export type { ClipboardApi, PasteEvent, PasteResult, ToastOptions, } from "./clipboard";
+export type { NetworkApi } from "./network";
 export type { ToolHandlers, ToolPoint, ToolsApi } from "./tools";
 export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
@@ -195,7 +196,7 @@ export interface PluginManifestInfo {
     permissions: readonly PluginPermission[];
     dataKey: string;
 }
-export type PluginPermission = "vault.read" | "vault.write" | "folders.import" | "control" | "pdf" | "clipboard";
+export type PluginPermission = "vault.read" | "vault.write" | "folders.import" | "control" | "pdf" | "clipboard" | "network.images";
 export interface CommandContribution {
     id: string;
     title: string;
@@ -434,6 +435,12 @@ export interface MethodsApi {
     register(name: string, handler: (params: Json) => Json | Promise<Json>): Disposable;
 }
 
+// network.ts
+export interface NetworkApi {
+    askImages(urls: readonly string[]): Promise<boolean>;
+    fetchImage(url: string): Promise<Uint8Array>;
+}
+
 // overlays.ts
 import type { ComponentType } from "react";
 import type { Disposable } from "./disposable";
@@ -624,6 +631,7 @@ import type { VaultApi } from "./vault";
 import type { ShapesApi } from "./shapes";
 import type { DiagramsApi } from "./diagrams";
 import type { ClipboardApi, ToastOptions } from "./clipboard";
+import type { NetworkApi } from "./network";
 import type { PdfApi } from "./pdf";
 import type { ThumbnailsApi } from "./thumbnails";
 import type { ToolsApi } from "./tools";
@@ -672,6 +680,7 @@ export interface PluginContext {
     readonly diagrams: DiagramsApi;
     readonly pdf: PdfApi;
     readonly clipboard: ClipboardApi;
+    readonly network: NetworkApi;
     readonly present: PresentApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;

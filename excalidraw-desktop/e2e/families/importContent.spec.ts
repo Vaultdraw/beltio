@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { clickMainMenuItem, openVault, trackErrors } from "../helpers";
+import { runPaletteCommand } from "../historyHelpers";
 import { live, seedAndOpen } from "../pageHelpers";
 
 // Family: every way a note references a file resolves like Obsidian does, and every Markdown construct
@@ -19,6 +20,7 @@ const NOTE = [
   "![[pic.svg|120]]",
   "![alt text](my pics/a b.svg)",
   "![Close-up of a chip](https://example.org/chip.png)",
+  "![An article](https://example.org/article)",
   `| Concept | Main responsibility |\n|---|---|\n| Paging | ${LONG} |\n| MMU | Hardware that performs address translation and protection checks. |`,
   "After the table.",
 ].join("\n\n");
@@ -63,9 +65,19 @@ test("an imported note shows its pictures and a real table", async ({
   await openVault(page, "?plugins=markdown-import");
   await page.waitForFunction(() => (window as any).__pluginsReady === true);
   await seedAndOpen(page, "Start.excalidraw");
-  await page.evaluate((src) => {
-    (window as any).__plugins.backend.folders.sourcePick = src;
-  }, SOURCE);
+  await page.evaluate(
+    ([src, pic]) => {
+      const be = (window as any).__plugins.backend;
+      be.folders.sourcePick = src;
+      // The network: the user says no at first; then yes. A web page behind an address is not a picture.
+      be.network.answer = false;
+      be.network.images = {
+        "https://example.org/chip.png": new TextEncoder().encode(pic),
+        "https://example.org/article": "NOT_AN_IMAGE",
+      };
+    },
+    [SOURCE, PIC] as const,
+  );
 
   await clickMainMenuItem(page, "Import Obsidian vault…");
   await expect(row(page, "Obsidian Notes")).toBeVisible({ timeout: 30_000 });
@@ -88,7 +100,14 @@ test("an imported note shows its pictures and a real table", async ({
   const texts = els
     .filter((e: any) => e.type === "text")
     .map((e: any) => e.text as string);
-  expect(texts.some((t) => /Web image, not downloaded/.test(t))).toBe(true);
+  expect(
+    texts.some((t) => /Web image, not downloaded: Close-up of a chip/.test(t)),
+  ).toBe(true);
+  expect(
+    await page.evaluate(
+      () => (window as any).__plugins.backend.network.asked.length,
+    ),
+  ).toBe(1);
 
   // The table: header and cells are there in full, wrapped, with no ellipsis or box characters.
   expect(texts).toContain("Concept");
@@ -102,5 +121,31 @@ test("an imported note shows its pictures and a real table", async ({
   expect(
     els.filter((e: any) => e.type === "line").length,
   ).toBeGreaterThanOrEqual(2);
+
+  // "Download images" on the open drawing: the user allows it now; the picture appears, the web page stays a box.
+  await page.evaluate(() => {
+    (window as any).__plugins.backend.network.answer = true;
+  });
+  await runPaletteCommand(
+    page,
+    "Markdown: Download web images in this drawing",
+    "Download web images",
+  );
+  await expect
+    .poll(
+      async () =>
+        (await live(page)).elements.filter((e) => e.type === "image").length,
+      {
+        timeout: 20_000,
+      },
+    )
+    .toBe(3);
+  const after = (await elements(page))
+    .filter((e: any) => e.type === "text")
+    .map((e: any) => e.text as string);
+  expect(after.some((t) => /Web page, not a picture: An article/.test(t))).toBe(
+    true,
+  );
+  expect(after.some((t) => /Close-up of a chip/.test(t))).toBe(false);
   expect(errors).toEqual([]);
 });

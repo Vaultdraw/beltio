@@ -46,6 +46,7 @@ import { createVaultApi } from "./vaultContext";
 import { createDiagramsApi } from "./diagramsContext";
 import { createClipboardApi } from "./clipboardContext";
 import { createPdfApi } from "./pdfContext";
+import { createNetworkApi } from "./networkContext";
 import { createPresentApi } from "./presentContext";
 import { createThumbnailsApi } from "./thumbnailsContext";
 import { createWorkspaceApi } from "./workspaceContext";
@@ -197,6 +198,7 @@ export function createPluginContext(
   let mathApi: MathApi | undefined;
   let overlaysApi: OverlaysApi | undefined;
   let presentApi: PluginContext["present"] | undefined;
+  let networkApi: PluginContext["network"] | undefined;
   let thumbnailsApi: ThumbnailsApi | undefined;
   let diagramsApi: DiagramsApi | undefined;
   let pdfApi: PdfApi | undefined;
@@ -447,6 +449,9 @@ export function createPluginContext(
     },
     get clipboard() {
       return (clipboardApi ??= createClipboardApi(rt, track, isLive));
+    },
+    get network() {
+      return (networkApi ??= createNetworkApi(rt));
     },
     get present() {
       return (presentApi ??= createPresentApi(id, track));

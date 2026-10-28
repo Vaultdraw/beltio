@@ -61,9 +61,22 @@ export interface FakeBackend extends PluginsBackend {
    * the tests set it (src/tests/fakePdfBridge.ts); unset, the rows fail with PDF_UNAVAILABLE.
    */
   pdf?: FakePdfRows;
+  /**
+   * The `network.*` rows (permission `network.images`): pictures by address (bytes, or an error
+   * code), what the user answers in the dialog, whether downloads are allowed, and what was asked.
+   */
+  network: {
+    images: Record<string, Uint8Array | string>;
+    answer: boolean;
+    allowed: boolean;
+    asked: string[][];
+    fetched: string[];
+  };
   /** The `folders.*` rows' state: what the pickers return next, the sources and targets handed out. */
   folders: FakeFolderStore;
 }
+
+export type FakeBackendNetwork = FakeBackend["network"];
 
 /** What the fake `pdf.*` rows need from an in-memory renderer (the shape of `FakePdfBridge`). */
 export interface FakePdfRows {
@@ -85,6 +98,41 @@ const PDF_ROWS = new Set([
   "pdf.unlock",
   "pdf.close",
 ]);
+
+/** The `network.*` rows over `fake.network`: the same answers and error codes as the native rows. */
+const networkRow = (
+  net: FakeBackendNetwork,
+  method: string,
+  body: Uint8Array,
+): Uint8Array => {
+  if (method === "network.askImages") {
+    if (net.allowed) {
+      return new Uint8Array([1]);
+    }
+    net.asked.push(JSON.parse(new TextDecoder().decode(body)).urls);
+    net.allowed = net.answer;
+    return new Uint8Array([net.allowed ? 1 : 0]);
+  }
+  if (method !== "network.fetchImage") {
+    throw coded("NOT_FOUND", `Plugins cannot call "${method}"`);
+  }
+  if (!net.allowed) {
+    throw coded(
+      "NETWORK_NOT_ALLOWED",
+      "Downloading pictures from web pages is not allowed. You can allow it in Settings.",
+    );
+  }
+  const url = new TextDecoder().decode(body);
+  net.fetched.push(url);
+  const hit = net.images[url];
+  if (hit === undefined) {
+    throw coded("NETWORK_ERROR", "Request failed");
+  }
+  if (typeof hit === "string") {
+    throw coded(hit, hit);
+  }
+  return hit;
+};
 
 /** The `pdf.*` rows over `fake.pdf`, with the body formats of `pdf_import::gateway_call`. */
 const pdfRow = async (
@@ -319,6 +367,13 @@ export function createFakeBackend(
     exportFiles: {},
     vaultReadOnly: false,
     vaultOpen: true,
+    network: {
+      images: {},
+      answer: true,
+      allowed: false,
+      asked: [],
+      fetched: [],
+    },
     folders: createFakeFolderStore({
       open: () => fake.vaultOpen,
       readOnly: () => fake.vaultReadOnly,
@@ -348,6 +403,15 @@ export function createFakeBackend(
           );
         }
         return pdfRow(fake.pdf, method, body);
+      }
+      if (method.startsWith("network.")) {
+        if (!plugin.permissions.includes("network.images")) {
+          throw coded(
+            "PERMISSION",
+            `${pluginId}: ${method} needs the permission "network.images", which plugin.toml does not declare`,
+          );
+        }
+        return networkRow(fake.network, method, body ?? new Uint8Array(0));
       }
       if (method.startsWith("export.")) {
         return exportRow(fake, plugin, method, body ?? new Uint8Array(0));

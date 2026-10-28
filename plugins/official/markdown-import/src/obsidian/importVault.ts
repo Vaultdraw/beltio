@@ -13,6 +13,8 @@
  */
 import { looksLike } from "../../../../../sdk/api/shared/sceneRules";
 
+import { createWebImages } from "../webImages";
+
 import { LinkResolver, rewriteLinks } from "./links";
 import { partPath, planImport, type PlanItem } from "./plan";
 
@@ -191,13 +193,14 @@ export async function importObsidianVault(
     fromDir: string,
     note: string,
   ): Promise<void> => {
+    const remote: PageItem[] = [];
     for (const item of items) {
       if (item.type !== "image" || item.bytes) {
         continue;
       }
       if (REMOTE.test(item.target)) {
-        label(item, "Web image, not downloaded");
-        continue; // never fetched by the import itself: it is offline
+        remote.push(item); // downloaded below only if the user allows it
+        continue;
       }
       const written = item.target.split(/[?#]/)[0];
       const hit = resolver.resolve(written, ["attachment"], fromDir);
@@ -230,6 +233,9 @@ export async function importObsidianVault(
           label(item, "Image not found");
         }
       }
+    }
+    if (remote.length > 0) {
+      await (opts.web ?? createWebImages(undefined)).fill(remote, signal);
     }
   };
 

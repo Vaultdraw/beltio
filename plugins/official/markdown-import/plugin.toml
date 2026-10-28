@@ -5,7 +5,7 @@ api = 0
 main = "main.js"
 description = "Turn a Markdown note, or a whole Obsidian vault, into page-mode drawings"
 author = "Vaultdraw"
-permissions = ["folders.import", "vault.read"]
+permissions = ["folders.import", "vault.read", "network.images"]
 
 [[contributes.importers]]
 id = "md"
@@ -43,6 +43,14 @@ title = "Import Obsidian vault…"
 [[contributes.commands]]
 id = "obsidian-new-vault"
 title = "Import Obsidian vault into a new vault…"
+
+[[contributes.commands]]
+id = "download-images"
+title = "Markdown: Download web images in this drawing"
+
+[[contributes.commands]]
+id = "attach-images"
+title = "Markdown: Attach missing images from a folder…"
 
 # Called by the core "Import: Cancel"; not listed in the palette.
 [[contributes.commands]]

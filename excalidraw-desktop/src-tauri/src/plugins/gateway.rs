@@ -57,6 +57,8 @@ pub(crate) const ALLOWLIST: &[Row] = &[
     Row { method: "pdf.render", permission: Some(PDF), route: Route::Raw },
     Row { method: "pdf.unlock", permission: Some(PDF), route: Route::Raw },
     Row { method: "pdf.close", permission: Some(PDF), route: Route::Raw },
+    Row { method: "network.askImages", permission: Some(NETWORK_IMAGES), route: Route::Raw },
+    Row { method: "network.fetchImage", permission: Some(NETWORK_IMAGES), route: Route::Raw },
     Row { method: "storage.read", permission: None, route: Route::StorageRead },
     Row { method: "storage.write", permission: None, route: Route::StorageWrite },
     Row { method: "markdown.parse", permission: None, route: Route::MarkdownParse },
@@ -76,6 +78,8 @@ pub(crate) const ALLOWLIST: &[Row] = &[
 pub(crate) const FOLDERS_IMPORT: &str = "folders.import";
 /// The permission every `pdf.*` row needs: open PDFs and render their pages natively.
 pub(crate) const PDF: &str = "pdf";
+/// The permission of the `network.*` rows: download the pictures a note shows from the web (consent purpose `images`).
+pub(crate) const NETWORK_IMAGES: &str = "network.images";
 
 /// An error as the host sees it: `{code, message, ...detail}` (detail such as `reason: "dirty"`).
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -257,11 +261,54 @@ pub(crate) fn markdown_call(params: Option<Value>) -> Result<Value, GatewayError
     serde_json::to_value(doc).map_err(|e| GatewayError::new("INTERNAL", e.to_string()))
 }
 
+/// `network.askImages` (`{urls}` in, one byte out: 1 = allowed) and `network.fetchImage` (the URL as
+/// text in, the picture's bytes out). The only plugin rows that reach the internet; they need the
+/// permission `network.images` and the consent purpose `images` (see `network::fetch_image`).
+fn network_call(app: &tauri::AppHandle, method: &str, body: &[u8]) -> Result<Vec<u8>, GatewayError> {
+    use tauri::Manager as _;
+    let dirs = crate::config::resolve_dirs()?;
+    match method {
+        "network.fetchImage" => {
+            let url = std::str::from_utf8(body).map_err(|_| GatewayError::new("INVALID_ARGUMENT", "The address must be text"))?;
+            Ok(crate::network::fetch_image(&dirs, url)?)
+        }
+        "network.askImages" => {
+            let parsed: Value = serde_json::from_slice(body).map_err(|_| GatewayError::new("INVALID_ARGUMENT", "urls must be a list of addresses"))?;
+            let urls: Vec<String> = parsed
+                .get("urls")
+                .and_then(Value::as_array)
+                .ok_or_else(|| GatewayError::new("INVALID_ARGUMENT", "urls must be a list of addresses"))?
+                .iter()
+                .filter_map(|u| u.as_str().map(str::to_owned))
+                .take(200)
+                .collect();
+            let hosts = crate::network::hosts_of(&urls);
+            let window = app.webview_windows().into_values().next();
+            let granted = crate::network::grant_images_in(&dirs, &hosts, |title, text| {
+                let mut dialog = rfd::MessageDialog::new()
+                    .set_level(rfd::MessageLevel::Info)
+                    .set_title(title)
+                    .set_description(text)
+                    .set_buttons(rfd::MessageButtons::OkCancelCustom(crate::network::ALLOW_LABEL.into(), crate::network::DENY_LABEL.into()));
+                if let Some(w) = window.as_ref() {
+                    dialog = dialog.set_parent(w);
+                }
+                dialog.show() == rfd::MessageDialogResult::Custom(crate::network::ALLOW_LABEL.into())
+            })?;
+            Ok(vec![u8::from(granted)])
+        }
+        _ => Err(GatewayError::new("NOT_FOUND", format!("Plugins cannot call \"{method}\""))),
+    }
+}
+
 /// Runs a `Route::Raw` method against the open vault (the one the control API calls active).
 pub(crate) fn raw_call(app: &tauri::AppHandle, method: &str, body: &[u8]) -> Result<Vec<u8>, GatewayError> {
     use tauri::Manager as _;
     if method.starts_with("pdf.") {
         return Ok(crate::pdf_import::gateway_call(method, body)?);
+    }
+    if method.starts_with("network.") {
+        return network_call(app, method, body);
     }
     let vault = crate::control_active_vault(app).ok_or_else(|| GatewayError::new("NO_VAULT", "No vault is open"))?;
     if method.starts_with("export.") {

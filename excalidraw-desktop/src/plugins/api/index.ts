@@ -67,6 +67,7 @@ export type {
   PickTargetOptions,
   Plugin,
   PluginContext,
+  NetworkApi,
   PresentApi,
   PresentOptions,
   PresentSession,

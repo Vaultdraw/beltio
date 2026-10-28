@@ -33,7 +33,7 @@ export interface PluginManifestInfo {
  * reads a folder you pick and writes into a destination you pick
  * (`ctx.folders`), `control` (since 0.22.0) lets other programs call the
  * plugin's declared methods (`ctx.methods`), `pdf` (since 0.26.0) opens PDF files and renders their
- * pages (`ctx.pdf`), `clipboard` (since 0.28.0) reads the clipboard text and sees pasted text (`ctx.clipboard`). The names `net` and `secret` are reserved.
+ * pages (`ctx.pdf`), `clipboard` (since 0.28.0) reads the clipboard text and sees pasted text (`ctx.clipboard`). `network.images` (since 0.31.0) downloads the pictures of web pages a note shows, after the user allows it (`ctx.network`). The names `net` and `secret` are reserved.
  *
  * @since 0.2.0
  */
@@ -43,7 +43,8 @@ export type PluginPermission =
   | "folders.import"
   | "control"
   | "pdf"
-  | "clipboard";
+  | "clipboard"
+  | "network.images";
 
 /**
  * A command declared in `plugin.toml`.

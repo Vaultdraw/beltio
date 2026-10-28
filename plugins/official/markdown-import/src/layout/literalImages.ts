@@ -26,7 +26,9 @@ const decode = (s: string): string => {
 };
 
 /** `alt|300` or `alt|300x200`: the alt text and the size. */
-const altAndSize = (s: string) => {
+const altAndSize = (
+  s: string,
+): { alt: string; width?: number; height?: number } => {
   const m = /^(.*?)\|?\s*(\d+)(?:x(\d+))?$/.exec(s.trim());
   if (!m || (m[1] === "" && !/^\d/.test(s.trim()))) {
     return { alt: s.trim() };

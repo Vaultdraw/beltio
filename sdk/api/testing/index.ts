@@ -19,6 +19,7 @@ import type {
 } from "./types";
 
 export type { FakeClipboard } from "./clipboard";
+export type { FakeNetwork } from "./network";
 export type {
   BootOptions,
   FakeBatch,
@@ -195,6 +196,7 @@ export async function boot(
     folders: host.folders,
     pdf: host.pdf,
     clipboard: host.clipboard,
+    network: host.network,
     import: host.importFile,
     cancelImport: host.cancelImport,
     flush,

@@ -12,9 +12,15 @@ import {
   layoutNoteStream,
   type LayoutOptions,
 } from "./deps";
+import { createWebImages } from "./webImages";
 import { fontFamilyOf, readSettings, type ImportSettings } from "./settings";
 
-import type { ImportInput, PageDocument, Plugin } from "@vaultdraw/api";
+import type {
+  ImportInput,
+  PageDocument,
+  Plugin,
+  PluginContext,
+} from "@vaultdraw/api";
 
 export interface Timings {
   name: string;
@@ -35,6 +41,10 @@ export interface Importing {
   importObsidian(destination: "newVault" | "vaultFolder"): Promise<void>;
   cancelObsidian(): boolean;
 }
+
+/** Web pictures through `ctx.network` when this app has it (API 0.31.0), else labelled boxes. */
+const webImagesOf = (ctx: PluginContext) =>
+  createWebImages(ctx.host.has("network") ? ctx.network : undefined);
 
 const stem = (fileName: string): string =>
   fileName.replace(/^.*[\\/]/, "").replace(/\.(md|markdown|txt)$/i, "") ||
@@ -90,6 +100,7 @@ const plugin: Plugin = definePlugin({
         measure: (f, s) => ctx.text.measure(f, s),
         signal,
       };
+      const web = webImagesOf(ctx);
       const base = `${stem(fileName)} (imported`;
       const cur: { doc: PageDocument | null } = { doc: null };
       let part = 0;
@@ -112,6 +123,7 @@ const plugin: Plugin = definePlugin({
             await cur.doc?.finish();
             await open(batch.part);
           }
+          await web.fill(batch.items, signal);
           cur.doc!.append(batch.items, batch.pageCount);
           elements += batch.items.length;
           firstPage ??= performance.now() - t0;
@@ -294,7 +306,9 @@ const plugin: Plugin = definePlugin({
         obsidianAbort = controller;
         let shown = 0;
         try {
+          const web = webImagesOf(ctx);
           const result = await importObsidianVault({
+            web,
             ctx,
             source,
             target,
@@ -342,6 +356,7 @@ const plugin: Plugin = definePlugin({
               written.name !== source.name
                 ? `Imported before, so this copy is "${written.name}"`
                 : `From ${source.name}`,
+              web.downloaded ? `${web.downloaded} web pictures downloaded` : "",
               noPicture
                 ? `${noPicture} images left as boxes (${result.oversizedImages} over 4 MB, ${result.unsupportedImages} unsupported, ${result.missingImages} not found)`
                 : "",

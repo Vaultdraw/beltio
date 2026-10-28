@@ -21,6 +21,7 @@ import type { VaultApi } from "./vault";
 import type { ShapesApi } from "./shapes";
 import type { DiagramsApi } from "./diagrams";
 import type { ClipboardApi, ToastOptions } from "./clipboard";
+import type { NetworkApi } from "./network";
 import type { PdfApi } from "./pdf";
 import type { ThumbnailsApi } from "./thumbnails";
 import type { ToolsApi } from "./tools";
@@ -128,6 +129,8 @@ export interface PluginContext {
   readonly pdf: PdfApi;
   /** Read the clipboard and see pastes of text. Needs the permission `clipboard`. @since 0.28.0 */
   readonly clipboard: ClipboardApi;
+  /** Download the pictures of web pages a note shows, once the user allows it. Needs the permission `network.images`. @since 0.31.0 */
+  readonly network: NetworkApi;
   /** Full-screen presenting of the open drawing. @since 0.29.0 */
   readonly present: PresentApi;
   /**

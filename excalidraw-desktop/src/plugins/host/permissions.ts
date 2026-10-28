@@ -12,6 +12,8 @@ export const PERMISSION_TEXT: Readonly<Record<string, string>> = {
   "folders.import":
     "Read a folder you pick and write into a destination you pick",
   clipboard: "Read the clipboard text and see the text you paste",
+  "network.images":
+    "Download the pictures of web pages that your notes show, after you allow it",
   pdf: "Open PDF files you pick and draw their pages",
   control:
     "Let the vaultdraw command, scripts and the AI apps you allow call its methods",

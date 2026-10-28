@@ -1,4 +1,5 @@
 import type { FakeClipboard } from "./clipboard";
+import type { FakeNetwork } from "./network";
 import type {
   AppEventMap,
   CommandContribution,
@@ -375,6 +376,8 @@ export interface TestPlugin {
   pdf: FakePdf;
   /** `ctx.clipboard` in tests: set `text`, call `paste`, click a toast button. */
   clipboard: FakeClipboard;
+  /** `ctx.network` in tests: set `images`, `answer` (the dialog), read `asked` and `fetched`. */
+  network: FakeNetwork;
   /**
    * Drops a file on the drawing as the app does: finds the importer by file
    * extension, loads the plugin, runs it and applies the returned ops as one

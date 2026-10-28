@@ -48,6 +48,7 @@ import { PluginPanels } from "../host/PluginPanels";
 import { startPluginHost } from "../host/start";
 import { enable, setupHost } from "../host/testUtils";
 import { routePaste, setPasteStarter } from "../clipboard/pasteRouter";
+
 import { findImporter, runImports } from "../importerMap";
 import { cancelImports } from "../importerMap";
 import { setWorkspaceBridge } from "../workspaceBridge";
@@ -56,6 +57,8 @@ import { setPluginSetting } from "../settings/pluginSettings";
 import { FakePdfBridge, makePages } from "../../tests/fakePdfBridge";
 
 import { createFakeScene, type FakeScene } from "./fakeScene";
+
+import type { FakeNetwork } from "../../../../sdk/api/testing/network";
 
 import type {
   Json,
@@ -313,6 +316,8 @@ export interface TestPlugin {
   folders: FakeFolders;
   pdf: FakePdf;
   clipboard: FakeClipboard;
+  /** `ctx.network` in tests: the fake backend's `network` rows (see sdk/api/testing/network.ts). */
+  network: FakeNetwork;
   /**
    * Drops a file on the drawing as the app does: finds the importer by
    * extension, runs the real import runner and resolves to the scene write
@@ -894,6 +899,7 @@ export async function boot(
     folders,
     pdf,
     clipboard,
+    network: backend.network,
     async import(fileName, content, at) {
       const match = findImporter(fileName);
       const active = getActiveScene();

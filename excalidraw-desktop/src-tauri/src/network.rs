@@ -98,6 +98,7 @@ fn purpose_phrase(purpose: &str) -> String {
         "themes" => "themes".into(),
         "plugins" => "plugins".into(),
         "plugin_list" | "plugin_registry" => "the plugin list".into(),
+        "images" => "pictures from web pages".into(),
         other => other.replace('_', " "),
     }
 }
@@ -278,6 +279,92 @@ pub(crate) fn redirect_target(base: &Url, location: &str) -> Result<Url> {
     parse_url(next.as_str()).map_err(|e| refused(e.message))
 }
 
+/// A redirect `Location` for the `images` purpose: https to any public host, vetted like a first URL.
+fn redirect_target_public(base: &Url, location: &str) -> Result<Url> {
+    let refused = |m: String| err("REDIRECT_REFUSED", m);
+    let next = base.join(location).map_err(|_| refused("Invalid redirect".into()))?;
+    parse_url(next.as_str()).map_err(|e| refused(e.message))
+}
+
+/// Largest picture a web download returns.
+pub(crate) const IMAGE_MAX_BYTES: u64 = 10 * 1024 * 1024;
+
+/// True when the bytes start like a picture a drawing can hold (PNG, JPEG, GIF, WebP, SVG).
+pub(crate) fn looks_like_image(b: &[u8]) -> bool {
+    b.starts_with(&[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+        || b.starts_with(&[0xff, 0xd8, 0xff])
+        || b.starts_with(b"GIF8")
+        || (b.len() >= 12 && &b[0..4] == b"RIFF" && &b[8..12] == b"WEBP")
+        || String::from_utf8_lossy(&b[..b.len().min(1024)]).contains("<svg")
+}
+
+/// Hosts a picture download may contact: every public https host, once `network.allow_images` is on
+/// (asked in a native dialog, listing the sites). This is the one purpose that is not limited to
+/// GitHub and `network.allowed_hosts`: the pictures live wherever the note's author put them.
+/// Everything else still applies: https only, no user info, no private, local or reserved address
+/// (literal or resolved), at most three redirects (each vetted the same way), 10 MiB, image bytes.
+pub(crate) fn fetch_image_with(agent: &ureq::Agent, url_text: &str) -> Result<Vec<u8>> {
+    let url = parse_url(url_text)?;
+    let body = get_bytes_following(agent, &url, IMAGE_MAX_BYTES, "image/*", Redirects::PublicHttps)?;
+    if !looks_like_image(&body) {
+        return Err(err("NOT_AN_IMAGE", "That address is not a picture"));
+    }
+    Ok(body)
+}
+
+/// `fetch_image_with` after the consent check for the `images` purpose.
+pub(crate) fn fetch_image(dirs: &config::Dirs, url_text: &str) -> Result<Vec<u8>> {
+    ensure_network_allowed(dirs, "images")?;
+    fetch_image_with(&agent(), url_text)
+}
+
+/// The sites in a download list, for the consent dialog: host names only, no repeats, at most 8.
+pub(crate) fn hosts_of(urls: &[String]) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for u in urls {
+        if let Ok(url) = Url::parse(u) {
+            if let Some(h) = url.host_str() {
+                let h = h.trim_end_matches('.').to_ascii_lowercase();
+                if !out.contains(&h) {
+                    out.push(h);
+                }
+            }
+        }
+    }
+    out
+}
+
+/// The dialog text for downloading the pictures of a note from `hosts`. Plain words.
+pub(crate) fn images_prompt(hosts: &[String]) -> (String, String) {
+    let shown = hosts.iter().take(8).cloned().collect::<Vec<_>>().join(", ");
+    let more = if hosts.len() > 8 { format!(" and {} more sites", hosts.len() - 8) } else { String::new() };
+    let sites = if shown.is_empty() { "the sites they are on".to_string() } else { format!("{shown}{more}") };
+    (
+        "Allow downloading pictures from the web?".into(),
+        format!(
+            "Your notes show pictures from web pages. Vaultdraw will download them from {sites} and keep a copy in your drawings, so they work offline afterwards. It sends only the request for each picture. You can change this any time in Settings."
+        ),
+    )
+}
+
+/// Asks once (native dialog) unless `network.allow_images` is already on, then turns it on together
+/// with the master switch. Ok(false) = the user said no.
+pub(crate) fn grant_images_in(dirs: &config::Dirs, hosts: &[String], confirm: impl FnOnce(&str, &str) -> bool) -> Result<bool> {
+    if ensure_network_allowed(dirs, "images").is_ok() {
+        return Ok(true);
+    }
+    let (title, text) = images_prompt(hosts);
+    if !confirm(&title, &text) {
+        return Ok(false);
+    }
+    let changes: Vec<config::LayerChange> = ["enabled", "allow_images"]
+        .iter()
+        .map(|k| config::LayerChange { key: format!("network.{k}"), value: Value::Bool(true), default: None })
+        .collect();
+    config::update_overrides_in(dirs, &changes)?;
+    Ok(true)
+}
+
 /// True for addresses a public host must never resolve to: private, link-local, CGNAT,
 /// unspecified, multicast and loopback.
 fn is_blocked_address(ip: IpAddr) -> bool {
@@ -400,7 +487,21 @@ fn configured_hosts() -> Vec<String> {
         .unwrap_or_default()
 }
 
+/// Which redirects a download follows.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Redirects {
+    /// https GitHub hosts only (themes, the plugin list, plugin packages).
+    GithubOnly,
+    /// Any public https host: each hop is vetted like the first URL (no private or local address,
+    /// resolved names checked by the guarded resolver). Only the `images` purpose.
+    PublicHttps,
+}
+
 fn get_bytes_with(agent: &ureq::Agent, url: &Url, max_bytes: u64, accept: &str) -> Result<Vec<u8>> {
+    get_bytes_following(agent, url, max_bytes, accept, Redirects::GithubOnly)
+}
+
+fn get_bytes_following(agent: &ureq::Agent, url: &Url, max_bytes: u64, accept: &str, redirects: Redirects) -> Result<Vec<u8>> {
     let mut current = url.clone();
     for _ in 0..=MAX_REDIRECTS {
         let mut resp = agent.get(current.as_str()).header("Accept", accept).call().map_err(net_error)?;
@@ -412,7 +513,10 @@ fn get_bytes_with(agent: &ureq::Agent, url: &Url, max_bytes: u64, accept: &str) 
                 .and_then(|v| v.to_str().ok())
                 .ok_or_else(|| err("REDIRECT_REFUSED", "Redirect without a Location"))?
                 .to_string();
-            current = redirect_target(&current, &location)?;
+            current = match redirects {
+                Redirects::GithubOnly => redirect_target(&current, &location)?,
+                Redirects::PublicHttps => redirect_target_public(&current, &location)?,
+            };
             continue;
         }
         if status != 200 {
@@ -956,5 +1060,104 @@ mod tests {
             let e = check_consent(Some(&cfg), purpose).unwrap_err();
             assert!(!e.message.contains("network.") && !e.message.contains('`') && !e.message.contains('_'), "{}", e.message);
         }
+    }
+
+    // --- web pictures (purpose `images`) ---
+
+    const PNG: &[u8] = &[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3];
+
+    #[test]
+    fn a_picture_is_downloaded_and_checked_by_its_bytes() {
+        let (base, _) = start(|p| if p == "/a.png" { Resp::ok(PNG) } else { Resp::ok("<html>not a picture</html>") });
+        assert_eq!(fetch_image_with(&agent(), &format!("{base}/a.png")).unwrap(), PNG);
+        // A web page behind an image-looking address is refused.
+        assert_eq!(fetch_image_with(&agent(), &format!("{base}/page.png")).unwrap_err().code, "NOT_AN_IMAGE");
+        let (base, _) = start(|_| Resp::ok("<svg xmlns='http://www.w3.org/2000/svg'/>"));
+        assert!(fetch_image_with(&agent(), &format!("{base}/x.svg")).is_ok());
+    }
+
+    #[test]
+    fn private_and_local_addresses_are_never_contacted() {
+        for bad in [
+            "https://192.168.1.5/a.png",
+            "https://10.0.0.1/a.png",
+            "https://169.254.169.254/latest/meta-data",
+            "https://127.0.0.1/a.png",
+            "https://[::1]/a.png",
+            "http://example.com/a.png",
+            "https://user:pw@example.com/a.png",
+        ] {
+            assert_eq!(fetch_image_with(&agent(), bad).unwrap_err().code, "INVALID_URL", "{bad}");
+        }
+    }
+
+    #[test]
+    fn a_redirect_to_a_private_or_plain_http_address_is_refused() {
+        for target in ["https://10.0.0.5/x.png", "http://example.com/x.png", "https://192.168.0.1/x.png"] {
+            let t = target.to_string();
+            let (base, hits) = start(move |_| Resp { headers: vec![("Location".into(), t.clone())], ..Resp::status(302) });
+            let e = fetch_image_with(&agent(), &format!("{base}/a.png")).unwrap_err();
+            assert_eq!(e.code, "REDIRECT_REFUSED", "{target}");
+            assert_eq!(hits.load(Ordering::SeqCst), 1);
+        }
+    }
+
+    #[test]
+    fn redirects_between_public_hosts_are_vetted_not_banned() {
+        assert_eq!(redirect_target_public(&url("https://a.example/x"), "https://cdn.other.example/y.png").unwrap().host_str(), Some("cdn.other.example"));
+        assert_eq!(redirect_target_public(&url("https://a.example/x"), "/y.png").unwrap().host_str(), Some("a.example"));
+    }
+
+    #[test]
+    fn an_oversize_picture_is_aborted() {
+        let (base, _) = start(|_| Resp::ok(vec![0x89; 5000]));
+        let e = get_bytes_following(&agent(), &url(&format!("{base}/a.png")), 1000, "image/*", Redirects::PublicHttps).unwrap_err();
+        assert_eq!(e.code, "TOO_LARGE");
+        assert_eq!(IMAGE_MAX_BYTES, 10 * 1024 * 1024);
+    }
+
+    #[test]
+    fn pictures_need_their_own_consent_and_the_master_switch() {
+        let t = tempfile::tempdir().unwrap();
+        let dirs = dirs_in(&t);
+        fs::create_dir_all(&dirs.config).unwrap();
+        assert_eq!(fetch_image(&dirs, "https://example.com/a.png").unwrap_err().code, "NETWORK_NOT_ALLOWED");
+        fs::write(dirs.config.join("config.toml"), "[network]\nenabled = false\nallow_images = true\n").unwrap();
+        assert_eq!(fetch_image(&dirs, "https://example.com/a.png").unwrap_err().code, "NETWORK_DISABLED");
+        // Allowing themes does not allow pictures.
+        fs::write(dirs.config.join("config.toml"), "[network]\nallow_themes = true\n").unwrap();
+        assert_eq!(fetch_image(&dirs, "https://example.com/a.png").unwrap_err().code, "NETWORK_NOT_ALLOWED");
+    }
+
+    #[test]
+    fn the_picture_dialog_lists_the_sites_in_plain_words_and_asks_once() {
+        let hosts = hosts_of(&["https://Cdn.Example.com/a.png".into(), "https://cdn.example.com/b.png".into(), "https://tomshardware.com/x.jpg".into(), "nonsense".into()]);
+        assert_eq!(hosts, vec!["cdn.example.com", "tomshardware.com"]);
+        let (title, text) = images_prompt(&hosts);
+        assert_eq!(title, "Allow downloading pictures from the web?");
+        assert!(text.contains("cdn.example.com, tomshardware.com"));
+        for s in [&title, &text] {
+            assert!(!s.contains('`') && !s.contains("network.") && !s.contains("allow_") && !s.contains('_'), "{s}");
+        }
+        let t = tempfile::tempdir().unwrap();
+        let dirs = dirs_in(&t);
+        let mut asked = 0;
+        assert!(!grant_images_in(&dirs, &hosts, |_, _| { asked += 1; false }).unwrap());
+        assert_eq!(code(ensure_network_allowed(&dirs, "images")), "NETWORK_NOT_ALLOWED");
+        assert!(grant_images_in(&dirs, &hosts, |_, _| { asked += 1; true }).unwrap());
+        assert_eq!(code(ensure_network_allowed(&dirs, "images")), "");
+        // Already allowed: no dialog.
+        assert!(grant_images_in(&dirs, &hosts, |_, _| { asked += 1; false }).unwrap());
+        assert_eq!(asked, 2);
+    }
+
+    #[test]
+    fn picture_bytes_are_recognised() {
+        assert!(looks_like_image(PNG));
+        assert!(looks_like_image(&[0xff, 0xd8, 0xff, 0xe0]));
+        assert!(looks_like_image(b"GIF89a"));
+        assert!(looks_like_image(b"RIFF\0\0\0\0WEBPVP8 "));
+        assert!(!looks_like_image(b"<!doctype html><html>"));
+        assert!(!looks_like_image(b""));
     }
 }

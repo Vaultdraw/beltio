@@ -76,6 +76,7 @@ export const PERMISSIONS = [
   "control",
   "pdf",
   "clipboard",
+  "network.images",
 ];
 /** Kept for later API revisions; an app that knows them as reserved refuses a manifest that uses one. */
 const RESERVED_PERMISSIONS = ["net", "secret"];

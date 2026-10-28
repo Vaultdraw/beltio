@@ -28,6 +28,8 @@ import type {
   ObsidianImportResult,
 } from "./obsidian/types";
 
+import type { WebImages } from "./webImages";
+
 export interface LayoutOptions {
   family: FontFamilyName;
   fontSize: number;
@@ -129,6 +131,8 @@ export interface ObsidianImportOptions {
   onProgress(done: number, total: number, current: string): void;
   /** See `ObsidianImportOptions.nextTarget` in `obsidian/types.ts`. */
   nextTarget?: (attempt: number) => Promise<TargetFolder | null>;
+  /** See `ObsidianImportOptions.web` in `obsidian/types.ts`. */
+  web?: WebImages;
 }
 
 /** Each note through the worker layout, collected per part (a drawing each). */

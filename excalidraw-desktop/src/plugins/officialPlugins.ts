@@ -113,6 +113,14 @@ export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
         id: "obsidian-new-vault",
         title: "Import Obsidian vault into a new vault…",
       },
+      {
+        id: "download-images",
+        title: "Markdown: Download web images in this drawing",
+      },
+      {
+        id: "attach-images",
+        title: "Markdown: Attach missing images from a folder…",
+      },
     ],
     /** A hidden command the core "Import: Cancel" runs for imports that are not file imports. */
     cancelCommand: "cancel-import",

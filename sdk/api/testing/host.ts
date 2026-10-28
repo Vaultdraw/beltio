@@ -54,6 +54,7 @@ import {
 import { createFoldersModel } from "./folders";
 import { createPagesMock } from "./pages";
 import { createClipboardModel, type FakeClipboard } from "./clipboard";
+import { createNetworkModel, type FakeNetwork } from "./network";
 import { createPdfModel } from "./pdf";
 import { createSceneModel } from "./scene";
 import { loadPanelDeps, panelsRoot, type PanelDeps } from "./panels";
@@ -141,6 +142,8 @@ export interface MockHost {
   pdf: FakePdf;
   /** What `ctx.clipboard` serves (needs the permission `clipboard`). */
   clipboard: FakeClipboard;
+  /** What `ctx.network` serves (needs the permission `network.images`). */
+  network: FakeNetwork;
   /** Drops a file on the active drawing; resolves to the scene write it made, or null. */
   importFile(
     fileName: string,
@@ -235,6 +238,7 @@ export function createMockHost(
   const vault = createVaultModel(maxOps);
   const pdfModel = createPdfModel();
   const clipboardModel = createClipboardModel();
+  const networkModel = createNetworkModel();
   const folders = createFoldersModel(vault, {
     open: () => vault.fake.setVault !== undefined && vaultIsOpen(),
     readOnly: () => vaultReadOnly(),
@@ -575,6 +579,7 @@ export function createMockHost(
     let diagramsApi: PluginContext["diagrams"] | undefined;
     let pdfApi: PluginContext["pdf"] | undefined;
     let clipboardApi: PluginContext["clipboard"] | undefined;
+    let networkApi: PluginContext["network"] | undefined;
     let menusApi: PluginContext["menus"] | undefined;
     let pagesApi: PluginContext["pages"] | undefined;
     let foldersApi: PluginContext["folders"] | undefined;
@@ -842,6 +847,9 @@ export function createMockHost(
       },
       get clipboard() {
         return (clipboardApi ??= clipboardModel.api(id, info.permissions));
+      },
+      get network() {
+        return (networkApi ??= networkModel.api(id, info.permissions));
       },
       get pdf() {
         // No native renderer in tests: set one up with `pdf` on the mock host.
@@ -1411,6 +1419,7 @@ export function createMockHost(
     folders: folders.fake,
     pdf: pdfModel.fake,
     clipboard: clipboardModel.fake,
+    network: networkModel.fake,
     importFile,
     cancelImport() {
       if (!importing) {
@@ -1635,6 +1644,7 @@ export function createMockHost(
       folders.reset();
       pdfModel.reset();
       clipboardModel.reset();
+      networkModel.reset();
       presenting?.end();
       activePath = "fake.excalidraw";
       sceneReadOnly = false;
