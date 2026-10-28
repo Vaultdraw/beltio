@@ -73,6 +73,11 @@ export const FIXTURES: Record<string, () => PluginInfo> = {
   stranger: () =>
     makePluginInfo("stranger", {
       name: "Stranger",
+      contributes: {
+        commands: [command("stranger", "Stranger: say hi")],
+        panels: [],
+        settings: [],
+      },
       review: { state: "review", added: [] },
     }),
   counter: () =>

@@ -512,6 +512,8 @@ test("a plugin nobody confirmed asks before it runs, and a community plugin cann
   // `stranger` declares no permission and has no consent record, and `plugins.enabled` lists it.
   await openVault(page, "?plugins=stranger");
   await page.waitForFunction(() => (window as any).__pluginsReady === true);
+  // Listed as enabled but never confirmed: it stays off, its command is not in the palette.
+  expect(await hits(page, "Stranger: say hi")).toEqual([]);
   // One startup notice says the plugin is off, and its Review button opens Settings, Plugins.
   const notice = page.getByText(/off until you review it: Stranger/i);
   await expect(notice).toBeVisible();
