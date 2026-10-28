@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { defineContextKey, PRESENT_KEY } from "./contextKeys";
+import { TOOL_COMMANDS } from "./toolCommands";
 import {
   commitCanvasTextEdit,
   isTextEditingTarget,
@@ -65,6 +67,20 @@ describe("readContext", () => {
     expect(readContext(document, app)).toMatchObject({ textEditing: true });
     add(`<div class="vault-modal-backdrop"></div>`);
     expect(readContext(document, app).modalOpen).toBe(true);
+  });
+
+  it("a running presentation is modal: canvas tool keys stand down, presentation keys hold", () => {
+    const sticky = TOOL_COMMANDS.find((c) => c.id === "tool.stickynote")!;
+    const before = readContext(document, app);
+    expect(before.modalOpen).toBe(false);
+    const stop = defineContextKey(PRESENT_KEY, () => true);
+    const during = readContext(document, app);
+    expect(during.modalOpen).toBe(true);
+    expect(whenHolds(["!modalOpen"], during)).toBe(false);
+    expect(whenHolds(sticky.when, during)).toBe(false);
+    expect(whenHolds([PRESENT_KEY as never], during)).toBe(true);
+    stop();
+    expect(readContext(document, app).modalOpen).toBe(false);
   });
 });
 

@@ -4,6 +4,9 @@
  * is not in the built-in context, so the keypress hot path pays nothing
  * while none are defined.
  */
+/** Defined while a presentation runs; the presentation counts as modal. */
+export const PRESENT_KEY = "present.active";
+
 const getters = new Map<string, () => boolean>();
 const warned = new Set<string>();
 

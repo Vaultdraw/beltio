@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PROFILE_COMMANDS } from "../commands/profileCommands";
 import { profileNameError } from "../vault/profiles";
@@ -33,6 +33,9 @@ describe("profile commands", () => {
 });
 
 describe("a vault's profile", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
   it("switches to the profile the vault names, once, and ignores unknown ones", async () => {
     vi.resetModules();
     const profileCall = vi.fn(async () => {});
@@ -60,11 +63,14 @@ describe("a vault's profile", () => {
 
   it("returns to the global choice when the next vault names no profile", async () => {
     vi.resetModules();
-    const profileCall = vi.fn(async () => {});
+    let active: string | null = "mine";
+    const profileCall = vi.fn(async (_c: string, a: { name: string | null }) => {
+      active = a.name;
+    });
     let name: string | null = "work";
     vi.doMock("../vault/settingsSync", () => ({
       getSettingsStatus: () => ({
-        profile: "mine",
+        profile: active,
         profiles: ["work", "mine"],
       }),
       isConfigFolderActive: () => true,
@@ -90,5 +96,79 @@ describe("a vault's profile", () => {
     await applyVaultProfile("c");
     expect(profileCall).toHaveBeenCalledTimes(2);
     vi.doUnmock("../vault/settingsSync");
+  });
+
+  const setup = async (active: string | null, vaultName: () => string | null) => {
+    vi.resetModules();
+    const profileCall = vi.fn(async () => {});
+    vi.doMock("../vault/settingsSync", () => ({
+      getSettingsStatus: () => ({
+        profile: active,
+        profiles: ["work", "mine", "talk"],
+      }),
+      isConfigFolderActive: () => true,
+      nativeCall: async () => vaultName(),
+      profileCall,
+    }));
+    vi.doMock("../toasts/toastStore", () => ({
+      toastStore: { push: vi.fn() },
+    }));
+    vi.doMock("../vault/vaultSettings", () => ({
+      getVaultSettingsSnapshot: () => ({ handle: "h" }),
+    }));
+    const prefs = await import("../vault/preferences");
+    const { applyVaultProfile } = await import("../vault/profiles");
+    return { profileCall, prefs, applyVaultProfile };
+  };
+
+  it("saves your own choice as state, and a second vault never overwrites it", async () => {
+    const { profileCall, prefs, applyVaultProfile } = await setup(
+      "mine",
+      () => "work",
+    );
+    await applyVaultProfile("a");
+    expect(prefs.getPreferences().profileChoice).toBe("mine");
+    await applyVaultProfile("b");
+    expect(profileCall).toHaveBeenLastCalledWith("profile_use", {
+      name: "work",
+    });
+    expect(prefs.getPreferences().profileChoice).toBe("mine");
+  });
+
+  it("goes back to the saved choice after a restart", async () => {
+    // A new run: nothing in memory, the choice only in the saved state.
+    const { profileCall, prefs, applyVaultProfile } = await setup(
+      "work",
+      () => null,
+    );
+    prefs.updatePreferences({ profileChoice: "mine" });
+    await applyVaultProfile("a");
+    expect(profileCall).toHaveBeenLastCalledWith("profile_use", {
+      name: "mine",
+    });
+    expect(prefs.getPreferences().profileChoice).toBeNull();
+  });
+
+  it("returns to the default config, and a deleted choice means default", async () => {
+    let r = await setup("work", () => null);
+    r.prefs.updatePreferences({ profileChoice: "default" });
+    await r.applyVaultProfile("a");
+    expect(r.profileCall).toHaveBeenLastCalledWith("profile_use", {
+      name: null,
+    });
+    r = await setup("work", () => null);
+    r.prefs.updatePreferences({ profileChoice: "deleted" });
+    await r.applyVaultProfile("a");
+    expect(r.profileCall).toHaveBeenLastCalledWith("profile_use", {
+      name: null,
+    });
+  });
+
+  it("a manual switch drops the saved choice", async () => {
+    const { prefs, applyVaultProfile } = await setup("mine", () => "work");
+    await applyVaultProfile("a");
+    const { switchProfile } = await import("../vault/profiles");
+    await switchProfile("talk");
+    expect(prefs.getPreferences().profileChoice).toBeNull();
   });
 });

@@ -205,6 +205,8 @@ interface VaultPreferencesBase {
   exportOptions: ExportOptions;
   /** The user has panned the canvas once: the "move canvas" hint stays hidden (machine state). */
   hasPanned: boolean;
+  /** The profile you chose yourself, remembered while a vault's own profile is active (machine state); null = none to go back to, "default" = the plain config. */
+  profileChoice: string | null;
   theme: VaultTheme;
   /** Colour theme name: a built-in name or a theme in the config themes/ folder. */
   colorTheme: string;
@@ -420,6 +422,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   expandedFolders: {},
   exportOptions: DEFAULT_EXPORT_OPTIONS,
   hasPanned: false,
+  profileChoice: null,
   theme: "system",
   colorTheme: "Default",
   networkEnabled: true,
@@ -759,6 +762,8 @@ export function normalizePreferences(input: unknown): VaultPreferences {
         : {},
     exportOptions: normalizeExportOptions(parsed.exportOptions),
     hasPanned: pick(parsed.hasPanned, isBoolean, d.hasPanned),
+    profileChoice:
+      typeof parsed.profileChoice === "string" ? parsed.profileChoice : null,
     theme: isVaultTheme(parsed.theme) ? parsed.theme : d.theme,
     colorTheme:
       typeof parsed.colorTheme === "string" && parsed.colorTheme.trim()

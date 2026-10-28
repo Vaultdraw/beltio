@@ -15,6 +15,13 @@ describe("whenCanOverlap", () => {
     expect(whenCanOverlap(["vaultOpen"], ["drawingOpen"])).toBe(true);
     expect(whenCanOverlap(["canvasFocus"], ["listFocus"])).toBe(false);
   });
+
+  it("a presentation is modal: its keys never clash with !modalOpen ones", () => {
+    expect(whenCanOverlap(["present.active"], ["drawingOpen", "!modalOpen"])).toBe(false);
+    expect(whenCanOverlap(["!modalOpen"], ["present.active"])).toBe(false);
+    expect(whenCanOverlap(["present.active"], ["modalOpen"])).toBe(true);
+    expect(whenCanOverlap(["present.active"], ["drawingOpen"])).toBe(true);
+  });
 });
 
 describe("findConflicts", () => {
@@ -179,5 +186,20 @@ describe("findConflicts: prefix and sequences", () => {
       kind: "prefix",
       id: "vault.newDrawing",
     });
+  });
+});
+
+describe("a presentation key on a tool key", () => {
+  it("binding next slide to N shows no conflict with Tool: Sticky note", () => {
+    const next: CommandDefinition = {
+      id: "frames.next",
+      title: "Frames: Next slide",
+      category: "Plugins",
+      keys: { default: ["ArrowRight"] },
+      when: ["present.active"],
+    };
+    const result = findConflicts([...COMMANDS, next], { "frames.next": ["N"] }, "mac");
+    expect(result.get("frames.next")?.get("N")).toBeUndefined();
+    expect(result.get("tool.stickynote")?.get("N")).toBeUndefined();
   });
 });

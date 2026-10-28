@@ -1089,6 +1089,7 @@ export const STATE_FIELDS = [
   "expandedFolders",
   "exportOptions",
   "hasPanned",
+  "profileChoice",
 ] as const;
 
 type StateField = typeof STATE_FIELDS[number];
@@ -1372,6 +1373,8 @@ export function stateToPreferences(
       : { ...d.expandedFolders },
     exportOptions: normalizeExportOptions(s.exportOptions),
     hasPanned: typeof s.hasPanned === "boolean" ? s.hasPanned : d.hasPanned,
+    profileChoice:
+      typeof s.profileChoice === "string" ? s.profileChoice : d.profileChoice,
   };
 }
 
@@ -1384,6 +1387,7 @@ export function preferencesToState(prefs: PreferencesSnapshot): PersistedState {
     expandedFolders: prefs.expandedFolders,
     exportOptions: prefs.exportOptions,
     hasPanned: prefs.hasPanned,
+    profileChoice: prefs.profileChoice,
   };
 }
 

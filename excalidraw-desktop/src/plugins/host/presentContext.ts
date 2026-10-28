@@ -4,7 +4,7 @@
  * own laser tool, and defines the context key `present.active` while it runs. Built on first
  * use; nothing is attached while no session runs.
  */
-import { defineContextKey } from "../../commands/contextKeys";
+import { defineContextKey, PRESENT_KEY } from "../../commands/contextKeys";
 import { getActiveEditor, onActiveEditorChange } from "../../editor/editorApi";
 import { FOCUS_PRESET } from "../../layout/layoutSettings";
 import {
@@ -22,7 +22,7 @@ import { errorText, logLine } from "./errors";
 import type { Disposable, PresentApi, PresentOptions } from "../api";
 
 /** The context key a command can name in `when` to act only during a presentation. */
-export const PRESENT_CONTEXT_KEY = "present.active";
+export const PRESENT_CONTEXT_KEY = PRESENT_KEY;
 
 interface Running {
   end(): void;

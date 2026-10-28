@@ -184,6 +184,7 @@ flowchart LR
 - **A profile can set any key**: `interface.theme`, `[hotkeys]`, `[keys]`, `plugins.enabled` and `plugins.disabled`, tools, and so on. It wins over `config.toml` and loses to Settings changes and the vault's own `settings.toml`.
 - **Settings writes to the active profile.** While a profile is active, Settings, `vaultdraw config set` and the control API save to `profiles/<name>/overrides.toml`; the main `overrides.toml` is left alone and is not read. Starting a profile from `default` copies it.
 - **Live switching.** The choice is the one-line file `profile` in the state folder. Writing it reloads like any config change: no restart.
+- **A vault's profile never replaces your own choice.** While a vault applies its profile, the profile you chose yourself is kept in `state.json` (`profileChoice`), also across a restart; opening a vault with no profile goes back to it. Switching a profile yourself drops it.
 - **Names:** 1 to 48 letters, digits, `_` or `-`; `default` is reserved. Names that differ only in case count as the same.
 - **Limits:** a profile's `config.toml` does not read `[include]` (keep includes in the main file). `[control]`, `[ai]` and `[watchdog]`, read before the app starts, come from the main `config.toml` and the active profile's `overrides.toml`, never from the profile's `config.toml`.
 - **Nothing is lost.** Duplicate copies, creating never overwrites, and deleting asks first (`--yes` on the command line). Deleting the active profile falls back to the default. Your `config.toml` is never touched.

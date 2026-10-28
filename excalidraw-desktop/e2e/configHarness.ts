@@ -19,6 +19,8 @@ type HarnessWindow = Window & {
   __e2eProfileConfigs?: Record<string, Table>;
   /** The profile each vault names in `.excalidraw-vault/profile`, by vault handle. */
   __e2eVaultProfiles?: Record<string, string>;
+  /** The profile you chose yourself, kept in state.json while a vault's profile is active. */
+  __e2eProfileChoice?: string | null;
   /** The report `config_check` returns (default: a clean one). */
   __e2eCheck?: Record<string, unknown>;
   /** The vault handle `backup_start` was called with. */
@@ -62,6 +64,7 @@ export function startConfigHarness(win: Window) {
       w.__e2eProfile ??= saved.profile;
       w.__e2eProfileConfigs ??= saved.configs;
       w.__e2eVaultProfiles ??= saved.vault;
+      w.__e2eProfileChoice ??= saved.choice ?? null;
     }
   } catch {
     // No storage: profiles last until the reload.
@@ -75,6 +78,7 @@ export function startConfigHarness(win: Window) {
           profile: w.__e2eProfile ?? null,
           configs: w.__e2eProfileConfigs ?? {},
           vault: w.__e2eVaultProfiles ?? {},
+          choice: w.__e2eProfileChoice ?? null,
         }),
       );
     } catch {
@@ -133,8 +137,17 @@ export function startConfigHarness(win: Window) {
             config: error ? null : over,
           },
         ],
-        state: {},
+        state: w.__e2eProfileChoice
+          ? { profileChoice: w.__e2eProfileChoice }
+          : {},
       };
+    }
+    if (cmd === "write_state") {
+      w.__e2eProfileChoice =
+        ((args as { state?: { profileChoice?: string | null } }).state
+          ?.profileChoice as string | null | undefined) ?? null;
+      persist();
+      return null;
     }
     if (cmd === "profile_create") {
       const a = args as { name: string };

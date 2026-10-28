@@ -1154,11 +1154,19 @@ test("profiles: create, switch live, per vault, bad names refused and delete fal
       ),
     )
     .toEqual([]);
-  // (Going back to the remembered profile needs a second vault: the memory of "your choice" lasts one run.)
-  await openSettingsTab(page, "General");
-  await select().selectOption("default");
-  await closeSettings(page);
+  // Your own choice ("default") was saved while the vault's profile applied: after a restart (reload),
+  // opening the vault that no longer names a profile goes back to it.
+  await expect
+    .poll(() => page.evaluate(() => (window as any).__e2eProfileChoice))
+    .toBe("default");
+  await reloadVault(page);
+  await expect(
+    toasts.filter({ hasText: 'Profile "default" (your choice).' }),
+  ).toBeVisible();
   await expect(page.getByTestId("activity-bar-graph")).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => (window as any).__e2eProfileChoice))
+    .toBeNull();
   // A vault that names a profile this machine does not have is ignored with a note.
   await page.evaluate((handle) => {
     window.sessionStorage.setItem(
@@ -1456,6 +1464,29 @@ test("presentation mode keys: every default key, clamping at the ends, empty dec
   await at(2);
   await page.keyboard.press("ArrowLeft");
   await at(1);
+  await page.keyboard.press("Escape");
+  await expect(strip).toHaveCount(0);
+
+  // N is also the Sticky note tool, but tools stand down in a presentation: no conflict, and N advances.
+  await openSettingsTab(page, "Hotkeys");
+  await page.getByLabel("Filter hotkeys").fill("Frames: Next slide");
+  await page
+    .getByRole("button", {
+      name: "Add hotkey for Frames: Next slide",
+      exact: true,
+    })
+    .click();
+  await page.keyboard.press("KeyN");
+  await expect(hotkeyRow(page, "frames.next")).toContainText("N");
+  await expect(hotkeyRow(page, "frames.next")).not.toHaveClass(
+    /vault-hotkeys__row--conflict/,
+  );
+  await closeSettings(page);
+  await page.keyboard.press("Meta+Alt+KeyP");
+  await at(1);
+  await page.waitForTimeout(600);
+  await page.keyboard.press("KeyN");
+  await at(2);
   await page.keyboard.press("Escape");
   await expect(strip).toHaveCount(0);
   expect(errors).toEqual([]);

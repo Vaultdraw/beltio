@@ -1,5 +1,5 @@
 /** Context facts the dispatcher checks a command's `when` against. */
-import { readCustomContextKey } from "./contextKeys";
+import { PRESENT_KEY, readCustomContextKey } from "./contextKeys";
 
 import type { CommandContext, WhenClause } from "./types";
 
@@ -71,7 +71,11 @@ export function readContext(doc: Document, app: AppContext): CommandContext {
     writable: app.writable,
     textEditing,
     canvasFocus: !textEditing && !!active?.closest(".vault-editor"),
-    modalOpen: !!doc.querySelector(".vault-modal-backdrop"),
+    // A running presentation is modal: the canvas keys (tools, N for a sticky note) stand
+    // down so the presentation's own keys win. Reads a custom key only if one is defined.
+    modalOpen:
+      !!doc.querySelector(".vault-modal-backdrop") ||
+      readCustomContextKey(PRESENT_KEY),
     // listNav.ts sets the attribute only while a list is registered.
     listFocus: !!scopeRoot?.hasAttribute("data-keylist"),
     galleryFocus: scope === "gallery",

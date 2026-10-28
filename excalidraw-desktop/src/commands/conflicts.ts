@@ -2,6 +2,7 @@
 import { isHostOwnedAction } from "./actionCommands";
 import { defaultKeys } from "./commands";
 import { excalidrawActionsFor } from "./excalidrawKeys";
+import { PRESENT_KEY } from "./contextKeys";
 import { effectiveKeys } from "./keymap";
 import { reservedReason } from "./reserved";
 
@@ -41,7 +42,13 @@ const FOCUS_SCOPES: readonly string[] = [
   "themeBrowser.open",
 ];
 
-/** Two `when` lists can hold together unless one needs X and the other !X, or they need different focus scopes. */
+/** A running presentation is modal (see `readContext`): `present.active` implies `modalOpen`. */
+const withImplied = (when: readonly WhenClause[]): readonly WhenClause[] =>
+  when.includes(PRESENT_KEY as WhenClause) && !when.includes("modalOpen")
+    ? [...when, "modalOpen"]
+    : when;
+
+/** Two `when` lists can hold together unless one needs X and the other !X (a presentation needs modalOpen), or they need different focus scopes. */
 export function whenCanOverlap(
   a: readonly WhenClause[] | undefined,
   b: readonly WhenClause[] | undefined,
@@ -49,6 +56,8 @@ export function whenCanOverlap(
   if (!a || !b) {
     return true;
   }
+  a = withImplied(a);
+  b = withImplied(b);
   const scopeA = a.find((clause) => FOCUS_SCOPES.includes(clause));
   const scopeB = b.find((clause) => FOCUS_SCOPES.includes(clause));
   if (scopeA && scopeB && scopeA !== scopeB) {

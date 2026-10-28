@@ -11,6 +11,7 @@ import {
   nativeCall,
   profileCall,
 } from "./settingsSync";
+import { getPreferences, updatePreferences } from "./preferences";
 import { getVaultSettingsSnapshot } from "./vaultSettings";
 
 export const DEFAULT_PROFILE = "default";
@@ -41,14 +42,18 @@ const applyProfile = (name: string | null) =>
   });
 
 /**
- * The global choice to return to once the open vault no longer names a profile;
- * `undefined` while no vault profile is applied.
+ * The profile you chose yourself, saved in state.json (`profileChoice`) while a vault's own
+ * profile is active, so it survives a restart; null while no vault profile is applied.
  */
-let globalChoice: { name: string | null } | undefined;
+const getChoice = () => getPreferences().profileChoice;
+const setChoice = (name: string | null) =>
+  updatePreferences({ profileChoice: name });
 
 /** Switch to a profile; `null` or `default` goes back to the plain config. A manual switch is the new global choice. */
 export const switchProfile = (name: string | null) => {
-  globalChoice = undefined;
+  if (getChoice() !== null) {
+    setChoice(null);
+  }
   return applyProfile(name);
 };
 
@@ -74,13 +79,17 @@ export async function applyVaultProfile(handle: string): Promise<void> {
       handle,
     });
     if (!name) {
-      if (globalChoice) {
-        const back = globalChoice.name;
-        globalChoice = undefined;
-        await applyProfile(back);
-        toastStore.push({
-          message: `Profile "${back ?? DEFAULT_PROFILE}" (your choice).`,
-        });
+      const choice = getChoice();
+      if (choice !== null) {
+        setChoice(null);
+        const known = getProfiles().profiles.includes(choice);
+        const back = choice === DEFAULT_PROFILE || !known ? null : choice;
+        if (back !== getProfiles().active) {
+          await applyProfile(back);
+          toastStore.push({
+            message: `Profile "${choice}" (your choice).`,
+          });
+        }
       }
       return;
     }
@@ -94,7 +103,9 @@ export async function applyVaultProfile(handle: string): Promise<void> {
       });
       return;
     }
-    globalChoice ??= { name: getProfiles().active };
+    if (getChoice() === null) {
+      setChoice(getProfiles().active ?? DEFAULT_PROFILE);
+    }
     await applyProfile(name);
     toastStore.push({ message: `Profile "${name}" (set by this vault).` });
   } catch {
