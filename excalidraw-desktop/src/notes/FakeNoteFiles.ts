@@ -44,12 +44,18 @@ function checkPath(path: string): void {
 export class FakeNoteFiles implements NoteFiles {
   private readonly files = new Map<string, { text: string; mtimeMs: number }>();
   private readonly history = new Map<string, string[]>();
+  private readonly folders = new Set<string>();
   private clock = 1;
   readOnly = false;
 
   /** Test seam: put a note on "disk" as if another program wrote it. */
   setOnDisk(path: string, text: string): void {
     this.files.set(path, { text, mtimeMs: ++this.clock });
+  }
+
+  /** Test seam: an empty folder on "disk" (files' folders exist implicitly). */
+  setFolder(path: string): void {
+    this.folders.add(path);
   }
 
   /** The text currently on "disk", or undefined. */
@@ -86,6 +92,16 @@ export class FakeNoteFiles implements NoteFiles {
       throw new VaultError("READ_ONLY", "This vault is read-only");
     }
     checkPath(path);
+    // Like the native write: missing folders are made, but a file in the way is refused.
+    const parts = path.split("/");
+    for (let i = 1; i < parts.length; i++) {
+      if (this.files.has(parts.slice(0, i).join("/"))) {
+        throw new VaultError(
+          "INVALID_PATH",
+          `A file named '${parts[i - 1]}' is in the way of the folder`,
+        );
+      }
+    }
     const bytes = new TextEncoder().encode(content).length;
     if (bytes > MAX_BYTES) {
       throw new VaultError("INVALID_FILE", "Note exceeds the 16 MiB limit");

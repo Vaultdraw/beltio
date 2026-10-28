@@ -356,3 +356,42 @@ mod tests {
         assert_eq!(ok, 1, "exactly one write against the same revision succeeds");
     }
 }
+
+#[cfg(test)]
+mod contract {
+    //! The shared fake/native contract (contract/note_write.json); the TypeScript side is
+    //! src/notes/noteWriteContract.test.ts against FakeNoteFiles.
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn note_write_matches_the_shared_contract() {
+        let table: serde_json::Value = serde_json::from_str(include_str!("contract/note_write.json")).unwrap();
+        for case in table["cases"].as_array().unwrap() {
+            let name = case["name"].as_str().unwrap();
+            let d = tempdir().unwrap();
+            let v = Vault::new(d.path().canonicalize().unwrap(), "t".into(), false, None);
+            for (p, text) in case["disk"].as_object().unwrap() {
+                let full = v.root.join(p.trim_end_matches('/'));
+                if p.ends_with('/') {
+                    fs::create_dir_all(full).unwrap();
+                } else {
+                    fs::create_dir_all(full.parent().unwrap()).unwrap();
+                    fs::write(full, text.as_str().unwrap()).unwrap();
+                }
+            }
+            let path = case["path"].as_str().unwrap();
+            let current = case["disk"][path].as_str().map(|t| revision(t.as_bytes()));
+            let base = match case["base"].as_str().unwrap() {
+                "none" => None,
+                "current" => current.clone(),
+                _ => Some("0".repeat(64)),
+            };
+            let got = match write_note_file(&v, path, "new text", base.as_deref()) {
+                Ok(_) => "ok".to_string(),
+                Err(e) => e.code,
+            };
+            assert_eq!(got, case["expect"].as_str().unwrap(), "{name}");
+        }
+    }
+}

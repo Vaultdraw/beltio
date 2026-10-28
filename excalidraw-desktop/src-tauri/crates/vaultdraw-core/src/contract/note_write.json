@@ -1,0 +1,20 @@
+{
+  "about": "One table for the native write_note_file and FakeNoteFiles.write (the browser e2e backend). Each case: files on disk before (path -> text; a path ending in / is a folder), the write, and the expected result: ok or the error code. Both test suites read this file; a fake that drifts from the backend fails here (bug hunt BH-9, round 7).",
+  "cases": [
+    { "name": "create in the root", "disk": {}, "path": "n.md", "base": "none", "expect": "ok" },
+    { "name": "create in a missing folder makes the folder", "disk": {}, "path": "Projects/2026/Idea.md", "base": "none", "expect": "ok" },
+    { "name": "create next to an existing folder", "disk": { "Sub/": "" }, "path": "Sub/n.md", "base": "none", "expect": "ok" },
+    { "name": "create over an existing note is a conflict", "disk": { "n.md": "old" }, "path": "n.md", "base": "none", "expect": "CONFLICT" },
+    { "name": "save with the current revision", "disk": { "n.md": "old" }, "path": "n.md", "base": "current", "expect": "ok" },
+    { "name": "save with a stale revision", "disk": { "n.md": "old" }, "path": "n.md", "base": "stale", "expect": "CONFLICT" },
+    { "name": "save of a note that is gone", "disk": {}, "path": "n.md", "base": "stale", "expect": "CONFLICT" },
+    { "name": "a file is in the way of the folder", "disk": { "plain": "x" }, "path": "plain/n.md", "base": "none", "expect": "INVALID_PATH" },
+    { "name": "dot folder", "disk": {}, "path": ".obsidian/n.md", "base": "none", "expect": "INVALID_PATH" },
+    { "name": "nested dot folder", "disk": {}, "path": "a/.hidden/n.md", "base": "none", "expect": "INVALID_PATH" },
+    { "name": "not a note", "disk": {}, "path": "x.txt", "base": "none", "expect": "INVALID_PATH" },
+    { "name": "an Obsidian Excalidraw file is a drawing", "disk": {}, "path": "x.excalidraw.md", "base": "none", "expect": "INVALID_PATH" },
+    { "name": "above the vault", "disk": {}, "path": "../x.md", "base": "none", "expect": "INVALID_PATH" },
+    { "name": "absolute path", "disk": {}, "path": "/x.md", "base": "none", "expect": "INVALID_PATH" },
+    { "name": "upper-case extension", "disk": {}, "path": "Sub/Note.MD", "base": "none", "expect": "ok" }
+  ]
+}
