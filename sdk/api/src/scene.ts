@@ -130,7 +130,10 @@ export interface NewElement {
    * are the size it is shown at. The bytes are hashed (SHA-1, as the editor
    * does), so adding the same picture twice stores it once. A batch is
    * refused with `TOO_LARGE` when the drawing would pass 90% of its 32 MiB
-   * size cap. Arrows cannot bind to images. Not valid in an `update`.
+   * size cap. Arrows cannot bind to images. In an `update` (since 0.25.0) it
+   * swaps the picture of an existing image in place: the id, z-order, groups,
+   * bound arrows, frame, angle and lock stay, and it is one undo step.
+   * Combine it with `width` and `height` to change the size.
    *
    * @since 0.7.0
    */

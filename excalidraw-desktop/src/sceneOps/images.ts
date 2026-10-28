@@ -27,8 +27,13 @@ import { currentDrawingBytes } from "../pdfImport/budget";
 import type { SceneApi, SceneOp } from "./types";
 
 type AddOp = Extract<SceneOp, { op: "add" }>;
+type UpdateOp = Extract<SceneOp, { op: "update" }>;
 
-/** Image add op (by identity) to the editor's file id (SHA-1 of its bytes). */
+/** The image an add or an update op carries. */
+const pictureOf = (op: AddOp | UpdateOp) =>
+  op.op === "add" ? op.element.image! : op.props.image!;
+
+/** Image add or update op (by identity) to the editor's file id (SHA-1 of its bytes). */
 export type ImageHashes = ReadonlyMap<object, FileId>;
 
 const sha1Hex = async (bytes: Uint8Array): Promise<FileId> => {
@@ -42,15 +47,20 @@ const sha1Hex = async (bytes: Uint8Array): Promise<FileId> => {
 };
 
 const imageOf = (op: unknown): { bytes: Uint8Array } | null => {
-  const el = (op as { op?: unknown; element?: unknown } | null)?.element as
-    | { type?: unknown; image?: { bytes?: unknown } }
-    | undefined;
-  if (
-    (op as { op?: unknown } | null)?.op === "add" &&
-    el?.type === "image" &&
-    isBytes(el.image?.bytes)
-  ) {
-    return { bytes: el.image.bytes as Uint8Array };
+  const o = op as {
+    op?: unknown;
+    element?: { type?: unknown; image?: { bytes?: unknown } };
+    props?: { image?: { bytes?: unknown } };
+  } | null;
+  // An add carries the picture on its element; an update (since 0.25.0) on its props.
+  const image =
+    o?.op === "add" && o.element?.type === "image"
+      ? o.element.image
+      : o?.op === "update"
+      ? o.props?.image
+      : undefined;
+  if (isBytes(image?.bytes)) {
+    return { bytes: image!.bytes as Uint8Array };
   }
   return null;
 };
@@ -98,7 +108,7 @@ export const toBase64 = (bytes: Uint8Array): string => {
 };
 
 export interface ImagePlan {
-  /** Image add op (by identity) to its file id. */
+  /** Image add or update op (by identity) to its file id. */
   fileIds: Map<object, string>;
   /** Files the drawing does not hold yet, one per distinct picture. */
   files: BinaryFileData[];
@@ -117,7 +127,9 @@ export const planImages = (
   hashes: ImageHashes | undefined,
 ): ImagePlan | null => {
   const adds = ops.filter(
-    (op): op is AddOp => op.op === "add" && op.element.type === "image",
+    (op): op is AddOp | UpdateOp =>
+      (op.op === "add" && op.element.type === "image") ||
+      (op.op === "update" && op.props.image !== undefined),
   );
   if (!adds.length) {
     return null;
@@ -134,7 +146,7 @@ export const planImages = (
       );
     }
     fileIds.set(add, id);
-    const image = add.element.image!;
+    const image = pictureOf(add);
     if (!have[id] && !fresh.has(id)) {
       fresh.set(id, image);
     }

@@ -43,10 +43,10 @@ const hashImages = async (ops: unknown): Promise<Map<object, string>> => {
     return out;
   }
   for (const op of ops) {
-    const image = op?.element?.image;
+    const image = op?.op === "update" ? op.props?.image : op?.element?.image;
     if (
-      op?.op === "add" &&
-      op.element?.type === "image" &&
+      (op?.op === "update" ||
+        (op?.op === "add" && op.element?.type === "image")) &&
       isBytes(image?.bytes) &&
       image.bytes.length <= MAX_IMAGE_BYTES
     ) {
@@ -355,7 +355,13 @@ export function createSceneModel(
     const fresh = new Map<string, { mime: string; bytes: Uint8Array }>();
     let imageCount = 0;
     for (const op of ops) {
-      if (op.op === "add" && op.element.type === "image") {
+      const picture =
+        op.op === "add" && op.element.type === "image"
+          ? op.element.image
+          : op.op === "update"
+          ? op.props.image
+          : undefined;
+      if (picture) {
         const id = hashes?.get(op);
         if (!id) {
           throw new PluginApiError("INVALID_ARGUMENT", "image was not hashed");
@@ -363,7 +369,7 @@ export function createSceneModel(
         fileIds.set(op, id);
         imageCount++;
         if (!files.has(id) && !fresh.has(id)) {
-          fresh.set(id, op.element.image!);
+          fresh.set(id, picture);
         }
       }
     }
@@ -399,8 +405,11 @@ export function createSceneModel(
       } else if (edits.get(op.id) !== "delete") {
         const base = (edits.get(op.id) as El | undefined) ?? byId.get(op.id)!;
         const next: El = { ...base, version: ++clock };
-        const { text, points, data, ...plain } = op.props;
+        const { text, points, data, image, ...plain } = op.props;
         Object.assign(next, plain);
+        if (image) {
+          next.fileId = fileIds.get(op);
+        }
         if (points) {
           Object.assign(next, sizeOfPoints(points));
         }

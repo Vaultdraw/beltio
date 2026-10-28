@@ -609,11 +609,25 @@ export const validateOps = (
         checkData(props, i, issues, options.dataKey);
       }
       if ("image" in props) {
-        issues.push({
-          op: i,
-          key: "image",
-          message: "only valid when adding an image; add a new image instead",
-        });
+        if (!options.allowImages) {
+          issues.push({
+            op: i,
+            key: "image",
+            message:
+              "images are not available here; use scene.batch on the open drawing",
+          });
+        } else if (target && target.type !== "image") {
+          issues.push({
+            op: i,
+            key: "image",
+            message: "only valid on image elements",
+          });
+        } else {
+          const problem = imageProblem(props.image);
+          if (problem) {
+            issues.push({ op: i, key: "image", message: problem });
+          }
+        }
       }
       if ("start" in props || "end" in props) {
         for (const key of ["start", "end"]) {

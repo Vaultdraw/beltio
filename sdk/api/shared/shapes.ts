@@ -101,7 +101,7 @@ export function shapeRect(
   };
 }
 
-/** Ops that replace a shape element with a freshly drawn one in the same place. */
+/** Ops that draw a shape again in place (same element). */
 export function updateOps(
   scene: Pick<SceneContextApi, "get" | "dataOf">,
   elementId: string,
@@ -124,9 +124,16 @@ export function updateOps(
   }
   const rect = { x: el.x, y: el.y, width: el.width, height: el.height };
   const bytes = renderShape(shapeId, found.def, props, rect);
+  // Since 0.25.0 the picture changes in place: the element keeps its id, z-order, groups and arrows.
   return [
-    { op: "delete", id: elementId },
-    { op: "add", element: shapeElement(shapeId, props, bytes, rect) },
+    {
+      op: "update",
+      id: elementId,
+      props: {
+        image: { mime: "image/svg+xml", bytes },
+        data: { shape: shapeId, props },
+      },
+    },
   ];
 }
 
@@ -181,8 +188,8 @@ export function createShapesApi(
         const def = defs.get(s);
         return def ? { def } : undefined;
       });
-      const result = await scene.batch(ops);
-      return result.ids[0];
+      await scene.batch(ops);
+      return elementId;
     },
   };
 }

@@ -107,21 +107,23 @@ describe("image validation", () => {
     }
   });
 
-  it("allows image only on image elements, and never in an update", () => {
+  it("allows image only on image elements, and in an update only where images are allowed", () => {
     expect(
       issues([{ op: "add", element: { type: "rectangle", image: png() } }])[0]
         .message,
     ).toMatch(/only valid when adding/);
-    const existing = new Map([["a", { type: "image" }]]);
+    const existing = new Map([
+      ["a", { type: "image" }],
+      ["r", { type: "rectangle" }],
+    ]);
+    const upd = (id: string, allowImages: boolean, props = { image: png() }) =>
+      validateOps([{ op: "update", id, props }], existing, { allowImages });
+    expect(() => upd("a", true)).not.toThrow();
+    expect(() => upd("r", true)).toThrow(/only valid on image elements/);
+    expect(() => upd("a", false)).toThrow(/images are not available/);
     expect(() =>
-      validateOps(
-        [{ op: "update", id: "a", props: { image: png() } }],
-        existing,
-        {
-          allowImages: true,
-        },
-      ),
-    ).toThrow(/add a new image/);
+      upd("a", true, { image: { mime: "image/bmp", bytes: PNG } } as never),
+    ).toThrow(/image/);
   });
 
   it("refuses an arrow bound to an image", () => {
@@ -174,6 +176,61 @@ describe("toBase64", () => {
   it("matches Buffer for a large input (no stack overflow)", () => {
     const big = new Uint8Array(1_000_003).map((_, i) => i % 251);
     expect(toBase64(big)).toBe(Buffer.from(big).toString("base64"));
+  });
+});
+
+describe("applyOps: image update in place", () => {
+  const PNG2 = new Uint8Array([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 9,
+  ]);
+  it("swaps the picture and keeps id, z-order, groups, bindings, frame, angle and lock", async () => {
+    const [a, b, c] = makeElements(3);
+    const pic = {
+      ...b,
+      type: "image",
+      fileId: "old",
+      status: "saved",
+      groupIds: ["g1"],
+      boundElements: [{ id: "arrow1", type: "arrow" }],
+      frameId: "f1",
+      angle: 0.5,
+      locked: true,
+    } as never as typeof b;
+    const { api, updateScene, addFiles } = stubApi([a, pic, c]);
+    const op = {
+      op: "update" as const,
+      id: pic.id,
+      props: { image: png(PNG2), width: 77 },
+    };
+    const images = await hashImages([op]);
+    const { ids } = applyOps(api, [op], { images });
+    expect(ids).toEqual([]);
+    expect(addFiles.mock.calls[0][0][0]).toMatchObject({ id: sha1(PNG2) });
+    expect(updateScene).toHaveBeenCalledTimes(1);
+    const els = updateScene.mock.calls[0][0].elements;
+    expect(els.map((e: { id: string }) => e.id)).toEqual([a.id, b.id, c.id]);
+    expect(els[1]).toMatchObject({
+      id: pic.id,
+      fileId: sha1(PNG2),
+      status: "saved",
+      width: 77,
+      groupIds: ["g1"],
+      boundElements: [{ id: "arrow1", type: "arrow" }],
+      frameId: "f1",
+      angle: 0.5,
+      locked: true,
+    });
+  });
+
+  it("refuses an update whose picture was not hashed, writing nothing", () => {
+    const [a] = makeElements(1);
+    const { api, updateScene } = stubApi([{ ...a, type: "image" } as never]);
+    expect(() =>
+      applyOps(api, [{ op: "update", id: a.id, props: { image: png() } }], {
+        images: new Map(),
+      }),
+    ).toThrow(/hashed/);
+    expect(updateScene).not.toHaveBeenCalled();
   });
 });
 

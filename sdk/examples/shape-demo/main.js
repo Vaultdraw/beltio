@@ -2,7 +2,7 @@
 // [[contributes.shapes]] adds "Insert shape: Badge" and a toolbar button. `render` returns one
 // SVG document; the app draws it as an image and stores it in the drawing together with the
 // shape's props, so the drawing opens without this plugin and shows the last picture.
-// Change a shape with ctx.shapes.update(elementId, newProps) (it draws again, one undo step).
+// Change a shape with ctx.shapes.update(elementId, newProps) (it draws again on the same element, one undo step).
 import { definePlugin } from "@vaultdraw/api";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);

@@ -75,9 +75,15 @@ const updated = (
   props: Props,
   work: Work,
   dataKey: string | null,
+  fileId?: string,
 ): ExcalidrawElement => {
-  const { text, data, roundness, angle, fontFamily, ...plain } = props;
+  const { text, data, roundness, angle, fontFamily, image, ...plain } = props;
   const patch: Record<string, unknown> = { ...plain };
+  if (image && fileId && el.type === "image") {
+    // A new picture on the same element: id, z-order, groups, bindings and locks stay.
+    patch.fileId = fileId;
+    patch.status = "saved";
+  }
   if (props.points && (el.type === "arrow" || el.type === "line")) {
     // The box follows the points (same rule as mutateElement), so bounds, selection and export stay right.
     Object.assign(patch, getSizeFromPoints(props.points as never));
@@ -142,7 +148,16 @@ export const applyOps = (
     if (op.op === "delete") {
       work.set(op.id, newElementWith(work.get(op.id)!, { isDeleted: true }));
     } else if (op.op === "update") {
-      work.set(op.id, updated(work.get(op.id)!, op.props, work, dataKey));
+      work.set(
+        op.id,
+        updated(
+          work.get(op.id)!,
+          op.props,
+          work,
+          dataKey,
+          imagePlan?.fileIds.get(op) as string | undefined,
+        ),
+      );
     }
   }
 

@@ -364,7 +364,7 @@ type AppEventMap = {
 - `mime` is PNG, JPEG, GIF, WebP or SVG; `bytes` is a `Uint8Array` of at most 10 MiB whose first bytes must look like that type.
 - The bytes are hashed (SHA-1, as the editor does). The same picture added twice, or already in the drawing, is stored once; each add is still its own element.
 - The size cap counts the picture's base64 data URL plus the element. A batch that would take the drawing past 90% of 32 MiB is refused with `TOO_LARGE`, nothing written.
-- New images cannot be bound with `{ ref }`; an image already on the canvas can, with `{ id }` (since 0.9.0). `image` is refused in an `update` (add a new image) and in `createDrawing` and the control API for now.
+- New images cannot be bound with `{ ref }`; an image already on the canvas can, with `{ id }` (since 0.9.0). Since 0.25.0 an `update` of an image element may carry `image` (and `width`/`height`) to change its picture in place: id, stacking order, groups, bound arrows, frame, angle and lock stay, and the whole batch is one undo step; on other elements it is refused. `image` is refused in `createDrawing` and the control API for now.
 - An importer's `{ ops }` may contain image ops too.
 - The hashing is asynchronous, then the checks and the write happen in one synchronous step. If the user switched drawings meanwhile, `options.path` rejects with `DRAWING_CHANGED`.
 - Check `ctx.host.api.revision` (0.7.0 or later) before relying on images.

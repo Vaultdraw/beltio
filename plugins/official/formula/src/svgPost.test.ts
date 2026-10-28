@@ -70,3 +70,24 @@ describe("postProcessSvg", () => {
     expect(postProcessSvg("<svg></svg>", "#000").ok).toBe(false);
   });
 });
+
+describe("postProcessSvg colours", () => {
+  const fill = (color: string) => {
+    const r = postProcessSvg(fx("simple"), color);
+    return r.ok ? r.svg : "";
+  };
+  it("keeps hex, names and rgb()/hsl() colours", () => {
+    for (const c of [
+      "#336699",
+      "red",
+      "rgb(200, 10, 10)",
+      "hsl(120 50% 40% / 0.5)",
+    ]) {
+      expect(fill(c)).toContain(c);
+    }
+  });
+  it("falls back for anything else", () => {
+    expect(fill('red" onload="x')).toContain("#1e1e1e");
+    expect(fill("url(#x)")).toContain("#1e1e1e");
+  });
+});

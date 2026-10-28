@@ -6,8 +6,13 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
+/** Hex, a plain name, or rgb()/hsl() with only digits, spaces, commas, dots, percent signs, slashes and signs. */
 const safeColor = (color: string) =>
-  /^(#[0-9a-f]{3,8}|[a-z]{3,20})$/i.test(color) ? color : DEFAULT_COLOR;
+  /^(#[0-9a-f]{3,8}|[a-z]{3,20}|(?:rgb|hsl)a?\(\s*[\d.%\s,/+-]{1,60}\))$/i.test(
+    color,
+  )
+    ? color
+    : DEFAULT_COLOR;
 
 export type PostProcessed =
   | { ok: true; svg: string; width: number; height: number }

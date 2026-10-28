@@ -57,8 +57,9 @@ export function selectedFormula(
 }
 
 /**
- * Draws the edited formula in place of the old one (same centre, same scale, angle, opacity and
- * link) in one undo step. The element is replaced, so it gets a new id, which this resolves to.
+ * Draws the edited formula on the same element (same centre and scale) in one undo step. The
+ * picture changes in place (API 0.25.0), so the id, z-order, groups, arrows, angle, opacity and
+ * link stay. Resolves to the element id.
  */
 export async function replaceFormula(
   scene: Scene,
@@ -75,24 +76,20 @@ export async function replaceFormula(
   const height = r.height * s;
   const cx = el.x + el.width / 2;
   const cy = el.y + el.height / 2;
-  const { ids } = await scene.batch([
-    { op: "delete", id },
+  await scene.batch([
     {
-      op: "add",
-      element: {
-        type: "image",
+      op: "update",
+      id,
+      props: {
         x: cx - width / 2,
         y: cy - height / 2,
         width,
         height,
-        angle: el.angle,
-        opacity: el.opacity,
-        ...(el.link ? { link: el.link } : {}),
         image: picture(r.svg),
         data: toFormulaData(r) as never,
       },
     },
   ]);
-  scene.scrollTo(ids[0]);
-  return ids[0];
+  scene.scrollTo(id);
+  return id;
 }

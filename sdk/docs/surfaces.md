@@ -13,7 +13,7 @@ Plugins can add small pieces of interface. Each is declared in `plugin.toml`, so
 | [Opening a panel or view](#layout) | none | `ctx.views.open` | 0.13.0 |
 | [Overlay over the drawing area](#overlays) | none | `ctx.overlays.open` | 0.17.0 |
 
-## Migration (0.9.0 to 0.24.0)
+## Migration (0.9.0 to 0.25.0)
 
 Everything here is additive: a plugin written for 0.9.0 runs unchanged. To use a surface in a plugin that must also run on an older app, ask for the feature and fall back:
 
@@ -38,6 +38,7 @@ if (ctx.host.has("statusBar")) ctx.statusBar.set("clock", { text });
 | 0.22.0 | `ctx.methods`, `[[contributes.methods]]`, permission `control` | `ctx.host.has("methods")` |
 | 0.23.0 | `ctx.diagrams.mermaidToElements` (the editor's Mermaid converter, as scene ops) | `ctx.host.has("diagrams")` |
 | 0.24.0 | `ctx.math` (TeX renderer), `ctx.scene.selection`, `ctx.scene.currentStrokeColor`, modal overlays | `ctx.host.has("math")` |
+| 0.25.0 | `scene.batch` `update` can change an image's picture in place (`image` prop); `ctx.shapes.update` and the formula plugin keep the element id | `ctx.host.revision >= "0.25.0"` |
 
 An older app refuses a `plugin.toml` with a table it does not know (`status_bar`, `views`, `menus`, `toolbar`, `tools`, `shapes`, `methods`), so set `min_app` to the app version that ships the revision you use; `vaultdraw-plugin check` warns when it is lower.
 
@@ -271,10 +272,10 @@ ctx.shapes.register("badge", {
   },
 });
 await ctx.shapes.insert("badge", { label: "Hi" }, { x: 0, y: 0 }); // resolves to the element id
-await ctx.shapes.update(id, { label: "Done" });                    // draws again, new id
+await ctx.shapes.update(id, { label: "Done" });                    // draws again, same element (since 0.25.0)
 ```
 
-- **The file does not change.** A shape is an ordinary image element (an SVG picture) with the shape name and its props as the plugin's element data (at most 4 KiB). Without the plugin the drawing opens and shows the last picture; with it, `update` draws the shape again.
+- **The file does not change.** A shape is an ordinary image element (an SVG picture) with the shape name and its props as the plugin's element data (at most 4 KiB). Without the plugin the drawing opens and shows the last picture; with it, `update` draws the shape again on the same element: the id, stacking order, groups, bound arrows and lock stay (before 0.25.0 it replaced the element).
 - **Safe.** `render` returns one SVG document of at most 200 KiB. It is drawn as an image, so it never runs script or loads anything.
 - **Not live.** A shape is drawn when you insert or update it, not on every frame. A resize scales the picture; call `update` to draw it at the new size.
 - **Limits.** At most 8 shapes per plugin.

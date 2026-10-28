@@ -113,6 +113,24 @@ test.describe("formula", () => {
     );
     await expect.poll(async () => (await images(page)).length).toBe(1);
     await focusCanvas(page);
+    // Give it a group and a bound arrow: the edit must keep both (and the id).
+    await page.evaluate(
+      ([code, id]) => {
+        const app = (0, eval)(code as string);
+        app.updateScene({
+          elements: app.scene.getElementsIncludingDeleted().map((e: any) =>
+            e.id === id
+              ? {
+                  ...e,
+                  groupIds: ["g-keep"],
+                  boundElements: [{ id: "arrow-keep", type: "arrow" }],
+                }
+              : e,
+          ),
+        });
+      },
+      [appHandle, (await images(page))[0].id] as const,
+    );
     const before = (await images(page))[0];
     const c0 = centreOf(before);
     await dblclickElement(page, before);
@@ -131,8 +149,20 @@ test.describe("formula", () => {
       .not.toBe(before.fileId);
     s = await scene(page);
     const after = s.elements.find((e) => e.type === "image")!;
-    // The plugin draws the edit as a replacement element (new id, same centre, one undo step).
-    expect(after.id).not.toBe(before.id);
+    // The picture changes in place: the same id, still in its group, the arrow still bound.
+    expect(after.id).toBe(before.id);
+    const raw = await page.evaluate(
+      ([code, id]) => {
+        const app = (0, eval)(code as string);
+        const e = app.scene
+          .getNonDeletedElements()
+          .find((x: any) => x.id === id);
+        return { groupIds: e.groupIds, boundElements: e.boundElements };
+      },
+      [appHandle, after.id] as const,
+    );
+    expect(raw.groupIds).toEqual(["g-keep"]);
+    expect(raw.boundElements).toEqual([{ id: "arrow-keep", type: "arrow" }]);
     expect(after.customData.latex.source).toBe(
       String.raw`\sum_{n=1}^{\infty} \frac1{n^2}`,
     );
