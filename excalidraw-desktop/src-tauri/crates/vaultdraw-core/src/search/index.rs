@@ -752,6 +752,19 @@ mod unit_tests {
     }
 
     #[test]
+    fn composed_and_decomposed_names_are_both_found_without_duplicates() {
+        // "é" as one char (NFC) and as e + combining acute (NFD), in different folders.
+        let idx = index(&[("a/caf\u{e9}.excalidraw", &["x"]), ("b/cafe\u{301}.excalidraw", &["y"]), ("c/zzz.excalidraw", &["z"])]);
+        for query in ["\u{e9}", "e\u{301}", "caf\u{e9}", "cafe\u{301}"] {
+            let (hits, total) = idx.query(query, Scope::Names, 10);
+            let mut found = paths(&hits);
+            found.sort();
+            assert_eq!(total, 2, "query {query:?}");
+            assert_eq!(found, vec!["a/caf\u{e9}.excalidraw", "b/cafe\u{301}.excalidraw"], "query {query:?}");
+        }
+    }
+
+    #[test]
     fn cjk_substring_and_dakuten() {
         let idx = index(&[("a.excalidraw", &["数据库设计", "がっこう"])]);
         assert_eq!(idx.query("据库", Scope::Content, 5).1, 1);
