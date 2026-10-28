@@ -5,7 +5,7 @@ api = 0
 main = "main.js"
 description = "Turn a Markdown note, or a whole Obsidian vault, into page-mode drawings"
 author = "Vaultdraw"
-permissions = ["folders.import"]
+permissions = ["folders.import", "vault.read"]
 
 [[contributes.importers]]
 id = "md"

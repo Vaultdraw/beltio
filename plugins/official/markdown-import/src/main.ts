@@ -6,6 +6,7 @@
 import { definePlugin } from "@vaultdraw/api";
 
 import { registerCommands } from "./commands";
+import { chooseImportFolder } from "./obsidian/freshFolder";
 import {
   importObsidianVault,
   layoutNoteStream,
@@ -273,10 +274,18 @@ const plugin: Plugin = definePlugin({
         if (!source) {
           return;
         }
-        const target = await ctx.folders.pickTarget(
+        // The folder is decided before any write: a repeated import goes to
+        // "<Vault> (import N)" whenever the folder already holds something.
+        const folder =
           destination === "newVault"
+            ? undefined
+            : await chooseImportFolder(source.name, (dir) =>
+                ctx.vault.list(dir),
+              );
+        const target = await ctx.folders.pickTarget(
+          folder === undefined
             ? { kind: "newVault", title: "Where to create the new vault" }
-            : { kind: "vaultFolder", path: source.name },
+            : { kind: "vaultFolder", path: folder },
         );
         if (!target) {
           return;
