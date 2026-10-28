@@ -298,6 +298,33 @@ const n = ctx.import("not-an-import");
     const code = `// import x from "nope";\n/* import y from "nope2"; */\nexport const a = "b";\nexport default { from: "c" };\n`;
     expect(scanImports(code)).toEqual([]);
   });
+
+  it("ignores import and export words inside string and template literals", () => {
+    const code = [
+      `const a = "Couldn't write the export";`,
+      `const b = 'the import "lodash" failed';`,
+      'const c = `export from "chart.js"`;',
+      // eslint-disable-next-line no-template-curly-in-string -- literal source text under test
+      "const d = `${ok ? 'export' : \"import\"}`;",
+      "const e = /import x from 'nope'/g;",
+      'const f = a / 2 // export "nope3"',
+      "const g = 'it\\'s export';",
+    ].join("\n");
+    expect(scanImports(code)).toEqual([]);
+  });
+
+  it("still finds real imports next to literals that look like them", () => {
+    const code = [
+      `const msg = "Couldn't write the export";`,
+      `import { z } from "lodash";`,
+      `const url = "https://x.test/*not a comment*/";`,
+      `const m = await import("chart.js");`,
+      `export * from "react";`,
+    ].join("\n");
+    expect(scanImports(code).sort()).toEqual(
+      ["chart.js", "lodash", "react"].sort(),
+    );
+  });
 });
 
 describe("checkPlugin", () => {
@@ -340,6 +367,26 @@ describe("checkPlugin", () => {
     expect(r.r.errors.map((e) => e.file).sort()).toEqual([
       "main.js",
       "util.js",
+    ]);
+  });
+
+  it("accepts a message that ends in the word export", () => {
+    const dir = makePlugin({
+      "main.js":
+        'export default { activate(ctx) { ctx.notify("Couldn\'t write the export"); } };\n',
+    });
+    expect(findings(dir).errors).toEqual([]);
+  });
+
+  it("still rejects a real export from or dynamic import of an unshared module", () => {
+    const dir = makePlugin({
+      "main.js":
+        'import "./util.js";\nexport * from "lodash";\nexport default { x: 1 };\n',
+      "util.js": 'export const y = await import("chart.js");\n',
+    });
+    expect(findings(dir).errors).toEqual([
+      "imports-unshared",
+      "imports-unshared",
     ]);
   });
 
