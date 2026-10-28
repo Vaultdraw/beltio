@@ -57,6 +57,13 @@ import type { AppState, BinaryFiles } from "../types";
 import type { Drawable } from "roughjs/bin/core";
 import type { RoughSVG } from "roughjs/bin/svg";
 
+const SAFE_IMAGE_DATA_URL =
+  /^data:image\/(?:png|jpe?g|gif|webp|avif|bmp|svg\+xml)(?:;[\w.=-]+)*;base64,/i;
+
+/** True for `data:image/...;base64,` only: the one form an exported SVG may carry. */
+export const isSafeImageDataURL = (url: unknown): url is string =>
+  typeof url === "string" && SAFE_IMAGE_DATA_URL.test(url);
+
 const roughSVGDrawWithPrecision = (
   rsvg: RoughSVG,
   drawable: Drawable,
@@ -605,7 +612,12 @@ const renderElementToSvg = (
           symbol.id = symbolId;
 
           const image = svgRoot.ownerDocument.createElementNS(SVG_NS, "image");
-          image.setAttribute("href", fileData.dataURL);
+          // A drawing from outside is untrusted: only an embedded image may load. Any other
+          // address (https:, file:, ...) would make the exported SVG fetch it when opened, so
+          // that image stays an empty placeholder.
+          if (isSafeImageDataURL(fileData.dataURL)) {
+            image.setAttribute("href", fileData.dataURL);
+          }
           image.setAttribute("preserveAspectRatio", "none");
 
           if (element.crop || !reuseImages) {
