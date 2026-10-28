@@ -1,5 +1,3 @@
-import { userError } from "./userError";
-
 import {
   memo,
   useCallback,
@@ -38,6 +36,8 @@ import {
   FOCUS_TREE_COMMAND_ID,
 } from "../commands/listCommands";
 import { focusCanvasIfIdle } from "../palette/focus";
+
+import { userError } from "./userError";
 
 import {
   IconChevronDown,

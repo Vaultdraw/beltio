@@ -360,6 +360,7 @@ const openSettings = async (page: Page) => {
 };
 
 for (const theme of ["light", "dark"] as const) {
+  // eslint-disable-next-line no-loop-func
   test(`crawler: every visible control, ${theme} theme`, async ({ page }) => {
     test.setTimeout(540_000);
     page.setDefaultTimeout(8000);
