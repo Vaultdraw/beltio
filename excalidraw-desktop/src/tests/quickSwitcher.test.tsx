@@ -377,7 +377,9 @@ describe("QuickSwitcher", () => {
 
   it("shows a message when listing fails but items still work", async () => {
     const h = await setup({ search: fakeSearch([], new Error("boom")) });
-    expect(screen.getByRole("status")).toHaveTextContent("boom");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Couldn't list the drawings",
+    );
     type(">settings");
     key("Enter");
     expect(h.onRunItem.mock.calls[0][0].key).toBe("command:settings.open");

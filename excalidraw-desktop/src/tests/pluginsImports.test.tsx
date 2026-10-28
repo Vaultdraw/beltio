@@ -52,8 +52,6 @@ describe("Plugins page: imports", () => {
     act(() => setImporterOverrides({ txt: "b" }));
     expect(screen.getByRole("alert").textContent).toContain("b imports it");
     act(() => setImporterOverrides({ txt: "" }));
-    expect(screen.getByRole("alert").textContent).toContain(
-      "not imported by plugins",
-    );
+    expect(screen.getByRole("alert").textContent).toContain("aren’t imported");
   });
 });

@@ -244,7 +244,8 @@ describe("LinksDock", () => {
     await screen.findByRole("tab", { name: /Backlinks \(0\)/ });
     expect(screen.getByText("No backlinks")).toBeInTheDocument();
     rerender(<LinksDock {...props} links={failing} path="Other.excalidraw" />);
-    await screen.findByText("boom");
+    await screen.findByText("Something went wrong.");
+    expect(screen.queryByText("boom")).toBeNull();
   });
 
   it("refreshes within the frame budget (200 rows, no IPC cost)", async () => {

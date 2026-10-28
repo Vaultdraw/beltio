@@ -110,7 +110,7 @@ describe("accent, zoom and confirm-delete controls", () => {
     expect(getPreferences(window).zoom).toBe(130);
     expect(screen.getByText("130 %")).toBeInTheDocument();
     fireEvent.click(
-      screen.getByRole("button", { name: "Reset Interface Zoom" }),
+      screen.getByRole("button", { name: "Reset Interface zoom" }),
     );
     expect(getPreferences(window).zoom).toBe(100);
   });
@@ -144,7 +144,7 @@ describe("per-vault rows", () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", {
-        name: "Reset Navigator Sort Order to global",
+        name: "Reset Navigator sort order to global",
       }),
     ).toBeNull();
 
@@ -162,7 +162,7 @@ describe("per-vault rows", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Reset Navigator Sort Order to global",
+        name: "Reset Navigator sort order to global",
       }),
     );
     await waitFor(() =>
