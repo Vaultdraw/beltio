@@ -4,7 +4,8 @@
  * is clipped, and arrow keys move through the items. One table of menus x
  * three themes; add a menu with one row.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "../fixture";
 
 import { openDrawing, openVault, trackErrors } from "../helpers";
 

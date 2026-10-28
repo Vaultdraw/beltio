@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "../fixture";
 
 import { clickMainMenuItem, openVault, trackErrors } from "../helpers";
 import { runPaletteCommand } from "../historyHelpers";
