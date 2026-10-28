@@ -224,6 +224,8 @@ export const deriveTokens = (
     "--vault-text-muted": textMuted,
     "--vault-text-faint": textFaint,
     "--vault-primary": primary,
+    // Alias used by notices and plugins (frames, favourites).
+    "--vault-accent": primary,
     "--vault-primary-hover": primaryHover,
     "--vault-primary-active": primaryActive,
     "--vault-primary-light": primaryLight,

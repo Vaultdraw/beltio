@@ -32,7 +32,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-radius: var(--vault-radius-md, 6px);
+  border-radius: var(--vd-radius-control);
   background: var(--vault-surface-active, rgba(128, 128, 128, 0.12));
 }
 

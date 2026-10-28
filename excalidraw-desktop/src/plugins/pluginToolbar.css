@@ -33,7 +33,7 @@
 }
 
 .plugin-toolbar__button[aria-pressed="true"] {
-  background: var(--vault-selected, var(--vault-hover));
+  background: var(--vault-sel);
   border-color: var(--vault-border);
 }
 
@@ -42,6 +42,6 @@
 }
 
 .plugin-toolbar__button:focus-visible {
-  outline: 2px solid var(--vault-focus, currentColor);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }

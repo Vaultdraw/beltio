@@ -57,6 +57,8 @@
   /* Fallbacks for the computed colour tokens (light Default). */
   --vault-on-danger: #ffffff;
   --vault-accent-text: #1d1d20;
+  /* Alias of the accent fill; tokens.ts writes it per theme. */
+  --vault-accent: var(--vault-primary, #6965db);
   --vault-hover: rgba(29, 29, 32, 0.05);
   --vault-chip: rgba(29, 29, 32, 0.08);
   --vault-chip-strong: rgba(29, 29, 32, 0.14);

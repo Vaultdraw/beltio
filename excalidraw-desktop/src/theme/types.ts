@@ -116,6 +116,7 @@ export const TOKEN_NAMES = [
   "--vault-text-muted",
   "--vault-text-faint",
   "--vault-primary",
+  "--vault-accent",
   "--vault-primary-hover",
   "--vault-primary-active",
   "--vault-primary-light",

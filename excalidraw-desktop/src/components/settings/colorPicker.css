@@ -101,7 +101,7 @@
 .vault-cp .vault-cp__hex {
   flex: none;
   width: 84px;
-  font-family: var(--vault-font-mono, monospace);
+  font-family: var(--vd-mono);
 }
 
 .vault-cp:disabled .vault-cp__swatch {
