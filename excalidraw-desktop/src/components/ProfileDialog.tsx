@@ -27,9 +27,7 @@ export const ProfileDialog = ({ mode, onClose }: Props) => {
   const { active, profiles } = getProfiles();
   const current = active ?? DEFAULT_PROFILE;
   const [name, setName] = useState("");
-  const [from, setFrom] = useState(
-    mode === "duplicate" ? current : "",
-  );
+  const [from, setFrom] = useState(mode === "duplicate" ? current : "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [toDelete, setToDelete] = useState<string | null>(null);
@@ -77,7 +75,9 @@ export const ProfileDialog = ({ mode, onClose }: Props) => {
         }
       >
         {names.length === 0 ? (
-          <p>There are no profiles yet. Use Profile: New profile to make one.</p>
+          <p>
+            There are no profiles yet. Use Profile: New profile to make one.
+          </p>
         ) : (
           <ul className="vault-profile-list" aria-label="Profiles">
             {names.map((n) => (
