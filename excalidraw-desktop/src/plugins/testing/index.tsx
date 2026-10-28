@@ -50,12 +50,17 @@ import { cancelImports } from "../importerMap";
 import { setWorkspaceBridge } from "../workspaceBridge";
 import { setPluginSetting } from "../settings/pluginSettings";
 
+import { FakePdfBridge, makePages } from "../../tests/fakePdfBridge";
+
 import { createFakeScene, type FakeScene } from "./fakeScene";
 
 import type {
   Json,
   MathRequest,
   MathResult,
+  PdfImportSettings,
+  PdfPageSize,
+  PdfRenderOptions,
   NewElement,
   MenuTarget,
   ToolPoint,
@@ -166,6 +171,28 @@ export interface FakeWorkspace {
   revealed(): string[];
 }
 
+/** What `ctx.pdf` sees: documents made up from page sizes (see sdk/api/testing/types.ts). */
+export interface FakePdf {
+  /** The document the next `pick()` returns (null: the user cancels). `open()` uses its pages too. */
+  nextPick: { name: string; pages: PdfPageSize[] } | null;
+  /** Non-null: documents open `locked` until `unlock` gets this password. */
+  password: string | null;
+  /** An error code (such as `PDF_INVALID`) that `pick` and `open` throw. */
+  openError: string | null;
+  /** The bytes `render` returns (default: a drawn page). */
+  renderBytes: (index: number, options: PdfRenderOptions) => Uint8Array;
+  /** 0-based pages whose render fails with `PDF_PAGE_FAILED`. */
+  failPages: Set<number>;
+  /** Changes what `ctx.pdf.settings()` returns (the `[pdf_import]` values). */
+  setSettings(patch: Partial<PdfImportSettings>): void;
+  /** Every render, in order. */
+  renders: { name: string; index: number; options: PdfRenderOptions }[];
+  /** Names of the documents opened, in order. */
+  opened: string[];
+  /** Ids of the documents closed. */
+  closed: number[];
+}
+
 /** What `ctx.folders` sees: the fake backend's sources and targets. */
 export interface FakeFolders {
   /** What the next `folders.pickSource` returns (null: the user cancels): files by relative path, text or bytes. */
@@ -262,6 +289,7 @@ export interface TestPlugin {
   vault: FakeVault;
   workspace: FakeWorkspace;
   folders: FakeFolders;
+  pdf: FakePdf;
   /**
    * Drops a file on the drawing as the app does: finds the importer by
    * extension, runs the real import runner and resolves to the scene write
@@ -536,6 +564,71 @@ export async function boot(
       })),
   };
 
+  const bridge = new FakePdfBridge({ pages: makePages(1) });
+  backend.pdf = bridge;
+  const docName = (token: number) =>
+    bridge.names.get(token) ?? `document ${token}`;
+  const pdf: FakePdf = {
+    get nextPick(): { name: string; pages: PdfPageSize[] } | null {
+      return null;
+    },
+    set nextPick(next) {
+      bridge.nextPick = next ? bridge.makeDoc(next.name, next.pages) : null;
+      if (next) {
+        bridge.defaultPages = next.pages;
+      }
+    },
+    get password() {
+      return bridge.password;
+    },
+    set password(value) {
+      bridge.password = value;
+    },
+    get openError() {
+      return bridge.openError;
+    },
+    set openError(value) {
+      bridge.openError = value;
+    },
+    get renderBytes() {
+      return bridge.renderBytes!;
+    },
+    set renderBytes(fn) {
+      bridge.renderBytes = fn;
+    },
+    get failPages() {
+      return bridge.failPages;
+    },
+    set failPages(set) {
+      bridge.failPages = set;
+    },
+    setSettings(patch) {
+      updatePreferences({
+        ...(patch.maxSide !== undefined && { pdfMaxSide: patch.maxSide }),
+        ...(patch.format !== undefined && { pdfFormat: patch.format }),
+        ...(patch.quality !== undefined && { pdfQuality: patch.quality }),
+        ...(patch.lockPages !== undefined && { pdfLockPages: patch.lockPages }),
+        ...(patch.warnPages !== undefined && { pdfWarnPages: patch.warnPages }),
+        ...(patch.pixelBudgetMp !== undefined && {
+          pdfPixelBudgetMp: patch.pixelBudgetMp,
+        }),
+      });
+    },
+    get renders() {
+      return bridge.renders.map((r) => ({
+        name: docName(r.token),
+        index: r.index,
+        options: r.opts,
+      }));
+    },
+    get opened() {
+      return [...new Set(bridge.opened)].map(docName);
+    },
+    get closed() {
+      return bridge.closes;
+    },
+  };
+
   const handler = (full: string) => {
     const h = getRegisteredHandler(full);
     if (!h) {
@@ -725,6 +818,7 @@ export async function boot(
       revealed: () => [...revealed],
     },
     folders,
+    pdf,
     async import(fileName, content, at) {
       const match = findImporter(fileName);
       const active = getActiveScene();

@@ -22,7 +22,8 @@ import {
   opsLimit,
 } from "../../../sdk/api/shared/sceneRules";
 import { PluginApiError } from "../../../sdk/api/shared/rules";
-import { currentDrawingBytes } from "../pdfImport/budget";
+
+import { currentDrawingBytes } from "./drawingBytes";
 
 import type { SceneApi, SceneOp } from "./types";
 

@@ -33,8 +33,11 @@ type SceneEl = {
   locked?: boolean;
   isDeleted?: boolean;
   fileId?: string;
-  customData?: { pdfImport?: { name: string; page: number } };
+  customData?: Record<string, { name: string; page: number } | undefined>;
 };
+
+/** The page an imported picture came from: the plugin keeps it under its data key. */
+const source = (e: SceneEl) => e.customData?.["plugins.pdf-import"];
 
 const dialog = (page: Page) => page.getByRole("dialog", { name: "Import PDF" });
 
@@ -126,13 +129,11 @@ test("palette command: dialog shows name and pages, Import adds 3 locked images 
 
   const images = await waitForImages(page, 3);
   const { json } = await scene(page);
-  images.sort(
-    (a, b) => a.customData!.pdfImport!.page - b.customData!.pdfImport!.page,
-  );
-  expect(images.map((e) => e.customData?.pdfImport?.page)).toEqual([1, 2, 3]);
+  images.sort((a, b) => source(a)!.page - source(b)!.page);
+  expect(images.map((e) => source(e)?.page)).toEqual([1, 2, 3]);
   for (const e of images) {
     expect(e.locked).toBe(true);
-    expect(e.customData?.pdfImport?.name).toBe("sample.pdf");
+    expect(source(e)?.name).toBe("sample.pdf");
     const file = json.files[e.fileId!];
     expect(file.dataURL).toMatch(/^data:image\/jpeg/);
   }
@@ -204,9 +205,7 @@ test("page range 2-3 imports two pages; an invalid range disables Import with an
   await expect(d).toContainText("2 pages");
   await importBtn.click();
   const images = await waitForImages(page, 2);
-  expect(images.map((e) => e.customData?.pdfImport?.page).sort()).toEqual([
-    2, 3,
-  ]);
+  expect(images.map((e) => source(e)?.page).sort()).toEqual([2, 3]);
 });
 
 test("cancel during a slow import commits nothing and closes the token", async ({
@@ -273,7 +272,7 @@ test("encrypted PDF shows the password message and no dialog", async ({
   await seedAndOpen(page, DRAWING);
   await prepare(page, { openError: "PDF_ENCRYPTED" });
   await runCommand(page, COMMAND);
-  await expect(page.getByRole("alert")).toContainText(/password-protected/);
+  await expect(page.locator(".vd-toast")).toContainText(/password-protected/);
   await expect(dialog(page)).toHaveCount(0);
   expect((await scene(page)).images).toHaveLength(0);
 });
@@ -328,9 +327,7 @@ test("a page that fails to render is skipped and reported", async ({
     /Imported 2 pages.*1 page could not be rendered \(2\)/,
   );
   const images = await waitForImages(page, 2);
-  expect(images.map((e) => e.customData?.pdfImport?.page).sort()).toEqual([
-    1, 3,
-  ]);
+  expect(images.map((e) => source(e)?.page).sort()).toEqual([1, 3]);
   // no hole: the two pages are stacked one after the other
   images.sort((a, b) => a.y - b.y);
   expect(images[1].y).toBeLessThan(images[0].y + images[0].height + 60);
@@ -453,5 +450,43 @@ test.describe("read-only vault", () => {
     await expect(item).toBeDisabled();
     await item.click({ force: true }).catch(() => {});
     await expect(dialog(page)).toHaveCount(0);
+  });
+});
+
+test.describe("extension off", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      const key = "excalidraw-vault-preferences-v1";
+      if (!window.sessionStorage.getItem("pdf-off-seeded")) {
+        window.localStorage.setItem(
+          key,
+          JSON.stringify({ extPdfImport: false }),
+        );
+        window.sessionStorage.setItem("pdf-off-seeded", "1");
+      }
+    });
+    await openVault(page);
+  });
+
+  test("no command, no menu item, no picker entry and no plugin code loaded", async ({
+    page,
+  }) => {
+    const requests: string[] = [];
+    page.on("request", (r) => requests.push(r.url()));
+    await seedAndOpen(page, DRAWING);
+    await page.keyboard.press("Meta+Shift+KeyP");
+    const palette = page.getByRole("dialog", { name: "Command palette" });
+    await expect(palette).toBeVisible();
+    await page.keyboard.type("Import: PDF");
+    await page.waitForTimeout(300);
+    await expect(
+      palette.getByRole("option").filter({ hasText: COMMAND }),
+    ).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await page.getByTestId("main-menu-trigger").click();
+    await expect(
+      page.getByRole("menuitem", { name: "Import PDF…" }),
+    ).toHaveCount(0);
+    expect(requests.filter((u) => u.includes("pdf-import"))).toEqual([]);
   });
 });

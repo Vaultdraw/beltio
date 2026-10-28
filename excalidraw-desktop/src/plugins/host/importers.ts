@@ -37,7 +37,7 @@ import {
   resultOps,
 } from "../../../../sdk/api/shared/importers";
 
-import { OFFICIAL_PLUGINS } from "../officialPlugins";
+import { importerMaxBytes, OFFICIAL_PLUGINS } from "../officialPlugins";
 
 import { ensureActive, getRuntime } from "./activation";
 import { errorText, logLine, reportPluginError } from "./errors";
@@ -60,8 +60,9 @@ async function runOne(item: ImportItem, target: ImportTarget): Promise<void> {
   const { file, match } = item;
   const { pluginId, importerId } = match;
   const fileName = baseName(file.name);
-  if (file.size > MAX_IMPORT_BYTES) {
-    toast(importTooBigMessage(fileName));
+  const limit = importerMaxBytes(pluginId, importerId, MAX_IMPORT_BYTES);
+  if (file.size > limit) {
+    toast(importTooBigMessage(fileName, limit));
     return;
   }
   // Set up before loading the plugin, so Cancel and a drawing switch during

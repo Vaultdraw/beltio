@@ -676,6 +676,16 @@ export function createSceneModel(
           if (readOnly) {
             throw refusal("the drawing is read-only", "READ_ONLY");
           }
+          const pageCount = options?.pageCount;
+          if (
+            pageCount !== undefined &&
+            !(Number.isInteger(pageCount) && pageCount >= 1 && pageCount <= 500)
+          ) {
+            throw refusal(
+              "pageCount must be a whole number from 1 to 500",
+              "INVALID_ARGUMENT",
+            );
+          }
           const hashes = await hashImages(ops);
           if (path === null) {
             throw refusal("no drawing is open", "NOT_FOUND");
@@ -728,6 +738,28 @@ export function createSceneModel(
               ),
         currentStrokeColor: () =>
           (appState.currentItemStrokeColor as string | undefined) ?? "#1e1e1e",
+        placePages(sizes) {
+          // No page mode in the mock: boxes stack below the content, 40 px apart.
+          const els = path === null ? [] : live();
+          let y = els.length
+            ? Math.max(...els.map((e) => e.y + e.height)) + 40
+            : 0;
+          const x = els.length ? Math.min(...els.map((e) => e.x)) : 0;
+          const rects = sizes.map((s) => {
+            const rect = { x, y, width: s.width, height: s.height };
+            y += s.height + 40;
+            return rect;
+          });
+          return { rects, pageCount: null, firstPage: null, maxPages: null };
+        },
+        sizeBytes: () =>
+          path === null
+            ? 0
+            : JSON.stringify(live()).length +
+              [...files.values()].reduce(
+                (n, f) => n + Math.ceil((f.bytes.length * 4) / 3) + 30,
+                0,
+              ),
         scrollTo(id) {
           if (path === null || typeof id !== "string") {
             return;

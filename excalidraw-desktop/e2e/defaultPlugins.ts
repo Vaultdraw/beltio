@@ -4,6 +4,7 @@
 import { parseToml } from "../../sdk/cli/src/toml.mjs";
 import formulaToml from "../../plugins/official/formula/plugin.toml?raw";
 import galleryToml from "../../plugins/official/gallery/plugin.toml?raw";
+import pdfImportToml from "../../plugins/official/pdf-import/plugin.toml?raw";
 import { setPluginsBackend } from "../src/plugins/host/backend";
 import {
   createFakeBackend,
@@ -11,8 +12,9 @@ import {
 } from "../src/plugins/host/fakeBackend";
 
 /**
- * No ?plugins: the app's default official plugins (the gallery and formula) can be listed by the fake backend,
- * so their stubs work. Nothing starts until one is used (the host loads on first use).
+ * No ?plugins: the app's default official plugins (the gallery, formula and the PDF import) can be listed by
+ * the fake backend, so their stubs work. Nothing starts until one is used (the host loads on first use). The
+ * PDF rows are served by the harness's in-memory renderer (`window.__pdfBridge`, see harnessMain.tsx).
  */
 export async function installDefaultBackend(win: Window): Promise<void> {
   const { bootPlugins } = await import("../src/plugins/boot");
@@ -24,6 +26,7 @@ export async function installDefaultBackend(win: Window): Promise<void> {
       version: doc.version,
       source: "bundled",
       dataKey: doc.data_key ?? null,
+      permissions: doc.permissions ?? [],
       contributes: {
         commands: doc.contributes.commands.map((x: any) => ({
           id: x.id,
@@ -40,6 +43,11 @@ export async function installDefaultBackend(win: Window): Promise<void> {
           title: x.title ?? null,
           kinds: x.kinds ?? [],
         })),
+        importers: (doc.contributes.importers ?? []).map((x: any) => ({
+          id: x.id,
+          title: x.title,
+          extensions: x.extensions,
+        })),
         settings: [],
       },
     });
@@ -47,14 +55,15 @@ export async function installDefaultBackend(win: Window): Promise<void> {
   const infos = [
     infoOf("gallery", galleryToml),
     infoOf("formula", formulaToml),
+    infoOf("pdf-import", pdfImportToml),
   ];
-  setPluginsBackend(
-    createFakeBackend(
-      infos,
-      (id, path) => `/e2e-plugins/${id}/${path}`,
-      (path, scene) =>
-        (win as any).__vaultRepo?.seedDrawing(path, JSON.stringify(scene)),
-    ),
+  const backend = createFakeBackend(
+    infos,
+    (id, path) => `/e2e-plugins/${id}/${path}`,
+    (path, scene) =>
+      (win as any).__vaultRepo?.seedDrawing(path, JSON.stringify(scene)),
   );
+  backend.pdf = (win as any).__pdfBridge;
+  setPluginsBackend(backend);
   bootPlugins(win); // the stubs, as main.tsx does in the app
 }

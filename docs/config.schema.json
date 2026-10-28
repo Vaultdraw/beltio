@@ -1562,7 +1562,8 @@
             "gallery",
             "graph",
             "mermaid",
-            "formula"
+            "formula",
+            "pdf-import"
           ],
           "type": "array",
           "items": {

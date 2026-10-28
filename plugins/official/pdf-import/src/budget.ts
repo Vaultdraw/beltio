@@ -1,20 +1,11 @@
 /**
  * Import budgets: decoded pixels (adaptive resolution) and drawing bytes
- * (the native 32 MiB cap). Pure. Byte sizes are rough estimates; the importer
+ * (the 32 MiB cap). Pure. Byte sizes are rough estimates; the importer
  * measures the real encoded size per page.
  */
-import { getNonDeletedElements } from "@excalidraw/element";
+import { DRAWING_BYTES_HEADROOM, LIMITS, MAX_DRAWING_BYTES } from "./limits";
 
-import type { BinaryFiles } from "@excalidraw/excalidraw/types";
-import type { ExcalidrawElement } from "@excalidraw/element/types";
-
-import {
-  DRAWING_BYTES_HEADROOM,
-  MAX_DRAWING_BYTES,
-  PDF_IMPORT_LIMITS,
-} from "./types";
-
-import type { PdfImportSettings, PdfPageInfo } from "./types";
+import type { PdfImportSettings, PdfPageSize } from "@vaultdraw/api";
 
 /** Rough encoded size of a JPEG page at quality 0.85, bytes per pixel. */
 export const JPEG_BYTES_PER_PX = 0.12;
@@ -24,7 +15,7 @@ export const PNG_BYTES_PER_PX = 0.5;
 /** Element JSON per imported page. */
 export const ELEMENT_JSON_BYTES = 250;
 
-const ratio = (p: PdfPageInfo) =>
+const ratio = (p: PdfPageSize) =>
   Math.max(p.widthPt, p.heightPt) /
   Math.max(1, Math.min(p.widthPt, p.heightPt));
 
@@ -35,7 +26,7 @@ const median = (values: number[]) => {
 
 /** Effective long side so that all pages together stay within the pixel budget. */
 export const planImportSides = (
-  pages: readonly PdfPageInfo[],
+  pages: readonly PdfPageSize[],
   indices: readonly number[],
   settings: PdfImportSettings,
 ): number => {
@@ -44,15 +35,12 @@ export const planImportSides = (
   const fromBudget = Math.floor(
     Math.sqrt(((settings.pixelBudgetMp * 1e6) / n) * r),
   );
-  return Math.min(
-    settings.maxSide,
-    Math.max(PDF_IMPORT_LIMITS.minSide, fromBudget),
-  );
+  return Math.min(settings.maxSide, Math.max(LIMITS.minSide, fromBudget));
 };
 
 /** Size of a page's long side `side` in pixels: [w, h]. */
 export const pagePixels = (
-  page: PdfPageInfo,
+  page: PdfPageSize,
   side: number,
 ): [number, number] => {
   const long = Math.max(page.widthPt, page.heightPt, 1);
@@ -90,7 +78,7 @@ export const estimateImport = ({
   settings,
   currentBytes,
 }: {
-  pages: readonly PdfPageInfo[];
+  pages: readonly PdfPageSize[];
   indices: readonly number[];
   settings: PdfImportSettings;
   currentBytes: number;
@@ -121,16 +109,4 @@ export const estimateImport = ({
     pagesThatFit: fit,
     decodedBytes: decoded,
   };
-};
-
-/** Approximate size of the drawing file: element JSON plus file data URLs. */
-export const currentDrawingBytes = (
-  elements: readonly ExcalidrawElement[],
-  files: BinaryFiles | null | undefined,
-): number => {
-  let bytes = JSON.stringify(getNonDeletedElements(elements)).length;
-  for (const file of Object.values(files ?? {})) {
-    bytes += file.dataURL.length;
-  }
-  return bytes;
 };

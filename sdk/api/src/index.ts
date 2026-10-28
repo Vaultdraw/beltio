@@ -75,6 +75,8 @@ export { definePlugin } from "./plugin";
 export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
 export type {
   BatchOptions,
+  PagePlacement,
+  PageRect,
   BatchResult,
   ElementId,
   ElementRef,
@@ -106,6 +108,13 @@ export type {
 } from "./overlays";
 export type { DiagramsApi, MermaidDrawing } from "./diagrams";
 export type { ThumbnailState, ThumbnailsApi } from "./thumbnails";
+export type {
+  PdfApi,
+  PdfDocument,
+  PdfImportSettings,
+  PdfPageSize,
+  PdfRenderOptions,
+} from "./pdf";
 export type { ToolHandlers, ToolPoint, ToolsApi } from "./tools";
 export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";

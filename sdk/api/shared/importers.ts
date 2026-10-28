@@ -7,8 +7,10 @@ import type { ImportInput, ImportResult, SceneOp } from "@vaultdraw/api";
 /** Files over this are refused before the plugin loads (the drawing cap). */
 export const MAX_IMPORT_BYTES = 32 * 1024 * 1024;
 
-export const importTooBigMessage = (file: string) =>
-  `${file} is over 32 MiB, so it was skipped`;
+export const importTooBigMessage = (
+  file: string,
+  limit: number = MAX_IMPORT_BYTES,
+) => `${file} is over ${limit / 1024 / 1024} MiB, so it was skipped`;
 export const importBusyMessage =
   "An import is already running. Wait for it, or run Import: Cancel.";
 export const importChangedMessage = (plugin: string) =>

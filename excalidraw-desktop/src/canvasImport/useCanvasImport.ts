@@ -1,7 +1,7 @@
 /**
- * "Import file…": pick PDFs/images, then reuse the existing pipelines: the PDF
- * import dialog for a PDF, the editor's own image insertion for images (at the
- * right-clicked point, or the viewport centre from the palette).
+ * "Import file…": pick files, then reuse the existing pipelines: a plugin's importer
+ * (PDF, Markdown, …) for its file types, the editor's own image insertion for images (at
+ * the right-clicked point, or the viewport centre from the palette).
  */
 import { useCallback, useRef } from "react";
 
@@ -19,7 +19,6 @@ export type ScenePoint = { x: number; y: number };
 export interface CanvasImportOptions {
   getApi: () => ExcalidrawImperativeAPI | undefined;
   getDocument: () => Document;
-  openPdf: (file: File) => void | Promise<void>;
   /** Vault-relative path of the active drawing (plugin imports target it). */
   getPath?: () => string | null;
   notify: (message: string) => void;
@@ -41,10 +40,7 @@ const viewportCentre = (api: ExcalidrawImperativeAPI): ScenePoint => {
 export const importPickedFiles = async (
   files: readonly File[],
   at: ScenePoint | undefined,
-  options: Pick<
-    CanvasImportOptions,
-    "getApi" | "openPdf" | "notify" | "getPath"
-  >,
+  options: Pick<CanvasImportOptions, "getApi" | "notify" | "getPath">,
 ) => {
   if (!files.length) {
     return;
@@ -56,11 +52,7 @@ export const importPickedFiles = async (
   const inDrawing = plan.plugin.filter((i) => !own.includes(i));
   if (!api) {
     // Home pane: only own-drawing importers can run.
-    const rest = [
-      ...plan.images,
-      ...(plan.pdf ? [plan.pdf] : []),
-      ...inDrawing.map((i) => i.file),
-    ];
+    const rest = [...plan.images, ...inDrawing.map((i) => i.file)];
     if (own.length) {
       await runImports(own, { path: null, at: at ?? { x: 0, y: 0 } });
     }
@@ -73,9 +65,6 @@ export const importPickedFiles = async (
   }
   if (plan.images.length) {
     await api.insertImages(plan.images, at);
-  }
-  if (plan.pdf) {
-    await options.openPdf(plan.pdf);
   }
   const path = options.getPath?.() ?? null;
   if (inDrawing.length > 0 && path === null) {

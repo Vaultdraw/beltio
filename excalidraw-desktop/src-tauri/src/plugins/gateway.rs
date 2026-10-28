@@ -49,6 +49,11 @@ pub(crate) const ALLOWLIST: &[Row] = &[
     Row { method: "vault.graphLayout.save", permission: Some("vault.write"), route: Route::Raw },
     Row { method: "vault.settings.read", permission: Some("vault.read"), route: Route::OwnSettings },
     Row { method: "vault.settings.update", permission: Some("vault.write"), route: Route::OwnSettings },
+    Row { method: "pdf.pick", permission: Some(PDF), route: Route::Raw },
+    Row { method: "pdf.open", permission: Some(PDF), route: Route::Raw },
+    Row { method: "pdf.render", permission: Some(PDF), route: Route::Raw },
+    Row { method: "pdf.unlock", permission: Some(PDF), route: Route::Raw },
+    Row { method: "pdf.close", permission: Some(PDF), route: Route::Raw },
     Row { method: "storage.read", permission: None, route: Route::StorageRead },
     Row { method: "storage.write", permission: None, route: Route::StorageWrite },
     Row { method: "markdown.parse", permission: None, route: Route::MarkdownParse },
@@ -66,6 +71,8 @@ pub(crate) const ALLOWLIST: &[Row] = &[
 
 /// The one permission every `folders.*` row needs: pick folders, read one, create files in another.
 pub(crate) const FOLDERS_IMPORT: &str = "folders.import";
+/// The permission every `pdf.*` row needs: open PDFs and render their pages natively.
+pub(crate) const PDF: &str = "pdf";
 
 /// An error as the host sees it: `{code, message, ...detail}` (detail such as `reason: "dirty"`).
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -250,6 +257,9 @@ pub(crate) fn markdown_call(params: Option<Value>) -> Result<Value, GatewayError
 /// Runs a `Route::Raw` method against the open vault (the one the control API calls active).
 pub(crate) fn raw_call(app: &tauri::AppHandle, method: &str, body: &[u8]) -> Result<Vec<u8>, GatewayError> {
     use tauri::Manager as _;
+    if method.starts_with("pdf.") {
+        return Ok(crate::pdf_import::gateway_call(method, body)?);
+    }
     let vault = crate::control_active_vault(app).ok_or_else(|| GatewayError::new("NO_VAULT", "No vault is open"))?;
     match method {
         "vault.graph" => {

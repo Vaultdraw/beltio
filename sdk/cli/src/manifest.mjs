@@ -27,7 +27,6 @@ export const RESERVED_EXTENSIONS = [
   "excalidraw",
   "excalidrawlib",
   "json",
-  "pdf",
   "jpeg",
   "svg",
   "png",
@@ -75,6 +74,7 @@ export const PERMISSIONS = [
   "vault.write",
   "folders.import",
   "control",
+  "pdf",
 ];
 /** Kept for later API revisions; an app that knows them as reserved refuses a manifest that uses one. */
 const RESERVED_PERMISSIONS = ["net", "secret"];

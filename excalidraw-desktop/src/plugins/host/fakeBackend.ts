@@ -47,9 +47,90 @@ export interface FakeBackend extends PluginsBackend {
   /** Tests: told after every own-table update / layout save (to persist or mirror them). */
   onVaultTable?: (pluginId: string, table: Record<string, unknown>) => void;
   onGraphLayout?: (bytes: Uint8Array) => void;
+  /**
+   * The native side of the `pdf.*` rows (permission `pdf`): in-memory documents. The e2e harness and
+   * the tests set it (src/tests/fakePdfBridge.ts); unset, the rows fail with PDF_UNAVAILABLE.
+   */
+  pdf?: FakePdfRows;
   /** The `folders.*` rows' state: what the pickers return next, the sources and targets handed out. */
   folders: FakeFolderStore;
 }
+
+/** What the fake `pdf.*` rows need from an in-memory renderer (the shape of `FakePdfBridge`). */
+export interface FakePdfRows {
+  pick(): Promise<unknown | null>;
+  openBytes(name: string, bytes: Uint8Array): Promise<unknown>;
+  renderPage(
+    token: number,
+    index: number,
+    opts: { maxSide: number; format: "jpeg" | "png"; quality: number },
+  ): Promise<Uint8Array>;
+  unlock(token: number, password: string): Promise<unknown>;
+  close(token: number): Promise<void>;
+}
+
+const PDF_ROWS = new Set([
+  "pdf.pick",
+  "pdf.open",
+  "pdf.render",
+  "pdf.unlock",
+  "pdf.close",
+]);
+
+/** The `pdf.*` rows over `fake.pdf`, with the body formats of `pdf_import::gateway_call`. */
+const pdfRow = async (
+  pdf: FakePdfRows | undefined,
+  method: string,
+  body: Uint8Array | undefined,
+): Promise<Uint8Array> => {
+  if (!pdf) {
+    throw coded("PDF_UNAVAILABLE", "No PDF renderer in this fake backend");
+  }
+  const json = (value: unknown) =>
+    new TextEncoder().encode(JSON.stringify(value));
+  const args = () => {
+    try {
+      return JSON.parse(new TextDecoder().decode(body ?? new Uint8Array()));
+    } catch {
+      throw coded("INVALID_ARGUMENT", "Expected a JSON object");
+    }
+  };
+  switch (method) {
+    case "pdf.pick":
+      return json(await pdf.pick());
+    case "pdf.open": {
+      const bytes = body ?? new Uint8Array();
+      const len =
+        bytes.byteLength >= 4
+          ? new DataView(bytes.buffer, bytes.byteOffset).getUint32(0)
+          : -1;
+      if (len < 0 || 4 + len >= bytes.byteLength) {
+        throw coded(
+          "INVALID_ARGUMENT",
+          "Expected a name length, the name and the PDF bytes",
+        );
+      }
+      const name = new TextDecoder().decode(bytes.subarray(4, 4 + len));
+      return json(await pdf.openBytes(name, bytes.subarray(4 + len)));
+    }
+    case "pdf.render": {
+      const a = args();
+      return pdf.renderPage(a.token, a.index, {
+        maxSide: a.maxSide,
+        format: a.format,
+        quality: a.quality,
+      });
+    }
+    case "pdf.unlock": {
+      const a = args();
+      return json(await pdf.unlock(a.token, a.password));
+    }
+    default: {
+      await pdf.close(args().token);
+      return new Uint8Array(0);
+    }
+  }
+};
 
 /** An error as the gateway reports it (`code` plus message). */
 const coded = (code: string, message: string) =>
@@ -199,6 +280,15 @@ export function createFakeBackend(
           "NOT_FOUND",
           `No installed plugin has the id "${pluginId}"`,
         );
+      }
+      if (PDF_ROWS.has(method)) {
+        if (!plugin.permissions.includes("pdf")) {
+          throw coded(
+            "PERMISSION",
+            `${pluginId}: ${method} needs the permission "pdf", which plugin.toml does not declare`,
+          );
+        }
+        return pdfRow(fake.pdf, method, body);
       }
       const need =
         method === "vault.graphLayout.save" ? "vault.write" : "vault.read";

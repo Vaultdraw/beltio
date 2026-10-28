@@ -49,7 +49,6 @@ import {
   addRecentVault,
   getExpandedFolders,
   getLinksSettings,
-  getPdfImportSettings,
   getTagsSettings,
   getLastVaultPath,
   getNavigatorCollapsed,
@@ -159,8 +158,6 @@ import { LibraryStore } from "./library/libraryStore";
 import { desktopLibraryRepository } from "./library/DesktopLibraryRepository";
 import VaultEditor from "./editor/VaultEditor";
 import { allEditorApis, getEditorApi } from "./editor/editorApi";
-import { desktopPdfBridge } from "./pdfImport/DesktopPdfBridge";
-import { usePdfImport } from "./pdfImport/usePdfImport";
 import { useCanvasImport } from "./canvasImport/useCanvasImport";
 
 import { VaultHeader } from "./components/VaultHeader";
@@ -192,7 +189,6 @@ import "./components/shell.css";
 
 import type { OpenTarget } from "./tabs/types";
 import type { TabsApi } from "./tabs/useTabs";
-import type { PdfBridge } from "./pdfImport/types";
 import type { SettingsTarget } from "./components/settings/schema";
 import type { PaletteMode } from "./palette/rank";
 import type { PaletteItem } from "./palette/types";
@@ -280,8 +276,6 @@ export interface VaultAppProps {
   libraryRepository?: LibraryRepository;
   /** File history; defaults to the native service. */
   history?: HistoryRepository;
-  /** PDF import (native renderer); defaults to the desktop bridge. */
-  pdf?: PdfBridge;
   /** Thumbnail cache; defaults to the native one under Tauri, else none (text UI). */
   thumbnails?: ThumbnailStore | null;
 }
@@ -296,7 +290,6 @@ export const VaultApp = ({
   initialVault = null,
   libraryRepository = desktopLibraryRepository,
   history = desktopHistoryRepository,
-  pdf = desktopPdfBridge,
   thumbnails,
 }: VaultAppProps) => {
   const libraryBundle = useMemo(
@@ -2174,35 +2167,9 @@ export const VaultApp = ({
     [doc],
   );
 
-  const pdfImport = usePdfImport({
-    bridge: pdf,
-    getApi: () => (activeDoc ? getEditorApi(activeDoc.id) : undefined),
-    getSettings: () => getPdfImportSettings(getPreferences(win)),
-    notify: (message, type) => {
-      // Confirmations are toasts; failures stay a banner until dismissed.
-      if (type === "info") {
-        toastStore.push({ message });
-      } else {
-        setGlobalAlert({ message, type });
-      }
-    },
-  });
-
-  const { start: startPdfImport, openFile: openPdfFile } = pdfImport;
-  const pdfControls = useMemo(
-    () => ({ start: startPdfImport, openFile: openPdfFile }),
-    [startPdfImport, openPdfFile],
-  );
   const importFile = useCanvasImport({
     getApi: () => (activeDoc ? getEditorApi(activeDoc.id) : undefined),
     getDocument: () => doc ?? document,
-    openPdf: ext["pdf-import"]
-      ? openPdfFile
-      : () =>
-          setGlobalAlert({
-            message: "PDF import is off (Settings → Extensions)",
-            type: "error",
-          }),
     getPath: () => activeDoc?.path ?? null,
     notify: (message) => setGlobalAlert({ message, type: "error" }),
   });
@@ -2266,7 +2233,6 @@ export const VaultApp = ({
         return handleExportDrawing(activeDoc.path, format);
       }
     },
-    importPdf: ext["pdf-import"] ? startPdfImport : undefined,
     importFile: () => importFile(),
     cancelImport: () => {
       if (!cancelImports()) {
@@ -2933,7 +2899,6 @@ export const VaultApp = ({
                   }
                   library={libraryOn ? libraryBundle : undefined}
                   links={editorLinks}
-                  pdfImport={ext["pdf-import"] ? pdfControls : undefined}
                   onImportFile={importFile}
                   restore={editorRestore}
                 />
@@ -3201,8 +3166,6 @@ export const VaultApp = ({
           ownerDocument={doc}
         />
       )}
-
-      {pdfImport.dialog}
 
       {showCloseDiscardConfirm && (
         <ConfirmModal

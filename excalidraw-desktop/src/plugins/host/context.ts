@@ -44,6 +44,7 @@ import { createThemeApi } from "./themeContext";
 import { createStorageApi } from "./storageContext";
 import { createVaultApi } from "./vaultContext";
 import { createDiagramsApi } from "./diagramsContext";
+import { createPdfApi } from "./pdfContext";
 import { createThumbnailsApi } from "./thumbnailsContext";
 import { createWorkspaceApi } from "./workspaceContext";
 
@@ -63,6 +64,7 @@ import type {
   ThemeApi,
   MenusApi,
   OverlaysApi,
+  PdfApi,
   ThumbnailsApi,
   DiagramsApi,
   ToolsApi,
@@ -193,6 +195,7 @@ export function createPluginContext(
   let overlaysApi: OverlaysApi | undefined;
   let thumbnailsApi: ThumbnailsApi | undefined;
   let diagramsApi: DiagramsApi | undefined;
+  let pdfApi: PdfApi | undefined;
 
   const settingValue = (key: string) => getPluginSetting(id, key);
 
@@ -397,6 +400,9 @@ export function createPluginContext(
     },
     get diagrams() {
       return (diagramsApi ??= createDiagramsApi());
+    },
+    get pdf() {
+      return (pdfApi ??= createPdfApi(rt));
     },
     get overlays() {
       return (overlaysApi ??= {

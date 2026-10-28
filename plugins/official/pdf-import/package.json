@@ -1,0 +1,11 @@
+{
+  "name": "@vaultdraw/plugin-pdf-import",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The official PDF import plugin: pick or drop a PDF, choose the pages, and place them as pictures in the open drawing",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node ../../../sdk/cli/bin/vaultdraw-plugin.mjs check dist"
+  }
+}

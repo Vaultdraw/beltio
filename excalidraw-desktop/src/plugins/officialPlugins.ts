@@ -46,6 +46,8 @@ export interface OfficialImporter {
   extensions: string[];
   /** The importer makes its own drawing, so it needs no open drawing (and works in a read-only one). */
   ownDrawing: boolean;
+  /** Largest file it takes, in bytes (the default is 32 MiB, the drawing cap). */
+  maxBytes?: number;
 }
 
 export interface OfficialPlugin {
@@ -60,7 +62,7 @@ export interface OfficialPlugin {
    * The `[extensions]` switch that turns this plugin on and off (same id). The plugin runs only
    * while the switch is on (and the extension set is not in safe start or bisect).
    */
-  extension?: "graph" | "mermaid" | "formula";
+  extension?: "graph" | "mermaid" | "formula" | "pdf-import";
 }
 
 export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
@@ -308,6 +310,29 @@ export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
       },
     ],
   },
+  {
+    id: "pdf-import",
+    name: "PDF import",
+    /** The `[extensions] pdf-import` switch (Settings, Extensions) turns this plugin on and off. */
+    extension: "pdf-import",
+    importers: [
+      {
+        id: "pdf",
+        title: "PDF",
+        extensions: ["pdf"],
+        ownDrawing: false,
+        /** The native renderer takes dropped PDFs up to 128 MiB. */
+        maxBytes: 128 * 1024 * 1024,
+      },
+    ],
+    commands: [
+      {
+        id: "import",
+        title: "Import: PDF…",
+        when: ["drawingOpen", "writable"],
+      },
+    ],
+  },
 ];
 
 /**
@@ -361,6 +386,19 @@ export const createsOwnDrawing = (pluginId: string): boolean =>
   OFFICIAL_PLUGINS.some(
     (p) => p.id === pluginId && p.importers.some((i) => i.ownDrawing),
   );
+
+/** The largest file an importer takes: its own `maxBytes`, else the 32 MiB drawing cap. */
+export const importerMaxBytes = (
+  pluginId: string,
+  importerId: string,
+  fallback: number,
+): number =>
+  OFFICIAL_PLUGINS.find((p) => p.id === pluginId)?.importers.find(
+    (i) => i.id === importerId,
+  )?.maxBytes ?? fallback;
+
+/** The main menu's "Import PDF…" item runs this command (shown while the plugin is on). */
+export const PDF_IMPORT_COMMAND_ID = "pdf-import.import";
 
 /** The main menu's "Import Obsidian vault…" item runs this command (shown while the plugin is on). */
 export const OBSIDIAN_IMPORT_COMMAND_ID = "markdown-import.obsidian";

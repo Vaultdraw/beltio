@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { rect } from "../page/testElements";
+import { byteBudget, estimateImport, planImportSides } from "../src/budget";
+import { DRAWING_BYTES_HEADROOM, MAX_DRAWING_BYTES } from "../src/limits";
 
-import {
-  byteBudget,
-  currentDrawingBytes,
-  estimateImport,
-  planImportSides,
-} from "./budget";
-import {
-  DEFAULT_PDF_IMPORT_SETTINGS as S,
-  DRAWING_BYTES_HEADROOM,
-  MAX_DRAWING_BYTES,
-} from "./types";
+import type { PdfImportSettings } from "@vaultdraw/api";
+
+const S: PdfImportSettings = {
+  maxSide: 1440,
+  format: "jpeg",
+  quality: 0.85,
+  lockPages: true,
+  warnPages: 50,
+  pixelBudgetMp: 60,
+};
 
 const a4 = { widthPt: 595, heightPt: 842 };
 const pages = (n: number) => Array.from({ length: n }, () => a4);
@@ -72,19 +72,10 @@ describe("estimateImport", () => {
   });
 });
 
-describe("byteBudget / currentDrawingBytes", () => {
-  it("byteBudget subtracts from the headroom share", () => {
+describe("byteBudget", () => {
+  it("subtracts from the headroom share", () => {
     expect(byteBudget(1000)).toBe(
       DRAWING_BYTES_HEADROOM * MAX_DRAWING_BYTES - 1000,
     );
-  });
-
-  it("counts live elements and file data URLs", () => {
-    const live = rect(0, 0);
-    const gone = rect(0, 0, 10, 10, { isDeleted: true });
-    const files = { a: { dataURL: "x".repeat(100) } } as any;
-    const bytes = currentDrawingBytes([live, gone], files);
-    expect(bytes).toBe(JSON.stringify([live]).length + 100);
-    expect(currentDrawingBytes([], null)).toBe(2);
   });
 });

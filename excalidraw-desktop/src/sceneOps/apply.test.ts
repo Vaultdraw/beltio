@@ -3,6 +3,10 @@ import {
   convertToExcalidrawElements,
 } from "@excalidraw/excalidraw";
 
+import {
+  DEFAULT_PAGE_SETUP,
+  PAGE_LIMITS,
+} from "@excalidraw/excalidraw/data/pageSetup";
 import { describe, expect, it } from "vitest";
 
 import type { ExcalidrawElement } from "@excalidraw/element/types";
@@ -10,6 +14,59 @@ import type { ExcalidrawElement } from "@excalidraw/element/types";
 import { applyOps } from "./apply";
 import { makeElements, stubApi } from "./testUtils";
 import { SceneOpsError } from "./types";
+
+describe("applyOps pageCount", () => {
+  const add = [
+    { op: "add", element: { type: "rectangle", width: 10, height: 10 } },
+  ] as const;
+
+  it("sets the page count in the same update in page mode", () => {
+    const pageSetup = { ...DEFAULT_PAGE_SETUP, enabled: true, pageCount: 1 };
+    const { api, updateScene } = stubApi([], { pageSetup });
+    applyOps(api, add, { pageCount: 4 });
+    expect(updateScene).toHaveBeenCalledTimes(1);
+    expect(updateScene.mock.calls[0][0].appState.pageSetup.pageCount).toBe(4);
+  });
+
+  it("clamps to the page limit and is ignored outside page mode", () => {
+    const pageSetup = { ...DEFAULT_PAGE_SETUP, enabled: true, pageCount: 1 };
+    const on = stubApi([], { pageSetup });
+    applyOps(on.api, add, { pageCount: 9999 });
+    expect(on.updateScene.mock.calls[0][0].appState.pageSetup.pageCount).toBe(
+      PAGE_LIMITS.pageCount.max,
+    );
+    const off = stubApi([]);
+    applyOps(off.api, add, { pageCount: 4 });
+    expect(off.updateScene.mock.calls[0][0].appState).toBeUndefined();
+  });
+});
+
+describe("applyOps reveal", () => {
+  const add = [
+    {
+      op: "add",
+      element: { type: "rectangle", x: 100, y: 500, width: 200, height: 80 },
+    },
+  ] as const;
+
+  it("scrolls the first added element to the top-centre, in the same update, without zoom", () => {
+    const { api, updateScene } = stubApi([], { zoom: { value: 2 } as never });
+    applyOps(api, add, { reveal: true });
+    const { appState } = updateScene.mock.calls[0][0];
+    // view 1000 wide at zoom 2: centre = 250 scene units; top margin 24 px = 12 units
+    expect(appState).toEqual({ scrollX: 250 - 200, scrollY: 12 - 500 });
+  });
+
+  it("is ignored in page mode and when off", () => {
+    const pageSetup = { ...DEFAULT_PAGE_SETUP, enabled: true, pageCount: 1 };
+    const on = stubApi([], { pageSetup });
+    applyOps(on.api, add, { reveal: true });
+    expect(on.updateScene.mock.calls[0][0].appState).toBeUndefined();
+    const off = stubApi([]);
+    applyOps(off.api, add);
+    expect(off.updateScene.mock.calls[0][0].appState).toBeUndefined();
+  });
+});
 
 describe("applyOps", () => {
   it("calls updateScene exactly once with IMMEDIATELY and returns add ids in order", () => {

@@ -11,6 +11,7 @@ export const PERMISSION_TEXT: Readonly<Record<string, string>> = {
   "vault.write": "Create drawings in your vault",
   "folders.import":
     "Read a folder you pick and write into a destination you pick",
+  pdf: "Open PDF files you pick and draw their pages",
   control:
     "Let the vaultdraw command, scripts and the AI apps you allow call its methods",
 };

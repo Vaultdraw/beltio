@@ -13,7 +13,7 @@ import {
 import {
   DRAWING_BYTES_HEADROOM as PDF_HEADROOM,
   MAX_DRAWING_BYTES as PDF_MAX,
-} from "../pdfImport/types";
+} from "../../../plugins/official/pdf-import/src/limits";
 
 import { applyOps } from "./apply";
 import { hashImages, toBase64 } from "./images";

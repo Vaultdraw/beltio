@@ -1323,6 +1323,71 @@ pub async fn pdf_close(token: u32) -> Result<()> {
     native::close(token).await
 }
 
+/// The plugin gateway's `pdf.*` rows (permission `pdf`, `plugin_call_raw`): the same native calls as
+/// the `pdf_*` commands. Bodies: `pdf.pick` empty; `pdf.open` a u32 big-endian name length, the
+/// name, then the PDF bytes; `pdf.render`, `pdf.unlock`, `pdf.close` a JSON object. Replies: the
+/// document info as JSON (`null` when the pick is cancelled), image bytes for `pdf.render`, empty
+/// for `pdf.close`. Runs on a blocking thread, so it waits on the async natives.
+pub(crate) fn gateway_call(method: &str, body: &[u8]) -> Result<Vec<u8>> {
+    use serde::Deserialize;
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct RenderArgs {
+        token: u32,
+        index: u32,
+        max_side: u32,
+        format: String,
+        quality: f32,
+    }
+    #[derive(Deserialize)]
+    struct UnlockArgs {
+        token: u32,
+        password: String,
+    }
+    #[derive(Deserialize)]
+    struct CloseArgs {
+        token: u32,
+    }
+    fn args<T: serde::de::DeserializeOwned>(body: &[u8]) -> Result<T> {
+        serde_json::from_slice(body).map_err(|e| err("INVALID_ARGUMENT", e.to_string()))
+    }
+    fn json<T: Serialize>(value: &T) -> Result<Vec<u8>> {
+        serde_json::to_vec(value).map_err(|e| err("INTERNAL", e.to_string()))
+    }
+    use tauri::async_runtime::block_on;
+    match method {
+        "pdf.pick" => json(&block_on(native::pick())?),
+        "pdf.open" => {
+            let bad = || err("INVALID_ARGUMENT", "Expected a name length, the name and the PDF bytes");
+            let len = body.get(..4).ok_or_else(bad)?;
+            let len = u32::from_be_bytes([len[0], len[1], len[2], len[3]]) as usize;
+            let name = body.get(4..4 + len).ok_or_else(bad)?;
+            let bytes = &body[4 + len..];
+            if bytes.is_empty() {
+                return Err(bad());
+            }
+            if bytes.len() > MAX_BYTES_IPC {
+                return Err(err("PDF_TOO_LARGE", "Dropped PDFs are limited to 128 MiB"));
+            }
+            json(&block_on(native::open_bytes(String::from_utf8_lossy(name).into_owned(), bytes.to_vec()))?)
+        }
+        "pdf.render" => {
+            let a: RenderArgs = args(body)?;
+            block_on(native::render(a.token, a.index, a.max_side, a.format, a.quality))
+        }
+        "pdf.unlock" => {
+            let a: UnlockArgs = args(body)?;
+            json(&block_on(native::unlock(a.token, a.password))?)
+        }
+        "pdf.close" => {
+            let a: CloseArgs = args(body)?;
+            block_on(native::close(a.token))?;
+            Ok(Vec::new())
+        }
+        _ => Err(err("NOT_FOUND", format!("Plugins cannot call \"{method}\""))),
+    }
+}
+
 #[cfg(all(test, target_os = "macos"))]
 mod tests {
     use super::mac::fixtures::*;
@@ -2027,5 +2092,21 @@ mod linux_tests {
         assert_eq!(std::fs::read_dir(dir.path().join("tmp")).map(|d| d.count()).unwrap_or(0), 1);
         s.close(info.token).unwrap();
         assert_eq!(std::fs::read_dir(dir.path().join("tmp")).map(|d| d.count()).unwrap_or(0), 0);
+    }
+}
+
+#[cfg(test)]
+mod gateway_tests {
+    use super::gateway_call;
+
+    #[test]
+    fn rows_refuse_bad_bodies_and_unknown_methods() {
+        assert_eq!(gateway_call("pdf.open", &[]).unwrap_err().code, "INVALID_ARGUMENT");
+        // A name length that runs past the body, and a name with no PDF bytes.
+        assert_eq!(gateway_call("pdf.open", &[0, 0, 0, 9, b'a']).unwrap_err().code, "INVALID_ARGUMENT");
+        assert_eq!(gateway_call("pdf.open", &[0, 0, 0, 1, b'a']).unwrap_err().code, "INVALID_ARGUMENT");
+        assert_eq!(gateway_call("pdf.render", b"{}").unwrap_err().code, "INVALID_ARGUMENT");
+        assert_eq!(gateway_call("pdf.close", b"nope").unwrap_err().code, "INVALID_ARGUMENT");
+        assert_eq!(gateway_call("pdf.delete", b"").unwrap_err().code, "NOT_FOUND");
     }
 }

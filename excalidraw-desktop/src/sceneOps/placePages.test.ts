@@ -9,11 +9,28 @@ import {
 
 import { rect } from "../page/testElements";
 
-import { planPdfPlacement } from "./layout";
+import { planPagePlacement } from "./placePages";
+
+import type { PagePlacementPlan } from "./placePages";
 
 const a4 = { widthPt: 595, heightPt: 842 };
 const wide = { widthPt: 842, heightPt: 595 };
 const k = 96 / 72;
+type Pt = { widthPt: number; heightPt: number };
+const planPdfPlacement = (o: {
+  pages: Pt[];
+  indices: number[];
+  elements: Parameters<typeof planPagePlacement>[0]["elements"];
+  pageSetup: Parameters<typeof planPagePlacement>[0]["pageSetup"];
+}): PagePlacementPlan =>
+  planPagePlacement({
+    sizes: o.indices.map((i) => ({
+      width: o.pages[i].widthPt * k,
+      height: o.pages[i].heightPt * k,
+    })),
+    elements: o.elements,
+    pageSetup: o.pageSetup,
+  });
 const setup = { ...DEFAULT_PAGE_SETUP, enabled: true, pageCount: 3 };
 
 describe("normal mode", () => {

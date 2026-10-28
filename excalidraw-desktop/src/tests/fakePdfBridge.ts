@@ -1,11 +1,24 @@
 /** In-memory PdfBridge for vitest and the e2e harness. */
-import type {
-  PdfBridge,
-  PdfImageFormat,
-  PdfInfo,
-  PdfPageInfo,
-  PdfRenderOptions,
-} from "../pdfImport/types";
+/** Page size in PDF points. */
+export type PdfPageInfo = { widthPt: number; heightPt: number };
+
+/** What the native `pdf_*` calls return for an open document. */
+export type PdfInfo = {
+  token: number;
+  name: string;
+  pageCount: number;
+  pages: PdfPageInfo[];
+  byteSize: number;
+  locked?: boolean;
+};
+
+export type PdfImageFormat = "jpeg" | "png";
+
+export type PdfRenderOptions = {
+  maxSide: number;
+  format: PdfImageFormat;
+  quality: number;
+};
 
 export type FakePdfDoc = { name: string; pages: PdfPageInfo[] };
 
@@ -43,7 +56,7 @@ const hasCanvas = () => {
   }
 };
 
-export class FakePdfBridge implements PdfBridge {
+export class FakePdfBridge {
   /** Result of the next pick(): a doc, or null for "cancelled". */
   nextPick: PdfInfo | null = null;
   delayMs: number;
@@ -56,6 +69,8 @@ export class FakePdfBridge implements PdfBridge {
   defaultPages: PdfPageInfo[];
   bytesPerPx: number;
   textLines: number;
+  /** Replaces the drawn page with these bytes (tests). */
+  renderBytes?: (index: number, opts: PdfRenderOptions) => Uint8Array;
 
   readonly renders: {
     token: number;
@@ -64,6 +79,8 @@ export class FakePdfBridge implements PdfBridge {
   }[] = [];
   readonly closes: number[] = [];
   readonly opened: number[] = [];
+  /** File name by document token. */
+  readonly names = new Map<number, string>();
 
   private nextToken = 1;
   private docs = new Map<number, PdfInfo>();
@@ -89,6 +106,7 @@ export class FakePdfBridge implements PdfBridge {
       byteSize: pages.length * 50_000,
     };
     this.docs.set(info.token, info);
+    this.names.set(info.token, name);
     this.opened.push(info.token);
     return this.password === null ? info : this.lock(info);
   }
@@ -153,6 +171,9 @@ export class FakePdfBridge implements PdfBridge {
     }
     if (this.failPages.has(index)) {
       throw codeError("PDF_PAGE_FAILED");
+    }
+    if (this.renderBytes) {
+      return this.renderBytes(index, opts);
     }
     const page = doc.pages[index];
     const long = Math.max(page.widthPt, page.heightPt);
@@ -219,7 +240,10 @@ const drawPage = (
 
 /** Canvas mocks return blank bytes: stamp the format's magic so mime sniffing works. */
 const withMagic = (bytes: Uint8Array, format: PdfImageFormat): Uint8Array => {
-  const magic = format === "png" ? [0x89, 0x50, 0x4e, 0x47] : [0xff, 0xd8];
+  const magic =
+    format === "png"
+      ? [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+      : [0xff, 0xd8, 0xff];
   if (bytes.length >= magic.length && !magic.every((b, i) => bytes[i] === b)) {
     bytes.set(magic);
   }
@@ -239,10 +263,5 @@ const fallbackBytes = (
   for (let i = 0; i < length; i++) {
     bytes[i] = (i * 31 + index * 7 + w) & 0xff;
   }
-  if (format === "png") {
-    bytes.set([0x89, 0x50, 0x4e, 0x47]);
-  } else {
-    bytes[0] = 0xff;
-  }
-  return bytes;
+  return withMagic(bytes, format);
 };

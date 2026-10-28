@@ -53,6 +53,7 @@ import {
 
 import { createFoldersModel } from "./folders";
 import { createPagesMock } from "./pages";
+import { createPdfModel } from "./pdf";
 import { createSceneModel } from "./scene";
 import { panelsRoot, type PanelDeps } from "./panels";
 import { createVaultModel } from "./vault";
@@ -88,6 +89,7 @@ import type {
   BootOptions,
   FakeBatch,
   FakeFolders,
+  FakePdf,
   FakeScene,
   FakeStorage,
   FakeTheme,
@@ -133,6 +135,8 @@ export interface MockHost {
   vault: FakeVault;
   workspace: FakeWorkspace;
   folders: FakeFolders;
+  /** What `ctx.pdf` serves (needs the permission `pdf`). */
+  pdf: FakePdf;
   /** Drops a file on the active drawing; resolves to the scene write it made, or null. */
   importFile(
     fileName: string,
@@ -219,6 +223,7 @@ export function createMockHost(
   const maxOps = () => sceneMaxOps;
   const scene = createSceneModel("fake.excalidraw", maxOps);
   const vault = createVaultModel(maxOps);
+  const pdfModel = createPdfModel();
   const folders = createFoldersModel(vault, {
     open: () => vault.fake.setVault !== undefined && vaultIsOpen(),
     readOnly: () => vaultReadOnly(),
@@ -543,6 +548,7 @@ export function createMockHost(
     let overlaysApi: PluginContext["overlays"] | undefined;
     let thumbnailsApi: PluginContext["thumbnails"] | undefined;
     let diagramsApi: PluginContext["diagrams"] | undefined;
+    let pdfApi: PluginContext["pdf"] | undefined;
     let menusApi: PluginContext["menus"] | undefined;
     let pagesApi: PluginContext["pages"] | undefined;
     let foldersApi: PluginContext["folders"] | undefined;
@@ -795,6 +801,10 @@ export function createMockHost(
             throw new Error("ctx.diagrams is not available in the test host");
           },
         });
+      },
+      get pdf() {
+        // No native renderer in tests: set one up with `pdf` on the mock host.
+        return (pdfApi ??= pdfModel.api(id, info.permissions));
       },
       get overlays() {
         return (overlaysApi ??= {
@@ -1305,6 +1315,7 @@ export function createMockHost(
     vault: vault.fake,
     workspace: vault.workspace,
     folders: folders.fake,
+    pdf: pdfModel.fake,
     importFile,
     cancelImport() {
       if (!importing) {
@@ -1516,6 +1527,7 @@ export function createMockHost(
       themeTokens = null;
       vault.reset();
       folders.reset();
+      pdfModel.reset();
       activePath = "fake.excalidraw";
       sceneReadOnly = false;
       importerImpls.clear();

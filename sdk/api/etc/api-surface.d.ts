@@ -138,7 +138,7 @@ export type { BuildSceneOptions, CreateDocumentOptions, FlowItem, FlowOptions, F
 export type { PanelsApi } from "./panels";
 export { definePlugin } from "./plugin";
 export type { LogApi, Plugin, PluginContext, UiApi } from "./plugin";
-export type { BatchOptions, BatchResult, ElementId, ElementRef, ImageSource, FontFamilyName, NewElement, SceneContextApi, SceneElementDetail, SceneElement, SceneElementType, SceneOp, SceneOpIssue, } from "./scene";
+export type { BatchOptions, PagePlacement, PageRect, BatchResult, ElementId, ElementRef, ImageSource, FontFamilyName, NewElement, SceneContextApi, SceneElementDetail, SceneElement, SceneElementType, SceneOp, SceneOpIssue, } from "./scene";
 export type { SelectOption, SettingDecl, SettingScopeName, SettingsApi, SettingValue, } from "./settings";
 export type { StatusBarApi, StatusBarState } from "./statusBar";
 export type { MenuTarget, MenusApi } from "./menus";
@@ -146,6 +146,7 @@ export type { ShapeDef, ShapesApi } from "./shapes";
 export type { OverlayHandle, OverlayOptions, OverlayProps, OverlaysApi, } from "./overlays";
 export type { DiagramsApi, MermaidDrawing } from "./diagrams";
 export type { ThumbnailState, ThumbnailsApi } from "./thumbnails";
+export type { PdfApi, PdfDocument, PdfImportSettings, PdfPageSize, PdfRenderOptions, } from "./pdf";
 export type { ToolHandlers, ToolPoint, ToolsApi } from "./tools";
 export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
@@ -164,7 +165,7 @@ export interface PluginManifestInfo {
     permissions: readonly PluginPermission[];
     dataKey: string;
 }
-export type PluginPermission = "vault.read" | "vault.write" | "folders.import" | "control";
+export type PluginPermission = "vault.read" | "vault.write" | "folders.import" | "control" | "pdf";
 export interface CommandContribution {
     id: string;
     title: string;
@@ -535,6 +536,40 @@ export interface PanelsApi {
     close(id: string): void;
 }
 
+// pdf.ts
+export interface PdfPageSize {
+    readonly widthPt: number;
+    readonly heightPt: number;
+}
+export interface PdfRenderOptions {
+    maxSide: number;
+    format: "jpeg" | "png";
+    quality: number;
+}
+export interface PdfDocument {
+    readonly name: string;
+    readonly pageCount: number;
+    readonly pages: readonly PdfPageSize[];
+    readonly byteSize: number;
+    readonly locked: boolean;
+    render(index: number, options: PdfRenderOptions): Promise<Uint8Array>;
+    unlock(password: string): Promise<PdfDocument>;
+    close(): Promise<void>;
+}
+export interface PdfImportSettings {
+    maxSide: number;
+    format: "jpeg" | "png";
+    quality: number;
+    lockPages: boolean;
+    warnPages: number;
+    pixelBudgetMp: number;
+}
+export interface PdfApi {
+    pick(): Promise<PdfDocument | null>;
+    open(name: string, bytes: Uint8Array): Promise<PdfDocument>;
+    settings(): PdfImportSettings;
+}
+
 // plugin.ts
 import type { CommandsApi } from "./commands";
 import type { MethodsApi } from "./methods";
@@ -558,6 +593,7 @@ import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
 import type { ShapesApi } from "./shapes";
 import type { DiagramsApi } from "./diagrams";
+import type { PdfApi } from "./pdf";
 import type { ThumbnailsApi } from "./thumbnails";
 import type { ToolsApi } from "./tools";
 import type { OverlaysApi } from "./overlays";
@@ -602,6 +638,7 @@ export interface PluginContext {
     readonly overlays: OverlaysApi;
     readonly thumbnails: ThumbnailsApi;
     readonly diagrams: DiagramsApi;
+    readonly pdf: PdfApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;
     setInterval(fn: () => void, ms: number): Disposable;
@@ -685,6 +722,20 @@ export interface BatchResult {
 }
 export interface BatchOptions {
     path?: string;
+    pageCount?: number;
+    reveal?: boolean;
+}
+export interface PageRect {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+export interface PagePlacement {
+    rects: PageRect[];
+    pageCount: number | null;
+    firstPage: number | null;
+    maxPages: number | null;
 }
 export interface SceneElementDetail extends SceneElement {
     readonly groupIds: readonly string[];
@@ -729,6 +780,11 @@ export interface SceneContextApi {
     scrollTo(id: string): void;
     selection(): readonly string[];
     currentStrokeColor(): string;
+    placePages(sizes: readonly {
+        width: number;
+        height: number;
+    }[]): PagePlacement;
+    sizeBytes(): number;
 }
 
 // settings.ts

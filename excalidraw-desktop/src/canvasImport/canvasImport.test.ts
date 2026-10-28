@@ -12,7 +12,6 @@ import {
 import {
   IMPORT_ACCEPT,
   importAccept,
-  isPdfFile,
   planImport,
   skippedMessage,
 } from "./importFiles";
@@ -32,32 +31,36 @@ const claimTxt = (extensions = ["txt"]) =>
   );
 
 const file = (name: string, type: string) => new File(["x"], name, { type });
-const pdf = (name = "a.pdf") => file(name, "application/pdf");
 const png = (name = "a.png") => file(name, "image/png");
 
 describe("planImport", () => {
-  it("routes the first PDF to the dialog and images to insertion", () => {
-    const a = pdf("a.pdf");
-    const b = pdf("b.pdf");
+  it("routes images to insertion and unclaimed files (a PDF with the plugin off) to skipped", () => {
+    const a = file("a.pdf", "application/pdf");
     const img = png();
     const jpg = file("c.jpg", "image/jpeg");
     const txt = file("notes.txt", "text/plain");
-    expect(planImport([img, a, b, jpg, txt])).toEqual({
-      pdf: a,
+    expect(planImport([img, a, jpg, txt])).toEqual({
       plugin: [],
       images: [img, jpg],
-      skipped: [b, txt],
+      skipped: [a, txt],
     });
   });
 
-  it("orders: PDF first, then importer, then images, then skipped", () => {
-    claimTxt(["txt", "pdf", "png"]);
-    const doc = pdf("a.pdf");
+  it("a PDF goes to the plugin that claims pdf, ahead of the image path", () => {
+    claimImporter({ pluginId: "pdf-import", importerId: "pdf", title: "PDF" }, [
+      "pdf",
+    ]);
+    const a = file("a.PDF", "");
+    const b = file("b.pdf", "application/pdf");
+    expect(planImport([a, b]).plugin.map((i) => i.file)).toEqual([a, b]);
+  });
+
+  it("orders: importer first, then images, then skipped", () => {
+    claimTxt(["txt", "png"]);
     const notes = file("notes.txt", "text/plain");
     const img = png("b.png");
     const zip = file("c.zip", "application/zip");
-    const plan = planImport([doc, notes, img, zip]);
-    expect(plan.pdf).toBe(doc);
+    const plan = planImport([notes, img, zip]);
     expect(plan.plugin.map((i) => [i.file, i.match.pluginId])).toEqual([
       [notes, "text-import"],
       [img, "text-import"],
@@ -77,22 +80,18 @@ describe("planImport", () => {
     expect(plan.skipped).toEqual([md]);
   });
 
-  it("recognises a PDF by extension when the type is missing", () => {
-    expect(isPdfFile(file("scan.PDF", ""))).toBe(true);
-    expect(isPdfFile(png())).toBe(false);
-  });
-
-  it("the picker accepts PDFs and the editor's image types", () => {
-    for (const t of ["application/pdf", ".pdf", "image/png", "image/svg+xml"]) {
+  it("the picker accepts the editor's image types, and no PDF while the plugin is off", () => {
+    for (const t of ["image/png", "image/svg+xml"]) {
       expect(IMPORT_ACCEPT.split(",")).toContain(t);
     }
+    expect(IMPORT_ACCEPT.split(",")).not.toContain(".pdf");
   });
 
   it("the picker accept adds importer extensions at call time", () => {
     expect(importAccept()).toBe(IMPORT_ACCEPT);
     const off = claimTxt(["txt", "md"]);
     expect(importAccept().split(",")).toEqual(
-      expect.arrayContaining([".txt", ".md", ".pdf"]),
+      expect.arrayContaining([".txt", ".md"]),
     );
     off();
     expect(importAccept()).toBe(IMPORT_ACCEPT);
@@ -114,24 +113,45 @@ describe("planImport", () => {
 describe("importPickedFiles", () => {
   const setup = () => {
     const api = { insertImages: vi.fn(async () => {}) };
-    const openPdf = vi.fn();
     const notify = vi.fn();
     return {
       api,
-      openPdf,
       notify,
-      options: { getApi: () => api as never, openPdf, notify },
+      options: { getApi: () => api as never, notify },
     };
   };
 
-  it("inserts images at the point and opens the PDF dialog", async () => {
+  it("inserts images at the point and hands a PDF to the plugin that claims it", async () => {
+    claimImporter({ pluginId: "pdf-import", importerId: "pdf", title: "PDF" }, [
+      "pdf",
+    ]);
+    const run = vi.fn(async () => {});
+    setImportRunner(run);
     const s = setup();
     const img = png();
-    const doc = pdf();
-    await importPickedFiles([img, doc], { x: 10, y: 20 }, s.options);
+    const doc = file("a.pdf", "application/pdf");
+    await importPickedFiles(
+      [img, doc],
+      { x: 10, y: 20 },
+      {
+        ...s.options,
+        getPath: () => "d.excalidraw",
+      },
+    );
     expect(s.api.insertImages).toHaveBeenCalledWith([img], { x: 10, y: 20 });
-    expect(s.openPdf).toHaveBeenCalledWith(doc);
+    expect(run).toHaveBeenCalledTimes(1);
     expect(s.notify).not.toHaveBeenCalled();
+  });
+
+  it("reports a PDF as not imported while the plugin is off", async () => {
+    const s = setup();
+    await importPickedFiles([file("a.pdf", "application/pdf")], undefined, {
+      ...s.options,
+      getPath: () => "d.excalidraw",
+    });
+    expect(s.notify).toHaveBeenCalledWith(
+      expect.stringContaining("Not imported: a.pdf"),
+    );
   });
 
   it("runs plugin imports at the point, or the viewport centre", async () => {
@@ -202,7 +222,6 @@ describe("importPickedFiles", () => {
       getApi: () => undefined,
     });
     expect(s.api.insertImages).not.toHaveBeenCalled();
-    expect(s.openPdf).not.toHaveBeenCalled();
     expect(s.notify).toHaveBeenCalledWith("Open a drawing to import a.png.");
   });
 

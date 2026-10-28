@@ -164,7 +164,6 @@ describe("commands", () => {
   it("gated app actions are not offered when the shell leaves them out", () => {
     const handlers = appCommandHandlers({} as AppCommandActions);
     expect(handlers["vault.newFromTemplate"]).toBeUndefined();
-    expect(handlers["file.importPdf"]).toBeUndefined();
     expect(handlers["templates.saveDrawing"]).toBeUndefined();
     expect(handlers["navigator.searchTags"]).toBeUndefined();
   });

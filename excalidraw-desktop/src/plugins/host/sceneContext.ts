@@ -10,6 +10,8 @@ import {
   SceneOpsError,
   viewportCenter,
 } from "../../sceneOps";
+import { currentDrawingBytes } from "../../sceneOps/drawingBytes";
+import { planPagePlacement } from "../../sceneOps/placePages";
 import { getActiveScene, subscribeScene } from "../../sceneOps/sceneBus";
 import { getWorkspaceBridge } from "../workspaceBridge";
 
@@ -119,6 +121,16 @@ export function createSceneApi(
       if (scene.readOnly) {
         throw refusal("the drawing is read-only", "READ_ONLY");
       }
+      const pageCount = batchOptions?.pageCount;
+      if (
+        pageCount !== undefined &&
+        !(Number.isInteger(pageCount) && pageCount >= 1 && pageCount <= 500)
+      ) {
+        throw refusal(
+          "pageCount must be a whole number from 1 to 500",
+          "INVALID_ARGUMENT",
+        );
+      }
       const maxOps = options.maxOps();
       // Hashing is async: look at the scene again afterwards, so the checks
       // and the write happen in the same synchronous step.
@@ -144,7 +156,13 @@ export function createSceneApi(
         target = now;
       }
       try {
-        return applyOps(target.api, ops, { dataKey, maxOps, images });
+        return applyOps(target.api, ops, {
+          dataKey,
+          maxOps,
+          images,
+          pageCount,
+          reveal: batchOptions?.reveal === true,
+        });
       } catch (err) {
         if (err instanceof SceneOpsError || err instanceof PluginApiError) {
           logLine(id, "error", `scene.batch: ${errorText(err)}`);
@@ -192,6 +210,48 @@ export function createSceneApi(
       return (
         getActiveScene()?.api.getAppState().currentItemStrokeColor ?? "#1e1e1e"
       );
+    },
+    placePages(sizes) {
+      const valid =
+        Array.isArray(sizes) &&
+        sizes.length <= 500 &&
+        sizes.every(
+          (s) =>
+            s &&
+            Number.isFinite(s.width) &&
+            Number.isFinite(s.height) &&
+            s.width > 0 &&
+            s.height > 0,
+        );
+      if (!valid) {
+        throw new PluginApiError(
+          "INVALID_ARGUMENT",
+          "scene.placePages: sizes must be a list of at most 500 positive widths and heights",
+        );
+      }
+      const scene = getActiveScene();
+      const plan = planPagePlacement({
+        sizes,
+        elements: scene?.api.getSceneElementsIncludingDeleted() ?? [],
+        pageSetup: scene?.api.getAppState().pageSetup,
+      });
+      return {
+        rects: plan.rects,
+        pageCount: plan.pageCount ?? null,
+        firstPage: plan.startPage ?? null,
+        maxPages: Number.isFinite(plan.maxPagesThatFit)
+          ? plan.maxPagesThatFit
+          : null,
+      };
+    },
+    sizeBytes() {
+      const scene = getActiveScene();
+      return scene
+        ? currentDrawingBytes(
+            scene.api.getSceneElementsIncludingDeleted(),
+            scene.api.getFiles(),
+          )
+        : 0;
     },
     scrollTo(elementId) {
       const scene = getActiveScene();

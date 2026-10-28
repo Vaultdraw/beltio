@@ -1,5 +1,9 @@
 /** Validates a batch and commits it as ONE scene update (one undo step). */
 import { CaptureUpdateAction } from "@excalidraw/excalidraw";
+import {
+  isPageModeOn,
+  PAGE_LIMITS,
+} from "@excalidraw/excalidraw/data/pageSetup";
 import { FONT_FAMILY, getSizeFromPoints } from "@excalidraw/common";
 import {
   computeBoundTextPosition,
@@ -17,6 +21,9 @@ import type {
   ExcalidrawElement,
   ExcalidrawTextElement,
 } from "@excalidraw/element/types";
+import type { AppState } from "@excalidraw/excalidraw/types";
+
+import { getPageSetupPatch } from "../page/pageSetupChange";
 
 import { buildBatch, normalAngle, roundnessFor, withData } from "./build";
 import { planImages } from "./images";
@@ -33,7 +40,14 @@ type Props = Partial<Omit<NewElement, "type" | "start" | "end">>;
 export type ApplyOptions = ValidateOptions & {
   /** From `hashImages(ops)`; needed when the batch adds images. */
   images?: ImageHashes;
+  /** Page mode: the page count to set in the same undo step (clamped to the page limit). */
+  pageCount?: number;
+  /** Scroll the first added element to the top-centre of the view (not in page mode). */
+  reveal?: boolean;
 };
+
+/** Distance of a revealed element's top edge from the view's top, in screen pixels. */
+const REVEAL_TOP_MARGIN = 24;
 
 /** Working copy of the scene: ops are applied to it in order, so later ops see earlier ones. */
 type Work = Map<string, ExcalidrawElement>;
@@ -177,8 +191,32 @@ export const applyOps = (
   if (imagePlan?.files.length) {
     api.addFiles(imagePlan.files);
   }
+  const appState = api.getAppState();
+  const pageCount =
+    options.pageCount !== undefined && isPageModeOn(appState.pageSetup)
+      ? Math.min(PAGE_LIMITS.pageCount.max, Math.max(1, options.pageCount))
+      : undefined;
+  const first = options.reveal
+    ? fresh.find((el) => el.id === ids[0])
+    : undefined;
+  const revealPatch =
+    first && !isPageModeOn(appState.pageSetup)
+      ? {
+          scrollX:
+            appState.width / (2 * appState.zoom.value) -
+            (first.x + first.width / 2),
+          scrollY: REVEAL_TOP_MARGIN / appState.zoom.value - first.y,
+        }
+      : undefined;
+  // updateScene infers one Pick<AppState, K>; the patch is one of two kinds
+  const patch = (
+    pageCount !== undefined
+      ? getPageSetupPatch(appState, { pageCount })
+      : revealPatch
+  ) as Pick<AppState, "pageSetup"> | undefined;
   api.updateScene({
     elements,
+    ...(patch ? { appState: patch } : {}),
     captureUpdate: CaptureUpdateAction.IMMEDIATELY,
   });
   return { ids, refs };

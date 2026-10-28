@@ -44,9 +44,7 @@ export interface AppCommandActions {
   setMode(mode: "light" | "dark" | "system"): void;
   setSyncCanvas(on: boolean): void;
   exportActive(format: "png" | "svg" | "pdf" | "copy"): void | Promise<void>;
-  /** Off with `extensions.pdf-import`. */
-  importPdf?: () => void | Promise<void>;
-  /** Pick PDFs/images: PDF -> import dialog, images -> viewport centre. */
+  /** Pick files: a plugin's file types (PDF, Markdown) go to it, images -> viewport centre. */
   importFile(): void | Promise<void>;
   /** "Import: Cancel": aborts the running plugin import. */
   cancelImport(): void;
@@ -109,7 +107,6 @@ export function appCommandHandlers(
     "file.exportPng": () => actions.exportActive("png"),
     "file.exportSvg": () => actions.exportActive("svg"),
     "file.exportPdf": () => actions.exportActive("pdf"),
-    "file.importPdf": actions.importPdf,
     "file.importFile": actions.importFile,
     "plugins.cancelImport": actions.cancelImport,
     "file.saveCopy": () => actions.exportActive("copy"),

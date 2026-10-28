@@ -1191,7 +1191,9 @@ The layout runs in the background, off the main thread, and is saved, so the gra
 
 ## PDF import
 
-**Import: PDF…** (command palette, or **Import PDF…** in the canvas main menu) turns PDF pages into image elements in the open drawing, so you can annotate them. Dropping a `.pdf` on the canvas opens the same dialog.
+**Import: PDF…** (command palette, or **Import PDF…** in the canvas main menu) turns PDF pages into image elements in the open drawing, so you can annotate them. Dropping a `.pdf` on the canvas, or picking one in **Import: File…**, opens the same dialog.
+
+PDF import is an official plugin (`pdf-import`, in `plugins/official/pdf-import`) that ships with the app and is on by default. Turn it off in **Settings → Extensions → PDF import**, or with `[extensions] pdf-import = false`: nothing of it loads, and the command, the main menu item and the `.pdf` entry in the file picker disappear (a dropped `.pdf` is then listed as not imported). The rendering stays native; the plugin reaches it through the plugin API (`ctx.pdf`, permission `pdf`). Drawings that already hold imported pages are unaffected: they are plain pictures. The command id is `pdf-import.import` (it was `file.importPdf`): rebind a key you had set on the old id. The dialog is shown over the drawing.
 
 - **Dialog.** Shows the file name, page count and a page range (`all`, `1-5, 8, 10-`), and warns when a large import won't fully fit. Enter imports, Escape cancels. Progress reads "Rendering page n of N"; cancelling leaves the drawing untouched.
 - **Result.** One undo step. Pages are locked so annotating doesn't drag them (unlock with **Unlock all**). In a normal drawing they go in a column below the existing content; in page mode each PDF page goes on its own drawing page after the last page with content.
@@ -1248,7 +1250,7 @@ pdf-import = false
 | `extensions.templates` | New from template and Save as template. |
 | `extensions.formula` | The formula plugin (official, bundled): inserting and editing LaTeX formulas, and the TeX renderer for `$…$` in notes. Off, MathJax never loads; existing formulas stay as images and notes show the TeX source. |
 | `extensions.mermaid` | Mermaid to Excalidraw. |
-| `extensions.pdf-import` | PDF import. |
+| `extensions.pdf-import` | PDF import (the official `pdf-import` plugin). |
 
 - Every extension is on by default.
 - History and thumbnails keep their own keys: `history.enabled` and `interface.thumbnails`. The Extensions page shows them too.
@@ -1794,7 +1796,7 @@ Plugins in the `plugins/` folder of the config folder.
 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
-| `enabled` | `["markdown-import", "gallery", "graph", "mermaid", "formula"]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`. |
+| `enabled` | `["markdown-import", "gallery", "graph", "mermaid", "formula", "pdf-import"]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`. |
 | `disabled` | `[]` | a list of official plugin ids you turned off, like ["gallery"] |  | Official plugins you turned off, like `["gallery"]`. Settings writes it; a new official plugin is on until you list it here. |
 | `importers` | `[object Object]` | a table like { txt = "text-import" } (extension = plugin id, "" for none) |  | Which plugin imports a file extension when two plugins claim it; `""` turns plugin handling off for that extension. |
 | `storage_limit_kb` | `1024` | an integer between 64 and 16384 |  | Most data one plugin may save with `ctx.storage`, in KiB; a save past it is refused. |

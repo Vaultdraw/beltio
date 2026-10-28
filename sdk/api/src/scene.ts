@@ -272,6 +272,61 @@ export interface BatchOptions {
    * @since 0.4.0
    */
   path?: string;
+  /**
+   * Page mode only: sets the drawing's page count to this (1 to 500) in the same undo step, so
+   * pages added by the batch exist. Ignored when the drawing is not in page mode. Use with the
+   * `pageCount` of `scene.placePages`.
+   *
+   * @since 0.26.0
+   */
+  pageCount?: number;
+  /**
+   * Scrolls the view in the same update (no zoom change, nothing selected) so the first added
+   * element is centred across and its top edge sits near the top of the view. Ignored in page
+   * mode and when the batch adds nothing.
+   *
+   * @since 0.26.0
+   */
+  reveal?: boolean;
+}
+
+/**
+ * A page-sized box in scene coordinates.
+ *
+ * @since 0.26.0
+ */
+export interface PageRect {
+  /** @since 0.26.0 */
+  x: number;
+  /** @since 0.26.0 */
+  y: number;
+  /** @since 0.26.0 */
+  width: number;
+  /** @since 0.26.0 */
+  height: number;
+}
+
+/**
+ * Where `scene.placePages` puts a run of page pictures in the active drawing.
+ *
+ * @since 0.26.0
+ */
+export interface PagePlacement {
+  /**
+   * One box per requested page, in order. In page mode each box is the picture scaled to fit and
+   * centred on its page, starting on the first page after the content. Otherwise the boxes stack
+   * downward below the content with a gap. Boxes past `maxPages` still have a position, but the
+   * drawing cannot hold those pages.
+   *
+   * @since 0.26.0
+   */
+  rects: PageRect[];
+  /** Page mode: the page count after the import (pass it as `batch({ pageCount })`). null otherwise. @since 0.26.0 */
+  pageCount: number | null;
+  /** Page mode: the 0-based page the first picture lands on (the page after the content). null otherwise. @since 0.26.0 */
+  firstPage: number | null;
+  /** Page mode: how many pages still fit in the drawing's page limit. null when there is no limit. @since 0.26.0 */
+  maxPages: number | null;
 }
 
 /**
@@ -419,4 +474,22 @@ export interface SceneContextApi {
    * @since 0.24.0
    */
   currentStrokeColor(): string;
+  /**
+   * Where to put `sizes.length` page pictures (a size is in scene pixels) in the active drawing,
+   * following its page mode. Pure: nothing changes until you `batch` the images at the returned
+   * boxes. With no drawing open the boxes start at the origin.
+   *
+   * @since 0.26.0
+   */
+  placePages(
+    sizes: readonly { width: number; height: number }[],
+  ): PagePlacement;
+  /**
+   * The size of the active drawing as it would be saved (elements plus pictures), in bytes. A
+   * drawing is capped at 32 MiB, and a batch of pictures is refused above 90% of it. 0 with no
+   * drawing open.
+   *
+   * @since 0.26.0
+   */
+  sizeBytes(): number;
 }

@@ -752,7 +752,6 @@ function mountVaultApp() {
           links={vaultLinks}
           libraryRepository={libraryRepository}
           history={historyRepository}
-          pdf={pdfBridge}
           thumbnails={thumbnailStore ?? null}
         />
       </StrictMode>,

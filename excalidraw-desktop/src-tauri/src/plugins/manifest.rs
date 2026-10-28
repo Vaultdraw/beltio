@@ -36,13 +36,13 @@ const ON_DROP: &str = "onDrop:";
 /// Extensions the app handles itself, so no importer may claim them. The same list is in
 /// `plugin.schema.json` (`definitions.importer`, `not.enum`) and `sdk/cli/src/manifest.mjs`; a
 /// test ties it to the schema, and the web view's test ties it to `IMAGE_MIME_TYPES`.
-pub(crate) const RESERVED_EXTENSIONS: [&str; 16] = [
-    "excalidraw", "excalidrawlib", "json", "pdf", "jpeg", "svg", "png", "jpg", "gif", "webp", "bmp", "ico", "avif", "jfif", "excalidraw.png",
+pub(crate) const RESERVED_EXTENSIONS: [&str; 15] = [
+    "excalidraw", "excalidrawlib", "json", "jpeg", "svg", "png", "jpg", "gif", "webp", "bmp", "ico", "avif", "jfif", "excalidraw.png",
     "excalidraw.svg",
 ];
 
 /// Permissions a plugin may declare. A declaration and a consent line, not a sandbox.
-pub(crate) const PERMISSIONS: [&str; 4] = ["vault.read", "vault.write", "folders.import", "control"];
+pub(crate) const PERMISSIONS: [&str; 5] = ["vault.read", "vault.write", "folders.import", "control", "pdf"];
 /// Names kept for later API revisions: an app that knows them as reserved refuses a manifest that uses one.
 const RESERVED_PERMISSIONS: [&str; 2] = ["net", "secret"];
 

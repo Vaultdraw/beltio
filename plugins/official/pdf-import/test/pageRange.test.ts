@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parsePageRange } from "./pageRange";
+import { parsePageRange } from "../src/pageRange";
 
 describe("parsePageRange", () => {
   it("empty and all select every page", () => {

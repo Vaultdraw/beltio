@@ -32,7 +32,8 @@ export interface PluginManifestInfo {
  * vault, `vault.write` creates drawings in it, `folders.import` (since 0.9.0)
  * reads a folder you pick and writes into a destination you pick
  * (`ctx.folders`), `control` (since 0.22.0) lets other programs call the
- * plugin's declared methods (`ctx.methods`). The names `net` and `secret` are reserved.
+ * plugin's declared methods (`ctx.methods`), `pdf` (since 0.26.0) opens PDF files and renders their
+ * pages (`ctx.pdf`). The names `net` and `secret` are reserved.
  *
  * @since 0.2.0
  */
@@ -40,7 +41,8 @@ export type PluginPermission =
   | "vault.read"
   | "vault.write"
   | "folders.import"
-  | "control";
+  | "control"
+  | "pdf";
 
 /**
  * A command declared in `plugin.toml`.

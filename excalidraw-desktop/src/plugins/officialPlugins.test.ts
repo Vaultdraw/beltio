@@ -7,6 +7,7 @@ import { parseToml } from "../../../sdk/cli/src/toml.mjs";
 
 import {
   createsOwnDrawing,
+  importerMaxBytes,
   isOfficialPluginId,
   OFFICIAL_PLUGINS,
 } from "./officialPlugins";
@@ -70,13 +71,18 @@ describe("the official plugin table (startup stubs)", () => {
           }) => [m.surface, m.command, m.title, m.kinds],
         ),
       );
-      expect(plugin.importers).toEqual(
+      expect(
+        plugin.importers.map(({ id, title, extensions }) => ({
+          id,
+          title,
+          extensions,
+        })),
+      ).toEqual(
         (doc.contributes.importers ?? []).map(
           (i: { id: string; title: string; extensions: string[] }) => ({
             id: i.id,
             title: i.title,
             extensions: i.extensions,
-            ownDrawing: true,
           }),
         ),
       );
@@ -101,11 +107,19 @@ describe("the official plugin table (startup stubs)", () => {
     );
   });
 
+  it("pdf-import follows the [extensions] pdf-import switch and takes PDFs up to 128 MiB", () => {
+    const row = OFFICIAL_PLUGINS.find((p) => p.id === "pdf-import")!;
+    expect(row.extension).toBe("pdf-import");
+    expect(importerMaxBytes("pdf-import", "pdf", 1)).toBe(128 * 1024 * 1024);
+    expect(importerMaxBytes("markdown-import", "md", 7)).toBe(7);
+    expect(createsOwnDrawing("pdf-import")).toBe(false);
+  });
+
   it("markdown-import never claims excalidraw.md", () => {
     const exts = OFFICIAL_PLUGINS.flatMap((p) =>
       p.importers.flatMap((i) => i.extensions),
     );
-    expect(exts).toEqual(["md", "markdown"]);
+    expect(exts).toEqual(["md", "markdown", "pdf"]);
   });
 
   it("knows its ids and which importers make their own drawing", () => {

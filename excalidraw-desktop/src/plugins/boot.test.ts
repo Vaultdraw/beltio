@@ -113,6 +113,7 @@ describe("official plugins (on by default, no startup cost)", () => {
       "graph",
       "mermaid",
       "formula",
+      "pdf-import",
     ]);
     const { win, flush, queue } = fakeWin(true);
     bootPlugins(win);

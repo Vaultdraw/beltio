@@ -36,11 +36,7 @@ import type { HostContextMenuItem } from "@excalidraw/excalidraw/components/Cont
 
 import { stripDrawingExt } from "../vault/fileKind";
 
-import {
-  isPdfFile,
-  planImport,
-  skippedMessage,
-} from "../canvasImport/importFiles";
+import { planImport, skippedMessage } from "../canvasImport/importFiles";
 import { getAppCommandRunner } from "../commands/appRunner";
 import { getRegisteredCommand, subscribeCommands } from "../commands/registry";
 import {
@@ -48,7 +44,10 @@ import {
   hasImporters,
   runImports,
 } from "../plugins/importerMap";
-import { OBSIDIAN_IMPORT_COMMAND_ID } from "../plugins/officialPlugins";
+import {
+  OBSIDIAN_IMPORT_COMMAND_ID,
+  PDF_IMPORT_COMMAND_ID,
+} from "../plugins/officialPlugins";
 import { useCanvasImportMenu } from "../canvasImport/useCanvasImportMenu";
 import { getMenuItems, runMenuItem } from "../plugins/menuRegistry";
 import {
@@ -151,7 +150,6 @@ type Props = {
   /** Links (open/insert/hints, rename edits, re-measure); omit for none. */
   links?: EditorLinksWiring;
   /** PDF import (menu item, dropped PDFs); omit for none. */
-  pdfImport?: { start: () => void; openFile: (file: File) => void };
   /** Canvas right-click "Import file…" (PDF or images at that point). */
   onImportFile?: (at?: ScenePoint) => unknown;
   /** Tabs: view for the first paint and the undo stacks to bring back. */
@@ -190,7 +188,6 @@ const VaultEditorComponent = ({
   focusRequest = null,
   library,
   links,
-  pdfImport,
   onImportFile,
   restore,
   loading = false,
@@ -356,13 +353,6 @@ const VaultEditorComponent = ({
     },
     [importMenuItems],
   );
-  const pdfImportRef = useRef(pdfImport);
-  pdfImportRef.current = pdfImport;
-  const hasPdfImport = !!pdfImport;
-  const canImportPdf = hasPdfImport && !readOnly && !disabled;
-  const canImportPdfRef = useRef(canImportPdf);
-  canImportPdfRef.current = canImportPdf;
-
   const dropRef = useRef({ path, readOnly: readOnly || disabled });
   dropRef.current = { path, readOnly: readOnly || disabled };
 
@@ -412,10 +402,7 @@ const VaultEditorComponent = ({
       if (plan.images.length) {
         void api.insertImages(plan.images, at);
       }
-      // A PDF reaches here only when the PDF import is unavailable.
-      setEditorError(
-        skippedMessage(plan.pdf ? [plan.pdf, ...plan.skipped] : plan.skipped),
-      );
+      setEditorError(skippedMessage(plan.skipped));
       return true;
     },
     [],
@@ -423,16 +410,6 @@ const VaultEditorComponent = ({
 
   const guardSceneDrop = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
-      // A dropped PDF opens the import dialog instead of Excalidraw's handling.
-      const pdf = Array.from(event.dataTransfer.files).find(isPdfFile);
-      if (pdf && pdfImportRef.current) {
-        event.preventDefault();
-        event.stopPropagation();
-        if (canImportPdfRef.current) {
-          pdfImportRef.current.openFile(pdf);
-        }
-        return;
-      }
       // Shift keeps Excalidraw's own handling (insert scene content).
       if (!event.shiftKey && hasImporters() && dropPluginFiles(event)) {
         return;
@@ -958,6 +935,11 @@ const VaultEditorComponent = ({
   // VaultApp render, e.g. each autosave status change).
   const hasLibrary = !!library;
   // The official markdown-import plugin's command exists as a stub from boot, so this costs no plugin code.
+  const hasPdfImport = useSyncExternalStore(
+    subscribeCommands,
+    () => !!getRegisteredCommand(PDF_IMPORT_COMMAND_ID),
+    () => false,
+  );
   const hasObsidianImport = useSyncExternalStore(
     subscribeCommands,
     () => !!getRegisteredCommand(OBSIDIAN_IMPORT_COMMAND_ID),
@@ -988,10 +970,12 @@ const VaultEditorComponent = ({
           </CommandMenuItem>
           {hasPdfImport && (
             <CommandMenuItem
-              commandId="file.importPdf"
+              commandId={PDF_IMPORT_COMMAND_ID}
               icon={LoadIcon}
-              onSelect={() => pdfImportRef.current?.start()}
-              disabled={!canImportPdf}
+              onSelect={() =>
+                void getAppCommandRunner()?.(PDF_IMPORT_COMMAND_ID)
+              }
+              disabled={readOnly || disabled}
             >
               Import PDF…
             </CommandMenuItem>
@@ -1063,8 +1047,9 @@ const VaultEditorComponent = ({
       canOpenSettings,
       canOpenGraph,
       canToggleHistory,
-      canImportPdf,
       hasPdfImport,
+      readOnly,
+      disabled,
       hasObsidianImport,
       saveCopy,
       paperDialogOpen,

@@ -17,6 +17,9 @@ import type {
   NewElement,
   PanelContribution,
   PluginContributions,
+  PdfImportSettings,
+  PdfPageSize,
+  PdfRenderOptions,
   PluginPermission,
   SettingDecl,
   SettingValue,
@@ -203,6 +206,28 @@ export interface FakeWorkspace {
   revealed(): string[];
 }
 
+/** What `ctx.pdf` sees, seedable. */
+export interface FakePdf {
+  /** The document the next `pick()` returns (null: the user cancels). `open()` uses its pages too. */
+  nextPick: { name: string; pages: PdfPageSize[] } | null;
+  /** Non-null: documents open `locked` until `unlock` gets this password. */
+  password: string | null;
+  /** An error code (such as `PDF_INVALID`) that `pick` and `open` throw. */
+  openError: string | null;
+  /** The bytes `render` returns (default: a 1x1 PNG). */
+  renderBytes: (index: number, options: PdfRenderOptions) => Uint8Array;
+  /** 0-based pages whose render fails with `PDF_PAGE_FAILED`. */
+  failPages: Set<number>;
+  /** Changes what `ctx.pdf.settings()` returns (the `[pdf_import]` values). */
+  setSettings(patch: Partial<PdfImportSettings>): void;
+  /** Every render, in order. */
+  renders: { name: string; index: number; options: PdfRenderOptions }[];
+  /** Names of the documents opened, in order. */
+  opened: string[];
+  /** Ids of the documents closed. */
+  closed: number[];
+}
+
 /** What `ctx.folders` sees, seedable. */
 export interface FakeFolders {
   /** What the next `folders.pickSource` returns (null: the user cancels): files by relative path, text or bytes. */
@@ -320,6 +345,7 @@ export interface TestPlugin {
   vault: FakeVault;
   workspace: FakeWorkspace;
   folders: FakeFolders;
+  pdf: FakePdf;
   /**
    * Drops a file on the drawing as the app does: finds the importer by file
    * extension, loads the plugin, runs it and applies the returned ops as one

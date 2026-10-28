@@ -77,8 +77,8 @@
       "uniqueItems": true,
       "items": {
         "title": "Permission",
-        "description": "vault.read reads the drawings in your vault. vault.write creates drawings in your vault. folders.import reads a folder you pick and writes into a destination you pick (ctx.folders). control lets other programs (the vaultdraw command, scripts, AI apps you allow) call the methods the plugin declares.",
-        "enum": ["vault.read", "vault.write", "folders.import", "control"]
+        "description": "vault.read reads the drawings in your vault. vault.write creates drawings in your vault. folders.import reads a folder you pick and writes into a destination you pick (ctx.folders). control lets other programs (the vaultdraw command, scripts, AI apps you allow) call the methods the plugin declares. pdf opens PDF files you pick and renders their pages (ctx.pdf).",
+        "enum": ["vault.read", "vault.write", "folders.import", "control", "pdf"]
       }
     },
     "data_key": {
@@ -524,7 +524,7 @@
             "maxLength": 32,
             "pattern": "^[a-z0-9]+(\\.[a-z0-9]+)*$",
             "not": {
-              "enum": ["excalidraw", "excalidrawlib", "json", "pdf", "jpeg", "svg", "png", "jpg", "gif", "webp", "bmp", "ico", "avif", "jfif", "excalidraw.png", "excalidraw.svg"]
+              "enum": ["excalidraw", "excalidrawlib", "json", "jpeg", "svg", "png", "jpg", "gif", "webp", "bmp", "ico", "avif", "jfif", "excalidraw.png", "excalidraw.svg"]
             }
           }
         }

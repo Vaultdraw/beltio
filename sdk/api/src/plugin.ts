@@ -20,6 +20,7 @@ import type { ThemeApi } from "./theme";
 import type { VaultApi } from "./vault";
 import type { ShapesApi } from "./shapes";
 import type { DiagramsApi } from "./diagrams";
+import type { PdfApi } from "./pdf";
 import type { ThumbnailsApi } from "./thumbnails";
 import type { ToolsApi } from "./tools";
 import type { OverlaysApi } from "./overlays";
@@ -121,6 +122,8 @@ export interface PluginContext {
   readonly thumbnails: ThumbnailsApi;
   /** Diagram converters (Mermaid). @since 0.23.0 */
   readonly diagrams: DiagramsApi;
+  /** Open PDF files and render their pages natively. Needs the permission `pdf`. @since 0.26.0 */
+  readonly pdf: PdfApi;
   /**
    * Disposed in reverse order on disable/reload/quit.
    *

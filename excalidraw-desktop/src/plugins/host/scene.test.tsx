@@ -136,6 +136,44 @@ describe("ctx.scene.batch", () => {
     await expect(ctx.scene.batch(add)).rejects.toThrow(/no drawing/);
   });
 
+  it("pageCount must be a whole number from 1 to 500", async () => {
+    const ctx = await bootCtx((c) => void c.commands.register("go", () => {}));
+    for (const bad of [0, 501, 1.5, Number.NaN]) {
+      await expect(ctx.scene.batch(add, { pageCount: bad })).rejects.toThrow(
+        /pageCount/,
+      );
+    }
+    expect(t!.scene.batches).toHaveLength(0);
+    await ctx.scene.batch(add, { pageCount: 3 }); // not in page mode: ignored
+    expect(t!.scene.batches).toHaveLength(1);
+  });
+
+  it("placePages stacks below the content; sizeBytes grows with it", async () => {
+    const ctx = await bootCtx((c) => void c.commands.register("go", () => {}));
+    const empty = ctx.scene.placePages([{ width: 100, height: 200 }]);
+    expect(empty).toEqual({
+      rects: [{ x: 0, y: 0, width: 100, height: 200 }],
+      pageCount: null,
+      firstPage: null,
+      maxPages: null,
+    });
+    const before = ctx.scene.sizeBytes();
+    t!.scene.setElements([{ ...rect, id: "a", x: 5, y: 7 }]);
+    expect(ctx.scene.sizeBytes()).toBeGreaterThan(before);
+    const plan = ctx.scene.placePages([
+      { width: 100, height: 200 },
+      { width: 50, height: 60 },
+    ]);
+    expect(plan.rects[0]).toMatchObject({ x: 5, width: 100 });
+    expect(plan.rects[0].y).toBeGreaterThanOrEqual(17);
+    expect(plan.rects[1].y).toBeGreaterThan(plan.rects[0].y + 200);
+    expect(() => ctx.scene.placePages([{ width: 0, height: 5 }])).toThrow(
+      /sizes/,
+    );
+    t!.scene.switchTo(null);
+    expect(ctx.scene.sizeBytes()).toBe(0);
+  });
+
   it("viewportCenter reads the active viewport", async () => {
     const ctx = await bootCtx((c) => void c.commands.register("go", () => {}));
     expect(ctx.scene.viewportCenter()).toEqual({ x: 400, y: 300 });

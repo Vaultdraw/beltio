@@ -1,4 +1,4 @@
-/** Where imported PDF pages go. Pure. */
+/** Where a run of page pictures goes in a drawing (`ctx.scene.placePages`). Pure. */
 import { arrayToMap } from "@excalidraw/common";
 import { getCommonBounds, getNonDeletedElements } from "@excalidraw/element";
 import {
@@ -14,8 +14,6 @@ import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import { getContentBottom } from "../page/pageContent";
 
-import type { PdfPageInfo } from "./types";
-
 export type PlacementRect = {
   x: number;
   y: number;
@@ -23,7 +21,7 @@ export type PlacementRect = {
   height: number;
 };
 
-export type PdfPlacement = {
+export type PagePlacementPlan = {
   rects: PlacementRect[];
   /** Page mode: the page count to set (start + n). */
   pageCount?: number;
@@ -33,32 +31,24 @@ export type PdfPlacement = {
   maxPagesThatFit: number;
 };
 
-const PT_TO_SCENE = 96 / 72;
-
-export const planPdfPlacement = ({
-  pages,
-  indices,
+export const planPagePlacement = ({
+  sizes,
   elements,
   pageSetup,
 }: {
-  pages: readonly PdfPageInfo[];
-  indices: readonly number[];
+  /** The pictures, in scene pixels. */
+  sizes: readonly { width: number; height: number }[];
   elements: readonly ExcalidrawElement[];
   pageSetup: PageSetup | null | undefined;
-}): PdfPlacement => {
+}): PagePlacementPlan => {
   const live = getNonDeletedElements(elements);
-  const size = (i: number) => ({
-    width: pages[i].widthPt * PT_TO_SCENE,
-    height: pages[i].heightPt * PT_TO_SCENE,
-  });
 
   if (pageSetup && isPageModeOn(pageSetup)) {
     const bottom = getContentBottom(pageSetup, live, arrayToMap(live));
     const start =
       bottom > 0 ? getPageIndexAt(pageSetup, bottom - 0.001) + 1 : 0;
-    const rects = indices.map((pageIndex, k) => {
+    const rects = sizes.map((s, k) => {
       const slot = getPageRect(pageSetup, start + k);
-      const s = size(pageIndex);
       const scale = Math.min(slot.width / s.width, slot.height / s.height);
       // round inwards so the fit never leaves the page
       const width = Math.floor(s.width * scale);
@@ -76,7 +66,7 @@ export const planPdfPlacement = ({
       // never drop pages the drawing already has
       pageCount: Math.min(
         PAGE_LIMITS.pageCount.max,
-        Math.max(pageSetup.pageCount, start + indices.length),
+        Math.max(pageSetup.pageCount, start + sizes.length),
       ),
       maxPagesThatFit: Math.max(0, PAGE_LIMITS.pageCount.max - start),
     };
@@ -89,9 +79,8 @@ export const planPdfPlacement = ({
     x = minX;
     y = maxY + PAGE_GAP;
   }
-  const rects = indices.map((pageIndex) => {
-    const s = size(pageIndex);
-    const rect = { x, y, ...s };
+  const rects = sizes.map((s) => {
+    const rect = { x, y, width: s.width, height: s.height };
     y += s.height + PAGE_GAP;
     return rect;
   });

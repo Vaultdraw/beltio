@@ -811,6 +811,34 @@ The example `sdk/examples/flow-from-text` has two methods: `draw` turns Mermaid-
 ## Diagram converters (since 0.23.0)
 
 `ctx.diagrams.mermaidToElements(text)` converts Mermaid text with the editor's own Mermaid-to-Excalidraw converter and answers `{ ops, width, height, skipped }`. `ops` are `add` ops for `ctx.scene.batch` or `ctx.vault.createDrawing`, the diagram's top left at 0, 0: shapes and text with their labels, straight arrows between shapes bound to them, bent arrows as points. `skipped` counts elements the ops cannot carry (pictures). It rejects with the converter's message for text it cannot read, and while the user has Mermaid off (`[extensions] mermaid`). The converter chunk loads on the first call; it needs no permission. The official `mermaid` plugin's `to_drawing` method is built on it.
+## PDF and page placement (since 0.26.0)
+
+Two additions for plugins that put page-sized pictures into the open drawing, such as the official `pdf-import`.
+
+**`ctx.pdf`** (permission `pdf`, bundled plugins need no consent) opens a PDF and renders its pages with the app's native renderer (PDFKit on macOS, poppler on Linux). Nothing loads until the first call.
+
+```ts
+let doc = await ctx.pdf.pick();                   // native file dialog; null when cancelled
+// or: doc = await ctx.pdf.open(file.name, new Uint8Array(await file.arrayBuffer()));
+if (doc?.locked) doc = await doc.unlock(password); // rejects with PDF_BAD_PASSWORD when wrong
+const bytes = await doc.render(0, { maxSide: 1440, format: "jpeg", quality: 0.85 });
+await doc.close();
+```
+
+| Member | Meaning |
+| --- | --- |
+| `pick()` | A native file dialog for a PDF. Resolves with a `PdfDocument`, or null when cancelled. |
+| `open(name, bytes)` | Opens PDF bytes (up to 128 MiB). |
+| `PdfDocument` | `name`, `pageCount`, `pages` (`widthPt`, `heightPt` of each page, as shown), `byteSize`, `locked`, `render(index, options)`, `unlock(password)`, `close()`. At most four documents stay open; the oldest closes when a fifth opens. Renders run one at a time. |
+| `settings()` | The `[pdf_import]` values of `config.toml`, read now (`maxSide`, `format`, `quality`, `lockPages`, `warnPages`, `pixelBudgetMp`). |
+
+Errors carry a `code`: `PDF_ENCRYPTED`, `PDF_BAD_PASSWORD`, `PDF_INVALID`, `PDF_PAGE_FAILED`, `PDF_BAD_TOKEN`, `PDF_TOO_LARGE`, `PDF_UNAVAILABLE`, and `PERMISSION` without the permission.
+
+**Placing pictures.** `ctx.scene.placePages(sizes)` returns where `sizes.length` page pictures go in the active drawing (sizes in scene pixels): `rects` (one box each), `pageCount` and `firstPage` (page mode), and `maxPages` (how many still fit in page mode). In page mode each picture is scaled to fit its page, starting on the page after the content; otherwise the boxes stack below the content. It changes nothing. `ctx.scene.sizeBytes()` is the drawing's size as saved (the cap is 32 MiB; a batch of pictures is refused above 90% of it). Add the pictures with `ctx.scene.batch(ops, { path, pageCount, reveal })`: `pageCount` sets the page count in the same undo step (page mode only), and `reveal` scrolls the first added element into view without zoom or selection (normal mode only).
+
+The editor is read-only while an overlay is open, and a change made then is not an undo step. A plugin that shows a dialog with `ctx.overlays` should close it before calling `batch`, as `pdf-import` does.
+
+Test with `boot()` from `@vaultdraw/api/testing`: `pdf.nextPick` sets the document the next `pick()` returns, `pdf.renderBytes`, `pdf.failPages`, `pdf.password` and `pdf.openError` shape the renderer, and `pdf.renders` and `pdf.closed` record what happened.
 
 ## Rules for plugin code
 

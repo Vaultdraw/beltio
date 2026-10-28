@@ -21,7 +21,7 @@ extensions = ["txt"]        # lower case, no dot; 1 to 8 per importer
 
 A plugin has at most 8 importers. The schema is [plugin.schema.json](../api/plugin.schema.json); the generated [manifest reference](manifest.md) lists every key.
 
-**Reserved extensions.** The app handles these itself, so no plugin may claim them: `excalidraw`, `excalidrawlib`, `json`, `pdf`, `jpeg`, `svg`, `png`, `jpg`, `gif`, `webp`, `bmp`, `ico`, `avif`, `jfif`, `excalidraw.png` and `excalidraw.svg`. A manifest that claims one is refused.
+**Reserved extensions.** The app handles these itself, so no plugin may claim them: `excalidraw`, `excalidrawlib`, `json`, `jpeg`, `svg`, `png`, `jpg`, `gif`, `webp`, `bmp`, `ico`, `avif`, `jfif`, `excalidraw.png` and `excalidraw.svg`. A manifest that claims one is refused.
 
 ## 2. Register the handler
 
@@ -67,9 +67,7 @@ The ops are the same ops as `ctx.scene.batch`. The same [batch rules](reference.
 ```mermaid
 flowchart TD
   M["plugin.toml<br/>contributes.importers"] -->|"host start: claims extensions"| S["Extension map<br/>no plugin code loaded"]
-  D["File dropped on canvas<br/>or picked in Import: File"] --> P{"PDF?"}
-  P -->|yes| PDF["Built-in PDF import"]
-  P -->|no| L{"Extension claimed<br/>by an importer?"}
+  D["File dropped on canvas<br/>or picked in Import: File"] --> L{"Extension claimed<br/>by an importer?"}
   S -.-> L
   L -->|no| IMG["Image, or skipped<br/>(today's path)"]
   L -->|yes| SZ{"32 MiB or less?"}
@@ -81,7 +79,7 @@ flowchart TD
 
 Notes on the flow:
 
-- The PDF import keeps its place first. Plugins never see a PDF.
+- A PDF goes to the importer that claims `pdf`: the official `pdf-import` plugin, or another plugin through `plugins.importers`. The app has no PDF handling of its own.
 - A plugin loads only when a matching file arrives. Until then it costs nothing.
 - The file size limit is checked before the plugin loads: 32 MiB.
 

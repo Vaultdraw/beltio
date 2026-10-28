@@ -19,6 +19,7 @@ describe("official plugins are on unless turned off", () => {
       "graph",
       "mermaid",
       "formula",
+      "pdf-import",
     ]);
     expect(v.pluginsDisabled).toEqual([]);
   });
@@ -31,6 +32,7 @@ describe("official plugins are on unless turned off", () => {
       "graph",
       "mermaid",
       "formula",
+      "pdf-import",
     ]);
     expect(v.pluginsDisabled).toEqual([]);
   });
@@ -44,13 +46,21 @@ describe("official plugins are on unless turned off", () => {
       "graph",
       "mermaid",
       "formula",
+      "pdf-import",
     ]);
     expect(v.pluginsDisabled).toEqual(["gallery"]);
   });
 
   it("nothing saved: every official plugin is on", () => {
     expect(resolveOfficial(undefined, undefined)).toEqual({
-      enabled: ["markdown-import", "gallery", "graph", "mermaid", "formula"],
+      enabled: [
+        "markdown-import",
+        "gallery",
+        "graph",
+        "mermaid",
+        "formula",
+        "pdf-import",
+      ],
       disabled: [],
     });
   });
@@ -62,6 +72,7 @@ describe("official plugins are on unless turned off", () => {
       "graph",
       "mermaid",
       "formula",
+      "pdf-import",
     ]);
     restoreExtensionDefaults();
     expect(getPreferences().pluginsEnabled).toEqual([
@@ -71,6 +82,7 @@ describe("official plugins are on unless turned off", () => {
       "graph",
       "mermaid",
       "formula",
+      "pdf-import",
     ]);
     expect(getPreferences().pluginsDisabled).toEqual([]);
   });
