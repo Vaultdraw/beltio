@@ -45,4 +45,4 @@ Built from one commit, after the packaged smoke passed (see `BUILT-FROM.txt`). C
 
 - The macOS build is unsigned (see above). Linux builds are new and are smoke-launched under a virtual display, not on every desktop.
 - Plugins and the plugin API are experimental. No automatic update.
-- Memory: everyday use (3 drawings, packaged, foreground) peaked at 336 MB in total, under the 400 MB goal, and idles near 220 MB. A 5,000-drawing vault peaks above 1 GB; most of it is WebKit buffers and it varies by about 250 MB from run to run.
+- Memory: everyday use (3 small drawings, packaged, foreground, quiet machine) peaks at about 470 MB in total and idles near 250 MB. Most of the peak is WebKit's display buffers for the editor canvases; `memory.low_memory_canvas = true` lowers the peak to about 365 MB, at about 60 instead of 120 frames per second while panning. A 5,000-drawing vault peaks above 1 GB; most of it is WebKit buffers and it varies by about 250 MB from run to run.
