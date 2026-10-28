@@ -5,8 +5,6 @@
  * path costs one existence probe; a folder move re-walks that folder alone;
  * drawing autosaves cost nothing.
  */
-import { probeExists } from "../tabs/missingWatcher";
-
 import { listNotePaths } from "./noteScan";
 
 import type { VaultChange, VaultRepository } from "../vault/types";
@@ -36,33 +34,92 @@ export const applyNoteOp = (list: string[], op: NoteListOp): string[] => {
   return [...kept, ...op.notes];
 };
 
-/** The ops a vault change needs (no work for plain file events). */
+/**
+ * Applies a batch of ops with one pass over the list (a `git checkout` that
+ * touches 500 notes copies the list once, not 500 times). Returns the same
+ * array when nothing changed.
+ */
+export const applyNoteOps = (
+  list: string[],
+  ops: readonly NoteListOp[],
+): string[] => {
+  if (ops.length <= 1) {
+    return ops.length === 0 ? list : applyNoteOp(list, ops[0]);
+  }
+  let set: Set<string> | null = null;
+  let changed = false;
+  for (const op of ops) {
+    set ??= new Set(list);
+    if (op.kind === "note") {
+      changed =
+        (op.exists ? !set.has(op.path) : set.delete(op.path)) || changed;
+      if (op.exists) {
+        set.add(op.path);
+      }
+    } else {
+      for (const p of [...set]) {
+        if (underFolder(p, op.path)) {
+          set.delete(p);
+          changed = true;
+        }
+      }
+      for (const n of op.notes) {
+        changed = !set.has(n) || changed;
+        set.add(n);
+      }
+    }
+  }
+  return changed ? [...set!] : list;
+};
+
+const parentOf = (p: string) => p.slice(0, Math.max(0, p.lastIndexOf("/")));
+
+/**
+ * The ops a vault change needs (no work for plain file events). A path with no
+ * file extension is a folder: a folder renamed, moved or deleted outside the
+ * app (Finder, git) arrives as plain paths, so it is re-walked alone. A burst
+ * lists each parent folder once, and a note under a re-walked folder needs no
+ * listing of its own.
+ */
 export async function notesOpsFor(
   repository: Repo,
   handle: string,
   event: Pick<VaultChange, "paths" | "rescan">,
 ): Promise<NoteListOp[]> {
   const ops: NoteListOp[] = [];
-  for (const path of new Set(event.paths)) {
-    if (NOTE_EXT.test(path)) {
-      let exists: boolean;
-      try {
-        // The parent listing, not the drawing-revision probe: it knows notes too.
-        exists = await probeExists(
-          { listDirectory: repository.listDirectory.bind(repository) },
-          handle,
-          path,
-        );
-      } catch {
-        continue;
-      }
-      ops.push({ kind: "note", path, exists });
-    } else if (event.rescan && path !== "" && !FILE_EXT.test(path)) {
-      ops.push({
-        kind: "folder",
-        path,
-        notes: await listNotePaths(repository, handle, undefined, path),
-      });
+  const paths = [...new Set(event.paths)].filter((p) => p !== "");
+  const folders = paths.filter((p) => !NOTE_EXT.test(p) && !FILE_EXT.test(p));
+  // Nested folders are covered by their outermost re-walked ancestor.
+  const roots = folders.filter(
+    (f) => !folders.some((o) => o !== f && underFolder(f, o)),
+  );
+  for (const path of roots) {
+    ops.push({
+      kind: "folder",
+      path,
+      notes: await listNotePaths(repository, handle, undefined, path),
+    });
+  }
+  const byParent = new Map<string, string[]>();
+  for (const path of paths) {
+    if (!NOTE_EXT.test(path) || roots.some((r) => underFolder(path, r))) {
+      continue;
+    }
+    const parent = parentOf(path);
+    byParent.set(parent, [...(byParent.get(parent) ?? []), path]);
+  }
+  for (const [parent, notes] of byParent) {
+    let names: ReadonlySet<string>;
+    try {
+      // The parent listing, not the drawing-revision probe: it knows notes too.
+      names = new Set(
+        (await repository.listDirectory(handle, parent)).map((e) => e.path),
+      );
+    } catch {
+      continue;
+    }
+    for (const path of notes) {
+      ops.push({ kind: "note", path, exists: names.has(path) });
     }
   }
   return ops;

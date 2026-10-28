@@ -116,7 +116,7 @@ import { useVaultAppearance } from "./theme/useVaultAppearance";
 import { registerBisectCommands } from "./extensionSwitches/bisectCommands";
 import { BisectBanner } from "./extensionSwitches/BisectBanner";
 import { listNotePaths } from "./notes/noteScan";
-import { applyNoteOp, notesOpsFor } from "./notes/noteListSync";
+import { applyNoteOps, notesOpsFor } from "./notes/noteListSync";
 
 import { flushOpenNotes, unsavedNotePaths } from "./notes/openNotes";
 import { isNotePath } from "./notes/register";
@@ -2173,7 +2173,7 @@ export const VaultApp = ({
       scanOps.current = null;
       setNoteList({
         handle: h,
-        paths: (ops ?? []).reduce(applyNoteOp, paths),
+        paths: applyNoteOps(paths, ops ?? []),
       });
     });
   }, [vault?.handle, repository]);
@@ -2201,7 +2201,7 @@ export const VaultApp = ({
             if (!prev || prev.handle !== h) {
               return prev;
             }
-            const paths = ops.reduce(applyNoteOp, prev.paths);
+            const paths = applyNoteOps(prev.paths, ops);
             return paths === prev.paths ? prev : { handle: h, paths };
           });
         });
