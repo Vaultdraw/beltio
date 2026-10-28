@@ -14,6 +14,7 @@ import {
   updatePreferences,
 } from "../vault/preferences";
 
+import { aliasesOf, aliasTarget, resolveCommandId } from "./aliases";
 import { allCommands, getCommand } from "./commands";
 import {
   failingClauses,
@@ -76,6 +77,9 @@ export function setHotkeyOverride(
   const legacy = getCommand(id)?.legacy;
   if (legacy) {
     delete next[legacy.id];
+  }
+  for (const old of aliasesOf(aliasTarget(id))) {
+    delete next[old]; // a renamed id's entry must not come back either
   }
   if (keys === null) {
     delete next[id];
@@ -182,7 +186,7 @@ export function useCommandDispatcher(
 
   const activeWhen = useCallback(
     (id: string, options?: AvailabilityOptions) =>
-      getCommand(id)?.when?.filter((clause) => {
+      getCommand(aliasTarget(id))?.when?.filter((clause) => {
         const key = clause.replace("!", "");
         return (
           !FOCUS_RULES.has(key) &&
@@ -193,22 +197,27 @@ export function useCommandDispatcher(
   );
 
   const isAvailable = useCallback(
-    (id: string, options?: AvailabilityOptions) =>
-      !!getCommand(id) &&
-      !!handlerFor(id) &&
-      whenHolds(activeWhen(id, options), context()),
+    (oldId: string, options?: AvailabilityOptions) => {
+      const id = aliasTarget(oldId);
+      return (
+        !!getCommand(id) &&
+        !!handlerFor(id) &&
+        whenHolds(activeWhen(id, options), context())
+      );
+    },
     [activeWhen, context, handlerFor],
   );
 
   /** Only for the control API's UNAVAILABLE error; isAvailable stays allocation-light. */
   const failedClauses = useCallback(
     (id: string, options?: AvailabilityOptions) =>
-      failingClauses(activeWhen(id, options), context()),
+      failingClauses(activeWhen(aliasTarget(id), options), context()),
     [activeWhen, context],
   );
 
   const run = useCallback(
-    (id: string, options?: AvailabilityOptions) => {
+    (oldId: string, options?: AvailabilityOptions) => {
+      const id = resolveCommandId(oldId);
       const handler = handlerFor(id);
       if (!handler || !isAvailable(id, options)) {
         return false;
@@ -220,7 +229,8 @@ export function useCommandDispatcher(
   );
 
   const runAndWait = useCallback(
-    async (id: string, options?: AvailabilityOptions) => {
+    async (oldId: string, options?: AvailabilityOptions) => {
+      const id = resolveCommandId(oldId);
       const handler = handlerFor(id);
       if (!handler || !isAvailable(id, options)) {
         return false;

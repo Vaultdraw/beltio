@@ -30,6 +30,8 @@ import { VAULT_THEME_COMMANDS } from "../theme/vaultThemeCommands";
 
 import { NOTES_COMMANDS } from "../notes/notesCommands";
 
+import { aliasTarget, isAliasId } from "./aliases";
+
 import {
   drawingOpenCommands,
   makeDrawingOpenCommand,
@@ -691,7 +693,8 @@ export const isBuiltinCommand = (id: string): boolean =>
 export const BUILTIN_COMMANDS = COMMANDS;
 
 /** A registered command, or the "Open drawing" command of a `drawing.open:` id. */
-export const getCommand = (id: string): CommandDefinition | undefined => {
+export const getCommand = (oldId: string): CommandDefinition | undefined => {
+  const id = aliasTarget(oldId);
   const registered = getRegisteredCommand(id);
   if (registered) {
     return registered;
@@ -730,6 +733,7 @@ export const allCommands = (
 
 export const isCommandId = (id: string): boolean =>
   getRegisteredCommand(id) !== undefined ||
+  isAliasId(id) ||
   isLegacyCommandId(id) ||
   parseDrawingOpenCommandId(id) !== null ||
   parseSnippetToggleCommandId(id) !== null;

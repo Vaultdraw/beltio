@@ -1,4 +1,5 @@
 /** Effective keys per command (defaults + `[hotkeys]` overrides) and lookup. */
+import { aliasesOf, resolveCommandId } from "./aliases";
 import { defaultKeys } from "./commands";
 import { isSequenceKey, normalizeKeys } from "./keySequence";
 
@@ -32,9 +33,24 @@ function legacyOverride(
   return normalizeAll(keys, platform).filter((c) => !except.includes(c));
 }
 
+/** The override on a renamed (aliased) old id of this command, if any. */
+function aliasOverride(
+  command: CommandDefinition,
+  overrides: HotkeyOverrides,
+): readonly string[] | undefined {
+  for (const old of aliasesOf(command.id)) {
+    const keys = own(overrides, old);
+    if (keys) {
+      resolveCommandId(old); // one notice
+      return keys;
+    }
+  }
+  return undefined;
+}
+
 /**
- * Override list when present (even []), else the legacy id's override, else
- * the platform defaults.
+ * Override list when present (even []), else an old (renamed) id's override,
+ * else the legacy id's override, else the platform defaults.
  */
 export function effectiveKeys(
   command: CommandDefinition,
@@ -42,7 +58,9 @@ export function effectiveKeys(
   platform: Platform,
 ): Chord[] {
   const override =
-    own(overrides, command.id) ?? legacyOverride(command, overrides, platform);
+    own(overrides, command.id) ??
+    aliasOverride(command, overrides) ??
+    legacyOverride(command, overrides, platform);
   return normalizeAll(override ?? defaultKeys(command, platform), platform);
 }
 

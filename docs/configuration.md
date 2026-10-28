@@ -511,6 +511,16 @@ The page lists all commands with their keys as chips. Type in the filter to narr
 - Keys the system or the app menu owns (Cmd+Q, Cmd+W, Cmd+Tab, Cmd+C/X/V/Z/A and similar) are refused, with the reason shown.
 - A key used by two commands, or by one of Excalidraw's own shortcuts, is shown in red with what it clashes with. It is allowed, and Vaultdraw's binding wins.
 
+### Renamed commands
+
+When a command gets a new id (it moved into an official extension, say), the old id keeps working: a key you bound to it in `[hotkeys]`, a palette entry, `vaultdraw` CLI calls, the control API's `command.run` and `vaultdraw://` links all resolve it to the new command, at the moment they run. Your config file is never rewritten; the first use of an old id logs one line in the console, with no dialog. Settings → Hotkeys shows the key on the new command. A binding on an entry that is not registered (its extension is off) does nothing until the extension is on again, and running it by id reports "unavailable", not an error. An entry on the new id wins over one on the old id.
+
+| Old id | New id |
+| --- | --- |
+| `thumbnails.galleryToggle` | `gallery.toggle` |
+| `thumbnails.galleryOpen` | `gallery.show-folder` |
+| `file.importPdf` | `pdf-import.import` |
+
 ### Defaults
 
 `Mod` is Cmd on macOS and Ctrl on Windows and Linux. A dash means no key by default.

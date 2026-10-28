@@ -2,6 +2,7 @@
  * WebView side of the control API: answers "control-request" events from the
  * Rust server. Pure: listen/invoke and the app state are injected.
  */
+import { isAliasId } from "../commands/aliases";
 import { getCommand } from "../commands/commands";
 import { spoolBlob } from "../export/spoolBlob";
 
@@ -72,7 +73,7 @@ export function createControlBridge(deps: ControlDeps) {
     "command.run": (params) => {
       const id = stringParam(params, "id");
       const runner = deps.runner();
-      if (!getCommand(id)) {
+      if (!getCommand(id) && !isAliasId(id)) {
         throw new ControlError("NOT_FOUND", `Unknown command ${id}`, { id });
       }
       if (!runner.run(id)) {

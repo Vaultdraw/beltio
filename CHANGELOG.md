@@ -6,6 +6,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Renamed command ids no longer break your keys.** A key bound in `[hotkeys]` to an old id (`thumbnails.galleryToggle`, `thumbnails.galleryOpen`, `file.importPdf`) keeps working, and so do those ids in the palette history, the CLI, `command.run` and links; they resolve to `gallery.toggle`, `gallery.show-folder` and `pdf-import.import` when they run, even if the extension registers later. See "Renamed commands" in `docs/configuration.md`.
 - **Editing a formula or a plugin shape keeps the element.** Both used to replace the image (new id, top of the stacking order, group and bound arrows lost). Plugin API 0.25.0: a scene `update` can carry `image` to change an image's picture in place, as one undo step, with the plugin's existing scene write permission. `ctx.shapes.update` and the formula edit use it.
 - **Formulas in `rgb()` / `hsl()` colours** keep their colour instead of turning near-black.
 - **Official plugins stay on after an upgrade.** Official plugins (markdown-import, gallery, later the graph) are on unless you turn one off: Settings writes the ones you switched off to `plugins.disabled`, and `plugins.enabled` keeps your own plugins. A saved `plugins.enabled` that predates an official plugin no longer hides it; every official plugin is on after an upgrade, because none shipped in a release before this (markdown-import first ships in 0.2.0). "Restore defaults" on the Extensions page turns every official plugin back on.
