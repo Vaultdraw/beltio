@@ -101,7 +101,6 @@ import {
 import { commitCanvasTextEdit } from "./commands/context";
 import { ActivityBar } from "./activityBar/ActivityBar";
 import { useActivityBarShown } from "./activityBar/activityBarRegistry";
-import { graphPanelStore } from "./activityBar/panelStores";
 import { getRegisteredHandler } from "./commands/handlerRegistry";
 import { closeInstallDialog } from "./theme/install/installStore";
 import { useThemeInstall } from "./theme/install/useThemeInstall";
@@ -2058,7 +2057,6 @@ export const VaultApp = ({
     subscribeOverlay,
     () => getOverlay()?.pluginId === "graph",
   );
-  useEffect(() => graphPanelStore.publish(graphOpen), [graphOpen]);
   const mainCovered = useSyncExternalStore(
     subscribeOverlay,
     hasCoveringOverlay,

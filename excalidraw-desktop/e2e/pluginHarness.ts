@@ -225,6 +225,8 @@ export async function startPluginsHarness(
     },
     win,
   );
+  // The activity bar entries the official plugins declare (main.tsx gets them from bootPlugins).
+  (await import("../src/plugins/boot")).syncOfficialActivity(win);
   const host = await startPluginHost(win, (run) => win.setTimeout(run, 0));
   (win as any).__plugins = {
     host,

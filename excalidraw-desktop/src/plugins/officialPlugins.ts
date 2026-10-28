@@ -281,6 +281,13 @@ export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
         when: ["graphFocus", "!modalOpen"],
       },
     ],
+    activity: {
+      id: "graph",
+      label: "Graph view",
+      icon: "graph",
+      command: "open",
+      after: "history",
+    },
   },
   {
     id: "mermaid",

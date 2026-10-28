@@ -145,7 +145,7 @@ const ACTIVITY_ICONS = { gallery: IconGallery, graph: IconGraph };
 let releaseActivity: (() => void) | null = null;
 
 /** The activity bar buttons of the enabled official plugins; they stay once the host runs. */
-function syncOfficialActivity(win: Window): void {
+export function syncOfficialActivity(win: Window): void {
   releaseActivity?.();
   const on = OFFICIAL_PLUGINS.filter(
     (p) => p.activity && enabledPluginIds(win).includes(p.id),

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { getCommand } from "../commands/commands";
-import { registerCommands } from "../commands/registry";
-import { officialCommandDefs } from "../plugins/boot";
 import { OFFICIAL_PLUGINS } from "../plugins/officialPlugins";
+
+import { placeAfter } from "./activityBarRegistry";
 
 import {
   ACTIVITY_ENTRIES,
@@ -28,14 +28,23 @@ describe("ACTIVITY_ENTRIES", () => {
   });
 
   it("runs only registered commands", () => {
-    // The graph's commands come from the official plugin's stubs (registered at boot in the app).
-    const release = registerCommands(
-      officialCommandDefs(OFFICIAL_PLUGINS.find((p) => p.id === "graph")!),
-    );
     for (const e of ACTIVITY_ENTRIES) {
       expect(getCommand(e.commandId), e.commandId).toBeDefined();
     }
-    release();
+  });
+
+  it("takes the graph's entry from the plugin, right behind history", () => {
+    expect(ACTIVITY_ENTRIES.some((e) => e.id === "graph")).toBe(false);
+    const a = OFFICIAL_PLUGINS.find((p) => p.id === "graph")!.activity!;
+    expect(a).toMatchObject({ id: "graph", icon: "graph", after: "history" });
+    const gallery = OFFICIAL_PLUGINS.find((p) => p.id === "gallery")!.activity!;
+    const mk = (x: { id: string; after?: string }) =>
+      ({ ...ACTIVITY_ENTRIES[0], ...x } as typeof ACTIVITY_ENTRIES[number]);
+    // gallery is registered before graph and sits behind it: both still land in place
+    const out = placeAfter([...ACTIVITY_ENTRIES, mk(gallery), mk(a)]).map(
+      (e) => e.id,
+    );
+    expect(out.slice(0, 4)).toEqual(["library", "history", "graph", "gallery"]);
   });
 
   it("lists the expected entries by group", () => {
@@ -44,7 +53,6 @@ describe("ACTIVITY_ENTRIES", () => {
     expect(of("top")).toEqual([
       "library",
       "history",
-      "graph",
       "search",
       "tags",
       "templates",
@@ -53,7 +61,7 @@ describe("ACTIVITY_ENTRIES", () => {
   });
 
   it("gives toggling panel entries an active store", () => {
-    for (const id of ["library", "history", "graph"]) {
+    for (const id of ["library", "history"]) {
       expect(ACTIVITY_ENTRIES.find((e) => e.id === id)?.active).toBeDefined();
     }
   });

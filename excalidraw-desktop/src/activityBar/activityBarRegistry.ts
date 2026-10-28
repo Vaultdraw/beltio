@@ -47,9 +47,22 @@ export function placeAfter(
     return list;
   }
   const out = list.filter((e) => !e.after);
-  for (const e of list.filter((x) => x.after)) {
-    const at = out.findIndex((x) => x.id === e.after);
-    out.splice(at < 0 ? out.length : at + 1, 0, e);
+  let pending = list.filter((x) => x.after);
+  // An entry may sit behind another moved one (gallery behind graph): place what can be
+  // placed, repeat, and keep the rest at the end.
+  while (pending.length) {
+    const next = pending.filter((e) => !out.some((x) => x.id === e.after));
+    for (const e of pending) {
+      const at = out.findIndex((x) => x.id === e.after);
+      if (at >= 0) {
+        out.splice(at + 1, 0, e);
+      }
+    }
+    if (next.length === pending.length) {
+      out.push(...next);
+      break;
+    }
+    pending = next;
   }
   return out;
 }

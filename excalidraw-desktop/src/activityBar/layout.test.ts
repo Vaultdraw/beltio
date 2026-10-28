@@ -33,11 +33,11 @@ describe("resolveActivityLayout", () => {
   it("ignores unknown and duplicate ids", () => {
     const rows = resolveActivityLayout(
       ACTIVITY_ENTRIES,
-      ["nope", "graph", "graph"],
+      ["nope", "search", "search"],
       ["gone"],
     );
     expect(ids(rows)).toHaveLength(DEFAULT.length);
-    expect(ids(rows)[0]).toBe("graph");
+    expect(ids(rows)[0]).toBe("search");
     expect(rows.some((r) => r.hidden)).toBe(false);
   });
 
@@ -51,8 +51,8 @@ describe("resolveActivityLayout", () => {
 
 describe("moveActivityEntry", () => {
   it("moves within the group and returns the full order", () => {
-    const next = moveActivityEntry(ACTIVITY_ENTRIES, [], "graph", -1);
-    expect(next.indexOf("graph")).toBe(DEFAULT.indexOf("graph") - 1);
+    const next = moveActivityEntry(ACTIVITY_ENTRIES, [], "search", -1);
+    expect(next.indexOf("search")).toBe(DEFAULT.indexOf("search") - 1);
     expect(next).toHaveLength(DEFAULT.length);
   });
 
@@ -131,6 +131,6 @@ describe("defaultHidden entries", () => {
   });
 
   it("built-in entries keep the plain hidden list", () => {
-    expect(setActivityEntryHidden(all, [], "graph", true)).toEqual(["graph"]);
+    expect(setActivityEntryHidden(all, [], "search", true)).toEqual(["search"]);
   });
 });

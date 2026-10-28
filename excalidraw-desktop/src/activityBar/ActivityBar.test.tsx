@@ -43,17 +43,17 @@ describe("ActivityBar", () => {
   it("hides entries without a handler and runs commands on click", () => {
     const run = setup();
     expect(screen.queryByTestId("activity-bar-tags")).toBeNull();
-    fireEvent.click(screen.getByTestId("activity-bar-graph"));
-    expect(run).toHaveBeenCalledWith("graph.open");
+    fireEvent.click(screen.getByTestId("activity-bar-search"));
+    expect(run).toHaveBeenCalledWith("navigator.focusSearch");
   });
 
   it("follows the configured order and hides entries", () => {
-    setup({ order: ["settings", "graph"], hidden: ["history"] });
+    setup({ order: ["settings", "search"], hidden: ["history"] });
     const ids = screen
       .getAllByRole("button")
       .map((b) => b.getAttribute("data-entry"));
     expect(ids).not.toContain("history");
-    expect(ids.indexOf("graph")).toBeLessThan(ids.indexOf("library"));
+    expect(ids.indexOf("search")).toBeLessThan(ids.indexOf("library"));
     expect(ids.slice(-2)).toEqual(["settings", "hotkeys"]);
   });
 

@@ -5,7 +5,6 @@
  */
 import { libraryPanelStore } from "../library/libraryPanelState";
 import {
-  IconGraph,
   IconHistory,
   IconKeyboard,
   IconLibrary,
@@ -20,7 +19,6 @@ import {
 } from "../history/historyPanelState";
 
 import { registerActivityEntries } from "./activityBarRegistry";
-import { graphPanelStore } from "./panelStores";
 
 import type { ExtensionId } from "../extensionSwitches/registry";
 import type { ComponentType, SVGProps } from "react";
@@ -81,15 +79,6 @@ export const ACTIVITY_ENTRIES: readonly ActivityEntry[] = [
       get: isHistoryPanelOpen,
     },
     needsDrawing: true,
-  },
-  {
-    id: "graph",
-    label: "Graph view",
-    icon: IconGraph,
-    commandId: "graph.open",
-    group: "top",
-    extension: "graph",
-    active: graphPanelStore,
   },
   {
     id: "search",
