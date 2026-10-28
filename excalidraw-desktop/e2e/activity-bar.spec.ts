@@ -75,14 +75,6 @@ test("activity bar: every entry opens its panel, view or dialog", async ({
   await expect(historyPanel(page)).toHaveCount(0);
   await pressed(page, "history", false);
 
-  // Graph view.
-  await entry(page, "graph").click();
-  await expect(page.getByTestId("graph-view")).toBeVisible();
-  await pressed(page, "graph", true);
-  await entry(page, "graph").click();
-  await expect(page.getByTestId("graph-view")).toHaveCount(0);
-  await pressed(page, "graph", false);
-
   // Gallery.
   await entry(page, "gallery").click();
   await expect(page.getByTestId("gallery-view")).toBeVisible();
@@ -136,6 +128,16 @@ test("activity bar: every entry opens its panel, view or dialog", async ({
   await expect(settings(page)).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(settings(page)).toHaveCount(0);
+
+  // Graph view: an official plugin, so a fresh load with the graph plugin enabled.
+  await openTagsVault(page, "?seed=tags&plugins=graph");
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
+  await entry(page, "graph").click();
+  await expect(page.getByTestId("graph-view")).toBeVisible();
+  await pressed(page, "graph", true);
+  await entry(page, "graph").click();
+  await expect(page.getByTestId("graph-view")).toHaveCount(0);
+  await pressed(page, "graph", false);
 
   expect(errors).toEqual([]);
 });

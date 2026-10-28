@@ -220,7 +220,8 @@ test.describe("tree changes", () => {
   test("the delete confirmation is clickable while the graph view is open", async ({
     page,
   }) => {
-    await openVault(page, "?seed=links");
+    await openVault(page, "?seed=links&plugins=graph");
+    await page.waitForFunction(() => (window as any).__pluginsReady === true);
     await page.keyboard.press("Meta+Alt+g");
     await expect(page.getByTestId("graph-view")).toBeVisible();
     await (await rowAction(page, "Hub", "Move to Trash")).click();
