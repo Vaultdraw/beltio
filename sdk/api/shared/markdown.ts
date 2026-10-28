@@ -115,7 +115,9 @@ const tableOrImage = (
   }
   const wiki = /^!\[\[([^\]|#]+)(?:\|([^\]]*))?\]\]$/.exec(body);
   if (wiki && IMAGE_NAME.test(wiki[1].trim())) {
-    const size = /^(\d+)(?:x(\d+))?$/.exec((wiki[2] ?? "").split("|").pop() ?? "");
+    const size = /^(\d+)(?:x(\d+))?$/.exec(
+      (wiki[2] ?? "").split("|").pop() ?? "",
+    );
     return {
       kind: "image",
       target: wiki[1].trim(),
