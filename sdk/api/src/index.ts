@@ -106,6 +106,7 @@ export type {
   OverlayProps,
   OverlaysApi,
 } from "./overlays";
+export type { PresentApi, PresentOptions, PresentSession } from "./present";
 export type { DiagramsApi, MermaidDrawing } from "./diagrams";
 export type { ThumbnailState, ThumbnailsApi } from "./thumbnails";
 export type {

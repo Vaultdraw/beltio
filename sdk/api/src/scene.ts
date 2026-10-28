@@ -42,6 +42,8 @@ export interface SceneElement {
   readonly angle: number;
   /** @since 0.1.0 */
   readonly text?: string;
+  /** The title of a `frame` (absent when it has none). @since 0.29.0 */
+  readonly name?: string;
   /** @since 0.1.0 */
   readonly strokeColor?: string;
   /** @since 0.1.0 */
@@ -74,6 +76,8 @@ export interface NewElement {
   height?: number;
   /** @since 0.1.0 */
   text?: string;
+  /** The title of a `frame`; only valid in an `update` of a frame, at most 200 characters. @since 0.29.0 */
+  name?: string;
   /** @since 0.1.0 */
   fontSize?: number;
   /** @since 0.1.0 */
@@ -462,6 +466,18 @@ export interface SceneContextApi {
    * @since 0.9.0
    */
   scrollTo(id: string): void;
+  /**
+   * Zooms and centres the view so the element (a frame, usually) fills the visible canvas, with
+   * `padding` pixels of margin (default 0), animated unless `animate` is false. Unlike `scrollTo` it may zoom in past 100%
+   * and it does not select unless `select` is true. Nothing happens for an unknown id or when no
+   * drawing is open.
+   *
+   * @since 0.29.0
+   */
+  fitTo(
+    id: string,
+    options?: { padding?: number; select?: boolean; animate?: boolean },
+  ): void;
   /**
    * Ids of the selected elements of the active drawing, [] when none or no drawing is open.
    *

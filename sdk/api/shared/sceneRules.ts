@@ -224,6 +224,13 @@ const text: Check = (v) =>
     ? null
     : `must be a string of at most ${MAX_TEXT} characters`;
 
+/** The title of a frame. */
+const MAX_NAME = 200;
+const name: Check = (v) =>
+  typeof v === "string" && v.length <= MAX_NAME
+    ? null
+    : `must be a string of at most ${MAX_NAME} characters`;
+
 const points: Check = (v) =>
   Array.isArray(v) &&
   v.length <= MAX_POINTS &&
@@ -267,6 +274,7 @@ const PROPS: Record<string, Check> = {
   width: num(1, MAX_SIZE),
   height: num(1, MAX_SIZE),
   text,
+  name,
   fontSize: num(1, 1000),
   strokeColor: color,
   backgroundColor: color,
@@ -519,6 +527,13 @@ export const validateOps = (
         });
       }
       checkProps(el, i, issues);
+      if ("name" in el) {
+        issues.push({
+          op: i,
+          key: "name",
+          message: "only valid when updating a frame",
+        });
+      }
       checkData(el, i, issues, options.dataKey);
       if (el.type === "image" && !options.allowImages) {
         issues.push({
@@ -639,6 +654,13 @@ export const validateOps = (
             });
           }
         }
+      }
+      if (target && "name" in props && target.type !== "frame") {
+        issues.push({
+          op: i,
+          key: "name",
+          message: "only valid on frames",
+        });
       }
       if (target && target.type !== "text") {
         if ("text" in props || "fontSize" in props || "fontFamily" in props) {

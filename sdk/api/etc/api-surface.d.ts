@@ -161,6 +161,7 @@ export type { StatusBarApi, StatusBarState } from "./statusBar";
 export type { MenuTarget, MenusApi } from "./menus";
 export type { ShapeDef, ShapesApi } from "./shapes";
 export type { OverlayHandle, OverlayOptions, OverlayProps, OverlaysApi, } from "./overlays";
+export type { PresentApi, PresentOptions, PresentSession } from "./present";
 export type { DiagramsApi, MermaidDrawing } from "./diagrams";
 export type { ThumbnailState, ThumbnailsApi } from "./thumbnails";
 export type { PdfApi, PdfDocument, PdfImportSettings, PdfPageSize, PdfRenderOptions, } from "./pdf";
@@ -616,6 +617,7 @@ import type { PdfApi } from "./pdf";
 import type { ThumbnailsApi } from "./thumbnails";
 import type { ToolsApi } from "./tools";
 import type { OverlaysApi } from "./overlays";
+import type { PresentApi } from "./present";
 import type { ViewsApi } from "./views";
 import type { WorkspaceApi } from "./workspace";
 export interface UiApi {
@@ -659,6 +661,7 @@ export interface PluginContext {
     readonly diagrams: DiagramsApi;
     readonly pdf: PdfApi;
     readonly clipboard: ClipboardApi;
+    readonly present: PresentApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;
     setInterval(fn: () => void, ms: number): Disposable;
@@ -668,6 +671,24 @@ export interface Plugin {
     deactivate?(): void | Promise<void>;
 }
 export declare const definePlugin: (plugin: Plugin) => Plugin;
+
+// present.ts
+import type { Disposable } from "./disposable";
+export interface PresentOptions {
+    background?: string;
+    fullscreen?: boolean;
+    onEnd?(): void;
+}
+export interface PresentSession extends Disposable {
+    end(): void;
+    readonly isActive: boolean;
+    setLaser(on: boolean): void;
+    readonly laser: boolean;
+}
+export interface PresentApi {
+    start(options?: PresentOptions): Promise<PresentSession>;
+    readonly active: boolean;
+}
 
 // scene.ts
 import type { Disposable } from "./disposable";
@@ -682,6 +703,7 @@ export interface SceneElement {
     readonly height: number;
     readonly angle: number;
     readonly text?: string;
+    readonly name?: string;
     readonly strokeColor?: string;
     readonly backgroundColor?: string;
 }
@@ -692,6 +714,7 @@ export interface NewElement {
     width?: number;
     height?: number;
     text?: string;
+    name?: string;
     fontSize?: number;
     strokeColor?: string;
     backgroundColor?: string;
@@ -798,6 +821,11 @@ export interface SceneContextApi {
     dataOf(id: string): Json | undefined;
     path(): string | null;
     scrollTo(id: string): void;
+    fitTo(id: string, options?: {
+        padding?: number;
+        select?: boolean;
+        animate?: boolean;
+    }): void;
     selection(): readonly string[];
     currentStrokeColor(): string;
     currentTextStyle(): {

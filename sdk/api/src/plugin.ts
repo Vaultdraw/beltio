@@ -25,6 +25,7 @@ import type { PdfApi } from "./pdf";
 import type { ThumbnailsApi } from "./thumbnails";
 import type { ToolsApi } from "./tools";
 import type { OverlaysApi } from "./overlays";
+import type { PresentApi } from "./present";
 import type { ViewsApi } from "./views";
 import type { WorkspaceApi } from "./workspace";
 
@@ -127,6 +128,8 @@ export interface PluginContext {
   readonly pdf: PdfApi;
   /** Read the clipboard and see pastes of text. Needs the permission `clipboard`. @since 0.28.0 */
   readonly clipboard: ClipboardApi;
+  /** Full-screen presenting of the open drawing. @since 0.29.0 */
+  readonly present: PresentApi;
   /**
    * Disposed in reverse order on disable/reload/quit.
    *

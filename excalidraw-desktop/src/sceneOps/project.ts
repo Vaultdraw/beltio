@@ -40,6 +40,9 @@ export const toSceneElement = (el: ExcalidrawElement): SceneElement => {
   if (el.type === "text") {
     out.text = el.text;
   }
+  if (el.type === "frame" && (el as { name?: string | null }).name) {
+    out.name = (el as { name: string }).name;
+  }
   if (el.strokeColor !== undefined) {
     out.strokeColor = el.strokeColor;
   }

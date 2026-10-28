@@ -12,6 +12,7 @@ Plugins can add small pieces of interface. Each is declared in `plugin.toml`, so
 | [Custom shape](#custom-shapes) | `[[contributes.shapes]]` | `ctx.shapes.register` | 0.16.0 |
 | [Opening a panel or view](#layout) | none | `ctx.views.open` | 0.13.0 |
 | [Overlay over the drawing area](#overlays) | none | `ctx.overlays.open` | 0.17.0 |
+| [Full-screen presentation](reference.md#ctxpresent-and-ctxscenefitto-since-0290) | none | `ctx.present.start` | 0.29.0 |
 
 ## Migration (0.9.0 to 0.25.0)
 

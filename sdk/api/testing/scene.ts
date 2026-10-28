@@ -231,6 +231,12 @@ export function createSceneModel(
   const batches: FakeBatch[] = [];
   let appState: Record<string, unknown> = {};
   const scrolled: string[] = [];
+  const fitted: {
+    id: string;
+    padding: number;
+    select: boolean;
+    animate: boolean;
+  }[] = [];
   /** Pictures of the drawing by SHA-1 (what the editor's file store holds). */
   const files = new Map<string, { mime: string; bytes: Uint8Array }>();
 
@@ -286,6 +292,9 @@ export function createSceneModel(
           if (el.type === "text") {
             out.text = el.text;
           }
+          if (el.type === "frame" && el.name) {
+            out.name = el.name;
+          }
           if (el.strokeColor !== undefined) {
             out.strokeColor = el.strokeColor;
           }
@@ -328,6 +337,7 @@ export function createSceneModel(
         ]),
       ),
     scrolledTo: () => [...scrolled],
+    fittedTo: () => fitted.map((f) => ({ ...f })),
     select(ids) {
       appState = {
         ...appState,
@@ -772,6 +782,20 @@ export function createSceneModel(
             return;
           }
           scrolled.push(id);
+        },
+        fitTo(id, options) {
+          if (path === null || typeof id !== "string") {
+            return;
+          }
+          if (!live().some((e) => e.id === id)) {
+            return;
+          }
+          fitted.push({
+            id,
+            padding: options?.padding ?? 0,
+            select: options?.select === true,
+            animate: options?.animate !== false,
+          });
         },
       };
     },

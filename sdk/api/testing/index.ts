@@ -170,6 +170,7 @@ export async function boot(
     openPanelIds: host.openPanelIds,
     renderMath: host.renderMath,
     overlay: host.overlay,
+    present: host.present,
     statusBar: host.statusBar,
     async clickStatusBar(id) {
       const item = host.statusBar().find((x) => x.id === id);

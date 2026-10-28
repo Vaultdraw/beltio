@@ -1,7 +1,7 @@
 // Generated from the @since tags of sdk/api/src by sdk/api/scripts/gen-features.mjs. Do not edit.
 
 /** The API revision of this build (the version of sdk/api/package.json). */
-export const API_REVISION = "0.28.0";
+export const API_REVISION = "0.29.0";
 
 /** Feature name to the revision that added it. `ctx.host.has(name)` is true for these. */
 export const FEATURES: Readonly<Record<string, string>> = {
@@ -65,12 +65,16 @@ export const FEATURES: Readonly<Record<string, string>> = {
   "pdf.open": "0.26.0",
   "pdf.pick": "0.26.0",
   "pdf.settings": "0.26.0",
+  present: "0.29.0",
+  "present.active": "0.29.0",
+  "present.start": "0.29.0",
   scene: "0.1.0",
   "scene.batch": "0.1.0",
   "scene.currentStrokeColor": "0.24.0",
   "scene.currentTextStyle": "0.28.0",
   "scene.dataOf": "0.4.0",
   "scene.elements": "0.1.0",
+  "scene.fitTo": "0.29.0",
   "scene.get": "0.4.0",
   "scene.onChange": "0.1.0",
   "scene.path": "0.4.0",

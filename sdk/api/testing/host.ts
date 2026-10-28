@@ -73,6 +73,7 @@ import type {
   ToolHandlers,
   Plugin,
   OverlayProps,
+  PresentOptions,
   ViewProps,
   PluginContext,
   StorageApi,
@@ -185,6 +186,12 @@ export interface MockHost {
   openPanelIds(): string[];
   /** Renders TeX through `ctx.math` (the provider the plugin set, else null). */
   renderMath(request: MathRequest): Promise<MathResult | null>;
+  /** The running presentation (`ctx.present.start`), or null; `end()` ends it as Escape would. */
+  present(): {
+    laser: boolean;
+    background: string | null;
+    end(): void;
+  } | null;
   /** The open overlay (`ctx.overlays.open`), or null. */
   overlay(): { close(): void; render(): RenderResult } | null;
   setSetting(
@@ -282,6 +289,12 @@ export function createMockHost(
     onClose?: () => void;
   } | null = null;
   let overlayClose: (() => void) | null = null;
+  /** The running presentation (`ctx.present.start`), one at a time. */
+  let presenting: {
+    options: PresentOptions;
+    laser: boolean;
+    end: () => void;
+  } | null = null;
   /** Overlays are not declared in the manifest: react loads when one opens (best effort). */
   let overlayDeps: PanelDeps | null = null;
   let overlayLoading: Promise<void> | null = null;
@@ -553,6 +566,7 @@ export function createMockHost(
     let toolsApi: PluginContext["tools"] | undefined;
     let shapesApi: PluginContext["shapes"] | undefined;
     let overlaysApi: PluginContext["overlays"] | undefined;
+    let presentApi: PluginContext["present"] | undefined;
     let thumbnailsApi: PluginContext["thumbnails"] | undefined;
     let diagramsApi: PluginContext["diagrams"] | undefined;
     let pdfApi: PluginContext["pdf"] | undefined;
@@ -826,6 +840,47 @@ export function createMockHost(
       get pdf() {
         // No native renderer in tests: set one up with `pdf` on the mock host.
         return (pdfApi ??= pdfModel.api(id, info.permissions));
+      },
+      get present() {
+        return (presentApi ??= {
+          get active() {
+            return presenting !== null;
+          },
+          async start(options) {
+            if (activePath === null) {
+              throw new PluginApiError("NOT_FOUND", "No drawing is open");
+            }
+            presenting?.end();
+            const opts = options ?? {};
+            const entry: NonNullable<typeof presenting> = {
+              options: opts,
+              laser: false,
+              end: () => {
+                if (presenting === entry) {
+                  presenting = null;
+                  opts.onEnd?.();
+                }
+              },
+            };
+            presenting = entry;
+            track(entry.end);
+            return {
+              end: entry.end,
+              dispose: entry.end,
+              get isActive() {
+                return presenting === entry;
+              },
+              setLaser(on) {
+                if (presenting === entry) {
+                  entry.laser = on === true;
+                }
+              },
+              get laser() {
+                return presenting === entry && entry.laser;
+              },
+            };
+          },
+        });
       },
       get overlays() {
         return (overlaysApi ??= {
@@ -1524,6 +1579,16 @@ export function createMockHost(
     openPanelIds: () => [...openPanels],
     renderMath: async (request) =>
       mathProvider ? mathProvider(request) : null,
+    present() {
+      const cur = presenting;
+      return cur
+        ? {
+            laser: cur.laser,
+            background: cur.options.background ?? null,
+            end: cur.end,
+          }
+        : null;
+    },
     overlay() {
       const open = overlay;
       if (!open) {
@@ -1564,6 +1629,7 @@ export function createMockHost(
       folders.reset();
       pdfModel.reset();
       clipboardModel.reset();
+      presenting?.end();
       activePath = "fake.excalidraw";
       sceneReadOnly = false;
       importerImpls.clear();

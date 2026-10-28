@@ -541,6 +541,39 @@ interface VaultExportsApi {
 
 Paths follow the path rules above: no dot segments, no `.excalidraw-vault`, no symbolic links. A file must end in `.svg` or `.png`. The official `auto-export` plugin is built on this.
 
+### ctx.present and ctx.scene.fitTo (since 0.29.0)
+
+Full-screen presenting of the open drawing, and zooming the view to an element. The official `frames` plugin is built on them.
+
+```ts
+interface PresentOptions {
+  background?: string; // a colour for the canvas during the session
+  fullscreen?: boolean; // the native window fills the screen; default true
+  onEnd?(): void;
+}
+interface PresentSession extends Disposable {
+  end(): void;
+  readonly isActive: boolean;
+  setLaser(on: boolean): void; // the editor's laser pointer; off returns to the selection tool
+  readonly laser: boolean;
+}
+interface PresentApi {
+  start(options?: PresentOptions): Promise<PresentSession>; // NOT_FOUND with no drawing open
+  readonly active: boolean;
+}
+// ctx.scene
+fitTo(id: string, options?: { padding?: number; select?: boolean; animate?: boolean }): void;
+```
+
+| Call | What it does |
+| --- | --- |
+| `present.start(options)` | Ends any running session, then hides the chrome as focus mode does (`[focus] hide`), makes the editor read-only, hides frame outlines and names, sets `background` if given and goes full screen. Call it from a command the user ran. |
+| `session.end()` / `dispose()` | Puts everything back. A session also ends when the user leaves focus mode (Escape), opens another drawing, or the plugin stops; `onEnd` runs once either way. |
+| `session.setLaser(on)` | Switches the editor between the laser pointer and the selection tool. |
+| `scene.fitTo(id, options)` | Zooms and centres the view so the element fills the visible canvas, `padding` pixels of margin (default 0), animated unless `animate` is false. May zoom in past 100%. Selects the element only with `select: true`. |
+
+While a session runs the context key `present.active` is true: a command declared with `when = ["present.active"]` takes its keys (arrows, Space) only then. A frame's title is read as `name` on `ctx.scene.elements()` and changed with `scene.batch([{ op: "update", id, props: { name } }])` (frames only, at most 200 characters; an empty name brings back the editor's "Frame N"). In tests, `plugin.present()` returns the running session (`{ laser, background, end() }`, where `end()` is Escape) and `plugin.scene.fittedTo()` lists the `fitTo` calls.
+
 ### ctx.workspace
 
 ```ts

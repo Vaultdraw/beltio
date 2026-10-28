@@ -16,7 +16,11 @@ import type { NewElement } from "../api";
 
 /** A NewElement (optionally with an id) or a full editor element. */
 export type FakeElementInput =
-  | (NewElement & { id?: string })
+  | (Omit<NewElement, "type"> & {
+      /** `frame` is accepted so tests can seed one (a plugin cannot add a frame). */
+      type: NewElement["type"] | "frame";
+      id?: string;
+    })
   | ExcalidrawElement;
 
 export interface FakeBatch {
@@ -49,6 +53,13 @@ export interface FakeScene {
   strokeColor(color: string): void;
   /** The app state fields `updateScene` set (such as `pageSetup`). */
   appState(): Record<string, unknown>;
+  /** What `ctx.scene.fitTo` asked the editor to show, in order. */
+  fittedTo(): {
+    id: string;
+    padding: number;
+    select: boolean;
+    animate: boolean;
+  }[];
   /** Records a `scrollTo` (the shell's focus path, called by the bridge). */
   recordScroll(id: string): void;
   /** Sets app state fields as a load would (the bridge's create path). */
@@ -67,13 +78,16 @@ const toElement = (input: FakeElementInput, n: number): ExcalidrawElement => {
   if (isFull(input)) {
     return input;
   }
-  const { type, text, id, ...rest } = input;
+  const { type, text, id, name, ...rest } = input as typeof input & {
+    name?: string;
+  };
   const base = newElement({ type: "rectangle", ...rest } as never);
   return {
     ...base,
     id: id ?? `fake-${n}`,
     type,
     ...(text === undefined ? {} : { text }),
+    ...(name === undefined ? {} : { name }),
     version: ++versionClock,
   } as unknown as ExcalidrawElement;
 };
@@ -88,10 +102,26 @@ export function createFakeScene(initialPath: string | null): FakeScene {
   let store: BinaryFiles = {};
   let appState: Record<string, unknown> = {};
   const scrolled: string[] = [];
+  const fitted: {
+    id: string;
+    padding: number;
+    select: boolean;
+    animate: boolean;
+  }[] = [];
+  let liveFor: ExcalidrawElement[] | null = null;
+  let liveCache: ExcalidrawElement[] = [];
+  /** The same array while the elements are the same, as the real editor gives. */
+  const liveNow = () => {
+    if (liveFor !== elements) {
+      liveFor = elements;
+      liveCache = elements.filter((e) => !e.isDeleted);
+    }
+    return liveCache;
+  };
   const fire = () => [...listeners].forEach((cb) => cb());
 
   const api = {
-    getSceneElements: () => elements.filter((e) => !e.isDeleted),
+    getSceneElements: () => liveNow(),
     getSceneElementsIncludingDeleted: () => elements,
     getAppState: () => ({
       width: 800,
@@ -99,8 +129,41 @@ export function createFakeScene(initialPath: string | null): FakeScene {
       scrollX: 0,
       scrollY: 0,
       zoom: { value: 1 },
+      viewModeEnabled: false,
+      viewBackgroundColor: "#ffffff",
+      frameRendering: { enabled: true, clip: true, name: true, outline: true },
+      activeTool: { type: "selection" },
       ...appState,
     }),
+    setActiveTool(tool: { type: string }) {
+      appState = { ...appState, activeTool: { type: tool.type } };
+    },
+    setViewport(opts: {
+      target: [number, number, number, number];
+      animation?: boolean;
+      offsets?: { top?: number };
+    }) {
+      const [x1, y1, x2, y2] = opts.target;
+      const el = elements.find(
+        (e) =>
+          !e.isDeleted &&
+          e.x === x1 &&
+          e.y === y1 &&
+          e.x + e.width === x2 &&
+          e.y + e.height === y2,
+      );
+      fitted.push({
+        id: el?.id ?? "",
+        padding: opts.offsets?.top ?? 0,
+        select: Boolean(
+          el &&
+            (appState.selectedElementIds as Record<string, true> | undefined)?.[
+              el.id
+            ],
+        ),
+        animate: opts.animation !== false,
+      });
+    },
     getFiles: () => store,
     addFiles(list: readonly { id: string }[]) {
       for (const f of list) {
@@ -172,6 +235,7 @@ export function createFakeScene(initialPath: string | null): FakeScene {
       ),
     live: () => elements.filter((e) => !e.isDeleted),
     scrolledTo: () => [...scrolled],
+    fittedTo: () => fitted.map((f) => ({ ...f })),
     select(ids: readonly string[]) {
       appState = {
         ...appState,

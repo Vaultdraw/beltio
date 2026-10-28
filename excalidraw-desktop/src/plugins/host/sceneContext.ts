@@ -276,6 +276,36 @@ export function createSceneApi(
       // The shell's focus path (search results): select, then scroll into view.
       getWorkspaceBridge()?.focusElement(scene.path, elementId);
     },
+    fitTo(elementId, options) {
+      const scene = getActiveScene();
+      if (!scene || typeof elementId !== "string" || !isLive()) {
+        return;
+      }
+      const el = scene.api
+        .getSceneElements()
+        .find((e) => e.id === elementId && !e.isDeleted);
+      if (!el) {
+        return;
+      }
+      const raw = Number(options?.padding);
+      const pad = Number.isFinite(raw) ? Math.min(Math.max(raw, 0), 2000) : 0;
+      if (options?.select === true) {
+        scene.api.updateScene({
+          appState: {
+            selectedElementIds: { [el.id]: true },
+            selectedGroupIds: {},
+            editingGroupId: null,
+          },
+          captureUpdate: "NEVER",
+        });
+      }
+      scene.api.setViewport({
+        target: [el.x, el.y, el.x + el.width, el.y + el.height],
+        fit: "contain",
+        animation: options?.animate !== false,
+        offsets: { top: pad, right: pad, bottom: pad, left: pad },
+      });
+    },
   };
 }
 

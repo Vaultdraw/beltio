@@ -46,6 +46,7 @@ import { createVaultApi } from "./vaultContext";
 import { createDiagramsApi } from "./diagramsContext";
 import { createClipboardApi } from "./clipboardContext";
 import { createPdfApi } from "./pdfContext";
+import { createPresentApi } from "./presentContext";
 import { createThumbnailsApi } from "./thumbnailsContext";
 import { createWorkspaceApi } from "./workspaceContext";
 
@@ -195,6 +196,7 @@ export function createPluginContext(
   let methodsApi: MethodsApi | undefined;
   let mathApi: MathApi | undefined;
   let overlaysApi: OverlaysApi | undefined;
+  let presentApi: PluginContext["present"] | undefined;
   let thumbnailsApi: ThumbnailsApi | undefined;
   let diagramsApi: DiagramsApi | undefined;
   let pdfApi: PdfApi | undefined;
@@ -426,6 +428,9 @@ export function createPluginContext(
     },
     get clipboard() {
       return (clipboardApi ??= createClipboardApi(rt, track, isLive));
+    },
+    get present() {
+      return (presentApi ??= createPresentApi(id, track));
     },
     get overlays() {
       return (overlaysApi ??= {

@@ -113,12 +113,18 @@ export interface FakeElement {
   readonly text?: string;
   readonly strokeColor?: string;
   readonly backgroundColor?: string;
+  /** The title of a frame. */
+  readonly name?: string | null;
   /** Set on the text element that labels a shape. */
   readonly containerId?: string | null;
 }
 
 /** A new element, optionally with an id. */
-export type FakeElementInput = NewElement & { id?: string };
+export type FakeElementInput = Omit<NewElement, "type"> & {
+  /** `frame` is accepted here so tests can seed one (a plugin cannot add a frame). */
+  type: NewElement["type"] | "frame";
+  id?: string;
+};
 
 /** One `scene.batch` write = one undo step. */
 export interface FakeBatch {
@@ -146,6 +152,13 @@ export interface FakeScene {
   files(): Record<string, { mime: string; bytes: Uint8Array }>;
   /** Ids `ctx.scene.scrollTo` asked the app to focus, in order. */
   scrolledTo(): string[];
+  /** What `ctx.scene.fitTo` was asked to show, in order. */
+  fittedTo(): {
+    id: string;
+    padding: number;
+    select: boolean;
+    animate: boolean;
+  }[];
   /** Selects elements as the user would (`ctx.scene.selection`). */
   select(ids: readonly string[]): void;
   /** Sets the stroke colour a new element gets (`ctx.scene.currentStrokeColor`). */
@@ -323,6 +336,15 @@ export interface TestPlugin {
   openPanelIds(): string[];
   /** Renders TeX through `ctx.math` (the provider this plugin set, else null). */
   renderMath(request: MathRequest): Promise<MathResult | null>;
+  /**
+   * The running presentation (`ctx.present.start`), or null. `end()` ends it as the user leaving
+   * focus mode would.
+   */
+  present(): {
+    laser: boolean;
+    background: string | null;
+    end(): void;
+  } | null;
   /** The open overlay (`ctx.overlays.open`), or null. `render()` mounts its component. */
   overlay(): { close(): void; render(): PanelView } | null;
   /** The status bar items that currently have text. */

@@ -93,6 +93,10 @@ const updated = (
 ): ExcalidrawElement => {
   const { text, data, roundness, angle, fontFamily, image, ...plain } = props;
   const patch: Record<string, unknown> = { ...plain };
+  if (plain.name === "") {
+    // An empty title brings back the editor's own "Frame N".
+    patch.name = null;
+  }
   if (image && fileId && el.type === "image") {
     // A new picture on the same element: id, z-order, groups, bindings and locks stay.
     patch.fileId = fileId;

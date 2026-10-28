@@ -25,6 +25,8 @@ import { tabKindFor } from "../../tabs/tabKinds";
 import { TabKindView } from "../../tabs/TabKindView";
 import { isPanelOpen } from "../../slots/panelStore";
 import { getMenuItems, runMenuItem } from "../menuRegistry";
+import { readCustomContextKey } from "../../commands/contextKeys";
+import { setActivePreset } from "../../layout/layoutStore";
 import { closeOverlay, getOverlay } from "../overlayStore";
 import { renderMath } from "../mathService";
 import PluginOverlayHost from "../PluginOverlayHost";
@@ -276,6 +278,15 @@ export interface TestPlugin {
   openPanelIds(): string[];
   /** Renders TeX through `ctx.math` (the provider a plugin set, else null). */
   renderMath(request: MathRequest): Promise<MathResult | null>;
+  /**
+   * The running presentation (`ctx.present.start`), or null. `end()` ends it as the user leaving
+   * focus mode (Escape) would.
+   */
+  present(): {
+    laser: boolean;
+    background: string | null;
+    end(): void;
+  } | null;
   /** The open overlay (`ctx.overlays.open`) of this plugin, or null. `render()` mounts it. */
   overlay(): { close(): void; render(): RenderResult } | null;
   /** The status bar items that currently have text. */
@@ -814,6 +825,18 @@ export async function boot(
     },
     openedFromViews: () => viewOpened.map((o) => ({ ...o })),
     renderMath: (request) => renderMath(request),
+    present() {
+      if (!readCustomContextKey("present.active")) {
+        return null;
+      }
+      const state = scene.appState();
+      return {
+        laser:
+          (state.activeTool as { type?: string } | undefined)?.type === "laser",
+        background: (state.viewBackgroundColor as string | undefined) ?? null,
+        end: () => setActivePreset(null),
+      };
+    },
     overlay() {
       const open = getOverlay();
       if (!open || open.pluginId !== id) {
