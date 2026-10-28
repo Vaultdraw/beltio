@@ -20,10 +20,15 @@ import type { LayoutEvent, PageItem } from "../../src/layout/types";
 const note50k = generateNote(50_000, 3);
 
 describe("layout budgets", () => {
+  // Tables are real grids (a text per cell, grid lines): their cost is checked on its own below.
+  const noteNoTables = {
+    ...note50k,
+    blocks: note50k.blocks.filter((b) => b.kind !== "table"),
+  };
   test("at most 60 elements per 1,000 words on a 50k-word note", () => {
     const opts = defaultOptions();
-    const table = buildWidthTable(fakeMeasure, note50k, opts);
-    const { parts, stats } = layoutNote(note50k, table, opts);
+    const table = buildWidthTable(fakeMeasure, noteNoTables, opts);
+    const { parts, stats } = layoutNote(noteNoTables, table, opts);
     const perThousand = (stats.elements / stats.words) * 1000;
     // eslint-disable-next-line no-console -- bench output
     console.log(

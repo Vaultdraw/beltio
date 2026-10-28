@@ -88,8 +88,6 @@ export interface LayoutOptions {
   page: LayoutPage;
   /** Split the result into parts of about this many elements (default 1000). */
   partElements?: number;
-  /** Table cap: columns and rows kept (defaults 8 and 200). */
-  tableCap?: { cols: number; rows: number };
 }
 
 /** Counts from a layout. */

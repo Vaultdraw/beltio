@@ -22,15 +22,6 @@
      "fill": "callout"
     },
     {
-     "type": "rect",
-     "page": 0,
-     "x": 48,
-     "y": 444.8,
-     "width": 698,
-     "height": 70.4,
-     "fill": "table"
-    },
-    {
      "type": "text",
      "page": 0,
      "x": 48,
@@ -164,22 +155,98 @@
      "lineHeight": 1.25
     },
     {
-     "type": "text",
+     "type": "rect",
      "page": 0,
-     "x": 58,
+     "x": 48,
      "y": 454.8,
-     "width": 678,
-     "height": 50.4,
-     "text": "Option │ Default\n───────┼────────\nmode   │ fast   ",
-     "fontSize": 14,
-     "fontFamily": "Cascadia",
-     "lineHeight": 1.2
+     "width": 145,
+     "height": 32,
+     "fill": "code",
+     "stroke": "none"
+    },
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 48,
+     "y": 454.8,
+     "width": 145,
+     "height": 64,
+     "fill": "none",
+     "stroke": "thin"
     },
     {
      "type": "line",
      "page": 0,
      "x": 48,
-     "y": 535.2,
+     "y": 486.8,
+     "width": 145,
+     "height": 0
+    },
+    {
+     "type": "line",
+     "page": 0,
+     "x": 115,
+     "y": 454.8,
+     "width": 0,
+     "height": 64
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 56,
+     "y": 460.8,
+     "width": 51,
+     "height": 20,
+     "text": "Option",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "align": "left"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 123,
+     "y": 460.8,
+     "width": 62,
+     "height": 20,
+     "text": "Default",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "align": "left"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 56,
+     "y": 492.8,
+     "width": 51,
+     "height": 20,
+     "text": "mode",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "align": "left"
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 123,
+     "y": 492.8,
+     "width": 62,
+     "height": 20,
+     "text": "fast",
+     "fontSize": 16,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "align": "left"
+    },
+    {
+     "type": "line",
+     "page": 0,
+     "x": 48,
+     "y": 538.8,
      "width": 698,
      "height": 0
     },
@@ -187,7 +254,7 @@
      "type": "text",
      "page": 0,
      "x": 48,
-     "y": 555.2,
+     "y": 558.8,
      "width": 698,
      "height": 20,
      "text": "<div align=\"center\">raw html</div>",
@@ -200,7 +267,7 @@
      "type": "image",
      "page": 0,
      "x": 48,
-     "y": 585.2,
+     "y": 588.8,
      "width": 64,
      "height": 40,
      "mimeType": "image/png",
@@ -210,7 +277,7 @@
      "type": "text",
      "page": 0,
      "x": 48,
-     "y": 635.2,
+     "y": 638.8,
      "width": 698,
      "height": 20,
      "text": "Last line",
@@ -225,7 +292,7 @@
  "stats": {
   "words": 42,
   "blocks": 17,
-  "elements": 18,
+  "elements": 24,
   "pages": 1,
   "parts": 1,
   "skipped": 0

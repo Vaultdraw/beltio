@@ -15,6 +15,7 @@
 import { mapNote } from "./blocks";
 import { fontPlan } from "./fonts";
 import { Paginator } from "./paginate";
+import { gridOf } from "./tableGrid";
 import { PartCutter } from "./parts";
 import { Wrapper } from "./wrap";
 
@@ -44,7 +45,6 @@ export { buildWidthTable, widthTableTransferables } from "./widthTable";
 export type { WidthTable, MeasureFn } from "./widthTable";
 
 export const DEFAULT_PART_ELEMENTS = 1000;
-export const DEFAULT_TABLE_CAP = { cols: 8, rows: 200 };
 /** Default image box when the note gives no size: the content width at most. */
 const IMAGE_WIDTH = 480;
 const IMAGE_RATIO = 0.625;
@@ -81,10 +81,7 @@ export function* layoutNoteStream(
   const bodyLine = roles.body.linePx;
   const pad = bodyLine / 2;
   const listIndent = roles.body.size * 1.5;
-  const zero = wrapper.width("0", roles.code);
-  const tableChars = zero > 0 ? Math.floor(contentWidth / zero) : 80;
   const cutter = new PartCutter(opts.partElements ?? DEFAULT_PART_ELEMENTS);
-  const mapOpts = { tableChars, tableCap: opts.tableCap ?? DEFAULT_TABLE_CAP };
 
   const stats: LayoutStats = {
     words: doc.stats.words,
@@ -254,7 +251,7 @@ export function* layoutNoteStream(
   };
 
   yield startPart("");
-  for (const item of mapNote(doc, mapOpts)) {
+  for (const item of mapNote(doc)) {
     if (cutter.consider(item)) {
       yield* endPart();
       yield startPart(
@@ -270,6 +267,29 @@ export function* layoutNoteStream(
       case "list":
         listItem(item);
         break;
+      case "table": {
+        const grid = gridOf(
+          item.header,
+          item.rows,
+          item.align,
+          wrapper,
+          roles.body,
+          frame.width,
+        );
+        const n = grid.rowH.length;
+        for (let r = 0; r < n; r++) {
+          push({
+            height: grid.rowH[r],
+            offset: 0,
+            spaceBefore: r === 0 ? item.spaceBefore * bodyLine : 0,
+            // The header stays with the first body row.
+            keepWithNext: grid.header && r === 0 && n > 1,
+            container: frame.container,
+            payload: { kind: "tableRow", x: frame.x, grid, row: r },
+          });
+        }
+        break;
+      }
       case "open":
         open(item.fill);
         break;

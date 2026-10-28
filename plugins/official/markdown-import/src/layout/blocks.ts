@@ -10,7 +10,7 @@
  * | code | a "code" box with the code in the monospace role, tabs as 4 spaces |
  * | blockquote / callout | a "quote" / "callout" box; the callout title first |
  * | thematic break | a rule |
- * | table | a "table" box with a monospace grid, capped (8 columns × 200 rows) |
+ * | table | a grid: header row shaded, borders, wrapped cells, widths from the content (no cap) |
  * | image / embed | an image box (bytes come later) / a `[[target]]` link line |
  * | math | the LaTeX as code-toned text |
  * | footnotes | `[n]` stays in the text; definitions go at the end of the note |
@@ -64,19 +64,22 @@ export interface MappedImage {
   spaceBefore: number;
 }
 
+export interface MappedTable {
+  kind: "table";
+  header: readonly string[];
+  rows: readonly (readonly string[])[];
+  align: readonly string[];
+  spaceBefore: number;
+}
+
 export type Mapped =
   | MappedText
+  | MappedTable
   | MappedList
   | MappedImage
   | { kind: "rule"; spaceBefore: number }
   | { kind: "open"; fill: Fill }
   | { kind: "close" };
-
-export interface MapOptions {
-  /** Characters that fit on one monospace line (tables are shaped to it). */
-  tableChars: number;
-  tableCap: { cols: number; rows: number };
-}
 
 const SPACE = { paragraph: 0.5, heading: 1, list: 0.5, block: 0.5 };
 const MIME: Record<string, string> = {
@@ -123,79 +126,6 @@ const marker = (b: Extract<NoteBlock, { kind: "listItem" }>): string => {
   return b.ordered ? `${b.marker} ` : "• ";
 };
 
-const ELLIPSIS = "…";
-
-const clip = (s: string, width: number): string =>
-  s.length <= width ? s : s.slice(0, Math.max(0, width - 1)) + ELLIPSIS;
-
-const pad = (
-  s: string,
-  width: number,
-  align: "none" | "left" | "center" | "right",
-): string => {
-  const gap = width - s.length;
-  if (gap <= 0) {
-    return s;
-  }
-  if (align === "right") {
-    return " ".repeat(gap) + s;
-  }
-  if (align === "center") {
-    const left = Math.floor(gap / 2);
-    return " ".repeat(left) + s + " ".repeat(gap - left);
-  }
-  return s + " ".repeat(gap);
-};
-
-/** A table as monospace lines, shaped to `maxChars` columns. */
-export const tableLines = (
-  b: Extract<NoteBlock, { kind: "table" }>,
-  opts: MapOptions,
-): string[] => {
-  const cols = Math.min(b.cols, opts.tableCap.cols, b.header.length || b.cols);
-  const rows = b.rows.slice(0, opts.tableCap.rows);
-  const cell = (s: string | undefined) => (s ?? "").replace(/\s+/g, " ").trim();
-  const header = Array.from({ length: cols }, (_, i) => cell(b.header[i]));
-  const body = rows.map((r) =>
-    Array.from({ length: cols }, (_, i) => cell(r[i])),
-  );
-  const widths = header.map((h, i) =>
-    Math.max(1, h.length, ...body.map((r) => r[i].length)),
-  );
-  const sep = " │ ";
-  const MIN = 4;
-  const total = () =>
-    widths.reduce((a, w) => a + w, 0) + sep.length * (cols - 1);
-  // Shrink the widest column until the table fits, never below MIN chars.
-  while (total() > opts.tableChars) {
-    let widest = 0;
-    for (let i = 1; i < cols; i++) {
-      if (widths[i] > widths[widest]) {
-        widest = i;
-      }
-    }
-    if (widths[widest] <= MIN) {
-      break;
-    }
-    widths[widest]--;
-  }
-  const align = (i: number) => b.align[i] ?? "none";
-  const line = (r: string[]) =>
-    r.map((c, i) => pad(clip(c, widths[i]), widths[i], align(i))).join(sep);
-  const out = [line(header), widths.map((w) => "─".repeat(w)).join("─┼─")];
-  for (const r of body) {
-    out.push(line(r));
-  }
-  const more = b.rows.length - rows.length;
-  if (more > 0) {
-    out.push(`… ${more} more rows`);
-  }
-  if (b.cols > cols) {
-    out.push(`… ${b.cols - cols} more columns`);
-  }
-  return out;
-};
-
 const text = (
   role: RoleName,
   t: string,
@@ -235,7 +165,6 @@ function* mapList(
 
 function* mapBlocks(
   blocks: readonly NoteBlock[],
-  opts: MapOptions,
   footnotes: Extract<NoteBlock, { kind: "footnoteDef" }>[],
 ): Generator<Mapped> {
   for (let i = 0; i < blocks.length; ) {
@@ -270,7 +199,7 @@ function* mapBlocks(
         break;
       case "blockquote":
         yield { kind: "open", fill: "quote" };
-        yield* mapBlocks(b.blocks, opts, footnotes);
+        yield* mapBlocks(b.blocks, footnotes);
         yield { kind: "close" };
         break;
       case "callout":
@@ -281,16 +210,20 @@ function* mapBlocks(
           splittable: false,
           data: { callout: b.calloutType },
         });
-        yield* mapBlocks(b.blocks, opts, footnotes);
+        yield* mapBlocks(b.blocks, footnotes);
         yield { kind: "close" };
         break;
       case "thematicBreak":
         yield { kind: "rule", spaceBefore: SPACE.block };
         break;
       case "table":
-        yield { kind: "open", fill: "table" };
-        yield text("code", tableLines(b, opts).join("\n"), { spaceBefore: 0 });
-        yield { kind: "close" };
+        yield {
+          kind: "table",
+          header: b.header,
+          rows: b.rows,
+          align: b.align,
+          spaceBefore: SPACE.block,
+        };
         break;
       case "image":
         yield {
@@ -331,9 +264,9 @@ function* mapBlocks(
  * Maps a whole note: its blocks in order, then the footnote definitions
  * after a rule, each as `[label] text`.
  */
-export function* mapNote(doc: NoteDoc, opts: MapOptions): Generator<Mapped> {
+export function* mapNote(doc: NoteDoc): Generator<Mapped> {
   const footnotes: Extract<NoteBlock, { kind: "footnoteDef" }>[] = [];
-  yield* mapBlocks(doc.blocks, opts, footnotes);
+  yield* mapBlocks(doc.blocks, footnotes);
   if (footnotes.length === 0) {
     return;
   }
@@ -349,6 +282,6 @@ export function* mapNote(doc: NoteDoc, opts: MapOptions): Generator<Mapped> {
         rest.unshift(first);
       }
     }
-    yield* mapBlocks(rest, opts, []);
+    yield* mapBlocks(rest, []);
   }
 }

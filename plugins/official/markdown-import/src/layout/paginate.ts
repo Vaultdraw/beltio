@@ -12,8 +12,11 @@
  * Entries are lines (a text block is one entry per wrapped line, so long
  * blocks split between pages by line) or whole items (images, rules).
  */
+import { CELL_PAD_X, CELL_PAD_Y } from "./tableGrid";
+
 import type { Role } from "./fonts";
 import type { Fill } from "./blocks";
+import type { TableGrid } from "./tableGrid";
 import type { PageItem, PageItemText } from "./types";
 
 /** A box drawn behind the entries it contains (code, quote, callout, table). */
@@ -47,7 +50,8 @@ export type EntryPayload =
       mimeType: string;
       alt?: string;
     }
-  | { kind: "rule"; x: number; width: number };
+  | { kind: "rule"; x: number; width: number }
+  | { kind: "tableRow"; x: number; grid: TableGrid; row: number };
 
 export interface Entry {
   /** The slot the entry takes on the page, container padding included. */
@@ -192,6 +196,97 @@ export class Paginator {
     return page;
   }
 
+  /** A table's rows on one page: header shade, border, grid lines, then one text per cell. */
+  private tableItems(
+    page: number,
+    grid: TableGrid,
+    tx: number,
+    rows: Placed[],
+  ): PageItem[] {
+    const { top, left } = this.margins;
+    const x0 = left + tx;
+    const first = rows[0];
+    const y0 = top + first.y + first.entry.offset;
+    const last = rows[rows.length - 1];
+    const y1 =
+      top +
+      last.y +
+      last.entry.offset +
+      grid.rowH[(last.entry.payload as { row: number }).row];
+    const out: PageItem[] = [];
+    const cols = grid.colX.length - 1;
+    for (const { entry, y } of rows) {
+      const r = (entry.payload as { row: number }).row;
+      if (grid.header && r === 0) {
+        out.push({
+          type: "rect",
+          page,
+          x: x0,
+          y: top + y + entry.offset,
+          width: grid.width,
+          height: grid.rowH[r],
+          fill: "code",
+          stroke: "none",
+        });
+      }
+    }
+    out.push({
+      type: "rect",
+      page,
+      x: x0,
+      y: y0,
+      width: grid.width,
+      height: y1 - y0,
+      fill: "none",
+      stroke: "thin",
+    });
+    for (const { y } of rows.slice(1)) {
+      out.push({
+        type: "line",
+        page,
+        x: x0,
+        y: top + y,
+        width: grid.width,
+        height: 0,
+      });
+    }
+    for (let c = 1; c < cols; c++) {
+      out.push({
+        type: "line",
+        page,
+        x: x0 + grid.colX[c],
+        y: y0,
+        width: 0,
+        height: y1 - y0,
+      });
+    }
+    const role = grid.role;
+    for (const { entry, y } of rows) {
+      const r = (entry.payload as { row: number }).row;
+      for (let c = 0; c < cols; c++) {
+        const lines = grid.lines[r][c];
+        if (lines.length === 0) {
+          continue;
+        }
+        const item: PageItemText = {
+          type: "text",
+          page,
+          x: x0 + grid.colX[c] + CELL_PAD_X,
+          y: top + y + entry.offset + CELL_PAD_Y,
+          width: grid.colX[c + 1] - grid.colX[c] - 2 * CELL_PAD_X,
+          height: lines.length * role.linePx,
+          text: lines.join("\n"),
+          fontSize: role.size,
+          fontFamily: role.family,
+          lineHeight: role.lineHeight,
+          align: grid.align[c],
+        };
+        out.push(item);
+      }
+    }
+    return out;
+  }
+
   /** Builds the page's items: boxes first (behind), then texts, images and rules. */
   private assemble(page: number, placed: Placed[]): CompletedPage {
     const { top, left } = this.margins;
@@ -254,8 +349,23 @@ export class Paginator {
       items.push(item);
       run = null;
     };
-    for (const { entry, y } of placed) {
+    for (let k = 0; k < placed.length; k++) {
+      const { entry, y } = placed[k];
       const p = entry.payload;
+      if (p.kind === "tableRow") {
+        endRun();
+        // The rows of this table on the page, drawn together.
+        const rows: Placed[] = [placed[k]];
+        while (
+          k + 1 < placed.length &&
+          placed[k + 1].entry.payload.kind === "tableRow" &&
+          (placed[k + 1].entry.payload as { grid: TableGrid }).grid === p.grid
+        ) {
+          rows.push(placed[++k]);
+        }
+        items.push(...this.tableItems(page, p.grid, p.x, rows));
+        continue;
+      }
       if (p.kind === "line") {
         if (run && run.block === p.block) {
           run.lines.push(p.text);

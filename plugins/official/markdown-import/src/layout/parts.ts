@@ -48,6 +48,13 @@ const estimate = (item: Mapped): number => {
     case "rule":
     case "open":
       return 1;
+    case "table":
+      return (
+        (item.rows.length + 1) * Math.max(item.header.length, 1) +
+        item.rows.length +
+        item.header.length +
+        2
+      );
     default:
       return 0;
   }
