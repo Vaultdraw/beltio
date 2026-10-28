@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { PROFILE_COMMANDS } from "../commands/profileCommands";
 import { profileNameError } from "../vault/profiles";
@@ -23,9 +23,38 @@ describe("profile commands", () => {
       "profile.new",
       "profile.duplicate",
       "profile.delete",
+      "profile.useForVault",
+      "profile.clearForVault",
     ]);
     expect(PROFILE_COMMANDS.every((c) => c.keys.default.length === 0)).toBe(
       true,
     );
+  });
+});
+
+describe("a vault's profile", () => {
+  it("switches to the profile the vault names, once, and ignores unknown ones", async () => {
+    vi.resetModules();
+    const profileCall = vi.fn(async () => {});
+    const push = vi.fn();
+    let name: string | null = "work";
+    vi.doMock("../vault/settingsSync", () => ({
+      getSettingsStatus: () => ({ profile: null, profiles: ["work"] }),
+      isConfigFolderActive: () => true,
+      nativeCall: async () => name,
+      profileCall,
+    }));
+    vi.doMock("../toasts/toastStore", () => ({ toastStore: { push } }));
+    vi.doMock("../vault/vaultSettings", () => ({
+      getVaultSettingsSnapshot: () => ({ handle: "h" }),
+    }));
+    const { applyVaultProfile } = await import("../vault/profiles");
+    await applyVaultProfile("h");
+    expect(profileCall).toHaveBeenCalledWith("profile_use", { name: "work" });
+    name = "gone";
+    await applyVaultProfile("h");
+    expect(profileCall).toHaveBeenCalledTimes(1);
+    expect(push.mock.calls.at(-1)?.[0].message).toMatch(/does not exist/);
+    vi.doUnmock("../vault/settingsSync");
   });
 });

@@ -81,7 +81,12 @@ export function useVaultSettings(
 ): UseVaultSettings {
   const handle = vault?.handle ?? null;
   useEffect(() => {
-    void attachVaultSettings(win, handle);
+    void attachVaultSettings(win, handle).then(() => {
+      // A vault may name its profile; one missed file read when it does not.
+      if (handle) {
+        void import("./profiles").then((m) => m.applyVaultProfile(handle));
+      }
+    });
     return () => detachVaultSettings();
   }, [win, handle]);
 

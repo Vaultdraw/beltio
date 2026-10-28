@@ -1933,8 +1933,12 @@ export async function profileCall(
 }
 
 /** Call a read-only native command through the settings bridge (desktop only). */
-export async function nativeCall<T>(what: string, cmd: string): Promise<T> {
-  return need(what).invoke<T>(cmd);
+export async function nativeCall<T>(
+  what: string,
+  cmd: string,
+  args?: Record<string, unknown>,
+): Promise<T> {
+  return need(what).invoke<T>(cmd, args);
 }
 
 /** Write any pending state.json change now (e.g. before quitting). */

@@ -196,7 +196,9 @@ flowchart LR
 | `vaultdraw profile use work` or Profile: Switch profile | saved; a running app switches at once |
 | nothing | the default profile |
 
-**Commands** (palette, no default keys, rebindable): `profile.switch`, `profile.new`, `profile.duplicate`, `profile.delete`. **Settings → General → Profile** has the same: a switcher and New profile, Duplicate and Delete buttons.
+**Per vault.** A vault can name its profile in the one-line file `<vault>/.excalidraw-vault/profile` (just the name). Opening the vault switches to it, with a note; a name that has no folder on this machine is ignored with a note, so a cloned vault is safe. Set it with **Profile: Use the active profile for this vault**, clear it with **Profile: Stop choosing a profile for this vault**, or write the file by hand. The switch is the same saved choice as `vaultdraw profile use`, so another vault opened later can switch it again.
+
+**Commands** (palette, no default keys, rebindable): `profile.switch`, `profile.new`, `profile.duplicate`, `profile.delete`, `profile.useForVault`, `profile.clearForVault`. **Settings → General → Profile** has the same: a switcher and New profile, Duplicate and Delete buttons.
 
 ```sh
 vaultdraw profile list                    # * marks the active one

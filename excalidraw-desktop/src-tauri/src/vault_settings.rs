@@ -21,6 +21,7 @@ use std::{
 use tauri::State;
 
 pub(crate) const SETTINGS_FILE: &str = "settings.toml";
+const PROFILE_FILE: &str = "profile";
 const MAX_SETTINGS_BYTES: u64 = 256 * 1024;
 const HEADER: &str = "# Vaultdraw settings for this vault; these override ~/.config/vaultdraw/config.toml\n";
 
@@ -154,6 +155,47 @@ pub(crate) async fn update_vault_settings(
     writable(&v)?;
     let _mutation = mutation_guard(&v)?;
     update_vault_settings_at(&v, &changes)
+}
+
+/// The profile this vault asks for: the one-line file `<vault>/.excalidraw-vault/profile`
+/// (a valid profile name, else nothing). Read once when the vault opens.
+pub(crate) fn vault_profile_at(root: &Path) -> Option<String> {
+    let dir = settings_file(root, false).ok()??.with_file_name(PROFILE_FILE);
+    let text = fs::read_to_string(dir).ok()?;
+    let name = text.trim();
+    config::valid_profile_name(name).then(|| name.to_owned())
+}
+
+/// Saves (or clears with `None`) the vault's profile file.
+pub(crate) fn set_vault_profile_at(v: &Vault, name: Option<&str>) -> Result<()> {
+    writable(v)?;
+    match name {
+        Some(n) if !config::valid_profile_name(n) => Err(err("INVALID_ARGUMENT", format!("Invalid profile name \"{n}\""))),
+        Some(n) => {
+            let Some(file) = settings_file(&v.root, true)? else { return Ok(()) };
+            write_atomic(&file.with_file_name(PROFILE_FILE), format!("{n}\n").as_bytes())
+        }
+        None => {
+            let Some(file) = settings_file(&v.root, false)? else { return Ok(()) };
+            match fs::remove_file(file.with_file_name(PROFILE_FILE)) {
+                Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(ioerr(e)),
+                _ => Ok(()),
+            }
+        }
+    }
+}
+
+#[tauri::command]
+pub(crate) async fn vault_profile(handle: String, state: State<'_, Service>) -> Result<Option<String>> {
+    let v = vault_for(&state, &handle)?;
+    Ok(vault_profile_at(&v.root))
+}
+
+#[tauri::command]
+pub(crate) async fn set_vault_profile(handle: String, name: Option<String>, state: State<'_, Service>) -> Result<()> {
+    let v = vault_for(&state, &handle)?;
+    let _mutation = mutation_guard(&v)?;
+    set_vault_profile_at(&v, name.as_deref())
 }
 
 #[cfg(test)]
@@ -373,5 +415,18 @@ mod tests {
         assert_eq!(names, vec![std::ffi::OsString::from(META_DIR)]);
         // The user-facing path API still refuses the metadata folder.
         assert!(super::super::safe_path(&v.root, &format!("{META_DIR}/{SETTINGS_FILE}"), true).is_err());
+    }
+
+    #[test]
+    fn a_vault_names_its_profile_in_a_one_line_file_and_can_clear_it() {
+        let t = tempdir().unwrap();
+        let v = vault(t.path(), false);
+        assert_eq!(vault_profile_at(t.path()), None);
+        set_vault_profile_at(&v, Some("work")).unwrap();
+        assert_eq!(vault_profile_at(t.path()).as_deref(), Some("work"));
+        assert_eq!(set_vault_profile_at(&v, Some("../x")).unwrap_err().code, "INVALID_ARGUMENT");
+        set_vault_profile_at(&v, None).unwrap();
+        assert_eq!(vault_profile_at(t.path()), None);
+        assert!(set_vault_profile_at(&vault(t.path(), true), Some("work")).is_err(), "a read-only vault is not written");
     }
 }

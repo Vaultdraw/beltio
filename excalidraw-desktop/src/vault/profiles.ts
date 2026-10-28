@@ -3,7 +3,15 @@
  * layered over config.toml). The native side does the files; these helpers call it and
  * reload, so the new profile's values apply at once. `default` is the plain config.
  */
-import { getSettingsStatus, profileCall } from "./settingsSync";
+import { toastStore } from "../toasts/toastStore";
+
+import {
+  getSettingsStatus,
+  isConfigFolderActive,
+  nativeCall,
+  profileCall,
+} from "./settingsSync";
+import { getVaultSettingsSnapshot } from "./vaultSettings";
 
 export const DEFAULT_PROFILE = "default";
 const NAME = /^[A-Za-z0-9_-]{1,48}$/;
@@ -39,3 +47,42 @@ export const createProfile = (name: string, from: string | null) =>
 
 export const deleteProfile = (name: string) =>
   profileCall("profile_delete", { name });
+
+/**
+ * A vault can name its profile in the one-line file `.excalidraw-vault/profile`. When the
+ * vault opens, that profile becomes the active one (the same switch as everywhere else).
+ * A name with no profile folder on this machine is ignored with a note.
+ */
+export async function applyVaultProfile(handle: string): Promise<void> {
+  if (!isConfigFolderActive()) {
+    return;
+  }
+  try {
+    const name = await nativeCall<string | null>("Profiles", "vault_profile", {
+      handle,
+    });
+    if (!name || name === getProfiles().active) {
+      return;
+    }
+    if (!getProfiles().profiles.includes(name)) {
+      toastStore.push({
+        message: `This vault asks for the profile "${name}", which does not exist here.`,
+        kind: "error",
+      });
+      return;
+    }
+    await switchProfile(name);
+    toastStore.push({ message: `Profile "${name}" (set by this vault).` });
+  } catch {
+    // A vault without the file, or one that is closing: nothing to apply.
+  }
+}
+
+/** Make the active profile this vault's (`null` clears it). Writes `.excalidraw-vault/profile`. */
+export async function setVaultProfile(name: string | null): Promise<void> {
+  const handle = getVaultSettingsSnapshot().handle;
+  if (!handle) {
+    throw new Error("Open a vault first.");
+  }
+  await nativeCall("Profiles", "set_vault_profile", { handle, name });
+}
