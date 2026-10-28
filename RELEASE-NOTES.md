@@ -5,7 +5,7 @@ Plugins, Markdown notes and Obsidian vaults, backup, libraries, profiles, Linux 
 ## Read first
 
 1. **Upgrading with plugins.** A plugin you enabled earlier that declared no permission asks for review once ("Needs review"). Approve it in Settings, Plugins. Official plugins stay on.
-2. **Browse community plugins is empty for now.** The list it reads (`plugins.registry_url`, `Vaultdraw/plugin-registry`) is not published yet, so Browse shows an error until it exists.
+2. **Browse community plugins starts empty.** The list (`Vaultdraw/plugin-registry`) is published but has no plugins yet; add yours by pull request (see `sdk/docs/registry.md`).
 3. **The macOS build is unsigned.** First open: right-click, Open, or System Settings, Privacy & Security, Open Anyway.
 
 ## What is new
