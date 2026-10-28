@@ -38,6 +38,10 @@ export async function renderMath(
     } catch {
       return null;
     }
+    // The plugin activates just after its start command runs: wait (at most 2 s) for its provider.
+    for (let i = 0; i < 40 && !provider; i++) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
   }
   const render = provider;
   if (!render) {

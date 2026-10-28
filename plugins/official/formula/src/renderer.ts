@@ -28,8 +28,13 @@ const defaultFactory = (): WorkerLike => {
     const url = URL.createObjectURL(
       new Blob([__FORMULA_WORKER_SOURCE__], { type: "text/javascript" }),
     );
+    // The URL is revoked when the worker is terminated: WebKit may fetch the script late.
     const w = new Worker(url);
-    URL.revokeObjectURL(url);
+    const terminate = w.terminate.bind(w);
+    w.terminate = () => {
+      terminate();
+      URL.revokeObjectURL(url);
+    };
     return w as unknown as WorkerLike;
   }
   // Outside the plugin build (the app's end-to-end run, built by Vite).

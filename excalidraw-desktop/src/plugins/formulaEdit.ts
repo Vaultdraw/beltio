@@ -29,7 +29,12 @@ export function editFormulaImage(
     return false;
   }
   const data = el.customData?.latex;
-  if (!data || typeof data !== "object") {
+  if (
+    !data ||
+    typeof data !== "object" ||
+    (data as { v?: unknown }).v !== 1 ||
+    typeof (data as { source?: unknown }).source !== "string"
+  ) {
     return false;
   }
   if (!enabledPluginIds(win).includes("formula")) {
