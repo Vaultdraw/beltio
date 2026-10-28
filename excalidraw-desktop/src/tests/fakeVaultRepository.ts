@@ -454,7 +454,8 @@ export class FakeVaultRepository implements VaultRepository {
           rows.set(rest, {
             path: notePath,
             name: rest,
-            kind: "note",
+            kind:
+              fileKind(notePath) === "excalidrawMd" ? "excalidrawMd" : "note",
             modifiedAt: Date.now(),
             size: 0,
           });
@@ -624,14 +625,23 @@ export class FakeVaultRepository implements VaultRepository {
     }
     await this.delay();
     const isFile = this.files.has(from);
+    const isNote = this.notes.has(from);
     const isFolder = this.folders.has(from);
-    if (!isFile && !isFolder) {
+    if (!isFile && !isNote && !isFolder) {
       throw makeError("NOT_FOUND", `source not found: ${from}`);
     }
-    if (this.files.has(to) || this.folders.has(to)) {
+    if (this.files.has(to) || this.notes.has(to) || this.folders.has(to)) {
       throw makeError("NAME_COLLISION", `destination exists: ${to}`);
     }
     this.checkNewName(to, from);
+    if (isNote) {
+      // Like the native move: any file moves; the note keeps its text.
+      this.seedFolder(to.includes("/") ? to.slice(0, to.lastIndexOf("/")) : "");
+      this.notes.delete(from);
+      this.notes.add(to);
+      this.emit({ handle: this.vault.handle, paths: [from, to], rescan: true });
+      return;
+    }
     if (isFile) {
       assertValidDrawingPath(to);
       const row = this.files.get(from)!;
@@ -666,6 +676,14 @@ export class FakeVaultRepository implements VaultRepository {
         moved.push(next);
       }
     }
+    for (const note of [...this.notes]) {
+      if (note.startsWith(`${from}/`)) {
+        const next = `${to}/${note.slice(from.length + 1)}`;
+        this.notes.delete(note);
+        this.notes.add(next);
+        moved.push(next);
+      }
+    }
     this.emit({ handle: this.vault.handle, paths: moved, rescan: true });
   }
 
@@ -682,9 +700,19 @@ export class FakeVaultRepository implements VaultRepository {
       this.emit({ handle: this.vault.handle, paths: [path], rescan: false });
       return;
     }
+    if (this.notes.has(path)) {
+      this.notes.delete(path);
+      this.emit({ handle: this.vault.handle, paths: [path], rescan: false });
+      return;
+    }
     if (this.folders.has(path)) {
       // Like the native trash: the folder and everything under it go.
       const prefix = `${path}/`;
+      for (const n of [...this.notes]) {
+        if (n.startsWith(prefix)) {
+          this.notes.delete(n);
+        }
+      }
       for (const f of [...this.files.keys()]) {
         if (f.startsWith(prefix)) {
           this.files.delete(f);

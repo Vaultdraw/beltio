@@ -46,9 +46,10 @@ export function buildRowMenu({
   pluginItems,
 }: RowMenuInput): MenuNode[] {
   const isFolder = entry.kind === "folder";
-  // Notes and Obsidian Excalidraw files only offer copy path and reveal from the tree.
   const isDrawing = entry.kind === "drawing";
-  const editable = !readOnly && (isFolder || isDrawing);
+  // Every entry can be renamed, moved and trashed, like Obsidian and Finder; only drawings
+  // also get duplicate, export, history and the rest.
+  const editable = !readOnly;
   const item = (
     id: string,
     label: string,

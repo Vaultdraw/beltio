@@ -120,11 +120,9 @@ export function treeActions(d: TreeKeyDeps): TreeActions {
   };
   const start = () => go(cursor < 0 ? 0 : cursor);
   const onRow = (fn: (row: TreeRow) => void) => () => row ? fn(row) : start();
-  // Notes and Obsidian Excalidraw files are not renamed, moved or deleted from here.
+  // Every row (folder, drawing, note) can be renamed, moved and deleted from the keyboard.
   const edit = (fn: (entry: VaultEntry) => void) =>
-    item && !d.readOnly && (item.kind === "drawing" || item.kind === "folder")
-      ? () => fn(item)
-      : undefined;
+    item && !d.readOnly ? () => fn(item) : undefined;
   const createIn = (kind: "drawing" | "folder") =>
     d.readOnly
       ? undefined

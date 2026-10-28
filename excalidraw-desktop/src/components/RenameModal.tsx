@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
-import { getCleanDrawingName, validateEntryName } from "../vault/treeStore";
+import { entryExtension, entryWord } from "../vault/fileKind";
+import { validateEntryName } from "../vault/treeStore";
 
 import { userError } from "./userError";
 
@@ -8,7 +9,8 @@ import { Dialog } from "./Dialog";
 
 interface RenameModalProps {
   initialName: string;
-  kind: "drawing" | "folder";
+  /** The entry kind: decides the word in the title and the extension kept. */
+  kind: "drawing" | "folder" | "note" | "excalidrawMd";
   onRename: (newName: string) => void | Promise<void>;
   onCancel: () => void;
 }
@@ -19,8 +21,11 @@ export const RenameModal = ({
   onRename,
   onCancel,
 }: RenameModalProps) => {
-  const cleanInitial =
-    kind === "drawing" ? getCleanDrawingName(initialName) : initialName;
+  const extension = kind === "folder" ? "" : entryExtension(initialName);
+  const cleanInitial = initialName.slice(
+    0,
+    initialName.length - extension.length,
+  );
   const [name, setName] = useState(cleanInitial);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -33,9 +38,11 @@ export const RenameModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const targetName =
-      kind === "drawing" ? `${name.trim()}.excalidraw` : name.trim();
-    const validation = validateEntryName(targetName, kind);
+    const targetName = `${name.trim()}${extension}`;
+    const validation = validateEntryName(
+      targetName,
+      kind === "folder" ? "folder" : "drawing",
+    );
     if (!validation.valid) {
       setError(validation.error ?? "Invalid name");
       return;
@@ -52,7 +59,7 @@ export const RenameModal = ({
 
   return (
     <Dialog
-      title={`Rename ${kind === "drawing" ? "Drawing" : "Folder"}`}
+      title={`Rename ${entryWord(kind)}`}
       titleId="rename-modal-title"
       onClose={onCancel}
       onSubmit={handleSubmit}
@@ -93,9 +100,11 @@ export const RenameModal = ({
           disabled={submitting}
         />
         <span className="vd-dialog__hint">
-          {kind === "drawing"
-            ? "Links to this drawing are updated. The .excalidraw extension is kept automatically."
-            : "Drawings inside keep their names."}
+          {kind === "folder"
+            ? "Drawings inside keep their names."
+            : kind === "note"
+            ? "Links to this note are updated. The .md extension is kept automatically."
+            : "Links to this drawing are updated. The extension is kept automatically."}
         </span>
         {error && <div className="vault-error-text">{error}</div>}
       </div>

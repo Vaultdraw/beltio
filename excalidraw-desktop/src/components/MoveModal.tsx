@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
+import { entryWord } from "../vault/fileKind";
 import { getBaseName, getParentPath, isMoveAllowed } from "../vault/treeStore";
 
 import { userError } from "./userError";
@@ -12,7 +13,7 @@ import type { KeyboardEvent } from "react";
 
 interface MoveModalProps {
   sourcePath: string;
-  sourceKind: "drawing" | "folder";
+  sourceKind: "drawing" | "folder" | "note" | "excalidrawMd";
   folders: string[]; // List of all known folder paths in vault, e.g. ["", "DSA", "DSA/Dynamic Programming"]
   onMove: (destinationParentPath: string) => void | Promise<void>;
   onCancel: () => void;
@@ -152,7 +153,7 @@ export const MoveModal = ({
 
   return (
     <Dialog
-      title={`Move ${sourceKind === "drawing" ? "Drawing" : "Folder"}`}
+      title={`Move ${entryWord(sourceKind)}`}
       titleId="move-modal-title"
       className="vd-dialog--wide"
       onClose={onCancel}
@@ -256,8 +257,7 @@ export const MoveModal = ({
           })}
         </div>
         <div className="vd-move__dest">
-          {sourceKind === "drawing" ? "Drawing" : "Folder"} will move into{" "}
-          {destLabel}.
+          {entryWord(sourceKind)} will move into {destLabel}.
         </div>
         {error && (
           <div className="vault-error-text" style={{ marginTop: "8px" }}>

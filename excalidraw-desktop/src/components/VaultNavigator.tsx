@@ -9,7 +9,12 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
-import { entryDisplayName, stripDrawingExt } from "../vault/fileKind";
+import {
+  entryDisplayName,
+  entryWord,
+  fileKind,
+  stripDrawingExt,
+} from "../vault/fileKind";
 
 import { getMenuItems, runMenuItem } from "../plugins/menuRegistry";
 import { getPreferences, updatePreferences } from "../vault/preferences";
@@ -479,7 +484,7 @@ export const VaultNavigator = ({
     const entry = allIndexedEntries.find((e) => e.path === request.path) ?? {
       path: request.path,
       name: request.path.split("/").pop() ?? request.path,
-      kind: "drawing" as const,
+      kind: ((k) => (k === "other" ? "drawing" : k))(fileKind(request.path)),
       modifiedAt: 0,
       size: 0,
     };
@@ -1108,7 +1113,7 @@ export const VaultNavigator = ({
       {renameTarget && (
         <RenameModal
           initialName={renameTarget.name}
-          kind={renameTarget.kind === "folder" ? "folder" : "drawing"}
+          kind={renameTarget.kind}
           onRename={async (newName) => {
             await onRenameEntry(renameTarget.path, newName);
             setRenameTarget(null);
@@ -1121,7 +1126,7 @@ export const VaultNavigator = ({
       {moveTarget && (
         <MoveModal
           sourcePath={moveTarget.path}
-          sourceKind={moveTarget.kind === "folder" ? "folder" : "drawing"}
+          sourceKind={moveTarget.kind}
           folders={allFolderPaths}
           onMove={async (destFolder) => {
             await onMoveEntry(moveTarget.path, destFolder);
@@ -1134,9 +1139,7 @@ export const VaultNavigator = ({
       {/* Trash Confirm Modal */}
       {trashTarget && (
         <ConfirmModal
-          title={`Delete ${
-            trashTarget.kind === "drawing" ? "Drawing" : "Folder"
-          }`}
+          title={`Delete ${entryWord(trashTarget.kind)}`}
           message={
             trashTarget.kind === "folder"
               ? folderTrashMessage(trashTarget.name, trashCount)
@@ -1278,11 +1281,7 @@ const TreeRow = memo(
         style={{ "--depth": depth } as React.CSSProperties}
         data-tree-path={entry.path}
         data-tree-kind={entry.kind}
-        onPointerDown={(e) => {
-          if (isFolder || entry.kind === "drawing") {
-            onRowPointerDown(e, entry);
-          }
-        }}
+        onPointerDown={(e) => onRowPointerDown(e, entry)}
         onPointerEnter={() => setHovered(true)}
         onPointerLeave={() => setHovered(false)}
         onFocus={() => setFocusWithin(true)}

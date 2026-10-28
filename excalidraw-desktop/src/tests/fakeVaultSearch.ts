@@ -257,7 +257,8 @@ export class FakeVaultSearch implements VaultSearch {
       for (const e of await this.repository.listDirectory(handle, dir)) {
         if (e.kind === "folder") {
           await walk(e.path);
-        } else {
+        } else if (e.kind === "drawing") {
+          // Notes hold no drawing JSON: never read them as drawings (toimprove 89).
           out.push(e.path);
         }
       }

@@ -6,6 +6,7 @@
  * the closed drawings' JSON in the background (see `settled()`).
  */
 import { findLinks, parseLinkField } from "../links/grammar";
+import { fileKind } from "../vault/fileKind";
 import { linkTargetFor, wikiLink } from "../links/format";
 import { encodeVaultUrl } from "../links/linkUri";
 import { createResolver, foldKey, relativePath } from "../links/resolve";
@@ -31,6 +32,7 @@ import type { LinkResolver } from "../links/resolve";
 import type { VaultRepository } from "../vault/types";
 
 const MAX_SNIPPET = 120;
+const EMPTY_SCENE = JSON.stringify({ type: "excalidraw", elements: [] });
 
 export type FakeVaultLinksOptions = Partial<
   Pick<LinksSettings, "newLinkFormat" | "shapeLinkFormat">
@@ -182,6 +184,11 @@ export class FakeVaultLinks implements VaultLinks {
   }
 
   private async read(handle: string, path: string) {
+    if (fileKind(path) !== "drawing") {
+      // A note: its link names count (they are in `drawings()`), but the fake keeps no
+      // note text, so it holds no links. Never read it as a drawing (toimprove 89).
+      return { json: EMPTY_SCENE, revision: "" };
+    }
     return this.repository.readDrawing(handle, path);
   }
 

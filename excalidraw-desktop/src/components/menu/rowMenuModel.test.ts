@@ -83,13 +83,31 @@ describe("row menu groups", () => {
     ]);
   });
 
-  it("notes only copy a path and reveal", () => {
-    expect(shape(menu(entry("note")))).toEqual([
-      "Copy path>",
-      "|",
-      "Reveal in file manager",
-    ]);
-  });
+  it.each(["note", "excalidrawMd"] as const)(
+    "%s: move, copy path, reveal, rename and trash (like Obsidian and Finder)",
+    (kind) => {
+      expect(shape(menu(entry(kind)))).toEqual([
+        "Move to…",
+        "|",
+        "Copy path>",
+        "|",
+        "Reveal in file manager",
+        "|",
+        "Rename…",
+        "Move to Trash",
+      ]);
+    },
+  );
+
+  it.each(["note", "excalidrawMd", "drawing", "folder"] as const)(
+    "read-only vault: a %s offers no rename, move or trash",
+    (kind) => {
+      const labels = shape(menu(entry(kind), true));
+      for (const label of ["Rename…", "Move to…", "Move to Trash"]) {
+        expect(labels).not.toContain(label);
+      }
+    },
+  );
 
   it("trash is last and dangerous; a folder has no link", () => {
     const nodes = menu(entry("folder"));

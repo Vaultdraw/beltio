@@ -72,3 +72,22 @@ export const entryDisplayName = (name: string): string => {
 /** Drawings that Vaultdraw writes: only native `.excalidraw` files (Obsidian Excalidraw files are read-only here). */
 export const isWritableDrawing = (path: string): boolean =>
   fileKind(path) === "drawing";
+
+/** The extension a rename keeps for this name (none for folders and other files). */
+export const entryExtension = (name: string): string => {
+  const kind = fileKind(name);
+  if (kind === "drawing") {
+    return name.slice(name.length - DRAWING_EXT.length);
+  }
+  if (kind === "excalidrawMd") {
+    return name.slice(name.length - EXCALIDRAW_MD_EXT.length);
+  }
+  if (kind === "note") {
+    return name.slice(name.length - NOTE_EXT.length);
+  }
+  return "";
+};
+
+/** The word for an entry in dialogs: Drawing, Note or Folder. */
+export const entryWord = (kind: string): "Drawing" | "Note" | "Folder" =>
+  kind === "folder" ? "Folder" : kind === "note" ? "Note" : "Drawing";

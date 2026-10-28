@@ -112,10 +112,9 @@ const jargon = (text: string) => {
   return found;
 };
 
-test.beforeEach(async ({ page }, info) => {
+test.beforeEach(async ({ page }) => {
   await openVault(page, "?seed=empty&config=1");
-  // The files test runs on drawings only; see "rename in a vault with notes" for why.
-  const n = await buildVault(page, !info.title.startsWith("files:"));
+  const n = await buildVault(page);
   expect(n).toBeGreaterThan(500);
   await refresh(page);
   await expect(row(page, "Projects")).toBeVisible();
@@ -310,11 +309,9 @@ test("tabs: a tree click reuses the tab, the plus button adds one", async ({
   expect(errors).toEqual([]);
 });
 
-// FINDINGS #3 (open): renaming a drawing in a vault that also holds notes fails with a raw
-// "drawing must end in .excalidraw: <some note>.md" toast. test.fail() flips to a failure
-// when it is fixed, so this line is then removed.
-test("rename in a vault with notes works (open bug)", async ({ page }) => {
-  test.fail();
+// FINDINGS #3 (fixed, toimprove 89): the in-memory vault read notes as drawings and showed a raw
+// "drawing must end in .excalidraw" toast. Guards the fake and the toast wording.
+test("rename in a vault with notes works", async ({ page }) => {
   const dialog = page.getByRole("dialog");
   await (await rowMenu(page, "Ünïcödé.excalidraw", "Rename…")).click();
   await dialog.getByLabel("New name").fill("Meetings");
