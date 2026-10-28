@@ -158,6 +158,10 @@ export function resolveDropFolder(
   return rowKind === "folder" ? rowPath : getParentPath(rowPath);
 }
 
+/** The same fold the backend uses to decide two names clash: capitals and accent spelling. */
+export const foldName = (n: string): string =>
+  n.normalize("NFC").toLowerCase().normalize("NFC");
+
 /**
  * Drop rules for dragging `source` into `targetFolder` ("" is the vault root).
  * `existingNames` are the names already known in the target folder; a clash
@@ -177,15 +181,16 @@ export function checkTreeDrop(
   }
   if (options.existingNames) {
     for (const name of options.existingNames) {
-      if (name === source.name) {
+      if (foldName(name) === foldName(source.name)) {
         const where = targetFolder
           ? `"${getBaseName(targetFolder)}"`
           : "the vault root";
         return {
           allowed: false,
-          reason: `"${stripDrawingExt(
-            source.name,
-          )}" already exists in ${where}`,
+          reason:
+            name === source.name
+              ? `"${stripDrawingExt(source.name)}" already exists in ${where}`
+              : `"${stripDrawingExt(name)}" already exists in ${where} (names that differ only in capitals or accents count as the same)`,
         };
       }
     }

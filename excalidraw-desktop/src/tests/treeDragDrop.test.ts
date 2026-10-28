@@ -175,3 +175,17 @@ describe("checkTreeDrop blocked moves", () => {
     expect(result.reason).toMatch(/already in this folder/i);
   });
 });
+
+describe("checkTreeDrop name clashes use the backend's fold", () => {
+  it("refuses a drop onto a name that differs only in capitals or accents, and says why", () => {
+    const source = { path: "Été.excalidraw", name: "Été.excalidraw", kind: "drawing" as const };
+    const r = checkTreeDrop(source, "A", { existingNames: ["été.excalidraw"] });
+    expect(r.allowed).toBe(false);
+    expect(r.reason).toContain("été");
+    expect(r.reason).toContain("capitals or accents");
+    // A decomposed accent (e + combining acute) is the same name too.
+    const d = checkTreeDrop(source, "A", { existingNames: ["Été.excalidraw"] });
+    expect(d.allowed).toBe(false);
+    expect(checkTreeDrop(source, "A", { existingNames: ["other.excalidraw"] }).allowed).toBe(true);
+  });
+});

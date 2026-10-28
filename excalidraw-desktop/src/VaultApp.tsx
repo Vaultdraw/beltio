@@ -1900,7 +1900,7 @@ export const VaultApp = ({
       await moveEntryCore(oldPath, newPath);
     } catch (err) {
       setGlobalAlert({
-        message: `Failed to rename: ${errorMessage(err)}`,
+        message: `Can't rename: ${errorMessage(err)}`,
         type: "error",
       });
     } finally {
