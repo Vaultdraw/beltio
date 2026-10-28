@@ -103,8 +103,12 @@ test.describe("context menu (keyboard)", () => {
     await expect(items.nth(1)).toBeFocused();
     await page.keyboard.press("ArrowUp");
     await page.keyboard.press("ArrowUp"); // wraps to the last
-    await expect(items.last()).toHaveText("Open in new window");
-    await expect(items.last()).toHaveAttribute("aria-disabled", "true");
+    // The last entry is focused. Plugin items (Favourites) come after the
+    // built-in groups, so "Open in new window" is not necessarily last.
+    await expect(items.last()).toBeFocused();
+    await expect(
+      items.filter({ hasText: "Open in new window" }),
+    ).toHaveAttribute("aria-disabled", "true");
     await page.keyboard.press("Escape");
     await expect(menu(page)).toHaveCount(0);
     await expect(tabByPath(page, B)).toBeFocused();
