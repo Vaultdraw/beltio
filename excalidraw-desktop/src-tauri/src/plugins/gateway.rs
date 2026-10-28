@@ -47,6 +47,9 @@ pub(crate) const ALLOWLIST: &[Row] = &[
     Row { method: "vault.graph", permission: Some("vault.read"), route: Route::Raw },
     Row { method: "vault.graphLayout.load", permission: Some("vault.read"), route: Route::Raw },
     Row { method: "vault.graphLayout.save", permission: Some("vault.write"), route: Route::Raw },
+    Row { method: "export.write", permission: Some("vault.write"), route: Route::Raw },
+    Row { method: "export.move", permission: Some("vault.write"), route: Route::Raw },
+    Row { method: "export.remove", permission: Some("vault.write"), route: Route::Raw },
     Row { method: "vault.settings.read", permission: Some("vault.read"), route: Route::OwnSettings },
     Row { method: "vault.settings.update", permission: Some("vault.write"), route: Route::OwnSettings },
     Row { method: "pdf.pick", permission: Some(PDF), route: Route::Raw },
@@ -261,6 +264,9 @@ pub(crate) fn raw_call(app: &tauri::AppHandle, method: &str, body: &[u8]) -> Res
         return Ok(crate::pdf_import::gateway_call(method, body)?);
     }
     let vault = crate::control_active_vault(app).ok_or_else(|| GatewayError::new("NO_VAULT", "No vault is open"))?;
+    if method.starts_with("export.") {
+        return Ok(super::exports::call(&vault, method, body)?);
+    }
     match method {
         "vault.graph" => {
             let search = app.try_state::<crate::search::SearchService>().ok_or_else(|| GatewayError::new("INTERNAL", "Search service unavailable"))?;

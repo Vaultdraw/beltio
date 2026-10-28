@@ -5,6 +5,7 @@
 
 mod consent;
 mod devlog;
+mod exports;
 mod gateway;
 pub(crate) use gateway::GatewayError;
 mod install;

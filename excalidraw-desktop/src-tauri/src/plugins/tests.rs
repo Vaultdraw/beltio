@@ -816,6 +816,9 @@ fn gateway_allowlist_maps_methods_to_permissions() {
             ("vault.graph", Some("vault.read")),
             ("vault.graphLayout.load", Some("vault.read")),
             ("vault.graphLayout.save", Some("vault.write")),
+            ("export.write", Some("vault.write")),
+            ("export.move", Some("vault.write")),
+            ("export.remove", Some("vault.write")),
             ("vault.settings.read", Some("vault.read")),
             ("vault.settings.update", Some("vault.write")),
             ("pdf.pick", Some("pdf")),
@@ -1500,4 +1503,69 @@ fn raw_rows_need_their_permission_and_are_not_json_routes() {
     // A user plugin needs the confirmation too.
     let user = info_with("user", "\"vault.read\"", Source::User);
     assert_eq!(gateway::authorize("vault.graph", "user", Some(&user), || none.clone()).unwrap_err().code, "PERMISSION");
+}
+
+mod exports_rows {
+    use super::super::exports;
+    use std::fs;
+    use tempfile::tempdir;
+
+    fn vault(root: &std::path::Path, read_only: bool) -> crate::Vault {
+        crate::Vault::for_tests(root.canonicalize().unwrap(), "t", read_only)
+    }
+    fn body(head: serde_json::Value, bytes: &[u8]) -> Vec<u8> {
+        let json = serde_json::to_vec(&head).unwrap();
+        let mut out = (json.len() as u32).to_be_bytes().to_vec();
+        out.extend(json);
+        out.extend(bytes);
+        out
+    }
+
+    #[test]
+    fn writes_moves_and_removes_images_only() {
+        let t = tempdir().unwrap();
+        let v = vault(t.path(), false);
+        exports::call(&v, "export.write", &body(serde_json::json!({"path": "out/a/Draw.svg"}), b"<svg/>")).unwrap();
+        assert_eq!(fs::read(t.path().join("out/a/Draw.svg")).unwrap(), b"<svg/>");
+        // Moving a folder of exports, then a file.
+        assert_eq!(exports::call(&v, "export.move", &body(serde_json::json!({"from": "out/a", "to": "out/b"}), b"")).unwrap(), vec![1]);
+        assert!(t.path().join("out/b/Draw.svg").exists() && !t.path().join("out/a").exists());
+        assert_eq!(exports::call(&v, "export.move", &body(serde_json::json!({"from": "out/b/Draw.svg", "to": "out/b/New.svg"}), b"")).unwrap(), vec![1]);
+        assert_eq!(exports::call(&v, "export.move", &body(serde_json::json!({"from": "out/none.svg", "to": "out/x.svg"}), b"")).unwrap(), vec![0]);
+        assert_eq!(exports::call(&v, "export.remove", &body(serde_json::json!({"path": "out/b/New.svg"}), b"")).unwrap(), vec![1]);
+        assert_eq!(exports::call(&v, "export.remove", &body(serde_json::json!({"path": "out/b/New.svg"}), b"")).unwrap(), vec![0]);
+        // A folder removal deletes images and then the empty folders.
+        exports::call(&v, "export.write", &body(serde_json::json!({"path": "out/c/d/One.png"}), b"x")).unwrap();
+        assert_eq!(exports::call(&v, "export.remove", &body(serde_json::json!({"path": "out/c"}), b"")).unwrap(), vec![1]);
+        assert!(!t.path().join("out/c").exists());
+    }
+
+    #[test]
+    fn refuses_other_files_dot_paths_symlinks_and_read_only() {
+        let t = tempdir().unwrap();
+        let v = vault(t.path(), false);
+        let code = |r: crate::Result<Vec<u8>>| r.unwrap_err().code;
+        let w = |path: &str| exports::call(&v, "export.write", &body(serde_json::json!({ "path": path }), b"x"));
+        assert_eq!(code(w("a.excalidraw")), "INVALID_PATH");
+        assert_eq!(code(w("a.txt")), "INVALID_PATH");
+        assert_eq!(code(w(".hidden/a.svg")), "INVALID_PATH");
+        assert_eq!(code(w("../a.svg")), "INVALID_PATH");
+        assert_eq!(code(w(".excalidraw-vault/a.svg")), "INVALID_PATH");
+        // A folder that holds anything but exports is never moved or removed.
+        fs::create_dir_all(t.path().join("keep")).unwrap();
+        fs::write(t.path().join("keep/notes.md"), "x").unwrap();
+        fs::write(t.path().join("keep/a.svg"), "x").unwrap();
+        assert_eq!(code(exports::call(&v, "export.remove", &body(serde_json::json!({"path": "keep"}), b""))), "INVALID_PATH");
+        assert!(t.path().join("keep/a.svg").exists());
+        #[cfg(unix)]
+        {
+            let other = tempdir().unwrap();
+            std::os::unix::fs::symlink(other.path(), t.path().join("link")).unwrap();
+            assert_eq!(code(w("link/a.svg")), "INVALID_PATH");
+            assert!(!other.path().join("a.svg").exists());
+        }
+        let ro = vault(t.path(), true);
+        assert_eq!(code(exports::call(&ro, "export.write", &body(serde_json::json!({"path": "a.svg"}), b"x"))), "READ_ONLY");
+        assert_eq!(code(exports::call(&v, "export.write", b"\0\0")), "INVALID_ARGUMENT");
+    }
 }
