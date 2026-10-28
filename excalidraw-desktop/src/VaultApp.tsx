@@ -410,10 +410,24 @@ export const VaultApp = ({
   const [dismissedReadOnlyBanner, setDismissedReadOnlyBanner] = useState<
     string | null
   >(null);
-  const [globalAlert, setGlobalAlert] = useState<{
-    message: string;
-    type: "error" | "info";
-  } | null>(null);
+  // Notices are toasts (one system, themed, auto-closing). One alert at a time:
+  // a new one replaces the last, and null dismisses it.
+  const alertToastId = useRef<number | undefined>(undefined);
+  const setGlobalAlert = useCallback(
+    (alert: { message: string; type: "error" | "info" } | null) => {
+      if (alertToastId.current !== undefined) {
+        toastStore.dismiss(alertToastId.current);
+        alertToastId.current = undefined;
+      }
+      if (alert) {
+        alertToastId.current = toastStore.push({
+          message: alert.message,
+          kind: alert.type,
+        });
+      }
+    },
+    [],
+  );
   const [isBusy, setIsBusy] = useState(false);
   // Control calls share one counter, so overlapping calls keep the overlay.
   const controlBusy = useMemo(() => createBusyCounter(setIsBusy), []);
@@ -503,6 +517,11 @@ export const VaultApp = ({
   // One preferences read per render (localStorage parse + normalise).
   const prefsNow = getPreferences(win);
   const { confirmDelete, showTagChips } = prefsNow;
+  // interface.notice_seconds: how long error notices stay (0 = until dismissed).
+  const noticeSeconds = prefsNow.noticeSeconds;
+  useEffect(() => {
+    toastStore.setErrorMs(noticeSeconds * 1000);
+  }, [noticeSeconds]);
   const {
     activityBar: activityBarOn,
     activityBarOrder,
@@ -827,11 +846,11 @@ export const VaultApp = ({
       await flushDoc({ commitText: false });
     } catch (err) {
       setGlobalAlert({
-        message: `Save failed: ${errorMessage(err)}`,
+        message: `Couldn't save the drawing: ${errorMessage(err)}`,
         type: "error",
       });
     }
-  }, [activeDoc, flushDoc, isBusy, isClosing, vault?.readOnly]);
+  }, [activeDoc, flushDoc, isBusy, isClosing, setGlobalAlert, vault?.readOnly]);
 
   // Keep cached listings and expanded folders in step with a folder that was
   // moved (`to`) or removed (`to === null`), along with everything inside it.
@@ -892,14 +911,14 @@ export const VaultApp = ({
           return;
         }
         setGlobalAlert({
-          message: `Could not load folder "${
-            dirPath || "root"
+          message: `Couldn't read the folder "${
+            dirPath || "vault root"
           }": ${errorMessage(err)}`,
           type: "error",
         });
       }
     },
-    [repository, vault, rebaseFolders],
+    [repository, vault, rebaseFolders, setGlobalAlert],
   );
 
   // files.list_start: the vault whose file list walk has started. Until then
@@ -1165,7 +1184,7 @@ export const VaultApp = ({
         })().catch((err) => {
           if (!disposed && currentGen === vaultGeneration.current) {
             setGlobalAlert({
-              message: `Could not update search index: ${errorMessage(err)}`,
+              message: `Couldn't update the search index: ${errorMessage(err)}`,
               type: "error",
             });
           }
@@ -1184,7 +1203,9 @@ export const VaultApp = ({
       .catch((err) => {
         if (!disposed) {
           setGlobalAlert({
-            message: `Watcher error: ${errorMessage(err)}`,
+            message: `Couldn't watch the vault for outside changes: ${errorMessage(
+              err,
+            )}`,
             type: "error",
           });
         }
@@ -1199,7 +1220,15 @@ export const VaultApp = ({
       abortController.abort();
       unsubscribe?.();
     };
-  }, [loadDirectory, refreshRecovery, repository, startIndexing, vault, win]);
+  }, [
+    loadDirectory,
+    refreshRecovery,
+    repository,
+    setGlobalAlert,
+    startIndexing,
+    vault,
+    win,
+  ]);
 
   // files.list_start (declared after the vault effect, so "open" starts
   // with this vault's scan context in place).
@@ -1383,7 +1412,7 @@ export const VaultApp = ({
         await repository.releaseVault(next.handle).catch(() => {});
       }
       setGlobalAlert({
-        message: `Could not reopen the vault: ${errorMessage(err)}`,
+        message: `Couldn't reopen the vault: ${errorMessage(err)}`,
         type: "error",
       });
     }
@@ -1406,7 +1435,10 @@ export const VaultApp = ({
         } catch {}
       }
       const msg = errorMessage(err);
-      setGlobalAlert({ message: `Cannot switch vault: ${msg}`, type: "error" });
+      setGlobalAlert({
+        message: `Couldn't switch vault: ${msg}`,
+        type: "error",
+      });
     } finally {
       setIsBusy(false);
     }
@@ -1504,7 +1536,7 @@ export const VaultApp = ({
       // A restored session naming a deleted file is not worth an alert.
       if (!(tabs.isRestoring() && isNotFoundError(err))) {
         setGlobalAlert({
-          message: `Failed to open drawing: ${errorMessage(err)}`,
+          message: `Couldn't open the drawing: ${errorMessage(err)}`,
           type: "error",
         });
       }
@@ -1606,7 +1638,7 @@ export const VaultApp = ({
       await createEntryCore(parentPath, name);
     } catch (err) {
       setGlobalAlert({
-        message: `Failed to create drawing: ${errorMessage(err)}`,
+        message: `Couldn't create "${name}": ${errorMessage(err)}`,
         type: "error",
       });
     } finally {
@@ -1640,7 +1672,7 @@ export const VaultApp = ({
         }
       } catch (err) {
         setGlobalAlert({
-          message: `Could not create the default folder "${parent}": ${errorMessage(
+          message: `Couldn't create the default folder "${parent}": ${errorMessage(
             err,
           )}`,
           type: "error",
@@ -1740,14 +1772,7 @@ export const VaultApp = ({
     expandFolder: handleExpandFolder,
     showNavigator: () => showNavigator(),
     openHotkeys: () => openSettings("hotkeys"),
-    notify: (message, type) => {
-      // Confirmations are toasts; failures stay a banner until dismissed.
-      if (type === "info") {
-        toastStore.push({ message });
-      } else {
-        setGlobalAlert({ message, type });
-      }
-    },
+    notify: (message, type) => setGlobalAlert({ message, type }),
   });
   const tagsSettings = useMemo(
     () => {
@@ -1765,15 +1790,7 @@ export const VaultApp = ({
     activePath: activeDoc?.path ?? null,
     bridge: appLinks.bridge,
     flushActive: () => flushDoc({ commitText: false }),
-    notify: (message, type) => {
-      setGlobalAlert({ message, type });
-      if (type === "info") {
-        (win ?? window).setTimeout(
-          () => setGlobalAlert((a) => (a?.message === message ? null : a)),
-          6000,
-        );
-      }
-    },
+    notify: (message, type) => setGlobalAlert({ message, type }),
     doc,
   });
   const editorLinks = useMemo(
@@ -1840,7 +1857,7 @@ export const VaultApp = ({
       startIndexing();
     } catch (err) {
       setGlobalAlert({
-        message: `Failed to create folder: ${errorMessage(err)}`,
+        message: `Couldn't create the folder "${name}": ${errorMessage(err)}`,
         type: "error",
       });
     } finally {
@@ -1903,7 +1920,9 @@ export const VaultApp = ({
       await moveEntryCore(oldPath, newPath);
     } catch (err) {
       setGlobalAlert({
-        message: `Can't rename: ${errorMessage(err)}`,
+        message: `Couldn't rename "${getBaseName(oldPath)}": ${errorMessage(
+          err,
+        )}`,
         type: "error",
       });
     } finally {
@@ -1927,7 +1946,9 @@ export const VaultApp = ({
       await moveEntryCore(sourcePath, newPath, destinationParentPath);
     } catch (err) {
       setGlobalAlert({
-        message: `Failed to move: ${errorMessage(err)}`,
+        message: `Couldn't move "${getBaseName(sourcePath)}": ${errorMessage(
+          err,
+        )}`,
         type: "error",
       });
     } finally {
@@ -1968,7 +1989,9 @@ export const VaultApp = ({
       await tabs.openCreated(target);
     } catch (err) {
       setGlobalAlert({
-        message: `Failed to duplicate drawing: ${errorMessage(err)}`,
+        message: `Couldn't duplicate "${getBaseName(path)}": ${errorMessage(
+          err,
+        )}`,
         type: "error",
       });
     } finally {
@@ -2016,7 +2039,9 @@ export const VaultApp = ({
       await trashEntryCore(path);
     } catch (err) {
       setGlobalAlert({
-        message: `Failed to trash entry: ${errorMessage(err)}`,
+        message: `Couldn't move "${getBaseName(
+          path,
+        )}" to the Trash: ${errorMessage(err)}`,
         type: "error",
       });
     } finally {
@@ -2033,7 +2058,9 @@ export const VaultApp = ({
       await repository.reveal(vault.handle, path);
     } catch (err) {
       setGlobalAlert({
-        message: `Failed to reveal entry: ${errorMessage(err)}`,
+        message: `Couldn't show "${getBaseName(
+          path,
+        )}" in the file manager: ${errorMessage(err)}`,
         type: "error",
       });
     }
@@ -2047,7 +2074,7 @@ export const VaultApp = ({
       await repository.revealRecovery(vault.handle);
     } catch (err) {
       setGlobalAlert({
-        message: `Failed to open the recovery folder: ${errorMessage(err)}`,
+        message: `Couldn't open the recovery folder: ${errorMessage(err)}`,
         type: "error",
       });
     }
@@ -2103,7 +2130,7 @@ export const VaultApp = ({
       await tabs.openCreated(targetPath);
     } catch (err) {
       setGlobalAlert({
-        message: `Failed to open recovered snapshot: ${errorMessage(err)}`,
+        message: `Couldn't open the recovered snapshot: ${errorMessage(err)}`,
         type: "error",
       });
     } finally {
@@ -3045,14 +3072,6 @@ export const VaultApp = ({
             )}
             <SafeStartBanner />
             <BisectBanner win={win} />
-            {globalAlert && (
-              <Banner
-                kind={globalAlert.type}
-                message={globalAlert.message}
-                onDismiss={() => setGlobalAlert(null)}
-                dismissLabel="Dismiss alert"
-              />
-            )}
             {activeDoc &&
               fileKind(activeDoc.path) === "excalidrawMd" &&
               dismissedMdBanner !== activeDoc.path && (
@@ -3497,7 +3516,7 @@ export const VaultApp = ({
               }
             } catch (err) {
               setGlobalAlert({
-                message: `Could not close window: ${errorMessage(err)}`,
+                message: `Couldn't close the window: ${errorMessage(err)}`,
                 type: "error",
               });
               setShowCloseDiscardConfirm(true);

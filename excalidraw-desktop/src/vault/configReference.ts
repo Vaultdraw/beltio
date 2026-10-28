@@ -140,6 +140,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       show_tag_chips: {
         doc: "Show a drawing's tags as chips in the file navigator.",
       },
+      notice_seconds: {
+        doc: "Seconds an error notice stays before it closes by itself (hovering or focusing it pauses the count); `0` keeps it until you dismiss it.",
+      },
       thumbnails: {
         doc: "Show drawing thumbnails (home, search, palette, gallery).",
       },

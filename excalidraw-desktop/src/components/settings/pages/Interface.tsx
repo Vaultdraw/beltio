@@ -1,5 +1,10 @@
 import { DEFAULT_ZOOM, clampZoom } from "../../../vault/zoom";
-import { MAX_ZOOM, MIN_ZOOM } from "../../../vault/preferences";
+import {
+  MAX_NOTICE_SECONDS,
+  MAX_ZOOM,
+  MIN_NOTICE_SECONDS,
+  MIN_ZOOM,
+} from "../../../vault/preferences";
 import {
   SORT_LABELS,
   SORT_ORDERS,
@@ -8,7 +13,7 @@ import {
 import { SettingRow } from "../SettingRow";
 import { useSettings, type SettingControls } from "../SettingsContext";
 
-import { Switch } from "./controls";
+import { Stepper, Switch } from "./controls";
 import { ActivityBarEntriesSetting } from "./ActivityBarEntries";
 import { ScopedRow } from "./scopedRow";
 
@@ -51,6 +56,23 @@ const ShowTagChipsSetting = () => {
         id="vault-show-tag-chips"
         checked={showTagChips}
         onChange={setShowTagChips}
+      />
+    </SettingRow>
+  );
+};
+
+const NoticeSecondsSetting = () => {
+  const { noticeSeconds, setNoticeSeconds } = useSettings();
+  return (
+    <SettingRow id="notice-seconds">
+      <Stepper
+        label="Error notice time"
+        unit="s"
+        min={MIN_NOTICE_SECONDS}
+        max={MAX_NOTICE_SECONDS}
+        step={1}
+        value={noticeSeconds}
+        onChange={setNoticeSeconds}
       />
     </SettingRow>
   );
@@ -104,6 +126,7 @@ const SortOrderSetting = () => (
 export const interfaceControls: SettingControls = {
   "interface-zoom": { Component: ZoomSetting },
   "show-tag-chips": { Component: ShowTagChipsSetting },
+  "notice-seconds": { Component: NoticeSecondsSetting },
   thumbnails: { Component: ThumbnailsSetting },
   "activity-bar": { Component: ActivityBarSetting },
   "activity-bar-entries": { Component: ActivityBarEntriesSetting },

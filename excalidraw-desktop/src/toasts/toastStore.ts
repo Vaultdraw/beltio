@@ -1,4 +1,12 @@
-import { dismissToast, emptyQueue, expireToasts, pushToast } from "./queue";
+import {
+  ERROR_MS,
+  dismissToast,
+  emptyQueue,
+  expireToasts,
+  holdToast,
+  pushToast,
+  releaseToast,
+} from "./queue";
 
 import type { Toast, ToastInput, ToastQueue } from "./queue";
 
@@ -7,6 +15,8 @@ type Listener = () => void;
 /** Tiny external store: callers anywhere push, only the host subscribes, so the app tree never re-renders for a toast. */
 export function createToastStore(now: () => number = Date.now) {
   let queue: ToastQueue = emptyQueue();
+  /** Lifetime of error toasts (`interface.notice_seconds`); 0 = until dismissed. */
+  let errorMs = ERROR_MS;
   const listeners = new Set<Listener>();
   const set = (next: ToastQueue) => {
     if (next !== queue) {
@@ -15,7 +25,27 @@ export function createToastStore(now: () => number = Date.now) {
     }
   };
   return {
-    push: (input: ToastInput) => set(pushToast(queue, input, now())),
+    /** Returns the id of the toast now showing this message. */
+    push: (input: ToastInput): number | undefined => {
+      const kind = input.kind ?? "info";
+      set(
+        pushToast(
+          queue,
+          kind === "error" && input.durationMs === undefined && !input.action
+            ? { ...input, durationMs: errorMs }
+            : input,
+          now(),
+        ),
+      );
+      return queue.toasts.find(
+        (t) => t.message === input.message && t.kind === kind,
+      )?.id;
+    },
+    setErrorMs: (ms: number) => {
+      errorMs = ms;
+    },
+    hold: (id: number) => set(holdToast(queue, id, now())),
+    release: (id: number) => set(releaseToast(queue, id, now())),
     dismiss: (id: number) => set(dismissToast(queue, id)),
     expire: () => set(expireToasts(queue, now())),
     clear: () => set(emptyQueue()),

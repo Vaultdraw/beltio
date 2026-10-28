@@ -71,6 +71,7 @@ autosave_delay_ms = 500      # idle time before an edit is written to disk
 zoom = 100                   # whole-app zoom, 50 to 200 percent
 thumbnail_max_elements = 8000 # biggest drawing that gets a thumbnail, 100 to 50000
 defer_home_pane = true       # show the file tree first, the home pane one frame later
+notice_seconds = 8           # seconds an error notice stays; 0 = until dismissed
 
 [navigator]
 sort = "name_asc"            # name_asc | name_desc | modified_desc | modified_asc
@@ -1862,6 +1863,7 @@ The app window around the canvas.
 | --- | --- | --- | --- | --- |
 | `zoom` | `100` | a whole number between 50 and 200 (percent) |  | Whole-app zoom in percent (Cmd/Ctrl+Shift `+`, `-`, `0`). |
 | `show_tag_chips` | `true` | true or false |  | Show a drawing's tags as chips in the file navigator. |
+| `notice_seconds` | `8` | an integer between 0 and 120 (seconds; 0 keeps notices until dismissed) |  | Seconds an error notice stays before it closes by itself (hovering or focusing it pauses the count); `0` keeps it until you dismiss it. |
 | `thumbnails` | `true` | true or false |  | Show drawing thumbnails (home, search, palette, gallery). |
 | `thumbnail_max_elements` | `8000` | an integer between 100 and 50000 |  | Biggest drawing (in elements) that gets a thumbnail. |
 | `thumbnail_cache_mb` | `128` | an integer between 8 and 8192 (megabytes) |  | Size cap of a vault's thumbnail cache on disk, in megabytes; the oldest thumbnails go first. Applies at the next thumbnail saved. |

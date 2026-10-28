@@ -209,7 +209,7 @@ test.describe("PDF export correctness", () => {
       const seen: string[] = [];
       (window as any).__alerts = seen;
       new MutationObserver(() => {
-        document.querySelectorAll(".vault-global-alert").forEach((n) => {
+        document.querySelectorAll(".vd-toast").forEach((n) => {
           const t = n.textContent ?? "";
           if (t && seen[seen.length - 1] !== t) {
             seen.push(t);
@@ -228,7 +228,7 @@ test.describe("PDF export correctness", () => {
     expect(
       seen.some((t) => /Exporting Busy\.excalidraw… page \d+ of 12/.test(t)),
     ).toBe(true);
-    await expect(page.locator(".vault-global-alert")).toHaveCount(0);
+    await expect(page.locator(".vd-toast")).toHaveCount(0);
   });
 
   test("export dialog: Page shape switch makes PNG/SVG page-shaped", async ({

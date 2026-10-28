@@ -162,8 +162,10 @@ import {
   isPluginImporters,
   isPluginStorageKb,
   isSceneMaxOps,
+  MAX_NOTICE_SECONDS,
   MAX_PLUGIN_STORAGE_KB,
   MAX_SCENE_MAX_OPS,
+  MIN_NOTICE_SECONDS,
   MIN_PLUGIN_STORAGE_KB,
   type DeepReadonly,
   type PreferencesSnapshot,
@@ -347,6 +349,7 @@ type ConfigField =
   | "confirmDelete"
   | "showTagChips"
   | "deferHomePane"
+  | "noticeSeconds"
   | "thumbnails"
   | "thumbnailMaxElements"
   | "thumbnailCacheMb"
@@ -549,6 +552,15 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "interface.defer_home_pane",
     expected: "true or false",
     valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "noticeSeconds",
+    key: "interface.notice_seconds",
+    expected: `an integer between ${MIN_NOTICE_SECONDS} and ${MAX_NOTICE_SECONDS} (seconds; 0 keeps notices until dismissed)`,
+    valid: (v) =>
+      isInt(v) &&
+      (v as number) >= MIN_NOTICE_SECONDS &&
+      (v as number) <= MAX_NOTICE_SECONDS,
   },
   {
     field: "thumbnails",

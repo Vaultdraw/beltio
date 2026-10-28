@@ -374,6 +374,13 @@
           "default": true,
           "type": "boolean"
         },
+        "notice_seconds": {
+          "description": "Seconds an error notice stays before it closes by itself (hovering or focusing it pauses the count); `0` keeps it until you dismiss it.",
+          "default": 8,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 120
+        },
         "thumbnails": {
           "description": "Show drawing thumbnails (home, search, palette, gallery).",
           "default": true,

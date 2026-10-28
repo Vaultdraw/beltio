@@ -231,7 +231,7 @@ for (const theme of THEMES) {
       });
       await openMenuFor("Graphs", "Move to Trash");
       await page.getByRole("button", { name: "Move to Trash" }).click();
-      await expect(page.locator(".vault-global-alert")).toBeVisible();
+      await expect(page.locator(".vd-toast--error")).toBeVisible();
       await page.waitForTimeout(250);
     });
 

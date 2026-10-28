@@ -227,6 +227,23 @@ describe("settingsSync mapping", () => {
         showTagChips: false,
       }),
     ).toEqual([{ key: "interface.show_tag_chips", value: false }]);
+    expect(configToPreferences({}).values.noticeSeconds).toBe(8);
+    expect(
+      configToPreferences({ interface: { notice_seconds: 0 } }),
+    ).toMatchObject({ values: { noticeSeconds: 0 }, problems: [] });
+    for (const bad of [-1, 121, 2.5, "8"]) {
+      expect(
+        configToPreferences({
+          interface: { notice_seconds: bad },
+        }).problems.map((p) => p.key),
+      ).toEqual(["interface.notice_seconds"]);
+    }
+    expect(
+      preferencesToConfigChanges(DEFAULT_PREFERENCES, {
+        ...DEFAULT_PREFERENCES,
+        noticeSeconds: 20,
+      }),
+    ).toEqual([{ key: "interface.notice_seconds", value: 20 }]);
     expect(configToPreferences({}).values.deferHomePane).toBe(true);
     expect(
       configToPreferences({ interface: { defer_home_pane: false } }),

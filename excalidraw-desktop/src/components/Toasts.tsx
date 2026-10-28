@@ -12,8 +12,8 @@ import type { KeyboardEvent } from "react";
 
 /**
  * Bottom-right toasts. Renders nothing (and keeps no timer) while the queue is
- * empty; one timeout at a time, for the earliest expiry. Escape on a focused
- * toast dismisses it.
+ * empty; one timeout at a time, for the earliest expiry. Hovering or focusing a
+ * toast pauses its countdown; Escape on a focused toast dismisses it.
  */
 export const Toasts = ({ store = toastStore }: { store?: ToastStore }) => {
   const queue = useSyncExternalStore(store.subscribe, store.getSnapshot);
@@ -37,8 +37,16 @@ export const Toasts = ({ store = toastStore }: { store?: ToastStore }) => {
           <div
             key={toast.id}
             className={`vd-toast vd-toast--${toast.kind}`}
-            role="status"
-            aria-live="polite"
+            role={toast.kind === "error" ? "alert" : "status"}
+            aria-live={toast.kind === "error" ? undefined : "polite"}
+            onMouseEnter={() => store.hold(toast.id)}
+            onMouseLeave={() => store.release(toast.id)}
+            onFocus={() => store.hold(toast.id)}
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                store.release(toast.id);
+              }
+            }}
             onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
               if (e.key === "Escape") {
                 e.preventDefault();

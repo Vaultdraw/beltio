@@ -122,6 +122,8 @@ autosave_delay_ms = 500
 # zoom = 100
 # Show a drawing's tags as chips in the file navigator
 # show_tag_chips = true
+# Seconds an error notice stays before it closes itself, 0 to 120 (0 = until dismissed)
+# notice_seconds = 8
 # Show drawing thumbnails (home, search, palette, gallery)
 # thumbnails = true
 # Biggest drawing (in elements) that gets a thumbnail, 100 to 50000

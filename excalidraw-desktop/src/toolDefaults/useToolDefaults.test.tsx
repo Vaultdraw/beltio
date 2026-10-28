@@ -50,7 +50,7 @@ function setup() {
   const updateScene = vi.fn(({ appState }: { appState: object }) => {
     state = { ...state, ...appState };
   });
-  const setToast = vi.spyOn(toastStore, "push").mockImplementation(() => {});
+  const setToast = vi.spyOn(toastStore, "push").mockImplementation(() => undefined);
   setToast.mockClear();
   const api = {
     updateScene,

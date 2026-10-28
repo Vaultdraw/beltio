@@ -427,6 +427,23 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     configKey: "interface.show_tag_chips",
   },
   {
+    id: "notice-seconds",
+    page: "interface",
+    label: "Error notices stay for",
+    description:
+      "Seconds an error notice stays before it closes by itself. 0 keeps it until you dismiss it.",
+    keywords: [
+      "notice",
+      "error",
+      "toast",
+      "alert",
+      "message",
+      "dismiss",
+      "seconds",
+    ],
+    configKey: "interface.notice_seconds",
+  },
+  {
     id: "thumbnails",
     page: "interface",
     label: "Show drawing thumbnails",

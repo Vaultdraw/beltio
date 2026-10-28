@@ -146,6 +146,9 @@ import { DEFAULT_SORT_ORDER, isSortOrder, type SortOrder } from "./sortOrder";
 /** `plugins.storage_limit_kb`: default and bounds (Rust refuses more than 16 MiB). */
 export const DEFAULT_PLUGIN_STORAGE_KB = 1024;
 export const MIN_PLUGIN_STORAGE_KB = 64;
+export const MIN_NOTICE_SECONDS = 0;
+export const MAX_NOTICE_SECONDS = 120;
+export const DEFAULT_NOTICE_SECONDS = 8;
 export const MAX_PLUGIN_STORAGE_KB = 16384;
 /** `plugins.scene_max_ops`: ops per plugin batch (sceneRules MAX_OPS and MAX_OPS_LIMIT; a test keeps them equal). */
 export const DEFAULT_SCENE_MAX_OPS = 500;
@@ -276,6 +279,8 @@ interface VaultPreferencesBase {
   showTagChips: boolean;
   /** Mount the vault home pane one frame after the file tree first paints (faster vault open). */
   deferHomePane: boolean;
+  /** Seconds an error notice stays before it closes itself; 0 keeps it until dismissed. */
+  noticeSeconds: number;
   /** Show drawing thumbnails (home, search, palette, gallery). */
   thumbnails: boolean;
   /** Largest drawing (elements) that gets a PNG thumbnail; bigger ones keep the placeholder. */
@@ -470,6 +475,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   confirmDelete: true,
   showTagChips: true,
   deferHomePane: true,
+  noticeSeconds: DEFAULT_NOTICE_SECONDS,
   thumbnails: true,
   thumbnailMaxElements: DEFAULT_THUMB_MAX_ELEMENTS,
   thumbnailCacheMb: DEFAULT_THUMB_CACHE_MB,
@@ -703,6 +709,11 @@ const pick = <T>(
 
 const isNumber = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value);
+const isNoticeSeconds = (value: unknown) =>
+  typeof value === "number" &&
+  Number.isInteger(value) &&
+  value >= MIN_NOTICE_SECONDS &&
+  value <= MAX_NOTICE_SECONDS;
 const isThumbCacheMb = (value: unknown) =>
   typeof value === "number" &&
   Number.isInteger(value) &&
@@ -893,6 +904,7 @@ export function normalizePreferences(input: unknown): VaultPreferences {
     confirmDelete: pick(parsed.confirmDelete, isBoolean, d.confirmDelete),
     showTagChips: pick(parsed.showTagChips, isBoolean, d.showTagChips),
     deferHomePane: pick(parsed.deferHomePane, isBoolean, d.deferHomePane),
+    noticeSeconds: pick(parsed.noticeSeconds, isNoticeSeconds, d.noticeSeconds),
     thumbnails: pick(parsed.thumbnails, isBoolean, d.thumbnails),
     thumbnailCacheMb: pick(
       parsed.thumbnailCacheMb,

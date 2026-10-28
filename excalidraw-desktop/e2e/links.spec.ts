@@ -377,7 +377,7 @@ test("moving a folder with unique basenames needs no rewrite", async ({
   const after = await readScene(page, "Folder B/Inner.excalidraw");
   expect(sceneTexts(after)).toEqual(sceneTexts(before));
   // No "Updated N links" toast.
-  await expect(page.locator(".vault-global-alert")).toHaveCount(0);
+  await expect(page.locator(".vd-toast")).toHaveCount(0);
 });
 
 test("Cmd+click on an unresolved link offers Create in the new-drawing folder", async ({

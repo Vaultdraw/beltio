@@ -88,6 +88,8 @@ export interface SettingsContextValue {
   setConfirmDelete: (next: boolean) => void;
   showTagChips: boolean;
   setShowTagChips: (next: boolean) => void;
+  noticeSeconds: number;
+  setNoticeSeconds: (next: number) => void;
   thumbnails: boolean;
   setThumbnails: (next: boolean) => void;
 
@@ -197,6 +199,9 @@ export const useSettingsController = ({
   const [showTagChips, setShowTagChipsState] = useState(
     () => getPreferences(win).showTagChips,
   );
+  const [noticeSeconds, setNoticeSecondsState] = useState(
+    () => getPreferences(win).noticeSeconds,
+  );
   const [thumbnails, setThumbnailsState] = useState(
     () => getPreferences(win).thumbnails,
   );
@@ -237,6 +242,7 @@ export const useSettingsController = ({
       setZoomState(prefs.zoom);
       setConfirmDeleteState(prefs.confirmDelete);
       setShowTagChipsState(prefs.showTagChips);
+      setNoticeSecondsState(prefs.noticeSeconds);
       setThumbnailsState(prefs.thumbnails);
       setLinksState(getLinksSettings(prefs));
       setTagsState(getTagsSettings(prefs));
@@ -312,6 +318,11 @@ export const useSettingsController = ({
   const setConfirmDelete = (next: boolean) => {
     setConfirmDeleteState(next);
     updatePreferences({ confirmDelete: next }, win);
+  };
+
+  const setNoticeSeconds = (next: number) => {
+    setNoticeSecondsState(next);
+    updatePreferences({ noticeSeconds: next }, win);
   };
 
   const setShowTagChips = (next: boolean) => {
@@ -418,6 +429,8 @@ export const useSettingsController = ({
     setConfirmDelete,
     showTagChips,
     setShowTagChips,
+    noticeSeconds,
+    setNoticeSeconds,
     thumbnails,
     setThumbnails,
     links,

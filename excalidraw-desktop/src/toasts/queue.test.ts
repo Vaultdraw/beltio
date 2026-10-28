@@ -8,8 +8,10 @@ import {
   dismissToast,
   emptyQueue,
   expireToasts,
+  holdToast,
   nextExpiry,
   pushToast,
+  releaseToast,
 } from "./queue";
 import { createToastStore } from "./toastStore";
 
@@ -104,5 +106,44 @@ describe("toast store", () => {
     off();
     store.push({ message: "b" });
     expect(spy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("toast hold and sticky", () => {
+  it("hold stops the countdown and release restarts it with time to read", () => {
+    let q = pushToast(emptyQueue(), { message: "a", durationMs: 8000 }, 0);
+    q = holdToast(q, 1, 7000);
+    expect(q.toasts[0].expiresAt).toBe(Infinity);
+    expect(nextExpiry(q)).toBeNull();
+    expect(expireToasts(q, 99999)).toBe(q);
+    q = releaseToast(q, 1, 20000);
+    expect(q.toasts[0].expiresAt).toBe(22000); // 1000 left, raised to 2000
+    q = holdToast(q, 1, 20500);
+    q = releaseToast(q, 1, 30000);
+    expect(q.toasts[0].expiresAt).toBe(32000);
+  });
+
+  it("a lifetime of 0 never expires and ignores hold", () => {
+    const q = pushToast(emptyQueue(), { message: "a", durationMs: 0 }, 0);
+    expect(q.toasts[0].sticky).toBe(true);
+    expect(nextExpiry(q)).toBeNull();
+    expect(expireToasts(q, 1e12)).toBe(q);
+    expect(holdToast(q, 1, 5)).toBe(q);
+  });
+
+  it("the store applies the error lifetime to errors only and returns the id", () => {
+    const store = createToastStore(() => 0);
+    store.setErrorMs(3000);
+    const e = store.push({ message: "bad", kind: "error" });
+    const i = store.push({ message: "ok" });
+    expect(e).toBe(1);
+    expect(i).toBe(2);
+    expect(store.getSnapshot().toasts.map((t) => t.expiresAt)).toEqual([
+      3000,
+      INFO_MS,
+    ]);
+    store.setErrorMs(0);
+    store.push({ message: "stuck", kind: "error" });
+    expect(store.getSnapshot().toasts[2].sticky).toBe(true);
   });
 });
