@@ -319,6 +319,18 @@ test("Install more themes in Settings opens the browser, filters, installs and a
   const defaultBg = await rootVar(page, "--vault-bg");
 
   const settings = await openSettings(page);
+  // Install Themes sits right below the picker, above Themes Folder.
+  const picker = settings.getByRole("radio", { name: "Dracula" });
+  const installRow = settings.getByTestId("settings-install-theme");
+  const pickerBox = await picker.boundingBox();
+  const installBox = await installRow.boundingBox();
+  const folders = settings.getByTestId("themes-folder");
+  const foldersBox =
+    (await folders.count()) > 0 ? await folders.boundingBox() : null;
+  expect(installBox!.y).toBeGreaterThan(pickerBox!.y);
+  if (foldersBox) {
+    expect(installBox!.y).toBeLessThan(foldersBox.y);
+  }
   await settings
     .getByRole("button", { name: "Install more themes..." })
     .click();
@@ -333,8 +345,13 @@ test("Install more themes in Settings opens the browser, filters, installs and a
   const midnight = browser.getByTestId("theme-card-Midnight");
   const daybreak = browser.getByTestId("theme-card-Daybreak");
   await expect(midnight).toBeVisible();
-  await expect(daybreak).toContainText("Credit: E2E fixtures");
-  await expect(daybreak).toContainText("Licence: MIT");
+  // The same mini-window preview as the built-in picker, from the palette.
+  await expect(daybreak.locator(".vault-theme-card__half")).toHaveCount(2);
+  await expect(daybreak).toContainText("Licence: MIT".replace("Licence: ", ""));
+  await expect(daybreak.locator(".vault-tb__credit")).toHaveAttribute(
+    "title",
+    /Credit: E2E fixtures/,
+  );
 
   await browser.getByLabel("Search themes").fill("cool");
   await expect(daybreak).toHaveCount(0);

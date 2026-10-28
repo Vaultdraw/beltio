@@ -175,14 +175,48 @@ describe("ThemeBrowserDialog", () => {
     expect(card.textContent).toMatch(/Vesper/);
     expect(card.textContent).toMatch(/Rauno/);
     expect(card.textContent).toMatch(/Warm dark theme/);
-    expect(card.textContent).toMatch(/Credit: Rauno Freiberg\./);
-    expect(card.textContent).toMatch(/Licence: MIT\./);
-    expect(screen.getByTestId("theme-card-Nordic").textContent).toMatch(
-      /Licence: GPL/,
+    // Credit and licence sit on one small line; the credit is in its tooltip.
+    expect(card.textContent).toMatch(/MIT/);
+    expect(card.textContent).not.toMatch(/Credit:/);
+    expect(card.querySelector(".vault-tb__credit")?.getAttribute("title")).toBe(
+      "Credit: Rauno Freiberg\nLicence: MIT",
     );
+    expect(screen.getByTestId("theme-card-Nordic").textContent).toMatch(/GPL/);
     expect(screen.getByTestId("theme-browser-status").textContent).toMatch(
       /2 of 2 themes/,
     );
+  });
+
+  it("draws the built-in mini-window preview from the catalogue palette", async () => {
+    await openReady();
+    const halves = screen
+      .getByTestId("theme-card-Vesper")
+      .querySelectorAll<HTMLElement>(".vault-theme-card__half");
+    expect(halves).toHaveLength(2);
+    expect(halves[0].style.backgroundColor).toBe("rgb(16, 16, 16)");
+    // Vesper has only a dark palette: the light half is marked auto.
+    expect(halves[1].textContent).toContain("auto");
+  });
+
+  it("Source opens in the default browser, not the webview", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    catalogue = makeCatalogue({
+      refresh: vi.fn(async () =>
+        raw([theme({ homepage: "https://example.com/vesper" })]),
+      ),
+    });
+    await openReady();
+    const link = screen.getByRole("link", { name: "Source" });
+    expect(link.getAttribute("target")).toBeNull();
+    fireEvent.click(link);
+    await waitFor(() =>
+      expect(open).toHaveBeenCalledWith(
+        "https://example.com/vesper",
+        "_blank",
+        "noopener,noreferrer",
+      ),
+    );
+    open.mockRestore();
   });
 
   it("filters by search text, tag and mode", async () => {

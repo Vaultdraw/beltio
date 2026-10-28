@@ -39,7 +39,10 @@ import { effectiveKeys } from "../commands/keymap";
 import { useHotkeyOverrides } from "../commands/useCommands";
 import { useCommandShortcutLookup } from "../commands/useCommandShortcut";
 
+import { ExternalLink } from "../help/ExternalLink";
+
 import { Dialog } from "./Dialog";
+import { PalettePreview } from "./ThemePreviewCard";
 
 import "./themeBrowser.css";
 
@@ -69,6 +72,9 @@ const SEARCH_BOX_COMMANDS: ReadonlySet<string> = new Set([
 ]);
 const PREVIEW_PARALLEL = 4;
 
+/** "Dark and light variants" repeats the mode badge; not worth a line. */
+const GENERIC_DESC = /^(dark|light)( and (dark|light))? variants?\.?$/i;
+
 type Phase =
   | { k: "consent" }
   | { k: "loading" }
@@ -97,21 +103,6 @@ const ACTION_LABEL: Record<EntryStatus, string> = {
   update: "Update",
   installed: "Use",
 };
-
-const Swatches = ({ entry }: { entry: CatalogueEntry }) => (
-  <div className="vault-tb__swatches" aria-hidden="true">
-    {(["dark", "light"] as const).map((mode) => {
-      const colours = entry.swatch[mode];
-      return colours ? (
-        <div key={mode} className="vault-tb__swatch-row">
-          {colours.map((c, i) => (
-            <span key={i} style={{ background: c }} />
-          ))}
-        </div>
-      ) : null;
-    })}
-  </div>
-);
 
 /** The preview image, fetched once the card is on screen (never before). */
 const Preview = ({
@@ -163,7 +154,7 @@ const Preview = ({
       {src ? (
         <img src={src} alt="" draggable={false} />
       ) : (
-        <Swatches entry={entry} />
+        <PalettePreview entry={entry} />
       )}
     </div>
   );
@@ -577,24 +568,18 @@ export const ThemeBrowserDialog = ({
                   )}
                 </div>
                 <div className="vault-tb__meta">{entry.author}</div>
-                {entry.description && (
+                {entry.description && !GENERIC_DESC.test(entry.description) && (
                   <div className="vault-tb__desc">{entry.description}</div>
                 )}
-                {(entry.credit || entry.licence) && (
-                  <div className="vault-tb__credit">
-                    {entry.credit && <>Credit: {entry.credit}. </>}
-                    {entry.licence && <>Licence: {entry.licence}.</>}
+                {(entry.credit || entry.licence || entry.homepage) && (
+                  <div className="vault-tb__credit" title={creditTitle(entry)}>
+                    {entry.licence && (
+                      <span className="vault-tb__licence">{entry.licence}</span>
+                    )}
                     {entry.homepage && (
-                      <>
-                        {" "}
-                        <a
-                          href={entry.homepage}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Source
-                        </a>
-                      </>
+                      <ExternalLink href={entry.homepage} onError={setError}>
+                        Source
+                      </ExternalLink>
                     )}
                   </div>
                 )}
@@ -734,3 +719,12 @@ const cardId = (entry: CatalogueEntry) =>
   `vault-tb-${entry.name
     .replace(/[^a-z0-9]+/gi, "-")
     .toLowerCase()}-${entry.sha256.slice(0, 6)}`;
+
+/** Credit and licence in full, for the tooltip on the card's details line. */
+const creditTitle = (entry: CatalogueEntry) =>
+  [
+    entry.credit && `Credit: ${entry.credit}`,
+    entry.licence && `Licence: ${entry.licence}`,
+  ]
+    .filter(Boolean)
+    .join("\n");

@@ -275,23 +275,6 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     perVault: true,
   },
   {
-    id: "themes-folder",
-    page: "appearance",
-    label: "Themes Folder",
-    description:
-      "Drop Noctalia palettes (.json) here; they appear above automatically.",
-    keywords: ["theme", "folder", "noctalia", "json", "custom", "import"],
-  },
-  {
-    id: "css-snippets",
-    page: "appearance",
-    label: "CSS snippets",
-    description:
-      "Your own .css files from the snippets folder, applied after the theme. On screen only: files and exports are unchanged.",
-    keywords: ["css", "snippet", "style", "custom", "stylesheet", "tweak"],
-    configKey: "appearance.snippets",
-  },
-  {
     id: "install-theme",
     page: "appearance",
     label: "Install Themes",
@@ -311,6 +294,23 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
       "repo",
       "palette",
     ],
+  },
+  {
+    id: "themes-folder",
+    page: "appearance",
+    label: "Themes Folder",
+    description:
+      "Drop Noctalia palettes (.json) here; they appear above automatically.",
+    keywords: ["theme", "folder", "noctalia", "json", "custom", "import"],
+  },
+  {
+    id: "css-snippets",
+    page: "appearance",
+    label: "CSS snippets",
+    description:
+      "Your own .css files from the snippets folder, applied after the theme. On screen only: files and exports are unchanged.",
+    keywords: ["css", "snippet", "style", "custom", "stylesheet", "tweak"],
+    configKey: "appearance.snippets",
   },
   {
     id: "theme-max-size",

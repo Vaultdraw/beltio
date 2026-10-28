@@ -62,7 +62,8 @@
 }
 
 .vault-tb__preview {
-  height: 70px;
+  display: flex;
+  height: 56px;
   border-radius: 6px;
   overflow: hidden;
   background: var(--vault-chip);
@@ -73,21 +74,6 @@
   height: 100%;
   object-fit: cover;
   display: block;
-}
-
-.vault-tb__swatches {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.vault-tb__swatch-row {
-  display: flex;
-  flex: 1;
-}
-
-.vault-tb__swatch-row span {
-  flex: 1;
 }
 
 .vault-tb__head {
@@ -116,6 +102,24 @@
 .vault-tb__credit {
   font-size: 11px;
   opacity: 0.7;
+}
+
+.vault-tb__credit {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.vault-tb__licence {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.vault-tb__credit a {
+  flex: none;
 }
 
 .vault-tb__desc {

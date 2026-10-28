@@ -17,6 +17,8 @@ import { accentSwatches } from "../accentSwatches";
 import { SettingRow } from "../SettingRow";
 import { useSettings, type SettingControls } from "../SettingsContext";
 
+import { ExternalLink } from "../../../help/ExternalLink";
+
 import { ColorSwatches, Segmented, Stepper, Switch } from "./controls";
 import { useCanvasTheme } from "./useCanvasTheme";
 import { PaperSetting } from "./PaperSetting";
@@ -279,9 +281,7 @@ const InstallThemeSetting = () => {
         removed && (
           <div className="vault-theme-problem" role="status">
             {removedNotice(removed)}{" "}
-            <a href={THEMES_REPO_URL} target="_blank" rel="noreferrer">
-              {THEMES_REPO}
-            </a>
+            <ExternalLink href={THEMES_REPO_URL}>{THEMES_REPO}</ExternalLink>
           </div>
         )
       }

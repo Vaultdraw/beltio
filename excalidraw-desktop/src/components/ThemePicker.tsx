@@ -12,8 +12,9 @@ import {
 } from "react";
 
 import { Segmented } from "./settings/pages/controls";
+import { ThemeHalf } from "./ThemePreviewCard";
 
-import type { ThemeMode, ThemePreviewColors } from "../theme";
+import type { ThemeMode } from "../theme";
 import type { ThemeEntry } from "../theme/registry";
 
 const PREVIEW_MODES: readonly ThemeMode[] = ["dark", "light"];
@@ -74,54 +75,6 @@ const SIDE_OPTIONS = [
   { label: "Dark", val: "dark" },
   { label: "Light", val: "light" },
 ] as const;
-
-const ThemeHalf = ({
-  colors: c,
-  mode,
-  generated,
-}: {
-  colors: ThemePreviewColors;
-  mode: ThemeMode;
-  generated: boolean;
-}) => (
-  <div
-    className="vault-theme-card__half"
-    data-mode={mode}
-    style={{ backgroundColor: c.surface, color: c.onSurface }}
-  >
-    <div
-      className="vault-theme-card__line"
-      style={{ backgroundColor: c.onSurface }}
-    />
-    <div
-      className="vault-theme-card__line vault-theme-card__line--short"
-      style={{ backgroundColor: c.onSurface }}
-    />
-    <div className="vault-theme-card__swatches">
-      <span
-        className="vault-theme-card__pill"
-        style={{ backgroundColor: c.primary }}
-      />
-      <span
-        className="vault-theme-card__dot"
-        style={{ backgroundColor: c.onSurface }}
-      />
-      <span
-        className="vault-theme-card__dot"
-        style={{ backgroundColor: c.onSurface }}
-      />
-    </div>
-    {generated && (
-      <span
-        className="vault-theme-card__auto"
-        style={{ color: c.onSurfaceVariant, borderColor: c.outline }}
-        title={`The ${mode} variant is generated from the other one`}
-      >
-        auto
-      </span>
-    )}
-  </div>
-);
 
 /**
  * Dark + light preview from the entry's cheap summary (never `entry.theme`,
