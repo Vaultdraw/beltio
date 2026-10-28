@@ -18,13 +18,28 @@ const state: {
   drawing?: AppEventMap["drawing.opened"];
 } = {};
 
+/**
+ * Renames, moves and deletes since the vault opened (at most 100), in order, for plugins that
+ * activate later: a favourites list must still follow a rename made before the plugin loaded.
+ */
+type PathEvent =
+  | { name: "drawing.renamed"; payload: AppEventMap["drawing.renamed"] }
+  | { name: "drawing.deleted"; payload: AppEventMap["drawing.deleted"] };
+const MAX_PATH_EVENTS = 100;
+let pathEvents: PathEvent[] = [];
+
 const track = <K extends AppEventName>(name: K, payload: AppEventMap[K]) => {
   if (name === "vault.opened") {
     state.vault = payload as AppEventMap["vault.opened"];
     state.drawing = undefined; // a new vault has no open drawing yet
+    pathEvents = [];
   } else if (name === "drawing.opened") {
     state.drawing = payload as AppEventMap["drawing.opened"];
   } else if (name === "drawing.deleted") {
+    pathEvents.push({ name, payload } as PathEvent);
+    if (pathEvents.length > MAX_PATH_EVENTS) {
+      pathEvents.shift();
+    }
     if (
       state.drawing?.path === (payload as AppEventMap["drawing.deleted"]).path
     ) {
@@ -32,6 +47,10 @@ const track = <K extends AppEventName>(name: K, payload: AppEventMap[K]) => {
     }
   } else if (name === "drawing.renamed") {
     const r = payload as AppEventMap["drawing.renamed"];
+    pathEvents.push({ name, payload: r });
+    if (pathEvents.length > MAX_PATH_EVENTS) {
+      pathEvents.shift();
+    }
     if (state.drawing?.path === r.from) {
       state.drawing = { path: r.to };
     }
@@ -79,10 +98,24 @@ const on = <K extends AppEventName>(name: K, cb: Listener<K>): (() => void) => {
 
 const hasListeners = (name: AppEventName): boolean => listeners.has(name);
 
+/** The remembered renames or deletes (oldest first) a late subscriber to `name` has not seen. */
+const replay = <K extends AppEventName>(name: K): AppEventMap[K][] =>
+  pathEvents
+    .filter((e) => e.name === name)
+    .map((e) => e.payload) as AppEventMap[K][];
+
 /** Forgets the remembered vault and drawing (test kit and vault teardown). */
 const clearCurrent = () => {
   state.vault = undefined;
   state.drawing = undefined;
+  pathEvents = [];
 };
 
-export const appEvents = { emit, on, hasListeners, current, clearCurrent };
+export const appEvents = {
+  emit,
+  on,
+  hasListeners,
+  current,
+  replay,
+  clearCurrent,
+};

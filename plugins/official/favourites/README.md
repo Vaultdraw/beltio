@@ -30,7 +30,7 @@ The order of `items` is the order in the panel. At most 200 entries.
 
 ## Renames and moves
 
-While the plugin is loaded, renaming or moving a file or folder in Vaultdraw updates its favourites, and deleting removes them. The plugin loads when you first use it in a session (panel, key, menu or command). A rename made before that, or outside Vaultdraw, is not followed: edit the path in `settings.toml`, or remove the entry and add it again.
+Renaming or moving a file or folder in Vaultdraw updates its favourites, and deleting removes them, even when the plugin had not loaded yet (the app remembers the last 100 renames and deletes since the vault opened). A rename made outside Vaultdraw is not followed: edit the path in `settings.toml`, or remove the entry and add it again.
 
 ## Off
 

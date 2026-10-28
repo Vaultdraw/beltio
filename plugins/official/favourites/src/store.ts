@@ -12,6 +12,8 @@ export interface FavouritesStore {
   subscribe(listener: () => void): () => void;
   /** Reads the table again (vault switched, or the file was edited by hand). */
   reload(): Promise<void>;
+  /** Resolves once the changes asked for so far (renames replayed at activation too) are applied and saved. */
+  settled(): Promise<void>;
   /** Replaces the list and saves it. */
   set(next: readonly Favourite[]): Promise<void>;
   /** Applies `change` to the latest list (after the first load) and saves it. */
@@ -49,6 +51,8 @@ export function createStore(ctx: PluginContext): FavouritesStore {
     }
   };
 
+  const inflight = new Set<Promise<void>>();
+
   const ready = () => (loaded ??= load());
 
   return {
@@ -58,9 +62,18 @@ export function createStore(ctx: PluginContext): FavouritesStore {
       void ready();
       return () => listeners.delete(l);
     },
-    reload() {
+    async reload() {
+      await this.settled();
       loaded = load();
       return loaded;
+    },
+    async settled() {
+      // Events the host replays at activation are queued on a microtask: give them a turn first.
+      await new Promise((r) => setTimeout(r, 0));
+      while (inflight.size > 0) {
+        await Promise.all([...inflight]);
+      }
+      await chain;
     },
     set(next) {
       items = next;
@@ -68,9 +81,15 @@ export function createStore(ctx: PluginContext): FavouritesStore {
       chain = chain.then(save);
       return chain;
     },
-    async update(change) {
-      await ready();
-      return this.set(change(items));
+    update(change) {
+      const run = (async () => {
+        await ready();
+        await this.set(change(items));
+      })();
+      inflight.add(run);
+      const done = () => void inflight.delete(run);
+      void run.then(done, done);
+      return run;
     },
   };
 }

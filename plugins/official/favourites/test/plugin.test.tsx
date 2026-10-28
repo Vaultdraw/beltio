@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { boot, type TestPlugin } from "@vaultdraw/api/testing";
 
+import { appEvents } from "../../../../excalidraw-desktop/src/events/appEvents";
+
 import { parseManifest } from "../../../../sdk/examples/testing/readManifest";
 import plugin from "../src/main";
 
@@ -118,5 +120,27 @@ describe("favourites plugin", () => {
       "B.excalidraw",
       "A.excalidraw",
     ]);
+  });
+
+  it("a rename made before the plugin loaded is followed once it does", async () => {
+    appEvents.emit("vault.opened", { name: "v" });
+    appEvents.emit("drawing.renamed", {
+      from: "A.excalidraw",
+      to: "Z/A.excalidraw",
+    });
+    // The file holds the old path, as it did before the rename.
+    const seeded = {
+      async activate(ctx: Parameters<typeof plugin.activate>[0]) {
+        await ctx.vault.table.update([
+          { key: "items", value: [{ path: "A.excalidraw" }] },
+        ]);
+        return plugin.activate(ctx);
+      },
+    };
+    p = await boot(manifest(), seeded);
+    p.vault.seed({ "Z/A.excalidraw": [] });
+    await p.run("open1");
+    expect(p.workspace.opened().map((o) => o.path)).toEqual(["Z/A.excalidraw"]);
+    expect(items(p)).toEqual([{ path: "Z/A.excalidraw" }]);
   });
 });

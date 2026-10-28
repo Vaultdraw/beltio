@@ -307,6 +307,10 @@ export function createEventsApi(
       if (now !== undefined) {
         enqueue(now);
       }
+      // Renames and deletes since the vault opened, in order (a favourites list follows them).
+      for (const past of appEvents.replay(name)) {
+        enqueue(past);
+      }
       return track(() => {
         live = false;
         off();

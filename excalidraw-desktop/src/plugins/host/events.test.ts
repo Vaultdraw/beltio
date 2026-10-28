@@ -104,4 +104,20 @@ describe("ctx.events", () => {
     appEvents.emit("vault.opened", { name: "w" });
     expect(appEvents.current("drawing.opened")).toBeUndefined();
   });
+
+  it("tells a late subscriber the renames and deletes since the vault opened, in order", async () => {
+    appEvents.emit("vault.opened", { name: "v" });
+    appEvents.emit("drawing.renamed", { from: "a", to: "b" });
+    appEvents.emit("drawing.deleted", { path: "c" });
+    appEvents.emit("drawing.renamed", { from: "b", to: "d" });
+    const seen: string[] = [];
+    await bootEvents((ctx) => {
+      ctx.events.on("drawing.renamed", (p) => seen.push(`${p.from}>${p.to}`));
+      ctx.events.on("drawing.deleted", (p) => seen.push(`del:${p.path}`));
+    });
+    await t!.flush();
+    expect(seen).toEqual(["a>b", "b>d", "del:c"]);
+    appEvents.emit("vault.opened", { name: "w" });
+    expect(appEvents.replay("drawing.renamed")).toEqual([]);
+  });
 });

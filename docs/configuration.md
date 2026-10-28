@@ -1519,7 +1519,7 @@ items = [
 ]
 ```
 
-A rename, move or delete done in Vaultdraw updates the list while the plugin is loaded (first use in the session: opening the panel, a key, a menu item or a command). A rename made before that, or outside Vaultdraw, is not followed: fix the `path` by hand or add the drawing again.
+A rename, move or delete done in Vaultdraw updates the list, even one made before the plugin first loaded in the session (the app remembers the last 100 since the vault opened). One made outside Vaultdraw is not followed: fix the `path` by hand or add the drawing again.
 
 ## Plugins (experimental)
 
