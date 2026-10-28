@@ -48,16 +48,89 @@ fn only_images(dir: &Path) -> Result<()> {
     Ok(())
 }
 
-fn remove_tree(dir: &Path) -> Result<()> {
+/// Which export files the plugin wrote: vault path to the sha256 of what it wrote. A file at
+/// such a path counts as an export only while its bytes still hash to that value, so a user's own
+/// `Logo.png` next to `Logo.excalidraw` (or a file they replaced or edited) is never overwritten,
+/// moved or deleted. Kept in the vault's metadata folder, so it travels with the vault.
+type Manifest = std::collections::BTreeMap<String, String>;
+
+const MANIFEST: &str = "plugin-exports.json";
+
+fn manifest_path(v: &vaultdraw_core::Vault) -> std::path::PathBuf {
+    v.root.join(crate::META_DIR).join(MANIFEST)
+}
+
+/// A missing or unreadable manifest reads as empty: every existing file is then "not ours" (safe).
+fn load(v: &vaultdraw_core::Vault) -> Manifest {
+    fs::read(manifest_path(v)).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default()
+}
+
+fn save(v: &vaultdraw_core::Vault, m: &Manifest) -> Result<()> {
+    let p = manifest_path(v);
+    if m.is_empty() && !p.exists() {
+        return Ok(());
+    }
+    if let Some(parent) = p.parent() {
+        fs::create_dir_all(parent).map_err(ioerr)?;
+    }
+    write_atomic(&p, &serde_json::to_vec(m).map_err(|e| err("INTERNAL", e.to_string()))?)
+}
+
+fn hash(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    Sha256::digest(bytes).iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// True when `path` (already resolved to `abs`) is a regular file the plugin wrote and nobody changed.
+fn owned(m: &Manifest, path: &str, abs: &Path) -> bool {
+    let Some(want) = m.get(path) else { return false };
+    let Ok(meta) = fs::symlink_metadata(abs) else { return false };
+    if !meta.is_file() || meta.len() > MAX_EXPORT_BYTES as u64 {
+        return false;
+    }
+    fs::read(abs).is_ok_and(|b| &hash(&b) == want)
+}
+
+fn not_an_export(path: &str) -> crate::NativeError {
+    err("CONFLICT", format!("{path} already exists and was not made by an export, so it is left alone"))
+}
+
+/// Moves a file to the Trash (tests delete it, so they never touch the real Trash).
+fn trash_file(p: &Path) -> Result<()> {
+    #[cfg(test)]
+    {
+        fs::remove_file(p).map_err(ioerr)
+    }
+    #[cfg(not(test))]
+    {
+        trash::delete(p).map_err(|e| err("TRASH_FAILED", format!("Could not move the export to the Trash: {e}")))
+    }
+}
+
+/// Every file under `dir` with its vault-relative path (`prefix` is the folder's own path).
+fn files_in(dir: &Path, prefix: &str, out: &mut Vec<(String, std::path::PathBuf)>) -> Result<()> {
     for entry in fs::read_dir(dir).map_err(ioerr)? {
         let entry = entry.map_err(ioerr)?;
+        let rel = format!("{prefix}/{}", entry.file_name().to_string_lossy());
         if entry.file_type().map_err(ioerr)?.is_dir() {
-            remove_tree(&entry.path())?;
+            files_in(&entry.path(), &rel, out)?;
         } else {
-            fs::remove_file(entry.path()).map_err(ioerr)?;
+            out.push((rel, entry.path()));
         }
     }
-    fs::remove_dir(dir).map_err(ioerr)
+    Ok(())
+}
+
+/// Removes the empty folders under (and including) `dir`; a folder that still holds a file stays.
+fn prune_empty(dir: &Path) {
+    if let Ok(rd) = fs::read_dir(dir) {
+        for e in rd.flatten() {
+            if e.file_type().is_ok_and(|t| t.is_dir()) {
+                prune_empty(&e.path());
+            }
+        }
+    }
+    let _ = fs::remove_dir(dir);
 }
 
 pub(crate) fn write(v: &vaultdraw_core::Vault, path: &str, bytes: &[u8]) -> Result<()> {
@@ -71,15 +144,23 @@ pub(crate) fn write(v: &vaultdraw_core::Vault, path: &str, bytes: &[u8]) -> Resu
     if dest.is_dir() {
         return Err(err("INVALID_PATH", "A folder has that name"));
     }
+    let mut m = load(v);
+    // Replacing an export is the point of `write`, but never a file the plugin did not write.
+    if fs::symlink_metadata(&dest).is_ok() && !owned(&m, path, &dest) {
+        return Err(not_an_export(path));
+    }
     if let Some(parent) = dest.parent() {
         fs::create_dir_all(parent).map_err(ioerr)?;
     }
-    // Replacing an export is the point of `write`, but never a file the user locked.
+    // ...and never a file the user locked.
     vaultdraw_core::fsops::ensure_file_writable(&dest)?;
-    write_atomic(&dest, bytes)
+    write_atomic(&dest, bytes)?;
+    m.insert(path.to_string(), hash(bytes));
+    save(v, &m)
 }
 
-/// Moves one export file, or a folder of exports. False when `from` does not exist.
+/// Moves one export file, or a folder of exports. False when `from` does not exist or is not
+/// (entirely) the plugin's own export.
 pub(crate) fn move_(v: &vaultdraw_core::Vault, from: &str, to: &str) -> Result<bool> {
     let file = is_image(from);
     check(from, file)?;
@@ -92,31 +173,58 @@ pub(crate) fn move_(v: &vaultdraw_core::Vault, from: &str, to: &str) -> Result<b
     if src == dest {
         return Ok(false);
     }
-    if dest.starts_with(&src) {
+    // A case-only rename on a case-insensitive disk: both names are the same file.
+    let same = vaultdraw_core::fsops::same_file(&src, &dest);
+    if dest.starts_with(&src) && !same {
         return Err(err("INVALID_PATH", "A folder cannot move into itself"));
     }
     if file == meta.is_dir() {
         return Err(err("INVALID_PATH", "A file and a folder do not exchange places"));
     }
+    let mut m = load(v);
     if meta.is_dir() {
         only_images(&src)?;
-        if dest.exists() {
+        let mut all = Vec::new();
+        files_in(&src, from, &mut all)?;
+        if all.iter().any(|(rel, abs)| !owned(&m, rel, abs)) {
+            return Ok(false);
+        }
+        if !same && dest.exists() {
             return Err(err("CONFLICT", "The destination folder exists"));
         }
-    } else if dest.is_dir() {
-        return Err(err("INVALID_PATH", "A folder has that name"));
+    } else {
+        if dest.is_dir() {
+            return Err(err("INVALID_PATH", "A folder has that name"));
+        }
+        if !owned(&m, from, &src) {
+            return Ok(false);
+        }
     }
     if let Some(parent) = dest.parent() {
         fs::create_dir_all(parent).map_err(ioerr)?;
     }
-    // The kernel refuses a name clash (a file made after the check above included).
-    vaultdraw_core::fsops::rename_no_replace(&src, &dest).map_err(|e| {
-        if e.kind() == std::io::ErrorKind::AlreadyExists { err("CONFLICT", "The destination exists") } else { ioerr(e) }
-    })?;
+    if same {
+        fs::rename(&src, &dest).map_err(ioerr)?;
+    } else {
+        // The kernel refuses a name clash (a file made after the check above included).
+        vaultdraw_core::fsops::rename_no_replace(&src, &dest).map_err(|e| {
+            if e.kind() == std::io::ErrorKind::AlreadyExists { err("CONFLICT", "The destination exists") } else { ioerr(e) }
+        })?;
+    }
+    let prefix = format!("{from}/");
+    let moved: Vec<(String, String)> = m
+        .iter()
+        .filter(|(k, _)| k.as_str() == from || k.starts_with(&prefix))
+        .map(|(k, h)| (format!("{to}{}", &k[from.len()..]), h.clone()))
+        .collect();
+    m.retain(|k, _| k.as_str() != from && !k.starts_with(&prefix));
+    m.extend(moved);
+    save(v, &m)?;
     Ok(true)
 }
 
-/// Removes one export file, or a folder that holds only exports. False when it does not exist.
+/// Moves the plugin's own export file (or the exports inside a folder) to the Trash. False when
+/// nothing of the plugin's is there; a file it did not write is never touched.
 pub(crate) fn remove(v: &vaultdraw_core::Vault, path: &str) -> Result<bool> {
     let file = is_image(path);
     check(path, file)?;
@@ -124,15 +232,33 @@ pub(crate) fn remove(v: &vaultdraw_core::Vault, path: &str) -> Result<bool> {
     let _guard = mutation_guard(v)?;
     let target = safe_path(&v.root, path, true)?;
     let Ok(meta) = fs::symlink_metadata(&target) else { return Ok(false) };
+    let mut m = load(v);
+    let mut removed = false;
     if meta.is_dir() {
         only_images(&target)?;
-        remove_tree(&target)?;
+        let mut all = Vec::new();
+        files_in(&target, path, &mut all)?;
+        for (rel, abs) in all {
+            if owned(&m, &rel, &abs) {
+                trash_file(&abs)?;
+                m.remove(&rel);
+                removed = true;
+            }
+        }
+        prune_empty(&target);
     } else if file {
-        fs::remove_file(&target).map_err(ioerr)?;
+        if owned(&m, path, &target) {
+            trash_file(&target)?;
+            m.remove(path);
+            removed = true;
+        }
     } else {
         return Err(err("INVALID_PATH", "Not an export"));
     }
-    Ok(true)
+    if removed {
+        save(v, &m)?;
+    }
+    Ok(removed)
 }
 
 /// Splits a request body into its JSON header and the bytes after it.
@@ -173,8 +299,8 @@ mod guard_tests {
     fn move_never_replaces_and_write_never_replaces_a_locked_file() {
         let t = tempfile::tempdir().unwrap();
         let v = vault(t.path());
-        fs::write(t.path().join("a.png"), "a").unwrap();
-        fs::write(t.path().join("b.png"), "b").unwrap();
+        write(&v, "a.png", b"a").unwrap();
+        write(&v, "b.png", b"b").unwrap();
         assert_eq!(move_(&v, "a.png", "b.png").unwrap_err().code, "CONFLICT");
         assert_eq!(fs::read_to_string(t.path().join("b.png")).unwrap(), "b");
         fs::set_permissions(t.path().join("b.png"), fs::Permissions::from_mode(0o444)).unwrap();

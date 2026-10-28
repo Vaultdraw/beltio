@@ -1598,6 +1598,53 @@ mod exports_rows {
     }
 
     #[test]
+    fn a_users_own_image_survives_export_move_and_delete() {
+        let t = tempdir().unwrap();
+        let v = vault(t.path(), false);
+        let ok = |m: &str, h: serde_json::Value, b: &[u8]| exports::call(&v, m, &body(h, b));
+        // The user's own Logo.png sits next to Logo.excalidraw.
+        fs::write(t.path().join("Logo.png"), "mine").unwrap();
+        let err = ok("export.write", serde_json::json!({"path": "Logo.png"}), b"export").unwrap_err();
+        assert_eq!(err.code, "CONFLICT");
+        assert_eq!(fs::read_to_string(t.path().join("Logo.png")).unwrap(), "mine");
+        // Neither a move nor a remove touches it.
+        assert_eq!(ok("export.remove", serde_json::json!({"path": "Logo.png"}), b"").unwrap(), vec![0]);
+        assert_eq!(ok("export.move", serde_json::json!({"from": "Logo.png", "to": "Other.png"}), b"").unwrap(), vec![0]);
+        assert_eq!(fs::read_to_string(t.path().join("Logo.png")).unwrap(), "mine");
+        // The plugin's own export is updated, moved and removed.
+        ok("export.write", serde_json::json!({"path": "Logo.svg"}), b"<svg>1</svg>").unwrap();
+        ok("export.write", serde_json::json!({"path": "Logo.svg"}), b"<svg>2</svg>").unwrap();
+        assert_eq!(fs::read(t.path().join("Logo.svg")).unwrap(), b"<svg>2</svg>");
+        assert_eq!(ok("export.move", serde_json::json!({"from": "Logo.svg", "to": "Brand.svg"}), b"").unwrap(), vec![1]);
+        ok("export.write", serde_json::json!({"path": "Brand.svg"}), b"<svg>3</svg>").unwrap();
+        assert_eq!(ok("export.remove", serde_json::json!({"path": "Brand.svg"}), b"").unwrap(), vec![1]);
+        assert!(!t.path().join("Brand.svg").exists());
+        assert_eq!(fs::read_to_string(t.path().join("Logo.png")).unwrap(), "mine");
+        // An export the user then edited is theirs too.
+        ok("export.write", serde_json::json!({"path": "E.svg"}), b"a").unwrap();
+        fs::write(t.path().join("E.svg"), "edited").unwrap();
+        assert_eq!(ok("export.write", serde_json::json!({"path": "E.svg"}), b"b").unwrap_err().code, "CONFLICT");
+        assert_eq!(ok("export.remove", serde_json::json!({"path": "E.svg"}), b"").unwrap(), vec![0]);
+        // A folder removal keeps a user's image and the folder that holds it.
+        ok("export.write", serde_json::json!({"path": "out/One.png"}), b"x").unwrap();
+        fs::write(t.path().join("out/Mine.png"), "m").unwrap();
+        assert_eq!(ok("export.remove", serde_json::json!({"path": "out"}), b"").unwrap(), vec![1]);
+        assert!(!t.path().join("out/One.png").exists() && t.path().join("out/Mine.png").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_case_only_move_keeps_the_export() {
+        let t = tempdir().unwrap();
+        let v = vault(t.path(), false);
+        exports::call(&v, "export.write", &body(serde_json::json!({"path": "a.svg"}), b"<svg/>")).unwrap();
+        assert_eq!(exports::call(&v, "export.move", &body(serde_json::json!({"from": "a.svg", "to": "A.svg"}), b"")).unwrap(), vec![1]);
+        let names: Vec<String> = fs::read_dir(t.path()).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into_owned()).filter(|n| n.ends_with(".svg")).collect();
+        assert_eq!(names, vec!["A.svg".to_string()]);
+        exports::call(&v, "export.write", &body(serde_json::json!({"path": "A.svg"}), b"<svg>2</svg>")).unwrap();
+    }
+
+    #[test]
     fn refuses_other_files_dot_paths_symlinks_and_read_only() {
         let t = tempdir().unwrap();
         let v = vault(t.path(), false);

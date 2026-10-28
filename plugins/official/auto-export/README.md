@@ -24,4 +24,5 @@ flowchart LR
 
 - Exports never go into folders that start with a dot, and only `.svg` and `.png` files are written, moved or deleted.
 - Rendering uses the editor's exporter on the main thread, so it waits for idle time and never runs inside the save.
-- A rename moves the export with the drawing; a delete removes it. A folder of exports is only touched when it holds nothing but exports.
+- The plugin records the files it writes (a list in the vault's `.excalidraw-vault` folder, with each file's hash). It never overwrites, moves or deletes a file it did not write, such as your own `Logo.png` next to `Logo.excalidraw`: that export is skipped with one notice. A file you edited after an export counts as yours too. Exports made by earlier versions are not recorded, so delete the old file once and the next save recreates it.
+- A rename moves the export with the drawing (a case-only rename too); a delete moves it to the Trash. A folder of exports is only touched when it holds nothing but exports.
