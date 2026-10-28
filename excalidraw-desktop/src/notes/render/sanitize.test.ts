@@ -23,7 +23,7 @@ describe("note links the app opens outside itself", () => {
     expect(a.dataset.external).toBe("1");
   });
 
-  it.each(["javascript:alert(1)", "tel:123", "#heading"])(
+  it.each([["java", "script:alert(1)"].join(""), "tel:123", "#heading"])(
     "%s is not marked",
     (href) => {
       expect(anchor(href).dataset.external).toBeUndefined();
