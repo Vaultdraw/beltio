@@ -284,6 +284,12 @@ autosave_delay_ms = 500
 # Where the popup shows: "bottom" or "center"
 # which_key_position = "bottom"
 
+[library]
+# Extra folders of .excalidrawlib files, each file a library: ["~/Documents/Libraries"]
+# folders = []
+# Library that takes new items; "" means Personal
+# default = ""
+
 [memory]
 # Free image data of deleted images once no undo or redo step can restore it
 # free_unused_images = true
@@ -1681,7 +1687,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 142, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 144, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();
