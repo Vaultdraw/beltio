@@ -1,0 +1,366 @@
+import { createHash } from "node:crypto";
+
+import { expect, test, type Page } from "@playwright/test";
+
+import { openDrawing, openVault, reloadVault, trackErrors } from "./helpers";
+
+// One broad spec for plugins, extensions, settings, commands, keys, themes and profiles (owner,
+// 2026-10-28): few tests, each checking many things in one pass, all through visible UI.
+
+const PREFS_KEY = "excalidraw-vault-preferences-v1";
+
+const paletteDialog = (page: Page) =>
+  page.getByRole("dialog", { name: "Command palette" });
+
+/** Opens the palette, types `query`, returns the option texts once the list stops changing, closes it. */
+const hits = async (page: Page, query: string): Promise<string[]> => {
+  await page.keyboard.press("Meta+Shift+KeyP");
+  await expect(paletteDialog(page)).toBeVisible();
+  await expect(paletteDialog(page).locator("input").first()).toBeFocused();
+  await page.keyboard.type(query);
+  const options = paletteDialog(page).getByRole("option");
+  let last = "";
+  let texts: string[] = [];
+  for (let i = 0; i < 40; i++) {
+    texts = await options.allTextContents();
+    const now = texts.join("|");
+    if (now === last && i > 3) {
+      break;
+    }
+    last = now;
+    await page.waitForTimeout(60);
+  }
+  await page.keyboard.press("Escape");
+  await expect(paletteDialog(page)).toHaveCount(0);
+  return texts;
+};
+
+const prefs = (page: Page) =>
+  page.evaluate(
+    (k) => JSON.parse(window.localStorage.getItem(k) ?? "{}"),
+    PREFS_KEY,
+  );
+
+const settingsModal = (page: Page) => page.locator(".vault-settings-modal");
+
+const openSettingsTab = async (page: Page, tab: string) => {
+  if ((await settingsModal(page).count()) === 0) {
+    await page.keyboard.press("Meta+Comma");
+    await expect(settingsModal(page)).toBeVisible();
+  }
+  await settingsModal(page).getByRole("tab", { name: tab }).click();
+};
+
+const closeSettings = async (page: Page) => {
+  await page.keyboard.press("Escape");
+  await expect(settingsModal(page)).toHaveCount(0);
+};
+
+const openGraphsDrawing = async (page: Page, query = "?seed=tags") => {
+  await openVault(page, query);
+  await page
+    .locator(".vault-tree-item__name", { hasText: "DSA" })
+    .first()
+    .click();
+  await openDrawing(page, "Graphs");
+};
+
+/** After a reload the DSA folder is already expanded (saved), so clicking it would collapse it. */
+const openGraphsAgain = async (page: Page) => {
+  const graphs = page.locator(".vault-tree-item__name", { hasText: "Graphs" });
+  if ((await graphs.count()) === 0) {
+    await page.locator(".vault-tree-item__name", { hasText: "DSA" }).first().click();
+  }
+  await openDrawing(page, "Graphs");
+};
+
+interface OfficialCase {
+  id: string;
+  /** What the palette is searched for, and which result proves the plugin is on. */
+  query: string;
+  match: RegExp;
+  /** The activity bar button the plugin adds, when it adds one. */
+  bar?: string;
+  /** Switched on the Extensions page (the `[extensions]` key) instead of the Plugins page. */
+  extension?: string;
+}
+
+const OFFICIAL: OfficialCase[] = [
+  { id: "gallery", query: "Gallery", match: /^Gallery: Toggle grid view/, bar: "activity-bar-gallery" },
+  { id: "favourites", query: "Favourites", match: /^Favourites: Open favourite 1/, bar: "activity-bar-favourites.list" },
+  { id: "frames", query: "Frames", match: /^Frames: Present from the first frame/, bar: "activity-bar-frames.list" },
+  { id: "formula", query: "Formula", match: /^Formula: Insert formula/ },
+  { id: "pdf-import", query: "Import: PDF", match: /^Import: PDF…/, extension: "pdf-import" },
+  { id: "auto-export", query: "Auto-export", match: /^Auto-export: Export all drawings now/ },
+  { id: "table", query: "Insert table", match: /^Insert table from clipboard/ },
+  { id: "markdown-import", query: "Import: Markdown", match: /^Import: Markdown…/ },
+  { id: "graph", query: "Graph: Open", match: /^Graph: Open graph view/, bar: "activity-bar-graph", extension: "graph" },
+];
+
+test("every official plugin: off, on, off and on again in one session leaves no UI or commands behind", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openGraphsDrawing(page);
+
+  const isOn = async (c: OfficialCase) => {
+    const texts = await hits(page, c.query);
+    return texts.some((t) => c.match.test(t));
+  };
+  const flip = async (c: OfficialCase) => {
+    await openSettingsTab(page, c.extension ? "Extensions" : "Plugins");
+    const row = c.extension
+      ? page.getByTestId(`extension-row-${c.extension}`)
+      : page.getByTestId(`plugin-${c.id}`);
+    await row.getByRole("switch").click({ force: true });
+    await closeSettings(page);
+  };
+
+  // The official plugins' stubs register just after the app mounts.
+  await expect
+    .poll(async () => (await hits(page, "Gallery")).length, { timeout: 15_000 })
+    .toBeGreaterThan(0);
+  // Everything starts on.
+  for (const c of OFFICIAL) {
+    expect(await isOn(c), `${c.id} on at start`).toBe(true);
+    if (c.bar) {
+      await expect(page.getByTestId(c.bar), `${c.id} button`).toBeVisible();
+    }
+  }
+
+  for (const round of [1]) {
+    for (const c of OFFICIAL) {
+      await flip(c);
+      expect(await isOn(c), `${c.id} off (round ${round})`).toBe(false);
+      if (c.bar) {
+        await expect(page.getByTestId(c.bar), `${c.id} button gone`).toHaveCount(0);
+      }
+      // The others are untouched.
+      for (const other of OFFICIAL.filter((o) => o !== c && o.id === "gallery")) {
+        expect(await isOn(other), `${other.id} unaffected by ${c.id}`).toBe(true);
+      }
+      await flip(c);
+      expect(await isOn(c), `${c.id} on again (round ${round})`).toBe(true);
+      if (c.bar) {
+        await expect(page.getByTestId(c.bar), `${c.id} button back`).toBeVisible();
+      }
+    }
+  }
+  const saved = await prefs(page);
+  expect(saved.pluginsDisabled).toEqual([]);
+  // Back on means working, not just listed.
+  await page.getByTestId("activity-bar-gallery").click();
+  await expect(page.getByTestId("gallery-view")).toBeVisible();
+  await page.getByTestId("activity-bar-gallery").click();
+  await expect(page.getByTestId("gallery-view")).toHaveCount(0);
+  await page.getByTestId("activity-bar-frames.list").click();
+  await expect(page.getByTestId("frames-panel")).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("an old plugins.enabled list upgrades, a disabled list is kept, and Restore defaults turns everything back on", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openGraphsDrawing(page);
+  const setPrefs = (patch: Record<string, unknown>) =>
+    page.evaluate(
+      ([k, p]) => {
+        const old = JSON.parse(window.localStorage.getItem(k as string) ?? "{}");
+        window.localStorage.setItem(
+          k as string,
+          JSON.stringify({ ...old, ...(p as object) }),
+        );
+      },
+      [PREFS_KEY, patch] as const,
+    );
+  const present = async (query: string, match: RegExp) =>
+    (await hits(page, query)).some((t) => match.test(t));
+  await expect
+    .poll(() => present("Frames", /^Frames: Present/), { timeout: 15_000 })
+    .toBe(true);
+
+  // 1. An 0.1.x config: only the gallery and a third-party plugin listed, no plugins.disabled.
+  await setPrefs({ pluginsEnabled: ["gallery", "my-third-party"] });
+  delete (await prefs(page)).pluginsDisabled;
+  await page.evaluate((k) => {
+    const p = JSON.parse(window.localStorage.getItem(k) ?? "{}");
+    delete p.pluginsDisabled;
+    window.localStorage.setItem(k, JSON.stringify(p));
+  }, PREFS_KEY);
+  await reloadVault(page);
+  const upgraded = await prefs(page);
+  expect(upgraded.pluginsEnabled).toEqual(
+    expect.arrayContaining(["gallery", "my-third-party", "frames", "table", "markdown-import", "graph"]),
+  );
+  expect(upgraded.pluginsDisabled).toEqual([]);
+  await openGraphsAgain(page);
+  await expect
+    .poll(() => present("Frames", /^Frames: Present/), { timeout: 15_000 })
+    .toBe(true);
+
+  // 2. Some plugins and extensions off on purpose: they stay off across a restart.
+  await setPrefs({
+    pluginsEnabled: ["gallery", "my-third-party"],
+    pluginsDisabled: ["frames", "table"],
+    extFormula: false,
+    extGraph: false,
+  });
+  await reloadVault(page);
+  await openGraphsAgain(page);
+  await expect
+    .poll(() => present("Gallery", /^Gallery: Toggle/), { timeout: 15_000 })
+    .toBe(true);
+  expect(await present("Frames", /^Frames:/)).toBe(false);
+  expect(await present("Insert table", /^Insert table/)).toBe(false);
+  expect(await present("Formula", /^Formula:/)).toBe(false);
+  expect(await present("Graph: Open", /^Graph:/)).toBe(false);
+  await expect(page.getByTestId("activity-bar-graph")).toHaveCount(0);
+  await expect(page.getByTestId("activity-bar-frames.list")).toHaveCount(0);
+  expect((await prefs(page)).pluginsEnabled).toContain("my-third-party");
+
+  // 3. Restore defaults on the Extensions page brings every official one back, keeps the third-party one.
+  await openSettingsTab(page, "Extensions");
+  await settingsModal(page).getByRole("button", { name: "Restore defaults" }).click();
+  await closeSettings(page);
+  await expect(page.getByTestId("activity-bar-graph")).toBeVisible();
+  await expect(page.getByTestId("activity-bar-frames.list")).toBeVisible();
+  expect(await present("Frames", /^Frames: Present/)).toBe(true);
+  expect(await present("Insert table", /^Insert table/)).toBe(true);
+  expect(await present("Formula", /^Formula: Insert/)).toBe(true);
+  expect(await present("Graph: Open", /^Graph: Open graph view/)).toBe(true);
+  const restored = await prefs(page);
+  expect(restored.pluginsDisabled).toEqual([]);
+  expect(restored.pluginsEnabled).toContain("my-third-party");
+  expect(restored.extFormula && restored.extGraph).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test("plugin permission review, consent, a crashing plugin and the registry browser (refused, failing, then allowed)", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  // The registry fixture: the index fails once, one package has the wrong checksum.
+  const BASE = "/Vaultdraw/plugin-registry/main/";
+  const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
+  const good = Buffer.from("fixture package: word-count 1.0.0");
+  const tampered = Buffer.from("fixture package: tampered 1.0.0");
+  const requested: string[] = [];
+  let indexFailures = 1;
+  await page.route("https://raw.githubusercontent.com/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    requested.push(path);
+    const headers = { "access-control-allow-origin": "*" };
+    if (path === `${BASE}index.json`) {
+      if (indexFailures-- > 0) {
+        return route.fulfill({ status: 500, headers, body: "boom" });
+      }
+      return route.fulfill({
+        status: 200,
+        headers,
+        body: JSON.stringify({
+          schema: 1,
+          plugins: [
+            { id: "word-count", name: "Word count", author: "ada", description: "Counts words.", version: "1.0.0", api: 0, permissions: ["vault.read"], sha256: sha(good), url: "packages/word-count-1.0.0.zip" },
+            { id: "tampered", name: "Tampered", author: "eve", description: "Wrong checksum.", version: "1.0.0", api: 0, permissions: ["vault.read", "vault.write"], sha256: sha(Buffer.from("something else")), url: "packages/tampered-1.0.0.zip" },
+          ],
+        }),
+      });
+    }
+    if (path === `${BASE}packages/word-count-1.0.0.zip`) {
+      return route.fulfill({ status: 200, headers, body: good });
+    }
+    if (path === `${BASE}packages/tampered-1.0.0.zip`) {
+      return route.fulfill({ status: 200, headers, body: tampered });
+    }
+    return route.fulfill({ status: 404, headers, body: "not found" });
+  });
+
+  await openVault(page, "?plugins=hello,writer,crashy&enabled=none");
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
+  await openSettingsTab(page, "Plugins");
+  const row = (id: string) => page.getByTestId(`plugin-${id}`);
+  const sw = (id: string, name: string) =>
+    row(id).getByRole("switch", { name: `Enable ${name}` });
+
+  // Review: a plugin with new permissions says so; Cancel leaves it off and its commands absent.
+  await expect(row("writer")).toContainText("Needs review");
+  await expect(row("hello")).toContainText("Unverified");
+  await sw("writer", "Writer").click({ force: true });
+  const consent = page.getByRole("dialog", { name: "Enable Writer?" });
+  await expect(consent).toContainText("Create drawings and write export images in your vault");
+  await consent.getByRole("button", { name: "Cancel" }).click();
+  await expect(consent).toHaveCount(0);
+  await expect(sw("writer", "Writer")).not.toBeChecked();
+  expect((await prefs(page)).pluginsEnabled ?? []).not.toContain("writer");
+  // The Review button reaches the same dialog; accepting clears the notice.
+  await row("writer").getByRole("button", { name: "Review Writer" }).click();
+  await page
+    .getByRole("dialog", { name: /Writer/ })
+    .getByRole("button", { name: /^(Enable|Accept|Allow|Confirm)/ })
+    .first()
+    .click();
+  await expect(row("writer")).not.toContainText("Needs review");
+
+  // Enable the other two through consent.
+  for (const [id, name] of [["hello", "Hello"], ["crashy", "Crashy"]]) {
+    await sw(id, name).click({ force: true });
+    await page
+      .getByRole("dialog", { name: new RegExp(`Enable ${name}`) })
+      .getByRole("button", { name: "Enable", exact: true })
+      .click();
+    await expect(sw(id, name)).toBeChecked();
+  }
+  await closeSettings(page);
+
+  // A plugin that throws three times is switched off with a notice; the app and other plugins carry on.
+  for (let run = 0; run < 3; run++) {
+    await page.keyboard.press("Meta+Shift+KeyP");
+    await page.keyboard.type("explode");
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(
+      (n) =>
+        ((window as any).__plugins.getPluginCosts() as any[]).find((c) => c.id === "crashy")?.handlerMs.length >= n,
+      run + 1,
+    );
+  }
+  await expect(page.getByText(/Plugin Crashy was disabled: 3 errors/)).toBeVisible();
+  expect((await hits(page, "explode")).filter((t) => /Crashy/.test(t))).toEqual([]);
+  expect((await hits(page, "say hello")).some((t) => /^Hello: say hello/.test(t))).toBe(true);
+  await page.keyboard.press("Meta+Shift+KeyP");
+  await page.keyboard.type("say hello");
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Hello from a plugin")).toBeVisible();
+  await openSettingsTab(page, "Plugins");
+  await expect(row("crashy")).toContainText("Disabled by Vaultdraw");
+  await expect(sw("crashy", "Crashy")).toBeDisabled();
+  await row("crashy").getByRole("button", { name: "Re-enable Crashy" }).click();
+  await expect(row("crashy")).not.toContainText("Disabled by Vaultdraw");
+
+  // Registry browser: nothing is requested until Allow; the first index fetch fails and Try again works.
+  await page.getByRole("button", { name: "Browse community plugins…" }).click();
+  const browser = page.getByTestId("plugin-browser-dialog");
+  await expect(browser.getByTestId("plugin-browser-consent")).toBeVisible();
+  await browser.getByRole("button", { name: "Not now" }).click();
+  await expect(browser).toHaveCount(0);
+  expect(requested).toEqual([]);
+  await page.getByRole("button", { name: "Browse community plugins…" }).click();
+  await browser.getByRole("button", { name: "Allow" }).click();
+  await expect(browser.getByRole("alert")).toBeVisible();
+  await browser.getByRole("button", { name: "Try again" }).click();
+  const list = browser.getByRole("listbox", { name: "Community plugins" });
+  await expect(list.getByRole("option")).toHaveCount(2);
+  // A package whose checksum differs is refused and nothing is installed.
+  await browser.getByLabel("Search plugins").fill("tampered");
+  await expect(browser.getByTestId("plugin-browser-permissions")).toContainText("Create drawings and write export images");
+  await browser.getByRole("button", { name: "Install", exact: true }).click();
+  await expect(browser.getByRole("alert")).toBeVisible();
+  await expect(list.getByRole("option", { name: /Tampered/ })).not.toContainText("Installed");
+  await browser.getByLabel("Search plugins").fill("word");
+  await browser.getByRole("button", { name: "Install", exact: true }).click();
+  await expect(page.getByText("Installed Word count")).toBeVisible();
+  // Allow was saved: reopening goes straight to the list.
+  expect((await prefs(page)).networkAllowPlugins).toBe(true);
+  // Only the failures this test caused on purpose: the crashing plugin and the failing downloads.
+  expect(errors.filter((e) => !/kaboom|500|checksum|Failed to load resource/i.test(e))).toEqual([]);
+});

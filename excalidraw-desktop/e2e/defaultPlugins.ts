@@ -7,6 +7,9 @@ import favouritesToml from "../../plugins/official/favourites/plugin.toml?raw";
 import formulaToml from "../../plugins/official/formula/plugin.toml?raw";
 import autoExportToml from "../../plugins/official/auto-export/plugin.toml?raw";
 import tableToml from "../../plugins/official/table/plugin.toml?raw";
+import graphToml from "../../plugins/official/graph/plugin.toml?raw";
+import mermaidToml from "../../plugins/official/mermaid/plugin.toml?raw";
+import markdownImportToml from "../../plugins/official/markdown-import/plugin.toml?raw";
 import galleryToml from "../../plugins/official/gallery/plugin.toml?raw";
 import pdfImportToml from "../../plugins/official/pdf-import/plugin.toml?raw";
 import { setPluginsBackend } from "../src/plugins/host/backend";
@@ -33,7 +36,7 @@ export async function installDefaultBackend(win: Window): Promise<void> {
       permissions: doc.permissions ?? [],
       activation: doc.activation ?? [],
       contributes: {
-        commands: doc.contributes.commands.map((x: any) => ({
+        commands: (doc.contributes.commands ?? []).map((x: any) => ({
           id: x.id,
           title: x.title,
           keys: x.keys ?? [],
@@ -80,6 +83,9 @@ export async function installDefaultBackend(win: Window): Promise<void> {
     infoOf("auto-export", autoExportToml),
     infoOf("table", tableToml),
     infoOf("frames", framesToml),
+    infoOf("graph", graphToml),
+    infoOf("mermaid", mermaidToml),
+    infoOf("markdown-import", markdownImportToml),
   ];
   const backend = createFakeBackend(
     infos,

@@ -4,7 +4,7 @@ import { getRegisteredCommand } from "../../commands/registry";
 import { toastStore } from "../../toasts/toastStore";
 import { getPreferences, updatePreferences } from "../../vault/preferences";
 
-import { getRuntime } from "./activation";
+import { disablePlugin, getRuntime } from "./activation";
 import { setModuleLoader } from "./loader";
 import { makePluginInfo } from "./fakeBackend";
 import { getPluginLog } from "./errors";
@@ -255,6 +255,24 @@ describe("install, uninstall, host-disabled", () => {
       reason: null,
     });
     expect(getRegisteredCommand("alpha.go")).toBeDefined();
+  });
+});
+
+describe("a plugin the host disabled after errors", () => {
+  it("shows its reason in the snapshot at once, without a rescan", async () => {
+    await boot([withCommands("alpha", "go")], { alpha: plugin() });
+    enable(["alpha"]);
+    await rescanPlugins();
+    const first = subscribePluginsState(() => {});
+    expect(getPluginsState().plugins[0].hostDisabled).toBeNull();
+    first(); // the page closes: nothing listens while the plugin fails
+    disablePlugin("alpha", "3 errors");
+    const unsubscribe = subscribePluginsState(() => {}); // and opens again
+    expect(getPluginsState().plugins[0].hostDisabled).toBe("3 errors");
+    expect(getPluginsState().runtime.alpha.state).toBe("disabled");
+    await clearHostDisabled("alpha");
+    expect(getPluginsState().plugins[0].hostDisabled).toBeNull();
+    unsubscribe();
   });
 });
 
