@@ -695,14 +695,34 @@
   font-family: inherit;
   font-size: var(--vd-fs-small);
   color: var(--vault-text-muted);
-  word-break: break-all;
+  /* The folder shortens with "…", the file name stays whole. */
+  display: flex;
+  min-width: 0;
+  white-space: nowrap;
   user-select: text;
+}
+
+.vault-config-path__dir {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vault-config-path__file {
+  flex: none;
 }
 
 .vault-config-actions {
   display: flex;
-  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--vd-space-2);
+}
+
+@media (max-width: 760px) {
+  .vault-config-actions {
+    justify-content: flex-start;
+  }
 }
 
 .vault-config-status {
@@ -1158,11 +1178,19 @@
 }
 
 .vault-config-layer {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--vd-space-2);
+  gap: var(--vd-space-3);
   font-size: var(--vd-fs-small);
+}
+
+.vault-config-layer > span {
+  min-width: 0;
+}
+
+.vault-config-layer > .vault-btn {
+  justify-self: stretch;
 }
 
 .vault-config-layer__name {

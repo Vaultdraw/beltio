@@ -700,10 +700,10 @@ fn save_with_dialog(name: &str, bytes: &[u8]) -> Result<bool> {
         let dir = smoke::export_dir().map_err(|e| err("SMOKE_CONFIG", e))?;
         Some(dir.join(clean))
     } else {
-        rfd::FileDialog::new().set_file_name(clean).save_file()
+        rfd::FileDialog::new().set_title("Save as").set_file_name(clean).save_file()
     };
     #[cfg(not(feature = "smoke-test"))]
-    let selected_path = rfd::FileDialog::new().set_file_name(clean).save_file();
+    let selected_path = rfd::FileDialog::new().set_title("Save as").set_file_name(clean).save_file();
     let Some(path) = selected_path else { return Ok(false); };
     if path.exists() {
         return Err(err(

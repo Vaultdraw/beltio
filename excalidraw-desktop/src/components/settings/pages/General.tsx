@@ -26,6 +26,21 @@ import { SettingRow } from "../SettingRow";
 const errorText = (err: unknown) =>
   err instanceof Error ? err.message : String(err);
 
+/**
+ * A file path on one line: the folder part shortens with "…" when the box is
+ * narrow, the file name never does (and never breaks mid-word). The full path
+ * is the hover text and still copies whole.
+ */
+export const PathText = ({ path }: { path: string }) => {
+  const cut = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")) + 1;
+  return (
+    <code className="vault-config-path" title={path}>
+      <span className="vault-config-path__dir">{path.slice(0, cut)}</span>
+      <span className="vault-config-path__file">{path.slice(cut)}</span>
+    </code>
+  );
+};
+
 /** One line per config layer: name, path, status, and a button to open it. */
 const LayerList = ({
   layers,
@@ -69,9 +84,7 @@ const LayerList = ({
               {" · "}
               {status}
             </span>
-            <code className="vault-config-path" title={layer.path}>
-              {layer.path}
-            </code>
+            <PathText path={layer.path} />
           </span>
           <button
             type="button"
@@ -177,9 +190,9 @@ const ConfigFileSetting = () => {
   return (
     <SettingRow
       id="config-file"
-      className="vault-config-row"
+      className="vault-config-row vault-setting-row--stack-narrow"
       testId="settings-config-row"
-      details={
+      below={
         <>
           {settingsStatus.layers?.length ? (
             <LayerList
@@ -187,9 +200,7 @@ const ConfigFileSetting = () => {
               onOpen={(layer) => void handleOpenLayer(layer)}
             />
           ) : (
-            <code className="vault-config-path">
-              {settingsStatus.configPath ?? "Unknown location"}
-            </code>
+            <PathText path={settingsStatus.configPath ?? "Unknown location"} />
           )}
           {settingsStatus.problems.length > 0 && (
             <ul

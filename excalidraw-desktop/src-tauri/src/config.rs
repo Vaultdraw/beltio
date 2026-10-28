@@ -98,19 +98,25 @@ pub(crate) fn apply_profile_arg<S: AsRef<str>>(args: impl IntoIterator<Item = S>
 /// page cannot click. `key` (and each of `also`) is `enabled` or `allow_<purpose>`; all of them are
 /// confirmed in one dialog. Ok(false) = the user said no.
 #[tauri::command]
-pub(crate) async fn network_grant(key: String, also: Option<Vec<String>>) -> Result<bool> {
+pub(crate) async fn network_grant(window: tauri::WebviewWindow, key: String, also: Option<Vec<String>>) -> Result<bool> {
     let dirs = resolve_dirs()?;
     let mut keys = vec![key.as_str()];
     keys.extend(also.iter().flatten().map(String::as_str));
     // One dialog for all the keys, so a single click never asks twice.
     super::network::grant_all_in(&dirs, &keys, |title, text| {
-        rfd::MessageDialog::new()
+        // Attached to the main window: macOS then draws a real NSAlert with the app's icon. Without
+        // a parent, rfd falls back to CFUserNotification, which shows the generic speech bubble.
+        let answer = rfd::MessageDialog::new()
             .set_level(rfd::MessageLevel::Info)
             .set_title(title)
             .set_description(text)
-            .set_buttons(rfd::MessageButtons::YesNo)
-            .show()
-            == rfd::MessageDialogResult::Yes
+            .set_parent(&window)
+            .set_buttons(rfd::MessageButtons::OkCancelCustom(
+                super::network::ALLOW_LABEL.into(),
+                super::network::DENY_LABEL.into(),
+            ))
+            .show();
+        answer == rfd::MessageDialogResult::Custom(super::network::ALLOW_LABEL.into())
     })
 }
 

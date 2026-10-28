@@ -92,18 +92,47 @@ pub(crate) fn refuse_consent_grants(changes: &[config::LayerChange]) -> Result<(
     Ok(())
 }
 
-/// What the confirmation dialog says for a consent key.
-fn grant_prompt(key: &str) -> (String, String) {
-    if key == "enabled" {
-        ("Allow network access?".into(), "Vaultdraw will be allowed to use the internet for features you allow (network.enabled). Nothing is sent until you use one.".into())
-    } else {
-        let purpose = key.trim_start_matches("allow_");
-        (
-            format!("Allow `{purpose}` downloads?"),
-            format!("Vaultdraw will connect to the internet to download {purpose}, only when you ask for it. You can turn this off any time in Settings (network.{key})."),
-        )
+/// The plain-language name of what a consent purpose downloads ("themes", "plugins").
+fn purpose_phrase(purpose: &str) -> String {
+    match purpose {
+        "themes" => "themes".into(),
+        "plugins" => "plugins".into(),
+        "plugin_list" | "plugin_registry" => "the plugin list".into(),
+        other => other.replace('_', " "),
     }
 }
+
+/// What the confirmation dialog says for one or more consent keys (`enabled` is the master
+/// switch, `allow_<purpose>` one purpose). Plain words only: no config keys, no code quotes.
+/// Returns `(title, text)`.
+fn grant_prompt(keys: &[&str]) -> (String, String) {
+    let master = keys.contains(&"enabled");
+    let phrases: Vec<String> =
+        keys.iter().filter_map(|k| k.strip_prefix("allow_")).map(purpose_phrase).collect();
+    let list = match phrases.as_slice() {
+        [] => String::new(),
+        [one] => one.clone(),
+        [init @ .., last] => format!("{} and {last}", init.join(", ")),
+    };
+    let title = match (master, list.is_empty()) {
+        (true, true) => "Allow internet access?".to_string(),
+        (true, false) => format!("Allow internet access to download {list}?"),
+        (false, _) => format!("Allow downloading {list}?"),
+    };
+    let text = if list.is_empty() {
+        "Vaultdraw will be able to use the internet for the features you allow. Nothing is sent until you use one. You can change this any time in Settings."
+            .to_string()
+    } else {
+        format!(
+            "Vaultdraw will connect to the internet to download {list}, only when you ask for it. You can change this any time in Settings."
+        )
+    };
+    (title, text)
+}
+
+/// The button that grants, and the one that refuses (the same wording in every native dialog).
+pub(crate) const ALLOW_LABEL: &str = "Allow";
+pub(crate) const DENY_LABEL: &str = "Don't Allow";
 
 /// Turns a consent key on after `confirm(title, text)` says yes. Returns whether it was granted;
 /// a refusal writes nothing. `key` is `enabled` or `allow_<purpose>`, without the `network.` prefix.
@@ -129,15 +158,7 @@ pub(crate) fn grant_all_in(dirs: &config::Dirs, keys: &[&str], confirm: impl FnO
     if unique.is_empty() || unique.len() > 4 || !unique.iter().all(|k| valid(k)) {
         return Err(err("INVALID_ARGUMENT", "Not a network consent key"));
     }
-    let (title, text) = if unique.len() == 1 {
-        grant_prompt(unique[0])
-    } else {
-        let prompts: Vec<(String, String)> = unique.iter().map(|k| grant_prompt(k)).collect();
-        (
-            prompts.iter().map(|(t, _)| t.trim_end_matches('?').to_string()).collect::<Vec<_>>().join(" and ") + "?",
-            prompts.iter().map(|(_, t)| t.as_str()).collect::<Vec<_>>().join("\n\n"),
-        )
-    };
+    let (title, text) = grant_prompt(&unique);
     if !confirm(&title, &text) {
         return Ok(false);
     }
@@ -838,7 +859,9 @@ mod tests {
         })
         .unwrap();
         assert!(!granted);
-        assert!(seen.unwrap().1.contains("network.allow_themes"));
+        let (title, text) = seen.unwrap();
+        assert_eq!(title, "Allow downloading themes?");
+        assert!(text.contains("download themes"), "{text}");
         assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "NETWORK_NOT_ALLOWED");
         let text = fs::read_to_string(dirs.config.join("config.toml")).unwrap_or_default();
         assert!(!text.contains("allow_themes = true"), "{text}");
@@ -876,7 +899,7 @@ mod tests {
         .unwrap();
         assert!(!no);
         assert_eq!(asked, 1);
-        assert!(text_seen.contains("network.enabled") && text_seen.contains("network.allow_themes"));
+        assert!(text_seen.contains("internet") && text_seen.contains("themes"), "{text_seen}");
         assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "NETWORK_DISABLED");
         let yes = grant_all_in(&dirs, &["enabled", "allow_themes", "enabled"], |_, _| {
             asked += 1;
@@ -903,6 +926,27 @@ mod tests {
         for key in ["", "allow_", "themes", "appearance.theme", "allow_themes.x", "ALLOW_THEMES", "allow_a b", "hotkeys"] {
             let r = grant_in(&dirs, key, |_, _| panic!("must not ask for {key:?}"));
             assert_eq!(r.unwrap_err().code, "INVALID_ARGUMENT", "{key:?}");
+        }
+    }
+
+    #[test]
+    fn prompts_are_plain_words_per_key() {
+        let cases: [(&[&str], &str); 7] = [
+            (&["allow_themes"], "Allow downloading themes?"),
+            (&["allow_plugins"], "Allow downloading plugins?"),
+            (&["allow_plugin_list"], "Allow downloading the plugin list?"),
+            (&["allow_font_packs"], "Allow downloading font packs?"),
+            (&["enabled"], "Allow internet access?"),
+            (&["enabled", "allow_themes"], "Allow internet access to download themes?"),
+            (&["allow_themes", "allow_plugins"], "Allow downloading themes and plugins?"),
+        ];
+        for (keys, want) in cases {
+            let (title, text) = grant_prompt(keys);
+            assert_eq!(title, want, "{keys:?}");
+            for s in [&title, &text] {
+                assert!(!s.contains('`') && !s.contains("network.") && !s.contains("allow_") && !s.contains('_'), "{keys:?}: {s}");
+            }
+            assert!(text.ends_with("in Settings.") || text.ends_with("Settings."), "{text}");
         }
     }
 }

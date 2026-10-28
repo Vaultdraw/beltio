@@ -270,7 +270,7 @@ pub(crate) async fn plugins_open_dir(app: AppHandle, id: Option<String>) -> Resu
 pub(crate) async fn plugins_pick_folder() -> Result<Option<String>> {
     blocking(|| {
         Ok(rfd::FileDialog::new()
-            .set_title("Choose a plugin folder (with plugin.toml)")
+            .set_title("Choose a plugin folder")
             .pick_folder()
             .map(|p| p.to_string_lossy().into_owned()))
     })
