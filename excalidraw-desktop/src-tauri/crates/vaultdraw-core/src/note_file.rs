@@ -152,6 +152,9 @@ pub fn write_note_file(v: &Vault, path: &str, content: &str, expected_revision: 
     }
     if current.is_none() {
         ensure_no_sibling_collision(&p)?;
+    } else {
+        // A note the user made read-only (mode or Finder "Locked") is never replaced, by a save or a link rewrite.
+        crate::fsops::ensure_file_writable(&p)?;
     }
     let history_copy = match &current {
         Some(rev) => Some(copy_to_history(v, path, &p, rev)?),

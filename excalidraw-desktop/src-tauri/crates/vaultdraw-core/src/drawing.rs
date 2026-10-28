@@ -198,7 +198,11 @@ where F: FnOnce(&Path, &[u8], bool) -> Result<()> {
     let p = safe_path(&v.root, path, true)?;
     let (on_disk, stamp) = match crate::fsops::current_revision_stamped(&p)? { Some((rev, stamp)) => (Some(rev), stamp), None => (None, None) };
     if on_disk.as_deref() != expected_revision { return Err(err("CONFLICT", "Drawing changed on disk; save was not applied")); }
-    if expected_revision.is_none() { ensure_no_sibling_collision(&p)?; } else { crate::fsops::ensure_file_writable(&p)?; }
+    if expected_revision.is_none() { ensure_no_sibling_collision(&p)?; } else if let Err(e) = crate::fsops::ensure_file_writable(&p) {
+        // A file locked while open: keep the unsaved edits as a recovery record before refusing.
+        let _ = create_recovery(v, path, expected_revision, operation_id, json);
+        return Err(e);
+    }
     let snapshot = create_recovery(v, path, expected_revision, operation_id, json)?;
     // Same inode, size and (old enough) modification time as the file just hashed: unchanged, no second read.
     let recheck = if stamp.as_ref().is_some_and(|s| crate::fsops::stamp_unchanged(&p, s)) { on_disk } else {

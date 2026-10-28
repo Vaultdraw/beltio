@@ -74,6 +74,8 @@ pub(crate) fn write(v: &vaultdraw_core::Vault, path: &str, bytes: &[u8]) -> Resu
     if let Some(parent) = dest.parent() {
         fs::create_dir_all(parent).map_err(ioerr)?;
     }
+    // Replacing an export is the point of `write`, but never a file the user locked.
+    vaultdraw_core::fsops::ensure_file_writable(&dest)?;
     write_atomic(&dest, bytes)
 }
 
@@ -107,7 +109,10 @@ pub(crate) fn move_(v: &vaultdraw_core::Vault, from: &str, to: &str) -> Result<b
     if let Some(parent) = dest.parent() {
         fs::create_dir_all(parent).map_err(ioerr)?;
     }
-    fs::rename(&src, &dest).map_err(ioerr)?;
+    // The kernel refuses a name clash (a file made after the check above included).
+    vaultdraw_core::fsops::rename_no_replace(&src, &dest).map_err(|e| {
+        if e.kind() == std::io::ErrorKind::AlreadyExists { err("CONFLICT", "The destination exists") } else { ioerr(e) }
+    })?;
     Ok(true)
 }
 
@@ -153,5 +158,27 @@ pub(crate) fn call(v: &vaultdraw_core::Vault, method: &str, body: &[u8]) -> Resu
         "export.move" => Ok(vec![u8::from(move_(v, field(&head, "from")?, field(&head, "to")?)?)]),
         "export.remove" => Ok(vec![u8::from(remove(v, field(&head, "path")?)?)]),
         _ => Err(err("NOT_FOUND", format!("Plugins cannot call \"{method}\""))),
+    }
+}
+
+#[cfg(test)]
+mod guard_tests {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt;
+
+    fn vault(root: &Path) -> vaultdraw_core::Vault {
+        vaultdraw_core::Vault::new(root.canonicalize().unwrap(), "t".into(), false, None)
+    }
+    #[test]
+    fn move_never_replaces_and_write_never_replaces_a_locked_file() {
+        let t = tempfile::tempdir().unwrap();
+        let v = vault(t.path());
+        fs::write(t.path().join("a.png"), "a").unwrap();
+        fs::write(t.path().join("b.png"), "b").unwrap();
+        assert_eq!(move_(&v, "a.png", "b.png").unwrap_err().code, "CONFLICT");
+        assert_eq!(fs::read_to_string(t.path().join("b.png")).unwrap(), "b");
+        fs::set_permissions(t.path().join("b.png"), fs::Permissions::from_mode(0o444)).unwrap();
+        assert_eq!(write(&v, "b.png", b"new").unwrap_err().code, "READ_ONLY");
+        assert_eq!(fs::read_to_string(t.path().join("b.png")).unwrap(), "b");
     }
 }

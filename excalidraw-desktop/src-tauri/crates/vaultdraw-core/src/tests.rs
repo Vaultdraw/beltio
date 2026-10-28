@@ -485,3 +485,31 @@ fn over_the_cap_prunes_old_session_records_but_never_the_newest_per_drawing() {
     assert!(dir.join(format!("p-{h}-s2.json")).exists());
     assert!(dir.join(format!("p-{h2}-s1.json")).exists(), "newest of its drawing kept even though oldest overall");
 }
+#[test]
+fn a_read_only_refusal_keeps_the_unsaved_edits_as_a_recovery_record() {
+    use std::os::unix::fs::PermissionsExt;
+    let t = tempdir().unwrap(); let v = vault(t.path());
+    let p = t.path().join("a.excalidraw");
+    fs::write(&p, SCENE).unwrap();
+    let rev = revision(SCENE.as_bytes());
+    fs::set_permissions(&p, fs::Permissions::from_mode(0o444)).unwrap();
+    let edited = SCENE.replace("\"version\":2", "\"version\":9");
+    let e = write_drawing_file(&v, "a.excalidraw", &edited, Some(&rev), "op").unwrap_err();
+    assert_eq!(e.code, "READ_ONLY");
+    let listed = list_recovery(&v).unwrap();
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].json, edited);
+    assert_eq!(fs::read_to_string(&p).unwrap(), SCENE);
+}
+#[test]
+fn a_read_only_note_is_not_replaced() {
+    use std::os::unix::fs::PermissionsExt;
+    let t = tempdir().unwrap(); let v = vault(t.path());
+    let p = t.path().join("n.md");
+    fs::write(&p, "one").unwrap();
+    let rev = revision(b"one");
+    fs::set_permissions(&p, fs::Permissions::from_mode(0o444)).unwrap();
+    let e = crate::note_file::write_note_file(&v, "n.md", "two", Some(&rev)).unwrap_err();
+    assert_eq!(e.code, "READ_ONLY");
+    assert_eq!(fs::read_to_string(&p).unwrap(), "one");
+}

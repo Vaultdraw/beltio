@@ -302,14 +302,14 @@ pub fn current_revision(path: &Path) -> Result<Option<String>> {
 }
 /// What a stat says about a file at one moment: size, modification time, device and inode.
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Stamp { size: u64, mtime: Option<std::time::SystemTime>, id: (u64, u64) }
+pub struct Stamp { size: u64, mtime: Option<std::time::SystemTime>, ctime: (i64, i64), id: (u64, u64) }
 impl Stamp {
     fn of(md: &fs::Metadata) -> Stamp {
         #[cfg(unix)]
-        let id = { use std::os::unix::fs::MetadataExt; (md.dev(), md.ino()) };
+        let (id, ctime) = { use std::os::unix::fs::MetadataExt; ((md.dev(), md.ino()), (md.ctime(), md.ctime_nsec())) };
         #[cfg(not(unix))]
-        let id = (0, 0);
-        Stamp { size: md.len(), mtime: md.modified().ok(), id }
+        let (id, ctime) = ((0, 0), (0, 0));
+        Stamp { size: md.len(), mtime: md.modified().ok(), ctime, id }
     }
 }
 /// Window after a modification in which a second write can still leave the same modification time
@@ -325,11 +325,35 @@ pub fn current_revision_stamped(path: &Path) -> Result<Option<(String, Option<St
         Err(e) => return Err(ioerr(e)),
     };
     let md = file.metadata().map_err(ioerr)?;
+    let local = local_fine_fs(&file);
     let (rev, total) = revision_of_reader(file.take(MAX_DRAWING_BYTES + 1)).map_err(ioerr)?;
     if total > MAX_DRAWING_BYTES { return Err(err("INVALID_FILE", "File exceeds its size limit")); }
     let stamp = Stamp::of(&md);
-    let stable = stamp.mtime.is_some_and(|m| std::time::SystemTime::now().duration_since(m).is_ok_and(|age| age > RACY_WINDOW));
+    // A whole-second modification time hints at a coarse clock (FAT keeps 2 s, HFS+ 1 s): not trusted.
+    let fine_clock = stamp.mtime.is_some_and(|m| m.duration_since(std::time::UNIX_EPOCH).is_ok_and(|d| d.subsec_nanos() != 0));
+    let stable = fine_clock && local && stamp.mtime.is_some_and(|m| std::time::SystemTime::now().duration_since(m).is_ok_and(|age| age > RACY_WINDOW));
     Ok(Some((rev, stable.then_some(stamp))))
+}
+/// True only on local file systems with a fine-grained clock (APFS, ext4, btrfs, xfs, f2fs, tmpfs).
+/// FAT/exFAT, HFS+, network drives and unknown file systems always re-hash.
+pub fn local_fine_fs(file: &File) -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        use std::os::unix::io::AsRawFd;
+        let mut st: libc::statfs = unsafe { std::mem::zeroed() };
+        if unsafe { libc::fstatfs(file.as_raw_fd(), &mut st) } != 0 { return false; }
+        let name: Vec<u8> = st.f_fstypename.iter().take_while(|c| **c != 0).map(|c| *c as u8).collect();
+        name == b"apfs" && st.f_flags & (libc::MNT_LOCAL as u32) != 0
+    }
+    #[cfg(target_os = "linux")]
+    {
+        use std::os::unix::io::AsRawFd;
+        let mut st: libc::statfs = unsafe { std::mem::zeroed() };
+        if unsafe { libc::fstatfs(file.as_raw_fd(), &mut st) } != 0 { return false; }
+        matches!(st.f_type as u64, 0xEF53 | 0x9123683E | 0x58465342 | 0xF2F52010 | 0x01021994)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    { let _ = file; false }
 }
 /// True when the file at `path` still has exactly this stamp (same inode, size and modification time).
 pub fn stamp_unchanged(path: &Path, stamp: &Stamp) -> bool {
@@ -516,6 +540,18 @@ mod stamp_tests {
         std::thread::sleep(std::time::Duration::from_millis(20));
         fs::write(&p, "abcdefghij").unwrap();
         assert!(!stamp_unchanged(&p, &stamp));
+        // ctime moves on metadata-only changes that keep size and mtime (permissions, utimes back-dating).
+        let (_, s2) = { std::thread::sleep(RACY_WINDOW + std::time::Duration::from_millis(50)); current_revision_stamped(&p).unwrap().unwrap() };
+        let s2 = s2.expect("stable");
+        let md = fs::metadata(&p).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        let mut perm = md.permissions(); perm.set_readonly(true); fs::set_permissions(&p, perm.clone()).unwrap();
+        assert!(!stamp_unchanged(&p, &s2), "a metadata change moves ctime");
+        perm.set_readonly(false); fs::set_permissions(&p, perm).unwrap();
+        // A whole-second modification time (coarse clock) is never trusted.
+        let f = fs::OpenOptions::new().write(true).open(&p).unwrap();
+        f.set_modified(std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_000_000)).unwrap();
+        assert!(current_revision_stamped(&p).unwrap().unwrap().1.is_none());
         // Replaced by a new file (new inode), same size and content.
         let again = current_revision_stamped(&p).unwrap().unwrap().1;
         fs::remove_file(&p).unwrap();
