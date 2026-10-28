@@ -30,6 +30,7 @@ import { toastStore } from "../toasts/toastStore";
 import { getPreferences } from "../vault/preferences";
 
 import { ConfirmModal } from "./ConfirmModal";
+import { keyBelongsToControl } from "./keyTarget";
 import { Dialog } from "./Dialog";
 
 import "./pluginBrowser.css";
@@ -200,7 +201,12 @@ export const PluginBrowserDialog = ({
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       move(e.key === "ArrowDown" ? 1 : -1);
-    } else if (e.key === "Enter" && current && !busy) {
+    } else if (
+      e.key === "Enter" &&
+      current &&
+      !busy &&
+      !keyBelongsToControl(e, search.current)
+    ) {
       e.preventDefault();
       const status = registryStatus(current, versions.get(current.id));
       if (status !== "installed" && current.api === 0) {

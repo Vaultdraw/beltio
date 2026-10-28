@@ -25,7 +25,9 @@ describe("template picker keyboard", () => {
         onRevealGlobal={onRevealGlobal}
       />,
     );
-    const btn = screen.getByRole("button", { name: "Open global templates folder" });
+    const btn = screen.getByRole("button", {
+      name: "Open global templates folder",
+    });
     btn.focus();
     fireEvent.keyDown(btn, { key: "Enter" });
     expect(onBlank).not.toHaveBeenCalled();

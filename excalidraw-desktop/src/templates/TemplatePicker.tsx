@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 
+import { keyBelongsToControl } from "../components/keyTarget";
+
 import { filterTemplates } from "./search";
 import { templateKey } from "./types";
 
@@ -364,6 +366,9 @@ export const TemplatePicker = ({
         }
         return;
       case "Enter":
+        if (keyBelongsToControl(e, inputRef.current)) {
+          return;
+        }
         e.preventDefault();
         activate();
         return;
