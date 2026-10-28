@@ -3959,8 +3959,13 @@ class App extends React.Component<AppProps, AppState> {
 
     // The constructor ran before the container existed, so the form factor
     // and toolbar mode are still the defaults: measure now, before the first
-    // paint, rather than on the first ResizeObserver callback.
-    this.refreshEditorInterface();
+    // paint, rather than on the first ResizeObserver callback. Unit tests
+    // mock the container size for their own geometry (often a phone-sized
+    // 200 x 100) and expect the desktop layout, so they only measure when
+    // they set getFormFactor.
+    if (!isTestEnv() || this.props.UIOptions.getFormFactor) {
+      this.refreshEditorInterface();
+    }
 
     if (isTestEnv() || isDevEnv()) {
       const setState = this.setState.bind(this);
