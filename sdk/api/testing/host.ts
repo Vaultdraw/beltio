@@ -55,7 +55,7 @@ import { createFoldersModel } from "./folders";
 import { createPagesMock } from "./pages";
 import { createPdfModel } from "./pdf";
 import { createSceneModel } from "./scene";
-import { panelsRoot, type PanelDeps } from "./panels";
+import { loadPanelDeps, panelsRoot, type PanelDeps } from "./panels";
 import { createVaultModel } from "./vault";
 
 import type {
@@ -278,6 +278,9 @@ export function createMockHost(
     onClose?: () => void;
   } | null = null;
   let overlayClose: (() => void) | null = null;
+  /** Overlays are not declared in the manifest: react loads when one opens (best effort). */
+  let overlayDeps: PanelDeps | null = null;
+  let overlayLoading: Promise<void> | null = null;
   let mathProvider: ((request: MathRequest) => Promise<MathResult>) | null =
     null;
   let lines: PluginLogLine[] = [];
@@ -810,6 +813,12 @@ export function createMockHost(
         return (overlaysApi ??= {
           open(component, options) {
             overlayClose?.();
+            if (!deps && !overlayDeps) {
+              overlayLoading = loadPanelDeps().then(
+                (d) => void (overlayDeps = d),
+                () => undefined,
+              );
+            }
             const entry = { component, onClose: options?.onClose };
             overlay = entry;
             const close = () => {
@@ -1299,8 +1308,11 @@ export function createMockHost(
     };
     return shown;
   };
-  const act = <T>(fn: () => Promise<T>): Promise<T> =>
-    rtl ? (rtl.act(fn) as unknown as Promise<T>) : fn();
+  const act = async <T>(fn: () => Promise<T>): Promise<T> => {
+    const result = await (rtl ? (rtl.act(fn) as unknown as Promise<T>) : fn());
+    await overlayLoading;
+    return result;
+  };
 
   const startupIds = info.activation.includes("onStartupFinished");
   decls = declaredSettings(id, info.contributes.settings, (text) =>
@@ -1498,11 +1510,12 @@ export function createMockHost(
       return {
         close: () => overlayClose?.(),
         render() {
-          if (!deps) {
+          const d = deps ?? overlayDeps;
+          if (!d) {
             throw notSetUp("overlays need react and @testing-library/react");
           }
-          return deps.rtl.render(
-            deps.react.createElement(open.component, {
+          return d.rtl.render(
+            d.react.createElement(open.component, {
               close: () => overlayClose?.(),
             }),
           );
