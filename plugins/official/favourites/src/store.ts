@@ -29,18 +29,32 @@ export function createStore(ctx: PluginContext): FavouritesStore {
   const listeners = new Set<() => void>();
   const emit = () => listeners.forEach((l) => l());
 
+  // Set when the last read failed: the list is then unknown, not empty, so it must never be saved.
+  let loadFailed = false;
+  // Bumped when another vault opens: a save queued before that belongs to the old vault.
+  let generation = 0;
+  ctx.subscriptions.push(
+    ctx.events.on("vault.opened", () => {
+      generation++;
+    }),
+  );
+
   const load = async () => {
     try {
       const table = await ctx.vault.table.read();
       items = parseItems(table.items);
+      loadFailed = false;
     } catch {
-      items = []; // no vault open, or no permission: an empty list
+      items = []; // no vault open, or no permission: shown empty, but never saved
+      loadFailed = true;
     }
     emit();
   };
 
-  const save = async () => {
-    const value = serialize(items);
+  const save = async (value: ReturnType<typeof serialize>, gen: number) => {
+    if (gen !== generation) {
+      return; // the vault changed since this change was made
+    }
     try {
       await ctx.vault.table.update([
         { key: "items", value: value.length ? value : null },
@@ -49,6 +63,22 @@ export function createStore(ctx: PluginContext): FavouritesStore {
       ctx.ui.toast("Could not save favourites");
       ctx.log.warn(e instanceof Error ? e.message : String(e));
     }
+  };
+
+  const commit = async (next: readonly Favourite[], gen: number) => {
+    if (loadFailed) {
+      // `next` was built on an unknown list; `reload()` (next vault.opened, toggle, jump) retries the read.
+      ctx.ui.toast("Favourites could not be read; not saving");
+      return;
+    }
+    if (gen !== generation) {
+      return; // another vault opened since the change was made
+    }
+    items = next;
+    emit();
+    const value = serialize(items);
+    chain = chain.then(() => save(value, gen));
+    return chain;
   };
 
   const inflight = new Set<Promise<void>>();
@@ -76,15 +106,20 @@ export function createStore(ctx: PluginContext): FavouritesStore {
       await chain;
     },
     set(next) {
-      items = next;
-      emit();
-      chain = chain.then(save);
-      return chain;
+      return commit(next, generation);
     },
     update(change) {
+      const gen = generation; // the vault this change was made in
       const run = (async () => {
         await ready();
-        await this.set(change(items));
+        if (loadFailed) {
+          await load(); // one more try before giving up
+        }
+        if (loadFailed) {
+          ctx.ui.toast("Favourites could not be read; not saving");
+          return;
+        }
+        await commit(change(items), gen);
       })();
       inflight.add(run);
       const done = () => void inflight.delete(run);

@@ -144,4 +144,38 @@ describe("favourites plugin", () => {
     expect(p.workspace.opened().map((o) => o.path)).toEqual(["Z/A.excalidraw"]);
     expect(items(p)).toEqual([{ path: "Z/A.excalidraw" }]);
   });
+
+  it("a failed read never turns into a save of an empty list", async () => {
+    p = await boot(manifest(), plugin);
+    await p.chooseMenuItem("tree", "Favourite: add or remove", {
+      path: "A.excalidraw",
+      kind: "drawing",
+    });
+    expect(items(p)).toHaveLength(1);
+    p.vault.setVault(null); // reads fail: no vault
+    p.events.emit("vault.opened", { name: "x" });
+    await new Promise((r) => setTimeout(r, 20));
+    p.events.emit("drawing.deleted", { path: "Other.excalidraw" });
+    await new Promise((r) => setTimeout(r, 20));
+    p.vault.setVault({ name: "v", readOnly: false });
+    expect(items(p)).toEqual([{ path: "A.excalidraw" }]); // still there
+    p.events.emit("drawing.renamed", {
+      from: "A.excalidraw",
+      to: "B.excalidraw",
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(items(p)).toEqual([{ path: "B.excalidraw" }]); // retried the read, then saved
+  });
+
+  it("a change made before a vault switch is not written into the new vault", async () => {
+    p = await boot(manifest(), plugin);
+    await p.chooseMenuItem("tree", "Favourite: add or remove", {
+      path: "A.excalidraw",
+      kind: "drawing",
+    });
+    p.events.emit("drawing.deleted", { path: "A.excalidraw" });
+    p.events.emit("vault.opened", { name: "other" }); // the switch lands before the save runs
+    await new Promise((r) => setTimeout(r, 30));
+    expect(items(p)).toEqual([{ path: "A.excalidraw" }]); // the delete was not saved here
+  });
 });

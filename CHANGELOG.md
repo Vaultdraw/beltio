@@ -4,6 +4,10 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Fixed
+
+- **Table paste and Favourites safety.** With `on_paste = "always"` a table over the limits is now pasted as text instead of being swallowed; pastes over 256,000 characters are no longer parsed (a huge CSV no longer throws). Favourites no longer saves after a failed read (which could wipe the list) and no longer writes a change into another vault after a vault switch.
+
 ## [0.2.0] - 2026-10-28
 
 The plugin platform, Markdown notes with Obsidian vaults, Linux builds and memory work. See [RELEASE-NOTES.md](RELEASE-NOTES.md).

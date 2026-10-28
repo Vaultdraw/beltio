@@ -22,5 +22,5 @@ flowchart LR
 
 - Recognised: tab-separated (spreadsheets), CSV with quotes (comma or semicolon), Markdown pipe tables (`|---|`).
 - The table is one group of a rectangle, a shaded header row, grid lines and one text per cell, in your current stroke colour, font and size. Excalidraw text has no bold, so the header is shaded with a heavier rule under it.
-- At most 200 rows and 30 columns, and about 400 filled cells per paste (the app's limit of 500 operations per drawing step).
+- At most 200 rows and 30 columns, and about 400 filled cells per paste (the app's limit of 500 operations per drawing step). A table over the limits is pasted as text, also with `always`; text over 256,000 characters is never checked.
 - The plugin sees only the text of a paste of plain text (permission `clipboard`); copied shapes and images never reach it.

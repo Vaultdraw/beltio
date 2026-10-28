@@ -89,3 +89,15 @@ describe("splitPipeRow", () => {
     expect(splitPipeRow("a | b")).toEqual(["a", "b"]);
   });
 });
+
+describe("parseTable on huge pastes", () => {
+  it("does not throw on many short rows and refuses past the limit", () => {
+    const rows = "1,2\n".repeat(120_000);
+    const t = parseTable(rows);
+    expect(t === null || t.rows.length > 200).toBe(true);
+    const pipes = "|a|b|\n".repeat(30_000);
+    expect(() => parseTable(pipes)).not.toThrow();
+    expect(() => parseTable("1,2\n".repeat(500_000))).not.toThrow(); // over the text cap: null
+    expect(parseTable("1,2\n".repeat(500_000))).toBeNull();
+  });
+});

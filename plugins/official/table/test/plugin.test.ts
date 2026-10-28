@@ -49,6 +49,15 @@ describe("table plugin", () => {
     expect(texts(p)).toHaveLength(4);
   });
 
+  it("always: a table over the limits is not swallowed, the text pastes as usual", async () => {
+    p = await boot(manifest(), plugin);
+    await p.setSetting("on_paste", "always");
+    const big = Array.from({ length: 201 }, (_, i) => `${i},x`).join("\n");
+    expect(await p.clipboard.paste(big)).toBe(false); // "pass": the editor pastes the text
+    await new Promise((r) => setTimeout(r, 20));
+    expect(texts(p)).toHaveLength(0);
+  });
+
   it("never, prose and single lines are left alone", async () => {
     p = await boot(manifest(), plugin);
     await p.setSetting("on_paste", "never");

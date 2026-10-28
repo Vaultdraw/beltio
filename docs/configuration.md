@@ -1318,9 +1318,9 @@ on_paste = "ask"       # "ask" (default), "always" or "never"
 max_col_width = 260    # widest column in pixels, 80 to 1000; longer text wraps
 ```
 
-- `ask`: the text pastes as usual and a toast offers **Insert as table**, which swaps the pasted text for the table in one undo step. `always`: the table replaces the paste. `never`: pastes are left alone. A normal paste is never changed without `always`.
+- `ask`: the text pastes as usual and a toast offers **Insert as table**, which swaps the pasted text for the table in one undo step. `always`: the table replaces the paste, except a table over the limits below, which is pasted as text (with a toast). `never`: pastes are left alone. A normal paste is never changed without `always`.
 - **Command** (palette, rebindable): `table.insert-from-clipboard` ("Insert table from clipboard") reads the clipboard text and inserts the table at the centre of the view.
-- Limits: 200 rows, 30 columns and about 400 filled cells per paste. Excalidraw text has no bold, so the header row is shaded with a heavier rule under it.
+- Limits: 200 rows, 30 columns and about 400 filled cells per paste, and text up to 256,000 characters is checked (larger pastes are never treated as tables). Excalidraw text has no bold, so the header row is shaded with a heavier rule under it.
 - Turn the plugin off with `plugins.disabled`; the plugin sees only the text of a paste of plain text (permission `clipboard`).
 
 ## Frames and presenting

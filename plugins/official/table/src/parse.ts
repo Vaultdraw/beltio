@@ -13,7 +13,7 @@ export interface ParsedTable {
   header: boolean;
 }
 
-export const LIMITS = { rows: 200, cols: 30, textChars: 2_000_000 };
+export const LIMITS = { rows: 200, cols: 30, textChars: 256_000 };
 
 const CHAR: Record<Exclude<Delimiter, "pipe">, string> = {
   tab: "\t",
@@ -22,7 +22,11 @@ const CHAR: Record<Exclude<Delimiter, "pipe">, string> = {
 };
 
 /** Splits text on `sep` with RFC 4180 quotes ("a, b", "" for a quote, quoted line breaks). */
-export function splitDelimited(text: string, sep: string): string[][] {
+export function splitDelimited(
+  text: string,
+  sep: string,
+  maxRows = Infinity,
+): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";
@@ -38,7 +42,7 @@ export function splitDelimited(text: string, sep: string): string[][] {
     rows.push(row);
     row = [];
   };
-  for (let i = 0; i < text.length; i++) {
+  for (let i = 0; i < text.length && rows.length < maxRows; i++) {
     const c = text[i];
     if (quoted) {
       if (c === '"') {
@@ -66,7 +70,7 @@ export function splitDelimited(text: string, sep: string): string[][] {
       atStart = false;
     }
   }
-  if (field !== "" || row.length > 0) {
+  if (rows.length < maxRows && (field !== "" || row.length > 0)) {
     endRow();
   }
   return rows;
@@ -84,12 +88,22 @@ function rectangular(rows: string[][], strict: boolean): string[][] | null {
   for (const r of live) {
     counts.set(r.length, (counts.get(r.length) ?? 0) + 1);
   }
-  const [mode, n] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+  let mode = 0;
+  let n = 0;
+  for (const [width, count] of counts) {
+    if (count > n) {
+      mode = width;
+      n = count;
+    }
+  }
   const need = strict ? live.length : Math.ceil(live.length * 0.8);
   if (mode < 2 || n < need) {
     return null;
   }
-  const width = Math.max(...live.map((r) => r.length));
+  let width = 0;
+  for (const r of live) {
+    width = Math.max(width, r.length); // a loop: a spread of many rows overflows the call stack
+  }
   return live.map((r) => [
     ...r.map((c) => c.trim()),
     ...Array(width - r.length).fill(""),
@@ -128,7 +142,8 @@ function parseMarkdown(text: string): ParsedTable | null {
   const lines = text
     .split(/\r?\n/)
     .map((l) => l.trim())
-    .filter((l) => l !== "");
+    .filter((l) => l !== "")
+    .slice(0, LIMITS.rows + 2); // past the row limit the table is refused anyway
   if (lines.length < 2 || !lines.every((l) => l.includes("|"))) {
     return null;
   }
@@ -162,7 +177,10 @@ export function parseTable(text: string): ParsedTable | null {
     if (!text.includes(CHAR[d])) {
       continue;
     }
-    const rows = rectangular(splitDelimited(text, CHAR[d]), d !== "tab");
+    const rows = rectangular(
+      splitDelimited(text, CHAR[d], LIMITS.rows + 2),
+      d !== "tab",
+    );
     if (rows) {
       return { rows, delimiter: d, header: true };
     }

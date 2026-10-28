@@ -18,6 +18,18 @@ const mode = (ctx: PluginContext): Mode => {
   return (MODES as readonly string[]).includes(v ?? "") ? (v as Mode) : "ask";
 };
 
+const TOO_BIG_ROWS = `That table is too big (most ${LIMITS.rows} rows and ${LIMITS.cols} columns)`;
+const TOO_BIG_OPS =
+  "That table is too big for one drawing step (about 400 filled cells); paste it in parts";
+
+/** Why `table` cannot be inserted (`extra` = elements the same step deletes), or null when it fits. */
+function whyNot(table: ParsedTable, extra = 0): string | null {
+  if (table.rows.length > LIMITS.rows || table.rows[0].length > LIMITS.cols) {
+    return TOO_BIG_ROWS;
+  }
+  return opCount(table) + extra > MAX_OPS ? TOO_BIG_OPS : null;
+}
+
 /** Inserts `table` (top-left at `at`, or centred in view); `drop` ids are deleted in the same undo step. */
 async function insert(
   ctx: PluginContext,
@@ -25,16 +37,9 @@ async function insert(
   at: { x: number; y: number } | null,
   drop: readonly string[] = [],
 ): Promise<boolean> {
-  if (table.rows.length > LIMITS.rows || table.rows[0].length > LIMITS.cols) {
-    ctx.ui.toast(
-      `That table is too big (most ${LIMITS.rows} rows and ${LIMITS.cols} columns)`,
-    );
-    return false;
-  }
-  if (opCount(table) + drop.length > MAX_OPS) {
-    ctx.ui.toast(
-      "That table is too big for one drawing step (about 400 filled cells); paste it in parts",
-    );
+  const why = whyNot(table, drop.length);
+  if (why) {
+    ctx.ui.toast(why);
     return false;
   }
   const { fontFamily, fontSize } = ctx.scene.currentTextStyle();
@@ -93,6 +98,11 @@ export default definePlugin({
         return "pass";
       }
       if (m === "always") {
+        if (whyNot(table)) {
+          // Too big to insert: let the editor paste the text instead of swallowing the paste.
+          ctx.ui.toast("That table is too big, pasted as text");
+          return "pass";
+        }
         void insert(ctx, table, null).catch((e) =>
           ctx.log.warn("Inserting the table failed", e),
         );
