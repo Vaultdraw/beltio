@@ -512,10 +512,16 @@ test("a plugin nobody confirmed asks before it runs, and a community plugin cann
   // `stranger` declares no permission and has no consent record, and `plugins.enabled` lists it.
   await openVault(page, "?plugins=stranger");
   await page.waitForFunction(() => (window as any).__pluginsReady === true);
+  // One startup notice says the plugin is off, and its Review button opens Settings, Plugins.
+  const notice = page.getByText(/off until you review it: Stranger/i);
+  await expect(notice).toBeVisible();
+  await page.getByRole("button", { name: "Review", exact: true }).click();
+  await expect(settingsModal(page)).toBeVisible();
   await openSettingsTab(page, "Plugins");
   const row = page.getByTestId("plugin-stranger");
   await expect(row).toContainText("Needs review");
   await expect(row).toContainText("not confirmed");
+  await expect(row).toContainText("stays off until you review it");
   await row.getByRole("button", { name: "Review Stranger" }).click();
   const dialog = page.getByRole("dialog", { name: "Review Stranger" });
   await expect(dialog).toContainText("switched off");

@@ -154,7 +154,7 @@ export const PluginRow = ({
           {info.review.state === "review" && (
             <div className="vault-plugin__problem" role="status">
               {reviewIsFirst(info)
-                ? "Needs review: you have not confirmed this plugin yet. "
+                ? "Needs review: you have not confirmed this plugin yet. It stays off until you review it. "
                 : `Needs review: new permission ${info.review.added
                     .map(permissionText)
                     .join(", ")}. `}

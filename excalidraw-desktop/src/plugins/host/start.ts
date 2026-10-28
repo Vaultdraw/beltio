@@ -17,6 +17,7 @@ import { installImportRunner } from "./importers";
 import { setDevLogSink } from "./errors";
 import { ensureDevListener } from "./manage";
 import { setPluginsList } from "./pluginsState";
+import { noticePluginsWaitingForReview } from "./reviewNotice";
 import { registerSafeModeCommands } from "./safeModeCommands";
 import { registerStatusBarCommands } from "./statusBarCommands";
 
@@ -62,6 +63,9 @@ export async function startPluginHost(
     startupDone = applyPlugins(win, schedule) ?? startupDone;
   };
   apply();
+  if (list.safeMode === null) {
+    noticePluginsWaitingForReview(list.plugins, enabledPluginIds(win));
+  }
   ensureDevListener();
   const off = subscribePreferences(apply);
   performance.mark("vaultdraw:plugins:started");
