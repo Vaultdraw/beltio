@@ -1350,6 +1350,23 @@
         }
       }
     },
+    "sync": {
+      "type": "object",
+      "description": "Vaults inside iCloud Drive, Dropbox, Syncthing or OneDrive. See [Sync services](#sync-services).",
+      "additionalProperties": false,
+      "properties": {
+        "conflict_badge": {
+          "description": "Show a `conflict` badge on conflict copies (`name (conflicted copy …)`, `name.sync-conflict-…`, `name 2`) in the file tree.",
+          "default": true,
+          "type": "boolean"
+        },
+        "download_placeholders": {
+          "description": "Ask iCloud to download a drawing that shows as not downloaded when you click it. Off: only its Download button does.",
+          "default": true,
+          "type": "boolean"
+        }
+      }
+    },
     "memory": {
       "type": "object",
       "description": "Memory kept by open drawings. See [Memory](#memory).",

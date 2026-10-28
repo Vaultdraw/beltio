@@ -296,6 +296,15 @@ export class DesktopVaultRepository implements VaultRepository {
     }
   }
 
+  async downloadPlaceholder(handle: string, path: string): Promise<void> {
+    const invoke = await this.getInvoke();
+    try {
+      await invoke<void>("sync_download_placeholder", { handle, path });
+    } catch (err) {
+      throw normalizeError(err);
+    }
+  }
+
   async trash(handle: string, path: string): Promise<void> {
     const invoke = await this.getInvoke();
     try {

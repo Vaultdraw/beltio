@@ -361,6 +361,19 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
     },
   },
   {
+    table: "sync",
+    intro:
+      "Vaults inside iCloud Drive, Dropbox, Syncthing or OneDrive. See [Sync services](#sync-services).",
+    keys: {
+      conflict_badge: {
+        doc: "Show a `conflict` badge on conflict copies (`name (conflicted copy …)`, `name.sync-conflict-…`, `name 2`) in the file tree.",
+      },
+      download_placeholders: {
+        doc: "Ask iCloud to download a drawing that shows as not downloaded when you click it. Off: only its Download button does.",
+      },
+    },
+  },
+  {
     table: "memory",
     intro: "Memory kept by open drawings. See [Memory](#memory).",
     keys: {

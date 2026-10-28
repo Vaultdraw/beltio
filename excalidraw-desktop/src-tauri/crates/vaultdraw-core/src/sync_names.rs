@@ -198,6 +198,16 @@ mod tests {
     }
 
     #[test]
+    fn matches_the_shared_fixtures() {
+        let fx: serde_json::Value = serde_json::from_str(include_str!("../../../../src/vault/fixtures/syncnames.json")).unwrap();
+        let opt = |v: &serde_json::Value| v.as_str().map(str::to_owned);
+        for c in fx["conflict"].as_array().unwrap() { assert_eq!(conflict_original(c[0].as_str().unwrap()), opt(&c[1]), "{}", c[0]); }
+        for c in fx["numbered"].as_array().unwrap() { assert_eq!(numbered_copy_original(c[0].as_str().unwrap()), opt(&c[1]), "{}", c[0]); }
+        for c in fx["placeholder"].as_array().unwrap() { assert_eq!(placeholder_real_name(c[0].as_str().unwrap()).map(str::to_owned), opt(&c[1]), "{}", c[0]); }
+        for c in fx["temp"].as_array().unwrap() { assert_eq!(is_sync_temp_name(c[0].as_str().unwrap()), c[1].as_bool().unwrap(), "{}", c[0]); }
+    }
+
+    #[test]
     fn temp_and_partial_files() {
         for n in ["~$Plan.md", ".~lock.a.md#", ".syncthing.Plan.excalidraw.tmp", ".dropbox.cache", "a.excalidraw.tmp", "a.md.PART", "a.excalidraw.crdownload", "a.excalidraw.sb-1a2b3c4d-AbCdEf"] {
             assert!(is_sync_temp_name(n), "{n}");

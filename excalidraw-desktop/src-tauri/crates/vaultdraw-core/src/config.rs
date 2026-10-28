@@ -300,6 +300,12 @@ autosave_delay_ms = 500
 # Seconds without input before off-screen caches are freed, 0 to 86400 (0 = never)
 # idle_purge_s = 180
 
+[sync]
+# Show a "conflict" badge on conflict copies from iCloud Drive, Dropbox or Syncthing
+# conflict_badge = true
+# Clicking an iCloud file that is not downloaded asks iCloud to fetch it
+# download_placeholders = true
+
 [extensions]
 # Built-in extensions: false = not loaded at all (no memory, no work). Changes apply live.
 # search = true       # search inside drawings (off: file names only)

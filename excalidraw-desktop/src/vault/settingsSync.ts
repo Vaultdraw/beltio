@@ -41,6 +41,7 @@ import {
 import { TABS_MAPPINGS, type TabsField } from "../tabs/tabsSettings";
 import { NOTES_MAPPINGS, type NotesField } from "../notes/notesSettings";
 import { MEMORY_MAPPINGS, type MemoryField } from "../memory/memorySettings";
+import { SYNC_MAPPINGS, type SyncField } from "../sync/syncSettings";
 import { setSafeStart, type SafeStart } from "../safeStart/state";
 import { parseBisect, setBisect } from "../extensionSwitches/bisectState";
 import { SEARCH_MAPPINGS, type SearchField } from "../search/searchSettings";
@@ -393,6 +394,7 @@ type ConfigField =
   | TabsField
   | NotesField
   | MemoryField
+  | SyncField
   | SearchField
   | LayoutField
   | ExtensionField
@@ -1027,6 +1029,7 @@ export const CONFIG_MAPPING: readonly ConfigMapping[] = [
   ...TABS_MAPPINGS,
   ...NOTES_MAPPINGS,
   ...MEMORY_MAPPINGS,
+  ...SYNC_MAPPINGS,
   ...SEARCH_MAPPINGS,
   ...LAYOUT_MAPPINGS,
   ...EXTENSION_MAPPINGS,

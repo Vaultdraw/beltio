@@ -16,6 +16,7 @@ import { TABS_SETTINGS_SCHEMA } from "../../tabs/tabsSettingsSchema";
 import { LAYOUT_SETTINGS_SCHEMA } from "../../layout/layoutSettingsSchema";
 import { SPECULATIVE_SETTINGS_SCHEMA } from "../../speculative/speculativeSettingsSchema";
 import { MEMORY_SETTINGS_SCHEMA } from "../../memory/memorySettingsSchema";
+import { SYNC_SETTINGS_SCHEMA } from "../../sync/syncSettingsSchema";
 import {
   STYLE_KEY_LABELS,
   TOOL_DEFAULT_TOOLS,
@@ -882,6 +883,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   ...TABS_SETTINGS_SCHEMA,
   ...LAYOUT_SETTINGS_SCHEMA,
   ...MEMORY_SETTINGS_SCHEMA,
+  ...SYNC_SETTINGS_SCHEMA,
   ...SERVICES_SETTINGS_SCHEMA,
   ...SPECULATIVE_SETTINGS_SCHEMA,
 

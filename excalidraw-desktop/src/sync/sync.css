@@ -1,0 +1,49 @@
+.vault-sync-compare .vault-sync-compare__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  height: min(52vh, 520px);
+}
+.vault-sync-compare__pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--vault-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.vault-sync-compare__pane header {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  border-bottom: 1px solid var(--vault-border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vault-sync-compare__count {
+  margin-left: auto;
+  color: var(--vault-text-muted);
+}
+.vault-sync-compare__canvas {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Tree badges: a conflict copy, an iCloud file not downloaded yet. */
+.vault-tree-item__sync {
+  flex-shrink: 0;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: var(--vault-warning);
+  border: 1px solid currentColor;
+}
+.vault-tree-item__sync--placeholder {
+  color: var(--vault-text-muted);
+}

@@ -53,6 +53,7 @@ import { CONFIG_COMMANDS } from "./configCommands";
 import { BACKUP_COMMANDS } from "./backupCommands";
 import { PROFILE_COMMANDS } from "./profileCommands";
 import { MEMORY_COMMANDS } from "./memoryCommands";
+import { SYNC_COMMANDS } from "./syncCommands";
 import { WATCHDOG_COMMANDS } from "./watchdogCommands";
 import { WINDOW_COMMANDS } from "./windowCommands";
 import { TOOL_COMMANDS } from "./toolCommands";
@@ -668,6 +669,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...LIST_COMMANDS,
   ...THUMBNAIL_COMMANDS,
   ...MEMORY_COMMANDS,
+  ...SYNC_COMMANDS,
   ...EXTENSION_COMMANDS,
   ...NOTES_COMMANDS,
   ...AI_COMMANDS,

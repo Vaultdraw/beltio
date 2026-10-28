@@ -13,6 +13,8 @@ import { entryDisplayName, stripDrawingExt } from "../vault/fileKind";
 
 import { getMenuItems, runMenuItem } from "../plugins/menuRegistry";
 import { getPreferences, updatePreferences } from "../vault/preferences";
+import { useGlobalPref } from "../vault/useGlobalPref";
+import "../sync/sync.css";
 import { SORT_LABELS, SORT_ORDERS, type SortOrder } from "../vault/sortOrder";
 import { checkTreeDrop, getParentPath } from "../vault/treeStore";
 
@@ -186,6 +188,11 @@ interface VaultNavigatorProps {
   onOpenLocalGraph?: (path: string) => void | Promise<void>;
   /** Drawing rows: "History", the History panel of that drawing. */
   onShowHistory?: (path: string) => void | Promise<void>;
+  /** Sync-service rows: a click on a not-downloaded file, and the row menu's compare / download. */
+  onSyncAction?: (
+    entry: VaultEntry,
+    action: "compare" | "download" | "open",
+  ) => void;
   ownerDocument?: Document | null;
 }
 
@@ -231,6 +238,7 @@ export const VaultNavigator = ({
   graphOpen = false,
   onOpenLocalGraph,
   onShowHistory,
+  onSyncAction,
   ownerDocument,
 }: VaultNavigatorProps) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -479,8 +487,13 @@ export const VaultNavigator = ({
   }, [focusedPath, rows, scrollToRow]);
 
   // Row handlers keep one identity so memoised rows skip unrelated renders.
-  const live = useRef({ onOpenDrawing, onOpenNote, onToggleFolder });
-  live.current = { onOpenDrawing, onOpenNote, onToggleFolder };
+  const live = useRef({
+    onOpenDrawing,
+    onOpenNote,
+    onToggleFolder,
+    onSyncAction,
+  });
+  live.current = { onOpenDrawing, onOpenNote, onToggleFolder, onSyncAction };
   /** Opens a file row by its kind: drawings and Obsidian Excalidraw files as drawings, notes via the notes hook. */
   const openEntry = useCallback(
     (path: string, kind: EntryKind, newTab?: boolean) => {
@@ -496,8 +509,11 @@ export const VaultNavigator = ({
   const onRowSelect = useCallback(
     (path: string, kind: EntryKind, newTab?: boolean) => {
       setFocusedPath(path);
+      const entry = rowsRef.current.find((r) => r.entry.path === path)?.entry;
       if (kind === "folder") {
         live.current.onToggleFolder(path);
+      } else if (entry?.sync === "placeholder" && live.current.onSyncAction) {
+        live.current.onSyncAction(entry, "open");
       } else {
         openEntry(path, kind, newTab);
       }
@@ -526,9 +542,12 @@ export const VaultNavigator = ({
   // is stable and computes actions from this snapshot only on demand.
   const openRow = useCallback(
     (path: string, newTab: boolean) => {
-      const kind = rowsRef.current.find((r) => r.entry.path === path)?.entry
-        .kind;
-      openEntry(path, kind ?? "drawing", newTab);
+      const entry = rowsRef.current.find((r) => r.entry.path === path)?.entry;
+      if (entry?.sync === "placeholder" && live.current.onSyncAction) {
+        live.current.onSyncAction(entry, "open");
+        return;
+      }
+      openEntry(path, entry?.kind ?? "drawing", newTab);
     },
     [openEntry],
   );
@@ -980,6 +999,7 @@ export const VaultNavigator = ({
           onOpenLocalGraph={
             onOpenLocalGraph && ((entry) => void onOpenLocalGraph(entry.path))
           }
+          onSyncAction={onSyncAction}
           onShowHistory={
             onShowHistory && ((entry) => void onShowHistory(entry.path))
           }
@@ -1269,6 +1289,7 @@ const TreeRow = memo(
           <span className="vault-tree-item__name" title={entry.path}>
             {isFolder ? entry.name : entryDisplayName(entry.name)}
           </span>
+          {entry.sync && <SyncBadge sync={entry.sync} />}
           {tags && <TagChips tags={tags} onFilter={onFilterTag} />}
         </div>
 
@@ -1329,6 +1350,7 @@ interface RowMenuProps {
   onTrash: (entry: VaultEntry) => void;
   onOpenLocalGraph?: (entry: VaultEntry) => void;
   onShowHistory?: (entry: VaultEntry) => void;
+  onSyncAction?: (entry: VaultEntry, action: "compare" | "download") => void;
 }
 
 const MENU_WIDTH = 200;
@@ -1461,6 +1483,7 @@ const RowMenu = ({
   onTrash,
   onOpenLocalGraph,
   onShowHistory,
+  onSyncAction,
 }: RowMenuProps) => {
   const { entry } = state;
   const isFolder = entry.kind === "folder";
@@ -1529,6 +1552,17 @@ const RowMenu = ({
       {isDrawing &&
         onShowHistory &&
         item("History", <IconHistory />, () => onShowHistory(entry))}
+      {isDrawing &&
+        entry.sync === "conflict" &&
+        onSyncAction &&
+        item("Compare with original…", <IconCopy />, () =>
+          onSyncAction(entry, "compare"),
+        )}
+      {entry.sync === "placeholder" &&
+        onSyncAction &&
+        item("Download from iCloud", <IconReveal />, () =>
+          onSyncAction(entry, "download"),
+        )}
       {isDrawing && onExport && (
         <>
           <div className="vault-menu__separator" role="separator" />
@@ -1576,5 +1610,30 @@ const RowMenu = ({
         </>
       )}
     </MenuPopup>
+  );
+};
+
+/** "conflict" or "not downloaded" next to a tree row's name. Mounted only for flagged rows. */
+const SyncBadge = ({ sync }: { sync: "conflict" | "placeholder" }) => {
+  const [showConflict] = useGlobalPref(undefined, "syncConflictBadge");
+  if (sync === "conflict") {
+    return showConflict ? (
+      <span
+        className="vault-tree-item__sync"
+        data-testid="sync-conflict-badge"
+        title="A sync service made this copy when two devices changed the same file. Use the row menu to compare."
+      >
+        conflict
+      </span>
+    ) : null;
+  }
+  return (
+    <span
+      className="vault-tree-item__sync vault-tree-item__sync--placeholder"
+      data-testid="sync-placeholder-badge"
+      title="iCloud has not downloaded this file yet."
+    >
+      not downloaded
+    </span>
   );
 };

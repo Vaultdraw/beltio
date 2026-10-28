@@ -1,0 +1,51 @@
+{
+  "conflict": [
+    ["Plan (conflicted copy 2026-01-01).excalidraw", "Plan.excalidraw"],
+    ["Plan (Mac's conflicted copy 2026-01-01).excalidraw", "Plan.excalidraw"],
+    ["Plan (Ana's MacBook Pro's conflicted copy 2026-01-01) (1).md", "Plan.md"],
+    ["Plan (CONFLICTED COPY x).excalidraw.md", "Plan.excalidraw.md"],
+    ["(conflicted copy x).excalidraw", null],
+    ["Plan (conflicted copy x).png", null],
+    ["Plan.excalidraw", null],
+    ["Plan.sync-conflict-20260101-120000-ABCDEFG.excalidraw", "Plan.excalidraw"],
+    ["Plan.sync-conflict-20260101-120000.md", "Plan.md"],
+    ["a.b.sync-conflict-20260101-120000-XYZ.excalidraw.md", "a.b.excalidraw.md"],
+    ["Plan.sync-conflict-2026-120000-ABC.excalidraw", null],
+    ["Plan.sync-conflict-20260101-12-ABC.excalidraw", null],
+    [".sync-conflict-20260101-120000-A.excalidraw", null],
+    ["Plan.sync-conflict-20260101-120000-A.png", null]
+  ],
+  "numbered": [
+    ["Plan 2.excalidraw", "Plan.excalidraw"],
+    ["My Plan 12.md", "My Plan.md"],
+    ["Plan 2.excalidraw.md", "Plan.excalidraw.md"],
+    ["Plan 1.excalidraw", null],
+    ["Plan 2024.excalidraw", null],
+    ["Plan2.excalidraw", null],
+    [" 2.excalidraw", null],
+    ["Plan 2.png", null]
+  ],
+  "placeholder": [
+    [".Plan.excalidraw.icloud", "Plan.excalidraw"],
+    [".Notes.md.icloud", "Notes.md"],
+    [".photo.png.icloud", null],
+    ["Plan.excalidraw.icloud", null],
+    ["..icloud", null]
+  ],
+  "temp": [
+    ["~$Plan.md", true],
+    [".~lock.a.md#", true],
+    [".syncthing.Plan.excalidraw.tmp", true],
+    [".dropbox.cache", true],
+    ["a.excalidraw.tmp", true],
+    ["a.md.PART", true],
+    ["a.excalidraw.crdownload", true],
+    ["a.excalidraw.sb-1a2b3c4d-AbCdEf", true],
+    ["Plan.excalidraw", false],
+    ["Plan.md", false],
+    ["tmp.excalidraw", false],
+    ["a.sb-.md", false],
+    ["Plan 2.excalidraw", false],
+    ["Plan (conflicted copy x).excalidraw", false]
+  ]
+}

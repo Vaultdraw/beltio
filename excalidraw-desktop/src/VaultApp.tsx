@@ -178,6 +178,7 @@ import { QuickSwitcher } from "./components/QuickSwitcher";
 import { Banner } from "./components/Banner";
 import { Toasts } from "./components/Toasts";
 import { toastStore } from "./toasts/toastStore";
+import { useSyncConflicts } from "./sync/useSyncConflicts";
 import { describeReadOnly } from "./vault/readOnlyReason";
 import { AiHost } from "./ai/AiHost";
 import { WatchdogHost } from "./watchdog/WatchdogHost";
@@ -1419,6 +1420,16 @@ export const VaultApp = ({
       return false;
     }
   };
+
+  // Sync services: conflict copies (compare, keep one) and iCloud files not downloaded yet.
+  const sync = useSyncConflicts({
+    repository,
+    history,
+    vault,
+    activePath: activeDoc?.path ?? null,
+    theme: appTheme === "dark" ? "dark" : "light",
+    openDrawing: (path) => handleOpenDrawing(path),
+  });
 
   // Search result: open the drawing (unless active), then focus the element.
   const handleOpenSearchResult = async (
@@ -3032,6 +3043,7 @@ export const VaultApp = ({
           graphOpen={graphOpen}
           onOpenLocalGraph={ext.graph ? openLocalGraph : undefined}
           onShowHistory={ext.history ? showHistory : undefined}
+          onSyncAction={sync.onSyncAction}
           onOpenDrawing={handleOpenDrawing}
           search={searchUi}
           tagSearch={ext.tags ? vaultSearch ?? undefined : null}
@@ -3095,6 +3107,8 @@ export const VaultApp = ({
           onExit={() => void runCommand(LAYOUT_COMMAND_IDS.exitFocus)}
         />
       )}
+
+      {sync.dialog}
 
       {showConflictDialog && activeDoc && (
         <ConflictDialog

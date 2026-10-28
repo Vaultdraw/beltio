@@ -5,6 +5,7 @@ import { servicesControls } from "../../../services/servicesSettingsControls";
 import { tabsControls } from "../../../tabs/tabsSettingsControls";
 import { layoutControls } from "../../../layout/layoutSettingsControls";
 import { memoryControls } from "../../../memory/memorySettingsControls";
+import { syncControls } from "../../../sync/syncSettingsControls";
 
 import { aboutControls } from "./About";
 import { appearanceControls } from "./Appearance";
@@ -40,6 +41,7 @@ export const SETTING_CONTROLS: SettingControls = {
   ...tabsControls,
   ...layoutControls,
   ...memoryControls,
+  ...syncControls,
   ...servicesControls,
   ...speculativeControls,
   ...drawingControls,

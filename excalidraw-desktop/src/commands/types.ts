@@ -33,6 +33,7 @@ export type BuiltinCommandCategory =
   | "Canvas"
   | "Extensions"
   | "Notes"
+  | "Sync"
   | "Help";
 
 export type CommandCategory = BuiltinCommandCategory | (string & {});

@@ -23,6 +23,10 @@ export type VaultEntry = {
   kind: EntryKind;
   modifiedAt: number;
   size: number;
+  /** Sync-service state: a conflict copy, or an iCloud file that is not downloaded yet. */
+  sync?: "conflict" | "placeholder";
+  /** For a conflict copy: the path of the file it conflicts with. */
+  conflictOf?: string;
 };
 
 export type DrawingFile = { json: string; revision: string };
@@ -55,6 +59,8 @@ export interface VaultRepository {
   createFolder(handle: string, path: string): Promise<void>;
   move(handle: string, from: string, to: string): Promise<void>;
   trash(handle: string, path: string): Promise<void>;
+  /** Asks iCloud to download a file listed as `sync: "placeholder"`; returns at once. */
+  downloadPlaceholder?(handle: string, path: string): Promise<void>;
   reveal(handle: string, path: string): Promise<void>;
   /** Opens the vault's crash-recovery folder in the OS file manager. */
   revealRecovery(handle: string): Promise<void>;

@@ -1407,6 +1407,29 @@ Big images are the largest thing a drawing keeps in memory. Vaultdraw releases a
 - Changes apply live: edit `config.toml` or Settings and the next idle pass uses the new values.
 - **When caches are freed.** `memory.hidden_purge_s` (default 120) is how long the window stays hidden before every cache is freed; `memory.idle_purge_s` (default 180) is how long without input before off-screen caches are freed. 0 turns a trigger off. Shorter values suit a 4 GB Mac.
 
+## Sync services
+
+A vault can live inside iCloud Drive, Dropbox, Syncthing or OneDrive. Vaultdraw never overwrites a file a sync service changed behind its back, and it keeps the leftovers of syncing out of your way.
+
+| Key | Settings | Default | What it does |
+| --- | --- | --- | --- |
+| `sync.conflict_badge` | Interface → Sync services | `true` | Shows a `conflict` badge on conflict copies in the file tree. |
+| `sync.download_placeholders` | Interface → Sync services | `true` | Clicking an iCloud file that is not downloaded asks iCloud to fetch it. `false`: only **Download from iCloud** in the row menu does. |
+
+| What the sync service leaves | What Vaultdraw does |
+| --- | --- |
+| Conflict copies: `name (conflicted copy …)`, `name (Mac's conflicted copy …)` (Dropbox), `name.sync-conflict-…` (Syncthing), `name 2` next to `name` (iCloud) | Listed in the tree with a `conflict` badge, searchable like any file. Never merged or deleted by itself. |
+| iCloud placeholders: `.name.excalidraw.icloud` | Shown as `name` with a `not downloaded` badge. The stub is never read as the drawing, so an empty file is never opened or saved. |
+| Temporary or partial files: `~$x`, `x.tmp`, `x.part`, `x.crdownload`, `.syncthing.*`, `.dropbox*`, `x.sb-…` | Left out of the tree, the search index and the file watcher. Always on. |
+
+**Compare and keep one.** Open the row menu (⋯) of a conflict copy and choose **Compare with original…**, or run `Sync: Compare with conflict copy` for the open drawing (it finds its conflict copy, or its original when the open drawing is the copy). The two versions show side by side, read-only. **Keep the original** or **Keep the conflict copy** saves the version you do not keep in the original's History, then moves the conflict copy to the Trash. Nothing is deleted outright. If the original changed on disk again meanwhile, the save is refused and both files stay.
+
+The commands `Sync: Keep this version (the other goes to history)` and `Sync: Keep the other version (this one goes to history)` do the same for the open drawing without the dialog. All three are in the command palette and rebindable in `[hotkeys]`.
+
+**Saving over a changed file.** Every save checks the file's revision against what you opened. If a sync service replaced the file meanwhile, the save is refused and the editor shows its usual conflict banner (reload, or save your edits as a copy). This holds for drawings and notes alike.
+
+Limits: Compare and keep work for `.excalidraw` drawings (conflict copies of notes get the badge, and you resolve them in the file tree or your file manager). OneDrive's `name-COMPUTER.ext` copies are not recognised, since the name cannot be told from a normal one.
+
 ## Extensions
 
 Built-in features you can turn off. Off means not loaded: the feature registers no command, starts no service and uses no memory. Turn them on or off in **Settings → Extensions**, with the palette ("Extensions: Toggle Graph view", one command per extension, rebindable in `[hotkeys]`), or in `config.toml`. Changes apply at once.
@@ -1940,6 +1963,15 @@ What focus mode hides (`View: Focus mode`). See [Layout and focus mode](#layout-
 | `hide` | every part | a list of part names |  | The parts focus mode hides: `header`, `navigator`, `activity_bar`, `tab_strip`, `footer`, `status_bar`. The canvas and the drawing toolbar always stay. |
 | `remember` | `false` | true or false |  | Open in focus mode when it was on at the last quit. |
 | `hint` | `false` | true or false |  | Show a small `Focus` chip (with the exit key) while focus mode is on. |
+
+### `[sync]`
+
+Vaults inside iCloud Drive, Dropbox, Syncthing or OneDrive. See [Sync services](#sync-services).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `conflict_badge` | `true` | true or false |  | Show a `conflict` badge on conflict copies (`name (conflicted copy …)`, `name.sync-conflict-…`, `name 2`) in the file tree. |
+| `download_placeholders` | `true` | true or false |  | Ask iCloud to download a drawing that shows as not downloaded when you click it. Off: only its Download button does. |
 
 ### `[memory]`
 
