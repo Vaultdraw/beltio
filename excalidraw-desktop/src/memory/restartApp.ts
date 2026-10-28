@@ -1,4 +1,3 @@
-import { getPluginsBackend } from "../plugins/host/backend";
 import { flushSettings } from "../vault/settingsSync";
 
 /** The running canvases were created with this memory.low_memory_canvas value. */
@@ -18,5 +17,7 @@ export async function restartApp(): Promise<void> {
   } catch {
     // the relaunch still goes ahead; settings are written as they change
   }
+  // lazy: keeps the plugin host out of the startup import graph
+  const { getPluginsBackend } = await import("../plugins/host/backend");
   await getPluginsBackend().restart();
 }
