@@ -1,0 +1,15 @@
+[
+  ["Figure 2019", "Figure 2019", null, null],
+  ["Photo 3", "Photo 3", null, null],
+  ["Room 101x2", "Room 101x2", null, null],
+  ["300", "", 300, null],
+  ["300x200", "", 300, 200],
+  ["Logo|300", "Logo", 300, null],
+  ["Logo | 300", "Logo", 300, null],
+  ["Logo|300x200", "Logo", 300, 200],
+  ["a|b|120", "a|b", 120, null],
+  ["Logo|big", "Logo|big", null, null],
+  ["|300", "", 300, null],
+  ["", "", null, null],
+  ["Chapter 3 | 640", "Chapter 3", 640, null]
+]

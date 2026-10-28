@@ -525,3 +525,17 @@ fn take_block_id(text: &mut String) -> Option<String> {
     text.truncate(text.trim_end().len());
     Some(id)
 }
+
+#[cfg(test)]
+mod alt_size_parity {
+    /// One table for the Rust parser and the importer's TypeScript copy (bug hunt BH-1: the
+    /// copy drifted and read "Photo 3" as 3 px wide). The TS test reads the same file.
+    #[test]
+    fn alt_and_size_matches_the_shared_table() {
+        let cases: Vec<(String, String, Option<u32>, Option<u32>)> =
+            serde_json::from_str(include_str!("alt_size_cases.json")).unwrap();
+        for (input, alt, w, h) in cases {
+            assert_eq!(super::alt_and_size(&input), (alt, w, h), "{input:?}");
+        }
+    }
+}

@@ -25,18 +25,26 @@ const decode = (s: string): string => {
   }
 };
 
-/** `alt|300` or `alt|300x200`: the alt text and the size. */
-const altAndSize = (
+const SIZE = /^\s*(\d+)(?:x(\d+))?\s*$/;
+
+/**
+ * `alt|300`, `alt|300x200` or a bare `300`: the alt text and the size. Only the part after the
+ * last `|` (or the whole alt) is a size, so "Photo 3" stays alt text. Mirrors the Rust parser's
+ * `alt_and_size`; both are pinned by `vaultdraw-core/src/markdown/alt_size_cases.json`.
+ */
+export const altAndSize = (
   s: string,
 ): { alt: string; width?: number; height?: number } => {
-  const m = /^(.*?)\|?\s*(\d+)(?:x(\d+))?$/.exec(s.trim());
-  if (!m || (m[1] === "" && !/^\d/.test(s.trim()))) {
+  const bar = s.lastIndexOf("|");
+  const [alt, last] = bar >= 0 ? [s.slice(0, bar), s.slice(bar + 1)] : ["", s];
+  const m = SIZE.exec(last);
+  if (!m) {
     return { alt: s.trim() };
   }
   return {
-    alt: m[1].trim(),
-    width: Number(m[2]),
-    ...(m[3] ? { height: Number(m[3]) } : {}),
+    alt: alt.trim(),
+    width: Number(m[1]),
+    ...(m[2] ? { height: Number(m[2]) } : {}),
   };
 };
 
