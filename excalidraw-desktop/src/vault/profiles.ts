@@ -35,7 +35,7 @@ export const getProfiles = () => {
   return { active: status.profile ?? null, profiles: status.profiles ?? [] };
 };
 
-const useProfile = (name: string | null) =>
+const applyProfile = (name: string | null) =>
   profileCall("profile_use", {
     name: name === DEFAULT_PROFILE ? null : name,
   });
@@ -49,7 +49,7 @@ let globalChoice: { name: string | null } | undefined;
 /** Switch to a profile; `null` or `default` goes back to the plain config. A manual switch is the new global choice. */
 export const switchProfile = (name: string | null) => {
   globalChoice = undefined;
-  return useProfile(name);
+  return applyProfile(name);
 };
 
 /** Create a profile, empty or copied from another (`default` copies Settings changes). */
@@ -77,7 +77,7 @@ export async function applyVaultProfile(handle: string): Promise<void> {
       if (globalChoice) {
         const back = globalChoice.name;
         globalChoice = undefined;
-        await useProfile(back);
+        await applyProfile(back);
         toastStore.push({
           message: `Profile "${back ?? DEFAULT_PROFILE}" (your choice).`,
         });
@@ -95,7 +95,7 @@ export async function applyVaultProfile(handle: string): Promise<void> {
       return;
     }
     globalChoice ??= { name: getProfiles().active };
-    await useProfile(name);
+    await applyProfile(name);
     toastStore.push({ message: `Profile "${name}" (set by this vault).` });
   } catch {
     // A vault without the file, or one that is closing: nothing to apply.
