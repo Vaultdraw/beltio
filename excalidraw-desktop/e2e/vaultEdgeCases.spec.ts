@@ -2,6 +2,15 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { enterVault, openVault, trackErrors } from "./helpers";
 import {
+  openPanelByShortcut,
+  panel,
+  PATH as GRAPHS,
+  rectEl,
+  rows,
+  runPaletteCommand,
+  setup as setupHistory,
+} from "./historyHelpers";
+import {
   activeTab,
   clickTree,
   expectShown,
@@ -891,6 +900,20 @@ test("Obsidian vault: browsing changes no byte, hidden folders are not listed, p
       () => (window as any).__vaultRepo.writeCalls.length as number,
     ),
   ).toBe(writes);
+  // "Save a copy" hands the plugin file's bytes out; the vault copy stays as it was.
+  await rowByName(page, "Plugin Sketch")
+    .locator(".vault-tree-item__name")
+    .click();
+  await expect(page.getByTestId("excalidraw-md-banner")).toBeVisible();
+  await runPaletteCommand(page, "Save a copy");
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as any).__vaultRepo.exported.map((e: any) => e.name as string),
+      ),
+    )
+    .toContainEqual(expect.stringMatching(/Plugin Sketch/));
+  expect(await snapshot()).toEqual(before);
   expect(errors).toEqual([]);
 });
 
@@ -1057,5 +1080,319 @@ test("backup: Settings offers back up and restore, and says where the zip went",
   await expect(
     d.getByRole("button", { name: "Restore from backup…" }),
   ).toBeEnabled();
+  expect(errors).toEqual([]);
+});
+
+// ---------------------------------------------------------------------------
+// History: checkpoint, restore, a deleted drawing, history off
+
+test("history: checkpoint, restore as a copy, a deleted drawing, history off", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  const anchor = rectEl("anc", 0, 0, null, 200, 120, 9);
+  const small = rectEl("a", 40, 40, null, 80, 60, 1);
+  const json = (els: unknown[]) =>
+    JSON.stringify({
+      type: "excalidraw",
+      version: 2,
+      elements: els,
+      appState: {},
+      files: {},
+    });
+  await setupHistory(
+    page,
+    [anchor, small],
+    [
+      { json: json([anchor]) },
+      {
+        json: json([anchor, small]),
+        partial: { reason: "checkpoint", name: "Ünï ✨ first", note: null },
+      },
+    ],
+  );
+  await openPanelByShortcut(page);
+  await expect(rows(page)).toHaveCount(2);
+  await expect(rows(page).first()).toContainText("Checkpoint: Ünï ✨ first");
+
+  // A new checkpoint through the palette dialog, with an odd name.
+  await runPaletteCommand(page, "History: Create checkpoint");
+  const cp = page.getByRole("dialog", { name: "Create checkpoint" });
+  await cp.getByLabel("Name").fill('Second 🎯 "quoted"');
+  await cp.getByRole("button", { name: /Create|Save/ }).click();
+  await expect(rows(page).filter({ hasText: "Second 🎯" })).toHaveCount(1);
+
+  // Restore the oldest version as a copy: the original is untouched, the copy exists and has its content.
+  const original = await readFake(page, GRAPHS);
+  await rows(page).last().click();
+  await page.getByTestId("history-restore").click();
+  await page
+    .getByRole("dialog", { name: /^Restore / })
+    .getByRole("button", { name: "Restore as a copy" })
+    .click();
+  await expect(
+    page
+      .locator(".vd-toast")
+      .filter({ hasText: "Restored as Graphs (restored" }),
+  ).toHaveCount(1);
+  expect(await readFake(page, GRAPHS)).toBe(original);
+  const copyPath = (await allPaths(page)).find((p) =>
+    p.startsWith("DSA/Graphs (restored"),
+  )!;
+  expect(copyPath).toBeTruthy();
+  expect(
+    JSON.parse((await readFake(page, copyPath))!).elements.map(
+      (e: any) => e.id,
+    ),
+  ).toEqual(["anc"]);
+
+  // The drawing is deleted outside the app while open: History can still restore it as a copy.
+  await page.evaluate(
+    (p) => (window as any).__vaultRepo.externalDelete(p),
+    GRAPHS,
+  );
+  await expect.poll(() => readFake(page, GRAPHS)).toBeNull();
+  await rows(page).filter({ hasText: "Ünï ✨ first" }).click();
+  await page.getByTestId("history-restore").click();
+  const restoreDialog = page.getByRole("dialog", { name: /^Restore / });
+  await expect(restoreDialog).toBeVisible();
+  const replace = restoreDialog.getByRole("button", {
+    name: "Replace current drawing",
+  });
+  if ((await replace.count()) > 0) {
+    await expect(replace).toBeDisabled();
+  }
+  await restoreDialog
+    .getByRole("button", { name: "Restore as a copy" })
+    .click();
+  await expect
+    .poll(
+      async () =>
+        (
+          await allPaths(page)
+        ).filter((p) => p.startsWith("DSA/Graphs (restored")).length,
+    )
+    .toBe(2);
+  expect(errors).toEqual([]);
+});
+
+test("history off: the setting stops new versions and the panel says so", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  const anchor = rectEl("anc", 0, 0, null, 200, 120, 9);
+  await setupHistory(page, [anchor], []);
+  await page
+    .getByLabel("Vault File Navigator")
+    .getByRole("button", { name: "Settings" })
+    .click();
+  const d = page
+    .getByRole("dialog")
+    .filter({ has: page.getByRole("tab", { name: "History" }) });
+  await d.getByRole("tab", { name: "History" }).click();
+  const kill = d
+    .locator('[data-setting-id="history-enabled"]')
+    .getByRole("switch", { name: "Enable history" });
+  await expect(kill).toBeChecked();
+  await kill.click();
+  await expect(kill).not.toBeChecked();
+  await d.getByRole("button", { name: "Close Settings" }).click();
+  const countBefore = await page.evaluate(
+    (p) => (window as any).__historyRepo.allVersions(p).length as number,
+    GRAPHS,
+  );
+  // Edit and save: no version is added.
+  const box = (await page
+    .locator(".vault-editor canvas.interactive")
+    .boundingBox())!;
+  await page.locator(".vault-editor [data-testid='toolbar-rectangle']").click();
+  await page.mouse.move(box.x + 500, box.y + 400);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 580, box.y + 460, { steps: 4 });
+  await page.mouse.up();
+  await expect
+    .poll(
+      async () => JSON.parse((await readFake(page, GRAPHS))!).elements.length,
+    )
+    .toBeGreaterThan(1);
+  await page.waitForTimeout(500);
+  expect(
+    await page.evaluate(
+      (p) => (window as any).__historyRepo.allVersions(p).length as number,
+      GRAPHS,
+    ),
+  ).toBe(countBefore);
+  await openPanelByShortcut(page);
+  await expect(panel(page)).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+// ---------------------------------------------------------------------------
+// Search, favourites, library
+
+const textScene = (...texts: string[]) =>
+  sceneJson(
+    [],
+    texts.map((t, i) => textEl(`s${i}`, t, i * 40)),
+  );
+
+test("search: names, text, accents, emoji, odd characters, tags, and a deleted drawing", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page, "?seed=empty");
+  await seedDrawings(page, {
+    "Alpha plan.excalidraw": textScene(
+      "quarterly roadmap",
+      "colour #ff00aa and https://x.io/p#frag",
+    ),
+    "Ünïcödé résumé.excalidraw": textScene("Crème brûlée recipe"),
+    "Emoji/Party 🎉.excalidraw": textScene("🎨 palette", "tag me #proj/alpha"),
+    "Odd.excalidraw": textScene("cost is a(b)*[c] + d?"),
+    "Notes dir/Other.excalidraw": textScene("another #proj/beta thing"),
+  });
+  await rescan(page);
+  await expect(rowByName(page, "Alpha plan")).toBeVisible();
+  const box = page.getByPlaceholder(/^Search drawings and text…/);
+  const drawingRows = page.locator('.vault-search-row[data-kind="drawing"]');
+  const names = () => drawingRows.allInnerTexts();
+  const find = async (q: string, expected: string[]) => {
+    await box.fill(q);
+    await expect
+      .poll(async () =>
+        (await names()).map((n) => n.split("\n")[0].trim()).sort(),
+      )
+      .toEqual(expected.sort());
+  };
+
+  await find("roadmap", ["Alpha plan"]); // text
+  await find("ALPHA", ["Alpha plan"]); // a name, any case
+  await find("brulee", ["Ünïcödé résumé"]); // accent-insensitive
+  await find("unicode resume", ["Ünïcödé résumé"]); // two terms, one in the name
+  await find("palette", ["Party 🎉"]); // emoji drawing, text next to it
+  await find("🎉", ["Party 🎉"]); // an emoji in the query
+  await find("a(b)*[c]", ["Odd"]); // regex characters are literal
+  await find("\\", []); // a lone backslash: no crash, no results
+  await find("x".repeat(500), []); // a very long query
+  await find("   ", []); // only spaces: nothing, no error
+  await find("tag:#proj", ["Party 🎉", "Other"]); // a tag and its children
+  await find("tag:#proj/beta", ["Other"]);
+  await find("tag:#frag", []); // a URL fragment is not a tag
+  await find("tag:#ff00aa", []); // a colour is not a tag
+  await find("zzz-nothing", []);
+  await expect(
+    page.getByText(/no (results|matches)|nothing found/i).first(),
+  ).toBeVisible();
+
+  // A deleted drawing leaves the results.
+  await box.fill("");
+  await trashVia(page, rowByName(page, "Odd"));
+  await expect.poll(() => readFake(page, "Odd.excalidraw")).toBeNull();
+  await page.evaluate(() =>
+    (window as any).__vaultSearch.setIndexState(
+      null,
+      (window as any).__vaultRepo.handle,
+    ),
+  );
+  await find("a(b)*[c]", []);
+  // Escape clears the query and the tree is back.
+  await page.keyboard.press("Escape");
+  await expect(box).toHaveValue("");
+  await expect(rowByName(page, "Alpha plan")).toBeVisible();
+});
+
+test("favourites follow a rename and drop a deleted drawing", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page, "?seed=search");
+  await rowByName(page, "DSA").locator(".vault-tree-item__name").click();
+  await rowByName(page, "Graphs").locator(".vault-tree-item__name").click();
+  await expect(page.locator(".vault-editor canvas.interactive")).toBeVisible();
+  const fav = async (name: string) => {
+    await rowByName(page, name)
+      .locator(".vault-tree-item__name")
+      .click({ button: "right" });
+    await page
+      .getByRole("menuitem", { name: "Favourite: add or remove" })
+      .click();
+  };
+  await fav("Graphs");
+  await fav("Shortest Paths");
+  await page.getByTestId("activity-bar-favourites.list").click();
+  const rowsF = page.getByTestId("favourite-row");
+  await expect(rowsF).toHaveCount(2);
+  // Toggling again removes; toggling once more brings it back at the end.
+  await fav("Graphs");
+  await expect(rowsF).toHaveCount(1);
+  await fav("Graphs");
+  await expect(rowsF).toHaveCount(2);
+  await expect(rowsF.nth(1)).toContainText("Graphs");
+
+  // Rename: the favourite keeps pointing at the same drawing.
+  expect(
+    await renameVia(page, rowByName(page, "Graphs"), "Graphs ✨ v2"),
+  ).toBeNull();
+  await expect(rowsF.filter({ hasText: "Graphs ✨ v2" })).toHaveCount(1);
+  await expect(rowsF.filter({ hasText: /^Graphs$/ })).toHaveCount(0);
+  // Delete: the row goes.
+  await trashVia(page, rowByName(page, "Shortest Paths"));
+  await expect(rowsF).toHaveCount(1);
+  // A click opens the renamed drawing.
+  await rowsF
+    .first()
+    .getByRole("button", { name: /Graphs ✨ v2/ })
+    .first()
+    .click();
+  await expect(
+    page.locator(".vault-breadcrumbs__item--active", {
+      hasText: "Graphs ✨ v2",
+    }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("library: sections, adding a selection by name, counts per section", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page);
+  await rowByName(page, "DSA").locator(".vault-tree-item__name").click();
+  await rowByName(page, "Graphs").locator(".vault-tree-item__name").click();
+  await expect(page.locator(".vault-editor canvas.interactive")).toBeVisible();
+  const box = (await page
+    .locator(".vault-editor canvas.interactive")
+    .boundingBox())!;
+  await page.locator(".vault-editor [data-testid='toolbar-rectangle']").click();
+  await page.mouse.move(box.x + 300, box.y + 400);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 380, box.y + 460, { steps: 4 });
+  await page.mouse.up(); // the new rectangle stays selected
+  await page.locator(".default-sidebar-trigger").first().click();
+  await expect(page.getByTestId("library-section-personal")).toHaveText(
+    "Personal",
+  );
+  await expect(page.getByTestId("library-section-vault")).toBeVisible();
+  const grid = (id: string) =>
+    page
+      .getByTestId(`library-section-${id}`)
+      .locator("xpath=following-sibling::*[1]");
+  const count = (scope: "personal" | "vault") =>
+    page.evaluate((s) => {
+      const lib = (window as any).__libraryRepo;
+      const raw = lib.getJson(
+        s,
+        s === "vault" ? (window as any).__vaultRepo.handle : undefined,
+      );
+      return raw ? (JSON.parse(raw).libraryItems.length as number) : 0;
+    }, scope);
+  expect(await count("personal")).toBe(0);
+  expect(await count("vault")).toBe(0);
+  await grid("vault").locator(".library-unit__adder").click({ force: true });
+  const input = grid("vault").getByTestId("library-item-name-input");
+  await input.fill("Ünï box 📦");
+  await input.press("Enter");
+  await expect.poll(() => count("vault")).toBe(1);
+  expect(await count("personal")).toBe(0);
   expect(errors).toEqual([]);
 });
