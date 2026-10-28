@@ -1,31 +1,48 @@
 # Vaultdraw 0.2.0
 
-Plugins, Markdown notes and Obsidian vaults, Linux builds, and memory work. Your drawings stay plain `.excalidraw` files in a folder you own.
+Plugins, Markdown notes and Obsidian vaults, backup, libraries, profiles, Linux builds, and a round of data-safety fixes. Your drawings stay plain `.excalidraw` files in a folder you own.
+
+## Read first
+
+1. **Upgrading with plugins.** A plugin you enabled earlier that declared no permission asks for review once ("Needs review"). Approve it in Settings, Plugins. Official plugins stay on.
+2. **Browse community plugins is empty for now.** The list it reads (`plugins.registry_url`, `Vaultdraw/plugin-registry`) is not published yet, so Browse shows an error until it exists.
+3. **The macOS build is unsigned.** First open: right-click, Open, or System Settings, Privacy & Security, Open Anyway.
 
 ## What is new
 
-- **Plugin platform.** Plugins (API 0.9.0) can add commands, panels, tab kinds, and read or convert folders. They load only when used. Official plugin: `markdown-import`.
-- **Markdown and Obsidian.** `.md` notes open in a tab with a reading view and a CodeMirror editor (optional Vim keys), with revision-checked saves. Obsidian vaults open in place; **Import Obsidian vault...** converts notes, links, images and `.excalidraw.md` drawings into drawings, without touching the source.
-- **Search, tags and links** cover notes; renaming a file rewrites the links that point at it.
-- **Extensions you can turn off**, a bisect tool to find a problem extension, and a safe start.
-- **Control and AI.** `vaultdraw mcp` (AI tools server, off until `ai.enabled`), `scene.*` commands, file associations, user commands, layout presets and focus mode, per-vault themes.
-- **Linux (x86_64).** `.deb` and AppImage, custom title bar, PDF import, the hang watchdog, the `vaultdraw` command.
-- **Faster and lighter.** Speculative open on press, idle-time memory release with keys (`memory.*`), speed trade-off keys. Full list in [CHANGELOG.md](CHANGELOG.md).
+- **Plugin platform (API 0.29.0).** Plugins add commands, panels, tab kinds, canvas tools, shapes and importers, and load only when used. A permission prompt gates each plugin, and ids of official plugins cannot be reused. Official plugins: graph, gallery, formula, mermaid, PDF import, Markdown import, table, favourites, frames and presenting, auto-export (off until enabled).
+- **Markdown and Obsidian.** `.md` notes open in a tab with a reading view and a CodeMirror editor (optional Vim keys). Obsidian vaults open in place; **Import Obsidian vault...** converts notes, links, images and `.excalidraw.md` drawings, and writes an import report.
+- **Backup and restore.** `Vault: Back up vault...` writes a zip of your drawings, notes and attachments in the background.
+- **Several libraries, profiles, focus mode.** Each `.excalidrawlib` is its own section; named profiles layer settings, keys and theme; `view.focusMode` hides everything but the canvas.
+- **Synced folders.** Conflict copies from iCloud Drive, Dropbox, Syncthing and OneDrive show a badge and can be compared with the original.
+- **Control and AI.** `vaultdraw mcp` (off until `ai.enabled`), `scene.*` commands that work on drawings not on screen, plugin commands from the CLI.
+- **Linux (x86_64 and arm64).** `.deb` and AppImage, custom title bar, PDF import, the hang watchdog, the `vaultdraw` command. On a vault past the inotify limit the watcher polls (`files.watch_poll_ms`) and tells you once.
+- **Faster and lighter.** Speculative open on press, idle-time memory release (`memory.*`), an opt-in low-memory canvas (`memory.low_memory_canvas`), a 19 KB formula plugin load. Full list in [CHANGELOG.md](CHANGELOG.md).
+
+## Data safety and security fixes
+
+- Quitting (Cmd+Q), closing the window and switching vault write every open note first.
+- Renaming or moving a drawing onto a name that differs only by accent or Unicode form can no longer replace another file. Saving never replaces a read-only or Finder-locked drawing, and it keeps tags and permissions.
+- Read-only drawing files open in view mode with a banner and **Save a copy**.
+- Repeated failed saves keep one recovery copy per drawing, so recovery storage no longer fills up.
+- Saves wait for a rename or move in progress; no false "Drawing changed on disk".
+- Creating drawings works on exFAT and FAT drives.
+- `vaultdraw://cmd` links run only an allow list of safe commands.
+- A community plugin cannot take an official plugin's id or a built-in command group name; a plugin never run before always asks.
 
 ## Downloads
 
-The macOS DMG is built, NOT release-gated: the packaged smoke must be re-run with a visible window before publishing.
+Built from one commit, after the packaged smoke passed (see `BUILT-FROM.txt`). Check files against `SHA256SUMS`.
 
 | File | Platform |
 | --- | --- |
 | `Vaultdraw_0.2.0_universal.dmg` | macOS, Apple Silicon and Intel |
+| `Vaultdraw_0.2.0_amd64.deb`, `Vaultdraw_0.2.0_amd64.AppImage` | Linux x86_64 |
+| `Vaultdraw_0.2.0_arm64.deb`, `Vaultdraw_0.2.0_aarch64.AppImage` | Linux arm64 |
 | `SHA256SUMS` | checksums for all files |
-| `Vaultdraw_0.2.0_amd64.deb` | Linux x86_64 (Debian, Ubuntu) |
-| `Vaultdraw_0.2.0_amd64.AppImage` | Linux x86_64 |
 
 ## Known limits
 
-- The macOS build is unsigned. First open: right-click, Open, or System Settings, Privacy & Security, Open Anyway.
-- Linux arm64 is not built. The Linux builds are new: the Linux end-to-end run still has 4 known failures (history panel copy/paste, the which-key popup, a page-mode drag clamp, a keystroke-speed test under emulation); a fix is in progress.
+- The macOS build is unsigned (see above). Linux builds are new and are smoke-launched under a virtual display, not on every desktop.
 - Plugins and the plugin API are experimental. No automatic update.
-- Memory: everyday use (3 drawings, packaged, foreground) peaks at 336 MB in total, under the 400 MB goal, and idles near 220 MB. The stress-vault (5,000 drawings) peak is under investigation.
+- Memory: everyday use (3 drawings, packaged, foreground) peaked at 336 MB in total, under the 400 MB goal, and idles near 220 MB. A 5,000-drawing vault peaks above 1 GB; most of it is WebKit buffers and it varies by about 250 MB from run to run.
