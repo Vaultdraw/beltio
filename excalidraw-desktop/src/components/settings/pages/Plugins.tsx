@@ -23,7 +23,10 @@ import {
   uninstallPlugin,
   type PluginsState,
 } from "../../../plugins/host/manage";
-import { permissionText } from "../../../plugins/host/permissions";
+import {
+  permissionText,
+  reviewIsFirst,
+} from "../../../plugins/host/permissions";
 import { runCommandById } from "../../../plugins/host/runner";
 import { pluginHostStarted } from "../../../plugins/hostFlag";
 import {
@@ -290,10 +293,7 @@ export const PluginsPage = () => {
   /** Records what the plugin declares, then runs `then`. */
   const confirmThen = (info: PluginInfo, then: () => void) => {
     setPending(null);
-    if (info.permissions.length === 0) {
-      then();
-      return;
-    }
+    // Always recorded, even for a plugin with no permissions: the record is what says "reviewed".
     run(`Could not save your choice for ${info.name}`, async () => {
       await confirmPluginPermissions(info.id, info.permissions);
       then();
@@ -465,8 +465,22 @@ export const PluginsPage = () => {
       )}
       {pending?.kind === "review" && (
         <ConfirmModal
-          title={`${pending.info.name} wants new permissions`}
-          message={`An update of ${pending.info.name} asks for more than you agreed to, so it is switched off. ${LIMIT_NOTE} It now says it can:`}
+          title={
+            reviewIsFirst(pending.info)
+              ? `Review ${pending.info.name}`
+              : `${pending.info.name} wants new permissions`
+          }
+          message={
+            reviewIsFirst(pending.info)
+              ? `You have not confirmed ${
+                  pending.info.name
+                } yet, so it is switched off. ${LIMIT_NOTE} ${
+                  pending.info.permissions.length === 0
+                    ? "It says it needs no permissions."
+                    : "It says it can:"
+                }`
+              : `An update of ${pending.info.name} asks for more than you agreed to, so it is switched off. ${LIMIT_NOTE} It now says it can:`
+          }
           details={pending.info.permissions.map(permissionText)}
           confirmLabel="Allow"
           onCancel={() => setPending(null)}

@@ -5,6 +5,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -111,7 +112,11 @@ describe("Plugins settings page", () => {
     expect(getPreferences(window).pluginsEnabled).toEqual([]);
     expect(screen.getByText(/not reviewed by Vaultdraw/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Enable" }));
-    expect(getPreferences(window).pluginsEnabled).toEqual(["hello"]);
+    // The choice is recorded first (even with no permissions), then the plugin turns on.
+    await waitFor(() =>
+      expect(getPreferences(window).pluginsEnabled).toEqual(["hello"]),
+    );
+    expect(h.confirm).toHaveBeenCalledWith("hello", []);
   });
 
   it("lists the declared permissions in the enable dialog and records the choice", async () => {

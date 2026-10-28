@@ -1,6 +1,9 @@
 import { useId, useState } from "react";
 
-import { permissionText } from "../../../plugins/host/permissions";
+import {
+  permissionText,
+  reviewIsFirst,
+} from "../../../plugins/host/permissions";
 import { DeclaredSettingsPage } from "../declared/DeclaredSettingsPage";
 
 import { Switch } from "./controls";
@@ -150,8 +153,11 @@ export const PluginRow = ({
           )}
           {info.review.state === "review" && (
             <div className="vault-plugin__problem" role="status">
-              Needs review: new permission{" "}
-              {info.review.added.map(permissionText).join(", ")}.{" "}
+              {reviewIsFirst(info)
+                ? "Needs review: you have not confirmed this plugin yet. "
+                : `Needs review: new permission ${info.review.added
+                    .map(permissionText)
+                    .join(", ")}. `}
               <button
                 type="button"
                 className="vault-btn vault-btn--sm"

@@ -154,6 +154,12 @@ fn load_dir(dir: &Path, cached: Option<&CacheEntry>) -> std::result::Result<Load
     })
 }
 
+/// The ids of the bundled (official) plugins, read from the bundled folder (install-time checks).
+pub(crate) fn official_ids(roots: &Roots) -> std::collections::HashSet<String> {
+    let Some(root) = roots.bundled.as_ref() else { return Default::default() };
+    child_dirs(root).iter().filter_map(|d| load_uncached(d).ok()).map(|m| m.id).collect()
+}
+
 /// Validates a folder without the cache (install uses this).
 pub(crate) fn load_uncached(dir: &Path) -> std::result::Result<Manifest, String> {
     load_dir(dir, None).map(|l| l.manifest)
@@ -201,7 +207,8 @@ pub(crate) fn scan(roots: &Roots, cache_path: Option<&Path>, app_version: &str) 
     let mut errors = Vec::new();
     let mut index = Index::new();
     let mut parsed = 0;
-    let sources = [(Some(&roots.user), Source::User), (roots.bundled.as_ref(), Source::Bundled)];
+    // Bundled first, so a user plugin that reuses an official id is seen as the repeat.
+    let sources = [(roots.bundled.as_ref(), Source::Bundled), (Some(&roots.user), Source::User)];
     for (root, source) in sources.into_iter().filter_map(|(r, s)| r.map(|r| (r, s))) {
         for dir in child_dirs(root) {
             let key = dir.to_string_lossy().into_owned();
@@ -215,11 +222,20 @@ pub(crate) fn scan(roots: &Roots, cache_path: Option<&Path>, app_version: &str) 
             };
             let id = loaded.manifest.id.clone();
             if let Some(prev) = index.get(&id) {
-                // A user plugin shadows a bundled one silently; any other repeat is an error.
-                if !(prev.source == Source::User && source == Source::Bundled) {
-                    fail(&mut errors, format!("Duplicate plugin id '{id}' (already in {})", prev.dir.display()));
+                // Only a dev plugin may take an official plugin's place; any other repeat is refused,
+                // so a community plugin cannot pose as an official one (and skip its consent prompt).
+                let dev_shadow = prev.source == Source::Bundled && source == Source::User && loaded.manifest.dev;
+                if !dev_shadow {
+                    let message = if prev.source == Source::Bundled && source == Source::User {
+                        format!("'{id}' is an official plugin id. Choose another id (only a plugin with dev = true may replace it)")
+                    } else {
+                        format!("Duplicate plugin id '{id}' (already in {})", prev.dir.display())
+                    };
+                    fail(&mut errors, message);
+                    continue;
                 }
-                continue;
+                plugins.retain(|p| p.manifest.id != id);
+                index.remove(&id);
             }
             let Ok(canonical) = dir.canonicalize() else { continue };
             parsed += usize::from(loaded.parsed);

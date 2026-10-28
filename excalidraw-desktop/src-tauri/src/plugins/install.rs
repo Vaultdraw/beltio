@@ -2,6 +2,7 @@
 use super::scan::{self, Entry, Source};
 use crate::{err, ioerr, random_id, Result};
 use std::{
+    collections::HashSet,
     fs,
     path::{Path, PathBuf},
 };
@@ -63,12 +64,13 @@ fn copy_tree(src: &Path, dst: &Path, budget: &mut Budget, depth: usize) -> Resul
 
 /// Copies `src` into `<user_root>/<id>` after validating its manifest. Replaces an existing
 /// folder only when it holds the same plugin id.
-pub(crate) fn install_folder(user_root: &Path, src: &Path, app_version: &str) -> Result<scan::PluginInfo> {
+pub(crate) fn install_folder(user_root: &Path, src: &Path, app_version: &str, official: &HashSet<String>) -> Result<scan::PluginInfo> {
     let src = src.canonicalize().map_err(ioerr)?;
     if !src.is_dir() {
         return Err(err("INVALID_PATH", "Choose a plugin folder"));
     }
     let manifest = scan::load_uncached(&src).map_err(|m| err("INVALID_FILE", m))?;
+    check_id(&manifest, official)?;
     fs::create_dir_all(user_root).map_err(ioerr)?;
     let staging = Staging(user_root.join(format!(".staging-{}", random_id())));
     copy_tree(&src, &staging.0, &mut Budget::default(), 0)?;
@@ -80,6 +82,15 @@ pub(crate) fn install_folder(user_root: &Path, src: &Path, app_version: &str) ->
         fs::rename(&staging.0, &dest).map_err(ioerr)?;
     }
     scan::info_for_dir(&dest, Source::User, app_version)
+}
+
+/// An install may not reuse an official plugin's id (it would replace the official plugin and skip
+/// its consent prompt). A plugin with `dev = true` may: that is the developer's own copy.
+fn check_id(manifest: &super::manifest::Manifest, official: &HashSet<String>) -> Result<()> {
+    if official.contains(&manifest.id) && !manifest.dev {
+        return Err(err("NAME_COLLISION", format!("`{}` is an official plugin id. Choose another id.", manifest.id)));
+    }
+    Ok(())
 }
 
 /// Swaps `staging` in for `dest` (renaming the old folder aside first, restoring it on failure).

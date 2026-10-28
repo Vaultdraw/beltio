@@ -555,15 +555,10 @@ export function createFakeBackend(
         name: entry.name,
         version: entry.version,
         permissions: entry.permissions as PluginInfo["permissions"],
-        review:
-          prior || entry.permissions.length === 0
-            ? { state: "ok", added: [] }
-            : {
-                state: entry.permissions.includes("vault.write")
-                  ? "review"
-                  : "notice",
-                added: entry.permissions,
-              },
+        // Like Rust: a plugin that was never confirmed always needs a review.
+        review: prior
+          ? { state: "ok", added: [] }
+          : { state: "review", added: entry.permissions },
       });
       fake.plugins = [...fake.plugins.filter((p) => p.id !== id), info];
       return info;

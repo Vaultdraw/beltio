@@ -474,6 +474,70 @@ test("plugin permission review, consent, a crashing plugin and the registry brow
   ).toEqual([]);
 });
 
+test("a plugin nobody confirmed asks before it runs, and a community plugin cannot take an official id", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  const BASE = "/Vaultdraw/plugin-registry/main/";
+  const pkg = Buffer.from("fixture package: graph 9.9.9");
+  const requested: string[] = [];
+  await page.route("https://raw.githubusercontent.com/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    requested.push(path);
+    const headers = { "access-control-allow-origin": "*" };
+    if (path === `${BASE}index.json`) {
+      return route.fulfill({
+        status: 200,
+        headers,
+        body: JSON.stringify({
+          schema: 1,
+          plugins: [
+            {
+              id: "graph",
+              name: "Graph lookalike",
+              author: "eve",
+              description: "Wants the official id.",
+              version: "9.9.9",
+              api: 0,
+              permissions: [],
+              sha256: createHash("sha256").update(pkg).digest("hex"),
+              url: "packages/graph-9.9.9.zip",
+            },
+          ],
+        }),
+      });
+    }
+    return route.fulfill({ status: 200, headers, body: pkg });
+  });
+  // `stranger` declares no permission and has no consent record, and `plugins.enabled` lists it.
+  await openVault(page, "?plugins=stranger");
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
+  await openSettingsTab(page, "Plugins");
+  const row = page.getByTestId("plugin-stranger");
+  await expect(row).toContainText("Needs review");
+  await expect(row).toContainText("not confirmed");
+  await row.getByRole("button", { name: "Review Stranger" }).click();
+  const dialog = page.getByRole("dialog", { name: "Review Stranger" });
+  await expect(dialog).toContainText("switched off");
+  await dialog.getByRole("button", { name: "Allow" }).click();
+  await expect(row).not.toContainText("Needs review");
+
+  // Installing a list entry that reuses an official id is refused and nothing is installed.
+  await page.getByRole("button", { name: "Browse community plugins…" }).click();
+  const browser = page.getByTestId("plugin-browser-dialog");
+  await browser.getByRole("button", { name: "Allow" }).click();
+  const list = browser.getByRole("listbox", { name: "Community plugins" });
+  await expect(list.getByRole("option")).toHaveCount(1);
+  await browser.getByRole("button", { name: "Install", exact: true }).click();
+  await expect(browser.getByRole("alert")).toContainText("official plugin id");
+  expect(requested.some((p) => p.endsWith(".zip"))).toBe(false);
+  expect(
+    errors.filter(
+      (e) => !/official plugin id|Failed to load resource/i.test(e),
+    ),
+  ).toEqual([]);
+});
+
 /** Is the toolbar's `name` tool the active one. */
 const toolActive = (page: Page, name: string) =>
   page.evaluate((id) => {

@@ -4,6 +4,7 @@
  */
 import { updatePreferences, getPreferences } from "../../vault/preferences";
 import { ensurePluginHost } from "../boot";
+import { isOfficialPluginId } from "../officialPlugins";
 import { pluginHostStarted } from "../hostFlag";
 
 import {
@@ -118,7 +119,15 @@ export async function installPluginFolder(path: string): Promise<PluginInfo> {
  * re-activated if it was running); a new one is added disabled.
  */
 export async function installRegistryPlugin(id: string): Promise<PluginInfo> {
-  const existed = currentList().plugins.some((p) => p.id === id);
+  if (isOfficialPluginId(id)) {
+    // Rust refuses it too; this saves the download and a misleading reload.
+    throw new Error(
+      `"${id}" is an official plugin id and cannot be installed from the list`,
+    );
+  }
+  const existed = currentList().plugins.some(
+    (p) => p.id === id && p.source === "user",
+  );
   const info = await getPluginsBackend().installFromRegistry(id);
   if (existed) {
     await reloadPlugin(id);

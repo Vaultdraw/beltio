@@ -20,6 +20,10 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **Community plugins registry (backend).** `network.allow_plugins` (asked once, revocable), `plugins.registry_url` and `plugins.registry_ttl_hours`. The app can fetch and cache a plugins `index.json` and install a package from it: the zip must match the list's SHA-256, is read strictly (the rules of `vaultdraw-plugin check`), and its manifest id, version and permissions must match the entry. Format: `sdk/docs/registry.md`. **Settings → Plugins → Browse community plugins…** lists it with search, details and the permissions the plugin declares, and installs, updates and uninstalls (palette: `plugins.browse`, `plugins.browseRefresh`). The default list address points at `Vaultdraw/plugin-registry`, which does not exist yet; set `plugins.registry_url` to use another.
 - **`[extensions] history`: switch the History panel off.** Hides the panel, checkpoint dialog, History button, activity bar entry and the `history.*` commands. Saving versions stays under `history.enabled` (Settings, Extensions: "File history"), so turning the panel off never stops versions from being kept. On by default.
 
+### Security
+
+- **Plugins: no official ids, and first run always asks.** A community or folder-installed plugin can no longer reuse an official plugin's id (`graph`, `gallery`, `table`, …): the install and the scan refuse it (only a plugin with `dev = true` may stand in for one while you develop). A user plugin that was never confirmed now needs a review before it loads, even when it declares no permission, so a shared profile or config that lists it in `plugins.enabled` cannot switch it on silently; the Settings row says "Needs review" and Review records your answer. Plugins you already confirmed keep working; a plugin you enabled earlier that declared no permission asks once.
+
 ### Fixed
 
 - **Quitting no longer loses note text.** Cmd+Q, closing the window and switching vault now write every open note first. With `notes.autosave_ms = 0` they ask: Save and Close, Don't Save or Cancel.

@@ -69,6 +69,12 @@ export const FIXTURES: Record<string, () => PluginInfo> = {
       permissions: ["vault.read", "vault.write"],
       review: { state: "review", added: ["vault.read", "vault.write"] },
     }),
+  // Declares nothing and was never confirmed: still held back until the user reviews it.
+  stranger: () =>
+    makePluginInfo("stranger", {
+      name: "Stranger",
+      review: { state: "review", added: [] },
+    }),
   counter: () =>
     makePluginInfo("counter", {
       name: "Counter",

@@ -30,3 +30,13 @@ export const needsReview = (info: Pick<PluginInfo, "review">): boolean =>
 /** One sentence for a toast: what an update added. */
 export const addedText = (added: readonly string[]): string =>
   added.map((p) => permissionText(p).toLowerCase()).join(", ");
+
+/**
+ * True when a needs-review plugin was never confirmed (nothing added to an old record): all its
+ * permissions are "added", or it declares none. An update that added one permission is false.
+ */
+export const reviewIsFirst = (
+  info: Pick<PluginInfo, "review" | "permissions">,
+): boolean =>
+  info.review.added.length === 0 ||
+  info.review.added.length >= info.permissions.length;

@@ -108,8 +108,8 @@ pub(crate) async fn plugins_list(app: AppHandle, rescan: Option<bool>) -> Result
 #[tauri::command]
 pub(crate) async fn plugins_install_folder(app: AppHandle, path: String) -> Result<PluginInfo> {
     blocking(move || {
-        let user_root = roots(&app)?.user;
-        let mut info = install::install_folder(&user_root, &PathBuf::from(path), APP_VERSION)?;
+        let roots = roots(&app)?;
+        let mut info = install::install_folder(&roots.user, &PathBuf::from(path), APP_VERSION, &scan::official_ids(&roots))?;
         rescan(&app)?;
         let state_dir = config::resolve_dirs()?.state;
         info.host_disabled = state::load(&state_dir).get(&info.manifest.id).cloned();

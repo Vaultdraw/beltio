@@ -20,7 +20,8 @@ pub(crate) enum ReviewState {
     Ok,
     /// Only read permissions were added: the plugin loads and the user is told once.
     Notice,
-    /// A write permission was added: the plugin stays off until the user confirms.
+    /// A write permission was added, or the user never confirmed this plugin at all: it stays
+    /// off until the user confirms.
     Review,
 }
 
@@ -37,10 +38,16 @@ impl Review {
     }
 }
 
-/// Compares `declared` with the confirmed set (`None` = never confirmed). Bundled plugins need no prompt.
+/// Compares `declared` with the confirmed set. Bundled plugins need no prompt. A plugin that
+/// was never confirmed (`None`) always needs a review, even when it declares no permission:
+/// outside code asks once before its first run, so a shared profile or config that lists it in
+/// `plugins.enabled` cannot turn it on silently. A confirmed `[]` means "reviewed, nothing declared".
 pub(crate) fn review(declared: &[String], confirmed: Option<&Vec<String>>, bundled: bool) -> Review {
     if bundled {
         return Review::ok();
+    }
+    if confirmed.is_none() {
+        return Review { state: ReviewState::Review, added: declared.to_vec() };
     }
     let added: Vec<String> =
         declared.iter().filter(|p| !confirmed.is_some_and(|c| c.contains(p))).cloned().collect();

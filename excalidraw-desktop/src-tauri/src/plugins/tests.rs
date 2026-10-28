@@ -1,6 +1,6 @@
 use super::{consent, install, manifest, scan, scheme};
 use scan::{Index, Roots, Source};
-use std::{fs, path::{Path, PathBuf}, time::Instant};
+use std::{collections::HashSet, fs, path::{Path, PathBuf}, time::Instant};
 use super::{clear_restart, RESTART_PENDING};
 use std::sync::atomic::Ordering;
 use tempfile::tempdir;
@@ -208,20 +208,54 @@ fn scan_main_must_be_regular_file_inside() {
 }
 
 #[test]
-fn duplicate_ids_user_wins_over_bundled_and_second_user_errors() {
+fn duplicate_user_ids_error_and_a_user_plugin_cannot_take_a_bundled_id() {
     let tmp = tempdir().unwrap();
     let r = roots(tmp.path());
     make_plugin(&r.user, "a", &minimal("same"));
     make_plugin(&r.user, "b", &minimal("same"));
-    make_plugin(r.bundled.as_ref().unwrap(), "c", &minimal("same"));
-    make_plugin(r.bundled.as_ref().unwrap(), "d", &minimal("only-bundled"));
+    make_plugin(&r.user, "x", &minimal("official"));
+    make_plugin(r.bundled.as_ref().unwrap(), "o", &minimal("official"));
     let s = scan::scan(&r, None, APP);
     assert_eq!(s.list.plugins.len(), 2);
+    assert_eq!(s.index["official"].source, Source::Bundled, "the official plugin stays");
+    assert!(s.index["official"].dir.ends_with("o"));
     assert_eq!(s.index["same"].source, Source::User);
     assert!(s.index["same"].dir.ends_with("a"));
-    assert_eq!(s.index["only-bundled"].source, Source::Bundled);
-    assert_eq!(s.list.errors.len(), 1);
-    assert!(s.list.errors[0].dir.ends_with("b") && s.list.errors[0].message.contains("Duplicate"));
+    assert_eq!(s.list.errors.len(), 2, "{:?}", s.list.errors);
+    let err = |dir: &str| s.list.errors.iter().find(|e| e.dir.ends_with(dir)).unwrap().message.clone();
+    assert!(err("b").contains("Duplicate"));
+    assert!(err("x").contains("official plugin id"), "{}", err("x"));
+}
+
+#[test]
+fn a_dev_plugin_may_shadow_a_bundled_one() {
+    let tmp = tempdir().unwrap();
+    let r = roots(tmp.path());
+    make_plugin(&r.user, "mine", &format!("{}dev = true\n", minimal("official")));
+    make_plugin(r.bundled.as_ref().unwrap(), "o", &minimal("official"));
+    make_plugin(r.bundled.as_ref().unwrap(), "p", &minimal("other"));
+    let s = scan::scan(&r, None, APP);
+    assert_eq!(s.list.plugins.len(), 2);
+    assert_eq!(s.list.plugins.iter().filter(|p| p.manifest.id == "official").count(), 1);
+    assert_eq!(s.index["official"].source, Source::User);
+    assert!(s.list.errors.is_empty(), "{:?}", s.list.errors);
+}
+
+#[test]
+fn install_refuses_an_official_id_unless_dev() {
+    let tmp = tempdir().unwrap();
+    let user = tmp.path().join("cfg/plugins");
+    let official: HashSet<String> = ["graph".to_string()].into();
+    let src = source_folder(tmp.path(), "src", "graph");
+    let e = install::install_folder(&user, &src, APP, &official).unwrap_err();
+    assert_eq!(e.code, "NAME_COLLISION");
+    assert!(e.message.contains("official plugin id"), "{}", e.message);
+    assert!(!user.join("graph").exists(), "nothing was copied");
+    install::install_folder(&user, &source_folder(tmp.path(), "src2", "graph-two"), APP, &official).unwrap();
+    let dev = source_folder(tmp.path(), "src3", "graph");
+    let text = fs::read_to_string(dev.join("plugin.toml")).unwrap();
+    fs::write(dev.join("plugin.toml"), format!("{text}dev = true\n")).unwrap();
+    install::install_folder(&user, &dev, APP, &official).unwrap();
 }
 
 #[test]
@@ -405,7 +439,7 @@ fn install_copies_and_skips_unwanted_entries() {
     #[cfg(unix)]
     std::os::unix::fs::symlink(tmp.path().join("src/main.js"), src.join("link.js")).unwrap();
     let user = tmp.path().join("cfg/plugins");
-    let info = install::install_folder(&user, &src, APP).unwrap();
+    let info = install::install_folder(&user, &src, APP, &HashSet::new()).unwrap();
     assert_eq!((info.manifest.id.as_str(), info.source), ("inst-one", Source::User));
     assert_eq!(list_names(&user), ["inst-one"]);
     assert_eq!(list_names(&user.join("inst-one")), ["lib", "main.js", "plugin.toml"]);
@@ -416,17 +450,17 @@ fn install_replaces_same_id_and_refuses_other_folder() {
     let tmp = tempdir().unwrap();
     let src = source_folder(tmp.path(), "src", "inst-one");
     let user = tmp.path().join("cfg/plugins");
-    install::install_folder(&user, &src, APP).unwrap();
+    install::install_folder(&user, &src, APP, &HashSet::new()).unwrap();
     fs::write(src.join("main.js"), "export default { v: 2 };").unwrap();
     fs::remove_file(src.join("lib/util.js")).unwrap();
-    install::install_folder(&user, &src, APP).unwrap();
+    install::install_folder(&user, &src, APP, &HashSet::new()).unwrap();
     assert_eq!(fs::read_to_string(user.join("inst-one/main.js")).unwrap(), "export default { v: 2 };");
     assert!(!user.join("inst-one/lib/util.js").exists());
     assert_eq!(list_names(&user), ["inst-one"]);
     // A different plugin sitting in the folder named after the id is not overwritten.
     fs::remove_dir_all(user.join("inst-one")).unwrap();
     make_plugin(&user, "inst-one", &minimal("another"));
-    let e = install::install_folder(&user, &src, APP).unwrap_err();
+    let e = install::install_folder(&user, &src, APP, &HashSet::new()).unwrap_err();
     assert_eq!(e.code, "NAME_COLLISION");
     assert_eq!(list_names(&user), ["inst-one"]);
 }
@@ -436,14 +470,14 @@ fn install_validates_first_and_cleans_staging() {
     let tmp = tempdir().unwrap();
     let user = tmp.path().join("cfg/plugins");
     let bad_src = make_plugin(tmp.path(), "bad", "id = ");
-    assert!(install::install_folder(&user, &bad_src, APP).is_err());
+    assert!(install::install_folder(&user, &bad_src, APP, &HashSet::new()).is_err());
     assert!(!user.exists() || list_names(&user).is_empty());
     // main inside a skipped folder fails after copy; staging must be removed.
     let hidden = make_plugin(tmp.path(), "hid", &minimal("hid-one").replace("main.js", ".dist/main.js"));
     fs::remove_file(hidden.join("main.js")).unwrap();
     fs::create_dir_all(hidden.join(".dist")).unwrap();
     fs::write(hidden.join(".dist/main.js"), "x").unwrap();
-    assert!(install::install_folder(&user, &hidden, APP).is_err());
+    assert!(install::install_folder(&user, &hidden, APP, &HashSet::new()).is_err());
     assert!(list_names(&user).is_empty(), "{:?}", list_names(&user));
 }
 
@@ -455,15 +489,15 @@ fn install_caps() {
     for i in 0..2000 {
         fs::write(many.join(format!("f{i}.js")), "").unwrap();
     }
-    assert!(install::install_folder(&user, &many, APP).unwrap_err().message.contains("too large"));
+    assert!(install::install_folder(&user, &many, APP, &HashSet::new()).unwrap_err().message.contains("too large"));
     let big = source_folder(tmp.path(), "big", "big-one");
     fs::File::create(big.join("huge.js")).unwrap().set_len(21 * 1024 * 1024).unwrap();
-    assert!(install::install_folder(&user, &big, APP).unwrap_err().message.contains("20 MB"));
+    assert!(install::install_folder(&user, &big, APP, &HashSet::new()).unwrap_err().message.contains("20 MB"));
     let total = source_folder(tmp.path(), "total", "total-one");
     for i in 0..3 {
         fs::File::create(total.join(format!("p{i}.js"))).unwrap().set_len(19 * 1024 * 1024).unwrap();
     }
-    assert!(install::install_folder(&user, &total, APP).unwrap_err().message.contains("too large"));
+    assert!(install::install_folder(&user, &total, APP, &HashSet::new()).unwrap_err().message.contains("too large"));
     assert!(list_names(&user).is_empty(), "{:?}", list_names(&user));
 }
 
@@ -472,7 +506,7 @@ fn uninstall_only_direct_children_of_user_root() {
     let tmp = tempdir().unwrap();
     let user = tmp.path().join("cfg/plugins");
     let src = source_folder(tmp.path(), "src", "gone-one");
-    install::install_folder(&user, &src, APP).unwrap();
+    install::install_folder(&user, &src, APP, &HashSet::new()).unwrap();
     let outside = make_plugin(tmp.path(), "outside", &minimal("out-one"));
     assert!(install::uninstall_dir(&user, &outside).is_err());
     assert!(outside.exists());
@@ -750,11 +784,16 @@ fn review_compares_declared_with_confirmed() {
         let c = confirmed.map(perms);
         consent::review(&perms(declared), c.as_ref(), bundled)
     };
-    assert_eq!(r(&[], None, false).state, Ok, "nothing declared needs no record");
+    assert_eq!(r(&[], Some(&[]), false).state, Ok, "reviewed with nothing declared needs nothing more");
+    let none = r(&[], None, false);
+    assert_eq!((none.state, none.added), (Review, Vec::<String>::new()), "never confirmed needs a review even with no permissions");
+    assert_eq!(r(&[], None, true).state, Ok, "bundled plugins never need a record");
     assert_eq!(r(&["vault.read"], Some(&["vault.read"]), false).state, Ok);
     assert_eq!(r(&["vault.read"], Some(&["vault.read", "vault.write"]), false).state, Ok, "fewer is fine");
     let n = r(&["vault.read"], None, false);
-    assert_eq!((n.state, n.added), (Notice, perms(&["vault.read"])), "a new read permission is a notice");
+    assert_eq!((n.state, n.added), (Review, perms(&["vault.read"])), "never confirmed needs a review, read-only or not");
+    let n = r(&["vault.read", "clipboard"], Some(&["vault.read"]), false);
+    assert_eq!((n.state, n.added), (Notice, perms(&["clipboard"])), "a new read permission to a confirmed plugin is a notice");
     let w = r(&["vault.read", "vault.write"], Some(&["vault.read"]), false);
     assert_eq!((w.state, w.added), (Review, perms(&["vault.write"])), "an added write needs review");
     assert_eq!(r(&["vault.write"], None, false).state, Review, "never confirmed counts as nothing confirmed");

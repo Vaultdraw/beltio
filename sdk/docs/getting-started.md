@@ -56,7 +56,7 @@ Do these once, in the app:
 
 1. Press **Cmd+P** and run **Plugins: Reload plugin list**.
 2. Open **Settings, Plugins** and switch **My Hello** on.
-3. A plugin that is not bundled shows an Unverified badge. The first time you enable it, a consent prompt appears, because plugins run with full access. Allow it.
+3. A plugin that is not bundled shows an Unverified badge. The first time you enable it, a consent prompt appears, because plugins run with full access. Allow it. A plugin you have not confirmed stays off, even if `plugins.enabled` lists it, and shows "Needs review". A plugin cannot reuse an official plugin's id unless it sets `dev = true`.
 4. Press **Cmd+P** and run **Hello: say hello** (or press Cmd+Alt+Shift+H). A toast says `Hello, Vaultdraw!`.
 
 Not sure where the files went? Run **Plugins: Open plugins folder** from the palette.

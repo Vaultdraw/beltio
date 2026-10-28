@@ -7,7 +7,7 @@
 use super::{install, scan, zip};
 use crate::{config, err, ioerr, network, random_id, theme_catalogue as cat, theme_install, Result};
 use serde::Deserialize;
-use std::{fs, path::Path};
+use std::{collections::HashSet, fs, path::Path};
 
 const KIND: cat::Kind = cat::Kind { purpose: "plugins", dir: "plugin-registry" };
 const MAX_INDEX_BYTES: u64 = 2 * 1024 * 1024;
@@ -50,7 +50,7 @@ impl Drop for Scratch {
 }
 
 /// Verifies `bytes` against `entry` and installs them into `user_root`. Pure of the network.
-fn install_bytes(user_root: &Path, scratch_root: &Path, bytes: &[u8], entry: &Entry, app_version: &str) -> Result<scan::PluginInfo> {
+fn install_bytes(user_root: &Path, scratch_root: &Path, bytes: &[u8], entry: &Entry, app_version: &str, official: &HashSet<String>) -> Result<scan::PluginInfo> {
     if !theme_install::sha256_hex(bytes).eq_ignore_ascii_case(&entry.sha256) {
         return Err(err(
             "HASH_MISMATCH",
@@ -75,10 +75,13 @@ fn install_bytes(user_root: &Path, scratch_root: &Path, bytes: &[u8], entry: &En
     if declared != listed {
         return Err(err("INVALID_FILE", "The permissions in the package differ from the ones the list shows"));
     }
-    install::install_folder(user_root, &scratch.0, app_version)
+    install::install_folder(user_root, &scratch.0, app_version, official)
 }
 
-fn download_and_install(dirs: &config::Dirs, user_root: &Path, id: &str, app_version: &str) -> Result<scan::PluginInfo> {
+fn download_and_install(dirs: &config::Dirs, user_root: &Path, id: &str, app_version: &str, official: &HashSet<String>) -> Result<scan::PluginInfo> {
+    if official.contains(id) {
+        return Err(err("NAME_COLLISION", format!("`{id}` is an official plugin id; it cannot be installed from the list")));
+    }
     network::ensure_network_allowed(dirs, KIND.purpose)?;
     let index = cat::cached_for(dirs, KIND).ok_or_else(|| err("NOT_FOUND", "The plugins list is not loaded. Open Browse first."))?;
     let entry = find_entry(&index, id)?;
@@ -86,7 +89,7 @@ fn download_and_install(dirs: &config::Dirs, user_root: &Path, id: &str, app_ver
     let url = base.join(&entry.url).map_err(|_| err("INVALID_URL", "The package address in the list is not valid"))?;
     let url = network::parse_url(url.as_str())?;
     let bytes = network::get_bytes(&url, MAX_PACKAGE_BYTES, ACCEPT_ZIP)?;
-    install_bytes(user_root, &dirs.state.join("plugin-registry-tmp"), &bytes, &entry, app_version)
+    install_bytes(user_root, &dirs.state.join("plugin-registry-tmp"), &bytes, &entry, app_version, official)
 }
 
 #[tauri::command]
@@ -105,8 +108,8 @@ pub(crate) async fn plugin_registry_index(url: String, max_bytes: u64) -> Result
 pub(crate) async fn plugin_registry_install(app: tauri::AppHandle, id: String) -> Result<scan::PluginInfo> {
     super::blocking(move || {
         let dirs = config::resolve_dirs()?;
-        let user_root = super::roots(&app)?.user;
-        let mut info = download_and_install(&dirs, &user_root, &id, super::APP_VERSION)?;
+        let roots = super::roots(&app)?;
+        let mut info = download_and_install(&dirs, &roots.user, &id, super::APP_VERSION, &super::scan::official_ids(&roots))?;
         super::rescan(&app)?;
         info.host_disabled = super::state::load(&dirs.state).get(&info.manifest.id).cloned();
         info.review = super::review_of(&info, &super::consent::load(&dirs.state));
