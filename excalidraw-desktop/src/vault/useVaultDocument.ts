@@ -162,6 +162,10 @@ export const useVaultDocument = (
     [],
   );
 
+  // A move in flight: change events for it must wait until the active
+  // document's path is updated, or they read the old path and see NOT_FOUND.
+  const relocation = useRef<Promise<unknown> | null>(null);
+
   const activate = useCallback(
     async (fresh: Omit<Active, "source"> | null) => {
       const activationGeneration = generation.current;
@@ -197,6 +201,7 @@ export const useVaultDocument = (
       }
       const coordinatorForDocument = new SaveCoordinator({
         repository,
+        hold: () => relocation.current,
         idleMs: autosaveDelayMsRef.current,
         target: () => {
           const current = active.current;
@@ -542,10 +547,6 @@ export const useVaultDocument = (
     },
     [activate],
   );
-
-  // A move in flight: change events for it must wait until the active
-  // document's path is updated, or they read the old path and see NOT_FOUND.
-  const relocation = useRef<Promise<unknown> | null>(null);
 
   const relocate = useCallback(
     async (

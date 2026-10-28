@@ -288,6 +288,47 @@ describe("saveCopy and relocate", () => {
     expect(result.current.document?.path).toBe("DSA/moved.excalidraw");
   });
 
+  it("edits made while a move runs are saved to the new path, with no conflict", async () => {
+    const repo = new FakeVaultRepository();
+    repo.seedDrawing("a.excalidraw", SAMPLE_SCENE);
+    const { result } = renderHook(() =>
+      useVaultDocument(repo, vaultOf(repo), { autosaveDelayMs: 10 }),
+    );
+    await openPath(result, "a.excalidraw");
+    let release = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    let moving: Promise<void> = Promise.resolve();
+    await act(async () => {
+      moving = result.current.relocate(
+        "a.excalidraw",
+        "b.excalidraw",
+        async (from, to) => {
+          // The file is renamed first; rewriting links elsewhere takes longer.
+          await repo.move(repo.handle, from, to);
+          await gate;
+        },
+      );
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    act(() => result.current.change(BLANK_SCENE));
+    // Longer than the save timer: it fires while the move is still running.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 60));
+    });
+    expect(result.current.status).not.toBe("conflict");
+    await act(async () => {
+      release();
+      await moving;
+    });
+    await waitFor(() => expect(result.current.status).toBe("saved"));
+    expect(result.current.document?.path).toBe("b.excalidraw");
+    expect((await repo.readDrawing(repo.handle, "b.excalidraw")).json).toBe(
+      BLANK_SCENE,
+    );
+  });
+
   it("relocate follows ancestor folder moves", async () => {
     const repo = new FakeVaultRepository();
     repo.seedDrawing("DSA/a.excalidraw", SAMPLE_SCENE);

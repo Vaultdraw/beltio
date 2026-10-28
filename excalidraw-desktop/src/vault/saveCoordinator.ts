@@ -13,6 +13,11 @@ export type SaveCoordinatorOptions = {
   snapshot: () => string | null;
   onStatus: (status: SaveStatus, error?: unknown) => void;
   onSaved: (revision: string, json: string) => void;
+  /**
+   * A promise while the document's path is being changed (rename or move):
+   * writes wait for it, then read the target again, so they use the new path.
+   */
+  hold?: () => Promise<unknown> | null;
   idleMs?: number;
   maxWaitMs?: number;
 };
@@ -103,6 +108,19 @@ export class SaveCoordinator {
 
   private async drain(): Promise<void> {
     if (this.disposed || this.inFlight || !this.queued) {
+      return;
+    }
+    const hold = this.options.hold?.();
+    if (hold) {
+      const wait = hold.then(
+        () => undefined,
+        () => undefined,
+      );
+      this.inFlight = wait;
+      void wait.then(() => {
+        this.inFlight = null;
+        void this.drain();
+      });
       return;
     }
     const target = this.options.target();
