@@ -211,6 +211,8 @@ vaultdraw profile delete talk --yes
 vaultdraw --profile work config check     # check one profile's files without switching
 ```
 
+Deleting a profile moves its folder to `profiles/.removed/<name>-<time>`, so you can copy it back by hand.
+
 ### Where a value comes from
 
 Every setting with a config key shows a small chip beside its name when it is not the built-in default: `config.toml` or `overrides`. Click it for details, all computed from the files already loaded.

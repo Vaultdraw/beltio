@@ -378,18 +378,29 @@ pub(crate) async fn delete_library(
     state: State<'_, Service>,
 ) -> Result<()> {
     let loc = locate(Scope::parse(&scope)?, handle, Some(&name), &state)?;
-    with_write(&loc, |p| {
-        inspect(p)?;
-        // Recoverable: the file moves into a `.removed` folder (never listed).
-        let removed = p.with_file_name(".removed");
-        fs::create_dir_all(&removed).map_err(ioerr)?;
-        let stamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
-        let stem = p.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-        fs::rename(p, removed.join(format!("{stem}-{stamp}{LIB_EXT}"))).map_err(ioerr)
-    })
+    with_write(&loc, remove_at)
+}
+
+/// Moves the library into a `.removed` folder next to it (never listed). Every call gets its own
+/// name (seconds stamp plus a counter, claimed exclusively), so a second delete in the same
+/// second never replaces the first copy.
+fn remove_at(p: &Path) -> Result<()> {
+    inspect(p)?;
+    let removed = p.with_file_name(".removed");
+    fs::create_dir_all(&removed).map_err(ioerr)?;
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let stem = p.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    for n in 0..1000u32 {
+        let name = if n == 0 { format!("{stem}-{stamp}{LIB_EXT}") } else { format!("{stem}-{stamp}-{n}{LIB_EXT}") };
+        match vaultdraw_core::fsops::rename_no_replace(p, &removed.join(name)) {
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            r => return r.map_err(ioerr),
+        }
+    }
+    Err(err("CONFLICT", "Too many removed copies of that library"))
 }
 
 const EMPTY_LIBRARY: &str = "{\n  \"type\": \"excalidrawlib\",\n  \"version\": 2,\n  \"source\": \"vaultdraw\",\n  \"libraryItems\": []\n}\n";
@@ -398,10 +409,13 @@ fn rename_at(from: &Path, to: &Path) -> Result<()> {
     if inspect(from)?.is_none() {
         return Err(err("NOT_FOUND", "That library no longer exists"));
     }
-    if fs::symlink_metadata(to).is_ok() {
-        return Err(err("CONFLICT", "A library with that name already exists"));
+    // Never replaces: a file another writer created at the new name since a moment ago is kept.
+    match vaultdraw_core::fsops::rename_no_replace(from, to) {
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+            Err(err("CONFLICT", "A library with that name already exists"))
+        }
+        r => r.map_err(ioerr),
     }
-    fs::rename(from, to).map_err(ioerr)
 }
 
 /// Native open dialog for importing a library; `None` when cancelled.
@@ -616,5 +630,28 @@ mod tests {
         assert_eq!(Scope::parse("vault").unwrap(), Scope::Vault);
         assert!(Scope::parse("other").is_err());
         assert!(vault_handle(None).is_err());
+    }
+
+    #[test]
+    fn two_deletes_in_one_second_keep_both_copies() {
+        let t = tempdir().unwrap();
+        let p = t.path().join("Mine.excalidrawlib");
+        fs::write(&p, LIB).unwrap();
+        remove_at(&p).unwrap();
+        fs::write(&p, LIB2).unwrap();
+        remove_at(&p).unwrap();
+        let kept: Vec<_> = fs::read_dir(t.path().join(".removed")).unwrap().flatten().collect();
+        assert_eq!(kept.len(), 2);
+    }
+
+    #[test]
+    fn rename_never_replaces_an_existing_library() {
+        let t = tempdir().unwrap();
+        let (a, b) = (t.path().join("A.excalidrawlib"), t.path().join("B.excalidrawlib"));
+        fs::write(&a, LIB).unwrap();
+        fs::write(&b, LIB2).unwrap();
+        assert_eq!(code(rename_at(&a, &b)), "CONFLICT");
+        assert_eq!(fs::read_to_string(&b).unwrap(), LIB2);
+        assert_eq!(fs::read_to_string(&a).unwrap(), LIB);
     }
 }

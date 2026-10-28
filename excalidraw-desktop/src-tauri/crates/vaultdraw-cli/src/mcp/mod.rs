@@ -12,7 +12,9 @@ mod tools;
 use crate::cli::Cli;
 use crate::error::Fail;
 use serde_json::{json, Value};
-use std::io::{BufRead, Write};
+use std::io::Write;
+use vaultdraw_protocol::frame::{read_frame, FrameError};
+use vaultdraw_protocol::MAX_FRAME_BYTES;
 use std::sync::{mpsc, Mutex};
 
 /// Protocol revisions served, newest first. The first is the stateless one.
@@ -57,13 +59,18 @@ pub fn run(cli: &Cli) -> Result<(), Fail> {
         });
         let mut input = std::io::stdin().lock();
         let mut client = String::from("mcp");
-        let mut buf = Vec::new();
         loop {
-            buf.clear();
-            match input.read_until(b'\n', &mut buf) {
-                Ok(0) | Err(_) => break,
-                Ok(_) => {}
-            }
+            // One line, capped (a client sending an endless line cannot grow memory without bound).
+            let buf = match read_frame(&mut input, MAX_FRAME_BYTES) {
+                Ok(Some(b)) => b,
+                Ok(None) | Err(FrameError::Io(_)) => break,
+                Err(FrameError::TooLarge) => {
+                    if !write(&error(Value::Null, PARSE_ERROR, "invalid JSON: the line is too large")) {
+                        break;
+                    }
+                    continue;
+                }
+            };
             // A line that is not UTF-8 is a parse error for that line, not the end of the session.
             let reply = match std::str::from_utf8(&buf) {
                 Err(_) => Some(error(Value::Null, PARSE_ERROR, "invalid JSON: the line is not UTF-8")),

@@ -109,7 +109,11 @@ pub fn create_profile(dirs: &Dirs, name: &str, from: Option<&str>) -> Result<()>
         }
     };
     fs::create_dir_all(dirs.profiles_dir()).map_err(ioerr)?;
-    fs::create_dir(dirs.profile_dir(name)).map_err(ioerr)?;
+    // Built in a temporary folder and renamed into place: a failed copy leaves no half-made profile.
+    let tmp = dirs.profiles_dir().join(format!(".new-{name}"));
+    let _ = fs::remove_dir_all(&tmp);
+    fs::create_dir(&tmp).map_err(ioerr)?;
+    let built = (|| -> Result<()> {
     let copy = |src: Option<PathBuf>, dst: PathBuf, fallback: Option<String>| -> Result<()> {
         match src.map(|s| read_toml_text(&s, "profile file", MAX_CONFIG_BYTES)) {
             Some(Ok(text)) => write_atomic_new(&dst, text.as_bytes()),
@@ -117,11 +121,24 @@ pub fn create_profile(dirs: &Dirs, name: &str, from: Option<&str>) -> Result<()>
             _ => fallback.map_or(Ok(()), |t| write_atomic_new(&dst, t.as_bytes())),
         }
     };
-    copy(config_src, dirs.profile_config_file(name), Some(profile_header(name)))?;
-    copy(overrides_src, dirs.profile_overrides_file(name), None)
+    copy(config_src, tmp.join(CONFIG_FILE), Some(profile_header(name)))?;
+    copy(overrides_src, tmp.join(OVERRIDES_FILE), None)
+    })();
+    if let Err(e) = built {
+        let _ = fs::remove_dir_all(&tmp);
+        return Err(e);
+    }
+    crate::fsops::rename_no_replace(&tmp, &dirs.profile_dir(name)).map_err(|e| {
+        let _ = fs::remove_dir_all(&tmp);
+        if e.kind() == std::io::ErrorKind::AlreadyExists {
+            err("NAME_COLLISION", format!("Profile \"{name}\" already exists"))
+        } else {
+            ioerr(e)
+        }
+    })
 }
 
-/// Deletes a profile folder (the caller asks first). If it was the saved choice, the default
+/// Moves a profile folder to `profiles/.removed/` (recoverable by hand; the caller asks first). If it was the saved choice, the default
 /// applies again. A profile named by `$VAULTDRAW_PROFILE` stays selected and starts empty.
 pub fn delete_profile(dirs: &Dirs, name: &str) -> Result<()> {
     check_name(name)?;
@@ -131,7 +148,24 @@ pub fn delete_profile(dirs: &Dirs, name: &str) -> Result<()> {
     if !meta.is_dir() {
         return Err(err("INVALID_PATH", format!("profiles/{name} is not a folder")));
     }
-    fs::remove_dir_all(&dir).map_err(ioerr)?;
+    let removed = dirs.profiles_dir().join(".removed");
+    fs::create_dir_all(&removed).map_err(ioerr)?;
+    let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+    let mut moved = false;
+    for n in 0..1000u32 {
+        let to = removed.join(if n == 0 { format!("{name}-{stamp}") } else { format!("{name}-{stamp}-{n}") });
+        match crate::fsops::rename_no_replace(&dir, &to) {
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            r => {
+                r.map_err(ioerr)?;
+                moved = true;
+                break;
+            }
+        }
+    }
+    if !moved {
+        return Err(err("CONFLICT", "Too many removed copies of that profile"));
+    }
     if fs::read_to_string(dirs.profile_pointer()).is_ok_and(|t| t.trim() == name) {
         let _ = fs::remove_file(dirs.profile_pointer());
     }
@@ -246,5 +280,24 @@ mod tests {
         assert_eq!(list_profiles(&d), vec!["a".to_string()]);
         assert_eq!(delete_profile(&d, "b").unwrap_err().code, "NOT_FOUND");
         assert_eq!(use_profile(&d, Some("b")).unwrap_err().code, "NOT_FOUND");
+    }
+
+    #[test]
+    fn a_copy_that_fails_leaves_no_profile_and_delete_keeps_a_recoverable_copy() {
+        let t = tempfile::tempdir().unwrap();
+        let d = dirs(t.path());
+        create_profile(&d, "a", None).unwrap();
+        fs::write(d.profile_config_file("a"), vec![b'#'; MAX_CONFIG_BYTES as usize + 1]).unwrap();
+        assert!(create_profile(&d, "big", Some("a")).is_err());
+        assert!(!d.profile_dir("big").exists());
+        assert_eq!(list_profiles(&d), vec!["a".to_string()]);
+        let leftovers: Vec<_> = fs::read_dir(d.profiles_dir()).unwrap().flatten().collect();
+        assert_eq!(leftovers.len(), 1, "no .new-big folder remains");
+        delete_profile(&d, "a").unwrap();
+        assert_eq!(list_profiles(&d), Vec::<String>::new());
+        assert_eq!(fs::read_dir(d.profiles_dir().join(".removed")).unwrap().count(), 1);
+        create_profile(&d, "a", None).unwrap();
+        delete_profile(&d, "a").unwrap();
+        assert_eq!(fs::read_dir(d.profiles_dir().join(".removed")).unwrap().count(), 2);
     }
 }
