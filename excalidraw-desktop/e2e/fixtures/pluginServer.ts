@@ -145,6 +145,19 @@ export const e2ePluginFixtures = (): Plugin => {
           res.end("not found");
         }
       });
+      // /e2e-plugins/<id>/worker-src.js: the formula plugin's worker text, imported on its first render.
+      server.middlewares.use(async (req, res, next) => {
+        const m = /^\/e2e-plugins\/([a-z0-9-]+)\/worker-src\.js(\?.*)?$/.exec(
+          req.url ?? "",
+        );
+        const file = m && path.join(officialDir(m[1]), "worker-src.js");
+        if (!file || !existsSync(file)) {
+          return next();
+        }
+        res.setHeader("Content-Type", "text/javascript; charset=utf-8");
+        res.setHeader("Cache-Control", "no-store");
+        res.end(await readFile(file, "utf8"));
+      });
       server.middlewares.use(async (req, res, next) => {
         const m = /^\/e2e-plugins\/([a-z0-9-]+)\/main\.js(\?.*)?$/.exec(
           req.url ?? "",
