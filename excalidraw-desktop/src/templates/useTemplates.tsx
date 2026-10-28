@@ -115,12 +115,7 @@ export function useTemplates(o: Options) {
         if (parent === null) {
           return;
         }
-        const stamp = Date.now().toString().slice(-4);
-        await o.createFromJson(
-          parent,
-          `${entry.name}-${stamp}.excalidraw`,
-          json,
-        );
+        await o.createFromJson(parent, `${entry.name}.excalidraw`, json);
       } catch (err) {
         o.onError(
           `Couldn't create a drawing from the template: ${errorMessage(err)}`,

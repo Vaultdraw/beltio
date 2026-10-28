@@ -12,6 +12,7 @@ import {
 import { fileKind, stripDrawingExt } from "./vault/fileKind";
 
 import { errorMessage, isNotFoundError } from "./vault/types";
+import { uniqueName } from "./vault/uniqueName";
 import { cachedPreferences } from "./vault/useGlobalPref";
 import {
   desktopRepository,
@@ -1723,12 +1724,25 @@ export const VaultApp = ({
     return parent;
   };
 
+  // The next free "<base>.excalidraw" / "<base> 1.excalidraw" in a folder.
+  const freeDrawingName = async (parent: string, base: string) => {
+    let taken: string[] = [];
+    try {
+      taken = (await repository.listDirectory(vault!.handle, parent)).map(
+        (e) => e.name,
+      );
+    } catch {
+      // folder not created yet: every name is free
+    }
+    return uniqueName(base, ".excalidraw", taken);
+  };
+
   const handleNewDrawing = async () => {
     const parent = await prepareNewDrawingParent();
     if (parent !== null) {
       await handleCreateDrawing(
         parent,
-        `Drawing-${Date.now().toString().slice(-4)}.excalidraw`,
+        await freeDrawingName(parent, "Untitled"),
       );
     }
   };
@@ -1742,7 +1756,11 @@ export const VaultApp = ({
     setIsBusy(true);
     setGlobalAlert(null);
     try {
-      await createEntryCore(parentPath, name, json);
+      await createEntryCore(
+        parentPath,
+        await freeDrawingName(parentPath, name.replace(/\.excalidraw$/, "")),
+        json,
+      );
     } finally {
       setIsBusy(false);
     }

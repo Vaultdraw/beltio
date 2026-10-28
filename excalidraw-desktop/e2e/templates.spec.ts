@@ -111,7 +111,7 @@ test("typing filters; Enter creates a drawing with new ids, same content and can
   await page.keyboard.press("Enter");
   await expect(picker(page)).toHaveCount(0);
 
-  const created = await waitForCreated(page, "Lecture Notes-");
+  const created = await waitForCreated(page, "Lecture Notes.");
   await expect(page.locator(".vault-editor canvas.interactive")).toBeVisible();
 
   const scene = await readScene(page, created);
@@ -159,7 +159,7 @@ test("arrow keys move the selection; Enter uses the active row", async ({
   await expect(rows(page).nth(1)).toHaveAttribute("aria-selected", "true");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
-  const created = await waitForCreated(page, "Kanban Board-");
+  const created = await waitForCreated(page, "Kanban Board.");
   const scene = await readScene(page, created);
   expect(scene.appState.viewBackgroundColor).toBe(
     TEMPLATE_BACKGROUNDS["Kanban Board"],
@@ -214,7 +214,7 @@ test("Blank drawing row creates a plain new drawing", async ({ page }) => {
   await openPicker(page);
   await rows(page).first().click();
   await expect(picker(page)).toHaveCount(0);
-  const created = await waitForCreated(page, "Drawing-");
+  const created = await waitForCreated(page, "Untitled.");
   const scene = await readScene(page, created);
   expect(scene.elements).toHaveLength(0);
 });
@@ -300,7 +300,7 @@ test("a global template saved for All vaults appears in the All vaults group", a
   await picker(page).getByRole("combobox").fill("shared");
   expect(await rowNames(page)).toEqual(["Shared Graph"]);
   await page.keyboard.press("Enter");
-  const created = await waitForCreated(page, "Shared Graph-");
+  const created = await waitForCreated(page, "Shared Graph.");
   const scene = await readScene(page, created);
   const source = await readScene(page, "DSA/Graphs.excalidraw");
   expect(scene.elements).toHaveLength(source.elements.length);

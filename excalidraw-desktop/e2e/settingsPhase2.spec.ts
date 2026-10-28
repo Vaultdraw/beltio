@@ -155,6 +155,6 @@ test("default folder is created and receives the new drawing", async ({
   expect(listing.root).toContain("Inbox");
   expect(listing.inbox).toContain("Inbox/Deep");
   expect(listing.deep).toHaveLength(1);
-  expect(listing.deep[0]).toMatch(/^Inbox\/Deep\/Drawing-\d+\.excalidraw$/);
+  expect(listing.deep[0]).toMatch(/^Inbox\/Deep\/Untitled\.excalidraw$/);
   expect(errors).toEqual([]);
 });
