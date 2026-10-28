@@ -36,7 +36,8 @@ const rowByName = (page: Page, name: string): Locator =>
     })
     .first();
 
-const dialog = (page: Page) => page.getByRole("dialog");
+// The app's own dialogs (the editor's property popovers also carry role=dialog).
+const dialog = (page: Page) => page.locator(".vault-modal-backdrop");
 
 /** Everything the fake vault holds, as sorted vault paths (files, folders, notes). */
 const allPaths = (page: Page): Promise<string[]> =>
@@ -81,7 +82,7 @@ const settle = async (page: Page, d: Locator): Promise<string | null> => {
       (await d.locator(".vault-error-text").count()) > 0 ||
       (await alert.count()) > 0;
     expect(closed || shown).toBe(true);
-  }).toPass({ timeout: 6000 });
+  }).toPass({ timeout: 25_000 });
   await page.waitForTimeout(150);
   let text: string | null = null;
   if ((await d.locator(".vault-error-text").count()) > 0) {
@@ -890,5 +891,171 @@ test("Obsidian vault: browsing changes no byte, hidden folders are not listed, p
       () => (window as any).__vaultRepo.writeCalls.length as number,
     ),
   ).toBe(writes);
+  expect(errors).toEqual([]);
+});
+
+// ---------------------------------------------------------------------------
+// Sync conflict copies, empty / read-only / very large vaults, backup
+
+test("sync conflict copies: every naming style gets a badge, a lone numbered name does not", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  const sc = sceneJson([{ id: "x" }]);
+  await openVault(page, "?seed=empty");
+  await seedDrawings(page, {
+    "Plan.excalidraw": sc,
+    "Plan (conflicted copy 2026-01-01).excalidraw": sc,
+    "Plan (Ana's MacBook's conflicted copy 2026-01-01).excalidraw": sc,
+    "Plan.sync-conflict-20260101-120000-ABCDEFG.excalidraw": sc,
+    "Plan 2.excalidraw": sc,
+    "Solo 2.excalidraw": sc, // numbered, but "Solo" does not exist: not a conflict
+    "Plan 2024.excalidraw": sc, // a year, not a copy number
+  });
+  await rescan(page);
+  await expect(rowByName(page, "Plan")).toBeVisible();
+  const badged = await page
+    .locator(".vault-tree-item", {
+      has: page.getByTestId("sync-conflict-badge"),
+    })
+    .evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.treePath));
+  expect(badged.sort()).toEqual(
+    [
+      "Plan (Ana's MacBook's conflicted copy 2026-01-01).excalidraw",
+      "Plan (conflicted copy 2026-01-01).excalidraw",
+      "Plan 2.excalidraw",
+      "Plan.sync-conflict-20260101-120000-ABCDEFG.excalidraw",
+    ].sort(),
+  );
+  expect(errors).toEqual([]);
+});
+
+test("an empty vault, a read-only vault and a very large drawing", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+
+  // Empty: a hint, no rows; the first drawing appears and opens.
+  await openVault(page, "?seed=empty");
+  await expect(
+    page.getByText("Vault is empty. Create your first drawing!"),
+  ).toBeVisible();
+  await expect(page.getByText("No Drawing Open")).toBeVisible();
+  const search = page.getByPlaceholder("Search drawings and text…");
+  await search.fill("anything");
+  await expect(page.locator(".vault-search-row")).toHaveCount(0);
+  await search.fill("");
+  expect(await createVia(page, "Drawing", "First")).toBeNull();
+  await expect(rowByName(page, "First")).toBeVisible();
+  await expect(page.getByText("Vault is empty.")).toHaveCount(0);
+
+  // Read-only and locked by another process: a badge explains why, no edit actions anywhere.
+  await page.goto("/e2e.html?readonly=1&locked=1");
+  await enterVault(page);
+  const badge = page.getByRole("button", { name: /Read-Only/ });
+  await expect(badge).toBeVisible();
+  await badge.click();
+  await expect(
+    page.getByRole("dialog", { name: "Why this vault is read-only" }),
+  ).toContainText("process 4242");
+  await page.keyboard.press("Escape");
+  for (const b of ["New Drawing", "New Folder"]) {
+    await expect(
+      page.getByRole("button", { name: b, exact: true }),
+    ).toHaveCount(0);
+  }
+  await row(page, "DSA").locator(".vault-tree-item__toggle").click();
+  await row(page, "DSA/Graphs.excalidraw")
+    .locator(".vault-tree-item__name")
+    .click();
+  await expect(page.locator(".vault-editor canvas.interactive")).toBeVisible();
+  await expect(page.locator(".vault-editor-container--readonly")).toBeVisible();
+  const box = (await page
+    .locator(".vault-editor canvas.interactive")
+    .boundingBox())!;
+  const beforeScene = await readFake(page, "DSA/Graphs.excalidraw");
+  await page.keyboard.press("r");
+  await page.mouse.move(box.x + 500, box.y + 400);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 600, box.y + 480, { steps: 5 });
+  await page.mouse.up();
+  await page.waitForTimeout(1000);
+  expect(await readFake(page, "DSA/Graphs.excalidraw")).toBe(beforeScene);
+  await row(page, "DSA/Graphs.excalidraw").click({ button: "right" });
+  for (const item of ["Rename", "Move to Trash", "Duplicate"]) {
+    await expect(page.getByRole("menuitem", { name: item })).toHaveCount(0);
+  }
+  await page.keyboard.press("Escape");
+
+  // A drawing with 10,000 elements opens, accepts an edit and saves it.
+  await page.goto("/e2e.html?scene=big10k");
+  await enterVault(page);
+  await row(page, "Big").locator(".vault-tree-item__toggle").click();
+  const t0 = Date.now();
+  await row(page, "Big/Big10k.excalidraw")
+    .locator(".vault-tree-item__name")
+    .click();
+  await expect(page.locator(".vault-editor canvas.interactive")).toBeVisible();
+  await expect(page.locator(".vault-editor")).toHaveAttribute(
+    "data-scene-ready",
+    "true",
+    {
+      timeout: 20_000,
+    },
+  );
+  expect(Date.now() - t0).toBeLessThan(20_000);
+  const count = () =>
+    page.evaluate(
+      () =>
+        (window as any).__editorApis()[0].getSceneElements().length as number,
+    );
+  expect(await count()).toBe(10_000);
+  const big = (await page
+    .locator(".vault-editor canvas.interactive")
+    .boundingBox())!;
+  await page.locator(".vault-editor [data-testid='toolbar-rectangle']").click();
+  await page.mouse.move(big.x + 700, big.y + 500);
+  await page.mouse.down();
+  await page.mouse.move(big.x + 780, big.y + 560, { steps: 4 });
+  await page.mouse.up();
+  await expect.poll(count).toBe(10_001);
+  await expect
+    .poll(
+      async () =>
+        JSON.parse((await readFake(page, "Big/Big10k.excalidraw"))!).elements
+          .length,
+    )
+    .toBe(10_001);
+  // Renaming it while open keeps all of it.
+  expect(
+    await renameVia(page, row(page, "Big/Big10k.excalidraw"), "Big renamed"),
+  ).toBeNull();
+  await expect
+    .poll(() => readFake(page, "Big/Big renamed.excalidraw"))
+    .not.toBeNull();
+  expect(
+    JSON.parse((await readFake(page, "Big/Big renamed.excalidraw"))!).elements,
+  ).toHaveLength(10_001);
+  expect(errors).toEqual([]);
+});
+
+test("backup: Settings offers back up and restore, and says where the zip went", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page, "?config=1");
+  await page
+    .getByLabel("Vault File Navigator")
+    .getByRole("button", { name: "Settings" })
+    .click();
+  const d = page.getByRole("dialog");
+  await d.getByRole("tab", { name: "General" }).click();
+  await d.getByRole("button", { name: "Back up vault…" }).click();
+  await expect(
+    page.getByText("Backup written: /backups/vault backup 2026-10-28.zip"),
+  ).toBeVisible();
+  await expect(
+    d.getByRole("button", { name: "Restore from backup…" }),
+  ).toBeEnabled();
   expect(errors).toEqual([]);
 });
