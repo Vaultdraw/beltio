@@ -137,6 +137,10 @@ describe("user strings follow STRINGS.md", () => {
               .slice(1),
           );
           for (const part of inner) {
+            // Capitalised word helpers mid-title (entryWord gives "Drawing").
+            if (/\bentryWord\(/.test(part) && !/toLowerCase/.test(part)) {
+              bad.push(`${relative(ROOT, file)}: ${m[0].slice(0, 90)}`);
+            }
             for (const lit of part.matchAll(/"([^"]*)"/g)) {
               flag(lit[1].split(/\s+/));
             }

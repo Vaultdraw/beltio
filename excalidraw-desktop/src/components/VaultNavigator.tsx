@@ -1139,7 +1139,7 @@ export const VaultNavigator = ({
       {/* Trash Confirm Modal */}
       {trashTarget && (
         <ConfirmModal
-          title={`Delete ${entryWord(trashTarget.kind)}`}
+          title={`Delete ${entryWord(trashTarget.kind).toLowerCase()}`}
           message={
             trashTarget.kind === "folder"
               ? folderTrashMessage(trashTarget.name, trashCount)

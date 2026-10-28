@@ -153,7 +153,7 @@ export const MoveModal = ({
 
   return (
     <Dialog
-      title={`Move ${entryWord(sourceKind)}`}
+      title={`Move ${entryWord(sourceKind).toLowerCase()}`}
       titleId="move-modal-title"
       className="vd-dialog--wide"
       onClose={onCancel}

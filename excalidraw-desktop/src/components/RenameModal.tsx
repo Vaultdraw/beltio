@@ -59,7 +59,7 @@ export const RenameModal = ({
 
   return (
     <Dialog
-      title={`Rename ${entryWord(kind)}`}
+      title={`Rename ${entryWord(kind).toLowerCase()}`}
       titleId="rename-modal-title"
       onClose={onCancel}
       onSubmit={handleSubmit}
