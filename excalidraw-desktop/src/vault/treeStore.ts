@@ -192,7 +192,7 @@ export function checkTreeDrop(
               ? `"${stripDrawingExt(source.name)}" already exists in ${where}`
               : `"${stripDrawingExt(
                   name,
-                )}" already exists in ${where} (names that differ only in capitals or accents count as the same)`,
+                )}" already exists in ${where} (names that differ only in capitals count as the same)`,
         };
       }
     }

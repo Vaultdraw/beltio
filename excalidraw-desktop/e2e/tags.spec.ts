@@ -6,7 +6,7 @@ import { openDrawing, openVault, trackErrors } from "./helpers";
 import { openTagsVault, paneTagNames, tagList } from "./tagsHelpers";
 
 const searchBox = (page: Page) =>
-  page.getByPlaceholder("Search drawings and text… (tag:#name)");
+  page.getByPlaceholder("Search drawings and text…");
 const panel = (page: Page) => page.getByRole("region", { name: "Tags" });
 const tagButton = (page: Page, name: string) =>
   panel(page).getByRole("button", { name: new RegExp(`^Tag ${name},`) });

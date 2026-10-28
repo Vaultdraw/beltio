@@ -351,7 +351,8 @@ export const SearchResults = ({
       : null;
   let statusText: string;
   if (error && useFallback) {
-    statusText = `Content search unavailable (${error}). Showing name matches.`;
+    statusText =
+      "Content search isn't available right now. Showing name matches.";
   } else if (!useFallback && !response) {
     statusText = loading ? "Searching…" : "";
   } else if (rows.length === 0) {

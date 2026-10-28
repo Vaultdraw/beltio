@@ -645,7 +645,7 @@ export const QuickSwitcher = ({
         )}
         {names.error && (
           <div className="vault-quick__empty" role="status">
-            Could not list drawings: {names.error}
+            Couldn't list the drawings. Try again in a moment.
           </div>
         )}
         {indexing && (

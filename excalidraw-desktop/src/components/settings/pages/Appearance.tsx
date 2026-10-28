@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { userError } from "../../userError";
+
 import { getSnippetSource } from "../../../snippets/store";
 import { resolveAccent } from "../../../theme/accent";
 import { openThemesDir } from "../../../theme/registry";
@@ -237,11 +239,7 @@ const ThemesFolderSetting = () => {
     try {
       await openThemesDir();
     } catch (err) {
-      setError(
-        `Could not open the themes folder: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
-      );
+      setError(`Couldn't open the themes folder. ${userError(err, "")}`.trim());
     }
   };
   return (

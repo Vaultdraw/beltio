@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { getCleanDrawingName, validateEntryName } from "../vault/treeStore";
 
+import { userError } from "./userError";
+
 import { Dialog } from "./Dialog";
 
 interface RenameModalProps {
@@ -43,7 +45,7 @@ export const RenameModal = ({
     try {
       await onRename(targetName);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(userError(err));
       setSubmitting(false);
     }
   };

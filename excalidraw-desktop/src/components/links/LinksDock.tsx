@@ -15,6 +15,8 @@ import {
   useState,
 } from "react";
 
+import { userError } from "../userError";
+
 import { stripDrawingExt } from "../../vault/fileKind";
 
 import { useListKeys } from "../../commands/useListKeys";
@@ -204,8 +206,7 @@ export function LinksDock(props: LinksDockProps) {
               setError(null);
             }
           },
-          (err) =>
-            live && setError(err instanceof Error ? err.message : String(err)),
+          (err) => live && setError(userError(err)),
         );
       },
       have ? DOCK_DEBOUNCE_MS : 0,

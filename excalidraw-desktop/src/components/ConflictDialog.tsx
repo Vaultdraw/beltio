@@ -2,6 +2,8 @@ import { useState } from "react";
 
 import { duplicateName, getBaseName } from "../vault/treeStore";
 
+import { userError } from "./userError";
+
 import { Dialog } from "./Dialog";
 import { IconAlert } from "./Icons";
 
@@ -33,7 +35,7 @@ export const ConflictDialog = ({
       await onReload();
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(userError(err));
       setProcessing(false);
     }
   };
@@ -45,7 +47,7 @@ export const ConflictDialog = ({
       await onSaveCopy(copyPath.trim());
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(userError(err));
       setProcessing(false);
     }
   };

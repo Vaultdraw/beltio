@@ -64,7 +64,7 @@ pub fn ensure_no_sibling_collision_except(path: &Path, except: Option<&Path>) ->
         return Err(err(
             "NAME_COLLISION",
             format!(
-                "A file named '{}' already exists here (names that differ only in capitals or accents count as the same)",
+                "A file named “{}” already exists here (names that differ only in capitals count as the same)",
                 item.file_name().to_string_lossy()
             ),
         ));
@@ -398,7 +398,7 @@ pub fn move_entry_paths(root: &Path, from: &str, to: &str) -> Result<()> {
     // The same file under another spelling (case-only rename): a plain rename is safe. Anything else
     // goes through the kernel's no-replace rename, so a clash our name check missed never overwrites.
     if same_file(&src, &dst) { return fs::rename(src, dst).map_err(ioerr); }
-    rename_no_replace(&src, &dst).map_err(|e| if e.kind() == std::io::ErrorKind::AlreadyExists { err("NAME_COLLISION", format!("A file named '{}' already exists here (names that differ only in capitals or accents count as the same)", dst.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default())) } else { ioerr(e) })
+    rename_no_replace(&src, &dst).map_err(|e| if e.kind() == std::io::ErrorKind::AlreadyExists { err("NAME_COLLISION", format!("A file named “{}” already exists here (names that differ only in capitals count as the same)", dst.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default())) } else { ioerr(e) })
 }
 
 #[cfg(test)]

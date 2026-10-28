@@ -22,7 +22,9 @@ export const ExternalLink = ({ href, children, className, onError }: Props) => (
     onClick={(e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      void openExternal(href).catch(() => onError?.(`Could not open ${href}`));
+      void openExternal(href).catch(() =>
+        onError?.("Couldn't open the link in the browser."),
+      );
     }}
   >
     {children}

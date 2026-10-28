@@ -518,9 +518,9 @@ export class FakeVaultRepository implements VaultRepository {
       ) {
         throw makeError(
           "NAME_COLLISION",
-          `A file named '${other.slice(
+          `A file named “${other.slice(
             other.lastIndexOf("/") + 1,
-          )}' already exists here (names that differ only in capitals or accents count as the same)`,
+          )}” already exists here (names that differ only in capitals count as the same)`,
         );
       }
     }

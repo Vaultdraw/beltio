@@ -1,3 +1,5 @@
+import { userError } from "./userError";
+
 import {
   memo,
   useCallback,
@@ -697,7 +699,7 @@ export const VaultNavigator = ({
       setCreateKind(null);
       setCreateName("");
     } catch (err: unknown) {
-      setCreateError(err instanceof Error ? err.message : String(err));
+      setCreateError(userError(err));
     }
   };
 
@@ -808,7 +810,8 @@ export const VaultNavigator = ({
             ref={searchInputRef}
             type="text"
             className="vault-search__input"
-            placeholder="Search drawings and text… (tag:#name)"
+            placeholder="Search drawings and text…"
+            title="Search names and text. Start with tag:# to find a tag."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -823,7 +826,7 @@ export const VaultNavigator = ({
             }}
           />
           {isIndexing && (
-            <span className="vault-spinner" title="Indexing files..." />
+            <span className="vault-spinner" title="Indexing files…" />
           )}
           {searchQuery && (
             <button

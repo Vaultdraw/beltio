@@ -10,7 +10,7 @@ export const tagList = (page: Page) =>
 export const tagRow = (page: Page, name: string) =>
   tagsPanel(page).getByRole("button", { name: new RegExp(`^Tag ${name},`) });
 export const searchBox = (page: Page) =>
-  page.getByPlaceholder("Search drawings and text… (tag:#name)");
+  page.getByPlaceholder("Search drawings and text…");
 export const popup = (page: Page) => page.locator(".vault-suggest");
 export const popupRows = (page: Page) =>
   page.locator(".vault-suggest__row:not(.vault-suggest__row--create)");

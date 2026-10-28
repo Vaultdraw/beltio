@@ -19,6 +19,8 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { userError } from "../components/userError";
+
 import { registerCommandHandlers } from "../commands/handlerRegistry";
 import { defineContextKey } from "../commands/contextKeys";
 import { openExternal } from "../help/openExternal";
@@ -115,7 +117,7 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
       }
       editor.current?.setText(file.content);
     } catch (err) {
-      setLoaded({ error: err instanceof Error ? err.message : String(err) });
+      setLoaded({ error: userError(err, "Couldn't open this note.") });
     }
   }, [vault.handle, path]);
   useEffect(() => {
@@ -349,7 +351,7 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
         : null;
     if (next === null) {
       toastStore.push({
-        message: "Could not match that checkbox to the note. Edit it instead.",
+        message: "Couldn't match that checkbox to the note. Edit it instead.",
       });
       return;
     }
@@ -428,10 +430,8 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
             toastStore.push({
               message:
                 err instanceof NoteConflictError
-                  ? `"${target}" already exists`
-                  : `Could not create "${target}": ${
-                      err instanceof Error ? err.message : String(err)
-                    }`,
+                  ? `“${target}” already exists`
+                  : `Couldn't create “${target}”. ${userError(err, "")}`.trim(),
             }),
         );
     },
@@ -491,9 +491,7 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
       await saver.current.flush();
     } catch (err) {
       toastStore.push({
-        message: `Could not save: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
+        message: `Couldn't save. ${userError(err, "")}`.trim(),
       });
     }
   }, [handle, path]);
@@ -556,7 +554,9 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
       )}
       {status.s === "error" && (
         <div className="note-banner note-banner-error" role="alert">
-          <span>Could not save: {status.message}</span>
+          <span>
+            {`Couldn't save. ${userError(status.message, "")}`.trim()}
+          </span>
           <button type="button" onClick={() => void saver.current?.flush()}>
             Try again
           </button>

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 
 import { duplicateName, getBaseName } from "../vault/treeStore";
 
+import { userError } from "./userError";
+
 import { Dialog } from "./Dialog";
 import { IconTrash } from "./Icons";
 
@@ -31,7 +33,7 @@ export const RecoveryDialog = ({
       const list = await repository.listRecovery(handle);
       setEntries(list);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(userError(err));
     } finally {
       setLoading(false);
     }
@@ -48,7 +50,7 @@ export const RecoveryDialog = ({
       await repository.discardRecovery(handle, id);
       setEntries((prev) => prev.filter((item) => item.id !== id));
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(userError(err));
     } finally {
       setProcessingId(null);
     }
@@ -62,7 +64,7 @@ export const RecoveryDialog = ({
       await onOpenRecovered(recoveredPath, entry.json);
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(userError(err));
       setProcessingId(null);
     }
   };

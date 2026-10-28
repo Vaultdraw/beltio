@@ -2,6 +2,8 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { getBaseName, getParentPath, isMoveAllowed } from "../vault/treeStore";
 
+import { userError } from "./userError";
+
 import { Dialog } from "./Dialog";
 import { IconChevronDown, IconChevronRight, IconFolder } from "./Icons";
 import { moveRows } from "./moveTree";
@@ -96,7 +98,7 @@ export const MoveModal = ({
     try {
       await onMove(target);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(userError(err));
       setMoving(false);
     }
   };
