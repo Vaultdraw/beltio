@@ -57,4 +57,29 @@ describe("a vault's profile", () => {
     expect(push.mock.calls.at(-1)?.[0].message).toMatch(/does not exist/);
     vi.doUnmock("../vault/settingsSync");
   });
+
+  it("returns to the global choice when the next vault names no profile", async () => {
+    vi.resetModules();
+    const profileCall = vi.fn(async () => {});
+    let name: string | null = "work";
+    vi.doMock("../vault/settingsSync", () => ({
+      getSettingsStatus: () => ({ profile: "mine", profiles: ["work", "mine"] }),
+      isConfigFolderActive: () => true,
+      nativeCall: async () => name,
+      profileCall,
+    }));
+    vi.doMock("../toasts/toastStore", () => ({ toastStore: { push: vi.fn() } }));
+    vi.doMock("../vault/vaultSettings", () => ({
+      getVaultSettingsSnapshot: () => ({ handle: "h" }),
+    }));
+    const { applyVaultProfile } = await import("../vault/profiles");
+    await applyVaultProfile("a");
+    expect(profileCall).toHaveBeenLastCalledWith("profile_use", { name: "work" });
+    name = null;
+    await applyVaultProfile("b");
+    expect(profileCall).toHaveBeenLastCalledWith("profile_use", { name: "mine" });
+    await applyVaultProfile("c");
+    expect(profileCall).toHaveBeenCalledTimes(2);
+    vi.doUnmock("../vault/settingsSync");
+  });
 });

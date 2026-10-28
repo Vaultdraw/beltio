@@ -35,11 +35,22 @@ export const getProfiles = () => {
   return { active: status.profile ?? null, profiles: status.profiles ?? [] };
 };
 
-/** Switch to a profile; `null` or `default` goes back to the plain config. */
-export const switchProfile = (name: string | null) =>
+const useProfile = (name: string | null) =>
   profileCall("profile_use", {
     name: name === DEFAULT_PROFILE ? null : name,
   });
+
+/**
+ * The global choice to return to once the open vault no longer names a profile;
+ * `undefined` while no vault profile is applied.
+ */
+let globalChoice: { name: string | null } | undefined;
+
+/** Switch to a profile; `null` or `default` goes back to the plain config. A manual switch is the new global choice. */
+export const switchProfile = (name: string | null) => {
+  globalChoice = undefined;
+  return useProfile(name);
+};
 
 /** Create a profile, empty or copied from another (`default` copies Settings changes). */
 export const createProfile = (name: string, from: string | null) =>
@@ -50,8 +61,9 @@ export const deleteProfile = (name: string) =>
 
 /**
  * A vault can name its profile in the one-line file `.excalidraw-vault/profile`. When the
- * vault opens, that profile becomes the active one (the same switch as everywhere else).
- * A name with no profile folder on this machine is ignored with a note.
+ * vault opens, that profile is active while it is open; opening a vault without one goes back
+ * to the global choice (the profile that was active before). A name with no profile folder
+ * on this machine is ignored with a note.
  */
 export async function applyVaultProfile(handle: string): Promise<void> {
   if (!isConfigFolderActive()) {
@@ -61,7 +73,18 @@ export async function applyVaultProfile(handle: string): Promise<void> {
     const name = await nativeCall<string | null>("Profiles", "vault_profile", {
       handle,
     });
-    if (!name || name === getProfiles().active) {
+    if (!name) {
+      if (globalChoice) {
+        const back = globalChoice.name;
+        globalChoice = undefined;
+        await useProfile(back);
+        toastStore.push({
+          message: `Profile "${back ?? DEFAULT_PROFILE}" (your choice).`,
+        });
+      }
+      return;
+    }
+    if (name === getProfiles().active) {
       return;
     }
     if (!getProfiles().profiles.includes(name)) {
@@ -71,7 +94,8 @@ export async function applyVaultProfile(handle: string): Promise<void> {
       });
       return;
     }
-    await switchProfile(name);
+    globalChoice ??= { name: getProfiles().active };
+    await useProfile(name);
     toastStore.push({ message: `Profile "${name}" (set by this vault).` });
   } catch {
     // A vault without the file, or one that is closing: nothing to apply.
