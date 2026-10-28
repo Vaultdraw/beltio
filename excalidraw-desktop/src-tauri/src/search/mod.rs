@@ -341,6 +341,15 @@ pub(crate) async fn search_list_names(handle: String, state: State<'_, SearchSer
     state.list_names(&handle)
 }
 
+/// Refresh: the index rescans the vault, so it catches changes nothing reported (watcher off,
+/// a sync tool that missed events). A vault whose index has not started has nothing to rescan.
+#[tauri::command]
+#[cfg_attr(test, allow(dead_code))]
+pub(crate) async fn search_rescan(handle: String, state: State<'_, SearchService>) -> Result<()> {
+    state.notify(&handle, &[], true);
+    Ok(())
+}
+
 #[tauri::command]
 #[cfg_attr(test, allow(dead_code))]
 pub(crate) async fn search_index_status(handle: String, state: State<'_, SearchService>) -> Result<IndexStatus> {
@@ -401,6 +410,38 @@ mod unit_tests {
         svc.start_with("h", root.to_path_buf(), noop(), None);
         wait_until("ready", || svc.status("h").is_ok_and(|s| s.state == IndexState::Ready));
         svc
+    }
+
+    // ---- in-app writes with the watcher off (toimprove 92) ----
+
+    #[test]
+    fn in_app_saves_moves_and_trashes_reach_search_with_the_watcher_off() {
+        let dir = tempfile::tempdir().unwrap();
+        write(dir.path(), "keep.excalidraw", &["alpha"]);
+        let svc = started(dir.path());
+        // `for_tests` has no file watcher: the same state as files.auto_reload = false.
+        let v = crate::Vault::for_tests(dir.path().to_path_buf(), "h", false);
+        assert!(!v.is_watching());
+        crate::commit_drawing(&v, None, Some(&svc), "new.excalidraw", &drawing(&["bananas"]), None, "op-1").unwrap();
+        wait_until("a saved drawing is searchable", || paths(&svc, "bananas") == vec!["new.excalidraw"]);
+        // A move and a trash that the app does itself.
+        crate::move_entry_paths(&v.root, "new.excalidraw", "moved.excalidraw").unwrap();
+        v.tell_search(Some(&svc), &["new.excalidraw".to_string(), "moved.excalidraw".to_string()]);
+        wait_until("the move is searchable", || paths(&svc, "bananas") == vec!["moved.excalidraw"]);
+        fs::remove_file(dir.path().join("moved.excalidraw")).unwrap();
+        v.tell_search(Some(&svc), &["moved.excalidraw".to_string()]);
+        wait_until("the trash leaves the index", || paths(&svc, "bananas").is_empty());
+        assert_eq!(paths(&svc, "alpha"), vec!["keep.excalidraw"]);
+    }
+
+    #[test]
+    fn refresh_rescan_finds_a_change_nobody_reported() {
+        let dir = tempfile::tempdir().unwrap();
+        let svc = started(dir.path());
+        write(dir.path(), "silent.excalidraw", &["quietly added"]);
+        assert!(paths(&svc, "quietly").is_empty(), "nothing told the index yet");
+        svc.notify("h", &[], true); // what the search_rescan command sends
+        wait_until("the rescan finds it", || paths(&svc, "quietly") == vec!["silent.excalidraw"]);
     }
 
     // ---- lazy start (D8) ----

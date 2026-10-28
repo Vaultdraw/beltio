@@ -206,6 +206,13 @@ export class FakeVaultSearch implements VaultSearch {
 
   /** Opt-in lazy mode (D8): the index is "loading" until start() or the first query. */
   private started: boolean;
+  /** Every rescan() call (the Refresh button), in order. */
+  readonly rescanCalls: string[] = [];
+
+  async rescan(handle: string): Promise<void> {
+    this.rescanCalls.push(handle);
+  }
+
   /** Every start() call and first-query start, in order ("start" | "query"). */
   readonly startCalls: string[] = [];
 

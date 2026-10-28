@@ -116,7 +116,8 @@ fn write(app: &AppHandle, params: &Value) -> Reply {
     refuse_if_dirty(app, &path)?;
     let json = serde_json::to_string(scene).map_err(|e| RpcError::invalid_params(e.to_string()))?;
     let history = app.try_state::<crate::history::HistoryService>();
-    let done = crate::commit_drawing(&v, history.as_deref(), &path, &json, expected, &crate::random_id()).map_err(native_err)?;
+    let search = app.try_state::<SearchService>();
+    let done = crate::commit_drawing(&v, history.as_deref(), search.as_deref(), &path, &json, expected, &crate::random_id()).map_err(native_err)?;
     Ok(json!({"path": path, "revision": done["revision"]}))
 }
 

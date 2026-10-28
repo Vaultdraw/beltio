@@ -133,6 +133,19 @@ impl Vault {
         *slot = vault_watch::start(&self.root, self.watch_tx.clone()).watching;
         slot.is_some()
     }
+    fn is_watching(&self) -> bool {
+        self.watcher.lock().unwrap_or_else(|p| p.into_inner()).is_some()
+    }
+    /// Tells the content index about an in-app change when no watcher will (`files.auto_reload`
+    /// off): saves, moves and trashes keep search current either way. A vault whose index has not
+    /// started drops it, like a watcher batch does. Free while the watcher runs.
+    pub(crate) fn tell_search(&self, search: Option<&search::SearchService>, paths: &[String]) {
+        if let Some(search) = search {
+            if !self.is_watching() {
+                search.notify(&self.handle, paths, false);
+            }
+        }
+    }
 }
 impl std::ops::Deref for Vault {
     type Target = vaultdraw_core::Vault;
@@ -531,6 +544,7 @@ fn parse_write_headers(headers: &tauri::http::HeaderMap) -> Result<WriteHeaders>
 pub(crate) fn commit_drawing(
     v: &Vault,
     history: Option<&history::HistoryService>,
+    search: Option<&search::SearchService>,
     path: &str,
     json: &str,
     expected_revision: Option<&str>,
@@ -546,21 +560,22 @@ pub(crate) fn commit_drawing(
             history.after_commit(&v.handle, path, rev, disk_len);
         }
         control::events::file_saved(path, rev);
+        v.tell_search(search, &[path.to_string()]);
     }
     memory::schedule_release();
     result
 }
 #[tauri::command]
-async fn write_drawing(request: tauri::ipc::Request<'_>, state: State<'_, Service>, history: State<'_, history::HistoryService>) -> Result<serde_json::Value> {
+async fn write_drawing(request: tauri::ipc::Request<'_>, state: State<'_, Service>, history: State<'_, history::HistoryService>, search: State<'_, search::SearchService>) -> Result<serde_json::Value> {
     let args = parse_write_headers(request.headers())?;
     let body = clipboard::raw_body(&request)?;
     let v = vault_for(&state, &args.handle)?;
-    write_drawing_raw(&v, Some(&history), &args, body)
+    write_drawing_raw(&v, Some(&history), Some(&search), &args, body)
 }
 /// The raw body is the UTF-8 scene JSON; it is validated in place, never copied into a String.
-fn write_drawing_raw(v: &Vault, history: Option<&history::HistoryService>, args: &WriteHeaders, body: &[u8]) -> Result<serde_json::Value> {
+fn write_drawing_raw(v: &Vault, history: Option<&history::HistoryService>, search: Option<&search::SearchService>, args: &WriteHeaders, body: &[u8]) -> Result<serde_json::Value> {
     let json = std::str::from_utf8(body).map_err(|_| err("INVALID_FILE", "Drawing is not UTF-8 JSON"))?;
-    commit_drawing(v, history, &args.path, json, args.expected_revision.as_deref(), &args.operation_id)
+    commit_drawing(v, history, search, &args.path, json, args.expected_revision.as_deref(), &args.operation_id)
 }
 #[tauri::command]
 async fn create_folder(handle: String, path: String, state: State<'_, Service>) -> Result<()> {
@@ -576,12 +591,14 @@ async fn move_entry(
     to: String,
     state: State<'_, Service>,
     history: State<'_, history::HistoryService>,
+    search: State<'_, search::SearchService>,
 ) -> Result<()> {
     let v = vault_for(&state, &handle)?;
     writable(&v)?;
     let _mutation = mutation_guard(&v)?;
     move_entry_paths(&v.root, &from, &to)?;
     history.moved(&handle, &from, &to);
+    v.tell_search(Some(&search), &[from, to]);
     Ok(())
 }
 /// `move_entry` that also keeps links between drawings working (see `links::types`).
@@ -605,10 +622,12 @@ async fn move_entry_with_links(
         let _mutation = mutation_guard(&v)?;
         move_entry_paths(&v.root, &from, &to)?;
         history.moved(&handle, &from, &to);
+        v.tell_search(Some(&search), &[from, to]);
         return Ok(links::MoveResult::default());
     }
     let moved = links::move_command(&app, &v, &from, &to, open_path.as_deref(), &search, &links)?;
     history.moved(&handle, &from, &to);
+    v.tell_search(Some(&search), &[from, to]);
     Ok(moved)
 }
 /// Most items `count_folder_items` walks before it stops and reports "N or more".
@@ -671,7 +690,7 @@ fn trash_in(root: &Path, path: &str, trasher: impl FnOnce(&Path) -> std::result:
     Ok(files)
 }
 #[tauri::command]
-async fn trash_entry(handle: String, path: String, state: State<'_, Service>, history: State<'_, history::HistoryService>) -> Result<()> {
+async fn trash_entry(handle: String, path: String, state: State<'_, Service>, history: State<'_, history::HistoryService>, search: State<'_, search::SearchService>) -> Result<()> {
     let v = vault_for(&state, &handle)?;
     writable(&v)?;
     let _mutation = mutation_guard(&v)?;
@@ -679,6 +698,7 @@ async fn trash_entry(handle: String, path: String, state: State<'_, Service>, hi
     for f in &files {
         history.trashed(&handle, f);
     }
+    v.tell_search(Some(&search), &files);
     Ok(())
 }
 /// How many files a folder holds (stops at 1,000), for the "Move to Trash" confirmation.
@@ -945,15 +965,15 @@ mod tests {
     fn raw_write_path_is_guarded_and_returns_revision() {
         let t = tempdir().unwrap(); let v = vault(t.path());
         let args = |expected: Option<&str>| WriteHeaders { handle: "test".into(), path: "a.excalidraw".into(), expected_revision: expected.map(str::to_owned), operation_id: "op".into() };
-        let created = write_drawing_raw(&v, None, &args(None), SCENE.as_bytes()).unwrap();
+        let created = write_drawing_raw(&v, None, None, &args(None), SCENE.as_bytes()).unwrap();
         assert_eq!(created["revision"], revision(SCENE.as_bytes()));
-        assert_eq!(write_drawing_raw(&v, None, &args(None), SCENE.as_bytes()).unwrap_err().code, "CONFLICT");
+        assert_eq!(write_drawing_raw(&v, None, None, &args(None), SCENE.as_bytes()).unwrap_err().code, "CONFLICT");
         let next = SCENE.replace("[]", "[{\"id\":1}]");
         let rev = created["revision"].as_str().unwrap().to_owned();
-        assert_eq!(write_drawing_raw(&v, None, &args(Some(&rev)), next.as_bytes()).unwrap()["revision"], revision(next.as_bytes()));
+        assert_eq!(write_drawing_raw(&v, None, None, &args(Some(&rev)), next.as_bytes()).unwrap()["revision"], revision(next.as_bytes()));
         assert_eq!(fs::read_to_string(t.path().join("a.excalidraw")).unwrap(), next);
-        assert_eq!(write_drawing_raw(&v, None, &args(Some(&rev)), SCENE.as_bytes()).unwrap_err().code, "CONFLICT");
-        assert_eq!(write_drawing_raw(&v, None, &args(None), &[0xff]).unwrap_err().code, "INVALID_FILE");
+        assert_eq!(write_drawing_raw(&v, None, None, &args(Some(&rev)), SCENE.as_bytes()).unwrap_err().code, "CONFLICT");
+        assert_eq!(write_drawing_raw(&v, None, None, &args(None), &[0xff]).unwrap_err().code, "INVALID_FILE");
     }
 
 }
@@ -1112,7 +1132,7 @@ pub fn run() {
                 config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
                 themes::list_themes, themes::open_themes_dir, theme_install::theme_resolve, theme_install::theme_fetch, theme_install::theme_write, theme_install::theme_installed, theme_install::theme_update_fetch, theme_install::theme_uninstall, theme_catalogue::theme_catalogue_cached, theme_catalogue::theme_catalogue_index, theme_catalogue::theme_catalogue_preview, plugins::registry::plugin_registry_cached, plugins::registry::plugin_registry_index, plugins::registry::plugin_registry_install, snippets::list_snippets, snippets::open_snippets_dir,
                 vault_settings::load_vault_settings, vault_settings::update_vault_settings, vault_settings::vault_profile, vault_settings::set_vault_profile,
-                services::services_start, search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
+                services::services_start, search::search_vault, search::search_index_status, search::search_rescan, search::vault_tags, search::search_list_names,
                 links::vault_links, links::vault_unlinked_mentions, links::resolve_link, links::links_plan_move, links::links_remeasure, links::links_remeasure_done, links::tags_plan_rename, links::rename_tag, links::vault_graph, links::graph_layout_load, links::graph_layout_save,
                 history::history_configure, history::history_status, history::history_opened, history::history_list, history::history_snapshot, history::history_checkpoint, history::history_read_version, history::history_read_blob, history::history_snapshot_bytes, history::history_restore_copy, history::history_export_file, history::history_delete_checkpoint, history::history_delete_all, history::history_exclude_from_git,
                 library::read_library, library::write_library, library::list_libraries, library::create_library, library::rename_library, library::delete_library, library::pick_library_file, markdown::markdown_parse, markdown::markdown_parse_file, notes::read_note, notes::write_note, note_assets::read_note_asset, import_folder::import_target_root, backup::backup_start, backup::restore_start, backup::backup_status, backup::backup_cancel,
@@ -1136,7 +1156,7 @@ pub fn run() {
                 config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
                 themes::list_themes, themes::open_themes_dir, theme_install::theme_resolve, theme_install::theme_fetch, theme_install::theme_write, theme_install::theme_installed, theme_install::theme_update_fetch, theme_install::theme_uninstall, theme_catalogue::theme_catalogue_cached, theme_catalogue::theme_catalogue_index, theme_catalogue::theme_catalogue_preview, plugins::registry::plugin_registry_cached, plugins::registry::plugin_registry_index, plugins::registry::plugin_registry_install, snippets::list_snippets, snippets::open_snippets_dir,
                 vault_settings::load_vault_settings, vault_settings::update_vault_settings, vault_settings::vault_profile, vault_settings::set_vault_profile,
-                services::services_start, search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
+                services::services_start, search::search_vault, search::search_index_status, search::search_rescan, search::vault_tags, search::search_list_names,
                 links::vault_links, links::vault_unlinked_mentions, links::resolve_link, links::links_plan_move, links::links_remeasure, links::links_remeasure_done, links::tags_plan_rename, links::rename_tag, links::vault_graph, links::graph_layout_load, links::graph_layout_save,
                 history::history_configure, history::history_status, history::history_opened, history::history_list, history::history_snapshot, history::history_checkpoint, history::history_read_version, history::history_read_blob, history::history_snapshot_bytes, history::history_restore_copy, history::history_export_file, history::history_delete_checkpoint, history::history_delete_all, history::history_exclude_from_git,
                 library::read_library, library::write_library, library::list_libraries, library::create_library, library::rename_library, library::delete_library, library::pick_library_file, markdown::markdown_parse, markdown::markdown_parse_file, notes::read_note, notes::write_note, note_assets::read_note_asset, import_folder::import_target_root, backup::backup_start, backup::restore_start, backup::backup_status, backup::backup_cancel,
@@ -1157,7 +1177,7 @@ pub fn run() {
             config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
             themes::list_themes, themes::open_themes_dir, theme_install::theme_resolve, theme_install::theme_fetch, theme_install::theme_write, theme_install::theme_installed, theme_install::theme_update_fetch, theme_install::theme_uninstall, theme_catalogue::theme_catalogue_cached, theme_catalogue::theme_catalogue_index, theme_catalogue::theme_catalogue_preview, plugins::registry::plugin_registry_cached, plugins::registry::plugin_registry_index, plugins::registry::plugin_registry_install, snippets::list_snippets, snippets::open_snippets_dir,
             vault_settings::load_vault_settings, vault_settings::update_vault_settings, vault_settings::vault_profile, vault_settings::set_vault_profile,
-            services::services_start, search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
+            services::services_start, search::search_vault, search::search_index_status, search::search_rescan, search::vault_tags, search::search_list_names,
                 links::vault_links, links::vault_unlinked_mentions, links::resolve_link, links::links_plan_move, links::links_remeasure, links::links_remeasure_done, links::tags_plan_rename, links::rename_tag, links::vault_graph, links::graph_layout_load, links::graph_layout_save,
                 history::history_configure, history::history_status, history::history_opened, history::history_list, history::history_snapshot, history::history_checkpoint, history::history_read_version, history::history_read_blob, history::history_snapshot_bytes, history::history_restore_copy, history::history_export_file, history::history_delete_checkpoint, history::history_delete_all, history::history_exclude_from_git,
             library::read_library, library::write_library, library::list_libraries, library::create_library, library::rename_library, library::delete_library, library::pick_library_file, markdown::markdown_parse, markdown::markdown_parse_file, notes::read_note, notes::write_note, note_assets::read_note_asset, import_folder::import_target_root, backup::backup_start, backup::restore_start, backup::backup_status, backup::backup_cancel,

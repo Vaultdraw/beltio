@@ -70,4 +70,9 @@ export interface VaultSearch {
    * or use). Optional: without it, the first query starts the index.
    */
   start?(handle: string): Promise<void>;
+  /**
+   * Rescans the vault for changes nobody reported (Refresh). Nothing happens
+   * while the index has not started.
+   */
+  rescan?(handle: string): Promise<void>;
 }

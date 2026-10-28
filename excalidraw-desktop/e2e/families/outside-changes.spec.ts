@@ -203,6 +203,12 @@ test("the Refresh button shows a change nobody reported", async ({ page }) => {
   await page.getByRole("button", { name: "Refresh files" }).click();
   await expect(row(page, "DSA/Silent.excalidraw")).toBeVisible();
   await expect(row(page, "DSA/Graphs.excalidraw")).toHaveCount(0);
+  // The content index rescans too (toimprove 92), so search sees the change as well.
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as any).__vaultSearch.rescanCalls.length),
+    )
+    .toBeGreaterThan(0);
 });
 
 // BH-8 (toimprove 95): a folder deleted outside while expanded leaves nothing behind;

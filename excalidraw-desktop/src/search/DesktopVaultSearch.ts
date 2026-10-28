@@ -78,6 +78,15 @@ export class DesktopVaultSearch implements VaultSearch {
     }
   }
 
+  async rescan(handle: string): Promise<void> {
+    const invoke = await resolveInvoke(this.options.invoke);
+    try {
+      await invoke("search_rescan", { handle });
+    } catch (err) {
+      throw normalizeError(err);
+    }
+  }
+
   async subscribe(listener: (status: IndexStatus) => void) {
     const listen = await resolveListen(this.options.listen);
     try {

@@ -1524,6 +1524,10 @@ export const VaultApp = ({
   const refreshFiles = () => {
     reloadLoadedFolders();
     startIndexing();
+    // The content index rescans too, so search catches what no event reported.
+    if (vault && vaultSearch?.rescan) {
+      void vaultSearch.rescan(vault.handle).catch(() => undefined);
+    }
     void refreshRecovery();
   };
   // Coming back to the window (from a file manager, say) re-reads the listed folders: a
