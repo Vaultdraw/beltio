@@ -4639,6 +4639,7 @@ name = "vaultdraw-core"
 version = "0.2.0"
 dependencies = [
  "crc32fast",
+ "flate2",
  "fs2",
  "hex",
  "libc",

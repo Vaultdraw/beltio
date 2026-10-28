@@ -2,6 +2,7 @@
 //! crash-recovery store, the vault lock, drawing read/write, the search index and the links
 //! index. The desktop app and the `vaultdraw` CLI are thin shells over this crate.
 
+pub mod backup;
 pub mod config;
 pub mod control_settings;
 pub mod drawing;
