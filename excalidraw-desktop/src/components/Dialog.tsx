@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { useEscapeLayer } from "./escapeLayers";
 import { IconClose } from "./Icons";
 
 import "./dialogs.css";
@@ -32,19 +33,6 @@ interface DialogProps {
   /** Ref to the frame element. */
   frameRef?: Ref<HTMLDivElement>;
 }
-
-/** Open dialogs, oldest first: only the top one answers Escape. */
-const openStack: HTMLElement[] = [];
-
-/** The dialog painted on top: the last open one in document order. */
-const topDialog = () =>
-  openStack.reduce<HTMLElement | undefined>(
-    (top, el) =>
-      !top || top.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING
-        ? el
-        : top,
-    undefined,
-  );
 
 const FOCUSABLE = [
   "a[href]",
@@ -104,6 +92,15 @@ export const Dialog = ({
   const [opener] = useState(() => globalThis.document?.activeElement ?? null);
   const live = useRef({ onClose, busy });
   live.current = { onClose, busy };
+  const [doc, setDoc] = useState<Document | null>(null);
+  useEffect(() => setDoc(backdropRef.current?.ownerDocument ?? null), []);
+  // Escape closes only the top layer (escapeLayers: dialogs, Settings, modal
+  // pages), wherever focus sits.
+  useEscapeLayer(
+    doc,
+    () => live.current.onClose(),
+    () => live.current.busy,
+  );
 
   useEffect(() => {
     const doc = backdropRef.current?.ownerDocument;
@@ -111,7 +108,6 @@ export const Dialog = ({
       return;
     }
     const token = backdropRef.current!;
-    openStack.push(token);
     // Focus starts inside the dialog unless the dialog already placed it:
     // the first control in the body or footer, else the Close button.
     if (!token.contains(doc.activeElement)) {
@@ -120,26 +116,7 @@ export const Dialog = ({
         stops.find((el) => !el.closest(".vd-dialog__header")) ?? stops[0]
       )?.focus();
     }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.isComposing) {
-        return;
-      }
-      if (topDialog() !== token) {
-        return;
-      }
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      if (!live.current.busy) {
-        live.current.onClose();
-      }
-    };
-    doc.addEventListener("keydown", onKeyDown, true);
     return () => {
-      doc.removeEventListener("keydown", onKeyDown, true);
-      const at = openStack.indexOf(token);
-      if (at >= 0) {
-        openStack.splice(at, 1);
-      }
       // Hand focus back (never body; skipped if that element is gone).
       if (
         opener instanceof HTMLElement &&

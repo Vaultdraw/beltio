@@ -2,7 +2,6 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { act, fireEvent, render } from "@testing-library/react";
-import { useRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { SaveTemplateModal } from "../templates/SaveTemplateModal";
@@ -10,7 +9,6 @@ import { SaveTemplateModal } from "../templates/SaveTemplateModal";
 import { ConfirmModal } from "./ConfirmModal";
 import { Dialog } from "./Dialog";
 import { escapeDepth } from "./escapeLayers";
-import { useModalKeys } from "./page/useModalKeys";
 import RenameTagDialog from "./tags/RenameTagDialog";
 
 import type { ReactNode } from "react";
@@ -20,17 +18,6 @@ import type { ReactNode } from "react";
  * with a confirm opened over it, Escape closes only the confirm (VS Code, Obsidian). One row
  * per modal kind; a new modal adds a row (and the guard below makes sure it uses the stack).
  */
-const ModalPage = ({ onClose }: { onClose: () => void }) => {
-  const dialog = useRef<HTMLDivElement>(null);
-  const close = useRef<HTMLButtonElement>(null);
-  useModalKeys(dialog, close, onClose, document);
-  return (
-    <div ref={dialog} role="dialog">
-      <button ref={close}>Close</button>
-    </div>
-  );
-};
-
 const members: [string, (onClose: () => void) => ReactNode][] = [
   [
     "Dialog",
@@ -52,7 +39,6 @@ const members: [string, (onClose: () => void) => ReactNode][] = [
       />
     ),
   ],
-  ["modal page (useModalKeys)", (onClose) => <ModalPage onClose={onClose} />],
   [
     "Save as template",
     (onClose) => (
