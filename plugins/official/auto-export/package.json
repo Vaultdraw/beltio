@@ -1,0 +1,11 @@
+{
+  "name": "@vaultdraw/plugin-auto-export",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The official auto-export plugin: SVG and PNG copies of your drawings, written when you save",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node ../../../sdk/cli/bin/vaultdraw-plugin.mjs check dist"
+  }
+}

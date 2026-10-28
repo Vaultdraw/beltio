@@ -14,7 +14,7 @@ import { getRegisteredCommand, registerCommands } from "../commands/registry";
 import { scheduleIdle } from "../platform/idle";
 import { openPanel, panelFlag, togglePanel } from "../slots/panelStore";
 import { toastStore } from "../toasts/toastStore";
-import { subscribePreferences } from "../vault/preferences";
+import { getPreferences, subscribePreferences } from "../vault/preferences";
 
 import { enabledPluginIds } from "./enabledIds";
 import { setFormulaEditRunner } from "./formulaEdit";
@@ -240,6 +240,12 @@ async function startFormulaPlugin(win: Window): Promise<void> {
   getAppCommandRunner()?.("formula.provide");
 }
 
+/** True when the official plugin `id` is on and its `startWhen` setting is true in config.toml. */
+function wantsStart(id: string, win: Window): boolean {
+  const key = OFFICIAL_PLUGINS.find((p) => p.id === id)?.startWhen;
+  return !!key && getPreferences(win).pluginSettings[id]?.[key] === true;
+}
+
 export function bootPlugins(win: Window): void {
   setImportHostStarter(() => ensurePluginHost(win));
   setMathStarter(() => startFormulaPlugin(win));
@@ -257,9 +263,12 @@ export function bootPlugins(win: Window): void {
       syncOfficialActivity(win);
     }
   });
-  // Official plugins alone don't start the host: only their first use does.
+  // Official plugins alone don't start the host: only their first use does, or a switch of theirs
+  // that asks for it (`startWhen`, such as `[plugin.auto-export] enabled = true`).
   const enabled = () =>
-    enabledPluginIds(win).some((id) => !isOfficialPluginId(id));
+    enabledPluginIds(win).some(
+      (id) => !isOfficialPluginId(id) || wantsStart(id, win),
+    );
   if (enabled()) {
     onIdle(win, () => start(win));
     return;

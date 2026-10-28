@@ -111,7 +111,9 @@ describe("consent text", () => {
     expect(permissionText("vault.read")).toBe(
       "Read the drawings in your vault",
     );
-    expect(permissionText("vault.write")).toBe("Create drawings in your vault");
+    expect(permissionText("vault.write")).toBe(
+      "Create drawings and write export images in your vault",
+    );
     expect(permissionText("future.thing")).toBe("future.thing");
     expect(needsReview(makePluginInfo("a"))).toBe(false);
   });

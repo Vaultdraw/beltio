@@ -1273,6 +1273,38 @@ PDF import is an official plugin (`pdf-import`, in `plugins/official/pdf-import`
 - **Size limits.** Drawings are capped at 32 MiB. Large PDFs get a lower resolution (a decoded-pixel budget keeps memory low), and when a drawing would get too big the import stops and says how many pages it imported. Password-protected PDFs are refused with a message.
 - **Settings.** **Settings → Files** (PDF Import rows), or the `[pdf_import]` table in `config.toml`: `max_side` (longest side in pixels, default 1440), `format` (`jpeg` or `png`), `quality` (JPEG, default 0.85), `lock_pages` (default true), `warn_pages` (default 50) and `pixel_budget_mp` (default 60).
 
+## Auto-export
+
+An official plugin (`auto-export`, in `plugins/official/auto-export`) that writes an SVG or PNG copy of a drawing each time it is saved. It ships with the app but is **off until you turn it on**: `[plugin.auto-export] enabled = false` makes it do nothing, and the app does not even load it. Turn it on in **Settings → Plugins → Auto-export → Settings**, or in `config.toml`. Changes apply live.
+
+```toml
+[plugin.auto-export]
+enabled = true
+formats = "both"      # "svg", "png" or "both"
+folder = "exports"    # "" writes next to each drawing
+exclude = "Private, Scratch"
+```
+
+| Key | Default | What it does |
+| --- | --- | --- |
+| `enabled` | `false` | Export on save. Global only (not per vault). |
+| `formats` | `"svg"` | `"svg"`, `"png"` or `"both"`. |
+| `scale` | `1` | PNG pixel scale, 1 to 3. |
+| `background` | `true` | Paint the canvas background. |
+| `theme` | `"light"` | `"light"` or `"dark"` colours. |
+| `folder` | `""` | A vault folder that mirrors your drawings' folders (`exports/Notes/A.svg` for `Notes/A.excalidraw`). Empty: next to the drawing (`Notes/A.svg`). A folder that starts with a dot is refused. |
+| `exclude` | `""` | Folders to leave out, separated by commas. Drawings inside the export folder are always left out. |
+| `skip_tag` | `"#no-export"` | A drawing with a text that contains this tag is never exported automatically. Empty turns it off. |
+| `on_rename` | `"move"` | `"move"` moves the export with a renamed or moved drawing or folder; `"leave"` keeps the old export and writes a new one. |
+| `on_delete` | `"remove"` | `"remove"` deletes the export of a deleted drawing or folder; `"leave"` keeps it. |
+| `debounce_ms` | `2000` | Wait after the last save of a drawing before exporting (200 to 60000). |
+| `notify` | `false` | Show a toast for each export. |
+
+- **Commands** (palette, rebindable): `auto-export.export-all` ("Auto-export: Export all drawings now") and `auto-export.export-current` ("Auto-export: Export this drawing now"). They work while `enabled` is `false`; the second ignores the skip tag and the skipped folders.
+- **Never blocks saving.** A save only starts a timer. After the wait the drawing joins a queue that is worked one export per idle tick, with the editor's own exporter.
+- **Safe paths.** Only `.svg` and `.png` files are written, moved or deleted, never in a folder that starts with a dot, never through a symbolic link. A folder of exports is moved or removed only when it holds nothing but exports.
+- **Limits.** Exports run on the main thread (the editor's exporter needs a canvas), so a very large drawing can cost a short pause while it renders in idle time. An empty drawing is not exported.
+
 ## Templates
 
 A template is an ordinary `.excalidraw` file, so any drawing can become one, and a template can be opened and edited like any other drawing.
@@ -1904,7 +1936,7 @@ Plugins in the `plugins/` folder of the config folder.
 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
-| `enabled` | `["markdown-import", "gallery", "graph", "mermaid", "formula", "pdf-import", "favourites"]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`. |
+| `enabled` | `["markdown-import", "gallery", "graph", "mermaid", "formula", "pdf-import", "favourites", "auto-export"]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`. |
 | `disabled` | `[]` | a list of official plugin ids you turned off, like ["gallery"] |  | Official plugins you turned off, like `["gallery"]`. Settings writes it; a new official plugin is on until you list it here. |
 | `importers` | `[object Object]` | a table like { txt = "text-import" } (extension = plugin id, "" for none) |  | Which plugin imports a file extension when two plugins claim it; `""` turns plugin handling off for that extension. |
 | `storage_limit_kb` | `1024` | an integer between 64 and 16384 |  | Most data one plugin may save with `ctx.storage`, in KiB; a save past it is refused. |

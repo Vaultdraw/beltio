@@ -4,6 +4,7 @@
 import { parseToml } from "../../sdk/cli/src/toml.mjs";
 import favouritesToml from "../../plugins/official/favourites/plugin.toml?raw";
 import formulaToml from "../../plugins/official/formula/plugin.toml?raw";
+import autoExportToml from "../../plugins/official/auto-export/plugin.toml?raw";
 import galleryToml from "../../plugins/official/gallery/plugin.toml?raw";
 import pdfImportToml from "../../plugins/official/pdf-import/plugin.toml?raw";
 import { setPluginsBackend } from "../src/plugins/host/backend";
@@ -28,6 +29,7 @@ export async function installDefaultBackend(win: Window): Promise<void> {
       source: "bundled",
       dataKey: doc.data_key ?? null,
       permissions: doc.permissions ?? [],
+      activation: doc.activation ?? [],
       contributes: {
         commands: doc.contributes.commands.map((x: any) => ({
           id: x.id,
@@ -54,7 +56,17 @@ export async function installDefaultBackend(win: Window): Promise<void> {
           title: x.title,
           extensions: x.extensions,
         })),
-        settings: [],
+        settings: (doc.contributes.settings ?? []).map((x: any) => ({
+          key: x.key,
+          type: x.type,
+          title: x.title,
+          ...(x.description ? { description: x.description } : {}),
+          default: x.default,
+          ...(x.min !== undefined ? { min: x.min } : {}),
+          ...(x.max !== undefined ? { max: x.max } : {}),
+          ...(x.options ? { options: x.options } : {}),
+          ...(x.scope ? { scope: x.scope } : {}),
+        })),
       },
     });
   };
@@ -63,6 +75,7 @@ export async function installDefaultBackend(win: Window): Promise<void> {
     infoOf("favourites", favouritesToml),
     infoOf("formula", formulaToml),
     infoOf("pdf-import", pdfImportToml),
+    infoOf("auto-export", autoExportToml),
   ];
   const backend = createFakeBackend(
     infos,
@@ -71,6 +84,24 @@ export async function installDefaultBackend(win: Window): Promise<void> {
       (win as any).__vaultRepo?.seedDrawing(path, JSON.stringify(scene)),
   );
   backend.pdf = (win as any).__pdfBridge;
+  // The plugin API reads the drawings the app holds (the in-memory vault) and writes exports into
+  // `backend.exportFiles`, which specs read through `window.__exportFiles()`.
+  backend.drawingSource = async (path) => {
+    const repo = (win as any).__vaultRepo;
+    try {
+      const file = await repo.readDrawing(repo.handle, path);
+      return { scene: JSON.parse(file.json), revision: file.revision };
+    } catch {
+      return null;
+    }
+  };
+  (win as any).__exportFiles = () =>
+    Object.fromEntries(
+      Object.entries(backend.exportFiles).map(([k, v]) => [
+        k,
+        new TextDecoder().decode(v),
+      ]),
+    );
   setPluginsBackend(backend);
   bootPlugins(win); // the stubs, as main.tsx does in the app
 }

@@ -17,6 +17,7 @@ import {
 import { getPreferences } from "../../vault/preferences";
 import { getWorkspaceBridge } from "../workspaceBridge";
 
+import { createExportsApi } from "./exportsContext";
 import { createGateway, createRawGateway } from "./gateway";
 
 import type { SceneElement, SceneOp, VaultApi, VaultEntry } from "../api";
@@ -35,8 +36,12 @@ export function createVaultApi(rt: PluginRuntime): VaultApi {
   // Read at call time: an update can change the declared permissions.
   const need = (method: string, permission: "vault.read" | "vault.write") =>
     requirePermission(id, rt.info.permissions, method, permission);
+  let exportsApi: VaultApi["exports"] | undefined;
   return {
     info: () => getWorkspaceBridge()?.vault() ?? null,
+    get exports() {
+      return (exportsApi ??= createExportsApi(rt));
+    },
     table: {
       async read() {
         need("vault.settings.read", "vault.read");

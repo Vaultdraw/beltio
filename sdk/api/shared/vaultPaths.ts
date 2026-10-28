@@ -26,7 +26,10 @@ const CONTROL = /[\u0000-\u001f\u007f-\u009f]/;
 const invalid = (message: string) =>
   new PluginApiError("INVALID_PATH", message);
 
-export type VaultPathKind = "file" | "folder";
+/** `image`: an export file (`.svg` or `.png`); `imageFolder`: a folder of exports (not the root). */
+export type VaultPathKind = "file" | "folder" | "image" | "imageFolder";
+
+const IMAGE_SUFFIXES = [".svg", ".png"];
 
 /**
  * Throws INVALID_PATH unless `path` is acceptable for a plugin call. A file
@@ -41,7 +44,9 @@ export const checkVaultPath = (path: unknown, kind: VaultPathKind): string => {
     if (kind === "folder") {
       return path;
     }
-    throw invalid("A drawing path is required");
+    throw invalid(
+      kind === "file" ? "A drawing path is required" : "A path is required",
+    );
   }
   if (utf8Length(path) > MAX_PLUGIN_PATH) {
     throw invalid("Path is longer than 1024 bytes");
@@ -54,6 +59,12 @@ export const checkVaultPath = (path: unknown, kind: VaultPathKind): string => {
   }
   if (kind === "file" && !path.toLowerCase().endsWith(DRAWING_SUFFIX)) {
     throw invalid("Drawing paths must end in .excalidraw");
+  }
+  if (
+    kind === "image" &&
+    !IMAGE_SUFFIXES.some((x) => path.toLowerCase().endsWith(x))
+  ) {
+    throw invalid("Exports end in .svg or .png");
   }
   if (path.includes("\\") || path.includes("\0")) {
     throw invalid(

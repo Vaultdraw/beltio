@@ -160,6 +160,8 @@ export interface FakeVault {
   graphLayout(): Uint8Array;
   /** The plugin's own vault settings table (`ctx.vault.table`), as the file would hold it. */
   table(): Record<string, unknown>;
+  /** The files `ctx.vault.exports` wrote, by path, as text (tests mock the renderer to give bytes of text). */
+  exports(): Record<string, string>;
 }
 
 /** What `ctx.workspace` and the folders' `open()` did. */
@@ -542,6 +544,13 @@ export async function boot(
     },
     graphLayout: () => new Uint8Array(backend.graphLayout),
     table: () => structuredClone(backend.vaultTables[info.id] ?? {}),
+    exports: () =>
+      Object.fromEntries(
+        Object.entries(backend.exportFiles).map(([k, v]) => [
+          k,
+          new TextDecoder().decode(v),
+        ]),
+      ),
     saves: () => [...saves],
     pageSetup: (path) =>
       (

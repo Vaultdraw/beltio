@@ -23,7 +23,7 @@ permissions = ["vault.read", "vault.write", "folders.import", "control", "pdf"] 
 | Permission | Consent line | Gates |
 | --- | --- | --- |
 | `vault.read` | Read the drawings in your vault | Listing folders, reading drawings other than the open one, and the `vault.changed` event |
-| `vault.write` | Create drawings in your vault | Creating drawings. Files have no undo, so creating one needs this permission |
+| `vault.write` | Create drawings and write export images in your vault | Creating drawings, and writing `.svg` and `.png` export images (`ctx.vault.exports`). Files have no undo, so creating one needs this permission |
 | `folders.import` | Read a folder you pick and write into a destination you pick | `ctx.folders` (since 0.9.0): listing and reading a folder the user chose in a dialog, and create-only writes into a new vault or a folder of the open vault. The source is never written |
 | `control` | Let the vaultdraw command, scripts and the AI apps you allow call its methods | `[[contributes.methods]]` and `ctx.methods` (since 0.22.0): other programs call the methods the plugin declares. A plugin that declares methods must declare `control`. Adding it in an update needs review, like a write permission |
 | `pdf` | Open PDF files you pick and draw their pages | `ctx.pdf` (since 0.26.0): a native file dialog for a PDF, opening PDF bytes, and rendering pages to pictures with the app's renderer. It reads the file you pick or the bytes you pass and writes nothing, so adding it needs no review |
@@ -40,6 +40,8 @@ Since API 0.3.0 the app checks them in its native layer: every native call of th
 | `ctx.vault.readDrawing(path)`                 | `vault.read`  | 0.6.0 |
 | `ctx.events.on("vault.changed", …)`           | `vault.read`  | 0.6.0 |
 | `ctx.vault.createDrawing(path, ops)`          | `vault.write` | 0.6.0 |
+| `ctx.vault.exports.render(path, to, options)` | `vault.read` and `vault.write` | 0.27.0 |
+| `ctx.vault.exports.move(from, to)`, `exports.remove(path)` | `vault.write` | 0.27.0 |
 | `ctx.vault.info()`                            | none          | 0.6.0 |
 | `ctx.vault.graph.read()`, `graph.layout.load()` | `vault.read`  | 0.18.0 |
 | `ctx.vault.graph.layout.save(bytes)`          | `vault.write` | 0.18.0 |

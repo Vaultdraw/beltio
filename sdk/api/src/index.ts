@@ -123,6 +123,8 @@ export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
 export type {
   VaultApi,
   VaultEntry,
+  ExportImageOptions,
+  VaultExportsApi,
   VaultGraphApi,
   VaultTableApi,
   VaultTableChange,

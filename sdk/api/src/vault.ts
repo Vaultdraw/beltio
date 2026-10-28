@@ -86,6 +86,59 @@ export interface VaultTableApi {
 }
 
 /**
+ * What an exported image looks like.
+ *
+ * @since 0.27.0
+ */
+export interface ExportImageOptions {
+  /** @since 0.27.0 */
+  format: "svg" | "png";
+  /** PNG pixel scale, 1 to 3 (default 1). @since 0.27.0 */
+  scale?: number;
+  /** Paint the canvas background (default true). @since 0.27.0 */
+  background?: boolean;
+  /** Render with the dark theme's colours (default false). @since 0.27.0 */
+  dark?: boolean;
+}
+
+/**
+ * Rendered exports in the vault: the app's own SVG and PNG export of a drawing, written into the
+ * vault as a `.svg` or `.png` file. These are the only files a plugin can write besides drawings,
+ * and only at paths without a dot segment. Errors carry the codes of the rest of `ctx.vault`.
+ *
+ * @since 0.27.0
+ */
+export interface VaultExportsApi {
+  /**
+   * Renders the drawing at `path` and writes the image to `to` (a path ending in `.svg` or `.png`
+   * that matches `options.format`), replacing the file when it exists and creating the folders.
+   * Resolves with the bytes written, or `null` when the drawing is empty (nothing is written).
+   * Needs `vault.read` and `vault.write`. Runs on the main thread: queue calls one at a time.
+   *
+   * @since 0.27.0
+   */
+  render(
+    path: string,
+    to: string,
+    options: ExportImageOptions,
+  ): Promise<{ path: string; size: number } | null>;
+  /**
+   * Moves an export file, or a folder that holds only exports, replacing an existing file. Resolves
+   * false when `from` does not exist. Needs `vault.write`.
+   *
+   * @since 0.27.0
+   */
+  move(from: string, to: string): Promise<boolean>;
+  /**
+   * Deletes an export file, or a folder that holds only exports (it refuses a folder with anything
+   * else in it). Resolves false when it does not exist. Needs `vault.write`.
+   *
+   * @since 0.27.0
+   */
+  remove(path: string): Promise<boolean>;
+}
+
+/**
  * The drawings of the open vault. Paths are vault-relative and use "/";
  * entries and segments that start with a dot are never listed or accepted.
  * Errors carry a `code`: `PERMISSION`, `INVALID_ARGUMENT`, `INVALID_PATH`,
@@ -138,6 +191,12 @@ export interface VaultApi {
    * @since 0.18.0
    */
   readonly graph: VaultGraphApi;
+  /**
+   * SVG and PNG exports of drawings, written into the vault.
+   *
+   * @since 0.27.0
+   */
+  readonly exports: VaultExportsApi;
   /**
    * The plugin's own table in the vault's settings file (bundled plugins only).
    *

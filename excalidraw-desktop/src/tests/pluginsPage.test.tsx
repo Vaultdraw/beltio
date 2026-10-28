@@ -134,7 +134,9 @@ describe("Plugins settings page", () => {
       within(dialog).getByText("Read the drawings in your vault"),
     ).toBeTruthy();
     expect(
-      within(dialog).getByText("Create drawings in your vault"),
+      within(dialog).getByText(
+        "Create drawings and write export images in your vault",
+      ),
     ).toBeTruthy();
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Enable" }));
@@ -169,7 +171,9 @@ describe("Plugins settings page", () => {
       name: "Writer wants new permissions",
     });
     expect(
-      within(dialog).getByText("Create drawings in your vault"),
+      within(dialog).getByText(
+        "Create drawings and write export images in your vault",
+      ),
     ).toBeTruthy();
     fireEvent.click(within(dialog).getByRole("button", { name: "Allow" }));
     expect(h.confirm).toHaveBeenCalledWith("writer", [

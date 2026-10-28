@@ -203,7 +203,9 @@ test("Plugins settings: a plugin that declares a write permission shows it in th
     .getByRole("switch", { name: "Enable Writer" })
     .click({ force: true });
   const consent = page.getByRole("dialog", { name: "Enable Writer?" });
-  await expect(consent).toContainText("Create drawings in your vault");
+  await expect(consent).toContainText(
+    "Create drawings and write export images in your vault",
+  );
   await expect(consent).toContainText("not a limit");
   await consent.getByRole("button", { name: "Enable", exact: true }).click();
 

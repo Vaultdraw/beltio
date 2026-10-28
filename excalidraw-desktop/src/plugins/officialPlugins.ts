@@ -73,6 +73,12 @@ export interface OfficialPlugin {
    * while the switch is on (and the extension set is not in safe start or bisect).
    */
   extension?: "graph" | "mermaid" | "formula" | "pdf-import";
+  /**
+   * A bool setting of this plugin (`[plugin.<id>]`) that, while true, starts the plugin host at idle
+   * after launch: the plugin reacts to app events, so it has to be loaded before its first command.
+   * While it is false (the default) nothing loads.
+   */
+  startWhen?: string;
 }
 
 export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
@@ -391,6 +397,25 @@ export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
       },
     ],
     panels: [{ id: "list", title: "Favourites", icon: "bookmark" }],
+  },
+  {
+    id: "auto-export",
+    name: "Auto-export",
+    /** `[plugin.auto-export] enabled = true` starts it at launch; false (the default) loads nothing. */
+    startWhen: "enabled",
+    importers: [],
+    commands: [
+      {
+        id: "export-all",
+        title: "Auto-export: Export all drawings now",
+        when: ["vaultOpen"],
+      },
+      {
+        id: "export-current",
+        title: "Auto-export: Export this drawing now",
+        when: ["drawingOpen"],
+      },
+    ],
   },
 ];
 

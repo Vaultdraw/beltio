@@ -8,7 +8,7 @@ import type { PluginInfo } from "./types";
 /** What the user reads in the enable dialog, per permission. */
 export const PERMISSION_TEXT: Readonly<Record<string, string>> = {
   "vault.read": "Read the drawings in your vault",
-  "vault.write": "Create drawings in your vault",
+  "vault.write": "Create drawings and write export images in your vault",
   "folders.import":
     "Read a folder you pick and write into a destination you pick",
   pdf: "Open PDF files you pick and draw their pages",

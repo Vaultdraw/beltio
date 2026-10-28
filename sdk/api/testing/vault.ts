@@ -128,6 +128,7 @@ export function createVaultModel(
   let graph = new Uint8Array(0);
   let graphLayout = new Uint8Array(0);
   let tableData: Record<string, unknown> = {};
+  const exported = new Map<string, string>();
 
   const needVault = () => {
     if (!info) {
@@ -160,6 +161,7 @@ export function createVaultModel(
       graph = new Uint8Array(bytes);
     },
     graphLayout: () => new Uint8Array(graphLayout),
+    exports: () => Object.fromEntries(exported),
     table: () => structuredClone(tableData),
     saves: () => [...saves],
     pageSetup: (path) =>
@@ -272,6 +274,81 @@ export function createVaultModel(
                 tableData[c.key] = structuredClone(c.value);
               }
             }
+          },
+        },
+        exports: {
+          async render(path, to, options) {
+            requirePermission(pluginId, permissions, "file.read", "vault.read");
+            requirePermission(
+              pluginId,
+              permissions,
+              "export.write",
+              "vault.write",
+            );
+            checkVaultPath(path, "file");
+            checkVaultPath(to, "image");
+            if (!to.toLowerCase().endsWith(`.${options.format}`)) {
+              throw new PluginApiError(
+                "INVALID_PATH",
+                "The path must end in the export format",
+              );
+            }
+            const v = needVault();
+            if (v.readOnly) {
+              throw new PluginApiError("READ_ONLY", "The vault is read-only");
+            }
+            const d = drawings.get(path);
+            if (!d) {
+              throw new PluginApiError("NOT_FOUND", "Drawing not found");
+            }
+            if (d.elements.every((e) => e.isDeleted)) {
+              return null;
+            }
+            const text = `mock-${options.format}:${path}`;
+            exported.set(to, text);
+            return { path: to, size: text.length };
+          },
+          async move(from, to) {
+            requirePermission(
+              pluginId,
+              permissions,
+              "export.move",
+              "vault.write",
+            );
+            const folder = !/\.(svg|png)$/i.test(from);
+            checkVaultPath(from, folder ? "imageFolder" : "image");
+            checkVaultPath(to, folder ? "imageFolder" : "image");
+            if (needVault().readOnly) {
+              throw new PluginApiError("READ_ONLY", "The vault is read-only");
+            }
+            const base = `${from}/`;
+            const keys = [...exported.keys()].filter((k) =>
+              folder ? k.startsWith(base) : k === from,
+            );
+            for (const k of keys) {
+              const text = exported.get(k)!;
+              exported.delete(k);
+              exported.set(folder ? `${to}/${k.slice(base.length)}` : to, text);
+            }
+            return keys.length > 0;
+          },
+          async remove(path) {
+            requirePermission(
+              pluginId,
+              permissions,
+              "export.remove",
+              "vault.write",
+            );
+            const folder = !/\.(svg|png)$/i.test(path);
+            checkVaultPath(path, folder ? "imageFolder" : "image");
+            if (needVault().readOnly) {
+              throw new PluginApiError("READ_ONLY", "The vault is read-only");
+            }
+            const keys = [...exported.keys()].filter((k) =>
+              folder ? k.startsWith(`${path}/`) : k === path,
+            );
+            keys.forEach((k) => exported.delete(k));
+            return keys.length > 0;
           },
         },
         graph: {
@@ -435,6 +512,7 @@ export function createVaultModel(
       graph = new Uint8Array(0);
       graphLayout = new Uint8Array(0);
       tableData = {};
+      exported.clear();
     },
   };
 }

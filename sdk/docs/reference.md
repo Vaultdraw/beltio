@@ -497,6 +497,32 @@ interface VaultApi {
 | Vault metadata | The `.excalidraw-vault` folder is never accepted. |
 | Create only | `createDrawing` refuses an existing path (`NAME_COLLISION`), also when it differs only by case. |
 
+### ctx.vault.exports (since 0.27.0)
+
+The app's own SVG and PNG export of a drawing, written into the vault as a `.svg` or `.png` file. These are the only files besides drawings a plugin can write.
+
+```ts
+interface ExportImageOptions {
+  format: "svg" | "png";
+  scale?: number; // PNG, 1 to 3 (default 1)
+  background?: boolean; // default true
+  dark?: boolean; // default false
+}
+interface VaultExportsApi {
+  render(path: string, to: string, options: ExportImageOptions): Promise<{ path: string; size: number } | null>;
+  move(from: string, to: string): Promise<boolean>;
+  remove(path: string): Promise<boolean>;
+}
+```
+
+| Call | What it does |
+| --- | --- |
+| `render(path, to, options)` | Renders the drawing at `path` and writes the image to `to` (it must end in the format), replacing the file and creating folders. Resolves with the bytes written, or `null` for an empty drawing (nothing is written). Needs `vault.read` and `vault.write`. The renderer loads on the first call and runs on the main thread: queue calls and run them one at a time, in idle time. |
+| `move(from, to)` | Moves an export file, or a folder that holds only exports. False when `from` does not exist. |
+| `remove(path)` | Deletes an export file, or a folder that holds only exports (a folder with anything else is refused). False when it does not exist. |
+
+Paths follow the path rules above: no dot segments, no `.excalidraw-vault`, no symbolic links. A file must end in `.svg` or `.png`. The official `auto-export` plugin is built on this.
+
 ### ctx.workspace
 
 ```ts

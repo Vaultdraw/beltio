@@ -188,6 +188,8 @@ export interface FakeVault {
   setGraph(bytes: Uint8Array): void;
   /** The layout bytes `ctx.vault.graph.layout.save` stored (empty when none). */
   graphLayout(): Uint8Array;
+  /** The files `ctx.vault.exports` wrote, by path: the mock renders `mock-<format>:<drawing path>`. */
+  exports(): Record<string, string>;
   /** The plugin's own vault settings table (`ctx.vault.table`), as the file would hold it. */
   table(): Record<string, unknown>;
   /** Paths the app saved for a page document (`finish` and `abort`), in order. */

@@ -152,7 +152,7 @@ export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
 export type { FontsApi, TextApi, TextFont } from "./text";
 export type { ThemeApi, ThemeChange, ThemeMode, ThemeTokenName } from "./theme";
-export type { VaultApi, VaultEntry, VaultGraphApi, VaultTableApi, VaultTableChange, } from "./vault";
+export type { VaultApi, VaultEntry, ExportImageOptions, VaultExportsApi, VaultGraphApi, VaultTableApi, VaultTableChange, } from "./vault";
 export type { FolderItem, WorkspaceApi } from "./workspace";
 export { SHARED_SPECIFIERS } from "./specifiers";
 
@@ -945,6 +945,20 @@ export interface VaultTableApi {
     read(): Promise<Record<string, unknown>>;
     update(changes: readonly VaultTableChange[]): Promise<void>;
 }
+export interface ExportImageOptions {
+    format: "svg" | "png";
+    scale?: number;
+    background?: boolean;
+    dark?: boolean;
+}
+export interface VaultExportsApi {
+    render(path: string, to: string, options: ExportImageOptions): Promise<{
+        path: string;
+        size: number;
+    } | null>;
+    move(from: string, to: string): Promise<boolean>;
+    remove(path: string): Promise<boolean>;
+}
 export interface VaultApi {
     info(): {
         name: string;
@@ -962,6 +976,7 @@ export interface VaultApi {
         refs: Record<string, string>;
     }>;
     readonly graph: VaultGraphApi;
+    readonly exports: VaultExportsApi;
     readonly table: VaultTableApi;
 }
 

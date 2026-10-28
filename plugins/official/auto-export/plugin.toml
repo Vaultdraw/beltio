@@ -1,0 +1,108 @@
+id = "auto-export"
+name = "Auto-export"
+version = "0.1.0"
+api = 0
+min_app = "0.2.0"
+main = "main.js"
+description = "SVG and PNG copies of your drawings, written next to them or into an export folder when you save"
+author = "Vaultdraw"
+permissions = ["vault.read", "vault.write"]
+activation = ["onStartupFinished"]
+
+[[contributes.commands]]
+id = "export-all"
+title = "Auto-export: Export all drawings now"
+when = ["vaultOpen"]
+
+[[contributes.commands]]
+id = "export-current"
+title = "Auto-export: Export this drawing now"
+when = ["drawingOpen"]
+
+[[contributes.settings]]
+key = "enabled"
+type = "bool"
+title = "Export on save"
+description = "Write an SVG or PNG copy of a drawing each time it is saved. Off until you turn it on."
+default = false
+scope = ["global"]
+
+[[contributes.settings]]
+key = "formats"
+type = "select"
+title = "Formats"
+default = "svg"
+options = [{ value = "svg", label = "SVG" }, { value = "png", label = "PNG" }, { value = "both", label = "SVG and PNG" }]
+
+[[contributes.settings]]
+key = "scale"
+type = "number"
+title = "PNG scale"
+description = "Pixel scale of PNG exports, 1 to 3."
+default = 1
+min = 1
+max = 3
+
+[[contributes.settings]]
+key = "background"
+type = "bool"
+title = "Background"
+description = "Paint the canvas background in the export."
+default = true
+
+[[contributes.settings]]
+key = "theme"
+type = "select"
+title = "Theme"
+default = "light"
+options = [{ value = "light", label = "Light" }, { value = "dark", label = "Dark" }]
+
+[[contributes.settings]]
+key = "folder"
+type = "string"
+title = "Export folder"
+description = "A vault folder that mirrors your drawings' folders (for example exports). Empty writes each export next to its drawing. Folders that start with a dot are refused."
+default = ""
+
+[[contributes.settings]]
+key = "exclude"
+type = "string"
+title = "Skip folders"
+description = "Vault folders to leave out, separated by commas (for example Private, Scratch/old)."
+default = ""
+
+[[contributes.settings]]
+key = "skip_tag"
+type = "string"
+title = "Skip tag"
+description = "A drawing with a text that contains this tag is never exported automatically. Empty turns it off."
+default = "#no-export"
+
+[[contributes.settings]]
+key = "on_rename"
+type = "select"
+title = "When a drawing is renamed or moved"
+default = "move"
+options = [{ value = "move", label = "Move its export too" }, { value = "leave", label = "Leave the old export and write a new one" }]
+
+[[contributes.settings]]
+key = "on_delete"
+type = "select"
+title = "When a drawing is deleted"
+default = "remove"
+options = [{ value = "remove", label = "Delete its export too" }, { value = "leave", label = "Keep the export" }]
+
+[[contributes.settings]]
+key = "debounce_ms"
+type = "int"
+title = "Wait after saving (ms)"
+description = "Exports start this long after the last save of a drawing."
+default = 2000
+min = 200
+max = 60000
+
+[[contributes.settings]]
+key = "notify"
+type = "bool"
+title = "Show a message for each export"
+default = false

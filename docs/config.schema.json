@@ -1613,7 +1613,8 @@
             "mermaid",
             "formula",
             "pdf-import",
-            "favourites"
+            "favourites",
+            "auto-export"
           ],
           "type": "array",
           "items": {

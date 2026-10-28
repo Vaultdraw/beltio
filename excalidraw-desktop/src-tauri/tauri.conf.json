@@ -47,7 +47,8 @@
       "../../plugins/official/mermaid/dist": "plugins/mermaid",
       "../../plugins/official/formula/dist": "plugins/formula",
       "../../plugins/official/pdf-import/dist": "plugins/pdf-import",
-      "../../plugins/official/favourites/dist": "plugins/favourites"
+      "../../plugins/official/favourites/dist": "plugins/favourites",
+      "../../plugins/official/auto-export/dist": "plugins/auto-export"
     },
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
     "fileAssociations": [

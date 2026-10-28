@@ -92,7 +92,7 @@ describe("bootPlugins", () => {
     flush();
     await vi.waitFor(() => expect(startPluginHost).toHaveBeenCalledTimes(1));
     flush();
-    expect(startPluginHost).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(startPluginHost).toHaveBeenCalledTimes(1));
   });
 });
 
@@ -115,6 +115,7 @@ describe("official plugins (on by default, no startup cost)", () => {
       "formula",
       "pdf-import",
       "favourites",
+      "auto-export",
     ]);
     const { win, flush, queue } = fakeWin(true);
     bootPlugins(win);
@@ -186,6 +187,58 @@ describe("official plugins (on by default, no startup cost)", () => {
     bootPlugins(win);
     expect(queue).toHaveLength(1);
     updatePreferences({ pluginsEnabled: ["markdown-import"] }, window);
+  });
+});
+
+describe("auto-export starts the host only while [plugin.auto-export] enabled is true", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    startPluginHost.mockClear();
+    updatePreferences(
+      { pluginsEnabled: ["auto-export"], pluginSettings: {} },
+      window,
+    );
+  });
+  afterEach(() =>
+    updatePreferences({ pluginsEnabled: [], pluginSettings: {} }, window),
+  );
+
+  it("loads nothing by default, but registers its commands as stubs", () => {
+    const { win, queue } = fakeWin(true);
+    bootPlugins(win);
+    expect(queue).toHaveLength(0);
+    expect(getRegisteredHandler("auto-export.export-all")).toBeTypeOf(
+      "function",
+    );
+  });
+
+  it("starts the host at idle when it is already true at launch", async () => {
+    updatePreferences(
+      { pluginSettings: { "auto-export": { enabled: true } } },
+      window,
+    );
+    const { win, flush, queue } = fakeWin(true);
+    bootPlugins(win);
+    expect(queue).toHaveLength(1);
+    flush();
+    await vi.waitFor(() => expect(startPluginHost).toHaveBeenCalledTimes(1));
+  });
+
+  it("starts it when the setting turns true later, and not when it is off", async () => {
+    const { win, flush, queue } = fakeWin(true);
+    bootPlugins(win);
+    updatePreferences(
+      { pluginSettings: { "auto-export": { enabled: false } } },
+      window,
+    );
+    expect(queue).toHaveLength(0);
+    updatePreferences(
+      { pluginSettings: { "auto-export": { enabled: true } } },
+      window,
+    );
+    expect(queue).toHaveLength(1);
+    flush();
+    await vi.waitFor(() => expect(startPluginHost).toHaveBeenCalledTimes(1));
   });
 });
 

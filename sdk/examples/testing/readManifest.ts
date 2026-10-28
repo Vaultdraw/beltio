@@ -71,6 +71,19 @@ const parseValue = (raw: string, where: string): Value => {
   if (/^"(?:[^"\\]|\\.)*"$/.test(v)) {
     return JSON.parse(v);
   }
+  // A list of inline tables on one line: `[{ value = "a", label = "A" }, ...]` (select options).
+  if (/^\[\s*\{.*\}\s*\]$/.test(v)) {
+    const tables = [...v.matchAll(/\{([^}]*)\}/g)].map((m) => {
+      const table: Table = {};
+      for (const kv of m[1].matchAll(
+        /([\w-]+)\s*=\s*("(?:[^"\\]|\\.)*"|[^,\s]+)/g,
+      )) {
+        table[kv[1]] = parseValue(kv[2], where);
+      }
+      return table;
+    });
+    return tables as unknown as Value;
+  }
   if (/^\[.*\]$/.test(v)) {
     const items = JSON.parse(v.replace(/,\s*\]$/, "]"));
     if (items.every((i: unknown) => typeof i === "string")) {

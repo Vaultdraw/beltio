@@ -34,6 +34,12 @@ export interface FakeBackend extends PluginsBackend {
     string,
     { scene: Record<string, unknown>; revision: string }
   >;
+  /** Tests: where `file.read` gets a drawing the app holds (default: `drawings`). */
+  drawingSource?: (
+    path: string,
+  ) => Promise<{ scene: Record<string, unknown>; revision: string } | null>;
+  /** The files the `export.*` rows wrote, by vault path. */
+  exportFiles: Record<string, Uint8Array>;
   /** Makes `file.write` fail with READ_ONLY. */
   vaultReadOnly: boolean;
   /** False: the vault rows fail with NO_VAULT. */
@@ -164,6 +170,55 @@ const FOLDER_ROWS = new Set([
 ]);
 
 /** The vault rows of the Rust gateway, over `fake.drawings`. */
+/** The `export.write`, `export.move` and `export.remove` rows over `exportFiles` (same body framing as Rust). */
+function exportRow(
+  fake: FakeBackend,
+  plugin: PluginInfo,
+  method: string,
+  body: Uint8Array,
+): Uint8Array {
+  if (!plugin.permissions.includes("vault.write")) {
+    throw coded(
+      "PERMISSION",
+      `${plugin.id}: ${method} needs the permission "vault.write", which plugin.toml does not declare`,
+    );
+  }
+  if (!fake.vaultOpen) {
+    throw coded("NO_VAULT", "No vault is open");
+  }
+  if (fake.vaultReadOnly) {
+    throw coded("READ_ONLY", "The vault is read-only");
+  }
+  const len = new DataView(body.buffer, body.byteOffset).getUint32(0);
+  const head = JSON.parse(
+    new TextDecoder().decode(body.subarray(4, 4 + len)),
+  ) as Record<string, string>;
+  const bytes = body.slice(4 + len);
+  const files = fake.exportFiles;
+  const isFile = (p: string) => /\.(svg|png)$/i.test(p);
+  if (method === "export.write") {
+    files[head.path] = bytes;
+    return new Uint8Array(0);
+  }
+  const under = (dir: string) =>
+    Object.keys(files).filter((k) => k.startsWith(`${dir}/`));
+  const keys = (p: string) => (isFile(p) ? (p in files ? [p] : []) : under(p));
+  if (method === "export.remove") {
+    const hit = keys(head.path);
+    hit.forEach((k) => delete files[k]);
+    return Uint8Array.of(hit.length > 0 ? 1 : 0);
+  }
+  const hit = keys(head.from);
+  for (const k of hit) {
+    const next = isFile(head.from)
+      ? head.to
+      : `${head.to}/${k.slice(head.from.length + 1)}`;
+    files[next] = files[k];
+    delete files[k];
+  }
+  return Uint8Array.of(hit.length > 0 ? 1 : 0);
+}
+
 function vaultCall(
   fake: FakeBackend,
   method: string,
@@ -261,6 +316,7 @@ export function createFakeBackend(
     graphLayout: new Uint8Array(0),
     vaultTables: {},
     drawings: {},
+    exportFiles: {},
     vaultReadOnly: false,
     vaultOpen: true,
     folders: createFakeFolderStore({
@@ -292,6 +348,9 @@ export function createFakeBackend(
           );
         }
         return pdfRow(fake.pdf, method, body);
+      }
+      if (method.startsWith("export.")) {
+        return exportRow(fake, plugin, method, body ?? new Uint8Array(0));
       }
       const need =
         method === "vault.graphLayout.save" ? "vault.write" : "vault.read";
@@ -334,6 +393,12 @@ export function createFakeBackend(
             "PERMISSION",
             `${pluginId}: ${method} needs the permission "${row}", which plugin.toml does not declare`,
           );
+        }
+        if (method === "file.read" && fake.drawingSource) {
+          const d = await fake.drawingSource(String(params?.path ?? ""));
+          if (d) {
+            return { path: params?.path, revision: d.revision, scene: d.scene };
+          }
         }
         return vaultCall(fake, method, params);
       }

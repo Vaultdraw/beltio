@@ -17,6 +17,7 @@ describe("[plugins] enabled", () => {
       "formula",
       "pdf-import",
       "favourites",
+      "auto-export",
     ]);
     expect(
       configToPreferences({ plugins: { enabled: [] } }).values.pluginsEnabled,
@@ -28,6 +29,7 @@ describe("[plugins] enabled", () => {
       "formula",
       "pdf-import",
       "favourites",
+      "auto-export",
     ]); // an old list: official plugins are on
     const ok = configToPreferences({ plugins: { enabled: ["hello-command"] } });
     expect(ok.values.pluginsEnabled).toEqual([
@@ -39,6 +41,7 @@ describe("[plugins] enabled", () => {
       "formula",
       "pdf-import",
       "favourites",
+      "auto-export",
     ]);
     expect(ok.problems).toEqual([]);
   });
@@ -53,6 +56,7 @@ describe("[plugins] enabled", () => {
       "formula",
       "pdf-import",
       "favourites",
+      "auto-export",
     ]);
     expect(bad.problems[0].key).toBe("plugins.enabled");
   });
