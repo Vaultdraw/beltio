@@ -47,9 +47,36 @@ export function rowHeadings(
   rows: readonly RankedRow[],
   mode: PaletteMode,
   hasQuery: boolean,
+  /** Keys of the recently used rows (listed first when there is no query). */
+  recent: readonly string[] = [],
 ): (string | null)[] {
   const out: (string | null)[] = rows.map(() => null);
-  if (mode !== "files" || !hasQuery) {
+  if (mode === "commands") {
+    // Browsing (no query): the group once, as a section header, where it
+    // changes (VS Code's "recently used / other commands", Raycast's
+    // sections), instead of a muted suffix on every row. Ranked results
+    // interleave groups, so they get no headers; each title still starts
+    // with its group ("Export: PDF").
+    if (hasQuery) {
+      return out;
+    }
+    const recentKeys = new Set(recent);
+    const groupOf = (row: RankedRow | undefined) =>
+      !row || row.kind !== "item"
+        ? null
+        : recentKeys.has(row.key)
+        ? "Recently used"
+        : row.entry.item.group;
+    rows.forEach((row, i) => {
+      const group = groupOf(row);
+      const prevGroup = groupOf(rows[i - 1]);
+      if (group && group !== prevGroup) {
+        out[i] = group;
+      }
+    });
+    return out;
+  }
+  if (!hasQuery) {
     return out;
   }
   let first = true;

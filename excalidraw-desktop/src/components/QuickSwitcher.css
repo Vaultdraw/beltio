@@ -94,7 +94,13 @@
   cursor: pointer;
 }
 
-.vault-quick__row--active {
+/* One tint: the pointer moves the selection, so hover adds no second colour. */
+.vault-quick__row:hover {
+  background-color: transparent;
+}
+
+.vault-quick__row--active,
+.vault-quick__row--active:hover {
   background-color: var(--vault-sel);
 }
 

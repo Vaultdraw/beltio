@@ -329,3 +329,50 @@ test("perf: per-keystroke latency on 5,000 drawings", async ({ page }) => {
     (process.platform === "linux" ? 4 : 1);
   expect(report.commitMs.p95).toBeLessThan(16 * perfFactor);
 });
+
+test("palette rows: group header once, an icon on every row, one tint, two hints", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page);
+  await page.keyboard.press("Meta+KeyP");
+  await expect(switcher(page)).toBeVisible();
+  // Drawings mode: no query syntax in the placeholder; the chip explains ">".
+  await expect(input(page)).toHaveAttribute("placeholder", "Search drawings…");
+  await expect(switcher(page).locator(".vault-quick__mode")).toHaveAttribute(
+    "title",
+    /Type > to run a command/,
+  );
+  await input(page).fill(">");
+  await expect(options(page).first()).toBeVisible();
+  const list = switcher(page).getByRole("listbox");
+  // No per-row group suffix, and every group heading appears once.
+  await expect(list.locator(".vault-quick__muted")).toHaveCount(0);
+  const heads = await list.locator(".vault-quick__group").allTextContents();
+  expect(heads.length).toBeGreaterThan(1);
+  expect(new Set(heads).size).toBe(heads.length);
+  // Every rendered row has an icon.
+  const missing = await list
+    .getByRole("option")
+    .evaluateAll(
+      (rows) =>
+        rows.filter((r) => !r.querySelector(".vault-quick__icon svg")).length,
+    );
+  expect(missing).toBe(0);
+  // Hover tint equals the selection tint (one colour).
+  const second = options(page).nth(1);
+  await second.hover();
+  await expect(second).toHaveAttribute("aria-selected", "true");
+  const tints = await list
+    .getByRole("option")
+    .evaluateAll(
+      (rows) =>
+        [...new Set(rows.map((r) => getComputedStyle(r).backgroundColor))]
+          .length,
+    );
+  expect(tints).toBe(2); // transparent + the one selection colour
+  await expect(
+    switcher(page).locator(".vault-quick__footer > span"),
+  ).toHaveCount(2);
+  expect(errors).toEqual([]);
+});

@@ -58,4 +58,17 @@ describe("rowHeadings", () => {
     const rows = rank("a");
     expect(rowHeadings(rows, "files", true)).toHaveLength(rows.length);
   });
+
+  it("commands without a query: each group once as a header, recents first", () => {
+    const items: PaletteItem[] = [
+      { key: "e1", title: "Export: PDF", group: "Export", run: () => {} },
+      { key: "e2", title: "Export: PNG", group: "Export", run: () => {} },
+      { key: "v1", title: "View: Zen", group: "View", run: () => {} },
+      { key: "v2", title: "View: Grid", group: "View", run: () => {} },
+    ];
+    const rows = rankRows(drawings, prepareItems(items), ">", ["v2"]);
+    const heads = rowHeadings(rows, "commands", false, ["v2"]);
+    expect(rows.map((r) => r.key)).toEqual(["v2", "e1", "e2", "v1"]);
+    expect(heads).toEqual(["Recently used", "Export", null, "View"]);
+  });
 });

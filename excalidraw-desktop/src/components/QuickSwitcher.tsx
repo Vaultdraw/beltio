@@ -45,13 +45,7 @@ import { getRecent, recordRecent } from "../palette/recent";
 import { PalettePreview } from "../thumbnails/surfaces/PalettePreview";
 import { errorMessage } from "../vault/types";
 
-import {
-  IconDrawing,
-  IconKeyDown,
-  IconKeyReturn,
-  IconKeyUp,
-  IconPlus,
-} from "./Icons";
+import { IconDrawing, IconCommand, IconKeyReturn, IconPlus } from "./Icons";
 
 import "./home.css";
 import "./QuickSwitcher.css";
@@ -74,14 +68,14 @@ const MODE_TEXT: Record<
   files: {
     label: "Go to drawing",
     chip: "Drawings",
-    placeholder: "Search drawings by name  (> for commands)",
+    placeholder: "Search drawings…",
     hint: "",
   },
   commands: {
     label: "Run a command",
     chip: "Commands",
     placeholder: "",
-    hint: " Search commands  (delete > for drawings)",
+    hint: " Search commands…",
   },
 };
 const NO_ITEMS: readonly PaletteItem[] = [];
@@ -183,11 +177,12 @@ const RowView = memo(
       const { item } = row.entry;
       body = (
         <>
-          <span className="vault-quick__icon">{item.icon}</span>
+          <span className="vault-quick__icon">
+            {item.icon ?? <IconCommand />}
+          </span>
           <span className="vault-quick__name">
             {highlight(item.title, 0, item.title.length, positions)}
           </span>
-          <span className="vault-quick__muted">{item.group}</span>
           {item.family && (
             <span className="vault-quick__tab">
               <kbd className="vault-kbd">Tab</kbd> browse
@@ -379,8 +374,14 @@ export const QuickSwitcher = ({
     [drawings, prepared, query, recent, mode, canCreate],
   );
   const headings = useMemo(
-    () => rowHeadings(rows, mode, query.trim() !== ""),
-    [rows, mode, query],
+    () =>
+      rowHeadings(
+        rows,
+        mode,
+        query.trim() !== "" && query.trim() !== COMMANDS_PREFIX,
+        recent,
+      ),
+    [rows, mode, query, recent],
   );
   const selected = Math.min(active, Math.max(0, rows.length - 1));
   // First paint shows FIRST_ROWS rows; the rest follows in a transition.
@@ -611,7 +612,14 @@ export const QuickSwitcher = ({
             value={query}
             onChange={(e) => changeQuery(e.target.value)}
           />
-          <span className="vault-quick__mode">
+          <span
+            className="vault-quick__mode"
+            title={
+              mode === "files"
+                ? "Type > to run a command"
+                : "Delete > to search drawings"
+            }
+          >
             {pickLabel ? "Pick" : MODE_TEXT[mode].chip}
           </span>
         </div>
@@ -656,22 +664,10 @@ export const QuickSwitcher = ({
         <div className="vault-quick__footer" aria-hidden="true">
           <span>
             <kbd className="vault-kbd vault-kbd--glyphs">
-              <IconKeyUp />
-              <IconKeyDown />
-            </kbd>{" "}
-            navigate
-          </span>
-          <span>
-            <kbd className="vault-kbd vault-kbd--glyphs">
               <IconKeyReturn />
             </kbd>{" "}
             {mode === "commands" ? "run" : "open"}
           </span>
-          {mode === "commands" && (
-            <span>
-              <kbd className="vault-kbd">Tab</kbd> browse
-            </span>
-          )}
           <span>
             <kbd className="vault-kbd">esc</kbd> close
           </span>

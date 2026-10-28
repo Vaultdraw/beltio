@@ -180,11 +180,25 @@ function emptyQueryRows(
     }
   }
   if (mode === "commands") {
+    // Browsing: each group together (first-seen group order, registry order
+    // inside), so the palette can show the group once as a section header.
+    const byGroup = new Map<string, RankItem[]>();
     for (const entry of items.list) {
-      if (out.length >= maxRows) {
-        break;
-      }
       if (!seen.has(entry.item.key)) {
+        const group = entry.item.group ?? "";
+        const list = byGroup.get(group);
+        if (list) {
+          list.push(entry);
+        } else {
+          byGroup.set(group, [entry]);
+        }
+      }
+    }
+    outer: for (const list of byGroup.values()) {
+      for (const entry of list) {
+        if (out.length >= maxRows) {
+          break outer;
+        }
         out.push(itemRow(entry, []));
       }
     }
