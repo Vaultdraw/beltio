@@ -56,7 +56,7 @@ describe("remove shape in non linear elements", () => {
     fireEvent.pointerUp(canvas, { clientX: 30, clientY: 30 });
 
     expect(renderInteractiveScene.mock.calls.length).toMatchInlineSnapshot(`5`);
-    expect(renderStaticScene.mock.calls.length).toMatchInlineSnapshot(`5`);
+    expect(renderStaticScene.mock.calls.length).toMatchInlineSnapshot(`4`);
     expect(h.elements.length).toEqual(0);
   });
 
@@ -71,7 +71,7 @@ describe("remove shape in non linear elements", () => {
     fireEvent.pointerUp(canvas, { clientX: 30, clientY: 30 });
 
     expect(renderInteractiveScene.mock.calls.length).toMatchInlineSnapshot(`5`);
-    expect(renderStaticScene.mock.calls.length).toMatchInlineSnapshot(`5`);
+    expect(renderStaticScene.mock.calls.length).toMatchInlineSnapshot(`4`);
     expect(h.elements.length).toEqual(0);
   });
 
@@ -86,7 +86,7 @@ describe("remove shape in non linear elements", () => {
     fireEvent.pointerUp(canvas, { clientX: 30, clientY: 30 });
 
     expect(renderInteractiveScene.mock.calls.length).toMatchInlineSnapshot(`5`);
-    expect(renderStaticScene.mock.calls.length).toMatchInlineSnapshot(`5`);
+    expect(renderStaticScene.mock.calls.length).toMatchInlineSnapshot(`4`);
     expect(h.elements.length).toEqual(0);
   });
 });

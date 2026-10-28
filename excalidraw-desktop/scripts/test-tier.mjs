@@ -102,10 +102,8 @@ if (tier === "fast") {
   npx(root, "vitest (sdk examples, mock host)", ["vitest", "run", "sdk/examples", ...vitestCaps], { VAULTDRAW_TEST_HOST: "mock" });
   step("perf lib tests", root, "node", ["--test", "excalidraw-desktop/perf/lib/*.test.mjs", "excalidraw-desktop/scripts/*.test.mjs"]);
   // The editor packages' own tests (sticky notes, stats, toolbar, ...). Before 2026-10-28 only the
-  // milestone tier ran them, so a toolbar change broke 15 sticky-note tests unseen. Known stale files
-  // (failing on main since before 9d53a916, tracked as a follow-up) are excluded until fixed.
-  const staleEditorTests = ["contextmenu", "dragCreate", "multiPointCreate", "selection"].flatMap((n) => ["--exclude", `**/tests/${n}.test.tsx`]);
-  npx(root, "vitest (packages)", ["vitest", "run", "packages", ...staleEditorTests, ...vitestCaps]);
+  // milestone tier ran them, so a toolbar change broke 15 sticky-note tests unseen.
+  npx(root, "vitest (packages)", ["vitest", "run", "packages", ...vitestCaps]);
   if (tier === "milestone") {
     npx(root, "tsc (root)", ["tsc"]);
     npx(root, "vitest (root)", ["vitest", "run", ...vitestCaps]);
