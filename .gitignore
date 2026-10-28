@@ -35,6 +35,7 @@ excalidraw-desktop/src-tauri/.cargo-home/
 .cache/
 .tools/
 .superdesign/
+/.template-run/
 
 # Personal planning notes (not published)
 /personal/

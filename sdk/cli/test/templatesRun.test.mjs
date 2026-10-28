@@ -12,7 +12,9 @@ import { run, SDK } from "./helpers.mjs";
 
 const ROOT = path.resolve(SDK, "..");
 const VITEST = path.join(ROOT, "node_modules", ".bin", "vitest");
-const SCRATCH = path.join(ROOT, ".cache", "template-run");
+// Not under .cache (app/.cache is a symlink to the parent folder, so node cannot find the repo's
+// vitest from there) and not under node_modules (vite ignores tsconfig.json there, so JSX breaks).
+const SCRATCH = path.join(ROOT, ".template-run");
 afterAll(() => rmSync(SCRATCH, { recursive: true, force: true }));
 
 describe.skipIf(!existsSync(VITEST))("template tests on the mock host", () => {
