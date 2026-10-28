@@ -10,12 +10,35 @@ import plugin from "../src/main";
 import type { SettingValue } from "@vaultdraw/api";
 
 // Load the (mocked) renderer once, so no test waits for its first import.
-beforeAll(
-  () => import("../../../../excalidraw-desktop/src/export/renderExport"),
-);
+beforeAll(async () => {
+  await import("../../../../excalidraw-desktop/src/export/renderExport");
+  await import("../../../../excalidraw-desktop/src/export/exportError");
+});
+
+// Real macrotask ticks (captured before fake timers) let the host's dynamic imports and the
+// exporter's idle queue finish, so no export from one test leaks into the next.
+const realSetTimeout = globalThis.setTimeout;
+const realTicks = async (n = 5) => {
+  for (let i = 0; i < n; i++) {
+    await new Promise<void>((r) => realSetTimeout(r, 0));
+    await vi.advanceTimersByTimeAsync(0);
+  }
+};
+// Waits for the real condition (the first export of a cold process loads modules, which takes
+// real time): fake time moves on while real time passes, with a deadline.
+const until = async (done: () => boolean) => {
+  for (let i = 0; i < 1500 && !done(); i++) {
+    await vi.advanceTimersByTimeAsync(50);
+    await new Promise<void>((r) => realSetTimeout(r, 10));
+  }
+};
 
 let p: TestPlugin | undefined;
 afterEach(async () => {
+  if (p) {
+    await vi.advanceTimersByTimeAsync(2000);
+    await realTicks();
+  }
   await p?.dispose();
   p = undefined;
   vi.useRealTimers();
@@ -76,10 +99,23 @@ const start = async (settings: Record<string, SettingValue> = {}) => {
   return p;
 };
 
+// The first save-triggered export of a process loads the drawing reader (a real dynamic import
+// that needs real time). Do one before any test, waiting for the real condition.
+beforeAll(async () => {
+  const w = await start({ enabled: true });
+  w.vault.seed({ "W.excalidraw": [rect] });
+  w.events.emit("drawing.saved", { path: "W.excalidraw" });
+  await until(() => Object.keys(w.vault.exports()).length > 0);
+  await w.dispose();
+  p = undefined;
+  vi.useRealTimers();
+}, 30000);
+
 const saved = async (t: TestPlugin, path: string) => {
   t.events.emit("drawing.saved", { path });
   await vi.advanceTimersByTimeAsync(400);
   await vi.advanceTimersByTimeAsync(400);
+  await realTicks();
 };
 
 describe("auto-export plugin", () => {
@@ -94,27 +130,18 @@ describe("auto-export plugin", () => {
     expect(info.activation).toContain("onStartupFinished");
   });
 
-  it("does nothing while enabled is false", async () => {
-    const t = await start();
-    t.vault.seed({ "A.excalidraw": [rect] });
-    await saved(t, "A.excalidraw");
-    expect(t.vault.exports()).toEqual({});
-  });
-
   it("exports next to the drawing after the debounce once turned on", async () => {
-    const t = await start();
+    const t = await start({ enabled: true });
     t.vault.seed({ "Notes/A.excalidraw": [rect] });
-    await t.setSetting("enabled", true);
     await vi.advanceTimersByTimeAsync(50);
     t.events.emit("drawing.saved", { path: "Notes/A.excalidraw" });
     await vi.advanceTimersByTimeAsync(100);
     expect(t.vault.exports()).toEqual({}); // still debouncing
-    // The first render loads the renderer module, which takes real time.
-    await vi.waitFor(() =>
-      expect(t.vault.exports()).toEqual({
-        "Notes/A.svg": "mock-svg:A.excalidraw",
-      }),
-    );
+    await until(() => Object.keys(t.vault.exports()).length > 0);
+    await realTicks();
+    expect(t.vault.exports()).toEqual({
+      "Notes/A.svg": "mock-svg:A.excalidraw",
+    });
   });
 
   it("restarts the wait on every save, so many saves make one export", async () => {
@@ -125,7 +152,9 @@ describe("auto-export plugin", () => {
       await vi.advanceTimersByTimeAsync(100);
     }
     expect(t.vault.exports()).toEqual({});
-    await vi.advanceTimersByTimeAsync(800);
+    await vi.advanceTimersByTimeAsync(300);
+    await until(() => Object.keys(t.vault.exports()).length > 0);
+    await realTicks();
     expect(Object.keys(t.vault.exports())).toEqual(["A.svg"]);
   });
 
@@ -137,6 +166,8 @@ describe("auto-export plugin", () => {
     });
     t.vault.seed({ "Notes/A.excalidraw": [rect] });
     await saved(t, "Notes/A.excalidraw");
+    await until(() => Object.keys(t.vault.exports()).length >= 2);
+    await realTicks();
     expect(Object.keys(t.vault.exports()).sort()).toEqual([
       "exports/Notes/A.png",
       "exports/Notes/A.svg",
@@ -258,5 +289,12 @@ describe("auto-export plugin", () => {
     await vi.advanceTimersByTimeAsync(1000);
     await done;
     expect(Object.keys(t.vault.exports())).toEqual(["D.svg"]);
+  });
+
+  it("does nothing while enabled is false", async () => {
+    const t = await start();
+    t.vault.seed({ "A.excalidraw": [rect] });
+    await saved(t, "A.excalidraw");
+    expect(t.vault.exports()).toEqual({});
   });
 });
