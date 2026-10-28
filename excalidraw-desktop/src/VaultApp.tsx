@@ -766,6 +766,9 @@ export const VaultApp = ({
         setUnsavedWhat(failed);
         setShowCloseDiscardConfirm(true);
       } finally {
+        // The window stayed open (or is gone): never remember the notes
+        // decision, so the next quit asks again.
+        notesDecisionRef.current = null;
         closePromiseRef.current = null;
       }
     })();
