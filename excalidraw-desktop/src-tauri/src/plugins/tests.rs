@@ -1692,3 +1692,33 @@ mod exports_rows {
         assert_eq!(code(exports::call(&v, "export.write", b"\0\0")), "INVALID_ARGUMENT");
     }
 }
+
+/// Every official plugin's plugin.toml parses with the real validator and is compatible with this
+/// app version: a manifest the app refuses loses its commands and activity bar button once the
+/// host runs (toimprove #103, the graph button).
+#[test]
+fn every_official_manifest_parses_and_is_compatible() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plugins/official");
+    let app = env!("CARGO_PKG_VERSION");
+    let mut seen = 0;
+    let mut bad = Vec::new();
+    for entry in fs::read_dir(&root).unwrap() {
+        let dir = entry.unwrap().path();
+        let toml = dir.join("plugin.toml");
+        if !toml.is_file() {
+            continue;
+        }
+        seen += 1;
+        let text = fs::read_to_string(&toml).unwrap();
+        match manifest::parse(&text) {
+            Err(e) => bad.push(format!("{}: {e}", dir.display())),
+            Ok(m) => {
+                if let (false, problem) = manifest::compatibility(&m, app) {
+                    bad.push(format!("{}: {problem:?}", dir.display()));
+                }
+            }
+        }
+    }
+    assert!(bad.is_empty(), "{bad:#?}");
+    assert!(seen >= 10, "found {seen} official plugins");
+}
