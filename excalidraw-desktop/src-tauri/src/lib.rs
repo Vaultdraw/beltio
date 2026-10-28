@@ -105,12 +105,33 @@ struct VaultSettingsChange {
 /// vault, so `v.root`, `v.handle` and the core functions work on it unchanged.
 pub(crate) struct Vault {
     core: vaultdraw_core::Vault,
-    _watcher: Option<vault_watch::Watching>,
+    /// The file watcher; `None` while `files.auto_reload` is off (or no watcher could start).
+    watcher: Mutex<Option<vault_watch::Watching>>,
+    /// Where the watcher's events go, kept so the watcher can be started again live.
+    watch_tx: mpsc::Sender<notify::Result<Event>>,
 }
 impl Vault {
     #[cfg(test)]
     pub(crate) fn for_tests(root: PathBuf, handle: &str, read_only: bool) -> Vault {
-        Vault { core: vaultdraw_core::Vault::new(root, handle.into(), read_only, None), _watcher: None }
+        Vault {
+            core: vaultdraw_core::Vault::new(root, handle.into(), read_only, None),
+            watcher: Mutex::new(None),
+            watch_tx: mpsc::channel().0,
+        }
+    }
+    /// Starts or stops the file watcher (`files.auto_reload`). Returns true when it was started
+    /// just now (events may have been missed while it was off, so the caller asks for a rescan).
+    fn set_watching(&self, on: bool) -> bool {
+        let mut slot = self.watcher.lock().unwrap_or_else(|p| p.into_inner());
+        if !on {
+            *slot = None;
+            return false;
+        }
+        if slot.is_some() {
+            return false;
+        }
+        *slot = vault_watch::start(&self.root, self.watch_tx.clone()).watching;
+        slot.is_some()
     }
 }
 impl std::ops::Deref for Vault {
@@ -277,13 +298,21 @@ fn open_vault(root: PathBuf, app: &AppHandle, service: &Service) -> Result<Vault
             }
         }
     });
-    let vault_watch::Started { watching: watcher, fallback: watch_fallback } = vault_watch::start(&root, tx);
-    if watcher.is_none() {
-        let _ = app.emit("vault-change", VaultChange { handle: handle.clone(), paths: Vec::new(), rescan: true });
-    }
+    // `files.auto_reload = false`: no watcher at all (no FSEvents stream, no polling); Refresh updates.
+    let config = services::read_config();
+    let (watcher, watch_fallback) = if vault_watch::auto_reload_from(&config) {
+        let vault_watch::Started { watching, fallback } = vault_watch::start(&root, tx.clone());
+        if watching.is_none() {
+            let _ = app.emit("vault-change", VaultChange { handle: handle.clone(), paths: Vec::new(), rescan: true });
+        }
+        (watching, fallback)
+    } else {
+        (None, None)
+    };
     let vault = Arc::new(Vault {
         core: vaultdraw_core::Vault::new(root.clone(), handle.clone(), read_only, lock),
-        _watcher: watcher,
+        watcher: Mutex::new(watcher),
+        watch_tx: tx,
     });
     service
         .vaults
@@ -291,7 +320,6 @@ fn open_vault(root: PathBuf, app: &AppHandle, service: &Service) -> Result<Vault
         .map_err(|_| err("INTERNAL", "Vault state unavailable"))?
         .insert(handle.clone(), vault.clone());
     // Registered; started here only when its `start` mode is "open" (services.rs).
-    let config = services::read_config();
     let modes = services::modes_of(&config);
     if let Some(search) = app.try_state::<search::SearchService>() {
         search.register(&handle, root.clone(), search::tauri_emitter(app));
@@ -439,6 +467,16 @@ async fn release_vault(handle: String, app: AppHandle, state: State<'_, Service>
 async fn retry_vault(handle: String, app: AppHandle, state: State<'_, Service>) -> Result<VaultInfo> {
     let root = vault_for(&state, &handle)?.root.clone();
     open_vault(root, &app, &state)
+}
+/// `files.auto_reload` changed (Settings or config.toml): starts or stops the vault's file watcher.
+/// Turning it on asks the UI for a rescan, since changes made while it was off were not seen.
+#[tauri::command]
+async fn set_vault_watching(handle: String, enabled: bool, app: AppHandle, state: State<'_, Service>) -> Result<()> {
+    let v = vault_for(&state, &handle)?;
+    if v.set_watching(enabled) {
+        let _ = app.emit("vault-change", VaultChange { handle, paths: Vec::new(), rescan: true });
+    }
+    Ok(())
 }
 #[tauri::command]
 async fn list_directory(
@@ -814,6 +852,18 @@ mod tests {
         assert_eq!(writable(&v).unwrap_err().code, "READ_ONLY");
     }
     #[test]
+    fn the_watcher_starts_and_stops_live_with_auto_reload() {
+        let d = tempdir().unwrap();
+        let v = vault(d.path());
+        assert!(v.watcher.lock().unwrap().is_none(), "a vault from for_tests starts without a watcher");
+        assert!(v.set_watching(true), "turning it on starts the watcher (the UI then rescans)");
+        assert!(!v.set_watching(true), "already running: nothing to restart");
+        assert!(v.watcher.lock().unwrap().is_some());
+        assert!(!v.set_watching(false));
+        assert!(v.watcher.lock().unwrap().is_none(), "off drops the watcher");
+        assert!(v.set_watching(true));
+    }
+    #[test]
     fn open_by_path_needs_an_existing_absolute_directory() {
         let d = tempfile::tempdir().unwrap();
         let ok = existing_vault_dir(d.path().to_str().unwrap()).unwrap();
@@ -1056,7 +1106,7 @@ pub fn run() {
         #[cfg(feature = "smoke-test")]
         let builder = if smoke::enabled() {
             builder.invoke_handler(tauri::generate_handler![
-                choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision, drawing_read_only, sync_download_placeholder,
+                choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, set_vault_watching, list_directory, read_drawing, drawing_revision, drawing_read_only, sync_download_placeholder,
                 write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, count_folder_items, reveal_entry, reveal_recovery_dir,
                 export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
                 config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
@@ -1080,7 +1130,7 @@ pub fn run() {
             ])
         } else {
             builder.invoke_handler(tauri::generate_handler![
-                choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision, drawing_read_only, sync_download_placeholder,
+                choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, set_vault_watching, list_directory, read_drawing, drawing_revision, drawing_read_only, sync_download_placeholder,
                 write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, count_folder_items, reveal_entry, reveal_recovery_dir,
                 export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
                 config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
@@ -1101,7 +1151,7 @@ pub fn run() {
         };
         #[cfg(not(feature = "smoke-test"))]
         let builder = builder.invoke_handler(tauri::generate_handler![
-            choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision, drawing_read_only, sync_download_placeholder,
+            choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, set_vault_watching, list_directory, read_drawing, drawing_revision, drawing_read_only, sync_download_placeholder,
             write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, count_folder_items, reveal_entry, reveal_recovery_dir,
             export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
             config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,

@@ -59,6 +59,11 @@ pub(crate) fn poll_interval_from(tables: &[toml::Table]) -> u64 {
         .unwrap_or(DEFAULT_POLL_MS)
 }
 
+/// `files.auto_reload` from the merged config (default on; a wrong type counts as unset).
+pub(crate) fn auto_reload_from(config: &serde_json::Value) -> bool {
+    config.get("files").and_then(|f| f.get("auto_reload")).and_then(|v| v.as_bool()).unwrap_or(true)
+}
+
 /// Read only when the fallback is needed, so the normal path never touches the config.
 fn configured_poll_ms() -> u64 {
     match crate::config::resolve_dirs() {
@@ -185,6 +190,78 @@ mod tests {
         let started = start_with(dir.path(), tx, true, || unreachable!("the interval is not read"), native);
         assert!(matches!(started.watching, Some(Watching::Native(_))));
         assert!(started.fallback.is_none());
+    }
+
+    /// Collects the paths the native watcher reports for `act`, waiting up to ~3 s.
+    fn native_paths(root: &Path, act: impl FnOnce(), want: &str) -> Vec<(String, notify::EventKind)> {
+        let (tx, rx) = mpsc::channel();
+        let started = start_with(root, tx, false, || 0, native);
+        assert!(started.watching.is_some());
+        std::thread::sleep(Duration::from_millis(500));
+        act();
+        let mut seen = Vec::new();
+        for _ in 0..30 {
+            if let Ok(Ok(e)) = rx.recv_timeout(Duration::from_millis(100)) {
+                for p in &e.paths {
+                    seen.push((p.strip_prefix(root).unwrap_or(p).to_string_lossy().into_owned(), e.kind));
+                }
+                if seen.iter().any(|(p, _)| p == want) { break; }
+            }
+        }
+        seen
+    }
+
+    #[test]
+    fn external_folder_delete_create_and_rename_are_reported() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().canonicalize().unwrap();
+        std::fs::create_dir_all(root.join("gone/inner")).unwrap();
+        std::fs::write(root.join("gone/inner/a.excalidraw"), "{}").unwrap();
+        std::fs::write(root.join("file.excalidraw"), "{}").unwrap();
+        std::thread::sleep(Duration::from_millis(1200));
+        let r = root.clone();
+        let seen = native_paths(&root, || std::fs::remove_dir_all(r.join("gone")).unwrap(), "gone");
+        eprintln!("folder delete: {seen:?}");
+        assert!(seen.iter().any(|(p, _)| p == "gone"), "folder removal reports the folder: {seen:?}");
+        let r = root.clone();
+        let seen = native_paths(&root, || std::fs::remove_file(r.join("file.excalidraw")).unwrap(), "file.excalidraw");
+        eprintln!("file delete: {seen:?}");
+        assert!(seen.iter().any(|(p, _)| p == "file.excalidraw"), "{seen:?}");
+        let r = root.clone();
+        let seen = native_paths(&root, || std::fs::create_dir(r.join("new")).unwrap(), "new");
+        eprintln!("create: {seen:?}");
+        assert!(seen.iter().any(|(p, _)| p == "new"), "{seen:?}");
+    }
+
+    #[test]
+    fn moving_a_folder_out_of_the_vault_like_the_trash_is_reported() {
+        let outer = tempfile::tempdir().unwrap();
+        let root = outer.path().canonicalize().unwrap().join("vault");
+        let trash = outer.path().canonicalize().unwrap().join("trash");
+        std::fs::create_dir_all(root.join("gone/inner")).unwrap();
+        std::fs::create_dir_all(&trash).unwrap();
+        std::fs::write(root.join("gone/inner/a.excalidraw"), "{}").unwrap();
+        std::thread::sleep(Duration::from_millis(1200));
+        let (r, t) = (root.clone(), trash.clone());
+        let seen = native_paths(&root, || std::fs::rename(r.join("gone"), t.join("gone")).unwrap(), "gone");
+        eprintln!("move out: {seen:?}");
+        assert!(seen.iter().any(|(p, _)| p == "gone"), "{seen:?}");
+        // and a rename inside the vault
+        std::fs::create_dir_all(root.join("a")).unwrap();
+        std::thread::sleep(Duration::from_millis(1200));
+        let r = root.clone();
+        let seen = native_paths(&root, || std::fs::rename(r.join("a"), r.join("b")).unwrap(), "b");
+        eprintln!("rename: {seen:?}");
+        assert!(seen.iter().any(|(p, _)| p == "a") && seen.iter().any(|(p, _)| p == "b"), "{seen:?}");
+    }
+
+    #[test]
+    fn auto_reload_defaults_on_and_reads_false() {
+        let j = |s: &str| serde_json::from_str::<serde_json::Value>(s).unwrap();
+        assert!(auto_reload_from(&serde_json::Value::Null));
+        assert!(auto_reload_from(&j(r#"{"files":{}}"#)));
+        assert!(auto_reload_from(&j(r#"{"files":{"auto_reload":"no"}}"#)));
+        assert!(!auto_reload_from(&j(r#"{"files":{"auto_reload":false}}"#)));
     }
 
     #[test]
