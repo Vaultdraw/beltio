@@ -64,7 +64,7 @@ export async function startPluginHost(
   };
   apply();
   if (list.safeMode === null) {
-    noticePluginsWaitingForReview(list.plugins, enabledPluginIds(win));
+    noticePluginsWaitingForReview(list, enabledPluginIds(win));
   }
   ensureDevListener();
   const off = subscribePreferences(apply);

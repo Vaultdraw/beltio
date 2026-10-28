@@ -90,6 +90,8 @@ export interface PluginsList {
   scanMs: number;
   /** This launch's safe mode; null in a normal launch. */
   safeMode: SafeModeInfo | null;
+  /** A damaged plugin-consent.json was moved aside (kept as .corrupt); everything asks again. */
+  consentReset?: boolean;
 }
 
 export type ActivationState =

@@ -9,7 +9,7 @@ import { PLUGIN_UI_COMMAND_IDS } from "../ui/pluginCommands";
 
 import { needsReview } from "./permissions";
 
-import type { PluginInfo } from "./types";
+import type { PluginInfo, PluginsList } from "./types";
 
 let shown = false;
 
@@ -24,28 +24,59 @@ export const pluginsWaitingForReview = (
   );
 };
 
-/** Once per launch; returns true when it pushed the toast. */
+/** Folders refused because they reuse an official plugin id. */
+export const refusedForOfficialId = (
+  errors: readonly { dir: string; message: string }[],
+): string[] =>
+  errors
+    .filter((e) => /official plugin id/i.test(e.message))
+    .map((e) => e.dir.split("/").pop() ?? e.dir);
+
+const nameList = (names: readonly string[]): string =>
+  names.length <= 3
+    ? names.join(", ")
+    : `${names.slice(0, 3).join(", ")} and ${names.length - 3} more`;
+
+/**
+ * Once per launch: names the plugins that are off until reviewed, the folders refused for reusing
+ * an official id, and a damaged consent file that was moved aside. Returns true when it pushed it.
+ */
 export function noticePluginsWaitingForReview(
-  infos: readonly PluginInfo[],
+  list: Pick<PluginsList, "plugins" | "errors" | "consentReset">,
   enabledIds: readonly string[],
 ): boolean {
   if (shown) {
     return false;
   }
-  const waiting = pluginsWaitingForReview(infos, enabledIds);
-  if (waiting.length === 0) {
+  const waiting = pluginsWaitingForReview(list.plugins, enabledIds);
+  const refused = refusedForOfficialId(list.errors);
+  const reset = list.consentReset === true;
+  if (waiting.length === 0 && refused.length === 0 && !reset) {
     return false;
   }
   shown = true;
-  const names = waiting.map((i) => i.name);
-  const listed =
-    names.length <= 3
-      ? names.join(", ")
-      : `${names.slice(0, 3).join(", ")} and ${names.length - 3} more`;
+  const parts: string[] = [];
+  if (reset) {
+    parts.push(
+      "The plugin confirmations file was damaged and was moved aside (plugin-consent.json.corrupt), so plugins ask again",
+    );
+  }
+  if (waiting.length > 0) {
+    parts.push(
+      `${waiting.length} plugin${waiting.length === 1 ? " is" : "s are"} off until you review ${
+        waiting.length === 1 ? "it" : "them"
+      }: ${nameList(waiting.map((i) => i.name))}`,
+    );
+  }
+  if (refused.length > 0) {
+    parts.push(
+      `${refused.length} plugin folder${
+        refused.length === 1 ? " was" : "s were"
+      } refused for reusing an official plugin id: ${nameList(refused)}`,
+    );
+  }
   toastStore.push({
-    message: `${waiting.length} plugin${
-      waiting.length === 1 ? " is" : "s are"
-    } off until you review ${waiting.length === 1 ? "it" : "them"}: ${listed}.`,
+    message: `${parts.join(". ")}.`,
     durationMs: 30_000,
     action: {
       label: "Review",

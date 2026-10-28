@@ -5,7 +5,12 @@
 use super::manifest::{is_valid_id, is_write_permission};
 use crate::{err, ioerr, read_bounded, write_atomic, Result};
 use serde::Serialize;
-use std::{collections::BTreeMap, fs, path::Path};
+use std::{
+    collections::BTreeMap,
+    fs,
+    path::Path,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 const FILE: &str = "plugin-consent.json";
 const MAX_BYTES: u64 = 1024 * 1024;
@@ -61,7 +66,15 @@ pub(crate) fn review(declared: &[String], confirmed: Option<&Vec<String>>, bundl
     Review { state, added }
 }
 
-/// Tolerant reader: a missing or corrupt file means nothing was confirmed (corrupt is logged).
+/// Set when a damaged record was moved aside; the next plugin list tells the user once.
+static RESET: AtomicBool = AtomicBool::new(false);
+
+/// True once after a damaged `plugin-consent.json` was moved aside (see `load`).
+pub(crate) fn take_reset() -> bool {
+    RESET.swap(false, Ordering::SeqCst)
+}
+
+/// Tolerant reader: a missing or corrupt file means nothing was confirmed (a corrupt one is moved aside).
 pub(crate) fn load(state_dir: &Path) -> Record {
     let path = state_dir.join(FILE);
     let bytes = match read_bounded(&path, MAX_BYTES) {
@@ -74,7 +87,12 @@ pub(crate) fn load(state_dir: &Path) -> Record {
         }
     };
     serde_json::from_slice::<Record>(&bytes).unwrap_or_else(|e| {
-        eprintln!("plugin-consent.json is corrupt, treating nothing as confirmed: {e}");
+        // Keep the damaged file for the user (`.corrupt`) and start clean, so the next confirm
+        // does not overwrite it, and say so once. Nothing counts as confirmed until the user reviews.
+        eprintln!("plugin-consent.json is corrupt, moved aside; treating nothing as confirmed: {e}");
+        if fs::rename(&path, state_dir.join(format!("{FILE}.corrupt"))).is_ok() {
+            RESET.store(true, Ordering::SeqCst);
+        }
         Record::new()
     })
 }

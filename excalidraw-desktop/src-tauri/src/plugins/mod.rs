@@ -92,6 +92,7 @@ pub(crate) async fn plugins_list(app: AppHandle, rescan: Option<bool>) -> Result
         let confirmed = consent::load(&state_dir);
         let mut list = snap.list.clone();
         list.safe_mode = crate::launch::current();
+        list.consent_reset = consent::take_reset();
         for p in &mut list.plugins {
             p.host_disabled = disabled.get(&p.manifest.id).cloned();
             p.review = review_of(p, &confirmed);

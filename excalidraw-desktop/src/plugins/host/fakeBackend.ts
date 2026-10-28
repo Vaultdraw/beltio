@@ -489,6 +489,7 @@ export function createFakeBackend(
       errors: [],
       scanMs: 0,
       safeMode: fake.safeMode,
+      consentReset: false,
     }),
     installFolder: async (path) => {
       const info = fake.installable[path];

@@ -836,6 +836,10 @@ fn consent_record_round_trips_and_tolerates_damage() {
     assert!(consent::confirm(state, "../evil", &[]).is_err(), "ids are validated");
     fs::write(state.join("plugin-consent.json"), "{ not json").unwrap();
     assert!(consent::load(state).is_empty(), "corrupt file means nothing confirmed");
+    assert!(state.join("plugin-consent.json.corrupt").exists(), "the damaged file is kept, not deleted");
+    assert!(!state.join("plugin-consent.json").exists(), "and moved out of the way");
+    assert!(consent::take_reset(), "the next list says so once");
+    assert!(!consent::take_reset());
 }
 
 // ---- P4a2: the gateway allowlist, consent check and storage.global ----
