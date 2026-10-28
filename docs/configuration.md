@@ -160,6 +160,53 @@ files = [
 
 Nothing is loaded that you did not name: there is no automatic folder and no globbing. Vaultdraw never writes to an included file; Settings still saves to `overrides.toml`, and a change that matches what an include says is not stored. The chip beside a setting names the included file it comes from, **Settings → General → Config files** lists every included file with its status and an Open button, and `vaultdraw config get <key> --source` prints its path. Editing an included file, or creating a `*.toml` in an included folder, reloads live; if a folder cannot be watched, press **Reload**.
 
+### Profiles
+
+A profile is a named set of settings, keys, theme and extensions you switch between: one for work, one for a talk, one with every plugin off. It is a plain folder next to your `config.toml`, and it costs nothing when you use none. The default profile is your existing config, so nothing needs migrating.
+
+```text
+config folder/
+  config.toml              # shared base, yours
+  profiles/
+    work/
+      config.toml          # same keys as the main file, written by hand
+      overrides.toml       # what Settings saves while "work" is active
+```
+
+```mermaid
+flowchart LR
+  I[Included files] --> C[config.toml]
+  C --> P["profiles/NAME/config.toml"]
+  P --> O["profile's overrides.toml<br/>(main overrides.toml with no profile)"]
+  O --> V[Vault settings.toml]
+```
+
+- **A profile can set any key**: `interface.theme`, `[hotkeys]`, `[keys]`, `plugins.enabled` and `plugins.disabled`, tools, and so on. It wins over `config.toml` and loses to Settings changes and the vault's own `settings.toml`.
+- **Settings writes to the active profile.** While a profile is active, Settings, `vaultdraw config set` and the control API save to `profiles/<name>/overrides.toml`; the main `overrides.toml` is left alone and is not read. Starting a profile from `default` copies it.
+- **Live switching.** The choice is the one-line file `profile` in the state folder. Writing it reloads like any config change: no restart.
+- **Names:** 1 to 48 letters, digits, `_` or `-`; `default` is reserved. Names that differ only in case count as the same.
+- **Limits:** a profile's `config.toml` does not read `[include]` (keep includes in the main file). `[control]`, `[ai]` and `[watchdog]`, read before the app starts, come from the main `config.toml` and the active profile's `overrides.toml`, never from the profile's `config.toml`.
+- **Nothing is lost.** Duplicate copies, creating never overwrites, and deleting asks first (`--yes` on the command line). Deleting the active profile falls back to the default. Your `config.toml` is never touched.
+
+**Choosing the profile**, highest first:
+
+| How | Use |
+| --- | --- |
+| `VAULTDRAW_PROFILE=work` or `vaultdraw --profile work ...` | one run, a CLI call, or `vaultdraw launch --profile work` |
+| `vaultdraw profile use work` or Profile: Switch profile | saved; a running app switches at once |
+| nothing | the default profile |
+
+**Commands** (palette, no default keys, rebindable): `profile.switch`, `profile.new`, `profile.duplicate`, `profile.delete`. **Settings → General → Profile** has the same: a switcher and New profile, Duplicate and Delete buttons.
+
+```sh
+vaultdraw profile list                    # * marks the active one
+vaultdraw profile new work                # empty; --from other, or --from default
+vaultdraw profile duplicate work talk
+vaultdraw profile use work                # "default" goes back to the plain config
+vaultdraw profile delete talk --yes
+vaultdraw --profile work config check     # check one profile's files without switching
+```
+
 ### Where a value comes from
 
 Every setting with a config key shows a small chip beside its name when it is not the built-in default: `config.toml` or `overrides`. Click it for details, all computed from the files already loaded.

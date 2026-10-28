@@ -29,6 +29,9 @@ const layerBaseName = (layer: LayerPayload): string => {
 export const layerFileName = (layer: LayerPayload): string =>
   layer.kind === "overrides"
     ? "overrides.toml"
+    : layer.kind === "profile"
+    ? // The active profile's file: profiles/<name>/config.toml.
+      layer.name ?? layer.path
     : layer.kind === "include"
     ? // An included file called config.toml or overrides.toml is named by its path.
       layerBaseName(layer)
@@ -91,7 +94,10 @@ export function keySource(
       ? [
           {
             file: fileOf(layer),
-            path: layer.kind === "include" ? layer.path : undefined,
+            path:
+              layer.kind === "include" || layer.kind === "profile"
+                ? layer.path
+                : undefined,
             value: found.value,
           },
         ]

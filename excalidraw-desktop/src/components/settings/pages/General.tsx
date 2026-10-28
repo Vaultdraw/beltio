@@ -4,7 +4,9 @@ import {
   requestResetOverrides,
   runConfigCheck,
 } from "../../../commands/configCommands";
+import { openProfileDialog } from "../../../commands/profileCommands";
 import { layerFileName } from "../../../vault/configSources";
+import { DEFAULT_PROFILE, switchProfile } from "../../../vault/profiles";
 import {
   getSettingsStatus,
   isWarning,
@@ -33,7 +35,7 @@ const LayerList = ({
   <ul className="vault-config-layers" aria-label="Config files">
     {layers.map((layer) => {
       const overrides = layer.kind === "overrides";
-      const included = layer.kind === "include";
+      const included = layer.kind === "include" || layer.kind === "profile";
       const fileName = layerFileName(layer);
       const status =
         layer.status === "error"
@@ -55,6 +57,8 @@ const LayerList = ({
             >
               {overrides
                 ? "Settings changes, wins"
+                : layer.kind === "profile"
+                ? "profile, over config.toml"
                 : included
                 ? `included by ${
                     layer.from?.split(/[\\/]/).pop() ?? "config.toml"
@@ -106,7 +110,7 @@ const ConfigFileSetting = () => {
     try {
       await (layer.kind === "overrides"
         ? revealOverrides()
-        : layer.kind === "include"
+        : layer.kind === "include" || layer.kind === "profile"
         ? openIncludedFile(layer.path)
         : openConfigFile());
     } catch (err) {
@@ -253,7 +257,79 @@ const ConfigFileSetting = () => {
   );
 };
 
+/** The active profile, a switcher, and the dialogs for new, duplicate and delete. */
+const ProfileSetting = () => {
+  const { settingsStatus } = useSettings();
+  const active = settingsStatus.profile ?? DEFAULT_PROFILE;
+  const [error, setError] = useState<string | null>(null);
+  const names = [DEFAULT_PROFILE, ...(settingsStatus.profiles ?? [])];
+  if (settingsStatus.mode !== "tauri") {
+    return (
+      <SettingRow
+        id="profile"
+        testId="settings-profile-note"
+        description="Profiles are folders in the config folder of the desktop app."
+      />
+    );
+  }
+  return (
+    <SettingRow id="profile" testId="settings-profile-row">
+      <div className="vault-config-actions">
+        <select
+          className="vault-input"
+          aria-label="Profile"
+          value={active}
+          onChange={(e) => {
+            setError(null);
+            switchProfile(e.target.value).catch((err: unknown) =>
+              setError(errorText(err)),
+            );
+          }}
+        >
+          {names.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="vault-btn vault-btn--sm"
+          onClick={() => void openProfileDialog("new")}
+        >
+          New profile
+        </button>
+        <button
+          type="button"
+          className="vault-btn vault-btn--sm"
+          onClick={() => void openProfileDialog("duplicate")}
+        >
+          Duplicate
+        </button>
+        <button
+          type="button"
+          className="vault-btn vault-btn--sm"
+          onClick={() => void openProfileDialog("delete")}
+          disabled={names.length < 2}
+        >
+          Delete
+        </button>
+      </div>
+      {error && (
+        <div className="vault-config-status vault-config-status--error">
+          {error}
+        </div>
+      )}
+    </SettingRow>
+  );
+};
+
 export const generalControls: SettingControls = {
+  profile: {
+    Component: ProfileSetting,
+    // Profiles are files in the config folder: desktop only.
+    searchable: (ctx) => ctx.settingsStatus.mode === "tauri",
+  },
   "config-file": {
     Component: ConfigFileSetting,
     // In the browser the row is only a note about where settings live.

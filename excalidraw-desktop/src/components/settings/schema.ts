@@ -130,6 +130,14 @@ export interface SettingSchema {
 export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   // ---- General ----
   {
+    id: "profile",
+    page: "general",
+    label: "Profile",
+    description:
+      "A profile is a folder of settings, keys and extensions layered over config.toml. Switch, make, copy or delete one; default is your plain config.",
+    keywords: ["profiles", "switch", "workspace", "config", "keys", "theme"],
+  },
+  {
     id: "config-file",
     page: "general",
     label: "Config File",

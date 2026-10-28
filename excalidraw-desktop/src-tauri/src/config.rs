@@ -154,8 +154,11 @@ pub(crate) async fn reveal_overrides() -> Result<()> {
 #[tauri::command]
 pub(crate) async fn open_included_file(path: String) -> Result<()> {
     let wanted = PathBuf::from(&path);
-    let found = layer_files(&resolve_dirs()?);
-    if !found.files.contains(&wanted) || !wanted.is_file() {
+    let dirs = resolve_dirs()?;
+    let found = layer_files(&dirs);
+    // The active profile's config.toml opens the same way.
+    let is_profile = active_profile(&dirs).is_some_and(|n| dirs.profile_config_file(&n) == wanted);
+    if !(found.files.contains(&wanted) || is_profile) || !wanted.is_file() {
         return Err(err("NOT_FOUND", format!("{path} is not an included file")));
     }
     launch(&[wanted.as_os_str()], false)

@@ -188,7 +188,7 @@ export interface ConfigErrorPayload {
 /** One config layer as `load_settings` reports it (lowest first). */
 export interface LayerPayload {
   id: number;
-  kind: "config" | "overrides" | "include";
+  kind: "config" | "overrides" | "include" | "profile";
   /** File name: `config.toml`, `overrides.toml` or the included file's name. */
   name?: string;
   /** For an included file: the file that names it. */
@@ -218,6 +218,9 @@ export interface LoadSettingsResult {
   layers?: LayerPayload[];
   /** Include problems that name no file (cycles, nesting, caps). */
   includeWarnings?: string[];
+  /** The active profile (null = default) and every profile folder. */
+  profile?: string | null;
+  profiles?: string[];
   state: Record<string, unknown> | null;
 }
 
@@ -253,6 +256,9 @@ export interface SettingsStatus {
   statePath: string | null;
   /** Where Settings saves what you change (the state folder). */
   overridesPath?: string | null;
+  /** The active profile (null = the default) and the profile folders. */
+  profile?: string | null;
+  profiles?: string[];
   /**
    * The config layers, lowest first. A layer that failed to parse on a reload keeps
    * the content of its last good read, so chips still show where values come from.
@@ -1680,6 +1686,8 @@ function applyLoad(
     configPath: result.configPath ?? null,
     statePath: result.statePath ?? null,
     overridesPath: result.overridesPath ?? null,
+    profile: result.profile ?? null,
+    profiles: result.profiles ?? [],
     problems: [...loadProblems, ...rt.writeProblems],
   });
 
@@ -1909,6 +1917,19 @@ function need(what: string): Runtime {
     throw new Error(`${what} is only available in the desktop app`);
   }
   return runtime;
+}
+
+/**
+ * A profile command (`profile_use`, `profile_create`, `profile_delete`), then a reload so
+ * the new profile's values apply at once (the watcher would also do it, a moment later).
+ */
+export async function profileCall(
+  cmd: "profile_use" | "profile_create" | "profile_delete",
+  args: Record<string, unknown>,
+): Promise<void> {
+  const rt = need("Profiles");
+  await enqueue(rt, () => rt.invoke(cmd, args));
+  await reloadSettings();
 }
 
 /** Call a read-only native command through the settings bridge (desktop only). */

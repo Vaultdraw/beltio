@@ -10,6 +10,9 @@ type HarnessWindow = Window & {
   __e2eIncludes?: { name: string; path: string; config: Table | null }[];
   /** When set, overrides.toml "fails to parse" with this message (line 2). */
   __e2eOverridesBroken?: string | null;
+  /** Profile folders and the active one (null = default). */
+  __e2eProfiles?: string[];
+  __e2eProfile?: string | null;
   /** The report `config_check` returns (default: a clean one). */
   __e2eCheck?: Record<string, unknown>;
 };
@@ -56,6 +59,8 @@ export function startConfigHarness(win: Window) {
         overridesPath: "/e2e/state/overrides.toml",
         config: merge(base, over),
         includeWarnings: [],
+        profile: w.__e2eProfile ?? null,
+        profiles: w.__e2eProfiles ?? [],
         configError: null,
         overridesError: error,
         layers: [
@@ -90,6 +95,26 @@ export function startConfigHarness(win: Window) {
         ],
         state: {},
       };
+    }
+    if (cmd === "profile_create") {
+      const a = args as { name: string };
+      (w.__e2eProfiles ??= []).push(a.name);
+      echo();
+      return null;
+    }
+    if (cmd === "profile_use") {
+      w.__e2eProfile = (args?.name as string | null) ?? null;
+      echo();
+      return null;
+    }
+    if (cmd === "profile_delete") {
+      const a = args as { name: string };
+      w.__e2eProfiles = (w.__e2eProfiles ?? []).filter((n) => n !== a.name);
+      if (w.__e2eProfile === a.name) {
+        w.__e2eProfile = null;
+      }
+      echo();
+      return null;
     }
     if (cmd === "config_check") {
       return (

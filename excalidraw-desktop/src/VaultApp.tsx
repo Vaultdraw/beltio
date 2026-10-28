@@ -179,6 +179,7 @@ import { describeReadOnly } from "./vault/readOnlyReason";
 import { AiHost } from "./ai/AiHost";
 import { WatchdogHost } from "./watchdog/WatchdogHost";
 import { ConfigResetConfirm } from "./components/ConfigResetConfirm";
+import { ProfileDialogHost } from "./components/ProfileDialogHost";
 import { ReportDialogHost } from "./components/ReportDialogHost";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { VaultHome } from "./components/VaultHome";
@@ -3206,6 +3207,7 @@ export const VaultApp = ({
       <LinkPromptHost />
       <ConfigResetConfirm />
       <ReportDialogHost />
+      <ProfileDialogHost />
 
       <Toasts />
     </div>
