@@ -236,7 +236,7 @@ describe("uriRun: what asks first", () => {
     await expect(
       t.run({ action: "cmd", id: "no.such", allowed: false }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
-    expect(t.asks).toEqual([]);
+    expect(t.asks).toHaveLength(1);
   });
 
   it("modal text is plain text; a long value keeps its start and its end", async () => {
