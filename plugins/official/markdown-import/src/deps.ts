@@ -127,6 +127,8 @@ export interface ObsidianImportOptions {
   signal: AbortSignal;
   /** Called before each file: "Importing 12 of 340: Note". */
   onProgress(done: number, total: number, current: string): void;
+  /** See `ObsidianImportOptions.nextTarget` in `obsidian/types.ts`. */
+  nextTarget?: (attempt: number) => Promise<TargetFolder | null>;
 }
 
 /** Each note through the worker layout, collected per part (a drawing each). */
