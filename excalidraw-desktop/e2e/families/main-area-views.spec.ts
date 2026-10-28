@@ -56,7 +56,7 @@ const WAYS: Way[] = [
     open: async (page) => {
       await page.keyboard.press("Meta+KeyP");
       const palette = page.getByRole("dialog", { name: "Command palette" });
-      await palette.getByRole("combobox").fill("Tagged");
+      await palette.getByRole("combobox").fill("Tagged Graphs");
       await palette.getByRole("option").first().click();
     },
     shows: SECOND,
@@ -64,7 +64,7 @@ const WAYS: Way[] = [
   {
     name: "search result",
     open: async (page) => {
-      await searchBox(page).fill("Tagged");
+      await searchBox(page).fill("Tagged Graphs");
       await page
         .locator('.vault-search-row[data-kind="drawing"]')
         .filter({ hasText: "Tagged Graphs" })
