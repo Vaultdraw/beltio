@@ -687,9 +687,13 @@ export async function runDesktopSmoke(): Promise<void> {
         () => win.document.querySelector('[data-testid="graph-view"]'),
         30_000,
       );
-      const loaded = win.performance
-        .getEntriesByType("resource")
-        .some((e) => e.name.includes("/graph/main.js"));
+      // WebKit may not list vdplugin:// module loads as resources: the host's own load measure counts too.
+      const loaded =
+        win.performance
+          .getEntriesByType("resource")
+          .some((e) => e.name.includes("/graph/main.js")) ||
+        win.performance.getEntriesByName("vaultdraw:plugin:graph:load").length >
+          0;
       run("graph.open");
       await waitFor(
         "graph view closed",
