@@ -12,6 +12,7 @@ import {
 import { fileKind, stripDrawingExt } from "./vault/fileKind";
 
 import { errorMessage, isNotFoundError } from "./vault/types";
+import { cachedPreferences } from "./vault/useGlobalPref";
 import {
   desktopRepository,
   isTauriAvailable,
@@ -117,6 +118,7 @@ import { BisectBanner } from "./extensionSwitches/BisectBanner";
 import { listNotePaths } from "./notes/noteScan";
 import { applyNoteOp, notesOpsFor } from "./notes/noteListSync";
 
+import { flushOpenNotes, unsavedNotePaths } from "./notes/openNotes";
 import { isNotePath } from "./notes/register";
 import { useNotes } from "./notes/useNotes";
 import { ActiveTabGate } from "./tabs/ActiveTabGate";
@@ -407,6 +409,7 @@ export const VaultApp = ({
   const controlBusy = useMemo(() => createBusyCounter(setIsBusy), []);
   const [isClosing, setIsClosing] = useState(false);
   const [showCloseDiscardConfirm, setShowCloseDiscardConfirm] = useState(false);
+  const [showNoteSavePrompt, setShowNoteSavePrompt] = useState(false);
 
   // Directory entries cache: folderPath -> VaultEntry[]
   const [directoryMap, setDirectoryMap] = useState<Map<string, VaultEntry[]>>(
@@ -635,6 +638,7 @@ export const VaultApp = ({
   const appWinRef = useRef<any>(null);
   const closePromiseRef = useRef<Promise<void> | null>(null);
   const closeAttemptRef = useRef(false);
+  const notesDecisionRef = useRef<"save" | "discard" | null>(null);
   const reopenEffectGeneration = useRef(0);
 
   useEffect(() => {
@@ -690,6 +694,20 @@ export const VaultApp = ({
       try {
         tabsRef.current?.prepareLeave();
         await docHookRef.current.flush();
+        // Open notes: with autosave off, the user decides (Save / Don't save).
+        if (
+          notesDecisionRef.current === null &&
+          cachedPreferences().notesAutosaveMs === 0 &&
+          unsavedNotePaths().length > 0
+        ) {
+          closeAttemptRef.current = false;
+          setIsClosing(false);
+          setShowNoteSavePrompt(true);
+          return;
+        }
+        if (notesDecisionRef.current !== "discard") {
+          await flushOpenNotes();
+        }
         await libraryStore.flush();
         await flushPluginData();
         await appWinRef.current?.destroy();
@@ -727,7 +745,14 @@ export const VaultApp = ({
           unlistenQuit();
         }
       } catch {
-        // Not running inside Tauri window.
+        // Not running inside a Tauri window (browser run): the same close step
+        // answers a DOM event, which the browser tests dispatch.
+        if (!disposed) {
+          const onQuit = () => void flushAndDestroy();
+          window.addEventListener("vaultdraw:quit-request", onQuit);
+          unlistenQuit = () =>
+            window.removeEventListener("vaultdraw:quit-request", onQuit);
+        }
       }
     })();
 
@@ -1184,6 +1209,7 @@ export const VaultApp = ({
       // until that succeeds so a failed flush leaves the current vault usable.
       tabs.prepareLeave();
       await closeDoc();
+      await flushOpenNotes();
       vaultGeneration.current += 1;
       // Release old vault handle ONLY after old doc has flushed and closed
       if (oldVault) {
@@ -3269,6 +3295,39 @@ export const VaultApp = ({
             closeSwitcher();
           }}
           ownerDocument={doc}
+        />
+      )}
+
+      {showNoteSavePrompt && (
+        <ConfirmModal
+          title="Unsaved notes"
+          message={`${
+            unsavedNotePaths().length
+          } open note(s) have changes that are not saved. Autosave is off.`}
+          confirmLabel="Save and Close"
+          cancelLabel="Cancel"
+          alternatives={[
+            {
+              label: "Don't Save",
+              onChoose: () => {
+                notesDecisionRef.current = "discard";
+                setShowNoteSavePrompt(false);
+                void flushAndDestroy();
+              },
+            },
+          ]}
+          onConfirm={() => {
+            notesDecisionRef.current = "save";
+            setShowNoteSavePrompt(false);
+            void flushAndDestroy();
+          }}
+          onCancel={() => {
+            void import("@tauri-apps/api/core")
+              .then((m) => m.invoke("plugins_restart_cancel"))
+              .catch(() => {});
+            setShowNoteSavePrompt(false);
+            notesDecisionRef.current = null;
+          }}
         />
       )}
 

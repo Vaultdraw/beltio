@@ -1470,3 +1470,84 @@ test("library: sections, adding a selection by name, counts per section", async 
   expect(await count("personal")).toBe(0);
   expect(errors).toEqual([]);
 });
+
+// ---------------------------------------------------------------------------
+// Save flows: quitting with open notes, typing during a move
+
+const requestQuit = (page: Page) =>
+  page.evaluate(() =>
+    window.dispatchEvent(new CustomEvent("vaultdraw:quit-request")),
+  );
+
+const withNotesAutosave = (page: Page, ms: number) =>
+  page.addInitScript((value) => {
+    localStorage.setItem(
+      "excalidraw-vault-preferences-v1",
+      JSON.stringify({ notesAutosaveMs: value }),
+    );
+  }, ms);
+
+const typeInNote = async (page: Page, text: string) => {
+  await rowByName(page, "Ideas").locator(".vault-tree-item__name").click();
+  await page.getByRole("button", { name: "Edit note" }).click();
+  await page.getByTestId("note-editor").locator(".cm-content").click();
+  await page.keyboard.press("Meta+ArrowDown");
+  await page.keyboard.type(text);
+};
+
+test("quit: an open note with typing not yet autosaved is written, with no prompt", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await withNotesAutosave(page, 60_000);
+  await openVault(page, "?seed=obsidian");
+  await rescan(page);
+  const nf = noteFiles(page);
+  await typeInNote(page, "\nunsaved before quit");
+  await expect(status(page)).toHaveAttribute("data-status", "dirty");
+  expect(await nf.text("Ideas.md")).not.toContain("unsaved before quit");
+  await requestQuit(page);
+  await expect.poll(() => nf.text("Ideas.md")).toContain("unsaved before quit");
+  await expect(dialog(page)).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("quit with notes autosave off: Cancel keeps it open, Save and Close writes it", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await withNotesAutosave(page, 0);
+  await openVault(page, "?seed=obsidian");
+  await rescan(page);
+  const nf = noteFiles(page);
+  await typeInNote(page, "\nkept by the prompt");
+  await requestQuit(page);
+  const d = dialog(page);
+  await expect(d).toContainText("Unsaved notes");
+  // Cancel keeps the window open and writes nothing.
+  await d.getByRole("button", { name: "Cancel" }).click();
+  await expect(d).toHaveCount(0);
+  expect(await nf.text("Ideas.md")).not.toContain("kept by the prompt");
+  // Save and Close writes the note.
+  await requestQuit(page);
+  await d.getByRole("button", { name: "Save and Close" }).click();
+  await expect.poll(() => nf.text("Ideas.md")).toContain("kept by the prompt");
+  expect(errors).toEqual([]);
+});
+
+test("quit with notes autosave off: Don't Save closes and writes nothing", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await withNotesAutosave(page, 0);
+  await openVault(page, "?seed=obsidian");
+  await rescan(page);
+  const nf = noteFiles(page);
+  await typeInNote(page, "\nthrown away");
+  await requestQuit(page);
+  await dialog(page).getByRole("button", { name: "Don't Save" }).click();
+  await expect(dialog(page)).toHaveCount(0);
+  await page.waitForTimeout(300);
+  expect(await nf.text("Ideas.md")).not.toContain("thrown away");
+  expect(errors).toEqual([]);
+});

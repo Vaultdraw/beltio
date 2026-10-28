@@ -40,6 +40,7 @@ import {
 import { createNoteLinkIndex } from "./noteLinks";
 import { taskLines, toggleTask } from "./noteTasks";
 import { NoteSaver, type SaveStatus } from "./noteSaver";
+import { registerOpenNote } from "./openNotes";
 import { NOTES_ACTIVE_KEY, NOTES_COMMAND_IDS as ID } from "./notesCommands";
 import { hydrateEmbeds, hydrateMath, type EmbedDeps } from "./render/hydrate";
 import { renderNoteHtml, stripFrontmatter } from "./render/obsidian";
@@ -138,7 +139,13 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
       { text: ready.text, revision: ready.revision },
     );
     saver.current = s;
+    const unregister = registerOpenNote({
+      path,
+      state: () => s.state,
+      flush: () => s.flush(),
+    });
     return () => {
+      unregister();
       // Leaving the tab: write what is pending (fire and forget).
       void s.flush();
       s.dispose();
