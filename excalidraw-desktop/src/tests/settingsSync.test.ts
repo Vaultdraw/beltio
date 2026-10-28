@@ -763,6 +763,25 @@ describe("settingsSync runtime", () => {
     ]);
   });
 
+  it("ignores config-change batches that only touch plugins, themes, snippets or .git", async () => {
+    const backend = createBackend();
+    await init(backend);
+    const loads = () => backend.callsOf("load_settings").length;
+    const before = loads();
+    const root = "/home/u/.config/vaultdraw";
+    backend.handler?.({
+      payload: { paths: [`${root}/plugins/a/main.js`, `${root}/.git/index`] },
+    });
+    backend.handler?.({ payload: { paths: [`${root}/themes/x.toml`] } });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(loads()).toBe(before);
+    backend.handler?.({
+      payload: { paths: [`${root}/plugins/a/main.js`, `${root}/config.toml`] },
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(loads()).toBeGreaterThan(before);
+  });
+
   it("reloads on config-change and dispatches only when something changed", async () => {
     const backend = createBackend();
     await init(backend);

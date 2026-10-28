@@ -49,3 +49,36 @@ export function touchesConfigSubdir(
     return segment.test(path);
   });
 }
+
+/** Folders of the config folder that hold no settings: plugins, themes and CSS snippets have their own listeners. */
+const NON_SETTINGS = new Set(["plugins", "themes", "snippets"]);
+
+/**
+ * True when a non-empty `config-change` batch only names files inside the config folder that no
+ * settings layer reads: under `plugins/`, `themes/` or `snippets/`, or in a dot folder (`.git`).
+ * Everything else reloads the settings: `config.toml`, `overrides.toml`, profiles, `keys`, includes
+ * (which may sit anywhere), the state files, and any path outside the folder (an unknown spelling).
+ * Unknown input and the root itself count as a settings change.
+ */
+export function isNonSettingsBatch(
+  paths: unknown,
+  configDir: string | null,
+): boolean {
+  if (!configDir || !Array.isArray(paths) || paths.length === 0) {
+    return false;
+  }
+  const root = `${norm(configDir)}/`;
+  return paths.every((p) => {
+    if (typeof p !== "string") {
+      return false;
+    }
+    const path = norm(p);
+    if (!path.startsWith(root)) {
+      return false;
+    }
+    const segments = path.slice(root.length).split("/");
+    return (
+      NON_SETTINGS.has(segments[0]) || segments.some((s) => s.startsWith("."))
+    );
+  });
+}

@@ -101,6 +101,7 @@ import {
 import { setImporterOverrides } from "../plugins/importerMap";
 import { resolveOfficial } from "../plugins/officialPlugins";
 
+import { isNonSettingsBatch } from "./configPaths";
 import { isWindowDecorations } from "./windowChrome";
 
 import {
@@ -1815,9 +1816,16 @@ export async function initSettings(
   }
 
   try {
-    const unlisten = await listen<{ paths?: string[] }>("config-change", () => {
-      void reloadSettings();
-    });
+    const unlisten = await listen<{ paths?: string[] }>(
+      "config-change",
+      (e) => {
+        // Plugin, theme and snippet files and dot folders (.git) change no setting.
+        if (isNonSettingsBatch(e?.payload?.paths, status.configDir)) {
+          return;
+        }
+        void reloadSettings();
+      },
+    );
     if (rt.disposed) {
       unlisten();
     } else {
