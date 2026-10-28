@@ -108,7 +108,7 @@ fn open_and_search_run_at_once() {
 }
 
 #[test]
-fn uri_allow_entries_remove_the_prompt_for_exactly_that_entry() {
+fn uri_allow_entries_remove_the_prompt_for_new_and_switch_but_a_command_still_asks() {
     let (h, w) = (Handler::default(), Fake::new(true));
     let cfg = "[control]\nuri_allow = [\"new\", \"appearance.toggleMode\", \"switch-vault\"]\n";
     go(&h, &w, cfg, NEW, Origin::Os).unwrap();
@@ -117,8 +117,10 @@ fn uri_allow_entries_remove_the_prompt_for_exactly_that_entry() {
     go(&h, &w, cfg, "vaultdraw://open?vault=DSA", Origin::Os).unwrap();
     let p = w.plans();
     assert_eq!(p[0]["allowed"], true);
-    assert_eq!(p[1]["allowed"], true);
+    assert_eq!(p[1]["allowed"], false, "a listed command is reachable but still asks");
+    assert_eq!(p[1]["listed"], true);
     assert_eq!(p[2]["allowed"], false, "another command still asks");
+    assert_eq!(p[2]["listed"], false);
     assert_eq!(p[3]["allowSwitch"], true);
     // `new` listed does not allow a cmd, and a command id does not allow `new`.
     go(&h, &w, "[control]\nuri_allow = [\"appearance.toggleMode\"]\n", NEW, Origin::Os).unwrap();
@@ -177,10 +179,11 @@ fn security_a_denied_command_is_refused_even_after_asking_and_an_explicit_allow_
     assert_eq!(e.app_code(), Some(codes::NOT_PERMITTED));
     assert!(w.plans().is_empty());
     assert!(w.notices()[0].contains("file.trash"));
-    // The user's file, the user's choice: listing the id overrides, and it then runs unasked.
+    // The user's file, the user's choice: listing the id overrides the refusal, and it still asks.
     go(&h, &w, "[control]\nuri_allow = [\"file.trash\"]\n", "vaultdraw://cmd?id=file.trash", Origin::Os).unwrap();
     let p = w.plans().pop().unwrap();
-    assert_eq!((p["action"].clone(), p["allowed"].clone()), (json!("cmd"), json!(true)));
+    assert_eq!((p["action"].clone(), p["allowed"].clone()), (json!("cmd"), json!(false)));
+    assert_eq!(p["listed"], true);
 }
 
 // ---- Parser rules reach the user as errors, nothing runs ----

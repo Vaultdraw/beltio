@@ -36,6 +36,8 @@ export interface UriPlan {
   message?: string;
   /** `new` / `cmd` may run without asking. */
   allowed?: boolean;
+  /** A `cmd` id the user listed in `control.uri_allow`: reachable, but it still asks. */
+  listed?: boolean;
   /** Switching vault may happen without asking. */
   allowSwitch?: boolean;
   origin?: string;
@@ -418,27 +420,26 @@ export function createUriRunner(deps: UriDeps) {
         return fail("NOT_FOUND", `Unknown command ${clip(id)}`, { id });
       }
       // Links run only built-in commands, unless the user listed this exact id in uri_allow.
-      if (!deps.isBuiltin(id) && plan.allowed !== true) {
+      if (!deps.isBuiltin(id) && plan.listed !== true) {
         return fail(
           "NOT_PERMITTED",
           `A link can only run built-in commands (${clip(
             id,
-          )} comes from a plugin; list it in control.uri_allow to allow it)`,
+          )} comes from a plugin)`,
           { id },
         );
       }
       // Built-in commands are opt-in too: only the link allow list, or the user's uri_allow.
-      if (!deps.isLinkable(id) && plan.allowed !== true) {
+      if (!deps.isLinkable(id) && plan.listed !== true) {
         return fail(
           "NOT_PERMITTED",
-          `A link cannot run ${clip(
-            id,
-          )} (not link-callable; list it in control.uri_allow to allow it)`,
+          `A link cannot run ${clip(id)}`,
           { id },
         );
       }
       lines.push(`Run the command "${clip(title)}" (${clip(id)})`);
-      ask ||= plan.allowed !== true;
+      // A command always asks: control.uri_allow only makes it reachable.
+      ask = true;
     }
     if (plan.action === "new" && create) {
       // An existing drawing is only opened: no prompt for that.

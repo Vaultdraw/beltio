@@ -173,18 +173,24 @@ pub(crate) fn plan_for(req: &UriRequest, policy: &Policy, origin: Origin) -> Res
     let mut plan = serde_json::to_value(req).map_err(|e| e.to_string())?;
     // Pre-approval comes only from `uri_allow`; nobody's own origin skips the question.
     let allow_switch = policy.allows("switch-vault");
+    let mut listed_cmd = false;
     let allowed = match req {
         UriRequest::Cmd { id } => {
             let listed = policy.allows(id);
             if is_denied(id) && !listed {
                 return Err(format!("A link cannot run {} (blocked for links; allow it in control.uri_allow)", printable(id, 60)));
             }
-            listed
+            // A listed command is reachable, but the window still asks before it runs.
+            listed_cmd = listed;
+            false
         }
         UriRequest::New { .. } => policy.allows("new"),
         _ => true,
     };
     plan["allowed"] = json!(allowed);
+    if matches!(req, UriRequest::Cmd { .. }) {
+        plan["listed"] = json!(listed_cmd);
+    }
     plan["allowSwitch"] = json!(allow_switch);
     plan["origin"] = json!(origin.name());
     Ok(plan)

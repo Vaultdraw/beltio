@@ -223,11 +223,16 @@ describe("uriRun: what asks first", () => {
     );
   });
 
-  it("cmd runs at once when allowed; an unknown command is refused before asking", async () => {
+  it("cmd always asks, even when listed; an unknown command is refused before asking", async () => {
     const t = make();
-    await t.run({ action: "cmd", id: "appearance.toggleMode", allowed: true });
-    expect(t.asks).toEqual([]);
-    expect(names(t.calls)).toEqual(["command.run"]);
+    const r = await t.run({
+      action: "cmd",
+      id: "appearance.toggleMode",
+      allowed: true,
+      listed: true,
+    });
+    expect(r.status).toBe("asking");
+    expect(t.calls).toEqual([]);
     await expect(
       t.run({ action: "cmd", id: "no.such", allowed: false }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
@@ -258,9 +263,11 @@ describe("uriRun: commands and a changing vault", () => {
     expect(t.asks).toEqual([]);
     expect(t.calls).toEqual([]);
     expect(t.notes[0][0]).toContain("built-in");
-    // Listed in control.uri_allow: the user's own choice, so it runs unasked.
-    await t.run({ action: "cmd", id: "my.plugin.run", allowed: true });
-    expect(names(t.calls)).toEqual(["command.run"]);
+    expect(t.notes[0][0]).not.toContain("uri_allow");
+    // Listed in control.uri_allow: reachable, but it still asks.
+    await t.run({ action: "cmd", id: "my.plugin.run", listed: true });
+    expect(t.asks).toHaveLength(1);
+    expect(t.calls).toEqual([]);
   });
 
   it("security: a built-in command that did not opt in is refused unless its exact id is allowed", async () => {
@@ -270,9 +277,10 @@ describe("uriRun: commands and a changing vault", () => {
     ).rejects.toMatchObject({ code: "NOT_PERMITTED" });
     expect(t.asks).toEqual([]);
     expect(t.calls).toEqual([]);
-    expect(t.notes[0][0]).toContain("not link-callable");
-    await t.run({ action: "cmd", id: "config.resetOverrides", allowed: true });
-    expect(names(t.calls)).toEqual(["command.run"]);
+    expect(t.notes[0][0]).not.toContain("uri_allow");
+    await t.run({ action: "cmd", id: "config.resetOverrides", listed: true });
+    expect(t.asks).toHaveLength(1);
+    expect(t.calls).toEqual([]);
   });
 
   it("security: a queued question does not run in a vault the user switched to", async () => {
