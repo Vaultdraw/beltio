@@ -24,7 +24,7 @@ export interface OfficialMenu {
   surface: "tree" | "tab" | "canvas";
   command: string;
   title: string;
-  kinds: string[];
+  kinds?: string[];
 }
 
 /** An activity bar button that runs one of the plugin's commands; `active` while its overlay is open. */
@@ -38,6 +38,15 @@ export interface OfficialActivity {
   command: string;
   /** The built-in entry it sits behind by default. */
   after?: string;
+}
+
+/** A side panel shown before the plugin loads (`[[contributes.panels]]`); opening it starts the plugin. */
+export interface OfficialPanel {
+  /** Short panel id (the full id is `<plugin id>.<id>`). */
+  id: string;
+  title: string;
+  /** A built-in panel icon name (stubs.ts ICONS). */
+  icon: string;
 }
 
 export interface OfficialImporter {
@@ -57,6 +66,7 @@ export interface OfficialPlugin {
   commands: OfficialCommand[];
   cancelCommand?: string;
   menus?: OfficialMenu[];
+  panels?: OfficialPanel[];
   activity?: OfficialActivity;
   /**
    * The `[extensions]` switch that turns this plugin on and off (same id). The plugin runs only
@@ -339,6 +349,48 @@ export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
         when: ["drawingOpen", "writable"],
       },
     ],
+  },
+  {
+    id: "favourites",
+    name: "Favourites",
+    importers: [],
+    commands: [
+      {
+        id: "toggle",
+        title: "Favourites: Add or remove the open drawing",
+        keys: ["Mod+Alt+J"],
+        when: ["drawingOpen", "!modalOpen"],
+      },
+      {
+        id: "toggle-element",
+        title: "Favourites: Add or remove the selected element",
+        when: ["drawingOpen", "!modalOpen"],
+      },
+      ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({
+        id: `open${n}`,
+        title: `Favourites: Open favourite ${n}`,
+        when: ["vaultOpen", "!modalOpen"],
+      })),
+    ],
+    menus: [
+      {
+        surface: "tree",
+        command: "toggle",
+        title: "Favourite: add or remove",
+        kinds: ["drawing", "note"],
+      },
+      {
+        surface: "tab",
+        command: "toggle",
+        title: "Favourite: add or remove",
+      },
+      {
+        surface: "canvas",
+        command: "toggle-element",
+        title: "Favourite: add or remove the selection",
+      },
+    ],
+    panels: [{ id: "list", title: "Favourites", icon: "bookmark" }],
   },
 ];
 

@@ -1496,6 +1496,31 @@ On Linux the system title bar used to sit above Vaultdraw's own header, two bars
 decorations = "custom"   # or "native"
 ```
 
+## Favourites
+
+Favourites is an official plugin (`favourites`, in `plugins/official/favourites`) that ships with the app and is on by default. It bookmarks drawings, notes and single elements, in your own order, and loads only when you use it. Turn it off with `plugins.disabled = ["favourites"]` (Settings, Plugins): the panel and the commands go away and nothing runs.
+
+| Command | What it does | Default key |
+| --- | --- | --- |
+| `favourites.toggle` | Add or remove the open drawing (also in the file tree and tab right-click menus) | `Mod+Alt+J` |
+| `favourites.toggle-element` | Add or remove the selected element or frame (also in the canvas menu); opening it selects and scrolls to it | none |
+| `favourites.open1` to `favourites.open9` | Open the 1st to 9th favourite | none |
+| `favourites.panel.list` | Show or hide the Favourites panel (activity bar) | none |
+
+In the panel: click or `Enter` opens, `Alt+Up` / `Alt+Down` or drag reorders, `F2` or double-click renames the label, `Delete` removes. Every command can be rebound under `[hotkeys]`.
+
+The list is kept per vault in `.excalidraw-vault/settings.toml`, in the plugin's own table. It is plain TOML you can edit by hand (the order is the panel order, at most 200 entries):
+
+```toml
+[favourites]
+items = [
+  { path = "Projects/Plan.excalidraw", label = "The plan" },
+  { path = "Projects/Plan.excalidraw", element = "Ab12Cd", label = "Budget frame" },
+]
+```
+
+A rename, move or delete done in Vaultdraw updates the list while the plugin is loaded (first use in the session: opening the panel, a key, a menu item or a command). A rename made before that, or outside Vaultdraw, is not followed: fix the `path` by hand or add the drawing again.
+
 ## Plugins (experimental)
 
 Plugins are folders in `plugins/` inside the config folder (`~/.config/vaultdraw/plugins/`). Only the ones listed in `config.toml` run:
@@ -1879,7 +1904,7 @@ Plugins in the `plugins/` folder of the config folder.
 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
-| `enabled` | `["markdown-import", "gallery", "graph", "mermaid", "formula", "pdf-import"]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`. |
+| `enabled` | `["markdown-import", "gallery", "graph", "mermaid", "formula", "pdf-import", "favourites"]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`. |
 | `disabled` | `[]` | a list of official plugin ids you turned off, like ["gallery"] |  | Official plugins you turned off, like `["gallery"]`. Settings writes it; a new official plugin is on until you list it here. |
 | `importers` | `[object Object]` | a table like { txt = "text-import" } (extension = plugin id, "" for none) |  | Which plugin imports a file extension when two plugins claim it; `""` turns plugin handling off for that extension. |
 | `storage_limit_kb` | `1024` | an integer between 64 and 16384 |  | Most data one plugin may save with `ctx.storage`, in KiB; a save past it is refused. |

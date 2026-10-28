@@ -6,12 +6,13 @@
  * the first use (or any other start of the host) loads the real plugin.
  */
 import { registerActivityEntries } from "../activityBar/activityBarRegistry";
-import { IconGallery, IconGraph } from "../components/Icons";
+import { IconBookmark, IconGallery, IconGraph } from "../components/Icons";
 import { getAppCommandRunner } from "../commands/appRunner";
 import { registerCommandHandlers } from "../commands/handlerRegistry";
 
 import { getRegisteredCommand, registerCommands } from "../commands/registry";
 import { scheduleIdle } from "../platform/idle";
+import { openPanel, panelFlag, togglePanel } from "../slots/panelStore";
 import { toastStore } from "../toasts/toastStore";
 import { subscribePreferences } from "../vault/preferences";
 
@@ -19,6 +20,7 @@ import { enabledPluginIds } from "./enabledIds";
 import { setFormulaEditRunner } from "./formulaEdit";
 import { setMathStarter } from "./mathService";
 
+import { addPluginPanels, getPluginPanels } from "./panelRegistry";
 import { pluginHostStarted } from "./hostFlag";
 import { addMenuItems } from "./menuRegistry";
 import { getOverlay, subscribeOverlay } from "./overlayStore";
@@ -26,6 +28,7 @@ import { claimImporter, setImportHostStarter } from "./importerMap";
 import {
   isOfficialPluginId,
   OFFICIAL_PLUGINS,
+  type OfficialPanel,
   type OfficialPlugin,
 } from "./officialPlugins";
 
@@ -95,6 +98,61 @@ export const officialCommandDefs = (
     ...(c.repeat ? { repeat: true } : {}),
   }));
 
+const PANEL_ICONS = { bookmark: IconBookmark } as const;
+
+/**
+ * A panel of an official plugin before the host runs: its toggle command, activity bar button and
+ * a stub that starts the host when first shown. The host then registers the real ones under the same
+ * ids (these are released first, which closes the panel, so it is opened again).
+ */
+function registerOfficialPanel(
+  win: Window,
+  plugin: OfficialPlugin,
+  panel: OfficialPanel,
+) {
+  const panelId = `${plugin.id}.${panel.id}`;
+  const commandId = `${plugin.id}.panel.${panel.id}`;
+  const defs: CommandDefinition[] = [
+    {
+      id: commandId,
+      title: `Toggle ${panel.title} panel`,
+      category: plugin.name,
+      keys: { default: [] as string[] },
+    },
+  ];
+  return [
+    registerCommands(defs),
+    registerCommandHandlers({ [commandId]: () => togglePanel(panelId) }),
+    registerActivityEntries([
+      {
+        id: panelId,
+        label: panel.title,
+        icon:
+          PANEL_ICONS[panel.icon as keyof typeof PANEL_ICONS] ?? IconGallery,
+        commandId,
+        group: "top" as const,
+        active: panelFlag(panelId),
+      },
+    ]),
+    addPluginPanels([
+      {
+        id: panelId,
+        pluginId: plugin.id,
+        title: panel.title,
+        load: async () => {
+          await ensurePluginHost(win);
+          openPanel(panelId);
+          const real = getPluginPanels().find((x) => x.id === panelId);
+          if (!real) {
+            throw new Error(`panel ${panelId} did not load`);
+          }
+          return real.load();
+        },
+      },
+    ]),
+  ];
+}
+
 /** Commands and file types of one official plugin as stubs: no plugin code runs. */
 function registerOfficialStubs(win: Window, plugin: OfficialPlugin) {
   const handlers: Record<string, () => Promise<void>> = {};
@@ -112,10 +170,13 @@ function registerOfficialStubs(win: Window, plugin: OfficialPlugin) {
           surface: m.surface,
           title: m.title,
           command: `${plugin.id}.${m.command}`,
-          kinds: m.kinds,
+          kinds: m.kinds ?? [],
         })),
       ),
     );
+  }
+  for (const p of plugin.panels ?? []) {
+    offs.push(...registerOfficialPanel(win, plugin, p));
   }
   for (const imp of plugin.importers) {
     offs.push(

@@ -1,0 +1,86 @@
+id = "favourites"
+name = "Favourites"
+version = "0.1.0"
+api = 0
+min_app = "0.26.0"
+main = "main.js"
+description = "Bookmarks for drawings, notes and single elements, in your own order, kept per vault"
+author = "Vaultdraw"
+permissions = ["vault.read", "vault.write"]
+
+[[contributes.panels]]
+id = "list"
+title = "Favourites"
+icon = "bookmark"
+
+[[contributes.commands]]
+id = "toggle"
+title = "Favourites: Add or remove the open drawing"
+keys = ["Mod+Alt+J"]
+when = ["drawingOpen", "!modalOpen"]
+
+[[contributes.commands]]
+id = "toggle-element"
+title = "Favourites: Add or remove the selected element"
+when = ["drawingOpen", "!modalOpen"]
+
+[[contributes.commands]]
+id = "open1"
+title = "Favourites: Open favourite 1"
+when = ["vaultOpen", "!modalOpen"]
+
+[[contributes.commands]]
+id = "open2"
+title = "Favourites: Open favourite 2"
+when = ["vaultOpen", "!modalOpen"]
+
+[[contributes.commands]]
+id = "open3"
+title = "Favourites: Open favourite 3"
+when = ["vaultOpen", "!modalOpen"]
+
+[[contributes.commands]]
+id = "open4"
+title = "Favourites: Open favourite 4"
+when = ["vaultOpen", "!modalOpen"]
+
+[[contributes.commands]]
+id = "open5"
+title = "Favourites: Open favourite 5"
+when = ["vaultOpen", "!modalOpen"]
+
+[[contributes.commands]]
+id = "open6"
+title = "Favourites: Open favourite 6"
+when = ["vaultOpen", "!modalOpen"]
+
+[[contributes.commands]]
+id = "open7"
+title = "Favourites: Open favourite 7"
+when = ["vaultOpen", "!modalOpen"]
+
+[[contributes.commands]]
+id = "open8"
+title = "Favourites: Open favourite 8"
+when = ["vaultOpen", "!modalOpen"]
+
+[[contributes.commands]]
+id = "open9"
+title = "Favourites: Open favourite 9"
+when = ["vaultOpen", "!modalOpen"]
+
+[[contributes.menus]]
+surface = "tree"
+command = "toggle"
+title = "Favourite: add or remove"
+kinds = ["drawing", "note"]
+
+[[contributes.menus]]
+surface = "tab"
+command = "toggle"
+title = "Favourite: add or remove"
+
+[[contributes.menus]]
+surface = "canvas"
+command = "toggle-element"
+title = "Favourite: add or remove the selection"

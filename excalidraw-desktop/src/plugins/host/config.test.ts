@@ -16,6 +16,7 @@ describe("[plugins] enabled", () => {
       "mermaid",
       "formula",
       "pdf-import",
+      "favourites",
     ]);
     expect(
       configToPreferences({ plugins: { enabled: [] } }).values.pluginsEnabled,
@@ -26,6 +27,7 @@ describe("[plugins] enabled", () => {
       "mermaid",
       "formula",
       "pdf-import",
+      "favourites",
     ]); // an old list: official plugins are on
     const ok = configToPreferences({ plugins: { enabled: ["hello-command"] } });
     expect(ok.values.pluginsEnabled).toEqual([
@@ -36,6 +38,7 @@ describe("[plugins] enabled", () => {
       "mermaid",
       "formula",
       "pdf-import",
+      "favourites",
     ]);
     expect(ok.problems).toEqual([]);
   });
@@ -49,6 +52,7 @@ describe("[plugins] enabled", () => {
       "mermaid",
       "formula",
       "pdf-import",
+      "favourites",
     ]);
     expect(bad.problems[0].key).toBe("plugins.enabled");
   });

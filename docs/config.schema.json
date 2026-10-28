@@ -1612,7 +1612,8 @@
             "graph",
             "mermaid",
             "formula",
-            "pdf-import"
+            "pdf-import",
+            "favourites"
           ],
           "type": "array",
           "items": {

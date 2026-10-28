@@ -2,6 +2,7 @@
 // its stubs work. Kept apart from pluginHarness.ts, whose imports would load the plugin host.
 // @ts-expect-error the CLI is plain .mjs
 import { parseToml } from "../../sdk/cli/src/toml.mjs";
+import favouritesToml from "../../plugins/official/favourites/plugin.toml?raw";
 import formulaToml from "../../plugins/official/formula/plugin.toml?raw";
 import galleryToml from "../../plugins/official/gallery/plugin.toml?raw";
 import pdfImportToml from "../../plugins/official/pdf-import/plugin.toml?raw";
@@ -36,7 +37,12 @@ export async function installDefaultBackend(win: Window): Promise<void> {
           palette: x.palette ?? true,
           repeat: x.repeat ?? false,
         })),
-        panels: [],
+        panels: (doc.contributes.panels ?? []).map((x: any) => ({
+          id: x.id,
+          title: x.title,
+          icon: x.icon ?? null,
+          group: x.group ?? "top",
+        })),
         menus: (doc.contributes.menus ?? []).map((x: any) => ({
           surface: x.surface,
           command: x.command,
@@ -54,6 +60,7 @@ export async function installDefaultBackend(win: Window): Promise<void> {
   };
   const infos = [
     infoOf("gallery", galleryToml),
+    infoOf("favourites", favouritesToml),
     infoOf("formula", formulaToml),
     infoOf("pdf-import", pdfImportToml),
   ];

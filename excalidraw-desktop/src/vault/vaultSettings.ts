@@ -75,9 +75,13 @@ const mappingOf = (field: VaultField) => {
 
 /**
  * settings.toml tables never checked: `[plugin.<id>]` (plugin ids) and
- * `[graph]` (validated by the lazily loaded graph view's own store).
+ * `[graph]` and `[favourites]` (validated by the plugin's own store, loaded on use).
  */
-const VAULT_OPEN_TABLES: ReadonlySet<string> = new Set(["plugin", "graph"]);
+const VAULT_OPEN_TABLES: ReadonlySet<string> = new Set([
+  "plugin",
+  "graph",
+  "favourites",
+]);
 
 let vaultKnownKeys: KnownIndex | null = null;
 const vaultKnown = () =>

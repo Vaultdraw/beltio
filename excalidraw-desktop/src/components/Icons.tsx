@@ -698,6 +698,12 @@ export const IconTag = strokeIcon(
   </>,
 );
 
+/** Favourites: a bookmark ribbon (Lucide "bookmark"). */
+export const IconBookmark = strokeIcon(
+  15,
+  <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />,
+);
+
 /** Gallery: a grid of tiles (Lucide "layout-grid"). */
 export const IconGallery = strokeIcon(
   15,

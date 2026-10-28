@@ -1,0 +1,11 @@
+{
+  "name": "@vaultdraw/plugin-favourites",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The official favourites plugin: bookmark drawings, notes and elements, in your own order",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node ../../../sdk/cli/bin/vaultdraw-plugin.mjs check dist"
+  }
+}
