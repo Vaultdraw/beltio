@@ -17,7 +17,9 @@ describe("whenCanOverlap", () => {
   });
 
   it("a presentation is modal: its keys never clash with !modalOpen ones", () => {
-    expect(whenCanOverlap(["present.active"], ["drawingOpen", "!modalOpen"])).toBe(false);
+    expect(
+      whenCanOverlap(["present.active"], ["drawingOpen", "!modalOpen"]),
+    ).toBe(false);
     expect(whenCanOverlap(["!modalOpen"], ["present.active"])).toBe(false);
     expect(whenCanOverlap(["present.active"], ["modalOpen"])).toBe(true);
     expect(whenCanOverlap(["present.active"], ["drawingOpen"])).toBe(true);
@@ -198,7 +200,11 @@ describe("a presentation key on a tool key", () => {
       keys: { default: ["ArrowRight"] },
       when: ["present.active"],
     };
-    const result = findConflicts([...COMMANDS, next], { "frames.next": ["N"] }, "mac");
+    const result = findConflicts(
+      [...COMMANDS, next],
+      { "frames.next": ["N"] },
+      "mac",
+    );
     expect(result.get("frames.next")?.get("N")).toBeUndefined();
     expect(result.get("tool.stickynote")?.get("N")).toBeUndefined();
   });

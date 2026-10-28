@@ -64,9 +64,11 @@ describe("a vault's profile", () => {
   it("returns to the global choice when the next vault names no profile", async () => {
     vi.resetModules();
     let active: string | null = "mine";
-    const profileCall = vi.fn(async (_c: string, a: { name: string | null }) => {
-      active = a.name;
-    });
+    const profileCall = vi.fn(
+      async (_c: string, a: { name: string | null }) => {
+        active = a.name;
+      },
+    );
     let name: string | null = "work";
     vi.doMock("../vault/settingsSync", () => ({
       getSettingsStatus: () => ({
@@ -98,7 +100,10 @@ describe("a vault's profile", () => {
     vi.doUnmock("../vault/settingsSync");
   });
 
-  const setup = async (active: string | null, vaultName: () => string | null) => {
+  const setup = async (
+    active: string | null,
+    vaultName: () => string | null,
+  ) => {
     vi.resetModules();
     const profileCall = vi.fn(async () => {});
     vi.doMock("../vault/settingsSync", () => ({

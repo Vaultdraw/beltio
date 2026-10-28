@@ -516,6 +516,7 @@ describe("settingsSync mapping", () => {
       navigatorWidth: 300,
       expandedFolders: { "/a": ["", "x"] },
       hasPanned: false,
+      profileChoice: null,
       exportOptions: {
         scale: expect.any(Number),
         background: true,
@@ -726,6 +727,7 @@ describe("settingsSync runtime", () => {
       navigatorWidth: 300,
       expandedFolders: {},
       hasPanned: false,
+      profileChoice: null,
       exportOptions: {
         scale: expect.any(Number),
         background: true,
