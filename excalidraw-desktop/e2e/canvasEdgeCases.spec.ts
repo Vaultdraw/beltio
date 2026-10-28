@@ -612,8 +612,12 @@ test("groups and editing: groups, nesting, Alt-drag, duplicate, paste, nudge, lo
   const R1 = await rectAt(page, 320, 180, 100, 70);
   const R2 = await draw(page, "ellipse", [500, 180], [600, 250]);
   const R3 = await draw(page, "diamond", [680, 180], [780, 250]);
-  // WebKit's headless mouse does not drive Excalidraw's rubber-band box
-  // (Chromium does), so multi-select by Shift-clicking edges
+  // Rubber-band (marquee) selection works in WebKit, but only when each pointer move is its
+  // own event-loop turn: Playwright's `mouse.move(..., { steps })` fires the moves back to
+  // back, the editor handles pointer moves once per frame and sees only the first, so the box
+  // stays empty. A harness limit, not an app bug (checked 2026-10-28: per-move awaits select
+  // 20 of 20 times, burst moves selected nothing in 14 of 16 runs). The "marquee" step below uses spaced moves.
+  // The other steps multi-select by Shift-clicking edges, which is faster and exact.
   const selectMany = async (list: El[]) => {
     await page.keyboard.press("Escape");
     await clickEdge(page, list[0]);
@@ -628,6 +632,25 @@ test("groups and editing: groups, nesting, Alt-drag, duplicate, paste, nudge, lo
   expect((await snap(page)).sel.length, "Shift-click selects the three").toBe(
     3,
   );
+  // real rubber-band box around the three shapes, with spaced pointer moves
+  await page.keyboard.press("Escape");
+  {
+    const a = await toClient(page, 280, 130);
+    const b = await toClient(page, 830, 300);
+    await page.mouse.move(a.x, a.y);
+    await page.mouse.down();
+    for (let i = 1; i <= 6; i++) {
+      await page.mouse.move(
+        a.x + ((b.x - a.x) * i) / 6,
+        a.y + ((b.y - a.y) * i) / 6,
+      );
+      await page.waitForTimeout(0);
+    }
+    await page.waitForTimeout(60);
+    await page.mouse.up();
+    await page.waitForTimeout(100);
+  }
+  expect((await snap(page)).sel.length, "marquee selects the three").toBe(3);
   await page.keyboard.press("Meta+KeyG");
   let g = await els(page);
   const gid = g[0].groupIds[0];
@@ -772,6 +795,14 @@ test("groups and editing: groups, nesting, Alt-drag, duplicate, paste, nudge, lo
   expect((await order()).at(-1), "bring to front").toBe(S3.id);
   await zMenu("Send to back");
   expect((await order())[0], "send to back").toBe(S3.id);
+  // the shortcuts: on macOS Cmd+Alt+[ / ] (Cmd+Shift+[ / ] is the Windows and Linux binding,
+  // so it does nothing in WebKit on a Mac: not an app bug; the registry and Excalidraw agree)
+  await clickEdge(page, await byId(page, S3.id));
+  await page.keyboard.press("Meta+Alt+BracketRight");
+  expect((await order()).at(-1), "Cmd+Alt+] brings to front").toBe(S3.id);
+  await page.keyboard.press("Meta+Alt+BracketLeft");
+  expect((await order())[0], "Cmd+Alt+[ sends to back").toBe(S3.id);
+  await page.keyboard.press("Escape");
   await zMenu("Bring forward");
   const fwd = (await order()).indexOf(S3.id);
   expect(fwd, "bring forward moves it up one step or more").toBeGreaterThan(0);
