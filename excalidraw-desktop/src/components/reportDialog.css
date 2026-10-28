@@ -4,7 +4,7 @@
   max-height: 50vh;
   overflow: auto;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
+  font-size: var(--vd-fs-small);
   line-height: 1.5;
   white-space: pre;
   user-select: text;
@@ -23,6 +23,6 @@
 
 .vd-report__status {
   margin-right: auto;
-  font-size: 12px;
+  font-size: var(--vd-fs-small);
   opacity: 0.8;
 }

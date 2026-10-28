@@ -101,7 +101,7 @@ html.dark body {
   border-radius: 10px;
   background: transparent;
   color: var(--vault-text-muted, inherit);
-  font-size: 11px;
+  font-size: var(--vd-fs-caption);
   opacity: 0.6;
   cursor: pointer;
 }

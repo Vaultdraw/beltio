@@ -14,7 +14,7 @@
      stylesheet gives <kbd> `font-family: monospace`, and the home's chips
      were the first monospace text on vault open (+15-20 ms layout at 4x). */
   font-family: inherit;
-  font-size: 10.5px;
+  font-size: var(--vd-fs-kbd);
   line-height: 1;
   text-align: center;
 }

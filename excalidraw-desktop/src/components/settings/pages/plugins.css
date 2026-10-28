@@ -75,7 +75,7 @@
   padding: 0 6px;
   border: 1px solid var(--vault-border);
   border-radius: var(--vd-radius-chip, 4px);
-  font-size: 11px;
+  font-size: var(--vd-fs-caption);
   color: var(--vault-text-muted);
 }
 

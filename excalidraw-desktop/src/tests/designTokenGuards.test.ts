@@ -12,6 +12,8 @@ import { ROW_HEIGHT as TAG_ROW_HEIGHT } from "../components/tags/TagsPanel";
 import { TREE_ROW_HEIGHT } from "../components/tree/useTreeWindow";
 import { deriveTokens, loadBuiltinThemes } from "../theme";
 
+import COLOUR_BASELINE from "./literalColours.baseline.json";
+
 const ROOT = join(__dirname, "..", "..");
 const SCAN = [join(ROOT, "src"), join(ROOT, "..", "plugins", "official")];
 const SKIP = /node_modules|dist|\.test\.|__snapshots__/;
@@ -135,5 +137,41 @@ describe("design token guards", () => {
     ).filter((x) => /tags|VaultShell|MoveModal/.test(x.rel))) {
       expect(m.step, m.rel).toBe("16");
     }
+  });
+
+  it("font sizes in the shell CSS come from the type scale (--vd-fs-*)", () => {
+    const bad: string[] = [];
+    for (const { rel, text } of cssFiles()) {
+      if (!rel.startsWith("src/") || rel.endsWith("theme/designSystem.css")) {
+        continue;
+      }
+      // em stays allowed: notes headings scale with the user's note font.
+      for (const m of text.matchAll(/font-size:\s*[0-9.]+(px|rem)\b/g)) {
+        bad.push(`${rel}: ${m[0]}`);
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it("literal colours outside theme/ never grow (ratchet; lower the baseline when you remove some)", () => {
+    const counts: Record<string, number> = {};
+    for (const { rel, text } of cssFiles()) {
+      if (!rel.startsWith("src/") || rel.startsWith("src/theme/")) {
+        continue;
+      }
+      const code = text
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/var\([^()]*(\([^()]*\)[^()]*)*\)/g, "");
+      const n = (code.match(/#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?)\(/g) ?? [])
+        .length;
+      if (n) {
+        counts[rel.slice("src/".length)] = n;
+      }
+    }
+    const grown = Object.entries(counts).filter(
+      ([file, n]) =>
+        n > ((COLOUR_BASELINE as Record<string, number>)[file] ?? 0),
+    );
+    expect(grown).toEqual([]);
   });
 });

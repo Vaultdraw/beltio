@@ -280,7 +280,7 @@
   flex: none;
   text-align: center;
   color: var(--vault-text-faint);
-  font-size: 10px;
+  font-size: var(--vd-fs-kbd);
 }
 
 .vd-move__name {

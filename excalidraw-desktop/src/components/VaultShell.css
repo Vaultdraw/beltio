@@ -166,7 +166,7 @@ html.dark {
 }
 
 .vault-editor__exports button {
-  font-size: 0.75rem;
+  font-size: var(--vd-fs-small);
   padding: 4px 8px;
   border-radius: var(--vault-radius-sm);
   background: transparent;
@@ -202,7 +202,7 @@ html.dark {
   justify-content: center;
   gap: 6px;
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: var(--vd-fs-emph);
   font-weight: 500;
   line-height: 1.2;
   padding: 6px 12px;
@@ -277,7 +277,7 @@ html.dark {
 
 .vault-btn--sm {
   padding: 3px 8px;
-  font-size: 0.78rem;
+  font-size: var(--vd-fs-small);
 }
 
 /* Navigator Pane (Right-Side) */
@@ -354,7 +354,7 @@ html.dark {
   background: transparent;
   color: var(--vault-text);
   font-family: inherit;
-  font-size: 0.82rem;
+  font-size: var(--vd-fs-body);
   font-weight: 600;
   cursor: pointer;
   text-align: left;
@@ -404,7 +404,7 @@ html.dark {
   outline: none;
   background: transparent;
   font-family: inherit;
-  font-size: 0.82rem;
+  font-size: var(--vd-fs-body);
   color: var(--vault-text);
   min-width: 0;
 }
@@ -418,7 +418,7 @@ html.dark {
   border: none;
   cursor: pointer;
   color: var(--vault-text-muted);
-  font-size: 0.75rem;
+  font-size: var(--vd-fs-small);
   padding: 2px;
   line-height: 1;
 }
@@ -454,7 +454,7 @@ html.dark {
   align-items: flex-start;
   justify-content: center;
   padding-top: 8px;
-  font-size: 0.75rem;
+  font-size: var(--vd-fs-small);
   color: var(--vault-primary);
 }
 
@@ -506,7 +506,7 @@ html.dark {
   border: 1px solid var(--vault-border-strong);
   box-shadow: var(--vault-shadow-lg);
   font-family: var(--vault-font);
-  font-size: 0.8rem;
+  font-size: var(--vd-fs-body);
   color: var(--vault-text);
 }
 
@@ -527,7 +527,7 @@ html.dark {
 }
 
 .vault-tree-drag-ghost__hint {
-  font-size: 0.72rem;
+  font-size: var(--vd-fs-small);
   color: var(--vault-text-muted);
 }
 
@@ -543,7 +543,7 @@ html.dark {
   padding: 24px 16px;
   text-align: center;
   color: var(--vault-text-muted);
-  font-size: 0.82rem;
+  font-size: var(--vd-fs-body);
 }
 
 .vault-tree-item {
@@ -553,7 +553,7 @@ html.dark {
   height: var(--vd-row);
   padding: 0 6px;
   padding-left: calc(8px + var(--depth, 0) * 16px);
-  font-size: 0.82rem;
+  font-size: var(--vd-fs-body);
   color: var(--vault-text-muted);
   cursor: pointer;
   border-radius: var(--vd-radius-control);
@@ -698,7 +698,7 @@ html.dark {
   background: transparent;
   color: var(--vault-text);
   font-family: inherit;
-  font-size: 0.82rem;
+  font-size: var(--vd-fs-body);
   text-align: left;
   cursor: pointer;
 }
@@ -749,7 +749,7 @@ html.dark {
   flex-shrink: 0;
   margin-left: 12px;
   color: var(--vault-text-faint);
-  font-size: 0.72rem;
+  font-size: var(--vd-fs-small);
   font-variant-numeric: tabular-nums;
 }
 
@@ -841,13 +841,13 @@ html.dark {
 
 .vault-modal__title {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--vd-fs-title);
   font-weight: 600;
 }
 
 .vault-modal__body {
   padding: 16px 18px;
-  font-size: 0.88rem;
+  font-size: var(--vd-fs-emph);
   line-height: 1.45;
   color: var(--vault-text);
   max-height: 60vh;
@@ -872,14 +872,14 @@ html.dark {
 }
 
 .vault-field label {
-  font-size: 0.8rem;
+  font-size: var(--vd-fs-body);
   font-weight: 500;
   color: var(--vault-text-muted);
 }
 
 .vault-input {
   font-family: inherit;
-  font-size: 0.88rem;
+  font-size: var(--vd-fs-emph);
   padding: 7px 10px;
   background-color: var(--vault-bg);
   color: var(--vault-text);
@@ -895,7 +895,7 @@ html.dark {
 }
 
 .vault-error-text {
-  font-size: 0.78rem;
+  font-size: var(--vd-fs-small);
   color: var(--vault-danger);
   margin-top: 4px;
 }
@@ -907,7 +907,7 @@ html.dark {
   gap: 10px;
   padding: 12px 14px;
   border-radius: var(--vault-radius);
-  font-size: 0.85rem;
+  font-size: var(--vd-fs-emph);
   line-height: 1.4;
   margin-bottom: 20px;
   text-align: left;
@@ -945,11 +945,11 @@ html.dark {
 
 .vault-recovery-item__path {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--vd-fs-emph);
 }
 
 .vault-recovery-item__time {
-  font-size: 0.75rem;
+  font-size: var(--vd-fs-small);
   color: var(--vault-text-muted);
 }
 

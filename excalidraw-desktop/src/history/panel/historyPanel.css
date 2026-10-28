@@ -19,14 +19,14 @@
 
 .vault-history-panel__title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--vd-fs-title);
   font-weight: 600;
 }
 
 .vault-history-panel__last {
   margin: 0;
   padding: 0 14px 8px;
-  font-size: 0.78rem;
+  font-size: var(--vd-fs-small);
   color: var(--vault-text-muted);
   border-bottom: 1px solid var(--vault-border);
 }
@@ -58,7 +58,7 @@
   box-sizing: border-box;
   padding: 0 14px;
   border-bottom: 1px solid var(--vault-border);
-  font-size: 0.85rem;
+  font-size: var(--vd-fs-emph);
   cursor: pointer;
   overflow: hidden;
 }
@@ -119,7 +119,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.75rem;
+  font-size: var(--vd-fs-small);
   color: var(--vault-text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -133,7 +133,7 @@
 }
 
 .vault-history-row__note {
-  font-size: 0.75rem;
+  font-size: var(--vd-fs-small);
   color: var(--vault-text-faint);
 }
 
@@ -181,7 +181,7 @@
 .vault-history-timeline__ends {
   display: flex;
   justify-content: space-between;
-  font-size: 0.7rem;
+  font-size: var(--vd-fs-caption);
   color: var(--vault-text-faint);
 }
 
@@ -194,7 +194,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  font-size: 0.78rem;
+  font-size: var(--vd-fs-small);
   color: var(--vault-text);
   background-color: var(--vault-bg);
   border: 1px solid var(--vault-border-strong);
@@ -230,7 +230,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 6px 12px;
-  font-size: 0.82rem;
+  font-size: var(--vd-fs-body);
   color: var(--vault-text);
   background-color: var(--vault-surface);
   border-bottom: 1px solid var(--vault-border);
@@ -278,7 +278,7 @@ body.vault-history-previewing > .excalidraw-modal-container {
 .vault-history-panel__warnings {
   margin: 0;
   padding: 8px 14px;
-  font-size: 0.78rem;
+  font-size: var(--vd-fs-small);
   line-height: 1.4;
   color: var(--vault-text-muted);
   background-color: var(--vault-surface-hover);

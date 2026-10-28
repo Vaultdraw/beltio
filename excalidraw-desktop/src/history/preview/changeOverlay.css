@@ -11,7 +11,7 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.78rem;
+  font-size: var(--vd-fs-small);
   color: var(--vault-text-muted);
   white-space: nowrap;
 }

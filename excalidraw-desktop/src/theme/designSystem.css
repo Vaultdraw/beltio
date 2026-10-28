@@ -38,6 +38,7 @@
     sans-serif;
   --vd-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --vd-line: 1.4;
+  --vd-fs-kbd: 10px; /* key chips and key hints only */
   --vd-fs-caption: 11px; /* captions, counts, section labels */
   --vd-fs-small: 12px; /* menus, descriptions */
   --vd-fs-body: 13px; /* default */

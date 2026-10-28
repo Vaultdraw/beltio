@@ -11,7 +11,7 @@
   border: 1px solid var(--vault-border-strong, var(--vault-border, #d2d2d8));
   border-radius: var(--vault-radius-lg, 10px);
   box-shadow: var(--vault-shadow-md, 0 4px 12px rgba(0, 0, 0, 0.08));
-  font-size: 0.85rem;
+  font-size: var(--vd-fs-emph);
   user-select: none;
 }
 
@@ -52,5 +52,5 @@
   padding-top: 5px;
   border-top: 1px solid var(--vault-border, #e4e4e8);
   color: var(--vault-text-faint, #9b9ba3);
-  font-size: 12px;
+  font-size: var(--vd-fs-small);
 }

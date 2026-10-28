@@ -10,7 +10,7 @@
   background-color: var(--vault-surface);
   border-bottom: 1px solid var(--vault-border);
   gap: 8px;
-  font-size: 12.5px;
+  font-size: var(--vd-fs-small);
   user-select: none;
   -webkit-user-select: none;
   z-index: 5;
@@ -102,7 +102,7 @@ html.vault-linux-custom .vault-header {
 .vault-breadcrumbs {
   display: flex;
   align-items: center;
-  font-size: 12.5px;
+  font-size: var(--vd-fs-small);
   color: var(--vault-text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -144,7 +144,7 @@ html.vault-linux-custom .vault-header {
   border-radius: var(--vd-radius-control, 6px);
   background: transparent;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--vd-fs-small);
   color: var(--vault-text-muted);
   white-space: nowrap;
 }
@@ -177,7 +177,7 @@ button.vault-status:hover:not(:disabled) {
   height: 20px;
   padding: 0 8px;
   border-radius: var(--vd-radius-chip, 4px);
-  font-size: 11px;
+  font-size: var(--vd-fs-caption);
   font-weight: 500;
   white-space: nowrap;
   cursor: default;

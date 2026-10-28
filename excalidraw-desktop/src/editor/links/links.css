@@ -12,7 +12,7 @@
   background: var(--vault-bg);
   color: var(--vault-text);
   box-shadow: var(--vault-shadow-md);
-  font-size: 0.85rem;
+  font-size: var(--vd-fs-emph);
   user-select: none;
 }
 
@@ -46,7 +46,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.75rem;
+  font-size: var(--vd-fs-small);
   color: var(--vault-text-faint);
 }
 
@@ -57,7 +57,7 @@
 
 .vault-suggest__count {
   margin-left: auto;
-  font-size: 0.75rem;
+  font-size: var(--vd-fs-small);
   color: var(--vault-text-faint);
 }
 

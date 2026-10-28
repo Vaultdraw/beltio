@@ -2,7 +2,7 @@
 
 .vault-settings-intro {
   margin: 0 0 12px;
-  font-size: 0.8rem;
+  font-size: var(--vd-fs-body);
   line-height: 1.4;
   color: var(--vault-text-muted);
 }
@@ -122,7 +122,7 @@
 
 .vault-tools-header__title {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: var(--vd-fs-emph);
   font-weight: 600;
   color: var(--vault-text);
 }
@@ -153,7 +153,7 @@
 
 .vault-tools-preview-note {
   margin: 0 0 4px;
-  font-size: 0.74rem;
+  font-size: var(--vd-fs-small);
   color: var(--vault-text-faint);
 }
 
@@ -178,13 +178,13 @@
 
 .vault-tools-row__label {
   flex: 0 0 auto;
-  font-size: 0.84rem;
+  font-size: var(--vd-fs-body);
   color: var(--vault-text);
 }
 
 .vault-tools-row__hint {
   margin-left: 6px;
-  font-size: 0.74rem;
+  font-size: var(--vd-fs-small);
   color: var(--vault-text-faint);
 }
 
@@ -201,7 +201,7 @@
   height: 30px;
   width: 150px;
   padding: 0 8px;
-  font-size: 0.82rem;
+  font-size: var(--vd-fs-body);
 }
 
 .vault-tools-row .vault-input--number {
@@ -248,7 +248,7 @@
   background-color: var(--vault-bg);
   color: var(--vault-text-muted);
   font: inherit;
-  font-size: 0.78rem;
+  font-size: var(--vd-fs-small);
   cursor: pointer;
 }
 

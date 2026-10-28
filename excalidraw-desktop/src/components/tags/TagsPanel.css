@@ -59,7 +59,7 @@
   border: none;
   color: var(--vault-text-muted);
   font: inherit;
-  font-size: 11px;
+  font-size: var(--vd-fs-caption);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -135,7 +135,7 @@
   border: none;
   color: inherit;
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--vd-fs-small);
   cursor: pointer;
   text-align: left;
 }
@@ -148,7 +148,7 @@
 
 .vault-tags__count {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--vd-fs-caption);
   color: var(--vault-text-faint);
 }
 
@@ -168,7 +168,7 @@
   flex-shrink: 0;
   padding: 0 5px;
   border-radius: 8px;
-  font-size: 10.5px;
+  font-size: var(--vd-fs-kbd);
   line-height: 15px;
   color: var(--vault-text-muted);
   background-color: var(--vault-surface-hover);

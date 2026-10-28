@@ -31,6 +31,6 @@
 .vault-history-usage__text,
 .vault-history-note-line {
   margin-top: 4px;
-  font-size: 0.78rem;
+  font-size: var(--vd-fs-small);
   color: var(--vault-text-muted);
 }

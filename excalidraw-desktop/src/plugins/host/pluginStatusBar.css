@@ -6,7 +6,7 @@
   min-height: 22px;
   padding: 0 8px;
   gap: 12px;
-  font-size: 12px;
+  font-size: var(--vd-fs-small);
   color: var(--vault-text-muted, var(--vault-text));
   background-color: var(--vault-surface);
   border-top: 1px solid var(--vault-border);

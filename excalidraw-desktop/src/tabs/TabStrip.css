@@ -98,7 +98,7 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 12px;
+  font-size: var(--vd-fs-small);
 }
 
 .vault-tabs__dot {
@@ -204,7 +204,7 @@
 .vault-tabs__count {
   padding: 0 8px;
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--vd-fs-caption);
   background: var(--vault-surface-hover);
 }
 
@@ -240,7 +240,7 @@
   background: var(--vault-bg);
   color: var(--vault-text);
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--vd-fs-small);
 }
 
 .vault-tablist__input:focus {
@@ -262,7 +262,7 @@
   padding: 0 8px;
   border-radius: 5px;
   color: var(--vault-text);
-  font-size: 12px;
+  font-size: var(--vd-fs-small);
   cursor: pointer;
 }
 
@@ -292,13 +292,13 @@
 .vault-tablist__tag {
   flex: 0 0 auto;
   color: var(--vault-text-muted);
-  font-size: 10px;
+  font-size: var(--vd-fs-kbd);
 }
 
 .vault-tablist__empty {
   padding: 8px;
   color: var(--vault-text-muted);
-  font-size: 12px;
+  font-size: var(--vd-fs-small);
 }
 
 .vault-menu__item[aria-disabled="true"] {
@@ -324,14 +324,14 @@
 
 .vault-tab-missing__title {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--vd-fs-title);
 }
 
 .vault-tab-missing__path {
   max-width: 100%;
   overflow-wrap: anywhere;
   color: var(--vault-text-muted);
-  font-size: 12px;
+  font-size: var(--vd-fs-small);
 }
 
 .vault-tab-missing__actions {
@@ -347,7 +347,7 @@
   background: var(--vault-surface);
   color: var(--vault-text);
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--vd-fs-small);
   cursor: pointer;
 }
 

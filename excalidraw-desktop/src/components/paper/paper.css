@@ -23,7 +23,7 @@
   border-radius: var(--vault-radius);
   background: var(--vault-surface);
   color: var(--vault-text-muted);
-  font-size: 0.75rem;
+  font-size: var(--vd-fs-small);
   cursor: pointer;
 }
 
@@ -135,7 +135,7 @@
 }
 
 .paper-menu__label {
-  font-size: 0.875rem;
+  font-size: var(--vd-fs-emph);
   margin-left: -0.125rem;
 }
 
@@ -147,7 +147,7 @@
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 0.8rem;
+  font-size: var(--vd-fs-body);
   cursor: pointer;
 }
 

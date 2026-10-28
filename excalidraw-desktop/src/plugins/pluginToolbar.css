@@ -24,7 +24,7 @@
   height: 32px;
   padding: 0;
   font: inherit;
-  font-size: 0.85rem;
+  font-size: var(--vd-fs-emph);
   color: var(--vault-text);
   background: transparent;
   border: 1px solid transparent;
