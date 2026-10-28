@@ -292,7 +292,8 @@ export class FakeVaultRepository implements VaultRepository {
       }
       if (folder.startsWith(prefix)) {
         const rest = folder.slice(prefix.length);
-        if (rest && !rest.includes("/")) {
+        // Dot-named entries (.obsidian, .trash, .git) are never listed natively.
+        if (rest && !rest.includes("/") && !rest.startsWith(".")) {
           rows.set(rest, {
             path: folder,
             name: rest,
@@ -306,7 +307,7 @@ export class FakeVaultRepository implements VaultRepository {
     for (const [filePath, row] of this.files) {
       if (filePath.startsWith(prefix)) {
         const rest = filePath.slice(prefix.length);
-        if (rest && !rest.includes("/")) {
+        if (rest && !rest.includes("/") && !rest.startsWith(".")) {
           rows.set(rest, {
             path: filePath,
             name: rest,
@@ -323,7 +324,7 @@ export class FakeVaultRepository implements VaultRepository {
     for (const notePath of this.notes) {
       if (notePath.startsWith(prefix)) {
         const rest = notePath.slice(prefix.length);
-        if (rest && !rest.includes("/")) {
+        if (rest && !rest.includes("/") && !rest.startsWith(".")) {
           rows.set(rest, {
             path: notePath,
             name: rest,

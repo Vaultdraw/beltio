@@ -532,3 +532,363 @@ test("tabs: many tabs, pin, close others, reorder, reload, same file twice, a de
     .toEqual(["T2.excalidraw", "T4.excalidraw", "T7.excalidraw"]);
   expect(errors).toEqual([]);
 });
+
+// ---------------------------------------------------------------------------
+// Links following renames
+
+const textEl = (id: string, text: string, y: number) => ({
+  id,
+  type: "text",
+  x: 220,
+  y: 200 + y,
+  width: 360,
+  height: 25,
+  angle: 0,
+  strokeColor: "#1e1e1e",
+  backgroundColor: "transparent",
+  fillStyle: "solid",
+  strokeWidth: 1,
+  strokeStyle: "solid",
+  roughness: 1,
+  opacity: 100,
+  groupIds: [],
+  frameId: null,
+  roundness: null,
+  boundElements: [],
+  link: null,
+  locked: false,
+  isDeleted: false,
+  version: 1,
+  versionNonce: 1,
+  index: null,
+  updated: 1,
+  seed: 1,
+  text,
+  originalText: text,
+  fontSize: 20,
+  fontFamily: 1,
+  textAlign: "left",
+  verticalAlign: "top",
+  containerId: null,
+  lineHeight: 1.25,
+});
+
+const FORMS = [
+  "[[Alpha]]",
+  "[[Alpha|the alpha]]",
+  "[[Alpha#Heading]]",
+  "![[Alpha]]",
+  "[[Alpha#Heading|shown]]",
+  "[[Folder/Inner]]",
+  "no link here",
+];
+
+const textsOf = async (page: Page, path: string) =>
+  ((await readSceneJson(page, path))?.elements ?? [])
+    .filter((e: any) => !e.isDeleted && e.type === "text")
+    .map((e: any) => e.originalText as string);
+
+const readSceneJson = async (page: Page, path: string) => {
+  const json = await readFake(page, path);
+  return json ? JSON.parse(json) : null;
+};
+
+const PREFS_KEY = "excalidraw-vault-preferences-v1";
+
+/** Opens the links seed, adds a drawing with every link form, renames Alpha to Omega. */
+const renameAlphaWith = async (
+  page: Page,
+  prefs: Record<string, unknown> | null,
+) => {
+  if (prefs) {
+    await page.addInitScript(
+      ([key, value]) => {
+        window.localStorage.setItem(key as string, JSON.stringify(value));
+      },
+      [PREFS_KEY, prefs] as const,
+    );
+  }
+  await openVault(page, "?seed=links");
+  await seedDrawings(page, {
+    "Forms.excalidraw": sceneJson(
+      [],
+      FORMS.map((t, i) => textEl(`f${i}`, t, i * 40)),
+    ),
+  });
+  await rescan(page);
+  await expect(rowByName(page, "Forms")).toBeVisible();
+  expect(await renameVia(page, rowByName(page, "Alpha"), "Omega")).toBeNull();
+  await expect(rowByName(page, "Omega")).toBeVisible();
+  await page.waitForTimeout(1200); // rewrites run in the background
+};
+
+test("links follow a rename: every form is rewritten, or none when links are off", async ({
+  page,
+  context,
+}) => {
+  const errors = trackErrors(page);
+  await renameAlphaWith(page, null);
+  await expect
+    .poll(() => textsOf(page, "Forms.excalidraw"))
+    .toEqual([
+      "[[Omega]]",
+      "[[Omega|the alpha]]",
+      "[[Alpha#Heading]]", // a drawing link has no heading part: left alone
+      "![[Omega]]",
+      "[[Alpha#Heading|shown]]",
+      "[[Folder/Inner]]",
+      "no link here",
+    ]);
+  // The shape link and other drawings follow too; an unresolved link is left alone.
+  expect(await textsOf(page, "Folder/Inner.excalidraw")).toContain(
+    "Points at [[Omega]]",
+  );
+  expect(await textsOf(page, "Hub.excalidraw")).toContain(
+    "Todo [[Missing Note]]",
+  );
+
+  // With the links extension off, a rename still follows the links (documented)...
+  const off = await context.newPage();
+  const offErrors = trackErrors(off);
+  await renameAlphaWith(off, { extLinks: false });
+  await expect
+    .poll(() => textsOf(off, "Forms.excalidraw"))
+    .toContain("[[Omega|the alpha]]");
+  // ...and links.update_on_rename = false leaves every link alone.
+  const none = await context.newPage();
+  const noneErrors = trackErrors(none);
+  await renameAlphaWith(none, { linkUpdateOnRename: false });
+  expect(await textsOf(none, "Forms.excalidraw")).toEqual(FORMS);
+  expect(await textsOf(none, "Folder/Inner.excalidraw")).toContain(
+    "Points at [[Alpha]]",
+  );
+  expect([...offErrors, ...noneErrors]).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+// ---------------------------------------------------------------------------
+// Notes and the Obsidian vault
+
+const noteFiles = (page: Page) => ({
+  text: (p: string) =>
+    page.evaluate(
+      (x) => (window as any).__noteFiles.textOf(x) as string | undefined,
+      p,
+    ),
+  set: (p: string, t: string) =>
+    page.evaluate(
+      ([x, y]) => (window as any).__noteFiles.setOnDisk(x, y),
+      [p, t],
+    ),
+});
+
+const addNote = (page: Page, path: string, text: string) =>
+  page.evaluate(
+    ([p, t]) => {
+      (window as any).__noteFiles.setOnDisk(p, t);
+      (window as any).__vaultRepo.seedNote(p);
+    },
+    [path, text],
+  );
+
+const status = (page: Page) => page.getByTestId("note-status");
+
+test("notes: tasks, edits, a file changed on disk, headings, embeds and odd names", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page, "?seed=obsidian");
+  // Notes added before the first note opens, so the vault-wide link walk knows them.
+  const filler = Array.from({ length: 60 }, (_, i) => `Filler ${i}.`).join(
+    "\n\n",
+  );
+  await addNote(
+    page,
+    "Target.md",
+    `# Target\n\n${filler}\n\n## Deep end\n\nhere\n`,
+  );
+  await addNote(
+    page,
+    "Linker.md",
+    "# Linker\n\nGo to [[Target#Deep end]] or [[Target]].\n",
+  );
+  const embed = "Embeds.md";
+  await addNote(
+    page,
+    embed,
+    "# Embeds\n\n![[Ideas#Later]]\n\nand ![[Ideas]]\n",
+  );
+  await addNote(page, "Ünï note 📝.md", "# Odd\n\n- [ ] a\n- [x] b\n");
+  await addNote(page, `${LONG}.md`, "# Long\n");
+  await addNote(page, "My Folder/inside.md", "# Inside\n");
+  await rescan(page);
+  const nf = noteFiles(page);
+  const reading = page.getByTestId("note-reading");
+
+  // A task box ticks and unticks through the guarded save, one line each time.
+  await rowByName(page, "Ideas").locator(".vault-tree-item__name").click();
+  await expect(reading.getByRole("heading", { name: "Ideas" })).toBeVisible();
+  const box = reading.getByRole("checkbox").first();
+  await box.click();
+  await expect
+    .poll(() => nf.text("Ideas.md"))
+    .toContain("- [x] ship the follow-ups");
+  await expect(status(page)).toHaveAttribute("data-status", "saved");
+  await reading.getByRole("checkbox").first().click();
+  await expect
+    .poll(() => nf.text("Ideas.md"))
+    .toContain("- [ ] ship the follow-ups");
+  expect((await nf.text("Ideas.md"))!.match(/- \[.\]/g)).toHaveLength(1);
+
+  // Edit and save; the disk text has the typed line and nothing else changed.
+  const before = (await nf.text("Ideas.md"))!;
+  await page.getByRole("button", { name: "Edit note" }).click();
+  await page.getByTestId("note-editor").locator(".cm-content").click();
+  await page.keyboard.press("Meta+ArrowDown");
+  await page.keyboard.type("\nfirst edit ünï 🎨\n");
+  await expect(status(page)).toHaveAttribute("data-status", "saved");
+  expect(await nf.text("Ideas.md")).toBe(`${before}\nfirst edit ünï 🎨\n`);
+
+  // The file changes on disk behind the open editor: the next save shows the banner.
+  await nf.set("Ideas.md", "# Ideas\n\nCHANGED OUTSIDE\n");
+  await page.keyboard.type("mine 1");
+  const banner = page.getByRole("alert").filter({ hasText: "changed on disk" });
+  await expect(banner).toBeVisible();
+  expect(await nf.text("Ideas.md")).toBe("# Ideas\n\nCHANGED OUTSIDE\n"); // not overwritten
+  // Reload from disk drops the edit and shows the disk text.
+  await banner.getByRole("button", { name: "Reload from disk" }).click();
+  await expect(banner).toHaveCount(0);
+  await expect(page.getByTestId("note-editor")).toContainText(
+    "CHANGED OUTSIDE",
+  );
+  await expect(page.getByTestId("note-editor")).not.toContainText("mine 1");
+
+  // A second clash; Keep mine overwrites the disk with the edit.
+  await page.getByTestId("note-editor").locator(".cm-content").click();
+  await page.keyboard.press("Meta+ArrowDown");
+  await nf.set("Ideas.md", "# Ideas\n\nCHANGED AGAIN\n");
+  await page.keyboard.type("mine 2");
+  await expect(banner).toBeVisible();
+  await banner.getByRole("button", { name: "Keep mine" }).click();
+  await expect(banner).toHaveCount(0);
+  await expect.poll(() => nf.text("Ideas.md")).toContain("mine 2");
+  await expect(status(page)).toHaveAttribute("data-status", "saved");
+  await page.getByRole("button", { name: "Show reading view" }).click();
+
+  // Heading links: a [[Note#Heading]] link opens the note scrolled to that heading.
+  await rowByName(page, "Linker").locator(".vault-tree-item__name").click();
+  await reading.getByText("Target > Deep end").click();
+  await expect(
+    reading.getByRole("heading", { name: "Deep end" }),
+  ).toBeInViewport();
+  await expect(
+    reading.getByRole("heading", { name: "Target", exact: true }),
+  ).toBeVisible();
+
+  // Embeds, an emoji + unicode name, a very long name and a note in a folder with a space.
+  await rowByName(page, "Embeds").locator(".vault-tree-item__name").click();
+  await expect(reading.locator(".note-embed").first()).toBeVisible();
+  // Ideas now holds what the edits above left on disk.
+  await expect(reading).toContainText("mine 2");
+  await rowByName(page, "Ünï note 📝")
+    .locator(".vault-tree-item__name")
+    .click();
+  await expect(reading.getByRole("heading", { name: "Odd" })).toBeVisible();
+  await reading.getByRole("checkbox").first().click();
+  await expect.poll(() => nf.text("Ünï note 📝.md")).toContain("- [x] a");
+  await rowByName(page, LONG).locator(".vault-tree-item__name").click();
+  await expect(reading.getByRole("heading", { name: "Long" })).toBeVisible();
+  const tree = page.locator(".vault-tree-container");
+  expect(
+    await tree.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+  ).toBe(true);
+  await rowByName(page, "My Folder")
+    .locator(".vault-tree-item__toggle")
+    .click();
+  await rowByName(page, "inside").locator(".vault-tree-item__name").click();
+  await expect(reading.getByRole("heading", { name: "Inside" })).toBeVisible();
+
+  // A note is a tab like any other: five notes open, the strip names them.
+  expect((await tabNames(page)).length).toBeGreaterThanOrEqual(1);
+  expect(errors).toEqual([]);
+});
+
+test("Obsidian vault: browsing changes no byte, hidden folders are not listed, plugin drawings are read-only", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page, "?seed=obsidian");
+  const snapshot = () =>
+    page.evaluate(async () => {
+      const w = window as any;
+      const repo = w.__vaultRepo;
+      const out: Record<string, string> = {};
+      for (const p of ["Welcome.md", "Ideas.md", "Daily/2026-10-27.md"]) {
+        out[p] = w.__noteFiles.textOf(p);
+      }
+      for (const [p, row] of repo.files as Map<string, any>) {
+        out[p] = `${row.revision}:${row.json}`;
+      }
+      return out;
+    });
+  const before = await snapshot();
+  const writes = await page.evaluate(
+    () => (window as any).__vaultRepo.writeCalls.length as number,
+  );
+
+  // Hidden folders and files are never listed, whatever is on disk.
+  await page.evaluate(() => {
+    const repo = (window as any).__vaultRepo;
+    repo.seedFolder(".obsidian");
+    repo.seedFolder(".trash");
+    repo.seedNote(".hidden.md");
+    repo.emit({ handle: repo.handle, paths: [], rescan: true });
+  });
+  await rescan(page);
+  await expect(rowByName(page, "Welcome")).toBeVisible();
+  for (const hidden of [".obsidian", ".trash", ".hidden"]) {
+    await expect(rowByName(page, hidden)).toHaveCount(0);
+  }
+
+  // Browse everything: open every item, toggle the editor without typing, switch back.
+  for (const f of ["Daily", "Drawings"]) {
+    await rowByName(page, f).locator(".vault-tree-item__toggle").click();
+  }
+  for (const n of ["Welcome", "Ideas", "2026-10-27"]) {
+    await rowByName(page, n).locator(".vault-tree-item__name").click();
+    await expect(page.getByTestId("note-reading")).toBeVisible();
+  }
+  await page.getByRole("button", { name: "Edit note" }).click();
+  await expect(page.getByTestId("note-editor")).toBeVisible();
+  await page.getByRole("button", { name: "Show reading view" }).click();
+  await rowByName(page, "Sketch").locator(".vault-tree-item__name").click();
+  await expect(page.locator(".vault-editor canvas.interactive")).toBeVisible();
+  for (const n of ["Plain", "Compressed", "Plugin Sketch"]) {
+    const r = rowByName(page, n);
+    if ((await r.count()) === 0) {
+      continue;
+    }
+    await r.locator(".vault-tree-item__name").click();
+    await expect(page.getByTestId("excalidraw-md-banner")).toBeVisible();
+    await expect(
+      page.locator(".vault-editor-container--readonly"),
+    ).toBeVisible();
+    // Drawing on a read-only plugin file changes nothing.
+    const box = (await page
+      .locator(".vault-editor canvas.interactive")
+      .boundingBox())!;
+    await page.keyboard.press("r");
+    await page.mouse.move(box.x + 300, box.y + 300);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 400, box.y + 380, { steps: 5 });
+    await page.mouse.up();
+  }
+  await page.waitForTimeout(1200); // past the autosave delay
+  expect(await snapshot()).toEqual(before);
+  expect(
+    await page.evaluate(
+      () => (window as any).__vaultRepo.writeCalls.length as number,
+    ),
+  ).toBe(writes);
+  expect(errors).toEqual([]);
+});

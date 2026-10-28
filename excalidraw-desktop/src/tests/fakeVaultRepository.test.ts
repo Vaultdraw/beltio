@@ -49,4 +49,14 @@ describe("FakeVaultRepository name rules (mirror the native ones)", () => {
     // A case-only rename of the same entry is allowed.
     await r.repo.move(r.handle, "Case.excalidraw", "case.excalidraw");
   });
+
+  it("never lists dot-named entries", async () => {
+    const r = make();
+    r.repo.seedFolder(".obsidian");
+    r.repo.seedFolder("Notes");
+    r.repo.seedNote(".hidden.md");
+    r.repo.seedNote("Notes/visible.md");
+    const names = (await r.repo.listDirectory(r.handle, "")).map((e) => e.name);
+    expect(names).toEqual(["Notes"]);
+  });
 });
