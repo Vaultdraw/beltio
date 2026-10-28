@@ -1,0 +1,93 @@
+id = "frames"
+name = "Frames"
+version = "0.1.0"
+api = 0
+min_app = "0.2.0"
+main = "main.js"
+description = "A Frames panel to order and rename the drawing's frames, and a full-screen presentation that shows each frame as a slide"
+author = "Vaultdraw"
+data_key = "frames"
+
+[[contributes.panels]]
+id = "list"
+title = "Frames"
+icon = "frame"
+
+[[contributes.commands]]
+id = "present"
+title = "Frames: Present from the current frame"
+keys = ["Mod+Alt+P"]
+when = ["drawingOpen", "!modalOpen"]
+
+[[contributes.commands]]
+id = "present-first"
+title = "Frames: Present from the first frame"
+when = ["drawingOpen", "!modalOpen"]
+
+[[contributes.commands]]
+id = "next"
+title = "Frames: Next slide"
+keys = ["ArrowRight", "ArrowDown", "Space", "PageDown"]
+when = ["present.active"]
+
+[[contributes.commands]]
+id = "prev"
+title = "Frames: Previous slide"
+keys = ["ArrowLeft", "ArrowUp", "Shift+Space", "PageUp"]
+when = ["present.active"]
+
+[[contributes.commands]]
+id = "first"
+title = "Frames: First slide"
+keys = ["Home"]
+when = ["present.active"]
+
+[[contributes.commands]]
+id = "last"
+title = "Frames: Last slide"
+keys = ["End"]
+when = ["present.active"]
+
+[[contributes.commands]]
+id = "laser"
+title = "Frames: Laser pointer on or off"
+keys = ["L"]
+when = ["present.active"]
+
+[[contributes.commands]]
+id = "exit"
+title = "Frames: End the presentation"
+keys = ["Escape"]
+when = ["present.active"]
+
+[[contributes.commands]]
+id = "move-up"
+title = "Frames: Move the selected frame earlier"
+when = ["drawingOpen", "writable", "!modalOpen"]
+
+[[contributes.commands]]
+id = "move-down"
+title = "Frames: Move the selected frame later"
+when = ["drawingOpen", "writable", "!modalOpen"]
+
+[[contributes.settings]]
+key = "transition"
+type = "select"
+title = "Slide transition"
+description = "How the view changes from one slide to the next."
+default = "none"
+options = [{ value = "none", label = "None" }, { value = "fade", label = "Fade" }]
+
+[[contributes.settings]]
+key = "background"
+type = "string"
+title = "Presentation background"
+description = "A colour behind every slide, like #101010 or black. Empty keeps the drawing's own background."
+default = ""
+
+[[contributes.settings]]
+key = "show_progress"
+type = "bool"
+title = "Progress dots"
+description = "Show a row of dots, one per slide, at the bottom while presenting."
+default = true

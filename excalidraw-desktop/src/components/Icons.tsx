@@ -704,6 +704,17 @@ export const IconBookmark = strokeIcon(
   <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />,
 );
 
+/** Frames: the crop frame (Lucide "frame"). */
+export const IconFrame = strokeIcon(
+  15,
+  <>
+    <line x1="22" x2="2" y1="6" y2="6" />
+    <line x1="22" x2="2" y1="18" y2="18" />
+    <line x1="6" x2="6" y1="2" y2="22" />
+    <line x1="18" x2="18" y1="2" y2="22" />
+  </>,
+);
+
 /** Gallery: a grid of tiles (Lucide "layout-grid"). */
 export const IconGallery = strokeIcon(
   15,

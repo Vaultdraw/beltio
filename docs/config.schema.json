@@ -1652,7 +1652,8 @@
             "pdf-import",
             "favourites",
             "auto-export",
-            "table"
+            "table",
+            "frames"
           ],
           "type": "array",
           "items": {

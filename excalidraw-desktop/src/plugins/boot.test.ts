@@ -117,6 +117,7 @@ describe("official plugins (on by default, no startup cost)", () => {
       "favourites",
       "auto-export",
       "table",
+      "frames",
     ]);
     const { win, flush, queue } = fakeWin(true);
     bootPlugins(win);

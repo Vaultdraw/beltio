@@ -2,6 +2,7 @@
 // its stubs work. Kept apart from pluginHarness.ts, whose imports would load the plugin host.
 // @ts-expect-error the CLI is plain .mjs
 import { parseToml } from "../../sdk/cli/src/toml.mjs";
+import framesToml from "../../plugins/official/frames/plugin.toml?raw";
 import favouritesToml from "../../plugins/official/favourites/plugin.toml?raw";
 import formulaToml from "../../plugins/official/formula/plugin.toml?raw";
 import autoExportToml from "../../plugins/official/auto-export/plugin.toml?raw";
@@ -78,6 +79,7 @@ export async function installDefaultBackend(win: Window): Promise<void> {
     infoOf("pdf-import", pdfImportToml),
     infoOf("auto-export", autoExportToml),
     infoOf("table", tableToml),
+    infoOf("frames", framesToml),
   ];
   const backend = createFakeBackend(
     infos,

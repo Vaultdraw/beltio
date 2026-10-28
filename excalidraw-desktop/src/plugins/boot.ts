@@ -6,13 +6,23 @@
  * the first use (or any other start of the host) loads the real plugin.
  */
 import { registerActivityEntries } from "../activityBar/activityBarRegistry";
-import { IconBookmark, IconGallery, IconGraph } from "../components/Icons";
+import {
+  IconBookmark,
+  IconFrame,
+  IconGallery,
+  IconGraph,
+} from "../components/Icons";
 import { getAppCommandRunner } from "../commands/appRunner";
 import { registerCommandHandlers } from "../commands/handlerRegistry";
 
 import { getRegisteredCommand, registerCommands } from "../commands/registry";
 import { scheduleIdle } from "../platform/idle";
-import { openPanel, panelFlag, togglePanel } from "../slots/panelStore";
+import {
+  isPanelOpen,
+  openPanel,
+  panelFlag,
+  togglePanel,
+} from "../slots/panelStore";
 import { toastStore } from "../toasts/toastStore";
 import { getPreferences, subscribePreferences } from "../vault/preferences";
 
@@ -99,7 +109,7 @@ export const officialCommandDefs = (
     ...(c.repeat ? { repeat: true } : {}),
   }));
 
-const PANEL_ICONS = { bookmark: IconBookmark } as const;
+const PANEL_ICONS = { bookmark: IconBookmark, frame: IconFrame } as const;
 
 /**
  * A panel of an official plugin before the host runs: its toggle command, activity bar button and
@@ -123,7 +133,18 @@ function registerOfficialPanel(
   ];
   return [
     registerCommands(defs),
-    registerCommandHandlers({ [commandId]: () => togglePanel(panelId) }),
+    registerCommandHandlers({
+      // Closing is a plain toggle. Opening starts the host first: the panel host mounts only once
+      // it runs, and starting it releases these stubs (which closes the flag), so open it after.
+      [commandId]: async () => {
+        if (isPanelOpen(panelId)) {
+          togglePanel(panelId);
+          return;
+        }
+        await ensurePluginHost(win);
+        openPanel(panelId);
+      },
+    }),
     registerActivityEntries([
       {
         id: panelId,

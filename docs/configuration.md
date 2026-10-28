@@ -1321,6 +1321,27 @@ max_col_width = 260    # widest column in pixels, 80 to 1000; longer text wraps
 - Limits: 200 rows, 30 columns and about 400 filled cells per paste. Excalidraw text has no bold, so the header row is shaded with a heavier rule under it.
 - Turn the plugin off with `plugins.disabled`; the plugin sees only the text of a paste of plain text (permission `clipboard`).
 
+## Frames and presenting
+
+An official plugin (`frames`, in `plugins/official/frames`): a **Frames** side panel and a full-screen presentation that shows each frame of a drawing as a slide. On by default; nothing loads until you open the panel or run a command (`plugins.disabled = ["frames"]` removes it).
+
+- **Panel.** The drawing's frames in slide order. Click or `Enter` zooms to one; drag a row or `Alt+Up` / `Alt+Down` reorders; `F2` or double-click renames (empty brings back "Frame N"). The order is saved on each frame in the drawing's own data (`customData.frames.order`), so the file still opens in Excalidraw. Frames without a saved order follow in reading order (rows from the top, each left to right).
+- **Present.** The panel's Present button, or `frames.present` (`Mod+Alt+P`, from the selected frame, else the frame in view) and `frames.present-first`. The window goes full screen with the chrome hidden the way focus mode hides it (`[focus] hide`), the drawing is read-only, frame outlines and names are not drawn, and each slide is fitted to the screen. Escape (`frames.exit`) ends it, and so does leaving focus mode.
+- **Keys while presenting** (all rebindable under `[hotkeys]`): `frames.next` (`Right`, `Down`, `Space`, `PageDown`), `frames.prev` (`Left`, `Up`, `Shift+Space`, `PageUp`), `frames.first` (`Home`), `frames.last` (`End`), `frames.laser` (`L`, the editor's laser pointer), `frames.exit` (`Escape`). A row of dots at the bottom shows the place; click one to jump. `frames.move-up` and `frames.move-down` move the selected frame in the order without the panel.
+
+```toml
+[plugin.frames]
+transition = "fade"      # "none" (default) or "fade"
+background = "#101010"   # a colour behind every slide; "" keeps the drawing's own
+show_progress = true     # the dot strip
+```
+
+| Key | Default | What it does |
+| --- | --- | --- |
+| `transition` | `"none"` | `"none"` or `"fade"` between slides. |
+| `background` | `""` | A colour (hex or CSS name) used as the canvas background while presenting; the drawing's own comes back after. Empty keeps the drawing's. |
+| `show_progress` | `true` | The row of dots and the slide count at the bottom. |
+
 ## Templates
 
 A template is an ordinary `.excalidraw` file, so any drawing can become one, and a template can be opened and edited like any other drawing.
@@ -2050,7 +2071,7 @@ Plugins in the `plugins/` folder of the config folder.
 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
-| `enabled` | `["markdown-import", "gallery", "graph", "mermaid", "formula", "pdf-import", "favourites", "auto-export", "table"]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`. |
+| `enabled` | `["markdown-import", "gallery", "graph", "mermaid", "formula", "pdf-import", "favourites", "auto-export", "table", "frames"]` | a list of plugin ids like ["hello-command"] |  | Ids of the plugins to load: your own plugins and official ones that are on. Official plugins (markdown-import, gallery) are on unless listed in `disabled`. |
 | `disabled` | `[]` | a list of official plugin ids you turned off, like ["gallery"] |  | Official plugins you turned off, like `["gallery"]`. Settings writes it; a new official plugin is on until you list it here. |
 | `importers` | `[object Object]` | a table like { txt = "text-import" } (extension = plugin id, "" for none) |  | Which plugin imports a file extension when two plugins claim it; `""` turns plugin handling off for that extension. |
 | `storage_limit_kb` | `1024` | an integer between 64 and 16384 |  | Most data one plugin may save with `ctx.storage`, in KiB; a save past it is refused. |
