@@ -49,6 +49,8 @@ mod test_alloc;
 mod smoke;
 mod watchdog;
 mod window_chrome;
+#[cfg(test)]
+mod plugin_dist_tests;
 #[cfg(feature = "smoke-test")]
 mod hidden_render;
 

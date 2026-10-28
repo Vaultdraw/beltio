@@ -1,5 +1,7 @@
 use std::path::Path;
 
+include!("plugin_dist_check.rs");
+
 /// `bundle.externalBin` makes tauri-build require `binaries/vaultdraw-<triple>`.
 /// `tauri build` creates the real CLI first (beforeBuildCommand runs
 /// scripts/build-cli.mjs); plain `cargo check/test` and `tauri dev` get a stub
@@ -52,10 +54,16 @@ fn ensure_official_plugin_dirs() {
         if !dir.exists() {
             std::fs::create_dir_all(&dir).expect("create the official plugin dist folder");
         }
-        // A release build must ship the plugin's real code (`npm run build` builds it first):
-        // an empty folder would silently drop the plugin from the app.
-        if std::env::var("PROFILE").is_ok_and(|p| p == "release") && !dir.join("main.js").exists() {
-            panic!("official plugin {id} is not built: run `node plugins/official/build.mjs` first");
+        // A release build must ship the plugin's real code (`npm run build` builds it first, via
+        // its `prebuild` step, which `tauri build`'s beforeBuildCommand runs): an empty or stale
+        // folder would silently drop the plugin, or its worker, from the app.
+        if std::env::var("PROFILE").is_ok_and(|p| p == "release") {
+            let missing = missing_plugin_dist_files(&Path::new("../../plugins/official").join(id));
+            if !missing.is_empty() {
+                panic!(
+                    "official plugin {id} is not fully built (missing {missing:?}): run `node plugins/official/build.mjs` first"
+                );
+            }
         }
     }
 }
