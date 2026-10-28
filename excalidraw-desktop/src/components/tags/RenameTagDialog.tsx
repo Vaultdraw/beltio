@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { validateTagInput } from "../../tags/renameFlow";
 import { errorMessage } from "../../vault/types";
+import { useEscapeLayer } from "../escapeLayers";
 import { IconClose } from "../Icons";
 
 import "./RenameTagDialog.css";
@@ -31,21 +32,8 @@ export interface RenameTagDialogProps {
 const PLAN_DEBOUNCE_MS = 250;
 const MAX_ROWS = 50;
 
-const useEscape = (onCancel: () => void, doc?: Document | null) => {
-  useEffect(() => {
-    if (!doc) {
-      return;
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onCancel();
-      }
-    };
-    doc.addEventListener("keydown", onKey);
-    return () => doc.removeEventListener("keydown", onKey);
-  }, [onCancel, doc]);
-};
+const useEscape = (onCancel: () => void, doc?: Document | null) =>
+  useEscapeLayer(doc ?? null, onCancel);
 
 const Header = ({ title, onCancel }: { title: string; onCancel(): void }) => (
   <div className="vault-modal__header">

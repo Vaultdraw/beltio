@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 
+import { pushEscapeLayer } from "../escapeLayers";
 import { IconClose } from "../Icons";
 
 import { APP_VERSION } from "../../appVersion";
@@ -190,8 +191,11 @@ export const SettingsModal = ({
     if (!targetDoc) {
       return;
     }
+    // Settings joins the Escape stack: a dialog opened over it (an uninstall confirm) closes
+    // alone; Settings answers only when it is the top layer.
+    const layer = pushEscapeLayer();
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") {
+      if (e.key !== "Escape" || !layer.isTop()) {
         return;
       }
       // Respect a handled Escape from our own controls or from a text field
@@ -212,7 +216,10 @@ export const SettingsModal = ({
       onClose();
     };
     targetDoc.addEventListener("keydown", handleKeyDown);
-    return () => targetDoc.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      layer.pop();
+      targetDoc.removeEventListener("keydown", handleKeyDown);
+    };
   }, [doc, onClose]);
 
   return (

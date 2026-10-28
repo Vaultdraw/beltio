@@ -4,6 +4,7 @@ import {
   getDefaultBackgroundPattern,
   setDefaultBackgroundPattern,
 } from "../../vault/paperDefaults";
+import { pushEscapeLayer } from "../escapeLayers";
 import { IconClose } from "../Icons";
 
 import { PaperControls } from "./PaperControls";
@@ -27,8 +28,12 @@ export const PaperDialog = ({ onClose, ownerDocument }: Props) => {
     }
     const previous = doc.activeElement as HTMLElement | null;
     closeRef.current?.focus();
+    const layer = pushEscapeLayer();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (!layer.isTop() || event.isComposing) {
+          return;
+        }
         event.preventDefault();
         event.stopPropagation();
         onClose();
@@ -55,6 +60,7 @@ export const PaperDialog = ({ onClose, ownerDocument }: Props) => {
     };
     doc.addEventListener("keydown", onKeyDown, true);
     return () => {
+      layer.pop();
       doc.removeEventListener("keydown", onKeyDown, true);
       previous?.focus?.();
     };

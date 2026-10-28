@@ -3,15 +3,17 @@ import { describe, expect, it } from "vitest";
 import { ACTION_MS } from "./queue";
 import { createToastStore } from "./toastStore";
 
+import type { ToastInput } from "./queue";
+
 /**
  * Family sweep (bug hunt BH-5): the "Error notices stay for" setting applies to every error
  * notice, whatever it carries (one action, several buttons, none). Rows: shape x setting.
  */
-const shapes = {
+const shapes: Record<"plain" | "action" | "buttons", Partial<ToastInput>> = {
   plain: {},
   action: { action: { label: "Retry", run: () => {} } },
   buttons: { actions: [{ label: "View report", run: () => {} }] },
-} as const;
+};
 
 const alive = (shape: keyof typeof shapes, errorMs: number, at: number) => {
   let t = 0;

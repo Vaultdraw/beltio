@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { useEscapeLayer } from "../components/escapeLayers";
 import { IconClose } from "../components/Icons";
 import { getCleanDrawingName, validateEntryName } from "../vault/treeStore";
 
@@ -35,19 +36,7 @@ export const SaveTemplateModal = ({
     inputRef.current?.select();
   }, []);
 
-  useEffect(() => {
-    if (!ownerDocument) {
-      return;
-    }
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onCancel();
-      }
-    };
-    ownerDocument.addEventListener("keydown", onKeyDown);
-    return () => ownerDocument.removeEventListener("keydown", onKeyDown);
-  }, [onCancel, ownerDocument]);
+  useEscapeLayer(ownerDocument, onCancel);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

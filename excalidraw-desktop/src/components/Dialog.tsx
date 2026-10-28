@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { useEscapeLayer } from "./escapeLayers";
 import { IconClose } from "./Icons";
 
 import "./dialogs.css";
@@ -56,24 +57,21 @@ export const Dialog = ({
   const live = useRef({ onClose, busy });
   live.current = { onClose, busy };
 
+  const [doc, setDoc] = useState<Document | null>(null);
+  useEffect(() => setDoc(backdropRef.current?.ownerDocument ?? null), []);
+  // Escape closes only the top dialog (escapeLayers), wherever focus sits.
+  useEscapeLayer(
+    doc,
+    () => live.current.onClose(),
+    () => live.current.busy,
+  );
+
   useEffect(() => {
     const doc = backdropRef.current?.ownerDocument;
     if (!doc) {
       return;
     }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.isComposing) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      if (!live.current.busy) {
-        live.current.onClose();
-      }
-    };
-    doc.addEventListener("keydown", onKeyDown, true);
     return () => {
-      doc.removeEventListener("keydown", onKeyDown, true);
       // Hand focus back (never body; skipped if that element is gone).
       if (
         opener instanceof HTMLElement &&

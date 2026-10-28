@@ -1,5 +1,7 @@
 import { useEffect, type RefObject } from "react";
 
+import { pushEscapeLayer } from "../escapeLayers";
+
 const FOCUSABLE =
   "button:not(:disabled), input:not(:disabled), select:not(:disabled)";
 
@@ -20,8 +22,12 @@ export const useModalKeys = (
     }
     const previous = doc.activeElement as HTMLElement | null;
     closeRef.current?.focus();
+    const layer = pushEscapeLayer();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (!layer.isTop() || event.isComposing) {
+          return;
+        }
         event.preventDefault();
         event.stopPropagation();
         onClose();
@@ -45,6 +51,7 @@ export const useModalKeys = (
     };
     doc.addEventListener("keydown", onKeyDown, true);
     return () => {
+      layer.pop();
       doc.removeEventListener("keydown", onKeyDown, true);
       previous?.focus?.();
     };
