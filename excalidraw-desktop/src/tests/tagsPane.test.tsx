@@ -15,7 +15,11 @@ import {
 } from "../commands/listKeysForTests";
 
 import { DrawingTags } from "../components/tags/TagChips";
-import { TagsPanel, VIRTUALIZE_ABOVE } from "../components/tags/TagsPanel";
+import {
+  ROW_HEIGHT,
+  TagsPanel,
+  VIRTUALIZE_ABOVE,
+} from "../components/tags/TagsPanel";
 import { applyTagFilter, registerTagActions } from "../tags/tagActions";
 import { tagStore } from "../tags/tagStore";
 
@@ -124,7 +128,7 @@ describe("virtualisation", () => {
     expect(rows[0]).toHaveTextContent("#t00000");
     const list = screen.getByRole("tree");
     act(() => {
-      list.scrollTop = 22 * 1000;
+      list.scrollTop = ROW_HEIGHT * 1000;
       fireEvent.scroll(list);
     });
     const after = screen.getAllByRole("treeitem");
@@ -138,7 +142,7 @@ describe("virtualisation", () => {
     const list = screen.getByRole("tree");
     list.focus();
     pressListKey(list, "G");
-    expect(list.scrollTop).toBeGreaterThan(22 * 1900);
+    expect(list.scrollTop).toBeGreaterThan(ROW_HEIGHT * 1900);
   });
 });
 

@@ -94,7 +94,7 @@ test("renaming a parent tag renames children, the open drawing (undoable) and cl
   await expect(dialog(page)).toHaveCount(0);
   await expect(
     page
-      .getByRole("alert")
+      .getByRole("region", { name: "Notifications" })
       .filter({ hasText: "Renamed #dsa to #algo in 3 drawings" }),
   ).toBeVisible();
 
