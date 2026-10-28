@@ -809,3 +809,111 @@ test("themes: switch, browse, install from a URL with the network refused and th
   expect(requests[0]).toBe("/Vaultdraw/themes/main/index.json");
   expect(errors.filter((e) => !/404|Failed to load resource|checksum|JSON/i.test(e))).toEqual([]);
 });
+
+test("profiles: create, switch live, per vault, bad names refused and delete falls back to default", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await page.addInitScript(() => {
+    // What the "talk" profile's config.toml says (its folder is made in the test).
+    (window as any).__e2eProfileConfigs = {
+      talk: { extensions: { graph: false }, plugins: { disabled: ["frames"] } },
+    };
+  });
+  await openGraphsDrawing(page, "?seed=tags&config=1");
+  const graphButton = page.getByTestId("activity-bar-graph");
+  const framesButton = page.getByTestId("activity-bar-frames.list");
+  await expect(graphButton).toBeVisible();
+  const select = () => settingsModal(page).getByLabel("Profile", { exact: true });
+  const toasts = page.locator(".vd-toast");
+
+  await openSettingsTab(page, "General");
+  await expect(select()).toHaveValue("default");
+
+  // Names are checked as you type: reserved, bad characters, and a duplicate.
+  const createProfile = async (name: string) => {
+    await settingsModal(page).getByRole("button", { name: "New profile" }).click();
+    const form = page.getByRole("dialog", { name: "New profile" });
+    await form.getByLabel("Profile name").fill(name);
+    return form;
+  };
+  let form = await createProfile("default");
+  await form.getByRole("button", { name: "Create" }).click();
+  await expect(form.getByRole("alert")).toContainText("Use 1 to 48 letters");
+  await form.getByLabel("Profile name").fill("bad name!");
+  await form.getByRole("button", { name: "Create" }).click();
+  await expect(form.getByRole("alert")).toContainText("Use 1 to 48 letters");
+  await form.getByLabel("Profile name").fill("talk");
+  await form.getByRole("button", { name: "Create" }).click();
+  await expect(select()).toHaveValue("talk");
+  // The profile's own config applies at once: Graph and Frames are gone.
+  await expect(graphButton).toHaveCount(0);
+  await expect(framesButton).toHaveCount(0);
+  form = await createProfile("Talk");
+  await form.getByRole("button", { name: "Create" }).click();
+  await expect(form.getByRole("alert")).toContainText("already exists");
+  await form.getByRole("button", { name: "Cancel" }).click();
+  await expect(form).toHaveCount(0);
+
+  // A second profile with no changes, then switch back and forth live.
+  form = await createProfile("plain");
+  await form.getByRole("button", { name: "Create" }).click();
+  await expect(select()).toHaveValue("plain");
+  await expect(graphButton).toBeVisible();
+  await select().selectOption("talk");
+  await expect(graphButton).toHaveCount(0);
+  await select().selectOption("default");
+  await expect(graphButton).toBeVisible();
+  await expect(framesButton).toBeVisible();
+
+  // Per vault: the vault names "talk"; after a reload it is active again with a note, and clearing it goes back.
+  await select().selectOption("talk");
+  await closeSettings(page);
+  await page.keyboard.press("Meta+Shift+KeyP");
+  await page.keyboard.type("Use the active profile for this vault");
+  await page.keyboard.press("Enter");
+  await openSettingsTab(page, "General");
+  await select().selectOption("default");
+  await closeSettings(page);
+  await expect(graphButton).toBeVisible();
+  await reloadVault(page);
+  await expect(toasts.filter({ hasText: 'Profile "talk" (set by this vault).' })).toBeVisible();
+  await expect(page.getByTestId("activity-bar-graph")).toHaveCount(0);
+  const vaultHandle = await page.evaluate(
+    () => Object.keys((window as any).__e2eVaultProfiles ?? {})[0],
+  );
+  expect(vaultHandle).toBeTruthy();
+  await page.keyboard.press("Meta+Shift+KeyP");
+  await page.keyboard.type("Stop choosing a profile for this vault");
+  await page.keyboard.press("Enter");
+  await expect
+    .poll(() => page.evaluate(() => Object.keys((window as any).__e2eVaultProfiles ?? {})))
+    .toEqual([]);
+  // (Going back to the remembered profile needs a second vault: the memory of "your choice" lasts one run.)
+  await openSettingsTab(page, "General");
+  await select().selectOption("default");
+  await closeSettings(page);
+  await expect(page.getByTestId("activity-bar-graph")).toBeVisible();
+  // A vault that names a profile this machine does not have is ignored with a note.
+  await page.evaluate((handle) => {
+    window.sessionStorage.setItem(
+      "e2e-profiles",
+      JSON.stringify({ profiles: ["talk", "plain"], profile: null, configs: (window as any).__e2eProfileConfigs, vault: { [handle]: "ghost" } }),
+    );
+  }, vaultHandle);
+  await reloadVault(page);
+  await expect(toasts.filter({ hasText: 'asks for the profile "ghost"' })).toBeVisible();
+  await expect(page.getByTestId("activity-bar-graph")).toBeVisible();
+
+  // Delete the active profile: it asks first, then falls back to default.
+  await openSettingsTab(page, "General");
+  await select().selectOption("talk");
+  await expect(page.getByTestId("activity-bar-graph")).toHaveCount(0);
+  await settingsModal(page).getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByRole("button", { name: "talk" }).click();
+  await page.getByRole("button", { name: "Delete profile" }).click();
+  await expect(select()).toHaveValue("default");
+  await expect(select().locator("option")).toHaveText(["default", "plain"]);
+  await expect(page.getByTestId("activity-bar-graph")).toBeVisible();
+  expect(errors).toEqual([]);
+});
