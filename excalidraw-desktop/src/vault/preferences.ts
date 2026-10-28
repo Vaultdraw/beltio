@@ -277,6 +277,10 @@ interface VaultPreferencesBase {
   activityBarOrder: string[];
   /** Activity bar entry ids hidden from the bar (their commands still work). */
   activityBarHidden: string[];
+  /** Extra folders of `.excalidrawlib` files shown as libraries (`[library] folders`). */
+  libraryFolders: string[];
+  /** Library that takes new items (`[library] default`); "" = Personal. */
+  libraryDefault: string;
   /** Ids of enabled plugins (`[plugins] enabled`). */
   pluginsEnabled: string[];
   /** Official plugins the user turned off (see plugins/officialPlugins.ts). */
@@ -456,6 +460,8 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   activityBar: true,
   activityBarOrder: [],
   activityBarHidden: [],
+  libraryFolders: [],
+  libraryDefault: "",
   // Official plugins are on by default and load on first use (plugins/officialPlugins.ts).
   pluginsEnabled: [...OFFICIAL_IDS],
   pluginsDisabled: [],
@@ -883,6 +889,16 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       parsed.activityBarHidden,
       isStringArray,
       d.activityBarHidden,
+    ),
+    libraryFolders: pick(
+      parsed.libraryFolders,
+      isStringArray,
+      d.libraryFolders,
+    ),
+    libraryDefault: pick(
+      parsed.libraryDefault,
+      (v): v is string => typeof v === "string",
+      d.libraryDefault,
     ),
     ...(() => {
       const r = resolveOfficial(

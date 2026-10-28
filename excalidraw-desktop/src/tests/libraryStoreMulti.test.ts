@@ -98,10 +98,21 @@ describe("LibraryStore named libraries", () => {
   });
 
   it("picks up an outside edit and a new file live", async () => {
-    repo.setFile("personal", fileOf(item("a1"), item("a2")), undefined, "Arrows");
+    repo.setFile(
+      "personal",
+      fileOf(item("a1"), item("a2")),
+      undefined,
+      "Arrows",
+    );
     repo.setFile("personal", fileOf(item("c1")), undefined, "Curves");
     await settle();
-    expect(store.union().map((i) => i.id)).toEqual(["p", "a1", "a2", "b1", "c1"]);
+    expect(store.union().map((i) => i.id)).toEqual([
+      "p",
+      "a1",
+      "a2",
+      "b1",
+      "c1",
+    ]);
     expect(store.getSections().map((s) => s.label)).toContain("Curves");
     repo.setFile("personal", null, undefined, "Curves");
     await settle();

@@ -160,6 +160,19 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
     },
   },
   {
+    table: "library",
+    intro:
+      "Named libraries: each `.excalidrawlib` file is a section in the library panel. See [Library](#library).",
+    keys: {
+      folders: {
+        doc: "Extra folders of `.excalidrawlib` files, each file a library (absolute paths, or starting with `~/`). The panel looks at them again when the window gains focus.",
+      },
+      default: {
+        doc: 'Name of the library that takes new items when you add without choosing a section; `""` (or a name that does not exist) means Personal.',
+      },
+    },
+  },
+  {
     table: "navigator",
     intro: "The file tree.",
     keys: {

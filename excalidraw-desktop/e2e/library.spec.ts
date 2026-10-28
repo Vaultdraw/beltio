@@ -410,4 +410,60 @@ test.describe("persisted library", () => {
     );
     expect(errors).toEqual([]);
   });
+
+  test("named libraries: create, fold, add, rename, remove", async ({
+    page,
+  }) => {
+    const errors = await setup(page);
+    await drawRectangle(page);
+    await openLibrary(page);
+
+    // create
+    await page.getByTestId("library-new").click();
+    await page.getByTestId("library-new-input").fill("Arrows");
+    await page.getByTestId("library-new-input").press("Enter");
+    const arrows = "lib:personal::Arrows";
+    await expect(header(page, arrows)).toHaveText("Arrows");
+
+    // fold and unfold another section
+    const fold = page.getByTestId("library-section-fold-personal");
+    await fold.click();
+    await expect(fold).toHaveAttribute("aria-expanded", "false");
+    await fold.click();
+    await expect(fold).toHaveAttribute("aria-expanded", "true");
+
+    // add an item to it: it lands in Arrows.excalidrawlib
+    await drawSelectedRect(page);
+    await addTo(page, arrows, "Arrow one");
+    await expect(itemsIn(page, arrows)).toHaveCount(1);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            JSON.parse(
+              (window as any).__libraryRepo.getJson(
+                "personal",
+                undefined,
+                "Arrows",
+              ) ?? "{}",
+            ).libraryItems?.length ?? 0,
+        ),
+      )
+      .toBe(1);
+
+    // rename
+    await page.getByTestId(`library-section-rename-${arrows}`).click();
+    const rename = page.getByTestId("library-section-rename-input");
+    await rename.fill("Shapes");
+    await rename.press("Enter");
+    const shapes = "lib:personal::Shapes";
+    await expect(header(page, shapes)).toHaveText("Shapes");
+    await expect(itemsIn(page, shapes)).toHaveCount(1);
+
+    // remove (the file moves aside, the section goes)
+    await page.getByTestId(`library-section-remove-${shapes}`).click();
+    await page.getByTestId("library-section-remove-confirm").click();
+    await expect(header(page, shapes)).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
 });

@@ -1363,6 +1363,34 @@ A backup is one zip of your vault that you can keep anywhere. It is made in the 
 
 Commands: `vault.backup`, `vault.restoreBackup` (palette, rebindable).
 
+## Library
+
+The library panel keeps one section per `.excalidrawlib` file, so you can sort shapes into categories. The files are plain Excalidraw libraries: they open in excalidraw.com and in Obsidian Excalidraw.
+
+| Library | File | Shown as |
+| --- | --- | --- |
+| Personal | `library.excalidrawlib` in the config folder | **Personal** (always there; the file is created when you add the first item) |
+| This vault | `library.excalidrawlib` at the vault root | **This vault** |
+| Named, every vault | `<config folder>/libraries/<Name>.excalidrawlib` | one section per file |
+| Named, one vault | `<vault>/.excalidraw-vault/libraries/<Name>.excalidrawlib` | one section per file |
+| Named, any folder | `*.excalidrawlib` in each folder of `[library] folders` | one section per file |
+
+Nothing needs migrating: an existing `library.excalidrawlib` is your **Personal** library.
+
+- **Fold** a section with the arrow by its title (remembered).
+- **New library** (bottom of the panel, or `Library: New library`) asks for a name and where to create it (Personal, or this vault).
+- **Rename** and **Remove** are the small buttons on a named section's title (or `Library: Rename <name>`, `Library: Remove <name>`). Remove moves the file into a `.removed` folder next to it, so it can be put back.
+- **Move items:** select them in the panel, open the panel's menu and pick **Move to <name>**. **Import:** the same menu has **Import into <name>…** for a downloaded `.excalidrawlib`; `Library: Import file into <name>` in the command palette does the same.
+- **Search** the panel to filter items by name across all libraries; `Insert: <item>` in the command palette also searches every library, and the library's name works as a search word.
+- Files changed outside Vaultdraw (a sync tool, a text editor) reload live, for the config and vault `libraries` folders. Extra `[library] folders` are checked again when the window gains focus.
+- `[library] default` names the library that takes new items when you add without picking a section (for example from the editor's own "add to library" action). Unknown names mean Personal.
+
+```toml
+[library]
+folders = ["~/Documents/Excalidraw Libraries"]
+default = "Arrows"
+```
+
 ## Memory
 
 Big images are the largest thing a drawing keeps in memory. Vaultdraw releases an image's data as soon as nothing can bring it back, so deleting images actually gives the memory back.
@@ -1770,6 +1798,15 @@ The app window around the canvas.
 | `activity_bar` | `true` | true or false | yes | Show the activity bar. |
 | `activity_bar_order` | `[]` | a list of entry ids like ["library", "history"] | yes | Activity bar entry order: `library`, `history`, `graph`, `gallery`, `search`, `tags`, `templates`, `hotkeys`, `settings`; unlisted entries follow in their default order. |
 | `activity_bar_hidden` | `[]` | a list of entry ids like ["tags"] | yes | Activity bar entries to hide. |
+
+### `[library]`
+
+Named libraries: each `.excalidrawlib` file is a section in the library panel. See [Library](#library).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `folders` | `[]` | a list of folder paths like ["~/Documents/Libraries"] |  | Extra folders of `.excalidrawlib` files, each file a library (absolute paths, or starting with `~/`). The panel looks at them again when the window gains focus. |
+| `default` | `""` | a library name like "Arrows", or "" for Personal |  | Name of the library that takes new items when you add without choosing a section; `""` (or a name that does not exist) means Personal. |
 
 ### `[navigator]`
 

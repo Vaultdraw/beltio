@@ -356,6 +356,8 @@ type ConfigField =
   | "pluginsToolbar"
   | "activityBarOrder"
   | "activityBarHidden"
+  | "libraryFolders"
+  | "libraryDefault"
   | "navigatorSort"
   | "newDrawingFolder"
   | "templatesFolder"
@@ -575,6 +577,19 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "interface.activity_bar_hidden",
     expected: 'a list of entry ids like ["tags"]',
     valid: isStringList,
+  },
+  {
+    field: "libraryFolders",
+    key: "library.folders",
+    expected: 'a list of folder paths like ["~/Documents/Libraries"]',
+    valid: (v) =>
+      isStringList(v) && (v as string[]).every((x) => x.trim() !== ""),
+  },
+  {
+    field: "libraryDefault",
+    key: "library.default",
+    expected: 'a library name like "Arrows", or "" for Personal',
+    valid: (v) => typeof v === "string",
   },
   {
     field: "pluginsEnabled",

@@ -28,6 +28,11 @@ import { t } from "../i18n";
 import { LibraryMenuControlButtons } from "./LibraryMenuControlButtons";
 import { LibraryDropdownMenu } from "./LibraryMenuHeaderContent";
 import {
+  NewLibraryRow,
+  SectionHeadingControls,
+  useCollapsedSections,
+} from "./LibrarySectionControls";
+import {
   LibraryMenuSection,
   LibraryMenuSectionGrid,
 } from "./LibraryMenuSection";
@@ -149,6 +154,8 @@ export default function LibraryMenuItems({
   );
   const [renamingId, setRenamingId] = useAtom(libraryItemRenamingAtom);
   const [namingSection, setNamingSection] = useAtom(libraryAddNamingAtom);
+  const { collapsed: foldedSections, toggle: toggleSection } =
+    useCollapsedSections();
   const setLibraryMenuOpen = useSetAtom(isLibraryMenuOpenAtom);
   const libraryContainerRef = useRef<HTMLDivElement>(null);
   const scrollPosition = useScrollPosition<HTMLDivElement>(libraryContainerRef);
@@ -457,11 +464,17 @@ export default function LibraryMenuItems({
             style={index > 0 ? { marginTop: "0.75rem" } : undefined}
             data-testid={`library-section-${section.id}`}
           >
+            <SectionHeadingControls
+              section={section}
+              collapsed={foldedSections.has(section.id)}
+              onToggle={() => toggleSection(section.id)}
+              manage={sections?.manage}
+            />
             {section.label}
             {index === 0 && menuInFirstSection && dropdownMenu}
           </div>
-          {!items.length &&
-          !(pendingElements.length > 0 && section.canAdd !== false) ? (
+          {foldedSections.has(section.id) ? null : !items.length &&
+            !(pendingElements.length > 0 && section.canAdd !== false) ? (
             <div className="library-menu-items__no-items library-menu-items__no-items--section">
               <div className="library-menu-items__no-items__hint">
                 {section.emptyHint ?? t("library.emptySection")}
@@ -494,6 +507,7 @@ export default function LibraryMenuItems({
           )}
         </React.Fragment>
       ))}
+      {sections?.manage && <NewLibraryRow manage={sections.manage} />}
     </>
   );
 

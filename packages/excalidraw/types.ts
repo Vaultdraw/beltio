@@ -688,6 +688,8 @@ export type LibrarySection = {
   canAdd?: boolean;
   /** Shown in the section when it has no items. */
   emptyHint?: string;
+  /** Heading shows rename and remove buttons (needs `sections.manage`). */
+  manageable?: boolean;
 };
 
 export type LibraryUIOptions = {
@@ -705,6 +707,15 @@ export type LibraryUIOptions = {
      *  into section, copy) are added to the library, and for moves of
      *  existing items. */
     assign: (itemIds: readonly string[], sectionId: string) => void;
+    /** Adds, renames and removes sections (files, for the host). Errors thrown
+     *  here show under the heading. */
+    manage?: {
+      /** Where a new section can be created; more than one shows a chooser. */
+      targets: readonly { id: string; label: string }[];
+      create: (name: string, targetId: string) => void | Promise<void>;
+      rename: (sectionId: string, name: string) => void | Promise<void>;
+      remove: (sectionId: string) => void | Promise<void>;
+    };
   };
   /** Host file picker for import. null = cancelled. Default: browser file input. */
   pickLibraryFile?: () => Promise<Blob | null>;

@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
 
-import { CaptureUpdateAction } from "@excalidraw/excalidraw";
+import {
+  CaptureUpdateAction,
+  loadLibraryFromBlob,
+} from "@excalidraw/excalidraw";
 import { DEFAULT_SIDEBAR } from "@excalidraw/common";
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
@@ -13,7 +16,10 @@ import { detectPlatform } from "../commands/keys";
 import { registerPaletteProvider } from "../palette/registry";
 import { createEditorProvider } from "../palette/providers/editor";
 import { createPensProvider } from "../palette/providers/pens";
-import { createLibraryItemsProvider } from "../palette/providers/library";
+import {
+  createLibraryItemsProvider,
+  createLibraryManageProvider,
+} from "../palette/providers/library";
 import { getPreferences } from "../vault/preferences";
 
 import type { CommandHandlers } from "../commands/types";
@@ -21,6 +27,12 @@ import type { PenPreset } from "../pens/penPresets";
 import type { LibraryStore } from "../library/libraryStore";
 
 import type { RefObject } from "react";
+
+/** Window event the library panel listens to (see LibrarySectionControls). */
+const LIBRARY_UI_EVENT = "vaultdraw:library-ui";
+type LibraryUIRequest =
+  | { action: "new" }
+  | { action: "rename" | "remove"; sectionId: string };
 
 type Options = {
   apiRef: RefObject<ExcalidrawImperativeAPI | null>;
@@ -125,8 +137,10 @@ export function useEditorPalette(options: Options): void {
           list: () =>
             store
               .listItems()
-              .flatMap(({ id, name, scope }) =>
-                name ? [{ id, name, keywords: ["library", scope] }] : [],
+              .flatMap(({ id, name, scope, library }) =>
+                name
+                  ? [{ id, name, keywords: ["library", scope, library] }]
+                  : [],
               ),
           insert: (id) => {
             const item = store.getItem(id);
@@ -137,11 +151,67 @@ export function useEditorPalette(options: Options): void {
         };
       }),
     );
+    const unLibraryManage = registerPaletteProvider(
+      createLibraryManageProvider(() => {
+        const store = live.current.libraryStore;
+        const current = api();
+        if (!store || !current || live.current.disabled) {
+          return null;
+        }
+        const show = (request: LibraryUIRequest) => {
+          // open the panel (once), then tell it what to do
+          const open =
+            current.getAppState().openSidebar?.name === DEFAULT_SIDEBAR.name;
+          if (!open) {
+            current.toggleSidebar({ ...DEFAULT_SIDEBAR, force: true });
+          }
+          setTimeout(
+            () =>
+              window.dispatchEvent(
+                new CustomEvent(LIBRARY_UI_EVENT, { detail: request }),
+              ),
+            open ? 0 : 150,
+          );
+        };
+        return {
+          sections: () =>
+            store.getSections().map((s) => ({
+              id: s.id,
+              label: s.label,
+              named: s.name !== null,
+            })),
+          newLibrary: () => show({ action: "new" }),
+          rename: (sectionId) => show({ action: "rename", sectionId }),
+          remove: (sectionId) => show({ action: "remove", sectionId }),
+          importInto: async (sectionId) => {
+            const picked = await store.pickLibraryFile();
+            if (!picked) {
+              return;
+            }
+            await store.loadNow();
+            const items = await loadLibraryFromBlob(
+              new Blob([picked.json], { type: "application/json" }),
+            );
+            store.assign(
+              items.filter((i) => !store.getItem(i.id)).map((i) => i.id),
+              sectionId,
+            );
+            await current.updateLibrary({
+              libraryItems: [...items],
+              merge: true,
+              prompt: false,
+              openLibraryMenu: false,
+            });
+          },
+        };
+      }),
+    );
     return () => {
       unbind();
       unEditor();
       unPens();
       unLibrary();
+      unLibraryManage();
     };
   }, [hasLibrary]);
 }

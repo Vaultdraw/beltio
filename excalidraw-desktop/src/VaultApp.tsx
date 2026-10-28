@@ -611,6 +611,16 @@ export const VaultApp = ({
     );
   }, [libraryStore, libraryOn, vault?.handle, vault?.readOnly]);
 
+  // `[library] folders` / `default`, live with the config.
+  const libraryFoldersKey = prefsNow.libraryFolders.join("\n");
+  const libraryDefault = prefsNow.libraryDefault;
+  useEffect(() => {
+    void libraryStore.configure(
+      libraryFoldersKey ? libraryFoldersKey.split("\n") : [],
+      libraryDefault,
+    );
+  }, [libraryStore, libraryFoldersKey, libraryDefault]);
+
   const vaultRef = useRef<VaultInfo | null>(vault);
   vaultRef.current = vault;
   const vaultGeneration = useRef(0);

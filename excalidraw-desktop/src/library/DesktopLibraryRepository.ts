@@ -83,7 +83,11 @@ export class DesktopLibraryRepository implements LibraryRepository {
     return this.call<string[]>("list_libraries", { scope, handle });
   }
 
-  async createLibrary(scope: LibraryScope, handle: string | null, name: string) {
+  async createLibrary(
+    scope: LibraryScope,
+    handle: string | null,
+    name: string,
+  ) {
     await this.call("create_library", { scope, handle, name });
   }
 
@@ -96,7 +100,11 @@ export class DesktopLibraryRepository implements LibraryRepository {
     await this.call("rename_library", { scope, handle, name, newName });
   }
 
-  async deleteLibrary(scope: LibraryScope, handle: string | null, name: string) {
+  async deleteLibrary(
+    scope: LibraryScope,
+    handle: string | null,
+    name: string,
+  ) {
     await this.call("delete_library", { scope, handle, name });
   }
 

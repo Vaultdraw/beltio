@@ -29,7 +29,11 @@ export class FakeLibraryRepository implements LibraryRepository {
   private listeners = new Set<(event: LibraryChange) => void>();
   private counter = 0;
 
-  private key(scope: LibraryScope, handle: string | null, name?: string | null) {
+  private key(
+    scope: LibraryScope,
+    handle: string | null,
+    name?: string | null,
+  ) {
     const base = scope === "personal" ? "personal" : `${scope}:${handle}`;
     return name ? `${base}|${name}` : base;
   }
@@ -47,7 +51,11 @@ export class FakeLibraryRepository implements LibraryRepository {
     return this.names(scope, handle);
   }
 
-  async createLibrary(scope: LibraryScope, handle: string | null, name: string) {
+  async createLibrary(
+    scope: LibraryScope,
+    handle: string | null,
+    name: string,
+  ) {
     const key = this.key(scope, handle, name);
     if (this.files.has(key)) {
       throw new FakeLibraryError("CONFLICT", "exists");
@@ -80,7 +88,11 @@ export class FakeLibraryRepository implements LibraryRepository {
   }
 
   readonly removed: string[] = [];
-  async deleteLibrary(scope: LibraryScope, handle: string | null, name: string) {
+  async deleteLibrary(
+    scope: LibraryScope,
+    handle: string | null,
+    name: string,
+  ) {
     const key = this.key(scope, handle, name);
     this.files.delete(key);
     this.removed.push(key);

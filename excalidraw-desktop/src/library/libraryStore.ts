@@ -334,11 +334,7 @@ export class LibraryStore {
 
   /** Every source in panel order: personal, this vault, then named ones. */
   private sources(): Source[] {
-    return [
-      this.personal,
-      ...(this.vault ? [this.vault] : []),
-      ...this.extras,
-    ];
+    return [this.personal, ...(this.vault ? [this.vault] : []), ...this.extras];
   }
 
   private defaultSource(): Source {
@@ -350,8 +346,9 @@ export class LibraryStore {
       return this.vault;
     }
     return (
-      this.extras.find((src) => src.name?.toLowerCase() === name.toLowerCase()) ??
-      this.personal
+      this.extras.find(
+        (src) => src.name?.toLowerCase() === name.toLowerCase(),
+      ) ?? this.personal
     );
   }
 
@@ -618,7 +615,8 @@ export class LibraryStore {
         if (existing) {
           listed.push(existing);
         } else {
-          const hostReadOnly = scope === "vault" ? this.vault?.hostReadOnly : false;
+          const hostReadOnly =
+            scope === "vault" ? this.vault?.hostReadOnly : false;
           listed.push(newSource(scope, handle, hostReadOnly ?? false, name));
           changed = true;
         }
@@ -680,7 +678,10 @@ export class LibraryStore {
     }
     if (fresh && this.started) {
       await this.loadSource(fresh);
-      await this.refreshLibraries({ scope: "vault", handle: fresh.handle ?? undefined });
+      await this.refreshLibraries({
+        scope: "vault",
+        handle: fresh.handle ?? undefined,
+      });
       this.bump("external");
     }
     await flushOld;
@@ -688,9 +689,7 @@ export class LibraryStore {
 
   /** Writes any pending changes immediately. Never rejects. */
   async flush(): Promise<void> {
-    await Promise.all(
-      this.sources().map((src) => this.flushSource(src)),
-    );
+    await Promise.all(this.sources().map((src) => this.flushSource(src)));
   }
 
   dispose() {

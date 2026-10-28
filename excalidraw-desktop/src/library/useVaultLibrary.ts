@@ -80,6 +80,17 @@ export const useVaultLibrary = (
     });
   }, [api, store]);
 
+  // Libraries in extra folders are not watched: look again when the window
+  // regains focus (cheap: one revision check per file, nothing while closed).
+  useEffect(() => {
+    if (!api) {
+      return;
+    }
+    const onFocus = () => void store.refresh();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [api, store]);
+
   // Toast each distinct problem once.
   const toasted = useRef(new Set<string>());
   useEffect(() => {
@@ -109,22 +120,25 @@ export const useVaultLibrary = (
   );
 
   const libraryUIOptions = useMemo<LibraryUIOptions>(() => {
-    const list = [
-      {
-        id: "personal",
-        label: "Personal",
-        emptyHint: "Items you add here are available in every vault.",
-      },
-      ...(store.hasVault()
-        ? [
-            {
-              id: "vault",
-              label: "This vault",
-              canAdd: !store.isVaultReadOnly(),
-              emptyHint:
-                "Saved in library.excalidrawlib in this vault, so it travels with the vault.",
-            },
-          ]
+    const info = store.getSections();
+    const list = info.map((section) => ({
+      id: section.id,
+      label: section.label,
+      canAdd: !section.readOnly,
+      manageable: section.name !== null,
+      emptyHint:
+        section.id === "personal"
+          ? "Items you add here are available in every vault."
+          : section.id === "vault"
+          ? "Saved in library.excalidrawlib in this vault, so it travels with the vault."
+          : section.scope === "vault"
+          ? "Saved in this vault's .excalidraw-vault/libraries folder."
+          : "Saved as a .excalidrawlib file you can open in Excalidraw.",
+    }));
+    const targets = [
+      { id: "personal", label: "Personal" },
+      ...(store.hasVault() && !store.isVaultReadOnly()
+        ? [{ id: "vault", label: "This vault" }]
         : []),
     ];
     return {
@@ -133,8 +147,17 @@ export const useVaultLibrary = (
       sections: {
         list,
         sectionOf: store.sectionOf,
-        assign: (ids, section) =>
-          store.assign(ids, section === "vault" ? "vault" : "personal"),
+        assign: (ids, section) => store.assign(ids, section),
+        manage: {
+          targets,
+          create: (name, target) =>
+            store.createLibrary(
+              target === "vault" ? "vault" : "personal",
+              name,
+            ),
+          rename: (id, name) => store.renameLibrary(id, name),
+          remove: (id) => store.removeLibrary(id),
+        },
       },
       pickLibraryFile: async () => {
         const picked = await repository.pickLibraryFile();

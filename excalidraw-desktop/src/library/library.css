@@ -21,3 +21,88 @@
   color: var(--vault-text);
   font-size: var(--vd-fs-small);
 }
+
+/* Named libraries: fold, rename, remove, new */
+.excalidraw .library-menu-items-container__header {
+  display: flex;
+  align-items: center;
+  gap: var(--vd-space-1);
+}
+.excalidraw .library-section-fold,
+.excalidraw .library-section-action {
+  all: unset;
+  cursor: pointer;
+  width: 1.25rem;
+  height: 1.25rem;
+  line-height: 1.25rem;
+  text-align: center;
+  color: var(--vault-text-faint);
+  border-radius: var(--vd-radius-1, 4px);
+}
+.excalidraw .library-section-fold::before {
+  content: "\25BE";
+}
+.excalidraw .library-section-fold.is-collapsed::before {
+  content: "\25B8";
+}
+.excalidraw .library-section-action--rename::before {
+  content: "\270E";
+}
+.excalidraw .library-section-action--remove::before {
+  content: "\00D7";
+}
+.excalidraw .library-section-fold:hover,
+.excalidraw .library-section-action:hover,
+.excalidraw .library-section-fold:focus-visible,
+.excalidraw .library-section-action:focus-visible {
+  color: var(--vault-text);
+  background: var(--vault-surface-hover, transparent);
+}
+.excalidraw .library-section-actions {
+  display: inline-flex;
+  margin-left: auto;
+}
+.excalidraw .library-section-input,
+.excalidraw .library-new-row select {
+  font: inherit;
+  text-transform: none;
+  letter-spacing: 0;
+  background: var(--vault-surface, transparent);
+  color: var(--vault-text);
+  border: 1px solid var(--vault-border, currentColor);
+  border-radius: var(--vd-radius-1, 4px);
+  padding: 0.125rem 0.375rem;
+  min-width: 0;
+}
+.excalidraw .library-section-confirm {
+  margin-left: auto;
+  display: inline-flex;
+  gap: var(--vd-space-1);
+  align-items: center;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.excalidraw .library-section-error {
+  color: var(--vault-danger, #c92a2a);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.excalidraw .library-new-button {
+  all: unset;
+  cursor: pointer;
+  display: block;
+  margin: var(--vd-space-3) 0;
+  color: var(--vault-text-muted);
+  font-size: var(--vd-fs-small);
+}
+.excalidraw .library-new-button:hover,
+.excalidraw .library-new-button:focus-visible {
+  color: var(--vault-text);
+}
+.excalidraw .library-new-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--vd-space-1);
+  margin: var(--vd-space-3) 0;
+}
