@@ -101,6 +101,8 @@ import {
 import { setImporterOverrides } from "../plugins/importerMap";
 import { resolveOfficial } from "../plugins/officialPlugins";
 
+import { isWatchPollMs, WATCH_POLL_LIMITS } from "./watchPoll";
+
 import { isNonSettingsBatch } from "./configPaths";
 import { isWindowDecorations } from "./windowChrome";
 
@@ -379,6 +381,7 @@ type ConfigField =
   | "controlNotifyEdits"
   | "watchdogEnabled"
   | "watchdogGraceMs"
+  | "filesWatchPollMs"
   | "windowDecorations"
   | "pdfMaxSide"
   | "pdfFormat"
@@ -922,6 +925,12 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "watchdog.grace_ms",
     expected: `a whole number of milliseconds between ${WATCHDOG_LIMITS.graceMs.min} and ${WATCHDOG_LIMITS.graceMs.max}`,
     valid: isWatchdogGraceMs,
+  },
+  {
+    field: "filesWatchPollMs",
+    key: "files.watch_poll_ms",
+    expected: `a whole number of milliseconds between ${WATCH_POLL_LIMITS.min} and ${WATCH_POLL_LIMITS.max}`,
+    valid: isWatchPollMs,
   },
   {
     field: "windowDecorations",

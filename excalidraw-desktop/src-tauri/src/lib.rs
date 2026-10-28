@@ -1,4 +1,4 @@
-use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::Event;
 use serde::Serialize;
 use std::{
     collections::HashMap,
@@ -39,6 +39,7 @@ mod theme_catalogue;
 mod theme_install;
 mod themes;
 mod vault_settings;
+mod vault_watch;
 mod history;
 mod thumbs;
 mod ui_activity;
@@ -80,6 +81,10 @@ struct VaultInfo {
     read_only_reason: Option<vault_lock::ReadOnlyReason>,
     /// The other Vaultdraw process holding the lock, when that is the reason.
     lock_holder_pid: Option<u32>,
+    /// Set when the file watcher could not start natively (Linux inotify limit) and the vault
+    /// is polled instead; the UI tells the user once.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    watch_fallback: Option<vault_watch::Fallback>,
 }
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -98,7 +103,7 @@ struct VaultSettingsChange {
 /// vault, so `v.root`, `v.handle` and the core functions work on it unchanged.
 pub(crate) struct Vault {
     core: vaultdraw_core::Vault,
-    _watcher: Option<RecommendedWatcher>,
+    _watcher: Option<vault_watch::Watching>,
 }
 impl Vault {
     #[cfg(test)]
@@ -270,20 +275,7 @@ fn open_vault(root: PathBuf, app: &AppHandle, service: &Service) -> Result<Vault
             }
         }
     });
-    let watcher = notify::recommended_watcher(move |event: notify::Result<Event>| {
-        let _ = tx.send(event);
-    })
-    .ok()
-    .and_then(|mut w| {
-        if w.configure(Config::default().with_poll_interval(Duration::from_millis(500)))
-            .is_ok()
-            && w.watch(&root, RecursiveMode::Recursive).is_ok()
-        {
-            Some(w)
-        } else {
-            None
-        }
-    });
+    let vault_watch::Started { watching: watcher, fallback: watch_fallback } = vault_watch::start(&root, tx);
     if watcher.is_none() {
         let _ = app.emit("vault-change", VaultChange { handle: handle.clone(), paths: Vec::new(), rescan: true });
     }
@@ -323,6 +315,7 @@ fn open_vault(root: PathBuf, app: &AppHandle, service: &Service) -> Result<Vault
         read_only,
         read_only_reason: outcome.reason,
         lock_holder_pid: outcome.holder_pid,
+        watch_fallback,
     })
 }
 

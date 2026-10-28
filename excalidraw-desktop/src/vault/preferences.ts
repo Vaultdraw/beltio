@@ -133,6 +133,8 @@ import {
   type ToolStyle,
 } from "../toolDefaults/toolStyles";
 
+import { DEFAULT_WATCH_POLL_MS, isWatchPollMs } from "./watchPoll";
+
 import { isWindowDecorations, type WindowDecorations } from "./windowChrome";
 
 import {
@@ -344,6 +346,8 @@ interface VaultPreferencesBase {
   watchdogEnabled: boolean;
   /** watchdog.grace_ms: how long the page stays unresponsive before the dialog */
   watchdogGraceMs: number;
+  /** files.watch_poll_ms: polling interval when the native file watcher cannot start (read by the native side) */
+  filesWatchPollMs: number;
   /** window.decorations: Linux title bar, "custom" (in-app buttons) or "native"; read by the native side at launch */
   windowDecorations: WindowDecorations;
   /** pdf_import.max_side */
@@ -498,6 +502,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   controlNotifyEdits: true,
   watchdogEnabled: true,
   watchdogGraceMs: 5000,
+  filesWatchPollMs: DEFAULT_WATCH_POLL_MS,
   windowDecorations: "custom",
   pdfMaxSide: DEFAULT_PDF_IMPORT_SETTINGS.maxSide,
   pdfFormat: DEFAULT_PDF_IMPORT_SETTINGS.format,
@@ -995,6 +1000,11 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       parsed.watchdogGraceMs,
       isWatchdogGraceMs,
       d.watchdogGraceMs,
+    ),
+    filesWatchPollMs: pick(
+      parsed.filesWatchPollMs,
+      isWatchPollMs,
+      d.filesWatchPollMs,
     ),
     windowDecorations: pick(
       parsed.windowDecorations,

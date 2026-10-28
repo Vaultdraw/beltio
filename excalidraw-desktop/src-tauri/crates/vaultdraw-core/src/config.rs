@@ -152,6 +152,8 @@ autosave_delay_ms = 500
 # list_start = "idle"
 # Read and parse a drawing when you press on it (tree, tab, switcher), before the click, so it opens sooner
 # speculative_open = true
+# Linux: how often (ms) a vault is polled when the system's inotify watch limit stops the normal file watcher
+# watch_poll_ms = 5000
 
 [hotkeys]
 # Override a command's keys; [] removes them. Example:
@@ -1613,7 +1615,7 @@ mod tests {
             "{out}"
         );
         assert!(
-            out.contains("# activity_bar_hidden = []\n\n[navigator]\n# name_asc | name_desc | modified_desc | modified_asc\nsort = \"modified_desc\"\n\n[files]\n# Ask before moving a drawing to the Trash\n# confirm_delete = true\n# Folder for new drawings, relative to the vault root (empty = next to the open drawing)\nnew_drawing_folder = \"Inbox\"\n# Vault folder holding your templates, relative to the vault root (empty falls back to \"Templates\")\n# templates_folder = \"Templates\"\n# When every vault folder is listed (recent drawings, file switcher, link suggestions): open | idle | use\n# list_start = \"idle\"\n# Read and parse a drawing when you press on it (tree, tab, switcher), before the click, so it opens sooner\n# speculative_open = true\n\n[hotkeys]\n"),
+            out.contains("# activity_bar_hidden = []\n\n[navigator]\n# name_asc | name_desc | modified_desc | modified_asc\nsort = \"modified_desc\"\n\n[files]\n# Ask before moving a drawing to the Trash\n# confirm_delete = true\n# Folder for new drawings, relative to the vault root (empty = next to the open drawing)\nnew_drawing_folder = \"Inbox\"\n# Vault folder holding your templates, relative to the vault root (empty falls back to \"Templates\")\n# templates_folder = \"Templates\"\n# When every vault folder is listed (recent drawings, file switcher, link suggestions): open | idle | use\n# list_start = \"idle\"\n# Read and parse a drawing when you press on it (tree, tab, switcher), before the click, so it opens sooner\n# speculative_open = true\n# Linux: how often (ms) a vault is polled when the system's inotify watch limit stops the normal file watcher\n# watch_poll_ms = 5000\n\n[hotkeys]\n"),
             "{out}"
         );
         assert_eq!(out.matches("[interface]").count(), 1);

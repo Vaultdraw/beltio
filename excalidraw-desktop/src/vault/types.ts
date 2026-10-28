@@ -12,6 +12,14 @@ export type VaultInfo = {
   readOnlyReason?: ReadOnlyReason | null;
   /** The other Vaultdraw process holding the lock (lockedByOtherProcess). */
   lockHolderPid?: number | null;
+  /** Linux: the native file watcher could not start, so the vault is polled instead (the app tells the user once). */
+  watchFallback?: WatchFallback | null;
+};
+
+export type WatchFallback = {
+  /** `limitReached`: the inotify watch limit; `failed`: another start error. */
+  reason: "limitReached" | "failed";
+  intervalMs: number;
 };
 
 /** What the tree lists: folders, drawings (`.excalidraw`), Markdown notes and Obsidian Excalidraw files (`.excalidraw.md`). */

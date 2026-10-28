@@ -1455,6 +1455,22 @@ The commands `Sync: Keep this version (the other goes to history)` and `Sync: Ke
 
 Limits: Compare and keep work for `.excalidraw` drawings (conflict copies of notes get the badge, and you resolve them in the file tree or your file manager). OneDrive's `name-COMPUTER.ext` copies are not recognised, since the name cannot be told from a normal one.
 
+## Large vaults on Linux
+
+Vaultdraw watches the vault folder so the tree, search and open drawings follow changes made outside the app. Linux's inotify needs one watch per folder, and a vault with a big Git history or `node_modules` can pass the system limit `fs.inotify.max_user_watches`.
+
+When that happens the vault is checked by polling instead (nothing goes stale), and one notice explains it when the vault opens. macOS is unchanged.
+
+| Key | Default | What it does |
+| --- | --- | --- |
+| `files.watch_poll_ms` | `5000` | How often, in milliseconds (500 to 600000), the polling fallback checks the vault. Read when the vault opens, and only if the fallback is needed. |
+
+To get the normal watcher back, raise the limit: `sudo sysctl fs.inotify.max_user_watches=524288` for now, or put `fs.inotify.max_user_watches=524288` in `/etc/sysctl.d/99-vaultdraw.conf` to keep it, then reopen the vault. Polling costs CPU in proportion to the vault's size, so a longer interval suits a very large vault.
+
+## Read-only drawing files
+
+A drawing whose file has no write permission (`chmod -w`, or Locked in Finder) opens in view mode with a banner: "Read-only file: make it writable to edit", and a **Save a copy** button (the same as `Save a copy` in the palette, `file.saveCopy`). Saving over such a file is refused by the app as well. Make the file writable and the banner and view mode lift on their own. There is no key for this: the file's own permission decides.
+
 ## Extensions
 
 Built-in features you can turn off. Off means not loaded: the feature registers no command, starts no service and uses no memory. Turn them on or off in **Settings → Extensions**, with the palette ("Extensions: Toggle Graph view", one command per extension, rebindable in `[hotkeys]`), or in `config.toml`. Changes apply at once.
@@ -1876,6 +1892,7 @@ Creating and deleting drawings.
 | `templates_folder` | `"Templates"` | a non-empty folder path inside the vault like "Templates" | yes | Vault folder holding your templates. See [Templates](#templates). |
 | `list_start` | `"idle"` | "open", "idle" or "use" |  | When every vault folder is listed for recent drawings, the file switcher, link suggestions and the move dialog: `open`, `idle` or `use` (the first of those). The file tree loads at open either way. See [Startup](#startup). |
 | `speculative_open` | `true` | true or false |  | Read and parse a drawing when you press on it in the file tree, a tab or the switcher, before the click lands, so it opens sooner. Holds one drawing for a moment; costs nothing when off or unused. See [Speed trade-offs](#speed-trade-offs). |
+| `watch_poll_ms` | `5000` | a whole number of milliseconds between 500 and 600000 |  | Linux: how often, in milliseconds, a vault is checked for changes when the system's inotify watch limit stops the normal file watcher. Read when the vault opens; unused (and never read) while the normal watcher works. See [Large vaults on Linux](#large-vaults-on-linux). |
 
 ### `[links]`
 

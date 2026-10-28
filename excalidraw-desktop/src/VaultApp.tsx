@@ -89,6 +89,7 @@ import {
   setWorkspaceBridge,
 } from "./plugins/workspaceBridge";
 import { useVaultDocument } from "./vault/useVaultDocument";
+import { watchFallbackMessage } from "./vault/watchFallbackNotice";
 import { useAppearance } from "./vault/useAppearance";
 import { useSnippets } from "./snippets/useSnippets";
 import { runZoomCommand, useInterfaceZoom } from "./vault/useInterfaceZoom";
@@ -594,6 +595,19 @@ export const VaultApp = ({
             } more; see Settings > General)`,
     });
   }, [warningsKey]);
+  // Linux: the native file watcher could not start for this vault (inotify limit), so it is polled; say so once.
+  const toastedWatchFallback = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const fallback = vault?.watchFallback;
+    if (!vault || !fallback || toastedWatchFallback.current.has(vault.handle)) {
+      return;
+    }
+    toastedWatchFallback.current.add(vault.handle);
+    toastStore.push({
+      message: watchFallbackMessage(fallback),
+      durationMs: 20_000,
+    });
+  }, [vault]);
   const allProblems = [
     ...settingsErrors,
     ...pluginSettingProblems,

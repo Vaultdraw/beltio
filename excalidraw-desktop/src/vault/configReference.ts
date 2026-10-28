@@ -198,6 +198,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       speculative_open: {
         doc: "Read and parse a drawing when you press on it in the file tree, a tab or the switcher, before the click lands, so it opens sooner. Holds one drawing for a moment; costs nothing when off or unused. See [Speed trade-offs](#speed-trade-offs).",
       },
+      watch_poll_ms: {
+        doc: "Linux: how often, in milliseconds, a vault is checked for changes when the system's inotify watch limit stops the normal file watcher. Read when the vault opens; unused (and never read) while the normal watcher works. See [Large vaults on Linux](#large-vaults-on-linux).",
+      },
     },
   },
   {
