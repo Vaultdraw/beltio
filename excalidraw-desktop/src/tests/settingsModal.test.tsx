@@ -56,7 +56,7 @@ describe("SettingsModal component and preference persistence", () => {
       screen.getByRole("searchbox", { name: "Search settings" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Mode")).toBeInTheDocument();
-    expect(screen.getByText("Colour Theme")).toBeInTheDocument();
+    expect(screen.getByText("Colour theme")).toBeInTheDocument();
   });
 
   it("lists Mode, sync, accent, canvas pattern, then the theme grid", () => {
@@ -157,8 +157,8 @@ describe("SettingsModal component and preference persistence", () => {
     const defaultsTab = screen.getByRole("tab", { name: "Drawing" });
     fireEvent.click(defaultsTab);
 
-    expect(screen.getByText("Default Font Family")).toBeInTheDocument();
-    expect(screen.getByText("Default Stroke Width")).toBeInTheDocument();
+    expect(screen.getByText("Default font family")).toBeInTheDocument();
+    expect(screen.getByText("Default stroke width")).toBeInTheDocument();
 
     const boldBtn = screen.getByRole("button", { name: "Bold (4px)" });
     fireEvent.click(boldBtn);

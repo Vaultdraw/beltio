@@ -48,7 +48,7 @@ export const ProfileDialog = ({ mode, onClose }: Props) => {
     return (
       <ConfirmModal
         title="Delete profile"
-        message={`Delete the profile "${toDelete}" and its files (profiles/${toDelete}/)? Your config.toml is not touched.${
+        message={`Delete the profile "${toDelete}" and its files (profiles/${toDelete}/)? Your config file is not touched.${
           toDelete === active ? " The default profile applies afterwards." : ""
         }`}
         confirmLabel="Delete profile"

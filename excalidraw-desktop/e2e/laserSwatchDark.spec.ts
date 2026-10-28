@@ -17,7 +17,7 @@ test("dark Tools > Laser: the swatch and preview show the real laser colour", as
   await openDrawing(page, "Graphs");
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");

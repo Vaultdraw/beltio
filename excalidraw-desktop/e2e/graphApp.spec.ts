@@ -77,7 +77,7 @@ test("Mod+Alt+G opens the graph over the canvas, hover shows name and shortcut r
   const canvas = page.locator(".vault-editor canvas.interactive");
   const before = await canvas.screenshot();
   await openGraph(page);
-  await expect(page.getByLabel("Vault File Navigator")).toBeVisible();
+  await expect(page.getByLabel("Vault file navigator")).toBeVisible();
   // The editor is hidden and inert while the graph is open.
   await expect(page.locator(".vault-editor-container")).toBeHidden();
   expect(
@@ -228,7 +228,7 @@ test("per-vault graph settings persist to settings.toml across a reload", async 
     .toBe(false);
   await page.reload();
   await page.waitForFunction(() => (window as any).__pluginsReady === true);
-  await expect(page.getByLabel("Vault File Navigator")).toBeVisible();
+  await expect(page.getByLabel("Vault file navigator")).toBeVisible();
   await page
     .locator(".vault-tree-item__name", { hasText: "Hub" })
     .first()

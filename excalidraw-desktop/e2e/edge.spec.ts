@@ -197,7 +197,9 @@ test("3. external edit while local edits are pending is a conflict, not silent l
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Save as Copy" }).click();
   const copyPath = await dialog.locator("#copy-path-input").inputValue();
-  await dialog.getByRole("button", { name: "Save Copy & Continue" }).click();
+  await dialog
+    .getByRole("button", { name: "Save a copy and continue" })
+    .click();
   await expect
     .poll(async () => (await liveRectangles(page, copyPath)).length, {
       timeout: 5000,
@@ -315,7 +317,7 @@ test("7. typing in rename and new-folder inputs never triggers canvas tools", as
   await rename.getByRole("button", { name: "Close" }).click();
   await expect(rename).toHaveCount(0);
 
-  await page.getByRole("button", { name: "New Folder" }).click();
+  await page.getByRole("button", { name: "New folder" }).click();
   const folder = page.getByRole("dialog");
   await expect(folder).toBeVisible();
   await folder.getByLabel("Name").click();

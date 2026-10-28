@@ -18,7 +18,7 @@ test("dark Tools > Text: the selected black swatch and the sample text show the 
   await openDrawing(page, "Graphs");
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");

@@ -35,7 +35,7 @@ vi.mock("../editor/VaultEditor", () => ({
   },
 }));
 
-const navTree = () => within(screen.getByLabelText("Vault File Navigator"));
+const navTree = () => within(screen.getByLabelText("Vault file navigator"));
 const input = () => screen.getByPlaceholderText(/Search drawings/i);
 
 /** The command registry binds Mod (Cmd on macOS, Ctrl elsewhere): pick one. */
@@ -247,7 +247,7 @@ describe("vault search flow", () => {
   it("Cmd+Shift+F expands a collapsed navigator and focuses the input", async () => {
     setNavigatorCollapsed(true, window);
     setup();
-    const aside = screen.getByLabelText("Vault File Navigator", {
+    const aside = screen.getByLabelText("Vault file navigator", {
       selector: "aside",
     });
     expect(aside).toHaveAttribute("aria-hidden", "true");

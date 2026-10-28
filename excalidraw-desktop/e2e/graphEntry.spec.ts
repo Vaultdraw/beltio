@@ -33,7 +33,7 @@ const session = (page: Page) =>
   });
 
 const graph = (page: Page) => page.getByTestId("graph-view");
-const navigator = (page: Page) => page.getByLabel("Vault File Navigator");
+const navigator = (page: Page) => page.getByLabel("Vault file navigator");
 // The activity bar (on by default) owns the Graph entry; the navigator toolbar
 // button is not rendered while it is on.
 const graphButton = (page: Page) => page.getByTestId("activity-bar-graph");

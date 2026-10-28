@@ -13,7 +13,7 @@ test("a backup is started from Settings and its result is shown", async ({
   await openVault(page, "?config=1");
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");

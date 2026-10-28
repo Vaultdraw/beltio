@@ -72,7 +72,7 @@ export function nextRevealScroll(
     : scrollTop + Math.max(200, clientHeight * 0.8);
 }
 
-/** Click "Open Vault Folder" on the onboarding screen; resolves once `ready()` holds. Returns elapsed ms. */
+/** Click "Open vault folder" on the onboarding screen; resolves once `ready()` holds. Returns elapsed ms. */
 export async function openVaultFolder(
   kit: PerfKit,
   ready: () => boolean,
@@ -85,11 +85,11 @@ export async function openVaultFolder(
   }
   const button = Array.from(root.querySelectorAll("button")).find(
     (item) =>
-      item.getAttribute("aria-label") === "Open Vault Folder" ||
-      item.textContent?.trim() === "Open Vault Folder",
+      item.getAttribute("aria-label") === "Open vault folder" ||
+      item.textContent?.trim() === "Open vault folder",
   );
   if (!button) {
-    throw new Error('"Open Vault Folder" button not found');
+    throw new Error('"Open vault folder" button not found');
   }
   // Diagnostics: track the choose_vault IPC so a hang can be placed (IPC vs UI).
   let choose = "not called";

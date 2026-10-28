@@ -627,7 +627,7 @@ const HotkeysPage = () => {
             className="vault-hotkeys__link"
             onClick={() => void handleOpenConfig()}
           >
-            Open hotkeys in config.toml
+            Open keys in config file
           </button>
           {openError && (
             <span className="vault-config-status--error" role="status">

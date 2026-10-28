@@ -590,7 +590,7 @@ test("dark theme and zoom 2: dotted, dashed and solid shapes draw where they are
   const errors = trackErrors(page);
   const ctx = await startDrawing(page);
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");
@@ -600,7 +600,7 @@ test("dark theme and zoom 2: dotted, dashed and solid shapes draw where they are
     .getByRole("button", { name: "Dark" })
     .click();
   await expect(page.locator("html")).toHaveClass(/dark/);
-  await page.getByRole("button", { name: "Close Settings" }).click();
+  await page.getByRole("button", { name: "Close settings" }).click();
   for (let k = 0; k < 10; k++) {
     await page.getByRole("button", { name: "Zoom in" }).click();
   }

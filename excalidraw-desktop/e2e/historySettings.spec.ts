@@ -36,7 +36,7 @@ const settingRow = (page: Page, id: string) =>
 
 const openSettings = async (page: Page) => {
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   await expect(dialog(page)).toBeVisible();
@@ -45,7 +45,7 @@ const openSettings = async (page: Page) => {
 };
 
 const closeSettings = async (page: Page) => {
-  await dialog(page).getByRole("button", { name: "Close Settings" }).click();
+  await dialog(page).getByRole("button", { name: "Close settings" }).click();
   await expect(dialog(page)).toHaveCount(0);
 };
 

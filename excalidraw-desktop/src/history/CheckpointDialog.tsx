@@ -75,7 +75,7 @@ export const CheckpointDialog = ({
             className="vault-btn vault-btn--primary"
             disabled={saving || !trimmed}
           >
-            {saving ? "Saving..." : "Save checkpoint"}
+            {saving ? "Saving…" : "Save checkpoint"}
           </button>
         </>
       }

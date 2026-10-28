@@ -115,7 +115,7 @@ test("tool default font applies to an existing drawing; a pick is a per-drawing 
 
   // (2) Settings > Tools > Text > Font = Cascadia
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");
@@ -131,7 +131,7 @@ test("tool default font applies to an existing drawing; a pick is a per-drawing 
     String(CASCADIA),
   );
   await page.screenshot({ path: `${SHOTS}/01-settings-default-font.png` });
-  await page.getByRole("button", { name: "Close Settings" }).click();
+  await page.getByRole("button", { name: "Close settings" }).click();
 
   // (3) existing drawing: new text uses the default, old text is unchanged
   await openDrawing(page, "Graphs");

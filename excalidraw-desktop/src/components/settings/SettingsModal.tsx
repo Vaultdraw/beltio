@@ -268,7 +268,7 @@ export const SettingsModal = ({
                 type="button"
                 className="vault-btn vault-btn--ghost vault-btn--icon"
                 onClick={onClose}
-                aria-label="Close Settings"
+                aria-label="Close settings"
               >
                 <IconClose />
               </button>

@@ -7,7 +7,7 @@ import { openDrawing, openVault, trackErrors } from "./helpers";
 test("navigator can be resized and remembers its width", async ({ page }) => {
   const errors = trackErrors(page);
   await openVault(page);
-  const nav = page.getByLabel("Vault File Navigator");
+  const nav = page.getByLabel("Vault file navigator");
   const before = (await nav.boundingBox())!.width;
   const handle = page.getByRole("separator", { name: "Resize navigator" });
   const box = (await handle.boundingBox())!;
@@ -43,24 +43,24 @@ test("navigator collapse toggle hides and restores the tree", async ({
   // One toggle only (#47): the header button; the pane has no collapse button.
   await expect(
     page
-      .getByLabel("Vault File Navigator")
+      .getByLabel("Vault file navigator")
       .getByRole("button", { name: /Collapse Navigator|Hide navigator/i }),
   ).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: /^(Hide|Show) Navigator$/ }),
   ).toHaveCount(1);
-  await page.getByRole("button", { name: "Hide Navigator" }).click();
+  await page.getByRole("button", { name: "Hide navigator" }).click();
   await expect
     .poll(
       async () =>
         (
           await page
-            .getByLabel("Vault File Navigator", { exact: true })
+            .getByLabel("Vault file navigator", { exact: true })
             .boundingBox()
         )?.width ?? 0,
     )
     .toBeLessThan(2);
-  await page.getByRole("button", { name: "Show Navigator" }).click();
+  await page.getByRole("button", { name: "Show navigator" }).click();
   await expect(page.locator(".vault-tree-item").first()).toBeVisible();
 });
 

@@ -369,15 +369,15 @@ test("dropping a .pdf on the canvas opens the import dialog", async ({
 
 test("settings: Files page lists the PDF section", async ({ page }) => {
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const modal = page.locator(".vault-settings-modal");
   await expect(modal).toBeVisible();
   await modal.getByRole("tab", { name: "Files" }).click();
-  await expect(modal.getByText("PDF Import Resolution")).toBeVisible();
-  await expect(modal.getByText("Lock Imported PDF Pages")).toBeVisible();
-  await expect(modal.getByText("PDF Import JPEG Quality")).toBeVisible();
+  await expect(modal.getByText("PDF import resolution")).toBeVisible();
+  await expect(modal.getByText("Lock imported PDF pages")).toBeVisible();
+  await expect(modal.getByText("PDF import JPEG quality")).toBeVisible();
 });
 
 test("Unlock all makes imported (locked) pages editable", async ({ page }) => {

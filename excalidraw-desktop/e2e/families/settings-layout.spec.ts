@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+
 import { test } from "../fixture";
 
 import { openVault, trackErrors } from "../helpers";
@@ -105,7 +106,7 @@ const box = async (l: Locator): Promise<Box> => {
 
 const openSettings = async (page: Page) => {
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   return page.getByRole("dialog");

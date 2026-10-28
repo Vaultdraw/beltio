@@ -103,7 +103,7 @@ test.beforeEach(async ({ page }) => {
 
 test("1. create a folder at root via UI", async ({ page }, info) => {
   const errors = trackErrors(page);
-  await page.getByRole("button", { name: "New Folder" }).click();
+  await page.getByRole("button", { name: "New folder" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await dialog.getByLabel("Name").fill("Notes");
@@ -124,7 +124,7 @@ test("2. create a drawing inside a folder, draw, and save", async ({
   page,
 }, info) => {
   const errors = trackErrors(page);
-  await page.getByRole("button", { name: "New Folder" }).click();
+  await page.getByRole("button", { name: "New folder" }).click();
   await page.getByRole("dialog").getByLabel("Name").fill("Notes");
   await page
     .getByRole("dialog")
@@ -163,7 +163,7 @@ test("2b. create a subfolder from a folder's menu", async ({ page }) => {
   const errors = trackErrors(page);
   await (await rowAction(page, "DSA", "New folder")).click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog).toContainText("New Folder in /DSA");
+  await expect(dialog).toContainText("New folder in /DSA");
   await dialog.getByLabel("Name").fill("Trees");
   await dialog.getByRole("button", { name: "Create" }).click();
   await expect(dialog).toHaveCount(0);
@@ -204,7 +204,7 @@ test("2d. Escape closes every dialog, however it was opened", async ({
   const dialog = page.getByRole("dialog");
 
   // New folder (toolbar button), focus in the name input.
-  await page.getByRole("button", { name: "New Folder" }).click();
+  await page.getByRole("button", { name: "New folder" }).click();
   await expect(dialog).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
@@ -214,7 +214,7 @@ test("2d. Escape closes every dialog, however it was opened", async ({
   await page.keyboard.press("Meta+Shift+KeyP");
   await page.keyboard.type("new drawing in selected");
   await page.keyboard.press("Enter");
-  await expect(dialog).toContainText("New Drawing in /DSA");
+  await expect(dialog).toContainText("New drawing in /DSA");
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
 
@@ -327,7 +327,7 @@ test("5b. moving an expanded folder keeps it open, with no error", async ({
   page,
 }) => {
   const errors = trackErrors(page);
-  await page.getByRole("button", { name: "New Folder" }).click();
+  await page.getByRole("button", { name: "New folder" }).click();
   await page.getByRole("dialog").getByLabel("Name").fill("Archive");
   await page
     .getByRole("dialog")
@@ -340,7 +340,7 @@ test("5b. moving an expanded folder keeps it open, with no error", async ({
   await (await rowAction(page, "Dynamic Programming", "Move to…")).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("treeitem", { name: "Archive", exact: true }).click();
-  await dialog.getByRole("button", { name: "Move Here" }).click();
+  await dialog.getByRole("button", { name: "Move here" }).click();
   await expect(dialog).toHaveCount(0);
   // The native watcher reports the old and new paths (the fake rescans).
   await page.evaluate(() => {
@@ -510,7 +510,7 @@ test("10. dark theme via settings applies to app and canvas", async ({
 }, info) => {
   const errors = trackErrors(page);
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");

@@ -15,7 +15,7 @@ test("Start file list setting switches by click and Recent still lists nested dr
   await openVault(page);
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");

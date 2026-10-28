@@ -12,7 +12,7 @@ test("Settings → Interface → Memory: the low-memory canvas switch is off by 
   const errors = trackErrors(page);
   await openVault(page);
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");

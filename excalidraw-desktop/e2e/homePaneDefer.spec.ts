@@ -38,11 +38,11 @@ test("opening a vault shows the tree, then the home pane in the same place", asy
 
   const pane = page.locator(".vault-home");
   await expect(
-    pane.getByRole("heading", { name: /No Drawing Open/i }),
+    pane.getByRole("heading", { name: /No drawing open/i }),
   ).toBeVisible();
   await expect(pane.locator(".vault-home__action")).toHaveCount(4);
   await expect(
-    page.getByLabel("Vault File Navigator").locator("[data-tree-path]").first(),
+    page.getByLabel("Vault file navigator").locator("[data-tree-path]").first(),
   ).toBeVisible();
 
   const probe = () =>
@@ -60,7 +60,7 @@ test("opening a vault shows the tree, then the home pane in the same place", asy
   await expect(page.locator(".vault-editor canvas.interactive")).toBeVisible();
   await page.getByRole("button", { name: /^Close Graphs/ }).click();
   await expect(
-    pane.getByRole("heading", { name: /No Drawing Open/i }),
+    pane.getByRole("heading", { name: /No drawing open/i }),
   ).toBeVisible();
   expect((await probe()).empties).toBe(atOpen.empties);
   expect(errors).toEqual([]);

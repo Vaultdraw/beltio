@@ -26,7 +26,7 @@ const SETTINGS_PAGES = [
 
 const openSettings = async (page: Page) => {
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");
@@ -206,7 +206,7 @@ for (const theme of THEMES) {
     });
 
     await surface("22", "create-dialog", async () => {
-      await page.getByRole("button", { name: "New Drawing" }).first().click();
+      await page.getByRole("button", { name: "New drawing" }).first().click();
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.keyboard.type("Sketch");
       await page.waitForTimeout(250);
@@ -299,7 +299,7 @@ for (const theme of THEMES) {
       });
       await page.goto("/e2e.html");
       await expect(
-        page.getByRole("button", { name: /Open Vault Folder/ }),
+        page.getByRole("button", { name: /Open vault folder/ }),
       ).toBeVisible();
       await page.waitForTimeout(300);
     });

@@ -25,7 +25,7 @@ test("an unknown config.toml key is a warning in a toast and in Settings, and Re
   await expect(page.getByTestId("settings-problem-banner")).toHaveCount(0);
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");

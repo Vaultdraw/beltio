@@ -79,7 +79,7 @@ test("Canvas: Group selection rebound on the Hotkeys page: the old key stops, th
 
   // Settings → Hotkeys, by clicking.
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const modal = page.locator(".vault-settings-modal");
@@ -107,7 +107,7 @@ test("Canvas: Group selection rebound on the Hotkeys page: the old key stops, th
   await expect(page.getByText("Press keys…")).toBeVisible();
   await page.keyboard.press("Alt+KeyG");
   await expect(chips).toHaveCount(1);
-  await page.getByRole("button", { name: "Close Settings" }).click();
+  await page.getByRole("button", { name: "Close settings" }).click();
   await expect(modal).toHaveCount(0);
 
   // Select both rectangles on the canvas.

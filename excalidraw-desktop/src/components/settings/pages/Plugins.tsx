@@ -119,15 +119,15 @@ const extText = (extensions: readonly string[]) =>
 export const clashText = (c: ImporterClash): string => {
   const others = c.others.map((o) => o.pluginId).join(", ");
   if (c.unknownChoice) {
-    return `plugins.importers sets .${c.extension} to ${
-      c.unknownChoice
-    }, which does not import it. ${
+    return `Your config file picks ${c.unknownChoice} for .${
+      c.extension
+    } files, but it doesn’t import them. ${
       c.winner ? `${c.winner.pluginId} imports it instead.` : ""
     }`.trim();
   }
   return c.winner
-    ? `.${c.extension} is claimed by ${c.winner.pluginId} and ${others}. ${c.winner.pluginId} imports it. Set plugins.importers in config.toml to choose.`
-    : `.${c.extension} is not imported by plugins (plugins.importers is empty for it). Claimed by ${others}.`;
+    ? `.${c.extension} is claimed by ${c.winner.pluginId} and ${others}. ${c.winner.pluginId} imports it. Choose another in the importers setting of your config file.`
+    : `.${c.extension} files aren’t imported: your config file turns importing off for them. Plugins that can: ${others}.`;
 };
 
 /** "Imports: .txt" per plugin that declares importers, plus clash problems. */
@@ -507,7 +507,7 @@ export const PluginsPage = () => {
             pending.info.name
           } saved (${formatDataSize(
             pending.bytes,
-          )}). Its settings in config.toml stay. This cannot be undone.`}
+          )}). Its settings in your config file stay. This can’t be undone.`}
           confirmLabel="Delete data"
           isDanger
           onCancel={() => setPending(null)}

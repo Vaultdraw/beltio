@@ -24,7 +24,7 @@ test("Config files lists an included file and a setting's chip names it", async 
   await openVault(page, "?config=1");
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");

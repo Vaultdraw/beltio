@@ -56,7 +56,7 @@ test.describe("render bursts and the live editor", () => {
     // Sync canvas with theme on (Dracula): the case where each render used to
     // flash the editor through standard colours and back.
     await page
-      .getByLabel("Vault File Navigator")
+      .getByLabel("Vault file navigator")
       .getByRole("button", { name: "Settings" })
       .click();
     const dialog = page.getByRole("dialog");

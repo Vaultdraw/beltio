@@ -71,7 +71,7 @@ const svgColours = (svg: string) =>
 
 const openSettings = async (page: Page) => {
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");

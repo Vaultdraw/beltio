@@ -154,7 +154,7 @@ export const SaveTemplateModal = ({
               className="vault-btn vault-btn--primary"
               disabled={submitting || !name.trim()}
             >
-              {submitting ? "Saving..." : "Save"}
+              {submitting ? "Saving…" : "Save"}
             </button>
           </div>
         </form>

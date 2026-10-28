@@ -11,7 +11,7 @@ test("Settings > Control: the AI switch asks first, then shows the MCP sub-switc
   await openVault(page);
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const settings = page.getByRole("dialog");

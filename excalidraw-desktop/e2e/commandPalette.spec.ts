@@ -468,7 +468,7 @@ test.describe("two modes: Cmd+P files, Cmd+Shift+P commands", () => {
 test.describe("navigator collapsed", () => {
   const collapse = async (page: Page) => {
     await page.keyboard.press("Meta+Backslash");
-    await expect(page.getByLabel("Vault File Navigator")).toHaveAttribute(
+    await expect(page.getByLabel("Vault file navigator")).toHaveAttribute(
       "aria-hidden",
       "true",
     );
@@ -504,7 +504,7 @@ test.describe("navigator collapsed", () => {
     await openGraphs(page);
     await collapse(page);
     for (const [query, label, title] of [
-      ["new folder", "New folder", "New Folder"],
+      ["new folder", "New folder", "New folder"],
       ["rename drawing", "Rename drawing", "Rename Drawing"],
     ] as const) {
       await runCommand(page, query, label);
@@ -523,7 +523,7 @@ test.describe("navigator collapsed", () => {
     await collapse(page);
     await runCommand(page, "new folder", "New folder");
     await page.keyboard.press("Enter");
-    const dialog = page.locator(".vault-modal", { hasText: "New Folder" });
+    const dialog = page.locator(".vault-modal", { hasText: "New folder" });
     await expect(dialog).toBeVisible();
     await expect(dialog.locator("input")).toBeFocused();
     await dialog.locator("input").fill("Palette Folder");

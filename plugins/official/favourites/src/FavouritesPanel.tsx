@@ -8,6 +8,12 @@ import { labelOf, move, relabel, removeAt, type Favourite } from "./model";
 
 import type { FavouritesStore } from "./store";
 
+/** Panel-local keys (not commands), named the way this platform's keyboard prints them. */
+const MOVE_KEYS =
+  typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform)
+    ? "⌥↑ / ⌥↓"
+    : "Alt+↑ / Alt+↓";
+
 const dirOf = (path: string) =>
   path.slice(0, Math.max(0, path.lastIndexOf("/")));
 
@@ -57,8 +63,8 @@ export default function FavouritesPanel({
       <h2 className="vd-fav-title">Favourites</h2>
       {items.length === 0 ? (
         <p className="vd-fav-empty">
-          Nothing yet. Right-click a drawing or note and choose "Favourite: add
-          or remove", or press Mod+Alt+J in an open drawing.
+          Nothing yet. Right-click a drawing or note and choose “Favourite: add
+          or remove”, or run it from the command palette.
         </p>
       ) : (
         <ul className="vd-fav-list" aria-label="Favourites">
@@ -138,7 +144,7 @@ export default function FavouritesPanel({
       )}
       {items.length > 1 ? (
         <p className="vd-fav-hint">
-          Drag or Alt+Up / Alt+Down to reorder, F2 to rename, Delete to remove.
+          Drag or press {MOVE_KEYS} to reorder, F2 to rename, Delete to remove.
         </p>
       ) : null}
     </div>

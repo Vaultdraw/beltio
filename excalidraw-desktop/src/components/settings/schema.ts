@@ -136,7 +136,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     page: "general",
     label: "Profile",
     description:
-      "A profile is a folder of settings, keys and extensions layered over config.toml. Switch, make, copy or delete one; default is your plain config.",
+      "A profile is a folder of settings, keys and extensions layered over your config file. Switch, make, copy or delete one; the default is your plain config file.",
     keywords: ["profiles", "switch", "workspace", "config", "keys", "theme"],
   },
   {
@@ -144,15 +144,15 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     page: "general",
     label: "Backup",
     description:
-      "Write a zip of this vault (drawings, notes, attachments) to a folder you pick, checked after writing. Restore puts a backup into a new folder and never overwrites anything. Schedule it with [backup] in config.toml.",
+      "Write a zip of this vault (drawings, notes, attachments) to a folder you pick, checked after writing. Restore puts a backup into a new folder and never overwrites anything. Schedule it in the backup section of your config file.",
     keywords: ["backup", "restore", "archive", "zip", "export"],
   },
   {
     id: "config-file",
     page: "general",
-    label: "Config File",
+    label: "Config file",
     description:
-      "Your config.toml is yours to edit by hand. What you change in Settings is saved to overrides.toml and wins over it. Changes apply live.",
+      "Your config file is yours to edit by hand. What you change in Settings is saved apart and wins over it. Changes apply live.",
     keywords: [
       "config.toml",
       "overrides.toml",
@@ -229,8 +229,8 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "canvas-background",
     page: "appearance",
-    label: "Default Canvas Background",
-    description: "Background color applied to newly created drawings.",
+    label: "Default canvas background",
+    description: "Background colour for new drawings.",
     keywords: ["canvas", "background", "colour", "color", "new drawing"],
     configKey: "appearance.canvas_background",
   },
@@ -268,7 +268,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "colour-theme",
     page: "appearance",
-    label: "Colour Theme",
+    label: "Colour theme",
     description:
       "Colours for the whole app. Every theme works in light and dark mode.",
     keywords: ["color", "theme", "palette", "noctalia", "skin"],
@@ -278,7 +278,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "install-theme",
     page: "appearance",
-    label: "Install Themes",
+    label: "Install themes",
     description:
       "Ten themes are built in. Browse the community themes, or download one from a URL or a GitHub repo, then update or remove them here.",
     keywords: [
@@ -299,7 +299,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "themes-folder",
     page: "appearance",
-    label: "Themes Folder",
+    label: "Themes folder",
     description:
       "Drop Noctalia palettes (.json) here; they appear above automatically.",
     keywords: ["theme", "folder", "noctalia", "json", "custom", "import"],
@@ -326,7 +326,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "theme-previews",
     page: "appearance",
-    label: "Theme Preview Images",
+    label: "Theme preview images",
     description:
       "The theme browser downloads a small preview image for each theme you scroll to. Off shows colour swatches only.",
     keywords: ["theme", "browse", "preview", "image", "download"],
@@ -335,7 +335,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "theme-index-ttl",
     page: "appearance",
-    label: "Refresh the Themes List",
+    label: "Refresh the themes list",
     description:
       "How long the theme browser keeps its list before fetching it again. 0 fetches every time it opens.",
     keywords: ["theme", "browse", "list", "cache", "refresh", "hours"],
@@ -346,7 +346,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "page-mode",
     page: "page",
-    label: "Default Mode for New Drawings",
+    label: "Default mode for new drawings",
     description:
       "Normal is the infinite canvas; Pages simulates sheets of paper with vertical scrolling. Each drawing can switch from the canvas menu.",
     keywords: ["page", "pages", "paper", "canvas", "infinite", "new drawing"],
@@ -364,7 +364,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "page-size",
     page: "page",
-    label: "Page Size",
+    label: "Page size",
     description:
       "A3, A4, A5, B5, Letter, Legal, tablet and phone sizes, or a custom width and height in pixels.",
     keywords: [
@@ -395,7 +395,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "page-paper-theme",
     page: "page",
-    label: "Paper Theme",
+    label: "Paper theme",
     description:
       "Normal is clean white paper; Old school is yellowed paper with blue lines and a red margin; Match current theme follows the app theme.",
     keywords: [
@@ -414,7 +414,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "interface-zoom",
     page: "interface",
-    label: "Interface Zoom",
+    label: "Interface zoom",
     description: "Scales the whole window. Cmd+Shift +/- and 0 also work.",
     keywords: ["zoom", "scale", "magnify", "size", "cmd shift plus minus"],
     configKey: "interface.zoom",
@@ -486,7 +486,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "sort-order",
     page: "interface",
-    label: "Navigator Sort Order",
+    label: "Navigator sort order",
     description: "How folders and drawings are ordered in the file navigator.",
     keywords: [
       "sort",
@@ -505,7 +505,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "font-family",
     page: "drawing",
-    label: "Default Font Family",
+    label: "Default font family",
     description: "Font used when typing text in new drawings.",
     keywords: ["font", "text", "typeface", "excalifont", "drawing defaults"],
     configKey: "editor.font_family",
@@ -513,7 +513,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "font-size",
     page: "drawing",
-    label: "Default Font Size",
+    label: "Default font size",
     description: "Initial text size for new text elements.",
     keywords: ["font", "text", "size", "drawing defaults"],
     configKey: "editor.font_size",
@@ -521,23 +521,23 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "stroke-color",
     page: "drawing",
-    label: "Default Stroke Color",
-    description: "Primary line and shape outline color.",
+    label: "Default stroke colour",
+    description: "Colour of lines and shape outlines.",
     keywords: ["colour", "line", "outline", "stroke", "drawing defaults"],
     configKey: "editor.stroke_color",
   },
   {
     id: "background-fill",
     page: "drawing",
-    label: "Default Background Fill",
-    description: "Shape interior fill color.",
+    label: "Default background fill",
+    description: "Colour inside shapes.",
     keywords: ["colour", "fill", "background", "shape", "drawing defaults"],
     configKey: "editor.background_color",
   },
   {
     id: "fill-style",
     page: "drawing",
-    label: "Default Fill Style",
+    label: "Default fill style",
     description: "Shading and texture pattern for shape backgrounds.",
     keywords: ["hachure", "cross-hatch", "solid", "fill", "drawing defaults"],
     configKey: "editor.fill_style",
@@ -545,7 +545,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "stroke-width",
     page: "drawing",
-    label: "Default Stroke Width",
+    label: "Default stroke width",
     description: "Line thickness for shapes, lines, and arrows.",
     keywords: ["thickness", "line", "thin", "bold", "drawing defaults"],
     configKey: "editor.stroke_width",
@@ -553,7 +553,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "roughness",
     page: "drawing",
-    label: "Default Roughness",
+    label: "Default roughness",
     description: "Hand-drawn sketch intensity.",
     keywords: ["sloppiness", "architect", "artist", "cartoonist", "sketch"],
     configKey: "editor.roughness",
@@ -564,7 +564,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     id: "pen-presets",
     page: "tools",
     section: "pen",
-    label: "Pen Presets",
+    label: "Pen presets",
     description:
       "Saved pens for freehand drawing. Select one from the pen bar or with Alt+1 to Alt+9 (change these keys on the Hotkeys page).",
     keywords: [
@@ -586,7 +586,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     id: "laser-color",
     page: "tools",
     section: "laser",
-    label: "Laser Colour",
+    label: "Laser colour",
     description: "Colour of the laser pointer trail.",
     keywords: [
       "laser",
@@ -603,7 +603,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     id: "laser-size",
     page: "tools",
     section: "laser",
-    label: "Laser Size",
+    label: "Laser size",
     description: "Thickness of the laser pointer trail in pixels.",
     keywords: ["laser", "pointer", "trail", "presentation", "thickness"],
     configKey: "laser.size",
@@ -612,7 +612,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     id: "laser-fade",
     page: "tools",
     section: "laser",
-    label: "Laser Fade Time",
+    label: "Laser fade time",
     description: "How long the laser trail takes to fade out, in milliseconds.",
     keywords: ["laser", "pointer", "trail", "presentation", "decay", "ms"],
     configKey: "laser.decay_ms",
@@ -621,7 +621,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     id: "laser-length",
     page: "tools",
     section: "laser",
-    label: "Laser Tail Length",
+    label: "Laser tail length",
     description: "Number of trail points over which the tail tapers off.",
     keywords: ["laser", "pointer", "trail", "presentation", "tail"],
     configKey: "laser.length",
@@ -707,7 +707,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "pdf-max-side",
     page: "files",
-    label: "PDF Import Resolution",
+    label: "PDF import resolution",
     description:
       "Longest side, in pixels, of an imported PDF page. Large imports are lowered automatically to stay within the pixel budget.",
     keywords: ["pdf", "import", "resolution", "size", "pixels", "quality"],
@@ -716,7 +716,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "pdf-format",
     page: "files",
-    label: "PDF Import Image Format",
+    label: "PDF import image format",
     description:
       "JPEG is much smaller; PNG is lossless but uses far more of the drawing size limit.",
     keywords: ["pdf", "import", "jpeg", "png", "format", "image"],
@@ -725,7 +725,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "pdf-quality",
     page: "files",
-    label: "PDF Import JPEG Quality",
+    label: "PDF import JPEG quality",
     description: "JPEG quality for imported pages (0.5 to 1).",
     keywords: ["pdf", "import", "jpeg", "quality", "compression"],
     configKey: "pdf_import.quality",
@@ -733,7 +733,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "pdf-lock-pages",
     page: "files",
-    label: "Lock Imported PDF Pages",
+    label: "Lock imported PDF pages",
     description:
       "Lock pages so annotating does not drag them. Right-click the canvas and choose Unlock all to edit them.",
     keywords: ["pdf", "import", "lock", "pages", "annotate"],
@@ -742,7 +742,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "pdf-warn-pages",
     page: "files",
-    label: "PDF Page Count Warning",
+    label: "PDF page count warning",
     description: "Warn before importing a PDF with more pages than this.",
     keywords: ["pdf", "import", "warn", "pages", "limit"],
     configKey: "pdf_import.warn_pages",
@@ -750,7 +750,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "pdf-pixel-budget",
     page: "files",
-    label: "PDF Import Pixel Budget",
+    label: "PDF import pixel budget",
     description:
       "Total megapixels one import may decode (memory use). Lower it on low-memory machines.",
     keywords: ["pdf", "import", "memory", "budget", "megapixels"],
@@ -786,7 +786,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "link-format",
     page: "links",
-    label: "New Link Format",
+    label: "New link format",
     description:
       "How a link to another drawing is written: the shortest unique name, a path relative to this drawing, or the full path from the vault root.",
     keywords: [
@@ -802,7 +802,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "link-shape-format",
     page: "links",
-    label: "Shape Link Format",
+    label: "Shape link format",
     description:
       "How a link on a shape is stored: [[Name]] (works with Obsidian) or a vaultdraw:// URL (opens in other Excalidraw apps).",
     keywords: ["wikilink", "url", "vaultdraw", "obsidian", "element link"],
@@ -811,7 +811,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "link-open-modifier",
     page: "links",
-    label: "Open Link Modifier",
+    label: "Open link modifier",
     description:
       "Key to hold while clicking a link to open the drawing it points to.",
     keywords: ["click", "modifier", "cmd", "ctrl", "alt", "shift", "mod"],
@@ -820,7 +820,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "link-update-on-rename",
     page: "links",
-    label: "Update Links on Rename",
+    label: "Update links on rename",
     description:
       "When a drawing is renamed or moved, rewrite the links that point to it: always, never, or ask each time.",
     keywords: [
@@ -836,7 +836,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "link-autocomplete",
     page: "links",
-    label: "Link Suggestions",
+    label: "Link suggestions",
     description: "Suggest drawings while you type [[ in a text element.",
     keywords: ["autocomplete", "suggest", "popup", "wikilink", "[["],
     configKey: "links.autocomplete",
@@ -844,7 +844,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "link-hint-chars",
     page: "links",
-    label: "Hint Characters",
+    label: "Hint characters",
     description:
       "Letters used for link hints (Vim style). At least 2 different lowercase characters, no spaces.",
     keywords: ["hint", "vimium", "keys", "letters", "alphabet", "keyboard"],
@@ -853,16 +853,16 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "link-style",
     page: "links",
-    label: "Style Links in Text",
+    label: "Style links in text",
     description:
-      "Draw [[links]] in text elements with the link colour and an underline. Brackets are dimmed, unresolved links are fainter with a dashed underline.",
+      "Draw links in text elements with the link colour and an underline. Brackets are dimmed, unresolved links are fainter with a dashed underline.",
     keywords: ["color", "colour", "underline", "highlight", "wikilink", "[["],
     configKey: "links.style_links",
   },
   {
     id: "link-color",
     page: "links",
-    label: "Link Colour",
+    label: "Link colour",
     description:
       "Colour of styled links: the theme accent, or a fixed colour that follows dark mode like any stroke.",
     keywords: ["color", "accent", "theme", "hex", "custom"],
@@ -871,7 +871,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "link-hover-preview",
     page: "links",
-    label: "Hover Preview",
+    label: "Hover preview",
     description:
       "Show a preview card of the linked drawing when you hover a link: always, only while holding the open modifier, or never.",
     keywords: ["preview", "hover", "card", "popup", "thumbnail", "tooltip"],
@@ -882,7 +882,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "tags-autocomplete",
     page: "links",
-    label: "Tag Suggestions",
+    label: "Tag suggestions",
     description: "Suggest existing tags while you type # in a text element.",
     keywords: ["tag", "hashtag", "autocomplete", "suggest", "popup", "#"],
     configKey: "tags.autocomplete",
@@ -890,7 +890,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
   {
     id: "tags-pane-sort",
     page: "links",
-    label: "Tags Pane Order",
+    label: "Tags pane order",
     description:
       "Default order of the Tags pane: by name or by number of drawings. Each vault can switch it from the pane.",
     keywords: ["tag", "sort", "order", "count", "name", "pane"],
@@ -912,7 +912,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     page: "hotkeys",
     label: "Hotkeys",
     description:
-      "Assign keyboard shortcuts to commands; changes are saved to [hotkeys] in config.toml.",
+      "Assign keyboard shortcuts to commands; changes are saved to your config file.",
     keywords: ["shortcuts", "keyboard", "keybindings", "keys", "commands"],
   },
 
@@ -922,7 +922,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     page: "extensions",
     label: "Built-in extensions",
     description:
-      "Turn search, links, tags, graph view, library, templates, history, thumbnails, formulas, Mermaid and PDF import on or off. Saved under [extensions].",
+      "Turn search, links, tags, graph view, library, templates, history, thumbnails, formulas, Mermaid and PDF import on or off. Saved in your config file.",
     keywords: [
       "extension",
       "feature",

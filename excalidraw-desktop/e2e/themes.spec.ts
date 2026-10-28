@@ -53,7 +53,7 @@ const closeTo = (a: number[], b: number[], tolerance = 2) =>
 
 const openSettings = async (page: Page) => {
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");
@@ -223,7 +223,7 @@ test("Install from URL in Settings asks once, downloads the theme and applies it
   const defaultBg = await rootVar(page, "--vault-bg");
 
   const settings = await openSettings(page);
-  await settings.getByRole("button", { name: "Install from URL..." }).click();
+  await settings.getByRole("button", { name: "Install from link…" }).click();
   const install = page.getByTestId("theme-install-dialog");
   await expect(install.getByTestId("theme-install-consent")).toBeVisible();
   expect(fixtureRequests).toEqual([]);
@@ -333,9 +333,7 @@ test("Install more themes in Settings opens the browser, filters, installs and a
   if (foldersBox) {
     expect(installBox!.y).toBeLessThan(foldersBox.y);
   }
-  await settings
-    .getByRole("button", { name: "Install more themes..." })
-    .click();
+  await settings.getByRole("button", { name: "Install more themes…" }).click();
   const browser = page.getByTestId("theme-browser-dialog");
   await expect(browser.getByTestId("theme-browser-consent")).toBeVisible();
   expect(requested).toEqual([]);

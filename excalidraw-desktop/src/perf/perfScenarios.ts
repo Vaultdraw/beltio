@@ -511,11 +511,11 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
     await scenario("vault-open", async () => {
       const openButton = Array.from(root.querySelectorAll("button")).find(
         (item) =>
-          item.getAttribute("aria-label") === "Open Vault Folder" ||
-          item.textContent?.trim() === "Open Vault Folder",
+          item.getAttribute("aria-label") === "Open vault folder" ||
+          item.textContent?.trim() === "Open vault folder",
       );
       if (!openButton) {
-        throw new Error('"Open Vault Folder" button not found');
+        throw new Error('"Open vault folder" button not found');
       }
       openButton.click();
       const paths = ctx.refreshRate?.drawings.map((d) => d.path) ?? [];
@@ -688,11 +688,11 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
     }
     const openButton = Array.from(root.querySelectorAll("button")).find(
       (item) =>
-        item.getAttribute("aria-label") === "Open Vault Folder" ||
-        item.textContent?.trim() === "Open Vault Folder",
+        item.getAttribute("aria-label") === "Open vault folder" ||
+        item.textContent?.trim() === "Open vault folder",
     );
     if (!openButton) {
-      throw new Error('"Open Vault Folder" button not found');
+      throw new Error('"Open vault folder" button not found');
     }
     const requiredRoots = new Set([
       openTargets.large,

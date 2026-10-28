@@ -87,7 +87,7 @@ const row = (page: Page, id: string) =>
   page.locator(`.vault-hotkeys__row[data-command-id="${id}"]`);
 
 const closeSettings = async (page: Page) => {
-  await page.getByRole("button", { name: "Close Settings" }).click();
+  await page.getByRole("button", { name: "Close settings" }).click();
   await expect(settingsModal(page)).toHaveCount(0);
 };
 
@@ -124,7 +124,7 @@ test.describe("typing never triggers commands", () => {
     expect(await drawingCount(page)).toBe(drawings);
     expect((await prefs(page)).zoom).toBe(120);
     await expect(
-      page.getByRole("button", { name: "Hide Navigator" }),
+      page.getByRole("button", { name: "Hide navigator" }),
     ).toBeVisible();
   };
 
@@ -186,7 +186,7 @@ test.describe("typing never triggers commands", () => {
     await search.fill("");
 
     await page
-      .getByLabel("Vault File Navigator")
+      .getByLabel("Vault file navigator")
       .getByRole("button", { name: "Settings" })
       .click();
     await expect(settingsModal(page)).toBeVisible();
@@ -266,7 +266,7 @@ test.describe("default chords", () => {
     await page.keyboard.press("Meta+KeyN");
     await expect.poll(() => drawingCount(page)).toBe(before + 1);
 
-    const nav = page.getByLabel("Vault File Navigator", { exact: true });
+    const nav = page.getByLabel("Vault file navigator", { exact: true });
     const width = async () => (await nav.boundingBox())?.width ?? 0;
     expect(await width()).toBeGreaterThan(100);
     await page.keyboard.press("Meta+Backslash");
@@ -478,7 +478,7 @@ test.describe("Hotkeys settings page", () => {
     await page.getByRole("tab", { name: "Hotkeys" }).click();
     await expect(chips(page, "view.toggleNavigator")).toHaveCount(2);
     await closeSettings(page);
-    const nav = page.getByLabel("Vault File Navigator", { exact: true });
+    const nav = page.getByLabel("Vault file navigator", { exact: true });
     await page.keyboard.press("Meta+Alt+KeyB");
     await expect
       .poll(async () => (await nav.boundingBox())?.width ?? 0)

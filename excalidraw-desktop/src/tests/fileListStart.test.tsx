@@ -24,7 +24,7 @@ vi.mock("../services/whenIdle", () => ({
   },
 }));
 
-const tree = () => within(screen.getByLabelText("Vault File Navigator"));
+const tree = () => within(screen.getByLabelText("Vault file navigator"));
 
 async function openWith(mode: StartMode) {
   await updatePreferences({ filesListStart: mode });

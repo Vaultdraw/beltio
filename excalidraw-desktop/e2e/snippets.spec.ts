@@ -15,7 +15,7 @@ test("Settings → Appearance → CSS snippets: a switch applies and removes the
 }) => {
   await openVault(page, "?snippets=1");
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");

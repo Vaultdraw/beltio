@@ -44,7 +44,7 @@ test("main menu shows Vaultdraw hotkeys and follows rebinding", async ({
       .getByRole("button", { name: /^Remove / })
       .click();
   }
-  await page.getByRole("button", { name: "Close Settings" }).click();
+  await page.getByRole("button", { name: "Close settings" }).click();
   await expect(page.locator(".vault-settings-modal")).toHaveCount(0);
 
   await openMenu(page);

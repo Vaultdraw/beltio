@@ -138,7 +138,7 @@ test("images only deleted undo steps could restore are released from memory", as
 
   // Settings (click): undo steps kept per drawing -> the minimum
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const settings = page.getByRole("dialog");
@@ -150,7 +150,7 @@ test("images only deleted undo steps could restore are released from memory", as
   await steps.focus();
   await page.keyboard.press("Home");
   await expect(steps).toHaveAttribute("aria-valuenow", "10");
-  await settings.getByRole("button", { name: "Close Settings" }).click();
+  await settings.getByRole("button", { name: "Close settings" }).click();
   await expect(settings).toHaveCount(0);
 
   const before = await editorState(page);

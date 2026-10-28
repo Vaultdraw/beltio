@@ -20,7 +20,7 @@ test("search index stays stopped on first-use mode until Startup is switched to 
   expect(await startCalls()).toEqual([]);
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");

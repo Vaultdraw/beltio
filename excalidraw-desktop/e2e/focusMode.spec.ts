@@ -22,7 +22,7 @@ test("focus mode: the menu entry hides the chrome, Esc restores it", async ({
     .click();
   await openDrawing(page, "Graphs");
   const header = page.locator("header.vault-header");
-  const navigator = page.getByLabel("Vault File Navigator");
+  const navigator = page.getByLabel("Vault file navigator");
   await expect(header).toBeVisible();
   await expect(navigator).toBeVisible();
 

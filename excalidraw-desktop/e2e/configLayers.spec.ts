@@ -17,7 +17,7 @@ test("a Settings change wins over config.toml, survives Reload, and a broken ove
   await openVault(page, "?config=1");
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");

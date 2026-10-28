@@ -156,7 +156,7 @@ test("the pen bar's settings link opens the Tools page on the Pen section", asyn
   await expect(
     page.getByRole("tab", { name: "Pen", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
-  await page.getByRole("button", { name: "Close Settings" }).click();
+  await page.getByRole("button", { name: "Close settings" }).click();
   // Opening Settings another way starts on the default page again.
   await page.keyboard.press("Meta+Comma");
   await expect(page.locator("#settings-title")).not.toHaveText("Tools");
@@ -172,7 +172,7 @@ test("pen keys are rebindable commands listed on the Hotkeys page", async ({
   await expect(
     page.locator('.vault-hotkeys__row[data-command-id="pen.select9"]'),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Close Settings" }).click();
+  await page.getByRole("button", { name: "Close settings" }).click();
 
   await page.evaluate(() =>
     (window as any).__updatePreferences({

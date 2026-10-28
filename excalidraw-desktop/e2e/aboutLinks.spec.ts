@@ -19,7 +19,7 @@ test("Settings > About shows the version and the help links", async ({
   await openVault(page);
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");

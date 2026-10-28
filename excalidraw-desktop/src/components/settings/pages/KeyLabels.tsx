@@ -80,7 +80,7 @@ export const KeyLabels = ({
               <span
                 className="vault-source-chip"
                 data-source="config"
-                title="Set in config.toml. Edit that file to remove it; a name changed here is saved apart and wins."
+                title="Set in your config file. Edit that file to remove it; a name changed here is saved apart and wins."
               >
                 config.toml
               </span>
@@ -110,7 +110,7 @@ export const KeyLabels = ({
               disabled={fromFile.has(seq)}
               title={
                 fromFile.has(seq)
-                  ? "Set in config.toml: remove it there"
+                  ? "Set in your config file: remove it there"
                   : undefined
               }
               onClick={() => {

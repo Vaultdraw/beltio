@@ -115,7 +115,7 @@ const settle = async (page: Page, d: Locator): Promise<string | null> => {
   return text;
 };
 
-/** Toolbar "New Drawing" / "New Folder" -> dialog -> Create. Returns the error text, if any. */
+/** Toolbar "New drawing" / "New folder" -> dialog -> Create. Returns the error text, if any. */
 const createVia = async (
   page: Page,
   kind: "Drawing" | "Folder",
@@ -288,7 +288,7 @@ test("tree: create, rename, move, duplicate and delete with awkward names", asyn
   await dialog(page)
     .getByRole("treeitem", { name: "Spaced Folder", exact: true })
     .click();
-  await dialog(page).getByRole("button", { name: "Move Here" }).click();
+  await dialog(page).getByRole("button", { name: "Move here" }).click();
   await expect(dialog(page)).toHaveCount(0);
   await expect
     .poll(() => readFake(page, "Spaced Folder/日本語のメモ.excalidraw"))
@@ -409,7 +409,7 @@ test("tree: drag and drop moves, refuses clashes, descendants and a read-only va
   // Read-only vault: the same drag is refused, and no create or delete is offered.
   await page.goto("/e2e.html?readonly=1");
   await enterVault(page);
-  await expect(page.getByRole("button", { name: "New Drawing" })).toHaveCount(
+  await expect(page.getByRole("button", { name: "New drawing" })).toHaveCount(
     0,
   );
   await row(page, "DSA").locator(".vault-tree-item__toggle").click();
@@ -1046,7 +1046,7 @@ test("an empty vault, a read-only vault and a very large drawing", async ({
   await expect(
     page.getByText("Vault is empty. Create your first drawing!"),
   ).toBeVisible();
-  await expect(page.getByText("No Drawing Open")).toBeVisible();
+  await expect(page.getByText("No drawing open")).toBeVisible();
   const search = page.getByPlaceholder("Search drawings and text…");
   await search.fill("anything");
   await expect(page.locator(".vault-search-row")).toHaveCount(0);
@@ -1065,7 +1065,7 @@ test("an empty vault, a read-only vault and a very large drawing", async ({
     page.getByRole("dialog", { name: "Why this vault is read-only" }),
   ).toContainText("process 4242");
   await page.keyboard.press("Escape");
-  for (const b of ["New Drawing", "New Folder"]) {
+  for (const b of ["New drawing", "New folder"]) {
     await expect(
       page.getByRole("button", { name: b, exact: true }),
     ).toHaveCount(0);
@@ -1226,7 +1226,7 @@ test("backup: Settings offers back up and restore, and says where the zip went",
   const errors = trackErrors(page);
   await openVault(page, "?config=1");
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const d = page.getByRole("dialog");
@@ -1341,7 +1341,7 @@ test("history off: the setting stops new versions and the panel says so", async 
   const anchor = rectEl("anc", 0, 0, null, 200, 120, 9);
   await setupHistory(page, [anchor], []);
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const d = page
@@ -1354,7 +1354,7 @@ test("history off: the setting stops new versions and the panel says so", async 
   await expect(kill).toBeChecked();
   await kill.click();
   await expect(kill).not.toBeChecked();
-  await d.getByRole("button", { name: "Close Settings" }).click();
+  await d.getByRole("button", { name: "Close settings" }).click();
   const countBefore = await page.evaluate(
     (p) => (window as any).__historyRepo.allVersions(p).length as number,
     GRAPHS,

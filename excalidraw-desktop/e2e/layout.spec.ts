@@ -12,7 +12,7 @@ const dialog = (page: Page) => page.getByRole("dialog");
 
 const openSettingsPage = async (page: Page, tab: string) => {
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   await expect(dialog(page)).toBeVisible();
@@ -55,7 +55,7 @@ test("layout: the Header switch hides the header; user commands are listed", asy
   await dialog(page).getByRole("tab", { name: "Hotkeys" }).click();
   await expect(dialog(page).getByText("Zoom in twice")).toBeVisible();
 
-  await dialog(page).getByRole("button", { name: "Close Settings" }).click();
+  await dialog(page).getByRole("button", { name: "Close settings" }).click();
   await expect(header).toHaveCount(0);
   expect(errors).toEqual([]);
 });

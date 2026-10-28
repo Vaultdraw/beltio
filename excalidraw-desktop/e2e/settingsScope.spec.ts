@@ -37,7 +37,7 @@ test("settings scope: inherit, override, reset, all by clicking", async ({
 }) => {
   const errors = trackErrors(page);
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   await expect(dialog(page)).toBeVisible();
@@ -129,7 +129,7 @@ test("palette opens Settings in either scope; vault scope is per-vault pages onl
   await expect(radio(page, "Global")).toBeChecked();
   await expect(tab(page, "Hotkeys")).toBeVisible();
 
-  await dialog(page).getByRole("button", { name: "Close Settings" }).click();
+  await dialog(page).getByRole("button", { name: "Close settings" }).click();
   await expect(dialog(page)).toHaveCount(0);
   await runPaletteCommand(page, "Settings: Edit global settings");
   await expect(radio(page, "Global")).toBeChecked();
@@ -142,7 +142,7 @@ test("settings tools: legend, dot tooltip and the reason This vault is disabled"
 }) => {
   await openVault(page, "?readonly=1");
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   await tab(page, "Tools").click();

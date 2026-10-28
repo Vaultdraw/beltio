@@ -290,7 +290,7 @@ const InstallThemeSetting = () => {
           className="vault-btn vault-btn--sm"
           onClick={() => openInstallDialog({ mode: "browse" })}
         >
-          Install more themes...
+          Install more themes…
         </button>
         <button
           type="button"
@@ -303,7 +303,7 @@ const InstallThemeSetting = () => {
             )
           }
         >
-          {removed ? `Install ${removed}` : "Install from URL..."}
+          {removed ? `Install ${removed}` : "Install from link…"}
         </button>
         <button
           type="button"
@@ -317,7 +317,7 @@ const InstallThemeSetting = () => {
           className="vault-btn vault-btn--sm"
           onClick={() => openInstallDialog({ mode: "uninstall" })}
         >
-          Remove...
+          Remove…
         </button>
       </div>
     </SettingRow>

@@ -194,7 +194,7 @@ test("Plugins settings: a plugin that declares a write permission shows it in th
   await page.waitForFunction(() => (window as any).__pluginsReady === true);
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   await page.getByRole("dialog").getByRole("tab", { name: "Plugins" }).click();
@@ -227,7 +227,7 @@ test("Plugins settings: delete a plugin's saved data", async ({ page }) => {
   await page.waitForFunction(() => (window as any).__pluginsReady === true);
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   await page.getByRole("dialog").getByRole("tab", { name: "Plugins" }).click();

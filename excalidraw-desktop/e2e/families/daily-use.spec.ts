@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+
 import { test } from "../fixture";
 
 import { openVault, trackErrors } from "../helpers";
@@ -172,7 +173,7 @@ test("files: create, rename, move, delete a non-empty folder like Finder does", 
   const dialog = page.getByRole("dialog");
 
   // Create a folder with an odd name.
-  await page.getByRole("button", { name: "New Folder" }).click();
+  await page.getByRole("button", { name: "New folder" }).click();
   await dialog.getByLabel("Name").fill("Réunions 🎯");
   await shot(page, "files-1-create-dialog");
   await dialog.getByRole("button", { name: "Create" }).click();
@@ -248,7 +249,7 @@ test("every Settings page opens, and its titles and buttons have no config keys 
 }) => {
   const errors = trackErrors(page);
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");

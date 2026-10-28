@@ -455,7 +455,7 @@ export const ThemeBrowserDialog = ({
       case "loading":
         return (
           <p role="status" data-testid="theme-browser-loading">
-            Loading the themes list...
+            Loading the themes list…
           </p>
         );
       case "error":
@@ -596,7 +596,7 @@ export const ThemeBrowserDialog = ({
                       act(entry);
                     }}
                   >
-                    {busy === entry.name ? "Working..." : ACTION_LABEL[status]}
+                    {busy === entry.name ? "Working…" : ACTION_LABEL[status]}
                   </button>
                   {status !== "available" && (
                     <button

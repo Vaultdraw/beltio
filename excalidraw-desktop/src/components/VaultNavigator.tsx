@@ -710,7 +710,7 @@ export const VaultNavigator = ({
         collapsed ? "vault-navigator--collapsed" : ""
       }`}
       style={collapsed ? undefined : { width, flexBasis: width }}
-      aria-label="Vault File Navigator"
+      aria-label="Vault file navigator"
       // Its dialogs render inside: keep them visible to assistive tech when
       // the palette opens one with the navigator collapsed.
       aria-hidden={
@@ -747,7 +747,7 @@ export const VaultNavigator = ({
                 setCreateError(null);
               }}
               title="New drawing"
-              aria-label="New Drawing"
+              aria-label="New drawing"
             >
               <IconNewDrawing />
             </button>
@@ -761,7 +761,7 @@ export const VaultNavigator = ({
                 setCreateError(null);
               }}
               title="New folder"
-              aria-label="New Folder"
+              aria-label="New folder"
             >
               <IconFolderPlus />
             </button>
@@ -1049,7 +1049,7 @@ export const VaultNavigator = ({
       {/* Create Modal */}
       {createKind && (
         <Dialog
-          title={`New ${createKind === "drawing" ? "Drawing" : "Folder"}${
+          title={`New ${createKind === "drawing" ? "drawing" : "folder"}${
             createParent ? ` in /${createParent}` : ""
           }`}
           titleId="create-entry-title"
@@ -1089,7 +1089,7 @@ export const VaultNavigator = ({
                 }
               }}
               placeholder={
-                createKind === "drawing" ? "My Drawing" : "Folder Name"
+                createKind === "drawing" ? "My drawing" : "Folder name"
               }
             />
             {createKind === "drawing" && (

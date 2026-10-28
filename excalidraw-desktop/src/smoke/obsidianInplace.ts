@@ -57,12 +57,12 @@ export async function runObsidianInplace(
   };
   const open = Array.from(root.querySelectorAll("button")).find(
     (b) =>
-      b.getAttribute("aria-label") === "Open Vault Folder" ||
-      b.title === "Open Vault Folder" ||
-      b.textContent?.trim() === "Open Vault Folder",
+      b.getAttribute("aria-label") === "Open vault folder" ||
+      b.title === "Open vault folder" ||
+      b.textContent?.trim() === "Open vault folder",
   );
   if (!open) {
-    throw new Error("no Open Vault Folder button");
+    throw new Error("no Open vault folder button");
   }
   const tOpen = win.performance.now();
   open.click();

@@ -147,7 +147,7 @@ export const ThemeInstallDialog = ({
   };
 
   const resolveInput = (text: string) =>
-    run("Looking it up...", async () =>
+    run("Looking it up…", async () =>
       toCandidate(await (await backend()).resolve(text.trim(), maxBytes)),
     );
 
@@ -382,7 +382,7 @@ export const ThemeInstallDialog = ({
                           ? status.message
                           : status
                           ? "Up to date"
-                          : "Checking..."}
+                          : "Checking…"}
                       </span>
                     )
                   ) : (

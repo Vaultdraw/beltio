@@ -16,7 +16,7 @@ test("a setting's chip names its source, the value it hides, and resets to confi
   await openVault(page, "?config=1");
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");
@@ -39,7 +39,7 @@ test("a setting's chip names its source, the value it hides, and resets to confi
   );
 
   // Reset to the config.toml value: the value and the chip go back.
-  await row.getByRole("button", { name: "Reset to config.toml value" }).click();
+  await row.getByRole("button", { name: "Use config file value" }).click();
   await expect(toggle).not.toBeChecked();
   await expect(chip).toHaveText("config.toml");
   expect(errors).toEqual([]);

@@ -26,7 +26,7 @@ test("activity bar: every entry opens its panel, view or dialog", async ({
   await expect(page.getByTestId("activity-bar")).toBeVisible();
   await expect(
     page
-      .getByLabel("Vault File Navigator")
+      .getByLabel("Vault file navigator")
       .getByRole("button", { name: "Graph view", exact: true }),
   ).toHaveCount(0);
 

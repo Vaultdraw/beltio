@@ -468,7 +468,7 @@ export async function runDesktopSmoke(): Promise<void> {
     step(name, work).catch(async () => {
       doc
         .querySelector<HTMLElement>(
-          '.vault-settings-modal [aria-label="Close Settings"]',
+          '.vault-settings-modal [aria-label="Close settings"]',
         )
         ?.click();
       doc.querySelector<HTMLElement>(".Modal__background")?.click();
@@ -582,7 +582,7 @@ export async function runDesktopSmoke(): Promise<void> {
           root,
           vaultPath: env.vaultPath,
           waitFor,
-          clickOpenVault: () => button("Open Vault Folder").click(),
+          clickOpenVault: () => button("Open vault folder").click(),
           call: invokeNative as never,
         }),
       );
@@ -615,7 +615,7 @@ export async function runDesktopSmoke(): Promise<void> {
         };
         let chosen: VaultInfo | null = null;
         try {
-          button("Open Vault Folder").click();
+          button("Open vault folder").click();
           try {
             vaultForReport = await waitFor("native test vault", () => {
               const path =
@@ -2217,9 +2217,9 @@ export async function runDesktopSmoke(): Promise<void> {
         );
       }
       (
-        await waitFor("Close Settings", () =>
+        await waitFor("Close settings", () =>
           modal.querySelector<HTMLButtonElement>(
-            '[aria-label="Close Settings"]',
+            '[aria-label="Close settings"]',
           ),
         )
       ).click();
@@ -2451,9 +2451,9 @@ export async function runDesktopSmoke(): Promise<void> {
         2000,
       ).catch(() => false);
       (
-        await waitFor("Close Settings", () =>
+        await waitFor("Close settings", () =>
           modal.querySelector<HTMLButtonElement>(
-            '[aria-label="Close Settings"]',
+            '[aria-label="Close settings"]',
           ),
         )
       ).click();
@@ -2480,7 +2480,7 @@ export async function runDesktopSmoke(): Promise<void> {
     };
     const navigatorWidth = () =>
       doc
-        .querySelector('[aria-label="Vault File Navigator"]')
+        .querySelector('[aria-label="Vault file navigator"]')
         ?.getBoundingClientRect().width ?? 0;
 
     await softStep("hotkeys-config-hand-edit-live", async () => {
@@ -3429,7 +3429,7 @@ export async function runDesktopSmoke(): Promise<void> {
         return;
       }
       modal
-        .querySelector<HTMLButtonElement>('[aria-label="Close Settings"]')
+        .querySelector<HTMLButtonElement>('[aria-label="Close settings"]')
         ?.click();
       await waitFor("settings modal closed", () =>
         doc.querySelector(".vault-settings-modal") ? null : true,

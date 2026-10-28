@@ -56,8 +56,8 @@ export const enterVault = async (
   page: Page,
   beforeClick?: () => Promise<void>,
 ) => {
-  const onboarding = page.getByRole("button", { name: /Open Vault Folder/ });
-  const navigator = page.getByLabel("Vault File Navigator");
+  const onboarding = page.getByRole("button", { name: /Open vault folder/ });
+  const navigator = page.getByLabel("Vault file navigator");
   await expect(async () => {
     if (await navigator.isVisible()) {
       return;

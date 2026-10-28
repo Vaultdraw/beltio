@@ -112,7 +112,9 @@ export const VaultHeader = ({
             type="button"
             className="vault-badge vault-badge--recovery"
             onClick={onOpenRecovery}
-            title={`${recoveryCount} recoverable snapshot(s) found. Click to review.`}
+            title={`${recoveryCount} recoverable ${
+              recoveryCount === 1 ? "snapshot" : "snapshots"
+            }. Click to review.`}
           >
             <IconHistory />
             <span>
@@ -149,7 +151,7 @@ export const VaultHeader = ({
             {saveStatus === "saving" && (
               <span
                 className="vault-status vault-status--saving"
-                title="Writing atomic update to disk..."
+                title="Saving…"
                 role="status"
               >
                 <span className="vault-spinner" />
@@ -178,7 +180,7 @@ export const VaultHeader = ({
                 title={saveError ?? "Error saving file. Click for details."}
               >
                 <IconAlert />
-                <span>Save Error</span>
+                <span>Not saved</span>
               </button>
             )}
           </>
@@ -193,10 +195,10 @@ export const VaultHeader = ({
           type="button"
           className="vault-ibtn"
           onClick={onToggleNavigator}
-          title={`${navigatorCollapsed ? "Show Navigator" : "Hide Navigator"}${
+          title={`${navigatorCollapsed ? "Show navigator" : "Hide navigator"}${
             toggleKeys ? ` (${toggleKeys})` : ""
           }`}
-          aria-label={navigatorCollapsed ? "Show Navigator" : "Hide Navigator"}
+          aria-label={navigatorCollapsed ? "Show navigator" : "Hide navigator"}
           aria-expanded={!navigatorCollapsed}
         >
           <IconSidebar />

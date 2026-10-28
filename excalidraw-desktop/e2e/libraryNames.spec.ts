@@ -219,7 +219,7 @@ test("library previews: light, dark, Dracula with sync", async ({ page }) => {
   await shoot(page, "dark");
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");

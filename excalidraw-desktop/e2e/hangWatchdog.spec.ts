@@ -13,7 +13,7 @@ test("Settings > Interface: the Hang watchdog switch is on, turns off and is sav
   await openVault(page);
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const settings = page.getByRole("dialog");

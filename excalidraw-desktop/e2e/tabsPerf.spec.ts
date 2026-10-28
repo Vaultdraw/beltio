@@ -636,7 +636,7 @@ for (const rate of RATES) {
       }).observe(document, { subtree: true, childList: true });
     });
     await page.goto(`/e2e.html${query}`);
-    await expect(page.getByLabel("Vault File Navigator")).toBeVisible();
+    await expect(page.getByLabel("Vault file navigator")).toBeVisible();
     const cdp = await page.context().newCDPSession(page);
     await throttle(cdp, rate);
     const session = (n: number) =>

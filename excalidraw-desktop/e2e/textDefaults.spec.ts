@@ -55,7 +55,7 @@ const setVaultTextColour = async (page: Page) => {
   await expect(page.getByTestId("tool-preview-text")).toBeVisible();
   await section.scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${SHOTS}/settings-text-preview.png` });
-  await page.getByRole("button", { name: "Close Settings" }).click();
+  await page.getByRole("button", { name: "Close settings" }).click();
 };
 
 test.beforeEach(async ({ page }) => {

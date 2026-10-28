@@ -18,7 +18,7 @@ export const ConfigResetConfirm = () => {
   return (
     <ConfirmModal
       title="Reset Settings changes"
-      message="This deletes overrides.toml, the file Settings saves your changes to. Values go back to config.toml, or to the defaults. config.toml is not touched."
+      message="This forgets everything you changed in Settings. Values go back to your config file, or to the defaults. Your config file is not touched."
       confirmLabel="Reset changes"
       isDanger
       onConfirm={() => void confirmResetOverrides()}

@@ -221,8 +221,8 @@ test("Cmd/Ctrl+Shift+F focuses the search box from the canvas", async ({
 });
 
 test("Cmd/Ctrl+Shift+F expands a collapsed navigator", async ({ page }) => {
-  const nav = page.getByLabel("Vault File Navigator");
-  await page.getByRole("button", { name: "Hide Navigator" }).click();
+  const nav = page.getByLabel("Vault file navigator");
+  await page.getByRole("button", { name: "Hide navigator" }).click();
   await expect(nav).toHaveAttribute("aria-hidden", "true");
   await page.keyboard.press("Meta+Shift+KeyF");
   await expect(nav).toHaveAttribute("aria-hidden", "false");

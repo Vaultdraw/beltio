@@ -173,7 +173,7 @@ export const MoveModal = ({
             onClick={() => void confirm(activePath)}
             disabled={moving}
           >
-            {moving ? "Moving..." : "Move Here"}
+            {moving ? "Moving…" : "Move here"}
           </button>
         </>
       }

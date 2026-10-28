@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+
 import { test } from "../fixture";
 
 import { openVault } from "../helpers";
@@ -73,10 +74,10 @@ const members: Member[] = [
     text: /Couldn't move "Graphs(\.excalidraw)?" to the Trash: .*disk is full/,
   },
   {
-    name: "create a folder fails (New Folder dialog)",
+    name: "create a folder fails (New folder dialog)",
     trigger: async (page) => {
       await failRepo(page, "createFolder", "read-only volume");
-      await page.getByRole("button", { name: "New Folder" }).click();
+      await page.getByRole("button", { name: "New folder" }).click();
       const dialog = page.getByRole("dialog");
       await dialog.getByLabel("Name").fill("Nope");
       await dialog.getByRole("button", { name: "Create" }).click();

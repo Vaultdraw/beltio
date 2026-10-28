@@ -220,15 +220,15 @@ describe("Links settings page", () => {
     expect(tabs.indexOf("Links")).toBe(tabs.indexOf("Files") + 1);
     const panel = screen.getByRole("tabpanel");
     for (const label of [
-      "New Link Format",
-      "Shape Link Format",
-      "Open Link Modifier",
-      "Update Links on Rename",
-      "Link Suggestions",
-      "Hint Characters",
-      "Style Links in Text",
-      "Link Colour",
-      "Hover Preview",
+      "New link format",
+      "Shape link format",
+      "Open link modifier",
+      "Update links on rename",
+      "Link suggestions",
+      "Hint characters",
+      "Style links in text",
+      "Link colour",
+      "Hover preview",
     ]) {
       expect(within(panel).getByText(label)).toBeInTheDocument();
     }

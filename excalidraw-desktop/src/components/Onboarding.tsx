@@ -60,7 +60,7 @@ export const Onboarding = ({
               <IconAlert />
             </span>
             <div>
-              <strong>Web Browser Preview Notice</strong>
+              <strong>Browser preview</strong>
               <div className="vault-onboarding__alert-note">
                 Tauri desktop backend is not active in this browser tab. Native
                 filesystem folders, atomic saving, and background watching
@@ -80,14 +80,14 @@ export const Onboarding = ({
           <button
             type="button"
             className="vault-onboarding__option"
-            aria-label="Create New Vault"
+            aria-label="Create new vault"
             aria-describedby="vault-onboarding-create"
             onClick={() => void onCreateVault()}
             disabled={loading}
           >
             <IconPlus width={18} height={18} />
             <span className="vault-onboarding__option-title">
-              Create New Vault
+              Create new vault
             </span>
             <span
               id="vault-onboarding-create"
@@ -99,14 +99,14 @@ export const Onboarding = ({
           <button
             type="button"
             className="vault-onboarding__option"
-            aria-label="Open Vault Folder"
+            aria-label="Open vault folder"
             aria-describedby="vault-onboarding-open"
             onClick={() => void onOpenVault()}
             disabled={loading}
           >
             <IconFolder width={18} height={18} />
             <span className="vault-onboarding__option-title">
-              Open Vault Folder
+              Open vault folder
             </span>
             <span
               id="vault-onboarding-open"
@@ -119,7 +119,7 @@ export const Onboarding = ({
 
         {recentVaults.length > 0 && (
           <div className="vault-onboarding__recent">
-            <div className="vault-onboarding__recent-title">Recent Vaults</div>
+            <div className="vault-onboarding__recent-title">Recent vaults</div>
             <div className="vault-onboarding__recent-list">
               {recentVaults.map((vaultPath) => (
                 <div

@@ -182,7 +182,7 @@ const ConfigFileSetting = () => {
       <SettingRow
         id="config-file"
         testId="settings-config-note"
-        description="Settings are saved in this browser. The desktop app keeps them in a plain config.toml you can edit by hand."
+        description="Settings are saved in this browser. The desktop app keeps them in a plain config file you can edit by hand."
       />
     );
   }
@@ -260,7 +260,7 @@ const ConfigFileSetting = () => {
         <button
           type="button"
           className="vault-btn vault-btn--sm"
-          title="Delete overrides.toml: values go back to config.toml or the defaults"
+          title="Forget what you changed in Settings: values go back to your config file or the defaults"
           onClick={requestResetOverrides}
         >
           <span>Reset all Settings changes</span>

@@ -256,7 +256,7 @@ const RenameStep = ({
           className="vault-btn vault-btn--primary"
           disabled={busy || !changed}
         >
-          {busy ? "Renaming..." : "Rename"}
+          {busy ? "Renaming…" : "Rename"}
         </button>
       </div>
     </form>

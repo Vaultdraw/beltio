@@ -69,7 +69,7 @@ test("Browse community plugins: consent, install, update and uninstall", async (
   await openVault(page, "?plugins=hello&enabled=none");
   await page.waitForFunction(() => (window as any).__pluginsReady === true);
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   await page.getByRole("dialog").getByRole("tab", { name: "Plugins" }).click();

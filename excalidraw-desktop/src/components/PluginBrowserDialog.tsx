@@ -291,7 +291,7 @@ export const PluginBrowserDialog = ({
       case "loading":
         return (
           <p role="status" data-testid="plugin-browser-loading">
-            Loading the plugins list...
+            Loading the plugins list…
           </p>
         );
       case "error":

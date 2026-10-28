@@ -24,7 +24,7 @@ import { FakeVaultRepository } from "./fakeVaultRepository";
 import { BLANK_SCENE, SAMPLE_SCENE } from "./fixtures";
 
 // Drawing names also appear in the home "Recent" list; query the tree itself.
-const tree = () => within(screen.getByLabelText("Vault File Navigator"));
+const tree = () => within(screen.getByLabelText("Vault file navigator"));
 
 describe("VaultApp Onboarding (no vault chosen)", () => {
   it("renders onboarding view with open and create vault actions", async () => {
@@ -37,21 +37,21 @@ describe("VaultApp Onboarding (no vault chosen)", () => {
       screen.getByRole("heading", { name: /Vaultdraw/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Open Vault Folder/i }),
+      screen.getByRole("button", { name: /Open vault folder/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Create New Vault/i }),
+      screen.getByRole("button", { name: /Create new vault/i }),
     ).toBeInTheDocument();
   });
 
-  it("clicking 'Open Vault Folder' calls repository.chooseVault(false)", async () => {
+  it("clicking 'Open vault folder' calls repository.chooseVault(false)", async () => {
     const repo = new FakeVaultRepository();
     repo.reopenVault = vi.fn().mockResolvedValue(null);
     const chooseSpy = vi.spyOn(repo, "chooseVault");
 
     render(<VaultApp repository={repo} initialVault={null} />);
 
-    const openBtn = screen.getByRole("button", { name: /Open Vault Folder/i });
+    const openBtn = screen.getByRole("button", { name: /Open vault folder/i });
     await act(async () => {
       fireEvent.click(openBtn);
     });
@@ -73,7 +73,7 @@ describe("VaultApp Onboarding (no vault chosen)", () => {
 
     await act(async () => {
       fireEvent.click(
-        screen.getByRole("button", { name: /Open Vault Folder/i }),
+        screen.getByRole("button", { name: /Open vault folder/i }),
       );
     });
     await waitFor(() =>
@@ -84,14 +84,14 @@ describe("VaultApp Onboarding (no vault chosen)", () => {
     expect(root!.querySelector("[data-vault-path]")).not.toBeNull();
   });
 
-  it("clicking 'Create New Vault' calls repository.chooseVault(true)", async () => {
+  it("clicking 'Create new vault' calls repository.chooseVault(true)", async () => {
     const repo = new FakeVaultRepository();
     repo.reopenVault = vi.fn().mockResolvedValue(null);
     const chooseSpy = vi.spyOn(repo, "chooseVault");
 
     render(<VaultApp repository={repo} initialVault={null} />);
 
-    const createBtn = screen.getByRole("button", { name: /Create New Vault/i });
+    const createBtn = screen.getByRole("button", { name: /Create new vault/i });
     await act(async () => {
       fireEvent.click(createBtn);
     });
@@ -114,7 +114,7 @@ describe("VaultApp Workspace with active vault", () => {
 
     // Empty state rendered when no drawing is open (one frame after the tree)
     expect(
-      await screen.findByRole("heading", { name: /No Drawing Open/i }),
+      await screen.findByRole("heading", { name: /No drawing open/i }),
     ).toBeInTheDocument();
 
     // Navigator is present with search input
@@ -203,7 +203,7 @@ describe("VaultApp Workspace with active vault", () => {
     );
 
     const toggleBtn = screen.getByRole("button", {
-      name: /Hide Navigator|Show Navigator/i,
+      name: /Hide navigator|Show navigator/i,
     });
     expect(toggleBtn).toBeInTheDocument();
 
@@ -232,7 +232,7 @@ describe("VaultApp Workspace with active vault", () => {
 
     // Recovery dialog opens and loads recovery entries
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByText(/Recoverable Snapshots/i)).toBeInTheDocument();
+    expect(screen.getByText(/Recoverable snapshots/i)).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByText("crashed.excalidraw")).toBeInTheDocument();
     });

@@ -67,7 +67,7 @@ const FontFamilySetting = () => {
     <SettingRow id="font-family">
       <select
         className="vault-input vault-input--font"
-        aria-label="Default Font Family"
+        aria-label="Default font family"
         value={defaults.defaultFontFamily}
         onChange={(e) =>
           updateDefaults({ defaultFontFamily: Number(e.target.value) })

@@ -260,7 +260,7 @@ const openPaperDialog = async (page: Page) => {
 
 const openSettings = async (page: Page) => {
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");
@@ -445,8 +445,8 @@ test("a new drawing gets the chosen default stamped into its file", async ({
   await expect(dialog).toHaveCount(0);
 
   await page
-    .getByLabel("Vault File Navigator")
-    .getByRole("button", { name: "New Drawing" })
+    .getByLabel("Vault file navigator")
+    .getByRole("button", { name: "New drawing" })
     .first()
     .click();
   const nd = page.getByRole("dialog");
@@ -470,8 +470,8 @@ test("a new drawing stays plain when the default is plain", async ({
 }) => {
   const errors = trackErrors(page);
   await page
-    .getByLabel("Vault File Navigator")
-    .getByRole("button", { name: "New Drawing" })
+    .getByLabel("Vault file navigator")
+    .getByRole("button", { name: "New drawing" })
     .first()
     .click();
   const nd = page.getByRole("dialog");
@@ -813,7 +813,7 @@ test("export: with Sync canvas with theme on, pattern colours are the standard o
     .click();
   // Close with the button (the flow under test is the export, not Escape), and
   // wait for the closed state and the themed canvas instead of a clock.
-  await settings.getByRole("button", { name: "Close Settings" }).click();
+  await settings.getByRole("button", { name: "Close settings" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   // The screen now shows themed colours: the canvas differs from standard...
   await expect

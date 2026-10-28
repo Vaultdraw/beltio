@@ -25,7 +25,7 @@ const withText = (text: string) =>
   SEARCH_SCENE.split("Dijkstra shortest path").join(text);
 
 const input = () => screen.getByPlaceholderText(/Search drawings/i);
-const nav = () => within(screen.getByLabelText("Vault File Navigator"));
+const nav = () => within(screen.getByLabelText("Vault file navigator"));
 
 function setup(tagged: Record<string, string> = {}) {
   const repo = new FakeVaultRepository();

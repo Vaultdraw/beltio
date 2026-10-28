@@ -95,16 +95,15 @@ export const ConfigSourceNote = ({
   if (fromOverrides) {
     text = source.hidden ? (
       <>
-        Set in overrides.toml (what you changed in Settings).{" "}
-        <code>{source.hidden.file}</code> says{" "}
+        Changed in Settings. <code>{source.hidden.file}</code> says{" "}
         <code>{show(source.hidden.value)}</code>.
       </>
     ) : (
-      <>Set in overrides.toml (what you changed in Settings).</>
+      <>Changed in Settings.</>
     );
     actions.push(
       source.hidden
-        ? button("Reset to config.toml value", () => resetConfigKey(source.key))
+        ? button("Use config file value", () => resetConfigKey(source.key))
         : button("Reset to default", () => resetConfigKey(source.key)),
     );
   } else {
@@ -119,7 +118,7 @@ export const ConfigSourceNote = ({
   }
   actions.push(
     fromOverrides || source.source === "config.toml"
-      ? button("Open config.toml", () => openConfigFile())
+      ? button("Open config file", () => openConfigFile())
       : button(`Open ${source.source}`, () =>
           openIncludedFile(source.path ?? source.source),
         ),

@@ -126,7 +126,7 @@ test("turning off tag chips in Settings hides them", async ({ page }) => {
   const errors = trackErrors(page);
   await expect(chip(page, "Interview")).toBeVisible();
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");

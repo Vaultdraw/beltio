@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { expect, type Page } from "@playwright/test";
+
 import { test } from "../fixture";
 
 import { openVault, trackErrors } from "../helpers";
@@ -20,7 +21,7 @@ const SOURCE_URL = "https://example.com/linked-theme-source";
 
 const openSettings = async (page: Page) => {
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");
@@ -61,7 +62,7 @@ const MEMBERS: Member[] = [
     click: async (page) => {
       const dialog = await openSettings(page);
       await dialog
-        .getByRole("button", { name: "Install more themes..." })
+        .getByRole("button", { name: "Install more themes…" })
         .click();
       const browser = page.getByTestId("theme-browser-dialog");
       await browser.getByRole("button", { name: "Allow" }).click();

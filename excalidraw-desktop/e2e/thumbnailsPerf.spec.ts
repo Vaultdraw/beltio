@@ -385,7 +385,7 @@ test("startup: thumbnails on vs off, no IPC and no gallery chunk before a surfac
           const m = w.__m;
           if (
             !m.nav &&
-            document.querySelector('[aria-label="Vault File Navigator"]')
+            document.querySelector('[aria-label="Vault file navigator"]')
           ) {
             m.nav = performance.now();
           }

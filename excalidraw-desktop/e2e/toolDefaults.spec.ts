@@ -70,7 +70,7 @@ const openToolDefaults = async (page: Page, tool = "Arrow") => {
   ).toBeVisible();
 };
 const closeSettings = (page: Page) =>
-  page.getByRole("button", { name: "Close Settings" }).click();
+  page.getByRole("button", { name: "Close settings" }).click();
 
 /** The compact panel: the stroke-style popover, then one of its options. */
 const pickStrokeStyle = async (page: Page, title: string) => {

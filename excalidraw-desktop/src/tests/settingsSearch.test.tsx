@@ -106,9 +106,9 @@ describe("settings search", () => {
 
     const box = results();
     const drawing = within(box).getByRole("region", { name: "Drawing" });
-    expect(within(drawing).getByText("Default Stroke Width")).toBeVisible();
+    expect(within(drawing).getByText("Default stroke width")).toBeVisible();
     expect(within(box).queryByText("Mode")).toBeNull();
-    expect(screen.queryByText("Colour Theme")).toBeNull();
+    expect(screen.queryByText("Colour theme")).toBeNull();
     expect(
       screen.getByRole("heading", { name: "Search results" }),
     ).toBeInTheDocument();
@@ -190,8 +190,8 @@ describe("settings search", () => {
     fireEvent.change(search, { target: { value: "folder" } });
     const box = results();
     expect(within(box).getByText("Vault folder")).toBeInTheDocument();
-    expect(within(box).queryByText("Themes Folder")).toBeNull();
-    expect(within(box).queryByText("Config File")).toBeNull();
+    expect(within(box).queryByText("Themes folder")).toBeNull();
+    expect(within(box).queryByText("Config file")).toBeNull();
   });
 
   it("shows a message when nothing matches", () => {
@@ -206,7 +206,7 @@ describe("settings search", () => {
     const { search } = renderModal();
     fireEvent.click(screen.getByRole("tab", { name: "Drawing" }));
     fireEvent.change(search, { target: { value: "mode" } });
-    expect(screen.queryByText("Default Font Family")).toBeNull();
+    expect(screen.queryByText("Default font family")).toBeNull();
 
     fireEvent.click(
       screen.getByRole("button", { name: "Clear settings search" }),
@@ -216,7 +216,7 @@ describe("settings search", () => {
       "aria-selected",
       "true",
     );
-    expect(screen.getByText("Default Font Family")).toBeInTheDocument();
+    expect(screen.getByText("Default font family")).toBeInTheDocument();
   });
 
   it("a page tab or a result heading leaves the search and opens that page", () => {
@@ -330,7 +330,7 @@ describe("Cmd+, opens Settings", () => {
     repo.seedDrawing("notes.excalidraw", SAMPLE_SCENE);
     render(<VaultApp repository={repo} initialVault={repo.vault} />);
     await waitFor(() =>
-      expect(screen.getByLabelText("Vault File Navigator")).toBeInTheDocument(),
+      expect(screen.getByLabelText("Vault file navigator")).toBeInTheDocument(),
     );
   };
   const dialog = () => screen.queryByRole("dialog");

@@ -162,7 +162,7 @@ export const ExtensionsPage = () => {
         <Row
           id="gallery"
           title="Gallery"
-          description="A grid of drawing thumbnails for a folder (Mod+Alt+E). Loads only when opened."
+          description="A grid of drawing thumbnails for a folder. Loads only when opened."
           note={
             !galleryOn ? "Off: no Gallery button, commands or code." : undefined
           }

@@ -71,7 +71,7 @@ export const RecoveryDialog = ({
 
   return (
     <Dialog
-      title="Recoverable Snapshots"
+      title="Recoverable snapshots"
       titleId="recovery-dialog-title"
       className="vd-dialog--wide"
       onClose={onClose}
@@ -95,7 +95,7 @@ export const RecoveryDialog = ({
             color: "var(--vault-text-muted)",
           }}
         >
-          Loading snapshots...
+          Loading snapshots…
         </div>
       ) : entries.length === 0 ? (
         <div

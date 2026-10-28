@@ -29,7 +29,7 @@ test("Check in Settings shows the config report, Copy confirms, Close dismisses"
   await openVault(page, "?config=1");
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const settings = page.getByRole("dialog").first();

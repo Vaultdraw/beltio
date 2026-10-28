@@ -26,7 +26,7 @@ test("per-vault theme: Dark mode for this vault only, then back to global", asyn
   await expect(html(page)).not.toHaveClass(/\bdark\b/);
 
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   await dialog(page)

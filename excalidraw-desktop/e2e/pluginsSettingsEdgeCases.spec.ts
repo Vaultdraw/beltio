@@ -768,7 +768,7 @@ test("focus mode with every panel open: chrome hides, panels stay, Esc and dialo
     })
     .toBeGreaterThan(0);
   const header = page.locator("header.vault-header");
-  const navigator = page.getByLabel("Vault File Navigator");
+  const navigator = page.getByLabel("Vault file navigator");
   const bar = page.getByTestId("activity-bar-settings");
   const chromeShown = async (on: boolean) => {
     for (const part of [header, navigator, bar]) {
@@ -1064,7 +1064,7 @@ test("themes: switch, browse, install from a URL with the network refused and th
 
   // Install from URL: refuse the network first; nothing is requested, nothing saved.
   await settingsModal(page)
-    .getByRole("button", { name: "Install from URL..." })
+    .getByRole("button", { name: "Install from link…" })
     .click();
   const install = page.getByTestId("theme-install-dialog");
   await expect(install.getByTestId("theme-install-consent")).toBeVisible();
@@ -1074,7 +1074,7 @@ test("themes: switch, browse, install from a URL with the network refused and th
   expect((await prefs(page)).networkAllowThemes).not.toBe(true);
   // The theme browser asks too, and also refuses cleanly.
   await settingsModal(page)
-    .getByRole("button", { name: "Install more themes..." })
+    .getByRole("button", { name: "Install more themes…" })
     .click();
   const browser = page.getByTestId("theme-browser-dialog");
   await expect(browser.getByTestId("theme-browser-consent")).toBeVisible();
@@ -1084,7 +1084,7 @@ test("themes: switch, browse, install from a URL with the network refused and th
 
   // Allow once: bad addresses give a message, a good one installs and applies.
   await settingsModal(page)
-    .getByRole("button", { name: "Install from URL..." })
+    .getByRole("button", { name: "Install from link…" })
     .click();
   await install.getByRole("button", { name: "Allow" }).click();
   const origin = new URL(page.url()).origin;
@@ -1110,7 +1110,7 @@ test("themes: switch, browse, install from a URL with the network refused and th
   // The browser no longer asks: it lists, filters, refuses a bad checksum and installs a good theme.
   requests.length = 0;
   await settingsModal(page)
-    .getByRole("button", { name: "Install more themes..." })
+    .getByRole("button", { name: "Install more themes…" })
     .click();
   await expect(browser.getByTestId("theme-browser-consent")).toHaveCount(0);
   await expect(browser.getByTestId("theme-browser-status")).toContainText(

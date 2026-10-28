@@ -352,7 +352,7 @@ const resetScope = async (page: Page) => {
 const openSettings = async (page: Page) => {
   if (!(await page.getByRole("dialog").filter({ visible: true }).count())) {
     await page
-      .getByLabel("Vault File Navigator")
+      .getByLabel("Vault file navigator")
       .getByRole("button", { name: "Settings" })
       .click();
     await expect(page.getByRole("dialog")).toBeVisible();
@@ -412,11 +412,11 @@ for (const theme of ["light", "dark"] as const) {
         name: "home / navigator",
         ensure: async (p) => {
           await p.keyboard.press("Escape");
-          const show = p.getByRole("button", { name: "Show Navigator" });
+          const show = p.getByRole("button", { name: "Show navigator" });
           if (await show.isVisible()) {
             await show.click();
           }
-          await expect(p.getByLabel("Vault File Navigator")).toBeVisible();
+          await expect(p.getByLabel("Vault file navigator")).toBeVisible();
         },
         scope: (p) => p.locator("body"),
       },

@@ -86,7 +86,7 @@ export const VaultHome = ({
       <div className="vault-empty-state__icon">
         <IconDrawing width="40" height="40" />
       </div>
-      <h2 className="vault-empty-state__title">No Drawing Open</h2>
+      <h2 className="vault-empty-state__title">No drawing open</h2>
       <p className="vault-empty-state__desc">
         Pick a drawing from the navigator or start something new.
       </p>

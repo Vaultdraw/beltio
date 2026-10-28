@@ -404,7 +404,7 @@ test("closed graph costs nothing (app harness: never opened vs opened then close
     });
     await installProbes(page);
     await page.goto("/e2e.html?seed=links");
-    await page.getByLabel("Vault File Navigator").waitFor();
+    await page.getByLabel("Vault file navigator").waitFor();
     await page
       .locator(".vault-tree-item__name", { hasText: "Hub" })
       .first()

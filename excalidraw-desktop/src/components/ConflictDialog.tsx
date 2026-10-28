@@ -56,7 +56,7 @@ export const ConflictDialog = ({
 
   return (
     <Dialog
-      title="File Conflict Detected"
+      title="This drawing changed on disk"
       titleId="conflict-dialog-title"
       icon={
         <span style={{ color: "var(--vault-warning)", display: "flex" }}>
@@ -72,7 +72,7 @@ export const ConflictDialog = ({
           onClick={onClose}
           disabled={processing}
         >
-          Close & Keep Editing
+          Keep editing
         </button>
       }
     >
@@ -103,7 +103,7 @@ export const ConflictDialog = ({
               onClick={() => void handleSaveCopy()}
               disabled={processing || !copyPath.trim()}
             >
-              {processing ? "Saving..." : "Save Copy & Continue"}
+              {processing ? "Saving…" : "Save a copy and continue"}
             </button>
             <button
               type="button"

@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+
 import { test } from "../fixture";
 
 import {
@@ -24,7 +25,7 @@ const NOTE = ["# Plan", "", "A paragraph of plain words.", ""].join("\n");
 
 const settingsDialog = async (page: Page) => {
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const dialog = page.getByRole("dialog");
@@ -63,8 +64,8 @@ const ROWS: Row[] = [
     path: "Fresh.excalidraw",
     create: async (page) => {
       await page
-        .getByLabel("Vault File Navigator")
-        .getByRole("button", { name: "New Drawing" })
+        .getByLabel("Vault file navigator")
+        .getByRole("button", { name: "New drawing" })
         .first()
         .click();
       const nd = page.getByRole("dialog");
@@ -122,7 +123,7 @@ test("every way a drawing is created follows the dark theme and the drawing font
     .click();
   await expect(page.locator("html")).toHaveClass(/dark/);
   await dialog.getByRole("tab", { name: "Drawing", exact: true }).click();
-  await dialog.getByLabel("Default Font Family").selectOption(String(NUNITO));
+  await dialog.getByLabel("Default font family").selectOption(String(NUNITO));
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
 

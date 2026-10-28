@@ -131,7 +131,7 @@ test.describe("closing", () => {
     await page.keyboard.press(`${MOD}+KeyW`);
     await expect(tabEls(page)).toHaveCount(1);
     expect((await readTabs(page))[0]).toMatchObject({ active: true, path: "" });
-    await expect(page.getByText("No Drawing Open")).toBeVisible();
+    await expect(page.getByText("No drawing open")).toBeVisible();
     expect(await mounted(page)).toBe(0);
   });
 
@@ -346,7 +346,7 @@ test.describe("session and settings", () => {
     await page.waitForTimeout(1600);
 
     await page.goto("/e2e.html");
-    await expect(page.getByLabel("Vault File Navigator")).toBeVisible();
+    await expect(page.getByLabel("Vault file navigator")).toBeVisible();
     await expect(tabEls(page)).toHaveCount(3);
     const after = await readTabs(page);
     expect(after.map((t) => t.name)).toEqual(before.map((t) => t.name));

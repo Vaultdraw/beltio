@@ -67,7 +67,7 @@ describe("settings problem banner", () => {
     expect(banner()).toHaveTextContent("config.toml line 3: expected `=`");
 
     // Opening a drawing clears the global alert; the banner must stay.
-    const tree = within(screen.getByLabelText("Vault File Navigator"));
+    const tree = within(screen.getByLabelText("Vault file navigator"));
     await waitFor(() => expect(tree.getByText("notes")).toBeInTheDocument());
     await act(async () => {
       fireEvent.click(tree.getByText("notes"));

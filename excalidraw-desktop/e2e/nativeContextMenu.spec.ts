@@ -30,7 +30,7 @@ test("native menu is suppressed outside editable fields; the canvas menu still o
 
   // Non-editable chrome: the suppression prevents the default.
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .click({ button: "right", position: { x: 4, y: 4 } });
   expect((await seen(page)).at(-1)).toBe(true);
 
@@ -63,7 +63,7 @@ test("without the flag (dev) the native menu is left alone", async ({
   await openVault(page);
   await recordContextMenus(page);
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .click({ button: "right", position: { x: 4, y: 4 } });
   expect((await seen(page)).at(-1)).toBe(false);
 });

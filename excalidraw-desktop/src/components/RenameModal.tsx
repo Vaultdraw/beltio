@@ -71,7 +71,7 @@ export const RenameModal = ({
             className="vault-btn vault-btn--primary"
             disabled={submitting || !name.trim()}
           >
-            {submitting ? "Renaming..." : "Rename"}
+            {submitting ? "Renaming…" : "Rename"}
           </button>
         </>
       }

@@ -108,8 +108,8 @@ describe("tags settings: Links page", () => {
       />,
     );
     const panel = screen.getByRole("tabpanel");
-    expect(within(panel).getByText("Tag Suggestions")).toBeInTheDocument();
-    expect(within(panel).getByText("Tags Pane Order")).toBeInTheDocument();
+    expect(within(panel).getByText("Tag suggestions")).toBeInTheDocument();
+    expect(within(panel).getByText("Tags pane order")).toBeInTheDocument();
     fireEvent.click(within(panel).getAllByRole("switch")[2]);
     fireEvent.change(within(panel).getAllByRole("combobox")[6], {
       target: { value: "count" },

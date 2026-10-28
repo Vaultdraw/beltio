@@ -40,7 +40,7 @@ test("a recorded key sequence shows the which-key popup and picks a tool", async
 
   // Bind "g r" to Tool: Rectangle through Settings, with clicks only.
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   const modal = page.locator(".vault-settings-modal");
@@ -54,7 +54,7 @@ test("a recorded key sequence shows the which-key popup and picks a tool", async
   await page.keyboard.type("g");
   await page.keyboard.type("r");
   await page.keyboard.press("Enter");
-  await page.getByRole("button", { name: "Close Settings" }).click();
+  await page.getByRole("button", { name: "Close settings" }).click();
   await expect(modal).toHaveCount(0);
 
   // Make Rectangle inactive so the final assertion means something.
@@ -81,7 +81,7 @@ test("Settings names a key group from the Hotkeys page", async ({ page }) => {
   const errors = trackErrors(page);
   await openVault(page);
   await page
-    .getByLabel("Vault File Navigator")
+    .getByLabel("Vault file navigator")
     .getByRole("button", { name: "Settings" })
     .click();
   await expect(page.locator(".vault-settings-modal")).toBeVisible();
