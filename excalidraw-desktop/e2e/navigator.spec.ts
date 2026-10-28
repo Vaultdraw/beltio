@@ -47,7 +47,7 @@ test("navigator collapse toggle hides and restores the tree", async ({
       .getByRole("button", { name: /Collapse Navigator|Hide navigator/i }),
   ).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: /^(Hide|Show) Navigator$/ }),
+    page.getByRole("button", { name: /^(Hide|Show) navigator$/ }),
   ).toHaveCount(1);
   await page.getByRole("button", { name: "Hide navigator" }).click();
   await expect

@@ -56,7 +56,7 @@ export const ConflictDialog = ({
 
   return (
     <Dialog
-      title="This drawing changed on disk"
+      title="File conflict"
       titleId="conflict-dialog-title"
       icon={
         <span style={{ color: "var(--vault-warning)", display: "flex" }}>
@@ -131,7 +131,7 @@ export const ConflictDialog = ({
               onClick={() => setShowCopyInput(true)}
               disabled={processing}
             >
-              Save as Copy
+              Save as copy
             </button>
           </div>
           <div className="vd-outcome">
@@ -147,7 +147,7 @@ export const ConflictDialog = ({
               onClick={() => void handleReload()}
               disabled={processing}
             >
-              Reload from Disk
+              Reload from disk
             </button>
           </div>
         </div>

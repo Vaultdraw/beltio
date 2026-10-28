@@ -126,7 +126,7 @@ const conflictThenReload = async (page: Page) => {
   const dialog = page.getByRole("dialog", { name: /Conflict/i });
   await expect(dialog).toBeVisible();
   const started = Date.now();
-  await dialog.getByRole("button", { name: "Reload from Disk" }).click();
+  await dialog.getByRole("button", { name: "Reload from disk" }).click();
   await expect(dialog).toHaveCount(0, { timeout: 5000 });
   return Date.now() - started;
 };

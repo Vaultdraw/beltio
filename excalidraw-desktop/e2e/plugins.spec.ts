@@ -237,7 +237,7 @@ test("Plugins settings: delete a plugin's saved data", async ({ page }) => {
   const confirm = page.getByRole("dialog", {
     name: "Delete the data of Hello?",
   });
-  await expect(confirm).toContainText("cannot be undone");
+  await expect(confirm).toContainText("can’t be undone");
   await confirm.getByRole("button", { name: "Delete data" }).click();
 
   await expect(page.getByText("Deleted the data of Hello.")).toBeVisible();

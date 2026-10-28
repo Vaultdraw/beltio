@@ -191,11 +191,11 @@ test("3. external edit while local edits are pending is a conflict, not silent l
   expect(disk.map((el: any) => el.id)).toContain("rect-external");
   expect(disk.length).toBe(baseline + 1);
 
-  // Local work must still be recoverable: "Save as Copy" must include the local rectangle.
+  // Local work must still be recoverable: "Save as copy" must include the local rectangle.
   await badge.click();
   const dialog = page.getByRole("dialog", { name: /Conflict/i });
   await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "Save as Copy" }).click();
+  await dialog.getByRole("button", { name: "Save as copy" }).click();
   const copyPath = await dialog.locator("#copy-path-input").inputValue();
   await dialog
     .getByRole("button", { name: "Save a copy and continue" })

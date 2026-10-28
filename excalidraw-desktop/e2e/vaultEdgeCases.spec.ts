@@ -121,7 +121,9 @@ const createVia = async (
   kind: "Drawing" | "Folder",
   name: string,
 ): Promise<string | null> => {
-  await page.getByRole("button", { name: `New ${kind}`, exact: true }).click();
+  await page
+    .getByRole("button", { name: `New ${kind.toLowerCase()}`, exact: true })
+    .click();
   const d = dialog(page);
   await expect(d).toBeVisible();
   await d.getByLabel("Name").fill(name);
