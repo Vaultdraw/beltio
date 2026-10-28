@@ -187,6 +187,29 @@ fn read_frame_has_revision_prefix_and_identical_body() {
     fs::write(t.path().join("notscene.excalidraw"), "{\"a\":1}").unwrap();
     assert_eq!(read_drawing_file(&v.root, "notscene.excalidraw").unwrap_err().code, "INVALID_FILE");
 }
+#[cfg(unix)]
+#[test]
+fn read_frame_marks_a_read_only_drawing_and_the_flag_lifts() {
+    use std::os::unix::fs::PermissionsExt;
+    let t = tempdir().unwrap(); let v = vault(t.path());
+    let p = t.path().join("a.excalidraw");
+    fs::write(&p, SCENE).unwrap();
+    let frame = read_drawing_file(&v.root, "a.excalidraw").unwrap();
+    assert_eq!(frame[REVISION_HEX_LEN], b'\n');
+    assert!(!drawing_read_only_at(&v.root, "a.excalidraw").unwrap());
+    fs::set_permissions(&p, fs::Permissions::from_mode(0o444)).unwrap();
+    let frame = read_drawing_file(&v.root, "a.excalidraw").unwrap();
+    assert_eq!(frame[REVISION_HEX_LEN], FRAME_READ_ONLY);
+    // The body and revision are unchanged by the mark.
+    assert_eq!(&frame[FRAME_PREFIX_LEN..], SCENE.as_bytes());
+    assert_eq!(&frame[..REVISION_HEX_LEN], revision(SCENE.as_bytes()).as_bytes());
+    assert!(drawing_read_only_at(&v.root, "a.excalidraw").unwrap());
+    // Writable again: the next read and the probe both say so.
+    fs::set_permissions(&p, fs::Permissions::from_mode(0o644)).unwrap();
+    assert!(!drawing_read_only_at(&v.root, "a.excalidraw").unwrap());
+    assert_eq!(read_drawing_file(&v.root, "a.excalidraw").unwrap()[REVISION_HEX_LEN], b'\n');
+    assert!(!drawing_read_only_at(&v.root, "missing.excalidraw").unwrap());
+}
 #[test]
 fn streaming_revision_matches_buffered_revision() {
     let t = tempdir().unwrap(); let p = t.path().join("big.excalidraw");

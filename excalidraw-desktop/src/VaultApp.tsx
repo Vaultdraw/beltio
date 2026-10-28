@@ -400,6 +400,9 @@ export const VaultApp = ({
   const [dismissedMdBanner, setDismissedMdBanner] = useState<string | null>(
     null,
   );
+  const [dismissedReadOnlyBanner, setDismissedReadOnlyBanner] = useState<
+    string | null
+  >(null);
   const [globalAlert, setGlobalAlert] = useState<{
     message: string;
     type: "error" | "info";
@@ -666,6 +669,7 @@ export const VaultApp = ({
     reload: reloadDoc,
     saveCopy: saveCopyDoc,
     relocate: relocateDoc,
+    fileReadOnly: activeFileReadOnly,
   } = docHook;
 
   const docHookRef = useRef(docHook);
@@ -2977,6 +2981,24 @@ export const VaultApp = ({
                   message="Obsidian Excalidraw drawing: shown read-only so the plugin's file stays intact. Use Save a copy to edit it as a .excalidraw drawing."
                 />
               )}
+            {activeDoc &&
+              activeFileReadOnly &&
+              fileKind(activeDoc.path) !== "excalidrawMd" &&
+              dismissedReadOnlyBanner !== activeDoc.path && (
+                <Banner
+                  kind="info"
+                  testId="read-only-file-banner"
+                  onDismiss={() => setDismissedReadOnlyBanner(activeDoc.path)}
+                  dismissLabel="Dismiss notice"
+                  message="Read-only file: make it writable to edit."
+                  action={{
+                    label: "Save a copy",
+                    testId: "read-only-save-copy",
+                    onClick: () =>
+                      void handleExportDrawing(activeDoc.path, "copy"),
+                  }}
+                />
+              )}
             {activeDoc ? (
               <div
                 // Loading blocks the pointer here (CSS), never through
@@ -2985,7 +3007,9 @@ export const VaultApp = ({
                 // the document hook flushes again before it is replaced.
                 inert={mainCovered}
                 className={`vault-editor-container ${
-                  vault.readOnly || fileKind(activeDoc.path) === "excalidrawMd"
+                  vault.readOnly ||
+                  activeFileReadOnly ||
+                  fileKind(activeDoc.path) === "excalidrawMd"
                     ? "vault-editor-container--readonly"
                     : ""
                 } ${editorLoading ? "vault-editor-container--busy" : ""}`}
@@ -3001,12 +3025,14 @@ export const VaultApp = ({
                   loading={editorLoading}
                   readOnly={
                     vault.readOnly ||
+                    activeFileReadOnly ||
                     fileKind(activeDoc.path) === "excalidrawMd" ||
                     isClosing ||
                     mainCovered
                   }
                   documentReadOnly={
                     vault.readOnly ||
+                    activeFileReadOnly ||
                     fileKind(activeDoc.path) === "excalidrawMd"
                   }
                   disabled={isClosing || mainCovered}

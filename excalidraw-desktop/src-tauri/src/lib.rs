@@ -55,7 +55,7 @@ mod hidden_render;
 // (history, thumbs, links, ...) compiling against `crate::{err, safe_path, ...}` unchanged.
 pub(crate) use vaultdraw_core::lock as vault_lock;
 pub(crate) use vaultdraw_core::{
-    create_folder_at, current_revision, drawing_revision_at, ensure_json, ensure_no_sibling_collision, err, ioerr, list_directory_in, move_entry_paths, mutation_guard,
+    create_folder_at, current_revision, drawing_read_only_at, drawing_revision_at, ensure_json, ensure_no_sibling_collision, err, ioerr, list_directory_in, move_entry_paths, mutation_guard,
     now_ms, random_id, read_bounded, read_drawing_file, read_drawing_parts, recovery_reveal_target, revision, safe_path,
     sync_dirs, validate_relative, write_atomic, write_atomic_new, write_drawing_file, write_drawing_file_rewrite,
     writable, NativeError, DrawingFile, RecoveryEntry, Result, VaultEntry, MAX_DRAWING_BYTES, META_DIR,
@@ -467,6 +467,12 @@ async fn read_drawing(handle: String, path: String, state: State<'_, Service>) -
 async fn drawing_revision(handle: String, path: String, state: State<'_, Service>) -> Result<Option<String>> {
     let v = vault_for(&state, &handle)?;
     drawing_revision_at(&v.root, &path)
+}
+/// Whether the drawing file is read-only now (the editor lifts its banner when this turns false).
+#[tauri::command]
+async fn drawing_read_only(handle: String, path: String, state: State<'_, Service>) -> Result<bool> {
+    let v = vault_for(&state, &handle)?;
+    drawing_read_only_at(&v.root, &path)
 }
 /// Asks iCloud to download a placeholder file ("not downloaded" in the tree); returns at once.
 #[tauri::command]
@@ -924,7 +930,7 @@ pub fn run() {
         #[cfg(feature = "smoke-test")]
         let builder = if smoke::enabled() {
             builder.invoke_handler(tauri::generate_handler![
-                choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision, sync_download_placeholder,
+                choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision, drawing_read_only, sync_download_placeholder,
                 write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
                 export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
                 config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
@@ -948,7 +954,7 @@ pub fn run() {
             ])
         } else {
             builder.invoke_handler(tauri::generate_handler![
-                choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision, sync_download_placeholder,
+                choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision, drawing_read_only, sync_download_placeholder,
                 write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
                 export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
                 config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
@@ -969,7 +975,7 @@ pub fn run() {
         };
         #[cfg(not(feature = "smoke-test"))]
         let builder = builder.invoke_handler(tauri::generate_handler![
-            choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision, sync_download_placeholder,
+            choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision, drawing_read_only, sync_download_placeholder,
             write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
             export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
             config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,

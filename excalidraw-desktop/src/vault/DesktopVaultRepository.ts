@@ -112,7 +112,10 @@ export function normalizeError(cause: unknown): Error {
 const REVISION_HEX_LENGTH = 64;
 const FRAME_PREFIX_LENGTH = REVISION_HEX_LENGTH + 1;
 
-/** Splits a `<revision>\n<json>` frame returned by `read_drawing`. */
+/** Frame mark after the revision: `\n`, or `\r` for a read-only file (see `FRAME_READ_ONLY` in the core). */
+const FRAME_READ_ONLY_MARK = 13;
+
+/** Splits a `<revision><mark><json>` frame returned by `read_drawing`. */
 export function decodeDrawingFrame(buffer: ArrayBuffer): DrawingFile {
   if (!buffer || buffer.byteLength < FRAME_PREFIX_LENGTH) {
     throw new VaultError("INVALID_FILE", "Malformed drawing response");
@@ -123,7 +126,9 @@ export function decodeDrawingFrame(buffer: ArrayBuffer): DrawingFile {
   const json = new TextDecoder().decode(
     new Uint8Array(buffer, FRAME_PREFIX_LENGTH),
   );
-  return { json, revision };
+  const readOnly =
+    new Uint8Array(buffer, REVISION_HEX_LENGTH, 1)[0] === FRAME_READ_ONLY_MARK;
+  return readOnly ? { json, revision, readOnly } : { json, revision };
 }
 
 /**
@@ -148,6 +153,7 @@ export class DesktopVaultRepository implements VaultRepository {
     this.listDirectory = this.listDirectory.bind(this);
     this.readDrawing = this.readDrawing.bind(this);
     this.readRevision = this.readRevision.bind(this);
+    this.readOnlyState = this.readOnlyState.bind(this);
     this.writeDrawing = this.writeDrawing.bind(this);
     this.createFolder = this.createFolder.bind(this);
     this.move = this.move.bind(this);
@@ -244,6 +250,15 @@ export class DesktopVaultRepository implements VaultRepository {
     const invoke = await this.getInvoke();
     try {
       return await invoke<string | null>("drawing_revision", { handle, path });
+    } catch (err) {
+      throw normalizeError(err);
+    }
+  }
+
+  async readOnlyState(handle: string, path: string): Promise<boolean> {
+    const invoke = await this.getInvoke();
+    try {
+      return await invoke<boolean>("drawing_read_only", { handle, path });
     } catch (err) {
       throw normalizeError(err);
     }

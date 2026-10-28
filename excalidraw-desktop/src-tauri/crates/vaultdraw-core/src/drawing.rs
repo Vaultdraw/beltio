@@ -81,9 +81,12 @@ pub fn list_directory_in(v: &Vault, path: &str) -> Result<Vec<VaultEntry>> {
     out.sort_by_cached_key(|e| (e.kind != "folder", e.name.to_lowercase(), e.name.clone()));
     Ok(out)
 }
-/// Hex SHA-256 length; the read frame is `<revision hex>\n<json bytes>`.
+/// Hex SHA-256 length; the read frame is `<revision hex><mark><json bytes>`: the mark is `\n`, or
+/// `\r` when the file is read-only (`FRAME_READ_ONLY`), so opening needs no extra call.
 pub const REVISION_HEX_LEN: usize = 64;
 pub const FRAME_PREFIX_LEN: usize = REVISION_HEX_LEN + 1;
+/// Frame mark for a drawing the user made read-only.
+pub const FRAME_READ_ONLY: u8 = b'\r';
 /// Reads a drawing into one buffer laid out as `<revision hex>\n<json bytes>`: the file is
 /// read straight into the buffer after a placeholder prefix, hashed in place and validated
 /// as UTF-8 JSON without further copies. The body is the raw file (see `read_drawing_file`).
@@ -102,7 +105,7 @@ pub fn read_drawing_disk(root: &Path, path: &str) -> Result<Vec<u8>> {
     ensure_json(json)?;
     let digest = Sha256::digest(&buf[FRAME_PREFIX_LEN..]);
     hex::encode_to_slice(digest, &mut buf[..REVISION_HEX_LEN]).map_err(|e| err("INTERNAL", e.to_string()))?;
-    buf[REVISION_HEX_LEN] = b'\n';
+    buf[REVISION_HEX_LEN] = if crate::fsops::metadata_read_only(&meta) { FRAME_READ_ONLY } else { b'\n' };
     Ok(buf)
 }
 /// Frame for an Obsidian Excalidraw plugin file (`.excalidraw.md`): the revision is the hash of the
@@ -162,6 +165,12 @@ pub fn read_drawing_parts(root: &Path, path: &str) -> Result<DrawingFile> {
     framed.truncate(REVISION_HEX_LEN);
     let revision = String::from_utf8(framed).map_err(|e| err("INTERNAL", e.to_string()))?;
     Ok(DrawingFile { json, revision })
+}
+/// Whether the drawing file is read-only right now (the watcher re-checks it to lift the banner).
+pub fn drawing_read_only_at(root: &Path, path: &str) -> Result<bool> {
+    if !crate::filekind::has_drawing_ext(path) { return Ok(false); }
+    let p = match safe_path(root, path, true) { Ok(p) => p, Err(e) if e.code == "NOT_FOUND" => return Ok(false), Err(e) => return Err(e) };
+    Ok(fs::metadata(&p).map(|m| crate::fsops::metadata_read_only(&m)).unwrap_or(false))
 }
 /// Revision of a drawing without sending its content; `None` when the file is missing.
 pub fn drawing_revision_at(root: &Path, path: &str) -> Result<Option<String>> {

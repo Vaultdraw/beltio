@@ -1135,6 +1135,64 @@ test("an empty vault, a read-only vault and a very large drawing", async ({
   expect(errors).toEqual([]);
 });
 
+test("a read-only drawing file opens in view mode with a banner, and edits again once it is writable", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page);
+  const path = "DSA/Graphs.excalidraw";
+  const roBanner = page.getByTestId("read-only-file-banner");
+  await page.evaluate(
+    (p) => (window as any).__vaultRepo.setFileReadOnly(p, true),
+    path,
+  );
+  await row(page, "DSA").locator(".vault-tree-item__toggle").click();
+  await row(page, path).locator(".vault-tree-item__name").click();
+  await expect(page.locator(".vault-editor canvas.interactive")).toBeVisible();
+
+  // View mode: the banner explains it and offers Save a copy; a drag draws nothing.
+  await expect(roBanner).toContainText(
+    "Read-only file: make it writable to edit",
+  );
+  await expect(
+    roBanner.getByRole("button", { name: "Save a copy" }),
+  ).toBeVisible();
+  await expect(page.locator(".vault-editor-container--readonly")).toBeVisible();
+  const box = (await page
+    .locator(".vault-editor canvas.interactive")
+    .boundingBox())!;
+  const before = await readFake(page, path);
+  await page.keyboard.press("r");
+  await page.mouse.move(box.x + 500, box.y + 400);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 600, box.y + 480, { steps: 5 });
+  await page.mouse.up();
+  await page.waitForTimeout(800);
+  expect(await readFake(page, path)).toBe(before);
+  await expect(
+    page.getByRole("alert").filter({ hasText: /failed|error/i }),
+  ).toHaveCount(0);
+
+  // The file becomes writable (a chmod the watcher reports): banner and view mode lift.
+  await page.evaluate(
+    (p) => (window as any).__vaultRepo.setFileReadOnly(p, false),
+    path,
+  );
+  await expect(roBanner).toHaveCount(0);
+  await expect(page.locator(".vault-editor-container--readonly")).toHaveCount(
+    0,
+  );
+  await page.locator(".vault-editor [data-testid='toolbar-rectangle']").click();
+  await page.mouse.move(box.x + 500, box.y + 400);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 600, box.y + 480, { steps: 5 });
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await readFake(page, path)) !== before)
+    .toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test("backup: Settings offers back up and restore, and says where the zip went", async ({
   page,
 }) => {

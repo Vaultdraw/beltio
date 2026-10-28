@@ -148,6 +148,43 @@ describe("useVaultDocument open/create/change/flush", () => {
   });
 });
 
+describe("read-only drawing files", () => {
+  it("opens flagged, never saves, and lifts when the watcher sees it become writable", async () => {
+    const repo = new FakeVaultRepository();
+    repo.seedDrawing("a.excalidraw", SAMPLE_SCENE);
+    repo.setFileReadOnly("a.excalidraw", true);
+    const { result } = renderHook(() => useVaultDocument(repo, vaultOf(repo)));
+    await openPath(result, "a.excalidraw");
+    expect(result.current.fileReadOnly).toBe(true);
+    // A change that slips through is not written (the fake would refuse with READ_ONLY).
+    const writesBefore = repo.writeCalls.length;
+    act(() => result.current.change(BLANK_SCENE));
+    await act(async () => {
+      await result.current.flush().catch(() => undefined);
+    });
+    expect(repo.writeCalls.length).toBe(writesBefore);
+    await act(async () => {
+      repo.setFileReadOnly("a.excalidraw", false);
+    });
+    await waitFor(() => expect(result.current.fileReadOnly).toBe(false));
+  });
+
+  it("a writable drawing is not flagged, and a reload picks the flag up again", async () => {
+    const repo = new FakeVaultRepository();
+    repo.seedDrawing("a.excalidraw", SAMPLE_SCENE);
+    const { result } = renderHook(() => useVaultDocument(repo, vaultOf(repo)));
+    await openPath(result, "a.excalidraw");
+    expect(result.current.fileReadOnly).toBe(false);
+    await act(async () => {
+      repo.setFileReadOnly("a.excalidraw", true);
+    });
+    await act(async () => {
+      await result.current.reload();
+    });
+    expect(result.current.fileReadOnly).toBe(true);
+  });
+});
+
 describe("rapid navigation and dirty-switch failures", () => {
   it("rapid A -> B -> C navigation keeps only the last document (stale loads rejected)", async () => {
     const repo = new FakeVaultRepository({ latencyMs: 40 });

@@ -29,7 +29,12 @@ export type VaultEntry = {
   conflictOf?: string;
 };
 
-export type DrawingFile = { json: string; revision: string };
+/** `readOnly`: the file has no write permission (or is locked); the editor opens it in view mode. */
+export type DrawingFile = {
+  json: string;
+  revision: string;
+  readOnly?: boolean;
+};
 export type RecoveryEntry = {
   id: string;
   path: string;
@@ -49,6 +54,8 @@ export interface VaultRepository {
   readDrawing(handle: string, path: string): Promise<DrawingFile>;
   /** Cheap revision probe (no content transfer); null when the file is missing. */
   readRevision?(handle: string, path: string): Promise<string | null>;
+  /** Cheap probe: is the drawing file read-only now? The open drawing re-checks it on a change event to lift its banner. */
+  readOnlyState?(handle: string, path: string): Promise<boolean>;
   writeDrawing(input: {
     handle: string;
     path: string;

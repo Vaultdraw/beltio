@@ -138,9 +138,8 @@ pub fn commit_no_clobber_with(temp: &Path, path: &Path, link: impl FnOnce(&Path,
     }
 }
 
-/// Refuses to overwrite a file the user made read-only (mode without write bits, or Finder "Locked").
-pub fn ensure_file_writable(path: &Path) -> Result<()> {
-    let Ok(md) = fs::metadata(path) else { return Ok(()) };
+/// True when the user made the file read-only: a mode without write bits, or Finder "Locked".
+pub fn metadata_read_only(md: &fs::Metadata) -> bool {
     #[allow(unused_mut)]
     let mut locked = md.permissions().readonly();
     #[cfg(target_os = "macos")]
@@ -148,7 +147,12 @@ pub fn ensure_file_writable(path: &Path) -> Result<()> {
         use std::os::macos::fs::MetadataExt;
         locked |= md.st_flags() & 0x2 /* UF_IMMUTABLE */ != 0;
     }
-    if locked {
+    locked
+}
+/// Refuses to overwrite a file the user made read-only (mode without write bits, or Finder "Locked").
+pub fn ensure_file_writable(path: &Path) -> Result<()> {
+    let Ok(md) = fs::metadata(path) else { return Ok(()) };
+    if metadata_read_only(&md) {
         return Err(err("READ_ONLY", "This file is read-only; make it writable to save"));
     }
     Ok(())

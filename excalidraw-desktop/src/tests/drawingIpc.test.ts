@@ -26,6 +26,24 @@ describe("drawing IPC framing", () => {
     });
   });
 
+  it("reads the read-only mark (a carriage return after the revision)", async () => {
+    const json = '{"type":"excalidraw"}';
+    const bytes = new TextEncoder().encode(`${REVISION}\r${json}`);
+    const invoke = vi.fn().mockResolvedValue(bytes.buffer);
+    const repo = new DesktopVaultRepository({ invoke });
+    await expect(repo.readDrawing("h", "a.excalidraw")).resolves.toEqual({
+      json,
+      revision: REVISION,
+      readOnly: true,
+    });
+    invoke.mockResolvedValue(true);
+    await expect(repo.readOnlyState("h", "a.excalidraw")).resolves.toBe(true);
+    expect(invoke).toHaveBeenLastCalledWith("drawing_read_only", {
+      handle: "h",
+      path: "a.excalidraw",
+    });
+  });
+
   it("rejects a malformed read response", async () => {
     const repo = new DesktopVaultRepository({
       invoke: vi.fn().mockResolvedValue(new ArrayBuffer(10)),

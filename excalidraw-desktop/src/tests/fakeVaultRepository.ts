@@ -204,6 +204,23 @@ export class FakeVaultRepository implements VaultRepository {
     }
   }
 
+  private readOnlyFiles = new Set<string>();
+
+  /** Makes a drawing read-only (or writable again) like a chmod: a change event follows, no new revision. */
+  setFileReadOnly(path: string, readOnly: boolean): void {
+    if (readOnly) {
+      this.readOnlyFiles.add(path);
+    } else {
+      this.readOnlyFiles.delete(path);
+    }
+    this.emit({ handle: this.vault.handle, paths: [path], rescan: false });
+  }
+
+  async readOnlyState(handle: string, path: string): Promise<boolean> {
+    this.ensureOpen(handle);
+    return this.readOnlyFiles.has(path);
+  }
+
   /** Simulate an out-of-band edit (e.g. another program). Bypasses revision. */
   externalWrite(path: string, json: string): string {
     assertValidDrawingPath(path);
@@ -359,7 +376,9 @@ export class FakeVaultRepository implements VaultRepository {
     if (!row) {
       throw makeError("NOT_FOUND", `drawing not found: ${path}`);
     }
-    return { json: row.json, revision: row.revision };
+    return this.readOnlyFiles.has(path)
+      ? { json: row.json, revision: row.revision, readOnly: true }
+      : { json: row.json, revision: row.revision };
   }
 
   /**
@@ -442,6 +461,12 @@ export class FakeVaultRepository implements VaultRepository {
     }
     if (existing.revision !== input.expectedRevision) {
       throw makeError("CONFLICT", `revision mismatch for ${input.path}`);
+    }
+    if (this.readOnlyFiles.has(input.path)) {
+      throw makeError(
+        "READ_ONLY",
+        "This file is read-only; make it writable to save",
+      );
     }
     const revision = this.nextRevision();
     this.files.set(input.path, { json: input.json, revision });

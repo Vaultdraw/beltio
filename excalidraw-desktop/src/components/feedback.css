@@ -41,6 +41,12 @@
   color: inherit;
 }
 
+.vd-banner .vd-banner__action {
+  flex: none;
+  color: inherit;
+  text-decoration: underline;
+}
+
 /* Toasts */
 .vd-toasts {
   position: fixed;

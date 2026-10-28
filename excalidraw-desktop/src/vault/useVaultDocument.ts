@@ -39,6 +39,8 @@ export type UseVaultDocumentResult = {
   document: VaultDocument | null;
   /** The live document right now (path and the latest saved revision, id of the mounted editor); `document` lags a render and keeps the load revision. */
   getActive: () => { id: string; path: string; revision: string } | null;
+  /** The open drawing's file is read-only (view mode and a banner); lifts when it becomes writable. */
+  fileReadOnly: boolean;
   status: SaveStatus;
   error: string | null;
   loading: boolean;
@@ -70,6 +72,8 @@ type Active = Omit<VaultDocument, "source"> & {
   currentJson: string;
   savedJson: string;
   deleted: boolean;
+  /** The file has no write permission: the editor shows it in view mode and nothing is saved. */
+  readOnly: boolean;
 };
 const withoutSource = ({
   source: _source,
@@ -108,6 +112,7 @@ export const useVaultDocument = (
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [fileReadOnly, setFileReadOnly] = useState(false);
   const active = useRef<Active | null>(null);
   const coordinator = useRef<SaveCoordinator | null>(null);
   const generation = useRef(0);
@@ -195,6 +200,7 @@ export const useVaultDocument = (
           : null,
       );
       releaseActive(replaced === next ? null : replaced);
+      setFileReadOnly(next?.readOnly ?? false);
       setCurrentStatus("saved", null);
       if (!next) {
         return;
@@ -207,6 +213,7 @@ export const useVaultDocument = (
           const current = active.current;
           return current &&
             !current.deleted &&
+            !current.readOnly &&
             !vaultRef.current?.readOnly &&
             isWritableDrawing(current.path)
             ? {
@@ -304,6 +311,7 @@ export const useVaultDocument = (
           revision: loaded.revision,
           handle: currentVault.handle,
           deleted: false,
+          readOnly: loaded.readOnly === true,
         });
       } catch (cause) {
         if (mine === generation.current) {
@@ -377,6 +385,7 @@ export const useVaultDocument = (
         revision: created.revision,
         handle: currentVault.handle,
         deleted: false,
+        readOnly: false,
       });
     },
     [activate, flush],
@@ -476,6 +485,7 @@ export const useVaultDocument = (
       savedJson: loaded.json,
       revision: loaded.revision,
       deleted: false,
+      readOnly: loaded.readOnly === true,
     });
   }, [activate, fallback, setCurrentStatus]);
 
@@ -543,6 +553,7 @@ export const useVaultDocument = (
         savedJson: copyJson,
         revision: saved.revision,
         deleted: false,
+        readOnly: false,
       });
     },
     [activate],
@@ -662,6 +673,24 @@ export const useVaultDocument = (
           ) {
             return;
           }
+          if (current.readOnly && repository.readOnlyState) {
+            // A permission change leaves the content alone, so this check comes before the
+            // revision comparison: the file became writable, lift view mode and the banner.
+            const stillReadOnly = await repository
+              .readOnlyState(current.handle, current.path)
+              .catch(() => true);
+            if (
+              disposed ||
+              checkGeneration !== generation.current ||
+              active.current !== current
+            ) {
+              return;
+            }
+            if (!stillReadOnly) {
+              current.readOnly = false;
+              setFileReadOnly(false);
+            }
+          }
           if (repository.readRevision) {
             // Our own saves echo through the watcher: compare revisions first and
             // skip the full read when nothing changed. A missing file is deleted.
@@ -724,6 +753,7 @@ export const useVaultDocument = (
               currentJson: disk.json,
               savedJson: disk.json,
               revision: disk.revision,
+              readOnly: disk.readOnly === true,
             });
           }
         })().catch(async (cause) => {
@@ -806,6 +836,7 @@ export const useVaultDocument = (
   return {
     document,
     getActive,
+    fileReadOnly,
     status,
     error,
     loading,
