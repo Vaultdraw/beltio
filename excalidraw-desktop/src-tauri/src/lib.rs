@@ -160,6 +160,11 @@ fn classify_vault_event(root: &Path, p: &Path) -> WatchedPath {
     if text.split('/').any(|part| part.starts_with(".excalidraw-tmp-")) {
         return WatchedPath::Ignore;
     }
+    // Sync services' temporary and partial files (`~$x`, `x.tmp`, `.syncthing.x.tmp`, `x.sb-..`): the finished
+    // file arrives under its real name. (A folder called `x.tmp` is not reported until the next rescan.)
+    if text.rsplit('/').next().is_some_and(vaultdraw_core::sync_names::is_sync_temp_name) {
+        return WatchedPath::Ignore;
+    }
     if text == library::LIBRARY_FILE
         || text == format!("{META_DIR}/{}", library::LIBRARIES_DIR)
         || text.starts_with(&format!("{META_DIR}/{}/", library::LIBRARIES_DIR))
@@ -463,6 +468,12 @@ async fn drawing_revision(handle: String, path: String, state: State<'_, Service
     let v = vault_for(&state, &handle)?;
     drawing_revision_at(&v.root, &path)
 }
+/// Asks iCloud to download a placeholder file ("not downloaded" in the tree); returns at once.
+#[tauri::command]
+async fn sync_download_placeholder(handle: String, path: String, state: State<'_, Service>) -> Result<()> {
+    let v = vault_for(&state, &handle)?;
+    vaultdraw_core::sync_names::request_download(&v, &path)
+}
 /// Arguments carried in the headers of the raw `write_drawing` request (percent-encoded).
 #[derive(Debug)]
 struct WriteHeaders { handle: String, path: String, expected_revision: Option<String>, operation_id: String }
@@ -701,6 +712,11 @@ mod tests {
         assert_eq!(c(".excalidraw-tmp-1-2"), WatchedPath::Ignore);
         assert_eq!(c("a/b.excalidraw"), WatchedPath::Entry("a/b.excalidraw".into()));
         assert_eq!(c("a/.excalidraw-tmp-1"), WatchedPath::Ignore);
+        assert_eq!(c("a/~$b.md"), WatchedPath::Ignore);
+        assert_eq!(c("a/b.excalidraw.tmp"), WatchedPath::Ignore);
+        assert_eq!(c(".syncthing.b.excalidraw.tmp"), WatchedPath::Ignore);
+        assert_eq!(c("a/b.excalidraw.sb-1a2b-c3d4"), WatchedPath::Ignore);
+        assert_eq!(c("a/b (conflicted copy 2026-01-01).excalidraw"), WatchedPath::Entry("a/b (conflicted copy 2026-01-01).excalidraw".into()));
         assert_eq!(c("bad?.excalidraw"), WatchedPath::Rescan);
         assert_eq!(classify_vault_event(root, Path::new("/elsewhere/x")), WatchedPath::Rescan);
     }
@@ -905,7 +921,7 @@ pub fn run() {
         #[cfg(feature = "smoke-test")]
         let builder = if smoke::enabled() {
             builder.invoke_handler(tauri::generate_handler![
-                choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
+                choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision, sync_download_placeholder,
                 write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
                 export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
                 config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
@@ -929,7 +945,7 @@ pub fn run() {
             ])
         } else {
             builder.invoke_handler(tauri::generate_handler![
-                choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
+                choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision, sync_download_placeholder,
                 write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
                 export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
                 config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
@@ -950,7 +966,7 @@ pub fn run() {
         };
         #[cfg(not(feature = "smoke-test"))]
         let builder = builder.invoke_handler(tauri::generate_handler![
-            choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
+            choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision, sync_download_placeholder,
             write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
             export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
             config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,

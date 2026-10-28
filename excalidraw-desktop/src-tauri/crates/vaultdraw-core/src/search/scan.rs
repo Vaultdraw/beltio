@@ -51,6 +51,7 @@ fn scan_dir(root: &Path, dir: &str, depth: usize, dirs: &mut Vec<(String, usize)
             && !crate::filekind::is_hidden_name(name)
             && !name.starts_with(".excalidraw-tmp-")
             && !(dir.is_empty() && name.eq_ignore_ascii_case(META_DIR))
+            && (is_dir || !crate::sync_names::is_sync_temp_name(name))
             && if is_dir { depth < MAX_DEPTH && !is_skipped_dir(name) } else { is_indexed_name(name) }
     };
     let Ok(raw) = read_dir_entries(&root.join(dir), &mut accept) else {
@@ -79,7 +80,7 @@ fn scan_dir_each(root: &Path, dir: &str, depth: usize, dirs: &mut Vec<(String, u
             continue;
         }
         // Dot names (`.obsidian`, `.trash`, `.git`) are never walked.
-        if crate::filekind::is_hidden_name(&name) {
+        if crate::filekind::is_hidden_name(&name) || (!ft.is_dir() && crate::sync_names::is_sync_temp_name(&name)) {
             continue;
         }
         let child = if dir.is_empty() { name.clone() } else { format!("{dir}/{name}") };
@@ -361,6 +362,19 @@ mod tests {
         let mut k: Vec<_> = v.into_iter().map(|f| (f.path, f.size, f.mtime)).collect();
         k.sort();
         k
+    }
+
+    #[test]
+    fn scan_skips_sync_temp_files_and_keeps_conflict_copies() {
+        let t = tempfile::tempdir().unwrap();
+        let r = t.path();
+        for f in ["a.excalidraw", "~$b.md", "c.md.tmp", "d.excalidraw.sb-1-2", ".syncthing.e.excalidraw.tmp", "a (conflicted copy 1).excalidraw", ".f.excalidraw.icloud"] {
+            fs::write(r.join(f), "{}").unwrap();
+        }
+        let mut names: Vec<String> = walk(r, "").into_iter().map(|f| f.path).collect();
+        names.sort();
+        assert_eq!(names, vec!["a (conflicted copy 1).excalidraw", "a.excalidraw"]);
+        assert_eq!(sorted(walk(r, "")), sorted(walk_each(r)));
     }
 
     #[test]

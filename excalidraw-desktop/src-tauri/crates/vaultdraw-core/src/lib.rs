@@ -26,6 +26,7 @@ pub mod recovery;
 pub mod scene_project;
 pub mod search;
 pub mod staging;
+pub mod sync_names;
 pub mod uri;
 pub mod vault;
 pub mod vault_path;

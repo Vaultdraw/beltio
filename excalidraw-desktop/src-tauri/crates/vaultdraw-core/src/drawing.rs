@@ -23,6 +23,12 @@ pub struct VaultEntry {
     pub kind: String,
     pub modified_at: u64,
     pub size: u64,
+    /// Sync-service state: `"conflict"` (a conflict copy), `"placeholder"` (an iCloud file not downloaded yet).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sync: Option<&'static str>,
+    /// For a conflict copy: the vault-relative path of the file it conflicts with.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub conflict_of: Option<String>,
 }
 /// The entries of one vault folder (the UI file tree and `vault.list` share this). One bulk
 /// directory read supplies names, types, sizes and times (see `fsbulk`); names are checked
@@ -34,34 +40,42 @@ pub fn list_directory_in(v: &Vault, path: &str) -> Result<Vec<VaultEntry>> {
     }
     let prefix_len = if path.is_empty() { 0 } else { path.len() + 1 };
     let mut accept = |name: &str, is_dir: bool| {
-        // Names starting with a dot (`.obsidian`, `.trash`, `.git`, the metadata folder) are never listed;
-        // files are listed when they are drawings or Markdown notes.
-        !crate::filekind::is_hidden_name(name)
+        // Names starting with a dot (`.obsidian`, `.trash`, `.git`, the metadata folder) are never listed,
+        // except iCloud placeholders (`.name.excalidraw.icloud`), which show as "not downloaded".
+        // Files are listed when they are drawings or Markdown notes; sync temp files never.
+        let placeholder = !is_dir && crate::sync_names::placeholder_real_name(name).is_some();
+        (placeholder || !crate::filekind::is_hidden_name(name))
             && !name.eq_ignore_ascii_case(META_DIR)
-            && (is_dir || crate::filekind::file_kind(name) != crate::filekind::FileKind::Other)
+            && (is_dir || placeholder || (crate::filekind::file_kind(name) != crate::filekind::FileKind::Other && !crate::sync_names::is_sync_temp_name(name)))
             && !component_is_invalid(name)
             && prefix_len + name.len() <= MAX_REL_PATH_BYTES
     };
-    let raw = read_dir_entries(&dir, &mut accept).map_err(ioerr)?;
-    let mut out: Vec<VaultEntry> = raw
-        .into_iter()
-        .map(|e| {
-            let mut rel = String::with_capacity(prefix_len + e.name.len());
-            if prefix_len > 0 {
-                rel.push_str(path);
-                rel.push('/');
+    let mut raw = read_dir_entries(&dir, &mut accept).map_err(ioerr)?;
+    // Placeholders show under their real name; a real file of the same name wins (it finished downloading).
+    let real: std::collections::HashSet<String> = raw.iter().filter(|e| !e.is_dir && !e.name.starts_with('.')).map(|e| e.name.clone()).collect();
+    let rel_of = |name: &str| if prefix_len > 0 { format!("{path}/{name}") } else { name.to_owned() };
+    let mut out: Vec<VaultEntry> = Vec::with_capacity(raw.len());
+    for e in raw.drain(..) {
+        let mut sync = None;
+        let mut conflict_of = None;
+        let mut name = e.name;
+        if !e.is_dir {
+            if let Some(real_name) = crate::sync_names::placeholder_real_name(&name) {
+                if real.contains(real_name) { continue; }
+                name = real_name.to_owned();
+                sync = Some("placeholder");
+            } else if let Some(orig) = crate::sync_names::conflict_original(&name) {
+                // A conflict copy whose original is gone is still flagged: it is what the sync left.
+                conflict_of = Some(rel_of(&orig));
+                sync = Some("conflict");
+            } else if let Some(orig) = crate::sync_names::numbered_copy_original(&name).filter(|o| real.contains(o)) {
+                conflict_of = Some(rel_of(&orig));
+                sync = Some("conflict");
             }
-            rel.push_str(&e.name);
-            let kind = if e.is_dir { "folder" } else { crate::filekind::file_kind(&e.name).as_str() };
-            VaultEntry {
-                path: rel,
-                name: e.name,
-                kind: kind.into(),
-                modified_at: e.modified_ms,
-                size: e.size,
-            }
-        })
-        .collect();
+        }
+        let kind = if e.is_dir { "folder" } else { crate::filekind::file_kind(&name).as_str() };
+        out.push(VaultEntry { path: rel_of(&name), name, kind: kind.into(), modified_at: e.modified_ms, size: e.size, sync, conflict_of });
+    }
     // Folders first, then names case-insensitively; the exact name breaks ties so the order
     // never depends on the file system's read order.
     out.sort_by_cached_key(|e| (e.kind != "folder", e.name.to_lowercase(), e.name.clone()));

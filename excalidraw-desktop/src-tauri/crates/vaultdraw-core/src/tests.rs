@@ -282,6 +282,72 @@ fn mixed_folder(root: &Path) {
 }
 
 #[test]
+fn list_directory_flags_conflict_copies_and_placeholders_and_skips_temp_files() {
+    let t = tempdir().unwrap();
+    let r = t.path();
+    fs::create_dir(r.join("Sub")).unwrap();
+    for f in [
+        "Plan.excalidraw",
+        "Plan (conflicted copy 2026-01-01).excalidraw",
+        "Plan.sync-conflict-20260101-120000-ABCDEFG.excalidraw",
+        "Plan 2.excalidraw",
+        "Report 2.excalidraw", // no "Report.excalidraw" beside it: a normal name
+        "Cloud.excalidraw",
+        ".Cloud.excalidraw.icloud", // finished downloading: the real file wins
+        ".Away.excalidraw.icloud",  // not downloaded
+        ".photo.png.icloud",
+        "~$Plan.md",
+        "x.excalidraw.tmp",
+        ".syncthing.Plan.excalidraw.tmp",
+        ".dropbox.cache",
+        "Sub/Plan.md",
+        "Sub/Plan (Mac's conflicted copy 2026-01-01).md",
+    ] {
+        fs::write(r.join(f), "{}").unwrap();
+    }
+    let v = vault(r);
+    let l = list_directory_in(&v, "").unwrap();
+    let row = |n: &str| l.iter().find(|e| e.name == n).unwrap_or_else(|| panic!("{n} missing in {:?}", l.iter().map(|e| &e.name).collect::<Vec<_>>()));
+    assert_eq!(row("Plan.excalidraw").sync, None);
+    let dropbox = row("Plan (conflicted copy 2026-01-01).excalidraw");
+    assert_eq!((dropbox.sync, dropbox.conflict_of.as_deref()), (Some("conflict"), Some("Plan.excalidraw")));
+    assert_eq!(row("Plan.sync-conflict-20260101-120000-ABCDEFG.excalidraw").conflict_of.as_deref(), Some("Plan.excalidraw"));
+    assert_eq!(row("Plan 2.excalidraw").conflict_of.as_deref(), Some("Plan.excalidraw"));
+    assert_eq!(row("Report 2.excalidraw").sync, None);
+    assert_eq!(row("Cloud.excalidraw").sync, None);
+    let away = row("Away.excalidraw");
+    assert_eq!((away.sync, away.kind.as_str(), away.path.as_str()), (Some("placeholder"), "drawing", "Away.excalidraw"));
+    let names: Vec<&str> = l.iter().map(|e| e.name.as_str()).collect();
+    for junk in ["~$Plan.md", "x.excalidraw.tmp", ".syncthing.Plan.excalidraw.tmp", ".dropbox.cache", ".photo.png.icloud", ".Cloud.excalidraw.icloud", "photo.png"] {
+        assert!(!names.contains(&junk), "{junk} must not be listed");
+    }
+    let sub = list_directory_in(&v, "Sub").unwrap();
+    let c = sub.iter().find(|e| e.sync == Some("conflict")).unwrap();
+    assert_eq!(c.conflict_of.as_deref(), Some("Sub/Plan.md"));
+    assert_eq!(c.path, "Sub/Plan (Mac's conflicted copy 2026-01-01).md");
+}
+
+#[test]
+fn a_save_onto_a_file_changed_by_sync_is_refused_and_leaves_it_intact() {
+    let t = tempdir().unwrap();
+    let v = vault(t.path());
+    let first = write_drawing_file(&v, "a.excalidraw", SCENE, None, "op-1").unwrap();
+    let rev = first["revision"].as_str().unwrap().to_owned();
+    // The sync client replaces the file behind the app's back.
+    let theirs = SCENE.replace("\"version\":2", "\"version\":3");
+    fs::write(t.path().join("a.excalidraw"), &theirs).unwrap();
+    let e = write_drawing_file(&v, "a.excalidraw", SCENE, Some(&rev), "op-2").unwrap_err();
+    assert_eq!(e.code, "CONFLICT");
+    assert_eq!(fs::read_to_string(t.path().join("a.excalidraw")).unwrap(), theirs);
+    // Same for a note.
+    let n = note_file::write_note_file(&v, "n.md", "mine", None).unwrap();
+    fs::write(t.path().join("n.md"), "theirs").unwrap();
+    let e = note_file::write_note_file(&v, "n.md", "mine 2", Some(&n.revision)).unwrap_err();
+    assert_eq!(e.code, "CONFLICT");
+    assert_eq!(fs::read_to_string(t.path().join("n.md")).unwrap(), "theirs");
+}
+
+#[test]
 fn list_directory_filters_sorts_and_reports_sizes() {
     let t = tempdir().unwrap();
     mixed_folder(t.path());
