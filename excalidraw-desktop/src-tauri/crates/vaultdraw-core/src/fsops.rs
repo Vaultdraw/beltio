@@ -296,6 +296,41 @@ pub fn current_revision(path: &Path) -> Result<Option<String>> {
     if total > MAX_DRAWING_BYTES { return Err(err("INVALID_FILE", "File exceeds its size limit")); }
     Ok(Some(rev))
 }
+/// What a stat says about a file at one moment: size, modification time, device and inode.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct Stamp { size: u64, mtime: Option<std::time::SystemTime>, id: (u64, u64) }
+impl Stamp {
+    fn of(md: &fs::Metadata) -> Stamp {
+        #[cfg(unix)]
+        let id = { use std::os::unix::fs::MetadataExt; (md.dev(), md.ino()) };
+        #[cfg(not(unix))]
+        let id = (0, 0);
+        Stamp { size: md.len(), mtime: md.modified().ok(), id }
+    }
+}
+/// Window after a modification in which a second write can still leave the same modification time
+/// (coarse file-system clocks); a file modified more recently than this is always re-hashed.
+const RACY_WINDOW: std::time::Duration = std::time::Duration::from_millis(100);
+
+/// Like `current_revision`, plus a stamp of the exact file that was hashed (taken from the open
+/// handle, so it describes the bytes read) and whether it is old enough to trust later.
+pub fn current_revision_stamped(path: &Path) -> Result<Option<(String, Option<Stamp>)>> {
+    let file = match File::open(path) {
+        Ok(f) => f,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(ioerr(e)),
+    };
+    let md = file.metadata().map_err(ioerr)?;
+    let (rev, total) = revision_of_reader(file.take(MAX_DRAWING_BYTES + 1)).map_err(ioerr)?;
+    if total > MAX_DRAWING_BYTES { return Err(err("INVALID_FILE", "File exceeds its size limit")); }
+    let stamp = Stamp::of(&md);
+    let stable = stamp.mtime.is_some_and(|m| std::time::SystemTime::now().duration_since(m).is_ok_and(|age| age > RACY_WINDOW));
+    Ok(Some((rev, stable.then_some(stamp))))
+}
+/// True when the file at `path` still has exactly this stamp (same inode, size and modification time).
+pub fn stamp_unchanged(path: &Path, stamp: &Stamp) -> bool {
+    fs::metadata(path).is_ok_and(|md| &Stamp::of(&md) == stamp)
+}
 pub fn read_bounded(path: &Path, limit: u64) -> Result<Vec<u8>> {
     let mut data = Vec::new();
     File::open(path).map_err(ioerr)?.take(limit.saturating_add(1)).read_to_end(&mut data).map_err(ioerr)?;
@@ -454,5 +489,33 @@ mod fs_safety_tests {
         let mut buf = [0u8; 64];
         let n = unsafe { libc::getxattr(cp.as_ptr(), name.as_ptr(), buf.as_mut_ptr() as *mut _, buf.len(), 0, 0) };
         assert_eq!(&buf[..n.max(0) as usize], tag);
+    }
+}
+
+#[cfg(test)]
+mod stamp_tests {
+    use super::*;
+
+    #[test]
+    fn stamp_is_trusted_only_for_an_old_unchanged_file() {
+        let t = tempfile::tempdir().unwrap();
+        let p = t.path().join("a.excalidraw");
+        fs::write(&p, "0123456789").unwrap();
+        // Just written: inside the racy window, so no stamp is offered and the caller re-hashes.
+        assert!(current_revision_stamped(&p).unwrap().unwrap().1.is_none());
+        std::thread::sleep(RACY_WINDOW + std::time::Duration::from_millis(50));
+        let (rev, stamp) = current_revision_stamped(&p).unwrap().unwrap();
+        let stamp = stamp.expect("old file is stable");
+        assert_eq!(Some(rev), current_revision(&p).unwrap());
+        assert!(stamp_unchanged(&p, &stamp));
+        // Same size, new content: the modification time moves, so the stamp no longer matches.
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        fs::write(&p, "abcdefghij").unwrap();
+        assert!(!stamp_unchanged(&p, &stamp));
+        // Replaced by a new file (new inode), same size and content.
+        let again = current_revision_stamped(&p).unwrap().unwrap().1;
+        fs::remove_file(&p).unwrap();
+        assert!(again.is_none_or(|s| !stamp_unchanged(&p, &s)));
+        assert!(current_revision_stamped(&p).unwrap().is_none());
     }
 }

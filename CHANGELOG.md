@@ -70,6 +70,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Changed
 
+- A save reads the drawing once instead of twice when it is older than 100 ms and its file stamp (inode, size, modification time) is unchanged; any doubt falls back to the full second hash. About 3 ms less per save of an 8.6 MB drawing.
 - **The graph view is an official plugin.** It moved out of the app core into `plugins/official/graph` and runs on the plugin API (overlays, vault graph bytes, own vault settings table). Same commands, keys, behaviour and `[graph]` settings. **Settings → Extensions → Graph view** (or `[extensions] graph = false`) turns it off, and turned off it costs nothing.
 - Ten built-in themes instead of 123: Default, Dracula, Catppuccin, Solarized, Gruvbox, Tokyo Night, Nord, Kanagawa, Everforest and One Dark. The rest moved to the Vaultdraw/themes repo; a `config.toml` that still names one shows Default, with a notice and an **Install it** button. `One` and `Everforest Alt` still select One Dark and Everforest.
 - Faster start: every built-in theme is in the startup code, and there is no lazy theme loading any more.

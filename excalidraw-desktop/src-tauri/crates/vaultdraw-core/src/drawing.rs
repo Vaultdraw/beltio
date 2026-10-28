@@ -187,12 +187,16 @@ where F: FnOnce(&Path, &[u8], bool) -> Result<()> {
     crate::fsops::reject_hidden(path)?;
     if operation_id.is_empty() || operation_id.len() > 200 { return Err(err("INVALID_ARGUMENT", "Invalid operation id")); }
     let p = safe_path(&v.root, path, true)?;
-    if current_revision(&p)?.as_deref() != expected_revision { return Err(err("CONFLICT", "Drawing changed on disk; save was not applied")); }
+    let (on_disk, stamp) = match crate::fsops::current_revision_stamped(&p)? { Some((rev, stamp)) => (Some(rev), stamp), None => (None, None) };
+    if on_disk.as_deref() != expected_revision { return Err(err("CONFLICT", "Drawing changed on disk; save was not applied")); }
     if expected_revision.is_none() { ensure_no_sibling_collision(&p)?; } else { crate::fsops::ensure_file_writable(&p)?; }
     let snapshot = create_recovery(v, path, expected_revision, operation_id, json)?;
-    let recheck = match current_revision(&p) {
-        Ok(rev) => rev,
-        Err(e) => { remove_recovery(&snapshot); return Err(e); }
+    // Same inode, size and (old enough) modification time as the file just hashed: unchanged, no second read.
+    let recheck = if stamp.as_ref().is_some_and(|s| crate::fsops::stamp_unchanged(&p, s)) { on_disk } else {
+        match current_revision(&p) {
+            Ok(rev) => rev,
+            Err(e) => { remove_recovery(&snapshot); return Err(e); }
+        }
     };
     if recheck.as_deref() != expected_revision { return Err(err("CONFLICT", "Drawing changed immediately before commit; recovery snapshot retained")); }
     commit_fn(&p, json.as_bytes(), expected_revision.is_none())?;
