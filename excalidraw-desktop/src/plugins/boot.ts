@@ -299,6 +299,7 @@ export function bootPlugins(win: Window): void {
   setPasteStarter(() => startPasteHandlers(win));
   setImportHostStarter(() => ensurePluginHost(win));
   setMathStarter(() => startFormulaPlugin(win));
+  watchStartWhen(win);
   setFormulaEditRunner((id) => runOfficialCommand(win, id));
   syncOfficialStubs(win);
   syncOfficialActivity(win);
@@ -327,6 +328,21 @@ export function bootPlugins(win: Window): void {
     if (enabled()) {
       off();
       onIdle(win, () => start(win));
+    }
+  });
+}
+
+/** Activates a `startWhen` plugin (auto-export) when its switch turns on after the host is up. */
+function watchStartWhen(win: Window): void {
+  const ids = OFFICIAL_PLUGINS.filter((p) => p.startWhen).map((p) => p.id);
+  const was = new Map(ids.map((id) => [id, wantsStart(id, win)]));
+  subscribePreferences(() => {
+    for (const id of ids) {
+      const now = wantsStart(id, win) && enabledPluginIds(win).includes(id);
+      if (now && !was.get(id) && pluginHostStarted.get()) {
+        void import("./host/activation").then((m) => m.ensureActive(id));
+      }
+      was.set(id, now);
     }
   });
 }

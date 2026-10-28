@@ -4,6 +4,8 @@ import { scheduleIdle } from "../../platform/idle";
 import { isBisectOff } from "../../extensionSwitches/bisectState";
 
 import { enabledPluginIds } from "../enabledIds";
+import { OFFICIAL_PLUGINS } from "../officialPlugins";
+import { getPreferences } from "../../vault/preferences";
 
 import { ensureActive } from "./activation";
 import { currentList } from "./pluginsState";
@@ -54,6 +56,15 @@ export function queueStartupActivations(
   });
 }
 
+/**
+ * An official plugin with a `startWhen` switch (auto-export) loads only while that switch is true in
+ * config.toml; boot activates it when the switch turns on later.
+ */
+export function startsAtLaunch(id: string, win: Window): boolean {
+  const key = OFFICIAL_PLUGINS.find((p) => p.id === id)?.startWhen;
+  return !key || getPreferences(win).pluginSettings[id]?.[key] === true;
+}
+
 /** Safe mode registers nothing; otherwise stubs follow the list and the enabled ids. */
 export function applyPlugins(
   win: Window,
@@ -66,5 +77,9 @@ export function applyPlugins(
   // An extension bisect turns some plugins off for this launch.
   const enabled = enabledPluginIds(win).filter((id) => !isBisectOff(id));
   const { started } = syncPlugins(plugins, enabled);
-  return queueStartupActivations(plugins, started, schedule);
+  return queueStartupActivations(
+    plugins,
+    started.filter((id) => startsAtLaunch(id, win)),
+    schedule,
+  );
 }
