@@ -74,6 +74,8 @@ export interface VaultRepository {
   createFolder(handle: string, path: string): Promise<void>;
   move(handle: string, from: string, to: string): Promise<void>;
   trash(handle: string, path: string): Promise<void>;
+  /** Files under a folder, counted natively and capped at 1,000 (for the Trash confirmation). */
+  countFolderItems?(handle: string, path: string): Promise<FolderCount>;
   /** Asks iCloud to download a file listed as `sync: "placeholder"`; returns at once. */
   downloadPlaceholder?(handle: string, path: string): Promise<void>;
   reveal(handle: string, path: string): Promise<void>;
@@ -106,3 +108,9 @@ export const errorMessage = (error: unknown): string => {
   }
   return String(error);
 };
+
+/** How many files a folder holds; `capped` means "this many or more". */
+export interface FolderCount {
+  count: number;
+  capped: boolean;
+}

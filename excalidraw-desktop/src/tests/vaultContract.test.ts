@@ -231,7 +231,7 @@ describe("directory listing and CRUD", () => {
     await expectCode(repo.move(repo.handle, "", "x"), "INVALID_PATH");
   });
 
-  it("trash deletes files but refuses non-empty folders and the vault root", async () => {
+  it("trash deletes files and folders with their contents, but not the vault root", async () => {
     const repo = new FakeVaultRepository();
     repo.seedDrawing("a/x.excalidraw", BLANK_SCENE);
     await repo.trash(repo.handle, "a/x.excalidraw");
@@ -240,7 +240,15 @@ describe("directory listing and CRUD", () => {
       "NOT_FOUND",
     );
     repo.seedDrawing("b/y.excalidraw", BLANK_SCENE);
-    await expectCode(repo.trash(repo.handle, "b"), "NAME_COLLISION");
+    expect(await repo.countFolderItems!(repo.handle, "b")).toEqual({
+      count: 1,
+      capped: false,
+    });
+    await repo.trash(repo.handle, "b");
+    await expectCode(
+      repo.readDrawing(repo.handle, "b/y.excalidraw"),
+      "NOT_FOUND",
+    );
     await expectCode(repo.trash(repo.handle, ""), "INVALID_PATH");
     await expectCode(repo.trash(repo.handle, "ghost.excalidraw"), "NOT_FOUND");
   });

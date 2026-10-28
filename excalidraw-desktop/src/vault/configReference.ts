@@ -185,7 +185,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
     table: "files",
     intro: "Creating and deleting drawings.",
     keys: {
-      confirm_delete: { doc: "Ask before moving a drawing to the Trash." },
+      confirm_delete: {
+        doc: "Ask before moving a drawing or folder to the Trash.",
+      },
       new_drawing_folder: {
         doc: "Folder for new drawings, relative to the vault root; empty puts them next to the open drawing.",
       },

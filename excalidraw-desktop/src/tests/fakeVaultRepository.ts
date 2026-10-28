@@ -15,6 +15,7 @@ import type {
   VaultEntry,
   VaultInfo,
   VaultRepository,
+  FolderCount,
 } from "../vault/types";
 
 export type FakeErrorCode =
@@ -574,20 +575,32 @@ export class FakeVaultRepository implements VaultRepository {
       return;
     }
     if (this.folders.has(path)) {
-      // Fake refuses non-empty folder trash like the native may; tests assert
-      // this conservative behavior.
+      // Like the native trash: the folder and everything under it go.
       const prefix = `${path}/`;
-      const hasChildren =
-        [...this.files.keys()].some((f) => f.startsWith(prefix)) ||
-        [...this.folders].some((f) => f !== path && f.startsWith(prefix));
-      if (hasChildren) {
-        throw makeError("NAME_COLLISION", `folder not empty: ${path}`);
+      for (const f of [...this.files.keys()]) {
+        if (f.startsWith(prefix)) {
+          this.files.delete(f);
+        }
+      }
+      for (const f of [...this.folders]) {
+        if (f.startsWith(prefix)) {
+          this.folders.delete(f);
+        }
       }
       this.folders.delete(path);
       this.emit({ handle: this.vault.handle, paths: [path], rescan: true });
       return;
     }
     throw makeError("NOT_FOUND", `path not found: ${path}`);
+  }
+
+  async countFolderItems(handle: string, path: string): Promise<FolderCount> {
+    this.ensureOpen(handle);
+    const prefix = `${path}/`;
+    const count = [...this.files.keys()].filter((f) =>
+      f.startsWith(prefix),
+    ).length;
+    return { count: Math.min(count, 1000), capped: count >= 1000 };
   }
 
   async reveal(handle: string, path: string): Promise<void> {

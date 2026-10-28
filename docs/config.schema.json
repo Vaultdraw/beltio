@@ -465,7 +465,7 @@
       "additionalProperties": false,
       "properties": {
         "confirm_delete": {
-          "description": "Ask before moving a drawing to the Trash.",
+          "description": "Ask before moving a drawing or folder to the Trash.",
           "default": true,
           "type": "boolean"
         },

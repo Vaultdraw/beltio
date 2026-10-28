@@ -190,20 +190,16 @@ describe("rebaseFolderPath", () => {
   });
 });
 
-describe("deletion conservatism", () => {
-  it("non-empty folders are refused (OS trash or explicit emptying instead)", async () => {
+describe("deletion", () => {
+  it("non-empty folders are trashed with everything under them", async () => {
     const repo = new FakeVaultRepository();
     repo.seedDrawing("DSA/a.excalidraw", SAMPLE_SCENE);
-    try {
-      await repo.trash(repo.handle, "DSA");
-      expect.unreachable("non-empty folder trash should fail");
-    } catch (error) {
-      expect(String(error)).toMatch(/not empty/i);
-    }
-    // File still intact after refused deletion.
-    expect(
-      await repo.readDrawing(repo.handle, "DSA/a.excalidraw"),
-    ).toBeTruthy();
+    repo.seedDrawing("DSA/sub/b.excalidraw", SAMPLE_SCENE);
+    await repo.trash(repo.handle, "DSA");
+    expect(await repo.listDirectory(repo.handle, "")).toEqual([]);
+    await expect(
+      repo.readDrawing(repo.handle, "DSA/sub/b.excalidraw"),
+    ).rejects.toBeTruthy();
   });
 
   it("empty folders trash cleanly; unrelated files are never in the fake", async () => {

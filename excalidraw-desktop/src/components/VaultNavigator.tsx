@@ -71,6 +71,7 @@ import { SearchResults } from "./search/SearchResults";
 import { TagChips } from "./tags/TagChips";
 import { TagsPanel, type TagsPanelHandle } from "./tags/TagsPanel";
 
+import { folderTrashMessage } from "./trashMessage";
 import { ConfirmModal } from "./ConfirmModal";
 import { Dialog } from "./Dialog";
 import { MoveModal } from "./MoveModal";
@@ -95,7 +96,12 @@ import type { DragSource } from "./tree/useTreeDrag";
 
 import type { ElementMatch, VaultSearch } from "../search/types";
 
-import type { EntryKind, VaultEntry, VaultInfo } from "../vault/types";
+import type {
+  EntryKind,
+  FolderCount,
+  VaultEntry,
+  VaultInfo,
+} from "../vault/types";
 
 import type { ExplorerExportFormat } from "../export/exportFromFile";
 
@@ -151,6 +157,8 @@ interface VaultNavigatorProps {
   onDuplicateDrawing: (path: string) => void | Promise<void>;
   onSaveAsTemplate?: (path: string) => void;
   onTrashEntry: (path: string) => void | Promise<void>;
+  /** Counts the files under a folder for the Trash confirmation (omitted: no count shown). */
+  onCountFolderItems?: (path: string) => Promise<FolderCount | null>;
   onRevealEntry: (path: string) => void | Promise<void>;
   /** Drawing rows: Export as PNG/SVG/PDF…, Save a copy… */
   onExportDrawing?: (
@@ -215,6 +223,7 @@ export const VaultNavigator = ({
   onDuplicateDrawing,
   onSaveAsTemplate,
   onTrashEntry,
+  onCountFolderItems,
   onRevealEntry,
   onExportDrawing,
   onSwitchVault,
@@ -261,6 +270,24 @@ export const VaultNavigator = ({
     }
   }, [moveTarget, onNeedIndex]);
   const [trashTarget, setTrashTarget] = useState<VaultEntry | null>(null);
+  const [trashCount, setTrashCount] = useState<FolderCount | null>(null);
+  // The callback is a fresh closure each render: read it through a ref.
+  const countRef = useRef(onCountFolderItems);
+  countRef.current = onCountFolderItems;
+  useEffect(() => {
+    setTrashCount(null);
+    if (trashTarget?.kind !== "folder" || !countRef.current) {
+      return;
+    }
+    let live = true;
+    countRef
+      .current(trashTarget.path)
+      .then((c) => live && setTrashCount(c))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [trashTarget]);
   const [menu, setMenu] = useState<RowMenuState | null>(null);
   const [sortMenu, setSortMenu] = useState<{ x: number; y: number } | null>(
     null,
@@ -1099,7 +1126,7 @@ export const VaultNavigator = ({
           }`}
           message={
             trashTarget.kind === "folder"
-              ? `Move the folder “${trashTarget.name}” to the trash? You can restore it from the system Trash. Only empty folders can be trashed, so move or delete its drawings first.`
+              ? folderTrashMessage(trashTarget.name, trashCount)
               : `Move “${trashTarget.name}” to the trash? You can restore it from the system Trash.`
           }
           confirmLabel="Move to Trash"

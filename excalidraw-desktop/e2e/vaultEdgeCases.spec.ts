@@ -293,7 +293,7 @@ test("tree: create, rename, move, duplicate and delete with awkward names", asyn
     .not.toBeNull();
   expect(await readFake(page, "日本語のメモ.excalidraw")).toBeNull();
 
-  // Trash: cancel keeps it; confirm removes it and closes its tab; a non-empty folder is refused.
+  // Trash: cancel keeps it; confirm removes it and closes its tab; a non-empty folder goes too, with its tabs.
   await rowMenu(page, rowByName(page, "Case"), "Move to Trash");
   await dialog(page).getByRole("button", { name: "Cancel" }).click();
   expect(await readFake(page, "Case.excalidraw")).not.toBeNull();
@@ -308,13 +308,21 @@ test("tree: create, rename, move, duplicate and delete with awkward names", asyn
     await spaced.locator(".vault-tree-item__toggle").click();
   }
   await expect(rowByName(page, "日本語のメモ")).toBeVisible();
+  await rowByName(page, "日本語のメモ")
+    .locator(".vault-tree-item__name")
+    .click();
+  await expect.poll(async () => await tabNames(page)).toContain("日本語のメモ");
   await rowMenu(page, rowByName(page, "Spaced Folder"), "Move to Trash");
+  await expect(dialog(page)).toContainText("Spaced Folder");
+  await expect(dialog(page)).toContainText("and its 1 item");
   await dialog(page).getByRole("button", { name: "Move to Trash" }).click();
-  await expect(rowByName(page, "Spaced Folder")).toBeVisible(); // refused: not empty
-  expect(
-    await readFake(page, "Spaced Folder/日本語のメモ.excalidraw"),
-  ).not.toBeNull();
-  await page.keyboard.press("Escape");
+  await expect(rowByName(page, "Spaced Folder")).toHaveCount(0);
+  await expect
+    .poll(() => readFake(page, "Spaced Folder/日本語のメモ.excalidraw"))
+    .toBeNull();
+  await expect
+    .poll(async () => await tabNames(page))
+    .not.toContain("日本語のメモ");
 
   expect(errors).toEqual([]);
 });

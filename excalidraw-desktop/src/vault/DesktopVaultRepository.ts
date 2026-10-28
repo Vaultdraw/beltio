@@ -8,6 +8,8 @@ import {
   type VaultRepository,
 } from "./types";
 
+import type { FolderCount } from "./types";
+
 export type InvokeFn = <T>(
   cmd: string,
   args?: Record<string, unknown> | Uint8Array,
@@ -158,6 +160,7 @@ export class DesktopVaultRepository implements VaultRepository {
     this.createFolder = this.createFolder.bind(this);
     this.move = this.move.bind(this);
     this.trash = this.trash.bind(this);
+    this.countFolderItems = this.countFolderItems.bind(this);
     this.reveal = this.reveal.bind(this);
     this.exportFile = this.exportFile.bind(this);
     this.saveDrawingCopy = this.saveDrawingCopy.bind(this);
@@ -324,6 +327,15 @@ export class DesktopVaultRepository implements VaultRepository {
     const invoke = await this.getInvoke();
     try {
       await invoke<void>("trash_entry", { handle, path });
+    } catch (err) {
+      throw normalizeError(err);
+    }
+  }
+
+  async countFolderItems(handle: string, path: string): Promise<FolderCount> {
+    const invoke = await this.getInvoke();
+    try {
+      return await invoke<FolderCount>("count_folder_items", { handle, path });
     } catch (err) {
       throw normalizeError(err);
     }

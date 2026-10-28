@@ -3246,6 +3246,11 @@ export const VaultApp = ({
           onDuplicateDrawing={handleDuplicateDrawing}
           onSaveAsTemplate={ext.templates ? templates.requestSave : undefined}
           onTrashEntry={handleTrashEntry}
+          onCountFolderItems={
+            repository.countFolderItems && vault
+              ? (path) => repository.countFolderItems!(vault.handle, path)
+              : undefined
+          }
           onRevealEntry={handleRevealEntry}
           onExportDrawing={handleExportDrawing}
           onSwitchVault={handleSwitchVault}
