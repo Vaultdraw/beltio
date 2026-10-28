@@ -1572,7 +1572,7 @@ A banner at the top says "Safe start" and why. It has two buttons: "Restart norm
 
 To leave safe start, run "Restart normally" (command `app.restartNormally`) from the palette or the banner. Neither command has a default key; bind one in `[hotkeys]` if you want.
 
-**Plugin safe mode is separate and unchanged.** After two crashed launches with plugins on, or with Option held at launch, only plugins stay off; built-in extensions keep running. "Restart in safe mode" (command `plugins.restartSafeMode`) does the same by hand. The banner for a core safe start shows only for the core kind.
+**Plugin safe mode is separate and unchanged.** After two crashed launches with plugins on, every plugin stays off; built-in extensions keep running. With Option held at launch, or after "Restart in safe mode" (command `plugins.restartSafeMode`), only the plugins you added stay off: the official ones that ship with the app (graph, gallery, frames, Markdown import and the rest) keep running. The banner for a core safe start shows only for the core kind.
 
 **Environment variables**
 
@@ -1737,7 +1737,7 @@ enabled = ["my-plugin"]
 
 - **Settings → Plugins** edits this list. It also installs a plugin from a folder (copied into `plugins/`, not enabled), reloads or uninstalls a plugin, and edits the settings each plugin declares. A plugin that isn't bundled asks for consent the first time you enable it, because it runs with full access.
 - **Zero cost when unused:** with an empty `enabled` list, no plugin code loads at startup.
-- **Safe mode:** after two crashed launches in a row with plugins enabled, the next launch loads no plugins and shows a banner. Holding Option at launch does the same. Use **Plugins: Restart in safe mode** (`plugins.restartSafeMode`) and **Plugins: Restart normally** (`plugins.restartNormally`) to switch.
+- **Safe mode:** after two crashed launches in a row with plugins enabled, the next launch loads no plugins and shows a banner. Holding Option at launch turns off only the plugins you added; the official ones keep running. Use **Plugins: Restart in safe mode** (`plugins.restartSafeMode`) and **Plugins: Restart normally** (`plugins.restartNormally`) to switch.
 - **Dev reload:** with `dev = true` in a plugin's `plugin.toml`, saving its `main.js` or `plugin.toml` reloads it.
 - **Saved plugin data:** a plugin's `ctx.storage` lives in the state folder (`plugin-data/<id>/data.json`), not in `config.toml` and never in a vault. `storage_limit_kb` caps each plugin's data (it is read on every write, so edits apply at once):
 

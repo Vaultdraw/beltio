@@ -65,17 +65,30 @@ export function startsAtLaunch(id: string, win: Window): boolean {
   return !key || getPreferences(win).pluginSettings[id]?.[key] === true;
 }
 
-/** Safe mode registers nothing; otherwise stubs follow the list and the enabled ids. */
+/**
+ * Plugin safe mode turns off the plugins the user added; the bundled official plugins (graph,
+ * gallery, frames, Markdown import, ...) are part of the app and stay on, as Obsidian's restricted
+ * mode keeps its core plugins. Safe start (scope `core`) and a safe mode caused by crashed launches
+ * register nothing. Otherwise stubs follow the list and the enabled ids.
+ */
 export function applyPlugins(
   win: Window,
   schedule: Schedule,
 ): Promise<void> | null {
   const { plugins, safeMode } = currentList();
-  if (safeMode) {
+  if (
+    safeMode &&
+    (safeMode.scope === "core" || safeMode.reason === "crashes")
+  ) {
     return null;
   }
   // An extension bisect turns some plugins off for this launch.
-  const enabled = enabledPluginIds(win).filter((id) => !isBisectOff(id));
+  const bundled = new Set(
+    plugins.filter((p) => p.source === "bundled").map((p) => p.id),
+  );
+  const enabled = enabledPluginIds(win).filter(
+    (id) => !isBisectOff(id) && (!safeMode || bundled.has(id)),
+  );
   const { started } = syncPlugins(plugins, enabled);
   return queueStartupActivations(
     plugins,

@@ -310,6 +310,38 @@ describe("safe mode", () => {
     expect(getRegisteredCommand("alpha.go")).toBeUndefined();
   });
 
+  // toimprove #103: the Option key at launch (or "Restart in safe mode") must not take away the
+  // app's own plugins (graph, gallery, ...): only the plugins the user added are off.
+  it.each([
+    ["modifier", "plugins", true],
+    ["user", "plugins", true],
+    ["crashes", "plugins", false],
+    ["flag", "core", false],
+  ] as const)(
+    "safe mode %s (%s): official plugins stay on = %s; user plugins stay off",
+    async (reason, scope, officialOn) => {
+      const official = {
+        ...withCommands("graph", "open"),
+        source: "bundled" as const,
+      };
+      setupHost([official, withCommands("alpha", "go")], {
+        graph: plugin(),
+        alpha: plugin(),
+      }).backend.safeMode = {
+        reason,
+        scope,
+        crashedLaunches: 0,
+        pluginsAtCrash: [],
+      };
+      updatePreferences({ pluginsEnabled: ["graph", "alpha"] });
+      const host = await startPluginHost(window, (run) => run());
+      stop = host.stop;
+      await host.startupDone;
+      expect(getRegisteredCommand("graph.open") !== undefined).toBe(officialOn);
+      expect(getRegisteredCommand("alpha.go")).toBeUndefined();
+    },
+  );
+
   it("normal launch offers Restart in safe mode", async () => {
     await boot([]);
     const def = getRegisteredCommand("plugins.restartSafeMode");

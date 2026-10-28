@@ -9,9 +9,17 @@ import { getRegisteredCommand, registerCommands } from "../commands/registry";
 import { getRegisteredHandler } from "../commands/handlerRegistry";
 import { getPreferences, updatePreferences } from "../vault/preferences";
 
+// The built-in entries (library, history, search, ...) register on import, as in the app.
+import "../activityBar/entries";
+import {
+  activityBarRegistry,
+  placeAfter,
+} from "../activityBar/activityBarRegistry";
+
 import { runCommandById } from "./host/runner";
 
 import { bootPlugins, ensurePluginHost } from "./boot";
+import { OFFICIAL_PLUGINS } from "./officialPlugins";
 import { pluginHostStarted } from "./hostFlag";
 import { findImporter, runImports } from "./importerMap";
 import { resetImporterMap, setImportRunner } from "./importerMapAdmin";
@@ -133,6 +141,28 @@ describe("official plugins (on by default, no startup cost)", () => {
       importerId: "md",
     });
     expect(findImporter("a.excalidraw.md")?.extension).toBe("md");
+  });
+
+  it("every enabled official plugin with an activity entry gets a button with a handler, in place", () => {
+    const { win } = fakeWin(true);
+    bootPlugins(win);
+    const ids = placeAfter([
+      ...activityBarRegistry.list("activityBar.top"),
+      ...activityBarRegistry.list("activityBar.bottom"),
+    ]).map((e) => e.id);
+    expect(new Set(ids).size, ids.join(",")).toBe(ids.length);
+    for (const p of OFFICIAL_PLUGINS.filter((x) => x.activity)) {
+      expect(ids, p.id).toContain(p.activity!.id);
+      expect(
+        getRegisteredHandler(`${p.id}.${p.activity!.command}`),
+        p.id,
+      ).toBeTypeOf("function");
+      if (p.activity!.after) {
+        expect(ids.indexOf(p.activity!.id), p.id).toBeGreaterThan(
+          ids.indexOf(p.activity!.after),
+        );
+      }
+    }
   });
 
   it("registers nothing when the user turned it off (enabled = [])", () => {
