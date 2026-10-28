@@ -7,6 +7,7 @@ import {
   type SettingsTarget,
 } from "../components/settings/schema";
 import { setSettingsScope } from "../components/settings/settingsScope";
+import { restartApp } from "../memory/restartApp";
 import { EXTENSION_COMMAND_HANDLERS } from "../extensionSwitches/extensionCommands";
 import { HELP_COMMAND_IDS, HELP_LINK_HANDLERS } from "../help/helpCommands";
 import { PEN_COMMAND_HANDLERS } from "../pens/penCommands";
@@ -102,6 +103,7 @@ export function appCommandHandlers(
     "file.revealInFinder": actions.revealActive,
     "file.duplicate": actions.duplicateActive,
     "appearance.toggleMode": actions.toggleMode,
+    "app.restart": () => void restartApp(),
     "palette.files": () => actions.togglePalette("files"),
     "palette.commands": () => actions.togglePalette("commands"),
     "appearance.mode.light": () => actions.setMode("light"),

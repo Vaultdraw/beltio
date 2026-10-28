@@ -8,6 +8,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 - **Auto-export no longer overwrites or deletes your own images.** It used to replace any `.svg` or `.png` with the drawing's name (your `Logo.png` beside `Logo.excalidraw`) and delete it with the drawing. It now records the files it writes (name and hash) and leaves everything else alone, with one notice; deleted exports go to the Trash, and a case-only rename moves the export. Exports from earlier versions are not recorded: delete the old file once and the next save recreates it.
 
+- **Obsidian re-import into the vault.** The destination folder is chosen before anything is written: if it already holds files, the import goes to a fresh "<Vault> (import N)" folder, so links never point at an older import (also with a partial overlap).
+- **Low-memory canvas.** Settings shows a "Restart now" button while the saved value differs from the running one; new command `app.restart` ("Restart Vaultdraw").
 - **Table paste and Favourites safety.** With `on_paste = "always"` a table over the limits is now pasted as text instead of being swallowed; pastes over 256,000 characters are no longer parsed (a huge CSV no longer throws). Favourites no longer saves after a failed read (which could wipe the list) and no longer writes a change into another vault after a vault switch.
 
 - **Libraries and profiles.** Deleting the same library twice in one second keeps both recoverable copies; renaming a library never replaces a file that appeared meanwhile. A profile copy that fails leaves no half-made profile, and deleting a profile moves it to `profiles/.removed/` instead of erasing it. The AI (MCP) server now caps one input line.

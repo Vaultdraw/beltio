@@ -19,6 +19,7 @@ import {
 } from "../vault/preferences";
 
 import { MEMORY_UNDO_STEPS, type MemoryField } from "./memorySettings";
+import { lowMemoryCanvasNeedsRestart, restartApp } from "./restartApp";
 
 /** A global (not per-vault) memory preference, kept in sync with config.toml. */
 const useMemoryPref = <F extends MemoryField>(
@@ -72,6 +73,7 @@ const UndoStepsSetting = () => {
 
 const LowMemoryCanvasSetting = () => {
   const [value, set] = useMemoryPref("memoryLowMemoryCanvas");
+  const { win } = useSettings();
   return (
     <SettingRow
       id="memory-low-memory-canvas"
@@ -82,6 +84,15 @@ const LowMemoryCanvasSetting = () => {
         checked={value}
         onChange={set}
       />
+      {lowMemoryCanvasNeedsRestart(value, win) && (
+        <button
+          type="button"
+          className="vault-btn vault-btn--sm"
+          onClick={() => void restartApp()}
+        >
+          Restart now
+        </button>
+      )}
     </SettingRow>
   );
 };

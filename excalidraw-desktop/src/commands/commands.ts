@@ -446,6 +446,12 @@ export const COMMANDS: readonly CommandDefinition[] = [
     keys: { default: [] },
   },
   {
+    id: "app.restart",
+    title: "Restart Vaultdraw",
+    category: "Vault",
+    keys: { default: [] },
+  },
+  {
     id: "settings.openHotkeys",
     title: "Settings: Hotkeys",
     category: "Settings",

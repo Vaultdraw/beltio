@@ -599,6 +599,7 @@ When a command gets a new id (it moved into an official extension, say), the old
 | `file.revealInFinder` | Reveal drawing in Finder | — | — |
 | `file.duplicate` | Duplicate drawing | — | — |
 | `appearance.toggleMode` | Toggle light/dark mode | — | — |
+| `app.restart` | Restart Vaultdraw | — | — |
 | `settings.openHotkeys` | Settings: Hotkeys | — | — |
 
 Every other palette entry with a fixed name (Mode: Dark, Paper: Grid, Settings: Files, Export: PNG, Sort: …, Rename drawing, …) is listed on the Hotkeys page too, unassigned by default.

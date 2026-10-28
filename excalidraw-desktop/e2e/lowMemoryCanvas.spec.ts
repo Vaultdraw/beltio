@@ -23,8 +23,12 @@ test("Settings → Interface → Memory: the low-memory canvas switch is off by 
   await expect(row).toContainText("60 frames per second");
   const toggle = row.getByRole("switch");
   await expect(toggle).not.toBeChecked();
+  const restart = row.getByRole("button", { name: "Restart now" });
+  await expect(restart).toHaveCount(0);
   await toggle.click();
   await expect(toggle).toBeChecked();
+  // The running canvases still use the old value: a restart applies it.
+  await expect(restart).toBeVisible();
   await expect
     .poll(async () =>
       page.evaluate(
