@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+
 import { test } from "../fixture";
 
 import { openVault, trackErrors } from "../helpers";
@@ -202,4 +203,39 @@ test("the Refresh button shows a change nobody reported", async ({ page }) => {
   await page.getByRole("button", { name: "Refresh files" }).click();
   await expect(row(page, "DSA/Silent.excalidraw")).toBeVisible();
   await expect(row(page, "DSA/Graphs.excalidraw")).toHaveCount(0);
+});
+
+// BH-8 (toimprove 95): a folder deleted outside while expanded leaves nothing behind;
+// a new folder with the same name starts collapsed, like a folder that never existed.
+test("a folder deleted outside and made again starts collapsed", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page, "?seed=obsidian");
+  await row(page, "DSA").click();
+  await row(page, "DSA/Dynamic Programming").click();
+  await expect(
+    row(page, "DSA/Dynamic Programming/01 Introduction.excalidraw"),
+  ).toBeVisible();
+  // Nobody reports the changes: only the Refresh button (a soft reload) sees them.
+  await outside(page, {
+    op: "delete",
+    path: "DSA/Dynamic Programming",
+    quiet: true,
+  });
+  await page.getByRole("button", { name: "Refresh files" }).click();
+  await expect(row(page, "DSA/Dynamic Programming")).toHaveCount(0);
+  await page.waitForTimeout(1000);
+  await outside(page, {
+    op: "create",
+    path: "DSA/Dynamic Programming/Again.excalidraw",
+    quiet: true,
+  });
+  await page.getByRole("button", { name: "Refresh files" }).click();
+  await expect(row(page, "DSA/Dynamic Programming")).toBeVisible();
+  await page.waitForTimeout(500);
+  await expect(
+    row(page, "DSA/Dynamic Programming/Again.excalidraw"),
+  ).toHaveCount(0);
+  expect(errors).toEqual([]);
 });

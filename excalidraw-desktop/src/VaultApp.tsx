@@ -890,6 +890,22 @@ export const VaultApp = ({
     [vault, win],
   );
 
+  // True when the parent's fresh listing no longer shows the folder (or the parent is gone too).
+  const folderIsGone = useCallback(
+    async (handle: string, dirPath: string) => {
+      try {
+        const siblings = await repository.listDirectory(
+          handle,
+          getParentPath(dirPath),
+        );
+        return !siblings.some((e) => e.path === dirPath);
+      } catch (err) {
+        return isNotFoundError(err);
+      }
+    },
+    [repository],
+  );
+
   // Load a directory's entries with generation check and error surfacing
   const loadDirectory = useCallback(
     async (dirPath: string, expectedGen?: number, soft = false) => {
@@ -913,10 +929,14 @@ export const VaultApp = ({
         }
         if (dirPath !== "" && isNotFoundError(err)) {
           // Moved, renamed or deleted (here or outside the app): not an error. A soft
-          // reload (after a rescan) leaves the bookkeeping alone: the folder's parent was
-          // reloaded too and no longer lists it, and an in-app move is still rebasing it.
-          if (!soft) {
-            rebaseFolders(dirPath, null);
+          // reload (after a rescan) drops the dead keys too, so the folder is not
+          // listed again on every focus and a new folder with the old name does not
+          // open expanded; but only once the parent's fresh listing no longer shows it
+          // (an in-app move is still rebasing it until then).
+          if (!soft || (await folderIsGone(vault.handle, dirPath))) {
+            if (gen === vaultGeneration.current) {
+              rebaseFolders(dirPath, null);
+            }
           }
           return;
         }
@@ -928,7 +948,7 @@ export const VaultApp = ({
         });
       }
     },
-    [repository, vault, rebaseFolders, setGlobalAlert],
+    [repository, vault, rebaseFolders, folderIsGone, setGlobalAlert],
   );
 
   // files.list_start: the vault whose file list walk has started. Until then
