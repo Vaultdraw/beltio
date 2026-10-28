@@ -84,7 +84,6 @@ import { usePens } from "../pens/usePens";
 import { readDrawingStyles } from "../toolDefaults/drawingStyles";
 import { useToolDefaults } from "../toolDefaults/useToolDefaults";
 import { editFormulaImage } from "../plugins/formulaEdit";
-import { useExtensions } from "../extensionSwitches/useExtensions";
 import { useMemoryRetention } from "../memory/useMemoryRetention";
 import { markOpen } from "../perf/openMarks";
 
