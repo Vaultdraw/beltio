@@ -10,6 +10,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **The network consent dialog looks like part of the app.** It now shows the Vaultdraw icon, plain titles ("Allow downloading themes?"), no config keys, and Allow / Don't Allow buttons; the in-app consent messages no longer name config keys either. Settings > General > Config File lays out cleanly: the buttons sit beside the text, the file rows use the full width, and paths shorten in the middle of the folder instead of breaking inside a word.
 - **Folders with files in them can be moved to the Trash.** "Move to Trash" used to refuse any folder that was not empty. It now moves the folder and everything in it to the system Trash (you can restore it there), closes its open tabs, and the confirmation says how many files it holds. Links inside the folder are moved as links, never followed. "Confirm before trashing" (`files.confirm_delete`) covers folders too.
 
 - **Themes in Settings.** Install Themes now sits right under the theme picker. The Community themes dialog draws the same dark and light mini-window previews as the picker (from the palette, nothing to download), with one short details line per card. "Source" and the other external links now open in your browser.
