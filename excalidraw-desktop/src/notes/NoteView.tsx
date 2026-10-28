@@ -39,7 +39,7 @@ import {
   takeAnchor,
   hasAnchor,
 } from "./noteAnchor";
-import { createNoteLinkIndex } from "./noteLinks";
+import { createNoteLinkIndex, newNotePathForLink } from "./noteLinks";
 import { taskLines, toggleTask } from "./noteTasks";
 import { NoteSaver, type SaveStatus } from "./noteSaver";
 import { registerOpenNote } from "./openNotes";
@@ -58,7 +58,6 @@ const NoteEditor = lazy(() => import("./NoteEditor"));
 
 const baseName = (p: string) =>
   p.slice(p.lastIndexOf("/") + 1).replace(/\.(?:md|markdown)$/i, "");
-const folderOf = (p: string) => p.slice(0, Math.max(0, p.lastIndexOf("/")));
 
 const STATUS_TEXT: Record<SaveStatus, string> = {
   saved: "Saved",
@@ -410,15 +409,9 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
         openPath(dest, { target: newTab ? "new" : "current" });
         return;
       }
-      // An unresolved link makes the note, as Obsidian does.
-      const created = `${
-        folderOf(path) ? `${folderOf(path)}/` : ""
-      }${target}.md`;
-      if (
-        handle === null ||
-        /[\\:*?"<>|]/.test(target) ||
-        target.includes("..")
-      ) {
+      // An unresolved link makes the note (and its folders), as Obsidian does.
+      const created = newNotePathForLink(path, target);
+      if (handle === null || created === null) {
         toastStore.push({ message: `Cannot create a note named "${target}"` });
         return;
       }

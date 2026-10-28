@@ -106,3 +106,47 @@ export function createNoteLinkIndex(paths: readonly string[]): NoteLinkIndex {
     },
   };
 }
+
+/**
+ * Where clicking an unresolved `[[target]]` creates the note, as Obsidian does: a target with a
+ * folder (`Projects/Idea`) is vault-relative, `./` and `../` are relative to the linking note, and
+ * a bare name goes next to it. A typed `.md` is not doubled. Missing folders are created by the
+ * write. Null when the name can't be a note (forbidden characters, above the vault, a dot-folder).
+ */
+export function newNotePathForLink(
+  fromPath: string,
+  target: string,
+): string | null {
+  const clean = target.trim().replace(/^\/+/, "").replace(/\/+$/, "");
+  if (!clean || /[\\:*?"<>|]/.test(clean)) {
+    return null;
+  }
+  const explicit = clean.startsWith("./") || clean.startsWith("../");
+  const parts =
+    explicit || !clean.includes("/")
+      ? folder(fromPath)
+        ? folder(fromPath).split("/")
+        : []
+      : [];
+  for (const seg of clean.split("/")) {
+    if (seg === "..") {
+      if (parts.length === 0) {
+        return null;
+      }
+      parts.pop();
+    } else if (seg === "." && explicit) {
+      continue;
+    } else if (seg === "" || seg.startsWith(".")) {
+      return null;
+    } else {
+      parts.push(seg);
+    }
+  }
+  const path = parts.join("/");
+  if (!path) {
+    return null;
+  }
+  return NOTE_EXT.test(path) && !/\.excalidraw\.md$/i.test(path)
+    ? path
+    : `${path}.md`;
+}

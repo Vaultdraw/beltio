@@ -130,6 +130,28 @@ fn copy_to_history(v: &Vault, path: &str, p: &Path, rev: &str) -> Result<String>
     Ok(rel)
 }
 
+/// A new note at a typed path gets its missing folders, as in Obsidian and Finder: `[[Projects/Idea]]`
+/// makes `Projects/` first. Each folder goes through the same checks as New Folder (no symlinks, no
+/// hidden names, no name that differs only in case or accents).
+fn create_missing_folders(v: &Vault, path: &str) -> Result<()> {
+    let parts = validate_relative(path)?;
+    let mut prefix = String::new();
+    for part in &parts[..parts.len().saturating_sub(1)] {
+        if !prefix.is_empty() {
+            prefix.push('/');
+        }
+        prefix.push_str(part);
+        let dir = v.root.join(&prefix);
+        match fs::symlink_metadata(&dir) {
+            Ok(md) if md.is_dir() => {}
+            Ok(_) => return Err(err("INVALID_PATH", format!("A file named '{part}' is in the way of the folder"))),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => crate::fsops::create_folder_at(&v.root, &prefix)?,
+            Err(e) => return Err(ioerr(e)),
+        }
+    }
+    Ok(())
+}
+
 /// The guarded write. `expected_revision`: the revision the caller read, or `None` to create a new note.
 pub fn write_note_file(v: &Vault, path: &str, content: &str, expected_revision: Option<&str>) -> Result<NoteWritten> {
     writable(v)?;
@@ -138,6 +160,9 @@ pub fn write_note_file(v: &Vault, path: &str, content: &str, expected_revision: 
         return Err(err("INVALID_FILE", "Note exceeds the 16 MiB limit"));
     }
     let _mutation = mutation_guard(v)?;
+    if expected_revision.is_none() {
+        create_missing_folders(v, path)?;
+    }
     let p = safe_path(&v.root, path, true)?;
     let current = current_revision(&p)?;
     if current.as_deref() != expected_revision {
@@ -257,9 +282,25 @@ mod tests {
             assert_eq!(write_note_file(&v, p, "x", None).unwrap_err().code, "INVALID_PATH", "{p}");
             assert_eq!(read_note_file(&v.root, p).unwrap_err().code, "INVALID_PATH", "{p}");
         }
-        assert!(write_note_file(&v, "Sub/Note.MD", "x", None).is_err(), "missing folder is not created");
-        fs::create_dir(v.root.join("Sub")).unwrap();
         assert!(write_note_file(&v, "Sub/Note.MD", "x", None).is_ok());
+    }
+
+    #[test]
+    fn a_new_note_creates_its_missing_folders_like_obsidian() {
+        let d = tempdir().unwrap();
+        let v = vault(d.path());
+        write_note_file(&v, "Projects/2026/Idea.md", "x", None).unwrap();
+        assert_eq!(fs::read_to_string(v.root.join("Projects/2026/Idea.md")).unwrap(), "x");
+        // An existing folder is reused, a file in the way is refused, and a case twin never makes a second folder.
+        write_note_file(&v, "Projects/Other.md", "y", None).unwrap();
+        fs::write(v.root.join("plain"), "f").unwrap();
+        assert_eq!(write_note_file(&v, "plain/n.md", "x", None).unwrap_err().code, "INVALID_PATH");
+        assert!(write_note_file(&v, "PROJECTS2/../x.md", "x", None).is_err());
+        let twin = write_note_file(&v, "projects/n.md", "x", None);
+        assert!(twin.is_err() || v.root.join("Projects/n.md").exists(), "never a second Projects folder");
+        // Only a create makes folders: a save with a revision for a missing note is a conflict, nothing is made.
+        assert!(write_note_file(&v, "Gone/n.md", "x", Some("deadbeef")).is_err());
+        assert!(!v.root.join("Gone").exists());
     }
 
     #[test]
