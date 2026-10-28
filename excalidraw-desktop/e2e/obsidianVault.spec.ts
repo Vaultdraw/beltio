@@ -42,15 +42,15 @@ test("an Obsidian-style vault lists its notes and opens an Excalidraw plugin fil
     "excalidrawMd",
   );
 
-  // A note offers no edit actions from the tree: only Reveal.
+  // A note offers rename, move and trash from the tree, like Obsidian (toimprove 94).
   await treeRow(page, "Welcome").click({ button: "right" });
   await expect(
     page.getByRole("menuitem", { name: "Reveal in file manager" }),
   ).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Rename" })).toHaveCount(0);
+  await expect(page.getByRole("menuitem", { name: "Rename…" })).toBeVisible();
   await expect(
     page.getByRole("menuitem", { name: "Move to Trash" }),
-  ).toHaveCount(0);
+  ).toBeVisible();
   await page.keyboard.press("Escape");
 
   // The Excalidraw plugin file opens as a drawing, read-only, with a notice.

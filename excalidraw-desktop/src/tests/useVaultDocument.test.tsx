@@ -342,6 +342,7 @@ describe("saveCopy and relocate", () => {
     expect((await repo.readDrawing(repo.handle, "copy.excalidraw")).json).toBe(
       BLANK_SCENE,
     );
+    repo.seedFolder("DSA");
 
     await act(async () => {
       await result.current.relocate("copy.excalidraw", "DSA/moved.excalidraw");

@@ -10,6 +10,8 @@ import { createOutsideFallback } from "../history/outsideFallback";
 
 import { takeSpeculativeRead } from "../speculative/speculativeOpen";
 
+import { writeNewDrawing } from "./writeNewDrawing";
+
 import {
   errorMessage,
   type SaveStatus,
@@ -364,11 +366,10 @@ export const useVaultDocument = (
       const path = parent ? `${parent}/${name}` : name;
       const initial =
         initialJson ?? serializeAsJSON([], initialAppState ?? {}, {}, "local");
-      const created = await repositoryRef.current.writeDrawing({
+      const created = await writeNewDrawing(repositoryRef.current, {
         handle: currentVault.handle,
         path,
         json: initial,
-        expectedRevision: null,
         operationId: operationId(),
       });
       if (
@@ -520,11 +521,10 @@ export const useVaultDocument = (
       ) {
         return;
       }
-      let saved = await repositoryRef.current.writeDrawing({
+      let saved = await writeNewDrawing(repositoryRef.current, {
         handle: current.handle,
         path,
         json,
-        expectedRevision: null,
         operationId: operationId(),
       });
       if (

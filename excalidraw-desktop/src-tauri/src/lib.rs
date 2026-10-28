@@ -40,6 +40,8 @@ mod theme_install;
 mod themes;
 mod vault_settings;
 mod vault_watch;
+#[cfg(test)]
+mod vault_ops_contract;
 mod history;
 mod thumbs;
 mod ui_activity;

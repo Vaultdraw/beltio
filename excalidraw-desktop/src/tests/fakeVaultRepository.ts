@@ -475,7 +475,22 @@ export class FakeVaultRepository implements VaultRepository {
         row.conflictOf = prefix + original;
       }
     }
-    return [...rows.values()].sort((a, b) => a.name.localeCompare(b.name));
+    // Like the native listing: folders first, then names case-insensitively, the exact name
+    // breaking ties.
+    const lower = (n: string) => n.toLowerCase();
+    return [...rows.values()].sort(
+      (a, b) =>
+        Number(b.kind === "folder") - Number(a.kind === "folder") ||
+        (lower(a.name) < lower(b.name)
+          ? -1
+          : lower(a.name) > lower(b.name)
+          ? 1
+          : a.name < b.name
+          ? -1
+          : a.name > b.name
+          ? 1
+          : 0),
+    );
   }
 
   async readDrawing(handle: string, path: string): Promise<DrawingFile> {
@@ -550,9 +565,12 @@ export class FakeVaultRepository implements VaultRepository {
     }
     const existing = this.files.get(input.path);
     if (input.expectedRevision === null) {
-      // Create-only: never overwrite.
+      // Create-only: never overwrite. Native answers CONFLICT, like a revision mismatch.
       if (existing) {
-        throw makeError("NAME_COLLISION", `already exists: ${input.path}`);
+        throw makeError(
+          "CONFLICT",
+          "Drawing changed on disk; save was not applied",
+        );
       }
       this.checkNewName(input.path);
       const revision = this.nextRevision();
@@ -569,7 +587,11 @@ export class FakeVaultRepository implements VaultRepository {
       return { revision };
     }
     if (!existing) {
-      throw makeError("NOT_FOUND", `drawing not found: ${input.path}`);
+      // Native: the file is gone, so the revision the editor holds no longer matches.
+      throw makeError(
+        "CONFLICT",
+        "Drawing changed on disk; save was not applied",
+      );
     }
     if (existing.revision !== input.expectedRevision) {
       throw makeError("CONFLICT", `revision mismatch for ${input.path}`);
@@ -597,14 +619,14 @@ export class FakeVaultRepository implements VaultRepository {
     if (path === "") {
       throw makeError("INVALID_PATH", "cannot create vault root");
     }
-    if (path.endsWith(".excalidraw")) {
-      throw makeError(
-        "INVALID_PATH",
-        `folder must not use .excalidraw: ${path}`,
-      );
-    }
+    // Like the native create: a folder may be named like a drawing (the file tree's own
+    // name check refuses it for people), and a file or note of that name is a collision.
     await this.delay();
-    if (this.files.has(path) || this.folders.has(path)) {
+    if (
+      this.files.has(path) ||
+      this.notes.has(path) ||
+      this.folders.has(path)
+    ) {
       throw makeError("NAME_COLLISION", `already exists: ${path}`);
     }
     this.checkNewName(path);
@@ -634,6 +656,10 @@ export class FakeVaultRepository implements VaultRepository {
       throw makeError("NAME_COLLISION", `destination exists: ${to}`);
     }
     this.checkNewName(to, from);
+    const toParent = to.includes("/") ? to.slice(0, to.lastIndexOf("/")) : "";
+    if (toParent !== "" && !this.folders.has(toParent)) {
+      throw makeError("NOT_FOUND", "Destination folder not found");
+    }
     if (isNote) {
       // Like the native move: any file moves; the note keeps its text.
       this.seedFolder(to.includes("/") ? to.slice(0, to.lastIndexOf("/")) : "");

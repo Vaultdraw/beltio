@@ -9,6 +9,7 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { writeNewDrawing } from "./vault/writeNewDrawing";
 import { fileKind, stripDrawingExt } from "./vault/fileKind";
 
 import { errorMessage, isNotFoundError } from "./vault/types";
@@ -2051,11 +2052,10 @@ export const VaultApp = ({
         target = duplicateName(target);
       }
       const opId = `dup-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      await repository.writeDrawing({
+      await writeNewDrawing(repository, {
         handle: vault.handle,
         path: target,
         json: file.json,
-        expectedRevision: null,
         operationId: opId,
       });
       const parent = getParentPath(target);
@@ -2192,11 +2192,10 @@ export const VaultApp = ({
     setGlobalAlert(null);
     try {
       const opId = `rec-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      await repository.writeDrawing({
+      await writeNewDrawing(repository, {
         handle: vault.handle,
         path: targetPath,
         json,
-        expectedRevision: null,
         operationId: opId,
       });
       const parent = getParentPath(targetPath);
@@ -2696,11 +2695,10 @@ export const VaultApp = ({
         if (!v) {
           throw new Error("No vault is open");
         }
-        const created = await repo.writeDrawing({
+        const created = await writeNewDrawing(repo, {
           handle: v.handle,
           path,
           json,
-          expectedRevision: null,
           operationId: `pages-${Date.now()}-${Math.random()
             .toString(36)
             .slice(2)}`,

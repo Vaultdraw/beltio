@@ -1,0 +1,504 @@
+{
+ "about": "One table for the native vault operations (create folder, move, trash, write drawing, list) and FakeVaultRepository (the browser e2e backend). Each case: files on disk before (path -> text; a path ending in / is a folder; only drawings, notes and folders), one operation, the expected result (ok or the error code) and optionally what must exist or be missing afterwards. Both test suites read this file (src-tauri/src/vault_ops_contract.rs and src/tests/vaultOpsContract.test.ts). A fake that drifts from the backend fails here: a refusal the backend has and the fake lacks is invisible to every Playwright test (bug hunt BH-9, toimprove 89, 100).",
+ "cases": [
+  {
+   "name": "create a folder at the root",
+   "disk": {},
+   "op": {
+    "kind": "createFolder",
+    "path": "Ideas"
+   },
+   "expect": "ok",
+   "after": {
+    "Ideas/": "exists"
+   }
+  },
+  {
+   "name": "create a folder inside a folder",
+   "disk": {
+    "Sub/": ""
+   },
+   "op": {
+    "kind": "createFolder",
+    "path": "Sub/Ideas"
+   },
+   "expect": "ok"
+  },
+  {
+   "name": "create a folder that exists",
+   "disk": {
+    "Ideas/": ""
+   },
+   "op": {
+    "kind": "createFolder",
+    "path": "Ideas"
+   },
+   "expect": "NAME_COLLISION"
+  },
+  {
+   "name": "create a folder whose name differs only in capitals",
+   "disk": {
+    "Ideas/": ""
+   },
+   "op": {
+    "kind": "createFolder",
+    "path": "ideas"
+   },
+   "expect": "NAME_COLLISION"
+  },
+  {
+   "name": "create a folder named like a drawing",
+   "disk": {},
+   "op": {
+    "kind": "createFolder",
+    "path": "x.excalidraw"
+   },
+   "expect": "ok"
+  },
+  {
+   "name": "create a folder where a drawing is",
+   "disk": {
+    "a.excalidraw": "s"
+   },
+   "op": {
+    "kind": "createFolder",
+    "path": "a.excalidraw"
+   },
+   "expect": "NAME_COLLISION"
+  },
+  {
+   "name": "create a hidden folder",
+   "disk": {},
+   "op": {
+    "kind": "createFolder",
+    "path": ".git"
+   },
+   "expect": "INVALID_PATH"
+  },
+  {
+   "name": "create the root",
+   "disk": {},
+   "op": {
+    "kind": "createFolder",
+    "path": ""
+   },
+   "expect": "INVALID_PATH"
+  },
+  {
+   "name": "create a folder above the vault",
+   "disk": {},
+   "op": {
+    "kind": "createFolder",
+    "path": "../x"
+   },
+   "expect": "INVALID_PATH"
+  },
+  {
+   "name": "rename a drawing",
+   "disk": {
+    "a.excalidraw": "s"
+   },
+   "op": {
+    "kind": "move",
+    "from": "a.excalidraw",
+    "to": "b.excalidraw"
+   },
+   "expect": "ok",
+   "after": {
+    "b.excalidraw": "exists",
+    "a.excalidraw": "missing"
+   }
+  },
+  {
+   "name": "rename a note",
+   "disk": {
+    "n.md": "t"
+   },
+   "op": {
+    "kind": "move",
+    "from": "n.md",
+    "to": "m.md"
+   },
+   "expect": "ok",
+   "after": {
+    "m.md": "exists",
+    "n.md": "missing"
+   }
+  },
+  {
+   "name": "move a drawing into a folder",
+   "disk": {
+    "a.excalidraw": "s",
+    "Sub/": ""
+   },
+   "op": {
+    "kind": "move",
+    "from": "a.excalidraw",
+    "to": "Sub/a.excalidraw"
+   },
+   "expect": "ok",
+   "after": {
+    "Sub/a.excalidraw": "exists"
+   }
+  },
+  {
+   "name": "move a note into a folder",
+   "disk": {
+    "n.md": "t",
+    "Sub/": ""
+   },
+   "op": {
+    "kind": "move",
+    "from": "n.md",
+    "to": "Sub/n.md"
+   },
+   "expect": "ok",
+   "after": {
+    "Sub/n.md": "exists"
+   }
+  },
+  {
+   "name": "move a folder with its files",
+   "disk": {
+    "Sub/": "",
+    "Sub/a.excalidraw": "s",
+    "Sub/n.md": "t"
+   },
+   "op": {
+    "kind": "move",
+    "from": "Sub",
+    "to": "Moved"
+   },
+   "expect": "ok",
+   "after": {
+    "Moved/a.excalidraw": "exists",
+    "Moved/n.md": "exists",
+    "Sub/a.excalidraw": "missing"
+   }
+  },
+  {
+   "name": "move onto an existing drawing",
+   "disk": {
+    "a.excalidraw": "s",
+    "b.excalidraw": "t"
+   },
+   "op": {
+    "kind": "move",
+    "from": "a.excalidraw",
+    "to": "b.excalidraw"
+   },
+   "expect": "NAME_COLLISION"
+  },
+  {
+   "name": "move onto a name that differs only in capitals",
+   "disk": {
+    "a.excalidraw": "s",
+    "B.excalidraw": "t"
+   },
+   "op": {
+    "kind": "move",
+    "from": "a.excalidraw",
+    "to": "b.excalidraw"
+   },
+   "expect": "NAME_COLLISION"
+  },
+  {
+   "name": "change only the capitals of a name",
+   "disk": {
+    "a.excalidraw": "s"
+   },
+   "op": {
+    "kind": "move",
+    "from": "a.excalidraw",
+    "to": "A.excalidraw"
+   },
+   "expect": "ok",
+   "after": {
+    "A.excalidraw": "exists"
+   }
+  },
+  {
+   "name": "move a missing entry",
+   "disk": {},
+   "op": {
+    "kind": "move",
+    "from": "gone.excalidraw",
+    "to": "b.excalidraw"
+   },
+   "expect": "NOT_FOUND"
+  },
+  {
+   "name": "move a folder into itself",
+   "disk": {
+    "Sub/": ""
+   },
+   "op": {
+    "kind": "move",
+    "from": "Sub",
+    "to": "Sub/Inner"
+   },
+   "expect": "INVALID_PATH"
+  },
+  {
+   "name": "move into a folder that does not exist",
+   "disk": {
+    "a.excalidraw": "s"
+   },
+   "op": {
+    "kind": "move",
+    "from": "a.excalidraw",
+    "to": "Nope/a.excalidraw"
+   },
+   "expect": "NOT_FOUND"
+  },
+  {
+   "name": "move to a hidden name",
+   "disk": {
+    "a.excalidraw": "s"
+   },
+   "op": {
+    "kind": "move",
+    "from": "a.excalidraw",
+    "to": ".hidden.excalidraw"
+   },
+   "expect": "INVALID_PATH"
+  },
+  {
+   "name": "move the root",
+   "disk": {},
+   "op": {
+    "kind": "move",
+    "from": "",
+    "to": "x"
+   },
+   "expect": "INVALID_PATH"
+  },
+  {
+   "name": "trash a drawing",
+   "disk": {
+    "a.excalidraw": "s"
+   },
+   "op": {
+    "kind": "trash",
+    "path": "a.excalidraw"
+   },
+   "expect": "ok",
+   "after": {
+    "a.excalidraw": "missing"
+   }
+  },
+  {
+   "name": "trash a note",
+   "disk": {
+    "n.md": "t"
+   },
+   "op": {
+    "kind": "trash",
+    "path": "n.md"
+   },
+   "expect": "ok",
+   "after": {
+    "n.md": "missing"
+   }
+  },
+  {
+   "name": "trash a folder with its files",
+   "disk": {
+    "Sub/": "",
+    "Sub/a.excalidraw": "s",
+    "Sub/n.md": "t"
+   },
+   "op": {
+    "kind": "trash",
+    "path": "Sub"
+   },
+   "expect": "ok",
+   "after": {
+    "Sub/": "missing",
+    "Sub/a.excalidraw": "missing",
+    "Sub/n.md": "missing"
+   }
+  },
+  {
+   "name": "trash something that is not there",
+   "disk": {},
+   "op": {
+    "kind": "trash",
+    "path": "gone.excalidraw"
+   },
+   "expect": "NOT_FOUND"
+  },
+  {
+   "name": "trash the root",
+   "disk": {},
+   "op": {
+    "kind": "trash",
+    "path": ""
+   },
+   "expect": "INVALID_PATH"
+  },
+  {
+   "name": "write a new drawing",
+   "disk": {},
+   "op": {
+    "kind": "writeDrawing",
+    "path": "a.excalidraw",
+    "base": "none"
+   },
+   "expect": "ok",
+   "after": {
+    "a.excalidraw": "exists"
+   }
+  },
+  {
+   "name": "write a new drawing in a folder",
+   "disk": {
+    "Sub/": ""
+   },
+   "op": {
+    "kind": "writeDrawing",
+    "path": "Sub/a.excalidraw",
+    "base": "none"
+   },
+   "expect": "ok"
+  },
+  {
+   "name": "create over an existing drawing",
+   "disk": {
+    "a.excalidraw": "s"
+   },
+   "op": {
+    "kind": "writeDrawing",
+    "path": "a.excalidraw",
+    "base": "none"
+   },
+   "expect": "CONFLICT"
+  },
+  {
+   "name": "save with the current revision",
+   "disk": {
+    "a.excalidraw": "s"
+   },
+   "op": {
+    "kind": "writeDrawing",
+    "path": "a.excalidraw",
+    "base": "current"
+   },
+   "expect": "ok"
+  },
+  {
+   "name": "save with a stale revision",
+   "disk": {
+    "a.excalidraw": "s"
+   },
+   "op": {
+    "kind": "writeDrawing",
+    "path": "a.excalidraw",
+    "base": "stale"
+   },
+   "expect": "CONFLICT"
+  },
+  {
+   "name": "save a drawing that is gone",
+   "disk": {},
+   "op": {
+    "kind": "writeDrawing",
+    "path": "a.excalidraw",
+    "base": "stale"
+   },
+   "expect": "CONFLICT"
+  },
+  {
+   "name": "write something that is not a drawing",
+   "disk": {},
+   "op": {
+    "kind": "writeDrawing",
+    "path": "x.md",
+    "base": "none"
+   },
+   "expect": "INVALID_PATH"
+  },
+  {
+   "name": "write into a hidden folder",
+   "disk": {},
+   "op": {
+    "kind": "writeDrawing",
+    "path": ".git/a.excalidraw",
+    "base": "none"
+   },
+   "expect": "INVALID_PATH"
+  },
+  {
+   "name": "write above the vault",
+   "disk": {},
+   "op": {
+    "kind": "writeDrawing",
+    "path": "../a.excalidraw",
+    "base": "none"
+   },
+   "expect": "INVALID_PATH"
+  },
+  {
+   "name": "list the root",
+   "disk": {
+    "a.excalidraw": "s",
+    "n.md": "t",
+    "Sub/": ""
+   },
+   "op": {
+    "kind": "listDirectory",
+    "path": "",
+    "names": [
+     "Sub",
+     "a.excalidraw",
+     "n.md"
+    ]
+   },
+   "expect": "ok"
+  },
+  {
+   "name": "list a folder",
+   "disk": {
+    "Sub/": "",
+    "Sub/b.excalidraw": "s"
+   },
+   "op": {
+    "kind": "listDirectory",
+    "path": "Sub",
+    "names": [
+     "b.excalidraw"
+    ]
+   },
+   "expect": "ok"
+  },
+  {
+   "name": "list a folder that is not there",
+   "disk": {},
+   "op": {
+    "kind": "listDirectory",
+    "path": "Nope"
+   },
+   "expect": "NOT_FOUND"
+  },
+  {
+   "name": "list a drawing as a folder",
+   "disk": {
+    "a.excalidraw": "s"
+   },
+   "op": {
+    "kind": "listDirectory",
+    "path": "a.excalidraw"
+   },
+   "expect": "NOT_FOUND"
+  },
+  {
+   "name": "list above the vault",
+   "disk": {},
+   "op": {
+    "kind": "listDirectory",
+    "path": ".."
+   },
+   "expect": "INVALID_PATH"
+  }
+ ]
+}

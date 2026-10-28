@@ -116,7 +116,7 @@ describe("create-only and revision behavior", () => {
         expectedRevision: null,
         operationId: op(2),
       }),
-      "NAME_COLLISION",
+      "CONFLICT", // the native answer (shared table: vault_ops.json)
     );
     // Original content untouched.
     const disk = await repo.readDrawing(repo.handle, "a.excalidraw");
@@ -194,18 +194,16 @@ describe("directory listing and CRUD", () => {
     expect(dp[0].size).toBe(SAMPLE_SCENE.length);
   });
 
-  it("createFolder rejects the vault root and .excalidraw-suffixed folders", async () => {
+  it("createFolder rejects the vault root; a drawing-like name is the file tree's rule, not the backend's", async () => {
     const repo = new FakeVaultRepository();
     await expectCode(repo.createFolder(repo.handle, ""), "INVALID_PATH");
-    await expectCode(
-      repo.createFolder(repo.handle, "x.excalidraw"),
-      "INVALID_PATH",
-    );
+    await repo.createFolder(repo.handle, "x.excalidraw");
   });
 
   it("move relocates files and folders without changing content revision", async () => {
     const repo = new FakeVaultRepository();
     const rev = repo.seedDrawing("a/b.excalidraw", SAMPLE_SCENE);
+    repo.seedFolder("c");
     await repo.move(repo.handle, "a/b.excalidraw", "c/d.excalidraw");
     await expectCode(
       repo.readDrawing(repo.handle, "a/b.excalidraw"),
