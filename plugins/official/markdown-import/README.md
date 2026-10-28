@@ -12,6 +12,16 @@ Turns a Markdown note into a page-mode drawing, and an Obsidian vault into a Vau
 | Import Obsidian vault… | pick a vault folder; its notes become drawings in a folder of this vault |
 | Import Obsidian vault into a new vault… | the same, into a new vault |
 
+### Tables and pictures
+
+| In the note | In the drawing |
+| --- | --- |
+| A pipe table | a grid of ordinary shapes: shaded header row, outline, grid lines, one text per cell. Cells wrap, columns are as wide as their content (shrunk to the page, never cut), column alignment is kept. A long table breaks between rows. No row or column limit (a big table makes a longer drawing) |
+| `![[pic.png]]`, `![[pic.png\|300]]`, `![alt](rel/pic.png)`, `![alt](my pics/a b.png)`, `<img src="…">` | the picture. A file is found like Obsidian does: path from the note, then from the vault root, then the nearest file with that name, case-insensitive, `%20` decoded |
+| A picture the import cannot place | a box that says why: `Web image, not downloaded`, `Image not found`, `Image over 4 MB`, `Image type a drawing cannot hold`, `Not a picture a drawing can hold`. Web pictures are never fetched by the import (it is offline) |
+
+The type of a picture comes from the file's bytes, not its name. Symbolic links inside the vault are not followed.
+
 ### Obsidian vault import
 
 | Source file | Result |
