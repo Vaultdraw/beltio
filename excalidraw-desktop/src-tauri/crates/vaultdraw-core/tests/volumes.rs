@@ -11,8 +11,7 @@
 //! Each volume runs the same cases in a scratch folder it deletes afterwards. Every case prints
 //! `VOLUME <fs> <case> PASS|FAIL|N/A <detail>`; the test fails if any case fails. A case that
 //! cannot apply to a volume (a FAT volume has no read-only mode bits) reports N/A, not PASS.
-//! `VAULTDRAW_TEST_STAMP_STRICT=1` makes the "save stamp shortcut is off on FAT/exFAT" case fail
-//! instead of warn (set it once the stamp fix has merged).
+//! The stamp case requires the save stamp shortcut OFF on FAT, exFAT and HFS+ (coarse clocks).
 
 use std::{
     fs,
@@ -320,13 +319,11 @@ fn case_stamp_shortcut(c: &Ctx) -> R {
     save(c, name, &scene(1), None).map_err(|e| e.message)?;
     std::thread::sleep(std::time::Duration::from_millis(2300));
     let (_, stamp) = current_revision_stamped(&c.root.join(name)).map_err(|e| e.message)?.ok_or("file vanished")?;
-    let fat = is_fat_family(&c.fs);
-    let strict = std::env::var("VAULTDRAW_TEST_STAMP_STRICT").is_ok_and(|v| v == "1");
+    let fat = is_fat_family(&c.fs) || c.fs == "hfs";
     match (fat, stamp.is_some()) {
-        (true, true) if strict => Err("the stamp shortcut is ON for a 2 second-clock volume".into()),
-        (true, true) => ok("WARN stamp shortcut is still ON here (set VAULTDRAW_TEST_STAMP_STRICT=1 once the data-safety-2 stamp fix is merged)"),
+        (true, true) => Err("the stamp shortcut is ON for a 2 second-clock volume".into()),
         (true, false) => ok("shortcut OFF (re-hash on every save)"),
-        (false, _) => ok(format!("shortcut {} on a native-clock volume (expected)", if stamp.is_some() { "ON" } else { "OFF" })),
+        (false, _) => ok(format!("shortcut {} on a fine-clock volume", if stamp.is_some() { "ON" } else { "OFF" })),
     }
 }
 
