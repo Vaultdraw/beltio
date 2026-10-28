@@ -1266,6 +1266,18 @@ colour_by = "mono"
 local_depth = 3
 ```
 
+| Key | Default | Range | What it does (Obsidian's name) |
+| --- | --- | --- | --- |
+| `text_fade` | 0.5 | 0-4 | Zoom at which labels start to appear: higher shows labels only when zoomed in (Text fade threshold) |
+| `node_size` | 1 | 0.2-5 | Dot size (Node size) |
+| `link_thickness` | 1 | 0.2-5 | Line thickness (Link thickness) |
+| `force_centre` | 0.3 | 0-1 | Pull of every node towards the middle (Center force) |
+| `force_repel` | 10 | 0-20 | How strongly nodes push each other apart (Repel force) |
+| `force_link` | 1 | 0-2 | Stiffness of the links (Link force) |
+| `force_distance` | 30 | 5-200 | Rest length of a link (Link distance) |
+
+Labels fade in and out instead of switching: a label that gives way to a neighbour while nodes drift fades over about a quarter of a second, a label that was dropped stays away for about half a second, and one already shown keeps its place unless another label overlaps it clearly. Hovering a node highlights it and its neighbours and dims the rest. Dragging a node pulls its neighbours along and the layout cools down again by itself.
+
 The layout runs in the background, off the main thread, and is saved, so the graph reopens in the same shape. It blooms out of its saved shape each time. Once the layout settles, the graph uses no CPU. The saved layout lives in Vaultdraw's own state folder, never inside your vault, and the graph costs nothing until you first open it.
 
 ## PDF import

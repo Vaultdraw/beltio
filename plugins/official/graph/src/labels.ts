@@ -23,6 +23,19 @@ export interface LabelOptions {
   font?: string;
 }
 
+/** Fade-in and fade-out times of a label (ms). Out is slower: a label never pops away. */
+export const FADE_IN_MS = 140;
+export const FADE_OUT_MS = 260;
+/** A zoom change beyond this ratio (|ln scale ratio|) drops the "keep what is shown" priority. */
+const RESELECT_LN = 0.12;
+/** A label the layout dropped (a collision) cannot come back for this long: no flicker cycles. */
+export const COOLDOWN_MS = 600;
+/** px: a shown label tolerates this much overlap; a new one needs this much clear space. */
+const STICKY_SLACK = 5;
+const NEW_MARGIN = 5;
+/** Longest frame step the fade uses (a stalled tab does not skip the fade). */
+const MAX_DT_MS = 64;
+
 export interface LabelFrame {
   positions: Float32Array;
   camera: CameraState;
@@ -34,6 +47,8 @@ export interface LabelFrame {
   hovered?: number;
   /** Neighbours of the hovered node: labelled first (collision-checked), full alpha. */
   always?: ArrayLike<number> | null;
+  /** Time since the previous frame in ms (drives the fades in `draw`; default one 60 Hz frame). */
+  dtMs?: number;
 }
 
 export class LabelLayer {
@@ -49,6 +64,31 @@ export class LabelLayer {
   private cols = 0;
   private rows = 0;
   private occ = new Uint8Array(0);
+
+  // Keep-what-is-shown state (see `layout`).
+  private prev: Uint32Array;
+  private prevCount = 0;
+  private prevScale = 0;
+  private clock = 0;
+  private dropAt = new Float64Array(0);
+
+  // Fade state (see `draw`): the displayed alpha of every node that has a label now or is fading out.
+  private cur = new Float32Array(0);
+  private liveIdx: Uint32Array;
+  private liveAlpha: Float32Array;
+  private liveText: string[];
+  private liveCount = 0;
+  private nextIdx: Uint32Array;
+  private nextAlpha: Float32Array;
+  private nextText: string[];
+  private tgtStamp = new Uint32Array(0);
+  /** True while a label is still fading: the caller keeps its frame loop going. */
+  animating = false;
+  /**
+   * Largest opacity change of any one label in one frame since the last reset, as a multiple of what
+   * the fade allows for that frame (<= 1 always; a label that popped would read far above 1).
+   */
+  worstStep = 0;
 
   /** Result of the last `layout()`: `count` entries. */
   count = 0;
@@ -67,6 +107,14 @@ export class LabelLayer {
     this.sy = new Float32Array(this.maxLabels);
     this.alpha = new Float32Array(this.maxLabels);
     this.text = new Array<string>(this.maxLabels).fill("");
+    this.prev = new Uint32Array(this.maxLabels);
+    const live = this.maxLabels * 3;
+    this.liveIdx = new Uint32Array(live);
+    this.liveAlpha = new Float32Array(live);
+    this.liveText = new Array<string>(live).fill("");
+    this.nextIdx = new Uint32Array(live);
+    this.nextAlpha = new Float32Array(live);
+    this.nextText = new Array<string>(live).fill("");
   }
 
   /** Orders nodes by degree (counting sort, O(n + maxDegree)) and derives importance 0..1. */
@@ -96,6 +144,12 @@ export class LabelLayer {
     }
     this.stamp = new Uint32Array(n);
     this.stampId = 0;
+    this.dropAt = new Float64Array(n).fill(-COOLDOWN_MS);
+    this.cur = new Float32Array(n);
+    this.tgtStamp = new Uint32Array(n);
+    this.liveCount = 0;
+    this.prevCount = 0;
+    this.animating = false;
   }
 
   private ensureGrid(w: number, h: number): void {
@@ -114,26 +168,35 @@ export class LabelLayer {
     y: number,
     textLen: number,
     force: boolean,
+    pad = 0,
   ): boolean {
     const x0 = x + OFFSET_X;
     const y0 = y + OFFSET_Y - 10;
-    const cx0 = Math.max(0, Math.floor(x0 / CELL_W));
-    const cx1 = Math.min(
-      this.cols - 1,
-      Math.floor((x0 + textLen * CHAR_W) / CELL_W),
-    );
-    const cy0 = Math.max(0, Math.floor(y0 / CELL_H));
-    const cy1 = Math.min(this.rows - 1, Math.floor((y0 + 13) / CELL_H));
+    const w = textLen * CHAR_W;
+    const col = (v: number) =>
+      Math.min(this.cols - 1, Math.max(0, Math.floor(v / CELL_W)));
+    const row = (v: number) =>
+      Math.min(this.rows - 1, Math.max(0, Math.floor(v / CELL_H)));
     const { occ, cols } = this;
     if (!force) {
-      for (let cy = cy0; cy <= cy1; cy++) {
-        for (let cx = cx0; cx <= cx1; cx++) {
+      // The test box is the text box grown (new label) or shrunk (one already shown) by `pad`:
+      // a shown label tolerates a slight overlap, a newcomer needs clear space.
+      const tx0 = col(x0 - pad);
+      const tx1 = col(x0 + w + pad);
+      const ty0 = row(y0 - pad);
+      const ty1 = row(y0 + 13 + pad);
+      for (let cy = ty0; cy <= ty1; cy++) {
+        for (let cx = tx0; cx <= tx1; cx++) {
           if (occ[cy * cols + cx]) {
             return false;
           }
         }
       }
     }
+    const cx0 = col(x0);
+    const cx1 = col(x0 + w);
+    const cy0 = row(y0);
+    const cy1 = row(y0 + 13);
     for (let cy = cy0; cy <= cy1; cy++) {
       for (let cx = cx0; cx <= cx1; cx++) {
         occ[cy * cols + cx] = 1;
@@ -148,9 +211,10 @@ export class LabelLayer {
     i: number,
     alpha: number,
     force: boolean,
+    pad = 0,
   ): boolean {
     const s = this.opts.label(i);
-    if (!s || !this.claim(x, y, s.length, force)) {
+    if (!s || !this.claim(x, y, s.length, force, pad)) {
       return false;
     }
     const k = this.count++;
@@ -167,6 +231,7 @@ export class LabelLayer {
     i: number,
     alpha: number,
     force: boolean,
+    pad = 0,
   ): boolean {
     const { camera: c, positions: p } = f;
     const x = (p[2 * i] - c.x) * c.scale + f.width / 2;
@@ -174,15 +239,29 @@ export class LabelLayer {
     if (x < 0 || y < 0 || x > f.width || y > f.height) {
       return false;
     }
-    return this.place(x, y, i, alpha, force);
+    return this.place(x, y, i, alpha, force, pad);
   }
 
-  /** Computes which labels to draw (no canvas access). Returns the count. */
+  /** Zoom LOD: alpha 0..1 of node `i` at `scale` (continuous in scale: no steps). */
+  private lod(i: number, scale: number): number {
+    const z = this.fadeScale * (1 - 0.85 * this.importance[i]) + 1e-4;
+    return Math.min(1, Math.max(0, (scale / z - 1) * 2));
+  }
+
+  /**
+   * Computes which labels to draw (no canvas access). Returns the count.
+   *
+   * Stable across frames (this is what stops the blinking while nodes drift): labels chosen in the
+   * previous layout are claimed first, in their old order, so a node that sweeps past does not
+   * flip a neighbour's label on and off. The priority resets when the zoom changes noticeably,
+   * where the best set by degree is wanted again.
+   */
   layout(f: LabelFrame): number {
     this.count = 0;
     if (this.n === 0) {
       return 0;
     }
+    this.clock += Math.min(MAX_DT_MS, Math.max(0, f.dtMs ?? 1000 / 60));
     this.ensureGrid(f.width, f.height);
     this.occ.fill(0);
     const id = ++this.stampId;
@@ -211,7 +290,21 @@ export class LabelLayer {
     const scale = cam.scale;
     const hw = f.width / 2;
     const hh = f.height / 2;
-    const fade = this.fadeScale;
+    const sticky =
+      this.prevScale > 0 &&
+      Math.abs(Math.log(scale / this.prevScale)) < RESELECT_LN;
+    if (sticky) {
+      for (let k = 0; k < this.prevCount && this.count < max; k++) {
+        const i = this.prev[k];
+        if (this.stamp[i] === id || (mask && mask[i])) {
+          continue;
+        }
+        const a = this.lod(i, scale);
+        if (a > 0 && this.tryAdd(f, i, a, false, -STICKY_SLACK)) {
+          this.stamp[i] = id;
+        }
+      }
+    }
     let tried = 0;
     for (
       let k = 0;
@@ -220,13 +313,15 @@ export class LabelLayer {
     ) {
       const i = this.order[k];
       // importance is non-increasing along `order`, so the first invisible one ends the scan
-      const z = fade * (1 - 0.85 * this.importance[i]) + 1e-4;
-      const a = Math.min(1, Math.max(0, (scale / z - 1) * 2));
+      const a = this.lod(i, scale);
       if (a <= 0) {
         break;
       }
       if (this.stamp[i] === id || (mask && mask[i])) {
         continue;
+      }
+      if (sticky && this.clock - this.dropAt[i] < COOLDOWN_MS) {
+        continue; // dropped a moment ago: stays away until the cooldown is over
       }
       const x = (f.positions[2 * i] - cam.x) * scale + hw;
       const y = (f.positions[2 * i + 1] - cam.y) * scale + hh;
@@ -234,12 +329,28 @@ export class LabelLayer {
         continue;
       }
       tried++;
-      this.place(x, y, i, a, false);
+      this.place(x, y, i, a, false, sticky ? NEW_MARGIN : 0);
     }
+    // Note which labels were just dropped, then remember the set.
+    for (let k = 0; k < this.prevCount; k++) {
+      const i = this.prev[k];
+      if (this.stamp[i] !== id && sticky) {
+        this.dropAt[i] = this.clock;
+      }
+    }
+    this.prevCount = 0;
+    for (let k = 0; k < this.count; k++) {
+      this.prev[this.prevCount++] = this.index[k];
+    }
+    this.prevScale = scale;
     return this.count;
   }
 
-  /** layout() + draw into an overlay 2D context (cleared first). */
+  /**
+   * layout() + draw into an overlay 2D context (cleared first). Each label eases in and out
+   * (FADE_IN_MS / FADE_OUT_MS), so a label the layout drops fades away instead of vanishing and
+   * one that returns fades back. `animating` says whether another frame is needed to finish.
+   */
   draw(
     ctx: CanvasRenderingContext2D,
     f: LabelFrame,
@@ -249,14 +360,73 @@ export class LabelLayer {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, f.width, f.height);
     const count = this.layout(f);
+    const dt = Math.min(MAX_DT_MS, Math.max(0, f.dtMs ?? 1000 / 60));
+    const up = dt / FADE_IN_MS;
+    const down = dt / FADE_OUT_MS;
+    const id = this.stampId; // this frame's chosen labels carry it in `stamp`
+    const cap = this.nextIdx.length;
+    let n = 0;
+    let animating = false;
+    // Chosen labels ease towards their zoom alpha ...
+    for (let k = 0; k < count && n < cap; k++) {
+      const i = this.index[k];
+      const target = this.alpha[k];
+      const before = this.cur[i];
+      let a = before;
+      a = a < target ? Math.min(target, a + up) : Math.max(target, a - down);
+      this.cur[i] = a;
+      if (dt > 0) {
+        this.worstStep = Math.max(
+          this.worstStep,
+          a > before ? (a - before) / up : (before - a) / down,
+        );
+      }
+      this.tgtStamp[i] = id;
+      if (a !== target) {
+        animating = true;
+      }
+      if (a > 0) {
+        this.nextIdx[n] = i;
+        this.nextAlpha[n] = a;
+        this.nextText[n++] = this.text[k];
+      }
+    }
+    // ... and the ones that were shown and are not chosen now fade out.
+    for (let k = 0; k < this.liveCount && n < cap; k++) {
+      const i = this.liveIdx[k];
+      if (this.tgtStamp[i] === id) {
+        continue;
+      }
+      const a = Math.max(0, this.cur[i] - down);
+      if (dt > 0) {
+        this.worstStep = Math.max(this.worstStep, (this.cur[i] - a) / down);
+      }
+      this.cur[i] = a;
+      if (a > 0) {
+        animating = true;
+        this.nextIdx[n] = i;
+        this.nextAlpha[n] = a;
+        this.nextText[n++] = this.liveText[k];
+      }
+    }
+    [this.liveIdx, this.nextIdx] = [this.nextIdx, this.liveIdx];
+    [this.liveAlpha, this.nextAlpha] = [this.nextAlpha, this.liveAlpha];
+    [this.liveText, this.nextText] = [this.nextText, this.liveText];
+    this.liveCount = n;
+    this.animating = animating;
+
     ctx.font = this.font;
     ctx.fillStyle = colour;
     ctx.textBaseline = "alphabetic";
-    for (let k = 0; k < count; k++) {
-      ctx.globalAlpha = this.alpha[k];
-      ctx.fillText(this.text[k], this.sx[k] + OFFSET_X, this.sy[k] + OFFSET_Y);
+    const { camera: c, positions: p } = f;
+    for (let k = 0; k < n; k++) {
+      const i = this.liveIdx[k];
+      const x = (p[2 * i] - c.x) * c.scale + f.width / 2;
+      const y = (p[2 * i + 1] - c.y) * c.scale + f.height / 2;
+      ctx.globalAlpha = this.liveAlpha[k];
+      ctx.fillText(this.liveText[k], x + OFFSET_X, y + OFFSET_Y);
     }
     ctx.globalAlpha = 1;
-    return count;
+    return n;
   }
 }

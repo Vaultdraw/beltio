@@ -22,6 +22,8 @@ type Win = Window & {
     metrics: { settledMs: number; frames: number };
     nodeScreen(i: number): { x: number; y: number };
     pathOf(i: number): string | null;
+    labelWorstStep(): number;
+    resetLabelStats(): void;
   } | null;
   __graphSettingsToml: Record<string, unknown>;
 };
@@ -247,4 +249,33 @@ test("per-vault graph settings persist to settings.toml across a reload", async 
     () => (window as unknown as Win).__graphApp!.nodeCount,
   );
   expect(withOrphans).toBeGreaterThanOrEqual(orphanless);
+});
+
+test("labels fade smoothly while the graph moves: no label pops in or out", async ({
+  page,
+}) => {
+  await openLinksVault(page, "Hub", null, GRAPH_PLUGIN);
+  await openGraph(page);
+  await page.evaluate(() =>
+    (window as unknown as Win).__graphApp!.resetLabelStats(),
+  );
+  // Move things: drag a node around (the layout reheats and its neighbours follow), then zoom.
+  const p = await nodeAt(page, "Hub.excalidraw");
+  await page.mouse.move(p.x, p.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 30; i++) {
+    await page.mouse.move(p.x + 4 * i, p.y + 2 * i);
+  }
+  await page.mouse.up();
+  await page.mouse.move(p.x, p.y);
+  for (let i = 0; i < 6; i++) {
+    await page.mouse.wheel(0, i % 2 === 0 ? -120 : 120);
+    await page.waitForTimeout(50);
+  }
+  await page.waitForTimeout(600);
+  const worst = await page.evaluate(() =>
+    (window as unknown as Win).__graphApp!.labelWorstStep(),
+  );
+  // 1 = the fastest the fade allows; a label that popped would read far above it.
+  expect(worst).toBeLessThanOrEqual(1.001);
 });

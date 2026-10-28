@@ -199,6 +199,8 @@ export class GraphSession {
   private cold = false;
 
   // hover / focus
+  /** Time of the previous render (label fades need the frame step). */
+  private lastRenderAt = 0;
   private hovered = -1;
   private focused = -1;
   private shownNode = -1;
@@ -986,7 +988,11 @@ export class GraphSession {
       dimAlpha: this.dimAlpha,
     });
     r.draw();
-    this.drawOverlay();
+    const dtMs = this.lastRenderAt > 0 ? now - this.lastRenderAt : undefined;
+    this.lastRenderAt = now;
+    if (this.drawOverlay(dtMs)) {
+      again = true; // a label is still fading
+    }
     this.metrics.frames++;
     const ft = this.metrics.frameTimes;
     ft.push(this.now() - t);
@@ -996,10 +1002,19 @@ export class GraphSession {
     return again;
   }
 
-  private drawOverlay(): void {
+  /** Largest per-frame opacity step of any label since `resetLabelStats` (tests: no blinking). */
+  labelWorstStep(): number {
+    return this.labels.worstStep;
+  }
+  resetLabelStats(): void {
+    this.labels.worstStep = 0;
+  }
+
+  /** Draws labels and arrows; true while a label is still fading (needs another frame). */
+  private drawOverlay(dtMs?: number): boolean {
     const ctx = this.ctx;
     if (!ctx) {
-      return;
+      return false;
     }
     const frame = {
       positions: this.pos,
@@ -1009,6 +1024,7 @@ export class GraphSession {
       mask: this.mask,
       hovered: this.shownNode,
       always: this.hoverNeighbours,
+      dtMs,
     };
     this.labels.draw(ctx, frame, this.colours.theme.label, this.dpr);
     const s = this.inputs?.settings;
@@ -1027,5 +1043,6 @@ export class GraphSession {
         this.colours.theme.edgeHighlight,
       );
     }
+    return this.labels.animating;
   }
 }

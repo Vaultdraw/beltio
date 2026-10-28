@@ -212,6 +212,10 @@ describe("GraphSession frames", () => {
     cb.onSettled?.(5);
     t.flushRaf();
     t.flushRaf(300); // camera fit finished
+    // labels finish their short fade-in, then the loop stops
+    for (let i = 0; i < 20 && t.rafs.size > 0; i++) {
+      t.flushRaf(16);
+    }
     expect(t.rafs.size).toBe(0);
   });
 });
