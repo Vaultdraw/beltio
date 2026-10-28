@@ -321,8 +321,8 @@ pub(crate) fn sanitize_name(name: &str) -> Result<&str> {
     if name.starts_with('.') || name.eq_ignore_ascii_case("source") {
         return Err(bad("This theme name is not allowed"));
     }
-    if name.chars().any(|c| c.is_control() || matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|')) {
-        return Err(bad("The theme name has characters that are not allowed in file names"));
+    if name.chars().any(|c| c.is_control() || vaultdraw_core::uri::is_bidi(c) || matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|')) {
+        return Err(bad("The theme name has characters that are not allowed (file-name, invisible or text-direction characters)"));
     }
     Ok(name)
 }
@@ -574,7 +574,16 @@ fn installed_folder(dirs: &config::Dirs, name: &str) -> Result<(PathBuf, Value)>
 
 pub(crate) fn uninstall_in(dirs: &config::Dirs, name: &str) -> Result<()> {
     let (folder, _) = installed_folder(dirs, name)?;
-    fs::remove_dir_all(folder).map_err(ioerr)
+    // Only the files the install wrote; anything the user added to the folder stays (and so does the folder).
+    for file in [format!("{name}.json"), SOURCE_FILE.to_string()] {
+        match fs::remove_file(folder.join(file)) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(ioerr(e)),
+        }
+    }
+    let _ = fs::remove_dir(&folder); // refuses while the user's own files are inside
+    Ok(())
 }
 
 pub(crate) fn update_fetch_in(dirs: &config::Dirs, ep: &Endpoints, name: &str, max_bytes: u64) -> Result<UpdateCheck> {

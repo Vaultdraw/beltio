@@ -6,6 +6,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Theme install and the command line.** Theme names with invisible or text-direction characters are refused (they could pose as another name); uninstalling a theme removes only the files the install wrote and keeps anything you added to its folder. `vaultdraw export --out-dir --embed-scene` names files `X.excalidraw.png`, like a single export.
+
 - **Search finds decomposed Japanese and Korean names and text.** Kana with a separate voicing mark (e.g. か + dakuten, common in file names copied from older Mac disks or zip files) and Korean written as separate jamo now match what you type. The search index rebuilds once on the first launch after the update.
 
 - **Exported SVGs no longer carry web addresses from untrusted drawings.** An image whose data was a web address (`https:` and so on) used to be copied into every exported SVG (export menu, command line, auto-export), so opening the SVG could contact that server. Only embedded `data:image/...;base64` images are exported now; any other image stays an empty placeholder.

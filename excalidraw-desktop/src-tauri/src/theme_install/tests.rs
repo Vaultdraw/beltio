@@ -161,7 +161,7 @@ fn sanitizes_names() {
         assert_eq!(sanitize_name(ok).unwrap(), ok);
     }
     let long = "x".repeat(81);
-    for bad in ["", " ", ".", "..", ".hidden", "a/b", "a\\b", "a\u{0}b", "a\nb", "source", "Source", " pad", "pad ", "a:b", &long] {
+    for bad in ["", " ", ".", "..", ".hidden", "a/b", "a\\b", "a\u{0}b", "a\nb", "source", "Source", " pad", "pad ", "a:b", "a\u{202E}b", "a\u{200B}b", "\u{FEFF}a", &long] {
         assert_eq!(code(sanitize_name(bad)), "INVALID_NAME", "{bad:?}");
     }
     assert!(sanitize_name(&"x".repeat(80)).is_ok());
@@ -281,6 +281,18 @@ fn uninstall_only_removes_installed_themes() {
     assert!(themes.join("Mine").join("Mine.json").exists());
     uninstall_in(&d, "Nord").unwrap();
     assert!(!themes.join("Nord").exists());
+}
+
+#[test]
+fn uninstall_keeps_files_the_user_added() {
+    let t = tempdir().unwrap();
+    let d = dirs_in(t.path(), None);
+    let themes = d.config.join("themes");
+    write_in(&d, &req("Nord", false)).unwrap();
+    fs::write(themes.join("Nord").join("Nord-mine.json"), "{}").unwrap();
+    uninstall_in(&d, "Nord").unwrap();
+    assert!(themes.join("Nord").join("Nord-mine.json").exists());
+    assert!(!themes.join("Nord").join("Nord.json").exists() && !themes.join("Nord").join("source.json").exists());
 }
 
 #[cfg(unix)]

@@ -163,7 +163,7 @@ fn export_folder(cli: &Cli, args: &ExportArgs, format: &str, socket: PathBuf, ou
     let legacy = Cell::new(false);
     let (mut done, total) = (0usize, paths.len());
     for path in &paths {
-        let result = match out_path(out_dir, path, format) {
+        let result = match out_path(out_dir, path, format, args.embed_scene) {
             Some(out) => export_one(&rpc, &mut client, &legacy, &options, path, &out, args.force).map(|size| (out, size)),
             None => Err(bad_reply(format!("vault.list returned an unsafe path {path:?}"))),
         };
@@ -221,7 +221,7 @@ fn export_one(rpc: &Rpc, client: &mut vaultdraw_protocol::client::Client, legacy
 /// `<dir>/<drawing path>` with the `.excalidraw` suffix replaced by the export's extension. None
 /// unless `path` is a safe vault-relative drawing path (the reply decides where files are written,
 /// so it must never reach outside `dir`: no `..`, no absolute path, no backslash).
-fn out_path(dir: &Path, path: &str, format: &str) -> Option<PathBuf> {
+fn out_path(dir: &Path, path: &str, format: &str, embed_scene: bool) -> Option<PathBuf> {
     if path.is_empty() || vaultdraw_core::validate_relative(path).is_err() {
         return None;
     }
@@ -229,7 +229,9 @@ fn out_path(dir: &Path, path: &str, format: &str) -> Option<PathBuf> {
     if !vaultdraw_core::has_drawing_ext(path) || cut == 0 || path[..cut].ends_with('/') {
         return None;
     }
-    Some(dir.join(format!("{}.{format}", &path[..cut])))
+    // The same name a single export gets: `X.excalidraw.png` when the scene is embedded.
+    let embed = if embed_scene && format != "pdf" { ".excalidraw" } else { "" };
+    Some(dir.join(format!("{}{embed}.{format}", &path[..cut])))
 }
 
 fn bad_reply(message: impl Into<String>) -> Fail {
@@ -674,16 +676,19 @@ mod tests {
     #[test]
     fn out_path_keeps_subfolders_and_swaps_the_extension() {
         let d = Path::new("/out");
-        assert_eq!(out_path(d, "a.excalidraw", "png").unwrap(), Path::new("/out/a.png"));
-        assert_eq!(out_path(d, "Graphs/sub/b.Excalidraw", "svg").unwrap(), Path::new("/out/Graphs/sub/b.svg"));
-        assert_eq!(out_path(d, "Ünïcode/é.excalidraw", "pdf").unwrap(), Path::new("/out/Ünïcode/é.pdf"));
+        assert_eq!(out_path(d, "a.excalidraw", "png", false).unwrap(), Path::new("/out/a.png"));
+        assert_eq!(out_path(d, "Graphs/sub/b.Excalidraw", "svg", false).unwrap(), Path::new("/out/Graphs/sub/b.svg"));
+        assert_eq!(out_path(d, "Ünïcode/é.excalidraw", "pdf", false).unwrap(), Path::new("/out/Ünïcode/é.pdf"));
+        // Embedding the scene names the file like a single export does; PDFs carry no scene.
+        assert_eq!(out_path(d, "G/a.excalidraw", "png", true).unwrap(), Path::new("/out/G/a.excalidraw.png"));
+        assert_eq!(out_path(d, "a.excalidraw", "pdf", true).unwrap(), Path::new("/out/a.pdf"));
     }
 
     #[test]
     fn out_path_refuses_paths_that_leave_the_out_dir_or_are_not_drawings() {
         let d = Path::new("/out");
         for bad in ["", "../x.excalidraw", "a/../../x.excalidraw", "/etc/x.excalidraw", "a\\..\\x.excalidraw", "./x.excalidraw", "a//b.excalidraw", ".excalidraw", "a/.excalidraw", "notes.md", "é"] {
-            assert!(out_path(d, bad, "png").is_none(), "{bad}");
+            assert!(out_path(d, bad, "png", false).is_none(), "{bad}");
         }
     }
 
