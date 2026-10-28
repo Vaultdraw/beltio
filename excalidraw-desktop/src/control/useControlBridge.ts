@@ -61,6 +61,7 @@ const uriDeps = (
     | "recentVaults"
     | "commandTitle"
     | "isBuiltin"
+    | "isLinkable"
     | "openSearch"
     | "exists"
     | "addLibrary"
@@ -72,6 +73,7 @@ const uriDeps = (
   recentVaults: () => part().recentVaults(),
   commandTitle: (id) => part().commandTitle(id),
   isBuiltin: (id) => part().isBuiltin(id),
+  isLinkable: (id) => part().isLinkable(id),
   openSearch: (query) => part().openSearch(query),
   exists: (path) => part().exists(path),
   addLibrary: (json, scope) => part().addLibrary(json, scope),
@@ -150,6 +152,8 @@ export function useControlBridge(
       | "recentVaults"
       | "commandTitle"
       | "isBuiltin"
+      | "isLinkable"
+      | "isLinkable"
       | "openSearch"
       | "exists"
       | "addLibrary"

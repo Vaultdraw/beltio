@@ -51,8 +51,11 @@ const make = (
         ? "Toggle mode"
         : id === "my.plugin.run"
         ? "Plugin run"
+        : id === "config.resetOverrides"
+        ? "Reset"
         : null,
     isBuiltin: (id) => id !== "my.plugin.run",
+    isLinkable: (id) => id === "appearance.toggleMode",
     openSearch: vi.fn(),
     readExternal: async (path, kind) => ({
       name: path.split("/").pop() as string,
@@ -257,6 +260,18 @@ describe("uriRun: commands and a changing vault", () => {
     expect(t.notes[0][0]).toContain("built-in");
     // Listed in control.uri_allow: the user's own choice, so it runs unasked.
     await t.run({ action: "cmd", id: "my.plugin.run", allowed: true });
+    expect(names(t.calls)).toEqual(["command.run"]);
+  });
+
+  it("security: a built-in command that did not opt in is refused unless its exact id is allowed", async () => {
+    const t = make();
+    await expect(
+      t.run({ action: "cmd", id: "config.resetOverrides", allowed: false }),
+    ).rejects.toMatchObject({ code: "NOT_PERMITTED" });
+    expect(t.asks).toEqual([]);
+    expect(t.calls).toEqual([]);
+    expect(t.notes[0][0]).toContain("not link-callable");
+    await t.run({ action: "cmd", id: "config.resetOverrides", allowed: true });
     expect(names(t.calls)).toEqual(["command.run"]);
   });
 

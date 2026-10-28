@@ -62,6 +62,8 @@ export interface UriDeps {
   commandTitle: (id: string) => string | null;
   /** The app's own command (not one a plugin registered). */
   isBuiltin: (id: string) => boolean;
+  /** A built-in command that opted in to links (commands/linkCommands.ts). */
+  isLinkable: (id: string) => boolean;
   openSearch: (query: string) => void;
   /** Files from the system (see `runFile`). */
   readExternal: (
@@ -422,6 +424,16 @@ export function createUriRunner(deps: UriDeps) {
           `A link can only run built-in commands (${clip(
             id,
           )} comes from a plugin; list it in control.uri_allow to allow it)`,
+          { id },
+        );
+      }
+      // Built-in commands are opt-in too: only the link allow list, or the user's uri_allow.
+      if (!deps.isLinkable(id) && plan.allowed !== true) {
+        return fail(
+          "NOT_PERMITTED",
+          `A link cannot run ${clip(
+            id,
+          )} (not link-callable; list it in control.uri_allow to allow it)`,
           { id },
         );
       }

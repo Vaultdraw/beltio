@@ -28,6 +28,7 @@ import { openVaultAtPath } from "./control/vaultOpen";
 import { canAddVaultLibrary, importLibrary } from "./control/libraryImport";
 import { probeExists } from "./tabs/missingWatcher";
 import { getCommand, isBuiltinCommand } from "./commands/commands";
+import { isLinkCommand } from "./commands/linkCommands";
 import { LinkPromptHost, LinkRequestHost } from "./control/linkRequests";
 import { useControlBridge } from "./control/useControlBridge";
 import { useMenuCommands } from "./help/useMenuCommands";
@@ -2571,6 +2572,7 @@ export const VaultApp = ({
       recentVaults: () => getRecentVaults(win),
       commandTitle: (id) => getCommand(id)?.title ?? null,
       isBuiltin: isBuiltinCommand,
+      isLinkable: isLinkCommand,
       openSearch: openTagSearch,
       exists: (path) => probeExists(repository, vault?.handle ?? "", path),
       canAddVaultLibrary: () => canAddVaultLibrary(libraryStore),
