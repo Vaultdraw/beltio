@@ -11,6 +11,7 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { defineContextKey } from "../commands/contextKeys";
 import { registerCommands } from "../commands/registry";
 import {
   registerCommandHandlers,
@@ -23,6 +24,7 @@ import {
 } from "../vault/preferences";
 
 import {
+  FOCUS_CONTEXT_KEY,
   LAYOUT_COMMAND_IDS,
   LAYOUT_PRESET_PREFIX,
   presetCommand,
@@ -30,6 +32,7 @@ import {
 import {
   allPresets,
   BUILTIN_PRESETS,
+  FOCUS_PRESET,
   shownParts,
   type LayoutPart,
   type ShownParts,
@@ -46,6 +49,7 @@ export interface LayoutBase {
   navigator: boolean;
   activity_bar: boolean;
   tab_strip: boolean;
+  status_bar: boolean;
 }
 
 export interface Layout {
@@ -58,6 +62,8 @@ export interface Layout {
   toggleGoverned: (part: LayoutPart) => boolean;
   /** Show `part` for this session if the active preset hides it. */
   reveal: (part: LayoutPart) => void;
+  /** Focus mode is on. */
+  focusActive: boolean;
 }
 
 export function useLayout(
@@ -69,25 +75,66 @@ export function useLayout(
     getPreferences(win),
   );
   const state = useSyncExternalStore(subscribeLayout, getLayoutState);
-  const { layoutHeader, layoutFooter, layoutPreset, layoutPresets } = prefs;
-  const presets = useMemo(() => allPresets(layoutPresets), [layoutPresets]);
+  const {
+    layoutHeader,
+    layoutFooter,
+    layoutPreset,
+    layoutPresets,
+    focusHide,
+    focusRemember,
+    focusOn,
+  } = prefs;
+  const presets = useMemo(
+    () => allPresets(layoutPresets, focusHide),
+    [layoutPresets, focusHide],
+  );
 
   const notifyRef = useRef(notify);
   notifyRef.current = notify;
 
-  // `layout.preset` applies at launch and whenever its value changes.
+  // `layout.preset` applies at launch and whenever its value changes; with
+  // `focus.remember`, a launch without one reopens in focus mode if it was on.
+  const launching = useRef(true);
+  const rememberedFocus = useRef(focusRemember && focusOn);
   useEffect(() => {
-    if (layoutPreset === "") {
+    const preset =
+      layoutPreset ||
+      (launching.current && rememberedFocus.current ? FOCUS_PRESET : "");
+    launching.current = false;
+    if (preset === "") {
       setActivePreset(null);
-    } else if (presets[layoutPreset]) {
-      setActivePreset(layoutPreset);
+    } else if (presets[preset]) {
+      setActivePreset(preset);
     } else {
       setActivePreset(null);
-      notifyRef.current(`Unknown layout preset "${layoutPreset}"`);
+      notifyRef.current(`Unknown layout preset "${preset}"`);
     }
     // Only the value: editing a preset's table keeps the session choice.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layoutPreset]);
+
+  // `focus.remember`: keep "focus mode is on" for the next launch.
+  const rememberRef = useRef({ focusRemember, focusOn });
+  rememberRef.current = { focusRemember, focusOn };
+  useEffect(
+    () =>
+      subscribeLayout(() => {
+        const now = getLayoutState().preset === FOCUS_PRESET;
+        const mem = rememberRef.current;
+        if (mem.focusRemember && mem.focusOn !== now) {
+          updatePreferences({ focusOn: now }, win);
+        }
+      }),
+    [win],
+  );
+
+  // The key the Esc binding waits on; defined only while focus mode is on.
+  const focusActive = state.preset === FOCUS_PRESET;
+  useEffect(
+    () =>
+      focusActive ? defineContextKey(FOCUS_CONTEXT_KEY, () => true) : undefined,
+    [focusActive],
+  );
 
   // A preset that disappeared from the config can't stay active.
   useEffect(() => {
@@ -118,6 +165,7 @@ export function useLayout(
           navigator: base.navigator,
           activity_bar: base.activity_bar,
           tab_strip: base.tab_strip,
+          status_bar: base.status_bar,
         },
         state.preset ? presets[state.preset] ?? null : null,
         state.session,
@@ -128,6 +176,7 @@ export function useLayout(
       base.navigator,
       base.activity_bar,
       base.tab_strip,
+      base.status_bar,
       state,
       presets,
     ],
@@ -163,6 +212,16 @@ export function useLayout(
       },
     );
     const unbind = registerCommandHandlers({
+      [LAYOUT_COMMAND_IDS.toggleFocus]: () => {
+        if (live.current.presets[FOCUS_PRESET]) {
+          togglePreset(FOCUS_PRESET);
+        }
+      },
+      [LAYOUT_COMMAND_IDS.exitFocus]: () => {
+        if (getLayoutState().preset === FOCUS_PRESET) {
+          setActivePreset(null);
+        }
+      },
       [LAYOUT_COMMAND_IDS.reset]: () => setActivePreset(null),
       [LAYOUT_COMMAND_IDS.toggleHeader]: () => {
         if (!toggleGoverned("header")) {
@@ -181,5 +240,5 @@ export function useLayout(
     };
   }, [win, toggleGoverned]);
 
-  return { shown, toggleGoverned, reveal };
+  return { shown, toggleGoverned, reveal, focusActive };
 }

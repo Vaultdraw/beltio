@@ -5,6 +5,9 @@ import { configToPreferences } from "../vault/settingsSync";
 import {
   allPresets,
   BUILTIN_PRESETS,
+  focusPreset,
+  LAYOUT_DEFAULTS,
+  LAYOUT_MAPPINGS,
   normalizeLayoutPreferences,
   presetsProblem,
   shownParts,
@@ -24,6 +27,7 @@ const ALL = {
   activity_bar: true,
   tab_strip: true,
   footer: true,
+  status_bar: true,
 };
 
 describe("layout settings", () => {
@@ -108,7 +112,41 @@ describe("layout settings", () => {
       activity_bar: false,
       tab_strip: false,
       footer: false,
+      status_bar: false,
     });
+  });
+
+  it("[focus] hide shapes the focus preset; a user preset still wins", () => {
+    expect(allPresets({}, ["navigator", "footer"]).focus).toEqual({
+      navigator: false,
+      footer: false,
+    });
+    expect(allPresets({ focus: { header: false } }, ["footer"]).focus).toEqual({
+      header: false,
+    });
+    expect(focusPreset([])).toEqual({});
+  });
+
+  it("reads [focus] from config.toml", () => {
+    const { values: preferences } = configToPreferences({
+      focus: { hide: ["navigator"], remember: true, hint: true },
+    });
+    expect(preferences).toMatchObject({
+      focusHide: ["navigator"],
+      focusRemember: true,
+      focusHint: true,
+    });
+  });
+
+  it("validates focus.hide as a list of part names", () => {
+    const hide = LAYOUT_MAPPINGS.find((m) => m.key === "focus.hide")!;
+    expect(hide.valid(["header", "status_bar"])).toBe(true);
+    expect(hide.valid([])).toBe(true);
+    expect(hide.valid(["canvas"])).toBe(false);
+    expect(hide.valid("header")).toBe(false);
+    expect(normalizeLayoutPreferences({ focusHide: ["x"] }).focusHide).toEqual(
+      LAYOUT_DEFAULTS.focusHide,
+    );
   });
 });
 

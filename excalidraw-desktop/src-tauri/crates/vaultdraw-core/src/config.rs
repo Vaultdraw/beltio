@@ -258,8 +258,17 @@ autosave_delay_ms = 500
 # A preset to apply at launch, like "focus" ("" = none)
 # preset = ""
 # Named presets, written as [layout.presets.<name>] tables that set header,
-# navigator, activity_bar, tab_strip or footer to true or false ("focus" is built in)
+# navigator, activity_bar, tab_strip, footer or status_bar to true or false
+# ("focus" is built in)
 # presets = {}
+
+[focus]
+# The parts focus mode hides (View: Focus mode; Esc leaves it)
+# hide = ["header", "navigator", "activity_bar", "tab_strip", "footer", "status_bar"]
+# Open in focus mode when it was on at the last quit
+# remember = false
+# Show a small "Focus" chip while it is on
+# hint = false
 
 [keys]
 # The key <leader> stands for in a sequence
@@ -1661,7 +1670,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 134, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 137, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();

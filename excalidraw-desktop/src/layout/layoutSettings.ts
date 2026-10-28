@@ -1,7 +1,7 @@
 /**
  * Layout settings: which parts of the window show (`[layout]`), and named
  * presets (`[layout.presets.<name>]`) that change several parts at once;
- * focus mode is the built-in `focus` preset. Pure data; settingsSync.ts /
+ * focus mode is the built-in `focus` preset, shaped by `[focus] hide`. Pure data; settingsSync.ts /
  * preferences.ts spread `LAYOUT_MAPPINGS`, `LAYOUT_FIELDS` and
  * `LAYOUT_DEFAULTS` in.
  *
@@ -17,6 +17,7 @@ export const LAYOUT_PARTS = [
   "activity_bar",
   "tab_strip",
   "footer",
+  "status_bar",
 ] as const;
 export type LayoutPart = typeof LAYOUT_PARTS[number];
 
@@ -29,6 +30,10 @@ export const LAYOUT_FIELDS = [
   "layoutFooter",
   "layoutPreset",
   "layoutPresets",
+  "focusHide",
+  "focusRemember",
+  "focusHint",
+  "focusOn",
 ] as const;
 export type LayoutField = typeof LAYOUT_FIELDS[number];
 
@@ -41,6 +46,14 @@ export interface LayoutPreferences {
   layoutPreset: string;
   /** The user's presets; the built-in ones are added by `allPresets`. */
   layoutPresets: LayoutPresets;
+  /** `[focus] hide`: the parts focus mode hides. */
+  focusHide: readonly LayoutPart[];
+  /** `[focus] remember`: reopen in focus mode if it was on at quit. */
+  focusRemember: boolean;
+  /** `[focus] hint`: a small "Focus" chip while focus mode is on. */
+  focusHint: boolean;
+  /** Focus mode was on at quit (kept only while `focusRemember`; not in config). */
+  focusOn: boolean;
 }
 
 export const LAYOUT_DEFAULTS: LayoutPreferences = {
@@ -48,19 +61,21 @@ export const LAYOUT_DEFAULTS: LayoutPreferences = {
   layoutFooter: true,
   layoutPreset: "",
   layoutPresets: {},
+  focusHide: LAYOUT_PARTS,
+  focusRemember: false,
+  focusHint: false,
+  focusOn: false,
 };
 
 export const FOCUS_PRESET = "focus";
 
-/** Built-in presets; a user preset with the same name replaces one. */
+/** The focus preset: every part in `hide` goes away. */
+export const focusPreset = (hide: readonly LayoutPart[]): LayoutPreset =>
+  Object.fromEntries(hide.map((part) => [part, false]));
+
+/** Built-in presets (focus hides every part); a user preset with the same name replaces one. */
 export const BUILTIN_PRESETS: LayoutPresets = {
-  [FOCUS_PRESET]: {
-    header: false,
-    navigator: false,
-    activity_bar: false,
-    tab_strip: false,
-    footer: false,
-  },
+  [FOCUS_PRESET]: focusPreset(LAYOUT_PARTS),
 };
 
 /** Preset names are TOML bare keys, so they make clean command ids. */
@@ -152,6 +167,10 @@ export function layoutPresetProblems(
 }
 
 const isBool = (v: unknown): v is boolean => typeof v === "boolean";
+const isPartList = (v: unknown): v is LayoutPart[] =>
+  Array.isArray(v) &&
+  v.length <= LAYOUT_PARTS.length &&
+  v.every((p) => typeof p === "string" && isPart(p));
 // Any text: a name that matches no preset is reported when it is applied.
 const isPresetChoice = (v: unknown): boolean => typeof v === "string";
 
@@ -183,6 +202,24 @@ export const LAYOUT_MAPPINGS: readonly ConfigMapping[] = [
       presetsProblem(value) === null ? splitPresets(value).presets : value,
     valid: isPresets,
   },
+  {
+    field: "focusHide",
+    key: "focus.hide",
+    expected: `a list of parts: ${LAYOUT_PARTS.join(", ")}`,
+    valid: isPartList,
+  },
+  {
+    field: "focusRemember",
+    key: "focus.remember",
+    expected: "true or false",
+    valid: isBool,
+  },
+  {
+    field: "focusHint",
+    key: "focus.hint",
+    expected: "true or false",
+    valid: isBool,
+  },
 ];
 
 const VALID: Record<LayoutField, (v: unknown) => boolean> = {
@@ -190,6 +227,10 @@ const VALID: Record<LayoutField, (v: unknown) => boolean> = {
   layoutFooter: isBool,
   layoutPreset: isPresetChoice,
   layoutPresets: isPresets,
+  focusHide: isPartList,
+  focusRemember: isBool,
+  focusHint: isBool,
+  focusOn: isBool,
 };
 
 /** Stored (localStorage) preferences -> valid layout fields; bad ones default. */
@@ -205,10 +246,16 @@ export function normalizeLayoutPreferences(
 }
 
 /** Built-in presets, then the user's (same name replaces). */
-export const allPresets = (user: LayoutPresets): LayoutPresets =>
-  Object.keys(user).length === 0
-    ? BUILTIN_PRESETS
-    : { ...BUILTIN_PRESETS, ...user };
+export const allPresets = (
+  user: LayoutPresets,
+  focusHide: readonly LayoutPart[] = LAYOUT_PARTS,
+): LayoutPresets => {
+  const builtin =
+    focusHide === LAYOUT_PARTS
+      ? BUILTIN_PRESETS
+      : { [FOCUS_PRESET]: focusPreset(focusHide) };
+  return Object.keys(user).length === 0 ? builtin : { ...builtin, ...user };
+};
 
 export type ShownParts = Readonly<Record<LayoutPart, boolean>>;
 

@@ -78,6 +78,11 @@ const OVERRIDES: Readonly<Record<string, Schema>> = {
     type: "object",
     additionalProperties: { type: "string" },
   },
+  "focus.hide": {
+    type: "array",
+    items: { type: "string", enum: [...LAYOUT_PARTS] },
+    uniqueItems: true,
+  },
   "layout.preset": { type: "string" },
   "layout.presets": {
     type: "object",

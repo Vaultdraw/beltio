@@ -323,9 +323,27 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
         doc: 'A preset to apply at launch and whenever this value changes; `""` = none.',
       },
       presets: {
-        doc: "Named presets, `[layout.presets.<name>]`, each listing the parts it shows or hides: `header`, `navigator`, `activity_bar`, `tab_strip`, `footer`. `focus` is built in.",
+        doc: "Named presets, `[layout.presets.<name>]`, each listing the parts it shows or hides: `header`, `navigator`, `activity_bar`, `tab_strip`, `footer`, `status_bar`. `focus` is built in.",
         default: "`focus` hides every part",
         accepts: "tables of `part = true | false`",
+      },
+    },
+  },
+  {
+    table: "focus",
+    intro:
+      "What focus mode hides (`View: Focus mode`). See [Layout and focus mode](#layout-and-focus-mode).",
+    keys: {
+      hide: {
+        doc: "The parts focus mode hides: `header`, `navigator`, `activity_bar`, `tab_strip`, `footer`, `status_bar`. The canvas and the drawing toolbar always stay.",
+        default: "every part",
+        accepts: "a list of part names",
+      },
+      remember: {
+        doc: "Open in focus mode when it was on at the last quit.",
+      },
+      hint: {
+        doc: "Show a small `Focus` chip (with the exit key) while focus mode is on.",
       },
     },
   },

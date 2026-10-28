@@ -23,6 +23,7 @@ import {
 import {
   LoadIcon,
   saveAs,
+  fullscreenIcon,
   settingsIcon,
 } from "@excalidraw/excalidraw/components/icons";
 
@@ -1022,6 +1023,13 @@ const VaultEditorComponent = ({
               Vault settings
             </CommandMenuItem>
           )}
+          <CommandMenuItem
+            commandId="view.focusMode"
+            icon={fullscreenIcon}
+            onSelect={() => void getAppCommandRunner()?.("view.focusMode")}
+          >
+            Focus mode
+          </CommandMenuItem>
           <MainMenu.DefaultItems.ToggleTheme allowSystemTheme={false} />
           <MainMenu.DefaultItems.ChangeCanvasBackground />
           <PaperMenuItem onOpenSettings={() => setPaperDialogOpen(true)} />

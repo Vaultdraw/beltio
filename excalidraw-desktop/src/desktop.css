@@ -89,3 +89,23 @@ html.dark body {
 .vault-app--no-footer .layer-ui__wrapper__footer {
   display: none;
 }
+
+/* [focus] hint = true: a quiet chip in the corner while focus mode is on. */
+.vault-focus-chip {
+  position: fixed;
+  right: 10px;
+  bottom: 8px;
+  z-index: 5;
+  padding: 2px 8px;
+  border: 1px solid var(--vault-border, rgba(128, 128, 128, 0.35));
+  border-radius: 10px;
+  background: transparent;
+  color: var(--vault-text-muted, inherit);
+  font-size: 11px;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.vault-focus-chip:hover {
+  opacity: 1;
+}

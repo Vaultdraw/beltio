@@ -100,6 +100,8 @@ import {
 } from "./vault/newDrawing";
 import { commitCanvasTextEdit } from "./commands/context";
 import { ActivityBar } from "./activityBar/ActivityBar";
+import { FocusChip } from "./layout/FocusChip";
+import { LAYOUT_COMMAND_IDS } from "./layout/layoutCommands";
 import { useActivityBarShown } from "./activityBar/activityBarRegistry";
 import { getRegisteredHandler } from "./commands/handlerRegistry";
 import { closeInstallDialog } from "./theme/install/installStore";
@@ -2144,6 +2146,7 @@ export const VaultApp = ({
       navigator: !navigatorCollapsed,
       activity_bar: activityBarShown,
       tab_strip: tabs.showStrip,
+      status_bar: true,
     },
     (message) => toastStore.push({ message }),
   );
@@ -3053,10 +3056,16 @@ export const VaultApp = ({
           }
         />
       </div>
-      {pluginsStarted && win && (
+      {pluginsStarted && win && layout.shown.status_bar && (
         <Suspense fallback={null}>
           <PluginStatusBar win={win} />
         </Suspense>
+      )}
+      {layout.focusActive && prefsNow.focusHint && (
+        <FocusChip
+          win={win}
+          onExit={() => void runCommand(LAYOUT_COMMAND_IDS.exitFocus)}
+        />
       )}
 
       {showConflictDialog && activeDoc && (

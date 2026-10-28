@@ -589,7 +589,7 @@ When a command gets a new id (it moved into an official extension, say), the old
 | `vault.newDrawing` | New drawing | ⌘N | Ctrl+N |
 | `vault.newFromTemplate` | Templates: New drawing from template | ⌥⌘N, ⌃⌥N | Ctrl+Alt+N |
 | `view.toggleNavigator` | Toggle navigator | ⌘\  | Ctrl+\  |
-| `layout.preset.focus` | Layout: Focus mode | ⇧⌘↩ | Ctrl+Shift+Enter |
+| `view.focusMode` | View: Focus mode | ⇧⌘↩ | Ctrl+Shift+Enter |
 | `vault.switch` | Open another vault | — | — |
 | `file.revealInFinder` | Reveal drawing in Finder | — | — |
 | `file.duplicate` | Duplicate drawing | — | — |
@@ -955,6 +955,7 @@ Hide the parts of the window you don't need, by hand or with a named preset. Foc
 | `activity_bar` | `interface.activity_bar` |
 | `tab_strip` | `tabs.show_strip` |
 | `navigator` | the navigator's collapse button and **Toggle navigator** |
+| `status_bar` | the plugin status bar at the bottom (nothing is drawn when no plugin adds an item) |
 
 A preset lists only the parts it changes; the rest keep their usual switch:
 
@@ -962,23 +963,33 @@ A preset lists only the parts it changes; the rest keep their usual switch:
 [layout]
 preset = ""            # a preset to start with, e.g. "focus"; "" = none
 
-[layout.presets.focus]  # built in: hides all five parts. Your table replaces it.
+[layout.presets.focus]  # built in: hides every part in [focus] hide. Your table replaces it.
 header = false
 navigator = false
 activity_bar = false
 tab_strip = false
 footer = false
+status_bar = false
 
 [layout.presets.reading]
 navigator = false
 footer = false
 ```
 
-- **Layout: Focus mode** (**Cmd/Ctrl+Shift+Enter**) turns focus mode on and off. Every preset has a command, `layout.preset.<name>` ("Layout: reading"), which works the same way. **Layout: Default layout** leaves any preset.
+- **View: Focus mode** (**Cmd/Ctrl+Shift+Enter**, also in the editor's main menu) turns focus mode on and off. **Esc** (command `view.focusMode.exit`, rebindable) leaves it, unless a dialog, a text edit or a list has the focus. Only the canvas and Excalidraw's drawing toolbar and menu stay. `layout.preset.focus` ("Layout: Focus mode", no key) still works for old bindings. Every preset has a command, `layout.preset.<name>` ("Layout: reading"), which works the same way. **Layout: Default layout** leaves any preset.
+- Plugin overlays and dialogs you open yourself stay while focus mode is on; focus mode only hides the window's own chrome. Tabs and notes tabs keep working (the tab strip is hidden; switch with the tab keys).
 - While a preset is on, the usual toggles (Toggle navigator, Toggle activity bar, Show or hide tab strip, **Layout: Toggle header**, **Layout: Toggle editor footer**) show or hide that part for this session only, without changing your config. Searching or revealing a drawing in the file tree shows the navigator. With no preset on, the toggles change the usual switch as before.
-- The active preset is per window and not saved; `layout.preset` says which one a window starts with, and changing it in the file applies at once.
+- The active preset is per window and not saved, except that `[focus] remember = true` reopens in focus mode if it was on at quit; `layout.preset` says which one a window starts with, and changing it in the file applies at once.
 - A save problem (a conflict or a failed save) brings the header back while it lasts, so you are always told.
 - A bad preset entry, such as a typo in a part name, is reported and only that preset is skipped.
+
+```toml
+[focus]
+hide = ["header", "navigator", "activity_bar", "tab_strip", "footer", "status_bar"]  # the default
+remember = false  # reopen in focus mode if it was on at the last quit
+hint = false      # a small "Focus · Esc" chip in the corner while it is on (click it to exit)
+```
+
 - Hiding parts costs nothing: they are simply not drawn.
 
 ## Notebook backgrounds
@@ -1779,7 +1790,17 @@ Which parts of the window show, and presets such as focus mode. See [Layout and 
 | `header` | `true` | true or false |  | Show the vault header (title, save status, History and Graph buttons). |
 | `footer` | `true` | true or false |  | Show Excalidraw's footer (zoom, undo and redo, help). |
 | `preset` | `""` | a preset name like "focus", or "" for none (text) |  | A preset to apply at launch and whenever this value changes; `""` = none. |
-| `presets` | `focus` hides every part | tables of `part = true \| false` |  | Named presets, `[layout.presets.<name>]`, each listing the parts it shows or hides: `header`, `navigator`, `activity_bar`, `tab_strip`, `footer`. `focus` is built in. |
+| `presets` | `focus` hides every part | tables of `part = true \| false` |  | Named presets, `[layout.presets.<name>]`, each listing the parts it shows or hides: `header`, `navigator`, `activity_bar`, `tab_strip`, `footer`, `status_bar`. `focus` is built in. |
+
+### `[focus]`
+
+What focus mode hides (`View: Focus mode`). See [Layout and focus mode](#layout-and-focus-mode).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `hide` | every part | a list of part names |  | The parts focus mode hides: `header`, `navigator`, `activity_bar`, `tab_strip`, `footer`, `status_bar`. The canvas and the drawing toolbar always stay. |
+| `remember` | `false` | true or false |  | Open in focus mode when it was on at the last quit. |
+| `hint` | `false` | true or false |  | Show a small `Focus` chip (with the exit key) while focus mode is on. |
 
 ### `[memory]`
 
