@@ -1,4 +1,5 @@
 import {
+  ACTION_MS,
   ERROR_MS,
   dismissToast,
   emptyQueue,
@@ -11,6 +12,15 @@ import {
 import type { Toast, ToastInput, ToastQueue } from "./queue";
 
 type Listener = () => void;
+
+/**
+ * The user's notice time applies to every error toast (bug hunt BH-5): 0 keeps it until
+ * dismissed, buttons or not; a toast with a button stays at least as long as any action toast.
+ */
+const errorLifetime = (input: ToastInput, errorMs: number): number =>
+  errorMs === 0 || !(input.action || input.actions?.length)
+    ? errorMs
+    : Math.max(errorMs, ACTION_MS);
 
 /** Tiny external store: callers anywhere push, only the host subscribes, so the app tree never re-renders for a toast. */
 export function createToastStore(now: () => number = Date.now) {
@@ -31,11 +41,8 @@ export function createToastStore(now: () => number = Date.now) {
       set(
         pushToast(
           queue,
-          kind === "error" &&
-            input.durationMs === undefined &&
-            !input.action &&
-            !input.actions?.length
-            ? { ...input, durationMs: errorMs }
+          kind === "error" && input.durationMs === undefined
+            ? { ...input, durationMs: errorLifetime(input, errorMs) }
             : input,
           now(),
         ),
