@@ -91,7 +91,7 @@ const members: Member[] = [
       const row = treeRow(page, "Graphs");
       await row.hover();
       await row.getByRole("button", { name: "More actions" }).click();
-      await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
+      await page.getByRole("menuitem", { name: "Rename…", exact: true }).click();
       const dialog = page.getByRole("dialog");
       await dialog.getByLabel("New name").fill("Other");
       await dialog.getByRole("button", { name: "Rename" }).click();

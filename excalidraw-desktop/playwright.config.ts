@@ -30,6 +30,31 @@ if (!process.env.E2E_PORT) {
 }
 const port = process.env.E2E_PORT;
 
+// A pinned port belongs to the heavy.sh slot this run holds, so a vite preview still
+// listening there is a leftover of a killed run: free it before starting (2026-10-28).
+if (process.env.E2E_PORT_AUTO !== "1" && !process.env.TEST_WORKER_INDEX) {
+  try {
+    const pids = execFileSync("lsof", ["-ti", `tcp:${port}`, "-sTCP:LISTEN"], {
+      encoding: "utf8",
+    })
+      .split("\n")
+      .filter(Boolean);
+    for (const pid of pids) {
+      const cmd = execFileSync("ps", ["-o", "command=", "-p", pid], {
+        encoding: "utf8",
+      });
+      if (/vite(\.js)? preview/.test(cmd) && cmd.includes("vite.e2e.config")) {
+        process.kill(Number(pid), "SIGTERM");
+        console.warn(
+          `e2e: stopped a stale preview server on port ${port} (pid ${pid})`,
+        );
+      }
+    }
+  } catch {
+    // Nothing listening (lsof exits 1) or no lsof: nothing to free.
+  }
+}
+
 // E2E_TIMEOUT_FACTOR slows every timeout for emulated machines (the Linux x86_64 VM
 // on an Apple-silicon Mac runs under Rosetta, about 2x slower). Default 1.
 const factor = Number(process.env.E2E_TIMEOUT_FACTOR) || 1;
@@ -52,8 +77,8 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command:
-      "node ../plugins/official/build.mjs --quiet --no-check && npx vite build --config vite.e2e.config.mts --logLevel warn && npx vite preview --config vite.e2e.config.mts",
+    // scripts/e2e-server.mjs: build + preview in one process group that dies with the run.
+    command: "node scripts/e2e-server.mjs",
     url: `http://localhost:${port}/e2e.html`,
     reuseExistingServer: false,
     timeout: 180_000,
