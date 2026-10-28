@@ -361,6 +361,35 @@ export class FakeVaultRepository implements VaultRepository {
     return { json: row.json, revision: row.revision };
   }
 
+  /**
+   * Mirrors the native rules for a NEW name: a dot-named component is refused (never listed), and
+   * a sibling whose name differs only in ASCII case is a collision (case-insensitive file systems).
+   */
+  private checkNewName(path: string): void {
+    if (path.split("/").some((part) => part.startsWith("."))) {
+      throw makeError(
+        "INVALID_PATH",
+        "Names starting with a dot are reserved and never listed or written",
+      );
+    }
+    const slash = path.lastIndexOf("/");
+    const parent = slash < 0 ? "" : path.slice(0, slash);
+    const name = path.slice(slash + 1).toLowerCase();
+    const siblings = [...this.files.keys(), ...this.folders, ...this.notes];
+    for (const other of siblings) {
+      const s = other.lastIndexOf("/");
+      if (
+        (s < 0 ? "" : other.slice(0, s)) === parent &&
+        other.slice(s + 1).toLowerCase() === name
+      ) {
+        throw makeError(
+          "NAME_COLLISION",
+          "A case-insensitive name collision already exists",
+        );
+      }
+    }
+  }
+
   async writeDrawing(input: {
     handle: string;
     path: string;
@@ -388,6 +417,7 @@ export class FakeVaultRepository implements VaultRepository {
       if (existing) {
         throw makeError("NAME_COLLISION", `already exists: ${input.path}`);
       }
+      this.checkNewName(input.path);
       const revision = this.nextRevision();
       const parent = input.path.includes("/")
         ? input.path.slice(0, input.path.lastIndexOf("/"))
@@ -431,9 +461,10 @@ export class FakeVaultRepository implements VaultRepository {
       );
     }
     await this.delay();
-    if (this.files.has(path)) {
-      throw makeError("NAME_COLLISION", `file exists: ${path}`);
+    if (this.files.has(path) || this.folders.has(path)) {
+      throw makeError("NAME_COLLISION", `already exists: ${path}`);
     }
+    this.checkNewName(path);
     this.seedFolder(path);
     this.emit({ handle: this.vault.handle, paths: [path], rescan: false });
   }
@@ -457,6 +488,9 @@ export class FakeVaultRepository implements VaultRepository {
     }
     if (this.files.has(to) || this.folders.has(to)) {
       throw makeError("NAME_COLLISION", `destination exists: ${to}`);
+    }
+    if (to.toLowerCase() !== from.toLowerCase()) {
+      this.checkNewName(to);
     }
     if (isFile) {
       assertValidDrawingPath(to);
