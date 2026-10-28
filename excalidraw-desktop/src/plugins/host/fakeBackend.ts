@@ -5,6 +5,9 @@ import {
   markdownParams,
 } from "../../../../sdk/api/shared/markdown";
 
+import { PLUGIN_CACHE_KEY } from "../../theme/catalogue/backends";
+import { sha256Hex } from "../../theme/install/backends";
+
 import type { FakeFolderStore } from "../../../../sdk/api/shared/fakeFolders";
 
 import type { PluginsBackend } from "./backend";
@@ -455,6 +458,50 @@ export function createFakeBackend(
     },
     uninstall: async (id) => {
       fake.plugins = fake.plugins.filter((p) => p.id !== id);
+    },
+    // Like Rust: the entry comes from the cached list, the zip is fetched and hash-checked.
+    // The fake does not unpack it: the plugin is built from the entry.
+    installFromRegistry: async (id) => {
+      const raw = JSON.parse(
+        globalThis.localStorage?.getItem(PLUGIN_CACHE_KEY) ?? "null",
+      ) as { json: string; url: string } | null;
+      const entry = raw
+        ? (
+            JSON.parse(raw.json).plugins as {
+              id: string;
+              name: string;
+              version: string;
+              sha256: string;
+              url: string;
+              permissions: string[];
+            }[]
+          ).find((p) => p.id === id)
+        : undefined;
+      if (!raw || !entry) {
+        throw new Error(`${id} is not in the plugins list`);
+      }
+      const res = await fetch(new URL(entry.url, raw.url).href);
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      if ((await sha256Hex(bytes)) !== entry.sha256) {
+        throw new Error(`${id} changed after the list was made`);
+      }
+      const prior = fake.plugins.find((p) => p.id === id);
+      const info = makePluginInfo(id, {
+        name: entry.name,
+        version: entry.version,
+        permissions: entry.permissions as PluginInfo["permissions"],
+        review:
+          prior || entry.permissions.length === 0
+            ? { state: "ok", added: [] }
+            : {
+                state: entry.permissions.includes("vault.write")
+                  ? "review"
+                  : "notice",
+                added: entry.permissions,
+              },
+      });
+      fake.plugins = [...fake.plugins.filter((p) => p.id !== id), info];
+      return info;
     },
     setHostDisabled: async (id, reason) => {
       fake.hostDisabledCalls.push({ id, reason });

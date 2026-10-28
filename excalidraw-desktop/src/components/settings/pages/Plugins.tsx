@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -34,7 +36,10 @@ import {
   installPluginFromFolder,
   reloadPluginList,
 } from "../../../plugins/ui/pluginActions";
-import { deleteDataRequest } from "../../../plugins/ui/pluginCommands";
+import {
+  browseRequest,
+  deleteDataRequest,
+} from "../../../plugins/ui/pluginCommands";
 import { subscribeStorageWrites } from "../../../plugins/host/storage";
 import { toastStore } from "../../../toasts/toastStore";
 import {
@@ -52,6 +57,12 @@ import { formatDataSize, PluginRow, type RuntimeState } from "./PluginRow";
 import "./plugins.css";
 
 import type { PluginInfo } from "../../../plugins/host/types";
+
+const PluginBrowserDialog = lazy(() =>
+  import("../../PluginBrowserDialog").then((m) => ({
+    default: m.PluginBrowserDialog,
+  })),
+);
 
 type SafeMode = NonNullable<PluginsState["safeMode"]>;
 
@@ -225,6 +236,18 @@ export const PluginsPage = () => {
       toastStore.push({ message: "No plugin has saved data." });
     }
   }, [dataRequest, dataSizes]);
+  // "Plugins: Browse community plugins…" (and its refresh variant) open the browser here.
+  const [browse, setBrowse] = useState<{ force: boolean } | null>(null);
+  const browseCount = useSyncExternalStore(
+    browseRequest.subscribe,
+    browseRequest.get,
+  );
+  useEffect(() => {
+    const request = browseRequest.take();
+    if (request) {
+      setBrowse(request);
+    }
+  }, [browseCount]);
   const installed = new Set(state.plugins.map((p) => p.id));
   const orphanData = [...(dataSizes ?? [])].filter(
     ([id]) => !installed.has(id),
@@ -295,6 +318,13 @@ export const PluginsPage = () => {
         />
       )}
       <div className="vault-plugins__toolbar">
+        <button
+          type="button"
+          className="vault-btn vault-btn--sm"
+          onClick={() => setBrowse({ force: false })}
+        >
+          Browse community plugins…
+        </button>
         <button
           type="button"
           className="vault-btn vault-btn--sm"
@@ -409,6 +439,16 @@ export const PluginsPage = () => {
             ))}
           </ul>
         </section>
+      )}
+
+      {browse && (
+        <Suspense fallback={null}>
+          <PluginBrowserDialog
+            refresh={browse.force}
+            onClose={() => setBrowse(null)}
+            win={win ?? undefined}
+          />
+        </Suspense>
       )}
 
       {pending?.kind === "enable" && (

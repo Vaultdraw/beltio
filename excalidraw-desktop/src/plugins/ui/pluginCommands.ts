@@ -16,6 +16,8 @@ export const PLUGIN_UI_COMMAND_IDS = {
   reloadList: "plugins.reloadList",
   openFolder: "plugins.openFolder",
   deleteData: "plugins.deleteData",
+  browse: "plugins.browse",
+  browseRefresh: "plugins.browseRefresh",
 } as const;
 
 const I = PLUGIN_UI_COMMAND_IDS;
@@ -34,6 +36,8 @@ export const PLUGIN_UI_COMMANDS: CommandDefinition[] = [
   command(I.reloadList, "Reload plugin list"),
   command(I.openFolder, "Open plugins folder"),
   command(I.deleteData, "Delete data of a plugin…"),
+  command(I.browse, "Browse community plugins…"),
+  command(I.browseRefresh, "Refresh the community plugins list…"),
 ];
 
 // "Delete data of a plugin…" requests: a counter the Plugins page watches, so a
@@ -58,6 +62,37 @@ export const deleteDataRequest = {
   },
 };
 
+// "Browse community plugins…" requests, handled like the one above; `force` fetches the list again.
+let browseRequests = 0;
+let browseHandled = 0;
+let browseForce = false;
+const browseListeners = new Set<() => void>();
+
+export const browseRequest = {
+  get: (): number => browseRequests,
+  subscribe: (fn: () => void): (() => void) => {
+    browseListeners.add(fn);
+    return () => void browseListeners.delete(fn);
+  },
+  /** `{ force }` once per request, then null. */
+  take: (): { force: boolean } | null => {
+    if (browseHandled >= browseRequests) {
+      return null;
+    }
+    browseHandled = browseRequests;
+    const force = browseForce;
+    browseForce = false;
+    return { force };
+  },
+};
+
+const requestBrowse = (force: boolean, openSettings: () => void) => {
+  browseRequests++;
+  browseForce = force;
+  browseListeners.forEach((fn) => fn());
+  openSettings();
+};
+
 /** `openSettings` is bound by the shell (it owns the Settings modal). */
 export const pluginUiHandlers = (
   openSettings: () => void,
@@ -67,6 +102,8 @@ export const pluginUiHandlers = (
   [I.reloadList]: () => void reloadPluginList(),
   [I.openFolder]: () => void openPluginsFolder(),
   // Opens Settings → Plugins with the first "Delete data" button focused.
+  [I.browse]: () => requestBrowse(false, openSettings),
+  [I.browseRefresh]: () => requestBrowse(true, openSettings),
   [I.deleteData]: () => {
     deleteDataRequests++;
     deleteDataListeners.forEach((fn) => fn());

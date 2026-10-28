@@ -113,6 +113,21 @@ export async function installPluginFolder(path: string): Promise<PluginInfo> {
   return info;
 }
 
+/**
+ * Installs or updates a plugin from the community list. An updated plugin is reloaded (and
+ * re-activated if it was running); a new one is added disabled.
+ */
+export async function installRegistryPlugin(id: string): Promise<PluginInfo> {
+  const existed = currentList().plugins.some((p) => p.id === id);
+  const info = await getPluginsBackend().installFromRegistry(id);
+  if (existed) {
+    await reloadPlugin(id);
+  } else {
+    await rescanPlugins();
+  }
+  return info;
+}
+
 export async function uninstallPlugin(id: string): Promise<void> {
   await dispose(id);
   resetPluginErrors(id);

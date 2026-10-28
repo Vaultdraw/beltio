@@ -7,6 +7,8 @@ export interface PluginsBackend {
   list(rescan?: boolean): Promise<PluginsList>;
   installFolder(path: string): Promise<PluginInfo>;
   uninstall(id: string): Promise<void>;
+  /** Downloads, verifies and installs plugin `id` from the cached community list (consent checked in Rust). */
+  installFromRegistry(id: string): Promise<PluginInfo>;
   setHostDisabled(id: string, reason: string | null): Promise<void>;
   /** The user confirmed `seen`; refused (CONFLICT) when the manifest declares something else now. */
   consentConfirm(id: string, seen: string[]): Promise<void>;
@@ -56,6 +58,8 @@ export function createTauriBackend(win?: Window | null): PluginsBackend {
     uninstall: async (id) => {
       await call("plugins_uninstall", { id });
     },
+    installFromRegistry: (id) =>
+      call<PluginInfo>("plugin_registry_install", { id }),
     setHostDisabled: async (id, reason) => {
       await call("plugins_set_host_disabled", { id, reason });
     },

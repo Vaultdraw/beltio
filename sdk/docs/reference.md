@@ -866,13 +866,15 @@ If a plugin needs something the API lacks, grow the API; don't import around it.
 
 ## Installing, enabling, safe mode
 
-- **Settings → Plugins** lists installed plugins. Each row has an enable switch (a plugin that isn't bundled asks for consent first, because it runs with full access), an Unverified badge, "Needs app ≥ X", "Disabled by Vaultdraw: reason" with Re-enable, Active / Not loaded, the activation time, a memory estimate, Open folder, Reload (active or dev plugins) and Uninstall (user plugins). **Install from folder…** copies a folder into `~/.config/vaultdraw/plugins/`. It does not enable it.
+- **Settings → Plugins** lists installed plugins. Each row has an enable switch (a plugin that isn't bundled asks for consent first, because it runs with full access), an Unverified badge, "Needs app ≥ X", "Disabled by Vaultdraw: reason" with Re-enable, Active / Not loaded, the activation time, a memory estimate, Open folder, Reload (active or dev plugins) and Uninstall (user plugins). **Install from folder…** copies a folder into `~/.config/vaultdraw/plugins/`. It does not enable it. **Browse community plugins…** lists a registry (see [registry](registry.md)): details with the permissions the plugin declares, Install, Update and Uninstall. It asks for network consent once (`network.allow_plugins`) and never enables a plugin by itself.
 - **Palette commands:**
 
   | Command                       | Id                        |
   | ----------------------------- | ------------------------- |
   | Plugins: Open plugin settings | `plugins.openSettings`    |
   | Plugins: Install from folder… | `plugins.installFolder`   |
+  | Plugins: Browse community plugins… | `plugins.browse`     |
+  | Plugins: Refresh the community plugins list… | `plugins.browseRefresh` |
   | Plugins: Reload plugin list   | `plugins.reloadList`      |
   | Plugins: Open plugins folder  | `plugins.openFolder`      |
   | Plugins: Restart in safe mode | `plugins.restartSafeMode` |

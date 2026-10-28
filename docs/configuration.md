@@ -1527,7 +1527,7 @@ enabled = ["my-plugin"]
   ```
 
   Settings → Plugins lists each extension that two plugins claim. See [importers.md](../sdk/docs/importers.md).
-- **Commands:** `plugins.openSettings`, `plugins.installFolder`, `plugins.reloadList`, `plugins.openFolder` (shows the plugins folder) and `plugins.deleteData` ("Delete data of a plugin…": opens Settings → Plugins at the first **Delete data** button). Like every command, you can rebind them in `[hotkeys]`.
+- **Commands:** `plugins.openSettings`, `plugins.installFolder`, `plugins.browse` ("Browse community plugins…": opens Settings → Plugins → Browse), `plugins.browseRefresh` (the same, fetching the list again), `plugins.reloadList`, `plugins.openFolder` (shows the plugins folder) and `plugins.deleteData` ("Delete data of a plugin…": opens Settings → Plugins at the first **Delete data** button). Like every command, you can rebind them in `[hotkeys]`.
 - **Writing a plugin:** the `vaultdraw-plugin` tool (`check`, `init`, `dev`) is described in `sdk/docs/getting-started.md`. It adds no config key.
 
 ## Markdown import
