@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { Fragment, useRef } from "react";
 
 import { useListKeys } from "../../commands/useListKeys";
 
@@ -194,25 +194,27 @@ export const Sidebar = ({
                 {page.group}
               </div>
             ) : null;
-          return [
-            heading,
-            <button
-              key={page.id}
-              id={settingsTabId(page.id)}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              aria-controls={SETTINGS_PANEL_ID}
-              tabIndex={page.id === stopId ? 0 : -1}
-              className={`vault-settings-nav-item ${
-                active ? "vault-settings-nav-item--active" : ""
-              }`}
-              onClick={() => onSelectPage(page.id)}
-            >
-              {PAGE_ICONS[page.id]}
-              <span>{page.label}</span>
-            </button>,
-          ];
+          return (
+            <Fragment key={page.id}>
+              {heading}
+              <button
+                key={page.id}
+                id={settingsTabId(page.id)}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                aria-controls={SETTINGS_PANEL_ID}
+                tabIndex={page.id === stopId ? 0 : -1}
+                className={`vault-settings-nav-item ${
+                  active ? "vault-settings-nav-item--active" : ""
+                }`}
+                onClick={() => onSelectPage(page.id)}
+              >
+                {PAGE_ICONS[page.id]}
+                <span>{page.label}</span>
+              </button>
+            </Fragment>
+          );
         })}
       </nav>
       {footer && <div className="vault-settings-foot">{footer}</div>}
