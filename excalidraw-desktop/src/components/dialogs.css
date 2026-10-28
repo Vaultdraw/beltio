@@ -245,7 +245,8 @@
   padding: var(--vd-space-2) var(--vd-space-3);
 }
 
-.vd-dialog .vault-btn--sm:not(.vault-btn--icon) {
+/* Small buttons inside the body (list rows); the footer has one height. */
+.vd-dialog .vd-dialog__body .vault-btn--sm:not(.vault-btn--icon) {
   height: var(--vd-control);
   padding: 0 10px;
   font-size: var(--vd-fs-small);

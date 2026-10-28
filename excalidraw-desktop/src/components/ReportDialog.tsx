@@ -48,7 +48,7 @@ export const ReportDialog = ({
           </span>
           <button
             type="button"
-            className="vault-btn vault-btn--sm"
+            className="vault-btn"
             onClick={() => void copy()}
           >
             Copy
@@ -56,7 +56,7 @@ export const ReportDialog = ({
           <button
             ref={closeRef}
             type="button"
-            className="vault-btn vault-btn--sm"
+            className="vault-btn"
             onClick={onClose}
           >
             Close

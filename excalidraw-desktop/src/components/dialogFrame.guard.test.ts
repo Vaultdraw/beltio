@@ -71,3 +71,12 @@ describe("dialog frame guard", () => {
     }
   });
 });
+
+describe("dialog footer", () => {
+  it("small buttons never shrink the footer (one footer height)", () => {
+    const css = readFileSync(join(__dirname, "dialogs.css"), "utf8");
+    for (const rule of css.match(/[^}]*vault-btn--sm[^{]*\{/g) ?? []) {
+      expect(rule).toMatch(/vd-dialog__body/);
+    }
+  });
+});

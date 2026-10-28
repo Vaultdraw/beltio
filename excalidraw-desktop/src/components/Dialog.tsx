@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-import { useEscapeLayer } from "./escapeLayers";
 import { IconClose } from "./Icons";
 
 import "./dialogs.css";
@@ -34,6 +33,9 @@ interface DialogProps {
   frameRef?: Ref<HTMLDivElement>;
 }
 
+/** Open dialogs, oldest first: only the top one answers Escape. */
+const openStack: object[] = [];
+
 const FOCUSABLE =
   'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
 
@@ -66,21 +68,38 @@ export const Dialog = ({
   const live = useRef({ onClose, busy });
   live.current = { onClose, busy };
 
-  const [doc, setDoc] = useState<Document | null>(null);
-  useEffect(() => setDoc(backdropRef.current?.ownerDocument ?? null), []);
-  // Escape closes only the top dialog (escapeLayers), wherever focus sits.
-  useEscapeLayer(
-    doc,
-    () => live.current.onClose(),
-    () => live.current.busy,
-  );
-
   useEffect(() => {
     const doc = backdropRef.current?.ownerDocument;
     if (!doc) {
       return;
     }
+    const token = {};
+    openStack.push(token);
+    // Focus starts inside the dialog unless the dialog already placed it.
+    const frame = backdropRef.current;
+    if (frame && !frame.contains(doc.activeElement)) {
+      frame.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.isComposing) {
+        return;
+      }
+      if (openStack[openStack.length - 1] !== token) {
+        return;
+      }
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (!live.current.busy) {
+        live.current.onClose();
+      }
+    };
+    doc.addEventListener("keydown", onKeyDown, true);
     return () => {
+      doc.removeEventListener("keydown", onKeyDown, true);
+      const at = openStack.indexOf(token);
+      if (at >= 0) {
+        openStack.splice(at, 1);
+      }
       // Hand focus back (never body; skipped if that element is gone).
       if (
         opener instanceof HTMLElement &&
@@ -102,19 +121,19 @@ export const Dialog = ({
     if (nodes.length === 0) {
       return;
     }
-    const first = nodes[0];
-    const last = nodes[nodes.length - 1];
+    // Move focus ourselves: WebKit skips buttons on Tab by default, which
+    // would let focus leave the dialog.
     const active = event.currentTarget.ownerDocument.activeElement;
-    if (
-      event.shiftKey &&
-      (active === first || !nodes.includes(active as never))
-    ) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && active === last) {
-      event.preventDefault();
-      first.focus();
-    }
+    const at = nodes.indexOf(active as HTMLElement);
+    const step = event.shiftKey ? -1 : 1;
+    const next =
+      at < 0
+        ? event.shiftKey
+          ? nodes.length - 1
+          : 0
+        : (at + step + nodes.length) % nodes.length;
+    event.preventDefault();
+    nodes[next].focus();
   };
 
   const content =
