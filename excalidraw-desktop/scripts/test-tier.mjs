@@ -72,6 +72,9 @@ if (tier === "fast") {
   if (desktopSrc.length || pkgSrc.length) {
     npx(desktop, "vitest related (desktop)", ["vitest", "related", "--run", "--passWithNoTests", ...rel([...desktopSrc, ...pkgSrc])]);
   }
+  // Plugin SDK and official plugins are tested under the root config (run from the root, not the plugin folder).
+  const sdkPlugins = code.filter((f) => f.startsWith("sdk/") || f.startsWith("plugins/official/"));
+  if (sdkPlugins.length) npx(root, "vitest related (sdk, official plugins)", ["vitest", "related", "--run", "--passWithNoTests", ...rel(sdkPlugins)]);
   if (pkgSrc.length) npx(root, "vitest related (packages)", ["vitest", "related", "--run", "--passWithNoTests", ...rel(pkgSrc)]);
   if (code.some((f) => f.startsWith("excalidraw-desktop/perf/"))) step("perf lib tests", root, "node", ["--test", "excalidraw-desktop/perf/lib/*.test.mjs"]);
   if (code.some((f) => f.startsWith("excalidraw-desktop/scripts/"))) step("script tests", root, "node", ["--test", "excalidraw-desktop/scripts/*.test.mjs"]);

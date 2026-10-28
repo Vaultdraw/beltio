@@ -98,7 +98,7 @@ describe("formula plugin", () => {
     expect(Object.values(p.scene.files())[0].mime).toBe("image/svg+xml");
   });
 
-  it("edit redraws the selected formula in place of the old one, one undo step", async () => {
+  it("edit redraws the selected formula on the same element, one undo step", async () => {
     p = await boot(manifest(), plugin);
     p.scene.setElements([]);
     await p.run("insert");
@@ -126,7 +126,7 @@ describe("formula plugin", () => {
       customData: { latex: { source: string } };
     }[];
     expect(live).toHaveLength(1);
-    expect(live[0].id).not.toBe(first.id);
+    expect(live[0].id).toBe(first.id);
     expect(live[0].customData.latex.source).toBe("x^2+y^2");
   });
 

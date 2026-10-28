@@ -58,16 +58,16 @@ describe("shape rules", () => {
       { a: 1 },
       defs,
     );
-    expect(ops.map((o) => o.op)).toEqual(["delete", "add"]);
-    expect(ops[1]).toMatchObject({
-      element: {
-        x: 5,
-        y: 6,
-        width: 7,
-        height: 8,
-        data: { shape: "s", props: { a: 1 } },
-      },
+    // One in-place update (API 0.25.0): the element keeps its id, only picture and data change.
+    expect(ops.map((o) => o.op)).toEqual(["update"]);
+    expect(ops[0]).toMatchObject({
+      op: "update",
+      id: "e",
+      props: { data: { shape: "s", props: { a: 1 } } },
     });
+    expect((ops[0] as { props: { image: unknown } }).props.image).toMatchObject(
+      { mime: "image/svg+xml" },
+    );
     expect(() => updateOps(scene(undefined), "e", {}, defs)).toThrow(
       /not a shape/,
     );
