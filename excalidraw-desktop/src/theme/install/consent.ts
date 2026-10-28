@@ -19,9 +19,9 @@ export const hasThemeConsent = (win: Window = window): boolean =>
 
 export const consentText = (enabled: boolean, allow: boolean | undefined) =>
   !enabled
-    ? "Network access is switched off in your settings (network.enabled). Turn it on and allow theme downloads?"
+    ? "Network access is switched off in Settings. Turn it on and allow theme downloads?"
     : allow === false
-    ? "Theme downloads are switched off (network.allow_themes). Allow them?"
+    ? "Theme downloads are switched off. Allow them?"
     : "Vaultdraw will connect to GitHub, or to the address you give, to download a theme. It sends nothing but the request. You can change this any time in Settings, General.";
 
 /**

@@ -25,14 +25,14 @@ pub(crate) fn check_consent(config: Option<&Value>, purpose: &str) -> Result<()>
         Some(_) => false,
     };
     if !enabled {
-        return Err(err("NETWORK_DISABLED", "Network access is switched off in Settings (network.enabled)"));
+        return Err(err("NETWORK_DISABLED", "Network access is switched off in Settings"));
     }
     let key = format!("allow_{purpose}");
     let allowed = network.and_then(|n| n.get(&key)).and_then(Value::as_bool) == Some(true);
     if !allowed {
         return Err(err(
             "NETWORK_NOT_ALLOWED",
-            format!("Network access for `{purpose}` is not allowed; allow it in Settings (network.{key})"),
+            format!("Downloading {} is not allowed. You can allow it in Settings.", purpose_phrase(purpose)),
         ));
     }
     Ok(())
@@ -947,6 +947,14 @@ mod tests {
                 assert!(!s.contains('`') && !s.contains("network.") && !s.contains("allow_") && !s.contains('_'), "{keys:?}: {s}");
             }
             assert!(text.ends_with("in Settings.") || text.ends_with("Settings."), "{text}");
+        }
+    }
+
+    #[test]
+    fn consent_errors_name_no_config_key() {
+        for (cfg, purpose) in [(json!({"network": {"enabled": false}}), "themes"), (json!({}), "plugins"), (json!({}), "plugin_list")] {
+            let e = check_consent(Some(&cfg), purpose).unwrap_err();
+            assert!(!e.message.contains("network.") && !e.message.contains('`') && !e.message.contains('_'), "{}", e.message);
         }
     }
 }

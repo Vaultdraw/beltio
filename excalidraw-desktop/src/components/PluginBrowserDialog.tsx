@@ -285,8 +285,7 @@ export const PluginBrowserDialog = ({
           <p data-testid="plugin-browser-consent">
             {consentText(prefs.networkEnabled, prefs.networkAllowPlugins)
               .replace("a theme", "a plugin list and plugins")
-              .replace(/theme downloads/g, "plugin downloads")
-              .replace("network.allow_themes", "network.allow_plugins")}
+              .replace(/theme downloads/g, "plugin downloads")}
           </p>
         );
       case "loading":
