@@ -109,7 +109,7 @@ describe("useExplorerExport", () => {
     await act(() => result.current("A/Graphs.excalidraw", "png"));
     expect(setAlert).toHaveBeenLastCalledWith({
       message:
-        "Failed to export Graphs.excalidraw: Cannot export an empty canvas.",
+        "Couldn't export Graphs.excalidraw: Cannot export an empty canvas.",
       type: "error",
     });
   });

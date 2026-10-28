@@ -52,4 +52,30 @@ export interface ClipboardApi {
 export interface ToastOptions {
   /** A button on the toast; it stays about eight seconds. @since 0.28.0 */
   action?: { label: string; run: () => void };
+  /**
+   * Up to two buttons (for example "Cancel" or "View report"); replaces `action`.
+   * Labels are cut at 40 characters. Clicking one closes the toast and runs it.
+   *
+   * @since 0.30.0
+   */
+  actions?: { label: string; run: () => void }[];
+  /** One short line under the message, such as the file being worked on. @since 0.30.0 */
+  detail?: string;
+  /**
+   * A progress bar with a count ("12 / 40"). While progress is set the toast
+   * stays up as long as you keep updating it (about a minute without an update).
+   *
+   * @since 0.30.0
+   */
+  progress?: { done: number; total: number };
+  /**
+   * Names this notice: showing a toast with the same `id` again updates it in
+   * place (new text, bar, buttons) instead of adding another. Use one id for
+   * "importing…" and the result that replaces it.
+   *
+   * @since 0.30.0
+   */
+  id?: string;
+  /** `"error"` gives the toast the error look and keeps it about eight seconds (or the user's notice time). @since 0.30.0 */
+  kind?: "info" | "error";
 }

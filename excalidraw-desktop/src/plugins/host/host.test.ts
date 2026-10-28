@@ -151,6 +151,44 @@ describe("activation", () => {
     expect(toasts().join()).toMatch(/declared but not registered/);
   });
 
+  it("ctx.ui.toast: one id updates in place; progress, detail, two buttons, error kind", async () => {
+    const stopped = vi.fn();
+    await boot([withCommands("hello", "say")], {
+      hello: {
+        activate(ctx) {
+          ctx.commands.register("say", () => {
+            const opts = {
+              id: "job",
+              detail: "a.md",
+              progress: { done: 1, total: 4 },
+              actions: [
+                { label: "Cancel", run: stopped },
+                { label: "Two", run() {} },
+                { label: "Three", run() {} },
+              ],
+            };
+            ctx.ui.toast("Working", opts);
+            ctx.ui.toast("Working", {
+              ...opts,
+              progress: { done: 3, total: 4 },
+            });
+          });
+        },
+      },
+    });
+    enable(["hello"]);
+    await getRegisteredHandler("hello.say")!();
+    const list = toastStore.getSnapshot().toasts;
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({
+      detail: "a.md",
+      progress: { done: 3, total: 4 },
+    });
+    expect(list[0].actions?.map((x) => x.label)).toEqual(["Cancel", "Two"]);
+    list[0].actions![0].run();
+    expect(stopped).toHaveBeenCalledTimes(1);
+  });
+
   it("failed activation disables the plugin, no retry", async () => {
     const { backend, loads } = await boot([withCommands("hello", "say")], {
       hello: {

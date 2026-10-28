@@ -5,6 +5,7 @@ import {
   ERROR_MS,
   INFO_MS,
   MAX_VISIBLE,
+  PROGRESS_MS,
   dismissToast,
   emptyQueue,
   expireToasts,
@@ -145,5 +146,49 @@ describe("toast hold and sticky", () => {
     store.setErrorMs(0);
     store.push({ message: "stuck", kind: "error" });
     expect(store.getSnapshot().toasts[2].sticky).toBe(true);
+  });
+});
+
+describe("toast design: key, progress, actions", () => {
+  it("a key updates the same notice in place with its new bar and buttons", () => {
+    let q = pushToast(
+      emptyQueue(),
+      {
+        message: "Importing",
+        key: "k",
+        detail: "a",
+        progress: { done: 1, total: 9 },
+        actions: [{ label: "Cancel", run() {} }],
+      },
+      0,
+    );
+    expect(q.toasts[0].expiresAt).toBe(PROGRESS_MS);
+    q = pushToast(
+      q,
+      { message: "Imported 9", key: "k", detail: "all done" },
+      100,
+    );
+    expect(q.toasts).toHaveLength(1);
+    expect(q.toasts[0]).toMatchObject({
+      message: "Imported 9",
+      detail: "all done",
+      progress: undefined,
+      actions: [],
+      expiresAt: 100 + INFO_MS,
+    });
+  });
+
+  it("keeps two buttons at most and the first as `action`", () => {
+    const q = pushToast(
+      emptyQueue(),
+      {
+        message: "m",
+        actions: [1, 2, 3].map((n) => ({ label: `b${n}`, run() {} })),
+      },
+      0,
+    );
+    expect(q.toasts[0].actions?.map((a) => a.label)).toEqual(["b1", "b2"]);
+    expect(q.toasts[0].action?.label).toBe("b1");
+    expect(q.toasts[0].expiresAt).toBe(ACTION_MS);
   });
 });

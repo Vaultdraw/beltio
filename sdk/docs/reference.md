@@ -126,7 +126,7 @@ interface PluginContext {
     set(key: string, value: unknown): Promise<void>;
     onChange(key: string, cb: (value: unknown) => void): Disposable;
   };
-  readonly ui: { toast(message: string): void };
+  readonly ui: { toast(message: string, options?: ToastOptions): void };
   readonly scene: {
     elements(): readonly SceneElement[]; // frozen snapshot; [] when no drawing is open
     onChange(
@@ -196,6 +196,19 @@ interface PluginContext {
 Notes:
 
 - `ctx.ui.toast(m)` shows "<plugin name>: m". Don't add your name yourself. The same message while it is still showing refreshes that toast instead of stacking a second one.
+- **Notices (since 0.30.0).** One design for the whole app: a short message, an optional one-line `detail`, an optional `progress` bar with a count, and up to two buttons. Keep the message short ("Importing notes") and put the changing part in `detail` ("taskflow.puml"):
+
+  ```ts
+  ctx.ui.toast("Importing notes", {
+    id: "import",                                   // the same id updates this notice in place
+    detail: current,
+    progress: { done, total },                      // stays up while you keep updating it
+    actions: [{ label: "Cancel", run: () => controller.abort() }],
+  });
+  ctx.ui.toast("Imported 571 notes", { id: "import", detail: "3 images left as boxes", actions: [{ label: "View report", run: openReport }] });
+  ```
+
+  `kind: "error"` gives the error look; it closes after the user's `interface.notice_seconds`. A toast with `progress` closes after about a minute without an update, so end it with a final toast on the same `id`. Buttons: at most two, labels cut at 40 characters, clicking one closes the toast and runs it.
 - A stored setting value outside a declared `min` / `max`, or of the wrong type, reads as the default and is reported as a settings problem. `ctx.settings.set` rejects such a value.
 - `ctx.scene.batch` rejects with a `code`:
 
@@ -512,7 +525,7 @@ ctx.clipboard.onPaste(({ text }) => {
 
 - A handler sees only the text of a paste of plain multi-line text, never copied shapes or images. The first to return `"handled"` wins; one that throws or takes over 1.5 seconds is skipped.
 - `ctx.scene.currentTextStyle()` returns `{ fontFamily, fontSize }` of the next text the user would draw.
-- `ctx.ui.toast(message, { action })` adds a button that stays about eight seconds.
+- `ctx.ui.toast(message, { action })` adds a button that stays about eight seconds (since 0.30.0 also `actions`, `detail`, `progress`, `id`: see Notes above).
 - In tests: `plugin.clipboard.text`, `plugin.clipboard.paste(text)` (true when handled), `plugin.clipboard.toastButtons()` and `plugin.clipboard.clickToast(label)`.
 
 ### ctx.vault.exports (since 0.27.0)

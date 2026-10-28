@@ -309,52 +309,74 @@ const plugin: Plugin = definePlugin({
                     })
                 : undefined,
             onProgress(done, total, current) {
-              // One toast per ~5 s at most: progress without spam.
+              // A bar with a count, updated in place about 3 times a second.
               const now = performance.now();
-              if (now - shown > 5000) {
+              if (now - shown > 300 || done >= total) {
                 shown = now;
-                ctx.ui.toast(
-                  `Importing ${done} of ${total}: ${current} (Import: Cancel stops)`,
-                );
+                ctx.ui.toast("Importing notes", {
+                  id: "obsidian-import",
+                  detail: current,
+                  progress: { done, total },
+                  actions: [
+                    {
+                      label: "Cancel",
+                      run: () => controller.abort("cancel"),
+                    },
+                  ],
+                });
               }
             },
           });
           const written = result.target ?? target;
           if (controller.signal.aborted) {
-            ctx.ui.toast(
-              `Import cancelled after ${result.notes} notes (they stay in ${written.name})`,
-            );
+            ctx.ui.toast(`Import cancelled after ${result.notes} notes`, {
+              id: "obsidian-import",
+              detail: `They stay in ${written.name}`,
+            });
           } else {
             const noPicture =
               result.oversizedImages +
               result.unsupportedImages +
               result.missingImages;
+            const detail = [
+              written.name !== source.name
+                ? `Imported before, so this copy is "${written.name}"`
+                : `From ${source.name}`,
+              noPicture
+                ? `${noPicture} images left as boxes (${result.oversizedImages} over 4 MB, ${result.unsupportedImages} unsupported, ${result.missingImages} not found)`
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" · ");
+            const report = result.report;
             ctx.ui.toast(
-              `Imported ${result.notes} notes and ${
-                result.drawings
-              } drawings from ${source.name}${
-                written.name !== source.name
-                  ? ` (it was imported before, so this copy is in "${written.name}")`
-                  : ""
-              }${
-                noPicture
-                  ? ` (${noPicture} images left as boxes: ${result.oversizedImages} over 4 MB, ${result.unsupportedImages} unsupported type, ${result.missingImages} not found)`
-                  : ""
-              }${
-                result.report
-                  ? `. See "${result.report.replace(/\.excalidraw$/, "")}" in ${
-                      written.name
-                    } for details`
-                  : ""
-              }`,
+              `Imported ${result.notes} notes and ${result.drawings} drawings`,
+              {
+                id: "obsidian-import",
+                detail,
+                ...(report
+                  ? {
+                      actions: [
+                        {
+                          label: "View report",
+                          run: () => void ctx.workspace.open(report),
+                        },
+                      ],
+                    }
+                  : {}),
+              },
             );
           }
           await written.open();
         } catch (err) {
           if (controller.signal.aborted) {
-            ctx.ui.toast("Import cancelled");
+            ctx.ui.toast("Import cancelled", { id: "obsidian-import" });
           } else {
-            ctx.ui.toast(`Obsidian import failed: ${(err as Error).message}`);
+            ctx.ui.toast("Obsidian import failed", {
+              id: "obsidian-import",
+              kind: "error",
+              detail: (err as Error).message,
+            });
             throw err;
           }
         } finally {

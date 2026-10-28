@@ -13,6 +13,17 @@ export interface ToastOptions {
         label: string;
         run: () => void;
     };
+    actions?: {
+        label: string;
+        run: () => void;
+    }[];
+    detail?: string;
+    progress?: {
+        done: number;
+        total: number;
+    };
+    id?: string;
+    kind?: "info" | "error";
 }
 
 // commands.ts

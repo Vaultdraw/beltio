@@ -89,6 +89,67 @@
   overflow-wrap: anywhere;
 }
 
+.vd-toast__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vd-toast__detail {
+  color: var(--vault-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vd-toast__progress {
+  display: flex;
+  align-items: center;
+  gap: var(--vd-space-2);
+  margin-top: 4px;
+}
+
+.vd-toast__progress progress {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 4px;
+  border: 0;
+  border-radius: 2px;
+  background-color: var(--vault-sel);
+  accent-color: var(--vault-accent);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.vd-toast__progress progress::-webkit-progress-bar {
+  background-color: var(--vault-sel);
+  border-radius: 2px;
+}
+
+.vd-toast__progress progress::-webkit-progress-value {
+  background-color: var(--vault-accent);
+  border-radius: 2px;
+}
+
+.vd-toast__progress progress::-moz-progress-bar {
+  background-color: var(--vault-accent);
+  border-radius: 2px;
+}
+
+.vd-toast__count {
+  flex: none;
+  color: var(--vault-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.vd-toast__buttons {
+  display: flex;
+  gap: var(--vd-space-2);
+  margin: 4px 0 0 calc(-1 * var(--vd-space-2));
+}
+
 .vd-toast__action {
   flex: none;
   height: var(--vd-control-sm);

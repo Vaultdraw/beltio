@@ -5,9 +5,21 @@
 
 export type ToastAction = { label: string; run: () => void };
 
+/** The one notice design: a short title, an optional one-line detail, an optional progress bar, up to two buttons. */
+export type ToastProgress = { done: number; total: number };
+
 export type Toast = {
   id: number;
+  /** The title: short, one line of what happened. */
   message: string;
+  /** One line under the title (what failed, which file). */
+  detail?: string;
+  /** A bar with a count; a toast with progress stays up while it keeps being updated. */
+  progress?: ToastProgress;
+  /** Same key = the same notice: a push updates it in place instead of stacking. */
+  key?: string;
+  /** Buttons (Cancel, View report, Undo); `action` is the first one. */
+  actions?: ToastAction[];
   /** Errors stay a little longer. */
   kind: "info" | "error";
   action?: ToastAction;
@@ -21,6 +33,11 @@ export type Toast = {
 
 export type ToastInput = {
   message: string;
+  detail?: string;
+  progress?: ToastProgress;
+  key?: string;
+  /** Buttons; takes the place of `action`. */
+  actions?: ToastAction[];
   kind?: Toast["kind"];
   action?: ToastAction;
   /** Overrides the default lifetime; 0 means stay until dismissed. */
@@ -30,10 +47,13 @@ export type ToastInput = {
 export type ToastQueue = { toasts: Toast[]; nextId: number };
 
 export const MAX_VISIBLE = 3;
+export const MAX_ACTIONS = 2;
 export const INFO_MS = 5000;
 export const ERROR_MS = 8000;
 /** A toast with an action (Undo) gives time to reach it. */
 export const ACTION_MS = 8000;
+/** A progress toast that is not updated for this long goes (its work died). */
+export const PROGRESS_MS = 60000;
 
 export const emptyQueue = (): ToastQueue => ({ toasts: [], nextId: 1 });
 
@@ -41,7 +61,13 @@ export const emptyQueue = (): ToastQueue => ({ toasts: [], nextId: 1 });
 const lifetime = (input: ToastInput): number => {
   const ms =
     input.durationMs ??
-    (input.action ? ACTION_MS : input.kind === "error" ? ERROR_MS : INFO_MS);
+    (input.progress
+      ? PROGRESS_MS
+      : input.action || input.actions?.length
+      ? ACTION_MS
+      : input.kind === "error"
+      ? ERROR_MS
+      : INFO_MS);
   return ms <= 0 ? Infinity : ms;
 };
 
@@ -59,33 +85,34 @@ export function pushToast(
   const life = lifetime(input);
   const expiresAt = now + life;
   const sticky = life === Infinity;
-  const same = queue.toasts.find(
-    (t) => t.message === input.message && t.kind === kind,
+  const actions = (input.actions ?? (input.action ? [input.action] : [])).slice(
+    0,
+    MAX_ACTIONS,
   );
+  const fields = {
+    message: input.message,
+    kind,
+    detail: input.detail,
+    progress: input.progress,
+    key: input.key,
+    actions,
+    action: actions[0],
+    expiresAt,
+    sticky,
+    heldLeftMs: undefined,
+  };
+  const same = input.key
+    ? queue.toasts.find((t) => t.key === input.key)
+    : queue.toasts.find(
+        (t) => !t.key && t.message === input.message && t.kind === kind,
+      );
   if (same) {
     return {
       ...queue,
-      toasts: queue.toasts.map((t) =>
-        t === same
-          ? {
-              ...t,
-              expiresAt,
-              sticky,
-              heldLeftMs: undefined,
-              action: input.action,
-            }
-          : t,
-      ),
+      toasts: queue.toasts.map((t) => (t === same ? { ...t, ...fields } : t)),
     };
   }
-  const toast: Toast = {
-    id: queue.nextId,
-    message: input.message,
-    kind,
-    action: input.action,
-    expiresAt,
-    sticky,
-  };
+  const toast: Toast = { id: queue.nextId, ...fields };
   return {
     nextId: queue.nextId + 1,
     toasts: [...queue.toasts, toast].slice(-MAX_VISIBLE),

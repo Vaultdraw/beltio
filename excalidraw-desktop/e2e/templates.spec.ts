@@ -338,7 +338,9 @@ test("read-only vault: templates listed, no Blank row, creating fails with a mes
   ]);
   await rows(page).first().click();
   await expect(picker(page)).toHaveCount(0);
-  await expect(page.getByText(/Failed to create from template/)).toBeVisible();
+  await expect(
+    page.getByText(/Couldn't create a drawing from the template/),
+  ).toBeVisible();
   expect(await vaultFiles(page)).toEqual(before);
 });
 

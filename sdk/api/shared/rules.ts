@@ -93,6 +93,10 @@ export const MAX_VISIBLE_TOASTS = 3;
 export interface MockToast {
   message: string;
   kind: "info" | "error";
+  /** `ToastOptions.id`: the same key updates the toast in place. */
+  key?: string;
+  detail?: string;
+  progress?: { done: number; total: number };
 }
 
 /** What a plugin's `ui.toast` shows: the plugin name, a colon, the message. */
@@ -103,10 +107,18 @@ export const toastMessage = (pluginName: string, message: unknown): string =>
 export const pushToast = (
   queue: readonly MockToast[],
   toast: MockToast,
-): MockToast[] =>
-  queue.some((t) => t.message === toast.message && t.kind === toast.kind)
+): MockToast[] => {
+  if (toast.key) {
+    return queue.some((t) => t.key === toast.key)
+      ? queue.map((t) => (t.key === toast.key ? toast : t))
+      : [...queue, toast].slice(-MAX_VISIBLE_TOASTS);
+  }
+  return queue.some(
+    (t) => !t.key && t.message === toast.message && t.kind === toast.kind,
+  )
     ? [...queue]
     : [...queue, toast].slice(-MAX_VISIBLE_TOASTS);
+};
 
 // --- declared contributions -----------------------------------------------
 

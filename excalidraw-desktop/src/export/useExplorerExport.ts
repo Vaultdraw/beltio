@@ -97,7 +97,7 @@ export const useExplorerExport = (input: {
     } catch (err) {
       win.clearTimeout(notice);
       setAlert({
-        message: `Failed to export ${name}: ${
+        message: `Couldn't export ${name}: ${
           err instanceof Error ? err.message : String(err)
         }`,
         type: "error",

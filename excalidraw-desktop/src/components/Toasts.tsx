@@ -55,19 +55,41 @@ export const Toasts = ({ store = toastStore }: { store?: ToastStore }) => {
               }
             }}
           >
-            <span className="vd-toast__text">{toast.message}</span>
-            {toast.action && (
-              <button
-                type="button"
-                className="vd-toast__action"
-                onClick={() => {
-                  store.dismiss(toast.id);
-                  toast.action?.run();
-                }}
-              >
-                {toast.action.label}
-              </button>
-            )}
+            <div className="vd-toast__body">
+              <span className="vd-toast__text">{toast.message}</span>
+              {toast.detail && (
+                <span className="vd-toast__detail">{toast.detail}</span>
+              )}
+              {toast.progress && (
+                <div className="vd-toast__progress">
+                  <progress
+                    value={toast.progress.done}
+                    max={Math.max(1, toast.progress.total)}
+                    aria-label={toast.message}
+                  />
+                  <span className="vd-toast__count">
+                    {toast.progress.done} / {toast.progress.total}
+                  </span>
+                </div>
+              )}
+              {toast.actions && toast.actions.length > 0 && (
+                <div className="vd-toast__buttons">
+                  {toast.actions.map((action) => (
+                    <button
+                      key={action.label}
+                      type="button"
+                      className="vd-toast__action"
+                      onClick={() => {
+                        store.dismiss(toast.id);
+                        action.run();
+                      }}
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               type="button"
               className="vd-toast__close"

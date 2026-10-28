@@ -31,14 +31,19 @@ export function createToastStore(now: () => number = Date.now) {
       set(
         pushToast(
           queue,
-          kind === "error" && input.durationMs === undefined && !input.action
+          kind === "error" &&
+            input.durationMs === undefined &&
+            !input.action &&
+            !input.actions?.length
             ? { ...input, durationMs: errorMs }
             : input,
           now(),
         ),
       );
-      return queue.toasts.find(
-        (t) => t.message === input.message && t.kind === kind,
+      return queue.toasts.find((t) =>
+        input.key
+          ? t.key === input.key
+          : t.message === input.message && t.kind === kind,
       )?.id;
     },
     setErrorMs: (ms: number) => {

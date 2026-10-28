@@ -283,22 +283,41 @@ export function createPluginContext(
     },
     ui: {
       toast: (message, options) => {
-        const action = options?.action;
+        const list =
+          options?.actions ?? (options?.action ? [options.action] : []);
+        const actions = (Array.isArray(list) ? list : [])
+          .filter((a) => a && typeof a.run === "function")
+          .slice(0, 2)
+          .map((a) => ({
+            label: String(a.label).slice(0, 40),
+            // The toast outlives nothing: a click after the plugin stopped does nothing.
+            run: () => {
+              if (isLive()) {
+                a.run();
+              }
+            },
+          }));
+        const p = options?.progress;
+        const done = Number(p?.done);
+        const total = Number(p?.total);
         toastStore.push({
           message: `${info.name}: ${String(message)}`,
-          ...(action && typeof action.run === "function"
+          kind: options?.kind === "error" ? "error" : "info",
+          ...(typeof options?.detail === "string" && options.detail
+            ? { detail: options.detail.slice(0, 200) }
+            : {}),
+          ...(p && Number.isFinite(done) && Number.isFinite(total)
             ? {
-                action: {
-                  label: String(action.label).slice(0, 40),
-                  // The toast outlives nothing: a click after the plugin stopped does nothing.
-                  run: () => {
-                    if (isLive()) {
-                      action.run();
-                    }
-                  },
+                progress: {
+                  done: Math.max(0, done),
+                  total: Math.max(0, total),
                 },
               }
             : {}),
+          ...(typeof options?.id === "string" && options.id
+            ? { key: `plugin:${id}:${options.id.slice(0, 60)}` }
+            : {}),
+          ...(actions.length ? { actions } : {}),
         });
       },
     },

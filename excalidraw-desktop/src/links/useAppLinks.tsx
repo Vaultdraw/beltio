@@ -245,7 +245,7 @@ export function useAppLinks(deps: AppLinksDeps) {
           path: spot.parent ? `${spot.parent}/${spot.name}` : spot.name,
         });
       } catch (err) {
-        d.notify(`Failed to create drawing: ${errorMessage(err)}`, "error");
+        d.notify(`Couldn't create the drawing: ${errorMessage(err)}`, "error");
       }
     },
     [activeHistory],

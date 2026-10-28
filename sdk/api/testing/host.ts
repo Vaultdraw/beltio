@@ -358,8 +358,12 @@ export function createMockHost(
     }
     lines.push({ level, text });
   };
-  const toast = (message: string, kind: MockToast["kind"] = "info") => {
-    toastQueue = pushToast(toastQueue, { message, kind });
+  const toast = (
+    message: string,
+    kind: MockToast["kind"] = "info",
+    extra: Partial<MockToast> = {},
+  ) => {
+    toastQueue = pushToast(toastQueue, { ...extra, message, kind });
   };
   const reportError = (err: unknown, where: string) => {
     const text = `${where}: ${errorText(err)}`;
@@ -683,13 +687,15 @@ export function createMockHost(
       ui: {
         toast: (message, options) => {
           const text = toastMessage(info.name, message);
-          toast(text);
-          if (options?.action) {
-            clipboardModel.addToastButton(
-              text,
-              options.action.label,
-              options.action.run,
-            );
+          toast(text, options?.kind === "error" ? "error" : "info", {
+            ...(options?.id ? { key: options.id } : {}),
+            ...(options?.detail ? { detail: options.detail } : {}),
+            ...(options?.progress ? { progress: options.progress } : {}),
+          });
+          for (const a of (
+            options?.actions ?? (options?.action ? [options.action] : [])
+          ).slice(0, 2)) {
+            clipboardModel.addToastButton(text, a.label, a.run);
           }
         },
       },
