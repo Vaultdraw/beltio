@@ -20,7 +20,8 @@ export const pluginsWaitingForReview = (
 ): PluginInfo[] => {
   const enabled = new Set(enabledIds);
   return infos.filter(
-    (i) => enabled.has(i.id) && i.compatible && !i.hostDisabled && needsReview(i),
+    (i) =>
+      enabled.has(i.id) && i.compatible && !i.hostDisabled && needsReview(i),
   );
 };
 
@@ -63,7 +64,9 @@ export function noticePluginsWaitingForReview(
   }
   if (waiting.length > 0) {
     parts.push(
-      `${waiting.length} plugin${waiting.length === 1 ? " is" : "s are"} off until you review ${
+      `${waiting.length} plugin${
+        waiting.length === 1 ? " is" : "s are"
+      } off until you review ${
         waiting.length === 1 ? "it" : "them"
       }: ${nameList(waiting.map((i) => i.name))}`,
     );
@@ -80,7 +83,8 @@ export function noticePluginsWaitingForReview(
     durationMs: 30_000,
     action: {
       label: "Review",
-      run: () => void getAppCommandRunner()?.(PLUGIN_UI_COMMAND_IDS.openSettings),
+      run: () =>
+        void getAppCommandRunner()?.(PLUGIN_UI_COMMAND_IDS.openSettings),
     },
   });
   return true;

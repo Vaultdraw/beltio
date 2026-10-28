@@ -3407,9 +3407,7 @@ export const VaultApp = ({
       {showNoteSavePrompt && (
         <ConfirmModal
           title="Unsaved notes"
-          message={`${describeNotes(
-            unsavedNotePaths(),
-          )} ${
+          message={`${describeNotes(unsavedNotePaths())} ${
             unsavedNotePaths().length === 1 ? "has" : "have"
           } changes that are not saved. Autosave is off.`}
           confirmLabel="Save and Close"

@@ -1203,7 +1203,9 @@ test("a read-only drawing file opens in view mode with a banner, and edits again
   await page.mouse.move(box.x + 380, box.y + 360, { steps: 5 });
   await page.mouse.up();
   await expect(roBanner).toBeVisible({ timeout: 15_000 });
-  await expect(roBanner.getByRole("button", { name: "Save a copy" })).toBeVisible();
+  await expect(
+    roBanner.getByRole("button", { name: "Save a copy" }),
+  ).toBeVisible();
   await expect(page.locator(".vault-editor-container--readonly")).toBeVisible();
   expect(errors.filter((e) => !/read-only/i.test(e))).toEqual([]);
 });

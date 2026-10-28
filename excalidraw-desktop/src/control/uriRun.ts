@@ -431,11 +431,7 @@ export function createUriRunner(deps: UriDeps) {
       }
       // Built-in commands are opt-in too: only the link allow list, or the user's uri_allow.
       if (!deps.isLinkable(id) && plan.listed !== true) {
-        return fail(
-          "NOT_PERMITTED",
-          `A link cannot run ${clip(id)}`,
-          { id },
-        );
+        return fail("NOT_PERMITTED", `A link cannot run ${clip(id)}`, { id });
       }
       lines.push(`Run the command "${clip(title)}" (${clip(id)})`);
       // A command always asks: control.uri_allow only makes it reachable.

@@ -18,7 +18,7 @@ const info = (id: string, state: string, extra: object = {}): PluginInfo =>
     hostDisabled: false,
     review: { state, added: [] },
     ...extra,
-  }) as unknown as PluginInfo;
+  } as unknown as PluginInfo);
 
 describe("plugins waiting for review: startup notice", () => {
   beforeEach(() => {
@@ -33,7 +33,9 @@ describe("plugins waiting for review: startup notice", () => {
       info("c", "review"),
       info("d", "review", { compatible: false }),
     ];
-    expect(pluginsWaitingForReview(infos, ["a", "b", "d"]).map((i) => i.id)).toEqual(["a"]);
+    expect(
+      pluginsWaitingForReview(infos, ["a", "b", "d"]).map((i) => i.id),
+    ).toEqual(["a"]);
   });
 
   it("says nothing when no plugin waits, and once per launch otherwise", () => {
@@ -42,7 +44,9 @@ describe("plugins waiting for review: startup notice", () => {
       errors: [],
       ...extra,
     });
-    expect(noticePluginsWaitingForReview(l([info("a", "ok")]), ["a"])).toBe(false);
+    expect(noticePluginsWaitingForReview(l([info("a", "ok")]), ["a"])).toBe(
+      false,
+    );
     const infos = [info("a", "review"), info("b", "review")];
     expect(noticePluginsWaitingForReview(l(infos), ["a", "b"])).toBe(true);
     expect(noticePluginsWaitingForReview(l(infos), ["a", "b"])).toBe(false);
@@ -55,7 +59,10 @@ describe("plugins waiting for review: startup notice", () => {
         {
           plugins: four,
           errors: [
-            { dir: "/p/graph", message: "'graph' is an official plugin id. Choose another" },
+            {
+              dir: "/p/graph",
+              message: "'graph' is an official plugin id. Choose another",
+            },
             { dir: "/p/x", message: "bad manifest" },
           ],
           consentReset: true,
