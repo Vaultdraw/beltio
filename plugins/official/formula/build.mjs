@@ -1,8 +1,9 @@
 /**
- * Builds the formula plugin into dist/ (plugin.toml, main.js, README.md):
- *   1. the MathJax worker (src/formula.worker.ts) is bundled into one self-contained string,
- *   2. src/main.tsx is bundled with that string injected as the global `__FORMULA_WORKER_SOURCE__`
- *      (the app's CSP allows a worker only from a blob: URL), and `FormulaDialog.css` as a text import,
+ * Builds the formula plugin into dist/ (plugin.toml, main.js, worker-src.js, README.md):
+ *   1. the MathJax worker (src/formula.worker.ts) is bundled into one self-contained string, written to
+ *      dist/worker-src.js (`export default "..."`), which main.js imports on the first render only
+ *      (the app's CSP allows a worker only from a blob: URL),
+ *   2. src/main.tsx is bundled with `FormulaDialog.css` as a text import,
  *   3. `vaultdraw-plugin check` runs on dist/.
  * Run from anywhere: `node plugins/official/formula/build.mjs [--no-check]`.
  */
@@ -51,11 +52,11 @@ const main = await esbuild.build({
   entryPoints: [path.join(root, "src/main.tsx")],
   format: "esm",
   platform: "browser",
-  external: SHARED,
+  external: [...SHARED, "./worker-src.js"],
   jsx: "automatic",
   charset: "utf8",
   loader: { ".css": "text" },
-  define: { ...common.define, __FORMULA_WORKER_SOURCE__: JSON.stringify(workerSrc) },
+  define: { ...common.define, __FORMULA_WORKER_FILE__: '"./worker-src.js"' },
   write: false,
   minify: false,
 });
@@ -63,12 +64,17 @@ const main = await esbuild.build({
 rmSync(dist, { recursive: true, force: true });
 mkdirSync(dist, { recursive: true });
 writeFileSync(path.join(dist, "main.js"), main.outputFiles[0].text);
+// The worker text lives in its own module, imported on the first render only.
+writeFileSync(
+  path.join(dist, "worker-src.js"),
+  `export default ${JSON.stringify(workerSrc)};\n`,
+);
 for (const f of ["plugin.toml", "README.md"]) {
   copyFileSync(path.join(root, f), path.join(dist, f));
 }
 const kb = (n) => `${(n / 1024).toFixed(1)} KB`;
 console.log(
-  `formula: main.js ${kb(statSync(path.join(dist, "main.js")).size)} (worker string ${kb(workerSrc.length)})`,
+  `formula: main.js ${kb(statSync(path.join(dist, "main.js")).size)} + worker-src.js ${kb(statSync(path.join(dist, "worker-src.js")).size)}`,
 );
 
 if (!process.argv.includes("--no-check")) {

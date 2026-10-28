@@ -142,3 +142,24 @@ describe("renderer", () => {
     expect(FakeWorker.instances[0].terminated).toBe(true);
   });
 });
+
+describe("renderer worker text file", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("answers with an error when the worker text cannot load", async () => {
+    vi.stubGlobal("__FORMULA_WORKER_FILE__", "data:text/javascript,throw 1");
+    const r = await renderFormula(req("b"));
+    expect(r).toEqual({ ok: false, error: "Formula renderer unavailable" });
+  });
+
+  it("loads the worker text module on the first render only", async () => {
+    vi.stubGlobal(
+      "__FORMULA_WORKER_FILE__",
+      "data:text/javascript,export default 'w'",
+    );
+    expect(FakeWorker.instances).toHaveLength(0);
+    const r = await renderFormula(req("a"));
+    expect(r.ok).toBe(true);
+    expect(FakeWorker.instances).toHaveLength(1);
+  });
+});

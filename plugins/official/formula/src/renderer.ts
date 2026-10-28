@@ -17,16 +17,30 @@ type WorkerLike = {
   onerror: ((e: unknown) => void) | null;
 };
 
-/** The worker's bundle, injected by the plugin's build (the app's CSP allows a worker only from a blob). */
-declare const __FORMULA_WORKER_SOURCE__: string | undefined;
+/**
+ * Set by the plugin's build: the module next to main.js whose default export is the worker's
+ * bundle as text (the app's CSP allows a worker only from a blob). It loads on the first render,
+ * so main.js stays small and a session that never renders math never parses the 3 MB worker text.
+ */
+declare const __FORMULA_WORKER_FILE__: string | undefined;
+
+let workerSource: string | null = null;
+
+/** Imports the worker text once (plugin build only); a no-op elsewhere. */
+const loadWorkerSource = async (): Promise<void> => {
+  if (workerSource !== null || typeof __FORMULA_WORKER_FILE__ !== "string") {
+    return;
+  }
+  const file = __FORMULA_WORKER_FILE__;
+  workerSource = (
+    (await import(/* @vite-ignore */ file)) as { default: string }
+  ).default;
+};
 
 const defaultFactory = (): WorkerLike => {
-  if (
-    typeof __FORMULA_WORKER_SOURCE__ === "string" &&
-    __FORMULA_WORKER_SOURCE__
-  ) {
+  if (workerSource) {
     const url = URL.createObjectURL(
-      new Blob([__FORMULA_WORKER_SOURCE__], { type: "text/javascript" }),
+      new Blob([workerSource], { type: "text/javascript" }),
     );
     // The URL is revoked when the worker is terminated: WebKit may fetch the script late.
     const w = new Worker(url);
@@ -107,21 +121,41 @@ const getWorker = (): WorkerLike => {
   return w;
 };
 
+const needsSource = (): boolean =>
+  workerSource === null && typeof __FORMULA_WORKER_FILE__ === "string";
+
+const post = (id: number, msg: Omit<WorkerIn, "id">): void => {
+  try {
+    getWorker().postMessage({ id, ...msg } as WorkerIn);
+  } catch (e) {
+    const resolve = pending.get(id);
+    pending.delete(id);
+    terminate("Formula renderer unavailable");
+    resolve?.({
+      ok: false,
+      error: e instanceof Error ? e.message : "Formula renderer unavailable",
+    });
+  }
+};
+
 const send = (msg: Omit<WorkerIn, "id">): Promise<FormulaRender | null> =>
   new Promise((resolve) => {
     clearIdle();
     const id = nextId++;
     pending.set(id, resolve);
-    try {
-      getWorker().postMessage({ id, ...msg } as WorkerIn);
-    } catch (e) {
-      pending.delete(id);
-      terminate("Formula renderer unavailable");
-      resolve({
-        ok: false,
-        error: e instanceof Error ? e.message : "Formula renderer unavailable",
-      });
+    if (worker || !needsSource()) {
+      post(id, msg);
+      return;
     }
+    // First render in the plugin build: load the worker text, then spawn the worker.
+    loadWorkerSource().then(
+      () => post(id, msg),
+      () => {
+        pending.delete(id);
+        terminate("Formula renderer unavailable");
+        resolve({ ok: false, error: "Formula renderer unavailable" });
+      },
+    );
   });
 
 export async function renderFormula(
