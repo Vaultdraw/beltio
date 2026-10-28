@@ -9,6 +9,8 @@ import type { MathRequest, MathResult } from "../../../sdk/api/src/math";
 export type MathRenderer = (request: MathRequest) => Promise<MathResult>;
 
 let provider: MathRenderer | null = null;
+/** Resolves the callers waiting in renderMath when a provider arrives. */
+let waiters: Array<() => void> = [];
 /** Starts the formula plugin when it is on (boot sets it); resolves once it had the chance to provide. */
 let starter: (() => Promise<void>) | null = null;
 
@@ -19,6 +21,11 @@ export const setMathStarter = (fn: (() => Promise<void>) | null): void => {
 /** Makes `renderer` the provider; the returned function removes it (if it is still the current one). */
 export function setMathProvider(renderer: MathRenderer): () => void {
   provider = renderer;
+  const pending = waiters;
+  waiters = [];
+  for (const wake of pending) {
+    wake();
+  }
   return () => {
     if (provider === renderer) {
       provider = null;
@@ -39,8 +46,16 @@ export async function renderMath(
       return null;
     }
     // The plugin activates just after its start command runs: wait (at most 2 s) for its provider.
-    for (let i = 0; i < 40 && !provider; i++) {
-      await new Promise((r) => setTimeout(r, 50));
+    if (!provider) {
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(done, 2000);
+        function done() {
+          clearTimeout(timer);
+          waiters = waiters.filter((w) => w !== done);
+          resolve();
+        }
+        waiters.push(done);
+      });
     }
   }
   const render = provider;
