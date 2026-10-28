@@ -29,6 +29,7 @@ const exportFromRow = async (
     await row(page, path).hover();
     await row(page, path).getByRole("button", { name: "More actions" }).click();
   }
+  await page.getByRole("menuitem", { name: "Export", exact: true }).click();
   await page.getByRole("menuitem", { name: label }).click();
   await expect
     .poll(() => exportedCount(page), { timeout: 20000 })
@@ -158,12 +159,14 @@ test("1. drawing rows offer export in the context menu and the ⋮ menu; folders
   const errors = trackErrors(page);
   const labels = ["Export as PNG…", "Export as SVG…", "Save a copy…"];
   await row(page, GRAPHS).click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Export", exact: true }).click();
   for (const label of labels) {
     await expect(page.getByRole("menuitem", { name: label })).toBeVisible();
   }
   await page.keyboard.press("Escape");
   await row(page, GRAPHS).hover();
   await row(page, GRAPHS).getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Export", exact: true }).click();
   for (const label of labels) {
     await expect(page.getByRole("menuitem", { name: label })).toBeVisible();
   }
@@ -382,6 +385,7 @@ test("7. perf: large drawing export time and longest main-thread gap", async ({
       // Right-click fires contextmenu, not click: the timer starts at the
       // menu item click.
       await row(page, "Large.excalidraw").click({ button: "right" });
+      await page.getByRole("menuitem", { name: "Export", exact: true }).click();
       await page.getByRole("menuitem", { name: label }).click();
       await expect
         .poll(() => page.evaluate(() => (window as any).__perf.saved), {

@@ -102,7 +102,7 @@ export const openRenameDialog = async (page: Page, name: string) => {
     .first();
   await row.hover();
   await row.getByRole("button", { name: "More actions" }).click();
-  await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Rename…", exact: true }).click();
   return page.getByRole("dialog");
 };
 

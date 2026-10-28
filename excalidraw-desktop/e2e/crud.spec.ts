@@ -130,7 +130,7 @@ test("2. create a drawing inside a folder, draw, and save", async ({
     .click();
   await expect(treeRow(page, "Notes")).toBeVisible();
 
-  await (await rowAction(page, "Notes", "New drawing here")).click();
+  await (await rowAction(page, "Notes", "New drawing")).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await dialog.getByLabel("Name").fill("Sketch");
@@ -159,7 +159,7 @@ test("2. create a drawing inside a folder, draw, and save", async ({
 
 test("2b. create a subfolder from a folder's menu", async ({ page }) => {
   const errors = trackErrors(page);
-  await (await rowAction(page, "DSA", "New folder here")).click();
+  await (await rowAction(page, "DSA", "New folder")).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("New Folder in /DSA");
   await dialog.getByLabel("Name").fill("Trees");
@@ -190,7 +190,7 @@ test("2c. keyboard only: palette command and menu key create inside the focused 
   await treeRow(page, "DSA").focus();
   await page.keyboard.press("Shift+F10");
   await expect(
-    page.getByRole("menuitem", { name: "New drawing here", exact: true }),
+    page.getByRole("menuitem", { name: "New drawing", exact: true }),
   ).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -218,7 +218,7 @@ test("2d. Escape closes every dialog, however it was opened", async ({
 
   await expandFolder(page, "DSA");
   // Rename, Move and the trash confirmation, from the row menu.
-  await (await rowAction(page, "Graphs", "Rename")).click();
+  await (await rowAction(page, "Graphs", "Rename…")).click();
   await expect(dialog).toContainText("Rename Drawing");
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
@@ -244,7 +244,7 @@ test("3. rename a drawing", async ({ page }, info) => {
   await openFromTree(page, "Graphs");
   const before = await liveElementCount(page, GRAPHS);
 
-  await (await rowAction(page, "Graphs", "Rename")).click();
+  await (await rowAction(page, "Graphs", "Rename…")).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await dialog.getByLabel("New name").fill("Graphs Renamed");

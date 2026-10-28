@@ -41,30 +41,17 @@ import {
   IconChevronRight,
   IconChevronsUpDown,
   IconClose,
-  IconCheck,
-  IconCopy,
   IconDrawing,
   IconNote,
-  IconEdit,
-  IconExportDocument,
-  IconExportImage,
-  IconExportVector,
   IconFolder,
   IconFolderPlus,
-  IconGraph,
-  IconHistory,
   IconMore,
-  IconMove,
   IconNewDrawing,
   IconPlus,
   IconRefresh,
-  IconReveal,
-  IconSaveCopy,
   IconSearch,
   IconSettings,
   IconSort,
-  IconTemplate,
-  IconTrash,
 } from "./Icons";
 import { GraphViewButton } from "./GraphViewButton";
 import { SearchResults } from "./search/SearchResults";
@@ -77,6 +64,9 @@ import { Dialog } from "./Dialog";
 import { MoveModal } from "./MoveModal";
 import { RenameModal } from "./RenameModal";
 import { flattenTree } from "./tree/flattenTree";
+import { copyEntryPath } from "./menu/copyPath";
+import { ContextMenu, MenuItem } from "./menu/ContextMenu";
+import { RowMenu, type RowMenuState } from "./menu/RowMenu";
 import { TREE_ROW_HEIGHT, useTreeWindow } from "./tree/useTreeWindow";
 import { ghostTransform, useTreeDrag } from "./tree/useTreeDrag";
 import {
@@ -630,6 +620,13 @@ export const VaultNavigator = ({
       export:
         onExportDrawing &&
         ((path, format) => void onExportDrawing(path, format)),
+      copyPath: (path, kind) =>
+        void copyEntryPath(
+          kind,
+          path,
+          vault.path,
+          asideRef.current?.ownerDocument.defaultView,
+        ),
     },
   };
   const treeKeys = useMemo(() => lazyTreeController(treeState), []);
@@ -983,7 +980,7 @@ export const VaultNavigator = ({
         )}
 
       {sortMenu && (
-        <MenuPopup
+        <ContextMenu
           x={sortMenu.x}
           y={sortMenu.y}
           label="Sort order"
@@ -1001,7 +998,7 @@ export const VaultNavigator = ({
               }}
             />
           ))}
-        </MenuPopup>
+        </ContextMenu>
       )}
 
       {menu && (
@@ -1010,26 +1007,32 @@ export const VaultNavigator = ({
           readOnly={vault.readOnly}
           ownerDocument={asideRef.current?.ownerDocument ?? ownerDocument}
           onClose={() => setMenu(null)}
-          onNewInside={onRowNewInside}
-          onDuplicate={(entry) => void onDuplicateDrawing(entry.path)}
-          onSaveAsTemplate={
-            onSaveAsTemplate && ((entry) => onSaveAsTemplate(entry.path))
-          }
-          onRename={(entry) => setRenameTarget(entry)}
-          onMove={(entry) => setMoveTarget(entry)}
-          onReveal={(entry) => void onRevealEntry(entry.path)}
-          onExport={
-            onExportDrawing &&
-            ((entry, format) => void onExportDrawing(entry.path, format))
-          }
-          onTrash={requestTrash}
-          onOpenLocalGraph={
-            onOpenLocalGraph && ((entry) => void onOpenLocalGraph(entry.path))
-          }
-          onSyncAction={onSyncAction}
-          onShowHistory={
-            onShowHistory && ((entry) => void onShowHistory(entry.path))
-          }
+          actions={{
+            newInside: onRowNewInside,
+            duplicate: (entry) => void onDuplicateDrawing(entry.path),
+            saveAsTemplate:
+              onSaveAsTemplate && ((entry) => onSaveAsTemplate(entry.path)),
+            rename: (entry) => setRenameTarget(entry),
+            move: (entry) => setMoveTarget(entry),
+            reveal: (entry) => void onRevealEntry(entry.path),
+            exportAs:
+              onExportDrawing &&
+              ((entry, format) => void onExportDrawing(entry.path, format)),
+            trash: requestTrash,
+            localGraph:
+              onOpenLocalGraph &&
+              ((entry) => void onOpenLocalGraph(entry.path)),
+            history:
+              onShowHistory && ((entry) => void onShowHistory(entry.path)),
+            syncAction: onSyncAction,
+            copyPath: (entry, kind) =>
+              void copyEntryPath(
+                kind,
+                entry.path,
+                vault.path,
+                asideRef.current?.ownerDocument.defaultView,
+              ),
+          }}
         />
       )}
 
@@ -1355,290 +1358,6 @@ const TreeRow = memo(
     );
   },
 );
-
-interface RowMenuState {
-  entry: VaultEntry;
-  x: number;
-  y: number;
-}
-
-interface RowMenuProps {
-  state: RowMenuState;
-  readOnly: boolean;
-  ownerDocument?: Document | null;
-  onClose: () => void;
-  onNewInside: (folderPath: string, kind: "folder" | "drawing") => void;
-  onDuplicate: (entry: VaultEntry) => void;
-  onSaveAsTemplate?: (entry: VaultEntry) => void;
-  onRename: (entry: VaultEntry) => void;
-  onMove: (entry: VaultEntry) => void;
-  onReveal: (entry: VaultEntry) => void;
-  onExport?: (entry: VaultEntry, format: ExplorerExportFormat) => void;
-  onTrash: (entry: VaultEntry) => void;
-  onOpenLocalGraph?: (entry: VaultEntry) => void;
-  onShowHistory?: (entry: VaultEntry) => void;
-  onSyncAction?: (entry: VaultEntry, action: "compare" | "download") => void;
-}
-
-const MENU_WIDTH = 200;
-
-interface MenuPopupProps {
-  x: number;
-  y: number;
-  label: string;
-  ownerDocument?: Document | null;
-  onClose: () => void;
-  children: ReactNode;
-}
-
-/** Positioned `vault-menu` with focus, arrow-key and dismiss handling. */
-const MenuPopup = ({
-  x,
-  y,
-  label,
-  ownerDocument,
-  onClose,
-  children,
-}: MenuPopupProps) => {
-  const menuRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const doc = menuRef.current?.ownerDocument ?? ownerDocument;
-    const win = doc?.defaultView;
-    if (!doc || !win) {
-      return;
-    }
-    menuRef.current
-      ?.querySelector<HTMLButtonElement>("[role^='menuitem']")
-      ?.focus();
-    const onPointerDown = (event: PointerEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        onClose();
-      }
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.stopPropagation();
-        onClose();
-        return;
-      }
-      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
-        return;
-      }
-      event.preventDefault();
-      const items = Array.from(
-        menuRef.current?.querySelectorAll<HTMLButtonElement>(
-          "[role^='menuitem']",
-        ) ?? [],
-      );
-      const index = items.indexOf(doc.activeElement as HTMLButtonElement);
-      const step = event.key === "ArrowDown" ? 1 : -1;
-      items[(index + step + items.length) % items.length]?.focus();
-    };
-    doc.addEventListener("pointerdown", onPointerDown, true);
-    doc.addEventListener("keydown", onKeyDown, true);
-    win.addEventListener("blur", onClose);
-    win.addEventListener("resize", onClose);
-    return () => {
-      doc.removeEventListener("pointerdown", onPointerDown, true);
-      doc.removeEventListener("keydown", onKeyDown, true);
-      win.removeEventListener("blur", onClose);
-      win.removeEventListener("resize", onClose);
-    };
-  }, [onClose, ownerDocument]);
-
-  const win = ownerDocument?.defaultView;
-  const maxX = (win?.innerWidth ?? 1280) - MENU_WIDTH - 8;
-  const maxY = (win?.innerHeight ?? 800) - 220;
-  const left = Math.max(8, Math.min(x - MENU_WIDTH, maxX));
-  const top = Math.max(8, Math.min(y, maxY));
-
-  return (
-    <div
-      ref={menuRef}
-      className="vault-menu"
-      role="menu"
-      aria-label={label}
-      style={{ left, top, width: MENU_WIDTH }}
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      {children}
-    </div>
-  );
-};
-
-interface MenuItemProps {
-  label: string;
-  icon?: ReactNode;
-  danger?: boolean;
-  checked?: boolean;
-  onSelect: () => void;
-}
-
-const MenuItem = ({
-  label,
-  icon,
-  danger,
-  checked,
-  onSelect,
-}: MenuItemProps) => (
-  <button
-    type="button"
-    role={checked === undefined ? "menuitem" : "menuitemradio"}
-    aria-checked={checked}
-    className={`vault-menu__item ${danger ? "vault-menu__item--danger" : ""}`}
-    onClick={onSelect}
-  >
-    {icon}
-    <span>{label}</span>
-    {checked && <IconCheck className="vault-menu__check" />}
-  </button>
-);
-
-/** Row actions shown from the "More actions" button or a right-click. */
-const RowMenu = ({
-  state,
-  readOnly,
-  ownerDocument,
-  onClose,
-  onNewInside,
-  onDuplicate,
-  onSaveAsTemplate,
-  onRename,
-  onMove,
-  onReveal,
-  onExport,
-  onTrash,
-  onOpenLocalGraph,
-  onShowHistory,
-  onSyncAction,
-}: RowMenuProps) => {
-  const { entry } = state;
-  const isFolder = entry.kind === "folder";
-  // Notes and Obsidian Excalidraw files only offer "Reveal" from the tree (no edits, no exports).
-  const isDrawing = entry.kind === "drawing";
-
-  const item = (
-    label: string,
-    icon: ReactNode,
-    action: () => void,
-    danger = false,
-  ) => (
-    <MenuItem
-      label={label}
-      icon={icon}
-      danger={danger}
-      onSelect={() => {
-        onClose();
-        action();
-      }}
-    />
-  );
-
-  // Items plugins declared for tree rows (`[[contributes.menus]]`), filtered by the row's kind.
-  const rowKind = isFolder ? "folder" : isDrawing ? "drawing" : "note";
-  const pluginItems = getMenuItems("tree").filter(
-    (it) => it.kinds.length === 0 || it.kinds.includes(rowKind),
-  );
-
-  return (
-    <MenuPopup
-      x={state.x}
-      y={state.y}
-      label={`Actions for ${entry.name}`}
-      ownerDocument={ownerDocument}
-      onClose={onClose}
-    >
-      {isFolder && !readOnly && (
-        <>
-          {item("New drawing here", <IconNewDrawing />, () =>
-            onNewInside(entry.path, "drawing"),
-          )}
-          {item("New folder here", <IconFolderPlus />, () =>
-            onNewInside(entry.path, "folder"),
-          )}
-        </>
-      )}
-      {isDrawing &&
-        !readOnly &&
-        item("Duplicate", <IconCopy />, () => onDuplicate(entry))}
-      {isDrawing &&
-        onSaveAsTemplate &&
-        item("Save as template…", <IconTemplate />, () =>
-          onSaveAsTemplate(entry),
-        )}
-      {!readOnly &&
-        (isFolder || isDrawing) &&
-        item("Rename", <IconEdit />, () => onRename(entry))}
-      {!readOnly &&
-        (isFolder || isDrawing) &&
-        item("Move to…", <IconMove />, () => onMove(entry))}
-      {item("Reveal in file manager", <IconReveal />, () => onReveal(entry))}
-      {isDrawing &&
-        onOpenLocalGraph &&
-        item("Open local graph", <IconGraph />, () => onOpenLocalGraph(entry))}
-      {isDrawing &&
-        onShowHistory &&
-        item("History", <IconHistory />, () => onShowHistory(entry))}
-      {isDrawing &&
-        entry.sync === "conflict" &&
-        onSyncAction &&
-        item("Compare with original…", <IconCopy />, () =>
-          onSyncAction(entry, "compare"),
-        )}
-      {entry.sync === "placeholder" &&
-        onSyncAction &&
-        item("Download from iCloud", <IconReveal />, () =>
-          onSyncAction(entry, "download"),
-        )}
-      {isDrawing && onExport && (
-        <>
-          <div className="vault-menu__separator" role="separator" />
-          {item("Export as PNG…", <IconExportImage />, () =>
-            onExport(entry, "png"),
-          )}
-          {item("Export as SVG…", <IconExportVector />, () =>
-            onExport(entry, "svg"),
-          )}
-          {item("Export as PDF…", <IconExportDocument />, () =>
-            onExport(entry, "pdf"),
-          )}
-          {item("Save a copy…", <IconSaveCopy />, () =>
-            onExport(entry, "copy"),
-          )}
-        </>
-      )}
-      {!readOnly && (isFolder || isDrawing) && (
-        <>
-          <div className="vault-menu__separator" role="separator" />
-          {item("Move to Trash", <IconTrash />, () => onTrash(entry), true)}
-        </>
-      )}
-      {pluginItems.length > 0 && (
-        <>
-          <div className="vault-menu__separator" role="separator" />
-          {pluginItems.map((it) => (
-            <MenuItem
-              key={it.command + it.title}
-              label={it.title}
-              icon={null}
-              onSelect={() => {
-                onClose();
-                runMenuItem(it, {
-                  surface: "tree",
-                  path: entry.path,
-                  kind:
-                    entry.kind === "excalidrawMd"
-                      ? "other"
-                      : (rowKind as "drawing" | "note" | "folder"),
-                });
-              }}
-            />
-          ))}
-        </>
-      )}
-    </MenuPopup>
-  );
-};
 
 /** "conflict" or "not downloaded" next to a tree row's name. Mounted only for flagged rows. */
 const SyncBadge = ({ sync }: { sync: "conflict" | "placeholder" }) => {

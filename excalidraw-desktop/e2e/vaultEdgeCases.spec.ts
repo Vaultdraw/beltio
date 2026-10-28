@@ -135,7 +135,7 @@ const rowMenu = async (page: Page, r: Locator, label: string) => {
 };
 
 const renameVia = async (page: Page, r: Locator, name: string) => {
-  await rowMenu(page, r, "Rename");
+  await rowMenu(page, r, "Rename…");
   const d = dialog(page);
   await d.getByLabel("New name").fill(name);
   await d.getByRole("button", { name: "Rename" }).click();
@@ -239,7 +239,7 @@ test("tree: create, rename, move, duplicate and delete with awkward names", asyn
   ] as const;
   for (const [name, expected] of bad) {
     if (name === "") {
-      await rowMenu(page, target, "Rename");
+      await rowMenu(page, target, "Rename…");
       await dialog(page).getByLabel("New name").fill("");
       await expect(
         dialog(page).getByRole("button", { name: "Rename" }),

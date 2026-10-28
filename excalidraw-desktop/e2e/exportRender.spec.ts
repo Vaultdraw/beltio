@@ -118,6 +118,7 @@ test("export.render returns the same PNG bytes as the explorer row export", asyn
     };
   });
   await row.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Export", exact: true }).click();
   await page.getByRole("menuitem", { name: "Export as PNG…" }).click();
   await expect
     .poll(() =>

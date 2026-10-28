@@ -732,6 +732,54 @@ html.dark {
   background-color: var(--vault-border);
 }
 
+.vault-menu__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Key of the matching command, right-aligned (follows rebinds). */
+.vault-menu__hint {
+  flex-shrink: 0;
+  margin-left: 12px;
+  color: var(--vault-text-faint);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.vault-menu__chevron {
+  margin-left: auto;
+}
+
+/* A submenu hangs beside its parent item; it flips left near the window edge. */
+.vault-menu__host {
+  position: relative;
+}
+
+.vault-menu--sub {
+  position: absolute;
+  top: -5px;
+  left: calc(100% + 2px);
+  width: max-content;
+  min-width: 180px;
+}
+
+.vault-menu--sub-left {
+  left: auto;
+  right: calc(100% + 2px);
+}
+
+.vault-menu__host > .vault-menu__item[aria-expanded="true"] {
+  background-color: var(--vault-surface-hover);
+}
+
+.vault-menu__item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* Drag area standing in for the hidden macOS title bar on screens without a header. */
 .vault-titlebar-drag {
   position: absolute;

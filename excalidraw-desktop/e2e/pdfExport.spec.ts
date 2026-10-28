@@ -69,6 +69,7 @@ const row = (page: Page, path: string) =>
 const exportViaNavigator = async (page: Page, path: string) => {
   const before = await exportedCount(page);
   await row(page, path).click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Export", exact: true }).click();
   await page.getByRole("menuitem", { name: "Export as PDF…" }).click();
   return waitForExport(page, before);
 };

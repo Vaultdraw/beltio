@@ -270,7 +270,7 @@ test("6. renaming the open drawing with unsaved edits keeps the edits", async ({
   const baseline = (await liveRectangles(page, GRAPHS)).length;
 
   await drawRectangle(page);
-  await (await rowAction(page, "Graphs", "Rename")).click();
+  await (await rowAction(page, "Graphs", "Rename…")).click();
   const dialog = page.getByRole("dialog", { name: "Rename Drawing" });
   await expect(dialog).toBeVisible();
   await dialog.getByLabel("New name").fill("Graphs Edited");
@@ -302,7 +302,7 @@ test("7. typing in rename and new-folder inputs never triggers canvas tools", as
     "true",
   );
 
-  await (await rowAction(page, "Graphs", "Rename")).click();
+  await (await rowAction(page, "Graphs", "Rename…")).click();
   const rename = page.getByRole("dialog", { name: "Rename Drawing" });
   await expect(rename).toBeVisible();
   await rename.getByLabel("New name").focus();

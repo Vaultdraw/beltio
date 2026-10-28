@@ -268,7 +268,7 @@ test.describe("rename and trash of an open background drawing", () => {
     await clickTree(page, B, [MOD]);
     await expectShown(page, ["b-ellipse"]);
 
-    await (await rowAction(page, A, "Rename")).click();
+    await (await rowAction(page, A, "Rename…")).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("New name").fill("Alpha Two");
     await dialog.getByRole("button", { name: "Rename" }).click();

@@ -23,7 +23,7 @@ test("dock lists backlinks and a rename rewrites links", async ({ page }) => {
     .first();
   await row.hover();
   await row.getByRole("button", { name: "More actions" }).click();
-  await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Rename…", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("New name").fill("Beta");
   await dialog.getByRole("button", { name: "Rename" }).click();
@@ -61,7 +61,7 @@ test("links extension off: a rename still rewrites links", async ({ page }) => {
     .first();
   await tree.hover();
   await tree.getByRole("button", { name: "More actions" }).click();
-  await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Rename…", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("New name").fill("Beta");
   await dialog.getByRole("button", { name: "Rename" }).click();

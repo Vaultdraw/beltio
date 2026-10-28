@@ -158,7 +158,7 @@ test.describe("tree changes", () => {
     const imgs = await recent.locator("img.vault-thumb").count();
     const before = await calls(page);
     await expandFolder(page, "DSA");
-    await (await rowAction(page, "Graphs", "Rename")).click();
+    await (await rowAction(page, "Graphs", "Rename…")).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("New name").fill("Graphs Renamed");
     await dialog.getByRole("button", { name: "Rename" }).click();

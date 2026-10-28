@@ -48,6 +48,8 @@ export interface TreeRowActions {
   localGraph?(path: string): void;
   history?(path: string): void;
   export?(path: string, format: ExplorerExportFormat): void;
+  /** Copy the row's path: relative to the vault, absolute, or a vaultdraw:// link. */
+  copyPath?(path: string, kind: "relative" | "absolute" | "link"): void;
 }
 
 /** Everything the tree implements (it has no second view: Tab leaves it). */
@@ -80,6 +82,9 @@ export const TREE_ACTIONS: readonly TreeAction[] = [
   "exportSvg",
   "exportPdf",
   "saveCopy",
+  "copyPath",
+  "copyAbsolutePath",
+  "copyLink",
 ];
 
 /**
@@ -194,7 +199,11 @@ function rowMenuActions(
   const bind = (fn: ((path: string) => void) | undefined, when = true) =>
     fn && when ? () => fn(path) : undefined;
   if (item.kind === "folder") {
-    return { reveal: bind(r.reveal), showAsGrid: bind(r.showAsGrid) };
+    return {
+      reveal: bind(r.reveal),
+      showAsGrid: bind(r.showAsGrid),
+      ...copyActions(path, r, true),
+    };
   }
   const exportAs = (format: ExplorerExportFormat) =>
     r.export ? () => r.export?.(path, format) : undefined;
@@ -208,6 +217,24 @@ function rowMenuActions(
     exportSvg: exportAs("svg"),
     exportPdf: exportAs("pdf"),
     saveCopy: exportAs("copy"),
+    ...copyActions(path, r),
+  };
+}
+
+/** "Copy path" submenu items: any row; a folder has no link. */
+function copyActions(
+  path: string,
+  r: TreeRowActions,
+  folder = false,
+): TreeActions {
+  const copy = r.copyPath;
+  if (!copy) {
+    return {};
+  }
+  return {
+    copyPath: () => copy(path, "relative"),
+    copyAbsolutePath: () => copy(path, "absolute"),
+    ...(folder ? {} : { copyLink: () => copy(path, "link") }),
   };
 }
 

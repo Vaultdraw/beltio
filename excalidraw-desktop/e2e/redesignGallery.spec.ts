@@ -180,7 +180,7 @@ for (const theme of THEMES) {
       await page.waitForTimeout(250);
     });
     await surface("18", "rename-dialog", async () => {
-      await openMenuFor("Graphs", "Rename");
+      await openMenuFor("Graphs", "Rename…");
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.waitForTimeout(250);
     });

@@ -61,6 +61,9 @@ export const LIST_COMMANDS: readonly CommandDefinition[] = [
   list("exportSvg", "Export item as SVG", []),
   list("exportPdf", "Export item as PDF", []),
   list("saveCopy", "Save a copy of item", []),
+  list("copyPath", "Copy item path (relative to the vault)", []),
+  list("copyAbsolutePath", "Copy item absolute path", []),
+  list("copyLink", "Copy item link", []),
   {
     id: FOCUS_TREE_COMMAND_ID,
     title: "Navigator: Focus file tree",

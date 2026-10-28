@@ -43,6 +43,9 @@ export const LIST_ACTIONS = [
   "exportSvg",
   "exportPdf",
   "saveCopy",
+  "copyPath",
+  "copyAbsolutePath",
+  "copyLink",
 ] as const;
 
 export type ListAction = typeof LIST_ACTIONS[number];
