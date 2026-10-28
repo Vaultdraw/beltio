@@ -16,7 +16,10 @@ describe("extension off: no handlers", () => {
   it("formula: a double-click is the editor's own unless the plugin is on", () => {
     const run = vi.fn(async () => undefined);
     setFormulaEditRunner(run);
-    const el = { locked: false, customData: { latex: { v: 1, source: "x" } } } as never;
+    const el = {
+      locked: false,
+      customData: { latex: { v: 1, source: "x" } },
+    } as never;
     // The plugin is in the enabled list by default and the extension is on.
     expect(editFormulaImage(window, el, false)).toBe(true);
     expect(run).toHaveBeenCalledWith("formula.edit");
