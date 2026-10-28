@@ -122,7 +122,9 @@ export function useTemplates(o: Options) {
           json,
         );
       } catch (err) {
-        o.onError(`Couldn't create a drawing from the template: ${errorMessage(err)}`);
+        o.onError(
+          `Couldn't create a drawing from the template: ${errorMessage(err)}`,
+        );
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
