@@ -33,8 +33,20 @@ fn ensure_cli_sidecar() {
 /// and `tauri dev` get an empty folder so they keep working without that step; the plugin is
 /// then missing from that dev build until `node plugins/official/build.mjs` runs.
 fn ensure_official_plugin_dirs() {
-    // One entry per official plugin listed in tauri.conf.json `bundle.resources`.
-    for id in ["markdown-import", "gallery", "graph", "formula"] {
+    // Every folder under plugins/official with a plugin.toml (so a new official plugin needs no edit here).
+    let root = Path::new("../../plugins/official");
+    println!("cargo:rerun-if-changed={}", root.display());
+    let mut ids: Vec<String> = std::fs::read_dir(root)
+        .map(|entries| {
+            entries
+                .flatten()
+                .filter(|e| e.path().join("plugin.toml").exists())
+                .map(|e| e.file_name().to_string_lossy().into_owned())
+                .collect()
+        })
+        .unwrap_or_default();
+    ids.sort();
+    for id in &ids {
         let dir = Path::new("../../plugins/official").join(id).join("dist");
         println!("cargo:rerun-if-changed={}", dir.display());
         if !dir.exists() {
