@@ -53,11 +53,13 @@ export class DesktopLibraryRepository implements LibraryRepository {
     scope: LibraryScope,
     handle: string | null,
     knownRevision: string | null,
+    name: string | null = null,
   ) {
     return this.call<LibraryReadResult>("read_library", {
       scope,
       handle,
       knownRevision,
+      name,
     });
   }
 
@@ -66,13 +68,36 @@ export class DesktopLibraryRepository implements LibraryRepository {
     handle: string | null,
     json: string,
     expectedRevision: string | null,
+    name: string | null = null,
   ) {
     return this.call<{ revision: string }>("write_library", {
       scope,
       handle,
       json,
       expectedRevision,
+      name,
     });
+  }
+
+  listLibraries(scope: LibraryScope, handle: string | null) {
+    return this.call<string[]>("list_libraries", { scope, handle });
+  }
+
+  async createLibrary(scope: LibraryScope, handle: string | null, name: string) {
+    await this.call("create_library", { scope, handle, name });
+  }
+
+  async renameLibrary(
+    scope: LibraryScope,
+    handle: string | null,
+    name: string,
+    newName: string,
+  ) {
+    await this.call("rename_library", { scope, handle, name, newName });
+  }
+
+  async deleteLibrary(scope: LibraryScope, handle: string | null, name: string) {
+    await this.call("delete_library", { scope, handle, name });
   }
 
   pickLibraryFile() {

@@ -87,14 +87,14 @@ describe("LibraryStore item names", () => {
     await rename("v", "  Flowchart ");
     store.assign(["p"], "personal");
     expect(store.listItems()).toEqual([
-      { id: "p", name: null, scope: "personal" },
-      { id: "v", name: "Flowchart", scope: "vault" },
+      { id: "p", name: null, scope: "personal", library: "Personal" },
+      { id: "v", name: "Flowchart", scope: "vault", library: "This vault" },
     ]);
     await rename("p", "Logo");
     await rename("v", undefined);
     expect(store.listItems()).toEqual([
-      { id: "p", name: "Logo", scope: "personal" },
-      { id: "v", name: null, scope: "vault" },
+      { id: "p", name: "Logo", scope: "personal", library: "Personal" },
+      { id: "v", name: null, scope: "vault", library: "This vault" },
     ]);
   });
 

@@ -380,7 +380,15 @@ pub(crate) async fn delete_library(
     let loc = locate(Scope::parse(&scope)?, handle, Some(&name), &state)?;
     with_write(&loc, |p| {
         inspect(p)?;
-        fs::remove_file(p).map_err(ioerr)
+        // Recoverable: the file moves into a `.removed` folder (never listed).
+        let removed = p.with_file_name(".removed");
+        fs::create_dir_all(&removed).map_err(ioerr)?;
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let stem = p.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+        fs::rename(p, removed.join(format!("{stem}-{stamp}{LIB_EXT}"))).map_err(ioerr)
     })
 }
 

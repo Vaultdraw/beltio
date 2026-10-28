@@ -28,8 +28,12 @@ const TORN_RETRY_MS = 300;
 export type StoreEventKind = "ui" | "external";
 
 type Source = {
+  /** Section id in the panel: "personal", "vault" or `lib:<scope>:<handle>:<name>`. */
+  id: string;
   scope: LibraryScope;
   handle: string | null;
+  /** File stem of a named library; null for the default file of a scope. */
+  name: string | null;
   /** Vault opened read-only by the host. */
   hostReadOnly: boolean;
   /** Reported by the backend (permissions / read-only vault). */
@@ -51,13 +55,25 @@ type Source = {
   maxWait: ReturnType<typeof setTimeout> | null;
 };
 
+const sourceId = (
+  scope: LibraryScope,
+  handle: string | null,
+  name: string | null,
+) =>
+  name === null
+    ? scope
+    : `lib:${scope}:${scope === "personal" ? "" : handle ?? ""}:${name}`;
+
 const newSource = (
   scope: LibraryScope,
   handle: string | null,
   hostReadOnly = false,
+  name: string | null = null,
 ): Source => ({
+  id: sourceId(scope, handle, name),
   scope,
   handle,
+  name,
   hostReadOnly,
   diskReadOnly: false,
   items: [],
@@ -86,7 +102,9 @@ const writable = (src: Source) =>
   !src.error && !src.hostReadOnly && !src.diskReadOnly;
 
 const label = (src: Source) =>
-  src.scope === "vault"
+  src.name !== null
+    ? `The library "${src.name}"`
+    : src.scope === "vault"
     ? "This vault's library.excalidrawlib"
     : "Your personal library (library.excalidrawlib)";
 
@@ -199,8 +217,23 @@ const applyDelta = (disk: LibraryItem[], delta: Delta): LibraryItem[] => {
 export type LibraryItemSummary = {
   id: string;
   name: string | null;
-  scope: LibraryScope;
+  /** Section id of the library that holds the item. */
+  scope: string;
+  /** Display name of that library. */
+  library: string;
 };
+
+export type LibrarySectionInfo = {
+  id: string;
+  label: string;
+  scope: LibraryScope;
+  /** File stem for named libraries (rename/remove work on these). */
+  name: string | null;
+  readOnly: boolean;
+};
+
+/** Where new items land when no section is chosen (`[library] default`). */
+const DEFAULT_PERSONAL = "personal";
 
 export interface LibraryStoreOptions {
   /** Schedules the lazy first load. Default: requestIdleCallback or a timeout. */
@@ -217,8 +250,16 @@ const defaultScheduleIdle = (run: () => void) => {
 export class LibraryStore {
   private personal = newSource("personal", null);
   private vault: Source | null = null;
+  /** Named libraries (config `libraries/`, vault `libraries/`, extra folders). */
+  private extras: Source[] = [];
+  /** Extra folders from `[library] folders`. */
+  private folders: string[] = [];
+  /** `[library] default`: name of the library that takes new items. */
+  private defaultName = "";
   /** Ids that belong to the vault file (everything else is personal). */
   private vaultIds = new Set<string>();
+  /** Ids that belong to a named library. */
+  private extraIds = new Map<string, Source>();
   private listeners = new Set<(kind: StoreEventKind) => void>();
   private version = 0;
   private gate: Promise<void> | null = null;
@@ -269,24 +310,69 @@ export class LibraryStore {
       return { libraryItems: this.union(), restored: true };
     },
     save: ({ libraryItems }: { libraryItems: LibraryItems }) => {
-      const personal: LibraryItem[] = [];
-      const vault: LibraryItem[] = [];
+      const buckets = new Map<Source, LibraryItem[]>(
+        this.sources().map((src) => [src, []]),
+      );
+      const known = new Set(this.personal.items.map((item) => item.id));
+      const fallback = this.defaultSource();
       for (const item of libraryItems) {
-        (this.vault && this.vaultIds.has(item.id) ? vault : personal).push(
-          item,
-        );
+        buckets.get(this.ownerOf(item.id, known, fallback))?.push(item);
       }
-      this.setItems(this.personal, personal);
-      if (this.vault) {
-        this.setItems(this.vault, vault);
+      for (const [src, items] of buckets) {
+        for (const { id } of items) {
+          // new items stay where they were put
+          if (src.name !== null) {
+            this.extraIds.set(id, src);
+          } else if (src.scope === "vault") {
+            this.vaultIds.add(id);
+          }
+        }
+        this.setItems(src, items);
       }
     },
   };
 
+  /** Every source in panel order: personal, this vault, then named ones. */
+  private sources(): Source[] {
+    return [
+      this.personal,
+      ...(this.vault ? [this.vault] : []),
+      ...this.extras,
+    ];
+  }
+
+  private defaultSource(): Source {
+    const name = this.defaultName.trim();
+    if (!name || name.toLowerCase() === DEFAULT_PERSONAL) {
+      return this.personal;
+    }
+    if (name.toLowerCase() === "vault" && this.vault) {
+      return this.vault;
+    }
+    return (
+      this.extras.find((src) => src.name?.toLowerCase() === name.toLowerCase()) ??
+      this.personal
+    );
+  }
+
+  /** The source an item lives in; ids nobody holds yet go to the default. */
+  private ownerOf(
+    id: string,
+    personalIds: ReadonlySet<string>,
+    fallback: Source,
+  ): Source {
+    const extra = this.extraIds.get(id);
+    if (extra) {
+      return extra;
+    }
+    if (this.vault && this.vaultIds.has(id)) {
+      return this.vault;
+    }
+    return personalIds.has(id) ? this.personal : fallback;
+  }
+
   union(): LibraryItem[] {
-    return this.vault
-      ? [...this.personal.items, ...this.vault.items]
-      : [...this.personal.items];
+    return this.sources().flatMap((src) => src.items);
   }
 
   /**
@@ -295,22 +381,55 @@ export class LibraryStore {
    * elements come from `getItem(id)`; inserting goes through the editor.
    */
   listItems(): LibraryItemSummary[] {
-    return this.union().map((item) => ({
-      id: item.id,
-      name: item.name?.trim() || null,
-      scope: this.sectionOf(item.id),
-    }));
-  }
-
-  getItem(id: string): LibraryItem | undefined {
-    return (
-      this.personal.items.find((item) => item.id === id) ??
-      this.vault?.items.find((item) => item.id === id)
+    return this.sources().flatMap((src) =>
+      src.items.map((item) => ({
+        id: item.id,
+        name: item.name?.trim() || null,
+        scope: src.id,
+        library: this.displayName(src),
+      })),
     );
   }
 
-  sectionOf = (id: string): LibraryScope =>
-    this.vault && this.vaultIds.has(id) ? "vault" : "personal";
+  getItem(id: string): LibraryItem | undefined {
+    for (const src of this.sources()) {
+      const found = src.items.find((item) => item.id === id);
+      if (found) {
+        return found;
+      }
+    }
+    return undefined;
+  }
+
+  sectionOf = (id: string): string => {
+    const extra = this.extraIds.get(id);
+    if (extra) {
+      return extra.id;
+    }
+    return this.vault && this.vaultIds.has(id) ? "vault" : "personal";
+  };
+
+  private displayName(src: Source): string {
+    if (src.name !== null) {
+      return src.name;
+    }
+    return src.scope === "vault" ? "This vault" : "Personal";
+  }
+
+  /** Sections for the panel, in order (named libraries after the two defaults). */
+  getSections(): LibrarySectionInfo[] {
+    return this.sources().map((src) => ({
+      id: src.id,
+      label: this.displayName(src),
+      scope: src.scope,
+      name: src.name,
+      readOnly: !writable(src),
+    }));
+  }
+
+  sourceInfo(sectionId: string): LibrarySectionInfo | undefined {
+    return this.getSections().find((section) => section.id === sectionId);
+  }
 
   hasVault() {
     return this.vault !== null;
@@ -323,7 +442,7 @@ export class LibraryStore {
   /** Human readable problems (unreadable or unwritable library files). */
   getErrors(): string[] {
     const out: string[] = [];
-    for (const src of [this.personal, this.vault]) {
+    for (const src of this.sources()) {
       if (src?.error) {
         out.push(
           `${label(src)} could not be read: ${
@@ -348,43 +467,185 @@ export class LibraryStore {
     };
   }
 
-  /** Moves existing items between files, or records where new items go. */
-  assign = (ids: readonly string[], scope: LibraryScope) => {
-    const target = scope === "vault" ? this.vault : this.personal;
+  /** Moves existing items between libraries, or records where new items go. */
+  assign = (ids: readonly string[], sectionId: string) => {
+    const target = this.sources().find((src) => src.id === sectionId);
     if (!target || !writable(target)) {
       return;
     }
-    const other = target === this.personal ? this.vault : this.personal;
     const idSet = new Set(ids);
+    // Items held by another writable source move over; ones in an unwritable
+    // file stay (they cannot be taken out of it).
     const moving: LibraryItem[] = [];
-    if (other && writable(other)) {
-      for (const item of other.items) {
-        if (idSet.has(item.id)) {
-          moving.push(item);
+    for (const other of this.sources()) {
+      if (other === target) {
+        continue;
+      }
+      const hit = other.items.filter((item) => idSet.has(item.id));
+      if (!hit.length) {
+        continue;
+      }
+      if (!writable(other)) {
+        for (const item of hit) {
+          idSet.delete(item.id);
         }
+        continue;
       }
-    }
-    const inOtherReadOnly = other && !writable(other);
-    for (const id of ids) {
-      if (inOtherReadOnly && other.items.some((item) => item.id === id)) {
-        continue; // cannot move out of an unwritable file
-      }
-      if (scope === "vault") {
-        this.vaultIds.add(id);
-      } else {
-        this.vaultIds.delete(id);
-      }
-    }
-    if (moving.length && other) {
-      const moved = new Set(moving.map((item) => item.id));
+      const gone = new Set(hit.map((item) => item.id));
+      moving.push(...hit);
       this.setItems(
         other,
-        other.items.filter((item) => !moved.has(item.id)),
+        other.items.filter((item) => !gone.has(item.id)),
       );
+    }
+    for (const id of idSet) {
+      this.vaultIds.delete(id);
+      this.extraIds.delete(id);
+      if (target.scope === "vault" && target.name === null) {
+        this.vaultIds.add(id);
+      } else if (target.name !== null) {
+        this.extraIds.set(id, target);
+      }
+    }
+    if (moving.length) {
       this.setItems(target, [...moving, ...target.items]);
     }
     this.bump("ui");
   };
+
+  // ---- named libraries ---------------------------------------------------
+
+  /** Applies `[library] folders` and `default`; reloads the list when they change. */
+  async configure(folders: readonly string[], defaultName: string) {
+    const nextFolders = [...folders];
+    const changed =
+      nextFolders.join("\n") !== this.folders.join("\n") ||
+      defaultName !== this.defaultName;
+    this.folders = nextFolders;
+    this.defaultName = defaultName;
+    if (changed && this.started) {
+      await this.refreshLibraries();
+    }
+  }
+
+  async createLibrary(scope: LibraryScope, name: string): Promise<void> {
+    const handle = this.handleFor(scope);
+    await this.repo.createLibrary?.(scope, handle, name);
+    await this.refreshLibraries();
+  }
+
+  async renameLibrary(sectionId: string, newName: string): Promise<void> {
+    const src = this.extras.find((s) => s.id === sectionId);
+    if (!src || src.name === null) {
+      return;
+    }
+    await this.flushSource(src);
+    await this.repo.renameLibrary?.(src.scope, src.handle, src.name, newName);
+    await this.refreshLibraries();
+  }
+
+  async removeLibrary(sectionId: string): Promise<void> {
+    const src = this.extras.find((s) => s.id === sectionId);
+    if (!src || src.name === null) {
+      return;
+    }
+    this.clearTimers(src);
+    await this.repo.deleteLibrary?.(src.scope, src.handle, src.name);
+    await this.refreshLibraries();
+  }
+
+  /** Re-reads the list and the files of the named libraries (window focus). */
+  refresh(): Promise<void> {
+    return this.started ? this.refreshLibraries() : Promise.resolve();
+  }
+
+  /** Native file picker for importing a library (host side of the panel). */
+  pickLibraryFile() {
+    return this.repo.pickLibraryFile();
+  }
+
+  private handleFor(scope: LibraryScope): string | null {
+    if (scope === "vault") {
+      return this.vault?.handle ?? null;
+    }
+    return null;
+  }
+
+  /** The (scope, handle) pairs that can hold named libraries. */
+  private containers(): { scope: LibraryScope; handle: string | null }[] {
+    return [
+      { scope: "personal" as const, handle: null },
+      ...(this.vault
+        ? [{ scope: "vault" as const, handle: this.vault.handle }]
+        : []),
+      ...this.folders.map((handle) => ({ scope: "folder" as const, handle })),
+    ];
+  }
+
+  /**
+   * Lists the named libraries on disk and brings `extras` in line: new files
+   * load, vanished ones drop their items. Cheap when nothing changed.
+   */
+  private async refreshLibraries(only?: LibraryChange): Promise<void> {
+    if (!this.repo.listLibraries || this.disposed) {
+      return;
+    }
+    const listed: Source[] = [];
+    let changed = false;
+    for (const { scope, handle } of this.containers()) {
+      if (
+        only &&
+        (only.scope !== scope ||
+          (scope !== "personal" && only.handle !== handle))
+      ) {
+        // untouched container: keep its sources as they are
+        listed.push(
+          ...this.extras.filter(
+            (src) => src.scope === scope && src.handle === handle,
+          ),
+        );
+        continue;
+      }
+      let names: string[] = [];
+      try {
+        names = await this.repo.listLibraries(scope, handle);
+      } catch {
+        names = [];
+      }
+      for (const name of names) {
+        const id = sourceId(scope, handle, name);
+        const existing = this.extras.find((src) => src.id === id);
+        if (existing) {
+          listed.push(existing);
+        } else {
+          const hostReadOnly = scope === "vault" ? this.vault?.hostReadOnly : false;
+          listed.push(newSource(scope, handle, hostReadOnly ?? false, name));
+          changed = true;
+        }
+      }
+    }
+    const keep = new Set(listed.map((src) => src.id));
+    for (const old of this.extras) {
+      if (!keep.has(old.id)) {
+        this.clearTimers(old);
+        for (const [id, owner] of this.extraIds) {
+          if (owner === old) {
+            this.extraIds.delete(id);
+          }
+        }
+        changed = true;
+      }
+    }
+    this.extras = listed;
+    await Promise.all(this.extras.map((src) => this.loadSource(src)));
+    // pick up outside edits of libraries that were already loaded
+    const reloaded = await Promise.all(
+      this.extras.map((src) => this.run(src, () => this.reconcile(src))),
+    );
+    if (changed || reloaded.some(Boolean)) {
+      this.bump("external");
+    }
+  }
 
   /** Switches the vault source. The old vault's pending writes are flushed. */
   async setVault(handle: string | null, readOnly = false): Promise<void> {
@@ -401,6 +662,17 @@ export class LibraryStore {
     }
     this.vault = handle ? newSource("vault", handle, readOnly) : null;
     this.vaultIds.clear();
+    for (const src of this.extras) {
+      if (src.scope === "vault") {
+        this.clearTimers(src);
+      }
+    }
+    for (const [id, owner] of this.extraIds) {
+      if (owner.scope === "vault") {
+        this.extraIds.delete(id);
+      }
+    }
+    this.extras = this.extras.filter((src) => src.scope !== "vault");
     const fresh = this.vault;
     const flushOld = old ? this.flushSource(old) : Promise.resolve();
     if (old?.loaded || fresh) {
@@ -408,6 +680,7 @@ export class LibraryStore {
     }
     if (fresh && this.started) {
       await this.loadSource(fresh);
+      await this.refreshLibraries({ scope: "vault", handle: fresh.handle ?? undefined });
       this.bump("external");
     }
     await flushOld;
@@ -416,9 +689,7 @@ export class LibraryStore {
   /** Writes any pending changes immediately. Never rejects. */
   async flush(): Promise<void> {
     await Promise.all(
-      [this.personal, this.vault].map((src) =>
-        src ? this.flushSource(src) : Promise.resolve(),
-      ),
+      this.sources().map((src) => this.flushSource(src)),
     );
   }
 
@@ -426,10 +697,8 @@ export class LibraryStore {
     this.disposed = true;
     this.unsubscribe?.();
     this.unsubscribe = null;
-    for (const src of [this.personal, this.vault]) {
-      if (src) {
-        this.clearTimers(src);
-      }
+    for (const src of this.sources()) {
+      this.clearTimers(src);
     }
     this.listeners.clear();
   }
@@ -454,7 +723,9 @@ export class LibraryStore {
       [this.personal, this.vault].map((src) =>
         src ? this.loadSource(src) : Promise.resolve(),
       ),
-    ).then(() => {});
+    )
+      .then(() => this.refreshLibraries())
+      .then(() => {});
   }
 
   private loadSource(src: Source): Promise<void> {
@@ -468,10 +739,14 @@ export class LibraryStore {
   }
 
   private onRepoChange(event: LibraryChange) {
+    if (this.started) {
+      void this.refreshLibraries(event).catch(() => {});
+    }
     const src = event.scope === "personal" ? this.personal : this.vault;
     if (
       !src ||
       !src.loaded ||
+      event.scope === "folder" ||
       (event.scope === "vault" && event.handle !== src.handle)
     ) {
       return;
@@ -501,6 +776,7 @@ export class LibraryStore {
         src.scope,
         src.handle,
         src.loaded && !force ? src.revision : null,
+        src.name,
       );
     } catch (err) {
       src.error = errorMessage(err);
@@ -540,9 +816,13 @@ export class LibraryStore {
     src.existed = result.json !== null || result.revision !== null;
     src.items = next;
     src.sigs = nextSigs;
-    if (src.scope === "vault") {
+    if (src.scope === "vault" && src.name === null) {
       for (const item of next) {
         this.vaultIds.add(item.id);
+      }
+    } else if (src.name !== null) {
+      for (const item of next) {
+        this.extraIds.set(item.id, src);
       }
     }
     if (reschedule && pendingDelta(src)) {
@@ -625,6 +905,7 @@ export class LibraryStore {
           src.handle,
           await serializeLibrary(items),
           src.existed ? src.revision : null,
+          src.name,
         );
         src.revision = revision;
         src.existed = true;

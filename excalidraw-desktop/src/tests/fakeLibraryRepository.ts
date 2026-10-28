@@ -29,13 +29,72 @@ export class FakeLibraryRepository implements LibraryRepository {
   private listeners = new Set<(event: LibraryChange) => void>();
   private counter = 0;
 
-  private key(scope: LibraryScope, handle: string | null) {
-    return scope === "personal" ? "personal" : `vault:${handle}`;
+  private key(scope: LibraryScope, handle: string | null, name?: string | null) {
+    const base = scope === "personal" ? "personal" : `${scope}:${handle}`;
+    return name ? `${base}|${name}` : base;
+  }
+
+  /** Stems of the named libraries stored for a scope. */
+  names(scope: LibraryScope, handle: string | null): string[] {
+    const prefix = `${this.key(scope, handle)}|`;
+    return [...this.files.keys()]
+      .filter((k) => k.startsWith(prefix))
+      .map((k) => k.slice(prefix.length))
+      .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  }
+
+  async listLibraries(scope: LibraryScope, handle: string | null) {
+    return this.names(scope, handle);
+  }
+
+  async createLibrary(scope: LibraryScope, handle: string | null, name: string) {
+    const key = this.key(scope, handle, name);
+    if (this.files.has(key)) {
+      throw new FakeLibraryError("CONFLICT", "exists");
+    }
+    this.files.set(key, {
+      json: '{"type":"excalidrawlib","version":2,"libraryItems":[]}',
+      revision: ++this.counter,
+    });
+    this.emit({ scope, ...(handle ? { handle } : {}) });
+  }
+
+  async renameLibrary(
+    scope: LibraryScope,
+    handle: string | null,
+    name: string,
+    newName: string,
+  ) {
+    const from = this.key(scope, handle, name);
+    const to = this.key(scope, handle, newName);
+    const file = this.files.get(from);
+    if (!file) {
+      throw new FakeLibraryError("NOT_FOUND", "missing");
+    }
+    if (this.files.has(to)) {
+      throw new FakeLibraryError("CONFLICT", "exists");
+    }
+    this.files.delete(from);
+    this.files.set(to, { ...file, revision: ++this.counter });
+    this.emit({ scope, ...(handle ? { handle } : {}) });
+  }
+
+  readonly removed: string[] = [];
+  async deleteLibrary(scope: LibraryScope, handle: string | null, name: string) {
+    const key = this.key(scope, handle, name);
+    this.files.delete(key);
+    this.removed.push(key);
+    this.emit({ scope, ...(handle ? { handle } : {}) });
   }
 
   /** Simulates an external edit (another window, a sync tool, the user). */
-  setFile(scope: LibraryScope, json: string | null, handle?: string) {
-    const key = this.key(scope, handle ?? null);
+  setFile(
+    scope: LibraryScope,
+    json: string | null,
+    handle?: string,
+    name?: string,
+  ) {
+    const key = this.key(scope, handle ?? null, name);
     if (json === null) {
       this.files.delete(key);
     } else {
@@ -44,8 +103,8 @@ export class FakeLibraryRepository implements LibraryRepository {
     this.emit({ scope, ...(scope === "vault" ? { handle } : {}) });
   }
 
-  getJson(scope: LibraryScope, handle?: string): string | null {
-    return this.files.get(this.key(scope, handle ?? null))?.json ?? null;
+  getJson(scope: LibraryScope, handle?: string, name?: string): string | null {
+    return this.files.get(this.key(scope, handle ?? null, name))?.json ?? null;
   }
 
   emit(event: LibraryChange) {
@@ -58,8 +117,9 @@ export class FakeLibraryRepository implements LibraryRepository {
     scope: LibraryScope,
     handle: string | null,
     knownRevision: string | null,
+    name?: string | null,
   ): Promise<LibraryReadResult> {
-    const key = this.key(scope, handle);
+    const key = this.key(scope, handle, name);
     const file = this.files.get(key);
     const base = { path: key, readOnly: this.readOnlyKeys.has(key) };
     if (!file) {
@@ -77,8 +137,9 @@ export class FakeLibraryRepository implements LibraryRepository {
     handle: string | null,
     json: string,
     expectedRevision: string | null,
+    name?: string | null,
   ) {
-    const key = this.key(scope, handle);
+    const key = this.key(scope, handle, name);
     if (this.readOnlyKeys.has(key)) {
       throw new FakeLibraryError("READ_ONLY", "read only");
     }
