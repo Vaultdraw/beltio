@@ -85,26 +85,26 @@
 
 /* The cursor row only shows while the list has keyboard focus. */
 .vault-tags__list:focus-visible .vault-tags__row--cursor {
-  outline: 1px solid var(--vault-primary);
-  outline-offset: -1px;
+  outline: none;
+  box-shadow: var(--vault-ring-inset);
 }
 
 .vault-tags__row {
   display: flex;
-  height: 22px;
+  height: var(--vd-row);
   box-sizing: border-box;
   align-items: center;
-  padding-left: calc(var(--depth, 0) * 12px);
+  padding-left: calc(var(--depth, 0) * 16px);
   border-radius: 4px;
 }
 
 .vault-tags__row:hover {
-  background-color: var(--vault-surface-hover);
+  background-color: var(--vault-hover);
 }
 
 .vault-tags__row--active,
 .vault-tags__row--active:hover {
-  background-color: var(--vault-primary-light);
+  background-color: var(--vault-sel);
   color: var(--vault-primary);
 }
 

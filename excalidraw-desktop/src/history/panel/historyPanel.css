@@ -74,7 +74,7 @@
 
 .vault-history-panel__list:focus-visible
   .vault-history-row[data-selected="true"] {
-  outline: 1px solid var(--vault-primary-border);
+  outline: var(--vd-sel-outline);
   outline-offset: -1px;
 }
 
@@ -155,7 +155,7 @@
 }
 
 .vault-history-timeline__track:focus-visible .vault-history-timeline__thumb {
-  box-shadow: 0 0 0 3px var(--vault-primary-light);
+  box-shadow: var(--vault-ring);
 }
 
 .vault-history-timeline__rail {

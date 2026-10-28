@@ -146,6 +146,7 @@ export const TOKEN_NAMES = [
   "--vault-sel",
   "--vault-sel-strong",
   "--vault-ring",
+  "--vault-ring-inset",
 ] as const;
 
 export type TokenName = typeof TOKEN_NAMES[number];

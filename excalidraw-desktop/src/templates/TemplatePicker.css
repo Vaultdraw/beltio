@@ -22,7 +22,7 @@
 
 .template-picker__input:focus {
   border-color: var(--vault-primary);
-  box-shadow: 0 0 0 2px var(--vault-primary-light);
+  box-shadow: var(--vault-ring);
 }
 
 .template-picker__scroll {
@@ -53,7 +53,7 @@
 }
 
 .template-picker__row.is-active {
-  background: var(--vault-surface-active);
+  background: var(--vault-sel);
 }
 
 .template-picker__thumb {

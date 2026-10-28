@@ -51,6 +51,9 @@
   --vd-radius-pop: 8px;
   --vd-radius-dialog: 10px;
 
+  /* Selected marks on swatches and cards (not focus: focus is --vault-ring). */
+  --vd-sel-outline: 2px solid var(--vault-primary);
+
   /* Disabled controls. */
   --vd-disabled-opacity: 0.45;
 
@@ -65,6 +68,7 @@
   --vault-sel: rgba(105, 101, 219, 0.14);
   --vault-sel-strong: rgba(105, 101, 219, 0.26);
   --vault-ring: 0 0 0 2px #ffffff, 0 0 0 4px rgba(105, 101, 219, 0.75);
+  --vault-ring-inset: inset 0 0 0 2px rgba(105, 101, 219, 0.75);
   --vault-shadow-island: 0 1px 2px rgba(0, 0, 0, 0.14);
   --vault-shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.26);
   --vault-scrim: rgba(0, 0, 0, 0.32);
@@ -79,4 +83,22 @@ html.dark {
   --vault-sel: rgba(142, 139, 240, 0.14);
   --vault-sel-strong: rgba(142, 139, 240, 0.26);
   --vault-ring: 0 0 0 2px #121212, 0 0 0 4px rgba(142, 139, 240, 0.75);
+  --vault-ring-inset: inset 0 0 0 2px rgba(142, 139, 240, 0.75);
+}
+
+/* One row style for every list (tree, menus, tab list, palette, search,
+ * links, tags, templates): the same hover, selected and keyboard focus.
+ * Zero specificity (:where) so each list's own active/drop states win. */
+:where(.vd-row) {
+  min-height: var(--vd-row);
+}
+:where(.vd-row:hover) {
+  background-color: var(--vault-hover);
+}
+:where(.vd-row[aria-selected="true"], .vd-row--selected) {
+  background-color: var(--vault-sel);
+}
+:where(.vd-row:focus-visible) {
+  outline: none;
+  box-shadow: var(--vault-ring-inset);
 }

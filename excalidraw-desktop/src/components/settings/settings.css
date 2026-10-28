@@ -83,8 +83,8 @@
 }
 
 .vault-settings-search__input:focus-visible {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }
 
 .vault-settings-search__clear {
@@ -140,8 +140,8 @@
 }
 
 .vault-settings-nav-item:focus-visible {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: -2px;
+  outline: none;
+  box-shadow: var(--vault-ring-inset);
 }
 
 .vault-settings-nav-item--active,
@@ -418,8 +418,8 @@
 }
 
 .vault-scope-switch__option:focus-visible {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }
 
 .vault-scope-switch__option[aria-disabled="true"] {
@@ -541,8 +541,8 @@
 }
 
 .vault-settings-modal .vault-btn:focus-visible {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }
 
 .vault-settings-modal .vault-btn--sm {
@@ -584,8 +584,8 @@
 }
 
 .vault-settings-modal .vault-input:focus-visible {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }
 
 .vault-settings-modal .vault-input::placeholder {
@@ -683,8 +683,8 @@
 }
 
 .vault-switch input:focus-visible + .vault-switch__track {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }
 
 /* ---- General / Files: paths, status ------------------------------------ */
@@ -806,8 +806,8 @@
 }
 
 .vault-stepper:focus-within {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }
 
 .vault-stepper__value {
@@ -878,13 +878,13 @@
 }
 
 .vault-accent__sw--on {
-  outline: 2px solid var(--vault-primary);
+  outline: var(--vd-sel-outline);
   outline-offset: 2px;
 }
 
 .vault-accent__sw:focus-visible {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }
 
 .vault-accent__custom input {
@@ -1043,14 +1043,14 @@
 }
 
 .vault-theme-card:focus-visible {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }
 
 .vault-theme-card--selected,
 .vault-theme-card--selected:hover {
   border-color: var(--vault-border);
-  outline: 2px solid var(--vault-primary);
+  outline: var(--vd-sel-outline);
   outline-offset: 2px;
 }
 
@@ -1147,8 +1147,8 @@
 }
 
 .vault-source-chip:focus-visible {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }
 
 .vault-source-note {

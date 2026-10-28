@@ -48,8 +48,8 @@
 }
 
 .paper-style:focus-within {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }
 
 .paper-style__input {

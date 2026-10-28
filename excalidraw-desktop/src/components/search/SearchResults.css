@@ -40,12 +40,12 @@
 }
 
 .vault-search-row:hover {
-  background-color: var(--vault-surface-hover);
+  background-color: var(--vault-hover);
 }
 
 .vault-search-row--active,
 .vault-search-row--active:hover {
-  background-color: var(--vault-primary-light);
+  background-color: var(--vault-sel);
 }
 
 .vault-search-row__icon {

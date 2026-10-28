@@ -46,8 +46,8 @@
 }
 
 .vault-tools-tab:focus-visible {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: -2px;
+  outline: none;
+  box-shadow: var(--vault-ring-inset);
 }
 
 .vault-tools-tab--active,

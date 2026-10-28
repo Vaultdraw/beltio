@@ -376,7 +376,7 @@ export function LinksDock(props: LinksDockProps) {
         {error && <div className="vault-links__empty">{error}</div>}
         {rows.map((row) => {
           const isSelected = row.key === selected?.key;
-          const cls = `vault-links__row vault-links__row--${row.kind}${
+          const cls = `vd-row vault-links__row vault-links__row--${row.kind}${
             isSelected ? " vault-links__row--selected" : ""
           }`;
           if (row.kind === "header") {

@@ -59,7 +59,7 @@
 }
 
 .vault-activity-bar__btn:focus-visible {
-  box-shadow: 0 0 0 1.5px var(--vault-primary);
+  box-shadow: var(--vault-ring-inset);
 }
 
 .vault-activity-bar__btn[aria-disabled="true"] {

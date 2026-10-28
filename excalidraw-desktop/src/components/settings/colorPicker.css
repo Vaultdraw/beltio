@@ -40,8 +40,8 @@
 
 .vault-cp__swatch:focus-visible,
 .vault-cp__custom:focus-within {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: 3px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }
 
 .vault-cp__swatch--selected {

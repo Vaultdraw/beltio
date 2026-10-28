@@ -41,7 +41,7 @@ import type { CSSProperties, Ref } from "react";
 
 import type { ListController } from "../../commands/listNav";
 
-export const ROW_HEIGHT = 22;
+export const ROW_HEIGHT = 26;
 export const VIRTUALIZE_ABOVE = 500;
 const OVERSCAN = 10;
 /** Viewport height assumed before the list is measured. */
@@ -325,7 +325,7 @@ export const TagsPanel = ({
                 aria-level={row.depth + 1}
                 aria-selected={isCursor}
                 aria-expanded={row.hasChildren ? row.isOpen : undefined}
-                className={`vault-tags__row${
+                className={`vd-row vault-tags__row${
                   isActive ? " vault-tags__row--active" : ""
                 }${isCursor ? " vault-tags__row--cursor" : ""}`}
                 style={{ "--depth": row.depth } as CSSProperties}

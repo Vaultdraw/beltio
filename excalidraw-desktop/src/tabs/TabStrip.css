@@ -69,8 +69,8 @@
 }
 
 .vault-tabs__tab:focus-visible {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: -2px;
+  outline: none;
+  box-shadow: var(--vault-ring-inset);
 }
 
 .vault-tabs__tab--pinned {
@@ -258,7 +258,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
+  height: var(--vd-row);
   padding: 0 8px;
   border-radius: 5px;
   color: var(--vault-text);
@@ -268,7 +268,7 @@
 
 .vault-tablist__row--cursor,
 .vault-tablist__row:hover {
-  background: var(--vault-surface-hover);
+  background: var(--vault-hover);
 }
 
 .vault-tablist__row--active .vault-tablist__name {

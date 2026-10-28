@@ -48,8 +48,8 @@
 }
 
 .paper-tile:focus-visible {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }
 
 /* Canvas pattern: compact 44 x 32 tiles on the row's right; the name is the
@@ -84,7 +84,7 @@
 .paper-tiles--patterns .paper-tile[data-checked="true"] {
   background: var(--vault-bg);
   border-color: var(--vault-border);
-  outline: 2px solid var(--vault-primary);
+  outline: var(--vd-sel-outline);
   outline-offset: 2px;
 }
 

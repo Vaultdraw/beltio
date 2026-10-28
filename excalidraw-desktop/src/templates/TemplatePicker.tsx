@@ -174,7 +174,7 @@ const Row = memo(
         id={optionId}
         role="option"
         aria-selected={active}
-        className={`template-picker__row${active ? " is-active" : ""}`}
+        className={`vd-row template-picker__row${active ? " is-active" : ""}`}
         data-template-key={templateKey(entry)}
         onClick={() => onPick(entry)}
         onMouseMove={() => !active && onHover(index)}
@@ -220,7 +220,7 @@ const BlankRow = memo(
         id={optionId}
         role="option"
         aria-selected={active}
-        className={`template-picker__row${active ? " is-active" : ""}`}
+        className={`vd-row template-picker__row${active ? " is-active" : ""}`}
         onClick={onBlank}
         onMouseMove={() => !active && onHover(index)}
       >

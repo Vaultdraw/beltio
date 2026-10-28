@@ -90,7 +90,7 @@ const DrawingRow = memo(
         aria-selected={active}
         data-kind="drawing"
         data-path={hit.path}
-        className={`vault-search-row ${
+        className={`vd-row vault-search-row ${
           active ? "vault-search-row--active" : ""
         } ${current ? "vault-search-row--current" : ""}`}
         onClick={(e) => onPick(index, isNewTabClick(e))}
@@ -176,7 +176,7 @@ const FolderRow = memo(
         aria-selected={active}
         data-kind="folder"
         data-path={entry.path}
-        className={`vault-search-row ${
+        className={`vd-row vault-search-row ${
           active ? "vault-search-row--active" : ""
         }`}
         onClick={(e) => onPick(index, isNewTabClick(e))}

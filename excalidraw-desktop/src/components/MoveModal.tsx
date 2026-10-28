@@ -231,7 +231,7 @@ export const MoveModal = ({
                 className={`vd-move__row${
                   row.matches ? "" : " vd-move__row--context"
                 }`}
-                style={{ paddingLeft: 4 + row.depth * 14 }}
+                style={{ paddingLeft: 4 + row.depth * 16 }}
                 onClick={() => select(path)}
                 onDoubleClick={() => void confirm(path)}
               >

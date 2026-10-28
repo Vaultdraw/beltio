@@ -61,6 +61,7 @@ export const NON_HEX_TOKENS: ReadonlySet<string> = new Set([
   "--vault-sel",
   "--vault-sel-strong",
   "--vault-ring",
+  "--vault-ring-inset",
   "--vault-scrim",
 ]);
 
@@ -256,6 +257,11 @@ export const deriveTokens = (
     "--vault-sel": tint(primary, STATE_ALPHA.selected),
     "--vault-sel-strong": tint(primary, STATE_ALPHA.selectedStrong),
     "--vault-ring": `0 0 0 2px ${bg}, 0 0 0 4px ${toRgba(
+      primary,
+      STATE_ALPHA.ring,
+    )}`,
+    // Same ring drawn inside, for rows and tabs whose parent clips overflow.
+    "--vault-ring-inset": `inset 0 0 0 2px ${toRgba(
       primary,
       STATE_ALPHA.ring,
     )}`,

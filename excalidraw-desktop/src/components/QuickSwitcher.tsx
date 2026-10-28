@@ -214,7 +214,7 @@ const RowView = memo(
         role="option"
         aria-selected={active}
         data-open-path={row.kind === "drawing" ? row.drawing.path : undefined}
-        className={`vault-quick__row${
+        className={`vd-row vault-quick__row${
           active ? " vault-quick__row--active" : ""
         }`}
         onMouseMove={() => onHover(index)}

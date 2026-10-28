@@ -202,7 +202,9 @@ export const MenuItem = ({
     type="button"
     role={checked === undefined ? "menuitem" : "menuitemradio"}
     aria-checked={checked}
-    className={`vault-menu__item ${danger ? "vault-menu__item--danger" : ""}`}
+    className={`vd-row vault-menu__item ${
+      danger ? "vault-menu__item--danger" : ""
+    }`}
     onClick={onSelect}
   >
     <span className="vault-menu__label">{label}</span>
@@ -243,7 +245,7 @@ const MenuNodes = ({
               key={node.id}
               type="button"
               role="menuitem"
-              className={`vault-menu__item ${
+              className={`vd-row vault-menu__item ${
                 node.danger ? "vault-menu__item--danger" : ""
               }`}
               onPointerEnter={() => setOpenSub(null)}
@@ -269,7 +271,7 @@ const MenuNodes = ({
               role="menuitem"
               aria-haspopup="menu"
               aria-expanded={open}
-              className="vault-menu__item"
+              className="vd-row vault-menu__item"
               onPointerEnter={() => setOpenSub(node.id)}
               onClick={() => setOpenSub(node.id)}
             >

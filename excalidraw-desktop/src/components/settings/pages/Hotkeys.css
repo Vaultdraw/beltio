@@ -317,8 +317,8 @@
 }
 
 .vault-hotkeys__seq-btn:focus-visible {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }
 
 /* Sequence recording: live caps, hint, cancel */
@@ -394,8 +394,8 @@
 }
 
 .vault-hotkeys button:focus-visible {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }
 
 .vault-hotkeys__drawings {

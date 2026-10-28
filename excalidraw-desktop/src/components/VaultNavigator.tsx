@@ -1267,7 +1267,7 @@ const TreeRow = memo(
     const showActions = hovered || focusWithin || isFocused || isActive;
     return (
       <div
-        className={`vault-tree-item ${
+        className={`vd-row vault-tree-item ${
           isActive ? "vault-tree-item--active" : ""
         } ${isFocused ? "vault-tree-item--focused" : ""} ${
           isDropTarget ? "vault-tree-item--drop-target" : ""

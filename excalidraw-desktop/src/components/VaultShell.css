@@ -550,7 +550,7 @@ html.dark {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 28px;
+  height: var(--vd-row);
   padding: 0 6px;
   padding-left: calc(8px + var(--depth, 0) * 16px);
   font-size: 0.82rem;
@@ -585,7 +585,7 @@ html.dark {
 
 .vault-tree-item:focus {
   outline: none;
-  box-shadow: inset 0 0 0 1.5px var(--vault-primary);
+  box-shadow: var(--vault-ring-inset);
 }
 
 .vault-tree-item__main {
@@ -691,7 +691,7 @@ html.dark {
   align-items: center;
   gap: 8px;
   width: 100%;
-  height: 28px;
+  height: var(--vd-row);
   padding: 0 8px;
   border: none;
   border-radius: 5px;
@@ -713,7 +713,11 @@ html.dark {
 .vault-menu__item:hover,
 .vault-menu__item:focus-visible {
   outline: none;
-  background-color: var(--vault-surface-hover);
+  background-color: var(--vault-hover);
+}
+
+.vault-menu__item:focus-visible {
+  box-shadow: var(--vault-ring-inset);
 }
 
 .vault-menu__item--danger,
@@ -887,7 +891,7 @@ html.dark {
 
 .vault-input:focus {
   border-color: var(--vault-primary);
-  box-shadow: 0 0 0 2px var(--vault-primary-light);
+  box-shadow: var(--vault-ring);
 }
 
 .vault-error-text {
@@ -989,8 +993,8 @@ html.dark {
 }
 
 .vault-segmented-btn:focus-visible {
-  outline: 2px solid var(--vault-primary);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }
 
 .vault-segmented-btn--active,

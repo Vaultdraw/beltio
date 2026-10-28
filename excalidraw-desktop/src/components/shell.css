@@ -90,7 +90,7 @@ html.vault-linux-custom .vault-header {
 
 .vault-ibtn:focus-visible {
   outline: none;
-  box-shadow: inset 0 0 0 1.5px var(--vault-primary);
+  box-shadow: var(--vault-ring-inset);
 }
 
 .vault-ibtn svg {

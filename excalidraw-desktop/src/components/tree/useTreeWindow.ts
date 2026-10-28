@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useState, type RefObject } from "react";
 
 /** Fixed row height; must match `.vault-tree-item` in VaultShell.css. */
-export const TREE_ROW_HEIGHT = 28;
+export const TREE_ROW_HEIGHT = 26;
 /** Top padding of `.vault-tree-container`. */
 const CONTAINER_PAD_TOP = 2;
 /** Below this many rows everything renders (windowing buys nothing). */

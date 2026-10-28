@@ -8,6 +8,8 @@ import { join, relative } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { ROW_HEIGHT as TAG_ROW_HEIGHT } from "../components/tags/TagsPanel";
+import { TREE_ROW_HEIGHT } from "../components/tree/useTreeWindow";
 import { deriveTokens, loadBuiltinThemes } from "../theme";
 
 const ROOT = join(__dirname, "..", "..");
@@ -77,6 +79,61 @@ describe("design token guards", () => {
           tokens["--vault-primary"],
         );
       }
+    }
+  });
+
+  it("focus is drawn only with --vault-ring / --vault-ring-inset", () => {
+    const bad: string[] = [];
+    for (const { rel, text } of cssFiles()) {
+      if (rel.endsWith("theme/designSystem.css")) {
+        continue;
+      }
+      for (const m of text.matchAll(/([^{}]*)\{([^{}]*)\}/g)) {
+        const [, selector, body] = m;
+        if (/outline:\s*[0-9.]+px/.test(body)) {
+          bad.push(`${rel}: literal outline in ${selector.trim()}`);
+        }
+        if (
+          /:focus/.test(selector) &&
+          /box-shadow:[^;]*[0-9.]+px[^;]*var\(--vault-primary/.test(body)
+        ) {
+          bad.push(`${rel}: hand-made focus shadow in ${selector.trim()}`);
+        }
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it("sidebar lists share one row height (--vd-row) and one 16 px indent", () => {
+    const css = (rel: string) =>
+      FILES.find((f) => f.rel.endsWith(rel))?.text ?? "";
+    const row = Number(
+      /--vd-row:\s*(\d+)px/.exec(css("theme/designSystem.css"))?.[1],
+    );
+    expect(row).toBe(26);
+    expect(TREE_ROW_HEIGHT).toBe(row);
+    expect(TAG_ROW_HEIGHT).toBe(row);
+    const rules: [string, string][] = [
+      ["components/VaultShell.css", ".vault-tree-item {"],
+      ["components/VaultShell.css", ".vault-menu__item {"],
+      ["components/tags/TagsPanel.css", ".vault-tags__row {"],
+      ["tabs/TabStrip.css", ".vault-tablist__row {"],
+      ["components/QuickSwitcher.css", ".vault-quick__row {"],
+    ];
+    for (const [file, selector] of rules) {
+      const text = css(file);
+      const start = text.indexOf(`\n${selector}`);
+      expect(start, `${file} ${selector}`).toBeGreaterThan(-1);
+      const body = text.slice(start, text.indexOf("}", start));
+      expect(body, `${file} ${selector}`).toMatch(/height:\s*var\(--vd-row\)/);
+    }
+    for (const m of FILES.flatMap((f) =>
+      [...f.text.matchAll(/depth[^;\n]*\*\s*(\d+)(px)?/g)].map((x) => ({
+        rel: f.rel,
+        step: x[1],
+      })),
+    ).filter((x) => /tags|VaultShell|MoveModal/.test(x.rel))) {
+      expect(m.step, m.rel).toBe("16");
     }
   });
 });

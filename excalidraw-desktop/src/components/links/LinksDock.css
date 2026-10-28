@@ -9,7 +9,7 @@
 }
 
 .vault-links:focus-visible {
-  box-shadow: inset 0 0 0 1px var(--vault-primary);
+  box-shadow: var(--vault-ring-inset);
 }
 
 .vault-links__tabs {
@@ -58,12 +58,12 @@
 }
 
 .vault-links__row:hover {
-  background-color: var(--vault-surface-hover);
+  background-color: var(--vault-hover);
 }
 
 .vault-links__row--selected,
 .vault-links__row--selected:hover {
-  background-color: var(--vault-primary-light);
+  background-color: var(--vault-sel);
 }
 
 .vault-links__row--header {

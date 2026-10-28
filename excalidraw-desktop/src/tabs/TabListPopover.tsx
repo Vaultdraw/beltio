@@ -130,7 +130,7 @@ export const TabListPopover = ({
             role="option"
             aria-selected={i === at}
             className={[
-              "vault-tablist__row",
+              "vd-row vault-tablist__row",
               i === at && "vault-tablist__row--cursor",
               entry.id === activeId && "vault-tablist__row--active",
               entry.missing && "vault-tablist__row--missing",
