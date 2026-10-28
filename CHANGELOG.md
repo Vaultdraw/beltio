@@ -22,6 +22,9 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Quitting no longer loses note text.** Cmd+Q, closing the window and switching vault now write every open note first. With `notes.autosave_ms = 0` they ask: Save and Close, Don't Save or Cancel.
+- **Typing while a drawing is renamed or moved.** Saves wait for the rename or move and then use the new path, so there is no false "Drawing changed on disk" and saving keeps going.
+- **Importing the same Obsidian vault again** goes into a fresh folder (`<Vault> (import 2)`), so its links point at its own drawings and not at the first import's.
 - Repeated failed saves of a drawing (a locked file, a full disk, a sync tool holding it) keep one recovery copy per drawing instead of one per retry, so the recovery store no longer fills up and blocks every save with "Recovery storage is full". A successful save removes it, and the recovery list skips an oversized record instead of failing.
 - Saving no longer replaces a drawing you made read-only (or Finder-locked): the save is refused with a read-only message. A normal save keeps the file's permissions and its extended attributes (Finder tags, colour labels).
 - Creating drawings and notes works on exFAT and FAT drives (no hard links): the exclusive no-replace rename is used instead, and an existing file is still never overwritten.

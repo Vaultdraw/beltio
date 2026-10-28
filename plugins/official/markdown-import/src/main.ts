@@ -291,6 +291,14 @@ const plugin: Plugin = definePlugin({
             target,
             settings: readSettings(ctx),
             signal: controller.signal,
+            nextTarget:
+              destination === "vaultFolder"
+                ? (attempt) =>
+                    ctx.folders.pickTarget({
+                      kind: "vaultFolder",
+                      path: `${source.name} (import ${attempt})`,
+                    })
+                : undefined,
             onProgress(done, total, current) {
               // One toast per ~5 s at most: progress without spam.
               const now = performance.now();
@@ -302,9 +310,10 @@ const plugin: Plugin = definePlugin({
               }
             },
           });
+          const written = result.target ?? target;
           if (controller.signal.aborted) {
             ctx.ui.toast(
-              `Import cancelled after ${result.notes} notes (they stay in ${target.name})`,
+              `Import cancelled after ${result.notes} notes (they stay in ${written.name})`,
             );
           } else {
             const noPicture =
@@ -321,13 +330,13 @@ const plugin: Plugin = definePlugin({
               }${
                 result.report
                   ? `. See "${result.report.replace(/\.excalidraw$/, "")}" in ${
-                      target.name
+                      written.name
                     } for details`
                   : ""
               }`,
             );
           }
-          await target.open();
+          await written.open();
         } catch (err) {
           if (controller.signal.aborted) {
             ctx.ui.toast("Import cancelled");

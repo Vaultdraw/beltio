@@ -21,7 +21,7 @@ Turns a Markdown note into a page-mode drawing, and an Obsidian vault into a Vau
 | `Sketch.excalidraw` and other files | copied natively (attachments only when `obsidian_attachments` is on) |
 | `.obsidian/`, `.trash/`, `.git/`, any dot entry | skipped |
 
-`[[Note]]`, `[[folder/Note|alias]]` and `[[Note#Heading]]` resolve the Obsidian way (exact path, then the shortest path with that name, case-insensitive) and are rewritten to `[[path|label]]`; links that match nothing stay as text. `![[image.png]]` embeds the image from the vault (up to 4 MB, else a placeholder). The source is only read, every write is create-only (a taken name becomes `Name 2`), one failing file is reported and the rest go on. Code: `src/obsidian/` (`plan.ts`, `links.ts`, `importVault.ts`); tests: `test/obsidian/` with a fixture vault.
+`[[Note]]`, `[[folder/Note|alias]]` and `[[Note#Heading]]` resolve the Obsidian way (exact path, then the shortest path with that name, case-insensitive) and are rewritten to `[[path|label]]`; links that match nothing stay as text. `![[image.png]]` embeds the image from the vault (up to 4 MB, else a placeholder). The source is only read, every write is create-only (a second import of the same vault goes into `<Vault> (import 2)`; any other taken name becomes `Name 2`), one failing file is reported and the rest go on. Code: `src/obsidian/` (`plan.ts`, `links.ts`, `importVault.ts`); tests: `test/obsidian/` with a fixture vault.
 
 ```mermaid
 flowchart LR

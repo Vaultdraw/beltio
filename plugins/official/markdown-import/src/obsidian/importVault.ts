@@ -76,7 +76,10 @@ export async function importObsidianVault(
   opts: ObsidianImportOptions,
 ): Promise<ObsidianImportResult> {
   const t0 = performance.now();
-  const { ctx, source, target, settings, signal } = opts;
+  const { ctx, source, settings, signal } = opts;
+  let target = opts.target;
+  let moves = 0;
+  let writes = 0;
   if (!opts.layout) {
     throw new Error("importObsidianVault needs a layout");
   }
@@ -134,12 +137,32 @@ export async function importObsidianVault(
   ): Promise<string> => {
     let to = path;
     for (let attempt = 0; ; attempt++) {
+      const used = target;
       try {
         await write(to);
+        writes++;
         return to;
       } catch (err) {
         if (codeOf(err) !== "NAME_COLLISION" || attempt >= 20) {
           throw err;
+        }
+        // The folder already holds an earlier import: start a fresh folder, so
+        // the rewritten links resolve inside this import, not the old one.
+        if (target !== used) {
+          attempt = -1; // a parallel write already moved to the fresh folder
+          to = path;
+          continue;
+        }
+        if (writes === 0 && opts.nextTarget && moves < 20) {
+          const fresh = await opts.nextTarget(++moves + 1);
+          if (fresh) {
+            target = fresh;
+            result.target = fresh;
+            attempt = -1;
+            to = path;
+            continue;
+          }
+          moves = 20;
         }
         to = plan.namer.next(to);
       }

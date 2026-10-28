@@ -55,6 +55,14 @@ export interface ObsidianImportOptions {
   onProgress(done: number, total: number, current: string): void;
   /** The layout; defaults to E1's worker layout built from `ctx`. */
   layout?: NoteLayout;
+  /**
+   * An earlier import already holds the first file: the plan's names (and the
+   * links rewritten to them) belong to that import, so the whole import moves
+   * to the folder this returns (`attempt` counts from 2; null = give up and
+   * write numbered names in the first folder). Only asked before the first
+   * write succeeds.
+   */
+  nextTarget?: (attempt: number) => Promise<TargetFolder | null>;
 }
 
 /** One embedded image that did not become a picture in its drawing. */
@@ -94,6 +102,8 @@ export interface ObsidianImportResult {
   errors: ImportError[];
   /** Target path of the written import report; unset when nothing went wrong. */
   report?: string;
+  /** The folder written to; differs from `opts.target` after a move to a fresh folder. */
+  target?: TargetFolder;
   /** True when the signal fired: what was written stays, the rest was not started. */
   cancelled: boolean;
   /** Target path of the first drawing written, to open. */

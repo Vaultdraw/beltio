@@ -285,6 +285,34 @@ describe("importObsidianVault", () => {
     expect(r.written).toContain("Home 2.excalidraw");
   });
 
+  test("an earlier import in the folder: the whole import moves to a fresh folder, so links resolve inside it", async () => {
+    const source = diskSource();
+    const first = memoryTarget(["Empty.excalidraw"]);
+    const fresh = memoryTarget();
+    const asked: number[] = [];
+    const r = await importObsidianVault({
+      ctx,
+      source,
+      target: first.target,
+      settings,
+      signal: new AbortController().signal,
+      onProgress() {},
+      layout,
+      nextTarget: async (attempt) => {
+        asked.push(attempt);
+        return fresh.target;
+      },
+    });
+    expect(asked).toEqual([2]);
+    expect(r.target).toBe(fresh.target);
+    expect([...first.files.keys()]).toEqual(["Empty.excalidraw"]);
+    expect(fresh.files.has("Home.excalidraw")).toBe(true);
+    expect(fresh.files.has("Empty 2.excalidraw")).toBe(false);
+    expect(r.errors.map((e) => e.path)).toEqual([
+      "Drawings/Broken.excalidraw.md",
+    ]);
+  });
+
   test("cancel stops before the next file and keeps what was written", async () => {
     const ac = new AbortController();
     const { out, go } = run({
