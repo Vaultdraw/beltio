@@ -6,6 +6,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Search finds decomposed Japanese and Korean names and text.** Kana with a separate voicing mark (e.g. か + dakuten, common in file names copied from older Mac disks or zip files) and Korean written as separate jamo now match what you type. The search index rebuilds once on the first launch after the update.
+
 - **Auto-export no longer overwrites or deletes your own images.** It used to replace any `.svg` or `.png` with the drawing's name (your `Logo.png` beside `Logo.excalidraw`) and delete it with the drawing. It now records the files it writes (name and hash) and leaves everything else alone, with one notice; deleted exports go to the Trash, and a case-only rename moves the export. Exports from earlier versions are not recorded: delete the old file once and the next save recreates it.
 
 - **Obsidian re-import into the vault.** The destination folder is chosen before anything is written: if it already holds files, the import goes to a fresh "<Vault> (import N)" folder, so links never point at an older import (also with a partial overlap).

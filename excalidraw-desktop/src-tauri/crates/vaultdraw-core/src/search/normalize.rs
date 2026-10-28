@@ -1,5 +1,7 @@
 //! Text normalisation shared by the index and by queries (DECISIONS.md #4).
 //!
+//! Each run of a base character plus its combining marks / conjoining jamo is composed (NFC)
+//! first, so decomposed kana (か + U+3099) and Hangul jamo match the composed form a query uses.
 //! NFKD (NFKC for kana), drop combining marks for Latin/Greek/Cyrillic-style ranges (never
 //! U+3099/U+309A, so `が` stays distinct from `か`), lowercase, a small fold map,
 //! katakana to hiragana, Hangul syllables kept whole, whitespace collapsed.
@@ -7,7 +9,7 @@
 use unicode_normalization::UnicodeNormalization;
 
 /// Bump whenever the rules above change; a mismatch rebuilds persisted indexes.
-pub const NORMALIZER_VERSION: u32 = 1;
+pub const NORMALIZER_VERSION: u32 = 2;
 
 fn is_strippable_mark(c: char) -> bool {
     matches!(c, '\u{300}'..='\u{36F}' | '\u{1AB0}'..='\u{1AFF}' | '\u{1DC0}'..='\u{1DFF}' | '\u{20D0}'..='\u{20FF}' | '\u{FE20}'..='\u{FE2F}')
@@ -58,12 +60,32 @@ pub fn fold_char(c: char, out: &mut impl FnMut(char)) {
     }
 }
 
+/// True for a char that continues the cluster before it: a combining mark (kana voicing marks
+/// included) or a conjoining Hangul vowel/final jamo.
+fn continues_cluster(c: char) -> bool {
+    !c.is_ascii()
+        && (unicode_normalization::char::canonical_combining_class(c) != 0 || matches!(c, '\u{1160}'..='\u{11FF}' | '\u{D7B0}'..='\u{D7FF}'))
+}
+
+/// Folds one cluster (a char and the marks after it), composing it first when it has several chars.
+fn fold_cluster(cluster: &[char], out: &mut impl FnMut(char)) {
+    if let [c] = cluster {
+        fold_char(*c, out);
+    } else {
+        for c in cluster.iter().copied().collect::<String>().nfc() {
+            fold_char(c, out);
+        }
+    }
+}
+
 /// The exact normalisation used by the index. Whitespace runs (including
 /// newlines) collapse to one space; leading/trailing whitespace is dropped.
 pub fn normalize(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     let mut pending_space = false;
-    for c in s.chars() {
+    let mut it = s.chars().peekable();
+    let mut cluster: Vec<char> = Vec::new();
+    while let Some(c) = it.next() {
         if c.is_whitespace() {
             pending_space = !out.is_empty();
             continue;
@@ -72,7 +94,16 @@ pub fn normalize(s: &str) -> String {
             out.push(' ');
             pending_space = false;
         }
-        fold_char(c, &mut |d| out.push(d));
+        cluster.clear();
+        cluster.push(c);
+        while let Some(&n) = it.peek() {
+            if n.is_whitespace() || !continues_cluster(n) {
+                break;
+            }
+            cluster.push(n);
+            it.next();
+        }
+        fold_cluster(&cluster, &mut |d| out.push(d));
     }
     out
 }
@@ -92,7 +123,9 @@ pub fn fold_with_map(s: &str) -> Folded {
     let mut chars = Vec::with_capacity(s.len());
     let mut starts = Vec::with_capacity(s.len() + 1);
     let mut pending_space = false;
-    for c in s.chars() {
+    let mut it = s.chars().peekable();
+    let mut cluster: Vec<char> = Vec::new();
+    while let Some(c) = it.next() {
         if c.is_whitespace() {
             pending_space = !chars.is_empty();
             continue;
@@ -103,9 +136,23 @@ pub fn fold_with_map(s: &str) -> Folded {
             norm.push(' ');
             pending_space = false;
         }
+        cluster.clear();
+        cluster.push(c);
+        while let Some(&n) = it.peek() {
+            if n.is_whitespace() || !continues_cluster(n) {
+                break;
+            }
+            cluster.push(n);
+            it.next();
+        }
+        // The folded cluster belongs to its first char; the marks after it have empty pieces.
         chars.push(c);
         starts.push(norm.len() as u32);
-        fold_char(c, &mut |d| norm.push(d));
+        fold_cluster(&cluster, &mut |d| norm.push(d));
+        for &m in &cluster[1..] {
+            chars.push(m);
+            starts.push(norm.len() as u32);
+        }
     }
     starts.push(norm.len() as u32);
     Folded { norm, chars, starts }
@@ -119,7 +166,11 @@ impl Folded {
             .iter()
             .filter_map(|&(a, b)| {
                 let first = self.starts[..n].partition_point(|&s| (s as usize) <= a).saturating_sub(1);
-                let end = self.starts.partition_point(|&s| (s as usize) < b).min(n);
+                let mut end = self.starts.partition_point(|&s| (s as usize) < b).min(n);
+                // Marks after the last char (empty pieces) are part of the highlight.
+                while end < n && self.starts[end] == self.starts[end + 1] {
+                    end += 1;
+                }
                 (end > first).then_some((first, end))
             })
             .collect()
@@ -129,6 +180,23 @@ impl Folded {
 #[cfg(test)]
 mod unit_tests {
     use super::*;
+
+    #[test]
+    fn decomposed_kana_and_hangul_match_the_composed_query() {
+        // か + U+3099 (NFD が), ハ + U+309A (NFD パ), conjoining jamo for 한글.
+        assert_eq!(normalize("か\u{3099}っこう"), normalize("がっこう"));
+        assert_eq!(normalize("ガイド"), normalize("カ\u{3099}イド"));
+        assert_eq!(normalize("ハ\u{309A}"), normalize("パ"));
+        assert_eq!(normalize("\u{1112}\u{1161}\u{11AB}\u{1100}\u{1173}\u{11AF}"), normalize("한글"));
+        assert_eq!(normalize("e\u{301}x A\u{30A}"), normalize("éx Å"));
+        assert_ne!(normalize("が"), normalize("か"));
+        // The map stays aligned: the mark belongs to its base char and the highlight covers both.
+        let f = fold_with_map("x か\u{3099}っ");
+        assert_eq!(f.chars.len(), 5);
+        assert_eq!(f.norm, "x がっ");
+        let at = f.norm.find('が').unwrap();
+        assert_eq!(f.char_ranges(&[(at, at + 'が'.len_utf8())]), vec![(2, 4)]);
+    }
 
     #[test]
     fn folds_accents_case_and_special_letters() {
