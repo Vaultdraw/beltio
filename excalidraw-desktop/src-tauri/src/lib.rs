@@ -638,13 +638,17 @@ struct FolderCount {
     capped: bool,
 }
 /// Files under `dir` (folders are walked, not counted; symlinks count as one item and are never followed).
-/// Stops after `cap` items.
+/// Hidden entries (`.DS_Store`, `.git/…`) are not counted, as in Finder: a folder that looks empty
+/// reads "0 items" (bug hunt BH-6). Stops after `cap` items.
 fn count_items(dir: &Path, cap: usize) -> FolderCount {
     let mut count = 0usize;
     let mut stack = vec![dir.to_path_buf()];
     while let Some(d) = stack.pop() {
         let Ok(rd) = fs::read_dir(&d) else { continue };
         for e in rd.flatten() {
+            if e.file_name().to_string_lossy().starts_with('.') {
+                continue;
+            }
             let Ok(ft) = e.file_type() else { continue };
             if ft.is_dir() {
                 stack.push(e.path());
@@ -863,6 +867,11 @@ mod tests {
         assert_eq!((all.count, all.capped), (6, false));
         let some = count_items(&d.path().join("a"), 3);
         assert_eq!((some.count, some.capped), (3, true));
+        // Hidden files and folders are not items, as in Finder.
+        std::fs::create_dir_all(d.path().join("e/.git/objects")).unwrap();
+        std::fs::write(d.path().join("e/.DS_Store"), "x").unwrap();
+        std::fs::write(d.path().join("e/.git/objects/1"), "x").unwrap();
+        assert_eq!(count_items(&d.path().join("e"), 1000).count, 0);
     }
     #[test]
     fn trash_entry_refuses_read_only_vaults() {
