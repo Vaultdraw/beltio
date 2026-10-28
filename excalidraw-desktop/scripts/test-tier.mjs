@@ -83,6 +83,14 @@ if (tier === "fast") {
   }
   if (!o["no-e2e"]) {
     const { specs, reasons } = impactedSpecs(files, listSpecNames(path.join(desktop, "e2e")));
+    // The UI crawler (testing.md "Crawler first") runs whenever app UI code or styles changed: ~2 min, light + dark.
+    const uiChanged = files.some((f) => /^(excalidraw-desktop\/src\/|packages\/).*\.(tsx?|css)$/.test(f) && !/\.test\.tsx?$/.test(f));
+    if (uiChanged || files.some((f) => f.startsWith("excalidraw-desktop/e2e/families/crawl") || f === "excalidraw-desktop/e2e/fixture.ts")) {
+      if (!specs.includes("families/crawl")) {
+        specs.push("families/crawl");
+        reasons["families/crawl"] = "UI code changed: crawl every control";
+      }
+    }
     for (const s of specs) console.log(`  e2e ${s} <- ${reasons[s]}`);
     if (specs.length) npx(desktop, `playwright (${specs.length} spec(s), webkit)`, ["playwright", "test", ...specs.map((s) => `e2e/${s}.spec.ts`)]);
   }
