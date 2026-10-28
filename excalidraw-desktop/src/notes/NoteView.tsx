@@ -23,7 +23,7 @@ import { userError } from "../components/userError";
 
 import { registerCommandHandlers } from "../commands/handlerRegistry";
 import { defineContextKey } from "../commands/contextKeys";
-import { openExternal } from "../help/openExternal";
+import { openWebLink } from "../help/openExternal";
 import { toastStore } from "../toasts/toastStore";
 import { cachedPreferences } from "../vault/useGlobalPref";
 import { subscribePreferences, updatePreferences } from "../vault/preferences";
@@ -385,7 +385,7 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
       }
       if (a.dataset.external) {
         e.preventDefault();
-        void openExternal(a.getAttribute("href") ?? "");
+        void openWebLink(a.getAttribute("href") ?? "");
         return;
       }
       if (!a.classList.contains("wikilink")) {

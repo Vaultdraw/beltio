@@ -3,16 +3,18 @@
 use super::{err, ioerr, Result};
 use serde::Serialize;
 
-/// https only, with a host and no credentials, parsed as a URL (not a string prefix).
+/// http or https, with a host and no credentials, parsed as a URL (not a string prefix). Plain
+/// http opens too, as in Obsidian and every browser hand-off: the user clicked it (bug hunt BH-2).
 /// Returns the normalised, percent-encoded form, which macOS `open` always parses as a URL.
 fn validate_https(url: &str) -> Result<String> {
-    let invalid = || err("INVALID_URL", "Only https links can be opened");
+    let invalid = || err("INVALID_URL", "Only web links (http or https) can be opened");
+    let rest = url.strip_prefix("https://").or_else(|| url.strip_prefix("http://"));
     // `https:///x` would be normalised to host `x`: never a real link, so refuse it.
-    if url.len() > 4096 || !url.starts_with("https://") || url[8..].starts_with('/') {
+    if url.len() > 4096 || rest.is_none_or(|r| r.starts_with('/')) {
         return Err(invalid());
     }
     let parsed = tauri::Url::parse(url).map_err(|_| invalid())?;
-    let https_with_host = parsed.scheme() == "https"
+    let https_with_host = matches!(parsed.scheme(), "https" | "http")
         && parsed.host_str().is_some_and(|h| !h.is_empty())
         && parsed.username().is_empty()
         && parsed.password().is_none();
@@ -179,11 +181,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn accepts_https_only() {
-        let ok = "https://github.com/Vaultdraw/vaultdraw/issues/new?title=a%20b";
-        assert_eq!(validate_https(ok).unwrap(), ok);
+    fn accepts_web_links_only() {
+        for ok in ["https://github.com/Vaultdraw/vaultdraw/issues/new?title=a%20b", "http://example.com/old"] {
+            assert_eq!(validate_https(ok).unwrap(), ok);
+        }
         for bad in [
-            "http://a.b",
+            "http:///x",
+            "http://u:p@a.b",
+            "ftp://a.b",
             "file:///etc/passwd",
             "javascript:alert(1)",
             "HTTPS://a.b",

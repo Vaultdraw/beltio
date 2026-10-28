@@ -4,6 +4,8 @@ import {
   loadTauriInvoke,
 } from "../vault/DesktopVaultRepository";
 
+import { toastStore } from "../toasts/toastStore";
+
 import { bugReportUrl, featureRequestUrl } from "./links";
 
 import type { ReportEnv } from "./links";
@@ -17,6 +19,28 @@ export async function openExternal(url: string): Promise<void> {
   }
   // Browser preview and tests only.
   window.open(url, "_blank", "noopener,noreferrer");
+}
+
+/** A web link (`http`, `https`) the browser can take; `mailto:` and the rest stay with the caller. */
+export const isWebLink = (url: string): boolean =>
+  /^https?:\/\//i.test(url.trim());
+
+/**
+ * Opens a link the user clicked and never fails silently: a refusal or a missing browser shows
+ * a notice. Every click-to-open path uses this (bug hunt BH-2: note links did nothing).
+ */
+export function openWebLink(
+  url: string,
+  opts: { open?: () => Promise<void>; label?: string } = {},
+): Promise<void> {
+  return (opts.open ?? (() => openExternal(url)))().catch((err: unknown) => {
+    toastStore.push({
+      kind: "error",
+      message: `Couldn't open ${opts.label ?? url}: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    });
+  });
 }
 
 async function reportEnv(): Promise<ReportEnv> {

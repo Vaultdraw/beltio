@@ -68,12 +68,17 @@ describe("onLinkOpen", () => {
     expect(cb.openDrawing).not.toHaveBeenCalled();
   });
 
-  it("leaves web links to the editor", () => {
-    const { cb, handler } = setup();
+  it("sends web links to the default browser, not the webview's window.open", () => {
+    const { cb } = setup();
+    const openWeb = vi.fn();
+    const handler = createOnLinkOpen(() => false, openWeb);
     const ev = event();
     handler({ link: "https://example.com" }, ev);
-    handler({ link: null }, ev);
-    expect(ev.preventDefault).not.toHaveBeenCalled();
+    expect(ev.preventDefault).toHaveBeenCalledTimes(1);
+    expect(openWeb).toHaveBeenCalledWith("https://example.com");
+    const none = event();
+    handler({ link: null }, none);
+    expect(none.preventDefault).not.toHaveBeenCalled();
     expect(cb.openDrawing).not.toHaveBeenCalled();
     expect(targetOf("https://x")).toBeNull();
   });

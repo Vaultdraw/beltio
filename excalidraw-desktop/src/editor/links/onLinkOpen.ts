@@ -4,6 +4,7 @@
  * selection". Vault links and `/...` links never reach `window.open`, which
  * would navigate the webview.
  */
+import { isWebLink, openWebLink } from "../../help/openExternal";
 import { findLinks, parseLinkField } from "../../links/grammar";
 
 import type { LinkResolver } from "../../links/resolve";
@@ -94,9 +95,13 @@ export function iconLinkTarget(
   return native.button === 1 || (mod && !!native.shiftKey) ? "new" : "current";
 }
 
-/** The handler for `<Excalidraw onLinkOpen>`. */
+/**
+ * The handler for `<Excalidraw onLinkOpen>`. Web links go to the default browser through the
+ * native opener: Excalidraw's own `window.open(_blank)` does nothing in the desktop webview.
+ */
 export function createOnLinkOpen(
   openRaw: (raw: string, opts?: LinkOpenOptions) => boolean,
+  openWeb: (url: string) => unknown = openWebLink,
 ) {
   return (element: LinkElement, event: LinkOpenEvent): void => {
     const link = element.link;
@@ -108,6 +113,9 @@ export function createOnLinkOpen(
       openRaw(link, { target: iconLinkTarget(event.detail?.nativeEvent) });
     } else if (link.startsWith("/")) {
       event.preventDefault();
+    } else if (isWebLink(link)) {
+      event.preventDefault();
+      openWeb(link.trim());
     }
   };
 }

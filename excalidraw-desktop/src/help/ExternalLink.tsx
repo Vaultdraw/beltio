@@ -1,4 +1,4 @@
-import { openExternal } from "./openExternal";
+import { openExternal, openWebLink } from "./openExternal";
 
 import type { MouseEvent, ReactNode } from "react";
 
@@ -6,7 +6,7 @@ interface Props {
   href: string;
   children: ReactNode;
   className?: string;
-  /** Called when the browser could not be opened. */
+  /** Called when the browser could not be opened; without it a notice says so. */
   onError?: (message: string) => void;
 }
 
@@ -22,9 +22,13 @@ export const ExternalLink = ({ href, children, className, onError }: Props) => (
     onClick={(e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      void openExternal(href).catch(() =>
-        onError?.("Couldn't open the link in the browser."),
-      );
+      if (onError) {
+        void openExternal(href).catch(() =>
+          onError("Couldn't open the link in the browser."),
+        );
+      } else {
+        void openWebLink(href);
+      }
     }}
   >
     {children}
