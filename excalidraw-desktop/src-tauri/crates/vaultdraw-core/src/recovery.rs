@@ -64,16 +64,30 @@ pub fn create_recovery(
     json: &str,
 ) -> Result<PathBuf> {
     let dir = recovery_dir(v)?;
-    // One record per drawing path: a new snapshot replaces the previous failed one (same file name),
-    // so repeated failed commits never fill the store. A successful save removes it.
-    let file = dir.join(format!("p-{}.json", &revision(path.as_bytes())[..32]));
+    // One record per drawing path AND process session: a new snapshot replaces only this session's
+    // previous failed one, so repeated failed commits never fill the store. A record left by an
+    // earlier session (crash, discarded close) keeps its own name and is never replaced or removed
+    // by a save; it stays listed for the recovery dialog.
+    let prefix = format!("p-{}-", &revision(path.as_bytes())[..32]);
+    let file = dir.join(format!("{prefix}{}.json", session_id()));
     let mut total = 0u64;
+    // (modified, size, path, group) of other sessions' records, for cap pruning.
+    let mut others: Vec<(SystemTime, u64, PathBuf, String)> = Vec::new();
     for entry in fs::read_dir(&dir).map_err(ioerr)? {
         let entry = entry.map_err(ioerr)?;
         let ty = entry.file_type().map_err(ioerr)?;
         if ty.is_symlink() { return Err(err("INVALID_PATH", "Recovery metadata contains a symbolic link")); }
         // The record about to be replaced does not count against the cap.
-        if ty.is_file() && entry.path() != file { total = total.saturating_add(entry.metadata().map_err(ioerr)?.len()); }
+        if ty.is_file() && entry.path() != file {
+            let md = entry.metadata().map_err(ioerr)?;
+            total = total.saturating_add(md.len());
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name.ends_with(".json") {
+                // Group = path hash (`p-<hash>-`); legacy random-named records form their own group.
+                let group = name.strip_prefix("p-").and_then(|r| r.get(..32)).map(str::to_string).unwrap_or_else(|| name.clone());
+                others.push((md.modified().unwrap_or(SystemTime::UNIX_EPOCH), md.len(), entry.path(), group));
+            }
+        }
     }
     let record = RecoveryRecord {
         path: path.into(),
@@ -86,6 +100,17 @@ pub fn create_recovery(
     // without materialising the escaped record in memory.
     let mut counter = CountingWriter(0);
     serde_json::to_writer(&mut counter, &record).map_err(|e| err("INTERNAL", e.to_string()))?;
+    if counter.0 <= MAX_RECOVERY_RECORD_BYTES && total.saturating_add(counter.0) > MAX_RECOVERY_BYTES {
+        // Over the cap: prune the oldest earlier-session records, never the newest per drawing.
+        others.sort_by_key(|o| o.0);
+        let mut newest: std::collections::HashMap<String, SystemTime> = std::collections::HashMap::new();
+        for o in &others { let e = newest.entry(o.3.clone()).or_insert(o.0); if o.0 > *e { *e = o.0; } }
+        for o in &others {
+            if total.saturating_add(counter.0) <= MAX_RECOVERY_BYTES { break; }
+            if newest.get(&o.3) == Some(&o.0) { continue; }
+            if fs::remove_file(&o.2).is_ok() { total = total.saturating_sub(o.1); }
+        }
+    }
     if counter.0 > MAX_RECOVERY_RECORD_BYTES || total.saturating_add(counter.0) > MAX_RECOVERY_BYTES {
         return Err(err(
             "RECOVERY_FULL",
@@ -100,6 +125,11 @@ pub fn create_recovery(
     })?;
     if let Err(e) = fs::rename(&staged, &file) { let _ = fs::remove_file(&staged); return Err(ioerr(e)); }
     Ok(file)
+}
+/// Random id of this process run; part of every record name so sessions never overwrite each other.
+fn session_id() -> &'static str {
+    static ID: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    ID.get_or_init(random_id)
 }
 /// `Write` sink that only counts bytes.
 #[doc(hidden)]
@@ -143,11 +173,11 @@ pub fn list_recovery(v: &Vault) -> Result<Vec<RecoveryEntry>> {
             continue;
         }
         let md = entry.metadata().map_err(ioerr)?;
-        total = total.saturating_add(md.len());
-        // An over-limit record is skipped, not fatal: one bad file must not hide the others.
-        if total > MAX_RECOVERY_BYTES || md.len() > MAX_RECOVERY_RECORD_BYTES {
+        // An over-limit record is skipped (and not counted), not fatal: one bad file must not hide the others.
+        if md.len() > MAX_RECOVERY_RECORD_BYTES || total.saturating_add(md.len()) > MAX_RECOVERY_BYTES {
             continue;
         }
+        total = total.saturating_add(md.len());
         let data = read_bounded(&entry.path(), MAX_RECOVERY_RECORD_BYTES)?;
         let record: RecoveryRecord<'_> = match serde_json::from_slice(&data) {
             Ok(r) => r,

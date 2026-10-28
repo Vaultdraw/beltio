@@ -446,3 +446,42 @@ fn recovery_listing_skips_an_over_limit_record() {
     big.set_len(MAX_RECOVERY_RECORD_BYTES + 1).unwrap();
     assert_eq!(list_recovery(&v).unwrap().len(), 1);
 }
+#[test]
+fn an_earlier_session_recovery_record_survives_a_later_successful_save() {
+    let t = tempdir().unwrap(); let v = vault(t.path());
+    fs::write(t.path().join("a.excalidraw"), SCENE).unwrap();
+    let rev = revision(SCENE.as_bytes());
+    let unsaved = SCENE.replace("\"version\":2", "\"version\":3");
+    let fail = |_: &Path, _: &[u8], _: bool| -> Result<()> { Err(err("IO", "crash")) };
+    assert!(write_drawing_file_with_commit(&v, "a.excalidraw", &unsaved, Some(&rev), "op1", fail).is_err());
+    let dir = checked_recovery_dir(&v, false).unwrap().unwrap();
+    // "Relaunch": the record now belongs to an earlier session.
+    let old = fs::read_dir(&dir).unwrap().next().unwrap().unwrap().path();
+    let earlier = old.with_file_name(format!("{}-earlier.json", old.file_stem().unwrap().to_string_lossy().rsplit_once('-').unwrap().0));
+    fs::rename(&old, &earlier).unwrap();
+    let other = SCENE.replace("\"version\":2", "\"version\":4");
+    write_drawing_file(&v, "a.excalidraw", &other, Some(&rev), "ok").unwrap();
+    assert!(earlier.exists(), "a save must not delete an earlier session's record");
+    let listed = list_recovery(&v).unwrap();
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].json, unsaved);
+}
+#[test]
+fn over_the_cap_prunes_old_session_records_but_never_the_newest_per_drawing() {
+    let t = tempdir().unwrap(); let v = vault(t.path());
+    let dir = recovery_dir(&v).unwrap();
+    let h = &revision(b"a.excalidraw")[..32];
+    let h2 = &revision(b"b.excalidraw")[..32];
+    let mk = |name: String, age: u64| {
+        let f = fs::File::create(dir.join(&name)).unwrap();
+        f.set_len(22 * 1024 * 1024).unwrap();
+        f.set_modified(std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1000 + age)).unwrap();
+    };
+    mk(format!("p-{h}-s1.json"), 1);
+    mk(format!("p-{h}-s2.json"), 2);
+    mk(format!("p-{h2}-s1.json"), 0);
+    create_recovery(&v, "c.excalidraw", None, "op", SCENE).unwrap();
+    assert!(!dir.join(format!("p-{h}-s1.json")).exists(), "oldest duplicate pruned");
+    assert!(dir.join(format!("p-{h}-s2.json")).exists());
+    assert!(dir.join(format!("p-{h2}-s1.json")).exists(), "newest of its drawing kept even though oldest overall");
+}
