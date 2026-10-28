@@ -270,7 +270,9 @@ describe("SettingsModal component and preference persistence", () => {
         />,
       );
       fireEvent.click(screen.getByRole("tab", { name: "General" }));
-      expect(screen.getByText("/cfg/config.toml")).toBeInTheDocument();
+      expect(screen.getAllByTitle("/cfg/config.toml").length).toBeGreaterThan(
+        0,
+      );
 
       fireEvent.click(
         screen.getByRole("button", { name: /open config folder/i }),
