@@ -341,6 +341,17 @@ autosave_delay_ms = 500
 # Edits made before history starts are not versioned.
 # start = "open"
 
+[backup]
+# Scheduled backups of the open vault: off | daily | weekly (a manual backup needs no setting).
+# Needs a folder outside the vault; takes effect the next time a vault opens.
+# every = "off"
+# folder = "~/Backups/vaultdraw"
+# Backups of this vault to keep in the folder (older ones made by this feature are deleted)
+# keep = 5
+# Also put the vault's settings.toml, and optionally the file history, in the zip
+# include_settings = true
+# include_history = false
+
 [plugins]
 # Ids of the plugins to load from the plugins/ folder, like ["hello-command"].
 # Official plugins (markdown-import, gallery) are on by default and load on first use;
@@ -1670,7 +1681,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 137, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 142, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();

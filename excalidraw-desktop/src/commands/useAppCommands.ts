@@ -69,6 +69,10 @@ export interface AppCommandActions {
   resolveConflict?: () => void;
   /** Only while the vault is open read-only. */
   retryWritable?: () => void;
+  /** "Vault: Back up vault…" (desktop app). */
+  backupVault?: () => void;
+  /** "Vault: Restore from backup…" (desktop app). */
+  restoreBackup?: () => void;
 }
 
 export function appCommandHandlers(
@@ -125,6 +129,8 @@ export function appCommandHandlers(
     "vault.openRecovered": actions.openRecovered,
     "file.resolveConflict": actions.resolveConflict,
     "vault.retryWritable": actions.retryWritable,
+    "vault.backup": actions.backupVault,
+    "vault.restoreBackup": actions.restoreBackup,
     ...Object.fromEntries(
       SETTINGS_PAGES.filter((page) => page.id !== "hotkeys").map((page) => [
         settingsPageCommandId(page.id),

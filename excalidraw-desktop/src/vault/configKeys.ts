@@ -24,6 +24,11 @@ export const NATIVE_KEYS: readonly string[] = [
   "control.enabled",
   "control.uri_enabled",
   "control.uri_allow",
+  "backup.every",
+  "backup.folder",
+  "backup.keep",
+  "backup.include_settings",
+  "backup.include_history",
 ];
 
 export interface UnknownKey {

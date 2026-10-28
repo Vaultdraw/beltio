@@ -74,6 +74,7 @@ The Excalidraw editor, plus what you need once you have more than one drawing:
 
 - Your drawings are ordinary `.excalidraw` files in a folder you pick: back them up, sync them or open them anywhere.
 - A file tree and tabs, autosave and crash recovery; changes made outside the app are picked up without losing your edits.
+- Backups: one zip of your vault to a folder you pick, checked after writing; restore goes into a new folder, never over anything. Optional daily or weekly schedule, and `vaultdraw backup` / `vaultdraw restore` from a terminal.
 - Page mode (A4, Letter or custom pages) with PDF export, notebook paper, and PNG, SVG or clipboard export. The official Auto-export plugin (off until you turn it on) keeps an SVG or PNG copy of each drawing next to it, or in an export folder, every time you save.
 - Mermaid diagrams and LaTeX formulas, converted offline. Everything works offline; there is no account and no telemetry.
 - A plain-text config folder you can edit by hand, and a `vaultdraw` command for the terminal.

@@ -11,7 +11,7 @@ import {
   spliceReference,
 } from "../vault/configReference";
 import { currentReference } from "../vault/configReferenceDoc";
-import { OPEN_TABLES } from "../vault/configKeys";
+import { NATIVE_KEYS, OPEN_TABLES } from "../vault/configKeys";
 import { CONFIG_MAPPING } from "../vault/settingsSync";
 
 const root = resolve(__dirname, "../../..");
@@ -91,6 +91,8 @@ describe("config reference", () => {
     const known = new Set([
       ...CONFIG_REFERENCE.map((t) => t.table),
       ...OPEN_TABLES,
+      // Tables only the native side reads (backup, control).
+      ...NATIVE_KEYS.map((k) => k.split(".")[0]),
     ]);
     const unknown = [...sections(defaultConfig()).keys()].filter(
       (t) => !known.has(t),

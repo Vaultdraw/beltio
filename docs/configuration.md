@@ -1318,6 +1318,35 @@ To make a template, choose **Save as template…** in a drawing's ⋯ menu, then
 
 Templates are left out of the Recent list. They still appear in the navigator, where you can open and edit them.
 
+## Backups
+
+A backup is one zip of your vault that you can keep anywhere. It is made in the background, checked after it is written, and never changes the vault. Nothing runs on a schedule unless you turn it on.
+
+1. **Back up:** palette `Vault: Back up vault…` (or Settings, General, Backup). Pick a folder outside the vault. The zip is `<vault name> backup <date>.zip` (` (2)` when that name is taken). A notice shows progress with **Cancel**; a cancelled or failed backup leaves no zip behind.
+2. **Restore:** palette `Vault: Restore from backup…`. Pick the zip, then a folder to put the restored vault in. It is extracted into a **new** folder (`<zip name> restored`), never over anything that exists; then **Open as vault** opens it.
+3. **From a terminal (no app needed):** `vaultdraw backup [--to <dir>] [--history] [--no-settings]` and `vaultdraw restore <zip> <dir>` (`<dir>` must not exist). `--vault <path>` picks the vault.
+
+| What | In the zip |
+| --- | --- |
+| Drawings, notes, attachments, folders | always |
+| `.excalidraw-vault/settings.toml` | `include_settings` (default on) |
+| File history | `include_history` (default off, it can be large) |
+| Other dot-folders (`.git`, trash, recovery data), symbolic links | never |
+
+- **Checked:** after writing, the zip is read back and each file's SHA-256 is compared with what was read from the vault. A zip that fails is deleted. Restore checks every file again and removes the new folder if anything is wrong.
+- **Scheduled:** set `[backup] every = "daily"` or `"weekly"` and a `folder`. After a vault opens (and then hourly) the app writes a backup when the newest one is older than the period, then deletes the oldest beyond `keep`. Only `<vault> backup <date>….zip` files that contain the backup list are deleted; nothing else in the folder is touched. With `every = "off"` (the default) no thread is started. Changing `every` takes effect the next time a vault opens.
+- **Limits:** a plain zip: under 4 GiB, under 65 534 files, else the backup is refused with a message. A file changed while it is read gets whatever was read; the check covers the zip, not later edits. A backup killed from outside can leave a `.part` file; it is incomplete and safe to delete.
+
+| Key | Default | What it does |
+| --- | --- | --- |
+| `backup.every` | `"off"` | `off`, `daily` or `weekly` |
+| `backup.folder` | none | where scheduled backups go and the default for `vaultdraw backup` (`~/` works) |
+| `backup.keep` | `5` | backups of this vault to keep, at least 1 |
+| `backup.include_settings` | `true` | include the vault's `settings.toml` |
+| `backup.include_history` | `false` | include the file history |
+
+Commands: `vault.backup`, `vault.restoreBackup` (palette, rebindable).
+
 ## Memory
 
 Big images are the largest thing a drawing keeps in memory. Vaultdraw releases an image's data as soon as nothing can bring it back, so deleting images actually gives the memory back.

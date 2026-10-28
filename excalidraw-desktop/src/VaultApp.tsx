@@ -63,6 +63,7 @@ import { getNewDrawingPaper } from "./vault/newDrawingPaper";
 import { isPageCommandChecked } from "./page/pageStatus";
 import {
   getSettingsStatus,
+  isConfigFolderActive,
   isWarning,
   PREFERENCES_CHANGED_EVENT,
   SETTINGS_STATUS_EVENT,
@@ -149,6 +150,7 @@ import { useGraphEntry } from "./commands/useGraphEntry";
 import { createDesktopThumbnailStore } from "./thumbnails/desktopStore";
 import { ThumbnailsRoot } from "./thumbnails/ThumbnailsRoot";
 import { HistoryHost } from "./history/HistoryHost";
+import { runBackup, runRestore } from "./backup/backupJob";
 import { setAppCommandRunner } from "./commands/appRunner";
 import { flushPluginData, pluginHostStarted } from "./plugins/hostFlag";
 import { usePluginSettingProblems } from "./plugins/settings/usePluginSettingProblems";
@@ -2280,6 +2282,22 @@ export const VaultApp = ({
       recoveryCount > 0 ? () => setShowRecoveryDialog(true) : undefined,
     resolveConflict:
       saveStatus === "conflict" ? () => setShowConflictDialog(true) : undefined,
+    backupVault:
+      vault && isConfigFolderActive()
+        ? () => void runBackup(vault.handle)
+        : undefined,
+    restoreBackup: isConfigFolderActive()
+      ? () =>
+          void runRestore(async (path) => {
+            const chosen = await openVaultAtPath(path);
+            try {
+              await safelySwitchVault(chosen);
+            } catch (err) {
+              await repository.releaseVault(chosen.handle).catch(() => {});
+              throw err;
+            }
+          })
+      : undefined,
     retryWritable:
       vault?.readOnly && idle ? () => void handleRetryWritable() : undefined,
   });

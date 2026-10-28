@@ -50,6 +50,7 @@ import { LIST_COMMANDS } from "./listCommands";
 import { THEME_BROWSER_COMMANDS, THEME_COMMANDS } from "./themeCommands";
 import { THUMBNAIL_COMMANDS } from "./thumbnailCommands";
 import { CONFIG_COMMANDS } from "./configCommands";
+import { BACKUP_COMMANDS } from "./backupCommands";
 import { PROFILE_COMMANDS } from "./profileCommands";
 import { MEMORY_COMMANDS } from "./memoryCommands";
 import { WATCHDOG_COMMANDS } from "./watchdogCommands";
@@ -674,6 +675,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...WINDOW_COMMANDS,
   ...CONFIG_COMMANDS,
   ...PROFILE_COMMANDS,
+  ...BACKUP_COMMANDS,
   ...THEME_COMMANDS,
   ...THEME_BROWSER_COMMANDS,
   ...HELP_COMMANDS,

@@ -283,6 +283,44 @@ const EXTRA_KEYS: Readonly<Record<string, Readonly<Record<string, Schema>>>> = {
 
 /** Tables only the native side reads (NATIVE_KEYS in configKeys.ts). */
 const NATIVE_TABLES: Readonly<Record<string, Schema>> = {
+  backup: {
+    type: "object",
+    description:
+      "Scheduled vault backups (a manual backup needs none of these). See Backups.",
+    additionalProperties: false,
+    properties: {
+      every: {
+        description:
+          "`off`, `daily` or `weekly`: write a backup when the newest one is older than that. Takes effect the next time a vault opens.",
+        default: "off",
+        type: "string",
+        enum: ["off", "daily", "weekly"],
+      },
+      folder: {
+        description:
+          "Where scheduled backups go; not inside the vault. `~/` starts at your home folder.",
+        type: "string",
+      },
+      keep: {
+        description:
+          "Backups of this vault to keep in `folder`; older ones this feature made are deleted. At least 1.",
+        default: 5,
+        type: "integer",
+        minimum: 1,
+        maximum: 1000,
+      },
+      include_settings: {
+        description: "Include the vault's `.excalidraw-vault/settings.toml`.",
+        default: true,
+        type: "boolean",
+      },
+      include_history: {
+        description: "Include the file history; it can be large.",
+        default: false,
+        type: "boolean",
+      },
+    },
+  },
   control: {
     type: "object",
     description: "The control socket for the `vaultdraw` command.",

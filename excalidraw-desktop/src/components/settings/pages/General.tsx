@@ -4,6 +4,8 @@ import {
   requestResetOverrides,
   runConfigCheck,
 } from "../../../commands/configCommands";
+import { getAppCommandRunner } from "../../../commands/appRunner";
+import { BACKUP_COMMAND_IDS } from "../../../commands/backupCommands";
 import { openProfileDialog } from "../../../commands/profileCommands";
 import { layerFileName } from "../../../vault/configSources";
 import { DEFAULT_PROFILE, switchProfile } from "../../../vault/profiles";
@@ -324,7 +326,37 @@ const ProfileSetting = () => {
   );
 };
 
+/** Back up the open vault to a zip, or restore one into a new folder. */
+const BackupSetting = () => {
+  const run = (id: string) => () => void getAppCommandRunner()?.(id);
+  return (
+    <SettingRow id="backup" testId="settings-backup-row">
+      <div className="vault-config-actions">
+        <button
+          type="button"
+          className="vault-btn vault-btn--sm"
+          onClick={run(BACKUP_COMMAND_IDS.backup)}
+        >
+          Back up vault…
+        </button>
+        <button
+          type="button"
+          className="vault-btn vault-btn--sm"
+          onClick={run(BACKUP_COMMAND_IDS.restore)}
+        >
+          Restore from backup…
+        </button>
+      </div>
+    </SettingRow>
+  );
+};
+
 export const generalControls: SettingControls = {
+  backup: {
+    Component: BackupSetting,
+    // The files are written by the desktop app.
+    searchable: (ctx) => ctx.settingsStatus.mode === "tauri",
+  },
   profile: {
     Component: ProfileSetting,
     // Profiles are files in the config folder: desktop only.

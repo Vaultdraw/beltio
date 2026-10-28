@@ -15,6 +15,8 @@ type HarnessWindow = Window & {
   __e2eProfile?: string | null;
   /** The report `config_check` returns (default: a clean one). */
   __e2eCheck?: Record<string, unknown>;
+  /** The vault handle `backup_start` was called with. */
+  __e2eBackupHandle?: string;
 };
 
 const merge = (base: Table, higher: Table): Table => {
@@ -115,6 +117,24 @@ export function startConfigHarness(win: Window) {
       }
       echo();
       return null;
+    }
+    if (cmd === "backup_start") {
+      w.__e2eBackupHandle = (args as { handle: string }).handle;
+      return "/backups";
+    }
+    if (cmd === "backup_status") {
+      return {
+        kind: "backup",
+        running: false,
+        phase: "writing",
+        filesDone: 3,
+        filesTotal: 3,
+        bytesDone: 30,
+        bytesTotal: 30,
+        path: "/backups/vault backup 2026-10-28.zip",
+        files: 3,
+        error: null,
+      };
     }
     if (cmd === "config_check") {
       return (

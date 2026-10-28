@@ -138,6 +138,14 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     keywords: ["profiles", "switch", "workspace", "config", "keys", "theme"],
   },
   {
+    id: "backup",
+    page: "general",
+    label: "Backup",
+    description:
+      "Write a zip of this vault (drawings, notes, attachments) to a folder you pick, checked after writing. Restore puts a backup into a new folder and never overwrites anything. Schedule it with [backup] in config.toml.",
+    keywords: ["backup", "restore", "archive", "zip", "export"],
+  },
+  {
     id: "config-file",
     page: "general",
     label: "Config File",
