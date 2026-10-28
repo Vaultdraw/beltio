@@ -117,7 +117,8 @@ export async function runObsidianTrial(): Promise<void> {
         )}`,
       );
     });
-    await log("trial:import-begin");
+    const visBegin = `${doc.visibilityState}/${doc.hasFocus()}`;
+    await log("trial:import-begin", { visibility: visBegin });
     const t0 = win.performance.now();
     void Promise.resolve(handler()).catch((e: unknown) =>
       errors.push(`handler: ${String(e)}`),
@@ -180,6 +181,8 @@ export async function runObsidianTrial(): Promise<void> {
         trial: {
           bootedByHand,
           importMs,
+          visibilityAtBegin: visBegin,
+          visibilityAtEnd: `${doc.visibilityState}/${doc.hasFocus()}`,
           toast: toastText,
           treeRows: doc.querySelectorAll(".vault-tree-item").length,
           opened,

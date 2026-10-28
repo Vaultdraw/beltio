@@ -5,7 +5,7 @@
 // --mode inplace: opens --src as a vault in place instead (no --out).
 // Usage: node scripts/obsidian-trial.mjs --app <Vaultdraw.app> --src <vault copy> --out <new vault> --run <scratch dir>
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { discoverWebKitHelpers, sampleFootprint, snapshotWebKitPids, trackChild } from "../perf/lib/procs.mjs";
 import { parseSmokeLine } from "../perf/lib/app.mjs";
@@ -50,14 +50,25 @@ let closed = false;
 let code = null;
 child.on("close", (c) => ((closed = true), (code = c)));
 const peak = { total: 0, atImportEnd: 0 };
+// Fallback end-of-import signal that doesn't depend on the toast (a new-vault import reloads the window, so the
+// in-page waiter can miss it): the --out folder stops growing for 15 s. Then 20 s of idle samples, then stop.
+const countFiles = (d) => { let n = 0; try { for (const e of readdirSync(d, { withFileTypes: true })) n += e.isDirectory() ? countFiles(path.join(d, e.name)) : 1; } catch {} return n; };
+let outCount = 0, outFirstAt = null, outLastGrowAt = null, outPollAt = 0, stoppedBy = null;
 const series = [];
 const deadline = Date.now() + 45 * 60_000;
 while (!closed && Date.now() < deadline) {
   const helpers = await discoverWebKitHelpers(before);
   const fp = await sampleFootprint([child.pid, ...helpers]);
   const total = [...fp.values()].reduce((a, v) => a + v.footprint, 0) / 1048576;
+  if (total > peak.total) peak.perProcess = [...fp.entries()].map(([pid, v]) => [pid === child.pid ? "app" : `helper${pid}`, Math.round(v.footprint / 1048576)]);
   peak.total = Math.max(peak.total, total);
   series.push([Date.now() - t0, Math.round(total)]);
+  if (out && Date.now() - outPollAt > 2000) {
+    outPollAt = Date.now();
+    const n = countFiles(out);
+    if (n !== outCount) { outCount = n; outLastGrowAt = Date.now() - t0; outFirstAt ??= outLastGrowAt; }
+    if (outCount > 0 && marks["trial:import-begin"] && Date.now() - t0 - outLastGrowAt > 35_000) { stoppedBy = "out-quiet"; break; }
+  }
   await new Promise((r) => setTimeout(r, 250));
 }
 if (!closed) child.kill("SIGKILL");
@@ -66,6 +77,15 @@ const summary = {
   exit: code,
   marks,
   peakTotalMB: Math.round(peak.total),
+  stoppedBy,
+  peakPerProcessMB: peak.perProcess,
+  outFiles: outCount,
+  outFirstFileAtMs: outFirstAt,
+  outLastGrowAtMs: outLastGrowAt,
+  importMsFromOut: outFirstAt != null ? outLastGrowAt - outFirstAt : null,
+  memAtOutLastGrowMB: outLastGrowAt != null ? at(outLastGrowAt) : null,
+  memIdleAfterMB: series.at(-1)?.[1] ?? null,
+  seriesEvery5s: series.filter((_, i) => i % 20 === 0),
   memAtImportBeginMB: marks["trial:import-begin"] ? at(marks["trial:import-begin"]) : null,
   memAtImportEndMB: marks["trial:import-end"] ? at(marks["trial:import-end"]) : null,
   memAtEndMB: series.at(-1)?.[1] ?? null,
