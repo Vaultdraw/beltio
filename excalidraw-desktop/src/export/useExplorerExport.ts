@@ -3,6 +3,7 @@
 import { useCallback, useRef } from "react";
 
 import { loadExportOptions } from "../editor/exportOptions";
+import { toastStore } from "../toasts/toastStore";
 
 import { exportDrawingFromVault } from "./exportFromFile";
 
@@ -43,7 +44,12 @@ export const useExplorerExport = (input: {
   return useCallback(async (path: string, format: ExplorerExportFormat) => {
     const { repository, vault, win, dark, flushIfOpen, setAlert } =
       latest.current;
-    if (!vault || !win || running.current) {
+    if (!vault || !win) {
+      return;
+    }
+    if (running.current) {
+      // Say so instead of ignoring the click (bug hunt BH-12).
+      toastStore.push({ message: "An export is already running" });
       return;
     }
     running.current = true;

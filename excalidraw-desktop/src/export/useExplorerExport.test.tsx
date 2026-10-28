@@ -1,5 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { toastStore } from "../toasts/toastStore";
 
 import { FakeVaultRepository } from "../tests/fakeVaultRepository";
 import { SAMPLE_SCENE } from "../tests/fixtures";
@@ -76,8 +79,13 @@ describe("useExplorerExport", () => {
     // Rendering done: the notice goes before the save dialog opens.
     exportDrawingFromVault.mock.calls[0][0].onRendered();
     expect(setAlert).toHaveBeenLastCalledWith(null);
-    // A second request while one runs is ignored.
+    // A second request while one runs says so and starts nothing.
+    const push = vi.spyOn(toastStore, "push");
     await act(() => result.current("A/Graphs.excalidraw", "png"));
+    expect(push).toHaveBeenCalledWith({
+      message: "An export is already running",
+    });
+    push.mockRestore();
     expect(exportDrawingFromVault).toHaveBeenCalledTimes(1);
     await act(async () => {
       finish(true);
