@@ -17,6 +17,7 @@
  * | html | the text, muted |
  */
 import { headingRole } from "./fonts";
+import { htmlImages, literalImages } from "./literalImages";
 
 import type { NoteBlock, NoteDoc, NoteInline } from "@vaultdraw/api";
 import type { RoleName } from "./fonts";
@@ -126,6 +127,21 @@ const marker = (b: Extract<NoteBlock, { kind: "listItem" }>): string => {
   return b.ordered ? `${b.marker} ` : "• ";
 };
 
+const imageOf = (b: {
+  target: string;
+  alt?: string;
+  width?: number;
+  height?: number;
+}): MappedImage => ({
+  kind: "image",
+  target: b.target,
+  mimeType: mimeOf(b.target),
+  spaceBefore: SPACE.block,
+  ...(b.alt ? { alt: b.alt } : {}),
+  ...(b.width ? { width: b.width } : {}),
+  ...(b.height ? { height: b.height } : {}),
+});
+
 const text = (
   role: RoleName,
   t: string,
@@ -182,6 +198,13 @@ function* mapBlocks(
         break;
       }
       case "paragraph": {
+        const pieces = literalImages(b.text);
+        if (pieces) {
+          for (const p of pieces) {
+            yield p.kind === "text" ? text("body", p.text) : imageOf(p);
+          }
+          break;
+        }
         const link = wholeLink(b.text, b.inline);
         yield text("body", b.text, link ? { link, tone: "link" } : {});
         break;
@@ -226,15 +249,7 @@ function* mapBlocks(
         };
         break;
       case "image":
-        yield {
-          kind: "image",
-          target: b.target,
-          mimeType: mimeOf(b.target),
-          spaceBefore: SPACE.block,
-          ...(b.alt ? { alt: b.alt } : {}),
-          ...(b.width ? { width: b.width } : {}),
-          ...(b.height ? { height: b.height } : {}),
-        };
+        yield imageOf(b);
         break;
       case "embed": {
         const ref =
@@ -250,9 +265,17 @@ function* mapBlocks(
       case "footnoteDef":
         footnotes.push(b);
         break;
-      case "html":
+      case "html": {
+        const imgs = htmlImages(b.text);
+        if (imgs) {
+          for (const p of imgs) {
+            yield imageOf(p);
+          }
+          break;
+        }
         yield text("body", b.text, { tone: "muted" });
         break;
+      }
       default:
         break;
     }

@@ -11,6 +11,8 @@
  * The source is only read. Every write is create-only, so nothing in the target is overwritten;
  * a failing file is recorded and the import goes on. Notes come first so `first` is a note.
  */
+import { looksLike } from "../../../../../sdk/api/shared/sceneRules";
+
 import { LinkResolver, rewriteLinks } from "./links";
 import { partPath, planImport, type PlanItem } from "./plan";
 
@@ -26,6 +28,10 @@ import type { PageItem } from "../layout/types";
 
 /** Images above this size are not embedded (the drawing keeps a placeholder). */
 export const MAX_EMBED_BYTES = 4 * 1024 * 1024;
+
+/** The picture type the bytes really are, or null. */
+export const sniffMime = (bytes: Uint8Array): string | null =>
+  [...EMBEDDABLE].find((m) => looksLike(m, bytes)) ?? null;
 
 /** The picture types a drawing can hold (the scene API's list). */
 const EMBEDDABLE = new Set([
@@ -87,7 +93,12 @@ export async function importObsidianVault(
   const entries = await source.list();
   const sizes = new Map(entries.map((e) => [e.path, e.size]));
   const plan = planImport(entries, settings);
-  const resolver = new LinkResolver(plan.items);
+  // Images resolve against every file of the vault, also when copying attachments is switched off.
+  const resolver = new LinkResolver(
+    settings.obsidianAttachments
+      ? plan.items
+      : planImport(entries, { ...settings, obsidianAttachments: true }).items,
+  );
   const setup = { size: settings.pageSize, layout: "separate" as const };
 
   const result: ObsidianImportResult = {
@@ -169,6 +180,11 @@ export async function importObsidianVault(
     }
   };
 
+  /** Says in the placeholder box why the picture is not there. */
+  const label = (item: PageItem & { type: "image" }, why: string): void => {
+    item.alt = `${why}: ${item.alt || item.target}`;
+  };
+
   /** Fills `bytes` of image items from the vault's attachments. */
   const fillImages = async (
     items: PageItem[],
@@ -180,24 +196,38 @@ export async function importObsidianVault(
         continue;
       }
       if (REMOTE.test(item.target)) {
-        continue; // never fetched: the import is offline
-      }
-      if (!EMBEDDABLE.has(item.mimeType)) {
-        noteIssue(note, item.target, "unsupported");
-        continue;
+        label(item, "Web image, not downloaded");
+        continue; // never fetched by the import itself: it is offline
       }
       const written = item.target.split(/[?#]/)[0];
       const hit = resolver.resolve(written, ["attachment"], fromDir);
       const size = hit ? sizes.get(hit.path) : undefined;
       if (!hit || size === undefined) {
+        // An unsupported type that is also missing is reported as missing: that is the first problem.
         noteIssue(note, item.target, "missing");
+        label(item, "Image not found");
+      } else if (!EMBEDDABLE.has(item.mimeType)) {
+        noteIssue(note, item.target, "unsupported");
+        label(item, "Image type a drawing cannot hold");
       } else if (size > MAX_EMBED_BYTES) {
         noteIssue(note, item.target, "oversized");
+        label(item, "Image over 4 MB");
       } else {
         try {
-          item.bytes = await source.readBytes(hit.path);
+          const bytes = await source.readBytes(hit.path);
+          // The file's own type decides, not its name: a WebP saved as `.png` is common, and a
+          // picture the drawing refuses would fail the whole note.
+          const mime = sniffMime(bytes);
+          if (!mime) {
+            noteIssue(note, item.target, "unsupported");
+            label(item, "Not a picture a drawing can hold");
+          } else {
+            item.mimeType = mime;
+            item.bytes = bytes;
+          }
         } catch {
           noteIssue(note, item.target, "missing");
+          label(item, "Image not found");
         }
       }
     }

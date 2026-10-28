@@ -43,13 +43,26 @@ const parse = (text: string): NoteDoc => {
   return { ...fakeParseMarkdown(""), blocks };
 };
 
-const bytesOf = (n: number) => new Uint8Array(n).fill(7);
+const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+/** A PNG-looking file of `n` bytes; the byte after the signature is `n`. */
+const pngOf = (n: number) => {
+  const b = new Uint8Array(Math.max(n, 9)).fill(n);
+  b.set(PNG);
+  return b;
+};
+const bytesOf = pngOf;
 
-const source = (files: Record<string, string | number>): SourceFolder => {
+const source = (
+  files: Record<string, string | number | Uint8Array>,
+): SourceFolder => {
   const data = new Map(
     Object.entries(files).map(([p, v]) => [
       p,
-      typeof v === "string" ? new TextEncoder().encode(v) : bytesOf(v),
+      typeof v === "string"
+        ? new TextEncoder().encode(v)
+        : typeof v === "number"
+        ? bytesOf(v)
+        : v,
     ]),
   );
   return {
@@ -70,7 +83,7 @@ const source = (files: Record<string, string | number>): SourceFolder => {
   };
 };
 
-const run = async (files: Record<string, string | number>) => {
+const run = async (files: Record<string, string | number | Uint8Array>) => {
   const written = new Map<string, PageItem[]>();
   const target = {
     name: "out",
@@ -136,11 +149,11 @@ describe("image forms in an import", () => {
   test("a note's own folder wins over a same-named file elsewhere", async () => {
     const files = {
       "a/Note.md": "IMG pic.png",
-      "a/pic.png": 5,
-      "b/pic.png": 9,
+      "a/pic.png": 20,
+      "b/pic.png": 30,
     };
     const { embedded } = await run(files);
-    expect(embedded("a/Note.excalidraw")[0].bytes).toHaveLength(5);
+    expect(embedded("a/Note.excalidraw")[0].bytes).toHaveLength(20);
   });
 
   test("over the cap, unsupported and remote images are counted, not embedded", async () => {
@@ -156,5 +169,26 @@ describe("image forms in an import", () => {
       unsupportedImages: 1,
       missingImages: 1,
     });
+  });
+});
+
+describe("a picture is judged by its bytes, not its name", () => {
+  test("a WebP named .png is embedded as image/webp; a text file named .png stays a labelled box", async () => {
+    const webp = new Uint8Array(20);
+    webp.set([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
+    const files = {
+      "Note.md": "IMG a.png\nIMG b.png\nIMG c.png",
+      "a.png": webp,
+      "b.png": 10,
+      "c.png": new TextEncoder().encode("not a picture at all"),
+    };
+    const { r, embedded } = await run(files);
+    const imgs = embedded("Note.excalidraw");
+    expect(imgs[0].mimeType).toBe("image/webp");
+    expect(imgs[0].bytes).toBeDefined();
+    expect(imgs[1].mimeType).toBe("image/png");
+    expect(imgs[2].bytes).toBeUndefined();
+    expect(imgs[2].alt).toMatch(/Not a picture/);
+    expect(r.unsupportedImages).toBe(1);
   });
 });

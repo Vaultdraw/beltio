@@ -113,9 +113,14 @@ export class LinkResolver {
       }
       // `../x` or `./x` that did not land on a file: the name alone is what Obsidian falls back to.
       if (/^\.{1,2}\//.test(written)) {
-        return this.resolve(written.replace(/^(?:\.{1,2}\/)+/, ""), kinds);
+        return this.resolve(
+          written.replace(/^(?:\.{1,2}\/)+/, ""),
+          kinds,
+          fromDir,
+        );
       }
     }
+    const near = fromDir === undefined ? [] : fold(fromDir).split("/");
     for (const key of keysOfTarget(written)) {
       const exact = this.byPath.get(key);
       if (exact && (!kinds || kinds.includes(exact.item.kind))) {
@@ -131,11 +136,7 @@ export class LinkResolver {
         if (hasSlash && !c.key.endsWith(`/${key}`)) {
           continue;
         }
-        if (
-          !best ||
-          c.key.length < best.key.length ||
-          (c.key.length === best.key.length && c.key < best.key)
-        ) {
+        if (!best || closer(c, best, near)) {
           best = c;
         }
       }
@@ -146,6 +147,33 @@ export class LinkResolver {
     return null;
   }
 }
+
+/** Leading folders a candidate shares with the note's folder. */
+const shared = (c: Candidate, near: readonly string[]): number => {
+  const dirs = c.key.split("/").slice(0, -1);
+  let n = 0;
+  while (n < dirs.length && n < near.length && dirs[n] === near[n]) {
+    n++;
+  }
+  return n;
+};
+
+/** Obsidian's pick among files with one name: the nearest to the note, then the shortest path. */
+const closer = (
+  a: Candidate,
+  b: Candidate,
+  near: readonly string[],
+): boolean => {
+  const sa = shared(a, near);
+  const sb = shared(b, near);
+  if (sa !== sb) {
+    return sa > sb;
+  }
+  return (
+    a.key.length < b.key.length ||
+    (a.key.length === b.key.length && a.key < b.key)
+  );
+};
 
 /** `written` resolved against the folder `dir` (`..` and `.` applied), or null when it leaves the vault. */
 export const relativeTo = (dir: string, written: string): string | null => {
@@ -260,6 +288,20 @@ const rewriteBlock = (
     case "listItem": {
       const r = rewriteText(b.text, b.inline, resolver, stats);
       return r.text === b.text ? b : { ...b, text: r.text, inline: r.inline };
+    }
+    case "embed": {
+      // `![[Note]]`: drawn as a link line; point it at the converted drawing like a wikilink.
+      const hit = resolver.resolve(b.target, [
+        "note",
+        "excalidrawMd",
+        "drawing",
+      ]);
+      if (!hit) {
+        stats.unresolved++;
+        return b;
+      }
+      stats.rewritten++;
+      return { ...b, target: linkTarget(hit.target) };
     }
     case "blockquote":
     case "callout":
