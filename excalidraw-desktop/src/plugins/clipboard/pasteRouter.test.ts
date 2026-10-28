@@ -44,7 +44,7 @@ describe("routePaste", () => {
 
   it("stops at the first handler that handles it", async () => {
     const second = vi.fn();
-    const off1 = addPasteHandler("a", async () => "handled");
+    const off1 = addPasteHandler("a", async () => "handled" as const);
     const off2 = addPasteHandler("b", second);
     expect(await routePaste("a\nb")).toBe(true);
     expect(second).not.toHaveBeenCalled();
