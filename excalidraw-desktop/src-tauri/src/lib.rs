@@ -573,29 +573,82 @@ async fn move_entry_with_links(
     history.moved(&handle, &from, &to);
     Ok(moved)
 }
+/// Most items `count_folder_items` walks before it stops and reports "N or more".
+const FOLDER_COUNT_CAP: usize = 1000;
+#[derive(serde::Serialize)]
+struct FolderCount {
+    count: usize,
+    capped: bool,
+}
+/// Files under `dir` (folders are walked, not counted; symlinks count as one item and are never followed).
+/// Stops after `cap` items.
+fn count_items(dir: &Path, cap: usize) -> FolderCount {
+    let mut count = 0usize;
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(d) = stack.pop() {
+        let Ok(rd) = fs::read_dir(&d) else { continue };
+        for e in rd.flatten() {
+            let Ok(ft) = e.file_type() else { continue };
+            if ft.is_dir() {
+                stack.push(e.path());
+            } else {
+                count += 1;
+                if count >= cap {
+                    return FolderCount { count, capped: true };
+                }
+            }
+        }
+    }
+    FolderCount { count, capped: false }
+}
+/// Vault-relative paths of every non-hidden file under `dir` (symlinks listed, never followed).
+fn files_under(root: &Path, dir: &Path) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(d) = stack.pop() {
+        let Ok(rd) = fs::read_dir(&d) else { continue };
+        for e in rd.flatten() {
+            let Ok(ft) = e.file_type() else { continue };
+            let path = e.path();
+            if ft.is_dir() {
+                stack.push(path);
+            } else if let Ok(rel) = path.strip_prefix(root) {
+                out.push(rel.to_string_lossy().replace('\\', "/"));
+            }
+        }
+    }
+    out
+}
+/// Trashes `path` (a file or a whole folder, empty or not) through `trasher`.
+/// Returns the vault paths of the files it held, for the history bookkeeping.
+fn trash_in(root: &Path, path: &str, trasher: impl FnOnce(&Path) -> std::result::Result<(), String>) -> Result<Vec<String>> {
+    // safe_path refuses symlinks anywhere in `path` and anything outside the vault.
+    let p = safe_path(root, path, false)?;
+    if p == root {
+        return Err(err("INVALID_PATH", "Cannot trash the vault root"));
+    }
+    // Links inside a folder are moved with it as links; their targets are never touched.
+    let files = if p.is_dir() { files_under(root, &p) } else { vec![path.to_string()] };
+    trasher(&p).map_err(|e| err("TRASH_FAILED", format!("Could not move item to OS trash: {e}")))?;
+    Ok(files)
+}
 #[tauri::command]
 async fn trash_entry(handle: String, path: String, state: State<'_, Service>, history: State<'_, history::HistoryService>) -> Result<()> {
     let v = vault_for(&state, &handle)?;
     writable(&v)?;
     let _mutation = mutation_guard(&v)?;
-    let p = safe_path(&v.root, &path, false)?;
-    if p == v.root {
-        return Err(err("INVALID_PATH", "Cannot trash the vault root"));
+    let files = trash_in(&v.root, &path, |p| trash::delete(p).map_err(|e| e.to_string()))?;
+    for f in &files {
+        history.trashed(&handle, f);
     }
-    if p.is_dir() && fs::read_dir(&p).map_err(ioerr)?.next().is_some() {
-        return Err(err(
-            "NOT_EMPTY",
-            "Non-empty folders are not trashed to avoid deleting unrelated files",
-        ));
-    }
-    trash::delete(&p).map_err(|e| {
-        err(
-            "TRASH_FAILED",
-            format!("Could not move item to OS trash: {e}"),
-        )
-    })?;
-    history.trashed(&handle, &path);
     Ok(())
+}
+/// How many files a folder holds (stops at 1,000), for the "Move to Trash" confirmation.
+#[tauri::command]
+async fn count_folder_items(handle: String, path: String, state: State<'_, Service>) -> Result<FolderCount> {
+    let v = vault_for(&state, &handle)?;
+    let p = safe_path(&v.root, &path, false)?;
+    Ok(count_items(&p, FOLDER_COUNT_CAP))
 }
 #[tauri::command]
 async fn reveal_recovery_dir(handle: String, state: State<'_, Service>) -> Result<()> {
@@ -681,6 +734,84 @@ mod tests {
     const SCENE: &str = r#"{"type":"excalidraw","version":2,"source":"https://excalidraw.com","elements":[],"appState":{},"files":{}}"#;
     fn vault(root: &Path) -> Vault {
         Vault::for_tests(root.canonicalize().unwrap(), "test", false)
+    }
+    #[test]
+    fn trash_takes_a_non_empty_nested_folder_and_lists_its_files() {
+        let d = tempdir().unwrap();
+        let root = d.path().canonicalize().unwrap();
+        std::fs::create_dir_all(root.join("Ideas/deep")).unwrap();
+        std::fs::write(root.join("Ideas/a.excalidraw"), SCENE).unwrap();
+        std::fs::write(root.join("Ideas/deep/b.md"), "x").unwrap();
+        let bin = tempdir().unwrap();
+        let files = trash_in(&root, "Ideas", |p| std::fs::rename(p, bin.path().join("Ideas")).map_err(|e| e.to_string())).unwrap();
+        let mut files = files;
+        files.sort();
+        assert_eq!(files, vec!["Ideas/a.excalidraw", "Ideas/deep/b.md"]);
+        assert!(!root.join("Ideas").exists());
+        assert!(bin.path().join("Ideas/deep/b.md").exists());
+    }
+    #[cfg(unix)]
+    #[test]
+    fn trash_keeps_a_symlink_inside_a_folder_as_a_link() {
+        let d = tempdir().unwrap();
+        let root = d.path().join("v");
+        let outside = d.path().join("outside");
+        std::fs::create_dir_all(root.join("F")).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        std::fs::write(outside.join("keep.txt"), "x").unwrap();
+        std::os::unix::fs::symlink(&outside, root.join("F/link")).unwrap();
+        let root = root.canonicalize().unwrap();
+        let bin = tempdir().unwrap();
+        let files = trash_in(&root, "F", |p| std::fs::rename(p, bin.path().join("F")).map_err(|e| e.to_string())).unwrap();
+        assert_eq!(files, vec!["F/link"]);
+        assert!(outside.join("keep.txt").exists(), "the link target outside the vault is untouched");
+        assert!(std::fs::symlink_metadata(bin.path().join("F/link")).unwrap().file_type().is_symlink());
+        assert_eq!(count_items(&outside, 10).count, 1);
+    }
+    #[cfg(unix)]
+    #[test]
+    fn trash_refuses_a_symlink_entry_itself_and_paths_through_one() {
+        let d = tempdir().unwrap();
+        let root = d.path().join("v");
+        let outside = d.path().join("outside");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        std::os::unix::fs::symlink(&outside, root.join("link")).unwrap();
+        let root = root.canonicalize().unwrap();
+        let hit = std::cell::Cell::new(false);
+        assert_eq!(trash_in(&root, "link", |_| { hit.set(true); Ok(()) }).unwrap_err().code, "INVALID_PATH");
+        assert_eq!(trash_in(&root, "link/x", |_| { hit.set(true); Ok(()) }).unwrap_err().code, "INVALID_PATH");
+        assert!(!hit.get());
+    }
+    #[test]
+    fn trash_refuses_the_vault_root_and_escapes() {
+        let d = tempdir().unwrap();
+        let root = d.path().canonicalize().unwrap();
+        let hit = std::cell::Cell::new(false);
+        for bad in ["", ".", "..", "../x", "/etc"] {
+            assert!(trash_in(&root, bad, |_| { hit.set(true); Ok(()) }).is_err(), "{bad}");
+        }
+        assert!(!hit.get());
+    }
+    #[test]
+    fn count_items_counts_files_and_stops_at_the_cap() {
+        let d = tempdir().unwrap();
+        std::fs::create_dir_all(d.path().join("a/b")).unwrap();
+        for i in 0..5 {
+            std::fs::write(d.path().join(format!("a/{i}.md")), "x").unwrap();
+        }
+        std::fs::write(d.path().join("a/b/c.md"), "x").unwrap();
+        let all = count_items(&d.path().join("a"), 1000);
+        assert_eq!((all.count, all.capped), (6, false));
+        let some = count_items(&d.path().join("a"), 3);
+        assert_eq!((some.count, some.capped), (3, true));
+    }
+    #[test]
+    fn trash_entry_refuses_read_only_vaults() {
+        // writable() is the guard trash_entry calls first.
+        let d = tempdir().unwrap();
+        let v = Vault::for_tests(d.path().canonicalize().unwrap(), "test", true);
+        assert_eq!(writable(&v).unwrap_err().code, "READ_ONLY");
     }
     #[test]
     fn open_by_path_needs_an_existing_absolute_directory() {
@@ -926,7 +1057,7 @@ pub fn run() {
         let builder = if smoke::enabled() {
             builder.invoke_handler(tauri::generate_handler![
                 choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision, drawing_read_only, sync_download_placeholder,
-                write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
+                write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, count_folder_items, reveal_entry, reveal_recovery_dir,
                 export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
                 config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
                 themes::list_themes, themes::open_themes_dir, theme_install::theme_resolve, theme_install::theme_fetch, theme_install::theme_write, theme_install::theme_installed, theme_install::theme_update_fetch, theme_install::theme_uninstall, theme_catalogue::theme_catalogue_cached, theme_catalogue::theme_catalogue_index, theme_catalogue::theme_catalogue_preview, plugins::registry::plugin_registry_cached, plugins::registry::plugin_registry_index, plugins::registry::plugin_registry_install, snippets::list_snippets, snippets::open_snippets_dir,
@@ -950,7 +1081,7 @@ pub fn run() {
         } else {
             builder.invoke_handler(tauri::generate_handler![
                 choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision, drawing_read_only, sync_download_placeholder,
-                write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
+                write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, count_folder_items, reveal_entry, reveal_recovery_dir,
                 export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
                 config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
                 themes::list_themes, themes::open_themes_dir, theme_install::theme_resolve, theme_install::theme_fetch, theme_install::theme_write, theme_install::theme_installed, theme_install::theme_update_fetch, theme_install::theme_uninstall, theme_catalogue::theme_catalogue_cached, theme_catalogue::theme_catalogue_index, theme_catalogue::theme_catalogue_preview, plugins::registry::plugin_registry_cached, plugins::registry::plugin_registry_index, plugins::registry::plugin_registry_install, snippets::list_snippets, snippets::open_snippets_dir,
@@ -971,7 +1102,7 @@ pub fn run() {
         #[cfg(not(feature = "smoke-test"))]
         let builder = builder.invoke_handler(tauri::generate_handler![
             choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision, drawing_read_only, sync_download_placeholder,
-            write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
+            write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, count_folder_items, reveal_entry, reveal_recovery_dir,
             export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
             config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
             themes::list_themes, themes::open_themes_dir, theme_install::theme_resolve, theme_install::theme_fetch, theme_install::theme_write, theme_install::theme_installed, theme_install::theme_update_fetch, theme_install::theme_uninstall, theme_catalogue::theme_catalogue_cached, theme_catalogue::theme_catalogue_index, theme_catalogue::theme_catalogue_preview, plugins::registry::plugin_registry_cached, plugins::registry::plugin_registry_index, plugins::registry::plugin_registry_install, snippets::list_snippets, snippets::open_snippets_dir,
