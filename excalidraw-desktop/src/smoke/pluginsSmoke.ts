@@ -23,6 +23,9 @@ type W = Window & {
   __smokeBoomStack?: string;
 };
 
+/** Official plugins that declare activation = ["onStartupFinished"]: they load once the host runs. */
+const STARTUP_PLUGINS = ["auto-export"];
+
 const vdResources = (win: Window) =>
   win.performance
     .getEntriesByType("resource")
@@ -181,7 +184,10 @@ export async function runPluginsSmoke(ctx: PluginsSmokeContext): Promise<void> {
           mainBytes: c.mainBytes,
         }));
       const loadedOthers = getPluginCosts().filter(
-        (c) => c.loadMs !== null && !c.id.startsWith("smoke-"),
+        (c) =>
+          c.loadMs !== null &&
+          !c.id.startsWith("smoke-") &&
+          !STARTUP_PLUGINS.includes(c.id),
       );
       if (loadedOthers.length) {
         throw new Error(
