@@ -1,7 +1,7 @@
 // Generated from the @since tags of sdk/api/src by sdk/api/scripts/gen-features.mjs. Do not edit.
 
 /** The API revision of this build (the version of sdk/api/package.json). */
-export const API_REVISION = "0.23.0";
+export const API_REVISION = "0.24.0";
 
 /** Feature name to the revision that added it. `ctx.host.has(name)` is true for these. */
 export const FEATURES: Readonly<Record<string, string>> = {
@@ -40,9 +40,9 @@ export const FEATURES: Readonly<Record<string, string>> = {
   "manifest.version": "0.1.0",
   markdown: "0.8.0",
   "markdown.parse": "0.8.0",
-  math: "0.23.0",
-  "math.provide": "0.23.0",
-  "math.render": "0.23.0",
+  math: "0.24.0",
+  "math.provide": "0.24.0",
+  "math.render": "0.24.0",
   menus: "0.12.0",
   "menus.target": "0.12.0",
   methods: "0.22.0",
@@ -60,14 +60,14 @@ export const FEATURES: Readonly<Record<string, string>> = {
   "panels.register": "0.1.0",
   scene: "0.1.0",
   "scene.batch": "0.1.0",
-  "scene.currentStrokeColor": "0.23.0",
+  "scene.currentStrokeColor": "0.24.0",
   "scene.dataOf": "0.4.0",
   "scene.elements": "0.1.0",
   "scene.get": "0.4.0",
   "scene.onChange": "0.1.0",
   "scene.path": "0.4.0",
   "scene.scrollTo": "0.9.0",
-  "scene.selection": "0.23.0",
+  "scene.selection": "0.24.0",
   "scene.useScene": "0.1.0",
   "scene.viewportCenter": "0.1.0",
   setInterval: "0.1.0",

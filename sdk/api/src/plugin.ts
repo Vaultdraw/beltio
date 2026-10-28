@@ -113,7 +113,7 @@ export interface PluginContext {
   readonly shapes: ShapesApi;
   /** Methods other programs can call, declared with `[[contributes.methods]]`. Needs the permission `control`. @since 0.22.0 */
   readonly methods: MethodsApi;
-  /** The TeX renderer. @since 0.23.0 */
+  /** The TeX renderer. @since 0.24.0 */
   readonly math: MathApi;
   /** Views that cover the drawing area. @since 0.17.0 */
   readonly overlays: OverlaysApi;
