@@ -207,7 +207,11 @@ export function createPagesApi(
     path: string,
     setup: PageRequest | undefined,
   ): Promise<PageDocument> => {
-    await bridge.createDrawing(parent, fileName, sceneJson([], [], setup, 1, bridge.importLook?.()));
+    await bridge.createDrawing(
+      parent,
+      fileName,
+      sceneJson([], [], setup, 1, bridge.importLook?.()),
+    );
     let queue: Chunk[] = [];
     let pageCount = 1;
     let appliedPages = 1;

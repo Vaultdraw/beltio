@@ -8,13 +8,13 @@
  * golden file `vaultdraw-core/tests/fixtures/new-drawing-parity.json`, so a
  * change to either side fails a test until both agree.
  */
-import type { BackgroundPattern } from "@excalidraw/excalidraw/data/backgroundPattern";
-
 import {
   PAPER_THEME_COLORS,
   type PageSetup,
   type PaperTheme,
 } from "@excalidraw/excalidraw/data/pageSetup";
+
+import type { BackgroundPattern } from "@excalidraw/excalidraw/data/backgroundPattern";
 
 import { getPageSetupPatch } from "../page/pageSetupChange";
 

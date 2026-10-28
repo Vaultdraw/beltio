@@ -121,9 +121,7 @@ test("every way a drawing is created follows the dark theme and the drawing font
     .click();
   await expect(page.locator("html")).toHaveClass(/dark/);
   await dialog.getByRole("tab", { name: "Drawing", exact: true }).click();
-  await dialog
-    .getByLabel("Default Font Family")
-    .selectOption(String(NUNITO));
+  await dialog.getByLabel("Default Font Family").selectOption(String(NUNITO));
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
 
@@ -168,7 +166,9 @@ test("every way a drawing is created follows the dark theme and the drawing font
         })
         .toBeLessThan(80);
       await screenshot(page, {
-        path: `${SHOTS}/${info.project.name}-new-drawing-defaults-${row.path.slice(0, 4)}.png`,
+        path: `${SHOTS}/${
+          info.project.name
+        }-new-drawing-defaults-${row.path.slice(0, 4)}.png`,
       });
     });
   }

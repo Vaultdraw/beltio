@@ -29,9 +29,9 @@ describe("import font", () => {
   });
 
   it("'document' and named fonts ignore the drawing font", () => {
-    expect(fontFamilyOf(readSettings(ctxWith({ font: "document" }, "Nunito")))).toBe(
-      "Liberation Sans",
-    );
+    expect(
+      fontFamilyOf(readSettings(ctxWith({ font: "document" }, "Nunito"))),
+    ).toBe("Liberation Sans");
     expect(
       fontFamilyOf(readSettings(ctxWith({ font: "comic-shanns" }, "Nunito"))),
     ).toBe("Comic Shanns");

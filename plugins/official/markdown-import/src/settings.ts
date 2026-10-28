@@ -7,17 +7,23 @@ import type {
 
 export type ObsidianLinks = "drawing" | "text";
 
+export type FontChoice =
+  | "excalifont"
+  | "nunito"
+  | "comic-shanns"
+  | "virgil"
+  | "helvetica"
+  | "cascadia";
+
 /** The font choices that name a family: the `font` setting values and their families. */
-export const FONT_CHOICES = {
+export const FONT_CHOICES: Readonly<Record<FontChoice, FontFamilyName>> = {
   excalifont: "Excalifont",
   nunito: "Nunito",
   "comic-shanns": "Comic Shanns",
   virgil: "Virgil",
   helvetica: "Helvetica",
   cascadia: "Cascadia",
-} as const satisfies Record<string, FontFamilyName>;
-
-export type FontChoice = keyof typeof FONT_CHOICES;
+};
 
 const FONT_VALUES = [
   "default",
@@ -30,7 +36,7 @@ export interface ImportSettings {
    * "default" follows the user's drawing font (`drawingFont`); "document" is the
    * Document font; any other value names a family.
    */
-  font: (typeof FONT_VALUES)[number];
+  font: typeof FONT_VALUES[number];
   /** The family a new drawing's text gets (Settings → Drawing → Font), read with the settings. */
   drawingFont?: FontFamilyName;
   fontSize: number;
