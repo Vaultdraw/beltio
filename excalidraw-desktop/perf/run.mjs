@@ -61,6 +61,11 @@ const HELP = `Usage: node excalidraw-desktop/perf/run.mjs [options]
   --everyday             (or PERF_EVERYDAY=1) the owner's typical use (implies --typical): the typical vault plus 3 note drawings
                          of 12 shapes and 100 lines of text each; opens all 3 in tabs, switches back, types a note, saves, pans,
                          then the idle footprint. Same memory.* metrics as --typical.
+  --owner-typical        (or PERF_OWNER_TYPICAL=1) the owner's definition of typical use and nothing else (implies --everyday): 3 note drawings
+                         in tabs, switch, type, save, pan, idle. Also samples footprint back-to-back and reports the SIMULTANEOUS
+                         whole-app peak (memory.owner.simultaneousPeakMB, with each process's size at that moment and the peak per
+                         phase in the notes). memory.peakFootprintMB stays the sum of per-process lifetime peaks (an upper bound).
+                         Use with --foreground; see personal/feature/memory-typical/owner-typical.sh.
   PERF_TYPICAL_GAP_MS=N  (env) typical mode: ms between the warm drawing opens (default 300), e.g. 2000 for a human pace
   PERF_CONFIG_TOML=<f>   (env) config.toml for the perf app's temp config dir (e.g. [interface] thumbnails = false)
   --scenarios a,b,..     Chromium mode: run only these scenarios (vault-open always runs). Names as in the result's "scenarios"
@@ -87,7 +92,7 @@ const { values: o } = parseArgs({
     "low-end": { type: "boolean" }, runs: { type: "string" }, warmup: { type: "string" }, compare: { type: "string" },
     out: { type: "string" }, "update-baseline": { type: "string" }, "no-build": { type: "boolean" },
     "skip-browser": { type: "boolean" }, "skip-app": { type: "boolean" }, "memory-pressure": { type: "boolean" },
-    "keep-runs": { type: "boolean" }, "quiet-load": { type: "string" }, "quiet-wait": { type: "string" }, "require-quiet": { type: "boolean" }, leak: { type: "boolean" }, "leak-only": { type: "boolean" }, scenarios: { type: "string" }, "skip-scenarios": { type: "string" }, typical: { type: "boolean" }, everyday: { type: "boolean" }, ablate: { type: "boolean" }, foreground: { type: "boolean" }, quick: { type: "boolean" }, app: { type: "boolean" }, milestone: { type: "boolean" }, help: { type: "boolean", short: "h" },
+    "keep-runs": { type: "boolean" }, "quiet-load": { type: "string" }, "quiet-wait": { type: "string" }, "require-quiet": { type: "boolean" }, leak: { type: "boolean" }, "leak-only": { type: "boolean" }, scenarios: { type: "string" }, "skip-scenarios": { type: "string" }, typical: { type: "boolean" }, everyday: { type: "boolean" }, "owner-typical": { type: "boolean" }, ablate: { type: "boolean" }, foreground: { type: "boolean" }, quick: { type: "boolean" }, app: { type: "boolean" }, milestone: { type: "boolean" }, help: { type: "boolean", short: "h" },
   },
 });
 if (o.help) { console.log(HELP); process.exit(0); }
@@ -99,9 +104,9 @@ const fixturesDir = process.env.PERF_FIXTURES_DIR ? path.resolve(process.env.PER
 if (o.foreground || process.env.PERF_FOREGROUND === "1") process.env.VAULTDRAW_PERF_FOREGROUND = "1";
 const mode = o["low-end"] ? "low-end" : "normal";
 const leakOnly = !!(o["leak-only"] || process.env.PERF_LEAK_ONLY === "1");
-const modes = { leak: leakOnly || !!(o.leak || process.env.PERF_LEAK === "1"), leakOnly, typical: !!(o.typical || o.ablate || o.everyday || process.env.PERF_TYPICAL === "1" || process.env.PERF_ABLATE === "1" || process.env.PERF_EVERYDAY === "1"), everyday: !!(o.everyday || process.env.PERF_EVERYDAY === "1"), ablate: !!(o.ablate || process.env.PERF_ABLATE === "1"), warmGapMs: Number(process.env.PERF_TYPICAL_GAP_MS) || undefined };
+const modes = { leak: leakOnly || !!(o.leak || process.env.PERF_LEAK === "1"), leakOnly, typical: !!(o.typical || o.ablate || o.everyday || o["owner-typical"] || process.env.PERF_OWNER_TYPICAL === "1" || process.env.PERF_TYPICAL === "1" || process.env.PERF_ABLATE === "1" || process.env.PERF_EVERYDAY === "1"), everyday: !!(o.everyday || o["owner-typical"] || process.env.PERF_OWNER_TYPICAL === "1" || process.env.PERF_EVERYDAY === "1"), ownerTypical: !!(o["owner-typical"] || process.env.PERF_OWNER_TYPICAL === "1"), ablate: !!(o.ablate || process.env.PERF_ABLATE === "1"), warmGapMs: Number(process.env.PERF_TYPICAL_GAP_MS) || undefined };
 if (modes.ablate) process.env.PERF_MEM_TIMELINE = "1";
-const variant = [modes.leakOnly ? "leak-only" : modes.leak && "leak", modes.typical && "typical", modes.everyday && "everyday", modes.ablate && "ablate", modes.warmGapMs && `gap${modes.warmGapMs}`].filter(Boolean).join("+");
+const variant = [modes.leakOnly ? "leak-only" : modes.leak && "leak", modes.typical && "typical", modes.everyday && "everyday", modes.ownerTypical && "owner", modes.ablate && "ablate", modes.warmGapMs && `gap${modes.warmGapMs}`].filter(Boolean).join("+");
 const runs = o.quick ? 1 : Number(o.runs ?? (o.milestone ? 4 : 2));
 const warmup = o.quick ? 0 : Number(o.warmup ?? (o.milestone ? 1 : 0));
 // Packaged-app runs open windows on the user's screen: only on request or at milestones.

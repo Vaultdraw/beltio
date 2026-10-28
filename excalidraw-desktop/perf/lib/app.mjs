@@ -8,6 +8,7 @@ import {
   applyBackgroundPolicy, trackChild, startMemoryPressure, discoverLinuxHelpers,
 } from "./procs.mjs";
 import { isLinux, linuxPerfBinary, lowEndCommand, systemdRunWorks, binaryExists } from "./linux.mjs";
+import { createPeakTracker, peakNote } from "./simultaneousPeak.mjs";
 import { LEAK_PREFIX, leakSummary, leakTableText } from "./leak.mjs";
 import { parseWindowStateLog, windowSummary, HIDDEN_RUN_NOTE } from "./windowState.mjs";
 
@@ -279,6 +280,18 @@ export async function runAppOnce({
     for (const v of m.values()) sum += v.rssKB;
     if (sum > peakRssKB) peakRssKB = sum;
   }
+  // --owner-typical: simultaneous whole-app peak, from back-to-back footprint samples (~100 ms apart) labelled with the running phase.
+  const peakTracker = modes.ownerTypical ? createPeakTracker(roleOf) : null;
+  let peakLoop = null;
+  const startPeakLoop = () => {
+    if (!peakTracker || peakLoop) return;
+    peakLoop = (async () => {
+      while (!closed) {
+        peakTracker.add(await sampleFootprint(livePids()), lastPhase ?? "boot");
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    })().catch(() => {});
+  };
   let tickN = 0;
   const timer = setInterval(() => {
     if (closed) return;
@@ -330,6 +343,7 @@ export async function runAppOnce({
     }
     if (name === "interactive") {
       interactiveSeen = true;
+      startPeakLoop();
       coldToInteractive = entry.details.wallMs - spawnWallMs;
       await verifyPid();
       await rediscover();
@@ -387,6 +401,7 @@ export async function runAppOnce({
   clearInterval(timer);
   closed = true;
   await chain.catch(() => {});
+  await peakLoop;
   mp?.stop();
   if (mp) notes.push(mp.note());
 
@@ -431,6 +446,14 @@ export async function runAppOnce({
     samples["memory.idleFootprintMB"] = [current / MB];
     notes.push(`footprint over ${footprintAtEnd.size}/${livePids().length} pids at idle-end (peak = sum of per-process lifetime peaks, an upper bound on the simultaneous peak)`);
   } else notes.push("footprint unavailable; memory.peakFootprintMB not measured");
+  if (peakTracker) {
+    const ps = peakTracker.summary();
+    if (ps.peakMB != null && ps.samples >= 5) {
+      samples["memory.owner.simultaneousPeakMB"] = [ps.peakMB];
+      for (const [role, mb] of Object.entries(ps.peakProcs)) samples[`memory.owner.peakAt.${role}MB`] = [mb];
+    }
+    notes.push(peakNote(ps));
+  }
   if (idleBegin && idleEnd) {
     const wallS = (idleEnd.t - idleBegin.t) / 1000;
     let cpu = 0;
