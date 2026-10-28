@@ -5,6 +5,7 @@ import type { NonDeletedSceneElementsMap } from "@excalidraw/element/types";
 import { isRenderThrottlingEnabled } from "../../reactUtils";
 import { renderNewElementScene } from "../../renderer/renderNewElementScene";
 
+import { primeLowMemoryCanvas } from "./lowMemoryCanvas";
 import { useCanvasBackingStore } from "./useCanvasBackingStore";
 
 import type {
@@ -28,6 +29,13 @@ interface NewElementCanvasProps {
 
 const NewElementCanvas = (props: NewElementCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  // Primed when created, before any drawing, like the static and interactive canvases.
+  const setCanvas = useCallback((canvas: HTMLCanvasElement | null) => {
+    canvasRef.current = canvas;
+    if (canvas) {
+      primeLowMemoryCanvas(canvas, canvas.ownerDocument);
+    }
+  }, []);
   const getCanvas = useCallback(() => canvasRef.current, []);
   useCanvasBackingStore(
     getCanvas,
@@ -63,7 +71,7 @@ const NewElementCanvas = (props: NewElementCanvasProps) => {
       }}
       width={props.appState.width * props.scale}
       height={props.appState.height * props.scale}
-      ref={canvasRef}
+      ref={setCanvas}
     />
   );
 };
