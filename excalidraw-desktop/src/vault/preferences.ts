@@ -218,6 +218,8 @@ interface VaultPreferencesBase {
   networkAllowThemes: boolean | undefined;
   /** Consent for the community plugins list and plugin downloads (`network.allow_plugins`); undefined = not asked yet. */
   networkAllowPlugins: boolean | undefined;
+  /** Extra hosts downloads may contact (`network.allowed_hosts`); Rust reads config.toml only. */
+  networkAllowedHosts: string[];
   /** Where the community plugins list comes from (`plugins.registry_url`, https only). */
   pluginsRegistryUrl: string;
   /** Hours the cached plugins list is used before Browse fetches again (`plugins.registry_ttl_hours`). */
@@ -432,6 +434,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   networkEnabled: true,
   networkAllowThemes: undefined,
   networkAllowPlugins: undefined,
+  networkAllowedHosts: [],
   pluginsRegistryUrl: DEFAULT_PLUGINS_REGISTRY_URL,
   pluginsRegistryTtlHours: 24,
   themeInstallMaxKb: 64,
@@ -855,6 +858,11 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       parsed.networkAllowPlugins,
       isBoolean,
       d.networkAllowPlugins,
+    ),
+    networkAllowedHosts: pick(
+      parsed.networkAllowedHosts,
+      isStringArray,
+      d.networkAllowedHosts,
     ),
     pluginsRegistryUrl: pick(
       parsed.pluginsRegistryUrl,

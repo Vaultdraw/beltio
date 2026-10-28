@@ -51,6 +51,7 @@ const stringList: Schema = { type: "array", items: { type: "string" } };
 const OVERRIDES: Readonly<Record<string, Schema>> = {
   "network.allow_themes": { type: "boolean" },
   "network.allow_plugins": { type: "boolean" },
+  "network.allowed_hosts": stringList,
   "plugins.registry_url": {
     type: "string",
     pattern:

@@ -65,9 +65,20 @@ pub(crate) fn refuse_consent_grants(changes: &[config::LayerChange]) -> Result<(
         )
     };
     let revokes = |v: &Value| matches!(v, Value::Null | Value::Bool(false));
+    // The host list is read from config.toml only; the page has no business adding to it.
+    let hosts_err = || {
+        err("CONSENT_REQUIRED", "`network.allowed_hosts` can only be edited by hand in config.toml".to_string())
+    };
+    let empty = |v: &Value| matches!(v, Value::Null) || matches!(v, Value::Array(a) if a.is_empty());
     for change in changes {
+        if change.key == "network.allowed_hosts" && !empty(&change.value) {
+            return Err(hosts_err());
+        }
         if change.key == "network" {
             if let Value::Object(fields) = &change.value {
+                if fields.get("allowed_hosts").is_some_and(|v| !empty(v)) {
+                    return Err(hosts_err());
+                }
                 if let Some((key, _)) = fields.iter().find(|(k, v)| is_consent_key(k) && !revokes(v)) {
                     return Err(refuse(key));
                 }
@@ -329,7 +340,43 @@ fn net_error(e: ureq::Error) -> super::NativeError {
 /// GET `url` (already vetted) and return at most `max_bytes` of body. Redirects are followed
 /// manually, up to three, to GitHub hosts only. Does not check consent: the caller must.
 pub(crate) fn get_bytes(url: &Url, max_bytes: u64, accept: &str) -> Result<Vec<u8>> {
+    if !(ALLOW_LOOPBACK && is_loopback(url)) {
+        check_host(url, &configured_hosts())?;
+    }
     get_bytes_with(&agent(), url, max_bytes, accept)
+}
+
+/// The one outbound host list: GitHub's own hosts (themes, plugin registry, packages) plus the
+/// hosts the user added to `network.allowed_hosts`. A page script can steer a theme or registry
+/// address, so no address outside this list is ever contacted.
+pub(crate) fn check_host(url: &Url, extra: &[String]) -> Result<()> {
+    let host = url.host_str().unwrap_or("").trim_end_matches('.').to_ascii_lowercase();
+    if REDIRECT_HOSTS.contains(&host.as_str()) || extra.iter().any(|h| h.eq_ignore_ascii_case(&host)) {
+        return Ok(());
+    }
+    Err(err(
+        "HOST_NOT_ALLOWED",
+        format!("`{host}` is not on the list of allowed hosts. To use it, add it to `allowed_hosts` under [network] in config.toml"),
+    ))
+}
+
+/// `network.allowed_hosts` from `config.toml` only. `overrides.toml` (where Settings and the
+/// page's `update_config` write) is never read for this, so a script in the page cannot add a host.
+pub(crate) fn hosts_from_config_toml(layers: &[config::LayerInfo]) -> Vec<String> {
+    layers
+        .iter()
+        .find(|l| l.kind == "config")
+        .and_then(|l| l.config.as_ref())
+        .and_then(|c| c.get("network")?.get("allowed_hosts")?.as_array().cloned())
+        .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_owned)).collect())
+        .unwrap_or_default()
+}
+
+fn configured_hosts() -> Vec<String> {
+    config::resolve_dirs()
+        .and_then(|d| config::load_settings_in(&d))
+        .map(|loaded| hosts_from_config_toml(&loaded.layers))
+        .unwrap_or_default()
 }
 
 fn get_bytes_with(agent: &ureq::Agent, url: &Url, max_bytes: u64, accept: &str) -> Result<Vec<u8>> {
@@ -435,6 +482,58 @@ mod tests {
 
     fn url(s: &str) -> Url {
         parse_url(s).unwrap()
+    }
+
+    #[test]
+    fn security_only_listed_hosts_are_contacted() {
+        let extra = vec!["Themes.Example.org".to_string()];
+        for ok in [
+            "https://raw.githubusercontent.com/Vaultdraw/themes/main/index.json",
+            "https://api.github.com/repos/x/y",
+            "https://github.com/x/y",
+            "https://codeload.github.com/x/y/zip/main",
+            "https://themes.example.org/a.json",
+        ] {
+            assert!(check_host(&url(ok), &extra).is_ok(), "{ok}");
+        }
+        for bad in ["https://evil.example/a.json", "https://raw.githubusercontent.com.evil.example/a", "https://example.org/a.json"] {
+            let e = check_host(&url(bad), &extra).unwrap_err();
+            assert_eq!(e.code, "HOST_NOT_ALLOWED", "{bad}");
+            assert!(e.message.contains("allowed_hosts"));
+        }
+        // Without a config entry the default list is all there is.
+        assert!(check_host(&url("https://themes.example.org/a.json"), &[]).is_err());
+    }
+
+    #[test]
+    fn security_the_page_cannot_write_allowed_hosts() {
+        let change = |key: &str, value: Value| config::LayerChange { key: key.into(), value, default: None };
+        let bad = [change("network.allowed_hosts", serde_json::json!(["evil.example"])), change("network", serde_json::json!({"allowed_hosts": ["evil.example"]}))];
+        for c in bad {
+            assert_eq!(refuse_consent_grants(&[c]).unwrap_err().code, "CONSENT_REQUIRED");
+        }
+        assert!(refuse_consent_grants(&[change("network.allowed_hosts", Value::Null)]).is_ok(), "clearing is fine");
+    }
+
+    #[test]
+    fn security_extra_hosts_come_from_config_toml_not_overrides() {
+        let layer = |kind: &'static str, config: Option<serde_json::Value>| config::LayerInfo {
+            id: 0,
+            kind,
+            name: kind.into(),
+            path: String::new(),
+            status: "ok",
+            error: None,
+            config,
+            from: None,
+        };
+        let layers = vec![
+            layer("config", Some(serde_json::json!({"network": {"allowed_hosts": ["mine.example", 3]}}))),
+            layer("overrides", Some(serde_json::json!({"network": {"allowed_hosts": ["page-added.example"]}}))),
+        ];
+        assert_eq!(hosts_from_config_toml(&layers), vec!["mine.example".to_string()]);
+        assert!(hosts_from_config_toml(&[layer("overrides", Some(serde_json::json!({"network": {"allowed_hosts": ["x.example"]}})))]).is_empty());
+        assert!(hosts_from_config_toml(&[layer("config", None)]).is_empty());
     }
 
     #[test]

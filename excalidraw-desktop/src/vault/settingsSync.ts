@@ -352,6 +352,7 @@ type ConfigField =
   | "thumbnailCacheMb"
   | "activityBar"
   | "pluginsEnabled"
+  | "networkAllowedHosts"
   | "pluginsDisabled"
   | "pluginImporters"
   | "pluginsStorageLimitKb"
@@ -481,6 +482,13 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "network.allow_plugins",
     expected: "true or false (leave it out to be asked)",
     valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "networkAllowedHosts",
+    key: "network.allowed_hosts",
+    expected: 'a list of host names like ["themes.example.org"]',
+    valid: (v) =>
+      isStringList(v) && (v as string[]).every((x) => x.trim() !== ""),
   },
   {
     field: "pluginsRegistryUrl",

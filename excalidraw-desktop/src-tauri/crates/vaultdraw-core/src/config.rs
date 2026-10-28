@@ -418,6 +418,9 @@ autosave_delay_ms = 500
 # allow_themes = false
 # Community plugins list and plugin downloads: absent = ask on first use, true = allow, false = refuse
 # allow_plugins = false
+# Extra hosts downloads may contact, besides GitHub's (raw.githubusercontent.com, github.com,
+# api.github.com, codeload.github.com). Read only from this file, never from overrides.toml
+# allowed_hosts = []
 
 [themes]
 # Largest theme file to install from the internet, in KB, 1 to 256

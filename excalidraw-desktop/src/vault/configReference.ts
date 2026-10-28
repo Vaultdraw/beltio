@@ -597,6 +597,10 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
         doc: "Allow the community plugins list and plugin downloads. Absent means ask on first use; `true` allows, `false` refuses. Turning it on asks in a native dialog.",
         default: "unset (ask)",
       },
+      allowed_hosts: {
+        doc: "Extra hosts a download may contact, besides GitHub's own (`raw.githubusercontent.com`, `github.com`, `api.github.com`, `codeload.github.com`). Exact host names. Read only from `config.toml`: Settings, `vaultdraw config set` and the page never write it, so a script cannot add a host.",
+        default: "[]",
+      },
     },
   },
   {

@@ -452,6 +452,7 @@ Vaultdraw never connects on its own: no update checks, no telemetry. Installing 
 | --- | --- |
 | `network.enabled` | Master switch, default `true`. `false` blocks every download, whatever else is allowed. Turning it back on from Settings asks in a native dialog. **Settings → General → Network access.** |
 | `network.allow_themes` | `true` allows theme downloads, `false` refuses them. Absent (the default) means "not asked yet": the first install shows a popup, **Allow** opens a second, native confirmation dialog, and **Yes** there writes `true`. **Settings → General → Allow downloading themes**; the reset arrow brings the question back. |
+| `network.allowed_hosts` | Extra host names downloads may contact, default `[]`. Every download (themes, the plugin list, plugin packages) may reach only GitHub's own hosts (`raw.githubusercontent.com`, `github.com`, `api.github.com`, `codeload.github.com`) plus these. Add one when you point `themes.index_url`, `plugins.registry_url` or a theme URL at your own server. **Read only from `config.toml`**: Settings, `vaultdraw config set` and scripts in the page never write it, so nothing but your hand edit can add a host. |
 | `themes.max_install_kb` | Largest theme file to accept, 1 to 256, default 64. **Settings → Appearance → Largest theme file.** |
 | `themes.index_url` | Where the community list comes from, default `https://raw.githubusercontent.com/Vaultdraw/themes/main/index.json`. `https` only. |
 | `themes.index_ttl_hours` | Hours the cached list is reused, 0 to 720, default 24. `0` fetches on every open. **Settings → Appearance → Refresh the Themes List.** |
@@ -1695,7 +1696,9 @@ A rename, move or delete done in Vaultdraw updates the list, even one made befor
 
 ## Plugins (experimental)
 
-Plugins are folders in `plugins/` inside the config folder (`~/.config/vaultdraw/plugins/`). Only the ones listed in `config.toml` run:
+Plugins are folders in `plugins/` inside the config folder (`~/.config/vaultdraw/plugins/`). Only the ones listed in `config.toml` run.
+
+> **The review step is the only boundary.** Plugins share the app window and its permissions. A permission is a declaration you confirm, not a sandbox: a plugin you confirmed can change settings and reach what the app can. Confirm only plugins whose code you trust.
 
 ```toml
 [plugins]
@@ -2149,6 +2152,7 @@ The internet is used only for features you allow, and only when you use them. Se
 | `enabled` | `true` | true or false |  | Master switch: `false` blocks every download, whatever else is allowed. Turning it on from Settings asks in a native dialog. |
 | `allow_themes` | unset (ask) | true or false (leave it out to be asked) |  | Allow theme downloads. Absent means ask on first use; `true` allows, `false` refuses. Turning it on asks in a native dialog. |
 | `allow_plugins` | unset (ask) | true or false (leave it out to be asked) |  | Allow the community plugins list and plugin downloads. Absent means ask on first use; `true` allows, `false` refuses. Turning it on asks in a native dialog. |
+| `allowed_hosts` | [] | a list of host names like ["themes.example.org"] |  | Extra hosts a download may contact, besides GitHub's own (`raw.githubusercontent.com`, `github.com`, `api.github.com`, `codeload.github.com`). Exact host names. Read only from `config.toml`: Settings, `vaultdraw config set` and the page never write it, so a script cannot add a host. |
 
 ### `[themes]`
 
