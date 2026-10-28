@@ -154,10 +154,10 @@ import { createCommandsProvider } from "./palette/providers/commands";
 import { createThemesProvider } from "./palette/providers/themes";
 import { resolveSelectedTheme } from "./theme/registry";
 import {
-  closeOverlay,
   getOverlay,
   hasOverlay,
   hasCoveringOverlay,
+  yieldOverlay,
   subscribeOverlay,
 } from "./plugins/overlayStore";
 import { FolderProvider } from "./plugins/folderContext";
@@ -1591,6 +1591,7 @@ export const VaultApp = ({
     if (tabs.enabled) {
       return tabs.open(drawingPath, opts?.target);
     }
+    yieldOverlay(); // tabs off: no tab host does it
     try {
       await openWithFreeze(drawingPath);
       return true;
@@ -1617,6 +1618,8 @@ export const VaultApp = ({
   ) => {
     if (drawingPath !== activeDoc?.path) {
       await handleOpenDrawing(drawingPath, opts);
+    } else {
+      yieldOverlay(); // already open: a covering view still gives way
     }
     if (match) {
       setFocusRequest({
@@ -2279,7 +2282,7 @@ export const VaultApp = ({
     closeDocument: closeDoc,
     notify: (message) => toastStore.push({ message }),
     runCommand: (id) => runnerRef.current?.run(id) ?? false,
-    closeOverlays: () => closeOverlay(),
+    closeOverlays: () => yieldOverlay(),
     isStripShown: () => layoutRef.current?.shown.tab_strip ?? false,
     setShowStrip: (tabsShowStrip) => {
       if (!layoutRef.current?.toggleGoverned("tab_strip")) {
@@ -3202,10 +3205,14 @@ export const VaultApp = ({
                 onOpenPath={
                   tabs.enabled
                     ? tabs.gateProps?.onOpenPath
-                    : (path, opts) =>
-                        isNotePath(path)
-                          ? setPlainNote(path)
-                          : void handleOpenDrawing(path, opts)
+                    : (path, opts) => {
+                        if (isNotePath(path)) {
+                          yieldOverlay();
+                          setPlainNote(path);
+                        } else {
+                          void handleOpenDrawing(path, opts);
+                        }
+                      }
                 }
               >
                 <DeferredHome
@@ -3277,6 +3284,7 @@ export const VaultApp = ({
             }
             if (ext.notes) {
               // Tabs off: show the note in the main pane instead.
+              yieldOverlay();
               void (activeDoc ? closeDoc() : Promise.resolve()).then(() =>
                 setPlainNote(path),
               );

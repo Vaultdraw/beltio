@@ -177,6 +177,7 @@ export function useTabs(args: UseTabsArgs): TabsApi {
             openDocument: (path) => live.current.openDocument(path),
             closeDocument: () => live.current.closeDocument(),
             isCustomKind: isKindPath,
+            onNavigate: () => live.current.closeOverlays(),
             flushDocument: () => live.current.docHook.flush(),
             currentDocument: () => {
               const a = live.current.docHook.getActive();
@@ -464,15 +465,10 @@ export function useTabs(args: UseTabsArgs): TabsApi {
       onCloseAll: () => void controller.closeAll(),
       onCopyPath: withPath(copyPath),
       onReveal: withPath((path) => live.current.revealInNavigator(path)),
-      onActivate: (id: TabId) => {
-        live.current.closeOverlays();
-        void controller.activate(id);
-      },
+      onActivate: (id: TabId) => void controller.activate(id),
       onClose: (id: TabId) => void controller.close(id),
-      onNewTab: () => {
-        live.current.closeOverlays();
-        void controller.newTab(live.current.settings.tabsNewTabPosition);
-      },
+      onNewTab: () =>
+        void controller.newTab(live.current.settings.tabsNewTabPosition),
     };
   }, [runtime, signals, copyPath]);
 

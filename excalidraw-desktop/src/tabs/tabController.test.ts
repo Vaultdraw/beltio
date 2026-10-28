@@ -33,6 +33,7 @@ const setup = (
     closePinned?: boolean;
     /** Record `flush` calls (the live document is saved before a switch). */
     flush?: boolean;
+    onNavigate?: () => void;
   } = {},
 ) => {
   const calls: string[] = [];
@@ -68,6 +69,7 @@ const setup = (
     onError,
     onPinnedCloseBlocked,
     closePinnedWithShortcut: () => opts.closePinned ?? false,
+    onNavigate: opts.onNavigate,
     session: { save: (s) => sessionSaves.push(s) },
     ...(opts.flush
       ? {
@@ -469,5 +471,44 @@ describe("TabsController", () => {
     // eslint-disable-next-line no-console
     console.log(`tabController overhead per switch: ${per.toFixed(4)} ms`);
     expect(per).toBeLessThan(0.5);
+  });
+});
+
+// Family: every way to move to a file or tab tells the host once, so a view
+// covering the main area gives way (e2e/families/main-area-views.spec.ts).
+describe("TabsController navigation hook", () => {
+  it.each([
+    ["openPath", (c: any) => c.openPath("c.excalidraw", { target: "new" })],
+    [
+      "openPath (already active)",
+      (c: any) => c.openPath("b.excalidraw", { target: "current" }),
+    ],
+    ["openCreated", (c: any) => c.openCreated("n.excalidraw")],
+    ["newTab", (c: any) => c.newTab()],
+    ["activate", (c: any, s: any) => c.activate(s.getState().tabs[0].id)],
+    ["next", (c: any) => c.next()],
+    ["prev", (c: any) => c.prev()],
+    ["goTo", (c: any) => c.goTo(1)],
+    ["goToLast", (c: any) => c.goToLast()],
+    ["mruNext", (c: any) => c.mruNext()],
+    ["mruPrev", (c: any) => c.mruPrev()],
+    ["reopenClosed", (c: any) => c.reopenClosed()],
+  ])("%s calls onNavigate once", async (_name, act) => {
+    const onNavigate = vi.fn();
+    const t = setup({ onNavigate });
+    await t.controller.openPath("a.excalidraw", { target: "current" });
+    await t.controller.openPath("b.excalidraw", { target: "new" });
+    onNavigate.mockClear();
+    await act(t.controller, t.store);
+    expect(onNavigate).toHaveBeenCalledTimes(1);
+  });
+
+  it("closing a tab is not a navigation", async () => {
+    const onNavigate = vi.fn();
+    const t = setup({ onNavigate });
+    await t.controller.openPath("a.excalidraw", { target: "current" });
+    onNavigate.mockClear();
+    await t.controller.close(t.store.getState().activeId);
+    expect(onNavigate).not.toHaveBeenCalled();
   });
 });

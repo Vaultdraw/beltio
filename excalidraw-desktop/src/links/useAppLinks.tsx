@@ -20,6 +20,7 @@ import { getPreferences, updatePreferences } from "../vault/preferences";
 import { setHotkeyOverride } from "../commands/useCommands";
 import { ensureFolder, folderChain } from "../vault/newDrawing";
 import { errorMessage } from "../vault/types";
+import { reopenYielded } from "../plugins/overlayStore";
 
 import { createSpot } from "./createTarget";
 import { getDockVisible, setDockVisible } from "./dockState";
@@ -31,6 +32,7 @@ import { createResolver } from "./resolve";
 
 import type { LinksDockHandle } from "../components/links/LinksDock";
 import type { EditorLinksBridge } from "../editor/links/useVaultEditorLinks";
+
 import type { ConfirmRequest } from "./moveFlow";
 import type {
   LinksSettings,
@@ -193,6 +195,10 @@ export function useAppLinks(deps: AppLinksDeps) {
 
   const go = useCallback(
     async (direction: "back" | "forward") => {
+      // A view (gallery, graph) that gave way to the last file comes back first.
+      if (direction === "back" && reopenYielded()) {
+        return;
+      }
       syncCurrent();
       const history = activeHistory();
       const entry = direction === "back" ? history.back() : history.forward();

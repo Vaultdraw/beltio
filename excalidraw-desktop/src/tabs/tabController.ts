@@ -76,6 +76,11 @@ export type TabsControllerDeps = {
    * the editor is closed like for the home tab, and the gate renders the view.
    */
   isCustomKind?: (path: string) => boolean;
+  /**
+   * The user navigates to a file or tab (open, activate, next/previous, new tab,
+   * reopen): a view covering the main area must give way. Called once per request.
+   */
+  onNavigate?: () => void;
   /** Called after every change that matters (debounced by the caller). */
   session?: { save: (state: TabsState) => void };
 };
@@ -167,6 +172,7 @@ export class TabsController {
   // -- opening --------------------------------------------------------------
 
   openPath(path: string, options: OpenOptions): Promise<void> {
+    this.deps.onNavigate?.();
     return this.run((s) => model.openPath(s, path, options));
   }
 
@@ -177,6 +183,7 @@ export class TabsController {
    * records the tab and treats the new tab as showing the document.
    */
   openCreated(path: string): Promise<void> {
+    this.deps.onNavigate?.();
     return this.run(
       (s) =>
         model.openPath(s, path, { target: targetForCreated(s), focus: true }),
@@ -185,20 +192,21 @@ export class TabsController {
   }
 
   newTab(position?: OpenOptions["position"]): Promise<void> {
+    this.deps.onNavigate?.();
     return this.run((s) => model.newTab(s, position));
   }
 
   // -- switching ------------------------------------------------------------
 
   activate(id: TabId): Promise<void> {
-    return this.run((s) => model.activate(s, id));
+    return this.navigate((s) => model.activate(s, id));
   }
-  next = (): Promise<void> => this.run(model.next);
-  prev = (): Promise<void> => this.run(model.prev);
-  goTo = (n: number): Promise<void> => this.run((s) => model.goTo(s, n));
-  goToLast = (): Promise<void> => this.run(model.goToLast);
-  mruNext = (): Promise<void> => this.run(model.mruNext);
-  mruPrev = (): Promise<void> => this.run(model.mruPrev);
+  next = (): Promise<void> => this.navigate(model.next);
+  prev = (): Promise<void> => this.navigate(model.prev);
+  goTo = (n: number): Promise<void> => this.navigate((s) => model.goTo(s, n));
+  goToLast = (): Promise<void> => this.navigate(model.goToLast);
+  mruNext = (): Promise<void> => this.navigate(model.mruNext);
+  mruPrev = (): Promise<void> => this.navigate(model.mruPrev);
 
   // -- closing --------------------------------------------------------------
 
@@ -232,7 +240,7 @@ export class TabsController {
     return this.run(model.closeAll);
   }
   reopenClosed(): Promise<void> {
-    return this.run(model.reopenClosed);
+    return this.navigate(model.reopenClosed);
   }
 
   // -- order ----------------------------------------------------------------
@@ -298,6 +306,12 @@ export class TabsController {
   }
 
   // -- internals ------------------------------------------------------------
+
+  /** A user navigation: a covering view gives way, then the state changes. */
+  private navigate(fn: (s: TabsState) => TabsState): Promise<void> {
+    this.deps.onNavigate?.();
+    return this.run(fn);
+  }
 
   private run(
     fn: (s: TabsState) => TabsState,
