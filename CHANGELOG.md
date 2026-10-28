@@ -21,6 +21,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Tabs and note links after a reload or a new note.** A restored background tab whose file was deleted outside the app is now marked missing (as an open tab is) instead of being dropped. A note you create, rename or delete is added to or removed from the `[[link]]` index at once (own actions and the file watcher); the full note rescan keeps its 10 s limit and no work runs before a note is first opened.
 - **Renamed command ids no longer break your keys.** A key bound in `[hotkeys]` to an old id (`thumbnails.galleryToggle`, `thumbnails.galleryOpen`, `file.importPdf`) keeps working, and so do those ids in the palette history, the CLI, `command.run` and links; they resolve to `gallery.toggle`, `gallery.show-folder` and `pdf-import.import` when they run, even if the extension registers later. See "Renamed commands" in `docs/configuration.md`.
 - **Editing a formula or a plugin shape keeps the element.** Both used to replace the image (new id, top of the stacking order, group and bound arrows lost). Plugin API 0.25.0: a scene `update` can carry `image` to change an image's picture in place, as one undo step, with the plugin's existing scene write permission. `ctx.shapes.update` and the formula edit use it.
 - **Formulas in `rgb()` / `hsl()` colours** keep their colour instead of turning near-black.
