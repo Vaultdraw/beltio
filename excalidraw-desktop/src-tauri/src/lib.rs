@@ -873,7 +873,10 @@ pub fn run() {
                 control::spawn(app.handle());
                 control::uri::on_startup_argv(app.handle());
                 #[cfg(feature = "smoke-test")]
-                smoke::harden_test_webview(&main_window);
+                {
+                    smoke::harden_test_webview(&main_window);
+                    smoke::front_test_window(&main_window);
+                }
                 // Hang watchdog: hooks WebKit's responsiveness callbacks; no thread or timer.
                 // Test builds skip it (an unanswered modal dialog would stall a smoke or perf
                 // run on a loaded machine) unless VAULTDRAW_WATCHDOG=1 asks for it.

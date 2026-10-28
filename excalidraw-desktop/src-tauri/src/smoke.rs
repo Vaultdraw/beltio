@@ -273,11 +273,16 @@ pub fn test_run() -> bool {
     enabled() || env::var("VAULTDRAW_PERF").ok().as_deref() == Some("1")
 }
 
-/// `VAULTDRAW_SMOKE_FOREGROUND=1`: the test run opens as a normal, focused app, for window
-/// managers that keep a never-activated window off the visible workspace (the WebView then
-/// reports hidden and the smoke refuses to start).
+/// Test runs open as a normal, focused app and bring their window to the front: a window
+/// behind other windows is occluded, WebKit stops drawing and the run is invalid (2026-10-28
+/// milestone smoke: appActive=false, occlusionVisible=false, three launches lost).
+/// `VAULTDRAW_SMOKE_BACKGROUND=1` restores the old never-activated Accessory mode.
 pub fn foreground_test() -> bool {
-    env::var("VAULTDRAW_SMOKE_FOREGROUND").ok().as_deref() == Some("1") || perf_foreground()
+    !wants_background(env::var("VAULTDRAW_SMOKE_BACKGROUND").ok().as_deref()) || perf_foreground()
+}
+
+fn wants_background(v: Option<&str>) -> bool {
+    v == Some("1")
 }
 
 /// `VAULTDRAW_PERF_FOREGROUND=1` (perf `--foreground`): a normal foreground app WITHOUT the
@@ -297,7 +302,7 @@ pub fn background_test() -> bool {
     test_run() && !foreground_test()
 }
 
-/// Test runs stay in the background: no Dock icon, never the active app. A window manager
+/// Opt-in background runs (`VAULTDRAW_SMOKE_BACKGROUND=1`) stay in the background: no Dock icon, never the active app. A window manager
 /// then has no activation to follow, so test windows never pull the user to another workspace.
 pub fn background_test_app(app: &mut tauri::App) {
     #[cfg(target_os = "macos")]
@@ -306,6 +311,55 @@ pub fn background_test_app(app: &mut tauri::App) {
     }
     #[cfg(not(target_os = "macos"))]
     let _ = app;
+}
+
+/// True when a shown window is not actually in front: the app is inactive or AppKit reports it
+/// occluded (then WebKit stops drawing).
+fn needs_front(app_active: bool, occlusion_visible: bool) -> bool {
+    !app_active || !occlusion_visible
+}
+
+/// Test runs (foreground mode) only: bring the main window to the front once it is built, and
+/// once more about 2 s later if AppKit still reports the app inactive or the window occluded.
+/// Release builds never call this.
+pub fn front_test_window(window: &tauri::WebviewWindow) {
+    if !foreground_test() || !test_run() {
+        return;
+    }
+    let front = |w: &tauri::WebviewWindow| {
+        let _ = w.show();
+        let _ = w.unminimize();
+        let _ = w.set_focus();
+        #[cfg(target_os = "macos")]
+        unsafe {
+            use objc2::runtime::{AnyObject, Bool};
+            use objc2::{class, msg_send};
+            let app: *mut AnyObject = msg_send![class!(NSApplication), sharedApplication];
+            if !app.is_null() {
+                let _: () = msg_send![&*app, activateIgnoringOtherApps: Bool::YES];
+            }
+        }
+    };
+    front(window);
+    let w = window.clone();
+    let _ = std::thread::Builder::new().name("test-front".into()).spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        let w2 = w.clone();
+        let _ = w.run_on_main_thread(move || {
+            #[cfg(target_os = "macos")]
+            let state = crate::hidden_render::native_state(&w2)["mac"].clone();
+            #[cfg(target_os = "macos")]
+            let again = needs_front(
+                state["appActive"].as_bool().unwrap_or(false),
+                state["occlusionVisible"].as_bool().unwrap_or(false),
+            );
+            #[cfg(not(target_os = "macos"))]
+            let again = false;
+            if again {
+                front(&w2);
+            }
+        });
+    });
 }
 
 /// Test runs only: keep the WebView rendering while the window is hidden (another workspace,
@@ -373,6 +427,21 @@ pub fn pdf_import_path() -> Result<PathBuf, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_runs_front_by_default_and_background_only_on_request() {
+        assert!(!wants_background(None));
+        assert!(!wants_background(Some("0")));
+        assert!(wants_background(Some("1")));
+    }
+
+    #[test]
+    fn front_again_when_inactive_or_occluded() {
+        assert!(!needs_front(true, true));
+        assert!(needs_front(false, true));
+        assert!(needs_front(true, false));
+        assert!(needs_front(false, false));
+    }
 
     #[test]
     fn alternates_only_when_alt_is_set() {
