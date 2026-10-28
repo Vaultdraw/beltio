@@ -22,6 +22,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- Repeated failed saves of a drawing (a locked file, a full disk, a sync tool holding it) keep one recovery copy per drawing instead of one per retry, so the recovery store no longer fills up and blocks every save with "Recovery storage is full". A successful save removes it, and the recovery list skips an oversized record instead of failing.
 - Saving no longer replaces a drawing you made read-only (or Finder-locked): the save is refused with a read-only message. A normal save keeps the file's permissions and its extended attributes (Finder tags, colour labels).
 - Creating drawings and notes works on exFAT and FAT drives (no hard links): the exclusive no-replace rename is used instead, and an existing file is still never overwritten.
 - Renaming or moving a drawing onto a name that differs only by accent case or Unicode form (`Été` and `été`, composed and decomposed `é`) no longer replaces the other file silently: it is refused as a name clash, and the file system's own no-replace rename guards every move. Case-only renames of the same file (`notes` to `Notes`) now work.

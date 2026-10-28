@@ -392,3 +392,34 @@ fn bulk_directory_read_matches_the_read_dir_fallback() {
     assert_eq!(a, b);
     assert!(a.iter().all(|e| !e.0.starts_with("link")), "symlinks are skipped");
 }
+#[test]
+fn failed_commits_keep_one_recovery_record_per_path_and_success_prunes_it() {
+    let t = tempdir().unwrap(); let v = vault(t.path());
+    let p = t.path().join("a.excalidraw");
+    fs::write(&p, SCENE).unwrap();
+    let rev = revision(SCENE.as_bytes());
+    let next = SCENE.replace("\"version\":2", "\"version\":3");
+    let fail = |_: &Path, _: &[u8], _: bool| -> Result<()> { Err(err("IO", "disk full")) };
+    for i in 0..6 {
+        assert!(write_drawing_file_with_commit(&v, "a.excalidraw", &next, Some(&rev), &format!("op{i}"), fail).is_err());
+    }
+    let dir = checked_recovery_dir(&v, false).unwrap().unwrap();
+    assert_eq!(fs::read_dir(&dir).unwrap().count(), 1, "six failures, one record");
+    assert_eq!(list_recovery(&v).unwrap().len(), 1);
+    // Another drawing gets its own record.
+    fs::write(t.path().join("b.excalidraw"), SCENE).unwrap();
+    assert!(write_drawing_file_with_commit(&v, "b.excalidraw", &next, Some(&rev), "opb", fail).is_err());
+    assert_eq!(fs::read_dir(&dir).unwrap().count(), 2);
+    // A later successful save removes the stale record of that path.
+    write_drawing_file(&v, "a.excalidraw", &next, Some(&rev), "ok").unwrap();
+    assert_eq!(fs::read_dir(&dir).unwrap().count(), 1);
+}
+#[test]
+fn recovery_listing_skips_an_over_limit_record() {
+    let t = tempdir().unwrap(); let v = vault(t.path());
+    create_recovery(&v, "a.excalidraw", None, "op", SCENE).unwrap();
+    let dir = checked_recovery_dir(&v, false).unwrap().unwrap();
+    let big = fs::File::create(dir.join("huge.json")).unwrap();
+    big.set_len(MAX_RECOVERY_RECORD_BYTES + 1).unwrap();
+    assert_eq!(list_recovery(&v).unwrap().len(), 1);
+}

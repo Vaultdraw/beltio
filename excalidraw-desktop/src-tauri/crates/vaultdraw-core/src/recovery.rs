@@ -64,13 +64,16 @@ pub fn create_recovery(
     json: &str,
 ) -> Result<PathBuf> {
     let dir = recovery_dir(v)?;
-    // Bound retained recovery before adding a snapshot; snapshots are never pruned automatically.
+    // One record per drawing path: a new snapshot replaces the previous failed one (same file name),
+    // so repeated failed commits never fill the store. A successful save removes it.
+    let file = dir.join(format!("p-{}.json", &revision(path.as_bytes())[..32]));
     let mut total = 0u64;
     for entry in fs::read_dir(&dir).map_err(ioerr)? {
         let entry = entry.map_err(ioerr)?;
         let ty = entry.file_type().map_err(ioerr)?;
         if ty.is_symlink() { return Err(err("INVALID_PATH", "Recovery metadata contains a symbolic link")); }
-        if ty.is_file() { total = total.saturating_add(entry.metadata().map_err(ioerr)?.len()); }
+        // The record about to be replaced does not count against the cap.
+        if ty.is_file() && entry.path() != file { total = total.saturating_add(entry.metadata().map_err(ioerr)?.len()); }
     }
     let record = RecoveryRecord {
         path: path.into(),
@@ -89,12 +92,13 @@ pub fn create_recovery(
             "Recovery storage is full; discard snapshots before saving",
         ));
     }
-    let file = dir.join(format!("{}.json", random_id()));
-    write_atomic_new_with(&file, |f| {
+    let staged = dir.join(format!("{}.tmp", random_id()));
+    write_atomic_new_with(&staged, |f| {
         let mut out = BufWriter::new(f);
         serde_json::to_writer(&mut out, &record)?;
         out.flush()
     })?;
+    if let Err(e) = fs::rename(&staged, &file) { let _ = fs::remove_file(&staged); return Err(ioerr(e)); }
     Ok(file)
 }
 /// `Write` sink that only counts bytes.
@@ -140,11 +144,9 @@ pub fn list_recovery(v: &Vault) -> Result<Vec<RecoveryEntry>> {
         }
         let md = entry.metadata().map_err(ioerr)?;
         total = total.saturating_add(md.len());
+        // An over-limit record is skipped, not fatal: one bad file must not hide the others.
         if total > MAX_RECOVERY_BYTES || md.len() > MAX_RECOVERY_RECORD_BYTES {
-            return Err(err(
-                "RECOVERY_FULL",
-                "Recovery directory exceeds its safety limit",
-            ));
+            continue;
         }
         let data = read_bounded(&entry.path(), MAX_RECOVERY_RECORD_BYTES)?;
         let record: RecoveryRecord<'_> = match serde_json::from_slice(&data) {
