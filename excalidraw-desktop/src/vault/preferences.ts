@@ -133,6 +133,12 @@ import {
   type ToolStyle,
 } from "../toolDefaults/toolStyles";
 
+import {
+  WATCH_DEFAULTS,
+  normalizeWatchPreferences,
+  type WatchPreferences,
+} from "../watch/watchSettings";
+
 import { DEFAULT_WATCH_POLL_MS, isWatchPollMs } from "./watchPoll";
 
 import { isWindowDecorations, type WindowDecorations } from "./windowChrome";
@@ -393,6 +399,7 @@ export type VaultPreferences = VaultPreferencesBase &
   KeysPreferences &
   ServicesPreferences &
   SpeculativePreferences &
+  WatchPreferences &
   LayoutPreferences &
   UserCommandsPreferences &
   Record<ToolField, ToolStyle>;
@@ -536,6 +543,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   ...KEYS_DEFAULTS,
   ...SERVICES_DEFAULTS,
   ...SPECULATIVE_DEFAULTS,
+  ...WATCH_DEFAULTS,
   ...LAYOUT_DEFAULTS,
   ...USER_COMMANDS_DEFAULTS,
   ...emptyToolStyles(),
@@ -1070,6 +1078,7 @@ export function normalizePreferences(input: unknown): VaultPreferences {
     ...normalizeKeysPreferences(parsed as Record<string, unknown>),
     ...normalizeServicesPreferences(parsed as Record<string, unknown>),
     ...normalizeSpeculativePreferences(parsed as Record<string, unknown>),
+    ...normalizeWatchPreferences(parsed as Record<string, unknown>),
     ...normalizeLayoutPreferences(parsed as Record<string, unknown>),
     ...normalizeUserCommandsPreferences(parsed as Record<string, unknown>),
     ...normalizeToolStyles(parsed as Partial<Record<ToolField, unknown>>),

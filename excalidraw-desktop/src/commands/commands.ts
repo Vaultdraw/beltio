@@ -600,7 +600,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
     id: "navigator.refresh",
     title: "Navigator: Refresh files",
     category: "Navigator",
-    keys: { default: [] },
+    keys: { default: ["Mod+Shift+R"] },
     when: ["vaultOpen", "!modalOpen"],
   },
   {

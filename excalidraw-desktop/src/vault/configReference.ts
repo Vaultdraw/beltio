@@ -203,6 +203,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       speculative_open: {
         doc: "Read and parse a drawing when you press on it in the file tree, a tab or the switcher, before the click lands, so it opens sooner. Holds one drawing for a moment; costs nothing when off or unused. See [Speed trade-offs](#speed-trade-offs).",
       },
+      auto_reload: {
+        doc: "Watch the vault folder and update the tree, search and open drawings when files change outside the app (file manager, sync, git). Off stops the watcher and costs nothing; Refresh in the navigator header (Cmd+Shift+R) still updates. See [Files changed outside the app](#files-changed-outside-the-app).",
+      },
       watch_poll_ms: {
         doc: "Linux: how often, in milliseconds, a vault is checked for changes when the system's inotify watch limit stops the normal file watcher. Read when the vault opens; unused (and never read) while the normal watcher works. See [Large vaults on Linux](#large-vaults-on-linux).",
       },

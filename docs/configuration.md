@@ -1460,6 +1460,21 @@ The commands `Sync: Keep this version (the other goes to history)` and `Sync: Ke
 
 Limits: Compare and keep work for `.excalidraw` drawings (conflict copies of notes get the badge, and you resolve them in the file tree or your file manager). OneDrive's `name-COMPUTER.ext` copies are not recognised, since the name cannot be told from a normal one.
 
+## Files changed outside the app
+
+Vaultdraw watches the vault folder, so a file or folder you create, rename, move or delete in your file manager, a sync service or git shows up in the tree, search and open tabs at once. A deleted drawing that is open stays in its tab, marked missing. When the window gains focus the tree also re-reads the folders it shows, as a safety net behind the watcher.
+
+| Key | Settings | Default | What it does |
+| --- | --- | --- | --- |
+| `files.auto_reload` | Files → Reload when files change outside the app | `true` | `false` stops the watcher (no file-system events, no polling, nothing runs); only **Refresh** updates the tree. Applies live: turning it back on rescans at once. |
+
+**Refresh** is the circular-arrow button in the navigator header, or the command `navigator.refresh` ("Navigator: Refresh files", `Mod+Shift+R` by default, rebindable in `[hotkeys]`). It re-reads every folder the tree shows and rescans the file list that search and links use.
+
+```toml
+[files]
+auto_reload = false
+```
+
 ## Large vaults on Linux
 
 Vaultdraw watches the vault folder so the tree, search and open drawings follow changes made outside the app. Linux's inotify needs one watch per folder, and a vault with a big Git history or `node_modules` can pass the system limit `fs.inotify.max_user_watches`.
@@ -1902,6 +1917,7 @@ Creating and deleting drawings.
 | `templates_folder` | `"Templates"` | a non-empty folder path inside the vault like "Templates" | yes | Vault folder holding your templates. See [Templates](#templates). |
 | `list_start` | `"idle"` | "open", "idle" or "use" |  | When every vault folder is listed for recent drawings, the file switcher, link suggestions and the move dialog: `open`, `idle` or `use` (the first of those). The file tree loads at open either way. See [Startup](#startup). |
 | `speculative_open` | `true` | true or false |  | Read and parse a drawing when you press on it in the file tree, a tab or the switcher, before the click lands, so it opens sooner. Holds one drawing for a moment; costs nothing when off or unused. See [Speed trade-offs](#speed-trade-offs). |
+| `auto_reload` | `true` | true or false |  | Watch the vault folder and update the tree, search and open drawings when files change outside the app (file manager, sync, git). Off stops the watcher and costs nothing; Refresh in the navigator header (Cmd+Shift+R) still updates. See [Files changed outside the app](#files-changed-outside-the-app). |
 | `watch_poll_ms` | `5000` | a whole number of milliseconds between 500 and 600000 |  | Linux: how often, in milliseconds, a vault is checked for changes when the system's inotify watch limit stops the normal file watcher. Read when the vault opens; unused (and never read) while the normal watcher works. See [Large vaults on Linux](#large-vaults-on-linux). |
 
 ### `[links]`

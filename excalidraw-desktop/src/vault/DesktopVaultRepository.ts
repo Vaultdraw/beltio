@@ -205,6 +205,15 @@ export class DesktopVaultRepository implements VaultRepository {
     return this.reopenPromise;
   }
 
+  async setWatching(handle: string, enabled: boolean): Promise<void> {
+    const invoke = await this.getInvoke();
+    try {
+      await invoke<void>("set_vault_watching", { handle, enabled });
+    } catch (err) {
+      throw normalizeError(err);
+    }
+  }
+
   async releaseVault(handle: string): Promise<void> {
     const invoke = await this.getInvoke();
     try {

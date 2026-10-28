@@ -192,67 +192,79 @@ mod tests {
         assert!(started.fallback.is_none());
     }
 
-    /// Collects the paths the native watcher reports for `act`, waiting up to ~3 s.
-    fn native_paths(root: &Path, act: impl FnOnce(), want: &str) -> Vec<(String, notify::EventKind)> {
+    /// Family "any change made outside the app shows up": one real native watcher, one real
+    /// folder, a table of file-manager style changes. Each row names the vault-relative
+    /// paths the watcher must report (the UI then reloads those folders).
+    #[test]
+    fn native_watcher_reports_every_kind_of_outside_change() {
+        use std::fs;
+        use std::collections::HashSet;
+        let outer = tempfile::tempdir().unwrap();
+        let base = outer.path().canonicalize().unwrap();
+        let (root, trash) = (base.join("vault"), base.join("trash"));
+        fs::create_dir_all(root.join("seed/inner/deeper")).unwrap();
+        fs::create_dir_all(root.join("mv/dest")).unwrap();
+        fs::create_dir_all(&trash).unwrap();
+        for f in ["seed/inner/deeper/a.excalidraw", "seed/inner/b.md", "old.excalidraw", "note.md", "mv/x.excalidraw", "gone.excalidraw", "tab.excalidraw"] {
+            fs::write(root.join(f), "{}").unwrap();
+        }
+        std::thread::sleep(Duration::from_millis(1500));
         let (tx, rx) = mpsc::channel();
-        let started = start_with(root, tx, false, || 0, native);
+        let started = start_with(&root, tx, false, || 0, native);
         assert!(started.watching.is_some());
         std::thread::sleep(Duration::from_millis(500));
-        act();
-        let mut seen = Vec::new();
-        for _ in 0..30 {
-            if let Ok(Ok(e)) = rx.recv_timeout(Duration::from_millis(100)) {
-                for p in &e.paths {
-                    seen.push((p.strip_prefix(root).unwrap_or(p).to_string_lossy().into_owned(), e.kind));
+
+        type Act = Box<dyn Fn(&Path, &Path)>;
+        let rows: Vec<(&str, Act, Vec<&str>)> = vec![
+            ("create a drawing", Box::new(|r, _| fs::write(r.join("new.excalidraw"), "{}").unwrap()), vec!["new.excalidraw"]),
+            ("create a note", Box::new(|r, _| fs::write(r.join("fresh.md"), "# x").unwrap()), vec!["fresh.md"]),
+            ("create a folder", Box::new(|r, _| fs::create_dir(r.join("made")).unwrap()), vec!["made"]),
+            ("create a nested folder", Box::new(|r, _| fs::create_dir_all(r.join("made/a/b")).unwrap()), vec!["made/a", "made/a/b"]),
+            ("delete a file", Box::new(|r, _| fs::remove_file(r.join("gone.excalidraw")).unwrap()), vec!["gone.excalidraw"]),
+            ("delete a note", Box::new(|r, _| fs::remove_file(r.join("note.md")).unwrap()), vec!["note.md"]),
+            ("delete a folder with children", Box::new(|r, _| fs::remove_dir_all(r.join("seed")).unwrap()), vec!["seed"]),
+            ("rename a file", Box::new(|r, _| fs::rename(r.join("old.excalidraw"), r.join("renamed.excalidraw")).unwrap()), vec!["old.excalidraw", "renamed.excalidraw"]),
+            ("rename a folder", Box::new(|r, _| fs::rename(r.join("made"), r.join("made2")).unwrap()), vec!["made", "made2"]),
+            ("move a file into a subfolder", Box::new(|r, _| fs::rename(r.join("mv/x.excalidraw"), r.join("mv/dest/x.excalidraw")).unwrap()), vec!["mv/x.excalidraw", "mv/dest/x.excalidraw"]),
+            ("move a folder out like the Trash", Box::new(|r, t| fs::rename(r.join("mv"), t.join("mv")).unwrap()), vec!["mv"]),
+            ("delete a drawing that is open in a tab", Box::new(|r, _| fs::remove_file(r.join("tab.excalidraw")).unwrap()), vec!["tab.excalidraw"]),
+        ];
+        let mut failures = Vec::new();
+        for (name, act, want) in &rows {
+            while rx.try_recv().is_ok() {}
+            act(&root, &trash);
+            let want: HashSet<String> = want.iter().map(|s| s.to_string()).collect();
+            let mut seen: HashSet<String> = HashSet::new();
+            for _ in 0..60 {
+                if let Ok(Ok(e)) = rx.recv_timeout(Duration::from_millis(100)) {
+                    seen.extend(e.paths.iter().map(|p| p.strip_prefix(&root).unwrap_or(p).to_string_lossy().into_owned()));
                 }
-                if seen.iter().any(|(p, _)| p == want) { break; }
+                if want.is_subset(&seen) { break; }
+            }
+            if !want.is_subset(&seen) {
+                failures.push(format!("{name}: wanted {want:?}, saw {seen:?}"));
             }
         }
-        seen
-    }
-
-    #[test]
-    fn external_folder_delete_create_and_rename_are_reported() {
-        let dir = tempfile::tempdir().unwrap();
-        let root = dir.path().canonicalize().unwrap();
-        std::fs::create_dir_all(root.join("gone/inner")).unwrap();
-        std::fs::write(root.join("gone/inner/a.excalidraw"), "{}").unwrap();
-        std::fs::write(root.join("file.excalidraw"), "{}").unwrap();
-        std::thread::sleep(Duration::from_millis(1200));
-        let r = root.clone();
-        let seen = native_paths(&root, || std::fs::remove_dir_all(r.join("gone")).unwrap(), "gone");
-        eprintln!("folder delete: {seen:?}");
-        assert!(seen.iter().any(|(p, _)| p == "gone"), "folder removal reports the folder: {seen:?}");
-        let r = root.clone();
-        let seen = native_paths(&root, || std::fs::remove_file(r.join("file.excalidraw")).unwrap(), "file.excalidraw");
-        eprintln!("file delete: {seen:?}");
-        assert!(seen.iter().any(|(p, _)| p == "file.excalidraw"), "{seen:?}");
-        let r = root.clone();
-        let seen = native_paths(&root, || std::fs::create_dir(r.join("new")).unwrap(), "new");
-        eprintln!("create: {seen:?}");
-        assert!(seen.iter().any(|(p, _)| p == "new"), "{seen:?}");
-    }
-
-    #[test]
-    fn moving_a_folder_out_of_the_vault_like_the_trash_is_reported() {
-        let outer = tempfile::tempdir().unwrap();
-        let root = outer.path().canonicalize().unwrap().join("vault");
-        let trash = outer.path().canonicalize().unwrap().join("trash");
-        std::fs::create_dir_all(root.join("gone/inner")).unwrap();
-        std::fs::create_dir_all(&trash).unwrap();
-        std::fs::write(root.join("gone/inner/a.excalidraw"), "{}").unwrap();
-        std::thread::sleep(Duration::from_millis(1200));
-        let (r, t) = (root.clone(), trash.clone());
-        let seen = native_paths(&root, || std::fs::rename(r.join("gone"), t.join("gone")).unwrap(), "gone");
-        eprintln!("move out: {seen:?}");
-        assert!(seen.iter().any(|(p, _)| p == "gone"), "{seen:?}");
-        // and a rename inside the vault
-        std::fs::create_dir_all(root.join("a")).unwrap();
-        std::thread::sleep(Duration::from_millis(1200));
-        let r = root.clone();
-        let seen = native_paths(&root, || std::fs::rename(r.join("a"), r.join("b")).unwrap(), "b");
-        eprintln!("rename: {seen:?}");
-        assert!(seen.iter().any(|(p, _)| p == "a") && seen.iter().any(|(p, _)| p == "b"), "{seen:?}");
+        // A burst: many creates then deletes; every path is reported.
+        while rx.try_recv().is_ok() {}
+        fs::create_dir(root.join("burst")).unwrap();
+        let burst: Vec<String> = (0..60).map(|i| format!("burst/n{i}.excalidraw")).collect();
+        for p in &burst { fs::write(root.join(p), "{}").unwrap(); }
+        for p in burst.iter().step_by(2) { fs::remove_file(root.join(p)).unwrap(); }
+        let mut seen: HashSet<String> = HashSet::new();
+        let deadline = std::time::Instant::now() + Duration::from_secs(8);
+        while std::time::Instant::now() < deadline {
+            match rx.recv_timeout(Duration::from_millis(100)) {
+                Ok(Ok(e)) => seen.extend(e.paths.iter().map(|p| p.strip_prefix(&root).unwrap_or(p).to_string_lossy().into_owned())),
+                Ok(Err(e)) => eprintln!("watcher error event: {e:?}"),
+                Err(mpsc::RecvTimeoutError::Timeout) => {}
+                Err(mpsc::RecvTimeoutError::Disconnected) => { eprintln!("disconnected"); break; }
+            }
+            if burst.iter().all(|p| seen.contains(p)) { break; }
+        }
+        let missing: Vec<_> = burst.iter().filter(|p| !seen.contains(*p)).collect();
+        if !missing.is_empty() { failures.push(format!("burst: {} paths never reported, e.g. {:?}; saw {} paths: {:?}", missing.len(), &missing[..missing.len().min(3)], seen.len(), seen.iter().filter(|p| !p.starts_with("burst/n")).collect::<Vec<_>>())); }
+        assert!(failures.is_empty(), "outside changes the watcher missed:\n{}", failures.join("\n"));
     }
 
     #[test]

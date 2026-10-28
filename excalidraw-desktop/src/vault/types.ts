@@ -56,6 +56,8 @@ export interface VaultRepository {
   chooseVault(create?: boolean): Promise<VaultInfo | null>;
   reopenVault(): Promise<VaultInfo | null>;
   releaseVault(handle: string): Promise<void>;
+  /** files.auto_reload: starts or stops the native file watcher of the vault (absent in fakes without one). */
+  setWatching?(handle: string, enabled: boolean): Promise<void>;
   /** Opens the vault behind `handle` again as a new handle (writable if its lock is free now). */
   retryVault?(handle: string): Promise<VaultInfo>;
   listDirectory(handle: string, path: string): Promise<VaultEntry[]>;

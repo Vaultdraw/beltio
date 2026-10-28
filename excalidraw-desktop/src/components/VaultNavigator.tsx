@@ -28,6 +28,7 @@ import { createTagsProvider } from "../palette/providers/tags";
 
 import { isNewTabClick } from "../tabs/newTabClick";
 import { useListKeys } from "../commands/useListKeys";
+import { useCommandShortcut } from "../commands/useCommandShortcut";
 import { focusList } from "../commands/listNav";
 import { registerCommandHandlers } from "../commands/handlerRegistry";
 import {
@@ -240,6 +241,10 @@ export const VaultNavigator = ({
   onSyncAction,
   ownerDocument,
 }: VaultNavigatorProps) => {
+  const refreshKey = useCommandShortcut(
+    "navigator.refresh",
+    ownerDocument?.defaultView ?? null,
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [focusedPath, setFocusedPath] = useState<string | null>(null);
 
@@ -765,7 +770,9 @@ export const VaultNavigator = ({
             type="button"
             className="vault-btn vault-btn--ghost vault-btn--icon"
             onClick={onRefresh}
-            title="Refresh files"
+            title={
+              refreshKey ? `Refresh files (${refreshKey})` : "Refresh files"
+            }
             aria-label="Refresh files"
           >
             <IconRefresh />

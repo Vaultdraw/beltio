@@ -105,6 +105,15 @@ export interface FakeVaultOptions {
   lockHolderPid?: number;
 }
 
+const EMPTY_SCENE_JSON = JSON.stringify({
+  type: "excalidraw",
+  version: 2,
+  source: "fake",
+  elements: [],
+  appState: {},
+  files: {},
+});
+
 export class FakeVaultRepository implements VaultRepository {
   readonly vault: VaultInfo;
   private files = new Map<string, FileRow>();
@@ -235,6 +244,105 @@ export class FakeVaultRepository implements VaultRepository {
     this.files.delete(path);
     // Remove now-empty ancestor bookkeeping is unnecessary for the fake.
     this.emit({ handle: this.vault.handle, paths: [path], rescan: false });
+  }
+
+  /** Calls of `setWatching` (files.auto_reload), for tests. */
+  watchingCalls: boolean[] = [];
+  async setWatching(_handle: string, enabled: boolean): Promise<void> {
+    this.watchingCalls.push(enabled);
+  }
+
+  /**
+   * A change made behind the app's back, in a file manager: nothing goes through the app's
+   * own create/move/trash. Reported like the native watcher does: every affected path
+   * (a deleted or renamed folder lists its children too), no rescan.
+   */
+  outside(change: {
+    op: "create" | "mkdir" | "delete" | "rename";
+    path: string;
+    to?: string;
+    /** No event at all (a watcher that missed it, or auto reload off): only Refresh shows it. */
+    quiet?: boolean;
+  }): void {
+    const { op, path } = change;
+    const under = (p: string, root: string) =>
+      p === root || p.startsWith(`${root}/`);
+    const touched: string[] = [path];
+    if (op === "create" || op === "mkdir") {
+      // The folders the file-manager change brought along are reported too, like the watcher.
+      for (
+        let at = path.lastIndexOf("/");
+        at > 0;
+        at = path.lastIndexOf("/", at - 1)
+      ) {
+        const parent = path.slice(0, at);
+        if (!this.folders.has(parent)) {
+          touched.push(parent);
+        }
+      }
+    }
+    if (op === "create") {
+      if (path.endsWith(".md")) {
+        this.seedNote(path);
+      } else {
+        this.seedDrawing(path, EMPTY_SCENE_JSON);
+      }
+    } else if (op === "mkdir") {
+      this.seedFolder(path);
+    } else if (op === "delete") {
+      for (const f of [...this.files.keys()]) {
+        if (under(f, path)) {
+          this.files.delete(f);
+          touched.push(f);
+        }
+      }
+      for (const n of [...this.notes]) {
+        if (under(n, path)) {
+          this.notes.delete(n);
+          touched.push(n);
+        }
+      }
+      for (const d of [...this.folders]) {
+        if (d !== "" && under(d, path)) {
+          this.folders.delete(d);
+          touched.push(d);
+        }
+      }
+    } else {
+      const to = change.to as string;
+      touched.push(to);
+      this.seedFolder(to.includes("/") ? to.slice(0, to.lastIndexOf("/")) : "");
+      const re = (p: string) =>
+        p === path ? to : `${to}${p.slice(path.length)}`;
+      for (const [f, row] of [...this.files]) {
+        if (under(f, path)) {
+          this.files.delete(f);
+          this.files.set(re(f), row);
+          touched.push(f, re(f));
+        }
+      }
+      for (const n of [...this.notes]) {
+        if (under(n, path)) {
+          this.notes.delete(n);
+          this.notes.add(re(n));
+          touched.push(n, re(n));
+        }
+      }
+      for (const d of [...this.folders]) {
+        if (d !== "" && under(d, path)) {
+          this.folders.delete(d);
+          this.folders.add(re(d));
+          touched.push(d, re(d));
+        }
+      }
+    }
+    if (!change.quiet) {
+      this.emit({
+        handle: this.vault.handle,
+        paths: [...new Set(touched)],
+        rescan: false,
+      });
+    }
   }
 
   seedRecovery(path: string, json: string): RecoveryEntry {

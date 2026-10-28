@@ -4,11 +4,17 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Added
+
+- **Refresh button and `files.auto_reload`.** The navigator header has a Refresh button (`Mod+Shift+R`, command `navigator.refresh`) that re-reads the tree and the file list. The new `files.auto_reload` setting (default on, Settings > Files, live) turns the file watcher off; then only Refresh updates the tree. See [Files changed outside the app](docs/configuration.md#files-changed-outside-the-app).
+
 ### Changed
 
 - **A cleaner file-tree right-click menu.** Items sit in groups split by dividers (create, organise, copy path, reveal, rename and Move to Trash last), "Copy path" and "Export" open submenus with a chevron, items that open a dialog end in "…", and each item shows its key when it has one. Arrow keys, Home, End, ArrowRight and ArrowLeft for submenus, and typing a name's first letters all work. New commands "List: Copy item path", "Copy item absolute path" and "Copy item link" (no default keys) copy the focused row's path.
 
 ### Fixed
+
+- **Changes made in a file manager now reach the whole tree.** A rescan used to reload only the top level, so a folder deleted, renamed or moved in Finder could stay listed inside an open folder. A rescan now reloads every folder the tree shows, and coming back to the window re-reads them.
 
 - **The network consent dialog looks like part of the app.** It now shows the Vaultdraw icon, plain titles ("Allow downloading themes?"), no config keys, and Allow / Don't Allow buttons; the in-app consent messages no longer name config keys either. Settings > General > Config File lays out cleanly: the buttons sit beside the text, the file rows use the full width, and paths shorten in the middle of the folder instead of breaking inside a word.
 

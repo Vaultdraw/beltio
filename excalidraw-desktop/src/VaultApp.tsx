@@ -21,6 +21,7 @@ import { DesktopVaultSearch } from "./search/DesktopVaultSearch";
 import { DesktopVaultLinks } from "./links/DesktopVaultLinks";
 import { useLinkDisplayPrefs } from "./links/useLinkDisplayPrefs";
 import { useSpeculativeOpen } from "./speculative/useSpeculativeOpen";
+import { useAutoReload } from "./watch/useAutoReload";
 import { resolveOpenTarget } from "./control/openTarget";
 import { createAppFiles } from "./control/appFiles";
 import { createBusyCounter } from "./control/busyCounter";
@@ -730,6 +731,7 @@ export const VaultApp = ({
     vault?.handle ?? null,
     activeDoc?.path ?? null,
   );
+  useAutoReload(repository, vault?.handle ?? null, prefsNow.filesAutoReload);
   const tabsRef = useRef<TabsApi | null>(null);
 
   // One close path serves both window close and app-wide Quit. Keep the editor
@@ -889,7 +891,7 @@ export const VaultApp = ({
 
   // Load a directory's entries with generation check and error surfacing
   const loadDirectory = useCallback(
-    async (dirPath: string, expectedGen?: number) => {
+    async (dirPath: string, expectedGen?: number, soft = false) => {
       if (!vault) {
         return;
       }
@@ -909,8 +911,12 @@ export const VaultApp = ({
           return;
         }
         if (dirPath !== "" && isNotFoundError(err)) {
-          // Moved, renamed or deleted (here or outside the app): not an error.
-          rebaseFolders(dirPath, null);
+          // Moved, renamed or deleted (here or outside the app): not an error. A soft
+          // reload (after a rescan) leaves the bookkeeping alone: the folder's parent was
+          // reloaded too and no longer lists it, and an in-app move is still rebasing it.
+          if (!soft) {
+            rebaseFolders(dirPath, null);
+          }
           return;
         }
         setGlobalAlert({
@@ -1129,7 +1135,11 @@ export const VaultApp = ({
         }
 
         if (event.rescan) {
-          void loadDirectory("", currentGen);
+          // Every folder the tree has loaded, not just the root: a rescan may stand for
+          // changes anywhere (dropped events, odd names, a watcher restart).
+          for (const dir of new Set(["", ...directoryMapRef.current.keys()])) {
+            void loadDirectory(dir, currentGen, true);
+          }
           scheduleCoalescedIndex();
           void refreshRecovery(currentGen);
           return;
@@ -1485,16 +1495,40 @@ export const VaultApp = ({
     saveExpandedFolders(vault.path, [], win);
   };
 
-  const refreshFiles = () => {
-    void loadDirectory("");
-    for (const f of expandedFolders) {
-      if (f) {
-        void loadDirectory(f);
-      }
+  const reloadLoadedFolders = () => {
+    for (const dir of new Set(["", ...directoryMapRef.current.keys()])) {
+      void loadDirectory(dir, undefined, true);
     }
+  };
+  const refreshFiles = () => {
+    reloadLoadedFolders();
     startIndexing();
     void refreshRecovery();
   };
+  // Coming back to the window (from a file manager, say) re-reads the listed folders: a
+  // safety net behind the watcher, costing nothing until the window gains focus. With
+  // files.auto_reload off, only Refresh updates.
+  const reloadOnFocus = useRef(reloadLoadedFolders);
+  reloadOnFocus.current = reloadLoadedFolders;
+  const autoReload = prefsNow.filesAutoReload;
+  const vaultHandleForFocus = vault?.handle ?? null;
+  useEffect(() => {
+    const target = win ?? window;
+    if (!autoReload || !vaultHandleForFocus) {
+      return;
+    }
+    let last = 0;
+    const onFocus = () => {
+      const now = Date.now();
+      if (now - last < 2000) {
+        return;
+      }
+      last = now;
+      reloadOnFocus.current();
+    };
+    target.addEventListener("focus", onFocus);
+    return () => target.removeEventListener("focus", onFocus);
+  }, [autoReload, vaultHandleForFocus, win]);
 
   const handleExpandFolder = (folderPath: string) => {
     if (!vault) {
@@ -3236,6 +3270,7 @@ export const VaultApp = ({
           activePath={activeDoc?.path ?? null}
           collapsed={navigatorHidden}
           onToggleCollapse={handleToggleNavigator}
+          onRefresh={refreshFiles}
           onOpenNote={(path, opts) => {
             if (ext.notes && tabs.enabled) {
               return tabs.open(path, opts?.target);
