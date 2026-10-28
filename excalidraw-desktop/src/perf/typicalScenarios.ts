@@ -16,6 +16,8 @@ import type { PerfKit } from "./perfKit";
 
 export type TypicalConfig = typeof typicalConfig;
 
+/** Rows mounted at once in a windowed tree: more than this means the root list is long. */
+const WINDOWED_FIRST_SCREEN = 20;
 const top = (path: string) => path.split("/")[0];
 const parentOf = (path: string) => path.split("/").slice(0, -1).join("/");
 
@@ -30,8 +32,13 @@ export async function runTypicalScenarios(
   await scenario("typical-vault-open", async () => {
     push(
       "typical.vaultOpenToTree",
-      await openVaultFolder(kit, () =>
-        [...folders, top(target.path)].every((path) => Boolean(row(path))),
+      await openVaultFolder(
+        kit,
+        // A windowed tree (hundreds of root rows) mounts only the first screen: the rows
+        // are found by scrolling afterwards (expandFolder), so a full first screen is enough.
+        () =>
+          [...folders, top(target.path)].every((path) => Boolean(row(path))) ||
+          kit.treeRows().length >= WINDOWED_FIRST_SCREEN,
       ),
     );
     info.typicalRootRows = kit

@@ -83,6 +83,7 @@ export async function runEverydayScenarios(kit: PerfKit): Promise<void> {
   const [first, second, third] = EVERYDAY_NOTES;
 
   await scenario("everyday-open", async () => {
+    await kit.revealRow("Notes");
     await kit.waitUntil("Notes folder", () => Boolean(row("Notes")));
     if (row("Notes")?.getAttribute("aria-expanded") !== "true") {
       kit.click(row("Notes"), "Notes");

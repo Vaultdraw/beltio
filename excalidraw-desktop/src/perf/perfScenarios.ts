@@ -13,6 +13,7 @@ import { readOpenMarks } from "./openMarks";
 import { refreshRateSamples, runRefreshRateProbe } from "./refreshRate";
 import { scenarioSelected } from "./scenarioFilter";
 import { setPerfStep } from "./footprintTrace";
+import { nextRevealScroll } from "./perfKit";
 import { runTypicalScenarios } from "./typicalScenarios";
 
 import type {
@@ -205,6 +206,25 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
     Array.from(
       root.querySelectorAll<HTMLElement>(".vault-tree-item[data-tree-path]"),
     );
+  /**
+   * The tree mounts only the rows near the scroll position (windowing), so in a vault with
+   * hundreds of root rows (a 20,000-file notes vault) `row(path)` is empty until the row is
+   * scrolled to. Scrolls the tree one screen at a time until the row is mounted.
+   */
+  const revealRow = async (path: string, ms = 30_000) => {
+    const scroller = root.querySelector<HTMLElement>(".vault-tree-container");
+    const deadline = now() + ms;
+    while (!row(path) && now() < deadline) {
+      if (scroller) {
+        scroller.scrollTop = nextRevealScroll(
+          scroller.scrollTop,
+          scroller.clientHeight,
+          scroller.scrollHeight,
+        );
+      }
+      await sleep(25);
+    }
+  };
   const childRows = (folder: string) =>
     treeRows().filter((item) => {
       const path = item.dataset.treePath ?? "";
@@ -639,6 +659,7 @@ export async function runPerfScenarios(ctx: PerfContext): Promise<PerfResult> {
     row,
     treeRows,
     childRows,
+    revealRow,
     click,
     key,
     interactiveCanvas,

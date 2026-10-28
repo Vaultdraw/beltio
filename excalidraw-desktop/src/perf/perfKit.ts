@@ -40,6 +40,8 @@ export type PerfKit = {
   push: (id: string, value: number) => void;
   row: (path: string) => HTMLElement | null;
   treeRows: () => HTMLElement[];
+  /** Scrolls the windowed tree until the row for `path` is mounted (gives up after `ms`). */
+  revealRow: (path: string, ms?: number) => Promise<void>;
   childRows: (folder: string) => HTMLElement[];
   click: (el: HTMLElement | null, label: string) => void;
   key: (target: EventTarget, k: string, extra?: KeyboardEventInit) => void;
@@ -58,6 +60,17 @@ export type PerfKit = {
   wrapWrites: () => void;
   resetWrites: () => void;
 };
+
+/** Next scrollTop when searching a windowed tree for a row: one screen down, back to the top after the end. */
+export function nextRevealScroll(
+  scrollTop: number,
+  clientHeight: number,
+  scrollHeight: number,
+): number {
+  return scrollTop + clientHeight >= scrollHeight - 1
+    ? 0
+    : scrollTop + Math.max(200, clientHeight * 0.8);
+}
 
 /** Click "Open Vault Folder" on the onboarding screen; resolves once `ready()` holds. Returns elapsed ms. */
 export async function openVaultFolder(
@@ -187,6 +200,7 @@ export async function expandFolder(
   const parts = folderPath.split("/");
   for (let i = 1; i <= parts.length; i++) {
     const current = parts.slice(0, i).join("/");
+    await kit.revealRow(current);
     await waitUntil(`row ${current}`, () => Boolean(row(current)));
     if (row(current)?.getAttribute("aria-expanded") !== "true") {
       click(row(current), current);
