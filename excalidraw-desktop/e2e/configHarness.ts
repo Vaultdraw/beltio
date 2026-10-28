@@ -54,7 +54,9 @@ export function startConfigHarness(win: Window) {
   w.__e2eOverrides ??= {};
   // Profiles survive a page reload (sessionStorage), like the folders and the `profile` file do.
   try {
-    const saved = JSON.parse(window.sessionStorage.getItem(PROFILE_STORE) ?? "null");
+    const saved = JSON.parse(
+      window.sessionStorage.getItem(PROFILE_STORE) ?? "null",
+    );
     if (saved) {
       w.__e2eProfiles ??= saved.profiles;
       w.__e2eProfile ??= saved.profile;
@@ -148,7 +150,9 @@ export function startConfigHarness(win: Window) {
       return null;
     }
     if (cmd === "vault_profile") {
-      return w.__e2eVaultProfiles?.[(args as { handle: string }).handle] ?? null;
+      return (
+        w.__e2eVaultProfiles?.[(args as { handle: string }).handle] ?? null
+      );
     }
     if (cmd === "set_vault_profile") {
       const a = args as { handle: string; name: string | null };

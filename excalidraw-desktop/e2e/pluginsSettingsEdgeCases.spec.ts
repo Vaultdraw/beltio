@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 
 import { MIDNIGHT_THEME } from "./fixtures/themeServer";
-import { seedAndOpen } from "./pageHelpers";
+import { rect, seedAndOpen } from "./pageHelpers";
 import {
   canvasBox,
   clickMainMenuItem,
@@ -79,7 +79,10 @@ const openGraphsDrawing = async (page: Page, query = "?seed=tags") => {
 const openGraphsAgain = async (page: Page) => {
   const graphs = page.locator(".vault-tree-item__name", { hasText: "Graphs" });
   if ((await graphs.count()) === 0) {
-    await page.locator(".vault-tree-item__name", { hasText: "DSA" }).first().click();
+    await page
+      .locator(".vault-tree-item__name", { hasText: "DSA" })
+      .first()
+      .click();
   }
   await openDrawing(page, "Graphs");
 };
@@ -96,15 +99,49 @@ interface OfficialCase {
 }
 
 const OFFICIAL: OfficialCase[] = [
-  { id: "gallery", query: "Gallery", match: /^Gallery: Toggle grid view/, bar: "activity-bar-gallery" },
-  { id: "favourites", query: "Favourites", match: /^Favourites: Open favourite 1/, bar: "activity-bar-favourites.list" },
-  { id: "frames", query: "Frames", match: /^Frames: Present from the first frame/, bar: "activity-bar-frames.list" },
+  {
+    id: "gallery",
+    query: "Gallery",
+    match: /^Gallery: Toggle grid view/,
+    bar: "activity-bar-gallery",
+  },
+  {
+    id: "favourites",
+    query: "Favourites",
+    match: /^Favourites: Open favourite 1/,
+    bar: "activity-bar-favourites.list",
+  },
+  {
+    id: "frames",
+    query: "Frames",
+    match: /^Frames: Present from the first frame/,
+    bar: "activity-bar-frames.list",
+  },
   { id: "formula", query: "Formula", match: /^Formula: Insert formula/ },
-  { id: "pdf-import", query: "Import: PDF", match: /^Import: PDF…/, extension: "pdf-import" },
-  { id: "auto-export", query: "Auto-export", match: /^Auto-export: Export all drawings now/ },
+  {
+    id: "pdf-import",
+    query: "Import: PDF",
+    match: /^Import: PDF…/,
+    extension: "pdf-import",
+  },
+  {
+    id: "auto-export",
+    query: "Auto-export",
+    match: /^Auto-export: Export all drawings now/,
+  },
   { id: "table", query: "Insert table", match: /^Insert table from clipboard/ },
-  { id: "markdown-import", query: "Import: Markdown", match: /^Import: Markdown…/ },
-  { id: "graph", query: "Graph: Open", match: /^Graph: Open graph view/, bar: "activity-bar-graph", extension: "graph" },
+  {
+    id: "markdown-import",
+    query: "Import: Markdown",
+    match: /^Import: Markdown…/,
+  },
+  {
+    id: "graph",
+    query: "Graph: Open",
+    match: /^Graph: Open graph view/,
+    bar: "activity-bar-graph",
+    extension: "graph",
+  },
 ];
 
 test("every official plugin: off, on, off and on again in one session leaves no UI or commands behind", async ({
@@ -143,16 +180,26 @@ test("every official plugin: off, on, off and on again in one session leaves no 
       await flip(c);
       expect(await isOn(c), `${c.id} off (round ${round})`).toBe(false);
       if (c.bar) {
-        await expect(page.getByTestId(c.bar), `${c.id} button gone`).toHaveCount(0);
+        await expect(
+          page.getByTestId(c.bar),
+          `${c.id} button gone`,
+        ).toHaveCount(0);
       }
       // The others are untouched.
-      for (const other of OFFICIAL.filter((o) => o !== c && o.id === "gallery")) {
-        expect(await isOn(other), `${other.id} unaffected by ${c.id}`).toBe(true);
+      for (const other of OFFICIAL.filter(
+        (o) => o !== c && o.id === "gallery",
+      )) {
+        expect(await isOn(other), `${other.id} unaffected by ${c.id}`).toBe(
+          true,
+        );
       }
       await flip(c);
       expect(await isOn(c), `${c.id} on again (round ${round})`).toBe(true);
       if (c.bar) {
-        await expect(page.getByTestId(c.bar), `${c.id} button back`).toBeVisible();
+        await expect(
+          page.getByTestId(c.bar),
+          `${c.id} button back`,
+        ).toBeVisible();
       }
     }
   }
@@ -176,7 +223,9 @@ test("an old plugins.enabled list upgrades, a disabled list is kept, and Restore
   const setPrefs = (patch: Record<string, unknown>) =>
     page.evaluate(
       ([k, p]) => {
-        const old = JSON.parse(window.localStorage.getItem(k as string) ?? "{}");
+        const old = JSON.parse(
+          window.localStorage.getItem(k as string) ?? "{}",
+        );
         window.localStorage.setItem(
           k as string,
           JSON.stringify({ ...old, ...(p as object) }),
@@ -201,7 +250,14 @@ test("an old plugins.enabled list upgrades, a disabled list is kept, and Restore
   await reloadVault(page);
   const upgraded = await prefs(page);
   expect(upgraded.pluginsEnabled).toEqual(
-    expect.arrayContaining(["gallery", "my-third-party", "frames", "table", "markdown-import", "graph"]),
+    expect.arrayContaining([
+      "gallery",
+      "my-third-party",
+      "frames",
+      "table",
+      "markdown-import",
+      "graph",
+    ]),
   );
   expect(upgraded.pluginsDisabled).toEqual([]);
   await openGraphsAgain(page);
@@ -231,7 +287,9 @@ test("an old plugins.enabled list upgrades, a disabled list is kept, and Restore
 
   // 3. Restore defaults on the Extensions page brings every official one back, keeps the third-party one.
   await openSettingsTab(page, "Extensions");
-  await settingsModal(page).getByRole("button", { name: "Restore defaults" }).click();
+  await settingsModal(page)
+    .getByRole("button", { name: "Restore defaults" })
+    .click();
   await closeSettings(page);
   await expect(page.getByTestId("activity-bar-graph")).toBeVisible();
   await expect(page.getByTestId("activity-bar-frames.list")).toBeVisible();
@@ -271,8 +329,28 @@ test("plugin permission review, consent, a crashing plugin and the registry brow
         body: JSON.stringify({
           schema: 1,
           plugins: [
-            { id: "word-count", name: "Word count", author: "ada", description: "Counts words.", version: "1.0.0", api: 0, permissions: ["vault.read"], sha256: sha(good), url: "packages/word-count-1.0.0.zip" },
-            { id: "tampered", name: "Tampered", author: "eve", description: "Wrong checksum.", version: "1.0.0", api: 0, permissions: ["vault.read", "vault.write"], sha256: sha(Buffer.from("something else")), url: "packages/tampered-1.0.0.zip" },
+            {
+              id: "word-count",
+              name: "Word count",
+              author: "ada",
+              description: "Counts words.",
+              version: "1.0.0",
+              api: 0,
+              permissions: ["vault.read"],
+              sha256: sha(good),
+              url: "packages/word-count-1.0.0.zip",
+            },
+            {
+              id: "tampered",
+              name: "Tampered",
+              author: "eve",
+              description: "Wrong checksum.",
+              version: "1.0.0",
+              api: 0,
+              permissions: ["vault.read", "vault.write"],
+              sha256: sha(Buffer.from("something else")),
+              url: "packages/tampered-1.0.0.zip",
+            },
           ],
         }),
       });
@@ -298,7 +376,9 @@ test("plugin permission review, consent, a crashing plugin and the registry brow
   await expect(row("hello")).toContainText("Unverified");
   await sw("writer", "Writer").click({ force: true });
   const consent = page.getByRole("dialog", { name: "Enable Writer?" });
-  await expect(consent).toContainText("Create drawings and write export images in your vault");
+  await expect(consent).toContainText(
+    "Create drawings and write export images in your vault",
+  );
   await consent.getByRole("button", { name: "Cancel" }).click();
   await expect(consent).toHaveCount(0);
   await expect(sw("writer", "Writer")).not.toBeChecked();
@@ -313,7 +393,10 @@ test("plugin permission review, consent, a crashing plugin and the registry brow
   await expect(row("writer")).not.toContainText("Needs review");
 
   // Enable the other two through consent.
-  for (const [id, name] of [["hello", "Hello"], ["crashy", "Crashy"]]) {
+  for (const [id, name] of [
+    ["hello", "Hello"],
+    ["crashy", "Crashy"],
+  ]) {
     await sw(id, name).click({ force: true });
     await page
       .getByRole("dialog", { name: new RegExp(`Enable ${name}`) })
@@ -330,13 +413,21 @@ test("plugin permission review, consent, a crashing plugin and the registry brow
     await page.keyboard.press("Enter");
     await page.waitForFunction(
       (n) =>
-        ((window as any).__plugins.getPluginCosts() as any[]).find((c) => c.id === "crashy")?.handlerMs.length >= n,
+        ((window as any).__plugins.getPluginCosts() as any[]).find(
+          (c) => c.id === "crashy",
+        )?.handlerMs.length >= n,
       run + 1,
     );
   }
-  await expect(page.getByText(/Plugin Crashy was disabled: 3 errors/)).toBeVisible();
-  expect((await hits(page, "explode")).filter((t) => /Crashy/.test(t))).toEqual([]);
-  expect((await hits(page, "say hello")).some((t) => /^Hello: say hello/.test(t))).toBe(true);
+  await expect(
+    page.getByText(/Plugin Crashy was disabled: 3 errors/),
+  ).toBeVisible();
+  expect((await hits(page, "explode")).filter((t) => /Crashy/.test(t))).toEqual(
+    [],
+  );
+  expect(
+    (await hits(page, "say hello")).some((t) => /^Hello: say hello/.test(t)),
+  ).toBe(true);
   await page.keyboard.press("Meta+Shift+KeyP");
   await page.keyboard.type("say hello");
   await page.keyboard.press("Enter");
@@ -362,17 +453,25 @@ test("plugin permission review, consent, a crashing plugin and the registry brow
   await expect(list.getByRole("option")).toHaveCount(2);
   // A package whose checksum differs is refused and nothing is installed.
   await browser.getByLabel("Search plugins").fill("tampered");
-  await expect(browser.getByTestId("plugin-browser-permissions")).toContainText("Create drawings and write export images");
+  await expect(browser.getByTestId("plugin-browser-permissions")).toContainText(
+    "Create drawings and write export images",
+  );
   await browser.getByRole("button", { name: "Install", exact: true }).click();
   await expect(browser.getByRole("alert")).toBeVisible();
-  await expect(list.getByRole("option", { name: /Tampered/ })).not.toContainText("Installed");
+  await expect(
+    list.getByRole("option", { name: /Tampered/ }),
+  ).not.toContainText("Installed");
   await browser.getByLabel("Search plugins").fill("word");
   await browser.getByRole("button", { name: "Install", exact: true }).click();
   await expect(page.getByText("Installed Word count")).toBeVisible();
   // Allow was saved: reopening goes straight to the list.
   expect((await prefs(page)).networkAllowPlugins).toBe(true);
   // Only the failures this test caused on purpose: the crashing plugin and the failing downloads.
-  expect(errors.filter((e) => !/kaboom|500|checksum|Failed to load resource/i.test(e))).toEqual([]);
+  expect(
+    errors.filter(
+      (e) => !/kaboom|500|checksum|Failed to load resource/i.test(e),
+    ),
+  ).toEqual([]);
 });
 
 /** Is the toolbar's `name` tool the active one. */
@@ -384,7 +483,8 @@ const toolActive = (page: Page, name: string) =>
     if (!el) {
       return null;
     }
-    const input = el instanceof HTMLInputElement ? el : el.querySelector("input");
+    const input =
+      el instanceof HTMLInputElement ? el : el.querySelector("input");
     if (input) {
       return input.checked;
     }
@@ -406,17 +506,38 @@ test("commands and keys: every command is listed and rebindable, old ids still b
   const errors = trackErrors(page);
   await openGraphsDrawing(page);
   await expect
-    .poll(() => hits(page, "Gallery").then((t) => t.length), { timeout: 15_000 })
+    .poll(() => hits(page, "Gallery").then((t) => t.length), {
+      timeout: 15_000,
+    })
     .toBeGreaterThan(0);
 
   // 1. The palette reaches a spread of commands from every area (a typed query, no shortcut).
   const SAMPLE = [
-    "Save", "Tabs: Close tab", "Search", "Tags: Focus tags pane", "Templates: Open the global templates folder",
-    "Extensions: Toggle Graph view", "Extensions: Toggle Formulas", "Gallery: Toggle grid view", "Favourites: Open favourite 1",
-    "Frames: Present from the current frame", "Formula: Insert formula", "Import: Markdown…", "Import: PDF…", "Graph: Open graph view",
-    "Insert table from clipboard", "Auto-export: Export all drawings now", "Plugins: Open plugin settings", "View: Focus mode",
-    "Layout: Default layout", "Themes: Remove an installed theme", "Tool: Rectangle", "Tool: Ellipse", "Open settings",
-    "Navigator: Focus file tree", "Config: Reload config files",
+    "Save",
+    "Tabs: Close tab",
+    "Search",
+    "Tags: Focus tags pane",
+    "Templates: Open the global templates folder",
+    "Extensions: Toggle Graph view",
+    "Extensions: Toggle Formulas",
+    "Gallery: Toggle grid view",
+    "Favourites: Open favourite 1",
+    "Frames: Present from the current frame",
+    "Formula: Insert formula",
+    "Import: Markdown…",
+    "Import: PDF…",
+    "Graph: Open graph view",
+    "Insert table from clipboard",
+    "Auto-export: Export all drawings now",
+    "Plugins: Open plugin settings",
+    "View: Focus mode",
+    "Layout: Default layout",
+    "Themes: Remove an installed theme",
+    "Tool: Rectangle",
+    "Tool: Ellipse",
+    "Open settings",
+    "Navigator: Focus file tree",
+    "Config: Reload config files",
   ];
   const input = () => paletteDialog(page).locator("input").first();
   await page.keyboard.press("Meta+Shift+KeyP");
@@ -425,9 +546,18 @@ test("commands and keys: every command is listed and rebindable, old ids still b
   for (const title of SAMPLE) {
     await input().fill(`>${title}`);
     const ok = await expect
-      .poll(async () => (await paletteDialog(page).getByRole("option").allTextContents()).some((t) => t.startsWith(title)), { timeout: 1500 })
+      .poll(
+        async () =>
+          (
+            await paletteDialog(page).getByRole("option").allTextContents()
+          ).some((t) => t.startsWith(title)),
+        { timeout: 1500 },
+      )
       .toBe(true)
-      .then(() => true, () => false);
+      .then(
+        () => true,
+        () => false,
+      );
     if (!ok) {
       unreachable.push(title);
     }
@@ -437,12 +567,14 @@ test("commands and keys: every command is listed and rebindable, old ids still b
 
   // 2. The Hotkeys page lists every command once, each with an Add button: all are rebindable.
   await openSettingsTab(page, "Hotkeys");
-  const listing = await page.locator(".vault-hotkeys__row").evaluateAll((rows) =>
-    rows.map((r) => ({
-      id: r.getAttribute("data-command-id"),
-      add: r.querySelector('button[aria-label^="Add hotkey for"]') !== null,
-    })),
-  );
+  const listing = await page
+    .locator(".vault-hotkeys__row")
+    .evaluateAll((rows) =>
+      rows.map((r) => ({
+        id: r.getAttribute("data-command-id"),
+        add: r.querySelector('button[aria-label^="Add hotkey for"]') !== null,
+      })),
+    );
   expect(listing.length).toBeGreaterThan(300);
   expect(new Set(listing.map((r) => r.id)).size).toBe(listing.length);
   expect(listing.filter((r) => !r.add).map((r) => r.id)).toEqual([]);
@@ -477,7 +609,9 @@ test("commands and keys: every command is listed and rebindable, old ids still b
   const bind = async (title: string, keys: string[], sequence: boolean) => {
     await openSettingsTab(page, "Hotkeys");
     await page.getByLabel("Filter hotkeys").fill(title);
-    await page.getByRole("button", { name: `Add hotkey for ${title}`, exact: true }).click();
+    await page
+      .getByRole("button", { name: `Add hotkey for ${title}`, exact: true })
+      .click();
     if (sequence) {
       await page.getByRole("button", { name: "Sequence", exact: true }).click();
     }
@@ -491,8 +625,12 @@ test("commands and keys: every command is listed and rebindable, old ids still b
   await bind("Tool: Rectangle", ["g", "r"], true);
   await bind("Tool: Ellipse", ["g"], true);
   await page.getByLabel("Filter hotkeys").fill("Tool: Ellipse");
-  await expect(hotkeyRow(page, "tool.ellipse")).toHaveClass(/vault-hotkeys__row--conflict/);
-  await expect(hotkeyRow(page, "tool.ellipse").getByTestId("conflict-sentence")).toBeVisible();
+  await expect(hotkeyRow(page, "tool.ellipse")).toHaveClass(
+    /vault-hotkeys__row--conflict/,
+  );
+  await expect(
+    hotkeyRow(page, "tool.ellipse").getByTestId("conflict-sentence"),
+  ).toBeVisible();
   await closeSettings(page);
 
   await page.locator(".vault-editor [data-testid='toolbar-diamond']").click();
@@ -501,22 +639,30 @@ test("commands and keys: every command is listed and rebindable, old ids still b
   await page.mouse.click(box.x + box.width * 0.8, box.y + box.height * 0.8);
   // The full sequence.
   await page.keyboard.press("g");
-  await expect(page.getByRole("status", { name: "Key sequence options" })).toBeVisible();
+  await expect(
+    page.getByRole("status", { name: "Key sequence options" }),
+  ).toBeVisible();
   await page.keyboard.press("r");
   await expect.poll(() => toolActive(page, "rectangle")).toBe(true);
   // Escape cancels a pending sequence: nothing runs.
   await page.locator(".vault-editor [data-testid='toolbar-diamond']").click();
   await page.mouse.click(box.x + box.width * 0.8, box.y + box.height * 0.8);
   await page.keyboard.press("g");
-  await expect(page.getByRole("status", { name: "Key sequence options" })).toBeVisible();
+  await expect(
+    page.getByRole("status", { name: "Key sequence options" }),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("status", { name: "Key sequence options" })).toHaveCount(0);
+  await expect(
+    page.getByRole("status", { name: "Key sequence options" }),
+  ).toHaveCount(0);
   await page.waitForTimeout(150);
   expect(await toolActive(page, "rectangle")).toBe(false);
   expect(await toolActive(page, "ellipse")).toBe(false);
   // A lone "g" waits for the timeout, then runs the shorter binding (Ellipse).
   await page.keyboard.press("g");
-  await expect.poll(() => toolActive(page, "ellipse"), { timeout: 5000 }).toBe(true);
+  await expect
+    .poll(() => toolActive(page, "ellipse"), { timeout: 5000 })
+    .toBe(true);
 
   // 5. A chord bound to two commands is a conflict on both rows, and Reset all removes the lot.
   await bind("Tool: Diamond", ["Meta+Comma"], false);
@@ -537,7 +683,9 @@ test("focus mode with every panel open: chrome hides, panels stay, Esc and dialo
   const errors = trackErrors(page);
   await openGraphsDrawing(page);
   await expect
-    .poll(() => hits(page, "Gallery").then((t) => t.length), { timeout: 15_000 })
+    .poll(() => hits(page, "Gallery").then((t) => t.length), {
+      timeout: 15_000,
+    })
     .toBeGreaterThan(0);
   const header = page.locator("header.vault-header");
   const navigator = page.getByLabel("Vault File Navigator");
@@ -548,13 +696,37 @@ test("focus mode with every panel open: chrome hides, panels stay, Esc and dialo
     }
   };
 
-  const PANELS: { bar: string; panel: () => ReturnType<Page["locator"]>; overlay?: boolean }[] = [
-    { bar: "activity-bar-library", panel: () => page.locator(".default-sidebar") },
-    { bar: "activity-bar-history", panel: () => page.locator(".vault-history-panel") },
-    { bar: "activity-bar-favourites.list", panel: () => page.getByTestId("favourites-panel") },
-    { bar: "activity-bar-frames.list", panel: () => page.getByTestId("frames-panel") },
-    { bar: "activity-bar-gallery", panel: () => page.getByTestId("gallery-view"), overlay: true },
-    { bar: "activity-bar-graph", panel: () => page.getByTestId("graph-view"), overlay: true },
+  const PANELS: {
+    bar: string;
+    panel: () => ReturnType<Page["locator"]>;
+    overlay?: boolean;
+  }[] = [
+    {
+      bar: "activity-bar-library",
+      panel: () => page.locator(".default-sidebar"),
+    },
+    {
+      bar: "activity-bar-history",
+      panel: () => page.locator(".vault-history-panel"),
+    },
+    {
+      bar: "activity-bar-favourites.list",
+      panel: () => page.getByTestId("favourites-panel"),
+    },
+    {
+      bar: "activity-bar-frames.list",
+      panel: () => page.getByTestId("frames-panel"),
+    },
+    {
+      bar: "activity-bar-gallery",
+      panel: () => page.getByTestId("gallery-view"),
+      overlay: true,
+    },
+    {
+      bar: "activity-bar-graph",
+      panel: () => page.getByTestId("graph-view"),
+      overlay: true,
+    },
   ];
   for (const p of PANELS) {
     await page.getByTestId(p.bar).click();
@@ -596,7 +768,10 @@ test("focus mode with every panel open: chrome hides, panels stay, Esc and dialo
   // focus.hide: only the header goes; the navigator and the activity bar stay.
   await page.evaluate((k) => {
     const prefsNow = JSON.parse(window.localStorage.getItem(k) ?? "{}");
-    window.localStorage.setItem(k, JSON.stringify({ ...prefsNow, focusHide: ["header"] }));
+    window.localStorage.setItem(
+      k,
+      JSON.stringify({ ...prefsNow, focusHide: ["header"] }),
+    );
   }, PREFS_KEY);
   await reloadVault(page);
   await openGraphsAgain(page);
@@ -661,7 +836,9 @@ test("config.toml edits reload live: plugins, extensions and keys follow, a brok
     };
   });
   await reload();
-  await expect(problems().getByRole("listitem").first()).toContainText("extensions.graph");
+  await expect(problems().getByRole("listitem").first()).toContainText(
+    "extensions.graph",
+  );
   await closeSettings(page);
   await expect(graphButton).toBeVisible();
   await expect(framesButton).toHaveCount(0);
@@ -670,15 +847,23 @@ test("config.toml edits reload live: plugins, extensions and keys follow, a brok
   // Invalid TOML: a clear error with the line, the last good settings stay, and Settings still saves.
   await page.evaluate(() => {
     (window as any).__e2eConfig = { extensions: { graph: false } };
-    (window as any).__e2eConfigError = { message: "expected a value after `=`", line: 3 };
+    (window as any).__e2eConfigError = {
+      message: "expected a value after `=`",
+      line: 3,
+    };
   });
   await reload();
   await expect(problems().getByRole("listitem")).toHaveText([
     "config.toml line 3: expected a value after `=`",
   ]);
   await openSettingsTab(page, "Extensions");
-  await expect(page.getByTestId("extension-row-graph").getByRole("switch")).toBeChecked();
-  await page.getByTestId("extension-row-gallery").locator(".vault-switch").click();
+  await expect(
+    page.getByTestId("extension-row-graph").getByRole("switch"),
+  ).toBeChecked();
+  await page
+    .getByTestId("extension-row-gallery")
+    .locator(".vault-switch")
+    .click();
   await closeSettings(page);
   await expect(graphButton).toBeVisible();
   await expect(page.getByTestId("activity-bar-gallery")).toHaveCount(0);
@@ -697,7 +882,8 @@ test("config.toml edits reload live: plugins, extensions and keys follow, a brok
 
 const rootVar = (page: Page, name: string) =>
   page.evaluate(
-    (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
+    (n) =>
+      getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
     name,
   );
 const themeName = (page: Page) =>
@@ -716,11 +902,20 @@ test("themes: switch, browse, install from a URL with the network refused and th
   const DAYBREAK = JSON.stringify({
     name: "Daybreak",
     author: "E2E",
-    light: { mPrimary: "#d9480f", mOnPrimary: "#ffffff", mSurface: "#fff8f0", mOnSurface: "#2b2118" },
+    light: {
+      mPrimary: "#d9480f",
+      mOnPrimary: "#ffffff",
+      mSurface: "#fff8f0",
+      mOnSurface: "#2b2118",
+    },
   });
   const sha = (t: string) => createHash("sha256").update(t).digest("hex");
   await page.route("**/e2e-themes/Broken.json", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "{ not json" }),
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: "{ not json",
+    }),
   );
   await page.route("**/e2e-themes/Missing.json", (route) =>
     route.fulfill({ status: 404, body: "not found" }),
@@ -731,8 +926,28 @@ test("themes: switch, browse, install from a URL with the network refused and th
       "/Vaultdraw/themes/main/index.json": JSON.stringify({
         schemaVersion: 1,
         themes: [
-          { name: "Daybreak", path: "Daybreak/Daybreak.json", author: "E2E", description: "Warm light", tags: ["light"], modes: ["light"], swatch: { light: ["#fff8f0", "#2b2118", "#d9480f"] }, sha256: sha(DAYBREAK), previews: [] },
-          { name: "Tampered", path: "Tampered/Tampered.json", author: "E2E", description: "Wrong checksum", tags: ["dark"], modes: ["dark"], swatch: { dark: ["#000000", "#ffffff", "#ff0000"] }, sha256: sha("something else"), previews: [] },
+          {
+            name: "Daybreak",
+            path: "Daybreak/Daybreak.json",
+            author: "E2E",
+            description: "Warm light",
+            tags: ["light"],
+            modes: ["light"],
+            swatch: { light: ["#fff8f0", "#2b2118", "#d9480f"] },
+            sha256: sha(DAYBREAK),
+            previews: [],
+          },
+          {
+            name: "Tampered",
+            path: "Tampered/Tampered.json",
+            author: "E2E",
+            description: "Wrong checksum",
+            tags: ["dark"],
+            modes: ["dark"],
+            swatch: { dark: ["#000000", "#ffffff", "#ff0000"] },
+            sha256: sha("something else"),
+            previews: [],
+          },
         ],
       }),
       "/Vaultdraw/themes/main/Daybreak/Daybreak.json": DAYBREAK,
@@ -742,13 +957,19 @@ test("themes: switch, browse, install from a URL with the network refused and th
     return route.fulfill(
       body === undefined
         ? { status: 404, body: "not found" }
-        : { status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body },
+        : {
+            status: 200,
+            contentType: "application/json",
+            headers: { "access-control-allow-origin": "*" },
+            body,
+          },
     );
   });
   await openGraphsDrawing(page);
   const defaultBg = await rootVar(page, "--vault-bg");
   await openSettingsTab(page, "Appearance");
-  const radio = (name: string) => settingsModal(page).getByRole("radio", { name, exact: true });
+  const radio = (name: string) =>
+    settingsModal(page).getByRole("radio", { name, exact: true });
 
   // Switch between built-in themes, and back.
   await radio("Dracula").click();
@@ -762,7 +983,9 @@ test("themes: switch, browse, install from a URL with the network refused and th
   expect((await prefs(page)).colorTheme).toBe("Default");
 
   // Install from URL: refuse the network first; nothing is requested, nothing saved.
-  await settingsModal(page).getByRole("button", { name: "Install from URL..." }).click();
+  await settingsModal(page)
+    .getByRole("button", { name: "Install from URL..." })
+    .click();
   const install = page.getByTestId("theme-install-dialog");
   await expect(install.getByTestId("theme-install-consent")).toBeVisible();
   await install.getByRole("button", { name: "Not now" }).click();
@@ -770,7 +993,9 @@ test("themes: switch, browse, install from a URL with the network refused and th
   expect(requests).toEqual([]);
   expect((await prefs(page)).networkAllowThemes).not.toBe(true);
   // The theme browser asks too, and also refuses cleanly.
-  await settingsModal(page).getByRole("button", { name: "Install more themes..." }).click();
+  await settingsModal(page)
+    .getByRole("button", { name: "Install more themes..." })
+    .click();
   const browser = page.getByTestId("theme-browser-dialog");
   await expect(browser.getByTestId("theme-browser-consent")).toBeVisible();
   await browser.getByRole("button", { name: "Not now" }).click();
@@ -778,38 +1003,67 @@ test("themes: switch, browse, install from a URL with the network refused and th
   expect(requests).toEqual([]);
 
   // Allow once: bad addresses give a message, a good one installs and applies.
-  await settingsModal(page).getByRole("button", { name: "Install from URL..." }).click();
+  await settingsModal(page)
+    .getByRole("button", { name: "Install from URL..." })
+    .click();
   await install.getByRole("button", { name: "Allow" }).click();
   const origin = new URL(page.url()).origin;
   for (const bad of ["Missing.json", "Broken.json"]) {
-    await install.getByLabel("Address or GitHub repo").fill(`${origin}/e2e-themes/${bad}`);
+    await install
+      .getByLabel("Address or GitHub repo")
+      .fill(`${origin}/e2e-themes/${bad}`);
     await install.getByRole("button", { name: "Look up" }).click();
     await expect(install.getByRole("alert")).toBeVisible();
   }
-  await install.getByLabel("Address or GitHub repo").fill(`${origin}/e2e-themes/Midnight.json`);
+  await install
+    .getByLabel("Address or GitHub repo")
+    .fill(`${origin}/e2e-themes/Midnight.json`);
   await install.getByRole("button", { name: "Look up" }).click();
   await install.getByRole("button", { name: "Install", exact: true }).click();
-  await expect(install.getByTestId("theme-install-done")).toContainText("Midnight");
+  await expect(install.getByTestId("theme-install-done")).toContainText(
+    "Midnight",
+  );
   await install.getByRole("button", { name: "Use it" }).click();
   await expect.poll(() => themeName(page)).toBe("Midnight");
   expect((await prefs(page)).networkAllowThemes).toBe(true);
 
   // The browser no longer asks: it lists, filters, refuses a bad checksum and installs a good theme.
   requests.length = 0;
-  await settingsModal(page).getByRole("button", { name: "Install more themes..." }).click();
+  await settingsModal(page)
+    .getByRole("button", { name: "Install more themes..." })
+    .click();
   await expect(browser.getByTestId("theme-browser-consent")).toHaveCount(0);
-  await expect(browser.getByTestId("theme-browser-status")).toContainText("2 of 2 themes");
+  await expect(browser.getByTestId("theme-browser-status")).toContainText(
+    "2 of 2 themes",
+  );
   await browser.getByLabel("Search themes").fill("zzz-nothing");
-  await expect(browser.getByTestId("theme-browser-status")).toContainText("0 of 2 themes");
+  await expect(browser.getByTestId("theme-browser-status")).toContainText(
+    "0 of 2 themes",
+  );
   await browser.getByLabel("Search themes").fill("");
-  await browser.getByTestId("theme-card-Tampered").getByRole("button", { name: "Install", exact: true }).click();
-  await expect(browser.getByTestId("theme-card-Tampered")).not.toContainText("Installed");
-  await browser.getByTestId("theme-card-Daybreak").getByRole("button", { name: "Install", exact: true }).click();
-  await expect(browser.getByTestId("theme-card-Daybreak")).toContainText("Installed");
-  await browser.getByTestId("theme-card-Daybreak").getByRole("button", { name: "Use", exact: true }).click();
+  await browser
+    .getByTestId("theme-card-Tampered")
+    .getByRole("button", { name: "Install", exact: true })
+    .click();
+  await expect(browser.getByTestId("theme-card-Tampered")).not.toContainText(
+    "Installed",
+  );
+  await browser
+    .getByTestId("theme-card-Daybreak")
+    .getByRole("button", { name: "Install", exact: true })
+    .click();
+  await expect(browser.getByTestId("theme-card-Daybreak")).toContainText(
+    "Installed",
+  );
+  await browser
+    .getByTestId("theme-card-Daybreak")
+    .getByRole("button", { name: "Use", exact: true })
+    .click();
   await expect.poll(() => themeName(page)).toBe("Daybreak");
   expect(requests[0]).toBe("/Vaultdraw/themes/main/index.json");
-  expect(errors.filter((e) => !/404|Failed to load resource|checksum|JSON/i.test(e))).toEqual([]);
+  expect(
+    errors.filter((e) => !/404|Failed to load resource|checksum|JSON/i.test(e)),
+  ).toEqual([]);
 });
 
 test("profiles: create, switch live, per vault, bad names refused and delete falls back to default", async ({
@@ -826,7 +1080,8 @@ test("profiles: create, switch live, per vault, bad names refused and delete fal
   const graphButton = page.getByTestId("activity-bar-graph");
   const framesButton = page.getByTestId("activity-bar-frames.list");
   await expect(graphButton).toBeVisible();
-  const select = () => settingsModal(page).getByLabel("Profile", { exact: true });
+  const select = () =>
+    settingsModal(page).getByLabel("Profile", { exact: true });
   const toasts = page.locator(".vd-toast");
 
   await openSettingsTab(page, "General");
@@ -834,7 +1089,9 @@ test("profiles: create, switch live, per vault, bad names refused and delete fal
 
   // Names are checked as you type: reserved, bad characters, and a duplicate.
   const createProfile = async (name: string) => {
-    await settingsModal(page).getByRole("button", { name: "New profile" }).click();
+    await settingsModal(page)
+      .getByRole("button", { name: "New profile" })
+      .click();
     const form = page.getByRole("dialog", { name: "New profile" });
     await form.getByLabel("Profile name").fill(name);
     return form;
@@ -879,7 +1136,9 @@ test("profiles: create, switch live, per vault, bad names refused and delete fal
   await closeSettings(page);
   await expect(graphButton).toBeVisible();
   await reloadVault(page);
-  await expect(toasts.filter({ hasText: 'Profile "talk" (set by this vault).' })).toBeVisible();
+  await expect(
+    toasts.filter({ hasText: 'Profile "talk" (set by this vault).' }),
+  ).toBeVisible();
   await expect(page.getByTestId("activity-bar-graph")).toHaveCount(0);
   const vaultHandle = await page.evaluate(
     () => Object.keys((window as any).__e2eVaultProfiles ?? {})[0],
@@ -889,7 +1148,11 @@ test("profiles: create, switch live, per vault, bad names refused and delete fal
   await page.keyboard.type("Stop choosing a profile for this vault");
   await page.keyboard.press("Enter");
   await expect
-    .poll(() => page.evaluate(() => Object.keys((window as any).__e2eVaultProfiles ?? {})))
+    .poll(() =>
+      page.evaluate(() =>
+        Object.keys((window as any).__e2eVaultProfiles ?? {}),
+      ),
+    )
     .toEqual([]);
   // (Going back to the remembered profile needs a second vault: the memory of "your choice" lasts one run.)
   await openSettingsTab(page, "General");
@@ -900,18 +1163,27 @@ test("profiles: create, switch live, per vault, bad names refused and delete fal
   await page.evaluate((handle) => {
     window.sessionStorage.setItem(
       "e2e-profiles",
-      JSON.stringify({ profiles: ["talk", "plain"], profile: null, configs: (window as any).__e2eProfileConfigs, vault: { [handle]: "ghost" } }),
+      JSON.stringify({
+        profiles: ["talk", "plain"],
+        profile: null,
+        configs: (window as any).__e2eProfileConfigs,
+        vault: { [handle]: "ghost" },
+      }),
     );
   }, vaultHandle);
   await reloadVault(page);
-  await expect(toasts.filter({ hasText: 'asks for the profile "ghost"' })).toBeVisible();
+  await expect(
+    toasts.filter({ hasText: 'asks for the profile "ghost"' }),
+  ).toBeVisible();
   await expect(page.getByTestId("activity-bar-graph")).toBeVisible();
 
   // Delete the active profile: it asks first, then falls back to default.
   await openSettingsTab(page, "General");
   await select().selectOption("talk");
   await expect(page.getByTestId("activity-bar-graph")).toHaveCount(0);
-  await settingsModal(page).getByRole("button", { name: "Delete", exact: true }).click();
+  await settingsModal(page)
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
   await page.getByRole("button", { name: "talk" }).click();
   await page.getByRole("button", { name: "Delete profile" }).click();
   await expect(select()).toHaveValue("default");
@@ -927,10 +1199,14 @@ test("paste-a-table: what counts as a table, Ask / Always / Never, and the plugi
   await openVault(page);
   await seedAndOpen(page, "Sketch.excalidraw", { elements: [] });
   await expect
-    .poll(() => hits(page, "Insert table").then((t) => t.length), { timeout: 15_000 })
+    .poll(() => hits(page, "Insert table").then((t) => t.length), {
+      timeout: 15_000,
+    })
     .toBeGreaterThan(0);
   const scene = async () =>
-    ((await readScene(page, "Sketch.excalidraw")).elements as any[]).filter((e) => !e.isDeleted);
+    ((await readScene(page, "Sketch.excalidraw")).elements as any[]).filter(
+      (e) => !e.isDeleted,
+    );
   const paste = async (text: string) => {
     const box = await canvasBox(page);
     await page.mouse.click(box.x + 200, box.y + 200);
@@ -938,7 +1214,11 @@ test("paste-a-table: what counts as a table, Ask / Always / Never, and the plugi
       const dt = new DataTransfer();
       dt.setData("text/plain", t);
       document.dispatchEvent(
-        new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }),
+        new ClipboardEvent("paste", {
+          clipboardData: dt,
+          bubbles: true,
+          cancelable: true,
+        }),
       );
     }, text);
   };
@@ -950,8 +1230,15 @@ test("paste-a-table: what counts as a table, Ask / Always / Never, and the plugi
   };
   const setMode = async (mode: string) => {
     await openSettingsTab(page, "Plugins");
-    await page.getByTestId("plugin-table").getByRole("button", { name: "Table settings" }).click();
-    const label = { ask: "Ask", always: "Always insert a table", never: "Never" }[mode];
+    await page
+      .getByTestId("plugin-table")
+      .getByRole("button", { name: "Table settings" })
+      .click();
+    const label = {
+      ask: "Ask",
+      always: "Always insert a table",
+      never: "Never",
+    }[mode];
     await page
       .getByTestId("plugin-table")
       .getByRole("group", { name: "When you paste a table" })
@@ -962,7 +1249,10 @@ test("paste-a-table: what counts as a table, Ask / Always / Never, and the plugi
 
   // Things that are not tables are left alone.
   await noOffer("just one line of text", "one line");
-  await noOffer("Hello, this is a sentence. It has commas, and more commas, but it is prose.", "prose with commas");
+  await noOffer(
+    "Hello, this is a sentence. It has commas, and more commas, but it is prose.",
+    "prose with commas",
+  );
   await noOffer("a\tb", "one row of cells");
   await noOffer("a|b", "one pipe row");
 
@@ -974,20 +1264,54 @@ test("paste-a-table: what counts as a table, Ask / Always / Never, and the plugi
   await setMode("always");
   const before = (await scene()).length;
   await paste("Name\tColour\nApple\tRed\nPear\tGreen");
-  await expect.poll(async () => (await scene()).some((e) => e.type === "line"), { timeout: 10_000 }).toBe(true);
+  await expect
+    .poll(async () => (await scene()).some((e) => e.type === "line"), {
+      timeout: 10_000,
+    })
+    .toBe(true);
   await expect(offer).toHaveCount(0);
   const always = (await scene()).slice(before);
-  expect(always.filter((e) => e.type === "text").map((e) => e.text).sort()).toEqual(
-    ["Apple", "Green", "Name", "Colour", "Pear", "Red"].sort(),
-  );
+  expect(
+    always
+      .filter((e) => e.type === "text")
+      .map((e) => e.text)
+      .sort(),
+  ).toEqual(["Apple", "Green", "Name", "Colour", "Pear", "Red"].sort());
 
   // Ask: each kind of table gets the offer; clicking swaps the pasted text for the table.
   await setMode("ask");
   const KINDS: [string, string, string[]][] = [
     ["tab-separated", "A\tB\nx\ty", ["A", "B", "x", "y"]],
-    ["markdown pipes", "| Item | Qty |\n| --- | --- |\n| Pen | two |", ["Item", "Qty", "Pen", "two"]],
-    ["csv with a quoted comma", 'Name,Note\nAda,"likes a, b"\nGrace,ok', ["Name", "Note", "Ada", "likes a, b", "Grace", "ok"]],
-    ["ragged rows (one cell short in five)", "Name\tColour\tSize\nApple\tRed\tS\nPear\tGreen\nFig\tPurple\tL\nPlum\tBlue\tM", ["Name", "Colour", "Size", "Apple", "Red", "S", "Pear", "Green", "Fig", "Purple", "L", "Plum", "Blue", "M"]],
+    [
+      "markdown pipes",
+      "| Item | Qty |\n| --- | --- |\n| Pen | two |",
+      ["Item", "Qty", "Pen", "two"],
+    ],
+    [
+      "csv with a quoted comma",
+      'Name,Note\nAda,"likes a, b"\nGrace,ok',
+      ["Name", "Note", "Ada", "likes a, b", "Grace", "ok"],
+    ],
+    [
+      "ragged rows (one cell short in five)",
+      "Name\tColour\tSize\nApple\tRed\tS\nPear\tGreen\nFig\tPurple\tL\nPlum\tBlue\tM",
+      [
+        "Name",
+        "Colour",
+        "Size",
+        "Apple",
+        "Red",
+        "S",
+        "Pear",
+        "Green",
+        "Fig",
+        "Purple",
+        "L",
+        "Plum",
+        "Blue",
+        "M",
+      ],
+    ],
     ["semicolons", "x;y\na;b\nc;d", ["x", "y", "a", "b", "c", "d"]],
   ];
   for (const [kind, text, cells] of KINDS) {
@@ -997,15 +1321,142 @@ test("paste-a-table: what counts as a table, Ask / Always / Never, and the plugi
     await page.getByRole("button", { name: "Insert as table" }).click();
     await expect(offer, `${kind} toast closes`).toHaveCount(0);
     await expect
-      .poll(async () => (await scene()).slice(count).filter((e) => e.type === "text").map((e) => e.text).sort(), { timeout: 10_000 })
+      .poll(
+        async () =>
+          (
+            await scene()
+          )
+            .slice(count)
+            .filter((e) => e.type === "text")
+            .map((e) => e.text)
+            .sort(),
+        { timeout: 10_000 },
+      )
       .toEqual([...cells].sort());
   }
 
   // Off: the plugin is not listening at all.
   await openSettingsTab(page, "Plugins");
-  await page.getByTestId("plugin-table").getByRole("switch").click({ force: true });
+  await page
+    .getByTestId("plugin-table")
+    .getByRole("switch")
+    .click({ force: true });
   await closeSettings(page);
-  expect((await hits(page, "Insert table")).filter((t) => /^Insert table/.test(t))).toEqual([]);
+  expect(
+    (await hits(page, "Insert table")).filter((t) => /^Insert table/.test(t)),
+  ).toEqual([]);
   await noOffer("Name\tColour\nApple\tRed", "table plugin off");
+  expect(errors).toEqual([]);
+});
+
+test("presentation mode keys: every default key, clamping at the ends, empty decks, and a rebound key", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  const frame = (id: string, x: number, name?: string) => ({
+    ...rect(id, x, 0, 400, 300),
+    type: "frame",
+    name: name ?? null,
+    backgroundColor: "transparent",
+  });
+  await openVault(page);
+  await seedAndOpen(page, "Empty.excalidraw", { elements: [rect("r1", 0, 0)] });
+  const deck = [
+    frame("f1", 0, "Intro"),
+    frame("f2", 600),
+    frame("f3", 1200),
+    frame("f4", 1800),
+  ];
+  await seedAndOpen(page, "Deck.excalidraw", { elements: deck });
+  await expect
+    .poll(() => hits(page, "Frames: Present").then((t) => t.length), {
+      timeout: 15_000,
+    })
+    .toBeGreaterThan(0);
+  const strip = page.getByTestId("present-strip");
+  const at = (n: number) => expect(strip).toContainText(`${n} / 4`);
+
+  // The play keys do nothing while no presentation runs.
+  await page.keyboard.press("End");
+  await page.keyboard.press("Space");
+  await expect(strip).toHaveCount(0);
+
+  // Start from the panel button, then walk with every default key.
+  await page.getByTestId("activity-bar-frames.list").click();
+  await page.getByTestId("frames-present").click();
+  await at(1);
+  const STEPS: [string, number][] = [
+    ["ArrowRight", 2],
+    ["ArrowDown", 3],
+    ["Space", 4],
+    ["ArrowRight", 4],
+    ["PageDown", 4],
+    ["ArrowLeft", 3],
+    ["ArrowUp", 2],
+    ["Shift+Space", 1],
+    ["ArrowLeft", 1],
+    ["PageUp", 1],
+    ["PageDown", 2],
+    ["End", 4],
+    ["Home", 1],
+  ];
+  for (const [key, expected] of STEPS) {
+    await page.keyboard.press(key);
+    await at(expected);
+  }
+  // The laser key neither moves nor ends the show; Escape ends it.
+  await page.keyboard.press("l");
+  await at(1);
+  await page.keyboard.press("Escape");
+  await expect(strip).toHaveCount(0);
+  await expect(page.getByTestId("activity-bar-frames.list")).toBeVisible();
+
+  // The palette starts it too, from the first frame, with the shortcut key from the open drawing.
+  await page.keyboard.press("Meta+Alt+KeyP");
+  await at(1);
+  // The play keys count once the show is fully up (the editor needs a frame or two).
+  await expect(async () => {
+    await page.keyboard.press("End");
+    await at(4);
+  }).toPass();
+  await page.keyboard.press("Escape");
+  await expect(strip).toHaveCount(0);
+
+  // A drawing with no frames says so and does not start.
+  await openDrawing(page, "Empty");
+  await page.keyboard.press("Meta+Alt+KeyP");
+  await expect(
+    page.getByText(/No frames in this drawing/).first(),
+  ).toBeVisible();
+  await expect(strip).toHaveCount(0);
+  await openDrawing(page, "Deck");
+
+  // Rebind: Alt+Shift+J for next replaces the default keys of that command.
+  await page.evaluate((k) => {
+    const p = JSON.parse(window.localStorage.getItem(k) ?? "{}");
+    window.localStorage.setItem(
+      k,
+      JSON.stringify({ ...p, hotkeys: { "frames.next": ["Alt+Shift+J"] } }),
+    );
+  }, PREFS_KEY);
+  await reloadVault(page);
+  await seedAndOpen(page, "Deck.excalidraw", { elements: deck });
+  await expect
+    .poll(() => hits(page, "Frames: Present").then((t) => t.length), {
+      timeout: 15_000,
+    })
+    .toBeGreaterThan(0);
+  await page.keyboard.press("Meta+Alt+KeyP");
+  await at(1);
+  await page.waitForTimeout(600);
+  await page.keyboard.press("Alt+Shift+KeyJ");
+  await at(2);
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(250);
+  await at(2);
+  await page.keyboard.press("ArrowLeft");
+  await at(1);
+  await page.keyboard.press("Escape");
+  await expect(strip).toHaveCount(0);
   expect(errors).toEqual([]);
 });
