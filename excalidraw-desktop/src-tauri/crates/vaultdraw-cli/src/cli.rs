@@ -124,6 +124,20 @@ pub enum Command {
         #[command(subcommand)]
         action: TabAction,
     },
+    /// Back the vault up to a zip (works without the app; the vault is only read)
+    Backup {
+        /// Folder for the zip (default: `[backup] folder` in config.toml); must be outside the vault
+        #[arg(long, value_name = "DIR")]
+        to: Option<PathBuf>,
+        /// Also include the file history
+        #[arg(long)]
+        history: bool,
+        /// Leave out the vault's settings.toml
+        #[arg(long)]
+        no_settings: bool,
+    },
+    /// Restore a backup into a NEW folder (refuses a folder that exists; nothing is overwritten)
+    Restore { zip: PathBuf, dir: PathBuf },
     /// Profiles: named sets of settings to switch between (no app needed)
     Profile {
         #[command(subcommand)]

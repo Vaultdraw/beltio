@@ -27,7 +27,7 @@ const MAX_U32: u64 = 0xFFFF_FFFF;
 const MAX_ENTRIES: usize = 65_534;
 const MAX_MANIFEST: u64 = 64 * 1024 * 1024;
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct BackupOptions {
     /// Include `.excalidraw-vault/settings.toml`.
     pub settings: bool,
@@ -699,10 +699,9 @@ fn is_backup_name(name: &str, vault: &str) -> bool {
     name.ends_with(".zip") && b.len() >= 10 && b[..4].iter().all(u8::is_ascii_digit) && b[4] == b'-' && b[7] == b'-'
 }
 
-/// Deletes the oldest backups of this vault in `folder` beyond `keep` (at least 1). Only files
-/// named `<vault> backup <date>….zip` that contain the backup manifest are touched.
-pub fn prune(folder: &Path, vault: &Path, keep: usize) -> Result<Vec<PathBuf>> {
-    let keep = keep.max(1);
+/// This vault's backups in `folder` (files named `<vault> backup <date>….zip` that hold the
+/// backup manifest), newest first.
+pub fn list_backups(folder: &Path, vault: &Path) -> Result<Vec<(SystemTime, PathBuf)>> {
     let name = vault_name(&fs::canonicalize(vault).map_err(ioerr)?);
     let mut found: Vec<(SystemTime, String, PathBuf)> = Vec::new();
     for e in fs::read_dir(folder).map_err(ioerr)?.flatten() {
@@ -718,13 +717,76 @@ pub fn prune(folder: &Path, vault: &Path, keep: usize) -> Result<Vec<PathBuf>> {
         found.push((m.modified().unwrap_or(UNIX_EPOCH), fname, e.path()));
     }
     found.sort_by(|a, b| b.0.cmp(&a.0).then(b.1.cmp(&a.1)));
+    Ok(found.into_iter().map(|(t, _, p)| (t, p)).collect())
+}
+
+/// Deletes the oldest backups of this vault in `folder` beyond `keep` (at least 1); see
+/// [`list_backups`] for which files count. Nothing else is touched.
+pub fn prune(folder: &Path, vault: &Path, keep: usize) -> Result<Vec<PathBuf>> {
     let mut removed = Vec::new();
-    for (_, _, p) in found.into_iter().skip(keep) {
+    for (_, p) in list_backups(folder, vault)?.into_iter().skip(keep.max(1)) {
         if fs::remove_file(&p).is_ok() {
             removed.push(p);
         }
     }
     Ok(removed)
+}
+
+// ---- settings ----------------------------------------------------------------------------
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Every {
+    Off,
+    Daily,
+    Weekly,
+}
+
+/// `[backup]` in the merged config. Wrong types count as unset.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BackupSettings {
+    pub every: Every,
+    pub folder: Option<PathBuf>,
+    pub keep: usize,
+    pub options: BackupOptions,
+}
+
+impl BackupSettings {
+    pub fn from_json(cfg: &serde_json::Value) -> Self {
+        let t = cfg.get("backup");
+        let get = |k: &str| t.and_then(|t| t.get(k));
+        let every = match get("every").and_then(|v| v.as_str()) {
+            Some("daily") => Every::Daily,
+            Some("weekly") => Every::Weekly,
+            _ => Every::Off,
+        };
+        let folder = get("folder").and_then(|v| v.as_str()).filter(|s| !s.trim().is_empty()).map(|s| {
+            match (s.strip_prefix("~/"), std::env::var_os("HOME")) {
+                (Some(rest), Some(h)) => PathBuf::from(h).join(rest),
+                _ => PathBuf::from(s),
+            }
+        });
+        let keep = get("keep").and_then(|v| v.as_u64()).map_or(5, |n| (n as usize).clamp(1, 1000));
+        let flag = |k: &str, d: bool| get(k).and_then(|v| v.as_bool()).unwrap_or(d);
+        Self { every, folder, keep, options: BackupOptions { settings: flag("include_settings", true), history: flag("include_history", false) } }
+    }
+
+    /// Seconds after the newest backup when the next scheduled one is due.
+    pub fn period_secs(&self) -> Option<u64> {
+        match self.every {
+            Every::Off => None,
+            Every::Daily => Some(23 * 3600),
+            Every::Weekly => Some(7 * 24 * 3600 - 3600),
+        }
+    }
+}
+
+/// True when the schedule wants a backup now: none yet, or the newest is older than the period.
+pub fn is_due(s: &BackupSettings, vault: &Path) -> bool {
+    let (Some(period), Some(folder)) = (s.period_secs(), s.folder.as_deref()) else { return false };
+    match list_backups(folder, vault) {
+        Ok(v) => v.first().map_or(true, |(t, _)| t.elapsed().map_or(false, |d| d.as_secs() >= period)),
+        Err(_) => folder.is_dir(), // unreadable folder: do not guess; a missing one is not created
+    }
 }
 
 #[cfg(test)]
@@ -918,6 +980,27 @@ mod tests {
         assert_eq!(removed.len(), 2);
         assert!(fake.exists() && dest.path().join("notes.txt").exists());
         assert_eq!(made.iter().filter(|p| p.exists()).count(), 2);
+    }
+
+    #[test]
+    fn settings_read_with_defaults_and_bad_types_unset() {
+        let d = BackupSettings::from_json(&serde_json::json!({}));
+        assert_eq!((d.every, d.keep, d.options.settings, d.options.history), (Every::Off, 5, true, false));
+        let s = BackupSettings::from_json(&serde_json::json!({"backup": {"every": "weekly", "folder": "/b", "keep": 3, "include_history": true}}));
+        assert_eq!((s.every, s.keep, s.folder.as_deref(), s.options.history), (Every::Weekly, 3, Some(Path::new("/b")), true));
+        let bad = BackupSettings::from_json(&serde_json::json!({"backup": {"every": 7, "keep": "x", "folder": 1}}));
+        assert_eq!((bad.every, bad.keep, bad.folder), (Every::Off, 5, None));
+    }
+
+    #[test]
+    fn due_when_no_backup_or_an_old_one() {
+        let v = vault();
+        let dest = tempfile::tempdir().unwrap();
+        let s = BackupSettings { every: Every::Daily, folder: Some(dest.path().to_path_buf()), keep: 5, options: BackupOptions::default() };
+        assert!(is_due(&s, v.path()));
+        create(v.path(), dest.path(), BackupOptions::default(), &no(), &mut |_| {}).unwrap();
+        assert!(!is_due(&s, v.path()));
+        assert!(!is_due(&BackupSettings { every: Every::Off, ..s.clone() }, v.path()));
     }
 
     #[test]

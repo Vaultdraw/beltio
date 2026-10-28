@@ -1,6 +1,7 @@
 //! One handler per subcommand. Each prints its own output and returns a `Fail` on error.
 
 mod app;
+mod backup;
 mod diag;
 mod events;
 mod export;
@@ -67,6 +68,8 @@ pub fn run(cli: &Cli) -> Result<(), Fail> {
         Command::Config { action: ConfigAction::Schema } => diag::config_schema(),
         Command::Config { action } => app::config(cli, action),
         Command::Profile { action } => profile::run(cli, action),
+        Command::Backup { to, history, no_settings } => backup::backup(cli, to.as_deref(), *history, *no_settings),
+        Command::Restore { zip, dir } => backup::restore(cli, zip, dir),
         Command::Doctor => diag::doctor(cli),
         Command::Events { topic } => events::stream(cli, topic),
         Command::Uri { url } => uri::run(cli, url),

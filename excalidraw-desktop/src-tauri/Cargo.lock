@@ -4627,6 +4627,7 @@ dependencies = [
  "clap_complete_nushell",
  "clap_mangen",
  "fs2",
+ "libc",
  "serde",
  "serde_json",
  "tempfile",

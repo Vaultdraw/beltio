@@ -12,6 +12,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 #[cfg(target_os = "macos")]
 mod app_menu;
+mod backup;
 mod clipboard;
 mod config;
 mod control;
@@ -294,6 +295,7 @@ fn open_vault(root: PathBuf, app: &AppHandle, service: &Service) -> Result<Vault
         search.register(&handle, root.clone(), search::tauri_emitter(app));
     }
     links::on_vault_open(app, vault);
+    backup::on_vault_open(root.clone());
     if let Some(history) = app.try_state::<history::HistoryService>() {
         let settings_root = root.clone();
         let settings: history::SettingsLoader = Arc::new(move || services::load_history_settings(&settings_root));
@@ -907,7 +909,7 @@ pub fn run() {
                 services::services_start, search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
                 links::vault_links, links::vault_unlinked_mentions, links::resolve_link, links::links_plan_move, links::links_remeasure, links::links_remeasure_done, links::tags_plan_rename, links::rename_tag, links::vault_graph, links::graph_layout_load, links::graph_layout_save,
                 history::history_configure, history::history_status, history::history_opened, history::history_list, history::history_snapshot, history::history_checkpoint, history::history_read_version, history::history_read_blob, history::history_snapshot_bytes, history::history_restore_copy, history::history_export_file, history::history_delete_checkpoint, history::history_delete_all, history::history_exclude_from_git,
-                library::read_library, library::write_library, library::pick_library_file, markdown::markdown_parse, markdown::markdown_parse_file, notes::read_note, notes::write_note, note_assets::read_note_asset, import_folder::import_target_root,
+                library::read_library, library::write_library, library::pick_library_file, markdown::markdown_parse, markdown::markdown_parse_file, notes::read_note, notes::write_note, note_assets::read_note_asset, import_folder::import_target_root, backup::backup_start, backup::restore_start, backup::backup_status, backup::backup_cancel,
                 pdf_import::pdf_pick, pdf_import::pdf_open_bytes, pdf_import::pdf_render_page, pdf_import::pdf_unlock, pdf_import::pdf_close,
                 templates::list_global_templates, templates::read_global_template,
                 templates::write_global_template, templates::open_global_templates_dir,
@@ -931,7 +933,7 @@ pub fn run() {
                 services::services_start, search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
                 links::vault_links, links::vault_unlinked_mentions, links::resolve_link, links::links_plan_move, links::links_remeasure, links::links_remeasure_done, links::tags_plan_rename, links::rename_tag, links::vault_graph, links::graph_layout_load, links::graph_layout_save,
                 history::history_configure, history::history_status, history::history_opened, history::history_list, history::history_snapshot, history::history_checkpoint, history::history_read_version, history::history_read_blob, history::history_snapshot_bytes, history::history_restore_copy, history::history_export_file, history::history_delete_checkpoint, history::history_delete_all, history::history_exclude_from_git,
-                library::read_library, library::write_library, library::pick_library_file, markdown::markdown_parse, markdown::markdown_parse_file, notes::read_note, notes::write_note, note_assets::read_note_asset, import_folder::import_target_root,
+                library::read_library, library::write_library, library::pick_library_file, markdown::markdown_parse, markdown::markdown_parse_file, notes::read_note, notes::write_note, note_assets::read_note_asset, import_folder::import_target_root, backup::backup_start, backup::restore_start, backup::backup_status, backup::backup_cancel,
                 pdf_import::pdf_pick, pdf_import::pdf_open_bytes, pdf_import::pdf_render_page, pdf_import::pdf_unlock, pdf_import::pdf_close,
                 templates::list_global_templates, templates::read_global_template,
                 templates::write_global_template, templates::open_global_templates_dir,
@@ -952,7 +954,7 @@ pub fn run() {
             services::services_start, search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
                 links::vault_links, links::vault_unlinked_mentions, links::resolve_link, links::links_plan_move, links::links_remeasure, links::links_remeasure_done, links::tags_plan_rename, links::rename_tag, links::vault_graph, links::graph_layout_load, links::graph_layout_save,
                 history::history_configure, history::history_status, history::history_opened, history::history_list, history::history_snapshot, history::history_checkpoint, history::history_read_version, history::history_read_blob, history::history_snapshot_bytes, history::history_restore_copy, history::history_export_file, history::history_delete_checkpoint, history::history_delete_all, history::history_exclude_from_git,
-            library::read_library, library::write_library, library::pick_library_file, markdown::markdown_parse, markdown::markdown_parse_file, notes::read_note, notes::write_note, note_assets::read_note_asset, import_folder::import_target_root,
+            library::read_library, library::write_library, library::pick_library_file, markdown::markdown_parse, markdown::markdown_parse_file, notes::read_note, notes::write_note, note_assets::read_note_asset, import_folder::import_target_root, backup::backup_start, backup::restore_start, backup::backup_status, backup::backup_cancel,
                 pdf_import::pdf_pick, pdf_import::pdf_open_bytes, pdf_import::pdf_render_page, pdf_import::pdf_unlock, pdf_import::pdf_close,
             templates::list_global_templates, templates::read_global_template,
             templates::write_global_template, templates::open_global_templates_dir,
