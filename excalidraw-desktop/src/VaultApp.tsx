@@ -87,6 +87,7 @@ import {
   rebaseFolderPath,
   scanVaultMetadata,
 } from "./vault/treeStore";
+import { applyParentListing } from "./vault/applyParentListing";
 import { appEvents } from "./events/appEvents";
 import { cancelImports } from "./plugins/importerMap";
 import {
@@ -1184,36 +1185,30 @@ export const VaultApp = ({
         // do not trigger a full recursive scan, while external creates appear.
         void (async () => {
           const parents = new Set(event.paths.map(getParentPath));
+          let failure: unknown = null;
           for (const parent of parents) {
-            const entries = await repository.listDirectory(
-              vault.handle,
-              parent,
-            );
+            let entries: VaultEntry[] | null;
+            try {
+              entries = await repository.listDirectory(vault.handle, parent);
+            } catch (err) {
+              // A child path of a folder removed outside the app: its folder is gone,
+              // not an error (bug hunt BH-3). Other failures don't stop the rest.
+              if (parent === "" || !isNotFoundError(err)) {
+                failure ??= err;
+                continue;
+              }
+              entries = null;
+            }
             if (disposed || currentGen !== vaultGeneration.current) {
               return;
             }
-            const entryPaths = new Set(entries.map((entry) => entry.path));
-            setAllIndexedEntries((previous) => {
-              const removedFolders = previous
-                .filter(
-                  (entry) =>
-                    getParentPath(entry.path) === parent &&
-                    entry.kind === "folder" &&
-                    !entryPaths.has(entry.path),
-                )
-                .map((entry) => entry.path);
-              return [
-                ...previous.filter((entry) => {
-                  if (getParentPath(entry.path) === parent) {
-                    return false;
-                  }
-                  return !removedFolders.some((folder) =>
-                    entry.path.startsWith(`${folder}/`),
-                  );
-                }),
-                ...entries,
-              ];
-            });
+            const listing = entries;
+            setAllIndexedEntries((previous) =>
+              applyParentListing(previous, parent, listing),
+            );
+          }
+          if (failure !== null) {
+            throw failure;
           }
         })().catch((err) => {
           if (!disposed && currentGen === vaultGeneration.current) {
