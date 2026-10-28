@@ -4,6 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import {
   canvasBox,
+  clickMainMenuItem,
   openDrawing,
   openVault,
   reloadVault,
@@ -524,5 +525,83 @@ test("commands and keys: every command is listed and rebindable, old ids still b
   await page.getByRole("button", { name: /^Reset all/ }).click();
   await page.getByRole("button", { name: /^Reset \d+\? Click again/ }).click();
   expect(Object.keys((await prefs(page)).hotkeys ?? {})).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test("focus mode with every panel open: chrome hides, panels stay, Esc and dialogs behave, focus.hide is honoured", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openGraphsDrawing(page);
+  await expect
+    .poll(() => hits(page, "Gallery").then((t) => t.length), { timeout: 15_000 })
+    .toBeGreaterThan(0);
+  const header = page.locator("header.vault-header");
+  const navigator = page.getByLabel("Vault File Navigator");
+  const bar = page.getByTestId("activity-bar-settings");
+  const chromeShown = async (on: boolean) => {
+    for (const part of [header, navigator, bar]) {
+      await (on ? expect(part).toBeVisible() : expect(part).toBeHidden());
+    }
+  };
+
+  const PANELS: { bar: string; panel: () => ReturnType<Page["locator"]>; overlay?: boolean }[] = [
+    { bar: "activity-bar-library", panel: () => page.locator(".default-sidebar") },
+    { bar: "activity-bar-history", panel: () => page.locator(".vault-history-panel") },
+    { bar: "activity-bar-favourites.list", panel: () => page.getByTestId("favourites-panel") },
+    { bar: "activity-bar-frames.list", panel: () => page.getByTestId("frames-panel") },
+    { bar: "activity-bar-gallery", panel: () => page.getByTestId("gallery-view"), overlay: true },
+    { bar: "activity-bar-graph", panel: () => page.getByTestId("graph-view"), overlay: true },
+  ];
+  for (const p of PANELS) {
+    await page.getByTestId(p.bar).click();
+    await expect(p.panel(), `${p.bar} opens`).toBeVisible();
+    await chromeShown(true);
+
+    // The key (a click on the editor's menu would close Excalidraw's own library sidebar).
+    await page.keyboard.press("Meta+Shift+Enter");
+    await chromeShown(false);
+    // The drawing toolbar and the panel you opened yourself stay.
+    if (!p.overlay) {
+      await expect(page.locator(".App-toolbar").first()).toBeVisible();
+    }
+    await expect(p.panel(), `${p.bar} stays in focus mode`).toBeVisible();
+
+    // Esc leaves focus mode (an overlay that has the focus takes the first Esc, as it does everywhere).
+    for (let i = 0; i < 3 && !(await header.isVisible()); i++) {
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(120);
+    }
+    await chromeShown(true);
+    if (await p.panel().isVisible()) {
+      await page.getByTestId(p.bar).click();
+    }
+    await expect(p.panel(), `${p.bar} closes`).toHaveCount(0);
+  }
+
+  // A dialog opened in focus mode takes the Esc first; focus mode stays until the next Esc.
+  await clickMainMenuItem(page, "Focus mode");
+  await chromeShown(false);
+  await page.keyboard.press("Meta+Comma");
+  await expect(settingsModal(page)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(settingsModal(page)).toHaveCount(0);
+  await chromeShown(false);
+  await page.keyboard.press("Escape");
+  await chromeShown(true);
+
+  // focus.hide: only the header goes; the navigator and the activity bar stay.
+  await page.evaluate((k) => {
+    const prefsNow = JSON.parse(window.localStorage.getItem(k) ?? "{}");
+    window.localStorage.setItem(k, JSON.stringify({ ...prefsNow, focusHide: ["header"] }));
+  }, PREFS_KEY);
+  await reloadVault(page);
+  await openGraphsAgain(page);
+  await clickMainMenuItem(page, "Focus mode");
+  await expect(header).toBeHidden();
+  await expect(navigator).toBeVisible();
+  await expect(bar).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(header).toBeVisible();
   expect(errors).toEqual([]);
 });
