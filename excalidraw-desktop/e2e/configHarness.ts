@@ -8,16 +8,24 @@ type HarnessWindow = Window & {
   __e2eOverrides?: Table;
   /** Included files, lowest first (`[include]`): `config` is null for a missing file. */
   __e2eIncludes?: { name: string; path: string; config: Table | null }[];
+  /** When set, config.toml "fails to parse" with this message and line. */
+  __e2eConfigError?: { message: string; line: number } | null;
   /** When set, overrides.toml "fails to parse" with this message (line 2). */
   __e2eOverridesBroken?: string | null;
   /** Profile folders and the active one (null = default). */
   __e2eProfiles?: string[];
   __e2eProfile?: string | null;
+  /** What each profile's config.toml holds, by profile name (layered over config.toml). */
+  __e2eProfileConfigs?: Record<string, Table>;
+  /** The profile each vault names in `.excalidraw-vault/profile`, by vault handle. */
+  __e2eVaultProfiles?: Record<string, string>;
   /** The report `config_check` returns (default: a clean one). */
   __e2eCheck?: Record<string, unknown>;
   /** The vault handle `backup_start` was called with. */
   __e2eBackupHandle?: string;
 };
+
+const PROFILE_STORE = "e2e-profiles";
 
 const merge = (base: Table, higher: Table): Table => {
   const out: Table = JSON.parse(JSON.stringify(base));
@@ -32,6 +40,7 @@ const lowerLayers = (w: HarnessWindow): Table =>
   [
     ...(w.__e2eIncludes ?? []).map((i) => i.config ?? {}),
     w.__e2eConfig ?? {},
+    w.__e2eProfile ? w.__e2eProfileConfigs?.[w.__e2eProfile] ?? {} : {},
   ].reduce((acc, layer) => merge(acc, layer), {} as Table);
 
 /**
@@ -43,6 +52,33 @@ const lowerLayers = (w: HarnessWindow): Table =>
 export function startConfigHarness(win: Window) {
   const w = win as HarnessWindow;
   w.__e2eOverrides ??= {};
+  // Profiles survive a page reload (sessionStorage), like the folders and the `profile` file do.
+  try {
+    const saved = JSON.parse(window.sessionStorage.getItem(PROFILE_STORE) ?? "null");
+    if (saved) {
+      w.__e2eProfiles ??= saved.profiles;
+      w.__e2eProfile ??= saved.profile;
+      w.__e2eProfileConfigs ??= saved.configs;
+      w.__e2eVaultProfiles ??= saved.vault;
+    }
+  } catch {
+    // No storage: profiles last until the reload.
+  }
+  const persist = () => {
+    try {
+      window.sessionStorage.setItem(
+        PROFILE_STORE,
+        JSON.stringify({
+          profiles: w.__e2eProfiles ?? [],
+          profile: w.__e2eProfile ?? null,
+          configs: w.__e2eProfileConfigs ?? {},
+          vault: w.__e2eVaultProfiles ?? {},
+        }),
+      );
+    } catch {
+      // See above.
+    }
+  };
   // The native watcher reports every write to overrides.toml, ours included.
   const watchers: (() => void)[] = [];
   const echo = () => setTimeout(() => watchers.forEach((cb) => cb()), 50);
@@ -63,7 +99,7 @@ export function startConfigHarness(win: Window) {
         includeWarnings: [],
         profile: w.__e2eProfile ?? null,
         profiles: w.__e2eProfiles ?? [],
-        configError: null,
+        configError: w.__e2eConfigError ?? null,
         overridesError: error,
         layers: [
           ...includes.map((inc, i) => ({
@@ -82,9 +118,9 @@ export function startConfigHarness(win: Window) {
             id: 0,
             kind: "config",
             path: "/e2e/vaultdraw/config.toml",
-            status: "ok",
-            error: null,
-            config: own,
+            status: w.__e2eConfigError ? "error" : "ok",
+            error: w.__e2eConfigError ?? null,
+            config: w.__e2eConfigError ? null : own,
           },
           {
             id: 1,
@@ -101,12 +137,28 @@ export function startConfigHarness(win: Window) {
     if (cmd === "profile_create") {
       const a = args as { name: string };
       (w.__e2eProfiles ??= []).push(a.name);
+      persist();
       echo();
       return null;
     }
     if (cmd === "profile_use") {
       w.__e2eProfile = (args?.name as string | null) ?? null;
+      persist();
       echo();
+      return null;
+    }
+    if (cmd === "vault_profile") {
+      return w.__e2eVaultProfiles?.[(args as { handle: string }).handle] ?? null;
+    }
+    if (cmd === "set_vault_profile") {
+      const a = args as { handle: string; name: string | null };
+      w.__e2eVaultProfiles ??= {};
+      if (a.name) {
+        w.__e2eVaultProfiles[a.handle] = a.name;
+      } else {
+        delete w.__e2eVaultProfiles[a.handle];
+      }
+      persist();
       return null;
     }
     if (cmd === "profile_delete") {
@@ -115,6 +167,7 @@ export function startConfigHarness(win: Window) {
       if (w.__e2eProfile === a.name) {
         w.__e2eProfile = null;
       }
+      persist();
       echo();
       return null;
     }

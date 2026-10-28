@@ -605,3 +605,89 @@ test("focus mode with every panel open: chrome hides, panels stay, Esc and dialo
   await expect(header).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test("config.toml edits reload live: plugins, extensions and keys follow, a broken file is named and nothing is lost", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await page.addInitScript(() => {
+    (window as any).__e2eConfig = {
+      extensions: { graph: false },
+      plugins: { disabled: ["frames"] },
+      hotkeys: { "gallery.toggle": ["Alt+Shift+Q"] },
+      interface: { thumbnails: false },
+    };
+  });
+  await openGraphsDrawing(page, "?seed=tags&config=1");
+  const graphButton = page.getByTestId("activity-bar-graph");
+  const framesButton = page.getByTestId("activity-bar-frames.list");
+  const galleryGrid = page.getByTestId("gallery-view");
+  await expect(page.getByTestId("activity-bar-gallery")).toBeVisible();
+  // What config.toml says is in force from the start.
+  await expect(graphButton).toHaveCount(0);
+  await expect(framesButton).toHaveCount(0);
+  await page.keyboard.press("Alt+Shift+Q");
+  await expect(galleryGrid).toBeVisible();
+  await page.keyboard.press("Alt+Shift+Q");
+  await expect(galleryGrid).toHaveCount(0);
+
+  const reload = async () => {
+    await openSettingsTab(page, "General");
+    await settingsModal(page).getByRole("button", { name: "Reload" }).click();
+  };
+  const problems = () =>
+    settingsModal(page).getByRole("list", { name: "Problems in config files" });
+
+  // The user edits the file: everything switches live.
+  await page.evaluate(() => {
+    (window as any).__e2eConfig = {};
+  });
+  await reload();
+  await closeSettings(page);
+  await expect(graphButton).toBeVisible();
+  await expect(framesButton).toBeVisible();
+  await page.keyboard.press("Alt+Shift+Q");
+  await page.waitForTimeout(250);
+  await expect(galleryGrid).toHaveCount(0);
+
+  // A wrong value is a warning that names the key; the rest of the file still applies.
+  await page.evaluate(() => {
+    (window as any).__e2eConfig = {
+      extensions: { graph: "yes", formula: false },
+      plugins: { disabled: ["frames"] },
+    };
+  });
+  await reload();
+  await expect(problems().getByRole("listitem").first()).toContainText("extensions.graph");
+  await closeSettings(page);
+  await expect(graphButton).toBeVisible();
+  await expect(framesButton).toHaveCount(0);
+  expect(await hits(page, "Formula: Insert")).toEqual([]);
+
+  // Invalid TOML: a clear error with the line, the last good settings stay, and Settings still saves.
+  await page.evaluate(() => {
+    (window as any).__e2eConfig = { extensions: { graph: false } };
+    (window as any).__e2eConfigError = { message: "expected a value after `=`", line: 3 };
+  });
+  await reload();
+  await expect(problems().getByRole("listitem")).toHaveText([
+    "config.toml line 3: expected a value after `=`",
+  ]);
+  await openSettingsTab(page, "Extensions");
+  await expect(page.getByTestId("extension-row-graph").getByRole("switch")).toBeChecked();
+  await page.getByTestId("extension-row-gallery").locator(".vault-switch").click();
+  await closeSettings(page);
+  await expect(graphButton).toBeVisible();
+  await expect(page.getByTestId("activity-bar-gallery")).toHaveCount(0);
+  // The user fixes the file: the error clears and the new values apply.
+  await page.evaluate(() => {
+    (window as any).__e2eConfigError = null;
+  });
+  await reload();
+  await expect(problems()).toHaveCount(0);
+  await closeSettings(page);
+  await expect(graphButton).toHaveCount(0);
+  // The Settings change made during the error survived.
+  await expect(page.getByTestId("activity-bar-gallery")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
