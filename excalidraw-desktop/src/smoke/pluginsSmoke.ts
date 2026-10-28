@@ -64,6 +64,17 @@ export async function runPluginsSmoke(ctx: PluginsSmokeContext): Promise<void> {
   const { getPluginsState } = await import("../plugins/host/manage");
   const { openPanel } = await import("../slots/panelStore");
   await step("plugins-host", async () => {
+    // Official plugins alone don't start the host (lazy policy, boot.ts): the first use does.
+    // Check it stays down at idle, then start it the way a first use would.
+    await delay(3000);
+    const startedAtIdle =
+      win.performance.getEntriesByName("vaultdraw:plugins:started").length > 0;
+    const idleRes = vdResources(win);
+    if (idleRes.length) {
+      throw new Error(`vdplugin requests at idle: ${idleRes}`);
+    }
+    const { ensurePluginHost } = await import("../plugins/boot");
+    await ensurePluginHost(win);
     await waitFor(
       "plugin host started",
       () => win.performance.getEntriesByName("vaultdraw:plugins:started")[0],
@@ -102,59 +113,63 @@ export async function runPluginsSmoke(ctx: PluginsSmokeContext): Promise<void> {
       if (before !== 0) {
         throw new Error(`modules requested before any use: ${before}`);
       }
-      const run = (id: string) => {
-        const handler = getRegisteredHandler(id);
-        if (!handler) {
-          throw new Error(`no handler for ${id}`);
+      details.hostStartedAtIdle = startedAtIdle;
+      // The fixtures (smoke-hello, smoke-panel) are optional: only official plugins are on by default.
+      if (getRegisteredHandler("smoke-hello.say")) {
+        const run = (id: string) => {
+          const handler = getRegisteredHandler(id);
+          if (!handler) {
+            throw new Error(`no handler for ${id}`);
+          }
+          return handler();
+        };
+        await run("smoke-hello.say");
+        await waitFor("smoke-hello ran", () =>
+          w.__smokeHello === "ok" ? true : null,
+        );
+        const helloUrl = vdResources(win).find((n) =>
+          n.endsWith("/smoke-hello/main.js"),
+        );
+        details.helloResource = helloUrl ?? null;
+        details.helloLoadMark =
+          win.performance.getEntriesByName("vaultdraw:plugin:smoke-hello:load")
+            .length > 0;
+        if (!helloUrl && !details.helloLoadMark) {
+          throw new Error("no load evidence for smoke-hello");
         }
-        return handler();
-      };
-      await run("smoke-hello.say");
-      await waitFor("smoke-hello ran", () =>
-        w.__smokeHello === "ok" ? true : null,
-      );
-      const helloUrl = vdResources(win).find((n) =>
-        n.endsWith("/smoke-hello/main.js"),
-      );
-      details.helloResource = helloUrl ?? null;
-      details.helloLoadMark =
-        win.performance.getEntriesByName("vaultdraw:plugin:smoke-hello:load")
-          .length > 0;
-      if (!helloUrl && !details.helloLoadMark) {
-        throw new Error("no load evidence for smoke-hello");
-      }
 
-      openPanel("smoke-panel.counter");
-      const button = await waitFor<Element>(
-        "plugin panel button",
-        () => win.document.querySelector("[data-smoke-counter]"),
-        15_000,
-      );
-      (button as HTMLElement).click();
-      await waitFor("counter incremented", () =>
-        button.getAttribute("data-smoke-counter") === "1" ? true : null,
-      );
-      details.panelCounterAfterClick =
-        button.getAttribute("data-smoke-counter");
+        openPanel("smoke-panel.counter");
+        const button = await waitFor<Element>(
+          "plugin panel button",
+          () => win.document.querySelector("[data-smoke-counter]"),
+          15_000,
+        );
+        (button as HTMLElement).click();
+        await waitFor("counter incremented", () =>
+          button.getAttribute("data-smoke-counter") === "1" ? true : null,
+        );
+        details.panelCounterAfterClick =
+          button.getAttribute("data-smoke-counter");
 
-      try {
-        await run("smoke-hello.boom");
-      } catch {
-        /* the host may rethrow; attribution is what is checked */
-      }
-      await waitFor("boom attributed", () =>
-        pluginErrorCount("smoke-hello") > 0 ? true : null,
-      );
-      const stack = w.__smokeBoomStack ?? "";
-      details.errorCount = pluginErrorCount("smoke-hello");
-      details.errorLog = getPluginLog("smoke-hello")
-        .filter((l) => l.level === "error")
-        .map((l) => l.text);
-      details.boomStack = stack.split("\n").slice(0, 3);
-      if (
-        !/vdplugin:\/\/localhost\/smoke-hello\/main\.js:\d+:\d+/.test(stack)
-      ) {
-        throw new Error(`stack lacks vdplugin URL: ${stack}`);
+        try {
+          await run("smoke-hello.boom");
+        } catch {
+          /* the host may rethrow; attribution is what is checked */
+        }
+        await waitFor("boom attributed", () =>
+          pluginErrorCount("smoke-hello") > 0 ? true : null,
+        );
+        const stack = w.__smokeBoomStack ?? "";
+        details.errorCount = pluginErrorCount("smoke-hello");
+        details.errorLog = getPluginLog("smoke-hello")
+          .filter((l) => l.level === "error")
+          .map((l) => l.text);
+        details.boomStack = stack.split("\n").slice(0, 3);
+        if (
+          !/vdplugin:\/\/localhost\/smoke-hello\/main\.js:\d+:\d+/.test(stack)
+        ) {
+          throw new Error(`stack lacks vdplugin URL: ${stack}`);
+        }
       }
       details.vdRequestsAfterUse = vdResources(win);
       details.activeCosts = getPluginCosts()
