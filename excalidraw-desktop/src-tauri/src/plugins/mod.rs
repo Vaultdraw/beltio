@@ -110,9 +110,9 @@ pub(crate) async fn plugins_list(app: AppHandle, rescan: Option<bool>) -> Result
 pub(crate) async fn plugins_install_folder(app: AppHandle, path: String) -> Result<PluginInfo> {
     blocking(move || {
         let roots = roots(&app)?;
-        let mut info = install::install_folder(&roots.user, &PathBuf::from(path), APP_VERSION, &scan::official_ids(&roots))?;
-        rescan(&app)?;
         let state_dir = config::resolve_dirs()?.state;
+        let mut info = install::install_folder_with_fresh_consent(&state_dir, &roots.user, &PathBuf::from(path), APP_VERSION, &scan::official_ids(&roots))?;
+        rescan(&app)?;
         info.host_disabled = state::load(&state_dir).get(&info.manifest.id).cloned();
         info.review = review_of(&info, &consent::load(&state_dir));
         Ok(info)

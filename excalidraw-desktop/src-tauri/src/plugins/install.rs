@@ -84,6 +84,21 @@ pub(crate) fn install_folder(user_root: &Path, src: &Path, app_version: &str, of
     scan::info_for_dir(&dest, Source::User, app_version)
 }
 
+/// A folder install from the user's disk. What the user confirmed belongs to the code they saw,
+/// not to the id: replacing an existing plugin with different code forgets its consent record,
+/// so the new code asks again. (A registry update keeps its record: it goes through `install_folder`.)
+pub(crate) fn install_folder_with_fresh_consent(
+    state_dir: &Path,
+    user_root: &Path,
+    src: &Path,
+    app_version: &str,
+    official: &HashSet<String>,
+) -> Result<scan::PluginInfo> {
+    let info = install_folder(user_root, src, app_version, official)?;
+    super::consent::forget(state_dir, &info.manifest.id)?;
+    Ok(info)
+}
+
 /// An install may not reuse an official plugin's id (it would replace the official plugin and skip
 /// its consent prompt). A plugin with `dev = true` may: that is the developer's own copy.
 fn check_id(manifest: &super::manifest::Manifest, official: &HashSet<String>) -> Result<()> {

@@ -70,6 +70,11 @@ fn install_bytes(user_root: &Path, scratch_root: &Path, bytes: &[u8], entry: &En
             format!("The package is `{}` {}, but the list says `{}` {}", manifest.id, manifest.version, entry.id, entry.version),
         ));
     }
+    // `dev = true` (the developer's own copy, allowed to shadow an official plugin) is for local
+    // folder installs only: a package from the list may not claim it.
+    if manifest.dev {
+        return Err(err("INVALID_FILE", "A package from the list may not set dev = true (only a local folder install may)"));
+    }
     let mut declared = manifest.permissions.clone();
     let mut listed = entry.permissions.clone();
     declared.sort();

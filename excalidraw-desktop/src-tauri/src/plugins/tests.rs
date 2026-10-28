@@ -256,6 +256,23 @@ fn install_refuses_a_built_in_command_group_as_an_id() {
 }
 
 #[test]
+fn security_a_folder_install_over_an_existing_id_forgets_the_old_consent() {
+    let tmp = tempdir().unwrap();
+    let user = tmp.path().join("cfg/plugins");
+    let state = tmp.path().join("state");
+    let none = HashSet::new();
+    install::install_folder_with_fresh_consent(&state, &user, &source_folder(tmp.path(), "v1", "lookalike"), APP, &none).unwrap();
+    consent::confirm(&state, "lookalike", &perms(&["vault.read"])).unwrap();
+    consent::confirm(&state, "other", &perms(&[])).unwrap();
+    assert!(consent::load(&state).contains_key("lookalike"));
+    // "My fixed copy": same id, different code. The old record must not carry over.
+    install::install_folder_with_fresh_consent(&state, &user, &source_folder(tmp.path(), "v2", "lookalike"), APP, &none).unwrap();
+    let rec = consent::load(&state);
+    assert!(!rec.contains_key("lookalike"), "the new code asks again");
+    assert!(rec.contains_key("other"), "other plugins keep theirs");
+}
+
+#[test]
 fn install_refuses_an_official_id_unless_dev() {
     let tmp = tempdir().unwrap();
     let user = tmp.path().join("cfg/plugins");

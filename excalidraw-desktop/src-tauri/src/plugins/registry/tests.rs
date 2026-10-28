@@ -43,6 +43,19 @@ fn installs_and_updates() {
 }
 
 #[test]
+fn security_a_registry_package_may_not_set_dev() {
+    let tmp = tempdir().unwrap();
+    let (user, scratch) = (tmp.path().join("plugins"), tmp.path().join("tmp"));
+    let dev_manifest = format!("{}dev = true\n", manifest("graph", "1.0.0", ""));
+    let pkg = build(&[("main.js", b"export default {}", false), ("plugin.toml", dev_manifest.as_bytes(), false)]);
+    let entry = entry_for(&pkg, "graph", "1.0.0", &[]);
+    let e = install_bytes(&user, &scratch, &pkg, &entry, "0.1.0", &HashSet::new()).err().unwrap();
+    assert_eq!(e.code, "INVALID_FILE");
+    assert!(e.message.contains("dev = true"));
+    assert!(!user.join("graph").exists());
+}
+
+#[test]
 fn refuses_a_package_with_an_official_id() {
     let tmp = tempdir().unwrap();
     let (user, scratch) = (tmp.path().join("plugins"), tmp.path().join("tmp"));
