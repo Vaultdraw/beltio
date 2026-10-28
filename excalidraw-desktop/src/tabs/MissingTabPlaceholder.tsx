@@ -1,5 +1,7 @@
 /** Tabs: shown instead of the editor when the active tab's file is gone. */
 
+import { Path } from "../components/Path";
+
 export interface MissingTabPlaceholderProps {
   path: string;
   onClose: () => void;
@@ -15,7 +17,7 @@ export const MissingTabPlaceholder = ({
     <p className="vault-tab-missing__title">
       This drawing was moved or deleted outside Vaultdraw
     </p>
-    <code className="vault-tab-missing__path">{path}</code>
+    <Path path={path} className="vault-tab-missing__path" />
     <div className="vault-tab-missing__actions">
       <button
         type="button"

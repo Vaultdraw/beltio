@@ -1,0 +1,19 @@
+/* Shared path text (Path.tsx): the folder shortens with "…", the file name stays whole. */
+.vd-path {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  font-family: inherit;
+  white-space: nowrap;
+  user-select: text;
+}
+
+.vd-path__dir {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vd-path__file {
+  flex: none;
+}

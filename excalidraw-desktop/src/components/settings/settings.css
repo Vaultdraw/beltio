@@ -114,6 +114,32 @@
   gap: 2px;
 }
 
+.vault-settings-nav-group {
+  padding: var(--vd-space-3) var(--vd-space-2) var(--vd-space-1);
+  font-size: var(--vd-fs-caption);
+  font-weight: 600;
+  color: var(--vault-text-faint);
+}
+
+.vault-settings-nav-group:first-child {
+  padding-top: 0;
+}
+
+/* The scope switch is a mode for every page: full width above the search. */
+.vault-settings-sidebar > .vault-scope-switch {
+  display: flex;
+  margin-bottom: var(--vd-space-2);
+}
+
+.vault-settings-sidebar > .vault-scope-switch .vault-scope-switch__option {
+  flex: 1;
+}
+
+.vault-settings-sidebar > .vault-scope-switch__reason {
+  display: block;
+  margin-bottom: var(--vd-space-2);
+}
+
 .vault-settings-nav-item {
   display: flex;
   align-items: center;
@@ -201,13 +227,8 @@
   color: var(--vault-text);
 }
 
-.vault-settings-live {
-  margin-left: auto;
-  font-size: var(--vd-fs-caption);
-  color: var(--vault-text-faint);
-}
-
 .vault-settings-header .vault-btn--icon {
+  margin-left: auto;
   width: 26px;
   height: 26px;
   border: 0;
@@ -215,6 +236,8 @@
 }
 
 .vault-settings-body {
+  /* SettingRow's narrow layout follows the page width, not the window. */
+  container: settings-page / inline-size;
   flex: 1 1 auto;
   min-height: 0;
   padding: var(--vd-space-2) var(--vd-space-5) var(--vd-space-5);
@@ -291,6 +314,7 @@
   align-items: center;
   justify-content: flex-end;
   flex: none;
+  flex-wrap: wrap;
   gap: var(--vd-space-2);
   max-width: 70%;
   padding-top: 2px;
@@ -465,8 +489,9 @@
   color: var(--vault-text-muted);
 }
 
-/* Narrow windows: a wide control drops under its text. */
-@media (max-width: 760px) {
+/* A narrow page (SettingRow owns this, whatever the window): a wide control
+   drops under its text instead of squeezing it. */
+@container settings-page (max-width: 720px) {
   .vault-setting-row--stack-narrow {
     flex-direction: column;
     align-items: stretch;
@@ -695,21 +720,8 @@
   font-family: inherit;
   font-size: var(--vd-fs-small);
   color: var(--vault-text-muted);
-  /* The folder shortens with "…", the file name stays whole. */
+  /* Layout (one line, folder shortens) comes from .vd-path in Path.css. */
   display: flex;
-  min-width: 0;
-  white-space: nowrap;
-  user-select: text;
-}
-
-.vault-config-path__dir {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.vault-config-path__file {
-  flex: none;
 }
 
 .vault-config-actions {
@@ -719,7 +731,7 @@
   gap: var(--vd-space-2);
 }
 
-@media (max-width: 760px) {
+@container settings-page (max-width: 720px) {
   .vault-config-actions {
     justify-content: flex-start;
   }

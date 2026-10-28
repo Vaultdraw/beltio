@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { Dialog } from "./Dialog";
+import { Path, looksLikePath } from "./Path";
 
 /** How long a guarded dialog ignores Confirm after it appears. */
 export const CONFIRM_GUARD_MS = 600;
@@ -98,7 +99,7 @@ export const ConfirmModal = ({
       {details && details.length > 0 && (
         <ul className="vault-modal__details vd-dialog__details">
           {details.slice(0, 50).map((line, i) => (
-            <li key={i}>{line}</li>
+            <li key={i}>{looksLikePath(line) ? <Path path={line} /> : line}</li>
           ))}
           {details.length > 50 && <li>…and {details.length - 50} more</li>}
         </ul>

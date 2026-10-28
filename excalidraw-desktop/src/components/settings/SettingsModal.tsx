@@ -243,6 +243,11 @@ export const SettingsModal = ({
           onQueryChange={setQuery}
           searchRef={searchRef}
           onEnterPage={enterPage}
+          top={
+            <SettingsProvider value={settings}>
+              <ScopeSwitch />
+            </SettingsProvider>
+          }
           footer={
             <>
               Vaultdraw {APP_VERSION}
@@ -269,8 +274,6 @@ export const SettingsModal = ({
               <h2 id="settings-title" className="vault-settings-title">
                 {searching ? "Search results" : getPage(activePage).label}
               </h2>
-              <ScopeSwitch />
-              <span className="vault-settings-live">Changes apply live</span>
               <button
                 type="button"
                 className="vault-btn vault-btn--ghost vault-btn--icon"

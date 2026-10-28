@@ -32,7 +32,11 @@ export const useConfigSource = (
   return found.source === "default" ? null : { ...found, key: configKey };
 };
 
-/** The small label beside a row's title: `config.toml` or `overrides`. Click for details. */
+/**
+ * The small label beside a row's title: "Changed" (set in Settings) or "From
+ * file" (set by hand in the config file). The file name lives in the tooltip
+ * and the note, never in the chip (Zed: "Set in settings.json", one link).
+ */
 export const ConfigSourceChip = ({
   source,
   open,
@@ -43,7 +47,12 @@ export const ConfigSourceChip = ({
   onToggle: () => void;
 }) => {
   const fromOverrides = source.source === "overrides.toml";
-  const label = fromOverrides ? "overrides" : source.source;
+  const label = fromOverrides ? "Changed" : "From file";
+  const title = fromOverrides
+    ? source.hidden
+      ? `Changed here; ${source.hidden.file} says ${show(source.hidden.value)}`
+      : "Changed here in Settings"
+    : `Set in ${source.source}`;
   return (
     <button
       type="button"
@@ -57,6 +66,7 @@ export const ConfigSourceChip = ({
       }
       data-hides={source.hidden ? "true" : undefined}
       aria-expanded={open}
+      title={title}
       aria-label={`Value from ${source.source}${
         source.hidden ? `, hides ${source.hidden.file}` : ""
       }`}
@@ -114,7 +124,9 @@ export const ConfigSourceNote = ({
         here is saved apart and wins over it.
       </>
     );
-    actions.push(button("Use default", () => resetConfigKey(source.key, true)));
+    actions.push(
+      button("Restore default", () => resetConfigKey(source.key, true)),
+    );
   }
   actions.push(
     fromOverrides || source.source === "config.toml"

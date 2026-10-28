@@ -39,6 +39,12 @@ export interface SettingRowProps {
   /** Shows a ↺ button that restores the default. */
   onReset?: () => void;
   testId?: string;
+  /**
+   * The control is wide (several buttons, a long field): on a page narrower
+   * than 720 px it drops under the text. SettingRow owns this, via a container
+   * query on the page, so no row needs its own media query.
+   */
+  stackWhenNarrow?: boolean;
   className?: string;
   /** Extra data-* attributes on the row (scope state). */
   data?: Record<`data-${string}`, string | undefined>;
@@ -57,6 +63,7 @@ export const SettingRow = ({
   disabled = false,
   onReset,
   testId,
+  stackWhenNarrow,
   className,
   data,
 }: SettingRowProps) => {
@@ -83,6 +90,7 @@ export const SettingRow = ({
     layout === "block" ? "vault-setting-block" : "vault-setting-row",
     layout === "stacked" && "vault-setting-row--stacked",
     disabled && "vault-setting-row--disabled",
+    stackWhenNarrow && "vault-setting-row--stack-narrow",
     className,
   ]
     .filter(Boolean)

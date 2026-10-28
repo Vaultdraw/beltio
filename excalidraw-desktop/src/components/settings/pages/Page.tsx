@@ -27,7 +27,6 @@ import "../paperSetting.css";
 import { Segmented } from "./controls";
 
 /** Segmented rows drop under their text at narrow widths. */
-const NARROW = "vault-setting-row--stack-narrow";
 
 const MODE_OPTIONS = [
   { label: "Normal canvas", val: "normal" },
@@ -49,7 +48,7 @@ const useDefaultPageSetup = () => {
 const ModeSetting = () => {
   const { setup, change } = useDefaultPageSetup();
   return (
-    <SettingRow id="page-mode" className={NARROW}>
+    <SettingRow id="page-mode" stackWhenNarrow>
       <Segmented
         options={MODE_OPTIONS}
         value={setup.enabled ? "page" : "normal"}
@@ -62,7 +61,7 @@ const ModeSetting = () => {
 const LayoutSetting = () => {
   const { setup, change } = useDefaultPageSetup();
   return (
-    <SettingRow id="page-layout" className={NARROW}>
+    <SettingRow id="page-layout" stackWhenNarrow>
       <Segmented
         options={LAYOUT_OPTIONS}
         value={setup.layout}
@@ -75,7 +74,7 @@ const LayoutSetting = () => {
 const SizeSetting = () => {
   const { setup, change } = useDefaultPageSetup();
   return (
-    <SettingRow id="page-size" className={NARROW}>
+    <SettingRow id="page-size" stackWhenNarrow>
       <PageSizeControl
         size={setup.size}
         width={setup.width}
@@ -89,7 +88,7 @@ const SizeSetting = () => {
 const OrientationSetting = () => {
   const { setup, change } = useDefaultPageSetup();
   return (
-    <SettingRow id="page-orientation" className={NARROW}>
+    <SettingRow id="page-orientation" stackWhenNarrow>
       <Segmented
         options={ORIENTATION_OPTIONS}
         value={setup.orientation}

@@ -7,6 +7,8 @@ import { userError } from "./userError";
 import { Dialog } from "./Dialog";
 import { IconTrash } from "./Icons";
 
+import { Path } from "./Path";
+
 import type { RecoveryEntry, VaultRepository } from "../vault/types";
 
 interface RecoveryDialogProps {
@@ -116,7 +118,10 @@ export const RecoveryDialog = ({
             return (
               <div key={entry.id} className="vault-recovery-item">
                 <div style={{ minWidth: 0, flex: "1 1 auto" }}>
-                  <div className="vault-recovery-item__path">{entry.path}</div>
+                  <Path
+                    path={entry.path}
+                    className="vault-recovery-item__path"
+                  />
                   <div className="vault-recovery-item__time">
                     {dateStr} • {getBaseName(entry.path)}
                   </div>

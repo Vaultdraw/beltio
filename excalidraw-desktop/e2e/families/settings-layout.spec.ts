@@ -134,6 +134,49 @@ test("every Settings page lays out cleanly at a wide and a narrow window", async
     const dialog = await openSettings(page);
     const tabs = await dialog.getByRole("tab").allTextContents();
     expect(tabs.length).toBeGreaterThan(5);
+
+    // Grouped nav: four headings in order, each page under its own group,
+    // the scope switch at the top of the sidebar, no "Changes apply live".
+    const nav = dialog.getByRole("tablist", { name: "Settings pages" });
+    const groups = await nav
+      .locator(".vault-settings-nav-group")
+      .allTextContents();
+    expect(groups, `${size.name}: nav groups`).toEqual([
+      "App",
+      "Vault",
+      "Extensions",
+      "Advanced",
+    ]);
+    const order = await nav.evaluate((el) =>
+      [...el.children].map((c) =>
+        c.classList.contains("vault-settings-nav-group")
+          ? `# ${c.textContent}`
+          : c.textContent?.trim() ?? "",
+      ),
+    );
+    const groupOf = (label: string) => {
+      const at = order.indexOf(label);
+      return order
+        .slice(0, at)
+        .reverse()
+        .find((x) => x.startsWith("# "));
+    };
+    expect(groupOf("Appearance")).toBe("# App");
+    expect(groupOf("Hotkeys")).toBe("# App");
+    expect(groupOf("Files")).toBe("# Vault");
+    expect(groupOf("Plugins")).toBe("# Extensions");
+    expect(groupOf("About")).toBe("# Advanced");
+    const sidebar = dialog.locator(".vault-settings-sidebar");
+    const scope = sidebar.getByRole("radiogroup", { name: "Settings scope" });
+    const search = sidebar.getByRole("searchbox", { name: "Search settings" });
+    expect((await box(scope)).y).toBeLessThan((await box(search)).y);
+    await expect(dialog.getByText("Changes apply live")).toHaveCount(0);
+    // Headings group for the eye only: arrow keys still step page to page.
+    await dialog.getByRole("tab", { name: "Hotkeys", exact: true }).click();
+    await page.keyboard.press("ArrowDown");
+    await expect(
+      dialog.getByRole("tab", { name: "Files", exact: true }),
+    ).toBeFocused();
     for (const label of tabs) {
       await dialog.getByRole("tab", { name: label, exact: true }).click();
       const found = await audit(dialog);

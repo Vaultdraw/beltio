@@ -23,23 +23,13 @@ import { IconFolder, IconRefresh } from "../../Icons";
 import { useSettings, type SettingControls } from "../SettingsContext";
 import { SettingRow } from "../SettingRow";
 
+import { Path } from "../../Path";
+
 const errorText = (err: unknown) =>
   err instanceof Error ? err.message : String(err);
 
-/**
- * A file path on one line: the folder part shortens with "…" when the box is
- * narrow, the file name never does (and never breaks mid-word). The full path
- * is the hover text and still copies whole.
- */
-export const PathText = ({ path }: { path: string }) => {
-  const cut = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")) + 1;
-  return (
-    <code className="vault-config-path" title={path}>
-      <span className="vault-config-path__dir">{path.slice(0, cut)}</span>
-      <span className="vault-config-path__file">{path.slice(cut)}</span>
-    </code>
-  );
-};
+/** Kept for callers: the shared middle-truncated path (components/Path.tsx). */
+export const PathText = ({ path }: { path: string }) => <Path path={path} />;
 
 /** One line per config layer: name, path, status, and a button to open it. */
 const LayerList = ({
@@ -190,7 +180,8 @@ const ConfigFileSetting = () => {
   return (
     <SettingRow
       id="config-file"
-      className="vault-config-row vault-setting-row--stack-narrow"
+      className="vault-config-row"
+      stackWhenNarrow
       testId="settings-config-row"
       below={
         <>

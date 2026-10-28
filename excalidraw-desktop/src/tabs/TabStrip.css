@@ -329,7 +329,6 @@
 
 .vault-tab-missing__path {
   max-width: 100%;
-  overflow-wrap: anywhere;
   color: var(--vault-text-muted);
   font-size: var(--vd-fs-small);
 }

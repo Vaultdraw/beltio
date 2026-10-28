@@ -61,6 +61,8 @@ export interface SidebarProps {
   onEnterPage?: () => void;
   /** "Vaultdraw 0.1.0 · config.toml" at the nav bottom (D6). */
   footer?: ReactNode;
+  /** Above the search: the Global / This vault switch, a mode for all pages. */
+  top?: ReactNode;
 }
 
 export const Sidebar = ({
@@ -72,6 +74,7 @@ export const Sidebar = ({
   searchRef,
   onEnterPage,
   footer,
+  top,
 }: SidebarProps) => {
   const navRef = useRef<HTMLElement>(null);
   // One tab stop: the active page (or the first while searching).
@@ -136,6 +139,7 @@ export const Sidebar = ({
 
   return (
     <aside className="vault-settings-sidebar">
+      {top}
       <div className="vault-settings-search">
         <IconSearch
           className="vault-settings-search__icon"
@@ -176,9 +180,22 @@ export const Sidebar = ({
         aria-orientation="vertical"
         aria-label="Settings pages"
       >
-        {pages.map((page) => {
+        {pages.map((page, i) => {
           const active = page.id === activePage;
-          return (
+          const heading =
+            i === 0 || pages[i - 1].group !== page.group ? (
+              // Decorative: the tabs stay one flat list for arrow keys and
+              // screen readers; the heading only groups them for the eye.
+              <div
+                className="vault-settings-nav-group"
+                aria-hidden="true"
+                data-group={page.group}
+              >
+                {page.group}
+              </div>
+            ) : null;
+          return [
+            heading,
             <button
               key={page.id}
               id={settingsTabId(page.id)}
@@ -194,8 +211,8 @@ export const Sidebar = ({
             >
               {PAGE_ICONS[page.id]}
               <span>{page.label}</span>
-            </button>
-          );
+            </button>,
+          ];
         })}
       </nav>
       {footer && <div className="vault-settings-foot">{footer}</div>}

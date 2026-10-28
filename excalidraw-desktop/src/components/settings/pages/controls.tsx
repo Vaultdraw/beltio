@@ -3,6 +3,8 @@ import { stepValue, type StepRange } from "../stepper";
 
 import "../colorPicker.css";
 
+import { Path } from "../../Path";
+
 import type { KeyboardEvent } from "react";
 
 /** Segmented buttons (one active). */
@@ -172,9 +174,7 @@ export const RevealPath = ({
   label: string;
 }) => (
   <>
-    <code className="vault-files-path" title={path}>
-      {path}
-    </code>
+    <Path path={path} className="vault-files-path" />
     {onReveal && (
       <button
         type="button"

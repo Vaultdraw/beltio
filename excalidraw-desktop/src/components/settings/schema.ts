@@ -45,8 +45,8 @@ export type SettingsPageId =
 export interface SettingsPage {
   id: SettingsPageId;
   label: string;
-  /** Sidebar group heading (Obsidian's "Options"). */
-  group: string;
+  /** Sidebar group heading: one of SETTINGS_GROUPS. */
+  group: typeof SETTINGS_GROUPS[number];
   /** Short text shown above the page's settings. */
   intro?: string;
   /** data-testid of the page body (e2e). */
@@ -58,33 +58,41 @@ export interface SettingsPage {
  * a custom page backed by the single "hotkeys-list" row.
  */
 export const SETTINGS_PAGES: readonly SettingsPage[] = [
-  { id: "general", label: "General", group: "Options" },
-  { id: "appearance", label: "Appearance", group: "Options" },
-  { id: "page", label: "Page", group: "Options" },
-  { id: "interface", label: "Interface", group: "Options" },
-  { id: "drawing", label: "Drawing", group: "Options" },
+  { id: "general", label: "General", group: "App" },
+  { id: "appearance", label: "Appearance", group: "App" },
+  { id: "page", label: "Page", group: "App" },
+  { id: "interface", label: "Interface", group: "App" },
+  { id: "drawing", label: "Drawing", group: "App" },
   {
     id: "tools",
     label: "Tools",
-    group: "Options",
+    group: "App",
     intro: "Default style of each tool, your pens and the laser.",
     testId: "tool-defaults-page",
   },
-  { id: "files", label: "Files", group: "Options" },
-  { id: "links", label: "Links", group: "Options" },
+  { id: "hotkeys", label: "Hotkeys", group: "App" },
+  { id: "files", label: "Files", group: "Vault" },
+  { id: "links", label: "Links", group: "Vault" },
   ...HISTORY_SETTINGS_PAGES,
-  { id: "hotkeys", label: "Hotkeys", group: "Options" },
   {
     id: "extensions",
     label: "Extensions",
-    group: "Options",
+    group: "Extensions",
     intro:
       "Built-in features you can turn off. Off means not loaded: no memory, no work. Changes apply at once.",
   },
-  { id: "plugins", label: "Plugins", group: "Options" },
-  { id: "control", label: "Control", group: "Options" },
-  { id: "about", label: "About", group: "Options" },
+  { id: "plugins", label: "Plugins", group: "Extensions" },
+  { id: "control", label: "Control", group: "Advanced" },
+  { id: "about", label: "About", group: "Advanced" },
 ];
+
+/** Sidebar groups, in order (Obsidian's "Options" / "Core plugins"; VS Code's tree). */
+export const SETTINGS_GROUPS = [
+  "App",
+  "Vault",
+  "Extensions",
+  "Advanced",
+] as const;
 
 export const DEFAULT_SETTINGS_PAGE: SettingsPageId = "appearance";
 

@@ -12,7 +12,7 @@ export const HISTORY_SETTINGS_PAGES: readonly SettingsPage[] = [
   {
     id: "history",
     label: "History",
-    group: "Options",
+    group: "Vault",
     intro: "Earlier versions of each drawing, kept inside the vault.",
     testId: "history-settings-page",
   },

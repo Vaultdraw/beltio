@@ -27,12 +27,12 @@ test("a setting's chip names its source, the value it hides, and resets to confi
 
   // config.toml sets it: the chip says so.
   await expect(toggle).not.toBeChecked();
-  await expect(chip).toHaveText("config.toml");
+  await expect(chip).toHaveText("From file");
 
   // Change it in Settings: overrides wins, and the chip says what it hides.
   await toggle.click();
   await expect(toggle).toBeChecked();
-  await expect(chip).toContainText("overrides");
+  await expect(chip).toContainText("Changed");
   await chip.click();
   await expect(row.getByRole("group", { name: "Value source" })).toContainText(
     "config.toml says false",
@@ -41,6 +41,6 @@ test("a setting's chip names its source, the value it hides, and resets to confi
   // Reset to the config.toml value: the value and the chip go back.
   await row.getByRole("button", { name: "Use config file value" }).click();
   await expect(toggle).not.toBeChecked();
-  await expect(chip).toHaveText("config.toml");
+  await expect(chip).toHaveText("From file");
   expect(errors).toEqual([]);
 });

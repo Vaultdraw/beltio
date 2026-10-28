@@ -126,7 +126,7 @@ const CanvasBackgroundSetting = () => {
       id="canvas-background"
       disabled={syncCanvas}
       testId="settings-canvas-background"
-      className="vault-setting-row--stack-narrow"
+      stackWhenNarrow
       description={
         syncCanvas
           ? "The canvas follows the theme while sync is on."

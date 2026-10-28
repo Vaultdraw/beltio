@@ -6,6 +6,7 @@ import { userError } from "./userError";
 
 import { Dialog } from "./Dialog";
 import { IconAlert } from "./Icons";
+import { Path } from "./Path";
 
 interface ConflictDialogProps {
   currentPath: string;
@@ -80,6 +81,7 @@ export const ConflictDialog = ({
         <strong>{fileName}</strong> was changed or deleted on disk outside
         Vaultdraw while you had unsaved edits. Choose which version to keep.
       </p>
+      <Path path={currentPath} className="vd-dialog__path" />
       {errorMessage && <div className="vd-notice">{errorMessage}</div>}
 
       {showCopyInput ? (
