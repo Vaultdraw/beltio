@@ -47,6 +47,7 @@ import { errorMessage } from "../vault/types";
 
 import { IconDrawing, IconCommand, IconKeyReturn, IconPlus } from "./Icons";
 
+import "./dialogs.css";
 import "./home.css";
 import "./QuickSwitcher.css";
 
@@ -572,7 +573,7 @@ export const QuickSwitcher = ({
 
   return (
     <div
-      className="vault-modal-backdrop vault-quick-backdrop"
+      className="vault-modal-backdrop vd-dialog-scrim vault-quick-backdrop"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) {
           dismiss();
@@ -581,7 +582,7 @@ export const QuickSwitcher = ({
       onKeyDown={onKeyDown}
     >
       <div
-        className="vault-modal vault-quick"
+        className="vault-modal vd-dialog vd-dialog--bare vault-quick"
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"

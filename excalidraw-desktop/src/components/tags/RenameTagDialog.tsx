@@ -7,8 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { validateTagInput } from "../../tags/renameFlow";
 import { errorMessage } from "../../vault/types";
-import { useEscapeLayer } from "../escapeLayers";
-import { IconClose } from "../Icons";
+import { Dialog } from "../Dialog";
 
 import "./RenameTagDialog.css";
 
@@ -32,23 +31,6 @@ export interface RenameTagDialogProps {
 const PLAN_DEBOUNCE_MS = 250;
 const MAX_ROWS = 50;
 
-const useEscape = (onCancel: () => void, doc?: Document | null) =>
-  useEscapeLayer(doc ?? null, onCancel);
-
-const Header = ({ title, onCancel }: { title: string; onCancel(): void }) => (
-  <div className="vault-modal__header">
-    <h3 className="vault-modal__title">{title}</h3>
-    <button
-      type="button"
-      className="vault-btn vault-btn--ghost vault-btn--icon"
-      onClick={onCancel}
-      aria-label="Close"
-    >
-      <IconClose />
-    </button>
-  </div>
-);
-
 const PickTag = ({
   tags,
   onPick,
@@ -69,52 +51,49 @@ const PickTag = ({
   const choose = (t: TagCount | undefined) =>
     t && onPick({ key: t.tag, display: t.display });
   return (
-    <div className="vault-modal vault-modal--compact">
-      <Header title="Rename tag" onCancel={onCancel} />
-      <div className="vault-modal__body">
-        <input
-          autoFocus
-          className="vault-input"
-          placeholder="Choose a tag to rename"
-          aria-label="Tag"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setIndex(0);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowDown" || (e.ctrlKey && e.key === "n")) {
-              e.preventDefault();
-              setIndex(Math.min(index + 1, rows.length - 1));
-            } else if (e.key === "ArrowUp" || (e.ctrlKey && e.key === "p")) {
-              e.preventDefault();
-              setIndex(Math.max(index - 1, 0));
-            } else if (e.key === "Enter") {
-              e.preventDefault();
-              choose(rows[index]);
-            }
-          }}
-        />
-        <ul className="vault-rename-tag__list" role="listbox">
-          {rows.map((t, i) => (
-            <li
-              key={t.tag}
-              role="option"
-              aria-selected={i === index}
-              className={i === index ? "is-active" : undefined}
-              onMouseEnter={() => setIndex(i)}
-              onClick={() => choose(t)}
-            >
-              #{t.display}{" "}
-              <span className="vault-rename-tag__count">{t.count}</span>
-            </li>
-          ))}
-          {rows.length === 0 && (
-            <li className="vault-rename-tag__empty">No matching tags</li>
-          )}
-        </ul>
-      </div>
-    </div>
+    <Dialog title="Rename tag" titleId="rename-tag-title" onClose={onCancel}>
+      <input
+        autoFocus
+        className="vault-input"
+        placeholder="Choose a tag to rename"
+        aria-label="Tag"
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setIndex(0);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown" || (e.ctrlKey && e.key === "n")) {
+            e.preventDefault();
+            setIndex(Math.min(index + 1, rows.length - 1));
+          } else if (e.key === "ArrowUp" || (e.ctrlKey && e.key === "p")) {
+            e.preventDefault();
+            setIndex(Math.max(index - 1, 0));
+          } else if (e.key === "Enter") {
+            e.preventDefault();
+            choose(rows[index]);
+          }
+        }}
+      />
+      <ul className="vault-rename-tag__list" role="listbox">
+        {rows.map((t, i) => (
+          <li
+            key={t.tag}
+            role="option"
+            aria-selected={i === index}
+            className={i === index ? "is-active" : undefined}
+            onMouseEnter={() => setIndex(i)}
+            onClick={() => choose(t)}
+          >
+            #{t.display}{" "}
+            <span className="vault-rename-tag__count">{t.count}</span>
+          </li>
+        ))}
+        {rows.length === 0 && (
+          <li className="vault-rename-tag__empty">No matching tags</li>
+        )}
+      </ul>
+    </Dialog>
   );
 };
 
@@ -207,47 +186,52 @@ const RenameStep = ({
 
   const message = !checked.ok ? checked.error : planError ?? error;
   return (
-    <form className="vault-modal vault-modal--compact" onSubmit={submit}>
-      <Header title={`Rename #${from.display}`} onCancel={onCancel} />
-      <div className="vault-modal__body">
-        <div className="vault-field">
-          <label htmlFor="rename-tag-input">New tag</label>
-          <input
-            id="rename-tag-input"
-            ref={input}
-            className="vault-input"
-            spellCheck={false}
-            autoComplete="off"
-            value={text}
+    <Dialog
+      title={`Rename #${from.display}`}
+      titleId="rename-tag-title"
+      onClose={onCancel}
+      onSubmit={submit}
+      busy={busy}
+      footer={
+        <>
+          <button
+            type="button"
+            className="vault-btn"
+            onClick={onCancel}
             disabled={busy}
-            aria-invalid={!checked.ok}
-            onChange={(e) => {
-              setText(e.target.value);
-              setError(null);
-            }}
-          />
-          {message && <div className="vault-error-text">{message}</div>}
-        </div>
-        {plan && changed && <PlanView plan={plan} />}
-      </div>
-      <div className="vault-modal__footer">
-        <button
-          type="button"
-          className="vault-btn"
-          onClick={onCancel}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="vault-btn vault-btn--primary"
+            disabled={busy || !changed}
+          >
+            {busy ? "Renaming…" : "Rename"}
+          </button>
+        </>
+      }
+    >
+      <div className="vault-field">
+        <label htmlFor="rename-tag-input">New tag</label>
+        <input
+          id="rename-tag-input"
+          ref={input}
+          className="vault-input"
+          spellCheck={false}
+          autoComplete="off"
+          value={text}
           disabled={busy}
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          className="vault-btn vault-btn--primary"
-          disabled={busy || !changed}
-        >
-          {busy ? "Renaming…" : "Rename"}
-        </button>
+          aria-invalid={!checked.ok}
+          onChange={(e) => {
+            setText(e.target.value);
+            setError(null);
+          }}
+        />
+        {message && <div className="vault-error-text">{message}</div>}
       </div>
-    </form>
+      {plan && changed && <PlanView plan={plan} />}
+    </Dialog>
   );
 };
 
@@ -258,35 +242,19 @@ export default function RenameTagDialog({
   initial,
   onConfirm,
   onCancel,
-  ownerDocument,
   debounceMs = PLAN_DEBOUNCE_MS,
 }: RenameTagDialogProps) {
   const [from, setFrom] = useState<TagRef | null>(initial);
-  useEscape(onCancel, ownerDocument);
-  return (
-    <div
-      className="vault-modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Rename tag"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onCancel();
-        }
-      }}
-    >
-      {from ? (
-        <RenameStep
-          api={api}
-          handle={handle}
-          from={from}
-          debounceMs={debounceMs}
-          onConfirm={(to) => onConfirm(from, to)}
-          onCancel={onCancel}
-        />
-      ) : (
-        <PickTag tags={tags()} onPick={setFrom} onCancel={onCancel} />
-      )}
-    </div>
+  return from ? (
+    <RenameStep
+      api={api}
+      handle={handle}
+      from={from}
+      debounceMs={debounceMs}
+      onConfirm={(to) => onConfirm(from, to)}
+      onCancel={onCancel}
+    />
+  ) : (
+    <PickTag tags={tags()} onPick={setFrom} onCancel={onCancel} />
   );
 }

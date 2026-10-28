@@ -793,76 +793,7 @@ html.dark {
   height: var(--vault-header-height);
 }
 
-/* Modals and Dialogs */
-.vault-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(12, 12, 14, 0.45);
-  backdrop-filter: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  padding: 16px;
-}
-
-.vault-modal {
-  background-color: var(--vault-bg);
-  color: var(--vault-text);
-  border: 1px solid var(--vault-border);
-  border-radius: var(--vault-radius-lg);
-  box-shadow: var(--vault-shadow-lg);
-  width: 100%;
-  max-width: 480px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  animation: vault-modal-scale 0.15s ease-out;
-}
-
-@keyframes vault-modal-scale {
-  from {
-    opacity: 0;
-    transform: scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.vault-modal__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--vault-border);
-}
-
-.vault-modal__title {
-  margin: 0;
-  font-size: var(--vd-fs-title);
-  font-weight: 600;
-}
-
-.vault-modal__body {
-  padding: 16px 18px;
-  font-size: var(--vd-fs-emph);
-  line-height: 1.45;
-  color: var(--vault-text);
-  max-height: 60vh;
-  overflow-y: auto;
-}
-
-.vault-modal__footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 18px;
-  background-color: var(--vault-surface);
-  border-top: 1px solid var(--vault-border);
-}
+/* Dialogs: components/dialogs.css (the one frame). */
 
 .vault-field {
   display: flex;

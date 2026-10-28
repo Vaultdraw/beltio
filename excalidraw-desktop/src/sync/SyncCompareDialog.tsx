@@ -154,7 +154,7 @@ export const SyncCompareDialog = ({
           </button>
           <button
             type="button"
-            className="vault-btn vault-btn--primary"
+            className="vault-btn vault-btn--danger"
             data-testid="sync-keep-original"
             disabled={busy || readOnly || !versions}
             onClick={() => void keep("original")}

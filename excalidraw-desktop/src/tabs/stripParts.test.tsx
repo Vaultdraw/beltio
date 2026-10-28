@@ -85,14 +85,13 @@ describe("TabContextMenu", () => {
     expect(onDismiss).toHaveBeenCalledWith(false);
   });
 
-  it("new window is disabled", () => {
+  it("has no disabled placeholder items (no Open in new window)", () => {
     open();
-    const item = screen.getByTestId("vault-tab-menu-newWindow");
-    expect(item.getAttribute("aria-disabled")).toBe("true");
-    expect(item.title).toBe("Coming later");
-    const onDismiss = vi.fn();
-    fireEvent.click(item);
-    expect(onDismiss).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("vault-tab-menu-newWindow")).toBeNull();
+    expect(screen.queryByText("Open in new window")).toBeNull();
+    for (const item of screen.getAllByRole("menuitem")) {
+      expect(item.getAttribute("aria-disabled")).toBeNull();
+    }
   });
 
   it("hides absent callbacks and per-drawing items on home tabs; labels Unpin", () => {

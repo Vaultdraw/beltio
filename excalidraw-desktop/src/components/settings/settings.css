@@ -8,7 +8,14 @@
  * +10 ms at 4x, DECISIONS D16). Page-specific rules live next to the pages
  * (Hotkeys.css, toolsPage.css, paperSetting.css). */
 
-.vault-modal-backdrop.vd-settings-scrim {
+.vd-settings-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--vd-space-4);
   background-color: var(--vault-scrim);
   backdrop-filter: none;
 }

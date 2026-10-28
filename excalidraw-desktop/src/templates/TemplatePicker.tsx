@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 
+import { Dialog } from "../components/Dialog";
 import { keyBelongsToControl } from "../components/keyTarget";
 
 import { filterTemplates } from "./search";
@@ -338,11 +339,6 @@ export const TemplatePicker = ({
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     switch (e.key) {
-      case "Escape":
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-        return;
       case "ArrowDown":
         e.preventDefault();
         if (total) {
@@ -371,28 +367,7 @@ export const TemplatePicker = ({
         }
         e.preventDefault();
         activate();
-        return;
-      case "Tab": {
-        const nodes = Array.from(
-          dialogRef.current?.querySelectorAll<HTMLElement>(
-            "input, button:not([disabled])",
-          ) ?? [],
-        );
-        if (nodes.length === 0) {
-          return;
-        }
-        const first = nodes[0];
-        const last = nodes[nodes.length - 1];
-        const cur = ownerDocument.activeElement;
-        if (e.shiftKey && cur === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && cur === last) {
-          e.preventDefault();
-          first.focus();
-        }
         break;
-      }
       default:
     }
   };
@@ -440,98 +415,84 @@ export const TemplatePicker = ({
   const empty = !loading && !error && !hasAny;
 
   return (
-    <div
-      className="vault-modal-backdrop"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
+    <Dialog
+      ariaLabel="New drawing from template"
+      onClose={onClose}
+      className="template-picker"
+      frameRef={dialogRef}
+      onFrameKeyDown={onKeyDown}
     >
+      <div className="template-picker__header">
+        <input
+          ref={inputRef}
+          className="template-picker__input"
+          type="text"
+          role="combobox"
+          aria-expanded="true"
+          aria-controls={`${uid}-list`}
+          aria-activedescendant={active >= 0 ? optionId(active) : undefined}
+          aria-autocomplete="list"
+          aria-label="Search templates"
+          placeholder={`Search templates in ${vaultName}…`}
+          value={query}
+          spellCheck={false}
+          autoComplete="off"
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
       <div
-        ref={dialogRef}
-        className="vault-modal template-picker"
-        role="dialog"
-        aria-modal="true"
-        aria-label="New drawing from template"
-        onKeyDown={onKeyDown}
+        className="template-picker__scroll"
+        ref={(el) => registry.setRoot(el)}
       >
-        <div className="template-picker__header">
-          <input
-            ref={inputRef}
-            className="template-picker__input"
-            type="text"
-            role="combobox"
-            aria-expanded="true"
-            aria-controls={`${uid}-list`}
-            aria-activedescendant={active >= 0 ? optionId(active) : undefined}
-            aria-autocomplete="list"
-            aria-label="Search templates"
-            placeholder={`Search templates in ${vaultName}…`}
-            value={query}
-            spellCheck={false}
-            autoComplete="off"
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <div
-          className="template-picker__scroll"
-          ref={(el) => registry.setRoot(el)}
-        >
-          {body}
-          {empty && (
-            <div className="template-picker__state">
-              <strong>No templates yet</strong>
-              <p>
-                Put .excalidraw files in <code>{folder}</code> in this vault, or
-                in the global templates folder in the app config directory (
-                <code>templates/</code>), to reuse them across vaults.
-              </p>
-              {onRevealGlobal && (
-                <button
-                  type="button"
-                  className="vault-btn"
-                  onClick={onRevealGlobal}
-                >
-                  Open global templates folder
-                </button>
-              )}
-            </div>
-          )}
-          {!empty && !error && hasAny && total === 0 && (
-            <div className="template-picker__state">
-              No templates match “{deferredQuery.trim()}”.
-            </div>
-          )}
-          <div
-            id={`${uid}-list`}
-            role="listbox"
-            aria-label="Templates"
-            className="template-picker__list"
-          >
-            {blankShown && (
-              <BlankRow
-                optionId={optionId(0)}
-                index={0}
-                active={active === 0}
-                onBlank={blank}
-                onHover={hover}
-              />
-            )}
-            {renderGroup(`This vault (${folder})`, vaultList, blankCount)}
-            {renderGroup(
-              "All vaults",
-              globalList,
-              blankCount + vaultList.length,
+        {body}
+        {empty && (
+          <div className="template-picker__state">
+            <strong>No templates yet</strong>
+            <p>
+              Put .excalidraw files in <code>{folder}</code> in this vault, or
+              in the global templates folder in the app config directory (
+              <code>templates/</code>), to reuse them across vaults.
+            </p>
+            {onRevealGlobal && (
+              <button
+                type="button"
+                className="vault-btn"
+                onClick={onRevealGlobal}
+              >
+                Open global templates folder
+              </button>
             )}
           </div>
-        </div>
-        <div className="template-picker__footer" aria-hidden="true">
-          <span>↑↓ navigate</span>
-          <span>↵ use</span>
-          <span>esc close</span>
+        )}
+        {!empty && !error && hasAny && total === 0 && (
+          <div className="template-picker__state">
+            No templates match “{deferredQuery.trim()}”.
+          </div>
+        )}
+        <div
+          id={`${uid}-list`}
+          role="listbox"
+          aria-label="Templates"
+          className="template-picker__list"
+        >
+          {blankShown && (
+            <BlankRow
+              optionId={optionId(0)}
+              index={0}
+              active={active === 0}
+              onBlank={blank}
+              onHover={hover}
+            />
+          )}
+          {renderGroup(`This vault (${folder})`, vaultList, blankCount)}
+          {renderGroup("All vaults", globalList, blankCount + vaultList.length)}
         </div>
       </div>
-    </div>
+      <div className="template-picker__footer" aria-hidden="true">
+        <span>↑↓ navigate</span>
+        <span>↵ use</span>
+        <span>esc close</span>
+      </div>
+    </Dialog>
   );
 };

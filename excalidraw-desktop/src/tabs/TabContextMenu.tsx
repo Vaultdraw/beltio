@@ -17,8 +17,7 @@ export type TabMenuAction =
   | "closeAll"
   | "pin"
   | "copyPath"
-  | "reveal"
-  | "newWindow";
+  | "reveal";
 
 export interface TabMenuHandlers {
   onClose?: (id: TabId) => void;
@@ -94,7 +93,6 @@ export const buildEntries = ({
           run: () => h.onReveal!(id),
         },
     ],
-    [{ action: "newWindow", label: "Open in new window" }],
     // Items plugins declared (`[[contributes.menus]]`); none without plugins.
     getMenuItems("tab").map(
       (item, i): Entry => ({
@@ -214,7 +212,6 @@ export const TabContextMenu = ({
             className="vd-row vault-menu__item"
             data-testid={`vault-tab-menu-${entry.action}`}
             aria-disabled={entry.run ? undefined : true}
-            title={entry.run ? undefined : "Coming later"}
             tabIndex={-1}
             onClick={() => {
               if (entry.run) {

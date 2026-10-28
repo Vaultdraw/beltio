@@ -117,7 +117,7 @@
   opacity: 0.4;
 }
 
-.paper-dialog {
+.vd-dialog.paper-dialog {
   max-width: 420px;
 }
 

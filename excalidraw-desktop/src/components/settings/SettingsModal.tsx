@@ -22,6 +22,7 @@ import {
   type SettingsTarget,
   type ToolsSection,
 } from "./schema";
+
 import "./settings.css";
 
 import { ScopeSwitch } from "./ScopeSwitch";
@@ -224,7 +225,7 @@ export const SettingsModal = ({
 
   return (
     <div
-      className="vault-modal-backdrop vd-settings-scrim"
+      className="vault-modal-backdrop vd-dialog-scrim vd-settings-scrim"
       role="dialog"
       aria-modal="true"
       aria-labelledby="settings-title"

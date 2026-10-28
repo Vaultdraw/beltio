@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import { useEscapeLayer } from "../components/escapeLayers";
-import { IconClose } from "../components/Icons";
+import { Dialog } from "../components/Dialog";
 import { getCleanDrawingName, validateEntryName } from "../vault/treeStore";
 
 import "./SaveTemplateModal.css";
@@ -18,7 +17,7 @@ interface SaveTemplateModalProps {
 
 export const SaveTemplateModal = ({
   defaultName,
-  ownerDocument,
+
   onSave,
   onCancel,
   readOnlyVault,
@@ -36,8 +35,6 @@ export const SaveTemplateModal = ({
     inputRef.current?.select();
   }, []);
 
-  useEscapeLayer(ownerDocument, onCancel);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) {
@@ -54,100 +51,79 @@ export const SaveTemplateModal = ({
     try {
       await onSave(clean, scope);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(userError(err));
       setSubmitting(false);
     }
   };
 
   return (
-    <div
-      className="vault-modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="save-template-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onCancel();
-        }
-      }}
+    <Dialog
+      title="Save as template"
+      titleId="save-template-title"
+      onClose={onCancel}
+      onSubmit={handleSubmit}
+      busy={submitting}
+      footer={
+        <>
+          <button
+            type="button"
+            className="vault-btn"
+            onClick={onCancel}
+            disabled={submitting}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="vault-btn vault-btn--primary"
+            disabled={submitting || !name.trim()}
+          >
+            {submitting ? "Saving…" : "Save"}
+          </button>
+        </>
+      }
     >
-      <div className="vault-modal">
-        <form onSubmit={handleSubmit}>
-          <div className="vault-modal__header">
-            <h3 id="save-template-title" className="vault-modal__title">
-              Save as template
-            </h3>
-            <button
-              type="button"
-              className="vault-btn vault-btn--ghost vault-btn--icon"
-              onClick={onCancel}
-              aria-label="Close"
-            >
-              <IconClose />
-            </button>
-          </div>
-          <div className="vault-modal__body">
-            <div className="vault-field">
-              <label htmlFor="save-template-name">Template name</label>
-              <input
-                id="save-template-name"
-                ref={inputRef}
-                type="text"
-                className="vault-input"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  if (error) {
-                    setError(null);
-                  }
-                }}
-                disabled={submitting}
-              />
-            </div>
-            <fieldset className="save-template__scope" disabled={submitting}>
-              <legend>Available in</legend>
-              <label>
-                <input
-                  type="radio"
-                  name="save-template-scope"
-                  checked={scope === "vault"}
-                  disabled={readOnlyVault}
-                  onChange={() => setScope("vault")}
-                />
-                This vault
-                {readOnlyVault && " (read-only)"}
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="save-template-scope"
-                  checked={scope === "global"}
-                  onChange={() => setScope("global")}
-                />
-                All vaults (global)
-              </label>
-            </fieldset>
-            {error && <div className="vault-error-text">{error}</div>}
-          </div>
-          <div className="vault-modal__footer">
-            <button
-              type="button"
-              className="vault-btn"
-              onClick={onCancel}
-              disabled={submitting}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="vault-btn vault-btn--primary"
-              disabled={submitting || !name.trim()}
-            >
-              {submitting ? "Saving…" : "Save"}
-            </button>
-          </div>
-        </form>
+      <div className="vault-field">
+        <label htmlFor="save-template-name">Template name</label>
+        <input
+          id="save-template-name"
+          ref={inputRef}
+          type="text"
+          className="vault-input"
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            if (error) {
+              setError(null);
+            }
+          }}
+          disabled={submitting}
+        />
       </div>
-    </div>
+      <fieldset className="save-template__scope" disabled={submitting}>
+        <legend>Available in</legend>
+        <label>
+          <input
+            type="radio"
+            name="save-template-scope"
+            checked={scope === "vault"}
+            disabled={readOnlyVault}
+            onChange={() => setScope("vault")}
+          />
+          This vault
+          {readOnlyVault && " (read-only)"}
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="save-template-scope"
+            checked={scope === "global"}
+            onChange={() => setScope("global")}
+          />
+          All vaults (global)
+        </label>
+      </fieldset>
+      {error && <div className="vault-error-text">{error}</div>}
+    </Dialog>
   );
 };

@@ -1,4 +1,4 @@
-.template-picker {
+.vd-dialog.template-picker {
   max-width: 560px;
   max-height: min(640px, 85vh);
 }

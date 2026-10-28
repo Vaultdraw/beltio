@@ -6,11 +6,13 @@ import { IconClose } from "./Icons";
 import "./dialogs.css";
 
 import type { FormEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
 interface DialogProps {
-  title: ReactNode;
-  titleId: string;
+  /** Omit for a headerless picker (palette style); then pass `ariaLabel`. */
+  title?: ReactNode;
+  titleId?: string;
+  ariaLabel?: string;
   /** Escape, backdrop click and the close button all call this. */
   onClose: () => void;
   children: ReactNode;
@@ -26,6 +28,10 @@ interface DialogProps {
   busy?: boolean;
   /** Test id of the frame. */
   testId?: string;
+  /** Extra keydown handler on the frame (pickers: arrows, Enter). */
+  onFrameKeyDown?: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
+  /** Ref to the frame element. */
+  frameRef?: Ref<HTMLDivElement>;
 }
 
 const FOCUSABLE =
@@ -42,6 +48,7 @@ const FOCUSABLE =
 export const Dialog = ({
   title,
   titleId,
+  ariaLabel,
   onClose,
   children,
   footer,
@@ -50,6 +57,8 @@ export const Dialog = ({
   icon,
   busy = false,
   testId,
+  onFrameKeyDown,
+  frameRef,
 }: DialogProps) => {
   const backdropRef = useRef<HTMLDivElement>(null);
   // Read during the first render, before the dialog's own autofocus runs.
@@ -108,30 +117,33 @@ export const Dialog = ({
     }
   };
 
-  const content = (
-    <>
-      <div className="vault-modal__header vd-dialog__header">
-        <div className="vd-dialog__heading">
-          {icon}
-          <h3 id={titleId} className="vault-modal__title vd-dialog__title">
-            {title}
-          </h3>
+  const content =
+    title === undefined ? (
+      children
+    ) : (
+      <>
+        <div className="vault-modal__header vd-dialog__header">
+          <div className="vd-dialog__heading">
+            {icon}
+            <h3 id={titleId} className="vault-modal__title vd-dialog__title">
+              {title}
+            </h3>
+          </div>
+          <button
+            type="button"
+            className="vault-btn vault-btn--ghost vault-btn--icon vd-dialog__close"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <IconClose />
+          </button>
         </div>
-        <button
-          type="button"
-          className="vault-btn vault-btn--ghost vault-btn--icon vd-dialog__close"
-          onClick={onClose}
-          aria-label="Close"
-        >
-          <IconClose />
-        </button>
-      </div>
-      <div className="vault-modal__body vd-dialog__body">{children}</div>
-      {footer && (
-        <div className="vault-modal__footer vd-dialog__footer">{footer}</div>
-      )}
-    </>
-  );
+        <div className="vault-modal__body vd-dialog__body">{children}</div>
+        {footer && (
+          <div className="vault-modal__footer vd-dialog__footer">{footer}</div>
+        )}
+      </>
+    );
 
   return (
     <div
@@ -139,7 +151,8 @@ export const Dialog = ({
       className="vault-modal-backdrop vd-dialog-scrim"
       role="dialog"
       aria-modal="true"
-      aria-labelledby={titleId}
+      aria-labelledby={title === undefined ? undefined : titleId}
+      aria-label={title === undefined ? ariaLabel : undefined}
       onKeyDown={trapTab}
       onClick={(e) => {
         if (e.target === e.currentTarget && !busy) {
@@ -148,8 +161,12 @@ export const Dialog = ({
       }}
     >
       <div
-        className={`vault-modal vd-dialog${className ? ` ${className}` : ""}`}
+        className={`vault-modal vd-dialog${
+          title === undefined ? " vd-dialog--bare" : ""
+        }${className ? ` ${className}` : ""}`}
         data-testid={testId}
+        ref={frameRef}
+        onKeyDown={onFrameKeyDown}
       >
         {onSubmit ? (
           <form onSubmit={onSubmit} className="vd-dialog__form">

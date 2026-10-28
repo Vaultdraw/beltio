@@ -1,15 +1,24 @@
 /* Shared dialog frame (Dialog.tsx): the design's `.dlg`. Plain borders and one
  * pop shadow on the frame; no blur, no layout transitions, no entry animation.
- * Specificity `.vault-modal.vd-dialog` beats the legacy .vault-modal rules in
- * VaultShell.css, which the settings modal, palette and pickers still use. */
+ * The only modal styles in the app: `vault-modal*` class names stay on the
+ * frame as stable hooks for tests and the command context, with no rules. */
 
-.vault-modal-backdrop.vd-dialog-scrim {
+.vd-dialog-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background-color: var(--vault-scrim);
   backdrop-filter: none;
   padding: var(--vd-space-4);
 }
 
-.vault-modal.vd-dialog {
+.vd-dialog {
+  display: flex;
+  flex-direction: column;
+  color: var(--vault-text);
   width: 100%;
   max-width: 420px;
   padding: var(--vd-space-5);
@@ -24,8 +33,15 @@
   overflow: visible;
 }
 
-.vault-modal.vd-dialog--wide {
+.vd-dialog.vd-dialog--wide {
   max-width: 520px;
+}
+
+/* Headerless pickers (palette style): the list owns its own padding. */
+.vd-dialog.vd-dialog--bare {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
 }
 
 .vd-dialog__form {
@@ -69,6 +85,7 @@
   font-size: var(--vd-fs-body);
   color: var(--vault-text);
   max-height: 60vh;
+  overflow-y: auto;
 }
 
 .vd-dialog .vd-dialog__body p {

@@ -5,6 +5,7 @@ import { duplicateName, getBaseName } from "../vault/treeStore";
 import { userError } from "./userError";
 
 import { Dialog } from "./Dialog";
+import { ConfirmModal } from "./ConfirmModal";
 import { IconAlert } from "./Icons";
 import { Path } from "./Path";
 
@@ -55,111 +56,129 @@ export const ConflictDialog = ({
 
   const fileName = getBaseName(currentPath);
 
+  const [confirmReload, setConfirmReload] = useState(false);
   return (
-    <Dialog
-      title="File conflict"
-      titleId="conflict-dialog-title"
-      icon={
-        <span style={{ color: "var(--vault-warning)", display: "flex" }}>
-          <IconAlert />
-        </span>
-      }
-      onClose={onClose}
-      busy={processing}
-      footer={
-        <button
-          type="button"
-          className="vault-btn vault-btn--ghost"
-          onClick={onClose}
-          disabled={processing}
-        >
-          Keep editing
-        </button>
-      }
-    >
-      <p>
-        <strong>{fileName}</strong> was changed or deleted on disk outside
-        Vaultdraw while you had unsaved edits. Choose which version to keep.
-      </p>
-      <Path path={currentPath} className="vd-dialog__path" />
-      {errorMessage && <div className="vd-notice">{errorMessage}</div>}
-
-      {showCopyInput ? (
-        <div className="vault-field">
-          <label htmlFor="copy-path-input">
-            Save your current edits to a new file:
-          </label>
-          <input
-            id="copy-path-input"
-            type="text"
-            className="vault-input"
-            value={copyPath}
-            onChange={(e) => setCopyPath(e.target.value)}
+    <>
+      <Dialog
+        title="File conflict"
+        titleId="conflict-dialog-title"
+        icon={
+          <span style={{ color: "var(--vault-warning)", display: "flex" }}>
+            <IconAlert />
+          </span>
+        }
+        onClose={onClose}
+        busy={processing}
+        footer={
+          <button
+            type="button"
+            className="vault-btn vault-btn--ghost"
+            onClick={onClose}
             disabled={processing}
-            autoFocus
-          />
-          <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-            <button
-              type="button"
-              className="vault-btn vault-btn--primary"
-              onClick={() => void handleSaveCopy()}
-              disabled={processing || !copyPath.trim()}
-            >
-              {processing ? "Saving…" : "Save a copy and continue"}
-            </button>
-            <button
-              type="button"
-              className="vault-btn"
-              onClick={() => setShowCopyInput(false)}
-              disabled={processing}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="vd-outcomes">
-          <div className="vd-outcome">
-            <div className="vd-outcome__text">
-              <div className="vd-outcome__title">Keep my version</div>
-              <div className="vd-outcome__desc">
-                Saves your edits as a separate file (e.g.{" "}
-                {getBaseName(suggestedCopy)}); the file on disk stays as it is.
-              </div>
-            </div>
-            <button
-              type="button"
-              className="vault-btn vault-btn--primary"
-              onClick={() => setShowCopyInput(true)}
-              disabled={processing}
-            >
-              Save as copy
-            </button>
-          </div>
-          <div className="vd-outcome">
-            <div className="vd-outcome__text">
-              <div className="vd-outcome__title">Take the disk version</div>
-              <div className="vd-outcome__desc">
-                Loads the newer file from disk and discards your unsaved edits.
-              </div>
-            </div>
-            <button
-              type="button"
-              className="vault-btn vault-btn--danger-soft"
-              onClick={() => void handleReload()}
-              disabled={processing}
-            >
-              Reload from disk
-            </button>
-          </div>
-        </div>
-      )}
+          >
+            Keep editing
+          </button>
+        }
+      >
+        <p>
+          <strong>{fileName}</strong> was changed or deleted on disk outside
+          Vaultdraw while you had unsaved edits. Choose which version to keep.
+        </p>
+        <Path path={currentPath} className="vd-dialog__path" />
+        {errorMessage && <div className="vd-notice">{errorMessage}</div>}
 
-      {error && (
-        <div className="vault-error-text" style={{ marginTop: "10px" }}>
-          {error}
-        </div>
+        {showCopyInput ? (
+          <div className="vault-field">
+            <label htmlFor="copy-path-input">
+              Save your current edits to a new file:
+            </label>
+            <input
+              id="copy-path-input"
+              type="text"
+              className="vault-input"
+              value={copyPath}
+              onChange={(e) => setCopyPath(e.target.value)}
+              disabled={processing}
+              autoFocus
+            />
+            <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+              <button
+                type="button"
+                className="vault-btn vault-btn--primary"
+                onClick={() => void handleSaveCopy()}
+                disabled={processing || !copyPath.trim()}
+              >
+                {processing ? "Saving…" : "Save a copy and continue"}
+              </button>
+              <button
+                type="button"
+                className="vault-btn"
+                onClick={() => setShowCopyInput(false)}
+                disabled={processing}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="vd-outcomes">
+            <div className="vd-outcome">
+              <div className="vd-outcome__text">
+                <div className="vd-outcome__title">Keep my version</div>
+                <div className="vd-outcome__desc">
+                  Saves your edits as a separate file (e.g.{" "}
+                  {getBaseName(suggestedCopy)}); the file on disk stays as it
+                  is.
+                </div>
+              </div>
+              <button
+                type="button"
+                className="vault-btn vault-btn--primary"
+                onClick={() => setShowCopyInput(true)}
+                disabled={processing}
+              >
+                Save as copy
+              </button>
+            </div>
+            <div className="vd-outcome">
+              <div className="vd-outcome__text">
+                <div className="vd-outcome__title">Take the disk version</div>
+                <div className="vd-outcome__desc">
+                  Loads the newer file from disk and discards your unsaved
+                  edits.
+                </div>
+              </div>
+              <button
+                type="button"
+                className="vault-btn vault-btn--danger-soft"
+                onClick={() => setConfirmReload(true)}
+                disabled={processing}
+              >
+                Reload from disk
+              </button>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="vault-error-text" style={{ marginTop: "10px" }}>
+            {error}
+          </div>
+        )}
+      </Dialog>
+      {confirmReload && (
+        <ConfirmModal
+          title="Discard your edits?"
+          message="Your unsaved edits are lost and the version on disk opens. This can't be undone."
+          confirmLabel="Discard and reload"
+          isDanger
+          onCancel={() => setConfirmReload(false)}
+          onConfirm={() => {
+            setConfirmReload(false);
+            void handleReload();
+          }}
+        />
       )}
-    </Dialog>
+    </>
   );
 };
