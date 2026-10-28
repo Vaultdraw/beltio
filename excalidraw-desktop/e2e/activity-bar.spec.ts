@@ -184,7 +184,7 @@ test("activity bar: Settings > Interface hides and reorders entries", async ({
       .getByTestId("activity-bar")
       .locator("button[data-entry]")
       .evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.entry));
-  // Built-ins register through the slot registry: the default order is unchanged.
+  // Built-ins register through the slot registry: the default order is unchanged (official plugins add their own entries).
   await expect
     .poll(order)
     .toEqual([
@@ -195,6 +195,8 @@ test("activity bar: Settings > Interface hides and reorders entries", async ({
       "search",
       "tags",
       "templates",
+      "favourites.list",
+      "frames.list",
       "hotkeys",
       "settings",
     ]);
@@ -239,6 +241,8 @@ test("activity bar: Settings > Interface hides and reorders entries", async ({
       "search",
       "tags",
       "templates",
+      "favourites.list",
+      "frames.list",
       "hotkeys",
       "settings",
     ]);
