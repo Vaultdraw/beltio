@@ -51,7 +51,7 @@ export const SaveTemplateModal = ({
     try {
       await onSave(clean, scope);
     } catch (err: unknown) {
-      setError(userError(err));
+      setError(err instanceof Error ? err.message : String(err));
       setSubmitting(false);
     }
   };
