@@ -177,7 +177,7 @@ describe("activity bar", () => {
     shortcut: () => "",
   };
   it("hides the entries of an extension that is off", () => {
-    const graph = ACTIVITY_ENTRIES.find((e) => e.id === "graph")!;
+    const graph = ACTIVITY_ENTRIES.find((e) => e.id === "history")!;
     const library = ACTIVITY_ENTRIES.find((e) => e.id === "library")!;
     expect(resolveEntryState(graph, ctx).hidden).toBe(false);
     const off = { ...ctx, isExtensionOn: () => false, drawingOpen: false };
