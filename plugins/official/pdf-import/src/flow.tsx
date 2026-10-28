@@ -1,25 +1,20 @@
 /**
- * One import: the dialog as an overlay, the render loop behind its Import button, then the pages
- * go into the drawing and a message says what happened. The editor is read-only while an overlay
- * is open and a change made then is not an undo step, so the pages are committed after the
- * overlay has closed. Resolves when all of that is done (or the import was cancelled).
+ * One import: the dialog as a modal overlay (the drawing stays visible behind it), the render
+ * loop behind its Import button, then the pages go into the drawing as one undo step and a
+ * message says what happened. Resolves when the dialog has closed.
  */
 import { useCallback, useRef, useState } from "react";
 
 import { PdfImportDialog } from "./Dialog";
 import { pdfErrorMessage, PdfImportAborted } from "./errors";
-import { commitPages, renderPages } from "./importPdf";
+import { importPdf } from "./importPdf";
 
 import type {
   PdfDocument,
   PdfImportSettings,
   PluginContext,
 } from "@vaultdraw/api";
-import type {
-  PdfImportProgress,
-  PdfImportResult,
-  RenderedPages,
-} from "./importPdf";
+import type { PdfImportProgress, PdfImportResult } from "./importPdf";
 
 const pages = (n: number) => `${n} page${n === 1 ? "" : "s"}`;
 
@@ -54,13 +49,9 @@ export function runImport(
   const abort = new AbortController();
   const stop = () => abort.abort();
   signal?.addEventListener("abort", stop, { once: true });
-  /** Set when the render finished: what the commit step puts in the drawing. */
-  let pending: RenderedPages | null = null;
-  let doc = first;
 
   function Root({ close }: { close: () => void }) {
     const [current, setCurrent] = useState(first);
-    doc = current;
     const [progress, setProgress] = useState<PdfImportProgress | null>(null);
     const running = useRef(false);
 
@@ -80,14 +71,16 @@ export function runImport(
       running.current = true;
       setProgress({ done: 0, total: indices.length });
       try {
-        pending = await renderPages({
+        const result = await importPdf({
           ctx,
           doc: current,
           indices,
           settings,
+          path,
           signal: abort.signal,
           onProgress: setProgress,
         });
+        ctx.ui.toast(importSummary(result, settings));
       } catch (err) {
         if (!(err instanceof PdfImportAborted)) {
           ctx.ui.toast(pdfErrorMessage(err));
@@ -113,30 +106,16 @@ export function runImport(
     );
   }
 
-  /** The overlay is gone: the editor takes a frame or two to turn writable again. */
-  const afterClose = async () => {
-    signal?.removeEventListener("abort", stop);
-    const pages = pending;
-    const stopped = abort.signal.aborted || signal?.aborted;
-    abort.abort();
-    void doc.close().catch(() => {});
-    if (!pages || stopped) {
-      return;
-    }
-    await new Promise<void>((done) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => done())),
-    );
-    try {
-      const result = await commitPages({ ctx, doc, pages, settings, path });
-      ctx.ui.toast(importSummary(result, settings));
-    } catch (err) {
-      ctx.ui.toast(pdfErrorMessage(err));
-    }
-  };
-
   return new Promise((resolve) => {
     const handle = ctx.overlays.open(Root, {
-      onClose: () => void afterClose().finally(resolve),
+      modal: true,
+      onClose: () => {
+        // Any way out (Cancel, done, another overlay, the plugin stopping) ends the import.
+        signal?.removeEventListener("abort", stop);
+        abort.abort();
+        void first.close().catch(() => {});
+        resolve();
+      },
     });
     signal?.addEventListener("abort", () => handle.close(), { once: true });
   });

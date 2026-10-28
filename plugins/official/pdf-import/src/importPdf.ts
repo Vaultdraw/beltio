@@ -1,8 +1,7 @@
 /**
  * Renders the chosen PDF pages natively (one in flight), then commits them to the drawing as
  * locked pictures in ONE batch (one undo step). Nothing is committed when aborted. The document
- * is always closed. Two steps so the dialog can close between them: the editor is read-only while
- * the overlay is open, and only a commit made after it closes lands in the undo history.
+ * is always closed. Two steps (`renderPages`, `commitPages`), and `importPdf` runs both.
  */
 import { byteBudget, pageJsonCost, planImportSides } from "./budget";
 import { PdfImportAborted } from "./errors";

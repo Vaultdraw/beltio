@@ -28,7 +28,12 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const FOCUSABLE =
   'button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])';
 
-/** The frame: a modal card. Escape cancels (also while running), Tab stays inside. */
+/**
+ * The app's dialog frame, as the core `Dialog` draws it (same class names, so it looks like every
+ * other Vaultdraw dialog and follows the theme). The overlay is modal (`ctx.overlays`), so the
+ * drawing stays visible behind the scrim. Escape cancels (also while running), Tab stays inside,
+ * and focus goes back to where it was.
+ */
 const Frame = ({
   titleId,
   onCancel,
@@ -42,63 +47,115 @@ const Frame = ({
   footer: React.ReactNode;
   children: React.ReactNode;
 }) => {
-  const root = useRef<HTMLDivElement>(null);
+  const backdrop = useRef<HTMLDivElement>(null);
+  const [opener] = useState(() => globalThis.document?.activeElement ?? null);
   const live = useRef(onCancel);
   live.current = onCancel;
   useEffect(() => {
-    const doc = root.current?.ownerDocument;
+    const doc = backdrop.current?.ownerDocument;
     if (!doc) {
-      return;
+      return undefined;
     }
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.isComposing) {
+      if (event.key !== "Escape" || event.isComposing) {
         return;
       }
-      if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopPropagation();
-        live.current();
-      } else if (event.key === "Tab") {
-        const items = [
-          ...(root.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []),
-        ];
-        if (items.length === 0) {
-          return;
-        }
-        const first = items[0];
-        const last = items[items.length - 1];
-        const at = doc.activeElement;
-        if (event.shiftKey && at === first) {
-          event.preventDefault();
-          last.focus();
-        } else if (!event.shiftKey && at === last) {
-          event.preventDefault();
-          first.focus();
-        }
-      }
+      event.preventDefault();
+      event.stopPropagation();
+      live.current();
     };
     doc.addEventListener("keydown", onKeyDown, true);
-    return () => doc.removeEventListener("keydown", onKeyDown, true);
-  }, []);
+    return () => {
+      doc.removeEventListener("keydown", onKeyDown, true);
+      if (
+        opener instanceof HTMLElement &&
+        opener !== doc.body &&
+        opener.isConnected
+      ) {
+        opener.focus();
+      }
+    };
+  }, [opener]);
+
+  const trapTab = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Tab") {
+      return;
+    }
+    const nodes = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>(FOCUSABLE),
+    );
+    if (nodes.length === 0) {
+      return;
+    }
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    const active = event.currentTarget.ownerDocument.activeElement;
+    if (
+      event.shiftKey &&
+      (active === first || !nodes.includes(active as never))
+    ) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   return (
-    <div className="pdfi" ref={root}>
-      <form
-        className="pdfi__card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        data-testid="pdf-dialog"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSubmit();
-        }}
-      >
-        <h2 className="pdfi__title" id={titleId}>
-          Import PDF
-        </h2>
-        {children}
-        <div className="pdfi__footer">{footer}</div>
-      </form>
+    <div
+      ref={backdrop}
+      className="vault-modal-backdrop vd-dialog-scrim"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      data-testid="pdf-dialog"
+      onKeyDown={trapTab}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onCancel();
+        }
+      }}
+    >
+      <div className="vault-modal vd-dialog pdfi">
+        <form
+          className="vd-dialog__form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit();
+          }}
+        >
+          <div className="vault-modal__header vd-dialog__header">
+            <div className="vd-dialog__heading">
+              <h3 id={titleId} className="vault-modal__title vd-dialog__title">
+                Import PDF
+              </h3>
+            </div>
+            <button
+              type="button"
+              className="vault-btn vault-btn--ghost vault-btn--icon vd-dialog__close"
+              onClick={onCancel}
+              aria-label="Close"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+          <div className="vault-modal__body vd-dialog__body">{children}</div>
+          <div className="vault-modal__footer vd-dialog__footer">{footer}</div>
+        </form>
+      </div>
     </div>
   );
 };
@@ -150,12 +207,12 @@ const PasswordPrompt = ({
       onSubmit={() => void submit()}
       footer={
         <>
-          <button type="button" className="pdfi__btn" onClick={onCancel}>
+          <button type="button" className="vault-btn" onClick={onCancel}>
             Cancel
           </button>
           <button
             type="submit"
-            className="pdfi__btn pdfi__btn--primary"
+            className="vault-btn vault-btn--primary"
             disabled={checking || password === ""}
           >
             Unlock
@@ -178,7 +235,7 @@ const PasswordPrompt = ({
             ref={input}
             autoFocus
             type="password"
-            className="pdfi__input"
+            className="vault-input"
             value={password}
             disabled={checking}
             autoComplete="off"
@@ -298,13 +355,13 @@ const ImportOptions = ({
       }}
       footer={
         <>
-          <button type="button" className="pdfi__btn" onClick={onCancel}>
+          <button type="button" className="vault-btn" onClick={onCancel}>
             Cancel
           </button>
           {!running && (
             <button
               type="submit"
-              className="pdfi__btn pdfi__btn--primary"
+              className="vault-btn vault-btn--primary"
               disabled={error !== null}
             >
               Import
@@ -325,7 +382,7 @@ const ImportOptions = ({
           <input
             autoFocus
             type="text"
-            className="pdfi__input"
+            className="vault-input"
             value={range}
             disabled={running}
             spellCheck={false}

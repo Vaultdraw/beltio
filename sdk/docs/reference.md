@@ -836,7 +836,7 @@ Errors carry a `code`: `PDF_ENCRYPTED`, `PDF_BAD_PASSWORD`, `PDF_INVALID`, `PDF_
 
 **Placing pictures.** `ctx.scene.placePages(sizes)` returns where `sizes.length` page pictures go in the active drawing (sizes in scene pixels): `rects` (one box each), `pageCount` and `firstPage` (page mode), and `maxPages` (how many still fit in page mode). In page mode each picture is scaled to fit its page, starting on the page after the content; otherwise the boxes stack below the content. It changes nothing. `ctx.scene.sizeBytes()` is the drawing's size as saved (the cap is 32 MiB; a batch of pictures is refused above 90% of it). Add the pictures with `ctx.scene.batch(ops, { path, pageCount, reveal })`: `pageCount` sets the page count in the same undo step (page mode only), and `reveal` scrolls the first added element into view without zoom or selection (normal mode only).
 
-The editor is read-only while an overlay is open, and a change made then is not an undo step. A plugin that shows a dialog with `ctx.overlays` should close it before calling `batch`, as `pdf-import` does.
+A plugin that shows a dialog should open it with `ctx.overlays.open(component, { modal: true })`: the editor is read-only while a covering overlay is open, and a change made then is not an undo step. A modal dialog leaves the editor writable, so `batch` inside it is one undo step, as in `pdf-import`.
 
 Test with `boot()` from `@vaultdraw/api/testing`: `pdf.nextPick` sets the document the next `pick()` returns, `pdf.renderBytes`, `pdf.failPages`, `pdf.password` and `pdf.openError` shape the renderer, and `pdf.renders` and `pdf.closed` record what happened.
 

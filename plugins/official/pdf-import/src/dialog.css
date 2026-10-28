@@ -1,31 +1,5 @@
 .pdfi {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  background: var(--vault-bg, #fff);
-  color: var(--vault-text, #1b1b1f);
-  font: inherit;
-}
-
-.pdfi__card {
-  width: min(460px, 100%);
-  max-height: 100%;
-  overflow: auto;
-  box-sizing: border-box;
-  padding: 20px;
-  border: 1px solid var(--vault-border, #d0d0d8);
-  border-radius: 10px;
-  background: var(--vault-surface, var(--vault-bg, #fff));
-  box-shadow: var(--vault-shadow-lg, 0 12px 40px rgb(0 0 0 / 0.25));
-}
-
-.pdfi__title {
-  margin: 0 0 12px;
-  font-size: 16px;
-  font-weight: 600;
+  max-width: 460px;
 }
 
 .pdfi__body {
@@ -45,6 +19,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--vault-text);
 }
 
 .pdfi__row {
@@ -55,25 +30,7 @@
 
 .pdfi__label {
   flex: 0 0 60px;
-}
-
-.pdfi__input {
-  flex: 1;
-  min-width: 0;
-  height: 32px;
-  box-sizing: border-box;
-  padding: 0 10px;
-  border: 1px solid var(--vault-border, #d0d0d8);
-  border-radius: 6px;
-  background: var(--vault-bg, #fff);
-  color: inherit;
-  font: inherit;
-}
-
-.pdfi__input:focus-visible,
-.pdfi__btn:focus-visible {
-  outline: 2px solid var(--vault-primary, #5b5bd6);
-  outline-offset: 1px;
+  color: var(--vault-text);
 }
 
 .pdfi__status {
@@ -81,18 +38,19 @@
   flex-direction: column;
   gap: 4px;
   font-size: 0.9em;
+  color: var(--vault-text);
 }
 
 .pdfi__muted {
-  color: var(--vault-text-muted, #6b6b76);
+  color: var(--vault-text-muted);
 }
 
 .pdfi__warning {
-  color: var(--vault-warning, #a15c00);
+  color: var(--vault-warning);
 }
 
 .pdfi__error {
-  color: var(--vault-danger, #c62828);
+  color: var(--vault-danger);
 }
 
 .pdfi__bar {
@@ -100,40 +58,11 @@
   margin-top: 6px;
   border-radius: 3px;
   overflow: hidden;
-  background: var(--vault-border, #d0d0d8);
+  background: var(--vault-border);
 }
 
 .pdfi__bar-fill {
   height: 100%;
-  background: var(--vault-primary, #5b5bd6);
+  background: var(--vault-primary);
   transition: width 120ms linear;
-}
-
-.pdfi__footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.pdfi__btn {
-  height: 34px;
-  padding: 0 14px;
-  border: 1px solid var(--vault-border, #d0d0d8);
-  border-radius: 6px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-
-.pdfi__btn--primary {
-  border-color: transparent;
-  background: var(--vault-primary, #5b5bd6);
-  color: var(--vault-on-primary, #fff);
-}
-
-.pdfi__btn:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
