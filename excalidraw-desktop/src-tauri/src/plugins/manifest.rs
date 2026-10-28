@@ -305,6 +305,21 @@ pub(crate) struct Manifest {
     pub dev: bool,
 }
 
+/// Ids a new plugin may not take: the built-in command groups (a plugin's commands are named
+/// `<id>.<name>`, so a plugin called `vault` would add commands that look built in). The official
+/// plugins are bundled and exempt. Checked when a plugin is installed, so a plugin that is already
+/// installed under one of these names keeps working.
+const RESERVED_IDS: &[&str] = &[
+    "ai", "app", "appearance", "backup", "canvas", "cli", "command", "commands", "config", "control", "drawing", "excalidraw",
+    "export", "extensions", "file", "focus", "help", "history", "keys", "layout", "library", "links", "memory", "navigator",
+    "notes", "page", "palette", "paper", "pens", "plugins", "profile", "settings", "snippets", "sync", "tabs", "tags",
+    "templates", "theme", "thumbnails", "tools", "uri", "vault", "vaultdraw", "view", "watchdog", "window",
+];
+
+pub(crate) fn is_reserved_id(id: &str) -> bool {
+    RESERVED_IDS.contains(&id)
+}
+
 /// `^[a-z0-9][a-z0-9-]{1,38}$`
 pub(crate) fn is_valid_id(s: &str) -> bool {
     let b = s.as_bytes();

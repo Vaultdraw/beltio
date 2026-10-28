@@ -465,7 +465,7 @@ How the browser uses the network:
 
 All three keys reload live, like the others.
 
-Community plugins use their own consent and list: `network.allow_plugins` (same ask-once behaviour; **Settings → General → Allow the community plugins list**), `plugins.registry_url` (default `https://raw.githubusercontent.com/Vaultdraw/plugin-registry/main/index.json`, `https` only) and `plugins.registry_ttl_hours` (0 to 720, default 24). The list format and what an install checks are in `sdk/docs/registry.md`.
+Community plugins use their own consent and list: `network.allow_plugins` (same ask-once behaviour; **Settings → General → Allow the community plugins list**), `plugins.registry_url` (default `https://raw.githubusercontent.com/Vaultdraw/plugin-registry/main/index.json`, `https` only) and `plugins.registry_ttl_hours` (0 to 720, default 24). The app reads `plugins.registry_url` itself when it fetches the list; nothing in the page can point that fetch at another address. The list format and what an install checks are in `sdk/docs/registry.md`.
 
 The desktop app checks these keys again in its Rust backend before every request, so a setting you turn off holds even if the interface is out of date.
 

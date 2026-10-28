@@ -87,6 +87,9 @@ pub(crate) fn install_folder(user_root: &Path, src: &Path, app_version: &str, of
 /// An install may not reuse an official plugin's id (it would replace the official plugin and skip
 /// its consent prompt). A plugin with `dev = true` may: that is the developer's own copy.
 fn check_id(manifest: &super::manifest::Manifest, official: &HashSet<String>) -> Result<()> {
+    if super::manifest::is_reserved_id(&manifest.id) {
+        return Err(err("NAME_COLLISION", format!("`{}` is the name of a built-in command group. Choose another id.", manifest.id)));
+    }
     if official.contains(&manifest.id) && !manifest.dev {
         return Err(err("NAME_COLLISION", format!("`{}` is an official plugin id. Choose another id.", manifest.id)));
     }

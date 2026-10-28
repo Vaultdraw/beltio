@@ -242,6 +242,20 @@ fn a_dev_plugin_may_shadow_a_bundled_one() {
 }
 
 #[test]
+fn install_refuses_a_built_in_command_group_as_an_id() {
+    let tmp = tempdir().unwrap();
+    let user = tmp.path().join("cfg/plugins");
+    for id in ["vault", "file", "view", "config", "uri", "control", "ai"] {
+        let src = source_folder(tmp.path(), &format!("src-{id}"), id);
+        let e = install::install_folder(&user, &src, APP, &HashSet::new()).unwrap_err();
+        assert_eq!(e.code, "NAME_COLLISION", "{id}");
+        assert!(e.message.contains("command group"), "{}", e.message);
+    }
+    assert!(!user.exists() || fs::read_dir(&user).unwrap().count() == 0);
+    install::install_folder(&user, &source_folder(tmp.path(), "ok", "vault-tools"), APP, &HashSet::new()).unwrap();
+}
+
+#[test]
 fn install_refuses_an_official_id_unless_dev() {
     let tmp = tempdir().unwrap();
     let user = tmp.path().join("cfg/plugins");

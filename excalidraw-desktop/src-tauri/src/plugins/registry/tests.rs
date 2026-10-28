@@ -112,3 +112,14 @@ fn no_consent_no_request() {
         assert_eq!(hits.load(Ordering::SeqCst), 0);
     }
 }
+
+#[test]
+fn the_list_address_comes_from_the_settings_not_the_page() {
+    let tmp = tempdir().unwrap();
+    let d = dirs_in(tmp.path(), Some("[plugins]\nregistry_url = \"https://example.com/my/index.json\"\n"));
+    assert_eq!(configured_url(&d).unwrap(), "https://example.com/my/index.json");
+    let d = dirs_in(&tmp.path().join("other"), Some(""));
+    assert_eq!(configured_url(&d).unwrap(), DEFAULT_URL, "unset means the default");
+    assert_eq!(registry_url_from(Some(&serde_json::json!({"plugins": {"registry_url": "  "}}))), DEFAULT_URL);
+    assert_eq!(registry_url_from(Some(&serde_json::json!({"plugins": {"registry_url": 5}}))), DEFAULT_URL);
+}

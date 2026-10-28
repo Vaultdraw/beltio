@@ -9,6 +9,8 @@ use crate::{config, err, ioerr, network, random_id, theme_catalogue as cat, them
 use serde::Deserialize;
 use std::{collections::HashSet, fs, path::Path};
 
+/// Used when `plugins.registry_url` is not set (the same address as `DEFAULT_PLUGINS_REGISTRY_URL` in preferences.ts).
+const DEFAULT_URL: &str = "https://raw.githubusercontent.com/Vaultdraw/plugin-registry/main/index.json";
 const KIND: cat::Kind = cat::Kind { purpose: "plugins", dir: "plugin-registry" };
 const MAX_INDEX_BYTES: u64 = 2 * 1024 * 1024;
 /// A zip of a package that unpacks to at most 8 MB is not much larger than that.
@@ -97,9 +99,33 @@ pub(crate) async fn plugin_registry_cached() -> Result<Option<cat::CatalogueInde
     theme_install::blocking(|d| Ok(cat::cached_for(&d, KIND))).await
 }
 
+/// The list address the user set (`plugins.registry_url`), or the default. Rust reads it itself, so a
+/// script in the page cannot choose which address this command fetches.
+fn configured_url(dirs: &config::Dirs) -> Result<String> {
+    let loaded = config::load_settings_in(dirs)?;
+    let value = serde_json::to_value(&loaded).map_err(|e| err("INTERNAL", e.to_string()))?;
+    Ok(registry_url_from(value.get("config")))
+}
+
+fn registry_url_from(config: Option<&serde_json::Value>) -> String {
+    config
+        .and_then(|c| c.get("plugins"))
+        .and_then(|p| p.get("registry_url"))
+        .and_then(|u| u.as_str())
+        .map(str::trim)
+        .filter(|u| !u.is_empty())
+        .unwrap_or(DEFAULT_URL)
+        .to_owned()
+}
+
+/// Fetches and caches the plugins list. The page's address (`_url`) is ignored: see `configured_url`.
 #[tauri::command]
-pub(crate) async fn plugin_registry_index(url: String, max_bytes: u64) -> Result<cat::CatalogueIndex> {
-    theme_install::blocking(move |d| cat::index_for(&d, KIND, &url, max_bytes.clamp(1, MAX_INDEX_BYTES))).await
+pub(crate) async fn plugin_registry_index(_url: Option<String>, max_bytes: u64) -> Result<cat::CatalogueIndex> {
+    theme_install::blocking(move |d| {
+        let url = configured_url(&d)?;
+        cat::index_for(&d, KIND, &url, max_bytes.clamp(1, MAX_INDEX_BYTES))
+    })
+    .await
 }
 
 /// Installs (or updates) the plugin `id` from the cached list. Returns the plugin like
