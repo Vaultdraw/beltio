@@ -120,7 +120,12 @@ import { BisectBanner } from "./extensionSwitches/BisectBanner";
 import { listNotePaths } from "./notes/noteScan";
 import { applyNoteOps, notesOpsFor } from "./notes/noteListSync";
 
-import { flushOpenNotes, unsavedNotePaths } from "./notes/openNotes";
+import {
+  describeNotes,
+  flushOpenNotes,
+  NotesUnsavedError,
+  unsavedNotePaths,
+} from "./notes/openNotes";
 import { isNotePath } from "./notes/register";
 import { useNotes } from "./notes/useNotes";
 import { ActiveTabGate } from "./tabs/ActiveTabGate";
@@ -415,6 +420,13 @@ export const VaultApp = ({
   const [isClosing, setIsClosing] = useState(false);
   const [showCloseDiscardConfirm, setShowCloseDiscardConfirm] = useState(false);
   const [showNoteSavePrompt, setShowNoteSavePrompt] = useState(false);
+  /** What could not be saved at quit (named in the discard dialog). */
+  const [unsavedWhat, setUnsavedWhat] = useState<string[]>([]);
+  /** A vault switch waiting for the user's answer about unsaved notes. */
+  const [switchNotes, setSwitchNotes] = useState<{
+    paths: string[];
+    answer: (a: "save" | "discard" | "cancel") => void;
+  } | null>(null);
 
   // Directory entries cache: folderPath -> VaultEntry[]
   const [directoryMap, setDirectoryMap] = useState<Map<string, VaultEntry[]>>(
@@ -710,9 +722,23 @@ export const VaultApp = ({
     closeAttemptRef.current = true;
     setIsClosing(true);
     const operation = (async () => {
+      // Every flush runs on its own: one failure never skips the others, so "Discard and Close"
+      // loses only what could not be saved.
+      const failed: string[] = [];
+      const step = async (what: string, run: () => Promise<unknown>) => {
+        try {
+          await run();
+        } catch (err) {
+          if (err instanceof NotesUnsavedError) {
+            failed.push(...err.paths.map((p) => describeNotes([p])));
+          } else {
+            failed.push(what);
+          }
+        }
+      };
       try {
         tabsRef.current?.prepareLeave();
-        await docHookRef.current.flush();
+        await step("the open drawing", () => docHookRef.current.flush());
         // Open notes: with autosave off, the user decides (Save / Don't save).
         if (
           notesDecisionRef.current === null &&
@@ -725,13 +751,19 @@ export const VaultApp = ({
           return;
         }
         if (notesDecisionRef.current !== "discard") {
-          await flushOpenNotes();
+          await step("notes", flushOpenNotes);
         }
-        await libraryStore.flush();
-        await flushPluginData();
+        await step("the library", () => libraryStore.flush());
+        await step("plugin data", flushPluginData);
+        if (failed.length > 0) {
+          setUnsavedWhat(failed);
+          setShowCloseDiscardConfirm(true);
+          return;
+        }
         await appWinRef.current?.destroy();
         setShowCloseDiscardConfirm(false);
       } catch {
+        setUnsavedWhat(failed);
         setShowCloseDiscardConfirm(true);
       } finally {
         closePromiseRef.current = null;
@@ -1226,9 +1258,34 @@ export const VaultApp = ({
     try {
       // Close old doc first (flushes pending edits). Keep its generation valid
       // until that succeeds so a failed flush leaves the current vault usable.
+      // Notes first, so a note that cannot be saved stops the switch before the drawing closes.
+      let notesDecision: "save" | "discard" = "save";
+      const unsaved = unsavedNotePaths();
+      if (cachedPreferences().notesAutosaveMs === 0 && unsaved.length > 0) {
+        const answer = await new Promise<"save" | "discard" | "cancel">(
+          (answer) => setSwitchNotes({ paths: unsaved, answer }),
+        );
+        setSwitchNotes(null);
+        if (answer === "cancel") {
+          throw new Error("Vault not switched: your notes are unchanged.");
+        }
+        notesDecision = answer;
+      }
+      if (notesDecision === "save") {
+        try {
+          await flushOpenNotes();
+        } catch (err) {
+          const names =
+            err instanceof NotesUnsavedError
+              ? describeNotes(err.paths)
+              : "a note";
+          throw new Error(
+            `Vault not switched: ${names} could not be saved (it may have changed on disk while you edited it). Open it to choose a version, then switch again.`,
+          );
+        }
+      }
       tabs.prepareLeave();
       await closeDoc();
-      await flushOpenNotes();
       vaultGeneration.current += 1;
       // Release old vault handle ONLY after old doc has flushed and closed
       if (oldVault) {
@@ -3343,9 +3400,11 @@ export const VaultApp = ({
       {showNoteSavePrompt && (
         <ConfirmModal
           title="Unsaved notes"
-          message={`${
-            unsavedNotePaths().length
-          } open note(s) have changes that are not saved. Autosave is off.`}
+          message={`${describeNotes(
+            unsavedNotePaths(),
+          )} ${
+            unsavedNotePaths().length === 1 ? "has" : "have"
+          } changes that are not saved. Autosave is off.`}
           confirmLabel="Save and Close"
           cancelLabel="Cancel"
           alternatives={[
@@ -3373,10 +3432,35 @@ export const VaultApp = ({
         />
       )}
 
+      {switchNotes && (
+        <ConfirmModal
+          title="Unsaved notes"
+          message={`${describeNotes(switchNotes.paths)} ${
+            switchNotes.paths.length === 1 ? "has" : "have"
+          } changes that are not saved. Autosave is off.`}
+          confirmLabel="Save and Switch"
+          cancelLabel="Cancel"
+          alternatives={[
+            {
+              label: "Don't Save",
+              onChoose: () => switchNotes.answer("discard"),
+            },
+          ]}
+          onConfirm={() => switchNotes.answer("save")}
+          onCancel={() => switchNotes.answer("cancel")}
+        />
+      )}
+
       {showCloseDiscardConfirm && (
         <ConfirmModal
           title="Unsaved Changes"
-          message="Vaultdraw could not save your latest changes to disk. If you close the window now, those changes are lost."
+          message={`Vaultdraw could not save ${
+            unsavedWhat.length > 0
+              ? unsavedWhat.join(", ")
+              : "your latest changes"
+          } to disk. Everything else was saved. If you close the window now, ${
+            unsavedWhat.length > 0 ? "these changes are" : "those changes are"
+          } lost.`}
           confirmLabel="Discard and Close"
           cancelLabel="Keep Window Open"
           isDanger

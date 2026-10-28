@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  describeNotes,
   flushOpenNotes,
+  NotesUnsavedError,
   registerOpenNote,
   unsavedNotePaths,
 } from "./openNotes";
@@ -32,5 +34,26 @@ describe("openNotes", () => {
     await expect(flushOpenNotes()).rejects.toThrow("c.md");
     off();
     expect(unsavedNotePaths()).toEqual([]);
+  });
+});
+
+describe("openNotes: naming and independent flushes", () => {
+  it("names notes for a dialog", () => {
+    expect(describeNotes(["a.md"])).toBe("'a.md'");
+    expect(describeNotes(["x/a.md", "b.md"])).toBe("'a.md' and 'b.md'");
+    expect(describeNotes(["a", "b", "c", "d", "e"])).toBe(
+      "'a', 'b', 'c' and 2 more",
+    );
+  });
+
+  it("a failing note does not stop the others, and the error names only the failed one", async () => {
+    const good = note("good.md", "dirty");
+    const bad = note("bad.md", "dirty", "conflict");
+    const off = [registerOpenNote(bad), registerOpenNote(good)];
+    const err = await flushOpenNotes().catch((e) => e);
+    expect(err).toBeInstanceOf(NotesUnsavedError);
+    expect((err as NotesUnsavedError).paths).toEqual(["bad.md"]);
+    expect(good.state()).toBe("saved");
+    off.forEach((f) => f());
   });
 });

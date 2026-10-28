@@ -29,12 +29,35 @@ export function unsavedNotePaths(): string[] {
     .map((n) => n.path);
 }
 
-/** Writes every open note; rejects when any note is still unsaved afterwards. */
+/** Thrown by flushOpenNotes: which notes are still unsaved. */
+export class NotesUnsavedError extends Error {
+  constructor(readonly paths: string[]) {
+    super(`Could not save ${paths.join(", ")}`);
+    this.name = "NotesUnsavedError";
+  }
+}
+
+/** Note names for a dialog: "a.md", "a.md and b.md", "a.md, b.md, c.md and 2 more". */
+export function describeNotes(paths: readonly string[]): string {
+  const names = paths.map((p) => `'${p.split("/").pop() ?? p}'`);
+  if (names.length <= 1) {
+    return names.join("");
+  }
+  if (names.length <= 3) {
+    return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  }
+  return `${names.slice(0, 3).join(", ")} and ${names.length - 3} more`;
+}
+
+/**
+ * Writes every open note, each on its own (one failing note never stops the others); rejects with
+ * the notes that are still unsaved afterwards.
+ */
 export async function flushOpenNotes(): Promise<void> {
   const notes = [...open];
-  await Promise.all(notes.map((n) => n.flush()));
+  await Promise.allSettled(notes.map((n) => n.flush()));
   const left = notes.filter((n) => UNSAVED.includes(n.state()));
   if (left.length > 0) {
-    throw new Error(`Could not save ${left.map((n) => n.path).join(", ")}`);
+    throw new NotesUnsavedError(left.map((n) => n.path));
   }
 }

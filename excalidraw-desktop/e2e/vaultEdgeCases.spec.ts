@@ -1582,6 +1582,7 @@ test("quit with notes autosave off: Cancel keeps it open, Save and Close writes 
   await requestQuit(page);
   const d = dialog(page);
   await expect(d).toContainText("Unsaved notes");
+  await expect(d).toContainText("'Ideas.md'");
   // Cancel keeps the window open and writes nothing.
   await d.getByRole("button", { name: "Cancel" }).click();
   await expect(d).toHaveCount(0);
