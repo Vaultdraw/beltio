@@ -7,6 +7,8 @@ import { boot, type TestPlugin } from "@vaultdraw/api/testing";
 import { parseManifest } from "../../../../sdk/examples/testing/readManifest";
 import plugin from "../src/main";
 
+import type { SettingValue } from "@vaultdraw/api";
+
 // Load the (mocked) renderer once, so no test waits for its first import.
 beforeAll(
   () => import("../../../../excalidraw-desktop/src/export/renderExport"),
@@ -50,7 +52,7 @@ const note = (text: string) =>
   ({ type: "text", x: 0, y: 0, width: 10, height: 10, text } as const);
 
 // Settings outlive a booted plugin in the test host: every test starts from the defaults.
-const DEFAULTS: Record<string, unknown> = {
+const DEFAULTS: Record<string, SettingValue> = {
   enabled: false,
   formats: "svg",
   scale: 1,
@@ -65,7 +67,7 @@ const DEFAULTS: Record<string, unknown> = {
   notify: false,
 };
 
-const start = async (settings: Record<string, unknown> = {}) => {
+const start = async (settings: Record<string, SettingValue> = {}) => {
   vi.useFakeTimers();
   p = await boot(manifest(), plugin);
   for (const [k, v] of Object.entries({ ...DEFAULTS, ...settings })) {

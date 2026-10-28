@@ -34,7 +34,9 @@ export function wrap(text: string, width: number, m: Measure): string[] {
     if (words.length === 0) {
       continue;
     }
-    const [space, ...ws] = m.widths([" ", ...words]);
+    const all = Array.from(m.widths([" ", ...words]));
+    const space = all[0];
+    const ws = all.slice(1);
     let line = "";
     let used = 0;
     words.forEach((word, i) => {

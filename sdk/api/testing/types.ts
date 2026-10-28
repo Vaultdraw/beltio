@@ -117,6 +117,8 @@ export interface FakeElement {
   readonly name?: string | null;
   /** Set on the text element that labels a shape. */
   readonly containerId?: string | null;
+  /** True once the element is deleted (kept in the scene for undo). */
+  readonly isDeleted?: boolean;
 }
 
 /** A new element, optionally with an id. */

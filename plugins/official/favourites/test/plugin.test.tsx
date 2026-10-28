@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 
+import { screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { boot, type TestPlugin } from "@vaultdraw/api/testing";
@@ -102,11 +103,11 @@ describe("favourites plugin", () => {
     await p.chooseMenuItem("tab", "Favourite: add or remove", {
       path: "B.excalidraw",
     });
-    const view = await p.openPanel("list");
+    await p.openPanel("list");
     const rows = () =>
-      view.getAllByTestId("favourite-row").map((r) => r.textContent);
+      screen.getAllByTestId("favourite-row").map((r) => r.textContent);
     expect(rows()[0]).toContain("A");
-    const first = view.getAllByRole("button", { name: /^A/ })[0];
+    const first = screen.getAllByRole("button", { name: /^A/ })[0];
     first.focus();
     first.dispatchEvent(
       new KeyboardEvent("keydown", {
