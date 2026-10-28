@@ -110,7 +110,11 @@ describe("RenameTagDialog", () => {
   });
 
   it("Enter confirms, Esc cancels", async () => {
-    const { onConfirm, onCancel } = setup();
+    const first = setup();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(first.onCancel).toHaveBeenCalled();
+    cleanup();
+    const { onConfirm } = setup();
     fireEvent.change(field(), { target: { value: "Algo" } });
     fireEvent.submit(field().closest("form")!);
     await waitFor(() =>
@@ -119,8 +123,6 @@ describe("RenameTagDialog", () => {
         "Algo",
       ),
     );
-    fireEvent.keyDown(document, { key: "Escape" });
-    expect(onCancel).toHaveBeenCalled();
   });
 
   it("shows a native error and stays open", async () => {

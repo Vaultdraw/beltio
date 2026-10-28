@@ -34,10 +34,47 @@ interface DialogProps {
 }
 
 /** Open dialogs, oldest first: only the top one answers Escape. */
-const openStack: object[] = [];
+const openStack: HTMLElement[] = [];
 
-const FOCUSABLE =
-  'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
+/** The dialog painted on top: the last open one in document order. */
+const topDialog = () =>
+  openStack.reduce<HTMLElement | undefined>(
+    (top, el) =>
+      !top || top.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING
+        ? el
+        : top,
+    undefined,
+  );
+
+const FOCUSABLE = [
+  "a[href]",
+  "button:not(:disabled)",
+  "input:not(:disabled)",
+  "select:not(:disabled)",
+  "textarea:not(:disabled)",
+  "[tabindex]",
+  '[contenteditable="true"]',
+]
+  .map((s) => `${s}:not([tabindex="-1"])`)
+  .join(", ");
+
+/** Tab stops in order; a radio group is one stop (its checked radio). */
+const tabStops = (root: HTMLElement): HTMLElement[] =>
+  Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => {
+    if (!(el instanceof HTMLInputElement) || el.type !== "radio" || !el.name) {
+      return true;
+    }
+    const group = Array.from(
+      root.querySelectorAll<HTMLInputElement>(
+        `input[type="radio"][name="${el.name.replace(
+          /["\\]/g,
+          "\\$&",
+        )}"]:not(:disabled)`,
+      ),
+    );
+    const checked = group.find((r) => r.checked);
+    return checked ? el === checked : el === group[0];
+  });
 
 /**
  * The one frame every Vaultdraw dialog uses (16 px title, 20 px padding, 34 px
@@ -73,18 +110,21 @@ export const Dialog = ({
     if (!doc) {
       return;
     }
-    const token = {};
+    const token = backdropRef.current!;
     openStack.push(token);
-    // Focus starts inside the dialog unless the dialog already placed it.
-    const frame = backdropRef.current;
-    if (frame && !frame.contains(doc.activeElement)) {
-      frame.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    // Focus starts inside the dialog unless the dialog already placed it:
+    // the first control in the body or footer, else the Close button.
+    if (!token.contains(doc.activeElement)) {
+      const stops = tabStops(token);
+      (
+        stops.find((el) => !el.closest(".vd-dialog__header")) ?? stops[0]
+      )?.focus();
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.isComposing) {
         return;
       }
-      if (openStack[openStack.length - 1] !== token) {
+      if (topDialog() !== token) {
         return;
       }
       event.preventDefault();
@@ -112,12 +152,10 @@ export const Dialog = ({
   }, [opener]);
 
   const trapTab = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "Tab") {
+    if (event.key !== "Tab" || event.defaultPrevented) {
       return;
     }
-    const nodes = Array.from(
-      event.currentTarget.querySelectorAll<HTMLElement>(FOCUSABLE),
-    );
+    const nodes = tabStops(event.currentTarget);
     if (nodes.length === 0) {
       return;
     }

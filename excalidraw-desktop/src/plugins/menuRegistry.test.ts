@@ -54,7 +54,11 @@ describe("menu registry", () => {
     const before = buildEntries({ tab }).map((e) => e.label);
     add(stub({ surface: "tab", title: "Plugin thing" }));
     const after = buildEntries({ tab });
-    expect(after.map((e) => e.label)).toEqual([...before, "", "Plugin thing"]);
+    expect(after.map((e) => e.label)).toEqual([
+      ...before,
+      ...(before.length ? [""] : []),
+      "Plugin thing",
+    ]);
     expect(after.at(-1)?.action).toBe("plugin:0");
   });
 

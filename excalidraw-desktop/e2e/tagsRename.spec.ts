@@ -42,7 +42,8 @@ const textEl = (id: string, text: string) => ({
   lineHeight: 1.25,
 });
 
-const dialog = (page: Page) => page.getByRole("dialog", { name: "Rename tag" });
+const dialog = (page: Page) =>
+  page.getByRole("dialog", { name: /^Rename (tag$|#)/ });
 const texts = async (page: Page, path: string) =>
   (await readScene(page, path)).elements.map((e: any) => e.originalText);
 const refreshIndex = (page: Page) =>

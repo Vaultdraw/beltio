@@ -103,7 +103,7 @@ describe("PageSetupDialog", () => {
     const onClose = mount(updatePageSetup(null, {}));
     const close = screen.getByRole("button", { name: "Close" });
     expect(close).toHaveFocus();
-    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    fireEvent.keyDown(close, { key: "Tab", shiftKey: true });
     expect(
       screen.getByRole("button", { name: "Make app default" }),
     ).toHaveFocus();
