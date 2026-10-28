@@ -18,21 +18,25 @@ import type {
 export const MAX_INDEX_BYTES = 2 * 1024 * 1024;
 export const MAX_PREVIEW_BYTES = 512 * 1024;
 
-const toCatalogue = (raw: RawIndex): Catalogue => ({
-  entries: parseIndex(raw.json),
+const toCatalogue = <E>(
+  raw: RawIndex,
+  parse: (json: string) => E[],
+): Catalogue<E> => ({
+  entries: parse(raw.json),
   sha256: raw.sha256,
   fetchedAt: raw.fetched_at,
   url: raw.url,
 });
 
 /** The cached list for `url`, or null (missing, for another address, or unreadable). */
-const readCache = async (
+const readCache = async <E>(
   backend: CatalogueBackend,
   url: string,
-): Promise<Catalogue | null> => {
+  parse: (json: string) => E[],
+): Promise<Catalogue<E> | null> => {
   try {
     const raw = await backend.cached();
-    return raw && raw.url === url ? toCatalogue(raw) : null;
+    return raw && raw.url === url ? toCatalogue(raw, parse) : null;
   } catch {
     return null;
   }
@@ -51,16 +55,23 @@ export interface LoadOptions {
  * The list for the browser. A fresh cache costs no request. When the fetch fails, a cached list
  * is shown with the reason; with no cache the error is thrown.
  */
-export const loadCatalogue = async (
+export const loadCatalogue = (
   backend: CatalogueBackend,
+  options: LoadOptions,
+): Promise<LoadedCatalogue> => loadIndex(backend, parseIndex, options);
+
+/** The same for any index: the plugins registry passes its own parser. */
+export const loadIndex = async <E>(
+  backend: CatalogueBackend,
+  parse: (json: string) => E[],
   {
     url,
     ttlHours,
     force = false,
     now = Math.floor(Date.now() / 1000),
   }: LoadOptions,
-): Promise<LoadedCatalogue> => {
-  const cached = await readCache(backend, url);
+): Promise<LoadedCatalogue<E>> => {
+  const cached = await readCache(backend, url, parse);
   if (cached && !force && ttlHours > 0) {
     const ageSeconds = now - cached.fetchedAt;
     if (ageSeconds >= 0 && ageSeconds < ttlHours * 3600) {
@@ -69,7 +80,10 @@ export const loadCatalogue = async (
   }
   try {
     return {
-      catalogue: toCatalogue(await backend.refresh(url, MAX_INDEX_BYTES)),
+      catalogue: toCatalogue(
+        await backend.refresh(url, MAX_INDEX_BYTES),
+        parse,
+      ),
       stale: false,
     };
   } catch (err) {

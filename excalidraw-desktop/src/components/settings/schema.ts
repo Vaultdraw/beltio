@@ -170,6 +170,24 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     keywords: ["network", "theme", "download", "install", "consent", "allow"],
     configKey: "network.allow_themes",
   },
+  {
+    id: "network-plugins",
+    page: "general",
+    label: "Allow the community plugins list",
+    description:
+      "Lets Browse list and download community plugins. Asked once, the first time you open Browse.",
+    keywords: [
+      "network",
+      "plugin",
+      "extension",
+      "browse",
+      "download",
+      "registry",
+      "consent",
+      "allow",
+    ],
+    configKey: "network.allow_plugins",
+  },
 
   // ---- Appearance ----
   {

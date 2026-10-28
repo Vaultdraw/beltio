@@ -6,6 +6,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Added
 
+- **Community plugins registry (backend).** `network.allow_plugins` (asked once, revocable), `plugins.registry_url` and `plugins.registry_ttl_hours`. The app can fetch and cache a plugins `index.json` and install a package from it: the zip must match the list's SHA-256, is read strictly (the rules of `vaultdraw-plugin check`), and its manifest id, version and permissions must match the entry. Format: `sdk/docs/registry.md`. The Browse screen follows.
 - **`[extensions] history`: switch the History panel off.** Hides the panel, checkpoint dialog, History button, activity bar entry and the `history.*` commands. Saving versions stays under `history.enabled` (Settings, Extensions: "File history"), so turning the panel off never stops versions from being kept. On by default.
 
 ### Fixed

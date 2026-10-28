@@ -207,6 +207,12 @@ interface VaultPreferencesBase {
   networkEnabled: boolean;
   /** Consent for downloading themes (`network.allow_themes`); undefined = not asked yet. */
   networkAllowThemes: boolean | undefined;
+  /** Consent for the community plugins list and plugin downloads (`network.allow_plugins`); undefined = not asked yet. */
+  networkAllowPlugins: boolean | undefined;
+  /** Where the community plugins list comes from (`plugins.registry_url`, https only). */
+  pluginsRegistryUrl: string;
+  /** Hours the cached plugins list is used before Browse fetches again (`plugins.registry_ttl_hours`). */
+  pluginsRegistryTtlHours: number;
   /** Largest theme file to install, in KiB (`themes.max_install_kb`). */
   themeInstallMaxKb: number;
   /** Where the community themes list comes from (`themes.index_url`, https only). */
@@ -393,6 +399,9 @@ const normalizeToolStyles = (parsed: Partial<Record<ToolField, unknown>>) =>
 export const DEFAULT_THEMES_INDEX_URL =
   "https://raw.githubusercontent.com/Vaultdraw/themes/main/index.json";
 
+export const DEFAULT_PLUGINS_REGISTRY_URL =
+  "https://raw.githubusercontent.com/Vaultdraw/plugin-registry/main/index.json";
+
 export const DEFAULT_PREFERENCES: VaultPreferences = {
   recentVaults: [],
   lastVaultPath: null,
@@ -405,6 +414,9 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   colorTheme: "Default",
   networkEnabled: true,
   networkAllowThemes: undefined,
+  networkAllowPlugins: undefined,
+  pluginsRegistryUrl: DEFAULT_PLUGINS_REGISTRY_URL,
+  pluginsRegistryTtlHours: 24,
   themeInstallMaxKb: 64,
   themesIndexUrl: DEFAULT_THEMES_INDEX_URL,
   themesIndexTtlHours: 24,
@@ -815,6 +827,21 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       parsed.networkAllowThemes,
       isBoolean,
       d.networkAllowThemes,
+    ),
+    networkAllowPlugins: pick(
+      parsed.networkAllowPlugins,
+      isBoolean,
+      d.networkAllowPlugins,
+    ),
+    pluginsRegistryUrl: pick(
+      parsed.pluginsRegistryUrl,
+      isThemesIndexUrl,
+      d.pluginsRegistryUrl,
+    ),
+    pluginsRegistryTtlHours: pick(
+      parsed.pluginsRegistryTtlHours,
+      isThemesIndexTtlHours,
+      d.pluginsRegistryTtlHours,
     ),
     themeInstallMaxKb: pick(
       parsed.themeInstallMaxKb,

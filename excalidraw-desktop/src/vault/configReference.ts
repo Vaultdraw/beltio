@@ -478,6 +478,12 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       status_bar: {
         doc: "Show the status bar plugins fill with `ctx.statusBar`. It appears only while a plugin item has text.",
       },
+      registry_url: {
+        doc: "The community plugins index that Settings, Plugins, Browse lists (an https address). Needs the plugins consent.",
+      },
+      registry_ttl_hours: {
+        doc: "Hours before Browse fetches the plugins index again; 0 fetches every time it opens.",
+      },
     },
   },
   {
@@ -535,6 +541,10 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       },
       allow_themes: {
         doc: "Allow theme downloads. Absent means ask on first use; `true` allows, `false` refuses. Turning it on asks in a native dialog.",
+        default: "unset (ask)",
+      },
+      allow_plugins: {
+        doc: "Allow the community plugins list and plugin downloads. Absent means ask on first use; `true` allows, `false` refuses. Turning it on asks in a native dialog.",
         default: "unset (ask)",
       },
     },

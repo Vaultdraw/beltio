@@ -50,6 +50,13 @@ const stringList: Schema = { type: "array", items: { type: "string" } };
 /** Keys whose `expected` text cannot be read as a type, or reads too loosely. */
 const OVERRIDES: Readonly<Record<string, Schema>> = {
   "network.allow_themes": { type: "boolean" },
+  "network.allow_plugins": { type: "boolean" },
+  "plugins.registry_url": {
+    type: "string",
+    pattern:
+      "^(https://|http://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?(/|$))[^ ]+$",
+  },
+  "plugins.registry_ttl_hours": { type: "integer", minimum: 0, maximum: 720 },
   "themes.max_install_kb": { type: "integer", minimum: 1, maximum: 256 },
   "themes.index_url": {
     type: "string",

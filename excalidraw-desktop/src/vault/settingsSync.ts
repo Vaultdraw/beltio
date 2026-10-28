@@ -300,6 +300,9 @@ type ConfigField =
   | "colorTheme"
   | "networkEnabled"
   | "networkAllowThemes"
+  | "networkAllowPlugins"
+  | "pluginsRegistryUrl"
+  | "pluginsRegistryTtlHours"
   | "themeInstallMaxKb"
   | "themesIndexUrl"
   | "themesIndexTtlHours"
@@ -458,6 +461,24 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "network.allow_themes",
     expected: "true or false (leave it out to be asked)",
     valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "networkAllowPlugins",
+    key: "network.allow_plugins",
+    expected: "true or false (leave it out to be asked)",
+    valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "pluginsRegistryUrl",
+    key: "plugins.registry_url",
+    expected: "an https address",
+    valid: isThemesIndexUrl,
+  },
+  {
+    field: "pluginsRegistryTtlHours",
+    key: "plugins.registry_ttl_hours",
+    expected: "a whole number of hours between 0 and 720",
+    valid: isThemesIndexTtlHours,
   },
   {
     field: "themeInstallMaxKb",
@@ -1465,6 +1486,7 @@ function enqueue<T>(rt: Runtime, task: () => Promise<T>): Promise<T> {
 const CONSENT_FIELDS: Readonly<Record<string, ConfigField>> = {
   "network.enabled": "networkEnabled",
   "network.allow_themes": "networkAllowThemes",
+  "network.allow_plugins": "networkAllowPlugins",
 };
 const isConsentGrant = (change: ConfigChange) =>
   (change.value === true ||

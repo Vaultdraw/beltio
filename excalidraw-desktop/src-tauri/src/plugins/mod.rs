@@ -19,6 +19,8 @@ mod vault_paths;
 #[cfg(test)]
 mod tests;
 mod watch;
+mod zip;
+pub(crate) mod registry;
 
 use crate::{config, err, Result};
 use scan::{Index, PluginInfo, PluginsList, Roots, Scanned};

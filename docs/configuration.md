@@ -414,6 +414,8 @@ How the browser uses the network:
 
 All three keys reload live, like the others.
 
+Community plugins use their own consent and list: `network.allow_plugins` (same ask-once behaviour; **Settings → General → Allow the community plugins list**), `plugins.registry_url` (default `https://raw.githubusercontent.com/Vaultdraw/plugin-registry/main/index.json`, `https` only) and `plugins.registry_ttl_hours` (0 to 720, default 24). The list format and what an install checks are in `sdk/docs/registry.md`.
+
 The desktop app checks these keys again in its Rust backend before every request, so a setting you turn off holds even if the interface is out of date.
 
 #### Adding a theme
@@ -1814,6 +1816,8 @@ Plugins in the `plugins/` folder of the config folder.
 | `scene_max_ops` | `500` | an integer between 1 and 1000 |  | Most ops in one plugin `scene.batch` call; a batch past it is refused. |
 | `toolbar` | `true` | true or false |  | Show the strip of buttons plugins declare with `[[contributes.toolbar]]`. It appears only while a plugin declares a button. |
 | `status_bar` | `true` | true or false |  | Show the status bar plugins fill with `ctx.statusBar`. It appears only while a plugin item has text. |
+| `registry_url` | `"https://raw.githubusercontent.com/Vaultdraw/plugin-registry/main/index.json"` | an https address |  | The community plugins index that Settings, Plugins, Browse lists (an https address). Needs the plugins consent. |
+| `registry_ttl_hours` | `24` | a whole number of hours between 0 and 720 |  | Hours before Browse fetches the plugins index again; 0 fetches every time it opens. |
 
 ### `[ai]`
 
@@ -1857,6 +1861,7 @@ The internet is used only for features you allow, and only when you use them. Se
 | --- | --- | --- | --- | --- |
 | `enabled` | `true` | true or false |  | Master switch: `false` blocks every download, whatever else is allowed. Turning it on from Settings asks in a native dialog. |
 | `allow_themes` | unset (ask) | true or false (leave it out to be asked) |  | Allow theme downloads. Absent means ask on first use; `true` allows, `false` refuses. Turning it on asks in a native dialog. |
+| `allow_plugins` | unset (ask) | true or false (leave it out to be asked) |  | Allow the community plugins list and plugin downloads. Absent means ask on first use; `true` allows, `false` refuses. Turning it on asks in a native dialog. |
 
 ### `[themes]`
 

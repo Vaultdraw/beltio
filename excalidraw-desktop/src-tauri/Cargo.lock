@@ -1118,6 +1118,7 @@ version = "0.2.0"
 dependencies = [
  "block2",
  "crc32fast",
+ "flate2",
  "fs2",
  "glib",
  "gtk",

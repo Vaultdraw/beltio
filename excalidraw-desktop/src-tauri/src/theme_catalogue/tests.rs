@@ -40,12 +40,12 @@ fn index_fetch_caches_and_refetch_keeps_file() {
     assert_eq!(a.json, "{\"themes\":[]}");
     assert_eq!(a.url, url);
     assert_eq!(cached_in(&d).unwrap(), a);
-    let file = cache_dir(&d).join(INDEX_FILE);
+    let file = cache_dir(&d, THEMES).join(INDEX_FILE);
     let old = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1000);
     fs::File::options().write(true).open(&file).unwrap().set_modified(old).unwrap();
-    let mut meta = read_meta(&cache_dir(&d)).unwrap();
+    let mut meta = read_meta(&cache_dir(&d, THEMES)).unwrap();
     meta.fetched_at = 5;
-    write_meta(&cache_dir(&d), &meta).unwrap();
+    write_meta(&cache_dir(&d, THEMES), &meta).unwrap();
     let b = index_in(&d, &url, 1000).unwrap();
     assert_eq!(b.sha256, a.sha256);
     assert!(b.fetched_at > 5);
@@ -104,7 +104,7 @@ fn preview_rejects_svg_and_garbage() {
     for p in ["svg", "x"] {
         assert_eq!(code(preview_in(&d, &format!("{base}/{p}"), 1000, 10)), "INVALID_FILE");
     }
-    assert!(!cache_dir(&d).join(PREVIEWS_DIR).exists() || fs::read_dir(cache_dir(&d).join(PREVIEWS_DIR)).unwrap().count() == 0);
+    assert!(!cache_dir(&d, THEMES).join(PREVIEWS_DIR).exists() || fs::read_dir(cache_dir(&d, THEMES).join(PREVIEWS_DIR)).unwrap().count() == 0);
 }
 
 #[test]
@@ -141,7 +141,7 @@ fn symlinked_cache_dir_refused() {
     fs::create_dir_all(&d.state).unwrap();
     let target = tmp.path().join("elsewhere");
     fs::create_dir(&target).unwrap();
-    std::os::unix::fs::symlink(&target, cache_dir(&d)).unwrap();
+    std::os::unix::fs::symlink(&target, cache_dir(&d, THEMES)).unwrap();
     let (base, _) = start(|_| Resp::ok("{}"));
     assert!(index_in(&d, &format!("{base}/i"), 1000).is_err());
     assert_eq!(fs::read_dir(&target).unwrap().count(), 0);
@@ -153,7 +153,7 @@ fn preview_cache_evicts_the_least_recently_used() {
     let d = dirs_in(tmp.path(), Some(ALLOW));
     let (base, hits) = start(|_| Resp::ok(PNG));
     let url = |n: &str| format!("{base}/{n}.png");
-    let file = |n: &str| cache_dir(&d).join(PREVIEWS_DIR).join(theme_install::sha256_hex(url(n).as_bytes()));
+    let file = |n: &str| cache_dir(&d, THEMES).join(PREVIEWS_DIR).join(theme_install::sha256_hex(url(n).as_bytes()));
     let age = |n: &str, secs: u64| {
         let t = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(secs);
         fs::File::options().write(true).open(file(n)).unwrap().set_modified(t).unwrap();

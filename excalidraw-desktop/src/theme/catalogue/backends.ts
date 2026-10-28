@@ -8,7 +8,14 @@ import type { CatalogueBackend, RawIndex } from "./types";
 
 type Invoke = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
 
-export const tauriCatalogueBackend = (invoke: Invoke): CatalogueBackend => {
+export const tauriCatalogueBackend = (
+  invoke: Invoke,
+  commands: { cached: string; refresh: string; preview?: string } = {
+    cached: "theme_catalogue_cached",
+    refresh: "theme_catalogue_index",
+    preview: "theme_catalogue_preview",
+  },
+): CatalogueBackend => {
   const call = async <T>(cmd: string, args: Record<string, unknown>) => {
     try {
       return await invoke<T>(cmd, args);
@@ -17,17 +24,22 @@ export const tauriCatalogueBackend = (invoke: Invoke): CatalogueBackend => {
     }
   };
   return {
-    cached: () => call<RawIndex | null>("theme_catalogue_cached", {}),
+    cached: () => call<RawIndex | null>(commands.cached, {}),
     refresh: (url, maxBytes) =>
-      call<RawIndex>("theme_catalogue_index", { url, maxBytes }),
-    preview: async (url, maxBytes) =>
-      new Uint8Array(
-        await call<ArrayBuffer>("theme_catalogue_preview", { url, maxBytes }),
-      ),
+      call<RawIndex>(commands.refresh, { url, maxBytes }),
+    preview: async (url, maxBytes) => {
+      if (!commands.preview) {
+        throw new InstallError("NO_PREVIEW", "This list has no previews");
+      }
+      return new Uint8Array(
+        await call<ArrayBuffer>(commands.preview, { url, maxBytes }),
+      );
+    },
   };
 };
 
 const CACHE_KEY = "vaultdraw-theme-catalogue-v1";
+export const PLUGIN_CACHE_KEY = "vaultdraw-plugin-registry-v1";
 
 /** https, or http on this machine (the browser harness). */
 const webUrl = (raw: string, win: Window): URL => {
@@ -68,10 +80,14 @@ const download = async (
 };
 
 /** Browser harness: plain fetch, the list cached in localStorage. */
-export const browserCatalogueBackend = (win: Window): CatalogueBackend => ({
+export const browserCatalogueBackend = (
+  win: Window,
+  cacheKey = CACHE_KEY,
+  invalidMessage = "The themes list is not valid JSON",
+): CatalogueBackend => ({
   cached: async () => {
     try {
-      const raw = win.localStorage.getItem(CACHE_KEY);
+      const raw = win.localStorage.getItem(cacheKey);
       return raw ? (JSON.parse(raw) as RawIndex) : null;
     } catch {
       return null;
@@ -86,10 +102,7 @@ export const browserCatalogueBackend = (win: Window): CatalogueBackend => ({
         .replace(/^﻿/, "");
       JSON.parse(json);
     } catch {
-      throw new InstallError(
-        "INVALID_INDEX",
-        "The themes list is not valid JSON",
-      );
+      throw new InstallError("INVALID_INDEX", invalidMessage);
     }
     const raw: RawIndex = {
       json,
@@ -98,7 +111,7 @@ export const browserCatalogueBackend = (win: Window): CatalogueBackend => ({
       url,
     };
     try {
-      win.localStorage.setItem(CACHE_KEY, JSON.stringify(raw));
+      win.localStorage.setItem(cacheKey, JSON.stringify(raw));
     } catch {
       // Storage full or blocked: the list still shows this time.
     }

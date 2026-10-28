@@ -48,7 +48,37 @@ const NetworkThemesSetting = () => {
   );
 };
 
+const NetworkPluginsSetting = () => {
+  const enabled = usePreference("networkEnabled");
+  const allowed = usePreference("networkAllowPlugins");
+  return (
+    <SettingRow
+      id="network-plugins"
+      htmlFor="vault-network-plugins"
+      disabled={!enabled}
+      description={
+        allowed === undefined
+          ? "Not asked yet: opening Browse will ask."
+          : undefined
+      }
+      onReset={
+        allowed === undefined
+          ? undefined
+          : () => updatePreferences({ networkAllowPlugins: undefined })
+      }
+    >
+      <Switch
+        id="vault-network-plugins"
+        checked={allowed === true}
+        disabled={!enabled}
+        onChange={(next) => updatePreferences({ networkAllowPlugins: next })}
+      />
+    </SettingRow>
+  );
+};
+
 export const networkControls: SettingControls = {
   "network-enabled": { Component: NetworkEnabledSetting },
   "network-themes": { Component: NetworkThemesSetting },
+  "network-plugins": { Component: NetworkPluginsSetting },
 };

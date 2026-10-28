@@ -20,8 +20,8 @@ export interface CatalogueEntry {
   homepage?: string;
 }
 
-export interface Catalogue {
-  entries: CatalogueEntry[];
+export interface Catalogue<E = CatalogueEntry> {
+  entries: E[];
   /** SHA-256 of the index file. */
   sha256: string;
   /** Unix seconds of the last successful fetch. */
@@ -49,8 +49,8 @@ export interface CatalogueBackend {
 
 export type EntryStatus = "available" | "installed" | "update";
 
-export interface LoadedCatalogue {
-  catalogue: Catalogue;
+export interface LoadedCatalogue<E = CatalogueEntry> {
+  catalogue: Catalogue<E>;
   /** True when the list came from the cache because the fetch failed. */
   stale: boolean;
   /** Why the fetch failed (shown next to the cached list). */

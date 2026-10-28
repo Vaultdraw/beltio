@@ -343,6 +343,10 @@ autosave_delay_ms = 500
 # importers = {}
 # Most ops in one plugin scene.batch call, 1 to 1000
 # scene_max_ops = 500
+# Community plugins list Browse reads (https; needs network.allow_plugins)
+# registry_url = "https://raw.githubusercontent.com/Vaultdraw/plugin-registry/main/index.json"
+# Hours before Browse refetches the list, 0 = fetch every time it opens
+# registry_ttl_hours = 24
 # Show the status bar plugins fill (only while an item has text)
 # status_bar = true
 # Show the strip of toolbar buttons plugins declare (only while one exists)
@@ -374,6 +378,8 @@ autosave_delay_ms = 500
 # enabled = true    # false = never connect
 # Install themes from a URL or GitHub repo: absent = ask on first use, true = allow, false = refuse
 # allow_themes = false
+# Community plugins list and plugin downloads: absent = ask on first use, true = allow, false = refuse
+# allow_plugins = false
 
 [themes]
 # Largest theme file to install from the internet, in KB, 1 to 256

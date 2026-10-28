@@ -22,6 +22,16 @@ const META_FILE: &str = "index.meta.json";
 const ACCEPT_JSON: &str = "application/json, text/plain, */*";
 const ACCEPT_IMAGE: &str = "image/png, image/jpeg, image/webp";
 
+/// One cached index: the network purpose its downloads need and its folder under `state/`.
+/// The plugin registry reuses this code with its own kind.
+#[derive(Clone, Copy)]
+pub(crate) struct Kind {
+    pub purpose: &'static str,
+    pub dir: &'static str,
+}
+
+pub(crate) const THEMES: Kind = Kind { purpose: PURPOSE, dir: CACHE_DIR };
+
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub(crate) struct CatalogueIndex {
     pub json: String,
@@ -41,8 +51,8 @@ fn now_secs() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
 }
 
-fn cache_dir(dirs: &config::Dirs) -> PathBuf {
-    dirs.state.join(CACHE_DIR)
+fn cache_dir(dirs: &config::Dirs, kind: Kind) -> PathBuf {
+    dirs.state.join(kind.dir)
 }
 
 /// Creates `path` as a real directory (never through a symlink); errors when something else is there.
@@ -54,9 +64,9 @@ fn ensure_real_dir(path: &Path) -> Result<()> {
     }
 }
 
-fn ensure_cache(dirs: &config::Dirs, sub: Option<&str>) -> Result<PathBuf> {
+fn ensure_cache(dirs: &config::Dirs, kind: Kind, sub: Option<&str>) -> Result<PathBuf> {
     fs::create_dir_all(&dirs.state).map_err(ioerr)?;
-    let root = cache_dir(dirs);
+    let root = cache_dir(dirs, kind);
     ensure_real_dir(&root)?;
     match sub {
         Some(s) => {
@@ -90,7 +100,11 @@ fn is_json_object(text: &str) -> bool {
 }
 
 pub(crate) fn cached_in(dirs: &config::Dirs) -> Option<CatalogueIndex> {
-    let root = cache_dir(dirs);
+    cached_for(dirs, THEMES)
+}
+
+pub(crate) fn cached_for(dirs: &config::Dirs, kind: Kind) -> Option<CatalogueIndex> {
+    let root = cache_dir(dirs, kind);
     let raw = read_regular(&root.join(INDEX_FILE))?;
     let meta = read_meta(&root)?;
     if theme_install::sha256_hex(&raw) != meta.sha256 {
@@ -105,7 +119,11 @@ pub(crate) fn cached_in(dirs: &config::Dirs) -> Option<CatalogueIndex> {
 }
 
 pub(crate) fn index_in(dirs: &config::Dirs, url: &str, max_bytes: u64) -> Result<CatalogueIndex> {
-    network::ensure_network_allowed(dirs, PURPOSE)?;
+    index_for(dirs, THEMES, url, max_bytes)
+}
+
+pub(crate) fn index_for(dirs: &config::Dirs, kind: Kind, url: &str, max_bytes: u64) -> Result<CatalogueIndex> {
+    network::ensure_network_allowed(dirs, kind.purpose)?;
     let parsed = network::parse_url(url)?;
     let bytes = network::get_bytes(&parsed, max_bytes.clamp(1, MAX_INDEX_BYTES), ACCEPT_JSON)?;
     let text = String::from_utf8(bytes.clone()).map_err(|_| err("INVALID_FILE", "The catalogue is not valid UTF-8"))?;
@@ -114,7 +132,7 @@ pub(crate) fn index_in(dirs: &config::Dirs, url: &str, max_bytes: u64) -> Result
         return Err(err("INVALID_FILE", "The catalogue is not a JSON object"));
     }
     let sha = theme_install::sha256_hex(&bytes);
-    let root = ensure_cache(dirs, None)?;
+    let root = ensure_cache(dirs, kind, None)?;
     let fetched_at = now_secs();
     let same = read_meta(&root).is_some_and(|m| m.sha256 == sha && m.url == url)
         && read_regular(&root.join(INDEX_FILE)).is_some_and(|b| b == bytes);
@@ -174,7 +192,7 @@ fn touch(path: &Path) {
 
 pub(crate) fn preview_in(dirs: &config::Dirs, url: &str, max_bytes: u64, keep: usize) -> Result<Vec<u8>> {
     let name = theme_install::sha256_hex(url.as_bytes());
-    let dir = cache_dir(dirs).join(PREVIEWS_DIR);
+    let dir = cache_dir(dirs, THEMES).join(PREVIEWS_DIR);
     let cached = dir.join(&name);
     if let Some(b) = read_regular(&cached).filter(|b| image_kind(b)) {
         touch(&cached);
@@ -186,7 +204,7 @@ pub(crate) fn preview_in(dirs: &config::Dirs, url: &str, max_bytes: u64, keep: u
     if !image_kind(&bytes) {
         return Err(err("INVALID_FILE", "The preview is not a PNG, JPEG or WebP image"));
     }
-    let dir = ensure_cache(dirs, Some(PREVIEWS_DIR))?;
+    let dir = ensure_cache(dirs, THEMES, Some(PREVIEWS_DIR))?;
     write_atomic(&dir.join(&name), &bytes)?;
     prune_dir(&dir, keep);
     Ok(bytes)
