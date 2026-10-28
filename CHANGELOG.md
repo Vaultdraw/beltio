@@ -6,12 +6,9 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
-<<<<<<< HEAD
 - **Folders with files in them can be moved to the Trash.** "Move to Trash" used to refuse any folder that was not empty. It now moves the folder and everything in it to the system Trash (you can restore it there), closes its open tabs, and the confirmation says how many files it holds. Links inside the folder are moved as links, never followed. "Confirm before trashing" (`files.confirm_delete`) covers folders too.
 
-=======
 - **Themes in Settings.** Install Themes now sits right under the theme picker. The Community themes dialog draws the same dark and light mini-window previews as the picker (from the palette, nothing to download), with one short details line per card. "Source" and the other external links now open in your browser.
->>>>>>> a8bd6eba (feat(themes): Install Themes under the picker, palette preview cards in Community themes, external links open in the browser)
 - **Theme install and the command line.** Theme names with invisible or text-direction characters are refused (they could pose as another name); uninstalling a theme removes only the files the install wrote and keeps anything you added to its folder. `vaultdraw export --out-dir --embed-scene` names files `X.excalidraw.png`, like a single export.
 
 - **Search finds decomposed Japanese and Korean names and text.** Kana with a separate voicing mark (e.g. か + dakuten, common in file names copied from older Mac disks or zip files) and Korean written as separate jamo now match what you type. The search index rebuilds once on the first launch after the update.
