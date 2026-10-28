@@ -5,7 +5,7 @@ import { seedAndOpen } from "./pageHelpers";
 
 // The menu-demo example (sdk/examples/menu-demo) through the real UI: a right-click
 // on a tree row shows the plugin's item (not for folders), choosing it loads the
-// plugin and its command reads where it was chosen. The tab menu shows it too.
+// plugin and its command reads where it was chosen. The tab and canvas menus show it too.
 
 const mainRequests = (page: Page) => {
   const urls: string[] = [];
@@ -59,6 +59,18 @@ test("tree row and tab menus offer the plugin's item and report where it was cho
     .click();
   await expect(
     page.getByText("Menu demo: tab: Start.excalidraw"),
+  ).toBeVisible();
+
+  // The canvas menu (a right-click on the drawing) carries it too.
+  await page
+    .locator("canvas.interactive")
+    .click({ button: "right", position: { x: 500, y: 400 } });
+  await page
+    .locator(".context-menu")
+    .getByRole("button", { name: "Menu demo: where was I chosen?" })
+    .click();
+  await expect(
+    page.getByText("Menu demo: canvas: Start.excalidraw"),
   ).toBeVisible();
   expect(errors).toEqual([]);
 });
