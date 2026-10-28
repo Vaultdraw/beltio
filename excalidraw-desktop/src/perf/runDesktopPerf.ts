@@ -216,7 +216,9 @@ export async function runDesktopPerf(): Promise<void> {
     if (layerDump) {
       const counters = await (
         win as unknown as { __perfMemCounters?: () => Promise<unknown> }
-      ).__perfMemCounters?.().catch(() => null);
+      )
+        .__perfMemCounters?.()
+        .catch(() => null);
       layerDump = await invoke<boolean>("perf_layer_tree", {
         label: name,
         dom: `${layerCensus(
