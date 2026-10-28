@@ -115,6 +115,8 @@ import { useVaultAppearance } from "./theme/useVaultAppearance";
 import { registerBisectCommands } from "./extensionSwitches/bisectCommands";
 import { BisectBanner } from "./extensionSwitches/BisectBanner";
 import { listNotePaths } from "./notes/noteScan";
+import { applyNoteOp, notesOpsFor } from "./notes/noteListSync";
+
 import { isNotePath } from "./notes/register";
 import { useNotes } from "./notes/useNotes";
 import { ActiveTabGate } from "./tabs/ActiveTabGate";
@@ -191,6 +193,8 @@ import { DeferredHome } from "./components/DeferredHome";
 
 import "./components/VaultShell.css";
 import "./components/shell.css";
+
+import type { NoteListOp } from "./notes/noteListSync";
 
 import type { OpenTarget } from "./tabs/types";
 import type { TabsApi } from "./tabs/useTabs";
@@ -2129,16 +2133,66 @@ export const VaultApp = ({
     paths: string[];
   } | null>(null);
   const noteScanAt = useRef(0);
+  const scanOps = useRef<NoteListOp[] | null>(null);
   const scanNotes = useCallback(() => {
     const h = vault?.handle;
     if (!h || Date.now() - noteScanAt.current < 10_000) {
       return;
     }
     noteScanAt.current = Date.now();
-    void listNotePaths(repository, h).then((paths) =>
-      setNoteList({ handle: h, paths }),
-    );
+    scanOps.current = [];
+    void listNotePaths(repository, h).then((paths) => {
+      // Changes that arrived while the walk ran may be missing from it.
+      const ops = scanOps.current;
+      scanOps.current = null;
+      setNoteList({
+        handle: h,
+        paths: (ops ?? []).reduce(applyNoteOp, paths),
+      });
+    });
   }, [vault?.handle, repository]);
+  // Between full scans, create/rename/delete events update the list at once
+  // (own actions and the file watcher alike). Nothing runs before a first scan.
+  const noteListReady = noteList?.handle === vault?.handle && !!noteList;
+  useEffect(() => {
+    const h = vault?.handle;
+    if (!h || !noteListReady) {
+      return;
+    }
+    let off: (() => void) | undefined;
+    let disposed = false;
+    void repository
+      .subscribe((event: VaultChange) => {
+        if (event.handle !== h) {
+          return;
+        }
+        void notesOpsFor(repository, h, event).then((ops) => {
+          if (disposed || ops.length === 0) {
+            return;
+          }
+          scanOps.current?.push(...ops);
+          setNoteList((prev) => {
+            if (!prev || prev.handle !== h) {
+              return prev;
+            }
+            const paths = ops.reduce(applyNoteOp, prev.paths);
+            return paths === prev.paths ? prev : { handle: h, paths };
+          });
+        });
+      })
+      .then((unsubscribe) => {
+        if (disposed) {
+          unsubscribe();
+        } else {
+          off = unsubscribe;
+        }
+      })
+      .catch(() => {});
+    return () => {
+      disposed = true;
+      off?.();
+    };
+  }, [vault?.handle, repository, noteListReady]);
   const kindVault = useMemo(
     () => ({
       handle: vault?.handle ?? null,

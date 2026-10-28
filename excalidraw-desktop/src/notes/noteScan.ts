@@ -6,14 +6,15 @@
  */
 import type { VaultRepository } from "../vault/types";
 
-/** Vault-relative paths of every note, found through `listDirectory`. */
+/** Vault-relative paths of every note (under `root`), found through `listDirectory`. */
 export async function listNotePaths(
   repository: Pick<VaultRepository, "listDirectory">,
   handle: string,
   signal?: AbortSignal,
+  root = "",
 ): Promise<string[]> {
   const notes: string[] = [];
-  const queue = [""];
+  const queue = [root];
   while (queue.length > 0 && !signal?.aborted) {
     const dir = queue.shift()!;
     try {

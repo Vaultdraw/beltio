@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   affectedTabPaths,
   createMissingWatcher,
+  markUnlistedMissing,
   probeExists,
   touchesPath,
 } from "./missingWatcher";
@@ -130,5 +131,32 @@ describe("probeExists", () => {
       true,
     );
     expect(listDirectory).toHaveBeenCalledWith("h", "f");
+  });
+});
+
+describe("markUnlistedMissing", () => {
+  it("marks a tab missing when its file is gone, keeps one that exists or is listed", async () => {
+    const marked: string[] = [];
+    markUnlistedMissing(
+      [
+        { id: "1", path: "listed.excalidraw" },
+        { id: "2", path: "gone.excalidraw" },
+        { id: "3", path: "late.md" },
+        { id: "4", path: "err.excalidraw" },
+        { id: "5", path: null },
+      ] as any,
+      new Set(["listed.excalidraw"]),
+      async (p) => {
+        if (p === "err.excalidraw") {
+          throw new Error("io");
+        }
+        return p === "late.md";
+      },
+      (p) => marked.push(p),
+    );
+    for (let i = 0; i < 5; i++) {
+      await Promise.resolve();
+    }
+    expect(marked).toEqual(["gone.excalidraw"]);
   });
 });

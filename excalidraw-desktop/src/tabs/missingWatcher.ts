@@ -124,3 +124,29 @@ export const probeExists = async (
   );
   return entries.some((e) => e.path === path);
 };
+
+/**
+ * After a session restore: tabs whose file the first vault scan did not list
+ * are probed once and marked missing when the file is gone (never removed).
+ */
+export const markUnlistedMissing = (
+  tabs: readonly TabView[],
+  known: ReadonlySet<string>,
+  exists: (path: string) => Promise<boolean>,
+  setMissing: (path: string) => void,
+): void => {
+  for (const tab of tabs) {
+    const path = tab.path;
+    if (path === null || known.has(path)) {
+      continue;
+    }
+    void exists(path).then(
+      (there) => {
+        if (!there) {
+          setMissing(path);
+        }
+      },
+      () => undefined, // unknown: leave the tab alone
+    );
+  }
+};

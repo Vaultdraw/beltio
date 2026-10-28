@@ -512,9 +512,25 @@ test("tabs: many tabs, pin, close others, reorder, reload, same file twice, a de
   await page.waitForTimeout(1600); // the session is written 1 s after the last change
   await page.reload();
   await enterVault(page);
-  // The fake vault is in memory: the reload dropped the seeded files, so put them back.
-  await seedDrawings(page, files);
+  // T7's file is deleted outside the app right away, while its restored tab has not
+  // loaded yet. The fake vault is in memory: put the other seeded files back.
+  const { "T7.excalidraw": t7, ...withoutT7 } = files;
+  await page.evaluate(() =>
+    (window as any).__vaultRepo.externalDelete("T7.excalidraw"),
+  );
+  await seedDrawings(page, withoutT7);
   await expect(tabEls(page)).toHaveCount(9);
+  const t7Tab = page.locator(
+    '[data-testid=vault-tab][data-path="T7.excalidraw"]',
+  );
+  // Marked missing (not removed), the same as a loaded tab; it clears when the file is back.
+  await expect(t7Tab).toHaveClass(/vault-tabs__tab--missing/, {
+    timeout: 5000,
+  });
+  await seedDrawings(page, { "T7.excalidraw": t7 });
+  await expect(t7Tab).not.toHaveClass(/vault-tabs__tab--missing/, {
+    timeout: 5000,
+  });
   expect(await readTabs(page)).toEqual(session);
   await expect(page.getByTestId("vault-tab").first()).toHaveAttribute(
     "aria-label",
@@ -820,6 +836,53 @@ test("notes: tasks, edits, a file changed on disk, headings, embeds and odd name
 
   // A note is a tab like any other: five notes open, the strip names them.
   expect((await tabNames(page)).length).toBeGreaterThanOrEqual(1);
+  expect(errors).toEqual([]);
+});
+
+test("notes: a note created, renamed or deleted right after a scan links at once", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page, "?seed=obsidian");
+  await addNote(
+    page,
+    "Hub.md",
+    "# Hub\n\nSee [[Fresh Note]] and [[Renamed Note]].\n",
+  );
+  await rescan(page);
+  await rowByName(page, "Hub").locator(".vault-tree-item__name").click();
+  const reading = page.getByTestId("note-reading");
+  const link = (name: string) =>
+    reading.locator("a.wikilink", { hasText: name });
+  await expect(link("Fresh Note")).toHaveClass(/unresolved/);
+  // The scan above just ran (it repeats at most every 10 s); notes made now still link.
+  const change = (paths: string[], rescanFlag = false) =>
+    page.evaluate(
+      ([p, r]) => {
+        const repo = (window as any).__vaultRepo;
+        repo.emit({ handle: repo.handle, paths: p, rescan: r });
+      },
+      [paths, rescanFlag] as const,
+    );
+  await addNote(page, "Fresh Note.md", "# Fresh\n");
+  await change(["Fresh Note.md"]);
+  await expect(link("Fresh Note")).not.toHaveClass(/unresolved/);
+  // A rename: the new name links, the old one does not.
+  await addNote(page, "Old Name.md", "# Old\n");
+  await change(["Old Name.md"]);
+  await page.evaluate(() => {
+    const w = window as any;
+    w.__noteFiles.setOnDisk("Renamed Note.md", "# Renamed\n");
+    w.__vaultRepo.seedNote("Renamed Note.md");
+  });
+  await change(["Old Name.md", "Renamed Note.md"], true);
+  await expect(link("Renamed Note")).not.toHaveClass(/unresolved/);
+  // A delete unlinks it.
+  await page.evaluate(() =>
+    (window as any).__vaultRepo.notes.delete("Fresh Note.md"),
+  );
+  await change(["Fresh Note.md"]);
+  await expect(link("Fresh Note")).toHaveClass(/unresolved/);
   expect(errors).toEqual([]);
 });
 

@@ -16,7 +16,11 @@ import { TAB_COMMAND_IDS } from "../commands/tabCommands";
 import { getEditorApi } from "../editor/editorApi";
 
 import { estimateHistoryBytes } from "./historyBytes";
-import { createMissingWatcher, probeExists } from "./missingWatcher";
+import {
+  createMissingWatcher,
+  markUnlistedMissing,
+  probeExists,
+} from "./missingWatcher";
 import { pickRestoreView } from "./restoreView";
 import { createStripSignals } from "./stripSignals";
 import { buildTabHandlers } from "./tabHandlers";
@@ -283,7 +287,7 @@ export function useTabs(args: UseTabsArgs): TabsApi {
     }
   }, [runtime, vault]);
 
-  // A restored session may name files that are gone: drop them once the
+  // A restored session may name files that are gone: mark them missing once the
   // vault scan has finished (the active file's failed open also marks it).
   useEffect(() => {
     if (
@@ -296,12 +300,18 @@ export function useTabs(args: UseTabsArgs): TabsApi {
     }
     prune.current = false;
     const known = new Set(args.entries.map((e) => e.path));
-    for (const tab of runtime.store.getState().tabs) {
-      if (tab.path !== null && !known.has(tab.path)) {
-        void runtime.controller.removed(tab.path);
-      }
+    // Not in the scan: probe once and mark it missing (as a loaded tab is),
+    // never drop it; a file the scan does not list is kept when it exists.
+    const handleNow = vault?.handle;
+    if (handleNow) {
+      markUnlistedMissing(
+        runtime.store.getState().tabs,
+        known,
+        (path) => probeExists(live.current.repository, handleNow, path),
+        (path) => void runtime.controller.setMissing(path, true),
+      );
     }
-  }, [runtime, args.indexing, args.entries]);
+  }, [runtime, args.indexing, args.entries, vault?.handle]);
 
   const handle = vault?.handle;
   // Outside delete / move of a background tab's file marks it missing; the
