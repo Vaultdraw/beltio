@@ -3,11 +3,13 @@ import { createHash } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 
 import { MIDNIGHT_THEME } from "./fixtures/themeServer";
+import { seedAndOpen } from "./pageHelpers";
 import {
   canvasBox,
   clickMainMenuItem,
   openDrawing,
   openVault,
+  readScene,
   reloadVault,
   trackErrors,
 } from "./helpers";
@@ -915,5 +917,95 @@ test("profiles: create, switch live, per vault, bad names refused and delete fal
   await expect(select()).toHaveValue("default");
   await expect(select().locator("option")).toHaveText(["default", "plain"]);
   await expect(page.getByTestId("activity-bar-graph")).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("paste-a-table: what counts as a table, Ask / Always / Never, and the plugin off", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page);
+  await seedAndOpen(page, "Sketch.excalidraw", { elements: [] });
+  await expect
+    .poll(() => hits(page, "Insert table").then((t) => t.length), { timeout: 15_000 })
+    .toBeGreaterThan(0);
+  const scene = async () =>
+    ((await readScene(page, "Sketch.excalidraw")).elements as any[]).filter((e) => !e.isDeleted);
+  const paste = async (text: string) => {
+    const box = await canvasBox(page);
+    await page.mouse.click(box.x + 200, box.y + 200);
+    await page.evaluate((t) => {
+      const dt = new DataTransfer();
+      dt.setData("text/plain", t);
+      document.dispatchEvent(
+        new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }),
+      );
+    }, text);
+  };
+  const offer = page.getByText("That looks like a table");
+  const noOffer = async (text: string, why: string) => {
+    await paste(text);
+    await page.waitForTimeout(700);
+    await expect(offer, why).toHaveCount(0);
+  };
+  const setMode = async (mode: string) => {
+    await openSettingsTab(page, "Plugins");
+    await page.getByTestId("plugin-table").getByRole("button", { name: "Table settings" }).click();
+    const label = { ask: "Ask", always: "Always insert a table", never: "Never" }[mode];
+    await page
+      .getByTestId("plugin-table")
+      .getByRole("group", { name: "When you paste a table" })
+      .getByRole("button", { name: label, exact: true })
+      .click();
+    await closeSettings(page);
+  };
+
+  // Things that are not tables are left alone.
+  await noOffer("just one line of text", "one line");
+  await noOffer("Hello, this is a sentence. It has commas, and more commas, but it is prose.", "prose with commas");
+  await noOffer("a\tb", "one row of cells");
+  await noOffer("a|b", "one pipe row");
+
+  // Never: even a clear table is a plain paste.
+  await setMode("never");
+  await noOffer("Name\tColour\nApple\tRed\nPear\tGreen", "never mode");
+
+  // Always: the table replaces the paste at once, no toast.
+  await setMode("always");
+  const before = (await scene()).length;
+  await paste("Name\tColour\nApple\tRed\nPear\tGreen");
+  await expect.poll(async () => (await scene()).some((e) => e.type === "line"), { timeout: 10_000 }).toBe(true);
+  await expect(offer).toHaveCount(0);
+  const always = (await scene()).slice(before);
+  expect(always.filter((e) => e.type === "text").map((e) => e.text).sort()).toEqual(
+    ["Apple", "Green", "Name", "Colour", "Pear", "Red"].sort(),
+  );
+
+  // Ask: each kind of table gets the offer; clicking swaps the pasted text for the table.
+  await setMode("ask");
+  const KINDS: [string, string, string[]][] = [
+    ["tab-separated", "A\tB\nx\ty", ["A", "B", "x", "y"]],
+    ["markdown pipes", "| Item | Qty |\n| --- | --- |\n| Pen | two |", ["Item", "Qty", "Pen", "two"]],
+    ["csv with a quoted comma", 'Name,Note\nAda,"likes a, b"\nGrace,ok', ["Name", "Note", "Ada", "likes a, b", "Grace", "ok"]],
+    ["ragged rows (one cell short in five)", "Name\tColour\tSize\nApple\tRed\tS\nPear\tGreen\nFig\tPurple\tL\nPlum\tBlue\tM", ["Name", "Colour", "Size", "Apple", "Red", "S", "Pear", "Green", "Fig", "Purple", "L", "Plum", "Blue", "M"]],
+    ["semicolons", "x;y\na;b\nc;d", ["x", "y", "a", "b", "c", "d"]],
+  ];
+  for (const [kind, text, cells] of KINDS) {
+    const count = (await scene()).length;
+    await paste(text);
+    await expect(offer, kind).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Insert as table" }).click();
+    await expect(offer, `${kind} toast closes`).toHaveCount(0);
+    await expect
+      .poll(async () => (await scene()).slice(count).filter((e) => e.type === "text").map((e) => e.text).sort(), { timeout: 10_000 })
+      .toEqual([...cells].sort());
+  }
+
+  // Off: the plugin is not listening at all.
+  await openSettingsTab(page, "Plugins");
+  await page.getByTestId("plugin-table").getByRole("switch").click({ force: true });
+  await closeSettings(page);
+  expect((await hits(page, "Insert table")).filter((t) => /^Insert table/.test(t))).toEqual([]);
+  await noOffer("Name\tColour\nApple\tRed", "table plugin off");
   expect(errors).toEqual([]);
 });
