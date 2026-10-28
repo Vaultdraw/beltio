@@ -50,6 +50,21 @@ describe("FakeVaultRepository name rules (mirror the native ones)", () => {
     await r.repo.move(r.handle, "Case.excalidraw", "case.excalidraw");
   });
 
+  it("refuses a rename onto an accent-case or Unicode-form twin, like the native check", async () => {
+    const r = make();
+    await create(r, "été.excalidraw");
+    await create(r, "notes.excalidraw");
+    await expect(
+      r.repo.move(r.handle, "notes.excalidraw", "Été.excalidraw"),
+    ).rejects.toMatchObject({ code: "NAME_COLLISION" });
+    await create(r, "caf\u00e9.excalidraw");
+    await expect(
+      r.repo.move(r.handle, "notes.excalidraw", "cafe\u0301.excalidraw"),
+    ).rejects.toMatchObject({ code: "NAME_COLLISION" });
+    // The same entry under a new case is still fine.
+    await r.repo.move(r.handle, "notes.excalidraw", "Notes.excalidraw");
+  });
+
   it("never lists dot-named entries", async () => {
     const r = make();
     r.repo.seedFolder(".obsidian");

@@ -174,8 +174,7 @@ pub fn write_note_file(v: &Vault, path: &str, content: &str, expected_revision: 
         }
         if current.is_none() {
             // Create-only: a hard link is an atomic no-clobber commit.
-            fs::hard_link(&temp, &p).map_err(|e| if e.kind() == std::io::ErrorKind::AlreadyExists { err("CONFLICT", "Note was created meanwhile; save was not applied") } else { ioerr(e) })?;
-            fs::remove_file(&temp).map_err(ioerr)?;
+            crate::fsops::commit_no_clobber(&temp, &p).map_err(|e| if e.kind() == std::io::ErrorKind::AlreadyExists { err("CONFLICT", "Note was created meanwhile; save was not applied") } else { ioerr(e) })?;
         } else {
             fs::rename(&temp, &p).map_err(ioerr)?;
         }

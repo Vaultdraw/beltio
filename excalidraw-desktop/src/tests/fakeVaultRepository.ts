@@ -364,9 +364,11 @@ export class FakeVaultRepository implements VaultRepository {
 
   /**
    * Mirrors the native rules for a NEW name: a dot-named component is refused (never listed), and
-   * a sibling whose name differs only in ASCII case is a collision (case-insensitive file systems).
+   * a sibling whose name differs only in case or Unicode form (NFC/NFD) is a collision, like the
+   * native check (full case folding). `except` is the entry being renamed: a case-only rename of
+   * the same entry is allowed.
    */
-  private checkNewName(path: string): void {
+  private checkNewName(path: string, except?: string): void {
     if (path.split("/").some((part) => part.startsWith("."))) {
       throw makeError(
         "INVALID_PATH",
@@ -375,13 +377,16 @@ export class FakeVaultRepository implements VaultRepository {
     }
     const slash = path.lastIndexOf("/");
     const parent = slash < 0 ? "" : path.slice(0, slash);
-    const name = path.slice(slash + 1).toLowerCase();
+    const fold = (n: string) =>
+      n.normalize("NFC").toLowerCase().normalize("NFC");
+    const name = fold(path.slice(slash + 1));
     const siblings = [...this.files.keys(), ...this.folders, ...this.notes];
     for (const other of siblings) {
       const s = other.lastIndexOf("/");
       if (
+        other !== except &&
         (s < 0 ? "" : other.slice(0, s)) === parent &&
-        other.slice(s + 1).toLowerCase() === name
+        fold(other.slice(s + 1)) === name
       ) {
         throw makeError(
           "NAME_COLLISION",
@@ -490,9 +495,7 @@ export class FakeVaultRepository implements VaultRepository {
     if (this.files.has(to) || this.folders.has(to)) {
       throw makeError("NAME_COLLISION", `destination exists: ${to}`);
     }
-    if (to.toLowerCase() !== from.toLowerCase()) {
-      this.checkNewName(to);
-    }
+    this.checkNewName(to, from);
     if (isFile) {
       assertValidDrawingPath(to);
       const row = this.files.get(from)!;

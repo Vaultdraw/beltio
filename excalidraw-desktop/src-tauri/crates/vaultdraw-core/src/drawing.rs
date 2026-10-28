@@ -188,7 +188,7 @@ where F: FnOnce(&Path, &[u8], bool) -> Result<()> {
     if operation_id.is_empty() || operation_id.len() > 200 { return Err(err("INVALID_ARGUMENT", "Invalid operation id")); }
     let p = safe_path(&v.root, path, true)?;
     if current_revision(&p)?.as_deref() != expected_revision { return Err(err("CONFLICT", "Drawing changed on disk; save was not applied")); }
-    if expected_revision.is_none() { ensure_no_sibling_collision(&p)?; }
+    if expected_revision.is_none() { ensure_no_sibling_collision(&p)?; } else { crate::fsops::ensure_file_writable(&p)?; }
     let snapshot = create_recovery(v, path, expected_revision, operation_id, json)?;
     let recheck = match current_revision(&p) {
         Ok(rev) => rev,
@@ -215,11 +215,13 @@ pub fn write_drawing_file_rewrite(v: &Vault, path: &str, json: &str, expected_re
     crate::fsops::reject_hidden(path)?;
     let p = safe_path(&v.root, path, false)?;
     if current_revision(&p)?.as_deref() != Some(expected_revision) { return Err(err("CONFLICT", "Drawing changed on disk; rewrite was not applied")); }
+    crate::fsops::ensure_file_writable(&p)?;
     let parent = p.parent().ok_or_else(|| err("INVALID_PATH", "File has no parent"))?.to_path_buf();
     let temp = parent.join(format!(".excalidraw-tmp-{}-{}", std::process::id(), random_id()));
     let result = (|| -> Result<()> {
         let mut f = OpenOptions::new().write(true).create_new(true).open(&temp).map_err(ioerr)?;
         f.write_all(json.as_bytes()).map_err(ioerr)?;
+        crate::fsops::copy_file_attrs(&p, &temp, &f);
         f.sync_all().map_err(ioerr)?;
         if current_revision(&p)?.as_deref() != Some(expected_revision) { return Err(err("CONFLICT", "Drawing changed immediately before commit; rewrite was not applied")); }
         fs::rename(&temp, &p).map_err(ioerr)

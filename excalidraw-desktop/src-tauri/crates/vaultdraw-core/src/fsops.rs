@@ -10,7 +10,39 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// Full Unicode case folding plus normalisation, so `Été`, `été` and the decomposed `e` + accent
+/// forms are one name (APFS and most sync tools treat them as the same name).
+pub fn fold_name(name: &str) -> String {
+    use unicode_normalization::UnicodeNormalization;
+    name.nfc().collect::<String>().to_lowercase().nfc().collect()
+}
+
+/// True when both paths are the same file or folder (same device and inode): a case-only rename.
+pub fn same_file(a: &Path, b: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        match (fs::symlink_metadata(a), fs::symlink_metadata(b)) {
+            (Ok(x), Ok(y)) => x.dev() == y.dev() && x.ino() == y.ino(),
+            _ => false,
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        match (fs::canonicalize(a), fs::canonicalize(b)) {
+            (Ok(x), Ok(y)) => x == y,
+            _ => false,
+        }
+    }
+}
+
 pub fn ensure_no_sibling_collision(path: &Path) -> Result<()> {
+    ensure_no_sibling_collision_except(path, None)
+}
+
+/// Refuses a name that folds to an existing sibling's name. `except` is the entry being renamed:
+/// it is the same file, so a case-only rename of it is allowed.
+pub fn ensure_no_sibling_collision_except(path: &Path, except: Option<&Path>) -> Result<()> {
     let parent = path
         .parent()
         .ok_or_else(|| err("INVALID_PATH", "Entry has no parent"))?;
@@ -20,21 +52,150 @@ pub fn ensure_no_sibling_collision(path: &Path) -> Result<()> {
     if !parent.is_dir() {
         return Err(err("NOT_FOUND", "Parent directory not found"));
     }
+    let want = fold_name(name);
     for item in fs::read_dir(parent).map_err(ioerr)? {
         let item = item.map_err(ioerr)?;
-        if item
-            .file_name()
-            .to_string_lossy()
-            .eq_ignore_ascii_case(name)
-        {
-            return Err(err(
-                "NAME_COLLISION",
-                "A case-insensitive name collision already exists",
-            ));
+        if fold_name(&item.file_name().to_string_lossy()) != want {
+            continue;
         }
+        if except.is_some_and(|src| same_file(src, &item.path())) {
+            continue;
+        }
+        return Err(err(
+            "NAME_COLLISION",
+            "A case-insensitive name collision already exists",
+        ));
     }
     Ok(())
 }
+
+fn is_unsupported(e: &std::io::Error) -> bool {
+    matches!(
+        e.raw_os_error(),
+        Some(c) if c == libc_codes::ENOTSUP || c == libc_codes::EINVAL || c == libc_codes::ENOSYS
+    )
+}
+#[cfg(unix)]
+mod libc_codes {
+    pub const ENOTSUP: i32 = libc::ENOTSUP;
+    pub const EINVAL: i32 = libc::EINVAL;
+    pub const ENOSYS: i32 = libc::ENOSYS;
+}
+#[cfg(not(unix))]
+mod libc_codes {
+    pub const ENOTSUP: i32 = -1;
+    pub const EINVAL: i32 = -1;
+    pub const ENOSYS: i32 = -1;
+}
+
+/// The kernel's own no-replace rename: fails with `AlreadyExists` instead of replacing `dst`.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn rename_excl(src: &Path, dst: &Path) -> std::io::Result<()> {
+    use std::{ffi::CString, os::unix::ffi::OsStrExt};
+    let s = CString::new(src.as_os_str().as_bytes()).map_err(|_| std::io::ErrorKind::InvalidInput)?;
+    let d = CString::new(dst.as_os_str().as_bytes()).map_err(|_| std::io::ErrorKind::InvalidInput)?;
+    #[cfg(target_os = "macos")]
+    let rc = unsafe { libc::renamex_np(s.as_ptr(), d.as_ptr(), libc::RENAME_EXCL) };
+    #[cfg(target_os = "linux")]
+    let rc = unsafe {
+        libc::syscall(libc::SYS_renameat2, libc::AT_FDCWD, s.as_ptr(), libc::AT_FDCWD, d.as_ptr(), 1u32 /* RENAME_NOREPLACE */) as i32
+    };
+    if rc == 0 { Ok(()) } else { Err(std::io::Error::last_os_error()) }
+}
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
+fn rename_excl(_src: &Path, _dst: &Path) -> std::io::Result<()> {
+    Err(std::io::Error::from_raw_os_error(libc_codes::ENOTSUP))
+}
+
+/// Last resort for file systems without no-replace rename: claim the destination name
+/// exclusively (`O_EXCL` file, or `mkdir` for a folder), then rename over our own placeholder.
+pub fn rename_via_claim(src: &Path, dst: &Path) -> std::io::Result<()> {
+    let is_dir = fs::symlink_metadata(src)?.is_dir();
+    if is_dir { fs::create_dir(dst)?; } else { OpenOptions::new().write(true).create_new(true).open(dst)?; }
+    fs::rename(src, dst).inspect_err(|_| {
+        let _ = if is_dir { fs::remove_dir(dst) } else { fs::remove_file(dst) };
+    })
+}
+
+/// Renames without ever replacing an existing `dst` (`AlreadyExists` instead).
+pub fn rename_no_replace(src: &Path, dst: &Path) -> std::io::Result<()> {
+    match rename_excl(src, dst) {
+        Err(e) if is_unsupported(&e) => rename_via_claim(src, dst),
+        r => r,
+    }
+}
+
+/// No-clobber commit of a finished temp file: a hard link (atomic), or on file systems without
+/// hard links (exFAT, FAT) the exclusive rename. The temp file is gone afterwards.
+pub fn commit_no_clobber(temp: &Path, path: &Path) -> std::io::Result<()> {
+    commit_no_clobber_with(temp, path, |t, p| fs::hard_link(t, p))
+}
+pub fn commit_no_clobber_with(temp: &Path, path: &Path, link: impl FnOnce(&Path, &Path) -> std::io::Result<()>) -> std::io::Result<()> {
+    match link(temp, path) {
+        Ok(()) => fs::remove_file(temp),
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => Err(e),
+        Err(_) => rename_no_replace(temp, path),
+    }
+}
+
+/// Refuses to overwrite a file the user made read-only (mode without write bits, or Finder "Locked").
+pub fn ensure_file_writable(path: &Path) -> Result<()> {
+    let Ok(md) = fs::metadata(path) else { return Ok(()) };
+    #[allow(unused_mut)]
+    let mut locked = md.permissions().readonly();
+    #[cfg(target_os = "macos")]
+    {
+        use std::os::macos::fs::MetadataExt;
+        locked |= md.st_flags() & 0x2 /* UF_IMMUTABLE */ != 0;
+    }
+    if locked {
+        return Err(err("READ_ONLY", "This file is read-only; make it writable to save"));
+    }
+    Ok(())
+}
+
+/// Gives the new file the old file's mode and extended attributes (Finder tags, labels), best effort.
+pub fn copy_file_attrs(old: &Path, new: &Path, new_file: &File) {
+    if let Ok(md) = fs::metadata(old) {
+        let _ = new_file.set_permissions(md.permissions());
+    }
+    copy_xattrs(old, new);
+}
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn copy_xattrs(old: &Path, new: &Path) {
+    use std::{ffi::CString, os::unix::ffi::OsStrExt};
+    let (Ok(o), Ok(n)) = (CString::new(old.as_os_str().as_bytes()), CString::new(new.as_os_str().as_bytes())) else { return };
+    unsafe {
+        #[cfg(target_os = "macos")]
+        let list = |buf: *mut libc::c_char, len: usize| libc::listxattr(o.as_ptr(), buf, len, libc::XATTR_NOFOLLOW);
+        #[cfg(target_os = "linux")]
+        let list = |buf: *mut libc::c_char, len: usize| libc::llistxattr(o.as_ptr(), buf, len);
+        let size = list(std::ptr::null_mut(), 0);
+        if size <= 0 { return; }
+        let mut names = vec![0u8; size as usize];
+        let got = list(names.as_mut_ptr() as *mut libc::c_char, names.len());
+        if got <= 0 { return; }
+        for name in names[..got as usize].split(|b| *b == 0).filter(|n| !n.is_empty()) {
+            let Ok(name) = CString::new(name) else { continue };
+            #[cfg(target_os = "macos")]
+            let get = |buf: *mut libc::c_void, len: usize| libc::getxattr(o.as_ptr(), name.as_ptr(), buf, len, 0, libc::XATTR_NOFOLLOW);
+            #[cfg(target_os = "linux")]
+            let get = |buf: *mut libc::c_void, len: usize| libc::lgetxattr(o.as_ptr(), name.as_ptr(), buf, len);
+            let vsize = get(std::ptr::null_mut(), 0);
+            if vsize < 0 { continue; }
+            let mut value = vec![0u8; vsize as usize];
+            let vgot = get(value.as_mut_ptr() as *mut libc::c_void, value.len());
+            if vgot < 0 { continue; }
+            #[cfg(target_os = "macos")]
+            libc::setxattr(n.as_ptr(), name.as_ptr(), value.as_ptr() as *const libc::c_void, vgot as usize, 0, libc::XATTR_NOFOLLOW);
+            #[cfg(target_os = "linux")]
+            libc::lsetxattr(n.as_ptr(), name.as_ptr(), value.as_ptr() as *const libc::c_void, vgot as usize, 0);
+        }
+    }
+}
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
+fn copy_xattrs(_old: &Path, _new: &Path) {}
+
 /// Only the field the validator needs; serde skips (but still syntax-checks) the rest,
 /// so a large scene is validated without building a `serde_json::Value` tree.
 #[derive(Deserialize)]
@@ -69,6 +230,10 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
             .create_new(true)
             .open(&temp)?;
         f.write_all(bytes)?;
+        // The swapped-in file keeps the old file's mode and extended attributes (Finder tags).
+        if path.exists() {
+            copy_file_attrs(path, &temp, &f);
+        }
         f.sync_all()?;
         // Same-directory rename is atomic on the primary macOS target. Windows replacement
         // may refuse existing destinations; fail closed rather than remove the source first.
@@ -103,9 +268,8 @@ pub fn write_atomic_new_with(path: &Path, fill: impl FnOnce(&mut File) -> std::i
             .open(&temp)?;
         fill(&mut f)?;
         f.sync_all()?;
-        // Hard-link creation is an atomic no-clobber commit on the same filesystem.
-        fs::hard_link(&temp, path)?;
-        fs::remove_file(&temp)?;
+        // A hard link is an atomic no-clobber commit; exFAT/FAT fall back to the exclusive rename.
+        commit_no_clobber(&temp, path)?;
         if let Ok(dir) = File::open(parent) {
             let _ = dir.sync_all();
         }
@@ -163,7 +327,132 @@ pub fn move_entry_paths(root: &Path, from: &str, to: &str) -> Result<()> {
     let src = safe_path(root, from, false)?;
     let dst = safe_path(root, to, true)?;
     if !src.exists() { return Err(err("NOT_FOUND", "Source entry not found")); }
-    ensure_no_sibling_collision(&dst)?;
+    ensure_no_sibling_collision_except(&dst, Some(&src))?;
     if let Some(parent) = dst.parent() { if !parent.is_dir() { return Err(err("NOT_FOUND", "Destination folder not found")); } }
-    fs::rename(src, dst).map_err(ioerr)
+    // The same file under another spelling (case-only rename): a plain rename is safe. Anything else
+    // goes through the kernel's no-replace rename, so a clash our name check missed never overwrites.
+    if same_file(&src, &dst) { return fs::rename(src, dst).map_err(ioerr); }
+    rename_no_replace(&src, &dst).map_err(|e| if e.kind() == std::io::ErrorKind::AlreadyExists { err("NAME_COLLISION", "A case-insensitive name collision already exists") } else { ioerr(e) })
+}
+
+#[cfg(test)]
+mod fs_safety_tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    const SCENE: &str = r#"{"type":"excalidraw","version":2,"elements":[],"appState":{},"files":{}}"#;
+
+    fn setup(names: &[(&str, &str)]) -> tempfile::TempDir {
+        let t = tempdir().unwrap();
+        for (n, c) in names { fs::write(t.path().join(n), c).unwrap(); }
+        t
+    }
+
+    #[test]
+    fn rename_onto_accent_case_name_is_refused_and_keeps_both() {
+        let t = setup(&[("été.excalidraw", "KEEP"), ("notes.excalidraw", "other")]);
+        let e = move_entry_paths(t.path(), "notes.excalidraw", "Été.excalidraw").unwrap_err();
+        assert_eq!(e.code, "NAME_COLLISION");
+        assert_eq!(fs::read_to_string(t.path().join("été.excalidraw")).unwrap(), "KEEP");
+        assert_eq!(fs::read_to_string(t.path().join("notes.excalidraw")).unwrap(), "other");
+    }
+
+    #[test]
+    fn rename_onto_other_unicode_form_is_refused() {
+        let nfc = "caf\u{e9}.excalidraw";
+        let nfd = "cafe\u{301}.excalidraw";
+        let t = setup(&[(nfc, "KEEP"), ("x.excalidraw", "other")]);
+        assert_eq!(move_entry_paths(t.path(), "x.excalidraw", nfd).unwrap_err().code, "NAME_COLLISION");
+        assert_eq!(fs::read_to_string(t.path().join(nfc)).unwrap(), "KEEP");
+        assert_eq!(fold_name(nfc), fold_name(nfd));
+    }
+
+    #[test]
+    fn case_only_rename_of_the_same_file_works() {
+        let t = setup(&[("notes.excalidraw", "body")]);
+        move_entry_paths(t.path(), "notes.excalidraw", "Notes.excalidraw").unwrap();
+        let names: Vec<String> = fs::read_dir(t.path()).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into()).collect();
+        assert_eq!(names, vec!["Notes.excalidraw".to_string()]);
+        assert_eq!(fs::read_to_string(t.path().join("Notes.excalidraw")).unwrap(), "body");
+        // A decomposed-to-composed spelling of the same file is also a plain rename.
+        fs::write(t.path().join("cafe\u{301}.md"), "x").unwrap();
+        move_entry_paths(t.path(), "cafe\u{301}.md", "caf\u{e9}.md").unwrap();
+    }
+
+    #[test]
+    fn rename_no_replace_never_replaces() {
+        let t = setup(&[("a", "A"), ("b", "B")]);
+        let (a, b) = (t.path().join("a"), t.path().join("b"));
+        assert_eq!(rename_no_replace(&a, &b).unwrap_err().kind(), std::io::ErrorKind::AlreadyExists);
+        assert_eq!(fs::read_to_string(&b).unwrap(), "B");
+        // The claim fallback (file systems without no-replace rename) refuses too, and works when free.
+        assert_eq!(rename_via_claim(&a, &b).unwrap_err().kind(), std::io::ErrorKind::AlreadyExists);
+        assert_eq!(fs::read_to_string(&b).unwrap(), "B");
+        let c = t.path().join("c");
+        rename_via_claim(&a, &c).unwrap();
+        assert_eq!(fs::read_to_string(&c).unwrap(), "A");
+        assert!(!a.exists());
+        // Folders too.
+        fs::create_dir(t.path().join("d1")).unwrap();
+        fs::create_dir(t.path().join("d2")).unwrap();
+        assert!(rename_via_claim(&t.path().join("d1"), &t.path().join("d2")).is_err());
+        rename_via_claim(&t.path().join("d1"), &t.path().join("d3")).unwrap();
+    }
+
+    #[test]
+    fn create_falls_back_when_hard_links_are_unsupported() {
+        let t = setup(&[("taken", "KEEP")]);
+        let no_link = |_: &Path, _: &Path| -> std::io::Result<()> { Err(std::io::Error::from_raw_os_error(libc::EPERM)) };
+        let temp = t.path().join("tmp1");
+        fs::write(&temp, "NEW").unwrap();
+        commit_no_clobber_with(&temp, &t.path().join("fresh"), no_link).unwrap();
+        assert_eq!(fs::read_to_string(t.path().join("fresh")).unwrap(), "NEW");
+        assert!(!temp.exists());
+        // Existing destination: still refused, nothing replaced, temp left for the caller to remove.
+        let temp2 = t.path().join("tmp2");
+        fs::write(&temp2, "NEW2").unwrap();
+        let e = commit_no_clobber_with(&temp2, &t.path().join("taken"), no_link).unwrap_err();
+        assert_eq!(e.kind(), std::io::ErrorKind::AlreadyExists);
+        assert_eq!(fs::read_to_string(t.path().join("taken")).unwrap(), "KEEP");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn saving_over_a_read_only_drawing_is_refused_and_mode_is_kept() {
+        use std::os::unix::fs::PermissionsExt;
+        use crate::{paths::revision, vault::Vault, write_drawing_file};
+        let t = tempdir().unwrap();
+        let v = Vault::new(t.path().canonicalize().unwrap(), "test".into(), false, None);
+        let p = t.path().join("a.excalidraw");
+        fs::write(&p, SCENE).unwrap();
+        let rev = revision(SCENE.as_bytes());
+        let next = SCENE.replace("\"version\":2", "\"version\":3");
+        fs::set_permissions(&p, fs::Permissions::from_mode(0o444)).unwrap();
+        let e = write_drawing_file(&v, "a.excalidraw", &next, Some(&rev), "op1").unwrap_err();
+        assert_eq!(e.code, "READ_ONLY");
+        assert_eq!(fs::read_to_string(&p).unwrap(), SCENE);
+        assert_eq!(fs::metadata(&p).unwrap().permissions().mode() & 0o777, 0o444);
+        // A writable drawing keeps its mode across a save.
+        fs::set_permissions(&p, fs::Permissions::from_mode(0o640)).unwrap();
+        write_drawing_file(&v, "a.excalidraw", &next, Some(&rev), "op2").unwrap();
+        assert_eq!(fs::read_to_string(&p).unwrap(), next);
+        assert_eq!(fs::metadata(&p).unwrap().permissions().mode() & 0o777, 0o640);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn save_keeps_finder_tags() {
+        use std::{ffi::CString, os::unix::ffi::OsStrExt};
+        let t = setup(&[("a.excalidraw", SCENE)]);
+        let p = t.path().join("a.excalidraw");
+        let cp = CString::new(p.as_os_str().as_bytes()).unwrap();
+        let name = CString::new("com.apple.metadata:_kMDItemUserTags").unwrap();
+        let tag = b"bplist00-test";
+        let rc = unsafe { libc::setxattr(cp.as_ptr(), name.as_ptr(), tag.as_ptr() as *const _, tag.len(), 0, 0) };
+        assert_eq!(rc, 0);
+        write_atomic(&p, SCENE.replace("2", "3").as_bytes()).unwrap();
+        let mut buf = [0u8; 64];
+        let n = unsafe { libc::getxattr(cp.as_ptr(), name.as_ptr(), buf.as_mut_ptr() as *mut _, buf.len(), 0, 0) };
+        assert_eq!(&buf[..n.max(0) as usize], tag);
+    }
 }

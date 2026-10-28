@@ -261,6 +261,16 @@ test("tree: create, rename, move, duplicate and delete with awkward names", asyn
   await expect(rowByName(page, "Résumé 📄")).toBeVisible();
   expect(await readFake(page, "Résumé 📄.excalidraw")).toBe(content);
   expect(await readFake(page, "Ünïcödé résumé.excalidraw")).toBeNull();
+  // A case-only rename of the same drawing works; a twin that differs by accent case is refused.
+  expect(
+    await renameVia(page, rowByName(page, "Résumé 📄"), "RÉSUMÉ 📄"),
+  ).toBeNull();
+  await expect(rowByName(page, "RÉSUMÉ 📄")).toBeVisible();
+  expect(
+    await renameVia(page, rowByName(page, "emoji 🎨 plan"), "résumé 📄"),
+  ).toMatch(/exist|collision/i);
+  expect(await readFake(page, "RÉSUMÉ 📄.excalidraw")).toBe(content);
+  await renameVia(page, rowByName(page, "RÉSUMÉ 📄"), "Résumé 📄");
   // Its open tab follows the rename.
   expect(await tabNames(page)).toContain("Résumé 📄");
   expect(await tabNames(page)).not.toContain("Ünïcödé résumé");
