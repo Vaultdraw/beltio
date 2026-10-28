@@ -57,10 +57,9 @@ const PUNCT_BEFORE_REGEX = /[(,=:[!&|?{};+\-*%<>~^]/;
 const blank = (s) => s.replace(/[^\n]/g, " ");
 
 /**
- * Reads a quoted string or template literal that starts at `start`.
- * `close` is the index of the closing quote (or the line end when unterminated),
- * `end` the index just after the literal. `${...}` parts of templates are skipped.
- * @returns {{ close: number, end: number }}
+ * Reads a single- or double-quoted string that starts at `start`.
+ * `end` is the index just after it (the line end when unterminated).
+ * @returns {{ body: string, end: number }}
  */
 function readQuoted(code, start) {
   const quote = code[start];
@@ -70,37 +69,51 @@ function readQuoted(code, start) {
     if (ch === "\\") {
       j += 2;
     } else if (ch === quote) {
-      return { close: j, end: j + 1 };
-    } else if (ch === "\n" && quote !== "`") {
-      return { close: j, end: j };
-    } else if (quote === "`" && ch === "$" && code[j + 1] === "{") {
-      j = skipInterpolation(code, j + 2);
+      return { body: code.slice(start + 1, j), end: j + 1 };
+    } else if (ch === "\n") {
+      return { body: code.slice(start + 1, j), end: j };
     } else {
       j++;
     }
   }
-  return { close: code.length, end: code.length };
+  return { body: code.slice(start + 1), end: code.length };
 }
 
-/** Returns the index just after the `}` that closes a template `${` part. */
-function skipInterpolation(code, from) {
-  let depth = 1;
-  let j = from;
-  while (j < code.length && depth > 0) {
+/**
+ * Masks a template literal that starts at `start`. Each static part becomes a
+ * string placeholder; each `${...}` part is masked as code (so an import inside
+ * it is still found). `end` is the index just after the closing backtick.
+ * @returns {{ masked: string, end: number }}
+ */
+function maskTemplate(code, start, strings) {
+  let masked = "";
+  let text = "";
+  let j = start + 1;
+  const flush = () => {
+    strings.push(text);
+    masked += `"#${strings.length - 1}"`;
+    text = "";
+  };
+  while (j < code.length) {
     const ch = code[j];
-    if (ch === '"' || ch === "'" || ch === "`") {
-      j = readQuoted(code, j).end;
-      continue;
+    if (ch === "\\") {
+      text += code.slice(j, j + 2);
+      j += 2;
+    } else if (ch === "`") {
+      flush();
+      return { masked, end: j + 1 };
+    } else if (ch === "$" && code[j + 1] === "{") {
+      flush();
+      const inner = maskCode(code, j + 2, strings, true);
+      masked += `;${inner.masked};`;
+      j = inner.end;
+    } else {
+      text += ch;
+      j++;
     }
-    if (ch === "{") {
-      depth++;
-    }
-    if (ch === "}") {
-      depth--;
-    }
-    j++;
   }
-  return j;
+  flush();
+  return { masked, end: code.length };
 }
 
 /** Reads a regex literal starting at the slash at `start`; returns the index after its flags. */
@@ -146,16 +159,17 @@ function regexAllowed(masked) {
 }
 
 /**
- * Blanks comments and regex literals, and moves each string and template
- * literal body into `strings`, so import patterns only match real code.
- * Best effort: a slash is read as a regex or a division from the token before it.
- * @param {string} code
- * @returns {{ masked: string, strings: string[] }}
+ * Masks code from `from`. Comments and regex literals are blanked; every string
+ * body goes into `strings` and is replaced by the placeholder `"#N"`. Inside a
+ * `${...}` (`inExpr`), the scan stops at the `}` that closes it and returns the
+ * index after it. Best effort: a slash is read as a regex or a division from the
+ * token before it.
+ * @returns {{ masked: string, end: number }}
  */
-function maskCode(code) {
-  const strings = [];
+function maskCode(code, from, strings, inExpr) {
   let masked = "";
-  let i = 0;
+  let depth = 0;
+  let i = from;
   while (i < code.length) {
     const c = code[i];
     const next = code[i + 1];
@@ -169,20 +183,32 @@ function maskCode(code) {
       const stop = close === -1 ? code.length : close + 2;
       masked += blank(code.slice(i, stop));
       i = stop;
-    } else if (c === '"' || c === "'" || c === "`") {
-      const { close, end } = readQuoted(code, i);
-      strings.push(code.slice(i + 1, close));
+    } else if (c === '"' || c === "'") {
+      const { body, end } = readQuoted(code, i);
+      strings.push(body);
       masked += `"#${strings.length - 1}"`;
       i = end;
+    } else if (c === "`") {
+      const tpl = maskTemplate(code, i, strings);
+      masked += tpl.masked;
+      i = tpl.end;
     } else if (c === "/" && regexAllowed(masked)) {
       masked += "0";
       i = readRegex(code, i);
+    } else if (inExpr && c === "}" && depth === 0) {
+      return { masked, end: i + 1 };
     } else {
+      if (c === "{") {
+        depth++;
+      }
+      if (c === "}") {
+        depth--;
+      }
       masked += c;
       i++;
     }
   }
-  return { masked, strings };
+  return { masked, end: code.length };
 }
 
 /**
@@ -190,7 +216,8 @@ function maskCode(code) {
  * @returns {string[]} import specifiers in the code (not inside strings or comments)
  */
 export function scanImports(code) {
-  const { masked, strings } = maskCode(code);
+  const strings = [];
+  const { masked } = maskCode(code, 0, strings, false);
   const out = [];
   for (const re of [STATIC_IMPORT, DYNAMIC_IMPORT]) {
     re.lastIndex = 0;

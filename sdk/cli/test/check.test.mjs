@@ -313,6 +313,22 @@ const n = ctx.import("not-an-import");
     expect(scanImports(code)).toEqual([]);
   });
 
+  it("finds an import inside a template interpolation", () => {
+    const code = [
+      // eslint-disable-next-line no-template-curly-in-string -- literal source text under test
+      'const a = `value ${await import("chart.js")} done`;',
+      // eslint-disable-next-line no-template-curly-in-string -- literal source text under test
+      'const b = `outer ${`inner ${import("deep.js")}`}`;',
+    ].join("\n");
+    expect(scanImports(code).sort()).toEqual(["chart.js", "deep.js"]);
+  });
+
+  it("ignores a plain string inside a template interpolation", () => {
+    // eslint-disable-next-line no-template-curly-in-string -- literal source text under test
+    const code = "const a = `value ${\"export * from 'lodash'\"} done`;\n";
+    expect(scanImports(code)).toEqual([]);
+  });
+
   it("still finds real imports next to literals that look like them", () => {
     const code = [
       `const msg = "Couldn't write the export";`,
