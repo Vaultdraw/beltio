@@ -29,9 +29,36 @@ fn validate_https(url: &str) -> Result<String> {
     }
 }
 
+/// A `mailto:` link (address and optional `?subject=`), parsed as a URL: the mail app opens it, as
+/// in Obsidian. Same strict output rule as web links.
+fn validate_mailto(url: &str) -> Result<String> {
+    let invalid = || err("INVALID_URL", "Only web and mail links can be opened");
+    if url.len() > 4096 || !url.get(..7).is_some_and(|p| p.eq_ignore_ascii_case("mailto:")) {
+        return Err(invalid());
+    }
+    let parsed = tauri::Url::parse(url).map_err(|_| invalid())?;
+    let has_target = !parsed.path().is_empty() || parsed.query().is_some_and(|q| q.contains("to="));
+    let out: String = parsed.clone().into();
+    let rfc3986 = |c: char| c.is_ascii_alphanumeric() || "-._~:/?#[]@!$&'()*+,;=%".contains(c);
+    if parsed.scheme() == "mailto" && has_target && out.chars().all(rfc3986) {
+        Ok(out)
+    } else {
+        Err(invalid())
+    }
+}
+
+/// What `open_external_url` hands to the system: a web link or a mail link, nothing else.
+fn validate_openable(url: &str) -> Result<String> {
+    if url.get(..7).is_some_and(|p| p.eq_ignore_ascii_case("mailto:")) {
+        validate_mailto(url)
+    } else {
+        validate_https(url)
+    }
+}
+
 #[tauri::command]
 pub(crate) fn open_external_url(url: String) -> Result<()> {
-    let url = validate_https(&url)?;
+    let url = validate_openable(&url)?;
     #[cfg(target_os = "macos")]
     let program = "open";
     #[cfg(target_os = "windows")]
@@ -202,6 +229,18 @@ mod tests {
             assert!(validate_https(bad).is_err(), "{bad}");
         }
         assert!(validate_https(&format!("https://a.b/{}", "x".repeat(4100))).is_err());
+    }
+
+    #[test]
+    fn mail_links_open_and_nothing_odd_does() {
+        for ok in ["mailto:a@b.c", "mailto:a@b.c?subject=Hello%20there", "MAILTO:a@b.c"] {
+            assert!(validate_openable(ok).is_ok(), "{ok}");
+        }
+        assert_eq!(validate_openable("mailto:a@b.c?subject=hi there").unwrap(), "mailto:a@b.c?subject=hi%20there");
+        for bad in ["mailto:", "mailto:?", "mailto:|x", "tel:123", "sms:1", "file:///x", "javascript:alert(1)", "mailtox:a@b.c"] {
+            assert!(validate_openable(bad).is_err(), "{bad}");
+        }
+        assert!(validate_openable(&format!("mailto:{}", "a".repeat(4100))).is_err());
     }
 
     #[test]

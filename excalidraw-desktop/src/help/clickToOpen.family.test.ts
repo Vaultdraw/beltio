@@ -54,7 +54,9 @@ describe("click-to-open web links", () => {
     ["https://example.com", true],
     ["http://example.com/old", true],
     ["  HTTP://EXAMPLE.COM  ", true],
-    ["mailto:a@b.c", false],
+    ["mailto:a@b.c", true],
+    ["  MAILTO:a@b.c?subject=Hi  ", true],
+    ["tel:123", false],
     ["Notes/Idea", false],
     ["/Notes/Idea", false],
   ])("isWebLink(%j) is %s", (url, web) => {
@@ -65,7 +67,8 @@ describe("click-to-open web links", () => {
     ["https://example.com/a", "web"],
     ["http://example.com/old", "web"],
     ["[[Idea]]", "vault"],
-    ["mailto:a@b.c", "left"],
+    ["mailto:a@b.c", "web"],
+    ["tel:123", "left"],
   ])("a canvas shape link %j opens as %s", (link, expected) => {
     const openRaw = vi.fn((raw: string) => raw.startsWith("[["));
     const openWeb = vi.fn();

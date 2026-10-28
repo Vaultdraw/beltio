@@ -21,9 +21,9 @@ export async function openExternal(url: string): Promise<void> {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
-/** A web link (`http`, `https`) the browser can take; `mailto:` and the rest stay with the caller. */
+/** A link the system opens outside the app: a web link (`http`, `https`) or a mail link (`mailto:`). */
 export const isWebLink = (url: string): boolean =>
-  /^https?:\/\//i.test(url.trim());
+  /^(?:https?:\/\/|mailto:)/i.test(url.trim());
 
 /**
  * Opens a link the user clicked and never fails silently: a refusal or a missing browser shows

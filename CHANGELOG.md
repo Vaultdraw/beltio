@@ -14,6 +14,18 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Notes and Obsidian Excalidraw files can be renamed, moved and moved to the Trash from the file tree**, from the right-click menu, the keyboard and by dragging, like drawings. The extension is kept.
+
+- **New drawings and drawings from a template take the next free name** ("Untitled", "Untitled 1"), like Obsidian, instead of a number from the clock that could clash.
+
+- **A folder deleted outside the app no longer lingers.** After Refresh or coming back to the window, the tree forgets it, and a new folder with the same name starts collapsed.
+
+- **Search stays current when "Reload when files change outside the app" is off.** Saving, moving and trashing in the app update full-text search, and Refresh rescans it.
+
+- **`mailto:` links in notes and on the canvas open your mail app.**
+
+- **A name that is already taken says so** ("A file named “x” already exists here.") instead of "Drawing changed on disk".
+
 - **Changes made in a file manager now reach the whole tree.** A rescan used to reload only the top level, so a folder deleted, renamed or moved in Finder could stay listed inside an open folder. A rescan now reloads every folder the tree shows, and coming back to the window re-reads them.
 
 - **Web pictures in imported notes are downloaded, and more local ones are found.** The first import with web pictures asks once, in a native dialog that names the sites (`network.allow_images`; https only, no private addresses, 10 MiB, pictures only); the pictures are then kept inside the drawing and work offline. If you said no, "Markdown: Download web images in this drawing" does it later; a web page that is not a picture stays a labelled box. "Markdown: Attach missing images from a folder…" fills the boxes of a single-file import from a folder you pick. A vault whose attachments folder is a link to a folder elsewhere is followed (read only; links into hidden folders or back into the vault are not). New plugin API 0.31.0: `ctx.network`, permission `network.images`.

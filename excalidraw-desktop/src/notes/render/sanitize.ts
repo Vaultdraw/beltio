@@ -42,7 +42,7 @@ const get = () => {
     }
     if (node.tagName === "A") {
       const href = node.getAttribute("href") ?? "";
-      if (/^https?:/i.test(href)) {
+      if (/^(?:https?|mailto):/i.test(href)) {
         node.setAttribute("rel", "noopener noreferrer");
         node.setAttribute("data-external", "1");
       }
