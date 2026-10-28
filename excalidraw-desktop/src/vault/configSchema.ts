@@ -340,7 +340,7 @@ const NATIVE_TABLES: Readonly<Record<string, Schema>> = {
       },
       uri_allow: {
         description:
-          'What a link may do without asking: "new", "switch-vault", or command ids.',
+          'What a link may do without asking: "new" and "switch-vault". A command id listed here is reachable from a link but still asks first.',
         default: [],
         type: "array",
         items: { type: "string" },

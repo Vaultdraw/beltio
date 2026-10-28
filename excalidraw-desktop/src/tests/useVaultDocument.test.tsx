@@ -185,6 +185,30 @@ describe("read-only drawing files", () => {
   });
 });
 
+describe("a file locked while it is open", () => {
+  it("the refused save switches the drawing to view mode and keeps the edits", async () => {
+    const repo = new FakeVaultRepository();
+    repo.seedDrawing("a.excalidraw", SAMPLE_SCENE);
+    const { result } = renderHook(() => useVaultDocument(repo, vaultOf(repo)));
+    await openPath(result, "a.excalidraw");
+    expect(result.current.fileReadOnly).toBe(false);
+    repo.setFileReadOnly("a.excalidraw", true);
+    act(() => result.current.change(BLANK_SCENE));
+    await act(async () => {
+      await result.current.flush().catch(() => undefined);
+    });
+    await waitFor(() => expect(result.current.fileReadOnly).toBe(true));
+    // Nothing was written, and the unsaved scene is still there for Save a copy.
+    const disk = await repo.readDrawing(repo.handle, "a.excalidraw");
+    expect(disk.json).toBe(SAMPLE_SCENE);
+    await act(async () => {
+      await result.current.saveCopy("copy.excalidraw");
+    });
+    const copy = await repo.readDrawing(repo.handle, "copy.excalidraw");
+    expect(copy.json).toBe(BLANK_SCENE);
+  });
+});
+
 describe("rapid navigation and dirty-switch failures", () => {
   it("rapid A -> B -> C navigation keeps only the last document (stale loads rejected)", async () => {
     const repo = new FakeVaultRepository({ latencyMs: 40 });

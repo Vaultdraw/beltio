@@ -2056,7 +2056,14 @@ export const VaultApp = ({
   const flushExportedDoc = async (path: string) => {
     const doc = docHookRef.current;
     if (doc.getActive()?.path === path) {
-      await doc.flush({ commitText: false });
+      try {
+        await doc.flush({ commitText: false });
+      } catch (err) {
+        // A locked file cannot be saved: Save a copy writes the live scene instead.
+        if (!doc.fileReadOnly) {
+          throw err;
+        }
+      }
     }
   };
 
@@ -3063,7 +3070,7 @@ export const VaultApp = ({
                   testId="read-only-file-banner"
                   onDismiss={() => setDismissedReadOnlyBanner(activeDoc.path)}
                   dismissLabel="Dismiss notice"
-                  message="Read-only file: make it writable to edit."
+                  message="Read-only file: make it writable in Finder (Get Info → Sharing & Permissions) to edit, or save a copy."
                   action={{
                     label: "Save a copy",
                     testId: "read-only-save-copy",
@@ -3463,6 +3470,17 @@ export const VaultApp = ({
           } lost.`}
           confirmLabel="Discard and Close"
           cancelLabel="Keep Window Open"
+          alternatives={
+            activeDoc && activeFileReadOnly
+              ? [
+                  {
+                    label: "Save a copy…",
+                    onChoose: () =>
+                      void handleExportDrawing(activeDoc.path, "copy"),
+                  },
+                ]
+              : undefined
+          }
           isDanger
           onConfirm={async () => {
             closeAttemptRef.current = true;

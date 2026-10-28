@@ -178,7 +178,7 @@ pub(crate) fn plan_for(req: &UriRequest, policy: &Policy, origin: Origin) -> Res
         UriRequest::Cmd { id } => {
             let listed = policy.allows(id);
             if is_denied(id) && !listed {
-                return Err(format!("A link cannot run {} (blocked for links; allow it in control.uri_allow)", printable(id, 60)));
+                return Err(format!("A link cannot run {} (blocked for links)", printable(id, 60)));
             }
             // A listed command is reachable, but the window still asks before it runs.
             listed_cmd = listed;

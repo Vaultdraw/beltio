@@ -229,6 +229,15 @@ export const useVaultDocument = (
           if (active.current !== next) {
             return;
           }
+          // A save refused because the file was locked while open: view mode and the banner,
+          // keeping the edits for Save a copy (the same state as a file that opened read-only).
+          if (
+            nextStatus === "error" &&
+            (cause as { code?: string } | undefined)?.code === "READ_ONLY"
+          ) {
+            next.readOnly = true;
+            setFileReadOnly(true);
+          }
           setCurrentStatus(
             nextStatus,
             cause

@@ -1152,7 +1152,7 @@ test("a read-only drawing file opens in view mode with a banner, and edits again
 
   // View mode: the banner explains it and offers Save a copy; a drag draws nothing.
   await expect(roBanner).toContainText(
-    "Read-only file: make it writable to edit",
+    "Read-only file: make it writable in Finder",
   );
   await expect(
     roBanner.getByRole("button", { name: "Save a copy" }),
@@ -1190,7 +1190,22 @@ test("a read-only drawing file opens in view mode with a banner, and edits again
   await expect
     .poll(async () => (await readFake(page, path)) !== before)
     .toBe(true);
-  expect(errors).toEqual([]);
+
+  // Locked while open: the next save is refused, and the drawing switches to view mode with the
+  // banner (and Save a copy) instead of failing on every autosave.
+  await page.evaluate(
+    (p) => (window as any).__vaultRepo.setFileReadOnly(p, true),
+    path,
+  );
+  await page.locator(".vault-editor [data-testid='toolbar-rectangle']").click();
+  await page.mouse.move(box.x + 300, box.y + 300);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 380, box.y + 360, { steps: 5 });
+  await page.mouse.up();
+  await expect(roBanner).toBeVisible({ timeout: 15_000 });
+  await expect(roBanner.getByRole("button", { name: "Save a copy" })).toBeVisible();
+  await expect(page.locator(".vault-editor-container--readonly")).toBeVisible();
+  expect(errors.filter((e) => !/read-only/i.test(e))).toEqual([]);
 });
 
 test("backup: Settings offers back up and restore, and says where the zip went", async ({
