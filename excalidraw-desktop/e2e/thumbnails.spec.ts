@@ -1,4 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { AFTER_AUTOSAVE_MS } from "./constants";
 import { canvasBox, openDrawing, openVault, trackErrors } from "./helpers";

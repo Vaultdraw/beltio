@@ -2,7 +2,9 @@
 import { appendFileSync } from "node:fs";
 import { loadavg } from "node:os";
 
-import { test, type CDPSession, type Page } from "@playwright/test";
+import { type CDPSession, type Page } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import type { GraphHarnessHooks } from "./graphHarness";
 

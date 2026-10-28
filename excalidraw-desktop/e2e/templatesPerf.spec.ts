@@ -1,6 +1,8 @@
 import { writeFileSync } from "node:fs";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { openVault } from "./helpers";
 

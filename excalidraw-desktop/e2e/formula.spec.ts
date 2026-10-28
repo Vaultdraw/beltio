@@ -1,5 +1,7 @@
 /* eslint-disable no-eval -- evaluates appHandle (a string) in the page to reach the editor instance */
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { AFTER_AUTOSAVE_MS } from "./constants";
 import {

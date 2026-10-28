@@ -1,7 +1,9 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 import { thumbDensity } from "../src/thumbnails/fit";
 import { failMarkerVersion, pngRenderVersion } from "../src/thumbnails/render";
+
+import { test } from "./fixture";
 
 import { openDrawing, openVault, trackErrors } from "./helpers";
 

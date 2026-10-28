@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { test } from "./fixture";
 
 import { openDrawing, openVault, SHOTS } from "./helpers";
 

@@ -1,4 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { openDrawing, openVault, trackErrors } from "./helpers";
 
@@ -70,6 +72,9 @@ test("a plugin panel shares the host React (hooks work)", async ({ page }) => {
   expect(errors.filter((e) => /Invalid hook call/i.test(e))).toEqual([]);
   expect(errors).toEqual([]);
 });
+
+// The crashing test plugin logs its deliberate failures.
+test.use({ allowedErrors: /\[plugin crashy\] command boom: kaboom/ });
 
 test("a plugin that fails three times is disabled and leaves the palette", async ({
   page,

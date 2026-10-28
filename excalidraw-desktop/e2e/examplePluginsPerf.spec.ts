@@ -1,4 +1,6 @@
-import { expect, test, type CDPSession, type Page } from "@playwright/test";
+import { expect, type CDPSession, type Page } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { canvasBox, openDrawing, openVault } from "./helpers";
 

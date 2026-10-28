@@ -3,7 +3,9 @@ import { appendFileSync } from "node:fs";
 import { loadavg } from "node:os";
 import { deflateSync } from "node:zlib";
 
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { openSeededVault, sceneJson } from "./tabsHelpers";
 

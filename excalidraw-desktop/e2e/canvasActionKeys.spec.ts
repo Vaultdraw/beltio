@@ -3,7 +3,9 @@
  * Reached through visible UI only: the Settings button, the Hotkeys page, the
  * chip's remove button and "Add hotkey".
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { AFTER_AUTOSAVE_MS } from "./constants";
 import {

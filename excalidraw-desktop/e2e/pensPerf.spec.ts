@@ -1,6 +1,8 @@
 import { appendFileSync } from "node:fs";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { canvasBox, openDrawing, openVault, readScene } from "./helpers";
 

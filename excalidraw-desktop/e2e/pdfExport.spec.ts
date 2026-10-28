@@ -1,6 +1,8 @@
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 
-import { expect, test, type CDPSession, type Page } from "@playwright/test";
+import { expect, type CDPSession, type Page } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import {
   exportDialogButton,

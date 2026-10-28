@@ -1,6 +1,8 @@
 import { mkdirSync } from "node:fs";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { expectOpen, GRAPH_PLUGIN, openLinksVault } from "./linksHelpers";
 import { personalPath } from "./mainCheckout";

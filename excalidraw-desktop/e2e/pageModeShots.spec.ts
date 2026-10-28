@@ -1,6 +1,8 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { canvasBox, openVault } from "./helpers";
 import { rect, runCommand, seedAndOpen, setupOf } from "./pageHelpers";

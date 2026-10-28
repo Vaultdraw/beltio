@@ -1,5 +1,7 @@
 /* eslint-disable no-console */
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { scene } from "./thumbnailScenes";
 import { buildStep0, cleanupStep0, openStep0 } from "./thumbnailsStep0Page";

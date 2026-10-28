@@ -1,4 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { openDrawing, openVault, trackErrors } from "./helpers";
 import { colorOn } from "./historyHelpers";

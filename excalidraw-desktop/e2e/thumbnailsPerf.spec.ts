@@ -1,5 +1,7 @@
 /* eslint-disable no-console */
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { openVault } from "./helpers";
 import { scene } from "./thumbnailScenes";

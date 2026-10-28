@@ -1,6 +1,8 @@
 import { appendFileSync } from "node:fs";
 
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { canvasBox, openDrawing, openVault } from "./helpers";
 import { AFTER_AUTOSAVE_MS } from "./constants";

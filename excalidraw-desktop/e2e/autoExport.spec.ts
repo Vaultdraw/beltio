@@ -1,4 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { canvasBox, openVault, trackErrors } from "./helpers";
 import { rect, seedAndOpen } from "./pageHelpers";

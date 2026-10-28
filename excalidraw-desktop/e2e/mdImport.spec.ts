@@ -1,4 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { openVault, trackErrors } from "./helpers";
 import { live, seedAndOpen } from "./pageHelpers";

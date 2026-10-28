@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { MIDNIGHT_THEME } from "./fixtures/themeServer";
 import { rect, seedAndOpen } from "./pageHelpers";
@@ -302,6 +304,12 @@ test("an old plugins.enabled list upgrades, a disabled list is kept, and Restore
   expect(restored.pluginsEnabled).toContain("my-third-party");
   expect(restored.extFormula && restored.extGraph).toBe(true);
   expect(errors).toEqual([]);
+});
+
+// Deliberate crashes and refused network (500/404) are part of these scenarios.
+test.use({
+  allowedErrors:
+    /\[plugin crashy\] command boom: kaboom|Failed to load resource: the server responded with a status of (404|500)/,
 });
 
 test("plugin permission review, consent, a crashing plugin and the registry browser (refused, failing, then allowed)", async ({

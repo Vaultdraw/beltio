@@ -1,8 +1,10 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 import { IMAGE_SCENE } from "../src/tests/fixtures";
+
+import { test } from "./fixture";
 
 import { openDrawing, openVault, readScene, trackErrors } from "./helpers";
 

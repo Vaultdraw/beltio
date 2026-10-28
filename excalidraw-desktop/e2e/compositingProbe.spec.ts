@@ -1,6 +1,8 @@
 import { execFileSync } from "node:child_process";
 
-import { test, webkit } from "@playwright/test";
+import { webkit } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { openDrawing, openVault } from "./helpers";
 import { typicalSceneJson } from "./memoryProbeScene";

@@ -1,4 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { SCENE_A, SCENE_B } from "./frameCapture";
 import { clickTree, openSeededVault, sceneIds } from "./tabsHelpers";

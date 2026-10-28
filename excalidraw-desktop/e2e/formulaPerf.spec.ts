@@ -1,5 +1,7 @@
 /* eslint-disable no-eval -- evaluates appHandle (a string) in the page to reach the editor instance */
-import { expect, test, type CDPSession, type Page } from "@playwright/test";
+import { expect, type CDPSession, type Page } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import {
   SRC,

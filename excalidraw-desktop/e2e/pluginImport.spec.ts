@@ -1,4 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { canvasBox, openVault, trackErrors } from "./helpers";
 import { focusCanvas, seedAndOpen, toScene } from "./pageHelpers";

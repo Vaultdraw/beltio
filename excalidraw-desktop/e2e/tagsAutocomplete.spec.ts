@@ -1,4 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+
+import { test } from "./fixture";
 
 import { AFTER_AUTOSAVE_MS } from "./constants";
 import { readScene, trackErrors } from "./helpers";
