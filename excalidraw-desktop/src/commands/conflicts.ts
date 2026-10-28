@@ -40,6 +40,8 @@ const FOCUS_SCOPES: readonly string[] = [
   "galleryFocus",
   "graphFocus",
   "themeBrowser.open",
+  // A running presentation is full screen: focus is never in a list, the canvas or the theme browser then.
+  PRESENT_KEY,
 ];
 
 /** A running presentation is modal (see `readContext`): `present.active` implies `modalOpen`. */

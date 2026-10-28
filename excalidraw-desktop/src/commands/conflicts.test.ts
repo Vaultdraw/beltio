@@ -16,6 +16,17 @@ describe("whenCanOverlap", () => {
     expect(whenCanOverlap(["canvasFocus"], ["listFocus"])).toBe(false);
   });
 
+  it("a presentation is its own focus scope: no clash with list, canvas or theme browser keys", () => {
+    expect(whenCanOverlap(["present.active"], ["listFocus"])).toBe(false);
+    expect(
+      whenCanOverlap(["present.active"], ["drawingOpen", "canvasFocus"]),
+    ).toBe(false);
+    expect(whenCanOverlap(["present.active"], ["themeBrowser.open"])).toBe(
+      false,
+    );
+    expect(whenCanOverlap(["present.active"], ["present.active"])).toBe(true);
+  });
+
   it("a presentation is modal: its keys never clash with !modalOpen ones", () => {
     expect(
       whenCanOverlap(["present.active"], ["drawingOpen", "!modalOpen"]),
