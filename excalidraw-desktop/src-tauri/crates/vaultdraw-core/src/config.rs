@@ -295,6 +295,7 @@ autosave_delay_ms = 500
 # mermaid = true      # Mermaid to Excalidraw
 # pdf-import = true   # PDF import
 # notes = true        # Markdown notes: reading view and editor
+# history = true      # History panel, checkpoints, commands (saving versions: [history] enabled)
 
 [search]
 # Milliseconds to wait after a keystroke before searching, 0 to 2000
@@ -1647,7 +1648,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 130, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 131, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();

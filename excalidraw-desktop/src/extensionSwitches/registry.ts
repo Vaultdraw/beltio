@@ -7,8 +7,9 @@
  * Pure data, always loaded (a few hundred bytes). Longer text for the
  * Settings page lives in `extensionsText.ts`, loaded with that page.
  *
- * History and thumbnails have switches already (`history.enabled`,
- * `interface.thumbnails`); they are shown on the page but have no key here.
+ * `history` switches only the History interface (panel, button, commands).
+ * Recording versions is `history.enabled`, and never depends on this switch.
+ * Thumbnails keep their own key (`interface.thumbnails`).
  * Ids use the plugin id grammar and are reserved for official use.
  */
 
@@ -23,6 +24,7 @@ export const EXTENSION_IDS = [
   "mermaid",
   "pdf-import",
   "notes",
+  "history",
 ] as const;
 
 export type ExtensionId = typeof EXTENSION_IDS[number];
@@ -39,6 +41,7 @@ export const EXTENSION_FIELDS = {
   mermaid: "extMermaid",
   "pdf-import": "extPdfImport",
   notes: "extNotes",
+  history: "extHistory",
 } as const;
 
 export type ExtensionField = typeof EXTENSION_FIELDS[ExtensionId];
@@ -59,6 +62,12 @@ export const BUILTIN_EXTENSIONS: readonly BuiltinExtension[] = [
   { id: "graph", title: "Graph view", kind: "builtin", defaultOn: true },
   { id: "library", title: "Library", kind: "builtin", defaultOn: true },
   { id: "templates", title: "Templates", kind: "builtin", defaultOn: true },
+  {
+    id: "history",
+    title: "History panel",
+    kind: "builtin",
+    defaultOn: true,
+  },
   // Owner, 2026-10-24: the official extras stay on by default (no change for 0.1.x users).
   { id: "formula", title: "Formulas", kind: "official", defaultOn: true },
   {

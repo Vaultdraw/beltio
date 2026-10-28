@@ -4,6 +4,10 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Added
+
+- **`[extensions] history`: switch the History panel off.** Hides the panel, checkpoint dialog, History button, activity bar entry and the `history.*` commands. Saving versions stays under `history.enabled` (Settings, Extensions: "File history"), so turning the panel off never stops versions from being kept. On by default.
+
 ### Fixed
 
 - **Renamed command ids no longer break your keys.** A key bound in `[hotkeys]` to an old id (`thumbnails.galleryToggle`, `thumbnails.galleryOpen`, `file.importPdf`) keeps working, and so do those ids in the palette history, the CLI, `command.run` and links; they resolve to `gallery.toggle`, `gallery.show-folder` and `pdf-import.import` when they run, even if the extension registers later. See "Renamed commands" in `docs/configuration.md`.

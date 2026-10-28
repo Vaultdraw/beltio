@@ -143,9 +143,9 @@ export const ExtensionsPage = () => {
           <ExtensionRow key={e.id} ext={e} />
         ))}
         <Row
-          id="history"
+          id="history-record"
           title="File history"
-          description="Versions of each drawing you can preview and restore."
+          description="Save versions of each drawing in the vault. Independent of the History panel switch."
           note="A vault can override this on the History page."
           checked={history}
           onChange={setHistory}

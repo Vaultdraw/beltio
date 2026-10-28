@@ -41,3 +41,33 @@ test("Settings > Extensions: a switch turns a built-in extension off and on live
   await expect(graphButton).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+// The History panel switch hides the History interface only; versions keep
+// being saved (that is the separate "File history" switch).
+test("Settings > Extensions: the History panel switch hides and restores the History button", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openTagsVault(page);
+  const historyButton = page.getByTestId("activity-bar-history");
+  await expect(historyButton).toBeVisible();
+
+  const toggle = async () => {
+    await page.getByTestId("activity-bar-settings").click();
+    const settings = page.locator(".vault-settings-modal");
+    await settings.getByRole("tab", { name: "Extensions" }).click();
+    const row = page.getByTestId("extension-row-history");
+    await expect(
+      page.getByTestId("extension-row-history-record"),
+    ).toContainText("File history");
+    await row.locator(".vault-switch").click();
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".vault-settings-modal")).toHaveCount(0);
+  };
+
+  await toggle();
+  await expect(historyButton).toHaveCount(0);
+  await toggle();
+  await expect(historyButton).toBeVisible();
+  expect(errors).toEqual([]);
+});

@@ -32,6 +32,12 @@ export const EXTENSION_TEXT: Record<ExtensionId, ExtensionText> = {
     description:
       "The library sidebar, saved per vault, and inserting library items from the palette.",
   },
+  history: {
+    description:
+      "The History panel, timeline, checkpoints and their commands. Saving versions is the separate “File history” switch below.",
+    offNote:
+      "Versions are still being saved while “File history” is on. Turn the panel back on to preview or restore them.",
+  },
   templates: {
     description: "New drawing from a template, and saving a drawing as one.",
   },

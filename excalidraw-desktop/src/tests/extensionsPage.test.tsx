@@ -53,7 +53,7 @@ describe("Settings → Extensions", () => {
     for (const e of BUILTIN_EXTENSIONS) {
       expect(within(page).getByTestId(`extension-row-${e.id}`)).toBeTruthy();
     }
-    for (const id of ["history", "thumbnails", "index"]) {
+    for (const id of ["history-record", "thumbnails", "index"]) {
       expect(within(page).getByTestId(`extension-row-${id}`)).toBeTruthy();
     }
   });

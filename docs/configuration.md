@@ -1770,6 +1770,7 @@ Built-in extensions, on (`true`) or off (`false`). Off means not loaded: no memo
 | `mermaid` | `true` | true or false |  | Mermaid to Excalidraw (the official mermaid plugin: dialog, menu entries, paste conversion and the mermaid.to_drawing method). |
 | `pdf-import` | `true` | true or false |  | Import PDF pages into a drawing. |
 | `notes` | `true` | true or false |  | Markdown notes: open a `.md` file in a tab with a reading view and an editor. See [Notes](#notes). |
+| `history` | `true` | true or false |  | The History panel, timeline, checkpoints and their commands. Versions are still saved while `history.enabled` is on. |
 
 ### `[keys]`
 

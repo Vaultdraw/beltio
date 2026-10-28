@@ -75,6 +75,7 @@ export const ACTIVITY_ENTRIES: readonly ActivityEntry[] = [
     icon: IconHistory,
     commandId: "history.toggle",
     group: "top",
+    extension: "history",
     active: {
       subscribe: subscribeHistoryPanelOpen,
       get: isHistoryPanelOpen,

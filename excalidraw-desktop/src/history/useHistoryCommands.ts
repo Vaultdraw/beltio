@@ -18,25 +18,27 @@ export interface HistoryActions {
   excludeFromGit?: () => void;
 }
 
-export function useHistoryCommands(actions: HistoryActions): void {
+export function useHistoryCommands(actions: HistoryActions, on = true): void {
   const live = useRef(actions);
   live.current = actions;
   const canDeleteAll = !!actions.deleteAll;
   const canExclude = !!actions.excludeFromGit;
   useEffect(
     () =>
-      registerCommandHandlers({
-        [HISTORY_COMMAND_IDS.checkpoint]: () => live.current.checkpoint(),
-        [HISTORY_COMMAND_IDS.toggle]: () => live.current.toggle(),
-        [HISTORY_COMMAND_IDS.timeTravel]: () => live.current.timeTravel(),
-        ...(canDeleteAll && {
-          [HISTORY_COMMAND_IDS.deleteAll]: () => live.current.deleteAll?.(),
-        }),
-        ...(canExclude && {
-          [HISTORY_COMMAND_IDS.excludeFromGit]: () =>
-            live.current.excludeFromGit?.(),
-        }),
-      }),
-    [canDeleteAll, canExclude],
+      !on
+        ? undefined
+        : registerCommandHandlers({
+            [HISTORY_COMMAND_IDS.checkpoint]: () => live.current.checkpoint(),
+            [HISTORY_COMMAND_IDS.toggle]: () => live.current.toggle(),
+            [HISTORY_COMMAND_IDS.timeTravel]: () => live.current.timeTravel(),
+            ...(canDeleteAll && {
+              [HISTORY_COMMAND_IDS.deleteAll]: () => live.current.deleteAll?.(),
+            }),
+            ...(canExclude && {
+              [HISTORY_COMMAND_IDS.excludeFromGit]: () =>
+                live.current.excludeFromGit?.(),
+            }),
+          }),
+    [canDeleteAll, canExclude, on],
   );
 }

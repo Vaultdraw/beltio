@@ -54,6 +54,11 @@ export interface HistoryHostProps {
   theme?: "light" | "dark";
   /** Native save for image exports of a version. */
   onSaveFile?: (fileName: string, bytes: Uint8Array) => Promise<unknown>;
+  /**
+   * `[extensions] history`: false hides the whole interface (panel, dialogs,
+   * commands). Recording versions never depends on it (history.enabled only).
+   */
+  interfaceOn?: boolean;
 }
 
 const HistoryHostImpl = ({
@@ -68,6 +73,7 @@ const HistoryHostImpl = ({
   onOpenDrawing,
   theme,
   onSaveFile,
+  interfaceOn = true,
 }: HistoryHostProps) => {
   const [panelOpen, setPanelOpen] = useState(false);
   const [mode, setMode] = useState<PanelMode>("side");
@@ -183,24 +189,29 @@ const HistoryHostImpl = ({
     }
   }, [handle, path, repository, showToast]);
 
-  useHistoryCommands({
-    checkpoint: () => {
-      if (canCheckpoint) {
-        setDialogOpen(true);
-      }
+  useHistoryCommands(
+    {
+      checkpoint: () => {
+        if (canCheckpoint) {
+          setDialogOpen(true);
+        }
+      },
+      toggle: () => {
+        setMode("side");
+        setPanelOpen((open) => !open);
+      },
+      timeTravel: () => {
+        setMode("fullscreen");
+        setPanelOpen(true);
+      },
+      deleteAll:
+        handle && path && !readOnly
+          ? () => setConfirmDeleteAll(true)
+          : undefined,
+      excludeFromGit: canExclude ? () => void excludeFromGit() : undefined,
     },
-    toggle: () => {
-      setMode("side");
-      setPanelOpen((open) => !open);
-    },
-    timeTravel: () => {
-      setMode("fullscreen");
-      setPanelOpen(true);
-    },
-    deleteAll:
-      handle && path && !readOnly ? () => setConfirmDeleteAll(true) : undefined,
-    excludeFromGit: canExclude ? () => void excludeFromGit() : undefined,
-  });
+    interfaceOn,
+  );
 
   // The panel and dialog belong to one drawing: closing it closes them.
   useEffect(() => {
@@ -242,7 +253,7 @@ const HistoryHostImpl = ({
     [closeDialog, flush, handle, path, repository, showToast],
   );
 
-  const showing = panelOpen && !!handle && !!path;
+  const showing = interfaceOn && panelOpen && !!handle && !!path;
   useEffect(() => {
     publishHistoryPanelOpen(showing);
   }, [showing]);
@@ -255,7 +266,7 @@ const HistoryHostImpl = ({
 
   return (
     <>
-      {handle && path && (
+      {interfaceOn && handle && path && (
         <PanelHost
           id={HISTORY_PANEL_ID}
           load={loadHistoryPanel}
@@ -282,14 +293,14 @@ const HistoryHostImpl = ({
           }}
         />
       )}
-      {dialogOpen && (
+      {interfaceOn && dialogOpen && (
         <CheckpointDialog
           onSave={saveCheckpoint}
           onCancel={closeDialog}
           drawingName={path ? drawingName(path) : undefined}
         />
       )}
-      {confirmDeleteAll && path && (
+      {interfaceOn && confirmDeleteAll && path && (
         <ConfirmModal
           {...deleteAllConfirm(path)}
           onConfirm={() => void deleteAll()}

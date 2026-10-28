@@ -399,6 +399,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       notes: {
         doc: "Markdown notes: open a `.md` file in a tab with a reading view and an editor. See [Notes](#notes).",
       },
+      history: {
+        doc: "The History panel, timeline, checkpoints and their commands. Versions are still saved while `history.enabled` is on.",
+      },
     },
   },
   {

@@ -2793,7 +2793,7 @@ export const VaultApp = ({
           onOpenConflict={() => setShowConflictDialog(true)}
           onOpenRecovery={() => setShowRecoveryDialog(true)}
           onSave={handleExplicitSave}
-          onToggleHistory={toggleHistory}
+          onToggleHistory={ext.history ? toggleHistory : undefined}
           onRetryWritable={
             repository.retryVault ? handleRetryWritable : undefined
           }
@@ -2893,7 +2893,7 @@ export const VaultApp = ({
                   onThemeChange={handleCanvasThemeChange}
                   onOpenSettings={openSettings}
                   onOpenGraph={ext.graph ? openGraph : undefined}
-                  onToggleHistory={toggleHistory}
+                  onToggleHistory={ext.history ? toggleHistory : undefined}
                   focusRequest={
                     focusRequest?.path === activeDoc.path ? focusRequest : null
                   }
@@ -2961,6 +2961,7 @@ export const VaultApp = ({
           document={activeDoc}
           flush={flushHistory}
           ownerDocument={doc}
+          interfaceOn={ext.history}
           status={saveStatus}
           onOpenDrawing={openFromHistory}
           theme={appTheme}
@@ -3000,7 +3001,7 @@ export const VaultApp = ({
           }
           graphOpen={graphOpen}
           onOpenLocalGraph={ext.graph ? openLocalGraph : undefined}
-          onShowHistory={showHistory}
+          onShowHistory={ext.history ? showHistory : undefined}
           onOpenDrawing={handleOpenDrawing}
           search={searchUi}
           tagSearch={ext.tags ? vaultSearch ?? undefined : null}
