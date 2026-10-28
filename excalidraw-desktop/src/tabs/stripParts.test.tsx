@@ -218,7 +218,7 @@ describe("MissingTabPlaceholder", () => {
     expect(screen.getByTestId("missing-tab-placeholder").textContent).toContain(
       "This drawing was moved or deleted outside Vaultdraw",
     );
-    expect(screen.getByText("A/x.excalidraw")).toBeTruthy();
+    expect(screen.getByTitle("A/x.excalidraw")).toBeTruthy();
     fireEvent.click(screen.getByText("Close tab"));
     fireEvent.click(screen.getByText("Search for it"));
     expect(onClose).toHaveBeenCalled();

@@ -168,7 +168,7 @@ describe("settings search", () => {
     // Tauri-only rows are searchable too.
     fireEvent.change(search, { target: { value: "config.toml" } });
     expect(
-      within(results()).getAllByText("/cfg/config.toml").length,
+      within(results()).getAllByTitle("/cfg/config.toml").length,
     ).toBeGreaterThan(0);
 
     fireEvent.change(search, { target: { value: "autosave" } });

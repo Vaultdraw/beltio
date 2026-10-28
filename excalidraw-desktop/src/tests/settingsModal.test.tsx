@@ -185,7 +185,7 @@ describe("SettingsModal component and preference persistence", () => {
     const vaultTab = screen.getByRole("tab", { name: "Files" });
     fireEvent.click(vaultTab);
 
-    expect(screen.getByText("/Users/test/Vault")).toBeInTheDocument();
+    expect(screen.getByTitle("/Users/test/Vault")).toBeInTheDocument();
     expect(screen.getByText("Autosave delay")).toBeInTheDocument();
 
     const revealBtn = screen.getByRole("button", {

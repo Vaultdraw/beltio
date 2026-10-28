@@ -462,8 +462,9 @@ describe("QuickSwitcher keystroke cost (5,000 drawings, jsdom)", () => {
     expect(dialog.querySelector(".vault-quick__mode")).toHaveTextContent(
       "Commands",
     );
-    expect(dialog.querySelector(".vault-quick__footer")).toHaveTextContent(
-      "browse",
+    // Two hints only (Enter, Esc); Tab browse is shown on the rows that browse.
+    expect(dialog.querySelectorAll(".vault-quick__footer > span")).toHaveLength(
+      2,
     );
   });
 
