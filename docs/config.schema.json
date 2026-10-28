@@ -1397,6 +1397,11 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 86400
+        },
+        "low_memory_canvas": {
+          "description": "Back the editor canvases with CPU memory: about 100 MB less memory, but panning drops to about 60 frames per second. Read when the editor starts (restart to apply).",
+          "default": false,
+          "type": "boolean"
         }
       }
     },

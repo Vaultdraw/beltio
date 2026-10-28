@@ -446,6 +446,7 @@ import { isSidebarDockedAtom } from "./Sidebar/Sidebar";
 import { hideTooltip } from "./Tooltip";
 import { StaticCanvas, InteractiveCanvas } from "./canvases";
 import NewElementCanvas from "./canvases/NewElementCanvas";
+import { primeLowMemoryCanvas } from "./canvases/lowMemoryCanvas";
 import { isPointHittingLink } from "./hyperlink/helpers";
 import { CursorHint, CursorHints } from "./CursorHint";
 import { MagicIcon, copyIcon, fullscreenIcon } from "./icons";
@@ -991,6 +992,7 @@ class App extends React.Component<AppProps, AppState> {
     this.scene = new Scene();
 
     this.canvas = this.ownerDocument.createElement("canvas");
+    primeLowMemoryCanvas(this.canvas, this.ownerDocument);
     this.rc = rough.canvas(this.canvas);
     this.renderer = new Renderer(this.scene);
     this.visibleElements = [];
@@ -11799,6 +11801,7 @@ class App extends React.Component<AppProps, AppState> {
     // canvas is null when unmounting
     if (canvas !== null) {
       this.interactiveCanvas = canvas;
+      primeLowMemoryCanvas(canvas, this.ownerDocument);
 
       // reflect state that landed before the canvas existed — the cursor is
       // otherwise only set imperatively on *changes* (e.g. the host-forced

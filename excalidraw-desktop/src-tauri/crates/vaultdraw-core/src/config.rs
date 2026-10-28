@@ -299,6 +299,8 @@ autosave_delay_ms = 500
 # hidden_purge_s = 120
 # Seconds without input before off-screen caches are freed, 0 to 86400 (0 = never)
 # idle_purge_s = 180
+# Back the editor canvases with CPU memory: about 100 MB less memory, panning at about 60 frames/s (restart to apply)
+# low_memory_canvas = false
 
 [sync]
 # Show a "conflict" badge on conflict copies from iCloud Drive, Dropbox or Syncthing
@@ -1693,7 +1695,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 146, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 147, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();

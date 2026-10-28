@@ -70,7 +70,24 @@ const UndoStepsSetting = () => {
   );
 };
 
+const LowMemoryCanvasSetting = () => {
+  const [value, set] = useMemoryPref("memoryLowMemoryCanvas");
+  return (
+    <SettingRow
+      id="memory-low-memory-canvas"
+      htmlFor="vault-memory-low-memory-canvas"
+    >
+      <Switch
+        id="vault-memory-low-memory-canvas"
+        checked={value}
+        onChange={set}
+      />
+    </SettingRow>
+  );
+};
+
 export const memoryControls: SettingControls = {
   "memory-free-unused-images": { Component: FreeImagesSetting },
   "memory-undo-steps": { Component: UndoStepsSetting },
+  "memory-low-memory-canvas": { Component: LowMemoryCanvasSetting },
 };

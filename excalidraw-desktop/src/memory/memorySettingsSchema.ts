@@ -26,4 +26,14 @@ export const MEMORY_SETTINGS_SCHEMA: readonly SettingSchema[] = [
     configKey: "memory.undo_steps",
     perVault: false,
   },
+  {
+    id: "memory-low-memory-canvas",
+    page: "interface",
+    label: "Low-memory canvas (restart to apply)",
+    description:
+      "Uses about 100 MB less memory; panning drops to about 60 frames per second. Applies the next time Vaultdraw starts.",
+    keywords: ["memory", "ram", "canvas", "gpu", "pan", "low", "frames"],
+    configKey: "memory.low_memory_canvas",
+    perVault: false,
+  },
 ];

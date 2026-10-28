@@ -83,6 +83,7 @@ templates_folder = "Templates" # vault folder holding templates, relative to the
 [memory]                     # see "Memory"
 free_unused_images = true    # release image data of deleted images once no undo step can restore it
 undo_steps = 1000            # undo steps kept per drawing, 10 to 10000
+low_memory_canvas = false    # about 100 MB less memory, panning at about 60 frames/s; restart to apply
 
 [tools.arrow]                # default style of one tool; see "Tool defaults"
 stroke_color = "#f08c00"     # set only the keys you want; others keep the current style
@@ -1421,12 +1422,14 @@ Big images are the largest thing a drawing keeps in memory. Vaultdraw releases a
 | --- | --- | --- | --- |
 | `memory.free_unused_images` | Interface → Memory | `true` | Releases image data that no element and no undo or redo step can restore. `false` keeps it until the drawing closes. |
 | `memory.undo_steps` | Interface → Memory | `1000` | Undo steps kept per drawing, 10 to 10000. Older steps are dropped, and with them the images only they could restore. |
+| `memory.low_memory_canvas` | Interface → Memory | `false` | Backs the editor canvases with CPU memory instead of GPU surfaces: about 100 MB less memory at the peak, but panning drops to about 60 frames per second. Read when the editor starts, so restart Vaultdraw after changing it. |
 
 - **When it runs.** About 20 seconds after you stop editing, in idle time. Typing and drawing never wait for it. A drawing without images does nothing.
 - **What is safe.** An image stays while an element shows it, or while any undo or redo step could bring a deleted one back. Saved drawings never change: a deleted image is already left out of the file when it saves.
 - **After the undo horizon.** Once a deletion is older than `undo_steps` steps, Cmd+Z can no longer restore it, and its image data is released. Restoring an older version from History still works: it brings its images back.
 - **Command.** `Memory: Free unused images` (in the command palette, rebindable) does it now, without the wait, and shows how much it freed.
-- Changes apply live: edit `config.toml` or Settings and the next idle pass uses the new values.
+- Changes apply live: edit `config.toml` or Settings and the next idle pass uses the new values (except `low_memory_canvas`, below).
+- **Low-memory canvas.** Off by default. On, the editor draws on canvases that live in CPU memory (`willReadFrequently`), so WebKit keeps no window-sized display buffers for them. Measured on the packaged app with three small drawings open: whole-app peak about 360 MB instead of about 470 MB, idle about 220 MB, but the pan frame interval goes from about 8 ms to about 17 ms (about 120 to about 60 frames per second). The canvases are created when the editor starts, so the key is read once: restart Vaultdraw after changing it.
 - **When caches are freed.** `memory.hidden_purge_s` (default 120) is how long the window stays hidden before every cache is freed; `memory.idle_purge_s` (default 180) is how long without input before off-screen caches are freed. 0 turns a trigger off. Shorter values suit a 4 GB Mac.
 
 ## Sync services
@@ -2005,6 +2008,7 @@ Memory kept by open drawings. See [Memory](#memory).
 | `undo_steps` | `1000` | a whole number from 10 to 10000 (undo steps kept per drawing) |  | Undo steps kept per drawing; older steps go, with the images only they could restore. |
 | `hidden_purge_s` | `120` | a whole number from 0 to 86400 (seconds, 0 = never) |  | Seconds the window stays hidden before the app frees its caches; 0 never does. |
 | `idle_purge_s` | `180` | a whole number from 0 to 86400 (seconds, 0 = never) |  | Seconds without input, while visible, before off-screen caches are freed; 0 never does. |
+| `low_memory_canvas` | `false` | true or false |  | Back the editor canvases with CPU memory: about 100 MB less memory, but panning drops to about 60 frames per second. Read when the editor starts (restart to apply). |
 
 ### `[search]`
 

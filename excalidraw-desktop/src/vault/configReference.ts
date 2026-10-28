@@ -389,6 +389,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       idle_purge_s: {
         doc: "Seconds without input, while visible, before off-screen caches are freed; 0 never does.",
       },
+      low_memory_canvas: {
+        doc: "Back the editor canvases with CPU memory: about 100 MB less memory, but panning drops to about 60 frames per second. Read when the editor starts (restart to apply).",
+      },
     },
   },
   {

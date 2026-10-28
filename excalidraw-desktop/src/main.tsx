@@ -86,6 +86,10 @@ if (ownerWindow.matchMedia("(prefers-color-scheme: dark)").matches) {
 void initSettings(ownerWindow)
   .then(async () => {
     mark("settings-ready");
+    // Read once when the editor creates its canvases (memory.low_memory_canvas).
+    if (getPreferences(ownerWindow).memoryLowMemoryCanvas) {
+      ownerWindow.EXCALIDRAW_LOW_MEMORY_CANVAS = true;
+    }
     ownerDocument.documentElement.classList.toggle(
       "dark",
       resolveTheme(getTheme(ownerWindow), ownerWindow) === "dark",

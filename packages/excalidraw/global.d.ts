@@ -3,6 +3,8 @@ interface Window {
   __EXCALIDRAW_SHA__: string | undefined;
   EXCALIDRAW_ASSET_PATH: string | string[] | undefined;
   EXCALIDRAW_THROTTLE_RENDER: boolean | undefined;
+  /** Host switch: back the editor canvases with CPU memory (less GPU memory, slower pan). Read when the editor is created. */
+  EXCALIDRAW_LOW_MEMORY_CANVAS: boolean | undefined;
   DEBUG_FRACTIONAL_INDICES: boolean | undefined;
   EXCALIDRAW_EXPORT_SOURCE: string;
   gtag: Function;

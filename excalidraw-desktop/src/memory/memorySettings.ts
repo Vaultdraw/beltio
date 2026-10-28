@@ -10,6 +10,7 @@ export const MEMORY_FIELDS = [
   "memoryUndoSteps",
   "memoryHiddenPurgeS",
   "memoryIdlePurgeS",
+  "memoryLowMemoryCanvas",
 ] as const;
 export type MemoryField = typeof MEMORY_FIELDS[number];
 
@@ -30,6 +31,8 @@ export interface MemoryPreferences {
   memoryHiddenPurgeS: number;
   /** Seconds without input, while visible, before off-screen caches are purged (0 = never). */
   memoryIdlePurgeS: number;
+  /** Back the editor canvases with CPU memory: about 100 MB less memory, panning at about 60 frames/s. Read when the editor starts. */
+  memoryLowMemoryCanvas: boolean;
 }
 
 export const MEMORY_DEFAULTS: MemoryPreferences = {
@@ -37,6 +40,7 @@ export const MEMORY_DEFAULTS: MemoryPreferences = {
   memoryUndoSteps: 1000,
   memoryHiddenPurgeS: DEFAULT_HIDDEN_PURGE_S,
   memoryIdlePurgeS: DEFAULT_IDLE_PURGE_S,
+  memoryLowMemoryCanvas: false,
 };
 
 const isBool = (v: unknown): v is boolean => typeof v === "boolean";
@@ -78,6 +82,12 @@ export const MEMORY_MAPPINGS: readonly ConfigMapping[] = [
     expected: PURGE_EXPECTED,
     valid: isPurgeS,
   },
+  {
+    field: "memoryLowMemoryCanvas",
+    key: "memory.low_memory_canvas",
+    expected: "true or false",
+    valid: isBool,
+  },
 ];
 
 const VALID: Record<MemoryField, (v: unknown) => boolean> = {
@@ -85,6 +95,7 @@ const VALID: Record<MemoryField, (v: unknown) => boolean> = {
   memoryUndoSteps: isSteps,
   memoryHiddenPurgeS: isPurgeS,
   memoryIdlePurgeS: isPurgeS,
+  memoryLowMemoryCanvas: isBool,
 };
 
 /** Stored (localStorage) preferences -> valid memory fields; bad ones default. */

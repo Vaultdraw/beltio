@@ -21,6 +21,7 @@ describe("memory settings", () => {
       memoryUndoSteps: 1000,
       memoryHiddenPurgeS: 120,
       memoryIdlePurgeS: 180,
+      memoryLowMemoryCanvas: false,
     });
     const { values, problems } = configToPreferences({});
     expect(problems).toEqual([]);
@@ -53,6 +54,17 @@ describe("memory settings", () => {
     expect(problems[0].message).toContain(`memory.${name}`);
     expect(values.memoryFreeUnusedImages).toBe(true);
     expect(values.memoryUndoSteps).toBe(1000);
+  });
+
+  it("reads memory.low_memory_canvas (off by default) and rejects a non-boolean", () => {
+    expect(configToPreferences({}).values.memoryLowMemoryCanvas).toBe(false);
+    expect(
+      configToPreferences({ memory: { low_memory_canvas: true } }).values
+        .memoryLowMemoryCanvas,
+    ).toBe(true);
+    const bad = configToPreferences({ memory: { low_memory_canvas: "on" } });
+    expect(bad.problems).toHaveLength(1);
+    expect(bad.values.memoryLowMemoryCanvas).toBe(false);
   });
 
   it("accepts the range edges", () => {
