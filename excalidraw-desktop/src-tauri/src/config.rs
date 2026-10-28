@@ -55,6 +55,45 @@ pub(crate) async fn update_config(changes: Vec<LayerChange>) -> Result<()> {
     update_overrides_in(&resolve_dirs()?, &changes)
 }
 
+/// Profiles (see `vaultdraw_core::config::profiles`): the saved choice is a file in the state
+/// folder, so the watcher reloads every window when it changes.
+#[tauri::command]
+pub(crate) async fn profile_use(name: Option<String>) -> Result<()> {
+    use_profile(&resolve_dirs()?, name.as_deref())
+}
+
+#[tauri::command]
+pub(crate) async fn profile_create(name: String, from: Option<String>) -> Result<()> {
+    create_profile(&resolve_dirs()?, &name, from.as_deref())
+}
+
+#[tauri::command]
+pub(crate) async fn profile_delete(name: String) -> Result<()> {
+    delete_profile(&resolve_dirs()?, &name)
+}
+
+/// `--profile <name>` / `--profile=<name>` in argv (the launch flag of `vaultdraw launch`).
+pub(crate) fn profile_from_args<S: AsRef<str>>(args: impl IntoIterator<Item = S>) -> Option<String> {
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        let a = a.as_ref();
+        if a == "--profile" {
+            return it.next().map(|n| n.as_ref().to_owned());
+        }
+        if let Some(n) = a.strip_prefix("--profile=") {
+            return Some(n.to_owned());
+        }
+    }
+    None
+}
+
+/// Applies the launch flag as `$VAULTDRAW_PROFILE`, once, before any thread reads the config.
+pub(crate) fn apply_profile_arg<S: AsRef<str>>(args: impl IntoIterator<Item = S>) {
+    if let Some(name) = profile_from_args(args) {
+        std::env::set_var(PROFILE_ENV, name);
+    }
+}
+
 /// Turns `network.enabled` or `network.allow_<purpose>` on after a native confirmation dialog the
 /// page cannot click. `key` (and each of `also`) is `enabled` or `allow_<purpose>`; all of them are
 /// confirmed in one dialog. Ok(false) = the user said no.
@@ -310,7 +349,7 @@ fn keep_state_event(state_dirs: &[PathBuf], mut event: Event) -> Option<Event> {
         return Some(event);
     }
     let in_state = |p: &Path| p.parent().is_some_and(|d| state_dirs.iter().any(|s| s == d));
-    event.paths.retain(|p| !in_state(p) || (p.file_name().is_some_and(|n| n == OVERRIDES_FILE)));
+    event.paths.retain(|p| !in_state(p) || p.file_name().is_some_and(|n| n == OVERRIDES_FILE || n == PROFILE_FILE));
     (!event.paths.is_empty()).then_some(event)
 }
 
@@ -442,6 +481,14 @@ mod tests {
         let mut e = Event::new(EventKind::Any);
         e.paths = paths.iter().map(PathBuf::from).collect();
         e
+    }
+
+    #[test]
+    fn the_profile_launch_flag_is_read_from_argv() {
+        assert_eq!(profile_from_args(["--safe", "--profile", "work"]).as_deref(), Some("work"));
+        assert_eq!(profile_from_args(["--profile=play", "x"]).as_deref(), Some("play"));
+        assert_eq!(profile_from_args(["x.excalidraw"]), None);
+        assert_eq!(profile_from_args(["--profile"]), None);
     }
 
     #[test]

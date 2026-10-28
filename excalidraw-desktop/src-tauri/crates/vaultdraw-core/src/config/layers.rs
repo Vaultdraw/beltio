@@ -17,8 +17,16 @@ pub const OVERRIDES_HEADER: &str = "# Written by Vaultdraw Settings. Settings wi
 const WHOLE_TABLE_UNITS: [&str; 2] = ["tools", "plugin"];
 
 impl Dirs {
+    /// The file Settings writes: the active profile's `overrides.toml`, else the main one.
     pub fn overrides_file(&self) -> PathBuf {
-        self.state.join(OVERRIDES_FILE)
+        let profile = super::profiles::active_profile(self);
+        self.overrides_file_of(profile.as_deref())
+    }
+    pub fn overrides_file_of(&self, profile: Option<&str>) -> PathBuf {
+        match profile {
+            Some(name) => self.profile_overrides_file(name),
+            None => self.state.join(OVERRIDES_FILE),
+        }
     }
 }
 
@@ -91,6 +99,9 @@ pub(super) fn read_layers_with(dirs: &Dirs, home: Option<&Path>) -> Layers {
     }
     let mut all = scan.layers;
     all.push(config);
+    if let Some(name) = super::profiles::active_profile(dirs) {
+        all.push(super::profiles::profile_layer(dirs, &name));
+    }
     all.push(overrides);
     Layers { all, warnings: scan.warnings }
 }
@@ -310,7 +321,9 @@ pub fn update_overrides_in(dirs: &Dirs, changes: &[LayerChange]) -> Result<()> {
         }
     };
     if existing.as_deref() != Some(updated.as_str()) {
-        fs::create_dir_all(&dirs.state).map_err(ioerr)?;
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).map_err(ioerr)?;
+        }
         write_atomic(&path, updated.as_bytes())?;
     }
     Ok(())
@@ -331,6 +344,7 @@ fn layer_file(l: &LayerInfo) -> String {
     match l.kind {
         "overrides" => OVERRIDES_FILE.into(),
         KIND_INCLUDE => l.path.clone(),
+        "profile" => l.name.clone(),
         _ => CONFIG_FILE.into(),
     }
 }

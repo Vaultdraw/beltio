@@ -787,6 +787,7 @@ pub(crate) fn startup_trace(label: &str) {
 
 pub fn run() {
     startup_trace("run");
+    config::apply_profile_arg(std::env::args().skip(1));
     control::instance::claim_or_forward();
     #[cfg(not(test))]
     {
@@ -900,7 +901,7 @@ pub fn run() {
                 choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
                 write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
                 export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
-                config::load_settings, config::update_config, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
+                config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
                 themes::list_themes, themes::open_themes_dir, theme_install::theme_resolve, theme_install::theme_fetch, theme_install::theme_write, theme_install::theme_installed, theme_install::theme_update_fetch, theme_install::theme_uninstall, theme_catalogue::theme_catalogue_cached, theme_catalogue::theme_catalogue_index, theme_catalogue::theme_catalogue_preview, plugins::registry::plugin_registry_cached, plugins::registry::plugin_registry_index, plugins::registry::plugin_registry_install, snippets::list_snippets, snippets::open_snippets_dir,
                 vault_settings::load_vault_settings, vault_settings::update_vault_settings,
                 services::services_start, search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
@@ -924,7 +925,7 @@ pub fn run() {
                 choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
                 write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
                 export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
-                config::load_settings, config::update_config, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
+                config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
                 themes::list_themes, themes::open_themes_dir, theme_install::theme_resolve, theme_install::theme_fetch, theme_install::theme_write, theme_install::theme_installed, theme_install::theme_update_fetch, theme_install::theme_uninstall, theme_catalogue::theme_catalogue_cached, theme_catalogue::theme_catalogue_index, theme_catalogue::theme_catalogue_preview, plugins::registry::plugin_registry_cached, plugins::registry::plugin_registry_index, plugins::registry::plugin_registry_install, snippets::list_snippets, snippets::open_snippets_dir,
                 vault_settings::load_vault_settings, vault_settings::update_vault_settings,
                 services::services_start, search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,
@@ -945,7 +946,7 @@ pub fn run() {
             choose_vault, open_vault_at, reopen_vault, release_vault, retry_vault, list_directory, read_drawing, drawing_revision,
             write_drawing, create_folder, move_entry, move_entry_with_links, trash_entry, reveal_entry, reveal_recovery_dir,
             export_file, drawing_copy::save_drawing_copy, clipboard::copy_to_clipboard, pressure::release_memory, watchdog::watchdog_last_hang, list_recovery, discard_recovery,
-            config::load_settings, config::update_config, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
+            config::load_settings, config::update_config, config::profile_use, config::profile_create, config::profile_delete, config::network_grant, config::write_state, config::open_config_dir, config::open_config_file, config::open_included_file, config::reveal_overrides, config::reset_overrides, config::config_check, config::doctor_report, external::open_external_url, external::system_info,
             themes::list_themes, themes::open_themes_dir, theme_install::theme_resolve, theme_install::theme_fetch, theme_install::theme_write, theme_install::theme_installed, theme_install::theme_update_fetch, theme_install::theme_uninstall, theme_catalogue::theme_catalogue_cached, theme_catalogue::theme_catalogue_index, theme_catalogue::theme_catalogue_preview, plugins::registry::plugin_registry_cached, plugins::registry::plugin_registry_index, plugins::registry::plugin_registry_install, snippets::list_snippets, snippets::open_snippets_dir,
             vault_settings::load_vault_settings, vault_settings::update_vault_settings,
             services::services_start, search::search_vault, search::search_index_status, search::vault_tags, search::search_list_names,

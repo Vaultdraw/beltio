@@ -7,6 +7,7 @@ mod export;
 mod files;
 mod launch;
 mod plugin;
+mod profile;
 mod scene;
 mod tabs;
 mod uri;
@@ -29,6 +30,11 @@ pub(super) fn emit(json: bool, value: &Value, human: impl FnOnce() -> String) {
 }
 
 pub fn run(cli: &Cli) -> Result<(), Fail> {
+    // `--profile` is the same as the environment variable the config code reads. Set before any
+    // other thread exists.
+    if let Some(p) = cli.profile.as_deref() {
+        std::env::set_var(vaultdraw_core::config::PROFILE_ENV, p);
+    }
     match &cli.command {
         Command::Completions { shell } => {
             let mut cmd = Cli::command();
@@ -60,6 +66,7 @@ pub fn run(cli: &Cli) -> Result<(), Fail> {
         Command::Config { action: ConfigAction::Check { strict } } => diag::config_check(cli, *strict),
         Command::Config { action: ConfigAction::Schema } => diag::config_schema(),
         Command::Config { action } => app::config(cli, action),
+        Command::Profile { action } => profile::run(cli, action),
         Command::Doctor => diag::doctor(cli),
         Command::Events { topic } => events::stream(cli, topic),
         Command::Uri { url } => uri::run(cli, url),

@@ -31,6 +31,9 @@ pub struct Cli {
     /// Treat target arguments as link-style file names
     #[arg(long = "file", global = true)]
     pub force_file: bool,
+    /// Use this profile (a folder of settings in the config folder); see `vaultdraw profile list`
+    #[arg(long, global = true, value_name = "NAME")]
+    pub profile: Option<String>,
     #[command(subcommand)]
     pub command: Command,
 }
@@ -120,6 +123,11 @@ pub enum Command {
     Tab {
         #[command(subcommand)]
         action: TabAction,
+    },
+    /// Profiles: named sets of settings to switch between (no app needed)
+    Profile {
+        #[command(subcommand)]
+        action: ProfileAction,
     },
     /// Read or change the app's config
     Config {
@@ -319,6 +327,28 @@ pub enum TabAction {
     Focus { id: String },
     /// Close a tab by id or file target
     Close { id: String },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ProfileAction {
+    /// List the profiles and mark the active one
+    List,
+    /// Choose the profile the app uses (`default` = none); a running app switches at once
+    Use { name: String },
+    /// Create a profile, empty or copied from another (`default` copies your Settings changes)
+    New {
+        name: String,
+        #[arg(long, value_name = "PROFILE")]
+        from: Option<String>,
+    },
+    /// Copy a profile under a new name
+    Duplicate { name: String, new_name: String },
+    /// Delete a profile and its files (asks first unless --yes)
+    Delete {
+        name: String,
+        #[arg(long, short)]
+        yes: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]

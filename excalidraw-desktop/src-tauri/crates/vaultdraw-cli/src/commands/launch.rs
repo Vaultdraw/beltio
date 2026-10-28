@@ -16,17 +16,21 @@ const APP_BINARY: &str = "excalidraw-vault";
 const ENV_APP: &str = "VAULTDRAW_APP";
 
 /// Program and arguments that start the app.
-fn start_command(safe: bool, macos: bool, app: Option<&str>) -> (String, Vec<String>) {
+fn start_command(safe: bool, profile: Option<&str>, macos: bool, app: Option<&str>) -> (String, Vec<String>) {
     let flag = |mut v: Vec<String>| {
         if safe {
             v.push("--safe".into());
+        }
+        if let Some(p) = profile {
+            v.push("--profile".into());
+            v.push(p.into());
         }
         v
     };
     if macos {
         // `--args` passes the rest to the app itself.
         let mut v = vec!["-a".to_string(), app.unwrap_or("Vaultdraw").to_string()];
-        if safe {
+        if safe || profile.is_some() {
             v.push("--args".into());
         }
         ("open".into(), flag(v))
@@ -55,7 +59,7 @@ pub fn run(cli: &Cli, safe: bool) -> Result<(), Fail> {
         }
         Err(f) if f.not_running() => {
             let app = std::env::var(ENV_APP).ok().filter(|v| !v.is_empty());
-            let (program, args) = start_command(safe, cfg!(target_os = "macos"), app.as_deref());
+            let (program, args) = start_command(safe, cli.profile.as_deref(), cfg!(target_os = "macos"), app.as_deref());
             Command::new(&program)
                 .args(&args)
                 .stdin(Stdio::null())
@@ -76,15 +80,17 @@ mod tests {
 
     #[test]
     fn macos_opens_the_bundle_and_passes_the_flag_after_args() {
-        assert_eq!(start_command(false, true, None), ("open".to_string(), vec!["-a".to_string(), "Vaultdraw".into()]));
-        let (p, a) = start_command(true, true, None);
+        assert_eq!(start_command(false, None, true, None), ("open".to_string(), vec!["-a".to_string(), "Vaultdraw".into()]));
+        let (p, a) = start_command(true, None, true, None);
         assert_eq!((p.as_str(), a), ("open", ["-a", "Vaultdraw", "--args", "--safe"].map(String::from).to_vec()));
-        assert_eq!(start_command(true, true, Some("/Apps/V.app")).1[1], "/Apps/V.app");
+        assert_eq!(start_command(true, None, true, Some("/Apps/V.app")).1[1], "/Apps/V.app");
     }
 
     #[test]
     fn other_systems_run_the_binary_with_the_flag() {
-        assert_eq!(start_command(true, false, None), (APP_BINARY.to_string(), vec!["--safe".to_string()]));
-        assert_eq!(start_command(false, false, Some("/opt/v")), ("/opt/v".to_string(), vec![]));
+        assert_eq!(start_command(false, Some("work"), false, None).1, vec!["--profile", "work"]);
+        assert_eq!(start_command(false, Some("work"), true, None).1, vec!["-a", "Vaultdraw", "--args", "--profile", "work"]);
+        assert_eq!(start_command(true, None, false, None), (APP_BINARY.to_string(), vec!["--safe".to_string()]));
+        assert_eq!(start_command(false, None, false, Some("/opt/v")), ("/opt/v".to_string(), vec![]));
     }
 }

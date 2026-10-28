@@ -19,10 +19,12 @@ mod check;
 mod doctor;
 mod includes;
 mod layers;
+mod profiles;
 pub use check::*;
 pub use doctor::*;
 pub use includes::*;
 pub use layers::*;
+pub use profiles::*;
 
 pub(crate) const MAX_CONFIG_BYTES: u64 = 1024 * 1024;
 const MAX_STATE_BYTES: u64 = 1024 * 1024;
@@ -466,6 +468,9 @@ pub struct LoadedSettings {
     pub layers: Vec<LayerInfo>,
     /// Include problems that name no file of their own (cycles, depth, caps, `[include]` in overrides).
     include_warnings: Vec<String>,
+    /// The active profile (`null` = default) and every profile folder.
+    profile: Option<String>,
+    profiles: Vec<String>,
     state: Json,
 }
 
@@ -596,6 +601,8 @@ pub fn load_settings_in(dirs: &Dirs) -> Result<LoadedSettings> {
         overrides_path: dirs.overrides_file().to_string_lossy().into_owned(),
         layers: layers.all,
         include_warnings: layers.warnings,
+        profile: active_profile(dirs),
+        profiles: list_profiles(dirs),
         state: read_state(&state_path),
     })
 }
