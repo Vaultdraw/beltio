@@ -3570,7 +3570,7 @@ export const VaultApp = ({
 
       {showCloseDiscardConfirm && (
         <ConfirmModal
-          title="Unsaved Changes"
+          title="Unsaved changes"
           message={`Vaultdraw could not save ${
             unsavedWhat.length > 0
               ? unsavedWhat.join(", ")

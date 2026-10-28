@@ -108,4 +108,46 @@ describe("user strings follow STRINGS.md", () => {
     });
     expect(bad).toEqual([]);
   });
+
+  it("dialog titles use sentence case", () => {
+    const capital = (w: string) =>
+      /^[A-Z][a-z]/.test(w) && !PROPER.has(w.replace(/[^A-Za-z]/g, ""));
+    const bad: string[] = [];
+    const appFiles = walk(join(ROOT, "excalidraw-desktop/src"));
+    for (const file of new Set([...files, ...appFiles])) {
+      const src = readFileSync(file, "utf8");
+      const tag =
+        /<(?:Dialog|ConfirmModal)\b[^>]*?\btitle=(?:"([^"]*)"|\{([^}]*(?:\}[^}]*)*?)\}\s*(?:\n|[a-zA-Z]))/g;
+      for (const m of src.matchAll(tag)) {
+        const flag = (words: string[]) =>
+          words.some(capital) &&
+          bad.push(`${relative(ROOT, file)}: ${m[0].slice(0, 90)}`);
+        if (m[1] !== undefined) {
+          flag(m[1].split(/\s+/).slice(1));
+          continue;
+        }
+        const expr = m[2];
+        const tpl = expr.match(/^\s*`([\s\S]*)`\s*$/);
+        if (tpl) {
+          const inner = [...tpl[1].matchAll(/\$\{([^}]*)\}/g)].map((x) => x[1]);
+          flag(
+            tpl[1]
+              .replace(/\$\{[^}]*\}/g, "x")
+              .split(/\s+/)
+              .slice(1),
+          );
+          for (const part of inner) {
+            for (const lit of part.matchAll(/"([^"]*)"/g)) {
+              flag(lit[1].split(/\s+/));
+            }
+          }
+        } else {
+          for (const lit of expr.matchAll(/"([^"]*)"/g)) {
+            flag(lit[1].split(/\s+/).slice(1));
+          }
+        }
+      }
+    }
+    expect(bad).toEqual([]);
+  });
 });

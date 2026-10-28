@@ -17,7 +17,7 @@ export const ConfigResetConfirm = () => {
   }
   return (
     <ConfirmModal
-      title="Reset Settings changes"
+      title="Reset settings changes"
       message="This forgets everything you changed in Settings. Values go back to your config file, or to the defaults. Your config file is not touched."
       confirmLabel="Reset changes"
       isDanger

@@ -221,12 +221,12 @@ test("2d. Escape closes every dialog, however it was opened", async ({
   await expandFolder(page, "DSA");
   // Rename, Move and the trash confirmation, from the row menu.
   await (await rowAction(page, "Graphs", "Rename…")).click();
-  await expect(dialog).toContainText("Rename Drawing");
+  await expect(dialog).toContainText("Rename drawing");
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
 
   await (await rowAction(page, "Graphs", "Move to…")).click();
-  await expect(dialog).toContainText("Move Drawing");
+  await expect(dialog).toContainText("Move drawing");
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
 

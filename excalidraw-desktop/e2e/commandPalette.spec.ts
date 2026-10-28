@@ -482,7 +482,7 @@ test.describe("navigator collapsed", () => {
     await page.keyboard.press("Enter");
     // The modal is rendered inside the aria-hidden navigator, so role/label
     // queries cannot see it (an a11y bug); find it by CSS.
-    const dialog = page.locator(".vault-modal", { hasText: "Rename Drawing" });
+    const dialog = page.locator(".vault-modal", { hasText: "Rename drawing" });
     await expect(dialog).toBeVisible();
     await dialog.locator("input").fill("Graphs Renamed");
     await dialog.locator("button[type=submit]").click();
@@ -505,7 +505,7 @@ test.describe("navigator collapsed", () => {
     await collapse(page);
     for (const [query, label, title] of [
       ["new folder", "New folder", "New folder"],
-      ["rename drawing", "Rename drawing", "Rename Drawing"],
+      ["rename drawing", "Rename drawing", "Rename drawing"],
     ] as const) {
       await runCommand(page, query, label);
       await page.keyboard.press("Enter");
