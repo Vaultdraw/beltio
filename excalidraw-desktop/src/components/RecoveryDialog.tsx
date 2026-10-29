@@ -123,9 +123,9 @@ export const RecoveryDialog = ({
                 <div key={entry.id} className="vault-recovery-item">
                   <div style={{ minWidth: 0, flex: "1 1 auto" }}>
                     <Path
-                        path={entry.path}
-                        className="vault-recovery-item__path"
-                      />
+                      path={entry.path}
+                      className="vault-recovery-item__path"
+                    />
                     <div className="vault-recovery-item__time">
                       {dateStr} • {getBaseName(entry.path)}
                     </div>
