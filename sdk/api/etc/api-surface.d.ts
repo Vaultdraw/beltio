@@ -1059,7 +1059,7 @@ export interface VaultApi {
         revision: string;
         created?: boolean;
     } | {
-        skipped: "changed";
+        skipped: "changed" | "unknown";
     }>;
     readonly graph: VaultGraphApi;
     readonly exports: VaultExportsApi;

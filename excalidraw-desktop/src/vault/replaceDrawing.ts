@@ -5,7 +5,7 @@
  * the open drawing are saved before it is read, a file changed meanwhile is not overwritten, and
  * the open tab reloads from the new file.
  */
-import { untouchedSince } from "../importUpgrade/recognise";
+import { editState } from "../importUpgrade/stamp";
 
 import type { HistoryRepository } from "../history/types";
 import type { VaultRepository } from "./types";
@@ -25,13 +25,14 @@ export interface ReplaceDeps {
 export interface ReplaceOptions {
   /** The History entry's name for the drawing as it was. */
   versionName: string;
-  /** Only when the drawing is still exactly as one batch wrote it (see `untouchedSince`). */
+  /** Only when the drawing is still exactly as the import wrote it (see `importUpgrade/stamp.ts`). */
   onlyIfUntouched?: boolean;
 }
 
 export type ReplaceResult =
   | { revision: string; created?: boolean }
-  | { skipped: "changed" };
+  /** "changed": edited since the import; "unknown": imported before stamps, so nobody can tell. */
+  | { skipped: "changed" | "unknown" };
 
 const coded = (code: string, message: string) =>
   Object.assign(new Error(message), { code });
@@ -62,8 +63,9 @@ export async function replaceDrawing(
     } catch {
       return { skipped: "changed" };
     }
-    if (!untouchedSince(scene)) {
-      return { skipped: "changed" };
+    const state = editState(scene);
+    if (state !== "untouched") {
+      return { skipped: state === "unknown" ? "unknown" : "changed" };
     }
   }
   try {

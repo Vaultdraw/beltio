@@ -89,6 +89,8 @@ const captureTarget = (into: Map<string, object>): TargetFolder =>
 export interface ReimportSummary {
   written: string[];
   changed: string[];
+  /** Imported before the import stamped its notes: nobody can tell if they were edited. */
+  unknown: string[];
   notFound: string[];
   failed: string[];
 }
@@ -112,6 +114,7 @@ export async function reimport(
   const summary: ReimportSummary = {
     written: [],
     changed: [],
+    unknown: [],
     // In a vault-wide run most drawings are the user's own: only a chosen one is "not found".
     notFound: onlyUntouched ? [] : drawings.filter((d) => !matches.has(d)),
     failed: [],
@@ -156,7 +159,9 @@ export async function reimport(
           onlyIfUntouched: onlyUntouched,
         });
         if ("skipped" in r) {
-          summary.changed.push(path);
+          (r.skipped === "unknown" ? summary.unknown : summary.changed).push(
+            path,
+          );
           if (first) {
             break; // the first part changed: the note stays as it is
           }
@@ -188,6 +193,15 @@ export async function reimport(
               )} changed since the import and left as ${
                 summary.changed.length === 1 ? "it was" : "they were"
               }`
+            : "",
+          summary.unknown.length > 0
+            ? `${plural(
+                summary.unknown.length,
+                "note",
+                "notes",
+              )} from an older import left as ${
+                summary.unknown.length === 1 ? "it was" : "they were"
+              }: edits cannot be told apart there (re-import one from its menu to update it)`
             : "",
           summary.notFound.length > 0
             ? `${plural(

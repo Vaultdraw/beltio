@@ -190,9 +190,11 @@ export interface VaultApi {
    * there: the drawing as it was is saved in the vault's History first, under `versionName`, so
    * the user can restore it; when that fails nothing is written (`NO_VERSION`). Pending edits of
    * the open drawing are saved first and its tab shows the new drawing after. A missing drawing
-   * is created. With `onlyIfUntouched`, a drawing that changed since one batch wrote it (an
-   * element added later, or one deleted) is left alone and the call resolves `{ skipped:
-   * "changed" }`. Needs `vault.write`. Errors: `READ_ONLY`, `NO_VERSION`, `CONFLICT`,
+   * is created. With `onlyIfUntouched`, a drawing the user changed since the import wrote it
+   * (anything moved, resized, retyped, restyled, reordered, added or deleted) is left alone and
+   * the call resolves `{ skipped: "changed" }`; a drawing written before the import stamped its
+   * elements resolves `{ skipped: "unknown" }` (nobody can tell, so it is never rewritten on a
+   * guess). Needs `vault.write`. Errors: `READ_ONLY`, `NO_VERSION`, `CONFLICT`,
    * `INVALID_PATH`, `NO_VAULT`.
    *
    * @since 0.33.0
@@ -201,7 +203,9 @@ export interface VaultApi {
     path: string,
     scene: object,
     options: { versionName: string; onlyIfUntouched?: boolean },
-  ): Promise<{ revision: string; created?: boolean } | { skipped: "changed" }>;
+  ): Promise<
+    { revision: string; created?: boolean } | { skipped: "changed" | "unknown" }
+  >;
   /**
    * The vault's link graph.
    *

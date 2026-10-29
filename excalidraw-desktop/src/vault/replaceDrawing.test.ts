@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { stampElements } from "../importUpgrade/stamp";
+
 import { replaceDrawing } from "./replaceDrawing";
 
 import type { ReplaceDeps } from "./replaceDrawing";
@@ -81,29 +83,37 @@ describe("replaceDrawing", () => {
     expect(files["a.excalidraw"]).toBe(scene([1]));
   });
 
-  it("onlyIfUntouched leaves an edited drawing alone; filled web pictures are not edits", async () => {
-    const edited = scene([1, 2]);
-    const filled = scene(
-      [1, 1],
-      [{ id: "p", type: "image", created: 9, link: "https://x/y.png" }],
+  it("onlyIfUntouched: edited is left alone, filled pictures are not edits, unstamped is unknown", async () => {
+    const stamped = (edit?: (els: Record<string, any>[]) => void) => {
+      const els: Record<string, any>[] = [
+        { id: "t", type: "text", x: 40, y: 40, originalText: "a" },
+        { id: "b", type: "rectangle", x: 40, y: 80, link: "https://x/y.png" },
+        { id: "l", type: "text", x: 48, y: 88, originalText: "Web image" },
+      ];
+      stampElements(els);
+      edit?.(els);
+      return JSON.stringify({ elements: els });
+    };
+    const edited = stamped((els) => (els[0].x = 99));
+    const filled = stamped((els) =>
+      els.splice(1, 2, { id: "p", type: "image", link: "https://x/y.png" }),
     );
     const { d, files } = deps({
       "e.excalidraw": edited,
       "f.excalidraw": filled,
+      "u.excalidraw": scene([1, 1]),
     });
-    expect(
-      await replaceDrawing(d, "e.excalidraw", "NEW", {
-        versionName: "x",
-        onlyIfUntouched: true,
-      }),
-    ).toEqual({ skipped: "changed" });
+    const only = { versionName: "x", onlyIfUntouched: true };
+    expect(await replaceDrawing(d, "e.excalidraw", "NEW", only)).toEqual({
+      skipped: "changed",
+    });
     expect(files["e.excalidraw"]).toBe(edited);
-    expect(
-      await replaceDrawing(d, "f.excalidraw", "NEW", {
-        versionName: "x",
-        onlyIfUntouched: true,
-      }),
-    ).toEqual({ revision: "r2" });
+    expect(await replaceDrawing(d, "u.excalidraw", "NEW", only)).toEqual({
+      skipped: "unknown",
+    });
+    expect(await replaceDrawing(d, "f.excalidraw", "NEW", only)).toEqual({
+      revision: "r2",
+    });
   });
 
   it("a missing drawing is created, with no version", async () => {

@@ -22,6 +22,7 @@ import {
 import { flowPages, pageGeometry } from "../../../../sdk/api/shared/pages";
 import { PluginApiError } from "../../../../sdk/api/shared/rules";
 import { checkVaultPath } from "../../../../sdk/api/shared/vaultPaths";
+import { stampElements } from "../../importUpgrade/stamp";
 import { buildPageItems, hashPageItemImages } from "../../sceneOps/pageText";
 import { getActiveScene } from "../../sceneOps/sceneBus";
 import { getWorkspaceBridge } from "../workspaceBridge";
@@ -83,6 +84,8 @@ const sceneJson = (
   pageCount: number,
   look?: ImportDrawingLook,
 ): string => {
+  // Every element written by an import carries its edit stamp (importUpgrade/stamp.ts, A-2).
+  stampElements(elements);
   const pageSetup = pageSetupFor(setup, pageCount);
   const { paperTheme, ...rest } = look ?? {};
   const appState = {

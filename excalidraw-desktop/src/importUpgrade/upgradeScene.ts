@@ -13,6 +13,7 @@ import {
 } from "../../../sdk/api/shared/markdownRoles";
 
 import { pageGeometryOf, reflowScene, overflows } from "./reflow";
+import { editState, stampElements } from "./stamp";
 
 import type { TextMeasure } from "./reflow";
 import type { ImportDrawingLook } from "../vault/newDrawingPaper";
@@ -194,6 +195,8 @@ export function upgradeScene(
   ) {
     return null;
   }
+  // An untouched import stays "untouched" after the app's own update (A-2): re-stamped below.
+  const wasUntouched = editState(scene) === "untouched";
   const paper = needsPaper(scene, t);
   if (paper) {
     const appState = { ...scene.appState };
@@ -262,6 +265,9 @@ export function upgradeScene(
         };
       }
     }
+  }
+  if (wasUntouched) {
+    stampElements(scene.elements);
   }
   return {
     json: JSON.stringify(scene, null, 2),

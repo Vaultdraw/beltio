@@ -9,6 +9,7 @@ import {
   SHOTS,
   trackErrors,
 } from "../helpers";
+import { stampElements } from "../../src/importUpgrade/stamp";
 import { rect, setupOf } from "../pageHelpers";
 
 // Family: files written by an older version still look and work right (toimprove #102).
@@ -374,6 +375,7 @@ const REIMPORT_SOURCE = {
     "Notes/Table note.md":
       "Line one\nLine two\n\n| Concept | Meaning |\n|---|---|\n| Paging | Pages of memory |",
     "Notes/Edited note.md": "Fresh text",
+    "Notes/Old note.md": "Fresh old text",
   },
 };
 
@@ -422,21 +424,26 @@ test("Re-import from its Markdown rebuilds an old import with a real table and i
   expect(errors).toEqual([]);
 });
 
-test("Re-import unchanged imported notes here leaves an edited import alone", async ({
+test("Re-import unchanged imported notes here leaves an edited import alone, and an old one it cannot judge", async ({
   page,
 }) => {
   const errors = trackErrors(page);
   await openVault(page, "?plugins=markdown-import");
   await page.waitForFunction(() => (window as any).__pluginsReady === true);
   await pickReimportSource(page);
+  // As the import writes them now: every element stamped (A-2).
+  const untouched = [{ ...text("Line one Line two", 60, 5), created: 1 }];
+  stampElements(untouched);
   const edited = [
     { ...text("Old text", 60, 5), created: 1 },
-    { ...text("my own words", 120, 5), created: 2 },
+    { ...text("my own words", 120, 5), created: 1 },
   ];
+  stampElements(edited);
+  edited[1].x += 30; // the user moved it: same `created`, which the old check trusted
   await seedRows(page, [
     {
       path: "Obsidian/Notes/Table note.excalidraw",
-      elements: [{ ...text("Line one Line two", 60, 5), created: 1 }],
+      elements: untouched,
       imported: true,
     },
     {
@@ -444,14 +451,21 @@ test("Re-import unchanged imported notes here leaves an edited import alone", as
       elements: edited,
       imported: true,
     },
+    {
+      // Imported before stamps: nobody can tell, so it is never rewritten on a guess.
+      path: "Obsidian/Notes/Old note.excalidraw",
+      elements: [{ ...text("Old import", 60, 5), created: 1 }],
+      imported: true,
+    },
   ]);
   // The plugin lists the vault through its own rows (native in the app; the browser stand-in
-  // keeps its own list), so the stand-in learns the two paths too.
+  // keeps its own list), so the stand-in learns the paths too.
   await page.evaluate(() => {
     const be = (window as any).__plugins.backend;
     for (const p of [
       "Obsidian/Notes/Table note.excalidraw",
       "Obsidian/Notes/Edited note.excalidraw",
+      "Obsidian/Notes/Old note.excalidraw",
     ]) {
       be.drawings[p] = { scene: { elements: [] }, revision: "r1" };
     }
@@ -467,11 +481,16 @@ test("Re-import unchanged imported notes here leaves an edited import alone", as
   await expect(
     page.getByText(/1 note was changed since the import/),
   ).toBeVisible();
+  await expect(
+    page.getByText(/1 note from an older import left as it was/),
+  ).toBeVisible();
   const kept = await readScene(page, "Obsidian/Notes/Edited note.excalidraw");
   expect(kept.elements.map((e: any) => e.text)).toEqual([
     "Old text",
     "my own words",
   ]);
+  const old = await readScene(page, "Obsidian/Notes/Old note.excalidraw");
+  expect(old.elements.map((e: any) => e.text)).toEqual(["Old import"]);
   const rebuilt = await readScene(page, "Obsidian/Notes/Table note.excalidraw");
   expect(
     rebuilt.elements.filter((e: any) => e.type === "line").length,

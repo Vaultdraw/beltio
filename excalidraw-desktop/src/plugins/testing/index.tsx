@@ -533,11 +533,13 @@ export async function boot(
         };
       }
       if (opts.onlyIfUntouched) {
-        const { untouchedSince } = await import(
-          "../../importUpgrade/recognise"
-        );
-        if (!untouchedSince(prev as never)) {
-          return { skipped: "changed" as const };
+        const { editState } = await import("../../importUpgrade/stamp");
+        const state = editState(prev);
+        if (state !== "untouched") {
+          return {
+            skipped:
+              state === "unknown" ? ("unknown" as const) : ("changed" as const),
+          };
         }
       }
       versions.push({ path, name: opts.versionName });

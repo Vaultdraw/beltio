@@ -43,6 +43,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **Import file takes BMP, ICO, AVIF and JFIF** even when the system gives no file type; a full favourites list says it is full instead of "Removed".
 - **`vaultdraw search --limit` checks its range (1 to 200)** instead of turning 0 into 1 result; a control socket path that is too long says so in plain words and names the setting that shortens it.
 - **A web page is no longer taken for an SVG picture** when it has a small inline icon (pasting such a link, or importing a note that points to one, now gives the "not a picture" box instead of a broken picture), and an SVG with a long comment or licence before its first tag is recognised.
+- **Re-import unchanged imported notes no longer rewrites notes you edited.** It used to miss moved, retyped, recoloured, resized and trimmed notes. The import now stamps each element it writes; any change you make (move, resize, retype, colour, font, delete, add, link, group, lock, reorder) marks the note as edited and it is left alone. Notes imported before this version cannot be told apart, so a folder or vault re-import leaves them as they are and says so; re-import one from its menu to update it. The re-import commands and menu items also show before the plugin has loaded.
+- **Re-import from a tab's menu rewrites the note of the tab you right-clicked**, not the active one; a picture written as a `data:` address with percent-encoding or extra parameters is read from the address.
 
 - **A 32 MiB drawing fits in one message of the control API and the MCP server.** The message cap is now 80 MiB, so a drawing that grows once it is escaped into JSON is no longer refused; a message over the cap says the limit in plain words.
 
