@@ -40,6 +40,7 @@ const { transforms, canvasBackgrounds } = vi.hoisted(() => ({
 }));
 
 vi.mock("@excalidraw/excalidraw", () => ({
+  setDisplayTextRoleColor: () => {},
   setDisplayColorTransform: (
     fn: ((c: string, d: boolean) => string) | null,
     canvasBackground: string | null = null,

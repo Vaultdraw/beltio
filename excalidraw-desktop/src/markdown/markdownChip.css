@@ -6,7 +6,7 @@
   height: 2rem;
   margin-inline-start: 0.5rem;
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: var(--vd-fs-small);
   line-height: 1;
   padding: 0 0.75rem;
   border-radius: 999px;
@@ -27,8 +27,8 @@
   color: var(--vault-accent-text, inherit);
 }
 .vault-markdown-chip:focus-visible {
-  outline: 2px solid var(--vault-ring, currentColor);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--vault-ring);
 }
 .vault-markdown-chip:disabled {
   cursor: default;

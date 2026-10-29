@@ -256,6 +256,19 @@ autosave_delay_ms = 500
 # Tick task checkboxes by clicking them in the reading view
 # toggle_tasks = true
 
+[markdown]
+# Markdown mode in new drawings: # and a space at a line start make a heading
+# typing = false
+# Heading sizes, times the text size, 0.5 to 8
+# h1_size = 2
+# h2_size = 1.5
+# h3_size = 1.25
+# h4_size = 1.125
+# h5_size = 1
+# h6_size = 1
+# Space between a heading and the text box Enter starts below it, in lines, 0 to 4
+# block_gap = 0.5
+
 [layout]
 # Show the header above the canvas (title, save status, History, Graph)
 # header = true
@@ -1710,7 +1723,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 154, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 162, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();

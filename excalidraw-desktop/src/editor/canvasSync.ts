@@ -59,6 +59,8 @@ const effectiveDisplay = (): {
 // Role colours (Markdown headings) follow the theme whether or not the canvas
 // syncs with it, held to contrast on the canvas actually shown.
 const STANDARD_CANVAS = "#ffffff";
+// Excalidraw's dark mode shows the white canvas inverted: #121212.
+const DARK_STANDARD_CANVAS = "#121212";
 let roleColorFor: {
   key: string;
   resolve: (role: string, isDark: boolean) => string | null;
@@ -73,9 +75,7 @@ const roleResolver = (
   if (roleColorFor?.key !== key) {
     const { variant } = themeSource;
     const light = buildRoleColor(variant, canvas ?? STANDARD_CANVAS);
-    const dark = canvas
-      ? light
-      : buildRoleColor(variant, invertColorForDarkMode(STANDARD_CANVAS));
+    const dark = canvas ? light : buildRoleColor(variant, DARK_STANDARD_CANVAS);
     roleColorFor = {
       key,
       resolve: (role, isDark) => (isDark ? dark : light)(role),

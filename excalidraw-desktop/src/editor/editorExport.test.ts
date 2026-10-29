@@ -27,6 +27,7 @@ const exportToBlob = vi.fn();
 const exportToSvg = vi.fn();
 
 vi.mock("@excalidraw/excalidraw", () => ({
+  setDisplayTextRoleColor: () => {},
   setDisplayColorTransform: (t: unknown) => setTransform(t),
   invertColorForDarkMode: (c: string) => c,
   exportToBlob: (o: unknown) => exportToBlob(o),
