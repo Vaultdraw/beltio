@@ -33,6 +33,8 @@ export const MAX_PAGE_ITEMS = 100_000;
 export const MAX_PAGE_COUNT = 500;
 const MAX_LINK = 2048;
 const MAX_LINE_HEIGHT = 10;
+/** A page item's `group` name: 1 to 64 letters, digits, `_`, `-`, `.` or `:` (as batch refs). */
+const GROUP_NAME = /^[A-Za-z0-9_.:-]{1,64}$/;
 const BAD_SCHEME = /^\s*(javascript|data|vbscript|file):/i;
 
 /** The editor's numeric font ids (packages/common FONT_FAMILY), pinned by mockParity.test.ts. */
@@ -138,6 +140,14 @@ export const checkPageItems = (items: unknown): readonly PageItem[] => {
       throw bad(`${at}.type must be "text", "rect", "line" or "image"`);
     }
     checkBox(it, at);
+    if (
+      it.group !== undefined &&
+      (typeof it.group !== "string" || !GROUP_NAME.test(it.group))
+    ) {
+      throw bad(
+        `${at}.group must be 1 to 64 letters, digits, "_", "-", "." or ":"`,
+      );
+    }
     switch (it.type) {
       case "text": {
         if (typeof it.text !== "string" || it.text.length > MAX_TEXT) {
@@ -198,6 +208,9 @@ export const checkPageItems = (items: unknown): readonly PageItem[] => {
         }
         break;
       case "line":
+        if (it.strong !== undefined && typeof it.strong !== "boolean") {
+          throw bad(`${at}.strong must be true or false`);
+        }
         break;
       case "image":
         if (typeof it.mimeType !== "string") {
@@ -266,6 +279,11 @@ export interface BuildPageOptions {
   id: () => string;
   seed: () => number;
   now: () => number;
+  /**
+   * Group name to the editor's group id. Pass the same map to every call of one
+   * drawing so a name used in two calls is one group; by default each call has its own.
+   */
+  groups?: Map<string, string>;
 }
 
 /** A built picture, as the editor's file store takes it. */
@@ -367,10 +385,20 @@ export const buildPageElements = (
   const elements: Record<string, unknown>[] = [];
   const files: BuiltFile[] = [];
   const seen = new Set<string>(known);
+  const groups = o.groups ?? new Map<string, string>();
+  const groupOf = (name: string): string => {
+    let id = groups.get(name);
+    if (!id) {
+      id = o.id();
+      groups.set(name, id);
+    }
+    return id;
+  };
   // A picture placeholder reads in the family of the text around it.
   const textFamily = items.find((i) => i.type === "text")?.fontFamily;
   for (const it of items) {
     const y = it.page * pitch + it.y;
+    const from = elements.length;
     switch (it.type) {
       case "text": {
         const el = textElement(
@@ -410,6 +438,7 @@ export const buildPageElements = (
         );
         Object.assign(el, {
           strokeColor: LINE_COLOR,
+          strokeWidth: it.strong ? 2 : 1,
           points: [
             [0, 0],
             [it.width, it.height],
@@ -471,6 +500,12 @@ export const buildPageElements = (
         // Only the box carries the link: a linked label drew a second link icon over the box's.
         elements.push(label);
         break;
+      }
+    }
+    if (it.group !== undefined) {
+      const groupId = groupOf(it.group);
+      for (let k = from; k < elements.length; k++) {
+        elements[k].groupIds = [groupId];
       }
     }
   }

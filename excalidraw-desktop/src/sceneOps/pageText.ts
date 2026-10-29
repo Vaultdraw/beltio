@@ -38,6 +38,8 @@ export const buildPageItems = (
     setup?: PageRequest;
     dataKey?: string;
     fileIds?: ReadonlyMap<object, string>;
+    /** Group name to group id, shared by every call of one drawing. */
+    groups?: Map<string, string>;
   },
   known: ReadonlySet<string> = new Set(),
 ): PageBuild => {

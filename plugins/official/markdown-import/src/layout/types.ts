@@ -24,6 +24,8 @@ export type PageItemText = {
   link?: string;
   /** At most 4 KiB as JSON, e.g. `{ heading: 2 }`. */
   data?: Record<string, unknown>;
+  /** Items with the same name are one group in the editor (a table moves as one). */
+  group?: string;
 };
 
 export type PageItemRect = {
@@ -35,6 +37,8 @@ export type PageItemRect = {
   height: number;
   fill: "code" | "quote" | "callout" | "table" | "none";
   stroke?: "none" | "thin";
+  /** Items with the same name are one group in the editor (a table moves as one). */
+  group?: string;
 };
 
 export type PageItemLine = {
@@ -44,6 +48,10 @@ export type PageItemLine = {
   y: number;
   width: number;
   height: number;
+  /** Twice the width: the rule under a table's header. */
+  strong?: boolean;
+  /** Items with the same name are one group in the editor (a table moves as one). */
+  group?: string;
 };
 
 export type PageItemImage = {

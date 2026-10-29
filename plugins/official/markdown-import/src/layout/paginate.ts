@@ -12,7 +12,7 @@
  * Entries are lines (a text block is one entry per wrapped line, so long
  * blocks split between pages by line) or whole items (images, rules).
  */
-import { CELL_PAD_X, CELL_PAD_Y } from "./tableGrid";
+import { CELL_PAD_Y } from "./tableGrid";
 
 import type { Role } from "./fonts";
 import type { Fill } from "./blocks";
@@ -90,6 +90,8 @@ export class Paginator {
   private keepUntil = -1;
   private current: Placed[] = [];
   private pageCount = 0;
+  /** Tables drawn so far: each table part's group name. */
+  private tables = 0;
 
   constructor(contentHeight: number, margins: PageMargins) {
     if (!(contentHeight > 0)) {
@@ -215,6 +217,8 @@ export class Paginator {
       grid.rowH[(last.entry.payload as { row: number }).row];
     const out: PageItem[] = [];
     const cols = grid.colX.length - 1;
+    // The table's part on this page moves as one: its own group.
+    const group = `table-${this.tables++}`;
     for (const { entry, y } of rows) {
       const r = (entry.payload as { row: number }).row;
       if (grid.header && r === 0) {
@@ -227,6 +231,7 @@ export class Paginator {
           height: grid.rowH[r],
           fill: "code",
           stroke: "none",
+          group,
         });
       }
     }
@@ -239,8 +244,10 @@ export class Paginator {
       height: y1 - y0,
       fill: "none",
       stroke: "thin",
+      group,
     });
-    for (const { y } of rows.slice(1)) {
+    for (const { entry, y } of rows.slice(1)) {
+      const r = (entry.payload as { row: number }).row;
       out.push({
         type: "line",
         page,
@@ -248,6 +255,9 @@ export class Paginator {
         y: top + y,
         width: grid.width,
         height: 0,
+        // The rule under the header is heavier, as the table plugin draws it: no bold text.
+        ...(grid.header && r === 1 ? { strong: true } : {}),
+        group,
       });
     }
     for (let c = 1; c < cols; c++) {
@@ -258,6 +268,7 @@ export class Paginator {
         y: y0,
         width: 0,
         height: y1 - y0,
+        group,
       });
     }
     const role = grid.role;
@@ -271,15 +282,16 @@ export class Paginator {
         const item: PageItemText = {
           type: "text",
           page,
-          x: x0 + grid.colX[c] + CELL_PAD_X,
+          x: x0 + grid.colX[c] + grid.padX,
           y: top + y + entry.offset + CELL_PAD_Y,
-          width: grid.colX[c + 1] - grid.colX[c] - 2 * CELL_PAD_X,
+          width: grid.colX[c + 1] - grid.colX[c] - 2 * grid.padX,
           height: lines.length * role.linePx,
           text: lines.join("\n"),
           fontSize: role.size,
           fontFamily: role.family,
           lineHeight: role.lineHeight,
           align: grid.align[c],
+          group,
         };
         out.push(item);
       }

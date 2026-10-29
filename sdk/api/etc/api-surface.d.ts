@@ -512,6 +512,7 @@ export interface PageTextItem {
     tone?: PageTextTone;
     link?: string;
     data?: Record<string, unknown>;
+    group?: string;
 }
 export interface PageRectItem {
     type: "rect";
@@ -522,6 +523,7 @@ export interface PageRectItem {
     height: number;
     fill: PageRectFill;
     stroke?: "none" | "thin";
+    group?: string;
 }
 export interface PageLineItem {
     type: "line";
@@ -530,6 +532,8 @@ export interface PageLineItem {
     y: number;
     width: number;
     height: number;
+    strong?: boolean;
+    group?: string;
 }
 export interface PageImageItem {
     type: "image";
@@ -542,6 +546,7 @@ export interface PageImageItem {
     bytes?: Uint8Array;
     alt?: string;
     target: string;
+    group?: string;
 }
 export type PageItem = PageTextItem | PageRectItem | PageLineItem | PageImageItem;
 export interface CreateDocumentOptions {

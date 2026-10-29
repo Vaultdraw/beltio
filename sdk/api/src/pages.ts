@@ -185,6 +185,8 @@ export interface PageTextItem {
   link?: string;
   /** The plugin's own data on the element (at most 4 KiB as JSON), as `NewElement.data`. @since 0.9.0 */
   data?: Record<string, unknown>;
+  /** Items with the same name become one group in the editor (they select and move as one; double-click edits a member). 1 to 64 letters, digits, `_`, `-`, `.` or `:`. @since 0.32.0 */
+  group?: string;
 }
 
 /**
@@ -209,6 +211,8 @@ export interface PageRectItem {
   fill: PageRectFill;
   /** Default "none". @since 0.9.0 */
   stroke?: "none" | "thin";
+  /** Items with the same name become one group in the editor (they select and move as one; double-click edits a member). 1 to 64 letters, digits, `_`, `-`, `.` or `:`. @since 0.32.0 */
+  group?: string;
 }
 
 /**
@@ -229,6 +233,10 @@ export interface PageLineItem {
   width: number;
   /** @since 0.9.0 */
   height: number;
+  /** A heavier line (twice the width), e.g. the rule under a table's header: Excalidraw text has no bold. @since 0.32.0 */
+  strong?: boolean;
+  /** Items with the same name become one group in the editor (they select and move as one; double-click edits a member). 1 to 64 letters, digits, `_`, `-`, `.` or `:`. @since 0.32.0 */
+  group?: string;
 }
 
 /**
@@ -259,6 +267,8 @@ export interface PageImageItem {
   alt?: string;
   /** Where the picture came from (the placeholder's link). @since 0.9.0 */
   target: string;
+  /** Items with the same name become one group in the editor (they select and move as one; double-click edits a member). 1 to 64 letters, digits, `_`, `-`, `.` or `:`. @since 0.32.0 */
+  group?: string;
 }
 
 /**

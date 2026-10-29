@@ -223,6 +223,8 @@ export function createPagesApi(
     let mounted = false;
     const mountDeadline = Date.now() + MOUNT_WAIT_MS;
     const idle: (() => void)[] = [];
+    // One group name is one group across every append of this document.
+    const groups = new Map<string, string>();
     const settle = () => {
       idle.splice(0).forEach((r) => r());
     };
@@ -259,7 +261,7 @@ export function createPagesApi(
       for (const chunk of chunks) {
         const built = buildPageItems(
           chunk.items,
-          { setup, dataKey, fileIds: chunk.fileIds },
+          { setup, dataKey, fileIds: chunk.fileIds, groups },
           known,
         );
         elements.push(...built.elements);
@@ -361,12 +363,13 @@ export function createPagesApi(
     const elements: unknown[] = [];
     const files: { id: string }[] = [];
     const known = new Set<string>();
+    const groups = new Map<string, string>();
     let pageCount = 1;
     let done = false;
     const intake = makeIntake((chunk) => {
       const built = buildPageItems(
         chunk.items,
-        { setup, dataKey, fileIds: chunk.fileIds },
+        { setup, dataKey, fileIds: chunk.fileIds, groups },
         known,
       );
       elements.push(...built.elements);

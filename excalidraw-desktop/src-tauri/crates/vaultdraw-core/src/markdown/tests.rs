@@ -372,3 +372,19 @@ fn a_picture_inside_a_list_item_keeps_its_place() {
         .collect();
     assert_eq!(kinds, vec!["item:one", "img:a.png", "p:two", "item:", "img:b.png", "item:task"]);
 }
+
+/// One table of Markdown tables for the Rust parser and its TypeScript stand-in
+/// (`sdk/api/shared/markdown.ts`): cell text is plain, inline marks dropped, `\|` a pipe.
+#[test]
+fn table_cells_match_the_shared_table() {
+    let cases: Vec<(String, Vec<String>, Vec<Vec<String>>)> =
+        serde_json::from_str(include_str!("table_cell_cases.json")).unwrap();
+    for (md, header, rows) in cases {
+        let doc = parse(&md);
+        let got = doc.blocks.iter().find_map(|b| match &b.kind {
+            BlockKind::Table { header, rows, .. } => Some((header.clone(), rows.clone())),
+            _ => None,
+        });
+        assert_eq!(got, Some((header, rows)), "{md:?}");
+    }
+}

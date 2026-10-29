@@ -1,0 +1,9 @@
+[
+  ["| Term | Meaning |\n|---|---|\n| **KVM** | a *module* in the __host__ kernel |", ["Term", "Meaning"], [["KVM", "a module in the host kernel"]]],
+  ["| a |\n|---|\n| `x \\| y` |", ["a"], [["x | y"]]],
+  ["| a |\n|---|\n| one \\| two |", ["a"], [["one | two"]]],
+  ["| a | b |\n|---|---|\n|  | x |", ["a", "b"], [["", "x"]]],
+  ["| **Bold head** | `code` |\n|:--|--:|\n| ~~old~~ new | 1,024 |", ["Bold head", "code"], [["old new", "1,024"]]],
+  ["| a |\n|---|\n| see [the docs](https://example.org) |", ["a"], [["see the docs"]]],
+  ["| x |\n|:-:|\n| snake_case_name and 2 * 3 |", ["x"], [["snake_case_name and 2 * 3"]]]
+]

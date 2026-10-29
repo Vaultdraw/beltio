@@ -14,8 +14,11 @@ import type { Wrapper } from "./wrap";
 export const CELL_PAD_X = 8;
 /** Room above and below a cell's text. */
 export const CELL_PAD_Y = 6;
-/** A column is never narrower than this (padding included). */
+/** A column is never narrower than this (padding included), unless the table has so many columns
+ * that they cannot all have it; then every column gets an equal share and thinner padding. */
 const MIN_COL = 3 * CELL_PAD_X;
+/** The thinnest cell padding, for tables with very many columns. */
+const MIN_PAD_X = 2;
 
 export type CellAlign = "left" | "center" | "right";
 
@@ -28,6 +31,8 @@ export interface TableGrid {
   lines: string[][][];
   /** Row heights, padding included. */
   rowH: number[];
+  /** Room left and right of each cell's text (thinner for tables with very many columns). */
+  padX: number;
   /** The first row is a header (shaded). */
   header: boolean;
   role: Role;
@@ -61,17 +66,33 @@ export const gridOf = (
       }
     });
   }
-  const want = natural.map((w) => Math.ceil(w) + 2 * CELL_PAD_X);
+  // So many columns that even the narrowest ones overflow: equal shares, thinner padding.
+  const share = Math.floor(maxWidth / cols);
+  const minCol = Math.min(MIN_COL, share);
+  const padX =
+    minCol < MIN_COL ? Math.max(MIN_PAD_X, Math.floor(minCol / 6)) : CELL_PAD_X;
+  const want = natural.map((w) => Math.max(minCol, Math.ceil(w) + 2 * padX));
   const least = word.map((w, c) =>
-    Math.min(want[c], Math.max(MIN_COL, Math.ceil(w) + 2 * CELL_PAD_X)),
+    Math.min(want[c], Math.max(minCol, Math.ceil(w) + 2 * padX)),
   );
   const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
   let colW: number[];
   if (sum(want) <= maxWidth) {
-    colW = want.map((w) => Math.max(w, MIN_COL));
+    colW = want;
   } else if (sum(least) >= maxWidth) {
+    // Even the longest words do not fit: shrink every column by the same factor (never under
+    // the minimum, which fits by construction); long words then break by character.
     const k = maxWidth / sum(least);
-    colW = least.map((w) => Math.max(MIN_COL, Math.floor(w * k)));
+    colW = least.map((w) => Math.max(minCol, Math.floor(w * k)));
+    let over = sum(colW) - maxWidth;
+    for (let c = 0; over > 0 && c < cols; c = (c + 1) % cols) {
+      if (colW[c] > minCol) {
+        colW[c]--;
+        over--;
+      } else if (colW.every((w) => w <= minCol)) {
+        break;
+      }
+    }
   } else {
     const spare = maxWidth - sum(least);
     const wish = want.map((w, c) => w - least[c]);
@@ -84,7 +105,7 @@ export const gridOf = (
   );
   const lines = rows.map((r) =>
     r.map((cell, c) =>
-      cell === "" ? [] : wrapper.lines(cell, role, colW[c] - 2 * CELL_PAD_X),
+      cell === "" ? [] : wrapper.lines(cell, role, colW[c] - 2 * padX),
     ),
   );
   const rowH = lines.map(
@@ -99,6 +120,7 @@ export const gridOf = (
     ) as CellAlign[],
     lines,
     rowH,
+    padX,
     header: head.length > 0,
     role,
   };

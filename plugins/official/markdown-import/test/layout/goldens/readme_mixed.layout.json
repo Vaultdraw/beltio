@@ -162,7 +162,8 @@
      "width": 145,
      "height": 32,
      "fill": "code",
-     "stroke": "none"
+     "stroke": "none",
+     "group": "table-0"
     },
     {
      "type": "rect",
@@ -172,7 +173,8 @@
      "width": 145,
      "height": 64,
      "fill": "none",
-     "stroke": "thin"
+     "stroke": "thin",
+     "group": "table-0"
     },
     {
      "type": "line",
@@ -180,7 +182,9 @@
      "x": 48,
      "y": 486.8,
      "width": 145,
-     "height": 0
+     "height": 0,
+     "strong": true,
+     "group": "table-0"
     },
     {
      "type": "line",
@@ -188,7 +192,8 @@
      "x": 115,
      "y": 454.8,
      "width": 0,
-     "height": 64
+     "height": 64,
+     "group": "table-0"
     },
     {
      "type": "text",
@@ -201,7 +206,8 @@
      "fontSize": 16,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
-     "align": "left"
+     "align": "left",
+     "group": "table-0"
     },
     {
      "type": "text",
@@ -214,7 +220,8 @@
      "fontSize": 16,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
-     "align": "left"
+     "align": "left",
+     "group": "table-0"
     },
     {
      "type": "text",
@@ -227,7 +234,8 @@
      "fontSize": 16,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
-     "align": "left"
+     "align": "left",
+     "group": "table-0"
     },
     {
      "type": "text",
@@ -240,7 +248,8 @@
      "fontSize": 16,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
-     "align": "left"
+     "align": "left",
+     "group": "table-0"
     },
     {
      "type": "line",

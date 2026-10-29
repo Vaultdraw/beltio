@@ -45,6 +45,7 @@ if (ctx.host.has("statusBar")) ctx.statusBar.set("clock", { text });
 | 0.28.0 | `ctx.clipboard` (`readText`, `onPaste`), permission `clipboard`, activation `onPaste`, `ctx.scene.currentTextStyle()`, toast action buttons (`ctx.ui.toast(message, { action })`) | `ctx.host.has("clipboard")` |
 | 0.31.0 | `ctx.network` (`askImages`, `fetchImage`), permission `network.images`: download the pictures of web pages after the user allows it | `ctx.host.has("network")` |
 | 0.30.0 | one notice design for plugins: `ctx.ui.toast` options `detail`, `progress` (bar and count), `actions` (up to two buttons), `id` (update in place), `kind` | `ctx.host.revision >= "0.30.0"` |
+| 0.32.0 | page items: `group` (one editor group per name, across appends) and `strong` lines | `ctx.host.revision >= "0.32.0"` |
 
 An older app refuses a `plugin.toml` with a table it does not know (`status_bar`, `views`, `menus`, `toolbar`, `tools`, `shapes`, `methods`), so set `min_app` to the app version that ships the revision you use; `vaultdraw-plugin check` warns when it is lower.
 

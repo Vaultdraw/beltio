@@ -197,6 +197,59 @@ describe("pages.createDocument", () => {
     });
   });
 
+  it("items with one group name are one group across appends; a strong line is twice as wide", async () => {
+    const p = await bootPages();
+    const doc = await ctx.pages.createDocument({ name: "N" });
+    const line = (y: number, extra: Partial<PageItem> = {}): PageItem =>
+      ({
+        type: "line",
+        page: 0,
+        x: 40,
+        y,
+        width: 200,
+        height: 0,
+        ...extra,
+      } as PageItem);
+    doc.append(
+      [
+        text(0, 0, "cell a", { group: "table-0" }),
+        line(30, { group: "table-0", strong: true }),
+        text(0, 60, "outside"),
+      ],
+      1,
+    );
+    await p.flush();
+    doc.append(
+      [
+        text(0, 90, "cell b", { group: "table-0" }),
+        line(120, { group: "table-1" }),
+      ],
+      1,
+    );
+    await p.flush();
+    const live = p.scene.live() as unknown as {
+      text?: string;
+      type: string;
+      groupIds: string[];
+      strokeWidth: number;
+    }[];
+    const [a, rule, outside, b, other] = live;
+    expect(a.groupIds).toHaveLength(1);
+    expect(b.groupIds).toEqual(a.groupIds);
+    expect(rule.groupIds).toEqual(a.groupIds);
+    expect(outside.groupIds).toEqual([]);
+    expect(other.groupIds).toHaveLength(1);
+    expect(other.groupIds).not.toEqual(a.groupIds);
+    expect([rule.strokeWidth, other.strokeWidth]).toEqual([2, 1]);
+    expect(() =>
+      doc.append([text(0, 0, "x", { group: "has space" })], 1),
+    ).toThrow(/group/);
+    expect(() => doc.append([line(0, { strong: "yes" as never })], 1)).toThrow(
+      /strong/,
+    );
+    await doc.finish();
+  });
+
   it("refuses invalid items and page counts with INVALID_ARGUMENT, queuing nothing", async () => {
     const p = await bootPages();
     const doc = await ctx.pages.createDocument({ name: "N" });

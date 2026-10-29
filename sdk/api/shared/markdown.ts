@@ -74,12 +74,36 @@ const withSpans = <T extends { text: string }>(
 
 const IMAGE_NAME = /\.(png|jpe?g|gif|webp|svg|avif|bmp|ico)$/i;
 
+/**
+ * A cell's plain text, as the Rust parser gives it: code spans keep their text, links their
+ * label, and bold, italic and strikethrough marks are dropped (`_` inside a word stays).
+ * Pinned with the Rust parser by `vaultdraw-core/src/markdown/table_cell_cases.json`.
+ */
+export const plainCell = (cell: string): string => {
+  const code: string[] = [];
+  return (
+    cell
+      .replace(/\\\|/g, "|")
+      .replace(
+        /`([^`]*)`/g,
+        (_, c: string) => `\u0000${code.push(c) - 1}\u0000`,
+      )
+      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/(\*\*|__|~~)(?=\S)(.*?\S)\1/g, "$2")
+      .replace(/(^|[^\w*])\*(?=\S)(.*?\S)\*(?![\w*])/g, "$1$2")
+      .replace(/(^|[^\w])_(?=\S)(.*?\S)_(?!\w)/g, "$1$2")
+      // eslint-disable-next-line no-control-regex
+      .replace(/\u0000(\d+)\u0000/g, (_, i: string) => code[Number(i)].trim())
+      .trim()
+  );
+};
+
 const cells = (line: string): string[] =>
   line
     .trim()
     .replace(/^\||\|$/g, "")
     .split(/(?<!\\)\|/)
-    .map((c) => c.replace(/\\\|/g, "|").trim());
+    .map(plainCell);
 
 /** A pipe table or a whole-paragraph image (`![[a.png|300]]`, `![alt](a b.png)`), as the real parser reports them. */
 const tableOrImage = (

@@ -763,10 +763,10 @@ The plugin lays the content out (wrapped lines, boxes, rules, pictures) and hand
 type PageItem =
   | { type: "text"; page; x; y; width; height; text: string; fontSize: number; fontFamily: FontFamilyName;
       lineHeight: number; align?: "left" | "center" | "right"; tone?: "normal" | "muted" | "code" | "link";
-      link?: string; data?: Record<string, unknown> }      // data at most 4 KiB as JSON, under the plugin's data key
-  | { type: "rect"; page; x; y; width; height; fill: "code" | "quote" | "callout" | "table" | "none"; stroke?: "none" | "thin" }
-  | { type: "line"; page; x; y; width; height }            // from (x, y) to (x + width, y + height)
-  | { type: "image"; page; x; y; width; height; mimeType: string; bytes?: Uint8Array; alt?: string; target: string };
+      link?: string; data?: Record<string, unknown>; group?: string } // data at most 4 KiB as JSON, under the plugin's data key
+  | { type: "rect"; page; x; y; width; height; fill: "code" | "quote" | "callout" | "table" | "none"; stroke?: "none" | "thin"; group?: string }
+  | { type: "line"; page; x; y; width; height; strong?: boolean; group?: string } // from (x, y) to (x + width, y + height)
+  | { type: "image"; page; x; y; width; height; mimeType: string; bytes?: Uint8Array; alt?: string; target: string; group?: string };
 ```
 
 | Rule | Limit |
@@ -775,6 +775,7 @@ type PageItem =
 | `page` | a whole number, 0 to 499; `pageCount` 1 to 500 |
 | `text` | at most 10,000 characters; `fontSize` 1 to 1000; `lineHeight` as `ctx.text.lineHeight` gives it |
 | `link` and `target` | at most 2,048 characters; `javascript:`, `data:`, `vbscript:` and `file:` are refused |
+| `group` (since 0.32.0) | 1 to 64 letters, digits, `_`, `-`, `.` or `:`. Items with the same name become one group, across every `append` of a document; `strong` (since 0.32.0) draws a line twice as wide |
 | `image.bytes` | at most 10 MiB, PNG, JPEG, GIF, WebP or SVG, and the bytes must look like `mimeType`. Without bytes the item becomes a box with the `alt` text, linked to `target` |
 
 A bad item fails the whole call with `INVALID_ARGUMENT` (naming the item), and nothing of that call is applied.
