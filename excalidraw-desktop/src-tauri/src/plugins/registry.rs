@@ -104,23 +104,12 @@ pub(crate) async fn plugin_registry_cached() -> Result<Option<cat::CatalogueInde
     theme_install::blocking(|d| Ok(cat::cached_for(&d, KIND))).await
 }
 
-/// The list address the user set (`plugins.registry_url`), or the default. Rust reads it itself, so a
-/// script in the page cannot choose which address this command fetches.
+/// The list address from `config.toml` (`plugins.registry_url`), or the default. Rust reads it itself
+/// and only from `config.toml`: neither the page's argument nor `overrides.toml` (which the page can
+/// write) can choose which address this command fetches.
 fn configured_url(dirs: &config::Dirs) -> Result<String> {
     let loaded = config::load_settings_in(dirs)?;
-    let value = serde_json::to_value(&loaded).map_err(|e| err("INTERNAL", e.to_string()))?;
-    Ok(registry_url_from(value.get("config")))
-}
-
-fn registry_url_from(config: Option<&serde_json::Value>) -> String {
-    config
-        .and_then(|c| c.get("plugins"))
-        .and_then(|p| p.get("registry_url"))
-        .and_then(|u| u.as_str())
-        .map(str::trim)
-        .filter(|u| !u.is_empty())
-        .unwrap_or(DEFAULT_URL)
-        .to_owned()
+    Ok(network::list_address(&loaded.layers, "plugins", "registry_url").unwrap_or_else(|| DEFAULT_URL.to_owned()))
 }
 
 /// Fetches and caches the plugins list. The page's address (`_url`) is ignored: see `configured_url`.

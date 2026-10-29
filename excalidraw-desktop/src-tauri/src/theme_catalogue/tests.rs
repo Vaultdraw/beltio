@@ -170,3 +170,14 @@ fn preview_cache_evicts_the_least_recently_used() {
     assert!(!file("b").exists(), "b is the least recently used");
     assert!(file("c").exists());
 }
+
+#[test]
+fn the_themes_list_address_comes_from_config_toml_only() {
+    let tmp = tempdir().unwrap();
+    let d = dirs_in(tmp.path(), Some("[themes]\nindex_url = \"https://example.com/my/themes.json\"\n"));
+    assert_eq!(configured_url(&d).unwrap(), "https://example.com/my/themes.json");
+    let d = dirs_in(&tmp.path().join("page"), Some(""));
+    fs::create_dir_all(&d.state).unwrap();
+    fs::write(d.state.join("overrides.toml"), "[themes]\nindex_url = \"https://raw.githubusercontent.com/evil/x/main/index.json\"\n").unwrap();
+    assert_eq!(configured_url(&d).unwrap(), DEFAULT_INDEX_URL, "an address in overrides.toml is ignored");
+}

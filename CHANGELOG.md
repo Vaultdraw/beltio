@@ -20,6 +20,9 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 ### Fixed
 
 - **Import file takes BMP, ICO, AVIF and JFIF** even when the system gives no file type; a full favourites list says it is full instead of "Removed".
+
+- **The community plugin and theme list addresses come from `config.toml` only.** `plugins.registry_url` and `themes.index_url` are no longer read from the Settings file (`overrides.toml`), so nothing in the page can point the list at another GitHub repository; Settings and scripts can no longer write them.
+
 - **Notes and Obsidian Excalidraw files can be renamed, moved and moved to the Trash from the file tree**, from the right-click menu, the keyboard and by dragging, like drawings. The extension is kept.
 
 - **New drawings and drawings from a template take the next free name** ("Untitled", "Untitled 1"), like Obsidian, instead of a number from the clock that could clash.

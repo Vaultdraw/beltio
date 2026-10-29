@@ -118,6 +118,15 @@ pub(crate) fn cached_for(dirs: &config::Dirs, kind: Kind) -> Option<CatalogueInd
     Some(CatalogueIndex { json, sha256: meta.sha256, fetched_at: meta.fetched_at, url: meta.url })
 }
 
+/// Used when `themes.index_url` is not set (the same address as `DEFAULT_THEMES_INDEX_URL` in preferences.ts).
+const DEFAULT_INDEX_URL: &str = "https://raw.githubusercontent.com/Vaultdraw/themes/main/index.json";
+
+/// The community themes list address: `themes.index_url` from `config.toml` only, or the default.
+fn configured_url(dirs: &config::Dirs) -> Result<String> {
+    let loaded = config::load_settings_in(dirs)?;
+    Ok(network::list_address(&loaded.layers, "themes", "index_url").unwrap_or_else(|| DEFAULT_INDEX_URL.to_owned()))
+}
+
 pub(crate) fn index_in(dirs: &config::Dirs, url: &str, max_bytes: u64) -> Result<CatalogueIndex> {
     index_for(dirs, THEMES, url, max_bytes)
 }
@@ -216,8 +225,9 @@ pub(crate) async fn theme_catalogue_cached() -> Result<Option<CatalogueIndex>> {
 }
 
 #[tauri::command]
-pub(crate) async fn theme_catalogue_index(url: String, max_bytes: u64) -> Result<CatalogueIndex> {
-    theme_install::blocking(move |d| index_in(&d, &url, max_bytes)).await
+pub(crate) async fn theme_catalogue_index(_url: Option<String>, max_bytes: u64) -> Result<CatalogueIndex> {
+    // The page's address is ignored: `themes.index_url` is read from config.toml only (`configured_url`).
+    theme_install::blocking(move |d| index_in(&d, &configured_url(&d)?, max_bytes)).await
 }
 
 #[tauri::command]

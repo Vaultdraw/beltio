@@ -71,6 +71,18 @@ pub(crate) fn refuse_consent_grants(changes: &[config::LayerChange]) -> Result<(
     };
     let empty = |v: &Value| matches!(v, Value::Null) || matches!(v, Value::Array(a) if a.is_empty());
     for change in changes {
+        // Where the lists come from is read from config.toml only too (see `list_address`).
+        if let Some((section, key)) = LIST_ADDRESS_KEYS.iter().find(|(s, k)| {
+            change.key == format!("{s}.{k}")
+                || (change.key == *s && matches!(&change.value, Value::Object(f) if f.get(*k).is_some_and(|v| !matches!(v, Value::Null))))
+        }) {
+            if !matches!(change.value, Value::Null) {
+                return Err(err(
+                    "CONSENT_REQUIRED",
+                    format!("`{section}.{key}` can only be edited by hand in config.toml"),
+                ));
+            }
+        }
         if change.key == "network.allowed_hosts" && !empty(&change.value) {
             return Err(hosts_err());
         }
@@ -480,6 +492,22 @@ pub(crate) fn hosts_from_config_toml(layers: &[config::LayerInfo]) -> Vec<String
         .unwrap_or_default()
 }
 
+/// The settings that say where a community list is downloaded from. Like `allowed_hosts` they are
+/// read from `config.toml` only, so a script in the page cannot point the download elsewhere.
+const LIST_ADDRESS_KEYS: [(&str, &str); 2] = [("plugins", "registry_url"), ("themes", "index_url")];
+
+/// `[section] key` as a text from `config.toml` only (never `overrides.toml`); `None` when unset or blank.
+pub(crate) fn list_address(layers: &[config::LayerInfo], section: &str, key: &str) -> Option<String> {
+    layers
+        .iter()
+        .find(|l| l.kind == "config")
+        .and_then(|l| l.config.as_ref())
+        .and_then(|c| c.get(section)?.get(key)?.as_str())
+        .map(str::trim)
+        .filter(|u| !u.is_empty())
+        .map(str::to_owned)
+}
+
 fn configured_hosts() -> Vec<String> {
     config::resolve_dirs()
         .and_then(|d| config::load_settings_in(&d))
@@ -638,6 +666,35 @@ mod tests {
             assert_eq!(refuse_consent_grants(&[c]).unwrap_err().code, "CONSENT_REQUIRED");
         }
         assert!(refuse_consent_grants(&[change("network.allowed_hosts", Value::Null)]).is_ok(), "clearing is fine");
+    }
+
+    #[test]
+    fn security_list_addresses_come_from_config_toml_not_overrides() {
+        let layer = |kind: &'static str, config: Option<serde_json::Value>| config::LayerInfo {
+            id: 0,
+            kind,
+            name: kind.into(),
+            path: String::new(),
+            status: "ok",
+            error: None,
+            config,
+            from: None,
+        };
+        for (section, key) in LIST_ADDRESS_KEYS {
+            let mine = serde_json::json!({ section: { key: " https://mine.example/i.json " } });
+            let page = serde_json::json!({ section: { key: "https://raw.githubusercontent.com/evil/x/main/i.json" } });
+            let layers = vec![layer("config", Some(mine)), layer("overrides", Some(page.clone()))];
+            assert_eq!(list_address(&layers, section, key).as_deref(), Some("https://mine.example/i.json"));
+            assert_eq!(list_address(&[layer("overrides", Some(page))], section, key), None, "{section}.{key}: overrides never count");
+            assert_eq!(list_address(&[layer("config", Some(serde_json::json!({ section: { key: "  " } })))], section, key), None);
+            // The page may not write it either (clearing is fine).
+            let change = |k: &str, v: Value| config::LayerChange { key: k.into(), value: v, default: None };
+            let evil = serde_json::json!("https://raw.githubusercontent.com/evil/x/main/i.json");
+            assert_eq!(refuse_consent_grants(&[change(&format!("{section}.{key}"), evil.clone())]).unwrap_err().code, "CONSENT_REQUIRED");
+            assert_eq!(refuse_consent_grants(&[change(section, serde_json::json!({ key: evil }))]).unwrap_err().code, "CONSENT_REQUIRED");
+            assert!(refuse_consent_grants(&[change(&format!("{section}.{key}"), Value::Null)]).is_ok());
+            assert!(refuse_consent_grants(&[change(section, serde_json::json!({"other": 1}))]).is_ok());
+        }
     }
 
     #[test]

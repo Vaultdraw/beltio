@@ -133,6 +133,11 @@ fn the_list_address_comes_from_the_settings_not_the_page() {
     assert_eq!(configured_url(&d).unwrap(), "https://example.com/my/index.json");
     let d = dirs_in(&tmp.path().join("other"), Some(""));
     assert_eq!(configured_url(&d).unwrap(), DEFAULT_URL, "unset means the default");
-    assert_eq!(registry_url_from(Some(&serde_json::json!({"plugins": {"registry_url": "  "}}))), DEFAULT_URL);
-    assert_eq!(registry_url_from(Some(&serde_json::json!({"plugins": {"registry_url": 5}}))), DEFAULT_URL);
+    // overrides.toml is the page's file: it never chooses the address.
+    let d = dirs_in(&tmp.path().join("page"), Some(""));
+    fs::create_dir_all(&d.state).unwrap();
+    fs::write(d.state.join("overrides.toml"), "[plugins]\nregistry_url = \"https://raw.githubusercontent.com/evil/x/main/index.json\"\n").unwrap();
+    assert_eq!(configured_url(&d).unwrap(), DEFAULT_URL, "an address in overrides.toml is ignored");
+    let d = dirs_in(&tmp.path().join("blank"), Some("[plugins]\nregistry_url = \"  \"\n"));
+    assert_eq!(configured_url(&d).unwrap(), DEFAULT_URL, "blank means the default");
 }
