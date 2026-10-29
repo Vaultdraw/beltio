@@ -478,3 +478,79 @@ test("Re-import unchanged imported notes here leaves an edited import alone", as
   ).toBeGreaterThanOrEqual(2);
   expect(errors).toEqual([]);
 });
+
+// toimprove #110: a note the update cannot recognise as an import (changed since) is listed with
+// the reason, and "Update to my theme and font anyway" on its menu updates just that note.
+test("notes the update left alone are listed, and Update anyway updates one", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page);
+  const dialog = await settings(page);
+  await dialog.getByRole("tab", { name: "Appearance", exact: true }).click();
+  await dialog
+    .getByRole("group", { name: "Mode" })
+    .getByRole("button", { name: "Dark" })
+    .click();
+  await page.keyboard.press("Escape");
+  const at = (id: string, y: number, created: number) => ({
+    ...text(id, y, 5, { x: 56 }),
+    created,
+  });
+  await seedRows(page, [
+    {
+      // The Obsidian import's report marks "Obsidian" as an imported folder.
+      path: "Obsidian/Import report.excalidraw",
+      elements: [at("Import report: Obsidian", 56, 7)],
+      imported: true,
+    },
+    {
+      // A poem imported without headings (no mark), unchanged: recognised by its shape.
+      path: "Obsidian/Poem.excalidraw",
+      elements: [at("Roses are red", 56, 7), at("Violets are blue", 86, 7)],
+      imported: true,
+    },
+    {
+      // Imported, then the owner added a line: no longer recognisable, so it is listed.
+      path: "Obsidian/Edited.excalidraw",
+      elements: [at("Imported line", 56, 7), at("My own line", 86, 99)],
+      imported: true,
+    },
+  ]);
+  await page.keyboard.press("Meta+Shift+p");
+  await page.keyboard.type("Update imported notes to my theme");
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByText("Updated 2 imported notes to your theme and font"),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("1 note was left as it was")).toBeVisible();
+  await page.getByRole("button", { name: "View list", exact: true }).click();
+  const list = page.getByRole("dialog", {
+    name: "Imported notes left as they were",
+  });
+  await expect(list).toBeVisible();
+  await expect(list).toContainText("Obsidian/Edited");
+  await expect(list).toContainText("changed after the import, or made by hand");
+  await page.keyboard.press("Escape");
+  await expect(list).toHaveCount(0);
+  expect(
+    (await readScene(page, "Obsidian/Edited.excalidraw")).appState.pageSetup
+      .paperTheme,
+  ).toBe("normal");
+
+  await treeItem(page, "Obsidian").click();
+  await treeItem(page, "Edited").click({ button: "right" });
+  await page
+    .getByRole("menuitem", { name: "Update to my theme and font anyway" })
+    .click();
+  await expect(
+    page.getByText("Updated this note to your theme and font"),
+  ).toBeVisible({ timeout: 20_000 });
+  const edited = await readScene(page, "Obsidian/Edited.excalidraw");
+  expect(edited.appState.pageSetup.paperTheme).not.toBe("normal");
+  expect(edited.elements.map((e: any) => e.text)).toEqual([
+    "Imported line",
+    "My own line",
+  ]);
+  expect(errors).toEqual([]);
+});

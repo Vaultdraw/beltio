@@ -137,6 +137,7 @@ export function useImportUpgrade(o: Options): void {
           live.current.activeDoc?.path
         : undefined;
       if (one && !file) {
+        toastStore.push({ key: KEY, message: "Open a note first" });
         return;
       }
       const { vault, repository, history, win, flush } = live.current;

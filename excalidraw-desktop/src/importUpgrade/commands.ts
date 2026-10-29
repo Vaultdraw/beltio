@@ -18,6 +18,7 @@ export const IMPORT_UPGRADE_COMMANDS: CommandDefinition[] = [
     title: "Markdown: Update this note to my theme and font anyway",
     category: "Markdown",
     keys: { default: [] },
-    when: ["vaultOpen", "writable", "drawingOpen"],
+    // Not "drawingOpen": the file list's menu runs it for a drawing that is not open.
+    when: ["vaultOpen", "writable"],
   },
 ];
