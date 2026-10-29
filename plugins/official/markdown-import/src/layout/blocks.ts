@@ -213,7 +213,9 @@ function* mapBlocks(
           keepWithNext: true,
           splittable: false,
           // The role names what the theme colours (markdownRoles.ts); only with its colour.
-          data: tone ? { heading: level, role: `h${level}` } : { heading: level },
+          data: tone
+            ? { heading: level, role: `h${level}` }
+            : { heading: level },
           ...(level <= 2 ? { cut: level as 1 | 2 } : {}),
         });
         break;

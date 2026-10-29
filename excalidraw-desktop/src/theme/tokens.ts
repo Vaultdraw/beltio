@@ -34,12 +34,7 @@ import {
 
 import { MARKDOWN_ROLES, markdownColors, markdownToken } from "./markdown";
 
-import type {
-  ThemeMode,
-  ThemeTokens,
-  ThemeVariant,
-  TokenName,
-} from "./types";
+import type { ThemeMode, ThemeTokens, ThemeVariant, TokenName } from "./types";
 
 /** `--vault-md-*`: the theme's Markdown colours (markdown.ts). */
 const markdownTokens = (variant: ThemeVariant) => {

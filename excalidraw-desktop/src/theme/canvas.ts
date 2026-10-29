@@ -21,6 +21,8 @@ import {
   DEFAULT_CANVAS_BACKGROUND_PICKS,
 } from "@excalidraw/common";
 
+import { ROLE_COLORS } from "../../../sdk/api/shared/markdownRoles";
+
 import {
   ensureContrast,
   hexToOklch,
@@ -30,8 +32,6 @@ import {
   oklchToHex,
   parseHex,
 } from "./color";
-
-import { ROLE_COLORS } from "../../../sdk/api/shared/markdownRoles";
 
 import { MARKDOWN_ROLES, markdownColors } from "./markdown";
 
