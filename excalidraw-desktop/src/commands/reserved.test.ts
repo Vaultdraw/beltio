@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { reservedReason } from "./reserved";
+import { reservedInfo, reservedReason } from "./reserved";
 
 describe("reservedReason", () => {
   it.each([
@@ -31,7 +31,7 @@ describe("reservedReason", () => {
     ["Mod+Z", "mac"],
     ["Mod+A", "win"],
     ["Mod+Shift+Z", "linux"],
-  ] as const)("refuses %s on %s", (chord, platform) => {
+  ] as const)("flags %s on %s as a clash", (chord, platform) => {
     expect(reservedReason(chord, platform)).toEqual(expect.any(String));
   });
 
@@ -47,5 +47,11 @@ describe("reservedReason", () => {
     ["Mod+W", "mac"],
   ] as const)("allows %s on %s", (chord, platform) => {
     expect(reservedReason(chord, platform)).toBeNull();
+  });
+
+  it("system and menu keys block the binding; text-field keys only clash", () => {
+    expect(reservedInfo("Mod+Q", "mac")?.blocked).toBe(true);
+    expect(reservedInfo("Mod+C", "mac")?.blocked).toBe(false);
+    expect(reservedInfo("Mod+C", "mac")?.reason).toMatch(/copy/);
   });
 });

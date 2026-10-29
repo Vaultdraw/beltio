@@ -125,7 +125,9 @@ export const conflictSentence = (
   const key = formatKeyLabel(chord, platform);
   const reserved = found.find((c) => c.kind === "reserved");
   if (reserved && reserved.kind === "reserved") {
-    return `${key} can't work: ${reserved.reason}. Change it.`;
+    return reserved.blocked
+      ? `${key} can't work: ${reserved.reason}. Change it.`
+      : `${key}: ${reserved.reason}. Change it if that is not what you want.`;
   }
   const others = found.filter(
     (c): c is Extract<Conflict, { kind: "command" }> => c.kind === "command",

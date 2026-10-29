@@ -111,6 +111,19 @@ describe("findConflicts", () => {
     expect(result.get("vault.switch")?.get("Mod+Q")?.[0].kind).toBe("reserved");
   });
 
+  it("a text-field key (Mod+C) can be bound and is shown as a clash, not refused", () => {
+    const result = findConflicts(
+      COMMANDS,
+      { "vault.switch": ["Mod+C"] },
+      "mac",
+    );
+    const found = result
+      .get("vault.switch")
+      ?.get("Mod+C")
+      ?.find((c) => c.kind === "reserved");
+    expect(found).toMatchObject({ kind: "reserved", blocked: false });
+  });
+
   it("normalises Meta/Ctrl per platform", () => {
     expect(
       findConflicts(COMMANDS, { "vault.switch": ["Ctrl+N"] }, "win")

@@ -4,7 +4,7 @@ import { defaultKeys } from "./commands";
 import { excalidrawActionsFor } from "./excalidrawKeys";
 import { PRESENT_KEY } from "./contextKeys";
 import { effectiveKeys } from "./keymap";
-import { reservedReason } from "./reserved";
+import { reservedInfo } from "./reserved";
 
 import { normalizeKey } from "./keySequence";
 
@@ -19,7 +19,7 @@ import type {
 export type Conflict =
   | { kind: "command"; id: string; title: string }
   | { kind: "excalidraw"; action: string; label: string }
-  | { kind: "reserved"; reason: string }
+  | { kind: "reserved"; reason: string; blocked: boolean }
   /**
    * Warning only: one key is the start of the other ("g" and "g g"); the
    * longer sequence wins. `other` is the other binding as stored,
@@ -172,9 +172,9 @@ export function findConflicts(
           });
         }
       }
-      const reason = reservedReason(first, platform);
-      if (reason) {
-        found.push({ kind: "reserved", reason });
+      const reserved = reservedInfo(first, platform);
+      if (reserved) {
+        found.push({ kind: "reserved", ...reserved });
       }
       if (found.length > 0) {
         let perChord = result.get(command.id);

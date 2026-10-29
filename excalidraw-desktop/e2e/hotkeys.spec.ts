@@ -528,24 +528,23 @@ test.describe("Hotkeys settings page", () => {
   for (const [label, chord] of [
     ["Cmd/Ctrl+Q", "Meta+KeyQ"],
     ["Cmd/Ctrl+Shift+W", "Meta+Shift+KeyW"],
+    ["Cmd/Ctrl+C", "Meta+KeyC"],
   ] as const) {
-    test(`refuses the reserved chord ${label} with a message`, async ({
+    test(`accepts the key ${label} and shows the clash on the row`, async ({
       page,
     }) => {
-      // Cmd+Q / Cmd+Shift+W are reserved on macOS; elsewhere Ctrl+Q/W are free, so
-      // use a chord reserved on every platform when the page accepts it.
+      // The user decides (VS Code, Obsidian): any key can be bound; the row says what it clashes with.
       const isMac = await page.evaluate(() =>
         /Mac/i.test(window.navigator.platform),
       );
-      test.skip(!isMac, "Ctrl+Q / Ctrl+Shift+W are only reserved on macOS");
+      test.skip(!isMac, "these clashes are macOS menu and text-field keys");
       await add(page, "New drawing").click();
       await page.keyboard.press(chord);
-      await expect(page.getByRole("alert")).toContainText(/^Can't use .+: .+/);
-      await expect(chips(page, "vault.newDrawing")).toHaveCount(1);
-      // Still recording: the next valid key is accepted.
-      await page.keyboard.press("Meta+Alt+KeyJ");
+      await expect(page.getByText("Press keys…")).toHaveCount(0);
       await expect(chips(page, "vault.newDrawing")).toHaveCount(2);
-      await expect(page.getByRole("alert")).toHaveCount(0);
+      await expect(
+        row(page, "vault.newDrawing").getByTestId("conflict-sentence"),
+      ).toContainText(/Change it/);
     });
   }
 

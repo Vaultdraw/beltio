@@ -1,4 +1,7 @@
-/** Keys the OS or the app menu owns: refused on the Hotkeys page. */
+/**
+ * Keys the OS, the app menu or text fields already use. The Hotkeys page accepts them
+ * (the user decides, like VS Code and Obsidian) and shows the clash on the row.
+ */
 import { normalizeChord } from "./keys";
 
 import type { Chord, Platform } from "./types";
@@ -35,14 +38,23 @@ const TEXT_FIELD: ReadonlyMap<Chord, string> = new Map(
     ["Mod+Z", "undo"],
     ["Mod+A", "select all"],
     ["Mod+Shift+Z", "redo"],
-  ].map(([chord, name]) => [chord, `${name} must keep working in text fields`]),
+  ].map(([chord, name]) => [
+    chord,
+    `it is the standard key for ${name}, and this binding takes it over, text fields included`,
+  ]),
 );
 
-/** Why `chord` cannot be assigned, or null when it is allowed. */
-export function reservedReason(
+export interface ReservedInfo {
+  reason: string;
+  /** The system or the app menu takes the key before Vaultdraw sees it, so a binding cannot work. */
+  blocked: boolean;
+}
+
+/** What `chord` clashes with outside the command list, or null when nothing. */
+export function reservedInfo(
   chord: Chord,
   platform: Platform,
-): string | null {
+): ReservedInfo | null {
   const normalized = normalizeChord(chord, platform);
   const system =
     platform === "mac"
@@ -51,5 +63,13 @@ export function reservedReason(
         (/(^|\+)Meta\+/.test(normalized)
           ? "the Windows/Super key is reserved by the system"
           : undefined);
-  return system ?? TEXT_FIELD.get(normalized) ?? null;
+  if (system) {
+    return { reason: system, blocked: true };
+  }
+  const text = TEXT_FIELD.get(normalized);
+  return text ? { reason: text, blocked: false } : null;
 }
+
+/** The clash text of `reservedInfo`, or null; kept for callers that only need the words. */
+export const reservedReason = (chord: Chord, platform: Platform) =>
+  reservedInfo(chord, platform)?.reason ?? null;

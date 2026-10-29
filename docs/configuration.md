@@ -566,7 +566,7 @@ The page lists all commands with their keys as chips. Type in the filter to narr
 - **+** records a new key for a command. A command can have several.
 - **×** on a key removes it. **↺** resets the command to its defaults.
 - While recording, **Backspace** clears the key and **Esc** cancels.
-- Keys the system or the app menu owns (Cmd+Q, Cmd+W, Cmd+Tab, Cmd+C/X/V/Z/A and similar) are refused, with the reason shown.
+- Any key can be bound, like VS Code and Obsidian. Keys the system or the app menu owns (Cmd+Q, Cmd+Tab and similar) are accepted but marked red with the reason, because the app never receives them. The standard text keys (Cmd+C/X/V/Z/A) are accepted too: the row says the binding takes them over, in text fields as well. Change or remove the binding any time.
 - A key used by two commands, or by one of Excalidraw's own shortcuts, is shown in red with what it clashes with. It is allowed, and Vaultdraw's binding wins.
 
 ### Renamed commands

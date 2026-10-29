@@ -16,7 +16,6 @@ import { conflictCount, findConflicts } from "../../../commands/conflicts";
 import {
   chordFromEvent,
   detectPlatform,
-  formatChord,
   formatChordParts,
 } from "../../../commands/keys";
 import { parseSequence } from "../../../commands/keySequence";
@@ -30,7 +29,6 @@ import {
   registeredCommands,
   subscribeCommands,
 } from "../../../commands/registry";
-import { reservedReason } from "../../../commands/reserved";
 import {
   resetHotkeyOverrides,
   setHotkeyOverride,
@@ -153,13 +151,6 @@ const HotkeysPage = () => {
           return;
         }
         if (step.action === "update") {
-          const first = step.chords[0];
-          const reason =
-            typed.length === 0 && first && reservedReason(first, plat);
-          if (reason) {
-            setRefusal(`Can't use ${formatChord(first, plat)}: ${reason}`);
-            return;
-          }
           setRefusal(null);
           setSeq(step.chords);
           return;
@@ -205,11 +196,6 @@ const HotkeysPage = () => {
       if (chord === "Backspace" || chord === "Delete") {
         write([]);
       } else {
-        const reason = reservedReason(chord, plat);
-        if (reason) {
-          setRefusal(`Can't use ${formatChord(chord, plat)}: ${reason}`);
-          return;
-        }
         write([...effectiveKeys(command, current, plat), chord]);
       }
       setRefusal(null);
