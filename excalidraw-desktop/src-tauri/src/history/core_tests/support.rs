@@ -197,7 +197,11 @@ impl Fx {
     }
     /// A synchronization point: a waited snapshot drains everything queued before it.
     pub fn barrier(&self) {
-        let _ = self.vh().snapshot("barrier.excalidraw", "leave", true);
+        // A barrier that timed out would let the next assertion race the worker and fail far
+        // from the cause (toimprove 119: one flaky lineage failure at load 16): say so here.
+        if let Err(e) = self.vh().snapshot("barrier.excalidraw", "leave", true) {
+            assert!(!e.message.contains("did not answer"), "history barrier timed out: {}", e.message);
+        }
     }
     pub fn hist_dir(&self) -> PathBuf {
         self.root.join(".excalidraw-vault/history")
