@@ -378,8 +378,32 @@ export class FakeVaultRepository implements VaultRepository {
 
   // -- VaultRepository ----------------------------------------------------
 
+  /**
+   * Test hook (vault switching): the next chooseVault() answers with another vault, and the
+   * release of the current one swaps the fake's files for `seed`'s (hunter C, 2026-10-30).
+   */
+  private queued: {
+    info: VaultInfo;
+    seed: (repo: FakeVaultRepository) => void;
+  } | null = null;
+  queueVault(next: {
+    name: string;
+    path: string;
+    seed?: (repo: FakeVaultRepository) => void;
+  }): void {
+    this.queued = {
+      info: {
+        handle: `fake-handle-${next.name}`,
+        path: next.path,
+        name: next.name,
+        readOnly: false,
+      },
+      seed: next.seed ?? (() => undefined),
+    };
+  }
+
   async chooseVault(): Promise<VaultInfo | null> {
-    return { ...this.vault };
+    return { ...(this.queued?.info ?? this.vault) };
   }
 
   async reopenVault(): Promise<VaultInfo | null> {
@@ -412,6 +436,18 @@ export class FakeVaultRepository implements VaultRepository {
       return;
     }
     this.ensureOpen(handle);
+    if (this.queued) {
+      const { info, seed } = this.queued;
+      this.queued = null;
+      this.files.clear();
+      this.folders = new Set([""]);
+      this.notes.clear();
+      this.mtimes.clear();
+      this.listeners.clear();
+      Object.assign(this.vault, info);
+      seed(this);
+      return;
+    }
     this.released = true;
     this.listeners.clear();
   }
