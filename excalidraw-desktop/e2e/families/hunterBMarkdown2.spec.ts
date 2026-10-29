@@ -110,3 +110,30 @@ test("hunter B: switching light/dark while editing a heading commits the text wi
     )
     .toBe("h1");
 });
+
+test("hunter B: Cmd+Z after a bullet conversion brings '- ' back; Backspace after a marker keeps the text; mid-heading Enter splits", async ({
+  page,
+}) => {
+  await start(page);
+  await newText(page);
+  await type(page, "- ");
+  await expect(page.locator(ta)).toHaveValue("• ");
+  await page.keyboard.press("Meta+z");
+  await expect(page.locator(ta)).toHaveValue("- ");
+  await page.keyboard.press("Meta+a");
+  await page.keyboard.press("Backspace");
+  await type(page, "- item");
+  await page.keyboard.press("Meta+ArrowLeft");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Backspace");
+  await expect(page.locator(ta)).toHaveValue("item");
+  await page.keyboard.press("Meta+a");
+  await page.keyboard.press("Backspace");
+  await type(page, "# Hello world");
+  for (let i = 0; i < 6; i++) {
+    await page.keyboard.press("ArrowLeft");
+  }
+  await page.keyboard.press("Enter");
+  await expect(page.locator(ta)).toHaveValue(" world");
+});
