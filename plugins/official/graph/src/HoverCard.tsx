@@ -1,3 +1,5 @@
+import { count } from "../../../../sdk/api/shared/plural";
+
 import type { ShownNode } from "./GraphSession";
 
 export interface HoverCardProps {
@@ -61,8 +63,11 @@ export function HoverCard({
       )}
       <div className="vd-graph__card-meta">
         {info.kind === "drawing"
-          ? `${info.links} links · ${info.backlinks} backlinks`
-          : `${info.links} links`}
+          ? `${count(info.links, "link")} · ${count(
+              info.backlinks,
+              "backlink",
+            )}`
+          : count(info.links, "link")}
       </div>
       <div className="vd-graph__card-keys">
         {info.kind === "drawing" ? "↵ open · L local graph" : "L local graph"}

@@ -1,3 +1,5 @@
+import { count } from "../../../../sdk/api/shared/plural";
+
 /** "all", "1-5, 8, 10-" -> 0-based sorted unique page indices. */
 export const parsePageRange = (
   text: string,
@@ -33,7 +35,7 @@ export const parsePageRange = (
       return { error: "Pages start at 1" };
     }
     if (from > pageCount || to > pageCount) {
-      return { error: `The document has ${pageCount} pages` };
+      return { error: `The document has ${count(pageCount, "page")}` };
     }
     if (from > to) {
       return { error: `Range "${part}" is backwards` };

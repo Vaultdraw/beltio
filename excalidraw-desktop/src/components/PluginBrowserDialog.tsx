@@ -449,6 +449,7 @@ export const PluginBrowserDialog = ({
       {confirmRemove && (
         <ConfirmModal
           title={`Uninstall ${confirmRemove.name}?`}
+          // plural-ok: a name or extension, not a count
           message={`This deletes the ${confirmRemove.name} folder and its files.`}
           confirmLabel="Uninstall"
           isDanger

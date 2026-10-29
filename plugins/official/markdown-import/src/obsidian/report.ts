@@ -3,6 +3,8 @@
  * It lists failed files with the reason, and the images that stayed boxes, grouped by reason.
  * Nothing is written for a clean import.
  */
+import { count } from "../../../../../sdk/api/shared/plural";
+
 import type { ImageIssue, ObsidianImportResult } from "./types";
 
 /** Where the report lands (the vault root; a taken name gets the next free one). */
@@ -27,7 +29,10 @@ export function buildReport(
   }
   const lines: string[] = [`# Import report: ${sourceName}`, ""];
   lines.push(
-    `${r.notes} notes and ${r.drawings} drawings written, ${r.attachments} attachments copied.`,
+    `${count(r.notes, "note")} and ${count(
+      r.drawings,
+      "drawing",
+    )} written, ${count(r.attachments, "attachment")} copied.`,
     "",
   );
   if (r.errors.length > 0) {

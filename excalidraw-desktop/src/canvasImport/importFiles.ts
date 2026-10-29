@@ -93,7 +93,8 @@ export const skippedMessage = (skipped: readonly File[]): string | null => {
     ),
   ];
   const plugins = titles.length
-    ? `, and ${titles.join(", ")} files from plugins`
+    ? // plural-ok: a name or extension, not a count
+      `, and ${titles.join(", ")} files from plugins`
     : "";
   return `Not imported: ${names}. Vaultdraw imports PNG, JPEG, SVG, GIF, WebP, BMP, ICO or AVIF images${plugins}.`;
 };

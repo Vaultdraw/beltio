@@ -55,6 +55,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **Import Obsidian vault… is on the home screen** while the Markdown import is on, not only in a drawing's main menu.
 - **Enter confirms "Move to Trash"**, as in Obsidian: the Trash keeps the file. Questions that cannot be undone still start on Cancel.
 - **The open graph follows file changes**, like Obsidian's: a drawing created, renamed, deleted or saved with new links (in the app or outside) shows up a moment later, and the nodes that stay keep their place.
+- **Counts read right:** "Imported 1 note and 1 drawing", "1 link", "1 word", "1 file", "Downloaded 1 picture" (they said "1 notes", "1 links" and so on in the import, the graph card, notes, backups, auto-export and PDF import).
 - **Re-import from a tab's menu rewrites the note of the tab you right-clicked**, not the active one; a picture written as a `data:` address with percent-encoding or extra parameters is read from the address.
 
 - **A 32 MiB drawing fits in one message of the control API and the MCP server.** The message cap is now 80 MiB, so a drawing that grows once it is escaped into JSON is no longer refused; a message over the cap says the limit in plain words.

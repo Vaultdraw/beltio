@@ -5,6 +5,8 @@
  */
 import { definePlugin } from "@vaultdraw/api";
 
+import { count } from "../../../../sdk/api/shared/plural";
+
 import { readConfig } from "./config";
 import { createExporter } from "./exporter";
 import { allExportPaths, isDrawing, isExcluded } from "./paths";
@@ -151,7 +153,7 @@ export default definePlugin({
       ctx.ui.toast(
         seen === 0
           ? "No drawings found"
-          : `Exported ${done} of ${seen} drawings`,
+          : `Exported ${done} of ${count(seen, "drawing")}`,
       );
     });
   },

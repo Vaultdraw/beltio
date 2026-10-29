@@ -4,6 +4,8 @@
  * (local pictures a single-file import could not see). Each fills what it can in ONE undo step and
  * says what it did.
  */
+import { count } from "../../../../sdk/api/shared/plural";
+
 import { LinkResolver } from "./obsidian/links";
 import { planImport } from "./obsidian/plan";
 import { createWebImages, isWebTarget, sniff } from "./webImages";
@@ -228,7 +230,7 @@ export async function downloadImages(
     offline || items.some((it) => /off in Settings/.test(it.alt ?? ""));
   ctx.ui.toast(
     n === boxes.length
-      ? `Downloaded ${n} pictures`
+      ? `Downloaded ${count(n, "picture")}`
       : n === 0
       ? `${
           boxes.length === 1 ? "The web picture" : "No web picture"
@@ -289,7 +291,7 @@ export async function attachImages(ctx: PluginContext): Promise<void> {
   ctx.ui.toast(
     n === 0
       ? "None of the pictures were in that folder"
-      : `Attached ${n} of ${boxes.length} pictures`,
+      : `Attached ${n} of ${count(boxes.length, "picture")}`,
     { id: "attach-images" },
   );
 }

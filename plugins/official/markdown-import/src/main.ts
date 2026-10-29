@@ -5,6 +5,8 @@
  */
 import { definePlugin } from "@vaultdraw/api";
 
+import { count } from "../../../../sdk/api/shared/plural";
+
 import { registerCommands } from "./commands";
 import { chooseImportFolder } from "./obsidian/freshFolder";
 import {
@@ -352,10 +354,13 @@ const plugin: Plugin = definePlugin({
           });
           const written = result.target ?? target;
           if (controller.signal.aborted) {
-            ctx.ui.toast(`Import cancelled after ${result.notes} notes`, {
-              id: "obsidian-import",
-              detail: `They stay in ${written.name}`,
-            });
+            ctx.ui.toast(
+              `Import cancelled after ${count(result.notes, "note")}`,
+              {
+                id: "obsidian-import",
+                detail: `They stay in ${written.name}`,
+              },
+            );
           } else {
             const noPicture =
               result.oversizedImages +
@@ -365,16 +370,25 @@ const plugin: Plugin = definePlugin({
               written.name !== source.name
                 ? `Imported before, so this copy is "${written.name}"`
                 : `From ${source.name}`,
-              web.downloaded ? `${web.downloaded} web pictures downloaded` : "",
+              web.downloaded
+                ? `${count(web.downloaded, "web picture")} downloaded`
+                : "",
               noPicture
-                ? `${noPicture} images left as boxes (${result.oversizedImages} over 4 MB, ${result.unsupportedImages} unsupported, ${result.missingImages} not found)`
+                ? `${count(noPicture, "image")} left as boxes (${
+                    result.oversizedImages
+                  } over 4 MB, ${result.unsupportedImages} unsupported, ${
+                    result.missingImages
+                  } not found)`
                 : "",
             ]
               .filter(Boolean)
               .join(" · ");
             const report = result.report;
             ctx.ui.toast(
-              `Imported ${result.notes} notes and ${result.drawings} drawings`,
+              `Imported ${count(result.notes, "note")} and ${count(
+                result.drawings,
+                "drawing",
+              )}`,
               {
                 id: "obsidian-import",
                 detail,

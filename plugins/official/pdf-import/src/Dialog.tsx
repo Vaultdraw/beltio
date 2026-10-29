@@ -220,11 +220,13 @@ const ImportOptions = ({
             plan.firstPage ?? 0,
             "page",
           )} already used)`
-        : `Only ${limit} of ${requested.length} pages can be imported at once`,
+        : // plural-ok: only shown for many pages
+          `Only ${limit} of ${requested.length} pages can be imported at once`,
     );
   }
   if (indices.length > settings.warnPages) {
     warnings.push(
+      // plural-ok: only shown for many pages
       `${indices.length} pages is a lot: the drawing will be large and may feel slow`,
     );
   }

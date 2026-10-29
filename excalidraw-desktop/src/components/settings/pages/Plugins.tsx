@@ -127,7 +127,8 @@ export const clashText = (c: ImporterClash): string => {
   }
   return c.winner
     ? `.${c.extension} is claimed by ${c.winner.pluginId} and ${others}. ${c.winner.pluginId} imports it. Choose another in the importers setting of your config file.`
-    : `.${c.extension} files aren’t imported: your config file turns importing off for them. Plugins that can: ${others}.`;
+    : // plural-ok: a name or extension, not a count
+      `.${c.extension} files aren’t imported: your config file turns importing off for them. Plugins that can: ${others}.`;
 };
 
 /** "Imports: .txt" per plugin that declares importers, plus clash problems. */
@@ -490,6 +491,7 @@ export const PluginsPage = () => {
       {pending?.kind === "uninstall" && (
         <ConfirmModal
           title={`Uninstall ${pending.info.name}?`}
+          // plural-ok: a name or extension, not a count
           message={`This deletes the ${pending.info.name} folder and its files.`}
           confirmLabel="Uninstall"
           isDanger

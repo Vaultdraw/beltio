@@ -19,6 +19,8 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { count } from "../../../sdk/api/shared/plural";
+
 import { userError } from "../components/userError";
 
 import { registerCommandHandlers } from "../commands/handlerRegistry";
@@ -519,7 +521,7 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
           {baseName(path)}
         </span>
         <span className="note-meta" aria-live="polite">
-          {doc ? `${doc.stats.words} words · ` : ""}
+          {doc ? `${count(doc.stats.words, "word")} · ` : ""}
           <span data-testid="note-status" data-status={status.s}>
             {STATUS_TEXT[status.s]}
           </span>

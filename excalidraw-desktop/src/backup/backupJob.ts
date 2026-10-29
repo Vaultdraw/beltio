@@ -5,6 +5,7 @@
  * used. The files are written by Rust (`vaultdraw_core::backup`); the vault is only read and a
  * restore only creates a new folder.
  */
+import { count } from "../../../sdk/api/shared/plural";
 import { nativeCall } from "../vault/settingsSync";
 import { toastStore } from "../toasts/toastStore";
 
@@ -34,7 +35,7 @@ export const progressMessage = (s: BackupStatus): string => {
   const pct = s.bytesTotal
     ? Math.min(100, Math.floor((s.bytesDone / s.bytesTotal) * 100))
     : 0;
-  return `${what}… ${pct}% (${s.filesDone} of ${s.filesTotal} files)`;
+  return `${what}… ${pct}% (${s.filesDone} of ${count(s.filesTotal, "file")})`;
 };
 
 let shownId: number | null = null;
@@ -85,7 +86,7 @@ export async function runBackup(handle: string): Promise<void> {
     await follow((s) =>
       s.error
         ? failed("Backup", s)
-        : show(`Backup written: ${s.path} (${s.files} files)`, {
+        : show(`Backup written: ${s.path} (${count(s.files ?? 0, "file")})`, {
             durationMs: 15000,
           }),
     );
@@ -106,7 +107,7 @@ export async function runRestore(
     await follow((s) =>
       s.error || !s.path
         ? failed("Restore", s)
-        : show(`Restored ${s.files} files into ${s.path}`, {
+        : show(`Restored ${count(s.files ?? 0, "file")} into ${s.path}`, {
             durationMs: 30000,
             action: {
               label: "Open as vault",
