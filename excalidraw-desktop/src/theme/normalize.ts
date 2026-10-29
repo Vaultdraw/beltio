@@ -18,6 +18,7 @@ import {
   pickOn,
   rotateHue,
 } from "./color";
+import { readMarkdownInput } from "./markdown";
 import {
   ANSI_KEYS,
   REQUIRED_ROLE_KEYS,
@@ -113,6 +114,11 @@ const readVariantInput = (
       out[key as RoleKey] = readColor(value, `${mode}.${key}`, themeName);
     } else if (key === "terminal") {
       out.terminal = readTerminalInput(value, mode, themeName, warnings);
+    } else if (key === "markdown") {
+      const md = readMarkdownInput(value, `${mode}.markdown`, warnings);
+      if (md && Object.keys(md).length > 0) {
+        out.markdown = md;
+      }
     } else {
       warnings.push(`${mode}.${key}: unknown key ignored`);
     }
@@ -316,7 +322,11 @@ export const resolveVariant = (
     }
   }
 
-  return { ...roles, terminal: deriveTerminal(t, roles, mode) };
+  return {
+    ...roles,
+    terminal: deriveTerminal(t, roles, mode),
+    ...(input.markdown ? { markdown: { ...input.markdown } } : {}),
+  };
 };
 
 // ---------------------------------------------------------------------------

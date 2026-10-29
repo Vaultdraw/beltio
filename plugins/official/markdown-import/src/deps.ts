@@ -36,6 +36,8 @@ export interface LayoutOptions {
   page: PageGeometry;
   /** About this many elements per part (drawing). */
   partElements: number;
+  /** Each heading level in its own theme colour (default on). */
+  headingColors?: boolean;
   measure: PluginContext["text"]["measure"];
   signal: AbortSignal;
 }
@@ -70,6 +72,7 @@ export async function* layoutNoteStream(
       margin: PAGE_MARGIN,
     },
     partElements: opts.partElements,
+    headingColors: opts.headingColors ?? true,
   };
   const table = buildWidthTable(opts.measure, doc, layout);
   const queue: LayoutBatch[] = [];
@@ -147,6 +150,7 @@ const workerLayout =
       fontSize: settings.fontSize,
       page: ctx.pages.geometry({ size: settings.pageSize, layout: "separate" }),
       partElements: settings.partElements,
+      headingColors: settings.headingColors ?? true,
       measure: (f, s) => ctx.text.measure(f, s),
       signal,
     };

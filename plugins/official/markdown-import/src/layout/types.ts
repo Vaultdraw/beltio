@@ -4,7 +4,11 @@
  * PHASE4-PLAN.md, "Layout output"): coordinates are scene pixels relative to
  * the page's top-left corner, text is already wrapped (lines joined by `\n`).
  */
-import type { FontFamilyName } from "@vaultdraw/api";
+import type {
+  FontFamilyName,
+  PageRectFill,
+  PageTextTone,
+} from "@vaultdraw/api";
 
 export type { FontFamilyName };
 
@@ -20,7 +24,7 @@ export type PageItemText = {
   fontFamily: FontFamilyName;
   lineHeight: number;
   align?: "left" | "center" | "right";
-  tone?: "normal" | "muted" | "code" | "link";
+  tone?: PageTextTone;
   link?: string;
   /** At most 4 KiB as JSON, e.g. `{ heading: 2 }`. */
   data?: Record<string, unknown>;
@@ -35,7 +39,7 @@ export type PageItemRect = {
   y: number;
   width: number;
   height: number;
-  fill: "code" | "quote" | "callout" | "table" | "none";
+  fill: PageRectFill;
   stroke?: "none" | "thin";
   /** Items with the same name are one group in the editor (a table moves as one). */
   group?: string;
@@ -96,6 +100,8 @@ export interface LayoutOptions {
   page: LayoutPage;
   /** Split the result into parts of about this many elements (default 1000). */
   partElements?: number;
+  /** Colour each heading level from the theme (`heading_colors`, default on). */
+  headingColors?: boolean;
 }
 
 /** Counts from a layout. */

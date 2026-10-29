@@ -4,8 +4,8 @@
  *
  * | Block | Becomes |
  * | --- | --- |
- * | heading | one text in the heading role, `data: { heading: level }`, kept with the next block |
- * | paragraph | one text; `link` set only when the whole paragraph is one link |
+ * | heading | one text in the heading role, `data: { heading: level, role: "h<level>" }` (tone `heading<level>`: the theme's colour), kept with the next block |
+ * | paragraph | one text; `link` (tone and role "link") set only when the whole paragraph is one link |
  * | list items | one text per run of items at the same depth, markers inline (•, 1., ☐, ☑) |
  * | code | a "code" box with the code in the monospace role, tabs as 4 spaces |
  * | blockquote / callout | a "quote" / "callout" box; the callout title first |
@@ -179,20 +179,41 @@ function* mapList(
   return i;
 }
 
+/** How blocks are styled (from the settings). */
+export interface MapStyle {
+  /** Each heading level in its own theme colour; off: the text colour. */
+  headingColors: boolean;
+}
+
+const DEFAULT_STYLE: MapStyle = { headingColors: true };
+
+/** The tone of a heading level (1 to 6), or none when heading colours are off. */
+export const headingTone = (
+  level: number,
+  style: MapStyle,
+): PageItemText["tone"] | undefined =>
+  style.headingColors
+    ? (`heading${Math.min(6, Math.max(1, level))}` as PageItemText["tone"])
+    : undefined;
+
 function* mapBlocks(
   blocks: readonly NoteBlock[],
   footnotes: Extract<NoteBlock, { kind: "footnoteDef" }>[],
+  style: MapStyle,
 ): Generator<Mapped> {
   for (let i = 0; i < blocks.length; ) {
     const b = blocks[i];
     switch (b.kind) {
       case "heading": {
         const level = Math.min(6, Math.max(1, b.level));
+        const tone = headingTone(level, style);
         yield text(headingRole(level), b.text, {
+          ...(tone ? { tone } : {}),
           spaceBefore: SPACE.heading,
           keepWithNext: true,
           splittable: false,
-          data: { heading: level },
+          // The role names what the theme colours (markdownRoles.ts); only with its colour.
+          data: tone ? { heading: level, role: `h${level}` } : { heading: level },
           ...(level <= 2 ? { cut: level as 1 | 2 } : {}),
         });
         break;
@@ -206,7 +227,11 @@ function* mapBlocks(
           break;
         }
         const link = wholeLink(b.text, b.inline);
-        yield text("body", b.text, link ? { link, tone: "link" } : {});
+        yield text(
+          "body",
+          b.text,
+          link ? { link, tone: "link", data: { role: "link" } } : {},
+        );
         break;
       }
       case "listItem":
@@ -216,13 +241,14 @@ function* mapBlocks(
         yield { kind: "open", fill: "code" };
         yield text("code", b.text.replace(/\t/g, "    "), {
           tone: "code",
+          data: { role: "code" },
           spaceBefore: 0,
         });
         yield { kind: "close" };
         break;
       case "blockquote":
         yield { kind: "open", fill: "quote" };
-        yield* mapBlocks(b.blocks, footnotes);
+        yield* mapBlocks(b.blocks, footnotes, style);
         yield { kind: "close" };
         break;
       case "callout":
@@ -233,7 +259,7 @@ function* mapBlocks(
           splittable: false,
           data: { callout: b.calloutType },
         });
-        yield* mapBlocks(b.blocks, footnotes);
+        yield* mapBlocks(b.blocks, footnotes, style);
         yield { kind: "close" };
         break;
       case "thematicBreak":
@@ -287,9 +313,12 @@ function* mapBlocks(
  * Maps a whole note: its blocks in order, then the footnote definitions
  * after a rule, each as `[label] text`.
  */
-export function* mapNote(doc: NoteDoc): Generator<Mapped> {
+export function* mapNote(
+  doc: NoteDoc,
+  style: MapStyle = DEFAULT_STYLE,
+): Generator<Mapped> {
   const footnotes: Extract<NoteBlock, { kind: "footnoteDef" }>[] = [];
-  yield* mapBlocks(doc.blocks, footnotes);
+  yield* mapBlocks(doc.blocks, footnotes, style);
   if (footnotes.length === 0) {
     return;
   }
@@ -305,6 +334,6 @@ export function* mapNote(doc: NoteDoc): Generator<Mapped> {
         rest.unshift(first);
       }
     }
-    yield* mapBlocks(rest, []);
+    yield* mapBlocks(rest, [], style);
   }
 }

@@ -5,6 +5,8 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { ROLE_COLORS } from "../../../sdk/api/shared/markdownRoles";
+
 import { overflows } from "./reflow";
 import { upgradeScene } from "./upgradeScene";
 
@@ -245,12 +247,55 @@ describe("update pass: clipped text is re-wrapped and the page reflows", () => {
     noOverlap(out.scene.elements);
   });
 
-  it("nothing clipped: the note is left alone", () => {
+  it("nothing clipped and headings styled: the note is left alone", () => {
     const head = text("Title", 56, {
       fontFamily: 3,
       fontSize: 28.5,
-      customData: { [MARK]: { heading: 1 } },
+      strokeColor: ROLE_COLORS.h1,
+      customData: { [MARK]: { heading: 1, role: "h1" } },
     });
     expect(run(scene([head]))).toBeNull();
+  });
+});
+
+describe("update pass: headings take their theme role", () => {
+  const head = (level: number, strokeColor: string, role?: string) =>
+    text(`Heading ${level}`, 56 + level * 60, {
+      fontFamily: 3,
+      fontSize: 20,
+      strokeColor,
+      customData: { [MARK]: { heading: level, ...(role ? { role } : {}) } },
+    });
+  type Data = { customData: Record<string, { role?: string }> };
+
+  it.each([1, 2, 3, 4, 5, 6])(
+    "a level %i heading gets its role colour and role",
+    (level) => {
+      const out = run(scene([head(level, "#1e1e1e")]))!;
+      expect(out.headings).toBe(1);
+      const el = out.scene.elements[0] as unknown as Data & E;
+      expect(el.strokeColor).toBe(
+        ROLE_COLORS[`h${level}` as keyof typeof ROLE_COLORS],
+      );
+      expect(el.customData[MARK].role).toBe(`h${level}`);
+    },
+  );
+
+  it("a colour the user picked is kept (the role is gone)", () => {
+    expect(run(scene([head(1, "#e03131")]))).toBeNull();
+  });
+
+  it("already styled: left alone", () => {
+    expect(run(scene([head(2, ROLE_COLORS.h2, "h2")]))).toBeNull();
+  });
+
+  it("heading colours off: back to the text colour, role dropped", () => {
+    const out = run(
+      scene([head(2, ROLE_COLORS.h2, "h2")]),
+      target({ headingColors: false }),
+    )!;
+    const el = out.scene.elements[0] as unknown as Data & E;
+    expect(el.strokeColor).toBe("#1e1e1e");
+    expect(el.customData[MARK].role).toBeUndefined();
   });
 });

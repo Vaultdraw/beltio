@@ -2,7 +2,7 @@
 
 # Theme tokens
 
-The colours `ctx.theme.tokens()` returns, 43 in all. Each value is a CSS string: most are `#rrggbb`, some are `rgba(...)` colours or shadows. Use one as `var(--vault-text)` in CSS, or read the string from `ctx.theme.tokens()["--vault-text"]`.
+The colours `ctx.theme.tokens()` returns, 55 in all. Each value is a CSS string: most are `#rrggbb`, some are `rgba(...)` colours or shadows. Use one as `var(--vault-text)` in CSS, or read the string from `ctx.theme.tokens()["--vault-text"]`.
 
 The names are part of the API. A token is added with a line here and is never removed without an alias.
 
@@ -51,3 +51,15 @@ The names are part of the API. A token is added with a line here and is never re
 | `--vault-sel-strong` | A stronger selection tint (an rgba colour). |
 | `--vault-ring` | The focus ring (an rgba colour). |
 | `--vault-ring-inset` | The focus ring drawn inside (a CSS box-shadow value), for rows and tabs whose parent clips overflow. |
+| `--vault-md-h1` | Markdown level 1 headings (a theme's `markdown.h1`, else its accent). |
+| `--vault-md-h2` | Markdown level 2 headings (`markdown.h2`, else the secondary accent). |
+| `--vault-md-h3` | Markdown level 3 headings (`markdown.h3`, else the tertiary accent). |
+| `--vault-md-h4` | Markdown level 4 headings (`markdown.h4`, else the accent towards the text). |
+| `--vault-md-h5` | Markdown level 5 headings (`markdown.h5`, else the secondary accent towards the text). |
+| `--vault-md-h6` | Markdown level 6 headings (`markdown.h6`, else the muted text). |
+| `--vault-md-bold` | Bold Markdown text (`markdown.bold`, else the text colour). |
+| `--vault-md-italic` | Italic Markdown text (`markdown.italic`, else the text colour). |
+| `--vault-md-link` | Markdown links (`markdown.link`, else the accent). |
+| `--vault-md-code` | Markdown code text (`markdown.code`, else the text colour). |
+| `--vault-md-code-bg` | The background of Markdown code (`markdown.code_bg`, else a tint of the page). |
+| `--vault-md-quote-bar` | The bar at the left of a Markdown quote (`markdown.quote_bar`, else the accent). |

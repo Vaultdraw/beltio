@@ -73,7 +73,10 @@ describe("layout budgets", () => {
     expect(code.length).toBeGreaterThan(0);
     for (const c of code) {
       expect(c.link).toBeUndefined();
-      expect(c.data).toBeUndefined();
+      // Only its Markdown role (the theme colours code), no tags or links.
+      expect(Object.keys(c.data ?? {}).filter((k) => k !== "role")).toEqual(
+        [],
+      );
       expect(c.fontFamily).toBe("Cascadia");
     }
     expect(

@@ -7,7 +7,7 @@
      "type": "rect",
      "page": 0,
      "x": 48,
-     "y": 218,
+     "y": 216.13,
      "width": 698,
      "height": 36.8,
      "fill": "code"
@@ -27,20 +27,22 @@
      "x": 48,
      "y": 48,
      "width": 698,
-     "height": 40,
+     "height": 36.25,
      "text": "Project Alpha",
-     "fontSize": 32,
+     "fontSize": 29,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "tone": "heading1",
      "data": {
-      "heading": 1
+      "heading": 1,
+      "role": "h1"
      }
     },
     {
      "type": "text",
      "page": 0,
      "x": 48,
-     "y": 98,
+     "y": 94.25,
      "width": 698,
      "height": 20,
      "text": "A short description with a website, a [[Roadmap]] link and #status/active tag.",
@@ -52,22 +54,24 @@
      "type": "text",
      "page": 0,
      "x": 48,
-     "y": 138,
+     "y": 134.25,
      "width": 698,
-     "height": 30,
+     "height": 31.88,
      "text": "Install",
-     "fontSize": 24,
+     "fontSize": 25.5,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "tone": "heading2",
      "data": {
-      "heading": 2
+      "heading": 2,
+      "role": "h2"
      }
     },
     {
      "type": "text",
      "page": 0,
      "x": 48,
-     "y": 178,
+     "y": 176.13,
      "width": 698,
      "height": 40,
      "text": "1. Run cargo build\n2. Run the tests:",
@@ -79,28 +83,33 @@
      "type": "text",
      "page": 0,
      "x": 58,
-     "y": 228,
+     "y": 226.13,
      "width": 678,
      "height": 16.8,
      "text": "cargo test # not a tag",
      "fontSize": 14,
      "fontFamily": "Cascadia",
      "lineHeight": 1.2,
-     "tone": "code"
+     "tone": "code",
+     "data": {
+      "role": "code"
+     }
     },
     {
      "type": "text",
      "page": 0,
      "x": 48,
-     "y": 274.8,
+     "y": 272.93,
      "width": 698,
-     "height": 30,
+     "height": 31.88,
      "text": "Features",
-     "fontSize": 24,
+     "fontSize": 25.5,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "tone": "heading2",
      "data": {
-      "heading": 2
+      "heading": 2,
+      "role": "h2"
      }
     },
     {

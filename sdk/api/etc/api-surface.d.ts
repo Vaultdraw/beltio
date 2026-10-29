@@ -495,8 +495,8 @@ export interface PagesApi {
     createDocument(options: CreateDocumentOptions): Promise<PageDocument>;
     buildScene(items: readonly PageItem[], options: BuildSceneOptions): Promise<object>;
 }
-export type PageTextTone = "normal" | "muted" | "code" | "link";
-export type PageRectFill = "code" | "quote" | "callout" | "table" | "none";
+export type PageTextTone = "normal" | "muted" | "code" | "link" | "heading1" | "heading2" | "heading3" | "heading4" | "heading5" | "heading6";
+export type PageRectFill = "code" | "quote" | "callout" | "table" | "bar" | "none";
 export interface PageTextItem {
     type: "text";
     page: number;
@@ -956,7 +956,7 @@ export interface FontsApi {
 
 // theme.ts
 import type { Disposable } from "./disposable";
-export type ThemeTokenName = "--vault-canvas" | "--vault-bg" | "--vault-surface" | "--vault-surface-hover" | "--vault-surface-active" | "--vault-border" | "--vault-border-strong" | "--vault-menu-bg" | "--vault-text" | "--vault-text-muted" | "--vault-text-faint" | "--vault-primary" | "--vault-primary-hover" | "--vault-primary-active" | "--vault-primary-light" | "--vault-primary-border" | "--vault-on-primary" | "--vault-on-danger" | "--vault-accent" | "--vault-accent-text" | "--vault-success" | "--vault-success-bg" | "--vault-success-border" | "--vault-warning" | "--vault-warning-bg" | "--vault-warning-border" | "--vault-danger" | "--vault-danger-bg" | "--vault-danger-border" | "--vault-danger-hover" | "--vault-shadow-sm" | "--vault-shadow-md" | "--vault-shadow-lg" | "--vault-shadow-island" | "--vault-shadow-pop" | "--vault-scrim" | "--vault-hover" | "--vault-chip" | "--vault-chip-strong" | "--vault-sel" | "--vault-sel-strong" | "--vault-ring" | "--vault-ring-inset";
+export type ThemeTokenName = "--vault-canvas" | "--vault-bg" | "--vault-surface" | "--vault-surface-hover" | "--vault-surface-active" | "--vault-border" | "--vault-border-strong" | "--vault-menu-bg" | "--vault-text" | "--vault-text-muted" | "--vault-text-faint" | "--vault-primary" | "--vault-primary-hover" | "--vault-primary-active" | "--vault-primary-light" | "--vault-primary-border" | "--vault-on-primary" | "--vault-on-danger" | "--vault-accent" | "--vault-accent-text" | "--vault-success" | "--vault-success-bg" | "--vault-success-border" | "--vault-warning" | "--vault-warning-bg" | "--vault-warning-border" | "--vault-danger" | "--vault-danger-bg" | "--vault-danger-border" | "--vault-danger-hover" | "--vault-shadow-sm" | "--vault-shadow-md" | "--vault-shadow-lg" | "--vault-shadow-island" | "--vault-shadow-pop" | "--vault-scrim" | "--vault-hover" | "--vault-chip" | "--vault-chip-strong" | "--vault-sel" | "--vault-sel-strong" | "--vault-ring" | "--vault-ring-inset" | "--vault-md-h1" | "--vault-md-h2" | "--vault-md-h3" | "--vault-md-h4" | "--vault-md-h5" | "--vault-md-h6" | "--vault-md-bold" | "--vault-md-italic" | "--vault-md-link" | "--vault-md-code" | "--vault-md-code-bg" | "--vault-md-quote-bar";
 export type ThemeMode = "light" | "dark";
 export interface ThemeChange {
     mode: ThemeMode;

@@ -45,6 +45,20 @@
       "selectionBg": "#585b70",
       "cursorText": "#1e1e2e",
       "cursor": "#f5e0dc"
+    },
+    "markdown": {
+      "h1": "#cba6f7",
+      "h2": "#fab387",
+      "h3": "#94e2d5",
+      "h4": "#a6e3a1",
+      "h5": "#89b4fa",
+      "h6": "#a3b4eb",
+      "bold": "#cdd6f4",
+      "italic": "#cdd6f4",
+      "link": "#cba6f7",
+      "code": "#f9e2af",
+      "code_bg": "#2a2a3c",
+      "quote_bar": "#cba6f7"
     }
   },
   "light": {
@@ -91,6 +105,20 @@
       "selectionBg": "#dc8a78",
       "cursorText": "#eff1f5",
       "cursor": "#dc8a78"
+    },
+    "markdown": {
+      "h1": "#8839ef",
+      "h2": "#be4800",
+      "h3": "#207f00",
+      "h4": "#007a81",
+      "h5": "#1b63f2",
+      "h6": "#6a6d82",
+      "bold": "#4c4f69",
+      "italic": "#4c4f69",
+      "link": "#8839ef",
+      "code": "#9d6000",
+      "code_bg": "#e1e3e9",
+      "quote_bar": "#8839ef"
     }
   }
 }

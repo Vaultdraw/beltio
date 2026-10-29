@@ -32,7 +32,22 @@ import {
   toRgba,
 } from "./color";
 
-import type { ThemeMode, ThemeTokens, ThemeVariant } from "./types";
+import { MARKDOWN_ROLES, markdownColors, markdownToken } from "./markdown";
+
+import type {
+  ThemeMode,
+  ThemeTokens,
+  ThemeVariant,
+  TokenName,
+} from "./types";
+
+/** `--vault-md-*`: the theme's Markdown colours (markdown.ts). */
+const markdownTokens = (variant: ThemeVariant) => {
+  const md = markdownColors(variant);
+  return Object.fromEntries(
+    MARKDOWN_ROLES.map((r) => [markdownToken(r), md[r]]),
+  ) as Pick<ThemeTokens, Extract<TokenName, `--vault-md-${string}`>>;
+};
 
 /** Largest OKLab step that still reads as "the accent" when used as text. */
 export const ACCENT_TEXT_MAX_NUDGE = 0.06;
@@ -260,6 +275,7 @@ export const deriveTokens = (
       primary,
       STATE_ALPHA.ring,
     )}`,
+    ...markdownTokens(variant),
     // Same ring drawn inside, for rows and tabs whose parent clips overflow.
     "--vault-ring-inset": `inset 0 0 0 2px ${toRgba(
       primary,

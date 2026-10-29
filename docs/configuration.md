@@ -526,6 +526,29 @@ The full set of roles, all optional except the first three:
 
 Optional top-level `name` and `author` fields are for display only.
 
+#### Markdown colours in themes
+
+Imported notes take their colours from the theme, the way an Obsidian theme sets `--h1-color` … `--h6-color`, `--link-color` and `--code-background`. Each variant may have a `markdown` block; every key is optional:
+
+```json
+"dark": {
+  "mSurface": "#1e1e2e", "mOnSurface": "#cdd6f4", "mPrimary": "#cba6f7",
+  "markdown": { "h1": "#cba6f7", "h2": "#fab387", "link": "#89b4fa", "code_bg": "#2a2a3c" }
+}
+```
+
+| Key | Colours | When the theme leaves it out |
+| --- | --- | --- |
+| `h1` … `h6` | Headings, one colour per level | `h1` the accent (`mPrimary`), `h2` `mSecondary`, `h3` `mTertiary`, `h4` and `h5` those accents mixed towards the text, `h6` the muted text |
+| `bold`, `italic` | Bold and italic text (for future inline styles) | the text colour |
+| `link` | Links | the accent |
+| `code`, `code_bg` | Code text and the code box | the text colour; a light tint of the page |
+| `quote_bar` | The bar left of a quote | the accent |
+
+A colour the theme sets is used as written. A colour Vaultdraw derives reads at 4.5:1 or more on the page (the quote bar at 3:1). The built-in themes set all of them. Each is also a token for CSS snippets and plugins: `--vault-md-h1` … `--vault-md-h6`, `--vault-md-bold`, `--vault-md-italic`, `--vault-md-link`, `--vault-md-code`, `--vault-md-code-bg`, `--vault-md-quote-bar`.
+
+An imported note stores which role each heading, link and code box plays, not the theme's colour, so switching themes (or light and dark) restyles every imported note at once. On a "Match current theme" page and with Sync canvas the roles show in the theme's colours; on a plain white page and in exports they show as near-black headings, a blue link and a grey code box. Picking your own colour for an element replaces its role, and your colour stays.
+
 #### Sync canvas with theme
 
 With `sync_canvas = true` (**Sync canvas with theme** in Settings), the canvas is recoloured on screen: its background becomes the theme's background, and the pencil, stroke and fill colours from Excalidraw's palette become matching theme colours. This only changes what you see. Saved drawings and PNG/SVG exports keep Excalidraw's standard colours, so they look the same for anyone who opens them. With it off, the canvas renders as in regular Excalidraw.
@@ -1768,6 +1791,7 @@ obsidian_excalidraw = true   # convert .excalidraw.md drawings
 strict_line_breaks = false  # a single line break stays a line break (Obsidian's default); true joins the lines
 obsidian_report = true       # write "Import report" when files fail or images stay boxes
 offer_update = true          # offer to update notes imported by an older version
+heading_colors = true        # each heading level in its own colour from your theme
 ```
 
 | Key | Default | Meaning |
@@ -1781,6 +1805,7 @@ offer_update = true          # offer to update notes imported by an older versio
 | `obsidian_excalidraw` | `true` | Convert `Name.excalidraw.md` (plain or compressed) to `Name.excalidraw`. |
 | `strict_line_breaks` | `false` | Like Obsidian's "Strict line breaks". Off: a single line break inside a paragraph stays a line break. On: the lines are joined with a space. Hard breaks (two spaces or a backslash at the end of a line) always break. |
 | `obsidian_report` | `true` | When a file fails or an image stays a box, write `Import report` (a drawing at the root of the target) listing each file or image and the reason. Nothing is written for a clean import. |
+| `heading_colors` | `true` | Headings take their level's colour from your theme (the theme's `markdown` colours, see [Themes](#markdown-colours-in-themes)), like Obsidian's `--h1-color` … `--h6-color`, and follow the theme when you switch. Headings step down in size like Obsidian's (1.8, 1.6, 1.4, 1.25, 1.125 and 1 times the body size). `false` gives headings the text colour. |
 | `offer_update` | `true` | Opening a note imported by an older version (white page, hand-drawn font, or web pictures left as boxes) shows one notice per session with **Update**. `false` hides the notice; the command still works. (Web-picture boxes fill in by themselves when such a note opens; see `network.allow_images`.) |
 
 Imported drawings start like a new drawing: your paper theme (the default page setup's when its mode is Page, otherwise Match current theme, so the page follows the app theme), background pattern and tool defaults. Notes imported by an older version kept a white page and the hand-drawn font. **Markdown: Update imported notes to my theme and font** (palette, command `markdown.updateImportedNotes`, no default key) gives every imported drawing in the vault your paper theme and the import's font (the `font` setting above; code stays in Cascadia; text the new font would cut off at the right edge is re-wrapped and what follows moves down, onto a new page when one is full); **Update imported notes here** on a folder's menu does the same for that folder and its subfolders. Only drawings the import made are changed, each gets a history version first (restore it from History to undo), a file edited meanwhile is left alone, and running it again changes nothing. Web pictures an older import left as boxes fill in by themselves when the note opens (`network.allow_images`); a box that could not be filled says why, and the notice offers **Retry** (also **Markdown: Download web images in this drawing**). The palette command **Markdown: Update this note to my theme and font anyway** (and **Update to my theme and font anyway** on a drawing's menu) updates one drawing the pass left alone, after a history version; when the pass leaves notes alone, its notice has **View list** with each note and why. To bring an old import's content up to date (real tables, line breaks, picture order), **Markdown: Re-import this note from its Markdown** (palette, `markdown-import.reimport-note`; also on a drawing's and a tab's menu) rebuilds it from the note in the Obsidian vault you pick (asked once per session), and **Markdown: Re-import unchanged imported notes** (`markdown-import.reimport-notes`; **Re-import unchanged imported notes here** on a folder's menu) does every import nobody changed since. Each rewritten drawing is kept in History first.

@@ -4,6 +4,8 @@
  * optional `terminal` palette.
  */
 
+import type { MarkdownRole } from "../../../sdk/api/shared/markdownRoles";
+
 export type ThemeMode = "light" | "dark";
 
 export const THEME_MODES: readonly ThemeMode[] = ["dark", "light"];
@@ -71,10 +73,13 @@ export type TerminalColors = {
 /** A fully resolved variant: every role and terminal colour is a lowercase `#rrggbb`. */
 export type ThemeVariant = Record<RoleKey, string> & {
   terminal: TerminalColors;
+  /** Markdown colours the theme sets (markdown.ts derives the rest). */
+  markdown?: Partial<Record<MarkdownRole, string>>;
 };
 
 /** Variant as authored (all optional at the type level; validated at runtime). */
 export type ThemeVariantInput = Partial<Record<RoleKey, string>> & {
+  markdown?: Partial<Record<MarkdownRole, string>>;
   terminal?: Partial<Record<TerminalExtraKey, string>> & {
     normal?: Partial<AnsiColors>;
     bright?: Partial<AnsiColors>;
@@ -147,6 +152,18 @@ export const TOKEN_NAMES = [
   "--vault-sel-strong",
   "--vault-ring",
   "--vault-ring-inset",
+  "--vault-md-h1",
+  "--vault-md-h2",
+  "--vault-md-h3",
+  "--vault-md-h4",
+  "--vault-md-h5",
+  "--vault-md-h6",
+  "--vault-md-bold",
+  "--vault-md-italic",
+  "--vault-md-link",
+  "--vault-md-code",
+  "--vault-md-code-bg",
+  "--vault-md-quote-bar",
 ] as const;
 
 export type TokenName = typeof TOKEN_NAMES[number];

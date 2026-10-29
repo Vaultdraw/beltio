@@ -165,3 +165,10 @@ type = "bool"
 title = "Offer to update old imports"
 description = "When you open a note imported by an older version (white page, hand-drawn font), offer to give every imported note your theme and font."
 default = true
+
+[[contributes.settings]]
+key = "heading_colors"
+type = "bool"
+title = "Coloured headings"
+description = "Headings take their level's colour from your theme, as in Obsidian, and follow it when you switch themes. Off: headings take the text colour."
+default = true

@@ -7,6 +7,11 @@
  * callouts), so a page or font the user chose in their own drawings stays as it is. Code text
  * (Cascadia) keeps its monospace font; only Excalifont text takes the user's drawing font.
  */
+import {
+  ROLE_COLORS,
+  headingRoleOf,
+} from "../../../sdk/api/shared/markdownRoles";
+
 import { pageGeometryOf, reflowScene, overflows } from "./reflow";
 
 import type { TextMeasure } from "./reflow";
@@ -23,6 +28,8 @@ export interface UpgradeTarget {
   fontFamily: number;
   /** Measures and wraps text (the editor's); without it clipped text is not detected or re-wrapped. */
   measure?: TextMeasure;
+  /** `[plugin.markdown-import] heading_colors` (default on): headings in their theme colour. */
+  headingColors?: boolean;
 }
 
 export interface UpgradeResult {
@@ -33,6 +40,8 @@ export interface UpgradeResult {
   fonts: number;
   /** Clipped texts re-wrapped to their width. */
   rewrapped: number;
+  /** Headings that took their role (theme colour), or lost it with heading colours off. */
+  headings: number;
 }
 
 type El = Record<string, unknown> & { type?: string; customData?: unknown };
@@ -90,6 +99,49 @@ export const importFontFamily = (
 
 export { webPictureBoxes } from "./placeholders";
 
+const TEXT_COLOR = "#1e1e1e";
+/** Colours the import itself gives a heading: a colour the user picked is never replaced. */
+const IMPORT_HEADING_COLORS = new Set<unknown>([
+  TEXT_COLOR,
+  ROLE_COLORS.h1,
+  ROLE_COLORS.h2,
+  ROLE_COLORS.h3,
+  ROLE_COLORS.h4,
+  ROLE_COLORS.h5,
+  ROLE_COLORS.h6,
+]);
+
+type ImportData = { heading?: unknown; role?: unknown };
+const importData = (e: El): ImportData | null =>
+  marked(e)
+    ? (e.customData as Record<string, ImportData>)[IMPORT_MARK] ?? null
+    : null;
+
+const headingLevel = (e: El): number | null => {
+  if (e.type !== "text" || e.isDeleted === true) {
+    return null;
+  }
+  const level = importData(e)?.heading;
+  return typeof level === "number" && level >= 1 && level <= 6 ? level : null;
+};
+
+/** The colour and role a heading gets with the settings now. */
+const headingLook = (level: number, t: UpgradeTarget) =>
+  t.headingColors === false
+    ? { color: TEXT_COLOR, role: undefined }
+    : { color: ROLE_COLORS[headingRoleOf(level)], role: headingRoleOf(level) };
+
+/** Imported headings whose colour or role is not the one the settings give them now. */
+const headingsToStyle = (scene: Scene, t: UpgradeTarget): El[] =>
+  (scene.elements ?? []).filter((e) => {
+    const level = headingLevel(e);
+    if (level === null || !IMPORT_HEADING_COLORS.has(e.strokeColor)) {
+      return false;
+    }
+    const want = headingLook(level, t);
+    return e.strokeColor !== want.color || importData(e)?.role !== want.role;
+  });
+
 const clippedTexts = (scene: Scene, t: UpgradeTarget): boolean =>
   !!t.measure &&
   (scene.elements ?? []).some(
@@ -110,6 +162,7 @@ export const hasOldLook = (
   imported &&
   (needsPaper(scene, t) ||
     oldFontTexts(scene, t).length > 0 ||
+    headingsToStyle(scene, t).length > 0 ||
     clippedTexts(scene, t));
 
 /** The upgraded drawing, or null when it is not an import or already has the user's look. */
@@ -160,6 +213,25 @@ export function upgradeScene(
         : e,
     );
   }
+  const restyle = new Set(headingsToStyle(scene, t));
+  if (restyle.size > 0) {
+    scene.elements = scene.elements.map((e) => {
+      if (!restyle.has(e)) {
+        return e;
+      }
+      const look = headingLook(headingLevel(e)!, t);
+      const { role: _old, ...rest } = importData(e) ?? {};
+      return {
+        ...e,
+        strokeColor: look.color,
+        customData: {
+          ...(e.customData as object),
+          [IMPORT_MARK]: look.role ? { ...rest, role: look.role } : rest,
+        },
+        version: (typeof e.version === "number" ? e.version : 1) + 1,
+      };
+    });
+  }
   let rewrapped = 0;
   if (t.measure) {
     const flow = reflowScene(
@@ -185,5 +257,6 @@ export function upgradeScene(
     paper,
     fonts: old.size,
     rewrapped,
+    headings: restyle.size,
   };
 }

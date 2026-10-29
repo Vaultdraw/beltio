@@ -60,6 +60,15 @@
     {
      "type": "rect",
      "page": 0,
+     "x": 48,
+     "y": 448,
+     "width": 3,
+     "height": 90,
+     "fill": "bar"
+    },
+    {
+     "type": "rect",
+     "page": 0,
      "x": 58,
      "y": 328,
      "width": 678,
@@ -74,6 +83,15 @@
      "width": 678,
      "height": 50,
      "fill": "quote"
+    },
+    {
+     "type": "rect",
+     "page": 0,
+     "x": 58,
+     "y": 488,
+     "width": 3,
+     "height": 50,
+     "fill": "bar"
     },
     {
      "type": "text",
@@ -256,7 +274,7 @@
  "stats": {
   "words": 41,
   "blocks": 15,
-  "elements": 21,
+  "elements": 23,
   "pages": 1,
   "parts": 1,
   "skipped": 0

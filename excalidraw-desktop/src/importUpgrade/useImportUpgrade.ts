@@ -82,6 +82,7 @@ export const upgradeTarget = (win: Window | null): UpgradeTarget => ({
     importSettings(win).font,
     getPreferences(win).defaultFontFamily,
   ),
+  headingColors: importSettings(win).heading_colors !== false,
   measure: editorMeasure,
 });
 

@@ -17,6 +17,7 @@ import {
   MAX_TEXT,
   imageProblem,
 } from "./sceneRules";
+import { ROLE_COLORS } from "./markdownRoles";
 import { FONT_SIZE } from "./text";
 
 import type {
@@ -49,20 +50,32 @@ export const FONT_IDS: Readonly<Record<FontFamilyName, number>> = {
   "Liberation Sans": 9,
 };
 
-/** Stroke colour per text tone (the editor's palette: black, gray 600, blue 800). */
+/**
+ * Stroke colour per text tone. Normal and muted are the editor's palette
+ * (black, gray 600). Links, code and headings are Markdown role colours
+ * (markdownRoles.ts): the canvas draws each in the active theme's colour for
+ * that role, so imported notes follow the theme like Obsidian's.
+ */
 export const TONE_COLORS: Readonly<Record<PageTextTone, string>> = {
   normal: "#1e1e1e",
   muted: "#868e96",
-  code: "#1e1e1e",
-  link: "#1971c2",
+  code: ROLE_COLORS.code,
+  link: ROLE_COLORS.link,
+  heading1: ROLE_COLORS.h1,
+  heading2: ROLE_COLORS.h2,
+  heading3: ROLE_COLORS.h3,
+  heading4: ROLE_COLORS.h4,
+  heading5: ROLE_COLORS.h5,
+  heading6: ROLE_COLORS.h6,
 };
 
-/** Background per box fill (gray 200, gray 50, blue 50, gray 50). */
+/** Background per box fill (role colours for the code box and the quote bar; gray 50 and blue 50 otherwise). */
 export const FILL_COLORS: Readonly<Record<PageRectFill, string>> = {
-  code: "#e9ecef",
+  code: ROLE_COLORS.code_bg,
   quote: "#f8f9fa",
   callout: "#e7f5ff",
   table: "#f8f9fa",
+  bar: ROLE_COLORS.quote_bar,
   none: "transparent",
 };
 

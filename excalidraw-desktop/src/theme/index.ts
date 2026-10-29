@@ -34,6 +34,14 @@ export {
 } from "./tokens";
 export { excalidrawVariableOverrides } from "./excalidrawVars";
 export {
+  MARKDOWN_ROLES,
+  MARKDOWN_TEXT_CONTRAST,
+  deriveMarkdownColors,
+  markdownColors,
+  markdownToken,
+} from "./markdown";
+export type { MarkdownColors, MarkdownRole } from "./markdown";
+export {
   buildCanvasColorTransform,
   buildCanvasPaletteMap,
   resolveFamilyTargets,

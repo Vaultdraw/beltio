@@ -31,7 +31,12 @@ export interface Role {
 
 export type RoleTable = Readonly<Record<RoleName, Role>>;
 
-const HEADING_SCALE = [2, 1.5, 1.25, 1.125, 1, 1];
+/**
+ * Heading sizes as a multiple of the body size: Obsidian's default theme
+ * steps (1.8, 1.6, 1.4, 1.25, 1.125, 1). Excalidraw text has no bold, so
+ * size and the heading colour carry the level.
+ */
+const HEADING_SCALE = [1.8, 1.6, 1.4, 1.25, 1.125, 1];
 
 const role = (name: RoleName, family: FontFamilyName, size: number): Role => {
   const lineHeight = LINE_HEIGHTS[family];

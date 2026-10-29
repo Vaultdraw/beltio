@@ -433,12 +433,12 @@ describe("pages.buildScene", () => {
       "image",
     ]);
     expect(scene.elements[0]).toMatchObject({
-      strokeColor: "#1971c2",
+      strokeColor: "#1971c3",
       link: "https://x.y",
       customData: { "plugins.pg": { h: 2 } },
     });
     expect(scene.elements[1]).toMatchObject({
-      backgroundColor: "#e9ecef",
+      backgroundColor: "#e9ecee",
       strokeColor: "transparent",
       y: ctx.pages.geometry({ size: "letter", orientation: "landscape" }).pitch,
     });

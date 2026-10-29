@@ -41,7 +41,10 @@
      "fontSize": 14,
      "fontFamily": "Cascadia",
      "lineHeight": 1.2,
-     "tone": "code"
+     "tone": "code",
+     "data": {
+      "role": "code"
+     }
     },
     {
      "type": "text",
@@ -54,7 +57,10 @@
      "fontSize": 14,
      "fontFamily": "Cascadia",
      "lineHeight": 1.2,
-     "tone": "code"
+     "tone": "code",
+     "data": {
+      "role": "code"
+     }
     },
     {
      "type": "text",
@@ -67,7 +73,10 @@
      "fontSize": 14,
      "fontFamily": "Cascadia",
      "lineHeight": 1.2,
-     "tone": "code"
+     "tone": "code",
+     "data": {
+      "role": "code"
+     }
     },
     {
      "type": "text",

@@ -763,14 +763,14 @@ Three additions for plugins that turn other files into drawings: a page-mode dra
 
 ### Page items
 
-The plugin lays the content out (wrapped lines, boxes, rules, pictures) and hands the host **page items**: scene pixels relative to the page's top-left corner, with the page index. The host never measures or re-wraps text: a text item arrives wrapped (lines joined by `"\n"`) and sized, and becomes a text element with `autoResize: false`. Colours follow the theme: `tone` and `fill` map to the editor's default palette.
+The plugin lays the content out (wrapped lines, boxes, rules, pictures) and hands the host **page items**: scene pixels relative to the page's top-left corner, with the page index. The host never measures or re-wraps text: a text item arrives wrapped (lines joined by `"\n"`) and sized, and becomes a text element with `autoResize: false`. Colours follow the theme: on a "Match current theme" paper (and with canvas sync) the tones `link`, `code` and `heading1` to `heading6`, the `code` fill and the `bar` fill are drawn in the active theme's Markdown colours (`--vault-md-*`, see [theme tokens](theme-tokens.md)); the other tones and fills map to the editor's default palette. The tones `heading1` to `heading6` and the fill `bar` are new in 0.32.0; check `ctx.host.revision` before using them on an older app.
 
 ```ts
 type PageItem =
   | { type: "text"; page; x; y; width; height; text: string; fontSize: number; fontFamily: FontFamilyName;
-      lineHeight: number; align?: "left" | "center" | "right"; tone?: "normal" | "muted" | "code" | "link";
+      lineHeight: number; align?: "left" | "center" | "right"; tone?: "normal" | "muted" | "code" | "link" | "heading1" … "heading6";
       link?: string; data?: Record<string, unknown>; group?: string } // data at most 4 KiB as JSON, under the plugin's data key
-  | { type: "rect"; page; x; y; width; height; fill: "code" | "quote" | "callout" | "table" | "none"; stroke?: "none" | "thin"; group?: string }
+  | { type: "rect"; page; x; y; width; height; fill: "code" | "quote" | "callout" | "table" | "bar" | "none"; stroke?: "none" | "thin"; group?: string }
   | { type: "line"; page; x; y; width; height; strong?: boolean; group?: string } // from (x, y) to (x + width, y + height)
   | { type: "image"; page; x; y; width; height; mimeType: string; bytes?: Uint8Array; alt?: string; target: string; group?: string };
 ```

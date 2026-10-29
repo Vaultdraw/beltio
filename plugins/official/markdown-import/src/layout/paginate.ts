@@ -330,6 +330,18 @@ export class Paginator {
         height: box.y1 - box.y0,
         fill: c.fill,
       });
+      // A quote gets an accent bar down its left edge, as Obsidian draws it.
+      if (c.fill === "quote") {
+        items.push({
+          type: "rect",
+          page,
+          x: left + c.x,
+          y: top + box.y0,
+          width: QUOTE_BAR,
+          height: box.y1 - box.y0,
+          fill: "bar",
+        });
+      }
     }
     let run: { block: TextBlock; y: number; lines: string[] } | null = null;
     const endRun = () => {
@@ -415,5 +427,8 @@ export class Paginator {
     return { page, items };
   }
 }
+
+/** Width of a quote's left bar, scene pixels. */
+export const QUOTE_BAR = 3;
 
 const depth = (c: Container): number => (c.parent ? depth(c.parent) + 1 : 0);

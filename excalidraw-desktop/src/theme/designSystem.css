@@ -93,6 +93,19 @@
   --vd-callout-quote: #8a8f98;
   --vd-callout-question: #b08800;
   --vd-callout-example: #7a5af8;
+  /* Markdown colours of the Default theme (builtin/default.json "markdown"; pinned by a test). */
+  --vault-md-h1: #6965db;
+  --vault-md-h2: #1971c2;
+  --vault-md-h3: #048296;
+  --vault-md-h4: #0d8930;
+  --vault-md-h5: #9c36b5;
+  --vault-md-h6: #64646d;
+  --vault-md-bold: #1d1d20;
+  --vault-md-italic: #1d1d20;
+  --vault-md-link: #6965db;
+  --vault-md-code: #af6400;
+  --vault-md-code-bg: #eaeaeb;
+  --vault-md-quote-bar: #6965db;
 }
 
 html.dark {
@@ -108,6 +121,18 @@ html.dark {
   --vault-sel-strong: rgba(142, 139, 240, 0.26);
   --vault-ring: 0 0 0 2px #121212, 0 0 0 4px rgba(142, 139, 240, 0.75);
   --vault-ring-inset: inset 0 0 0 2px rgba(142, 139, 240, 0.75);
+  --vault-md-h1: #8e8bf0;
+  --vault-md-h2: #4dabf7;
+  --vault-md-h3: #3bc9db;
+  --vault-md-h4: #69db7c;
+  --vault-md-h5: #da77f2;
+  --vault-md-h6: #a1a1a9;
+  --vault-md-bold: #e6e6e9;
+  --vault-md-italic: #e6e6e9;
+  --vault-md-link: #8e8bf0;
+  --vault-md-code: #ffd43b;
+  --vault-md-code-bg: #202020;
+  --vault-md-quote-bar: #8e8bf0;
 }
 
 /* One row style for every list (tree, menus, tab list, palette, search,

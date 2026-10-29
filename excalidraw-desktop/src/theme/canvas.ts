@@ -10,6 +10,8 @@
  *   gray[0..4]                        -> canvas→text ramp (6, 15, 30, 55, 85 %)
  *   hue families (red … orange)       -> theme colour, see resolveFamilyTargets
  *   bronze                            -> orange target desaturated towards text
+ *   Markdown role colours (ROLE_COLORS) -> the theme's Markdown colour of that role
+ *                                        (markdown.ts), as the theme sets or derives it
  *   shade i (0 lightest fill … 4 stroke) -> mix(canvas, target, 12/30/55/80/100 %),
  *                                        shade 4 nudged to ≥ 3:1 on the canvas
  */
@@ -28,6 +30,10 @@ import {
   oklchToHex,
   parseHex,
 } from "./color";
+
+import { ROLE_COLORS } from "../../../sdk/api/shared/markdownRoles";
+
+import { MARKDOWN_ROLES, markdownColors } from "./markdown";
 
 import type { ThemeMode, ThemeVariant } from "./types";
 
@@ -213,6 +219,11 @@ export const buildCanvasPaletteMap = (
     }
   };
 
+  // Markdown roles of imported notes: the theme's own colour for each role.
+  const md = markdownColors(variant);
+  for (const role of MARKDOWN_ROLES) {
+    set(ROLE_COLORS[role], md[role]);
+  }
   set(COLOR_PALETTE.white, canvas);
   for (const pick of DEFAULT_CANVAS_BACKGROUND_PICKS) {
     set(pick, canvas);

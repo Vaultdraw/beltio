@@ -251,7 +251,9 @@ export function* layoutNoteStream(
   };
 
   yield startPart("");
-  for (const item of mapNote(doc)) {
+  for (const item of mapNote(doc, {
+    headingColors: opts.headingColors ?? true,
+  })) {
     if (cutter.consider(item)) {
       yield* endPart();
       yield startPart(

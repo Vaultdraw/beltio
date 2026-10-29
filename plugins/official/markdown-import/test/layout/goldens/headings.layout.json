@@ -9,20 +9,22 @@
      "x": 48,
      "y": 48,
      "width": 698,
-     "height": 40,
+     "height": 36.25,
      "text": "Title with bold and italic",
-     "fontSize": 32,
+     "fontSize": 29,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "tone": "heading1",
      "data": {
-      "heading": 1
+      "heading": 1,
+      "role": "h1"
      }
     },
     {
      "type": "text",
      "page": 0,
      "x": 48,
-     "y": 98,
+     "y": 94.25,
      "width": 698,
      "height": 20,
      "text": "Intro paragraph with highlight, gone and inline #code.",
@@ -34,97 +36,109 @@
      "type": "text",
      "page": 0,
      "x": 48,
-     "y": 138,
+     "y": 134.25,
      "width": 698,
-     "height": 30,
+     "height": 31.88,
      "text": "Second level #topic",
-     "fontSize": 24,
+     "fontSize": 25.5,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "tone": "heading2",
      "data": {
-      "heading": 2
+      "heading": 2,
+      "role": "h2"
      }
     },
     {
      "type": "text",
      "page": 0,
      "x": 48,
-     "y": 188,
+     "y": 186.13,
+     "width": 698,
+     "height": 28.13,
+     "text": "Third",
+     "fontSize": 22.5,
+     "fontFamily": "Nunito",
+     "lineHeight": 1.25,
+     "tone": "heading3",
+     "data": {
+      "heading": 3,
+      "role": "h3"
+     }
+    },
+    {
+     "type": "text",
+     "page": 0,
+     "x": 48,
+     "y": 234.25,
      "width": 698,
      "height": 25,
-     "text": "Third",
+     "text": "Fourth",
      "fontSize": 20,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "tone": "heading4",
      "data": {
-      "heading": 3
+      "heading": 4,
+      "role": "h4"
      }
     },
     {
      "type": "text",
      "page": 0,
      "x": 48,
-     "y": 233,
+     "y": 279.25,
      "width": 698,
      "height": 22.5,
-     "text": "Fourth",
+     "text": "Fifth",
      "fontSize": 18,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "tone": "heading5",
      "data": {
-      "heading": 4
+      "heading": 5,
+      "role": "h5"
      }
     },
     {
      "type": "text",
      "page": 0,
      "x": 48,
-     "y": 275.5,
-     "width": 698,
-     "height": 20,
-     "text": "Fifth",
-     "fontSize": 16,
-     "fontFamily": "Nunito",
-     "lineHeight": 1.25,
-     "data": {
-      "heading": 5
-     }
-    },
-    {
-     "type": "text",
-     "page": 0,
-     "x": 48,
-     "y": 315.5,
+     "y": 321.75,
      "width": 698,
      "height": 20,
      "text": "Sixth",
      "fontSize": 16,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "tone": "heading6",
      "data": {
-      "heading": 6
+      "heading": 6,
+      "role": "h6"
      }
     },
     {
      "type": "text",
      "page": 0,
      "x": 48,
-     "y": 355.5,
+     "y": 361.75,
      "width": 698,
-     "height": 40,
+     "height": 36.25,
      "text": "Setext Heading",
-     "fontSize": 32,
+     "fontSize": 29,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "tone": "heading1",
      "data": {
-      "heading": 1
+      "heading": 1,
+      "role": "h1"
      }
     },
     {
      "type": "text",
      "page": 0,
      "x": 48,
-     "y": 405.5,
+     "y": 408,
      "width": 698,
      "height": 20,
      "text": "Last paragraph",

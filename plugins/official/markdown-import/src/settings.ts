@@ -52,6 +52,8 @@ export interface ImportSettings {
    * space; off (Obsidian's default), it stays a line break.
    */
   strictLineBreaks?: boolean;
+  /** Each heading level in its own theme colour (`heading_colors`; unset counts as on). */
+  headingColors?: boolean;
 }
 
 /** The fallback drawing font (Excalifont); the Document font is the plain sans. */
@@ -106,6 +108,7 @@ export function readSettings(ctx: PluginContext): ImportSettings {
     obsidianExcalidraw: bool(get("obsidian_excalidraw"), true),
     obsidianReport: bool(get("obsidian_report"), true),
     strictLineBreaks: bool(get("strict_line_breaks"), false),
+    headingColors: bool(get("heading_colors"), true),
   };
 }
 

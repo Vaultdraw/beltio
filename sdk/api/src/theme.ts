@@ -3,7 +3,8 @@ import type { Disposable } from "./disposable";
 /**
  * The CSS custom properties of the app's colour theme. The names are API: a
  * token is never removed without an alias. `sdk/docs/theme-tokens.md` says what
- * each one is for.
+ * each one is for. The `--vault-md-*` tokens (since 0.32.0) are the theme's
+ * Markdown colours, like an Obsidian theme's `--h1-color`.
  *
  * @since 0.2.0
  */
@@ -50,7 +51,19 @@ export type ThemeTokenName =
   | "--vault-sel"
   | "--vault-sel-strong"
   | "--vault-ring"
-  | "--vault-ring-inset";
+  | "--vault-ring-inset"
+  | "--vault-md-h1"
+  | "--vault-md-h2"
+  | "--vault-md-h3"
+  | "--vault-md-h4"
+  | "--vault-md-h5"
+  | "--vault-md-h6"
+  | "--vault-md-bold"
+  | "--vault-md-italic"
+  | "--vault-md-link"
+  | "--vault-md-code"
+  | "--vault-md-code-bg"
+  | "--vault-md-quote-bar";
 
 /**
  * The light or dark look that is shown now.
