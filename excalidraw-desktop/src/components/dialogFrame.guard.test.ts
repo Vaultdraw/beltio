@@ -19,10 +19,6 @@ const ALLOWED: Record<string, string> = {
     "the settings window: full-size two-pane surface, own Escape (clear search first); uses the scrim class",
   "excalidraw-desktop/src/components/readonly/ReadOnlyBadge.tsx":
     "a non-modal popover (no aria-modal, no backdrop)",
-  "plugins/official/formula/src/DialogFrame.tsx":
-    "plugin bundle: cannot import host components; mirrors the frame's classes",
-  "plugins/official/pdf-import/src/Dialog.tsx":
-    "plugin bundle: cannot import host components; mirrors the frame's classes",
 };
 
 const PATTERN =

@@ -6,7 +6,11 @@
  */
 import { useEffect, useRef } from "react";
 
-const stack: object[] = [];
+// One stack per window, not per bundle: official plugins ship their own copy of this module
+// (their dialogs use the same frame), and their layers must stack with the app's.
+const KEY = Symbol.for("vaultdraw.escapeLayers");
+const holder = globalThis as unknown as Record<symbol, object[] | undefined>;
+const stack: object[] = (holder[KEY] ??= []);
 
 /** Joins the stack; `isTop` is true while nothing newer is open. */
 export function pushEscapeLayer(): { isTop: () => boolean; pop: () => void } {

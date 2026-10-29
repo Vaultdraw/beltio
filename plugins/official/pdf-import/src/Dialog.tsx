@@ -4,6 +4,7 @@
  */
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
+import { Dialog } from "../../../../excalidraw-desktop/src/components/Dialog";
 import { estimateImport } from "./budget";
 import { pdfErrorMessage } from "./errors";
 import { sizeOf } from "./importPdf";
@@ -25,15 +26,7 @@ const formatMb = (bytes: number) =>
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
-const FOCUSABLE =
-  'button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])';
-
-/**
- * The app's dialog frame, as the core `Dialog` draws it (same class names, so it looks like every
- * other Vaultdraw dialog and follows the theme). The overlay is modal (`ctx.overlays`), so the
- * drawing stays visible behind the scrim. Escape cancels (also while running), Tab stays inside,
- * and focus goes back to where it was.
- */
+/** The app's own `Dialog` (keyboard contract, focus and Escape stack included), as a plugin overlay. */
 const Frame = ({
   titleId,
   onCancel,
@@ -46,119 +39,22 @@ const Frame = ({
   onSubmit: () => void;
   footer: React.ReactNode;
   children: React.ReactNode;
-}) => {
-  const backdrop = useRef<HTMLDivElement>(null);
-  const [opener] = useState(() => globalThis.document?.activeElement ?? null);
-  const live = useRef(onCancel);
-  live.current = onCancel;
-  useEffect(() => {
-    const doc = backdrop.current?.ownerDocument;
-    if (!doc) {
-      return undefined;
-    }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.isComposing) {
-        return;
-      }
+}) => (
+  <Dialog
+    title="Import PDF"
+    titleId={titleId}
+    className="pdfi"
+    testId="pdf-dialog"
+    onClose={onCancel}
+    onSubmit={(event) => {
       event.preventDefault();
-      event.stopPropagation();
-      live.current();
-    };
-    doc.addEventListener("keydown", onKeyDown, true);
-    return () => {
-      doc.removeEventListener("keydown", onKeyDown, true);
-      if (
-        opener instanceof HTMLElement &&
-        opener !== doc.body &&
-        opener.isConnected
-      ) {
-        opener.focus();
-      }
-    };
-  }, [opener]);
-
-  const trapTab = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "Tab") {
-      return;
-    }
-    const nodes = Array.from(
-      event.currentTarget.querySelectorAll<HTMLElement>(FOCUSABLE),
-    );
-    if (nodes.length === 0) {
-      return;
-    }
-    const first = nodes[0];
-    const last = nodes[nodes.length - 1];
-    const active = event.currentTarget.ownerDocument.activeElement;
-    if (
-      event.shiftKey &&
-      (active === first || !nodes.includes(active as never))
-    ) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && active === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-
-  return (
-    <div
-      ref={backdrop}
-      className="vault-modal-backdrop vd-dialog-scrim"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      data-testid="pdf-dialog"
-      onKeyDown={trapTab}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) {
-          onCancel();
-        }
-      }}
-    >
-      <div className="vault-modal vd-dialog pdfi">
-        <form
-          className="vd-dialog__form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onSubmit();
-          }}
-        >
-          <div className="vault-modal__header vd-dialog__header">
-            <div className="vd-dialog__heading">
-              <h3 id={titleId} className="vault-modal__title vd-dialog__title">
-                Import PDF
-              </h3>
-            </div>
-            <button
-              type="button"
-              className="vault-btn vault-btn--ghost vault-btn--icon vd-dialog__close"
-              onClick={onCancel}
-              aria-label="Close"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
-          <div className="vault-modal__body vd-dialog__body">{children}</div>
-          <div className="vault-modal__footer vd-dialog__footer">{footer}</div>
-        </form>
-      </div>
-    </div>
-  );
-};
+      onSubmit();
+    }}
+    footer={footer}
+  >
+    {children}
+  </Dialog>
+);
 
 const PasswordPrompt = ({
   doc,

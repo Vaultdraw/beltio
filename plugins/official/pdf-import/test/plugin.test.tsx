@@ -134,6 +134,27 @@ describe("pdf-import plugin", () => {
     expect(p!.pdf.closed).toHaveLength(2);
   });
 
+  it("uses the app's dialog keys: Tab stays inside, Enter on Cancel cancels and never imports", async () => {
+    await start();
+    await openDialog();
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+    const stops = Array.from(
+      dialog().querySelectorAll<HTMLElement>("button, input"),
+    ).filter((el) => !(el as HTMLButtonElement).disabled);
+    // Tab from the last stop wraps to the first; Shift+Tab from the first wraps to the last.
+    stops[stops.length - 1].focus();
+    fireEvent.keyDown(stops[stops.length - 1], { key: "Tab" });
+    expect(dialog().contains(document.activeElement)).toBe(true);
+    stops[0].focus();
+    fireEvent.keyDown(stops[0], { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(stops[stops.length - 1]);
+    // Enter on the focused Cancel button is a click on Cancel (button default), not a form submit.
+    cancel.focus();
+    fireEvent.click(cancel);
+    await closed();
+    expect(p!.scene.batches).toHaveLength(0);
+  });
+
   it("an encrypted PDF asks for its password first", async () => {
     await start();
     p!.pdf.password = "pw";
