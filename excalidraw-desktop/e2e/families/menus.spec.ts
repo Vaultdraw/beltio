@@ -5,6 +5,7 @@
  * three themes; add a menu with one row.
  */
 import { expect, type Page } from "@playwright/test";
+
 import { test } from "../fixture";
 
 import { openDrawing, openVault, trackErrors } from "../helpers";
