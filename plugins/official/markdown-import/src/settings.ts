@@ -109,6 +109,18 @@ export function readSettings(ctx: PluginContext): ImportSettings {
   };
 }
 
+/** The code font: code blocks, math and text tables. */
+export const CODE_FONT: FontFamilyName = "Cascadia";
+
+/**
+ * Every family a note is laid out in. All of them must be loaded before the
+ * width table is measured: a family still loading measures in a fallback
+ * font, and its lines then overflow (and clip) once the real font draws.
+ */
+export const layoutFamiliesOf = (
+  s: Pick<ImportSettings, "font" | "drawingFont">,
+): FontFamilyName[] => [...new Set([fontFamilyOf(s), CODE_FONT])];
+
 export const fontFamilyOf = (
   s: Pick<ImportSettings, "font" | "drawingFont">,
 ): FontFamilyName =>

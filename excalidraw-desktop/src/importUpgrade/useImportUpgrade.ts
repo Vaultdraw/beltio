@@ -29,6 +29,11 @@ import {
   webPictureBoxes,
 } from "./upgradeScene";
 import { UPDATE_IMPORTED_NOTES, UPDATE_THIS_NOTE } from "./commands";
+import {
+  editorMeasure,
+  loadedFontMeasure,
+  loadFamilies,
+} from "./editorMeasure";
 
 import type { UpgradeTarget } from "./upgradeScene";
 import type { HistoryRepository } from "../history/types";
@@ -77,6 +82,7 @@ export const upgradeTarget = (win: Window | null): UpgradeTarget => ({
     importSettings(win).font,
     getPreferences(win).defaultFontFamily,
   ),
+  measure: editorMeasure,
 });
 
 interface Options {
@@ -139,12 +145,15 @@ export function useImportUpgrade(o: Options): void {
       running.current = true;
       try {
         await flush().catch(() => undefined);
+        const upgradeTo = upgradeTarget(win);
+        // The old import font, the new one and the code font, before anything is measured.
+        await loadFamilies([5, 3, upgradeTo.fontFamily]).catch(() => undefined);
         const { runImportUpgrade } = await import("./runUpgrade");
         const summary = await runImportUpgrade({
           repository,
           history,
           handle: vault.handle,
-          target: upgradeTarget(win),
+          target: upgradeTo,
           folder,
           anyway: file ? [file] : undefined,
           onProgress: (done, total) =>
@@ -267,7 +276,10 @@ export function useImportUpgrade(o: Options): void {
     } catch {
       return;
     }
-    if (!hasOldLook(scene, upgradeTarget(win))) {
+    // Fonts may still be loading here: a line in a font not loaded yet counts as fitting.
+    if (
+      !hasOldLook(scene, { ...upgradeTarget(win), measure: loadedFontMeasure })
+    ) {
       return;
     }
     offered.current = true;

@@ -5,7 +5,7 @@
 
 import { buildWidthTable } from "./layout/index";
 import { importObsidianVault as importVault } from "./obsidian/importVault";
-import { fontFamilyOf } from "./settings";
+import { CODE_FONT, fontFamilyOf, layoutFamiliesOf } from "./settings";
 import { createLayoutClient, LayoutAbortedError } from "./worker/client";
 
 import type {
@@ -59,7 +59,7 @@ export async function* layoutNoteStream(
   const fonts = {
     body: opts.family,
     heading: opts.family,
-    code: "Cascadia" as FontFamilyName,
+    code: CODE_FONT,
   };
   const layout: LayoutEngineOptions = {
     fonts,
@@ -160,7 +160,7 @@ const workerLayout =
 export async function importObsidianVault(
   opts: ObsidianImportOptions,
 ): Promise<ObsidianImportResult> {
-  await opts.ctx.fonts.ensure([fontFamilyOf(opts.settings)]);
+  await opts.ctx.fonts.ensure(layoutFamiliesOf(opts.settings));
   return importVault({ ...opts, layout: workerLayout(opts) });
 }
 

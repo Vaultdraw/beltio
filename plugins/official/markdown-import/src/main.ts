@@ -16,6 +16,7 @@ import { createWebImages } from "./webImages";
 import {
   fontFamilyOf,
   parseOptions,
+  layoutFamiliesOf,
   readSettings,
   type ImportSettings,
 } from "./settings";
@@ -89,7 +90,7 @@ const plugin: Plugin = definePlugin({
     ): Promise<void> {
       const t0 = performance.now();
       const family = fontFamilyOf(settings);
-      await ctx.fonts.ensure([family], text);
+      await ctx.fonts.ensure(layoutFamiliesOf(settings), text);
       const t1 = performance.now();
       const doc = await ctx.markdown.parse(text, parseOptions(settings));
       const t2 = performance.now();
