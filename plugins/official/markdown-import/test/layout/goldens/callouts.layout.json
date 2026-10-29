@@ -104,6 +104,7 @@
      "fontSize": 16,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "data": {
       "callout": "note"
      }
@@ -131,6 +132,7 @@
      "fontSize": 16,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "data": {
       "callout": "tip"
      }
@@ -158,6 +160,7 @@
      "fontSize": 16,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "data": {
       "callout": "warning"
      }
@@ -173,6 +176,7 @@
      "fontSize": 16,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "data": {
       "callout": "note"
      }
@@ -200,6 +204,7 @@
      "fontSize": 16,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "data": {
       "callout": "faq"
      }
@@ -215,6 +220,7 @@
      "fontSize": 16,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "data": {
       "callout": "info"
      }

@@ -20,6 +20,7 @@ type El = {
   width: number;
   height: number;
   fontSize: number;
+  fontFamily: number;
   lineHeight: number;
   textAlign: string;
   customData?: Record<string, unknown>;
@@ -27,7 +28,9 @@ type El = {
 };
 
 /** A tiny scene of text boxes with one being edited. */
-function harness(opts: { on?: boolean; isLabel?: boolean } = {}) {
+function harness(
+  opts: { on?: boolean; isLabel?: boolean; headingBold?: boolean } = {},
+) {
   let on = opts.on ?? true;
   const els = new Map<string, El>();
   let nextId = 1;
@@ -39,6 +42,7 @@ function harness(opts: { on?: boolean; isLabel?: boolean } = {}) {
       width: 100,
       height: 25,
       fontSize: 20,
+      fontFamily: 5,
       lineHeight: 1.25,
       textAlign: "left",
       text: "",
@@ -49,7 +53,10 @@ function harness(opts: { on?: boolean; isLabel?: boolean } = {}) {
   };
   const ext = createMarkdownTyping({
     isOn: () => on,
-    getSettings: () => DEFAULT_MARKDOWN_TYPING_SETTINGS,
+    getSettings: () => ({
+      ...DEFAULT_MARKDOWN_TYPING_SETTINGS,
+      headingBold: opts.headingBold ?? true,
+    }),
   });
   const textarea = document.createElement("textarea");
   let editing = "";
@@ -81,14 +88,33 @@ function harness(opts: { on?: boolean; isLabel?: boolean } = {}) {
         if (patch.fontSize !== undefined) {
           e.fontSize = patch.fontSize;
         }
+        if (patch.fontFamily !== undefined) {
+          e.fontFamily = patch.fontFamily;
+        }
         if ("customData" in patch) {
           e.customData = patch.customData;
         }
         measure(e);
       },
-      continueInNewText: ({ x, y, text, caret: c, fontSize, customData }) => {
+      continueInNewText: ({
+        x,
+        y,
+        text,
+        caret: c,
+        fontSize,
+        fontFamily,
+        customData,
+      }) => {
+        const from = els.get(editing)!;
         submit();
-        const created = add({ x, y, text, fontSize, customData });
+        const created = add({
+          x,
+          y,
+          text,
+          fontSize,
+          fontFamily: fontFamily ?? from.fontFamily,
+          customData,
+        });
         measure(created);
         start(created.id, c);
       },
@@ -522,5 +548,67 @@ describe("Markdown typing: quotes", () => {
     expect(body.text).toBe("body");
     expect(quote.text).toBe("said");
     expect(quote.customData).toEqual({ role: "quote" });
+  });
+});
+
+describe("Markdown typing: bold headings", () => {
+  it("a heading takes the bold variant of the font; Enter's body box is regular again", () => {
+    const h = harness();
+    h.type("## Title");
+    expect(h.current().fontFamily).toBe(105);
+    h.press("Enter");
+    h.type("body");
+    expect(h.current().fontFamily).toBe(5);
+    expect(h.all().find((e) => e.text === "Title")?.fontFamily).toBe(105);
+  });
+
+  it("a heading made on a later line is bold in its new box", () => {
+    const h = harness();
+    h.type("intro");
+    h.press("Enter", { shiftKey: true });
+    h.textarea.value = "intro\n";
+    h.textarea.setSelectionRange(6, 6);
+    h.type("# Big ");
+    expect(h.all().some((e) => e.fontFamily === 105)).toBe(true);
+    expect(h.all().find((e) => e.text.startsWith("intro"))?.fontFamily).toBe(5);
+  });
+
+  it("Backspace at the start of a heading and Enter on an empty one make regular text", () => {
+    const h = harness();
+    h.type("# ");
+    expect(h.current().fontFamily).toBe(105);
+    h.press("Backspace");
+    expect(h.current().fontFamily).toBe(5);
+    const g = harness();
+    g.type("# ");
+    g.press("Enter");
+    expect(g.current().fontFamily).toBe(5);
+  });
+
+  it("Cmd+Z right after the # restores the font", () => {
+    const h = harness();
+    h.type("# ");
+    h.press("z", { metaKey: true });
+    expect(h.current().fontFamily).toBe(5);
+  });
+
+  it("heading_bold off: headings keep the regular font", () => {
+    const h = harness({ headingBold: false });
+    h.type("# Title");
+    expect(h.current().fontFamily).toBe(5);
+    expect(h.current().customData).toEqual({ role: "h1" });
+  });
+
+  it("a font that has no bold variant (Lilita One) stays as it is", () => {
+    const h = harness();
+    h.current().fontFamily = 7;
+    h.type("# Title");
+    expect(h.current().fontFamily).toBe(7);
+  });
+
+  it("a quote is never bold", () => {
+    const h = harness();
+    h.type("> ");
+    expect(h.current().fontFamily).toBe(5);
   });
 });

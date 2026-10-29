@@ -6,6 +6,7 @@ import {
   getFontFamilyFallbacks,
   getFontFamilyString,
   FONT_SIZES,
+  regularFontOf,
 } from "@excalidraw/common";
 import { getContainerElement } from "@excalidraw/element";
 import { charWidth } from "@excalidraw/element";
@@ -224,8 +225,20 @@ export class Fonts {
   public static async generateFontFaceDeclarations(
     elements: readonly ExcalidrawElement[],
   ) {
-    const families = Fonts.getUniqueFamilies(elements);
-    const charsPerFamily = Fonts.getCharsPerFamily(elements);
+    // a bold variant inlines its regular family's faces (the weight is set on the text)
+    const families = [
+      ...new Set(Fonts.getUniqueFamilies(elements).map(regularFontOf)),
+    ];
+    const charsPerFamily: Record<number, Set<string>> = {};
+    for (const [family, chars] of Object.entries(
+      Fonts.getCharsPerFamily(elements),
+    )) {
+      const regular = regularFontOf(Number(family));
+      charsPerFamily[regular] = new Set([
+        ...(charsPerFamily[regular] ?? []),
+        ...chars,
+      ]);
+    }
 
     // for simplicity, assuming we have just one family with the CJK handdrawn fallback
     const familyWithCJK = families.find((x) =>

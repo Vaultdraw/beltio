@@ -6,6 +6,7 @@ import {
   THEME,
   DARK_THEME_FILTER,
   getFontFamilyString,
+  isBoldFont,
   isRTL,
   isTestEnv,
   getVerticalOffset,
@@ -834,6 +835,9 @@ const renderElementToSvg = (
           text.setAttribute("x", `${horizontalOffset}`);
           text.setAttribute("y", `${i * lineHeightPx + verticalOffset}`);
           text.setAttribute("font-family", getFontFamilyString(element));
+          if (isBoldFont(element.fontFamily)) {
+            text.setAttribute("font-weight", "bold");
+          }
           text.setAttribute("font-size", `${element.fontSize}px`);
           text.setAttribute(
             "fill",

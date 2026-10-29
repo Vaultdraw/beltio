@@ -27,34 +27,47 @@ export interface Role {
   lineHeight: number;
   /** `size * lineHeight`. */
   linePx: number;
+  /** The bold variant of the family (headings; the `heading_bold` setting). */
+  bold: boolean;
 }
 
 export type RoleTable = Readonly<Record<RoleName, Role>>;
 
 /**
  * Heading sizes as a multiple of the body size: Obsidian's default theme
- * steps (1.8, 1.6, 1.4, 1.25, 1.125, 1). Excalidraw text has no bold, so
- * size and the heading colour carry the level.
+ * steps (1.8, 1.6, 1.4, 1.25, 1.125, 1). Headings are in the bold variant of
+ * the font (`heading_bold`), and size and the heading colour carry the level.
  */
 const HEADING_SCALE = [1.8, 1.6, 1.4, 1.25, 1.125, 1];
 
-const role = (name: RoleName, family: FontFamilyName, size: number): Role => {
+const role = (
+  name: RoleName,
+  family: FontFamilyName,
+  size: number,
+  bold = false,
+): Role => {
   const lineHeight = LINE_HEIGHTS[family];
-  return { name, family, size, lineHeight, linePx: size * lineHeight };
+  return { name, family, size, lineHeight, linePx: size * lineHeight, bold };
 };
 
 /** The roles for a body size and three families. Sizes are rounded to 0.5 px. */
-export const fontPlan = (fonts: LayoutFonts, fontSize: number): RoleTable => {
+export const fontPlan = (
+  fonts: LayoutFonts,
+  fontSize: number,
+  boldHeadings = true,
+): RoleTable => {
   const half = (n: number) => Math.round(n * 2) / 2;
+  const heading = (name: RoleName, scale: number) =>
+    role(name, fonts.heading, half(fontSize * scale), boldHeadings);
   return {
     body: role("body", fonts.body, fontSize),
-    h1: role("h1", fonts.heading, half(fontSize * HEADING_SCALE[0])),
-    h2: role("h2", fonts.heading, half(fontSize * HEADING_SCALE[1])),
-    h3: role("h3", fonts.heading, half(fontSize * HEADING_SCALE[2])),
-    h4: role("h4", fonts.heading, half(fontSize * HEADING_SCALE[3])),
-    h5: role("h5", fonts.heading, half(fontSize * HEADING_SCALE[4])),
-    h6: role("h6", fonts.heading, half(fontSize * HEADING_SCALE[5])),
-    title: role("title", fonts.heading, fontSize),
+    h1: heading("h1", HEADING_SCALE[0]),
+    h2: heading("h2", HEADING_SCALE[1]),
+    h3: heading("h3", HEADING_SCALE[2]),
+    h4: heading("h4", HEADING_SCALE[3]),
+    h5: heading("h5", HEADING_SCALE[4]),
+    h6: heading("h6", HEADING_SCALE[5]),
+    title: role("title", fonts.heading, fontSize, boldHeadings),
     code: role("code", fonts.code, half(fontSize * 0.875)),
   };
 };
@@ -63,4 +76,5 @@ export const headingRole = (level: number): RoleName =>
   `h${Math.min(6, Math.max(1, level))}` as RoleName;
 
 /** The font string `wrapText` is given; the width table is keyed by it. */
-export const fontKey = (family: string, size: number) => `${size}px ${family}`;
+export const fontKey = (family: string, size: number, bold = false) =>
+  `${bold ? "bold " : ""}${size}px ${family}`;

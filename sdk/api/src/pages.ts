@@ -196,6 +196,8 @@ export interface PageTextItem {
   fontSize: number;
   /** @since 0.9.0 */
   fontFamily: FontFamilyName;
+  /** The bold variant of the family. Wrap with `ctx.text.measure({ …, bold: true })`. @since 0.36.0 */
+  bold?: boolean;
   /** A multiple of the font size, as `ctx.text.lineHeight` gives it. @since 0.9.0 */
   lineHeight: number;
   /** @since 0.9.0 */

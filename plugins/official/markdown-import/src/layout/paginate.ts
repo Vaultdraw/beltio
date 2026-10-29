@@ -293,6 +293,9 @@ export class Paginator {
           align: grid.align[c],
           group,
         };
+        if (role.bold) {
+          item.bold = true;
+        }
         out.push(item);
       }
     }
@@ -361,6 +364,9 @@ export class Paginator {
         fontFamily: block.role.family,
         lineHeight: block.role.lineHeight,
       };
+      if (block.role.bold) {
+        item.bold = true;
+      }
       if (block.tone) {
         item.tone = block.tone;
       }

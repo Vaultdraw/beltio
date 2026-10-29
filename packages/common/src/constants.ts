@@ -153,6 +153,41 @@ export const FONT_FAMILY = {
   Assistant: 10,
 };
 
+/**
+ * Bold variants (Vaultdraw). A bold text keeps its family's name and looks and
+ * stores the id `regular id + 100` (Excalifont 5 is 105, Nunito 6 is 106):
+ * the font string asks for the bold weight, so a family with a bold face
+ * uses it and the others are emboldened by the browser. Measuring, drawing
+ * and editing all go through `getFontString`, so every size stays consistent.
+ * An editor that does not know the id (excalidraw.com) draws the text in its
+ * fallback font, still readable. Lilita One and Assistant are heavy already.
+ */
+export const BOLD_FONT_OFFSET = 100;
+const BOLDABLE_FONTS: readonly number[] = [
+  FONT_FAMILY.Virgil,
+  FONT_FAMILY.Helvetica,
+  FONT_FAMILY.Cascadia,
+  FONT_FAMILY.Excalifont,
+  FONT_FAMILY.Nunito,
+  FONT_FAMILY["Comic Shanns"],
+  FONT_FAMILY["Liberation Sans"],
+];
+
+/** The bold id of a regular family, or the id itself when it has none (or is bold already). */
+export const boldFontOf = (fontFamily: number): number =>
+  BOLDABLE_FONTS.includes(fontFamily)
+    ? fontFamily + BOLD_FONT_OFFSET
+    : fontFamily;
+
+/** True for the id of a bold variant. */
+export const isBoldFont = (fontFamily: number): boolean =>
+  fontFamily > BOLD_FONT_OFFSET &&
+  BOLDABLE_FONTS.includes(fontFamily - BOLD_FONT_OFFSET);
+
+/** The regular family of a bold id; any other id as it is. */
+export const regularFontOf = (fontFamily: number): number =>
+  isBoldFont(fontFamily) ? fontFamily - BOLD_FONT_OFFSET : fontFamily;
+
 // Segoe UI Emoji fails to properly fallback for some glyphs: ∞, ∫, ≠
 // so we need to have generic font fallback before it
 export const SANS_SERIF_GENERIC_FONT = "sans-serif";
@@ -172,7 +207,7 @@ export const FONT_FAMILY_FALLBACKS = {
 export function getGenericFontFamilyFallback(
   fontFamily: number,
 ): keyof typeof FONT_FAMILY_GENERIC_FALLBACKS {
-  switch (fontFamily) {
+  switch (regularFontOf(fontFamily)) {
     case FONT_FAMILY.Cascadia:
     case FONT_FAMILY["Comic Shanns"]:
       return MONOSPACE_GENERIC_FONT;
@@ -187,7 +222,7 @@ export const getFontFamilyFallbacks = (
 ): Array<keyof typeof FONT_FAMILY_FALLBACKS> => {
   const genericFallbackFont = getGenericFontFamilyFallback(fontFamily);
 
-  switch (fontFamily) {
+  switch (regularFontOf(fontFamily)) {
     case FONT_FAMILY.Excalifont:
       return [
         CJK_HAND_DRAWN_FALLBACK_FONT,

@@ -45,7 +45,10 @@ export const checkFont = (font: unknown): TextFont => {
   if (!font || typeof font !== "object") {
     throw bad("font must be { family, size }");
   }
-  const { family, size } = font as Record<string, unknown>;
+  const { family, size, bold } = font as Record<string, unknown>;
+  if (bold !== undefined && typeof bold !== "boolean") {
+    throw bad("font.bold must be true or false");
+  }
   if (
     typeof size !== "number" ||
     !Number.isFinite(size) ||
@@ -56,7 +59,9 @@ export const checkFont = (font: unknown): TextFont => {
       `font.size must be between ${FONT_SIZE.min} and ${FONT_SIZE.max}`,
     );
   }
-  return { family: checkFamily(family), size };
+  return bold === undefined
+    ? { family: checkFamily(family), size }
+    : { family: checkFamily(family), size, bold };
 };
 
 export const checkStrings = (strings: unknown): readonly string[] => {

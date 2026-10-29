@@ -1335,6 +1335,11 @@
           "type": "number",
           "minimum": 0,
           "maximum": 4
+        },
+        "heading_bold": {
+          "description": "Headings typed in Markdown mode use the bold variant of the text's font.",
+          "default": true,
+          "type": "boolean"
         }
       }
     },

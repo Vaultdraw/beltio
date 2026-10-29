@@ -60,6 +60,26 @@ const sizeSetting = (level: number) => {
   return SizeSetting;
 };
 
+const BoldSetting = () => {
+  const { win } = useSettings();
+  const on = usePref(win, "markdownHeadingBold");
+  return (
+    <SettingRow
+      id="markdown-heading-bold"
+      htmlFor="vault-markdown-heading-bold"
+      testId="setting-markdown-heading-bold"
+    >
+      <Switch
+        id="vault-markdown-heading-bold"
+        checked={on}
+        onChange={(next) =>
+          updatePreferences({ markdownHeadingBold: next }, win)
+        }
+      />
+    </SettingRow>
+  );
+};
+
 const GapSetting = () => {
   const { win } = useSettings();
   const value = usePref(win, "markdownBlockGap");
@@ -86,4 +106,5 @@ export const markdownControls: SettingControls = {
     ]),
   ),
   "markdown-block-gap": { Component: GapSetting },
+  "markdown-heading-bold": { Component: BoldSetting },
 };

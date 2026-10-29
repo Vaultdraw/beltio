@@ -172,3 +172,10 @@ type = "bool"
 title = "Coloured headings"
 description = "Headings take their level's colour from your theme, as in Obsidian, and follow it when you switch themes. Off: headings take the text colour."
 default = true
+
+[[contributes.settings]]
+key = "heading_bold"
+type = "bool"
+title = "Bold headings"
+description = "Headings are drawn in the bold variant of the note font, as in Obsidian. Off: headings are in the regular font and differ by size and colour."
+default = true

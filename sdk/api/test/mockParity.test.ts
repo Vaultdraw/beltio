@@ -759,4 +759,12 @@ describe("parity: page documents, buildScene, scrollTo and folders seen through 
       expect(FONT_FAMILY[name as keyof typeof FONT_FAMILY]).toBe(id);
     }
   });
+
+  it("bold font ids equal the editor's", async () => {
+    const { FONT_IDS, boldFontId } = await import("../shared/pageItems");
+    const { boldFontOf } = await import("../../../packages/common/src/index");
+    for (const [name, id] of Object.entries(FONT_IDS)) {
+      expect(boldFontId(name as keyof typeof FONT_IDS)).toBe(boldFontOf(id));
+    }
+  });
 });

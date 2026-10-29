@@ -38,6 +38,8 @@ export interface LayoutOptions {
   partElements: number;
   /** Each heading level in its own theme colour (default on). */
   headingColors?: boolean;
+  /** Headings in the bold variant of the font (default on). */
+  headingBold?: boolean;
   measure: PluginContext["text"]["measure"];
   signal: AbortSignal;
 }
@@ -73,6 +75,7 @@ export async function* layoutNoteStream(
     },
     partElements: opts.partElements,
     headingColors: opts.headingColors ?? true,
+    boldHeadings: opts.headingBold ?? true,
   };
   const table = buildWidthTable(opts.measure, doc, layout);
   const queue: LayoutBatch[] = [];
@@ -151,6 +154,7 @@ const workerLayout =
       page: ctx.pages.geometry({ size: settings.pageSize, layout: "separate" }),
       partElements: settings.partElements,
       headingColors: settings.headingColors ?? true,
+      headingBold: settings.headingBold ?? true,
       measure: (f, s) => ctx.text.measure(f, s),
       signal,
     };

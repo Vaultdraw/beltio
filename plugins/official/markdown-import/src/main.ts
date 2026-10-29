@@ -104,6 +104,7 @@ const plugin: Plugin = definePlugin({
         page: ctx.pages.geometry(setup),
         partElements: settings.partElements,
         headingColors: settings.headingColors ?? true,
+        headingBold: settings.headingBold ?? true,
         measure: (f, s) => ctx.text.measure(f, s),
         signal,
       };

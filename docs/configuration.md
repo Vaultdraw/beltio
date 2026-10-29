@@ -1836,6 +1836,7 @@ strict_line_breaks = false  # a single line break stays a line break (Obsidian's
 obsidian_report = true       # write "Import report" when files fail or images stay boxes
 offer_update = true          # offer to update notes imported by an older version
 heading_colors = true        # each heading level in its own colour from your theme
+heading_bold = true          # headings in the bold variant of the note font
 ```
 
 | Key | Default | Meaning |
@@ -1849,6 +1850,7 @@ heading_colors = true        # each heading level in its own colour from your th
 | `obsidian_excalidraw` | `true` | Convert `Name.excalidraw.md` (plain or compressed) to `Name.excalidraw`. |
 | `strict_line_breaks` | `false` | Like Obsidian's "Strict line breaks". Off: a single line break inside a paragraph stays a line break. On: the lines are joined with a space. Hard breaks (two spaces or a backslash at the end of a line) always break. |
 | `obsidian_report` | `true` | When a file fails or an image stays a box, write `Import report` (a drawing at the root of the target) listing each file or image and the reason. Nothing is written for a clean import. |
+| `heading_bold` | `true` | Headings are drawn in the bold variant of the note font, as in Obsidian. `false`: regular font, headings differ by size and colour. Bold is a font id the editor knows (the regular id plus 100); excalidraw.com shows such text in its fallback font. |
 | `heading_colors` | `true` | Headings take their level's colour from your theme (the theme's `markdown` colours, see [Themes](#markdown-colours-in-themes)), like Obsidian's `--h1-color` … `--h6-color`, and follow the theme when you switch. Headings step down in size like Obsidian's (1.8, 1.6, 1.4, 1.25, 1.125 and 1 times the body size). `false` gives headings the text colour. |
 | `offer_update` | `true` | Opening a note imported by an older version (white page, hand-drawn font, or web pictures left as boxes) shows one notice per session with **Update**. `false` hides the notice; the command still works. (Web-picture boxes fill in by themselves when such a note opens; see `network.allow_images`.) |
 
@@ -2091,6 +2093,7 @@ Markdown mode for typing on the canvas: `# ` at the start of a line makes a head
 | `h5_size` | `1` | a number from 0.5 to 8 (times the text size) |  | Heading 5 size, as a multiple of the text size. |
 | `h6_size` | `1` | a number from 0.5 to 8 (times the text size) |  | Heading 6 size, as a multiple of the text size. |
 | `block_gap` | `0.5` | a number from 0 to 4 (lines) |  | Space between a heading and the text box Enter starts below it, in lines. |
+| `heading_bold` | `true` | true or false |  | Headings typed in Markdown mode use the bold variant of the text's font. |
 
 ### `[layout]`
 

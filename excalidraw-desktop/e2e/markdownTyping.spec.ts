@@ -65,6 +65,8 @@ test("Markdown mode: # Title, Enter, body makes a heading and body text below it
   expect(title.customData).toEqual({ role: "h1" });
   expect(body.customData ?? null).toBeNull();
   expect(title.fontSize).toBe(body.fontSize * 2);
+  // a heading is in the bold variant of the font (regular id + 100), the body is not
+  expect(title.fontFamily).toBe(body.fontFamily + 100);
   expect(body.x).toBeCloseTo(title.x, 5);
   expect(body.y).toBeGreaterThan(title.y + title.height);
 

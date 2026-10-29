@@ -7,6 +7,7 @@ import {
   isWritableElement,
   getFontString,
   getFontFamilyString,
+  isBoldFont,
   isTestEnv,
   MIME_TYPES,
   getTextDisplayColor,
@@ -332,6 +333,13 @@ export const textWysiwyg = ({
       return true;
     }
     if (`${updatedTextElement.fontSize}px` !== editable.style.fontSize) {
+      return true;
+    }
+    // a bold variant differs from its regular family by weight only
+    const isBold =
+      editable.style.fontWeight === "bold" ||
+      editable.style.fontWeight === "700";
+    if (isBold !== isBoldFont(updatedTextElement.fontFamily)) {
       return true;
     }
     return false;
@@ -1385,7 +1393,15 @@ const createExtensionSession = ({
       // re-measure with the new size (the editor's own update path)
       onChange?.(editable.value);
     },
-    continueInNewText: ({ x, y, text, caret, fontSize, customData }) => {
+    continueInNewText: ({
+      x,
+      y,
+      text,
+      caret,
+      fontSize,
+      fontFamily,
+      customData,
+    }) => {
       const from = getElement();
       if (!from) {
         return;
@@ -1396,7 +1412,7 @@ const createExtensionSession = ({
         y,
         text,
         fontSize,
-        fontFamily: from.fontFamily,
+        fontFamily: fontFamily ?? from.fontFamily,
         lineHeight: from.lineHeight,
         textAlign: from.textAlign,
         strokeColor: from.strokeColor,

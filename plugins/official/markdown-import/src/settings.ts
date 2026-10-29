@@ -54,6 +54,8 @@ export interface ImportSettings {
   strictLineBreaks?: boolean;
   /** Each heading level in its own theme colour (`heading_colors`; unset counts as on). */
   headingColors?: boolean;
+  /** Headings in the bold variant of the font (`heading_bold`; unset counts as on). */
+  headingBold?: boolean;
 }
 
 /** The fallback drawing font (Excalifont); the Document font is the plain sans. */
@@ -109,6 +111,7 @@ export function readSettings(ctx: PluginContext): ImportSettings {
     obsidianReport: bool(get("obsidian_report"), true),
     strictLineBreaks: bool(get("strict_line_breaks"), false),
     headingColors: bool(get("heading_colors"), true),
+    headingBold: bool(get("heading_bold"), true),
   };
 }
 

@@ -20,7 +20,8 @@ export const measureText = (
     // lines would be stripped from computation
     .map((x) => x || " ")
     .join("\n");
-  const fontSize = parseFloat(font);
+  // a bold variant's font string starts with its weight
+  const fontSize = parseFloat(font.replace(/^bold\s+/, ""));
   const height = getTextHeight(_text, fontSize, lineHeight);
   const width = getTextWidth(_text, font);
   return { width, height };

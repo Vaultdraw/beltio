@@ -51,6 +51,13 @@ export const FONT_IDS: Readonly<Record<FontFamilyName, number>> = {
 };
 
 /**
+ * The bold variant of a family's font id: `id + 100` (packages/common
+ * `boldFontOf`, tied by the parity test). Lilita One is heavy already.
+ */
+export const boldFontId = (family: FontFamilyName): number =>
+  family === "Lilita One" ? FONT_IDS[family] : FONT_IDS[family] + 100;
+
+/**
  * Stroke colour per text tone. Normal and muted are the editor's palette
  * (black, gray 600). Links, code and headings are Markdown role colours
  * (markdownRoles.ts): the canvas draws each in the active theme's colour for
@@ -171,6 +178,9 @@ export const checkPageItems = (items: unknown): readonly PageItem[] => {
         number(it.fontSize, `${at}.fontSize`, FONT_SIZE.min, FONT_SIZE.max);
         if (!(FONT_NAMES as readonly unknown[]).includes(it.fontFamily)) {
           throw bad(`${at}.fontFamily must be one of ${FONT_NAMES.join(", ")}`);
+        }
+        if (it.bold !== undefined && typeof it.bold !== "boolean") {
+          throw bad(`${at}.bold must be true or false`);
         }
         number(it.lineHeight, `${at}.lineHeight`, 0.1, MAX_LINE_HEIGHT);
         if (
@@ -359,12 +369,13 @@ const textElement = (
   family: FontFamilyName,
   lineHeight: number,
   align: "left" | "center" | "right",
+  bold = false,
 ) =>
   Object.assign(el, {
     text,
     originalText: text,
     fontSize,
-    fontFamily: FONT_IDS[family],
+    fontFamily: bold ? boldFontId(family) : FONT_IDS[family],
     textAlign: align,
     verticalAlign: "top",
     containerId: null,
@@ -421,6 +432,7 @@ export const buildPageElements = (
           it.fontFamily,
           it.lineHeight,
           it.align ?? "left",
+          it.bold === true,
         );
         el.strokeColor = TONE_COLORS[it.tone ?? "normal"];
         if (it.link !== undefined) {

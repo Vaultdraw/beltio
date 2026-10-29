@@ -14,6 +14,7 @@
      "fontSize": 29,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "tone": "heading1",
      "data": {
       "heading": 1,
@@ -43,6 +44,7 @@
      "fontSize": 25.5,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "tone": "heading2",
      "data": {
       "heading": 2,
@@ -60,6 +62,7 @@
      "fontSize": 22.5,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "tone": "heading3",
      "data": {
       "heading": 3,
@@ -77,6 +80,7 @@
      "fontSize": 20,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "tone": "heading4",
      "data": {
       "heading": 4,
@@ -94,6 +98,7 @@
      "fontSize": 18,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "tone": "heading5",
      "data": {
       "heading": 5,
@@ -111,6 +116,7 @@
      "fontSize": 16,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "tone": "heading6",
      "data": {
       "heading": 6,
@@ -128,6 +134,7 @@
      "fontSize": 29,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "tone": "heading1",
      "data": {
       "heading": 1,

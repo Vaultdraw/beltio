@@ -16,6 +16,14 @@ export interface TextFont {
   family: FontFamilyName;
   /** Size in scene pixels, 1 to 1000. @since 0.8.0 */
   size: number;
+  /**
+   * The bold variant of the family (the font id a bold text stores). Widths
+   * differ from the regular ones, so measure with the flag a text is drawn
+   * with. Lilita One is heavy already and ignores it.
+   *
+   * @since 0.36.0
+   */
+  bold?: boolean;
 }
 
 /**

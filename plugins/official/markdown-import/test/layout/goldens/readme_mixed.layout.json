@@ -32,6 +32,7 @@
      "fontSize": 29,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "tone": "heading1",
      "data": {
       "heading": 1,
@@ -61,6 +62,7 @@
      "fontSize": 25.5,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "tone": "heading2",
      "data": {
       "heading": 2,
@@ -106,6 +108,7 @@
      "fontSize": 25.5,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "tone": "heading2",
      "data": {
       "heading": 2,
@@ -147,6 +150,7 @@
      "fontSize": 16,
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
+     "bold": true,
      "data": {
       "callout": "tip"
      }

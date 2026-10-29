@@ -644,6 +644,15 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     keywords: ["markdown", "heading", "gap", "spacing", "enter"],
     configKey: "markdown.block_gap",
   },
+  {
+    id: "markdown-heading-bold",
+    page: "drawing",
+    label: "Bold headings",
+    description:
+      "Headings you type in Markdown mode are in the bold variant of the text's font.",
+    keywords: ["markdown", "heading", "bold", "font", "weight"],
+    configKey: "markdown.heading_bold",
+  },
 
   // ---- Tools: pen and laser (page was "Pens & laser") ----
   {

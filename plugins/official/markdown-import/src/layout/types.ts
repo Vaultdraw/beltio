@@ -22,6 +22,8 @@ export type PageItemText = {
   text: string;
   fontSize: number;
   fontFamily: FontFamilyName;
+  /** The bold variant of the family. */
+  bold?: boolean;
   lineHeight: number;
   align?: "left" | "center" | "right";
   tone?: PageTextTone;
@@ -102,6 +104,8 @@ export interface LayoutOptions {
   partElements?: number;
   /** Colour each heading level from the theme (`heading_colors`, default on). */
   headingColors?: boolean;
+  /** Headings in the bold variant of the font (`heading_bold`, default on). */
+  boldHeadings?: boolean;
 }
 
 /** Counts from a layout. */

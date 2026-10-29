@@ -91,6 +91,16 @@ test("an imported note's headings follow the theme in light and dark", async ({
     expect(h.customData[MARK].role).toBe(`h${level}`);
     expect(h.strokeColor).toBe(ROLE_COLORS[`h${level}`]);
   }
+  // roles are stored where typed Markdown stores them, and headings are bold
+  const body = scene.elements.find(
+    (e: any) => e.type === "text" && e.text.startsWith("A kernel"),
+  );
+  for (const level of [1, 2, 3]) {
+    const h = heading(level);
+    expect(h.customData.role).toBe(`h${level}`);
+    expect(h.fontFamily).toBe(body.fontFamily + 100);
+  }
+  expect(body.customData?.role).toBeUndefined();
   expect(heading(1).fontSize).toBeGreaterThan(heading(2).fontSize);
   expect(heading(2).fontSize).toBeGreaterThan(heading(3).fontSize);
   // The page follows the theme, so the roles draw in the theme's colours.

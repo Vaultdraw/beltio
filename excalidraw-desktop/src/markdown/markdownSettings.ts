@@ -18,6 +18,7 @@ export const MARKDOWN_FIELDS = [
   "markdownH5Size",
   "markdownH6Size",
   "markdownBlockGap",
+  "markdownHeadingBold",
 ] as const;
 export type MarkdownField = typeof MARKDOWN_FIELDS[number];
 
@@ -36,6 +37,8 @@ export interface MarkdownPreferences {
   markdownH6Size: number;
   /** markdown.block_gap: space above a new block, in lines. */
   markdownBlockGap: number;
+  /** markdown.heading_bold: headings in the bold variant of the text's font. */
+  markdownHeadingBold: boolean;
 }
 
 const SIZE_FIELDS = [
@@ -56,6 +59,7 @@ export const MARKDOWN_DEFAULTS: MarkdownPreferences = {
   markdownH5Size: DEFAULT_HEADING_SCALES[4],
   markdownH6Size: DEFAULT_HEADING_SCALES[5],
   markdownBlockGap: DEFAULT_BLOCK_GAP,
+  markdownHeadingBold: true,
 };
 
 const isBool = (v: unknown): v is boolean => typeof v === "boolean";
@@ -73,6 +77,7 @@ const VALID: Record<MarkdownField, (v: unknown) => boolean> = {
   markdownH5Size: inRange(HEADING_SIZE_LIMITS),
   markdownH6Size: inRange(HEADING_SIZE_LIMITS),
   markdownBlockGap: inRange(BLOCK_GAP_LIMITS),
+  markdownHeadingBold: isBool,
 };
 
 export const MARKDOWN_MAPPINGS: readonly ConfigMapping[] = [
@@ -96,6 +101,12 @@ export const MARKDOWN_MAPPINGS: readonly ConfigMapping[] = [
     expected: `a number from ${BLOCK_GAP_LIMITS.min} to ${BLOCK_GAP_LIMITS.max} (lines)`,
     valid: VALID.markdownBlockGap,
   },
+  {
+    field: "markdownHeadingBold",
+    key: "markdown.heading_bold",
+    expected: "true or false",
+    valid: isBool,
+  },
 ];
 
 /** Stored preferences -> valid Markdown fields; bad ones default. */
@@ -116,4 +127,5 @@ export const typingSettingsFrom = (
 ): MarkdownTypingSettings => ({
   headingScales: SIZE_FIELDS.map((f) => prefs[f]),
   blockGap: prefs.markdownBlockGap,
+  headingBold: prefs.markdownHeadingBold,
 });

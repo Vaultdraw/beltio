@@ -23,6 +23,8 @@
  *
  * Cmd/Ctrl+Z right after any conversion brings the typed marks back.
  */
+import { boldFontOf, regularFontOf } from "@excalidraw/common";
+
 import type {
   TextEditorExtension,
   TextEditorListeners,
@@ -53,11 +55,14 @@ export type MarkdownTypingSettings = {
   headingScales: readonly number[];
   /** Gap between blocks, in body lines. */
   blockGap: number;
+  /** Headings in the bold variant of the text's font (`markdown.heading_bold`). */
+  headingBold: boolean;
 };
 
 export const DEFAULT_MARKDOWN_TYPING_SETTINGS: MarkdownTypingSettings = {
   headingScales: DEFAULT_HEADING_SCALES,
   blockGap: DEFAULT_BLOCK_GAP,
+  headingBold: true,
 };
 
 type Conversion =
@@ -71,6 +76,7 @@ type Conversion =
       /** The style before, when the conversion restyled the box. */
       style?: {
         fontSize: number;
+        fontFamily: number;
         customData: Record<string, unknown> | undefined;
       };
     }
@@ -106,6 +112,16 @@ const bodySizeOf = (
   const level = headingLevelOf(roleOf(el));
   return level ? el.fontSize / scaleOf(settings, level) : el.fontSize;
 };
+
+/** The font a box with `role` is drawn in: headings in the bold variant, everything else regular. */
+const fontFor = (
+  fontFamily: number,
+  role: string | null,
+  settings: MarkdownTypingSettings,
+) =>
+  headingLevelOf(role) && settings.headingBold
+    ? boldFontOf(fontFamily)
+    : regularFontOf(fontFamily);
 
 /** Where a box placed right below `el` starts (top-left for its alignment). */
 const belowAnchor = (
@@ -179,10 +195,15 @@ export function createMarkdownTyping(deps: {
       const rest = value.slice(caret);
       if (!hasAbove) {
         // read before restyling: the scene mutates elements in place
-        const style = { fontSize: el.fontSize, customData: el.customData };
+        const style = {
+          fontSize: el.fontSize,
+          fontFamily: el.fontFamily,
+          customData: el.customData,
+        };
         session.setText(rest, 0);
         session.restyle({
           fontSize,
+          fontFamily: fontFor(el.fontFamily, role, settings),
           customData: withRole(el.customData, role),
         });
         lastConversion = {
@@ -211,6 +232,7 @@ export function createMarkdownTyping(deps: {
         text: rest,
         caret: 0,
         fontSize,
+        fontFamily: fontFor(el.fontFamily, role, settings),
         customData: { role },
       });
       return true;
@@ -257,12 +279,14 @@ export function createMarkdownTyping(deps: {
         text: tail,
         caret: 0,
         fontSize: bodySize,
+        fontFamily: regularFontOf(el.fontFamily),
       });
     };
 
     const toBody = (el: ExcalidrawTextElement) => {
       session.restyle({
         fontSize: bodySizeOf(el, deps.getSettings()),
+        fontFamily: regularFontOf(el.fontFamily),
         customData: withRole(el.customData, null),
       });
     };

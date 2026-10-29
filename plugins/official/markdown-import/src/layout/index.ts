@@ -76,7 +76,7 @@ export function* layoutNoteStream(
   if (!(contentWidth > 0) || !(contentHeight > 0)) {
     throw new Error("The page margins leave no room for content");
   }
-  const roles = fontPlan(opts.fonts, opts.fontSize);
+  const roles = fontPlan(opts.fonts, opts.fontSize, opts.boldHeadings);
   const wrapper = new Wrapper(table);
   const bodyLine = roles.body.linePx;
   const pad = bodyLine / 2;

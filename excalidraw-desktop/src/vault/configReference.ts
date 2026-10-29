@@ -375,6 +375,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       block_gap: {
         doc: "Space between a heading and the text box Enter starts below it, in lines.",
       },
+      heading_bold: {
+        doc: "Headings typed in Markdown mode use the bold variant of the text's font.",
+      },
     },
   },
   {

@@ -507,6 +507,7 @@ export interface PageTextItem {
     text: string;
     fontSize: number;
     fontFamily: FontFamilyName;
+    bold?: boolean;
     lineHeight: number;
     align?: "left" | "center" | "right";
     tone?: PageTextTone;
@@ -945,6 +946,7 @@ import type { FontFamilyName } from "./scene";
 export interface TextFont {
     family: FontFamilyName;
     size: number;
+    bold?: boolean;
 }
 export interface TextApi {
     measure(font: TextFont, strings: readonly string[]): Float64Array;

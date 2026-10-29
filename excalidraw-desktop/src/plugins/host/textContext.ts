@@ -2,7 +2,12 @@
  * `ctx.text` and `ctx.fonts`: the editor's own text measure (the canvas
  * provider that `wrapText` uses) and its font loader. Built on first read.
  */
-import { FONT_FAMILY, getFontString, getLineHeight } from "@excalidraw/common";
+import {
+  FONT_FAMILY,
+  boldFontOf,
+  getFontString,
+  getLineHeight,
+} from "@excalidraw/common";
 import { getLineWidth } from "@excalidraw/element";
 import { Fonts } from "@excalidraw/excalidraw/fonts/Fonts";
 
@@ -22,11 +27,13 @@ import type { FontsApi, TextApi } from "../api";
 export function createTextApi(): TextApi {
   return {
     measure(font, strings) {
-      const { family, size } = checkFont(font);
+      const { family, size, bold } = checkFont(font);
       const list = checkStrings(strings);
       const css = getFontString({
         fontSize: size,
-        fontFamily: FONT_FAMILY[family],
+        fontFamily: bold
+          ? boldFontOf(FONT_FAMILY[family])
+          : FONT_FAMILY[family],
       });
       const out = new Float64Array(list.length);
       for (let i = 0; i < list.length; i++) {

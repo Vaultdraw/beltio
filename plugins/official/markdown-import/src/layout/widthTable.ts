@@ -29,6 +29,7 @@ export type MeasureFn = (
 export interface FontTable {
   family: FontFamilyName;
   size: number;
+  bold: boolean;
   /** Code points measured, ascending. */
   codes: Uint32Array;
   /** Advance of each code point, scene pixels. */
@@ -215,7 +216,9 @@ const measureFont = (
   const pairStrings = all.pairs.map((p) =>
     String.fromCharCode(Math.floor(p / 65536), p % 65536),
   );
-  const font: TextFont = { family: role.family, size: role.size };
+  const font: TextFont = role.bold
+    ? { family: role.family, size: role.size, bold: true }
+    : { family: role.family, size: role.size };
   const widths = measure(font, [...all.chars, ...pairStrings]);
   const n = all.codes.length;
   const advance = new Map<number, number>();
@@ -239,6 +242,7 @@ const measureFont = (
   return {
     family: role.family,
     size: role.size,
+    bold: role.bold,
     codes: Uint32Array.from(all.codes),
     widths: Float64Array.from(all.codes, (c) => advance.get(c) ?? 0),
     pairs: Uint32Array.from(keptPairs),
@@ -254,15 +258,15 @@ const measureFont = (
 export const buildWidthTable = (
   measure: MeasureFn,
   doc: NoteDoc,
-  opts: Pick<LayoutOptions, "fonts" | "fontSize">,
+  opts: Pick<LayoutOptions, "fonts" | "fontSize" | "boldHeadings">,
 ): WidthTable => {
-  const roles = fontPlan(opts.fonts, opts.fontSize);
+  const roles = fontPlan(opts.fonts, opts.fontSize, opts.boldHeadings);
   const samples = collectSamples(doc);
   // Roles sharing (family, size) share one table.
   const byKey = new Map<string, { role: Role; samples: Samples }>();
   for (const [name, s] of samples) {
     const role = roles[name];
-    const key = fontKey(role.family, role.size);
+    const key = fontKey(role.family, role.size, role.bold);
     const cur = byKey.get(key);
     if (cur) {
       // Merge: measure the union once.
@@ -383,12 +387,12 @@ export const createMeasurers = (
 ): Map<string, LineMeasurer> => {
   const out = new Map<string, LineMeasurer>();
   for (const f of table.fonts) {
-    out.set(fontKey(f.family, f.size), new LineMeasurer(f));
+    out.set(fontKey(f.family, f.size, f.bold), new LineMeasurer(f));
   }
   return out;
 };
 
 /** The roles a layout uses, for callers that need sizes without a table. */
 export const layoutRoles = (
-  opts: Pick<LayoutOptions, "fonts" | "fontSize">,
-): RoleTable => fontPlan(opts.fonts, opts.fontSize);
+  opts: Pick<LayoutOptions, "fonts" | "fontSize" | "boldHeadings">,
+): RoleTable => fontPlan(opts.fonts, opts.fontSize, opts.boldHeadings);

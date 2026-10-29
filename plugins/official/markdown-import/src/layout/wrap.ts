@@ -49,7 +49,7 @@ export class Wrapper {
   font(role: Role): FontString {
     let key = this.keys.get(role);
     if (!key) {
-      key = fontKey(role.family, role.size) as FontString;
+      key = fontKey(role.family, role.size, role.bold) as FontString;
       this.keys.set(role, key);
     }
     return key;
@@ -57,12 +57,12 @@ export class Wrapper {
 
   /** True when the role's font was measured. */
   has(role: Role): boolean {
-    return this.measurers.has(fontKey(role.family, role.size));
+    return this.measurers.has(fontKey(role.family, role.size, role.bold));
   }
 
   /** The width of a string on one line, from the table. */
   width(text: string, role: Role): number {
-    const m = this.measurers.get(fontKey(role.family, role.size));
+    const m = this.measurers.get(fontKey(role.family, role.size, role.bold));
     return m ? m.width(text) : 0;
   }
 

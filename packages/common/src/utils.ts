@@ -17,6 +17,8 @@ import {
   ENV,
   FONT_FAMILY,
   getFontFamilyFallbacks,
+  isBoldFont,
+  regularFontOf,
   WINDOWS_EMOJI_FALLBACK_FONT,
 } from "./constants";
 
@@ -125,8 +127,9 @@ export const getFontFamilyString = ({
 }: {
   fontFamily: FontFamilyValues;
 }) => {
+  const regular = regularFontOf(fontFamily);
   for (const [fontFamilyString, id] of Object.entries(FONT_FAMILY)) {
-    if (id === fontFamily) {
+    if (id === regular) {
       return `${fontFamilyString}${getFontFamilyFallbacks(id)
         .map((x) => `, ${x}`)
         .join("")}`;
@@ -143,7 +146,9 @@ export const getFontString = ({
   fontSize: number;
   fontFamily: FontFamilyValues;
 }) => {
-  return `${fontSize}px ${getFontFamilyString({ fontFamily })}` as FontString;
+  return `${
+    isBoldFont(fontFamily) ? "bold " : ""
+  }${fontSize}px ${getFontFamilyString({ fontFamily })}` as FontString;
 };
 
 /** executes callback in the frame that's after the current one */

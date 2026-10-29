@@ -1936,6 +1936,7 @@ export type TextEditorSession = {
   /** Restyles the edited text live (and re-measures it). */
   restyle: (patch: {
     fontSize?: number;
+    fontFamily?: number;
     customData?: Record<string, unknown> | undefined;
   }) => void;
   /**
@@ -1948,6 +1949,8 @@ export type TextEditorSession = {
     text: string;
     caret: number;
     fontSize: number;
+    /** Default: the edited text's font. */
+    fontFamily?: number;
     customData?: Record<string, unknown>;
   }) => void;
   /**
