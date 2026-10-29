@@ -153,9 +153,9 @@ const EMBED = /!\[\[[^\]]+\]\]|!\[[^\]]*\]\([^)]*\)/g;
 /** Line breaks as the Rust parser reports them: hard breaks always, soft ones when asked. */
 const lineBreaks = (text: string, soft: boolean): string =>
   text
-    .replace(/(?: {2,}|\\)\n[ \t]*/g, "\u0001")
+    .replace(/(?: {2,}|\\)\n[ \t]*/g, "\uE000")
     .replace(/[ \t]*\n[ \t]*/g, soft ? "\n" : " ")
-    .replace(/\u0001/g, "\n");
+    .replace(/\uE000/g, "\n");
 
 /**
  * A paragraph with a picture or embed inside: text and embeds in source order, like the Rust
@@ -187,7 +187,11 @@ const splitAtEmbeds = (
     } else {
       const target = /^!\[\[([^\]|#]+)/.exec(literal)?.[1]?.trim();
       const md = /^!\[[^\]]*\]\(<?([^)>]+?)>?\)$/.exec(literal)?.[1]?.trim();
-      out.push({ kind: "embed", target: target ?? md ?? literal, range } as NoteBlock);
+      out.push({
+        kind: "embed",
+        target: target ?? md ?? literal,
+        range,
+      } as NoteBlock);
     }
     at = m.index! + literal.length;
   }
@@ -245,9 +249,7 @@ export const fakeParseMarkdown = (
       blocks.push(...split);
       continue;
     }
-    const flat = heading
-      ? body
-      : lineBreaks(body, !!options?.softBreakNewline);
+    const flat = heading ? body : lineBreaks(body, !!options?.softBreakNewline);
     blocks.push(
       withSpans(
         heading
