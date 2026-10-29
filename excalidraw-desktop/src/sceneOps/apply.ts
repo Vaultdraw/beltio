@@ -116,7 +116,8 @@ const updated = (
     patch.fontFamily = FONT_FAMILY[fontFamily];
   }
   if (data !== undefined && dataKey) {
-    patch.customData = withData(el.customData, dataKey, data);
+    // `{}`, not undefined: newElementWith skips an undefined-only patch (hunter B-1 family).
+    patch.customData = withData(el.customData, dataKey, data) ?? {};
   }
   let next = newElementWith(el, patch as never);
   const relayout =

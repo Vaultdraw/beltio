@@ -252,6 +252,11 @@ describe("plugin data", () => {
       withOther,
     );
     expect(third.get(a.id).customData).toEqual({ other: true });
+    // The plugin's data was the only key: removing it must still remove it.
+    const only = run([{ op: "update", id: a.id, props: { data: null } }], [
+      a,
+    ] as ExcalidrawElement[]);
+    expect(only.get(a.id).customData?.[KEY]).toBeUndefined();
   });
 
   it("refuses data without a key, non-JSON data and data over 4 KiB", () => {

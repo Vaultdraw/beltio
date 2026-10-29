@@ -91,7 +91,9 @@ function harness(
         if (patch.fontFamily !== undefined) {
           e.fontFamily = patch.fontFamily;
         }
-        if ("customData" in patch) {
+        // As the editor's mutateElement: an undefined value changes nothing (hunter B-1, B-2:
+        // the fake used to assign it, so "remove the role" passed here and failed in the app).
+        if (patch.customData !== undefined) {
           e.customData = patch.customData;
         }
         measure(e);
@@ -201,21 +203,21 @@ describe("Markdown typing: headings", () => {
     const h = harness();
     h.type("####### x");
     expect(h.textarea.value).toBe("####### x");
-    expect(h.current().customData).toBeUndefined();
+    expect(h.current().customData?.role).toBeUndefined();
   });
 
   it("# inside a line stays plain (a tag or text)", () => {
     const h = harness();
     h.type("a # b #tag ");
     expect(h.textarea.value).toBe("a # b #tag ");
-    expect(h.current().customData).toBeUndefined();
+    expect(h.current().customData?.role).toBeUndefined();
   });
 
   it("mode off: # and a space stay literal, existing headings stay", () => {
     const h = harness({ on: false });
     h.type("# Title");
     expect(h.textarea.value).toBe("# Title");
-    expect(h.current().customData).toBeUndefined();
+    expect(h.current().customData?.role).toBeUndefined();
   });
 
   it("turned off mid-edit: the next # stays plain", () => {
@@ -249,7 +251,7 @@ describe("Markdown typing: headings", () => {
     h.type("#");
     const handled = h.press(" ", { isComposing: true } as never);
     expect(handled).toBe(false);
-    expect(h.current().customData).toBeUndefined();
+    expect(h.current().customData?.role).toBeUndefined();
   });
 
   it("a later line of a body box becomes a heading box below it", () => {
@@ -322,7 +324,7 @@ describe("Markdown typing: Enter, Backspace, undo", () => {
     h.type("# ");
     h.press("Enter");
     expect(h.all()).toHaveLength(1);
-    expect(h.current().customData).toBeUndefined();
+    expect(h.current().customData?.role).toBeUndefined();
     expect(h.current().fontSize).toBe(20);
   });
 
@@ -347,7 +349,7 @@ describe("Markdown typing: Enter, Backspace, undo", () => {
     h.textarea.setSelectionRange(0, 0);
     h.press("Backspace");
     expect(h.textarea.value).toBe("Title");
-    expect(h.current().customData).toBeUndefined();
+    expect(h.current().customData?.role).toBeUndefined();
     expect(h.current().fontSize).toBe(20);
   });
 
@@ -375,7 +377,7 @@ describe("Markdown typing: Enter, Backspace, undo", () => {
     expect(h.current().customData).toEqual({ role: "h1" });
     h.press("z", { metaKey: true });
     expect(h.textarea.value).toBe("# ");
-    expect(h.current().customData).toBeUndefined();
+    expect(h.current().customData?.role).toBeUndefined();
     expect(h.current().fontSize).toBe(20);
   });
 
@@ -418,7 +420,7 @@ describe("Markdown typing: lists and tasks", () => {
     h.type(typed);
     expect(h.textarea.value).toBe(shown);
     expect(h.all()).toHaveLength(1);
-    expect(h.current().customData).toBeUndefined();
+    expect(h.current().customData?.role).toBeUndefined();
   });
 
   it("Enter continues a bullet list; Enter on an empty item ends it", () => {
@@ -527,7 +529,7 @@ describe("Markdown typing: quotes", () => {
     h.type("> q");
     h.textarea.setSelectionRange(0, 0);
     h.press("Backspace");
-    expect(h.current().customData).toBeUndefined();
+    expect(h.current().customData?.role).toBeUndefined();
     expect(h.textarea.value).toBe("q");
   });
 
@@ -536,7 +538,7 @@ describe("Markdown typing: quotes", () => {
     h.type("> ");
     h.press("z", { metaKey: true });
     expect(h.textarea.value).toBe("> ");
-    expect(h.current().customData).toBeUndefined();
+    expect(h.current().customData?.role).toBeUndefined();
   });
 
   it("> on a later line splits into a quote box below", () => {

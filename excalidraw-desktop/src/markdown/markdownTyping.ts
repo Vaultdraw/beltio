@@ -152,6 +152,16 @@ export function createMarkdownTyping(deps: {
 
   const attach = (session: TextEditorSession): TextEditorListeners => {
     const { editable } = session;
+    /**
+     * The editor skips undefined values (mutateElement), so "no customData" (a role removed, or
+     * restored by undo to a text that had none) is written as `{}` (hunter B-1, B-2).
+     */
+    const restyle = (patch: Parameters<TextEditorSession["restyle"]>[0]) =>
+      session.restyle(
+        "customData" in patch
+          ? { ...patch, customData: patch.customData ?? {} }
+          : patch,
+      );
 
     /** Replace [from, to) with `text` (caret after it) and remember the undo. */
     const replaceMarks = (
@@ -201,7 +211,7 @@ export function createMarkdownTyping(deps: {
           customData: el.customData,
         };
         session.setText(rest, 0);
-        session.restyle({
+        restyle({
           fontSize,
           fontFamily: fontFor(el.fontFamily, role, settings),
           customData: withRole(el.customData, role),
@@ -284,7 +294,7 @@ export function createMarkdownTyping(deps: {
     };
 
     const toBody = (el: ExcalidrawTextElement) => {
-      session.restyle({
+      restyle({
         fontSize: bodySizeOf(el, deps.getSettings()),
         fontFamily: regularFontOf(el.fontFamily),
         customData: withRole(el.customData, null),
@@ -386,7 +396,7 @@ export function createMarkdownTyping(deps: {
       if (c.kind === "inPlace") {
         session.setText(c.before, c.caretBefore);
         if (c.style) {
-          session.restyle(c.style);
+          restyle(c.style);
         }
       } else {
         session.setText("", 0);
