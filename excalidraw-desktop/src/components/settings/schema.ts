@@ -172,11 +172,11 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     ],
   },
   {
-    id: "network-enabled",
+    id: "network-offline",
     page: "general",
-    label: "Network access",
+    label: "Offline mode",
     description:
-      "Master switch. Off blocks every download. Vaultdraw never connects in the background; it only connects when you ask.",
+      "Turns every internet feature off: the plugin and theme lists, installs, web pictures and the update check. Everything else works as before.",
     keywords: [
       "network",
       "internet",
@@ -184,17 +184,27 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
       "online",
       "download",
       "privacy",
+      "airplane",
     ],
-    configKey: "network.enabled",
+    configKey: "network.offline",
     heading: "Network",
+  },
+  {
+    id: "network-updates",
+    page: "general",
+    label: "Check for updates at startup",
+    description:
+      "Looks once for a newer version after the app starts and tells you only if there is one. Does nothing in Offline mode.",
+    keywords: ["update", "version", "release", "startup", "check", "network"],
+    configKey: "updates.check_on_startup",
   },
   {
     id: "network-themes",
     page: "general",
     label: "Allow downloading themes",
     description:
-      "Lets Install theme fetch a theme from the address or GitHub repo you give. Asked once, the first time you install one.",
-    keywords: ["network", "theme", "download", "install", "consent", "allow"],
+      "Lets Install theme and the theme browser fetch themes. Off shows a note instead.",
+    keywords: ["network", "theme", "download", "install", "allow"],
     configKey: "network.allow_themes",
   },
   {
@@ -202,7 +212,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     page: "general",
     label: "Allow the community plugins list",
     description:
-      "Lets Browse list and download community plugins. Asked once, the first time you open Browse.",
+      "Lets Browse list and download community plugins. Off shows a note instead.",
     keywords: [
       "network",
       "plugin",
@@ -210,7 +220,6 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
       "browse",
       "download",
       "registry",
-      "consent",
       "allow",
     ],
     configKey: "network.allow_plugins",

@@ -210,7 +210,7 @@ test("with sync on, a drawing with a dark custom background shows the theme canv
   expect(errors).toEqual([]);
 });
 
-test("Install from URL in Settings asks once, downloads the theme and applies it", async ({
+test("Install from URL in Settings downloads without asking, the theme and applies it", async ({
   page,
 }) => {
   const errors = trackErrors(page);
@@ -225,9 +225,8 @@ test("Install from URL in Settings asks once, downloads the theme and applies it
   const settings = await openSettings(page);
   await settings.getByRole("button", { name: "Install from link…" }).click();
   const install = page.getByTestId("theme-install-dialog");
-  await expect(install.getByTestId("theme-install-consent")).toBeVisible();
+  await expect(install.getByTestId("theme-install-offline")).toHaveCount(0);
   expect(fixtureRequests).toEqual([]);
-  await install.getByRole("button", { name: "Allow" }).click();
 
   await install
     .getByLabel("Address or GitHub repo")
@@ -335,9 +334,7 @@ test("Install more themes in Settings opens the browser, filters, installs and a
   }
   await settings.getByRole("button", { name: "Install more themes…" }).click();
   const browser = page.getByTestId("theme-browser-dialog");
-  await expect(browser.getByTestId("theme-browser-consent")).toBeVisible();
-  expect(requested).toEqual([]);
-  await browser.getByRole("button", { name: "Allow" }).click();
+  await expect(browser.getByTestId("theme-browser-offline")).toHaveCount(0);
 
   await expect(browser.getByTestId("theme-browser-status")).toContainText(
     "2 of 2 themes",

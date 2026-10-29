@@ -316,9 +316,13 @@ export const SETTINGS_STATUS_EVENT = "vault-settings-status";
 
 type ConfigField =
   | "colorTheme"
+  | "networkOffline"
   | "networkEnabled"
+  | "updatesCheckOnStartup"
   | "networkAllowThemes"
   | "networkAllowPlugins"
+  | "networkAllowImages"
+  | "networkAllowUpdates"
   | "pluginsRegistryUrl"
   | "pluginsRegistryTtlHours"
   | "themeInstallMaxKb"
@@ -477,21 +481,46 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     valid: (v) => typeof v === "string" && v.trim().length > 0,
   },
   {
+    field: "networkOffline",
+    key: "network.offline",
+    expected: "true or false",
+    valid: (v) => typeof v === "boolean",
+  },
+  {
+    // The old master switch: false still means Offline mode (older configs).
     field: "networkEnabled",
     key: "network.enabled",
     expected: "true or false",
     valid: (v) => typeof v === "boolean",
   },
   {
+    field: "updatesCheckOnStartup",
+    key: "updates.check_on_startup",
+    expected: "true or false",
+    valid: (v) => typeof v === "boolean",
+  },
+  {
     field: "networkAllowThemes",
     key: "network.allow_themes",
-    expected: "true or false (leave it out to be asked)",
+    expected: "true or false",
     valid: (v) => typeof v === "boolean",
   },
   {
     field: "networkAllowPlugins",
     key: "network.allow_plugins",
-    expected: "true or false (leave it out to be asked)",
+    expected: "true or false",
+    valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "networkAllowImages",
+    key: "network.allow_images",
+    expected: "true or false",
+    valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "networkAllowUpdates",
+    key: "network.allow_updates",
+    expected: "true or false",
     valid: (v) => typeof v === "boolean",
   },
   {
@@ -1546,22 +1575,6 @@ function enqueue<T>(rt: Runtime, task: () => Promise<T>): Promise<T> {
   return run;
 }
 
-/**
- * Turning network consent on is not an ordinary config write: Rust refuses it in
- * `update_config` and asks through a native dialog (`network_grant`) the page cannot click.
- * Turning it off or clearing it stays a normal write.
- */
-const CONSENT_FIELDS: Readonly<Record<string, ConfigField>> = {
-  "network.enabled": "networkEnabled",
-  "network.allow_themes": "networkAllowThemes",
-  "network.allow_plugins": "networkAllowPlugins",
-};
-const isConsentGrant = (change: ConfigChange) =>
-  (change.value === true ||
-    // Switching back to the default (true) is sent as "use the default".
-    (change.value === null && change.default === true)) &&
-  change.key in CONSENT_FIELDS;
-
 function persist(
   rt: Runtime,
   next: PreferencesSnapshot,
@@ -1570,46 +1583,17 @@ function persist(
   if (rt.disposed) {
     return;
   }
-  const all = preferencesToConfigChanges(prev, next);
-  const grants = all.filter(isConsentGrant);
-  const changes = all.filter((c) => !isConsentGrant(c));
-  if (all.length > 0) {
+  const changes = preferencesToConfigChanges(prev, next);
+  if (changes.length > 0) {
     rt.localEdits++;
     void enqueue(rt, async () => {
-      const refused: ConfigField[] = [];
-      // The user said no (or the call failed): put the switch back to what config.toml holds.
-      const revert = () => {
-        if (refused.length > 0) {
-          const back = Object.fromEntries(refused.map((f) => [f, prev[f]]));
-          replaceStoredPreferences({ ...getPreferences(rt.win), ...back });
-          dispatch(rt.win, PREFERENCES_CHANGED_EVENT, getPreferences(rt.win));
-        }
-      };
       try {
-        if (changes.length > 0) {
-          await rt.invoke("update_config", { changes });
-        }
-        if (grants.length > 0) {
-          // One native dialog for every grant of this change, so one click asks once.
-          const [first, ...rest] = grants.map((g) =>
-            g.key.slice("network.".length),
-          );
-          refused.push(...grants.map((g) => CONSENT_FIELDS[g.key]));
-          const granted = await rt.invoke<boolean>(
-            "network_grant",
-            rest.length > 0 ? { key: first, also: rest } : { key: first },
-          );
-          if (granted) {
-            refused.length = 0;
-          }
-        }
-        revert();
+        await rt.invoke("update_config", { changes });
         if (rt.writeProblems.length) {
           rt.writeProblems = [];
           refreshProblems(rt);
         }
       } catch (err) {
-        revert();
         rt.writeProblems = [
           {
             kind: "io",

@@ -571,7 +571,7 @@ interface NetworkApi {
 }
 ```
 
-`fetchImage` rejects with `NETWORK_NOT_ALLOWED` or `NETWORK_DISABLED` (ask first), `INVALID_URL` (not https, or a private or local address), `REDIRECT_REFUSED`, `PRIVATE_ADDRESS` (the name resolves to one), `TOO_LARGE` (over 10 MiB), `NOT_AN_IMAGE` (the bytes are not PNG, JPEG, GIF, WebP or SVG), `HTTP_STATUS`, `NETWORK_TIMEOUT` or `NETWORK_ERROR`. Ask once per task, not per picture, and remember a "no".
+`fetchImage` rejects with `NETWORK_NOT_ALLOWED` (web pictures turned off) or `NETWORK_DISABLED` (Offline mode is on), `INVALID_URL` (not https, or a private or local address), `REDIRECT_REFUSED`, `PRIVATE_ADDRESS` (the name resolves to one), `TOO_LARGE` (over 10 MiB), `NOT_AN_IMAGE` (the bytes are not PNG, JPEG, GIF, WebP or SVG), `HTTP_STATUS`, `NETWORK_TIMEOUT` or `NETWORK_ERROR`. Ask once per task, not per picture, and remember a "no".
 
 ### ctx.present and ctx.scene.fitTo (since 0.29.0)
 

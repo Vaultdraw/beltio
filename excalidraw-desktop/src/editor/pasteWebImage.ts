@@ -111,7 +111,9 @@ export async function pasteWebPictures(
       }
       const why = refused
         ? "Web image refused (not a public web address)"
-        : code === "NETWORK_NOT_ALLOWED" || code === "NETWORK_DISABLED"
+        : code === "NETWORK_DISABLED"
+        ? "Web image, not downloaded (Offline mode is on)"
+        : code === "NETWORK_NOT_ALLOWED"
         ? "Web image, not downloaded (web pictures are off in Settings)"
         : code === "TOO_LARGE"
         ? "Image over 10 MB"

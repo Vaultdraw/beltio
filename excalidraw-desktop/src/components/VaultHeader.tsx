@@ -4,6 +4,7 @@ import { useCommandShortcut } from "../commands/useCommandShortcut";
 import { isCustomChrome } from "../vault/windowChrome";
 
 import { HistoryButton } from "./HistoryButton";
+import { OfflineBadge } from "./OfflineBadge";
 import { IconAlert, IconHistory, IconSidebar } from "./Icons";
 import { ReadOnlyBadge } from "./readonly/ReadOnlyBadge";
 import { WindowControls } from "./WindowControls";
@@ -107,6 +108,8 @@ export const VaultHeader = ({
         {vault.readOnly && (
           <ReadOnlyBadge vault={vault} onRetry={onRetryWritable} />
         )}
+
+        <OfflineBadge />
 
         {recoveryCount > 0 && (
           <button

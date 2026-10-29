@@ -49,8 +49,8 @@ pub(crate) async fn load_settings() -> Result<crate::launch::WithSafeStart<Loade
 
 #[tauri::command]
 pub(crate) async fn update_config(changes: Vec<LayerChange>) -> Result<()> {
-    // The webview may revoke network consent but never grant it (see `network_grant`).
-    super::network::refuse_consent_grants(&changes)?;
+    // The page may flip the network switches but never the host or list addresses.
+    super::network::refuse_unsafe_writes(&changes)?;
     // Settings writes `overrides.toml` in the state folder; config.toml is yours alone.
     update_overrides_in(&resolve_dirs()?, &changes)
 }
@@ -92,32 +92,6 @@ pub(crate) fn apply_profile_arg<S: AsRef<str>>(args: impl IntoIterator<Item = S>
     if let Some(name) = profile_from_args(args) {
         std::env::set_var(PROFILE_ENV, name);
     }
-}
-
-/// Turns `network.enabled` or `network.allow_<purpose>` on after a native confirmation dialog the
-/// page cannot click. `key` (and each of `also`) is `enabled` or `allow_<purpose>`; all of them are
-/// confirmed in one dialog. Ok(false) = the user said no.
-#[tauri::command]
-pub(crate) async fn network_grant(window: tauri::WebviewWindow, key: String, also: Option<Vec<String>>) -> Result<bool> {
-    let dirs = resolve_dirs()?;
-    let mut keys = vec![key.as_str()];
-    keys.extend(also.iter().flatten().map(String::as_str));
-    // One dialog for all the keys, so a single click never asks twice.
-    super::network::grant_all_in(&dirs, &keys, |title, text| {
-        // Attached to the main window: macOS then draws a real NSAlert with the app's icon. Without
-        // a parent, rfd falls back to CFUserNotification, which shows the generic speech bubble.
-        let answer = rfd::MessageDialog::new()
-            .set_level(rfd::MessageLevel::Info)
-            .set_title(title)
-            .set_description(text)
-            .set_parent(&window)
-            .set_buttons(rfd::MessageButtons::OkCancelCustom(
-                super::network::ALLOW_LABEL.into(),
-                super::network::DENY_LABEL.into(),
-            ))
-            .show();
-        answer == rfd::MessageDialogResult::Custom(super::network::ALLOW_LABEL.into())
-    })
 }
 
 #[tauri::command]

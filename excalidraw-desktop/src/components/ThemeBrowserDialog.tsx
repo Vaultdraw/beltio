@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getInstallBackend } from "../theme/install/backends";
 import {
-  consentText,
-  grantThemeConsent,
+  blockReason,
   hasThemeConsent,
+  unblockLabel,
+  unblockThemes,
 } from "../theme/install/consent";
 import { kibToBytes } from "../theme/install/installer";
 import { toInstallError } from "../theme/install/types";
@@ -76,7 +77,7 @@ const PREVIEW_PARALLEL = 4;
 const GENERIC_DESC = /^(dark|light)( and (dark|light))? variants?\.?$/i;
 
 type Phase =
-  | { k: "consent" }
+  | { k: "blocked" }
   | { k: "loading" }
   | { k: "ready" }
   | { k: "error"; message: string };
@@ -168,7 +169,7 @@ export const ThemeBrowserDialog = ({
 }: Props) => {
   const prefs = getPreferences(win);
   const [phase, setPhase] = useState<Phase>(
-    hasThemeConsent(win) ? { k: "loading" } : { k: "consent" },
+    hasThemeConsent(win) ? { k: "loading" } : { k: "blocked" },
   );
   const [loaded, setLoaded] = useState<LoadedCatalogue | null>(null);
   const [installed, setInstalled] = useState<InstalledTheme[]>([]);
@@ -211,7 +212,7 @@ export const ThemeBrowserDialog = ({
     } catch (err) {
       const e = toInstallError(err);
       if (e.code === "NETWORK_NOT_ALLOWED" || e.code === "NETWORK_DISABLED") {
-        setPhase({ k: "consent" });
+        setPhase({ k: "blocked" });
       } else {
         setPhase({ k: "error", message: e.message });
       }
@@ -438,7 +439,7 @@ export const ThemeBrowserDialog = ({
   }, [currentName]);
 
   const allow = async () => {
-    if (await grantThemeConsent(win)) {
+    if (await unblockThemes(win)) {
       setPhase({ k: "loading" });
       started.current = false;
     }
@@ -446,10 +447,10 @@ export const ThemeBrowserDialog = ({
 
   const body = (() => {
     switch (phase.k) {
-      case "consent":
+      case "blocked":
         return (
-          <p data-testid="theme-browser-consent">
-            {consentText(prefs.networkEnabled, prefs.networkAllowThemes)}
+          <p data-testid="theme-browser-offline">
+            {blockReason("networkAllowThemes", win)}
           </p>
         );
       case "loading":
@@ -647,7 +648,7 @@ export const ThemeBrowserDialog = ({
       </button>
     );
     switch (phase.k) {
-      case "consent":
+      case "blocked":
         return (
           <>
             {close("Not now")}
@@ -656,7 +657,7 @@ export const ThemeBrowserDialog = ({
               className="vault-btn vault-btn--primary"
               onClick={() => void allow()}
             >
-              Allow
+              {unblockLabel(win)}
             </button>
           </>
         );

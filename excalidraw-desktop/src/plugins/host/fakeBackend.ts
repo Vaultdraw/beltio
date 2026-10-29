@@ -68,6 +68,8 @@ export interface FakeBackend extends PluginsBackend {
   network: {
     images: Record<string, Uint8Array | string>;
     allowed: boolean;
+    /** Offline mode now (the harness reads the page's settings; the native side reads config.toml). */
+    offline?: () => boolean;
     asked: string[][];
     fetched: string[];
   };
@@ -107,7 +109,7 @@ const networkRow = (
   if (method === "network.askImages") {
     // No dialog (owner, 2026-10-29): the answer is the setting, like the native row.
     net.asked.push(JSON.parse(new TextDecoder().decode(body)).urls);
-    return new Uint8Array([net.allowed ? 1 : 0]);
+    return new Uint8Array([net.allowed && !net.offline?.() ? 1 : 0]);
   }
   if (method !== "network.fetchImage") {
     throw coded("NOT_FOUND", `Plugins cannot call "${method}"`);
@@ -123,6 +125,12 @@ export const fakeFetchImage = (
   net: FakeBackendNetwork,
   url: string,
 ): Uint8Array => {
+  if (net.offline?.()) {
+    throw coded(
+      "NETWORK_DISABLED",
+      "Offline mode is on. Turn it off in Settings to use the internet.",
+    );
+  }
   if (!net.allowed) {
     throw coded(
       "NETWORK_NOT_ALLOWED",

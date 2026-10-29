@@ -10,9 +10,10 @@ import {
   validateCandidate,
 } from "../theme/install/installer";
 import {
-  consentText,
-  grantThemeConsent,
+  blockReason,
   hasThemeConsent,
+  unblockLabel,
+  unblockThemes,
 } from "../theme/install/consent";
 import { toInstallError } from "../theme/install/types";
 import { reloadThemeRegistry } from "../theme/registry";
@@ -30,7 +31,7 @@ import type {
 } from "../theme/install/types";
 
 type Step =
-  | { k: "consent" }
+  | { k: "blocked" }
   | { k: "input" }
   | { k: "busy"; text: string }
   | { k: "pick"; repo: Extract<Resolved, { kind: "repo" }>; preselect?: string }
@@ -59,7 +60,7 @@ export const ThemeInstallDialog = ({
   const needsNetwork = request.mode !== "uninstall";
   const consented = hasThemeConsent(win);
   const [step, setStep] = useState<Step>(
-    needsNetwork && !consented ? { k: "consent" } : startStep(request),
+    needsNetwork && !consented ? { k: "blocked" } : startStep(request),
   );
   const [input, setInput] = useState(
     request.mode === "install" ? request.input ?? "" : "",
@@ -85,7 +86,7 @@ export const ThemeInstallDialog = ({
       setStep(next ?? before);
     } catch (err) {
       setError(toInstallError(err).message);
-      setStep(before.k === "consent" ? { k: "input" } : before);
+      setStep(before.k === "blocked" ? { k: "input" } : before);
     }
   };
 
@@ -176,7 +177,7 @@ export const ThemeInstallDialog = ({
     });
 
   const allow = async () => {
-    if (await grantThemeConsent(win)) {
+    if (await unblockThemes(win)) {
       setStep(startStep(request));
     }
   };
@@ -264,10 +265,10 @@ export const ThemeInstallDialog = ({
   const busy = step.k === "busy";
   const body = (() => {
     switch (step.k) {
-      case "consent":
+      case "blocked":
         return (
-          <p data-testid="theme-install-consent">
-            {consentText(prefs.networkEnabled, prefs.networkAllowThemes)}
+          <p data-testid="theme-install-offline">
+            {blockReason("networkAllowThemes", win)}
           </p>
         );
       case "input":
@@ -414,7 +415,7 @@ export const ThemeInstallDialog = ({
       </button>
     );
     switch (step.k) {
-      case "consent":
+      case "blocked":
         return (
           <>
             {cancel("Not now")}
@@ -423,7 +424,7 @@ export const ThemeInstallDialog = ({
               className="vault-btn vault-btn--primary"
               onClick={() => void allow()}
             >
-              Allow
+              {unblockLabel(win)}
             </button>
           </>
         );

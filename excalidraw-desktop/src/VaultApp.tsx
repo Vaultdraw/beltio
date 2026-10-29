@@ -44,6 +44,7 @@ import { DesktopVaultTagRename } from "./tags/DesktopVaultTagRename";
 import { scheduleIdle } from "./platform/idle";
 import { useAppTags } from "./tags/useAppTags";
 import { useExtensions } from "./extensionSwitches/useExtensions";
+import { useNetworkMode } from "./network/useNetworkMode";
 import { SafeStartBanner } from "./safeStart/SafeStartBanner";
 import {
   listenSafeStartRequests,
@@ -345,6 +346,8 @@ export const VaultApp = ({
   // Safe start: "Restart in safe start" / "Restart normally", and a second
   // `vaultdraw launch --safe` while this window runs.
   useEffect(() => registerSafeStartCommands(), []);
+  // Offline mode command, and the quiet update check once per launch.
+  useNetworkMode(win ?? window);
   // Extension bisect: Start, or the answers while one runs.
   useEffect(() => registerBisectCommands(win), [win]);
   useEffect(() => {

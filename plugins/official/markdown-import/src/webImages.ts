@@ -109,7 +109,9 @@ export const createWebImages = (net: NetworkApi | undefined): WebImages => {
           ? "Image over 10 MB"
           : code === "INVALID_URL" || code === "PRIVATE_ADDRESS"
           ? "Web image refused (not a public web address)"
-          : code === "NETWORK_NOT_ALLOWED" || code === "NETWORK_DISABLED"
+          : code === "NETWORK_DISABLED"
+          ? "Web image, not downloaded (Offline mode is on)"
+          : code === "NETWORK_NOT_ALLOWED"
           ? "Web image, not downloaded (web pictures are off in Settings)"
           : "Web image could not be downloaded",
       );
@@ -152,7 +154,7 @@ export const createWebImages = (net: NetworkApi | undefined): WebImages => {
         todo.forEach((i) =>
           label(
             i,
-            "Web image, not downloaded (web pictures are off in Settings)",
+            "Web image, not downloaded (Offline mode is on, or web pictures are off in Settings)",
           ),
         );
         return;

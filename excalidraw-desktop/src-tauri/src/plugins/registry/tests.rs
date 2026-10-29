@@ -117,7 +117,7 @@ fn downloads_from_the_cached_list_with_consent() {
 #[test]
 fn no_consent_no_request() {
     let tmp = tempdir().unwrap();
-    for consent in [None, Some("[network]\nallow_plugins = false\n"), Some("[network]\nallow_themes = true\n")] {
+    for consent in [Some("[network]\nallow_plugins = false\n"), Some("[network]\noffline = true\n"), Some("[network]\nenabled = false\nallow_plugins = true\n")] {
         let d = dirs_in(&tmp.path().join(format!("{}", consent.map_or(0, str::len))), consent);
         let (base, hits) = start(|_| Resp::ok("{}"));
         assert!(cat::index_for(&d, KIND, &format!("{base}/index.json"), 1000).is_err());

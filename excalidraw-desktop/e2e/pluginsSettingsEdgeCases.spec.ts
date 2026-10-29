@@ -312,7 +312,7 @@ test.use({
     /\[plugin crashy\] command boom: kaboom|Failed to load resource: the server responded with a status of (404|500)/,
 });
 
-test("plugin permission review, consent, a crashing plugin and the registry browser (refused, failing, then allowed)", async ({
+test("plugin permission review, consent, a crashing plugin and the registry browser (failing, then working)", async ({
   page,
 }) => {
   const errors = trackErrors(page);
@@ -446,15 +446,10 @@ test("plugin permission review, consent, a crashing plugin and the registry brow
   await row("crashy").getByRole("button", { name: "Re-enable Crashy" }).click();
   await expect(row("crashy")).not.toContainText("Disabled by Vaultdraw");
 
-  // Registry browser: nothing is requested until Allow; the first index fetch fails and Try again works.
+  // Registry browser: no question; the first index fetch fails and Try again works.
   await page.getByRole("button", { name: "Browse community plugins…" }).click();
   const browser = page.getByTestId("plugin-browser-dialog");
-  await expect(browser.getByTestId("plugin-browser-consent")).toBeVisible();
-  await browser.getByRole("button", { name: "Not now" }).click();
-  await expect(browser).toHaveCount(0);
-  expect(requested).toEqual([]);
-  await page.getByRole("button", { name: "Browse community plugins…" }).click();
-  await browser.getByRole("button", { name: "Allow" }).click();
+  await expect(browser.getByTestId("plugin-browser-offline")).toHaveCount(0);
   await expect(browser.getByRole("alert")).toBeVisible();
   await browser.getByRole("button", { name: "Try again" }).click();
   const list = browser.getByRole("listbox", { name: "Community plugins" });
@@ -472,8 +467,8 @@ test("plugin permission review, consent, a crashing plugin and the registry brow
   await browser.getByLabel("Search plugins").fill("word");
   await browser.getByRole("button", { name: "Install", exact: true }).click();
   await expect(page.getByText("Installed Word count")).toBeVisible();
-  // Allow was saved: reopening goes straight to the list.
-  expect((await prefs(page)).networkAllowPlugins).toBe(true);
+  // Nothing was asked, nothing was switched off.
+  expect((await prefs(page)).networkAllowPlugins).not.toBe(false);
   // Only the failures this test caused on purpose: the crashing plugin and the failing downloads.
   expect(
     errors.filter(
@@ -541,7 +536,6 @@ test("a plugin nobody confirmed asks before it runs, and a community plugin cann
   // Installing a list entry that reuses an official id is refused and nothing is installed.
   await page.getByRole("button", { name: "Browse community plugins…" }).click();
   const browser = page.getByTestId("plugin-browser-dialog");
-  await browser.getByRole("button", { name: "Allow" }).click();
   const list = browser.getByRole("listbox", { name: "Community plugins" });
   await expect(list.getByRole("option")).toHaveCount(1);
   await browser.getByRole("button", { name: "Install", exact: true }).click();
@@ -1057,31 +1051,14 @@ test("themes: switch, browse, install from a URL with the network refused and th
   await expect.poll(() => rootVar(page, "--vault-bg")).toBe(defaultBg);
   expect((await prefs(page)).colorTheme).toBe("Default");
 
-  // Install from URL: refuse the network first; nothing is requested, nothing saved.
+  // Install from URL: no question; bad addresses give a message, a good one installs and applies.
   await settingsModal(page)
     .getByRole("button", { name: "Install from link…" })
     .click();
   const install = page.getByTestId("theme-install-dialog");
-  await expect(install.getByTestId("theme-install-consent")).toBeVisible();
-  await install.getByRole("button", { name: "Not now" }).click();
-  await expect(install).toHaveCount(0);
-  expect(requests).toEqual([]);
-  expect((await prefs(page)).networkAllowThemes).not.toBe(true);
-  // The theme browser asks too, and also refuses cleanly.
-  await settingsModal(page)
-    .getByRole("button", { name: "Install more themes…" })
-    .click();
   const browser = page.getByTestId("theme-browser-dialog");
-  await expect(browser.getByTestId("theme-browser-consent")).toBeVisible();
-  await browser.getByRole("button", { name: "Not now" }).click();
-  await expect(browser).toHaveCount(0);
+  await expect(install.getByTestId("theme-install-offline")).toHaveCount(0);
   expect(requests).toEqual([]);
-
-  // Allow once: bad addresses give a message, a good one installs and applies.
-  await settingsModal(page)
-    .getByRole("button", { name: "Install from link…" })
-    .click();
-  await install.getByRole("button", { name: "Allow" }).click();
   const origin = new URL(page.url()).origin;
   for (const bad of ["Missing.json", "Broken.json"]) {
     await install
@@ -1100,14 +1077,14 @@ test("themes: switch, browse, install from a URL with the network refused and th
   );
   await install.getByRole("button", { name: "Use it" }).click();
   await expect.poll(() => themeName(page)).toBe("Midnight");
-  expect((await prefs(page)).networkAllowThemes).toBe(true);
+  expect((await prefs(page)).networkAllowThemes).not.toBe(false);
 
   // The browser no longer asks: it lists, filters, refuses a bad checksum and installs a good theme.
   requests.length = 0;
   await settingsModal(page)
     .getByRole("button", { name: "Install more themes…" })
     .click();
-  await expect(browser.getByTestId("theme-browser-consent")).toHaveCount(0);
+  await expect(browser.getByTestId("theme-browser-offline")).toHaveCount(0);
   await expect(browser.getByTestId("theme-browser-status")).toContainText(
     "2 of 2 themes",
   );

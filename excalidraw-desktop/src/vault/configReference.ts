@@ -582,7 +582,7 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
         doc: "Show the status bar plugins fill with `ctx.statusBar`. It appears only while a plugin item has text.",
       },
       registry_url: {
-        doc: "The community plugins index that Settings, Plugins, Browse lists (an https address). Needs the plugins consent.",
+        doc: "The community plugins index that Settings, Plugins, Browse lists (an https address).",
       },
       registry_ttl_hours: {
         doc: "Hours before Browse fetches the plugins index again; 0 fetches every time it opens.",
@@ -637,22 +637,42 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
   {
     table: "network",
     intro:
-      "The internet is used only for features you allow, and only when you use them. See [Network](#network).",
+      "The internet is on by default and used only when you use a feature that needs it. One switch, Offline mode, turns all of it off. See [Network](#network).",
     keys: {
+      offline: {
+        doc: "Offline mode: `true` turns every internet feature off (plugin and theme lists and installs, web pictures, the update check); each says so in plain words. Settings, General, Offline mode, or the palette command Offline mode: on or off.",
+      },
       enabled: {
-        doc: "Master switch: `false` blocks every download, whatever else is allowed. Turning it on from Settings asks in a native dialog.",
+        doc: "The old master switch, still read: `false` counts as Offline mode. New configs use `offline`.",
       },
       allow_themes: {
-        doc: "Allow theme downloads. Absent means ask on first use; `true` allows, `false` refuses. Turning it on asks in a native dialog.",
-        default: "unset (ask)",
+        doc: "`false` turns theme downloads off. Absent or `true` allows them.",
+        default: "true",
       },
       allow_plugins: {
-        doc: "Allow the community plugins list and plugin downloads. Absent means ask on first use; `true` allows, `false` refuses. Turning it on asks in a native dialog.",
-        default: "unset (ask)",
+        doc: "`false` turns the community plugins list and plugin downloads off. Absent or `true` allows them.",
+        default: "true",
+      },
+      allow_images: {
+        doc: "`false` turns web pictures off (imported and pasted pictures stay boxes). Absent or `true` shows them.",
+        default: "true",
+      },
+      allow_updates: {
+        doc: "`false` turns the update check off. Absent or `true` allows it.",
+        default: "true",
       },
       allowed_hosts: {
         doc: "Extra hosts a download may contact, besides GitHub's own (`raw.githubusercontent.com`, `github.com`, `api.github.com`, `codeload.github.com`). Exact host names. Read only from `config.toml`: Settings, `vaultdraw config set` and the page never write it, so a script cannot add a host.",
         default: "[]",
+      },
+    },
+  },
+  {
+    table: "updates",
+    intro: "The quiet update check. See [Network](#network).",
+    keys: {
+      check_on_startup: {
+        doc: "Look once for a newer version after the app has started; a small notice appears only when one exists. Never in Offline mode.",
       },
     },
   },
@@ -665,7 +685,7 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
         doc: "Largest theme file to accept, in KB (1 to 256).",
       },
       index_url: {
-        doc: "The community themes index the theme browser lists (an https address). Needs the themes consent.",
+        doc: "The community themes index the theme browser lists (an https address). ",
       },
       index_ttl_hours: {
         doc: "Hours before the browser fetches the index again; 0 fetches every time it opens.",

@@ -19,7 +19,11 @@ import {
   makePluginInfo,
 } from "../src/plugins/host/fakeBackend";
 import { startPluginHost } from "../src/plugins/host/start";
-import { updatePreferences } from "../src/vault/preferences";
+import {
+  getPreferences,
+  isOffline,
+  updatePreferences,
+} from "../src/vault/preferences";
 
 import type { PluginInfo } from "../src/plugins/host/types";
 
@@ -195,6 +199,7 @@ export async function startPluginsHarness(
     (path, scene) =>
       (win as any).__vaultRepo?.seedDrawing(path, JSON.stringify(scene)),
   );
+  backend.network.offline = () => isOffline(getPreferences(win));
   for (const id of csv(params, "pluginData")) {
     backend.data[id] = JSON.stringify({ notes: "x".repeat(12 * 1024) });
   }

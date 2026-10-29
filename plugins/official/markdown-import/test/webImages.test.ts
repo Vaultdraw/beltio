@@ -71,7 +71,7 @@ describe("web pictures", () => {
     expect(log.asked).toHaveLength(1);
     expect(log.fetched).toHaveLength(0);
     expect((a as any).alt).toBe(
-      "Web image, not downloaded (web pictures are off in Settings): Chip",
+      "Web image, not downloaded (Offline mode is on, or web pictures are off in Settings): Chip",
     );
     expect((b as any).bytes).toBeUndefined();
   });

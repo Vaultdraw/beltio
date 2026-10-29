@@ -50,21 +50,23 @@ beforeEach(() => {
 });
 afterEach(() => {
   setThemeRegistry(null);
-  prefs({ networkEnabled: true, networkAllowThemes: undefined });
+  prefs({
+    networkOffline: false,
+    networkEnabled: true,
+    networkAllowThemes: undefined,
+  });
 });
 
 describe("ThemeInstallDialog (install)", () => {
-  it("asks for consent first, saves Allow, then installs a file after a confirm step", async () => {
+  it("asks nothing, then installs a file after a confirm step", async () => {
     prefs({ networkEnabled: true, networkAllowThemes: undefined });
     const onClose = vi.fn();
     render(
       <ThemeInstallDialog request={{ mode: "install" }} onClose={onClose} />,
     );
 
-    expect(screen.getByTestId("theme-install-consent")).toBeTruthy();
+    expect(screen.queryByTestId("theme-install-offline")).toBeNull();
     expect(backend.resolve).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Allow" }));
-    expect(getPreferences().networkAllowThemes).toBe(true);
 
     fireEvent.change(await screen.findByLabelText("Address or GitHub repo"), {
       target: { value: "https://example.com/Midnight.json" },
@@ -83,8 +85,8 @@ describe("ThemeInstallDialog (install)", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("Not now closes without any request", () => {
-    prefs({ networkEnabled: true, networkAllowThemes: undefined });
+  it("Not now closes without any request while Offline mode is on", () => {
+    prefs({ networkOffline: true });
     const onClose = vi.fn();
     render(
       <ThemeInstallDialog request={{ mode: "install" }} onClose={onClose} />,
@@ -94,16 +96,42 @@ describe("ThemeInstallDialog (install)", () => {
     expect(backend.resolve).not.toHaveBeenCalled();
   });
 
-  it("says when the master switch is off and Allow turns it back on", () => {
-    prefs({ networkEnabled: false, networkAllowThemes: true });
+  it("says why while Offline mode is on and the button turns it off", () => {
+    prefs({ networkOffline: true, networkAllowThemes: true });
     render(
       <ThemeInstallDialog request={{ mode: "install" }} onClose={vi.fn()} />,
     );
-    expect(screen.getByTestId("theme-install-consent").textContent).toMatch(
-      /switched off/,
+    expect(screen.getByTestId("theme-install-offline").textContent).toBe(
+      "Offline mode is on. Turn it off in Settings to install themes.",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Allow" }));
+    expect(backend.resolve).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Turn off Offline mode" }),
+    );
+    expect(getPreferences().networkOffline).toBe(false);
     expect(getPreferences().networkEnabled).toBe(true);
+  });
+
+  it("the old master switch (network.enabled = false) counts as Offline mode", () => {
+    prefs({ networkOffline: false, networkEnabled: false });
+    render(
+      <ThemeInstallDialog request={{ mode: "install" }} onClose={vi.fn()} />,
+    );
+    expect(screen.getByTestId("theme-install-offline").textContent).toMatch(
+      /Offline mode is on/,
+    );
+  });
+
+  it("an explicit allow false says so and the button turns it back on", () => {
+    prefs({ networkOffline: false, networkAllowThemes: false });
+    render(
+      <ThemeInstallDialog request={{ mode: "install" }} onClose={vi.fn()} />,
+    );
+    expect(screen.getByTestId("theme-install-offline").textContent).toBe(
+      "Theme downloads are turned off in Settings.",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Turn on" }));
+    expect(getPreferences().networkAllowThemes).toBeUndefined();
   });
 
   it("shows a lookup error and stays on the input", async () => {

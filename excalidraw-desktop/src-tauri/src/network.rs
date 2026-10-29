@@ -16,60 +16,57 @@ use ureq::unversioned::{
 };
 use url::{Host, Url};
 
+/// True when Offline mode is on: `network.offline = true`, or the old master switch
+/// `network.enabled = false` (older configs). A value of the wrong type counts as on, so a typo
+/// never lets a request out.
+fn is_offline(network: Option<&Value>) -> bool {
+    let off = match network.and_then(|n| n.get("offline")) {
+        None => false,
+        Some(Value::Bool(b)) => *b,
+        Some(_) => true,
+    };
+    let old_off = match network.and_then(|n| n.get("enabled")) {
+        None => false,
+        Some(Value::Bool(b)) => !*b,
+        Some(_) => true,
+    };
+    off || old_off
+}
+
 /// Pure check on the parsed config (`None` when `config.toml` is missing or does not parse).
+/// Online is the default: every purpose is allowed unless Offline mode is on or the user wrote
+/// `network.allow_<purpose> = false`. Nothing is ever asked.
 pub(crate) fn check_consent(config: Option<&Value>, purpose: &str) -> Result<()> {
     let network = config.and_then(|c| c.get("network"));
-    let enabled = match network.and_then(|n| n.get("enabled")) {
-        None => true,
-        Some(Value::Bool(b)) => *b,
-        Some(_) => false,
-    };
-    if !enabled {
-        return Err(err("NETWORK_DISABLED", "Network access is switched off in Settings"));
+    if is_offline(network) {
+        return Err(err("NETWORK_DISABLED", "Offline mode is on. Turn it off in Settings to use the internet."));
     }
     let key = format!("allow_{purpose}");
     let allowed = match network.and_then(|n| n.get(&key)) {
-        // Web pictures are on unless the user turned them off (owner, 2026-10-29: "If there is a
-        // link, download it and display it"); every other purpose still needs a yes.
-        None => purpose == "images",
+        None => true,
         Some(v) => v.as_bool() == Some(true),
     };
     if !allowed {
         return Err(err(
             "NETWORK_NOT_ALLOWED",
-            format!("Downloading {} is not allowed. You can allow it in Settings.", purpose_phrase(purpose)),
+            format!("Downloading {} is turned off in Settings.", purpose_phrase(purpose)),
         ));
     }
     Ok(())
 }
 
-/// Reads `config.toml` in `dirs` and requires consent for `purpose`. Call before any request.
+/// Reads `config.toml` in `dirs` and checks Offline mode and `purpose`. Call before any request.
+/// A config that cannot be read counts as the defaults (online).
 pub(crate) fn ensure_network_allowed(dirs: &config::Dirs, purpose: &str) -> Result<()> {
     let loaded = config::load_settings_in(dirs)?;
     let value = serde_json::to_value(&loaded).map_err(|e| err("INTERNAL", e.to_string()))?;
     check_consent(value.get("config"), purpose)
 }
 
-// ---------------------------------------------------------------------------
-// Granting consent
-// ---------------------------------------------------------------------------
-
-/// True for the keys that give consent: `network.enabled` and `network.allow_<purpose>`.
-fn is_consent_key(key: &str) -> bool {
-    key == "enabled" || key.strip_prefix("allow_").is_some_and(|p| !p.is_empty())
-}
-
-/// `update_config` (the webview's write path) may revoke consent or remove a consent key, but
-/// never set one to anything but false: a grant goes through `network_grant` and its native
-/// dialog, so a script in the page cannot give itself network access.
-pub(crate) fn refuse_consent_grants(changes: &[config::LayerChange]) -> Result<()> {
-    let refuse = |key: &str| {
-        err(
-            "CONSENT_REQUIRED",
-            format!("`network.{key}` can only be turned on through the confirmation dialog (network_grant)"),
-        )
-    };
-    let revokes = |v: &Value| matches!(v, Value::Null | Value::Bool(false));
+/// `update_config` (the webview's write path) may change the network switches freely, but never
+/// the host list or where the community lists come from: a script in the page must not be able
+/// to point a download at its own server.
+pub(crate) fn refuse_unsafe_writes(changes: &[config::LayerChange]) -> Result<()> {
     // The host list is read from config.toml only; the page has no business adding to it.
     let hosts_err = || {
         err("CONSENT_REQUIRED", "`network.allowed_hosts` can only be edited by hand in config.toml".to_string())
@@ -96,96 +93,22 @@ pub(crate) fn refuse_consent_grants(changes: &[config::LayerChange]) -> Result<(
                 if fields.get("allowed_hosts").is_some_and(|v| !empty(v)) {
                     return Err(hosts_err());
                 }
-                if let Some((key, _)) = fields.iter().find(|(k, v)| is_consent_key(k) && !revokes(v)) {
-                    return Err(refuse(key));
-                }
-            }
-        } else if let Some(key) = change.key.strip_prefix("network.") {
-            if is_consent_key(key) && !revokes(&change.value) {
-                return Err(refuse(key));
             }
         }
     }
     Ok(())
 }
 
-/// The plain-language name of what a consent purpose downloads ("themes", "plugins").
+/// The plain-language name of what a purpose downloads ("themes", "plugins").
 fn purpose_phrase(purpose: &str) -> String {
     match purpose {
         "themes" => "themes".into(),
         "plugins" => "plugins".into(),
         "plugin_list" | "plugin_registry" => "the plugin list".into(),
         "images" => "pictures from web pages".into(),
+        "updates" => "the update check".into(),
         other => other.replace('_', " "),
     }
-}
-
-/// What the confirmation dialog says for one or more consent keys (`enabled` is the master
-/// switch, `allow_<purpose>` one purpose). Plain words only: no config keys, no code quotes.
-/// Returns `(title, text)`.
-fn grant_prompt(keys: &[&str]) -> (String, String) {
-    let master = keys.contains(&"enabled");
-    let phrases: Vec<String> =
-        keys.iter().filter_map(|k| k.strip_prefix("allow_")).map(purpose_phrase).collect();
-    let list = match phrases.as_slice() {
-        [] => String::new(),
-        [one] => one.clone(),
-        [init @ .., last] => format!("{} and {last}", init.join(", ")),
-    };
-    let title = match (master, list.is_empty()) {
-        (true, true) => "Allow internet access?".to_string(),
-        (true, false) => format!("Allow internet access to download {list}?"),
-        (false, _) => format!("Allow downloading {list}?"),
-    };
-    let text = if list.is_empty() {
-        "Vaultdraw will be able to use the internet for the features you allow. Nothing is sent until you use one. You can change this any time in Settings."
-            .to_string()
-    } else {
-        format!(
-            "Vaultdraw will connect to the internet to download {list}, only when you ask for it. You can change this any time in Settings."
-        )
-    };
-    (title, text)
-}
-
-/// The button that grants, and the one that refuses (the same wording in every native dialog).
-pub(crate) const ALLOW_LABEL: &str = "Allow";
-pub(crate) const DENY_LABEL: &str = "Don't Allow";
-
-/// Turns a consent key on after `confirm(title, text)` says yes. Returns whether it was granted;
-/// a refusal writes nothing. `key` is `enabled` or `allow_<purpose>`, without the `network.` prefix.
-#[cfg(test)]
-pub(crate) fn grant_in(dirs: &config::Dirs, key: &str, confirm: impl FnOnce(&str, &str) -> bool) -> Result<bool> {
-    grant_all_in(dirs, &[key], confirm)
-}
-
-/// The same for several keys at once (the master switch and a purpose): one dialog, one answer,
-/// so a single click never shows the box twice. Every key is checked before anything is asked.
-pub(crate) fn grant_all_in(dirs: &config::Dirs, keys: &[&str], confirm: impl FnOnce(&str, &str) -> bool) -> Result<bool> {
-    let valid = |key: &str| {
-        key.len() <= 40
-            && is_consent_key(key)
-            && key.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
-    };
-    let mut unique: Vec<&str> = Vec::new();
-    for key in keys {
-        if !unique.contains(key) {
-            unique.push(key);
-        }
-    }
-    if unique.is_empty() || unique.len() > 4 || !unique.iter().all(|k| valid(k)) {
-        return Err(err("INVALID_ARGUMENT", "Not a network consent key"));
-    }
-    let (title, text) = grant_prompt(&unique);
-    if !confirm(&title, &text) {
-        return Ok(false);
-    }
-    let changes: Vec<config::LayerChange> = unique
-        .iter()
-        .map(|k| config::LayerChange { key: format!("network.{k}"), value: Value::Bool(true), default: None })
-        .collect();
-    config::update_overrides_in(dirs, &changes)?;
-    Ok(true)
 }
 
 // ---------------------------------------------------------------------------
@@ -643,9 +566,9 @@ mod tests {
         let change = |key: &str, value: Value| config::LayerChange { key: key.into(), value, default: None };
         let bad = [change("network.allowed_hosts", serde_json::json!(["evil.example"])), change("network", serde_json::json!({"allowed_hosts": ["evil.example"]}))];
         for c in bad {
-            assert_eq!(refuse_consent_grants(&[c]).unwrap_err().code, "CONSENT_REQUIRED");
+            assert_eq!(refuse_unsafe_writes(&[c]).unwrap_err().code, "CONSENT_REQUIRED");
         }
-        assert!(refuse_consent_grants(&[change("network.allowed_hosts", Value::Null)]).is_ok(), "clearing is fine");
+        assert!(refuse_unsafe_writes(&[change("network.allowed_hosts", Value::Null)]).is_ok(), "clearing is fine");
     }
 
     #[test]
@@ -670,10 +593,10 @@ mod tests {
             // The page may not write it either (clearing is fine).
             let change = |k: &str, v: Value| config::LayerChange { key: k.into(), value: v, default: None };
             let evil = serde_json::json!("https://raw.githubusercontent.com/evil/x/main/i.json");
-            assert_eq!(refuse_consent_grants(&[change(&format!("{section}.{key}"), evil.clone())]).unwrap_err().code, "CONSENT_REQUIRED");
-            assert_eq!(refuse_consent_grants(&[change(section, serde_json::json!({ key: evil }))]).unwrap_err().code, "CONSENT_REQUIRED");
-            assert!(refuse_consent_grants(&[change(&format!("{section}.{key}"), Value::Null)]).is_ok());
-            assert!(refuse_consent_grants(&[change(section, serde_json::json!({"other": 1}))]).is_ok());
+            assert_eq!(refuse_unsafe_writes(&[change(&format!("{section}.{key}"), evil.clone())]).unwrap_err().code, "CONSENT_REQUIRED");
+            assert_eq!(refuse_unsafe_writes(&[change(section, serde_json::json!({ key: evil }))]).unwrap_err().code, "CONSENT_REQUIRED");
+            assert!(refuse_unsafe_writes(&[change(&format!("{section}.{key}"), Value::Null)]).is_ok());
+            assert!(refuse_unsafe_writes(&[change(section, serde_json::json!({"other": 1}))]).is_ok());
         }
     }
 
@@ -828,22 +751,35 @@ mod tests {
     }
 
     #[test]
-    fn pure_gate_four_states() {
-        assert_eq!(code(check_consent(None, "themes")), "NETWORK_NOT_ALLOWED");
-        assert_eq!(code(check_consent(Some(&json!({})), "themes")), "NETWORK_NOT_ALLOWED");
-        assert_eq!(code(check_consent(Some(&json!({"network": {"enabled": false, "allow_themes": true}})), "themes")), "NETWORK_DISABLED");
+    fn pure_gate_states() {
+        // Online by default: nothing written means every purpose is allowed.
+        for purpose in ["themes", "plugins", "plugin_list", "images", "updates"] {
+            assert!(check_consent(None, purpose).is_ok(), "{purpose}");
+            assert!(check_consent(Some(&json!({})), purpose).is_ok(), "{purpose}");
+            assert!(check_consent(Some(&json!({"network": {}})), purpose).is_ok(), "{purpose}");
+        }
+        assert!(check_consent(Some(&json!({"network": {"allow_themes": true, "offline": false}})), "themes").is_ok());
+        // An explicit false is honoured, for that purpose only.
         assert_eq!(code(check_consent(Some(&json!({"network": {"allow_themes": false}})), "themes")), "NETWORK_NOT_ALLOWED");
-        assert!(check_consent(Some(&json!({"network": {"allow_themes": true}})), "themes").is_ok());
-        assert!(check_consent(Some(&json!({"network": {"enabled": true, "allow_themes": true}})), "themes").is_ok());
+        assert!(check_consent(Some(&json!({"network": {"allow_themes": false}})), "plugins").is_ok());
+        // Offline mode wins over everything, the old master switch too.
+        for cfg in [
+            json!({"network": {"offline": true}}),
+            json!({"network": {"offline": true, "allow_themes": true}}),
+            json!({"network": {"enabled": false, "allow_themes": true}}),
+            json!({"network": {"enabled": false}}),
+            json!({"network": {"enabled": true, "offline": true}}),
+        ] {
+            assert_eq!(code(check_consent(Some(&cfg), "themes")), "NETWORK_DISABLED", "{cfg}");
+        }
+        assert!(check_consent(Some(&json!({"network": {"enabled": true, "offline": false}})), "themes").is_ok());
     }
 
     #[test]
-    fn gate_is_per_purpose_and_fails_closed() {
-        let cfg = json!({"network": {"allow_themes": true}});
-        assert_eq!(code(check_consent(Some(&cfg), "catalogue")), "NETWORK_NOT_ALLOWED");
-        // Wrong types never count as consent.
+    fn gate_fails_closed_on_wrong_types() {
         assert_eq!(code(check_consent(Some(&json!({"network": {"allow_themes": "true"}})), "themes")), "NETWORK_NOT_ALLOWED");
-        assert_eq!(code(check_consent(Some(&json!({"network": {"enabled": "yes", "allow_themes": true}})), "themes")), "NETWORK_DISABLED");
+        assert_eq!(code(check_consent(Some(&json!({"network": {"enabled": "yes"}})), "themes")), "NETWORK_DISABLED");
+        assert_eq!(code(check_consent(Some(&json!({"network": {"offline": "no"}})), "themes")), "NETWORK_DISABLED");
     }
 
     fn gate_with(config: Option<&str>) -> String {
@@ -858,17 +794,40 @@ mod tests {
 
     #[test]
     fn reads_config_toml() {
-        assert_eq!(gate_with(Some("")), "NETWORK_NOT_ALLOWED");
-        assert_eq!(gate_with(Some("[network]\nenabled = false\nallow_themes = true\n")), "NETWORK_DISABLED");
+        assert_eq!(gate_with(Some("")), "");
+        assert_eq!(gate_with(Some("[network]\noffline = true\nallow_themes = true\n")), "NETWORK_DISABLED");
+        assert_eq!(gate_with(Some("[network]\nenabled = false\n")), "NETWORK_DISABLED");
         assert_eq!(gate_with(Some("[network]\nallow_themes = false\n")), "NETWORK_NOT_ALLOWED");
         assert_eq!(gate_with(Some("[network]\nallow_themes = true\n")), "");
-        assert_eq!(gate_with(Some("this is not toml [")), "NETWORK_NOT_ALLOWED");
     }
 
     #[test]
-    fn default_config_makes_no_request() {
-        // A fresh install writes the default config; it must not grant consent.
-        assert_eq!(gate_with(None), "NETWORK_NOT_ALLOWED");
+    fn default_config_is_online() {
+        assert_eq!(gate_with(None), "");
+    }
+
+    /// Every purpose x {online, offline, allow false}: the family table (the browser stand-in has
+    /// the same table in `src/tests/networkFamily.test.ts`).
+    #[test]
+    fn every_purpose_online_offline_and_allow_false() {
+        for purpose in ["themes", "plugins", "plugin_list", "images", "updates"] {
+            let allow = format!("allow_{purpose}");
+            let toml = |body: &str| json!(toml_to_json(body));
+            assert!(check_consent(Some(&toml("")), purpose).is_ok(), "{purpose} online");
+            let off = check_consent(Some(&toml("[network]\noffline = true\n")), purpose).unwrap_err();
+            assert_eq!(off.code, "NETWORK_DISABLED", "{purpose} offline");
+            assert!(off.message.starts_with("Offline mode is on"), "{}", off.message);
+            let no = check_consent(Some(&toml(&format!("[network]\n{allow} = false\n"))), purpose).unwrap_err();
+            assert_eq!(no.code, "NETWORK_NOT_ALLOWED", "{purpose} allow false");
+            for e in [&off, &no] {
+                assert!(!e.message.contains("network.") && !e.message.contains('`') && !e.message.contains('_'), "{}", e.message);
+            }
+        }
+    }
+
+    fn toml_to_json(text: &str) -> Value {
+        let v: toml::Value = toml::from_str(text).unwrap();
+        serde_json::to_value(v).unwrap()
     }
 
     // ---- security review fixes ----
@@ -954,148 +913,22 @@ mod tests {
         config::LayerChange { key: key.into(), value, default: None }
     }
 
-    #[test]
-    fn update_config_may_revoke_but_not_grant() {
-        for ok in [
-            change("network.allow_themes", json!(false)),
-            change("network.allow_themes", Value::Null),
-            change("network.enabled", json!(false)),
-            change("network.enabled", Value::Null),
-            change("network", Value::Null),
-            change("network", json!({"allow_themes": false, "enabled": false})),
-            change("appearance.theme", json!("dark")),
-            change("themes.max_install_kb", json!(64)),
-        ] {
-            assert!(refuse_consent_grants(std::slice::from_ref(&ok)).is_ok(), "{ok:?}");
-        }
-        for bad in [
-            change("network.allow_themes", json!(true)),
-            change("network.enabled", json!(true)),
-            change("network.allow_catalogue", json!(true)),
-            change("network.allow_themes", json!("true")),
-            change("network.allow_themes", json!(1)),
-            change("network", json!({"allow_themes": true})),
-            change("network", json!({"enabled": true})),
-        ] {
-            let e = refuse_consent_grants(std::slice::from_ref(&bad)).unwrap_err();
-            assert_eq!(e.code, "CONSENT_REQUIRED", "{bad:?}");
-        }
-        // One grant hidden among harmless changes refuses the whole call.
-        let mixed = [change("appearance.theme", json!("dark")), change("network.allow_themes", json!(true))];
-        assert_eq!(refuse_consent_grants(&mixed).unwrap_err().code, "CONSENT_REQUIRED");
-    }
-
     fn dirs_in(t: &tempfile::TempDir) -> config::Dirs {
         config::Dirs { config: t.path().join("config"), state: t.path().join("state") }
     }
 
     #[test]
-    fn grant_writes_only_after_the_dialog_says_yes() {
-        let t = tempfile::tempdir().unwrap();
-        let dirs = dirs_in(&t);
-        let mut seen = None;
-        let granted = grant_in(&dirs, "allow_themes", |title, text| {
-            seen = Some((title.to_string(), text.to_string()));
-            false
-        })
-        .unwrap();
-        assert!(!granted);
-        let (title, text) = seen.unwrap();
-        assert_eq!(title, "Allow downloading themes?");
-        assert!(text.contains("download themes"), "{text}");
-        assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "NETWORK_NOT_ALLOWED");
-        let text = fs::read_to_string(dirs.config.join("config.toml")).unwrap_or_default();
-        assert!(!text.contains("allow_themes = true"), "{text}");
-
-        assert!(grant_in(&dirs, "allow_themes", |_, _| true).unwrap());
-        assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "");
-    }
-
-    #[test]
-    fn grant_enabled_turns_the_master_switch_back_on() {
-        let t = tempfile::tempdir().unwrap();
-        let dirs = dirs_in(&t);
-        fs::create_dir_all(&dirs.config).unwrap();
-        fs::write(dirs.config.join("config.toml"), "[network]\nenabled = false\nallow_themes = true\n").unwrap();
-        assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "NETWORK_DISABLED");
-        assert!(!grant_in(&dirs, "enabled", |_, _| false).unwrap());
-        assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "NETWORK_DISABLED");
-        assert!(grant_in(&dirs, "enabled", |_, _| true).unwrap());
-        assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "");
-    }
-
-    #[test]
-    fn grant_several_keys_asks_once_and_writes_all() {
-        let t = tempfile::tempdir().unwrap();
-        let dirs = dirs_in(&t);
-        fs::create_dir_all(&dirs.config).unwrap();
-        fs::write(dirs.config.join("config.toml"), "[network]\nenabled = false\n").unwrap();
-        let mut asked = 0;
-        let mut text_seen = String::new();
-        let no = grant_all_in(&dirs, &["enabled", "allow_themes"], |_, text| {
-            asked += 1;
-            text_seen = text.to_string();
-            false
-        })
-        .unwrap();
-        assert!(!no);
-        assert_eq!(asked, 1);
-        assert!(text_seen.contains("internet") && text_seen.contains("themes"), "{text_seen}");
-        assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "NETWORK_DISABLED");
-        let yes = grant_all_in(&dirs, &["enabled", "allow_themes", "enabled"], |_, _| {
-            asked += 1;
-            true
-        })
-        .unwrap();
-        assert!(yes);
-        assert_eq!(asked, 2);
-        assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "");
-    }
-
-    #[test]
-    fn grant_several_keys_rejects_a_bad_one_without_asking() {
-        let t = tempfile::tempdir().unwrap();
-        let dirs = dirs_in(&t);
-        let r = grant_all_in(&dirs, &["enabled", "hotkeys"], |_, _| panic!("must not ask"));
-        assert_eq!(r.unwrap_err().code, "INVALID_ARGUMENT");
-    }
-
-    #[test]
-    fn grant_rejects_other_keys_without_asking() {
-        let t = tempfile::tempdir().unwrap();
-        let dirs = dirs_in(&t);
-        for key in ["", "allow_", "themes", "appearance.theme", "allow_themes.x", "ALLOW_THEMES", "allow_a b", "hotkeys"] {
-            let r = grant_in(&dirs, key, |_, _| panic!("must not ask for {key:?}"));
-            assert_eq!(r.unwrap_err().code, "INVALID_ARGUMENT", "{key:?}");
-        }
-    }
-
-    #[test]
-    fn prompts_are_plain_words_per_key() {
-        let cases: [(&[&str], &str); 7] = [
-            (&["allow_themes"], "Allow downloading themes?"),
-            (&["allow_plugins"], "Allow downloading plugins?"),
-            (&["allow_plugin_list"], "Allow downloading the plugin list?"),
-            (&["allow_font_packs"], "Allow downloading font packs?"),
-            (&["enabled"], "Allow internet access?"),
-            (&["enabled", "allow_themes"], "Allow internet access to download themes?"),
-            (&["allow_themes", "allow_plugins"], "Allow downloading themes and plugins?"),
-        ];
-        for (keys, want) in cases {
-            let (title, text) = grant_prompt(keys);
-            assert_eq!(title, want, "{keys:?}");
-            for s in [&title, &text] {
-                assert!(!s.contains('`') && !s.contains("network.") && !s.contains("allow_") && !s.contains('_'), "{keys:?}: {s}");
-            }
-            assert!(text.ends_with("in Settings.") || text.ends_with("Settings."), "{text}");
-        }
-    }
-
-    #[test]
-    fn consent_errors_name_no_config_key() {
-        for (cfg, purpose) in [(json!({"network": {"enabled": false}}), "themes"), (json!({}), "plugins"), (json!({}), "plugin_list")] {
-            let e = check_consent(Some(&cfg), purpose).unwrap_err();
-            assert!(!e.message.contains("network.") && !e.message.contains('`') && !e.message.contains('_'), "{}", e.message);
+    fn the_page_may_flip_the_network_switches() {
+        for ok in [
+            change("network.offline", json!(true)),
+            change("network.offline", json!(false)),
+            change("network.enabled", Value::Null),
+            change("network.allow_themes", json!(true)),
+            change("network.allow_themes", json!(false)),
+            change("network", json!({"allow_themes": true, "offline": false})),
+            change("updates.check_on_startup", json!(false)),
+        ] {
+            assert!(refuse_unsafe_writes(std::slice::from_ref(&ok)).is_ok(), "{ok:?}");
         }
     }
 
@@ -1155,16 +988,16 @@ mod tests {
     }
 
     #[test]
-    fn pictures_are_on_unless_turned_off_and_the_master_switch_wins() {
+    fn pictures_are_on_unless_turned_off_and_offline_mode_wins() {
         let t = tempfile::tempdir().unwrap();
         let dirs = dirs_in(&t);
         fs::create_dir_all(&dirs.config).unwrap();
-        // Nothing set: allowed, no question (owner, 2026-10-29). Other purposes still need a yes.
+        // Nothing set: allowed, no question (owner, 2026-10-29), like every other purpose.
         assert_eq!(code(ensure_network_allowed(&dirs, "images")), "");
-        assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "NETWORK_NOT_ALLOWED");
+        assert_eq!(code(ensure_network_allowed(&dirs, "themes")), "");
         fs::write(dirs.config.join("config.toml"), "[network]\nallow_images = false\n").unwrap();
         assert_eq!(fetch_image(&dirs, "https://example.com/a.png").unwrap_err().code, "NETWORK_NOT_ALLOWED");
-        fs::write(dirs.config.join("config.toml"), "[network]\nenabled = false\nallow_images = true\n").unwrap();
+        fs::write(dirs.config.join("config.toml"), "[network]\noffline = true\nallow_images = true\n").unwrap();
         assert_eq!(fetch_image(&dirs, "https://example.com/a.png").unwrap_err().code, "NETWORK_DISABLED");
         fs::write(dirs.config.join("config.toml"), "[network]\nenabled = false\n").unwrap();
         assert_eq!(fetch_image(&dirs, "https://example.com/a.png").unwrap_err().code, "NETWORK_DISABLED");

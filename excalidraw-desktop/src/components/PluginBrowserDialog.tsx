@@ -22,9 +22,10 @@ import {
 } from "../plugins/registry/client";
 import { toInstallError } from "../theme/install/types";
 import {
-  consentText,
-  grantConsent,
+  blockReason,
   hasConsent,
+  unblock,
+  unblockLabel,
 } from "../theme/install/consent";
 import { toastStore } from "../toasts/toastStore";
 import { getPreferences } from "../vault/preferences";
@@ -42,7 +43,7 @@ import type {
 import type { RegistryEntry } from "../plugins/registry/types";
 
 type Phase =
-  | { k: "consent" }
+  | { k: "blocked" }
   | { k: "loading" }
   | { k: "error"; message: string }
   | { k: "ready" };
@@ -67,11 +68,10 @@ export const PluginBrowserDialog = ({
   onClose,
   win = window,
 }: Props) => {
-  const prefs = getPreferences(win);
   const [phase, setPhase] = useState<Phase>(
     hasConsent("networkAllowPlugins", win)
       ? { k: "loading" }
-      : { k: "consent" },
+      : { k: "blocked" },
   );
   const [loaded, setLoaded] = useState<LoadedCatalogue<RegistryEntry> | null>(
     null,
@@ -110,7 +110,7 @@ export const PluginBrowserDialog = ({
     } catch (err) {
       const e = toInstallError(err);
       if (e.code === "NETWORK_NOT_ALLOWED" || e.code === "NETWORK_DISABLED") {
-        setPhase({ k: "consent" });
+        setPhase({ k: "blocked" });
       } else {
         setPhase({ k: "error", message: e.message });
       }
@@ -144,7 +144,7 @@ export const PluginBrowserDialog = ({
   };
 
   const allow = async () => {
-    if (await grantConsent("networkAllowPlugins", win)) {
+    if (await unblock("networkAllowPlugins", win)) {
       retry(false);
     }
   };
@@ -286,12 +286,10 @@ export const PluginBrowserDialog = ({
 
   const body = (() => {
     switch (phase.k) {
-      case "consent":
+      case "blocked":
         return (
-          <p data-testid="plugin-browser-consent">
-            {consentText(prefs.networkEnabled, prefs.networkAllowPlugins)
-              .replace("a theme", "a plugin list and plugins")
-              .replace(/theme downloads/g, "plugin downloads")}
+          <p data-testid="plugin-browser-offline">
+            {blockReason("networkAllowPlugins", win)}
           </p>
         );
       case "loading":
@@ -397,7 +395,7 @@ export const PluginBrowserDialog = ({
     </button>
   );
   const footer =
-    phase.k === "consent" ? (
+    phase.k === "blocked" ? (
       <>
         {close("Not now")}
         <button
@@ -405,7 +403,7 @@ export const PluginBrowserDialog = ({
           className="vault-btn vault-btn--primary"
           onClick={() => void allow()}
         >
-          Allow
+          {unblockLabel(win)}
         </button>
       </>
     ) : phase.k === "error" ? (

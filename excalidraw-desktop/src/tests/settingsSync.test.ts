@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_PREFERENCES,
   getPreferences,
+  isOffline,
   getTheme,
   updatePreferences,
 } from "../vault/preferences";
@@ -58,7 +59,6 @@ const createBackend = (initial?: {
     configError: initial?.configError ?? null,
     state: initial?.state ?? {},
     /** What the native consent dialog answers. */
-    grantAnswer: true,
     handler: null as null | ((e: { payload: unknown }) => void),
     unlisten: vi.fn(),
     invoke: vi.fn(async (cmd: string, args?: Record<string, unknown>) => {
@@ -88,20 +88,6 @@ const createBackend = (initial?: {
             }
           }
           return undefined;
-        }
-        case "network_grant": {
-          if (!backend.grantAnswer) {
-            return false;
-          }
-          backend.config ??= {};
-          backend.config.network ??= {};
-          for (const key of [
-            (args as any).key,
-            ...((args as any).also ?? []),
-          ]) {
-            backend.config.network[key] = true;
-          }
-          return true;
         }
         case "write_state":
           backend.state = clone((args as any).state);
@@ -626,40 +612,31 @@ describe("settingsSync runtime", () => {
     expect(backend.callsOf("update_config")).toHaveLength(1);
   });
 
-  it("sends consent grants to network_grant, never update_config", async () => {
+  it("writes the network switches as ordinary update_config calls: nothing is asked", async () => {
     const backend = createBackend();
     await init(backend);
     updatePreferences(
-      { networkAllowThemes: true, networkEnabled: false, theme: "dark" },
+      { networkAllowThemes: true, networkOffline: true, theme: "dark" },
       window,
     );
     await flushSettings();
-    // turning it off is an ordinary write; the grant is not part of it
+    expect(backend.callsOf("network_grant")).toHaveLength(0);
     expect(backend.callsOf("update_config")).toEqual([
       [
         "update_config",
         {
           changes: [
-            { key: "network.enabled", value: false },
+            { key: "network.offline", value: true },
+            { key: "network.allow_themes", value: true },
             { key: "appearance.mode", value: "dark" },
           ],
         },
       ],
     ]);
-    expect(backend.callsOf("network_grant")).toEqual([
-      ["network_grant", { key: "allow_themes" }],
-    ]);
-    expect(getPreferences(window).networkAllowThemes).toBe(true);
-    updatePreferences({ networkEnabled: true }, window);
-    await flushSettings();
-    expect(backend.callsOf("network_grant").map(([, a]) => a)).toEqual([
-      { key: "allow_themes" },
-      { key: "enabled" },
-    ]);
-    expect(backend.callsOf("update_config")).toHaveLength(1);
+    expect(getPreferences(window).networkOffline).toBe(true);
   });
 
-  it("asks once when the master switch and a purpose are granted together", async () => {
+  it("turning Offline mode off clears the old master switch too", async () => {
     const backend = createBackend({
       config: {
         ...clone(DEFAULT_CONFIG),
@@ -667,51 +644,28 @@ describe("settingsSync runtime", () => {
       },
     });
     await init(backend);
-    updatePreferences(
-      { networkEnabled: true, networkAllowThemes: true },
-      window,
-    );
+    expect(isOffline(getPreferences(window))).toBe(true);
+    updatePreferences({ networkOffline: false, networkEnabled: true }, window);
     await flushSettings();
-    expect(backend.callsOf("network_grant")).toEqual([
-      ["network_grant", { key: "enabled", also: ["allow_themes"] }],
-    ]);
-    expect(backend.config?.network).toEqual({
-      enabled: true,
-      allow_themes: true,
-    });
-    expect(getPreferences(window).networkEnabled).toBe(true);
-    expect(getPreferences(window).networkAllowThemes).toBe(true);
+    expect(backend.config?.network).toEqual({ allow_themes: false });
+    expect(isOffline(getPreferences(window))).toBe(false);
   });
 
-  it("puts both switches back when the one dialog says no", async () => {
+  it("reads updates.check_on_startup and the new network keys", async () => {
     const backend = createBackend({
       config: {
         ...clone(DEFAULT_CONFIG),
-        network: { enabled: false, allow_themes: false },
+        network: { offline: true, allow_images: false, allow_updates: false },
+        updates: { check_on_startup: false },
       },
     });
-    backend.grantAnswer = false;
     await init(backend);
-    updatePreferences(
-      { networkEnabled: true, networkAllowThemes: true },
-      window,
-    );
-    await flushSettings();
-    expect(backend.callsOf("network_grant")).toHaveLength(1);
-    expect(getPreferences(window).networkEnabled).toBe(false);
-    expect(getPreferences(window).networkAllowThemes).toBe(false);
-  });
-
-  it("puts a consent switch back when the native dialog says no", async () => {
-    const backend = createBackend();
-    backend.grantAnswer = false;
-    await init(backend);
-    updatePreferences({ networkAllowThemes: true }, window);
-    expect(getPreferences(window).networkAllowThemes).toBe(true);
-    await flushSettings();
-    expect(getPreferences(window).networkAllowThemes).toBeUndefined();
-    expect(backend.config?.network?.allow_themes).toBeUndefined();
-    expect(backend.callsOf("update_config")).toHaveLength(0);
+    expect(getPreferences(window)).toMatchObject({
+      networkOffline: true,
+      networkAllowImages: false,
+      networkAllowUpdates: false,
+      updatesCheckOnStartup: false,
+    });
   });
 
   it("revokes consent with a normal update_config write", async () => {

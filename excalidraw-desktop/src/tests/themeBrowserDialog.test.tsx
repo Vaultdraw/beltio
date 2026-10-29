@@ -139,6 +139,7 @@ beforeEach(() => {
   catalogue = makeCatalogue();
   install = makeInstall();
   prefs({
+    networkOffline: false,
     networkEnabled: true,
     networkAllowThemes: true,
     themesPreviews: true,
@@ -148,6 +149,7 @@ afterEach(() => {
   setThemeRegistry(null);
   vi.unstubAllGlobals();
   prefs({
+    networkOffline: false,
     networkEnabled: true,
     networkAllowThemes: undefined,
     themesPreviews: true,
@@ -155,16 +157,20 @@ afterEach(() => {
 });
 
 describe("ThemeBrowserDialog", () => {
-  it("asks for consent first, makes no call, then Allow loads the grid", async () => {
-    prefs({ networkEnabled: true, networkAllowThemes: undefined });
+  it("while Offline mode is on it says why and makes no call; turning it off loads the grid", async () => {
+    prefs({ networkOffline: true });
     render(<ThemeBrowserDialog onClose={vi.fn()} />);
-    expect(screen.getByTestId("theme-browser-consent")).toBeTruthy();
+    expect(screen.getByTestId("theme-browser-offline").textContent).toMatch(
+      /Offline mode is on/,
+    );
     expect(catalogue.cached).not.toHaveBeenCalled();
     expect(catalogue.refresh).not.toHaveBeenCalled();
     expect(install.installed).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Allow" }));
-    expect(getPreferences().networkAllowThemes).toBe(true);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Turn off Offline mode" }),
+    );
+    expect(getPreferences().networkOffline).toBe(false);
     await screen.findByTestId("theme-card-Vesper");
     expect(catalogue.refresh).toHaveBeenCalledTimes(1);
   });

@@ -229,6 +229,16 @@ button.vault-status:hover:not(:disabled) {
   cursor: pointer;
 }
 
+.vault-badge--offline {
+  background-color: var(--vault-chip);
+  color: var(--vault-text-muted);
+  border: 1px solid var(--vault-border);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--vd-fs-caption);
+}
+
+.vault-badge--offline:hover,
 .vault-badge--recovery:hover,
 .vault-badge--conflict:hover,
 .vault-badge--error:hover {

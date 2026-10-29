@@ -6,13 +6,13 @@ import { test } from "./fixture";
 
 import { openVault, trackErrors } from "./helpers";
 
-// Settings, Plugins, Browse: consent first, then a list served by a local fixture (the default
+// Settings, Plugins, Browse: no question, a list served by a local fixture (the default
 // registry address is intercepted), details with permissions, install, update, uninstall.
 
 const BASE = "/Vaultdraw/plugin-registry/main/";
 const sha = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
 
-test("Browse community plugins: consent, install, update and uninstall", async ({
+test("Browse community plugins: no question, install, update and uninstall", async ({
   page,
 }) => {
   const errors = trackErrors(page);
@@ -76,9 +76,7 @@ test("Browse community plugins: consent, install, update and uninstall", async (
   await page.getByRole("button", { name: "Browse community plugins…" }).click();
 
   const browser = page.getByTestId("plugin-browser-dialog");
-  await expect(browser.getByTestId("plugin-browser-consent")).toBeVisible();
-  expect(requested).toEqual([]);
-  await browser.getByRole("button", { name: "Allow" }).click();
+  await expect(browser.getByTestId("plugin-browser-offline")).toHaveCount(0);
 
   const list = browser.getByRole("listbox", { name: "Community plugins" });
   await expect(list.getByRole("option")).toHaveCount(2);

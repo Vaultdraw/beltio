@@ -65,7 +65,6 @@ const MEMBERS: Member[] = [
         .getByRole("button", { name: "Install more themes…" })
         .click();
       const browser = page.getByTestId("theme-browser-dialog");
-      await browser.getByRole("button", { name: "Allow" }).click();
       await browser
         .getByTestId("theme-card-Linked")
         .getByRole("link", { name: "Source" })

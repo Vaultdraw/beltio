@@ -343,8 +343,10 @@ describe("browserBackend downloads", () => {
 });
 
 describe("network and install keys", () => {
-  it("defaults: network on, themes not yet allowed, 64 KiB", () => {
+  it("defaults: network on and not offline, themes allowed, 64 KiB", () => {
     expect(DEFAULT_PREFERENCES.networkEnabled).toBe(true);
+    expect(DEFAULT_PREFERENCES.networkOffline).toBe(false);
+    expect(DEFAULT_PREFERENCES.updatesCheckOnStartup).toBe(true);
     expect(DEFAULT_PREFERENCES.networkAllowThemes).toBeUndefined();
     expect(DEFAULT_PREFERENCES.themeInstallMaxKb).toBe(64);
   });

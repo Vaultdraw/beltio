@@ -226,12 +226,20 @@ interface VaultPreferencesBase {
   theme: VaultTheme;
   /** Colour theme name: a built-in name or a theme in the config themes/ folder. */
   colorTheme: string;
-  /** Master switch for every network use (config `network.enabled`). */
+  /** Offline mode: every network feature off (config `network.offline`, default false). */
+  networkOffline: boolean;
+  /** The old master switch (`network.enabled`), still read: false counts as Offline mode. Use `isOffline`. */
   networkEnabled: boolean;
-  /** Consent for downloading themes (`network.allow_themes`); undefined = not asked yet. */
+  /** Theme downloads (`network.allow_themes`): only an explicit false turns them off. */
   networkAllowThemes: boolean | undefined;
-  /** Consent for the community plugins list and plugin downloads (`network.allow_plugins`); undefined = not asked yet. */
+  /** The community plugins list and plugin downloads (`network.allow_plugins`): only an explicit false turns them off. */
   networkAllowPlugins: boolean | undefined;
+  /** Web pictures (`network.allow_images`): only an explicit false turns them off. */
+  networkAllowImages: boolean | undefined;
+  /** The update check (`network.allow_updates`): only an explicit false turns it off. */
+  networkAllowUpdates: boolean | undefined;
+  /** Look for a newer version once after startup (`updates.check_on_startup`, default true). */
+  updatesCheckOnStartup: boolean;
   /** Extra hosts downloads may contact (`network.allowed_hosts`); Rust reads config.toml only. */
   networkAllowedHosts: string[];
   /** Where the community plugins list comes from (`plugins.registry_url`, https only). */
@@ -449,9 +457,13 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   profileChoice: null,
   theme: "system",
   colorTheme: "Default",
+  networkOffline: false,
   networkEnabled: true,
+  updatesCheckOnStartup: true,
   networkAllowThemes: undefined,
   networkAllowPlugins: undefined,
+  networkAllowImages: undefined,
+  networkAllowUpdates: undefined,
   networkAllowedHosts: [],
   pluginsRegistryUrl: DEFAULT_PLUGINS_REGISTRY_URL,
   pluginsRegistryTtlHours: 24,
@@ -874,7 +886,13 @@ export function normalizePreferences(input: unknown): VaultPreferences {
         isNumber(v) && (v as number) >= MIN_ZOOM && (v as number) <= MAX_ZOOM,
       d.zoom,
     ),
+    networkOffline: pick(parsed.networkOffline, isBoolean, d.networkOffline),
     networkEnabled: pick(parsed.networkEnabled, isBoolean, d.networkEnabled),
+    updatesCheckOnStartup: pick(
+      parsed.updatesCheckOnStartup,
+      isBoolean,
+      d.updatesCheckOnStartup,
+    ),
     networkAllowThemes: pick(
       parsed.networkAllowThemes,
       isBoolean,
@@ -884,6 +902,16 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       parsed.networkAllowPlugins,
       isBoolean,
       d.networkAllowPlugins,
+    ),
+    networkAllowImages: pick(
+      parsed.networkAllowImages,
+      isBoolean,
+      d.networkAllowImages,
+    ),
+    networkAllowUpdates: pick(
+      parsed.networkAllowUpdates,
+      isBoolean,
+      d.networkAllowUpdates,
     ),
     networkAllowedHosts: pick(
       parsed.networkAllowedHosts,
@@ -1516,3 +1544,8 @@ export function setNavigatorCollapsed(
 ): void {
   updatePreferences({ navigatorCollapsed: collapsed }, win);
 }
+
+/** True while Offline mode is on (`network.offline`, or the old `network.enabled = false`). */
+export const isOffline = (
+  prefs: Pick<VaultPreferences, "networkOffline" | "networkEnabled">,
+): boolean => prefs.networkOffline || !prefs.networkEnabled;

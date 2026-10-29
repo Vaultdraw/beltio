@@ -435,20 +435,28 @@ autosave_delay_ms = 500
 # decorations = "custom"
 
 [network]
-# Master switch for every feature that uses the internet
-# enabled = true    # false = never connect
-# Install themes from a URL or GitHub repo: absent = ask on first use, true = allow, false = refuse
-# allow_themes = false
-# Community plugins list and plugin downloads: absent = ask on first use, true = allow, false = refuse
-# allow_plugins = false
+# Offline mode: true turns every internet feature off (plugin and theme lists and installs, web
+# pictures, the update check). Settings, General, Offline mode, or the command "Offline mode: on or off"
+# offline = false
+# The old master switch, still read: false counts as Offline mode
+# enabled = true
+# Each download is on unless you write false: themes, community plugins, web pictures, the update check
+# allow_themes = true
+# allow_plugins = true
+# allow_images = true
+# allow_updates = true
 # Extra hosts downloads may contact, besides GitHub's (raw.githubusercontent.com, github.com,
 # api.github.com, codeload.github.com). Read only from this file, never from overrides.toml
 # allowed_hosts = []
 
+[updates]
+# Look once for a newer version after the app starts; a small notice appears only if there is one
+# check_on_startup = true
+
 [themes]
 # Largest theme file to install from the internet, in KB, 1 to 256
 # max_install_kb = 64
-# Community themes catalogue index (the browser lists it; downloads need the themes consent)
+# Community themes catalogue index (the browser lists it; 
 # index_url = "https://raw.githubusercontent.com/Vaultdraw/themes/main/index.json"
 # Hours before the browser refetches the index, 0 = fetch every time it opens
 # index_ttl_hours = 24

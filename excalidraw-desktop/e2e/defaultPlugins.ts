@@ -12,6 +12,7 @@ import markdownImportToml from "../../plugins/official/markdown-import/plugin.to
 import galleryToml from "../../plugins/official/gallery/plugin.toml?raw";
 import pdfImportToml from "../../plugins/official/pdf-import/plugin.toml?raw";
 import { setPluginsBackend } from "../src/plugins/host/backend";
+import { getPreferences, isOffline } from "../src/vault/preferences";
 import {
   createFakeBackend,
   makePluginInfo,
@@ -91,6 +92,7 @@ export async function installDefaultBackend(win: Window): Promise<void> {
     (path, scene) =>
       (win as any).__vaultRepo?.seedDrawing(path, JSON.stringify(scene)),
   );
+  backend.network.offline = () => isOffline(getPreferences(win));
   backend.pdf = (win as any).__pdfBridge;
   // A spec can start the app in plugin safe mode (as Option held at launch does).
   backend.safeMode = (win as any).__e2ePluginSafeMode ?? null;

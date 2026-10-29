@@ -29,8 +29,11 @@ accent_color = ""            # "#rrggbb" replaces the theme's primary colour; ""
 snippets = []                # CSS snippets to apply, by file name in snippets/, e.g. ["wide-sidebar"]
 
 [network]
-enabled = true               # master switch: false blocks every download
-allow_themes = true          # theme downloads allowed; leave the line out to be asked
+offline = false              # Offline mode: true turns every internet feature off
+allow_themes = true          # false turns theme downloads off
+
+[updates]
+check_on_startup = true      # one quiet look for a newer version after startup
 
 [themes]
 max_install_kb = 64          # largest theme file Install from URL accepts (1 to 256)
@@ -422,7 +425,7 @@ The keys inside the open browser are commands too. They exist only while the bro
 
 In the search box plain keys are text, so only the movement keys and Enter work there, plus a Shift chord for remove.
 
-Limits: the list needs network consent (see "Network"), and the CLI `vaultdraw theme install` does not exist yet (the CLI has no network client or consent step). The preview cache keeps the 300 most recently used images.
+Limits: the list needs the internet and is blocked in Offline mode (see "Network"), and the CLI `vaultdraw theme install` does not exist yet (the CLI has no network client). The preview cache keeps the 300 most recently used images.
 
 #### Installing more themes
 
@@ -447,30 +450,47 @@ None has a default key; bind them on the Hotkeys page.
 
 #### Network
 
-Vaultdraw never connects on its own: no update checks, no telemetry. Installing a theme, and browsing the community list, are the features that download, and they ask first.
+The internet is on by default and nothing asks first. Vaultdraw connects only when you use a feature that needs it (browse or install themes and plugins, show a web picture) and, once after startup, to see whether a newer version exists. **Offline mode** turns all of that off in one place: **Settings → General → Offline mode**, the palette command `Offline mode: on or off` (rebindable), or `network.offline = true`. While it is on, a small **Offline** badge sits in the header (click it to turn Offline mode off), and each feature says why it is off, for example "Offline mode is on. Turn it off in Settings to browse plugins." No request leaves the app.
+
+No telemetry, and nothing runs in the background except the one update check.
+
+```mermaid
+flowchart LR
+    A[A feature wants the internet] --> B{Offline mode on?}
+    B -- yes --> C[Says so in plain words, no request]
+    B -- no --> D{That download turned off?}
+    D -- yes --> C
+    D -- no --> E[Checked request: http or https, public address, size cap, timeout]
+```
 
 | Key | Meaning |
 | --- | --- |
-| `network.enabled` | Master switch, default `true`. `false` blocks every download, whatever else is allowed. Turning it back on from Settings asks in a native dialog. **Settings → General → Network access.** |
-| `network.allow_themes` | `true` allows theme downloads, `false` refuses them. Absent (the default) means "not asked yet": the first install shows a popup, **Allow** opens a second, native confirmation dialog, and **Yes** there writes `true`. **Settings → General → Allow downloading themes**; the reset arrow brings the question back. |
-| `network.allowed_hosts` | Extra host names downloads may contact, default `[]`. Every download (themes, the plugin list, plugin packages) may reach only GitHub's own hosts (`raw.githubusercontent.com`, `github.com`, `api.github.com`, `codeload.github.com`) plus these. Add one when you point `themes.index_url`, `plugins.registry_url` or a theme URL at your own server. **Read only from `config.toml`**: Settings, `vaultdraw config set` and scripts in the page never write it, so nothing but your hand edit can add a host. |
-| `network.allow_images` | `true` (the default, also when absent) shows web pictures: an imported note's pictures are downloaded during the import, the picture boxes of older imports fill in when the note opens, and a pasted picture address (or a pasted part of a web page with a picture) becomes a picture. No question is asked. `false` turns this off: the pictures stay boxes that say so, and **Markdown: Download web images in this drawing** reports that they are off. This is the one purpose that may contact hosts other than GitHub and `network.allowed_hosts`, because the pictures live wherever the note's author put them. Every download is `http` or `https` to a public host (never a private, local or reserved address, checked on the address, on the resolved address and after each of at most three redirects), times out after 20 seconds, is at most 10 MiB and must be a picture by its bytes (PNG, JPEG, GIF, WebP, SVG); at most four download at once. Downloaded pictures are embedded in the drawing, so they work offline. `network.enabled = false` (**Settings → General → Network access**) switches everything off. |
+| `network.offline` | Offline mode, default `false`. `true` turns every internet feature off. **Settings → General → Offline mode.** |
+| `network.enabled` | The old master switch, still read: `false` counts as Offline mode. Turning Offline mode off in Settings or the palette removes it. |
+| `network.allow_themes` | `false` turns theme downloads off. Absent or `true` allows them. Default `true`. **Settings → General → Allow downloading themes.** |
+| `network.allow_plugins` | `false` turns the community plugins list and plugin downloads off. Default `true`. **Settings → General → Allow the community plugins list.** |
+| `network.allow_images` | `false` turns web pictures off: an imported note's pictures and pasted picture addresses stay boxes that say so. Absent or `true` (the default) shows them: pictures download during the import, the boxes of older imports fill in when the note opens, and a pasted picture address (or part of a web page with a picture) becomes a picture. |
+| `network.allow_updates` | `false` turns the update check off. Default `true`. |
+| `updates.check_on_startup` | Default `true`: about fifteen seconds after the app starts, one request asks GitHub for the latest release. A notice ("Vaultdraw 0.2.0 is available", with **View release**) appears only when it is newer than the installed version. Once per launch, never repeated, never in Offline mode. **Settings → General → Check for updates at startup.** |
+| `network.allowed_hosts` | Extra host names downloads may contact, default `[]`. Themes, the plugin list and plugin packages may reach only GitHub's own hosts (`raw.githubusercontent.com`, `github.com`, `api.github.com`, `codeload.github.com`) plus these. Add one when you point `themes.index_url`, `plugins.registry_url` or a theme URL at your own server. **Read only from `config.toml`**: Settings, `vaultdraw config set` and scripts in the page never write it, so a script cannot add a host. |
 | `themes.max_install_kb` | Largest theme file to accept, 1 to 256, default 64. **Settings → Appearance → Largest theme file.** |
 | `themes.index_url` | Where the community list comes from, default `https://raw.githubusercontent.com/Vaultdraw/themes/main/index.json`. `https` only. **Read only from `config.toml`**, like `network.allowed_hosts`: Settings, `vaultdraw config set` and scripts in the page never write it. |
 | `themes.index_ttl_hours` | Hours the cached list is reused, 0 to 720, default 24. `0` fetches on every open. **Settings → Appearance → Refresh the Themes List.** |
 | `themes.previews` | Default `true`. `false` shows colour swatches only and fetches no images. **Settings → Appearance → Theme Preview Images.** |
 
+Every request keeps the same quiet safety checks, whatever you allow: `http` or `https` only, no private or local address (also after redirects and name lookups), no embedded passwords, size limits and timeouts, and no proxy.
+
 How the browser uses the network:
 
-1. Nothing is requested before you allow theme downloads, or before you open the browser.
+1. Nothing is requested before you open the browser.
 2. One request fetches `index.json`. It is cached on disk with its SHA-256 and fetch time, and reused for `themes.index_ttl_hours`.
-3. Offline, the browser shows the cached list with a notice.
+3. With no connection, the browser shows the cached list with a notice. In Offline mode it makes no request and says so.
 4. Previews are fetched only for cards scrolled into view, cached on disk, PNG, JPEG or WebP only, at most 512 KiB each.
 5. Each theme file is checked against the SHA-256 in the list before it is written.
 
-All three keys reload live, like the others.
+These keys reload live, like the others.
 
-Community plugins use their own consent and list: `network.allow_plugins` (same ask-once behaviour; **Settings → General → Allow the community plugins list**), `plugins.registry_url` (default `https://raw.githubusercontent.com/Vaultdraw/plugin-registry/main/index.json`, `https` only) and `plugins.registry_ttl_hours` (0 to 720, default 24). The app reads `plugins.registry_url` itself, from `config.toml` only (never `overrides.toml`, which Settings and scripts in the page write), so nothing in the page can point that fetch at another address. The list format and what an install checks are in `sdk/docs/registry.md`.
+Community plugins use their own switch and list: `network.allow_plugins`, `plugins.registry_url` (default `https://raw.githubusercontent.com/Vaultdraw/plugin-registry/main/index.json`, `https` only) and `plugins.registry_ttl_hours` (0 to 720, default 24). The app reads `plugins.registry_url` itself, from `config.toml` only (never `overrides.toml`, which Settings and scripts in the page write), so nothing in the page can point that fetch at another address. The list format and what an install checks are in `sdk/docs/registry.md`.
 
 The desktop app checks these keys again in its Rust backend before every request, so a setting you turn off holds even if the interface is out of date.
 
@@ -2187,7 +2207,7 @@ Plugins in the `plugins/` folder of the config folder.
 | `scene_max_ops` | `500` | an integer between 1 and 1000 |  | Most ops in one plugin `scene.batch` call; a batch past it is refused. |
 | `toolbar` | `true` | true or false |  | Show the strip of buttons plugins declare with `[[contributes.toolbar]]`. It appears only while a plugin declares a button. |
 | `status_bar` | `true` | true or false |  | Show the status bar plugins fill with `ctx.statusBar`. It appears only while a plugin item has text. |
-| `registry_url` | `"https://raw.githubusercontent.com/Vaultdraw/plugin-registry/main/index.json"` | an https address |  | The community plugins index that Settings, Plugins, Browse lists (an https address). Needs the plugins consent. |
+| `registry_url` | `"https://raw.githubusercontent.com/Vaultdraw/plugin-registry/main/index.json"` | an https address |  | The community plugins index that Settings, Plugins, Browse lists (an https address). |
 | `registry_ttl_hours` | `24` | a whole number of hours between 0 and 720 |  | Hours before Browse fetches the plugins index again; 0 fetches every time it opens. |
 
 ### `[ai]`
@@ -2229,14 +2249,25 @@ The hang watchdog: a Wait / Quit dialog when the page stops answering. See [Hang
 
 ### `[network]`
 
-The internet is used only for features you allow, and only when you use them. See [Network](#network).
+The internet is on by default and used only when you use a feature that needs it. One switch, Offline mode, turns all of it off. See [Network](#network).
 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
-| `enabled` | `true` | true or false |  | Master switch: `false` blocks every download, whatever else is allowed. Turning it on from Settings asks in a native dialog. |
-| `allow_themes` | unset (ask) | true or false (leave it out to be asked) |  | Allow theme downloads. Absent means ask on first use; `true` allows, `false` refuses. Turning it on asks in a native dialog. |
-| `allow_plugins` | unset (ask) | true or false (leave it out to be asked) |  | Allow the community plugins list and plugin downloads. Absent means ask on first use; `true` allows, `false` refuses. Turning it on asks in a native dialog. |
+| `offline` | `false` | true or false |  | Offline mode: `true` turns every internet feature off (plugin and theme lists and installs, web pictures, the update check); each says so in plain words. Settings, General, Offline mode, or the palette command Offline mode: on or off. |
+| `enabled` | `true` | true or false |  | The old master switch, still read: `false` counts as Offline mode. New configs use `offline`. |
+| `allow_themes` | true | true or false |  | `false` turns theme downloads off. Absent or `true` allows them. |
+| `allow_plugins` | true | true or false |  | `false` turns the community plugins list and plugin downloads off. Absent or `true` allows them. |
+| `allow_images` | true | true or false |  | `false` turns web pictures off (imported and pasted pictures stay boxes). Absent or `true` shows them. |
+| `allow_updates` | true | true or false |  | `false` turns the update check off. Absent or `true` allows it. |
 | `allowed_hosts` | [] | a list of host names like ["themes.example.org"] |  | Extra hosts a download may contact, besides GitHub's own (`raw.githubusercontent.com`, `github.com`, `api.github.com`, `codeload.github.com`). Exact host names. Read only from `config.toml`: Settings, `vaultdraw config set` and the page never write it, so a script cannot add a host. |
+
+### `[updates]`
+
+The quiet update check. See [Network](#network).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `check_on_startup` | `true` | true or false |  | Look once for a newer version after the app has started; a small notice appears only when one exists. Never in Offline mode. |
 
 ### `[themes]`
 
@@ -2245,7 +2276,7 @@ Installing themes from the internet. See [Installing more themes](#installing-mo
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
 | `max_install_kb` | `64` | a whole number of KiB between 1 and 256 |  | Largest theme file to accept, in KB (1 to 256). |
-| `index_url` | `"https://raw.githubusercontent.com/Vaultdraw/themes/main/index.json"` | an https address |  | The community themes index the theme browser lists (an https address). Needs the themes consent. |
+| `index_url` | `"https://raw.githubusercontent.com/Vaultdraw/themes/main/index.json"` | an https address |  | The community themes index the theme browser lists (an https address).  |
 | `index_ttl_hours` | `24` | a whole number of hours between 0 and 720 |  | Hours before the browser fetches the index again; 0 fetches every time it opens. |
 | `previews` | `true` | true or false |  | Download preview images in the browser; `false` shows colour swatches only. |
 

@@ -342,10 +342,10 @@ use std::sync::Arc;
 #[test]
 fn consent_denied_makes_zero_connections() {
     let (base, hits) = repo_server();
-    for config in [None, Some(""), Some("[network]\nallow_themes = false\n"), Some("[network]\nenabled = false\nallow_themes = true\n")] {
+    for config in [Some("[network]\nallow_themes = false\n"), Some("[network]\noffline = true\nallow_themes = true\n"), Some("[network]\nenabled = false\n")] {
         let t = tempdir().unwrap();
         let d = dirs_in(t.path(), config);
-        let expect = if config.is_some_and(|c| c.contains("enabled")) { "NETWORK_DISABLED" } else { "NETWORK_NOT_ALLOWED" };
+        let expect = if config.is_some_and(|c| c.contains("offline") || c.contains("enabled")) { "NETWORK_DISABLED" } else { "NETWORK_NOT_ALLOWED" };
         assert_eq!(code(resolve_in(&d, &ep(&base), &format!("{base}/Nord.json"), 1000)), expect);
         assert_eq!(code(resolve_in(&d, &ep(&base), "o/r", 1000)), expect);
         let f = FetchRef::Url { url: format!("{base}/Nord.json") };

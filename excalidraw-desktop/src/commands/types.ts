@@ -35,6 +35,7 @@ export type BuiltinCommandCategory =
   | "Notes"
   | "Markdown"
   | "Sync"
+  | "Network"
   | "Help";
 
 export type CommandCategory = BuiltinCommandCategory | (string & {});

@@ -223,7 +223,9 @@ export async function downloadImages(
   if (quiet && n === boxes.length) {
     return;
   }
-  const off = items.some((it) => /off in Settings/.test(it.alt ?? ""));
+  const offline = items.some((it) => /Offline mode/.test(it.alt ?? ""));
+  const off =
+    offline || items.some((it) => /off in Settings/.test(it.alt ?? ""));
   ctx.ui.toast(
     n === boxes.length
       ? `Downloaded ${n} pictures`
@@ -237,7 +239,9 @@ export async function downloadImages(
       ...(n < boxes.length
         ? {
             detail: off
-              ? "Web pictures are turned off in Settings"
+              ? offline
+                ? "Offline mode is on. Turn it off in Settings to download web pictures."
+                : "Web pictures are turned off in Settings"
               : "The box says why for each one: not a picture, too large, or not reachable",
             ...(off
               ? {}
