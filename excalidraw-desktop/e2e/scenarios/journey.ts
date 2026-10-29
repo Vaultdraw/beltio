@@ -59,8 +59,9 @@ export type Journey = {
  */
 const GLOBAL_KNOWN: { match: RegExp; bug: string }[] = [
   {
-    match: /^setup: .*vault-recent__(title|folder)/,
-    bug: "toimprove TN-1: faint text of the home list is below 3:1 in the light theme",
+    match:
+      /vault-(recent__(title|folder)|theme-head__(title|note)|settings-heading)\)" is hard to read/,
+    bug: "toimprove TN-1: faint text (home list, theme and settings headings) is below 3:1 in the light theme",
   },
 ];
 
