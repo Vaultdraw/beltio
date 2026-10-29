@@ -349,4 +349,48 @@ describe("Import: Cancel command", () => {
     appCommandHandlers({ cancelImport } as never)["plugins.cancelImport"]!();
     expect(cancelImport).toHaveBeenCalledOnce();
   });
+
+  // Family: every image kind the picker accepts is imported, even with an empty type (WebKit).
+  it.each([
+    "png",
+    "jpg",
+    "jpeg",
+    "svg",
+    "gif",
+    "webp",
+    "bmp",
+    "ico",
+    "avif",
+    "jfif",
+    "BMP",
+  ])(
+    "a .%s file with an empty type is an image, with its real type filled in",
+    (ext) => {
+      const plan = planImport([file(`pic.${ext}`, "")]);
+      expect(plan.skipped).toHaveLength(0);
+      expect(plan.images).toHaveLength(1);
+      expect(plan.images[0].type).toMatch(/^image\//);
+    },
+  );
+
+  it("a text file with an image-looking name is still skipped only when it has no image extension", () => {
+    expect(planImport([file("notes.txt", "")]).skipped).toHaveLength(1);
+    expect(planImport([file("bmp", "")]).skipped).toHaveLength(1);
+  });
+
+  it("the skip message names every image kind the picker accepts", () => {
+    const msg = skippedMessage([file("x.txt", "text/plain")]) ?? "";
+    for (const kind of [
+      "PNG",
+      "JPEG",
+      "SVG",
+      "GIF",
+      "WebP",
+      "BMP",
+      "ICO",
+      "AVIF",
+    ]) {
+      expect(msg).toContain(kind);
+    }
+  });
 });

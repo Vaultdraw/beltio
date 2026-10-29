@@ -11,6 +11,7 @@ import FavouritesPanel from "./FavouritesPanel";
 import {
   defaultLabel,
   dropPath,
+  MAX_FAVOURITES,
   renamePath,
   toggle,
   type Favourite,
@@ -75,11 +76,16 @@ export default definePlugin({
       }),
     );
 
-    const announce = (added: boolean, what: string) =>
+    const announce = (
+      r: { added: boolean; full?: boolean },
+      what: string,
+    ) =>
       ctx.ui.toast(
-        added
-          ? `Added ${what} to favourites`
-          : `Removed ${what} from favourites`,
+        r.full
+          ? `Favourites are full (${MAX_FAVOURITES}). Remove one to add ${what}`
+          : r.added
+            ? `Added ${what} to favourites`
+            : `Removed ${what} from favourites`,
       );
 
     ctx.commands.register("toggle", async () => {
@@ -92,7 +98,7 @@ export default definePlugin({
       await store.reload();
       const r = toggle(store.get(), path);
       await store.set(r.items);
-      announce(r.added, defaultLabel(path));
+      announce(r, defaultLabel(path));
     });
 
     ctx.commands.register("toggle-element", async () => {
@@ -110,7 +116,7 @@ export default definePlugin({
       await store.reload();
       const r = toggle(store.get(), path, id, label);
       await store.set(r.items);
-      announce(r.added, label);
+      announce(r, label);
     });
 
     for (const n of SLOTS) {

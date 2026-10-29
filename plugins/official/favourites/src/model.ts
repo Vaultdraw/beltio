@@ -67,13 +67,13 @@ export function toggle(
   path: string,
   element?: string,
   label?: string,
-): { items: Favourite[]; added: boolean } {
+): { items: Favourite[]; added: boolean; full?: boolean } {
   const at = indexOfTarget(items, path, element);
   if (at >= 0) {
     return { items: items.filter((_, i) => i !== at), added: false };
   }
   if (items.length >= MAX_FAVOURITES) {
-    return { items: [...items], added: false };
+    return { items: [...items], added: false, full: true };
   }
   const cleaned = str(label, MAX_LABEL);
   return {

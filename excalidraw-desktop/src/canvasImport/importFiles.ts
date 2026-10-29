@@ -13,7 +13,33 @@ import {
 
 const IMAGE_TYPES = new Set<string>(Object.values(IMAGE_MIME_TYPES));
 
-export const isImportableImage = (file: File) => IMAGE_TYPES.has(file.type);
+/** Extension to image type; WebKit leaves `file.type` empty for some (BMP, ICO, AVIF, JFIF). */
+const EXT_TYPES: Record<string, string> = {
+  ...IMAGE_MIME_TYPES,
+  jpeg: IMAGE_MIME_TYPES.jpg,
+  jpe: IMAGE_MIME_TYPES.jpg,
+  jfif: IMAGE_MIME_TYPES.jpg,
+  ico: IMAGE_MIME_TYPES.ico,
+};
+
+/** The image type of a file: its own type, or the one its extension names ("" = not an image). */
+export const imageTypeOf = (file: File): string => {
+  if (IMAGE_TYPES.has(file.type)) {
+    return file.type;
+  }
+  const dot = file.name.lastIndexOf(".");
+  return dot < 0 ? "" : EXT_TYPES[file.name.slice(dot + 1).toLowerCase()] ?? "";
+};
+
+export const isImportableImage = (file: File) => imageTypeOf(file) !== "";
+
+/** The file with its real type filled in, so the editor accepts it. */
+const withImageType = (file: File): File => {
+  const type = imageTypeOf(file);
+  return type === file.type
+    ? file
+    : new File([file], file.name, { type, lastModified: file.lastModified });
+};
 
 const BASE_ACCEPT = [
   ...Object.values(IMAGE_MIME_TYPES),
@@ -46,7 +72,7 @@ export const planImport = (files: readonly File[]): ImportPlan => {
     if (match) {
       plan.plugin.push({ file, match });
     } else if (isImportableImage(file)) {
-      plan.images.push(file);
+      plan.images.push(withImageType(file));
     } else {
       plan.skipped.push(file);
     }
@@ -69,5 +95,5 @@ export const skippedMessage = (skipped: readonly File[]): string | null => {
   const plugins = titles.length
     ? `, and ${titles.join(", ")} files from plugins`
     : "";
-  return `Not imported: ${names}. Vaultdraw imports PNG, JPEG, SVG, GIF or WebP images${plugins}.`;
+  return `Not imported: ${names}. Vaultdraw imports PNG, JPEG, SVG, GIF, WebP, BMP, ICO or AVIF images${plugins}.`;
 };
