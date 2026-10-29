@@ -771,6 +771,7 @@ html.dark {
   left: calc(100% + 2px);
   width: max-content;
   min-width: 180px;
+  max-width: 380px; /* MENU_MAX_WIDTH: past it labels end in an ellipsis */
 }
 
 .vault-menu--sub-left {

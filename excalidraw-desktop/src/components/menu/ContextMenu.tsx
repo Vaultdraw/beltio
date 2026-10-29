@@ -19,6 +19,11 @@ import { IconCheck, IconChevronRight } from "../Icons";
 import { typeAheadIndex, type MenuNode } from "./menuModel";
 
 export const MENU_WIDTH = 220;
+/**
+ * Menus grow to their longest label, like Obsidian's and Zed's, up to this width; past it a
+ * label ends in an ellipsis (test-net TN-11: "Re-import unchanged imported notes here" was cut).
+ */
+export const MENU_MAX_WIDTH = 380;
 const ITEM_SELECTOR =
   ":scope > [role^='menuitem'], :scope > .vault-menu__host > [role^='menuitem']";
 const TYPE_AHEAD_RESET_MS = 700;
@@ -154,10 +159,7 @@ export const ContextMenu = ({
       return;
     }
     const { width, height } = menu.getBoundingClientRect();
-    const left = Math.max(
-      8,
-      Math.min(x - MENU_WIDTH, view.innerWidth - width - 8),
-    );
+    const left = Math.max(8, Math.min(x - width, view.innerWidth - width - 8));
     menu.style.left = `${left}px`;
     menu.style.top = `${Math.max(
       8,
@@ -172,7 +174,14 @@ export const ContextMenu = ({
       className="vault-menu"
       role="menu"
       aria-label={label}
-      style={{ left: x, top: y, width: MENU_WIDTH, visibility: "hidden" }}
+      style={{
+        left: x,
+        top: y,
+        minWidth: MENU_WIDTH,
+        maxWidth: MENU_MAX_WIDTH,
+        width: "max-content",
+        visibility: "hidden",
+      }}
       onContextMenu={(e) => e.preventDefault()}
     >
       {nodes ? (

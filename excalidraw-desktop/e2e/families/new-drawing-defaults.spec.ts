@@ -100,8 +100,13 @@ const ROWS: Row[] = [
         (e: any) => e.type === "text" && !e.text.startsWith("zebra"),
       );
       expect(texts.length).toBeGreaterThan(0);
+      // Headings take the bold variant of the user's font (id + 100, the heading_bold default);
+      // body text is the font itself, never bold.
+      const heading = (t: any) =>
+        /^h[1-6]$/.test(String(t.customData?.role ?? ""));
+      expect(texts.filter((t: any) => !heading(t)).length).toBeGreaterThan(0);
       for (const t of texts) {
-        expect(t.fontFamily).toBe(NUNITO);
+        expect(t.fontFamily).toBe(heading(t) ? NUNITO + 100 : NUNITO);
       }
     },
   },

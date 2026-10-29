@@ -37,6 +37,11 @@ const DENY_LIST: { re: RegExp; reason: string }[] = [
     reason:
       "removes a plugin from the vault; plugin install and uninstall are covered by the plugin specs",
   },
+  {
+    re: /Import Obsidian vault/i,
+    reason:
+      "imports a whole folder into the vault (many writes, a progress notice over the page); clicked and checked by families/home-actions",
+  },
 ];
 const DENY = new RegExp(DENY_LIST.map((d) => d.re.source).join("|"), "i");
 const CONTROLS =
