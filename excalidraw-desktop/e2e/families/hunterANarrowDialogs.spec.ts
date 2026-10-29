@@ -14,17 +14,26 @@ const inside = async (page: Page, sel: string, what: string) => {
   expect(b.y + b.height, `${what} bottom`).toBeLessThanOrEqual(641);
 };
 
-test("narrow 360x640: palette, settings, hotkeys fit the window", async ({ page }) => {
+test("narrow 360x640: palette, settings, hotkeys fit the window", async ({
+  page,
+}) => {
   test.setTimeout(90_000);
   const errors = trackErrors(page);
   await page.setViewportSize({ width: 360, height: 640 });
   await openVault(page);
   await page.keyboard.press("Meta+Shift+KeyP");
-  await inside(page, '[role="dialog"][aria-label="Command palette"]', "palette");
+  await inside(
+    page,
+    '[role="dialog"][aria-label="Command palette"]',
+    "palette",
+  );
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Settings" }).first().click();
   await inside(page, ".vault-settings-modal", "settings");
-  const close = page.locator(".vault-settings-modal").getByRole("button", { name: /close/i }).first();
+  const close = page
+    .locator(".vault-settings-modal")
+    .getByRole("button", { name: /close/i })
+    .first();
   await expect(close, "settings close button").toBeVisible();
   const cb = (await close.boundingBox())!;
   expect(cb.x + cb.width).toBeLessThanOrEqual(361);
@@ -33,6 +42,10 @@ test("narrow 360x640: palette, settings, hotkeys fit the window", async ({ page 
   await expect(page.getByRole("dialog").first()).toBeVisible();
   const d = (await page.getByRole("dialog").first().boundingBox())!;
   expect(d.x + d.width, "hotkeys right").toBeLessThanOrEqual(361);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth - innerWidth,
+    ),
+  ).toBeLessThanOrEqual(0);
   expect(errors).toEqual([]);
 });

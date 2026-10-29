@@ -13,19 +13,29 @@ const SIZES = [
 
 test.use({ actionTimeout: 6000 });
 for (const size of SIZES) {
-  test(`narrow window ${size.width}x${size.height}: menus stay inside, no sideways scroll`, async ({ page }) => {
+  test(`narrow window ${size.width}x${size.height}: menus stay inside, no sideways scroll`, async ({
+    page,
+  }) => {
     // At 360 px the navigator leaves the editor column 43 px wide: no tab fits until the
     // navigator gives way on narrow windows, as Obsidian's side panes do (toimprove 138).
-    test.fixme(size.width < 400, "toimprove 138: navigator must give way at narrow widths");
+    test.fixme(
+      size.width < 400,
+      "toimprove 138: navigator must give way at narrow widths",
+    );
     test.setTimeout(90_000);
     const errors = trackErrors(page);
     await page.setViewportSize(size);
     await openVault(page);
-    await page.locator(".vault-tree-item__name", { hasText: "DSA" }).first().click();
+    await page
+      .locator(".vault-tree-item__name", { hasText: "DSA" })
+      .first()
+      .click();
     await openDrawing(page, "Graphs");
 
     const overflow = () =>
-      page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      );
     expect(await overflow(), "page scrolls sideways").toBeLessThanOrEqual(0);
 
     const menuInside = async (what: string) => {
@@ -34,14 +44,20 @@ for (const size of SIZES) {
       const b = (await menu.boundingBox())!;
       expect(b.x, `${what}: left edge`).toBeGreaterThanOrEqual(-1);
       expect(b.y, `${what}: top edge`).toBeGreaterThanOrEqual(-1);
-      expect(b.x + b.width, `${what}: right edge`).toBeLessThanOrEqual(size.width + 1);
-      expect(b.y + b.height, `${what}: bottom edge`).toBeLessThanOrEqual(size.height + 1);
+      expect(b.x + b.width, `${what}: right edge`).toBeLessThanOrEqual(
+        size.width + 1,
+      );
+      expect(b.y + b.height, `${what}: bottom edge`).toBeLessThanOrEqual(
+        size.height + 1,
+      );
       await page.keyboard.press("Escape");
     };
 
-    const row = page.locator(".vault-tree-item__name", { hasText: "Graphs" }).first();
+    const row = page
+      .locator(".vault-tree-item__name", { hasText: "Graphs" })
+      .first();
     if (await row.isVisible()) {
-        await row.click({ button: "right" });
+      await row.click({ button: "right" });
       await menuInside("file row menu");
     }
     // A tab is clickable where the user sees it: its middle and its close button are not under
@@ -49,9 +65,14 @@ for (const size of SIZES) {
     const covered = await page.evaluate(() => {
       const tab = document.querySelector('[data-testid="vault-tab"]')!;
       const hit = (el: Element | null) => {
-        if (!el) return false;
+        if (!el) {
+          return false;
+        }
         const b = el.getBoundingClientRect();
-        const top = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2);
+        const top = document.elementFromPoint(
+          b.x + b.width / 2,
+          b.y + b.height / 2,
+        );
         return !!top && el.contains(top);
       };
       return {
@@ -59,13 +80,19 @@ for (const size of SIZES) {
         close: !hit(tab.querySelector("button")),
       };
     });
-    expect(covered, "something covers the tab or its close button").toEqual({ tab: false, close: false });
+    expect(covered, "something covers the tab or its close button").toEqual({
+      tab: false,
+      close: false,
+    });
     const tab = page.locator('[role="tab"]').first();
     if (await tab.isVisible()) {
       await tab.click({ button: "right" });
       await menuInside("tab menu");
     }
-    expect(await overflow(), "page scrolls sideways after menus").toBeLessThanOrEqual(0);
+    expect(
+      await overflow(),
+      "page scrolls sideways after menus",
+    ).toBeLessThanOrEqual(0);
     expect(errors).toEqual([]);
   });
 }
