@@ -121,6 +121,33 @@ export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
         id: "attach-images",
         title: "Markdown: Attach missing images from a folder…",
       },
+      {
+        id: "reimport-note",
+        title: "Markdown: Re-import this note from its Markdown",
+      },
+      {
+        id: "reimport-notes",
+        title: "Markdown: Re-import unchanged imported notes",
+      },
+    ],
+    menus: [
+      {
+        surface: "tree",
+        command: "reimport-note",
+        title: "Re-import from its Markdown",
+        kinds: ["drawing"],
+      },
+      {
+        surface: "tab",
+        command: "reimport-note",
+        title: "Re-import from its Markdown",
+      },
+      {
+        surface: "tree",
+        command: "reimport-notes",
+        title: "Re-import unchanged imported notes here",
+        kinds: ["folder"],
+      },
     ],
     /** A hidden command the core "Import: Cancel" runs for imports that are not file imports. */
     cancelCommand: "cancel-import",
