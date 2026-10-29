@@ -56,8 +56,8 @@ test("hunter B: seven # stays literal; empty heading Enter goes back to body", a
   await page.keyboard.press("Enter");
   await type(page, "now body");
   await settle(page);
-  const t = (await texts(page)).find((e: any) => e.text === "now body");
-  expect(t?.customData ?? null).toBeNull();
+  const t = await find(page, "now body");
+  expect(t.customData?.role ?? null).toBeNull();
 });
 
 test("hunter B: Backspace at the start of a heading makes it plain body text again", async ({
@@ -104,4 +104,50 @@ test("hunter B: Cmd+Z right after a conversion leaves a plain text, not a half h
   await settle(page);
   const t = await find(page, "# plain");
   expect(t.customData?.role ?? null).toBeNull();
+});
+
+test("hunter B: Enter on an empty heading makes plain body text with no heading role", async ({
+  page,
+}) => {
+  await start(page);
+  await newText(page);
+  await type(page, "## ");
+  await expect(page.locator(ta)).toHaveValue("");
+  await page.keyboard.press("Enter");
+  await type(page, "body words");
+  await settle(page);
+  const t = await find(page, "body words");
+  expect(t.customData?.role ?? null).toBeNull();
+  expect(t.fontSize).toBe(20);
+});
+
+test("hunter B: Enter in the middle of a heading splits it; Backspace in the empty body box returns to the heading end", async ({
+  page,
+}) => {
+  await start(page);
+  await newText(page);
+  await type(page, "# HelloWorld");
+  for (let i = 0; i < 5; i++) {
+    await page.keyboard.press("ArrowLeft");
+  }
+  await page.keyboard.press("Enter");
+  await type(page, "x");
+  await expect(page.locator(ta)).toHaveValue("xWorld");
+  await page.keyboard.press("Backspace");
+  await page.keyboard.press("Backspace");
+  await settle(page);
+  const head = await find(page, "Hello");
+  expect(head.customData).toEqual({ role: "h1" });
+});
+
+test("hunter B: heading in a drawing in dark theme keeps heading size after reopening the text", async ({
+  page,
+}) => {
+  await start(page);
+  await newText(page);
+  await type(page, "### Third");
+  await settle(page);
+  const t = await find(page, "Third");
+  expect(t.customData).toEqual({ role: "h3" });
+  expect(t.fontSize).toBe(25);
 });
