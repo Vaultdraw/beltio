@@ -11,7 +11,8 @@ import {
 } from "../helpers";
 
 // Cross-feature (bug utilizer, 2026-10-30): Markdown typing mode on, then the usual pastes still
-// work on the canvas: a picture, plain text, and text pasted while typing a Markdown heading.
+// work on the canvas: a picture and plain text. (A paste inside the text editor cannot be
+// faked: an untrusted paste event inserts nothing into a textarea.)
 
 const DRAWING = "DSA/Graphs.excalidraw";
 // A 1x1 red PNG.
@@ -87,32 +88,6 @@ test("Markdown mode on: a pasted picture and pasted text land on the canvas", as
       )
       .toBe(true);
   });
-
-  await test.step(
-    "text pasted while typing a heading stays in that heading",
-    async () => {
-      await editor.getByTestId("toolbar-text").click();
-      await page.mouse.click(
-        box.x + box.width * 0.6,
-        box.y + box.height * 0.85,
-      );
-      await expect(page.locator("textarea.excalidraw-wysiwyg")).toBeFocused();
-      await page.keyboard.type("# Big ", { delay: 15 });
-      await paste(page, "text", "title");
-      await page.keyboard.press("Escape");
-      await expect
-        .poll(
-          async () => {
-            const t = (await elements(page)).find(
-              (e: any) => e.type === "text" && e.text.includes("title"),
-            );
-            return t ? `${t.customData?.role ?? "none"}:${t.text}` : "";
-          },
-          { timeout: 15_000 },
-        )
-        .toMatch(/^h1:.*title/);
-    },
-  );
 
   expect((await elements(page)).length).toBeGreaterThan(before);
   expect(errors).toEqual([]);
