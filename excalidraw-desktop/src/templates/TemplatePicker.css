@@ -137,9 +137,3 @@
   background: var(--vault-surface);
   border-top: 1px solid var(--vault-border);
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .template-picker__thumb-ph.is-loading {
-    animation: none;
-  }
-}

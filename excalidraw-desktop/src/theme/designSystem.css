@@ -14,6 +14,15 @@
  */
 
 :root {
+  /* Stacking scale: local stacking inside a component stays 0-10; anything
+   that floats uses these. Toasts sit above menus; dialogs above both. */
+  --z-sticky: 10;
+  --z-panel: 20;
+  --z-popover: 100;
+  --z-toast: 200;
+  --z-modal: 300;
+  --z-drag: 400;
+
   /* Spacing: 4 px base. */
   --vd-space-1: 4px;
   --vd-space-2: 8px;
@@ -73,9 +82,23 @@
   --vault-shadow-island: 0 1px 2px rgba(0, 0, 0, 0.14);
   --vault-shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.26);
   --vault-scrim: rgba(0, 0, 0, 0.32);
+  /* Search match highlight (a yellow marker on text, readable in both modes). */
+  --vault-mark: rgba(255, 200, 0, 0.35);
+  /* Note code tokens and the callout palette (Obsidian's callout types). */
+  --vd-syntax-string: #3a8f5a;
+  --vd-syntax-number: #b9651b;
+  --vd-callout-warn: #d98e04;
+  --vd-callout-danger: #d64545;
+  --vd-callout-ok: #2f9e6a;
+  --vd-callout-quote: #8a8f98;
+  --vd-callout-question: #b08800;
+  --vd-callout-example: #7a5af8;
 }
 
 html.dark {
+  --vd-syntax-string: #7fd09a;
+  --vd-syntax-number: #f0a868;
+  --vault-mark: rgba(255, 200, 0, 0.28);
   --vault-on-danger: #121212;
   --vault-accent-text: #8e8bf0;
   --vault-hover: rgba(230, 230, 233, 0.06);
@@ -102,4 +125,16 @@ html.dark {
 :where(.vd-row:focus-visible) {
   outline: none;
   box-shadow: var(--vault-ring-inset);
+}
+
+/* Reduced motion, once for the whole app: no transitions or animations.
+ * Components that need a still fallback add their own (LoadingLine). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
 }

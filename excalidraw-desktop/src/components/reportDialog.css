@@ -14,11 +14,11 @@
 }
 
 .vd-report__text[data-tone="warning"] {
-  border-left-color: #d9a300;
+  border-left-color: var(--vault-warning);
 }
 
 .vd-report__text[data-tone="error"] {
-  border-left-color: #d64545;
+  border-left-color: var(--vault-danger);
 }
 
 .vd-report__status {

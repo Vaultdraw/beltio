@@ -10,7 +10,7 @@
   height: 32px;
   padding: 0 var(--vd-space-2) 0 var(--vd-space-3);
   border-bottom: 1px solid var(--vault-border);
-  background-color: var(--vault-sel);
+  background-color: var(--vault-chip);
   color: var(--vault-text);
   font-size: var(--vd-fs-small);
   line-height: var(--vd-line);
@@ -52,7 +52,7 @@
   position: fixed;
   right: var(--vd-space-4);
   bottom: var(--vd-space-4);
-  z-index: 120;
+  z-index: var(--z-toast);
   width: min(340px, calc(100vw - 32px));
   pointer-events: none;
 }
@@ -81,6 +81,18 @@
 
 .vd-toast--error {
   border-color: var(--vault-danger-border);
+}
+
+/* The status icon: the accent for information, the danger colour for errors. */
+.vd-toast__icon {
+  display: inline-flex;
+  flex: none;
+  margin-top: 1px;
+  color: var(--vault-accent);
+}
+
+.vd-toast--error .vd-toast__icon {
+  color: var(--vault-danger);
 }
 
 .vd-toast__text {

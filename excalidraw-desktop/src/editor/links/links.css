@@ -1,7 +1,7 @@
 /* Link UI drawn over the editor: suggestions, hover underline, hint badges. */
 .vault-suggest {
   position: fixed;
-  z-index: 60;
+  z-index: calc(var(--z-popover) + 1);
   box-sizing: border-box;
   width: 320px;
   max-height: 280px;
@@ -69,7 +69,7 @@
 
 .vault-link-underline {
   position: fixed;
-  z-index: 55;
+  z-index: var(--z-panel);
   height: 0;
   border-bottom: 2px solid var(--vault-primary);
   pointer-events: none;
@@ -78,7 +78,7 @@
 
 .vault-link-hint {
   position: fixed;
-  z-index: 70;
+  z-index: calc(var(--z-popover) + 2);
   padding: 0 4px;
   border: 1px solid var(--vault-border);
   border-radius: 3px;

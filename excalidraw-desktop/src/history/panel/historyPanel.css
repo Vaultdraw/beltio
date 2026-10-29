@@ -217,7 +217,7 @@
 .vault-history-preview {
   position: absolute;
   inset: 0;
-  z-index: 20;
+  z-index: var(--z-panel);
   display: flex;
   flex-direction: column;
   background-color: var(--vault-bg);
@@ -270,7 +270,7 @@
 body.vault-history-previewing > .excalidraw-modal-container {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: var(--z-popover);
 }
 
 /* Git notice, warnings */

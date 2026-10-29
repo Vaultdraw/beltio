@@ -197,11 +197,9 @@
 }
 
 .tok-comment { color: var(--vault-text-faint); font-style: italic; }
-.tok-string { color: #3a8f5a; }
-.tok-number { color: #b9651b; }
+.tok-string { color: var(--vd-syntax-string); }
+.tok-number { color: var(--vd-syntax-number); }
 .tok-keyword { color: var(--vault-primary); font-weight: 600; }
-html.dark .tok-string { color: #7fd09a; }
-html.dark .tok-number { color: #f0a868; }
 
 .note-body blockquote {
   padding-left: var(--vd-space-3);
@@ -313,24 +311,24 @@ details.callout > summary {
 
 .callout[data-callout="warning"],
 .callout[data-callout="caution"],
-.callout[data-callout="attention"] { --callout-color: #d98e04; }
+.callout[data-callout="attention"] { --callout-color: var(--vd-callout-warn); }
 .callout[data-callout="danger"],
 .callout[data-callout="error"],
 .callout[data-callout="bug"],
 .callout[data-callout="failure"],
 .callout[data-callout="fail"],
-.callout[data-callout="missing"] { --callout-color: #d64545; }
+.callout[data-callout="missing"] { --callout-color: var(--vd-callout-danger); }
 .callout[data-callout="tip"],
 .callout[data-callout="hint"],
 .callout[data-callout="success"],
 .callout[data-callout="check"],
-.callout[data-callout="done"] { --callout-color: #2f9e6a; }
+.callout[data-callout="done"] { --callout-color: var(--vd-callout-ok); }
 .callout[data-callout="quote"],
-.callout[data-callout="cite"] { --callout-color: #8a8f98; }
+.callout[data-callout="cite"] { --callout-color: var(--vd-callout-quote); }
 .callout[data-callout="question"],
 .callout[data-callout="help"],
-.callout[data-callout="faq"] { --callout-color: #b08800; }
-.callout[data-callout="example"] { --callout-color: #7a5af8; }
+.callout[data-callout="faq"] { --callout-color: var(--vd-callout-question); }
+.callout[data-callout="example"] { --callout-color: var(--vd-callout-example); }
 
 .note-tag[data-tag] {
   cursor: pointer;
@@ -350,10 +348,5 @@ details.callout > summary {
   }
   to {
     background: transparent;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .note-anchor-flash {
-    animation: none;
   }
 }

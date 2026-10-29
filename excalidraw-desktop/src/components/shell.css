@@ -36,8 +36,8 @@ html.vault-linux-custom .vault-header {
 }
 
 .vault-window-controls__close:hover {
-  background: #e5484d;
-  color: #fff;
+  background: var(--vault-danger);
+  color: var(--vault-on-danger);
 }
 
 .vault-header__left {

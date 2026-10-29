@@ -162,7 +162,7 @@ html.dark {
   border: 1px solid var(--vault-border);
   padding: 4px;
   border-radius: var(--vault-radius);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--vault-shadow-sm);
 }
 
 .vault-editor__exports button {
@@ -212,7 +212,10 @@ html.dark {
   color: var(--vault-text);
   cursor: pointer;
   user-select: none;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .vault-btn:hover:not(:disabled) {
@@ -494,7 +497,7 @@ html.dark {
   position: fixed;
   left: 0;
   top: 0;
-  z-index: 2000;
+  z-index: var(--z-drag);
   pointer-events: none;
   display: flex;
   flex-direction: column;
@@ -677,7 +680,7 @@ html.dark {
 /* Row actions menu */
 .vault-menu {
   position: fixed;
-  z-index: 1000;
+  z-index: var(--z-popover);
   padding: 4px;
   background-color: var(--vault-menu-bg);
   border: 1px solid var(--vault-border-strong);

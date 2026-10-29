@@ -174,4 +174,42 @@ describe("design token guards", () => {
     );
     expect(grown).toEqual([]);
   });
+
+  it("floating layers use the z-index scale; toasts sit above menus, dialogs above both", () => {
+    const ds = FILES.find((f) =>
+      f.rel.endsWith("theme/designSystem.css"),
+    )!.text;
+    const z = (name: string) =>
+      Number(new RegExp(`--z-${name}:\\s*(\\d+)`).exec(ds)?.[1]);
+    expect(z("popover")).toBeGreaterThan(z("panel"));
+    expect(z("toast")).toBeGreaterThan(z("popover"));
+    expect(z("modal")).toBeGreaterThan(z("toast"));
+    expect(z("drag")).toBeGreaterThan(z("modal"));
+    const bad: string[] = [];
+    for (const { rel, text } of cssFiles()) {
+      if (!rel.startsWith("src/")) {
+        continue; // official plugins stack inside the canvas
+      }
+      for (const m of text.matchAll(/z-index:\s*(-?\d+)\s*;/g)) {
+        // 0-10 is local stacking inside one component.
+        if (Number(m[1]) > 10) {
+          bad.push(`${rel}: z-index ${m[1]}`);
+        }
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it("reduced motion is handled once, globally, and no rule animates 'all'", () => {
+    const ds = FILES.find((f) =>
+      f.rel.endsWith("theme/designSystem.css"),
+    )!.text;
+    expect(ds).toMatch(
+      /prefers-reduced-motion: reduce\)\s*\{\s*\*,\s*::before,\s*::after\s*\{[^}]*transition: none !important[^}]*animation: none !important/,
+    );
+    const bad = cssFiles()
+      .filter((f) => /transition:\s*all\b/.test(f.text))
+      .map((f) => f.rel);
+    expect(bad).toEqual([]);
+  });
 });

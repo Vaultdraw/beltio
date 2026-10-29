@@ -1,7 +1,7 @@
 /* Hover preview card for [[links]] on the canvas (lazy chunk). */
 .vault-link-preview {
   position: absolute;
-  z-index: 56;
+  z-index: var(--z-popover);
   box-sizing: border-box;
   width: 260px;
   padding: 8px 10px;

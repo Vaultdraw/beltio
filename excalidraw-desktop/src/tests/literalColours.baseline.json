@@ -1,13 +1,8 @@
 {
-  "components/VaultShell.css": 60,
-  "components/reportDialog.css": 2,
-  "components/search/SearchResults.css": 1,
+  "components/VaultShell.css": 58,
   "components/settings/colorPicker.css": 14,
   "components/settings/toolsPage.css": 2,
-  "components/shell.css": 2,
   "history/preview/changeOverlay.css": 3,
-  "notes/notes.css": 10,
-  "page/page.css": 1,
   "templates/TemplatePicker.css": 1,
   "thumbnails/thumbnails.css": 1
 }

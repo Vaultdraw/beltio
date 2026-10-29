@@ -1,6 +1,6 @@
 .vault-whichkey {
   position: fixed;
-  z-index: 60;
+  z-index: var(--z-popover);
   left: 0;
   right: 0;
   display: flex;
@@ -84,11 +84,5 @@
   }
   to {
     opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .vault-whichkey {
-    animation: none;
   }
 }
