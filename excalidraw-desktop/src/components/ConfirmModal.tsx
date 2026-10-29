@@ -17,6 +17,11 @@ interface ConfirmModalProps {
   /** Destructive: the confirm button is the one filled danger button. */
   isDanger?: boolean;
   /**
+   * The action can be undone (Move to Trash: the system Trash keeps it), so Enter confirms, as in
+   * Obsidian's delete question; otherwise a danger dialog starts on Cancel (test-net TN-9).
+   */
+  recoverable?: boolean;
+  /**
    * Asked by something other than the user's own action (a link from outside):
    * focus starts on Cancel, and Confirm ignores clicks and Enter/Space for
    * `GUARD_MS` after the dialog appears, so a key still held cannot confirm it.
@@ -35,6 +40,7 @@ export const ConfirmModal = ({
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   isDanger = false,
+  recoverable = false,
   guarded = false,
   alternatives,
   onConfirm,
@@ -43,10 +49,13 @@ export const ConfirmModal = ({
   const confirmBtnRef = useRef<HTMLButtonElement>(null);
   const cancelBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Destructive confirmations start on Cancel so a stray Enter is safe.
+  // Destructive confirmations that cannot be undone start on Cancel so a stray Enter is safe.
   useEffect(() => {
-    (isDanger || guarded ? cancelBtnRef : confirmBtnRef).current?.focus();
-  }, [isDanger, guarded]);
+    ((isDanger && !recoverable) || guarded
+      ? cancelBtnRef
+      : confirmBtnRef
+    ).current?.focus();
+  }, [isDanger, recoverable, guarded]);
 
   const shownAt = useRef(Date.now());
   const settled = () =>

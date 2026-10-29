@@ -28,12 +28,7 @@ const breadcrumb = (page: Page) => page.locator(".vault-breadcrumbs");
 
 journey({
   title: "keyboard-journey",
-  known: [
-    {
-      match: /Enter in the trash question does not trash/,
-      bug: "toimprove TN-9: the trash question does not run on Enter",
-    },
-  ],
+  known: [],
   setup: async (page) => {
     await openVault(page);
     // Start with the focus in the page, not in the browser's address bar.

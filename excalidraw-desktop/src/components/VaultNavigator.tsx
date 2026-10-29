@@ -1147,6 +1147,7 @@ export const VaultNavigator = ({
           }
           confirmLabel="Move to Trash"
           isDanger
+          recoverable
           onConfirm={async () => {
             await onTrashEntry(trashTarget.path);
             setTrashTarget(null);
