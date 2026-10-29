@@ -179,9 +179,14 @@ export function buildRowMenu({
       ...(isFolder
         ? []
         : [
-            item("copyLink", "Vaultdraw link", () => a.copyPath(entry, "link"), {
-              commandId: "list.copyLink",
-            }),
+            item(
+              "copyLink",
+              "Vaultdraw link",
+              () => a.copyPath(entry, "link"),
+              {
+                commandId: "list.copyLink",
+              },
+            ),
           ]),
     ],
   };
