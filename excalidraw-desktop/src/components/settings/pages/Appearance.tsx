@@ -169,7 +169,12 @@ const AccentSetting = () => {
     ) : undefined,
   );
   const commitDraft = () => {
-    const text = (draft ?? "").trim();
+    // Nothing typed since the last commit (Enter, then a click elsewhere blurs the field): keep
+    // the colour. Treating "no draft" as "cleared" erased the accent (test-net TN-4).
+    if (draft === null) {
+      return;
+    }
+    const text = draft.trim();
     setDraft(null);
     if (text === "") {
       setAccentColor("");

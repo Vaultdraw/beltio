@@ -60,13 +60,7 @@ const changes = async (page: Page, ctx: { data: Record<string, any> }) => {
 
 journey({
   title: "settings-journey",
-  known: [
-    {
-      match:
-        /accent colour is lost (when the mode changes|after the next setting changes)/,
-      bug: "toimprove TN-4: choosing Light or Dark clears the accent colour",
-    },
-  ],
+  // TN-4 (accent cleared by the next click) fixed 2026-10-30: a report here fails the journey.
   setup: async (page, ctx) => {
     // The overrides table survives a reload through the session store (the file on disk, for real).
     await page.addInitScript(() => {
