@@ -64,6 +64,22 @@ describe("gridWindow", () => {
     expect(sameWindow(a, computeGridWindow(210, m()))).toBe(false);
   });
 
+  it.each([
+    [1, 2],
+    [2, 1],
+    [4, 5],
+    [5, 0],
+    [0, 1],
+  ])(
+    "an item count change from %i to %i inside one row changes the window",
+    (from, to) => {
+      const a = computeGridWindow(0, m({ count: from }));
+      const b = computeGridWindow(0, m({ count: to }));
+      expect(b.last - b.first + 1).toBe(to);
+      expect(sameWindow(a, b)).toBe(false);
+    },
+  );
+
   it("re-flows on resize", () => {
     const a = computeGridWindow(0, m());
     const b = computeGridWindow(0, m({ viewportWidth: 500 }));

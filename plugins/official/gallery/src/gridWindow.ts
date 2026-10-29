@@ -79,7 +79,11 @@ export const sameWindow = (a: GridWindow, b: GridWindow): boolean =>
   a.firstRow === b.firstRow &&
   a.lastRow === b.lastRow &&
   a.rowHeight === b.rowHeight &&
-  a.totalHeight === b.totalHeight;
+  a.totalHeight === b.totalHeight &&
+  // The mounted range: a drawing added or removed inside the last row changes only this
+  // (hunter C-6: the count said 2 items, the grid kept 1 card).
+  a.first === b.first &&
+  a.last === b.last;
 
 /** Rows that fit fully in the viewport (at least 1), for PageUp/PageDown. */
 export const pageRows = (viewportHeight: number, rowHeight: number): number =>
