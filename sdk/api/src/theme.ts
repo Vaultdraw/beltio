@@ -26,6 +26,7 @@ export type ThemeTokenName =
   | "--vault-primary-border"
   | "--vault-on-primary"
   | "--vault-on-danger"
+  | "--vault-accent"
   | "--vault-accent-text"
   | "--vault-success"
   | "--vault-success-bg"
@@ -48,7 +49,8 @@ export type ThemeTokenName =
   | "--vault-chip-strong"
   | "--vault-sel"
   | "--vault-sel-strong"
-  | "--vault-ring";
+  | "--vault-ring"
+  | "--vault-ring-inset";
 
 /**
  * The light or dark look that is shown now.

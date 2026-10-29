@@ -33,6 +33,8 @@ export const DESCRIPTIONS = {
   "--vault-primary-border": "A border in the accent family.",
   "--vault-on-primary": "Text on an accent fill.",
   "--vault-on-danger": "Text on a danger fill.",
+  "--vault-accent":
+    "The same colour as the primary accent, an alias for notices and plugins.",
   "--vault-accent-text":
     "The accent, adjusted to read as text on the background.",
   "--vault-success": "Success text and icons.",
@@ -58,6 +60,8 @@ export const DESCRIPTIONS = {
   "--vault-sel": "A translucent selection tint (an rgba colour).",
   "--vault-sel-strong": "A stronger selection tint (an rgba colour).",
   "--vault-ring": "The focus ring (an rgba colour).",
+  "--vault-ring-inset":
+    "The focus ring drawn inside (a CSS box-shadow value), for rows and tabs whose parent clips overflow.",
 };
 
 /** The token names in the ThemeTokenName union, in source order. */

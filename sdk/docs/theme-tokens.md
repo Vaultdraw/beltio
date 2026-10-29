@@ -2,7 +2,7 @@
 
 # Theme tokens
 
-The colours `ctx.theme.tokens()` returns, 41 in all. Each value is a CSS string: most are `#rrggbb`, some are `rgba(...)` colours or shadows. Use one as `var(--vault-text)` in CSS, or read the string from `ctx.theme.tokens()["--vault-text"]`.
+The colours `ctx.theme.tokens()` returns, 43 in all. Each value is a CSS string: most are `#rrggbb`, some are `rgba(...)` colours or shadows. Use one as `var(--vault-text)` in CSS, or read the string from `ctx.theme.tokens()["--vault-text"]`.
 
 The names are part of the API. A token is added with a line here and is never removed without an alias.
 
@@ -26,6 +26,7 @@ The names are part of the API. A token is added with a line here and is never re
 | `--vault-primary-border` | A border in the accent family. |
 | `--vault-on-primary` | Text on an accent fill. |
 | `--vault-on-danger` | Text on a danger fill. |
+| `--vault-accent` | The same colour as the primary accent, an alias for notices and plugins. |
 | `--vault-accent-text` | The accent, adjusted to read as text on the background. |
 | `--vault-success` | Success text and icons. |
 | `--vault-success-bg` | Success background. |
@@ -49,3 +50,4 @@ The names are part of the API. A token is added with a line here and is never re
 | `--vault-sel` | A translucent selection tint (an rgba colour). |
 | `--vault-sel-strong` | A stronger selection tint (an rgba colour). |
 | `--vault-ring` | The focus ring (an rgba colour). |
+| `--vault-ring-inset` | The focus ring drawn inside (a CSS box-shadow value), for rows and tabs whose parent clips overflow. |
