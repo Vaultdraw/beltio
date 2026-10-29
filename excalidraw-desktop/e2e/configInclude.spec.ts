@@ -56,8 +56,8 @@ test("Config files lists an included file and a setting's chip names it", async 
   await expect(
     row.getByRole("switch", { name: /Show drawing thumbnails/ }),
   ).not.toBeChecked();
-  const chip = row.getByRole("button", { name: /^Value from/ });
-  await expect(chip).toHaveText("colors.toml");
+  const chip = row.getByRole("button", { name: /^Value from colors\.toml/ });
+  await expect(chip).toHaveText("From file");
   await chip.click();
   await expect(row.getByRole("group", { name: "Value source" })).toContainText(
     "Set in colors.toml",
