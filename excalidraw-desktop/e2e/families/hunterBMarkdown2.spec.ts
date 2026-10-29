@@ -137,3 +137,46 @@ test("hunter B: Cmd+Z after a bullet conversion brings '- ' back; Backspace afte
   await page.keyboard.press("Enter");
   await expect(page.locator(ta)).toHaveValue(" world");
 });
+
+test("hunter B: heading, Enter, Backspace in the empty body returns to the heading end; no stray empty text is left", async ({
+  page,
+}) => {
+  await start(page);
+  await newText(page);
+  await type(page, "# Head");
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Backspace");
+  await type(page, "er");
+  await expect(page.locator(ta)).toHaveValue("Header");
+  await page.keyboard.press("Escape");
+  await expect(page.locator(ta)).toHaveCount(0);
+  await expect
+    .poll(
+      async () =>
+        (await texts(page))
+          .map((e: any) => e.text)
+          .filter((t: string) => t !== "DSA — Dynamic Programming"),
+      { timeout: 10_000 },
+    )
+    .toEqual(["Header"]);
+});
+
+test("hunter B: > quote then a list item inside it, Backspace twice, keeps one quote box", async ({
+  page,
+}) => {
+  await start(page);
+  await newText(page);
+  await type(page, "> a");
+  await page.keyboard.press("Enter");
+  await type(page, "- b");
+  await expect(page.locator(ta)).toHaveValue("a\n• b");
+  await page.keyboard.press("Escape");
+  await expect
+    .poll(
+      async () =>
+        (await texts(page)).find((e: any) => e.text === "a\n• b")?.customData
+          ?.role,
+      { timeout: 10_000 },
+    )
+    .toBe("quote");
+});
