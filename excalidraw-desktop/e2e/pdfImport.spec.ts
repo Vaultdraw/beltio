@@ -149,6 +149,13 @@ test("palette command: dialog shows name and pages, Import adds 3 locked images 
   expect(images[1].y).toBeGreaterThan(images[0].y + images[0].height);
   expect(images[2].y).toBeGreaterThan(images[1].y + images[1].height);
 
+  // focus left the closed dialog
+  expect(
+    await page.evaluate(
+      () => !document.activeElement?.closest('[role="dialog"]'),
+    ),
+  ).toBe(true);
+
   // the token was closed after the import
   const st = await bridgeState(page);
   expect(st.closes).toContain(st.token);

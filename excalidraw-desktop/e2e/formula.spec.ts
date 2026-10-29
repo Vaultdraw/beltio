@@ -67,7 +67,10 @@ test.describe("formula", () => {
     expect(svg).not.toMatch(/foreignObject|<script/i);
     expect(el1.width).toBeGreaterThan(0);
     expect(el1.height).toBeGreaterThan(0);
-    expect(s.selected).toEqual([el1.id]);
+    // The host selects the new element a beat after it lands: poll, do not read once.
+    await expect
+      .poll(async () => (await scene(page)).selected)
+      .toEqual([el1.id]);
 
     // 2. shortcut + $$ delimiters
     await page.keyboard.press("Escape");

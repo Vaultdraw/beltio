@@ -109,7 +109,12 @@ export function DialogFrame({
         stack.splice(at, 1);
       }
       doc.removeEventListener("keydown", onKeyDown, true);
+      // Give focus back only when nothing else took it (never steal it from the canvas
+      // or a control that opened after this dialog closed).
+      const now = doc.activeElement;
+      const free = !now || now === doc.body || node.contains(now);
       if (
+        free &&
         opener instanceof HTMLElement &&
         opener !== doc.body &&
         opener.isConnected
