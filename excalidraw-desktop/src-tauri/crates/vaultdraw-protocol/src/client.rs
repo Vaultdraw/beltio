@@ -41,6 +41,7 @@ pub struct Client {
 impl Client {
     /// Connects; `NotRunning` when nothing listens at `path`.
     pub fn connect(path: &Path) -> Result<Self, CallError> {
+        crate::dirs::check_socket_path_len(path).map_err(CallError::Io)?;
         let stream = UnixStream::connect(path).map_err(|e| match e.kind() {
             std::io::ErrorKind::NotFound | std::io::ErrorKind::ConnectionRefused => {
                 CallError::NotRunning(format!("Vaultdraw is not running (no control socket at {})", path.display()))
@@ -114,5 +115,19 @@ fn frame_err(e: FrameError) -> CallError {
             CallError::Rpc(RpcError::app(crate::codes::TIMEOUT, "The app did not answer in time"))
         }
         e => CallError::Io(e.to_string()),
+    }
+}
+
+#[cfg(test)]
+mod socket_path_tests {
+    use super::*;
+
+    /// Hunter C-3: a long state folder gave the OS's raw "path must be shorter than SUN_LEN".
+    #[test]
+    fn a_too_long_socket_path_reads_as_plain_words() {
+        let p = std::path::PathBuf::from(format!("/tmp/{}/ctl.sock", "x".repeat(120)));
+        let Err(CallError::Io(m)) = Client::connect(&p) else { panic!("expected an IO error") };
+        assert!(m.contains("too long") && m.contains("VAULTDRAW_RUNTIME_DIR"), "{m}");
+        assert!(!m.contains("SUN_LEN"), "{m}");
     }
 }

@@ -60,7 +60,8 @@ pub enum Command {
     /// Search the vault (names, text, tags)
     Search {
         query: String,
-        #[arg(long, value_name = "N")]
+        /// Results to return, 1 to 200 (default 50)
+        #[arg(long, value_name = "N", value_parser = clap::value_parser!(u32).range(1..=200))]
         limit: Option<u32>,
     },
     /// Open a drawing in the window
@@ -269,7 +270,7 @@ pub enum SceneAction {
         /// Elements to return, 1 to 2000 (default 200)
         #[arg(long, value_name = "N", value_parser = clap::value_parser!(u32).range(1..=2000))]
         limit: Option<u32>,
-        /// Elements to skip (paging)
+        /// Elements to skip (paging), 0 or more
         #[arg(long, value_name = "N")]
         offset: Option<u32>,
     },
@@ -418,6 +419,79 @@ impl CompletionShell {
             Self::Fish => clap_complete::generate(Shell::Fish, cmd, name, out),
             Self::Elvish => clap_complete::generate(Shell::Elvish, cmd, name, out),
             Self::Nushell => clap_complete::generate(clap_complete_nushell::Nushell, cmd, name, out),
+        }
+    }
+}
+
+#[cfg(test)]
+mod numeric_flag_tests {
+    //! Family sweep (hunter C-1, 2026-10-30): every numeric flag states its range in its help and
+    //! the parser refuses a value outside it, instead of clamping it silently later
+    //! (`search --limit 0` returned one result).
+    use super::Cli;
+    use clap::{error::ErrorKind, Command, CommandFactory};
+
+    /// Numeric flags whose range the app checks (with a plain-word error), not the parser.
+    const CHECKED_BY_THE_APP: &[(&str, &str, &str)] = &[("export", "scale", "the app refuses values outside 1 to 3 (control/params.ts)")];
+
+    fn walk(cmd: &Command, path: &mut Vec<String>, out: &mut Vec<(Vec<String>, String, String)>) {
+        for a in cmd.get_arguments() {
+            let numeric = a.get_value_names().is_some_and(|v| v.iter().any(|n| matches!(n.as_str(), "N" | "PX")));
+            if numeric {
+                let help = a.get_help().map(|h| h.to_string()).unwrap_or_default();
+                out.push((path.clone(), a.get_id().to_string(), help));
+            }
+        }
+        for sub in cmd.get_subcommands() {
+            path.push(sub.get_name().to_string());
+            walk(sub, path, out);
+            path.pop();
+        }
+    }
+
+    /// "1 to 200" → (1, 200); "0 or more" → (0, u32::MAX).
+    fn range(help: &str) -> Option<(u64, u64)> {
+        if help.contains("0 or more") {
+            return Some((0, u64::from(u32::MAX)));
+        }
+        let w: Vec<&str> = help.split(|c: char| !c.is_ascii_alphanumeric()).filter(|s| !s.is_empty()).collect();
+        w.windows(3).find_map(|t| match (t[0].parse::<u64>(), t[1], t[2].parse::<u64>()) {
+            (Ok(a), "to", Ok(b)) => Some((a, b)),
+            _ => None,
+        })
+    }
+
+    fn kind(path: &[String], flag: &str, value: &str) -> ErrorKind {
+        let mut args = vec!["vaultdraw".to_string()];
+        args.extend(path.iter().cloned());
+        args.push(format!("--{flag}"));
+        args.push(value.to_string());
+        match Cli::command().try_get_matches_from(args) {
+            Ok(_) => ErrorKind::DisplayHelp, // stands for "accepted"
+            Err(e) => e.kind(),
+        }
+    }
+
+    #[test]
+    fn every_numeric_flag_states_and_enforces_its_range() {
+        let mut flags = Vec::new();
+        walk(&Cli::command(), &mut Vec::new(), &mut flags);
+        assert!(flags.len() >= 4, "the sweep found the numeric flags: {flags:?}");
+        for (path, flag, help) in flags {
+            let at = format!("vaultdraw {} --{flag}", path.join(" "));
+            if CHECKED_BY_THE_APP.iter().any(|(c, f, _)| path.last().map(String::as_str) == Some(*c) && *f == flag) {
+                continue;
+            }
+            let (lo, hi) = range(&help).unwrap_or_else(|| panic!("{at}: the help must state the range (\"1 to 200\" or \"0 or more\"), got {help:?}"));
+            for ok in [lo, hi] {
+                assert_ne!(kind(&path, &flag, &ok.to_string()), ErrorKind::ValueValidation, "{at} {ok} is in the stated range");
+            }
+            if lo > 0 {
+                assert_eq!(kind(&path, &flag, &(lo - 1).to_string()), ErrorKind::ValueValidation, "{at} {} must be refused, not clamped", lo - 1);
+            }
+            if hi < u64::from(u32::MAX) {
+                assert_eq!(kind(&path, &flag, &(hi + 1).to_string()), ErrorKind::ValueValidation, "{at} {} must be refused, not clamped", hi + 1);
+            }
         }
     }
 }

@@ -97,15 +97,21 @@ impl InstancePaths {
 
     /// Fails when the socket path is too long for `bind`/`connect`.
     pub fn check_socket_len(&self) -> Result<(), String> {
-        let n = self.socket.as_os_str().len();
-        if n > MAX_SOCKET_PATH {
-            return Err(format!(
-                "control socket path is {n} bytes, longer than the {MAX_SOCKET_PATH}-byte limit: {} (set VAULTDRAW_RUNTIME_DIR to a shorter directory)",
-                self.socket.display()
-            ));
-        }
-        Ok(())
+        check_socket_path_len(&self.socket)
     }
+}
+
+/// The one length check for a control socket path, shared by the app (bind) and the CLI
+/// (connect), so both say the same plain words instead of the OS's "shorter than SUN_LEN".
+pub fn check_socket_path_len(socket: &Path) -> Result<(), String> {
+    let n = socket.as_os_str().len();
+    if n > MAX_SOCKET_PATH {
+        return Err(format!(
+            "The control socket path is too long ({n} characters, the limit is {MAX_SOCKET_PATH}): {}. Set VAULTDRAW_RUNTIME_DIR to a shorter folder, or pass --socket with a shorter path",
+            socket.display()
+        ));
+    }
+    Ok(())
 }
 
 /// Creates `dir` (and parents) and makes the leaf 0700. Refuses a symlink or a directory

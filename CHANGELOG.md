@@ -37,6 +37,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **Web pictures in old imports download now.** **Download pictures** (and the notice on opening an imported note) missed the boxes of the oldest imports, which show only the picture's description, so nothing downloaded; addresses without a file extension work too (the bytes decide). A box that stays shows one link icon, not two overlapping ones.
 - **Default `config.toml` lists the control keys.** `control.enabled`, `control.uri_enabled` and `control.uri_allow` are now in the commented template and the `[control]` table of the configuration reference; the profile example names `appearance.theme`.
 - **Import file takes BMP, ICO, AVIF and JFIF** even when the system gives no file type; a full favourites list says it is full instead of "Removed".
+- **`vaultdraw search --limit` checks its range (1 to 200)** instead of turning 0 into 1 result; a control socket path that is too long says so in plain words and names the setting that shortens it.
 
 - **A 32 MiB drawing fits in one message of the control API and the MCP server.** The message cap is now 80 MiB, so a drawing that grows once it is escaped into JSON is no longer refused; a message over the cap says the limit in plain words.
 
