@@ -4,9 +4,12 @@ Plugins, Markdown notes and Obsidian vaults, backup, libraries, profiles, Linux 
 
 ## Read first
 
-1. **Upgrading with plugins.** A plugin you enabled earlier that declared no permission asks for review once ("Needs review"). Approve it in Settings, Plugins. Official plugins stay on.
-2. **Browse community plugins starts empty.** The list (`Vaultdraw/plugin-registry`) is published but has no plugins yet; add yours by pull request (see `sdk/docs/registry.md`).
-3. **The macOS build is unsigned.** First open: right-click, Open, or System Settings, Privacy & Security, Open Anyway.
+1. **Upgrading with plugins.** Every plugin you added yourself asks for review once before it runs again ("Needs review"; a notice at launch has a **Review** button). Approve it in Settings, Plugins. Official plugins stay on.
+2. **Theme or plugin downloads from your own server.** Downloads now go only to GitHub (`github.com`, `raw.githubusercontent.com`, `api.github.com`, `codeload.github.com`). If you set `themes.index_url`, `plugins.registry_url` or install themes from another host, add it by hand to `config.toml`: `network.allowed_hosts = ["themes.example.org"]`. Settings cannot set this key, and the two list addresses are read from `config.toml` only.
+3. **Auto-export and old export files.** Auto-export now changes only the files it wrote itself. Exports made by an earlier version are not recorded, so they are not updated: delete an old export once and the next save makes it again.
+4. **Search index rebuild.** The first launch after the update rebuilds the search index once, in the background (it now handles Japanese and Korean text with separate marks). Search results may be incomplete for a short time on a large vault.
+5. **Browse community plugins starts empty.** The list (`Vaultdraw/plugin-registry`) is published but has no plugins yet; add yours by pull request (see `sdk/docs/registry.md`).
+6. **The macOS build is unsigned.** First open: right-click, Open, or System Settings, Privacy & Security, Open Anyway.
 
 ## What is new
 
