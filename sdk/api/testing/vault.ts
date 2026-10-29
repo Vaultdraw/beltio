@@ -2,6 +2,7 @@
  * `ctx.vault` and `ctx.workspace` of the mock host. The path and permission
  * rules it shares with the app's host are in sdk/api/shared/vaultPaths.ts.
  */
+import { editState } from "../shared/importStamp";
 import { PluginApiError } from "../shared/rules";
 import { validateOps } from "../shared/sceneRules";
 import { checkVaultPath, requirePermission } from "../shared/vaultPaths";
@@ -422,12 +423,15 @@ export function createVaultModel(
             []) as FakeElement[];
           const prev = drawings.get(path);
           if (prev) {
-            const raw = prev.elements as unknown as Record<string, unknown>[];
-            const touched =
-              raw.some((e) => e.isDeleted === true) ||
-              new Set(raw.map((e) => e.created)).size > 1;
-            if (options.onlyIfUntouched && touched) {
-              return { skipped: "changed" as const };
+            // One rule with the app (shared/importStamp.ts, A-2).
+            const state = editState({ elements: prev.elements });
+            if (options.onlyIfUntouched && state !== "untouched") {
+              return {
+                skipped:
+                  state === "unknown"
+                    ? ("unknown" as const)
+                    : ("changed" as const),
+              };
             }
             versions.push({ path, name: options.versionName });
           }
@@ -442,6 +446,35 @@ export function createVaultModel(
           return prev
             ? { revision: `r${next.revision}` }
             : { revision: `r${next.revision}`, created: true };
+        },
+        async trashDrawing(path, options) {
+          requirePermission(
+            pluginId,
+            permissions,
+            "vault.trashDrawing",
+            "vault.write",
+          );
+          checkVaultPath(path, "file");
+          const v = needVault();
+          if (v.readOnly) {
+            throw new PluginApiError("READ_ONLY", "The vault is read-only");
+          }
+          const prev = drawings.get(path);
+          if (!prev) {
+            throw new PluginApiError("NOT_FOUND", "No such drawing");
+          }
+          const state = editState({ elements: prev.elements });
+          if (options.onlyIfUntouched && state !== "untouched") {
+            return {
+              skipped:
+                state === "unknown"
+                  ? ("unknown" as const)
+                  : ("changed" as const),
+            };
+          }
+          versions.push({ path, name: options.versionName });
+          drawings.delete(path);
+          return { trashed: true as const };
         },
         async createDrawing(path, ops: readonly SceneOp[]) {
           requirePermission(pluginId, permissions, "file.write", "vault.write");

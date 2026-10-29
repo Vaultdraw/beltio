@@ -14,6 +14,7 @@ import {
   pageSetupFor,
   sha1Hex,
 } from "../shared/pageItems";
+import { stampElements } from "../shared/importStamp";
 import { pageGeometry } from "../shared/pages";
 import { PluginApiError } from "../shared/rules";
 import { checkVaultPath } from "../shared/vaultPaths";
@@ -246,6 +247,7 @@ export function createPagesMock(
       const setup = checkSetup(opts.setup);
       const fileIds = await hashPageImages(checked, sha1Hex);
       const built = build(checked, setup, fileIds, new Set());
+      stampElements(built.elements); // as the app's sceneJson (A-2)
       return {
         type: "excalidraw",
         version: 2,
