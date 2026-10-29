@@ -43,7 +43,7 @@ const fake = (answer: boolean, images: Record<string, Uint8Array | string>) => {
 };
 
 describe("web pictures", () => {
-  test("asked once per import, then downloaded and typed by their bytes", async () => {
+  test("the setting is read once per import, then pictures download, typed by their bytes (no extension needed)", async () => {
     const { net, log } = fake(true, {
       "https://a.example/1.png": PNG,
       "https://b.example/2": PNG,
@@ -61,7 +61,7 @@ describe("web pictures", () => {
     expect(web.downloaded).toBe(2);
   });
 
-  test("a no stays a no for the import and every box says why", async () => {
+  test("web pictures turned off: nothing is fetched and every box says why", async () => {
     const { net, log } = fake(false, {});
     const web = createWebImages(net);
     const a = item("https://a.example/1.png", "Chip");
@@ -70,7 +70,9 @@ describe("web pictures", () => {
     await web.fill([b]);
     expect(log.asked).toHaveLength(1);
     expect(log.fetched).toHaveLength(0);
-    expect((a as any).alt).toBe("Web image, not downloaded: Chip");
+    expect((a as any).alt).toBe(
+      "Web image, not downloaded (web pictures are off in Settings): Chip",
+    );
     expect((b as any).bytes).toBeUndefined();
   });
 
@@ -93,20 +95,36 @@ describe("web pictures", () => {
     ]);
   });
 
-  test("http is never downloaded, data: pictures need no network, no network API means boxes", async () => {
-    const { net, log } = fake(true, {});
+  test("http downloads like https; data: pictures need no network; no network API means boxes", async () => {
+    const { net, log } = fake(true, { "http://a.example/1.png": PNG });
     const web = createWebImages(net);
     const plain = item("http://a.example/1.png");
     const data = item(
       `data:image/png;base64,${btoa(String.fromCharCode(...PNG))}`,
     );
     await web.fill([plain, data]);
-    expect((plain as any).alt).toMatch(/not https/);
+    expect((plain as any).bytes).toBeDefined();
     expect((data as any).bytes).toBeDefined();
-    expect(log.asked).toHaveLength(0);
+    expect(log.fetched).toEqual(["http://a.example/1.png"]);
     const none = item("https://a.example/1.png");
     await createWebImages(undefined).fill([none]);
     expect((none as any).alt).toMatch(/not downloaded/);
+  });
+
+  test("a private or local address is refused in plain words", async () => {
+    const { net } = fake(true, {
+      "http://192.168.1.2/a.png": "INVALID_URL",
+      "https://intranet.example/a.png": "PRIVATE_ADDRESS",
+    });
+    const items = [
+      item("http://192.168.1.2/a.png", "Router"),
+      item("https://intranet.example/a.png", "Wiki"),
+    ];
+    await createWebImages(net).fill(items);
+    expect(items.map((i) => (i as any).alt)).toEqual([
+      "Web image refused (not a public web address): Router",
+      "Web image refused (not a public web address): Wiki",
+    ]);
   });
 
   test("the same address is downloaded once", async () => {

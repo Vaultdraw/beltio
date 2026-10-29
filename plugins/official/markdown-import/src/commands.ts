@@ -18,6 +18,8 @@ export function registerCommands(ctx: PluginContext, imp: Importing): void {
   reg("obsidian", () => imp.importObsidian("vaultFolder"));
   reg("obsidian-new-vault", () => imp.importObsidian("newVault"));
   reg("download-images", () => downloadImages(ctx));
+  // Run by the app when an imported note with web-picture boxes opens: fills them quietly.
+  reg("fill-web-images", () => downloadImages(ctx, true));
   reg("attach-images", () => attachImages(ctx));
   // Called by the core "Import: Cancel": true when a vault import was running.
   reg("cancel-import", () => imp.cancelObsidian());

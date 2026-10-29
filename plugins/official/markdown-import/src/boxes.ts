@@ -156,15 +156,26 @@ const replace = async (
   return n;
 };
 
-/** "Download images": the web pictures of the open drawing. */
-export async function downloadImages(ctx: PluginContext): Promise<void> {
+/**
+ * "Download images": the web pictures of the open drawing. `quiet` is the app's own call when an
+ * imported note with picture boxes opens (like Obsidian, web pictures just show): nothing is said
+ * unless some could not be downloaded, and then the notice offers Retry.
+ */
+export async function downloadImages(
+  ctx: PluginContext,
+  quiet = false,
+): Promise<void> {
   const boxes = findBoxes(ctx).filter((b) => isWebTarget(b.link));
   if (boxes.length === 0) {
-    ctx.ui.toast("This drawing has no web pictures to download");
+    if (!quiet) {
+      ctx.ui.toast("This drawing has no web pictures to download");
+    }
     return;
   }
   if (!ctx.host.has("network")) {
-    ctx.ui.toast("This version of Vaultdraw cannot download pictures");
+    if (!quiet) {
+      ctx.ui.toast("This version of Vaultdraw cannot download pictures");
+    }
     return;
   }
   const web = createWebImages(ctx.network);
@@ -180,7 +191,9 @@ export async function downloadImages(ctx: PluginContext): Promise<void> {
     // The note's own alt text is what follows the reason in the label.
     alt: altOf((b.label as { text?: string }).text ?? ""),
   })) as (PageItem & { type: "image"; bytes?: Uint8Array })[];
-  ctx.ui.toast("Downloading pictures", { id: "download-images" });
+  if (!quiet) {
+    ctx.ui.toast("Downloading pictures", { id: "download-images" });
+  }
   await web.fill(items);
   const bytes = new Map<Box, Uint8Array>();
   items.forEach((it, i) => it.bytes && bytes.set(boxes[i], it.bytes));
@@ -207,18 +220,32 @@ export async function downloadImages(ctx: PluginContext): Promise<void> {
   if (relabel.length > 0) {
     await ctx.scene.batch(relabel);
   }
+  if (quiet && n === boxes.length) {
+    return;
+  }
+  const off = items.some((it) => /off in Settings/.test(it.alt ?? ""));
   ctx.ui.toast(
     n === boxes.length
       ? `Downloaded ${n} pictures`
       : n === 0
-      ? "No picture was downloaded"
+      ? `${
+          boxes.length === 1 ? "The web picture" : "No web picture"
+        } could not be downloaded`
       : `Downloaded ${n} of ${boxes.length} pictures`,
     {
       id: "download-images",
       ...(n < boxes.length
         ? {
-            detail:
-              "The others are not pictures, are too large, or could not be reached",
+            detail: off
+              ? "Web pictures are turned off in Settings"
+              : "The box says why for each one: not a picture, too large, or not reachable",
+            ...(off
+              ? {}
+              : {
+                  actions: [
+                    { label: "Retry", run: () => void downloadImages(ctx) },
+                  ],
+                }),
           }
         : {}),
     },

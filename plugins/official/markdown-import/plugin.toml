@@ -48,6 +48,12 @@ title = "Import Obsidian vault into a new vault…"
 id = "download-images"
 title = "Markdown: Download web images in this drawing"
 
+# Run by the app when an imported note with web-picture boxes opens; not listed in the palette.
+[[contributes.commands]]
+id = "fill-web-images"
+title = "Markdown: Show the web pictures of this drawing"
+palette = false
+
 [[contributes.commands]]
 id = "attach-images"
 title = "Markdown: Attach missing images from a folder…"

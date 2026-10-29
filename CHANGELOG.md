@@ -13,6 +13,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Changed
 
+- **Web pictures just show.** Pictures from the web in an imported note are downloaded during the import, with no question, and the picture boxes of notes imported earlier fill in by themselves when the note opens. `http` addresses work too; private and local addresses are refused, downloads are capped at 10 MiB and checked by their bytes. A box that could not be filled says why, with **Retry**. `network.allow_images` now defaults to on; set it to `false` to keep pictures as boxes. **Network access** off still stops everything.
 - **Imported tables move as one and read cleaner.** A Markdown table in an imported note is one group (click selects the table, double-click edits a cell), with a heavier rule under the header like a pasted table. Tables with very many columns stay inside the page instead of running past its edge. Notes imported by an older version keep their old text table until they are imported again.
 - **Any key can be rebound, like VS Code and Obsidian.** Keys the system or menu owns (Cmd+Q, Cmd+Tab) and the text keys (Cmd+C, X, V, Z, A) are no longer refused on the Hotkeys page; the row shows what the key clashes with.
 - **Settings text and tooltips show your real shortcut** (zoom, focus mode, pens, refresh, save), and follow rebinds and the platform.

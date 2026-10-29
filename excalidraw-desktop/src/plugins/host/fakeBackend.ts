@@ -63,11 +63,10 @@ export interface FakeBackend extends PluginsBackend {
   pdf?: FakePdfRows;
   /**
    * The `network.*` rows (permission `network.images`): pictures by address (bytes, or an error
-   * code), what the user answers in the dialog, whether downloads are allowed, and what was asked.
+   * code), the user's setting (on unless turned off), and the lists `askImages` was called with.
    */
   network: {
     images: Record<string, Uint8Array | string>;
-    answer: boolean;
     allowed: boolean;
     asked: string[][];
     fetched: string[];
@@ -106,11 +105,8 @@ const networkRow = (
   body: Uint8Array,
 ): Uint8Array => {
   if (method === "network.askImages") {
-    if (net.allowed) {
-      return new Uint8Array([1]);
-    }
+    // No dialog (owner, 2026-10-29): the answer is the setting, like the native row.
     net.asked.push(JSON.parse(new TextDecoder().decode(body)).urls);
-    net.allowed = net.answer;
     return new Uint8Array([net.allowed ? 1 : 0]);
   }
   if (method !== "network.fetchImage") {
@@ -119,7 +115,7 @@ const networkRow = (
   if (!net.allowed) {
     throw coded(
       "NETWORK_NOT_ALLOWED",
-      "Downloading pictures from web pages is not allowed. You can allow it in Settings.",
+      "Downloading pictures from web pages is turned off in Settings.",
     );
   }
   const url = new TextDecoder().decode(body);
@@ -369,8 +365,7 @@ export function createFakeBackend(
     vaultOpen: true,
     network: {
       images: {},
-      answer: true,
-      allowed: false,
+      allowed: true,
       asked: [],
       fetched: [],
     },

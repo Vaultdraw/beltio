@@ -1,8 +1,9 @@
 /**
- * Web pictures of a note (toimprove 71). The import is offline by default: a picture on the web is
- * a labelled box. When the user allows it (one native dialog per import, `ctx.network.askImages`),
- * the pictures are downloaded once and embedded in the drawing, so they work offline afterwards.
- * Only pictures: a link to a web page stays a box ("Not a picture").
+ * Web pictures of a note (toimprove 71, 108). Like Obsidian, a picture on the web just shows: it is
+ * downloaded during the import and embedded in the drawing, so it works offline afterwards. No
+ * question is asked (owner, 2026-10-29); `ctx.network.askImages` only says whether the user turned
+ * web pictures (or the network) off, and then each one stays a box that says so. Only pictures: a
+ * link to a web page stays a box ("Web page, not a picture").
  */
 import { looksLike } from "../../../../sdk/api/shared/sceneRules";
 
@@ -60,7 +61,7 @@ export interface WebImages {
 
 /**
  * `net` undefined (an app without `ctx.network`) or the user saying no leaves every web picture a
- * labelled box. The question is asked once per import; "no" is remembered for the import.
+ * labelled box. The setting is read once per import.
  */
 export const createWebImages = (net: NetworkApi | undefined): WebImages => {
   let verdict: "ask" | "yes" | "no" = "ask";
@@ -115,6 +116,10 @@ export const createWebImages = (net: NetworkApi | undefined): WebImages => {
           ? "Web page, not a picture"
           : code === "TOO_LARGE"
           ? "Image over 10 MB"
+          : code === "INVALID_URL" || code === "PRIVATE_ADDRESS"
+          ? "Web image refused (not a public web address)"
+          : code === "NETWORK_NOT_ALLOWED" || code === "NETWORK_DISABLED"
+          ? "Web image, not downloaded (web pictures are off in Settings)"
           : "Web image could not be downloaded",
       );
     }
@@ -135,8 +140,6 @@ export const createWebImages = (net: NetworkApi | undefined): WebImages => {
           : null;
         if (data) {
           give(item, data);
-        } else if (!/^https:/i.test(item.target)) {
-          label(item, "Web image, not downloaded (not https)");
         } else {
           todo.push(item);
         }
@@ -148,13 +151,19 @@ export const createWebImages = (net: NetworkApi | undefined): WebImages => {
         todo.forEach((i) => label(i, "Web image, not downloaded"));
         return;
       }
+      // Asks nothing: the answer is the user's setting.
       if (verdict === "ask") {
         verdict = (await net.askImages(todo.map((i) => i.target)))
           ? "yes"
           : "no";
       }
       if (verdict === "no") {
-        todo.forEach((i) => label(i, "Web image, not downloaded"));
+        todo.forEach((i) =>
+          label(
+            i,
+            "Web image, not downloaded (web pictures are off in Settings)",
+          ),
+        );
         return;
       }
       let next = 0;

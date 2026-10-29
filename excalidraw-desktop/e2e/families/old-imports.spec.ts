@@ -174,10 +174,6 @@ test("notes imported by an older version take the theme and font with one Update
     path: `${SHOTS}/${info.project.name}-old-import-before.png`,
   });
 
-  // The web picture can be downloaded from the same notice (the import plugin asks consent).
-  await expect(
-    page.getByRole("button", { name: "Download pictures", exact: true }),
-  ).toBeVisible();
   await page.getByRole("button", { name: "Update", exact: true }).click();
   await expect(
     page.getByText("Updated 2 imported notes to your theme and font"),
@@ -295,7 +291,7 @@ test("with the offer turned off, opening an old import shows no notice", async (
 // toimprove #108: the oldest imports labelled a web picture's box with the bare alt text (no
 // "Web image" prefix), the address may have no file extension, and both the box and its label
 // carried the link (two overlapping link icons). The kernel note of the owner's vault, in short.
-test("an old import's web pictures with bare labels download from the notice; one link icon stays", async ({
+test("an old import's web pictures with bare labels show by themselves when it opens; one link icon stays", async ({
   page,
 }) => {
   const errors = trackErrors(page);
@@ -307,7 +303,6 @@ test("an old import's web pictures with bare labels download from the notice; on
   await page.evaluate(
     ([pic, article]) => {
       const net = (window as any).__plugins.backend.network;
-      net.answer = true; // the user clicks Allow in the native dialog
       net.images = {
         [pic]: new TextEncoder().encode(
           `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="#f00"/></svg>`,
@@ -340,16 +335,13 @@ test("an old import's web pictures with bare labels download from the notice; on
   ]);
   await treeItem(page, "Kubernetes").click();
   await treeItem(page, "kernel").click();
-  // The notice on opening offers the download (and the theme update: this page is still white).
-  const download = page.getByRole("button", {
-    name: "Download pictures",
-    exact: true,
-  });
-  await expect(download).toBeVisible({ timeout: 15_000 });
-  await download.click();
+  // No click and no question: the picture fills in; the one that is not a picture says so, with Retry.
   await expect(page.getByText("Downloaded 1 of 2 pictures")).toBeVisible({
     timeout: 20_000,
   });
+  await expect(
+    page.getByRole("button", { name: "Retry", exact: true }),
+  ).toBeVisible();
   await expect
     .poll(
       async () =>

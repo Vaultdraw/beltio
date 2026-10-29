@@ -272,31 +272,9 @@ fn network_call(app: &tauri::AppHandle, method: &str, body: &[u8]) -> Result<Vec
             let url = std::str::from_utf8(body).map_err(|_| GatewayError::new("INVALID_ARGUMENT", "The address must be text"))?;
             Ok(crate::network::fetch_image(&dirs, url)?)
         }
-        "network.askImages" => {
-            let parsed: Value = serde_json::from_slice(body).map_err(|_| GatewayError::new("INVALID_ARGUMENT", "urls must be a list of addresses"))?;
-            let urls: Vec<String> = parsed
-                .get("urls")
-                .and_then(Value::as_array)
-                .ok_or_else(|| GatewayError::new("INVALID_ARGUMENT", "urls must be a list of addresses"))?
-                .iter()
-                .filter_map(|u| u.as_str().map(str::to_owned))
-                .take(200)
-                .collect();
-            let hosts = crate::network::hosts_of(&urls);
-            let window = app.webview_windows().into_values().next();
-            let granted = crate::network::grant_images_in(&dirs, &hosts, |title, text| {
-                let mut dialog = rfd::MessageDialog::new()
-                    .set_level(rfd::MessageLevel::Info)
-                    .set_title(title)
-                    .set_description(text)
-                    .set_buttons(rfd::MessageButtons::OkCancelCustom(crate::network::ALLOW_LABEL.into(), crate::network::DENY_LABEL.into()));
-                if let Some(w) = window.as_ref() {
-                    dialog = dialog.set_parent(w);
-                }
-                dialog.show() == rfd::MessageDialogResult::Custom(crate::network::ALLOW_LABEL.into())
-            })?;
-            Ok(vec![u8::from(granted)])
-        }
+        // No question any more (owner, 2026-10-29): web pictures are on unless the user turned
+        // them off (`network.allow_images = false`) or switched the network off.
+        "network.askImages" => Ok(vec![u8::from(crate::network::ensure_network_allowed(&dirs, "images").is_ok())]),
         _ => Err(GatewayError::new("NOT_FOUND", format!("Plugins cannot call \"{method}\""))),
     }
 }

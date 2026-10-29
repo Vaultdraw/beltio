@@ -556,7 +556,7 @@ Paths follow the path rules above: no dot segments, no `.excalidraw-vault`, no s
 
 ### ctx.network (since 0.31.0)
 
-Pictures from the web, for a plugin whose notes show them. Needs the permission `network.images`. The app asks the user in a native dialog (the page cannot click it) that names the sites, once, and writes `network.allow_images`; a plugin that asks again while it is on gets `true` without a dialog.
+Pictures from the web, for a plugin whose notes show them. Needs the permission `network.images`. No dialog: `askImages` resolves `true` unless the user set `network.allow_images = false` or switched the network off (since 2026-10-29; before, the app asked once). Downloads are `http` or `https` to public hosts only.
 
 ```ts
 interface NetworkApi {

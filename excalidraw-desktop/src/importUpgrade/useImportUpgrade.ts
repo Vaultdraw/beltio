@@ -17,6 +17,7 @@ import {
   takeMenuTarget,
 } from "../plugins/menuRegistry";
 import { openReport } from "../commands/configCommands";
+import { isSceneReady } from "../editor/sceneReady";
 import { toastStore } from "../toasts/toastStore";
 import { getImportDrawingLook } from "../vault/newDrawingPaper";
 import { getPreferences } from "../vault/preferences";
@@ -36,8 +37,36 @@ import type { VaultInfo, VaultRepository } from "../vault/types";
 
 const KEY = "import-upgrade";
 const PLUGIN = "markdown-import";
-/** The import plugin's own command that turns web-picture boxes into pictures (asks consent). */
-const DOWNLOAD_PICTURES = "markdown-import.download-images";
+/**
+ * The import plugin's quiet command that turns web-picture boxes into pictures (no question; it
+ * says something only when a picture could not be downloaded).
+ */
+const FILL_PICTURES = "markdown-import.fill-web-images";
+/** Longest wait for the opened drawing to land in the editor before filling its pictures. */
+const READY_MS = 10_000;
+
+/** Runs `fn` once the editor shows document `id` (its scene has landed), or never after READY_MS. */
+const whenSceneReady = (win: Window | null, id: string, fn: () => void) => {
+  const doc = win?.document;
+  if (!doc) {
+    return () => {};
+  }
+  const start = performance.now();
+  let timer = 0;
+  const tick = () => {
+    const editor = doc.querySelector(".vault-editor");
+    if (
+      isSceneReady(editor) &&
+      editor?.getAttribute("data-document-id") === id
+    ) {
+      fn();
+    } else if (performance.now() - start < READY_MS) {
+      timer = window.setTimeout(tick, 100);
+    }
+  };
+  tick();
+  return () => window.clearTimeout(timer);
+};
 
 const importSettings = (win: Window | null) =>
   getPreferences(win).pluginSettings[PLUGIN] ?? {};
@@ -238,51 +267,56 @@ export function useImportUpgrade(o: Options): void {
     } catch {
       return;
     }
-    const old = hasOldLook(scene, upgradeTarget(win));
-    const pictures = webPictureBoxes(scene);
-    if (!old && pictures === 0) {
+    if (!hasOldLook(scene, upgradeTarget(win))) {
       return;
     }
     offered.current = true;
-    const actions = [
-      ...(old
-        ? [
-            {
-              label: "Update",
-              // Through the handler registry, like the palette.
-              run: () => void getRegisteredHandler(UPDATE_IMPORTED_NOTES)?.(),
-            },
-          ]
-        : []),
-      ...(pictures > 0
-        ? [
-            {
-              label: "Download pictures",
-              run: () => {
-                try {
-                  runCommand(DOWNLOAD_PICTURES);
-                } catch {
-                  // The import plugin is off: nothing can download.
-                }
-              },
-            },
-          ]
-        : []),
-    ];
     toastStore.push({
       key: `${KEY}-offer`,
-      message: old
-        ? "This note was imported with the old look"
-        : `This note has ${plural(
-            pictures,
-            "web picture",
-            "web pictures",
-          )} that were not downloaded`,
-      detail: old
-        ? "Your theme and font for every imported note"
-        : "Downloading asks once before contacting the sites",
+      message: "This note was imported with the old look",
+      detail: "Your theme and font for every imported note",
       durationMs: 0,
-      actions,
+      actions: [
+        {
+          label: "Update",
+          // Through the handler registry, like the palette.
+          run: () => void getRegisteredHandler(UPDATE_IMPORTED_NOTES)?.(),
+        },
+      ],
+    });
+  }, [docId, writable]);
+
+  // Web pictures just show, like Obsidian (owner, 2026-10-29): an opened drawing that still has
+  // web-picture boxes (an import from before pictures were downloaded) gets them filled in the
+  // background by the import plugin, once per drawing per session. The editor saves the result.
+  const filled = useRef(new Set<string>());
+  useEffect(() => {
+    const doc = live.current.activeDoc;
+    if (!writable || !doc || filled.current.has(doc.id)) {
+      return;
+    }
+    const { json } = doc.source;
+    // Cheap test first: only a drawing with a linked web address is parsed (any import version,
+    // marked or not, #108).
+    if (!/"link":\s*"(?:https?|data):/i.test(json)) {
+      return;
+    }
+    let scene;
+    try {
+      scene = JSON.parse(json);
+    } catch {
+      return;
+    }
+    if (webPictureBoxes(scene) === 0) {
+      return;
+    }
+    filled.current.add(doc.id);
+    return whenSceneReady(live.current.win, doc.id, () => {
+      try {
+        runCommand(FILL_PICTURES);
+      } catch {
+        // The import plugin is off: the boxes stay, with the link to each picture.
+      }
     });
   }, [docId, writable]);
 }
