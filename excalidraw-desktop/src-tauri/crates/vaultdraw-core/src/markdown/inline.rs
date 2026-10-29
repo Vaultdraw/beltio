@@ -184,7 +184,9 @@ pub struct Inl {
     spans: Vec<Inline>,
     /// Byte ranges of `text` where a `#` must not start a tag (code, wikilinks, math).
     no_tag: Vec<(usize, usize)>,
-    pub hoisted: Vec<Block>,
+    /// Finished pieces before the text being collected: text cut off at each embed or display
+    /// formula, and the embed itself, in source order.
+    parts: Vec<Piece>,
     link_stack: Vec<(usize, String)>,
     wiki: Option<WikiCap>,
     img: Option<ImgCap>,
@@ -193,13 +195,62 @@ pub struct Inl {
     /// Inside a multi-line html comment.
     in_html_comment: bool,
     pub first_start: Option<usize>,
+    /// A bare `^id` with no text before the end: names the block before it.
+    pending_id: Option<String>,
+}
+
+/// One piece of a paragraph, in source order: a run of text, or an embed / display formula
+/// that sat inside it (Obsidian shows them where they are written).
+pub enum Piece {
+    Text { text: String, inline: Vec<Inline> },
+    Block(Block),
 }
 
 pub struct Finished {
-    pub text: String,
-    pub inline: Vec<Inline>,
+    /// Never holds an empty text piece.
+    pub pieces: Vec<Piece>,
+    /// The trailing `^block-id` of the last piece.
     pub block_id: Option<String>,
-    pub hoisted: Vec<Block>,
+}
+
+impl Finished {
+    /// Turns the pieces into blocks in source order; `make(text, inline, first)` builds the block
+    /// for a text piece (`first`: it is the first block). The `^block-id` goes on the last block.
+    pub fn into_blocks(self, range: Range, mut make: impl FnMut(String, Vec<Inline>, bool) -> BlockKind) -> Vec<Block> {
+        let mut out: Vec<Block> = Vec::with_capacity(self.pieces.len());
+        for p in self.pieces {
+            match p {
+                Piece::Text { text, inline } => {
+                    let first = out.is_empty();
+                    out.push(Block { range, kind: make(text, inline, first), block_id: None });
+                }
+                Piece::Block(b) => out.push(b),
+            }
+        }
+        if let Some(last) = out.last_mut() {
+            last.block_id = self.block_id;
+        }
+        out
+    }
+
+    /// The text of every text piece joined by a space, and the other blocks: for places that
+    /// keep one string (table cells, a callout title).
+    pub fn flat(self) -> (String, Vec<Block>) {
+        let mut text = String::new();
+        let mut blocks = Vec::new();
+        for p in self.pieces {
+            match p {
+                Piece::Text { text: t, .. } => {
+                    if !text.is_empty() {
+                        text.push(' ');
+                    }
+                    text.push_str(&t);
+                }
+                Piece::Block(b) => blocks.push(b),
+            }
+        }
+        (text, blocks)
+    }
 }
 
 impl Inl {
@@ -301,11 +352,14 @@ impl Inl {
                     });
                 }
             }
-            Event::DisplayMath(m) => self.hoisted.push(Block {
-                range: ctx.range(range),
-                kind: BlockKind::Math { latex: m.trim().replace('\r', "") },
-                block_id: None,
-            }),
+            Event::DisplayMath(m) => {
+                let block = Block {
+                    range: ctx.range(range),
+                    kind: BlockKind::Math { latex: m.trim().replace('\r', "") },
+                    block_id: None,
+                };
+                self.cut(ctx, block);
+            }
             Event::FootnoteReference(l) => {
                 if !self.in_comment {
                     let start = self.u16len;
@@ -348,7 +402,7 @@ impl Inl {
             Event::End(end) => match end {
                 TagEnd::Emphasis | TagEnd::Strong | TagEnd::Strikethrough | TagEnd::Superscript | TagEnd::Subscript => {}
                 TagEnd::Link => {
-                    if let Some((start, target)) = self.link_stack.pop() {
+                    if let Some((start, target)) = self.link_stack.pop().filter(|(s, _)| *s <= self.u16len) {
                         self.spans.push(Inline {
                             kind: InlineKind::Link,
                             start,
@@ -446,7 +500,7 @@ impl Inl {
             } else {
                 BlockKind::Embed { target, heading, block_ref, alt, width, height }
             };
-            self.hoisted.push(Block { range, kind, block_id: None });
+            self.cut(ctx, Block { range, kind, block_id: None });
         } else {
             let target = decode_dest(&img.dest);
             let lower = target.to_ascii_lowercase();
@@ -458,56 +512,72 @@ impl Inl {
                 let (t, heading, block_ref) = split_target(&target);
                 BlockKind::Embed { target: t, heading, block_ref, alt, width, height }
             };
-            self.hoisted.push(Block { range, kind, block_id: None });
+            self.cut(ctx, Block { range, kind, block_id: None });
         }
     }
 
-    /// Ends the block: trims, pulls off a trailing `^block-id`, finds `#tags` outside code.
+    /// An embed or display formula ends the text so far: it becomes a piece, then the block.
+    fn cut(&mut self, ctx: &mut Ctx, block: Block) {
+        if let Some((text, inline, _)) = self.drain_text(ctx, false) {
+            self.parts.push(Piece::Text { text, inline });
+        }
+        self.parts.push(Piece::Block(block));
+    }
+
+    /// Ends the block: the pieces in source order, the last text trimmed with its `^block-id`
+    /// pulled off and its `#tags` found outside code.
     pub fn finish(mut self, ctx: &mut Ctx) -> Finished {
-        let lead = self.text.len() - self.text.trim_start().len();
+        let mut block_id = None;
+        if let Some((text, inline, id)) = self.drain_text(ctx, true) {
+            self.parts.push(Piece::Text { text, inline });
+            block_id = id;
+        } else if let Some(id) = self.pending_id.take() {
+            block_id = Some(id);
+        }
+        Finished { pieces: self.parts, block_id }
+    }
+
+    /// Takes the text collected so far (trimmed; `last` also pulls off a `^block-id`). None when
+    /// nothing is left; a bare `^id` is kept in `pending_id`.
+    fn drain_text(&mut self, ctx: &mut Ctx, last: bool) -> Option<(String, Vec<Inline>, Option<String>)> {
+        let mut text = std::mem::take(&mut self.text);
+        let mut spans = std::mem::take(&mut self.spans);
+        let mut no_tag = std::mem::take(&mut self.no_tag);
+        self.u16len = 0;
+        let lead = text.len() - text.trim_start().len();
         if lead > 0 {
-            let lead16 = self.text[..lead].encode_utf16().count();
-            self.text.drain(..lead);
-            for s in &mut self.spans {
+            let lead16 = text[..lead].encode_utf16().count();
+            text.drain(..lead);
+            for s in &mut spans {
                 s.start = s.start.saturating_sub(lead16);
                 s.end = s.end.saturating_sub(lead16);
             }
-            for r in &mut self.no_tag {
+            for r in &mut no_tag {
                 r.0 = r.0.saturating_sub(lead);
                 r.1 = r.1.saturating_sub(lead);
             }
         }
-        self.text.truncate(self.text.trim_end().len());
-        let block_id = take_block_id(&mut self.text);
-        if !self.text.is_empty() {
-            let words_text = &self.text;
-            ctx.words += words_text.split_whitespace().count();
+        text.truncate(text.trim_end().len());
+        let block_id = if last { take_block_id(&mut text) } else { None };
+        if text.is_empty() {
+            self.pending_id = block_id;
+            return None;
         }
-        let ascii = self.text.is_ascii();
+        ctx.words += text.split_whitespace().count();
+        let ascii = text.is_ascii();
         let mut tag_spans = Vec::new();
-        for m in find_tags(&self.text) {
-            if self.no_tag.iter().any(|&(a, b)| m.range.0 >= a && m.range.0 < b) {
+        for m in find_tags(&text) {
+            if no_tag.iter().any(|&(a, b)| m.range.0 >= a && m.range.0 < b) {
                 continue;
             }
-            let start = if ascii { m.range.0 } else { self.text[..m.range.0].encode_utf16().count() };
-            let end = if ascii { m.range.1 } else { self.text[..m.range.1].encode_utf16().count() };
+            let start = if ascii { m.range.0 } else { text[..m.range.0].encode_utf16().count() };
+            let end = if ascii { m.range.1 } else { text[..m.range.1].encode_utf16().count() };
             ctx.add_tag(m.display);
-            tag_spans.push(Inline {
-                kind: InlineKind::Tag,
-                start,
-                end,
-                target: m.display.to_string(),
-                alias: None,
-                heading: None,
-                block_ref: None,
-            });
+            tag_spans.push(Inline { kind: InlineKind::Tag, start, end, target: m.display.to_string(), alias: None, heading: None, block_ref: None });
         }
-        let mut inline = self.spans;
-        if !tag_spans.is_empty() {
-            inline.extend(tag_spans);
-        }
-        inline.sort_by_key(|s| (s.start, s.end));
-        Finished { text: self.text, inline, block_id, hoisted: self.hoisted }
+        spans.extend(tag_spans);
+        spans.sort_by_key(|s| (s.start, s.end));
+        Some((text, spans, block_id))
     }
 }
 

@@ -105,7 +105,7 @@
         287
       ],
       "kind": "paragraph",
-      "text": "Text before  text after."
+      "text": "Text before"
     },
     {
       "range": [
@@ -116,6 +116,14 @@
       "target": "inline.png",
       "remote": false,
       "width": 50
+    },
+    {
+      "range": [
+        244,
+        287
+      ],
+      "kind": "paragraph",
+      "text": "text after."
     }
   ],
   "links": [
@@ -215,7 +223,7 @@
   "tags": [],
   "stats": {
     "words": 4,
-    "blocks": 12,
+    "blocks": 13,
     "droppedEmphasis": 0,
     "droppedHtml": 0
   }

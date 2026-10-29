@@ -327,3 +327,48 @@ fn escaped_pipe_in_a_table_cell_keeps_the_target_clean() {
     assert_eq!(image_targets(&doc), vec![("o.png".to_string(), Some(40))]);
     assert!(doc.links.iter().any(|l| l.target == "Note"), "{:?}", doc.links.iter().map(|l| &l.target).collect::<Vec<_>>());
 }
+
+/// One table for the Rust parser and the browser stand-in (`fakeParseMarkdown`): line breaks and
+/// the order of text and pictures inside a paragraph. The TypeScript test reads the same file.
+#[test]
+fn paragraph_cases_match_the_shared_table() {
+    #[derive(serde::Deserialize)]
+    struct Case {
+        name: String,
+        input: String,
+        #[serde(rename = "softBreakNewline")]
+        soft: bool,
+        blocks: Vec<(String, String)>,
+    }
+    let cases: Vec<Case> = serde_json::from_str(include_str!("paragraph_cases.json")).unwrap();
+    for c in cases {
+        let doc = parse_markdown(&c.input, &ParseOptions { soft_break_newline: c.soft });
+        let got: Vec<(String, String)> = doc
+            .blocks
+            .iter()
+            .map(|b| match &b.kind {
+                BlockKind::Paragraph { text, .. } => ("paragraph".to_string(), text.clone()),
+                BlockKind::Image { target, .. } => ("image".to_string(), target.clone()),
+                BlockKind::Embed { target, .. } => ("embed".to_string(), target.clone()),
+                other => panic!("{}: unexpected block {other:?}", c.name),
+            })
+            .collect();
+        assert_eq!(got, c.blocks, "{}", c.name);
+    }
+}
+
+#[test]
+fn a_picture_inside_a_list_item_keeps_its_place() {
+    let doc = parse("- one ![[a.png]] two\n- ![[b.png]]\n- [ ] task\n");
+    let kinds: Vec<String> = doc
+        .blocks
+        .iter()
+        .map(|b| match &b.kind {
+            BlockKind::ListItem { text, .. } => format!("item:{text}"),
+            BlockKind::Paragraph { text, .. } => format!("p:{text}"),
+            BlockKind::Image { target, .. } => format!("img:{target}"),
+            _ => "other".to_string(),
+        })
+        .collect();
+    assert_eq!(kinds, vec!["item:one", "img:a.png", "p:two", "item:", "img:b.png", "item:task"]);
+}

@@ -1,0 +1,325 @@
+[
+ {
+  "name": "single newline joins with a space (strict line breaks on)",
+  "input": "one\ntwo\nthree",
+  "softBreakNewline": false,
+  "blocks": [
+   [
+    "paragraph",
+    "one two three"
+   ]
+  ]
+ },
+ {
+  "name": "single newline stays a line break (Obsidian default)",
+  "input": "one\ntwo\nthree",
+  "softBreakNewline": true,
+  "blocks": [
+   [
+    "paragraph",
+    "one\ntwo\nthree"
+   ]
+  ]
+ },
+ {
+  "name": "blank line starts a paragraph",
+  "input": "one\n\ntwo",
+  "softBreakNewline": true,
+  "blocks": [
+   [
+    "paragraph",
+    "one"
+   ],
+   [
+    "paragraph",
+    "two"
+   ]
+  ]
+ },
+ {
+  "name": "blank line starts a paragraph (strict)",
+  "input": "one\n\ntwo",
+  "softBreakNewline": false,
+  "blocks": [
+   [
+    "paragraph",
+    "one"
+   ],
+   [
+    "paragraph",
+    "two"
+   ]
+  ]
+ },
+ {
+  "name": "hard break with two spaces",
+  "input": "one  \ntwo",
+  "softBreakNewline": false,
+  "blocks": [
+   [
+    "paragraph",
+    "one\ntwo"
+   ]
+  ]
+ },
+ {
+  "name": "hard break with two spaces (soft on)",
+  "input": "one  \ntwo",
+  "softBreakNewline": true,
+  "blocks": [
+   [
+    "paragraph",
+    "one\ntwo"
+   ]
+  ]
+ },
+ {
+  "name": "hard break with a backslash",
+  "input": "one\\\ntwo",
+  "softBreakNewline": false,
+  "blocks": [
+   [
+    "paragraph",
+    "one\ntwo"
+   ]
+  ]
+ },
+ {
+  "name": "hard break with a backslash (soft on)",
+  "input": "one\\\ntwo",
+  "softBreakNewline": true,
+  "blocks": [
+   [
+    "paragraph",
+    "one\ntwo"
+   ]
+  ]
+ },
+ {
+  "name": "embed alone is a picture",
+  "input": "![[a.png|599]]",
+  "softBreakNewline": true,
+  "blocks": [
+   [
+    "image",
+    "a.png"
+   ]
+  ]
+ },
+ {
+  "name": "embed at the start, three lines after (Data Modelling shape)",
+  "input": "![[Ink 1.ink.png|599]]\nline one\nline two\nline three",
+  "softBreakNewline": true,
+  "blocks": [
+   [
+    "image",
+    "Ink 1.ink.png"
+   ],
+   [
+    "paragraph",
+    "line one\nline two\nline three"
+   ]
+  ]
+ },
+ {
+  "name": "embed at the start, strict",
+  "input": "![[a.png]]\nline one\nline two",
+  "softBreakNewline": false,
+  "blocks": [
+   [
+    "image",
+    "a.png"
+   ],
+   [
+    "paragraph",
+    "line one line two"
+   ]
+  ]
+ },
+ {
+  "name": "embed in the middle",
+  "input": "before ![[a.png]] after",
+  "softBreakNewline": true,
+  "blocks": [
+   [
+    "paragraph",
+    "before"
+   ],
+   [
+    "image",
+    "a.png"
+   ],
+   [
+    "paragraph",
+    "after"
+   ]
+  ]
+ },
+ {
+  "name": "embed in the middle on its own line",
+  "input": "before\n![[a.png]]\nafter",
+  "softBreakNewline": true,
+  "blocks": [
+   [
+    "paragraph",
+    "before"
+   ],
+   [
+    "image",
+    "a.png"
+   ],
+   [
+    "paragraph",
+    "after"
+   ]
+  ]
+ },
+ {
+  "name": "embed in the middle on its own line (strict)",
+  "input": "before\n![[a.png]]\nafter",
+  "softBreakNewline": false,
+  "blocks": [
+   [
+    "paragraph",
+    "before"
+   ],
+   [
+    "image",
+    "a.png"
+   ],
+   [
+    "paragraph",
+    "after"
+   ]
+  ]
+ },
+ {
+  "name": "embed at the end",
+  "input": "text\n![[a.png]]",
+  "softBreakNewline": true,
+  "blocks": [
+   [
+    "paragraph",
+    "text"
+   ],
+   [
+    "image",
+    "a.png"
+   ]
+  ]
+ },
+ {
+  "name": "two embeds in a row",
+  "input": "![[a.png]]![[b.png]]",
+  "softBreakNewline": true,
+  "blocks": [
+   [
+    "image",
+    "a.png"
+   ],
+   [
+    "image",
+    "b.png"
+   ]
+  ]
+ },
+ {
+  "name": "two embeds in a row on two lines",
+  "input": "![[a.png]]\n![[b.png]]",
+  "softBreakNewline": true,
+  "blocks": [
+   [
+    "image",
+    "a.png"
+   ],
+   [
+    "image",
+    "b.png"
+   ]
+  ]
+ },
+ {
+  "name": "two embeds with text between",
+  "input": "x ![[a.png]] y ![[b.png]] z",
+  "softBreakNewline": true,
+  "blocks": [
+   [
+    "paragraph",
+    "x"
+   ],
+   [
+    "image",
+    "a.png"
+   ],
+   [
+    "paragraph",
+    "y"
+   ],
+   [
+    "image",
+    "b.png"
+   ],
+   [
+    "paragraph",
+    "z"
+   ]
+  ]
+ },
+ {
+  "name": "note embed in the middle",
+  "input": "a ![[Other Note]] b",
+  "softBreakNewline": true,
+  "blocks": [
+   [
+    "paragraph",
+    "a"
+   ],
+   [
+    "embed",
+    "Other Note"
+   ],
+   [
+    "paragraph",
+    "b"
+   ]
+  ]
+ },
+ {
+  "name": "markdown picture in the middle",
+  "input": "a ![alt](p.png) b",
+  "softBreakNewline": true,
+  "blocks": [
+   [
+    "paragraph",
+    "a"
+   ],
+   [
+    "image",
+    "p.png"
+   ],
+   [
+    "paragraph",
+    "b"
+   ]
+  ]
+ },
+ {
+  "name": "picture after a hard break",
+  "input": "a  \n![[a.png]]\nb",
+  "softBreakNewline": true,
+  "blocks": [
+   [
+    "paragraph",
+    "a"
+   ],
+   [
+    "image",
+    "a.png"
+   ],
+   [
+    "paragraph",
+    "b"
+   ]
+  ]
+ }
+]
