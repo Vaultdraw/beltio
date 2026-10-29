@@ -12,10 +12,12 @@ import {
 import { act } from "@testing-library/react";
 
 import { Excalidraw } from "../index";
-import { actionChangeFontFamily } from "./actionProperties";
+
 import { API } from "../tests/helpers/api";
 import { UI } from "../tests/helpers/ui";
 import { render } from "../tests/test-utils";
+
+import { actionChangeFontFamily } from "./actionProperties";
 
 describe("element locking", () => {
   beforeEach(async () => {
@@ -284,7 +286,10 @@ describe("font family of bold text", () => {
         window.h.app.actionManager.executeAction(
           actionChangeFontFamily,
           "api",
-          { currentItemFontFamily: FONT_FAMILY[to] },
+          {
+            currentItemFontFamily: FONT_FAMILY[to],
+            currentHoveredFontFamily: null,
+          },
         );
       });
       expect(window.h.elements[0]).toMatchObject({
@@ -303,6 +308,7 @@ describe("font family of bold text", () => {
     act(() => {
       window.h.app.actionManager.executeAction(actionChangeFontFamily, "api", {
         currentItemFontFamily: FONT_FAMILY.Nunito,
+        currentHoveredFontFamily: null,
       });
     });
     expect(window.h.elements[0]).toMatchObject({
