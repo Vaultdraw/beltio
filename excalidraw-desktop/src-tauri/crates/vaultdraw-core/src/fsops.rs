@@ -419,6 +419,8 @@ mod fs_safety_tests {
         let t = setup(&[("été.excalidraw", "KEEP"), ("notes.excalidraw", "other")]);
         let e = move_entry_paths(t.path(), "notes.excalidraw", "Été.excalidraw").unwrap_err();
         assert_eq!(e.code, "NAME_COLLISION");
+        // The wording must not promise more than the fold does: `ete` and `été` are different names.
+        assert!(e.message.contains("capitals") && !e.message.contains("accents"), "{}", e.message);
         assert_eq!(fs::read_to_string(t.path().join("été.excalidraw")).unwrap(), "KEEP");
         assert_eq!(fs::read_to_string(t.path().join("notes.excalidraw")).unwrap(), "other");
     }
