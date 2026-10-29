@@ -122,7 +122,10 @@ test("Markdown mode in dark: lists, tasks (Toggle task) and a quote; the Setting
     .click();
   await expect(page.locator("html")).toHaveClass(/dark/);
   await dialog.getByRole("tab", { name: "Drawing", exact: true }).click();
-  await dialog.getByTestId("setting-markdown-typing").getByRole("switch").click();
+  await dialog
+    .getByTestId("setting-markdown-typing")
+    .getByRole("switch")
+    .click();
   await page.screenshot({ path: `${SHOTS}/02-settings-dark.png` });
   await page.getByRole("button", { name: "Close settings" }).click();
   await expect(chip(page)).toHaveAttribute("aria-pressed", "true");
