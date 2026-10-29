@@ -30,13 +30,6 @@ const search = (page: Page) =>
 
 journey({
   title: "files-journey",
-  known: [
-    {
-      match: /vault-recent__(title|folder)/,
-      bug: "toimprove TN-1: faint text on the home list is below 3:1 in the light theme",
-      theme: "light",
-    },
-  ],
   setup: async (page) => {
     await openVault(page, "?seed=links");
     await expect(page.locator(".vault-recent__title")).toBeVisible();

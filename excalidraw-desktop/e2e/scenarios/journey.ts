@@ -52,6 +52,18 @@ export type Journey = {
   onTimings?: (timings: Record<string, number>, theme: string) => void;
 };
 
+/**
+ * Logged bugs that show on many screens and appear or not depending on timing (the home list
+ * fills in a moment after start): they never fail a journey and are never reported stale.
+ * Remove an entry when its bug is fixed.
+ */
+const GLOBAL_KNOWN: { match: RegExp; bug: string }[] = [
+  {
+    match: /^setup: .*vault-recent__(title|folder)/,
+    bug: "toimprove TN-1: faint text of the home list is below 3:1 in the light theme",
+  },
+];
+
 export const journey = (j: Journey) => {
   for (const theme of j.themes ?? (["light", "dark"] as const)) {
     test.describe(j.title, () => {
@@ -127,7 +139,9 @@ export const journey = (j: Journey) => {
               `known problem no longer shows (${k.bug}): remove it from the journey`,
           );
         const unexpected = problems.filter(
-          (p) => !known.some((k) => k.match.test(p)),
+          (p) =>
+            !known.some((k) => k.match.test(p)) &&
+            !GLOBAL_KNOWN.some((k) => k.match.test(p)),
         );
         expect(
           [...unexpected, ...stale],

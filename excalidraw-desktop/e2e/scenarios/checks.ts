@@ -31,7 +31,9 @@ const NOTICES =
 export const inspect = (
   page: Page,
   options: CheckOptions = {},
-): Promise<Problems & { dialogs: number; notices: number }> =>
+): Promise<
+  Problems & { dialogs: number; notices: number; dialogNames: string[] }
+> =>
   page.evaluate(
     ({ dialogsSel, noticesSel, scope, minContrast }) => {
       const root: Element =
@@ -276,15 +278,22 @@ export const inspect = (
         }
       }
 
-      const visible = (sel: string) =>
+      const visibleEls = (sel: string) =>
         Array.from(document.querySelectorAll(sel)).filter(
           (e) => shown(e) && !e.closest("[aria-hidden='true']"),
-        ).length;
+        );
+      const visible = (sel: string) => visibleEls(sel).length;
+      // The editor's own property pickers carry role=dialog; they are not dialogs the user opened.
+      const isPicker = (e: Element) =>
+        e.matches(".color-picker-container, .FontPicker__container");
+      const dialogEls = visibleEls(dialogsSel).filter((e) => !isPicker(e));
+      const dialogNames = dialogEls.map(label);
       return {
         layout: [...new Set(layout)],
         contrast: [...new Set(contrast)],
         focus: [...new Set(focus)],
-        dialogs: visible(dialogsSel),
+        dialogs: dialogEls.length,
+        dialogNames,
         notices: visible(noticesSel),
       };
     },
@@ -308,7 +317,13 @@ export const stepProblems = async (
   }
   const expectedDialogs = options.dialogs ?? 0;
   if (r.dialogs !== expectedDialogs) {
-    out.push(`${r.dialogs} dialog(s) open, expected ${expectedDialogs}`);
+    out.push(
+      `${
+        r.dialogs
+      } dialog(s) open, expected ${expectedDialogs}: ${r.dialogNames.join(
+        " | ",
+      )}`,
+    );
   }
   if (options.notices !== undefined && r.notices !== options.notices) {
     out.push(`${r.notices} notice(s) showing, expected ${options.notices}`);
