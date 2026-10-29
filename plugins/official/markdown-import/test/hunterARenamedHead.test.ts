@@ -43,6 +43,9 @@ describe("re-import: a note whose first drawing is gone", () => {
       },
       ui: { toast() {} },
       vault: {
+        async list() {
+          return [...existing].map((path) => ({ kind: "drawing", path }));
+        },
         async replaceDrawing(path: string) {
           if (!existing.has(path)) {
             created.push(path);

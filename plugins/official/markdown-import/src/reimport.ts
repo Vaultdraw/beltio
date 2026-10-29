@@ -97,6 +97,8 @@ export interface ReimportSummary {
   partsKept: string[];
   notFound: string[];
   failed: string[];
+  /** Notes that now need more parts: a run over unchanged notes creates no drawing. */
+  grew: string[];
   /** Notes whose drawing has pictures while their web pictures could not be downloaded now. */
   keptPictures: string[];
 }
@@ -193,6 +195,30 @@ export function partsMissing(
   return false;
 }
 
+/** The drawings in the folder of `head` (listed once per folder and run). */
+function drawingsBeside(
+  ctx: PluginContext,
+  head: string,
+  dirs: Map<string, Promise<Set<string>>>,
+): Promise<Set<string>> {
+  const slash = head.lastIndexOf("/");
+  const dir = slash < 0 ? "" : head.slice(0, slash);
+  let got = dirs.get(dir);
+  if (!got) {
+    got = Promise.resolve()
+      .then(() => ctx.vault.list(dir))
+      .then(
+        (entries) =>
+          new Set(
+            entries.filter((e) => e.kind !== "folder").map((e) => e.path),
+          ),
+      )
+      .catch(() => new Set<string>());
+    dirs.set(dir, got);
+  }
+  return got;
+}
+
 /** True when any existing part of the note holds a picture. */
 async function holdsPictures(
   ctx: PluginContext,
@@ -225,7 +251,7 @@ export async function reimport(
   const settings = readSettings(ctx);
   const plan = planImport(await source.list(), settings);
   const matches = matchNotes(drawings, plan.items);
-  const existing = new Set(drawings);
+  const dirs = new Map<string, Promise<Set<string>>>();
   const summary: ReimportSummary = {
     written: [],
     changed: [],
@@ -236,6 +262,7 @@ export async function reimport(
     notFound: onlyUntouched ? [] : drawings.filter((d) => !matches.has(d)),
     failed: [],
     keptPictures: [],
+    grew: [],
   };
   // One pass per note (a note's parts are written together, or not at all).
   const notes = new Map<string, { item: PlanItem; root: string }>();
@@ -289,9 +316,20 @@ export async function reimport(
     }
     const headRel = [...built.keys()][0];
     const head = headRel && (root ? `${root}/${headRel}` : headRel);
-    if (onlyUntouched && head && partsMissing(head, existing)) {
-      summary.changed.push(head);
-      continue;
+    // Re-import writes only drawings that exist (CTO rule, hunter A-6): a part the user
+    // deleted, renamed or moved is never written back. Only "Re-import from its Markdown",
+    // chosen for one note, may add new parts after the last one.
+    if (head) {
+      const here = await drawingsBeside(ctx, head, dirs);
+      if (partsMissing(head, here)) {
+        summary.changed.push(head);
+        continue;
+      }
+      const paths = [...built.keys()].map((r) => (root ? `${root}/${r}` : r));
+      if (onlyUntouched && paths.some((p) => !here.has(p))) {
+        summary.grew.push(head);
+        continue;
+      }
     }
     // Never trade pictures the drawing holds for "not downloaded" boxes (hunter A-8).
     if (missed > 0 && (await holdsPictures(ctx, built, root))) {
@@ -371,6 +409,17 @@ export async function reimport(
               )} kept, as ${
                 summary.partsKept.length === 1 ? "it" : "they"
               } may have been changed: ${names(summary.partsKept)}`
+            : "",
+          summary.grew.length > 0
+            ? `${plural(
+                summary.grew.length,
+                "note is",
+                "notes are",
+              )} longer now and left as ${
+                summary.grew.length === 1 ? "it was" : "they were"
+              }: re-import ${
+                summary.grew.length === 1 ? "it" : "each"
+              } from its menu to add the new parts`
             : "",
           summary.keptPictures.length > 0
             ? `${plural(

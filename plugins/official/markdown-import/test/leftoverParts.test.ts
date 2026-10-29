@@ -44,6 +44,7 @@ const run = async (
     notFound: [],
     failed: [],
     keptPictures: [],
+    grew: [],
   };
   await dropLeftoverParts(ctx, head, partCount, summary);
   return { trashed, kept: summary.partsKept };

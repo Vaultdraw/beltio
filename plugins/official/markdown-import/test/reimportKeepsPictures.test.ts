@@ -59,6 +59,9 @@ const run = async (hasPicture: boolean) => {
     },
     ui: { toast() {} },
     vault: {
+      async list() {
+        return [{ kind: "drawing", path: "Note.excalidraw" }];
+      },
       async readDrawing() {
         return {
           elements: hasPicture ? [{ type: "image" }] : [{ type: "text" }],
