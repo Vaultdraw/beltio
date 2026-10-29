@@ -1,3 +1,5 @@
+import { IMAGE_MIME_TYPES } from "@excalidraw/common";
+
 import { exportToSvg } from "../scene/export";
 import { API } from "../tests/helpers/api";
 
@@ -39,6 +41,15 @@ describe("SVG export of image files", () => {
   it("accepts only base64 data: images", () => {
     expect(isSafeImageDataURL(PIXEL)).toBe(true);
     expect(isSafeImageDataURL("data:image/svg+xml;base64,PHN2Zy8+")).toBe(true);
+    // Every type the editor accepts as an image is kept (ICO and JFIF used to be dropped).
+    for (const type of Object.values(IMAGE_MIME_TYPES)) {
+      expect(isSafeImageDataURL(`data:${type};base64,AAAA`)).toBe(true);
+      expect(
+        isSafeImageDataURL(`data:${type.toUpperCase()};charset=x;base64,AAAA`),
+      ).toBe(true);
+      expect(isSafeImageDataURL(`data:${type},AAAA`)).toBe(false);
+    }
+    expect(isSafeImageDataURL("data:image/x-iconx;base64,AAAA")).toBe(false);
     for (const bad of [
       "https://tracker.example/p.png",
       "http://x/p.png",

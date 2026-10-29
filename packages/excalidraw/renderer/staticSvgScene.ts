@@ -11,6 +11,7 @@ import {
   getVerticalOffset,
   applyDarkModeFilter,
   MIME_TYPES,
+  IMAGE_MIME_TYPES,
   STICKY_NOTE_EDGE_SHADOW_OPACITY,
   STICKY_NOTE_EDGE_SHADOW_WIDTH,
   STICKY_NOTE_FOOTER,
@@ -57,8 +58,14 @@ import type { AppState, BinaryFiles } from "../types";
 import type { Drawable } from "roughjs/bin/core";
 import type { RoughSVG } from "roughjs/bin/svg";
 
-const SAFE_IMAGE_DATA_URL =
-  /^data:image\/(?:png|jpe?g|gif|webp|avif|bmp|svg\+xml)(?:;[\w.=-]+)*;base64,/i;
+// One source: every type the editor accepts as an image (`IMAGE_MIME_TYPES`), so an image the
+// editor shows is never dropped from an export.
+const SAFE_IMAGE_DATA_URL = new RegExp(
+  `^data:(?:${Object.values(IMAGE_MIME_TYPES)
+    .map((t) => t.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&"))
+    .join("|")})(?:;[\\w.=-]+)*;base64,`,
+  "i",
+);
 
 /** True for `data:image/...;base64,` only: the one form an exported SVG may carry. */
 export const isSafeImageDataURL = (url: unknown): url is string =>

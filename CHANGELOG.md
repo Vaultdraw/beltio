@@ -21,6 +21,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 - **Import file takes BMP, ICO, AVIF and JFIF** even when the system gives no file type; a full favourites list says it is full instead of "Removed".
 
+- **SVG export keeps ICO and JFIF images.** The list of image types an exported SVG may embed is built from the one list of types the editor accepts, so a pasted favicon or a `.jfif` photo no longer becomes an empty placeholder.
+
 - **Auto-export says plainly when a file is in the way.** If a file with the export's name was not made by auto-export (an older export, or a copy a sync conflict left), the plugin leaves it alone and now shows one message per file naming it and saying to delete or rename it, instead of failing quietly on every save.
 
 - **The community plugin and theme list addresses come from `config.toml` only.** `plugins.registry_url` and `themes.index_url` are no longer read from the Settings file (`overrides.toml`), so nothing in the page can point the list at another GitHub repository; Settings and scripts can no longer write them.
