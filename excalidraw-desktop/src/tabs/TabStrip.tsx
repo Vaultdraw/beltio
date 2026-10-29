@@ -372,7 +372,7 @@ export const TabStrip = memo(
 
     return (
       <div
-        className="vault-tabs"
+        className={narrow ? "vault-tabs vault-tabs--narrow" : "vault-tabs"}
         data-testid="vault-tabs"
         ref={stripRef}
         onDoubleClick={onStripDoubleClick}
@@ -424,18 +424,21 @@ export const TabStrip = memo(
           <IconPlus width={14} height={14} />
         </button>
         {narrow ? (
-          <button
-            type="button"
-            className="vault-tabs__count"
-            data-testid="vault-tab-count"
-            aria-label="Show open tabs"
-            aria-haspopup="listbox"
-            aria-expanded={listOpen}
-            onMouseDown={keepFocus}
-            onClick={() => setListOpen((o) => !o)}
-          >
-            {activeIndex + 1} / {tabs.length}
-          </button>
+          // "1 / 1" says nothing and takes the room the only tab needs (hunter A-7).
+          tabs.length > 1 && (
+            <button
+              type="button"
+              className="vault-tabs__count"
+              data-testid="vault-tab-count"
+              aria-label="Show open tabs"
+              aria-haspopup="listbox"
+              aria-expanded={listOpen}
+              onMouseDown={keepFocus}
+              onClick={() => setListOpen((o) => !o)}
+            >
+              {activeIndex + 1} / {tabs.length}
+            </button>
+          )
         ) : (
           <button
             type="button"

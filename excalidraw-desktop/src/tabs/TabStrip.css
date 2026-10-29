@@ -359,3 +359,15 @@
   border-color: var(--vault-primary);
   color: var(--vault-on-primary);
 }
+
+/* Narrow strip (one tab shown): the tab takes the room left beside the
+ * buttons and shrinks below its usual minimum, so nothing sits on it (hunter A-7). */
+.vault-tabs--narrow .vault-tabs__list {
+  flex: 1 1 0;
+}
+
+.vault-tabs--narrow .vault-tabs__tab {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+}
