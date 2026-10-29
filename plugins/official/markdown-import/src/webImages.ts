@@ -28,16 +28,30 @@ const label = (item: ImageItem, why: string): void => {
   item.alt = `${why}: ${item.alt || item.target}`;
 };
 
-/** The bytes of a `data:image/...;base64,` address, or null. */
+/** The bytes of a `data:` address (base64 or percent-encoded, any parameters), or null. */
 const dataBytes = (target: string): Uint8Array | null => {
-  const m = /^data:[^,;]*;base64,(.*)$/is.exec(target);
+  const m = /^data:([^,]*),(.*)$/is.exec(target);
   if (!m) {
     return null;
   }
   try {
-    return Uint8Array.from(atob(m[1].replace(/\s+/g, "")), (c) =>
-      c.charCodeAt(0),
-    );
+    if (/;\s*base64$/i.test(m[1])) {
+      return Uint8Array.from(atob(m[2].replace(/\s+/g, "")), (c) =>
+        c.charCodeAt(0),
+      );
+    }
+    // Percent-encoded text or bytes (`%XX`); anything else is itself.
+    const out: number[] = [];
+    const encoder = new TextEncoder();
+    // Plain text between `%XX` bytes is encoded whole, so surrogate pairs stay intact.
+    for (const part of m[2].split(/(%[0-9a-f]{2})/i)) {
+      if (/^%[0-9a-f]{2}$/i.test(part)) {
+        out.push(parseInt(part.slice(1), 16));
+      } else {
+        out.push(...encoder.encode(part));
+      }
+    }
+    return Uint8Array.from(out);
   } catch {
     return null;
   }
