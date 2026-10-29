@@ -1357,8 +1357,7 @@ export const actionChangeFontFamily = register<{
                 : nextFontFamily!;
             if (
               isTextElement(oldElement) &&
-              (oldElement.fontFamily !== family ||
-                currentItemFontFamily) // force update on selection
+              (oldElement.fontFamily !== family || currentItemFontFamily) // force update on selection
             ) {
               const newElement: ExcalidrawTextElement = newElementWith(
                 oldElement,
