@@ -340,3 +340,218 @@ test("hunt: a note that shrank to one page does not leave its old parts behind a
   expect(after, "old parts of a note that is now one page").toEqual(["Long"]);
   expect(errors).toEqual([]);
 });
+
+const SVG_RED = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="#f00"/></svg>`;
+const PIC1 = "https://pics.test/one.svg";
+const PIC2 = "https://pics.test/two";
+
+const sceneKinds = async (page: Page, path: string) => {
+  const s = await readScene(page, path);
+  const els = s.elements.filter((e: any) => !e.isDeleted);
+  return {
+    images: els.filter((e: any) => e.type === "image").length,
+    boxes: els.filter((e: any) => e.type === "rectangle" && e.link).length,
+    texts: els
+      .filter((e: any) => e.type === "text")
+      .map((e: any) => e.text as string),
+  };
+};
+
+const importOne = async (page: Page, files: Record<string, string>) => {
+  await page.evaluate((f) => {
+    (window as any).__plugins.backend.folders.sourcePick = {
+      name: "Vault",
+      files: f,
+    };
+  }, files);
+  await clickMainMenuItem(page, "Import Obsidian vault…");
+  await expect(row(page, "Vault")).toBeVisible({ timeout: 30_000 });
+};
+
+test("hunt: a web picture that failed fills in on Retry, and stays after a reload", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page, "?plugins=markdown-import");
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
+  await seedAndOpen(page, "Start.excalidraw");
+  // One picture answers, one is down (no entry: a network error), one is a page.
+  await page.evaluate(
+    ([a, svg]) => {
+      (window as any).__plugins.backend.network.images = {
+        [a]: new TextEncoder().encode(svg),
+      };
+    },
+    [PIC1, SVG_RED] as const,
+  );
+  await importOne(page, {
+    "Pics.md": `before\n\n![one](${PIC1})\n\nmiddle\n\n![two](${PIC2})\n\nafter`,
+  });
+  await row(page, "Vault/Pics.excalidraw").click();
+  await expect(page.getByText(/could not be downloaded/).first()).toBeVisible({
+    timeout: 20_000,
+  });
+  let k = await sceneKinds(page, "Vault/Pics.excalidraw");
+  expect(k.images, "the reachable picture is in").toBe(1);
+  expect(k.boxes, "the unreachable one is a box").toBe(1);
+  // Order on the page: before, picture 1, middle, box 2, after.
+  const order = await readScene(page, "Vault/Pics.excalidraw");
+  const ys = (pred: (e: any) => boolean) =>
+    order.elements
+      .filter((e: any) => !e.isDeleted && pred(e))
+      .map((e: any) => e.y as number);
+  const yBefore = ys((e) => e.text === "before")[0];
+  const yMid = ys((e) => e.text === "middle")[0];
+  const yAfter = ys((e) => e.text === "after")[0];
+  const yImg = ys((e) => e.type === "image")[0];
+  const yBox = ys((e) => e.type === "rectangle" && !!e.link)[0];
+  expect([yBefore, yImg, yMid, yBox, yAfter]).toEqual(
+    [...[yBefore, yImg, yMid, yBox, yAfter]].sort((a, b) => a - b),
+  );
+  // The server comes back; Retry.
+  await page.evaluate(
+    ([b, svg]) => {
+      (window as any).__plugins.backend.network.images[b] =
+        new TextEncoder().encode(svg);
+    },
+    [PIC2, SVG_RED] as const,
+  );
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect
+    .poll(
+      async () => (await sceneKinds(page, "Vault/Pics.excalidraw")).images,
+      {
+        timeout: 20_000,
+      },
+    )
+    .toBe(2);
+  k = await sceneKinds(page, "Vault/Pics.excalidraw");
+  expect(k.boxes).toBe(0);
+  expect(k.texts.join("|")).not.toMatch(/could not be downloaded/);
+  // Reload: the pictures are in the file, not fetched again.
+  const before = await page.evaluate(
+    () => (window as any).__plugins.backend.network.fetched.length,
+  );
+  await page.reload();
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
+  const after = await page.evaluate(
+    () => (window as any).__plugins.backend.network.fetched.length,
+  );
+  expect(after).toBeLessThanOrEqual(before);
+  expect(errors).toEqual([]);
+});
+
+test("hunt: strict line breaks and coloured headings settings change the next import and a re-import", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page, "?plugins=markdown-import");
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
+  await seedAndOpen(page, "Start.excalidraw");
+  const NOTE_TXT = "# Title\n\nline one\nline two\n\n## Sub\n\nend";
+  await importOne(page, { "Lines.md": NOTE_TXT });
+  const scene0 = await readScene(page, "Vault/Lines.excalidraw");
+  const t0 = scene0.elements
+    .filter((e: any) => e.type === "text")
+    .map((e: any) => e.text);
+  expect(t0.join("|")).toContain("line one\nline two");
+  const h0 = scene0.elements.find(
+    (e: any) => e.customData?.["plugins.markdown-import"]?.role === "h1",
+  );
+  expect(h0, "heading role with colours on").toBeTruthy();
+
+  await page.evaluate(() =>
+    (window as any).__updatePreferences({
+      pluginSettings: {
+        "markdown-import": { strict_line_breaks: true, heading_colors: false },
+      },
+    }),
+  );
+  await page.evaluate(
+    (f) => {
+      (window as any).__plugins.backend.folders.sourcePick = {
+        name: "Vault",
+        files: f,
+      };
+    },
+    { "Lines.md": NOTE_TXT },
+  );
+  await row(page, "Vault").click({ button: "right" });
+  await page
+    .getByRole("menuitem", { name: "Re-import unchanged imported notes here" })
+    .click();
+  await expect(page.getByText(/Re-imported 1 note/)).toBeVisible({
+    timeout: 30_000,
+  });
+  const scene1 = await readScene(page, "Vault/Lines.excalidraw");
+  const t1 = scene1.elements
+    .filter((e: any) => e.type === "text")
+    .map((e: any) => e.text);
+  expect(t1.join("|")).toContain("line one line two");
+  expect(
+    scene1.elements.some(
+      (e: any) => e.customData?.["plugins.markdown-import"]?.role === "h1",
+    ),
+    "no heading colour role when coloured headings are off",
+  ).toBe(false);
+  // The heading is still a heading (bigger than body text).
+  const head = scene1.elements.find((e: any) => e.text === "Title");
+  const body = scene1.elements.find((e: any) => e.text === "end");
+  expect(head.fontSize).toBeGreaterThan(body.fontSize);
+  expect(errors).toEqual([]);
+});
+
+const liveTexts = (page: Page) =>
+  page.evaluate(() => {
+    const el = document.querySelector(".vault-editor canvas.interactive")!;
+    const key = Object.keys(el).find((k) => k.startsWith("__reactFiber"))!;
+    let fiber = (el as any)[key];
+    while (fiber) {
+      const s = fiber.stateNode;
+      if (s && s.scene && s.state && typeof s.state.scrollX === "number") {
+        return s.scene
+          .getNonDeletedElements()
+          .filter((e: any) => e.type === "text")
+          .map((e: any) => e.text as string);
+      }
+      fiber = fiber.return;
+    }
+    throw new Error("editor instance not found");
+  });
+
+test("hunt: Re-import of the open note shows the new note on the canvas, and Undo does not blank it", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page, "?plugins=markdown-import");
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
+  await seedAndOpen(page, "Start.excalidraw");
+  await importOne(page, { "Open.md": "open v1" });
+  await row(page, "Vault/Open.excalidraw").click();
+  await expect.poll(() => liveTexts(page)).toContain("open v1");
+  await page.evaluate(() => {
+    (window as any).__plugins.backend.folders.sourcePick = {
+      name: "Vault",
+      files: { "Open.md": "open v2" },
+    };
+  });
+  await row(page, "Vault/Open.excalidraw").click({ button: "right" });
+  await page
+    .getByRole("menuitem", { name: "Re-import from its Markdown" })
+    .click();
+  await expect(page.getByText("Re-imported 1 note")).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect
+    .poll(() => liveTexts(page), { timeout: 10_000 })
+    .toContain("open v2");
+  // Undo right after the reload must not wipe or revert the canvas.
+  await page
+    .locator(".vault-editor canvas.interactive")
+    .click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press("Meta+z");
+  await page.waitForTimeout(500);
+  expect(await liveTexts(page)).toContain("open v2");
+  // The old note is in History (Restore brings it back).
+  expect(errors).toEqual([]);
+});
