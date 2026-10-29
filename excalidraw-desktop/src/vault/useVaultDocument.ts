@@ -100,6 +100,9 @@ const operationId = () =>
 const isNotFound = (error: unknown) =>
   /not.?found|deleted/i.test(errorMessage(error));
 
+/** Paths checked when the open drawing vanishes in a watcher batch (a rename is two paths). */
+const MAX_RENAME_PROBES = 32;
+
 export const useVaultDocument = (
   repository: VaultRepository,
   vault: VaultInfo | null,
@@ -108,6 +111,8 @@ export const useVaultDocument = (
     history?: HistoryRepository;
     /** A save produced `revision` for `path` (thumbnail staleness). */
     onDrawingSaved?: (path: string, revision: string) => void;
+    /** The open drawing was renamed or moved outside the app and now lives at `to` (C-4). */
+    onOutsideRename?: (from: string, to: string) => void;
   },
 ): UseVaultDocumentResult => {
   const [document, setDocument] = useState<VaultDocument | null>(null);
@@ -129,6 +134,8 @@ export const useVaultDocument = (
   historyRef.current = options?.history;
   const onDrawingSavedRef = useRef(options?.onDrawingSaved);
   onDrawingSavedRef.current = options?.onDrawingSaved;
+  const onOutsideRenameRef = useRef(options?.onOutsideRename);
+  onOutsideRenameRef.current = options?.onOutsideRename;
   const [fallback] = useState(() =>
     createOutsideFallback(() => historyRef.current),
   );
@@ -645,6 +652,41 @@ export const useVaultDocument = (
     }
     let disposed = false;
     let unsubscribe: (() => void) | undefined;
+    /** Where the open drawing went: a path of the batch (or one under a renamed folder) with its revision. */
+    const findRenamed = async (
+      current: Active,
+      paths: readonly string[],
+    ): Promise<string | null> => {
+      // The cheap revision probe where the repository has one, else a read.
+      const revisionAt = (c: string): Promise<string | null> =>
+        (repository.readRevision
+          ? repository.readRevision(current.handle, c)
+          : repository.readDrawing(current.handle, c).then((d) => d.revision)
+        ).catch(() => null);
+      const gone = paths.filter(
+        (p) => p === current.path || current.path.startsWith(`${p}/`),
+      );
+      const candidates = new Set<string>();
+      for (const p of paths) {
+        if (p === current.path || gone.includes(p)) {
+          continue;
+        }
+        candidates.add(p);
+        for (const g of gone) {
+          candidates.add(`${p}${current.path.slice(g.length)}`);
+        }
+      }
+      for (const c of [...candidates].slice(0, MAX_RENAME_PROBES)) {
+        if (!isWritableDrawing(c)) {
+          continue;
+        }
+        const rev = await revisionAt(c);
+        if (rev !== null && rev === current.revision) {
+          return c;
+        }
+      }
+      return null;
+    };
     void repository
       .subscribe((event) => {
         const current = active.current;
@@ -774,6 +816,27 @@ export const useVaultDocument = (
             return;
           }
           if (isNotFound(cause)) {
+            // Renamed or moved outside (Finder, git, sync): the same bytes now sit at one of the
+            // batch's other paths. Follow them, as Obsidian and Neovim buffers do, instead of
+            // a dead "Conflict" (hunter C-4). Only an unchanged revision counts as the same file.
+            const to = await findRenamed(current, event.paths);
+            if (
+              to &&
+              !disposed &&
+              checkGeneration === generation.current &&
+              active.current === current
+            ) {
+              const from = current.path;
+              current.path = to;
+              setDocument({
+                id: current.id,
+                path: to,
+                source: current.source,
+                revision: current.revision,
+              });
+              onOutsideRenameRef.current?.(from, to);
+              return;
+            }
             current.deleted = true;
             await coordinator.current?.stop(
               new Error(

@@ -714,6 +714,11 @@ export const VaultApp = ({
     history,
     onDrawingSaved: (path, revision) =>
       thumbServiceRef.current?.noteSaved(path, revision),
+    // Renamed or moved outside while open: the tab, favourites and plugins follow (C-4).
+    onOutsideRename: (from, to) => {
+      appEvents.emit("drawing.renamed", { from, to });
+      tabsRef.current?.renamed(from, to);
+    },
   });
   const {
     document: activeDoc,
