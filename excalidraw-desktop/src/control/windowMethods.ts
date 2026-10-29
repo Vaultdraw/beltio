@@ -53,7 +53,7 @@ const PDF_IGNORED = [
   "pageShaped",
 ] as const;
 
-/** Raw output cap: base64 adds a third and the JSON-RPC frame is 48 MiB. */
+/** Raw output cap: base64 adds a third and the JSON-RPC frame is 80 MiB. */
 export const MAX_EXPORT_BYTES = 32 * 1024 * 1024;
 
 /** Standard base64 of `bytes`, in chunks (no argument-count stack overflow). */

@@ -65,7 +65,10 @@ pub fn run(cli: &Cli) -> Result<(), Fail> {
                 Ok(Some(b)) => b,
                 Ok(None) | Err(FrameError::Io(_)) => break,
                 Err(FrameError::TooLarge) => {
-                    if !write(&error(Value::Null, PARSE_ERROR, "invalid JSON: the line is too large")) {
+                    if !write(&error(Value::Null, PARSE_ERROR, &format!(
+                            "invalid JSON: the message is too large (at most {} MiB; a drawing is at most 32 MiB before it is escaped into JSON)",
+                            MAX_FRAME_BYTES / (1024 * 1024)
+                        ))) {
                         break;
                     }
                     continue;

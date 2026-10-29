@@ -113,6 +113,18 @@ mod tests {
     use super::*;
     use std::io::{BufReader, Cursor};
 
+    #[test]
+    fn a_largest_drawing_escaped_into_a_json_string_fits_one_frame() {
+        // 32 MiB of quotes is the worst real case: every one is escaped to two bytes.
+        let drawing = "\"".repeat(32 * 1024 * 1024);
+        let mut line = serde_json::to_vec(&serde_json::json!({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"json": drawing}})).unwrap();
+        assert!(line.len() > 64 * 1024 * 1024, "{}", line.len());
+        line.push(b'\n');
+        let mut r = BufReader::new(Cursor::new(line));
+        let got = read_frame(&mut r, crate::MAX_FRAME_BYTES).expect("not too large").expect("a frame");
+        assert!(got.len() < crate::MAX_FRAME_BYTES);
+    }
+
     fn frames(input: &[u8], cap: usize, chunk: usize) -> Vec<Result<Vec<u8>, String>> {
         let mut r = BufReader::with_capacity(chunk, Cursor::new(input.to_vec()));
         let mut out = Vec::new();

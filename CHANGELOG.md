@@ -21,6 +21,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 - **Import file takes BMP, ICO, AVIF and JFIF** even when the system gives no file type; a full favourites list says it is full instead of "Removed".
 
+- **A 32 MiB drawing fits in one message of the control API and the MCP server.** The message cap is now 80 MiB, so a drawing that grows once it is escaped into JSON is no longer refused; a message over the cap says the limit in plain words.
+
 - **SVG export keeps ICO and JFIF images.** The list of image types an exported SVG may embed is built from the one list of types the editor accepts, so a pasted favicon or a `.jfif` photo no longer becomes an empty placeholder.
 
 - **Auto-export says plainly when a file is in the way.** If a file with the export's name was not made by auto-export (an older export, or a copy a sync conflict left), the plugin leaves it alone and now shows one message per file naming it and saying to delete or rename it, instead of failing quietly on every save.

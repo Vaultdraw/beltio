@@ -26,8 +26,10 @@ pub const API_LEVEL: u32 = 1;
 /// Lowest API level this build still serves / understands.
 pub const API_MIN: u32 = 1;
 
-/// Largest frame (one JSON line) either side accepts: a 32 MiB drawing plus envelope.
-pub const MAX_FRAME_BYTES: usize = 48 * 1024 * 1024;
+/// Largest frame (one JSON line) either side accepts: 2.5 times the largest drawing (32 MiB), so a
+/// drawing sent as a JSON string still fits after escaping (each `"` becomes `\"`, so 2 times at
+/// worst for real drawings) plus the envelope.
+pub const MAX_FRAME_BYTES: usize = 80 * 1024 * 1024;
 
 /// JSON-RPC 2.0 error codes.
 pub const PARSE_ERROR: i64 = -32700;

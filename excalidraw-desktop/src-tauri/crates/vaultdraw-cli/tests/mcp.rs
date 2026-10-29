@@ -238,6 +238,28 @@ fn a_line_that_is_not_utf8_is_a_parse_error_and_the_session_goes_on() {
 }
 
 #[test]
+fn a_line_over_the_cap_names_the_limit_in_drawing_terms_and_the_session_goes_on() {
+    let e = env(None);
+    let mut s = Session::start(&e, None);
+    {
+        let stdin = s.child.stdin.as_mut().unwrap();
+        let chunk = vec![b'a'; 1024 * 1024];
+        for _ in 0..81 {
+            stdin.write_all(&chunk).unwrap();
+        }
+        stdin.write_all(b"\n").unwrap();
+    }
+    let mut line = String::new();
+    s.reader.read_line(&mut line).unwrap();
+    let r: Value = serde_json::from_str(&line).unwrap();
+    assert_eq!(r["error"]["code"], -32700);
+    let message = r["error"]["message"].as_str().unwrap();
+    assert!(message.contains("at most 80 MiB") && message.contains("32 MiB"), "{message}");
+    assert_eq!(s.ask("ping", json!({}))["result"], json!({}));
+    s.finish();
+}
+
+#[test]
 fn a_batch_gets_one_array_back() {
     let e = env(None);
     let mut s = Session::start(&e, None);
