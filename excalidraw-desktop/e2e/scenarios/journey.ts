@@ -57,13 +57,7 @@ export type Journey = {
  * fills in a moment after start): they never fail a journey and are never reported stale.
  * Remove an entry when its bug is fixed.
  */
-const GLOBAL_KNOWN: { match: RegExp; bug: string }[] = [
-  {
-    match:
-      /vault-(recent__(title|folder)|theme-head__(title|note)|settings-heading|search-row__path)\)" is hard to read/,
-    bug: "toimprove TN-1: faint text (home list, theme and settings headings, search result paths) is below 3:1 (down to 2.2:1)",
-  },
-];
+const GLOBAL_KNOWN: { match: RegExp; bug: string }[] = [];
 
 export const journey = (j: Journey) => {
   for (const theme of j.themes ?? (["light", "dark"] as const)) {

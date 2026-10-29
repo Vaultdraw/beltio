@@ -131,7 +131,8 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--vault-text-faint);
+  /* Text to read: muted, not faint (TN-1: faint is 2.2-2.8:1 in light themes). */
+  color: var(--vault-text-muted);
 }
 
 .vault-recent__item {
@@ -178,7 +179,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--vd-fs-caption);
-  color: var(--vault-text-faint);
+  /* Text to read: muted, not faint (TN-1: faint is 2.2-2.8:1 in light themes). */
+  color: var(--vault-text-muted);
 }
 
 /* Onboarding */
@@ -325,7 +327,8 @@ html.dark .vault-onboarding__logo {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--vault-text-faint);
+  /* Text to read: muted, not faint (TN-1: faint is 2.2-2.8:1 in light themes). */
+  color: var(--vault-text-muted);
 }
 
 .vault-onboarding__recent-list {

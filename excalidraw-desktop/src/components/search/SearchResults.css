@@ -73,7 +73,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--vd-fs-caption);
-  color: var(--vault-text-faint);
+  /* Text to read: muted, not faint (TN-1: faint is 2.2-2.8:1 in light themes). */
+  color: var(--vault-text-muted);
 }
 
 .vault-search-row__count {
