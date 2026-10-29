@@ -40,7 +40,7 @@ describe("data: pictures in a note", () => {
       async askImages() {
         return true;
       },
-      async fetchImage(u) {
+      async fetchImage(u: string) {
         fetched.push(u);
         throw Object.assign(new Error("refused"), { code: "INVALID_URL" });
       },
