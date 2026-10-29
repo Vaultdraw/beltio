@@ -68,12 +68,18 @@ export async function runStartupUpdateCheck(
   return true;
 }
 
+/** The test builds (perf, smoke, end-to-end) never reach out to the internet on their own. */
+const isTestBuild = (): boolean =>
+  import.meta.env.VITE_APP_PERF_TEST === "true" ||
+  import.meta.env.VITE_APP_SMOKE_TEST === "true" ||
+  import.meta.env.VITE_APP_E2E === "true";
+
 /** Schedules the check after the delay; returns a function that cancels it. */
 export function scheduleStartupUpdateCheck(
   win: Window,
   delayMs = UPDATE_CHECK_DELAY_MS,
 ): () => void {
-  if (!isTauriAvailable(win) || started) {
+  if (!isTauriAvailable(win) || started || isTestBuild()) {
     return () => undefined;
   }
   const timer = win.setTimeout(() => {

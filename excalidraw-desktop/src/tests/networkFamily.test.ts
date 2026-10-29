@@ -10,6 +10,7 @@ import { setOfflineMode } from "../network/offlineMode";
 import {
   resetStartupUpdateCheck,
   runStartupUpdateCheck,
+  scheduleStartupUpdateCheck,
 } from "../network/startupUpdateCheck";
 import { blockReason, unblock } from "../theme/install/consent";
 import { toastStore } from "../toasts/toastStore";
@@ -155,6 +156,40 @@ describe("the update check", () => {
       expect(invoke).not.toHaveBeenCalled();
     });
   }
+});
+
+describe("scheduling the update check", () => {
+  const fakeWin = () => {
+    const win = {
+      __TAURI__: {},
+      setTimeout: vi.fn(() => 1),
+      clearTimeout: vi.fn(),
+    };
+    return win as unknown as Window & { setTimeout: ReturnType<typeof vi.fn> };
+  };
+
+  it("waits for a timer, once, in the desktop app only", () => {
+    const win = fakeWin();
+    scheduleStartupUpdateCheck(win, 15_000);
+    expect(win.setTimeout).toHaveBeenCalledWith(expect.any(Function), 15_000);
+    const browser = { setTimeout: vi.fn(), clearTimeout: vi.fn() };
+    scheduleStartupUpdateCheck(browser as unknown as Window);
+    expect(browser.setTimeout).not.toHaveBeenCalled();
+  });
+
+  it("never in a test build (perf, smoke, end-to-end)", () => {
+    for (const flag of [
+      "VITE_APP_PERF_TEST",
+      "VITE_APP_SMOKE_TEST",
+      "VITE_APP_E2E",
+    ]) {
+      vi.stubEnv(flag, "true");
+      const win = fakeWin();
+      scheduleStartupUpdateCheck(win, 1);
+      expect(win.setTimeout, flag).not.toHaveBeenCalled();
+      vi.unstubAllEnvs();
+    }
+  });
 });
 
 describe("Offline mode makes no request at all", () => {
