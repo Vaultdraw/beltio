@@ -50,6 +50,31 @@ import {
   withRole,
 } from "./roles";
 
+/**
+ * The marker an empty nested item takes one level out: the next number after
+ * the last item at that level above it, else the item's own marker.
+ */
+const outdentedMarker = (
+  above: string,
+  indent: string,
+  marker: string,
+): string => {
+  const lines = above.split("\n");
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const it = listItemOf(lines[i]);
+    if (!it) {
+      break;
+    }
+    if (it.indent.length < indent.length) {
+      break;
+    }
+    if (it.indent === indent) {
+      return nextMarker(it.marker);
+    }
+  }
+  return marker;
+};
+
 export type MarkdownTypingSettings = {
   /** Heading 1..6 sizes as multiples of the body size. */
   headingScales: readonly number[];
@@ -326,6 +351,21 @@ export function createMarkdownTyping(deps: {
       const line = value.slice(start, lineEnd(value, from));
       const item = listItemOf(line);
       if (item && from === to && from >= start + item.length) {
+        if (line.length === item.length && item.indent.length > 0) {
+          // an empty nested item: Enter moves it out one level, as Obsidian does
+          const indent = item.indent.slice(Math.min(4, item.indent.length));
+          const marker = outdentedMarker(
+            value.slice(0, Math.max(0, start - 1)),
+            indent,
+            item.marker,
+          );
+          const text = `${indent}${marker} `;
+          session.setText(
+            value.slice(0, start) + text + value.slice(start + item.length),
+            start + text.length,
+          );
+          return true;
+        }
         if (line.length === item.length) {
           // an empty item: Enter ends the list (the marker goes)
           session.setText(

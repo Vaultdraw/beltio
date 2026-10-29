@@ -149,6 +149,12 @@ export async function pasteWebPictures(
   if (ops.length === 0) {
     return false;
   }
+  // Centre the whole stack on the viewport, as the editor's own picture paste does (hunter B).
+  const lift = (y - 16 - center.y) / 2;
+  for (const op of ops) {
+    const el = (op as { element: { y: number } }).element;
+    el.y -= lift;
+  }
   applyOps(api as never, ops, { images: await hashImages(ops) });
   return true;
 }

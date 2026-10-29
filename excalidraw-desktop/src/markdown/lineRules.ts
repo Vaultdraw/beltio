@@ -18,7 +18,8 @@ export const TASK_DONE = "☑";
 
 const BULLET_RE = /^( *)[-*+]$/;
 const ORDERED_RE = /^( *)\d{1,9}[.)]$/;
-const TASK_RE = /^( *)(?:[-*+•] ?)?\[([ xX]?)\]$/;
+// A task, also a numbered one ("1. [ ] ", as Obsidian allows).
+const TASK_RE = /^( *)(?:[-*+•] ?|(\d{1,9}[.)]) )?\[([ xX]?)\]$/;
 
 /**
  * `before` is the line's text before the caret, without the space being
@@ -41,9 +42,10 @@ export function matchLineTrigger(before: string): LineTrigger | null {
     return { kind: "list", marker: `${m[1]}${BULLET}` };
   }
   m = TASK_RE.exec(before);
-  if (m && (m[2] !== "" || before.includes("[]"))) {
-    const done = m[2] === "x" || m[2] === "X";
-    return { kind: "list", marker: `${m[1]}${done ? TASK_DONE : TASK_OPEN}` };
+  if (m && (m[3] !== "" || before.includes("[]"))) {
+    const done = m[3] === "x" || m[3] === "X";
+    const box = done ? TASK_DONE : TASK_OPEN;
+    return { kind: "list", marker: `${m[1]}${m[2] ? `${m[2]} ` : ""}${box}` };
   }
   if (ORDERED_RE.test(before)) {
     // already reads as a numbered item: only Enter continues it
@@ -61,7 +63,7 @@ export type ListItem = {
   length: number;
 };
 
-const ITEM_RE = /^( *)(•|☐|☑|\d{1,9}[.)]) /;
+const ITEM_RE = /^( *)(\d{1,9}[.)] [☐☑]|•|☐|☑|\d{1,9}[.)]) /;
 
 export function listItemOf(line: string): ListItem | null {
   const m = ITEM_RE.exec(line);
@@ -73,18 +75,22 @@ export function nextMarker(marker: string): string {
   if (marker === TASK_DONE || marker === TASK_OPEN) {
     return TASK_OPEN;
   }
-  const m = /^(\d+)([.)])$/.exec(marker);
-  return m ? `${Number(m[1]) + 1}${m[2]}` : marker;
+  const m = /^(\d+)([.)])( [☐☑])?$/.exec(marker);
+  return m
+    ? `${Number(m[1]) + 1}${m[2]}${m[3] ? ` ${TASK_OPEN}` : ""}`
+    : marker;
 }
 
 /** A task line's marker toggled (☐ <-> ☑), or null for other lines. */
 export function toggledTask(line: string): string | null {
   const item = listItemOf(line);
-  if (!item || (item.marker !== TASK_OPEN && item.marker !== TASK_DONE)) {
+  const box = item?.marker.slice(-1);
+  if (!item || (box !== TASK_OPEN && box !== TASK_DONE)) {
     return null;
   }
-  const flipped = item.marker === TASK_OPEN ? TASK_DONE : TASK_OPEN;
-  return `${item.indent}${flipped}${line.slice(item.indent.length + 1)}`;
+  const flipped = box === TASK_OPEN ? TASK_DONE : TASK_OPEN;
+  const at = item.indent.length + item.marker.length - 1;
+  return `${line.slice(0, at)}${flipped}${line.slice(at + 1)}`;
 }
 
 /** Start index of the caret's line in `value`. */

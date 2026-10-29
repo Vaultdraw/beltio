@@ -35,6 +35,22 @@ html.vault-macos .vault-titlebar-strip {
   -webkit-user-select: none;
 }
 
+/* Header hidden with Offline mode on: the strip shows the Offline chip on
+ * every platform (hunter B-4). */
+.vault-titlebar-strip:has(.vault-badge--offline) {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  height: 28px;
+  padding-right: 8px;
+}
+
+html.vault-macos .vault-titlebar-strip:has(.vault-badge--offline) {
+  display: flex;
+}
+
 /* Linux custom chrome with the header hidden: the strip is the title bar and
  * keeps the window buttons and the drag area (hunter B-4). */
 html.vault-linux-custom .vault-titlebar-strip {

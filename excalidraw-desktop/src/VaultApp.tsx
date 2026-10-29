@@ -184,6 +184,7 @@ import VaultEditor from "./editor/VaultEditor";
 import { allEditorApis, getEditorApi } from "./editor/editorApi";
 import { useCanvasImport } from "./canvasImport/useCanvasImport";
 
+import { OfflineBadge } from "./components/OfflineBadge";
 import { WindowControls } from "./components/WindowControls";
 import { isCustomChrome } from "./vault/windowChrome";
 import { VaultHeader } from "./components/VaultHeader";
@@ -3193,11 +3194,9 @@ export const VaultApp = ({
         // Header hidden: on macOS a thin drag strip keeps the window buttons
         // off the canvas and the navigator; with Linux custom chrome it is the
         // title bar and carries the window buttons (hunter B-4).
-        <div
-          className="vault-titlebar-strip"
-          data-tauri-drag-region
-          aria-hidden={isCustomChrome(win) ? undefined : "true"}
-        >
+        <div className="vault-titlebar-strip" data-tauri-drag-region>
+          {/* Offline mode keeps an indicator with the header hidden (hunter B-4). */}
+          <OfflineBadge />
           {isCustomChrome(win) && <WindowControls />}
         </div>
       )}

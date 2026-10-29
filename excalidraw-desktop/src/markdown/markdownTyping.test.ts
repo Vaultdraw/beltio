@@ -614,3 +614,35 @@ describe("Markdown typing: bold headings", () => {
     expect(h.current().fontFamily).toBe(5);
   });
 });
+
+// Parity with Obsidian (hunter B round 2): numbered tasks, and Enter on an empty nested item
+// moves it out one level before it ends the list.
+describe("Markdown typing: Obsidian list parity", () => {
+  it.each([
+    ["1. [ ] ", "1. ☐ "],
+    ["2) [x] ", "2) ☑ "],
+    ["    3. [ ] ", "    3. ☐ "],
+  ])("%j becomes a numbered task %j", (typed, shown) => {
+    const h = harness();
+    h.type(typed);
+    expect(h.textarea.value).toBe(shown);
+  });
+
+  it("Enter continues a numbered task list with the next number, open", () => {
+    const h = harness();
+    h.type("1. [x] done");
+    h.press("Enter");
+    expect(h.textarea.value).toBe("1. ☑ done\n2. ☐ ");
+  });
+
+  it("Enter on an empty nested item outdents it, then ends the list", () => {
+    const h = harness();
+    h.type("    - deep");
+    h.press("Enter");
+    expect(h.textarea.value).toBe("    • deep\n    • ");
+    h.press("Enter");
+    expect(h.textarea.value).toBe("    • deep\n• ");
+    h.press("Enter");
+    expect(h.textarea.value).toBe("    • deep\n");
+  });
+});

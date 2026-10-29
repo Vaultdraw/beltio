@@ -100,6 +100,7 @@ describe("list items", () => {
     ["☑", "☐"],
     ["9.", "10."],
     ["1)", "2)"],
+    ["1. ☑", "2. ☐"],
   ])("after %j comes %j", (marker, next) => {
     expect(nextMarker(marker)).toBe(next);
   });
@@ -107,6 +108,9 @@ describe("list items", () => {
   it.each([
     ["☐ milk", "☑ milk"],
     ["  ☑ done", "  ☐ done"],
+    ["1. ☐ numbered", "1. ☑ numbered"],
+    ["    12) ☑ deep", "    12) ☐ deep"],
+    ["3. not a task", null],
     ["• not a task", null],
     ["plain", null],
   ])("toggle %j -> %j", (line, out) => {

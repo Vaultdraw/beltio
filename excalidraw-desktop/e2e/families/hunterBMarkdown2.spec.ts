@@ -43,6 +43,9 @@ test("hunter B: bullets, numbers and tasks continue, nest with Tab and end on an
   await expect(page.locator(ta)).toHaveValue("• one\n• two\n    • nested");
   await page.keyboard.press("Enter");
   await page.keyboard.press("Enter");
+  // Obsidian: Enter on an empty nested item moves it out one level first.
+  await expect(page.locator(ta)).toHaveValue("• one\n• two\n    • nested\n• ");
+  await page.keyboard.press("Enter");
   await expect(page.locator(ta)).toHaveValue("• one\n• two\n    • nested\n");
   await page.keyboard.press("Enter");
   await type(page, "1. a");
