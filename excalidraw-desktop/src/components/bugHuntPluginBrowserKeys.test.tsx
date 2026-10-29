@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { PluginBrowserDialog } from "./PluginBrowserDialog";
 
 const install = vi.hoisted(() => vi.fn(async () => ({ name: "Foo", review: { state: "ok" } })));
 const uninstall = vi.hoisted(() => vi.fn(async () => {}));
@@ -38,8 +39,6 @@ vi.mock("../plugins/registry/client", async (orig) => ({
 }));
 
 const STATE = { plugins: [{ id: "foo", version: "1.0.0" }] } as never;
-
-import { PluginBrowserDialog } from "./PluginBrowserDialog";
 
 // Bug hunt round 3 (BH-15): the list's Enter shortcut sits on the wrapper of the
 // details buttons, so Enter on a focused button runs the shortcut instead.
