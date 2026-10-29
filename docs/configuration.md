@@ -2141,6 +2141,9 @@ Scripts and links from outside. The socket and link keys are read by the native 
 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
+| `enabled` | `true` | true or false |  | The local control socket the `vaultdraw` command uses. `false` turns it off; needs a restart. |
+| `uri_enabled` | `true` | true or false |  | `false` ignores `vaultdraw://` links and `.excalidraw` or `.excalidrawlib` files opened from outside. |
+| `uri_allow` | `[]` | list of text |  | What a link may do without asking: `"new"`, `"switch-vault"`, or a command id with a dot. Anything else asks first. |
 | `notify_edits` | `true` | true or false |  | Show a notice when a script or AI tool edits the drawing on screen. |
 
 ### `[window]`
