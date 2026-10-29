@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { openVault } from "./helpers";
 
-// Bug hunter round 7: click verification of BH-3 and BH-11 (BH-9 needs the real note backend, see FINDINGS).
+// Bug hunter round 7: click verification of BH-3 and BH-11. Both are fixed; this keeps them fixed.
 
 const row = (page: any, path: string) =>
   page.locator(`[data-tree-path="${path}"]`);
@@ -28,7 +28,7 @@ test("BH-3: a folder with files removed outside raises no search index error", a
   await expect(page.getByText(/update the search index/)).toHaveCount(0);
 });
 
-test("BH-11: two New Drawing clicks in the same clock tick make two drawings", async ({
+test("BH-11: two New Drawing clicks make two drawings (Untitled, Untitled 1), never a clash", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -38,14 +38,14 @@ test("BH-11: two New Drawing clicks in the same clock tick make two drawings", a
   await openVault(page, "?seed=empty");
   const btn = page.getByRole("button", { name: "New Drawing" }).first();
   await btn.click();
-  await expect(row(page, "Drawing-1234.excalidraw")).toBeVisible();
+  await expect(row(page, "Untitled.excalidraw")).toBeVisible();
   await page.waitForTimeout(1500);
   await page.getByRole("tab").getByRole("button").first().click();
   await page.waitForTimeout(500);
   await page.getByRole("button", { name: /New drawing/i }).first().click();
   await page.waitForTimeout(2000);
   const names = await page
-    .locator("[data-tree-path^='Drawing-']")
+    .locator("[data-tree-path^='Untitled']")
     .evaluateAll((els) => els.map((e) => e.getAttribute("data-tree-path")));
   await expect(page.locator("[role=alert]")).toHaveCount(0);
   expect(names.length).toBe(2);

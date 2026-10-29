@@ -32,4 +32,5 @@ it("a full list refuses a new favourite and does not say it removed it", async (
   });
   const said = p.toasts().filter((t) => t.includes("New"));
   expect(said.some((t) => t.includes("Removed"))).toBe(false);
+  expect(said.some((t) => t.includes("full"))).toBe(true);
 }, 60000);
