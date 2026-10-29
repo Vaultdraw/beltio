@@ -21,6 +21,34 @@ export interface KeyDoc {
   accepts?: string;
 }
 
+/**
+ * Keys only the native side reads (NATIVE_KEYS in configKeys.ts): no mapping
+ * row, so they carry their own default and accepts text. Listed before the
+ * mapped keys of the same table in docs/configuration.md; the JSON schema
+ * describes them separately (NATIVE_TABLES).
+ */
+export const NATIVE_KEY_DOCS: Readonly<
+  Record<string, Readonly<Record<string, Required<KeyDoc>>>>
+> = {
+  control: {
+    enabled: {
+      doc: "The local control socket the `vaultdraw` command uses. `false` turns it off; needs a restart.",
+      default: "`true`",
+      accepts: "true or false",
+    },
+    uri_enabled: {
+      doc: "`false` ignores `vaultdraw://` links and `.excalidraw` or `.excalidrawlib` files opened from outside.",
+      default: "`true`",
+      accepts: "true or false",
+    },
+    uri_allow: {
+      doc: 'What a link may do without asking: `"new"`, `"switch-vault"`, or a command id with a dot. Anything else asks first.',
+      default: "`[]`",
+      accepts: "list of text",
+    },
+  },
+};
+
 export interface TableDoc {
   table: string;
   /** One line under the table heading. */
@@ -691,6 +719,15 @@ export function renderConfigReference(input: RenderInput): string {
     out.push(`### \`[${table.table}]\``, "", table.intro, "");
     out.push("| Key | Default | Accepts | Per vault | What it does |");
     out.push("| --- | --- | --- | --- | --- |");
+    for (const [name, doc] of Object.entries(
+      NATIVE_KEY_DOCS[table.table] ?? {},
+    )) {
+      out.push(
+        `| ${code(name)} | ${doc.default} | ${cell(doc.accepts)} |  | ${cell(
+          doc.doc,
+        )} |`,
+      );
+    }
     for (const [name, doc] of Object.entries(table.keys)) {
       const mapping = byKey.get(`${table.table}.${name}`);
       if (!mapping) {

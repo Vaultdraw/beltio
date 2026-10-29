@@ -7,6 +7,7 @@ import {
   BEGIN_MARKER,
   CONFIG_REFERENCE,
   END_MARKER,
+  NATIVE_KEY_DOCS,
   referenceGaps,
   spliceReference,
 } from "../vault/configReference";
@@ -44,6 +45,14 @@ const sections = (text: string) => {
 };
 
 describe("config reference", () => {
+  it("native-only key docs name real native keys", () => {
+    for (const [table, keys] of Object.entries(NATIVE_KEY_DOCS)) {
+      for (const key of Object.keys(keys)) {
+        expect(NATIVE_KEYS).toContain(`${table}.${key}`);
+      }
+    }
+  });
+
   it("documents every key the app reads, and nothing else", () => {
     expect(referenceGaps({ mappings: CONFIG_MAPPING })).toEqual({
       undocumented: [],
