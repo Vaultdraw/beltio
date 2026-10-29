@@ -183,7 +183,7 @@ flowchart LR
   O --> V[Vault settings.toml]
 ```
 
-- **A profile can set any key**: `interface.theme`, `[hotkeys]`, `[keys]`, `plugins.enabled` and `plugins.disabled`, tools, and so on. It wins over `config.toml` and loses to Settings changes and the vault's own `settings.toml`.
+- **A profile can set any key**: `appearance.theme`, `[hotkeys]`, `[keys]`, `plugins.enabled` and `plugins.disabled`, tools, and so on. It wins over `config.toml` and loses to Settings changes and the vault's own `settings.toml`.
 - **Settings writes to the active profile.** While a profile is active, Settings, `vaultdraw config set` and the control API save to `profiles/<name>/overrides.toml`; the main `overrides.toml` is left alone and is not read. Starting a profile from `default` copies it.
 - **Live switching.** The choice is the one-line file `profile` in the state folder. Writing it reloads like any config change: no restart.
 - **A vault's profile never replaces your own choice.** While a vault applies its profile, the profile you chose yourself is kept in `state.json` (`profileChoice`), also across a restart; opening a vault with no profile goes back to it. Switching a profile yourself drops it.
@@ -2160,6 +2160,9 @@ Scripts and links from outside. The socket and link keys are read by the native 
 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
+| `enabled` | `true` | true or false |  | The local control socket the `vaultdraw` command uses. `false` turns it off; needs a restart. |
+| `uri_enabled` | `true` | true or false |  | `false` ignores `vaultdraw://` links and `.excalidraw` or `.excalidrawlib` files opened from outside. |
+| `uri_allow` | `[]` | list of text |  | What a link may do without asking: `"new"`, `"switch-vault"`, or a command id with a dot. Anything else asks first. |
 | `notify_edits` | `true` | true or false |  | Show a notice when a script or AI tool edits the drawing on screen. |
 
 ### `[window]`

@@ -20,6 +20,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Default `config.toml` lists the control keys.** `control.enabled`, `control.uri_enabled` and `control.uri_allow` are now in the commented template and the `[control]` table of the configuration reference; the profile example names `appearance.theme`.
 - **Import file takes BMP, ICO, AVIF and JFIF** even when the system gives no file type; a full favourites list says it is full instead of "Removed".
 
 - **A 32 MiB drawing fits in one message of the control API and the MCP server.** The message cap is now 80 MiB, so a drawing that grows once it is escaped into JSON is no longer refused; a message over the cap says the limit in plain words.

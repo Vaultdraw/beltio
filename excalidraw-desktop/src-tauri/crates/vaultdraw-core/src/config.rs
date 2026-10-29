@@ -401,6 +401,12 @@ autosave_delay_ms = 500
 # mcp_enabled = true
 
 [control]
+# The local control socket the vaultdraw command uses; false turns it off (needs a restart)
+# enabled = true
+# false = ignore vaultdraw:// links and .excalidraw / .excalidrawlib files opened from outside
+# uri_enabled = true
+# What a link may do without asking: "new", "switch-vault"; a command id (with a dot) makes it reachable
+# uri_allow = []
 # Show a notice when a script or AI tool edits the drawing on screen
 # notify_edits = true
 
@@ -1704,7 +1710,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 151, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 154, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();
