@@ -958,7 +958,7 @@ const rootVar = (page: Page, name: string) =>
 const themeName = (page: Page) =>
   page.evaluate(() => document.documentElement.dataset.vaultTheme ?? "");
 
-test("themes: switch, browse, install from a URL with the network refused and then allowed", async ({
+test("themes: switch, browse, install from a URL with no question asked", async ({
   page,
 }) => {
   const errors = trackErrors(page);
