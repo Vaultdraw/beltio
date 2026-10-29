@@ -23,6 +23,12 @@ const defaultIdle: Idle = (run) => {
 const codeOf = (e: unknown): string =>
   (e as { code?: string } | null)?.code ?? "";
 
+/** The file a CONFLICT message names (it starts with the path). */
+const conflictPath = (e: unknown): string | null => {
+  const m = /^(.+?) already exists/.exec((e as Error)?.message ?? "");
+  return m ? m[1] : null;
+};
+
 export interface Exporter {
   /** A save happened: export after the debounce (restarts the wait). */
   schedule(path: string): void;
@@ -43,6 +49,8 @@ export function createExporter(
   const queue: string[] = [];
   let working = false;
   let warned = false;
+  // Files the user must deal with by hand: told once each, not on every save.
+  const taken = new Set<string>();
 
   const warn = (message: string, e: unknown) => {
     ctx.log.warn(message, e);
@@ -90,7 +98,18 @@ export function createExporter(
     } catch (e) {
       // The drawing was deleted or moved since the save: nothing to export.
       // A read-only vault cannot take exports: not worth a message on every save.
-      if (codeOf(e) !== "NOT_FOUND" && codeOf(e) !== "READ_ONLY") {
+      if (codeOf(e) === "CONFLICT") {
+        // A file with the export's name that an export did not make (made before exports were
+        // tracked, or left by a sync conflict): never overwritten. Say so once, plainly.
+        const file = conflictPath(e) ?? path;
+        ctx.log.warn(`Could not export ${path}`, e);
+        if (!taken.has(file)) {
+          taken.add(file);
+          ctx.ui.toast(
+            `${file} already exists and was not made by auto-export, so it is left alone. Delete it or rename it and the next export will replace it.`,
+          );
+        }
+      } else if (codeOf(e) !== "NOT_FOUND" && codeOf(e) !== "READ_ONLY") {
         warn(`Could not export ${path}`, e);
       }
       return false;
