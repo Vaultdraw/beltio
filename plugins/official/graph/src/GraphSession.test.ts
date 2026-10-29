@@ -441,7 +441,7 @@ describe("GraphSession refresh (hunter C-5: the open graph follows file changes)
     const t = setup();
     await t.session.load();
     const moved = new Float32Array(2 * N).map((_, i) => i * 3);
-    t.layouts[0].cb.onPositions(moved);
+    t.layouts[0].cb.onPositions(moved, { tick: 1, alpha: 0.5 });
     await t.session.refresh();
     expect(t.source.graph).toHaveBeenCalledTimes(2);
     expect(t.layouts).toHaveLength(2);
