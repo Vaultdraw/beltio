@@ -5,6 +5,7 @@
  */
 import type {
   FolderEntry,
+  MarkdownParseOptions,
   NoteDoc,
   PageGeometry,
   PageRequest,
@@ -32,7 +33,9 @@ export type NoteLayout = (
 
 /** The slice of the plugin context the import uses. */
 export interface ImportContext {
-  readonly markdown: { parse(text: string): Promise<NoteDoc> };
+  readonly markdown: {
+    parse(text: string, options?: MarkdownParseOptions): Promise<NoteDoc>;
+  };
   readonly pages: {
     geometry(request?: PageRequest): PageGeometry;
     buildScene(

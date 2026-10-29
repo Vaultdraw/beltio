@@ -128,8 +128,9 @@ const squash = (s: string) => s.replace(/\s+/g, "");
 const tableParts = (items: PageItem[]) => {
   const byGroup = new Map<string, PageItem[]>();
   for (const it of items) {
-    if (it.group) {
-      byGroup.set(it.group, [...(byGroup.get(it.group) ?? []), it]);
+    const group = "group" in it ? it.group : undefined;
+    if (group) {
+      byGroup.set(group, [...(byGroup.get(group) ?? []), it]);
     }
   }
   return [...byGroup.values()];
@@ -226,7 +227,9 @@ describe("every table shape imports as a real table", () => {
       (i) => i.type === "text" && ["Before.", "After."].includes(i.text),
     );
     expect(outside).toHaveLength(2);
-    expect(outside.every((i) => i.group === undefined)).toBe(true);
+    expect(outside.every((i) => !("group" in i) || i.group === undefined)).toBe(
+      true,
+    );
   });
 
   test("a table split over pages is one group per page", () => {

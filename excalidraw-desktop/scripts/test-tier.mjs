@@ -71,7 +71,10 @@ if (tier === "fast") {
   const pkgSrc = code.filter((f) => f.startsWith("packages/"));
   console.log(`base ${base.slice(0, 10)}; ${files.length} changed file(s)`);
   if (code.some(inDesktop) || pkgSrc.length) npx(desktop, "tsc (desktop, incremental)", tscIncremental("tsconfig.json", "desktop.tsbuildinfo"));
-  if (pkgSrc.length) npx(root, "tsc (root, incremental)", tscIncremental("tsconfig.json", "root.tsbuildinfo"));
+  // plugins/ and sdk/ are type-checked only by the root config (two merges on
+  // 2026-10-29 broke it unseen when this ran for packages/ alone).
+  const rootOnly = code.filter((f) => /^(packages|plugins|sdk)\//.test(f));
+  if (rootOnly.length) npx(root, "tsc (root, incremental)", tscIncremental("tsconfig.json", "root.tsbuildinfo"));
   // Plugin SDK (sdk/) is .mjs too; desktop .mjs stays out of the fast tier (not lint-clean on main yet).
   const candidates = code.filter((f) => (/\.(js|tsx?)$/.test(f) || f.startsWith("sdk/")) && !f.startsWith("excalidraw-desktop/src-tauri/"));
   const lintable = await lintableFiles(candidates, root); // ESLint-ignored files (generated .d.ts) never reach eslint
