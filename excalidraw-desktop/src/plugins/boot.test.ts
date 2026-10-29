@@ -163,6 +163,22 @@ describe("official plugins (on by default, no startup cost)", () => {
         );
       }
     }
+    // Panels (frames, favourites) get a button too, shown by default, with a palette command.
+    for (const p of OFFICIAL_PLUGINS) {
+      for (const panel of p.panels ?? []) {
+        const id = `${p.id}.${panel.id}`;
+        const entry = activityBarRegistry
+          .list("activityBar.top")
+          .concat(activityBarRegistry.list("activityBar.bottom"))
+          .find((e) => e.id === id);
+        expect(entry, id).toBeDefined();
+        expect(entry!.defaultHidden, id).toBeFalsy();
+        expect(getRegisteredCommand(entry!.commandId), id).toBeDefined();
+        expect(getRegisteredHandler(entry!.commandId), id).toBeTypeOf(
+          "function",
+        );
+      }
+    }
   });
 
   it("registers nothing when the user turned it off (enabled = [])", () => {
