@@ -2,7 +2,7 @@
  * Read side: a frozen, plain-object projection of the live scene. Live
  * elements are mutated in place while dragging, so they are never handed out.
  */
-import { FONT_FAMILY } from "@excalidraw/common";
+import { FONT_FAMILY, regularFontOf } from "@excalidraw/common";
 import { getSceneVersion } from "@excalidraw/element";
 
 import type { ExcalidrawElement } from "@excalidraw/element/types";
@@ -110,7 +110,9 @@ export const toSceneElementDetail = (
   };
   if (el.type === "text") {
     out.fontSize = el.fontSize;
-    out.fontFamily = FONT_NAME.get(el.fontFamily) ?? String(el.fontFamily);
+    // A bold text is its family's bold variant (id + 100): plugins see the family's name.
+    const family = regularFontOf(el.fontFamily);
+    out.fontFamily = FONT_NAME.get(family) ?? String(family);
   }
   if (el.type === "image") {
     out.fileId = el.fileId ?? null;

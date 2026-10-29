@@ -16,7 +16,11 @@ const text = (id: string, fontFamily: number, extra = {}) => ({
   ...extra,
 });
 const TARGET: UpgradeTarget = {
-  look: { paperTheme: "match", viewBackgroundColor: "#18191c", viewBackgroundPattern: null },
+  look: {
+    paperTheme: "match",
+    viewBackgroundColor: "#18191c",
+    viewBackgroundPattern: null,
+  },
   fontFamily: 6, // Nunito
 };
 
@@ -26,7 +30,16 @@ describe("upgradeScene: bold text of a new import takes the user's font too", ()
       type: "excalidraw",
       version: 2,
       appState: {
-        pageSetup: { enabled: true, width: 794, height: 1123, layout: "separate", orientation: "portrait", pageCount: 1, paperTheme: "match", size: "a4" },
+        pageSetup: {
+          enabled: true,
+          width: 794,
+          height: 1123,
+          layout: "separate",
+          orientation: "portrait",
+          pageCount: 1,
+          paperTheme: "match",
+          size: "a4",
+        },
       },
       elements: [
         text("Heading", 105, { customData: MARK }),
@@ -38,7 +51,9 @@ describe("upgradeScene: bold text of a new import takes the user's font too", ()
     const out = upgradeScene(JSON.stringify(scene), TARGET, true);
     expect(out).not.toBeNull();
     const fam = Object.fromEntries(
-      (JSON.parse(out!.json).elements as { id: string; fontFamily: number }[]).map((e) => [e.id, e.fontFamily]),
+      (
+        JSON.parse(out!.json).elements as { id: string; fontFamily: number }[]
+      ).map((e) => [e.id, e.fontFamily]),
     );
     expect(fam.body).toBe(6);
     expect(fam.Heading).toBe(106);

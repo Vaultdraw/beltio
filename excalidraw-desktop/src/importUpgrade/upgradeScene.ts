@@ -7,6 +7,8 @@
  * callouts), so a page or font the user chose in their own drawings stays as it is. Code text
  * (Cascadia) keeps its monospace font; only Excalifont text takes the user's drawing font.
  */
+import { boldFontOf, isBoldFont, regularFontOf } from "@excalidraw/common";
+
 import {
   ROLE_COLORS,
   headingRoleOf,
@@ -68,13 +70,16 @@ const needsPaper = (scene: Scene, t: UpgradeTarget): boolean => {
 };
 
 const oldFontTexts = (scene: Scene, t: UpgradeTarget): El[] =>
+  // bold-ok: the user's drawing font setting, a regular family
   t.fontFamily === OLD_IMPORT_FONT
     ? []
     : (scene.elements ?? []).filter(
         (e) =>
           e.type === "text" &&
           e.isDeleted !== true &&
-          e.fontFamily === OLD_IMPORT_FONT,
+          typeof e.fontFamily === "number" &&
+          // Bold headings and paragraphs (the old font's bold variant) move with the body (hunter A-5).
+          regularFontOf(e.fontFamily) === OLD_IMPORT_FONT,
       );
 
 /** Families of the import's `font` setting (plugins/official/markdown-import settings.ts). */
@@ -213,14 +218,16 @@ export function upgradeScene(
   const old = new Set(oldFontTexts(scene, t));
   const oldFamilies = new Map<string, number>();
   for (const e of old) {
-    oldFamilies.set(String(e.id), OLD_IMPORT_FONT);
+    oldFamilies.set(String(e.id), e.fontFamily as number);
   }
   if (old.size > 0) {
     scene.elements = scene.elements.map((e) =>
       old.has(e)
         ? {
             ...e,
-            fontFamily: t.fontFamily,
+            fontFamily: isBoldFont(e.fontFamily as number)
+              ? boldFontOf(t.fontFamily)
+              : t.fontFamily,
             version: (typeof e.version === "number" ? e.version : 1) + 1,
           }
         : e,

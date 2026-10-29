@@ -184,6 +184,8 @@ import VaultEditor from "./editor/VaultEditor";
 import { allEditorApis, getEditorApi } from "./editor/editorApi";
 import { useCanvasImport } from "./canvasImport/useCanvasImport";
 
+import { WindowControls } from "./components/WindowControls";
+import { isCustomChrome } from "./vault/windowChrome";
 import { VaultHeader } from "./components/VaultHeader";
 import {
   VaultNavigator,
@@ -3189,12 +3191,15 @@ export const VaultApp = ({
         />
       ) : (
         // Header hidden: on macOS a thin drag strip keeps the window buttons
-        // off the canvas and the navigator (CSS shows it on macOS only).
+        // off the canvas and the navigator; with Linux custom chrome it is the
+        // title bar and carries the window buttons (hunter B-4).
         <div
           className="vault-titlebar-strip"
           data-tauri-drag-region
-          aria-hidden="true"
-        />
+          aria-hidden={isCustomChrome(win) ? undefined : "true"}
+        >
+          {isCustomChrome(win) && <WindowControls />}
+        </div>
       )}
 
       <div className="vault-main">

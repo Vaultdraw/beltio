@@ -6,9 +6,13 @@ import {
   FREEDRAW_STROKE_WIDTH,
   FONT_FAMILY,
   STROKE_WIDTH,
+  boldFontOf,
 } from "@excalidraw/common";
 
+import { act } from "@testing-library/react";
+
 import { Excalidraw } from "../index";
+import { actionChangeFontFamily } from "./actionProperties";
 import { API } from "../tests/helpers/api";
 import { UI } from "../tests/helpers/ui";
 import { render } from "../tests/test-utils";
@@ -250,6 +254,59 @@ describe("element locking", () => {
       expect(queryByTestId(document.body, `font-family-code`)).toHaveClass(
         "active",
       );
+    });
+  });
+});
+
+// Bold text is its family's bold variant (id + 100). Family "the font of a bold text" (hunter A-5):
+// the picker shows the family, and a new family keeps the text bold.
+describe("font family of bold text", () => {
+  beforeEach(async () => {
+    await render(<Excalidraw />);
+  });
+
+  it.each([
+    ["Excalifont", "Nunito", "font-family-hand-drawn"],
+    ["Comic Shanns", "Excalifont", "font-family-code"],
+    ["Nunito", "Comic Shanns", "font-family-normal"],
+  ] as const)(
+    "a bold %s text shows its family and stays bold in %s",
+    (from, to, testId) => {
+      const text = API.createElement({
+        type: "text",
+        fontFamily: boldFontOf(FONT_FAMILY[from]) as never,
+      });
+      API.setElements([text]);
+      API.setSelectedElements([text]);
+      expect(queryByTestId(document.body, testId)).toHaveClass("active");
+
+      act(() => {
+        window.h.app.actionManager.executeAction(
+          actionChangeFontFamily,
+          "api",
+          { currentItemFontFamily: FONT_FAMILY[to] },
+        );
+      });
+      expect(window.h.elements[0]).toMatchObject({
+        fontFamily: boldFontOf(FONT_FAMILY[to]),
+      });
+    },
+  );
+
+  it("a regular text stays regular", () => {
+    const text = API.createElement({
+      type: "text",
+      fontFamily: FONT_FAMILY.Excalifont,
+    });
+    API.setElements([text]);
+    API.setSelectedElements([text]);
+    act(() => {
+      window.h.app.actionManager.executeAction(actionChangeFontFamily, "api", {
+        currentItemFontFamily: FONT_FAMILY.Nunito,
+      });
+    });
+    expect(window.h.elements[0]).toMatchObject({
+      fontFamily: FONT_FAMILY.Nunito,
     });
   });
 });

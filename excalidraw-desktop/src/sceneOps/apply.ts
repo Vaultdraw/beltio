@@ -4,7 +4,12 @@ import {
   isPageModeOn,
   PAGE_LIMITS,
 } from "@excalidraw/excalidraw/data/pageSetup";
-import { FONT_FAMILY, getSizeFromPoints } from "@excalidraw/common";
+import {
+  FONT_FAMILY,
+  boldFontOf,
+  getSizeFromPoints,
+  isBoldFont,
+} from "@excalidraw/common";
 import {
   computeBoundTextPosition,
   computeContainerDimensionForBoundText,
@@ -113,7 +118,12 @@ const updated = (
     patch.angle = normalAngle(angle);
   }
   if (fontFamily) {
-    patch.fontFamily = FONT_FAMILY[fontFamily];
+    // A bold text stays bold in the new family (its bold variant).
+    const family = FONT_FAMILY[fontFamily];
+    patch.fontFamily =
+      el.type === "text" && isBoldFont(el.fontFamily)
+        ? boldFontOf(family)
+        : family;
   }
   if (data !== undefined && dataKey) {
     // `{}`, not undefined: newElementWith skips an undefined-only patch (hunter B-1 family).

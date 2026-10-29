@@ -35,6 +35,19 @@ html.vault-macos .vault-titlebar-strip {
   -webkit-user-select: none;
 }
 
+/* Linux custom chrome with the header hidden: the strip is the title bar and
+ * keeps the window buttons and the drag area (hunter B-4). */
+html.vault-linux-custom .vault-titlebar-strip {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  height: 28px;
+  padding-right: 4px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* Linux custom chrome: the header is the only title bar; window buttons sit at the right edge. */
 html.vault-linux-custom .vault-header {
   padding-right: 4px;

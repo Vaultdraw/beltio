@@ -38,6 +38,9 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Bold text keeps its bold.** Changing the font of a bold heading in the editor, "Update to my theme and font" and a plugin font change now keep the text bold in the new font; the font picker shows a bold text's font as selected; plugins read a bold text's font by its name.
+- **"Re-import unchanged imported notes" no longer brings back a deleted or renamed part.** A long note whose first (or a middle) drawing you deleted, renamed or moved is left as it is and counted as changed.
+- **Linux: the window buttons stay when the header is hidden** (and in focus mode): a thin title strip keeps minimize, maximize, close and the drag area.
 - **Imported text is no longer cut off at the right edge.** "Update imported notes" now re-wraps text when it gives a note a wider font, and moves what follows down the page (onto a new page when full); running it again repairs notes it already updated. A new import also loads the code font before measuring.
 - **Imported notes keep their line breaks and picture order, like Obsidian.** A single line break inside a paragraph stays a line break (the new `strict_line_breaks` key under `[plugin.markdown-import]`, default off, joins the lines instead, like Obsidian's "Strict line breaks"). A picture or embed written inside a paragraph stays where it is written: the text before it, the picture and the text after it are separate blocks in that order, where the picture used to move below the text. Notes imported earlier get this when they are imported again.
 - **Web pictures in old imports download now.** **Download pictures** (and the notice on opening an imported note) missed the boxes of the oldest imports, which show only the picture's description, so nothing downloaded; addresses without a file extension work too (the bytes decide). A box that stays shows one link icon, not two overlapping ones.

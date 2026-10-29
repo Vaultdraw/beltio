@@ -23,6 +23,9 @@ import {
   reduceToCommonValue,
   invariant,
   FONT_SIZES,
+  boldFontOf,
+  isBoldFont,
+  regularFontOf,
   type StrokeWidthKey,
 } from "@excalidraw/common";
 
@@ -1347,16 +1350,21 @@ export const actionChangeFontFamily = register<{
           elements,
           appState,
           (oldElement) => {
+            // A bold text (the family's bold variant) stays bold in the new family.
+            const family =
+              isTextElement(oldElement) && isBoldFont(oldElement.fontFamily)
+                ? (boldFontOf(nextFontFamily!) as FontFamilyValues)
+                : nextFontFamily!;
             if (
               isTextElement(oldElement) &&
-              (oldElement.fontFamily !== nextFontFamily ||
+              (oldElement.fontFamily !== family ||
                 currentItemFontFamily) // force update on selection
             ) {
               const newElement: ExcalidrawTextElement = newElementWith(
                 oldElement,
                 {
-                  fontFamily: nextFontFamily,
-                  lineHeight: getLineHeight(nextFontFamily!),
+                  fontFamily: family,
+                  lineHeight: getLineHeight(family),
                 },
               );
 
@@ -1447,11 +1455,13 @@ export const actionChangeFontFamily = register<{
           app,
           (element) => {
             if (isTextElement(element)) {
-              return element.fontFamily;
+              return regularFontOf(element.fontFamily) as FontFamilyValues;
             }
             const boundTextElement = getBoundTextElement(element, elementsMap);
             if (boundTextElement) {
-              return boundTextElement.fontFamily;
+              return regularFontOf(
+                boundTextElement.fontFamily,
+              ) as FontFamilyValues;
             }
             return null;
           },

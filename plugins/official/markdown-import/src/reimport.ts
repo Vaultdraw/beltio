@@ -154,6 +154,43 @@ export async function dropLeftoverParts(
   }
 }
 
+/**
+ * True when the user removed or renamed a part of an imported note: a part from the first one
+ * up to the last one still on disk is missing (hunter A-6). Deleting or renaming a drawing is an
+ * edit, so a run over unchanged notes must not write it back (Obsidian never recreates a note
+ * the user deleted). `head` is the first part's path; `existing` every drawing in the run.
+ */
+export function partsMissing(
+  head: string,
+  existing: ReadonlySet<string>,
+): boolean {
+  const slash = head.lastIndexOf("/");
+  const dir = slash < 0 ? "" : head.slice(0, slash + 1);
+  const stem = baseName(head);
+  const part = new RegExp(`^${escapeRe(stem)} \\(part (\\d+)\\)\\.excalidraw$`);
+  let last = existing.has(head) ? 1 : 0;
+  const have = new Set<number>(last ? [1] : []);
+  for (const p of existing) {
+    if (!p.startsWith(dir) || p.slice(dir.length).includes("/")) {
+      continue;
+    }
+    const n = Number(part.exec(p.slice(dir.length))?.[1]);
+    if (n > 1) {
+      have.add(n);
+      last = Math.max(last, n);
+    }
+  }
+  if (last === 0) {
+    return true; // no part is left at all
+  }
+  for (let n = 1; n <= last; n++) {
+    if (!have.has(n)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /** Rebuilds `drawings` from their notes. `onlyUntouched`: leave changed drawings alone. */
 export async function reimport(
   ctx: PluginContext,
@@ -167,6 +204,7 @@ export async function reimport(
   const settings = readSettings(ctx);
   const plan = planImport(await source.list(), settings);
   const matches = matchNotes(drawings, plan.items);
+  const existing = new Set(drawings);
   const summary: ReimportSummary = {
     written: [],
     changed: [],
@@ -208,6 +246,12 @@ export async function reimport(
       summary.failed.push(item.path);
       continue;
     }
+    const headRel = [...built.keys()][0];
+    const head = headRel && (root ? `${root}/${headRel}` : headRel);
+    if (onlyUntouched && head && partsMissing(head, existing)) {
+      summary.changed.push(head);
+      continue;
+    }
     let first = true;
     for (const [rel, scene] of built) {
       const path = root ? `${root}/${rel}` : rel;
@@ -234,10 +278,8 @@ export async function reimport(
       }
       first = false;
     }
-    const head = [...built.keys()][0];
-    const headPath = head && (root ? `${root}/${head}` : head);
-    if (headPath && summary.written.includes(headPath)) {
-      await dropLeftoverParts(ctx, headPath, built.size, summary);
+    if (head && summary.written.includes(head)) {
+      await dropLeftoverParts(ctx, head, built.size, summary);
     }
   }
   ctx.ui.toast(
