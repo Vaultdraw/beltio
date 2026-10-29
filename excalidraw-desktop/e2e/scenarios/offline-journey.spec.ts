@@ -41,12 +41,6 @@ const openSettings = async (page: Page, tab: string) => {
 
 journey({
   title: "offline-journey",
-  known: [
-    {
-      match: /import notice says "Imported 1 notes/,
-      bug: "toimprove TN-10: the import notice says 1 notes and 1 drawings",
-    },
-  ],
   setup: async (page, ctx) => {
     ctx.data.requests = [] as string[];
     // Watch, don't block: interception breaks the page's own blob: pieces in WebKit. Every
