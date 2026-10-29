@@ -5,24 +5,15 @@
  * web pictures (or the network) off, and then each one stays a box that says so. Only pictures: a
  * link to a web page stays a box ("Web page, not a picture").
  */
-import { looksLike } from "../../../../sdk/api/shared/sceneRules";
+import { pictureType } from "../../../../sdk/api/shared/sceneRules";
 
 import type { NetworkApi } from "@vaultdraw/api";
 import type { PageItem } from "./layout/types";
 
 type ImageItem = PageItem & { type: "image" };
 
-/** A picture a drawing can hold, by its bytes. */
-const TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-  "image/svg+xml",
-] as const;
-
-export const sniff = (bytes: Uint8Array): string | null =>
-  TYPES.find((m) => looksLike(m, bytes)) ?? null;
+/** A picture a drawing can hold, by its bytes (one rule for paste, import and the native download). */
+export const sniff = pictureType;
 
 /** Largest picture downloaded (the native side enforces the same). */
 export const MAX_WEB_BYTES = 10 * 1024 * 1024;

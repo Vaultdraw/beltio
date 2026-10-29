@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { pastedPictureUrls, pictureType } from "./pasteWebImage";
+import { pastedPictureUrls } from "./pasteWebImage";
 
 describe("which pastes are web pictures", () => {
   it.each([
@@ -54,14 +54,4 @@ describe("which pastes are web pictures", () => {
   });
 });
 
-describe("pictureType goes by the bytes", () => {
-  const enc = (s: string) => new TextEncoder().encode(s);
-  it.each([
-    [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]), "image/png"],
-    [new Uint8Array([0xff, 0xd8, 0xff, 0xe0]), "image/jpeg"],
-    [enc("GIF89a..."), "image/gif"],
-    [enc("RIFF\u0000\u0000\u0000\u0000WEBPVP8 "), "image/webp"],
-    [enc('<?xml version="1.0"?><svg xmlns="x"/>'), "image/svg+xml"],
-    [enc("<!doctype html><html>"), null],
-  ])("%#", (bytes, type) => expect(pictureType(bytes)).toBe(type));
-});
+// pictureType: pinned by pictureBytes.contract.test.ts (one table with Rust).

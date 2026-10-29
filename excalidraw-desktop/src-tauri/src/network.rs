@@ -319,13 +319,10 @@ pub(crate) fn parse_public_url(text: &str) -> Result<Url> {
 /// Largest picture a web download returns.
 pub(crate) const IMAGE_MAX_BYTES: u64 = 10 * 1024 * 1024;
 
-/// True when the bytes start like a picture a drawing can hold (PNG, JPEG, GIF, WebP, SVG).
+/// True when the bytes hold a picture a drawing can hold (PNG, JPEG, GIF, WebP, SVG): one rule
+/// with the TypeScript side (`vaultdraw_core::picture`, contract `picture_bytes.json`).
 pub(crate) fn looks_like_image(b: &[u8]) -> bool {
-    b.starts_with(&[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
-        || b.starts_with(&[0xff, 0xd8, 0xff])
-        || b.starts_with(b"GIF8")
-        || (b.len() >= 12 && &b[0..4] == b"RIFF" && &b[8..12] == b"WEBP")
-        || String::from_utf8_lossy(&b[..b.len().min(1024)]).contains("<svg")
+    vaultdraw_core::picture::picture_type(b).is_some()
 }
 
 /// Hosts a picture download may contact: every public http or https host, unless `network.allow_images` is off

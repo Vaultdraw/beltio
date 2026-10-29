@@ -89,6 +89,59 @@ const BINDABLE_ON_CANVAS = new Set([...BINDABLE, "image"]);
 const startsWith = (b: Uint8Array, sig: readonly number[], at = 0) =>
   b.length >= at + sig.length && sig.every((v, i) => b[at + i] === v);
 
+/** How far into the bytes the SVG check looks for the root element (prolog, comments, doctype). */
+const SVG_PROLOG_BYTES = 64 * 1024;
+
+/**
+ * True when the document's first element is `<svg>` (after an optional byte
+ * order mark, XML declaration, comments, processing instructions and a
+ * doctype). A web page with an inline `<svg>` icon is not a picture. Same
+ * rule as Rust `network::looks_like_image`; both read
+ * `vaultdraw-core/src/contract/picture_bytes.json`.
+ */
+export const isSvgDocument = (bytes: Uint8Array): boolean => {
+  const t = new TextDecoder().decode(bytes.subarray(0, SVG_PROLOG_BYTES));
+  let i = t.charCodeAt(0) === 0xfeff ? 1 : 0;
+  for (;;) {
+    while (i < t.length && /\s/.test(t[i])) {
+      i++;
+    }
+    let close: string | null = null;
+    let from = i + 2;
+    if (t.startsWith("<!--", i)) {
+      close = "-->";
+      from = i + 4;
+    } else if (t.startsWith("<?", i)) {
+      close = "?>";
+    } else if (/^<!doctype/i.test(t.slice(i, i + 9))) {
+      const gt = t.indexOf(">", i);
+      const sub = t.indexOf("[", i);
+      close = sub >= 0 && (gt < 0 || sub < gt) ? "]>" : ">";
+    }
+    if (close !== null) {
+      const end = t.indexOf(close, from);
+      if (end < 0) {
+        return false;
+      }
+      i = end + close.length;
+    } else {
+      return /^<(?:[A-Za-z_][\w.-]*:)?svg[\s>/]/.test(t.slice(i, i + 64));
+    }
+  }
+};
+
+/** The picture type of `bytes` (PNG, JPEG, GIF, WebP or SVG), or null. */
+export const pictureType = (bytes: Uint8Array): string | null =>
+  (
+    [
+      "image/png",
+      "image/jpeg",
+      "image/gif",
+      "image/webp",
+      "image/svg+xml",
+    ] as const
+  ).find((m) => looksLike(m, bytes)) ?? null;
+
 /** Does the start of `bytes` look like `mime`? (A cheap check; the editor still decodes it.) */
 export const looksLike = (mime: string, bytes: Uint8Array): boolean => {
   switch (mime) {
@@ -106,10 +159,8 @@ export const looksLike = (mime: string, bytes: Uint8Array): boolean => {
         startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) &&
         startsWith(bytes, [0x57, 0x45, 0x42, 0x50], 8)
       );
-    case "image/svg+xml": {
-      const head = new TextDecoder().decode(bytes.subarray(0, 1024));
-      return head.includes("<svg");
-    }
+    case "image/svg+xml":
+      return isSvgDocument(bytes);
     default:
       return false;
   }

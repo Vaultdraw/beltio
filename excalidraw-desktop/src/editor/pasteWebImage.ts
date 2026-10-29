@@ -7,6 +7,8 @@
  */
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
+import { pictureType } from "../../../sdk/api/shared/sceneRules";
+
 import { fetchWebImage } from "../network/webImage";
 import { applyOps, hashImages, viewportCenter } from "../sceneOps";
 
@@ -14,33 +16,11 @@ import type { SceneOp } from "../sceneOps";
 
 const ONE_URL = /^https?:\/\/\S+$/i;
 const PICTURE_PATH = /\.(png|jpe?g|gif|webp|svg|avif|bmp|ico)(?:[?#]|$)/i;
-const TYPES: Record<string, string> = {
-  png: "image/png",
-  jpeg: "image/jpeg",
-  gif: "image/gif",
-  webp: "image/webp",
-  svg: "image/svg+xml",
-};
 /** Widest a pasted picture starts (scene pixels); larger ones are scaled down. */
 const MAX_WIDTH = 600;
 
-/** The picture type by the first bytes (the same five the import accepts). */
-export const pictureType = (b: Uint8Array): string | null => {
-  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) {
-    return TYPES.png;
-  }
-  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) {
-    return TYPES.jpeg;
-  }
-  const head = new TextDecoder().decode(b.subarray(0, 1024));
-  if (head.startsWith("GIF8")) {
-    return TYPES.gif;
-  }
-  if (head.startsWith("RIFF") && head.slice(8, 12) === "WEBP") {
-    return TYPES.webp;
-  }
-  return head.includes("<svg") ? TYPES.svg : null;
-};
+/** The picture type by its bytes (the same five the import accepts; one rule, sdk/api/shared/sceneRules.ts). */
+export { pictureType };
 
 /** The picture addresses a paste carries, or null when it is not a web picture paste. */
 export const pastedPictureUrls = (data: {

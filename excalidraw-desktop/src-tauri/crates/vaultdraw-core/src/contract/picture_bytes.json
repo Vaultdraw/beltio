@@ -1,0 +1,100 @@
+{
+ "_about": "What picture a download or paste holds, by its bytes. Read by Rust network.rs (looks_like_image) and TypeScript sdk/api/shared/sceneRules.ts (pictureType); give each case either text (UTF-8) or hex. type null = not a picture. Source: hunter B, 2026-10-30.",
+ "cases": [
+  {
+   "name": "png",
+   "hex": "89504e470d0a1a0a0000000d49484452",
+   "type": "image/png"
+  },
+  {
+   "name": "jpeg",
+   "hex": "ffd8ffe000104a464946",
+   "type": "image/jpeg"
+  },
+  {
+   "name": "gif",
+   "text": "GIF89a\u0001\u0000",
+   "type": "image/gif"
+  },
+  {
+   "name": "webp",
+   "text": "RIFF\u0000\u0000\u0000\u0000WEBPVP8 ",
+   "type": "image/webp"
+  },
+  {
+   "name": "plain svg",
+   "text": "<svg xmlns=\"http://www.w3.org/2000/svg\"/>",
+   "type": "image/svg+xml"
+  },
+  {
+   "name": "svg after xml declaration and doctype",
+   "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n<svg width=\"1\"></svg>",
+   "type": "image/svg+xml"
+  },
+  {
+   "name": "svg after a doctype with an internal subset",
+   "text": "<!DOCTYPE svg [ <!ENTITY a \"b\"> ]><svg/>",
+   "type": "image/svg+xml"
+  },
+  {
+   "name": "svg after a byte order mark and blank lines",
+   "text": "﻿\n\n  <svg/>",
+   "type": "image/svg+xml"
+  },
+  {
+   "name": "svg after a long licence comment (hunter B)",
+   "text": "<?xml version=\"1.0\"?><!-- licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence licence  --><svg xmlns=\"http://www.w3.org/2000/svg\"/>",
+   "type": "image/svg+xml"
+  },
+  {
+   "name": "svg with a namespace prefix",
+   "text": "<svg:svg xmlns:svg=\"http://www.w3.org/2000/svg\"/>",
+   "type": "image/svg+xml"
+  },
+  {
+   "name": "svg tag on a new line after attributes wrap",
+   "text": "<svg\n  width=\"1\"/>",
+   "type": "image/svg+xml"
+  },
+  {
+   "name": "web page with an inline svg icon (hunter B)",
+   "text": "<!doctype html><html><head><title>x</title></head><body><svg width=\"1\"></svg><p>hello</p>",
+   "type": null
+  },
+  {
+   "name": "web page starting with a comment",
+   "text": "<!-- served by nginx --><html><body><svg/></body></html>",
+   "type": null
+  },
+  {
+   "name": "xml that is not svg",
+   "text": "<?xml version=\"1.0\"?><rss><svg/></rss>",
+   "type": null
+  },
+  {
+   "name": "element named svgfoo",
+   "text": "<svgfoo/>",
+   "type": null
+  },
+  {
+   "name": "plain text mentioning <svg",
+   "text": "see <svg> tags",
+   "type": null
+  },
+  {
+   "name": "unclosed comment",
+   "text": "<!-- <svg/>",
+   "type": null
+  },
+  {
+   "name": "empty",
+   "text": "",
+   "type": null
+  },
+  {
+   "name": "json",
+   "text": "{\"error\":\"not found\"}",
+   "type": null
+  }
+ ]
+}

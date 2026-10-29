@@ -22,6 +22,7 @@ pub mod note_file;
 pub mod new_drawing;
 pub mod ops;
 pub mod paths;
+pub mod picture;
 pub mod recovery;
 pub mod scene_project;
 pub mod search;
