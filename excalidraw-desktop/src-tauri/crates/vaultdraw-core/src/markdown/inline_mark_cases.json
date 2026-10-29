@@ -1,0 +1,38 @@
+{
+  "blocks": [
+    { "name": "bold in a sentence", "input": "a **b** c", "kind": "paragraph", "text": "a b c", "marks": [["bold", 2, 3]] },
+    { "name": "bold with underscores", "input": "a __b__ c", "kind": "paragraph", "text": "a b c", "marks": [["bold", 2, 3]] },
+    { "name": "italic with a star", "input": "a *b* c", "kind": "paragraph", "text": "a b c", "marks": [["italic", 2, 3]] },
+    { "name": "italic with underscores", "input": "a _b_ c", "kind": "paragraph", "text": "a b c", "marks": [["italic", 2, 3]] },
+    { "name": "underscores inside a word stay", "input": "snake_case_name and more", "kind": "paragraph", "text": "snake_case_name and more", "marks": [] },
+    { "name": "bold and italic over the same words", "input": "x ***both*** y", "kind": "paragraph", "text": "x both y", "marks": [["bold", 2, 6], ["italic", 2, 6]] },
+    { "name": "italic inside bold", "input": "**a *b* c**", "kind": "paragraph", "text": "a b c", "marks": [["bold", 0, 5], ["italic", 2, 3]] },
+    { "name": "a whole paragraph in bold", "input": "**All of it**", "kind": "paragraph", "text": "All of it", "marks": [["bold", 0, 9]] },
+    { "name": "two bold runs", "input": "**one** and **two**", "kind": "paragraph", "text": "one and two", "marks": [["bold", 0, 3], ["bold", 8, 11]] },
+    { "name": "inline code", "input": "run `ls -la` now", "kind": "paragraph", "text": "run ls -la now", "marks": [["code", 4, 10]] },
+    { "name": "code keeps its stars", "input": "use `**not bold**` here", "kind": "paragraph", "text": "use **not bold** here", "marks": [["code", 4, 16]] },
+    { "name": "bold with code inside", "input": "**run `ls`**", "kind": "paragraph", "text": "run ls", "marks": [["bold", 0, 6], ["code", 4, 6]] },
+    { "name": "strikethrough is dropped, not marked", "input": "a ~~b~~ c", "kind": "paragraph", "text": "a b c", "marks": [] },
+    { "name": "a link keeps its label and the bold in it", "input": "see [the **docs**](https://example.org) now", "kind": "paragraph", "text": "see the docs now", "marks": [["bold", 8, 12]] },
+    { "name": "accents and an emoji count in UTF-16 units", "input": "é **ü😀x** z", "kind": "paragraph", "text": "é ü😀x z", "marks": [["bold", 2, 6]] },
+    { "name": "a stray star is plain text", "input": "2 * 3 = 6", "kind": "paragraph", "text": "2 * 3 = 6", "marks": [] },
+    { "name": "a heading with bold words", "input": "## The **big** one", "kind": "heading", "text": "The big one", "marks": [["bold", 4, 7]] },
+    { "name": "a whole heading in italic", "input": "# *Quiet*", "kind": "heading", "text": "Quiet", "marks": [["italic", 0, 5]] },
+    { "name": "a list item that is all bold", "input": "- **Done**", "kind": "listItem", "text": "Done", "marks": [["bold", 0, 4]], "rustOnly": true },
+    { "name": "a task item with code", "input": "- [ ] run `make`", "kind": "listItem", "text": "run make", "marks": [["code", 4, 8]], "rustOnly": true }
+  ],
+  "cells": [
+    {
+      "name": "bold header and body cells",
+      "input": "| **Term** | Meaning |\n|---|---|\n| **KVM** | a *module* in the host |",
+      "header": [["Term", [["bold", 0, 4]]], ["Meaning", []]],
+      "rows": [[["KVM", [["bold", 0, 3]]], ["a module in the host", [["italic", 2, 8]]]]]
+    },
+    {
+      "name": "code and plain cells",
+      "input": "| a | b |\n|---|---|\n| `x` | y |",
+      "header": [["a", []], ["b", []]],
+      "rows": [[["x", [["code", 0, 1]]], ["y", []]]]
+    }
+  ]
+}

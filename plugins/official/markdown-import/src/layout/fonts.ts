@@ -9,6 +9,7 @@ import type { FontFamilyName, LayoutFonts } from "./types";
 
 export type RoleName =
   | "body"
+  | "bodyBold"
   | "h1"
   | "h2"
   | "h3"
@@ -61,6 +62,7 @@ export const fontPlan = (
     role(name, fonts.heading, half(fontSize * scale), boldHeadings);
   return {
     body: role("body", fonts.body, fontSize),
+    bodyBold: role("bodyBold", fonts.body, fontSize, true),
     h1: heading("h1", HEADING_SCALE[0]),
     h2: heading("h2", HEADING_SCALE[1]),
     h3: heading("h3", HEADING_SCALE[2]),

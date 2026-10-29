@@ -35,7 +35,14 @@
       "marker": "-",
       "depth": 0,
       "task": "done",
-      "text": "done task with bold"
+      "text": "done task with bold",
+      "marks": [
+        {
+          "kind": "bold",
+          "start": 15,
+          "end": 19
+        }
+      ]
     },
     {
       "range": [

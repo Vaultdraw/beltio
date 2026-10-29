@@ -182,6 +182,9 @@ pub struct Inl {
     /// Length of `text` in UTF-16 code units.
     u16len: usize,
     spans: Vec<Inline>,
+    /// Bold, italic and code spans so far, and the bold or italic ones still open (kind, start).
+    marks: Vec<Mark>,
+    open_marks: Vec<(MarkKind, usize)>,
     /// Byte ranges of `text` where a `#` must not start a tag (code, wikilinks, math).
     no_tag: Vec<(usize, usize)>,
     /// Finished pieces before the text being collected: text cut off at each embed or display
@@ -202,7 +205,7 @@ pub struct Inl {
 /// One piece of a paragraph, in source order: a run of text, or an embed / display formula
 /// that sat inside it (Obsidian shows them where they are written).
 pub enum Piece {
-    Text { text: String, inline: Vec<Inline> },
+    Text { text: String, inline: Vec<Inline>, marks: Vec<Mark> },
     Block(Block),
 }
 
@@ -216,13 +219,13 @@ pub struct Finished {
 impl Finished {
     /// Turns the pieces into blocks in source order; `make(text, inline, first)` builds the block
     /// for a text piece (`first`: it is the first block). The `^block-id` goes on the last block.
-    pub fn into_blocks(self, range: Range, mut make: impl FnMut(String, Vec<Inline>, bool) -> BlockKind) -> Vec<Block> {
+    pub fn into_blocks(self, range: Range, mut make: impl FnMut(String, Vec<Inline>, Vec<Mark>, bool) -> BlockKind) -> Vec<Block> {
         let mut out: Vec<Block> = Vec::with_capacity(self.pieces.len());
         for p in self.pieces {
             match p {
-                Piece::Text { text, inline } => {
+                Piece::Text { text, inline, marks } => {
                     let first = out.is_empty();
-                    out.push(Block { range, kind: make(text, inline, first), block_id: None });
+                    out.push(Block { range, kind: make(text, inline, marks, first), block_id: None });
                 }
                 Piece::Block(b) => out.push(b),
             }
@@ -233,23 +236,28 @@ impl Finished {
         out
     }
 
-    /// The text of every text piece joined by a space, and the other blocks: for places that
-    /// keep one string (table cells, a callout title).
-    pub fn flat(self) -> (String, Vec<Block>) {
+    /// The text of every text piece joined by a space, its style spans, and the other blocks: for
+    /// places that keep one string (table cells, a callout title).
+    pub fn flat(self) -> (String, Vec<Mark>, Vec<Block>) {
         let mut text = String::new();
+        let mut base = 0usize;
+        let mut marks = Vec::new();
         let mut blocks = Vec::new();
         for p in self.pieces {
             match p {
-                Piece::Text { text: t, .. } => {
+                Piece::Text { text: t, marks: m, .. } => {
                     if !text.is_empty() {
                         text.push(' ');
+                        base += 1;
                     }
+                    marks.extend(m.into_iter().map(|k| Mark { start: k.start + base, end: k.end + base, ..k }));
+                    base += if t.is_ascii() { t.len() } else { t.encode_utf16().count() };
                     text.push_str(&t);
                 }
                 Piece::Block(b) => blocks.push(b),
             }
         }
-        (text, blocks)
+        (text, marks, blocks)
     }
 }
 
@@ -329,8 +337,12 @@ impl Inl {
             Event::Code(c) => {
                 if !self.in_comment {
                     let s = self.text.len();
+                    let start = self.u16len;
                     self.push(&c);
                     self.no_tag.push((s, self.text.len()));
+                    if self.u16len > start {
+                        self.marks.push(Mark { kind: MarkKind::Code, start, end: self.u16len });
+                    }
                 }
             }
             Event::InlineMath(m) => {
@@ -400,7 +412,16 @@ impl Inl {
             }
             Event::Start(tag) => return self.start(ctx, tag, range),
             Event::End(end) => match end {
-                TagEnd::Emphasis | TagEnd::Strong | TagEnd::Strikethrough | TagEnd::Superscript | TagEnd::Subscript => {}
+                TagEnd::Emphasis | TagEnd::Strong => {
+                    let kind = if matches!(end, TagEnd::Strong) { MarkKind::Bold } else { MarkKind::Italic };
+                    if let Some(i) = self.open_marks.iter().rposition(|(k, _)| *k == kind) {
+                        let (_, start) = self.open_marks.remove(i);
+                        if start < self.u16len {
+                            self.marks.push(Mark { kind, start, end: self.u16len });
+                        }
+                    }
+                }
+                TagEnd::Strikethrough | TagEnd::Superscript | TagEnd::Subscript => {}
                 TagEnd::Link => {
                     if let Some((start, target)) = self.link_stack.pop().filter(|(s, _)| *s <= self.u16len) {
                         self.spans.push(Inline {
@@ -425,6 +446,11 @@ impl Inl {
         match tag {
             Tag::Emphasis | Tag::Strong | Tag::Strikethrough | Tag::Superscript | Tag::Subscript => {
                 ctx.dropped_emphasis += 1;
+                match tag {
+                    Tag::Strong => self.open_marks.push((MarkKind::Bold, self.u16len)),
+                    Tag::Emphasis => self.open_marks.push((MarkKind::Italic, self.u16len)),
+                    _ => {}
+                }
             }
             Tag::Link { link_type: LinkType::WikiLink { has_pothole }, dest_url, .. } => {
                 self.wiki = Some(WikiCap { dest: dest_url.trim_end_matches('\\').to_string(), has_pothole, range: range.clone(), alias: String::new() });
@@ -518,8 +544,8 @@ impl Inl {
 
     /// An embed or display formula ends the text so far: it becomes a piece, then the block.
     fn cut(&mut self, ctx: &mut Ctx, block: Block) {
-        if let Some((text, inline, _)) = self.drain_text(ctx, false) {
-            self.parts.push(Piece::Text { text, inline });
+        if let Some((text, inline, marks, _)) = self.drain_text(ctx, false) {
+            self.parts.push(Piece::Text { text, inline, marks });
         }
         self.parts.push(Piece::Block(block));
     }
@@ -528,8 +554,8 @@ impl Inl {
     /// pulled off and its `#tags` found outside code.
     pub fn finish(mut self, ctx: &mut Ctx) -> Finished {
         let mut block_id = None;
-        if let Some((text, inline, id)) = self.drain_text(ctx, true) {
-            self.parts.push(Piece::Text { text, inline });
+        if let Some((text, inline, marks, id)) = self.drain_text(ctx, true) {
+            self.parts.push(Piece::Text { text, inline, marks });
             block_id = id;
         } else if let Some(id) = self.pending_id.take() {
             block_id = Some(id);
@@ -539,9 +565,14 @@ impl Inl {
 
     /// Takes the text collected so far (trimmed; `last` also pulls off a `^block-id`). None when
     /// nothing is left; a bare `^id` is kept in `pending_id`.
-    fn drain_text(&mut self, ctx: &mut Ctx, last: bool) -> Option<(String, Vec<Inline>, Option<String>)> {
+    fn drain_text(&mut self, ctx: &mut Ctx, last: bool) -> Option<(String, Vec<Inline>, Vec<Mark>, Option<String>)> {
         let mut text = std::mem::take(&mut self.text);
         let mut spans = std::mem::take(&mut self.spans);
+        let mut marks = std::mem::take(&mut self.marks);
+        // A bold or italic span still open (it crosses an embed) goes on in the next piece.
+        for (_, s) in &mut self.open_marks {
+            *s = 0;
+        }
         let mut no_tag = std::mem::take(&mut self.no_tag);
         self.u16len = 0;
         let lead = text.len() - text.trim_start().len();
@@ -551,6 +582,10 @@ impl Inl {
             for s in &mut spans {
                 s.start = s.start.saturating_sub(lead16);
                 s.end = s.end.saturating_sub(lead16);
+            }
+            for m in &mut marks {
+                m.start = m.start.saturating_sub(lead16);
+                m.end = m.end.saturating_sub(lead16);
             }
             for r in &mut no_tag {
                 r.0 = r.0.saturating_sub(lead);
@@ -565,6 +600,12 @@ impl Inl {
         }
         ctx.words += text.split_whitespace().count();
         let ascii = text.is_ascii();
+        let len16 = if ascii { text.len() } else { text.encode_utf16().count() };
+        for m in &mut marks {
+            m.end = m.end.min(len16);
+        }
+        marks.retain(|m| m.start < m.end);
+        marks.sort_by_key(|m| (m.start, m.end, m.kind as u8));
         let mut tag_spans = Vec::new();
         for m in find_tags(&text) {
             if no_tag.iter().any(|&(a, b)| m.range.0 >= a && m.range.0 < b) {
@@ -577,7 +618,7 @@ impl Inl {
         }
         spans.extend(tag_spans);
         spans.sort_by_key(|s| (s.start, s.end));
-        Some((text, spans, block_id))
+        Some((text, spans, marks, block_id))
     }
 }
 

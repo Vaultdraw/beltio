@@ -22,7 +22,14 @@
       ],
       "kind": "heading",
       "level": 1,
-      "text": "Project Alpha"
+      "text": "Project Alpha",
+      "marks": [
+        {
+          "kind": "bold",
+          "start": 8,
+          "end": 13
+        }
+      ]
     },
     {
       "range": [
@@ -71,7 +78,14 @@
       "marker": "1.",
       "depth": 0,
       "task": "none",
-      "text": "Run cargo build"
+      "text": "Run cargo build",
+      "marks": [
+        {
+          "kind": "code",
+          "start": 4,
+          "end": 15
+        }
+      ]
     },
     {
       "range": [
@@ -138,7 +152,14 @@
       "marker": "-",
       "depth": 1,
       "task": "none",
-      "text": "works on the worst laptop"
+      "text": "works on the worst laptop",
+      "marks": [
+        {
+          "kind": "bold",
+          "start": 13,
+          "end": 18
+        }
+      ]
     },
     {
       "range": [

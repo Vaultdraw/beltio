@@ -48,6 +48,7 @@ export type {
   NoteDoc,
   NoteFrontmatter,
   NoteInline,
+  NoteMark,
   NoteLink,
   NoteStats,
 } from "./markdown";

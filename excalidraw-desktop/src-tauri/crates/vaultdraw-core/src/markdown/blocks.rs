@@ -79,7 +79,7 @@ impl<'a, 's> Walk<'a, 's> {
         }
     }
 
-    fn push_text_block(&mut self, out: &mut Vec<Block>, range: Range, fin: Finished, make: impl FnMut(String, Vec<Inline>, bool) -> BlockKind) {
+    fn push_text_block(&mut self, out: &mut Vec<Block>, range: Range, fin: Finished, make: impl FnMut(String, Vec<Inline>, Vec<Mark>, bool) -> BlockKind) {
         if fin.pieces.is_empty() {
             // A bare `^id` line names the block before it.
             if let (Some(id), Some(prev)) = (fin.block_id, out.last_mut()) {
@@ -98,13 +98,13 @@ impl<'a, 's> Walk<'a, 's> {
             Event::Rule => out.push(Block { range, kind: BlockKind::ThematicBreak, block_id: None }),
             Event::Start(Tag::Paragraph) => {
                 let fin = self.inline_run(|e| matches!(e, TagEnd::Paragraph));
-                self.push_text_block(out, range, fin, |text, inline, _| BlockKind::Paragraph { text, inline });
+                self.push_text_block(out, range, fin, |text, inline, marks, _| BlockKind::Paragraph { text, inline, marks });
             }
             Event::Start(Tag::Heading { level, .. }) => {
                 let fin = self.inline_run(|e| matches!(e, TagEnd::Heading(_)));
                 let level = level as u8;
-                out.extend(fin.into_blocks(range, |text, inline, first| {
-                    if first { BlockKind::Heading { level, text, inline } } else { BlockKind::Paragraph { text, inline } }
+                out.extend(fin.into_blocks(range, |text, inline, marks, first| {
+                    if first { BlockKind::Heading { level, text, inline, marks } } else { BlockKind::Paragraph { text, inline, marks } }
                 }));
             }
             Event::Start(Tag::BlockQuote(_)) => self.blockquote(r, range, out, depth),
@@ -226,7 +226,7 @@ impl<'a, 's> Walk<'a, 's> {
                 }
             }
             let fin = inl.finish(&mut self.ctx);
-            let (fin_text, fin_blocks) = fin.flat();
+            let (fin_text, _, fin_blocks) = fin.flat();
             title = match fin_text.strip_prefix("[!").and_then(|t| t.split_once(']')) {
                 Some((_, rest)) => rest.trim_start_matches(['+', '-']).trim().to_string(),
                 None => raw_title.clone(),
@@ -244,7 +244,7 @@ impl<'a, 's> Walk<'a, 's> {
                 }
                 let start = inl.first_start.unwrap_or(end);
                 let fin = inl.finish(&mut self.ctx);
-                self.push_text_block(&mut blocks, self.ctx.range(&(start..end)), fin, |text, inline, _| BlockKind::Paragraph { text, inline });
+                self.push_text_block(&mut blocks, self.ctx.range(&(start..end)), fin, |text, inline, marks, _| BlockKind::Paragraph { text, inline, marks });
             }
         }
         self.children(&mut blocks, depth);
@@ -278,17 +278,17 @@ impl<'a, 's> Walk<'a, 's> {
                     emitted = true;
                     let fin = std::mem::take(&mut inl).finish(&mut self.ctx);
                     let starts_with_text = matches!(fin.pieces.first(), Some(Piece::Text { .. }));
-                    let item = |text: String, inline: Vec<Inline>| BlockKind::ListItem { ordered, marker: marker.clone(), depth, task, text, inline };
+                    let item = |text: String, inline: Vec<Inline>, marks: Vec<Mark>| BlockKind::ListItem { ordered, marker: marker.clone(), depth, task, text, inline, marks };
                     if starts_with_text {
                         // Text after an embed continues the item, without a second marker.
-                        out.extend(fin.into_blocks(range, |text, inline, first| {
-                            if first { item(text, inline) } else { BlockKind::Paragraph { text, inline } }
+                        out.extend(fin.into_blocks(range, |text, inline, marks, first| {
+                            if first { item(text, inline, marks) } else { BlockKind::Paragraph { text, inline, marks } }
                         }));
                     } else {
                         // An item that starts with an embed (or is empty) keeps its marker as an empty item.
                         let block_id = if fin.pieces.is_empty() { fin.block_id.clone() } else { None };
-                        out.push(Block { range, kind: item(String::new(), Vec::new()), block_id });
-                        out.extend(fin.into_blocks(range, |text, inline, _| BlockKind::Paragraph { text, inline }));
+                        out.push(Block { range, kind: item(String::new(), Vec::new(), Vec::new()), block_id });
+                        out.extend(fin.into_blocks(range, |text, inline, marks, _| BlockKind::Paragraph { text, inline, marks }));
                     }
                 }
             };
@@ -351,21 +351,30 @@ impl<'a, 's> Walk<'a, 's> {
             .collect();
         let mut header: Vec<String> = Vec::new();
         let mut rows: Vec<Vec<String>> = Vec::new();
+        let mut header_marks: Vec<Vec<Mark>> = Vec::new();
+        let mut row_marks: Vec<Vec<Vec<Mark>>> = Vec::new();
         let mut hoisted: Vec<Block> = Vec::new();
         let mut in_head = false;
         while let Some((ev, _)) = self.next() {
             match ev {
                 Event::Start(Tag::TableHead) => in_head = true,
                 Event::End(TagEnd::TableHead) => in_head = false,
-                Event::Start(Tag::TableRow) => rows.push(Vec::new()),
+                Event::Start(Tag::TableRow) => {
+                    rows.push(Vec::new());
+                    row_marks.push(Vec::new());
+                }
                 Event::Start(Tag::TableCell) => {
                     let fin = self.inline_run(|e| matches!(e, TagEnd::TableCell));
-                    let (text, blocks) = fin.flat();
+                    let (text, marks, blocks) = fin.flat();
                     hoisted.extend(blocks);
                     if in_head {
                         header.push(text);
+                        header_marks.push(marks);
                     } else if let Some(row) = rows.last_mut() {
                         row.push(text);
+                        if let Some(r) = row_marks.last_mut() {
+                            r.push(marks);
+                        }
                     }
                 }
                 Event::End(TagEnd::Table) => break,
@@ -374,7 +383,7 @@ impl<'a, 's> Walk<'a, 's> {
         }
         let cols = align.len().max(header.len());
         let cell_count = header.len() + rows.iter().map(Vec::len).sum::<usize>();
-        out.push(Block { range, kind: BlockKind::Table { align, header, rows, cols, cell_count }, block_id: None });
+        out.push(Block { range, kind: BlockKind::Table { align, header, rows, cols, cell_count, header_marks, row_marks }, block_id: None });
         out.extend(hoisted);
     }
 }

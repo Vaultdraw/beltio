@@ -44,6 +44,13 @@
           "end": 11,
           "target": "tag"
         }
+      ],
+      "marks": [
+        {
+          "kind": "code",
+          "start": 27,
+          "end": 38
+        }
       ]
     }
   ],

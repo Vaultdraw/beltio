@@ -35,7 +35,36 @@
         ]
       ],
       "cols": 3,
-      "cellCount": 12
+      "cellCount": 12,
+      "rowMarks": [
+        [
+          [],
+          [],
+          []
+        ],
+        [
+          [
+            {
+              "kind": "bold",
+              "start": 0,
+              "end": 4
+            }
+          ],
+          [],
+          [
+            {
+              "kind": "code",
+              "start": 7,
+              "end": 11
+            }
+          ]
+        ],
+        [
+          [],
+          [],
+          []
+        ]
+      ]
     },
     {
       "range": [

@@ -36,6 +36,9 @@ export interface TableGrid {
   /** The first row is a header (shaded). */
   header: boolean;
   role: Role;
+  /** The role of a bold cell, and which cells (`[row][col]`, header first) are bold. */
+  boldRole?: Role;
+  bold?: readonly (readonly boolean[])[];
 }
 
 const flat = (s: string | undefined): string =>
@@ -48,24 +51,29 @@ export const gridOf = (
   wrapper: Wrapper,
   role: Role,
   maxWidth: number,
+  boldRole?: Role,
+  boldCells?: readonly (readonly boolean[])[],
 ): TableGrid => {
+  const roleAt = (r: number, c: number): Role =>
+    boldRole && boldCells?.[r]?.[c] ? boldRole : role;
   const cols = Math.max(head.length, ...body.map((r) => r.length), 1);
   const rows: string[][] = (head.length ? [head, ...body] : [...body]).map(
     (r) => Array.from({ length: cols }, (_, c) => flat(r[c])),
   );
   const natural = new Array<number>(cols).fill(0);
   const word = new Array<number>(cols).fill(0);
-  for (const r of rows) {
+  rows.forEach((r, ri) => {
     r.forEach((cell, c) => {
       if (cell === "") {
         return;
       }
-      natural[c] = Math.max(natural[c], wrapper.width(cell, role));
+      const cellRole = roleAt(ri, c);
+      natural[c] = Math.max(natural[c], wrapper.width(cell, cellRole));
       for (const w of cell.split(" ")) {
-        word[c] = Math.max(word[c], wrapper.width(w, role));
+        word[c] = Math.max(word[c], wrapper.width(w, cellRole));
       }
     });
-  }
+  });
   // So many columns that even the narrowest ones overflow: equal shares, thinner padding.
   const share = Math.floor(maxWidth / cols);
   const minCol = Math.min(MIN_COL, share);
@@ -103,9 +111,9 @@ export const gridOf = (
     (a, w) => [...a, a[a.length - 1] + w],
     [0],
   );
-  const lines = rows.map((r) =>
+  const lines = rows.map((r, ri) =>
     r.map((cell, c) =>
-      cell === "" ? [] : wrapper.lines(cell, role, colW[c] - 2 * padX),
+      cell === "" ? [] : wrapper.lines(cell, roleAt(ri, c), colW[c] - 2 * padX),
     ),
   );
   const rowH = lines.map(
@@ -123,5 +131,6 @@ export const gridOf = (
     padX,
     header: head.length > 0,
     role,
+    ...(boldRole && boldCells ? { boldRole, bold: boldCells } : {}),
   };
 };

@@ -37,7 +37,14 @@
             78
           ],
           "kind": "paragraph",
-          "text": "First footnote with bold."
+          "text": "First footnote with bold.",
+          "marks": [
+            {
+              "kind": "bold",
+              "start": 20,
+              "end": 24
+            }
+          ]
         }
       ]
     },

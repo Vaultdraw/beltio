@@ -105,6 +105,7 @@ const plugin: Plugin = definePlugin({
         partElements: settings.partElements,
         headingColors: settings.headingColors ?? true,
         headingBold: settings.headingBold ?? true,
+        boldText: settings.boldText ?? true,
         measure: (f, s) => ctx.text.measure(f, s),
         signal,
       };

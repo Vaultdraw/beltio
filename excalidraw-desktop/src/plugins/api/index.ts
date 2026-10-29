@@ -46,6 +46,7 @@ export type {
   NoteDoc,
   NoteFrontmatter,
   NoteInline,
+  NoteMark,
   NoteLink,
   NoteStats,
   PageDocument,

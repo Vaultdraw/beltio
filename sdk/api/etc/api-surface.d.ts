@@ -161,7 +161,7 @@ export type { CommandContribution, ImporterContribution, MenuContribution, Metho
 export type { FolderEntry, FoldersApi, PickSourceOptions, PickTargetOptions, SourceFolder, TargetFolder, } from "./folders";
 export type { ApiVersion, HostApi } from "./host";
 export type { ImportersApi, Importer, ImportInput, ImportOptions, ImportResult, } from "./importers";
-export type { ByteRange, MarkdownApi, MarkdownParseOptions, NoteBlock, NoteBlockBase, NoteDoc, NoteFrontmatter, NoteInline, NoteLink, NoteStats, } from "./markdown";
+export type { ByteRange, MarkdownApi, MarkdownParseOptions, NoteBlock, NoteBlockBase, NoteDoc, NoteFrontmatter, NoteInline, NoteMark, NoteLink, NoteStats, } from "./markdown";
 export type { BuildSceneOptions, CreateDocumentOptions, FlowItem, FlowOptions, FlowPlacement, PageDocument, PageGeometry, PageImageItem, PageItem, PageLineItem, PageRectFill, PageRectItem, PageRequest, PageSizeName, PageTextItem, PageTextTone, PagesApi, } from "./pages";
 export type { PanelsApi } from "./panels";
 export { definePlugin } from "./plugin";
@@ -300,6 +300,11 @@ export interface NoteInline {
     readonly heading?: string;
     readonly blockRef?: string;
 }
+export interface NoteMark {
+    readonly kind: "bold" | "italic" | "code";
+    readonly start: number;
+    readonly end: number;
+}
 export interface NoteBlockBase {
     readonly range: ByteRange;
     readonly blockId?: string;
@@ -309,10 +314,12 @@ export type NoteBlock = NoteBlockBase & ({
     level: number;
     text: string;
     inline?: readonly NoteInline[];
+    marks?: readonly NoteMark[];
 } | {
     kind: "paragraph";
     text: string;
     inline?: readonly NoteInline[];
+    marks?: readonly NoteMark[];
 } | {
     kind: "listItem";
     ordered: boolean;
@@ -321,6 +328,7 @@ export type NoteBlock = NoteBlockBase & ({
     task: "none" | "open" | "done";
     text: string;
     inline?: readonly NoteInline[];
+    marks?: readonly NoteMark[];
 } | {
     kind: "code";
     code: true;
@@ -344,6 +352,8 @@ export type NoteBlock = NoteBlockBase & ({
     rows: readonly (readonly string[])[];
     cols: number;
     cellCount: number;
+    headerMarks?: readonly (readonly NoteMark[])[];
+    rowMarks?: readonly (readonly (readonly NoteMark[])[])[];
 } | {
     kind: "image";
     target: string;

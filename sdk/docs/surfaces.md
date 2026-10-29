@@ -49,6 +49,7 @@ if (ctx.host.has("statusBar")) ctx.statusBar.set("clock", { text });
 | 0.34.0 | page item tones `heading1` to `heading6` (the theme's colour per heading level) and the fill `bar` (a quote's left bar); theme tokens `--vault-md-*` (the theme's Markdown colours) | `ctx.host.revision >= "0.34.0"` |
 | 0.35.0 | `ctx.vault.trashDrawing` (a drawing to the Trash after a History version; `onlyIfUntouched`); `replaceDrawing` may resolve `{ skipped: "unknown" }` | `ctx.host.has("vault.trashDrawing")` |
 | 0.36.0 | `bold` on page items and `ctx.text.measure` fonts: the bold variant of a family (headings) | `ctx.host.revision >= "0.36.0"` |
+| 0.37.0 | `marks` on parsed blocks and `headerMarks` and `rowMarks` on tables: bold, italic and code spans (`ctx.markdown.parse`) | `ctx.host.revision >= "0.37.0"` |
 
 An older app refuses a `plugin.toml` with a table it does not know (`status_bar`, `views`, `menus`, `toolbar`, `tools`, `shapes`, `methods`), so set `min_app` to the app version that ships the revision you use; `vaultdraw-plugin check` warns when it is lower.
 

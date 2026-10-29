@@ -167,7 +167,8 @@
      "fontFamily": "Nunito",
      "lineHeight": 1.25,
      "align": "left",
-     "group": "table-0"
+     "group": "table-0",
+     "bold": true
     },
     {
      "type": "text",

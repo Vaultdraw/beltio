@@ -179,3 +179,10 @@ type = "bool"
 title = "Bold headings"
 description = "Headings are drawn in the bold variant of the note font, as in Obsidian. Off: headings are in the regular font and differ by size and colour."
 default = true
+
+[[contributes.settings]]
+key = "bold_text"
+type = "bool"
+title = "Bold text"
+description = "A paragraph, list or table cell written entirely in bold is drawn in the bold variant of the note font. Bold words inside a sentence stay in the regular font."
+default = true

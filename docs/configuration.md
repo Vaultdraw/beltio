@@ -1837,6 +1837,7 @@ obsidian_report = true       # write "Import report" when files fail or images s
 offer_update = true          # offer to update notes imported by an older version
 heading_colors = true        # each heading level in its own colour from your theme
 heading_bold = true          # headings in the bold variant of the note font
+bold_text = true             # a paragraph, list or table cell that is all bold uses the bold font
 ```
 
 | Key | Default | Meaning |
@@ -1850,6 +1851,7 @@ heading_bold = true          # headings in the bold variant of the note font
 | `obsidian_excalidraw` | `true` | Convert `Name.excalidraw.md` (plain or compressed) to `Name.excalidraw`. |
 | `strict_line_breaks` | `false` | Like Obsidian's "Strict line breaks". Off: a single line break inside a paragraph stays a line break. On: the lines are joined with a space. Hard breaks (two spaces or a backslash at the end of a line) always break. |
 | `obsidian_report` | `true` | When a file fails or an image stays a box, write `Import report` (a drawing at the root of the target) listing each file or image and the reason. Nothing is written for a clean import. |
+| `bold_text` | `true` | A paragraph, list or table cell written entirely in bold (`**like this**`) is drawn in the bold variant of the note font. A list is bold only when every item in it is. Bold words inside a sentence stay in the regular font (an Excalidraw text has one font; mixed runs are not drawn). `false`: regular font. |
 | `heading_bold` | `true` | Headings are drawn in the bold variant of the note font, as in Obsidian. `false`: regular font, headings differ by size and colour. Bold is a font id the editor knows (the regular id plus 100); excalidraw.com shows such text in its fallback font. |
 | `heading_colors` | `true` | Headings take their level's colour from your theme (the theme's `markdown` colours, see [Themes](#markdown-colours-in-themes)), like Obsidian's `--h1-color` … `--h6-color`, and follow the theme when you switch. Headings step down in size like Obsidian's (1.8, 1.6, 1.4, 1.25, 1.125 and 1 times the body size). `false` gives headings the text colour. |
 | `offer_update` | `true` | Opening a note imported by an older version (white page, hand-drawn font, or web pictures left as boxes) shows one notice per session with **Update**. `false` hides the notice; the command still works. (Web-picture boxes fill in by themselves when such a note opens; see `network.allow_images`.) |

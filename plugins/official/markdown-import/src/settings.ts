@@ -56,6 +56,8 @@ export interface ImportSettings {
   headingColors?: boolean;
   /** Headings in the bold variant of the font (`heading_bold`; unset counts as on). */
   headingBold?: boolean;
+  /** A paragraph, list or table cell that is bold from its first to its last word uses the bold font (`bold_text`; unset counts as on). */
+  boldText?: boolean;
 }
 
 /** The fallback drawing font (Excalifont); the Document font is the plain sans. */
@@ -112,6 +114,7 @@ export function readSettings(ctx: PluginContext): ImportSettings {
     strictLineBreaks: bool(get("strict_line_breaks"), false),
     headingColors: bool(get("heading_colors"), true),
     headingBold: bool(get("heading_bold"), true),
+    boldText: bool(get("bold_text"), true),
   };
 }
 

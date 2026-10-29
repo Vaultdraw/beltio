@@ -9,6 +9,18 @@
       "kind": "heading",
       "level": 1,
       "text": "Title with bold and italic",
+      "marks": [
+        {
+          "kind": "bold",
+          "start": 11,
+          "end": 15
+        },
+        {
+          "kind": "italic",
+          "start": 20,
+          "end": 26
+        }
+      ],
       "blockId": "h1"
     },
     {
@@ -17,7 +29,14 @@
         105
       ],
       "kind": "paragraph",
-      "text": "Intro paragraph with highlight, gone and inline #code."
+      "text": "Intro paragraph with highlight, gone and inline #code.",
+      "marks": [
+        {
+          "kind": "code",
+          "start": 41,
+          "end": 53
+        }
+      ]
     },
     {
       "range": [

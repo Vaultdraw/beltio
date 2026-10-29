@@ -12,10 +12,11 @@
  * occur in the note, and kept only when they kern.
  */
 import { fontKey, fontPlan, headingRole } from "./fonts";
+import { wholeBold } from "./marks";
 
 import type { TextFont } from "@vaultdraw/api";
 
-import type { NoteBlock, NoteDoc } from "@vaultdraw/api";
+import type { NoteBlock, NoteDoc, NoteMark } from "@vaultdraw/api";
 import type { Role, RoleName, RoleTable } from "./fonts";
 import type { FontFamilyName, LayoutOptions } from "./types";
 
@@ -138,7 +139,10 @@ const walk = (blocks: readonly NoteBlock[], visit: (b: NoteBlock) => void) => {
 };
 
 /** The text of each role, as the block mappers will emit it. */
-export const collectSamples = (doc: NoteDoc): Map<RoleName, Samples> => {
+export const collectSamples = (
+  doc: NoteDoc,
+  boldText = true,
+): Map<RoleName, Samples> => {
   const out = new Map<RoleName, Samples>();
   const get = (r: RoleName) => {
     let s = out.get(r);
@@ -150,15 +154,25 @@ export const collectSamples = (doc: NoteDoc): Map<RoleName, Samples> => {
     return s;
   };
   get("body");
+  const bold = (text: string, marks?: readonly NoteMark[]) =>
+    boldText && wholeBold(text, marks);
   walk(doc.blocks, (b) => {
     switch (b.kind) {
       case "heading":
         get(headingRole(b.level)).add(b.text);
         break;
       case "paragraph":
-      case "listItem":
       case "html":
+        get(
+          b.kind === "paragraph" && bold(b.text, b.marks) ? "bodyBold" : "body",
+        ).add(b.text);
+        break;
+      case "listItem":
+        // a run of items is drawn in the bold font only when every item is bold; measure both
         get("body").add(b.text);
+        if (bold(b.text, b.marks)) {
+          get("bodyBold").add(b.text);
+        }
         break;
       case "code":
       case "math":
@@ -168,15 +182,18 @@ export const collectSamples = (doc: NoteDoc): Map<RoleName, Samples> => {
         get("title").add(b.title);
         break;
       case "table": {
-        const s = get("code");
-        for (const h of b.header) {
-          s.add(h);
-        }
-        for (const row of b.rows) {
-          for (const cell of row) {
-            s.add(cell);
+        // Cells are drawn in the body font (bold for a cell that is all bold).
+        const s = get("body");
+        const cell = (text: string, marks?: readonly NoteMark[]) => {
+          s.add(text);
+          if (bold(text, marks)) {
+            get("bodyBold").add(text);
           }
-        }
+        };
+        b.header.forEach((h, i) => cell(h, b.headerMarks?.[i]));
+        b.rows.forEach((row, ri) =>
+          row.forEach((c, i) => cell(c, b.rowMarks?.[ri]?.[i])),
+        );
         break;
       }
       case "image":
@@ -258,10 +275,10 @@ const measureFont = (
 export const buildWidthTable = (
   measure: MeasureFn,
   doc: NoteDoc,
-  opts: Pick<LayoutOptions, "fonts" | "fontSize" | "boldHeadings">,
+  opts: Pick<LayoutOptions, "fonts" | "fontSize" | "boldHeadings" | "boldText">,
 ): WidthTable => {
   const roles = fontPlan(opts.fonts, opts.fontSize, opts.boldHeadings);
-  const samples = collectSamples(doc);
+  const samples = collectSamples(doc, opts.boldText ?? true);
   // Roles sharing (family, size) share one table.
   const byKey = new Map<string, { role: Role; samples: Samples }>();
   for (const [name, s] of samples) {

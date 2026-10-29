@@ -12,6 +12,7 @@ import type {
   NoteBlock,
   NoteDoc,
   NoteInline,
+  NoteMark,
 } from "@vaultdraw/api";
 
 /** The largest text the parser takes, in UTF-8 bytes (the Rust limit). */
@@ -67,9 +68,134 @@ const wikilinkSpans = (text: string): NoteInline[] =>
 
 const withSpans = <T extends { text: string }>(
   block: T,
-): T & { inline?: NoteInline[] } => {
-  const inline = block.text.startsWith("![[") ? [] : wikilinkSpans(block.text);
-  return inline.length ? { ...block, inline } : block;
+): T & { inline?: NoteInline[]; marks?: NoteMark[] } => {
+  const { text, marks } = styledText(block.text);
+  const inline = text.startsWith("![[") ? [] : wikilinkSpans(text);
+  return {
+    ...block,
+    text,
+    ...(inline.length ? { inline } : {}),
+    ...(marks.length ? { marks } : {}),
+  };
+};
+
+const MARK_RANK: Record<NoteMark["kind"], number> = {
+  bold: 0,
+  italic: 1,
+  code: 2,
+};
+const isWord = (c: string | undefined) => !!c && /[\p{L}\p{N}_]/u.test(c);
+
+/**
+ * A text's plain form and its bold, italic and code spans, as the Rust parser reports them
+ * (pinned by `vaultdraw-core/src/markdown/inline_mark_cases.json`): `**` and `__` are bold, `*`
+ * and `_` italic (not inside a word), `***x***` both, backticks code (their text is kept as
+ * written), `~~` is dropped, a link keeps its label, wikilinks stay literal. Offsets are UTF-16.
+ */
+export const styledText = (
+  src: string,
+): { text: string; marks: NoteMark[] } => {
+  const marks: NoteMark[] = [];
+  const run = (s: string, at: number): string => {
+    let out = "";
+    let i = 0;
+    const rest = () => s.slice(i);
+    const wrap = (
+      open: number,
+      content: string,
+      kinds: readonly NoteMark["kind"][],
+      end: number,
+    ) => {
+      const start = at + out.length;
+      out += run(content, start);
+      for (const kind of kinds) {
+        if (at + out.length > start) {
+          marks.push({ kind, start, end: at + out.length });
+        }
+      }
+      i = end;
+      return open;
+    };
+    while (i < s.length) {
+      const c = s[i];
+      const prev = s[i - 1];
+      let m: RegExpExecArray | null;
+      if (c === "\\" && /[*_`~\\[\]|]/.test(s[i + 1] ?? "")) {
+        out += s[i + 1];
+        i += 2;
+      } else if (c === "`") {
+        const ticks = /^`+/.exec(rest())![0];
+        const close = s.indexOf(ticks, i + ticks.length);
+        if (close < 0) {
+          out += ticks;
+          i += ticks.length;
+          continue;
+        }
+        let code = s.slice(i + ticks.length, close);
+        if (/^ .* $/s.test(code) && code.trim()) {
+          code = code.slice(1, -1);
+        }
+        const start = at + out.length;
+        out += code;
+        if (code) {
+          marks.push({ kind: "code", start, end: at + out.length });
+        }
+        i = close + ticks.length;
+      } else if ((m = /^\[\[[^\]]*\]\]/.exec(rest()))) {
+        out += m[0];
+        i += m[0].length;
+      } else if ((m = /^!?\[([^\]]*)\]\(([^)]*)\)/.exec(rest()))) {
+        out += run(m[1], at + out.length);
+        i += m[0].length;
+      } else if (
+        (c === "*" || (c === "_" && !isWord(prev))) &&
+        (m = new RegExp(
+          `^(\\${c}{3})(?=\\S)([\\s\\S]*?\\S)\\1${c === "_" ? "(?!\\w)" : ""}`,
+        ).exec(rest()))
+      ) {
+        wrap(0, m[2], ["bold", "italic"], i + m[0].length);
+      } else if (
+        (c === "*" || (c === "_" && !isWord(prev))) &&
+        (m = new RegExp(
+          `^(\\${c}{2})(?=\\S)([\\s\\S]*?\\S)\\1${c === "_" ? "(?!\\w)" : ""}`,
+        ).exec(rest()))
+      ) {
+        wrap(0, m[2], ["bold"], i + m[0].length);
+      } else if (c === "~" && (m = /^~~(?=\S)([\s\S]*?\S)~~/.exec(rest()))) {
+        wrap(0, m[1], [], i + m[0].length);
+      } else if (
+        (c === "*" || (c === "_" && !isWord(prev))) &&
+        (m = new RegExp(
+          `^\\${c}(?=\\S)([\\s\\S]*?\\S)\\${c}${
+            c === "_" ? "(?!\\w)" : "(?!\\*)"
+          }`,
+        ).exec(rest()))
+      ) {
+        wrap(0, m[1], ["italic"], i + m[0].length);
+      } else {
+        out += c;
+        i += 1;
+      }
+    }
+    return out;
+  };
+  const text = run(src, 0);
+  const lead = text.length - text.trimStart().length;
+  const trimmed = text.trim();
+  const out = marks
+    .map((k) => ({
+      ...k,
+      start: Math.max(0, k.start - lead),
+      end: Math.min(trimmed.length, k.end - lead),
+    }))
+    .filter((k) => k.start < k.end)
+    .sort(
+      (a, b) =>
+        a.start - b.start ||
+        a.end - b.end ||
+        MARK_RANK[a.kind] - MARK_RANK[b.kind],
+    );
+  return { text: trimmed, marks: out };
 };
 
 const IMAGE_NAME = /\.(png|jpe?g|gif|webp|svg|avif|bmp|ico)$/i;
@@ -98,12 +224,17 @@ export const plainCell = (cell: string): string => {
   );
 };
 
-const cells = (line: string): string[] =>
+const rawCells = (line: string): string[] =>
   line
     .trim()
     .replace(/^\||\|$/g, "")
-    .split(/(?<!\\)\|/)
-    .map(plainCell);
+    .split(/(?<!\\)\|/);
+
+const cells = (line: string): string[] => rawCells(line).map(plainCell);
+
+/** Each cell's plain text and style spans. */
+const styledCells = (line: string) =>
+  rawCells(line).map((c) => styledText(c.replace(/\\\|/g, "|")));
 
 /** A pipe table or a whole-paragraph image (`![[a.png|300]]`, `![alt](a b.png)`), as the real parser reports them. */
 const tableOrImage = (
@@ -127,6 +258,13 @@ const tableOrImage = (
         : ("none" as const),
     );
     const rows = lines.slice(2).map(cells);
+    const headerMarks = styledCells(lines[0]).map((c) => c.marks);
+    const rowMarks = lines
+      .slice(2)
+      .map((l) => styledCells(l).map((c) => c.marks));
+    const any =
+      headerMarks.some((m) => m.length) ||
+      rowMarks.some((r) => r.some((m) => m.length));
     return {
       kind: "table",
       align,
@@ -134,6 +272,7 @@ const tableOrImage = (
       rows,
       cols: header.length,
       cellCount: (rows.length + 1) * header.length,
+      ...(any ? { headerMarks, rowMarks } : {}),
       range,
     } as NoteBlock;
   }

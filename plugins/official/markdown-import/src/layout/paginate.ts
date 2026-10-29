@@ -271,7 +271,6 @@ export class Paginator {
         group,
       });
     }
-    const role = grid.role;
     for (const { entry, y } of rows) {
       const r = (entry.payload as { row: number }).row;
       for (let c = 0; c < cols; c++) {
@@ -279,6 +278,8 @@ export class Paginator {
         if (lines.length === 0) {
           continue;
         }
+        const role =
+          grid.boldRole && grid.bold?.[r]?.[c] ? grid.boldRole : grid.role;
         const item: PageItemText = {
           type: "text",
           page,

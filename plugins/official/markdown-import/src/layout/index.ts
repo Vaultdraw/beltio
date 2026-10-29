@@ -196,7 +196,7 @@ export function* layoutNoteStream(
   };
 
   const listItem = (item: MappedList) => {
-    const role = roles.body;
+    const role = item.bold ? roles.bodyBold : roles.body;
     const indent = Math.min(item.depth * listIndent, frame.width / 2);
     const block: TextBlock = {
       role,
@@ -253,6 +253,7 @@ export function* layoutNoteStream(
   yield startPart("");
   for (const item of mapNote(doc, {
     headingColors: opts.headingColors ?? true,
+    boldText: opts.boldText ?? true,
   })) {
     if (cutter.consider(item)) {
       yield* endPart();
@@ -277,6 +278,8 @@ export function* layoutNoteStream(
           wrapper,
           roles.body,
           frame.width,
+          roles.bodyBold,
+          item.bold,
         );
         const n = grid.rowH.length;
         for (let r = 0; r < n; r++) {

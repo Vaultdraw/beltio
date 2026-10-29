@@ -18,8 +18,9 @@
  */
 import { headingRole } from "./fonts";
 import { htmlImages, literalImages } from "./literalImages";
+import { wholeBold } from "./marks";
 
-import type { NoteBlock, NoteDoc, NoteInline } from "@vaultdraw/api";
+import type { NoteBlock, NoteDoc, NoteInline, NoteMark } from "@vaultdraw/api";
 import type { RoleName } from "./fonts";
 import type { PageItemRect, PageItemText } from "./types";
 
@@ -45,6 +46,8 @@ export interface MappedListItem {
   /** The marker as drawn, with its trailing space: "• ", "1. ", "☐ ". */
   prefix: string;
   text: string;
+  /** The item is bold from its first to its last word. */
+  bold: boolean;
 }
 
 export interface MappedList {
@@ -53,6 +56,8 @@ export interface MappedList {
   depth: number;
   items: MappedListItem[];
   spaceBefore: number;
+  /** Every item is bold: the run (one text) is drawn in the bold variant. */
+  bold: boolean;
 }
 
 export interface MappedImage {
@@ -71,6 +76,8 @@ export interface MappedTable {
   rows: readonly (readonly string[])[];
   align: readonly string[];
   spaceBefore: number;
+  /** Per row (header first when there is one) and column: the cell is bold from its first to its last word. Absent when no cell is. */
+  bold?: readonly (readonly boolean[])[];
 }
 
 export type Mapped =
@@ -156,9 +163,30 @@ const text = (
   ...extra,
 });
 
+/** The `bold` matrix of a table (header row first), or nothing when no cell is bold. */
+const boldCells = (
+  b: Extract<NoteBlock, { kind: "table" }>,
+  style: MapStyle,
+): { bold?: boolean[][] } => {
+  if (!style.boldText || (!b.headerMarks && !b.rowMarks)) {
+    return {};
+  }
+  const rows: boolean[][] = [];
+  const add = (
+    cells: readonly string[],
+    marks?: readonly (readonly NoteMark[])[],
+  ) => rows.push(cells.map((c, i) => wholeBold(c, marks?.[i])));
+  if (b.header.length) {
+    add(b.header, b.headerMarks);
+  }
+  b.rows.forEach((r, i) => add(r, b.rowMarks?.[i]));
+  return rows.some((r) => r.some(Boolean)) ? { bold: rows } : {};
+};
+
 function* mapList(
   blocks: readonly NoteBlock[],
   from: number,
+  style: MapStyle,
 ): Generator<MappedList, number> {
   let i = from;
   let first = true;
@@ -170,10 +198,20 @@ function* mapList(
       if (b.kind !== "listItem" || b.depth !== depth) {
         break;
       }
-      items.push({ prefix: marker(b), text: b.text });
+      items.push({
+        prefix: marker(b),
+        text: b.text,
+        bold: style.boldText && wholeBold(b.text, b.marks),
+      });
       i++;
     }
-    yield { kind: "list", depth, items, spaceBefore: first ? SPACE.list : 0 };
+    yield {
+      kind: "list",
+      depth,
+      items,
+      spaceBefore: first ? SPACE.list : 0,
+      bold: items.every((li) => li.bold),
+    };
     first = false;
   }
   return i;
@@ -183,9 +221,11 @@ function* mapList(
 export interface MapStyle {
   /** Each heading level in its own theme colour; off: the text colour. */
   headingColors: boolean;
+  /** A paragraph, list or table cell that is bold from its first to its last word uses the bold font. */
+  boldText: boolean;
 }
 
-const DEFAULT_STYLE: MapStyle = { headingColors: true };
+const DEFAULT_STYLE: MapStyle = { headingColors: true, boldText: true };
 
 /** The tone of a heading level (1 to 6), or none when heading colours are off. */
 export const headingTone = (
@@ -229,15 +269,16 @@ function* mapBlocks(
           break;
         }
         const link = wholeLink(b.text, b.inline);
+        const bold = !link && style.boldText && wholeBold(b.text, b.marks);
         yield text(
-          "body",
+          bold ? "bodyBold" : "body",
           b.text,
           link ? { link, tone: "link", data: { role: "link" } } : {},
         );
         break;
       }
       case "listItem":
-        i = yield* mapList(blocks, i);
+        i = yield* mapList(blocks, i, style);
         continue;
       case "code":
         yield { kind: "open", fill: "code" };
@@ -274,6 +315,7 @@ function* mapBlocks(
           rows: b.rows,
           align: b.align,
           spaceBefore: SPACE.block,
+          ...boldCells(b, style),
         };
         break;
       case "image":

@@ -92,11 +92,15 @@ pub enum BlockKind {
         text: String,
         #[serde(skip_serializing_if = "Vec::is_empty")]
         inline: Vec<Inline>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        marks: Vec<Mark>,
     },
     Paragraph {
         text: String,
         #[serde(skip_serializing_if = "Vec::is_empty")]
         inline: Vec<Inline>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        marks: Vec<Mark>,
     },
     ListItem {
         ordered: bool,
@@ -108,6 +112,8 @@ pub enum BlockKind {
         text: String,
         #[serde(skip_serializing_if = "Vec::is_empty")]
         inline: Vec<Inline>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        marks: Vec<Mark>,
     },
     Code {
         /// Always true: lets a consumer test for code without matching the kind name.
@@ -134,6 +140,12 @@ pub enum BlockKind {
         cols: usize,
         /// Header cells plus body cells.
         cell_count: usize,
+        /// Bold, italic and code spans of each header cell (offsets into that cell's text).
+        #[serde(skip_serializing_if = "no_marks")]
+        header_marks: Vec<Vec<Mark>>,
+        /// Same for the body cells, row by row.
+        #[serde(skip_serializing_if = "no_row_marks")]
+        row_marks: Vec<Vec<Vec<Mark>>>,
     },
     Image {
         target: String,
@@ -182,6 +194,33 @@ pub enum InlineKind {
     Tag,
     Math,
     FootnoteRef,
+}
+
+/// What a style span is.
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum MarkKind {
+    Bold,
+    Italic,
+    Code,
+}
+
+/// A bold, italic or code span inside a text (or table cell); offsets are UTF-16 code units. Spans
+/// may nest (`***both***` is a bold and an italic span over the same range).
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Mark {
+    pub kind: MarkKind,
+    pub start: usize,
+    pub end: usize,
+}
+
+fn no_marks(m: &[Vec<Mark>]) -> bool {
+    m.iter().all(Vec::is_empty)
+}
+
+fn no_row_marks(m: &[Vec<Vec<Mark>>]) -> bool {
+    m.iter().all(|r| no_marks(r))
 }
 
 /// A marked span inside a text block's `text`; offsets are UTF-16 code units (JavaScript string

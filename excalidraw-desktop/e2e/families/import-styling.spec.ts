@@ -32,6 +32,8 @@ const NOTE = [
   "A kernel assumes it is the only program in ring 0.",
   "### One disk write, step by step",
   "Host kernel writes it to the real SSD.",
+  "**This paragraph is bold from start to end.**",
+  "Only **two words** here are bold.",
 ].join("\n\n");
 
 const setMode = async (page: Page, mode: "Light" | "Dark") => {
@@ -101,6 +103,15 @@ test("an imported note's headings follow the theme in light and dark", async ({
     expect(h.fontFamily).toBe(body.fontFamily + 100);
   }
   expect(body.customData?.role).toBeUndefined();
+  // a paragraph that is all bold uses the bold font; bold words inside a sentence do not
+  const textOf = (start: string) =>
+    scene.elements.find(
+      (e: any) => e.type === "text" && e.text.startsWith(start),
+    );
+  expect(textOf("This paragraph is bold").fontFamily).toBe(
+    body.fontFamily + 100,
+  );
+  expect(textOf("Only two words here").fontFamily).toBe(body.fontFamily);
   expect(heading(1).fontSize).toBeGreaterThan(heading(2).fontSize);
   expect(heading(2).fontSize).toBeGreaterThan(heading(3).fontSize);
   // The page follows the theme, so the roles draw in the theme's colours.

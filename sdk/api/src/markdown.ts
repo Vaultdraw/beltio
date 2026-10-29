@@ -70,6 +70,23 @@ export interface NoteInline {
 }
 
 /**
+ * A bold, italic or code span inside a block's `text` (or a table cell's).
+ * `start` and `end` are string indexes (UTF-16 code units). Spans may nest:
+ * `***both***` is a bold and an italic span over the same range. Strikethrough
+ * is dropped, not marked.
+ *
+ * @since 0.37.0
+ */
+export interface NoteMark {
+  /** @since 0.37.0 */
+  readonly kind: "bold" | "italic" | "code";
+  /** @since 0.37.0 */
+  readonly start: number;
+  /** @since 0.37.0 */
+  readonly end: number;
+}
+
+/**
  * Fields every block has.
  *
  * @since 0.8.0
@@ -83,7 +100,8 @@ export interface NoteBlockBase {
 
 /**
  * One block of a note. Text is plain: emphasis markers are removed, links
- * and tags are marked in `inline`.
+ * and tags are marked in `inline`, bold, italic and code in `marks` (since
+ * 0.37.0; absent when there are none).
  *
  * @since 0.8.0
  */
@@ -94,8 +112,14 @@ export type NoteBlock = NoteBlockBase &
         level: number;
         text: string;
         inline?: readonly NoteInline[];
+        marks?: readonly NoteMark[];
       }
-    | { kind: "paragraph"; text: string; inline?: readonly NoteInline[] }
+    | {
+        kind: "paragraph";
+        text: string;
+        inline?: readonly NoteInline[];
+        marks?: readonly NoteMark[];
+      }
     | {
         kind: "listItem";
         ordered: boolean;
@@ -106,6 +130,7 @@ export type NoteBlock = NoteBlockBase &
         task: "none" | "open" | "done";
         text: string;
         inline?: readonly NoteInline[];
+        marks?: readonly NoteMark[];
       }
     | { kind: "code"; code: true; lang?: string; text: string }
     | { kind: "blockquote"; blocks: readonly NoteBlock[] }
@@ -124,6 +149,10 @@ export type NoteBlock = NoteBlockBase &
         rows: readonly (readonly string[])[];
         cols: number;
         cellCount: number;
+        /** Bold, italic and code spans of each header cell (offsets into that cell's text). Absent when there are none. @since 0.37.0 */
+        headerMarks?: readonly (readonly NoteMark[])[];
+        /** The same for the body cells, row by row. Absent when there are none. @since 0.37.0 */
+        rowMarks?: readonly (readonly (readonly NoteMark[])[])[];
       }
     | {
         kind: "image";

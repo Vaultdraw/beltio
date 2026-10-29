@@ -106,6 +106,8 @@ export interface LayoutOptions {
   headingColors?: boolean;
   /** Headings in the bold variant of the font (`heading_bold`, default on). */
   boldHeadings?: boolean;
+  /** A paragraph, list or table cell that is all bold uses the bold font (`bold_text`, default on). */
+  boldText?: boolean;
 }
 
 /** Counts from a layout. */

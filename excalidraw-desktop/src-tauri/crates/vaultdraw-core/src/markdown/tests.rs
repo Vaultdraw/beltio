@@ -101,7 +101,7 @@ fn tags_never_come_from_code() {
 #[test]
 fn wikilink_variants_and_offsets() {
     let doc = parse("a [[N#H|al]] b [[M#^blk]] 😀 #t");
-    let BlockKind::Paragraph { text, inline } = &doc.blocks[0].kind else { panic!() };
+    let BlockKind::Paragraph { text, inline, .. } = &doc.blocks[0].kind else { panic!() };
     assert_eq!(text, "a [[N#H|al]] b [[M#^blk]] 😀 #t");
     let w = &inline[0];
     assert_eq!((w.kind, w.target.as_str(), w.heading.as_deref(), w.alias.as_deref()), (InlineKind::Wikilink, "N", Some("H"), Some("al")));
@@ -387,4 +387,54 @@ fn table_cells_match_the_shared_table() {
         });
         assert_eq!(got, Some((header, rows)), "{md:?}");
     }
+}
+
+fn mark_json(marks: &[Mark]) -> serde_json::Value {
+    marks
+        .iter()
+        .map(|m| serde_json::json!([serde_json::to_value(m.kind).unwrap(), m.start, m.end]))
+        .collect()
+}
+
+/// One table of bold, italic and code spans for the Rust parser and its TypeScript stand-in
+/// (`sdk/api/shared/markdown.ts`), in paragraphs, headings, list items and table cells. The
+/// TypeScript test (`sdk/api/test/inlineMarkCases.test.ts`) reads the same file.
+#[test]
+fn inline_marks_match_the_shared_table() {
+    let table: serde_json::Value = serde_json::from_str(include_str!("inline_mark_cases.json")).unwrap();
+    for c in table["blocks"].as_array().unwrap() {
+        let name = c["name"].as_str().unwrap();
+        let doc = parse(c["input"].as_str().unwrap());
+        let (text, marks) = doc
+            .blocks
+            .iter()
+            .find_map(|b| match &b.kind {
+                BlockKind::Paragraph { text, marks, .. } | BlockKind::Heading { text, marks, .. } | BlockKind::ListItem { text, marks, .. } => {
+                    Some((text.clone(), mark_json(marks)))
+                }
+                _ => None,
+            })
+            .unwrap_or_else(|| panic!("{name}: no text block"));
+        assert_eq!(text, c["text"].as_str().unwrap(), "{name}");
+        assert_eq!(marks, c["marks"], "{name}");
+    }
+    for c in table["cells"].as_array().unwrap() {
+        let name = c["name"].as_str().unwrap();
+        let doc = parse(c["input"].as_str().unwrap());
+        let BlockKind::Table { header, rows, header_marks, row_marks, .. } = &doc.blocks[0].kind else { panic!("{name}: no table") };
+        let cell = |t: &String, m: &Vec<Mark>| serde_json::json!([t, mark_json(m)]);
+        let head: Vec<_> = header.iter().zip(header_marks).map(|(t, m)| cell(t, m)).collect();
+        let body: Vec<Vec<_>> = rows.iter().zip(row_marks).map(|(r, rm)| r.iter().zip(rm).map(|(t, m)| cell(t, m)).collect()).collect();
+        assert_eq!(serde_json::Value::from(head), c["header"], "{name} header");
+        assert_eq!(serde_json::Value::from(body), c["rows"], "{name} rows");
+    }
+}
+
+#[test]
+fn marks_stay_out_of_the_json_when_there_are_none() {
+    let doc = parse("plain text\n\n| a |\n|---|\n| b |\n");
+    let v = serde_json::to_value(&doc).unwrap();
+    assert!(v["blocks"][0].get("marks").is_none());
+    assert!(v["blocks"][1].get("headerMarks").is_none());
+    assert!(v["blocks"][1].get("rowMarks").is_none());
 }

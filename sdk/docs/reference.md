@@ -680,9 +680,9 @@ interface MarkdownParseOptions {
 | `tags` | Frontmatter tags, then inline `#tags`, without `#`. Tags never come from code. |
 | `stats` | `words`, `blocks` (nested ones included), `droppedEmphasis` and `droppedHtml` (the count of removed markers and HTML comments). |
 
-Each block has a `range`, and a `blockId` when the block ends with `^block-id`. Block text is plain: emphasis markers are removed, and links and tags are marked in `inline`.
+Each block has a `range`, and a `blockId` when the block ends with `^block-id`. Block text is plain: emphasis markers are removed, links and tags are marked in `inline`, and bold, italic and code spans in `marks` (since 0.37.0; `{ kind: "bold" | "italic" | "code", start, end }`, absent when there are none; `***both***` is a bold and an italic span over the same range, strikethrough is dropped). A `table` block has `headerMarks` and `rowMarks` with the same spans per cell.
 
-- **Two kinds of offsets.** A `range` is `[start, end]` in UTF-8 bytes of the text you passed (a leading byte order mark is skipped but counted). An `inline` span's `start` and `end` are UTF-16 indexes into that block's `text`, the same as `String.slice` takes. Do not mix them.
+- **Two kinds of offsets.** A `range` is `[start, end]` in UTF-8 bytes of the text you passed (a leading byte order mark is skipped but counted). An `inline` or `marks` span's `start` and `end` are UTF-16 indexes into that block's `text`, the same as `String.slice` takes. Do not mix them.
 - **Limit:** 16 MiB of UTF-8 text per call. A larger text is refused with `INVALID_ARGUMENT`.
 - **Speed:** one native call; the parser takes about 1 ms for 50,000 words.
 

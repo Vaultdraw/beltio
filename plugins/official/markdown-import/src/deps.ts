@@ -40,6 +40,8 @@ export interface LayoutOptions {
   headingColors?: boolean;
   /** Headings in the bold variant of the font (default on). */
   headingBold?: boolean;
+  /** A paragraph, list or table cell that is all bold uses the bold font (default on). */
+  boldText?: boolean;
   measure: PluginContext["text"]["measure"];
   signal: AbortSignal;
 }
@@ -76,6 +78,7 @@ export async function* layoutNoteStream(
     partElements: opts.partElements,
     headingColors: opts.headingColors ?? true,
     boldHeadings: opts.headingBold ?? true,
+    boldText: opts.boldText ?? true,
   };
   const table = buildWidthTable(opts.measure, doc, layout);
   const queue: LayoutBatch[] = [];
@@ -155,6 +158,7 @@ const workerLayout =
       partElements: settings.partElements,
       headingColors: settings.headingColors ?? true,
       headingBold: settings.headingBold ?? true,
+      boldText: settings.boldText ?? true,
       measure: (f, s) => ctx.text.measure(f, s),
       signal,
     };
