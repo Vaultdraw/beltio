@@ -348,6 +348,18 @@ pub(crate) fn fetch_image(dirs: &config::Dirs, url_text: &str) -> Result<Vec<u8>
     fetch_image_with(&agent(), url_text)
 }
 
+/// The app's own picture download (a pasted picture address): the same checks as a plugin's
+/// `network.fetchImage` (web pictures on, public http or https, 10 MiB, picture bytes), run off the
+/// main thread.
+#[tauri::command]
+pub(crate) async fn network_fetch_image(url: String) -> Result<tauri::ipc::Response> {
+    let dirs = config::resolve_dirs()?;
+    let bytes = tauri::async_runtime::spawn_blocking(move || fetch_image(&dirs, &url))
+        .await
+        .map_err(|e| err("INTERNAL", e.to_string()))??;
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
 /// True for addresses a public host must never resolve to: private, link-local, CGNAT,
 /// unspecified, multicast and loopback.
 fn is_blocked_address(ip: IpAddr) -> bool {

@@ -112,13 +112,23 @@ const networkRow = (
   if (method !== "network.fetchImage") {
     throw coded("NOT_FOUND", `Plugins cannot call "${method}"`);
   }
+  return fakeFetchImage(net, new TextDecoder().decode(body));
+};
+
+/**
+ * One picture download from the stand-in's table: what `network.fetchImage` and the app's own
+ * `network_fetch_image` (a pasted picture address) both answer in the browser build.
+ */
+export const fakeFetchImage = (
+  net: FakeBackendNetwork,
+  url: string,
+): Uint8Array => {
   if (!net.allowed) {
     throw coded(
       "NETWORK_NOT_ALLOWED",
       "Downloading pictures from web pages is turned off in Settings.",
     );
   }
-  const url = new TextDecoder().decode(body);
   net.fetched.push(url);
   const hit = net.images[url];
   if (hit === undefined) {

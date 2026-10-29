@@ -1093,7 +1093,7 @@ const VaultEditorComponent = ({
         onInitialize={onInitialize}
         onExcalidrawAPI={onExcalidrawAPI}
         onImageEdit={onImageEdit}
-        onPaste={onEditorPaste}
+        onPaste={(data) => onEditorPaste(data, apiRef.current)}
         canvasContextMenuItems={canvasContextMenuItems}
         validateEmbeddable={false}
         viewModeEnabled={readOnly}
