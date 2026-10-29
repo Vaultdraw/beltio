@@ -266,6 +266,9 @@ pub struct VaultHistory {
     pub(crate) last_error: Mutex<Option<LastError>>,
     format_newer: AtomicBool,
     pub(crate) writing: Arc<AtomicBool>,
+    /// Background jobs (reconcile, orphan scan, relink, sweep) are pending: tests wait for it to
+    /// clear so a step never races a job whose pace depends on the wall clock (toimprove 119).
+    pub(crate) bg_busy: Arc<AtomicBool>,
     loaded: Mutex<bool>,
     pub(crate) notifier: Arc<Mutex<Notifier>>,
     pub(crate) emit: Emitter,
@@ -763,6 +766,7 @@ impl HistoryService {
             last_error: Mutex::new(None),
             format_newer: AtomicBool::new(format_newer),
             writing: Arc::new(AtomicBool::new(false)),
+            bg_busy: Arc::new(AtomicBool::new(false)),
             loaded: Mutex::new(false),
             notifier: Arc::new(Mutex::new(Notifier::default())),
             emit,

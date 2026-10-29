@@ -202,6 +202,12 @@ impl Fx {
         if let Err(e) = self.vh().snapshot("barrier.excalidraw", "leave", true) {
             assert!(!e.message.contains("did not answer"), "history barrier timed out: {}", e.message);
         }
+        // Background jobs run in 5 ms wall-clock slices behind urgent messages: under load they
+        // were still running when the next step began (toimprove 119). Wait until they are done,
+        // then pass once more through the queue so the worker's last loop pass has run.
+        let vh = self.vh();
+        wait_for("history background jobs", || !vh.bg_busy.load(std::sync::atomic::Ordering::Relaxed));
+        let _ = vh.snapshot("barrier.excalidraw", "leave", true);
     }
     pub fn hist_dir(&self) -> PathBuf {
         self.root.join(".excalidraw-vault/history")

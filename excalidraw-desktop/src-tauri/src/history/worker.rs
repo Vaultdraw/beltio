@@ -1065,6 +1065,7 @@ pub(crate) fn run(vh: Arc<VaultHistory>, survivors: Survivors, clock: Arc<dyn Cl
         let timer = core.next_deadline().map(|d| Duration::from_millis(d.saturating_sub(now)));
         let daily = bg.daily_due.filter(|_| core.on()).map(|d| Duration::from_millis(d.saturating_sub(now)));
         let relink = bg.relink_due(&core, now);
+        vh.bg_busy.store(bg.pending(), Ordering::Relaxed);
         let wait = [timer, super::lock(&vh.notifier).wait(), daily, relink].into_iter().flatten().min();
         match vh.inbox.pop(wait, bg.pending()) {
             Popped::Stop => break,

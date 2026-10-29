@@ -322,8 +322,13 @@ fn trash_hides_the_history_and_put_back_within_seven_days_reattaches_it() {
     fx.clock.advance(3 * DAY);
     fs::write(fx.root.join(A), &json1).unwrap();
     watch(&fx, &[A]);
-    assert_eq!(fx.versions(A).len(), 3, "re-attached");
-    assert_eq!(fx.vh().list(A).unwrap().lineages, vec![lin.clone()]);
+    // Three days on, the daily sweep may thin the automatic versions (retention), and it runs in
+    // background slices whose pace follows the wall clock: count what survived, not a fixed 3
+    // (toimprove 119: the fixed count held only while the sweep had not run yet).
+    assert_eq!(fx.vh().list(A).unwrap().lineages, vec![lin.clone()], "re-attached");
+    let kept = all_versions(&fx, &lin);
+    assert!(kept >= 1, "the history survived the put-back");
+    assert_eq!(fx.versions(A).len(), kept, "every kept version is listed again");
     fx.barrier();
     assert!(!fs::read_to_string(fx.vh().vault_state.join("lineages.json")).unwrap().contains(&lin));
     assert!(lineage::sweep_inputs(&fx.vh(), fx.clock.now_ms() + 30 * DAY).trash_expired.is_empty());
