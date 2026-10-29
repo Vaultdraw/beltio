@@ -48,6 +48,8 @@ describe("data: pictures in a note", () => {
     const it = item(url);
     await createWebImages(net).fill([it]);
     expect(fetched).toEqual([]);
-    expect((it as { bytes?: Uint8Array }).bytes?.length ?? 0).toBeGreaterThan(0);
+    expect((it as { bytes?: Uint8Array }).bytes?.length ?? 0).toBeGreaterThan(
+      0,
+    );
   });
 });
