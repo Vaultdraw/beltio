@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { Dialog } from "../../../../excalidraw-desktop/src/components/Dialog";
+import { DialogFrame } from "../../_shared/DialogFrame";
+
 import { renderFormula, warmFormulaRenderer } from "./renderer";
 import { svgToDataURL } from "./svgPost";
 import { parseFormulaInput } from "./types";
@@ -113,7 +114,7 @@ const FormulaDialog = ({
         }
       }}
     >
-      <Dialog
+      <DialogFrame
         title={title}
         titleId="formula-dialog-title"
         onClose={onCancel}
@@ -175,7 +176,7 @@ const FormulaDialog = ({
             {error}
           </div>
         )}
-      </Dialog>
+      </DialogFrame>
     </div>
   );
 };

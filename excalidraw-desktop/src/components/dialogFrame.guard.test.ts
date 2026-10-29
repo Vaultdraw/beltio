@@ -19,6 +19,8 @@ const ALLOWED: Record<string, string> = {
     "the settings window: full-size two-pane surface, own Escape (clear search first); uses the scrim class",
   "excalidraw-desktop/src/components/readonly/ReadOnlyBadge.tsx":
     "a non-modal popover (no aria-modal, no backdrop)",
+  "plugins/official/_shared/DialogFrame.tsx":
+    "the one frame copy the official plugins share (they use the public API only, so cannot import Dialog)",
 };
 
 const PATTERN =
@@ -64,6 +66,30 @@ describe("dialog frame guard", () => {
   it("every allowed exception still exists (no stale entries)", () => {
     for (const rel of Object.keys(ALLOWED)) {
       expect(statSync(join(ROOT, rel)).isFile()).toBe(true);
+    }
+  });
+});
+
+describe("plugin dialog frame", () => {
+  it("shares the app's Escape stack and offers the same keyboard contract", () => {
+    const app = readFileSync(join(__dirname, "escapeLayers.ts"), "utf8");
+    const plugin = readFileSync(
+      join(ROOT, "plugins/official/_shared/DialogFrame.tsx"),
+      "utf8",
+    );
+    const key = /Symbol\.for\("([^"]+)"\)/;
+    expect(app.match(key)?.[1]).toBeTruthy();
+    expect(plugin.match(key)?.[1]).toBe(app.match(key)?.[1]);
+  });
+
+  it("every official plugin dialog goes through the shared frame", () => {
+    for (const file of [
+      "plugins/official/formula/src/FormulaDialog.tsx",
+      "plugins/official/pdf-import/src/Dialog.tsx",
+    ]) {
+      expect(readFileSync(join(ROOT, file), "utf8")).toMatch(
+        /from "\.\.\/\.\.\/_shared\/DialogFrame"/,
+      );
     }
   });
 });

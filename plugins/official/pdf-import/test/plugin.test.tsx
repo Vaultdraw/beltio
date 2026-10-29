@@ -155,6 +155,22 @@ describe("pdf-import plugin", () => {
     expect(p!.scene.batches).toHaveLength(0);
   });
 
+  it("Escape goes to a dialog opened over it, not to the import dialog", async () => {
+    await start();
+    await openDialog();
+    // What the app's Dialog/ConfirmModal does: join the shared stack on globalThis.
+    const stack = (globalThis as unknown as Record<symbol, object[]>)[
+      Symbol.for("vaultdraw.escapeLayers")
+    ];
+    const above = {};
+    stack.push(above);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(dialog()).toBeTruthy();
+    stack.splice(stack.indexOf(above), 1);
+    fireEvent.keyDown(document, { key: "Escape" });
+    await closed();
+  });
+
   it("an encrypted PDF asks for its password first", async () => {
     await start();
     p!.pdf.password = "pw";

@@ -4,7 +4,8 @@
  */
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
-import { Dialog } from "../../../../excalidraw-desktop/src/components/Dialog";
+import { DialogFrame } from "../../_shared/DialogFrame";
+
 import { estimateImport } from "./budget";
 import { pdfErrorMessage } from "./errors";
 import { sizeOf } from "./importPdf";
@@ -26,7 +27,7 @@ const formatMb = (bytes: number) =>
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
-/** The app's own `Dialog` (keyboard contract, focus and Escape stack included), as a plugin overlay. */
+/** The shared plugin dialog frame (the app's keyboard contract), as a plugin overlay. */
 const Frame = ({
   titleId,
   onCancel,
@@ -40,7 +41,7 @@ const Frame = ({
   footer: React.ReactNode;
   children: React.ReactNode;
 }) => (
-  <Dialog
+  <DialogFrame
     title="Import PDF"
     titleId={titleId}
     className="pdfi"
@@ -53,7 +54,7 @@ const Frame = ({
     footer={footer}
   >
     {children}
-  </Dialog>
+  </DialogFrame>
 );
 
 const PasswordPrompt = ({
