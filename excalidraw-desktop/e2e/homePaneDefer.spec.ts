@@ -40,7 +40,8 @@ test("opening a vault shows the tree, then the home pane in the same place", asy
   await expect(
     pane.getByRole("heading", { name: /No drawing open/i }),
   ).toBeVisible();
-  await expect(pane.locator(".vault-home__action")).toHaveCount(4);
+  // Four core actions plus "Import Obsidian vault…" (the Markdown import is on by default).
+  await expect(pane.locator(".vault-home__action")).toHaveCount(5);
   await expect(
     page.getByLabel("Vault file navigator").locator("[data-tree-path]").first(),
   ).toBeVisible();

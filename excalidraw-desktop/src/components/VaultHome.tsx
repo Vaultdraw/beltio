@@ -3,14 +3,19 @@
  * (each runs a registry command and shows its live shortcut) and the recent
  * drawings. Plain buttons, so Tab / Enter reach everything.
  */
+import { useSyncExternalStore } from "react";
+
 import { PALETTE_COMMANDS_ID, PALETTE_FILES_ID } from "../commands/commands";
 import { formatChord } from "../commands/keys";
+import { getRegisteredCommand, subscribeCommands } from "../commands/registry";
 import { useCommandShortcutLookup } from "../commands/useCommandShortcut";
+import { OBSIDIAN_IMPORT_COMMAND_ID } from "../plugins/officialPlugins";
 import { RecentDrawings } from "../thumbnails/surfaces/RecentDrawings";
 
 import {
   IconCommand,
   IconDrawing,
+  IconFolderOpen,
   IconPlus,
   IconSearch,
   IconTemplate,
@@ -56,6 +61,17 @@ export const HOME_ACTIONS: readonly HomeAction[] = [
   },
 ];
 
+/**
+ * Shown while the Markdown import is on: someone coming from Obsidian finds the import on the
+ * first screen, not only in the drawing's main menu or the palette (test-net TN-3).
+ */
+const OBSIDIAN_IMPORT: HomeAction = {
+  id: OBSIDIAN_IMPORT_COMMAND_ID,
+  label: "Import Obsidian vault…",
+  icon: <IconFolderOpen />,
+  writes: true,
+};
+
 export interface HomeRecent {
   path: string;
   name: string;
@@ -81,6 +97,12 @@ export const VaultHome = ({
   inert,
 }: VaultHomeProps) => {
   const shortcut = useCommandShortcutLookup(ownerWindow ?? null, formatChord);
+  // The plugin's stub registers the command at boot, so this loads no plugin code.
+  const hasObsidianImport = useSyncExternalStore(
+    subscribeCommands,
+    () => !!getRegisteredCommand(OBSIDIAN_IMPORT_COMMAND_ID),
+    () => false,
+  );
   return (
     <div className="vault-empty-state vault-home" inert={inert}>
       <div className="vault-empty-state__icon">
@@ -91,23 +113,25 @@ export const VaultHome = ({
         Pick a drawing from the navigator or start something new.
       </p>
       <div className="vault-home__actions">
-        {HOME_ACTIONS.filter((a) => !(a.writes && readOnly)).map((action) => {
-          const keys = shortcut(action.id);
-          return (
-            <button
-              key={action.id}
-              type="button"
-              className={`vault-home__action${
-                action.primary ? " vault-home__action--primary" : ""
-              }`}
-              onClick={() => onRun(action.id)}
-            >
-              {action.icon}
-              <span className="vault-home__label">{action.label}</span>
-              {keys && <kbd className="vault-kbd">{keys}</kbd>}
-            </button>
-          );
-        })}
+        {[...HOME_ACTIONS, ...(hasObsidianImport ? [OBSIDIAN_IMPORT] : [])]
+          .filter((a) => !(a.writes && readOnly))
+          .map((action) => {
+            const keys = shortcut(action.id);
+            return (
+              <button
+                key={action.id}
+                type="button"
+                className={`vault-home__action${
+                  action.primary ? " vault-home__action--primary" : ""
+                }`}
+                onClick={() => onRun(action.id)}
+              >
+                {action.icon}
+                <span className="vault-home__label">{action.label}</span>
+                {keys && <kbd className="vault-kbd">{keys}</kbd>}
+              </button>
+            );
+          })}
       </div>
       <RecentDrawings entries={recent} onOpen={onOpenDrawing} />
     </div>
