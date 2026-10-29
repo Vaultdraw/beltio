@@ -21,6 +21,20 @@ html.vault-macos .vault-header {
   padding-left: 86px;
 }
 
+/* With the header hidden, macOS still draws its window buttons at the top
+ * left; this strip gives them room so nothing sits under them. */
+.vault-titlebar-strip {
+  display: none;
+}
+
+html.vault-macos .vault-titlebar-strip {
+  display: block;
+  flex: none;
+  height: 28px;
+  -webkit-app-region: drag;
+  -webkit-user-select: none;
+}
+
 /* Linux custom chrome: the header is the only title bar; window buttons sit at the right edge. */
 html.vault-linux-custom .vault-header {
   padding-right: 4px;

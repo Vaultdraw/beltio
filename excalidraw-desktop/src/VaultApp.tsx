@@ -3086,10 +3086,10 @@ export const VaultApp = ({
       }`}
     >
       {/* A save problem keeps the header: it is where the user is told. */}
-      {(layout.shown.header ||
-        !!saveError ||
-        saveStatus === "conflict" ||
-        saveStatus === "error") && (
+      {layout.shown.header ||
+      !!saveError ||
+      saveStatus === "conflict" ||
+      saveStatus === "error" ? (
         <VaultHeader
           vault={vault}
           activePath={activeDoc?.path ?? null}
@@ -3105,6 +3105,14 @@ export const VaultApp = ({
           onRetryWritable={
             repository.retryVault ? handleRetryWritable : undefined
           }
+        />
+      ) : (
+        // Header hidden: on macOS a thin drag strip keeps the window buttons
+        // off the canvas and the navigator (CSS shows it on macOS only).
+        <div
+          className="vault-titlebar-strip"
+          data-tauri-drag-region
+          aria-hidden="true"
         />
       )}
 
