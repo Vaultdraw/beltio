@@ -238,6 +238,8 @@ export const inspect = (
         a &&
         a !== document.body &&
         a !== document.documentElement &&
+        // The editor's own container takes focus so keys reach the canvas; no ring by design.
+        !a.classList.contains("excalidraw") &&
         shown(a) &&
         root.contains(a)
       ) {

@@ -39,6 +39,7 @@ journey({
   ],
   setup: async (page) => {
     await openVault(page, "?seed=links");
+    await expect(page.locator(".vault-recent__title")).toBeVisible();
   },
   steps: [
     {

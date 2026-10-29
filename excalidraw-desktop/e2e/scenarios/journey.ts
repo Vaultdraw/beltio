@@ -30,6 +30,8 @@ export type Ctx = {
   data: Record<string, any>;
   /** Milliseconds per step name, for the journeys that record timings. */
   timings: Record<string, number>;
+  /** A step reports something wrong the user would see, without stopping the journey. */
+  report: (problem: string) => void;
 };
 
 export type Journey = {
@@ -61,8 +63,15 @@ export const journey = (j: Journey) => {
         if (j.knownBug) {
           test.fail(true, j.knownBug);
         }
+        page.setDefaultTimeout(15_000);
         await page.emulateMedia({ colorScheme: theme });
-        const ctx: Ctx = { theme, data: {}, timings: {} };
+        const reported: string[] = [];
+        const ctx: Ctx = {
+          theme,
+          data: {},
+          timings: {},
+          report: (p) => reported.push(p),
+        };
         const problems: string[] = [];
         // A problem that stays on screen is reported at the first step that shows it, once.
         const seen = new Set<string>();
@@ -100,6 +109,7 @@ export const journey = (j: Journey) => {
             break;
           }
           ctx.timings[step.name] = Date.now() - t0;
+          add(where, reported.splice(0));
           const found = await stepProblems(page, {
             skipFocus: !step.keyboard,
             ...step.check,
