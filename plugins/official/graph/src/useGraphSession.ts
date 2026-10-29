@@ -24,6 +24,9 @@ export interface UseGraphSessionOptions {
   onInteract?: () => void;
 }
 
+/** Quiet time after the last file change before the open graph re-reads its data. */
+export const REFRESH_DELAY_MS = 400;
+
 export function useGraphSession(opts: UseGraphSessionOptions) {
   const stageRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
@@ -70,7 +73,23 @@ export function useGraphSession(opts: UseGraphSessionOptions) {
       latest.current.onInteract?.(),
     );
     void session.load();
+    // Files changed while the graph is open: refresh once the burst settles (a save, an outside
+    // rename and the link index catching up arrive as several events).
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const unsubscribe = opts.source.onChange?.(() => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      timer = setTimeout(() => {
+        timer = null;
+        void session.refresh();
+      }, REFRESH_DELAY_MS);
+    });
     return () => {
+      unsubscribe?.();
+      if (timer) {
+        clearTimeout(timer);
+      }
       unbind();
       ro.disconnect();
       session.dispose();

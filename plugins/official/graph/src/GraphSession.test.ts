@@ -435,3 +435,48 @@ describe("GraphSession interaction", () => {
     expect(t.session.hintMap()).not.toBe(map);
   });
 });
+
+describe("GraphSession refresh (hunter C-5: the open graph follows file changes)", () => {
+  it("re-reads the graph, keeps every node where it was and settles warm", async () => {
+    const t = setup();
+    await t.session.load();
+    const moved = new Float32Array(2 * N).map((_, i) => i * 3);
+    t.layouts[0].cb.onPositions(moved);
+    await t.session.refresh();
+    expect(t.source.graph).toHaveBeenCalledTimes(2);
+    expect(t.layouts).toHaveLength(2);
+    const init = t.layouts[1].starts[0];
+    expect(init.nodeCount).toBe(N);
+    expect(Array.from(init.positions)).toEqual(Array.from(moved));
+    expect(init.alpha).toBe(ALPHA_WARM);
+    expect(t.states.at(-1)).toMatchObject({ phase: "ready", nodeCount: N });
+  });
+
+  it("a smaller graph drops the gone nodes and keeps the rest in place", async () => {
+    const t = setup();
+    await t.session.load();
+    const small = fakeGraph(60, 5);
+    t.source.graph.mockResolvedValueOnce(small);
+    await t.session.refresh();
+    expect(t.states.at(-1)).toMatchObject({ nodeCount: small.nodeCount });
+  });
+
+  it("a failed read keeps the last graph", async () => {
+    const t = setup();
+    await t.session.load();
+    t.source.graph.mockRejectedValueOnce(new Error("busy"));
+    await t.session.refresh();
+    expect(t.layouts).toHaveLength(1);
+    expect(t.states.at(-1)).toMatchObject({ phase: "ready", nodeCount: N });
+  });
+
+  it("does nothing before load or after close", async () => {
+    const t = setup();
+    await t.session.refresh();
+    expect(t.source.graph).not.toHaveBeenCalled();
+    await t.session.load();
+    t.session.dispose();
+    await t.session.refresh();
+    expect(t.source.graph).toHaveBeenCalledTimes(1);
+  });
+});

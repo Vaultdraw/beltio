@@ -10,4 +10,13 @@ export const pluginGraphSource = (ctx: PluginContext): GraphSource => ({
   },
   loadLayout: () => ctx.vault.graph.layout.load(),
   saveLayout: (_handle, bytes) => ctx.vault.graph.layout.save(bytes),
+  onChange(cb) {
+    const subs = [
+      ctx.events.on("vault.changed", () => cb()),
+      ctx.events.on("drawing.saved", () => cb()),
+      ctx.events.on("drawing.renamed", () => cb()),
+      ctx.events.on("drawing.deleted", () => cb()),
+    ];
+    return () => subs.forEach((d) => d.dispose());
+  },
 });

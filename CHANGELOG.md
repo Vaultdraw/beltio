@@ -54,6 +54,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **Readable faint text:** the home screen's recent list, Settings and theme headings and search result paths use the muted text colour (they were below 3:1 in light themes).
 - **Import Obsidian vault… is on the home screen** while the Markdown import is on, not only in a drawing's main menu.
 - **Enter confirms "Move to Trash"**, as in Obsidian: the Trash keeps the file. Questions that cannot be undone still start on Cancel.
+- **The open graph follows file changes**, like Obsidian's: a drawing created, renamed, deleted or saved with new links (in the app or outside) shows up a moment later, and the nodes that stay keep their place.
 - **Re-import from a tab's menu rewrites the note of the tab you right-clicked**, not the active one; a picture written as a `data:` address with percent-encoding or extra parameters is read from the address.
 
 - **A 32 MiB drawing fits in one message of the control API and the MCP server.** The message cap is now 80 MiB, so a drawing that grows once it is escaped into JSON is no longer refused; a message over the cap says the limit in plain words.

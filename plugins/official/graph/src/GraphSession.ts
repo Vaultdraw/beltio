@@ -69,6 +69,11 @@ export interface GraphSource {
   graph(handle: string): Promise<GraphData>;
   loadLayout(handle: string): Promise<Uint8Array>;
   saveLayout(handle: string, bytes: Uint8Array): Promise<void>;
+  /**
+   * Calls `cb` when drawings or links may have changed (files created, renamed, deleted or saved,
+   * in the app or outside); returns the unsubscribe. The open graph refreshes (hunter C-5).
+   */
+  onChange?(cb: () => void): () => void;
 }
 
 export interface LayoutLike {
@@ -311,6 +316,42 @@ export class GraphSession {
         });
       }
     }
+  }
+
+  /**
+   * Re-reads the graph after files changed, keeping every node that stays where it is (its
+   * position carries over by path); new nodes are seeded next to their links and the layout
+   * runs warm, so the picture settles instead of starting over (Obsidian's live graph).
+   */
+  async refresh(): Promise<void> {
+    if (!this.loaded || this.disposed) {
+      return;
+    }
+    const { source, handle, ui } = this.d;
+    let g: GraphData;
+    try {
+      g = await source.graph(handle);
+    } catch {
+      return; // keep showing the last good graph
+    }
+    if (this.disposed) {
+      return;
+    }
+    const current =
+      !this.local && this.pos.length === this.gpos.length
+        ? this.pos
+        : this.gpos;
+    const kept = decodeLayout(encodeGraphLayout(this.g, current));
+    this.g = g;
+    this.gpos = seedPositions(g, kept);
+    this.isNew = null;
+    this.buildView(false);
+    this.drawNow();
+    ui.state({
+      phase: "ready",
+      nodeCount: this.vn,
+      backend: this.renderer?.rendererInfo,
+    });
   }
 
   dispose(): void {
