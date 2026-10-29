@@ -7,8 +7,8 @@ import { SETTINGS_SCHEMA } from "./schema";
 // note-link syntax, not a config key.)
 describe("settings descriptions use plain words", () => {
   it("show no [table] config headers", () => {
-    const bad = SETTINGS_SCHEMA.filter(
-      (s) => /(^|[^[])\[[a-z_.]+\](?!\])/.test(s.description ?? ""),
+    const bad = SETTINGS_SCHEMA.filter((s) =>
+      /(^|[^[])\[[a-z_.]+\](?!\])/.test(s.description ?? ""),
     ).map((s) => `${s.id}: ${s.description}`);
     expect(bad).toEqual([]);
   });

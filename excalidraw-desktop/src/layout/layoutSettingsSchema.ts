@@ -11,7 +11,7 @@ export const LAYOUT_SETTINGS_SCHEMA: readonly SettingSchema[] = [
     heading: "Layout",
     label: "Header",
     description:
-      "Show the bar above the canvas with the drawing's name, save status, History and Graph. Focus mode (Cmd/Ctrl+Shift+Enter) hides it too.",
+      "Show the bar above the canvas with the drawing's name, save status, History and Graph. Focus mode ({{key:view.focusMode}}) hides it too.",
     keywords: ["layout", "header", "title", "bar", "hide", "focus", "zen"],
     configKey: "layout.header",
     perVault: false,

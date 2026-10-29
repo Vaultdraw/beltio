@@ -65,7 +65,7 @@ export const TABS_SETTINGS_SCHEMA: readonly SettingSchema[] = [
   }),
   row({
     id: "tabs-close-pinned",
-    label: "Cmd+W can close pinned tabs",
+    label: "Close pinned tabs with the shortcut",
     description: "Off keeps pinned tabs open until you unpin them.",
     keywords: ["pin", "pinned", "close", "protect"],
     configKey: "tabs.close_pinned",

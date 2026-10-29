@@ -7,6 +7,7 @@
  * settings) can import it without rendering anything.
  */
 
+import { withoutShortcuts } from "../../commands/shortcutText";
 import {
   HISTORY_SETTINGS_PAGES,
   HISTORY_SETTINGS_SCHEMA,
@@ -423,7 +424,8 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     id: "interface-zoom",
     page: "interface",
     label: "Interface zoom",
-    description: "Scales the whole window. Cmd+Shift +/- and 0 also work.",
+    description:
+      "Scales the whole window. Zoom in ({{key:view.zoomIn}}), zoom out ({{key:view.zoomOut}}) and reset ({{key:view.zoomReset}}) also work.",
     keywords: ["zoom", "scale", "magnify", "size", "cmd shift plus minus"],
     configKey: "interface.zoom",
   },
@@ -574,7 +576,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     section: "pen",
     label: "Pen presets",
     description:
-      "Saved pens for freehand drawing. Select one from the pen bar or with Alt+1 to Alt+9 (change these keys on the Hotkeys page).",
+      "Saved pens for freehand drawing. Select one from the pen bar, or with {{key:pen.select1}} to {{key:pen.select9}} (change these keys on the Hotkeys page).",
     keywords: [
       "pen",
       "pens",
@@ -1094,7 +1096,7 @@ export const settingsForPage = (
 ): SettingSchema[] => schema.filter((s) => s.page === page);
 
 const haystack = (s: SettingSchema) =>
-  [s.label, s.description, ...s.keywords, s.configKey ?? ""]
+  [s.label, withoutShortcuts(s.description), ...s.keywords, s.configKey ?? ""]
     .join("\n")
     .toLocaleLowerCase();
 

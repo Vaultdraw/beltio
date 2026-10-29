@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { useCommandShortcutLookup } from "../../commands/useCommandShortcut";
+import { withShortcuts } from "../../commands/shortcutText";
 import { IconRefresh } from "../Icons";
 
 import {
@@ -75,6 +77,9 @@ export const SettingRow = ({
   const source = useConfigSource(
     data?.["data-scope-state"] === undefined ? schema.configKey : undefined,
   );
+  const shortcut = useCommandShortcutLookup();
+  const describe = (d: ReactNode) =>
+    typeof d === "string" ? withShortcuts(d, shortcut) : d;
   const [sourceOpen, setSourceOpen] = useState(false);
   const chip = source && (
     <ConfigSourceChip
@@ -118,7 +123,7 @@ export const SettingRow = ({
           {aside}
         </div>
         <div className="vault-setting-desc">
-          {description ?? schema.description}
+          {describe(description ?? schema.description)}
         </div>
         {sourceNote}
         {children && <div className="vault-setting-wide">{children}</div>}
@@ -139,7 +144,7 @@ export const SettingRow = ({
           {chip}
         </div>
         <div className="vault-setting-desc">
-          {description ?? schema.description}
+          {describe(description ?? schema.description)}
         </div>
         {sourceNote}
         {details}
