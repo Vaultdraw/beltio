@@ -34,3 +34,14 @@ describe("import stamps: how the user can edit a text", () => {
     expect(editState({ elements: els })).toBe("edited");
   });
 });
+
+describe("stamps written before the text-box check", () => {
+  it("still read as untouched (no a/w recorded: nothing to compare)", () => {
+    const els: Record<string, unknown>[] = [{ ...base(), autoResize: false }];
+    stampElements(els);
+    const data = els[0].customData as Record<string, Record<string, unknown>>;
+    delete data["vaultdraw.import"].a;
+    delete data["vaultdraw.import"].w;
+    expect(editState({ elements: els })).toBe("untouched");
+  });
+});

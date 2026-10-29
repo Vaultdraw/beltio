@@ -13,7 +13,12 @@
 export const STAMP_KEY = "vaultdraw.import";
 
 type El = Record<string, unknown>;
-type Stamp = { f: string; o: number; n: number };
+/**
+ * `a`, `w` (hunter A-9): a text's auto-size switch, and the width of a free text that wraps at a
+ * fixed width. Dragging a text's side handle changes them while its source stays. Stamps written
+ * before they existed have neither and skip the check.
+ */
+type Stamp = { f: string; o: number; n: number; a?: boolean; w?: number };
 
 export type EditState = "untouched" | "edited" | "unknown";
 
@@ -109,6 +114,28 @@ const stampOf = (e: El): Stamp | null => {
 const live = (els: unknown): El[] =>
   (Array.isArray(els) ? (els as El[]) : []).filter((e) => e.isDeleted !== true);
 
+/** The text-box part of a stamp: auto-size, and the width when the text wraps at a fixed one. */
+const textBox = (e: El): { a?: boolean; w?: number } => {
+  if (e.type !== "text") {
+    return {};
+  }
+  const a = e.autoResize !== false;
+  return !a && !e.containerId && typeof e.width === "number"
+    ? { a, w: Math.round(e.width) }
+    : { a };
+};
+
+/** True when the user changed how a text wraps (side handle, auto-size switched). */
+const boxChanged = (e: El, s: Stamp): boolean => {
+  if (s.a === undefined) {
+    return false;
+  }
+  const now = textBox(e);
+  return (
+    now.a !== s.a || (s.w !== undefined && Math.abs((now.w ?? -1e9) - s.w) > 1)
+  );
+};
+
 /** Stamps every element in place (the order of `elements` is the drawing order). */
 export const stampElements = (elements: readonly unknown[]): void => {
   const els = live(elements);
@@ -118,7 +145,7 @@ export const stampElements = (elements: readonly unknown[]): void => {
       ...(typeof e.customData === "object" && e.customData !== null
         ? (e.customData as object)
         : {}),
-      [STAMP_KEY]: { f, o: i, n: els.length },
+      [STAMP_KEY]: { f, o: i, n: els.length, ...textBox(e) },
     };
   });
 };
@@ -157,7 +184,7 @@ export const editState = (scene: { elements?: unknown }): EditState => {
       return "edited"; // pasted from another note, or reordered
     }
     lastOrder = s.o;
-    if (s.f !== fingerprint(e, all[i - 1])) {
+    if (s.f !== fingerprint(e, all[i - 1]) || boxChanged(e, s)) {
       return "edited";
     }
     stamped++;

@@ -153,6 +153,10 @@ const EDITS: [string, (s: Scene) => void][] = [
   ],
   ["rotate an element", (s) => (paragraph(s).angle = 0.5)],
   ["make an element transparent", (s) => (paragraph(s).opacity = 40)],
+  // hunter A-9: the side handle changes how a text wraps, not its source or size.
+  ["narrow a text box (side handle)", (s) => (paragraph(s).width = 260)],
+  ["widen a text box (side handle)", (s) => (paragraph(s).width = 640)],
+  ["switch a text back to auto size", (s) => (paragraph(s).autoResize = true)],
   [
     "delete without saving yet (isDeleted)",
     (s) => (paragraph(s).isDeleted = true),
