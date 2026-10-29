@@ -49,12 +49,6 @@ const report = (stops: Stop[], where: string, say: (p: string) => void) => {
 
 journey({
   title: "tab-walk-journey",
-  known: [
-    {
-      match: /Tab is trapped in the editor/,
-      bug: "toimprove TN-5: Tab cannot leave the canvas",
-    },
-  ],
   setup: async (page) => {
     await openVault(page);
     await page.locator("body").click({ position: { x: 5, y: 5 } });
@@ -73,7 +67,7 @@ journey({
       },
     },
     {
-      name: "with a drawing open: Tab leaves the canvas and walks the header and navigator",
+      name: "with a drawing open: Tab stays on the canvas (shape switching); the Focus file tree command leaves it and Tab walks on",
       keyboard: true,
       run: async (page, ctx) => {
         await page
@@ -81,16 +75,16 @@ journey({
           .first()
           .click();
         await openDrawing(page, "Graphs");
+        // By parity (Excalidraw, Zed, Emacs, Obsidian) Tab belongs to the canvas; the user
+        // leaves it by command (TN-5 was ruled not a bug).
+        await page.keyboard.press("Meta+Shift+KeyP");
+        await page.keyboard.type("Focus file tree");
+        await page.keyboard.press("Enter");
+        await expect(page.getByRole("dialog")).toHaveCount(0);
         const stops = await walk(page, 30);
         report(stops, "drawing open", ctx.report);
         const keys = new Set(stops.map((s) => s.key));
-        if (keys.size < 3) {
-          ctx.report(
-            `Tab is trapped in the editor: 30 presses reached only ${[
-              ...keys,
-            ].join(" | ")}`,
-          );
-        }
+        expect(keys.size, [...keys].join(" | ")).toBeGreaterThan(4);
       },
     },
     {
