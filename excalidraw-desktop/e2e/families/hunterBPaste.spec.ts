@@ -71,5 +71,5 @@ test("hunter B: pasting a PNG file puts a picture on the canvas; pasting text ma
       { timeout: 10_000 },
     )
     .toBe(true);
-  expect(errors()).toEqual([]);
+  expect(errors).toEqual([]);
 });

@@ -14,7 +14,10 @@ const texts = async (p: Page) =>
   );
 const start = async (page: Page) => {
   await openVault(page);
-  await page.locator(".vault-tree-item__name", { hasText: "DSA" }).first().click();
+  await page
+    .locator(".vault-tree-item__name", { hasText: "DSA" })
+    .first()
+    .click();
   await openDrawing(page, "Graphs");
   await editor(page).getByTestId("markdown-chip").click();
 };
@@ -74,9 +77,12 @@ test("hunter B: > makes a quote and Enter on its empty last line ends it", async
   await page.keyboard.press("Escape");
   await expect(page.locator(ta)).toHaveCount(0);
   await expect
-    .poll(async () => (await texts(page)).some((e: any) => e.text === "plain"), {
-      timeout: 10_000,
-    })
+    .poll(
+      async () => (await texts(page)).some((e: any) => e.text === "plain"),
+      {
+        timeout: 10_000,
+      },
+    )
     .toBe(true);
   const t = await texts(page);
   const q = t.find((e: any) => e.text === "wise");
@@ -94,8 +100,13 @@ test("hunter B: switching light/dark while editing a heading commits the text wi
   await runCommand(page, "Toggle light/dark mode");
   await expect(page.locator(ta)).toHaveCount(0);
   await expect
-    .poll(async () => (await texts(page)).find((e: any) => e.text === "Titl")?.customData?.role, {
-      timeout: 10_000,
-    })
+    .poll(
+      async () =>
+        (await texts(page)).find((e: any) => e.text === "Titl")?.customData
+          ?.role,
+      {
+        timeout: 10_000,
+      },
+    )
     .toBe("h1");
 });
