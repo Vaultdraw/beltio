@@ -217,8 +217,9 @@ export async function reimport(
 /** "Re-import this note from its Markdown": the drawing whose menu was used, or the open one. */
 export async function reimportOne(ctx: PluginContext): Promise<void> {
   const target = ctx.menus.target();
-  const path =
-    (target?.kind === "drawing" && target.path) || ctx.workspace.activePath();
+  // A menu names its own path (a file row, or the tab that was right-clicked, which need not be
+  // the active one); only a palette or key run falls back to the open drawing.
+  const path = target ? target.path : ctx.workspace.activePath();
   if (!path) {
     ctx.ui.toast("Open an imported note first");
     return;
