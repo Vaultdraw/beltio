@@ -6,6 +6,8 @@
  * rename whose event beats `controller.renamed`, settles first) and costs one
  * existence probe per affected tab. No timers run while nothing is affected.
  */
+import { fileKind } from "../vault/fileKind";
+
 import type { Tab, TabId } from "./types";
 
 type TabView = Pick<Tab, "id" | "path"> & { missing?: boolean };
@@ -153,7 +155,10 @@ export const probeExists = async (
   handle: string,
   path: string,
 ): Promise<boolean> => {
-  if (repo.readRevision) {
+  // The native revision probe takes drawings only (it refuses a note with INVALID_PATH): notes
+  // and other files go through the parent listing.
+  const kind = fileKind(path);
+  if (repo.readRevision && (kind === "drawing" || kind === "excalidrawMd")) {
     return (await repo.readRevision(handle, path)) !== null;
   }
   const slash = path.lastIndexOf("/");

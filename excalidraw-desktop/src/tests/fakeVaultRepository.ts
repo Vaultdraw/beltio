@@ -506,6 +506,20 @@ export class FakeVaultRepository implements VaultRepository {
     );
   }
 
+  /** As the native `drawing_revision`: drawings only (INVALID_PATH otherwise), null when missing. */
+  async readRevision(handle: string, path: string): Promise<string | null> {
+    this.ensureOpen(handle);
+    const kind = fileKind(path);
+    if (kind !== "drawing" && kind !== "excalidrawMd") {
+      throw makeError(
+        "INVALID_PATH",
+        "Only .excalidraw files have drawing revisions",
+      );
+    }
+    await this.delay();
+    return this.files.get(path)?.revision ?? null;
+  }
+
   async readDrawing(handle: string, path: string): Promise<DrawingFile> {
     this.ensureOpen(handle);
     assertReadableDrawingPath(path);

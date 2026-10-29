@@ -119,11 +119,25 @@ describe("createMissingWatcher", () => {
 });
 
 describe("probeExists", () => {
-  it("uses readRevision when available", async () => {
+  it("uses readRevision for a drawing", async () => {
     const readRevision = vi.fn(async () => null);
     expect(
-      await probeExists({ readRevision, listDirectory: vi.fn() }, "h", "a"),
+      await probeExists(
+        { readRevision, listDirectory: vi.fn() },
+        "h",
+        "a.excalidraw",
+      ),
     ).toBe(false);
+  });
+  it("lists the parent for a note (the native revision probe refuses notes)", async () => {
+    const readRevision = vi.fn(async () => {
+      throw new Error("INVALID_PATH");
+    });
+    const listDirectory = vi.fn(async () => [{ path: "f/n.md" }]);
+    expect(
+      await probeExists({ readRevision, listDirectory }, "h", "f/n.md"),
+    ).toBe(true);
+    expect(readRevision).not.toHaveBeenCalled();
   });
   it("falls back to the parent listing", async () => {
     const listDirectory = vi.fn(async () => [{ path: "f/a.excalidraw" }]);
