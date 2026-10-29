@@ -351,9 +351,12 @@ const resetScope = async (page: Page) => {
 
 const openSettings = async (page: Page) => {
   if (!(await page.getByRole("dialog").filter({ visible: true }).count())) {
+    // Any visible Settings button: a crawled control may have hidden the navigator (its
+    // button is gone then), the activity bar keeps one (flake at load 11, 2026-10-30).
     await page
-      .getByLabel("Vault file navigator")
-      .getByRole("button", { name: "Settings" })
+      .getByRole("button", { name: "Settings", exact: true })
+      .filter({ visible: true })
+      .first()
       .click();
     await expect(page.getByRole("dialog")).toBeVisible();
   }
