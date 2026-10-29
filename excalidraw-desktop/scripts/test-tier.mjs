@@ -6,14 +6,15 @@
 // Options: --base <ref> (default: merge-base with main), --dry-run (print the plan), --no-e2e, --no-perf.
 // Locks: functional steps take no lock (e2e gets its own port). Only perf steps take build.lock.
 // Wrap merge/milestone in personal/metrics/heavy.sh (heavy.sh -> build.lock order is kept).
-import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
 import { impactedSpecs, listSpecNames } from "./e2e-impact.mjs";
 import { lintableFiles } from "./lint-files.mjs";
+import { exitOnSignals, runGuarded } from "./run-guarded.mjs";
 
 const { values: o, positionals } = parseArgs({
   allowPositionals: true,
@@ -48,8 +49,16 @@ function changedFiles() {
 }
 
 const steps = [];
-const step = (name, cwd, cmd, args, env = {}) => steps.push({ name, cwd, cmd, args, env });
+const step = (name, cwd, cmd, args, env = {}, extra = {}) => steps.push({ name, cwd, cmd, args, env, ...extra });
 const npx = (cwd, name, args, env) => step(name, cwd, "npx", args, env);
+// Playwright gets a hard deadline and a progress file (toimprove 104: runs printed every test as
+// passed and then never exited). E2E_DEADLINE_MIN overrides the deadline.
+const DEADLINE_MIN = { fast: 30, merge: 60, milestone: 150 };
+const playwright = (name, args, env = {}) =>
+  step(name, desktop, "npx", ["playwright", "test", ...args], env, {
+    deadlineMs: (Number(process.env.E2E_DEADLINE_MIN) || DEADLINE_MIN[tier]) * 60_000,
+    progress: true,
+  });
 const perf = (name, args) => step(name, root, "lockf", ["-k", LOCK, "node", "excalidraw-desktop/perf/" + args[0], ...args.slice(1)]);
 const tscIncremental = (p, info) => ["tsc", "--noEmit", "--incremental", "--tsBuildInfoFile", path.join(root, ".cache/tsc", info), "-p", p];
 const eslint = (files) => ["eslint", "--max-warnings=0", "--cache", "--cache-location", ".cache/eslint/", ...files];
@@ -92,7 +101,7 @@ if (tier === "fast") {
       }
     }
     for (const s of specs) console.log(`  e2e ${s} <- ${reasons[s]}`);
-    if (specs.length) npx(desktop, `playwright (${specs.length} spec(s), webkit)`, ["playwright", "test", ...specs.map((s) => `e2e/${s}.spec.ts`)]);
+    if (specs.length) playwright(`playwright (${specs.length} spec(s), webkit)`, specs.map((s) => `e2e/${s}.spec.ts`));
   }
 } else {
   // Load caps (personal/feature/README.md "Load caps"): full suites must not flood the machine while
@@ -117,7 +126,7 @@ if (tier === "fast") {
     npx(root, "vitest (root)", ["vitest", "run", ...vitestCaps]);
   }
   if (!o["no-e2e"]) {
-    npx(desktop, `playwright (${tier === "milestone" ? "full, webkit + chromium" : "functional, webkit"})`, ["playwright", "test"],
+    playwright(`playwright (${tier === "milestone" ? "full, webkit + chromium" : "functional, webkit"})`, [],
       tier === "milestone" ? { ...e2eEnv, E2E_FULL: "1" } : e2eEnv);
   }
   if (!o["no-perf"]) {
@@ -137,14 +146,29 @@ const load = () => execFileSync("sysctl", ["-n", "vm.loadavg"], { encoding: "utf
 if (!steps.length) console.log("nothing to test");
 const results = [];
 const t0 = Date.now();
+// Every step runs in its own process group that dies with this runner, even on SIGKILL
+// (run-guarded.mjs). On a catchable signal, stop the step's group first, then exit.
+exitOnSignals();
+const progressDir = path.join(root, ".cache/test-tier");
 for (const s of steps) {
   const env = Object.entries(s.env).map(([k, v]) => `${k}=${v} `).join("");
   console.log(`\n== ${s.name}: ${env}${s.cmd} ${s.args.join(" ")}`.slice(0, 400));
   if (o["dry-run"]) continue;
   const t = Date.now();
-  const r = spawnSync(s.cmd, s.args, { cwd: s.cwd, stdio: "inherit", env: { ...process.env, ...s.env } });
-  results.push({ name: s.name, ok: r.status === 0, ms: Date.now() - t });
-  if (r.status !== 0) break; // fail fast: the cheapest failing signal first
+  let progressFile;
+  if (s.progress) {
+    mkdirSync(progressDir, { recursive: true });
+    progressFile = path.join(progressDir, `progress-${process.pid}.json`);
+    rmSync(progressFile, { force: true });
+  }
+  const r = await runGuarded({
+    cmd: s.cmd, args: s.args, cwd: s.cwd, deadlineMs: s.deadlineMs, progressFile,
+    env: { ...process.env, ...s.env, ...(progressFile ? { E2E_PROGRESS_FILE: progressFile } : {}) },
+  });
+  if (progressFile) rmSync(progressFile, { force: true });
+  if (r.note) console.log(`\n${s.name}: ${r.note}`);
+  results.push({ name: s.name, ok: r.ok, ms: Date.now() - t });
+  if (!r.ok) break; // fail fast: the cheapest failing signal first
 }
 console.log(`\n${tier} tier (load ${load()}):`);
 for (const r of results) console.log(`  ${r.ok ? "ok  " : "FAIL"} ${r.name.padEnd(42)} ${fmt(r.ms)}`);

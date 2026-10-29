@@ -69,7 +69,14 @@ export default defineConfig({
   expect: { timeout: 5_000 * factor },
   fullyParallel: process.env.E2E_FULLY_PARALLEL === "1",
   workers: Number(process.env.E2E_WORKERS) || 4,
-  reporter: [["list"]],
+  // test-tier.mjs sets E2E_PROGRESS_FILE: the progress reporter tells it the outcome even if
+  // Playwright's teardown never ends (toimprove 104).
+  reporter: [
+    ["list"],
+    ...(process.env.E2E_PROGRESS_FILE
+      ? [["./scripts/pw-progress-reporter.mjs"] as [string]]
+      : []),
+  ],
   outputDir: `../.cache/e2e-results-${port}`,
   use: {
     baseURL: `http://localhost:${port}`,
