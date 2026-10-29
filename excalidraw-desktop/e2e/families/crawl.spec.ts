@@ -15,7 +15,29 @@ import { expect, test } from "../fixture";
  * Failures are collected and reported together: they are the bug list.
  */
 
-const DENY = /trash|delete|remove|quit|exit|uninstall|wipe|erase|sign out/i;
+/**
+ * Controls the crawler never clicks. Every entry has a written reason (test-net, 2026-10-30:
+ * entries without one were removed: quit, exit, wipe, erase and sign out match no control in
+ * the app; if one appears the crawler will click it and report what happens).
+ */
+const DENY_LIST: { re: RegExp; reason: string }[] = [
+  {
+    re: /trash|delete/i,
+    reason:
+      "destroys a drawing or folder; Move to Trash and Delete are clicked, confirmed and undone by families/daily-use, crud and outside-changes",
+  },
+  {
+    re: /remove/i,
+    reason:
+      "removes a vault from the recent list, a shortcut or an installed theme; each has its own test (hotkeys, themes, onboarding specs)",
+  },
+  {
+    re: /uninstall/i,
+    reason:
+      "removes a plugin from the vault; plugin install and uninstall are covered by the plugin specs",
+  },
+];
+const DENY = new RegExp(DENY_LIST.map((d) => d.re.source).join("|"), "i");
 const CONTROLS =
   'button, a[href], [role="button"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="tab"], [role="switch"], [role="checkbox"], input[type="checkbox"], input[type="radio"], summary';
 const POPUPS =
