@@ -1,0 +1,99 @@
+import { expect, type Page } from "@playwright/test";
+
+import { test } from "./fixture";
+
+import {
+  canvasBox,
+  openDrawing,
+  openVault,
+  readScene,
+  trackErrors,
+} from "./helpers";
+import { personalPath } from "./mainCheckout";
+
+// Markdown mode, through visible UI only: the footer chip turns it on, the
+// text tool and the keyboard type "# Title", Enter, "body". Two text boxes:
+// a heading 1 (role h1, twice the size) and body text right below it.
+const DRAWING = "DSA/Graphs.excalidraw";
+const SHOTS = personalPath("feature/markdown-typing/shots");
+const textarea = "textarea.excalidraw-wysiwyg";
+const editor = (page: Page) => page.locator(".vault-editor");
+const chip = (page: Page) => editor(page).getByTestId("markdown-chip");
+
+const live = async (page: Page) =>
+  (await readScene(page, DRAWING)).elements.filter(
+    (el: any) => !el.isDeleted && el.type === "text",
+  );
+const textWith = async (page: Page, text: string) =>
+  (await live(page)).find((el: any) => el.text === text);
+
+test("Markdown mode: # Title, Enter, body makes a heading and body text below it; the switch is saved with the drawing", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page);
+  await page
+    .locator(".vault-tree-item__name", { hasText: "DSA" })
+    .first()
+    .click();
+  await openDrawing(page, "Graphs");
+
+  // off by default; the chip turns it on
+  await expect(chip(page)).toHaveAttribute("aria-pressed", "false");
+  await chip(page).click();
+  await expect(chip(page)).toHaveAttribute("aria-pressed", "true");
+
+  // text tool, click empty canvas, type
+  await editor(page).getByTestId("toolbar-text").click();
+  const box = await canvasBox(page);
+  await page.mouse.click(box.x + box.width * 0.55, box.y + box.height * 0.8);
+  await expect(page.locator(textarea)).toBeFocused();
+  await page.keyboard.type("# Title", { delay: 20 });
+  // the # went the moment the space was typed
+  await expect(page.locator(textarea)).toHaveValue("Title");
+  await page.keyboard.press("Enter");
+  await expect(page.locator(textarea)).toHaveValue("");
+  await page.keyboard.type("body", { delay: 20 });
+  await page.keyboard.press("Escape");
+  await expect(page.locator(textarea)).toHaveCount(0);
+
+  await expect
+    .poll(async () => !!(await textWith(page, "body")), { timeout: 10_000 })
+    .toBe(true);
+  const title = await textWith(page, "Title");
+  const body = await textWith(page, "body");
+  expect(title.customData).toEqual({ role: "h1" });
+  expect(body.customData ?? null).toBeNull();
+  expect(title.fontSize).toBe(body.fontSize * 2);
+  expect(body.x).toBeCloseTo(title.x, 5);
+  expect(body.y).toBeGreaterThan(title.y + title.height);
+
+  await page.screenshot({ path: `${SHOTS}/01-heading-light.png` });
+
+  // the switch is saved in the drawing and comes back when it is opened
+  // again (the browser test vault does not survive a page reload)
+  expect((await readScene(page, DRAWING)).vaultdraw?.markdown).toBe(true);
+  await page
+    .locator(".vault-tree-item__name", { hasText: "Dynamic Programming" })
+    .first()
+    .click();
+  await openDrawing(page, "Introduction");
+  await expect(chip(page)).toHaveAttribute("aria-pressed", "false");
+  await openDrawing(page, "Graphs");
+  await expect(chip(page)).toHaveAttribute("aria-pressed", "true");
+
+  // off again: # stays plain text, the heading stays a heading
+  await chip(page).click();
+  await expect(chip(page)).toHaveAttribute("aria-pressed", "false");
+  await editor(page).getByTestId("toolbar-text").click();
+  await page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.3);
+  await expect(page.locator(textarea)).toBeFocused();
+  await page.keyboard.type("# plain", { delay: 20 });
+  await expect(page.locator(textarea)).toHaveValue("# plain");
+  await page.keyboard.press("Escape");
+  await expect.poll(async () => !!(await textWith(page, "# plain"))).toBe(true);
+  expect((await textWith(page, "Title")).customData).toEqual({ role: "h1" });
+  expect((await readScene(page, DRAWING)).vaultdraw?.markdown).toBe(false);
+
+  expect(errors).toEqual([]);
+});

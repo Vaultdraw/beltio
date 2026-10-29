@@ -1,9 +1,14 @@
 /* Footer chip: off reads as plain text, on as a selected chip (theme tokens only). */
 .vault-markdown-chip {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  height: 2rem;
+  margin-inline-start: 0.5rem;
   font: inherit;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1;
-  padding: 0.35rem 0.6rem;
+  padding: 0 0.75rem;
   border-radius: 999px;
   border: 1px solid var(--vault-border, transparent);
   background: transparent;
