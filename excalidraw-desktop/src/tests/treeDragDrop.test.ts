@@ -189,7 +189,9 @@ describe("checkTreeDrop name clashes use the backend's fold", () => {
     expect(r.reason).toContain("differ only in capitals count");
     // `ete` and `été` are different names: the wording must not promise that accents count.
     expect(r.reason).not.toMatch(/accent/i);
-    expect(checkTreeDrop(source, "A", { existingNames: ["ete.excalidraw"] }).allowed).toBe(true);
+    expect(
+      checkTreeDrop(source, "A", { existingNames: ["ete.excalidraw"] }).allowed,
+    ).toBe(true);
     // A decomposed accent (e + combining acute) is the same name too.
     const d = checkTreeDrop(source, "A", { existingNames: ["Été.excalidraw"] });
     expect(d.allowed).toBe(false);

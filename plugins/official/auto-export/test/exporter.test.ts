@@ -32,7 +32,9 @@ const fake = (render: (path: string, to: string) => Promise<unknown>) => {
 
 const conflict = (to: string) =>
   Object.assign(
-    new Error(`${to} already exists and was not made by an export, so it is left alone`),
+    new Error(
+      `${to} already exists and was not made by an export, so it is left alone`,
+    ),
     { code: "CONFLICT" },
   );
 
