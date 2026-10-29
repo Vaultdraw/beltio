@@ -53,7 +53,7 @@ describe("createAppFiles", () => {
         readDrawing: vi.fn(),
       },
     });
-    expect(await files.drawingExists("a")).toBe(false);
+    expect(await files.drawingExists("a.excalidraw")).toBe(false);
     await expect(files.folderExists("f")).rejects.toMatchObject({
       code: "IO_ERROR",
     });
