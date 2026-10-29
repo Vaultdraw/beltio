@@ -207,6 +207,20 @@ export interface VaultApi {
     { revision: string; created?: boolean } | { skipped: "changed" | "unknown" }
   >;
   /**
+   * Moves a drawing to the system Trash, after saving it as it was in the vault's History under
+   * `versionName` (when that fails nothing is moved: `NO_VERSION`). With `onlyIfUntouched` it
+   * moves only a drawing the import wrote and nobody changed since (see `replaceDrawing`), and
+   * otherwise resolves `{ skipped: "changed" | "unknown" }`. What a re-import does with the
+   * leftover parts of a note that got shorter. Needs `vault.write`. Errors: `READ_ONLY`,
+   * `NO_VERSION`, `NOT_FOUND`, `INVALID_PATH`, `NO_VAULT`.
+   *
+   * @since 0.35.0
+   */
+  trashDrawing(
+    path: string,
+    options: { versionName: string; onlyIfUntouched?: boolean },
+  ): Promise<{ trashed: true } | { skipped: "changed" | "unknown" }>;
+  /**
    * The vault's link graph.
    *
    * @since 0.18.0

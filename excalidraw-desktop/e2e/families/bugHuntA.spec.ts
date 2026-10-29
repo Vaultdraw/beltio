@@ -297,7 +297,6 @@ const longNote = (n: number) =>
 test("hunt: a note that shrank to one page does not leave its old parts behind after Re-import", async ({
   page,
 }) => {
-  test.fixme(true, "A-4: fixed next by the bug utilizer");
   test.setTimeout(120_000);
   const errors = trackErrors(page);
   await openVault(page, "?plugins=markdown-import");

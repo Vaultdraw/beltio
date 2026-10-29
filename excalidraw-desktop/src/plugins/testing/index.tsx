@@ -551,6 +551,28 @@ export async function boot(
       }
       return { revision };
     },
+    trashDrawing: async (path, opts) => {
+      // As the app (vault/replaceDrawing.ts trashDrawing), over the in-memory drawings.
+      const prev = backend.drawings[path]?.scene;
+      if (!prev) {
+        throw Object.assign(new Error("No such drawing"), {
+          code: "NOT_FOUND",
+        });
+      }
+      if (opts.onlyIfUntouched) {
+        const { editState } = await import("../../importUpgrade/stamp");
+        const state = editState(prev);
+        if (state !== "untouched") {
+          return {
+            skipped:
+              state === "unknown" ? ("unknown" as const) : ("changed" as const),
+          };
+        }
+      }
+      versions.push({ path, name: opts.versionName });
+      delete backend.drawings[path];
+      return { trashed: true as const };
+    },
     flushDrawing: async (path) => {
       if (getActiveScene()?.path !== path) {
         return null;

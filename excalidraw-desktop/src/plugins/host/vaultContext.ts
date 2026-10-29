@@ -135,6 +135,53 @@ export function createVaultApi(rt: PluginRuntime): VaultApi {
         );
       }
     },
+    async trashDrawing(path, options) {
+      need("vault.trashDrawing", "vault.write");
+      checkVaultPath(path, "file");
+      if (!path.endsWith(".excalidraw")) {
+        throw new PluginApiError(
+          "INVALID_PATH",
+          "The path must end in .excalidraw",
+        );
+      }
+      if (
+        typeof options?.versionName !== "string" ||
+        options.versionName.trim() === "" ||
+        options.versionName.length > 200
+      ) {
+        throw new PluginApiError(
+          "INVALID_ARGUMENT",
+          "versionName must be a name of 1 to 200 characters",
+        );
+      }
+      const bridge = getWorkspaceBridge();
+      if (!bridge?.vault()) {
+        throw new PluginApiError("NO_VAULT", "No vault is open");
+      }
+      if (bridge.vault()!.readOnly) {
+        throw new PluginApiError("READ_ONLY", "The vault is read-only");
+      }
+      if (!bridge.trashDrawing) {
+        throw new PluginApiError(
+          "NOT_SUPPORTED",
+          "This version of Vaultdraw cannot move drawings to the Trash",
+        );
+      }
+      try {
+        return await bridge.trashDrawing(path, {
+          versionName: options.versionName,
+          onlyIfUntouched: options.onlyIfUntouched === true,
+        });
+      } catch (err) {
+        const code = (err as { code?: string }).code;
+        throw new PluginApiError(
+          code === "READ_ONLY" || code === "NO_VERSION" || code === "NOT_FOUND"
+            ? code
+            : "IO_ERROR",
+          err instanceof Error ? err.message : String(err),
+        );
+      }
+    },
     async createDrawing(path, ops: readonly SceneOp[]) {
       need("file.write", "vault.write");
       checkVaultPath(path, "file");

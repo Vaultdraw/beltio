@@ -91,12 +91,68 @@ export interface ReimportSummary {
   changed: string[];
   /** Imported before the import stamped its notes: nobody can tell if they were edited. */
   unknown: string[];
+  /** Parts of a note that got shorter, untouched since the import: moved to the Trash. */
+  partsTrashed: string[];
+  /** Such parts the user changed (or an older import wrote): kept. */
+  partsKept: string[];
   notFound: string[];
   failed: string[];
 }
 
 const plural = (n: number, one: string, many: string) =>
   `${n} ${n === 1 ? one : many}`;
+
+const baseName = (p: string) =>
+  p.slice(p.lastIndexOf("/") + 1).replace(/\.excalidraw$/, "");
+const names = (paths: readonly string[]) =>
+  paths.length > 3
+    ? `${paths.slice(0, 3).map(baseName).join(", ")} and ${
+        paths.length - 3
+      } more`
+    : paths.map(baseName).join(", ");
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * A note that got shorter leaves "Name (part N)" drawings past its new last part (hunter A-4).
+ * Obsidian keeps one file per note, so they are clutter: each one the import wrote and nobody
+ * changed goes to the Trash (History keeps it first); a changed one stays and is named.
+ */
+export async function dropLeftoverParts(
+  ctx: PluginContext,
+  headPath: string,
+  partCount: number,
+  summary: ReimportSummary,
+): Promise<void> {
+  if (!ctx.host.has("vault.trashDrawing")) {
+    return;
+  }
+  const slash = headPath.lastIndexOf("/");
+  const dir = slash < 0 ? "" : headPath.slice(0, slash);
+  const stem = baseName(headPath);
+  const part = new RegExp(`^${escapeRe(stem)} \\(part (\\d+)\\)\\.excalidraw$`);
+  let entries;
+  try {
+    entries = await ctx.vault.list(dir);
+  } catch {
+    return;
+  }
+  for (const e of entries) {
+    const n = Number(part.exec(e.path.slice(e.path.lastIndexOf("/") + 1))?.[1]);
+    if (e.kind === "folder" || !(n > partCount)) {
+      continue;
+    }
+    try {
+      const r = await ctx.vault.trashDrawing(e.path, {
+        versionName: VERSION_NAME,
+        onlyIfUntouched: true,
+      });
+      ("trashed" in r ? summary.partsTrashed : summary.partsKept).push(e.path);
+    } catch {
+      summary.failed.push(e.path);
+    }
+  }
+}
 
 /** Rebuilds `drawings` from their notes. `onlyUntouched`: leave changed drawings alone. */
 export async function reimport(
@@ -115,6 +171,8 @@ export async function reimport(
     written: [],
     changed: [],
     unknown: [],
+    partsTrashed: [],
+    partsKept: [],
     // In a vault-wide run most drawings are the user's own: only a chosen one is "not found".
     notFound: onlyUntouched ? [] : drawings.filter((d) => !matches.has(d)),
     failed: [],
@@ -176,6 +234,11 @@ export async function reimport(
       }
       first = false;
     }
+    const head = [...built.keys()][0];
+    const headPath = head && (root ? `${root}/${head}` : head);
+    if (headPath && summary.written.includes(headPath)) {
+      await dropLeftoverParts(ctx, headPath, built.size, summary);
+    }
   }
   ctx.ui.toast(
     summary.written.length === 0
@@ -202,6 +265,24 @@ export async function reimport(
               )} from an older import left as ${
                 summary.unknown.length === 1 ? "it was" : "they were"
               }: edits cannot be told apart there (re-import one from its menu to update it)`
+            : "",
+          summary.partsTrashed.length > 0
+            ? `${plural(
+                summary.partsTrashed.length,
+                "old part",
+                "old parts",
+              )} of a shorter note moved to the Trash: ${names(
+                summary.partsTrashed,
+              )}`
+            : "",
+          summary.partsKept.length > 0
+            ? `${plural(
+                summary.partsKept.length,
+                "old part was",
+                "old parts were",
+              )} kept, as ${
+                summary.partsKept.length === 1 ? "it" : "they"
+              } may have been changed: ${names(summary.partsKept)}`
             : "",
           summary.notFound.length > 0
             ? `${plural(

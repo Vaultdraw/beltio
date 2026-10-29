@@ -2749,6 +2749,29 @@ export const VaultApp = ({
           opts,
         );
       },
+      trashDrawing: async (path, opts) => {
+        const { vault: v, repository: repo } = shellRef.current;
+        if (!v) {
+          throw new Error("No vault is open");
+        }
+        const { trashDrawing } = await import("./vault/replaceDrawing");
+        const doc = () => docHookRef.current;
+        return trashDrawing(
+          {
+            repository: repo,
+            history: historyRef.current,
+            handle: v.handle,
+            flush: async (p) => {
+              if (doc().getActive()?.path === p) {
+                await doc().flush({ commitText: false });
+              }
+            },
+            trash: (p) => appFilesRef.current.trashEntry(p),
+          },
+          path,
+          opts,
+        );
+      },
       flushDrawing: async (path) => {
         const doc = docHookRef.current;
         if (doc.getActive()?.path !== path) {

@@ -1061,6 +1061,14 @@ export interface VaultApi {
     } | {
         skipped: "changed" | "unknown";
     }>;
+    trashDrawing(path: string, options: {
+        versionName: string;
+        onlyIfUntouched?: boolean;
+    }): Promise<{
+        trashed: true;
+    } | {
+        skipped: "changed" | "unknown";
+    }>;
     readonly graph: VaultGraphApi;
     readonly exports: VaultExportsApi;
     readonly table: VaultTableApi;

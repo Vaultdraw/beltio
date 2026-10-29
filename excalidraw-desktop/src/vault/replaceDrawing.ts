@@ -86,3 +86,47 @@ export async function replaceDrawing(
   await deps.reload(path).catch(() => undefined);
   return { revision: out.revision };
 }
+
+export type TrashResult =
+  | { trashed: true }
+  | { skipped: "changed" | "unknown" };
+
+/**
+ * Moves a drawing to the Trash after saving it in History (`ctx.vault.trashDrawing`, API 0.35.0):
+ * what a re-import does with the leftover parts of a note that got shorter (hunter A-4). With
+ * `onlyIfUntouched`, only a drawing the import wrote and nobody changed since.
+ */
+export async function trashDrawing(
+  deps: Pick<ReplaceDeps, "repository" | "history" | "handle" | "flush"> & {
+    trash(path: string): Promise<void>;
+  },
+  path: string,
+  opts: ReplaceOptions,
+): Promise<TrashResult> {
+  await deps.flush(path).catch(() => undefined);
+  const file = await deps.repository.readDrawing(deps.handle, path);
+  if (file.readOnly) {
+    throw coded("READ_ONLY", "The drawing is read-only");
+  }
+  if (opts.onlyIfUntouched) {
+    let state: ReturnType<typeof editState> = "edited";
+    try {
+      state = editState(JSON.parse(file.json));
+    } catch {
+      // unreadable: treat as changed
+    }
+    if (state !== "untouched") {
+      return { skipped: state === "unknown" ? "unknown" : "changed" };
+    }
+  }
+  try {
+    await deps.history.checkpoint(deps.handle, path, opts.versionName, "");
+  } catch {
+    throw coded(
+      "NO_VERSION",
+      "No history version could be saved first, so the drawing was left as it was",
+    );
+  }
+  await deps.trash(path);
+  return { trashed: true };
+}

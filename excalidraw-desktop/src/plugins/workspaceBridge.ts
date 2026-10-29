@@ -2,7 +2,11 @@ import { hasDrawingExt } from "../vault/fileKind";
 
 import type { ImportDrawingLook } from "../vault/newDrawingPaper";
 
-import type { ReplaceOptions, ReplaceResult } from "../vault/replaceDrawing";
+import type {
+  ReplaceOptions,
+  ReplaceResult,
+  TrashResult,
+} from "../vault/replaceDrawing";
 /**
  * What the plugin host may ask the vault shell (`ctx.vault.info`,
  * `ctx.workspace`, `ctx.pages.createDocument`, `ctx.scene.scrollTo`,
@@ -42,6 +46,8 @@ export interface WorkspaceBridge {
     json: string,
     opts: ReplaceOptions,
   ): Promise<ReplaceResult>;
+  /** Saves a drawing in History, then moves it to the Trash. See vault/replaceDrawing.ts. */
+  trashDrawing?(path: string, opts: ReplaceOptions): Promise<TrashResult>;
   /**
    * Saves pending edits when `path` is the open drawing and resolves to the
    * revision on disk after; null when the drawing is not open.
