@@ -80,7 +80,8 @@ test("vault home actions show live shortcuts and run their commands", async ({
 }) => {
   await openVault(page);
   const home = page.locator(".vault-home");
-  await expect(home.locator(".vault-home__action")).toHaveCount(4);
+  // Four core actions plus "Import Obsidian vault…" (the Markdown import is on by default).
+  await expect(home.locator(".vault-home__action")).toHaveCount(5);
   await expect(home.getByRole("button", { name: /New drawing/ })).toContainText(
     /N$/,
   );
