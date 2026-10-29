@@ -100,14 +100,14 @@ describe("Hotkeys page: sequence recorder", () => {
     expect(screen.getByRole("tab", { name: "Hotkeys" })).toBeInTheDocument();
   });
 
-  it("refuses a reserved first chord", () => {
+  it("accepts a reserved first chord (the user decides)", () => {
     startSequence();
     press(
       mac
         ? { code: "KeyQ", key: "q", metaKey: true }
         : { code: "F4", key: "F4", altKey: true },
     );
-    expect(within(row()).getByRole("alert")).toHaveTextContent(/Can't use/);
+    expect(within(row()).queryByRole("alert")).toBeNull();
   });
 
   it("shows a prefix conflict for a recorded sequence", () => {

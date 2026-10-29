@@ -196,16 +196,18 @@ describe("Hotkeys settings page", () => {
     expect(isDispatcherPaused()).toBe(false);
   });
 
-  it("refuses a reserved chord with the reason", () => {
+  it("accepts a reserved chord and shows the clash with its reason", () => {
     openPage();
     start("New drawing");
     const quit = mac
       ? { code: "KeyQ", key: "q", ...MOD }
       : { code: "F4", key: "F4", altKey: true };
     press(quit);
-    expect(screen.getByRole("alert").textContent).toMatch(/^Can't use .+: .+/);
-    expect(hotkeys()["vault.newDrawing"]).toBeUndefined();
-    expect(screen.getByText("Press keys…")).toBeInTheDocument();
+    expect(hotkeys()["vault.newDrawing"]).toHaveLength(2);
+    expect(screen.queryByText("Press keys…")).toBeNull();
+    expect(
+      document.querySelector('[data-testid="conflict-sentence"]')?.textContent,
+    ).toMatch(/Change it/);
   });
 
   it("flags conflicts: count chip, red keys and a sentence saying which wins", () => {
