@@ -111,6 +111,11 @@ const IMPORT_HEADING_COLORS = new Set<unknown>([
   ROLE_COLORS.h6,
 ]);
 
+const withoutRole = (data: object): object => {
+  const { role: _role, ...rest } = data as Record<string, unknown>;
+  return rest;
+};
+
 type ImportData = { heading?: unknown; role?: unknown };
 const importData = (e: El): ImportData | null =>
   marked(e)
@@ -139,7 +144,12 @@ const headingsToStyle = (scene: Scene, t: UpgradeTarget): El[] =>
       return false;
     }
     const want = headingLook(level, t);
-    return e.strokeColor !== want.color || importData(e)?.role !== want.role;
+    const topRole = (e.customData as { role?: unknown } | undefined)?.role;
+    return (
+      e.strokeColor !== want.color ||
+      importData(e)?.role !== want.role ||
+      topRole !== want.role
+    );
   });
 
 const clippedTexts = (scene: Scene, t: UpgradeTarget): boolean =>
@@ -225,7 +235,8 @@ export function upgradeScene(
         ...e,
         strokeColor: look.color,
         customData: {
-          ...(e.customData as object),
+          ...withoutRole(e.customData as object),
+          ...(look.role ? { role: look.role } : {}),
           [IMPORT_MARK]: look.role ? { ...rest, role: look.role } : rest,
         },
         version: (typeof e.version === "number" ? e.version : 1) + 1,

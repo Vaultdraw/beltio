@@ -63,11 +63,13 @@ const STANDARD_CANVAS = "#ffffff";
 const DARK_STANDARD_CANVAS = "#121212";
 let roleColorFor: {
   key: string;
-  resolve: (role: string, isDark: boolean) => string | null;
+  resolve: (role: string, isDark: boolean, stored: string) => string | null;
 } | null = null;
 const roleResolver = (
   canvas: string | null,
-): ((role: string, isDark: boolean) => string | null) | null => {
+):
+  | ((role: string, isDark: boolean, stored: string) => string | null)
+  | null => {
   if (!themeSource) {
     return null;
   }
@@ -78,7 +80,7 @@ const roleResolver = (
     const dark = canvas ? light : buildRoleColor(variant, DARK_STANDARD_CANVAS);
     roleColorFor = {
       key,
-      resolve: (role, isDark) => (isDark ? dark : light)(role),
+      resolve: (role, isDark, stored) => (isDark ? dark : light)(role, stored),
     };
   }
   return roleColorFor.resolve;

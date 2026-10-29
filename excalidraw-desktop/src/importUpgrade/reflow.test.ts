@@ -252,7 +252,7 @@ describe("update pass: clipped text is re-wrapped and the page reflows", () => {
       fontFamily: 3,
       fontSize: 28.5,
       strokeColor: ROLE_COLORS.h1,
-      customData: { [MARK]: { heading: 1, role: "h1" } },
+      customData: { role: "h1", [MARK]: { heading: 1, role: "h1" } },
     });
     expect(run(scene([head]))).toBeNull();
   });
@@ -264,7 +264,10 @@ describe("update pass: headings take their theme role", () => {
       fontFamily: 3,
       fontSize: 20,
       strokeColor,
-      customData: { [MARK]: { heading: level, ...(role ? { role } : {}) } },
+      customData: {
+        ...(role ? { role } : {}),
+        [MARK]: { heading: level, ...(role ? { role } : {}) },
+      },
     });
   type Data = { customData: Record<string, { role?: string }> };
 
@@ -278,6 +281,7 @@ describe("update pass: headings take their theme role", () => {
         ROLE_COLORS[`h${level}` as keyof typeof ROLE_COLORS],
       );
       expect(el.customData[MARK].role).toBe(`h${level}`);
+      expect((el.customData as { role?: string }).role).toBe(`h${level}`);
     },
   );
 
@@ -297,5 +301,6 @@ describe("update pass: headings take their theme role", () => {
     const el = out.scene.elements[0] as unknown as Data & E;
     expect(el.strokeColor).toBe("#1e1e1e");
     expect(el.customData[MARK].role).toBeUndefined();
+    expect((el.customData as { role?: string }).role).toBeUndefined();
   });
 });

@@ -17,7 +17,7 @@ import {
   MAX_TEXT,
   imageProblem,
 } from "./sceneRules";
-import { ROLE_COLORS } from "./markdownRoles";
+import { ROLE_COLORS, roleOfColor } from "./markdownRoles";
 import { FONT_SIZE } from "./text";
 
 import type {
@@ -426,8 +426,15 @@ export const buildPageElements = (
         if (it.link !== undefined) {
           el.link = it.link;
         }
-        if (it.data !== undefined && o.dataKey) {
-          el.customData = { [o.dataKey]: structuredClone(it.data) };
+        // The role (a heading level, link, code) is stored where typed
+        // Markdown stores it, `customData.role`, so one path colours both.
+        const role = roleOfColor(el.strokeColor);
+        const data =
+          it.data !== undefined && o.dataKey
+            ? { [o.dataKey]: structuredClone(it.data) }
+            : undefined;
+        if (role || data) {
+          el.customData = { ...(role ? { role } : {}), ...data };
         }
         elements.push(el);
         break;

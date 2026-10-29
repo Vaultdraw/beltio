@@ -1,41 +1,80 @@
 /**
- * The theme's Markdown tokens (`markdown.h1` … `markdown.h6`, like
- * Obsidian's `--h1-color`): what the canvas draws a text with a heading role
- * in. Derived from the theme's accents and terminal colours, each held to at
- * least 4.5:1 on the canvas actually shown. Themes defining their own tokens
- * is a follow-up shared with the Markdown import styling (one interface:
- * `markdownTokens`).
+ * The one path from a role to a colour: every text with a role
+ * (`customData.role`, typed or imported) is drawn in the active theme's
+ * Markdown colour for that role (`markdown.h1` … `markdown.h6`, `bold`,
+ * `italic`, `link`, `code`; theme/markdown.ts), like Obsidian's `--h1-color`.
+ * A quote's text takes the theme's muted text colour.
+ *
+ * A theme's own colours are used as written. Only when the canvas shown is
+ * not the theme's page ("Sync canvas with theme" off) is a colour moved to
+ * read at 4.5:1 on that canvas.
+ *
+ * A text whose stored colour is neither the editor's default black nor a
+ * reserved role colour was picked by the user: it keeps that colour and the
+ * role no longer applies.
  */
-import { ensureContrast } from "../theme/color";
+import { COLOR_PALETTE } from "@excalidraw/common";
 
-import { HEADING_ROLES, QUOTE_ROLE } from "./roles";
+import { ROLE_COLORS } from "../../../sdk/api/shared/markdownRoles";
+import { ensureContrast, normalizeHex } from "../theme/color";
+import { markdownColors } from "../theme/markdown";
 
+import { QUOTE_ROLE } from "./roles";
+
+import type { MarkdownRole } from "../../../sdk/api/shared/markdownRoles";
 import type { ThemeVariant } from "../theme/types";
-import type { HeadingRole } from "./roles";
 
 export const MIN_ROLE_CONTRAST = 4.5;
 
-export type MarkdownTokens = Record<HeadingRole | typeof QUOTE_ROLE, string>;
+/** Roles a text can have: the theme's Markdown roles and the quote box. */
+const TEXT_ROLES: readonly string[] = [
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "bold",
+  "italic",
+  "link",
+  "code",
+];
 
-export const markdownTokens = (variant: ThemeVariant): MarkdownTokens => ({
-  h1: variant.mPrimary,
-  h2: variant.mSecondary,
-  h3: variant.mTertiary,
-  h4: variant.terminal.normal.blue,
-  h5: variant.terminal.normal.magenta,
-  h6: variant.terminal.normal.cyan,
-  quote: variant.mOnSurfaceVariant,
-});
+const DEFAULT_STORED = new Set<string>(
+  [COLOR_PALETTE.black, "#1e1e1e", ...Object.values(ROLE_COLORS)].map((c) =>
+    String(c).toLowerCase(),
+  ),
+);
 
-/** role -> on-screen colour on `canvas`, or null for roles without a token. */
+/** The theme's colour of a text role, before any canvas adjustment. */
+export const roleTokenColor = (
+  variant: ThemeVariant,
+  role: string,
+): string | null => {
+  if (role === QUOTE_ROLE) {
+    return variant.mOnSurfaceVariant;
+  }
+  return TEXT_ROLES.includes(role)
+    ? markdownColors(variant)[role as MarkdownRole]
+    : null;
+};
+
+/** role -> on-screen colour on `canvas`, or null for an unknown role or a colour the user picked. */
 export function buildRoleColor(
   variant: ThemeVariant,
   canvas: string,
-): (role: string) => string | null {
-  const tokens = markdownTokens(variant);
+): (role: string, storedColor?: string) => string | null {
+  const onPage = normalizeHex(canvas) === normalizeHex(variant.mSurface);
   const out = new Map<string, string>();
-  for (const role of [...HEADING_ROLES, QUOTE_ROLE] as const) {
-    out.set(role, ensureContrast(tokens[role], canvas, MIN_ROLE_CONTRAST));
+  for (const role of [...TEXT_ROLES, QUOTE_ROLE]) {
+    const color = roleTokenColor(variant, role)!;
+    out.set(
+      role,
+      onPage ? color : ensureContrast(color, canvas, MIN_ROLE_CONTRAST),
+    );
   }
-  return (role) => out.get(role) ?? null;
+  return (role, storedColor) =>
+    storedColor !== undefined && !DEFAULT_STORED.has(storedColor.toLowerCase())
+      ? null
+      : out.get(role) ?? null;
 }

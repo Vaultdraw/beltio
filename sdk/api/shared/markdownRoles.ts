@@ -3,11 +3,13 @@
  * link, a code box), so the theme decides its colour, the way Obsidian themes
  * set `--h1-color`, `--link-color` or `--code-background`.
  *
- * A role is stored twice on an element: in `customData` (`role: "h2"`), and
- * as a reserved file colour from `ROLE_COLORS`. The canvas colour map
- * (excalidraw-desktop/src/theme/canvas.ts) draws each reserved colour in the
- * active theme's `markdown` colour for that role, so switching themes restyles
- * every import with no rewrite. A colour the user picks is no reserved colour,
+ * A role is stored twice on an element: in `customData.role` (`"h2"`, the same
+ * place typed Markdown stores it), and as a reserved file colour from
+ * `ROLE_COLORS`. The editor draws a text with a role in the active theme's
+ * `markdown` colour for it (excalidraw-desktop/src/markdown/roleColors.ts);
+ * the canvas colour map (theme/canvas.ts) does the same for the reserved
+ * colours of older imports and of shapes, so switching themes restyles every
+ * import with no rewrite. A colour the user picks is no reserved colour,
  * so it is kept as is: picking a colour drops the role.
  *
  * The reserved colours are what the page shows on plain white paper and in
