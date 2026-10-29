@@ -171,6 +171,7 @@ import { HistoryHost } from "./history/HistoryHost";
 import { runBackup, runRestore } from "./backup/backupJob";
 import { setAppCommandRunner } from "./commands/appRunner";
 import { flushPluginData, pluginHostStarted } from "./plugins/hostFlag";
+import { runQuitBarrier } from "./quitBarrier";
 import { usePluginSettingProblems } from "./plugins/settings/usePluginSettingProblems";
 import { useHistoryEntry } from "./history/useHistoryEntry";
 import { desktopHistoryRepository } from "./history/DesktopHistoryRepository";
@@ -749,53 +750,36 @@ export const VaultApp = ({
     closeAttemptRef.current = true;
     setIsClosing(true);
     const operation = (async () => {
-      // Every flush runs on its own: one failure never skips the others, so "Discard and Close"
-      // loses only what could not be saved.
-      const failed: string[] = [];
-      const step = async (what: string, run: () => Promise<unknown>) => {
-        try {
-          await run();
-        } catch (err) {
-          if (err instanceof NotesUnsavedError) {
-            failed.push(...err.paths.map((p) => describeNotes([p])));
-          } else {
-            failed.push(what);
-          }
-        }
-      };
       try {
-        tabsRef.current?.prepareLeave();
-        await step("the open drawing", () => docHookRef.current.flush());
-        // Open notes: with autosave off, the user decides (Save / Don't save).
-        if (
-          notesDecisionRef.current === null &&
-          cachedPreferences().notesAutosaveMs === 0 &&
-          unsavedNotePaths().length > 0
-        ) {
-          closeAttemptRef.current = false;
-          setIsClosing(false);
-          setShowNoteSavePrompt(true);
-          return;
-        }
-        if (notesDecisionRef.current !== "discard") {
-          await step("notes", flushOpenNotes);
-        }
-        await step("the library", () => libraryStore.flush());
-        await step("plugin data", flushPluginData);
-        if (failed.length > 0) {
-          setUnsavedWhat(failed);
-          setShowCloseDiscardConfirm(true);
-          return;
-        }
-        await appWinRef.current?.destroy();
-        setShowCloseDiscardConfirm(false);
-      } catch {
-        setUnsavedWhat(failed);
-        setShowCloseDiscardConfirm(true);
+        await runQuitBarrier(
+          {
+            prepareLeave: () => tabsRef.current?.prepareLeave(),
+            flushDrawing: () => docHookRef.current.flush(),
+            notesAutosaveOff: () => cachedPreferences().notesAutosaveMs === 0,
+            unsavedNotePaths,
+            describeNotes,
+            flushOpenNotes,
+            isNotesUnsavedError: (e) =>
+              e instanceof NotesUnsavedError ? e.paths : null,
+            flushLibrary: () => libraryStore.flush(),
+            flushPluginData,
+            destroyWindow: async () => {
+              await appWinRef.current?.destroy();
+            },
+            askAboutNotes: () => {
+              closeAttemptRef.current = false;
+              setIsClosing(false);
+              setShowNoteSavePrompt(true);
+            },
+            askAboutDiscard: (what) => {
+              setUnsavedWhat(what);
+              setShowCloseDiscardConfirm(true);
+            },
+            closed: () => setShowCloseDiscardConfirm(false),
+          },
+          notesDecisionRef,
+        );
       } finally {
-        // The window stayed open (or is gone): never remember the notes
-        // decision, so the next quit asks again.
-        notesDecisionRef.current = null;
         closePromiseRef.current = null;
       }
     })();
