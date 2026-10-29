@@ -1054,15 +1054,20 @@ Type Markdown on the canvas, like in Obsidian or Notion. With Markdown mode on, 
 | `# ` to `###### ` at the start of a line | The marks go and the text becomes heading 1 to 6: bigger (`h1_size` … `h6_size`, times the text size) and in the theme's heading colour. On a later line of a text box, the heading starts its own box below. |
 | Enter in a heading | The heading is done; a new text box in normal text starts just below it (`block_gap` lines lower, same left edge). Enter on an empty heading makes it normal text. Shift+Enter adds a line inside the heading. |
 | Backspace at the start of a heading | It turns back into normal text. Backspace in the empty box Enter just made returns to the end of the heading. |
-| Cmd+Z right after a heading appears | The typed `# ` comes back as plain text. |
+| `> ` at the start of a line | A quote: the text keeps its size and takes the theme's quote colour. Enter adds a line to the quote; Enter on its empty last line ends it and starts normal text below. |
+| `- `, `* ` or `+ ` | A bullet `• `. Enter starts the next item; Enter on an empty item ends the list. Indented items stay indented. |
+| `1. ` | A numbered item; Enter starts `2. `, and so on. |
+| `[ ] `, `- [ ] `, `[x] ` | A task `☐ ` or a done task `☑ `. **Markdown: Toggle task** (Cmd+L, rebindable) ticks or unticks the task on the caret's line, or the first task of the selected text. |
+| Backspace right after a list marker | The marker goes; the text stays. |
+| Cmd+Z right after a conversion | The typed marks (`# `, `> `, `- `) come back as plain text. |
 
 - **Per drawing.** Each drawing has its own switch: the **Markdown** button at the bottom of the canvas, or the palette command `Markdown mode: On or off` (Cmd+Alt+M, rebindable on the Hotkeys page). The switch is saved in the drawing. New drawings follow `typing` in `[markdown]` (**Settings → Drawing → Markdown**).
 - **Mode off.** Headings you already have stay as they are; new `#` stays plain text.
 - **Works with any text box:** free text, and text inside a shape (a shape's label converts in place and never splits).
 - **Pasting** text with `#` keeps it as plain text.
-- **Files stay normal Excalidraw files.** A heading stores its role (`customData.role`, `"h1"` … `"h6"`) and its size; on excalidraw.com it shows as larger text in the normal text colour. PNG and SVG exports use the stored colour too.
-- **Colours come from the theme:** heading 1 the theme's primary colour, heading 2 secondary, heading 3 tertiary, headings 4 to 6 its blue, magenta and cyan, each made readable (at least 4.5:1) on the canvas shown.
-- Lists, tasks and quotes come next; bold, italic and inline code later.
+- **Files stay normal Excalidraw files.** A heading or quote stores its role (`customData.role`: `"h1"` … `"h6"`, `"quote"`) and its size; on excalidraw.com it shows as larger text in the normal text colour. List and task markers are plain characters (`•`, `☐`, `☑`), as the Markdown import writes them. PNG and SVG exports use the stored colour too.
+- **Colours come from the theme:** heading 1 the theme's primary colour, heading 2 secondary, heading 3 tertiary, headings 4 to 6 its blue, magenta and cyan, quotes its muted text colour, each made readable (at least 4.5:1) on the canvas shown.
+- Bold, italic and inline code come later.
 
 ## Tool defaults
 

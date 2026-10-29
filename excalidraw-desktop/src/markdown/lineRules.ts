@@ -1,28 +1,90 @@
 /**
- * Markdown typing rules for one line, pure. Called on a typed space with the
- * text between the line start and the caret, never with the whole text.
+ * Markdown typing rules for one line, pure. Called on a typed key with the
+ * caret's line only (the text before the caret, or the whole line), never
+ * with the whole text.
  */
 import type { HeadingLevel } from "./roles";
 
-/** The block a typed space turns the line into, or null. */
-export type LineTrigger = { kind: "heading"; level: HeadingLevel };
+/** What a typed space turns the line into, or null. */
+export type LineTrigger =
+  | { kind: "heading"; level: HeadingLevel }
+  | { kind: "quote" }
+  /** Replace the line's text before the caret with `marker` (+ the space). */
+  | { kind: "list"; marker: string };
+
+export const BULLET = "•";
+export const TASK_OPEN = "☐";
+export const TASK_DONE = "☑";
+
+const BULLET_RE = /^( *)[-*+]$/;
+const ORDERED_RE = /^( *)\d{1,9}[.)]$/;
+const TASK_RE = /^( *)(?:[-*+•] ?)?\[([ xX]?)\]$/;
 
 /**
  * `before` is the line's text before the caret, without the space being
- * typed. `#` to `######` makes a heading of that level. Leading spaces are
- * not allowed (as in Markdown, where 4 spaces make code; we keep it strict).
+ * typed. Headings and quotes need the line start (no indent); list markers
+ * may be indented (nested lists, Tab).
  */
 export function matchLineTrigger(before: string): LineTrigger | null {
   const n = before.length;
-  if (n < 1 || n > 6) {
+  if (n === 0 || n > 24) {
     return null;
   }
-  for (let i = 0; i < n; i++) {
-    if (before.charCodeAt(i) !== 35 /* # */) {
-      return null;
-    }
+  if (before === ">") {
+    return { kind: "quote" };
   }
-  return { kind: "heading", level: n as HeadingLevel };
+  if (n <= 6 && /^#+$/.test(before)) {
+    return { kind: "heading", level: n as HeadingLevel };
+  }
+  let m = BULLET_RE.exec(before);
+  if (m) {
+    return { kind: "list", marker: `${m[1]}${BULLET}` };
+  }
+  m = TASK_RE.exec(before);
+  if (m && (m[2] !== "" || before.includes("[]"))) {
+    const done = m[2] === "x" || m[2] === "X";
+    return { kind: "list", marker: `${m[1]}${done ? TASK_DONE : TASK_OPEN}` };
+  }
+  if (ORDERED_RE.test(before)) {
+    // already reads as a numbered item: only Enter continues it
+    return null;
+  }
+  return null;
+}
+
+/** A list item's marker at the start of a line: indent + marker + space. */
+export type ListItem = {
+  indent: string;
+  /** The marker as written, without the trailing space ("•", "3.", "☐"). */
+  marker: string;
+  /** Length of indent + marker + space: where the item's text starts. */
+  length: number;
+};
+
+const ITEM_RE = /^( *)(•|☐|☑|\d{1,9}[.)]) /;
+
+export function listItemOf(line: string): ListItem | null {
+  const m = ITEM_RE.exec(line);
+  return m ? { indent: m[1], marker: m[2], length: m[0].length } : null;
+}
+
+/** The marker the next item gets: bullets stay, numbers count up, tasks open. */
+export function nextMarker(marker: string): string {
+  if (marker === TASK_DONE || marker === TASK_OPEN) {
+    return TASK_OPEN;
+  }
+  const m = /^(\d+)([.)])$/.exec(marker);
+  return m ? `${Number(m[1]) + 1}${m[2]}` : marker;
+}
+
+/** A task line's marker toggled (☐ <-> ☑), or null for other lines. */
+export function toggledTask(line: string): string | null {
+  const item = listItemOf(line);
+  if (!item || (item.marker !== TASK_OPEN && item.marker !== TASK_DONE)) {
+    return null;
+  }
+  const flipped = item.marker === TASK_OPEN ? TASK_DONE : TASK_OPEN;
+  return `${item.indent}${flipped}${line.slice(item.indent.length + 1)}`;
 }
 
 /** Start index of the caret's line in `value`. */

@@ -316,6 +316,8 @@ const VaultEditorComponent = ({
   writableRef.current = !readOnly && !disabled;
   const markdown = useMarkdownMode({
     getWindow: () => host.current?.ownerDocument.defaultView ?? null,
+    getApi: () => apiRef.current,
+    getContainer: () => host.current,
     isWritable: () => writableRef.current,
     onChange: () => scheduleSaveRef.current(),
   });

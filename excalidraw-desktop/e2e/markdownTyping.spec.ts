@@ -97,3 +97,69 @@ test("Markdown mode: # Title, Enter, body makes a heading and body text below it
 
   expect(errors).toEqual([]);
 });
+
+test("Markdown mode in dark: lists, tasks (Toggle task) and a quote; the Settings default turns it on for the drawing", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page);
+  await page
+    .locator(".vault-tree-item__name", { hasText: "DSA" })
+    .first()
+    .click();
+  await openDrawing(page, "Graphs");
+
+  // Settings: dark mode, and Markdown mode on for drawings without a switch
+  await page
+    .getByLabel("Vault file navigator")
+    .getByRole("button", { name: "Settings" })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("tab", { name: "Appearance", exact: true }).click();
+  await dialog
+    .getByRole("group", { name: "Mode" })
+    .getByRole("button", { name: "Dark" })
+    .click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await dialog.getByRole("tab", { name: "Drawing", exact: true }).click();
+  await dialog.getByTestId("setting-markdown-typing").getByRole("switch").click();
+  await page.screenshot({ path: `${SHOTS}/02-settings-dark.png` });
+  await page.getByRole("button", { name: "Close settings" }).click();
+  await expect(chip(page)).toHaveAttribute("aria-pressed", "true");
+
+  // a list, a task list and a quote, typed like a user
+  await editor(page).getByTestId("toolbar-text").click();
+  const box = await canvasBox(page);
+  await page.mouse.click(box.x + box.width * 0.45, box.y + box.height * 0.55);
+  await expect(page.locator(textarea)).toBeFocused();
+  await page.keyboard.type("- milk", { delay: 15 });
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("eggs", { delay: 15 });
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("[ ] call mum", { delay: 15 });
+  // Toggle task (Cmd/Ctrl+L) on the caret's line
+  await page.keyboard.press("ControlOrMeta+l");
+  await expect(page.locator(textarea)).toHaveValue(
+    "• milk\n• eggs\n☑ call mum",
+  );
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("> quoted", { delay: 15 });
+  await page.keyboard.press("Escape");
+  await expect(page.locator(textarea)).toHaveCount(0);
+
+  await expect
+    .poll(async () => !!(await textWith(page, "quoted")), { timeout: 10_000 })
+    .toBe(true);
+  const list = await textWith(page, "• milk\n• eggs\n☑ call mum");
+  const quote = await textWith(page, "quoted");
+  expect(list).toBeTruthy();
+  expect(list.customData ?? null).toBeNull();
+  expect(quote.customData).toEqual({ role: "quote" });
+  expect(quote.fontSize).toBe(list.fontSize);
+  expect(quote.y).toBeGreaterThan(list.y + list.height);
+  await page.screenshot({ path: `${SHOTS}/03-lists-quote-dark.png` });
+
+  expect(errors).toEqual([]);
+});

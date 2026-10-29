@@ -8,14 +8,14 @@
  */
 import { ensureContrast } from "../theme/color";
 
-import { HEADING_ROLES } from "./roles";
+import { HEADING_ROLES, QUOTE_ROLE } from "./roles";
 
 import type { ThemeVariant } from "../theme/types";
 import type { HeadingRole } from "./roles";
 
 export const MIN_ROLE_CONTRAST = 4.5;
 
-export type MarkdownTokens = Record<HeadingRole, string>;
+export type MarkdownTokens = Record<HeadingRole | typeof QUOTE_ROLE, string>;
 
 export const markdownTokens = (variant: ThemeVariant): MarkdownTokens => ({
   h1: variant.mPrimary,
@@ -24,6 +24,7 @@ export const markdownTokens = (variant: ThemeVariant): MarkdownTokens => ({
   h4: variant.terminal.normal.blue,
   h5: variant.terminal.normal.magenta,
   h6: variant.terminal.normal.cyan,
+  quote: variant.mOnSurfaceVariant,
 });
 
 /** role -> on-screen colour on `canvas`, or null for roles without a token. */
@@ -33,7 +34,7 @@ export function buildRoleColor(
 ): (role: string) => string | null {
   const tokens = markdownTokens(variant);
   const out = new Map<string, string>();
-  for (const role of HEADING_ROLES) {
+  for (const role of [...HEADING_ROLES, QUOTE_ROLE] as const) {
     out.set(role, ensureContrast(tokens[role], canvas, MIN_ROLE_CONTRAST));
   }
   return (role) => out.get(role) ?? null;

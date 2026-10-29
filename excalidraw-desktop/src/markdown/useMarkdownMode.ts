@@ -12,14 +12,54 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import type { TextEditorExtension } from "@excalidraw/excalidraw/types";
+import type {
+  ExcalidrawImperativeAPI,
+  TextEditorExtension,
+} from "@excalidraw/excalidraw/types";
 
 import { registerCommandHandlers } from "../commands/handlerRegistry";
 import { getPreferences, subscribePreferences } from "../vault/preferences";
 
+import { applyEdits } from "../editor/links/applyEdits";
+
 import { typingSettingsFrom } from "./markdownSettings";
+import { toggleFirstTask, toggleTaskInTextarea } from "./taskToggle";
 
 export const MARKDOWN_TOGGLE_COMMAND = "markdown.toggle";
+export const MARKDOWN_TOGGLE_TASK_COMMAND = "markdown.toggleTask";
+
+/**
+ * ☐ <-> ☑: on the caret's line while a text is edited, else on the first task
+ * line of the one selected text (one undo step). Works with the mode off too:
+ * it only edits task lines that are already there.
+ */
+const toggleTask = (
+  api: ExcalidrawImperativeAPI | null,
+  container: HTMLElement | null,
+) => {
+  const textarea = container?.querySelector<HTMLTextAreaElement>(
+    "textarea.excalidraw-wysiwyg",
+  );
+  if (textarea?.isConnected) {
+    toggleTaskInTextarea(textarea);
+    return;
+  }
+  if (!api) {
+    return;
+  }
+  const state = api.getAppState();
+  const selected = api
+    .getSceneElements()
+    .filter((el) => state.selectedElementIds[el.id] && el.type === "text");
+  if (selected.length !== 1) {
+    return;
+  }
+  const el = selected[0] as unknown as { id: string; originalText: string };
+  const next = toggleFirstTask(el.originalText);
+  if (next !== null) {
+    applyEdits(api, [{ elementId: el.id, field: "text", value: next }]);
+  }
+};
 
 type TypingModule = typeof import("./markdownTyping");
 let typingModule: Promise<TypingModule> | null = null;
@@ -27,17 +67,27 @@ const loadTyping = () => (typingModule ??= import("./markdownTyping"));
 
 export function useMarkdownMode({
   getWindow,
+  getApi,
+  getContainer,
   isWritable,
   onChange,
 }: {
   getWindow: () => Window | null;
+  getApi: () => ExcalidrawImperativeAPI | null;
+  getContainer: () => HTMLElement | null;
   /** False for read-only or disabled drawings: the switch can't change. */
   isWritable: () => boolean;
   /** The drawing's switch changed: save it. */
   onChange: () => void;
 }) {
-  const live = useRef({ getWindow, isWritable, onChange });
-  live.current = { getWindow, isWritable, onChange };
+  const live = useRef({
+    getWindow,
+    getApi,
+    getContainer,
+    isWritable,
+    onChange,
+  });
+  live.current = { getWindow, getApi, getContainer, isWritable, onChange };
 
   // null = the drawing has no switch of its own (follows the default)
   const [drawing, setDrawing] = useState<boolean | null>(null);
@@ -91,7 +141,15 @@ export function useMarkdownMode({
   }, [setDrawingValue]);
 
   useEffect(
-    () => registerCommandHandlers({ [MARKDOWN_TOGGLE_COMMAND]: toggle }),
+    () =>
+      registerCommandHandlers({
+        [MARKDOWN_TOGGLE_COMMAND]: toggle,
+        [MARKDOWN_TOGGLE_TASK_COMMAND]: () => {
+          if (live.current.isWritable()) {
+            toggleTask(live.current.getApi(), live.current.getContainer());
+          }
+        },
+      }),
     [toggle],
   );
 

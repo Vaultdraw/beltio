@@ -379,3 +379,148 @@ describe("Markdown typing: Enter, Backspace, undo", () => {
     expect(h.textarea.selectionStart).toBe(8);
   });
 });
+
+describe("Markdown typing: lists and tasks", () => {
+  it.each([
+    ["- ", "• "],
+    ["* ", "• "],
+    ["[ ] ", "☐ "],
+    ["- [ ] ", "☐ "],
+    ["- [x] ", "☑ "],
+  ])("%j becomes %j, in the same box", (typed, shown) => {
+    const h = harness();
+    h.type(typed);
+    expect(h.textarea.value).toBe(shown);
+    expect(h.all()).toHaveLength(1);
+    expect(h.current().customData).toBeUndefined();
+  });
+
+  it("Enter continues a bullet list; Enter on an empty item ends it", () => {
+    const h = harness();
+    h.type("- milk");
+    h.press("Enter");
+    h.type("eggs");
+    h.press("Enter");
+    expect(h.textarea.value).toBe("• milk\n• eggs\n• ");
+    h.press("Enter");
+    expect(h.textarea.value).toBe("• milk\n• eggs\n");
+    h.type("after");
+    expect(h.textarea.value).toBe("• milk\n• eggs\nafter");
+    expect(h.all()).toHaveLength(1);
+  });
+
+  it("numbers count up; tasks continue open", () => {
+    const h = harness();
+    h.type("1. one");
+    h.press("Enter");
+    h.type("two");
+    expect(h.textarea.value).toBe("1. one\n2. two");
+    const t = harness();
+    t.type("- [x] done");
+    t.press("Enter");
+    expect(t.textarea.value).toBe("☑ done\n☐ ");
+  });
+
+  it("nested items keep their indent", () => {
+    const h = harness();
+    h.type("    - deep");
+    h.press("Enter");
+    expect(h.textarea.value).toBe("    • deep\n    • ");
+  });
+
+  it("Enter in the middle of an item splits it into two items", () => {
+    const h = harness();
+    h.type("- ab");
+    h.textarea.setSelectionRange(3, 3);
+    h.press("Enter");
+    expect(h.textarea.value).toBe("• a\n• b");
+  });
+
+  it("Backspace right after a marker removes it, keeps the text", () => {
+    const h = harness();
+    h.type("- item");
+    h.textarea.setSelectionRange(2, 2);
+    h.press("Backspace");
+    expect(h.textarea.value).toBe("item");
+  });
+
+  it("Cmd+Z right after a list conversion brings the - back", () => {
+    const h = harness();
+    h.type("- ");
+    h.press("z", { metaKey: true });
+    expect(h.textarea.value).toBe("- ");
+  });
+
+  it("a dash inside a line stays a dash", () => {
+    const h = harness();
+    h.type("a - b");
+    expect(h.textarea.value).toBe("a - b");
+  });
+
+  it("mode off: - stays a dash and Enter is a plain new line", () => {
+    const h = harness({ on: false });
+    h.type("- a");
+    h.press("Enter");
+    expect(h.textarea.value).toBe("- a\n");
+  });
+
+  it("lists work in a label too", () => {
+    const h = harness({ isLabel: true });
+    h.type("- a");
+    h.press("Enter");
+    expect(h.textarea.value).toBe("• a\n• ");
+  });
+});
+
+describe("Markdown typing: quotes", () => {
+  it("> and a space make a quote box at body size", () => {
+    const h = harness();
+    h.type("> wise words");
+    expect(h.textarea.value).toBe("wise words");
+    expect(h.current().customData).toEqual({ role: "quote" });
+    expect(h.current().fontSize).toBe(20);
+  });
+
+  it("Enter in a quote is a new line; Enter on the empty last line ends it", () => {
+    const h = harness();
+    h.type("> one");
+    h.press("Enter");
+    h.type("two");
+    h.press("Enter");
+    expect(h.all()).toHaveLength(1);
+    h.press("Enter");
+    const [quote, body] = h.all();
+    expect(quote.text).toBe("one\ntwo");
+    expect(quote.customData).toEqual({ role: "quote" });
+    expect(body.customData).toBeUndefined();
+    expect(body.y).toBeGreaterThan(quote.y + quote.height);
+  });
+
+  it("Backspace at the start of a quote makes it body text", () => {
+    const h = harness();
+    h.type("> q");
+    h.textarea.setSelectionRange(0, 0);
+    h.press("Backspace");
+    expect(h.current().customData).toBeUndefined();
+    expect(h.textarea.value).toBe("q");
+  });
+
+  it("Cmd+Z right after brings the > back", () => {
+    const h = harness();
+    h.type("> ");
+    h.press("z", { metaKey: true });
+    expect(h.textarea.value).toBe("> ");
+    expect(h.current().customData).toBeUndefined();
+  });
+
+  it("> on a later line splits into a quote box below", () => {
+    const h = harness();
+    h.type("body");
+    h.press("Enter");
+    h.type("> said");
+    const [body, quote] = h.all();
+    expect(body.text).toBe("body");
+    expect(quote.text).toBe("said");
+    expect(quote.customData).toEqual({ role: "quote" });
+  });
+});
