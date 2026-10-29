@@ -1,6 +1,7 @@
 import { type Locator, type Page } from "@playwright/test";
 
 import { openDrawing, openVault } from "../helpers";
+import { rect, setupOf } from "../pageHelpers";
 import { expect, test } from "../fixture";
 
 /* eslint-disable no-console */
@@ -538,6 +539,233 @@ for (const theme of ["light", "dark"] as const) {
     expect(
       failures,
       "crawler failures (each line is a bug to fix or log)",
+    ).toEqual([]);
+  });
+}
+
+// Screens added since the crawler was written (test-net, 2026-10-30): the import entries in the main
+// menu, the row menus with Re-import and Update anyway, the "left as they were" list, the plugin
+// browser, the theme browser and Install from link. The theme picker is the Appearance page of the
+// Settings crawl above. The Markdown mode chip is not in this base (markdown typing is a Settings
+// switch only, crawled with the Markdown page); add it here when the chip merges.
+const importedText = (id: string, y: number, created: number) => ({
+  ...rect(id, 56, y, 300, 30),
+  type: "text",
+  text: id,
+  originalText: id,
+  fontSize: 20,
+  fontFamily: 5,
+  textAlign: "left",
+  verticalAlign: "top",
+  containerId: null,
+  autoResize: true,
+  lineHeight: 1.25,
+  created,
+});
+
+const SEED_ROWS = [
+  {
+    path: "Obsidian/Import report.excalidraw",
+    elements: [importedText("Import report: Obsidian", 56, 7)],
+  },
+  {
+    path: "Obsidian/Poem.excalidraw",
+    elements: [
+      importedText("Roses are red", 56, 7),
+      importedText("Violets are blue", 86, 7),
+    ],
+  },
+  {
+    path: "Obsidian/Edited.excalidraw",
+    elements: [
+      importedText("Imported line", 56, 7),
+      importedText("My own line", 86, 99),
+    ],
+  },
+];
+
+for (const theme of ["light", "dark"] as const) {
+  // eslint-disable-next-line no-loop-func
+  test(`crawler: screens added since, ${theme} theme`, async ({ page }) => {
+    test.setTimeout(300_000);
+    page.setDefaultTimeout(8000);
+    const start = failures.length;
+    await page.emulateMedia({ colorScheme: theme });
+    const opened: string[] = [];
+    await page.exposeFunction("__crawlOpened2", (u: string) => opened.push(u));
+    await page.addInitScript(() => {
+      window.open = (url) => {
+        void (window as any).__crawlOpened2(String(url ?? ""));
+        return null;
+      };
+    });
+    // The catalogues are local fixtures with nothing in them: the dialogs show their empty state.
+    await page.route("https://raw.githubusercontent.com/**", (r) => {
+      const body = r.request().url().includes("plugin-registry")
+        ? { schema: 1, plugins: [] }
+        : { schemaVersion: 1, themes: [] };
+      return r.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: { "access-control-allow-origin": "*" },
+        body: JSON.stringify(body),
+      });
+    });
+    await openVault(page, "?plugins=markdown-import&config=1");
+    await page.waitForFunction(() => (window as any).__pluginsReady === true);
+    await page.evaluate(
+      ([rows, pageSetup]) => {
+        const repo = (window as any).__vaultRepo;
+        for (const r of rows as { path: string; elements: unknown[] }[]) {
+          repo.seedDrawing(
+            r.path,
+            JSON.stringify({
+              type: "excalidraw",
+              version: 2,
+              elements: r.elements,
+              appState: { pageSetup },
+              files: {},
+            }),
+          );
+        }
+        repo.emit({ handle: repo.handle, paths: [], rescan: true });
+        (window as any).__plugins.backend.folders.sourcePick = {
+          name: "Crawl Notes",
+          files: { "A.md": "# A\n\nText\n", ".obsidian/app.json": "{}" },
+        };
+      },
+      [SEED_ROWS, setupOf({ paperTheme: "normal" })] as const,
+    );
+    const tree = (p: Page, name: string) =>
+      p.locator(".vault-tree-item__name", { hasText: name }).first();
+    const showTree = async (p: Page) => {
+      await closePopups(p, "tree", "reset");
+      const show = p.getByRole("button", { name: "Show navigator" });
+      if (await show.isVisible()) {
+        await show.click();
+      }
+      if (!(await tree(p, "Poem").isVisible())) {
+        await tree(p, "Obsidian").click();
+      }
+      await expect(tree(p, "Poem")).toBeVisible();
+    };
+    const settingsTab = async (p: Page, tab: string) => {
+      await closePopups(p, "settings", "reset", 1);
+      await openSettings(p);
+      await p
+        .getByRole("dialog")
+        .getByRole("tab", { name: tab, exact: true })
+        .first()
+        .click();
+    };
+    const screens: Screen[] = [
+      {
+        name: "main menu with the import entries",
+        ensure: async (p) => {
+          await showTree(p);
+          await tree(p, "Poem").click();
+          await expect(
+            p.locator(".vault-editor canvas.interactive"),
+          ).toBeVisible();
+          await closePopups(p, "main menu", "reset");
+          if (!(await p.getByRole("menu").filter({ visible: true }).count())) {
+            await p.getByTestId("main-menu-trigger").click();
+          }
+        },
+        scope: (p) => p.getByRole("menu").filter({ visible: true }).first(),
+      },
+      {
+        name: "row menu: an imported drawing (Re-import, Update anyway)",
+        ensure: async (p) => {
+          await showTree(p);
+          await tree(p, "Poem").click({ button: "right" });
+          await expect(p.getByRole("menu")).toBeVisible();
+        },
+        scope: (p) => p.getByRole("menu").filter({ visible: true }).first(),
+      },
+      {
+        name: "row menu: an imported folder (Re-import unchanged imported notes here)",
+        ensure: async (p) => {
+          await showTree(p);
+          await tree(p, "Obsidian").click({ button: "right" });
+          await expect(p.getByRole("menu")).toBeVisible();
+        },
+        scope: (p) => p.getByRole("menu").filter({ visible: true }).first(),
+      },
+      {
+        name: "Imported notes left as they were (the skipped list)",
+        ensure: async (p) => {
+          await closePopups(p, "skipped list", "reset");
+          const list = p.getByRole("dialog", {
+            name: "Imported notes left as they were",
+          });
+          if (!(await list.isVisible())) {
+            await p.keyboard.press("Meta+Shift+KeyP");
+            await p.keyboard.type("Update imported notes to my theme");
+            await p.keyboard.press("Enter");
+            await p
+              .getByRole("button", { name: "View list", exact: true })
+              .click({ timeout: 20_000 });
+          }
+          await expect(list).toBeVisible();
+        },
+        scope: (p) =>
+          p.getByRole("dialog", { name: "Imported notes left as they were" }),
+      },
+      {
+        name: "Plugin browser",
+        ensure: async (p) => {
+          const d = p.getByTestId("plugin-browser-dialog");
+          if (!(await d.isVisible())) {
+            await settingsTab(p, "Plugins");
+            await p
+              .getByRole("button", { name: "Browse community plugins…" })
+              .click();
+          }
+          await expect(d).toBeVisible();
+        },
+        scope: (p) => p.getByTestId("plugin-browser-dialog"),
+      },
+      {
+        name: "Theme browser",
+        ensure: async (p) => {
+          const d = p.getByTestId("theme-browser-dialog");
+          if (!(await d.isVisible())) {
+            await settingsTab(p, "Appearance");
+            await p
+              .getByRole("button", { name: "Install more themes…" })
+              .click();
+          }
+          await expect(d).toBeVisible();
+        },
+        scope: (p) => p.getByTestId("theme-browser-dialog"),
+      },
+      {
+        name: "Install a theme from a link",
+        ensure: async (p) => {
+          const d = p.getByTestId("theme-install-dialog");
+          if (!(await d.isVisible())) {
+            await settingsTab(p, "Appearance");
+            await p.getByRole("button", { name: "Install from link…" }).click();
+          }
+          await expect(d).toBeVisible();
+        },
+        scope: (p) => p.getByTestId("theme-install-dialog"),
+      },
+    ];
+    for (const s of screens) {
+      await crawl(page, theme, s, opened);
+      await page.keyboard.press("Escape").catch(() => {});
+    }
+    // eslint-disable-next-line no-console
+    console.log(
+      `CRAWL2 ${theme}: ${failures.length - start} failures in ${
+        screens.length
+      } added screens`,
+    );
+    expect(
+      failures.slice(start),
+      "crawler failures on the added screens (each line is a bug to fix or log)",
     ).toEqual([]);
   });
 }
