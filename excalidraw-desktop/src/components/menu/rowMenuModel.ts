@@ -179,7 +179,7 @@ export function buildRowMenu({
       ...(isFolder
         ? []
         : [
-            item("copyLink", "Link", () => a.copyPath(entry, "link"), {
+            item("copyLink", "Vaultdraw link", () => a.copyPath(entry, "link"), {
               commandId: "list.copyLink",
             }),
           ]),

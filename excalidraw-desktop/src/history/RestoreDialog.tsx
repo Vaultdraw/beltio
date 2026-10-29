@@ -70,7 +70,7 @@ export const RestoreDialog = ({
       <p>
         Replacing {drawingName ? `"${drawingName}"` : "the drawing"} with this
         version keeps your current drawing recoverable: a version is saved first
-        and Cmd+Z undoes the restore. Restoring as a copy leaves it untouched.
+        and you can undo the restore. Restoring as a copy leaves it untouched.
       </p>
       {refused && (
         <div className="vault-error-text" role="status">

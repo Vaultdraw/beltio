@@ -367,7 +367,7 @@ export const TagsPanel = ({
                     className="vault-tags__more"
                     tabIndex={-1}
                     aria-label={`Rename tag ${node.display}…`}
-                    title="Rename tag… (r)"
+                    title="Rename tag…"
                     onClick={() => onRenameTag(node.key, node.display)}
                   >
                     <IconMore />

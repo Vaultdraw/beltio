@@ -48,7 +48,7 @@ describe("RestoreDialog", () => {
     setup();
     expect(screen.getByTestId("restore-dialog")).toHaveClass("vd-dialog");
     expect(screen.getByRole("dialog")).toHaveTextContent(
-      /"Graphs".*Cmd\+Z undoes the restore/,
+      /"Graphs".*you can undo the restore/,
     );
   });
 

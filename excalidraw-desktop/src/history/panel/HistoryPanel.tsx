@@ -361,7 +361,9 @@ const HistoryPanel = ({
         version,
       );
       notify(
-        `Restored version from ${formatClock(selected.createdAt)}. Undo: Cmd+Z`,
+        `Restored version from ${formatClock(
+          selected.createdAt,
+        )}. You can undo it.`,
       );
       backToCurrent();
     });

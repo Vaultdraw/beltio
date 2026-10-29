@@ -42,6 +42,7 @@ export const VaultHeader = ({
   onRetryWritable,
 }: VaultHeaderProps) => {
   const toggleKeys = useCommandShortcut("view.toggleNavigator");
+  const saveKeys = useCommandShortcut("file.save");
   if (!vault) {
     return null;
   }
@@ -141,7 +142,7 @@ export const VaultHeader = ({
                 className="vault-status vault-status--dirty"
                 onClick={onSave}
                 disabled={!onSave || vault.readOnly}
-                title="Unsaved changes — click or press Ctrl+S / Cmd+S to save now"
+                title={saveKeys ? `Save now (${saveKeys})` : "Save now"}
                 aria-label="Save drawing"
               >
                 <span className="vault-status__dot" />
