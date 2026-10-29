@@ -15,11 +15,12 @@ import { looksLike } from "../../../../../sdk/api/shared/sceneRules";
 
 import { createWebImages } from "../webImages";
 
+import { parseOptions } from "../settings";
+
 import { LinkResolver, rewriteLinks } from "./links";
 import { partPath, planImport, type PlanItem } from "./plan";
 
 import { buildReport, REPORT_PATH } from "./report";
-import { parseOptions } from "../settings";
 
 import type {
   ImageIssue,
