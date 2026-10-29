@@ -138,7 +138,7 @@ export interface PagesApi {
 /**
  * The tones the host paints text in: the drawing follows the theme, no
  * theme colours are stamped in. `link`, `code` and `heading1` to `heading6`
- * (headings since 0.32.0) are drawn in the active theme's Markdown colours
+ * (headings since 0.34.0) are drawn in the active theme's Markdown colours
  * (`--vault-md-link`, `--vault-md-code`, `--vault-md-h1` …), as an Obsidian
  * theme sets `--link-color` and `--h1-color`.
  *
@@ -158,7 +158,7 @@ export type PageTextTone =
 
 /**
  * What a box is filled with. `code` is drawn in the theme's
- * `--vault-md-code-bg`; `bar` (since 0.32.0), the bar at the left of a
+ * `--vault-md-code-bg`; `bar` (since 0.34.0), the bar at the left of a
  * quote, in `--vault-md-quote-bar`.
  *
  * @since 0.9.0

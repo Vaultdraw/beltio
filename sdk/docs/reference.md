@@ -763,7 +763,7 @@ Three additions for plugins that turn other files into drawings: a page-mode dra
 
 ### Page items
 
-The plugin lays the content out (wrapped lines, boxes, rules, pictures) and hands the host **page items**: scene pixels relative to the page's top-left corner, with the page index. The host never measures or re-wraps text: a text item arrives wrapped (lines joined by `"\n"`) and sized, and becomes a text element with `autoResize: false`. Colours follow the theme: on a "Match current theme" paper (and with canvas sync) the tones `link`, `code` and `heading1` to `heading6`, the `code` fill and the `bar` fill are drawn in the active theme's Markdown colours (`--vault-md-*`, see [theme tokens](theme-tokens.md)); the other tones and fills map to the editor's default palette. The tones `heading1` to `heading6` and the fill `bar` are new in 0.32.0; check `ctx.host.revision` before using them on an older app.
+The plugin lays the content out (wrapped lines, boxes, rules, pictures) and hands the host **page items**: scene pixels relative to the page's top-left corner, with the page index. The host never measures or re-wraps text: a text item arrives wrapped (lines joined by `"\n"`) and sized, and becomes a text element with `autoResize: false`. Colours follow the theme: on a "Match current theme" paper (and with canvas sync) the tones `link`, `code` and `heading1` to `heading6`, the `code` fill and the `bar` fill are drawn in the active theme's Markdown colours (`--vault-md-*`, see [theme tokens](theme-tokens.md)); the other tones and fills map to the editor's default palette. The tones `heading1` to `heading6` and the fill `bar` are new in 0.34.0; check `ctx.host.revision` before using them on an older app.
 
 ```ts
 type PageItem =
