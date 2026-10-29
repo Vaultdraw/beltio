@@ -148,6 +148,53 @@ const tableOrImage = (
   return null;
 };
 
+const EMBED = /!\[\[[^\]]+\]\]|!\[[^\]]*\]\([^)]*\)/g;
+
+/** Line breaks as the Rust parser reports them: hard breaks always, soft ones when asked. */
+const lineBreaks = (text: string, soft: boolean): string =>
+  text
+    .replace(/(?: {2,}|\\)\n[ \t]*/g, "\u0001")
+    .replace(/[ \t]*\n[ \t]*/g, soft ? "\n" : " ")
+    .replace(/\u0001/g, "\n");
+
+/**
+ * A paragraph with a picture or embed inside: text and embeds in source order, like the Rust
+ * parser (a shared case table pins both). Null when the paragraph has none.
+ */
+const splitAtEmbeds = (
+  body: string,
+  range: readonly [number, number],
+  soft: boolean,
+): NoteBlock[] | null => {
+  const found = [...body.matchAll(EMBED)];
+  if (!found.length) {
+    return null;
+  }
+  const out: NoteBlock[] = [];
+  const text = (t: string) => {
+    const flat = lineBreaks(t, soft).trim();
+    if (flat) {
+      out.push(withSpans({ kind: "paragraph" as const, text: flat, range }));
+    }
+  };
+  let at = 0;
+  for (const m of found) {
+    text(body.slice(at, m.index));
+    const literal = m[0];
+    const image = tableOrImage(literal, range);
+    if (image) {
+      out.push(image);
+    } else {
+      const target = /^!\[\[([^\]|#]+)/.exec(literal)?.[1]?.trim();
+      const md = /^!\[[^\]]*\]\(<?([^)>]+?)>?\)$/.exec(literal)?.[1]?.trim();
+      out.push({ kind: "embed", target: target ?? md ?? literal, range } as NoteBlock);
+    }
+    at = m.index! + literal.length;
+  }
+  text(body.slice(at));
+  return out;
+};
+
 /** A small stand-in for the Rust parser (see the file comment). */
 export const fakeParseMarkdown = (
   text: string,
@@ -191,7 +238,16 @@ export const fakeParseMarkdown = (
       continue;
     }
     const heading = /^(#{1,6})\s+(.*)$/s.exec(body);
-    const flat = options?.softBreakNewline ? body : body.replace(/\n/g, " ");
+    const split = heading
+      ? null
+      : splitAtEmbeds(body, range, !!options?.softBreakNewline);
+    if (split) {
+      blocks.push(...split);
+      continue;
+    }
+    const flat = heading
+      ? body
+      : lineBreaks(body, !!options?.softBreakNewline);
     blocks.push(
       withSpans(
         heading

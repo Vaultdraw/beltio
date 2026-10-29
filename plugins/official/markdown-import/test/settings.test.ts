@@ -43,3 +43,18 @@ describe("import font", () => {
     );
   });
 });
+
+describe("line breaks", () => {
+  it("keep single line breaks unless strict_line_breaks is on (Obsidian's default)", async () => {
+    const { parseOptions } = await import("../src/settings");
+    expect(parseOptions(readSettings(ctxWith({})))).toEqual({
+      softBreakNewline: true,
+    });
+    expect(
+      parseOptions(readSettings(ctxWith({ strict_line_breaks: true }))),
+    ).toEqual({ softBreakNewline: false });
+    expect(
+      parseOptions(readSettings(ctxWith({ strict_line_breaks: "yes" }))),
+    ).toEqual({ softBreakNewline: true });
+  });
+});

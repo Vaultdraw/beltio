@@ -115,6 +115,13 @@ description = "Convert .excalidraw.md drawings of an Obsidian vault into drawing
 default = true
 
 [[contributes.settings]]
+key = "strict_line_breaks"
+type = "bool"
+title = "Strict line breaks"
+description = "Off, like Obsidian: a single line break in a note stays a line break. On: lines of one paragraph join with a space."
+default = false
+
+[[contributes.settings]]
 key = "obsidian_report"
 type = "bool"
 title = "Obsidian: write an import report"

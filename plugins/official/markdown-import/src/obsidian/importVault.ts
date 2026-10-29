@@ -19,6 +19,7 @@ import { LinkResolver, rewriteLinks } from "./links";
 import { partPath, planImport, type PlanItem } from "./plan";
 
 import { buildReport, REPORT_PATH } from "./report";
+import { parseOptions } from "../settings";
 
 import type {
   ImageIssue,
@@ -255,7 +256,10 @@ export async function importObsidianVault(
   };
 
   const importNote = async (item: PlanItem): Promise<void> => {
-    let doc = await ctx.markdown.parse(await source.readText(item.path));
+    let doc = await ctx.markdown.parse(
+      await source.readText(item.path),
+      parseOptions(settings),
+    );
     if (signal.aborted) {
       return;
     }

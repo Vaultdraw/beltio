@@ -47,6 +47,11 @@ export interface ImportSettings {
   obsidianExcalidraw: boolean;
   /** Write `Import report` when something did not import cleanly (unset counts as off). */
   obsidianReport?: boolean;
+  /**
+   * Obsidian's "Strict line breaks": on, a single newline in a paragraph joins the lines with a
+   * space; off (Obsidian's default), it stays a line break.
+   */
+  strictLineBreaks?: boolean;
 }
 
 /** The fallback drawing font (Excalifont); the Document font is the plain sans. */
@@ -73,6 +78,11 @@ const int = (v: unknown, d: number, min: number, max: number): number =>
 const bool = (v: unknown, d: boolean): boolean =>
   typeof v === "boolean" ? v : d;
 
+/** The options every note is parsed with: soft line breaks stay line breaks unless strict. */
+export const parseOptions = (
+  s: Pick<ImportSettings, "strictLineBreaks">,
+): { softBreakNewline: boolean } => ({ softBreakNewline: !s.strictLineBreaks });
+
 /** The user's current drawing font; Excalifont when the host cannot say. */
 const drawingFontOf = (ctx: PluginContext): FontFamilyName => {
   try {
@@ -95,6 +105,7 @@ export function readSettings(ctx: PluginContext): ImportSettings {
     obsidianLinks: oneOf(get("obsidian_links"), ["drawing", "text"], "drawing"),
     obsidianExcalidraw: bool(get("obsidian_excalidraw"), true),
     obsidianReport: bool(get("obsidian_report"), true),
+    strictLineBreaks: bool(get("strict_line_breaks"), false),
   };
 }
 

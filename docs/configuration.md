@@ -1786,6 +1786,7 @@ part_elements = 1000         # 200 to 20000: a longer note is split into parts
 obsidian_attachments = true  # copy images and other files of an Obsidian vault
 obsidian_links = "drawing"   # "drawing": [[links]] point at the converted drawings; "text": keep as written
 obsidian_excalidraw = true   # convert .excalidraw.md drawings
+strict_line_breaks = false  # a single line break stays a line break (Obsidian's default); true joins the lines
 obsidian_report = true       # write "Import report" when files fail or images stay boxes
 offer_update = true          # offer to update notes imported by an older version
 ```
@@ -1799,6 +1800,7 @@ offer_update = true          # offer to update notes imported by an older versio
 | `obsidian_attachments` | `true` | Copy every other file of the vault (images, PDFs) next to the drawings. |
 | `obsidian_links` | `"drawing"` | Rewrite `[[Note]]` and `[[Note\|alias]]` to the converted drawing's path, `![[image.png]]` embeds the image (up to 4 MB). `"text"` leaves them as written. |
 | `obsidian_excalidraw` | `true` | Convert `Name.excalidraw.md` (plain or compressed) to `Name.excalidraw`. |
+| `strict_line_breaks` | `false` | Like Obsidian's "Strict line breaks". Off: a single line break inside a paragraph stays a line break. On: the lines are joined with a space. Hard breaks (two spaces or a backslash at the end of a line) always break. |
 | `obsidian_report` | `true` | When a file fails or an image stays a box, write `Import report` (a drawing at the root of the target) listing each file or image and the reason. Nothing is written for a clean import. |
 | `offer_update` | `true` | Opening a note imported by an older version (white page, hand-drawn font, or web pictures left as boxes) shows one notice per session with **Update** and **Download pictures**. `false` hides the notice; the command still works. |
 

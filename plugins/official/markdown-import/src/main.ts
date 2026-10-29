@@ -13,7 +13,12 @@ import {
   type LayoutOptions,
 } from "./deps";
 import { createWebImages } from "./webImages";
-import { fontFamilyOf, readSettings, type ImportSettings } from "./settings";
+import {
+  fontFamilyOf,
+  parseOptions,
+  readSettings,
+  type ImportSettings,
+} from "./settings";
 
 import type {
   ImportInput,
@@ -86,7 +91,7 @@ const plugin: Plugin = definePlugin({
       const family = fontFamilyOf(settings);
       await ctx.fonts.ensure([family], text);
       const t1 = performance.now();
-      const doc = await ctx.markdown.parse(text);
+      const doc = await ctx.markdown.parse(text, parseOptions(settings));
       const t2 = performance.now();
       if (signal.aborted) {
         throw abortError();
