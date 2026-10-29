@@ -9,7 +9,10 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
+import { getNoteFiles } from "../notes/noteBackend";
+import { savedNoteRevision } from "../notes/openNotes";
 import { stripDrawingExt } from "../vault/fileKind";
+import { findRenamed } from "../vault/renamePairing";
 
 import { registerCommandHandlers } from "../commands/handlerRegistry";
 import { TAB_COMMAND_IDS } from "../commands/tabCommands";
@@ -86,7 +89,7 @@ export interface UseTabsArgs {
   /** Watcher events and existence probes for the missing-file marks. */
   repository: Pick<
     VaultRepository,
-    "subscribe" | "readRevision" | "listDirectory"
+    "subscribe" | "readRevision" | "listDirectory" | "readDrawing"
   >;
   /** Show the navigator, expand to the path and focus its row. */
   revealInNavigator: (path: string) => void;
@@ -321,12 +324,46 @@ export function useTabs(args: UseTabsArgs): TabsApi {
     if (!runtime || !handle) {
       return;
     }
-    const { store, controller } = runtime;
+    const { store, controller, memory } = runtime;
+    const repo = () => live.current.repository;
     const watcher = createMissingWatcher({
       tabs: () => store.getState().tabs,
       activeId: () => store.getState().activeId,
-      exists: (path) => probeExists(live.current.repository, handle, path),
+      exists: (path) => probeExists(repo(), handle, path),
       setMissing: (path, missing) => void controller.setMissing(path, missing),
+      // Renamed or moved outside (hunter C-4): notes by the revision of their saved text,
+      // background drawings by the revision their kept state belongs to. The open drawing is
+      // followed by the document hook.
+      findRenamed: async (tab, batch, active) => {
+        const path = tab.path;
+        if (path === null) {
+          return null;
+        }
+        const note = path.toLowerCase().endsWith(".md");
+        if (!note && active) {
+          return null;
+        }
+        const revision = note
+          ? savedNoteRevision(path)
+          : memory.revisionOf(tab.id, path);
+        if (revision === null) {
+          return null;
+        }
+        const taken = new Set(store.getState().tabs.map((t) => t.path));
+        return findRenamed(path, String(revision), batch, async (c) => {
+          if (taken.has(c)) {
+            return null;
+          }
+          if (note) {
+            return (await getNoteFiles().read(handle, c)).revision;
+          }
+          const r = repo();
+          return r.readRevision
+            ? r.readRevision(handle, c)
+            : (await r.readDrawing(handle, c)).revision;
+        });
+      },
+      renamed: (from, to) => controller.renamed(from, to),
     });
     let off: (() => void) | undefined;
     let disposed = false;

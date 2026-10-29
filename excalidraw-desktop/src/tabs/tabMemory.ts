@@ -89,6 +89,12 @@ export class TabMemory<S> {
     return e.path === path && e.revision === revision ? e.snapshot : null;
   }
 
+  /** The revision the tab's kept state belongs to, when it is for `path` (outside renames). */
+  revisionOf(tabId: TabId, path: string): number | string | null {
+    const e = this.entries.get(tabId);
+    return e && e.path === path ? e.revision : null;
+  }
+
   /** Mark an entry most recently used (without changing it). */
   touch(tabId: TabId): void {
     const e = this.entries.get(tabId);

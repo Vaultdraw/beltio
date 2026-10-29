@@ -86,15 +86,16 @@ test("editing a drawing that was renamed outside does not recreate it under the 
 test("a note renamed outside while open: the tab follows or says so, never a silent stale tab", async ({
   page,
 }) => {
-  test.fixme(
-    true,
-    "toimprove 123 (rest): open notes do not follow an outside rename yet",
-  );
   await openVault(page, "?seed=obsidian");
   await outside(page, { op: "create", path: "Fresh.md" });
   await expect(row(page, "Fresh.md")).toBeVisible();
   await row(page, "Fresh.md").click();
   await expect(page.getByTestId("vault-tab")).toHaveCount(1);
+  // The note is open and saved (what the user sees before renaming it in Finder).
+  await expect(page.getByTestId("note-status")).toHaveAttribute(
+    "data-status",
+    "saved",
+  );
   await outside(page, { op: "rename", path: "Fresh.md", to: "Fresher.md" });
   await expect(row(page, "Fresher.md")).toBeVisible();
   await expect(page.getByTestId("vault-tab")).toHaveAttribute(
@@ -106,10 +107,6 @@ test("a note renamed outside while open: the tab follows or says so, never a sil
 test("a drawing in a background tab renamed outside: the tab follows, it is not marked missing", async ({
   page,
 }) => {
-  test.fixme(
-    true,
-    "toimprove 123 (rest): background tabs keep no revision to pair the rename with",
-  );
   await openVault(page);
   await row(page, "DSA").click();
   await row(page, "DSA/Graphs.excalidraw").click();

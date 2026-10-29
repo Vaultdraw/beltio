@@ -53,6 +53,20 @@ export class FakeNoteFiles implements NoteFiles {
     this.files.set(path, { text, mtimeMs: ++this.clock });
   }
 
+  /** Test seam: a note renamed or moved by another program (its text and revision stay). */
+  moveOnDisk(from: string, to: string): void {
+    const f = this.files.get(from);
+    if (f) {
+      this.files.delete(from);
+      this.files.set(to, f);
+    }
+  }
+
+  /** Test seam: a note deleted by another program. */
+  removeOnDisk(path: string): void {
+    this.files.delete(path);
+  }
+
   /** Test seam: an empty folder on "disk" (files' folders exist implicitly). */
   setFolder(path: string): void {
     this.folders.add(path);

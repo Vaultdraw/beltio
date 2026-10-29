@@ -146,6 +146,7 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
       path,
       state: () => s.state,
       flush: () => s.flush(),
+      revision: () => s.currentRevision,
     });
     return () => {
       unregister();

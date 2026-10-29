@@ -40,6 +40,11 @@ export class NoteSaver {
     return this.status;
   }
 
+  /** The revision on disk the saved text matches. */
+  get currentRevision(): string {
+    return this.revision;
+  }
+
   /** The note was (re)read from disk: this text and revision are the new base. */
   rebase(text: string, revision: string): void {
     this.cancel();

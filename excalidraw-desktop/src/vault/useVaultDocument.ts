@@ -20,6 +20,7 @@ import {
 } from "./types";
 import { isWritableDrawing } from "./fileKind";
 import { SaveCoordinator } from "./saveCoordinator";
+import { findRenamed } from "./renamePairing";
 
 import type { HistoryRepository } from "../history/types";
 
@@ -99,9 +100,6 @@ const operationId = () =>
   `vault-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const isNotFound = (error: unknown) =>
   /not.?found|deleted/i.test(errorMessage(error));
-
-/** Paths checked when the open drawing vanishes in a watcher batch (a rename is two paths). */
-const MAX_RENAME_PROBES = 32;
 
 export const useVaultDocument = (
   repository: VaultRepository,
@@ -652,41 +650,13 @@ export const useVaultDocument = (
     }
     let disposed = false;
     let unsubscribe: (() => void) | undefined;
-    /** Where the open drawing went: a path of the batch (or one under a renamed folder) with its revision. */
-    const findRenamed = async (
-      current: Active,
-      paths: readonly string[],
-    ): Promise<string | null> => {
-      // The cheap revision probe where the repository has one, else a read.
-      const revisionAt = (c: string): Promise<string | null> =>
-        (repository.readRevision
+    /** Where the open drawing went: a path of the batch with its revision (renamePairing.ts). */
+    const findRenamedDoc = (current: Active, paths: readonly string[]) =>
+      findRenamed(current.path, current.revision, paths, (c) =>
+        repository.readRevision
           ? repository.readRevision(current.handle, c)
-          : repository.readDrawing(current.handle, c).then((d) => d.revision)
-        ).catch(() => null);
-      const gone = paths.filter(
-        (p) => p === current.path || current.path.startsWith(`${p}/`),
+          : repository.readDrawing(current.handle, c).then((d) => d.revision),
       );
-      const candidates = new Set<string>();
-      for (const p of paths) {
-        if (p === current.path || gone.includes(p)) {
-          continue;
-        }
-        candidates.add(p);
-        for (const g of gone) {
-          candidates.add(`${p}${current.path.slice(g.length)}`);
-        }
-      }
-      for (const c of [...candidates].slice(0, MAX_RENAME_PROBES)) {
-        if (!isWritableDrawing(c)) {
-          continue;
-        }
-        const rev = await revisionAt(c);
-        if (rev !== null && rev === current.revision) {
-          return c;
-        }
-      }
-      return null;
-    };
     void repository
       .subscribe((event) => {
         const current = active.current;
@@ -819,7 +789,7 @@ export const useVaultDocument = (
             // Renamed or moved outside (Finder, git, sync): the same bytes now sit at one of the
             // batch's other paths. Follow them, as Obsidian and Neovim buffers do, instead of
             // a dead "Conflict" (hunter C-4). Only an unchanged revision counts as the same file.
-            const to = await findRenamed(current, event.paths);
+            const to = await findRenamedDoc(current, event.paths);
             if (
               to &&
               !disposed &&

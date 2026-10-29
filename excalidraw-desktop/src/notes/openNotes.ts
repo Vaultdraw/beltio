@@ -9,6 +9,8 @@ export interface OpenNote {
   path: string;
   state: () => SaveStatus;
   flush: () => Promise<void>;
+  /** The revision on disk the note's text matches (what a rename outside keeps). */
+  revision?: () => string;
 }
 
 const open = new Set<OpenNote>();
@@ -60,4 +62,17 @@ export async function flushOpenNotes(): Promise<void> {
   if (left.length > 0) {
     throw new NotesUnsavedError(left.map((n) => n.path));
   }
+}
+
+/**
+ * The revision of an open note whose text is all on disk, else null (nothing pending, so a
+ * rename outside can be followed without a write landing on the old path).
+ */
+export function savedNoteRevision(path: string): string | null {
+  for (const n of open) {
+    if (n.path === path && n.state() === "saved" && n.revision) {
+      return n.revision();
+    }
+  }
+  return null;
 }

@@ -190,6 +190,16 @@ export class FakeVaultRepository implements VaultRepository {
     return revision;
   }
 
+  /**
+   * The notes' text store (FakeNoteFiles), when a harness has one: changes made "outside" move
+   * the text too, as on a real disk (a rename keeps a note's content and revision).
+   */
+  noteText?: {
+    setOnDisk(path: string, text: string): void;
+    moveOnDisk(from: string, to: string): void;
+    removeOnDisk(path: string): void;
+  };
+
   /** A Markdown note (listed as `note`; it has no drawing content). */
   seedNote(path: string): void {
     assertValidRelativePath(path);
@@ -284,6 +294,7 @@ export class FakeVaultRepository implements VaultRepository {
     if (op === "create") {
       if (path.endsWith(".md")) {
         this.seedNote(path);
+        this.noteText?.setOnDisk(path, "");
       } else {
         this.seedDrawing(path, EMPTY_SCENE_JSON);
       }
@@ -299,6 +310,7 @@ export class FakeVaultRepository implements VaultRepository {
       for (const n of [...this.notes]) {
         if (under(n, path)) {
           this.notes.delete(n);
+          this.noteText?.removeOnDisk(n);
           touched.push(n);
         }
       }
@@ -325,6 +337,7 @@ export class FakeVaultRepository implements VaultRepository {
         if (under(n, path)) {
           this.notes.delete(n);
           this.notes.add(re(n));
+          this.noteText?.moveOnDisk(n, re(n));
           touched.push(n, re(n));
         }
       }

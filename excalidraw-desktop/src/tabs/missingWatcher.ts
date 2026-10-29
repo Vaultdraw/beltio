@@ -16,6 +16,16 @@ export type MissingWatcherDeps = {
   /** The cheapest existence probe the repository offers. */
   exists: (path: string) => Promise<boolean>;
   setMissing: (path: string, missing: boolean) => void;
+  /**
+   * Where a tab's file went when it vanished in a batch (an outside rename or move), or null.
+   * Only the same revision counts (vault/renamePairing.ts). Optional: without it, missing.
+   */
+  findRenamed?: (
+    tab: TabView,
+    batch: readonly string[],
+    active: boolean,
+  ) => Promise<string | null>;
+  renamed?: (from: string, to: string) => void;
   delayMs?: number;
 };
 
@@ -45,6 +55,7 @@ export const affectedTabPaths = (
 
 export const createMissingWatcher = (deps: MissingWatcherDeps) => {
   const pending = new Set<string>();
+  const batch = new Set<string>();
   let timer: ReturnType<typeof setTimeout> | null = null;
   let disposed = false;
 
@@ -52,11 +63,34 @@ export const createMissingWatcher = (deps: MissingWatcherDeps) => {
     timer = null;
     const paths = [...pending];
     pending.clear();
+    const seen = [...batch];
+    batch.clear();
     for (const path of paths) {
       const tab = deps.tabs().find((t) => t.path === path);
-      // Gone (closed or renamed in-app meanwhile), or shown: nothing to mark.
-      // A shown tab that is already marked may still be cleared.
-      if (!tab || (tab.id === deps.activeId() && !tab.missing)) {
+      if (!tab) {
+        continue; // closed, or renamed in-app meanwhile
+      }
+      const isActive = tab.id === deps.activeId();
+      // A renamed or moved file: the tab follows it (an open drawing is followed by the document
+      // hook; notes and background tabs here).
+      if (deps.findRenamed && deps.renamed && !tab.missing) {
+        const exists = await deps.exists(path).catch(() => true);
+        if (!exists) {
+          const to = await deps
+            .findRenamed(tab, seen, isActive)
+            .catch(() => null);
+          if (
+            to &&
+            !disposed &&
+            deps.tabs().some((t) => t.id === tab.id && t.path === path)
+          ) {
+            deps.renamed(path, to);
+            continue;
+          }
+        }
+      }
+      // Shown: nothing to mark. A shown tab that is already marked may still be cleared.
+      if (isActive && !tab.missing) {
         continue;
       }
       let exists: boolean;
@@ -83,6 +117,11 @@ export const createMissingWatcher = (deps: MissingWatcherDeps) => {
       }
       for (const p of affectedTabPaths(eventPaths, deps.tabs(), rescan)) {
         pending.add(p);
+      }
+      if (pending.size > 0) {
+        for (const p of eventPaths) {
+          batch.add(p);
+        }
       }
       if (pending.size > 0 && timer === null) {
         timer = setTimeout(
