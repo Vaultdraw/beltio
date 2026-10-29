@@ -252,7 +252,21 @@ export const inspect = (
           a.isContentEditable;
         const outline =
           s.outlineStyle !== "none" && parseFloat(s.outlineWidth) > 0;
-        const ring = s.boxShadow !== "none";
+        // A ring may be drawn by a wrapper that has `:focus-within` (the Settings number stepper
+        // rings its whole box): look up to three levels (TN-8 was this check missing it).
+        let wrapped = false;
+        for (
+          let p = a.parentElement, i = 0;
+          p && i < 3 && !wrapped;
+          p = p.parentElement, i++
+        ) {
+          const ps = getComputedStyle(p);
+          wrapped =
+            p.matches(":focus-within") &&
+            (ps.boxShadow !== "none" ||
+              (ps.outlineStyle !== "none" && parseFloat(ps.outlineWidth) > 0));
+        }
+        const ring = s.boxShadow !== "none" || wrapped;
         const marked =
           a.matches(":focus-visible") ||
           a.getAttribute("aria-selected") === "true";
