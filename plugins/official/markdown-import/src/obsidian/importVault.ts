@@ -306,7 +306,12 @@ export async function importObsidianVault(
     };
   };
 
-  const total = plan.items.length;
+  // A re-import (`only`) lays out just those notes; links and pictures still resolve against the
+  // whole vault, and nothing is copied.
+  const items = opts.only
+    ? plan.items.filter((it) => it.kind === "note" && opts.only!.has(it.path))
+    : plan.items;
+  const total = items.length;
   let done = 0;
   let sliceStart = performance.now();
   for (let i = 0; i < total; ) {
@@ -320,7 +325,7 @@ export async function importObsidianVault(
       sliceStart = performance.now();
       continue;
     }
-    const item = plan.items[i];
+    const item = items[i];
     opts.onProgress(done, total, stem(item.path));
     if (item.kind === "note") {
       try {
@@ -333,7 +338,7 @@ export async function importObsidianVault(
       continue;
     }
     // A run of copy items goes out COPY_CONCURRENCY at a time (each is a native call).
-    const batch = plan.items
+    const batch = items
       .slice(i, i + COPY_CONCURRENCY)
       .filter((b) => b.kind !== "note");
     const outcomes = await Promise.allSettled(batch.map(copyItem));
@@ -351,9 +356,10 @@ export async function importObsidianVault(
     result.cancelled = true;
   }
   opts.onProgress(done, total, "");
-  const report = settings.obsidianReport
-    ? buildReport(source.name, result)
-    : null;
+  const report =
+    settings.obsidianReport && !opts.only
+      ? buildReport(source.name, result)
+      : null;
   if (report) {
     try {
       const doc = await ctx.markdown.parse(report);

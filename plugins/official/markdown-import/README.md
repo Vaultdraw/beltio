@@ -49,7 +49,7 @@ Long notes are split into parts of about 1,000 elements: `Note (imported, part 2
 
 Every command is in the palette (Cmd+P) and has no default key; bind them in `[hotkeys]`.
 
-`Import: Markdown…`, `Import: Markdown from clipboard`, `Import: Markdown with the Document font`, `Markdown: Next heading`, `Markdown: Previous heading`, `Import: Show timings`, `Markdown: Download web images in this drawing`, `Markdown: Attach missing images from a folder…`, `Import Obsidian vault…`, `Import Obsidian vault into a new vault…`.
+`Import: Markdown…`, `Import: Markdown from clipboard`, `Import: Markdown with the Document font`, `Markdown: Next heading`, `Markdown: Previous heading`, `Import: Show timings`, `Markdown: Download web images in this drawing`, `Markdown: Attach missing images from a folder…`, `Markdown: Re-import this note from its Markdown`, `Markdown: Re-import unchanged imported notes`, `Import Obsidian vault…`, `Import Obsidian vault into a new vault…`.
 
 ## Settings
 

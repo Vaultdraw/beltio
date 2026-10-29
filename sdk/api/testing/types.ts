@@ -213,6 +213,8 @@ export interface FakeVault {
   saves(): string[];
   /** The saved page setup of a drawing (`appState.pageSetup`), or undefined. */
   pageSetup(path: string): Record<string, unknown> | undefined;
+  /** History versions `ctx.vault.replaceDrawing` saved before writing: path and name, in order. */
+  versions(): { path: string; name: string }[];
 }
 
 /** What `ctx.workspace` and `TargetFolder.open()` did. */

@@ -132,6 +132,8 @@ export interface ObsidianImportOptions {
   /** See `ObsidianImportOptions.nextTarget` in `obsidian/types.ts`. */
   nextTarget?: (attempt: number) => Promise<TargetFolder | null>;
   /** See `ObsidianImportOptions.web` in `obsidian/types.ts`. */
+  /** Re-import: only these notes (source paths); nothing is copied and no report is written. */
+  only?: ReadonlySet<string>;
   web?: WebImages;
 }
 

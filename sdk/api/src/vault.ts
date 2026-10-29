@@ -186,6 +186,23 @@ export interface VaultApi {
     refs: Record<string, string>;
   }>;
   /**
+   * Writes a whole drawing (scene JSON as `pages.buildScene` returns it) at `path`, over the one
+   * there: the drawing as it was is saved in the vault's History first, under `versionName`, so
+   * the user can restore it; when that fails nothing is written (`NO_VERSION`). Pending edits of
+   * the open drawing are saved first and its tab shows the new drawing after. A missing drawing
+   * is created. With `onlyIfUntouched`, a drawing that changed since one batch wrote it (an
+   * element added later, or one deleted) is left alone and the call resolves `{ skipped:
+   * "changed" }`. Needs `vault.write`. Errors: `READ_ONLY`, `NO_VERSION`, `CONFLICT`,
+   * `INVALID_PATH`, `NO_VAULT`.
+   *
+   * @since 0.33.0
+   */
+  replaceDrawing(
+    path: string,
+    scene: object,
+    options: { versionName: string; onlyIfUntouched?: boolean },
+  ): Promise<{ revision: string; created?: boolean } | { skipped: "changed" }>;
+  /**
    * The vault's link graph.
    *
    * @since 0.18.0

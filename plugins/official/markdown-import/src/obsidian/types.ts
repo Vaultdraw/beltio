@@ -60,6 +60,8 @@ export interface ObsidianImportOptions {
   /** The layout; defaults to E1's worker layout built from `ctx`. */
   layout?: NoteLayout;
   /** Downloads web pictures (once the user allows it); unset: they stay labelled boxes. */
+  /** Re-import: only these notes (source paths); nothing is copied and no report is written. */
+  only?: ReadonlySet<string>;
   web?: WebImages;
   /**
    * An earlier import already holds the first file: the plan's names (and the

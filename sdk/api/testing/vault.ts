@@ -125,6 +125,7 @@ export function createVaultModel(
   let openedVaults: string[] = [];
   let revealedFolders: string[] = [];
   let saves: string[] = [];
+  let versions: { path: string; name: string }[] = [];
   let graph = new Uint8Array(0);
   let graphLayout = new Uint8Array(0);
   let tableData: Record<string, unknown> = {};
@@ -164,6 +165,7 @@ export function createVaultModel(
     exports: () => Object.fromEntries(exported),
     table: () => structuredClone(tableData),
     saves: () => [...saves],
+    versions: () => [...versions],
     pageSetup: (path) =>
       drawings.get(path)?.appState?.pageSetup as
         | Record<string, unknown>
@@ -404,6 +406,43 @@ export function createVaultModel(
             revision: `r${d.revision}`,
           };
         },
+        async replaceDrawing(path, scene, options) {
+          requirePermission(
+            pluginId,
+            permissions,
+            "vault.replaceDrawing",
+            "vault.write",
+          );
+          checkVaultPath(path, "file");
+          const v = needVault();
+          if (v.readOnly) {
+            throw new PluginApiError("READ_ONLY", "The vault is read-only");
+          }
+          const els = ((scene as { elements?: unknown[] }).elements ??
+            []) as FakeElement[];
+          const prev = drawings.get(path);
+          if (prev) {
+            const raw = prev.elements as unknown as Record<string, unknown>[];
+            const touched =
+              raw.some((e) => e.isDeleted === true) ||
+              new Set(raw.map((e) => e.created)).size > 1;
+            if (options.onlyIfUntouched && touched) {
+              return { skipped: "changed" as const };
+            }
+            versions.push({ path, name: options.versionName });
+          }
+          const next: Stored = {
+            elements: [...els],
+            revision: (prev?.revision ?? 0) + 1,
+            modifiedAt: Date.now(),
+            appState: (scene as { appState?: Record<string, unknown> })
+              .appState,
+          };
+          drawings.set(path, next);
+          return prev
+            ? { revision: `r${next.revision}` }
+            : { revision: `r${next.revision}`, created: true };
+        },
         async createDrawing(path, ops: readonly SceneOp[]) {
           requirePermission(pluginId, permissions, "file.write", "vault.write");
           checkVaultPath(path, "file");
@@ -509,6 +548,7 @@ export function createVaultModel(
       openedVaults = [];
       revealedFolders = [];
       saves = [];
+      versions = [];
       graph = new Uint8Array(0);
       graphLayout = new Uint8Array(0);
       tableData = {};

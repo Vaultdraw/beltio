@@ -46,6 +46,27 @@ const pageMode = (scene: Scene) =>
   (scene.appState?.pageSetup as { enabled?: unknown } | undefined)?.enabled ===
   true;
 
+/** Web pictures filled in after the import (they replaced a box): not an edit by the user. */
+const filledPicture = (e: El) =>
+  e.type === "image" &&
+  typeof e.link === "string" &&
+  /^(?:https?|data):/i.test(e.link);
+
+/**
+ * True when a drawing is still exactly as one batch wrote it: every element made in the same
+ * millisecond, nothing deleted (web pictures filled in later do not count). An empty drawing
+ * counts. What "unedited since import" means for a re-import.
+ */
+export const untouchedSince = (scene: Scene): boolean => {
+  const els = (Array.isArray(scene.elements) ? scene.elements : []).filter(
+    (e) => !filledPicture(e),
+  );
+  if (els.some((e) => e.isDeleted === true)) {
+    return false;
+  }
+  return new Set(els.map((e) => e.created)).size <= 1;
+};
+
 /** True when the elements look like one untouched run of the import. */
 const importShape = (els: readonly El[]): boolean => {
   if (els.length === 0 || els.some((e) => e.isDeleted === true)) {

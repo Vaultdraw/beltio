@@ -729,6 +729,10 @@ export const VaultApp = ({
 
   const docHookRef = useRef(docHook);
   docHookRef.current = docHook;
+  const reloadDocRef = useRef(reloadDoc);
+  reloadDocRef.current = reloadDoc;
+  const historyRef = useRef(history);
+  historyRef.current = history;
   useSpeculativeOpen(
     doc,
     prefsNow.filesSpeculativeOpen,
@@ -2699,6 +2703,48 @@ export const VaultApp = ({
         });
         await load(getParentPath(path));
         return created.revision;
+      },
+      replaceDrawing: async (path, json, opts) => {
+        const {
+          vault: v,
+          repository: repo,
+          loadDirectory: load,
+        } = shellRef.current;
+        if (!v) {
+          throw new Error("No vault is open");
+        }
+        const { replaceDrawing } = await import("./vault/replaceDrawing");
+        const doc = () => docHookRef.current;
+        return replaceDrawing(
+          {
+            repository: repo,
+            history: historyRef.current,
+            handle: v.handle,
+            flush: async (p) => {
+              if (doc().getActive()?.path === p) {
+                await doc().flush({ commitText: false });
+              }
+            },
+            reload: async (p) => {
+              if (doc().getActive()?.path === p) {
+                await reloadDocRef.current();
+              }
+            },
+            create: async (p, j) => {
+              const made = await writeNewDrawing(repo, {
+                handle: v.handle,
+                path: p,
+                json: j,
+                operationId: `replace-${Date.now()}`,
+              });
+              await load(getParentPath(p));
+              return made.revision;
+            },
+          },
+          path,
+          json,
+          opts,
+        );
       },
       flushDrawing: async (path) => {
         const doc = docHookRef.current;

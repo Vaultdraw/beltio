@@ -5,7 +5,7 @@ api = 0
 main = "main.js"
 description = "Turn a Markdown note, or a whole Obsidian vault, into page-mode drawings"
 author = "Vaultdraw"
-permissions = ["folders.import", "vault.read", "network.images"]
+permissions = ["folders.import", "vault.read", "vault.write", "network.images"]
 
 [[contributes.importers]]
 id = "md"
@@ -57,6 +57,31 @@ palette = false
 [[contributes.commands]]
 id = "attach-images"
 title = "Markdown: Attach missing images from a folder…"
+
+[[contributes.commands]]
+id = "reimport-note"
+title = "Markdown: Re-import this note from its Markdown"
+
+[[contributes.commands]]
+id = "reimport-notes"
+title = "Markdown: Re-import unchanged imported notes"
+
+[[contributes.menus]]
+surface = "tree"
+command = "reimport-note"
+title = "Re-import from its Markdown"
+kinds = ["drawing"]
+
+[[contributes.menus]]
+surface = "tab"
+command = "reimport-note"
+title = "Re-import from its Markdown"
+
+[[contributes.menus]]
+surface = "tree"
+command = "reimport-notes"
+title = "Re-import unchanged imported notes here"
+kinds = ["folder"]
 
 # Called by the core "Import: Cancel"; not listed in the palette.
 [[contributes.commands]]

@@ -1052,6 +1052,15 @@ export interface VaultApi {
         ids: string[];
         refs: Record<string, string>;
     }>;
+    replaceDrawing(path: string, scene: object, options: {
+        versionName: string;
+        onlyIfUntouched?: boolean;
+    }): Promise<{
+        revision: string;
+        created?: boolean;
+    } | {
+        skipped: "changed";
+    }>;
     readonly graph: VaultGraphApi;
     readonly exports: VaultExportsApi;
     readonly table: VaultTableApi;

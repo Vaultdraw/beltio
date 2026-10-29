@@ -468,6 +468,11 @@ interface VaultApi {
     path: string,
     ops: readonly SceneOp[],
   ): Promise<{ path: string; revision: string; ids: string[]; refs: Record<string, string> }>; // needs vault.write; refs since 0.4.0
+  replaceDrawing(
+    path: string,
+    scene: object, // as pages.buildScene returns it
+    options: { versionName: string; onlyIfUntouched?: boolean },
+  ): Promise<{ revision: string; created?: boolean } | { skipped: "changed" }>; // needs vault.write; since 0.33.0
   table: {
     read(): Promise<Record<string, unknown>>; // needs vault.read; since 0.19.0, bundled plugins only
     update(changes: readonly { key: string; value: unknown }[]): Promise<void>; // needs vault.write
@@ -488,6 +493,7 @@ interface VaultApi {
 | `list(dir)` | One folder (`""` is the root), folders first, then by name. Dot entries and symlinks are left out. |
 | `readDrawing(path)` | The drawing's elements as plain copies, and its revision. Files over 32 MiB are refused. |
 | `createDrawing(path, ops)` | A new drawing built from `add` and `group` ops. The path must not exist. Returns the ids of the new elements, in op order, and `refs` (since 0.4.0). |
+| `replaceDrawing(path, scene, options)` | Writes a whole drawing over the one at `path` (since 0.33.0). The drawing as it was goes into the vault's History first, named `versionName`, so the user can restore it; if that fails nothing is written (`NO_VERSION`). Pending edits of the open drawing are saved first, and its tab shows the new drawing after. A missing drawing is created (`created: true`). With `onlyIfUntouched`, a drawing changed since one batch wrote it (an element added later or deleted; web pictures filled in later do not count) is left alone: `{ skipped: "changed" }`. Errors: `READ_ONLY`, `NO_VERSION`, `CONFLICT`, `INVALID_PATH`, `NO_VAULT`. |
 
 | `graph.read()` | The whole link graph of the open vault as bytes (the app's `VDG1` export), in one binary call. Starts the link index on first use. Since 0.18.0. |
 | `graph.layout.load()` / `save(bytes)` | A graph view's saved layout, kept per vault in the app's state folder (never in the vault). Empty when none; saving empty clears it. Since 0.18.0. |

@@ -364,3 +364,117 @@ test("an old import's web pictures with bare labels show by themselves when it o
   ).toEqual(expect.arrayContaining([PIC, ARTICLE]));
   expect(errors).toEqual([]);
 });
+
+// Re-import (toimprove #108-#110): an old import is rebuilt from its note with what the import draws
+// today (real table, kept line breaks). Per note from the drawing's menu, whatever its state; per
+// folder only the drawings unchanged since the import. History keeps each one as it was.
+const REIMPORT_SOURCE = {
+  name: "Obsidian",
+  files: {
+    "Notes/Table note.md":
+      "Line one\nLine two\n\n| Concept | Meaning |\n|---|---|\n| Paging | Pages of memory |",
+    "Notes/Edited note.md": "Fresh text",
+  },
+};
+
+const pickReimportSource = (page: Page) =>
+  page.evaluate((src) => {
+    (window as any).__plugins.backend.folders.sourcePick = src;
+  }, REIMPORT_SOURCE);
+
+test("Re-import from its Markdown rebuilds an old import with a real table and its line breaks", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page, "?plugins=markdown-import");
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
+  await pickReimportSource(page);
+  const path = "Obsidian/Notes/Table note.excalidraw";
+  await seedRows(page, [
+    {
+      path,
+      elements: [
+        text("Line one Line two", 60, 5),
+        text("Concept │ Meaning │ Paging │ Pages of…", 100, 3),
+      ],
+      imported: true,
+    },
+  ]);
+  await treeItem(page, "Obsidian").click();
+  await treeItem(page, "Notes").click();
+  await treeItem(page, "Table note").click({ button: "right" });
+  await page
+    .getByRole("menuitem", { name: "Re-import from its Markdown" })
+    .click();
+  await expect(page.getByText("Re-imported 1 note")).toBeVisible({
+    timeout: 30_000,
+  });
+  const scene = await readScene(page, path);
+  const texts = scene.elements
+    .filter((e: any) => e.type === "text" && !e.isDeleted)
+    .map((e: any) => e.text as string);
+  expect(texts.some((t: string) => /Line one\nLine two/.test(t))).toBe(true);
+  expect(texts).toContain("Paging");
+  expect(texts.join("")).not.toMatch(/[│…]/);
+  expect(
+    scene.elements.filter((e: any) => e.type === "line").length,
+  ).toBeGreaterThanOrEqual(2);
+  expect(errors).toEqual([]);
+});
+
+test("Re-import unchanged imported notes here leaves an edited import alone", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page, "?plugins=markdown-import");
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
+  await pickReimportSource(page);
+  const edited = [
+    { ...text("Old text", 60, 5), created: 1 },
+    { ...text("my own words", 120, 5), created: 2 },
+  ];
+  await seedRows(page, [
+    {
+      path: "Obsidian/Notes/Table note.excalidraw",
+      elements: [{ ...text("Line one Line two", 60, 5), created: 1 }],
+      imported: true,
+    },
+    {
+      path: "Obsidian/Notes/Edited note.excalidraw",
+      elements: edited,
+      imported: true,
+    },
+  ]);
+  // The plugin lists the vault through its own rows (native in the app; the browser stand-in
+  // keeps its own list), so the stand-in learns the two paths too.
+  await page.evaluate(() => {
+    const be = (window as any).__plugins.backend;
+    for (const p of [
+      "Obsidian/Notes/Table note.excalidraw",
+      "Obsidian/Notes/Edited note.excalidraw",
+    ]) {
+      be.drawings[p] = { scene: { elements: [] }, revision: "r1" };
+    }
+  });
+  await treeItem(page, "Obsidian").click();
+  await treeItem(page, "Notes").click({ button: "right" });
+  await page
+    .getByRole("menuitem", { name: "Re-import unchanged imported notes here" })
+    .click();
+  await expect(page.getByText("Re-imported 1 note")).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(
+    page.getByText(/1 note was changed since the import/),
+  ).toBeVisible();
+  const kept = await readScene(page, "Obsidian/Notes/Edited note.excalidraw");
+  expect(kept.elements.map((e: any) => e.text)).toEqual([
+    "Old text",
+    "my own words",
+  ]);
+  const rebuilt = await readScene(page, "Obsidian/Notes/Table note.excalidraw");
+  expect(
+    rebuilt.elements.filter((e: any) => e.type === "line").length,
+  ).toBeGreaterThanOrEqual(2);
+  expect(errors).toEqual([]);
+});

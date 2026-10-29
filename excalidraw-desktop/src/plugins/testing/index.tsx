@@ -156,6 +156,8 @@ export interface FakeVault {
   drawings(): Record<string, readonly ExcalidrawElement[]>;
   /** Paths saved by the shell (a page document's `finish`), in order. */
   saves(): string[];
+  /** History versions `ctx.vault.replaceDrawing` saved before writing: path and name, in order. */
+  versions(): { path: string; name: string }[];
   /** The saved page setup of a drawing (its `appState.pageSetup`), or undefined. */
   pageSetup(path: string): Record<string, unknown> | undefined;
   /** The open vault; null = no vault is open. Default: a writable "mock-vault". */
@@ -464,6 +466,7 @@ export async function boot(
   const openedVaults: string[] = [];
   const revealed: string[] = [];
   const saves: string[] = [];
+  const versions: { path: string; name: string }[] = [];
   let revisionSeq = 0;
   const parse = (json: string) =>
     JSON.parse(json) as {
@@ -517,6 +520,34 @@ export async function boot(
         throw new Error(`Already exists: ${path}`);
       }
       return store(path, parse(json) as Record<string, unknown>);
+    },
+    replaceDrawing: async (path, json, opts) => {
+      // As the app (vault/replaceDrawing.ts), over the in-memory drawings.
+      const prev = backend.drawings[path]?.scene as
+        | { elements?: Record<string, unknown>[] }
+        | undefined;
+      if (!prev) {
+        return {
+          revision: store(path, parse(json) as Record<string, unknown>),
+          created: true,
+        };
+      }
+      if (opts.onlyIfUntouched) {
+        const { untouchedSince } = await import(
+          "../../importUpgrade/recognise"
+        );
+        if (!untouchedSince(prev as never)) {
+          return { skipped: "changed" as const };
+        }
+      }
+      versions.push({ path, name: opts.versionName });
+      const revision = store(path, parse(json) as Record<string, unknown>);
+      if (getActiveScene()?.path === path) {
+        const data = parse(json);
+        scene.setElements(data.elements ?? []);
+        scene.updateAppState(data.appState ?? {});
+      }
+      return { revision };
     },
     flushDrawing: async (path) => {
       if (getActiveScene()?.path !== path) {
@@ -578,6 +609,7 @@ export async function boot(
         ]),
       ),
     saves: () => [...saves],
+    versions: () => [...versions],
     pageSetup: (path) =>
       (
         backend.drawings[path]?.scene.appState as

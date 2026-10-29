@@ -1,6 +1,8 @@
 import { hasDrawingExt } from "../vault/fileKind";
 
 import type { ImportDrawingLook } from "../vault/newDrawingPaper";
+
+import type { ReplaceOptions, ReplaceResult } from "../vault/replaceDrawing";
 /**
  * What the plugin host may ask the vault shell (`ctx.vault.info`,
  * `ctx.workspace`, `ctx.pages.createDocument`, `ctx.scene.scrollTo`,
@@ -31,6 +33,15 @@ export interface WorkspaceBridge {
   createDrawing(parent: string, name: string, json: string): Promise<void>;
   /** Writes a new drawing from scene JSON without opening it; resolves to its revision. */
   writeDrawing(path: string, json: string): Promise<string>;
+  /**
+   * Writes scene JSON over a drawing after saving it as it was in History (creates it when it does
+   * not exist). See vault/replaceDrawing.ts.
+   */
+  replaceDrawing?(
+    path: string,
+    json: string,
+    opts: ReplaceOptions,
+  ): Promise<ReplaceResult>;
   /**
    * Saves pending edits when `path` is the open drawing and resolves to the
    * revision on disk after; null when the drawing is not open.
