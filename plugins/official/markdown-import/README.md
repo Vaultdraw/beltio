@@ -65,6 +65,7 @@ Every command is in the palette (Cmd+P) and has no default key; bind them in `[h
 | `obsidian_links` | `drawing` | `drawing` keeps `[[links]]` as links, `text` leaves plain text |
 | `obsidian_excalidraw` | `true` | convert `.excalidraw.md` drawings |
 | `obsidian_report` | `true` | write `Import report` (failed files, images left as boxes) when something went wrong |
+| `offer_update` | `true` | opening a note imported by an older version offers to give every imported note your theme and font (command **Markdown: Update imported notes to my theme and font**) |
 
 ## Turn it off
 

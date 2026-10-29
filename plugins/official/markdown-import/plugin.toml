@@ -120,3 +120,10 @@ type = "bool"
 title = "Obsidian: write an import report"
 description = "Write \"Import report\" into the target when files fail or images stay boxes."
 default = true
+
+[[contributes.settings]]
+key = "offer_update"
+type = "bool"
+title = "Offer to update old imports"
+description = "When you open a note imported by an older version (white page, hand-drawn font), offer to give every imported note your theme and font."
+default = true

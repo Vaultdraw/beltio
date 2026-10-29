@@ -111,6 +111,23 @@ export function beginMenuRun(pluginId: string, command: string): () => void {
   };
 }
 
+/**
+ * For app commands a menu item runs (no plugin host): the row the item was chosen on, once, or
+ * null when the command was started another way (palette, key).
+ */
+export function takeMenuTarget(command: string): MenuTarget | null {
+  const hit =
+    pending &&
+    pending.command === command &&
+    performance.now() - pending.at < PENDING_MS
+      ? pending.target
+      : null;
+  if (hit) {
+    pending = null;
+  }
+  return hit;
+}
+
 /** Runs the item's command; the command reads `target` through `ctx.menus.target()`. */
 export function runMenuItem(item: MenuItemStub, target: MenuTarget): void {
   pending = { command: item.command, target, at: performance.now() };

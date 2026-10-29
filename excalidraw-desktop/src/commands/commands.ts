@@ -30,6 +30,8 @@ import { VAULT_THEME_COMMANDS } from "../theme/vaultThemeCommands";
 
 import { NOTES_COMMANDS } from "../notes/notesCommands";
 
+import { IMPORT_UPGRADE_COMMANDS } from "../importUpgrade/commands";
+
 import { aliasTarget, isAliasId } from "./aliases";
 
 import {
@@ -684,6 +686,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   ...CONFIG_COMMANDS,
   ...PROFILE_COMMANDS,
   ...BACKUP_COMMANDS,
+  ...IMPORT_UPGRADE_COMMANDS,
   ...THEME_COMMANDS,
   ...THEME_BROWSER_COMMANDS,
   ...HELP_COMMANDS,

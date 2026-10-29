@@ -6,6 +6,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Added
 
+- **Update imported notes.** Notes imported by an older version (white page in the dark theme, hand-drawn font) can take your theme and font: the palette command **Markdown: Update imported notes to my theme and font** for the whole vault, or **Update imported notes here** on a folder's menu. Opening such a note offers it once, with **Download pictures** for web pictures left as boxes (asks before any download). Each changed note gets a history version first; your own drawings are never touched. Turn the offer off with `offer_update` in `[plugin.markdown-import]`.
 - **Refresh button and `files.auto_reload`.** The navigator header has a Refresh button (`Mod+Shift+R`, command `navigator.refresh`) that re-reads the tree and the file list. The new `files.auto_reload` setting (default on, Settings > Files, live) turns the file watcher off; then only Refresh updates the tree. See [Files changed outside the app](docs/configuration.md#files-changed-outside-the-app).
 
 ### Changed

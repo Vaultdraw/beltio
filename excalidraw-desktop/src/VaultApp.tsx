@@ -175,6 +175,7 @@ import { runQuitBarrier } from "./quitBarrier";
 import { usePluginSettingProblems } from "./plugins/settings/usePluginSettingProblems";
 import { useHistoryEntry } from "./history/useHistoryEntry";
 import { desktopHistoryRepository } from "./history/DesktopHistoryRepository";
+import { useImportUpgrade } from "./importUpgrade/useImportUpgrade";
 import { toHistorySettings } from "./history/historySettings";
 import { LibraryStore } from "./library/libraryStore";
 import { desktopLibraryRepository } from "./library/DesktopLibraryRepository";
@@ -736,6 +737,15 @@ export const VaultApp = ({
     activeDoc?.path ?? null,
   );
   useAutoReload(repository, vault?.handle ?? null, prefsNow.filesAutoReload);
+  useImportUpgrade({
+    win,
+    vault,
+    repository,
+    history,
+    activeDoc,
+    flush: flushDoc,
+    reload: reloadDoc,
+  });
   const tabsRef = useRef<TabsApi | null>(null);
 
   // One close path serves both window close and app-wide Quit. Keep the editor
