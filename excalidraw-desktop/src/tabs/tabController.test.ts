@@ -512,3 +512,27 @@ describe("TabsController navigation hook", () => {
     expect(onNavigate).not.toHaveBeenCalled();
   });
 });
+
+describe("a document that cannot be closed (hunter B freeze, 2026-10-30)", () => {
+  it("closing the last tab while the document cannot close fails once, it does not spin", async () => {
+    const t = setup();
+    await t.controller.openPath("a.excalidraw", { target: "current" });
+    let closes = 0;
+    // Its vault went away: every close of the document fails at once.
+    (
+      t.controller as unknown as {
+        deps: { closeDocument: () => Promise<void> };
+      }
+    ).deps.closeDocument = async () => {
+      closes++;
+      if (closes > 50) {
+        throw new Error("spinning");
+      }
+      throw new Error("vault released");
+    };
+    const s = t.store.getState();
+    await t.controller.close(s.activeId);
+    expect(closes).toBeLessThanOrEqual(2);
+    expect(t.onError).toHaveBeenCalled();
+  });
+});

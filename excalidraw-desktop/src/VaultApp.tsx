@@ -1318,8 +1318,12 @@ export const VaultApp = ({
   // `sameVault`: swap the current vault's handle for a fresh one (Retry writable).
   const safelySwitchVault = async (chosen: VaultInfo, sameVault = false) => {
     if (!sameVault && vault && chosen.path === vault.path) {
-      // Avoid choosing same old root and acquiring a duplicate/read-only clone
-      await repository.releaseVault(chosen.handle);
+      // Avoid choosing same old root and acquiring a duplicate/read-only clone. Release only the
+      // extra handle: never the open vault's own (a repository that hands back the same handle
+      // would otherwise close the vault in use).
+      if (chosen.handle !== vault.handle) {
+        await repository.releaseVault(chosen.handle);
+      }
       return;
     }
     const oldVault = vault;

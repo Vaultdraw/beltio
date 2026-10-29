@@ -452,12 +452,17 @@ export class TabsController {
 
   private async pump(): Promise<void> {
     this.busy = true;
+    // A tab whose load failed and is still the one pending (closing to the home tab when the
+    // document cannot be closed: its vault went away) is not retried in this run: retrying
+    // at once spun forever in microtasks and froze the window (hunter B, 2026-10-30). The next
+    // state change pumps again.
+    let failedId: string | null = null;
     try {
       for (;;) {
         const tab = this.disposed
           ? null
           : this.pending(this.deps.store.getState());
-        if (!tab) {
+        if (!tab || tab.id === failedId) {
           return;
         }
         const prev = this.loaded;
@@ -485,6 +490,16 @@ export class TabsController {
           this.origins.delete(target.id);
         } catch (err) {
           this.failed(target, prev, err);
+          // Retry only when the failure changed what is pending (a tab marked missing now
+          // closes the document instead of opening it).
+          const next = this.pending(this.deps.store.getState());
+          if (
+            next?.id === target.id &&
+            next.path === target.path &&
+            next.missing === target.missing
+          ) {
+            failedId = target.id;
+          }
         }
       }
     } finally {

@@ -57,6 +57,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **The open graph follows file changes**, like Obsidian's: a drawing created, renamed, deleted or saved with new links (in the app or outside) shows up a moment later, and the nodes that stay keep their place.
 - **Counts read right:** "Imported 1 note and 1 drawing", "1 link", "1 word", "1 file", "Downloaded 1 picture" (they said "1 notes", "1 links" and so on in the import, the graph card, notes, backups, auto-export and PDF import).
 - **The open drawing follows a rename or move made outside the app** (Finder, git, sync), alone or with its folder: the tab takes the new name and edits keep saving, where it used to show only "Conflict". Favourites and plugins follow too.
+- **No more freeze when a drawing cannot be closed.** If the vault went away (or choosing the vault already open released it), closing the last tab retried forever and froze the window with memory climbing; it now fails once and says why. Choosing the open vault again in "Open another vault" no longer closes it.
 - **Re-import from a tab's menu rewrites the note of the tab you right-clicked**, not the active one; a picture written as a `data:` address with percent-encoding or extra parameters is read from the address.
 
 - **A 32 MiB drawing fits in one message of the control API and the MCP server.** The message cap is now 80 MiB, so a drawing that grows once it is escaped into JSON is no longer refused; a message over the cap says the limit in plain words.
