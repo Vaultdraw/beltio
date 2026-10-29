@@ -84,14 +84,19 @@ export const importFontFamily = (
 export { webPictureBoxes } from "./placeholders";
 
 /** True when an imported scene still has the old page or font. */
-export const hasOldLook = (scene: Scene, t: UpgradeTarget): boolean =>
-  isImportedScene(scene) &&
-  (needsPaper(scene, t) || oldFontTexts(scene, t).length > 0);
+export const hasOldLook = (
+  scene: Scene,
+  t: UpgradeTarget,
+  /** Known to be an import some other way (recognise.ts), or the user said "anyway". */
+  imported = isImportedScene(scene),
+): boolean =>
+  imported && (needsPaper(scene, t) || oldFontTexts(scene, t).length > 0);
 
 /** The upgraded drawing, or null when it is not an import or already has the user's look. */
 export function upgradeScene(
   json: string,
   t: UpgradeTarget,
+  imported?: boolean,
 ): UpgradeResult | null {
   let scene: Scene;
   try {
@@ -99,7 +104,11 @@ export function upgradeScene(
   } catch {
     return null;
   }
-  if (!scene || !Array.isArray(scene.elements) || !hasOldLook(scene, t)) {
+  if (
+    !scene ||
+    !Array.isArray(scene.elements) ||
+    !hasOldLook(scene, t, imported ?? isImportedScene(scene))
+  ) {
     return null;
   }
   const paper = needsPaper(scene, t);

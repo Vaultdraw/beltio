@@ -16,6 +16,7 @@ import {
   runCommand,
   takeMenuTarget,
 } from "../plugins/menuRegistry";
+import { openReport } from "../commands/configCommands";
 import { toastStore } from "../toasts/toastStore";
 import { getImportDrawingLook } from "../vault/newDrawingPaper";
 import { getPreferences } from "../vault/preferences";
@@ -26,7 +27,7 @@ import {
   importFontFamily,
   webPictureBoxes,
 } from "./upgradeScene";
-import { UPDATE_IMPORTED_NOTES } from "./commands";
+import { UPDATE_IMPORTED_NOTES, UPDATE_THIS_NOTE } from "./commands";
 
 import type { UpgradeTarget } from "./upgradeScene";
 import type { HistoryRepository } from "../history/types";
@@ -64,6 +65,16 @@ interface Options {
 const plural = (n: number, one: string, many: string) =>
   `${n} ${n === 1 ? one : many}`;
 
+/** The list of skipped notes: one per line, the note's path without the extension, then why. */
+export const skippedText = (list: { path: string; reason: string }[]) =>
+  [
+    ...list.map(
+      (f) => `${f.path.replace(/\.excalidraw$/, "")}\n    ${f.reason}`,
+    ),
+    "",
+    'To update one anyway: right-click it in the file list and choose "Update to my theme and font anyway", or open it and run that command from the palette. History keeps the note as it was before.',
+  ].join("\n");
+
 export function useImportUpgrade(o: Options): void {
   const live = useRef(o);
   live.current = o;
@@ -75,11 +86,23 @@ export function useImportUpgrade(o: Options): void {
     if (!writable) {
       return;
     }
-    const run = async () => {
+    const run = async (one = false) => {
       // Chosen on a folder's menu: that folder only; from the palette or a key: the whole vault.
-      const target = takeMenuTarget(UPDATE_IMPORTED_NOTES);
+      // "Anyway": the file whose menu was used, or the open drawing.
+      const target = takeMenuTarget(
+        one ? UPDATE_THIS_NOTE : UPDATE_IMPORTED_NOTES,
+      );
       const folder =
-        target?.kind === "folder" && target.path ? target.path : undefined;
+        !one && target?.kind === "folder" && target.path
+          ? target.path
+          : undefined;
+      const file = one
+        ? (target?.kind === "drawing" && target.path) ||
+          live.current.activeDoc?.path
+        : undefined;
+      if (one && !file) {
+        return;
+      }
       const { vault, repository, history, win, flush } = live.current;
       if (!vault || running.current) {
         return;
@@ -94,6 +117,7 @@ export function useImportUpgrade(o: Options): void {
           handle: vault.handle,
           target: upgradeTarget(win),
           folder,
+          anyway: file ? [file] : undefined,
           onProgress: (done, total) =>
             toastStore.push({
               key: KEY,
@@ -105,22 +129,50 @@ export function useImportUpgrade(o: Options): void {
         if (open && summary.paths.includes(open)) {
           await live.current.reload().catch(() => undefined);
         }
+        const list = summary.skippedFiles;
         toastStore.push({
           key: KEY,
-          message:
-            summary.updated === 0
-              ? "No imported note needed updating"
-              : `Updated ${plural(
-                  summary.updated,
-                  "imported note",
-                  "imported notes",
-                )} to your theme and font`,
-          detail:
-            summary.skipped > 0
-              ? `${summary.skipped} left as they were (changed meanwhile, or no history version could be saved)`
-              : summary.updated > 0
-              ? "History keeps each note as it was before"
-              : undefined,
+          message: file
+            ? summary.updated === 1
+              ? "Updated this note to your theme and font"
+              : list.length > 0
+              ? "Could not update this note"
+              : "This note already has your theme and font"
+            : summary.updated === 0
+            ? "No imported note needed updating"
+            : `Updated ${plural(
+                summary.updated,
+                "imported note",
+                "imported notes",
+              )} to your theme and font`,
+          detail: file
+            ? list[0]?.reason ??
+              (summary.updated === 1
+                ? "History keeps the note as it was before"
+                : undefined)
+            : list.length > 0
+            ? `${plural(list.length, "note was", "notes were")} left as ${
+                list.length === 1 ? "it was" : "they were"
+              }`
+            : summary.updated > 0
+            ? "History keeps each note as it was before"
+            : undefined,
+          ...(!file && list.length > 0
+            ? {
+                durationMs: 0,
+                actions: [
+                  {
+                    label: "View list",
+                    run: () =>
+                      openReport({
+                        title: "Imported notes left as they were",
+                        text: skippedText(list),
+                        tone: "warning",
+                      }),
+                  },
+                ],
+              }
+            : {}),
         });
       } catch (err) {
         toastStore.push({
@@ -134,7 +186,8 @@ export function useImportUpgrade(o: Options): void {
       }
     };
     const offHandlers = registerCommandHandlers({
-      [UPDATE_IMPORTED_NOTES]: run,
+      [UPDATE_IMPORTED_NOTES]: () => run(),
+      [UPDATE_THIS_NOTE]: () => run(true),
     });
     const offMenu = addMenuItems([
       {
@@ -144,6 +197,14 @@ export function useImportUpgrade(o: Options): void {
         title: "Update imported notes here",
         command: UPDATE_IMPORTED_NOTES,
         kinds: ["folder"],
+      },
+      {
+        pluginId: "app",
+        pluginName: "Vaultdraw",
+        surface: "tree",
+        title: "Update to my theme and font anyway",
+        command: UPDATE_THIS_NOTE,
+        kinds: ["drawing"],
       },
     ]);
     return () => {
