@@ -18,6 +18,10 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **Menus, toasts and dialogs stack in a fixed order.** One z-index scale: toasts show above menus and dialogs above both. Reduced motion is honoured everywhere.
 - **A cleaner file-tree right-click menu.** Items sit in groups split by dividers (create, organise, copy path, reveal, rename and Move to Trash last), "Copy path" and "Export" open submenus with a chevron, items that open a dialog end in "…", and each item shows its key when it has one. Arrow keys, Home, End, ArrowRight and ArrowLeft for submenus, and typing a name's first letters all work. New commands "List: Copy item path", "Copy item absolute path" and "Copy item link" (no default keys) copy the focused row's path.
 
+### Removed
+
+- **The Frames plugin is gone**: the Frames panel and its activity bar button, the Present slideshow and every "Frames: ..." command. Excalidraw's own frame tool and drawings with frames work as before. Old `[plugin.frames]` settings and a `frames` entry in `plugins.disabled` are ignored without any message.
+
 ### Fixed
 
 - **Imported notes keep their line breaks and picture order, like Obsidian.** A single line break inside a paragraph stays a line break (the new `strict_line_breaks` key under `[plugin.markdown-import]`, default off, joins the lines instead, like Obsidian's "Strict line breaks"). A picture or embed written inside a paragraph stays where it is written: the text before it, the picture and the text after it are separate blocks in that order, where the picture used to move below the text. Notes imported earlier get this when they are imported again.

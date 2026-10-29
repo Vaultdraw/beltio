@@ -23,12 +23,6 @@ const VIEWS: Row[] = [
     shows: "gallery-view",
   },
   {
-    entry: "activity-bar-frames.list",
-    label: "Frames",
-    command: /Toggle Frames panel/,
-    shows: "",
-  },
-  {
     entry: "activity-bar-favourites.list",
     label: "Favourites",
     command: /Toggle Favourites panel/,

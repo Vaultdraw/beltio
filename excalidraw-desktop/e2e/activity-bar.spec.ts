@@ -198,7 +198,6 @@ test("activity bar: Settings > Interface hides and reorders entries", async ({
       "tags",
       "templates",
       "favourites.list",
-      "frames.list",
       "hotkeys",
       "settings",
     ]);
@@ -244,7 +243,6 @@ test("activity bar: Settings > Interface hides and reorders entries", async ({
       "tags",
       "templates",
       "favourites.list",
-      "frames.list",
       "hotkeys",
       "settings",
     ]);

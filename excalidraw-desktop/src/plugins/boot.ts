@@ -6,12 +6,7 @@
  * the first use (or any other start of the host) loads the real plugin.
  */
 import { registerActivityEntries } from "../activityBar/activityBarRegistry";
-import {
-  IconBookmark,
-  IconFrame,
-  IconGallery,
-  IconGraph,
-} from "../components/Icons";
+import { IconBookmark, IconGallery, IconGraph } from "../components/Icons";
 import { getAppCommandRunner } from "../commands/appRunner";
 import { registerCommandHandlers } from "../commands/handlerRegistry";
 
@@ -109,7 +104,7 @@ export const officialCommandDefs = (
     ...(c.repeat ? { repeat: true } : {}),
   }));
 
-const PANEL_ICONS = { bookmark: IconBookmark, frame: IconFrame } as const;
+const PANEL_ICONS = { bookmark: IconBookmark } as const;
 
 /**
  * A panel of an official plugin before the host runs: its toggle command, activity bar button and

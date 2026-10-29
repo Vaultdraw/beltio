@@ -5,7 +5,7 @@ import { expect, type Page } from "@playwright/test";
 import { test } from "./fixture";
 
 import { MIDNIGHT_THEME } from "./fixtures/themeServer";
-import { rect, seedAndOpen } from "./pageHelpers";
+import { seedAndOpen } from "./pageHelpers";
 import {
   canvasBox,
   clickMainMenuItem,
@@ -113,12 +113,6 @@ const OFFICIAL: OfficialCase[] = [
     match: /^Favourites: Open favourite 1/,
     bar: "activity-bar-favourites.list",
   },
-  {
-    id: "frames",
-    query: "Frames",
-    match: /^Frames: Present from the first frame/,
-    bar: "activity-bar-frames.list",
-  },
   { id: "formula", query: "Formula", match: /^Formula: Insert formula/ },
   {
     id: "pdf-import",
@@ -212,8 +206,8 @@ test("every official plugin: off, on, off and on again in one session leaves no 
   await expect(page.getByTestId("gallery-view")).toBeVisible();
   await page.getByTestId("activity-bar-gallery").click();
   await expect(page.getByTestId("gallery-view")).toHaveCount(0);
-  await page.getByTestId("activity-bar-frames.list").click();
-  await expect(page.getByTestId("frames-panel")).toBeVisible();
+  await page.getByTestId("activity-bar-favourites.list").click();
+  await expect(page.getByTestId("favourites-panel")).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -238,7 +232,9 @@ test("an old plugins.enabled list upgrades, a disabled list is kept, and Restore
   const present = async (query: string, match: RegExp) =>
     (await hits(page, query)).some((t) => match.test(t));
   await expect
-    .poll(() => present("Frames", /^Frames: Present/), { timeout: 15_000 })
+    .poll(() => present("Favourites", /^Favourites: Open favourite 1/), {
+      timeout: 15_000,
+    })
     .toBe(true);
 
   // 1. An 0.1.x config: only the gallery and a third-party plugin listed, no plugins.disabled.
@@ -255,7 +251,7 @@ test("an old plugins.enabled list upgrades, a disabled list is kept, and Restore
     expect.arrayContaining([
       "gallery",
       "my-third-party",
-      "frames",
+      "favourites",
       "table",
       "markdown-import",
       "graph",
@@ -264,13 +260,15 @@ test("an old plugins.enabled list upgrades, a disabled list is kept, and Restore
   expect(upgraded.pluginsDisabled).toEqual([]);
   await openGraphsAgain(page);
   await expect
-    .poll(() => present("Frames", /^Frames: Present/), { timeout: 15_000 })
+    .poll(() => present("Favourites", /^Favourites: Open favourite 1/), {
+      timeout: 15_000,
+    })
     .toBe(true);
 
   // 2. Some plugins and extensions off on purpose: they stay off across a restart.
   await setPrefs({
     pluginsEnabled: ["gallery", "my-third-party"],
-    pluginsDisabled: ["frames", "table"],
+    pluginsDisabled: ["favourites", "table"],
     extFormula: false,
     extGraph: false,
   });
@@ -279,12 +277,12 @@ test("an old plugins.enabled list upgrades, a disabled list is kept, and Restore
   await expect
     .poll(() => present("Gallery", /^Gallery: Toggle/), { timeout: 15_000 })
     .toBe(true);
-  expect(await present("Frames", /^Frames:/)).toBe(false);
+  expect(await present("Favourites", /^Favourites:/)).toBe(false);
   expect(await present("Insert table", /^Insert table/)).toBe(false);
   expect(await present("Formula", /^Formula:/)).toBe(false);
   expect(await present("Graph: Open", /^Graph:/)).toBe(false);
   await expect(page.getByTestId("activity-bar-graph")).toHaveCount(0);
-  await expect(page.getByTestId("activity-bar-frames.list")).toHaveCount(0);
+  await expect(page.getByTestId("activity-bar-favourites.list")).toHaveCount(0);
   expect((await prefs(page)).pluginsEnabled).toContain("my-third-party");
 
   // 3. Restore defaults on the Extensions page brings every official one back, keeps the third-party one.
@@ -294,8 +292,10 @@ test("an old plugins.enabled list upgrades, a disabled list is kept, and Restore
     .click();
   await closeSettings(page);
   await expect(page.getByTestId("activity-bar-graph")).toBeVisible();
-  await expect(page.getByTestId("activity-bar-frames.list")).toBeVisible();
-  expect(await present("Frames", /^Frames: Present/)).toBe(true);
+  await expect(page.getByTestId("activity-bar-favourites.list")).toBeVisible();
+  expect(await present("Favourites", /^Favourites: Open favourite 1/)).toBe(
+    true,
+  );
   expect(await present("Insert table", /^Insert table/)).toBe(true);
   expect(await present("Formula", /^Formula: Insert/)).toBe(true);
   expect(await present("Graph: Open", /^Graph: Open graph view/)).toBe(true);
@@ -602,7 +602,6 @@ test("commands and keys: every command is listed and rebindable, old ids still b
     "Extensions: Toggle Formulas",
     "Gallery: Toggle grid view",
     "Favourites: Open favourite 1",
-    "Frames: Present from the current frame",
     "Formula: Insert formula",
     "Import: Markdown…",
     "Import: PDF…",
@@ -794,10 +793,6 @@ test("focus mode with every panel open: chrome hides, panels stay, Esc and dialo
       panel: () => page.getByTestId("favourites-panel"),
     },
     {
-      bar: "activity-bar-frames.list",
-      panel: () => page.getByTestId("frames-panel"),
-    },
-    {
       bar: "activity-bar-gallery",
       panel: () => page.getByTestId("gallery-view"),
       overlay: true,
@@ -871,19 +866,19 @@ test("config.toml edits reload live: plugins, extensions and keys follow, a brok
   await page.addInitScript(() => {
     (window as any).__e2eConfig = {
       extensions: { graph: false },
-      plugins: { disabled: ["frames"] },
+      plugins: { disabled: ["favourites"] },
       hotkeys: { "gallery.toggle": ["Alt+Shift+Q"] },
       interface: { thumbnails: false },
     };
   });
   await openGraphsDrawing(page, "?seed=tags&config=1");
   const graphButton = page.getByTestId("activity-bar-graph");
-  const framesButton = page.getByTestId("activity-bar-frames.list");
+  const favouritesButton = page.getByTestId("activity-bar-favourites.list");
   const galleryGrid = page.getByTestId("gallery-view");
   await expect(page.getByTestId("activity-bar-gallery")).toBeVisible();
   // What config.toml says is in force from the start.
   await expect(graphButton).toHaveCount(0);
-  await expect(framesButton).toHaveCount(0);
+  await expect(favouritesButton).toHaveCount(0);
   await page.keyboard.press("Alt+Shift+Q");
   await expect(galleryGrid).toBeVisible();
   await page.keyboard.press("Alt+Shift+Q");
@@ -903,7 +898,7 @@ test("config.toml edits reload live: plugins, extensions and keys follow, a brok
   await reload();
   await closeSettings(page);
   await expect(graphButton).toBeVisible();
-  await expect(framesButton).toBeVisible();
+  await expect(favouritesButton).toBeVisible();
   await page.keyboard.press("Alt+Shift+Q");
   await page.waitForTimeout(250);
   await expect(galleryGrid).toHaveCount(0);
@@ -912,7 +907,7 @@ test("config.toml edits reload live: plugins, extensions and keys follow, a brok
   await page.evaluate(() => {
     (window as any).__e2eConfig = {
       extensions: { graph: "yes", formula: false },
-      plugins: { disabled: ["frames"] },
+      plugins: { disabled: ["favourites"] },
     };
   });
   await reload();
@@ -921,7 +916,7 @@ test("config.toml edits reload live: plugins, extensions and keys follow, a brok
   );
   await closeSettings(page);
   await expect(graphButton).toBeVisible();
-  await expect(framesButton).toHaveCount(0);
+  await expect(favouritesButton).toHaveCount(0);
   expect(await hits(page, "Formula: Insert")).toEqual([]);
 
   // Invalid TOML: a clear error with the line, the last good settings stay, and Settings still saves.
@@ -1153,12 +1148,15 @@ test("profiles: create, switch live, per vault, bad names refused and delete fal
   await page.addInitScript(() => {
     // What the "talk" profile's config.toml says (its folder is made in the test).
     (window as any).__e2eProfileConfigs = {
-      talk: { extensions: { graph: false }, plugins: { disabled: ["frames"] } },
+      talk: {
+        extensions: { graph: false },
+        plugins: { disabled: ["favourites"] },
+      },
     };
   });
   await openGraphsDrawing(page, "?seed=tags&config=1");
   const graphButton = page.getByTestId("activity-bar-graph");
-  const framesButton = page.getByTestId("activity-bar-frames.list");
+  const favouritesButton = page.getByTestId("activity-bar-favourites.list");
   await expect(graphButton).toBeVisible();
   const select = () =>
     settingsModal(page).getByLabel("Profile", { exact: true });
@@ -1185,9 +1183,9 @@ test("profiles: create, switch live, per vault, bad names refused and delete fal
   await form.getByLabel("Profile name").fill("talk");
   await form.getByRole("button", { name: "Create" }).click();
   await expect(select()).toHaveValue("talk");
-  // The profile's own config applies at once: Graph and Frames are gone.
+  // The profile's own config applies at once: Graph and Favourites are gone.
   await expect(graphButton).toHaveCount(0);
-  await expect(framesButton).toHaveCount(0);
+  await expect(favouritesButton).toHaveCount(0);
   form = await createProfile("Talk");
   await form.getByRole("button", { name: "Create" }).click();
   await expect(form.getByRole("alert")).toContainText("already exists");
@@ -1203,7 +1201,7 @@ test("profiles: create, switch live, per vault, bad names refused and delete fal
   await expect(graphButton).toHaveCount(0);
   await select().selectOption("default");
   await expect(graphButton).toBeVisible();
-  await expect(framesButton).toBeVisible();
+  await expect(favouritesButton).toBeVisible();
 
   // Per vault: the vault names "talk"; after a reload it is active again with a note, and clearing it goes back.
   await select().selectOption("talk");
@@ -1434,140 +1432,5 @@ test("paste-a-table: what counts as a table, Ask / Always / Never, and the plugi
     (await hits(page, "Insert table")).filter((t) => /^Insert table/.test(t)),
   ).toEqual([]);
   await noOffer("Name\tColour\nApple\tRed", "table plugin off");
-  expect(errors).toEqual([]);
-});
-
-test("presentation mode keys: every default key, clamping at the ends, empty decks, and a rebound key", async ({
-  page,
-}) => {
-  const errors = trackErrors(page);
-  const frame = (id: string, x: number, name?: string) => ({
-    ...rect(id, x, 0, 400, 300),
-    type: "frame",
-    name: name ?? null,
-    backgroundColor: "transparent",
-  });
-  await openVault(page);
-  await seedAndOpen(page, "Empty.excalidraw", { elements: [rect("r1", 0, 0)] });
-  const deck = [
-    frame("f1", 0, "Intro"),
-    frame("f2", 600),
-    frame("f3", 1200),
-    frame("f4", 1800),
-  ];
-  await seedAndOpen(page, "Deck.excalidraw", { elements: deck });
-  await expect
-    .poll(() => hits(page, "Frames: Present").then((t) => t.length), {
-      timeout: 15_000,
-    })
-    .toBeGreaterThan(0);
-  const strip = page.getByTestId("present-strip");
-  const at = (n: number) => expect(strip).toContainText(`${n} / 4`);
-
-  // The play keys do nothing while no presentation runs.
-  await page.keyboard.press("End");
-  await page.keyboard.press("Space");
-  await expect(strip).toHaveCount(0);
-
-  // Start from the panel button, then walk with every default key.
-  await page.getByTestId("activity-bar-frames.list").click();
-  await page.getByTestId("frames-present").click();
-  await at(1);
-  const STEPS: [string, number][] = [
-    ["ArrowRight", 2],
-    ["ArrowDown", 3],
-    ["Space", 4],
-    ["ArrowRight", 4],
-    ["PageDown", 4],
-    ["ArrowLeft", 3],
-    ["ArrowUp", 2],
-    ["Shift+Space", 1],
-    ["ArrowLeft", 1],
-    ["PageUp", 1],
-    ["PageDown", 2],
-    ["End", 4],
-    ["Home", 1],
-  ];
-  for (const [key, expected] of STEPS) {
-    await page.keyboard.press(key);
-    await at(expected);
-  }
-  // The laser key neither moves nor ends the show; Escape ends it.
-  await page.keyboard.press("l");
-  await at(1);
-  await page.keyboard.press("Escape");
-  await expect(strip).toHaveCount(0);
-  await expect(page.getByTestId("activity-bar-frames.list")).toBeVisible();
-
-  // The palette starts it too, from the first frame, with the shortcut key from the open drawing.
-  await page.keyboard.press("Meta+Alt+KeyP");
-  await at(1);
-  // The play keys count once the show is fully up (the editor needs a frame or two).
-  await expect(async () => {
-    await page.keyboard.press("End");
-    await at(4);
-  }).toPass();
-  await page.keyboard.press("Escape");
-  await expect(strip).toHaveCount(0);
-
-  // A drawing with no frames says so and does not start.
-  await openDrawing(page, "Empty");
-  await page.keyboard.press("Meta+Alt+KeyP");
-  await expect(
-    page.getByText(/No frames in this drawing/).first(),
-  ).toBeVisible();
-  await expect(strip).toHaveCount(0);
-  await openDrawing(page, "Deck");
-
-  // Rebind: Alt+Shift+J for next replaces the default keys of that command.
-  await page.evaluate((k) => {
-    const p = JSON.parse(window.localStorage.getItem(k) ?? "{}");
-    window.localStorage.setItem(
-      k,
-      JSON.stringify({ ...p, hotkeys: { "frames.next": ["Alt+Shift+J"] } }),
-    );
-  }, PREFS_KEY);
-  await reloadVault(page);
-  await seedAndOpen(page, "Deck.excalidraw", { elements: deck });
-  await expect
-    .poll(() => hits(page, "Frames: Present").then((t) => t.length), {
-      timeout: 15_000,
-    })
-    .toBeGreaterThan(0);
-  await page.keyboard.press("Meta+Alt+KeyP");
-  await at(1);
-  await page.waitForTimeout(600);
-  await page.keyboard.press("Alt+Shift+KeyJ");
-  await at(2);
-  await page.keyboard.press("ArrowRight");
-  await page.waitForTimeout(250);
-  await at(2);
-  await page.keyboard.press("ArrowLeft");
-  await at(1);
-  await page.keyboard.press("Escape");
-  await expect(strip).toHaveCount(0);
-
-  // N is also the Sticky note tool, but tools stand down in a presentation: no conflict, and N advances.
-  await openSettingsTab(page, "Hotkeys");
-  await page.getByLabel("Filter hotkeys").fill("Frames: Next slide");
-  await page
-    .getByRole("button", {
-      name: "Add hotkey for Frames: Next slide",
-      exact: true,
-    })
-    .click();
-  await page.keyboard.press("KeyN");
-  await expect(hotkeyRow(page, "frames.next")).toContainText("N");
-  await expect(hotkeyRow(page, "frames.next")).not.toHaveClass(
-    /vault-hotkeys__row--conflict/,
-  );
-  await closeSettings(page);
-  await page.keyboard.press("Meta+Alt+KeyP");
-  await at(1);
-  await page.waitForTimeout(600);
-  await page.keyboard.press("KeyN");
-  await at(2);
-  await page.keyboard.press("Escape");
-  await expect(strip).toHaveCount(0);
   expect(errors).toEqual([]);
 });

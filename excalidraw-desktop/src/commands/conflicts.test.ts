@@ -215,21 +215,21 @@ describe("findConflicts: prefix and sequences", () => {
   });
 });
 
-describe("a presentation key on a tool key", () => {
-  it("binding next slide to N shows no conflict with Tool: Sticky note", () => {
+describe("a modal plugin key on a tool key", () => {
+  it("binding a presentation key to N shows no conflict with Tool: Sticky note", () => {
     const next: CommandDefinition = {
-      id: "frames.next",
-      title: "Frames: Next slide",
+      id: "show.next",
+      title: "Show: Next slide",
       category: "Plugins",
       keys: { default: ["ArrowRight"] },
       when: ["present.active"],
     };
     const result = findConflicts(
       [...COMMANDS, next],
-      { "frames.next": ["N"] },
+      { "show.next": ["N"] },
       "mac",
     );
-    expect(result.get("frames.next")?.get("N")).toBeUndefined();
+    expect(result.get("show.next")?.get("N")).toBeUndefined();
     expect(result.get("tool.stickynote")?.get("N")).toBeUndefined();
   });
 });

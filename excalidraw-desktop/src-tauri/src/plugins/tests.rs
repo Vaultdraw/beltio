@@ -1720,5 +1720,5 @@ fn every_official_manifest_parses_and_is_compatible() {
         }
     }
     assert!(bad.is_empty(), "{bad:#?}");
-    assert!(seen >= 10, "found {seen} official plugins");
+    assert!(seen >= 9, "found {seen} official plugins");
 }

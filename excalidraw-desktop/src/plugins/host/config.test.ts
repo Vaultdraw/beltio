@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_PREFERENCES } from "../../vault/preferences";
+
 import {
   configToPreferences,
   parseHotkeysTable,
   preferencesToConfigChanges,
 } from "../../vault/settingsSync";
+
+import { syncPlugins } from "./index";
 
 describe("[plugins] enabled", () => {
   it("defaults to the official markdown-import and parses valid ids; [] turns it off", () => {
@@ -19,7 +22,6 @@ describe("[plugins] enabled", () => {
       "favourites",
       "auto-export",
       "table",
-      "frames",
     ]);
     expect(
       configToPreferences({ plugins: { enabled: [] } }).values.pluginsEnabled,
@@ -33,7 +35,6 @@ describe("[plugins] enabled", () => {
       "favourites",
       "auto-export",
       "table",
-      "frames",
     ]); // an old list: official plugins are on
     const ok = configToPreferences({ plugins: { enabled: ["hello-command"] } });
     expect(ok.values.pluginsEnabled).toEqual([
@@ -47,7 +48,6 @@ describe("[plugins] enabled", () => {
       "favourites",
       "auto-export",
       "table",
-      "frames",
     ]);
     expect(ok.problems).toEqual([]);
   });
@@ -64,7 +64,6 @@ describe("[plugins] enabled", () => {
       "favourites",
       "auto-export",
       "table",
-      "frames",
     ]);
     expect(bad.problems[0].key).toBe("plugins.enabled");
   });
@@ -84,5 +83,24 @@ describe("hotkeys of plugin commands", () => {
     });
     expect(t.hotkeys["hello-command.say"]).toEqual(["Mod+Alt+H"]);
     expect(t.problems.map((p) => p.key)).toEqual(["hotkeys.library.nope"]);
+  });
+});
+
+describe("a config written when the Frames plugin existed", () => {
+  const old = {
+    plugins: { enabled: ["frames", "hello-command"], disabled: ["frames"] },
+    plugin: { frames: { transition: "fade", background: "#101010" } },
+    hotkeys: { "frames.next": ["N"] },
+  };
+
+  it("loads with no problem and no official plugin named frames", () => {
+    const r = configToPreferences(old);
+    expect(r.problems).toEqual([]);
+    expect(r.values.pluginsDisabled).toEqual([]);
+  });
+
+  it("the plugin host quietly skips an enabled id it does not know", () => {
+    expect(() => syncPlugins([], ["frames", "hello-command"])).not.toThrow();
+    expect(syncPlugins([], ["frames"]).started).toEqual([]);
   });
 });
