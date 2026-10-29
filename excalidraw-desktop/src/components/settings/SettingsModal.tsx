@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 
+import { trapTab, useFocusReturn } from "../Dialog";
 import { pushEscapeLayer } from "../escapeLayers";
 import { IconClose } from "../Icons";
 
@@ -95,6 +96,8 @@ export const SettingsModal = ({
   ownerDocument,
   initialPage,
 }: SettingsModalProps) => {
+  // Focus goes back where it was when Settings closes (test-net TN-6), before the search autofocus.
+  useFocusReturn();
   const modalRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const doc = ownerDocument ?? modalRef.current?.ownerDocument ?? null;
@@ -235,7 +238,7 @@ export const SettingsModal = ({
         }
       }}
     >
-      <div ref={modalRef} className="vault-settings-modal">
+      <div ref={modalRef} className="vault-settings-modal" onKeyDown={trapTab}>
         <Sidebar
           pages={pages}
           activePage={searching ? null : activePage}

@@ -48,6 +48,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **A note that got shorter no longer leaves old parts behind.** When a re-import writes fewer parts, each leftover "Name (part N)" drawing that nobody changed goes to the Trash (History keeps it first), and the notice names it; a leftover part you changed is kept and named. Plugin API 0.35.0 adds `ctx.vault.trashDrawing`.
 - **Markdown typing: a heading or quote turned back into body text loses its role.** Backspace at the start, Enter on an empty heading and Cmd+Z right after `# ` used to leave the heading role on the text (wrong colour, and the next heading came out at body size). A plugin removing its only data from an element now removes it too.
 - **A typed accent colour stays.** After typing a colour and pressing Enter, the next click anywhere in Settings (for example Light or Dark) used to clear it.
+- **Settings keeps Tab inside and gives focus back.** Tab no longer walks out of the Settings window to the canvas behind it, and closing Settings puts the focus back where it was.
 - **Re-import from a tab's menu rewrites the note of the tab you right-clicked**, not the active one; a picture written as a `data:` address with percent-encoding or extra parameters is read from the address.
 
 - **A 32 MiB drawing fits in one message of the control API and the MCP server.** The message cap is now 80 MiB, so a drawing that grows once it is escaped into JSON is no longer refused; a message over the cap says the limit in plain words.

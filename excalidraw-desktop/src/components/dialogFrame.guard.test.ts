@@ -63,6 +63,25 @@ describe("dialog frame guard", () => {
     expect(css).not.toMatch(/vault-modal-scale/);
   });
 
+  it("an allowed modal outside Dialog.tsx keeps Tab inside and returns focus (TN-6, TN-7)", () => {
+    // Settings lacked both: Tab walked to the canvas behind it, and Escape left focus on the body.
+    const settings = readFileSync(
+      join(
+        ROOT,
+        "excalidraw-desktop/src/components/settings/SettingsModal.tsx",
+      ),
+      "utf8",
+    );
+    expect(settings).toMatch(/onKeyDown=\{trapTab\}/);
+    expect(settings).toMatch(/useFocusReturn\(\)/);
+    const plugin = readFileSync(
+      join(ROOT, "plugins/official/_shared/DialogFrame.tsx"),
+      "utf8",
+    );
+    expect(plugin).toMatch(/onKeyDown=\{trapTab\}/);
+    expect(plugin).toMatch(/opener\.focus\(\)/);
+  });
+
   it("every allowed exception still exists (no stale entries)", () => {
     for (const rel of Object.keys(ALLOWED)) {
       expect(statSync(join(ROOT, rel)).isFile()).toBe(true);

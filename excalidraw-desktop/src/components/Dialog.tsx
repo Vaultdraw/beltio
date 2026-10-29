@@ -65,6 +65,52 @@ const tabStops = (root: HTMLElement): HTMLElement[] =>
   });
 
 /**
+ * Keeps Tab inside `event.currentTarget` (a modal surface). Shared by Dialog and the frames the
+ * guard allows (Settings): focus moves ourselves, since WebKit skips buttons on Tab by default
+ * and Chromium lets it walk to the page behind (test-net TN-7).
+ */
+export const trapTab = (event: ReactKeyboardEvent<HTMLElement>) => {
+  if (event.key !== "Tab" || event.defaultPrevented) {
+    return;
+  }
+  const nodes = tabStops(event.currentTarget);
+  if (nodes.length === 0) {
+    return;
+  }
+  const active = event.currentTarget.ownerDocument.activeElement;
+  const at = nodes.indexOf(active as HTMLElement);
+  const step = event.shiftKey ? -1 : 1;
+  const next =
+    at < 0
+      ? event.shiftKey
+        ? nodes.length - 1
+        : 0
+      : (at + step + nodes.length) % nodes.length;
+  event.preventDefault();
+  nodes[next].focus();
+};
+
+/**
+ * The element that had focus when a modal opened, focused again when it closes (never the body;
+ * skipped if that element is gone). Call during the first render, before any autofocus.
+ */
+export const useFocusReturn = () => {
+  const [opener] = useState(() => globalThis.document?.activeElement ?? null);
+  useEffect(
+    () => () => {
+      if (
+        opener instanceof HTMLElement &&
+        opener !== opener.ownerDocument.body &&
+        opener.isConnected
+      ) {
+        opener.focus();
+      }
+    },
+    [opener],
+  );
+};
+
+/**
  * The one frame every Vaultdraw dialog uses (16 px title, 20 px padding, 34 px
  * buttons; see dialogs.css). It owns the keyboard contract, so every dialog
  * closes on Escape regardless of how it was opened or where focus sits:
@@ -127,29 +173,6 @@ export const Dialog = ({
       }
     };
   }, [opener]);
-
-  const trapTab = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "Tab" || event.defaultPrevented) {
-      return;
-    }
-    const nodes = tabStops(event.currentTarget);
-    if (nodes.length === 0) {
-      return;
-    }
-    // Move focus ourselves: WebKit skips buttons on Tab by default, which
-    // would let focus leave the dialog.
-    const active = event.currentTarget.ownerDocument.activeElement;
-    const at = nodes.indexOf(active as HTMLElement);
-    const step = event.shiftKey ? -1 : 1;
-    const next =
-      at < 0
-        ? event.shiftKey
-          ? nodes.length - 1
-          : 0
-        : (at + step + nodes.length) % nodes.length;
-    event.preventDefault();
-    nodes[next].focus();
-  };
 
   const content =
     title === undefined ? (

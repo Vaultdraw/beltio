@@ -33,10 +33,6 @@ journey({
       match: /Enter in the trash question does not trash/,
       bug: "toimprove TN-9: the trash question does not run on Enter",
     },
-    {
-      match: /keyboard focus is lost on the page body/,
-      bug: "toimprove TN-6: closing a dialog leaves the focus on the page body",
-    },
   ],
   setup: async (page) => {
     await openVault(page);

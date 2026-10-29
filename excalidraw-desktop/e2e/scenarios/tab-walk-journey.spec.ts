@@ -55,10 +55,6 @@ journey({
       bug: "toimprove TN-5: Tab cannot leave the canvas",
     },
     {
-      match: /Tab leaves the Settings dialog/,
-      bug: "toimprove TN-7: Settings does not keep Tab inside the dialog",
-    },
-    {
       match: /vault-stepper__value\)" has keyboard focus without/,
       bug: "toimprove TN-8: a number stepper in Settings shows no focus ring",
     },
