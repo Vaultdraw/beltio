@@ -446,7 +446,7 @@ export const buildPageElements = (
           }
           break;
         }
-        // No bytes: a box with the alt text, linked to where the picture is.
+        // No bytes: a box linked to where the picture is, with the alt text inside.
         const box = base("rectangle", it.x, y, it.width, it.height, o, now);
         box.strokeColor = LINE_COLOR;
         box.link = linkOk(it.target) ? it.target : null;
@@ -468,7 +468,7 @@ export const buildPageElements = (
           "left",
         );
         label.strokeColor = TONE_COLORS.muted;
-        label.link = box.link;
+        // Only the box carries the link: a linked label drew a second link icon over the box's.
         elements.push(label);
         break;
       }

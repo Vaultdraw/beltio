@@ -1,0 +1,23 @@
+{
+  "about": "Every placeholder-box style the Markdown import ever wrote (toimprove #108). Read by plugins/official/markdown-import/test/boxes.test.ts (pairBoxes) and excalidraw-desktop/src/importUpgrade/placeholders.test.ts (webPictureBoxes). `web` = counted as a web picture; `pairs` = boxes matched.",
+  "cases": [
+    { "name": "2026-10-27 to 10-28: bare alt text, label linked", "label": "How to Install RAM in a PC | Tom's Hardware", "labelLink": "same", "link": "https://images.openai.com/static-rsc-4/abc?purpose=inline", "pairs": 1, "web": 1 },
+    { "name": "bare address when the note gave no alt text", "label": "https://images.openai.com/static-rsc-4/abc?purpose=inline", "labelLink": "same", "link": "https://images.openai.com/static-rsc-4/abc?purpose=inline", "pairs": 1, "web": 1 },
+    { "name": "alt text with a colon of its own", "label": "Kubernetes: the kernel", "labelLink": "same", "link": "https://example.com/k.png", "pairs": 1, "web": 1 },
+    { "name": "2026-10-28: Web image prefix", "label": "Web image: a cat", "labelLink": "same", "link": "https://example.com/a.png", "pairs": 1, "web": 1 },
+    { "name": "not downloaded (user said no)", "label": "Web image, not downloaded: a cat", "labelLink": "same", "link": "https://example.com/a.png", "pairs": 1, "web": 1 },
+    { "name": "not https", "label": "Web image, not downloaded (not https): a cat", "labelLink": "same", "link": "http://example.com/a.png", "pairs": 1, "web": 1 },
+    { "name": "download failed", "label": "Web image could not be downloaded: a cat", "labelLink": "same", "link": "https://example.com/a.png", "pairs": 1, "web": 1 },
+    { "name": "web page, not a picture", "label": "Web page, not a picture: docs", "labelLink": "same", "link": "https://example.com/docs", "pairs": 1, "web": 1 },
+    { "name": "too large", "label": "Image over 10 MB: big", "labelLink": "same", "link": "https://example.com/big.png", "pairs": 1, "web": 1 },
+    { "name": "2026-10-30 on: label without a link (one link icon)", "label": "Web image: a cat", "labelLink": "none", "link": "https://example.com/a.png", "pairs": 1, "web": 1 },
+    { "name": "local picture not found", "label": "Image not found: Pasted image 1.png", "labelLink": "same", "link": "Pasted image 1.png", "pairs": 1, "web": 0 },
+    { "name": "local picture over 4 MB", "label": "Image over 4 MB: big.png", "labelLink": "same", "link": "big.png", "pairs": 1, "web": 0 },
+    { "name": "local type a drawing cannot hold", "label": "Image type a drawing cannot hold: a.tiff", "labelLink": "same", "link": "a.tiff", "pairs": 1, "web": 0 },
+    { "name": "local file that is not a picture", "label": "Not a picture a drawing can hold: a.png", "labelLink": "same", "link": "a.png", "pairs": 1, "web": 0 },
+    { "name": "user's own: linked box, text links elsewhere", "label": "my note", "labelLink": "other", "link": "https://example.com/a.png", "pairs": 0, "web": 0 },
+    { "name": "user's own: a shape's bound label", "label": "my note", "labelLink": "none", "bound": true, "link": "https://example.com/a.png", "pairs": 0, "web": 0 },
+    { "name": "user's own: text outside the box", "label": "outside", "labelLink": "same", "outside": true, "link": "https://example.com/a.png", "pairs": 0, "web": 0 },
+    { "name": "box without a link", "label": "Web image: a", "labelLink": "none", "link": "", "pairs": 0, "web": 0 }
+  ]
+}

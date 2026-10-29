@@ -21,6 +21,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 ### Fixed
 
 - **Imported notes keep their line breaks and picture order, like Obsidian.** A single line break inside a paragraph stays a line break (the new `strict_line_breaks` key under `[plugin.markdown-import]`, default off, joins the lines instead, like Obsidian's "Strict line breaks"). A picture or embed written inside a paragraph stays where it is written: the text before it, the picture and the text after it are separate blocks in that order, where the picture used to move below the text. Notes imported earlier get this when they are imported again.
+- **Web pictures in old imports download now.** **Download pictures** (and the notice on opening an imported note) missed the boxes of the oldest imports, which show only the picture's description, so nothing downloaded; addresses without a file extension work too (the bytes decide). A box that stays shows one link icon, not two overlapping ones.
 - **Default `config.toml` lists the control keys.** `control.enabled`, `control.uri_enabled` and `control.uri_allow` are now in the commented template and the `[control]` table of the configuration reference; the profile example names `appearance.theme`.
 - **Import file takes BMP, ICO, AVIF and JFIF** even when the system gives no file type; a full favourites list says it is full instead of "Removed".
 

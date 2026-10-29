@@ -81,31 +81,7 @@ export const importFontFamily = (
 ): number =>
   (typeof setting === "string" && IMPORT_FONTS[setting]) || drawingFont;
 
-/**
- * Web pictures the old import left as labelled boxes ("Web image ..." text inside a box that
- * links to an https address). "Download web images in this drawing" turns them into pictures.
- */
-export const webPictureBoxes = (scene: Scene): number => {
-  const els = (scene.elements ?? []).filter((e) => e.isDeleted !== true);
-  const links = new Set(
-    els
-      .filter(
-        (e) =>
-          e.type === "text" &&
-          typeof e.text === "string" &&
-          e.text.startsWith("Web image") &&
-          typeof e.link === "string",
-      )
-      .map((e) => e.link as string),
-  );
-  return els.filter(
-    (e) =>
-      e.type === "rectangle" &&
-      typeof e.link === "string" &&
-      /^https?:\/\//i.test(e.link) &&
-      links.has(e.link),
-  ).length;
-};
+export { webPictureBoxes } from "./placeholders";
 
 /** True when an imported scene still has the old page or font. */
 export const hasOldLook = (scene: Scene, t: UpgradeTarget): boolean =>

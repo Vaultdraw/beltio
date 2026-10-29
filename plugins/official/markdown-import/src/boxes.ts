@@ -24,38 +24,72 @@ export interface Box {
   link: string;
 }
 
+/** The reason a newer import writes before the note's own alt text ("Web image: a cat"). */
 const REASON =
-  /^(Web image|Web page, not a picture|Image not found|Image over|Image type|Not a picture)/;
+  /^(Web image|Web page, not a picture|Image not found|Image over|Image type|Not a picture)[^:]*: /;
 
-/** The placeholder boxes of the open drawing: a rectangle and the text inside it with the same link. */
-export const findBoxes = (ctx: PluginContext): Box[] => {
-  const els = ctx.scene.elements();
-  const texts = els.filter((e) => e.type === "text");
-  const rects = els.filter((e) => e.type === "rectangle");
-  const rectDetails = ctx.scene.get(rects.map((r) => r.id));
-  const textDetails = new Map(
-    ctx.scene.get(texts.map((t) => t.id)).map((d) => [d.id, d]),
-  );
-  const out: Box[] = [];
-  for (const box of rectDetails) {
-    if (!box.link) {
+/** What `pairBoxes` reads of an element: the slim scene element or the saved JSON one. */
+export interface BoxElement {
+  id: string;
+  type: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  link?: string | null;
+  text?: string;
+  containerId?: string | null;
+  isDeleted?: boolean;
+}
+
+/**
+ * The placeholder boxes among `els`: a linked rectangle with a free text inside it, the text
+ * linked to the same address (every import before 2026-10-30) or not linked at all (newer imports,
+ * so the box shows one link icon, not two). The label is the note's alt text, the address, or
+ * either after a reason ("Web image: ..."); every version of the import is matched, also the
+ * oldest that wrote the bare alt text (toimprove #108). A shape's own label (`containerId`) is
+ * never one. Pure: the core's update pass reads the same case table
+ * (test/fixtures/placeholder-boxes.json).
+ */
+export const pairBoxes = <T extends BoxElement>(
+  els: readonly T[],
+): { box: T; label: T; link: string }[] => {
+  const live = els.filter((e) => e.isDeleted !== true);
+  const texts = live.filter((e) => e.type === "text" && !e.containerId);
+  const out: { box: T; label: T; link: string }[] = [];
+  for (const box of live) {
+    if (box.type !== "rectangle" || !box.link) {
       continue;
     }
-    const label = texts.find((t) => {
-      const d = textDetails.get(t.id);
-      return (
-        d?.link === box.link &&
+    const inside = texts.filter(
+      (t) =>
         t.x >= box.x &&
         t.y >= box.y &&
         t.x < box.x + box.width &&
-        t.y < box.y + box.height
-      );
-    });
-    if (label && REASON.test((label as { text?: string }).text ?? "")) {
+        t.y < box.y + box.height &&
+        (t.link === box.link || !t.link),
+    );
+    const label =
+      inside.find((t) => t.link === box.link) ??
+      (inside.length === 1 ? inside[0] : undefined);
+    if (label) {
       out.push({ box, label, link: box.link });
     }
   }
   return out;
+};
+
+/** The note's own alt text of a label: what follows the reason, or the whole label. */
+export const altOf = (label: string): string => label.replace(REASON, "");
+
+/** The placeholder boxes of the open drawing. */
+export const findBoxes = (ctx: PluginContext): Box[] => {
+  const els = ctx.scene.elements();
+  const wanted = els.filter((e) => e.type === "text" || e.type === "rectangle");
+  const details = ctx.scene.get(wanted.map((e) => e.id));
+  return pairBoxes(
+    details as unknown as (BoxElement & SceneElementDetail)[],
+  ).map((p) => ({ box: p.box, label: p.label, link: p.link }));
 };
 
 const MIME_OK = new Set([
@@ -144,23 +178,30 @@ export async function downloadImages(ctx: PluginContext): Promise<void> {
     mimeType: "",
     target: b.link,
     // The note's own alt text is what follows the reason in the label.
-    alt: ((b.label as { text?: string }).text ?? "").replace(/^[^:]*: /, ""),
+    alt: altOf((b.label as { text?: string }).text ?? ""),
   })) as (PageItem & { type: "image"; bytes?: Uint8Array })[];
   ctx.ui.toast("Downloading pictures", { id: "download-images" });
   await web.fill(items);
   const bytes = new Map<Box, Uint8Array>();
   items.forEach((it, i) => it.bytes && bytes.set(boxes[i], it.bytes));
   const n = await replace(ctx, boxes, bytes);
-  // The boxes that stay say why now (a web page, too large, unreachable).
+  // The boxes that stay say why now (a web page, too large, unreachable), and only the box keeps
+  // the link: an old import linked the label too, so two link icons overlapped (#108).
   const relabel: SceneOp[] = [];
   items.forEach((it, i) => {
-    const was = (boxes[i].label as { text?: string }).text;
-    if (!it.bytes && it.alt && it.alt !== was) {
-      relabel.push({
-        op: "update",
-        id: boxes[i].label.id,
-        props: { text: it.alt },
-      });
+    if (it.bytes) {
+      return;
+    }
+    const label = boxes[i].label as SceneElementDetail & { text?: string };
+    const props: Record<string, unknown> = {};
+    if (it.alt && it.alt !== label.text) {
+      props.text = it.alt;
+    }
+    if (label.link) {
+      props.link = null;
+    }
+    if (Object.keys(props).length > 0) {
+      relabel.push({ op: "update", id: label.id, props } as SceneOp);
     }
   });
   if (relabel.length > 0) {

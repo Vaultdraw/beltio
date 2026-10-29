@@ -160,7 +160,12 @@ export function useImportUpgrade(o: Options): void {
       return;
     }
     const { json } = doc.source;
-    if (!json.includes(IMPORT_MARK)) {
+    // Cheap tests first: only an import, or a drawing with a linked web address, is parsed. The
+    // oldest imports of plain notes carry no mark but may hold picture boxes (#108).
+    if (
+      !json.includes(IMPORT_MARK) &&
+      !/"link":\s*"(?:https?|data):/i.test(json)
+    ) {
       return;
     }
     if (importSettings(win).offer_update === false) {

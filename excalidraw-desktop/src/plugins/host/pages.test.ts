@@ -264,7 +264,7 @@ describe("pages.createDocument", () => {
     expect(fileId).toMatch(/^[0-9a-f]{40}$/);
     expect(p.scene.files()[fileId]).toMatchObject({ mime: "image/png" });
     expect(live[1]).toMatchObject({ link: "missing.bmp" });
-    expect(live[2]).toMatchObject({ text: "a diagram", link: "missing.bmp" });
+    expect(live[2]).toMatchObject({ text: "a diagram", link: null }); // only the box is linked
     await doc.finish();
   });
 

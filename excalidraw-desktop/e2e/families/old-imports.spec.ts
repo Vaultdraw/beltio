@@ -107,6 +107,27 @@ const seedRows = async (page: Page, rows: Row[]) => {
   ).toBeVisible();
 };
 
+/** The open drawing's live elements with their text and link (React fibers: no window.h in e2e). */
+const sceneEls = (page: Page) =>
+  page.evaluate(() => {
+    const el = document.querySelector(".vault-editor canvas.interactive")!;
+    const key = Object.keys(el).find((k) => k.startsWith("__reactFiber"))!;
+    let fiber = (el as any)[key];
+    while (fiber) {
+      const s = fiber.stateNode;
+      if (s && s.scene && s.state && typeof s.state.scrollX === "number") {
+        return s.scene.getNonDeletedElements().map((e: any) => ({
+          id: e.id as string,
+          type: e.type as string,
+          text: e.text as string | undefined,
+          link: e.link as string | null,
+        }));
+      }
+      fiber = fiber.return;
+    }
+    throw new Error("editor instance not found");
+  });
+
 const treeItem = (page: Page, name: string) =>
   page.locator(".vault-tree-item__name", { hasText: name }).first();
 
@@ -268,5 +289,86 @@ test("with the offer turned off, opening an old import shows no notice", async (
   await expect(
     page.getByText("Updated 1 imported note to your theme and font"),
   ).toBeVisible({ timeout: 20_000 });
+  expect(errors).toEqual([]);
+});
+
+// toimprove #108: the oldest imports labelled a web picture's box with the bare alt text (no
+// "Web image" prefix), the address may have no file extension, and both the box and its label
+// carried the link (two overlapping link icons). The kernel note of the owner's vault, in short.
+test("an old import's web pictures with bare labels download from the notice; one link icon stays", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openVault(page, "?plugins=markdown-import");
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
+  const PIC = "https://images.example.org/static-rsc-4/ZGgUsQq8?purpose=inline";
+  const ARTICLE =
+    "https://images.example.org/static-rsc-4/WeeraYi?purpose=inline";
+  await page.evaluate(
+    ([pic, article]) => {
+      const net = (window as any).__plugins.backend.network;
+      net.answer = true; // the user clicks Allow in the native dialog
+      net.images = {
+        [pic]: new TextEncoder().encode(
+          `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="#f00"/></svg>`,
+        ),
+        [article]: "NOT_AN_IMAGE",
+      };
+    },
+    [PIC, ARTICLE] as const,
+  );
+  const box = (id: string, y: number, link: string) => ({
+    ...rect(id, 56, y, 480, 300),
+    type: "rectangle",
+    link,
+  });
+  await seedRows(page, [
+    {
+      path: "Kubernetes/kernel.excalidraw",
+      elements: [
+        text("What is a kernel", 20, 3, { customData: MARK }),
+        box("pic-box", 356, PIC),
+        text("Close-up of CPU processor chip", 364, 3, { link: PIC, x: 64 }),
+        box("article-box", 696, ARTICLE),
+        text("How to Install RAM in a PC | Tom's Hardware", 704, 3, {
+          link: ARTICLE,
+          x: 64,
+        }),
+      ],
+      imported: true,
+    },
+  ]);
+  await treeItem(page, "Kubernetes").click();
+  await treeItem(page, "kernel").click();
+  // The notice on opening offers the download (and the theme update: this page is still white).
+  const download = page.getByRole("button", {
+    name: "Download pictures",
+    exact: true,
+  });
+  await expect(download).toBeVisible({ timeout: 15_000 });
+  await download.click();
+  await expect(page.getByText("Downloaded 1 of 2 pictures")).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect
+    .poll(
+      async () =>
+        (await sceneEls(page)).filter((e) => e.type === "image").length,
+    )
+    .toBe(1);
+  const els = await sceneEls(page);
+  // The picture took its box's place; the web page stays a box, and only the box is linked now.
+  expect(els.some((e) => e.id === "pic-box")).toBe(false);
+  const linked = els.filter((e) => e.link === ARTICLE);
+  expect(linked.map((e) => e.type)).toEqual(["rectangle"]);
+  const label = els.find(
+    (e) => e.type === "text" && /Tom's Hardware/.test(e.text ?? ""),
+  )!;
+  expect(label.text).toMatch(/^Web page, not a picture: How to Install RAM/);
+  expect(
+    await page.evaluate(
+      () => (window as any).__plugins.backend.network.fetched as string[],
+    ),
+  ).toEqual(expect.arrayContaining([PIC, ARTICLE]));
   expect(errors).toEqual([]);
 });
