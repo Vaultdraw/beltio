@@ -43,6 +43,7 @@ const run = async (
     partsKept: [],
     notFound: [],
     failed: [],
+    keptPictures: [],
   };
   await dropLeftoverParts(ctx, head, partCount, summary);
   return { trashed, kept: summary.partsKept };

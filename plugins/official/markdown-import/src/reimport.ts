@@ -10,7 +10,7 @@
  * drawing's path without the folder the import wrote into. Every drawing written keeps the old one
  * in History first (`ctx.vault.replaceDrawing`), so Restore brings it back.
  */
-import { createWebImages } from "./webImages";
+import { createWebImages, type WebImages } from "./webImages";
 import { importObsidianVault } from "./deps";
 import { planImport, type PlanItem } from "./obsidian/plan";
 import { readSettings } from "./settings";
@@ -97,6 +97,8 @@ export interface ReimportSummary {
   partsKept: string[];
   notFound: string[];
   failed: string[];
+  /** Notes whose drawing has pictures while their web pictures could not be downloaded now. */
+  keptPictures: string[];
 }
 
 const plural = (n: number, one: string, many: string) =>
@@ -191,6 +193,25 @@ export function partsMissing(
   return false;
 }
 
+/** True when any existing part of the note holds a picture. */
+async function holdsPictures(
+  ctx: PluginContext,
+  built: ReadonlyMap<string, object>,
+  root: string,
+): Promise<boolean> {
+  for (const rel of built.keys()) {
+    try {
+      const d = await ctx.vault.readDrawing(root ? `${root}/${rel}` : rel);
+      if (d.elements.some((e) => e.type === "image")) {
+        return true;
+      }
+    } catch {
+      // not there yet: a new part holds nothing
+    }
+  }
+  return false;
+}
+
 /** Rebuilds `drawings` from their notes. `onlyUntouched`: leave changed drawings alone. */
 export async function reimport(
   ctx: PluginContext,
@@ -214,6 +235,7 @@ export async function reimport(
     // In a vault-wide run most drawings are the user's own: only a chosen one is "not found".
     notFound: onlyUntouched ? [] : drawings.filter((d) => !matches.has(d)),
     failed: [],
+    keptPictures: [],
   };
   // One pass per note (a note's parts are written together, or not at all).
   const notes = new Map<string, { item: PlanItem; root: string }>();
@@ -231,6 +253,25 @@ export async function reimport(
       progress: { done: done++, total: notes.size },
     });
     const built = new Map<string, object>();
+    // Web pictures that could not be downloaded this time (Offline mode, no connection).
+    let missed = 0;
+    const counted: WebImages = {
+      get downloaded() {
+        return web.downloaded;
+      },
+      async fill(items, signal) {
+        await web.fill(items, signal);
+        // Only failures that may pass (not a broken link, which stays broken).
+        missed += items.filter(
+          (i) =>
+            i.type === "image" &&
+            !(i as { bytes?: unknown }).bytes &&
+            /^Web image(, not downloaded| could not be downloaded)/.test(
+              (i as { alt?: string }).alt ?? "",
+            ),
+        ).length;
+      },
+    };
     try {
       await importObsidianVault({
         ctx,
@@ -239,7 +280,7 @@ export async function reimport(
         settings: { ...settings, obsidianReport: false },
         signal: new AbortController().signal,
         onProgress() {},
-        web,
+        web: counted,
         only: new Set([item.path]),
       });
     } catch {
@@ -250,6 +291,11 @@ export async function reimport(
     const head = headRel && (root ? `${root}/${headRel}` : headRel);
     if (onlyUntouched && head && partsMissing(head, existing)) {
       summary.changed.push(head);
+      continue;
+    }
+    // Never trade pictures the drawing holds for "not downloaded" boxes (hunter A-8).
+    if (missed > 0 && (await holdsPictures(ctx, built, root))) {
+      summary.keptPictures.push(head ?? item.path);
       continue;
     }
     let first = true;
@@ -325,6 +371,17 @@ export async function reimport(
               )} kept, as ${
                 summary.partsKept.length === 1 ? "it" : "they"
               } may have been changed: ${names(summary.partsKept)}`
+            : "",
+          summary.keptPictures.length > 0
+            ? `${plural(
+                summary.keptPictures.length,
+                "note was",
+                "notes were",
+              )} left as ${
+                summary.keptPictures.length === 1 ? "it was" : "they were"
+              } to keep ${
+                summary.keptPictures.length === 1 ? "its" : "their"
+              } pictures: web pictures could not be downloaded now (Offline mode or no connection)`
             : "",
           summary.notFound.length > 0
             ? `${plural(
