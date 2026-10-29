@@ -537,6 +537,12 @@ export const IconInfo = strokeIcon(
   </>,
 );
 
+/** A pinned tab (Lucide "pin"). */
+export const IconPin = strokeIcon(
+  13,
+  <path d="M12 17v5M9 3h6l-1 7 3 3v2H7v-2l3-3z" />,
+);
+
 /** Plugins: a plug (Lucide "plug"). */
 export const IconPlug = strokeIcon(
   14,

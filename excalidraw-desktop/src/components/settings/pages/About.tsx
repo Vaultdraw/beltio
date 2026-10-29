@@ -1,5 +1,5 @@
 import { APP_VERSION } from "../../../appVersion";
-import { ABOUT_LINKS } from "../../../help/aboutLinks";
+import { ABOUT_LINKS, ABOUT_PRIMARY } from "../../../help/aboutLinks";
 import { getAppCommandRunner } from "../../../commands/appRunner";
 
 import "./about.css";
@@ -19,12 +19,19 @@ const AboutPage = () => (
       An offline vault for your drawings: plain files on your disk, fast and
       keyboard-driven.
     </p>
+    <button
+      type="button"
+      className="vault-btn vault-btn--primary vault-about__primary"
+      onClick={() => getAppCommandRunner()?.(ABOUT_PRIMARY.command)}
+    >
+      {ABOUT_PRIMARY.label}
+    </button>
     <div className="vault-about__links">
       {ABOUT_LINKS.map(({ command, label }) => (
         <button
           key={command}
           type="button"
-          className="vault-btn vault-about__link"
+          className="vault-about__link"
           onClick={() => getAppCommandRunner()?.(command)}
         >
           {label}

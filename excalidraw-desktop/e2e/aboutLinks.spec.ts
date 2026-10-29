@@ -33,6 +33,7 @@ test("Settings > About shows the version and the help links", async ({
   for (const name of [
     "Website",
     "Documentation",
+    "Check for updates",
     "Report a bug",
     "Request a feature",
     "Source code",

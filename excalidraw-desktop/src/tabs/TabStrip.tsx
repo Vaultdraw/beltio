@@ -18,6 +18,7 @@ import {
   IconChevronDown,
   IconClose,
   IconDrawing,
+  IconPin,
   IconPlus,
 } from "../components/Icons";
 
@@ -57,22 +58,6 @@ export interface TabStripProps {
 const TAB_MIN_PX = 72;
 /** Below this strip width only the active tab and a count chip are shown. */
 const NARROW_PX = 2 * TAB_MIN_PX + 28 + 32;
-
-const IconPin = () => (
-  <svg
-    width="13"
-    height="13"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M12 17v5M9 3h6l-1 7 3 3v2H7v-2l3-3z" />
-  </svg>
-);
 
 /** Keep focus on the canvas: tabs and their buttons never take mouse focus. */
 const keepFocus = (e: MouseEvent) => e.preventDefault();

@@ -3,7 +3,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import { nextExpiry } from "../toasts/queue";
 import { toastStore } from "../toasts/toastStore";
 
-import { IconClose } from "./Icons";
+import { IconAlert, IconClose, IconInfo } from "./Icons";
 
 import "./feedback.css";
 
@@ -55,6 +55,9 @@ export const Toasts = ({ store = toastStore }: { store?: ToastStore }) => {
               }
             }}
           >
+            <span className="vd-toast__icon" aria-hidden="true">
+              {toast.kind === "error" ? <IconAlert /> : <IconInfo />}
+            </span>
             <div className="vd-toast__body">
               <span className="vd-toast__text">{toast.message}</span>
               {toast.detail && (

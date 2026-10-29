@@ -23,29 +23,42 @@ export const HELP_COMMAND_IDS = {
 
 const I = HELP_COMMAND_IDS;
 
+/** One label per help command: the palette title, the About page and the welcome screen read it. */
+export const HELP_LABELS: Record<string, string> = {
+  [I.website]: "Website",
+  [I.docs]: "Documentation",
+  [I.keyboard]: "Keyboard shortcuts",
+  [I.reportBug]: "Report a bug",
+  [I.requestFeature]: "Request a feature",
+  [I.whatsNew]: "What's new",
+  [I.checkUpdates]: "Check for updates",
+  [I.source]: "Source code",
+  [I.license]: "License and credits",
+  [I.about]: "About Vaultdraw",
+};
+
 const command = (
   id: string,
-  title: string,
   when: CommandDefinition["when"] = [],
 ): CommandDefinition => ({
   id,
-  title: `Help: ${title}`,
+  title: `Help: ${HELP_LABELS[id]}`,
   category: "Help",
   keys: { default: [] },
   when,
 });
 
 export const HELP_COMMANDS: CommandDefinition[] = [
-  command(I.website, "Website"),
-  command(I.docs, "Documentation"),
-  command(I.keyboard, "Keyboard shortcuts"),
-  command(I.reportBug, "Report a bug"),
-  command(I.requestFeature, "Request a feature"),
-  command(I.whatsNew, "What's new"),
-  command(I.checkUpdates, "Check for updates"),
-  command(I.source, "Source code"),
-  command(I.license, "License and credits"),
-  command(I.about, "About Vaultdraw", ["vaultOpen", "!modalOpen"]),
+  command(I.website),
+  command(I.docs),
+  command(I.keyboard),
+  command(I.reportBug),
+  command(I.requestFeature),
+  command(I.whatsNew),
+  command(I.checkUpdates),
+  command(I.source),
+  command(I.license),
+  command(I.about, ["vaultOpen", "!modalOpen"]),
 ];
 
 const open = (url: string) => () => {

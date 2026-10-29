@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 
+import { IconCheck, IconSearch } from "./Icons";
 import { Segmented } from "./settings/pages/controls";
 import { ThemeHalf } from "./ThemePreviewCard";
 
@@ -135,20 +136,7 @@ const ThemeCard = memo(
         <div className="vault-theme-card__meta">
           <span className="vault-theme-card__name">{name}</span>
           {selected && (
-            <svg
-              className="vault-theme-card__check"
-              viewBox="0 0 24 24"
-              width="12"
-              height="12"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="m5 12 5 5L20 7" />
-            </svg>
+            <IconCheck className="vault-theme-card__check" aria-hidden="true" />
           )}
           {entry.source === "user" && (
             <span className="vault-theme-card__tag">
@@ -376,28 +364,7 @@ export const ThemePicker = ({
         </span>
         <span className="vault-theme-head__spacer" />
         <div className="vault-theme-search">
-          <svg
-            className="vault-theme-search__icon"
-            viewBox="0 0 16 16"
-            width="14"
-            height="14"
-            aria-hidden="true"
-          >
-            <circle
-              cx="7"
-              cy="7"
-              r="4.5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            />
-            <path
-              d="M10.5 10.5 14 14"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
+          <IconSearch className="vault-theme-search__icon" aria-hidden="true" />
           <input
             type="search"
             className="vault-input vault-theme-search__input"

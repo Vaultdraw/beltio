@@ -5,6 +5,8 @@ import {
   applyDarkModeFilter,
 } from "@excalidraw/common";
 
+import { IconCheck } from "../../Icons";
+
 import type { CSSProperties, KeyboardEvent } from "react";
 
 const HEX_RE = /^#[0-9a-f]{6}$/i;
@@ -22,21 +24,7 @@ const checkTone = (color: string) => {
 };
 
 const Check = () => (
-  <svg
-    className="vault-cp__check"
-    viewBox="0 0 12 12"
-    aria-hidden="true"
-    focusable="false"
-  >
-    <path
-      d="M2.5 6.4l2.3 2.3 4.7-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
+  <IconCheck className="vault-cp__check" aria-hidden="true" focusable="false" />
 );
 
 const swatchStyle = (color: string) =>

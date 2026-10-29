@@ -43,9 +43,35 @@ html.dark .vault-about__mark {
   color: var(--vault-text-muted);
 }
 
+.vault-about__primary {
+  margin-bottom: var(--vd-space-4);
+}
+
 .vault-about__links {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--vd-space-1) var(--vd-space-4);
   justify-content: center;
+  max-width: 460px;
+}
+
+/* Text links, not a wall of buttons. */
+.vault-about__link {
+  padding: var(--vd-space-1) 0;
+  border: 0;
+  background: none;
+  color: var(--vault-accent-text);
+  font: inherit;
+  font-size: var(--vd-fs-small);
+  cursor: pointer;
+}
+
+.vault-about__link:hover {
+  text-decoration: underline;
+}
+
+.vault-about__link:focus-visible {
+  outline: none;
+  border-radius: var(--vd-radius-chip);
+  box-shadow: var(--vault-ring);
 }
