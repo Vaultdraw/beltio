@@ -80,6 +80,36 @@ test.describe("dialogs family", () => {
           els.map((e) => Math.round(e.getBoundingClientRect().height)),
         );
       expect(new Set(heights).size).toBeLessThanOrEqual(1);
+      // Layout: the close button shares the title's row, at the right edge;
+      // footer buttons sit at the right edge with a gap between them.
+      const layout = await dialog.evaluate((el) => {
+        const r = (s: string) => el.querySelector(s)?.getBoundingClientRect();
+        const frame = r(".vd-dialog")!;
+        const title = r(".vd-dialog__title");
+        const close = r(".vd-dialog__close");
+        const btns = [
+          ...el.querySelectorAll(
+            ".vd-dialog__footer .vault-btn:not(.vault-btn--icon)",
+          ),
+        ].map((b) => b.getBoundingClientRect());
+        return {
+          sameRow:
+            !title || !close
+              ? true
+              : close.top < title.bottom && close.bottom > title.top,
+          closeRight: !close ? 0 : frame.right - close.right,
+          footerRight: btns.length
+            ? frame.right - btns[btns.length - 1].right
+            : 0,
+          gaps: btns.slice(1).map((b, i) => b.left - btns[i].right),
+        };
+      });
+      expect(layout.sameRow, "close button on the title row").toBe(true);
+      expect(layout.closeRight, "close button at the right").toBeLessThan(48);
+      expect(layout.footerRight, "buttons at the right").toBeLessThan(48);
+      for (const g of layout.gaps) {
+        expect(g, "gap between buttons").toBeGreaterThanOrEqual(4);
+      }
       await page.keyboard.press("Escape");
       await expect(dialog).toHaveCount(0);
       await expect(page.locator(".vd-dialog-scrim")).toHaveCount(0);

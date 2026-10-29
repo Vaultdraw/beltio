@@ -51,7 +51,11 @@
   min-height: 0;
 }
 
+/* Title left, close button right, one row (the legacy .vault-modal__header
+ * rules that used to give this were removed in 3c153ff2). */
 .vd-dialog .vd-dialog__header {
+  display: flex;
+  justify-content: space-between;
   padding: 0;
   border: 0;
   align-items: flex-start;
@@ -92,7 +96,11 @@
   margin: 0;
 }
 
+/* Buttons right-aligned in one row, the confirming action last (macOS). */
 .vd-dialog .vd-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   padding: 0;
   margin-top: var(--vd-space-1);
   background: transparent;
