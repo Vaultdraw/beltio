@@ -44,6 +44,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **Offline mode stays visible with the header hidden:** the Offline chip moves to a thin strip at the top.
 - **Markdown typing follows Obsidian for lists:** Enter on an empty nested item moves it out one level before it ends the list, and `1. [ ] ` makes a numbered task.
 - **A picture pasted from the web lands centred on the screen**, not hanging below the centre.
+- **Opening another vault starts with a clean file list:** the old search text, tag filter and open file-list dialogs no longer carry over (the new vault looked empty).
 - **Narrow windows: the tab strip gives the open tab its room;** the "1 / 1" count shows only with more than one tab.
 - **"Re-import unchanged imported notes" sees a text box you narrowed, widened or switched to auto size** as an edit and leaves that note alone; it also never creates a drawing (a longer note is named instead: re-import it from its menu).
 - **Re-import never swaps a note's pictures for "not downloaded" boxes.** When web pictures cannot be downloaded (Offline mode, no connection) and the drawing already has pictures, the note is left as it was and the notice says so.

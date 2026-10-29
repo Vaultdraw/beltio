@@ -41,11 +41,11 @@ test("switching vault leaves nothing of the old vault on screen", async ({
   );
   await runCommand(page, "Open another vault");
 
-  // C-7: the old search text stays in the box and hides every file of the new vault.
+  // C-7: the old search text must not stay in the box (it hid every file of the new vault).
   const box = page.getByPlaceholder("Search drawings and text…");
   await expect(page.getByTestId("vault-tab")).toHaveCount(1); // one empty tab, none of the old
   await expect(page.getByTestId("vault-tab")).not.toContainText("Graphs");
-  await expect.soft(box).toHaveValue("");
+  await expect(box).toHaveValue("");
   await box.fill("");
   await expect(name(page, "Only here")).toBeVisible({ timeout: 10_000 });
   await expect(name(page, "DSA")).toHaveCount(0);

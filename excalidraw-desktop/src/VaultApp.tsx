@@ -3395,6 +3395,9 @@ export const VaultApp = ({
         {appLinks.dialogs}
         {appTags.dialog}
         <VaultNavigator
+          // A new vault gets a fresh navigator (search text, focus, open dialogs), as Obsidian
+          // opens a vault in a clean window (hunter C-7).
+          key={vault.handle}
           vault={vault}
           activePath={activeDoc?.path ?? null}
           collapsed={navigatorHidden}
