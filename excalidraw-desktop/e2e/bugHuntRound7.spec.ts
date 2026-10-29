@@ -42,7 +42,10 @@ test("BH-11: two New Drawing clicks make two drawings (Untitled, Untitled 1), ne
   await page.waitForTimeout(1500);
   await page.getByRole("tab").getByRole("button").first().click();
   await page.waitForTimeout(500);
-  await page.getByRole("button", { name: /New drawing/i }).first().click();
+  await page
+    .getByRole("button", { name: /New drawing/i })
+    .first()
+    .click();
   await page.waitForTimeout(2000);
   const names = await page
     .locator("[data-tree-path^='Untitled']")

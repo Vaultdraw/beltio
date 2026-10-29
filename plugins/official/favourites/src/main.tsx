@@ -76,16 +76,13 @@ export default definePlugin({
       }),
     );
 
-    const announce = (
-      r: { added: boolean; full?: boolean },
-      what: string,
-    ) =>
+    const announce = (r: { added: boolean; full?: boolean }, what: string) =>
       ctx.ui.toast(
         r.full
           ? `Favourites are full (${MAX_FAVOURITES}). Remove one to add ${what}`
           : r.added
-            ? `Added ${what} to favourites`
-            : `Removed ${what} from favourites`,
+          ? `Added ${what} to favourites`
+          : `Removed ${what} from favourites`,
       );
 
     ctx.commands.register("toggle", async () => {

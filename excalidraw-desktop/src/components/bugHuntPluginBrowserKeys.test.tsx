@@ -1,8 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+
 import { PluginBrowserDialog } from "./PluginBrowserDialog";
 
-const install = vi.hoisted(() => vi.fn(async () => ({ name: "Foo", review: { state: "ok" } })));
+const install = vi.hoisted(() =>
+  vi.fn(async () => ({ name: "Foo", review: { state: "ok" } })),
+);
 const uninstall = vi.hoisted(() => vi.fn(async () => {}));
 
 vi.mock("../plugins/host/manage", () => ({

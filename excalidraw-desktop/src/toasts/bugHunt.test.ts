@@ -10,7 +10,9 @@ describe("bug hunt: notice time 0 means until dismissed", () => {
     store.push({
       message: "Import failed",
       kind: "error",
-      ...(withButton ? { actions: [{ label: "View report", run: () => {} }] } : {}),
+      ...(withButton
+        ? { actions: [{ label: "View report", run: () => {} }] }
+        : {}),
     });
     t = 60_000;
     store.expire();
