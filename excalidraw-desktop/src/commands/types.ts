@@ -33,6 +33,7 @@ export type BuiltinCommandCategory =
   | "Canvas"
   | "Extensions"
   | "Notes"
+  | "Markdown"
   | "Sync"
   | "Help";
 

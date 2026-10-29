@@ -137,9 +137,14 @@ export const serializeSceneForSave = (
   appState: Partial<AppState>,
   files: BinaryFiles,
   styles?: DrawingStyles,
+  markdown: boolean | null = null,
 ): string =>
-  styles
-    ? appendDrawingStyles(serializeScene(elements, appState, files), styles)
+  styles || markdown !== null
+    ? appendDrawingStyles(
+        serializeScene(elements, appState, files),
+        styles ?? {},
+        markdown,
+      )
     : serializeScene(elements, appState, files);
 
 const nonAsciiString = (value: unknown): boolean =>

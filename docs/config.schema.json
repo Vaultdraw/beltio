@@ -1277,6 +1277,67 @@
         }
       }
     },
+    "markdown": {
+      "type": "object",
+      "description": "Markdown mode for typing on the canvas: `# ` at the start of a line makes a heading. Each drawing has its own switch (palette `Markdown mode: On or off`, or the Markdown chip at the bottom); this sets it for new drawings. See [Markdown mode](#markdown-mode).",
+      "additionalProperties": false,
+      "properties": {
+        "typing": {
+          "description": "Markdown mode on in new drawings.",
+          "default": false,
+          "type": "boolean"
+        },
+        "h1_size": {
+          "description": "Heading 1 size, as a multiple of the text size.",
+          "default": 2,
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 8
+        },
+        "h2_size": {
+          "description": "Heading 2 size, as a multiple of the text size.",
+          "default": 1.5,
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 8
+        },
+        "h3_size": {
+          "description": "Heading 3 size, as a multiple of the text size.",
+          "default": 1.25,
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 8
+        },
+        "h4_size": {
+          "description": "Heading 4 size, as a multiple of the text size.",
+          "default": 1.125,
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 8
+        },
+        "h5_size": {
+          "description": "Heading 5 size, as a multiple of the text size.",
+          "default": 1,
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 8
+        },
+        "h6_size": {
+          "description": "Heading 6 size, as a multiple of the text size.",
+          "default": 1,
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 8
+        },
+        "block_gap": {
+          "description": "Space between a heading and the text box Enter starts below it, in lines.",
+          "default": 0.5,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 4
+        }
+      }
+    },
     "layout": {
       "type": "object",
       "description": "Which parts of the window show, and presets such as focus mode. See [Layout and focus mode](#layout-and-focus-mode).",

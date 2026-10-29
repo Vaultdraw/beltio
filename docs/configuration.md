@@ -1045,6 +1045,25 @@ A drawing can be an infinite canvas (Normal) or simulated paper (Page), like a n
 - **Defaults and per drawing.** **Settings → Page** sets the mode, layout, size, orientation and paper theme of new drawings (the `[page]` table in `config.toml`). The canvas main menu's **Page** row opens the drawing's page setup, with **Make app default**. The setup is saved in the drawing (`appState.pageSetup`), so it reopens the same; other Excalidraw apps open the file as a normal canvas.
 - **Keyboard.** Every action is a palette command and can get a key on the Hotkeys page: `Page mode: On/Off/Toggle`, `Page layout: Continuous/Separate pages`, `Page size: A4` (every size), `Page orientation: Portrait/Landscape`, `Paper theme: Normal/Old school/Match current theme`, `Page setup…`, `Fit content to page`, `Next page`/`Previous page` (PageDown/PageUp) and `Export: PDF`.
 
+## Markdown mode
+
+Type Markdown on the canvas, like in Obsidian or Notion. With Markdown mode on, `# ` at the start of a line turns the line into a heading the moment the space is typed.
+
+| You type | What happens |
+| --- | --- |
+| `# ` to `###### ` at the start of a line | The marks go and the text becomes heading 1 to 6: bigger (`h1_size` … `h6_size`, times the text size) and in the theme's heading colour. On a later line of a text box, the heading starts its own box below. |
+| Enter in a heading | The heading is done; a new text box in normal text starts just below it (`block_gap` lines lower, same left edge). Enter on an empty heading makes it normal text. Shift+Enter adds a line inside the heading. |
+| Backspace at the start of a heading | It turns back into normal text. Backspace in the empty box Enter just made returns to the end of the heading. |
+| Cmd+Z right after a heading appears | The typed `# ` comes back as plain text. |
+
+- **Per drawing.** Each drawing has its own switch: the **Markdown** button at the bottom of the canvas, or the palette command `Markdown mode: On or off` (Cmd+Alt+M, rebindable on the Hotkeys page). The switch is saved in the drawing. New drawings follow `typing` in `[markdown]` (**Settings → Drawing → Markdown**).
+- **Mode off.** Headings you already have stay as they are; new `#` stays plain text.
+- **Works with any text box:** free text, and text inside a shape (a shape's label converts in place and never splits).
+- **Pasting** text with `#` keeps it as plain text.
+- **Files stay normal Excalidraw files.** A heading stores its role (`customData.role`, `"h1"` … `"h6"`) and its size; on excalidraw.com it shows as larger text in the normal text colour. PNG and SVG exports use the stored colour too.
+- **Colours come from the theme:** heading 1 the theme's primary colour, heading 2 secondary, heading 3 tertiary, headings 4 to 6 its blue, magenta and cyan, each made readable (at least 4.5:1) on the canvas shown.
+- Lists, tasks and quotes come next; bold, italic and inline code later.
+
 ## Tool defaults
 
 Each drawing tool can start with its own style, so a dotted, orange, 3 px arrow is always one keypress away. Tools: rectangle, diamond, ellipse, arrow, line and text. The pen keeps its own saved presets (`[pens]`) and the laser its own look (`[laser]`); all of them are edited on one page, **Settings → Tools**.
@@ -2032,6 +2051,21 @@ Markdown notes: the reading view and the editor. See [Notes](#notes).
 | `math` | `true` | true or false |  | Render `$…$` and `$$…$$` as formulas in the reading view. |
 | `remote_images` | `false` | true or false |  | Load images from `http(s)` addresses. Off keeps notes fully offline: the image shows its alt text instead. |
 | `toggle_tasks` | `true` | true or false |  | Tick `- [ ]` task checkboxes by clicking them in the reading view. The change is saved through the guarded save; off leaves them read-only. |
+
+### `[markdown]`
+
+Markdown mode for typing on the canvas: `# ` at the start of a line makes a heading. Each drawing has its own switch (palette `Markdown mode: On or off`, or the Markdown chip at the bottom); this sets it for new drawings. See [Markdown mode](#markdown-mode).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `typing` | `false` | true or false |  | Markdown mode on in new drawings. |
+| `h1_size` | `2` | a number from 0.5 to 8 (times the text size) |  | Heading 1 size, as a multiple of the text size. |
+| `h2_size` | `1.5` | a number from 0.5 to 8 (times the text size) |  | Heading 2 size, as a multiple of the text size. |
+| `h3_size` | `1.25` | a number from 0.5 to 8 (times the text size) |  | Heading 3 size, as a multiple of the text size. |
+| `h4_size` | `1.125` | a number from 0.5 to 8 (times the text size) |  | Heading 4 size, as a multiple of the text size. |
+| `h5_size` | `1` | a number from 0.5 to 8 (times the text size) |  | Heading 5 size, as a multiple of the text size. |
+| `h6_size` | `1` | a number from 0.5 to 8 (times the text size) |  | Heading 6 size, as a multiple of the text size. |
+| `block_gap` | `0.5` | a number from 0 to 4 (lines) |  | Space between a heading and the text box Enter starts below it, in lines. |
 
 ### `[layout]`
 

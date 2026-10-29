@@ -9,6 +9,7 @@ import {
   appendDrawingStyles,
   clearDrawingStyle,
   effectiveToolStyles,
+  readDrawingMarkdown,
   readDrawingStyles,
   sanitizeDrawingStyles,
   setDrawingStyle,
@@ -170,5 +171,34 @@ describe("precedence: built-in -> [editor] -> tool default -> this drawing", () 
     };
     expect(opened.currentItemFontFamily).toBe(3);
     expect(readDrawingStyles(json)).toEqual({});
+  });
+});
+
+describe("the drawing's Markdown mode switch in the vaultdraw block", () => {
+  const sceneJson = '{\n  "type": "excalidraw",\n  "elements": []\n}';
+
+  it.each([
+    [true, null],
+    [false, null],
+    [true, { text: { font_size: 28 } }],
+  ] as const)("markdown %s round-trips (styles %j)", (markdown, styles) => {
+    const json = appendDrawingStyles(sceneJson, styles ?? {}, markdown);
+    expect(readDrawingMarkdown(json)).toBe(markdown);
+    expect(readDrawingStyles(json)).toEqual(styles ?? {});
+    // still plain JSON any reader (excalidraw.com) parses
+    expect(JSON.parse(json).type).toBe("excalidraw");
+  });
+
+  it("no switch and no styles: the file stays byte for byte", () => {
+    expect(appendDrawingStyles(sceneJson, {}, null)).toBe(sceneJson);
+    expect(readDrawingMarkdown(sceneJson)).toBeNull();
+  });
+
+  it("a non-boolean value reads as no switch", () => {
+    const json = sceneJson.replace(
+      /\n}$/,
+      ',\n  "vaultdraw": {\n    "markdown": "yes"\n  }\n}',
+    );
+    expect(readDrawingMarkdown(json)).toBeNull();
   });
 });

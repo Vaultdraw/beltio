@@ -9,7 +9,7 @@ import {
   getFontFamilyString,
   isTestEnv,
   MIME_TYPES,
-  applyDarkModeFilter,
+  getTextDisplayColor,
   isRTL,
   hasRTLChars,
 } from "@excalidraw/common";
@@ -41,6 +41,7 @@ import { getLineWidth } from "@excalidraw/element";
 import { normalizeText } from "@excalidraw/element";
 import { wrapText } from "@excalidraw/element";
 import { getWrappedTextLines } from "@excalidraw/element";
+import { newTextElement } from "@excalidraw/element";
 import {
   isArrowElement,
   isBoundToContainer,
@@ -76,7 +77,11 @@ import {
 import type { ParsedDataTranferList } from "../clipboard";
 
 import type App from "../components/App";
-import type { AppState } from "../types";
+import type {
+  AppState,
+  TextEditorListeners,
+  TextEditorSession,
+} from "../types";
 
 /**
  * How much further than the browser's caret reveal the canvas pans, in
@@ -496,8 +501,8 @@ export const textWysiwyg = ({
         ),
         textAlign,
         verticalAlign,
-        color: applyDarkModeFilter(
-          updatedTextElement.strokeColor,
+        color: getTextDisplayColor(
+          updatedTextElement,
           appState.theme === THEME.DARK,
         ),
         opacity: updatedTextElement.opacity / 100,
@@ -842,7 +847,11 @@ export const textWysiwyg = ({
     };
   }
 
+  let extensionListeners: TextEditorListeners | null = null;
   editable.onkeydown = (event) => {
+    if (extensionListeners?.onKeyDown?.(event)) {
+      return;
+    }
     if (!event.shiftKey && actionZoomIn.keyTest(event)) {
       event.preventDefault();
       app.actionManager.executeAction(actionZoomIn);
@@ -1059,6 +1068,9 @@ export const textWysiwyg = ({
   };
 
   const cleanup = () => {
+    const listeners = extensionListeners;
+    extensionListeners = null;
+    listeners?.detach?.();
     // remove events to ensure they don't late-fire
     editable.onblur = null;
     editable.oninput = null;
@@ -1299,5 +1311,119 @@ export const textWysiwyg = ({
   ownerWindow.addEventListener("beforeunload", handleSubmit);
   editorBox!.appendChild(editable);
 
+  const extension = app.props.textEditorExtension?.() ?? null;
+  if (extension) {
+    extensionListeners = extension.attach(
+      createExtensionSession({
+        app,
+        editable,
+        elementId: element.id,
+        isLabel: !!element.containerId,
+        onChange,
+        submit: () => {
+          submittedViaKeyboard = false;
+          handleSubmit();
+        },
+      }),
+    );
+  }
+
   return handleSubmit;
+};
+
+/**
+ * The session a host's `textEditorExtension` drives: text and style changes
+ * go through the editor's own update path (measuring, wrapping, history), and
+ * moving on to another text goes through `startTextEditing`.
+ */
+const createExtensionSession = ({
+  app,
+  editable,
+  elementId,
+  isLabel,
+  onChange,
+  submit,
+}: {
+  app: App;
+  editable: HTMLTextAreaElement;
+  elementId: string;
+  isLabel: boolean;
+  onChange?: (nextOriginalText: string) => void;
+  submit: () => void;
+}): TextEditorSession => {
+  const getElement = () => {
+    const latest = app.scene.getElement(elementId);
+    return latest && isTextElement(latest) ? latest : null;
+  };
+  const editExisting = (
+    target: NonDeleted<ExcalidrawTextElement>,
+    caret: number,
+  ) => {
+    app.text.startTextEditing({
+      sceneX: target.x,
+      sceneY: target.y,
+      insertAtParentCenter: false,
+      textElement: target,
+      initialSelection: { start: caret, end: caret },
+    });
+  };
+  return {
+    editable,
+    isLabel,
+    getElement,
+    setText: (text, caret) => {
+      editable.value = text;
+      editable.setSelectionRange(caret, caret);
+      editable.dispatchEvent(new Event("input"));
+    },
+    restyle: (patch) => {
+      const latest = getElement();
+      if (!latest) {
+        return;
+      }
+      app.scene.mutateElement(latest, patch);
+      // re-measure with the new size (the editor's own update path)
+      onChange?.(editable.value);
+    },
+    continueInNewText: ({ x, y, text, caret, fontSize, customData }) => {
+      const from = getElement();
+      if (!from) {
+        return;
+      }
+      submit();
+      const created = newTextElement({
+        x,
+        y,
+        text,
+        fontSize,
+        fontFamily: from.fontFamily,
+        lineHeight: from.lineHeight,
+        textAlign: from.textAlign,
+        strokeColor: from.strokeColor,
+        backgroundColor: from.backgroundColor,
+        opacity: from.opacity,
+        roughness: from.roughness,
+        strokeWidth: from.strokeWidth,
+        frameId: from.frameId,
+        customData,
+      });
+      app.insertNewElements([created]);
+      editExisting(created, Math.min(caret, created.originalText.length));
+    },
+    editText: (id, caret, text) => {
+      submit();
+      const found = app.scene.getNonDeletedElement(id);
+      if (!found || !isTextElement(found) || found.isDeleted) {
+        return;
+      }
+      if (text !== undefined && text !== found.originalText) {
+        // the editor re-measures from originalText when it opens
+        app.scene.mutateElement(found, { originalText: text });
+      }
+      const target = app.scene.getNonDeletedElement(
+        id,
+      ) as NonDeleted<ExcalidrawTextElement>;
+      editExisting(target, Math.min(caret, target.originalText.length));
+    },
+  };
 };

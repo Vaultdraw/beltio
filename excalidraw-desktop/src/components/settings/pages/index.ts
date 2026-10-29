@@ -12,6 +12,7 @@ import { aboutControls } from "./About";
 import { appearanceControls } from "./Appearance";
 import { controlControls } from "./Control";
 import { drawingControls } from "./Drawing";
+import { markdownControls } from "./Markdown";
 import { filesControls } from "./Files";
 import { generalControls } from "./General";
 import { hotkeysControls } from "./Hotkeys";
@@ -32,6 +33,7 @@ import type { SettingControls } from "../SettingsContext";
 
 /** Every setting's control, keyed by schema id. */
 export const SETTING_CONTROLS: SettingControls = {
+  ...markdownControls,
   ...generalControls,
   ...networkControls,
   ...appearanceControls,

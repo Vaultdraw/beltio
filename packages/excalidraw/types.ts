@@ -979,6 +979,11 @@ export interface ExcalidrawProps {
    */
   newTextStyle?: () => NewTextStyle | null;
   /**
+   * Host hook into the text editor, read when a text starts being edited.
+   * Returns null (the default) to leave the editor as it is: no cost per key.
+   */
+  textEditorExtension?: () => TextEditorExtension | null;
+  /**
    * Lets the style panel mark properties the host overrides (e.g. picked in
    * this drawing) and offer "Use default". Pass a new object when overrides change.
    */
@@ -1914,6 +1919,54 @@ export type NewTextStyle = Partial<
     "strokeColor" | "opacity" | "fontFamily" | "fontSize" | "textAlign"
   >
 >;
+
+/**
+ * One text editing session, as the host's `textEditorExtension` sees it.
+ * Every method keeps the editor's own measuring, history and selection.
+ */
+export type TextEditorSession = {
+  /** The editor's textarea. */
+  readonly editable: HTMLTextAreaElement;
+  /** True for a label inside a shape or on an arrow (it can't be split). */
+  readonly isLabel: boolean;
+  /** The edited text element, latest version. */
+  getElement: () => ExcalidrawTextElement | null;
+  /** Replaces the whole text and puts the caret at `caret`. */
+  setText: (text: string, caret: number) => void;
+  /** Restyles the edited text live (and re-measures it). */
+  restyle: (patch: {
+    fontSize?: number;
+    customData?: Record<string, unknown> | undefined;
+  }) => void;
+  /**
+   * Ends this session and edits a new free text whose top-left is (x, y),
+   * with the edited text's font, colour, opacity and alignment.
+   */
+  continueInNewText: (opts: {
+    x: number;
+    y: number;
+    text: string;
+    caret: number;
+    fontSize: number;
+    customData?: Record<string, unknown>;
+  }) => void;
+  /**
+   * Ends this session and edits another text element, caret at `caret`;
+   * `text` replaces its text first.
+   */
+  editText: (id: string, caret: number, text?: string) => void;
+};
+
+export type TextEditorListeners = {
+  /** Runs before the editor's own keys; true = handled (the editor skips it). */
+  onKeyDown?: (event: KeyboardEvent) => boolean;
+  /** The session ended. */
+  detach?: () => void;
+};
+
+export type TextEditorExtension = {
+  attach: (session: TextEditorSession) => TextEditorListeners | null;
+};
 
 /** Host hook for marking overridden style properties (see `styleOverrides`). */
 export type StyleOverridesHook = {

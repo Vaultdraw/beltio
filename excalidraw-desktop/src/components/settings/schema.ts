@@ -568,6 +568,73 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     keywords: ["sloppiness", "architect", "artist", "cartoonist", "sketch"],
     configKey: "editor.roughness",
   },
+  {
+    id: "markdown-typing",
+    page: "drawing",
+    heading: "Markdown",
+    label: "Markdown mode in new drawings",
+    description:
+      "Type # and a space at the start of a line to make a heading. Each drawing can turn it on or off with the Markdown button at the bottom.",
+    keywords: ["markdown", "heading", "title", "typing", "#", "obsidian"],
+    configKey: "markdown.typing",
+  },
+  {
+    id: "markdown-h1-size",
+    page: "drawing",
+    label: "Heading 1 size",
+    description: "How much bigger than the text a heading 1 is.",
+    keywords: ["markdown", "heading", "h1", "size", "font"],
+    configKey: "markdown.h1_size",
+  },
+  {
+    id: "markdown-h2-size",
+    page: "drawing",
+    label: "Heading 2 size",
+    description: "How much bigger than the text a heading 2 is.",
+    keywords: ["markdown", "heading", "h2", "size", "font"],
+    configKey: "markdown.h2_size",
+  },
+  {
+    id: "markdown-h3-size",
+    page: "drawing",
+    label: "Heading 3 size",
+    description: "How much bigger than the text a heading 3 is.",
+    keywords: ["markdown", "heading", "h3", "size", "font"],
+    configKey: "markdown.h3_size",
+  },
+  {
+    id: "markdown-h4-size",
+    page: "drawing",
+    label: "Heading 4 size",
+    description: "How much bigger than the text a heading 4 is.",
+    keywords: ["markdown", "heading", "h4", "size", "font"],
+    configKey: "markdown.h4_size",
+  },
+  {
+    id: "markdown-h5-size",
+    page: "drawing",
+    label: "Heading 5 size",
+    description: "How much bigger than the text a heading 5 is.",
+    keywords: ["markdown", "heading", "h5", "size", "font"],
+    configKey: "markdown.h5_size",
+  },
+  {
+    id: "markdown-h6-size",
+    page: "drawing",
+    label: "Heading 6 size",
+    description: "How much bigger than the text a heading 6 is.",
+    keywords: ["markdown", "heading", "h6", "size", "font"],
+    configKey: "markdown.h6_size",
+  },
+  {
+    id: "markdown-block-gap",
+    page: "drawing",
+    label: "Space below a heading",
+    description:
+      "Space between a heading and the text box Enter starts below it, in lines.",
+    keywords: ["markdown", "heading", "gap", "spacing", "enter"],
+    configKey: "markdown.block_gap",
+  },
 
   // ---- Tools: pen and laser (page was "Pens & laser") ----
   {

@@ -1,0 +1,31 @@
+/* Footer chip: off reads as plain text, on as a selected chip (theme tokens only). */
+.vault-markdown-chip {
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--vault-border, transparent);
+  background: transparent;
+  color: var(--vault-text-muted, inherit);
+  cursor: pointer;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+.vault-markdown-chip:hover:not(:disabled) {
+  background: var(--vault-hover, rgba(0, 0, 0, 0.06));
+  color: var(--vault-text, inherit);
+}
+.vault-markdown-chip[aria-pressed="true"] {
+  background: var(--vault-sel, rgba(0, 0, 0, 0.12));
+  border-color: var(--vault-primary-border, currentColor);
+  color: var(--vault-accent-text, inherit);
+}
+.vault-markdown-chip:focus-visible {
+  outline: 2px solid var(--vault-ring, currentColor);
+  outline-offset: 2px;
+}
+.vault-markdown-chip:disabled {
+  cursor: default;
+  opacity: 0.6;
+}

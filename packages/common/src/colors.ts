@@ -109,6 +109,47 @@ export const setDisplayColorTransform = (
   displayColorListeners.forEach((listener) => listener());
 };
 
+/**
+ * Host hook for text with a role (`customData.role`, e.g. "h1" for a
+ * Markdown heading): its on-screen colour, or null for the stored one. Shares
+ * the transform's version, so cached element canvases repaint when it changes.
+ */
+export type DisplayTextRoleColor = (
+  role: string,
+  isDarkMode: boolean,
+) => string | null;
+
+let displayTextRoleColor: DisplayTextRoleColor | null = null;
+
+export const setDisplayTextRoleColor = (
+  resolve: DisplayTextRoleColor | null,
+) => {
+  if (resolve === displayTextRoleColor) {
+    return;
+  }
+  displayTextRoleColor = resolve;
+  displayColorTransformVersion++;
+  displayColorListeners.forEach((listener) => listener());
+};
+
+/** On-screen colour of a text: its role's colour, else the stored one through the display filter. */
+export const getTextDisplayColor = (
+  element: {
+    strokeColor: string;
+    customData?: Record<string, unknown> | null;
+  },
+  isDarkMode: boolean,
+): string => {
+  const role = displayTextRoleColor && element.customData?.role;
+  if (typeof role === "string") {
+    const color = displayTextRoleColor!(role, isDarkMode);
+    if (color) {
+      return color;
+    }
+  }
+  return applyDarkModeFilter(element.strokeColor, isDarkMode);
+};
+
 export const getDisplayColorTransformVersion = () =>
   displayColorTransformVersion;
 

@@ -24,6 +24,7 @@ import {
   getVerticalOffset,
   invariant,
   applyDarkModeFilter,
+  getTextDisplayColor,
   getDisplayColorTransformVersion,
   isSafari,
   STICKY_NOTE_EDGE_SHADOW_OPACITY,
@@ -679,8 +680,8 @@ const drawElementOnCanvas = (
         context.canvas.setAttribute("dir", rtl ? "rtl" : "ltr");
         context.save();
         context.font = getFontString(element);
-        context.fillStyle = applyDarkModeFilter(
-          element.strokeColor,
+        context.fillStyle = getTextDisplayColor(
+          element,
           renderConfig.theme === THEME.DARK,
         );
         context.textAlign = element.textAlign as CanvasTextAlign;

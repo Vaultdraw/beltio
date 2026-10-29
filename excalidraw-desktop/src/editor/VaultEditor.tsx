@@ -12,6 +12,7 @@ import {
 import {
   CaptureUpdateAction,
   DefaultSidebar,
+  Footer,
   Excalidraw,
   MainMenu,
 } from "@excalidraw/excalidraw";
@@ -81,7 +82,12 @@ import { PluginToolbar } from "../plugins/PluginToolbar";
 import { usePluginOn } from "../plugins/usePluginOn";
 
 import { usePens } from "../pens/usePens";
-import { readDrawingStyles } from "../toolDefaults/drawingStyles";
+import {
+  readDrawingMarkdown,
+  readDrawingStyles,
+} from "../toolDefaults/drawingStyles";
+import { useMarkdownMode } from "../markdown/useMarkdownMode";
+import { MarkdownChip } from "../markdown/MarkdownChip";
 import { useToolDefaults } from "../toolDefaults/useToolDefaults";
 import { editFormulaImage } from "../plugins/formulaEdit";
 import { useMemoryRetention } from "../memory/useMemoryRetention";
@@ -306,6 +312,16 @@ const VaultEditorComponent = ({
   });
   const onPageChange = pageMode.onChange;
 
+  const writableRef = useRef(!readOnly && !disabled);
+  writableRef.current = !readOnly && !disabled;
+  const markdown = useMarkdownMode({
+    getWindow: () => host.current?.ownerDocument.defaultView ?? null,
+    isWritable: () => writableRef.current,
+    onChange: () => scheduleSaveRef.current(),
+  });
+  const getMarkdownForSave = markdown.getForSave;
+  const loadMarkdown = markdown.load;
+
   // The "move canvas" hint disappears after the user's first pan (persisted).
   useLayoutEffect(() => {
     const el = host.current;
@@ -471,6 +487,7 @@ const VaultEditorComponent = ({
       );
       markOpen("parsed");
       loadDrawingStyles(readDrawingStyles(initialSource.json));
+      loadMarkdown(readDrawingMarkdown(initialSource.json));
       return scene;
     } catch (cause) {
       setEditorError(cause instanceof Error ? cause.message : String(cause));
@@ -525,9 +542,10 @@ const VaultEditorComponent = ({
         current[1],
         current[2],
         getDrawingStyles(),
+        getMarkdownForSave(),
       ),
     );
-  }, [getDrawingStyles]);
+  }, [getDrawingStyles, getMarkdownForSave]);
 
   const scheduleSave = useCallback(() => {
     if (isSwapping(sceneDocId.current, propDocId.current)) {
@@ -758,6 +776,7 @@ const VaultEditorComponent = ({
       resetToolDefaults();
       // the new drawing's own style picks; the old drawing's are gone
       loadDrawingStyles(readDrawingStyles(json));
+      loadMarkdown(readDrawingMarkdown(json));
       resetPageMode();
       setPageSetupOpen(false);
       setPaperDialogOpen(false);
@@ -883,6 +902,7 @@ const VaultEditorComponent = ({
         api.getAppState(),
         api.getFiles(),
         getDrawingStyles(),
+        getMarkdownForSave(),
       );
       const blob = new ownerDocument.defaultView!.Blob([json], {
         type: "application/json",
@@ -898,7 +918,7 @@ const VaultEditorComponent = ({
       exportingRef.current = false;
       setExporting(false);
     }
-  }, [getDrawingStyles]);
+  }, [getDrawingStyles, getMarkdownForSave]);
 
   // Every image export (dialog, shortcuts, context menu copy) lands here.
   // Throwing makes the editor show its own error.
@@ -1048,9 +1068,18 @@ const VaultEditorComponent = ({
             ownerDocument={host.current?.ownerDocument}
           />
         )}
+        <Footer>
+          <MarkdownChip
+            on={markdown.on}
+            disabled={readOnly || disabled}
+            onToggle={markdown.toggle}
+          />
+        </Footer>
       </>
     ),
     [
+      markdown.on,
+      markdown.toggle,
       exporting,
       canExport,
       canOpenSettings,
@@ -1104,6 +1133,7 @@ const VaultEditorComponent = ({
         freedrawPen={pens.freedrawPen}
         currentItemStrokeWidth={toolDefaults.currentItemStrokeWidth}
         newTextStyle={toolDefaults.newTextStyle}
+        textEditorExtension={markdown.textEditorExtension}
         newContainerStyle={toolDefaults.newContainerStyle}
         styleOverrides={toolDefaults.styleOverrides}
         laserPointerOptions={pens.laserPointerOptions}

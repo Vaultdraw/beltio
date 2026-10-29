@@ -11,11 +11,12 @@ import {
   withStandardCanvasColors,
 } from "./canvasSync";
 
-const { calls } = vi.hoisted(() => ({
+const { calls, roleCalls } = vi.hoisted(() => ({
   calls: [] as Array<{
     fn: ((c: string, d: boolean) => string) | null;
     canvas: string | null;
   }>,
+  roleCalls: [] as Array<((role: string, d: boolean) => string | null) | null>,
 }));
 
 vi.mock("@excalidraw/excalidraw", () => ({
@@ -25,7 +26,12 @@ vi.mock("@excalidraw/excalidraw", () => ({
   ) => {
     calls.push({ fn, canvas });
   },
-  invertColorForDarkMode: (c: string) => `inverted(${c})`,
+  setDisplayTextRoleColor: (
+    fn: ((role: string, d: boolean) => string | null) | null,
+  ) => {
+    roleCalls.push(fn);
+  },
+  invertColorForDarkMode: (c: string) => (c === "#ffffff" ? "#121212" : c),
 }));
 
 const dracula = findTheme(builtinRegistry(), "Dracula")!;
@@ -38,6 +44,7 @@ const last = () => calls[calls.length - 1];
 
 beforeEach(() => {
   calls.length = 0;
+  roleCalls.length = 0;
 });
 afterEach(() => resetCanvasSync());
 
@@ -93,5 +100,31 @@ describe("page mode display override", () => {
     });
     expect(during).toBeNull();
     expect(last().fn!("#fff", true)).toBe("#fff");
+  });
+
+  it("heading roles follow the theme, with contrast on the canvas shown", () => {
+    setCanvasThemeSource(source);
+    const resolve = roleCalls[roleCalls.length - 1]!;
+    expect(resolve).toBeTypeOf("function");
+    // sync off: Excalidraw's own canvas (white, dark = inverted white)
+    const light = resolve("h1", false)!;
+    const dark = resolve("h1", true)!;
+    expect(light).toMatch(/^#[0-9a-f]{6}$/);
+    expect(dark).toMatch(/^#[0-9a-f]{6}$/);
+    expect(resolve("body", false)).toBeNull();
+    // sync on: drawn on the theme's surface
+    setCanvasSync(source);
+    const synced = roleCalls[roleCalls.length - 1]!;
+    expect(synced("h2", true)).toBe(synced("h2", false));
+  });
+
+  it("exports draw roles in the stored colour", async () => {
+    setCanvasThemeSource(source);
+    let during: unknown = "unset";
+    await withStandardCanvasColors(async () => {
+      during = roleCalls[roleCalls.length - 1];
+    });
+    expect(during).toBeNull();
+    expect(roleCalls[roleCalls.length - 1]).toBeTypeOf("function");
   });
 });

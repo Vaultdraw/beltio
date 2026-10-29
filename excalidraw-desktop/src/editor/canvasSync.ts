@@ -8,9 +8,11 @@
 import {
   invertColorForDarkMode,
   setDisplayColorTransform,
+  setDisplayTextRoleColor,
 } from "@excalidraw/excalidraw";
 
 import { buildCanvasColorTransform } from "../theme";
+import { buildRoleColor } from "../markdown/roleColors";
 
 import type { ThemeMode, ThemeVariant } from "../theme";
 
@@ -54,9 +56,47 @@ const effectiveDisplay = (): {
     : null;
 };
 
+// Role colours (Markdown headings) follow the theme whether or not the canvas
+// syncs with it, held to contrast on the canvas actually shown.
+const STANDARD_CANVAS = "#ffffff";
+let roleColorFor: {
+  key: string;
+  resolve: (role: string, isDark: boolean) => string | null;
+} | null = null;
+const roleResolver = (
+  canvas: string | null,
+): ((role: string, isDark: boolean) => string | null) | null => {
+  if (!themeSource) {
+    return null;
+  }
+  const key = `${themeSource.key}|${canvas ?? ""}`;
+  if (roleColorFor?.key !== key) {
+    const { variant } = themeSource;
+    const light = buildRoleColor(variant, canvas ?? STANDARD_CANVAS);
+    const dark = canvas
+      ? light
+      : buildRoleColor(variant, invertColorForDarkMode(STANDARD_CANVAS));
+    roleColorFor = {
+      key,
+      resolve: (role, isDark) => (isDark ? dark : light)(role),
+    };
+  }
+  return roleColorFor.resolve;
+};
+
+const applyRoleColors = () => {
+  const display = effectiveDisplay();
+  setDisplayTextRoleColor(
+    roleResolver(
+      pageDisplay === "identity" ? STANDARD_CANVAS : display?.canvas ?? null,
+    ),
+  );
+};
+
 const applyDisplay = () => {
   const display = effectiveDisplay();
   setDisplayColorTransform(display?.transform ?? null, display?.canvas ?? null);
+  applyRoleColors();
 };
 
 let currentKey = "off";
@@ -114,12 +154,14 @@ export const setCanvasThemeSource = (source: SyncSource | null): void => {
     return;
   }
   themeSource = source;
-  if (pageDisplay === "match") {
-    if (suspended === 0) {
+  if (suspended === 0) {
+    if (pageDisplay === "match") {
       applyDisplay();
+    } else {
+      applyRoleColors();
     }
-    repaintAll();
   }
+  repaintAll();
 };
 
 /** Page mode's display override (null = page mode off: today's behaviour). Returns true when it changed. */
@@ -151,8 +193,11 @@ export const registerCanvasRepaint = (repaint: () => void) => {
  * repaints. The release is idempotent.
  */
 export const suspendCanvasSync = (): (() => void) => {
-  if (suspended++ === 0 && effectiveDisplay()) {
-    setDisplayColorTransform(null);
+  if (suspended++ === 0) {
+    if (effectiveDisplay()) {
+      setDisplayColorTransform(null);
+    }
+    setDisplayTextRoleColor(null);
   }
   let released = false;
   return () => {
@@ -160,7 +205,7 @@ export const suspendCanvasSync = (): (() => void) => {
       return;
     }
     released = true;
-    if (--suspended === 0 && effectiveDisplay()) {
+    if (--suspended === 0) {
       applyDisplay();
       repaintAll();
     }
@@ -174,7 +219,7 @@ export const suspendCanvasSync = (): (() => void) => {
 export const withStandardCanvasColors = async <T>(
   task: () => Promise<T>,
 ): Promise<T> => {
-  if (!effectiveDisplay() && suspended === 0) {
+  if (!effectiveDisplay() && !themeSource && suspended === 0) {
     return task();
   }
   const release = suspendCanvasSync();
@@ -194,6 +239,8 @@ export const resetCanvasSync = () => {
   pageDisplay = null;
   themeSource = null;
   built = null;
+  roleColorFor = null;
   repainters.clear();
   setDisplayColorTransform(null);
+  setDisplayTextRoleColor(null);
 };

@@ -16,6 +16,7 @@ import {
   invertColorForDarkMode,
   isShallowEqual,
   setDisplayColorTransform,
+  setDisplayTextRoleColor,
 } from "@excalidraw/common";
 
 import App, {
@@ -87,6 +88,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     freedrawPen,
     currentItemStrokeWidth,
     newTextStyle,
+    textEditorExtension,
     styleOverrides,
     newContainerStyle,
     laserPointerOptions,
@@ -240,6 +242,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           freedrawPen={freedrawPen}
           currentItemStrokeWidth={currentItemStrokeWidth}
           newTextStyle={newTextStyle}
+          textEditorExtension={textEditorExtension}
           styleOverrides={styleOverrides}
           newContainerStyle={newContainerStyle}
           laserPointerOptions={laserPointerOptions}
@@ -603,8 +606,12 @@ export {
   getStrokeWidthByKey,
   invertColorForDarkMode,
   setDisplayColorTransform,
+  setDisplayTextRoleColor,
 };
-export type { DisplayColorTransform } from "@excalidraw/common";
+export type {
+  DisplayColorTransform,
+  DisplayTextRoleColor,
+} from "@excalidraw/common";
 
 export { renderBackgroundPattern } from "./renderer/backgroundPattern";
 export {

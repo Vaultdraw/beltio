@@ -99,6 +99,13 @@ export const EDITOR_COMMANDS: readonly CommandDefinition[] = [
   ...PAPER_COMMANDS,
   ...PAGE_COMMANDS,
   {
+    id: "markdown.toggle",
+    title: "Markdown mode: On or off",
+    category: "Markdown",
+    keys: { default: ["Mod+Alt+M"] },
+    when: ["drawingOpen", "writable"],
+  },
+  {
     id: "library.toggle",
     title: "Library: Open/close",
     category: "Library",

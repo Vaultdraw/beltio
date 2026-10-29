@@ -40,6 +40,10 @@ import {
 } from "../history/historySettings";
 import { TABS_MAPPINGS, type TabsField } from "../tabs/tabsSettings";
 import { NOTES_MAPPINGS, type NotesField } from "../notes/notesSettings";
+import {
+  MARKDOWN_MAPPINGS,
+  type MarkdownField,
+} from "../markdown/markdownSettings";
 import { MEMORY_MAPPINGS, type MemoryField } from "../memory/memorySettings";
 import { SYNC_MAPPINGS, type SyncField } from "../sync/syncSettings";
 import { setSafeStart, type SafeStart } from "../safeStart/state";
@@ -403,6 +407,7 @@ type ConfigField =
   | HistoryField
   | TabsField
   | NotesField
+  | MarkdownField
   | MemoryField
   | SyncField
   | SearchField
@@ -1061,6 +1066,7 @@ export const CONFIG_MAPPING: readonly ConfigMapping[] = [
   ...HISTORY_MAPPINGS,
   ...TABS_MAPPINGS,
   ...NOTES_MAPPINGS,
+  ...MARKDOWN_MAPPINGS,
   ...MEMORY_MAPPINGS,
   ...SYNC_MAPPINGS,
   ...SEARCH_MAPPINGS,

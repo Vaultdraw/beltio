@@ -61,21 +61,37 @@ export function sanitizeDrawingStyles(value: unknown): DrawingStyles {
  * without the block, or one that does not look as expected, gives {}.
  */
 export function readDrawingStyles(json: string): DrawingStyles {
+  return sanitizeDrawingStyles(readBlock(json)?.styles);
+}
+
+/**
+ * The drawing's own Markdown mode switch (`"vaultdraw": {"markdown": true}`),
+ * or null when the drawing has none (it follows `markdown.typing`).
+ */
+export function readDrawingMarkdown(json: string): boolean | null {
+  const value = readBlock(json)?.markdown;
+  return typeof value === "boolean" ? value : null;
+}
+
+/** The trailing `vaultdraw` block, parsed, or null. */
+function readBlock(json: string): Record<string, unknown> | null {
   try {
     const tail = json.length > TAIL_CHARS ? json.slice(-TAIL_CHARS) : json;
     const at = tail.lastIndexOf(BLOCK_KEY);
     if (at < 0) {
-      return {};
+      return null;
     }
     // `"vaultdraw": {...}\n}`: the object runs up to the final top-level brace.
     const rest = tail.slice(at + BLOCK_KEY.length).trimEnd();
     if (!rest.endsWith("}")) {
-      return {};
+      return null;
     }
-    const block = JSON.parse(rest.slice(0, -1)) as { styles?: unknown };
-    return sanitizeDrawingStyles(block?.styles);
+    const block = JSON.parse(rest.slice(0, -1)) as unknown;
+    return block && typeof block === "object" && !Array.isArray(block)
+      ? (block as Record<string, unknown>)
+      : null;
   } catch {
-    return {};
+    return null;
   }
 }
 
@@ -87,9 +103,11 @@ export function readDrawingStyles(json: string): DrawingStyles {
 export function appendDrawingStyles(
   json: string,
   styles: DrawingStyles,
+  markdown: boolean | null = null,
 ): string {
   const clean = sanitizeDrawingStyles(styles);
-  if (isEmptyDrawingStyles(clean) || !json.endsWith("\n}")) {
+  const noStyles = isEmptyDrawingStyles(clean);
+  if ((noStyles && markdown === null) || !json.endsWith("\n}")) {
     return json;
   }
   const ordered: Record<string, ToolStyle> = {};
@@ -98,8 +116,12 @@ export function appendDrawingStyles(
       ordered[tool] = clean[tool]!;
     }
   }
+  const content: Record<string, unknown> = noStyles ? {} : { styles: ordered };
+  if (markdown !== null) {
+    content.markdown = markdown;
+  }
   const block = toAsciiJson(
-    JSON.stringify({ styles: ordered }, null, 2).replace(/\n/g, "\n  "),
+    JSON.stringify(content, null, 2).replace(/\n/g, "\n  "),
   );
   return `${json.slice(0, -2)},\n  ${BLOCK_KEY} ${block}\n}`;
 }

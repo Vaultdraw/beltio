@@ -361,6 +361,23 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
     },
   },
   {
+    table: "markdown",
+    intro:
+      "Markdown mode for typing on the canvas: `# ` at the start of a line makes a heading. Each drawing has its own switch (palette `Markdown mode: On or off`, or the Markdown chip at the bottom); this sets it for new drawings. See [Markdown mode](#markdown-mode).",
+    keys: {
+      typing: { doc: "Markdown mode on in new drawings." },
+      h1_size: { doc: "Heading 1 size, as a multiple of the text size." },
+      h2_size: { doc: "Heading 2 size, as a multiple of the text size." },
+      h3_size: { doc: "Heading 3 size, as a multiple of the text size." },
+      h4_size: { doc: "Heading 4 size, as a multiple of the text size." },
+      h5_size: { doc: "Heading 5 size, as a multiple of the text size." },
+      h6_size: { doc: "Heading 6 size, as a multiple of the text size." },
+      block_gap: {
+        doc: "Space between a heading and the text box Enter starts below it, in lines.",
+      },
+    },
+  },
+  {
     table: "layout",
     intro:
       "Which parts of the window show, and presets such as focus mode. See [Layout and focus mode](#layout-and-focus-mode).",

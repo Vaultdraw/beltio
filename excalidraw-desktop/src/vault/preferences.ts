@@ -73,6 +73,11 @@ import {
   type NotesPreferences,
 } from "../notes/notesSettings";
 import {
+  MARKDOWN_DEFAULTS,
+  normalizeMarkdownPreferences,
+  type MarkdownPreferences,
+} from "../markdown/markdownSettings";
+import {
   SPECULATIVE_DEFAULTS,
   normalizeSpeculativePreferences,
   type SpeculativePreferences,
@@ -392,6 +397,7 @@ export type VaultPreferences = VaultPreferencesBase &
   HistoryPreferences &
   TabsPreferences &
   NotesPreferences &
+  MarkdownPreferences &
   MemoryPreferences &
   SyncPreferences &
   SearchPreferences &
@@ -536,6 +542,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   ...HISTORY_DEFAULTS,
   ...TABS_DEFAULTS,
   ...NOTES_DEFAULTS,
+  ...MARKDOWN_DEFAULTS,
   ...MEMORY_DEFAULTS,
   ...SYNC_DEFAULTS,
   ...SEARCH_DEFAULTS,
@@ -1071,6 +1078,7 @@ export function normalizePreferences(input: unknown): VaultPreferences {
     ...normalizeHistoryPreferences(parsed as Record<string, unknown>),
     ...normalizeTabsPreferences(parsed as Record<string, unknown>),
     ...normalizeNotesPreferences(parsed as Record<string, unknown>),
+    ...normalizeMarkdownPreferences(parsed as Record<string, unknown>),
     ...normalizeMemoryPreferences(parsed as Record<string, unknown>),
     ...normalizeSyncPreferences(parsed as Record<string, unknown>),
     ...normalizeSearchPreferences(parsed as Record<string, unknown>),
