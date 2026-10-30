@@ -15,6 +15,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 ### Fixed
 
 - **A picked text colour on a heading now sticks on every path.** Paste styles and the eyedropper used to leave a heading in the theme's colour; and a heading made plain text and a heading again no longer keeps an old pick forever.
+- **The narrow-window file list takes its shadow and backdrop from the theme.** They were fixed black values a theme could not restyle; they now use the same tokens as menus and dialogs (toimprove 273).
 - **The graph plugin's search matches accents like the app's search.** `ß`, `ø`, decomposed accents and the other look-alikes now fold the same way as the quick switcher, because plugins can call the app's fold (`ctx.text.fold`, plugin API 1.2, experimental; the graph plugin needs `min_api 1.2.0`). One copy of the fold now serves the app and plugins (toimprove 197 family).
 - **The Rename tag picker ignores accents and case like the rest of search.** Typing `cafe` finds `Café`, `strasse` finds `Straße`, and a decomposed `é` works (the filter used lower case only; toimprove 201 family).
 - **A task with a tab after its box is a task in the reading view.** `- [/]<tab>doing` was plain text there (and its box could not be ticked) although the import counted it; a tab now counts as the space, as in Obsidian.

@@ -338,7 +338,7 @@ html.dark {
   bottom: 0;
   min-width: 0;
   max-width: calc(100% - 44px) !important;
-  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--vault-shadow-pop);
   transition: none;
 }
 
@@ -346,7 +346,7 @@ html.dark {
   position: absolute;
   inset: 0;
   z-index: 3;
-  background: rgba(0, 0, 0, 0.32);
+  background: var(--vault-scrim);
 }
 
 .vault-navigator__toolbar {
