@@ -114,7 +114,7 @@ test("Enter opens the hovered drawing and closes the graph; click does too", asy
   await expect(breadcrumbs(page)).not.toContainText("Alpha");
 });
 
-test("Mod+Alt+L opens the local graph around the current drawing", async ({
+test("Mod+Alt+O opens the local graph around the current drawing", async ({
   page,
 }) => {
   await openLinksVault(page, "Hub", null, GRAPH_PLUGIN);
@@ -124,7 +124,7 @@ test("Mod+Alt+L opens the local graph around the current drawing", async ({
   );
   await page.keyboard.press("Escape");
   await expect(graph(page)).toHaveCount(0);
-  await openGraph(page, "Meta+Alt+l");
+  await openGraph(page, "Meta+Alt+o");
   const local = await page.evaluate(() => {
     const s = (window as unknown as Win).__graphApp!;
     return { n: s.nodeCount, local: s.isLocal };

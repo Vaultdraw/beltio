@@ -18,7 +18,7 @@ when = ["vaultOpen", "!modalOpen"]
 [[contributes.commands]]
 id = "openLocal"
 title = "Graph: Open local graph"
-keys = ["Mod+Alt+L"]
+keys = ["Mod+Alt+O"]
 when = ["drawingOpen", "!modalOpen"]
 
 [[contributes.commands]]

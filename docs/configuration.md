@@ -1310,7 +1310,7 @@ start = "idle"                     # when the link index starts: open | idle | u
 
 The graph is an official plugin (`graph`, in `plugins/official/graph`) that ships with the app and is on by default. Its commands, keys and settings below are unchanged. Turn it off in **Settings → Extensions → Graph view**, or with `[extensions] graph = false`: nothing of it loads, and its commands and entry points disappear. It reads the graph as bytes through the plugin API (`ctx.vault.graph`) and keeps its per-vault settings in `[graph]` of the vault's `settings.toml` (`ctx.vault.table`).
 
-⌘⌥G (**Graph: Open graph view**) shows every drawing as a dot and every link as a line, over the canvas. Esc, or ⌘⌥G again, returns to the drawing you left, at the same zoom and position. ⌘⌥L opens the **local graph**: the open drawing and the drawings within 1–3 links of it.
+⌘⌥G (**Graph: Open graph view**) shows every drawing as a dot and every link as a line, over the canvas. Esc, or ⌘⌥G again, returns to the drawing you left, at the same zoom and position. ⌘⌥O opens the **local graph**: the open drawing and the drawings within 1–3 links of it.
 
 You can also open it with the mouse: the **Graph view** button in the navigator toolbar (its tooltip shows the current key), **Graph view** in the canvas main menu, or **Open local graph** in a drawing's ⋯ menu in the navigator, which opens that drawing and shows its local graph. All three run the same commands as the keys, so they follow your rebinding.
 

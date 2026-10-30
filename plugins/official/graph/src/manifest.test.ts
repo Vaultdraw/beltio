@@ -15,7 +15,7 @@ import type {
 // The graph's commands, as plugin.toml declares them: the ids, titles and keys the app always had.
 const EXPECTED: Record<string, { title: string; keys: string[] }> = {
   "graph.open": { title: "Graph: Open graph view", keys: ["Mod+Alt+G"] },
-  "graph.openLocal": { title: "Graph: Open local graph", keys: ["Mod+Alt+L"] },
+  "graph.openLocal": { title: "Graph: Open local graph", keys: ["Mod+Alt+O"] },
   "graph.toggleOrphans": { title: "Graph: Toggle orphans", keys: [] },
   "graph.toggleTags": { title: "Graph: Toggle tags", keys: [] },
   "graph.toggleUnresolved": {
@@ -90,6 +90,12 @@ describe("Graph plugin commands", () => {
 
   it.each(PLATFORMS)("has no conflicts with the defaults on %s", (platform) => {
     expect(findConflicts([...COMMANDS, ...defs], {}, platform).size).toBe(0);
+  });
+
+  it("keeps the local graph key off the Linux lock-screen key (Ctrl+Alt+L on KDE, Xfce, Cinnamon)", () => {
+    const keys = defs.find((d) => d.id === "graph.openLocal")!.keys.default;
+    const linux = keys.map((k) => k.replace(/^Mod\+/, "Ctrl+"));
+    expect(linux).not.toContain("Ctrl+Alt+L");
   });
 
   it("opens and closes only inside an open vault, local needs a drawing", () => {

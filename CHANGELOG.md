@@ -16,6 +16,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **The Graph's local graph key is ⌘⌥O (Ctrl+Alt+O on Linux), not ⌘⌥L.** Ctrl+Alt+L is the lock-screen key on KDE, Xfce and Cinnamon, so the key never reached Vaultdraw there. Change it in Settings → Hotkeys or `[hotkeys]`.
 - **Escape closes Excalidraw's own dialogs after a click inside them (Linux).** In the image export dialog a click left the focus on the page behind it (the button is disabled while it works), so Escape did nothing; Escape on the page body now closes the top dialog.
 - **Opening an imported note no longer downloads a web page again.** A link that is not a picture ("Web page, not a picture"), is over 10 MB or was refused is not fetched a second time when the note opens; **Download images** still tries again on request.
 - **Escape closes Settings when a button or switch inside it has focus.** The editor underneath had already marked the key handled, so Settings stayed open (seen on Linux, where a click focuses the control; Tab does it everywhere).

@@ -207,7 +207,7 @@ export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
       {
         id: "openLocal",
         title: "Graph: Open local graph",
-        keys: ["Mod+Alt+L"],
+        keys: ["Mod+Alt+O"],
         when: ["drawingOpen", "!modalOpen"],
       },
       {
