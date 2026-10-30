@@ -1640,3 +1640,29 @@ test("quit with notes autosave off: Don't Save closes and writes nothing", async
   expect(await nf.text("Ideas.md")).not.toContain("thrown away");
   expect(errors).toEqual([]);
 });
+
+test("quit: an answer to the unsaved-notes prompt is forgotten when the window stays open", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await withNotesAutosave(page, 0);
+  await openVault(page, "?seed=obsidian");
+  await rescan(page);
+  const nf = noteFiles(page);
+  await typeInNote(page, "\nsecond chance");
+  // The file changes on disk, so saving the note fails.
+  await nf.set("Ideas.md", "changed elsewhere\n");
+  await requestQuit(page);
+  const d = dialog(page);
+  await expect(d).toContainText("Unsaved notes");
+  await d.getByRole("button", { name: "Save and Close" }).click();
+  await expect(d).toContainText("could not save");
+  await d.getByRole("button", { name: "Keep Window Open" }).click();
+  await expect(d).toHaveCount(0);
+  // The earlier answer is not remembered: the next quit asks again.
+  await requestQuit(page);
+  await expect(d).toContainText("Unsaved notes");
+  await d.getByRole("button", { name: "Cancel" }).click();
+  await expect(d).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
