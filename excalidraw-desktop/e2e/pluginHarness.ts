@@ -154,9 +154,9 @@ export const FIXTURES: Record<string, () => PluginInfo> = {
     }),
   badsyntax: () =>
     makePluginInfo("badsyntax", {
-      name: "Bad syntax",
+      name: "Bad import",
       contributes: {
-        commands: [command("x", "Bad syntax: run")],
+        commands: [command("x", "Bad import: run")],
         panels: [],
         settings: [],
       },

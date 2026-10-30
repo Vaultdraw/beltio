@@ -44,7 +44,7 @@ for (const id of ["badload", "badsyntax"]) {
     page,
   }) => {
     await start(page, `${id},hello`);
-    await runCmd(page, `${id === "badload" ? "Bad load" : "Bad syntax"}: run`);
+    await runCmd(page, `${id === "badload" ? "Bad load" : "Bad import"}: run`);
     await page.waitForTimeout(800);
     await expect(
       page.getByText(/failed|error|couldn.t|could not|problem/i).first(),
