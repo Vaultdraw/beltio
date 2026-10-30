@@ -1,0 +1,21 @@
+{
+  "about": "What counts as a task line, and whether it is ticked (Obsidian: any one character between the brackets, then a space or tab, is a ticked box). Copies that must agree: markdown/blocks.rs custom_status_end (import, plugin API; markdown::tests::task_status_contract_table), notes/render/obsidian.ts TASK_RULES (reading view) and notes/noteTasks.ts TASK (ticking), run by src/tests/taskStatusContract.test.ts (validator, toimprove 235 twins, 2026-10-30 night). One line per row.",
+  "cases": [
+    { "label": "open", "line": "- [ ] open", "task": "open" },
+    { "label": "done x", "line": "- [x] done", "task": "done" },
+    { "label": "done upper X", "line": "- [X] done", "task": "done" },
+    { "label": "in progress", "line": "- [/] doing", "task": "done" },
+    { "label": "cancelled", "line": "- [-] cancelled", "task": "done" },
+    { "label": "ordered later", "line": "1. [>] later", "task": "done" },
+    { "label": "star marker", "line": "* [?] question", "task": "done" },
+    { "label": "accented status", "line": "- [é] accent", "task": "done" },
+    { "label": "emoji status", "line": "- [★] star", "task": "done" },
+    { "label": "tab after status", "line": "- [/]\tdoing", "task": "done", "ts_known": "the reading view and ticking need a space after the bracket (toimprove 245)" },
+    { "label": "wikilink is not a task", "line": "- [[Note]] link", "task": "none" },
+    { "label": "empty brackets", "line": "- [] empty", "task": "none" },
+    { "label": "two characters", "line": "- [ab] two", "task": "none" },
+    { "label": "no space after bracket", "line": "- [/]doing", "task": "none" },
+    { "label": "backslash status", "line": "- [\\] odd", "task": "none" },
+    { "label": "plain item", "line": "- just text", "task": "none" }
+  ]
+}

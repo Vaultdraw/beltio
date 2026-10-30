@@ -559,3 +559,32 @@ fn custom_task_statuses() {
         ]
     );
 }
+
+/// `contract/task_status_cases.json` is read here and by `src/tests/taskStatusContract.test.ts`
+/// (reading view and ticking): one table for every copy of the task-line rule (toimprove 235 twins).
+#[test]
+fn task_status_contract_table() {
+    let table: serde_json::Value = serde_json::from_str(include_str!("../contract/task_status_cases.json")).unwrap();
+    let mut failures = Vec::new();
+    for row in table["cases"].as_array().unwrap() {
+        let line = row["line"].as_str().unwrap();
+        let want = row["task"].as_str().unwrap();
+        let doc = parse(&format!("{line}\n"));
+        let got = doc
+            .blocks
+            .iter()
+            .find_map(|b| match &b.kind {
+                BlockKind::ListItem { task, .. } => Some(match task {
+                    TaskState::None => "none",
+                    TaskState::Open => "open",
+                    TaskState::Done => "done",
+                }),
+                _ => None,
+            })
+            .unwrap_or("none");
+        if got != want {
+            failures.push(format!("{}: {line:?} -> {got}, want {want}", row["label"]));
+        }
+    }
+    assert!(failures.is_empty(), "{failures:#?}");
+}
