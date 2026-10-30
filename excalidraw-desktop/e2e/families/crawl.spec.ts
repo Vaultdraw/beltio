@@ -774,3 +774,230 @@ for (const theme of ["light", "dark"] as const) {
     ).toEqual([]);
   });
 }
+
+// The first-run setup (onboarding-2, 2026-10-31): every control on every step, light and dark, at the
+// 1280 and 360 px windows. A step is reached by the real buttons (Get started, Next); clicking a
+// control that leaves the step (Next, Back, Skip setup, Open my vault) re-reaches it afterwards.
+const SETUP_IDS = [
+  "welcome",
+  "look",
+  "basics",
+  "network",
+  "extras",
+  "vault",
+  "done",
+] as const;
+const SETUP_SIZES = [
+  { w: 1280, h: 850 },
+  { w: 360, h: 740 },
+] as const;
+const setupRoot = (p: Page) => p.getByTestId("setup");
+const setupStep = (p: Page) =>
+  setupRoot(p)
+    .getAttribute("data-step", { timeout: 500 })
+    .catch(() => null);
+
+/** A first launch: no vault to reopen, no saved answers. */
+const freshSetup = async (page: Page) => {
+  await page.goto("/e2e.html");
+  await page.evaluate(() => localStorage.clear());
+  await page.goto("/e2e.html");
+  await expect(setupRoot(page)).toBeVisible();
+};
+
+const gotoSetupStep = async (page: Page, id: string) => {
+  if ((await setupStep(page)) === null) {
+    await freshSetup(page);
+  }
+  for (let i = 0; i < SETUP_IDS.length; i++) {
+    const now = await setupStep(page);
+    if (now === id) {
+      return;
+    }
+    const cur = SETUP_IDS.indexOf(now as typeof SETUP_IDS[number]);
+    const want = SETUP_IDS.indexOf(id as typeof SETUP_IDS[number]);
+    await setupRoot(page)
+      .locator(cur < want ? ".vault-setup__primary" : ".vault-setup__ghost")
+      .filter({ hasText: cur < want ? /./ : /Back/ })
+      .first()
+      .click();
+    await expect(setupRoot(page)).not.toHaveAttribute("data-step", now ?? "");
+  }
+};
+
+/** The element that draws the focus ring for a control (hidden inputs draw it on their label or row). */
+const focusRingProblem = (page: Page, id: number): Promise<string | null> =>
+  page.evaluate((n) => {
+    const el = document.querySelector(`[data-crawl-id="${n}"]`) as HTMLElement;
+    if (!el) {
+      return null;
+    }
+    el.focus();
+    const holder =
+      el instanceof HTMLInputElement
+        ? el.closest("label, .vault-setup__row, .vault-setup__choice") || el
+        : el;
+    const st = getComputedStyle(holder);
+    const ring =
+      (st.boxShadow && st.boxShadow !== "none") ||
+      (st.outlineStyle !== "none" && parseFloat(st.outlineWidth) > 0);
+    return document.activeElement === el && !ring
+      ? "no visible focus ring"
+      : null;
+  }, id);
+
+for (const theme of ["light", "dark"] as const) {
+  // eslint-disable-next-line no-loop-func
+  test(`crawler: setup screens, ${theme} theme`, async ({ page }) => {
+    test.setTimeout(420_000);
+    page.setDefaultTimeout(8000);
+    const start = failures.length;
+    await page.emulateMedia({ colorScheme: theme });
+    const opened: string[] = [];
+    await page.route(
+      (u) => !/^(localhost|127\.0\.0\.1)$/.test(u.hostname),
+      (r) => r.abort(),
+    );
+    await page.exposeFunction("__crawlOpened3", (u: string) => opened.push(u));
+    await page.addInitScript(() => {
+      window.open = (url) => {
+        void (window as any).__crawlOpened3(String(url ?? ""));
+        return null;
+      };
+      let repo: any;
+      Object.defineProperty(window, "__vaultRepo", {
+        configurable: true,
+        get: () => repo,
+        set: (v) => {
+          repo = v;
+          v.reopenVault = async () => null;
+        },
+      });
+    });
+    for (const size of SETUP_SIZES) {
+      await page.setViewportSize({ width: size.w, height: size.h });
+      await freshSetup(page);
+      for (const id of SETUP_IDS) {
+        const where = `[${theme}] setup > ${id} @${size.w}`;
+        await gotoSetupStep(page, id);
+        // The step follows the system until the person picks a mode on Look.
+        const names = (await enumerate(setupRoot(page))).map((c) => ({
+          name: c.name,
+          tag: c.tag,
+        }));
+        for (const c of await enumerate(setupRoot(page))) {
+          seen.add(`${theme}|setup ${id}|${c.tag}|${c.name}|${c.id}`);
+          if (!c.name) {
+            fail(where, `${c.tag} has no accessible name`);
+          }
+          const ring = await focusRingProblem(page, c.id);
+          if (ring) {
+            fail(where, `${c.tag} "${c.name}": ${ring}`);
+          }
+        }
+        for (const p of await layoutProblems(page, '[data-testid="setup"]')) {
+          fail(where, p);
+        }
+        const scrollX = await page.evaluate(
+          () => document.documentElement.scrollWidth - innerWidth,
+        );
+        if (scrollX > 1) {
+          fail(where, `the page scrolls sideways by ${scrollX}px`);
+        }
+        const card = await page.evaluate(() => {
+          const r = document
+            .querySelector(".vault-setup__card")!
+            .getBoundingClientRect();
+          return { left: r.left, right: r.right };
+        });
+        if (card.left < -1 || card.right > size.w + 1) {
+          fail(where, "the card sticks out of the window");
+        }
+        const heading = await page.evaluate(
+          () => document.activeElement?.tagName,
+        );
+        if (heading !== "H1") {
+          fail(where, `focus is on ${heading}, not the heading, on arrival`);
+        }
+
+        // Escape goes back (the first step asks about skipping), twice returns.
+        if (id === "welcome") {
+          await page.keyboard.press("Escape");
+          await expect(
+            setupRoot(page).getByRole("heading", { name: "Skip the setup?" }),
+          ).toBeVisible();
+          await page.keyboard.press("Escape");
+          await expect(
+            setupRoot(page).getByRole("heading", {
+              name: /in a folder you own/,
+            }),
+          ).toBeVisible();
+        } else {
+          const prev = SETUP_IDS[SETUP_IDS.indexOf(id) - 1]!;
+          await page.keyboard.press("Escape");
+          if ((await setupStep(page)) !== prev) {
+            fail(where, `Escape did not go back to ${prev}`);
+          }
+          await gotoSetupStep(page, id);
+        }
+
+        // Click every control once, by its name; re-reach the step if the click left it.
+        const done = new Set<string>();
+        for (const n of names) {
+          const key = `${n.tag}|${n.name}`;
+          if (done.has(key) || DENY.test(n.name)) {
+            continue;
+          }
+          done.add(key);
+          await gotoSetupStep(page, id);
+          const el = (await enumerate(setupRoot(page))).find(
+            (c) => c.tag === n.tag && c.name === n.name,
+          );
+          if (!el) {
+            continue; // the page changed after an earlier click (accent swatches follow the theme)
+          }
+          const before = opened.length;
+          const label = `${n.tag} "${n.name}"`;
+          try {
+            await page
+              .locator(`[data-crawl-id="${el.id}"]`)
+              .first()
+              .click({ timeout: 1500 });
+          } catch (e) {
+            fail(
+              where,
+              `${label} cannot be clicked: ${String(e)
+                .replace(/\s+/g, " ")
+                .slice(0, 160)}`,
+            );
+            continue;
+          }
+          clicked++;
+          await page.waitForTimeout(80);
+          if (el.href && /^https?:/.test(el.href) && opened.length === before) {
+            fail(where, `${label} link ${el.href} did not reach the opener`);
+          }
+          // A control that opens a dialog (the theme browser): it sits above the setup, closes with Esc, and the setup stays.
+          if ((await popupVisible(page)) > 1) {
+            for (const p of await layoutProblems(page, '[role="dialog"]')) {
+              fail(where, `after ${label}: ${p}`);
+            }
+            await closePopups(page, where, label, 1);
+            if ((await setupStep(page)) !== id) {
+              fail(where, `after ${label} and Esc the setup left ${id}`);
+            }
+          }
+        }
+        console.log(
+          `CRAWL3 ${where}: ${names.length} controls, ${
+            failures.length - start
+          } failures so far`,
+        );
+      }
+    }
+    expect(
+      failures.slice(start),
+      "crawler failures on the setup screens (each line is a bug to fix or log)",
+    ).toEqual([]);
+  });
+}
