@@ -16,6 +16,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 - **The graph plugin's search matches accents like the app's search.** `ß`, `ø`, decomposed accents and the other look-alikes now fold the same way as the quick switcher, because plugins can call the app's fold (`ctx.text.fold`, plugin API 1.2, experimental; the graph plugin needs `min_api 1.2.0`). One copy of the fold now serves the app and plugins (toimprove 197 family).
 - **The Rename tag picker ignores accents and case like the rest of search.** Typing `cafe` finds `Café`, `strasse` finds `Straße`, and a decomposed `é` works (the filter used lower case only; toimprove 201 family).
+- **A task with a tab after its box is a task in the reading view.** `- [/]<tab>doing` was plain text there (and its box could not be ticked) although the import counted it; a tab now counts as the space, as in Obsidian.
 - **The hang watchdog keeps its web view alive (macOS).** It now holds a reference to the main web view and lets go when the window is destroyed, so a re-check can never touch a freed view (toimprove 243).
 - **"Insert as table" after a paste no longer removes your own text.** When the table paste was typed into an existing text box, the button replaced that text; it now swaps only the text the paste created.
 - **A favourite of a deleted element says so.** Opening it used to show the drawing and do nothing; now a notice reads "That element is no longer in the drawing".

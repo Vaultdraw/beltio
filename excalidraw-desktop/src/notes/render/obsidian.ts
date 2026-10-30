@@ -378,12 +378,12 @@ const CALLOUT = /^\[!([\w-]+)\]([+-]?)[ \t]*([^\n]*)(?:\n|$)/;
 
 /**
  * Obsidian's custom task statuses: any one character between the brackets (`- [/] doing`,
- * `- [-] cancelled`, `- [>] later`) is a ticked box, as `[x]` is (toimprove 216). marked knows only
+ * `- [-] cancelled`, `- [>] later`) is a ticked box, as `[x]` is (toimprove 216), and a tab after the bracket counts as the space (245). marked knows only
  * `[ ]` and `[x]`, so its list tokenizer runs with these two rules swapped in.
  */
 const TASK_RULES = {
-  listIsTask: /^\[[^\]\\\n]\] /,
-  listReplaceTask: /^\[[^\]\\\n]\] +/,
+  listIsTask: /^\[[^\]\\\n]\][ \t]/,
+  listReplaceTask: /^\[[^\]\\\n]\][ \t]+/,
 };
 /** The status character of a task item (`/` for `- [/] doing`), from its source. */
 const TASK_MARK = /^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+\[([^\]\\\n])\]/;
@@ -408,7 +408,14 @@ marked.use({
       const rules = tok.rules;
       tok.rules = { ...rules, other: { ...rules.other, ...TASK_RULES } };
       try {
-        return Tokenizer.prototype.list.call(this, src);
+        const list = Tokenizer.prototype.list.call(this, src);
+        // marked reads "open" as the exact text "[ ] "; a tab after the bracket is open too.
+        for (const item of list?.items ?? []) {
+          if (item.task && TASK_MARK.exec(item.raw)?.[1] === " ") {
+            item.checked = false;
+          }
+        }
+        return list;
       } finally {
         tok.rules = rules;
       }
