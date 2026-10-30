@@ -135,3 +135,34 @@ for (const width of SETTINGS_WIDTHS) {
     expect(errors).toEqual([]);
   });
 }
+
+// A-13: the Community themes dialog has a minimum width of about 485 px, so in windows between
+// 380 and 520 px wide it is wider than the window: it is centred, so both edges (and the close X's
+// breathing room) are cut off by up to 8 px (440 px window: x = -8). Every dialog in a 440 to 520 px
+// window should keep a margin, as the plugin browser (16 px each side) does.
+for (const width of [440, 460, 480, 500]) {
+  test(`A-13: the theme browser fits a ${width} px window`, async ({
+    page,
+  }) => {
+    test.fixme(
+      width < 500,
+      "A-13: theme browser dialog min-width wider than the window",
+    );
+    const errors = trackErrors(page);
+    await page.setViewportSize({ width, height: 700 });
+    await openVault(page);
+    await page.getByRole("button", { name: "Settings" }).first().click();
+    await page
+      .locator(".vault-settings-modal")
+      .getByRole("tab", { name: "Appearance", exact: true })
+      .click();
+    await page.getByRole("button", { name: "Install more themes…" }).click();
+    const dialog = page.getByTestId("theme-browser-dialog");
+    await expect(dialog).toBeVisible();
+    await page.waitForTimeout(1200);
+    const b = (await dialog.boundingBox())!;
+    expect(b.x, "left edge").toBeGreaterThanOrEqual(0);
+    expect(b.x + b.width, "right edge").toBeLessThanOrEqual(width);
+    expect(errors).toEqual([]);
+  });
+}
