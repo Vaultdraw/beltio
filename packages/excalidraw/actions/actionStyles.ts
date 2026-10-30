@@ -6,6 +6,8 @@ import {
   KEYS,
   getLineHeight,
   arrayToMap,
+  isPickedColor,
+  rolePickUpdate,
 } from "@excalidraw/common";
 
 import { newElementWith, syncStickyNoteInk } from "@excalidraw/element";
@@ -156,6 +158,15 @@ export const actionPasteStyles = register({
                 lineHeight: sourceText.lineHeight || getLineHeight(fontFamily),
               });
               newElement = newTextElement;
+              // the pasted colour is a pick unless it is a heading's own theme colour
+              newElement = newElementWith(
+                newElement,
+                rolePickUpdate(
+                  newElement,
+                  "strokeColor",
+                  isPickedColor(elementStylesToCopyFrom),
+                ),
+              );
 
               if (isStickyNoteBoundText(newTextElement, elementsMap)) {
                 // the copied stroke may be transparent; a note's label never is

@@ -8,6 +8,7 @@ import {
   arrayToMap,
   capitalizeString,
   isShallowEqual,
+  rolePickUpdate,
 } from "@excalidraw/common";
 
 import { getColorUpdate, mutateElement } from "@excalidraw/element";
@@ -552,11 +553,10 @@ const LayerUI = ({
                   includeBoundTextElement: property === "strokeColor",
                 });
                 for (const element of targets) {
-                  mutateElement(
-                    element,
-                    elementsMap,
-                    getColorUpdate(element, property, color, elementsMap),
-                  );
+                  mutateElement(element, elementsMap, {
+                    ...getColorUpdate(element, property, color, elementsMap),
+                    ...rolePickUpdate(element, property),
+                  });
                   ShapeCache.delete(element);
                 }
                 app.scene.triggerUpdate();

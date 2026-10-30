@@ -101,6 +101,7 @@ import {
   isSelectionLikeTool,
   oneOf,
   getStrokeWidthByKey,
+  rolePickUpdate,
 } from "@excalidraw/common";
 
 import {
@@ -3248,16 +3249,14 @@ class App extends React.Component<AppProps, AppState> {
               .map((element) => element.id),
           );
           this.updateScene({
-            elements: this.scene
-              .getElementsIncludingDeleted()
-              .map((el) =>
-                targetIds.has(el.id)
-                  ? newElementWith(
-                      el,
-                      getColorUpdate(el, property, color, elementsMap),
-                    )
-                  : el,
-              ),
+            elements: this.scene.getElementsIncludingDeleted().map((el) =>
+              targetIds.has(el.id)
+                ? newElementWith(el, {
+                    ...getColorUpdate(el, property, color, elementsMap),
+                    ...rolePickUpdate(el, property),
+                  })
+                : el,
+            ),
             captureUpdate: CaptureUpdateAction.IMMEDIATELY,
           });
         }

@@ -26,7 +26,7 @@ import {
   boldFontOf,
   isBoldFont,
   regularFontOf,
-  ROLE_COLOR_PICKED,
+  rolePickUpdate,
   type StrokeWidthKey,
 } from "@excalidraw/common";
 
@@ -394,14 +394,7 @@ export const actionChangeStrokeColor = register<
               ? newElementWith(el, {
                   ...getColorUpdate(el, "strokeColor", color, elementsMap),
                   // Vaultdraw: a picked colour wins over a text role's colour
-                  ...(el.type === "text" && el.customData?.role
-                    ? {
-                        customData: {
-                          ...el.customData,
-                          [ROLE_COLOR_PICKED]: true,
-                        },
-                      }
-                    : {}),
+                  ...rolePickUpdate(el, "strokeColor"),
                 })
               : el,
           true,

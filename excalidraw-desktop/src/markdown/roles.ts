@@ -4,6 +4,8 @@
  * same on excalidraw.com; the canvas draws each role in the active theme's
  * colour for it (see roleColors.ts). Shared with the Markdown import styling.
  */
+import { ROLE_COLOR_PICKED } from "@excalidraw/common";
+
 import type { ExcalidrawTextElement } from "@excalidraw/element/types";
 
 export const HEADING_ROLES = ["h1", "h2", "h3", "h4", "h5", "h6"] as const;
@@ -52,11 +54,19 @@ export const withRole = (
   role: string | null,
   base?: string,
 ): Record<string, unknown> | undefined => {
-  const { role: _old, roleBase: _oldBase, ...rest } = customData ?? {};
+  const {
+    role: _old,
+    roleBase: _oldBase,
+    // a text with no role keeps its colour as plain colour: the pick was about the role
+    [ROLE_COLOR_PICKED]: pickedBefore,
+    ...rest
+  } = customData ?? {};
   const own =
     base && !STOCK_TEXT_COLORS.includes(base.toLowerCase())
       ? { roleBase: base.toLowerCase() }
       : {};
-  const next = role ? { ...rest, role, ...own } : rest;
+  const kept =
+    role && pickedBefore ? { [ROLE_COLOR_PICKED]: pickedBefore } : {};
+  const next = role ? { ...rest, ...kept, role, ...own } : rest;
   return Object.keys(next).length ? next : undefined;
 };

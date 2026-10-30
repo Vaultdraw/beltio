@@ -142,6 +142,40 @@ export const setDisplayTextRoleColor = (
  */
 export const ROLE_COLOR_PICKED = "roleColorPicked";
 
+type RoleColorElement = {
+  type: string;
+  customData?: Record<string, unknown> | null;
+};
+
+/**
+ * The `customData` patch every writer of a text's stroke colour spreads into its update: a
+ * picked colour on a text with a role wins over the role's colour (toimprove 238, 256). Empty
+ * for any other element or property.
+ */
+export const rolePickUpdate = (
+  element: RoleColorElement,
+  property: string,
+  picked = true,
+): { customData?: Record<string, unknown> } => {
+  if (property !== "strokeColor" || element.type !== "text") {
+    return {};
+  }
+  const data = element.customData;
+  if (!data?.role) {
+    return {};
+  }
+  const { [ROLE_COLOR_PICKED]: _old, ...rest } = data;
+  return { customData: picked ? { ...rest, [ROLE_COLOR_PICKED]: true } : rest };
+};
+
+/**
+ * Whether a colour copied from `source` is a pick the target should keep: a source without a
+ * role has a colour of its own; a role source's colour is its own pick only if it was picked.
+ */
+export const isPickedColor = (source: RoleColorElement): boolean =>
+  !(source.type === "text" && source.customData?.role) ||
+  source.customData?.[ROLE_COLOR_PICKED] === true;
+
 /** On-screen colour of a text: its role's colour, else the stored one through the display filter. */
 export const getTextDisplayColor = (
   element: {

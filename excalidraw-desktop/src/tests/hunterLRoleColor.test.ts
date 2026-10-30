@@ -59,7 +59,7 @@ afterEach(() => setDisplayTextRoleColor(null));
 type T = OrderedExcalidrawElement & ExcalidrawTextElement;
 
 describe("hunter L-1: Paste styles onto a heading", () => {
-  it.fails("pasting a black body text's style makes the heading black", () => {
+  it("pasting a black body text's style makes the heading black", () => {
     setDisplayTextRoleColor(resolver);
     const body = {
       ...newTextElement({ text: "body", x: 0, y: 0, fontSize: 20 }),
@@ -157,30 +157,27 @@ describe("hunter L-2: a picked heading colour outlives the heading", () => {
     expect(getTextDisplayColor(el as never, false)).toBe(THEME_H1);
   });
 
-  it.fails(
-    "a heading made body text and a heading again takes the theme's colour too",
-    () => {
-      setDisplayTextRoleColor(resolver);
-      // a heading whose colour the user picked once (red, from the colour panel)
-      const el = {
-        ...red(),
-        fontSize: 40,
-        fontFamily: 105,
-        customData: {
-          role: "h1",
-          bodySize: 20,
-          [ROLE_COLOR_PICKED]: true,
-        } as Record<string, unknown>,
-      };
-      // Backspace at its start: body text again
-      const h = session(el);
-      h.caret(0);
-      expect(h.key("Backspace")).toBe(true);
-      expect(el.customData?.role).toBeUndefined();
-      // `# ` again: a heading, like any other red body text
-      makeHeading(el);
-      expect(el.customData).toMatchObject({ role: "h1" });
-      expect(getTextDisplayColor(el as never, false)).toBe(THEME_H1);
-    },
-  );
+  it("a heading made body text and a heading again takes the theme's colour too", () => {
+    setDisplayTextRoleColor(resolver);
+    // a heading whose colour the user picked once (red, from the colour panel)
+    const el = {
+      ...red(),
+      fontSize: 40,
+      fontFamily: 105,
+      customData: {
+        role: "h1",
+        bodySize: 20,
+        [ROLE_COLOR_PICKED]: true,
+      } as Record<string, unknown>,
+    };
+    // Backspace at its start: body text again
+    const h = session(el);
+    h.caret(0);
+    expect(h.key("Backspace")).toBe(true);
+    expect(el.customData?.role).toBeUndefined();
+    // `# ` again: a heading, like any other red body text
+    makeHeading(el);
+    expect(el.customData).toMatchObject({ role: "h1" });
+    expect(getTextDisplayColor(el as never, false)).toBe(THEME_H1);
+  });
 });
