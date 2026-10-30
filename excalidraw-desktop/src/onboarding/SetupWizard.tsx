@@ -16,7 +16,6 @@ import { defaultVaultChoice } from "./steps/Vault";
 import type { SetupEnv, VaultChoice } from "./types";
 
 import "../components/home.css";
-
 import "./setup.css";
 
 export interface SetupWizardProps {
@@ -98,8 +97,14 @@ export default function SetupWizard(props: SetupWizardProps) {
     }
   };
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const onKeyDown = (e: KeyboardEvent) => {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) {
+      return;
+    }
+    // Keys count while focus is in the setup or nowhere (after a click on empty space).
+    const t = e.target instanceof Node ? e.target : null;
+    if (t && t !== win.document.body && !rootRef.current?.contains(t)) {
       return;
     }
     if (e.key === "Enter" && !isButtonLike(e.target)) {
@@ -111,6 +116,15 @@ export default function SetupWizard(props: SetupWizardProps) {
     }
   };
 
+  // The latest handler, without re-binding the document listener on every render.
+  const keyRef = useRef(onKeyDown);
+  keyRef.current = onKeyDown;
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => keyRef.current(e);
+    win.document.addEventListener("keydown", handler);
+    return () => win.document.removeEventListener("keydown", handler);
+  }, [win]);
+
   const Body = step.Component;
   return (
     <div
@@ -120,7 +134,7 @@ export default function SetupWizard(props: SetupWizardProps) {
       aria-label="Setup"
       data-testid="setup"
       data-step={step.id}
-      onKeyDown={onKeyDown}
+      ref={rootRef}
     >
       <div className="vault-titlebar-drag" data-tauri-drag-region />
       {isCustomChrome(win) && (

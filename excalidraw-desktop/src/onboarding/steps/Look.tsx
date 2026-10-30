@@ -95,6 +95,7 @@ export const Look = ({ env }: StepProps) => {
         label="Theme"
         value={current}
         columns={2}
+        compact
         options={files.map((f) => {
           const c = builtinThemePreview(f.id)?.[mode];
           return {

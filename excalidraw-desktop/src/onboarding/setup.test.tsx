@@ -2,7 +2,13 @@
  * First-run setup: the step list, when it shows, every screen's writes,
  * skip at every step, back, keyboard only, Offline mode, the end action.
  */
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getPreferences, updatePreferences } from "../vault/preferences";
@@ -14,7 +20,9 @@ import { SETUP_STEPS } from "./steps";
 
 const noop = () => undefined;
 
-const mount = (over: Partial<React.ComponentProps<typeof SetupWizard>> = {}) => {
+const mount = (
+  over: Partial<React.ComponentProps<typeof SetupWizard>> = {},
+) => {
   const props = {
     win: window,
     hasVault: false,
@@ -32,7 +40,12 @@ const mount = (over: Partial<React.ComponentProps<typeof SetupWizard>> = {}) => 
 
 const wizard = () => screen.getByTestId("setup");
 const stepId = () => wizard().getAttribute("data-step");
-const next = () => fireEvent.click(screen.getByRole("button", { name: /^(Next|Get started|Open my vault|Finish|Choose a vault)/ }));
+const next = () =>
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: /^(Next|Get started|Open my vault|Finish|Choose a vault)/,
+    }),
+  );
 const goTo = (id: string) => {
   let guard = 0;
   while (stepId() !== id && guard++ < 10) {
@@ -52,11 +65,20 @@ afterEach(() => {
 });
 
 describe("when the setup shows", () => {
-  const base = { completed: false, recentVaults: [], lastVaultPath: null, testBuild: false };
+  const base = {
+    completed: false,
+    recentVaults: [],
+    lastVaultPath: null,
+    testBuild: false,
+  };
   it.each([
     ["fresh start", base, true],
     ["already finished", { ...base, completed: true }, false],
-    ["has a recent vault (older install)", { ...base, recentVaults: ["/a"] }, false],
+    [
+      "has a recent vault (older install)",
+      { ...base, recentVaults: ["/a"] },
+      false,
+    ],
     ["has a last vault", { ...base, lastVaultPath: "/a" }, false],
     ["perf or smoke build", { ...base, testBuild: true }, false],
   ])("%s", (_name, facts, expected) => {
@@ -72,7 +94,15 @@ describe("when the setup shows", () => {
 
 describe("the step list", () => {
   it("is Welcome, Look, Basics, Network, Extras, Vault, Done with unique ids", () => {
-    expect(SETUP_STEPS.map((s) => s.id)).toEqual(["welcome", "look", "basics", "network", "extras", "vault", "done"]);
+    expect(SETUP_STEPS.map((s) => s.id)).toEqual([
+      "welcome",
+      "look",
+      "basics",
+      "network",
+      "extras",
+      "vault",
+      "done",
+    ]);
     expect(new Set(SETUP_STEPS.map((s) => s.id)).size).toBe(SETUP_STEPS.length);
   });
 });
@@ -81,7 +111,11 @@ describe("walking through", () => {
   it("shows the pitch on the first screen and offers Skip setup but no Back", () => {
     mount();
     expect(stepId()).toBe("welcome");
-    expect(screen.getByRole("heading", { name: /Your Excalidraw drawings, in a folder you own/ })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", {
+        name: /Your Excalidraw drawings, in a folder you own/,
+      }),
+    ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Skip setup" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Back/ })).toBeNull();
   });
@@ -94,14 +128,29 @@ describe("walking through", () => {
     fireEvent.click(screen.getByRole("button", { name: /Back/ }));
     expect(stepId()).toBe("look");
     next();
-    expect((screen.getByRole("switch", { name: /Vim-style keys/ }) as HTMLInputElement).checked).toBe(true);
+    expect(
+      (
+        screen.getByRole("switch", {
+          name: /Vim-style keys/,
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
   });
 
   it("Skip setup works on every screen except the last, and marks it done", () => {
     for (const step of SETUP_STEPS.slice(0, -1)) {
       window.localStorage.clear();
       const { unmount } = render(
-        <SetupWizard win={window} hasVault={false} recentVaults={[]} lastVaultPath={null} onOpenVault={noop} onCreateVault={noop} onSelectRecent={noop} refreshAppearance={noop} />,
+        <SetupWizard
+          win={window}
+          hasVault={false}
+          recentVaults={[]}
+          lastVaultPath={null}
+          onOpenVault={noop}
+          onCreateVault={noop}
+          onSelectRecent={noop}
+          refreshAppearance={noop}
+        />,
       );
       goTo(step.id);
       fireEvent.click(screen.getByRole("button", { name: "Skip setup" }));
@@ -139,7 +188,11 @@ describe("each screen writes the config", () => {
     fireEvent.click(screen.getByRole("radio", { name: /Slow/ }));
     fireEvent.click(screen.getByRole("radio", { name: /^Clean/ }));
     const p = getPreferences(window);
-    expect([p.markdownTyping, p.autosaveDelayMs, p.defaultRoughness]).toEqual([true, 5000, 0]);
+    expect([p.markdownTyping, p.autosaveDelayMs, p.defaultRoughness]).toEqual([
+      true,
+      5000,
+      0,
+    ]);
   });
 
   it("Network: Offline mode on and off, and the browse link follows it", () => {
@@ -157,7 +210,9 @@ describe("each screen writes the config", () => {
     updatePreferences({ networkOffline: true }, window);
     mount();
     goTo("look");
-    expect(screen.queryByRole("button", { name: /Browse community themes/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /Browse community themes/ }),
+    ).toBeNull();
     expect(screen.getByText(/once Offline mode is off/)).toBeTruthy();
   });
 
@@ -169,25 +224,59 @@ describe("each screen writes the config", () => {
     fireEvent.click(sw);
     expect(getPreferences(window).extGraph).toBe(false);
     expect(getPreferences(window).aiEnabled).toBe(false);
-    expect(screen.getByTestId("setup-ai-note").textContent).toMatch(/AI assistant: off/);
+    expect(screen.getByTestId("setup-ai-note").textContent).toMatch(
+      /AI assistant: off/,
+    );
   });
 });
 
 describe("keyboard", () => {
   it("Enter goes next, Esc goes back, Esc on the first screen asks before skipping", () => {
     mount();
-    fireEvent.keyDown(wizard(), { key: "Enter" });
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Enter",
+    });
     expect(stepId()).toBe("look");
-    fireEvent.keyDown(wizard(), { key: "Escape" });
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
     expect(stepId()).toBe("welcome");
-    fireEvent.keyDown(wizard(), { key: "Escape" });
-    expect(screen.getByRole("heading", { name: "Skip the setup?" })).toBeTruthy();
-    fireEvent.keyDown(wizard(), { key: "Escape" });
-    expect(screen.queryByRole("heading", { name: "Skip the setup?" })).toBeNull();
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
+    expect(
+      screen.getByRole("heading", { name: "Skip the setup?" }),
+    ).toBeTruthy();
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
+    expect(
+      screen.queryByRole("heading", { name: "Skip the setup?" }),
+    ).toBeNull();
     expect(getPreferences(window).onboardingCompleted).toBe(false);
-    fireEvent.keyDown(wizard(), { key: "Escape" });
-    fireEvent.keyDown(wizard(), { key: "Enter" });
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Enter",
+    });
     expect(getPreferences(window).onboardingCompleted).toBe(true);
+  });
+
+  it("keys still work after a click on empty space left focus on the page", () => {
+    mount();
+    (document.activeElement as HTMLElement | null)?.blur();
+    fireEvent.keyDown(document.body, { key: "Enter" });
+    expect(stepId()).toBe("look");
+  });
+
+  it("keys typed elsewhere (another field outside the setup) are left alone", () => {
+    mount();
+    const other = document.createElement("input");
+    document.body.appendChild(other);
+    fireEvent.keyDown(other, { key: "Enter" });
+    expect(stepId()).toBe("welcome");
+    other.remove();
   });
 
   it("Enter on a focused button presses that button, not Next", () => {
@@ -230,9 +319,15 @@ describe("the vault step and the end", () => {
     expect(isSetupRequested()).toBe(false);
   });
   it("a recent vault is listed, preselected when it was the last, and reopened", async () => {
-    const p = mount({ recentVaults: ["/v/one", "/v/two"], lastVaultPath: "/v/two" });
+    const p = mount({
+      recentVaults: ["/v/one", "/v/two"],
+      lastVaultPath: "/v/two",
+    });
     goTo("vault");
-    expect((screen.getByRole("radio", { name: /\/v\/two/ }) as HTMLInputElement).checked).toBe(true);
+    expect(
+      (screen.getByRole("radio", { name: /\/v\/two/ }) as HTMLInputElement)
+        .checked,
+    ).toBe(true);
     next();
     await act(async () => {
       next();
@@ -242,9 +337,17 @@ describe("the vault step and the end", () => {
   it("re-run with a vault open keeps it, opens nothing, and shows the summary", async () => {
     const p = mount({ hasVault: true });
     goTo("vault");
-    expect((screen.getByRole("radio", { name: /Keep the vault/ }) as HTMLInputElement).checked).toBe(true);
+    expect(
+      (
+        screen.getByRole("radio", {
+          name: /Keep the vault/,
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
     next();
-    expect(screen.getByTestId("setup-summary").textContent).toMatch(/the open vault stays/);
+    expect(screen.getByTestId("setup-summary").textContent).toMatch(
+      /the open vault stays/,
+    );
     await act(async () => {
       next();
     });
@@ -260,10 +363,22 @@ describe("the vault step and the end", () => {
 
 describe("re-running keeps the current values", () => {
   it("opens on the values already in the config", () => {
-    updatePreferences({ notesVim: true, autosaveDelayMs: 2000, theme: "dark" }, window);
+    updatePreferences(
+      { notesVim: true, autosaveDelayMs: 2000, theme: "dark" },
+      window,
+    );
     mount({ hasVault: true });
     goTo("basics");
-    expect((screen.getByRole("switch", { name: /Vim-style keys/ }) as HTMLInputElement).checked).toBe(true);
-    expect((screen.getByRole("radio", { name: /Relaxed/ }) as HTMLInputElement).checked).toBe(true);
+    expect(
+      (
+        screen.getByRole("switch", {
+          name: /Vim-style keys/,
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+    expect(
+      (screen.getByRole("radio", { name: /Relaxed/ }) as HTMLInputElement)
+        .checked,
+    ).toBe(true);
   });
 });

@@ -8,6 +8,7 @@ export function ChoiceGroup<T extends string | number | boolean>({
   options,
   onChange,
   columns,
+  compact,
 }: {
   name: string;
   label: string;
@@ -21,6 +22,8 @@ export function ChoiceGroup<T extends string | number | boolean>({
   }[];
   onChange: (next: T) => void;
   columns?: number;
+  /** One row per choice (label beside its content). */
+  compact?: boolean;
 }) {
   return (
     <div
@@ -32,7 +35,9 @@ export function ChoiceGroup<T extends string | number | boolean>({
       {options.map((o) => (
         <label
           key={String(o.value)}
-          className="vault-setup__choice"
+          className={`vault-setup__choice${
+            compact ? " vault-setup__choice--theme" : ""
+          }`}
           data-selected={value === o.value || undefined}
           data-disabled={o.disabled || undefined}
         >

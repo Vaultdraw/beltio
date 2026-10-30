@@ -1959,6 +1959,18 @@
         }
       }
     },
+    "onboarding": {
+      "type": "object",
+      "description": "The first-run setup. See [First-run setup](#first-run-setup).",
+      "additionalProperties": false,
+      "properties": {
+        "completed": {
+          "description": "The first-run setup has been finished or skipped. `false` shows it again at the next start (an app that already has a recent vault never shows it by itself). The palette command **Run setup again** runs it any time.",
+          "default": false,
+          "type": "boolean"
+        }
+      }
+    },
     "updates": {
       "type": "object",
       "description": "The quiet update check. See [Network](#network).",

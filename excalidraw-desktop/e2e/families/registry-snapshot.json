@@ -3576,6 +3576,14 @@
    "palette": true
   },
   {
+   "id": "setup.run",
+   "title": "Run setup again",
+   "category": "Settings",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
    "id": "sync.compareWithConflictCopy",
    "title": "Sync: Compare with conflict copy",
    "category": "Sync",

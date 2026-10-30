@@ -9,7 +9,7 @@ import { expect, type Page } from "@playwright/test";
 
 import { test } from "./fixture";
 
-const SHOTS_DIR = "../../personal/feature/onboarding/shots";
+const SHOTS_DIR = "../personal/feature/onboarding/shots";
 
 const setup = (page: Page) => page.getByTestId("setup");
 const nextButton = (page: Page) => setup(page).locator(".vault-setup__primary");
@@ -25,6 +25,18 @@ const stored = (page: Page) =>
   });
 
 const fresh = async (page: Page) => {
+  // The harness reopens its fake vault by itself; a first launch has none to reopen.
+  await page.addInitScript(() => {
+    let repo: any;
+    Object.defineProperty(window, "__vaultRepo", {
+      configurable: true,
+      get: () => repo,
+      set: (v) => {
+        repo = v;
+        v.reopenVault = async () => null;
+      },
+    });
+  });
   await page.goto("/e2e.html");
   await expect(setup(page)).toBeVisible();
   await expect(setup(page)).toHaveAttribute("data-step", "welcome");
@@ -42,7 +54,7 @@ test("a full run by clicking: every screen, every choice in the config, the vaul
   await nextButton(page).click();
 
   await expect(setup(page)).toHaveAttribute("data-step", "look");
-  await setup(page).getByRole("radio", { name: "Dark" }).check();
+  await setup(page).getByRole("radio", { name: "Dark", exact: true }).check();
   await expect(page.locator("html")).toHaveClass(/dark/);
   await setup(page).getByRole("radio", { name: /Nord/ }).check();
   await expect(page.getByTestId("setup-preview")).toBeVisible();
@@ -114,11 +126,15 @@ test("keyboard only: Enter next, Esc back, Tab reaches the controls with a visib
   await page.keyboard.press("Escape");
   await expect(setup(page)).toHaveAttribute("data-step", "welcome");
   await page.keyboard.press("Enter");
-  // Tab lands on the first radio; arrows move inside the group.
-  await page.keyboard.press("Tab");
-  await expect(setup(page).getByRole("radio", { name: "Light" })).toBeFocused();
-  await page.keyboard.press("ArrowRight");
-  await expect(setup(page).getByRole("radio", { name: "Dark" })).toBeChecked();
+  // Arrows move inside a group (WebKit's Tab skips form controls by default, so focus it directly).
+  await setup(page).getByRole("radio", { name: "Follow system" }).focus();
+  await expect(
+    setup(page).getByRole("radio", { name: "Follow system" }),
+  ).toBeFocused();
+  await page.keyboard.press("ArrowLeft");
+  await expect(
+    setup(page).getByRole("radio", { name: "Dark", exact: true }),
+  ).toBeChecked();
   for (const id of ["basics", "network", "extras", "vault", "done"]) {
     await page.keyboard.press("Enter");
     await expect(setup(page)).toHaveAttribute("data-step", id);
@@ -154,13 +170,22 @@ test("Run setup again from the palette keeps the vault and the current values", 
 
   await page.keyboard.press("Meta+Shift+KeyP");
   const palette = page.getByRole("dialog", { name: "Command palette" });
-  await palette.getByRole("combobox").fill("Run setup again");
+  await expect(palette.getByRole("combobox")).toHaveValue(">");
+  await page.keyboard.type("Run setup again");
+  await expect(
+    palette.getByRole("option", { name: /Run setup again/ }),
+  ).toBeVisible();
   await page.keyboard.press("Enter");
   await expect(setup(page)).toBeVisible();
   await page.keyboard.press("Enter");
   await page.keyboard.press("Enter");
   await expect(setup(page)).toHaveAttribute("data-step", "basics");
-  await expect(setup(page).getByRole("radio", { name: /Quick/ })).toBeChecked();
+  await expect(
+    setup(page).getByRole("switch", { name: /Vim-style keys/ }),
+  ).not.toBeChecked();
+  await setup(page)
+    .getByRole("radio", { name: /Relaxed/ })
+    .check();
   for (let i = 0; i < 3; i++) {
     await page.keyboard.press("Enter");
   }
@@ -172,6 +197,7 @@ test("Run setup again from the palette keeps the vault and the current values", 
   await page.keyboard.press("Enter");
   await expect(setup(page)).toHaveCount(0);
   await expect(page.getByLabel("Vault file navigator")).toBeVisible();
+  expect(await stored(page)).toMatchObject({ autosaveDelayMs: 2000 });
 });
 
 const SHOTS = process.env.SETUP_SHOTS === "1";
@@ -198,7 +224,10 @@ for (const mode of ["light", "dark"] as const) {
       for (let i = 0; i < STEPS.length; i++) {
         if (STEPS[i] === "look") {
           await setup(page)
-            .getByRole("radio", { name: mode === "dark" ? "Dark" : "Light" })
+            .getByRole("radio", {
+              name: mode === "dark" ? "Dark" : "Light",
+              exact: true,
+            })
             .check();
         }
         await expect(setup(page)).toHaveAttribute("data-step", STEPS[i]!);

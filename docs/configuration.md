@@ -453,6 +453,16 @@ None has a default key; bind them on the Hotkeys page.
 - A theme with the same name as an installed one asks: **Replace** or **Keep both**. A theme you added by hand is never overwritten.
 - In the browser build, only direct file addresses work and themes are kept in the browser.
 
+#### First-run setup
+
+The first time Vaultdraw starts with no vault, a short setup asks one thing per screen: **Welcome**, **Look** (light, dark or follow the system, a theme, an accent colour, with a live preview), **Basics** (Vim-style keys in notes, Markdown mode in new drawings, how soon edits are saved, the line style of new shapes), **Network** (online or Offline mode, with a plain sentence for each online feature), **Extras** (the optional features, each with a switch; the AI assistant stays off) and **Vault** (open a folder, create one, open an Obsidian vault, or a recent vault; nothing in a folder changes until you save or import), then **Done**.
+
+- **Every answer is written to `config.toml` as you give it**, the same way Settings does, so it applies at once and you can edit it by hand later.
+- **Skip setup** is on every screen and keeps the defaults. **Enter** goes on, **Esc** goes back (on the first screen it asks whether to skip).
+- It shows by itself once. `onboarding.completed` records that it was finished or skipped; set it to `false` to see it again at the next start. An app that already has a recent vault never shows it by itself.
+- **Run setup again** (palette command `setup.run`, rebindable, no default key) opens it any time with your current values selected. It changes nothing until you answer.
+- It is a separate chunk that loads only when it shows, so after setup it costs nothing.
+
 #### Network
 
 The internet is on by default and nothing asks first. Vaultdraw connects only when you use a feature that needs it (browse or install themes and plugins, show a web picture) and, once after startup, to see whether a newer version exists. **Offline mode** turns all of that off in one place: **Settings → General → Offline mode**, the palette command `Offline mode: on or off` (rebindable), or `network.offline = true`. While it is on, a small **Offline** badge sits in the header (click it to turn Offline mode off), and each feature says why it is off, for example "Offline mode is on. Turn it off in Settings to browse plugins." No request leaves the app.
@@ -2310,6 +2320,14 @@ The internet is on by default and used only when you use a feature that needs it
 | `allow_images` | true | true or false |  | `false` turns web pictures off (imported and pasted pictures stay boxes). Absent or `true` shows them. |
 | `allow_updates` | true | true or false |  | `false` turns the update check off. Absent or `true` allows it. |
 | `allowed_hosts` | [] | a list of host names like ["themes.example.org"] |  | Extra hosts a download may contact, besides GitHub's own (`raw.githubusercontent.com`, `github.com`, `api.github.com`, `codeload.github.com`). Exact host names. Read only from `config.toml`: Settings, `vaultdraw config set` and the page never write it, so a script cannot add a host. |
+
+### `[onboarding]`
+
+The first-run setup. See [First-run setup](#first-run-setup).
+
+| Key | Default | Accepts | Per vault | What it does |
+| --- | --- | --- | --- | --- |
+| `completed` | `false` | true or false |  | The first-run setup has been finished or skipped. `false` shows it again at the next start (an app that already has a recent vault never shows it by itself). The palette command **Run setup again** runs it any time. |
 
 ### `[updates]`
 

@@ -4,8 +4,6 @@
   inset: 0;
   z-index: calc(var(--z-modal) - 10);
   display: flex;
-  align-items: center;
-  justify-content: center;
   box-sizing: border-box;
   padding: var(--vd-space-6) var(--vd-space-4);
   background: var(--vault-bg);
@@ -163,10 +161,17 @@
   font-size: var(--vd-fs-small);
 }
 
+.vault-setup__choice--theme {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--vd-space-3);
+  padding: var(--vd-space-2) var(--vd-space-3);
+}
+
 .vault-setup__swatches {
   display: flex;
+  flex: none;
   gap: 3px;
-  margin-bottom: 4px;
 }
 
 .vault-setup__swatches i {
@@ -457,12 +462,27 @@
   background: var(--vault-primary-hover, var(--vault-primary));
 }
 
+.vault-setup__primary .vault-kbd {
+  border-color: transparent;
+  background: transparent;
+  color: inherit;
+  opacity: 0.75;
+}
+
 .vault-setup__primary:disabled {
   opacity: var(--vd-disabled-opacity);
   cursor: default;
 }
 
+.vault-setup__choice--theme .vault-setup__choice-label {
+  overflow-wrap: normal;
+}
+
 @media (max-width: 480px) {
+  .vault-setup__choices:has(.vault-setup__choice--theme) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .vault-setup__foot {
     flex-direction: column-reverse;
     align-items: stretch;
