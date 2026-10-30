@@ -17,6 +17,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **A long note with no blank line opens at once.** A pasted log or CSV of 8,000 lines with no empty line took 7 seconds to show in the reading view (and grew four times slower for twice the text); it now takes about 0.1 second. The rendered result is unchanged.
 - **A note with old-Mac line ends (a lone CR) can be ticked.** Clicking a checkbox in the reading view did nothing in such a note. The note keeps its own line ends when it is saved.
 - **The external-AI switch is named "External AI tools" in the palette.** The two commands read **External AI tools: Toggle AI access** and **External AI tools: Toggle the AI tools interface (MCP)**, so they are not mixed up with the AI assistant's "AI:" commands. The command ids are unchanged, so existing key bindings still work.
 - **The Graph's local graph key is ⌘⌥O (Ctrl+Alt+O on Linux), not ⌘⌥L.** Ctrl+Alt+L is the lock-screen key on KDE, Xfce and Cinnamon, so the key never reached Vaultdraw there. Change it in Settings → Hotkeys or `[hotkeys]`.

@@ -75,10 +75,31 @@ export function splitWikilink(inner: string): {
   return { target: ref.trim(), heading, blockRef, alias };
 }
 
+/**
+ * An inline extension's `start()`: where the first `needle` is, looking only as far as the first
+ * space, tab or newline; if the first word has none, the first whitespace itself (-1 when there is
+ * no whitespace left). Marked asks every `start()` for each plain-text token, and `indexOf` over the
+ * rest of the paragraph made one long paragraph with no blank line quadratic (toimprove 294).
+ * Pointing at an earlier place is always safe: the text token just ends sooner and marked glues the
+ * pieces back, so the output is the same. No needle holds whitespace, and the text rule never
+ * reads across it, so the cut changes no token.
+ */
+const WORD_END = /[ \t\n]/;
+const wordStart =
+  (needle: string, on: () => boolean = () => true) =>
+  (src: string): number => {
+    if (!on()) {
+      return -1;
+    }
+    const end = src.search(WORD_END);
+    const i = (end < 0 ? src : src.slice(0, end)).indexOf(needle);
+    return i >= 0 ? i : end;
+  };
+
 const wikilink: TokenizerAndRendererExtension = {
   name: "wikilink",
   level: "inline",
-  start: (src) => src.indexOf("[["),
+  start: wordStart("[["),
   tokenizer(src) {
     const m = /^\[\[([^\]\n]+)\]\]/.exec(src);
     return m ? { type: "wikilink", raw: m[0], inner: m[1] } : undefined;
@@ -113,7 +134,7 @@ const wikilink: TokenizerAndRendererExtension = {
 const embed: TokenizerAndRendererExtension = {
   name: "wikiembed",
   level: "inline",
-  start: (src) => src.indexOf("![["),
+  start: wordStart("![["),
   tokenizer(src) {
     const m = /^!\[\[([^\]\n]+)\]\]/.exec(src);
     return m ? { type: "wikiembed", raw: m[0], inner: m[1] } : undefined;
@@ -153,7 +174,7 @@ const TAG_LOOKAHEAD = 4 * MAX_TAG_CHARS + 2;
 const tag: TokenizerAndRendererExtension = {
   name: "notetag",
   level: "inline",
-  start: (src) => src.indexOf("#"),
+  start: wordStart("#"),
   // The tag pane's own grammar (tags/grammar.ts, the port of search/tags.rs), so a chip is always
   // a tag the pane lists and a click finds it (toimprove 217). The character before `#` is the
   // end of the token before it.
@@ -178,7 +199,7 @@ const tag: TokenizerAndRendererExtension = {
 const highlight: TokenizerAndRendererExtension = {
   name: "notemark",
   level: "inline",
-  start: (src) => src.indexOf("=="),
+  start: wordStart("=="),
   tokenizer(src) {
     const m = /^==(?=\S)([^\n]*?\S)==/.exec(src);
     return m
@@ -198,7 +219,7 @@ const highlight: TokenizerAndRendererExtension = {
 const inlineMath: TokenizerAndRendererExtension = {
   name: "inlinemath",
   level: "inline",
-  start: (src) => (ctx.math ? src.indexOf("$") : -1),
+  start: wordStart("$", () => ctx.math),
   tokenizer(src) {
     if (!ctx.math) {
       return undefined;
@@ -284,7 +305,7 @@ const commentBlock: TokenizerAndRendererExtension = {
 const commentInline: TokenizerAndRendererExtension = {
   name: "notecomment",
   level: "inline",
-  start: (src) => src.indexOf("%%"),
+  start: wordStart("%%"),
   tokenizer(src) {
     const m = /^%%[\s\S]+?%%/.exec(src);
     return m ? { type: "notecomment", raw: m[0] } : undefined;
@@ -293,13 +314,13 @@ const commentInline: TokenizerAndRendererExtension = {
 };
 
 /** A trailing ` ^block-id` (the target of `[[note#^id]]`): the marker is not shown. */
+const BLOCK_ID_HERE = /^\^[A-Za-z0-9-]+[ \t]*(?:\n|$)/;
 const blockId: TokenizerAndRendererExtension = {
   name: "noteblockid",
   level: "inline",
-  start: (src) => {
-    const m = /(?:^|[ \t])\^[A-Za-z0-9-]+[ \t]*(?:\n|$)/.exec(src);
-    return m ? src.indexOf("^", m.index) : -1;
-  },
+  // A marker is at the very start or after whitespace: this start is 0 for a marker right here,
+  // else the first whitespace (the marker, if any, comes after it; toimprove 294).
+  start: (src) => (BLOCK_ID_HERE.test(src) ? 0 : src.search(WORD_END)),
   tokenizer(src) {
     const m = /^\^[A-Za-z0-9-]+[ \t]*(?=\n|$)/.exec(src);
     return m
@@ -348,7 +369,7 @@ const footnoteDef: TokenizerAndRendererExtension = {
 const footnoteRef: TokenizerAndRendererExtension = {
   name: "footnoteref",
   level: "inline",
-  start: (src) => src.indexOf("[^"),
+  start: wordStart("[^"),
   tokenizer(src) {
     const m = /^\[\^([^\]\s]+)\](?!:)/.exec(src);
     return m ? { type: "footnoteref", raw: m[0], id: m[1] } : undefined;

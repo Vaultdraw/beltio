@@ -6,7 +6,7 @@
  * 0.47 s, 8,000 lines 7.4 s (ratio 15.7 for 4x the text). Cause: the inline extensions' `start()`
  * (obsidian.ts: `src.indexOf("[[")`, "![[", "#", "==", "$", "%%", "[^") scan the whole rest of
  * the paragraph for every text token, and marked makes one text token per stretch of plain text.
- * Obsidian opens such a note at once. `it.fails` turns red when it is fixed: drop `fails`.
+ * Fixed (toimprove 294): the inline `start()`s look only as far as the first whitespace.
  */
 import { describe, expect, it } from "vitest";
 
@@ -21,16 +21,12 @@ const lines = (n: number, f: (i: number) => string) =>
   Array.from({ length: n }, (_, i) => f(i)).join("\n");
 
 describe("launch hunter 3: render time of a note with no blank line grows linearly", () => {
-  it.fails(
-    "one paragraph of 1,000 vs 4,000 lines: under 8x for 4x the text",
-    () => {
-      const f = (i: number) =>
-        `log line ${i} with [[Welcome]] and #tag and ==mark==`;
-      time(lines(200, f));
-      const a = time(lines(1000, f));
-      const b = time(lines(4000, f));
-      expect(b / Math.max(a, 1)).toBeLessThan(8);
-    },
-    60_000,
-  );
+  it("one paragraph of 1,000 vs 4,000 lines: under 8x for 4x the text", () => {
+    const f = (i: number) =>
+      `log line ${i} with [[Welcome]] and #tag and ==mark==`;
+    time(lines(200, f));
+    const a = time(lines(1000, f));
+    const b = time(lines(4000, f));
+    expect(b / Math.max(a, 1)).toBeLessThan(8);
+  }, 60_000);
 });
