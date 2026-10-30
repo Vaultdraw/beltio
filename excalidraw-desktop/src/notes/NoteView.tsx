@@ -51,6 +51,7 @@ import { createNoteLinkIndex, newNotePathForLink } from "./noteLinks";
 import { taskLines, toggleTask } from "./noteTasks";
 import { NoteSaver, type SaveStatus } from "./noteSaver";
 import { registerOpenNote } from "./openNotes";
+import { resolveRelativeHref } from "./relativeLink";
 import { NOTES_ACTIVE_KEY, NOTES_COMMAND_IDS as ID } from "./notesCommands";
 import {
   hydrateEmbeds,
@@ -410,6 +411,24 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
         return;
       }
       if (!a.classList.contains("wikilink")) {
+        // An ordinary Markdown link: never let the window navigate to it. A link to a file in the
+        // vault opens it (a heading after # is scrolled to); anything else does nothing.
+        e.preventDefault();
+        const to = resolveRelativeHref(
+          path,
+          a.getAttribute("href") ?? "",
+          vault.paths(),
+        );
+        if (to) {
+          if (to.heading) {
+            queueAnchor(to.path, { heading: to.heading });
+          }
+          if (to.path !== path) {
+            openPath(to.path, {
+              target: e.metaKey || e.ctrlKey ? "new" : "current",
+            });
+          }
+        }
         return;
       }
       e.preventDefault();
@@ -449,7 +468,7 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
             }),
         );
     },
-    [openPath, openSearch, tickTask, path, handle],
+    [openPath, openSearch, tickTask, path, handle, vault],
   );
 
   // ---- commands ----------------------------------------------------------

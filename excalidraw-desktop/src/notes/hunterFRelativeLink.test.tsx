@@ -50,7 +50,7 @@ afterEach(() => {
 });
 
 describe("hunter F-17: a Markdown link to a note in the reading view", () => {
-  it.fails("opens the note and never lets the window navigate", async () => {
+  it("opens the note and never lets the window navigate", async () => {
     const open = vi.fn();
     render(<NoteView path="n.md" openPath={open} vault={vault} />);
     await screen.findByTestId("note-reading");
@@ -60,7 +60,7 @@ describe("hunter F-17: a Markdown link to a note in the reading view", () => {
     expect(navigated).toBe(false);
     expect(open).toHaveBeenLastCalledWith("Other.md", { target: "current" });
   });
-  it.fails("the same for a percent-encoded name", async () => {
+  it("the same for a percent-encoded name", async () => {
     const open = vi.fn();
     render(<NoteView path="n.md" openPath={open} vault={vault} />);
     await screen.findByTestId("note-reading");
