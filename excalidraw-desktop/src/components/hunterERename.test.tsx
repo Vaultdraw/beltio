@@ -23,24 +23,21 @@ const submit = (name: string) => {
 };
 
 describe("hunter E: Rename dialog", () => {
-  it.fails(
-    "E-6 an unchanged name renames nothing and asks the host for nothing",
-    () => {
-      const onRename = vi.fn();
-      render(
-        <RenameModal
-          initialName="Idea.excalidraw"
-          kind="drawing"
-          onRename={onRename}
-          onCancel={() => undefined}
-        />,
-      );
-      fireEvent.click(screen.getByRole("button", { name: "Rename" }));
-      expect(onRename).not.toHaveBeenCalled();
-    },
-  );
+  it("E-6 an unchanged name renames nothing and asks the host for nothing", () => {
+    const onRename = vi.fn();
+    render(
+      <RenameModal
+        initialName="Idea.excalidraw"
+        kind="drawing"
+        onRename={onRename}
+        onCancel={() => undefined}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
+    expect(onRename).not.toHaveBeenCalled();
+  });
 
-  it.fails("E-7 a typed extension is not added twice", () => {
+  it("E-7 a typed extension is not added twice", () => {
     const onRename = vi.fn();
     render(
       <RenameModal
@@ -54,7 +51,7 @@ describe("hunter E: Rename dialog", () => {
     expect(onRename).toHaveBeenCalledWith("Plan.excalidraw");
   });
 
-  it.fails("E-7b a note typed with .md is not renamed to .md.md", () => {
+  it("E-7b a note typed with .md is not renamed to .md.md", () => {
     const onRename = vi.fn();
     render(
       <RenameModal

@@ -23,6 +23,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Rename is quieter and exact.** Pressing Rename with the name unchanged closes the dialog (it used to end in a red "Couldn't rename … Cannot move an entry into itself"), and typing the extension yourself (`Plan.excalidraw`, `Plan.md`) no longer adds it twice.
 - **Number settings with a fractional step no longer get stuck.** The up and down arrows on a setting such as **PDF JPEG quality** (default 0.85, step 0.05) did nothing at 0.6, 0.7, 0.85 and 0.95 going up, and at 0.55 and 0.65 going down; every step of 0.1, 0.05 or 0.01 (plugin settings too) now moves one clean step.
 - **Web pictures in a note's reading view show by default.** `notes.remote_images` is now on (it was left over from the ask-first rule). Pictures load through the app's checked download (public `http(s)` addresses only, picture bytes, 10 MiB); `notes.remote_images = false`, `network.allow_images = false` or Offline mode shows the alt text instead and makes no request.
 - **Text no longer runs out of the page or jumps while you type in page mode.** A text typed near the page's right edge used to grow past the page and shift sideways with every key, and ended up wider than the page. It now wraps at the page's edge and stays where it is (Markdown mode on or off).

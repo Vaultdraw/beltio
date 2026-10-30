@@ -38,7 +38,21 @@ export const RenameModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const targetName = `${name.trim()}${extension}`;
+    // A typed extension is not added twice (the hint says it is kept automatically).
+    let typed = name.trim();
+    if (
+      extension &&
+      typed.length > extension.length &&
+      typed.toLowerCase().endsWith(extension.toLowerCase())
+    ) {
+      typed = typed.slice(0, typed.length - extension.length).trim();
+    }
+    // Nothing changed: close quietly, like Obsidian and Zed (the core refuses a move onto itself).
+    if (typed === cleanInitial) {
+      onCancel();
+      return;
+    }
+    const targetName = `${typed}${extension}`;
     const validation = validateEntryName(
       targetName,
       kind === "folder" ? "folder" : "drawing",
