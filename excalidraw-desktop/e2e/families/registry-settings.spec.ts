@@ -53,7 +53,6 @@ const KNOWN: { id: RegExp; match: RegExp; bug: string }[] = [
     "network-themes",
     "network-plugins",
     "colour-theme",
-    "pdf-quality",
     "ai-enabled",
   ].map((id) => ({
     id: new RegExp(`^${id}$`),
