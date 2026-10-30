@@ -1087,7 +1087,9 @@ Type Markdown on the canvas, like in Obsidian or Notion. With Markdown mode on, 
 - **Works with any text box:** free text, and text inside a shape (a shape's label converts in place and never splits).
 - **Pasting** text with `#` keeps it as plain text.
 - **Files stay normal Excalidraw files.** A heading or quote stores its role (`customData.role`: `"h1"` … `"h6"`, `"quote"`) and its size; on excalidraw.com it shows as larger text in the normal text colour. List and task markers are plain characters (`•`, `☐`, `☑`), as the Markdown import writes them. PNG and SVG exports use the stored colour too.
-- **Colours come from the theme:** heading 1 the theme's primary colour, heading 2 secondary, heading 3 tertiary, headings 4 to 6 its blue, magenta and cyan, quotes its muted text colour, each made readable (at least 4.5:1) on the canvas shown.
+- **Colours come from the theme:** headings in the theme's `markdown.h1` … `h6` colours (or derived from its accents), quotes in the muted grey an imported quote gets, each made readable (at least 4.5:1) when the canvas shown is not the theme's page. A colour you pick on a heading afterwards is kept.
+- **Your text defaults carry over.** A heading, list or quote starts from the text tool's defaults (**Settings → Tools → Text**): its font (headings use the bold face of it), size (headings are `h1_size` … times it), alignment, line height and opacity. Your default text colour is the colour of normal text only: headings and quotes are drawn in the theme's Markdown colours, like Obsidian's `--h1-color`, so a green text default does not turn every heading green. The file remembers your colour (`customData.roleBase`) so a heading turned back into normal text keeps it.
+- **In page mode a text wraps at the page's edge.** A free text you type stays inside the page (it wraps instead of growing past the edge or jumping sideways), in or out of Markdown mode. Outside page mode the text still wraps at the edge of the view.
 - Bold, italic and inline code come later.
 
 ## Tool defaults

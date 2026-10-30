@@ -21,6 +21,12 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 - **Plugin API 0.32.0: page item groups and strong lines.** `ctx.pages` items take `group` (items with one name become one group in the editor, across appends) and lines take `strong` (twice the width).
 
+### Fixed
+
+- **Text no longer runs out of the page or jumps while you type in page mode.** A text typed near the page's right edge used to grow past the page and shift sideways with every key, and ended up wider than the page. It now wraps at the page's edge and stays where it is (Markdown mode on or off).
+- **Your text colour no longer turns headings and quotes into plain text.** With a text default colour set (Settings → Tools → Text), Markdown headings and quotes kept that colour and lost the theme's heading colours. They now take the theme's colours; font, size, alignment and line height still come from your defaults, and a colour you pick on a heading afterwards is kept.
+- **A typed quote and an imported quote are the same colour** in every theme.
+
 ### Changed
 
 - **No more internet permission prompts.** The question before downloading themes, browsing community plugins or showing web pictures is gone (the native Allow / Don't Allow dialog and the in-app Allow step); the safety checks stay (http or https only, no private or local address, size limits, timeouts).

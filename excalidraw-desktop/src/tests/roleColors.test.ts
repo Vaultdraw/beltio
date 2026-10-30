@@ -108,45 +108,75 @@ describe("imported and typed headings", () => {
 // whether or not the canvas syncs with the theme (toimprove 163).
 describe("every role colour follows the active theme", () => {
   const ROLES = [
-    "h1", "h2", "h3", "h4", "h5", "h6", "quote", "link", "code", "bold", "italic",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "quote",
+    "link",
+    "code",
+    "bold",
+    "italic",
   ];
   const everyVariant = themes.flatMap((t) =>
     MODES.map((m) => [`${t.id} ${m}`, t[m]] as const),
   );
 
-  it.each(everyVariant)("%s: on the theme's page each role is its token", (_n, v) => {
-    const resolve = buildRoleColor(v, v.mSurface);
-    for (const role of ROLES) {
-      const token = roleTokenColor(v, role);
-      expect(token, role).toMatch(/^#[0-9a-f]{6}$/i);
-      expect(resolve(role, "#1e1e1e"), role).toBe(token);
-    }
-    for (const r of ["h1", "h2", "h3", "h4", "h5", "h6", "link", "code", "bold", "italic"] as const) {
-      expect(roleTokenColor(v, r), r).toBe(markdownColors(v)[r]);
-    }
-  });
-
-  it.each(everyVariant)("%s: off the theme's page each role reads at 4.5:1", (_n, v) => {
-    for (const canvas of ["#ffffff", "#121212"]) {
-      if (canvas === v.mSurface) {
-        continue; // the theme's own page: its colours as written
-      }
-      const resolve = buildRoleColor(v, canvas);
+  it.each(everyVariant)(
+    "%s: on the theme's page each role is its token",
+    (_n, v) => {
+      const resolve = buildRoleColor(v, v.mSurface);
       for (const role of ROLES) {
-        const got = resolve(role, "#1e1e1e")!;
-        expect(got, `${role} on ${canvas}`).toBe(
-          ensureContrast(roleTokenColor(v, role)!, canvas, 4.5),
-        );
+        const token = roleTokenColor(v, role);
+        expect(token, role).toMatch(/^#[0-9a-f]{6}$/i);
+        expect(resolve(role, "#1e1e1e"), role).toBe(token);
       }
-    }
-  });
+      for (const r of [
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "link",
+        "code",
+        "bold",
+        "italic",
+      ] as const) {
+        expect(roleTokenColor(v, r), r).toBe(markdownColors(v)[r]);
+      }
+    },
+  );
 
-  it.each(everyVariant)("%s: a typed quote is the colour an imported quote gets", (_n, v) => {
-    // the import draws a quote's text in its muted tone (gray 600), which the theme paints
-    expect(roleTokenColor(v, "quote")).toBe(
-      buildCanvasPaletteMap(v).get("#868e96"),
-    );
-  });
+  it.each(everyVariant)(
+    "%s: off the theme's page each role reads at 4.5:1",
+    (_n, v) => {
+      for (const canvas of ["#ffffff", "#121212"]) {
+        if (canvas === v.mSurface) {
+          continue; // the theme's own page: its colours as written
+        }
+        const resolve = buildRoleColor(v, canvas);
+        for (const role of ROLES) {
+          const got = resolve(role, "#1e1e1e")!;
+          expect(got, `${role} on ${canvas}`).toBe(
+            ensureContrast(roleTokenColor(v, role)!, canvas, 4.5),
+          );
+        }
+      }
+    },
+  );
+
+  it.each(everyVariant)(
+    "%s: a typed quote is the colour an imported quote gets",
+    (_n, v) => {
+      // the import draws a quote's text in its muted tone (gray 600), which the theme paints
+      expect(roleTokenColor(v, "quote")).toBe(
+        buildCanvasPaletteMap(v).get("#868e96"),
+      );
+    },
+  );
 
   it("a user's own text colour does not hide the role colour, a later pick does", () => {
     const v = variantOf("default", "dark");
