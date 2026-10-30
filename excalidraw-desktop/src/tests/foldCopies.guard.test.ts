@@ -108,3 +108,43 @@ describe("guard: name filters fold accents", () => {
     },
   );
 });
+
+/**
+ * Third and fourth members (validator, 2026-10-30 evening, V-4 / toimprove 214): a second copy of
+ * foldKey's letter table (`.replace(/ß/…)`, æ, œ, ø, ł, đ, ı) drifts from the index; and foldKey
+ * applied one character at a time never composes a decomposed name (Korean jamo, "か" + U+3099),
+ * so Cmd+P missed names the vault search finds. Fold whole strings or grapheme clusters only.
+ */
+const ALL_DIRS = [...DIRS, join(ROOT, "../sdk")];
+const TABLE_COPY = /\.replace\(\s*\/[ßæœøłđı]/;
+const PIECEWISE = /\b(?:fold|foldKey)\(\s*(?:ch|c|char)\s*\)/;
+const PIECEWISE_KNOWN: Record<string, string> = {
+  "src/commands/fuzzy.ts": "toimprove 214 (Cmd+P folds per code unit)",
+};
+
+describe("guard: one fold table, applied to whole names", () => {
+  const files = ALL_DIRS.flatMap((d) => walk(d)).map((f) => ({
+    rel: relative(ROOT, f).split("\\").join("/"),
+    text: readFileSync(f, "utf8"),
+  }));
+  it("no copy of foldKey's letter table outside foldKey.ts", () => {
+    expect(
+      files
+        .filter((f) => f.rel !== "src/search/foldKey.ts")
+        .filter((f) => TABLE_COPY.test(f.text))
+        .map((f) => f.rel),
+    ).toEqual([]);
+  });
+  const piecewise = files
+    .filter((f) => PIECEWISE.test(f.text))
+    .map((f) => f.rel);
+  it("no new per-character fold", () => {
+    expect(piecewise.filter((f) => !PIECEWISE_KNOWN[f])).toEqual([]);
+  });
+  it.fails(
+    "no per-character fold left (empty PIECEWISE_KNOWN with 214)",
+    () => {
+      expect(piecewise).toEqual([]);
+    },
+  );
+});
