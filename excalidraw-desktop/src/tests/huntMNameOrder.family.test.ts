@@ -38,7 +38,7 @@ describe("family: every list of names follows the tree's order (toimprove M-11)"
     );
   });
 
-  it.fails(
+  it(
     "the template picker lists vault and global templates in the tree's order",
     async () => {
       const entry = (name: string) => ({
@@ -68,7 +68,7 @@ describe("family: every list of names follows the tree's order (toimprove M-11)"
     },
   );
 
-  it.fails("the tags panel orders child tags in the tree's order", () => {
+  it("the tags panel orders child tags in the tree's order", () => {
     const kids = ["10", "2", "1"];
     const tree = buildTagTree(
       [

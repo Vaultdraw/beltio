@@ -35,12 +35,16 @@ const collator = new Intl.Collator(undefined, {
   sensitivity: "base",
 });
 
+/** Natural order for any list of names the user picks from ("Meeting 2" before "Meeting 10"). */
+export const naturalCompare = (a: string, b: string): number =>
+  collator.compare(a, b);
+
 /**
  * Compare by the name the row shows (without `.excalidraw` / `.md`), so "Untitled" comes before
  * "Untitled 2" as in Zed and Obsidian; the full file name only breaks ties ("Plan.md" and
  * "Plan.excalidraw").
  */
-const compareNames = (a: string, b: string): number =>
+export const compareNames = (a: string, b: string): number =>
   collator.compare(entryDisplayName(a), entryDisplayName(b)) ||
   collator.compare(a, b);
 

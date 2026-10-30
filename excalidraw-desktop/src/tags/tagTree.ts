@@ -1,3 +1,5 @@
+import { naturalCompare } from "../vault/sortOrder";
+
 import type { TagCount, TagSort } from "./types";
 
 export type TagNode = {
@@ -51,8 +53,8 @@ export function buildTagTree(
       attach(node(t.tag, t.display, t.count));
     }
   }
-  const byName = (a: TagNode, b: TagNode) =>
-    a.label.toLowerCase().localeCompare(b.label.toLowerCase());
+  // the file tree's order, so "sprint/2" comes before "sprint/10" (toimprove 261)
+  const byName = (a: TagNode, b: TagNode) => naturalCompare(a.label, b.label);
   // Count sort: most drawings first, name breaks ties. Applied at every level.
   const order =
     sort === "count"

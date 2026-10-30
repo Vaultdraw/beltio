@@ -1,13 +1,14 @@
 import { DRAWING_EXT } from "../vault/fileKind";
+import { compareNames } from "../vault/sortOrder";
 import { errorMessage, type VaultRepository } from "../vault/types";
 
 import type { GlobalTemplateStore, TemplateEntry } from "./types";
 
 const EXT = DRAWING_EXT;
 
+// the file tree's order, so "Meeting 2" comes before "Meeting 10" (toimprove 261)
 const byName = (a: TemplateEntry, b: TemplateEntry) =>
-  a.name.toLowerCase().localeCompare(b.name.toLowerCase()) ||
-  a.name.localeCompare(b.name);
+  compareNames(a.name, b.name);
 
 const stripExt = (file: string) =>
   file.toLowerCase().endsWith(EXT) ? file.slice(0, -EXT.length) : file;
