@@ -244,7 +244,7 @@ export function printEnvLines({ configDir }) {
 }
 
 const NEXT_STEPS =
-  "In Vaultdraw: Cmd+P, Plugins: Reload plugin list; then Settings, Plugins, enable the plugin. After that, saves reload it by itself.";
+  "In Vaultdraw: Cmd+Shift+P (Ctrl+Shift+P on Linux), Plugins: Reload plugin list; then Settings, Plugins, enable the plugin. After that, saves reload it by itself.";
 
 /**
  * @param {string | undefined} dir

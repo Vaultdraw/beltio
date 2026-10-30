@@ -45,7 +45,7 @@ $VP dev .
 
 ```
 Installed my-hello in ~/.config/vaultdraw/plugins/my-hello
-In Vaultdraw: Cmd+P, Plugins: Reload plugin list; then Settings, Plugins, enable the plugin. After that, saves reload it by itself.
+In Vaultdraw: Cmd+Shift+P (Ctrl+Shift+P on Linux), Plugins: Reload plugin list; then Settings, Plugins, enable the plugin. After that, saves reload it by itself.
 Watching /…/my-hello. Press Ctrl+C to stop.
 Dev log: ~/.local/state/vaultdraw/plugin-logs/my-hello.log (new lines are shown here)
 ```
@@ -54,10 +54,10 @@ Dev log: ~/.local/state/vaultdraw/plugin-logs/my-hello.log (new lines are shown 
 
 Do these once, in the app:
 
-1. Press **Cmd+P** and run **Plugins: Reload plugin list**.
+1. Press **Cmd+Shift+P** (Ctrl+Shift+P on Linux) and run **Plugins: Reload plugin list**.
 2. Open **Settings, Plugins** and switch **My Hello** on.
 3. A plugin that is not bundled shows an Unverified badge. The first time you enable it, a consent prompt appears, because plugins run with full access. Allow it. A plugin you have not confirmed stays off, even if `plugins.enabled` lists it, and shows "Needs review". A plugin cannot reuse an official plugin's id unless it sets `dev = true`.
-4. Press **Cmd+P** and run **Hello: say hello** (or press Cmd+Alt+Shift+H). A toast says `Hello, Vaultdraw!`.
+4. Press **Cmd+Shift+P** (Ctrl+Shift+P on Linux) and run **Hello: say hello** (or press Cmd+Alt+Shift+H). A toast says `Hello, Vaultdraw!`.
 
 Not sure where the files went? Run **Plugins: Open plugins folder** from the palette.
 

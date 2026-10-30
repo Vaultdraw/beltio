@@ -113,7 +113,7 @@ A Vaultdraw plugin.
 ## Develop
 
 1. \`vaultdraw-plugin dev .\` copies this folder into your plugins folder and keeps it up to date on every save.
-2. In Vaultdraw, press Cmd+P, run "Plugins: Reload plugin list", then enable the plugin in Settings, Plugins.
+2. In Vaultdraw, press Cmd+Shift+P (Ctrl+Shift+P on Linux), run "Plugins: Reload plugin list", then enable the plugin in Settings, Plugins.
 3. \`vaultdraw-plugin check .\` runs the static checks (also useful in CI).
 
 The plugin id is \`${id}\`. The manifest is \`plugin.toml\`; the code is \`main.js\`.

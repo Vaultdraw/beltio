@@ -153,7 +153,7 @@ describe("dev --once", () => {
     const r = dev(plugin, config);
     expect(r.code).toBe(0);
     expect(r.out).toContain(
-      "Cmd+P, Plugins: Reload plugin list; then Settings, Plugins, enable the plugin",
+      "Cmd+Shift+P (Ctrl+Shift+P on Linux), Plugins: Reload plugin list; then Settings, Plugins, enable the plugin",
     );
     expect(readFileSync(installed(config, "plugin.toml"), "utf8")).toBe(
       `${MANIFEST}dev = true\n`,

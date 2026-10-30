@@ -11,6 +11,6 @@ A Vaultdraw plugin written in TypeScript.
 | `npm run check` | Static checks of `dist/` |
 | `npm run package` | Write `__ID__-0.1.0.zip` and its `.sha256` file |
 
-After the first `npm run dev`: in Vaultdraw press Cmd+P, run "Plugins: Reload plugin list", then enable the plugin in Settings, Plugins.
+After the first `npm run dev`: in Vaultdraw press Cmd+Shift+P (Ctrl+Shift+P on Linux), run "Plugins: Reload plugin list", then enable the plugin in Settings, Plugins.
 
 The `vaultdraw/` folder holds the API types and the test kit, copied by `vaultdraw-plugin init`. There is nothing to install for them.
