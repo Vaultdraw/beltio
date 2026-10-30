@@ -27,9 +27,9 @@ describe("table plugin", () => {
   it("ask: the text pastes, a toast offers a table, the click swaps it", async () => {
     p = await boot(manifest(), plugin);
     await p.setSetting("on_paste", "ask");
-    p.scene.setElements([{ type: "text", x: 40, y: 60, text: TSV }]);
-    p.scene.select(p.scene.live().map((e) => e.id));
     expect(await p.clipboard.paste(TSV)).toBe(false); // the editor pastes
+    p.scene.setElements([{ type: "text", x: 40, y: 60, text: TSV }]); // its new text
+    p.scene.select(p.scene.live().map((e) => e.id));
     await new Promise((r) => setTimeout(r, 260));
     expect(p.clipboard.toastButtons()[0]?.label).toBe("Insert as table");
     expect(p.clipboard.clickToast("Insert as table")).toBe(true);
@@ -39,6 +39,20 @@ describe("table plugin", () => {
     expect(
       p.scene.live().some((e) => e.type === "text" && e.text === TSV),
     ).toBe(false);
+  });
+
+  // toimprove 241: the swap removes only the text the paste made, never the user's own.
+  it("ask: a paste into an existing text makes no new element, so the click keeps the user's text", async () => {
+    p = await boot(manifest(), plugin);
+    await p.setSetting("on_paste", "ask");
+    p.scene.setElements([{ type: "text", x: 40, y: 60, text: "My own note" }]);
+    p.scene.select(p.scene.live().map((e) => e.id));
+    expect(await p.clipboard.paste(TSV)).toBe(false); // typed into the box: no new element
+    await new Promise((r) => setTimeout(r, 260));
+    expect(p.clipboard.clickToast("Insert as table")).toBe(true);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(texts(p).map((e) => e.text)).toContain("My own note");
+    expect(texts(p).map((e) => e.text)).toContain("Apple");
   });
 
   it("always: the paste is handled and a table appears", async () => {

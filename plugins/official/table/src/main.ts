@@ -109,10 +109,13 @@ export default definePlugin({
         return "handled";
       }
       // ask: the editor pastes the text as usual; the toast offers to swap it for a table.
+      // The swap removes only text the paste made: a paste typed into the user's own text
+      // makes no new element, and that text stays.
+      const before = new Set(ctx.scene.elements().map((e) => e.id));
       ctx.setTimeout(() => {
         const pasted = ctx.scene
           .get(ctx.scene.selection())
-          .filter((e) => e.type === "text");
+          .filter((e) => e.type === "text" && !before.has(e.id));
         ctx.ui.toast("That looks like a table", {
           action: {
             label: "Insert as table",
