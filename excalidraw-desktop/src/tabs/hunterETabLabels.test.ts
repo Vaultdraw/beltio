@@ -12,11 +12,11 @@ const t = (path: string | null) => ({ path });
  * Drop `fails` when the labels tell them apart.
  */
 describe("hunter E-4: tab labels of same-named files of different kinds", () => {
-  it.fails("a note and a drawing in one folder read differently", () => {
+  it("a note and a drawing in one folder read differently", () => {
     const labels = tabLabels([t("Notes/Idea.md"), t("Notes/Idea.excalidraw")]);
     expect(new Set(labels).size).toBe(2);
   });
-  it.fails("a drawing, a note and an Obsidian drawing read differently", () => {
+  it("a drawing, a note and an Obsidian drawing read differently", () => {
     const labels = tabLabels([
       t("Idea.excalidraw"),
       t("Idea.md"),

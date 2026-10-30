@@ -34,6 +34,24 @@ const folderSuffix = (path: string, depth: number): string => {
  */
 export const tabLabels = (tabs: readonly Pick<Tab, "path">[]): string[] => {
   const names = tabs.map((t) => tabName(t.path));
+  // Same name, different kind (Idea.md next to Idea.excalidraw): everything that is not a note
+  // shows its extension, as Obsidian does, so the tabs can be told apart.
+  const byName = new Map<string, number[]>();
+  names.forEach((name, i) => {
+    if (tabs[i].path !== null) {
+      byName.set(name, [...(byName.get(name) ?? []), i]);
+    }
+  });
+  byName.forEach((indexes) => {
+    const base = (i: number) => (tabs[i].path as string).split("/").pop()!;
+    if (new Set(indexes.map(base)).size > 1) {
+      for (const i of indexes) {
+        if (base(i).toLowerCase() !== `${names[i]}.md`.toLowerCase()) {
+          names[i] = base(i);
+        }
+      }
+    }
+  });
   const labels = [...names];
   const groups = new Map<string, number[]>();
   names.forEach((name, i) => {
