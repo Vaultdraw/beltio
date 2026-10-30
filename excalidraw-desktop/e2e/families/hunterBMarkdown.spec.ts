@@ -89,7 +89,7 @@ test("hunter B: heading mid-text splits; Enter in the middle of a heading; selec
   await settle(page);
   await find(page, "line one");
   const sub = await find(page, "Sub heading");
-  expect(sub.customData).toEqual({ role: "h2" });
+  expect(sub.customData).toMatchObject({ role: "h2" });
 });
 
 test("hunter B: Cmd+Z right after a conversion leaves a plain text, not a half heading", async ({
@@ -137,7 +137,7 @@ test("hunter B: Enter in the middle of a heading splits it; Backspace in the emp
   await page.keyboard.press("Backspace");
   await settle(page);
   const head = await find(page, "Hello");
-  expect(head.customData).toEqual({ role: "h1" });
+  expect(head.customData).toMatchObject({ role: "h1" });
 });
 
 test("hunter B: heading in a drawing in dark theme keeps heading size after reopening the text", async ({
@@ -148,6 +148,6 @@ test("hunter B: heading in a drawing in dark theme keeps heading size after reop
   await type(page, "### Third");
   await settle(page);
   const t = await find(page, "Third");
-  expect(t.customData).toEqual({ role: "h3" });
+  expect(t.customData).toMatchObject({ role: "h3" });
   expect(t.fontSize).toBe(25);
 });

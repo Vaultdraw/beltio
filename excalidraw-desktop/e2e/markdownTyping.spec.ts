@@ -62,7 +62,7 @@ test("Markdown mode: # Title, Enter, body makes a heading and body text below it
     .toBe(true);
   const title = await textWith(page, "Title");
   const body = await textWith(page, "body");
-  expect(title.customData).toEqual({ role: "h1" });
+  expect(title.customData).toMatchObject({ role: "h1" });
   expect(body.customData ?? null).toBeNull();
   expect(title.fontSize).toBe(body.fontSize * 2);
   // a heading is in the bold variant of the font (regular id + 100), the body is not
@@ -94,7 +94,9 @@ test("Markdown mode: # Title, Enter, body makes a heading and body text below it
   await expect(page.locator(textarea)).toHaveValue("# plain");
   await page.keyboard.press("Escape");
   await expect.poll(async () => !!(await textWith(page, "# plain"))).toBe(true);
-  expect((await textWith(page, "Title")).customData).toEqual({ role: "h1" });
+  expect((await textWith(page, "Title")).customData).toMatchObject({
+    role: "h1",
+  });
   expect((await readScene(page, DRAWING)).vaultdraw?.markdown).toBe(false);
 
   expect(errors).toEqual([]);

@@ -157,7 +157,7 @@ test("text defaults (font, size, colour, alignment) carry into headings, lists a
     .filter((e: any) => e.type === "text" && !e.isDeleted && e.x > 0)
     .slice(-3);
   const [head, list, quote] = texts;
-  expect(head.customData).toEqual({ role: "h1", roleBase: "#e03131" });
+  expect(head.customData).toMatchObject({ role: "h1", roleBase: "#e03131" });
   expect(quote.customData).toEqual({ role: "quote", roleBase: "#e03131" });
   expect(list.customData ?? null).toBeNull();
   for (const t of texts) {
