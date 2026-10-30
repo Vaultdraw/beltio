@@ -355,33 +355,36 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
     }
   }, [html, mode, prefs.notesToggleTasks]);
 
-  const tickTask = useCallback((box: HTMLInputElement) => {
-    const root = reading.current;
-    const s = saver.current;
-    if (!root || !s) {
-      return;
-    }
-    const boxes = [
-      ...root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
-    ].filter((b) => !b.closest(".note-embed"));
-    const index = boxes.indexOf(box);
-    const source = draft.current;
-    const next =
-      index >= 0 && boxes.length === taskLines(source).length
-        ? toggleTask(source, index)
-        : null;
-    if (next === null) {
-      toastStore.push({
-        message: "Couldn't match that checkbox to the note. Edit it instead.",
-      });
-      return;
-    }
-    // Saved like any edit: the revision is checked, a conflict shows the banner.
-    draft.current = next;
-    setText(next);
-    s.change(next);
-    void s.flush();
-  }, []);
+  const tickTask = useCallback(
+    (box: HTMLInputElement) => {
+      const root = reading.current;
+      const s = saver.current;
+      if (!root || !s) {
+        return;
+      }
+      const boxes = [
+        ...root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+      ].filter((b) => !b.closest(".note-embed"));
+      const index = boxes.indexOf(box);
+      const source = draft.current;
+      const next =
+        index >= 0 && boxes.length === taskLines(source, prefs.notesMath).length
+          ? toggleTask(source, index, prefs.notesMath)
+          : null;
+      if (next === null) {
+        toastStore.push({
+          message: "Couldn't match that checkbox to the note. Edit it instead.",
+        });
+        return;
+      }
+      // Saved like any edit: the revision is checked, a conflict shows the banner.
+      draft.current = next;
+      setText(next);
+      s.change(next);
+      void s.flush();
+    },
+    [prefs.notesMath],
+  );
 
   // ---- reading view clicks ----------------------------------------------
   const onReadingClick = useCallback(

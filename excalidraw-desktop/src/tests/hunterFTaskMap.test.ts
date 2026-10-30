@@ -34,13 +34,10 @@ describe("hunter F-12: a note with a task-shaped example can still tick its real
     expect(boxes(code)).toBe(1);
     expect(boxes(comment)).toBe(1);
   });
-  it.fails(
-    "the source has as many task lines as the page has checkboxes (indented code)",
-    () => {
-      expect(taskLines(code).length).toBe(boxes(code));
-    },
-  );
-  it.fails("the same with a task inside an HTML comment", () => {
+  it("the source has as many task lines as the page has checkboxes (indented code)", () => {
+    expect(taskLines(code).length).toBe(boxes(code));
+  });
+  it("the same with a task inside an HTML comment", () => {
     expect(taskLines(comment).length).toBe(boxes(comment));
   });
 });

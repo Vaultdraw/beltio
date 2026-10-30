@@ -12,7 +12,7 @@ import { Marked } from "marked";
 import { altAndSize } from "./imageSize";
 import { highlightCode } from "./highlight";
 
-import type { Tokens, TokenizerAndRendererExtension } from "marked";
+import type { Token, Tokens, TokenizerAndRendererExtension } from "marked";
 
 export interface RenderContext {
   /** Vault path a `[[target]]` points to, or null when it does not exist. */
@@ -270,6 +270,28 @@ const FRONTMATTER =
 /** The note without its leading `---` properties block. */
 export const stripFrontmatter = (text: string): string =>
   text.replace(FRONTMATTER, "");
+
+/**
+ * The block tokens the reading view renders for `text` (front matter stripped), and how many lines
+ * the stripped front matter took. For code that must agree with what the renderer drew, such as
+ * which line a checkbox belongs to.
+ */
+export function lexNote(
+  text: string,
+  math = true,
+): { tokens: Token[]; skipped: number } {
+  const body = stripFrontmatter(text);
+  const removed = text.slice(0, text.length - body.length);
+  ctx = { resolve: () => null, highlight: false, math };
+  try {
+    return {
+      tokens: marked.lexer(body),
+      skipped: (removed.match(/\n/g) ?? []).length,
+    };
+  } finally {
+    ctx = { resolve: () => null, highlight: true, math: true };
+  }
+}
 
 /** Unsafe HTML for `text`; always sanitise before use. */
 export function renderNoteHtml(text: string, context: RenderContext): string {

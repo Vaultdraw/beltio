@@ -1,41 +1,66 @@
 /**
  * Task checkboxes (`- [ ] item`) of a note's source, so the reading view can
  * tick one: the Nth checkbox of the rendered page is the Nth task line here.
- * Fenced code and front matter are skipped, as the renderer skips them.
+ * Positions come from the renderer's own tokens, so code (fenced or indented), HTML comments,
+ * math blocks and front matter are skipped exactly as it skips them.
  */
-const FENCE = /^\s{0,3}(```|~~~)/;
+import { lexNote } from "./render/obsidian";
+
+import type { Token, Tokens } from "marked";
+
 const TASK =
   /^((?:[ \t]*>)*[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+\[)([ xX])(\])(?=[ \t]|$)/;
-const FRONTMATTER =
-  /^﻿?---[ \t]*\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/;
 
-/** Line numbers (0-based) of the note's task items, in reading order. */
-export function taskLines(text: string): number[] {
-  const fm = FRONTMATTER.exec(text)?.[0] ?? "";
-  const skip = fm ? fm.replace(/\r?\n$/, "").split("\n").length : 0;
-  const lines = text.split("\n");
-  const out: number[] = [];
-  let fence: string | null = null;
-  for (let i = skip; i < lines.length; i++) {
-    const f = FENCE.exec(lines[i]);
-    if (f) {
-      fence = fence === null ? f[1] : fence === f[1] ? null : fence;
-      continue;
+const newlines = (s: string) => (s.match(/\n/g) ?? []).length;
+
+/**
+ * Task lines among `tokens`, which start on line `base`. Lines are counted from each token's own
+ * raw text, so a quote, a list item or an indented block never shifts the count.
+ */
+function collect(tokens: Token[], base: number, out: number[]): void {
+  let line = base;
+  for (const t of tokens) {
+    if (t.type === "list") {
+      let at = line;
+      for (const item of (t as Tokens.List).items) {
+        if (item.task) {
+          out.push(at);
+        }
+        collect(item.tokens, at, out);
+        at += newlines(item.raw);
+      }
+    } else if (t.type === "blockquote") {
+      collect((t as Tokens.Blockquote).tokens, line, out);
     }
-    if (!fence && TASK.test(lines[i])) {
-      out.push(i);
-    }
+    line += newlines(t.raw);
   }
+}
+
+/**
+ * Line numbers (0-based) of the note's task items, in reading order: the ones the reading view
+ * draws a checkbox for. `math` is the renderer's math setting (a `$$` block hides what is inside).
+ */
+export function taskLines(text: string, math = true): number[] {
+  const { tokens, skipped } = lexNote(text, math);
+  const out: number[] = [];
+  collect(tokens, skipped, out);
   return out;
 }
 
 /** `text` with task number `index` ticked or unticked; null when there is no such task. */
-export function toggleTask(text: string, index: number): string | null {
-  const at = taskLines(text)[index];
+export function toggleTask(
+  text: string,
+  index: number,
+  math = true,
+): string | null {
+  const at = taskLines(text, math)[index];
   if (at === undefined) {
     return null;
   }
   const lines = text.split("\n");
+  if (!TASK.test(lines[at])) {
+    return null;
+  }
   lines[at] = lines[at].replace(
     TASK,
     (_m, a: string, mark: string, b: string) =>

@@ -27,7 +27,7 @@ const checked = (md: string): boolean[] => {
   ].map((b) => b.hasAttribute("checked"));
 };
 
-type Row = { name: string; md: string; broken?: boolean };
+type Row = { name: string; md: string };
 
 const REAL = "- [ ] real one\n- [ ] real two\n";
 const rows: Row[] = [
@@ -42,12 +42,10 @@ const rows: Row[] = [
   {
     name: "after indented code",
     md: `Example:\n\n    - [ ] code\n\n${REAL}`,
-    broken: true,
   },
   {
     name: "after an HTML comment",
     md: `<!--\n- [ ] hidden\n-->\n\n${REAL}`,
-    broken: true,
   },
   {
     // passes today only because the reading view still shows %% comments (hunter F-11); when
@@ -58,7 +56,6 @@ const rows: Row[] = [
   {
     name: "after a math block",
     md: `$$\n- [ ] x\n$$\n\n${REAL}`,
-    broken: true,
   },
   { name: "with CRLF line ends", md: REAL.replace(/\n/g, "\r\n") },
   {
@@ -69,8 +66,7 @@ const rows: Row[] = [
 
 describe("family: the Nth checkbox ticks the Nth rendered task", () => {
   for (const row of rows) {
-    const test = row.broken ? it.fails : it;
-    test(row.name, () => {
+    it(row.name, () => {
       const before = checked(row.md);
       expect(taskLines(row.md).length, "checkboxes vs task lines").toBe(
         before.length,
