@@ -88,3 +88,49 @@ test("hunter I-5 (toimprove 220): Cmd+B typed in the navigator search box does n
   expect((await textWith(page, "keep"))?.fontFamily).toBeLessThan(100);
   expect(errors).toEqual([]);
 });
+
+test("hunter I: Cmd+B on a selected text is one undo step; Cmd+Shift+Z redoes it (coverage)", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await open(page);
+  await typeBox(page, 0.3, 0.8, "step");
+  await page.keyboard.press("Escape");
+  await (await fontOf(page, "step")).toBeLessThan(100);
+  await page.keyboard.press("ControlOrMeta+b");
+  await (await fontOf(page, "step")).toBeGreaterThan(100);
+  await page.keyboard.press("ControlOrMeta+z");
+  await (await fontOf(page, "step")).toBeLessThan(100);
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await (await fontOf(page, "step")).toBeGreaterThan(100);
+  expect(errors).toEqual([]);
+});
+
+test("hunter I: Cmd+L ticks the task of the selected text and ticks it back (coverage)", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await open(page);
+  await editor(page).getByTestId("markdown-chip").click();
+  await typeBox(page, 0.3, 0.8, "- [ ] buy milk");
+  await expect(page.locator(textarea)).toHaveValue("☐ buy milk");
+  await page.keyboard.press("Escape");
+  await expect
+    .poll(async () => !!(await textWith(page, "☐ buy milk")), {
+      timeout: 10_000,
+    })
+    .toBe(true);
+  await page.keyboard.press("ControlOrMeta+l");
+  await expect
+    .poll(async () => !!(await textWith(page, "☑ buy milk")), {
+      timeout: 10_000,
+    })
+    .toBe(true);
+  await page.keyboard.press("ControlOrMeta+l");
+  await expect
+    .poll(async () => !!(await textWith(page, "☐ buy milk")), {
+      timeout: 10_000,
+    })
+    .toBe(true);
+  expect(errors).toEqual([]);
+});
