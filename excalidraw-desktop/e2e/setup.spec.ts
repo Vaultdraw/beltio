@@ -24,7 +24,8 @@ const stored = (page: Page) =>
     return {};
   });
 
-const fresh = async (page: Page) => {
+/** `query` is the harness query string; screenshots pass ?autosave=500, the real install's default. */
+const fresh = async (page: Page, query = "") => {
   // The harness reopens its fake vault by itself; a first launch has none to reopen.
   await page.addInitScript(() => {
     let repo: any;
@@ -37,7 +38,7 @@ const fresh = async (page: Page) => {
       },
     });
   });
-  await page.goto("/e2e.html");
+  await page.goto(`/e2e.html${query}`);
   await expect(setup(page)).toBeVisible();
   await expect(setup(page)).toHaveAttribute("data-step", "welcome");
 };
@@ -200,6 +201,166 @@ test("Run setup again from the palette keeps the vault and the current values", 
   expect(await stored(page)).toMatchObject({ autosaveDelayMs: 2000 });
 });
 
+test("Open an Obsidian vault, then cancel the folder picker: the old vault picker shows, nothing is lost", async ({
+  page,
+}) => {
+  await fresh(page);
+  await page.evaluate(() => {
+    (window as any).__vaultRepo.chooseVault = async () => null;
+  });
+  for (let i = 0; i < 5; i++) {
+    await nextButton(page).click();
+  }
+  await expect(setup(page)).toHaveAttribute("data-step", "vault");
+  await setup(page)
+    .getByRole("radio", { name: /Obsidian/ })
+    .check();
+  await nextButton(page).click();
+  await expect(setup(page)).toHaveAttribute("data-step", "done");
+  await nextButton(page).click();
+  await expect(setup(page)).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /Open vault folder/ }),
+  ).toBeVisible();
+  expect(await stored(page)).toMatchObject({ onboardingCompleted: true });
+});
+
+test("Offline mode, then back to Look: the browse link gives way to a plain sentence; online again, it opens the browser above the setup", async ({
+  page,
+}) => {
+  await fresh(page);
+  await page.route("https://raw.githubusercontent.com/**", (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "access-control-allow-origin": "*" },
+      body: JSON.stringify({ schemaVersion: 1, themes: [] }),
+    }),
+  );
+  for (let i = 0; i < 3; i++) {
+    await nextButton(page).click();
+  }
+  await setup(page)
+    .getByRole("radio", { name: /Offline mode/ })
+    .check();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await expect(setup(page)).toHaveAttribute("data-step", "look");
+  await expect(
+    setup(page).getByRole("button", { name: "Browse community themes" }),
+  ).toHaveCount(0);
+  await expect(setup(page)).toContainText("once Offline mode is off");
+  await nextButton(page).click();
+  await nextButton(page).click();
+  await setup(page)
+    .getByRole("radio", { name: /^Online/ })
+    .check();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await setup(page)
+    .getByRole("button", { name: "Browse community themes" })
+    .click();
+  const browser = page.getByTestId("theme-browser-dialog");
+  await expect(browser).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(browser).toHaveCount(0);
+  await expect(setup(page)).toHaveAttribute("data-step", "look");
+});
+
+test("a window resized mid-setup keeps the step and the answers and never scrolls sideways", async ({
+  page,
+}) => {
+  await fresh(page);
+  await nextButton(page).click();
+  await setup(page).getByRole("radio", { name: "Dark", exact: true }).check();
+  for (const [w, h] of [
+    [360, 700],
+    [1280, 850],
+    [360, 700],
+  ] as const) {
+    await page.setViewportSize({ width: w, height: h });
+    await expect(setup(page)).toHaveAttribute("data-step", "look");
+    await expect(
+      setup(page).getByRole("radio", { name: "Dark", exact: true }),
+    ).toBeChecked();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - innerWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
+    await expect(nextButton(page)).toBeInViewport({ ratio: 0 });
+  }
+});
+
+test("a new screen starts at the top, not where the button below the last one left the scroll", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 500 });
+  await fresh(page);
+  await nextButton(page).click();
+  await nextButton(page).scrollIntoViewIfNeeded();
+  await nextButton(page).click();
+  await expect(setup(page)).toHaveAttribute("data-step", "basics");
+  expect(
+    await setup(page).evaluate((el) => (el as HTMLElement).scrollTop),
+  ).toBe(0);
+  await expect(setup(page).getByRole("heading")).toBeInViewport();
+});
+
+test("the setup keeps its place from step to step: the dots do not jump", async ({
+  page,
+}) => {
+  await fresh(page);
+  const dotsY = async () =>
+    Math.round(
+      await setup(page)
+        .locator(".vault-setup__dots")
+        .evaluate((el) => el.getBoundingClientRect().top),
+    );
+  const first = await dotsY();
+  for (let i = 0; i < 6; i++) {
+    await nextButton(page).click();
+    expect(await dotsY()).toBe(first);
+  }
+});
+
+test("quitting mid-setup and starting again: the answers are kept and the setup runs again from the start", async ({
+  page,
+}) => {
+  await fresh(page);
+  await nextButton(page).click();
+  await setup(page).getByRole("radio", { name: "Dark", exact: true }).check();
+  await nextButton(page).click();
+  await setup(page)
+    .getByRole("switch", { name: /Vim-style keys/ })
+    .check();
+  await page.reload();
+  await expect(setup(page)).toHaveAttribute("data-step", "welcome");
+  await nextButton(page).click();
+  await expect(
+    setup(page).getByRole("radio", { name: "Dark", exact: true }),
+  ).toBeChecked();
+  await nextButton(page).click();
+  await expect(
+    setup(page).getByRole("switch", { name: /Vim-style keys/ }),
+  ).toBeChecked();
+  expect(await stored(page)).toMatchObject({
+    onboardingCompleted: false,
+    theme: "dark",
+    notesVim: true,
+  });
+});
+
+test("Done shows a real install's save speed (Quick), not the test harness's 100 ms", async ({
+  page,
+}) => {
+  await fresh(page, "?autosave=500");
+  for (let i = 0; i < 6; i++) {
+    await nextButton(page).click();
+  }
+  await expect(page.getByTestId("setup-summary")).toContainText("Quick");
+});
+
 const SHOTS = process.env.SETUP_SHOTS === "1";
 const STEPS = [
   "welcome",
@@ -220,7 +381,8 @@ for (const mode of ["light", "dark"] as const) {
       test.skip(!SHOTS, "set SETUP_SHOTS=1 to write the screenshots");
       mkdirSync(SHOTS_DIR, { recursive: true });
       await page.setViewportSize({ width, height });
-      await fresh(page);
+      // The harness saves after 100 ms to keep specs short; a real install says "Quick" (500 ms).
+      await fresh(page, "?autosave=500");
       for (let i = 0; i < STEPS.length; i++) {
         if (STEPS[i] === "look") {
           await setup(page)
