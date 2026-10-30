@@ -411,6 +411,18 @@ fn secrets_path(state_dir: &Path, plugin_id: &str) -> Result<PathBuf> {
     Ok(file)
 }
 
+/// Removes every key the plugin saved (Delete data, new code under the same id): a key goes with
+/// the plugin's data, as in Obsidian, and never passes to different code (toimprove 279).
+pub(crate) fn forget_secrets(state_dir: &Path, plugin_id: &str) -> Result<()> {
+    let path = secrets_path(state_dir, plugin_id)?;
+    let _g = secrets_guard();
+    match fs::remove_file(&path) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(ioerr(e)),
+    }
+}
+
 /// The plugin's keys. A missing or damaged file reads as empty (the next `secret.set` replaces it).
 fn load_secrets(path: &Path) -> Map<String, Value> {
     fs::read(path).ok().and_then(|b| serde_json::from_slice::<Value>(&b).ok()).and_then(|v| if let Value::Object(m) = v { Some(m) } else { None }).unwrap_or_default()
@@ -692,6 +704,19 @@ mod tests {
         assert!(head.contains("user-agent: vaultdraw/"));
         // Another plugin does not see this plugin's key.
         assert_eq!(open("t-auth-2", &base).unwrap_err().code, "SECRET_MISSING");
+    }
+
+    #[test]
+    fn forgetting_a_plugin_removes_its_keys_and_only_its_own() {
+        let dir = tempfile::tempdir().unwrap();
+        for id in ["t-forget", "t-keep"] {
+            call_net(dir.path(), id, "secret.set", json!({"name": "api-key", "value": "sk-1"})).unwrap();
+        }
+        forget_secrets(dir.path(), "t-forget").unwrap();
+        forget_secrets(dir.path(), "t-never-had-one").unwrap();
+        let has = |id: &str| call_net(dir.path(), id, "secret.has", json!({"name": "api-key"})).unwrap();
+        assert_eq!(has("t-forget"), vec![0]);
+        assert_eq!(has("t-keep"), vec![1]);
     }
 
     #[test]

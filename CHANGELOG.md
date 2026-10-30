@@ -47,6 +47,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **Template picker and tags panel order names like the file tree.** "Meeting 10" came before "Meeting 2" there; both now use the tree's natural order (toimprove 261).
 - **A one-line link is underlined only as wide as its text,** also in a box the user made wider (it was underlined across the whole box, with a link strip over empty space) (toimprove 258).
 - **The plugin browser does not offer an update that needs a newer Vaultdraw.** Update and Install are off, with a line saying which version to update to, instead of replacing a working plugin with one that will not load (toimprove 251).
+- **Delete data on a plugin also removes the keys it saved** (the AI assistant's API key stayed on disk with no way to see or remove it), and different code installed under an old plugin id no longer inherits them (toimprove 279).
 
 ## [0.2.0] - 2026-10-28
 

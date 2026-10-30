@@ -230,7 +230,13 @@ pub(crate) async fn plugins_data_list() -> Result<Vec<storage::DataSize>> {
 /// "Delete data": removes a plugin's saved data. Returns whether there was any.
 #[tauri::command]
 pub(crate) async fn plugins_data_delete(id: String) -> Result<bool> {
-    blocking(move || storage::delete(&config::resolve_dirs()?.state, &id)).await
+    blocking(move || {
+        // the plugin's saved keys (ctx.secret) are part of its data (toimprove 279)
+        let state = config::resolve_dirs()?.state;
+        net::forget_secrets(&state, &id)?;
+        storage::delete(&state, &id)
+    })
+    .await
 }
 
 #[tauri::command]

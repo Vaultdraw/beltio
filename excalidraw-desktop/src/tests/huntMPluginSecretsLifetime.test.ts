@@ -49,14 +49,14 @@ describe("a plugin's secrets go with its data (toimprove M-20)", () => {
     ).toContain("consent::forget");
   });
 
-  it.fails("Delete data also removes the plugin's secrets", () => {
+  it("Delete data also removes the plugin's secrets", () => {
     expect(
       touchesSecrets(fnBody(read("storage.rs"), "delete")) ||
         touchesSecrets(fnBody(read("mod.rs"), "plugins_data_delete")),
     ).toBe(true);
   });
 
-  it.fails(
+  it(
     "installing different code under an old id forgets its secrets too",
     () => {
       expect(

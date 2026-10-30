@@ -509,7 +509,7 @@ export const PluginsPage = () => {
             pending.info.name
           } saved (${formatDataSize(
             pending.bytes,
-          )}). Its settings in your config file stay. This can’t be undone.`}
+          )}). Any key it saved goes too. Its settings in your config file stay. This can’t be undone.`}
           confirmLabel="Delete data"
           isDanger
           onCancel={() => setPending(null)}
