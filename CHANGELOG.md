@@ -25,6 +25,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Zoomed out, a click on a linked text selects it again** (toimprove 205). The clickable strip of the link underline never reaches above the lower quarter of the text, so only the line itself and just below it open the link, at any zoom.
 - **Cmd+B flips back to regular with a Lilita One or Assistant text in the selection** (toimprove 213). Fonts without a bold face no longer count when Toggle bold asks whether everything is bold already.
 - **Cmd+B no longer drops what changed while the bold font loaded** (toimprove 204). Toggle bold re-reads the drawing after the font wait, so a shape drawn or a change reloaded in that moment stays.
 - **SVG pictures can keep their colours in dark mode** (toimprove 133). Excalidraw draws SVG pictures inverted in dark mode, which turns logos and coloured drawings into negatives. New `appearance.invert_svg_in_dark` (on by default, like Excalidraw; Settings → Appearance) turns it off, on screen and in dark exports, with live reload.

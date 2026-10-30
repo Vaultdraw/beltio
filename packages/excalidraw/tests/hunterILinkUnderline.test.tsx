@@ -43,7 +43,7 @@ describe("hunter I-3: a click in the middle of a linked text, zoomed out", () =>
     expect(isPointHittingLinkIcon(text, map, appState(1), middle)).toBe(false);
   });
 
-  it.fails.each([0.5, 0.25])(
+  it.each([0.5, 0.25])(
     "at %s zoom the middle of the text is not a link click",
     (zoom) => {
       setLinkIndicator({ style: "underline" });
@@ -79,6 +79,33 @@ describe("hunter I-7: a linked text of several lines", () => {
     () => {
       const u = getLinkUnderline(multi, arrayToMap([multi]))!;
       expect(u.x2 - u.x1).toBeLessThanOrEqual(lastLine.width + 1);
+    },
+  );
+});
+
+describe("toimprove 205: the underline stays clickable at any zoom", () => {
+  afterEach(() => setLinkIndicator(null));
+  const text = newTextElement({
+    x: 0,
+    y: 0,
+    text: "Roadmap",
+    fontSize: 20,
+    link: "https://example.com",
+  });
+  const map = arrayToMap([text]);
+  const onLine = pointFrom<GlobalPoint>(text.width / 2, text.height - 1);
+  const justBelow = pointFrom<GlobalPoint>(text.width / 2, text.height);
+
+  it.each([4, 1, 0.5, 0.25, 0.1])(
+    "at %s zoom a click on the line or just below it opens the link",
+    (zoom) => {
+      setLinkIndicator({ style: "underline" });
+      expect(isPointHittingLinkIcon(text, map, appState(zoom), onLine)).toBe(
+        true,
+      );
+      expect(isPointHittingLinkIcon(text, map, appState(zoom), justBelow)).toBe(
+        true,
+      );
     },
   );
 });
