@@ -193,6 +193,13 @@ describe("[layout] narrow_width (hunter A-7)", () => {
     };
     expect(shownParts(base, narrowLayer(true, null), {}).navigator).toBe(false);
     expect(shownParts(base, narrowLayer(false, null), {}).navigator).toBe(true);
+    // The overlay is a view state of the narrow window: open shows it, wide ignores it.
+    expect(shownParts(base, narrowLayer(true, null, true), {}).navigator).toBe(
+      true,
+    );
+    expect(shownParts(base, narrowLayer(false, null, true), {}).navigator).toBe(
+      true,
+    );
     expect(
       shownParts(base, narrowLayer(true, { navigator: true }), {}).navigator,
     ).toBe(true);

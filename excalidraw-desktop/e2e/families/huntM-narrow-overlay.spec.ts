@@ -39,10 +39,6 @@ test("narrow then wide, overlay never opened: the file list is back beside the d
 test("narrow window: open and close the overlay, then widen: the file list is back beside the drawing", async ({
   page,
 }) => {
-  test.fail(
-    true,
-    "toimprove M-1: the overlay's close is a session choice that outlives the narrow window",
-  );
   const errors = trackErrors(page);
   await page.setViewportSize({ width: 480, height: 700 });
   await openVault(page);

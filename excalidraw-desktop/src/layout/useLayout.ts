@@ -8,6 +8,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
   useSyncExternalStore,
 } from "react";
 
@@ -160,6 +161,15 @@ export function useLayout(
     [userNames],
   );
 
+  // The narrow window's file list overlay is a view state of the narrow window, not a layout
+  // choice: it never outlives it (Obsidian's drawer; widening brings the docked list back).
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  useEffect(() => {
+    if (!narrow) {
+      setOverlayOpen(false);
+    }
+  }, [narrow]);
+
   const shown = useMemo(
     () =>
       shownParts(
@@ -174,6 +184,7 @@ export function useLayout(
         narrowLayer(
           narrow,
           state.preset ? presets[state.preset] ?? null : null,
+          overlayOpen,
         ),
         state.session,
       ),
@@ -187,6 +198,7 @@ export function useLayout(
       state,
       presets,
       narrow,
+      overlayOpen,
     ],
   );
 
@@ -195,12 +207,16 @@ export function useLayout(
 
   const toggleGoverned = useCallback((part: LayoutPart): boolean => {
     const { preset, session } = getLayoutState();
-    const governed =
+    const byLayout =
       session[part] !== undefined ||
-      (preset !== null && live.current.presets[preset]?.[part] !== undefined) ||
-      // In a narrow window the file list is folded for this window only: showing it is a
-      // session choice, never a change to config.toml.
-      (part === "navigator" && live.current.narrow);
+      (preset !== null && live.current.presets[preset]?.[part] !== undefined);
+    // In a narrow window the file list is folded for this window only: showing it opens the
+    // overlay, never a change to config.toml or to the session layout.
+    if (part === "navigator" && live.current.narrow && !byLayout) {
+      setOverlayOpen(!live.current.shown.navigator);
+      return true;
+    }
+    const governed = byLayout;
     if (governed) {
       setSessionPart(part, !live.current.shown[part]);
     }
@@ -258,7 +274,8 @@ export function useLayout(
 export const narrowLayer = (
   narrow: boolean,
   preset: Readonly<Partial<Record<LayoutPart, boolean>>> | null,
-) => (narrow ? { navigator: false, ...(preset ?? {}) } : preset);
+  overlayOpen = false,
+) => (narrow ? { navigator: overlayOpen, ...(preset ?? {}) } : preset);
 
 /** True while the window is narrower than `width` px (0 = never). One media query, no polling. */
 function useNarrowWindow(win: Window | null, width: number): boolean {
