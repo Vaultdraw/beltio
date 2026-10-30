@@ -23,6 +23,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Enter and Backspace on a heading give the right body size after you change a heading size.** A typed heading now remembers the text size it was made from, so changing `markdown.h1_size` later no longer makes the next line or the un-headed text the wrong size; an imported heading is read at the default scale.
 - **A note and a drawing with the same name have different tabs.** `Idea.md` and `Idea.excalidraw` in one folder used to read "Idea" twice; the drawing tab now shows its extension (as Obsidian does for anything that is not a note).
 - **The name dialogs agree with the core before they close.** Rename, New and Save-as-template now refuse a name that starts with a dot or holds the control characters U+0080 to U+009F (they used to close and then show a red alert), and a long emoji name is shortened between characters in the message.
 - **Rename is quieter and exact.** Pressing Rename with the name unchanged closes the dialog (it used to end in a red "Couldn't rename … Cannot move an entry into itself"), and typing the extension yourself (`Plan.excalidraw`, `Plan.md`) no longer adds it twice.

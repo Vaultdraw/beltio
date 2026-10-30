@@ -129,13 +129,33 @@ const scaleOf = (settings: MarkdownTypingSettings, level: number) => {
   return typeof s === "number" && s > 0 ? s : 1;
 };
 
-/** The body text size of a box, from its size and role. */
-const bodySizeOf = (
-  el: ExcalidrawTextElement,
-  settings: MarkdownTypingSettings,
-) => {
+/**
+ * The body text size of a box. A heading remembers the size it was made from (`bodySize` in its
+ * custom data), so changing `markdown.h1_size` later does not change what Enter or Backspace gives.
+ * A heading without it (an imported one, drawn at the default scale) is divided by the default scale.
+ */
+const bodySizeOf = (el: ExcalidrawTextElement) => {
   const level = headingLevelOf(roleOf(el));
-  return level ? el.fontSize / scaleOf(settings, level) : el.fontSize;
+  if (!level) {
+    return el.fontSize;
+  }
+  const stored = el.customData?.bodySize;
+  return typeof stored === "number" && stored > 0
+    ? stored
+    : el.fontSize / scaleOf(DEFAULT_MARKDOWN_TYPING_SETTINGS, level);
+};
+
+/** `withRole` plus the remembered body size of a heading (dropped for any other role). */
+const withRoleAndBody = (
+  customData: Record<string, unknown> | undefined,
+  role: string | null,
+  base: string | undefined,
+  bodySize: number,
+) => {
+  const next = withRole(customData, role, base);
+  const { bodySize: _old, ...rest } = next ?? {};
+  const out = headingLevelOf(role) ? { ...rest, bodySize } : rest;
+  return Object.keys(out).length ? out : undefined;
 };
 
 /** The font a box with `role` is drawn in: headings in the bold variant, everything else regular. */
@@ -225,7 +245,7 @@ export function createMarkdownTyping(deps: {
         return false;
       }
       const settings = deps.getSettings();
-      const bodySize = bodySizeOf(el, settings);
+      const bodySize = bodySizeOf(el);
       const before = `${value.slice(0, caret)} ${value.slice(caret)}`;
       const rest = value.slice(caret);
       if (!hasAbove) {
@@ -239,7 +259,12 @@ export function createMarkdownTyping(deps: {
         restyle({
           fontSize,
           fontFamily: fontFor(el.fontFamily, role, settings),
-          customData: withRole(el.customData, role, el.strokeColor),
+          customData: withRoleAndBody(
+            el.customData,
+            role,
+            el.strokeColor,
+            bodySize,
+          ),
         });
         lastConversion = {
           kind: "inPlace",
@@ -268,7 +293,7 @@ export function createMarkdownTyping(deps: {
         caret: 0,
         fontSize,
         fontFamily: fontFor(el.fontFamily, role, settings),
-        customData: withRole(undefined, role, el.strokeColor),
+        customData: withRoleAndBody(undefined, role, el.strokeColor, bodySize),
       });
       return true;
     };
@@ -291,12 +316,12 @@ export function createMarkdownTyping(deps: {
       }
       const settings = deps.getSettings();
       if (trigger.kind === "quote") {
-        return convertBox(el, QUOTE_ROLE, bodySizeOf(el, settings));
+        return convertBox(el, QUOTE_ROLE, bodySizeOf(el));
       }
       return convertBox(
         el,
         headingRole(trigger.level),
-        bodySizeOf(el, settings) * scaleOf(settings, trigger.level),
+        bodySizeOf(el) * scaleOf(settings, trigger.level),
       );
     };
 
@@ -306,7 +331,7 @@ export function createMarkdownTyping(deps: {
       if (head !== editable.value) {
         session.setText(head, head.length);
       }
-      const bodySize = bodySizeOf(el, settings);
+      const bodySize = bodySizeOf(el);
       const at = belowAnchor(session.getElement() ?? el, bodySize, settings);
       pendingContinue = el.id;
       session.continueInNewText({
@@ -320,9 +345,9 @@ export function createMarkdownTyping(deps: {
 
     const toBody = (el: ExcalidrawTextElement) => {
       restyle({
-        fontSize: bodySizeOf(el, deps.getSettings()),
+        fontSize: bodySizeOf(el),
         fontFamily: regularFontOf(el.fontFamily),
-        customData: withRole(el.customData, null),
+        customData: withRoleAndBody(el.customData, null, undefined, 0),
       });
     };
 

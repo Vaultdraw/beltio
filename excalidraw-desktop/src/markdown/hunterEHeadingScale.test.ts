@@ -62,20 +62,17 @@ function setup() {
 }
 
 describe("hunter E-5: body size under a changed heading scale", () => {
-  it.fails("Enter after a 40 px heading starts a 20 px body box", () => {
+  it("Enter after a 40 px heading starts a 20 px body box", () => {
     const s = setup();
     s.key("Enter");
     expect(s.continueInNewText).toHaveBeenCalled();
     expect(s.continueInNewText.mock.calls[0][0].fontSize).toBe(20);
   });
-  it.fails(
-    "Backspace at the start of a 40 px heading gives 20 px body text",
-    () => {
-      const s = setup();
-      s.textarea.setSelectionRange(0, 0);
-      s.key("Backspace");
-      expect(s.restyle).toHaveBeenCalled();
-      expect(s.restyle.mock.calls[0][0].fontSize).toBe(20);
-    },
-  );
+  it("Backspace at the start of a 40 px heading gives 20 px body text", () => {
+    const s = setup();
+    s.textarea.setSelectionRange(0, 0);
+    s.key("Backspace");
+    expect(s.restyle).toHaveBeenCalled();
+    expect(s.restyle.mock.calls[0][0].fontSize).toBe(20);
+  });
 });

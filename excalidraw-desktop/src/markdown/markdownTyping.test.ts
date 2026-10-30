@@ -200,7 +200,7 @@ describe("Markdown typing: headings", () => {
       const h = harness();
       h.type(`${"#".repeat(level)} `);
       expect(h.textarea.value).toBe("");
-      expect(h.current().customData).toEqual({ role: `h${level}` });
+      expect(h.current().customData).toMatchObject({ role: `h${level}` });
       expect(h.current().fontSize).toBe(
         20 * DEFAULT_MARKDOWN_TYPING_SETTINGS.headingScales[level - 1],
       );
@@ -231,7 +231,7 @@ describe("Markdown typing: headings", () => {
   it("turned off mid-edit: the next # stays plain", () => {
     const h = harness();
     h.type("# Title");
-    expect(h.current().customData).toEqual({ role: "h1" });
+    expect(h.current().customData).toMatchObject({ role: "h1" });
     h.setOn(false);
     h.press("Enter");
     // Enter is a plain newline again: still one box
@@ -244,14 +244,14 @@ describe("Markdown typing: headings", () => {
     h.textarea.setSelectionRange(0, 0);
     h.type("## ");
     expect(h.textarea.value).toBe("Title");
-    expect(h.current().customData).toEqual({ role: "h2" });
+    expect(h.current().customData).toMatchObject({ role: "h2" });
   });
 
   it("CJK and emoji headings keep their text", () => {
     const h = harness();
     h.type("# 标题 😀");
     expect(h.textarea.value).toBe("标题 😀");
-    expect(h.current().customData).toEqual({ role: "h1" });
+    expect(h.current().customData).toMatchObject({ role: "h1" });
   });
 
   it("IME composition never converts", () => {
@@ -272,7 +272,7 @@ describe("Markdown typing: headings", () => {
     expect(boxes[0].text).toBe("body");
     expect(boxes[0].customData).toBeUndefined();
     expect(boxes[1].text).toBe("Section");
-    expect(boxes[1].customData).toEqual({ role: "h2" });
+    expect(boxes[1].customData).toMatchObject({ role: "h2" });
     expect(boxes[1].y).toBeGreaterThan(boxes[0].y + boxes[0].height);
     expect(boxes[1].x).toBe(boxes[0].x);
   });
@@ -291,7 +291,7 @@ describe("Markdown typing: headings", () => {
   it("a label (text in a shape) converts in place on its only line, never splits", () => {
     const h = harness({ isLabel: true });
     h.type("# Box");
-    expect(h.current().customData).toEqual({ role: "h1" });
+    expect(h.current().customData).toMatchObject({ role: "h1" });
     h.press("Enter");
     expect(h.all()).toHaveLength(1);
     expect(h.textarea.value).toBe("Box\n");
@@ -306,7 +306,7 @@ describe("Markdown typing: Enter, Backspace, undo", () => {
     h.type("body");
     const [title, body] = h.all();
     expect(title.text).toBe("Title");
-    expect(title.customData).toEqual({ role: "h1" });
+    expect(title.customData).toMatchObject({ role: "h1" });
     expect(title.fontSize).toBe(40);
     expect(body.text).toBe("body");
     expect(body.customData).toBeUndefined();
@@ -366,7 +366,7 @@ describe("Markdown typing: Enter, Backspace, undo", () => {
     h.type("# Title");
     h.press("Backspace");
     expect(h.textarea.value).toBe("Titl");
-    expect(h.current().customData).toEqual({ role: "h1" });
+    expect(h.current().customData).toMatchObject({ role: "h1" });
   });
 
   it("Backspace in the empty box Enter made goes back to the heading", () => {
@@ -376,13 +376,13 @@ describe("Markdown typing: Enter, Backspace, undo", () => {
     h.press("Backspace");
     expect(h.all()).toHaveLength(1);
     expect(h.current().text).toBe("Title");
-    expect(h.current().customData).toEqual({ role: "h1" });
+    expect(h.current().customData).toMatchObject({ role: "h1" });
   });
 
   it("Cmd+Z right after a conversion restores the literal # ", () => {
     const h = harness();
     h.type("# ");
-    expect(h.current().customData).toEqual({ role: "h1" });
+    expect(h.current().customData).toMatchObject({ role: "h1" });
     h.press("z", { metaKey: true });
     expect(h.textarea.value).toBe("# ");
     expect(h.current().customData?.role).toBeUndefined();
@@ -400,7 +400,7 @@ describe("Markdown typing: Enter, Backspace, undo", () => {
     const h = harness();
     h.type("# T");
     expect(h.press("z", { metaKey: true })).toBe(false);
-    expect(h.current().customData).toEqual({ role: "h1" });
+    expect(h.current().customData).toMatchObject({ role: "h1" });
   });
 
   it("Cmd+Z after a split conversion joins the line back", () => {
@@ -606,7 +606,7 @@ describe("Markdown typing: bold headings", () => {
     const h = harness({ headingBold: false });
     h.type("# Title");
     expect(h.current().fontFamily).toBe(5);
-    expect(h.current().customData).toEqual({ role: "h1" });
+    expect(h.current().customData).toMatchObject({ role: "h1" });
   });
 
   it("a font that has no bold variant (Lilita One) stays as it is", () => {
@@ -660,14 +660,17 @@ describe("Markdown typing: the user's text colour (toimprove 162)", () => {
     const h = harness({ color: "#E03131" });
     h.type("# ");
     expect(h.current().strokeColor).toBe("#E03131");
-    expect(h.current().customData).toEqual({ role: "h1", roleBase: "#e03131" });
+    expect(h.current().customData).toMatchObject({
+      role: "h1",
+      roleBase: "#e03131",
+    });
   });
 
   it("the stock colours leave no base (the file stays as before)", () => {
     for (const color of ["#1e1e1e", "#000000"]) {
       const h = harness({ color });
       h.type("## ");
-      expect(h.current().customData).toEqual({ role: "h2" });
+      expect(h.current().customData).toMatchObject({ role: "h2" });
     }
   });
 
