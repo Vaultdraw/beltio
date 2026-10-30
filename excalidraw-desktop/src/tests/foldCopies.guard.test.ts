@@ -80,12 +80,7 @@ const LOWER_OK: Record<string, { count: number; why: string }> = {
   "src/theme/catalogue/search.ts": { count: 3, why: "theme catalogue text" },
   "src/vault/syncNames.ts": { count: 1, why: "a fixed English marker" },
 };
-const LOWER_KNOWN: Record<string, { count: number; why: string }> = {
-  "src/components/tags/RenameTagDialog.tsx": {
-    count: 1,
-    why: "toimprove 201 family (tag picker)",
-  },
-};
+const LOWER_KNOWN: Record<string, { count: number; why: string }> = {};
 
 describe("guard: name filters fold accents", () => {
   const counts: Record<string, number> = {};
@@ -101,12 +96,9 @@ describe("guard: name filters fold accents", () => {
     );
     expect(extra).toEqual([]);
   });
-  it.fails(
-    "the vault-name and tag filters fold accents (KNOWN is empty)",
-    () => {
-      expect(Object.keys(LOWER_KNOWN).filter((f) => counts[f])).toEqual([]);
-    },
-  );
+  it("the vault-name and tag filters fold accents (KNOWN is empty)", () => {
+    expect(Object.keys(LOWER_KNOWN).filter((f) => counts[f])).toEqual([]);
+  });
 });
 
 /**

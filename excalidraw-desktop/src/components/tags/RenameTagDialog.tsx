@@ -5,6 +5,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { foldKey } from "../../search/foldKey";
 import { validateTagInput } from "../../tags/renameFlow";
 import { errorMessage } from "../../vault/types";
 import { Dialog } from "../Dialog";
@@ -43,9 +44,9 @@ const PickTag = ({
   const [query, setQuery] = useState("");
   const [index, setIndex] = useState(0);
   const rows = useMemo(() => {
-    const q = query.trim().replace(/^#/, "").toLowerCase();
+    const q = foldKey(query.trim().replace(/^#/, ""));
     return tags
-      .filter((t) => t.tag.includes(q) || t.display.toLowerCase().includes(q))
+      .filter((t) => t.tag.includes(q) || foldKey(t.display).includes(q))
       .slice(0, MAX_ROWS);
   }, [tags, query]);
   const choose = (t: TagCount | undefined) =>

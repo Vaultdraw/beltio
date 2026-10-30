@@ -9,6 +9,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 
+import { foldKey } from "../search/foldKey";
 import RenameTagDialog from "../components/tags/RenameTagDialog";
 import { isTagJob } from "../tags/renameJobs";
 import { runTagRename, validateTagInput } from "../tags/renameFlow";
@@ -154,6 +155,35 @@ describe("RenameTagDialog", () => {
     expect(
       ((await screen.findByLabelText("New tag")) as HTMLInputElement).value,
     ).toBe("DSA/Graphs");
+  });
+});
+
+describe("RenameTagDialog picker folds accents (toimprove 201 family)", () => {
+  it.each([
+    ["cafe", "Café"],
+    ["CAFÉ", "Café"],
+    ["strasse", "Straße"],
+    ["cafe\u0301", "Café"], // typed decomposed
+    ["café", "Cafe"], // typed with the accent, tag written without
+    ["STRASSE", "Straße"],
+  ])("typing %s finds %s", (typed, display) => {
+    const key = foldKey(display);
+    render(
+      <RenameTagDialog
+        api={new FakeVaultTagRename()}
+        handle="h"
+        tags={() => [{ tag: key, display, count: 1 }]}
+        initial={null}
+        onConfirm={vi.fn(async () => {})}
+        onCancel={() => {}}
+        ownerDocument={document}
+        debounceMs={0}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Tag"), {
+      target: { value: typed },
+    });
+    expect(screen.getAllByRole("option")).toHaveLength(1);
   });
 });
 
