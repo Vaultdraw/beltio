@@ -73,6 +73,16 @@ export function duplicateName(path: string): string {
   return joinPath(parent, `${copyBase}${ext}`);
 }
 
+/**
+ * The name "Duplicate drawing" writes: an Obsidian drawing (`Sketch.excalidraw.md`, read-only
+ * here) is copied as an editable `Sketch copy.excalidraw`; any other drawing as `duplicateName`.
+ */
+export function drawingCopyName(path: string): string {
+  return fileKind(path) === "excalidrawMd"
+    ? duplicateName(path.slice(0, path.length - EXCALIDRAW_MD_EXT.length))
+    : duplicateName(path);
+}
+
 export function getParentPath(path: string): string {
   const slash = path.lastIndexOf("/");
   return slash >= 0 ? path.slice(0, slash) : "";

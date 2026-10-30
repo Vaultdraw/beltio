@@ -203,14 +203,16 @@ function rowMenuActions(
       ...copyActions(path, r, true),
     };
   }
+  // Like the menu: notes and Obsidian drawings get only the shared items (reveal, copy path).
+  const drawing = item.kind === "drawing";
   const exportAs = (format: ExplorerExportFormat) =>
-    r.export ? () => r.export?.(path, format) : undefined;
+    drawing && r.export ? () => r.export?.(path, format) : undefined;
   return {
-    duplicate: bind(r.duplicate, !d.readOnly),
-    saveAsTemplate: bind(r.saveAsTemplate),
+    duplicate: bind(r.duplicate, drawing && !d.readOnly),
+    saveAsTemplate: bind(r.saveAsTemplate, drawing),
     reveal: bind(r.reveal),
-    localGraph: bind(r.localGraph),
-    history: bind(r.history),
+    localGraph: bind(r.localGraph, drawing),
+    history: bind(r.history, drawing),
     exportPng: exportAs("png"),
     exportSvg: exportAs("svg"),
     exportPdf: exportAs("pdf"),

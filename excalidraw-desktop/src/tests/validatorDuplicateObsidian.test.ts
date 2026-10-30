@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { fileKind, hasDrawingExt } from "../vault/fileKind";
-import { duplicateName } from "../vault/treeStore";
+import { drawingCopyName, duplicateName } from "../vault/treeStore";
 
 /**
  * Validator V-2 (2026-10-30, review of 73d05967). "Duplicate drawing" (palette, `file.duplicate`,
@@ -32,18 +32,26 @@ describe("validator V-2: Duplicate drawing on an open Obsidian drawing", () => {
     expect(hasDrawingExt(target)).toBe(false);
   });
 
-  it("(context) Duplicate drawing writes duplicateName(path) as a drawing", () => {
-    expect(body("handleDuplicateDrawing")).toContain("duplicateName(path)");
+  it("Duplicate drawing writes drawingCopyName(path) as a drawing", () => {
+    expect(body("handleDuplicateDrawing")).toContain("drawingCopyName(path)");
     expect(body("handleDuplicateDrawing")).toContain("writeNewDrawing");
   });
 
-  it.fails(
-    "the copy of an Obsidian drawing is a .excalidraw drawing the app can write",
-    () => {
-      // fixed when the handler turns an Obsidian drawing's copy into a .excalidraw name
-      expect(body("handleDuplicateDrawing")).toMatch(
-        /excalidrawMd|stripExcalidrawMd|drawingCopyName/,
-      );
+  it("the copy of an Obsidian drawing is a .excalidraw drawing the app can write", () => {
+    expect(body("handleDuplicateDrawing")).toMatch(
+      /excalidrawMd|stripExcalidrawMd|drawingCopyName/,
+    );
+  });
+
+  it.each([
+    ["Sub/Sketch.excalidraw.md", "Sub/Sketch copy.excalidraw"],
+    ["Sketch copy.excalidraw.md", "Sketch copy 2.excalidraw"],
+    ["Plan.excalidraw", "Plan copy.excalidraw"],
+  ])(
+    "drawingCopyName(%s) is %s, a name the drawing writer accepts",
+    (from, to) => {
+      expect(drawingCopyName(from)).toBe(to);
+      expect(hasDrawingExt(drawingCopyName(from))).toBe(true);
     },
   );
 });

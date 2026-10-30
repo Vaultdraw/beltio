@@ -145,12 +145,7 @@ const menuActions = (entry: VaultEntry, readOnly: boolean) => {
 const sorted = (s: Set<string>) => [...s].sort();
 
 // kind/readOnly rows broken today: the keyboard offers drawing-only items for these kinds.
-const KNOWN = new Set([
-  "note/writable",
-  "note/read-only",
-  "excalidrawMd/writable",
-  "excalidrawMd/read-only",
-]);
+const KNOWN = new Set<string>([]);
 
 const ROWS: Array<[EntryKind, boolean]> = (
   ["folder", "drawing", "note", "excalidrawMd"] as const

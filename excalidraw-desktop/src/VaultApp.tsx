@@ -83,6 +83,7 @@ import {
 import {
   buildTree,
   createProgressThrottle,
+  drawingCopyName,
   duplicateName,
   getBaseName,
   getParentPath,
@@ -2065,7 +2066,7 @@ export const VaultApp = ({
         await flushDoc({ commitText: false });
       }
       const file = await repository.readDrawing(vault.handle, path);
-      let target = duplicateName(path);
+      let target = drawingCopyName(path);
       const knownPaths = new Set(allIndexedEntries.map((e) => e.path));
       while (knownPaths.has(target)) {
         target = duplicateName(target);
