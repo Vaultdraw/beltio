@@ -395,6 +395,8 @@ for (const mode of ["light", "dark"] as const) {
             .check();
         }
         await expect(setup(page)).toHaveAttribute("data-step", STEPS[i]!);
+        // Choosing a radio scrolls it to the top edge of a narrow window: show the screen as it opens.
+        await setup(page).evaluate((el) => (el as HTMLElement).scrollTo(0, 0));
         await page.waitForTimeout(250);
         await page.screenshot({
           path: `${SHOTS_DIR}/${i + 1}-${STEPS[i]}-${mode}-${label}.png`,
