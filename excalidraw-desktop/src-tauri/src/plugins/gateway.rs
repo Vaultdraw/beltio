@@ -275,7 +275,6 @@ pub(crate) fn markdown_call(params: Option<Value>) -> Result<Value, GatewayError
 /// text in, the picture's bytes out). The only plugin rows that reach the internet; they need the
 /// permission `network.images` and the consent purpose `images` (see `network::fetch_image`).
 fn network_call(app: &tauri::AppHandle, method: &str, body: &[u8]) -> Result<Vec<u8>, GatewayError> {
-    use tauri::Manager as _;
     let dirs = crate::config::resolve_dirs()?;
     match method {
         "network.fetchImage" => {

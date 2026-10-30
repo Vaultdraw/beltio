@@ -436,6 +436,7 @@ mod fs_safety_tests {
     use super::*;
     use tempfile::tempdir;
 
+    #[cfg(unix)]
     const SCENE: &str = r#"{"type":"excalidraw","version":2,"elements":[],"appState":{},"files":{}}"#;
 
     fn setup(names: &[(&str, &str)]) -> tempfile::TempDir {

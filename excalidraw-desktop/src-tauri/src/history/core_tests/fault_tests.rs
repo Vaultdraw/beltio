@@ -5,7 +5,9 @@ use crate::history::{
     store::{self, fault, FaultKind, Step},
     writer::Outcome,
 };
-use std::{fs, path::Path, process::Command, sync::{atomic::{AtomicBool, Ordering}, Arc}};
+#[cfg(unix)]
+use std::process::Command;
+use std::{fs, path::Path, sync::{atomic::{AtomicBool, Ordering}, Arc}};
 
 const P: &str = "a.excalidraw";
 

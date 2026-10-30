@@ -33,6 +33,7 @@ use std::{
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter, Manager};
 
+#[cfg(not(test))]
 pub(crate) use scheme::register as register_scheme;
 
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
