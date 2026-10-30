@@ -584,6 +584,18 @@
   font-size: var(--vd-fs-small);
 }
 
+/* Same specificity as the base button rule above, so the primary fill is not wiped to transparent. */
+.vault-settings-modal .vault-btn--primary {
+  background-color: var(--vault-primary);
+  border-color: var(--vault-primary);
+  color: var(--vault-on-primary);
+}
+
+.vault-settings-modal .vault-btn--primary:hover:not(:disabled) {
+  background-color: var(--vault-primary-hover);
+  border-color: var(--vault-primary-hover);
+}
+
 .vault-settings-modal .vault-btn--ghost {
   border-color: transparent;
   color: var(--vault-text-muted);
