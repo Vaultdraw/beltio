@@ -74,13 +74,10 @@ describe("hunter I-7: a linked text of several lines", () => {
     expect(multi.width).toBeGreaterThan(lastLine.width * 3);
   });
 
-  it.fails(
-    "the underline under the last line is no wider than that line",
-    () => {
-      const u = getLinkUnderline(multi, arrayToMap([multi]))!;
-      expect(u.x2 - u.x1).toBeLessThanOrEqual(lastLine.width + 1);
-    },
-  );
+  it("the underline under the last line is no wider than that line", () => {
+    const u = getLinkUnderline(multi, arrayToMap([multi]))!;
+    expect(u.x2 - u.x1).toBeLessThanOrEqual(lastLine.width + 1);
+  });
 });
 
 describe("toimprove 205: the underline stays clickable at any zoom", () => {
@@ -108,4 +105,32 @@ describe("toimprove 205: the underline stays clickable at any zoom", () => {
       );
     },
   );
+});
+
+describe("toimprove 224: every line of a linked text is underlined", () => {
+  afterEach(() => setLinkIndicator(null));
+  const multi = newTextElement({
+    x: 0,
+    y: 0,
+    text: "Roadmap for the next quarter\nQ4",
+    fontSize: 20,
+    link: "[[Roadmap]]",
+  });
+  const map = arrayToMap([multi]);
+
+  it("one segment per line, each under its own line", () => {
+    const u = getLinkUnderline(multi, map)!;
+    expect(u.segments).toHaveLength(2);
+    expect(u.segments[0].y).toBeLessThan(u.segments[1].y);
+    expect(u.segments[0].x2 - u.segments[0].x1).toBeCloseTo(multi.width, 0);
+  });
+
+  it("a click on the first line's underline opens the link; one past the short last line does not", () => {
+    setLinkIndicator({ style: "underline" });
+    const u = getLinkUnderline(multi, map)!;
+    const first = pointFrom<GlobalPoint>(multi.width - 2, u.segments[0].y);
+    const pastQ4 = pointFrom<GlobalPoint>(multi.width - 2, u.segments[1].y);
+    expect(isPointHittingLinkIcon(multi, map, appState(1), first)).toBe(true);
+    expect(isPointHittingLinkIcon(multi, map, appState(1), pastQ4)).toBe(false);
+  });
 });

@@ -257,10 +257,12 @@ const renderLinkIcon = (
     context.lineWidth = 1.5 / zoom;
     // Web links are dashed, internal links solid.
     context.setLineDash(web ? [4 / zoom, 3 / zoom] : []);
-    const y = underline.y - underline.centerY;
     context.beginPath();
-    context.moveTo(underline.x1 - underline.centerX, y);
-    context.lineTo(underline.x2 - underline.centerX, y);
+    for (const segment of underline.segments) {
+      const y = segment.y - underline.centerY;
+      context.moveTo(segment.x1 - underline.centerX, y);
+      context.lineTo(segment.x2 - underline.centerX, y);
+    }
     context.stroke();
     context.restore();
   }

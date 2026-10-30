@@ -1,7 +1,11 @@
 import { pointFrom, pointRotateRads } from "@excalidraw/math";
 
-import { getBoundTextElement } from "@excalidraw/element";
-import { getElementAbsoluteCoords } from "@excalidraw/element";
+import { getFontString } from "@excalidraw/common";
+import {
+  getBoundTextElement,
+  getElementAbsoluteCoords,
+  getLineWidth,
+} from "@excalidraw/element";
 
 import type { GlobalPoint, Radians } from "@excalidraw/math";
 import type {
@@ -42,15 +46,82 @@ export const getLinkIndicatorStyle = (): LinkIndicatorStyle => current.style;
 
 export const isWebLink = (link: string) => /^(https?:|mailto:)/i.test(link);
 
-/** Underline of an element: the text rectangle (scene coordinates) it sits under. */
+/** One underlined line of text (scene coordinates, before rotation). */
+export type LinkUnderlineSegment = { x1: number; x2: number; y: number };
+
+/**
+ * Underline of an element: one segment under each non-empty line of its text,
+ * as wide as that line (Obsidian underlines the link text on every line).
+ * `x1`, `x2` and `y` repeat the last segment.
+ */
 export type LinkUnderline = {
   x1: number;
   x2: number;
   /** y of the line */
   y: number;
+  segments: readonly LinkUnderlineSegment[];
+  /** Height of one line of the text, in scene units. */
+  lineHeight: number;
   centerX: number;
   centerY: number;
   angle: Radians;
+};
+
+type TextLike = {
+  version: number;
+  text: string;
+  width: number;
+  fontSize: number;
+  fontFamily: number;
+  lineHeight: number;
+  textAlign: string;
+};
+
+// Line widths per text element version: measured once, not every frame.
+const segmentCache = new WeakMap<
+  object,
+  {
+    version: number;
+    width: number;
+    rel: readonly LinkUnderlineSegment[];
+    lineHeight: number;
+  }
+>();
+
+/** Segments relative to the text box's top-left corner. */
+const relativeSegments = (text: TextLike) => {
+  const hit = segmentCache.get(text);
+  if (hit && hit.version === text.version && hit.width === text.width) {
+    return hit;
+  }
+  const lines = text.text.split("\n");
+  const lineHeight = text.fontSize * text.lineHeight;
+  let rel: LinkUnderlineSegment[];
+  if (lines.length < 2) {
+    rel = [{ x1: 0, x2: text.width, y: lineHeight }];
+  } else {
+    const font = getFontString(text as never);
+    rel = [];
+    lines.forEach((line, i) => {
+      const w = Math.min(text.width, getLineWidth(line.trimEnd(), font));
+      if (w <= 0) {
+        return;
+      }
+      const x1 =
+        text.textAlign === "center"
+          ? (text.width - w) / 2
+          : text.textAlign === "right"
+          ? text.width - w
+          : 0;
+      rel.push({ x1, x2: x1 + w, y: (i + 1) * lineHeight });
+    });
+    if (!rel.length) {
+      rel = [{ x1: 0, x2: text.width, y: lineHeight * lines.length }];
+    }
+  }
+  const entry = { version: text.version, width: text.width, rel, lineHeight };
+  segmentCache.set(text, entry);
+  return entry;
 };
 
 const UNDERLINE_INSET = 1;
@@ -70,10 +141,19 @@ export const getLinkUnderline = (
     return null;
   }
   const [x1, y1, x2, y2] = getElementAbsoluteCoords(text, elementsMap);
+  const { rel, lineHeight } = relativeSegments(text as unknown as TextLike);
+  const segments = rel.map((r) => ({
+    x1: x1 + r.x1,
+    x2: x1 + r.x2,
+    y: Math.min(y2, y1 + r.y) - UNDERLINE_INSET,
+  }));
+  const last = segments[segments.length - 1];
   return {
-    x1,
-    x2,
-    y: y2 - UNDERLINE_INSET,
+    x1: last.x1,
+    x2: last.x2,
+    y: last.y,
+    segments,
+    lineHeight: Math.min(lineHeight, y2 - y1),
     centerX: (x1 + x2) / 2,
     centerY: (y1 + y2) / 2,
     angle: text.angle,
@@ -95,7 +175,7 @@ export const showsLinkUnderline = (
 const HIT_HALF_HEIGHT = 6;
 const MAX_TEXT_SHARE_ABOVE = 0.25;
 
-/** Whether the scene point is on the underline strip (12 screen px tall, at most a quarter of the text above the line). */
+/** Whether the scene point is on an underline strip (12 screen px tall, at most a quarter of a line above it). */
 export const isPointHittingUnderline = (
   underline: LinkUnderline,
   zoom: number,
@@ -108,15 +188,15 @@ export const isPointHittingUnderline = (
   );
   const half = HIT_HALF_HEIGHT / zoom;
   const slack = 4 / zoom;
-  // Above the line the strip never reaches past the lower quarter of the
-  // text: zoomed out, 6 screen px would cover the whole text and a click to
+  // Above each line the strip never reaches past the lower quarter of the
+  // line: zoomed out, 6 screen px would cover the whole text and a click to
   // select it would open the link.
-  const textHeight = 2 * (underline.y + UNDERLINE_INSET - underline.centerY);
-  const above = Math.min(half, textHeight * MAX_TEXT_SHARE_ABOVE);
-  return (
-    px > underline.x1 - slack &&
-    px < underline.x2 + slack &&
-    py > underline.y - above &&
-    py < underline.y + half
+  const above = Math.min(half, underline.lineHeight * MAX_TEXT_SHARE_ABOVE);
+  return underline.segments.some(
+    (s) =>
+      px > s.x1 - slack &&
+      px < s.x2 + slack &&
+      py > s.y - above &&
+      py < s.y + half,
   );
 };
