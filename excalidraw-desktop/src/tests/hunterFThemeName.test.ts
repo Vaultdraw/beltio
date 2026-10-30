@@ -24,13 +24,13 @@ const refused = (name: string) => {
 };
 
 describe("hunter F-1: Look up pre-check agrees with the native theme name rules", () => {
-  it.fails(
+  it(
     "a name over 80 characters is refused at Look up (native refuses it)",
     () => {
       expect(refused("A".repeat(100))).toBe(true);
     },
   );
-  it.fails(
+  it(
     "the reserved name Source is refused at Look up (native refuses it)",
     () => {
       expect(refused("Source")).toBe(true);
@@ -40,7 +40,7 @@ describe("hunter F-1: Look up pre-check agrees with the native theme name rules"
 });
 
 describe("hunter F-2: Look up wording names a folder for a theme", () => {
-  it.fails("a theme name ending in a dot does not say 'Folder'", () => {
+  it("a theme name ending in a dot does not say 'Folder'", () => {
     let message = "";
     try {
       validateCandidate(file("Dracula."), "x");

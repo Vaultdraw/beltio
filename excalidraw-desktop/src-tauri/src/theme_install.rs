@@ -24,6 +24,8 @@ const MAX_THEME_BYTES: u64 = 256 * 1024;
 const MAX_TREE_BYTES: u64 = 8 * 1024 * 1024;
 const MAX_THEMES: usize = 500;
 const MAX_NAME_CHARS: usize = 80;
+/// The folder named after the theme must fit a file name.
+const MAX_NAME_BYTES: usize = 255;
 const SOURCE_FILE: &str = "source.json";
 const RAW_HOST: &str = "https://raw.githubusercontent.com";
 const API_HOST: &str = "https://api.github.com";
@@ -317,6 +319,9 @@ pub(crate) fn sanitize_name(name: &str) -> Result<&str> {
     }
     if name.chars().count() > MAX_NAME_CHARS {
         return Err(bad("The theme name is too long (80 characters at most)"));
+    }
+    if name.len() > MAX_NAME_BYTES {
+        return Err(bad("The theme name is too long to be a file name (emoji and accented letters take more room)"));
     }
     if name.starts_with('.') || name.eq_ignore_ascii_case("source") {
         return Err(bad("This theme name is not allowed"));

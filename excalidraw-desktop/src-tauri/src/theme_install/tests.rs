@@ -547,9 +547,7 @@ fn theme_name_contract_table() {
             serde_json::Value::String(s) => s.clone(),
             o => o["repeat"].as_str().unwrap().repeat(o["times"].as_u64().unwrap() as usize),
         };
-        // nativeToday pins a known wrong answer (80 emoji pass the 80-character rule but are 320 bytes,
-        // too long for the folder): remove it from the row when sanitize_name counts bytes too.
-        let expected = row.get("nativeToday").and_then(|v| v.as_bool()).unwrap_or_else(|| row["backendOk"].as_bool().unwrap());
+        let expected = row["backendOk"].as_bool().unwrap();
         assert_eq!(sanitize_name(&name).is_ok(), expected, "{}", row["label"]);
     }
 }

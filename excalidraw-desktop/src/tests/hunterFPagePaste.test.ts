@@ -20,16 +20,15 @@ import {
  * right edge: the exact overflow the commit fixed for typing.
  */
 describe("hunter F-3: pasted text wraps at the page edge in page mode", () => {
-  const clipboard = readFileSync(
-    resolve(
-      __dirname,
-      "../../../packages/excalidraw/components/App.clipboard.ts",
-    ),
+  // The page cap lives in getMaxTextWidth, the one helper typing and pasting share (toimprove 177;
+  // behaviour pinned by packages/excalidraw/tests/pageTextMaxWidth.test.ts).
+  const text = readFileSync(
+    resolve(__dirname, "../../../packages/excalidraw/components/App.text.ts"),
     "utf8",
   );
 
-  it.fails("the paste path uses the page-width wrap as typing does", () => {
-    expect(clipboard).toMatch(/getPageTextMaxWidth/);
+  it("the shared max-width helper caps text at the page width", () => {
+    expect(text).toMatch(/pageSetup\.width/);
   });
 
   it("(context) a 800 px wrapped text cannot be inside an A5 or phone page, even after the clamp", () => {

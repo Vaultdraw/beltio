@@ -10,7 +10,7 @@ import { validateCandidate } from "../theme/install/installer";
  * meets a refusal only after pressing Install, nor a refusal the install would not make.
  * Hunter F-1 and F-2 (2026-10-30): the pre-check borrowed the folder rule (255 bytes, no `source`
  * rule, bidirectional characters allowed, a trailing dot refused as "Folder names ...").
- * KNOWN_DRIFT rows fail today (`it.fails`); remove a label when the pre-check agrees.
+ * KNOWN_DRIFT rows would fail today (`it.fails`); empty since the pre-check follows the install (toimprove 175, 176).
  */
 type Row = {
   label: string;
@@ -21,18 +21,7 @@ type Row = {
 const nameOf = (r: Row) =>
   typeof r.name === "string" ? r.name : r.name.repeat.repeat(r.name.times);
 
-const KNOWN_DRIFT = new Set([
-  "81 characters",
-  "100 characters",
-  "reserved Source",
-  "reserved source",
-  "reserved SOURCE",
-  "trailing dot",
-  "Windows device name",
-  "right-to-left override",
-  "right-to-left isolate",
-  "zero-width space",
-]);
+const KNOWN_DRIFT = new Set<string>([]);
 
 const colours =
   '"dark":{"mPrimary":"#123456","mSurface":"#101010","mOnSurface":"#eeeeee"}';

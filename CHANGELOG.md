@@ -23,6 +23,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Theme Look up and Install agree on a theme's name.** A name over 80 characters, "Source", or one with invisible or text-direction characters is refused at Look up (it used to pass and fail only on Install), a name ending in a dot is accepted as Install accepts it (it was refused with "Folder names cannot end with a dot"), and 80 emoji no longer pass Install only to fail writing the folder.
 - **Pasted long text in page mode wraps at the page edge.** Typed text already did; a pasted paragraph used to wrap at up to 800 px and ran past the right edge of an A5, B5 or phone page.
 - **Look up on a bad theme file explains itself in plain words, and refuses an unusable name at once.** The message no longer names theme keys (`mSurface`) or format hints; a theme named like `../x` is refused at Look up, not after Install.
 - **Enter and Backspace on a heading give the right body size after you change a heading size.** A typed heading now remembers the text size it was made from, so changing `markdown.h1_size` later no longer makes the next line or the un-headed text the wrong size; an imported heading is read at the default scale.

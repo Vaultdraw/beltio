@@ -1,8 +1,8 @@
 /** Install, update and remove themes through an InstallBackend (pure logic, no UI). */
 
-import { validateEntryName } from "../../vault/treeStore";
 import { parseThemeFile } from "../normalize";
 
+import { themeNameProblem } from "./themeName";
 import { InstallError } from "./types";
 
 import type {
@@ -71,11 +71,11 @@ export const validateCandidate = (
       "That theme's colours are incomplete or are not written as hex colours such as #1e1e1e",
     );
   }
-  // The name becomes a file name: refuse one that could not be written (slashes, dots) here, not
-  // after the user pressed Install.
-  const safe = validateEntryName(name, "folder");
-  if (!safe.valid) {
-    throw bad(`That theme's name cannot be used: ${safe.error}`);
+  // The name becomes a file name: refuse one the install would refuse here, not after the user
+  // pressed Install (same rules as the native install, one case table pins both).
+  const nameProblem = themeNameProblem(name);
+  if (nameProblem) {
+    throw bad(`That theme's name cannot be used: ${nameProblem}`);
   }
   return name;
 };
