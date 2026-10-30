@@ -83,7 +83,9 @@ test("hunter B: 32 tabs: the overflow list, its filter, wrap-around keys and the
   expect(lb.x + lb.width).toBeLessThanOrEqual(vp.width + 1);
   // duplicate names must be distinguishable
   const labels = await rows(page).evaluateAll((els) =>
-    els.map((e) => (e.querySelector(".vault-tablist__name")?.textContent ?? "").trim()),
+    els.map((e) =>
+      (e.querySelector(".vault-tablist__name")?.textContent ?? "").trim(),
+    ),
   );
   const notes = labels.filter((l) => /Notes/.test(l));
   expect(new Set(notes).size).toBe(notes.length);
@@ -95,11 +97,23 @@ test("hunter B: 32 tabs: the overflow list, its filter, wrap-around keys and the
   await page.keyboard.press("Enter");
   await expect(list(page)).toBeVisible(); // nothing picked: stays open (or closes)
   expect(await activeTab(page)).toBe(before);
-  for (let i = 0; i < 4; i++) await page.keyboard.press("Backspace");
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press("Backspace");
+  }
   await page.keyboard.type("Tab 07");
   await expect(rows(page).first()).toContainText("Tab 07");
   await page.keyboard.press("Enter");
   await expect(list(page)).toHaveCount(0);
+  // keyboard focus is never left on the old tab (utilizer, B-5 family): the picked tab or the
+  // opened drawing has it, as in Obsidian
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const el = document.activeElement?.closest('[data-testid="vault-tab"]');
+        return el ? el.textContent ?? "" : "not a tab";
+      }),
+    )
+    .toMatch(/Tab 07|not a tab/);
   // the picked tab is visible in the strip
   const act2 = page.locator('[data-testid="vault-tab"][aria-selected="true"]');
   await expect

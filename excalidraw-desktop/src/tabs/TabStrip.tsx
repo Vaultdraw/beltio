@@ -296,14 +296,25 @@ export const TabStrip = memo(
       // tabElement only reads listRef
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+    // The tab picked in the list: the active id is still the old one when the list closes.
+    const picked = useRef<TabId | null>(null);
     const dismissList = useCallback((restoreFocus: boolean) => {
       setListOpen(false);
+      const id = picked.current ?? latest.current.activeId;
+      picked.current = null;
       if (restoreFocus) {
-        // After a pick the active id is still the old tab: focusing it must not scroll the
-        // strip away from the tab just picked (the strip scrolls to the new active tab itself).
-        tabElement(latest.current.activeId)?.focus({ preventScroll: true });
+        // Focus goes to the picked tab (keys act on it next), without scrolling the strip: it
+        // scrolls to the new active tab itself (hunter B-5).
+        tabElement(id)?.focus({ preventScroll: true });
       }
     }, []);
+    const onPick = useCallback(
+      (id: TabId) => {
+        picked.current = id;
+        onActivate(id);
+      },
+      [onActivate],
+    );
 
     const { onTabPointerDown, wasDrag } = useStripDrag({
       listRef,
@@ -466,7 +477,7 @@ export const TabStrip = memo(
               missing: t.missing,
             }))}
             activeId={active.id}
-            onActivate={onActivate}
+            onActivate={onPick}
             onDismiss={dismissList}
           />
         )}
