@@ -14,7 +14,9 @@ import {
 
 import type { NoteDoc } from "../plugins/api";
 
-const FRONT = /^﻿?---[ \t]*\r?\n([\s\S]*?)\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/;
+/** The reading view's rule (render/obsidian.ts FRONTMATTER), one case table pins both. */
+const FRONT =
+  /^﻿?---[ \t]*\r?\n(?:([\s\S]*?)\r?\n)?(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/;
 
 /** The browser stand-in: front matter keys, tags and counts. */
 export function standInNoteDoc(text: string): NoteDoc {
@@ -25,10 +27,22 @@ export function standInNoteDoc(text: string): NoteDoc {
   }
   const properties: Record<string, string> = {};
   const tags: string[] = [];
-  for (const line of m[1].split(/\r?\n/)) {
+  const lists: Record<string, string[]> = {};
+  let key: string | null = null;
+  for (const line of (m[1] ?? "").split(/\r?\n/)) {
     const kv = /^([\w-]+):[ \t]*(.*)$/.exec(line);
+    const item = /^[ \t]*-[ \t]+(.*)$/.exec(line);
     if (kv) {
-      properties[kv[1]] = kv[2].replace(/^["']|["']$/g, "");
+      key = kv[1];
+      properties[key] = kv[2].replace(/^["']|["']$/g, "");
+    } else if (item && key) {
+      // A block list (`tags:` then `  - one`), as the native parser reads it (toimprove 215).
+      (lists[key] ??= []).push(item[1].trim().replace(/^["']|["']$/g, ""));
+    }
+  }
+  for (const [k, items] of Object.entries(lists)) {
+    if (!properties[k]) {
+      properties[k] = items.join(", ");
     }
   }
   for (const t of (properties.tags ?? "").split(/[,\s[\]]+/).filter(Boolean)) {
@@ -38,7 +52,7 @@ export function standInNoteDoc(text: string): NoteDoc {
     ...base,
     frontmatter: {
       range: [0, m[0].length],
-      raw: m[1],
+      raw: m[1] ?? "",
       tags,
       aliases: [],
       properties,

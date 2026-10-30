@@ -1,7 +1,7 @@
 //! Bug hunter J, 2026-10-30 (toimprove 215): the native parser runs the front matter case table
 //! that the reading view and the browser stand-in run (src/notes/frontmatterContract.test.ts).
-//! Rows whose `drift.native` is set disagree today; they are listed, not asserted, by the first
-//! test and asserted by the `should_panic` test. Delete `should_panic` when 207 is fixed.
+//! A row whose `drift.native` is set disagrees today and is skipped; none does since 215 was fixed
+//! (the parser reads front matter by the reading view's rule).
 
 use vaultdraw_core::markdown::{parse_markdown, ParseOptions};
 
@@ -27,16 +27,4 @@ fn native_front_matter_matches_the_table() {
         .map(|r| format!("{}: {:?}", r["label"].as_str().unwrap(), tags_of(r["text"].as_str().unwrap())))
         .collect();
     assert!(bad.is_empty(), "rows that disagree: {bad:?}");
-}
-
-#[test]
-#[should_panic(expected = "native drift")]
-fn known_native_drift_rows() {
-    let bad: Vec<String> = rows()
-        .iter()
-        .filter(|r| !r["drift"]["native"].is_null())
-        .filter(|r| tags_of(r["text"].as_str().unwrap()) != want(r))
-        .map(|r| r["label"].as_str().unwrap().to_string())
-        .collect();
-    assert!(bad.is_empty(), "native drift: {bad:?}");
 }
