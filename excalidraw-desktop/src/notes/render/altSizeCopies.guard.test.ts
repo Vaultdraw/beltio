@@ -21,7 +21,7 @@ const PINNED = [
   "plugins/official/markdown-import/src/layout/literalImages.ts",
 ];
 const KNOWN_211 = [
-  "excalidraw-desktop/src/notes/render/hydrate.ts",
+  // hydrate.ts uses altAndSize since toimprove 211 (fixer A).
   // page mode's image block: drops the height and refuses "| 300" with a space
   "sdk/api/shared/markdown.ts",
 ];
@@ -42,7 +42,7 @@ describe("one alt|size parser (altAndSize)", () => {
     expect(copies().filter((f) => !KNOWN_211.includes(f))).toEqual([]);
   });
   it.fails(
-    "hydrate.ts and the page-mode parser use altAndSize too (fails until toimprove 211)",
+    "the page-mode parser uses altAndSize too (fails until sdk/api/shared/markdown.ts does)",
     () => {
       expect(copies()).toEqual([]);
     },
