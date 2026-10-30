@@ -39,26 +39,42 @@ export async function toggleBoldSelected(
   if (changing.length === 0) {
     return 0;
   }
-  const patched = changing.map(
-    (e) =>
-      newElementWith(
-        e as never,
-        { fontFamily: wanted(e) } as never,
-      ) as AnyElement,
+  const target = new Map(changing.map((e) => [e.id, wanted(e)]));
+  await fontsReady(
+    changing.map(
+      (e) =>
+        newElementWith(
+          e as never,
+          { fontFamily: target.get(e.id) } as never,
+        ) as AnyElement,
+    ),
   );
-  await fontsReady(patched);
-  const map = new Map(all.map((e) => [e.id, e]));
+  // Re-read after the wait: anything drawn, typed or reloaded meanwhile stays.
+  const current =
+    api.getSceneElementsIncludingDeleted() as unknown as AnyElement[];
+  const map = new Map(current.map((e) => [e.id, e]));
   const next = new Map<string, AnyElement>();
-  for (const e of patched) {
-    map.set(e.id, e);
-    const measured = measureTextUpdate(e, map);
+  for (const e of current) {
+    const font = target.get(e.id);
+    if (font === undefined || e.isDeleted || e.type !== "text") {
+      continue;
+    }
+    const patched = newElementWith(
+      e as never,
+      { fontFamily: font } as never,
+    ) as AnyElement;
+    map.set(e.id, patched);
+    const measured = measureTextUpdate(patched, map);
     next.set(
       e.id,
-      newElementWith(e as never, (measured ?? {}) as never) as AnyElement,
+      newElementWith(patched as never, (measured ?? {}) as never) as AnyElement,
     );
   }
+  if (next.size === 0) {
+    return 0;
+  }
   api.updateScene({
-    elements: all.map((e) => next.get(e.id) ?? e) as never,
+    elements: current.map((e) => next.get(e.id) ?? e) as never,
     captureUpdate: IMMEDIATELY,
   });
   return next.size;

@@ -29,28 +29,25 @@ const text = (id: string) => ({
 });
 
 describe("hunter I-2: Toggle bold keeps what changed while the font loaded", () => {
-  it.fails(
-    "a shape added during the font wait is still in the scene after the toggle",
-    async () => {
-      let scene: any[] = [text("a")];
-      let written: any[] | null = null;
-      const api = {
-        getAppState: () => ({ selectedElementIds: { a: true } }),
-        getSceneElementsIncludingDeleted: () => scene,
-        updateScene: (s: { elements: any[] }) => {
-          written = s.elements;
-          scene = s.elements;
-        },
-      };
-      const done = toggleBoldSelected(api as never);
-      // the user draws a rectangle while the bold face loads
-      scene = [
-        ...scene,
-        { id: "r", type: "rectangle", isDeleted: false, version: 1 },
-      ];
-      releaseFonts();
-      expect(await done).toBe(1);
-      expect(written!.map((e) => e.id)).toEqual(["a", "r"]);
-    },
-  );
+  it("a shape added during the font wait is still in the scene after the toggle", async () => {
+    let scene: any[] = [text("a")];
+    let written: any[] | null = null;
+    const api = {
+      getAppState: () => ({ selectedElementIds: { a: true } }),
+      getSceneElementsIncludingDeleted: () => scene,
+      updateScene: (s: { elements: any[] }) => {
+        written = s.elements;
+        scene = s.elements;
+      },
+    };
+    const done = toggleBoldSelected(api as never);
+    // the user draws a rectangle while the bold face loads
+    scene = [
+      ...scene,
+      { id: "r", type: "rectangle", isDeleted: false, version: 1 },
+    ];
+    releaseFonts();
+    expect(await done).toBe(1);
+    expect(written!.map((e) => e.id)).toEqual(["a", "r"]);
+  });
 });
