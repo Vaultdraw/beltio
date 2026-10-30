@@ -126,7 +126,7 @@ mod tests {
 
     fn root() -> (tempfile::TempDir, PathBuf) {
         let t = tempfile::tempdir().unwrap();
-        let r = t.path().canonicalize().unwrap();
+        let r = dunce::canonicalize(t.path()).unwrap();
         (t, r)
     }
 

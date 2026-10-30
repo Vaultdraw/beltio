@@ -13,6 +13,9 @@
 //! cannot apply to a volume (a FAT volume has no read-only mode bits) reports N/A, not PASS.
 //! The stamp case requires the save stamp shortcut OFF on FAT, exFAT and HFS+ (coarse clocks).
 
+// Unix volume tests (mode bits, mounted folders): not built on Windows.
+#![cfg(unix)]
+
 use std::{
     fs,
     panic::{catch_unwind, AssertUnwindSafe},
@@ -399,7 +402,7 @@ fn run_volume(mount: &Path) -> usize {
         // A fresh vault folder per case: no case sees another's files.
         let root = mount.join(format!("vdtest-{}-{name}", std::process::id()));
         fs::create_dir_all(&root).unwrap();
-        let root = root.canonicalize().unwrap();
+        let root = dunce::canonicalize(root).unwrap();
         let ctx = Ctx { fs: fs.clone(), v: Vault::new(root.clone(), "t".into(), false, None), root: root.clone(), ci };
         let r = catch_unwind(AssertUnwindSafe(|| case(&ctx)));
         let (tag, detail) = match r {

@@ -164,6 +164,7 @@ fn crash_after_every_kth_unlink_leaves_every_delta_with_its_keyframe() {
     assert!(totals.iter().all(|t| *t < 60), "{totals:?}");
 }
 
+#[cfg(unix)]
 #[test]
 fn keyframe_is_never_removed_while_a_delta_references_it_even_if_the_delta_stays_on_disk() {
     let g = G::new();
@@ -491,6 +492,7 @@ fn delete_all_removes_every_lineage_of_the_path_including_hidden_and_checkpoints
     assert!(gc::delete_all(&g.ctx(START), "nothing.excalidraw").unwrap().is_empty());
 }
 
+#[cfg(unix)]
 #[test]
 fn delete_lineages_validates_ids_and_refuses_symlinked_folders() {
     let g = G::new();

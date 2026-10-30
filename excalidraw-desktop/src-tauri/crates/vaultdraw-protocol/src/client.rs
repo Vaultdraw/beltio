@@ -4,13 +4,13 @@ use crate::frame::{read_frame, write_frame, FrameError};
 use crate::message::{Id, Incoming, Notification, Request, RpcError};
 use serde_json::Value;
 use std::io::BufReader;
-use std::os::unix::net::UnixStream;
+use crate::transport::{self, Stream};
 use std::path::Path;
 use std::time::Duration;
 
 #[derive(Debug)]
 pub enum CallError {
-    /// No app is listening (socket missing or connection refused).
+    /// No app is listening (socket or pipe missing, or connection refused).
     NotRunning(String),
     /// Transport failure after connecting, or an unparsable reply.
     Io(String),
@@ -31,8 +31,8 @@ impl std::fmt::Display for CallError {
 }
 
 pub struct Client {
-    writer: UnixStream,
-    reader: BufReader<UnixStream>,
+    writer: Stream,
+    reader: BufReader<Stream>,
     next_id: i64,
     /// Notifications that arrived while waiting for a reply.
     pending: std::collections::VecDeque<Notification>,
@@ -42,7 +42,7 @@ impl Client {
     /// Connects; `NotRunning` when nothing listens at `path`.
     pub fn connect(path: &Path) -> Result<Self, CallError> {
         crate::dirs::check_socket_path_len(path).map_err(CallError::Io)?;
-        let stream = UnixStream::connect(path).map_err(|e| match e.kind() {
+        let stream = transport::connect(path).map_err(|e| match e.kind() {
             std::io::ErrorKind::NotFound | std::io::ErrorKind::ConnectionRefused => {
                 CallError::NotRunning(format!("Vaultdraw is not running (no control socket at {})", path.display()))
             }
@@ -119,6 +119,7 @@ fn frame_err(e: FrameError) -> CallError {
 }
 
 #[cfg(test)]
+#[cfg(unix)]
 mod socket_path_tests {
     use super::*;
 

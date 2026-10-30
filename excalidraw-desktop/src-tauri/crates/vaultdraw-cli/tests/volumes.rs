@@ -29,10 +29,10 @@ fn ok(e: &Env, args: &[&str], stdin: &str) -> Result<Value, String> {
 
 fn env_on(mount: &Path, tag: &str) -> Env {
     let tmp = tempfile::tempdir().unwrap();
-    let base = tmp.path().canonicalize().unwrap();
+    let base = dunce::canonicalize(tmp.path()).unwrap();
     let root = mount.join(format!("vdcli-{}-{tag}", std::process::id()));
     std::fs::create_dir_all(&root).unwrap();
-    let root = root.canonicalize().unwrap();
+    let root = dunce::canonicalize(root).unwrap();
     let e = Env { root, state: base.join("state"), runtime: base.join("run"), config: base.join("config"), _tmp: tmp };
     for d in [&e.state, &e.runtime, &e.config] { std::fs::create_dir_all(d).unwrap(); }
     e

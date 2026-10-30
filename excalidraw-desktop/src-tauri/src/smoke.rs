@@ -27,7 +27,7 @@ pub fn test_dir() -> Result<PathBuf, String> {
     if !path.is_dir() {
         return Err(format!("{ENV_DIR} must name a directory"));
     }
-    path.canonicalize().map_err(|error| error.to_string())
+    dunce::canonicalize(path).map_err(|error| error.to_string())
 }
 
 /// Vault for the n-th `choose_vault` call: the test folder, or with EXCALIDRAW_VAULT_SMOKE_DIR_ALT set
@@ -43,7 +43,7 @@ pub fn choose_dir() -> Result<PathBuf, String> {
             if !path.is_dir() {
                 return Err(format!("{ENV_DIR_ALT} must name an existing directory"));
             }
-            path.canonicalize().map_err(|error| error.to_string())
+            dunce::canonicalize(path).map_err(|error| error.to_string())
         }
         None => test_dir(),
     }
@@ -59,7 +59,7 @@ pub fn export_dir() -> Result<PathBuf, String> {
     let root = test_dir()?;
     let path = root.join("smoke-exports");
     fs::create_dir_all(&path).map_err(|error| error.to_string())?;
-    let resolved = path.canonicalize().map_err(|error| error.to_string())?;
+    let resolved = dunce::canonicalize(path).map_err(|error| error.to_string())?;
     if !resolved.starts_with(&root) || !resolved.is_dir() {
         return Err("smoke export directory escaped the configured test folder".into());
     }

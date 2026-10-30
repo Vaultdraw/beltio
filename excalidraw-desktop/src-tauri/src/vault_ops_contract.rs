@@ -66,7 +66,7 @@ fn native_vault_operations_follow_the_shared_table() {
     for case in table["cases"].as_array().unwrap() {
         let name = case["name"].as_str().unwrap();
         let dir = tempfile::tempdir().unwrap();
-        let root = dir.path().canonicalize().unwrap();
+        let root = dunce::canonicalize(dir.path()).unwrap();
         build_disk(&root, case["disk"].as_object().unwrap());
         let got = run(&root, &case["op"]);
         let want = case["expect"].as_str().unwrap();

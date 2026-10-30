@@ -50,8 +50,8 @@ fn settings_file(root: &Path, create: bool) -> Result<Option<PathBuf>> {
     if metadata.file_type().is_symlink() || !metadata.is_dir() {
         return Err(err("INVALID_PATH", "Reserved vault metadata is not a real directory"));
     }
-    let base = root.canonicalize().map_err(ioerr)?;
-    if !meta.canonicalize().map_err(ioerr)?.starts_with(&base) {
+    let base = dunce::canonicalize(root).map_err(ioerr)?;
+    if !dunce::canonicalize(&meta).map_err(ioerr)?.starts_with(&base) {
         return Err(err("INVALID_PATH", "Path escapes the selected vault"));
     }
     let file = meta.join(SETTINGS_FILE);
@@ -205,7 +205,7 @@ mod tests {
     use tempfile::tempdir;
 
     fn vault(root: &Path, read_only: bool) -> Vault {
-        Vault::for_tests(root.canonicalize().unwrap(), "test", read_only)
+        Vault::for_tests(dunce::canonicalize(root).unwrap(), "test", read_only)
     }
     fn change(key: &str, value: Json) -> ConfigChange {
         ConfigChange { key: key.into(), value }
@@ -409,7 +409,7 @@ mod tests {
         update_vault_settings_at(&v, &[change("files.new_drawing_folder", json!("../escape"))]).unwrap();
         let path = PathBuf::from(load_vault_settings_at(&v.root).path);
         assert_eq!(path, v.root.join(META_DIR).join(SETTINGS_FILE));
-        assert!(path.canonicalize().unwrap().starts_with(&v.root));
+        assert!(dunce::canonicalize(path).unwrap().starts_with(&v.root));
         // Only the metadata folder was created in the vault root.
         let names: Vec<_> = fs::read_dir(&v.root).unwrap().map(|e| e.unwrap().file_name()).collect();
         assert_eq!(names, vec![std::ffi::OsString::from(META_DIR)]);

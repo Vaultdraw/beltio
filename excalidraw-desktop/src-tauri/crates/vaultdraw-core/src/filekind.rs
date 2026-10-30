@@ -194,7 +194,7 @@ mod tests {
     }
 
     fn vault(root: &Path) -> crate::Vault {
-        crate::Vault::new(root.canonicalize().unwrap(), "t".into(), false, None)
+        crate::Vault::new(dunce::canonicalize(root).unwrap(), "t".into(), false, None)
     }
 
     fn listed(v: &crate::Vault, dir: &str) -> Vec<(String, String)> {
@@ -266,7 +266,7 @@ mod tests {
         let d = fixture_copy();
         let before = snapshot(d.path());
         {
-            let root = d.path().canonicalize().unwrap();
+            let root = dunce::canonicalize(d.path()).unwrap();
             let outcome = crate::lock::LockRegistry::default().acquire(&root, ".excalidraw-vault.lock");
             let v = crate::Vault::new(root.clone(), "t".into(), outcome.lock.is_none(), outcome.lock);
             let mut pending = vec![String::new()];

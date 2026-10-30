@@ -1200,7 +1200,7 @@ fn plugin_path_corpus() {
 /// A vault in a temp folder, with the root canonical like the app's.
 fn vault(read_only: bool) -> (tempfile::TempDir, Vault) {
     let d = tempdir().unwrap();
-    let v = Vault::new(d.path().canonicalize().unwrap(), "t".into(), read_only, None);
+    let v = Vault::new(dunce::canonicalize(d.path()).unwrap(), "t".into(), read_only, None);
     (d, v)
 }
 
@@ -1617,7 +1617,7 @@ mod exports_rows {
     use tempfile::tempdir;
 
     fn vault(root: &std::path::Path, read_only: bool) -> crate::Vault {
-        crate::Vault::for_tests(root.canonicalize().unwrap(), "t", read_only)
+        crate::Vault::for_tests(dunce::canonicalize(root).unwrap(), "t", read_only)
     }
     fn body(head: serde_json::Value, bytes: &[u8]) -> Vec<u8> {
         let json = serde_json::to_vec(&head).unwrap();

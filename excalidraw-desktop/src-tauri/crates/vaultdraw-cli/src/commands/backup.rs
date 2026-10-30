@@ -6,7 +6,7 @@ use crate::cli::Cli;
 use crate::error::Fail;
 use serde_json::json;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 use vaultdraw_core::backup::{self, BackupOptions, BackupSettings, Progress};
 use vaultdraw_core::config::{read_merged_config, resolve_dirs_with};
 use vaultdraw_core::vault_path;
@@ -15,6 +15,7 @@ static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 
 #[cfg(unix)]
 fn on_interrupt() {
+    use std::sync::atomic::Ordering;
     extern "C" fn handler(_: libc::c_int) {
         INTERRUPTED.store(true, Ordering::Relaxed);
     }

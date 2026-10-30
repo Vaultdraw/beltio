@@ -34,10 +34,10 @@ pub(crate) struct Target {
 /// The real path of `p`. A path that no longer exists (a file mid-save) keeps its folder's real
 /// path, so an event for it still compares equal. macOS reports `/private/var/...` for `/var/...`.
 pub(crate) fn canonical(p: &Path) -> PathBuf {
-    if let Ok(c) = p.canonicalize() {
+    if let Ok(c) = dunce::canonicalize(p) {
         return c;
     }
-    match (p.parent().and_then(|d| d.canonicalize().ok()), p.file_name()) {
+    match (p.parent().and_then(|d| dunce::canonicalize(d).ok()), p.file_name()) {
         (Some(dir), Some(name)) => dir.join(name),
         _ => p.to_path_buf(),
     }
@@ -172,6 +172,7 @@ mod tests {
         assert!(changed_ids(&[p("/p/a/notes.txt"), p("/p/a/dist/main.js")], &ts).is_empty());
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_symlinked_plugin_folder_matches_the_real_path_events() {
         use std::fs;
@@ -191,6 +192,7 @@ mod tests {
         assert_eq!(changed_ids(&[link.join("main.js")], &[t]), ids);
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_real_watcher_reports_a_save_through_a_symlinked_folder() {
         use std::fs;

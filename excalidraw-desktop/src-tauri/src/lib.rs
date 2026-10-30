@@ -1,3 +1,7 @@
+// Windows builds use the plain fallbacks of the macOS and Linux platform code (pressure, watchdog,
+// PDF import, window chrome): their helpers are then unused.
+#![cfg_attr(windows, allow(dead_code))]
+
 use notify::Event;
 use serde::Serialize;
 use std::{
@@ -236,7 +240,7 @@ fn classify_vault_event(root: &Path, p: &Path) -> WatchedPath {
     }
 }
 fn open_vault(root: PathBuf, app: &AppHandle, service: &Service) -> Result<VaultInfo> {
-    let root = root.canonicalize().map_err(ioerr)?;
+    let root = dunce::canonicalize(root).map_err(ioerr)?;
     if !root.is_dir() {
         return Err(err("INVALID_PATH", "Vault must be a directory"));
     }
@@ -394,7 +398,7 @@ fn remember_vault(app: &AppHandle, info: &VaultInfo) {
 fn existing_vault_dir(path: &str) -> Result<PathBuf> {
     let p = PathBuf::from(path);
     if !p.is_absolute() { return Err(err("INVALID_PATH", "Vault path must be absolute")); }
-    let canonical = p.canonicalize().map_err(ioerr)?;
+    let canonical = dunce::canonicalize(p).map_err(ioerr)?;
     if !canonical.is_dir() { return Err(err("INVALID_PATH", "Vault must be a directory")); }
     Ok(canonical)
 }
@@ -798,12 +802,12 @@ mod tests {
     use tempfile::tempdir;
     const SCENE: &str = r#"{"type":"excalidraw","version":2,"source":"https://excalidraw.com","elements":[],"appState":{},"files":{}}"#;
     fn vault(root: &Path) -> Vault {
-        Vault::for_tests(root.canonicalize().unwrap(), "test", false)
+        Vault::for_tests(dunce::canonicalize(root).unwrap(), "test", false)
     }
     #[test]
     fn trash_takes_a_non_empty_nested_folder_and_lists_its_files() {
         let d = tempdir().unwrap();
-        let root = d.path().canonicalize().unwrap();
+        let root = dunce::canonicalize(d.path()).unwrap();
         std::fs::create_dir_all(root.join("Ideas/deep")).unwrap();
         std::fs::write(root.join("Ideas/a.excalidraw"), SCENE).unwrap();
         std::fs::write(root.join("Ideas/deep/b.md"), "x").unwrap();
@@ -825,7 +829,7 @@ mod tests {
         std::fs::create_dir_all(&outside).unwrap();
         std::fs::write(outside.join("keep.txt"), "x").unwrap();
         std::os::unix::fs::symlink(&outside, root.join("F/link")).unwrap();
-        let root = root.canonicalize().unwrap();
+        let root = dunce::canonicalize(root).unwrap();
         let bin = tempdir().unwrap();
         let files = trash_in(&root, "F", |p| std::fs::rename(p, bin.path().join("F")).map_err(|e| e.to_string())).unwrap();
         assert_eq!(files, vec!["F/link"]);
@@ -842,7 +846,7 @@ mod tests {
         std::fs::create_dir_all(&root).unwrap();
         std::fs::create_dir_all(&outside).unwrap();
         std::os::unix::fs::symlink(&outside, root.join("link")).unwrap();
-        let root = root.canonicalize().unwrap();
+        let root = dunce::canonicalize(root).unwrap();
         let hit = std::cell::Cell::new(false);
         assert_eq!(trash_in(&root, "link", |_| { hit.set(true); Ok(()) }).unwrap_err().code, "INVALID_PATH");
         assert_eq!(trash_in(&root, "link/x", |_| { hit.set(true); Ok(()) }).unwrap_err().code, "INVALID_PATH");
@@ -851,7 +855,7 @@ mod tests {
     #[test]
     fn trash_refuses_the_vault_root_and_escapes() {
         let d = tempdir().unwrap();
-        let root = d.path().canonicalize().unwrap();
+        let root = dunce::canonicalize(d.path()).unwrap();
         let hit = std::cell::Cell::new(false);
         for bad in ["", ".", "..", "../x", "/etc"] {
             assert!(trash_in(&root, bad, |_| { hit.set(true); Ok(()) }).is_err(), "{bad}");
@@ -880,7 +884,7 @@ mod tests {
     fn trash_entry_refuses_read_only_vaults() {
         // writable() is the guard trash_entry calls first.
         let d = tempdir().unwrap();
-        let v = Vault::for_tests(d.path().canonicalize().unwrap(), "test", true);
+        let v = Vault::for_tests(dunce::canonicalize(d.path()).unwrap(), "test", true);
         assert_eq!(writable(&v).unwrap_err().code, "READ_ONLY");
     }
     #[test]
@@ -899,7 +903,7 @@ mod tests {
     fn open_by_path_needs_an_existing_absolute_directory() {
         let d = tempfile::tempdir().unwrap();
         let ok = existing_vault_dir(d.path().to_str().unwrap()).unwrap();
-        assert_eq!(ok, d.path().canonicalize().unwrap());
+        assert_eq!(ok, dunce::canonicalize(d.path()).unwrap());
         assert_eq!(existing_vault_dir("relative/dir").unwrap_err().code, "INVALID_PATH");
         assert_eq!(existing_vault_dir(d.path().join("nope").to_str().unwrap()).unwrap_err().code, "NOT_FOUND");
         let f = d.path().join("f.txt");

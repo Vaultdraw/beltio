@@ -5,9 +5,6 @@ use super::events::{Bus, Staged, Subscription};
 use super::policy;
 use serde_json::{json, Value};
 use std::io::{self, BufReader, Write};
-use std::os::fd::{AsRawFd, RawFd};
-use std::os::unix::fs::PermissionsExt;
-use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -15,6 +12,7 @@ use std::time::Duration;
 use vaultdraw_protocol::dirs::InstancePaths;
 use vaultdraw_protocol::events::{self, mask_of, notification};
 use vaultdraw_protocol::frame::{read_frame, write_frame, FrameError};
+use vaultdraw_protocol::transport::{self, Listener, Stream};
 use vaultdraw_protocol::methods::{self, roles, EVENTS_SUBSCRIBE, EVENTS_UNSUBSCRIBE, RPC_HELLO};
 use vaultdraw_protocol::{codes, Id, Request, Response, RpcError, API_LEVEL, INVALID_REQUEST, MAX_FRAME_BYTES, PARSE_ERROR};
 
@@ -33,7 +31,7 @@ pub(crate) trait Dispatch: Send + Sync + 'static {
 }
 
 /// A connection's write half, shared by replies and the event writer thread.
-type SharedWriter = Arc<Mutex<UnixStream>>;
+type SharedWriter = Arc<Mutex<Stream>>;
 
 /// A client that does not read for this long is cut off instead of stalling its writers.
 const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
@@ -59,7 +57,7 @@ impl Default for Conn {
 /// Injectable peer check (tests simulate another user).
 #[derive(Clone, Copy)]
 pub(crate) struct ServerConfig {
-    pub peer_uid: fn(RawFd) -> io::Result<u32>,
+    pub peer_uid: fn(&Stream) -> io::Result<u32>,
     pub my_uid: u32,
     /// The AI switch (`ai.enabled` and `ai.mcp_enabled`); tests pin it.
     pub mcp_open: fn() -> bool,
@@ -67,7 +65,7 @@ pub(crate) struct ServerConfig {
 
 impl Default for ServerConfig {
     fn default() -> Self {
-        Self { peer_uid: vaultdraw_protocol::peer::peer_uid, my_uid: vaultdraw_protocol::peer::my_uid(), mcp_open: policy::mcp_enabled }
+        Self { peer_uid: vaultdraw_protocol::peer::stream_peer_uid, my_uid: vaultdraw_protocol::peer::my_uid(), mcp_open: policy::mcp_enabled }
     }
 }
 
@@ -82,7 +80,8 @@ impl ServerHandle {
     #[cfg(test)]
     pub(crate) fn shutdown(&self) {
         self.stop.store(true, Ordering::SeqCst);
-        let _ = UnixStream::connect(&self.socket);
+        let _ = transport::connect(&self.socket);
+        #[cfg(unix)]
         let _ = std::fs::remove_file(&self.socket);
     }
 }
@@ -91,20 +90,26 @@ impl ServerHandle {
 /// serves connections on a background thread.
 pub(crate) fn start(paths: &InstancePaths, dispatch: Arc<dyn Dispatch>, bus: Arc<Bus>, cfg: ServerConfig) -> io::Result<ServerHandle> {
     paths.check_socket_len().map_err(io::Error::other)?;
+    // Windows has no socket file: the pipe is created by `bind` and goes away with the process.
+    #[cfg(unix)]
     match std::fs::remove_file(&paths.socket) {
         Ok(()) => {}
         Err(e) if e.kind() == io::ErrorKind::NotFound => {}
         Err(e) => return Err(e),
     }
-    let listener = UnixListener::bind(&paths.socket)?;
-    std::fs::set_permissions(&paths.socket, std::fs::Permissions::from_mode(0o600))?;
+    let listener = transport::bind(&paths.socket)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&paths.socket, std::fs::Permissions::from_mode(0o600))?;
+    }
     let stop = Arc::new(AtomicBool::new(false));
     let handle = ServerHandle { socket: paths.socket.clone(), stop: stop.clone() };
     std::thread::Builder::new().name("control-accept".into()).spawn(move || accept_loop(listener, dispatch, bus, cfg, stop))?;
     Ok(handle)
 }
 
-fn accept_loop(listener: UnixListener, dispatch: Arc<dyn Dispatch>, bus: Arc<Bus>, cfg: ServerConfig, stop: Arc<AtomicBool>) {
+fn accept_loop(listener: Listener, dispatch: Arc<dyn Dispatch>, bus: Arc<Bus>, cfg: ServerConfig, stop: Arc<AtomicBool>) {
     let live = Arc::new(AtomicUsize::new(0));
     for stream in listener.incoming() {
         if stop.load(Ordering::SeqCst) {
@@ -129,8 +134,8 @@ fn accept_loop(listener: UnixListener, dispatch: Arc<dyn Dispatch>, bus: Arc<Bus
     }
 }
 
-fn serve_connection(stream: UnixStream, dispatch: &dyn Dispatch, bus: &Arc<Bus>, cfg: ServerConfig) {
-    match (cfg.peer_uid)(stream.as_raw_fd()) {
+fn serve_connection(stream: Stream, dispatch: &dyn Dispatch, bus: &Arc<Bus>, cfg: ServerConfig) {
+    match (cfg.peer_uid)(&stream) {
         Ok(uid) if uid == cfg.my_uid => {}
         _ => return,
     }
@@ -259,7 +264,7 @@ fn subscribe(params: Option<&Value>, conn: &mut Conn, bus: &Arc<Bus>) -> Result<
     Ok(reply)
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
     use std::time::{Duration, Instant};

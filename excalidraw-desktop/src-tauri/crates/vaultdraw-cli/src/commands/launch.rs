@@ -15,6 +15,16 @@ const APP_BINARY: &str = "excalidraw-vault";
 /// Overrides where the app is (a path to the binary, or the bundle name on macOS).
 const ENV_APP: &str = "VAULTDRAW_APP";
 
+/// Windows: the app's `.exe` beside this CLI (the installer puts both in one folder), else its name
+/// on `PATH`. `None` elsewhere.
+fn windows_app_path() -> Option<String> {
+    if !cfg!(windows) {
+        return None;
+    }
+    let dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
+    ["Vaultdraw.exe", "excalidraw-vault.exe"].iter().map(|n| dir.join(n)).find(|p| p.is_file()).map(|p| p.to_string_lossy().into_owned())
+}
+
 /// Program and arguments that start the app.
 fn start_command(safe: bool, profile: Option<&str>, macos: bool, app: Option<&str>) -> (String, Vec<String>) {
     let flag = |mut v: Vec<String>| {
@@ -58,9 +68,16 @@ pub fn run(cli: &Cli, safe: bool) -> Result<(), Fail> {
             Ok(())
         }
         Err(f) if f.not_running() => {
-            let app = std::env::var(ENV_APP).ok().filter(|v| !v.is_empty());
+            let app = std::env::var(ENV_APP).ok().filter(|v| !v.is_empty()).or_else(windows_app_path);
             let (program, args) = start_command(safe, cli.profile.as_deref(), cfg!(target_os = "macos"), app.as_deref());
-            Command::new(&program)
+            let mut command = Command::new(&program);
+            #[cfg(windows)]
+            {
+                // Detached, so closing the terminal does not close the app.
+                use std::os::windows::process::CommandExt;
+                command.creation_flags(0x0000_0008 | 0x0000_0200);
+            }
+            command
                 .args(&args)
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())

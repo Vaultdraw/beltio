@@ -8,7 +8,13 @@ publish = false
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+[target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+# Windows: the control link is a named pipe (`\\.\pipe\vaultdraw-...`) through interprocess.
+[target.'cfg(windows)'.dependencies]
+interprocess = "2"
 
 [dev-dependencies]
 tempfile = "3"

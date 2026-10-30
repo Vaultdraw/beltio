@@ -19,7 +19,7 @@ fn two() -> Two {
     let d = tempfile::tempdir().unwrap();
     let root = d.path().join("v");
     fs::create_dir_all(&root).unwrap();
-    let root = root.canonicalize().unwrap();
+    let root = dunce::canonicalize(root).unwrap();
     let clock = TestClock::new(T0);
     let a = mk_writer(&root, &d.path().join("sa"), clock.clone(), Box::new(|| true));
     let b = mk_writer(&root, &d.path().join("sb"), clock.clone(), Box::new(|| true));
@@ -185,7 +185,7 @@ fn a_lagging_unordered_replica_with_partial_files_and_conflict_copies_never_brea
     }
     let src = t.root.join(".excalidraw-vault/history");
     let rep_dir = tempfile::tempdir().unwrap();
-    let rep = rep_dir.path().canonicalize().unwrap();
+    let rep = dunce::canonicalize(rep_dir.path()).unwrap();
     let hist = rep.join(".excalidraw-vault/history");
     let state = tempfile::tempdir().unwrap();
     let svc = HistoryService::for_tests(state.path().to_path_buf(), t.clock.clone());

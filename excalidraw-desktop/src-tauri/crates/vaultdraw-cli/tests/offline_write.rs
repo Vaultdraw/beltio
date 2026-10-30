@@ -21,7 +21,7 @@ fn scene(text: &str) -> Value {
 
 fn env() -> Env {
     let tmp = tempfile::tempdir().unwrap();
-    let base = tmp.path().canonicalize().unwrap();
+    let base = dunce::canonicalize(tmp.path()).unwrap();
     let root = base.join("vault");
     std::fs::create_dir_all(root.join("sub")).unwrap();
     std::fs::write(root.join("a.excalidraw"), scene("old").to_string()).unwrap();

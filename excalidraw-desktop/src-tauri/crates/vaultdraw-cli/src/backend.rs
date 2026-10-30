@@ -44,7 +44,7 @@ fn check_vault(cli: &Cli, rpc: &Rpc, client: &mut vaultdraw_protocol::client::Cl
     let Some(want) = &cli.vault else { return Ok(()) };
     let info = rpc.call_on(client, vaultdraw_protocol::methods::VAULT_INFO, None)?;
     let app = info.get("path").and_then(Value::as_str).unwrap_or("");
-    let canon = |p: &std::path::Path| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+    let canon = |p: &std::path::Path| dunce::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
     if canon(want) == canon(std::path::Path::new(app)) {
         Ok(())
     } else {

@@ -8,6 +8,7 @@ mod worker;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
+#[cfg(unix)]
 mod bench;
 
 // The pure index, extractor, normaliser and snapshot store live in `vaultdraw-core`.

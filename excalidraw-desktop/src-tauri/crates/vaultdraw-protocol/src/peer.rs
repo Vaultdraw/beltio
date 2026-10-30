@@ -33,6 +33,24 @@ pub fn my_uid() -> u32 {
     unsafe { libc::getuid() }
 }
 
+/// The other end's user id for a transport stream. Windows has no uid: the pipe's default
+/// permissions already keep other users out, so a connected peer counts as this user (0).
+#[cfg(unix)]
+pub fn stream_peer_uid(s: &crate::transport::Stream) -> std::io::Result<u32> {
+    use std::os::fd::AsRawFd;
+    peer_uid(s.as_raw_fd())
+}
+
+#[cfg(windows)]
+pub fn stream_peer_uid(_s: &crate::transport::Stream) -> std::io::Result<u32> {
+    Ok(0)
+}
+
+#[cfg(windows)]
+pub fn my_uid() -> u32 {
+    0
+}
+
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;

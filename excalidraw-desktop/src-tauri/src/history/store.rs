@@ -11,7 +11,6 @@ use crate::{err, ioerr, META_DIR, Result};
 use std::{
     fs::{self, File, OpenOptions},
     io::{self, Read, Write},
-    os::unix::fs::OpenOptionsExt,
     path::{Path, PathBuf},
     time::{Duration, SystemTime},
 };
@@ -98,7 +97,8 @@ fn is_crash(e: &io::Error) -> bool {
 }
 
 pub fn is_enospc(e: &io::Error) -> bool {
-    e.raw_os_error() == Some(ENOSPC)
+    // Windows: ERROR_DISK_FULL (112) and ERROR_HANDLE_DISK_FULL (39).
+    e.raw_os_error() == Some(ENOSPC) || (cfg!(windows) && matches!(e.raw_os_error(), Some(112) | Some(39)))
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -118,11 +118,35 @@ mod sys {
     pub const SF_DATALESS: u32 = 0x4000_0000;
 }
 
+#[cfg(unix)]
+trait NoFollow {
+    fn no_follow(&mut self) -> &mut Self;
+}
+#[cfg(unix)]
+impl NoFollow for OpenOptions {
+    fn no_follow(&mut self) -> &mut Self {
+        use std::os::unix::fs::OpenOptionsExt;
+        self.custom_flags(O_NOFOLLOW)
+    }
+}
+/// Windows: open a symlink or junction itself (`FILE_FLAG_OPEN_REPARSE_POINT`) instead of its target.
+#[cfg(windows)]
+trait NoFollow {
+    fn no_follow(&mut self) -> &mut Self;
+}
+#[cfg(windows)]
+impl NoFollow for OpenOptions {
+    fn no_follow(&mut self) -> &mut Self {
+        use std::os::windows::fs::OpenOptionsExt;
+        self.custom_flags(0x0020_0000)
+    }
+}
+
 #[cfg(target_os = "macos")]
 const O_NOFOLLOW: i32 = sys::O_NOFOLLOW;
-#[cfg(all(not(target_os = "macos"), target_arch = "aarch64"))]
+#[cfg(all(unix, not(target_os = "macos"), target_arch = "aarch64"))]
 const O_NOFOLLOW: i32 = 0o100000;
-#[cfg(all(not(target_os = "macos"), not(target_arch = "aarch64")))]
+#[cfg(all(unix, not(target_os = "macos"), not(target_arch = "aarch64")))]
 const O_NOFOLLOW: i32 = 0o400000;
 
 /// `clonefile(src → dst)` (APFS copy-on-write clone, size-independent). `ENOTSUP`/`EXDEV` mean
@@ -144,7 +168,11 @@ pub fn clone_file(src: &Path, dst: &Path) -> io::Result<()> {
     {
         clone_file_linux(src, dst)
     }
-    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    #[cfg(windows)]
+    {
+        clone_file_copy(src, dst)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", windows)))]
     {
         let _ = (src, dst);
         Err(io::Error::from(io::ErrorKind::Unsupported))
@@ -166,6 +194,25 @@ fn clone_file_linux(src: &Path, dst: &Path) -> io::Result<()> {
     let reflinked = unsafe { libc::ioctl(to.as_raw_fd(), FICLONE, from.as_raw_fd()) } == 0;
     let done = if reflinked { Ok(()) } else { io::copy(&mut from, &mut to).map(|_| ()) };
     let done = done.and_then(|()| match mtime {
+        Some(t) => to.set_modified(t),
+        None => Ok(()),
+    });
+    if done.is_err() {
+        drop(to);
+        let _ = fs::remove_file(dst);
+    }
+    done
+}
+
+/// Windows: a plain copy that keeps the source's mtime (so the outside-change check can match size
+/// and mtime without hashing). Fails with `AlreadyExists` like `clonefile`; a half-written
+/// destination is removed.
+#[cfg(windows)]
+fn clone_file_copy(src: &Path, dst: &Path) -> io::Result<()> {
+    let mut from = File::open(src)?;
+    let mtime = from.metadata()?.modified().ok();
+    let mut to = fs::OpenOptions::new().write(true).create_new(true).open(dst)?;
+    let done = io::copy(&mut from, &mut to).map(|_| ()).and_then(|()| match mtime {
         Some(t) => to.set_modified(t),
         None => Ok(()),
     });
@@ -198,6 +245,14 @@ pub fn sync_file(f: &File, full: bool) -> io::Result<()> {
 
 pub fn sync_dir(dir: &Path) -> io::Result<()> {
     fault::hit(Step::DirSync)?;
+    // Windows cannot open a folder through `File::open` (it needs backup semantics), and NTFS keeps
+    // a rename durable through its own journal: nothing to flush here.
+    #[cfg(windows)]
+    {
+        let _ = dir;
+        return Ok(());
+    }
+    #[cfg(not(windows))]
     sync_file(&File::open(dir)?, true)
 }
 
@@ -209,7 +264,12 @@ pub fn is_dataless(md: &fs::Metadata) -> bool {
         use std::os::macos::fs::MetadataExt;
         md.st_flags() & sys::SF_DATALESS != 0
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(windows)]
+    {
+        // A OneDrive (or other cloud) placeholder: reading it downloads the file.
+        vaultdraw_core::fsops::is_cloud_placeholder_md(md)
+    }
+    #[cfg(not(any(target_os = "macos", windows)))]
     {
         let _ = md;
         false
@@ -284,7 +344,7 @@ impl Store {
     pub fn ensure_layout(&self) -> Result<()> {
         let hist = self.dir(&[], true)?.ok_or_else(|| err("INTERNAL", "History directory unavailable"))?;
         self.dir(&[BLOBS_DIR], true)?;
-        match OpenOptions::new().write(true).create_new(true).custom_flags(O_NOFOLLOW).open(hist.join(FORMAT_MARKER)) {
+        match OpenOptions::new().write(true).create_new(true).no_follow().open(hist.join(FORMAT_MARKER)) {
             Ok(_) => Ok(()),
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => Ok(()),
             Err(e) => Err(ioerr(e)),
@@ -489,7 +549,7 @@ fn create_dir_ok(p: &Path) -> Result<()> {
 
 /// Opens a regular file without following a final symlink.
 pub fn open_regular(p: &Path) -> io::Result<File> {
-    let f = OpenOptions::new().read(true).custom_flags(O_NOFOLLOW).open(p)?;
+    let f = OpenOptions::new().read(true).no_follow().open(p)?;
     if !f.metadata()?.is_file() {
         return Err(io::Error::other("not a regular file"));
     }
@@ -539,14 +599,14 @@ pub fn durable_write(dir: &Path, name: &str, bytes: &[u8], full: bool, kind: Wri
     let tmp = dir.join(format!(".{name}.tmp"));
     let result = (|| -> io::Result<()> {
         fault::hit(s_tmp)?;
-        let mut f = match OpenOptions::new().write(true).create_new(true).custom_flags(O_NOFOLLOW).open(&tmp) {
+        let mut f = match OpenOptions::new().write(true).create_new(true).no_follow().open(&tmp) {
             Ok(f) => f,
             // Blob names are content-addressed, so their temp name repeats: a leftover of a killed
             // write (younger than the startup cleanup age) would block every retry. It is ours
             // (own device in the name) and the content is identical by construction.
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists && kind == WriteKind::Blob => {
                 fs::remove_file(&tmp)?;
-                OpenOptions::new().write(true).create_new(true).custom_flags(O_NOFOLLOW).open(&tmp)?
+                OpenOptions::new().write(true).create_new(true).no_follow().open(&tmp)?
             }
             Err(e) => return Err(e),
         };
@@ -573,6 +633,7 @@ pub fn durable_write(dir: &Path, name: &str, bytes: &[u8], full: bool, kind: Wri
 mod unit_tests {
     use super::*;
 
+    #[cfg(unix)]
     #[test]
     fn checked_dirs_refuse_symlinks_and_files() {
         let root = tempfile::tempdir().unwrap();
@@ -596,6 +657,7 @@ mod unit_tests {
         assert!(Store::new(r2.path()).ensure_layout().is_err());
     }
 
+    #[cfg(unix)]
     #[test]
     fn nofollow_open_refuses_symlinked_files_and_caps_size() {
         let d = tempfile::tempdir().unwrap();
@@ -630,5 +692,35 @@ mod unit_tests {
     fn free_floor_is_two_gb_or_three_percent() {
         assert_eq!(free_floor(100 * 1024 * 1024 * 1024), 3 * (100 * 1024 * 1024 * 1024 / 100));
         assert_eq!(free_floor(10 * 1024 * 1024 * 1024), 2 * 1024 * 1024 * 1024);
+    }
+}
+
+#[cfg(all(test, windows))]
+mod windows_tests {
+    use super::*;
+
+    #[test]
+    fn clone_copies_the_bytes_and_the_mtime_and_never_replaces() {
+        let d = tempfile::tempdir().unwrap();
+        let (src, dst) = (d.path().join("a.excalidraw"), d.path().join("b.excalidraw"));
+        fs::write(&src, "body").unwrap();
+        let old = SystemTime::now() - Duration::from_secs(3600);
+        File::options().write(true).open(&src).unwrap().set_modified(old).unwrap();
+        clone_file(&src, &dst).unwrap();
+        assert_eq!(fs::read_to_string(&dst).unwrap(), "body");
+        let got = fs::metadata(&dst).unwrap().modified().unwrap();
+        assert!(got.duration_since(old).unwrap_or_default() < Duration::from_secs(2) && old.duration_since(got).unwrap_or_default() < Duration::from_secs(2));
+        assert_eq!(clone_file(&src, &dst).unwrap_err().kind(), io::ErrorKind::AlreadyExists);
+    }
+
+    #[test]
+    fn no_follow_reads_a_regular_file_and_the_enospc_codes_match() {
+        let d = tempfile::tempdir().unwrap();
+        let p = d.path().join("f");
+        fs::write(&p, "x").unwrap();
+        assert!(OpenOptions::new().read(true).no_follow().open(&p).is_ok());
+        assert!(is_enospc(&io::Error::from_raw_os_error(112)) && is_enospc(&io::Error::from_raw_os_error(39)));
+        assert!(!is_enospc(&io::Error::from_raw_os_error(5)));
+        sync_dir(d.path()).unwrap();
     }
 }

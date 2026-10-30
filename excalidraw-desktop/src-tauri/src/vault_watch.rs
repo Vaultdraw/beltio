@@ -200,7 +200,7 @@ mod tests {
         use std::fs;
         use std::collections::HashSet;
         let outer = tempfile::tempdir().unwrap();
-        let base = outer.path().canonicalize().unwrap();
+        let base = dunce::canonicalize(outer.path()).unwrap();
         let (root, trash) = (base.join("vault"), base.join("trash"));
         fs::create_dir_all(root.join("seed/inner/deeper")).unwrap();
         fs::create_dir_all(root.join("mv/dest")).unwrap();

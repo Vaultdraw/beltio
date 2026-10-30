@@ -224,7 +224,7 @@ mod tests {
     use tempfile::tempdir;
 
     fn vault(root: &Path) -> Vault {
-        Vault::new(root.canonicalize().unwrap(), "t".into(), false, None)
+        Vault::new(dunce::canonicalize(root).unwrap(), "t".into(), false, None)
     }
 
     #[test]
@@ -306,7 +306,7 @@ mod tests {
     #[test]
     fn read_only_vault_and_bad_content() {
         let d = tempdir().unwrap();
-        let ro = Vault::new(d.path().canonicalize().unwrap(), "t".into(), true, None);
+        let ro = Vault::new(dunce::canonicalize(d.path()).unwrap(), "t".into(), true, None);
         assert_eq!(write_note_file(&ro, "a.md", "x", None).unwrap_err().code, "READ_ONLY");
         fs::write(d.path().join("bin.md"), [0xff, 0xfe, 0x00]).unwrap();
         assert_eq!(read_note_file(d.path(), "bin.md").unwrap_err().code, "INVALID_FILE");
@@ -370,7 +370,7 @@ mod contract {
         for case in table["cases"].as_array().unwrap() {
             let name = case["name"].as_str().unwrap();
             let d = tempdir().unwrap();
-            let v = Vault::new(d.path().canonicalize().unwrap(), "t".into(), false, None);
+            let v = Vault::new(dunce::canonicalize(d.path()).unwrap(), "t".into(), false, None);
             for (p, text) in case["disk"].as_object().unwrap() {
                 let full = v.root.join(p.trim_end_matches('/'));
                 if p.ends_with('/') {

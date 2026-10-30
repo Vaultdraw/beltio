@@ -1,7 +1,8 @@
 //! Vaultdraw control API: the contract shared by the app's control server, the `vaultdraw`
 //! CLI and tests (personal/feature/control-api).
 //!
-//! - Transport: one Unix domain socket per user (`<runtime>/ctl.sock`), newline-delimited
+//! - Transport: one Unix domain socket per user (`<runtime>/ctl.sock`; a named pipe derived from
+//!   that path on Windows, see [`transport`]), newline-delimited
 //!   JSON-RPC 2.0 in both directions. Replies carry the request id; notifications (events)
 //!   have no id and may arrive between replies.
 //! - Versioning: [`API_LEVEL`] is an integer. Within a level, changes are additive only
@@ -17,6 +18,7 @@ pub mod frame;
 pub mod message;
 pub mod methods;
 pub mod peer;
+pub mod transport;
 
 pub use client::{CallError, Client};
 pub use message::{codes, ErrorData, Id, Notification, Request, Response, RpcError};

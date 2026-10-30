@@ -78,7 +78,7 @@ fn expand(entry: &str, base: &Path, home: Option<&Path>) -> std::result::Result<
 /// True when `path` is inside a vault: any parent folder holds `.excalidraw-vault`, or the path
 /// goes through one. A cloned vault must not pull in, or be pulled in as, config.
 fn inside_vault(path: &Path) -> bool {
-    let real = fs::canonicalize(path).or_else(|_| path.parent().map(fs::canonicalize).unwrap_or(Err(std::io::ErrorKind::NotFound.into()))).unwrap_or_else(|_| path.to_path_buf());
+    let real = dunce::canonicalize(path).or_else(|_| path.parent().map(fs::canonicalize).unwrap_or(Err(std::io::ErrorKind::NotFound.into()))).unwrap_or_else(|_| path.to_path_buf());
     real.ancestors().any(|a| a.file_name().is_some_and(|n| n == crate::paths::META_DIR) || a.join(crate::paths::META_DIR).is_dir())
 }
 
@@ -191,7 +191,7 @@ impl Walk<'_> {
         if fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink()) {
             return self.row(path, from, "error", format!("{} is a symbolic link; only regular files and folders are read", path.display()), None, None);
         }
-        let canonical = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+        let canonical = dunce::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
         if let Some(at) = self.stack.iter().position(|p| *p == canonical) {
             let chain: Vec<String> = self.stack[at..].iter().chain([&canonical]).map(|p| display_name(p)).collect();
             self.scan.warnings.push(format!("include cycle: {} (skipped)", chain.join(" -> ")));
@@ -238,7 +238,7 @@ pub(super) fn scan_includes(config_path: &Path, config: &Json, home: Option<&Pat
     if config.get("include").is_none() {
         return walk.scan;
     }
-    let canonical = fs::canonicalize(config_path).unwrap_or_else(|_| config_path.to_path_buf());
+    let canonical = dunce::canonicalize(config_path).unwrap_or_else(|_| config_path.to_path_buf());
     walk.seen.insert(canonical.clone());
     walk.stack.push(canonical);
     walk.entries(config_path, config, 1);
@@ -283,7 +283,7 @@ mod tests {
     }
     fn env() -> Env {
         let t = tempdir().unwrap();
-        let root = fs::canonicalize(t.path()).unwrap();
+        let root = dunce::canonicalize(t.path()).unwrap();
         let dirs = Dirs { config: root.join("config"), state: root.join("state") };
         fs::create_dir_all(&dirs.config).unwrap();
         Env { _t: t, root, dirs }

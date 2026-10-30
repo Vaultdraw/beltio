@@ -7,7 +7,7 @@ use std::process::{Command, Stdio};
 
 fn run(args: &[&str]) -> (i32, String, String) {
     let tmp = tempfile::tempdir().unwrap();
-    let base = tmp.path().canonicalize().unwrap();
+    let base = dunce::canonicalize(tmp.path()).unwrap();
     let (state, runtime, config) = (base.join("state"), base.join("run"), base.join("config"));
     for d in [&state, &runtime, &config] {
         std::fs::create_dir_all(d).unwrap();

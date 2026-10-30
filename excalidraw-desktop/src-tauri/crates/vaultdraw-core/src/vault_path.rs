@@ -54,7 +54,7 @@ pub fn legacy_app_config_dir_with(get: impl Fn(&str) -> Option<OsString>, os: Os
 
 /// `path` as a canonical directory.
 fn as_vault_dir(path: &Path) -> Result<PathBuf> {
-    let canonical = path.canonicalize().map_err(|e| match e.kind() {
+    let canonical = dunce::canonicalize(path).map_err(|e| match e.kind() {
         std::io::ErrorKind::NotFound => no_vault(format!("{} does not exist", path.display())),
         _ => ioerr(e),
     })?;
@@ -158,7 +158,7 @@ mod tests {
     fn vault(root: &Path, name: &str) -> PathBuf {
         let p = root.join(name);
         fs::create_dir_all(&p).unwrap();
-        p.canonicalize().unwrap()
+        dunce::canonicalize(p).unwrap()
     }
 
     #[test]

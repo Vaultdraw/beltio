@@ -97,8 +97,8 @@ pub(crate) fn locate(root: &Path, from: &str, target: &str) -> Result<String> {
 fn read_asset(root: &Path, from: &str, target: &str) -> Result<Vec<u8>> {
     let path = locate(root, from, target)?;
     let full = asset_file(root, &path)?;
-    let real = full.canonicalize().map_err(|_| err("NOT_FOUND", "Image not found"))?;
-    let base = root.canonicalize().map_err(|_| err("NOT_FOUND", "Vault not found"))?;
+    let real = dunce::canonicalize(full).map_err(|_| err("NOT_FOUND", "Image not found"))?;
+    let base = dunce::canonicalize(root).map_err(|_| err("NOT_FOUND", "Vault not found"))?;
     if !real.starts_with(&base) {
         return Err(err("INVALID_PATH", "Image is outside the vault"));
     }

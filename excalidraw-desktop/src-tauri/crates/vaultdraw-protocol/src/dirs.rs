@@ -104,6 +104,10 @@ impl InstancePaths {
 /// The one length check for a control socket path, shared by the app (bind) and the CLI
 /// (connect), so both say the same plain words instead of the OS's "shorter than SUN_LEN".
 pub fn check_socket_path_len(socket: &Path) -> Result<(), String> {
+    // Windows names a pipe from the path's hash: no length limit applies.
+    if cfg!(windows) {
+        return Ok(());
+    }
     let n = socket.as_os_str().len();
     if n > MAX_SOCKET_PATH {
         return Err(format!(
@@ -137,6 +141,17 @@ pub fn ensure_private_dir(dir: &Path) -> std::io::Result<()> {
     }
     if meta.mode() & 0o077 != 0 {
         std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700))?;
+    }
+    Ok(())
+}
+
+/// Windows: the runtime folder lives under the user's own `%LOCALAPPDATA%` (private by its
+/// default permissions), so creating it is enough.
+#[cfg(not(unix))]
+pub fn ensure_private_dir(dir: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dir)?;
+    if !std::fs::metadata(dir)?.is_dir() {
+        return Err(std::io::Error::other(format!("{} is not a directory", dir.display())));
     }
     Ok(())
 }
@@ -175,6 +190,7 @@ mod tests {
         assert!(resolve_dirs_with(env(&[("VAULTDRAW_STATE_DIR", "rel"), ("HOME", "/h")]), false, None).is_err());
     }
 
+    #[cfg(unix)]
     #[test]
     fn socket_length_is_checked() {
         assert!(InstancePaths::in_dir("/Users/me/.local/state/vaultdraw/run").check_socket_len().is_ok());
@@ -224,5 +240,23 @@ mod tests {
         let l = std::os::unix::net::UnixListener::bind(&p.socket).unwrap();
         assert!(std::os::unix::net::UnixStream::connect(&p.socket).is_ok());
         drop(l);
+    }
+}
+
+#[cfg(all(test, not(unix)))]
+mod non_unix_tests {
+    use super::*;
+
+    #[test]
+    fn the_private_dir_is_created_and_a_file_in_its_place_is_refused() {
+        let t = tempfile::tempdir().unwrap();
+        let d = t.path().join("a").join("run");
+        ensure_private_dir(&d).unwrap();
+        ensure_private_dir(&d).unwrap();
+        let f = t.path().join("file");
+        std::fs::write(&f, "x").unwrap();
+        assert!(ensure_private_dir(&f).is_err());
+        // Windows names the pipe from the path: no length limit applies.
+        assert!(InstancePaths::in_dir(format!("C:\\{}", "x".repeat(300))).check_socket_len().is_ok());
     }
 }

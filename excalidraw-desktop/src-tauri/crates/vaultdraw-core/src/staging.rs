@@ -56,7 +56,8 @@ pub fn volume_case_sensitive(path: &Path) -> bool {
         }
     }
     let _ = path;
-    true
+    // NTFS folders are case-insensitive unless a user turned case sensitivity on for one (rare).
+    !cfg!(windows)
 }
 
 /// `<state>/history/<vault_id>/staged`.

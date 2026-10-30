@@ -44,7 +44,8 @@ fn probe(cli: &Cli) -> (Option<PathBuf>, String, Option<Value>) {
         Ok(s) => s,
         Err(f) => return (None, format!("unknown ({})", f.message), None),
     };
-    if !socket.exists() {
+    // Windows has no socket file (a named pipe): connecting is the only probe.
+    if !cfg!(windows) && !socket.exists() {
         return (Some(socket), "no app (socket absent)".into(), None);
     }
     match Rpc::new(socket.clone(), PROBE_SECS).call(methods::APP_STATUS, None) {

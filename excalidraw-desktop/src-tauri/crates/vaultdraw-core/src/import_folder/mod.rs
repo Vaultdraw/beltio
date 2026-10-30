@@ -79,7 +79,7 @@ impl SourceFolder {
         if !meta.is_dir() {
             return Err(err("INVALID_PATH", "The source is not a folder"));
         }
-        let root = root.canonicalize().map_err(ioerr)?;
+        let root = dunce::canonicalize(root).map_err(ioerr)?;
         let name = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
         Ok(SourceFolder { root, name, linked: std::sync::Mutex::new(Vec::new()) })
     }
@@ -157,7 +157,7 @@ impl SourceFolder {
 
     /// The real folder a symbolic link points at, when `list` may follow it (see `list`).
     fn followable_dir(&self, link: &Path) -> Option<PathBuf> {
-        let real = fs::canonicalize(link).ok()?;
+        let real = dunce::canonicalize(link).ok()?;
         if !fs::metadata(&real).ok()?.is_dir() || real.starts_with(&self.root) || self.root.starts_with(&real) {
             return None;
         }
@@ -181,13 +181,13 @@ impl SourceFolder {
             let meta = fs::symlink_metadata(&cur).map_err(ioerr)?;
             if meta.file_type().is_symlink() {
                 // Only a folder link `list` followed, and never the last part (a file link).
-                let ok = i + 1 < parts.len() && fs::canonicalize(&cur).is_ok_and(|r| linked.contains(&r));
+                let ok = i + 1 < parts.len() && dunce::canonicalize(&cur).is_ok_and(|r| linked.contains(&r));
                 if !ok {
                     return Err(err("INVALID_PATH", "Symbolic links are not allowed in a vault"));
                 }
             }
         }
-        let real = fs::canonicalize(&cur).map_err(ioerr)?;
+        let real = dunce::canonicalize(&cur).map_err(ioerr)?;
         if !(real.starts_with(&self.root) || linked.iter().any(|l| real.starts_with(l))) {
             return Err(err("INVALID_PATH", "Path escapes the selected vault"));
         }
@@ -244,7 +244,7 @@ impl TargetFolder {
             }
             Err(e) => return Err(ioerr(e)),
         }
-        let root = path.canonicalize().map_err(ioerr)?;
+        let root = dunce::canonicalize(path).map_err(ioerr)?;
         let name = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
         Ok(TargetFolder { root, name, kind: TargetKind::NewVault })
     }

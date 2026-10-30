@@ -79,7 +79,7 @@ pub(crate) fn spawn_reaped(cmd: &mut std::process::Command) -> std::io::Result<(
 }
 
 /// `file://` URI of an absolute path, percent-encoding everything but unreserved characters and `/`.
-#[cfg(any(target_os = "linux", test))]
+#[cfg(any(target_os = "linux", all(test, unix)))]
 fn file_uri(path: &std::path::Path) -> String {
     use std::os::unix::ffi::OsStrExt;
     let mut uri = String::from("file://");
@@ -288,6 +288,7 @@ mod tests {
 
 #[cfg(test)]
 mod reveal_tests {
+    #[cfg(unix)]
     #[test]
     fn file_uri_encodes_spaces_and_unicode() {
         let u = super::file_uri(std::path::Path::new("/v/my dir/é#1.excalidraw"));

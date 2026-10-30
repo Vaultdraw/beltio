@@ -140,7 +140,7 @@ fn load_dir(dir: &Path, cached: Option<&CacheEntry>) -> std::result::Result<Load
     };
     let main_path = dir.join(&manifest.main);
     let main_meta = regular_file_meta(&main_path, &format!("main '{}'", manifest.main))?;
-    let inside = match (main_path.canonicalize(), dir.canonicalize()) {
+    let inside = match (dunce::canonicalize(main_path), dunce::canonicalize(dir)) {
         (Ok(m), Ok(d)) => m.starts_with(d),
         _ => false,
     };
@@ -239,7 +239,7 @@ pub(crate) fn scan(roots: &Roots, cache_path: Option<&Path>, app_version: &str) 
                 plugins.retain(|p| p.manifest.id != id);
                 index.remove(&id);
             }
-            let Ok(canonical) = dir.canonicalize() else { continue };
+            let Ok(canonical) = dunce::canonicalize(&dir) else { continue };
             parsed += usize::from(loaded.parsed);
             fresh.entries.insert(key, loaded.entry.clone());
             index.insert(id, Entry { dir: dir.clone(), canonical, source });

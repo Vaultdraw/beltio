@@ -29,7 +29,7 @@ pub fn same_file(a: &Path, b: &Path) -> bool {
     }
     #[cfg(not(unix))]
     {
-        match (fs::canonicalize(a), fs::canonicalize(b)) {
+        match (dunce::canonicalize(a), dunce::canonicalize(b)) {
             (Ok(x), Ok(y)) => x == y,
             _ => false,
         }
@@ -105,7 +105,21 @@ fn rename_excl(src: &Path, dst: &Path) -> std::io::Result<()> {
     };
     if rc == 0 { Ok(()) } else { Err(std::io::Error::last_os_error()) }
 }
-#[cfg(not(any(target_os = "macos", target_os = "linux")))]
+/// Windows: `MoveFileExW` without `MOVEFILE_REPLACE_EXISTING` fails with `ERROR_ALREADY_EXISTS`
+/// (183, kind `AlreadyExists`) instead of replacing `dst`; it renames files and folders alike.
+#[cfg(windows)]
+fn rename_excl(src: &Path, dst: &Path) -> std::io::Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn MoveFileExW(existing: *const u16, new: *const u16, flags: u32) -> i32;
+    }
+    let wide = |p: &Path| p.as_os_str().encode_wide().chain(std::iter::once(0)).collect::<Vec<u16>>();
+    let (s, d) = (wide(src), wide(dst));
+    // SAFETY: both buffers are NUL-terminated UTF-16 and outlive the call.
+    if unsafe { MoveFileExW(s.as_ptr(), d.as_ptr(), 0) } != 0 { Ok(()) } else { Err(std::io::Error::last_os_error()) }
+}
+#[cfg(not(any(target_os = "macos", target_os = "linux", windows)))]
 fn rename_excl(_src: &Path, _dst: &Path) -> std::io::Result<()> {
     Err(std::io::Error::from_raw_os_error(libc_codes::ENOTSUP))
 }
@@ -138,6 +152,22 @@ pub fn commit_no_clobber_with(temp: &Path, path: &Path, link: impl FnOnce(&Path,
         Ok(()) => fs::remove_file(temp),
         Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => Err(e),
         Err(_) => rename_no_replace(temp, path),
+    }
+}
+
+/// True for a OneDrive (or other cloud-files) placeholder: reading it would download the file
+/// (`FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS`, `RECALL_ON_OPEN` or `OFFLINE`). Always false off Windows
+/// (iCloud placeholders are `.name.icloud` stubs, see `sync_names`).
+pub fn is_cloud_placeholder_md(md: &fs::Metadata) -> bool {
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        md.file_attributes() & (0x0040_0000 | 0x0004_0000 | 0x0000_1000) != 0
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = md;
+        false
     }
 }
 
@@ -470,7 +500,7 @@ mod fs_safety_tests {
     #[test]
     fn create_falls_back_when_hard_links_are_unsupported() {
         let t = setup(&[("taken", "KEEP")]);
-        let no_link = |_: &Path, _: &Path| -> std::io::Result<()> { Err(std::io::Error::from_raw_os_error(libc::EPERM)) };
+        let no_link = |_: &Path, _: &Path| -> std::io::Result<()> { Err(std::io::Error::from_raw_os_error(1)) };
         let temp = t.path().join("tmp1");
         fs::write(&temp, "NEW").unwrap();
         commit_no_clobber_with(&temp, &t.path().join("fresh"), no_link).unwrap();
@@ -490,7 +520,7 @@ mod fs_safety_tests {
         use std::os::unix::fs::PermissionsExt;
         use crate::{paths::revision, vault::Vault, write_drawing_file};
         let t = tempdir().unwrap();
-        let v = Vault::new(t.path().canonicalize().unwrap(), "test".into(), false, None);
+        let v = Vault::new(dunce::canonicalize(t.path()).unwrap(), "test".into(), false, None);
         let p = t.path().join("a.excalidraw");
         fs::write(&p, SCENE).unwrap();
         let rev = revision(SCENE.as_bytes());
@@ -562,5 +592,33 @@ mod stamp_tests {
         fs::remove_file(&p).unwrap();
         assert!(again.is_none_or(|s| !stamp_unchanged(&p, &s)));
         assert!(current_revision_stamped(&p).unwrap().is_none());
+    }
+}
+
+#[cfg(all(test, windows))]
+mod windows_tests {
+    use super::*;
+
+    #[test]
+    fn rename_never_replaces_a_file_or_a_folder_on_windows() {
+        let d = tempfile::tempdir().unwrap();
+        let p = |n: &str| d.path().join(n);
+        fs::write(p("a"), "A").unwrap();
+        fs::write(p("b"), "B").unwrap();
+        assert_eq!(rename_no_replace(&p("a"), &p("b")).unwrap_err().kind(), std::io::ErrorKind::AlreadyExists);
+        assert_eq!(fs::read_to_string(p("b")).unwrap(), "B");
+        fs::create_dir(p("d1")).unwrap();
+        fs::create_dir(p("d2")).unwrap();
+        assert_eq!(rename_no_replace(&p("d1"), &p("d2")).unwrap_err().kind(), std::io::ErrorKind::AlreadyExists);
+        rename_no_replace(&p("a"), &p("c")).unwrap();
+        rename_no_replace(&p("d1"), &p("d3")).unwrap();
+        assert!(p("c").is_file() && p("d3").is_dir() && !p("a").exists());
+    }
+
+    #[test]
+    fn an_ordinary_file_is_not_a_cloud_placeholder() {
+        let d = tempfile::tempdir().unwrap();
+        fs::write(d.path().join("f"), "x").unwrap();
+        assert!(!is_cloud_placeholder_md(&fs::metadata(d.path().join("f")).unwrap()));
     }
 }

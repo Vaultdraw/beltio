@@ -1265,7 +1265,7 @@ mod native {
     use super::*;
 
     fn unsupported<T>() -> Result<T> {
-        Err(err("PDF_UNAVAILABLE", "PDF import is only available on macOS and Linux"))
+        Err(err("PDF_UNAVAILABLE", "PDF import is not on Windows yet"))
     }
     pub async fn pick() -> Result<Option<PdfInfo>> {
         unsupported()

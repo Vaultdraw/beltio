@@ -351,6 +351,37 @@ mod sys {
     }
 }
 
+/// Windows: the current offset from `GetTimeZoneInformation` (bias is minutes WEST of UTC; the
+/// standard or daylight bias applies on top). Not DST aware for a past or future instant.
+#[cfg(windows)]
+fn win_offset_secs() -> i32 {
+    #[repr(C)]
+    struct SystemTime([u16; 8]);
+    #[repr(C)]
+    struct Tzi {
+        bias: i32,
+        standard_name: [u16; 32],
+        standard_date: SystemTime,
+        standard_bias: i32,
+        daylight_name: [u16; 32],
+        daylight_date: SystemTime,
+        daylight_bias: i32,
+    }
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetTimeZoneInformation(tzi: *mut Tzi) -> u32;
+    }
+    // SAFETY: all-zero is a valid `Tzi`; the call writes only into it.
+    let mut tzi: Tzi = unsafe { std::mem::zeroed() };
+    let kind = unsafe { GetTimeZoneInformation(&mut tzi) };
+    let extra = match kind {
+        1 => tzi.standard_bias,
+        2 => tzi.daylight_bias,
+        _ => 0,
+    };
+    -(tzi.bias + extra) * 60
+}
+
 /// The machine's UTC offset in seconds at `utc_ms` (DST aware; 0 when unknown). Declared by hand
 /// like the other platform calls (no libc crate).
 pub fn local_offset_secs(utc_ms: u64) -> i32 {
@@ -365,9 +396,24 @@ pub fn local_offset_secs(utc_ms: u64) -> i32 {
         }
         tm.gmtoff as i32
     }
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    {
+        let _ = utc_ms;
+        win_offset_secs()
+    }
+    #[cfg(not(any(unix, windows)))]
     {
         let _ = utc_ms;
         0
+    }
+}
+
+#[cfg(all(test, windows))]
+mod windows_tests {
+    #[test]
+    fn the_windows_utc_offset_is_a_real_zone_offset() {
+        let s = super::local_offset_secs(1_700_000_000_000);
+        assert!((-12 * 3600..=14 * 3600).contains(&s), "{s}");
+        assert_eq!(s % 900, 0, "zone offsets are whole quarter hours: {s}");
     }
 }

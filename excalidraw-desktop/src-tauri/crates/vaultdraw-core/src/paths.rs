@@ -152,8 +152,8 @@ pub fn safe_path(root: &Path, path: &str, allow_missing_leaf: bool) -> Result<Pa
             .parent()
             .ok_or_else(|| err("INVALID_PATH", "Invalid path"))?;
     }
-    let canonical = ancestor.canonicalize().map_err(ioerr)?;
-    let base = root.canonicalize().map_err(ioerr)?;
+    let canonical = dunce::canonicalize(ancestor).map_err(ioerr)?;
+    let base = dunce::canonicalize(root).map_err(ioerr)?;
     if !canonical.starts_with(&base) {
         return Err(err("INVALID_PATH", "Path escapes the selected vault"));
     }

@@ -151,7 +151,7 @@ impl Fx {
         let state = dir.path().join("state");
         std::fs::create_dir_all(&root).unwrap();
         std::fs::create_dir_all(&state).unwrap();
-        let root = root.canonicalize().unwrap();
+        let root = dunce::canonicalize(root).unwrap();
         let clock = TestClock::new(crate::now_ms(std::time::SystemTime::now()));
         let svc = HistoryService::for_tests(state.clone(), clock.clone());
         let vault = crate::Vault::for_tests(root.clone(), "h", false);

@@ -88,7 +88,7 @@ mod tests {
     use vaultdraw_protocol::codes;
 
     fn vault(root: &std::path::Path, read_only: bool) -> Vault {
-        Vault::new(root.canonicalize().unwrap(), "t".into(), read_only, None)
+        Vault::new(dunce::canonicalize(root).unwrap(), "t".into(), read_only, None)
     }
     fn scene() -> Value {
         json!({"type": "excalidraw", "version": 2, "elements": [], "appState": {}, "files": {}})

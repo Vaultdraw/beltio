@@ -287,13 +287,13 @@ pub(crate) fn call(v: &vaultdraw_core::Vault, method: &str, body: &[u8]) -> Resu
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod guard_tests {
     use super::*;
     use std::os::unix::fs::PermissionsExt;
 
     fn vault(root: &Path) -> vaultdraw_core::Vault {
-        vaultdraw_core::Vault::new(root.canonicalize().unwrap(), "t".into(), false, None)
+        vaultdraw_core::Vault::new(dunce::canonicalize(root).unwrap(), "t".into(), false, None)
     }
     #[test]
     fn move_never_replaces_and_write_never_replaces_a_locked_file() {

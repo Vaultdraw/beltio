@@ -145,7 +145,7 @@ fn exit_1_on_io_failure_from_a_dead_peer() {
     let dir = std::path::PathBuf::from(format!("/tmp/vd-dead-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let sock = dir.join("c.sock");
-    let l = std::os::unix::net::UnixListener::bind(&sock).unwrap();
+    let l = vaultdraw_protocol::transport::bind(&sock).unwrap();
     std::thread::spawn(move || for s in l.incoming() { drop(s); });
     let o = vd(&["status"], Some(&sock), None);
     assert_eq!(code(&o), 1, "{}", err(&o));
@@ -266,7 +266,7 @@ fn unparsable_reply_checks_the_api_level() {
     let dir = std::path::PathBuf::from(format!("/tmp/vd-bad-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let sock = dir.join("c.sock");
-    let l = std::os::unix::net::UnixListener::bind(&sock).unwrap();
+    let l = vaultdraw_protocol::transport::bind(&sock).unwrap();
     std::thread::spawn(move || {
         use std::io::{BufRead, BufReader, Write};
         for s in l.incoming().flatten() {

@@ -120,7 +120,7 @@ fn new_vault_must_be_missing_or_empty() {
     assert!(fresh.is_dir());
     assert_eq!(dst.kind(), TargetKind::NewVault);
     assert_eq!(dst.name(), "New vault");
-    assert_eq!(dst.root(), fresh.canonicalize().unwrap());
+    assert_eq!(dst.root(), dunce::canonicalize(fresh).unwrap());
     // Empty existing folder: fine. Non-empty: NAME_COLLISION. A file: INVALID_PATH.
     let empty = t.path().join("Empty");
     fs::create_dir(&empty).unwrap();

@@ -8,7 +8,9 @@ include!("plugin_dist_check.rs");
 /// that explains how to build it, so they keep working without that step.
 fn ensure_cli_sidecar() {
     let triple = std::env::var("TARGET").expect("cargo sets TARGET");
-    let path = format!("binaries/vaultdraw-{triple}");
+    // tauri-build wants `.exe` on Windows targets.
+    let ext = if triple.contains("windows") { ".exe" } else { "" };
+    let path = format!("binaries/vaultdraw-{triple}{ext}");
     println!("cargo:rerun-if-changed={path}");
     if Path::new(&path).exists() {
         return;

@@ -208,7 +208,7 @@ mod tests {
     #[test]
     fn download_needs_a_placeholder_and_a_safe_path() {
         let t = tempfile::tempdir().unwrap();
-        let v = crate::vault::Vault::new(t.path().canonicalize().unwrap(), "t".into(), false, None);
+        let v = crate::vault::Vault::new(dunce::canonicalize(t.path()).unwrap(), "t".into(), false, None);
         assert_eq!(request_download(&v, "a.excalidraw").unwrap_err().code, "NOT_FOUND");
         assert_eq!(request_download(&v, "../a.excalidraw").unwrap_err().code, "INVALID_PATH");
         assert_eq!(request_download(&v, "a.png").unwrap_err().code, "INVALID_PATH");

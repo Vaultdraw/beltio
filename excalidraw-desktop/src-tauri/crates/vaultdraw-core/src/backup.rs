@@ -394,11 +394,11 @@ fn vault_name(root: &Path) -> String {
 /// Backs the vault up into `dest_dir`. The vault is only read. `progress` is called at most
 /// about every 100 ms. On cancel or error no `.zip` and no `.part` is left behind.
 pub fn create(root: &Path, dest_dir: &Path, opts: BackupOptions, cancel: &AtomicBool, progress: &mut dyn FnMut(&Progress)) -> Result<BackupResult> {
-    let root = fs::canonicalize(root).map_err(ioerr)?;
+    let root = dunce::canonicalize(root).map_err(ioerr)?;
     if !dest_dir.is_dir() {
         return Err(err("NOT_FOUND", format!("The backup folder {} does not exist", dest_dir.display())));
     }
-    let dest_dir = fs::canonicalize(dest_dir).map_err(ioerr)?;
+    let dest_dir = dunce::canonicalize(dest_dir).map_err(ioerr)?;
     if dest_dir.starts_with(&root) {
         return Err(err("INVALID_PATH", "Choose a backup folder outside the vault"));
     }
@@ -702,7 +702,7 @@ fn is_backup_name(name: &str, vault: &str) -> bool {
 /// This vault's backups in `folder` (files named `<vault> backup <date>….zip` that hold the
 /// backup manifest), newest first.
 pub fn list_backups(folder: &Path, vault: &Path) -> Result<Vec<(SystemTime, PathBuf)>> {
-    let name = vault_name(&fs::canonicalize(vault).map_err(ioerr)?);
+    let name = vault_name(&dunce::canonicalize(vault).map_err(ioerr)?);
     let mut found: Vec<(SystemTime, String, PathBuf)> = Vec::new();
     for e in fs::read_dir(folder).map_err(ioerr)?.flatten() {
         let fname = e.file_name().to_string_lossy().to_string();
@@ -973,7 +973,7 @@ mod tests {
             made.push(create(v.path(), dest.path(), BackupOptions::default(), &no(), &mut |_| {}).unwrap().path);
         }
         // a look-alike that is not ours, and an unrelated file
-        let fake = dest.path().join(format!("{} backup 2020-01-01.zip", vault_name(&fs::canonicalize(v.path()).unwrap())));
+        let fake = dest.path().join(format!("{} backup 2020-01-01.zip", vault_name(&dunce::canonicalize(v.path()).unwrap())));
         fs::write(&fake, b"not a zip").unwrap();
         fs::write(dest.path().join("notes.txt"), b"x").unwrap();
         let removed = prune(dest.path(), v.path(), 2).unwrap();

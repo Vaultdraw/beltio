@@ -39,7 +39,7 @@ fn vault() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
     let (root, state) = (d.path().join("v"), d.path().join("s"));
     std::fs::create_dir_all(&root).unwrap();
     std::fs::create_dir_all(&state).unwrap();
-    let root = root.canonicalize().unwrap();
+    let root = dunce::canonicalize(root).unwrap();
     (d, root, state)
 }
 

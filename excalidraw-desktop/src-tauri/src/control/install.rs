@@ -33,6 +33,10 @@ impl Installed {
     pub fn message(&self) -> String {
         match self.mode {
             Mode::Link => format!("Installed 'vaultdraw' command at {}", self.path.display()),
+            Mode::Copy if cfg!(windows) => format!(
+                "Installed 'vaultdraw' command at {} and added its folder to your Path; open a new terminal to use it. Run Install again after updating the app",
+                self.path.display()
+            ),
             Mode::Copy => format!(
                 "Installed 'vaultdraw' command at {} as a copy (the AppImage mounts somewhere new on every start); run Install again after updating the app",
                 self.path.display()
@@ -41,7 +45,60 @@ impl Installed {
     }
 }
 
+/// Windows: copies `vaultdraw.exe` (beside the app) to `%LOCALAPPDATA%\Vaultdraw\bin` and adds that
+/// folder to the user's `Path` (PowerShell sets and broadcasts it correctly; `setx` would cut it at
+/// 1024 characters). A new terminal sees it. There is no system-wide install from the app.
+#[cfg(windows)]
+pub(crate) fn install_cli_report(_system: bool) -> crate::Result<Installed> {
+    let exe = std::env::current_exe().map_err(crate::ioerr)?;
+    let src = exe.parent().map(|d| d.join("vaultdraw.exe")).ok_or_else(|| crate::err("NOT_FOUND", "Cannot locate the app directory"))?;
+    let base = std::env::var_os("LOCALAPPDATA").map(PathBuf::from).filter(|p| p.is_absolute());
+    let dir = base.ok_or_else(|| crate::err("INVALID_PATH", "%LOCALAPPDATA% is not set"))?.join("Vaultdraw").join("bin");
+    let target = dir.join("vaultdraw.exe");
+    if !src.exists() {
+        return Err(crate::err(
+            "NOT_FOUND",
+            format!("The vaultdraw command line tool is not part of this build (expected {}); it ships in the packaged app", src.display()),
+        ));
+    }
+    std::fs::create_dir_all(&dir).map_err(crate::ioerr)?;
+    // Copy beside, then rename: a running `vaultdraw` is never half-written.
+    let tmp = dir.join(format!("vaultdraw.tmp.{}", std::process::id()));
+    std::fs::copy(&src, &tmp).and_then(|_| std::fs::rename(&tmp, &target)).map_err(|e| {
+        let _ = std::fs::remove_file(&tmp);
+        crate::ioerr(e)
+    })?;
+    let script = format!(
+        "$d = '{}'; $p = [Environment]::GetEnvironmentVariable('Path','User'); \
+         if (($p -split ';') -notcontains $d) {{ [Environment]::SetEnvironmentVariable('Path', (($p, $d | Where-Object {{ $_ }}) -join ';'), 'User') }}",
+        dir.display().to_string().replace('\'', "''")
+    );
+    let status = std::process::Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+        .creation_flags_hidden()
+        .status()
+        .map_err(crate::ioerr)?;
+    if !status.success() {
+        return Err(crate::err("INTERNAL", format!("Copied the command to {} but could not add it to Path", target.display())));
+    }
+    Ok(Installed { path: target, mode: Mode::Copy })
+}
+
+/// Runs a child without a console window.
+#[cfg(windows)]
+trait HiddenWindow {
+    fn creation_flags_hidden(&mut self) -> &mut Self;
+}
+#[cfg(windows)]
+impl HiddenWindow for std::process::Command {
+    fn creation_flags_hidden(&mut self) -> &mut Self {
+        use std::os::windows::process::CommandExt;
+        self.creation_flags(0x0800_0000)
+    }
+}
+
 /// Installs the bundled CLI into `~/.local/bin` (or `/usr/local/bin` when `system`).
+#[cfg(not(windows))]
 pub(crate) fn install_cli_report(system: bool) -> crate::Result<Installed> {
     let exe = std::env::current_exe().map_err(crate::ioerr)?;
     let src = exe.parent().map(|d| d.join("vaultdraw")).ok_or_else(|| crate::err("NOT_FOUND", "Cannot locate the app directory"))?;

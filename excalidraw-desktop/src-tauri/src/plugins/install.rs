@@ -65,7 +65,7 @@ fn copy_tree(src: &Path, dst: &Path, budget: &mut Budget, depth: usize) -> Resul
 /// Copies `src` into `<user_root>/<id>` after validating its manifest. Replaces an existing
 /// folder only when it holds the same plugin id.
 pub(crate) fn install_folder(user_root: &Path, src: &Path, app_version: &str, official: &HashSet<String>) -> Result<scan::PluginInfo> {
-    let src = src.canonicalize().map_err(ioerr)?;
+    let src = dunce::canonicalize(src).map_err(ioerr)?;
     if !src.is_dir() {
         return Err(err("INVALID_PATH", "Choose a plugin folder"));
     }
@@ -128,12 +128,12 @@ fn replace_existing(user_root: &Path, dest: &Path, id: &str, staging: &Path) -> 
 
 /// Deletes a user plugin folder: it must be a real directory that is a direct child of the user root.
 pub(crate) fn uninstall_dir(user_root: &Path, dir: &Path) -> Result<()> {
-    let root = user_root.canonicalize().map_err(ioerr)?;
+    let root = dunce::canonicalize(user_root).map_err(ioerr)?;
     let meta = fs::symlink_metadata(dir).map_err(ioerr)?;
     if meta.file_type().is_symlink() || !meta.is_dir() {
         return Err(err("INVALID_PATH", "Not a plugin folder"));
     }
-    let canonical = dir.canonicalize().map_err(ioerr)?;
+    let canonical = dunce::canonicalize(dir).map_err(ioerr)?;
     if canonical.parent() != Some(root.as_path()) {
         return Err(err("INVALID_PATH", "Plugin folder is outside the user plugins folder"));
     }

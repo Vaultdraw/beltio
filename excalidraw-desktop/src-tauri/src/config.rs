@@ -236,7 +236,7 @@ impl IncludeFilter {
 
 /// Real path of `p`; for a file that does not exist yet, its real folder plus its name.
 fn real_path(p: &Path) -> Option<PathBuf> {
-    fs::canonicalize(p).ok().or_else(|| Some(fs::canonicalize(p.parent()?).ok()?.join(p.file_name()?)))
+    dunce::canonicalize(p).ok().or_else(|| Some(dunce::canonicalize(p.parent()?).ok()?.join(p.file_name()?)))
 }
 
 /// The path and, when it resolves, its real path: events carry either form (macOS reports
@@ -280,7 +280,7 @@ fn sync_includes(watcher: &Mutex<RecommendedWatcher>, filter: &Mutex<IncludeFilt
         .dirs
         .iter()
         .filter(|d| d.is_dir() && !roots.iter().any(|r| d.starts_with(r)) && **d != dirs.state)
-        .map(|d| fs::canonicalize(d).unwrap_or_else(|_| d.clone()))
+        .map(|d| dunce::canonicalize(d).unwrap_or_else(|_| d.clone()))
         .collect();
     if let Ok(mut f) = filter.lock() {
         f.files = with_real(found.files);
@@ -356,13 +356,13 @@ pub(crate) fn start_watcher(app: &AppHandle) -> std::result::Result<ConfigWatche
     let state_inside_config = dirs.state.starts_with(&dirs.config);
     let state_watched = !state_inside_config && fs::create_dir_all(&dirs.state).is_ok();
     let mut state_dirs = vec![dirs.state.clone()];
-    if let Ok(real) = fs::canonicalize(&dirs.state) {
+    if let Ok(real) = dunce::canonicalize(&dirs.state) {
         state_dirs.push(real);
     }
     let app = app.clone();
     let root = dirs.config.clone();
     let mut roots = vec![dirs.config.clone()];
-    if let Ok(real) = fs::canonicalize(&dirs.config) {
+    if let Ok(real) = dunce::canonicalize(&dirs.config) {
         roots.push(real);
     }
     let filter = Arc::new(Mutex::new(IncludeFilter::default()));
@@ -503,7 +503,7 @@ mod tests {
         let state = t.path().join("state");
         fs::create_dir_all(&state).unwrap();
         let mut dirs = vec![state.clone()];
-        if let Ok(real) = fs::canonicalize(&state) {
+        if let Ok(real) = dunce::canonicalize(&state) {
             dirs.push(real);
         }
         let (tx, rx) = mpsc::channel();
@@ -559,7 +559,7 @@ mod tests {
     #[test]
     fn a_changed_include_outside_the_config_folder_emits_and_its_neighbour_does_not() {
         let t = tempfile::tempdir().unwrap();
-        let root = fs::canonicalize(t.path()).unwrap();
+        let root = dunce::canonicalize(t.path()).unwrap();
         let dirs = Dirs { config: root.join("config"), state: root.join("state") };
         let dots = root.join("dots");
         fs::create_dir_all(&dirs.config).unwrap();

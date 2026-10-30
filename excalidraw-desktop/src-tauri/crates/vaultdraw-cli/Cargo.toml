@@ -18,6 +18,7 @@ clap_complete = "4"
 clap_complete_nushell = "4"
 clap_mangen = "0.2"
 serde_json = "1"
+dunce = "1"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

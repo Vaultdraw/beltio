@@ -298,7 +298,7 @@ fn job_files(count: usize, elements: usize, image_bytes: usize, tag: &str) -> (t
         p.to_path = rel;
         plans.push(p);
     }
-    let v = Arc::new(Vault::for_tests(root.canonicalize().unwrap(), "b", false));
+    let v = Arc::new(Vault::for_tests(dunce::canonicalize(root).unwrap(), "b", false));
     (dir, v, plans)
 }
 
@@ -386,9 +386,9 @@ fn bench_build_breakdown() {
 fn bench_rename_return() {
     for n in [300usize, 3000] {
         let dir = tempfile::tempdir().unwrap();
-        let root = dir.path().join("vault").canonicalize().unwrap_or_else(|_| {
+        let root = dunce::canonicalize(dir.path().join("vault")).unwrap_or_else(|_| {
             fs::create_dir_all(dir.path().join("vault")).unwrap();
-            dir.path().join("vault").canonicalize().unwrap()
+            dunce::canonicalize(dir.path().join("vault")).unwrap()
         });
         fs::write(root.join("Hub.excalidraw"), r#"{"type":"excalidraw","elements":[]}"#).unwrap();
         for i in 0..n {
@@ -554,7 +554,7 @@ fn bench_tag_rename() {
             FilePlan { from_path: rel.clone(), to_path: rel, elements: BTreeMap::new() }
         })
         .collect();
-    let v = Arc::new(Vault::for_tests(root.canonicalize().unwrap(), "b", false));
+    let v = Arc::new(Vault::for_tests(dunce::canonicalize(root).unwrap(), "b", false));
     let state = LinksState::default();
     let mut runs = Vec::new();
     for k in 0..7 {

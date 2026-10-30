@@ -17,7 +17,7 @@ fn fixture() -> Fixture {
     let root = dir.path().join("vault");
     let state = dir.path().join("state");
     fs::create_dir_all(&root).unwrap();
-    let root = root.canonicalize().unwrap();
+    let root = dunce::canonicalize(root).unwrap();
     let vt = VaultThumbs::new(root.clone(), &state);
     Fixture { _dir: dir, root, state, vt }
 }
@@ -323,7 +323,7 @@ fn put_over_cap_triggers_background_gc() {
     let root = dir.path().join("v");
     fs::create_dir_all(&root).unwrap();
     let state = dir.path().join("s");
-    let mut vt = VaultThumbs::new(root.canonicalize().unwrap(), &state);
+    let mut vt = VaultThumbs::new(dunce::canonicalize(root).unwrap(), &state);
     {
         let m = Arc::get_mut(&mut vt).unwrap();
         m.cap = std::sync::atomic::AtomicU64::new(300);
@@ -472,7 +472,7 @@ fn cap_defaults_and_follows_a_valid_setting_only() {
     let dir = tempdir().unwrap();
     let root = dir.path().join("v");
     fs::create_dir_all(&root).unwrap();
-    let vt = VaultThumbs::new(root.canonicalize().unwrap(), &dir.path().join("s"));
+    let vt = VaultThumbs::new(dunce::canonicalize(root).unwrap(), &dir.path().join("s"));
     assert_eq!(vt.cap.load(Relaxed), 128 * 1024 * 1024, "default unchanged");
     vt.set_cap_mb(64);
     assert_eq!(vt.cap.load(Relaxed), 64 * 1024 * 1024);

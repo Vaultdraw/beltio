@@ -15,7 +15,7 @@ fn vault() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
     let state = d.path().join("s");
     fs::create_dir_all(&root).unwrap();
     fs::create_dir_all(&state).unwrap();
-    let root = root.canonicalize().unwrap();
+    let root = dunce::canonicalize(root).unwrap();
     (d, root, state)
 }
 
@@ -159,6 +159,7 @@ fn kill_child() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn fifty_random_sigkills_of_a_writer_leave_every_visible_version_exact() {
     let d = tempfile::tempdir().unwrap();
@@ -180,10 +181,10 @@ fn fifty_random_sigkills_of_a_writer_leave_every_visible_version_exact() {
         child.kill().unwrap(); // SIGKILL
         let _ = child.wait();
         if i % 10 == 9 {
-            verify_all_versions(&root.canonicalize().unwrap());
+            verify_all_versions(&dunce::canonicalize(root).unwrap());
         }
     }
-    let root = root.canonicalize().unwrap();
+    let root = dunce::canonicalize(root).unwrap();
     let n = verify_all_versions(&root);
     assert!(n > 20, "the writers made progress ({n} versions)");
     // relaunch: own temp files are cleaned

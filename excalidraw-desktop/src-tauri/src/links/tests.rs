@@ -439,7 +439,7 @@ fn read(root: &Path, rel: &str) -> String {
 }
 
 fn test_vault(root: &Path) -> Arc<Vault> {
-    Arc::new(Vault::for_tests(root.canonicalize().unwrap(), "h", false))
+    Arc::new(Vault::for_tests(dunce::canonicalize(root).unwrap(), "h", false))
 }
 
 struct Env {

@@ -89,7 +89,8 @@ fn scan_dir_each(root: &Path, dir: &str, depth: usize, dirs: &mut Vec<(String, u
                 dirs.push((child, depth + 1));
             }
         } else if ft.is_file() && is_indexed_name(&name) && validate_relative(&child).is_ok() {
-            if let Ok(md) = entry.metadata() {
+            // A OneDrive placeholder is listed in the tree but not indexed: reading it would download it.
+            if let Some(md) = entry.metadata().ok().filter(|md| !crate::fsops::is_cloud_placeholder_md(md)) {
                 files.push(Found { path: child, size: md.len(), mtime: md.modified().map(now_ms).unwrap_or(0) });
             }
         }

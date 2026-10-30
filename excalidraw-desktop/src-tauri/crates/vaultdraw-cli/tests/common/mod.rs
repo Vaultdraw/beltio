@@ -1,9 +1,9 @@
 #![allow(dead_code)]
-//! A fake control server (Unix socket, NDJSON) and a runner for the built binary.
+//! A fake control server (Unix socket or named pipe, NDJSON) and a runner for the built binary.
 
 use serde_json::{json, Value};
 use std::io::{BufRead, BufReader, Write};
-use std::os::unix::net::UnixListener;
+use vaultdraw_protocol::transport;
 use std::path::PathBuf;
 use std::process::{Command, Output};
 use std::sync::{Arc, Mutex};
@@ -34,10 +34,11 @@ impl Fake {
         let pushes = Arc::new(pushes);
         // Short path: sun_path is 104 bytes on macOS.
         let dir = std::env::temp_dir().join(format!("vd-{}-{}", std::process::id(), next()));
+        #[cfg(unix)]
         let dir = PathBuf::from("/tmp").join(dir.file_name().unwrap());
         std::fs::create_dir_all(&dir).unwrap();
         let socket = dir.join("c.sock");
-        let listener = UnixListener::bind(&socket).unwrap();
+        let listener = transport::bind(&socket).unwrap();
         let seen = Arc::new(Mutex::new(Vec::new()));
         let seen2 = seen.clone();
         let handler = Arc::new(handler);

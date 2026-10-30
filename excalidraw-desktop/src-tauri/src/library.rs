@@ -561,7 +561,7 @@ mod tests {
     #[test]
     fn read_only_vault_is_refused() {
         let t = tempdir().unwrap();
-        let v = Vault::for_tests(t.path().canonicalize().unwrap(), "h", true);
+        let v = Vault::for_tests(dunce::canonicalize(t.path()).unwrap(), "h", true);
         assert_eq!(code(writable(&v)), "READ_ONLY");
     }
 

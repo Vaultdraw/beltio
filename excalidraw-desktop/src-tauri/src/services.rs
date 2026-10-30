@@ -362,6 +362,7 @@ mod tests {
         panic!("link index was not pre-built");
     }
 
+    #[cfg(unix)]
     fn cpu_ms() -> f64 {
         // SAFETY: getrusage fills a plain struct for this process.
         let mut u: libc::rusage = unsafe { std::mem::zeroed() };
@@ -370,6 +371,7 @@ mod tests {
         t(u.ru_utime) + t(u.ru_stime)
     }
 
+    #[cfg(unix)]
     fn rss_mb() -> f64 {
         std::process::Command::new("ps")
             .args(["-o", "rss=", "-p", &std::process::id().to_string()])
@@ -384,6 +386,7 @@ mod tests {
     /// registered (`idle`/`use`): CPU time and RSS growth in the first `WINDOW` after open,
     /// cold (no snapshot) and warm (snapshot present). Ignored by default:
     /// `cargo test --release bench_open_startup_work -- --ignored --nocapture`
+    #[cfg(unix)]
     #[test]
     #[ignore]
     fn bench_open_startup_work() {

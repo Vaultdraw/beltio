@@ -17,7 +17,7 @@ fn split_frame(frame: &[u8]) -> (String, &[u8]) {
     (String::from_utf8(frame[..REVISION_HEX_LEN].to_vec()).unwrap(), &frame[FRAME_PREFIX_LEN..])
 }
 fn vault(root: &Path) -> Vault {
-    Vault::new(root.canonicalize().unwrap(), "test".into(), false, None)
+    Vault::new(dunce::canonicalize(root).unwrap(), "test".into(), false, None)
 }
 /// Save/open cost breakdown on a real fixture: `PERF_FIXTURE=/path/to/x.excalidraw cargo test --release
 /// bench_write_breakdown -- --ignored --nocapture`.
@@ -504,6 +504,7 @@ fn over_the_cap_prunes_old_session_records_but_never_the_newest_per_drawing() {
     assert!(dir.join(format!("p-{h}-s2.json")).exists());
     assert!(dir.join(format!("p-{h2}-s1.json")).exists(), "newest of its drawing kept even though oldest overall");
 }
+#[cfg(unix)]
 #[test]
 fn a_read_only_refusal_keeps_the_unsaved_edits_as_a_recovery_record() {
     use std::os::unix::fs::PermissionsExt;
@@ -520,6 +521,7 @@ fn a_read_only_refusal_keeps_the_unsaved_edits_as_a_recovery_record() {
     assert_eq!(listed[0].json, edited);
     assert_eq!(fs::read_to_string(&p).unwrap(), SCENE);
 }
+#[cfg(unix)]
 #[test]
 fn a_read_only_note_is_not_replaced() {
     use std::os::unix::fs::PermissionsExt;

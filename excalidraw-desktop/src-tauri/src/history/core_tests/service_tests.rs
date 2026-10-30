@@ -183,7 +183,7 @@ fn hard_off_has_no_thread_no_clones_and_commands_answer_history_off() {
     let root = dir.path().join("v");
     fs::create_dir_all(&root).unwrap();
     let svc = HistoryService::hard_off_for_tests(dir.path().join("state"));
-    svc.start("h", root.canonicalize().unwrap(), false, std::sync::Arc::new(|_| {}));
+    svc.start("h", dunce::canonicalize(root).unwrap(), false, std::sync::Arc::new(|_| {}));
     assert_eq!(svc.vault("h").err().unwrap().code, "HISTORY_OFF");
     svc.after_commit("h", P, &"a".repeat(64), 1);
     assert!(!dir.path().join("state").exists());
@@ -275,7 +275,7 @@ fn second_read_only_instance_writes_nothing_and_still_reads() {
 fn switching_a_to_b_to_a_leaves_one_worker_and_no_duplicate_versions() {
     let fx = Fx::new();
     let other = tempfile::tempdir().unwrap();
-    let other_root = other.path().canonicalize().unwrap();
+    let other_root = dunce::canonicalize(other.path()).unwrap();
     fx.start_configured(5);
     let mut sc = scene(21, 60, 0, 0);
     fx.save(P, &sc.json());

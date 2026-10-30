@@ -11,7 +11,7 @@ fn filled() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf, usize
     let (root, state) = (d.path().join("v"), d.path().join("s"));
     fs::create_dir_all(root.join("Dir")).unwrap();
     fs::create_dir_all(&state).unwrap();
-    let root = root.canonicalize().unwrap();
+    let root = dunce::canonicalize(root).unwrap();
     let mut w = mk_writer(&root, &state, TestClock::new(T0), Box::new(|| true));
     let mut sc = scene(1, 60, 1, 2000);
     for _ in 0..5 {
@@ -95,6 +95,7 @@ fn case_insensitive_volumes_fold_path_keys() {
     assert!(!strict.read().unwrap().has_lineage("dir/draw.excalidraw"));
 }
 
+#[cfg(unix)]
 #[test]
 fn untrusted_names_symlinks_and_junk_are_ignored_never_deleted() {
     let (_d, root, _s, n) = filled();

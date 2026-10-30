@@ -153,7 +153,7 @@ fn a_blob_temp_file_left_by_a_kill_does_not_block_the_retry() {
     let (root, state) = (d.path().join("v"), d.path().join("s"));
     fs::create_dir_all(&root).unwrap();
     fs::create_dir_all(&state).unwrap();
-    let root = root.canonicalize().unwrap();
+    let root = dunce::canonicalize(root).unwrap();
     let mut w = mk_writer(&root, &state, TestClock::new(T0), Box::new(|| true));
     let json = scene(61, 30, 1, 4000).json();
     fault::arm(Step::BlobRename, 0, FaultKind::Crash);
@@ -173,7 +173,7 @@ fn new_history_folders_are_made_durable_by_full_sync_versions() {
         let (root, state) = (d.path().join("v"), d.path().join("s"));
         fs::create_dir_all(&root).unwrap();
         fs::create_dir_all(&state).unwrap();
-        let root = root.canonicalize().unwrap();
+        let root = dunce::canonicalize(root).unwrap();
         let mut w = mk_writer(&root, &state, TestClock::new(T0), Box::new(|| true));
         // checkpoint = full sync: the content's directory fsync, plus one per new parent entry
         // (new lineage folder, new blob shard folder) that would otherwise vanish on power loss
@@ -266,6 +266,7 @@ fn sweep_never_removes_the_state_of_a_vault_with_a_live_worker() {
     assert!(!d.path().join(dead).exists(), "idle state older than 90 days is swept");
 }
 
+#[cfg(unix)]
 #[test]
 fn opening_through_a_symlinked_folder_clones_nothing() {
     let fx = Fx::new();

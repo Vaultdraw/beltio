@@ -45,7 +45,21 @@ pub(crate) fn lower_priority() {
         pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
     }
 }
-#[cfg(not(target_os = "macos"))]
+/// Windows: background mode lowers the thread's CPU, I/O and memory priority together.
+#[cfg(windows)]
+pub(crate) fn lower_priority() {
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetCurrentThread() -> isize;
+        fn SetThreadPriority(thread: isize, priority: i32) -> i32;
+    }
+    const THREAD_MODE_BACKGROUND_BEGIN: i32 = 0x0001_0000;
+    // SAFETY: plain kernel32 calls affecting only the calling thread.
+    unsafe {
+        SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
+    }
+}
+#[cfg(not(any(target_os = "macos", windows)))]
 pub(crate) fn lower_priority() {}
 
 pub(super) struct Worker {

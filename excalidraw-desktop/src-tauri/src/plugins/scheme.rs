@@ -79,7 +79,7 @@ pub(crate) fn resolve(index: &Index, uri_path: &str) -> Result<Resolved, u16> {
     if meta.len() > MAX_FILE_BYTES {
         return Err(413);
     }
-    let canonical = joined.canonicalize().map_err(|_| 404u16)?;
+    let canonical = dunce::canonicalize(joined).map_err(|_| 404u16)?;
     if !canonical.starts_with(&entry.canonical) {
         return Err(403);
     }
