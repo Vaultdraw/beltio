@@ -79,7 +79,34 @@ export async function pasteWebPictures(
   const ops: SceneOp[] = [];
   const center = viewportCenter(api.getAppState() as never);
   let y = center.y;
-  for (const url of found.urls) {
+  // A part of a web page: its words come along, in page order (hunter A-10; Obsidian keeps both).
+  type Part = { type: "text" | "imageUrl"; value: string };
+  const parts: Part[] = found.fromPage
+    ? (data.mixedContent as { type: string; value: string }[]).flatMap(
+        (n): Part[] =>
+          n.type === "text" && n.value.trim()
+            ? [{ type: "text" as const, value: n.value.trim() }]
+            : n.type === "imageUrl" && found.urls.includes(n.value)
+            ? [{ type: "imageUrl" as const, value: n.value }]
+            : [],
+      )
+    : found.urls.map((value) => ({ type: "imageUrl" as const, value }));
+  for (const part of parts) {
+    if (part.type === "text") {
+      const lines = part.value.split("\n").length;
+      ops.push({
+        op: "add",
+        element: {
+          type: "text",
+          x: center.x - MAX_WIDTH / 2,
+          y,
+          text: part.value,
+        },
+      } as SceneOp);
+      y += lines * 25 + 16;
+      continue;
+    }
+    const url = part.value;
     try {
       const bytes = await fetchWebImage(url);
       const mime = pictureType(bytes);

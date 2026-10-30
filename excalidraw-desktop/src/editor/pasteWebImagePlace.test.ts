@@ -62,3 +62,24 @@ describe("a pasted web picture lands centred on the viewport", () => {
     expect(span(boxes)).toBeCloseTo(400, 0);
   });
 });
+
+describe("a pasted part of a web page keeps its words (hunter A-10)", () => {
+  it("words and pictures land in page order", async () => {
+    applied.length = 0;
+    await pasteWebPictures(api, {
+      text: "Intro\nAfter",
+      mixedContent: [
+        { type: "text", value: "Intro" },
+        { type: "imageUrl", value: "https://a.example/1.png" },
+        { type: "text", value: "  " },
+        { type: "text", value: "After" },
+      ],
+    });
+    const kinds = applied[0].map((o) =>
+      o.element.type === "text"
+        ? `text:${(o.element as unknown as { text: string }).text}`
+        : o.element.type,
+    );
+    expect(kinds).toEqual(["text:Intro", "image", "text:After"]);
+  });
+});
