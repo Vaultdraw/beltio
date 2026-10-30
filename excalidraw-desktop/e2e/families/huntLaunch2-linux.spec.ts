@@ -23,21 +23,19 @@ test.beforeEach(async ({ page }) => {
   await openDrawing(page, "Graphs");
 });
 
-test(
-  "toimprove 287: on Linux the Interface settings page does not say Cmd+click",
-  async ({ page }) => {
-    await page.keyboard.press("Control+,");
-    const dialog = page.getByRole("dialog");
-    await dialog.getByRole("tab", { name: "Interface", exact: true }).click();
-    await expect(dialog).not.toContainText(/\bCmd\b|⌘/);
-  },
-);
+test("toimprove 287: on Linux the Interface settings page does not say Cmd+click", async ({
+  page,
+}) => {
+  await page.keyboard.press("Control+,");
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("tab", { name: "Interface", exact: true }).click();
+  await expect(dialog).not.toContainText(/\bCmd\b|⌘/);
+});
 
-test(
-  "toimprove 287: on Linux the command palette does not offer Reveal in Finder",
-  async ({ page }) => {
-    await page.keyboard.press("Control+Shift+P");
-    await page.keyboard.type("reveal");
-    await expect(page.getByText(/Finder/)).toHaveCount(0);
-  },
-);
+test("toimprove 287: on Linux the command palette does not offer Reveal in Finder", async ({
+  page,
+}) => {
+  await page.keyboard.press("Control+Shift+P");
+  await page.keyboard.type("reveal");
+  await expect(page.getByText(/Finder/)).toHaveCount(0);
+});

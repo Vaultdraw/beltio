@@ -21,6 +21,7 @@ test("palette commands mode: words in any order and accents folded find New fold
       .slice(0, 3)
       .join(" | ");
   }
+  // eslint-disable-next-line no-console
   console.log(`PALETTE ${JSON.stringify(out)}`);
   expect(out["new folder"]).toMatch(/New folder/);
   expect.soft(out["folder new"], "words in any order").toMatch(/New folder/);
