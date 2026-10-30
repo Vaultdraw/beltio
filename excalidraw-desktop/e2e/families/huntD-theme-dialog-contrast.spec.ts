@@ -17,7 +17,10 @@ const lowContrast = (page: Page, minRatio: number) =>
       if (!m) {
         return null;
       }
-      const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number);
+      const p = m[1]
+        .split(/[ ,/]+/)
+        .filter(Boolean)
+        .map(Number);
       return { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 };
     };
     const lum = ({ r, g, b }: any) => {
@@ -99,7 +102,9 @@ test("Settings stays readable when the theme and mode change while it is open", 
   const names = await d
     .getByRole("radio")
     .evaluateAll((els) =>
-      els.map((e) => (e.getAttribute("aria-label") || e.textContent || "").trim()),
+      els.map((e) =>
+        (e.getAttribute("aria-label") || e.textContent || "").trim(),
+      ),
     );
   const tabs = await d
     .getByRole("tab")

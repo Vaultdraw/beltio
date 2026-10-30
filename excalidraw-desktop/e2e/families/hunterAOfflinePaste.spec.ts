@@ -92,7 +92,8 @@ test("paste while Offline mode is on: local pastes work, web pictures say why, t
   await expect(page.getByTestId("offline-badge")).toBeVisible();
   const box = await canvasBox(page);
   let n = 0;
-  const focus = () => page.mouse.click(box.x + 120 + 180 * n, box.y + 120 + 90 * n++);
+  const focus = () =>
+    page.mouse.click(box.x + 120 + 180 * n, box.y + 120 + 90 * n++);
 
   // 1. a picture file
   await focus();

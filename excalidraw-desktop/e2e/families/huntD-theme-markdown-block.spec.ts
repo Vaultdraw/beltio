@@ -47,7 +47,8 @@ const THEME = JSON.stringify({
 
 const rootVar = (page: Page, n: string) =>
   page.evaluate(
-    (k) => getComputedStyle(document.documentElement).getPropertyValue(k).trim(),
+    (k) =>
+      getComputedStyle(document.documentElement).getPropertyValue(k).trim(),
     k(n),
   );
 function k(n: string) {
@@ -89,8 +90,14 @@ const ink = (page: Page, text: string) =>
     const q = c.width / c.getBoundingClientRect().width;
     const x0 = Math.max(0, Math.round((e.x + st.scrollX) * st.zoom.value * q));
     const y0 = Math.max(0, Math.round((e.y + st.scrollY) * st.zoom.value * q));
-    const w = Math.max(1, Math.min(Math.round(e.width * st.zoom.value * q), c.width - x0));
-    const h = Math.max(1, Math.min(Math.round(e.height * st.zoom.value * q), c.height - y0));
+    const w = Math.max(
+      1,
+      Math.min(Math.round(e.width * st.zoom.value * q), c.width - x0),
+    );
+    const h = Math.max(
+      1,
+      Math.min(Math.round(e.height * st.zoom.value * q), c.height - y0),
+    );
     const d = c.getContext("2d")!.getImageData(x0, y0, w, h).data;
     const counts = new Map<string, number>();
     for (let i = 0; i < d.length; i += 4) {
@@ -99,12 +106,19 @@ const ink = (page: Page, text: string) =>
     }
     const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
     const hex = (s: string) =>
-      "#" + s.split(",").map((n) => Number(n).toString(16).padStart(2, "0")).join("");
-    return { bg: hex(sorted[0][0]), inks: sorted.slice(1, 6).map((s) => hex(s[0])) };
+      `#${s
+        .split(",")
+        .map((n) => Number(n).toString(16).padStart(2, "0"))
+        .join("")}`;
+    return {
+      bg: hex(sorted[0][0]),
+      inks: sorted.slice(1, 6).map((s) => hex(s[0])),
+    };
   }, text);
 
 const near = (a: string, b: string, tol = 40) => {
-  const n = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const n = (h: string) =>
+    [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
   const [x, y] = [n(a), n(b)];
   return Math.max(...x.map((v, i) => Math.abs(v - y[i]))) <= tol;
 };
@@ -164,24 +178,38 @@ test("a theme's own Markdown colours reach typed headings, in light and dark", a
   await page.locator(".vault-editor").getByTestId("markdown-chip").click();
   await typeLine(page, 0.3, 0.7, "# Alpha title ");
   await typeLine(page, 0.3, 0.85, "## Beta subtitle ");
-  const scene = async () => (await readScene(page, "DSA/Graphs.excalidraw")).elements;
+  const scene = async () =>
+    (await readScene(page, "DSA/Graphs.excalidraw")).elements;
   await expect
-    .poll(async () => (await scene()).filter((e: any) => e.customData?.role).length)
+    .poll(
+      async () => (await scene()).filter((e: any) => e.customData?.role).length,
+    )
     .toBe(2);
   const findText = async (start: string) =>
-    (await scene()).find((e: any) => e.type === "text" && e.text.startsWith(start));
+    (await scene()).find(
+      (e: any) => e.type === "text" && e.text.startsWith(start),
+    );
   const al = await findText("Alpha");
   const be = await findText("Beta");
   expect(al.customData.role).toBe("h1");
   expect(be.customData.role).toBe("h2");
   const p1 = await ink(page, al.text);
-  expect(p1.inks.some((c) => near(c, "#cc2200")), `h1 painted ${JSON.stringify(p1)}`).toBe(true);
+  expect(
+    p1.inks.some((c) => near(c, "#cc2200")),
+    `h1 painted ${JSON.stringify(p1)}`,
+  ).toBe(true);
 
   await setMode(page, "Dark");
   expect(await rootVar(page, "--vault-md-h1")).toBe("#ff8866");
   const p2 = await ink(page, al.text);
-  expect(p2.inks.some((c) => near(c, "#ff8866")), `dark h1 painted ${JSON.stringify(p2)}`).toBe(true);
+  expect(
+    p2.inks.some((c) => near(c, "#ff8866")),
+    `dark h1 painted ${JSON.stringify(p2)}`,
+  ).toBe(true);
   const p3 = await ink(page, be.text);
-  expect(p3.inks.some((c) => near(c, "#66aaff")), `dark h2 painted ${JSON.stringify(p3)}`).toBe(true);
+  expect(
+    p3.inks.some((c) => near(c, "#66aaff")),
+    `dark h2 painted ${JSON.stringify(p3)}`,
+  ).toBe(true);
   expect(errors).toEqual([]);
 });

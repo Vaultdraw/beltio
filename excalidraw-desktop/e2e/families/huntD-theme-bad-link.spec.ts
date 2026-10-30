@@ -72,14 +72,6 @@ test("a theme link that serves bad data gives a plain message each time and inst
     current = key;
     const box = install.getByLabel("Address or GitHub repo");
     if (!(await box.isVisible())) {
-      console.log(
-        "PREVIEW STATE before",
-        key,
-        (await install.innerText()).replace(/\s+/g, " "),
-      );
-      await page.screenshot({
-        path: "../.cache/e2e-shots/huntD-theme-preview.png",
-      });
       await install
         .getByRole("button", { name: /Back|Cancel|Change/ })
         .first()
