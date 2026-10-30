@@ -1740,7 +1740,7 @@ notify_edits = true   # show a notice when a script or AI tool edits the drawing
 
 ## AI
 
-AI is off by default, and while it is off Vaultdraw is fully offline. Turning it on lets an AI app you connect (a desktop assistant or a coding agent) read and edit your drawings through the running app. Vaultdraw itself sends nothing: what the AI app reads, it sends to its own AI provider under its own terms.
+AI is off by default, and while it is off no AI app can reach your drawings. (This switch is separate from Offline mode, which turns off Vaultdraw's own internet features.) Turning it on lets an AI app you connect (a desktop assistant or a coding agent) read and edit your drawings through the running app. Vaultdraw itself sends nothing: what the AI app reads, it sends to its own AI provider under its own terms.
 
 ```toml
 [ai]

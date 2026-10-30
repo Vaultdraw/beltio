@@ -1106,7 +1106,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     page: "control",
     label: "AI",
     description:
-      "Off keeps your device fully offline. On lets an AI app you connect read and edit your drawings.",
+      "On lets an AI app you connect read and edit your drawings. Off keeps it from doing so. For no internet use at all, turn on Offline mode in General.",
     keywords: ["ai", "assistant", "agent", "llm", "mcp", "offline", "privacy"],
     configKey: "ai.enabled",
   },

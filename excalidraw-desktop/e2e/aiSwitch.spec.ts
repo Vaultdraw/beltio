@@ -26,7 +26,7 @@ test("Settings > Control: the AI switch asks first, then shows the MCP sub-switc
   const warning = page.getByTestId("ai-warning");
   await expect(warning).toBeVisible();
   await expect(warning).toContainText("Turn on AI?");
-  await expect(warning).toContainText("no longer fully offline");
+  await expect(warning).toContainText("While AI is on, an AI app you connect");
   await expect(aiSwitch).not.toBeChecked();
 
   await page.getByTestId("ai-warning-confirm").click();

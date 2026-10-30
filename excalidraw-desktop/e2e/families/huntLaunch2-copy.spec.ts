@@ -6,7 +6,7 @@ import { openVault } from "../helpers";
 // Launch hunter 2 [launch] [shell]: the Control page's AI row promises "fully offline" while the
 // network is on by default (update check, theme and plugin lists, web pictures). Offline mode is
 // the switch that does that. toimprove 286.
-test.fail(
+test(
   "toimprove 286: Settings > Control, the AI row does not claim to keep the device fully offline",
   async ({ page }) => {
     await openVault(page);

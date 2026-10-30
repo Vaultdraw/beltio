@@ -12,7 +12,7 @@ const root = join(__dirname, "..", "..");
 const read = (p: string) => readFileSync(join(root, p), "utf8");
 
 describe("privacy claims match the network policy (toimprove 286)", () => {
-  it.fails(
+  it(
     "the Control page's AI row does not say Off keeps the device fully offline",
     () => {
       expect(read("src/components/settings/schema.ts")).not.toMatch(
@@ -20,7 +20,7 @@ describe("privacy claims match the network policy (toimprove 286)", () => {
       );
     },
   );
-  it.fails(
+  it(
     "the AI-on warning does not say Vaultdraw makes no network requests",
     () => {
       expect(read("src/ai/AiWarningDialog.tsx")).not.toMatch(
@@ -28,7 +28,7 @@ describe("privacy claims match the network policy (toimprove 286)", () => {
       );
     },
   );
-  it.fails(
+  it(
     "docs/configuration.md does not say Vaultdraw is fully offline while AI is off",
     () => {
       expect(read("../docs/configuration.md")).not.toMatch(
