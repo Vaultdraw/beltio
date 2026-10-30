@@ -516,6 +516,17 @@ export function createMarkdownTyping(deps: {
       return false;
     };
 
+    /** In the empty box Enter just made: back to the end of the block it came from. */
+    const backToBlock = (el: ExcalidrawTextElement): boolean => {
+      const from = continuedFrom.get(el.id);
+      if (!from || editable.value !== "") {
+        return false;
+      }
+      continuedFrom.delete(el.id);
+      session.editText(from, Number.MAX_SAFE_INTEGER);
+      return true;
+    };
+
     const backspace = (): boolean => {
       const { selectionStart: caret, selectionEnd } = editable;
       const el = session.getElement();
@@ -529,14 +540,7 @@ export function createMarkdownTyping(deps: {
           lastConversion = null;
           return true;
         }
-        const from = continuedFrom.get(el.id);
-        if (from && value === "") {
-          // an empty box Enter just made: back to the end of its block
-          continuedFrom.delete(el.id);
-          session.editText(from, Number.MAX_SAFE_INTEGER);
-          return true;
-        }
-        return false;
+        return backToBlock(el);
       }
       const start = lineStart(value, caret);
       const item = listItemOf(value.slice(start, lineEnd(value, caret)));
@@ -554,6 +558,10 @@ export function createMarkdownTyping(deps: {
     const undo = (): boolean => {
       const c = lastConversion;
       const el = session.getElement();
+      if (el && (!c || c.elementId !== el.id) && backToBlock(el)) {
+        // Cmd+Z right after Enter takes the Enter back, as in Obsidian
+        return true;
+      }
       if (!c || !el || c.elementId !== el.id || editable.value !== c.after) {
         return false;
       }

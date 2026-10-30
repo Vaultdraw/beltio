@@ -381,6 +381,26 @@ describe("Markdown typing: Enter, Backspace, undo", () => {
     expect(h.current().customData).toMatchObject({ role: "h1" });
   });
 
+  it("Cmd+Z in the empty box Enter made goes back to the heading (toimprove 237)", () => {
+    const h = harness();
+    h.type("# Title");
+    h.press("Enter");
+    expect(h.textarea.value).toBe("");
+    h.press("z", { metaKey: true });
+    expect(h.all()).toHaveLength(1);
+    expect(h.current().text).toBe("Title");
+    expect(h.current().customData).toMatchObject({ role: "h1" });
+  });
+
+  it("Cmd+Z after typing in that box is the editor's own undo, not a jump back", () => {
+    const h = harness();
+    h.type("# Title");
+    h.press("Enter");
+    h.type("x");
+    h.press("z", { metaKey: true });
+    expect(h.current().text).not.toBe("Title");
+  });
+
   it("Cmd+Z right after a conversion restores the literal # ", () => {
     const h = harness();
     h.type("# ");

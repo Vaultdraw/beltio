@@ -184,7 +184,6 @@ for (const row of FIELD_KEYS) {
 test("hunter I-12 (toimprove 237): Cmd+Z right after Enter on a heading takes the Enter back (Obsidian undoes the new line)", async ({
   page,
 }) => {
-  test.fail();
   const errors = trackErrors(page);
   await open(page);
   await editor(page).getByTestId("markdown-chip").click();

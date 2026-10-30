@@ -25,6 +25,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Markdown mode: Cmd+Z right after Enter on a heading takes the Enter back** (toimprove 237), as in Obsidian: the empty box goes and the caret is back at the end of the heading, like Backspace.
 - **A linked text of several lines is underlined on every line** (toimprove 224), each line as wide as its own text, as in Obsidian; any of those lines opens the link. It used to get one line under its last line, as wide as its longest line.
 - **An Obsidian drawing exports as "Plan.png", not "Plan.excalidraw.md.png"** (toimprove 232). PNG, SVG and PDF exports and Save a copy name the file as the tree shows it.
 - **Markdown mode: Enter after a heading in a group keeps the next paragraph in the group** (toimprove 227). Moving, copying or deleting a grouped card now takes the text typed after its heading along.
