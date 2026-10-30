@@ -182,3 +182,21 @@ for (const row of FIELD_KEYS) {
     expect(errors).toEqual([]);
   });
 }
+
+test("hunter I-12 (toimprove 237): Cmd+Z right after Enter on a heading takes the Enter back (Obsidian undoes the new line)", async ({
+  page,
+}) => {
+  test.fail();
+  const errors = trackErrors(page);
+  await open(page);
+  await editor(page).getByTestId("markdown-chip").click();
+  await typeBox(page, 0.3, 0.7, "# Plan");
+  await expect(page.locator(textarea)).toHaveValue("Plan");
+  await page.keyboard.press("Enter");
+  // a new, empty body box is being edited below the heading
+  await expect(page.locator(textarea)).toHaveValue("");
+  await page.keyboard.press("ControlOrMeta+z");
+  // back in the heading, at its end, as before the Enter
+  await expect(page.locator(textarea)).toHaveValue("Plan", { timeout: 3000 });
+  expect(errors).toEqual([]);
+});
