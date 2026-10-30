@@ -1,11 +1,11 @@
+import { useState, type KeyboardEvent } from "react";
+
 import { IconChevronDown, IconReveal } from "../../Icons";
-import { stepValue, type StepRange } from "../stepper";
+import { stepValue, typedValue, type StepRange } from "../stepper";
 
 import "../colorPicker.css";
 
 import { Path } from "../../Path";
-
-import type { KeyboardEvent } from "react";
 
 /** Segmented buttons (one active). */
 export const Segmented = <T extends string | number>({
@@ -75,8 +75,9 @@ export const Switch = ({
 );
 
 /**
- * Number stepper: the value plus two chevrons. The value is the one tab stop
- * (ArrowUp/Down step, PageUp/Down step x5, Home/End jump to the ends).
+ * Number stepper: the value plus two chevrons. The value is the one tab stop, a text field: type
+ * a number and press Enter or leave the field (clamped and put on the grid; Escape goes back);
+ * ArrowUp/Down step, PageUp/Down step x5, Home/End jump to the ends (hunter D-3).
  */
 export const Stepper = ({
   value,
@@ -93,7 +94,20 @@ export const Stepper = ({
   label: string;
 }) => {
   const range = { min, max, step };
+  // What the user is typing; null while the field shows the value.
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = () => {
+    if (draft === null) {
+      return; // nothing typed: leaving the field changes nothing (TN-4 family)
+    }
+    const next = typedValue(draft, range);
+    setDraft(null);
+    if (next !== null && next !== value) {
+      onChange(next);
+    }
+  };
   const move = (dir: 1 | -1, times = 1) => {
+    setDraft(null);
     let next = value;
     for (let i = 0; i < times; i++) {
       next = stepValue(next, dir, range);
@@ -110,7 +124,15 @@ export const Stepper = ({
       PageDown: () => move(-1, 5),
       Home: () => onChange(min),
       End: () => onChange(max),
+      Enter: commit,
+      Escape: () => setDraft(null),
     };
+    if (e.key === "Escape" && draft === null) {
+      return; // nothing typed: Escape closes the dialog as usual
+    }
+    if ((e.key === "Home" || e.key === "End") && draft !== null) {
+      return; // while typing, Home and End move the caret
+    }
     if (key[e.key]) {
       e.preventDefault();
       key[e.key]();
@@ -118,20 +140,23 @@ export const Stepper = ({
   };
   return (
     <div className="vault-stepper">
-      <span
+      <input
         className="vault-stepper__value"
         role="spinbutton"
-        tabIndex={0}
+        type="text"
+        inputMode="decimal"
         aria-label={label}
         aria-valuenow={value}
         aria-valuemin={min}
         aria-valuemax={max}
         aria-valuetext={unit ? `${value} ${unit}` : String(value)}
+        size={Math.max(3, String(max).length + (unit ? unit.length + 1 : 0))}
+        value={draft ?? (unit ? `${value} ${unit}` : String(value))}
+        onChange={(e) => setDraft(e.target.value)}
+        onFocus={(e) => e.currentTarget.select()}
+        onBlur={commit}
         onKeyDown={onKeyDown}
-      >
-        {value}
-        {unit ? ` ${unit}` : ""}
-      </span>
+      />
       <span className="vault-stepper__arrows">
         <button
           type="button"

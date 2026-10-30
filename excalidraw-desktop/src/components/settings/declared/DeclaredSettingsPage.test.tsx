@@ -61,9 +61,7 @@ describe("DeclaredSettingsPage", () => {
   it("renders one row per declaration with defaults", () => {
     renderPage();
     expect(screen.getByRole("switch", { name: "Enabled" })).not.toBeChecked();
-    expect(screen.getByRole("spinbutton", { name: "Size" })).toHaveTextContent(
-      "5",
-    );
+    expect(screen.getByRole("spinbutton", { name: "Size" })).toHaveValue("5");
     expect(screen.getByRole("button", { name: "Alpha" })).toHaveAttribute(
       "aria-pressed",
       "true",

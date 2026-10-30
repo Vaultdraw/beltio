@@ -109,6 +109,17 @@ test("official plugin settings: steppers stop at their ends, choices and text su
       const inside = await num(s);
       expect(inside, `${plugin}/${label} one step down`).toBeLessThan(max);
       expect(inside).toBeGreaterThanOrEqual(min);
+      // typed values (D-3 family): a number past the end is clamped, text that is no number
+      // leaves the value as it was
+      await s.focus();
+      await page.keyboard.press("Meta+A");
+      await page.keyboard.type(String(max * 10));
+      await page.keyboard.press("Enter");
+      expect(await num(s), `${plugin}/${label} typed past max`).toBe(max);
+      await page.keyboard.press("Meta+A");
+      await page.keyboard.type("nope");
+      await page.keyboard.press("Enter");
+      expect(await num(s), `${plugin}/${label} typed text`).toBe(max);
     }
     for (const g of await row.locator("[role=group]").all()) {
       const buttons = g.getByRole("button");
@@ -165,19 +176,18 @@ test("official plugin settings: steppers stop at their ends, choices and text su
   expect(errors).toEqual([]);
 });
 
-// Parity: Obsidian's and Zed's number settings take typed numbers; ours is a span that only steps.
-test.fixme(
-  "a number setting in a plugin page takes a typed value (Elements per drawing: 5000)",
-  async ({ page }) => {
-    await openVault(page);
-    const { row } = await openPluginSettings(page, "Markdown import");
-    const s = row.getByRole("spinbutton", { name: "Elements per drawing" });
-    const was = await num(s);
-    await s.focus();
-    await page.keyboard.press("Control+A");
-    await page.keyboard.type("5000");
-    await page.keyboard.press("Enter");
-    expect(await num(s)).toBe(5000);
-    expect(was).not.toBe(5000);
-  },
-);
+// Parity: Obsidian's and Zed's number settings take typed numbers (D-3, fixed).
+test("a number setting in a plugin page takes a typed value (Elements per drawing: 5000)", async ({
+  page,
+}) => {
+  await openVault(page);
+  const { row } = await openPluginSettings(page, "Markdown import");
+  const s = row.getByRole("spinbutton", { name: "Elements per drawing" });
+  const was = await num(s);
+  await s.focus();
+  await page.keyboard.press("Meta+A");
+  await page.keyboard.type("5000");
+  await page.keyboard.press("Enter");
+  expect(await num(s)).toBe(5000);
+  expect(was).not.toBe(5000);
+});

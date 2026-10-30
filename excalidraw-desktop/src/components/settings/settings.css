@@ -845,12 +845,18 @@
 .vault-stepper__value {
   display: inline-flex;
   align-items: center;
+  box-sizing: content-box;
   min-width: 56px;
+  margin: 0;
   padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
   font-size: var(--vd-fs-small);
   font-variant-numeric: tabular-nums;
   outline: none;
-  cursor: default;
+  cursor: text;
 }
 
 .vault-stepper__arrows {

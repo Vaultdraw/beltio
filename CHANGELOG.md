@@ -43,6 +43,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **Arrow-key moves can be undone** (one step per key press; a held key is one step). The editor never recorded them, so Cmd+Z only cleared the selection.
 - **Enter after a heading in a shape label** ends the heading: the label goes back to body size instead of every later line being drawn at heading size.
 - **A dragged tab scrolls the tab strip** when held at its left or right edge, so it can be dropped far along among many tabs.
+- **Number settings take typed values.** Click a number in Settings (or a plugin's settings page), type it and press Enter or leave the field; it is kept within its range. Arrow keys and the chevrons still step.
 - **A note nested thousands of levels deep no longer crashes the app at every vault open.** Quotes, callouts and lists deeper than 64 levels are read as plain text.
 - **Bold text keeps its bold.** Changing the font of a bold heading in the editor, "Update to my theme and font" and a plugin font change now keep the text bold in the new font; the font picker shows a bold text's font as selected; plugins read a bold text's font by its name.
 - **"Re-import unchanged imported notes" no longer brings back a deleted or renamed part.** A long note whose first (or a middle) drawing you deleted, renamed or moved is left as it is and counted as changed.
