@@ -423,6 +423,30 @@ mod tests {
     }
 
     #[test]
+    fn every_writer_shares_the_schema_check_and_a_refused_batch_changes_nothing() {
+        // Family (hunter C-9): Settings, `config set` and the control API all end in update_overrides_in.
+        let t = tempdir().unwrap();
+        let d = dirs_in(t.path());
+        update_overrides_in(&d, &[set("editor.font_size", json!(20))]).unwrap();
+        let before = overrides(&d);
+        let bad: [(&str, Json); 6] = [
+            ("files.auto_reload", json!("banana")),
+            ("files.auto_reloadd", json!(true)),
+            ("editor.font_size", json!("huge")),
+            ("editor.font_size", json!(100000)),
+            ("hotkeys.vault.newDrawing", json!("Mod+K")),
+            ("tools.arrow.nonsense", json!(1)),
+        ];
+        for (key, value) in bad {
+            let e = update_overrides_in(&d, &[set("saving.autosave_delay_ms", json!(900)), set(key, value.clone())]).unwrap_err();
+            assert_eq!(e.code, "CONFIG_INVALID", "{key} = {value}");
+            assert_eq!(overrides(&d), before, "{key} = {value} changed the file");
+        }
+        // Valid writes of every shape Settings makes still go through.
+        update_overrides_in(&d, &[set("hotkeys.vault.newDrawing", json!(["Mod+K"])), set("editor.font_size", json!(14.0)), reset("saving.autosave_delay_ms", json!(500))]).unwrap();
+    }
+
+    #[test]
     fn merge_replaces_scalars_and_arrays_and_merges_tables_by_key() {
         let mut base = json!({"editor": {"font_size": 14, "stroke_color": "#111"}, "interface": {"activity_bar_order": ["a", "b"]}, "root": 1});
         merge_layer(&mut base, &json!({"editor": {"font_size": 20}, "interface": {"activity_bar_order": ["c"]}, "root": 2}));

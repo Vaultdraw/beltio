@@ -489,7 +489,7 @@ fn c3_methods() -> Vec<MethodSpec> {
         ),
         spec(
             TAB_FOCUS,
-            "Focus a tab by id, 1-based index, or file target",
+            "Focus a tab by id, 1-based index, drawing name or file target",
             target(json!({"id": {"type": "string"}, "index": {"type": "integer"}})),
             obj(json!({"id": {"type": "string"}}), &["id"]),
             CLI_ONLY,
@@ -497,8 +497,8 @@ fn c3_methods() -> Vec<MethodSpec> {
         ),
         spec(
             TAB_CLOSE,
-            "Close a tab by id or file target",
-            target(json!({"id": {"type": "string"}})),
+            "Close a tab by id, 1-based index, drawing name or file target",
+            target(json!({"id": {"type": "string"}, "index": {"type": "integer"}})),
             obj(json!({"closed": {"type": "boolean"}}), &["closed"]),
             CLI_ONLY,
             true,

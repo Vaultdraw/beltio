@@ -338,9 +338,9 @@ pub enum PluginAction {
 
 #[derive(Subcommand, Debug)]
 pub enum TabAction {
-    /// Focus a tab by id or 1-based index
+    /// Focus a tab by id, 1-based number, drawing name or file target
     Focus { id: String },
-    /// Close a tab by id or file target
+    /// Close a tab by id, 1-based number, drawing name or file target
     Close { id: String },
 }
 
