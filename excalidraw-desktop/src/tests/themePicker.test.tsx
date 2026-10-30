@@ -88,11 +88,10 @@ describe("ThemePicker", () => {
     expect(search).toHaveAttribute("placeholder", "Search themes");
     expect(screen.getByText(/^120 ·/)).toBeInTheDocument();
 
-    fireEvent.change(search, { target: { value: "theme 11" } });
-    expect(names()).toEqual(
-      Array.from({ length: 10 }, (_, i) => `Theme 11${i}`),
-    );
-    expect(screen.getByRole("status")).toHaveTextContent("10 themes");
+    // each word is searched on its own, in any order (toimprove 246)
+    fireEvent.change(search, { target: { value: "110 theme" } });
+    expect(names()).toEqual(["Theme 110"]);
+    expect(screen.getByRole("status")).toHaveTextContent("1 theme");
 
     fireEvent.change(search, { target: { value: "nothing like this" } });
     expect(screen.queryAllByRole("radio")).toHaveLength(0);
@@ -124,7 +123,7 @@ describe("ThemePicker", () => {
 
     // Selected card filtered out: the first match takes the tab stop.
     fireEvent.change(screen.getByRole("searchbox"), {
-      target: { value: "theme 01" },
+      target: { value: "theme 010" },
     });
     expect(radios().filter((r) => r.tabIndex === 0)).toEqual([
       screen.getByRole("radio", { name: "Theme 010" }),
