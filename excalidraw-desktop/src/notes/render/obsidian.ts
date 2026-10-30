@@ -351,9 +351,9 @@ const footnotesHtml = (): string => {
     .filter((id) => notes.defs.has(id))
     .map(
       (id) =>
-        `<li id="fn-${esc(id)}">${
-          marked.parseInline(notes.defs.get(id)!) as string
-        } <a href="#fnref-${esc(
+        `<li id="fn-${esc(id)}">${inline(
+          notes.defs.get(id)!,
+        )} <a href="#fnref-${esc(
           id,
         )}" class="footnote-back" data-footnote="fnref-${esc(
           id,
@@ -468,9 +468,8 @@ marked.use({
         head[1][0].toUpperCase() + head[1].slice(1).toLowerCase();
       const rest = (first as Tokens.Paragraph).text.slice(head[0].length);
       const body =
-        (rest.trim()
-          ? `<p>${marked.parseInline(rest.trim()) as string}</p>`
-          : "") + this.parser.parse(tokens.slice(1));
+        (rest.trim() ? `<p>${inline(rest.trim())}</p>` : "") +
+        this.parser.parse(tokens.slice(1));
       const titleHtml = `<div class="callout-title"><span class="callout-title-text">${inline(
         title,
       )}</span></div>`;

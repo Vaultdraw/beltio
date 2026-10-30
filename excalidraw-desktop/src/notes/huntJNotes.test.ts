@@ -319,6 +319,19 @@ describe("J-10: Markdown in a callout title (toimprove 219)", () => {
   });
 });
 
+describe("J-13 family: every part rendered on its own follows the line-break setting", () => {
+  const strict = (md: string) =>
+    renderNoteHtml(md, {
+      resolve: () => null,
+      highlight: false,
+      math: false,
+      strictLineBreaks: true,
+    });
+  it("strict line breaks on: the lines under a callout title join", () => {
+    expect(strict("> [!note] T\n> one\n> two")).not.toContain("one<br>");
+  });
+});
+
 describe("J-11: footnotes of an embedded note (toimprove 222)", () => {
   it.fails(
     "the host's footnote number reaches the host's footnote, not the embed's",
@@ -358,10 +371,7 @@ describe("J-13: line breaks right under a callout title (toimprove 229)", () => 
   it("sanity: a later paragraph in the callout breaks its lines", () => {
     expect(html(md)).toContain("para two a<br>para two b");
   });
-  it.fails(
-    "the first lines under the title break too (strict line breaks off)",
-    () => {
-      expect(html(md)).toMatch(/line one<br>\s*line two/);
-    },
-  );
+  it("the first lines under the title break too (strict line breaks off)", () => {
+    expect(html(md)).toMatch(/line one<br>\s*line two/);
+  });
 });
