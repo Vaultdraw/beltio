@@ -3,6 +3,7 @@
 import { isTauriAvailable } from "../../vault/DesktopVaultRepository";
 
 import { guardedFetch } from "../../network/webFetchGuard";
+
 import { readStoredThemes, writeStoredThemes } from "./browserStore";
 import { InstallError, toInstallError } from "./types";
 

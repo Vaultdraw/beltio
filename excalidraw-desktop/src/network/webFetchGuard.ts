@@ -29,7 +29,7 @@ export const isLocalOrPrivateHost = (hostname: string): boolean => {
     host.endsWith(".internal") ||
     host.endsWith(".lan") ||
     host.endsWith(".home.arpa") ||
-    !host.includes(".") && !host.startsWith("[")
+    (!host.includes(".") && !host.startsWith("["))
   ) {
     return true;
   }
@@ -93,7 +93,10 @@ export const vetWebUrl = (
     throw new InstallError("BAD_URL", `"${raw}" is not a web address`);
   }
   if (url.username || url.password) {
-    throw new InstallError("BAD_URL", "Addresses with a password are not allowed");
+    throw new InstallError(
+      "BAD_URL",
+      "Addresses with a password are not allowed",
+    );
   }
   const loopbackHttp =
     url.protocol === "http:" && LOOPBACK_HOSTS.has(url.hostname);

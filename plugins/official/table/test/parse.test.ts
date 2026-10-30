@@ -114,8 +114,6 @@ describe("line endings", () => {
       ["1", "2", "3"],
       ["4", "5", "6"],
     ]);
-    expect(
-      parseTable(["a\tb", "1\t2"].join(eol) + eol)?.rows.length,
-    ).toBe(2);
+    expect(parseTable(["a\tb", "1\t2"].join(eol) + eol)?.rows.length).toBe(2);
   });
 });

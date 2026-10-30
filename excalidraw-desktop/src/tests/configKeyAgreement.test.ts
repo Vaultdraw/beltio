@@ -25,7 +25,9 @@ const known = new Set<string>([
 
 /** Settings rows whose key is read by a table-specific loader, not CONFIG_MAPPING. */
 const OTHER_LOADERS = (key: string) =>
-  key.startsWith("tools.") || key.startsWith("hotkeys") || key.startsWith("plugin");
+  key.startsWith("tools.") ||
+  key.startsWith("hotkeys") ||
+  key.startsWith("plugin");
 
 const rows = SETTINGS_SCHEMA.filter((s) => s.configKey);
 

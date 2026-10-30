@@ -5,6 +5,7 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 const SRC = join(__dirname, "..");
@@ -19,7 +20,10 @@ const walk = (dir: string): string[] =>
 describe("src/pdfImport", () => {
   const files = walk(DIR);
   const others = walk(SRC).filter(
-    (f) => /\.tsx?$/.test(f) && !f.startsWith(DIR) && !f.endsWith("pdfImportFolder.test.ts"),
+    (f) =>
+      /\.tsx?$/.test(f) &&
+      !f.startsWith(DIR) &&
+      !f.endsWith("pdfImportFolder.test.ts"),
   );
 
   it("holds no importer code, only settings", () => {
@@ -29,9 +33,12 @@ describe("src/pdfImport", () => {
     ]);
   });
 
-  it.each(files.map((f) => f.slice(DIR.length + 1)))("%s is imported from outside the folder", (name) => {
-    const stem = name.replace(/\.tsx?$/, "");
-    const re = new RegExp(`pdfImport/${stem}["']`);
-    expect(others.some((f) => re.test(readFileSync(f, "utf8")))).toBe(true);
-  });
+  it.each(files.map((f) => f.slice(DIR.length + 1)))(
+    "%s is imported from outside the folder",
+    (name) => {
+      const stem = name.replace(/\.tsx?$/, "");
+      const re = new RegExp(`pdfImport/${stem}["']`);
+      expect(others.some((f) => re.test(readFileSync(f, "utf8")))).toBe(true);
+    },
+  );
 });

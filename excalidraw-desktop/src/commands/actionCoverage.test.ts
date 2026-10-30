@@ -10,6 +10,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { buildRowMenu } from "../components/menu/rowMenuModel";
@@ -130,9 +131,9 @@ describe("every audited click action has a command", () => {
         s.handlers,
       );
       // Distinct commands may back several handlers (two buttons, one action).
-      expect(s.commands.length + s.plumbing + s.gaps.length).toBeLessThanOrEqual(
-        s.handlers,
-      );
+      expect(
+        s.commands.length + s.plumbing + s.gaps.length,
+      ).toBeLessThanOrEqual(s.handlers);
       for (const id of s.commands) {
         expect(getCommand(id), `${id} is not in the registry`).toBeTruthy();
       }
@@ -140,7 +141,9 @@ describe("every audited click action has a command", () => {
   );
 
   it("KNOWN gaps (must shrink, never grow)", () => {
-    const gaps = SURFACES.flatMap((s) => s.gaps.map((g) => `${s.file}: ${g.what}`));
+    const gaps = SURFACES.flatMap((s) =>
+      s.gaps.map((g) => `${s.file}: ${g.what}`),
+    );
     expect(gaps).toEqual([
       "components/links/LinksDock.tsx: Backlinks tab",
       "components/links/LinksDock.tsx: Outgoing links tab",
@@ -150,7 +153,12 @@ describe("every audited click action has a command", () => {
 });
 
 const entry = (kind: VaultEntry["kind"], sync?: string): VaultEntry =>
-  ({ name: "a", path: "a", kind, ...(sync ? { sync } : {}) }) as unknown as VaultEntry;
+  ({
+    name: "a",
+    path: "a",
+    kind,
+    ...(sync ? { sync } : {}),
+  } as unknown as VaultEntry);
 
 const flatten = (nodes: readonly MenuNode[]): MenuNode[] =>
   nodes.flatMap((n) => (n.kind === "submenu" ? flatten(n.items) : [n]));
@@ -195,9 +203,7 @@ describe("the file tree row menu", () => {
     .filter((n): n is Extract<MenuNode, { kind: "item" }> => n.kind === "item");
 
   it("every item has a registered command, except the known gaps", () => {
-    const missing = new Set(
-      items.filter((i) => !i.commandId).map((i) => i.id),
-    );
+    const missing = new Set(items.filter((i) => !i.commandId).map((i) => i.id));
     expect([...missing].sort()).toEqual([...ROW_MENU_GAPS].sort());
     for (const i of items) {
       if (i.commandId) {
@@ -234,7 +240,10 @@ describe("the tab context menu", () => {
       .filter((a) => a !== "sep" && !a.startsWith("plugin:"));
     expect(actions.length).toBeGreaterThan(0);
     for (const a of actions) {
-      expect(TAB_COMMAND[a], `tab menu action ${a} has no command`).toBeTruthy();
+      expect(
+        TAB_COMMAND[a],
+        `tab menu action ${a} has no command`,
+      ).toBeTruthy();
       expect(getCommand(TAB_COMMAND[a])).toBeTruthy();
     }
   });
