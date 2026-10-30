@@ -20,7 +20,7 @@ const html = (md: string) =>
     { remoteImages: false },
   );
 
-describe("J-2: $$display math$$ inside a sentence (toimprove 203)", () => {
+describe("J-1: $$display math$$ inside a sentence (toimprove 208)", () => {
   it("sanity: $$ on its own lines is display math", () => {
     expect(html("$$\nE=mc^2\n$$")).toContain('data-display="1"');
   });
@@ -35,7 +35,7 @@ describe("J-2: $$display math$$ inside a sentence (toimprove 203)", () => {
   );
 });
 
-describe("J-3: an ordinary Markdown link opens the note Obsidian opens (toimprove 204)", () => {
+describe("J-2: an ordinary Markdown link opens the note Obsidian opens (toimprove 209)", () => {
   // Obsidian's default "New link format" is "Shortest path when possible": a link from
   // Projects/Plan.md to the only Ideas.md in the vault is written `[x](Ideas.md)`; with "Absolute
   // path in vault" it is `[x](Areas/Ideas.md)`. Both open the note in Obsidian, and the app's own
@@ -76,7 +76,7 @@ describe("J-3: an ordinary Markdown link opens the note Obsidian opens (toimprov
   }
 });
 
-describe("J-5: a block id on its own line after a table, quote or list (toimprove 205)", () => {
+describe("J-3: a block id on its own line after a table, quote or list (toimprove 210)", () => {
   // Obsidian (Help > Link to blocks): "To link to a list, a table or a quote, add the block
   // identifier on its own line, after a blank line." `![[Note#^tbl]]` then embeds the table.
   const note =
@@ -95,7 +95,7 @@ describe("J-5: a block id on its own line after a table, quote or list (toimprov
   }
 });
 
-describe("J-6: ![[pic.png|caption|300x200]] (toimprove 206)", () => {
+describe("J-4: ![[pic.png|caption|300x200]] (toimprove 211)", () => {
   const hydrate = async (alias: string) => {
     const root = document.createElement("div");
     root.innerHTML = `<span data-embed="image" data-target="pic.png" data-path="pic.png" data-alias="${alias}">pic.png</span>`;

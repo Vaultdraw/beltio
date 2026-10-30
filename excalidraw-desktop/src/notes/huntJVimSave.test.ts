@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * Bug hunter J (2026-10-30 evening) [notes], toimprove 208: `:w` in the second note saves the
+ * Bug hunter J (2026-10-30 evening) [notes], toimprove 212 (J-5): `:w` in the second note saves the
  * first one. notesVim.ts defines the `:w` command once, with the save callback of the first note
  * editor that turned Vim keys on (`defined` flag); every later editor's `:w` runs that callback.
  * Vim and Obsidian's Vim mode: `:w` writes the buffer the cursor is in.
