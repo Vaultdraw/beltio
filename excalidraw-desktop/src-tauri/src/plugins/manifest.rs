@@ -10,7 +10,7 @@ pub(crate) const SUPPORTED_API: u32 = 1;
 /// The pre-1.0 level. A manifest that says `api = 0` still loads, with a warning, until API 2.0.
 pub(crate) const LEGACY_API: u32 = 0;
 /// The API revision this app implements: the version of `sdk/api/package.json` (a test keeps them equal).
-pub(crate) const API_REVISION: &str = "1.1.0";
+pub(crate) const API_REVISION: &str = "1.2.0";
 const MAX_COMMANDS: usize = 200;
 const MAX_PANELS: usize = 20;
 const MAX_SETTINGS: usize = 100;

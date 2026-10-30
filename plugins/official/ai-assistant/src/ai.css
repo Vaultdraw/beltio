@@ -7,7 +7,7 @@
 .vd-ai-task[aria-selected="true"] { background: var(--vault-primary-light, rgba(105,101,219,.18)); border-color: var(--vault-primary-border, var(--vault-accent, #6965db)); }
 .vd-ai-input, .vd-ai-keyinput { width: 100%; box-sizing: border-box; font: inherit; color: inherit; background: var(--vault-surface, transparent); border: 1px solid var(--vault-border, rgba(128,128,128,.3)); border-radius: var(--vd-radius-pop, 6px); padding: 6px 8px; resize: vertical; }
 .vd-ai-keyinput { flex: 1; min-width: 0; resize: none; }
-.vd-ai-input:focus-visible, .vd-ai-keyinput:focus-visible, .vd-ai-btn:focus-visible, .vd-ai-task:focus-visible { outline: 2px solid var(--vault-accent, #6965db); outline-offset: 1px; }
+.vd-ai-input:focus-visible, .vd-ai-keyinput:focus-visible, .vd-ai-btn:focus-visible, .vd-ai-task:focus-visible { outline: none; box-shadow: var(--vault-ring-inset); }
 .vd-ai-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .vd-ai-btn { font: inherit; font-size: var(--vd-fs-small, 12px); color: inherit; background: var(--vault-surface-hover, rgba(128,128,128,.12)); border: 1px solid var(--vault-border, rgba(128,128,128,.3)); border-radius: var(--vd-radius-pop, 6px); padding: 4px 10px; cursor: pointer; }
 .vd-ai-btn:disabled { opacity: .5; cursor: default; }
