@@ -1,3 +1,4 @@
+import { foldKey } from "../search/foldKey";
 import { DRAWING_EXT, hasDrawingExt } from "../vault/fileKind";
 /**
  * Fuzzy scorer for the quick switcher (Cmd+P): ranks drawing paths and command
@@ -8,8 +9,6 @@ import { DRAWING_EXT, hasDrawingExt } from "../vault/fileKind";
  * Space-separated query pieces must all match (AND), like VS Code.
  * See personal/feature/hotkeys/RESEARCH.md for the rationale and numbers.
  */
-
-const COMBINING_MARKS = /\p{M}/gu;
 
 const NEG = -0x3fffffff;
 const MATCH = 16;
@@ -52,9 +51,8 @@ const isSeparator = (c: number) =>
   c === 32 || c === 45 || c === 95 || c === 46 || c === 40 || c === 58;
 const isSlash = (c: number) => c === 47 || c === 92;
 
-/** Fold one string the way F1 search does: NFKD, strip marks, lowercase. */
-const fold = (s: string) =>
-  s.normalize("NFKD").replace(COMBINING_MARKS, "").toLowerCase();
+/** Fold like the search index (accents, ß, Ł, Đ, Æ, Ø, kana), so "lodz" finds "Łódź". */
+const fold = foldKey;
 
 /** Precompute everything that does not depend on the query. Call once per item. */
 export function prepare(text: string): Prepared {

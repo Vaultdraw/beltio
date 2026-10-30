@@ -19,7 +19,7 @@ describe("hunter H-2: the quick switcher folds like the index", () => {
     expect(foldKey("Straße")).toBe("strasse");
   });
 
-  it.fails.each([
+  it.each([
     ["lodz", "Łódź plan"],
     ["strasse", "Straße"],
     ["orsted", "Ørsted"],

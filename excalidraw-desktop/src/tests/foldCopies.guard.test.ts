@@ -23,7 +23,6 @@ const ALLOWED: Record<string, string> = {
   "src/theme/normalize.ts": "theme ids, not user search",
 };
 const KNOWN: Record<string, string> = {
-  "src/commands/fuzzy.ts": "toimprove 197 (quick switcher, palette)",
   "../plugins/official/graph/src/filters.ts":
     "toimprove 197 family (graph filter)",
 };

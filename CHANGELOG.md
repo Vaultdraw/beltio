@@ -25,6 +25,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Cmd+P finds "Łódź plan" when you type "lodz"** (toimprove 197). The quick switcher and the command palette fold letters like the vault search (ß, Ł, Đ, Æ, Ø, accents, kana), so "strasse" finds "Straße" and "orsted" finds "Ørsted".
 - **A to Z puts "Untitled" before "Untitled 2" and "Untitled 10"** (toimprove 196). The file tree sorts by the name it shows, without `.excalidraw` or `.md`, in natural order, as Zed and Obsidian do.
 - **A long word no longer makes a note's reading view scroll sideways, and sized images keep their shape** (toimprove 195, 198). Paragraphs, inline code, headings, lists, tasks, quotes, table cells and links wrap long words, hashes and paths as in Obsidian (code blocks still scroll inside their box); an image with a width and height shrinks proportionally in a narrow note instead of being squashed.
 - **The note reading view reads like Obsidian** (toimprove 185). A single newline is a line break (new `notes.strict_line_breaks`, off, is Obsidian's setting), `%%comments%%` and trailing `^block-ids` are hidden, and `[^1]` footnotes become numbered links with a list at the end.
