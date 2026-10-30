@@ -230,3 +230,34 @@ describe("hunter L-6: Cmd+Z in the box Enter made, after typing in it", () => {
     },
   );
 });
+
+/**
+ * Hunter L-14 [improvement] (next door to 228 and the inline marks): a box that turned bold or
+ * code by its marks keeps that look for everything typed after Enter, since Enter adds a line to
+ * the same box. Obsidian: `**a**` or `` `a` `` then Enter, and the next line is plain text. Our
+ * headings and quotes already end on Enter (endBox); the inline looks could do the same and start
+ * a plain body box below.
+ */
+describe("hunter L-14: Enter after a box made bold or code by its marks", () => {
+  it("sanity: the marks turn the box bold", () => {
+    const h = harness();
+    h.type("**a**");
+    expect(h.current().fontFamily).toBe(105);
+  });
+
+  it.fails.each([
+    ["**a**", 105],
+    ["`a`", 3],
+  ])(
+    "after %s, Enter starts plain text, not more of that look",
+    (marks, look) => {
+      const h = harness();
+      h.type(marks);
+      expect(h.current().fontFamily).toBe(look);
+      h.press("Enter");
+      h.type("b");
+      expect(h.current().text).toBe("b");
+      expect(h.current().fontFamily).toBe(5);
+    },
+  );
+});
