@@ -59,7 +59,7 @@ export const NOTES_DEFAULTS: NotesPreferences = {
   notesAutosaveMs: 800,
   notesHighlightCode: true,
   notesMath: true,
-  notesRemoteImages: false,
+  notesRemoteImages: true,
   notesToggleTasks: true,
 };
 

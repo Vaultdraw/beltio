@@ -17,8 +17,8 @@ describe("notes settings", () => {
     expect(NOTES_MAPPINGS).toHaveLength(Object.keys(NOTES_DEFAULTS).length);
   });
 
-  it("keeps the notes fully offline by default", () => {
-    expect(NOTES_DEFAULTS.notesRemoteImages).toBe(false);
+  it("shows web pictures by default (Offline mode is the switch that stops them)", () => {
+    expect(NOTES_DEFAULTS.notesRemoteImages).toBe(true);
   });
 
   it("bad stored values fall back to the defaults", () => {

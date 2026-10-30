@@ -23,6 +23,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Web pictures in a note's reading view show by default.** `notes.remote_images` is now on (it was left over from the ask-first rule). Pictures load through the app's checked download (public `http(s)` addresses only, picture bytes, 10 MiB); `notes.remote_images = false`, `network.allow_images = false` or Offline mode shows the alt text instead and makes no request.
 - **Text no longer runs out of the page or jumps while you type in page mode.** A text typed near the page's right edge used to grow past the page and shift sideways with every key, and ended up wider than the page. It now wraps at the page's edge and stays where it is (Markdown mode on or off).
 - **Your text colour no longer turns headings and quotes into plain text.** With a text default colour set (Settings → Tools → Text), Markdown headings and quotes kept that colour and lost the theme's heading colours. They now take the theme's colours; font, size, alignment and line height still come from your defaults, and a colour you pick on a heading afterwards is kept.
 - **A typed quote and an imported quote are the same colour** in every theme.

@@ -1266,8 +1266,8 @@
           "type": "boolean"
         },
         "remote_images": {
-          "description": "Load images from `http(s)` addresses. Off keeps notes fully offline: the image shows its alt text instead.",
-          "default": false,
+          "description": "Show images from `http(s)` addresses in the reading view. Off, or Offline mode on, shows the alt text instead.",
+          "default": true,
           "type": "boolean"
         },
         "toggle_tasks": {

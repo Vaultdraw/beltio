@@ -2,9 +2,12 @@
  * Sanitises the reading view's HTML. Markdown can carry raw HTML, so the
  * output of the renderer always passes through DOMPurify before it reaches
  * the page: no scripts, styles, forms, frames or event handlers, and links
- * only to http(s), mailto and in-page addresses. With remote images off
- * (`notes.remote_images`, the default) an image from the web is replaced by
- * its alt text, so opening a note never makes a network request.
+ * only to http(s), mailto and in-page addresses. With remote images on
+ * (`notes.remote_images`, the default, and Offline mode off) an image from the
+ * web keeps its address in `data-remote-src` and `hydrateRemoteImages` loads
+ * it through the app's checked download (the page's own policy forbids direct
+ * web requests). Off, it is replaced by its alt text, so opening a note
+ * never makes a network request.
  */
 import DOMPurify from "dompurify";
 
@@ -26,7 +29,10 @@ const get = () => {
   p.addHook("afterSanitizeAttributes", (node) => {
     if (node.tagName === "IMG") {
       const src = node.getAttribute("src") ?? "";
-      if (!remoteImages && /^(?:https?:)?\/\//i.test(src)) {
+      if (remoteImages && /^https?:\/\//i.test(src)) {
+        node.setAttribute("data-remote-src", src);
+        node.removeAttribute("src");
+      } else if (/^(?:https?:)?\/\//i.test(src)) {
         const alt = node.getAttribute("alt") ?? "";
         const stub = node.ownerDocument.createElement("span");
         stub.className = "note-image-blocked";

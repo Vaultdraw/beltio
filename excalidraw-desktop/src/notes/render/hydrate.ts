@@ -130,3 +130,77 @@ export async function hydrateEmbeds(
     }),
   );
 }
+
+/** Downloads one web picture and returns a blob address for it (the app's checked download). */
+export type FetchRemoteImage = (url: string) => Promise<Uint8Array>;
+
+const REMOTE_CACHE_MAX = 64;
+const remoteCache = new Map<string, string>();
+
+const imageMime = (b: Uint8Array): string => {
+  const s = (i: number, t: string) =>
+    [...t].every((c, k) => b[i + k] === c.charCodeAt(0));
+  if (s(1, "PNG")) {
+    return "image/png";
+  }
+  if (b[0] === 0xff && b[1] === 0xd8) {
+    return "image/jpeg";
+  }
+  if (s(0, "GIF8")) {
+    return "image/gif";
+  }
+  if (s(0, "RIFF") && s(8, "WEBP")) {
+    return "image/webp";
+  }
+  if (s(4, "ftyp")) {
+    return "image/avif";
+  }
+  return "image/svg+xml";
+};
+
+/**
+ * Loads each `img[data-remote-src]` (a web picture the sanitiser let through) with `fetch` and
+ * shows it from a blob address. A picture that cannot load (offline, refused address, not a
+ * picture) becomes its alt text, like a blocked one.
+ */
+export async function hydrateRemoteImages(
+  root: HTMLElement,
+  fetch: FetchRemoteImage,
+): Promise<void> {
+  const imgs = [
+    ...root.querySelectorAll<HTMLImageElement>("img[data-remote-src]"),
+  ];
+  await Promise.all(
+    imgs.map(async (img) => {
+      const url = img.dataset.remoteSrc ?? "";
+      try {
+        let blob = remoteCache.get(url);
+        if (!blob) {
+          const bytes = await fetch(url);
+          blob = URL.createObjectURL(
+            new Blob([bytes as BlobPart], { type: imageMime(bytes) }),
+          );
+          remoteCache.set(url, blob);
+          if (remoteCache.size > REMOTE_CACHE_MAX) {
+            const [oldest] = remoteCache.keys();
+            URL.revokeObjectURL(remoteCache.get(oldest)!);
+            remoteCache.delete(oldest);
+          }
+        }
+        if (img.isConnected) {
+          img.src = blob;
+          img.removeAttribute("data-remote-src");
+        }
+      } catch {
+        if (!img.isConnected) {
+          return;
+        }
+        const stub = img.ownerDocument.createElement("span");
+        stub.className = "note-image-blocked";
+        stub.textContent = img.alt || "Image from the web (could not load)";
+        stub.title = url;
+        img.replaceWith(stub);
+      }
+    }),
+  );
+}

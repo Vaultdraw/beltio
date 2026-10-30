@@ -28,7 +28,13 @@ import { defineContextKey } from "../commands/contextKeys";
 import { openWebLink } from "../help/openExternal";
 import { toastStore } from "../toasts/toastStore";
 import { cachedPreferences } from "../vault/useGlobalPref";
-import { subscribePreferences, updatePreferences } from "../vault/preferences";
+import {
+  isOffline,
+  subscribePreferences,
+  updatePreferences,
+} from "../vault/preferences";
+
+import { fetchWebImage } from "../network/webImage";
 
 import { createAssetUrls } from "./noteAssets";
 import { parseNoteDoc } from "./noteDoc";
@@ -46,7 +52,12 @@ import { taskLines, toggleTask } from "./noteTasks";
 import { NoteSaver, type SaveStatus } from "./noteSaver";
 import { registerOpenNote } from "./openNotes";
 import { NOTES_ACTIVE_KEY, NOTES_COMMAND_IDS as ID } from "./notesCommands";
-import { hydrateEmbeds, hydrateMath, type EmbedDeps } from "./render/hydrate";
+import {
+  hydrateEmbeds,
+  hydrateMath,
+  hydrateRemoteImages,
+  type EmbedDeps,
+} from "./render/hydrate";
 import { renderNoteHtml, stripFrontmatter } from "./render/obsidian";
 import { sanitizeNoteHtml } from "./render/sanitize";
 
@@ -80,6 +91,11 @@ const usePrefs = () =>
 
 const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
   const prefs = usePrefs();
+  // Web pictures: the notes switch, Offline mode and the web-pictures switch all have to allow it.
+  const remoteImages =
+    prefs.notesRemoteImages &&
+    !isOffline(prefs) &&
+    prefs.networkAllowImages !== false;
   const [loaded, setLoaded] = useState<Loaded>(null);
   const [text, setText] = useState("");
   const [mode, setMode] = useState<Mode>(prefs.notesOpenIn);
@@ -215,7 +231,7 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
         highlight: prefs.notesHighlightCode,
         math: prefs.notesMath,
       }),
-      { remoteImages: prefs.notesRemoteImages },
+      { remoteImages },
     );
   }, [
     ready,
@@ -225,7 +241,7 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
     path,
     prefs.notesHighlightCode,
     prefs.notesMath,
-    prefs.notesRemoteImages,
+    remoteImages,
   ]);
 
   // One object per html: a fresh one would make React rewrite the DOM that
@@ -251,14 +267,15 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
             highlight: prefs.notesHighlightCode,
             math: prefs.notesMath,
           }),
-          { remoteImages: prefs.notesRemoteImages },
+          { remoteImages },
         ),
       afterNested: async (el, depth) => {
         await hydrateMath(el, prefs.notesFontSize);
         await hydrateEmbeds(el, nestedDeps, depth);
+        void hydrateRemoteImages(el, (u) => fetchWebImage(u));
       },
     }),
-    [handle, assets, links, path, prefs],
+    [handle, assets, links, path, prefs, remoteImages],
   );
 
   useEffect(() => {
@@ -268,6 +285,7 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
     }
     void hydrateMath(root, prefs.notesFontSize);
     void hydrateEmbeds(root, nestedDeps);
+    void hydrateRemoteImages(root, (u) => fetchWebImage(u));
     // Markdown images with vault paths (`![](pics/a.png)`).
     for (const img of root.querySelectorAll<HTMLImageElement>("img[src]")) {
       const src = img.getAttribute("src") ?? "";

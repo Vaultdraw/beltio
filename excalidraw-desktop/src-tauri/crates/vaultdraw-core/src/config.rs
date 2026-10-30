@@ -251,8 +251,8 @@ autosave_delay_ms = 500
 # highlight_code = true
 # Render $...$ and $$...$$ as formulas
 # math = true
-# Load images from http(s) addresses (false keeps notes fully offline)
-# remote_images = false
+# Show images from http(s) addresses in the reading view (false, or Offline mode, shows the alt text)
+# remote_images = true
 # Tick task checkboxes by clicking them in the reading view
 # toggle_tasks = true
 

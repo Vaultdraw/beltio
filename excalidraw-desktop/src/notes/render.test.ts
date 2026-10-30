@@ -151,7 +151,10 @@ describe("sanitising", () => {
     const md = "![alt text](https://example.com/a.png)";
     expect(html(md)).not.toContain("<img");
     expect(html(md)).toContain("alt text");
-    expect(html(md, {}, true)).toContain('src="https://example.com/a.png"');
+    // allowed: no direct request from the page; the app loads it through its checked download
+    const on = html(md, {}, true);
+    expect(on).toContain('data-remote-src="https://example.com/a.png"');
+    expect(on).not.toContain(' src="https://');
   });
 
   it("marks external links", () => {
