@@ -2,6 +2,7 @@
  * Composes the ControlFiles the window methods need from a few raw app
  * pieces (repository, throwing cores, tab controls). Pure and testable.
  */
+import { fileKind } from "../vault/fileKind";
 import { isNotFoundError } from "../vault/types";
 import { probeExists } from "../tabs/missingWatcher";
 
@@ -115,7 +116,8 @@ export function createAppFiles(d: AppFilesDeps): ControlFiles {
         path,
         newTab ? { target: "new" } : undefined,
       );
-      if (opened) {
+      // A note opens in the note editor: there is no drawing editor to wait for (toimprove 206).
+      if (opened && fileKind(path) !== "note") {
         await editorShows(path);
       }
       return opened;
