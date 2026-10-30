@@ -324,6 +324,7 @@ type ConfigField =
   | "networkAllowThemes"
   | "networkAllowPlugins"
   | "networkAllowImages"
+  | "networkAllowAi"
   | "networkAllowUpdates"
   | "pluginsRegistryUrl"
   | "pluginsRegistryTtlHours"
@@ -524,6 +525,12 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
   {
     field: "networkAllowImages",
     key: "network.allow_images",
+    expected: "true or false",
+    valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "networkAllowAi",
+    key: "network.allow_ai",
     expected: "true or false",
     valid: (v) => typeof v === "boolean",
   },

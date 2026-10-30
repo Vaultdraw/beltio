@@ -454,10 +454,12 @@ autosave_delay_ms = 500
 # offline = false
 # The old master switch, still read: false counts as Offline mode
 # enabled = true
-# Each download is on unless you write false: themes, community plugins, web pictures, the update check
+# Each download is on unless you write false: themes, community plugins, web pictures, AI requests,
+# the update check
 # allow_themes = true
 # allow_plugins = true
 # allow_images = true
+# allow_ai = true
 # allow_updates = true
 # Extra hosts downloads may contact, besides GitHub's (raw.githubusercontent.com, github.com,
 # api.github.com, codeload.github.com). Read only from this file, never from overrides.toml

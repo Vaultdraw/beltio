@@ -52,6 +52,7 @@ const OVERRIDES: Readonly<Record<string, Schema>> = {
   "network.allow_themes": { type: "boolean" },
   "network.allow_plugins": { type: "boolean" },
   "network.allow_images": { type: "boolean" },
+  "network.allow_ai": { type: "boolean" },
   "network.allow_updates": { type: "boolean" },
   "network.allowed_hosts": stringList,
   "plugins.registry_url": {

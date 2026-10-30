@@ -237,6 +237,8 @@ interface VaultPreferencesBase {
   networkAllowPlugins: boolean | undefined;
   /** Web pictures (`network.allow_images`): only an explicit false turns them off. */
   networkAllowImages: boolean | undefined;
+  /** AI requests (`network.allow_ai`): only an explicit false turns them off. */
+  networkAllowAi: boolean | undefined;
   /** The update check (`network.allow_updates`): only an explicit false turns it off. */
   networkAllowUpdates: boolean | undefined;
   /** Look for a newer version once after startup (`updates.check_on_startup`, default true). */
@@ -471,6 +473,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   networkAllowThemes: undefined,
   networkAllowPlugins: undefined,
   networkAllowImages: undefined,
+  networkAllowAi: undefined,
   networkAllowUpdates: undefined,
   networkAllowedHosts: [],
   pluginsRegistryUrl: DEFAULT_PLUGINS_REGISTRY_URL,
@@ -927,6 +930,7 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       isBoolean,
       d.networkAllowImages,
     ),
+    networkAllowAi: pick(parsed.networkAllowAi, isBoolean, d.networkAllowAi),
     networkAllowUpdates: pick(
       parsed.networkAllowUpdates,
       isBoolean,
