@@ -29,6 +29,7 @@ const REACHABLE = [
   "excalidraw-desktop/src-tauri/src/plugins/gateway.rs",
   "excalidraw-desktop/src-tauri/src/plugins/mod.rs",
   "excalidraw-desktop/src-tauri/src/plugins/exports.rs",
+  "excalidraw-desktop/src-tauri/src/plugins/net.rs",
 ];
 
 const missing = (file: string) => [
@@ -51,11 +52,25 @@ describe("every code a plugin call rejects with is in PluginErrorCode (toimprove
   });
 
   it("(context) today's unlisted codes, so a new one is noticed", () => {
-    expect(REACHABLE.flatMap(missing).sort()).toEqual([
+    expect([...new Set(REACHABLE.flatMap(missing))].sort()).toEqual([
       "INTERNAL",
-      "INTERNAL",
+      "INVALID_URL",
+      "NETWORK_TIMEOUT",
+      "PRIVATE_ADDRESS",
+      "SECRET_MISSING",
+      "TOO_MANY_STREAMS",
       "TRASH_FAILED",
     ]);
+  });
+
+  // API 1.1 (617d9364): ctx.net's own doc comment lists the codes it rejects with.
+  it.fails("every code ctx.net documents is in the union", () => {
+    const doc = read("sdk/api/src/net.ts")
+      .split("Error codes:")[1]
+      .split("*/")[0];
+    const named = [...doc.matchAll(/`([A-Z_]+)`/g)].map((m) => m[1]);
+    expect(named.length).toBeGreaterThan(5);
+    expect(named.filter((c) => !union.has(c))).toEqual([]);
   });
 
   it.fails("no plugin-reachable native code is missing from the union", () => {
