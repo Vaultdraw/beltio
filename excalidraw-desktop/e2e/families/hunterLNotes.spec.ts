@@ -117,7 +117,7 @@ test.describe("hunter L: notes in an Obsidian-shaped vault", () => {
   });
 
   // L-4 (toimprove 259): a link inside an embedded note is followed from the HOST's folder.
-  test.fail(
+  test(
     "a Markdown link inside an embedded note opens the file next to that note (L-4)",
     async ({ page }) => {
       await row(page, "Inbox/Daily.md").click();
@@ -136,24 +136,23 @@ test.describe("hunter L: notes in an Obsidian-shaped vault", () => {
 
   // L-8 [improvement]: a task inside an embedded note is a disabled box (NoteView enables only the
   // host's own boxes). Obsidian ticks it, writing the embedded note's file.
-  test.fail(
-    "a task inside an embedded note can be ticked and is saved in that note (L-8)",
-    async ({ page }) => {
-      await row(page, "Inbox/Daily.md").click();
-      const reading = page.getByTestId("note-reading");
-      const box = reading.locator('.note-embed li[data-task="/"] input');
-      await expect(box).toBeVisible();
-      await expect(box).toBeEnabled({ timeout: 2000 });
-      await box.click();
-      await expect
-        .poll(
-          () =>
-            page.evaluate(() =>
-              (window as any).__noteFiles.textOf("Projects/Plan.md"),
-            ),
-          { timeout: 3000 },
-        )
-        .toContain("- [ ] doing");
-    },
-  );
+  test("a task inside an embedded note can be ticked and is saved in that note (L-8)", async ({
+    page,
+  }) => {
+    await row(page, "Inbox/Daily.md").click();
+    const reading = page.getByTestId("note-reading");
+    const box = reading.locator('.note-embed li[data-task="/"] input');
+    await expect(box).toBeVisible();
+    await expect(box).toBeEnabled({ timeout: 2000 });
+    await box.click();
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() =>
+            (window as any).__noteFiles.textOf("Projects/Plan.md"),
+          ),
+        { timeout: 3000 },
+      )
+      .toContain("- [ ] doing");
+  });
 });

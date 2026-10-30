@@ -122,6 +122,30 @@ const loadVaultPictures = (
 const usePrefs = () =>
   useSyncExternalStore(subscribePreferences, () => cachedPreferences());
 
+/** The whole-note embed a box sits in (not a heading or block part, whose boxes do not line up with the file). */
+const embedOf = (box: HTMLElement, hostPath: string): HTMLElement | null => {
+  const embed = box.closest<HTMLElement>(".note-embed-note[data-path]");
+  return embed &&
+    embed.dataset.path &&
+    embed.dataset.path !== hostPath &&
+    !embed.dataset.heading &&
+    !embed.dataset.block
+    ? embed
+    : null;
+};
+
+/** Makes the task boxes of a hydrated embedded note clickable (toimprove 267). */
+const enableEmbeddedTasks = (root: HTMLElement, hostPath: string): void => {
+  for (const box of root.querySelectorAll<HTMLInputElement>(
+    'input[type="checkbox"]',
+  )) {
+    if (embedOf(box, hostPath)) {
+      box.disabled = false;
+      box.classList.add("note-task");
+    }
+  }
+};
+
 const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
   const prefs = usePrefs();
   // Web pictures: the notes switch, Offline mode and the web-pictures switch all have to allow it.
@@ -307,6 +331,9 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
           { remoteImages },
         ),
       afterNested: async (el, depth, from) => {
+        if (prefs.notesToggleTasks) {
+          enableEmbeddedTasks(el, path);
+        }
         await hydrateMath(el, prefs.notesFontSize);
         loadVaultPictures(el, from, assets);
         await hydrateEmbeds(el, nestedDeps, depth, from);
@@ -376,6 +403,49 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
     }
   }, [html, mode, prefs.notesToggleTasks]);
 
+  /** Ticks a task inside an embedded note: the embedded note's own file is changed, as in Obsidian (toimprove 267). */
+  const tickEmbeddedTask = useCallback(
+    async (box: HTMLInputElement, embed: HTMLElement) => {
+      const target = embed.dataset.path ?? "";
+      const own = [
+        ...embed.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+      ].filter((b) => b.closest(".note-embed-note[data-path]") === embed);
+      const fail = (why: string) =>
+        toastStore.push({ message: `Couldn't tick that task. ${why}` });
+      if (handle === null) {
+        return;
+      }
+      try {
+        const file = await getNoteFiles().read(handle, target);
+        const index = own.indexOf(box);
+        const next =
+          index >= 0 &&
+          own.length === taskLines(file.content, prefs.notesMath).length
+            ? toggleTask(file.content, index, prefs.notesMath)
+            : null;
+        if (next === null) {
+          fail("Open that note and edit it there.");
+          return;
+        }
+        await getNoteFiles().write(handle, target, next, file.revision);
+        const line = next.split("\n")[taskLines(next, prefs.notesMath)[index]];
+        const mark = /\[(.)\]/.exec(line ?? "")?.[1] ?? " ";
+        box.checked = mark !== " ";
+        const li = box.closest<HTMLElement>("li[data-task]");
+        if (li) {
+          li.dataset.task = mark;
+        }
+      } catch (err) {
+        fail(
+          err instanceof NoteConflictError
+            ? "The note changed on disk; try again."
+            : userError(err, ""),
+        );
+      }
+    },
+    [handle, prefs.notesMath],
+  );
+
   const tickTask = useCallback(
     (box: HTMLInputElement) => {
       const root = reading.current;
@@ -417,7 +487,12 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
         cachedPreferences().notesToggleTasks
       ) {
         e.preventDefault();
-        tickTask(el);
+        const embed = embedOf(el, path);
+        if (embed) {
+          void tickEmbeddedTask(el, embed);
+        } else if (!el.closest(".note-embed")) {
+          tickTask(el);
+        }
         return;
       }
       const chip = el.closest<HTMLElement>("[data-tag]");
@@ -508,7 +583,7 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
             }),
         );
     },
-    [openPath, openSearch, tickTask, path, handle, vault],
+    [openPath, openSearch, tickTask, tickEmbeddedTask, path, handle, vault],
   );
 
   // ---- commands ----------------------------------------------------------
