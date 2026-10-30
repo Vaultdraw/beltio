@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 
 import { test } from "../fixture";
 import {
@@ -14,10 +14,6 @@ import { rect, seedAndOpen } from "../pageHelpers";
 // Nothing of the user's may be overwritten or mixed in; importing the same vault again must not
 // touch the first import either (Obsidian never overwrites on a paste or copy: "Alpha 1").
 const ALPHA = "Alpha words from the other app.";
-const row = (page: Page, path: string) =>
-  page.locator(
-    `.vault-tree-container .vault-tree-item[data-tree-path="${path}"]`,
-  );
 
 test("importing a vault whose name and notes collide with the user's own files overwrites nothing", async ({
   page,

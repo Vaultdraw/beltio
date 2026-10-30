@@ -15,9 +15,9 @@ import type { NoteBlock, NoteDoc } from "@vaultdraw/api";
 import type { PageItem, PageItemText } from "../../src/layout/types";
 
 const para = (text: string): NoteBlock =>
-  ({ kind: "paragraph", range: [0, 0], text }) as unknown as NoteBlock;
+  ({ kind: "paragraph", range: [0, 0], text } as unknown as NoteBlock);
 const quote = (blocks: NoteBlock[]): NoteBlock =>
-  ({ kind: "blockquote", range: [0, 0], blocks }) as unknown as NoteBlock;
+  ({ kind: "blockquote", range: [0, 0], blocks } as unknown as NoteBlock);
 const item = (depth: number, text: string): NoteBlock =>
   ({
     kind: "listItem",
@@ -27,7 +27,7 @@ const item = (depth: number, text: string): NoteBlock =>
     depth,
     task: "none",
     text,
-  }) as unknown as NoteBlock;
+  } as unknown as NoteBlock);
 
 const nestedQuote = (depth: number): NoteBlock[] => {
   let inner: NoteBlock[] = [para("deepest words stay readable")];
@@ -46,7 +46,7 @@ const docOf = (blocks: NoteBlock[]): NoteDoc =>
     links: [],
     tags: [],
     stats: { words: 0, blocks: 0, droppedEmphasis: 0, droppedHtml: 0 },
-  }) as unknown as NoteDoc;
+  } as unknown as NoteDoc);
 
 const CASES: [string, (d: number) => NoteBlock[]][] = [
   ["quotes in quotes", nestedQuote],
@@ -71,9 +71,13 @@ describe.each(CASES)("deep nesting: %s", (_name, make) => {
       make === nestedQuote ? "readable" : `level ${depth - 1}`,
     );
     const pageRight = opts.page.width ?? 794;
-    const outside = texts.filter((t) => t.x + t.width > pageRight + 1 || t.x < -1);
+    const outside = texts.filter(
+      (t) => t.x + t.width > pageRight + 1 || t.x < -1,
+    );
     expect(
-      outside.map((t) => `${t.text} x=${Math.round(t.x)} w=${Math.round(t.width)}`).slice(0, 3),
+      outside
+        .map((t) => `${t.text} x=${Math.round(t.x)} w=${Math.round(t.width)}`)
+        .slice(0, 3),
       "text outside the page",
     ).toEqual([]);
   });
