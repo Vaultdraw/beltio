@@ -11,6 +11,7 @@ import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
 import { getNoteFiles } from "../notes/noteBackend";
 import { savedNoteRevision } from "../notes/openNotes";
+import { toastStore } from "../toasts/toastStore";
 import { fileKind, stripDrawingExt } from "../vault/fileKind";
 import { findRenamed } from "../vault/renamePairing";
 
@@ -232,11 +233,14 @@ export function useTabs(args: UseTabsArgs): TabsApi {
     [runtime],
   );
 
+  // Like the row menu: a refused clipboard is reported, never silent (toimprove 207).
   const copyPath = useCallback((path: string) => {
-    void navigator.clipboard
-      ?.writeText(path)
+    Promise.resolve()
+      .then(() => navigator.clipboard.writeText(path))
       .then(() => live.current.notify("Path copied"))
-      .catch(() => {});
+      .catch(() =>
+        toastStore.push({ message: "Could not copy the path", kind: "error" }),
+      );
   }, []);
 
   // Flush a pending session write when the runtime goes away (vault switch,

@@ -204,23 +204,19 @@ test("row menu Copy path says so when the clipboard refuses", async ({
   await expect(page.getByText("Could not copy the path")).toBeVisible();
 });
 
-test.fail(
-  "toimprove 207: tab menu Copy path says so when the clipboard refuses (the row menu does)",
-  async ({ page }) => {
-    await stubClipboard(page, true);
-    await openVault(page, "?seed=obsidian");
-    const path = "Ideas.md";
-    await showRow(page, path);
-    await row(page, path).locator(".vault-tree-item__name").click();
-    await tabOf(page, path).click({ button: "right" });
-    const menu = page.getByTestId("vault-tab-menu");
-    await menu
-      .getByRole("menuitem", { name: "Copy path", exact: true })
-      .click();
-    await expect(menu).toHaveCount(0);
-    // Today nothing at all is shown: no "Path copied", no failure notice.
-    await expect(page.getByText(/could not copy/i)).toBeVisible({
-      timeout: 3000,
-    });
-  },
-);
+test("toimprove 207: tab menu Copy path says so when the clipboard refuses (the row menu does)", async ({
+  page,
+}) => {
+  await stubClipboard(page, true);
+  await openVault(page, "?seed=obsidian");
+  const path = "Ideas.md";
+  await showRow(page, path);
+  await row(page, path).locator(".vault-tree-item__name").click();
+  await tabOf(page, path).click({ button: "right" });
+  const menu = page.getByTestId("vault-tab-menu");
+  await menu.getByRole("menuitem", { name: "Copy path", exact: true }).click();
+  await expect(menu).toHaveCount(0);
+  await expect(page.getByText(/could not copy/i)).toBeVisible({
+    timeout: 3000,
+  });
+});
