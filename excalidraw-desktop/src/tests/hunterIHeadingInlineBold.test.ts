@@ -89,3 +89,28 @@ describe("hunter I-1: **bold** typed in a heading when headings are not bold", (
     expect(h.el.fontFamily).toBe(105);
   });
 });
+
+/**
+ * Hunter I-9 (2026-10-30). A box typed as `` `npm run` `` turns into Cascadia but gets no role,
+ * so it is drawn in the plain text colour. The theme has a code colour (`markdown.code`, which
+ * roleColors.ts applies only to a text with the `code` role, like Obsidian's --code-normal for
+ * inline code), and the Markdown import draws code in the theme's code tone. A typed code box
+ * never takes it.
+ */
+describe("hunter I-9: a typed `code` box takes the theme's code colour", () => {
+  it("sanity: the box is Cascadia and the marks go", () => {
+    const h = session(true);
+    h.type("`npm run`");
+    expect(h.textarea.value).toBe("npm run");
+    expect(h.el.fontFamily).toBe(3);
+  });
+
+  it.fails(
+    "it carries the code role, so the theme's code colour applies",
+    () => {
+      const h = session(true);
+      h.type("`npm run`");
+      expect(h.el.customData).toMatchObject({ role: "code" });
+    },
+  );
+});
