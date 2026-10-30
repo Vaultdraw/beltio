@@ -41,6 +41,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **The AI assistant's Copy says it copied** (or that it could not), like every other copy in the app (toimprove 271).
 - **The AI panel's checkbox follows the theme colour** instead of the system green (toimprove 284).
 - **A code box changed back to a normal font loses the code colour.** It stayed in the theme's code colour; the code role now ends when the font is no longer the code font (toimprove 264).
+- **`vaultdraw://new?path=` on an existing note or Obsidian drawing opens it** instead of creating a stray `….excalidraw.md.excalidraw` file next to it (toimprove 265).
 
 ## [0.2.0] - 2026-10-28
 

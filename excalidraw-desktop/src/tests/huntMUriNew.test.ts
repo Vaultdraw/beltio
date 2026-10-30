@@ -69,7 +69,7 @@ describe("vaultdraw://new on a file that exists only opens it (toimprove M-13)",
     ]);
   });
 
-  it.fails.each([["Obsidian/Sketch.excalidraw.md"], ["Notes/Plan.md"]])(
+  it.each([["Obsidian/Sketch.excalidraw.md"], ["Notes/Plan.md"]])(
     "new?path=%s opens it and creates nothing",
     async (path) => {
       const r = runner();

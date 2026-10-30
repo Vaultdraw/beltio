@@ -413,6 +413,8 @@ export function createUriRunner(deps: UriDeps) {
 
     const file = plan.file ? openablePath(plan.file) : undefined;
     const create = plan.path ? withExt(plan.path) : undefined;
+    // An existing note or Obsidian drawing is only opened, never created over (toimprove 265).
+    const existing = plan.path ? openablePath(plan.path) : undefined;
     if (plan.action === "cmd") {
       const id = plan.id ?? "";
       const title = deps.commandTitle(id);
@@ -439,7 +441,7 @@ export function createUriRunner(deps: UriDeps) {
     }
     if (plan.action === "new" && create) {
       // An existing drawing is only opened: no prompt for that.
-      if (!needSwitch && (await openIfExists(create, false))) {
+      if (!needSwitch && (await openIfExists(existing ?? create, false))) {
         return { status: "done" };
       }
       lines.push(`Create the drawing "${clip(create)}"`);
@@ -482,7 +484,7 @@ export function createUriRunner(deps: UriDeps) {
           if (
             create &&
             (ask || mustSwitch) &&
-            (await openIfExists(create, false))
+            (await openIfExists(existing ?? create, false))
           ) {
             return;
           }
