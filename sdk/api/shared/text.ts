@@ -84,6 +84,17 @@ export const checkStrings = (strings: unknown): readonly string[] => {
   return strings;
 };
 
+/** `ctx.text.fold`: one string, at most as long as one `measure` call takes. */
+export const checkFoldText = (text: unknown): string => {
+  if (typeof text !== "string") {
+    throw bad("text must be a string");
+  }
+  if (text.length > MAX_MEASURE_CHARS) {
+    throw bad(`At most ${MAX_MEASURE_CHARS} characters per call`);
+  }
+  return text;
+};
+
 export const checkFamilies = (
   families: unknown,
   text: unknown,

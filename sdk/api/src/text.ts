@@ -49,6 +49,17 @@ export interface TextApi {
    * @since 0.8.0
    */
   lineHeight(family: FontFamilyName): number;
+  /**
+   * Folds text the way the app's search does: lower case, accents and the
+   * usual look-alikes removed (`Éclair` and `STRASSE` become `eclair` and
+   * `strasse`; `ß` becomes `ss`). Compare folded strings to match names the
+   * way the quick switcher and the vault search do. Synchronous, at most
+   * 4,000,000 characters.
+   *
+   * @experimental Outside the 1.0 promise: it may change or go in a minor release.
+   * @since 1.2.0
+   */
+  fold(text: string): string;
 }
 
 /**

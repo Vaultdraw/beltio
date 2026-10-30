@@ -88,6 +88,15 @@ describe("ctx.text", () => {
     expect(w[3]).toBeGreaterThan(0);
   });
 
+  it("fold is the app's search fold and checks its argument", () => {
+    expect(ctx.text.fold("Éclair")).toBe("eclair");
+    expect(ctx.text.fold("STRASSE")).toBe(ctx.text.fold("Straße"));
+    expect(ctx.text.fold("cafe\u0301")).toBe("cafe");
+    expect(() => ctx.text.fold(1 as never)).toThrow(
+      expect.objectContaining({ code: "INVALID_ARGUMENT" }),
+    );
+  });
+
   it("checks fonts and sizes", () => {
     expect(() =>
       ctx.text.measure({ family: "Comic Sans" as never, size: 20 }, ["a"]),

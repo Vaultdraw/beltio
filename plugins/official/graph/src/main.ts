@@ -14,6 +14,7 @@ import { definePlugin } from "@vaultdraw/api";
 
 import { GRAPH_COMMAND_IDS, GRAPH_VIEW_IDS } from "./commandIds";
 import { createController } from "./controller";
+import { installFold } from "./foldHook";
 import { runViewCommand } from "./viewBus";
 
 import type { OverlayHandle, OverlayProps } from "@vaultdraw/api";
@@ -24,6 +25,7 @@ const SHORT = (id: string) => id.slice("graph.".length);
 
 export default definePlugin({
   activate(ctx) {
+    installFold(ctx.text.fold);
     const controller = createController(ctx);
     let overlay: OverlayHandle | null = null;
 

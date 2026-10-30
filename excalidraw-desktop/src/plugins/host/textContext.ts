@@ -13,11 +13,13 @@ import { Fonts } from "@excalidraw/excalidraw/fonts/Fonts";
 
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 
+import { foldKey } from "../../../../sdk/api/shared/fold";
 import { PluginApiError } from "../../../../sdk/api/shared/rules";
 import {
   FONT_TIMEOUT_MS,
   checkFamilies,
   checkFamily,
+  checkFoldText,
   checkFont,
   checkStrings,
 } from "../../../../sdk/api/shared/text";
@@ -42,6 +44,7 @@ export function createTextApi(): TextApi {
       return out;
     },
     lineHeight: (family) => getLineHeight(FONT_FAMILY[checkFamily(family)]),
+    fold: (text) => foldKey(checkFoldText(text)),
   };
 }
 

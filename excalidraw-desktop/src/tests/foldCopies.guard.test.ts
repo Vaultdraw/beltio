@@ -19,13 +19,11 @@ import { describe, expect, it } from "vitest";
 const ROOT = join(__dirname, "../..");
 const DIRS = [join(ROOT, "src"), join(ROOT, "../plugins/official")];
 const ALLOWED: Record<string, string> = {
-  "src/search/foldKey.ts": "the one fold",
+  "src/search/foldKey.ts": "the re-export of the one fold",
+  "../sdk/api/shared/fold.ts": "the one fold (plugins get it as ctx.text.fold)",
   "src/theme/normalize.ts": "theme ids, not user search",
 };
-const KNOWN: Record<string, string> = {
-  "../plugins/official/graph/src/filters.ts":
-    "toimprove 197 family (graph filter)",
-};
+const KNOWN: Record<string, string> = {};
 
 const walk = (dir: string, out: string[] = []): string[] => {
   for (const name of readdirSync(dir)) {
@@ -57,7 +55,7 @@ describe("guard: one fold for user-typed matching", () => {
   it("KNOWN lists only copies that still exist (delete fixed ones)", () => {
     expect(Object.keys(KNOWN).filter((f) => !found.includes(f))).toEqual([]);
   });
-  it.fails("no copies left (the switcher and graph filter use foldKey)", () => {
+  it("no copies left (the switcher and graph filter use foldKey)", () => {
     expect(found.filter((f) => KNOWN[f])).toEqual([]);
   });
 });
@@ -120,7 +118,7 @@ describe("guard: one fold table, applied to whole names", () => {
   it("no copy of foldKey's letter table outside foldKey.ts", () => {
     expect(
       files
-        .filter((f) => f.rel !== "src/search/foldKey.ts")
+        .filter((f) => f.rel !== "../sdk/api/shared/fold.ts")
         .filter((f) => TABLE_COPY.test(f.text))
         .map((f) => f.rel),
     ).toEqual([]);

@@ -14,7 +14,7 @@ The plugin API is frozen at 1.0. A plugin written for 1.0 keeps working on every
 
 Not covered:
 
-- **`@experimental` areas.** `ctx.thumbnails`, `ctx.vault.graph` and `ctx.vault.table` were built for one official plugin each. They may change or go in a minor release. The tag is in the types.
+- **`@experimental` areas.** `ctx.text.fold`, `ctx.thumbnails`, `ctx.vault.graph` and `ctx.vault.table` were built for one official plugin each. They may change or go in a minor release. The tag is in the types.
 - **Wording and layout** of toasts, dialogs and the plugin list, timing, and the order of events between different kinds.
 - **The list of `check` codes and of error codes.** A minor release may add one: keep a default branch.
 - **Anything not in the types or these docs.** If you reach it by another route, it is yours to keep working.

@@ -16,6 +16,7 @@ import {
   type MockToast,
 } from "../shared/rules";
 import { API_REVISION, FEATURES } from "../shared/features";
+import { foldKey } from "../shared/fold";
 import {
   baseName,
   importBusyMessage,
@@ -46,6 +47,7 @@ import {
   LINE_HEIGHTS,
   checkFamilies,
   checkFamily,
+  checkFoldText,
   checkFont,
   checkStrings,
   fakeMeasure,
@@ -1028,6 +1030,7 @@ export function createMockHost(
             fakeMeasure(checkFont(font), checkStrings(strings)),
           lineHeight: (family: FontFamilyName) =>
             LINE_HEIGHTS[checkFamily(family)],
+          fold: (text: string) => foldKey(checkFoldText(text)),
         };
       },
       get fonts() {

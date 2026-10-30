@@ -13,6 +13,12 @@ An addition for the official AI assistant plugin. Nothing a 1.0 plugin uses chan
 - Errors of `ctx.net` carry the codes listed on its members (`NETWORK_DISABLED`, `NETWORK_TIMEOUT`, `PRIVATE_ADDRESS`, `SECRET_MISSING`, `ABORTED` and others); the `PluginErrorCode` type is unchanged.
 - The permission names `net` and `secret` are no longer reserved.
 
+## 1.2.0
+
+### Added
+
+- **`ctx.text.fold(text)`** (`@experimental`, since 1.2.0): folds text the way the app's search does (lower case, accents and look-alikes removed, `ß` to `ss`). A plugin that filters names compares folded strings instead of copying the fold. The official graph plugin uses it. Needs `min_api = "1.2.0"`.
+
 ## 1.0.0
 
 The API is frozen after an audit of every exported name (the audit is in the project notes; its table has 250 type members, 13 manifest keys, 7 permissions, 6 events and 6 commands, none removed).

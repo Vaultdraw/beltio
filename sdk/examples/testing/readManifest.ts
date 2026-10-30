@@ -22,6 +22,7 @@ const TOP_KEYS = new Set([
   "version",
   "api",
   "min_app",
+  "min_api",
   "main",
   "description",
   "author",

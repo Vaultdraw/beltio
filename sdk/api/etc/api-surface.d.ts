@@ -1,4 +1,4 @@
-// @vaultdraw/api 1.1.0
+// @vaultdraw/api 1.2.0
 // clipboard.ts
 import type { Disposable } from "./disposable";
 export interface PasteEvent {
@@ -1010,6 +1010,7 @@ export interface TextFont {
 export interface TextApi {
     measure(font: TextFont, strings: readonly string[]): Float64Array;
     lineHeight(family: FontFamilyName): number;
+    fold(text: string): string;
 }
 export interface FontsApi {
     ensure(families: readonly FontFamilyName[], text?: string): Promise<void>;

@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+
+import { foldKey } from "../../../../sdk/api/shared/fold";
 
 import { fakeGraph } from "./fakeGraph";
 import {
@@ -10,10 +12,14 @@ import {
   searchBright,
   visibilityMask,
 } from "./filters";
+import { installFold } from "./foldHook";
 import { packRgba } from "./renderer/shared";
 import { deriveGraphColours, FALLBACK_TOKENS } from "./theme";
 import { DEFAULT_GRAPH_SETTINGS } from "./settings";
 import { FLAG_ORPHAN, FLAG_TAG, FLAG_UNRESOLVED } from "./types";
+
+// What the host installs at activation (`ctx.text.fold`).
+beforeAll(() => installFold(foldKey));
 
 const g = fakeGraph(300, 3);
 const palette = deriveGraphColours(FALLBACK_TOKENS).palette;
@@ -30,6 +36,10 @@ describe("query grammar", () => {
     ]);
     expect(parseQuery("   ")).toEqual([]);
     expect(fold("Éclair")).toBe("eclair");
+    // the app's fold, not a copy: ß, ø and decomposed marks (toimprove 197 family)
+    expect(fold("STRASSE")).toBe(fold("Straße"));
+    expect(fold("Sø")).toBe("so");
+    expect(fold("cafe\u0301")).toBe("cafe");
   });
 
   it("name matches the label, case and accent blind", () => {

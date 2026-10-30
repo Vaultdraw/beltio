@@ -2,6 +2,7 @@ id = "graph"
 name = "Graph"
 version = "0.1.0"
 api = 1
+min_api = "1.2.0"
 min_app = "0.1.2"
 main = "main.js"
 description = "The vault's link graph: a GPU-drawn map of drawings, tags and links, with a local view, Vim keys and link hints"

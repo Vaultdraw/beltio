@@ -7,12 +7,15 @@
  *   name / file:name   label contains the text
  * Matching ignores case and accents, like the vault search.
  */
+import { fold } from "./foldHook";
 import { packRgba, parseColour } from "./renderer/shared";
 import { FLAG_ORPHAN, FLAG_TAG, FLAG_UNRESOLVED } from "./types";
 
 import type { GraphSettings } from "./settings";
 import type { GraphPalette } from "./theme";
 import type { GraphData } from "./types";
+
+export { fold };
 
 export type Matcher = (node: number) => boolean;
 
@@ -21,10 +24,6 @@ type Term = {
   kind: "name" | "path" | "tag";
   value: string;
 };
-
-const MARKS = /\p{M}/gu;
-export const fold = (s: string) =>
-  s.normalize("NFKD").replace(MARKS, "").toLowerCase();
 
 const TERM = /(-?)(?:(path|tag|file):)?(?:"([^"]*)"|(\S+))/g;
 

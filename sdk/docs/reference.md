@@ -694,6 +694,7 @@ Each block has a `range`, and a `blockId` when the block ends with `^block-id`. 
 interface TextApi {
   measure(font: TextFont, strings: readonly string[]): Float64Array; // free
   lineHeight(family: FontFamilyName): number; // free
+  fold(text: string): string; // free; EXPERIMENTAL, since 1.2.0: the search fold (lower case, no accents, ß to ss)
 }
 interface TextFont {
   family: FontFamilyName;
@@ -705,6 +706,7 @@ interface TextFont {
 | --- | --- |
 | `measure(font, strings)` | The width of each string on one line, in scene pixels, in the same order as `strings`. It uses the editor's own measure. |
 | `lineHeight(family)` | The editor's line height for the family, as a multiple of the font size. A line is `size * lineHeight` pixels tall. |
+| `fold(text)` | **Experimental, since 1.2.0.** The text folded as the app's search folds it: lower case, accents removed, `ß` to `ss`. Compare folded strings to match names like the quick switcher does. |
 
 - Load the font first with `ctx.fonts.ensure`. Without it, the widths come from the fallback font.
 - Each `measure` call takes at most 100,000 strings and 4,000,000 characters in all. A size outside 1 to 1000 or an unknown family is refused with `INVALID_ARGUMENT`.
