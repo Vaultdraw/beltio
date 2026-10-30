@@ -36,7 +36,11 @@ const renderPage = () =>
   render(
     <SettingsProvider
       value={
-        { win: window, vault: null, scope: "global" } as SettingsContextValue
+        {
+          win: window,
+          vault: null,
+          scope: "global",
+        } as unknown as SettingsContextValue
       }
     >
       <DeclaredSettingsPage pluginId="unbounded" title="Unbounded" />
