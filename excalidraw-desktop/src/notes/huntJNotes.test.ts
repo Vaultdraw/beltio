@@ -292,3 +292,36 @@ describe("J-10: Markdown in a callout title (toimprove 219)", () => {
     ).not.toBeNull();
   });
 });
+
+describe("J-11: footnotes of an embedded note (toimprove 222)", () => {
+  it.fails(
+    "the host's footnote number reaches the host's footnote, not the embed's",
+    async () => {
+      const opts = {
+        resolve: (t: string) => (t === "Other" ? "Other.md" : null),
+        highlight: false,
+        math: true,
+      };
+      const render = (md: string) =>
+        sanitizeNoteHtml(renderNoteHtml(md, opts), { remoteImages: false });
+      const root = document.createElement("div");
+      root.innerHTML = render(
+        "![[Other]]\n\nHost claim[^1].\n\n[^1]: host source",
+      );
+      document.body.append(root);
+      await hydrateEmbeds(root, {
+        imageUrl: async () => null,
+        noteText: async () => "Other claim[^1].\n\n[^1]: other source",
+        renderNested: (t: string) => render(t),
+        afterNested: async () => {},
+      } as never);
+      // What NoteView.onReadingClick does for a footnote number: the first element with that id.
+      const ref = [
+        ...root.querySelectorAll<HTMLAnchorElement>("a[data-footnote]"),
+      ].find((a) => !a.closest(".note-embed") && a.closest("sup"))!;
+      const target = root.querySelector(`[id="${ref.dataset.footnote}"]`);
+      root.remove();
+      expect(target?.textContent).toContain("host source");
+    },
+  );
+});
