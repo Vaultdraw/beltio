@@ -4,6 +4,7 @@
  * and embeds (`![[note]]`, `![[image.png]]`) filled in from the vault. None of
  * it runs for a note without those parts.
  */
+import { altAndSize } from "./imageSize";
 import { extractBlock, extractSection } from "./sections";
 
 export interface EmbedDeps {
@@ -93,14 +94,16 @@ export async function hydrateEmbeds(
         }
         const img = document.createElement("img");
         img.className = "note-embed-img";
-        img.alt = el.dataset.target ?? "";
+        // `![[pic.png|caption|300x200]]`: the shared parser, so the size after the last `|` and
+        // the caption read the same here as in the import and the native side (toimprove 211).
+        const { alt, width, height } = altAndSize(el.dataset.alias ?? "");
+        img.alt = alt || (el.dataset.target ?? "");
         img.src = url;
-        const size = /^(\d+)(?:x(\d+))?$/.exec(el.dataset.alias ?? "");
-        if (size) {
-          img.width = Number(size[1]);
-          if (size[2]) {
-            img.height = Number(size[2]);
-          }
+        if (width !== undefined) {
+          img.width = width;
+        }
+        if (height !== undefined) {
+          img.height = height;
         }
         el.replaceChildren(img);
         return;

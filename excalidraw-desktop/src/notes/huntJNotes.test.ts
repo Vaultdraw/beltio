@@ -133,7 +133,7 @@ describe("J-4: ![[pic.png|caption|300x200]] (toimprove 211)", () => {
   it("sanity: ![[pic.png|300]] is 300 wide", async () => {
     expect((await hydrate("300")).getAttribute("width")).toBe("300");
   });
-  it.fails(
+  it(
     "the size after the last | is used, as the renderer's comment promises",
     async () => {
       const img = await hydrate("My caption|300x200");
@@ -141,7 +141,7 @@ describe("J-4: ![[pic.png|caption|300x200]] (toimprove 211)", () => {
       expect(img.getAttribute("height")).toBe("200");
     },
   );
-  it.fails(
+  it(
     "the caption is the picture's alt text, not the file name",
     async () => {
       expect((await hydrate("My caption")).alt).toBe("My caption");
