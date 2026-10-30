@@ -9,8 +9,9 @@
 const ASCII = /^\p{ASCII}*$/u;
 // Marks that are stripped; never U+3099/U+309A (が stays distinct from か) nor Indic or Thai signs.
 const STRIPPABLE = /[̀-ͯ᪰-᫿᷀-᷿⃐-⃿︠-︯]/gu;
-// A mark or conjoining Hangul jamo continues the cluster before it.
-const CONTINUES = /[\p{M}ᅠ-ᇿힰ-퟿]/u;
+// A mark or conjoining Hangul jamo continues the cluster before it. Exported so a caller that
+// folds piece by piece (the quick switcher keeps a position map) folds whole clusters too.
+export const CONTINUES = /[\p{M}ᅠ-ᇿힰ-퟿]/u;
 
 const foldLowered = (s: string): string =>
   s

@@ -1,4 +1,4 @@
-import { foldKey } from "../search/foldKey";
+import { CONTINUES, foldKey } from "../search/foldKey";
 import { DRAWING_EXT, hasDrawingExt } from "../vault/fileKind";
 /**
  * Fuzzy scorer for the quick switcher (Cmd+P): ranks drawing paths and command
@@ -74,12 +74,19 @@ export function prepare(text: string): Prepared {
   let prevLower = false;
   for (let i = 0; i < origEnd; ) {
     const code = text.charCodeAt(i);
-    const len = code >= 0xd800 && code <= 0xdbff && i + 1 < origEnd ? 2 : 1;
+    const first = code >= 0xd800 && code <= 0xdbff && i + 1 < origEnd ? 2 : 1;
+    // Fold a whole cluster (a letter with its marks, a decomposed Hangul syllable), so a name
+    // stored decomposed (NFD) folds as foldKey folds the whole name (toimprove 214).
+    let len = first;
+    while (i + len < origEnd && CONTINUES.test(text[i + len])) {
+      len++;
+    }
     if (base < 0 && i >= origBase) {
       base = norm.length;
     }
-    const ch = len === 1 ? text[i] : text.slice(i, i + 2);
-    const piece = code < 128 ? ch.toLowerCase() : fold(ch);
+    const ch = text.slice(i, i + first);
+    const cluster = len === first ? ch : text.slice(i, i + len);
+    const piece = code < 128 && len === 1 ? ch.toLowerCase() : fold(cluster);
     const isUpper = ch !== ch.toLowerCase();
     for (let k = 0; k < piece.length; k++) {
       starts.push(i);
