@@ -1842,7 +1842,7 @@
       "additionalProperties": false,
       "properties": {
         "enabled": {
-          "description": "The master switch; turning it on in Settings or with **AI: Toggle AI** first shows a warning.",
+          "description": "The master switch; turning it on in Settings or with **External AI tools: Toggle AI access** first shows a warning.",
           "default": false,
           "type": "boolean"
         },

@@ -10,14 +10,14 @@ export const AI_COMMAND_IDS = {
 export const AI_COMMANDS: CommandDefinition[] = [
   {
     id: AI_COMMAND_IDS.toggle,
-    title: "AI: Toggle AI",
+    title: "External AI tools: Toggle AI access",
     category: "AI",
     keys: { default: [] },
     when: ["vaultOpen", "!modalOpen"],
   },
   {
     id: AI_COMMAND_IDS.toggleMcp,
-    title: "AI: Toggle AI tools interface (MCP)",
+    title: "External AI tools: Toggle the AI tools interface (MCP)",
     category: "AI",
     keys: { default: [] },
     when: ["vaultOpen", "!modalOpen"],

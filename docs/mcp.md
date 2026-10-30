@@ -4,7 +4,7 @@
 
 ## Turn it on
 
-1. In Vaultdraw: Settings → Control, switch on AI (or run **AI: Toggle AI**). Read the warning: what an AI app reads from your drawings goes to its provider.
+1. In Vaultdraw: Settings → Control, switch on AI (or run **External AI tools: Toggle AI access**). Read the warning: what an AI app reads from your drawings goes to its provider.
 2. Keep the sub-switch **AI tools interface** on (`ai.mcp_enabled`, default on). Both keys are in [configuration.md](configuration.md#ai).
 3. Add the server to the AI app. For most of them:
 

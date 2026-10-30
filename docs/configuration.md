@@ -1750,10 +1750,10 @@ mcp_enabled = true    # the AI tools interface (MCP), used only while enabled is
 
 | Key | Default | What it does |
 | --- | --- | --- |
-| `ai.enabled` | `false` | The master switch. Turning it on in Settings or with **AI: Toggle AI** first shows a warning: what is sent, where, and how to turn it off. Setting it by hand in `config.toml` shows no warning. Anything but `true` counts as off. |
+| `ai.enabled` | `false` | The master switch. Turning it on in Settings or with **External AI tools: Toggle AI access** first shows a warning: what is sent, where, and how to turn it off. Setting it by hand in `config.toml` shows no warning. Anything but `true` counts as off. |
 | `ai.mcp_enabled` | `true` | The AI tools interface: the `mcp` role of the control socket. It opens only while both keys are `true`, so you can keep AI on with this interface off. A missing key counts as `true`; a value that is not `true` or `false` counts as off. |
 
-- **Where.** Settings → Control has the AI switch, with the AI tools interface as a sub-switch under it, and **Edit notices** (`control.notify_edits`). The palette commands **AI: Toggle AI** (`ai.toggle`) and **AI: Toggle AI tools interface (MCP)** (`ai.toggleMcp`) have no default keys, and **AI: Copy the AI app setup (MCP server config)** (`ai.copyMcpSetup`) copies the `mcpServers` entry for `vaultdraw mcp` to the clipboard (no setting changes); bind them in Settings → Hotkeys or `[hotkeys]`.
+- **Where.** Settings → Control has the AI switch, with the AI tools interface as a sub-switch under it, and **Edit notices** (`control.notify_edits`). The palette commands **External AI tools: Toggle AI access** (`ai.toggle`) and **External AI tools: Toggle the AI tools interface (MCP)** (`ai.toggleMcp`) have no default keys, and **AI: Copy the AI app setup (MCP server config)** (`ai.copyMcpSetup`) copies the `mcpServers` entry for `vaultdraw mcp` to the clipboard (no setting changes); bind them in Settings → Hotkeys or `[hotkeys]`.
 - **Live.** The app reads both keys at every AI request, from `config.toml` and, when it exists, `overrides.toml` in the state folder (a higher layer that wins key by key). Turning AI off refuses the next request at once; there is no restart, no watcher and no cost while it is off.
 - **Fails closed.** If `config.toml` or `overrides.toml` exists but cannot be read or parsed, AI counts as off until the file is fixed.
 - **Rate limit.** An AI connection may send 20 requests per second (bursts of 40) and run one edit in the app at a time. This guards against a runaway loop; it is not a security boundary.
@@ -2277,7 +2277,7 @@ AI features, off until you turn them on. See [AI](#ai).
 
 | Key | Default | Accepts | Per vault | What it does |
 | --- | --- | --- | --- | --- |
-| `enabled` | `false` | true or false |  | The master switch; turning it on in Settings or with **AI: Toggle AI** first shows a warning. |
+| `enabled` | `false` | true or false |  | The master switch; turning it on in Settings or with **External AI tools: Toggle AI access** first shows a warning. |
 | `mcp_enabled` | `true` | true or false |  | The AI tools interface (the `mcp` role of the control socket); it opens only while both keys are `true`. |
 
 ### `[control]`

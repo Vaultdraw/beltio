@@ -422,7 +422,7 @@ autosave_delay_ms = 500
 # toolbar = true
 
 [ai]
-# The AI master switch; Settings and AI: Toggle AI show a warning first
+# The AI master switch; Settings and External AI tools: Toggle AI access show a warning first
 # enabled = false
 # The AI tools interface (mcp role of the control socket), open only while both are true
 # mcp_enabled = true

@@ -102,8 +102,11 @@ describe("AI preferences: config -> prefs -> config", () => {
 describe("AI commands", () => {
   it("are registered, unbound and need an open vault", () => {
     for (const [id, title] of [
-      ["ai.toggle", "AI: Toggle AI"],
-      ["ai.toggleMcp", "AI: Toggle AI tools interface (MCP)"],
+      ["ai.toggle", "External AI tools: Toggle AI access"],
+      [
+        "ai.toggleMcp",
+        "External AI tools: Toggle the AI tools interface (MCP)",
+      ],
       ["ai.copyMcpSetup", "AI: Copy the AI app setup (MCP server config)"],
     ]) {
       const command = getCommand(id)!;

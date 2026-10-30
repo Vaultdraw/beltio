@@ -3830,7 +3830,7 @@
   },
   {
    "id": "ai.toggle",
-   "title": "AI: Toggle AI",
+   "title": "External AI tools: Toggle AI access",
    "category": "AI",
    "keys": [],
    "when": [
@@ -3841,7 +3841,7 @@
   },
   {
    "id": "ai.toggleMcp",
-   "title": "AI: Toggle AI tools interface (MCP)",
+   "title": "External AI tools: Toggle the AI tools interface (MCP)",
    "category": "AI",
    "keys": [],
    "when": [

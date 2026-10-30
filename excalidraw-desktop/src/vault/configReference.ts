@@ -612,7 +612,7 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
     intro: "AI features, off until you turn them on. See [AI](#ai).",
     keys: {
       enabled: {
-        doc: "The master switch; turning it on in Settings or with **AI: Toggle AI** first shows a warning.",
+        doc: "The master switch; turning it on in Settings or with **External AI tools: Toggle AI access** first shows a warning.",
       },
       mcp_enabled: {
         doc: "The AI tools interface (the `mcp` role of the control socket); it opens only while both keys are `true`.",

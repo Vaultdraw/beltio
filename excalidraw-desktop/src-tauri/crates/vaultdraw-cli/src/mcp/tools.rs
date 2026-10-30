@@ -139,7 +139,7 @@ pub fn failure(f: &Fail) -> Value {
 }
 
 /// How to turn AI on, said the same way everywhere.
-const HOW_TO_ENABLE: &str = "AI tools are off. In Vaultdraw turn on Settings > AI (palette: AI: Toggle AI), or set ai.enabled = true in config.toml, and keep ai.mcp_enabled on (AI: Toggle AI tools interface (MCP))";
+const HOW_TO_ENABLE: &str = "AI tools are off. In Vaultdraw turn on Settings > AI (palette: External AI tools: Toggle AI access), or set ai.enabled = true in config.toml, and keep ai.mcp_enabled on (External AI tools: Toggle the AI tools interface (MCP))";
 
 fn disabled() -> Fail {
     Fail::new(EXIT_REFUSED, HOW_TO_ENABLE, codes::DISABLED)
