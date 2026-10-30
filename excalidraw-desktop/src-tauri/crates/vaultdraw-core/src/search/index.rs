@@ -919,4 +919,40 @@ mod unit_tests {
         d.items = PackedItems::pack(vec![text("a", None, "x")]);
         assert!(!d.rebuild("a.excalidraw"));
     }
+    /// Hunter A round 3: whatever a user types into the search box returns (no panic, no hang),
+    /// including very long text, many words, unbalanced quotes and brackets, control characters,
+    /// lone combining marks, emoji sequences, and operator-looking input.
+    #[test]
+    fn hostile_queries_return_quickly_without_panic() {
+        let idx = index(&[("a/note.excalidraw", &["Dijkstra algorithm", "Café ☕ 🚀 日本語 #tag"]), ("b/other.excalidraw", &["words and more words"])]);
+        let long_word = "a".repeat(200_000);
+        let many_words = "word ".repeat(50_000);
+        let cases: Vec<(&str, String)> = vec![
+            ("one huge word", long_word),
+            ("many words", many_words),
+            ("quotes", "\"".repeat(10_001)),
+            ("brackets", "(".repeat(20_000) + &")".repeat(5)),
+            ("regex-looking", "(a|b)*[^x]\\".repeat(5_000)),
+            ("operators", "tag:#".repeat(5_000)),
+            ("path operator", "path:".repeat(5_000) + "x"),
+            ("control chars", "\u{0}\u{1}\u{7}\r\n\t\u{7f}".repeat(2_000)),
+            ("lone combining marks", "\u{301}".repeat(50_000)),
+            ("emoji sequence", "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}".repeat(20_000)),
+            ("hangul and jamo", "\u{1100}\u{1161}\u{11A8}".repeat(30_000)),
+            ("only punctuation", "!?.,;:".repeat(30_000)),
+            ("mixed width", "Ａｂｃ".repeat(30_000)),
+        ];
+        let mut slow = Vec::new();
+        for (name, q) in &cases {
+            for scope in [Scope::All, Scope::Names, Scope::Content] {
+                let started = std::time::Instant::now();
+                let (hits, _) = idx.query(q, scope, 50);
+                std::hint::black_box(hits.len());
+                if started.elapsed().as_secs() >= 2 {
+                    slow.push(format!("{name} ({:?})", started.elapsed()));
+                }
+            }
+        }
+        assert!(slow.is_empty(), "slow queries: {slow:?}");
+    }
 }
