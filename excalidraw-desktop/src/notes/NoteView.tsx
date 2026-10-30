@@ -295,13 +295,14 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
         }
       },
       imageUrl: (p, from) => assets.url(from ?? path, p),
-      renderNested: (t, _depth, from) =>
+      renderNested: (t, _depth, from, idScope) =>
         sanitizeNoteHtml(
           renderNoteHtml(t, {
             resolve: (target) => links.resolve(from, target),
             highlight: prefs.notesHighlightCode,
             math: prefs.notesMath,
             strictLineBreaks: prefs.notesStrictLineBreaks,
+            idScope,
           }),
           { remoteImages },
         ),

@@ -16,13 +16,24 @@ export interface EmbedDeps {
   noteText: (path: string) => Promise<string | null>;
   /** A URL an <img> can show for a vault image, or null. */
   imageUrl: (path: string, from?: string) => Promise<string | null>;
-  /** Sanitised HTML of the nested note `from`; `depth` counts nesting. */
-  renderNested: (text: string, depth: number, from: string) => string;
+  /**
+   * Sanitised HTML of the nested note `from`; `depth` counts nesting. `idScope` goes in front of
+   * the ids it writes, so an embed's footnotes and headings never take the host's clicks (222).
+   */
+  renderNested: (
+    text: string,
+    depth: number,
+    from: string,
+    idScope: string,
+  ) => string;
   /** Hydrates the nested element of note `from` (formulas, pictures, deeper embeds). */
   afterNested: (el: HTMLElement, depth: number, from: string) => Promise<void>;
 }
 
 const MAX_DEPTH = 2;
+
+/** Embedded notes rendered so far: each gets its own id scope. */
+let embedRenders = 0;
 
 const toHex = (css: string): string => {
   const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(css);
@@ -131,7 +142,12 @@ export async function hydrateEmbeds(
       }
       const body = document.createElement("div");
       body.className = "note-embed-body";
-      body.innerHTML = deps.renderNested(part, depth + 1, path);
+      body.innerHTML = deps.renderNested(
+        part,
+        depth + 1,
+        path,
+        `embed${++embedRenders}-`,
+      );
       el.className = "note-embed note-embed-note embedded";
       el.replaceChildren(body);
       await deps.afterNested(body, depth + 1, path);

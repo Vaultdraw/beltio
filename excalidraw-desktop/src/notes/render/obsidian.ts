@@ -25,6 +25,11 @@ export interface RenderContext {
   resolve: (target: string) => string | null;
   highlight: boolean;
   math: boolean;
+  /**
+   * Put in front of the ids this render writes (headings, footnotes): an embedded note gets its own,
+   * so its `fn-1` and heading ids never take the clicks of the note around it (toimprove 222).
+   */
+  idScope?: string;
 }
 
 const esc = (s: string): string =>
@@ -349,9 +354,8 @@ const footnoteRef: TokenizerAndRendererExtension = {
       notes.order.push(id);
       n = notes.order.length;
     }
-    return `<sup class="footnote-ref"><a href="#fn-${esc(id)}" id="fnref-${esc(
-      id,
-    )}" data-footnote="fn-${esc(id)}">${n}</a></sup>`;
+    const k = esc(`${ctx.idScope ?? ""}${id}`);
+    return `<sup class="footnote-ref"><a href="#fn-${k}" id="fnref-${k}" data-footnote="fn-${k}">${n}</a></sup>`;
   },
 };
 
@@ -359,16 +363,12 @@ const footnoteRef: TokenizerAndRendererExtension = {
 const footnotesHtml = (): string => {
   const items = notes.order
     .filter((id) => notes.defs.has(id))
-    .map(
-      (id) =>
-        `<li id="fn-${esc(id)}">${inline(
-          notes.defs.get(id)!,
-        )} <a href="#fnref-${esc(
-          id,
-        )}" class="footnote-back" data-footnote="fnref-${esc(
-          id,
-        )}">\u21a9</a></li>`,
-    );
+    .map((id) => {
+      const k = esc(`${ctx.idScope ?? ""}${id}`);
+      return `<li id="fn-${k}">${inline(
+        notes.defs.get(id)!,
+      )} <a href="#fnref-${k}" class="footnote-back" data-footnote="fnref-${k}">\u21a9</a></li>`;
+    });
   return items.length
     ? `<section class="footnotes"><hr><ol>${items.join("")}</ol></section>\n`
     : "";
@@ -442,9 +442,9 @@ marked.use({
         : html;
     },
     heading({ tokens, depth, text }: Tokens.Heading) {
-      return `<h${depth} id="${esc(slug(text))}">${this.parser.parseInline(
-        tokens,
-      )}</h${depth}>\n`;
+      return `<h${depth} id="${esc(
+        `${ctx.idScope ?? ""}${slug(text)}`,
+      )}">${this.parser.parseInline(tokens)}</h${depth}>\n`;
     },
     // `![alt|100](pic.png)` and `![alt|100x50](pic.png)`: the size is not part of the alt text.
     image({ href, title, text }: Tokens.Image) {

@@ -25,6 +25,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **A footnote number scrolls to its own footnote when the note embeds another note with footnotes** (toimprove 222). Each embedded note now writes its own footnote and heading ids, so a click in the note never lands in the embed (and the embed's own footnotes still work).
 - **`![[Sketch]]` in a note opens the drawing** (toimprove 218). Embedding a drawing (`.excalidraw` or an Obsidian `.excalidraw.md`) showed a dead word; it is now a link that opens the drawing. A picture of the drawing inside the note is not drawn yet.
 - **Zoomed out, a click on a linked text selects it again** (toimprove 205). The clickable strip of the link underline never reaches above the lower quarter of the text, so only the line itself and just below it open the link, at any zoom.
 - **Cmd+B flips back to regular with a Lilita One or Assistant text in the selection** (toimprove 213). Fonts without a bold face no longer count when Toggle bold asks whether everything is bold already.
