@@ -24,18 +24,18 @@ describe("hunter H-5: folder name matching folds accents", () => {
     expect(searchEntries([folder("Café")], "CAFÉ")).toHaveLength(1);
   });
 
-  it.fails("sidebar search: cafe finds the folder Café", () => {
+  it("sidebar search: cafe finds the folder Café", () => {
     expect(searchEntries([folder("Café")], "cafe")).toHaveLength(1);
   });
 
-  it.fails("Move dialog type-ahead: cafe finds the folder Café", () => {
+  it("Move dialog type-ahead: cafe finds the folder Café", () => {
     const rows = moveRows(["Café", "Other"], new Set(), "cafe");
     expect(rows.some((r) => r.entry.path === "Café" && r.matches)).toBe(true);
   });
 });
 
 describe("hunter H-5b: the Move dialog orders folders like the navigator (numeric)", () => {
-  it.fails("Week 2 comes before Week 10", () => {
+  it("Week 2 comes before Week 10", () => {
     const rows = moveRows(["Week 10", "Week 2"], new Set([""]), "");
     expect(rows.map((r) => r.entry.path)).toEqual(["", "Week 2", "Week 10"]);
   });

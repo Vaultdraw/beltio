@@ -81,14 +81,6 @@ const LOWER_OK: Record<string, { count: number; why: string }> = {
   "src/vault/syncNames.ts": { count: 1, why: "a fixed English marker" },
 };
 const LOWER_KNOWN: Record<string, { count: number; why: string }> = {
-  "src/vault/treeStore.ts": {
-    count: 3,
-    why: "toimprove 201 (sidebar search of names)",
-  },
-  "src/components/moveTree.ts": {
-    count: 1,
-    why: "toimprove 201 (Move dialog filter)",
-  },
   "src/components/tags/RenameTagDialog.tsx": {
     count: 1,
     why: "toimprove 201 family (tag picker)",

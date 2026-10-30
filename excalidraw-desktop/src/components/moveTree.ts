@@ -1,3 +1,5 @@
+import { foldKey } from "../search/foldKey";
+import { compareEntries } from "../vault/sortOrder";
 import { getBaseName } from "../vault/treeStore";
 
 import { flattenTree } from "./tree/flattenTree";
@@ -26,9 +28,7 @@ export function buildFolderTree(folders: readonly string[]): TreeNode[] {
     return node;
   };
   const root = make("");
-  for (const folder of [...new Set(folders)].sort((a, b) =>
-    a.localeCompare(b),
-  )) {
+  for (const folder of new Set(folders)) {
     if (folder === "") {
       continue;
     }
@@ -45,6 +45,10 @@ export function buildFolderTree(folders: readonly string[]): TreeNode[] {
       parent = node;
     }
   }
+  // Each level in the file tree's order (natural: "Week 2" before "Week 10").
+  for (const node of nodes.values()) {
+    node.children!.sort((a, b) => compareEntries(a.entry, b.entry, "name_asc"));
+  }
   return [root];
 }
 
@@ -53,7 +57,7 @@ export function matchingFolderPaths(
   folders: readonly string[],
   query: string,
 ): Set<string> {
-  const needle = query.trim().toLowerCase();
+  const needle = foldKey(query.trim());
   const keep = new Set<string>([""]);
   if (needle === "") {
     return keep;
@@ -74,9 +78,9 @@ export function matchingFolderPaths(
 /** `matches`: the folder itself fits the type-ahead (false for ancestors kept only for context; always true without a filter). */
 export type MoveRow = TreeRow & { hasChildren: boolean; matches: boolean };
 
+/** Case and accents fold like the vault search: "cafe" finds "Café". */
 const nameMatches = (path: string, query: string): boolean =>
-  path !== "" &&
-  getBaseName(path).toLowerCase().includes(query.trim().toLowerCase());
+  path !== "" && foldKey(getBaseName(path)).includes(foldKey(query.trim()));
 
 /**
  * Rows the Move dialog shows: the whole tree with `expanded` folders open, or,

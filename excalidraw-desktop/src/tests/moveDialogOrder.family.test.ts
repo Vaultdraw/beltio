@@ -33,7 +33,7 @@ describe("family: folder lists follow the tree's order", () => {
     expect(order.indexOf("Week 2")).toBeLessThan(order.indexOf("Week 10"));
   });
 
-  it.fails(
+  it(
     "the Move dialog lists top-level folders in the tree's order",
     () => {
       const [root] = buildFolderTree(NAMES);
@@ -41,7 +41,7 @@ describe("family: folder lists follow the tree's order", () => {
     },
   );
 
-  it.fails("the Move dialog orders subfolders the same way", () => {
+  it("the Move dialog orders subfolders the same way", () => {
     const [root] = buildFolderTree(NAMES.map((n) => `Year/${n}`));
     const year = root.children![0];
     expect(year.children!.map((n) => n.entry.name)).toEqual(treeOrder());

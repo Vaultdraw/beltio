@@ -1,3 +1,5 @@
+import { foldKey } from "../search/foldKey";
+
 import {
   DRAWING_EXT,
   EXCALIDRAW_MD_EXT,
@@ -5,6 +7,7 @@ import {
   NOTE_EXT,
   stripDrawingExt,
 } from "./fileKind";
+
 import { DEFAULT_SORT_ORDER, sortEntries, type SortOrder } from "./sortOrder";
 import { joinPath, type VaultEntry, type VaultRepository } from "./types";
 
@@ -20,28 +23,27 @@ export type TreeNode = {
 
 export const MAX_SEARCH_RESULTS = 100;
 
-/** Case-insensitive filename/path substring search over an array of paths. */
+/** Filename/path substring search over an array of paths; case and accents fold like the vault search ("cafe" finds "Café"). */
 export function searchPaths(entries: string[], query: string): string[] {
-  const q = query.trim().toLowerCase();
+  const q = foldKey(query.trim());
   if (!q) {
     return [];
   }
-  return entries.filter((entry) => entry.toLowerCase().includes(q));
+  return entries.filter((entry) => foldKey(entry).includes(q));
 }
 
-/** Case-insensitive search over VaultEntry items, matching either path or name. */
+/** Search over VaultEntry items, matching either path or name, folded like the vault search. */
 export function searchEntries(
   entries: VaultEntry[],
   query: string,
 ): VaultEntry[] {
-  const q = query.trim().toLowerCase();
+  const q = foldKey(query.trim());
   if (!q) {
     return [];
   }
   return entries.filter(
     (entry) =>
-      entry.path.toLowerCase().includes(q) ||
-      entry.name.toLowerCase().includes(q),
+      foldKey(entry.path).includes(q) || foldKey(entry.name).includes(q),
   );
 }
 
