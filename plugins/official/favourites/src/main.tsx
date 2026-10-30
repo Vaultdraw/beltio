@@ -35,8 +35,16 @@ async function openFavourite(ctx: PluginContext, f: Favourite) {
   if (!element) {
     return;
   }
+  // Like a bookmark to a missing target: say so, never open the drawing and do nothing.
+  const reveal = () => {
+    if (ctx.scene.elements().some((x) => x.id === element)) {
+      ctx.scene.scrollTo(element);
+    } else {
+      ctx.ui.toast("That element is no longer in the drawing");
+    }
+  };
   if (already) {
-    ctx.scene.scrollTo(element);
+    reveal();
     return;
   }
   let timer = 0;
@@ -44,12 +52,12 @@ async function openFavourite(ctx: PluginContext, f: Favourite) {
     if (e.path === f.path) {
       sub.dispose();
       clearTimeout(timer);
-      ctx.scene.scrollTo(element);
+      reveal();
     }
   });
   timer = window.setTimeout(() => {
     sub.dispose();
-    ctx.scene.scrollTo(element);
+    reveal();
   }, 1500);
 }
 

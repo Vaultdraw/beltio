@@ -178,4 +178,33 @@ describe("favourites plugin", () => {
     await new Promise((r) => setTimeout(r, 30));
     expect(items(p)).toEqual([{ path: "A.excalidraw" }]); // the delete was not saved here
   });
+
+  // toimprove 242: a favourite of a deleted element says so instead of doing nothing.
+  it("an element favourite whose element is gone says so; a present one scrolls to it", async () => {
+    const seeded = {
+      async activate(ctx: Parameters<typeof plugin.activate>[0]) {
+        await ctx.vault.table.update([
+          {
+            key: "items",
+            value: [
+              { path: "A.excalidraw", element: "gone" },
+              { path: "A.excalidraw", element: "here" },
+            ],
+          },
+        ]);
+        return plugin.activate(ctx);
+      },
+    };
+    p = await boot(manifest(), seeded);
+    p.vault.seed({
+      "A.excalidraw": [{ type: "rectangle", id: "here", x: 0, y: 0 }],
+    });
+    await p.run("open1");
+    await new Promise((r) => setTimeout(r, 1700));
+    expect(p.toasts().some((t) => t.includes("no longer in the drawing"))).toBe(true);
+    const before = p.toasts().length;
+    await p.run("open2");
+    await new Promise((r) => setTimeout(r, 100));
+    expect(p.toasts().length).toBe(before);
+  }, 20000);
 });
