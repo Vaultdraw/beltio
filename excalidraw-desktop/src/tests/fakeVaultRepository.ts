@@ -761,6 +761,9 @@ export class FakeVaultRepository implements VaultRepository {
       this.seedFolder(to.includes("/") ? to.slice(0, to.lastIndexOf("/")) : "");
       this.notes.delete(from);
       this.notes.add(to);
+      // The text moves with the file, like the native rename (hunter G: without this an
+      // open note showed "The file is no longer there" after a rename in the browser only).
+      this.noteText?.moveOnDisk(from, to);
       this.emit({ handle: this.vault.handle, paths: [from, to], rescan: true });
       return;
     }
@@ -803,6 +806,7 @@ export class FakeVaultRepository implements VaultRepository {
         const next = `${to}/${note.slice(from.length + 1)}`;
         this.notes.delete(note);
         this.notes.add(next);
+        this.noteText?.moveOnDisk(note, next);
         moved.push(next);
       }
     }
@@ -824,6 +828,7 @@ export class FakeVaultRepository implements VaultRepository {
     }
     if (this.notes.has(path)) {
       this.notes.delete(path);
+      this.noteText?.removeOnDisk(path);
       this.emit({ handle: this.vault.handle, paths: [path], rescan: false });
       return;
     }
@@ -833,6 +838,7 @@ export class FakeVaultRepository implements VaultRepository {
       for (const n of [...this.notes]) {
         if (n.startsWith(prefix)) {
           this.notes.delete(n);
+          this.noteText?.removeOnDisk(n);
         }
       }
       for (const f of [...this.files.keys()]) {
