@@ -611,6 +611,58 @@ mod tests {
         assert_eq!(layered_config_in(&e.dirs).unwrap()["control"]["enabled"], false);
     }
 
+    // Hunter D round 2 (2026-10-30): cycles spelled in other ways, and shapes that look like a
+    // cycle but are not one.
+    #[test]
+    fn a_diamond_is_not_a_cycle_and_loads_the_shared_file_once() {
+        let e = env();
+        e.write("config/config.toml", "[include]\nfiles = [\"b.toml\", \"c.toml\"]\n");
+        e.write("config/b.toml", "[include]\nfiles = [\"d.toml\"]\n");
+        e.write("config/c.toml", "[include]\nfiles = [\"d.toml\"]\n");
+        e.write("config/d.toml", "[editor]\nfont_size = 4\n");
+        let layers = read_layers_with(&e.dirs, None);
+        assert!(layers.warnings.is_empty(), "{:?}", layers.warnings);
+        assert_eq!(layers.all.iter().filter(|l| l.name == "d.toml").count(), 1);
+    }
+
+    #[test]
+    fn a_cycle_through_other_spellings_of_the_same_path_is_still_a_cycle() {
+        let e = env();
+        e.write("config/config.toml", "[include]\nfiles = [\"a.toml\"]\n");
+        e.write("config/a.toml", "[include]\nfiles = [\"./sub/../b.toml\"]\n[editor]\nfont_size = 1\n");
+        e.write("config/b.toml", "[include]\nfiles = [\"../config/a.toml\"]\n");
+        fs::create_dir_all(e.root.join("config/sub")).unwrap();
+        let layers = read_layers_with(&e.dirs, None);
+        assert_eq!(layers.warnings.len(), 1, "{:?}", layers.warnings);
+        assert!(layers.warnings[0].contains("include cycle"), "{:?}", layers.warnings);
+        assert_eq!(merged(&layers.all).unwrap()["editor"]["font_size"], 1);
+    }
+
+    #[test]
+    fn a_cycle_through_a_folder_include_ends_and_keeps_the_values() {
+        let e = env();
+        e.write("config/config.toml", "[include]\nfiles = [\"d\"]\n");
+        e.write("config/d/10.toml", "[include]\nfiles = [\"../d\"]\n[editor]\nfont_size = 6\n");
+        e.write("config/d/20.toml", "[editor]\nroughness = 3\n");
+        let l = e.load();
+        let c = l.config.unwrap();
+        assert_eq!((c["editor"]["font_size"].clone(), c["editor"]["roughness"].clone()), (json!(6), json!(3)));
+    }
+
+    #[test]
+    fn a_long_cycle_and_a_wide_fan_of_cycles_stay_bounded() {
+        let e = env();
+        // a0 -> a1 -> ... -> a5 -> a0, and the config includes all of them.
+        let all: Vec<String> = (0..6).map(|i| format!("\"a{i}.toml\"")).collect();
+        e.write("config/config.toml", &format!("[include]\nfiles = [{}]\n", all.join(", ")));
+        for i in 0..6 {
+            e.write(&format!("config/a{i}.toml"), &format!("[include]\nfiles = [\"a{}.toml\"]\n", (i + 1) % 6));
+        }
+        let layers = read_layers_with(&e.dirs, None);
+        assert!(layers.warnings.len() <= 6, "{:?}", layers.warnings);
+        assert_eq!(layers.all.iter().filter(|l| l.kind == "include").count(), 6);
+    }
+
     /// Timing with includes (run with `--release --ignored --nocapture`).
     #[test]
     #[ignore]
