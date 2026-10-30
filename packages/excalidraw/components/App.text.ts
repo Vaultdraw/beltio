@@ -155,14 +155,17 @@ export class AppText {
   /**
    * The widest a text may grow to as it's typed or pasted, in scene units:
    * TEXT_MAX_WRAP_WIDTH, or less, so that a text never outgrows the part of
-   * the canvas it's kept within.
+   * the canvas it's kept within (in page mode, the page's width).
    */
   public getMaxTextWidth = (offsets: Required<Offsets>) => {
     const { left, right } = offsets;
     const viewWidth = this.app.state.width - left - right;
+    const { pageSetup } = this.app.state;
     return Math.min(
       viewWidth > 0 ? viewWidth / this.app.state.zoom.value : Infinity,
       TEXT_MAX_WRAP_WIDTH,
+      // page mode: never wider than the page, for typed and pasted text alike
+      isPageModeOn(pageSetup) ? pageSetup.width : Infinity,
     );
   };
 

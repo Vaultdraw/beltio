@@ -23,6 +23,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Pasted long text in page mode wraps at the page edge.** Typed text already did; a pasted paragraph used to wrap at up to 800 px and ran past the right edge of an A5, B5 or phone page.
 - **Look up on a bad theme file explains itself in plain words, and refuses an unusable name at once.** The message no longer names theme keys (`mSurface`) or format hints; a theme named like `../x` is refused at Look up, not after Install.
 - **Enter and Backspace on a heading give the right body size after you change a heading size.** A typed heading now remembers the text size it was made from, so changing `markdown.h1_size` later no longer makes the next line or the un-headed text the wrong size; an imported heading is read at the default scale.
 - **A note and a drawing with the same name have different tabs.** `Idea.md` and `Idea.excalidraw` in one folder used to read "Idea" twice; the drawing tab now shows its extension (as Obsidian does for anything that is not a note).
