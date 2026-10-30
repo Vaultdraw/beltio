@@ -2632,7 +2632,11 @@ export const VaultApp = ({
     vault,
     repository,
     active: activeDoc
-      ? { path: activeDoc.path, dirty: saveStatus !== "saved" }
+      ? {
+          path: activeDoc.path,
+          dirty: saveStatus !== "saved",
+          conflict: saveStatus === "conflict",
+        }
       : null,
     tabStore: tabs.store,
     activate: tabs.stripProps?.onActivate,

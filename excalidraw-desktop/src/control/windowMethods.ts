@@ -4,6 +4,7 @@
  * throwing cores the UI handlers use.
  */
 import { ExportError } from "../export/exportError";
+import { stripDrawingExt } from "../vault/fileKind";
 
 import { ControlError } from "./errors";
 import {
@@ -69,7 +70,7 @@ export const bytesToBase64 = (bytes: Uint8Array): string => {
 export interface ControlFiles {
   vault: () => VaultSummary | null;
   /** Active document (path, unsaved changes) or null. */
-  active: () => { path: string; dirty: boolean } | null;
+  active: () => { path: string; dirty: boolean; conflict?: boolean } | null;
   /** Tab model, null when tabs are disabled. */
   tabState: () => TabsState | null;
   activateTab: (id: string) => Promise<void>;
@@ -136,6 +137,24 @@ export function createWindowMethods(
     return v;
   };
   const tabList = () => tabListResult(f.tabState(), f.active());
+  /**
+   * Why the window will not leave the drawing it shows: a save conflict. The window explains it with
+   * its own notice; a script gets the same reason in plain words (the code alone said "IO_ERROR").
+   */
+  const conflictGuard = (
+    data: Record<string, unknown>,
+  ): ControlError | null => {
+    const a = f.active();
+    if (!a?.conflict) {
+      return null;
+    }
+    const name = stripDrawingExt(a.path.slice(a.path.lastIndexOf("/") + 1));
+    return new ControlError(
+      "CONFLICT",
+      `${name} changed on disk while it has unsaved edits. Choose Keep my version or Take the disk version in the window, then try again`,
+      { ...data, reason: "conflict", path: a.path },
+    );
+  };
 
   /** Validates an `export.render` / `export.spool` request. */
   const exportRequest = (params: unknown) => {
@@ -215,7 +234,10 @@ export function createWindowMethods(
       }
       const newTab = objectParams(params).newTab === true;
       if (!(await f.openDrawing(path, newTab))) {
-        throw new ControlError("IO_ERROR", `Could not open ${path}`, { path });
+        throw (
+          conflictGuard({ target: path }) ??
+          new ControlError("IO_ERROR", `Could not open ${path}`, { path })
+        );
       }
       return { path, opened: true };
     },
@@ -314,9 +336,12 @@ export function createWindowMethods(
       const id = resolveTabId(f.tabState(), params);
       await f.activateTab(id);
       if (f.tabState()?.activeId !== id) {
-        throw new ControlError("UNAVAILABLE", "The tab could not be focused", {
-          id,
-        });
+        throw (
+          conflictGuard({ id }) ??
+          new ControlError("UNAVAILABLE", "The tab could not be focused", {
+            id,
+          })
+        );
       }
       return { id };
     },
@@ -324,9 +349,10 @@ export function createWindowMethods(
       const id = resolveTabId(f.tabState(), params);
       await f.closeTab(id);
       if (f.tabState()?.tabs.some((t) => t.id === id)) {
-        throw new ControlError("UNAVAILABLE", "The tab could not be closed", {
-          id,
-        });
+        throw (
+          (f.tabState()?.activeId === id ? conflictGuard({ id }) : null) ??
+          new ControlError("UNAVAILABLE", "The tab could not be closed", { id })
+        );
       }
       return { closed: true };
     },

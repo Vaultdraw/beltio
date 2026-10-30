@@ -195,6 +195,46 @@ describe("window methods (C3)", () => {
     );
   });
 
+  // Hunter C small item: in a save conflict the window refuses to leave the drawing and says why;
+  // the control API said "IO_ERROR" / "UNAVAILABLE". One table over the three calls that leave it.
+  it("in a save conflict open, focus and close say why in plain words", async () => {
+    const conflict = {
+      active: () => ({
+        path: "Docs/Theta.excalidraw",
+        dirty: true,
+        conflict: true,
+      }),
+    };
+    const refuse = {
+      openDrawing: vi.fn().mockResolvedValue(false),
+      activateTab: async () => {},
+      closeTab: async () => {},
+    };
+    const rows: [string, Record<string, unknown>][] = [
+      ["file.open", { path: "b.excalidraw" }],
+      ["tab.focus", { id: "t2" }],
+      ["tab.close", { id: "t1" }],
+    ];
+    for (const [method, params] of rows) {
+      const { call } = make({ ...conflict, ...refuse });
+      const e = (await call(method, params)).error;
+      expect(e.code, method).toBe("CONFLICT");
+      expect(e.message, method).toContain("Theta changed on disk");
+      expect(e.message, method).toContain("Keep my version");
+      expect(e.message, method).not.toMatch(/IO_ERROR|UNAVAILABLE/);
+    }
+    // Without a conflict the old messages stay.
+    const { call } = make(refuse);
+    expect((await call("file.open", { path: "b.excalidraw" })).error.code).toBe(
+      "IO_ERROR",
+    );
+    // Closing a tab that is not the conflicted one is not blamed on the conflict.
+    const other = make({ ...conflict, ...refuse });
+    expect((await other.call("tab.close", { id: "t2" })).error.code).toBe(
+      "UNAVAILABLE",
+    );
+  });
+
   it("file.trash", async () => {
     const { call, files } = make();
     expect(await call("file.trash", { path: "a.excalidraw" })).toEqual({

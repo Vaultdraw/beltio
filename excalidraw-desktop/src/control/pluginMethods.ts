@@ -17,6 +17,14 @@ type Runner = Pick<CommandRunner, "run" | "isAvailable"> & {
 const pluginsState = async () =>
   (await import("../plugins/host/pluginsState")).getPluginsState();
 
+/**
+ * The plugin list exists once the host has started. Official plugins are on by default but the
+ * host stays asleep until something needs it, so every plugin method wakes it first: on a fresh
+ * config `plugin commands`, `plugin methods` and `plugin call` must see them (hunter C-11).
+ */
+const startHost = async () =>
+  (await import("../plugins/boot")).ensurePluginHost(window);
+
 export const DEFAULT_METHOD_TIMEOUT_MS = 30_000;
 /** A result larger than this (as JSON text) fails the call. */
 export const MAX_METHOD_RESULT_BYTES = 4 * 1024 * 1024;
@@ -53,13 +61,17 @@ const withTimeout = <T>(p: Promise<T>, ms: number, what: string) =>
     p.then(resolve, reject).finally(() => clearTimeout(t));
   });
 
-export function createPluginMethods(runner: () => Runner) {
+export function createPluginMethods(
+  runner: () => Runner,
+  ensureHost: () => Promise<void> = startHost,
+) {
   return {
     "plugin.commands": async (params: unknown) => {
       const only = objectParams(params ?? {}).plugin;
       if (only !== undefined && typeof only !== "string") {
         throw new ControlError("INVALID_PARAMS", "plugin must be a string");
       }
+      await ensureHost();
       const state = await pluginsState();
       const plugins = state.plugins
         .filter((p) => only === undefined || p.id === only)
@@ -86,6 +98,7 @@ export function createPluginMethods(runner: () => Runner) {
     "plugin.methods": async (params: unknown) => {
       const only = objectParams(params ?? {}).plugin;
       const ai = callerOf(params) === "mcp";
+      await ensureHost();
       const state = await pluginsState();
       const methods = state.plugins
         .filter((p) => (only === undefined || p.id === only) && live(state, p))
@@ -108,6 +121,7 @@ export function createPluginMethods(runner: () => Runner) {
       const plugin = stringParam(params, "plugin");
       const method = stringParam(params, "method");
       const ai = callerOf(params) === "mcp";
+      await ensureHost();
       const state = await pluginsState();
       const info = state.plugins.find((p) => p.id === plugin);
       const decl = info?.contributes.methods?.find((m) => m.id === method);
@@ -183,6 +197,7 @@ export function createPluginMethods(runner: () => Runner) {
     },
     "plugin.run": async (params: unknown) => {
       const id = stringParam(params, "id");
+      await ensureHost();
       const state = await pluginsState();
       const owner = state.plugins.find(
         (p) =>

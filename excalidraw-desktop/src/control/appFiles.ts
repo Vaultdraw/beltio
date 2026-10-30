@@ -21,7 +21,7 @@ export interface AppFilesDeps {
     VaultRepository,
     "readRevision" | "listDirectory" | "readDrawing"
   >;
-  active: { path: string; dirty: boolean } | null;
+  active: { path: string; dirty: boolean; conflict?: boolean } | null;
   tabStore: TabStore | null;
   /** Tab strip actions (undefined when tabs are disabled). */
   activate?: (id: string) => void;

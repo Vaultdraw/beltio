@@ -56,7 +56,12 @@ const make = (run = true) => {
     isAvailable: vi.fn(() => true),
     failedClauses: () => ["drawingOpen"],
   };
-  return { m: createPluginMethods(() => runner), runner };
+  const ensureHost = vi.fn(async () => {});
+  return {
+    m: createPluginMethods(() => runner, ensureHost),
+    runner,
+    ensureHost,
+  };
 };
 
 describe("plugin control methods", () => {
@@ -174,5 +179,32 @@ describe("plugin control methods", () => {
     await expect(
       m["plugin.call"]({ plugin: "on", method: "none" }),
     ).rejects.toMatchObject({ code: "PLUGIN_ERROR" });
+  });
+
+  // Hunter C, C-11: on a fresh config the host sleeps and the list is empty until something wakes it.
+  it("every plugin method wakes the host before it reads the list", async () => {
+    for (const [method, params] of [
+      ["plugin.commands", {}],
+      ["plugin.methods", {}],
+      ["plugin.call", { plugin: "on", method: "echo", params: {} }],
+      ["plugin.run", { id: "on.go" }],
+    ] as const) {
+      setPluginsList({ plugins: [], errors: [], scanMs: 0, safeMode: null });
+      const ensureHost = vi.fn(async () => {
+        setPluginsList({
+          plugins: [plugin("on", true)] as never,
+          errors: [],
+          scanMs: 0,
+          safeMode: null,
+        });
+      });
+      const m = createPluginMethods(
+        () => ({ run: () => true, isAvailable: () => true }),
+        ensureHost,
+      );
+      const out = (await m[method](params)) as Record<string, unknown>;
+      expect(ensureHost, method).toHaveBeenCalledTimes(1);
+      expect(out, method).toBeTruthy();
+    }
   });
 });

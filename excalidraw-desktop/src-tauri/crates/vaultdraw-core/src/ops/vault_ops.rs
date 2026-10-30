@@ -50,6 +50,28 @@ pub fn write(v: &Vault, path: &str, scene: &Value, expected_revision: Option<&st
     Ok((revision, json.len() as u64))
 }
 
+/// Creates the missing folders above `path` (a vault-relative file path) for a write that makes a
+/// new drawing, like the app's "new drawing" and the imports do (a plugin's `createDrawing`, `write
+/// --create`). Never follows or replaces a symbolic link, and never touches an existing file.
+pub fn ensure_parents(v: &Vault, path: &str) -> Result<(), RpcError> {
+    crate::writable(v).map_err(native_err)?;
+    let parts = crate::validate_relative(path).map_err(native_err)?;
+    let mut dir = v.root.to_path_buf();
+    for part in parts.iter().take(parts.len().saturating_sub(1)) {
+        dir.push(part);
+        match std::fs::symlink_metadata(&dir) {
+            Ok(m) if m.file_type().is_symlink() => return Err(RpcError::app("INVALID_PATH", "Symbolic links are not allowed in a vault")),
+            Ok(m) if m.is_dir() => {}
+            Ok(_) => return Err(RpcError::app("INVALID_PATH", format!("{part} is a file, not a folder"))),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                std::fs::create_dir(&dir).map_err(|e| RpcError::app("IO_ERROR", e.to_string()))?;
+            }
+            Err(e) => return Err(RpcError::app("IO_ERROR", e.to_string())),
+        }
+    }
+    Ok(())
+}
+
 /// `file.write`'s `expectedRevision`: required key, `null` = create only.
 pub fn expected_revision(params: &Value) -> Result<Option<&str>, RpcError> {
     match params.get("expectedRevision") {
@@ -106,6 +128,34 @@ mod tests {
         assert_eq!(code(&write(&ro, "a.excalidraw", &s2, Some(&rev2)).unwrap_err()), codes::READ_ONLY);
         assert_eq!(code(&write(&v, "x.txt", &s2, None).unwrap_err()), codes::INVALID_PATH);
         assert_eq!(code(&write(&v, "x.excalidraw", &json!({"nope": 1}), None).unwrap_err()), "INVALID_FILE");
+    }
+
+    #[test]
+    fn ensure_parents_makes_the_folders_above_a_new_drawing_and_nothing_else() {
+        // Hunter C small item: a plugin creating a drawing in a folder that does not exist yet.
+        let d = tempfile::tempdir().unwrap();
+        let v = vault(d.path(), false);
+        ensure_parents(&v, "Diagrams/2026/Flow.excalidraw").unwrap();
+        assert!(d.path().join("Diagrams/2026").is_dir());
+        assert!(!d.path().join("Diagrams/2026/Flow.excalidraw").exists());
+        // Existing folders, a file at the top level, and a repeat are fine.
+        ensure_parents(&v, "Diagrams/2026/Other.excalidraw").unwrap();
+        ensure_parents(&v, "Top.excalidraw").unwrap();
+        // The write itself then works in the new folder.
+        assert!(write(&v, "Diagrams/2026/Flow.excalidraw", &scene(), None).is_ok());
+        // A file where a folder is needed, an escape, and a read-only vault are refused; nothing is made.
+        write(&v, "Top.excalidraw", &scene(), None).unwrap();
+        assert_eq!(code(&ensure_parents(&v, "Top.excalidraw/x.excalidraw").unwrap_err()), codes::INVALID_PATH);
+        assert!(ensure_parents(&v, "../out/x.excalidraw").is_err());
+        assert!(!d.path().parent().unwrap().join("out").exists());
+        let ro = vault(d.path(), true);
+        assert!(ensure_parents(&ro, "New/x.excalidraw").is_err());
+        assert!(!d.path().join("New").exists());
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(d.path(), d.path().join("link")).unwrap();
+            assert!(ensure_parents(&v, "link/sub/x.excalidraw").is_err());
+        }
     }
 
     #[test]
