@@ -8,8 +8,9 @@ import { lexNote } from "./render/obsidian";
 
 import type { Token, Tokens } from "marked";
 
+/** Any one status character, as Obsidian (`[/]`, `[-]`, `[>]`): ticking one clears it. */
 const TASK =
-  /^((?:[ \t]*>)*[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+\[)([ xX])(\])(?=[ \t]|$)/;
+  /^((?:[ \t]*>)*[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+\[)([^\]\\\n])(\])(?=[ \t]|$)/;
 
 const newlines = (s: string) => (s.match(/\n/g) ?? []).length;
 

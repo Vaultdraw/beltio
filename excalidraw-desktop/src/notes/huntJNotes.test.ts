@@ -10,6 +10,7 @@ import { createResolver } from "../links/resolve";
 import { findTags } from "../tags/grammar";
 
 import { findAnchorElement } from "./noteAnchor";
+import { taskLines, toggleTask } from "./noteTasks";
 import { resolveRelativeHref } from "./relativeLink";
 import { hydrateEmbeds } from "./render/hydrate";
 import { renderNoteHtml } from "./render/obsidian";
@@ -194,12 +195,28 @@ describe("J-7: Obsidian's custom task statuses (toimprove 216)", () => {
     expect(boxes("- [ ] a\n- [x] b")).toHaveLength(2);
   });
   for (const mark of ["/", "-", ">", "?"]) {
-    it.fails(`- [${mark}] is a ticked box, not the text "[${mark}]"`, () => {
+    it(`- [${mark}] is a ticked box, not the text "[${mark}]"`, () => {
       const md = `- [${mark}] item`;
       expect(boxes(md)).toHaveLength(1);
       expect(html(md)).not.toContain(`[${mark === ">" ? "&gt;" : mark}]`);
     });
   }
+});
+
+describe("J-7 family: custom statuses in the task map (toimprove 216)", () => {
+  it("a custom status keeps its character for themes", () => {
+    expect(html("- [/] doing")).toContain('data-task="/"');
+    expect(html("- [ ] open")).not.toContain("data-task");
+  });
+  it("ticking a [/] box clears it, and the boxes below stay matched", () => {
+    const md = "- [/] doing\n- [ ] next";
+    expect(taskLines(md)).toEqual([0, 1]);
+    expect(toggleTask(md, 0)).toBe("- [ ] doing\n- [ ] next");
+    expect(toggleTask(md, 1)).toBe("- [/] doing\n- [x] next");
+  });
+  it("[[links]] and [^notes] at the start of an item are not tasks", () => {
+    expect(taskLines("- [[Note]] x\n- [^1] y")).toEqual([]);
+  });
 });
 
 describe("J-8: tag chips in a note follow the tag grammar the tag pane uses (toimprove 217)", () => {

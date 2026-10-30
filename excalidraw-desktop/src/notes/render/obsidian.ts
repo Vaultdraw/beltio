@@ -7,7 +7,7 @@
  * KaTeX output never goes through the sanitiser's attribute rules and the
  * KaTeX chunk loads only for notes that have formulas.
  */
-import { Marked } from "marked";
+import { Marked, Renderer, Tokenizer } from "marked";
 
 import { findTags, MAX_TAG_CHARS } from "../../tags/grammar";
 
@@ -366,7 +366,35 @@ const footnotesHtml = (): string => {
 
 const CALLOUT = /^\[!([\w-]+)\]([+-]?)[ \t]*([^\n]*)(?:\n|$)/;
 
+/**
+ * Obsidian's custom task statuses: any one character between the brackets (`- [/] doing`,
+ * `- [-] cancelled`, `- [>] later`) is a ticked box, as `[x]` is (toimprove 216). marked knows only
+ * `[ ]` and `[x]`, so its list tokenizer runs with these two rules swapped in.
+ */
+const TASK_RULES = {
+  listIsTask: /^\[[^\]\\\n]\] /,
+  listReplaceTask: /^\[[^\]\\\n]\] +/,
+};
+/** The status character of a task item (`/` for `- [/] doing`), from its source. */
+const TASK_MARK = /^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+\[([^\]\\\n])\]/;
+
 const marked = new Marked({ gfm: true, breaks: false });
+marked.use({
+  tokenizer: {
+    list(src) {
+      const tok = this as unknown as {
+        rules: { other: Record<string, unknown> };
+      };
+      const rules = tok.rules;
+      tok.rules = { ...rules, other: { ...rules.other, ...TASK_RULES } };
+      try {
+        return Tokenizer.prototype.list.call(this, src);
+      } finally {
+        tok.rules = rules;
+      }
+    },
+  },
+});
 marked.use({
   extensions: [
     commentBlock,
@@ -382,6 +410,17 @@ marked.use({
     inlineMath,
   ],
   renderer: {
+    // A custom status keeps its character, as Obsidian's `data-task` (themes style it).
+    listitem(item: Tokens.ListItem) {
+      const html = Renderer.prototype.listitem.call(this, item);
+      const mark = item.task ? TASK_MARK.exec(item.raw)?.[1] : undefined;
+      return mark && mark !== " "
+        ? html.replace(
+            "<li>",
+            `<li class="task-list-item" data-task="${esc(mark)}">`,
+          )
+        : html;
+    },
     heading({ tokens, depth, text }: Tokens.Heading) {
       return `<h${depth} id="${esc(slug(text))}">${this.parser.parseInline(
         tokens,

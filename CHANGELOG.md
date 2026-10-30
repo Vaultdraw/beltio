@@ -25,6 +25,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Obsidian's custom task statuses show as checkboxes** (toimprove 216). `- [/] doing`, `- [-] cancelled`, `- [>] later` and any other single character showed as text "[/]"; they are now ticked boxes that keep their character for themes (`data-task`), and ticking one clears it, as in Obsidian.
 - **Tag chips in a note are the tags the tag pane lists** (toimprove 217). Colours like `#1e1e1e` are no longer chips that search for nothing, `#tag-` and `#a/b/` read as `tag` and `a/b`, and `"#q"`, `list,#c` and `x:#k` are chips like in the pane; the reading view now uses the same tag grammar as the pane and the search.
 - **`$$E=mc^2$$` inside a sentence shows the formula** (toimprove 208). It showed the dollar signs; it is now display math on its own line, as in Obsidian. Single-dollar prices stay text.
 - **`![[pic.png|caption|300x200]]` keeps its size, and the caption is the picture's alt text** (toimprove 211). The reading view now reads the text after `|` with the same parser as the import and the native side.
