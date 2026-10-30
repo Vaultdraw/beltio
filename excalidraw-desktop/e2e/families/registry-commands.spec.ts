@@ -42,6 +42,16 @@ const SKIP: { match: RegExp; reason: string }[] = [
     reason: "writes outside the vault or opens a native picker or Finder",
   },
   {
+    match:
+      /^(history\.(previous|next|restore|restoreReplace|restoreCopy|copySelection|exportExcalidraw|exportImage|toggleHighlights|deleteCheckpoint|backToCurrent|dismissGitNotice)|themeBrowser\.|page\.dismissNotice|vault\.retryWritable|file\.resolveConflict|links\.registerHandlers|list\.(nextView|showAsGrid)|navigator\.clearSearch|thumbnails\.|snippets\.)/,
+    reason:
+      "only offered in a state this family does not build (history panel with a checkpoint, theme browser open, a conflict or read-only banner, an active search, list focus, snippets on); covered by the hotkeys family or their own specs",
+  },
+  {
+    match: /^vault\.(backup|restoreBackup)$/,
+    reason: "writes a backup outside the vault or opens a native picker",
+  },
+  {
     match: /^palette\.commands$/,
     reason: "is the palette itself: every row opens it",
   },
@@ -94,26 +104,48 @@ const run = async (
   page: Page,
   cmd: Cmd,
   errors: string[],
+  onStuck: () => Promise<void>,
 ): Promise<{ ran: boolean; problems: string[] }> => {
   const problems: string[] = [];
   const errorsBefore = errors.length;
-  await settle(page);
-  await page.keyboard.press("Meta+Shift+KeyP");
+  const t0 = Date.now();
+  const lap: string[] = [];
+  const mark = (n: string) => lap.push(`${n}=${Date.now() - t0}`);
   const dlg = palette(page);
-  if (!(await dlg.isVisible().catch(() => false))) {
-    await dlg.waitFor({ timeout: 2000 }).catch(() => undefined);
+  const openPalette = async (ms: number) => {
+    await settle(page);
+    await page.keyboard.press("Meta+Shift+KeyP");
+    return dlg.waitFor({ timeout: ms }).then(
+      () => true,
+      () => false,
+    );
+  };
+  if (!(await openPalette(1500))) {
+    // The previous command left a state Escape cannot leave: that is its problem. Start afresh.
+    await onStuck();
+    if (!(await openPalette(4000))) {
+      return { ran: false, problems };
+    }
   }
   await dlg.getByRole("combobox").fill(`>${cmd.title}`);
-  const texts = await dlg.getByRole("option").allInnerTexts();
-  const idx = texts.findIndex((t) =>
-    t.replace(/\s+/g, " ").trim().startsWith(cmd.title),
-  );
+  // The palette shows at most 80 rows and fills in a moment: poll a short while for this row.
+  let idx = -1;
+  for (let i = 0; i < 6 && idx < 0; i++) {
+    await page.waitForTimeout(i === 0 ? 60 : 120);
+    const texts = await dlg.getByRole("option").allInnerTexts();
+    idx = texts.findIndex((t) =>
+      t.replace(/\s+/g, " ").trim().startsWith(cmd.title),
+    );
+  }
   if (idx < 0) {
     await settle(page);
     return { ran: false, problems };
   }
+  mark("found");
   const before = await signature(page);
+  mark("sig");
   await dlg.getByRole("option").nth(idx).click({ timeout: 3000 });
+  mark("click");
   await page.waitForTimeout(250);
   if (!(await answers(page))) {
     problems.push("the window stopped answering after the command");
@@ -129,6 +161,11 @@ const run = async (
   if (!(await answers(page))) {
     problems.push("the window stopped answering after Escape and undo");
   }
+  mark("end");
+  if (Date.now() - t0 > 3000) {
+    // eslint-disable-next-line no-console
+    console.log(`SLOW ${cmd.id} ${lap.join(" ")}`);
+  }
   const fresh = errors.slice(errorsBefore);
   for (const e of fresh) {
     problems.push(`error: ${e.slice(0, 160)}`);
@@ -136,27 +173,27 @@ const run = async (
   return { ran: true, problems };
 };
 
-const seedContext = async (page: Page, kind: "drawing" | "note") => {
+const seedContext = async (page: Page, kind: "home" | "drawing" | "note") => {
+  await openVault(page, "?seed=obsidian");
+  if (kind === "home") {
+    return;
+  }
   if (kind === "drawing") {
-    await page
-      .locator(".vault-tree-item__name", { hasText: "DSA" })
-      .first()
-      .click();
+    const graphs = page
+      .locator(".vault-tree-item__name", { hasText: "Graphs" })
+      .first();
+    if (!(await graphs.isVisible().catch(() => false))) {
+      await page
+        .locator(".vault-tree-item__name", { hasText: "DSA" })
+        .first()
+        .click();
+    }
     await openDrawing(page, "Graphs");
     await page.keyboard.press("Meta+KeyA");
     return;
   }
-  await page.evaluate(() => {
-    const repo = (window as any).__vaultRepo;
-    repo.seedNote("Context note.md");
-    repo.emit({ handle: repo.handle, paths: [], rescan: true });
-  });
-  await page
-    .locator('.vault-tree-item[data-tree-path="Context note.md"]')
-    .click();
-  await expect(
-    page.locator(".vault-editor, .vault-note").first(),
-  ).toBeVisible();
+  await page.locator('.vault-tree-item[data-tree-path="Welcome.md"]').click();
+  await expect(page.getByTestId("note-reading")).toBeVisible();
 };
 
 const needs = (c: Cmd) => ({
@@ -168,8 +205,12 @@ test("every palette command, in the state where it can run", async ({
   page,
   errors,
 }) => {
-  test.setTimeout(30 * 60_000);
-  page.setDefaultTimeout(8000);
+  test.skip(
+    !process.env.TN2_FULL,
+    "about 20 minutes: run with TN2_FULL=1 (once per batch of merges, by QA)",
+  );
+  test.setTimeout(60 * 60_000);
+  page.setDefaultTimeout(4000);
   const t0 = Date.now();
   const skipped = new Map<string, string>();
   const todo: Cmd[] = [];
@@ -204,32 +245,51 @@ test("every palette command, in the state where it can run", async ({
     }
   };
 
-  await openVault(page);
-  errors.length = 0;
+  let state: "home" | "drawing" | "note" = "home";
+  const lastRan: { id: string | null } = { id: null };
+  const fresh = async () => {
+    await seedContext(page, state);
+    errors.length = 0;
+  };
+  const go = async (list: Cmd[]) => {
+    for (const c of list) {
+      const r = await run(page, c, errors, async () => {
+        if (lastRan.id) {
+          results.set(lastRan.id, [
+            ...(results.get(lastRan.id) ?? []),
+            "left the app in a state Escape does not leave (the palette would not open next)",
+          ]);
+        }
+        await fresh();
+      });
+      record(c, r);
+      if (r.ran) {
+        lastRan.id = c.id;
+      }
+    }
+    // eslint-disable-next-line no-console
+    console.log(
+      `PHASE ${state} done ${(Date.now() - t0) / 1000}s, ran ${ran.size}`,
+    );
+  };
   // 1. Home: nothing open.
-  for (const c of safe.filter((c) => !needs(c).drawing)) {
-    record(c, await run(page, c, errors));
+  if (!process.env.TN2_SKIP_HOME) {
+    await fresh();
+    await go(safe.filter((c) => !needs(c).drawing));
   }
-  console.log(`PHASE home done ${(Date.now() - t0) / 1000}s, ran ${ran.size}`);
   // 2. A drawing with everything selected.
-  await seedContext(page, "drawing");
-  for (const c of safe.filter((c) => !ran.has(c.id))) {
-    record(c, await run(page, c, errors));
-  }
-  console.log(
-    `PHASE drawing done ${(Date.now() - t0) / 1000}s, ran ${ran.size}`,
-  );
+  state = "drawing";
+  await fresh();
+  await go(safe.filter((c) => !ran.has(c.id)));
   // 3. A note.
-  await seedContext(page, "note");
-  for (const c of safe.filter((c) => !ran.has(c.id))) {
-    record(c, await run(page, c, errors));
-  }
-  console.log(`PHASE note done ${(Date.now() - t0) / 1000}s, ran ${ran.size}`);
+  state = "note";
+  await fresh();
+  await go(safe.filter((c) => !ran.has(c.id)));
   // 4. Destructive commands: each on a fresh throwaway vault, with a drawing open.
+  state = "drawing";
   for (const c of destructive) {
-    await openVault(page);
-    await seedContext(page, "drawing");
-    record(c, await run(page, c, errors));
+    await fresh();
+    await go([c]);
   }
 
   const never = todo.filter((c) => !ran.has(c.id));
