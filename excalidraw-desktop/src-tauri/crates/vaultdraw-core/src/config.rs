@@ -1751,7 +1751,27 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 174, "{settings:?}");
+        // Every documented key line (`key = value` or its `# key = value` example, outside the
+        // `[tools]` sample, not a `{}` table) must have been found by the scan above: counted
+        // here from the template text by plain line shape, so a new key needs no edit to a
+        // pinned number, and a key the scan cannot read still fails.
+        let mut table = String::new();
+        let mut lines_that_look_like_keys = 0;
+        for line in DEFAULT_CONFIG.lines() {
+            if let Some(name) = line.strip_prefix('[').and_then(|l| l.strip_suffix(']')) {
+                table = name.to_string();
+                continue;
+            }
+            let body = line.strip_prefix("# ").unwrap_or(line);
+            let shaped = body.split_once(" = ").is_some_and(|(k, v)| {
+                !k.is_empty() && k.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') && !v.starts_with('{')
+            });
+            if shaped && !table.is_empty() && table != "tools" {
+                lines_that_look_like_keys += 1;
+            }
+        }
+        assert_eq!(settings.len(), lines_that_look_like_keys, "{settings:?}");
+        assert!(settings.iter().filter(|s| s.4).count() > 100, "the template documents far more keys than this");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();
