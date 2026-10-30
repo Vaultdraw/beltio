@@ -523,7 +523,14 @@ fn name_rules_match_the_shared_table() {
     for c in table["cases"].as_array().unwrap() {
         let path = c["path"].as_str().unwrap();
         let invalid = c["invalid"].as_bool().unwrap();
-        let got_invalid = crate::paths::validate_relative(path).is_err();
+        let result = crate::paths::validate_relative(path);
+        let got_invalid = result.is_err();
+        if let (Err(e), Some(says)) = (&result, c.get("says").and_then(|v| v.as_str())) {
+            assert!(e.message.contains(says), "{}: {:?} should say {says:?}, said {:?}", c["name"], path, e.message);
+        }
+        if let Err(e) = &result {
+            assert!(!e.message.contains("invalid component"), "{}: raw wording {:?}", c["name"], e.message);
+        }
         if got_invalid != invalid {
             wrong.push(format!("{}: {:?} native invalid={got_invalid}, table says {invalid}", c["name"], path));
         }

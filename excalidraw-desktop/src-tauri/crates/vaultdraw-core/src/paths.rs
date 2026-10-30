@@ -65,6 +65,35 @@ pub fn component_is_invalid(part: &str) -> bool {
         || part.chars().any(|c| c.is_control() || "<>:\"|?*".contains(c))
         || is_windows_reserved_name(part)
 }
+/// Why one path component is refused, in plain words, or `None` when it is fine. The same words as
+/// `nameProblem` in sdk/api/shared/vaultPaths.ts (shared table: contract/name_rules.json). Windows
+/// device names are refused on every system on purpose, so a vault opens everywhere.
+pub fn component_problem(part: &str) -> Option<String> {
+    let shown = || if part.chars().count() > 40 { format!("\"{}...\"", part.chars().take(37).collect::<String>()) } else { format!("\"{part}\"") };
+    if part.is_empty() {
+        return Some("A name cannot be empty".into());
+    }
+    if part == "." || part == ".." {
+        return Some("A name cannot be only dots".into());
+    }
+    if part.len() > 255 {
+        return Some(format!("The name {} is too long: {} bytes, and the limit is 255", shown(), part.len()));
+    }
+    if part.ends_with('.') || part.ends_with(' ') {
+        return Some(format!("The name {} ends with a dot or a space, which Windows cannot hold", shown()));
+    }
+    if part.chars().any(|c| c.is_control()) {
+        return Some(format!("The name {} has a control character in it", shown()));
+    }
+    if let Some(c) = part.chars().find(|c| "<>:\"|?*".contains(*c)) {
+        return Some(format!("The character {c} is not allowed in a name ({})", shown()));
+    }
+    if is_windows_reserved_name(part) {
+        let stem = part.split('.').next().unwrap_or(part).to_ascii_uppercase();
+        return Some(format!("{stem} is a reserved Windows name, so Vaultdraw refuses it on every system to keep vaults portable ({})", shown()));
+    }
+    None
+}
 #[inline]
 pub fn validate_relative(path: &str) -> Result<Vec<String>> {
     if path.is_empty() {
@@ -83,8 +112,8 @@ pub fn validate_relative(path: &str) -> Result<Vec<String>> {
     }
     let mut out = Vec::new();
     for part in path.split('/') {
-        if component_is_invalid(part) {
-            return Err(err("INVALID_PATH", "Path contains an invalid component"));
+        if let Some(problem) = component_problem(part) {
+            return Err(err("INVALID_PATH", problem));
         }
         if part.eq_ignore_ascii_case(META_DIR) {
             return Err(err(

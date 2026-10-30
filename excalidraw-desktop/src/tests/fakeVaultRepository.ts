@@ -7,6 +7,7 @@
  */
 import { conflictOriginal, numberedCopyOriginal } from "../vault/syncNames";
 import { fileKind } from "../vault/fileKind";
+import { nameProblem } from "../../../sdk/api/shared/vaultPaths";
 
 import type {
   DrawingFile,
@@ -62,6 +63,11 @@ export function assertValidRelativePath(path: string): void {
         "INVALID_PATH",
         `traversal/empty segment rejected: ${path}`,
       );
+    }
+    // The native core's naming rules and words (shared table: contract/name_rules.json).
+    const problem = nameProblem(seg);
+    if (problem) {
+      throw makeError("INVALID_PATH", problem);
     }
   }
   if (segments.some((s) => s === ".excalidraw-vault")) {

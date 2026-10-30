@@ -44,12 +44,14 @@
   {
    "name": "name of 256 bytes",
    "path": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-   "invalid": true
+   "invalid": true,
+   "says": "too long"
   },
   {
    "name": "Windows device name CON",
    "path": "CON",
-   "invalid": true
+   "invalid": true,
+   "says": "reserved Windows name"
   },
   {
    "name": "Windows device name in lower case",
@@ -74,7 +76,8 @@
   {
    "name": "trailing dot",
    "path": "name.",
-   "invalid": true
+   "invalid": true,
+   "says": "ends with a dot or a space"
   },
   {
    "name": "trailing space",
@@ -84,7 +87,8 @@
   {
    "name": "colon",
    "path": "a:b",
-   "invalid": true
+   "invalid": true,
+   "says": "character :"
   },
   {
    "name": "question mark",

@@ -23,6 +23,47 @@ const BAD_CHARS = /[<>:"|?*]/;
 // eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u001f\u007f-\u009f]/;
 
+const shown = (name: string) =>
+  `"${name.length > 40 ? `${name.slice(0, 37)}...` : name}"`;
+
+/**
+ * Why one path component is refused, in plain words, or null when it is fine. The same rules and
+ * words as the Rust side's `component_problem` (paths.rs; one table, contract/name_rules.json).
+ * Reserved Windows names are refused on purpose, on every system, so a vault opens everywhere.
+ */
+export const nameProblem = (part: string): string | null => {
+  if (part === "") {
+    return "A name cannot be empty";
+  }
+  if (part === "." || part === "..") {
+    return "A name cannot be only dots";
+  }
+  if (utf8Length(part) > MAX_SEGMENT) {
+    return `The name ${shown(part)} is too long: ${utf8Length(
+      part,
+    )} bytes, and the limit is ${MAX_SEGMENT}`;
+  }
+  if (part.endsWith(".") || part.endsWith(" ")) {
+    return `The name ${shown(
+      part,
+    )} ends with a dot or a space, which Windows cannot hold`;
+  }
+  if (CONTROL.test(part)) {
+    return `The name ${shown(part)} has a control character in it`;
+  }
+  const bad = BAD_CHARS.exec(part);
+  if (bad) {
+    return `The character ${bad[0]} is not allowed in a name (${shown(part)})`;
+  }
+  const stem = part.split(".")[0].toUpperCase();
+  if (RESERVED.has(stem)) {
+    return `${stem} is a reserved Windows name, so Vaultdraw refuses it on every system to keep vaults portable (${shown(
+      part,
+    )})`;
+  }
+  return null;
+};
+
 const invalid = (message: string) =>
   new PluginApiError("INVALID_PATH", message);
 
@@ -72,17 +113,12 @@ export const checkVaultPath = (path: unknown, kind: VaultPathKind): string => {
     );
   }
   for (const part of parts) {
-    if (
-      part === "" ||
-      utf8Length(part) > MAX_SEGMENT ||
-      part.endsWith(".") ||
-      part.endsWith(" ") ||
-      CONTROL.test(part) ||
-      BAD_CHARS.test(part) ||
-      RESERVED.has(part.split(".")[0].toUpperCase()) ||
-      part.toLowerCase() === META_DIR
-    ) {
-      throw invalid("Path contains an invalid component");
+    const problem = nameProblem(part);
+    if (problem) {
+      throw invalid(problem);
+    }
+    if (part.toLowerCase() === META_DIR) {
+      throw invalid("Reserved vault metadata is not user-accessible");
     }
   }
   return path;

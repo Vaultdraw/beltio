@@ -116,8 +116,8 @@ test("a vault import with odd note names keeps every note", async ({
 
 // A-15: the import report explains a failed note with the file system's own words ("Path contains
 // an invalid component"). Say what is wrong: a name Windows cannot hold, a name too long, a
-// character the vault does not allow. Remove fixme to reproduce.
-test.fixme(
+// character the vault does not allow.
+test(
   "A-15: the import report gives plain reasons for a note it could not write",
   async ({ page }) => {
     await openVault(page, "?plugins=markdown-import");
@@ -155,6 +155,8 @@ test.fixme(
       return "";
     });
     expect(report).toContain("CON");
+    expect(report).toMatch(/reserved Windows name/);
+    expect(report).toMatch(/character : is not allowed/);
     expect(report, "failure reasons in plain words").not.toMatch(
       /invalid component|Path contains/i,
     );
