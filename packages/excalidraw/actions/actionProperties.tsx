@@ -27,6 +27,7 @@ import {
   isBoldFont,
   regularFontOf,
   rolePickUpdate,
+  roleAfterFontChange,
   type StrokeWidthKey,
 } from "@excalidraw/common";
 
@@ -1366,6 +1367,8 @@ export const actionChangeFontFamily = register<{
                 {
                   fontFamily: family,
                   lineHeight: getLineHeight(family),
+                  // Vaultdraw: a code role ends with the code font
+                  ...roleAfterFontChange(oldElement, family),
                 },
               );
 

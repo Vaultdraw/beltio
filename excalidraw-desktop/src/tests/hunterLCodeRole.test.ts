@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   FONT_FAMILY,
   getTextDisplayColor,
+  roleAfterFontChange,
   setDisplayTextRoleColor,
 } from "@excalidraw/common";
 import { newTextElement, Scene } from "@excalidraw/element";
@@ -24,7 +25,7 @@ const CODE_COLOR = "#2b8a3e";
 afterEach(() => setDisplayTextRoleColor(null));
 
 describe("hunter L-7: a code box changed back to a normal font", () => {
-  it.fails("is no longer painted in the code colour", () => {
+  it("is no longer painted in the code colour", () => {
     setDisplayTextRoleColor((role) => (role === "code" ? CODE_COLOR : null));
     // what typing `npm run` in Markdown mode makes (markdownTyping closeMark)
     const code = {
@@ -59,5 +60,24 @@ describe("hunter L-7: a code box changed back to a normal font", () => {
     const after = out.elements[0];
     expect(after.fontFamily).toBe(FONT_FAMILY.Excalifont);
     expect(getTextDisplayColor(after, false)).toBe(code.strokeColor);
+  });
+});
+
+describe("roleAfterFontChange (toimprove 264)", () => {
+  const code = { type: "text", customData: { role: "code", other: 1 } };
+  it("keeps the code role in the code font, regular or bold", () => {
+    expect(roleAfterFontChange(code, FONT_FAMILY.Cascadia)).toEqual({});
+  });
+  it("ends the code role (and only it) in any other font", () => {
+    expect(roleAfterFontChange(code, FONT_FAMILY.Excalifont)).toEqual({
+      customData: { other: 1 },
+    });
+  });
+  it("leaves headings and other elements alone", () => {
+    const heading = { type: "text", customData: { role: "h1" } };
+    expect(roleAfterFontChange(heading, FONT_FAMILY.Excalifont)).toEqual({});
+    expect(
+      roleAfterFontChange({ type: "rectangle" }, FONT_FAMILY.Excalifont),
+    ).toEqual({});
   });
 });
