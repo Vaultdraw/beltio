@@ -6157,6 +6157,10 @@ class App extends React.Component<AppProps, AppState> {
       maybeHandleArrowPointlikeDrag({ app: this, event });
     }
     if (isArrowKey(event.key)) {
+      // A nudge with the arrow keys is one undo step (the move is applied without a capture).
+      if (this.scene.getSelectedElements(this.state).length) {
+        this.store.scheduleCapture();
+      }
       bindOrUnbindBindingElements(
         this.scene.getSelectedElements(this.state).filter(isArrowElement),
         this.scene,
