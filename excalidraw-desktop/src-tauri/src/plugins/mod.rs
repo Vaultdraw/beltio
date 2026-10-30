@@ -9,6 +9,7 @@ mod exports;
 mod gateway;
 pub(crate) use gateway::GatewayError;
 mod install;
+mod net;
 mod manifest;
 pub(crate) use manifest::is_valid_id as is_valid_plugin_id;
 mod scan;
@@ -212,7 +213,7 @@ pub(crate) async fn plugin_call_raw(
         if row.route != gateway::Route::Raw {
             return Err(gateway::GatewayError::new("INVALID_ARGUMENT", format!("\"{method}\" is a JSON method: use plugin_call")));
         }
-        gateway::raw_call(&app, &method, &body)
+        gateway::raw_call(&app, &plugin_id, &method, &body)
     })
     .await
     .map_err(|e| gateway::GatewayError::new("INTERNAL", e.to_string()))??;

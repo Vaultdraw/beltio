@@ -814,8 +814,8 @@ fn data_key_is_optional_and_checked() {
 #[test]
 fn permission_rules() {
     bad(&with("permissions = [\"vault.delete\"]\n"), "unknown permission");
-    for reserved in ["net", "secret"] {
-        bad(&with(&format!("permissions = [\"{reserved}\"]\n")), "reserved");
+    for known in ["net", "secret"] {
+        assert!(manifest::parse(&with(&format!("permissions = [\"{known}\"]\n"))).is_ok(), "{known} is a permission now");
     }
     bad(&with("permissions = [\"vault.read\", \"vault.read\"]\n"), "duplicate permission");
     let nine = vec!["\"vault.read\""; 9].join(", ");
@@ -926,6 +926,12 @@ fn gateway_allowlist_maps_methods_to_permissions() {
             ("pdf.close", Some("pdf")),
             ("network.askImages", Some("network.images")),
             ("network.fetchImage", Some("network.images")),
+            ("net.open", Some("net")),
+            ("net.read", Some("net")),
+            ("net.close", Some("net")),
+            ("secret.set", Some("secret")),
+            ("secret.has", Some("secret")),
+            ("secret.delete", Some("secret")),
             ("storage.read", None),
             ("storage.write", None),
             ("markdown.parse", None),

@@ -59,6 +59,12 @@ pub(crate) const ALLOWLIST: &[Row] = &[
     Row { method: "pdf.close", permission: Some(PDF), route: Route::Raw },
     Row { method: "network.askImages", permission: Some(NETWORK_IMAGES), route: Route::Raw },
     Row { method: "network.fetchImage", permission: Some(NETWORK_IMAGES), route: Route::Raw },
+    Row { method: "net.open", permission: Some(NET), route: Route::Raw },
+    Row { method: "net.read", permission: Some(NET), route: Route::Raw },
+    Row { method: "net.close", permission: Some(NET), route: Route::Raw },
+    Row { method: "secret.set", permission: Some(SECRET), route: Route::Raw },
+    Row { method: "secret.has", permission: Some(SECRET), route: Route::Raw },
+    Row { method: "secret.delete", permission: Some(SECRET), route: Route::Raw },
     Row { method: "storage.read", permission: None, route: Route::StorageRead },
     Row { method: "storage.write", permission: None, route: Route::StorageWrite },
     Row { method: "markdown.parse", permission: None, route: Route::MarkdownParse },
@@ -80,6 +86,10 @@ pub(crate) const FOLDERS_IMPORT: &str = "folders.import";
 pub(crate) const PDF: &str = "pdf";
 /// The permission of the `network.*` rows: download the pictures a note shows from the web (consent purpose `images`).
 pub(crate) const NETWORK_IMAGES: &str = "network.images";
+/// The permission of the `net.*` rows: streamed requests to a provider (consent purpose `ai`; see `net.rs`).
+pub(crate) const NET: &str = "net";
+/// The permission of the `secret.*` rows: keep a key the plugin can use but never read back.
+pub(crate) const SECRET: &str = "secret";
 
 /// An error as the host sees it: `{code, message, ...detail}` (detail such as `reason: "dirty"`).
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -280,8 +290,12 @@ fn network_call(app: &tauri::AppHandle, method: &str, body: &[u8]) -> Result<Vec
 }
 
 /// Runs a `Route::Raw` method against the open vault (the one the control API calls active).
-pub(crate) fn raw_call(app: &tauri::AppHandle, method: &str, body: &[u8]) -> Result<Vec<u8>, GatewayError> {
+pub(crate) fn raw_call(app: &tauri::AppHandle, plugin_id: &str, method: &str, body: &[u8]) -> Result<Vec<u8>, GatewayError> {
     use tauri::Manager as _;
+    if method.starts_with("net.") || method.starts_with("secret.") {
+        let dirs = crate::config::resolve_dirs()?;
+        return Ok(super::net::call(&dirs.state, || crate::network::config_value(&dirs), plugin_id, method, body)?);
+    }
     if method.starts_with("pdf.") {
         return Ok(crate::pdf_import::gateway_call(method, body)?);
     }

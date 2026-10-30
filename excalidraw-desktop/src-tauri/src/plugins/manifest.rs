@@ -46,9 +46,7 @@ pub(crate) const RESERVED_EXTENSIONS: [&str; 15] = [
 ];
 
 /// Permissions a plugin may declare. A declaration and a consent line, not a sandbox.
-pub(crate) const PERMISSIONS: [&str; 7] = ["vault.read", "vault.write", "folders.import", "control", "pdf", "clipboard", "network.images"];
-/// Names kept for later API revisions: an app that knows them as reserved refuses a manifest that uses one.
-const RESERVED_PERMISSIONS: [&str; 2] = ["net", "secret"];
+pub(crate) const PERMISSIONS: [&str; 9] = ["vault.read", "vault.write", "folders.import", "control", "pdf", "clipboard", "network.images", "net", "secret"];
 
 /// A write permission changes files with no undo: adding one needs the user's review.
 pub(crate) fn is_write_permission(p: &str) -> bool {
@@ -584,9 +582,6 @@ fn check_permissions(list: &[String]) -> Result<(), String> {
     }
     let mut seen = HashSet::new();
     for p in list {
-        if RESERVED_PERMISSIONS.contains(&p.as_str()) {
-            return Err(format!("Permission '{p}' is reserved and cannot be used yet"));
-        }
         if !PERMISSIONS.contains(&p.as_str()) {
             return Err(format!("Unknown permission '{p}' (known: {})", PERMISSIONS.join(", ")));
         }

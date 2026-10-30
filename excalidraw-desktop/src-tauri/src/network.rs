@@ -58,9 +58,14 @@ pub(crate) fn check_consent(config: Option<&Value>, purpose: &str) -> Result<()>
 /// Reads `config.toml` in `dirs` and checks Offline mode and `purpose`. Call before any request.
 /// A config that cannot be read counts as the defaults (online).
 pub(crate) fn ensure_network_allowed(dirs: &config::Dirs, purpose: &str) -> Result<()> {
+    check_consent(config_value(dirs)?.as_ref(), purpose)
+}
+
+/// The parsed `config` part of the settings in `dirs` (what `check_consent` takes).
+pub(crate) fn config_value(dirs: &config::Dirs) -> Result<Option<Value>> {
     let loaded = config::load_settings_in(dirs)?;
     let value = serde_json::to_value(&loaded).map_err(|e| err("INTERNAL", e.to_string()))?;
-    check_consent(value.get("config"), purpose)
+    Ok(value.get("config").cloned())
 }
 
 /// `update_config` (the webview's write path) may change the network switches freely, but never
@@ -106,6 +111,7 @@ fn purpose_phrase(purpose: &str) -> String {
         "plugins" => "plugins".into(),
         "plugin_list" | "plugin_registry" => "the plugin list".into(),
         "images" => "pictures from web pages".into(),
+        "ai" => "AI requests".into(),
         "updates" => "the update check".into(),
         other => other.replace('_', " "),
     }
@@ -123,7 +129,7 @@ const MAX_REDIRECTS: usize = 3;
 /// debug builds of the app speak https to public hosts only.
 const ALLOW_LOOPBACK: bool = cfg!(test);
 
-fn is_loopback(url: &Url) -> bool {
+pub(crate) fn is_loopback(url: &Url) -> bool {
     match url.host() {
         Some(Host::Domain(d)) => d.eq_ignore_ascii_case("localhost"),
         Some(Host::Ipv4(ip)) => ip.is_loopback(),
@@ -282,7 +288,7 @@ pub(crate) async fn network_fetch_image(url: String) -> Result<tauri::ipc::Respo
 
 /// True for addresses a public host must never resolve to: private, link-local, CGNAT,
 /// unspecified, multicast and loopback.
-fn is_blocked_address(ip: IpAddr) -> bool {
+pub(crate) fn is_blocked_address(ip: IpAddr) -> bool {
     is_private_ip(ip)
         || ip.is_loopback()
         || ip.is_multicast()
@@ -291,7 +297,7 @@ fn is_blocked_address(ip: IpAddr) -> bool {
 
 /// Marks the error raised when a host name resolves to a forbidden address.
 #[derive(Debug)]
-struct ForbiddenAddress;
+pub(crate) struct ForbiddenAddress;
 impl std::fmt::Display for ForbiddenAddress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("The host resolves to a private or local address")
@@ -299,14 +305,14 @@ impl std::fmt::Display for ForbiddenAddress {
 }
 impl std::error::Error for ForbiddenAddress {}
 
-fn is_loopback_host(h: &str) -> bool {
+pub(crate) fn is_loopback_host(h: &str) -> bool {
     let h = h.trim_start_matches('[').trim_end_matches(']');
     h.eq_ignore_ascii_case("localhost") || h.parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback())
 }
 
 /// Judges resolved addresses. A loopback URL (tests) must resolve only to loopback addresses;
 /// any other host must resolve to none of the blocked ones (one bad answer refuses the host).
-fn check_resolved(loopback_url: bool, addrs: &[SocketAddr]) -> bool {
+pub(crate) fn check_resolved(loopback_url: bool, addrs: &[SocketAddr]) -> bool {
     addrs.iter().all(|a| if loopback_url { a.ip().is_loopback() } else { !is_blocked_address(a.ip()) })
 }
 
@@ -350,7 +356,7 @@ fn agent() -> ureq::Agent {
     agent_with(DefaultResolver::default())
 }
 
-fn net_error(e: ureq::Error) -> super::NativeError {
+pub(crate) fn net_error(e: ureq::Error) -> super::NativeError {
     match e {
         ureq::Error::Timeout(_) => err("NETWORK_TIMEOUT", "The request timed out"),
         ureq::Error::Io(ref io) if io.get_ref().is_some_and(|inner| inner.is::<ForbiddenAddress>()) => {
