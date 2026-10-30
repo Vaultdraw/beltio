@@ -33,6 +33,9 @@ snippets = []                # CSS snippets to apply, by file name in snippets/,
 offline = false              # Offline mode: true turns every internet feature off
 allow_themes = true          # false turns theme downloads off
 
+[onboarding]
+completed = false            # true once the first-run setup was finished or skipped
+
 [updates]
 check_on_startup = true      # one quiet look for a newer version after startup
 

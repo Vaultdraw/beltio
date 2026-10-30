@@ -686,6 +686,16 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
     },
   },
   {
+    table: "onboarding",
+    intro:
+      "The first-run setup. See [First-run setup](#first-run-setup).",
+    keys: {
+      completed: {
+        doc: "The first-run setup has been finished or skipped. `false` shows it again at the next start (an app that already has a recent vault never shows it by itself). The palette command **Run setup again** runs it any time.",
+      },
+    },
+  },
+  {
     table: "updates",
     intro: "The quiet update check. See [Network](#network).",
     keys: {

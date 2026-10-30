@@ -463,6 +463,10 @@ autosave_delay_ms = 500
 # api.github.com, codeload.github.com). Read only from this file, never from overrides.toml
 # allowed_hosts = []
 
+[onboarding]
+# The first-run setup was finished or skipped; false shows it again at the next start
+# completed = false
+
 [updates]
 # Look once for a newer version after the app starts; a small notice appears only if there is one
 # check_on_startup = true

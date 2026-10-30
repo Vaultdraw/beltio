@@ -241,6 +241,8 @@ interface VaultPreferencesBase {
   networkAllowUpdates: boolean | undefined;
   /** Look for a newer version once after startup (`updates.check_on_startup`, default true). */
   updatesCheckOnStartup: boolean;
+  /** The first-run setup has been finished or skipped (`onboarding.completed`, default false). */
+  onboardingCompleted: boolean;
   /** Extra hosts downloads may contact (`network.allowed_hosts`); Rust reads config.toml only. */
   networkAllowedHosts: string[];
   /** Where the community plugins list comes from (`plugins.registry_url`, https only). */
@@ -465,6 +467,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   networkOffline: false,
   networkEnabled: true,
   updatesCheckOnStartup: true,
+  onboardingCompleted: false,
   networkAllowThemes: undefined,
   networkAllowPlugins: undefined,
   networkAllowImages: undefined,
@@ -903,6 +906,11 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       parsed.updatesCheckOnStartup,
       isBoolean,
       d.updatesCheckOnStartup,
+    ),
+    onboardingCompleted: pick(
+      parsed.onboardingCompleted,
+      isBoolean,
+      d.onboardingCompleted,
     ),
     networkAllowThemes: pick(
       parsed.networkAllowThemes,

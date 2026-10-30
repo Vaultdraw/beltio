@@ -46,6 +46,8 @@ import { scheduleIdle } from "./platform/idle";
 import { useAppTags } from "./tags/useAppTags";
 import { useExtensions } from "./extensionSwitches/useExtensions";
 import { useNetworkMode } from "./network/useNetworkMode";
+import { useSetupCommand } from "./onboarding/useSetupCommand";
+import { useSetupVisible } from "./onboarding/useSetupVisible";
 import { SafeStartBanner } from "./safeStart/SafeStartBanner";
 import {
   listenSafeStartRequests,
@@ -261,6 +263,9 @@ const LinksDock = lazy(() =>
   })),
 );
 
+// The first-run setup (also "Run setup again"): a lazy chunk, fetched only when it shows.
+const SetupWizard = lazy(() => import("./onboarding/SetupWizard"));
+
 // The theme install dialog loads only when a command, Settings or the
 // "no longer built in" notice opens it.
 const ThemeBrowserDialog = lazy(() =>
@@ -354,6 +359,7 @@ export const VaultApp = ({
   useEffect(() => registerSafeStartCommands(), []);
   // Offline mode command, and the quiet update check once per launch.
   useNetworkMode(win ?? window);
+  useSetupCommand();
   // Extension bisect: Start, or the answers while one runs.
   useEffect(() => registerBisectCommands(win), [win]);
   useEffect(() => {
@@ -522,6 +528,7 @@ export const VaultApp = ({
   );
   useSnippets(doc, win);
   const { refresh: refreshAppearance } = appearance;
+  const setupVisible = useSetupVisible(!!vault, win);
   const appTheme = appearance.snapshot.mode;
   // The thumbnail service lives in ThumbnailsRoot (see there); save notices
   // reach it through this ref.
@@ -3099,6 +3106,49 @@ export const VaultApp = ({
     </ThumbnailsRoot>
   );
 
+  const handleSelectRecent = async (recentPath: string) => {
+    setOnboardingError(null);
+    setGlobalAlert(null);
+    setLoadingVault(true);
+    let chosen: VaultInfo | null = null;
+    try {
+      if (recentPath === lastVaultPath) {
+        const reopened = await repository.reopenVault();
+        if (reopened) {
+          if (reopened.path === recentPath) {
+            chosen = reopened;
+            await safelySwitchVault(reopened);
+            chosen = null;
+            return;
+          }
+          // Reopened a different vault path than requested; release it immediately
+          await repository.releaseVault(reopened.handle);
+        }
+      }
+      // Native desktop only persists the last opened vault for direct reopen.
+      // Route to folder picker with explanatory hint:
+      setGlobalAlert({
+        message: `Native desktop reopens the last vault automatically. Please select "${recentPath}" in the folder picker.`,
+        type: "info",
+      });
+      chosen = await repository.chooseVault(false);
+      if (chosen) {
+        await safelySwitchVault(chosen);
+      }
+    } catch (err: unknown) {
+      if (chosen) {
+        try {
+          await repository.releaseVault(chosen.handle);
+        } catch {}
+      }
+      const msg = errorMessage(err);
+      setOnboardingError(msg);
+      setGlobalAlert({ message: msg, type: "error" });
+    } finally {
+      setLoadingVault(false);
+    }
+  };
+
   if (!vault) {
     return withThumbnails(
       <div
@@ -3115,58 +3165,46 @@ export const VaultApp = ({
             dismissLabel="Dismiss settings problem"
           />
         )}
-        <Onboarding
-          recentVaults={recentVaults}
-          lastVaultPath={lastVaultPath}
-          onOpenVault={handleOpenVault}
-          onCreateVault={handleCreateVault}
-          onSelectRecent={async (recentPath) => {
-            setOnboardingError(null);
-            setGlobalAlert(null);
-            setLoadingVault(true);
-            let chosen: VaultInfo | null = null;
-            try {
-              if (recentPath === lastVaultPath) {
-                const reopened = await repository.reopenVault();
-                if (reopened) {
-                  if (reopened.path === recentPath) {
-                    chosen = reopened;
-                    await safelySwitchVault(reopened);
-                    chosen = null;
-                    return;
-                  }
-                  // Reopened a different vault path than requested; release it immediately
-                  await repository.releaseVault(reopened.handle);
-                }
-              }
-              // Native desktop only persists the last opened vault for direct reopen.
-              // Route to folder picker with explanatory hint:
-              setGlobalAlert({
-                message: `Native desktop reopens the last vault automatically. Please select "${recentPath}" in the folder picker.`,
-                type: "info",
-              });
-              chosen = await repository.chooseVault(false);
-              if (chosen) {
-                await safelySwitchVault(chosen);
-              }
-            } catch (err: unknown) {
-              if (chosen) {
-                try {
-                  await repository.releaseVault(chosen.handle);
-                } catch {}
-              }
-              const msg = errorMessage(err);
-              setOnboardingError(msg);
-              setGlobalAlert({ message: msg, type: "error" });
-            } finally {
-              setLoadingVault(false);
-            }
-          }}
-          onRemoveRecent={(p) => removeRecentVault(p, win)}
-          error={onboardingError}
-          loading={loadingVault}
-          ownerWindow={win}
-        />
+        {setupVisible
+          ? win && (
+              <Suspense fallback={null}>
+                <SetupWizard
+                  win={win}
+                  hasVault={false}
+                  recentVaults={recentVaults}
+                  lastVaultPath={lastVaultPath}
+                  onOpenVault={handleOpenVault}
+                  onCreateVault={handleCreateVault}
+                  onSelectRecent={handleSelectRecent}
+                  refreshAppearance={refreshAppearance}
+                  error={onboardingError}
+                  loading={loadingVault}
+                />
+              </Suspense>
+            )
+          : null}
+        {setupVisible && themeInstallRequest?.mode === "browse" && (
+          <Suspense fallback={null}>
+            <ThemeBrowserDialog
+              refresh={themeInstallRequest.refresh}
+              onClose={closeInstallDialog}
+              onThemeChanged={refreshAppearance}
+            />
+          </Suspense>
+        )}
+        {!setupVisible && (
+          <Onboarding
+            recentVaults={recentVaults}
+            lastVaultPath={lastVaultPath}
+            onOpenVault={handleOpenVault}
+            onCreateVault={handleCreateVault}
+            onSelectRecent={handleSelectRecent}
+            onRemoveRecent={(p) => removeRecentVault(p, win)}
+            error={onboardingError}
+            loading={loadingVault}
+            ownerWindow={win}
+          />
+        )}
       </div>,
     );
   }
@@ -3544,6 +3582,23 @@ export const VaultApp = ({
           onOpenRecovered={handleOpenRecovered}
           onClose={() => setShowRecoveryDialog(false)}
         />
+      )}
+
+      {setupVisible && win && (
+        <Suspense fallback={null}>
+          <SetupWizard
+            win={win}
+            hasVault
+            recentVaults={recentVaults}
+            lastVaultPath={lastVaultPath}
+            onOpenVault={handleOpenVault}
+            onCreateVault={handleCreateVault}
+            onSelectRecent={handleSelectRecent}
+            refreshAppearance={refreshAppearance}
+            error={onboardingError}
+            loading={loadingVault}
+          />
+        </Suspense>
       )}
 
       <WhichKeyHost win={win} />

@@ -61,6 +61,11 @@ export const enterVault = async (
   // In a narrow window ([layout] narrow_width) the file list is folded: the vault is open when
   // the shell is there, with or without the list.
   const shell = page.locator(".vault-main");
+  // A fresh browser profile shows the first-run setup before the vault picker:
+  // skip it, which lands on today's defaults and the picker below.
+  const skipSetup = page
+    .getByTestId("setup")
+    .getByRole("button", { name: "Skip setup" });
   await expect(async () => {
     if ((await navigator.isVisible()) || (await shell.isVisible())) {
       return;
@@ -69,6 +74,9 @@ export const enterVault = async (
     // button vanished because the vault opened by itself; one click is enough.
     // `beforeClick` runs on every poll that still sees the button: keep it
     // repeatable.
+    if (await skipSetup.isVisible()) {
+      await skipSetup.click({ timeout: 1000 });
+    }
     if (await onboarding.isVisible()) {
       await beforeClick?.();
     }

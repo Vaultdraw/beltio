@@ -320,6 +320,7 @@ type ConfigField =
   | "networkOffline"
   | "networkEnabled"
   | "updatesCheckOnStartup"
+  | "onboardingCompleted"
   | "networkAllowThemes"
   | "networkAllowPlugins"
   | "networkAllowImages"
@@ -493,6 +494,12 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     // The old master switch: false still means Offline mode (older configs).
     field: "networkEnabled",
     key: "network.enabled",
+    expected: "true or false",
+    valid: (v) => typeof v === "boolean",
+  },
+  {
+    field: "onboardingCompleted",
+    key: "onboarding.completed",
     expected: "true or false",
     valid: (v) => typeof v === "boolean",
   },
