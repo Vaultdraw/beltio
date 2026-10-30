@@ -58,14 +58,17 @@ export function toggleTask(
   if (at === undefined) {
     return null;
   }
-  const lines = text.split("\n");
-  if (!TASK.test(lines[at])) {
+  // Split the way the reading view does (CRLF, lone CR or LF). The separators stay in `parts`
+  // at odd indexes, so the file keeps its own line ends when it is written back.
+  const parts = text.split(/(\r\n|\r|\n)/);
+  const line = parts[at * 2];
+  if (line === undefined || !TASK.test(line)) {
     return null;
   }
-  lines[at] = lines[at].replace(
+  parts[at * 2] = line.replace(
     TASK,
     (_m, a: string, mark: string, b: string) =>
       `${a}${mark === " " ? "x" : " "}${b}`,
   );
-  return lines.join("\n");
+  return parts.join("");
 }

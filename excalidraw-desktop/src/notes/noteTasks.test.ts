@@ -31,4 +31,10 @@ describe("toggleTask", () => {
   it("returns null for a missing task", () => {
     expect(toggleTask(text, 3)).toBeNull();
   });
+  it("ticks a task in a note with old-Mac line ends (a lone CR), and keeps them", () => {
+    const old = "- [ ] a\r- [ ] b\r- [ ] c";
+    expect(taskLines(old)).toEqual([0, 1, 2]);
+    expect(toggleTask(old, 1)).toBe("- [ ] a\r- [x] b\r- [ ] c");
+    expect(toggleTask("- [ ] a\r\n- [ ] b\n", 1)).toBe("- [ ] a\r\n- [x] b\n");
+  });
 });
