@@ -77,7 +77,7 @@ describe("toimprove 238: a picked colour wins, black included", () => {
       selectedElementIds: { [withRole.id]: true, [plain.id]: true },
     } as never;
     const result = actionChangeStrokeColor.perform(
-      [withRole, plain],
+      [withRole, plain] as never,
       appState,
       { color: "#1e1e1e" },
       null as never,
