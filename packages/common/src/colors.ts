@@ -135,6 +135,13 @@ export const setDisplayTextRoleColor = (
   displayColorListeners.forEach((listener) => listener());
 };
 
+/**
+ * `customData` flag set when the user picks a stroke colour for a text with a
+ * role: the pick wins over the role's colour, even when it is the default
+ * black every new heading also stores.
+ */
+export const ROLE_COLOR_PICKED = "roleColorPicked";
+
 /** On-screen colour of a text: its role's colour, else the stored one through the display filter. */
 export const getTextDisplayColor = (
   element: {
@@ -144,7 +151,7 @@ export const getTextDisplayColor = (
   isDarkMode: boolean,
 ): string => {
   const role = displayTextRoleColor && element.customData?.role;
-  if (typeof role === "string") {
+  if (typeof role === "string" && !element.customData?.[ROLE_COLOR_PICKED]) {
     const base = element.customData?.roleBase;
     const color = displayTextRoleColor!(
       role,
