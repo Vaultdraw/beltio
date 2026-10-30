@@ -160,3 +160,18 @@ describe("commitCanvasTextEdit", () => {
     expect(() => commitCanvasTextEdit(null)).not.toThrow();
   });
 });
+
+describe("listFocus and buttons inside a list (toimprove 239)", () => {
+  it.each([
+    ["the list root", "root", true],
+    ["a tree row", "row", true],
+    ["a settings tab item", "tab", true],
+    ["a row's More actions button", "more", false],
+  ])("focus on %s: list keys %s", (_label, id, expected) => {
+    add(`<div id="root" data-keylist tabindex="0">
+      <div id="row" role="treeitem" tabindex="-1"><button id="more">More actions</button></div>
+      <button id="tab" role="tab">Page</button></div>`);
+    (document.getElementById(id) as HTMLElement).focus();
+    expect(readContext(document, app).listFocus).toBe(expected);
+  });
+});

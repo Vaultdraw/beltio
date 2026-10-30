@@ -37,19 +37,18 @@ test("sanity: a click on More actions opens the row menu", async ({ page }) => {
 });
 
 for (const key of ["Enter", "Space"]) {
-  test.fail(
-    `toimprove 239: ${key} on a focused More actions button opens the row menu`,
-    async ({ page }) => {
-      await openVault(page);
-      await focusMore(page);
-      await page.keyboard.press(key === "Space" ? " " : key);
-      await expect(page.locator(`[data-tree-path="DSA"]`)).toHaveAttribute(
-        "aria-expanded",
-        "true",
-      );
-      await expect(
-        page.getByRole("menu", { name: /Actions for Graphs/ }),
-      ).toBeVisible({ timeout: 2000 });
-    },
-  );
+  test(`toimprove 239: ${key} on a focused More actions button opens the row menu`, async ({
+    page,
+  }) => {
+    await openVault(page);
+    await focusMore(page);
+    await page.keyboard.press(key === "Space" ? " " : key);
+    await expect(page.locator(`[data-tree-path="DSA"]`)).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await expect(
+      page.getByRole("menu", { name: /Actions for Graphs/ }),
+    ).toBeVisible({ timeout: 2000 });
+  });
 }

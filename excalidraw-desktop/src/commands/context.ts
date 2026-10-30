@@ -1,4 +1,6 @@
 /** Context facts the dispatcher checks a command's `when` against. */
+import { isNestedControl } from "../components/keyTarget";
+
 import { PRESENT_KEY, readCustomContextKey } from "./contextKeys";
 
 import type { CommandContext, WhenClause } from "./types";
@@ -81,7 +83,10 @@ export function readContext(doc: Document, app: AppContext): CommandContext {
       !!doc.querySelector(".vault-modal-backdrop") ||
       readCustomContextKey(PRESENT_KEY),
     // listNav.ts sets the attribute only while a list is registered.
-    listFocus: !!scopeRoot?.hasAttribute("data-keylist"),
+    // A button inside a row (More actions) takes its own Enter and Space (toimprove 239).
+    listFocus:
+      !!scopeRoot?.hasAttribute("data-keylist") &&
+      !isNestedControl(active, scopeRoot),
     galleryFocus: scope === "gallery",
     graphFocus: scope === "graph",
   };

@@ -25,3 +25,22 @@ export function keyBelongsToControl(
       : true)
   );
 }
+
+// A list's own items (a tree row, a settings tab) carry the list's keys even when they are buttons.
+const LIST_ITEM =
+  '[role="treeitem"], [role="option"], [role="tab"], [role="row"], [role="gridcell"]';
+
+/**
+ * The focused element is a control of its own inside a key list (a row's "More actions"
+ * button, "Remove from recent list"): Enter and Space press it, the list's keys stand down
+ * (toimprove 239, 226).
+ */
+export function isNestedControl(el: Element | null, root: Element): boolean {
+  return (
+    !!el &&
+    el !== root &&
+    root.contains(el) &&
+    el.matches(CONTROL) &&
+    !el.matches(LIST_ITEM)
+  );
+}
