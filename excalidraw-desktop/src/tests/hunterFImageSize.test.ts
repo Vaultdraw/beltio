@@ -23,12 +23,12 @@ describe("hunter F-16: the reading view reads the |size of a Markdown image", ()
   it("(context) the [[embed]] form carries its size", () => {
     expect(html("![[a.png|200]]")).toContain('data-alias="200"');
   });
-  it.fails("![alt|100](a.png) has width 100 and alt 'alt'", () => {
+  it("![alt|100](a.png) has width 100 and alt 'alt'", () => {
     const out = html("![alt|100](a.png)");
     expect(out).toMatch(/width="100"/);
     expect(out).toContain('alt="alt"');
   });
-  it.fails("![alt|100x50](a.png) has width and height", () => {
+  it("![alt|100x50](a.png) has width and height", () => {
     const out = html("![alt|100x50](a.png)");
     expect(out).toMatch(/width="100"/);
     expect(out).toMatch(/height="50"/);

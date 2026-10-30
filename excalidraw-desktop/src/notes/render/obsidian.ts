@@ -9,6 +9,7 @@
  */
 import { Marked } from "marked";
 
+import { altAndSize } from "./imageSize";
 import { highlightCode } from "./highlight";
 
 import type { Tokens, TokenizerAndRendererExtension } from "marked";
@@ -212,6 +213,15 @@ marked.use({
       return `<h${depth} id="${esc(slug(text))}">${this.parser.parseInline(
         tokens,
       )}</h${depth}>\n`;
+    },
+    // `![alt|100](pic.png)` and `![alt|100x50](pic.png)`: the size is not part of the alt text.
+    image({ href, title, text }: Tokens.Image) {
+      const { alt, width, height } = altAndSize(text);
+      return `<img src="${esc(href)}" alt="${esc(alt)}"${
+        title ? ` title="${esc(title)}"` : ""
+      }${width ? ` width="${width}"` : ""}${
+        height ? ` height="${height}"` : ""
+      }>`;
     },
     code({ text, lang }: Tokens.Code) {
       const language = (lang ?? "").trim().split(/\s+/)[0];

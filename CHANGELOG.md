@@ -24,6 +24,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **`![alt|100](pic.png)` is sized in a note's reading view,** as in Obsidian (`|100x50` sets width and height too); it used to keep `alt|100` as the alt text at full size.
 - **A plain Markdown link to a note works in the reading view.** `[text](Other.md)`, `(My%20Page.md)` and `(Folder/Other.md#Heading)` (what Obsidian writes with Wikilinks off) open the note, Cmd-click opens a new tab; a click used to try to navigate the app window itself.
 - **New drawing and New folder tell you why a name is refused, and keep what you typed.** A name the vault refuses (`a:b`, `.x`, `CON`) or one that already exists used to close the dialog with a notice at the top; now the dialog stays open and says why under the field.
 - **An empty properties block (`---` then `---`) is hidden in a note's reading view,** as in Obsidian (it showed two horizontal rules).
