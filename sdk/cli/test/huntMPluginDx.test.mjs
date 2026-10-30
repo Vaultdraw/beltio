@@ -26,8 +26,8 @@ const findings = (text) => {
 };
 
 describe("min_api against the API revision this SDK implements (toimprove M-4)", () => {
-  it("sanity: the revision is 1.0.0 and min_api equal to it is clean", () => {
-    expect(REVISION).toBe("1.0.0");
+  it("sanity: min_api equal to the revision is clean", () => {
+    expect(REVISION).toMatch(/^1\.\d+\.\d+$/);
     expect(findings(`${MANIFEST}min_api = "${REVISION}"\n`)).toEqual([]);
   });
 
