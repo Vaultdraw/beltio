@@ -1,5 +1,5 @@
 {
- "about": "Names a person can type for a drawing or a folder, and whether the native backend (paths.rs component_is_invalid, applied to the file name with its .excalidraw extension for a drawing) accepts them. The Name dialogs (validateEntryName) must refuse every backendOk=false name with a sentence of their own; otherwise the user types a name, presses Save and gets a vague backend error. Both suites read this file: src/tests/nameContract.test.ts and the paths.rs test name_contract_table.",
+ "about": "Names a person can type for a drawing or a folder, and whether the native backend (paths.rs component_is_invalid plus fsops reject_hidden for create and move, applied to the file name with its .excalidraw extension for a drawing) accepts them. The Name dialogs (validateEntryName) must refuse every backendOk=false name with a sentence of their own; otherwise the user types a name, presses Save and gets a vague backend error. Both suites read this file: src/tests/nameContract.test.ts and the paths.rs test name_contract_table.",
  "cases": [
   {
    "label": "plain",
@@ -65,7 +65,7 @@
    "label": "leading dot",
    "name": ".hidden",
    "kind": "drawing",
-   "backendOk": true
+   "backendOk": false
   },
   {
    "label": "leading dash",
@@ -137,7 +137,7 @@
    "label": "leading dot",
    "name": ".hidden",
    "kind": "folder",
-   "backendOk": true
+   "backendOk": false
   },
   {
    "label": "leading dash",
@@ -237,6 +237,18 @@
    "name": "foo.",
    "kind": "drawing",
    "backendOk": true
+  },
+  {
+   "label": "C1 control character (U+0085)",
+   "name": "a\u0085b",
+   "kind": "drawing",
+   "backendOk": false
+  },
+  {
+   "label": "C1 control character (U+009F)",
+   "name": "a\u009fb",
+   "kind": "folder",
+   "backendOk": false
   }
  ]
 }

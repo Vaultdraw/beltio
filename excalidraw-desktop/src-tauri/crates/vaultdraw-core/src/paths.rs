@@ -174,7 +174,8 @@ mod name_contract_tests {
                 o => o["repeat"].as_str().unwrap().repeat(o["times"].as_u64().unwrap() as usize),
             };
             let component = if row["kind"] == "drawing" { format!("{name}.excalidraw") } else { name.clone() };
-            let ok = !component_is_invalid(&component);
+            // The whole create/move rule: a bad component, or a dot name (fsops::reject_hidden, hunter E-1).
+            let ok = !component_is_invalid(&component) && crate::fsops::reject_hidden(&component).is_ok();
             assert_eq!(ok, row["backendOk"].as_bool().unwrap(), "{} ({})", row["label"], row["kind"]);
         }
     }
