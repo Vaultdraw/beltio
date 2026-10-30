@@ -1,7 +1,7 @@
 #!/bin/sh
 # Linux user-experience check on an INSTALLED Vaultdraw (/usr/bin), headless: Xvfb, a window manager and the real X clipboard.
-#   1. the webview reports a Linux platform (the file-manager command is named for Linux, not Finder)
-#   2. shortcut labels show Ctrl, not Cmd (a screenshot of the palette is saved to $OUT/palette.png)
+#   1+2. the webview does not report a Mac: shortcut labels show Ctrl, not Cmd (the palette screenshot is saved to $OUT/palette.png; look at it),
+#        and the reveal command says "file manager", not Finder
 #   3. "Reveal in file manager" runs dbus-send ShowItems, and xdg-open on the folder when that fails (PATH shims log the commands)
 #   4. a window-manager close right after an unsaved edit still saves it (the quit barrier)
 #   5. copy and paste through the real clipboard (xclip reads what Ctrl+C put there; Ctrl+V pastes it in another drawing)
@@ -31,7 +31,7 @@ $CLI open Alpha.excalidraw >/dev/null; sleep 2
 # 2. labels and 1. Linux platform wording
 $CLI cmd run palette.commands >/dev/null; sleep 2; xdotool type "open link under"; sleep 1; import -window root "$OUT/palette.png"
 $CLI cmd list | grep -q 'Mod+Shift+P' && pass "command list is available" || fail "command list"
-$CLI --json cmd list | grep -q '"title": *"Reveal drawing in file manager"' && pass "platform is Linux: the reveal command says file manager, not Finder" || fail "reveal command still says Finder (navigator.platform is not Linux?)"
+$CLI --json cmd list | grep -q '"title": *"Reveal drawing in file manager"' && pass "the reveal command says file manager, not Finder" || fail "the reveal command still says Finder"
 xdotool key Escape; sleep 1
 echo "(look at $OUT/palette.png: shortcut chips must read Ctrl, never Cmd)"
 
