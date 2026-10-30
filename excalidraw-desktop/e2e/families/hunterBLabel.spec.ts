@@ -1,3 +1,4 @@
+import { lineStartKey } from "../nativeKeys";
 import { expect, type Page } from "@playwright/test";
 
 import { test } from "../fixture";
@@ -112,7 +113,7 @@ test("hunter B: a quote in a shape label drops back to body text with Backspace 
     b.y + b.height * 0.7 + 80,
   );
   await expect(page.locator(ta)).toBeFocused();
-  await page.keyboard.press("Meta+ArrowLeft");
+  await page.keyboard.press(lineStartKey);
   await page.keyboard.press("Backspace");
   await page.keyboard.press("Escape");
   await expect

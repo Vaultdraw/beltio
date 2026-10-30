@@ -337,8 +337,7 @@ test.describe("library item names", () => {
       .click();
     const box = await canvasBox(page);
     await page.mouse.click(box.x + box.width / 2, box.y + box.height - 20);
-    await page.keyboard.press("Control+a");
-    await page.keyboard.press("ControlOrMeta+a");
+    await page.keyboard.press("Meta+a");
     await openLibrary(page);
     const personal = page
       .getByTestId("library-section-personal")

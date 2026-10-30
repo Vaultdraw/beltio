@@ -71,7 +71,7 @@ test("Markdown mode: **Bold** and `code` typed alone in a box render, Cmd+B and 
   // Cmd+Z right after the closing mark brings the marks back
   await typeBox(page, 0.6, 0.9, "**x**");
   await expect(page.locator(textarea)).toHaveValue("x");
-  await page.keyboard.press("ControlOrMeta+z");
+  await page.keyboard.press("Meta+z");
   await expect(page.locator(textarea)).toHaveValue("**x**");
   await page.keyboard.press("Escape");
 
@@ -86,11 +86,11 @@ test("Markdown mode: **Bold** and `code` typed alone in a box render, Cmd+B and 
   await expect
     .poll(async () => (await textWith(page, "t"))?.fontFamily > 100)
     .toBe(true);
-  await page.keyboard.press("ControlOrMeta+b");
+  await page.keyboard.press("Meta+b");
   await expect
     .poll(async () => (await textWith(page, "t"))?.fontFamily < 100)
     .toBe(true);
-  await page.keyboard.press("ControlOrMeta+b");
+  await page.keyboard.press("Meta+b");
   await expect
     .poll(async () => (await textWith(page, "t"))?.fontFamily > 100)
     .toBe(true);

@@ -1,3 +1,4 @@
+import { nativeMod } from "../nativeKeys";
 import { expect, type Page } from "@playwright/test";
 
 import { test } from "../fixture";
@@ -49,7 +50,7 @@ test("hunter B: seven # stays literal; empty heading Enter goes back to body", a
   await newText(page);
   await type(page, "####### x");
   await expect(page.locator(ta)).toHaveValue("####### x");
-  await page.keyboard.press("Meta+a");
+  await page.keyboard.press(`${nativeMod}+a`);
   await page.keyboard.press("Backspace");
   await type(page, "## ");
   await expect(page.locator(ta)).toHaveValue("");

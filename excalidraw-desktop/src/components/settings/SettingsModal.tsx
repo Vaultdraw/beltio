@@ -60,6 +60,11 @@ const isEditable = (el: Element | null) =>
     el.tagName === "SELECT" ||
     (el as HTMLElement).isContentEditable);
 
+// A switch or radio has no Escape of its own.
+const isToggleInput = (el: Element | null) =>
+  el instanceof HTMLInputElement &&
+  (el.type === "checkbox" || el.type === "radio");
+
 const SettingList = ({
   settings,
   inSearch = false,
@@ -198,6 +203,18 @@ export const SettingsModal = ({
     // Settings joins the Escape stack: a dialog opened over it (an uninstall confirm) closes
     // alone; Settings answers only when it is the top layer.
     const layer = pushEscapeLayer();
+    // Did a control inside Settings handle this Escape? The modal sees the key before the
+    // document does, so a mark set here was not set by the editor underneath. (Judging by
+    // "the focus is inside Settings" kept Settings open on Linux, where a click focuses the
+    // button or switch and the canvas has already marked the key handled.)
+    let handledInside: KeyboardEvent | null = null;
+    const modalEl = modalRef.current;
+    const markHandled = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && e.defaultPrevented) {
+        handledInside = e;
+      }
+    };
+    modalEl?.addEventListener("keydown", markHandled);
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || !layer.isTop()) {
         return;
@@ -208,7 +225,8 @@ export const SettingsModal = ({
       const target = e.target instanceof Element ? e.target : null;
       if (
         e.defaultPrevented &&
-        (isEditable(target) || !!modalRef.current?.contains(target))
+        (isEditable(target) || handledInside === e) &&
+        !(isToggleInput(target) && handledInside !== e)
       ) {
         return;
       }
@@ -222,6 +240,7 @@ export const SettingsModal = ({
     targetDoc.addEventListener("keydown", handleKeyDown);
     return () => {
       layer.pop();
+      modalEl?.removeEventListener("keydown", markHandled);
       targetDoc.removeEventListener("keydown", handleKeyDown);
     };
   }, [doc, onClose]);

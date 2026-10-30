@@ -1,3 +1,4 @@
+import { nativeMod } from "../nativeKeys";
 import { expect, type Page } from "@playwright/test";
 
 import { test } from "../fixture";
@@ -66,8 +67,8 @@ test("hunter B: 2,000 elements: select all, move, undo, redo, copy-paste and exp
   await expect.poll(async () => (await api(page)).x0).toBe(before.x0 + 5);
   // copy and paste: doubles
   await page.keyboard.press("Meta+a");
-  await page.keyboard.press("Meta+c");
-  await page.keyboard.press("Meta+v");
+  await page.keyboard.press(`${nativeMod}+c`);
+  await page.keyboard.press(`${nativeMod}+v`);
   await expect
     .poll(async () => (await api(page)).n, { timeout: 20_000 })
     .toBe(2 * N);

@@ -1,3 +1,4 @@
+import { nativeMod, lineStartKey } from "../nativeKeys";
 import { expect, type Page } from "@playwright/test";
 
 import { test } from "../fixture";
@@ -123,15 +124,15 @@ test("hunter B: Cmd+Z after a bullet conversion brings '- ' back; Backspace afte
   await expect(page.locator(ta)).toHaveValue("• ");
   await page.keyboard.press("Meta+z");
   await expect(page.locator(ta)).toHaveValue("- ");
-  await page.keyboard.press("Meta+a");
+  await page.keyboard.press(`${nativeMod}+a`);
   await page.keyboard.press("Backspace");
   await type(page, "- item");
-  await page.keyboard.press("Meta+ArrowLeft");
+  await page.keyboard.press(lineStartKey);
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("Backspace");
   await expect(page.locator(ta)).toHaveValue("item");
-  await page.keyboard.press("Meta+a");
+  await page.keyboard.press(`${nativeMod}+a`);
   await page.keyboard.press("Backspace");
   await type(page, "# Hello world");
   for (let i = 0; i < 6; i++) {

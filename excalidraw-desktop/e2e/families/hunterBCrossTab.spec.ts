@@ -1,3 +1,4 @@
+import { nativeMod } from "../nativeKeys";
 import { expect, type Page } from "@playwright/test";
 
 import { test } from "../fixture";
@@ -126,11 +127,11 @@ test("hunter B: copy in one drawing's tab and paste in another keeps labels, rol
   await expect.poll(async () => (await dump(page)).els.length).toBe(4);
   await focusCanvas(page);
   await page.keyboard.press("Meta+a");
-  await page.keyboard.press("Meta+c");
+  await page.keyboard.press(`${nativeMod}+c`);
   await clickTree(page, "B", ["Meta"]);
   await expect.poll(async () => (await dump(page)).els.length).toBe(1);
   await focusCanvas(page);
-  await page.keyboard.press("Meta+v");
+  await page.keyboard.press(`${nativeMod}+v`);
   await expect.poll(async () => (await dump(page)).els.length).toBe(5);
   const d = await dump(page);
   const box = d.els.find((e) => e.type === "rectangle" && e.id !== "other")!;

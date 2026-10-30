@@ -146,7 +146,7 @@ test("Markdown mode in dark: lists, tasks (Toggle task) and a quote; the Setting
   await page.keyboard.press("Enter");
   await page.keyboard.type("[ ] call mum", { delay: 15 });
   // Toggle task (Cmd/Ctrl+L) on the caret's line
-  await page.keyboard.press("ControlOrMeta+l");
+  await page.keyboard.press("Meta+l");
   await expect(page.locator(textarea)).toHaveValue(
     "• milk\n• eggs\n☑ call mum",
   );

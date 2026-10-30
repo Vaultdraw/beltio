@@ -1,3 +1,4 @@
+import { nativeMod } from "./nativeKeys";
 import { expect, type Page } from "@playwright/test";
 
 import { test } from "./fixture";
@@ -732,8 +733,8 @@ test("groups and editing: groups, nesting, Alt-drag, duplicate, paste, nudge, lo
   expect(dup.id).not.toBe(copy.id);
   near(dup.x, copy.x + 10, 3, "duplicate offset");
   // copy and paste
-  await page.keyboard.press("Meta+KeyC");
-  await page.keyboard.press("Meta+KeyV");
+  await page.keyboard.press(`${nativeMod}+KeyC`);
+  await page.keyboard.press(`${nativeMod}+KeyV`);
   await expect.poll(() => count(page)).toBe(total0 + 3);
   // undo / redo walks each of those
   await undo(page);

@@ -51,7 +51,7 @@ test("hunter I: Cmd+B while typing a box with Markdown mode on makes it bold (co
   await open(page);
   await editor(page).getByTestId("markdown-chip").click();
   await typeBox(page, 0.3, 0.8, "loud");
-  await page.keyboard.press("ControlOrMeta+b");
+  await page.keyboard.press("Meta+b");
   await page.keyboard.press("Escape");
   await (await fontOf(page, "loud")).toBeGreaterThan(100);
   expect(errors).toEqual([]);
@@ -63,7 +63,7 @@ test("hunter I: Cmd+B while typing a box with Markdown mode off makes it bold, a
   const errors = trackErrors(page);
   await open(page);
   await typeBox(page, 0.3, 0.8, "plain");
-  await page.keyboard.press("ControlOrMeta+b");
+  await page.keyboard.press("Meta+b");
   await page.keyboard.press("Escape");
   await (await fontOf(page, "plain")).toBeGreaterThan(100);
   expect(errors).toEqual([]);
@@ -81,7 +81,7 @@ test("hunter I-5 (toimprove 220): Cmd+B typed in the navigator search box does n
   const search = page.getByPlaceholder("Search drawings and text…");
   await search.click();
   await search.type("gra");
-  await page.keyboard.press("ControlOrMeta+b");
+  await page.keyboard.press("Meta+b");
   // give a wrong toggle time to land and save
   await page.waitForTimeout(3500);
   expect((await textWith(page, "keep"))?.fontFamily).toBeLessThan(100);
@@ -96,11 +96,11 @@ test("hunter I: Cmd+B on a selected text is one undo step; Cmd+Shift+Z redoes it
   await typeBox(page, 0.3, 0.8, "step");
   await page.keyboard.press("Escape");
   await (await fontOf(page, "step")).toBeLessThan(100);
-  await page.keyboard.press("ControlOrMeta+b");
+  await page.keyboard.press("Meta+b");
   await (await fontOf(page, "step")).toBeGreaterThan(100);
-  await page.keyboard.press("ControlOrMeta+z");
+  await page.keyboard.press("Meta+z");
   await (await fontOf(page, "step")).toBeLessThan(100);
-  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await page.keyboard.press("Meta+Shift+z");
   await (await fontOf(page, "step")).toBeGreaterThan(100);
   expect(errors).toEqual([]);
 });
@@ -119,13 +119,13 @@ test("hunter I: Cmd+L ticks the task of the selected text and ticks it back (cov
       timeout: 10_000,
     })
     .toBe(true);
-  await page.keyboard.press("ControlOrMeta+l");
+  await page.keyboard.press("Meta+l");
   await expect
     .poll(async () => !!(await textWith(page, "☑ buy milk")), {
       timeout: 10_000,
     })
     .toBe(true);
-  await page.keyboard.press("ControlOrMeta+l");
+  await page.keyboard.press("Meta+l");
   await expect
     .poll(async () => !!(await textWith(page, "☐ buy milk")), {
       timeout: 10_000,
@@ -138,13 +138,13 @@ test("hunter I: Cmd+L ticks the task of the selected text and ticks it back (cov
 // Each row: what is typed on the canvas, the key, and how the saved text must still read.
 const FIELD_KEYS = [
   {
-    key: "ControlOrMeta+l",
+    key: "Meta+l",
     typed: "- [ ] call Ana",
     shown: "☐ call Ana",
     same: (el: any) => el?.text === "☐ call Ana",
   },
   {
-    key: "ControlOrMeta+b",
+    key: "Meta+b",
     typed: "plain words",
     shown: "plain words",
     same: (el: any) => el?.fontFamily < 100,
@@ -192,7 +192,7 @@ test("hunter I-12 (toimprove 237): Cmd+Z right after Enter on a heading takes th
   await page.keyboard.press("Enter");
   // a new, empty body box is being edited below the heading
   await expect(page.locator(textarea)).toHaveValue("");
-  await page.keyboard.press("ControlOrMeta+z");
+  await page.keyboard.press("Meta+z");
   // back in the heading, at its end, as before the Enter
   await expect(page.locator(textarea)).toHaveValue("Plan", { timeout: 3000 });
   expect(errors).toEqual([]);
