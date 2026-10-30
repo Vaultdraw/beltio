@@ -20,7 +20,7 @@ const e = (name: string, kind: VaultEntry["kind"]): VaultEntry => ({
 });
 
 describe("hunter H-1: A to Z sorts by the shown name, not the file name", () => {
-  it.fails("Untitled comes before Untitled 2 and Untitled 10", () => {
+  it("Untitled comes before Untitled 2 and Untitled 10", () => {
     const shown = sortEntries(
       [
         e("Untitled 10.excalidraw", "drawing"),
@@ -32,7 +32,7 @@ describe("hunter H-1: A to Z sorts by the shown name, not the file name", () => 
     expect(shown).toEqual(["Untitled", "Untitled 2", "Untitled 10"]);
   });
 
-  it.fails("a note and a drawing: Notes before Notes 2", () => {
+  it("a note and a drawing: Notes before Notes 2", () => {
     const shown = sortEntries(
       [e("Notes 2.excalidraw", "drawing"), e("Notes.md", "note")],
       "name_asc",

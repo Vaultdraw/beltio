@@ -3,6 +3,8 @@
  * and functions (no React, no preferences) so the settings schema, the tree
  * builder and tests share one definition.
  */
+import { entryDisplayName } from "./fileKind";
+
 import type { VaultEntry } from "./types";
 
 export const SORT_ORDERS = [
@@ -33,6 +35,15 @@ const collator = new Intl.Collator(undefined, {
   sensitivity: "base",
 });
 
+/**
+ * Compare by the name the row shows (without `.excalidraw` / `.md`), so "Untitled" comes before
+ * "Untitled 2" as in Zed and Obsidian; the full file name only breaks ties ("Plan.md" and
+ * "Plan.excalidraw").
+ */
+const compareNames = (a: string, b: string): number =>
+  collator.compare(entryDisplayName(a), entryDisplayName(b)) ||
+  collator.compare(a, b);
+
 /** Folders always come first; `order` applies within folders and among all files together. */
 export const compareEntries = (
   a: Pick<VaultEntry, "kind" | "name" | "modifiedAt">,
@@ -47,13 +58,13 @@ export const compareEntries = (
   }
   switch (order) {
     case "name_desc":
-      return collator.compare(b.name, a.name);
+      return compareNames(b.name, a.name);
     case "modified_desc":
-      return b.modifiedAt - a.modifiedAt || collator.compare(a.name, b.name);
+      return b.modifiedAt - a.modifiedAt || compareNames(a.name, b.name);
     case "modified_asc":
-      return a.modifiedAt - b.modifiedAt || collator.compare(a.name, b.name);
+      return a.modifiedAt - b.modifiedAt || compareNames(a.name, b.name);
     default:
-      return collator.compare(a.name, b.name);
+      return compareNames(a.name, b.name);
   }
 };
 
