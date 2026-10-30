@@ -18,7 +18,7 @@ describe("hunter I-11: export file names of Obsidian drawings", () => {
     expect(exportFileName("Plan.excalidraw", ext, false)).toBe(want);
   });
 
-  it.fails.each(["png", "svg", "pdf"] as const)(
+  it.each(["png", "svg", "pdf"] as const)(
     "Plan.excalidraw.md exports as a .%s without .md in its name",
     (ext) => {
       expect(exportFileName("Plan.excalidraw.md", ext, false)).not.toMatch(
@@ -26,4 +26,16 @@ describe("hunter I-11: export file names of Obsidian drawings", () => {
       );
     },
   );
+});
+
+describe("toimprove 232: export names use the name the tree shows", () => {
+  it.each([
+    ["Plan.excalidraw.md", "png", false, "Plan.png"],
+    ["Plan.Excalidraw.MD", "svg", false, "Plan.svg"],
+    ["Plan.excalidraw.md", "png", true, "Plan.excalidraw.png"],
+    ["v1.2 notes.excalidraw", "pdf", false, "v1.2 notes.pdf"],
+    [".excalidraw", "png", false, "Drawing.png"],
+  ] as const)("%s as %s (embed %s) is %s", (name, ext, embed, want) => {
+    expect(exportFileName(name, ext, embed)).toBe(want);
+  });
 });

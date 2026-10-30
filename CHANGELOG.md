@@ -25,6 +25,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **An Obsidian drawing exports as "Plan.png", not "Plan.excalidraw.md.png"** (toimprove 232). PNG, SVG and PDF exports and Save a copy name the file as the tree shows it.
 - **Markdown mode: Enter after a heading in a group keeps the next paragraph in the group** (toimprove 227). Moving, copying or deleting a grouped card now takes the text typed after its heading along.
 - **Page mode: text that runs past the bottom of a page flows to the top of the next page** (toimprove 231). Enter after a heading near the bottom of a sheet used to pull the new text up over the heading. Shapes, and text on the last page, are still kept inside the page as before.
 - **Settings > Hotkeys search matches each word in any order** (toimprove 223). "toggle mode" finds "Toggle light/dark mode", like the Settings search and the command palette; accents fold too.
