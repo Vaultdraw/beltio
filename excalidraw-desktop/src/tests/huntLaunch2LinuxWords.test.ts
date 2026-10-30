@@ -17,7 +17,7 @@ const ROWS: [file: string, wrong: RegExp][] = [
 ];
 
 describe("user text does not name macOS keys or apps (toimprove 287)", () => {
-  it.fails.each(ROWS)("%s", (file, wrong) => {
+  it.each(ROWS)("%s", (file, wrong) => {
     expect(read(file)).not.toMatch(wrong);
   });
 });

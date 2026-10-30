@@ -186,7 +186,8 @@ export default function Panel({ session }: { session: Session }) {
               ) : null}
               {s.drawn !== null ? (
                 <span className="vd-ai-via">
-                  Drew {s.drawn} shapes. Undo with Cmd+Z.
+                  Drew {s.drawn} shapes. Undo with{" "}
+                  {/mac/i.test(navigator.platform) ? "Cmd" : "Ctrl"}+Z.
                 </span>
               ) : null}
             </div>

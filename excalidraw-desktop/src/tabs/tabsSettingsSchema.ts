@@ -2,6 +2,8 @@
  * Schema rows of the "Tabs" section on the Interface settings page. Spread
  * into components/settings/schema.ts with one line. Pure data.
  */
+import { modKeyWord } from "../platform/platformWords";
+
 import type { SettingSchema } from "../components/settings/schema";
 
 const row = (
@@ -36,8 +38,7 @@ export const TABS_SETTINGS_SCHEMA: readonly SettingSchema[] = [
   row({
     id: "tabs-open-from-navigator",
     label: "Open drawings from the file tree in",
-    description:
-      "Current tab replaces the open drawing; New tab keeps it open. Cmd+click does the other one.",
+    description: `Current tab replaces the open drawing; New tab keeps it open. ${modKeyWord()}+click does the other one.`,
     keywords: ["navigator", "click", "new tab", "replace", "browser"],
     configKey: "tabs.open_from_navigator",
     perVault: true,

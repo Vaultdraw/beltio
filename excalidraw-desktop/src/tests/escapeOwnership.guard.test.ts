@@ -20,14 +20,14 @@ const MARKS =
 const AROUND = 15;
 
 const KNOWN: Record<string, string> = {
-  "components/VaultNavigator.tsx":
-    "the search box clears on Escape without marking it, so the narrow overlay closes too (toimprove 252)",
   "components/readonly/ReadOnlyBadge.tsx":
     "the read-only popover closes from a document capture listener without marking the key; not seen to close a second layer yet (the overlay checks for an open popup), mark it when 252 is fixed",
 };
 
 /** Checked by hand: the key is marked elsewhere, or there is no event. Keep the reason. */
 const MARKED_ELSEWHERE: Record<string, string> = {
+  "components/settings/SettingsModal.tsx":
+    "it reads whether a control inside already marked the key (defaultPrevented) and only then decides to close; the close itself marks the key",
   "components/settings/pages/Hotkeys.tsx":
     "the recorder's capture listener calls preventDefault and stopImmediatePropagation first",
   "components/settings/pages/sequenceRecorder.ts":

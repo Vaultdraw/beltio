@@ -52,6 +52,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **In a narrow window a plugin side panel floats over the drawing** like the file list (it docked at full width and left the drawing 123 px at 480 px); Esc or a click on the strip of drawing beside it closes it (toimprove 285).
 - **A task inside an embedded note can be ticked** and is saved in that note's own file, as in Obsidian; it was a greyed, dead box (toimprove 267).
 - **Privacy wording is honest about the network.** The AI switch and its warning no longer say the device is "fully offline" or that Vaultdraw "makes no network requests" (the network is on by default); they point to Offline mode (toimprove 286).
+- **User text uses the platform's own words.** Linux no longer says "Cmd" or "Finder": the read-only messages, the tab setting, the AI panel's undo hint and the reveal command (now "Reveal drawing in file manager") say Ctrl and file manager there (toimprove 287).
 
 ## [0.2.0] - 2026-10-28
 

@@ -152,6 +152,7 @@ import {
 import { WhichKeyHost } from "./keys/WhichKeyHost";
 import { drawingOpenCommandId } from "./commands/drawingCommands";
 import { detectPlatform, formatChordWords } from "./commands/keys";
+import { fileManagerWord } from "./platform/platformWords";
 import { commandShortcutLabel } from "./palette/shortcuts";
 import {
   collectPaletteItems,
@@ -3318,7 +3319,11 @@ export const VaultApp = ({
                   testId="read-only-file-banner"
                   onDismiss={() => setDismissedReadOnlyBanner(activeDoc.path)}
                   dismissLabel="Dismiss notice"
-                  message="Read-only file: make it writable in Finder (Get Info → Sharing & Permissions) to edit, or save a copy."
+                  message={`Read-only file: make it writable in ${fileManagerWord()}${
+                    detectPlatform() === "mac"
+                      ? " (Get Info → Sharing & Permissions)"
+                      : ""
+                  } to edit, or save a copy.`}
                   action={{
                     label: "Save a copy",
                     testId: "read-only-save-copy",

@@ -1,3 +1,5 @@
+import { fileManagerWord } from "../platform/platformWords";
+
 import type { VaultInfo } from "./types";
 
 /** Plain-language explanation of why a vault is read-only (toimprove #40). */
@@ -8,8 +10,7 @@ export function describeReadOnly(
     case "notWritable":
       return {
         summary: "Folder is not writable",
-        detail:
-          "You don't have permission to change files in this folder. Fix the folder's permissions in Finder, then try again.",
+        detail: `You don't have permission to change files in this folder. Fix the folder's permissions in ${fileManagerWord()}, then try again.`,
       };
     case "lockedByOtherProcess":
       return {

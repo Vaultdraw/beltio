@@ -431,7 +431,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   },
   {
     id: "file.revealInFinder",
-    title: "Reveal drawing in Finder",
+    title: "Reveal drawing in file manager",
     category: "File",
     keys: { default: [] },
     when: ["drawingOpen"],

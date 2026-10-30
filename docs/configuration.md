@@ -659,7 +659,7 @@ When a command gets a new id (it moved into an official extension, say), the old
 | `view.toggleNavigator` | Toggle navigator | ⌘\  | Ctrl+\  |
 | `view.focusMode` | View: Focus mode | ⇧⌘↩ | Ctrl+Shift+Enter |
 | `vault.switch` | Open another vault | — | — |
-| `file.revealInFinder` | Reveal drawing in Finder | — | — |
+| `file.revealInFinder` | Reveal drawing in file manager | — | — |
 | `file.duplicate` | Duplicate drawing | — | — |
 | `appearance.toggleMode` | Toggle light/dark mode | — | — |
 | `app.restart` | Restart Vaultdraw | — | — |
