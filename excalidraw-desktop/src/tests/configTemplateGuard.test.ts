@@ -47,8 +47,9 @@ const templateKeys = (text: string) => {
       keys.add(`${sub[1]}.${sub[2]}`);
     }
     // A key line starts a TOML value; prose such as "# false = ignore ..." does not.
-    const key =
-      /^(?:# )?([a-z][a-z0-9_-]*) = (?:["\[{\d-]|true\b|false\b)/.exec(line);
+    const key = /^(?:# )?([a-z][a-z0-9_-]*) = (?:["[{\d-]|true\b|false\b)/.exec(
+      line,
+    );
     if (table && key && key[1] !== "true" && key[1] !== "false") {
       keys.add(`${table}.${key[1]}`);
     }
