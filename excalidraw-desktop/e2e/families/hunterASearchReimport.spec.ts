@@ -71,13 +71,20 @@ test("search follows import, re-import of a note with a table, accents and emoji
     anyRow = false,
   ) => {
     const got = await found(page, word, anyRow);
-    if (got !== want) problems.push(`${what}: "${word}" found=${got}, want ${want}`);
+    if (got !== want) {
+      problems.push(`${what}: "${word}" found=${got}, want ${want}`);
+    }
   };
   await check("QUASARMEMORY", true, "upper-case query");
   await check("walrusword", true, "list item next to accents and emoji");
   await check("rocket", true, "word after an emoji");
   await check("Ünïcode", true, "accented word as typed");
-  await check("unicode", true, "accented word without accents (Obsidian ignores accents)", true);
+  await check(
+    "unicode",
+    true,
+    "accented word without accents (Obsidian ignores accents)",
+    true,
+  );
   await check("cafe", true, "heading with an accent, query without", true);
 
   // change at the source, re-import

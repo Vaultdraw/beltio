@@ -26,24 +26,33 @@ const live = async (page: Page, type: string) =>
   );
 
 const pasteGenerated = (page: Page, row: Row) =>
-  page.evaluate(async ({ w, h, mime }) => {
-    const c = document.createElement("canvas");
-    c.width = w;
-    c.height = h;
-    const g = c.getContext("2d")!;
-    g.fillStyle = "#3366cc";
-    g.fillRect(0, 0, w, h);
-    g.fillStyle = "#ffcc00";
-    g.fillRect(0, 0, Math.max(1, w / 2), Math.max(1, h / 2));
-    const type = mime ?? "image/png";
-    const blob: Blob = await new Promise((r) => c.toBlob((b) => r(b!), type));
-    const dt = new DataTransfer();
-    dt.items.add(new File([blob], `pic.${type.split("/")[1]}`, { type: blob.type }));
-    document.dispatchEvent(
-      new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }),
-    );
-    return blob.type;
-  }, { w: row.w, h: row.h, mime: row.mime });
+  page.evaluate(
+    async ({ w, h, mime }) => {
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      const g = c.getContext("2d")!;
+      g.fillStyle = "#3366cc";
+      g.fillRect(0, 0, w, h);
+      g.fillStyle = "#ffcc00";
+      g.fillRect(0, 0, Math.max(1, w / 2), Math.max(1, h / 2));
+      const type = mime ?? "image/png";
+      const blob: Blob = await new Promise((r) => c.toBlob((b) => r(b!), type));
+      const dt = new DataTransfer();
+      dt.items.add(
+        new File([blob], `pic.${type.split("/")[1]}`, { type: blob.type }),
+      );
+      document.dispatchEvent(
+        new ClipboardEvent("paste", {
+          clipboardData: dt,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      return blob.type;
+    },
+    { w: row.w, h: row.h, mime: row.mime },
+  );
 
 test("pasted picture files keep their shape and land in view, whatever the size or kind", async ({
   page,
@@ -69,17 +78,33 @@ test("pasted picture files keep their shape and land in view, whatever the size 
       problems.push(`${row.name}: no picture appeared`);
       continue;
     }
-    const el: any = (await live(page, "image")).find((e: any) => !before.includes(e.id));
+    const el: any = (await live(page, "image")).find(
+      (e: any) => !before.includes(e.id),
+    );
     const ratio = el.width / el.height;
     const want = row.w / row.h;
     if (Math.abs(ratio / want - 1) > 0.03) {
-      problems.push(`${row.name}: shape ${el.width.toFixed(0)}x${el.height.toFixed(0)} changed the aspect ratio (${ratio.toFixed(3)} vs ${want.toFixed(3)})`);
+      problems.push(
+        `${row.name}: shape ${el.width.toFixed(0)}x${el.height.toFixed(
+          0,
+        )} changed the aspect ratio (${ratio.toFixed(3)} vs ${want.toFixed(
+          3,
+        )})`,
+      );
     }
     if (Math.max(el.width, el.height) < 8) {
-      problems.push(`${row.name}: shown ${el.width.toFixed(1)}x${el.height.toFixed(1)}, too small to see or grab`);
+      problems.push(
+        `${row.name}: shown ${el.width.toFixed(1)}x${el.height.toFixed(
+          1,
+        )}, too small to see or grab`,
+      );
     }
     if (Math.max(el.width, el.height) > 2000) {
-      problems.push(`${row.name}: shown ${el.width.toFixed(0)}x${el.height.toFixed(0)}, far larger than the window`);
+      problems.push(
+        `${row.name}: shown ${el.width.toFixed(0)}x${el.height.toFixed(
+          0,
+        )}, far larger than the window`,
+      );
     }
   }
   // not a picture: a pdf file in the clipboard (let any late picture land first)
@@ -87,11 +112,23 @@ test("pasted picture files keep their shape and land in view, whatever the size 
   const count = (await live(page, "image")).length;
   await page.evaluate(() => {
     const dt = new DataTransfer();
-    dt.items.add(new File([new Uint8Array([37, 80, 68, 70])], "doc.pdf", { type: "application/pdf" }));
-    document.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+    dt.items.add(
+      new File([new Uint8Array([37, 80, 68, 70])], "doc.pdf", {
+        type: "application/pdf",
+      }),
+    );
+    document.dispatchEvent(
+      new ClipboardEvent("paste", {
+        clipboardData: dt,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
   });
   await page.waitForTimeout(800);
-  if ((await live(page, "image")).length !== count) problems.push("a pdf file became a picture");
+  if ((await live(page, "image")).length !== count) {
+    problems.push("a pdf file became a picture");
+  }
   expect(problems, problems.join("\n")).toEqual([]);
   expect(errors).toEqual([]);
 });

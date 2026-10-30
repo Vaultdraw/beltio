@@ -1,19 +1,17 @@
 import { expect, type Page } from "@playwright/test";
 
 import { test } from "../fixture";
-import {
-  clickMainMenuItem,
-  openVault,
-  trackErrors,
-} from "../helpers";
+import { clickMainMenuItem, openVault, trackErrors } from "../helpers";
 import { seedAndOpen } from "../pageHelpers";
 
 // Hunter A round 3: switch the theme with imported notes open. What is PAINTED must be legible:
 // the ink on the canvas (plain, bold, heading, table text) keeps a contrast of at least 3:1 with the
 // page in light and dark, after each switch, and after switching back.
 const NOTES: Record<string, string> = {
-  "Plain.md": "Plain words in a paragraph that wraps over a few lines of the page.\n",
-  "Bold.md": "**All bold paragraph that wraps over a few lines of the page here.**\n",
+  "Plain.md":
+    "Plain words in a paragraph that wraps over a few lines of the page.\n",
+  "Bold.md":
+    "**All bold paragraph that wraps over a few lines of the page here.**\n",
   "Head.md": "# Big heading\n\n## Smaller heading\n",
   "Table.md": "| A | B |\n|---|---|\n| one | two |\n| three | four |\n",
   "Code.md": "```js\nconst a = 1;\n```\n\n> quote text here\n",
@@ -45,7 +43,9 @@ const paint = (page: Page) =>
     const c = document.querySelector(
       ".vault-editor canvas.static",
     ) as HTMLCanvasElement | null;
-    if (!c) return { error: "no static canvas" };
+    if (!c) {
+      return { error: "no static canvas" };
+    }
     const ctx = c.getContext("2d");
     // draw through an offscreen copy: the page's own context may be a different kind
     const copy = document.createElement("canvas");
@@ -63,11 +63,15 @@ const paint = (page: Page) =>
     };
     const counts = new Map<number, number>();
     for (let i = 0; i < d.length; i += 4 * 7) {
-      if (d[i + 3] < 200) continue;
+      if (d[i + 3] < 200) {
+        continue;
+      }
       const k = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2];
       counts.set(k, (counts.get(k) ?? 0) + 1);
     }
-    if (!counts.size) return { error: "blank canvas", ctx: !!ctx };
+    if (!counts.size) {
+      return { error: "blank canvas", ctx: !!ctx };
+    }
     const bgKey = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
     const bgL = lum(bgKey >> 16, (bgKey >> 8) & 255, bgKey & 255);
     let best = 1;
@@ -75,7 +79,9 @@ const paint = (page: Page) =>
     for (const [k, n] of counts) {
       const l = lum(k >> 16, (k >> 8) & 255, k & 255);
       const ratio = (Math.max(l, bgL) + 0.05) / (Math.min(l, bgL) + 0.05);
-      if (ratio > 1.5) inkPixels += n;
+      if (ratio > 1.5) {
+        inkPixels += n;
+      }
       best = Math.max(best, ratio);
     }
     return { bg: bgKey.toString(16), best: +best.toFixed(2), inkPixels };

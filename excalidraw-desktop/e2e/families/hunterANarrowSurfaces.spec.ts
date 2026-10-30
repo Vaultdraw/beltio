@@ -3,7 +3,12 @@ import { expect, type Page } from "@playwright/test";
 import { stepProblems } from "../scenarios/checks";
 
 import { test } from "../fixture";
-import { clickMainMenuItem, openDrawing, openVault, trackErrors } from "../helpers";
+import {
+  clickMainMenuItem,
+  openDrawing,
+  openVault,
+  trackErrors,
+} from "../helpers";
 
 // Hunter A round 3: every surface a user reaches without a drawing open (home screen, navigator
 // menus, main menu, new-drawing and import dialogs, settings pages, plugin and theme browsers)
@@ -32,27 +37,37 @@ const walk = async (
     const over = await page.evaluate(
       () => document.documentElement.scrollWidth - innerWidth,
     );
-    if (over > 0) problems.push(`page scrolls sideways by ${over}px`);
-    for (const p of problems) out.push(`[${size.width} ${theme}] ${what}: ${p}`);
+    if (over > 0) {
+      problems.push(`page scrolls sideways by ${over}px`);
+    }
+    for (const p of problems) {
+      out.push(`[${size.width} ${theme}] ${what}: ${p}`);
+    }
   };
   await openVault(page);
   await check("home");
   // main menu (hamburger) is only in the editor; open a drawing for the editor's own chrome
-  await page.locator(".vault-tree-item__name", { hasText: "DSA" }).first().click();
+  await page
+    .locator(".vault-tree-item__name", { hasText: "DSA" })
+    .first()
+    .click();
   await openDrawing(page, "Graphs");
   await page.getByTestId("main-menu-trigger").click();
   await check("main menu");
   await page.keyboard.press("Escape");
 
   const nav = page.getByLabel("Vault file navigator");
-  if (!(await nav.isVisible())) out.push(`[${size.width} ${theme}] navigator not visible`);
+  if (!(await nav.isVisible())) {
+    out.push(`[${size.width} ${theme}] navigator not visible`);
+  }
   if (await nav.isVisible()) {
     await nav.getByRole("button", { name: "New drawing" }).first().click();
     await check("new drawing dialog", 1);
     await page.keyboard.press("Escape");
   }
-  if (seen.length < 3) out.push(`only ${seen.length} surfaces walked: ${seen.join(", ")}`);
-  console.log(`${size.width} ${theme}: ${seen.join(" | ")}`);
+  if (seen.length < 3) {
+    out.push(`only ${seen.length} surfaces walked: ${seen.join(", ")}`);
+  }
   return out;
 };
 
@@ -80,7 +95,10 @@ void clickMainMenuItem;
 const SETTINGS_WIDTHS = [360, 400, 480, 560, 640, 720, 900];
 for (const width of SETTINGS_WIDTHS) {
   test(`A-11: settings pages fit a ${width} px window`, async ({ page }) => {
-    test.fixme(width < 720, "A-11: settings page column too narrow below 720 px");
+    test.fixme(
+      width < 720,
+      "A-11: settings page column too narrow below 720 px",
+    );
     test.setTimeout(120_000);
     const errors = trackErrors(page);
     await page.setViewportSize({ width, height: 700 });
@@ -101,10 +119,17 @@ for (const width of SETTINGS_WIDTHS) {
         skipFocus: true,
         minContrast: 2.5,
       })) {
-        if (/outside|overlap|cut off/.test(p)) out.push(`${name}: ${p}`);
+        if (/outside|overlap|cut off/.test(p)) {
+          out.push(`${name}: ${p}`);
+        }
       }
-      const x = await modal.getByRole("button", { name: /close/i }).first().boundingBox();
-      if (!x || x.x + x.width > width) out.push(`${name}: close button out of the window`);
+      const x = await modal
+        .getByRole("button", { name: /close/i })
+        .first()
+        .boundingBox();
+      if (!x || x.x + x.width > width) {
+        out.push(`${name}: close button out of the window`);
+      }
     }
     expect(out, out.join("\n")).toEqual([]);
     expect(errors).toEqual([]);

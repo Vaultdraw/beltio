@@ -92,7 +92,8 @@ test("paste while Offline mode is on: local pastes work, web pictures say why, t
   await expect(page.getByTestId("offline-badge")).toBeVisible();
   const box = await canvasBox(page);
   let n = 0;
-  const focus = () => page.mouse.click(box.x + 120 + 180 * n, box.y + 120 + 90 * n++);
+  const focus = () =>
+    page.mouse.click(box.x + 120 + 180 * n, box.y + 120 + 90 * n++);
 
   // 1. a picture file
   await focus();
@@ -160,32 +161,33 @@ test("spreadsheet cells pasted while Offline mode is on still offer a table", as
 
 // A-10: copying a part of a web page (words and a picture) and pasting it keeps only the picture;
 // the words are dropped, online as well as offline. Obsidian keeps both. Remove fixme to reproduce.
-test.fixme("A-10: pasting rich text with a web picture keeps the words", async ({
-  page,
-}) => {
-  const errors = trackErrors(page);
-  await openVault(page, "?plugins=markdown-import");
-  await page.waitForFunction(() => (window as any).__pluginsReady === true);
-  await page.evaluate(
-    ([svg, a]) => {
-      (window as any).__plugins.backend.network.images = {
-        [a]: new TextEncoder().encode(svg),
-      };
-    },
-    [SVG, PIC_A] as const,
-  );
-  await seedAndOpen(page, FILE, { elements: [] });
-  const box = await canvasBox(page);
-  await page.mouse.click(box.x + 150, box.y + 150);
-  await paste(page, {
-    "text/html": `<p>Words next to the picture</p><img src="${PIC_A}" alt="Alpha">`,
-    "text/plain": "Words next to the picture",
-  });
-  await expect
-    .poll(async () => (await live(page, "image")).length, { timeout: 15_000 })
-    .toBe(1);
-  expect((await texts(page)).join(" | ")).toContain(
-    "Words next to the picture",
-  );
-  expect(errors).toEqual([]);
-});
+test.fixme(
+  "A-10: pasting rich text with a web picture keeps the words",
+  async ({ page }) => {
+    const errors = trackErrors(page);
+    await openVault(page, "?plugins=markdown-import");
+    await page.waitForFunction(() => (window as any).__pluginsReady === true);
+    await page.evaluate(
+      ([svg, a]) => {
+        (window as any).__plugins.backend.network.images = {
+          [a]: new TextEncoder().encode(svg),
+        };
+      },
+      [SVG, PIC_A] as const,
+    );
+    await seedAndOpen(page, FILE, { elements: [] });
+    const box = await canvasBox(page);
+    await page.mouse.click(box.x + 150, box.y + 150);
+    await paste(page, {
+      "text/html": `<p>Words next to the picture</p><img src="${PIC_A}" alt="Alpha">`,
+      "text/plain": "Words next to the picture",
+    });
+    await expect
+      .poll(async () => (await live(page, "image")).length, { timeout: 15_000 })
+      .toBe(1);
+    expect((await texts(page)).join(" | ")).toContain(
+      "Words next to the picture",
+    );
+    expect(errors).toEqual([]);
+  },
+);

@@ -14,9 +14,10 @@ const row = (page: Page, path: string) =>
     `.vault-tree-container .vault-tree-item[data-tree-path="${path}"]`,
   );
 const longNote = (n: number) =>
-  Array.from({ length: n }, (_, i) => `Paragraph number ${i} with some words.`).join(
-    "\n\n",
-  );
+  Array.from(
+    { length: n },
+    (_, i) => `Paragraph number ${i} with some words.`,
+  ).join("\n\n");
 const names = async (page: Page) =>
   (await page.locator(".vault-tree-item__name").allInnerTexts()).filter((n) =>
     /^Long/.test(n),
