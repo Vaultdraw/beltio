@@ -1,0 +1,23 @@
+{
+  "about": "The search index's fold (search/normalize.rs normalize, used for tag keys and link keys). Every TypeScript copy that claims to match it (tags/grammar.ts tagKey, links/resolve.ts foldKey) runs the same rows in src/tests/foldContract.test.ts (validator, hunter F-4, 2026-10-30). One word per row: whitespace collapsing is not part of the tag and link keys.",
+  "cases": [
+    { "label": "ascii case", "input": "Ideas", "folded": "ideas" },
+    { "label": "acute accent", "input": "Élan", "folded": "elan" },
+    { "label": "Vietnamese", "input": "Việt", "folded": "viet" },
+    { "label": "sharp s", "input": "Straße", "folded": "strasse" },
+    { "label": "Polish l", "input": "Łódź", "folded": "lodz" },
+    { "label": "Danish o", "input": "Ørsted", "folded": "orsted" },
+    { "label": "ae ligature", "input": "Æble", "folded": "aeble" },
+    { "label": "oe ligature", "input": "Œuvre", "folded": "oeuvre" },
+    { "label": "d with stroke", "input": "Đà", "folded": "da" },
+    { "label": "dotless i", "input": "ıyi", "folded": "iyi" },
+    { "label": "fi ligature", "input": "ﬁle", "folded": "file" },
+    { "label": "full-width letters", "input": "ＡＢＣ", "folded": "abc" },
+    { "label": "hiragana voiced", "input": "がっこう", "folded": "がっこう" },
+    { "label": "katakana to hiragana", "input": "ガッコウ", "folded": "がっこう" },
+    { "label": "decomposed kana", "input": "がっこう", "folded": "がっこう" },
+    { "label": "Hindi vowel signs kept", "input": "हिन्दी", "folded": "हिन्दी" },
+    { "label": "Thai tone marks kept", "input": "ที่", "folded": "ที่" },
+    { "label": "Hangul kept whole", "input": "한글", "folded": "한글" }
+  ]
+}

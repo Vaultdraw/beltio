@@ -244,4 +244,15 @@ mod unit_tests {
         assert_eq!(f.chars.iter().collect::<String>(), "a b");
         assert_eq!(f.char_ranges(&[(2, 3)]), vec![(2, 3)]);
     }
+
+    /// One table for this fold and its TypeScript copies (validator, hunter F-4, 2026-10-30):
+    /// `contract/fold_cases.json` is read here and by `src/tests/foldContract.test.ts`.
+    #[test]
+    fn fold_cases_contract_table() {
+        let table: serde_json::Value = serde_json::from_str(include_str!("../contract/fold_cases.json")).unwrap();
+        for row in table["cases"].as_array().unwrap() {
+            let input = row["input"].as_str().unwrap();
+            assert_eq!(normalize(input), row["folded"].as_str().unwrap(), "{}", row["label"]);
+        }
+    }
 }
