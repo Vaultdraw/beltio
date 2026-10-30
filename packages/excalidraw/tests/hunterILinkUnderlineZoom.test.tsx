@@ -1,6 +1,9 @@
+import { afterEach, describe, expect, it } from "vitest";
 import { pointFrom } from "@excalidraw/math";
 import { newTextElement } from "@excalidraw/element";
 import { arrayToMap } from "@excalidraw/common";
+
+import type { GlobalPoint } from "@excalidraw/math";
 
 import { getDefaultAppState } from "../appState";
 import { isPointHittingLinkIcon } from "../components/hyperlink/helpers";
@@ -30,7 +33,7 @@ describe("hunter I-3: a click in the middle of a linked text, zoomed out", () =>
     link: "https://example.com",
   });
   const map = arrayToMap([text]);
-  const middle = pointFrom(text.width / 2, text.height / 2);
+  const middle = pointFrom<GlobalPoint>(text.width / 2, text.height / 2);
 
   it("sanity: at 100% the middle of the text selects it", () => {
     setLinkIndicator({ style: "underline" });
