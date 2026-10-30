@@ -346,7 +346,7 @@ describe("the vault step and the end", () => {
     ).toBe(true);
     next();
     expect(screen.getByTestId("setup-summary").textContent).toMatch(
-      /the open vault stays/,
+      /The open vault stays/,
     );
     await act(async () => {
       next();

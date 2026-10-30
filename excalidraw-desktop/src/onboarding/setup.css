@@ -5,7 +5,7 @@
   z-index: calc(var(--z-modal) - 10);
   display: flex;
   box-sizing: border-box;
-  padding: var(--vd-space-6) var(--vd-space-4);
+  padding: clamp(var(--vd-space-6), 12vh, 120px) var(--vd-space-4) var(--vd-space-6);
   background: var(--vault-bg);
   color: var(--vault-text);
   font-family: var(--vd-font);
@@ -19,7 +19,7 @@
   flex-direction: column;
   width: 100%;
   max-width: 520px;
-  margin: auto;
+  margin: 0 auto auto; /* top-aligned: the dots and title stay put from step to step */
 }
 
 .vault-setup__dots {
@@ -35,17 +35,19 @@
   width: 6px;
   height: 6px;
   border-radius: 3px;
-  background: var(--vault-chip-strong);
+  background: var(--vault-text-muted);
+  opacity: 0.3;
   transition: width 120ms ease;
 }
 
 .vault-setup__dots li[data-state="done"] {
-  background: var(--vault-text-muted);
+  opacity: 1;
 }
 
 .vault-setup__dots li[data-state="now"] {
   width: 18px;
   background: var(--vault-primary);
+  opacity: 1;
 }
 
 .vault-setup__page {
@@ -424,6 +426,7 @@
 }
 
 .vault-setup__foot-left {
+  margin-left: calc(-1 * var(--vd-space-4)); /* the first label lines up with the card edge */
   display: flex;
   flex-wrap: wrap;
   gap: var(--vd-space-1);
@@ -489,6 +492,7 @@
   }
 
   .vault-setup__foot-left {
+    margin-left: 0;
     justify-content: center;
   }
 

@@ -18,17 +18,17 @@ const on = (v: boolean) => (v ? "on" : "off");
 export const vaultSummary = (c: VaultChoice): string => {
   switch (c.kind) {
     case "keep":
-      return "the open vault stays";
+      return "The open vault stays";
     case "recent":
       return c.path;
     case "open":
-      return "you pick a folder next";
+      return "You pick a folder next";
     case "create":
-      return "you create a new vault next";
+      return "You create a new vault next";
     case "obsidian":
-      return "you pick your Obsidian vault next";
+      return "You pick your Obsidian vault next";
     default:
-      return "decided later";
+      return "Decided later";
   }
 };
 

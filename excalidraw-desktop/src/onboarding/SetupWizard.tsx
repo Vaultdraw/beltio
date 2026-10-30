@@ -43,6 +43,7 @@ export default function SetupWizard(props: SetupWizardProps) {
     defaultVaultChoice({ hasVault, recentVaults, lastVaultPath }),
   );
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const step = SETUP_STEPS[index]!;
   const last = index === SETUP_STEPS.length - 1;
 
@@ -59,6 +60,8 @@ export default function SetupWizard(props: SetupWizardProps) {
 
   useEffect(() => {
     headingRef.current?.focus({ preventScroll: true });
+    // A new screen starts at the top (a long one was left scrolled by the button below it).
+    rootRef.current?.scrollTo?.({ top: 0 });
   }, [index, confirmSkip]);
 
   const skip = () => {
@@ -98,7 +101,6 @@ export default function SetupWizard(props: SetupWizardProps) {
     }
   };
 
-  const rootRef = useRef<HTMLDivElement>(null);
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) {
       return;
