@@ -22,7 +22,11 @@ import { getPreferences, updatePreferences } from "../vault/preferences";
 import { useGlobalPref } from "../vault/useGlobalPref";
 import "../sync/sync.css";
 import { SORT_LABELS, SORT_ORDERS, type SortOrder } from "../vault/sortOrder";
-import { checkTreeDrop, getParentPath } from "../vault/treeStore";
+import {
+  checkTreeDrop,
+  getParentPath,
+  validateEntryName,
+} from "../vault/treeStore";
 
 import { useVaultTags } from "../tags/useVaultTags";
 
@@ -693,6 +697,12 @@ export const VaultNavigator = ({
       return;
     }
     setCreateError(null);
+    // Say it in the dialog before it closes, as the core would refuse it later.
+    const checked = validateEntryName(createName, createKind);
+    if (!checked.valid) {
+      setCreateError(checked.error ?? "That name cannot be used");
+      return;
+    }
     try {
       if (createKind === "drawing") {
         const fullDrawingName = hasDrawingExt(createName.trim())

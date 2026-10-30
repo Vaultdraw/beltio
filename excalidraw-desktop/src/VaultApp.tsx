@@ -1706,18 +1706,26 @@ export const VaultApp = ({
     return initialAppState;
   };
 
-  const handleCreateDrawing = async (parentPath: string, name: string) => {
+  // Throws when the create fails: the New drawing dialog stays open and says why.
+  const createDrawingOrThrow = async (parentPath: string, name: string) => {
     setIsBusy(true);
     setGlobalAlert(null);
     try {
       await createEntryCore(parentPath, name);
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  // Everywhere else (palette, plugins, empty state): a failure is a notice.
+  const handleCreateDrawing = async (parentPath: string, name: string) => {
+    try {
+      await createDrawingOrThrow(parentPath, name);
     } catch (err) {
       setGlobalAlert({
         message: `Couldn't create "${name}": ${errorMessage(err)}`,
         type: "error",
       });
-    } finally {
-      setIsBusy(false);
     }
   };
 
@@ -1934,7 +1942,8 @@ export const VaultApp = ({
   );
 
   // Create folder
-  const handleCreateFolder = async (parentPath: string, name: string) => {
+  // Throws when the create fails: the New folder dialog stays open and says why.
+  const createFolderOrThrow = async (parentPath: string, name: string) => {
     if (!vault) {
       return;
     }
@@ -1947,11 +1956,6 @@ export const VaultApp = ({
       handleExpandFolder(parentPath);
       handleExpandFolder(path);
       startIndexing();
-    } catch (err) {
-      setGlobalAlert({
-        message: `Couldn't create the folder "${name}": ${errorMessage(err)}`,
-        type: "error",
-      });
     } finally {
       setIsBusy(false);
     }
@@ -3439,8 +3443,8 @@ export const VaultApp = ({
           onOpenSearchResult={handleOpenSearchResult}
           searchFocusNonce={searchFocusNonce}
           request={navigatorRequest}
-          onCreateDrawing={handleCreateDrawing}
-          onCreateFolder={handleCreateFolder}
+          onCreateDrawing={createDrawingOrThrow}
+          onCreateFolder={createFolderOrThrow}
           onRenameEntry={handleRenameEntry}
           onMoveEntry={handleMoveEntry}
           onDuplicateDrawing={handleDuplicateDrawing}

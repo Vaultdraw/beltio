@@ -255,7 +255,7 @@ marked.use({
 });
 
 const FRONTMATTER =
-  /^﻿?---[ \t]*\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/;
+  /^﻿?---[ \t]*\r?\n(?:[\s\S]*?\r?\n)?(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/;
 
 /** The note without its leading `---` properties block. */
 export const stripFrontmatter = (text: string): string =>

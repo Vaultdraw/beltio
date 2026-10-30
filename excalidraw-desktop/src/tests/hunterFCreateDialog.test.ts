@@ -22,10 +22,13 @@ describe("hunter F-13: the create dialog stays open when creating fails", () => 
   it("(context) the handler shows a global alert", () => {
     expect(body("handleCreateDrawing")).toContain("setGlobalAlert");
   });
-  it.fails("handleCreateDrawing lets the dialog know (rethrows)", () => {
-    expect(body("handleCreateDrawing")).toMatch(/throw /);
+  it("the navigator's dialog gets the handlers that rethrow, so it stays open", () => {
+    expect(body("createDrawingOrThrow")).not.toContain("catch");
+    expect(body("createFolderOrThrow")).not.toContain("catch");
+    expect(app).toContain("onCreateDrawing={createDrawingOrThrow}");
+    expect(app).toContain("onCreateFolder={createFolderOrThrow}");
   });
-  it.fails("handleCreateFolder lets the dialog know (rethrows)", () => {
-    expect(body("handleCreateFolder")).toMatch(/throw /);
+  it("other callers of New drawing keep the notice", () => {
+    expect(body("handleCreateDrawing")).toContain("setGlobalAlert");
   });
 });

@@ -12,10 +12,10 @@ describe("hunter F-10: an empty frontmatter block is hidden in the reading view"
   it("(context) a block with a property is stripped", () => {
     expect(stripFrontmatter("---\ntitle: a\n---\nBody")).toBe("Body");
   });
-  it.fails("---\\n---\\nBody reads as Body", () => {
+  it("---\\n---\\nBody reads as Body", () => {
     expect(stripFrontmatter("---\n---\nBody")).toBe("Body");
   });
-  it.fails("the same with Windows line ends", () => {
+  it("the same with Windows line ends", () => {
     expect(stripFrontmatter("---\r\n---\r\nBody")).toBe("Body");
   });
 });
