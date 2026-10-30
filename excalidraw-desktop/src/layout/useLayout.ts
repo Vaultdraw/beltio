@@ -83,7 +83,9 @@ export function useLayout(
     focusHide,
     focusRemember,
     focusOn,
+    layoutNarrowWidth,
   } = prefs;
+  const narrow = useNarrowWindow(win, layoutNarrowWidth);
   const presets = useMemo(
     () => allPresets(layoutPresets, focusHide),
     [layoutPresets, focusHide],
@@ -167,7 +169,10 @@ export function useLayout(
           tab_strip: base.tab_strip,
           status_bar: base.status_bar,
         },
-        state.preset ? presets[state.preset] ?? null : null,
+        narrowLayer(
+          narrow,
+          state.preset ? presets[state.preset] ?? null : null,
+        ),
         state.session,
       ),
     [
@@ -179,17 +184,21 @@ export function useLayout(
       base.status_bar,
       state,
       presets,
+      narrow,
     ],
   );
 
-  const live = useRef({ shown, presets });
-  live.current = { shown, presets };
+  const live = useRef({ shown, presets, narrow });
+  live.current = { shown, presets, narrow };
 
   const toggleGoverned = useCallback((part: LayoutPart): boolean => {
     const { preset, session } = getLayoutState();
     const governed =
       session[part] !== undefined ||
-      (preset !== null && live.current.presets[preset]?.[part] !== undefined);
+      (preset !== null && live.current.presets[preset]?.[part] !== undefined) ||
+      // In a narrow window the file list is folded for this window only: showing it is a
+      // session choice, never a change to config.toml.
+      (part === "navigator" && live.current.narrow);
     if (governed) {
       setSessionPart(part, !live.current.shown[part]);
     }
@@ -241,4 +250,29 @@ export function useLayout(
   }, [win, toggleGoverned]);
 
   return { shown, toggleGoverned, reveal, focusActive };
+}
+
+/** The navigator folded in a narrow window, under any preset (a preset can still show it). */
+export const narrowLayer = (
+  narrow: boolean,
+  preset: Readonly<Partial<Record<LayoutPart, boolean>>> | null,
+) => (narrow ? { navigator: false, ...(preset ?? {}) } : preset);
+
+/** True while the window is narrower than `width` px (0 = never). One media query, no polling. */
+function useNarrowWindow(win: Window | null, width: number): boolean {
+  const query = useMemo(
+    () =>
+      win && width > 0 && typeof win.matchMedia === "function"
+        ? win.matchMedia(`(max-width: ${width - 1}px)`)
+        : null,
+    [win, width],
+  );
+  const subscribe = useCallback(
+    (cb: () => void) => {
+      query?.addEventListener?.("change", cb);
+      return () => query?.removeEventListener?.("change", cb);
+    },
+    [query],
+  );
+  return useSyncExternalStore(subscribe, () => query?.matches ?? false);
 }

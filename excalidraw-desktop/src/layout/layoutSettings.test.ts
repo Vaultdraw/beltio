@@ -164,3 +164,41 @@ describe("layout store", () => {
     resetLayoutState();
   });
 });
+
+describe("[layout] narrow_width (hunter A-7)", () => {
+  it("accepts whole pixels from 0 to 4000 and defaults to 0 (never folds)", async () => {
+    const { LAYOUT_MAPPINGS, LAYOUT_DEFAULTS } = await import(
+      "./layoutSettings"
+    );
+    const m = LAYOUT_MAPPINGS.find((x) => x.key === "layout.narrow_width")!;
+    expect(LAYOUT_DEFAULTS.layoutNarrowWidth).toBe(0);
+    for (const ok of [0, 600, 4000]) {
+      expect(m.valid(ok)).toBe(true);
+    }
+    for (const bad of [-1, 4001, 600.5, "600", null]) {
+      expect(m.valid(bad)).toBe(false);
+    }
+  });
+
+  it("a narrow window folds the file list under any preset, and a preset can still show it", async () => {
+    const { narrowLayer } = await import("./useLayout");
+    const { shownParts } = await import("./layoutSettings");
+    const base = {
+      header: true,
+      footer: true,
+      navigator: true,
+      activity_bar: true,
+      tab_strip: true,
+      status_bar: true,
+    };
+    expect(shownParts(base, narrowLayer(true, null), {}).navigator).toBe(false);
+    expect(shownParts(base, narrowLayer(false, null), {}).navigator).toBe(true);
+    expect(
+      shownParts(base, narrowLayer(true, { navigator: true }), {}).navigator,
+    ).toBe(true);
+    // Toggle navigator in a narrow window is a session choice
+    expect(
+      shownParts(base, narrowLayer(true, null), { navigator: true }).navigator,
+    ).toBe(true);
+  });
+});

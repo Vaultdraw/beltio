@@ -2106,6 +2106,7 @@ Which parts of the window show, and presets such as focus mode. See [Layout and 
 | `header` | `true` | true or false |  | Show the vault header (title, save status, History and Graph buttons). |
 | `footer` | `true` | true or false |  | Show Excalidraw's footer (zoom, undo and redo, help). |
 | `preset` | `""` | a preset name like "focus", or "" for none (text) |  | A preset to apply at launch and whenever this value changes; `""` = none. |
+| `narrow_width` | `0` | a whole number from 0 to 4000 (pixels, 0 = never) |  | Below this window width (pixels) the file list starts folded, so a narrow or tiled window keeps room for the drawing; Toggle navigator shows it again for this window only. 0 (the default) never folds it. |
 | `presets` | `focus` hides every part | tables of `part = true \| false` |  | Named presets, `[layout.presets.<name>]`, each listing the parts it shows or hides: `header`, `navigator`, `activity_bar`, `tab_strip`, `footer`, `status_bar`. `focus` is built in. |
 
 ### `[focus]`

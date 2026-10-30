@@ -34,6 +34,7 @@ export const LAYOUT_FIELDS = [
   "focusRemember",
   "focusHint",
   "focusOn",
+  "layoutNarrowWidth",
 ] as const;
 export type LayoutField = typeof LAYOUT_FIELDS[number];
 
@@ -54,6 +55,11 @@ export interface LayoutPreferences {
   focusHint: boolean;
   /** Focus mode was on at quit (kept only while `focusRemember`; not in config). */
   focusOn: boolean;
+  /**
+   * `[layout] narrow_width`: below this window width (px) the file list starts folded, for
+   * narrow or tiled windows; 0 = never, the default (hunter A-7, toimprove 138).
+   */
+  layoutNarrowWidth: number;
 }
 
 export const LAYOUT_DEFAULTS: LayoutPreferences = {
@@ -65,6 +71,7 @@ export const LAYOUT_DEFAULTS: LayoutPreferences = {
   focusRemember: false,
   focusHint: false,
   focusOn: false,
+  layoutNarrowWidth: 0,
 };
 
 export const FOCUS_PRESET = "focus";
@@ -167,6 +174,8 @@ export function layoutPresetProblems(
 }
 
 const isBool = (v: unknown): v is boolean => typeof v === "boolean";
+const isNarrowWidth = (v: unknown): v is number =>
+  typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 4000;
 const isPartList = (v: unknown): v is LayoutPart[] =>
   Array.isArray(v) &&
   v.length <= LAYOUT_PARTS.length &&
@@ -203,6 +212,12 @@ export const LAYOUT_MAPPINGS: readonly ConfigMapping[] = [
     valid: isPresets,
   },
   {
+    field: "layoutNarrowWidth",
+    key: "layout.narrow_width",
+    expected: "a whole number from 0 to 4000 (pixels, 0 = never)",
+    valid: (v: unknown) => isNarrowWidth(v),
+  },
+  {
     field: "focusHide",
     key: "focus.hide",
     expected: `a list of parts: ${LAYOUT_PARTS.join(", ")}`,
@@ -231,6 +246,7 @@ const VALID: Record<LayoutField, (v: unknown) => boolean> = {
   focusRemember: isBool,
   focusHint: isBool,
   focusOn: isBool,
+  layoutNarrowWidth: isNarrowWidth,
 };
 
 /** Stored (localStorage) preferences -> valid layout fields; bad ones default. */

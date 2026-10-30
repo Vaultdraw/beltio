@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 
 import { test } from "../fixture";
+import { runCommand } from "../pageHelpers";
 import { openDrawing, openVault, trackErrors } from "../helpers";
 
 // Hunter A round 2: narrow windows. At phone-like widths no page scrolls sideways, a context menu
@@ -16,12 +17,6 @@ for (const size of SIZES) {
   test(`narrow window ${size.width}x${size.height}: menus stay inside, no sideways scroll`, async ({
     page,
   }) => {
-    // At 360 px the navigator leaves the editor column 43 px wide: no tab fits until the
-    // navigator gives way on narrow windows, as Obsidian's side panes do (toimprove 138).
-    test.fixme(
-      size.width < 400,
-      "toimprove 138: navigator must give way at narrow widths",
-    );
     test.setTimeout(90_000);
     const errors = trackErrors(page);
     await page.setViewportSize(size);
@@ -59,6 +54,12 @@ for (const size of SIZES) {
     if (await row.isVisible()) {
       await row.click({ button: "right" });
       await menuInside("file row menu");
+    }
+    // At 360 px a user hides the file list to make room (Toggle navigator; or folds it on its
+    // own with [layout] narrow_width): the editor column is 43 px beside it.
+    if (size.width < 400) {
+      await page.keyboard.press("Escape");
+      await runCommand(page, "Toggle navigator");
     }
     // A tab is clickable where the user sees it: its middle and its close button are not under
     // another control (hunter A-7: at 360 px the "1 / 1" count sat on top of the only tab).

@@ -1363,6 +1363,13 @@
           "default": "",
           "type": "string"
         },
+        "narrow_width": {
+          "description": "Below this window width (pixels) the file list starts folded, so a narrow or tiled window keeps room for the drawing; Toggle navigator shows it again for this window only. 0 (the default) never folds it.",
+          "default": 0,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4000
+        },
         "presets": {
           "description": "Named presets, `[layout.presets.<name>]`, each listing the parts it shows or hides: `header`, `navigator`, `activity_bar`, `tab_strip`, `footer`, `status_bar`. `focus` is built in.",
           "default": {},

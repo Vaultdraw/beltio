@@ -6,6 +6,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Added
 
+- **`[layout] narrow_width`: fold the file list in narrow or tiled windows.** Below the width you set, the file list starts hidden so the drawing keeps its room; Toggle navigator shows it again for that window. Off (0) by default.
 - **A paragraph, list or table cell written entirely in bold is drawn bold.** The Markdown reader (and the plugin API, 0.37.0: `marks`, `headerMarks`, `rowMarks`) now keeps bold, italic and code spans instead of dropping them, and the import uses them: `**all of it**` takes the bold font; bold words inside a sentence stay regular (one text, one font). `bold_text` in `[plugin.markdown-import]` turns it off.
 - **Bold headings.** Imported notes and headings you type in Markdown mode are drawn in a bold variant of the text's font (Excalifont, Nunito, Cascadia and the others get one; Lilita One is heavy already). `heading_bold` in `[plugin.markdown-import]` and `heading_bold` in `[markdown]` (Settings → Drawing) turn it off. A bold text stores the font id of its family plus 100; excalidraw.com does not know it and shows such text in its fallback font. Plugin API 0.36.0: `bold` on page text items and `ctx.text.measure` fonts.
 - **Imported and typed headings look the same.** Both are drawn in the theme's Markdown colours (`markdown.h1` … `h6`, `link`, `code` in a theme file, else derived from its accents), and a colour you pick on a heading is kept.

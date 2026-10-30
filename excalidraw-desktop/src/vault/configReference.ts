@@ -394,6 +394,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       preset: {
         doc: 'A preset to apply at launch and whenever this value changes; `""` = none.',
       },
+      narrow_width: {
+        doc: "Below this window width (pixels) the file list starts folded, so a narrow or tiled window keeps room for the drawing; Toggle navigator shows it again for this window only. 0 (the default) never folds it.",
+      },
       presets: {
         doc: "Named presets, `[layout.presets.<name>]`, each listing the parts it shows or hides: `header`, `navigator`, `activity_bar`, `tab_strip`, `footer`, `status_bar`. `focus` is built in.",
         default: "`focus` hides every part",
