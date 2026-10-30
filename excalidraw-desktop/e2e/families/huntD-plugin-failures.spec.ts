@@ -63,5 +63,16 @@ test("a slow plugin load does not freeze the app, and its command runs when read
   // while it loads, another command still runs
   await runCmd(page, "say hello");
   await expect(page.getByText("Hello from a plugin")).toBeVisible();
-  await expect(page.getByText("slow ran")).toBeVisible({ timeout: 8000 });
+  await expect(page.getByText("slow ran 1")).toBeVisible({ timeout: 8000 });
+});
+
+test("running a slow-loading plugin's command twice while it loads runs it twice, once each", async ({
+  page,
+}) => {
+  await start(page, "slowload");
+  await runCmd(page, "Slow load: run");
+  await page.waitForTimeout(200);
+  await runCmd(page, "Slow load: run");
+  await expect(page.getByText("slow ran 1")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("slow ran 2")).toBeVisible({ timeout: 10_000 });
 });
