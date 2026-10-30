@@ -49,6 +49,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **The plugin browser does not offer an update that needs a newer Vaultdraw.** Update and Install are off, with a line saying which version to update to, instead of replacing a working plugin with one that will not load (toimprove 251).
 - **Delete data on a plugin also removes the keys it saved** (the AI assistant's API key stayed on disk with no way to see or remove it), and different code installed under an old plugin id no longer inherits them (toimprove 279).
 - **`network.allow_ai` is documented,** and the message the AI assistant shows when it is off names it and says what to do; it said "turned off in Settings" although no Settings switch exists (toimprove 278).
+- **In a narrow window a plugin side panel floats over the drawing** like the file list (it docked at full width and left the drawing 123 px at 480 px); Esc or a click on the strip of drawing beside it closes it (toimprove 285).
 
 ## [0.2.0] - 2026-10-28
 

@@ -3448,7 +3448,7 @@ export const VaultApp = ({
         />
         {pluginsStarted && (
           <Suspense fallback={null}>
-            <PluginPanels />
+            <PluginPanels narrow={layout.narrow} />
           </Suspense>
         )}
         {templates.dialogs}

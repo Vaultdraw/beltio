@@ -301,10 +301,6 @@ test("AI panel: the checkbox follows the theme colour like the app's own", async
 test("AI panel at 480 px leaves the drawing at least 320 px, like the file list does", async ({
   page,
 }) => {
-  test.fail(
-    true,
-    "toimprove M-22: plugin panels dock at full width in narrow windows",
-  );
   const errors = trackErrors(page);
   await setup(page, { width: 480, height: 760 });
   const canvas = (await page

@@ -1,6 +1,7 @@
 /** Mounts the panels plugins declared; a panel's code loads when it first opens. */
 import { useCallback, useSyncExternalStore } from "react";
 
+import { useNavigatorOverlay } from "../../layout/useNavigatorOverlay";
 import { PanelHost } from "../../slots/PanelHost";
 import { closePanel, usePanelOpen } from "../../slots/panelStore";
 
@@ -46,30 +47,55 @@ const boundaryLoad = (stub: PluginPanelStub) => {
   return load;
 };
 
-function PluginPanel({ stub }: { stub: PluginPanelStub }) {
+function PluginPanel({
+  stub,
+  narrow,
+}: {
+  stub: PluginPanelStub;
+  narrow: boolean;
+}) {
   const open = usePanelOpen(stub.id);
   const onClose = useCallback(() => closePanel(stub.id), [stub.id]);
+  // In a narrow window the panel floats over the drawing like the file list: Esc and a click on
+  // the strip of drawing beside it close it (toimprove 285; Obsidian's right drawer).
+  useNavigatorOverlay(
+    narrow && open ? document : null,
+    narrow && open,
+    onClose,
+    null,
+  );
   if (!open) {
     return null;
   }
   return (
-    <aside
-      className="vault-plugin-panel"
-      data-testid={`plugin-panel-${stub.id}`}
-      aria-label={stub.title}
-    >
-      <PanelHost
-        id={stub.id}
-        load={boundaryLoad(stub)}
-        open
-        onClose={onClose}
-        props={{}}
-      />
-    </aside>
+    <>
+      {narrow && (
+        <div
+          className="vault-navigator-scrim"
+          data-testid={`plugin-panel-scrim-${stub.id}`}
+          onPointerDown={onClose}
+        />
+      )}
+      <aside
+        className={`vault-plugin-panel${
+          narrow ? " vault-plugin-panel--overlay" : ""
+        }`}
+        data-testid={`plugin-panel-${stub.id}`}
+        aria-label={stub.title}
+      >
+        <PanelHost
+          id={stub.id}
+          load={boundaryLoad(stub)}
+          open
+          onClose={onClose}
+          props={{}}
+        />
+      </aside>
+    </>
   );
 }
 
-export function PluginPanels() {
+export function PluginPanels({ narrow = false }: { narrow?: boolean }) {
   const panels = useSyncExternalStore(
     subscribePluginPanels,
     getPluginPanels,
@@ -78,7 +104,7 @@ export function PluginPanels() {
   return (
     <>
       {panels.map((stub) => (
-        <PluginPanel key={stub.id} stub={stub} />
+        <PluginPanel key={stub.id} stub={stub} narrow={narrow} />
       ))}
     </>
   );

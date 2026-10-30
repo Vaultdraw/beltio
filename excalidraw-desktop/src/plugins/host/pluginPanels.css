@@ -6,3 +6,16 @@
   border-left: 1px solid var(--vault-border, rgba(128, 128, 128, 0.3));
   background: var(--vault-surface, var(--island-bg-color, transparent));
 }
+
+/* Narrow window ([layout] narrow_width): the panel floats over the drawing from the right edge and
+   leaves a strip of the drawing to tap to close it (the scrim is the file list's). */
+.vault-plugin-panel--overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  width: min(320px, calc(100% - 44px));
+  flex: none;
+  box-shadow: var(--vault-shadow-pop);
+}
