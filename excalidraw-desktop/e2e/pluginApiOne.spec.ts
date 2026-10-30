@@ -27,7 +27,7 @@ test("a plugin loads, and its settings page changes what its command does", asyn
   await expect(modal(page)).toBeVisible();
   await modal(page).getByRole("tab", { name: "Plugins" }).click();
   await modal(page).getByRole("button", { name: "Hello settings" }).click();
-  const field = modal(page).getByLabel("Greeting");
+  const field = modal(page).getByRole("textbox", { name: "Greeting" });
   await field.fill("Howdy");
   await field.press("Enter");
   await page.keyboard.press("Escape");
