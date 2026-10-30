@@ -40,7 +40,7 @@ describe("hunter K-5: removing a recent vault with the keyboard does not open it
     expect(onSelectRecent).toHaveBeenCalledWith("/Users/me/Old vault");
   });
 
-  it.fails.each([["Enter"], [" "]])(
+  it.each([["Enter"], [" "]])(
     "toimprove 226: %j on the remove button does not open the vault",
     (key) => {
       const { onSelectRecent, remove } = setup();

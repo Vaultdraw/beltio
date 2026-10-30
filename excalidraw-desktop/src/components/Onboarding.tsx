@@ -6,6 +6,7 @@ import { isTauriAvailable } from "../vault/DesktopVaultRepository";
 import { isCustomChrome } from "../vault/windowChrome";
 
 import { IconAlert, IconClose, IconFolder, IconPlus } from "./Icons";
+import { keyBelongsToControl } from "./keyTarget";
 import { WindowControls } from "./WindowControls";
 
 import "./home.css";
@@ -129,6 +130,10 @@ export const Onboarding = ({
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => {
+                    // Enter on "Remove from recent list" presses that button only (toimprove 226).
+                    if (keyBelongsToControl(e)) {
+                      return;
+                    }
                     if (e.key === "Enter" || e.key === " ") {
                       void onSelectRecent(vaultPath);
                     }
