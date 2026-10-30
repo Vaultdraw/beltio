@@ -304,7 +304,7 @@ describe("J-10: Markdown in a callout title (toimprove 219)", () => {
   it("sanity: an empty title is the type's name", () => {
     expect(title("> [!NOTE]\n> body").textContent).toBe("Note");
   });
-  it.fails("bold and a wikilink in the title are rendered", () => {
+  it("bold and a wikilink in the title are rendered", () => {
     const t = title("> [!tip] Read **this** and [[Other]]\n> body");
     expect(t.querySelector("strong")?.textContent).toBe("this");
     expect(t.querySelector("a.wikilink")?.getAttribute("data-path")).toBe(
@@ -312,7 +312,7 @@ describe("J-10: Markdown in a callout title (toimprove 219)", () => {
     );
     expect(t.textContent).not.toContain("**");
   });
-  it.fails("inline code in the title is code", () => {
+  it("inline code in the title is code", () => {
     expect(
       title("> [!info] Has `code`\n> b").querySelector("code"),
     ).not.toBeNull();

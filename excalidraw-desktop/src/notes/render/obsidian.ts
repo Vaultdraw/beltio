@@ -379,6 +379,16 @@ const TASK_RULES = {
 const TASK_MARK = /^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+\[([^\]\\\n])\]/;
 
 const marked = new Marked({ gfm: true, breaks: false });
+
+/**
+ * Inline Markdown rendered on its own (a callout's title and first lines, a footnote) with the
+ * render's own options, so line breaks follow the note's setting (toimprove 219, 229).
+ */
+const inline = (md: string): string =>
+  marked.parseInline(md, {
+    async: false,
+    breaks: ctx.strictLineBreaks !== true,
+  }) as string;
 marked.use({
   tokenizer: {
     list(src) {
@@ -461,7 +471,7 @@ marked.use({
         (rest.trim()
           ? `<p>${marked.parseInline(rest.trim()) as string}</p>`
           : "") + this.parser.parse(tokens.slice(1));
-      const titleHtml = `<div class="callout-title"><span class="callout-title-text">${esc(
+      const titleHtml = `<div class="callout-title"><span class="callout-title-text">${inline(
         title,
       )}</span></div>`;
       if (fold) {
