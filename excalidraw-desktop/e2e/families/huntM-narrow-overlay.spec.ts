@@ -130,7 +130,10 @@ test("narrow window: Escape on a row menu in the overlay closes the menu, not th
 test("narrow window: Escape in the overlay's search box clears the query and keeps the list", async ({
   page,
 }) => {
-  test.fail(true, "toimprove M-6: one Escape clears the search and closes the overlay");
+  test.fail(
+    true,
+    "toimprove M-6: one Escape clears the search and closes the overlay",
+  );
   const errors = trackErrors(page);
   await page.setViewportSize({ width: 480, height: 700 });
   await openVault(page);
@@ -141,6 +144,9 @@ test("narrow window: Escape in the overlay's search box clears the query and kee
   await page.keyboard.press("Escape");
   await expect(search).toHaveValue("");
   await page.waitForTimeout(200);
-  await expect(nav(page), "the list stays open after clearing the query").toBeVisible();
+  await expect(
+    nav(page),
+    "the list stays open after clearing the query",
+  ).toBeVisible();
   expect(errors).toEqual([]);
 });

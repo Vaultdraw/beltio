@@ -78,20 +78,30 @@ describe("check warns on deprecated names in the code (toimprove M-7)", () => {
 // plugin and Zed's extension template run their build with tools `npm install` brings.
 describe("template scripts run after npm install (toimprove M-8)", () => {
   for (const template of ["command", "panel", "scene"]) {
-    it.fails(`${template}: every script's tool is installed by npm install`, () => {
-      const parent = tmp("vdp-huntm-");
-      const r = run(["init", "demo-tpl", "--template", template, "--dir", parent]);
-      expect(r.code).toBe(0);
-      const pkg = JSON.parse(
-        readFileSync(path.join(parent, "demo-tpl", "package.json"), "utf8"),
-      );
-      const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-      const uses = Object.values(pkg.scripts).some((s) =>
-        /^vaultdraw-plugin\b/.test(s),
-      );
-      expect(uses).toBe(true);
-      expect(Object.keys(deps)).toContain("vaultdraw-plugin");
-    });
+    it.fails(
+      `${template}: every script's tool is installed by npm install`,
+      () => {
+        const parent = tmp("vdp-huntm-");
+        const r = run([
+          "init",
+          "demo-tpl",
+          "--template",
+          template,
+          "--dir",
+          parent,
+        ]);
+        expect(r.code).toBe(0);
+        const pkg = JSON.parse(
+          readFileSync(path.join(parent, "demo-tpl", "package.json"), "utf8"),
+        );
+        const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+        const uses = Object.values(pkg.scripts).some((s) =>
+          /^vaultdraw-plugin\b/.test(s),
+        );
+        expect(uses).toBe(true);
+        expect(Object.keys(deps)).toContain("vaultdraw-plugin");
+      },
+    );
   }
 });
 
@@ -100,11 +110,17 @@ describe("template scripts run after npm install (toimprove M-8)", () => {
 // unquoted variable, so the very first command fails "no such file or directory: node /path/…".
 // The same page still shows the old message "this version of the app implements 0".
 describe("getting-started works as written on macOS (toimprove M-9)", () => {
-  const doc = readFileSync(path.join(SDK, "docs", "getting-started.md"), "utf8");
+  const doc = readFileSync(
+    path.join(SDK, "docs", "getting-started.md"),
+    "utf8",
+  );
   it.fails("no command depends on word-splitting a shell variable", () => {
     expect(doc).not.toMatch(/^\$VP /m);
   });
-  it.fails("the api-unsupported example matches what check prints today (implements 1)", () => {
-    expect(doc).not.toContain("this version of the app implements 0");
-  });
+  it.fails(
+    "the api-unsupported example matches what check prints today (implements 1)",
+    () => {
+      expect(doc).not.toContain("this version of the app implements 0");
+    },
+  );
 });
