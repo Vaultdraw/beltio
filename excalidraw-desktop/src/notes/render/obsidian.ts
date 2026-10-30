@@ -10,6 +10,7 @@
 import { Marked, Renderer, Tokenizer } from "marked";
 
 import { findLinks } from "../../links/grammar";
+import { fileKind } from "../../vault/fileKind";
 import { findTags, MAX_TAG_CHARS } from "../../tags/grammar";
 
 import { altAndSize } from "./imageSize";
@@ -120,6 +121,14 @@ const embed: TokenizerAndRendererExtension = {
     const kind = IMAGE.test(target) ? "image" : "note";
     // Images are found by the backend (next to the note, by name); notes by the link index.
     const path = kind === "image" ? target : ctx.resolve(target);
+    if (path && kind === "note" && fileKind(path) !== "note") {
+      // A drawing (`![[Sketch]]`): no note text to show, so it is a link that opens the drawing
+      // instead of a dead word (toimprove 218).
+      const data = `data-target="${esc(target)}" data-path="${esc(path)}"`;
+      return `<span class="note-embed note-embed-drawing" ${data}><a class="wikilink" href="#" ${data}>${esc(
+        alias || target,
+      )}</a></span>`;
+    }
     const attrs = `data-embed="${kind}" data-target="${esc(target)}"${
       path ? ` data-path="${esc(path)}"` : ""
     }${heading ? ` data-heading="${esc(heading)}"` : ""}${

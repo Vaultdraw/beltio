@@ -261,31 +261,55 @@ describe("J-8: tag chips in a note follow the tag grammar the tag pane uses (toi
 });
 
 describe("J-9: ![[Sketch]] embeds a drawing (toimprove 218)", () => {
-  it.fails(
-    "a drawing embed shows the drawing or at least a link to it",
-    async () => {
-      const root = document.createElement("div");
-      root.innerHTML = sanitizeNoteHtml(
-        renderNoteHtml("See ![[Sketch]] here.", {
-          resolve: (t) => (t === "Sketch" ? "Sketch.excalidraw" : null),
-          highlight: false,
-          math: true,
-        }),
-        { remoteImages: false },
-      );
-      document.body.append(root);
-      await hydrateEmbeds(root, {
-        imageUrl: async () => null,
-        // The native read refuses anything that is not a .md note (note_file.rs check_note_path).
-        noteText: async (p: string) => (p.endsWith(".md") ? "" : null),
-        renderNested: () => "",
-        afterNested: async () => {},
-      } as never);
-      const embed = root.querySelector('[data-path="Sketch.excalidraw"]')!;
-      root.remove();
-      expect(embed.querySelector("img, svg, canvas, a")).not.toBeNull();
-    },
-  );
+  it("a drawing embed shows the drawing or at least a link to it", async () => {
+    const root = document.createElement("div");
+    root.innerHTML = sanitizeNoteHtml(
+      renderNoteHtml("See ![[Sketch]] here.", {
+        resolve: (t) => (t === "Sketch" ? "Sketch.excalidraw" : null),
+        highlight: false,
+        math: true,
+      }),
+      { remoteImages: false },
+    );
+    document.body.append(root);
+    await hydrateEmbeds(root, {
+      imageUrl: async () => null,
+      // The native read refuses anything that is not a .md note (note_file.rs check_note_path).
+      noteText: async (p: string) => (p.endsWith(".md") ? "" : null),
+      renderNested: () => "",
+      afterNested: async () => {},
+    } as never);
+    const embed = root.querySelector('[data-path="Sketch.excalidraw"]')!;
+    root.remove();
+    expect(embed.querySelector("img, svg, canvas, a")).not.toBeNull();
+  });
+});
+
+describe("J-9 family: what embeds a drawing and what does not (toimprove 218)", () => {
+  const out = (md: string) =>
+    sanitizeNoteHtml(
+      renderNoteHtml(md, {
+        resolve: (t) =>
+          ({
+            Sketch: "Sketch.excalidraw",
+            Old: "Old.excalidraw.md",
+            Note: "Note.md",
+          }[t] ?? null),
+        highlight: false,
+        math: true,
+      }),
+      { remoteImages: false },
+    );
+  it("an Obsidian drawing (.excalidraw.md) is a link too", () => {
+    expect(out("![[Old]]")).toContain('data-path="Old.excalidraw.md"');
+    expect(out("![[Old]]")).toContain("wikilink");
+  });
+  it("a note embed stays an embed", () => {
+    expect(out("![[Note]]")).toContain('data-embed="note"');
+  });
+  it("a missing target stays an unresolved embed", () => {
+    expect(out("![[Gone]]")).toContain("unresolved");
+  });
 });
 
 describe("J-10: Markdown in a callout title (toimprove 219)", () => {
