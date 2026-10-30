@@ -3,7 +3,7 @@
 # and real file-system changes. Hunter C, 2026-10-30. Needs the app built with the smoke feature:
 #   VITE_APP_SMOKE_TEST=true node ../node_modules/@tauri-apps/cli/tauri.js build --features smoke-test --bundles app --config src-tauri/tauri.test.conf.json
 # Usage: scripts/packaged-control-check.sh   (opens one app window; check HID idle > 300 s first; never runs while a perf run holds the build lock)
-# Prints PASS/FAIL per check; "CLAIM" checks are the open hunter claims (C-8 mv drops the extension, C-9 config set accepts bad keys and values, C-10 control calls answer before their state is ready) and are expected to FAIL until fixed.
+# Prints PASS/FAIL per check; "CLAIM" checks were the open hunter claims (C-8 to C-11, all fixed on 2026-10-30); a claim that fails again is a regression.
 # Exit 1 on any FAIL that is not a CLAIM; CLAIM_STRICT=1 makes claims fail the run too.
 set -u
 HERE=$(cd "$(dirname "$0")/.." && pwd)
@@ -83,6 +83,11 @@ v new MvA >/dev/null; sleep 2; v mv MvA MvB >/dev/null 2>&1; sleep 1
 v config set files.auto_reload banana >/dev/null 2>&1 && claim "C-9: 'config set files.auto_reload banana' accepted (exit 0)" || pass "CLAIM C-9 config set refuses a wrong type"
 v config set files.auto_reload true >/dev/null 2>&1
 v config set files.auto_reloadd false >/dev/null 2>&1 && claim "C-9: 'config set files.auto_reloadd false' (misspelt key) accepted" || pass "CLAIM C-9 config set refuses an unknown key"
+
+# 6b. small items fixed after hunter C round 3
+v plugin call mermaid to_drawing '{"text":"graph TD\nA --> B","path":"NewDir/Sub/D2.excalidraw"}' >/dev/null 2>&1 && [ -f "$V/NewDir/Sub/D2.excalidraw" ] && pass "plugin call into a missing folder creates the folder" || fail "plugin call into a missing folder"
+v open Fresh >/dev/null 2>&1; v tab close Fresh >/dev/null 2>&1 && ! v tabs | grep -q Fresh && pass "tab close by bare name" || fail "tab close Fresh (bare name)"
+v open Alpha >/dev/null 2>&1; v open Fresh --new-tab >/dev/null 2>&1; v tab close 2 >/dev/null 2>&1 && ! v tabs | grep -q Fresh && pass "tab close by number" || fail "tab close 2 (number)"
 
 # 7. vault switch
 v vault open "$V2" >/dev/null; sleep 2
