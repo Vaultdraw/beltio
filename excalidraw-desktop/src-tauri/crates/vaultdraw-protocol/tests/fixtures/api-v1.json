@@ -1442,7 +1442,7 @@
       "roles": [
         "cli"
       ],
-      "summary": "Focus a tab by id, 1-based index, or file target",
+      "summary": "Focus a tab by id, 1-based index, drawing name or file target",
       "window": true
     },
     {
@@ -1455,6 +1455,9 @@
           },
           "id": {
             "type": "string"
+          },
+          "index": {
+            "type": "integer"
           },
           "path": {
             "type": "string"
@@ -1478,7 +1481,7 @@
       "roles": [
         "cli"
       ],
-      "summary": "Close a tab by id or file target",
+      "summary": "Close a tab by id, 1-based index, drawing name or file target",
       "window": true
     },
     {
