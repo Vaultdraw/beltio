@@ -6,6 +6,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Added
 
+- **Windows installer and CI (not released yet).** A per-user NSIS installer with the WebView2 bootstrapper built in, which also puts the `vaultdraw` command on your `PATH` (removed on uninstall), and a `windows` workflow that tests and builds it on GitHub. The first builds are unsigned, so SmartScreen warns; see `docs/windows.md`.
+
 - **AI assistant (official plugin, off by default).** Ask a model you choose about your drawing with your own key: **AI: Ask about this drawing**, **Describe the selection**, **Generate a diagram from text** (the answer becomes shapes, one undo step), **Summarise this note**, and **Stop the answer**. Anthropic, OpenAI (or any OpenAI-style address) and a local Ollama; provider, model, address and timeout in Settings, Plugins. A panel streams the answer and **Show what is sent** lists exactly what leaves the app. The key is kept outside `config.toml` and your vaults and cannot be read back. Offline mode blocks it, except a model on this computer. No Vaultdraw server is involved. Plugin API 1.1.0 (experimental additions): `ctx.net` (permission `net`) and `ctx.secret` (permission `secret`); official plugins can now be off by default.
 
 ### Changed

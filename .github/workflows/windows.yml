@@ -1,0 +1,103 @@
+# Windows checks on GitHub's windows-latest runners: typecheck + unit tests, Rust tests, the functional
+# end-to-end suite (Playwright Chromium, three shards) and the NSIS installer as a downloadable artefact.
+# Same shape as linux.yml. It runs only once the owner pushes this file; enabling Actions is an owner action.
+# The installer is unsigned for now: Windows SmartScreen warns on first run (docs/windows.md).
+name: windows
+on:
+  push: { branches: [main] }
+  pull_request:
+concurrency: { group: "windows-${{ github.ref }}", cancel-in-progress: true }
+permissions: { contents: read }
+
+env:
+  CI: "1"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check:
+    name: typecheck + unit tests
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: yarn, cache-dependency-path: yarn.lock }
+      - run: npx --yes yarn@1.22.22 install --frozen-lockfile
+      - run: npx --yes yarn@1.22.22 test:typecheck
+      - name: Unit tests (desktop, sdk examples, editor packages)
+        run: |
+          (cd excalidraw-desktop && npx vitest run --maxWorkers=2 --minWorkers=1)
+          npx vitest run sdk --maxWorkers=2 --minWorkers=1
+          VAULTDRAW_TEST_HOST=mock npx vitest run sdk/examples --maxWorkers=2 --minWorkers=1
+          npx vitest run packages --maxWorkers=2 --minWorkers=1
+
+  rust:
+    name: cargo test
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: excalidraw-desktop/src-tauri, cache-on-failure: true }
+      - name: cargo test --workspace
+        run: cargo test --workspace -j 2 --manifest-path excalidraw-desktop/src-tauri/Cargo.toml
+
+  e2e:
+    name: end-to-end (Chromium, shard ${{ matrix.shard }}/3)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix: { shard: [1, 2, 3] }
+    defaults: { run: { shell: bash, working-directory: excalidraw-desktop } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: yarn, cache-dependency-path: yarn.lock }
+      - run: npx --yes yarn@1.22.22 install --frozen-lockfile
+        working-directory: .
+      - id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with: { path: "~/AppData/Local/ms-playwright", key: "playwright-chromium-${{ steps.pw.outputs.version }}" }
+      - run: npx playwright install chromium
+      # The app's webview on Windows is WebView2 (Chromium), so Chromium is the matching engine here.
+      # A failed test is retried once (reported as flaky, not hidden); the factor leaves room for a shared runner.
+      - name: Functional end-to-end suite
+        run: npx playwright test --project=chromium --shard=${{ matrix.shard }}/3 --retries=1
+        env: { E2E_FULL: "1", E2E_WORKERS: "2", E2E_TIMEOUT_FACTOR: "1.5" }
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-results-shard-${{ matrix.shard }}
+          path: .cache/e2e-results-*
+          if-no-files-found: ignore
+          retention-days: 7
+
+  bundle:
+    name: bundle (NSIS installer)
+    runs-on: windows-latest
+    timeout-minutes: 75
+    defaults: { run: { shell: bash, working-directory: excalidraw-desktop } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: yarn, cache-dependency-path: yarn.lock }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: excalidraw-desktop/src-tauri, cache-on-failure: true }
+      - run: npx --yes yarn@1.22.22 install --frozen-lockfile
+        working-directory: .
+      # tauri.windows.conf.json picks the NSIS target, the embedded WebView2 bootstrapper and the PATH hook.
+      - name: Build the installer
+        run: npx --yes yarn@1.22.22 tauri build --ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: excalidraw-desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error
+          retention-days: 7
