@@ -55,7 +55,7 @@ function setup() {
   });
   const listeners = ext.attach(session);
   const key = (k: string) =>
-    listeners.onKeyDown?.(
+    listeners?.onKeyDown?.(
       new KeyboardEvent("keydown", { key: k, cancelable: true }),
     );
   return { key, continueInNewText, restyle, textarea };
