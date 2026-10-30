@@ -13,29 +13,25 @@ import { openVault } from "../helpers";
 const WORD = "Supercalifragilistic".repeat(16); // 320 characters, no break
 const URL = `https://example.com/${"very-long-path-segment/".repeat(14)}end`;
 
-type Row = { name: string; md: string; bug?: string };
-
-const G1 =
-  "toimprove 195 (G-1): long words do not wrap in the note reading view";
+type Row = { name: string; md: string };
 
 const ROWS: Row[] = [
-  { name: "a long word in a paragraph", md: `Before ${WORD} after.`, bug: G1 },
+  { name: "a long word in a paragraph", md: `Before ${WORD} after.` },
   { name: "a bare long link", md: `See ${URL} for more.` },
   {
     name: "a Markdown link with a long address as its text",
     md: `[${URL}](${URL})`,
   },
-  { name: "long inline code", md: `Run \`${WORD}\` now.`, bug: G1 },
-  { name: "a long word in a heading", md: `## ${WORD}`, bug: G1 },
-  { name: "a long word in a list item", md: `- ${WORD}`, bug: G1 },
-  { name: "a long word in a task", md: `- [ ] ${WORD}`, bug: G1 },
-  { name: "a long word in a quote", md: `> ${WORD}`, bug: G1 },
+  { name: "long inline code", md: `Run \`${WORD}\` now.` },
+  { name: "a long word in a heading", md: `## ${WORD}` },
+  { name: "a long word in a list item", md: `- ${WORD}` },
+  { name: "a long word in a task", md: `- [ ] ${WORD}` },
+  { name: "a long word in a quote", md: `> ${WORD}` },
   {
     name: "a long word in a table cell",
     md: `| a | b |\n| - | - |\n| ${WORD} | x |`,
-    bug: G1,
   },
-  { name: "a wikilink to a long name", md: `[[${WORD}]]`, bug: G1 },
+  { name: "a wikilink to a long name", md: `[[${WORD}]]` },
 ];
 
 const sideways = (page: Page) =>
@@ -46,14 +42,9 @@ const sideways = (page: Page) =>
 
 for (const width of [720, 1280]) {
   for (const r of ROWS) {
-    test(`${
-      r.bug ? "[toimprove 195, fails until fixed] " : ""
-    }note reading view at ${width} px: ${
-      r.name
-    } wraps, nothing scrolls sideways`, async ({ page }) => {
-      if (r.bug) {
-        test.fail(true, r.bug);
-      }
+    test(`note reading view at ${width} px: ${r.name} wraps, nothing scrolls sideways`, async ({
+      page,
+    }) => {
       await page.setViewportSize({ width, height: 800 });
       await openVault(page, "?seed=obsidian");
       await page.evaluate((text) => {

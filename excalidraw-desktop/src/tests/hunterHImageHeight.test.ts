@@ -19,7 +19,7 @@ const rule = (selector: string) => {
 };
 
 describe("hunter H-3: sized images keep their shape in a narrow note", () => {
-  it.fails(
+  it(
     "`.note-body img` that is clamped by max-width also has height: auto",
     () => {
       const body = rule(".note-body img");

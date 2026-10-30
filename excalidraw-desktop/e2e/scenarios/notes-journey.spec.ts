@@ -87,12 +87,6 @@ const openRow = (page: Page, path: string) =>
 
 journey({
   title: "notes-journey",
-  known: [
-    {
-      match: /the note reading view scrolls sideways on a long line/,
-      bug: "toimprove 195 (G-1)",
-    },
-  ],
   setup: async (page) => {
     await openVault(page, "?seed=obsidian");
     await seed(page);

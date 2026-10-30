@@ -127,6 +127,11 @@
   overflow-wrap: anywhere;
 }
 
+.note-body {
+  /* A long word, path or hash wraps inside the page, as in Obsidian; code blocks scroll in their box. */
+  overflow-wrap: anywhere;
+}
+
 .note-body > :first-child {
   margin-top: 0;
 }
@@ -219,6 +224,8 @@
 
 .note-body img {
   max-width: 100%;
+  /* A sized image (width and height attributes) keeps its shape when the column is narrower. */
+  height: auto;
 }
 
 .note-body hr {
