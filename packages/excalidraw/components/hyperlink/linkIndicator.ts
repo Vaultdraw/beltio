@@ -96,28 +96,25 @@ const relativeSegments = (text: TextLike) => {
   }
   const lines = text.text.split("\n");
   const lineHeight = text.fontSize * text.lineHeight;
-  let rel: LinkUnderlineSegment[];
-  if (lines.length < 2) {
-    rel = [{ x1: 0, x2: text.width, y: lineHeight }];
-  } else {
-    const font = getFontString(text as never);
-    rel = [];
-    lines.forEach((line, i) => {
-      const w = Math.min(text.width, getLineWidth(line.trimEnd(), font));
-      if (w <= 0) {
-        return;
-      }
-      const x1 =
-        text.textAlign === "center"
-          ? (text.width - w) / 2
-          : text.textAlign === "right"
-          ? text.width - w
-          : 0;
-      rel.push({ x1, x2: x1 + w, y: (i + 1) * lineHeight });
-    });
-    if (!rel.length) {
-      rel = [{ x1: 0, x2: text.width, y: lineHeight * lines.length }];
+  // Each line is measured, one line too: a box the user made wider underlines only the text
+  // (toimprove 258; Obsidian underlines the link text).
+  const font = getFontString(text as never);
+  let rel: LinkUnderlineSegment[] = [];
+  lines.forEach((line, i) => {
+    const w = Math.min(text.width, getLineWidth(line.trimEnd(), font));
+    if (w <= 0) {
+      return;
     }
+    const x1 =
+      text.textAlign === "center"
+        ? (text.width - w) / 2
+        : text.textAlign === "right"
+        ? text.width - w
+        : 0;
+    rel.push({ x1, x2: x1 + w, y: (i + 1) * lineHeight });
+  });
+  if (!rel.length) {
+    rel = [{ x1: 0, x2: text.width, y: lineHeight * lines.length }];
   }
   const entry = { version: text.version, width: text.width, rel, lineHeight };
   segmentCache.set(text, entry);

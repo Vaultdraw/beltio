@@ -42,7 +42,7 @@ describe("hunter L-3: a one-line linked text in a wide box", () => {
     expect(u.segments[0].x2 - u.segments[0].x1).toBeCloseTo(textWidth, 0);
   });
 
-  it.fails("one line is underlined as wide as its text, not the box", () => {
+  it("one line is underlined as wide as its text, not the box", () => {
     setLinkIndicator({ style: "underline" });
     const u = getLinkUnderline(wide, arrayToMap([wide]))!;
     expect(textWidth).toBeLessThan(200);
