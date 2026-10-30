@@ -131,6 +131,45 @@ export const FIXTURES: Record<string, () => PluginInfo> = {
       name: "Scene watch",
       activation: ["onStartupFinished"],
     }),
+  badpanel: () =>
+    makePluginInfo("badpanel", {
+      name: "Bad panel",
+      contributes: {
+        commands: [command("hi", "Bad panel: hi")],
+        panels: [
+          { id: "bad", title: "Bad panel", icon: null, group: "top" },
+          { id: "good", title: "Good panel", icon: null, group: "top" },
+        ],
+        settings: [],
+      },
+    }),
+  badload: () =>
+    makePluginInfo("badload", {
+      name: "Bad load",
+      contributes: {
+        commands: [command("x", "Bad load: run")],
+        panels: [],
+        settings: [],
+      },
+    }),
+  badsyntax: () =>
+    makePluginInfo("badsyntax", {
+      name: "Bad syntax",
+      contributes: {
+        commands: [command("x", "Bad syntax: run")],
+        panels: [],
+        settings: [],
+      },
+    }),
+  slowload: () =>
+    makePluginInfo("slowload", {
+      name: "Slow load",
+      contributes: {
+        commands: [command("slow", "Slow load: run")],
+        panels: [],
+        settings: [],
+      },
+    }),
   size5k: () => sized("size5k", "Size 5k", 5 * 1024),
   size100k: () => sized("size100k", "Size 100k", 100 * 1024),
   size1m: () => sized("size1m", "Size 1m", 1024 * 1024),
