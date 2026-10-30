@@ -24,12 +24,18 @@ type El = {
   lineHeight: number;
   textAlign: string;
   customData?: Record<string, unknown>;
+  strokeColor: string;
   text: string;
 };
 
 /** A tiny scene of text boxes with one being edited. */
 function harness(
-  opts: { on?: boolean; isLabel?: boolean; headingBold?: boolean } = {},
+  opts: {
+    on?: boolean;
+    isLabel?: boolean;
+    headingBold?: boolean;
+    color?: string;
+  } = {},
 ) {
   let on = opts.on ?? true;
   const els = new Map<string, El>();
@@ -45,6 +51,7 @@ function harness(
       fontFamily: 5,
       lineHeight: 1.25,
       textAlign: "left",
+      strokeColor: opts.color ?? "#1e1e1e",
       text: "",
       ...p,
     };
@@ -116,6 +123,7 @@ function harness(
           fontSize,
           fontFamily: fontFamily ?? from.fontFamily,
           customData,
+          strokeColor: from.strokeColor,
         });
         measure(created);
         start(created.id, c);
@@ -644,5 +652,63 @@ describe("Markdown typing: Obsidian list parity", () => {
     expect(h.textarea.value).toBe("    • deep\n• ");
     h.press("Enter");
     expect(h.textarea.value).toBe("    • deep\n");
+  });
+});
+
+describe("Markdown typing: the user's text colour (toimprove 162)", () => {
+  it("a heading keeps the user's colour in the file and remembers it as the role base", () => {
+    const h = harness({ color: "#E03131" });
+    h.type("# ");
+    expect(h.current().strokeColor).toBe("#E03131");
+    expect(h.current().customData).toEqual({ role: "h1", roleBase: "#e03131" });
+  });
+
+  it("the stock colours leave no base (the file stays as before)", () => {
+    for (const color of ["#1e1e1e", "#000000"]) {
+      const h = harness({ color });
+      h.type("## ");
+      expect(h.current().customData).toEqual({ role: "h2" });
+    }
+  });
+
+  it("a heading started on a later line, a quote and the body box below keep the colour", () => {
+    const h = harness({ color: "#2f9e44" });
+    h.type("first");
+    h.press("Enter");
+    h.type("> ");
+    const quote = h.current();
+    expect(quote.customData).toEqual({ role: "quote", roleBase: "#2f9e44" });
+    expect(quote.strokeColor).toBe("#2f9e44");
+    h.type("said");
+    h.press("Enter");
+    h.press("Enter");
+    expect(h.current().strokeColor).toBe("#2f9e44");
+    expect(h.current().customData ?? null).toBeNull();
+  });
+
+  it("Backspace at the heading start drops the role and its base, not the colour", () => {
+    const h = harness({ color: "#e03131" });
+    h.type("# Title");
+    h.textarea.setSelectionRange(0, 0);
+    h.press("Backspace");
+    expect(Object.keys(h.current().customData ?? {})).toEqual([]);
+    expect(h.current().strokeColor).toBe("#e03131");
+  });
+
+  it("font family, alignment and line height of the defaults survive every block", () => {
+    const h = harness({ color: "#e03131" });
+    const box = h.current();
+    box.fontFamily = 8;
+    box.textAlign = "center";
+    box.lineHeight = 1.5;
+    h.type("# Head");
+    h.press("Enter");
+    h.type("- item");
+    const head = h.all()[0];
+    const body = h.current();
+    expect(head.textAlign).toBe("center");
+    expect(head.lineHeight).toBe(1.5);
+    expect(head.fontFamily).toBe(108); // the bold face of Comic Shanns
+    expect(body.fontFamily).toBe(8);
   });
 });

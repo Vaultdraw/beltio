@@ -55,6 +55,7 @@ import type {
 import { actionTextAutoResize } from "../actions/actionTextAutoResize";
 import { withBatchedUpdates } from "../reactUtils";
 import { isPointHittingTextAutoResizeHandle } from "../textAutoResizeHandle";
+import { getPageTextMaxWidth, isPageModeOn } from "../data/pageSetup";
 import { scrollBoundsIntoView } from "../viewport";
 import { textWysiwyg } from "../wysiwyg/textWysiwyg";
 
@@ -206,7 +207,16 @@ export class AppText {
       const textViewportOffsets = this.getTextViewportOffsets(
         getElementBounds(latestTextElement, elementsMap),
       );
-      const maxWidth = this.getMaxTextWidth(textViewportOffsets);
+      let maxWidth = this.getMaxTextWidth(textViewportOffsets);
+      const pageSetup = this.app.state.pageSetup;
+      if (isPageModeOn(pageSetup) && !container) {
+        // page mode: a free text wraps at the page's edge, so it never grows
+        // past it (and is never moved back in as it grows)
+        maxWidth = Math.min(
+          maxWidth,
+          getPageTextMaxWidth(pageSetup, latestTextElement),
+        );
+      }
 
       this.app.scene.replaceAllElements([
         // Not sure why we include deleted elements as well hence using deleted elements map

@@ -33,12 +33,28 @@ export const roleOf = (
   return typeof role === "string" ? role : null;
 };
 
-/** customData with `role` set (or removed when null); undefined when nothing is left. */
+/** The two stock text colours: a text in one of them has no colour of its own. */
+const STOCK_TEXT_COLORS = ["#1e1e1e", "#000000"];
+
+/**
+ * customData with `role` set (or removed when null); undefined when nothing is left.
+ *
+ * `base` is the text colour the box had when the role was set. A user's own
+ * text default colour is no reason to lose the theme's role colour (the
+ * theme owns heading and quote colours, like Obsidian's `--h1-color`), so
+ * the role colour applies while the stored colour is still `roleBase`; a
+ * colour picked afterwards differs and wins.
+ */
 export const withRole = (
   customData: Record<string, unknown> | undefined,
   role: string | null,
+  base?: string,
 ): Record<string, unknown> | undefined => {
-  const { role: _old, ...rest } = customData ?? {};
-  const next = role ? { ...rest, role } : rest;
+  const { role: _old, roleBase: _oldBase, ...rest } = customData ?? {};
+  const own =
+    base && !STOCK_TEXT_COLORS.includes(base.toLowerCase())
+      ? { roleBase: base.toLowerCase() }
+      : {};
+  const next = role ? { ...rest, role, ...own } : rest;
   return Object.keys(next).length ? next : undefined;
 };

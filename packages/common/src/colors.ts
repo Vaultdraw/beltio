@@ -118,6 +118,8 @@ export type DisplayTextRoleColor = (
   role: string,
   isDarkMode: boolean,
   storedColor: string,
+  /** `customData.roleBase`: the colour the text had when it got the role. */
+  roleBase?: string,
 ) => string | null;
 
 let displayTextRoleColor: DisplayTextRoleColor | null = null;
@@ -143,7 +145,13 @@ export const getTextDisplayColor = (
 ): string => {
   const role = displayTextRoleColor && element.customData?.role;
   if (typeof role === "string") {
-    const color = displayTextRoleColor!(role, isDarkMode, element.strokeColor);
+    const base = element.customData?.roleBase;
+    const color = displayTextRoleColor!(
+      role,
+      isDarkMode,
+      element.strokeColor,
+      typeof base === "string" ? base : undefined,
+    );
     if (color) {
       return color;
     }

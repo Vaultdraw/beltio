@@ -10,6 +10,7 @@ import {
   getPageIndexRange,
   getPageRect,
   getPageSizeInPoints,
+  getPageTextMaxWidth,
   normalizePageSetup,
   updatePageSetup,
 } from "./pageSetup";
@@ -136,5 +137,40 @@ describe("continuous layout clamping", () => {
       dx: 10,
       dy: 3 * 1123 - 3400,
     });
+  });
+});
+
+describe("getPageTextMaxWidth (a free text wraps at the page edge)", () => {
+  const A4W = 794;
+  const t = (
+    x: number,
+    width: number,
+    textAlign: "left" | "center" | "right" = "left",
+    fontSize = 20,
+  ) => ({ x, width, textAlign, fontSize });
+
+  it("left aligned: from its left edge to the page's right edge", () => {
+    expect(getPageTextMaxWidth(sep(), t(100, 50))).toBe(A4W - 100);
+    expect(getPageTextMaxWidth(sep(), t(0, 50))).toBe(A4W);
+  });
+
+  it("right aligned: from the page's left edge to its right edge", () => {
+    expect(getPageTextMaxWidth(sep(), t(500, 100, "right"))).toBe(600);
+  });
+
+  it("centred: the nearer side decides, both ways", () => {
+    expect(getPageTextMaxWidth(sep(), t(100, 100, "center"))).toBe(300);
+    expect(getPageTextMaxWidth(sep(), t(594, 100, "center"))).toBe(300);
+  });
+
+  it("a text at the very edge keeps room for a few letters, never one per line", () => {
+    expect(getPageTextMaxWidth(sep(), t(790, 4, "left", 20))).toBe(120);
+    expect(getPageTextMaxWidth(sep(), t(790, 4, "left", 500))).toBe(A4W);
+  });
+
+  it("is the same on every page of a layout (x is the only input)", () => {
+    for (const layout of [sep(), cont()]) {
+      expect(getPageTextMaxWidth(layout, t(300, 10))).toBe(A4W - 300);
+    }
   });
 });

@@ -3,19 +3,22 @@
  * (`customData.role`, typed or imported) is drawn in the active theme's
  * Markdown colour for that role (`markdown.h1` … `markdown.h6`, `bold`,
  * `italic`, `link`, `code`; theme/markdown.ts), like Obsidian's `--h1-color`.
- * A quote's text takes the theme's muted text colour.
+ * A quote's text takes the colour a Markdown import's quote gets: the theme's
+ * muted grey (the same on both paths).
  *
  * A theme's own colours are used as written. Only when the canvas shown is
  * not the theme's page ("Sync canvas with theme" off) is a colour moved to
  * read at 4.5:1 on that canvas.
  *
- * A text whose stored colour is neither the editor's default black nor a
- * reserved role colour was picked by the user: it keeps that colour and the
- * role no longer applies.
+ * A text whose stored colour is neither the editor's default black, a
+ * reserved role colour nor the colour its box had when Markdown mode gave it
+ * the role (`customData.roleBase`, the user's own text default) was picked by
+ * the user afterwards: it keeps that colour and the role no longer applies.
  */
 import { COLOR_PALETTE } from "@excalidraw/common";
 
 import { ROLE_COLORS } from "../../../sdk/api/shared/markdownRoles";
+import { buildCanvasPaletteMap } from "../theme/canvas";
 import { ensureContrast, normalizeHex } from "../theme/color";
 import { markdownColors } from "../theme/markdown";
 
@@ -46,13 +49,27 @@ const DEFAULT_STORED = new Set<string>(
   ),
 );
 
+/** The colour a Markdown import draws a quote's text in (its muted tone, gray 600), as the theme paints it. */
+const IMPORT_MUTED = "#868e96";
+const mutedCache = new WeakMap<ThemeVariant, string>();
+const quoteColor = (variant: ThemeVariant): string => {
+  let hit = mutedCache.get(variant);
+  if (!hit) {
+    hit =
+      buildCanvasPaletteMap(variant).get(IMPORT_MUTED) ??
+      variant.mOnSurfaceVariant;
+    mutedCache.set(variant, hit);
+  }
+  return hit;
+};
+
 /** The theme's colour of a text role, before any canvas adjustment. */
 export const roleTokenColor = (
   variant: ThemeVariant,
   role: string,
 ): string | null => {
   if (role === QUOTE_ROLE) {
-    return variant.mOnSurfaceVariant;
+    return quoteColor(variant);
   }
   return TEXT_ROLES.includes(role)
     ? markdownColors(variant)[role as MarkdownRole]
@@ -63,7 +80,7 @@ export const roleTokenColor = (
 export function buildRoleColor(
   variant: ThemeVariant,
   canvas: string,
-): (role: string, storedColor?: string) => string | null {
+): (role: string, storedColor?: string, roleBase?: string) => string | null {
   const onPage = normalizeHex(canvas) === normalizeHex(variant.mSurface);
   const out = new Map<string, string>();
   for (const role of [...TEXT_ROLES, QUOTE_ROLE]) {
@@ -73,8 +90,13 @@ export function buildRoleColor(
       onPage ? color : ensureContrast(color, canvas, MIN_ROLE_CONTRAST),
     );
   }
-  return (role, storedColor) =>
-    storedColor !== undefined && !DEFAULT_STORED.has(storedColor.toLowerCase())
-      ? null
-      : out.get(role) ?? null;
+  return (role, storedColor, roleBase) => {
+    if (storedColor !== undefined) {
+      const stored = storedColor.toLowerCase();
+      if (!DEFAULT_STORED.has(stored) && stored !== roleBase?.toLowerCase()) {
+        return null;
+      }
+    }
+    return out.get(role) ?? null;
+  };
 }

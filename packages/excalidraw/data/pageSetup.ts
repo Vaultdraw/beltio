@@ -303,6 +303,36 @@ export const getPageIndexRange = (
   return first > last ? null : [first, last];
 };
 
+/**
+ * The widest a free text may grow to without leaving the page column: from
+ * the edge its alignment pins (left: its left edge, right: its right edge,
+ * centre: its centre) to the nearer side of the column. A text that already
+ * starts past the edge keeps room for a few letters (the clamp moves it in
+ * once, never per key).
+ */
+export const getPageTextMaxWidth = (
+  setup: PageSetup,
+  text: {
+    x: number;
+    width: number;
+    fontSize: number;
+    textAlign: string;
+  },
+): number => {
+  const left = 0;
+  const right = setup.width;
+  let room: number;
+  if (text.textAlign === "right") {
+    room = text.x + text.width - left;
+  } else if (text.textAlign === "center") {
+    const centre = text.x + text.width / 2;
+    room = 2 * Math.min(centre - left, right - centre);
+  } else {
+    room = right - text.x;
+  }
+  return Math.max(room, Math.min(right - left, text.fontSize * 6));
+};
+
 /** Clamps a scene point into page `index`. */
 export const clampPointToPage = (
   setup: PageSetup,

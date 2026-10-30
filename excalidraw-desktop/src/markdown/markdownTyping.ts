@@ -239,7 +239,7 @@ export function createMarkdownTyping(deps: {
         restyle({
           fontSize,
           fontFamily: fontFor(el.fontFamily, role, settings),
-          customData: withRole(el.customData, role),
+          customData: withRole(el.customData, role, el.strokeColor),
         });
         lastConversion = {
           kind: "inPlace",
@@ -268,7 +268,7 @@ export function createMarkdownTyping(deps: {
         caret: 0,
         fontSize,
         fontFamily: fontFor(el.fontFamily, role, settings),
-        customData: { role },
+        customData: withRole(undefined, role, el.strokeColor),
       });
       return true;
     };
