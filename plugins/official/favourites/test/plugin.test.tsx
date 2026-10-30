@@ -201,7 +201,9 @@ describe("favourites plugin", () => {
     });
     await p.run("open1");
     await new Promise((r) => setTimeout(r, 1700));
-    expect(p.toasts().some((t) => t.includes("no longer in the drawing"))).toBe(true);
+    expect(p.toasts().some((t) => t.includes("no longer in the drawing"))).toBe(
+      true,
+    );
     const before = p.toasts().length;
     await p.run("open2");
     await new Promise((r) => setTimeout(r, 100));
