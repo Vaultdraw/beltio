@@ -1420,6 +1420,31 @@ max_col_width = 260    # widest column in pixels, 80 to 1000; longer text wraps
 - Limits: 200 rows, 30 columns and about 400 filled cells per paste, and text up to 256,000 characters is checked (larger pastes are never treated as tables). Excalidraw text has no bold, so the header row is shaded with a heavier rule under it.
 - Turn the plugin off with `plugins.disabled`; the plugin sees only the text of a paste of plain text (permission `clipboard`).
 
+### AI assistant (official plugin)
+
+An official plugin (`ai-assistant`, in `plugins/official/ai-assistant`), **off until you turn it on** in Settings, Plugins. It asks a model you choose about your drawing, with your own key. There is no Vaultdraw server: requests go straight from the app to the provider, so it costs nothing here and the provider bills you. Nothing loads, and nothing is sent, until you use one of its commands.
+
+```toml
+[plugin.ai-assistant]
+provider = "anthropic"        # "anthropic", "openai" (also any OpenAI-style service) or "ollama"
+model = ""                    # empty: a common default for the provider
+base_url = ""                 # empty: the provider's usual address; https, or http to this computer
+timeout_s = 60                # seconds to connect and between parts of an answer, 5 to 600
+max_context_chars = 12000     # most drawing text sent, 500 to 200000
+```
+
+| Provider | Address used when `base_url` is empty | Key |
+| --- | --- | --- |
+| `anthropic` | `https://api.anthropic.com` | needed |
+| `openai` | `https://api.openai.com/v1` | needed, except for an address on this computer |
+| `ollama` | `http://localhost:11434` | none |
+
+- **Commands** (palette, rebindable): `ai-assistant.ask` ("AI: Ask about this drawing"), `ai-assistant.describe` ("AI: Describe the selection"), `ai-assistant.diagram` ("AI: Generate a diagram from text"; the model writes a Mermaid diagram and **Draw it** turns it into shapes in one undo step), `ai-assistant.summarise` ("AI: Summarise this note": the selected text, or all text in the drawing), `ai-assistant.cancel` ("AI: Stop the answer"), `ai-assistant.clear`, `ai-assistant.set-key` and `ai-assistant.remove-key`. The panel (also on the activity bar) has the question box, **Stop**, **Copy** and **Show what is sent**, which lists the exact instructions and drawing text of the next request.
+- **The key** is entered in the panel (or with "AI: Set API key"), kept by the app in `plugin-secrets/ai-assistant.json` in the state folder (readable by your user only, **not encrypted**), and never written to `config.toml`, a vault or a drawing. The page cannot read it back; the app adds it to the request itself. "AI: Remove API key" deletes it.
+- **Offline mode** stops every request to another computer and says so in plain words. A request to this computer (`localhost`, `127.0.0.1`, `::1`, for example Ollama) still works, because nothing leaves the machine. Other computers on your network are not reachable (private addresses are refused), and there are no redirects.
+- **Limits:** the drawing is sent as text (element kinds, labels, positions), not as a picture; Summarise reads text in drawings (the native note editor's text is not available to plugins yet). Answers stop at 8 MiB.
+- Turn the plugin off in Settings, Plugins; it is not in the default `plugins.enabled`, and Restore defaults leaves it off.
+
 ## Templates
 
 A template is an ordinary `.excalidraw` file, so any drawing can become one, and a template can be opened and edited like any other drawing.

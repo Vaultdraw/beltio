@@ -96,6 +96,7 @@ export async function installDefaultBackend(win: Window): Promise<void> {
       (win as any).__vaultRepo?.seedDrawing(path, JSON.stringify(scene)),
   );
   backend.network.offline = () => isOffline(getPreferences(win));
+  backend.net.offline = () => isOffline(getPreferences(win));
   backend.pdf = (win as any).__pdfBridge;
   // A spec can start the app in plugin safe mode (as Option held at launch does).
   backend.safeMode = (win as any).__e2ePluginSafeMode ?? null;

@@ -87,7 +87,12 @@ const readOfficial = async (id: string) => {
         palette: x.palette ?? true,
         repeat: x.repeat ?? false,
       })),
-      panels: [],
+      panels: (c.panels ?? []).map((x: any) => ({
+        id: x.id,
+        title: x.title,
+        icon: x.icon ?? null,
+        group: x.group ?? "top",
+      })),
       menus: (c.menus ?? []).map((x: any) => ({
         surface: x.surface,
         command: x.command,

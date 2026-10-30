@@ -240,6 +240,7 @@ export async function startPluginsHarness(
       (win as any).__vaultRepo?.seedDrawing(path, JSON.stringify(scene)),
   );
   backend.network.offline = () => isOffline(getPreferences(win));
+  backend.net.offline = () => isOffline(getPreferences(win));
   // Plugins list and read the app's vault, as the native gateway does (one file list).
   readThroughVault(backend, () => (win as any).__vaultRepo);
   for (const id of csv(params, "pluginData")) {
