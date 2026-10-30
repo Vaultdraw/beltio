@@ -23,8 +23,11 @@ const BAD_CHARS = /[<>:"|?*]/;
 // eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u001f\u007f-\u009f]/;
 
-const shown = (name: string) =>
-  `"${name.length > 40 ? `${name.slice(0, 37)}...` : name}"`;
+// Counts characters, not UTF-16 units, like the Rust side: an emoji is never cut in half.
+const shown = (name: string) => {
+  const chars = [...name];
+  return `"${chars.length > 40 ? `${chars.slice(0, 37).join("")}...` : name}"`;
+};
 
 /**
  * Why one path component is refused, in plain words, or null when it is fine. The same rules and

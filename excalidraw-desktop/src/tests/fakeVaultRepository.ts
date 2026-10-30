@@ -53,6 +53,13 @@ export function assertValidRelativePath(path: string): void {
   if (path.includes("\\")) {
     throw makeError("INVALID_PATH", `backslash separator rejected: ${path}`);
   }
+  if (new TextEncoder().encode(path).length > 4096) {
+    // The native core's MAX_REL_PATH_BYTES.
+    throw makeError(
+      "INVALID_PATH",
+      "Path must be a bounded vault-relative path using forward slashes",
+    );
+  }
   if (path === "." || path === "..") {
     throw makeError("INVALID_PATH", `reserved path rejected: ${path}`);
   }

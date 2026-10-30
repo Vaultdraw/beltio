@@ -122,7 +122,7 @@ export function validateEntryName(
     };
   }
   // eslint-disable-next-line no-control-regex
-  if (/[\u0000-\u001f\u007f]/.test(trimmed)) {
+  if (/[\u0000-\u001f\u007f-\u009f]/.test(trimmed)) {
     return { valid: false, error: "Name cannot contain line breaks or tabs" };
   }
   if (WINDOWS_DEVICE_NAMES.has(trimmed.split(".")[0].toUpperCase())) {
@@ -139,6 +139,13 @@ export function validateEntryName(
   }
   if (trimmed.toLowerCase() === ".excalidraw-vault") {
     return { valid: false, error: "Name is reserved by the application" };
+  }
+  // The core refuses these on create and move (fsops reject_hidden); say so before the dialog closes.
+  if (trimmed.startsWith(".")) {
+    return {
+      valid: false,
+      error: "Names starting with a dot are reserved and never listed",
+    };
   }
   if (kind === "folder" && trimmed.toLowerCase().endsWith(".excalidraw")) {
     return {
