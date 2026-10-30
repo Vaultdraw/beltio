@@ -48,25 +48,22 @@ test("sanity: Shift+F10 opens the row menu of the cursor row and Escape closes i
   expect(errors).toEqual([]);
 });
 
-test.fail(
-  "toimprove 221: after Escape on the row menu, focus is back in the tree and j moves the cursor",
-  async ({ page }) => {
-    await openVault(page);
-    const firstChild = await cursorOnDsa(page);
-    await page.keyboard.press("Shift+F10");
-    const menu = page.getByRole("menu", { name: /Actions for DSA/ });
-    await expect(menu).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(menu).toHaveCount(0);
-    expect(await activeInfo(page)).toMatchObject({ inTree: true });
-    await page.keyboard.press("j");
-    await expect(focusedRow(page)).toHaveAttribute(
-      "data-tree-path",
-      firstChild,
-      { timeout: 2000 },
-    );
-  },
-);
+test("toimprove 221: after Escape on the row menu, focus is back in the tree and j moves the cursor", async ({
+  page,
+}) => {
+  await openVault(page);
+  const firstChild = await cursorOnDsa(page);
+  await page.keyboard.press("Shift+F10");
+  const menu = page.getByRole("menu", { name: /Actions for DSA/ });
+  await expect(menu).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveCount(0);
+  expect(await activeInfo(page)).toMatchObject({ inTree: true });
+  await page.keyboard.press("j");
+  await expect(focusedRow(page)).toHaveAttribute("data-tree-path", firstChild, {
+    timeout: 2000,
+  });
+});
 
 test("the tab menu hands focus back to its tab after Escape (reference member)", async ({
   page,
@@ -86,18 +83,17 @@ test("the tab menu hands focus back to its tab after Escape (reference member)",
   await expect(tab).toBeFocused();
 });
 
-test.fail(
-  "toimprove 221: after Escape on the sort menu, focus is back on the Sort order button",
-  async ({ page }) => {
-    await openVault(page);
-    const button = page.getByRole("button", { name: "Sort order" });
-    await button.focus();
-    await page.keyboard.press("Enter");
-    const menu = page.getByRole("menu", { name: "Sort order" });
-    await expect(menu).toBeVisible();
-    await expect(menu.locator("[role^=menuitem]").first()).toBeFocused();
-    await page.keyboard.press("Escape");
-    await expect(menu).toHaveCount(0);
-    await expect(button).toBeFocused({ timeout: 2000 });
-  },
-);
+test("toimprove 221: after Escape on the sort menu, focus is back on the Sort order button", async ({
+  page,
+}) => {
+  await openVault(page);
+  const button = page.getByRole("button", { name: "Sort order" });
+  await button.focus();
+  await page.keyboard.press("Enter");
+  const menu = page.getByRole("menu", { name: "Sort order" });
+  await expect(menu).toBeVisible();
+  await expect(menu.locator("[role^=menuitem]").first()).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveCount(0);
+  await expect(button).toBeFocused({ timeout: 2000 });
+});

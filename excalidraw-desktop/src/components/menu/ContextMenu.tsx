@@ -56,6 +56,23 @@ export const ContextMenu = ({
   const win = ownerDocument?.defaultView ?? null;
   const shortcut = useCommandShortcutLookup(win);
 
+  // Hand focus back to what had it before the menu opened (the tree, the Sort order button),
+  // as the tab menu and dialogs do (toimprove 221). Only when focus would otherwise be lost: an
+  // item that opens a dialog or moves focus keeps it there.
+  useEffect(() => {
+    const doc = menuRef.current?.ownerDocument ?? ownerDocument;
+    const opener = doc?.activeElement as HTMLElement | null;
+    return () => {
+      const now = doc?.activeElement;
+      const lost = !now || now === doc?.body || !now.isConnected;
+      if (lost && opener?.isConnected && opener !== doc?.body) {
+        opener.focus({ preventScroll: true });
+      }
+    };
+    // Once per menu: the opener is what had focus when it mounted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const menu = menuRef.current;
     const doc = menu?.ownerDocument ?? ownerDocument;
