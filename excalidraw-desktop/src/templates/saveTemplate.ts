@@ -19,7 +19,7 @@ export async function saveAsTemplate(
 ): Promise<TemplateEntry> {
   const { repository, handle, folder, global, scope, json } = input;
   const base = getCleanDrawingName(input.name);
-  const validation = validateEntryName(base, "drawing");
+  const validation = validateEntryName(`${base}${EXT}`, "drawing");
   if (!validation.valid) {
     throw new Error(validation.error ?? "Invalid name");
   }

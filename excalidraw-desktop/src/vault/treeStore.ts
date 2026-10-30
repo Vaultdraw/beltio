@@ -89,6 +89,16 @@ export function getCleanDrawingName(name: string): string {
   return clean;
 }
 
+/** Same list as paths.rs `is_windows_reserved_name`; the contract table entry_names.json pins both. */
+const WINDOWS_DEVICE_NAMES = new Set([
+  "CON",
+  "PRN",
+  "AUX",
+  "NUL",
+  ...Array.from({ length: 9 }, (_, i) => `COM${i + 1}`),
+  ...Array.from({ length: 9 }, (_, i) => `LPT${i + 1}`),
+]);
+
 export function validateEntryName(
   name: string,
   kind: "folder" | "drawing",
@@ -97,16 +107,32 @@ export function validateEntryName(
   if (!trimmed) {
     return { valid: false, error: "Name cannot be empty" };
   }
-  if (trimmed.length > 255) {
-    return { valid: false, error: "Name is too long (maximum 255 characters)" };
+  // The native backend refuses a name over 255 bytes (UTF-8), so count bytes, not characters.
+  if (new TextEncoder().encode(trimmed).length > 255) {
+    return {
+      valid: false,
+      error:
+        "Name is too long (255 bytes at most; emoji and accented letters take more than one)",
+    };
   }
-  if (
-    trimmed.includes("/") ||
-    trimmed.includes("\\") ||
-    trimmed.includes(":") ||
-    trimmed.includes("\0")
-  ) {
-    return { valid: false, error: "Name cannot contain slashes or colons" };
+  if (/[\\/:*?"<>|]/.test(trimmed)) {
+    return {
+      valid: false,
+      error: 'Name cannot contain slashes or any of : * ? " < > |',
+    };
+  }
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(trimmed)) {
+    return { valid: false, error: "Name cannot contain line breaks or tabs" };
+  }
+  if (WINDOWS_DEVICE_NAMES.has(trimmed.split(".")[0].toUpperCase())) {
+    return {
+      valid: false,
+      error: "Name is a reserved system name (Windows cannot open it)",
+    };
+  }
+  if (kind === "folder" && trimmed.endsWith(".")) {
+    return { valid: false, error: "Folder names cannot end with a dot" };
   }
   if (trimmed === "." || trimmed === "..") {
     return { valid: false, error: "Name cannot be '.' or '..'" };

@@ -130,3 +130,23 @@ pub fn safe_path(root: &Path, path: &str, allow_missing_leaf: bool) -> Result<Pa
     }
     Ok(cur)
 }
+
+#[cfg(test)]
+mod name_contract_tests {
+    use super::component_is_invalid;
+
+    /// The table src/tests/nameContract.test.ts also reads: the names the Name dialogs must refuse.
+    #[test]
+    fn name_contract_table() {
+        let table: serde_json::Value = serde_json::from_str(include_str!("contract/entry_names.json")).unwrap();
+        for row in table["cases"].as_array().unwrap() {
+            let name = match &row["name"] {
+                serde_json::Value::String(s) => s.clone(),
+                o => o["repeat"].as_str().unwrap().repeat(o["times"].as_u64().unwrap() as usize),
+            };
+            let component = if row["kind"] == "drawing" { format!("{name}.excalidraw") } else { name.clone() };
+            let ok = !component_is_invalid(&component);
+            assert_eq!(ok, row["backendOk"].as_bool().unwrap(), "{} ({})", row["label"], row["kind"]);
+        }
+    }
+}

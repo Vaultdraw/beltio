@@ -1,0 +1,242 @@
+{
+ "about": "Names a person can type for a drawing or a folder, and whether the native backend (paths.rs component_is_invalid, applied to the file name with its .excalidraw extension for a drawing) accepts them. The Name dialogs (validateEntryName) must refuse every backendOk=false name with a sentence of their own; otherwise the user types a name, presses Save and gets a vague backend error. Both suites read this file: src/tests/nameContract.test.ts and the paths.rs test name_contract_table.",
+ "cases": [
+  {
+   "label": "plain",
+   "name": "Plan",
+   "kind": "drawing",
+   "backendOk": true
+  },
+  {
+   "label": "question mark",
+   "name": "a?b",
+   "kind": "drawing",
+   "backendOk": false
+  },
+  {
+   "label": "star",
+   "name": "a*b",
+   "kind": "drawing",
+   "backendOk": false
+  },
+  {
+   "label": "less than",
+   "name": "a<b",
+   "kind": "drawing",
+   "backendOk": false
+  },
+  {
+   "label": "double quote",
+   "name": "a\"b",
+   "kind": "drawing",
+   "backendOk": false
+  },
+  {
+   "label": "pipe",
+   "name": "a|b",
+   "kind": "drawing",
+   "backendOk": false
+  },
+  {
+   "label": "newline in the name",
+   "name": "A\nB",
+   "kind": "drawing",
+   "backendOk": false
+  },
+  {
+   "label": "tab in the name",
+   "name": "A\tB",
+   "kind": "drawing",
+   "backendOk": false
+  },
+  {
+   "label": "Windows device name CON",
+   "name": "CON",
+   "kind": "drawing",
+   "backendOk": false
+  },
+  {
+   "label": "Windows device name nul",
+   "name": "nul",
+   "kind": "drawing",
+   "backendOk": false
+  },
+  {
+   "label": "leading dot",
+   "name": ".hidden",
+   "kind": "drawing",
+   "backendOk": true
+  },
+  {
+   "label": "leading dash",
+   "name": "-rf",
+   "kind": "drawing",
+   "backendOk": true
+  },
+  {
+   "label": "plain",
+   "name": "Plan",
+   "kind": "folder",
+   "backendOk": true
+  },
+  {
+   "label": "question mark",
+   "name": "a?b",
+   "kind": "folder",
+   "backendOk": false
+  },
+  {
+   "label": "star",
+   "name": "a*b",
+   "kind": "folder",
+   "backendOk": false
+  },
+  {
+   "label": "less than",
+   "name": "a<b",
+   "kind": "folder",
+   "backendOk": false
+  },
+  {
+   "label": "double quote",
+   "name": "a\"b",
+   "kind": "folder",
+   "backendOk": false
+  },
+  {
+   "label": "pipe",
+   "name": "a|b",
+   "kind": "folder",
+   "backendOk": false
+  },
+  {
+   "label": "newline in the name",
+   "name": "A\nB",
+   "kind": "folder",
+   "backendOk": false
+  },
+  {
+   "label": "tab in the name",
+   "name": "A\tB",
+   "kind": "folder",
+   "backendOk": false
+  },
+  {
+   "label": "Windows device name CON",
+   "name": "CON",
+   "kind": "folder",
+   "backendOk": false
+  },
+  {
+   "label": "Windows device name nul",
+   "name": "nul",
+   "kind": "folder",
+   "backendOk": false
+  },
+  {
+   "label": "leading dot",
+   "name": ".hidden",
+   "kind": "folder",
+   "backendOk": true
+  },
+  {
+   "label": "leading dash",
+   "name": "-rf",
+   "kind": "folder",
+   "backendOk": true
+  },
+  {
+   "label": "drawing exactly 255 bytes with the extension",
+   "name": {
+    "repeat": "x",
+    "times": 244
+   },
+   "kind": "drawing",
+   "backendOk": true
+  },
+  {
+   "label": "drawing 256 bytes with the extension",
+   "name": {
+    "repeat": "x",
+    "times": 245
+   },
+   "kind": "drawing",
+   "backendOk": false
+  },
+  {
+   "label": "drawing 251 characters (262 bytes)",
+   "name": {
+    "repeat": "x",
+    "times": 251
+   },
+   "kind": "drawing",
+   "backendOk": false
+  },
+  {
+   "label": "drawing 128 accented letters (267 bytes)",
+   "name": {
+    "repeat": "é",
+    "times": 128
+   },
+   "kind": "drawing",
+   "backendOk": false
+  },
+  {
+   "label": "drawing 62 emoji (259 bytes)",
+   "name": {
+    "repeat": "😀",
+    "times": 62
+   },
+   "kind": "drawing",
+   "backendOk": false
+  },
+  {
+   "label": "drawing 60 emoji (251 bytes)",
+   "name": {
+    "repeat": "😀",
+    "times": 60
+   },
+   "kind": "drawing",
+   "backendOk": true
+  },
+  {
+   "label": "folder exactly 255 bytes",
+   "name": {
+    "repeat": "x",
+    "times": 255
+   },
+   "kind": "folder",
+   "backendOk": true
+  },
+  {
+   "label": "folder 128 accented letters (256 bytes)",
+   "name": {
+    "repeat": "é",
+    "times": 128
+   },
+   "kind": "folder",
+   "backendOk": false
+  },
+  {
+   "label": "folder 64 emoji (256 bytes)",
+   "name": {
+    "repeat": "😀",
+    "times": 64
+   },
+   "kind": "folder",
+   "backendOk": false
+  },
+  {
+   "label": "folder with a trailing dot",
+   "name": "foo.",
+   "kind": "folder",
+   "backendOk": false
+  },
+  {
+   "label": "drawing with a trailing dot (the extension follows)",
+   "name": "foo.",
+   "kind": "drawing",
+   "backendOk": true
+  }
+ ]
+}
