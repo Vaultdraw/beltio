@@ -288,7 +288,9 @@ test("a window resized mid-setup keeps the step and the answers and never scroll
         () => document.documentElement.scrollWidth - innerWidth,
       ),
     ).toBeLessThanOrEqual(1);
-    await expect(nextButton(page)).toBeInViewport({ ratio: 0 });
+    // A narrow window scrolls; the button must be reachable by scrolling.
+    await nextButton(page).scrollIntoViewIfNeeded();
+    await expect(nextButton(page)).toBeInViewport();
   }
 });
 

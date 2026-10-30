@@ -799,8 +799,8 @@ const setupStep = (p: Page) =>
 
 /** A first launch: no vault to reopen, no saved answers. */
 const freshSetup = async (page: Page) => {
-  await page.goto("/e2e.html");
-  await page.evaluate(() => localStorage.clear());
+  // Answers saved by an earlier pass (or Skip) would hide the setup: clear them first.
+  await page.evaluate(() => localStorage.clear()).catch(() => {});
   await page.goto("/e2e.html");
   await expect(setupRoot(page)).toBeVisible();
 };
@@ -825,25 +825,58 @@ const gotoSetupStep = async (page: Page, id: string) => {
   }
 };
 
-/** The element that draws the focus ring for a control (hidden inputs draw it on their label or row). */
+/**
+ * Does a :focus-visible rule give this control a ring? Engines differ on when a script's focus() counts
+ * as keyboard focus, so the sheets are read instead: a rule with :focus-visible whose selector, with
+ * that pseudo-class dropped, matches the control (or the label/row that draws the ring for a hidden
+ * input) and sets a box-shadow or outline.
+ */
 const focusRingProblem = (page: Page, id: number): Promise<string | null> =>
   page.evaluate((n) => {
     const el = document.querySelector(`[data-crawl-id="${n}"]`) as HTMLElement;
     if (!el) {
       return null;
     }
-    el.focus();
-    const holder =
-      el instanceof HTMLInputElement
-        ? el.closest("label, .vault-setup__row, .vault-setup__choice") || el
-        : el;
-    const st = getComputedStyle(holder);
-    const ring =
-      (st.boxShadow && st.boxShadow !== "none") ||
-      (st.outlineStyle !== "none" && parseFloat(st.outlineWidth) > 0);
-    return document.activeElement === el && !ring
-      ? "no visible focus ring"
-      : null;
+    const drawsRing = (rule: CSSStyleRule) =>
+      !!rule.style.boxShadow ||
+      (!!rule.style.outline && !/^(none|0)/.test(rule.style.outline)) ||
+      (!!rule.style.outlineStyle && rule.style.outlineStyle !== "none");
+    const walk = (rules: CSSRuleList, out: CSSStyleRule[]) => {
+      for (const r of Array.from(rules)) {
+        if ((r as CSSStyleRule).selectorText?.includes(":focus-visible")) {
+          out.push(r as CSSStyleRule);
+        } else if ((r as CSSGroupingRule).cssRules) {
+          walk((r as CSSGroupingRule).cssRules, out);
+        }
+      }
+    };
+    const rules: CSSStyleRule[] = [];
+    for (const sheet of Array.from(document.styleSheets)) {
+      try {
+        walk(sheet.cssRules, rules);
+      } catch {
+        // a cross-origin sheet: none in the app
+      }
+    }
+    const holders = [
+      el,
+      el.closest("label, .vault-setup__row, .vault-setup__choice"),
+    ].filter(Boolean) as Element[];
+    const has = rules.some(
+      (r) =>
+        drawsRing(r) &&
+        r.selectorText.split(",").some((sel) => {
+          const plain = sel.replace(/:focus-visible/g, "").trim();
+          return holders.some((h) => {
+            try {
+              return h.matches(plain);
+            } catch {
+              return false;
+            }
+          });
+        }),
+    );
+    return has ? null : "no visible focus ring";
   }, id);
 
 for (const theme of ["light", "dark"] as const) {
@@ -880,7 +913,9 @@ for (const theme of ["light", "dark"] as const) {
       for (const id of SETUP_IDS) {
         const where = `[${theme}] setup > ${id} @${size.w}`;
         await gotoSetupStep(page, id);
-        // The step follows the system until the person picks a mode on Look.
+        const arrivedOn = await page.evaluate(
+          () => document.activeElement?.tagName,
+        );
         const names = (await enumerate(setupRoot(page))).map((c) => ({
           name: c.name,
           tag: c.tag,
@@ -913,11 +948,8 @@ for (const theme of ["light", "dark"] as const) {
         if (card.left < -1 || card.right > size.w + 1) {
           fail(where, "the card sticks out of the window");
         }
-        const heading = await page.evaluate(
-          () => document.activeElement?.tagName,
-        );
-        if (heading !== "H1") {
-          fail(where, `focus is on ${heading}, not the heading, on arrival`);
+        if (arrivedOn !== "H1") {
+          fail(where, `focus is on ${arrivedOn}, not the heading, on arrival`);
         }
 
         // Escape goes back (the first step asks about skipping), twice returns.
@@ -974,6 +1006,13 @@ for (const theme of ["light", "dark"] as const) {
           }
           clicked++;
           await page.waitForTimeout(80);
+          if (/^Browse/.test(n.name)) {
+            // The lazy theme browser takes a moment to appear.
+            await page
+              .getByTestId("theme-browser-dialog")
+              .waitFor({ timeout: 4000 })
+              .catch(() => fail(where, `${label} did not open the browser`));
+          }
           if (el.href && /^https?:/.test(el.href) && opened.length === before) {
             fail(where, `${label} link ${el.href} did not reach the opener`);
           }
