@@ -438,3 +438,70 @@ fn marks_stay_out_of_the_json_when_there_are_none() {
     assert!(v["blocks"][1].get("headerMarks").is_none());
     assert!(v["blocks"][1].get("rowMarks").is_none());
 }
+
+// ---- hunter A, round 3: hostile and odd notes never panic and keep valid ranges ----
+fn hostile_cases() -> Vec<(&'static str, String)> {
+    let n = 20_000;
+    vec![
+        ("nested blockquotes", "> ".repeat(n) + "deep\n"),
+        ("one line of > characters", ">".repeat(5_000)),
+        ("nested lists", (0..2000).map(|i| format!("{}- item\n", "  ".repeat(i))).collect()),
+        ("nested callouts", (0..2000).map(|_| "> ").collect::<String>() + "[!note] x\n"),
+        ("one huge line", "word ".repeat(400_000)),
+        ("many open brackets", "[".repeat(200_000)),
+        ("many open wikilinks", "[[a".repeat(50_000)),
+        ("many emphasis marks", "*a ".repeat(100_000)),
+        ("many highlight marks", "==".repeat(100_000)),
+        ("many comment marks", "%%a".repeat(50_000)),
+        ("very wide table", format!("{}\n{}\n{}\n", "|a".repeat(20_000) + "|", "|-".repeat(20_000) + "|", "|b".repeat(20_000) + "|")),
+        ("very tall table", format!("|a|b|\n|-|-|\n{}", "|1|2|\n".repeat(100_000))),
+        ("many tags", "#t ".repeat(100_000)),
+        ("one huge tag", format!("#{}", "a".repeat(300_000))),
+        ("unterminated fence then text", "```\n".to_string() + &"code\n".repeat(100_000)),
+        ("many footnotes", (0..20_000).map(|i| format!("a[^{i}]\n\n[^{i}]: note {i}\n\n")).collect()),
+        ("many images", "![[p.png|10]]\n\n".repeat(50_000)),
+        ("frontmatter bomb", format!("---\n{}---\n", "k: v\n".repeat(100_000))),
+        ("crlf and bom", "\u{feff}# t\r\n\r\n- a\r\n- b\r\n".repeat(1)),
+        ("only whitespace and control", " \t\r\n\u{0}\u{1}\u{7f}\u{2028}\u{2029}\u{200b}\u{feff}".repeat(1000)),
+        ("lone surrogates-like and combining", "e\u{301}".repeat(100_000) + "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}"),
+    ]
+}
+
+/// A parse in a child copy of this test binary on a default 2 MB stack (an indexer thread), so a
+/// stack overflow (an abort, not a panic) is reported as a failed test instead of killing the run.
+fn parses_in_child(case: &str) -> bool {
+    let exe = std::env::current_exe().unwrap();
+    std::process::Command::new(exe)
+        .args(["markdown::tests::hostile_child", "--exact", "--ignored", "--nocapture"])
+        .env("HUNT_CASE", case)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+#[test]
+#[ignore]
+fn hostile_child() {
+    let Ok(case) = std::env::var("HUNT_CASE") else { return };
+    let src = hostile_cases().into_iter().find(|(n, _)| *n == case).unwrap().1;
+    let h = std::thread::Builder::new()
+        .spawn(move || {
+            let doc = parse(&src);
+            check_ranges(&src, &doc.blocks);
+            // the search indexer's own entry point
+            let _ = crate::search::notes::extract_note(&src);
+        })
+        .unwrap();
+    h.join().expect("parse panicked");
+}
+
+/// toimprove (hunter A-12): a note nested a few thousand levels deep (a line of `>` characters,
+/// a deeply indented list) overflows the stack of the thread that parses it, which aborts the whole
+/// app, and the indexer parses every note of the vault at start-up. Run with
+/// `cargo test -p vaultdraw-core hostile_notes -- --ignored` to see it fail.
+#[test]
+#[ignore = "A-12: stack overflow on deeply nested notes aborts the process"]
+fn hostile_notes_parse_without_crashing() {
+    let failures: Vec<_> = hostile_cases().into_iter().filter(|(n, _)| !parses_in_child(n)).map(|(n, _)| n).collect();
+    assert!(failures.is_empty(), "crashed or panicked on: {failures:?}");
+}
