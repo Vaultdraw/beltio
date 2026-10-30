@@ -85,3 +85,19 @@ test("the tab menu hands focus back to its tab after Escape (reference member)",
   await expect(menu).toHaveCount(0);
   await expect(tab).toBeFocused();
 });
+
+test.fail(
+  "toimprove 221: after Escape on the sort menu, focus is back on the Sort order button",
+  async ({ page }) => {
+    await openVault(page);
+    const button = page.getByRole("button", { name: "Sort order" });
+    await button.focus();
+    await page.keyboard.press("Enter");
+    const menu = page.getByRole("menu", { name: "Sort order" });
+    await expect(menu).toBeVisible();
+    await expect(menu.locator("[role^=menuitem]").first()).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(menu).toHaveCount(0);
+    await expect(button).toBeFocused({ timeout: 2000 });
+  },
+);
