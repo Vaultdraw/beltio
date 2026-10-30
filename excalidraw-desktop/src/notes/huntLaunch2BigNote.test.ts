@@ -32,13 +32,9 @@ const best = (text: string) => {
 };
 
 describe("a big note opens in time that grows about linearly (toimprove 288)", () => {
-  it.fails(
-    "lexing 4 times the text costs under 8 times the time",
-    () => {
-      const small = best(note(150));
-      const big = best(note(600));
-      expect(big / small).toBeLessThan(8);
-    },
-    120_000,
-  );
+  it("lexing 4 times the text costs under 8 times the time", () => {
+    const small = best(note(150));
+    const big = best(note(600));
+    expect(big / small).toBeLessThan(8);
+  }, 120_000);
 });

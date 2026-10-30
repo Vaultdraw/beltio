@@ -240,7 +240,11 @@ const inlineMath: TokenizerAndRendererExtension = {
 const blockStart = (re: RegExp) => {
   const at = new RegExp(`(?:^|\\n)(?=${re.source})`);
   return (src: string): number => {
-    const m = at.exec(src);
+    // A paragraph never reaches past its blank line, so a match beyond it cannot cut anything:
+    // look only that far. Scanning the whole rest of the note for every block made opening a big
+    // note quadratic (toimprove 288).
+    const blank = /\n[ \t]*\n/.exec(src);
+    const m = at.exec(blank ? src.slice(0, blank.index + 1) : src);
     return m ? m.index + (src[m.index] === "\n" ? 1 : 0) : -1;
   };
 };
