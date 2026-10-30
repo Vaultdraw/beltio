@@ -117,6 +117,7 @@ interface Options {
 const FOCUS_RULES = new Set([
   "textEditing",
   "canvasFocus",
+  "editorFocus",
   "listFocus",
   "galleryFocus",
   "graphFocus",
@@ -162,6 +163,7 @@ export function useCommandDispatcher(
             ...live.current.app,
             textEditing: false,
             canvasFocus: false,
+            editorFocus: false,
             modalOpen: false,
             listFocus: false,
             galleryFocus: false,

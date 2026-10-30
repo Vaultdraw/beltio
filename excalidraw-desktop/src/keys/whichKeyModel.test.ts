@@ -12,6 +12,7 @@ const ctx = {
   writable: true,
   textEditing: false,
   canvasFocus: true,
+  editorFocus: false,
   modalOpen: false,
   listFocus: false,
 } as unknown as CommandContext;

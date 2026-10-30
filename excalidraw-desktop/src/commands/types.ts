@@ -48,6 +48,9 @@ export type CommandCategory = BuiltinCommandCategory | (string & {});
  * - textEditing: focus is in an input, textarea, select or contenteditable
  *   (includes Excalidraw's WYSIWYG text editor).
  * - canvasFocus: focus is inside the editor and not text editing.
+ * - editorFocus: focus is on the canvas or in its text editor (Excalidraw's
+ *   WYSIWYG), never in another field (search, Settings, a dialog): for format
+ *   keys like Cmd+B that act on the drawing while typing in it.
  * - modalOpen: a vault dialog (`.vault-modal-backdrop`) is open.
  * - listFocus: focus is in a keyboard list (file tree, tags, links, Settings
  *   pages; see listNav.ts) and not text editing.
@@ -60,6 +63,7 @@ export type BuiltinContextKey =
   | "writable"
   | "textEditing"
   | "canvasFocus"
+  | "editorFocus"
   | "modalOpen"
   | "listFocus"
   | "galleryFocus"

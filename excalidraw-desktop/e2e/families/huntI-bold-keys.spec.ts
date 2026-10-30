@@ -72,7 +72,6 @@ test("hunter I: Cmd+B while typing a box with Markdown mode off makes it bold, a
 test("hunter I-5 (toimprove 220): Cmd+B typed in the navigator search box does not change the selected canvas text", async ({
   page,
 }) => {
-  test.fail();
   const errors = trackErrors(page);
   await open(page);
   await typeBox(page, 0.3, 0.8, "keep");

@@ -51,16 +51,19 @@ describe("readContext", () => {
       ...app,
       textEditing: false,
       canvasFocus: false,
+      editorFocus: false,
       modalOpen: false,
     });
     document.getElementById("in")?.focus();
     expect(readContext(document, app)).toMatchObject({
       canvasFocus: true,
+      editorFocus: true,
       textEditing: false,
     });
     document.getElementById("ta")?.focus();
     expect(readContext(document, app)).toMatchObject({
       canvasFocus: false,
+      editorFocus: false,
       textEditing: true,
     });
     document.getElementById("out")?.focus();
@@ -84,6 +87,36 @@ describe("readContext", () => {
   });
 });
 
+describe("editorFocus (toimprove 220: Cmd+B in a search box must not touch the drawing)", () => {
+  it("holds on the canvas and in its text editor, never in another field", () => {
+    add(
+      `<div class="vault-editor"><button id="cv"></button><textarea id="wys" class="excalidraw-wysiwyg"></textarea><input id="hex"></div><input id="search"><div contenteditable="true" id="ce"></div>`,
+    );
+    const focus = (id: string) => {
+      document.getElementById(id)?.focus();
+      return readContext(document, app).editorFocus;
+    };
+    expect(focus("cv")).toBe(true);
+    expect(focus("wys")).toBe(true);
+    expect(focus("hex")).toBe(false);
+    expect(focus("search")).toBe(false);
+    expect(focus("ce")).toBe(false);
+  });
+
+  it("the Markdown format keys need it; the palette ignores focus rules", async () => {
+    const { EDITOR_COMMANDS } = await import("./editorCommands");
+    for (const id of [
+      "markdown.toggle",
+      "markdown.toggleTask",
+      "markdown.toggleBold",
+    ]) {
+      expect(EDITOR_COMMANDS.find((c) => c.id === id)?.when).toContain(
+        "editorFocus",
+      );
+    }
+  });
+});
+
 describe("whenHolds", () => {
   const ctx: CommandContext = {
     vaultOpen: true,
@@ -91,6 +124,7 @@ describe("whenHolds", () => {
     writable: true,
     textEditing: false,
     canvasFocus: false,
+    editorFocus: false,
     modalOpen: false,
     listFocus: false,
     galleryFocus: false,

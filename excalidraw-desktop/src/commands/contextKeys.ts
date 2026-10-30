@@ -17,6 +17,7 @@ const BUILTIN_KEYS: ReadonlySet<string> = new Set([
   "writable",
   "textEditing",
   "canvasFocus",
+  "editorFocus",
   "modalOpen",
   "listFocus",
   "galleryFocus",

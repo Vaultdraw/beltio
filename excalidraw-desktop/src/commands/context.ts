@@ -65,12 +65,16 @@ export function readContext(doc: Document, app: AppContext): CommandContext {
     ? null
     : active?.closest("[data-keylist],[data-keyscope]") ?? null;
   const scope = scopeRoot?.getAttribute("data-keyscope");
+  const inEditor = !!active?.closest(".vault-editor");
   return {
     vaultOpen: app.vaultOpen,
     drawingOpen: app.drawingOpen,
     writable: app.writable,
     textEditing,
-    canvasFocus: !textEditing && !!active?.closest(".vault-editor"),
+    canvasFocus: !textEditing && inEditor,
+    editorFocus:
+      inEditor &&
+      (!textEditing || !!active?.classList.contains("excalidraw-wysiwyg")),
     // A running presentation is modal: the canvas keys (tools, N for a sticky note) stand
     // down so the presentation's own keys win. Reads a custom key only if one is defined.
     modalOpen:

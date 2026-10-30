@@ -11,6 +11,7 @@ const ctx: CommandContext = {
   writable: true,
   textEditing: false,
   canvasFocus: false,
+  editorFocus: false,
   modalOpen: false,
   listFocus: false,
   galleryFocus: false,
