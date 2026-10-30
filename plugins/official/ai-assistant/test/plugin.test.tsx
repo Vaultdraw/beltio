@@ -7,6 +7,11 @@ import { boot, type TestPlugin } from "@vaultdraw/api/testing";
 
 import { parseManifest } from "../../../../sdk/examples/testing/readManifest";
 import plugin from "../src/main";
+import {
+  secretNameOf,
+  type ProviderConfig,
+  type ProviderId,
+} from "../src/providers";
 
 let p: TestPlugin | undefined;
 afterEach(async () => {
@@ -37,7 +42,12 @@ async function start(opts: { key?: boolean; provider?: string } = {}) {
     { type: "text", x: 10, y: 80, text: "Secret plan" },
   ]);
   if (opts.key !== false) {
-    p.net.secrets["ai-assistant"] = { "api-key": KEY };
+    p.net.secrets["ai-assistant"] = {
+      [secretNameOf({
+        provider: (opts.provider ?? "openai") as ProviderId,
+        baseUrl: "",
+      } as ProviderConfig)]: KEY,
+    };
   }
   const view = await p.openPanel("assistant");
   return view;
@@ -320,7 +330,9 @@ describe("the key", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Save key" }));
     await waitFor(() =>
-      expect(p!.net.secrets["ai-assistant"]?.["api-key"]).toBe(KEY),
+      expect(
+        p!.net.secrets["ai-assistant"]?.["api-key-openai-api.openai.com"],
+      ).toBe(KEY),
     );
     await waitFor(() =>
       expect(screen.getByText(/A key is saved on this computer/)).toBeTruthy(),

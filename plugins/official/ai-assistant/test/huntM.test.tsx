@@ -38,7 +38,9 @@ async function start(opts: { key?: boolean } = {}) {
   await p.setSetting("provider", "openai");
   p.scene.setElements([{ type: "text", x: 10, y: 10, text: "Login page" }]);
   if (opts.key !== false) {
-    p.net.secrets["ai-assistant"] = { "api-key": "sk-test-1" };
+    p.net.secrets["ai-assistant"] = {
+      "api-key-openai-api.openai.com": "sk-test-1",
+    };
   }
   await p.openPanel("assistant");
 }
@@ -134,7 +136,7 @@ describe("a key goes only to the service it was saved for (toimprove M-17)", () 
       ],
     ] as const
   ).forEach(([what, settings]) => {
-    it.fails(`${what}: the saved key is not sent there`, async () => {
+    it(`${what}: the saved key is not sent there`, async () => {
       p = await boot(manifest(), plugin);
       await p.setSetting("provider", "anthropic");
       p.scene.setElements([{ type: "text", x: 10, y: 10, text: "Login page" }]);

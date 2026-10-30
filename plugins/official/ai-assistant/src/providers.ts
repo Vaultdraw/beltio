@@ -21,8 +21,6 @@ export interface ChatMessage {
   content: string;
 }
 
-export const SECRET_NAME = "api-key";
-
 export const DEFAULT_BASE: Record<ProviderId, string> = {
   anthropic: "https://api.anthropic.com",
   openai: "https://api.openai.com/v1",
@@ -53,6 +51,27 @@ export const isLocalAddress = (url: string): boolean => {
 export const baseUrlOf = (cfg: ProviderConfig): string =>
   (cfg.baseUrl.trim() || DEFAULT_BASE[cfg.provider]).replace(/\/+$/, "");
 
+/**
+ * The name a key is saved under: one key per provider and address, so a key saved for one service
+ * is never sent to another (toimprove 272; Zed keeps a credential per provider API URL). The
+ * default Anthropic address keeps the first release's plain "api-key".
+ */
+export const secretNameOf = (cfg: ProviderConfig): string => {
+  const base = baseUrlOf(cfg);
+  if (cfg.provider === "anthropic" && base === DEFAULT_BASE.anthropic) {
+    return "api-key";
+  }
+  let host = base;
+  try {
+    host = new URL(base).host;
+  } catch {
+    // an address that does not parse is refused later; keep a stable name for it
+  }
+  return `api-key-${cfg.provider}-${host.toLowerCase()}`
+    .replace(/[^a-z0-9._-]/g, "-")
+    .slice(0, 64);
+};
+
 /** Whether this provider needs a stored key to be asked. */
 export const needsKey = (cfg: ProviderConfig): boolean =>
   cfg.provider === "anthropic" ||
@@ -74,7 +93,7 @@ export function buildRequest(
         "content-type": "application/json",
         "anthropic-version": "2023-06-01",
       },
-      auth: { secret: SECRET_NAME, header: "x-api-key" },
+      auth: { secret: secretNameOf(cfg), header: "x-api-key" },
       body: JSON.stringify({
         model,
         max_tokens: 4096,
@@ -93,7 +112,7 @@ export function buildRequest(
       ...(cfg.hasKey || !isLocalAddress(base)
         ? {
             auth: {
-              secret: SECRET_NAME,
+              secret: secretNameOf(cfg),
               header: "authorization",
               prefix: "Bearer ",
             },

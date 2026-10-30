@@ -18,6 +18,7 @@ import {
   errorMessageOf,
   isProvider,
   needsKey,
+  secretNameOf,
   type ChatMessage,
   type ProviderConfig,
 } from "./providers";
@@ -107,6 +108,19 @@ export function createSession(ctx: PluginContext): Session {
   const viaOf = (c: ProviderConfig) =>
     `${PROVIDER_NAMES[c.provider]}, ${c.model}`;
 
+  const refreshKey = async () => {
+    hasKey = await ctx.secret.has(secretNameOf(config()));
+    set({ hasKey, via: viaOf(config()) });
+  };
+  // switching the provider or the address switches the key too
+  for (const key of ["provider", "base_url"]) {
+    ctx.subscriptions.push(
+      ctx.settings.onChange(key, () => {
+        void refreshKey();
+      }),
+    );
+  }
+
   const set = (patch: Partial<SessionState>) => {
     state = { ...state, ...patch };
     for (const cb of [...listeners]) {
@@ -150,6 +164,8 @@ export function createSession(ctx: PluginContext): Session {
     if (state.status === "running") {
       return;
     }
+    // the key belongs to the provider and address chosen now (toimprove 272)
+    hasKey = await ctx.secret.has(secretNameOf(config()));
     const cfg = config();
     const via = viaOf(cfg);
     const { context, sent } = await preview(task, request);
@@ -292,17 +308,14 @@ export function createSession(ctx: PluginContext): Session {
         drawn: null,
       });
     },
-    async refreshKey() {
-      hasKey = await ctx.secret.has("api-key");
-      set({ hasKey, via: viaOf(config()) });
-    },
+    refreshKey,
     async setKey(value) {
-      await ctx.secret.set("api-key", value.trim());
+      await ctx.secret.set(secretNameOf(config()), value.trim());
       hasKey = true;
       set({ hasKey, error: null });
     },
     async removeKey() {
-      await ctx.secret.delete("api-key");
+      await ctx.secret.delete(secretNameOf(config()));
       hasKey = false;
       set({ hasKey });
     },

@@ -42,7 +42,7 @@ describe("buildRequest", () => {
     );
     expect(r.url).toBe("https://gw.example.com/v1/chat/completions");
     expect(r.auth).toEqual({
-      secret: "api-key",
+      secret: "api-key-openai-gw.example.com",
       header: "authorization",
       prefix: "Bearer ",
     });

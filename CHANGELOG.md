@@ -36,6 +36,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **Cmd+Z in a Markdown-mode box after a heading brings back a word you deleted.** After Enter on a heading, typing a word and deleting it, Cmd+Z jumped back to the heading and lost the word; once anything is typed in the box, Cmd+Z is the text box's own undo (toimprove 263).
 - **A Markdown link inside an embedded note opens the file next to that note.** It resolved from the note that held the embed, so `[plan index](index.md)` in an embedded `Projects/Plan.md` opened `Inbox/index.md`; links and `[[#Heading]]` links now follow the note that wrote them (toimprove 259).
 - **A note's properties are listed in the note's order.** They were alphabetical (`title, date, author` showed as `author, date, title`); the reading view now keeps the file's order, as Obsidian's properties panel does (toimprove 281).
+- **The AI assistant sends a saved key only to the service it was saved for.** One key was used for every provider, so an Anthropic key went to OpenAI after switching the provider, or to any address typed into Address. A key is now kept per provider and address, and a different one asks for its own key (toimprove 272).
 
 ## [0.2.0] - 2026-10-28
 
