@@ -38,6 +38,12 @@ export interface FakeBackend extends PluginsBackend {
   drawingSource?: (
     path: string,
   ) => Promise<{ scene: Record<string, unknown>; revision: string } | null>;
+  /**
+   * Tests: where `vault.list` gets a folder's entries (the e2e harness: the in-memory vault, so a
+   * rename or delete in the file tree shows to plugins, as on the Mac). With `drawingSource` set,
+   * a drawing it does not have is NOT_FOUND: the app's vault is the one truth (twin drift, 2026-10-30).
+   */
+  listSource?: (dir: string) => Promise<unknown[] | null>;
   /** The files the `export.*` rows wrote, by vault path. */
   exportFiles: Record<string, Uint8Array>;
   /** Makes `file.write` fail with READ_ONLY. */
@@ -354,6 +360,44 @@ function vaultCall(
   return { path, revision };
 }
 
+/** The part of the app's vault repository the plugin vault rows read through. */
+export interface VaultReader {
+  handle: string;
+  listDirectory(handle: string, dir: string): Promise<unknown[]>;
+  readDrawing(
+    handle: string,
+    path: string,
+  ): Promise<{ json: string; revision: string }>;
+}
+
+/**
+ * Makes the plugin vault rows (`vault.list`, `file.read`) read the app's vault, as the native
+ * gateway does: one file list, so a rename, move or delete in the file tree shows to plugins
+ * (the e2e harness and the twin test use it; twin drift, 2026-10-30).
+ */
+export function readThroughVault(
+  fake: FakeBackend,
+  repo: () => VaultReader | null | undefined,
+): void {
+  fake.drawingSource = async (path) => {
+    const r = repo();
+    try {
+      const file = await r!.readDrawing(r!.handle, path);
+      return { scene: JSON.parse(file.json), revision: file.revision };
+    } catch {
+      return null;
+    }
+  };
+  fake.listSource = async (dir) => {
+    const r = repo();
+    try {
+      return await r!.listDirectory(r!.handle, dir);
+    } catch {
+      return null;
+    }
+  };
+}
+
 export function createFakeBackend(
   plugins: PluginInfo[] = [],
   moduleUrl: (id: string, path: string) => string = (id, path) =>
@@ -472,10 +516,25 @@ export function createFakeBackend(
           );
         }
         if (method === "file.read" && fake.drawingSource) {
-          const d = await fake.drawingSource(String(params?.path ?? ""));
-          if (d) {
-            return { path: params?.path, revision: d.revision, scene: d.scene };
+          if (!fake.vaultOpen) {
+            throw coded("NO_VAULT", "No vault is open");
           }
+          const d = await fake.drawingSource(String(params?.path ?? ""));
+          if (!d) {
+            throw coded("NOT_FOUND", `Drawing not found: ${params?.path}`);
+          }
+          return { path: params?.path, revision: d.revision, scene: d.scene };
+        }
+        if (method === "vault.list" && fake.listSource) {
+          if (!fake.vaultOpen) {
+            throw coded("NO_VAULT", "No vault is open");
+          }
+          const dir = String(params?.dir ?? "");
+          const entries = await fake.listSource(dir);
+          if (!entries) {
+            throw coded("NOT_FOUND", "Directory not found");
+          }
+          return { entries };
         }
         return vaultCall(fake, method, params);
       }

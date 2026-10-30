@@ -15,6 +15,7 @@ import { setPluginsBackend } from "../src/plugins/host/backend";
 import { getPreferences, isOffline } from "../src/vault/preferences";
 import {
   createFakeBackend,
+  readThroughVault,
   makePluginInfo,
 } from "../src/plugins/host/fakeBackend";
 
@@ -98,15 +99,7 @@ export async function installDefaultBackend(win: Window): Promise<void> {
   backend.safeMode = (win as any).__e2ePluginSafeMode ?? null;
   // The plugin API reads the drawings the app holds (the in-memory vault) and writes exports into
   // `backend.exportFiles`, which specs read through `window.__exportFiles()`.
-  backend.drawingSource = async (path) => {
-    const repo = (win as any).__vaultRepo;
-    try {
-      const file = await repo.readDrawing(repo.handle, path);
-      return { scene: JSON.parse(file.json), revision: file.revision };
-    } catch {
-      return null;
-    }
-  };
+  readThroughVault(backend, () => (win as any).__vaultRepo);
   (win as any).__exportFiles = () =>
     Object.fromEntries(
       Object.entries(backend.exportFiles).map(([k, v]) => [

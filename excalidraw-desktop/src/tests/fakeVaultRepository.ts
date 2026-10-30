@@ -246,20 +246,33 @@ export class FakeVaultRepository implements VaultRepository {
     assertValidDrawingPath(path);
     const revision = this.nextRevision();
     this.files.set(path, { json, revision });
-    this.emit({ handle: this.vault.handle, paths: [path], rescan: false });
+    this.emitOutside([path]);
     return revision;
   }
 
   externalDelete(path: string): void {
     this.files.delete(path);
     // Remove now-empty ancestor bookkeeping is unnecessary for the fake.
-    this.emit({ handle: this.vault.handle, paths: [path], rescan: false });
+    this.emitOutside([path]);
   }
 
   /** Calls of `setWatching` (files.auto_reload), for tests. */
   watchingCalls: boolean[] = [];
+  /**
+   * The watcher's state: off (files.auto_reload = false), changes made outside send no event,
+   * as the native watcher stops; the app's own writes still report (twin parity, 2026-10-30).
+   */
+  watching = true;
   async setWatching(_handle: string, enabled: boolean): Promise<void> {
     this.watchingCalls.push(enabled);
+    this.watching = enabled;
+  }
+
+  /** An outside change's event, unless the watcher is off. */
+  private emitOutside(paths: string[]): void {
+    if (this.watching) {
+      this.emit({ handle: this.vault.handle, paths, rescan: false });
+    }
   }
 
   /**
@@ -268,9 +281,11 @@ export class FakeVaultRepository implements VaultRepository {
    * (a deleted or renamed folder lists its children too), no rescan.
    */
   outside(change: {
-    op: "create" | "mkdir" | "delete" | "rename";
+    op: "create" | "mkdir" | "delete" | "rename" | "modify";
     path: string;
     to?: string;
+    /** `modify`: the new contents (a note's text, or a drawing's JSON). */
+    content?: string;
     /** No event at all (a watcher that missed it, or auto reload off): only Refresh shows it. */
     quiet?: boolean;
   }): void {
@@ -291,7 +306,16 @@ export class FakeVaultRepository implements VaultRepository {
         }
       }
     }
-    if (op === "create") {
+    if (op === "modify") {
+      if (path.endsWith(".md")) {
+        this.noteText?.setOnDisk(path, change.content ?? "");
+      } else {
+        this.files.set(path, {
+          json: change.content ?? EMPTY_SCENE_JSON,
+          revision: this.nextRevision(),
+        });
+      }
+    } else if (op === "create") {
       if (path.endsWith(".md")) {
         this.seedNote(path);
         this.noteText?.setOnDisk(path, "");
@@ -350,11 +374,7 @@ export class FakeVaultRepository implements VaultRepository {
       }
     }
     if (!change.quiet) {
-      this.emit({
-        handle: this.vault.handle,
-        paths: [...new Set(touched)],
-        rescan: false,
-      });
+      this.emitOutside([...new Set(touched)]);
     }
   }
 

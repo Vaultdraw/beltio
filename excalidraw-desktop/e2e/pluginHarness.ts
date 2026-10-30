@@ -16,6 +16,7 @@ import {
 import { setPluginsBackend } from "../src/plugins/host/backend";
 import {
   createFakeBackend,
+  readThroughVault,
   makePluginInfo,
 } from "../src/plugins/host/fakeBackend";
 import { startPluginHost } from "../src/plugins/host/start";
@@ -200,6 +201,8 @@ export async function startPluginsHarness(
       (win as any).__vaultRepo?.seedDrawing(path, JSON.stringify(scene)),
   );
   backend.network.offline = () => isOffline(getPreferences(win));
+  // Plugins list and read the app's vault, as the native gateway does (one file list).
+  readThroughVault(backend, () => (win as any).__vaultRepo);
   for (const id of csv(params, "pluginData")) {
     backend.data[id] = JSON.stringify({ notes: "x".repeat(12 * 1024) });
   }

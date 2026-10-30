@@ -336,9 +336,31 @@ export class FakeVaultSearch implements VaultSearch {
 
   async subscribe(listener: (s: IndexStatus) => void) {
     this.listeners.add(listener);
+    await this.followRepository();
     return () => {
       this.listeners.delete(listener);
     };
+  }
+
+  /**
+   * Like the native index, every vault change is indexed and then reported with a status event
+   * (the tags pane and the backlinks dock refetch on it). Twin parity, 2026-10-30.
+   */
+  private following = false;
+  private async followRepository(): Promise<void> {
+    if (this.following) {
+      return;
+    }
+    this.following = true;
+    await this.repository.subscribe((event) => {
+      setTimeout(() => {
+        void this.status(event.handle).then((s) => {
+          for (const l of [...this.listeners]) {
+            l(s);
+          }
+        });
+      }, 0);
+    });
   }
 
   async search(

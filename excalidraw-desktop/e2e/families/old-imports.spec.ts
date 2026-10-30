@@ -458,18 +458,6 @@ test("Re-import unchanged imported notes here leaves an edited import alone, and
       imported: true,
     },
   ]);
-  // The plugin lists the vault through its own rows (native in the app; the browser stand-in
-  // keeps its own list), so the stand-in learns the paths too.
-  await page.evaluate(() => {
-    const be = (window as any).__plugins.backend;
-    for (const p of [
-      "Obsidian/Notes/Table note.excalidraw",
-      "Obsidian/Notes/Edited note.excalidraw",
-      "Obsidian/Notes/Old note.excalidraw",
-    ]) {
-      be.drawings[p] = { scene: { elements: [] }, revision: "r1" };
-    }
-  });
   await treeItem(page, "Obsidian").click();
   await treeItem(page, "Notes").click({ button: "right" });
   await page
