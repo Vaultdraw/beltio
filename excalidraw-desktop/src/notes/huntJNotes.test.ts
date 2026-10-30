@@ -325,3 +325,17 @@ describe("J-11: footnotes of an embedded note (toimprove 222)", () => {
     },
   );
 });
+
+describe("J-13: line breaks right under a callout title (toimprove 229)", () => {
+  const md =
+    "> [!note] Title\n> line one\n> line two\n>\n> para two a\n> para two b";
+  it("sanity: a later paragraph in the callout breaks its lines", () => {
+    expect(html(md)).toContain("para two a<br>para two b");
+  });
+  it.fails(
+    "the first lines under the title break too (strict line breaks off)",
+    () => {
+      expect(html(md)).toMatch(/line one<br>\s*line two/);
+    },
+  );
+});
