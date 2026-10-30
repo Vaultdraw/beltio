@@ -131,3 +131,25 @@ test("hunter B: 32 tabs: the overflow list, its filter, wrap-around keys and the
   await expect(tabEls(page)).toHaveCount(1);
   expect(errors).toEqual([]);
 });
+
+// B-8 (polish): dragging a tab and holding it at the strip edge does not scroll the strip, so with
+// many tabs a tab can only be dropped among the ones already in view (Chrome, Firefox and Zed scroll).
+test.fixme(
+  "hunter B: holding a dragged tab at the strip edge scrolls the strip toward it",
+  async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await openAll(page);
+    const list = page.locator(".vault-tabs__list");
+    const lb = (await list.boundingBox())!;
+    const act = page.locator('[data-testid="vault-tab"][aria-selected="true"]');
+    const ab = (await act.boundingBox())!;
+    await page.mouse.move(ab.x + ab.width / 2, ab.y + ab.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(lb.x + 20, ab.y + ab.height / 2, { steps: 15 });
+    await page.waitForTimeout(3000);
+    await page.mouse.up();
+    const tabs = await readTabs(page);
+    const at = tabs.findIndex((t) => t.active);
+    expect(at, "the dragged tab moved far toward the front").toBeLessThan(10);
+  },
+);
