@@ -17,7 +17,7 @@ import {
 
 import { userError } from "../userError";
 
-import { stripDrawingExt } from "../../vault/fileKind";
+import { drawingStem } from "../../vault/fileKind";
 
 import { useListKeys } from "../../commands/useListKeys";
 import { IconChevronDown, IconChevronRight } from "../Icons";
@@ -79,7 +79,7 @@ const TITLES: Record<Section, string> = {
   unresolved: "Unresolved links",
 };
 
-const stripExt = (p: string) => stripDrawingExt(p);
+const stripExt = (p: string) => drawingStem(p);
 const baseName = (p: string) => stripExt(p.slice(p.lastIndexOf("/") + 1));
 const folderOf = (p: string) =>
   p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "";

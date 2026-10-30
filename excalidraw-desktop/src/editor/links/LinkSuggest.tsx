@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-import { stripDrawingExt } from "../../vault/fileKind";
+import { drawingStem } from "../../vault/fileKind";
 
 import "./links.css";
 
@@ -57,7 +57,7 @@ function Row({ row }: { row: SuggestRow }) {
     return <TagRow row={row} />;
   }
   const path = row.path;
-  const end = stripDrawingExt(path).length;
+  const end = drawingStem(path).length;
   const slash = path.lastIndexOf("/") + 1;
   const marks = new Set(row.positions);
   return (

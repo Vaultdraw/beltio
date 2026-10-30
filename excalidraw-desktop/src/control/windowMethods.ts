@@ -4,7 +4,7 @@
  * throwing cores the UI handlers use.
  */
 import { ExportError } from "../export/exportError";
-import { stripDrawingExt } from "../vault/fileKind";
+import { drawingStem } from "../vault/fileKind";
 
 import { ControlError } from "./errors";
 import {
@@ -148,7 +148,7 @@ export function createWindowMethods(
     if (!a?.conflict) {
       return null;
     }
-    const name = stripDrawingExt(a.path.slice(a.path.lastIndexOf("/") + 1));
+    const name = drawingStem(a.path.slice(a.path.lastIndexOf("/") + 1));
     return new ControlError(
       "CONFLICT",
       `${name} changed on disk while it has unsaved edits. Choose Keep my version or Take the disk version in the window, then try again`,

@@ -10,7 +10,7 @@ import {
 } from "react";
 
 import { writeNewDrawing } from "./vault/writeNewDrawing";
-import { fileKind, stripDrawingExt } from "./vault/fileKind";
+import { fileKind, drawingStem } from "./vault/fileKind";
 
 import { errorMessage, isNotFoundError } from "./vault/types";
 import { uniqueName } from "./vault/uniqueName";
@@ -3044,7 +3044,7 @@ export const VaultApp = ({
     () =>
       recentDrawings.map((entry) => ({
         path: entry.path,
-        name: stripDrawingExt(getBaseName(entry.path)),
+        name: drawingStem(getBaseName(entry.path)),
         folder: getParentPath(entry.path) || vaultName,
       })),
     [recentDrawings, vaultName],

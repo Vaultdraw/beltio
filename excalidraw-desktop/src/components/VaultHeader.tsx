@@ -1,4 +1,4 @@
-import { stripDrawingExt } from "../vault/fileKind";
+import { drawingStem } from "../vault/fileKind";
 import { useCommandShortcut } from "../commands/useCommandShortcut";
 
 import { isCustomChrome } from "../vault/windowChrome";
@@ -97,7 +97,7 @@ export const VaultHeader = ({
                 title={fileName}
                 data-tauri-drag-region
               >
-                {stripDrawingExt(fileName)}
+                {drawingStem(fileName)}
               </span>
             </span>
           )}

@@ -1,4 +1,4 @@
-import { stripDrawingExt } from "../vault/fileKind";
+import { drawingStem } from "../vault/fileKind";
 
 import { ControlError } from "./errors";
 import { objectParams } from "./params";
@@ -55,7 +55,7 @@ export function tabListResult(
 
 /** The file name of a tab's path without folders or the drawing extension, lower case. */
 const baseName = (path: string): string =>
-  stripDrawingExt(path.slice(path.lastIndexOf("/") + 1)).toLowerCase();
+  drawingStem(path.slice(path.lastIndexOf("/") + 1)).toLowerCase();
 
 /**
  * Tab id from {id} | {index (1-based)} | {path}, for `tab.focus` and `tab.close` alike. An `id` that
@@ -71,7 +71,7 @@ export function resolveTabId(state: TabsState | null, params: unknown): string {
   if (typeof p.id === "string") {
     tab = state.tabs.find((t) => t.id === p.id);
     if (!tab) {
-      const want = stripDrawingExt(p.id).toLowerCase();
+      const want = drawingStem(p.id).toLowerCase();
       const named = state.tabs.filter(
         (t) => t.path && baseName(t.path) === want,
       );

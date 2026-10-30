@@ -14,7 +14,7 @@ import {
   entryWord,
   fileKind,
   hasDrawingExt,
-  stripDrawingExt,
+  drawingStem,
 } from "../vault/fileKind";
 
 import { getMenuItems, runMenuItem } from "../plugins/menuRegistry";
@@ -988,7 +988,7 @@ export const VaultNavigator = ({
           >
             <span className="vault-tree-drag-ghost__name">
               {drag.source.kind === "folder" ? <IconFolder /> : <IconDrawing />}
-              {stripDrawingExt(drag.source.name)}
+              {drawingStem(drag.source.name)}
             </span>
             {drag.targetFolder !== null && (
               <span className="vault-tree-drag-ghost__hint">

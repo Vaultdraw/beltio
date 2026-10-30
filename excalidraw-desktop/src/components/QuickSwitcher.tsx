@@ -20,7 +20,7 @@ import {
   useState,
 } from "react";
 
-import { stripDrawingExt } from "../vault/fileKind";
+import { drawingStem } from "../vault/fileKind";
 
 import { chordFromEvent } from "../commands/keys";
 import {
@@ -149,7 +149,7 @@ const RowView = memo(
     if (row.kind === "drawing") {
       const { path } = row.drawing;
       const slash = path.lastIndexOf("/");
-      const nameEnd = stripDrawingExt(path).length;
+      const nameEnd = drawingStem(path).length;
       body = (
         <>
           <span className="vault-quick__icon">

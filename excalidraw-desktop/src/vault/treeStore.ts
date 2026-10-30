@@ -2,6 +2,7 @@ import { foldKey } from "../search/foldKey";
 
 import {
   DRAWING_EXT,
+  drawingStem,
   EXCALIDRAW_MD_EXT,
   fileKind,
   NOTE_EXT,
@@ -250,8 +251,8 @@ export function checkTreeDrop(
           allowed: false,
           reason:
             name === source.name
-              ? `"${stripDrawingExt(source.name)}" already exists in ${where}`
-              : `"${stripDrawingExt(
+              ? `"${drawingStem(source.name)}" already exists in ${where}`
+              : `"${drawingStem(
                   name,
                 )}" already exists in ${where} (names that differ only in capitals count as the same)`,
         };

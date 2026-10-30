@@ -8,7 +8,7 @@
  * - only while the popup is open: one capture keydown listener on document.
  * The textarea never loses focus (blur would submit the text).
  */
-import { stripDrawingExt } from "../../vault/fileKind";
+import { drawingStem } from "../../vault/fileKind";
 import { MAX_LINK_CHARS } from "../../links/grammar";
 import { linkTargetFor, wikiLink } from "../../links/format";
 import { foldKey } from "../../links/resolve";
@@ -407,7 +407,7 @@ export class WikiAutocomplete {
     }
     const key = foldKey(name);
     const exists = rows.some((r) => {
-      const bare = foldKey(stripDrawingExt(r.path));
+      const bare = foldKey(drawingStem(r.path));
       return bare === key || bare.endsWith(`/${key}`);
     });
     return exists ? null : name;

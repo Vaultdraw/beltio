@@ -13,24 +13,16 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { drawingDisplayName } from "../commands/drawingCommands";
+import { drawingName } from "../history/historyConfirms";
+import { drawingStem } from "../vault/fileKind";
+
 const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
   encoding: "utf8",
 }).trim();
 
 const PINNED: Record<string, [count: number, why: string]> = {
-  "excalidraw-desktop/src/VaultApp.tsx": [1, "toimprove 236"],
-  "excalidraw-desktop/src/commands/drawingCommands.ts": [1, "toimprove 236"],
-  "excalidraw-desktop/src/components/QuickSwitcher.tsx": [1, "toimprove 236"],
-  "excalidraw-desktop/src/components/VaultHeader.tsx": [1, "toimprove 236"],
-  "excalidraw-desktop/src/components/VaultNavigator.tsx": [1, "toimprove 236"],
-  "excalidraw-desktop/src/components/links/LinksDock.tsx": [1, "toimprove 236"],
-  "excalidraw-desktop/src/components/search/SearchResults.tsx": [
-    1,
-    "toimprove 236",
-  ],
-  "excalidraw-desktop/src/control/tabList.ts": [2, "toimprove 236"],
   "excalidraw-desktop/src/control/uriRun.ts": [1, "toimprove 206 (K-1)"],
-  "excalidraw-desktop/src/control/windowMethods.ts": [1, "toimprove 236"],
   "excalidraw-desktop/src/editor/VaultEditor.tsx": [
     1,
     "toimprove 232 (Save a copy)",
@@ -39,24 +31,22 @@ const PINNED: Record<string, [count: number, why: string]> = {
     1,
     "toimprove 232 (export name)",
   ],
-  "excalidraw-desktop/src/editor/links/LinkSuggest.tsx": [1, "toimprove 236"],
-  "excalidraw-desktop/src/editor/links/wikiAutocomplete.ts": [
-    1,
-    "toimprove 236",
-  ],
-  "excalidraw-desktop/src/history/historyConfirms.ts": [1, "toimprove 236"],
   "excalidraw-desktop/src/links/grammar.ts": [
     1,
     "link targets: .excalidraw is the written form",
   ],
-  "excalidraw-desktop/src/palette/group.ts": [2, "toimprove 236"],
-  "excalidraw-desktop/src/tabs/useTabs.ts": [1, "toimprove 236"],
   "excalidraw-desktop/src/templates/useTemplates.tsx": [
     1,
     "templates are .excalidraw files",
   ],
-  "excalidraw-desktop/src/vault/treeStore.ts": [3, "toimprove 236"],
-  "plugins/official/gallery/src/GalleryView.tsx": [1, "toimprove 236"],
+  "excalidraw-desktop/src/vault/treeStore.ts": [
+    1,
+    "duplicateName: the drawing branch (Obsidian drawings keep .excalidraw.md)",
+  ],
+  "plugins/official/gallery/src/GalleryView.tsx": [
+    1,
+    "its own copy (a plugin): strips .excalidraw and .excalidraw.md",
+  ],
 };
 
 const counts = (): Record<string, number> => {
@@ -88,5 +78,22 @@ describe("guard: names drop the whole drawing extension", () => {
       ([f, n]) => n > (PINNED[f]?.[0] ?? 0),
     );
     expect(extra).toEqual([]);
+  });
+});
+
+describe("toimprove 236: an Obsidian drawing's shown name drops .excalidraw.md", () => {
+  it.each([
+    ["Plan.excalidraw", "Plan"],
+    ["Plan.EXCALIDRAW", "Plan"],
+    ["Plan.excalidraw.md", "Plan"],
+    ["Ideas.md", "Ideas.md"],
+    ["photo.png", "photo.png"],
+  ])("drawingStem(%s) is %s", (name, stem) => {
+    expect(drawingStem(name)).toBe(stem);
+  });
+
+  it("the palette, history and tab names use it", () => {
+    expect(drawingDisplayName("Sub/Sketch.excalidraw.md")).toBe("Sketch");
+    expect(drawingName("Sub/Sketch.excalidraw.md")).toBe("Sketch");
   });
 });

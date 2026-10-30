@@ -3,7 +3,7 @@
  * registry: each `[hotkeys]` entry whose id is `drawing.open:<vault-relative
  * path>` makes one (so the key lives in config.toml like every other).
  */
-import { stripDrawingExt } from "../vault/fileKind";
+import { drawingStem } from "../vault/fileKind";
 
 import type { CommandDefinition, HotkeyOverrides } from "./types";
 
@@ -20,7 +20,7 @@ export const parseDrawingOpenCommandId = (id: string): string | null =>
 
 /** "Graphs/BFS.excalidraw" -> "BFS". */
 export const drawingDisplayName = (path: string): string =>
-  stripDrawingExt(path.split("/").pop() ?? path);
+  drawingStem(path.split("/").pop() ?? path);
 
 export const makeDrawingOpenCommand = (path: string): CommandDefinition => ({
   id: drawingOpenCommandId(path),

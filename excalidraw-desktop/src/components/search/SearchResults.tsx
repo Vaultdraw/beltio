@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 
-import { stripDrawingExt } from "../../vault/fileKind";
+import { drawingStem } from "../../vault/fileKind";
 
 import { Highlighted } from "../../search/highlight";
 import { useVaultSearch } from "../../search/useVaultSearch";
@@ -54,7 +54,7 @@ interface Props {
   onOpenFolder: (path: string) => void;
 }
 
-const stripExt = (name: string) => stripDrawingExt(name);
+const stripExt = (name: string) => drawingStem(name);
 const fmt = formatCount;
 
 const entryToHit = (entry: VaultEntry): SearchHit => ({

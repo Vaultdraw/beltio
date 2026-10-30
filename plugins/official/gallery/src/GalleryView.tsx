@@ -53,7 +53,8 @@ export interface GalleryViewProps {
 }
 
 const baseName = (path: string) => path.slice(path.lastIndexOf("/") + 1);
-const stripDrawingExt = (name: string) => name.replace(/\.excalidraw$/i, "");
+const stripDrawingExt = (name: string) =>
+  name.replace(/\.excalidraw(\.md)?$/i, "");
 const displayName = (e: VaultEntry) =>
   e.kind === "folder" ? e.name : stripDrawingExt(baseName(e.path));
 

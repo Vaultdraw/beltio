@@ -12,7 +12,7 @@ import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import { getNoteFiles } from "../notes/noteBackend";
 import { savedNoteRevision } from "../notes/openNotes";
 import { toastStore } from "../toasts/toastStore";
-import { fileKind, stripDrawingExt } from "../vault/fileKind";
+import { fileKind, drawingStem } from "../vault/fileKind";
 import { findRenamed } from "../vault/renamePairing";
 
 import { registerCommandHandlers } from "../commands/handlerRegistry";
@@ -525,7 +525,7 @@ export function useTabs(args: UseTabsArgs): TabsApi {
         void open(path, opts?.target);
       },
       onSearch: (path: string) =>
-        live.current.searchFor(stripDrawingExt(path.split("/").pop() ?? path)),
+        live.current.searchFor(drawingStem(path.split("/").pop() ?? path)),
     };
   }, [runtime, open]);
 

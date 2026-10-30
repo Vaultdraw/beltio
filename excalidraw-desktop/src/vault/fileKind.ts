@@ -34,6 +34,15 @@ export const hasDrawingExt = (name: string): boolean =>
 export const stripDrawingExt = (name: string): string =>
   hasDrawingExt(name) ? name.slice(0, name.length - DRAWING_EXT.length) : name;
 
+/**
+ * A drawing's name without its extension, for an Obsidian drawing too: "Plan.excalidraw" and
+ * "Plan.excalidraw.md" give "Plan" (toimprove 236). Notes and other files keep theirs.
+ */
+export const drawingStem = (name: string): string =>
+  fileKind(name) === "excalidrawMd"
+    ? name.slice(0, name.length - EXCALIDRAW_MD_EXT.length)
+    : stripDrawingExt(name);
+
 export const fileKind = (name: string): FileKind => {
   if (hasDrawingExt(name)) {
     return "drawing";
