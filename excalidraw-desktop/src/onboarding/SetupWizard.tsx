@@ -9,14 +9,15 @@ import { isCustomChrome } from "../vault/windowChrome";
 import { updatePreferences } from "../vault/preferences";
 import { WindowControls } from "../components/WindowControls";
 
+import "../components/home.css";
+
 import { closeSetup } from "./setupStore";
 import { SETUP_STEPS } from "./steps";
 import { defaultVaultChoice } from "./steps/Vault";
 
-import type { SetupEnv, VaultChoice } from "./types";
-
-import "../components/home.css";
 import "./setup.css";
+
+import type { SetupEnv, VaultChoice } from "./types";
 
 export interface SetupWizardProps {
   win: Window;
