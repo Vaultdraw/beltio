@@ -122,8 +122,9 @@ export const Stepper = ({
       ArrowDown: () => move(-1),
       PageUp: () => move(1, 5),
       PageDown: () => move(-1, 5),
-      Home: () => onChange(min),
-      End: () => onChange(max),
+      // No bound (a plugin setting without min or max): Home and End have no end to go to.
+      Home: () => Number.isFinite(min) && onChange(min),
+      End: () => Number.isFinite(max) && onChange(max),
       Enter: commit,
       Escape: () => setDraft(null),
     };
@@ -147,10 +148,14 @@ export const Stepper = ({
         inputMode="decimal"
         aria-label={label}
         aria-valuenow={value}
-        aria-valuemin={min}
-        aria-valuemax={max}
+        aria-valuemin={Number.isFinite(min) ? min : undefined}
+        aria-valuemax={Number.isFinite(max) ? max : undefined}
         aria-valuetext={unit ? `${value} ${unit}` : String(value)}
-        size={Math.max(3, String(max).length + (unit ? unit.length + 1 : 0))}
+        size={Math.max(
+          3,
+          String(Number.isFinite(max) ? max : value).length +
+            (unit ? unit.length + 1 : 0),
+        )}
         value={draft ?? (unit ? `${value} ${unit}` : String(value))}
         onChange={(e) => setDraft(e.target.value)}
         onFocus={(e) => e.currentTarget.select()}

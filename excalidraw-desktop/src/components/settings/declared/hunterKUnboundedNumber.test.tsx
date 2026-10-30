@@ -63,13 +63,13 @@ describe("hunter K-6: a plugin number setting without min or max takes any numbe
     expect(stored().goal).toBe(800);
   });
 
-  it.fails("toimprove 234: typing 5000 stores 5000 (no max declared)", () => {
+  it("toimprove 234: typing 5000 stores 5000 (no max declared)", () => {
     renderPage();
     type("Word goal", "5000");
     expect(stored().goal).toBe(5000);
   });
 
-  it.fails("toimprove 234: typing -20 stores -20 (no min declared)", () => {
+  it("toimprove 234: typing -20 stores -20 (no min declared)", () => {
     renderPage();
     type("Offset", "-20");
     expect(stored().offset).toBe(-20);

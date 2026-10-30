@@ -60,8 +60,9 @@ const DeclaredControl = ({ decl, id, value, onChange }: ControlProps) => {
         <Stepper
           value={n}
           label={decl.title}
-          min={decl.min ?? Math.min(0, n)}
-          max={decl.max ?? Math.max(1000, n)}
+          // No declared bound: none in the field either (toimprove 234).
+          min={decl.min ?? -Infinity}
+          max={decl.max ?? Infinity}
           step={stepFor(decl)}
           onChange={(next) => onChange(round(next))}
         />
