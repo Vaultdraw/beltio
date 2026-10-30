@@ -24,19 +24,13 @@ const refused = (name: string) => {
 };
 
 describe("hunter F-1: Look up pre-check agrees with the native theme name rules", () => {
-  it(
-    "a name over 80 characters is refused at Look up (native refuses it)",
-    () => {
-      expect(refused("A".repeat(100))).toBe(true);
-    },
-  );
-  it(
-    "the reserved name Source is refused at Look up (native refuses it)",
-    () => {
-      expect(refused("Source")).toBe(true);
-      expect(refused("source")).toBe(true);
-    },
-  );
+  it("a name over 80 characters is refused at Look up (native refuses it)", () => {
+    expect(refused("A".repeat(100))).toBe(true);
+  });
+  it("the reserved name Source is refused at Look up (native refuses it)", () => {
+    expect(refused("Source")).toBe(true);
+    expect(refused("source")).toBe(true);
+  });
 });
 
 describe("hunter F-2: Look up wording names a folder for a theme", () => {

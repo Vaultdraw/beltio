@@ -3,10 +3,7 @@ import { describe, expect, it } from "vitest";
 import { TEXT_MAX_WRAP_WIDTH } from "@excalidraw/common";
 
 import { AppText } from "../components/App.text";
-import {
-  DEFAULT_PAGE_SETUP,
-  getPresetPageSize,
-} from "../data/pageSetup";
+import { DEFAULT_PAGE_SETUP, getPresetPageSize } from "../data/pageSetup";
 
 import type App from "../components/App";
 
