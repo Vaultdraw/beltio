@@ -140,7 +140,10 @@ test("a theme's own Markdown colours reach typed headings, in light and dark", a
   page,
 }) => {
   // linux-ci-triage (2026-10-30): the canvas ink sampler finds no text element on Linux WebKitGTK (page.evaluate: e.x undefined); needs a debug session. Tracking: personal/feature/linux-ci-triage/TRIAGE.md.
-  test.skip(process.platform === "linux", "the canvas ink sampler finds no text element on Linux WebKitGTK");
+  test.skip(
+    process.platform === "linux",
+    "the canvas ink sampler finds no text element on Linux WebKitGTK",
+  );
   const errors = trackErrors(page);
   await page.route("https://themes.example.test/**", (route) =>
     route.fulfill({

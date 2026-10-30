@@ -1,5 +1,6 @@
-import { lineStartKey } from "../nativeKeys";
 import { expect, type Page } from "@playwright/test";
+
+import { lineStartKey } from "../nativeKeys";
 
 import { test } from "../fixture";
 import {

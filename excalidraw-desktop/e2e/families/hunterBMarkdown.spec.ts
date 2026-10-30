@@ -1,5 +1,6 @@
-import { nativeMod } from "../nativeKeys";
 import { expect, type Page } from "@playwright/test";
+
+import { nativeMod } from "../nativeKeys";
 
 import { test } from "../fixture";
 import { canvasBox, openDrawing, openVault, readScene } from "../helpers";
