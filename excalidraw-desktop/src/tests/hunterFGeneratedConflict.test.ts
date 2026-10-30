@@ -11,8 +11,8 @@ import { uniqueName } from "../vault/uniqueName";
  * (`vaultdraw-core/src/drawing.rs:71`, `sync_names::numbered_copy_original`) flags every file called
  * "<name> 2" .. "<name> 99" as an iCloud conflict copy of "<name>" whenever "<name>" exists beside
  * it, with no check that the vault is on a sync service. The third new drawing in a folder
- * therefore shows a "conflict" badge and a "Compare with original" menu item. (The browser
- * stand-in does not flag, so no spec sees it.)
+ * therefore shows a "conflict" badge and a "Compare with original" menu item. (The browser stand-in flags it the
+ * same way, and generated-names.spec.ts creates "Untitled 2" but only checks file names.)
  */
 describe("hunter F-14: the app's own generated names are not sync conflicts", () => {
   const sync = readFileSync(
