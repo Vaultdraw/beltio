@@ -133,27 +133,29 @@ describe("J-4: ![[pic.png|caption|300x200]] (toimprove 211)", () => {
   it("sanity: ![[pic.png|300]] is 300 wide", async () => {
     expect((await hydrate("300")).getAttribute("width")).toBe("300");
   });
-  it(
-    "the size after the last | is used, as the renderer's comment promises",
-    async () => {
-      const img = await hydrate("My caption|300x200");
-      expect(img.getAttribute("width")).toBe("300");
-      expect(img.getAttribute("height")).toBe("200");
-    },
-  );
-  it(
-    "the caption is the picture's alt text, not the file name",
-    async () => {
-      expect((await hydrate("My caption")).alt).toBe("My caption");
-    },
-  );
+  it("the size after the last | is used, as the renderer's comment promises", async () => {
+    const img = await hydrate("My caption|300x200");
+    expect(img.getAttribute("width")).toBe("300");
+    expect(img.getAttribute("height")).toBe("200");
+  });
+  it("the caption is the picture's alt text, not the file name", async () => {
+    expect((await hydrate("My caption")).alt).toBe("My caption");
+  });
 });
 
 describe("J-2 family: what a Markdown link must NOT open (toimprove 209)", () => {
-  const paths = ["Projects/Plan.md", "Areas/Ideas.md", "Areas/Ideas.excalidraw"];
+  const paths = [
+    "Projects/Plan.md",
+    "Areas/Ideas.md",
+    "Areas/Ideas.excalidraw",
+  ];
   it("a ./ or ../ link opens only that file, never a namesake elsewhere", () => {
-    expect(resolveRelativeHref("Projects/Plan.md", "./Ideas.md", paths)).toBeNull();
-    expect(resolveRelativeHref("Projects/Plan.md", "../Ideas.md", paths)).toBeNull();
+    expect(
+      resolveRelativeHref("Projects/Plan.md", "./Ideas.md", paths),
+    ).toBeNull();
+    expect(
+      resolveRelativeHref("Projects/Plan.md", "../Ideas.md", paths),
+    ).toBeNull();
   });
   it("the extension written is kept: Ideas.md never opens the drawing", () => {
     expect(
@@ -164,6 +166,8 @@ describe("J-2 family: what a Markdown link must NOT open (toimprove 209)", () =>
     ).toBeNull();
   });
   it("a missing note stays a dead link", () => {
-    expect(resolveRelativeHref("Projects/Plan.md", "Nope.md", paths)).toBeNull();
+    expect(
+      resolveRelativeHref("Projects/Plan.md", "Nope.md", paths),
+    ).toBeNull();
   });
 });
