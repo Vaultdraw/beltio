@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { isLocalOrPrivateHost } from "../network/webFetchGuard";
 import { browserCatalogueBackend } from "../theme/catalogue/backends";
 import { browserBackend } from "../theme/install/backends";
+import "../theme/install/consent";
 import { updatePreferences } from "../vault/preferences";
 
 const RESET = {
@@ -174,5 +175,20 @@ describe("webview downloads: safety checks", () => {
     ]) {
       expect(isLocalOrPrivateHost(h)).toBe(false);
     }
+  });
+});
+
+describe("before the policy is registered", () => {
+  it("every download is blocked (fail closed)", async () => {
+    vi.resetModules();
+    const { browserBackend: fresh } = await import("../theme/install/backends");
+    const f = OK();
+    await expect(
+      fresh(mkWin(f)).fetch(
+        { kind: "url", url: "https://example.com/a.json" },
+        65536,
+      ),
+    ).rejects.toMatchObject({ code: "NETWORK_DISABLED" });
+    expect(f).not.toHaveBeenCalled();
   });
 });

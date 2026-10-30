@@ -7,10 +7,9 @@
  */
 
 import { isTauriAvailable } from "../vault/DesktopVaultRepository";
-import { blockReason } from "../theme/install/consent";
 import { InstallError } from "../theme/install/types";
 
-import type { ConsentField } from "../theme/install/consent";
+import { webFetchBlockReason, type WebFetchField } from "./webFetchPolicy";
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
@@ -74,7 +73,7 @@ export const isLocalOrPrivateHost = (hostname: string): boolean => {
 export const vetWebUrl = (
   raw: string,
   win: Window,
-  field: ConsentField,
+  field: WebFetchField,
 ): URL => {
   if (isTauriAvailable(win)) {
     throw new InstallError(
@@ -82,7 +81,7 @@ export const vetWebUrl = (
       "Downloads go through the desktop app, not the page",
     );
   }
-  const reason = blockReason(field, win);
+  const reason = webFetchBlockReason(field, win);
   if (reason) {
     throw new InstallError("NETWORK_DISABLED", reason);
   }
@@ -116,7 +115,7 @@ export const vetWebUrl = (
 export const guardedFetch = async (
   raw: string,
   win: Window,
-  field: ConsentField,
+  field: WebFetchField,
 ): Promise<{ response: Response; url: URL }> => {
   const url = vetWebUrl(raw, win, field);
   let response: Response;

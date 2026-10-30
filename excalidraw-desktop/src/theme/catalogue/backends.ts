@@ -5,7 +5,7 @@ import { guardedFetch } from "../../network/webFetchGuard";
 import { readCapped, sha256Hex } from "../install/backends";
 import { InstallError, toInstallError } from "../install/types";
 
-import type { ConsentField } from "../install/consent";
+import type { WebFetchField } from "../../network/webFetchPolicy";
 import type { CatalogueBackend, RawIndex } from "./types";
 
 type Invoke = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
@@ -47,7 +47,7 @@ const download = async (
   raw: string,
   maxBytes: number,
   win: Window,
-  field: ConsentField,
+  field: WebFetchField,
 ): Promise<Uint8Array<ArrayBuffer>> => {
   const { response } = await guardedFetch(raw, win, field);
   return readCapped(response, maxBytes);
@@ -58,7 +58,7 @@ export const browserCatalogueBackend = (
   win: Window,
   cacheKey = CACHE_KEY,
   invalidMessage = "The themes list is not valid JSON",
-  field: ConsentField = "networkAllowThemes",
+  field: WebFetchField = "networkAllowThemes",
 ): CatalogueBackend => ({
   cached: async () => {
     try {

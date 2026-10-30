@@ -9,6 +9,7 @@ import {
   isOffline,
   updatePreferences,
 } from "../../vault/preferences";
+import { setWebFetchPolicy } from "../../network/webFetchPolicy";
 import { flushSettings } from "../../vault/settingsSync";
 
 /** The preference that holds a download switch (`network.allow_<purpose>`). */
@@ -68,3 +69,6 @@ export const unblock = async (
 
 export const unblockThemes = (win: Window = window): Promise<boolean> =>
   unblock("networkAllowThemes", win);
+
+// The webview download guard asks here (browser harness only; Rust has its own check).
+setWebFetchPolicy(blockReason);

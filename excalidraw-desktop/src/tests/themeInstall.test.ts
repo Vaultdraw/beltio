@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import "../theme/install/consent";
 import { browserBackend, tauriBackend } from "../theme/install/backends";
 import {
   applyUpdate,
