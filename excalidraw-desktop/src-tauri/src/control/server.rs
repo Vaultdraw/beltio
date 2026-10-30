@@ -267,6 +267,8 @@ fn subscribe(params: Option<&Value>, conn: &mut Conn, bus: &Arc<Bus>) -> Result<
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
+    use std::os::unix::fs::PermissionsExt;
+    use std::os::unix::net::{UnixListener, UnixStream};
     use std::time::{Duration, Instant};
     use vaultdraw_protocol::{CallError, Client};
 

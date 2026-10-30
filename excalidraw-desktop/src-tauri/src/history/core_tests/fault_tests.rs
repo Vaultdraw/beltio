@@ -181,10 +181,10 @@ fn fifty_random_sigkills_of_a_writer_leave_every_visible_version_exact() {
         child.kill().unwrap(); // SIGKILL
         let _ = child.wait();
         if i % 10 == 9 {
-            verify_all_versions(&dunce::canonicalize(root).unwrap());
+            verify_all_versions(&dunce::canonicalize(&root).unwrap());
         }
     }
-    let root = dunce::canonicalize(root).unwrap();
+    let root = dunce::canonicalize(&root).unwrap();
     let n = verify_all_versions(&root);
     assert!(n > 20, "the writers made progress ({n} versions)");
     // relaunch: own temp files are cleaned
