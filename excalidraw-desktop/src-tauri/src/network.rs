@@ -1038,3 +1038,26 @@ mod tests {
         assert!(!looks_like_image(b""));
     }
 }
+
+/// `vaultdraw-core/src/contract/private_host_cases.json` is read here and by
+/// `src/tests/privateHostContract.test.ts` (the webview download guard): one table for both copies
+/// of the private-address rule (validator, twins rule, 2026-10-30 night).
+#[cfg(test)]
+mod private_host_contract {
+    use super::*;
+
+    #[test]
+    fn private_host_contract_table() {
+        let table: serde_json::Value =
+            serde_json::from_str(include_str!("../crates/vaultdraw-core/src/contract/private_host_cases.json")).unwrap();
+        let mut failures = Vec::new();
+        for row in table["cases"].as_array().unwrap() {
+            let host = row["host"].as_str().unwrap();
+            let ip: IpAddr = host.trim_start_matches('[').trim_end_matches(']').parse().unwrap();
+            if is_blocked_address(ip) != row["blocked"].as_bool().unwrap() {
+                failures.push(host.to_string());
+            }
+        }
+        assert!(failures.is_empty(), "{failures:?}");
+    }
+}
