@@ -659,6 +659,22 @@ mod tests {
         assert!(check_url("https://api.openai.com/v1/chat").is_ok());
     }
 
+    /// `vaultdraw-core/src/contract/net_address_cases.json` is read here and by
+    /// `src/tests/huntMFakeNetTwin.test.ts` (the fake ctx.net): one table for both twins (M-18).
+    #[test]
+    fn address_contract_table() {
+        let dir = tempfile::tempdir().unwrap();
+        let table: Value = serde_json::from_str(include_str!("../../crates/vaultdraw-core/src/contract/net_address_cases.json")).unwrap();
+        for row in table["cases"].as_array().unwrap() {
+            let (url, want) = (row["url"].as_str().unwrap(), row["want"].as_str().unwrap());
+            if want == "ok" {
+                assert!(check_url(url).is_ok(), "{url}");
+            } else {
+                assert_eq!(code(call_net(dir.path(), "t-addr", "net.open", json!({"url": url}))), want, "{url}");
+            }
+        }
+    }
+
     #[test]
     fn auth_header_comes_from_the_saved_secret() {
         let dir = tempfile::tempdir().unwrap();

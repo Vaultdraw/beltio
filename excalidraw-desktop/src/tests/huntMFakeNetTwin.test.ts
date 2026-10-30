@@ -4,11 +4,12 @@
  * browser harness and the SDK mock host use (`sdk/api/shared/fakeNet.ts`). They have no shared case
  * table (testing.md: "Twins share one case table"), and the fake accepts addresses the app refuses:
  * a plugin's tests (and the app's e2e) pass for a request the real app never sends.
- * The rows below are the Rust table's rows, as written there.
+ * The rows live in vaultdraw-core/src/contract/net_address_cases.json, read by net.rs too.
  */
 import { describe, expect, it } from "vitest";
 
 import { createFakeNet, fakeNetRow } from "../../../sdk/api/shared/fakeNet";
+import table from "../../src-tauri/crates/vaultdraw-core/src/contract/net_address_cases.json";
 
 const enc = new TextEncoder();
 const open = async (url: string): Promise<string> => {
@@ -27,33 +28,13 @@ const open = async (url: string): Promise<string> => {
   }
 };
 
-const RUST_ROWS: [string, string][] = [
-  ["http://192.168.1.5/x", "INVALID_URL"],
-  ["http://example.com/x", "INVALID_URL"],
-  ["ftp://example.com/x", "INVALID_URL"],
-  ["https://user:pw@example.com/x", "INVALID_URL"],
-  ["not a url", "INVALID_URL"],
-  ["https://10.0.0.1/x", "PRIVATE_ADDRESS"],
-  ["https://169.254.169.254/x", "PRIVATE_ADDRESS"],
-  ["https://[fd00::1]/x", "PRIVATE_ADDRESS"],
-  ["http://localhost:11434/api", "ok"],
-  ["https://127.0.0.1/api", "ok"],
-  ["http://[::1]:8080/api", "ok"],
-  ["https://api.openai.com/v1/chat", "ok"],
-];
-
-/** Rows the fake answers differently today (flip each when the twins share a table). */
-const DRIFT = new Set([
-  "https://user:pw@example.com/x", // fake: ok
-  "not a url", // fake: Node's ERR_INVALID_URL, not a PluginApiError code
-  "https://10.0.0.1/x", // fake: ok
-  "https://169.254.169.254/x", // fake: ok
-  "https://[fd00::1]/x", // fake: ok
-]);
+type Row = { url: string; want: string; fake_known?: string };
+/** One table for both twins (validator): net.rs runs the same rows in `address_contract_table`. */
+const ROWS = table.cases as Row[];
 
 describe("fake ctx.net answers like the app's net.rs (toimprove M-18)", () => {
-  RUST_ROWS.forEach(([url, want]) => {
-    (DRIFT.has(url) ? it.fails : it)(`${url} -> ${want}`, async () => {
+  ROWS.forEach(({ url, want, fake_known }) => {
+    (fake_known ? it.fails : it)(`${url} -> ${want}`, async () => {
       expect(await open(url)).toBe(want);
     });
   });

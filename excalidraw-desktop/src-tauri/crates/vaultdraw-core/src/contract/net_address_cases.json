@@ -1,0 +1,17 @@
+{
+  "about": "What a plugin's ctx.net.open answers for a URL: \"ok\" or the error code. Copies that must agree: the app (src-tauri/src/plugins/net.rs check_url and net.open; plugins::net tests address_contract_table) and the fake used by the browser harness and the SDK mock host (sdk/api/shared/fakeNet.ts; src/tests/huntMFakeNetTwin.test.ts). A row with fake_known is drift in the fake (toimprove 274). Rows from hunter M-18 and net.rs address_rules (validator, 2026-10-30 night).",
+  "cases": [
+    { "url": "http://192.168.1.5/x", "want": "INVALID_URL" },
+    { "url": "http://example.com/x", "want": "INVALID_URL" },
+    { "url": "ftp://example.com/x", "want": "INVALID_URL" },
+    { "url": "https://user:pw@example.com/x", "want": "INVALID_URL", "fake_known": "fake: ok" },
+    { "url": "not a url", "want": "INVALID_URL", "fake_known": "fake: Node's ERR_INVALID_URL" },
+    { "url": "https://10.0.0.1/x", "want": "PRIVATE_ADDRESS", "fake_known": "fake: ok" },
+    { "url": "https://169.254.169.254/x", "want": "PRIVATE_ADDRESS", "fake_known": "fake: ok" },
+    { "url": "https://[fd00::1]/x", "want": "PRIVATE_ADDRESS", "fake_known": "fake: ok" },
+    { "url": "http://localhost:11434/api", "want": "ok" },
+    { "url": "https://127.0.0.1/api", "want": "ok" },
+    { "url": "http://[::1]:8080/api", "want": "ok" },
+    { "url": "https://api.openai.com/v1/chat", "want": "ok" }
+  ]
+}
