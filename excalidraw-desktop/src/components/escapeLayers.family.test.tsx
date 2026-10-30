@@ -123,6 +123,8 @@ const NOT_MODAL: Record<string, string> = {
   "editor/links/wikiAutocomplete.ts": "autocomplete popup inside the editor",
   "history/panel/PreviewOverlay.tsx":
     "yields to anything that handled Escape (defaultPrevented)",
+  "layout/useNavigatorOverlay.ts":
+    "the narrow-window file list: yields to any dialog or menu that handles Escape first (defaultPrevented, escapeBelongsToOther)",
   "tabs/TabContextMenu.tsx": "menu",
   "tabs/useStripDrag.ts": "Escape cancels a drag",
 };
