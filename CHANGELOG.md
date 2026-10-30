@@ -34,6 +34,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **A footnote used only inside another footnote is listed.** Its number used to lead to nothing; it now appears in the footnotes list (toimprove 276).
 - **Save as template on an Obsidian drawing offers the drawing's name.** It offered "Plan.excalidraw.md"; it now offers "Plan" (toimprove 277).
 - **Cmd+Z in a Markdown-mode box after a heading brings back a word you deleted.** After Enter on a heading, typing a word and deleting it, Cmd+Z jumped back to the heading and lost the word; once anything is typed in the box, Cmd+Z is the text box's own undo (toimprove 263).
+- **A Markdown link inside an embedded note opens the file next to that note.** It resolved from the note that held the embed, so `[plan index](index.md)` in an embedded `Projects/Plan.md` opened `Inbox/index.md`; links and `[[#Heading]]` links now follow the note that wrote them (toimprove 259).
 
 ## [0.2.0] - 2026-10-28
 

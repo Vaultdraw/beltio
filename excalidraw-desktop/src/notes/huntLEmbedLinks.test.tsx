@@ -79,7 +79,7 @@ it("sanity: the host note's own Markdown link opens the index next to it", async
   expect(openPath).toHaveBeenCalledWith("Inbox/index.md", expect.anything());
 });
 
-it.fails(
+it(
   "L-4: a Markdown link inside an embedded note opens the index next to THAT note",
   async () => {
     const openPath = vi.fn();
@@ -96,6 +96,23 @@ it.fails(
     );
   },
 );
+
+it("L-4 family: a [[#Heading]] link inside an embedded note opens the embedded note there", async () => {
+  const files = new FakeNoteFiles();
+  files.setOnDisk("Inbox/Daily.md", "# Daily\n\n![[Plan]]\n");
+  files.setOnDisk("Projects/Plan.md", "# Plan\n\n[[#Goals]]\n\n## Goals\n\nx\n");
+  setNoteFiles(files);
+  const openPath = vi.fn();
+  render(<NoteView path="Inbox/Daily.md" openPath={openPath} vault={vault} />);
+  const reading = await screen.findByTestId("note-reading");
+  const a = await waitFor(() => {
+    const x = reading.querySelector<HTMLAnchorElement>(".note-embed a.wikilink");
+    expect(x).not.toBeNull();
+    return x!;
+  });
+  fireEvent.click(a);
+  expect(openPath).toHaveBeenCalledWith("Projects/Plan.md", expect.anything());
+});
 
 it("L-5: a [[link]] in a property opens the note", async () => {
   const openPath = vi.fn();

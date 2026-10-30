@@ -442,12 +442,17 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
         void openWebLink(a.getAttribute("href") ?? "");
         return;
       }
+      // A link follows the note that wrote it: inside an embedded note, its own folder and name
+      // (toimprove 259; Obsidian).
+      const from =
+        a.closest<HTMLElement>(".note-embed-note[data-path]")?.dataset.path ??
+        path;
       if (!a.classList.contains("wikilink")) {
         // An ordinary Markdown link: never let the window navigate to it. A link to a file in the
         // vault opens it (a heading after # is scrolled to); anything else does nothing.
         e.preventDefault();
         const to = resolveRelativeHref(
-          path,
+          from,
           a.getAttribute("href") ?? "",
           vault.paths(),
         );
@@ -470,8 +475,11 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
       const newTab = e.metaKey || e.ctrlKey;
       const block = a.dataset.block;
       if (!target && (heading || block)) {
-        // A link to a place in this note.
-        queueAnchor(path, { heading, block });
+        // A link to a place in the note that wrote it.
+        queueAnchor(from, { heading, block });
+        if (from !== path) {
+          openPath(from, { target: newTab ? "new" : "current" });
+        }
         return;
       }
       if (dest) {
@@ -482,7 +490,7 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
         return;
       }
       // An unresolved link makes the note (and its folders), as Obsidian does.
-      const created = newNotePathForLink(path, target);
+      const created = newNotePathForLink(from, target);
       if (handle === null || created === null) {
         toastStore.push({ message: `Cannot create a note named "${target}"` });
         return;
