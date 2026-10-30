@@ -505,7 +505,6 @@ fn hostile_child() {
 /// app, and the indexer parses every note of the vault at start-up. Run with
 /// `cargo test -p vaultdraw-core hostile_notes -- --ignored` to see it fail.
 #[test]
-#[ignore = "A-12: stack overflow on deeply nested notes aborts the process"]
 fn hostile_notes_parse_without_crashing() {
     let failures: Vec<_> = hostile_cases().into_iter().filter(|(n, _)| !parses_in_child(n)).map(|(n, _)| n).collect();
     assert!(failures.is_empty(), "crashed or panicked on: {failures:?}");

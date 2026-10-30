@@ -14,21 +14,62 @@ pub struct Walk<'a, 's> {
     queue: std::collections::VecDeque<Item<'a>>,
     pub ctx: Ctx<'s>,
     pub frontmatter: Option<Frontmatter>,
+    /// Open containers we kept, and deeper ones we dropped (see `MAX_NEST`).
+    kept: usize,
+    skipped: usize,
+}
+
+/// Containers (quotes, lists, items) nested deeper than this are flattened into their parent: the
+/// walk below recurses once per kept level, so an unbounded note (a line of `>` characters) would
+/// overflow the stack and abort the app. CommonMark parsers cap nesting the same way.
+pub const MAX_NEST: usize = 64;
+
+fn is_container_start(t: &Tag) -> bool {
+    matches!(t, Tag::BlockQuote(_) | Tag::List(_) | Tag::Item | Tag::FootnoteDefinition(_) | Tag::DefinitionList | Tag::DefinitionListDefinition)
+}
+
+fn is_container_end(t: &TagEnd) -> bool {
+    matches!(t, TagEnd::BlockQuote(_) | TagEnd::List(_) | TagEnd::Item | TagEnd::FootnoteDefinition | TagEnd::DefinitionList | TagEnd::DefinitionListDefinition)
 }
 
 impl<'a, 's> Walk<'a, 's> {
     pub fn new(parser: Md<'a>, ctx: Ctx<'s>) -> Self {
-        Walk { it: parser.into_offset_iter(), queue: Default::default(), ctx, frontmatter: None }
+        Walk { it: parser.into_offset_iter(), queue: Default::default(), ctx, frontmatter: None, kept: 0, skipped: 0 }
+    }
+
+    /// The parser's next event, with containers beyond `MAX_NEST` dropped (start and matching end).
+    fn raw(&mut self) -> Option<Item<'a>> {
+        loop {
+            let (ev, r) = self.it.next()?;
+            match &ev {
+                Event::Start(t) if is_container_start(t) => {
+                    if self.kept >= MAX_NEST {
+                        self.skipped += 1;
+                        continue;
+                    }
+                    self.kept += 1;
+                }
+                Event::End(t) if is_container_end(t) => {
+                    if self.skipped > 0 {
+                        self.skipped -= 1;
+                        continue;
+                    }
+                    self.kept = self.kept.saturating_sub(1);
+                }
+                _ => {}
+            }
+            return Some((ev, r));
+        }
     }
 
     /// Next event; adjacent text events are merged so markers like `%%` and `==` are not split.
     fn pull(&mut self) -> Option<Item<'a>> {
-        let (ev, r) = self.it.next()?;
+        let (ev, r) = self.raw()?;
         let Event::Text(first) = ev else { return Some((ev, r)) };
         let mut merged: Option<String> = None;
         let mut end = r.end;
         loop {
-            match self.it.next() {
+            match self.raw() {
                 None => break,
                 Some((Event::Text(t), r2)) => {
                     merged.get_or_insert_with(|| first.to_string()).push_str(&t);

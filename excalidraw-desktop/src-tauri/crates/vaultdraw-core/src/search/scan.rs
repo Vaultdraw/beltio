@@ -564,4 +564,28 @@ mod tests {
         let f = Found { path: "nodir/z.excalidraw".into(), size: 10, mtime: 1 };
         assert!(parse_in(dir.path(), &f, &mut buf, &mut handle).is_none());
     }
+
+    /// Hunter A-12: the real indexer walk and parse over a vault holding notes nested thousands of
+    /// levels deep, on a default 2 MB thread like an indexer worker, stays up and indexes the
+    /// ordinary note next to them.
+    #[test]
+    fn hostile_deeply_nested_notes_are_indexed_without_crashing() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("fine.md"), "# Fine\n\nordinary words\n").unwrap();
+        fs::write(dir.path().join("quotes.md"), "> ".repeat(20_000) + "deep\n").unwrap();
+        fs::write(dir.path().join("lists.md"), (0..2000).map(|i| format!("{}- item\n", "  ".repeat(i))).collect::<String>()).unwrap();
+        fs::write(dir.path().join("mixed.md"), "- > ".repeat(5_000) + "|a|b|\n").unwrap();
+        let root = dir.path().to_path_buf();
+        let found = std::thread::Builder::new()
+            .spawn(move || {
+                let mut buf = Vec::new();
+                let files = walk(&root, "");
+                let n = files.iter().filter_map(|f| parse(&root, f, &mut buf)).count();
+                (files.len(), n)
+            })
+            .unwrap()
+            .join()
+            .expect("the indexer thread survived");
+        assert_eq!(found, (4, 4));
+    }
 }
