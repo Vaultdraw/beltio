@@ -116,6 +116,22 @@ impl VaultIndex {
             state = self.changed.wait(state).unwrap_or_else(|p| p.into_inner());
         }
     }
+    /// Like [`wait_ready`](Self::wait_ready) but gives up after `limit` (false): a control call
+    /// waits for a vault that is still being indexed, never forever.
+    pub(crate) fn wait_ready_for(&self, limit: std::time::Duration) -> bool {
+        let deadline = Instant::now() + limit;
+        let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
+        loop {
+            if self.stop.load(std::sync::atomic::Ordering::SeqCst) {
+                return false;
+            }
+            if *state == IndexState::Ready {
+                return true;
+            }
+            let Some(left) = deadline.checked_duration_since(Instant::now()) else { return false };
+            state = self.changed.wait_timeout(state, left).unwrap_or_else(|p| p.into_inner()).0;
+        }
+    }
     fn status(&self, handle: &str) -> IndexStatus {
         let guard = self.read();
         self.status_of(handle, &guard)
@@ -524,6 +540,45 @@ mod unit_tests {
         std::thread::sleep(Duration::from_millis(50));
         other.stop("h");
         assert!(!waiter.join().unwrap());
+    }
+
+    #[test]
+    fn wait_ready_for_answers_at_once_when_ready_and_gives_up_on_time() {
+        // Hunter C, C-10: control calls wait for the first index build, but never forever.
+        let dir = tempfile::tempdir().unwrap();
+        write(dir.path(), "a.excalidraw", &["alpha"]);
+        let svc = registered(dir.path());
+        let vi = svc.vault("h").unwrap();
+        assert!(vi.wait_ready_for(Duration::from_secs(20)));
+        let t = Instant::now();
+        assert!(vi.wait_ready_for(Duration::from_millis(1)));
+        assert!(t.elapsed() < Duration::from_millis(100));
+        *vi.state.lock().unwrap() = IndexState::Building; // a long cold build
+        let t = Instant::now();
+        assert!(!vi.wait_ready_for(Duration::from_millis(150)));
+        assert!(t.elapsed() >= Duration::from_millis(140) && t.elapsed() < Duration::from_secs(2));
+        // A build that ends while a caller waits wakes it.
+        let waiter = { let vi = vi.clone(); std::thread::spawn(move || vi.wait_ready_for(Duration::from_secs(10))) };
+        std::thread::sleep(Duration::from_millis(50));
+        vi.set_state(IndexState::Ready);
+        assert!(waiter.join().unwrap());
+    }
+
+    #[test]
+    fn a_notified_new_file_is_in_the_index_without_the_watcher() {
+        // What a control create/move/trash relies on to answer only once the index has the change.
+        let dir = tempfile::tempdir().unwrap();
+        write(dir.path(), "old.excalidraw", &["alpha"]);
+        let svc = registered(dir.path());
+        let vi = svc.vault("h").unwrap();
+        assert!(vi.wait_ready());
+        write(dir.path(), "fresh.excalidraw", &["beta"]);
+        std::fs::rename(dir.path().join("old.excalidraw"), dir.path().join("moved.excalidraw")).unwrap();
+        svc.notify("h", &["fresh.excalidraw".into(), "old.excalidraw".into(), "moved.excalidraw".into()], false);
+        wait_until("index follows the notice", || {
+            let g = vi.read();
+            g.contains("fresh.excalidraw") && g.contains("moved.excalidraw") && !g.contains("old.excalidraw")
+        });
     }
 
     #[test]

@@ -48,6 +48,8 @@ export interface AppFilesDeps {
    * outgoing drawing before the next one opens (tabController capture).
    */
   flushIfOpen: (path: string) => Promise<void>;
+  /** True once the editor shows `path` (waits a short time); absent = do not wait (tests, no editor). */
+  editorReady?: (path: string) => Promise<boolean>;
   /** Shows the busy overlay while `run` is in flight (mutating calls only). */
   busy: <T>(run: () => Promise<T>) => Promise<T>;
 }
@@ -62,6 +64,16 @@ export function createAppFiles(d: AppFilesDeps): ControlFiles {
   const handle = () => d.vault?.handle ?? "";
   const missing = (e: unknown) =>
     isNotFoundError(e) ? false : Promise.reject(e);
+  /** Answers only when the editor can be read: the drawing is on screen, or a plain message says it is not yet. */
+  const editorShows = async (path: string) => {
+    if (d.editorReady && !(await d.editorReady(path))) {
+      throw new ControlError(
+        "UNAVAILABLE",
+        `${path} is open but its editor is still loading; try again in a moment`,
+        { path },
+      );
+    }
+  };
   const exportWith = async <T>(
     path: string,
     render: (
@@ -85,6 +97,10 @@ export function createAppFiles(d: AppFilesDeps): ControlFiles {
       d.activate?.(id);
       if (d.tabStore) {
         await waitForTabs(d.tabStore, (s) => s.activeId === id);
+        const path = d.tabStore.getState().tabs.find((t) => t.id === id)?.path;
+        if (path) {
+          await editorShows(path);
+        }
       }
     },
     closeTab: async (id) => {
@@ -94,8 +110,16 @@ export function createAppFiles(d: AppFilesDeps): ControlFiles {
       }
     },
     openVault: async (path) => summary(await d.openVaultAt(path)),
-    openDrawing: (path, newTab) =>
-      d.openDrawing(path, newTab ? { target: "new" } : undefined),
+    openDrawing: async (path, newTab) => {
+      const opened = await d.openDrawing(
+        path,
+        newTab ? { target: "new" } : undefined,
+      );
+      if (opened) {
+        await editorShows(path);
+      }
+      return opened;
+    },
     drawingExists: (path) =>
       probeExists(d.repository, handle(), path).catch(missing),
     folderExists: (path) =>

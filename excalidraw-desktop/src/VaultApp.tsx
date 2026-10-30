@@ -26,6 +26,7 @@ import { useSpeculativeOpen } from "./speculative/useSpeculativeOpen";
 import { useAutoReload } from "./watch/useAutoReload";
 import { resolveOpenTarget } from "./control/openTarget";
 import { createAppFiles } from "./control/appFiles";
+import { waitForEditor } from "./control/editorReady";
 import { createBusyCounter } from "./control/busyCounter";
 import { openVaultAtPath } from "./control/vaultOpen";
 import { canAddVaultLibrary, importLibrary } from "./control/libraryImport";
@@ -2647,6 +2648,7 @@ export const VaultApp = ({
       return chosen;
     },
     openDrawing: handleOpenDrawing,
+    editorReady: waitForEditor,
     createEntry: createEntryCore,
     moveEntry: (from, to, rewriteLinks) =>
       moveEntryCore(from, to, getParentPath(to), { rewriteLinks }),

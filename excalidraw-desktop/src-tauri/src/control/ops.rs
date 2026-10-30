@@ -4,7 +4,7 @@
 use super::bridge::{call_window, pending, CALL_TIMEOUT, STATE_TIMEOUT, WINDOW_LABEL};
 use super::target::{self, native_err, Need};
 use super::{config_ops, events, vault_ops};
-use crate::search::SearchService;
+use crate::search::{SearchService, VaultIndex};
 use crate::{links, Vault};
 use serde_json::{json, Map, Value};
 use std::sync::Arc;
@@ -19,6 +19,10 @@ type Reply = Result<Value, RpcError>;
 const QUIT_DELAY: Duration = Duration::from_millis(100);
 /// Rendering a drawing to a file (`export.render`) takes longer than the other window calls.
 const EXPORT_TIMEOUT: Duration = Duration::from_secs(120);
+/// A control call that reads the index waits this long for the first build of a vault's index.
+const INDEX_WAIT: Duration = Duration::from_secs(10);
+/// After a create, move or trash the reply waits this long for the index to show the change.
+const SYNC_WAIT: Duration = Duration::from_secs(3);
 
 pub(crate) fn call(app: &AppHandle, method: &str, params: Option<Value>) -> Reply {
     let params = params.unwrap_or(Value::Null);
@@ -37,6 +41,7 @@ pub(crate) fn call(app: &AppHandle, method: &str, params: Option<Value>) -> Repl
         VAULT_LINKS => links_of(app, &params),
         VAULT_TAGS => {
             let v = active(app)?;
+            settled_index(app, &v);
             to_json(app.state::<SearchService>().tags(&v.handle).map_err(native_err)?)
         }
         FILE_READ => {
@@ -51,8 +56,17 @@ pub(crate) fn call(app: &AppHandle, method: &str, params: Option<Value>) -> Repl
         CONFIG_SET => config_ops::set(&dirs()?, &params),
         APP_QUIT => Ok(quit(app)),
         VAULT_OPEN | TAB_LIST => call_window(app, method, Some(params), CALL_TIMEOUT),
-        FILE_OPEN | FILE_TRASH => window_with_target(app, method, params, Need::File, CALL_TIMEOUT),
-        FILE_CREATE => window_with_target(app, method, params, Need::Nothing, CALL_TIMEOUT),
+        FILE_OPEN => window_with_target(app, method, params, Need::File, CALL_TIMEOUT),
+        FILE_TRASH => {
+            let reply = window_with_target(app, method, params, Need::File, CALL_TIMEOUT)?;
+            index_caught_up(app, &[], &[reply["path"].as_str()]);
+            Ok(reply)
+        }
+        FILE_CREATE => {
+            let reply = window_with_target(app, method, params, Need::Nothing, CALL_TIMEOUT)?;
+            index_caught_up(app, &[reply["path"].as_str()], &[]);
+            Ok(reply)
+        }
         EXPORT_RENDER | EXPORT_SPOOL => window_with_target(app, method, params, Need::File, EXPORT_TIMEOUT),
         TAB_FOCUS | TAB_CLOSE => tab_call(app, method, params),
         FILE_MOVE => file_move(app, params),
@@ -81,10 +95,52 @@ fn opt_str<'a>(params: &'a Value, key: &str) -> Result<Option<&'a str>, RpcError
 }
 
 /// Link-style name to path through the vault's link resolver; `None` when it resolves to nothing.
+/// Waits for the vault's first index build, so a name never misses just because the app is young.
 fn by_name<'a>(app: &'a AppHandle, v: &'a Vault) -> impl Fn(&str) -> Option<String> + 'a {
     move |name| {
-        let vi = app.state::<SearchService>().vault(&v.handle).ok()?;
+        let vi = settled_index(app, v)?;
         links::resolve_name(&vi, name)
+    }
+}
+
+/// The vault's index once its first build has finished (waits up to [`INDEX_WAIT`], then answers
+/// from what is indexed: a huge vault gets partial results rather than a hang).
+fn settled_index(app: &AppHandle, v: &Vault) -> Option<Arc<VaultIndex>> {
+    let vi = app.state::<SearchService>().vault(&v.handle).ok()?;
+    vi.wait_ready_for(INDEX_WAIT);
+    Some(vi)
+}
+
+/// Answers a create, move or trash only once the index shows it: the watcher would tell the index
+/// about 0.8 s later, and a script's next `open Name` or `links Name` must not miss (hunter C-10).
+/// `added` and `gone` are vault-relative paths; only drawings are indexed for sure, so only they are awaited.
+fn index_caught_up(app: &AppHandle, added: &[Option<&str>], gone: &[Option<&str>]) {
+    let drawings = |list: &[Option<&str>]| -> Vec<String> {
+        list.iter().flatten().filter(|p| vaultdraw_core::filekind::has_drawing_ext(p)).map(|p| p.to_string()).collect()
+    };
+    let (added, gone) = (drawings(added), drawings(gone));
+    if added.is_empty() && gone.is_empty() {
+        return;
+    }
+    let Ok(v) = active(app) else { return };
+    let service = app.state::<SearchService>();
+    let Ok(vi) = service.vault(&v.handle) else { return };
+    // Until the first build ends, the scan itself finds the change.
+    if !vi.wait_ready_for(INDEX_WAIT) {
+        return;
+    }
+    let all: Vec<String> = added.iter().chain(gone.iter()).cloned().collect();
+    service.notify(&v.handle, &all, false);
+    let deadline = std::time::Instant::now() + SYNC_WAIT;
+    while std::time::Instant::now() < deadline {
+        let done = {
+            let index = vi.read();
+            added.iter().all(|p| index.contains(p)) && gone.iter().all(|p| !index.contains(p))
+        };
+        if done {
+            return;
+        }
+        std::thread::sleep(Duration::from_millis(10));
     }
 }
 
@@ -96,6 +152,7 @@ fn search(app: &AppHandle, params: &Value) -> Reply {
     let query = opt_str(params, "query")?.ok_or_else(|| RpcError::invalid_params("query is required"))?;
     let limit = params.get("limit").and_then(Value::as_u64).map(|n| n.min(u32::MAX as u64) as u32);
     let v = active(app)?;
+    settled_index(app, &v);
     to_json(app.state::<SearchService>().search(&v.handle, query, limit, None).map_err(native_err)?)
 }
 
@@ -103,7 +160,8 @@ fn search(app: &AppHandle, params: &Value) -> Reply {
 fn links_of(app: &AppHandle, params: &Value) -> Reply {
     let v = active(app)?;
     let path = resolve(app, &v, params, Need::File)?;
-    let vi = app.state::<SearchService>().vault(&v.handle).map_err(native_err)?;
+    // Backlinks of a vault still being indexed would be incomplete, and an empty list is no error.
+    let vi = settled_index(app, &v).ok_or_else(|| RpcError::app("NOT_FOUND", "The vault's index is not available"))?;
     to_json(links::links_of(&vi, &path))
 }
 
@@ -177,7 +235,9 @@ fn file_move(app: &AppHandle, mut params: Value) -> Reply {
     let to = target::validate_destination(need("to")?)?;
     params["from"] = Value::String(from);
     params["to"] = Value::String(to);
-    call_window(app, FILE_MOVE, Some(params), CALL_TIMEOUT)
+    let reply = call_window(app, FILE_MOVE, Some(params), CALL_TIMEOUT)?;
+    index_caught_up(app, &[reply["to"].as_str()], &[reply["from"].as_str()]);
+    Ok(reply)
 }
 
 /// Replies `{quitting: true}` now; the quit starts once the reply is on the wire, through the
