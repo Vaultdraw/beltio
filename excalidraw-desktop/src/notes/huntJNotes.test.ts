@@ -70,7 +70,7 @@ describe("J-2: an ordinary Markdown link opens the note Obsidian opens (toimprov
         want,
       );
     });
-    it.fails(`a click on [x](${href}) opens ${want} (${label})`, () => {
+    it(`a click on [x](${href}) opens ${want} (${label})`, () => {
       expect(resolveRelativeHref(from, href, paths)?.path).toBe(want);
     });
   }
@@ -127,4 +127,23 @@ describe("J-4: ![[pic.png|caption|300x200]] (toimprove 211)", () => {
       expect((await hydrate("My caption")).alt).toBe("My caption");
     },
   );
+});
+
+describe("J-2 family: what a Markdown link must NOT open (toimprove 209)", () => {
+  const paths = ["Projects/Plan.md", "Areas/Ideas.md", "Areas/Ideas.excalidraw"];
+  it("a ./ or ../ link opens only that file, never a namesake elsewhere", () => {
+    expect(resolveRelativeHref("Projects/Plan.md", "./Ideas.md", paths)).toBeNull();
+    expect(resolveRelativeHref("Projects/Plan.md", "../Ideas.md", paths)).toBeNull();
+  });
+  it("the extension written is kept: Ideas.md never opens the drawing", () => {
+    expect(
+      resolveRelativeHref("Projects/Plan.md", "Ideas.md", [
+        "Projects/Plan.md",
+        "Areas/Ideas.excalidraw",
+      ]),
+    ).toBeNull();
+  });
+  it("a missing note stays a dead link", () => {
+    expect(resolveRelativeHref("Projects/Plan.md", "Nope.md", paths)).toBeNull();
+  });
 });

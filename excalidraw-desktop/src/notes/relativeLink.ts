@@ -1,9 +1,11 @@
-import { joinRelative } from "../links/resolve";
+import { createResolver, joinRelative } from "../links/resolve";
 
 /**
  * Where an ordinary Markdown link in a note points: `[t](Other.md)`, `(My%20Page.md)`,
  * `(Folder/Other.md#Heading)`, `(../x.excalidraw)`. Obsidian vaults with "Use [[Wikilinks]]" off
- * write these. Null when it is not a link to a vault file (web address, `mailto:`, no such file).
+ * write these, in Obsidian's three link formats: relative to the note, the shortest unique path
+ * (`Ideas.md` for the only `Areas/Ideas.md`, its default) and the path from the vault root.
+ * Null when it is not a link to a vault file (web address, `mailto:`, no such file).
  */
 export const resolveRelativeHref = (
   from: string,
@@ -39,5 +41,17 @@ export const resolveRelativeHref = (
   const found =
     paths.find((p) => p === joined) ??
     paths.find((p) => p.toLowerCase() === lower);
-  return found ? { path: found, heading } : null;
+  if (found) {
+    return { path: found, heading };
+  }
+  if (/^\.\.?\//.test(rel)) {
+    return null; // written relative to the note: only that file
+  }
+  // The shortest path or the path from the vault root: what the app's link resolver (the twin of
+  // the search index's) already finds for backlinks, so a click opens the same note (toimprove 209).
+  const hit = createResolver(paths).resolveTarget(from, rel).path;
+  const ext = /\.[^./]+$/.exec(rel)?.[0].toLowerCase();
+  return hit && (!ext || hit.toLowerCase().endsWith(ext))
+    ? { path: hit, heading }
+    : null;
 };
