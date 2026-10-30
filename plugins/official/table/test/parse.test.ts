@@ -101,3 +101,21 @@ describe("parseTable on huge pastes", () => {
     expect(parseTable("1,2\n".repeat(500_000))).toBeNull();
   });
 });
+
+describe("line endings", () => {
+  it.each([
+    ["LF", "\n"],
+    ["CRLF", "\r\n"],
+    ["lone CR (old Mac and some spreadsheet exports)", "\r"],
+  ])("%s separates rows", (_name, eol) => {
+    const text = ["a,b,c", "1,2,3", "4,5,6"].join(eol);
+    expect(parseTable(text)?.rows).toEqual([
+      ["a", "b", "c"],
+      ["1", "2", "3"],
+      ["4", "5", "6"],
+    ]);
+    expect(
+      parseTable(["a\tb", "1\t2"].join(eol) + eol)?.rows.length,
+    ).toBe(2);
+  });
+});

@@ -60,8 +60,9 @@ export function splitDelimited(
       atStart = false;
     } else if (c === sep) {
       endField();
-    } else if (c === "\n" || (c === "\r" && text[i + 1] === "\n")) {
-      if (c === "\r") {
+    } else if (c === "\n" || c === "\r") {
+      // \r\n is one line end; a lone \r (old Mac exports) is one too.
+      if (c === "\r" && text[i + 1] === "\n") {
         i++;
       }
       endRow();
