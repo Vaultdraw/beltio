@@ -95,10 +95,6 @@ void clickMainMenuItem;
 const SETTINGS_WIDTHS = [360, 400, 480, 560, 640, 720, 900];
 for (const width of SETTINGS_WIDTHS) {
   test(`A-11: settings pages fit a ${width} px window`, async ({ page }) => {
-    test.fixme(
-      width < 720,
-      "A-11: settings page column too narrow below 720 px",
-    );
     test.setTimeout(120_000);
     const errors = trackErrors(page);
     await page.setViewportSize({ width, height: 700 });
@@ -144,10 +140,6 @@ for (const width of [440, 460, 480, 500]) {
   test(`A-13: the theme browser fits a ${width} px window`, async ({
     page,
   }) => {
-    test.fixme(
-      width < 500,
-      "A-13: theme browser dialog min-width wider than the window",
-    );
     const errors = trackErrors(page);
     await page.setViewportSize({ width, height: 700 });
     await openVault(page);

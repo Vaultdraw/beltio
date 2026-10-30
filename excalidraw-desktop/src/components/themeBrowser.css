@@ -1,6 +1,7 @@
 .vault-modal.vault-tb-dialog {
-  max-width: 880px;
+  max-width: min(880px, calc(100vw - 32px));
   width: min(880px, 94vw);
+  min-width: 0;
 }
 
 .vault-tb {
@@ -12,6 +13,7 @@
 
 .vault-tb__bar {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
