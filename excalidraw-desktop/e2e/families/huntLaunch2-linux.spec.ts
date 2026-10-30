@@ -23,7 +23,7 @@ test.beforeEach(async ({ page }) => {
   await openDrawing(page, "Graphs");
 });
 
-test.fail(
+test(
   "toimprove 287: on Linux the Interface settings page does not say Cmd+click",
   async ({ page }) => {
     await page.keyboard.press("Control+,");
@@ -33,7 +33,7 @@ test.fail(
   },
 );
 
-test.fail(
+test(
   "toimprove 287: on Linux the command palette does not offer Reveal in Finder",
   async ({ page }) => {
     await page.keyboard.press("Control+Shift+P");
