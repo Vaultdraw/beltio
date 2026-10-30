@@ -30,39 +30,35 @@ const messageOf = (json: string, fallback = "Linked theme") => {
   return null;
 };
 
-type Row = { name: string; json: string; known?: boolean };
+type Row = { name: string; json: string };
 
 const BAD_FILES: Row[] = [
   { name: "not JSON at all", json: "<html>404</html>" },
   { name: "cut off", json: '{"name":"Cut","dark":{"mPrimary":"#fff' },
-  { name: "an array", json: "[1,2,3]", known: true },
-  { name: "null", json: "null", known: true },
-  { name: "no colours", json: '{"name":"Hollow"}', known: true },
+  { name: "an array", json: "[1,2,3]" },
+  { name: "null", json: "null" },
+  { name: "no colours", json: '{"name":"Hollow"}' },
   {
     name: "missing two required colours",
     json: '{"name":"Half","dark":{"mPrimary":"#123456"}}',
-    known: true,
   },
   {
     name: "a colour that is not a colour",
     json: '{"name":"Evil","dark":{"mPrimary":"red;x","mSurface":"#101010","mOnSurface":"#eee"}}',
-    known: true,
   },
   {
     name: "a number as the name",
     json: '{"name":42,"dark":{"mPrimary":"#123456","mSurface":"#101010","mOnSurface":"#eee"}}',
-    known: true,
   },
   {
     name: "an author that is not text",
     json: '{"name":"A","author":7,"dark":{"mPrimary":"#123456","mSurface":"#101010","mOnSurface":"#eee"}}',
-    known: true,
   },
 ];
 
 describe("theme Look up explains a bad file in plain words", () => {
   for (const row of BAD_FILES) {
-    (row.known ? it.fails : it)(row.name, () => {
+    it(row.name, () => {
       const message = messageOf(row.json);
       expect(message, "a bad file must be refused").not.toBeNull();
       expect(rawWords(message!), message!).toEqual([]);
@@ -73,19 +69,18 @@ describe("theme Look up explains a bad file in plain words", () => {
 const colours =
   '"dark":{"mPrimary":"#123456","mSurface":"#101010","mOnSurface":"#eee"}';
 const UNSAFE_NAMES: Row[] = [
-  { name: "../x", json: `{"name":"../x",${colours}}`, known: true },
-  { name: "a/b", json: `{"name":"a/b",${colours}}`, known: true },
-  { name: "..", json: `{"name":"..",${colours}}`, known: true },
+  { name: "../x", json: `{"name":"../x",${colours}}` },
+  { name: "a/b", json: `{"name":"a/b",${colours}}` },
+  { name: "..", json: `{"name":"..",${colours}}` },
   {
     name: "back\\slash",
     json: `{"name":"back\\\\slash",${colours}}`,
-    known: true,
   },
 ];
 
 describe("theme Look up refuses a name that is not a safe file name", () => {
   for (const row of UNSAFE_NAMES) {
-    (row.known ? it.fails : it)(`refuses ${row.name}`, () => {
+    it(`refuses ${row.name}`, () => {
       expect(messageOf(row.json)).not.toBeNull();
     });
   }

@@ -1,5 +1,6 @@
 /** Install, update and remove themes through an InstallBackend (pure logic, no UI). */
 
+import { validateEntryName } from "../../vault/treeStore";
 import { parseThemeFile } from "../normalize";
 
 import { InstallError } from "./types";
@@ -21,6 +22,32 @@ export interface Candidate {
 
 export const kibToBytes = (kb: number) => Math.max(1, Math.min(256, kb)) * 1024;
 
+const bad = (message: string) => new InstallError("INVALID_THEME", message);
+
+/**
+ * What is wrong with a theme file, in words a user can act on (the parser's own messages name theme
+ * keys and format hints, which are for theme authors). Null when the shape is fine.
+ */
+const plainProblem = (parsed: unknown): string | null => {
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return "That file is not a theme file";
+  }
+  const file = parsed as Record<string, unknown>;
+  if (
+    file.name !== undefined &&
+    (typeof file.name !== "string" || !file.name.trim())
+  ) {
+    return "The theme's name has to be text";
+  }
+  if (file.author !== undefined && typeof file.author !== "string") {
+    return "The theme's author has to be text";
+  }
+  if (file.dark === undefined && file.light === undefined) {
+    return "That theme has no colours for a dark or a light look";
+  }
+  return null;
+};
+
 /** Checks the file is a valid theme; returns the name it installs under. Throws InstallError. */
 export const validateCandidate = (
   json: string,
@@ -30,16 +57,27 @@ export const validateCandidate = (
   try {
     parsed = JSON.parse(json);
   } catch {
-    throw new InstallError("INVALID_THEME", "The file is not valid JSON");
+    throw bad("The file is not valid JSON");
   }
+  const problem = plainProblem(parsed);
+  if (problem) {
+    throw bad(problem);
+  }
+  let name: string;
   try {
-    return parseThemeFile(parsed, fallbackName).name;
-  } catch (err) {
-    throw new InstallError(
-      "INVALID_THEME",
-      err instanceof Error ? err.message : String(err),
+    name = parseThemeFile(parsed, fallbackName).name;
+  } catch {
+    throw bad(
+      "That theme's colours are incomplete or are not written as hex colours such as #1e1e1e",
     );
   }
+  // The name becomes a file name: refuse one that could not be written (slashes, dots) here, not
+  // after the user pressed Install.
+  const safe = validateEntryName(name, "folder");
+  if (!safe.valid) {
+    throw bad(`That theme's name cannot be used: ${safe.error}`);
+  }
+  return name;
 };
 
 /** The file's JSON with its `name` set, so a renamed copy shows under its new name. */
