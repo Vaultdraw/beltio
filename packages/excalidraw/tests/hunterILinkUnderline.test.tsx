@@ -7,7 +7,10 @@ import type { GlobalPoint } from "@excalidraw/math";
 
 import { getDefaultAppState } from "../appState";
 import { isPointHittingLinkIcon } from "../components/hyperlink/helpers";
-import { setLinkIndicator } from "../components/hyperlink/linkIndicator";
+import {
+  getLinkUnderline,
+  setLinkIndicator,
+} from "../components/hyperlink/linkIndicator";
 
 import type { AppState } from "../types";
 
@@ -47,6 +50,35 @@ describe("hunter I-3: a click in the middle of a linked text, zoomed out", () =>
       expect(isPointHittingLinkIcon(text, map, appState(zoom), middle)).toBe(
         false,
       );
+    },
+  );
+});
+
+/**
+ * Hunter I-7 (2026-10-30). A linked text of several lines gets ONE underline, under its last
+ * line, as wide as its longest line (`getLinkUnderline` uses the whole text box). The last
+ * line "Q4" reads as the link and the line runs on past it into empty space; only that strip
+ * is clickable. Obsidian underlines the link text on every line it covers.
+ */
+describe("hunter I-7: a linked text of several lines", () => {
+  const multi = newTextElement({
+    x: 0,
+    y: 0,
+    text: "Roadmap for the next quarter\nQ4",
+    fontSize: 20,
+    link: "[[Roadmap]]",
+  });
+  const lastLine = newTextElement({ x: 0, y: 0, text: "Q4", fontSize: 20 });
+
+  it("sanity: the box is as wide as its longest line", () => {
+    expect(multi.width).toBeGreaterThan(lastLine.width * 3);
+  });
+
+  it.fails(
+    "the underline under the last line is no wider than that line",
+    () => {
+      const u = getLinkUnderline(multi, arrayToMap([multi]))!;
+      expect(u.x2 - u.x1).toBeLessThanOrEqual(lastLine.width + 1);
     },
   );
 });
