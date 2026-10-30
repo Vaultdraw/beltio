@@ -129,3 +129,42 @@ test("imported notes stay legible after every theme switch", async ({
   expect(problems, problems.join("\n")).toEqual([]);
   expect(errors).toEqual([]);
 });
+
+test("a drawing that stays open while the theme switches stays legible", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  const errors = trackErrors(page);
+  await openVault(page, "?plugins=markdown-import");
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
+  await seedAndOpen(page, "Start.excalidraw");
+  await page.evaluate((n) => {
+    (window as any).__plugins.backend.folders.sourcePick = {
+      name: "Vault",
+      files: n,
+    };
+  }, NOTES);
+  await clickMainMenuItem(page, "Import Obsidian vault…");
+  await expect(row(page, "Vault")).toBeVisible({ timeout: 30_000 });
+  if (!(await row(page, "Vault/Plain.excalidraw").isVisible())) {
+    await row(page, "Vault").locator(".vault-tree-item__toggle").click();
+  }
+  const problems: string[] = [];
+  for (const name of Object.keys(NOTES).map((n) => n.replace(/\.md$/, ""))) {
+    await setMode(page, "Light");
+    await row(page, `Vault/${name}.excalidraw`).click();
+    await page.waitForTimeout(500);
+    for (const mode of ["Dark", "Light", "Dark"] as const) {
+      await setMode(page, mode); // the drawing stays open
+      await page.waitForTimeout(600);
+      const r: any = await paint(page);
+      if (r.error || r.best < 3 || r.inkPixels < 20) {
+        problems.push(
+          `${name} open while switching to ${mode}: ${JSON.stringify(r)}`,
+        );
+      }
+    }
+  }
+  expect(problems, problems.join("\n")).toEqual([]);
+  expect(errors).toEqual([]);
+});

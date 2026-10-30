@@ -1,7 +1,12 @@
 import { expect, type Page } from "@playwright/test";
 
 import { test } from "../fixture";
-import { clickMainMenuItem, openVault, readScene, trackErrors } from "../helpers";
+import {
+  clickMainMenuItem,
+  openVault,
+  readScene,
+  trackErrors,
+} from "../helpers";
 import { rect, seedAndOpen } from "../pageHelpers";
 
 // Hunter A round 3: names collide. The user already has a folder "Vault" with their own drawing
@@ -28,7 +33,9 @@ test("importing a vault whose name and notes collide with the user's own files o
     repo.emit({ handle: repo.handle, paths: [], rescan: true });
   }, JSON.stringify({ type: "excalidraw", version: 2, elements: [rect("userRect", 10, 10)], appState: {}, files: {} }));
   const userBefore = JSON.stringify(
-    (await readScene(page, "Vault/Alpha.excalidraw")).elements.map((e: any) => e.id),
+    (await readScene(page, "Vault/Alpha.excalidraw")).elements.map(
+      (e: any) => e.id,
+    ),
   );
   const pick = () =>
     page.evaluate((t) => {
@@ -39,7 +46,9 @@ test("importing a vault whose name and notes collide with the user's own files o
     }, ALPHA);
   const userIntact = async (when: string) => {
     const ids = JSON.stringify(
-      (await readScene(page, "Vault/Alpha.excalidraw")).elements.map((e: any) => e.id),
+      (await readScene(page, "Vault/Alpha.excalidraw")).elements.map(
+        (e: any) => e.id,
+      ),
     );
     expect(ids, `the user's own Alpha after ${when}`).toBe(userBefore);
   };
@@ -49,20 +58,27 @@ test("importing a vault whose name and notes collide with the user's own files o
       const names: string[] = [];
       const seen = new Set<string>();
       const walk = async (dir: string) => {
-        if (seen.has(dir)) return;
+        if (seen.has(dir)) {
+          return;
+        }
         seen.add(dir);
         const res = await r.listDirectory(r.handle, dir);
         for (const e of res) {
           const p: string = e.path;
-          if (e.kind === "folder") await walk(p);
-          else if (/\.excalidraw$/.test(p)) names.push(p);
+          if (e.kind === "folder") {
+            await walk(p);
+          } else if (/\.excalidraw$/.test(p)) {
+            names.push(p);
+          }
         }
       };
       await walk("");
       let n = 0;
       for (const p of names) {
         const d = await r.readDrawing(r.handle, p);
-        if (d.json.includes(w)) n++;
+        if (d.json.includes(w)) {
+          n++;
+        }
       }
       return n;
     }, word);
