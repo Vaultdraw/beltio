@@ -36,7 +36,7 @@ import type {
 import type { ExcalidrawImageElement } from "@excalidraw/element/types";
 import type { HostContextMenuItem } from "@excalidraw/excalidraw/components/ContextMenu";
 
-import { entryDisplayName } from "../vault/fileKind";
+import { drawingStem } from "../vault/fileKind";
 
 import { planImport, skippedMessage } from "../canvasImport/importFiles";
 import { getAppCommandRunner } from "../commands/appRunner";
@@ -899,7 +899,7 @@ const VaultEditorComponent = ({
       return;
     }
     const ownerDocument = mounted.ownerDocument;
-    const baseName = entryDisplayName(nameRef.current) || "Drawing";
+    const baseName = drawingStem(nameRef.current) || "Drawing";
     exportingRef.current = true;
     setExporting(true);
     try {
