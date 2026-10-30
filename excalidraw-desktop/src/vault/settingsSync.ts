@@ -146,6 +146,7 @@ import {
   isPaperMajorEvery,
   isHintChars,
   isHoverPreview,
+  isLinkIndicator,
   isLinkColor,
   isNewLinkFormat,
   isOpenModifier,
@@ -388,6 +389,7 @@ type ConfigField =
   | "linkStyle"
   | "linkColor"
   | "linkHoverPreview"
+  | "linkCanvasIndicator"
   | "tagAutocomplete"
   | "tagPaneSort"
   | "aiEnabled"
@@ -938,6 +940,12 @@ const CORE_MAPPING: readonly ConfigMapping[] = [
     key: "links.hover_preview",
     expected: '"always", "modifier" or "off"',
     valid: isHoverPreview,
+  },
+  {
+    field: "linkCanvasIndicator",
+    key: "links.canvas_indicator",
+    expected: '"underline", "icon" or "both"',
+    valid: isLinkIndicator,
   },
   {
     field: "tagAutocomplete",

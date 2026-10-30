@@ -9,6 +9,7 @@ import { Switch } from "./controls";
 
 import type {
   HoverPreview,
+  LinkIndicator,
   NewLinkFormat,
   OpenModifier,
   ShapeLinkFormat,
@@ -43,6 +44,12 @@ const HOVER_PREVIEWS: readonly { val: HoverPreview; label: string }[] = [
   { val: "always", label: "Always" },
   { val: "modifier", label: "While holding the open modifier" },
   { val: "off", label: "Off" },
+];
+
+const CANVAS_INDICATORS: readonly { val: LinkIndicator; label: string }[] = [
+  { val: "underline", label: "Underline" },
+  { val: "icon", label: "Corner icon" },
+  { val: "both", label: "Underline and icon" },
 ];
 
 const parseUpdate = (text: string): UpdateOnRename =>
@@ -268,6 +275,31 @@ const HoverPreviewSetting = () => {
   );
 };
 
+const CanvasIndicatorSetting = () => {
+  const { links, setLinks } = useSettings();
+  return (
+    <SettingRow
+      id="link-canvas-indicator"
+      htmlFor="vault-link-canvas-indicator"
+    >
+      <select
+        id="vault-link-canvas-indicator"
+        className="vault-input"
+        value={links.canvasIndicator}
+        onChange={(e) =>
+          setLinks({ canvasIndicator: e.target.value as LinkIndicator })
+        }
+      >
+        {CANVAS_INDICATORS.map((o) => (
+          <option key={o.val} value={o.val}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </SettingRow>
+  );
+};
+
 export const linksControls: SettingControls = {
   "link-format": { Component: NewLinkFormatSetting },
   "link-shape-format": { Component: ShapeLinkFormatSetting },
@@ -278,4 +310,5 @@ export const linksControls: SettingControls = {
   "link-style": { Component: StyleLinksSetting },
   "link-color": { Component: LinkColorSetting },
   "link-hover-preview": { Component: HoverPreviewSetting },
+  "link-canvas-indicator": { Component: CanvasIndicatorSetting },
 };

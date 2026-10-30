@@ -257,6 +257,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       },
       color: { doc: "Link colour; `accent` uses the theme accent." },
       hover_preview: { doc: "When the hover preview card shows." },
+      canvas_indicator: {
+        doc: "How a linked element is marked on the canvas: `underline`, `icon` or `both`.",
+      },
       start: {
         doc: "When the link index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first links action). Starting links also starts search. See [Startup](#startup).",
       },

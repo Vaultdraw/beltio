@@ -78,6 +78,7 @@ import { copyToClipboard } from "../vault/clipboard";
 import { getPreferences, updatePreferences } from "../vault/preferences";
 
 import { PenBar } from "../pens/PenBar";
+
 import { PluginToolbar } from "../plugins/PluginToolbar";
 import { usePluginOn } from "../plugins/usePluginOn";
 
@@ -94,6 +95,8 @@ import { useMemoryRetention } from "../memory/useMemoryRetention";
 import { markOpen } from "../perf/openMarks";
 
 import "../theme/excalidrawChrome.css";
+
+import { useLinkIndicator } from "./links/useLinkIndicator";
 
 import "./compositing.css";
 
@@ -244,6 +247,7 @@ const VaultEditorComponent = ({
     null,
   );
   const { libraryUIOptions, onAppState } = useVaultLibrary(library, libraryApi);
+  const linkIndicator = useLinkIndicator(theme ?? "light", window);
   // Links act on the scene, so they wait while another document's scene is shown.
   const editorLinks = useVaultEditorLinks(
     apiReady ? libraryApi : null,
@@ -1131,6 +1135,7 @@ const VaultEditorComponent = ({
         interaction={disabled ? false : undefined}
         onExportImage={handleExportImage}
         onLinkOpen={editorLinks.onLinkOpen}
+        linkIndicator={linkIndicator}
         aiEnabled={false}
         freedrawPen={pens.freedrawPen}
         currentItemStrokeWidth={toolDefaults.currentItemStrokeWidth}

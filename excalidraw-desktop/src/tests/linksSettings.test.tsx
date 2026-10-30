@@ -42,6 +42,7 @@ const KEYS = [
   "links.style_links",
   "links.color",
   "links.hover_preview",
+  "links.canvas_indicator",
   "tags.autocomplete",
   "tags.pane_sort",
 ] as const;
@@ -70,6 +71,7 @@ describe("links settings: config -> prefs -> config", () => {
         style_links: false,
         color: "#ff8800",
         hover_preview: "modifier",
+        canvas_indicator: "both",
       },
     });
     expect(problems).toEqual([]);
@@ -83,6 +85,7 @@ describe("links settings: config -> prefs -> config", () => {
       styleLinks: false,
       linkColor: "#ff8800",
       hoverPreview: "modifier",
+      canvasIndicator: "both",
     });
   });
 
@@ -109,6 +112,8 @@ describe("links settings: config -> prefs -> config", () => {
     ["color", "red"],
     ["color", "#fff"],
     ["hover_preview", "sometimes"],
+    ["canvas_indicator", "box"],
+    ["canvas_indicator", true],
   ])("reports an invalid links.%s = %j and falls back", (name, value) => {
     const { values, problems } = configToPreferences({
       links: { [name]: value },
@@ -135,6 +140,7 @@ describe("links settings: config -> prefs -> config", () => {
       linkStyle: false,
       linkColor: "#ff8800",
       linkHoverPreview: "off" as const,
+      linkCanvasIndicator: "icon" as const,
     };
     const changes = preferencesToConfigChanges(DEFAULT_PREFERENCES, next);
     expect(changes).toEqual([
@@ -147,8 +153,9 @@ describe("links settings: config -> prefs -> config", () => {
       { key: "links.style_links", value: false },
       { key: "links.color", value: "#ff8800" },
       { key: "links.hover_preview", value: "off" },
+      { key: "links.canvas_indicator", value: "icon" },
     ]);
-    expect(changes.map((c) => c.key)).toEqual(KEYS.slice(0, 9));
+    expect(changes.map((c) => c.key)).toEqual(KEYS.slice(0, 10));
     expect(preferencesToConfigChanges(next, next)).toEqual([]);
   });
 
@@ -229,11 +236,12 @@ describe("Links settings page", () => {
       "Style links in text",
       "Link colour",
       "Hover preview",
+      "Link marker on the canvas",
     ]) {
       expect(within(panel).getByText(label)).toBeInTheDocument();
     }
     // The Tags section shares the page: one more select and one more switch.
-    expect(within(panel).getAllByRole("combobox")).toHaveLength(7);
+    expect(within(panel).getAllByRole("combobox")).toHaveLength(8);
     expect(within(panel).getAllByRole("switch")[0]).toBeChecked();
   });
 
@@ -247,7 +255,7 @@ describe("Links settings page", () => {
       />,
     );
     const panel = screen.getByRole("tabpanel");
-    const [format, shape, modifier, update, colorMode, hover] =
+    const [format, shape, modifier, update, colorMode, hover, indicator] =
       within(panel).getAllByRole("combobox");
     fireEvent.change(format, { target: { value: "absolute" } });
     fireEvent.change(shape, { target: { value: "vaultdraw-url" } });
@@ -257,6 +265,7 @@ describe("Links settings page", () => {
     fireEvent.click(within(panel).getAllByRole("switch")[1]);
     fireEvent.change(colorMode, { target: { value: "custom" } });
     fireEvent.change(hover, { target: { value: "modifier" } });
+    fireEvent.change(indicator, { target: { value: "both" } });
     const chars = within(panel).getByRole("textbox");
     fireEvent.change(chars, { target: { value: "a" } });
     fireEvent.blur(chars);
@@ -273,6 +282,7 @@ describe("Links settings page", () => {
       styleLinks: false,
       linkColor: "#6965db",
       hoverPreview: "modifier",
+      canvasIndicator: "both",
     });
     fireEvent.change(update, { target: { value: "false" } });
     expect(getPreferences(window).linkUpdateOnRename).toBe(false);

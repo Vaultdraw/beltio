@@ -1,12 +1,10 @@
 import {
   applyDarkModeFilter,
-  COLOR_WHITE,
   FRAME_STYLE,
   THEME,
   throttleRAF,
 } from "@excalidraw/common";
 import {
-  isElementLink,
   beginElementCanvasFrame,
   didDeferZoomRefresh,
   refreshElementCanvasForZoom,
@@ -42,11 +40,14 @@ import type {
   NonDeletedExcalidrawElement,
 } from "@excalidraw/element/types";
 
+import { getLinkHandleFromCoords } from "../components/hyperlink/helpers";
 import {
-  EXTERNAL_LINK_IMG,
-  ELEMENT_LINK_IMG,
-  getLinkHandleFromCoords,
-} from "../components/hyperlink/helpers";
+  DEFAULT_LINK_INDICATOR,
+  getLinkUnderline,
+  isWebLink,
+  showsLinkGlyph,
+  showsLinkUnderline,
+} from "../components/hyperlink/linkIndicator";
 
 import { isPageModeOn } from "../data/pageSetup";
 
@@ -58,6 +59,8 @@ import {
   getNormalizedCanvasDimensions,
   snapScrollToDevicePixels,
 } from "./helpers";
+
+import type { LinkIndicatorConfig } from "../components/hyperlink/linkIndicator";
 
 import type {
   StaticCanvasRenderConfig,
@@ -218,15 +221,11 @@ export const frameClip = (
   );
 };
 
-type LinkIconCanvas = HTMLCanvasElement & { zoom: number };
-
-const linkIconCanvasCache: {
-  regularLink: LinkIconCanvas | null;
-  elementLink: LinkIconCanvas | null;
-} = {
-  regularLink: null,
-  elementLink: null,
-};
+// 24x24 glyphs drawn as strokes in the link colour (no box, no fill).
+const WEB_LINK_GLYPH = new Path2D(
+  "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3",
+);
+const INTERNAL_LINK_GLYPH = new Path2D("M4 12h15M13 6l6 6-6 6");
 
 const renderLinkIcon = (
   element: NonDeletedExcalidrawElement,
@@ -234,8 +233,42 @@ const renderLinkIcon = (
   appState: StaticCanvasAppState,
   elementsMap: ElementsMap,
   renderState: ElementRenderState,
+  indicator: LinkIndicatorConfig,
 ) => {
-  if (element.link && !appState.selectedElementIds[element.id]) {
+  if (!element.link) {
+    return;
+  }
+  const web = isWebLink(element.link);
+  const underline = getLinkUnderline(element, elementsMap);
+  const zoom = appState.zoom.value;
+  context.save();
+  context.globalAlpha = renderState.opacity;
+  context.strokeStyle = indicator.color;
+  context.lineCap = "round";
+  context.lineJoin = "round";
+
+  if (underline && showsLinkUnderline(indicator.style, true)) {
+    context.save();
+    context.translate(
+      appState.scrollX + underline.centerX + renderState.offset.x,
+      appState.scrollY + underline.centerY + renderState.offset.y,
+    );
+    context.rotate(underline.angle);
+    context.lineWidth = 1.5 / zoom;
+    // Web links are dashed, internal links solid.
+    context.setLineDash(web ? [4 / zoom, 3 / zoom] : []);
+    const y = underline.y - underline.centerY;
+    context.beginPath();
+    context.moveTo(underline.x1 - underline.centerX, y);
+    context.lineTo(underline.x2 - underline.centerX, y);
+    context.stroke();
+    context.restore();
+  }
+
+  if (
+    showsLinkGlyph(indicator.style, !!underline) &&
+    !appState.selectedElementIds[element.id]
+  ) {
     const [x1, y1, x2, y2] = getElementAbsoluteCoords(element, elementsMap);
     const [x, y, width, height] = getLinkHandleFromCoords(
       [
@@ -247,60 +280,22 @@ const renderLinkIcon = (
       element.angle,
       appState,
     );
-    const centerX = x + width / 2;
-    const centerY = y + height / 2;
-    context.save();
-    context.translate(appState.scrollX + centerX, appState.scrollY + centerY);
+    context.translate(
+      appState.scrollX + x + width / 2,
+      appState.scrollY + y + height / 2,
+    );
     context.rotate(element.angle);
-
-    const canvasKey = isElementLink(element.link)
-      ? "elementLink"
-      : "regularLink";
-
-    let linkCanvas = linkIconCanvasCache[canvasKey];
-
-    if (!linkCanvas || linkCanvas.zoom !== appState.zoom.value) {
-      linkCanvas = Object.assign(document.createElement("canvas"), {
-        zoom: appState.zoom.value,
-      });
-      linkCanvas.width = width * window.devicePixelRatio * appState.zoom.value;
-      linkCanvas.height =
-        height * window.devicePixelRatio * appState.zoom.value;
-      linkIconCanvasCache[canvasKey] = linkCanvas;
-
-      const linkCanvasCacheContext = linkCanvas.getContext("2d")!;
-      linkCanvasCacheContext.scale(
-        window.devicePixelRatio * appState.zoom.value,
-        window.devicePixelRatio * appState.zoom.value,
-      );
-
-      // Seed a sane default so a corrupted color (silently rejected by the
-      // canvas) falls back to white instead of a stale fillStyle.
-      linkCanvasCacheContext.fillStyle = COLOR_WHITE;
-      linkCanvasCacheContext.fillStyle =
-        appState.viewBackgroundColor || COLOR_WHITE;
-
-      linkCanvasCacheContext.fillRect(0, 0, width, height);
-
-      if (canvasKey === "elementLink") {
-        linkCanvasCacheContext.drawImage(ELEMENT_LINK_IMG, 0, 0, width, height);
-      } else {
-        linkCanvasCacheContext.drawImage(
-          EXTERNAL_LINK_IMG,
-          0,
-          0,
-          width,
-          height,
-        );
-      }
-
-      linkCanvasCacheContext.restore();
-    }
-    context.globalAlpha = renderState.opacity;
-    context.drawImage(linkCanvas, x - centerX, y - centerY, width, height);
-    context.restore();
+    // Glyph box is 24 units; a stroke of 2.25 units is about 1.1 px at 12 px.
+    const scale = width / 24;
+    context.scale(scale, scale);
+    context.translate(-12, -12);
+    context.lineWidth = 2.25;
+    context.globalAlpha = renderState.opacity * 0.9;
+    context.stroke(web ? WEB_LINK_GLYPH : INTERNAL_LINK_GLYPH);
   }
+  context.restore();
 };
+
 /** View of the pattern and the page surround (screen pixels). */
 const patternView = (
   appState: StaticCanvasAppState,
@@ -340,6 +335,10 @@ function* paintStaticScene(
   }
 
   const { renderGrid = true, isExporting } = renderConfig;
+  const linkIndicator: LinkIndicatorConfig = {
+    style: renderConfig.linkIndicatorStyle ?? DEFAULT_LINK_INDICATOR.style,
+    color: renderConfig.linkIndicatorColor ?? DEFAULT_LINK_INDICATOR.color,
+  };
   if (!isExporting) {
     // Vaultdraw: new frame for the element bitmap LRU
     beginElementCanvasFrame(
@@ -524,7 +523,14 @@ function* paintStaticScene(
       context.restore();
 
       if (!isExporting && renderConfig.renderLinks !== false) {
-        renderLinkIcon(element, context, appState, elementsMap, renderState);
+        renderLinkIcon(
+          element,
+          context,
+          appState,
+          elementsMap,
+          renderState,
+          linkIndicator,
+        );
       }
     } catch (error: any) {
       console.error(
@@ -586,7 +592,14 @@ function* paintStaticScene(
           );
         }
         if (!isExporting && renderConfig.renderLinks !== false) {
-          renderLinkIcon(element, context, appState, elementsMap, renderState);
+          renderLinkIcon(
+            element,
+            context,
+            appState,
+            elementsMap,
+            renderState,
+            linkIndicator,
+          );
         }
         context.restore();
       } catch (error: any) {

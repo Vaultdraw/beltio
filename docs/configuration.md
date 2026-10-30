@@ -1191,6 +1191,8 @@ On the canvas, a `[[link]]` is drawn in the link colour and underlined, still in
 
 The colour is the theme's accent by default. Set `links.color` to a hex colour such as `"#1971c2"` to choose your own; it follows dark mode and canvas sync like any other colour. `links.style_links = false` draws links as plain text.
 
+A link on a whole element (a text, a labelled shape, an image) is marked on the canvas too. `links.canvas_indicator` chooses how: `"underline"` (default) draws a line under the text of text elements and labelled shapes; elements without text get a small corner icon, so a link is never invisible. `"icon"` draws the corner icon only, `"both"` draws both. Links to the web are dashed and show an external-link icon; links to drawings are solid with an arrow. Both use the link colour. Clicking the line or the icon opens the link, as before. The marker is never part of a PNG, SVG or PDF export, and the file is unchanged.
+
 Hover over a link for a moment to see a preview of the linked drawing: its name, folder and a thumbnail. It disappears when you move away, click or scroll. Set `links.hover_preview` to `"modifier"` to show it only while the open modifier (Cmd) is held, as in Obsidian's editing view, or to `"off"`.
 
 ### Shape links
@@ -1278,6 +1280,7 @@ hint_chars = "asdfghjkl"           # letters used by Shift+F hints
 style_links = true                 # draw [[links]] in the link colour, underlined
 color = "accent"                   # accent (theme) | "#rrggbb"
 hover_preview = "always"           # always | modifier | off
+canvas_indicator = "underline"     # how a linked element is marked: underline | icon | both
 start = "idle"                     # when the link index starts: open | idle | use (see Startup)
 ```
 
@@ -2010,6 +2013,7 @@ Creating and deleting drawings.
 | `style_links` | `true` | true or false |  | Draw `[[links]]` in text with the link colour and an underline. |
 | `color` | `"accent"` | "accent" or a hex colour like "#6965db" |  | Link colour; `accent` uses the theme accent. |
 | `hover_preview` | `"always"` | "always", "modifier" or "off" |  | When the hover preview card shows. |
+| `canvas_indicator` | `"underline"` | "underline", "icon" or "both" |  | How a linked element is marked on the canvas: `underline`, `icon` or `both`. |
 | `start` | `"idle"` | "open", "idle" or "use" |  | When the link index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first links action). Starting links also starts search. See [Startup](#startup). |
 
 ### `[tags]`

@@ -34,6 +34,9 @@ export type StaticCanvasRenderConfig = {
   /** whether to render link icons on elements with links (never rendered
    when exporting). @default true */
   renderLinks?: boolean;
+  /** how linked elements are marked (see LinkIndicatorStyle) and in which colour */
+  linkIndicatorStyle?: "underline" | "icon" | "both";
+  linkIndicatorColor?: string;
   /** when exporting the behavior is slightly different (e.g. we can't use
    CSS filters), and we disable render optimizations for best output */
   isExporting: boolean;

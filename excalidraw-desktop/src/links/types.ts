@@ -156,6 +156,9 @@ export type OpenModifier = "mod" | "alt" | "ctrl" | "shift";
 export type UpdateOnRename = boolean | "ask";
 /** When the hover preview card of a text link shows. */
 export type HoverPreview = "always" | "modifier" | "off";
+
+/** links.canvas_indicator: how linked elements are marked on the canvas. */
+export type LinkIndicator = "underline" | "icon" | "both";
 /** `"accent"` (theme accent) or a `#rrggbb` scene colour. */
 export type LinkColor = string;
 
@@ -178,6 +181,8 @@ export type LinksSettings = {
   linkColor: LinkColor;
   /** links.hover_preview: preview card of the linked drawing on hover. */
   hoverPreview: HoverPreview;
+  /** links.canvas_indicator: underline under linked text, the corner glyph, or both. */
+  canvasIndicator: LinkIndicator;
 };
 
 export const DEFAULT_LINKS_SETTINGS: LinksSettings = {
@@ -190,4 +195,5 @@ export const DEFAULT_LINKS_SETTINGS: LinksSettings = {
   styleLinks: true,
   linkColor: "accent",
   hoverPreview: "always",
+  canvasIndicator: "underline",
 };

@@ -26,6 +26,7 @@ import {
 import {
   DEFAULT_LINKS_SETTINGS,
   type HoverPreview,
+  type LinkIndicator,
   type LinksSettings,
   type NewLinkFormat,
   type OpenModifier,
@@ -358,6 +359,8 @@ interface VaultPreferencesBase {
   linkColor: string;
   /** links.hover_preview */
   linkHoverPreview: HoverPreview;
+  /** links.canvas_indicator */
+  linkCanvasIndicator: LinkIndicator;
   /** tags.autocomplete */
   tagAutocomplete: boolean;
   /** tags.pane_sort */
@@ -529,6 +532,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   linkStyle: DEFAULT_LINKS_SETTINGS.styleLinks,
   linkColor: DEFAULT_LINKS_SETTINGS.linkColor,
   linkHoverPreview: DEFAULT_LINKS_SETTINGS.hoverPreview,
+  linkCanvasIndicator: DEFAULT_LINKS_SETTINGS.canvasIndicator,
   tagAutocomplete: DEFAULT_TAGS_SETTINGS.autocomplete,
   tagPaneSort: DEFAULT_TAGS_SETTINGS.paneSort,
   aiEnabled: false,
@@ -591,6 +595,7 @@ export const getLinksSettings = (
   styleLinks: prefs.linkStyle,
   linkColor: prefs.linkColor,
   hoverPreview: prefs.linkHoverPreview,
+  canvasIndicator: prefs.linkCanvasIndicator,
 });
 
 /** The tags fields of the preferences as one settings object. */
@@ -638,6 +643,8 @@ export const isLinkColor = (v: unknown): v is string =>
   v === "accent" || (typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v));
 export const isHoverPreview = (v: unknown): v is HoverPreview =>
   v === "always" || v === "modifier" || v === "off";
+export const isLinkIndicator = (v: unknown): v is LinkIndicator =>
+  v === "underline" || v === "icon" || v === "both";
 export const isUpdateOnRename = (v: unknown): v is UpdateOnRename =>
   typeof v === "boolean" || v === "ask";
 /** At least 2 distinct characters, no whitespace, nothing uppercase. */
@@ -1047,6 +1054,11 @@ export function normalizePreferences(input: unknown): VaultPreferences {
       parsed.linkHoverPreview,
       isHoverPreview,
       d.linkHoverPreview,
+    ),
+    linkCanvasIndicator: pick(
+      parsed.linkCanvasIndicator,
+      isLinkIndicator,
+      d.linkCanvasIndicator,
     ),
     tagAutocomplete: pick(parsed.tagAutocomplete, isBoolean, d.tagAutocomplete),
     tagPaneSort: pick(parsed.tagPaneSort, isTagSort, d.tagPaneSort),

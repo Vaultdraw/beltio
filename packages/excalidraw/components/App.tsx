@@ -448,6 +448,7 @@ import { StaticCanvas, InteractiveCanvas } from "./canvases";
 import NewElementCanvas from "./canvases/NewElementCanvas";
 import { primeLowMemoryCanvas } from "./canvases/lowMemoryCanvas";
 import { isPointHittingLink } from "./hyperlink/helpers";
+import { setLinkIndicator } from "./hyperlink/linkIndicator";
 import { CursorHint, CursorHints } from "./CursorHint";
 import { MagicIcon, copyIcon, fullscreenIcon } from "./icons";
 import { AppStateObserver, type OnStateChange } from "./AppStateObserver";
@@ -808,6 +809,18 @@ class App extends React.Component<AppProps, AppState> {
   /** offsets of `elementRenderOverrides`; keeps its identity while they don't change */
   private elementRenderOffsets: ElementRenderOffsets = new Map();
   private renderOverridesUpdatePending = false;
+
+  /**
+   * Link marker settings for the renderer. Also publishes them to the hit
+   * testing module so what is drawn is what can be clicked.
+   */
+  private getLinkIndicatorRenderConfig = () => {
+    setLinkIndicator(this.props.linkIndicator ?? null);
+    return {
+      linkIndicatorStyle: this.props.linkIndicator?.style,
+      linkIndicatorColor: this.props.linkIndicator?.color,
+    };
+  };
 
   private getRenderOverrideConfig = () => ({
     elementRenderOverrides: this.elementRenderOverrides,
@@ -2755,6 +2768,7 @@ class App extends React.Component<AppProps, AppState> {
                               isExporting: false,
                               renderGrid: isGridModeEnabled(this),
                               renderLinks: this.isLinksEnabled(),
+                              ...this.getLinkIndicatorRenderConfig(),
                               canvasBackgroundColor:
                                 this.state.viewBackgroundColor,
                               embedsValidationStatus:

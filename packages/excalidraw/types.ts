@@ -1065,6 +1065,16 @@ export interface ExcalidrawProps {
    * @default true
    */
   interaction?: boolean | InteractionConfig;
+
+  /**
+   * How elements with a link are marked on the canvas (never in exports):
+   * an underline under their text, the small corner glyph, or both, in the
+   * given colour. Defaults to the corner glyph in the upstream colour.
+   */
+  linkIndicator?: {
+    style: "underline" | "icon" | "both";
+    color: string;
+  };
   /**
    * Whether Excalidraw's default UI is rendered — toolbar, default menus,
    * footer controls, sidebars, and canvas popups. Host UI passed through

@@ -349,6 +349,7 @@ export const useSettingsController = ({
         linkStyle: next.styleLinks,
         linkColor: next.linkColor,
         linkHoverPreview: next.hoverPreview,
+        linkCanvasIndicator: next.canvasIndicator,
       },
       win,
     );

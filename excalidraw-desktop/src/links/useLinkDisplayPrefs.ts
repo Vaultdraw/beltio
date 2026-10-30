@@ -10,7 +10,7 @@ import { getPreferences, subscribePreferences } from "../vault/preferences";
 
 const keyOf = (win?: Window | null) => {
   const p = getPreferences(win);
-  return `${p.linkStyle}|${p.linkColor}|${p.linkHoverPreview}`;
+  return `${p.linkStyle}|${p.linkColor}|${p.linkHoverPreview}|${p.linkCanvasIndicator}`;
 };
 
 export function useLinkDisplayPrefs(win?: Window | null): void {

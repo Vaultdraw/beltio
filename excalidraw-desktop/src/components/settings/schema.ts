@@ -982,6 +982,24 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     configKey: "links.hover_preview",
   },
 
+  {
+    id: "link-canvas-indicator",
+    page: "links",
+    label: "Link marker on the canvas",
+    description:
+      "How a linked element shows its link: a line under its text, a small corner icon, or both. Elements without text always get the icon. Web links are dashed, drawing links solid; colours follow the link colour.",
+    keywords: [
+      "underline",
+      "icon",
+      "indicator",
+      "marker",
+      "corner",
+      "arrow",
+      "line",
+    ],
+    configKey: "links.canvas_indicator",
+  },
+
   // ---- Tags (shares the Links page) ----
   {
     id: "tags-autocomplete",

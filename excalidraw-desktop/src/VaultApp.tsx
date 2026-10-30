@@ -1839,6 +1839,7 @@ export const VaultApp = ({
       prefsNow.linkStyle,
       prefsNow.linkColor,
       prefsNow.linkHoverPreview,
+      prefsNow.linkCanvasIndicator,
     ],
   );
   const palettePick = usePalettePick();
