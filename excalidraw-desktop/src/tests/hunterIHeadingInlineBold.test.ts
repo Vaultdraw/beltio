@@ -81,7 +81,7 @@ describe("hunter I-1: **bold** typed in a heading when headings are not bold", (
     expect(h.el.fontFamily).toBe(105);
   });
 
-  it.fails("heading_bold off: the heading turns bold when its marks go", () => {
+  it("heading_bold off: the heading turns bold when its marks go", () => {
     const h = session(false);
     h.type("# **Title**");
     expect(h.el.customData).toMatchObject({ role: "h1" });

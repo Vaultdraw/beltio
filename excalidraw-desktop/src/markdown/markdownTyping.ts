@@ -27,7 +27,7 @@
  *
  * Cmd/Ctrl+Z right after any conversion brings the typed marks back.
  */
-import { boldFontOf, regularFontOf } from "@excalidraw/common";
+import { boldFontOf, isBoldFont, regularFontOf } from "@excalidraw/common";
 
 import type {
   TextEditorExtension,
@@ -363,9 +363,10 @@ export function createMarkdownTyping(deps: {
         customData: el.customData,
       };
       session.setText(m.inner, m.inner.length);
-      // a heading is bold already: only its marks go
-      if (!heading) {
-        restyle({ fontFamily: inlineFont(el.fontFamily, m.kind) });
+      // a bold heading only loses its marks; a regular one (heading_bold
+      // off) turns bold like any other box
+      if (!heading || !isBoldFont(style.fontFamily)) {
+        restyle({ fontFamily: inlineFont(style.fontFamily, m.kind) });
       }
       lastConversion = {
         kind: "inPlace",

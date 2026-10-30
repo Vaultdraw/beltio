@@ -25,6 +25,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **`# **Title**` turns the heading bold when headings are not bold** (toimprove 203). With `markdown.heading_bold = false`, closing the `**` used to drop the marks and leave the heading regular.
 - **Cmd+B, Cmd+L and Cmd+Alt+M typed in a search box or dialog leave the drawing alone** (toimprove 220). The Markdown format keys now act only while the canvas or its text editor has focus; the command palette still runs them.
 - **A footnote number scrolls to its own footnote when the note embeds another note with footnotes** (toimprove 222). Each embedded note now writes its own footnote and heading ids, so a click in the note never lands in the embed (and the embed's own footnotes still work).
 - **`![[Sketch]]` in a note opens the drawing** (toimprove 218). Embedding a drawing (`.excalidraw` or an Obsidian `.excalidraw.md`) showed a dead word; it is now a link that opens the drawing. A picture of the drawing inside the note is not drawn yet.
