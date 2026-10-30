@@ -61,7 +61,11 @@ export function findAnchorElement(
         own.querySelector(`[data-block-id="${CSS.escape(anchor.block)}"]`) ||
         ` ${(own.textContent ?? "").trimEnd()}`.endsWith(marker)
       ) {
-        return el;
+        // An id on a line of its own names the table, quote or list above it (Obsidian).
+        const alone =
+          el.tagName === "P" &&
+          (el.textContent ?? "").trim().replace(marker.trim(), "") === "";
+        return (alone && (el.previousElementSibling as HTMLElement)) || el;
       }
     }
     return null;

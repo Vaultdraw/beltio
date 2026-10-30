@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import { createResolver } from "../links/resolve";
 
+import { findAnchorElement } from "./noteAnchor";
 import { resolveRelativeHref } from "./relativeLink";
 import { hydrateEmbeds } from "./render/hydrate";
 import { renderNoteHtml } from "./render/obsidian";
@@ -89,10 +90,29 @@ describe("J-3: a block id on its own line after a table, quote or list (toimprov
     ["q", "> quoted line"],
     ["lst", "- two"],
   ] as const) {
-    it.fails(`![[Note#^${id}]] embeds the block above the id line`, () => {
+    it(`![[Note#^${id}]] embeds the block above the id line`, () => {
       expect(extractBlock(note, id)).toContain(wants);
     });
   }
+});
+
+describe("J-3 family: [[Note#^id]] scrolls to the block an own-line id names (toimprove 210)", () => {
+  it("the table above the id line is the target, not the empty line", () => {
+    const root = document.createElement("div");
+    root.innerHTML = sanitizeNoteHtml(
+      renderNoteHtml("| a |\n|---|\n| 1 |\n\n^tbl\n\nAfter ^p2\n", {
+        resolve: () => null,
+        highlight: false,
+        math: false,
+      }),
+      { remoteImages: false },
+    );
+    expect(findAnchorElement(root, { block: "tbl" })?.tagName).toBe("TABLE");
+    expect(findAnchorElement(root, { block: "p2" })?.tagName).toBe("P");
+  });
+  it("an id after a blank line at the very top names nothing", () => {
+    expect(extractBlock("^top\n\ntext", "top")).toBeNull();
+  });
 });
 
 describe("J-4: ![[pic.png|caption|300x200]] (toimprove 211)", () => {

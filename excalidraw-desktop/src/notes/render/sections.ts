@@ -46,15 +46,32 @@ export function extractSection(text: string, heading: string): string | null {
   return start < 0 ? null : lines.slice(start).join("\n").trimEnd();
 }
 
-/** The paragraph or list item whose last words are `^id`, without the marker. */
+/**
+ * The paragraph or list item whose last words are `^id`, without the marker. An id on a line of
+ * its own names the block above it (a table, quote or list, after a blank line), as in Obsidian.
+ */
 export function extractBlock(text: string, id: string): string | null {
   const lines = text.split(/\r?\n/);
   const marker = new RegExp(
-    `\\s\\^${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`,
+    `(?:^|\\s)\\^${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`,
   );
   for (let i = 0; i < lines.length; i++) {
     if (!marker.test(lines[i])) {
       continue;
+    }
+    if (lines[i].trim() === `^${id}`) {
+      let end = i - 1;
+      while (end >= 0 && lines[end].trim() === "") {
+        end--;
+      }
+      if (end < 0) {
+        return null;
+      }
+      let start = end;
+      while (start > 0 && lines[start - 1].trim() !== "") {
+        start--;
+      }
+      return lines.slice(start, end + 1).join("\n");
     }
     let from = i;
     while (
