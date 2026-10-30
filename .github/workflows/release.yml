@@ -1,0 +1,150 @@
+# Release builds: one tag (v<version>) or a manual run builds the macOS (universal DMG), Linux (AppImage,
+# deb) and Windows (NSIS installer) bundles, then writes SHA256SUMS and creates a DRAFT GitHub release.
+# The workflow never publishes: the owner reviews the draft and clicks Publish (docs/releasing.md).
+# Only the release job can write to the repository (contents: write). Build jobs only read it.
+# No signing yet: the builds are unsigned (macOS Gatekeeper and Windows SmartScreen warn; see docs/windows.md).
+name: release
+on:
+  push: { tags: ["v*"] }
+  workflow_dispatch:
+concurrency: { group: "release-${{ github.ref }}", cancel-in-progress: false }
+permissions: { contents: read }
+
+env:
+  CI: "1"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check:
+    name: version check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        name: Tag, tauri.conf.json and CHANGELOG.md must agree
+        run: |
+          VERSION=$(node -p "require('./excalidraw-desktop/src-tauri/tauri.conf.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            if [ "${GITHUB_REF_NAME#v}" != "$VERSION" ]; then
+              echo "::error::tag $GITHUB_REF_NAME does not match tauri.conf.json version $VERSION"
+              exit 1
+            fi
+            if ! grep -q "^## \[$VERSION\]" CHANGELOG.md; then
+              echo "::error::CHANGELOG.md has no '## [$VERSION]' section yet"
+              exit 1
+            fi
+          else
+            echo "::notice::manual run: a dry run for v$VERSION, the tag is not checked"
+          fi
+
+  build:
+    name: build ${{ matrix.name }}
+    needs: check
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macos
+            os: macos-latest
+            tauri_args: --target universal-apple-darwin
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+            bundles: excalidraw-desktop/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          - name: linux
+            os: ubuntu-24.04
+            tauri_args: ""
+            rust_targets: ""
+            bundles: |
+              excalidraw-desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+              excalidraw-desktop/src-tauri/target/release/bundle/deb/*.deb
+          - name: windows
+            os: windows-latest
+            tauri_args: ""
+            rust_targets: ""
+            bundles: excalidraw-desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: yarn, cache-dependency-path: yarn.lock }
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: excalidraw-desktop/src-tauri, cache-on-failure: true, key: "${{ matrix.name }}" }
+      - name: System libraries for Tauri 2 (Linux)
+        if: matrix.name == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
+            libxdo-dev patchelf xdg-utils desktop-file-utils
+      - name: Yarn on PATH for tauri-action
+        run: npm install -g yarn@1.22.22
+      - run: yarn install --frozen-lockfile
+      # tauri-action builds the bundles only: no tagName or releaseId is given, so it does not touch a release.
+      - name: Build the bundles
+        uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: excalidraw-desktop
+          args: ${{ matrix.tauri_args }}
+        env:
+          # Signing is not set up yet (owner decision, see docs/releasing.md). When it is, add the secrets
+          # here, for example for macOS:
+          # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}     # app-specific password, for notarisation
+          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # and for Windows (a certificate file or Azure Trusted Signing; set in the windows job only):
+          # WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          # WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          # AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET (Trusted Signing), if chosen
+          CI: "1"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundles-${{ matrix.name }}
+          path: ${{ matrix.bundles }}
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: draft release with SHA256SUMS
+    needs: [check, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Only this job may write to the repository.
+    permissions: { contents: write }
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: v${{ needs.check.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: bundles-*
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        working-directory: dist
+        run: |
+          ls -la
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+      - name: Create the draft, or replace its files on a re-run
+        working-directory: dist
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" ./* --clobber
+          else
+            gh release create "$TAG" ./* --draft --target "$GITHUB_SHA" \
+              --title "Vaultdraw $TAG" \
+              --notes "Draft. Check the notes in CHANGELOG.md, then publish. Builds are unsigned: see docs/windows.md for the Windows warning and docs/releasing.md for macOS."
+          fi
