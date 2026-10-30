@@ -186,10 +186,25 @@ const inlineMath: TokenizerAndRendererExtension = {
   },
 };
 
+/**
+ * A block extension's `start()`: the first line start in `src` (index 0, or just after a "\n")
+ * where `re` matches, else -1. It must never point into the middle of a
+ * line: marked cuts the paragraph there and glues it back with an extra line, so prose showed a
+ * line break the note does not have and a checkbox below ticked a later task (toimprove 202).
+ */
+const blockStart = (re: RegExp) => {
+  const at = new RegExp(`(?:^|\\n)(?=${re.source})`);
+  return (src: string): number => {
+    const m = at.exec(src);
+    return m ? m.index + (src[m.index] === "\n" ? 1 : 0) : -1;
+  };
+};
+const mathStart = blockStart(/\$\$/);
+
 const blockMath: TokenizerAndRendererExtension = {
   name: "blockmath",
   level: "block",
-  start: (src) => (ctx.math ? src.indexOf("$$") : -1),
+  start: (src) => (ctx.math ? mathStart(src) : -1),
   tokenizer(src) {
     if (!ctx.math) {
       return undefined;
@@ -209,7 +224,7 @@ const blockMath: TokenizerAndRendererExtension = {
 const commentBlock: TokenizerAndRendererExtension = {
   name: "notecommentblock",
   level: "block",
-  start: (src) => src.indexOf("%%"),
+  start: blockStart(/%%[ \t]*\n/),
   tokenizer(src) {
     const m = /^%%[ \t]*\n[\s\S]*?\n?%%[ \t]*(?:\n|$)/.exec(src);
     return m ? { type: "notecommentblock", raw: m[0] } : undefined;
@@ -259,10 +274,7 @@ let notes: Footnotes = { defs: new Map(), order: [] };
 const footnoteDef: TokenizerAndRendererExtension = {
   name: "footnotedef",
   level: "block",
-  start: (src) => {
-    const m = /(?:^|\n)\[\^[^\]\s]+\]:/.exec(src);
-    return m ? m.index + (src[m.index] === "\n" ? 1 : 0) : -1;
-  },
+  start: blockStart(/\[\^[^\]\s]+\]:/),
   tokenizer(src) {
     const m =
       /^\[\^([^\]\s]+)\]:[ \t]*([^\n]*(?:\n(?: {2,}|\t)[^\n]*)*)(?:\n|$)/.exec(
