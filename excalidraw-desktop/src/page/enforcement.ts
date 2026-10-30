@@ -9,8 +9,16 @@
  * with it (group, bound text, frame children). Anything that was already
  * outside and was not touched stays where it is: old drawings are never
  * rearranged.
+ *
+ * Text flows: a free text box that starts on a page and runs past its bottom
+ * edge (Enter after a heading, a box that grew) moves to the top of the next
+ * page, as in Typst or Word, instead of being pulled up over what is above it.
  */
-import { getClampToPageOffset } from "@excalidraw/excalidraw/data/pageSetup";
+import {
+  getClampToPageOffset,
+  getPageIndexAt,
+  getPageRect,
+} from "@excalidraw/excalidraw/data/pageSetup";
 import { isTextElement } from "@excalidraw/element";
 
 import type { PageSetup } from "@excalidraw/excalidraw/data/pageSetup";
@@ -33,6 +41,45 @@ const candidateOf = (
     return container && !container.isDeleted ? container : null;
   }
   return element;
+};
+
+/** Where a free text crossing its page's bottom edge flows to (separate sheets only), else null. */
+const flowToNextPage = (
+  setup: PageSetup,
+  ids: readonly string[],
+  [x1, y1, x2, y2]: Bounds,
+  elementsMap: ElementsMap,
+): { dx: number; dy: number } | null => {
+  if (setup.layout === "continuous") {
+    return null;
+  }
+  const allFreeText = ids.every((id) => {
+    const el = elementsMap.get(id);
+    return !!el && isTextElement(el) && !el.containerId;
+  });
+  if (!allFreeText) {
+    return null;
+  }
+  const index = getPageIndexAt(setup, y1);
+  const page = getPageRect(setup, index);
+  const bottom = page.y + page.height;
+  if (
+    index + 1 >= setup.pageCount ||
+    y1 < page.y ||
+    y1 >= bottom ||
+    y2 <= bottom ||
+    y2 - y1 > page.height
+  ) {
+    return null;
+  }
+  const next = getPageRect(setup, index + 1);
+  const dy = next.y - y1;
+  const { dx } = getClampToPageOffset(
+    setup,
+    [x1, y1 + dy, x2, y2 + dy],
+    index + 1,
+  );
+  return { dx, dy };
 };
 
 /** Translation per element id that brings the changed elements back inside; empty = all fine. */
@@ -87,7 +134,9 @@ export const planEnforcement = (
     if (!bounds) {
       continue;
     }
-    const { dx, dy } = getClampToPageOffset(setup, bounds);
+    const { dx, dy } =
+      flowToNextPage(setup, ids, bounds, elementsMap) ??
+      getClampToPageOffset(setup, bounds);
     if (dx === 0 && dy === 0) {
       continue;
     }
