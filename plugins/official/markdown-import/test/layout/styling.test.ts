@@ -106,12 +106,19 @@ describe("each construct gets its style", () => {
     expect(textOf(items, "Alpha")!.tone).toBeUndefined();
     expect(textOf(items, "Beta")!.tone).toBeUndefined();
     // Still marked as headings: navigation and the update pass need it.
-    expect(textOf(items, "Alpha")!.data).toEqual({ heading: 1 });
+    expect(textOf(items, "Alpha")!.data).toEqual({
+      heading: 1,
+      bodySize: 16,
+    });
   });
 
   it("headings and links carry their role", () => {
     const { items } = layout("## Beta");
-    expect(textOf(items, "Beta")!.data).toEqual({ heading: 2, role: "h2" });
+    expect(textOf(items, "Beta")!.data).toEqual({
+      heading: 2,
+      role: "h2",
+      bodySize: 16,
+    });
     const link = textOf(layout(LINK_BLOCKS).items, "Site")!;
     expect(link.data).toEqual({ role: "link" });
   });

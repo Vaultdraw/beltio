@@ -36,7 +36,8 @@
      "tone": "heading1",
      "data": {
       "heading": 1,
-      "role": "h1"
+      "role": "h1",
+      "bodySize": 16
      }
     },
     {
@@ -66,7 +67,8 @@
      "tone": "heading2",
      "data": {
       "heading": 2,
-      "role": "h2"
+      "role": "h2",
+      "bodySize": 16
      }
     },
     {
@@ -112,7 +114,8 @@
      "tone": "heading2",
      "data": {
       "heading": 2,
-      "role": "h2"
+      "role": "h2",
+      "bodySize": 16
      }
     },
     {

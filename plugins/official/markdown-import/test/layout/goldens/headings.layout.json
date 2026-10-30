@@ -18,7 +18,8 @@
      "tone": "heading1",
      "data": {
       "heading": 1,
-      "role": "h1"
+      "role": "h1",
+      "bodySize": 16
      }
     },
     {
@@ -48,7 +49,8 @@
      "tone": "heading2",
      "data": {
       "heading": 2,
-      "role": "h2"
+      "role": "h2",
+      "bodySize": 16
      }
     },
     {
@@ -66,7 +68,8 @@
      "tone": "heading3",
      "data": {
       "heading": 3,
-      "role": "h3"
+      "role": "h3",
+      "bodySize": 16
      }
     },
     {
@@ -84,7 +87,8 @@
      "tone": "heading4",
      "data": {
       "heading": 4,
-      "role": "h4"
+      "role": "h4",
+      "bodySize": 16
      }
     },
     {
@@ -102,7 +106,8 @@
      "tone": "heading5",
      "data": {
       "heading": 5,
-      "role": "h5"
+      "role": "h5",
+      "bodySize": 16
      }
     },
     {
@@ -120,7 +125,8 @@
      "tone": "heading6",
      "data": {
       "heading": 6,
-      "role": "h6"
+      "role": "h6",
+      "bodySize": 16
      }
     },
     {
@@ -138,7 +144,8 @@
      "tone": "heading1",
      "data": {
       "heading": 1,
-      "role": "h1"
+      "role": "h1",
+      "bodySize": 16
      }
     },
     {
