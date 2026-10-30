@@ -13,7 +13,7 @@
 import { stripDrawingExt } from "../vault/fileKind";
 
 import { ControlError } from "./errors";
-import { withExt } from "./params";
+import { openablePath, withExt } from "./params";
 
 export type UriAction =
   | "focus"
@@ -411,7 +411,7 @@ export function createUriRunner(deps: UriDeps) {
       ask ||= plan.allowSwitch !== true;
     }
 
-    const file = plan.file ? withExt(plan.file) : undefined;
+    const file = plan.file ? openablePath(plan.file) : undefined;
     const create = plan.path ? withExt(plan.path) : undefined;
     if (plan.action === "cmd") {
       const id = plan.id ?? "";

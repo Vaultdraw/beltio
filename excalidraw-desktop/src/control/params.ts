@@ -46,6 +46,14 @@ export const relPath = (
 export const withExt = (path: string): string =>
   path.toLowerCase().endsWith(EXT) ? path : `${path}${EXT}`;
 
+/**
+ * The file a link or command opens: a note (`.md`) or an Obsidian drawing (`.excalidraw.md`) as
+ * written, any other name as a drawing (`Graphs/BFS` opens `Graphs/BFS.excalidraw`), like the
+ * CLI's `resolveOpenTarget` (toimprove 206).
+ */
+export const openablePath = (path: string): string =>
+  fileKind(path) === "other" ? withExt(path) : path;
+
 export const splitPath = (path: string): { parent: string; name: string } => {
   const i = path.lastIndexOf("/");
   return i < 0

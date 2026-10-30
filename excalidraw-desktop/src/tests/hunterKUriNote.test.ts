@@ -73,7 +73,7 @@ describe("hunter K-1: a copied Vaultdraw link opens the file it was copied from"
     ]);
   });
 
-  it.fails.each([["Notes/Plan.md"], ["Obsidian/Sketch.excalidraw.md"]])(
+  it.each([["Notes/Plan.md"], ["Obsidian/Sketch.excalidraw.md"]])(
     "toimprove 206: the copied link of %s opens it",
     async (path) => {
       const r = runner();

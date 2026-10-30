@@ -159,23 +159,22 @@ test("a drawing's copied Vaultdraw link opens the drawing", async ({
 });
 
 for (const path of ["Ideas.md", "Drawings/Plugin Sketch.excalidraw.md"]) {
-  test.fail(
-    `toimprove 206: the copied Vaultdraw link of ${path} opens it (the link adds .excalidraw)`,
-    async ({ page }) => {
-      await stubClipboard(page);
-      await openVault(page, "?seed=obsidian");
-      await showRow(page, path);
-      await clickCopy(page, path, "Vaultdraw link");
-      const [link] = await copied(page);
-      expect(link).toBe(linkOf(path));
-      expect(await openLink(page, link)).toEqual({ status: "done" });
-      await expect
-        .poll(async () => (await readTabs(page)).find((t) => t.active)?.path, {
-          timeout: 3000,
-        })
-        .toBe(path);
-    },
-  );
+  test(`toimprove 206: the copied Vaultdraw link of ${path} opens it`, async ({
+    page,
+  }) => {
+    await stubClipboard(page);
+    await openVault(page, "?seed=obsidian");
+    await showRow(page, path);
+    await clickCopy(page, path, "Vaultdraw link");
+    const [link] = await copied(page);
+    expect(link).toBe(linkOf(path));
+    expect(await openLink(page, link)).toEqual({ status: "done" });
+    await expect
+      .poll(async () => (await readTabs(page)).find((t) => t.active)?.path, {
+        timeout: 3000,
+      })
+      .toBe(path);
+  });
 }
 
 const tabOf = (page: Page, path: string) =>
