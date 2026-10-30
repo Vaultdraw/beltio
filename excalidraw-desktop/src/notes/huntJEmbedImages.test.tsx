@@ -50,19 +50,16 @@ it("sanity: the note's own vault picture goes to the asset loader", async () => 
   );
 });
 
-it.fails(
-  "a vault picture inside an embedded note goes to the asset loader too",
-  async () => {
-    render(<NoteView path="Host.md" openPath={() => {}} vault={vault} />);
-    const reading = await screen.findByTestId("note-reading");
-    await waitFor(() =>
-      expect(reading.querySelector(".note-embed-body")).not.toBeNull(),
-    );
-    const inner = reading.querySelector('.note-embed-body img[alt="inner"]');
-    expect(inner).not.toBeNull();
-    expect(inner!.getAttribute("src")).toBeNull();
-  },
-);
+it("a vault picture inside an embedded note goes to the asset loader too", async () => {
+  render(<NoteView path="Host.md" openPath={() => {}} vault={vault} />);
+  const reading = await screen.findByTestId("note-reading");
+  await waitFor(() =>
+    expect(reading.querySelector(".note-embed-body")).not.toBeNull(),
+  );
+  const inner = reading.querySelector('.note-embed-body img[alt="inner"]');
+  expect(inner).not.toBeNull();
+  expect(inner!.getAttribute("src")).toBeNull();
+});
 
 // J-14 (toimprove 230): a [[link]] in a property value is a link in Obsidian's properties panel.
 it("sanity: properties are listed", async () => {

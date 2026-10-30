@@ -332,6 +332,44 @@ describe("J-13 family: every part rendered on its own follows the line-break set
   });
 });
 
+describe("J-12 family: an embedded note resolves from its own folder (toimprove 225)", () => {
+  it("its pictures, links and deeper embeds get the embedded note's path", async () => {
+    const root = document.createElement("div");
+    root.innerHTML =
+      '<span data-embed="note" data-target="Other" data-path="Sub/Other.md">Other</span>';
+    document.body.append(root);
+    const seen: string[] = [];
+    await hydrateEmbeds(root, {
+      imageUrl: async () => null,
+      noteText: async () => "![[pic.png]]",
+      renderNested: (_t: string, _d: number, from: string) => {
+        seen.push(`render ${from}`);
+        return '<span data-embed="image" data-path="Sub/pic.png">pic</span>';
+      },
+      afterNested: async (el: HTMLElement, depth: number, from: string) => {
+        seen.push(`after ${from}`);
+        await hydrateEmbeds(
+          el,
+          {
+            imageUrl: async (_p: string, f?: string) => {
+              seen.push(`image ${f}`);
+              return null;
+            },
+          } as never,
+          depth,
+          from,
+        );
+      },
+    } as never);
+    root.remove();
+    expect(seen).toEqual([
+      "render Sub/Other.md",
+      "after Sub/Other.md",
+      "image Sub/Other.md",
+    ]);
+  });
+});
+
 describe("J-11: footnotes of an embedded note (toimprove 222)", () => {
   it.fails(
     "the host's footnote number reaches the host's footnote, not the embed's",

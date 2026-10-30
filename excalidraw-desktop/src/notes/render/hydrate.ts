@@ -7,15 +7,19 @@
 import { altAndSize } from "./imageSize";
 import { extractBlock, extractSection } from "./sections";
 
+/**
+ * `from` is the note the embed sits in (undefined: the note on screen), so an embedded note's own
+ * links and pictures resolve from its folder, as in Obsidian (toimprove 225).
+ */
 export interface EmbedDeps {
   /** Text of a vault note, or null when it cannot be read. */
   noteText: (path: string) => Promise<string | null>;
   /** A URL an <img> can show for a vault image, or null. */
-  imageUrl: (path: string) => Promise<string | null>;
-  /** Sanitised HTML of a nested note; `depth` counts nesting. */
-  renderNested: (text: string, depth: number) => string;
-  /** Hydrates the nested element (formulas, deeper embeds). */
-  afterNested: (el: HTMLElement, depth: number) => Promise<void>;
+  imageUrl: (path: string, from?: string) => Promise<string | null>;
+  /** Sanitised HTML of the nested note `from`; `depth` counts nesting. */
+  renderNested: (text: string, depth: number, from: string) => string;
+  /** Hydrates the nested element of note `from` (formulas, pictures, deeper embeds). */
+  afterNested: (el: HTMLElement, depth: number, from: string) => Promise<void>;
 }
 
 const MAX_DEPTH = 2;
@@ -79,6 +83,7 @@ export async function hydrateEmbeds(
   root: HTMLElement,
   deps: EmbedDeps,
   depth = 0,
+  from?: string,
 ): Promise<void> {
   const nodes = [...root.querySelectorAll<HTMLElement>("[data-embed]")];
   await Promise.all(
@@ -88,7 +93,7 @@ export async function hydrateEmbeds(
         return;
       }
       if (el.dataset.embed === "image") {
-        const url = await deps.imageUrl(path);
+        const url = await deps.imageUrl(path, from);
         if (!url || !el.isConnected) {
           return;
         }
@@ -126,10 +131,10 @@ export async function hydrateEmbeds(
       }
       const body = document.createElement("div");
       body.className = "note-embed-body";
-      body.innerHTML = deps.renderNested(part, depth + 1);
+      body.innerHTML = deps.renderNested(part, depth + 1, path);
       el.className = "note-embed note-embed-note embedded";
       el.replaceChildren(body);
-      await deps.afterNested(body, depth + 1);
+      await deps.afterNested(body, depth + 1, path);
     }),
   );
 }

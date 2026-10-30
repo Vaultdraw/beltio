@@ -87,6 +87,34 @@ type Loaded =
   | { error: string }
   | null;
 
+/**
+ * Markdown pictures with vault paths (`![](pics/a.png)`) in `root`, written in note `from`: each
+ * goes to the asset loader, which resolves it from that note's folder. Runs for the note and for
+ * every embedded note (toimprove 225).
+ */
+const loadVaultPictures = (
+  root: HTMLElement,
+  from: string,
+  assets: ReturnType<typeof createAssetUrls>,
+): void => {
+  for (const img of root.querySelectorAll<HTMLImageElement>("img[src]")) {
+    const src = img.getAttribute("src") ?? "";
+    if (/^[a-z][a-z0-9+.-]*:|^\/\//i.test(src) || src.startsWith("#")) {
+      continue;
+    }
+    img.removeAttribute("src");
+    let target = src;
+    try {
+      target = decodeURI(src);
+    } catch {
+      // keep the text as written
+    }
+    void assets
+      .url(from, target)
+      .then((u) => u && img.isConnected && (img.src = u));
+  }
+};
+
 const usePrefs = () =>
   useSyncExternalStore(subscribePreferences, () => cachedPreferences());
 
@@ -262,20 +290,21 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
           return null;
         }
       },
-      imageUrl: (p) => assets.url(path, p),
-      renderNested: (t) =>
+      imageUrl: (p, from) => assets.url(from ?? path, p),
+      renderNested: (t, _depth, from) =>
         sanitizeNoteHtml(
           renderNoteHtml(t, {
-            resolve: (target) => links.resolve(path, target),
+            resolve: (target) => links.resolve(from, target),
             highlight: prefs.notesHighlightCode,
             math: prefs.notesMath,
             strictLineBreaks: prefs.notesStrictLineBreaks,
           }),
           { remoteImages },
         ),
-      afterNested: async (el, depth) => {
+      afterNested: async (el, depth, from) => {
         await hydrateMath(el, prefs.notesFontSize);
-        await hydrateEmbeds(el, nestedDeps, depth);
+        loadVaultPictures(el, from, assets);
+        await hydrateEmbeds(el, nestedDeps, depth, from);
         void hydrateRemoteImages(el, (u) => fetchWebImage(u));
       },
     }),
@@ -290,23 +319,7 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
     void hydrateMath(root, prefs.notesFontSize);
     void hydrateEmbeds(root, nestedDeps);
     void hydrateRemoteImages(root, (u) => fetchWebImage(u));
-    // Markdown images with vault paths (`![](pics/a.png)`).
-    for (const img of root.querySelectorAll<HTMLImageElement>("img[src]")) {
-      const src = img.getAttribute("src") ?? "";
-      if (/^[a-z][a-z0-9+.-]*:|^\/\//i.test(src) || src.startsWith("#")) {
-        continue;
-      }
-      img.removeAttribute("src");
-      let target = src;
-      try {
-        target = decodeURI(src);
-      } catch {
-        // keep the text as written
-      }
-      void assets
-        .url(path, target)
-        .then((u) => u && img.isConnected && (img.src = u));
-    }
+    loadVaultPictures(root, path, assets);
   }, [html, mode, nestedDeps, assets, path, prefs.notesFontSize]);
 
   // ---- scroll to a [[Note#Heading]] / [[Note#^block]] target ---------------
