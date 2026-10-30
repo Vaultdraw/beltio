@@ -13,7 +13,7 @@ Plugins, Markdown notes and Obsidian vaults, backup, libraries, profiles, Linux 
 
 ## What is new
 
-- **Plugin platform (API 0.37.0).** Plugins add commands, panels, tab kinds, canvas tools, shapes and importers, and load only when used. A permission prompt gates each plugin, and ids of official plugins cannot be reused. Official plugins: graph, gallery, formula, mermaid, PDF import, Markdown import, table, favourites and auto-export (off until enabled).
+- **Plugin platform (API 1.0, frozen after an audit).** Plugins add commands, panels, tab kinds, canvas tools, shapes and importers, and load only when used. A permission prompt gates each plugin, and ids of official plugins cannot be reused. Official plugins: graph, gallery, formula, mermaid, PDF import, Markdown import, table, favourites and auto-export (off until enabled).
 - **Markdown and Obsidian.** `.md` notes open in a tab with a reading view that follows Obsidian (line breaks, `%%comments%%`, footnotes, callouts, tasks, embeds) and a CodeMirror editor (optional Vim keys). Obsidian vaults open in place; **Import Obsidian vault...** converts notes, links, images, tables and `.excalidraw.md` drawings in your theme and font, writes an import report, and can re-import a note later. Markdown mode types headings, `**bold**` and `` `code` `` on the canvas. Limits: bold words inside a sentence stay regular (one text, one font), and a drawing embedded in a note is a link, not a picture.
 - **Network on by default, with one Offline mode.** No permission prompts: themes, plugin lists and web pictures just work, with safety checks (public http or https addresses only, size limits). **Settings, General, Offline mode** (or `network.offline = true`) turns every internet feature off. Once per launch a quiet check tells you if a newer release exists (`updates.check_on_startup`).
 - **Files and menus.** Notes and Obsidian drawings rename, move and trash from the file tree; folders with files go to the Trash; a drawing renamed outside the app keeps its tab; every dialog uses one frame; any key can be rebound; SVG pictures can keep their colours in dark mode (`appearance.invert_svg_in_dark`).
@@ -54,5 +54,5 @@ Built from one commit, after the packaged smoke passed (see `BUILT-FROM.txt`). C
 ## Known limits
 
 - The macOS build is unsigned (see above). Linux builds are new and are smoke-launched under a virtual display, not on every desktop.
-- Plugins and the plugin API are experimental. No automatic update.
+- Plugins are new: the API is frozen at 1.0 (`@experimental` parts excepted), but the ecosystem is young. No automatic update.
 - Memory: everyday use (3 small drawings, packaged, foreground, quiet machine) peaks at about 470 MB in total and idles near 250 MB. Most of the peak is WebKit's display buffers for the editor canvases; `memory.low_memory_canvas = true` lowers the peak to about 365 MB, at about 60 instead of 120 frames per second while panning. A 5,000-drawing vault peaks above 1 GB; most of it is WebKit buffers and it varies by about 250 MB from run to run.

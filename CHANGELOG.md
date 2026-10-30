@@ -6,7 +6,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ## [0.2.0] - 2026-10-28
 
-The plugin platform (plugin API 0.37.0, experimental), Markdown notes with Obsidian vaults, Linux builds and memory work. See [RELEASE-NOTES.md](RELEASE-NOTES.md).
+The plugin platform (plugin API 1.0, frozen after an audit), Markdown notes with Obsidian vaults, Linux builds and memory work. See [RELEASE-NOTES.md](RELEASE-NOTES.md).
 
 ### New
 
@@ -406,7 +406,7 @@ The plugin platform (plugin API 0.37.0, experimental), Markdown notes with Obsid
 - The macOS build is still unsigned: right-click, Open the first time (or System Settings, Privacy & Security, Open Anyway).
 - Linux: x86_64 and arm64 `.deb` and AppImage are built. On a vault past the inotify limit the watcher polls (`files.watch_poll_ms`) instead of staying off.
 - Community plugins: the list at `plugins.registry_url` (`Vaultdraw/plugin-registry`) has no plugins yet, so Browse is empty.
-- Plugins and the plugin API are still experimental; no automatic update yet.
+- Plugins are new: the API is frozen at 1.0 (see Plugin SDK), but plugins are still young. No automatic update yet.
 
 ## [0.1.2] - 2026-10-23
 
