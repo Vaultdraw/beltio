@@ -25,6 +25,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Enter or Backspace on an imported heading gives the note's body size** (toimprove 187). The import now remembers each heading's body size, and older imported headings are divided by the import's own steps (1.8, 1.6, 1.4, …) instead of the typing defaults, so h1 from a 16 px note gives 16 px, not 14.5.
 - **`![alt|100](pic.png)` is sized in a note's reading view,** as in Obsidian (`|100x50` sets width and height too); it used to keep `alt|100` as the alt text at full size.
 - **A plain Markdown link to a note works in the reading view.** `[text](Other.md)`, `(My%20Page.md)` and `(Folder/Other.md#Heading)` (what Obsidian writes with Wikilinks off) open the note, Cmd-click opens a new tab; a click used to try to navigate the app window itself.
 - **New drawing and New folder tell you why a name is refused, and keep what you typed.** A name the vault refuses (`a:b`, `.x`, `CON`) or one that already exists used to close the dialog with a notice at the top; now the dialog stays open and says why under the field.

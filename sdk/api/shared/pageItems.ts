@@ -441,12 +441,22 @@ export const buildPageElements = (
         // The role (a heading level, link, code) is stored where typed
         // Markdown stores it, `customData.role`, so one path colours both.
         const role = roleOfColor(el.strokeColor);
+        // A heading's body size is the editor's own field too (`customData.bodySize`), hoisted out of
+        // the plugin's data like the role.
+        const { bodySize, ...rest } = it.data ?? {};
+        const hoist =
+          role && /^h[1-6]$/.test(role) && typeof bodySize === "number";
+        const own = hoist ? rest : it.data;
         const data =
-          it.data !== undefined && o.dataKey
-            ? { [o.dataKey]: structuredClone(it.data) }
+          own !== undefined && o.dataKey
+            ? { [o.dataKey]: structuredClone(own) }
             : undefined;
         if (role || data) {
-          el.customData = { ...(role ? { role } : {}), ...data };
+          el.customData = {
+            ...(role ? { role } : {}),
+            ...(hoist ? { bodySize } : {}),
+            ...data,
+          };
         }
         elements.push(el);
         break;

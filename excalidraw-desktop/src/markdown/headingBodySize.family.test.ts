@@ -136,7 +136,6 @@ type Row = {
   el: () => El;
   scales: readonly number[];
   body: number;
-  broken?: boolean;
 };
 
 const rows: Row[] = [
@@ -165,9 +164,6 @@ const rows: Row[] = [
         el: () => imported(level, body),
         scales: DEFAULT,
         body,
-        // h6 is scale 1 in both tables; every other level differs (0381b502 divides by the typing
-        // default, not the import's steps).
-        broken: level !== 6,
       }),
     ),
   ),
@@ -176,8 +172,7 @@ const rows: Row[] = [
 describe("family: a heading's body size, from every source of heading", () => {
   for (const key of ["Enter", "Backspace"] as const) {
     for (const row of rows) {
-      const test = row.broken ? it.fails : it;
-      test(`${key}: ${row.name} gives ${row.body} px body text`, () => {
+      it(`${key}: ${row.name} gives ${row.body} px body text`, () => {
         const size = run(row.el(), row.scales, key);
         expect(size).toBeDefined();
         expect(Math.abs((size ?? 0) - row.body)).toBeLessThanOrEqual(0.25);

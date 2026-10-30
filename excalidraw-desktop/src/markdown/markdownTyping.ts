@@ -137,6 +137,10 @@ const scaleOf = (settings: MarkdownTypingSettings, level: number) => {
   return typeof s === "number" && s > 0 ? s : 1;
 };
 
+/** The Markdown import's heading steps (`HEADING_SCALE` in its layout/fonts.ts) and its data key. */
+const IMPORT_HEADING_SCALE = [1.8, 1.6, 1.4, 1.25, 1.125, 1];
+const IMPORT_DATA_KEYS = ["plugins.markdown-import"];
+
 /**
  * The body text size of a box. A heading remembers the size it was made from (`bodySize` in its
  * custom data), so changing `markdown.h1_size` later does not change what Enter or Backspace gives.
@@ -148,9 +152,20 @@ const bodySizeOf = (el: ExcalidrawTextElement) => {
     return el.fontSize;
   }
   const stored = el.customData?.bodySize;
-  return typeof stored === "number" && stored > 0
-    ? stored
-    : el.fontSize / scaleOf(DEFAULT_MARKDOWN_TYPING_SETTINGS, level);
+  if (typeof stored === "number" && stored > 0) {
+    return stored;
+  }
+  // No remembered size: a heading from an import made before it stored one was drawn with the
+  // import's own steps; a typed one, with the typing defaults.
+  const fromImport = IMPORT_DATA_KEYS.some(
+    (k) => (el.customData?.[k] as { heading?: unknown } | undefined)?.heading,
+  );
+  return (
+    el.fontSize /
+    (fromImport
+      ? IMPORT_HEADING_SCALE[level - 1]
+      : scaleOf(DEFAULT_MARKDOWN_TYPING_SETTINGS, level))
+  );
 };
 
 /** `withRole` plus the remembered body size of a heading (dropped for any other role). */

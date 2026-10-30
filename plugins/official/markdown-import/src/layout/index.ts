@@ -183,7 +183,12 @@ export function* layoutNoteStream(
       block.link = item.link;
     }
     if (item.data) {
-      block.data = item.data;
+      // A heading remembers the body size it was drawn from, so Enter and Backspace in the editor
+      // give the note's body size back (the editor reads it as `customData.bodySize`).
+      block.data =
+        item.data.heading !== undefined
+          ? { ...item.data, bodySize: roles.body.size }
+          : item.data;
     }
     const lines = wrapper.lines(item.text, role, frame.width);
     pushLines(
