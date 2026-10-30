@@ -175,14 +175,31 @@ const inlineMath: TokenizerAndRendererExtension = {
     if (!ctx.math) {
       return undefined;
     }
+    // `$$E=mc^2$$` inside a sentence is display math, as in Obsidian (toimprove 208).
+    const d = /^\$\$([^$]*?[^\s$][^$]*?)\$\$/.exec(src);
+    if (d) {
+      return {
+        type: "inlinemath",
+        raw: d[0],
+        latex: d[1].trim(),
+        display: true,
+      };
+    }
     const m = /^\$([^\s$](?:[^$\n]*?[^\s$])?)\$(?!\d)/.exec(src);
     return m ? { type: "inlinemath", raw: m[0], latex: m[1] } : undefined;
   },
   renderer(token) {
-    const latex = (token as unknown as { latex: string }).latex;
-    return `<span class="note-math" data-math="${esc(latex)}">${esc(
-      latex,
-    )}</span>`;
+    const { latex, display } = token as unknown as {
+      latex: string;
+      display?: boolean;
+    };
+    return display
+      ? `<span class="note-math note-math-block" data-math="${esc(
+          latex,
+        )}" data-display="1">${esc(latex)}</span>`
+      : `<span class="note-math" data-math="${esc(latex)}">${esc(
+          latex,
+        )}</span>`;
   },
 };
 

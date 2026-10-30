@@ -25,6 +25,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **`$$E=mc^2$$` inside a sentence shows the formula** (toimprove 208). It showed the dollar signs; it is now display math on its own line, as in Obsidian. Single-dollar prices stay text.
 - **`![[pic.png|caption|300x200]]` keeps its size, and the caption is the picture's alt text** (toimprove 211). The reading view now reads the text after `|` with the same parser as the import and the native side.
 - **`![[Note#^tbl]]` finds a block id written on its own line after a table, quote or list** (toimprove 210). Obsidian's documented form for those blocks showed as an unresolved embed; the embed now shows the block above the id line, and `[[Note#^tbl]]` scrolls to it.
 - **A Markdown link in Obsidian's default format opens its note** (toimprove 209). `[x](Ideas.md)` for the only `Areas/Ideas.md` (shortest path) and `[x](Areas/Ideas.md)` (path from the vault root) did nothing on click although backlinks listed them; they now open like in Obsidian, through the same link resolver as backlinks. A `./` or `../` link still opens only that file.

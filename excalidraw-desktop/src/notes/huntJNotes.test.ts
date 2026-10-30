@@ -25,15 +25,24 @@ describe("J-1: $$display math$$ inside a sentence (toimprove 208)", () => {
   it("sanity: $$ on its own lines is display math", () => {
     expect(html("$$\nE=mc^2\n$$")).toContain('data-display="1"');
   });
-  it.fails(
-    "`The formula $$E=mc^2$$ is famous.` shows the formula, not the dollars",
-    () => {
-      const out = html("The formula $$E=mc^2$$ is famous.");
-      expect(out).toContain('data-math="E=mc^2"');
-      expect(out).toContain('data-display="1"');
-      expect(out.replace(/data-math="[^"]*"/g, "")).not.toContain("$");
-    },
-  );
+  it("`The formula $$E=mc^2$$ is famous.` shows the formula, not the dollars", () => {
+    const out = html("The formula $$E=mc^2$$ is famous.");
+    expect(out).toContain('data-math="E=mc^2"');
+    expect(out).toContain('data-display="1"');
+    expect(out.replace(/data-math="[^"]*"/g, "")).not.toContain("$");
+  });
+});
+
+describe("J-1 family: dollars that are not display math (toimprove 208)", () => {
+  it("prices with one $ stay text", () => {
+    expect(html("It was $5 and then $6.")).not.toContain("data-math");
+  });
+  it("an empty $$$$ stays text", () => {
+    expect(html("Nothing $$ $$ here.")).not.toContain("data-math");
+  });
+  it("inline $math$ is not display math", () => {
+    expect(html("Area $x^2$ grows.")).not.toContain("data-display");
+  });
 });
 
 describe("J-2: an ordinary Markdown link opens the note Obsidian opens (toimprove 209)", () => {

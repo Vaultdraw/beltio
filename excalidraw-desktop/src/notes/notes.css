@@ -262,6 +262,7 @@
 }
 
 .note-math-block {
+  display: block;
   text-align: center;
   margin: 0.8em 0;
   overflow-x: auto;
