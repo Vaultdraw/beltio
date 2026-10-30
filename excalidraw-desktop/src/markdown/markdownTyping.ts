@@ -334,6 +334,13 @@ export function createMarkdownTyping(deps: {
       const value = editable.value;
       const { selectionStart: from, selectionEnd: to } = editable;
       const role = roleOf(el);
+      if (headingLevelOf(role) && session.isLabel) {
+        // a label is one box and cannot split: Enter ends the heading, the
+        // label goes back to body size and the Enter adds a line (hunter B-6)
+        toBody(el);
+        lastConversion = null;
+        return false;
+      }
       if (headingLevelOf(role) && !session.isLabel) {
         if (!value.trim()) {
           // an empty heading: Enter turns it back into body text

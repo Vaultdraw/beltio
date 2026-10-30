@@ -69,26 +69,25 @@ test("hunter B: a heading, a list and Enter inside a shape label stay bound to t
   expect(errors).toEqual([]);
 });
 
-// B-6 (polish): a label cannot hold a second box, so after "# Title" + Enter the list lines
-// stay in the heading box and are drawn at the heading size (40 px). Obsidian: a heading is one line.
-test.fixme(
-  "hunter B: lines after a heading in a shape label are body size, not heading size",
-  async ({ page }) => {
-    const base = await labelled(page);
-    await type(page, "# Title");
-    await page.keyboard.press("Enter");
-    await type(page, "- one");
-    await page.keyboard.press("Escape");
-    await expect
-      .poll(async () => (await live(page)).length, { timeout: 10_000 })
-      .toBeGreaterThan(base);
-    const label = (await live(page))
-      .slice(base)
-      .find((e: any) => e.type === "text");
-    expect(label.customData?.role ?? null).toBeNull();
-    expect(label.fontSize).toBeLessThan(40);
-  },
-);
+// B-6: a label cannot hold a second box, so Enter after "# Title" ends the heading: the label goes
+// back to body size (Obsidian: a heading is one line, the next line is body).
+test("hunter B: lines after a heading in a shape label are body size, not heading size", async ({
+  page,
+}) => {
+  const base = await labelled(page);
+  await type(page, "# Title");
+  await page.keyboard.press("Enter");
+  await type(page, "- one");
+  await page.keyboard.press("Escape");
+  await expect
+    .poll(async () => (await live(page)).length, { timeout: 10_000 })
+    .toBeGreaterThan(base);
+  const label = (await live(page))
+    .slice(base)
+    .find((e: any) => e.type === "text");
+  expect(label.customData?.role ?? null).toBeNull();
+  expect(label.fontSize).toBeLessThan(40);
+});
 
 test("hunter B: a quote in a shape label drops back to body text with Backspace and stays bound", async ({
   page,

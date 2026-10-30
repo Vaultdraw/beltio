@@ -6,6 +6,8 @@
 
 import { useCallback, useEffect, useRef } from "react";
 
+import { startHorizontalEdgeScroll } from "../components/edgeScroll";
+
 import type { PointerEvent as ReactPointerEvent, RefObject } from "react";
 import type { TabId } from "./types";
 
@@ -72,6 +74,10 @@ export function useStripDrag({
       let lo = 0;
       let hi = 0;
       let stripLeft = 0;
+      let listLeft = 0;
+      let scroll0 = 0;
+      let lastX = startX;
+      let stopEdgeScroll: (() => void) | null = null;
 
       const reset = () => {
         el.style.transform = "";
@@ -85,6 +91,8 @@ export function useStripDrag({
         doc.removeEventListener("pointerup", up);
         doc.removeEventListener("pointercancel", cancel);
         doc.removeEventListener("keydown", key, true);
+        stopEdgeScroll?.();
+        stopEdgeScroll = null;
         cleanup.current = null;
         if (dragging) {
           reset();
@@ -101,9 +109,16 @@ export function useStripDrag({
         if (from < 0 || !kids || kids.length !== tabs.length) {
           return false;
         }
+        // content space (scroll-independent): the strip scrolls while a drag is held at its edge
+        const list = listRef.current;
+        scroll0 = list?.scrollLeft ?? 0;
+        listLeft = list?.getBoundingClientRect().left ?? 0;
         rects = Array.from(kids, (k) => {
           const r = k.getBoundingClientRect();
-          return { left: r.left, right: r.right };
+          return {
+            left: r.left - listLeft + scroll0,
+            right: r.right - listLeft + scroll0,
+          };
         });
         const pinnedCount = tabs.filter((t) => t.pinned).length;
         [lo, hi] = tabs[from].pinned
@@ -119,24 +134,22 @@ export function useStripDrag({
         el.classList.add("vault-tabs__tab--dragging");
         return true;
       };
-      function move(ev: PointerEvent) {
-        if (ev.pointerId !== pointerId) {
-          return;
-        }
-        const dx = ev.clientX - startX;
-        if (!dragging) {
-          if (Math.abs(dx) < DRAG_THRESHOLD_PX) {
-            return;
-          }
-          if (!begin()) {
-            return stop();
-          }
-          dragging = true;
-        }
+      /** Place the dragged tab and the drop indicator for the latest pointer x and scroll. */
+      const update = () => {
+        const scroll = listRef.current?.scrollLeft ?? 0;
+        // keep the tab inside the content so a transform never grows the scroll range
+        const own = rects[from];
+        const dx = Math.max(
+          rects[0].left - own.left,
+          Math.min(
+            rects[rects.length - 1].right - own.right,
+            lastX - startX + (scroll - scroll0),
+          ),
+        );
         el.style.transform = `translateX(${dx}px)`;
         slot = dropIndex(
           rects.map((r) => (r.left + r.right) / 2),
-          ev.clientX,
+          lastX - listLeft + scroll,
           from,
           lo,
           hi,
@@ -146,8 +159,32 @@ export function useStripDrag({
         const ind = indicatorRef.current;
         if (ind && edge !== undefined) {
           ind.hidden = false;
-          ind.style.left = `${edge - stripLeft}px`;
+          ind.style.left = `${edge - scroll + listLeft - stripLeft}px`;
         }
+      };
+      function move(ev: PointerEvent) {
+        if (ev.pointerId !== pointerId) {
+          return;
+        }
+        lastX = ev.clientX;
+        const dx = ev.clientX - startX;
+        if (!dragging) {
+          if (Math.abs(dx) < DRAG_THRESHOLD_PX) {
+            return;
+          }
+          if (!begin()) {
+            return stop();
+          }
+          dragging = true;
+          if (listRef.current) {
+            stopEdgeScroll = startHorizontalEdgeScroll(
+              listRef.current,
+              () => lastX,
+              update,
+            );
+          }
+        }
+        update();
       }
       function up(ev: PointerEvent) {
         if (ev.pointerId !== pointerId) {
