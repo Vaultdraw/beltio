@@ -37,8 +37,8 @@ test("the merged window has no macOS-only keys but keeps the base behaviour", ()
   }
 });
 
-test("Linux bundles deb and AppImage and keeps the sidecar, resources and security settings", () => {
-  assert.deepEqual(merged.bundle.targets, ["deb", "appimage"]);
+test("Linux bundles deb, rpm and AppImage and keeps the sidecar, resources and security settings", () => {
+  assert.deepEqual(merged.bundle.targets, ["deb", "rpm", "appimage"]);
   assert.deepEqual(merged.bundle.externalBin, base.bundle.externalBin);
   assert.deepEqual(merged.bundle.resources, base.bundle.resources);
   assert.equal(merged.app.security.csp, base.app.security.csp);
