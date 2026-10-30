@@ -2,7 +2,7 @@
 //! "Untitled 1", "Untitled 2"; "Plan copy", "Plan copy 2") are not sync conflict copies. The real
 //! listing of a real folder runs here; the `sync_names` rule flags every "<name> N" beside "<name>"
 //! even when no sync service is involved, so the third new drawing shows a "conflict" badge.
-//! `should_panic` marks today's wrong answer: delete it when 190 is fixed (the test then passes).
+//! Fixed (toimprove 190): numbered names count as iCloud copies only in a folder iCloud manages.
 
 use std::fs;
 use vaultdraw_core::{list_directory_in, Vault};
@@ -23,7 +23,6 @@ fn flagged(names: &[&str]) -> Vec<String> {
 }
 
 #[test]
-#[should_panic(expected = "generated names flagged")]
 fn the_apps_own_numbered_names_are_not_conflicts() {
     let f = flagged(&["Untitled.excalidraw", "Untitled 1.excalidraw", "Untitled 2.excalidraw", "Plan copy.excalidraw", "Plan copy 2.excalidraw", "Untitled.md", "Untitled 2.md"]);
     assert!(f.is_empty(), "generated names flagged: {f:?}");

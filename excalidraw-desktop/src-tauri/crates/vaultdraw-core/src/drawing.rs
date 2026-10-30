@@ -54,6 +54,11 @@ pub fn list_directory_in(v: &Vault, path: &str) -> Result<Vec<VaultEntry>> {
     // Placeholders show under their real name; a real file of the same name wins (it finished downloading).
     let real: std::collections::HashSet<String> = raw.iter().filter(|e| !e.is_dir && !e.name.starts_with('.')).map(|e| e.name.clone()).collect();
     let rel_of = |name: &str| if prefix_len > 0 { format!("{path}/{name}") } else { name.to_owned() };
+    // "Plan 2" beside "Plan" is iCloud's conflict copy only where iCloud manages the folder (toimprove 190).
+    let numbered_conflicts = crate::sync_names::numbered_copies_are_conflicts(
+        &v.root.to_string_lossy(),
+        raw.iter().any(|e| !e.is_dir && crate::sync_names::placeholder_real_name(&e.name).is_some()),
+    );
     let mut out: Vec<VaultEntry> = Vec::with_capacity(raw.len());
     for e in raw.drain(..) {
         let mut sync = None;
@@ -68,7 +73,7 @@ pub fn list_directory_in(v: &Vault, path: &str) -> Result<Vec<VaultEntry>> {
                 // A conflict copy whose original is gone is still flagged: it is what the sync left.
                 conflict_of = Some(rel_of(&orig));
                 sync = Some("conflict");
-            } else if let Some(orig) = crate::sync_names::numbered_copy_original(&name).filter(|o| real.contains(o)) {
+            } else if let Some(orig) = crate::sync_names::numbered_copy_original(&name).filter(|o| numbered_conflicts && real.contains(o)) {
                 conflict_of = Some(rel_of(&orig));
                 sync = Some("conflict");
             }

@@ -1519,7 +1519,7 @@ A vault can live inside iCloud Drive, Dropbox, Syncthing or OneDrive. Vaultdraw 
 
 | What the sync service leaves | What Vaultdraw does |
 | --- | --- |
-| Conflict copies: `name (conflicted copy …)`, `name (Mac's conflicted copy …)` (Dropbox), `name.sync-conflict-…` (Syncthing), `name 2` next to `name` (iCloud) | Listed in the tree with a `conflict` badge, searchable like any file. Never merged or deleted by itself. |
+| Conflict copies: `name (conflicted copy …)`, `name (Mac's conflicted copy …)` (Dropbox), `name.sync-conflict-…` (Syncthing), `name 2` next to `name` (iCloud: only when the vault is in iCloud Drive or the folder holds an iCloud placeholder; elsewhere `Untitled 2` is just the next free name) | Listed in the tree with a `conflict` badge, searchable like any file. Never merged or deleted by itself. |
 | iCloud placeholders: `.name.excalidraw.icloud` | Shown as `name` with a `not downloaded` badge. The stub is never read as the drawing, so an empty file is never opened or saved. |
 | Temporary or partial files: `~$x`, `x.tmp`, `x.part`, `x.crdownload`, `.syncthing.*`, `.dropbox*`, `x.sb-…` | Left out of the tree, the search index and the file watcher. Always on. |
 

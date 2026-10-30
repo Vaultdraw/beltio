@@ -1005,7 +1005,7 @@ test("Obsidian vault: browsing changes no byte, hidden folders are not listed, p
 // ---------------------------------------------------------------------------
 // Sync conflict copies, empty / read-only / very large vaults, backup
 
-test("sync conflict copies: every naming style gets a badge, a lone numbered name does not", async ({
+test("sync conflict copies: every naming style gets a badge, a numbered name outside iCloud does not", async ({
   page,
 }) => {
   const errors = trackErrors(page);
@@ -1016,6 +1016,8 @@ test("sync conflict copies: every naming style gets a badge, a lone numbered nam
     "Plan (conflicted copy 2026-01-01).excalidraw": sc,
     "Plan (Ana's MacBook's conflicted copy 2026-01-01).excalidraw": sc,
     "Plan.sync-conflict-20260101-120000-ABCDEFG.excalidraw": sc,
+    // Outside iCloud Drive "Plan 2" is the next free name (toimprove 190), not iCloud's copy;
+    // the native listing tests cover the iCloud case.
     "Plan 2.excalidraw": sc,
     "Solo 2.excalidraw": sc, // numbered, but "Solo" does not exist: not a conflict
     "Plan 2024.excalidraw": sc, // a year, not a copy number
@@ -1031,7 +1033,6 @@ test("sync conflict copies: every naming style gets a badge, a lone numbered nam
     [
       "Plan (Ana's MacBook's conflicted copy 2026-01-01).excalidraw",
       "Plan (conflicted copy 2026-01-01).excalidraw",
-      "Plan 2.excalidraw",
       "Plan.sync-conflict-20260101-120000-ABCDEFG.excalidraw",
     ].sort(),
   );

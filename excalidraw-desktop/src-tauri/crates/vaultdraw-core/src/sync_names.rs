@@ -6,7 +6,7 @@
 //! | --------- | ---------------------------------------------- |
 //! | Dropbox   | `name (conflicted copy 2026-01-01).ext`, `name (Mac's conflicted copy 2026-01-01).ext` |
 //! | Syncthing | `name.sync-conflict-20260101-120000-ABCDEFG.ext` |
-//! | iCloud    | `name 2.ext` (only when `name.ext` exists beside it) |
+//! | iCloud    | `name 2.ext` (only when `name.ext` exists beside it, in a folder iCloud manages) |
 //!
 //! iCloud placeholders are `.name.ext.icloud` stubs: never read as the file, shown as "not downloaded".
 
@@ -106,6 +106,19 @@ pub fn numbered_copy_original(name: &str) -> Option<String> {
     (!base.is_empty() && (2..=99).contains(&num) && n.bytes().all(|b| b.is_ascii_digit())).then(|| format!("{base}{ext_text}"))
 }
 
+/// iCloud Drive keeps its folders under `~/Library/Mobile Documents/` (Obsidian's iCloud vaults
+/// too). With no placeholder in sight, this is the only sign that a folder is iCloud's.
+pub fn in_icloud_drive(root: &str) -> bool {
+    root.replace('\\', "/").contains("/Library/Mobile Documents/")
+}
+
+/// Whether `name 2.ext` beside `name.ext` is an iCloud conflict copy: only in a folder iCloud
+/// manages (the vault is in iCloud Drive, or the folder holds an iCloud placeholder). Elsewhere it
+/// is the next free name the app and Obsidian give a new file ("Untitled 2", "Plan copy 2").
+pub fn numbered_copies_are_conflicts(root: &str, folder_has_placeholder: bool) -> bool {
+    folder_has_placeholder || in_icloud_drive(root)
+}
+
 /// Asks iCloud to download a placeholder (`.name.ext.icloud` beside `path`). Returns at once: the
 /// real file appears when the download finishes and the watcher reports it. macOS only; the
 /// placeholder is never read as the file.
@@ -177,6 +190,13 @@ mod tests {
     }
 
     #[test]
+    fn numbered_copies_count_only_where_icloud_manages_the_folder() {
+        assert!(numbered_copies_are_conflicts("/Users/a/Library/Mobile Documents/com~apple~CloudDocs/V", false));
+        assert!(numbered_copies_are_conflicts("/Users/a/Notes", true), "a placeholder beside it");
+        assert!(!numbered_copies_are_conflicts("/Users/a/Notes", false), "\"Untitled 2\" is the next free name");
+    }
+
+    #[test]
     fn icloud_placeholders() {
         assert_eq!(placeholder_real_name(".Plan.excalidraw.icloud"), Some("Plan.excalidraw"));
         assert_eq!(placeholder_real_name(".Notes.md.icloud"), Some("Notes.md"));
@@ -205,6 +225,7 @@ mod tests {
         for c in fx["numbered"].as_array().unwrap() { assert_eq!(numbered_copy_original(c[0].as_str().unwrap()), opt(&c[1]), "{}", c[0]); }
         for c in fx["placeholder"].as_array().unwrap() { assert_eq!(placeholder_real_name(c[0].as_str().unwrap()).map(str::to_owned), opt(&c[1]), "{}", c[0]); }
         for c in fx["temp"].as_array().unwrap() { assert_eq!(is_sync_temp_name(c[0].as_str().unwrap()), c[1].as_bool().unwrap(), "{}", c[0]); }
+        for c in fx["icloud_root"].as_array().unwrap() { assert_eq!(in_icloud_drive(c[0].as_str().unwrap()), c[1].as_bool().unwrap(), "{}", c[0]); }
     }
 
     #[test]

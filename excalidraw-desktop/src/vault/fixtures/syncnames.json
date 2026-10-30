@@ -47,5 +47,13 @@
     ["a.sb-.md", false],
     ["Plan 2.excalidraw", false],
     ["Plan (conflicted copy x).excalidraw", false]
+  ],
+  "icloud_root": [
+    ["/Users/a/Library/Mobile Documents/iCloud~md~obsidian/Documents/Notes", true],
+    ["/Users/a/Library/Mobile Documents/com~apple~CloudDocs/Vault", true],
+    ["C:\\Users\\a\\Library\\Mobile Documents\\Vault", true],
+    ["/Users/a/Documents/Vault", false],
+    ["/Users/a/Mobile Documents/Vault", false],
+    ["/Users/a/Dropbox/Vault", false]
   ]
 }

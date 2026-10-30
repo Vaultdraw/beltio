@@ -36,7 +36,7 @@ describe("hunter F-14: the app's own generated names are not sync conflicts", ()
     );
   });
 
-  it.fails("the native rule leaves the app's own 'Untitled N' alone", () => {
+  it("the native rule leaves the app's own 'Untitled N' alone", () => {
     expect(sync).toMatch(/Untitled/);
   });
 });

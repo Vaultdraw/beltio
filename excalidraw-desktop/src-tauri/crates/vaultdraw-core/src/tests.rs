@@ -351,6 +351,25 @@ fn list_directory_flags_conflict_copies_and_placeholders_and_skips_temp_files() 
 }
 
 #[test]
+fn numbered_names_are_icloud_copies_only_in_icloud_drive_or_beside_a_placeholder() {
+    let t = tempdir().unwrap();
+    let plain = t.path().join("Plain");
+    let icloud = t.path().join("Library/Mobile Documents/com~apple~CloudDocs/Vault");
+    for dir in [&plain, &icloud] {
+        fs::create_dir_all(dir.join("Sub")).unwrap();
+        for f in ["Untitled.excalidraw", "Untitled 2.excalidraw", "Sub/Plan.md", "Sub/Plan 2.md", "Sub/.Away.md.icloud"] {
+            fs::write(dir.join(f), "{}").unwrap();
+        }
+    }
+    let flagged = |root: &std::path::Path, path: &str| -> Vec<String> {
+        list_directory_in(&vault(root), path).unwrap().into_iter().filter(|e| e.sync == Some("conflict")).map(|e| e.name).collect()
+    };
+    assert!(flagged(&plain, "").is_empty(), "the app's own next free name is not a conflict (toimprove 190)");
+    assert_eq!(flagged(&plain, "Sub"), ["Plan 2.md"], "a placeholder shows iCloud manages the folder");
+    assert_eq!(flagged(&icloud, ""), ["Untitled 2.excalidraw"], "iCloud Drive");
+}
+
+#[test]
 fn a_save_onto_a_file_changed_by_sync_is_refused_and_leaves_it_intact() {
     let t = tempdir().unwrap();
     let v = vault(t.path());

@@ -5,7 +5,11 @@
  * contract from `../vault/types.ts` with an in-memory filesystem so QA tests
  * can run before the native Rust backend and UI workers land.
  */
-import { conflictOriginal, numberedCopyOriginal } from "../vault/syncNames";
+import {
+  conflictOriginal,
+  numberedCopiesAreConflicts,
+  numberedCopyOriginal,
+} from "../vault/syncNames";
 import { fileKind } from "../vault/fileKind";
 import { nameProblem } from "../../../sdk/api/shared/vaultPaths";
 
@@ -544,14 +548,17 @@ export class FakeVaultRepository implements VaultRepository {
         }
       }
     }
-    // Conflict copies, as the native listing flags them.
+    // Conflict copies, as the native listing flags them (the fake has no iCloud placeholders).
+    const numbered = numberedCopiesAreConflicts(this.vault.path, false);
     for (const row of rows.values()) {
       if (row.kind === "folder") {
         continue;
       }
       const original =
         conflictOriginal(row.name) ??
-        ((o) => (o && rows.has(o) ? o : null))(numberedCopyOriginal(row.name));
+        ((o) => (numbered && o && rows.has(o) ? o : null))(
+          numberedCopyOriginal(row.name),
+        );
       if (original) {
         row.sync = "conflict";
         row.conflictOf = prefix + original;

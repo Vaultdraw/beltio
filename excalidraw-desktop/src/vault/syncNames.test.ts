@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import fixtures from "./fixtures/syncnames.json";
 import {
   conflictOriginal,
+  inICloudDrive,
   isSyncTempName,
   numberedCopyOriginal,
   placeholderRealName,
@@ -24,6 +25,11 @@ describe("syncNames (shared fixtures with the Rust twin)", () => {
   it("iCloud placeholders", () => {
     for (const [name, real] of fixtures.placeholder) {
       expect(placeholderRealName(name as string), name as string).toBe(real);
+    }
+  });
+  it("iCloud Drive folders", () => {
+    for (const [root, icloud] of fixtures.icloud_root) {
+      expect(inICloudDrive(root as string), root as string).toBe(icloud);
     }
   });
   it("temporary files", () => {

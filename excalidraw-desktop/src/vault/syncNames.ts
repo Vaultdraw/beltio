@@ -81,3 +81,18 @@ export const numberedCopyOriginal = (name: string): string | null => {
   const n = Number(m[2]);
   return n >= 2 && n <= 99 ? m[1] + name.slice(name.length - extLen) : null;
 };
+
+/** iCloud Drive keeps its folders under `~/Library/Mobile Documents/` (Obsidian's iCloud vaults too). */
+export const inICloudDrive = (root: string): boolean =>
+  root.split("\\").join("/").includes("/Library/Mobile Documents/");
+
+/**
+ * Whether `Plan 2.ext` beside `Plan.ext` is an iCloud conflict copy: only in a folder iCloud
+ * manages (the vault is in iCloud Drive, or the folder holds an iCloud placeholder). Elsewhere it
+ * is the next free name the app and Obsidian give ("Untitled 2", "Plan copy 2"). Twin of
+ * `numbered_copies_are_conflicts` in sync_names.rs.
+ */
+export const numberedCopiesAreConflicts = (
+  root: string,
+  folderHasPlaceholder: boolean,
+): boolean => folderHasPlaceholder || inICloudDrive(root);
