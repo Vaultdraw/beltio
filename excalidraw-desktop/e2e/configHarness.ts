@@ -87,6 +87,8 @@ export function startConfigHarness(win: Window) {
   };
   // The native watcher reports every write to overrides.toml, ours included.
   const watchers: (() => void)[] = [];
+  // Tests: a hand edit of config.toml (change __e2eConfig, then call this) as the native watcher reports it.
+  (w as any).__e2eConfigChanged = () => watchers.forEach((cb) => cb());
   const echo = () => setTimeout(() => watchers.forEach((cb) => cb()), 50);
   const invoke = (async (cmd: string, args?: Record<string, unknown>) => {
     if (cmd === "load_settings") {
