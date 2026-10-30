@@ -123,6 +123,8 @@ xattr -dr com.apple.quarantine /Applications/Vaultdraw.app
 
 With Homebrew, `brew install --cask --no-quarantine vaultdraw/tap/vaultdraw` never sets the flag.
 
+**Linux** (64-bit Intel and AMD): a `.deb` for Debian and Ubuntu, an `.rpm` for Fedora, `vaultdraw-bin` on the AUR for Arch, and an AppImage. One command per distribution: [docs/linux.md](docs/linux.md).
+
 ## Command line
 
 Open the command palette and run **Install 'vaultdraw' command in PATH**. Then:

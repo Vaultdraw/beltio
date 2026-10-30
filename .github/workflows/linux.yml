@@ -121,6 +121,7 @@ jobs:
           name: linux-bundles
           path: |
             excalidraw-desktop/src-tauri/target/release/bundle/deb/*.deb
+            excalidraw-desktop/src-tauri/target/release/bundle/rpm/*.rpm
             excalidraw-desktop/src-tauri/target/release/bundle/appimage/*.AppImage
           if-no-files-found: error
           retention-days: 7

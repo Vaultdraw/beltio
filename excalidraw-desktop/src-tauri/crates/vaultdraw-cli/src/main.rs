@@ -15,6 +15,11 @@ use clap::error::ErrorKind;
 use clap::Parser;
 
 fn main() {
+    // Rust ignores SIGPIPE, so `vaultdraw ls | head` panicked with "Broken pipe". Restore the default (end quietly), like every Unix tool.
+    #[cfg(unix)]
+    unsafe {
+        libc::signal(libc::SIGPIPE, libc::SIG_DFL);
+    }
     let cli = match cli::Cli::try_parse() {
         Ok(c) => c,
         Err(e) => {

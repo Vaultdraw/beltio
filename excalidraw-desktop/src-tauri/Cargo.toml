@@ -3,6 +3,9 @@ name = "excalidraw-vault"
 version = "0.2.0"
 description = "Vaultdraw: an offline, local-first vault for Excalidraw drawings"
 authors = ["Vaultdraw contributors"]
+license = "MIT"
+homepage = "https://vaultdraw.vercel.app"
+repository = "https://github.com/Vaultdraw/vaultdraw"
 edition = "2021"
 rust-version = "1.77"
 

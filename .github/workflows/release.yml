@@ -1,5 +1,5 @@
 # Release builds: one tag (v<version>) or a manual run builds the macOS (universal DMG), Linux (AppImage,
-# deb) and Windows (NSIS installer) bundles, then writes SHA256SUMS and creates a DRAFT GitHub release.
+# deb, rpm) and Windows (NSIS installer) bundles, then writes SHA256SUMS and creates a DRAFT GitHub release.
 # The workflow never publishes: the owner reviews the draft and clicks Publish (docs/releasing.md).
 # Only the release job can write to the repository (contents: write). Build jobs only read it.
 # No signing yet: the builds are unsigned (macOS Gatekeeper and Windows SmartScreen warn; see docs/windows.md).
@@ -65,6 +65,7 @@ jobs:
             bundles: |
               excalidraw-desktop/src-tauri/target/release/bundle/appimage/*.AppImage
               excalidraw-desktop/src-tauri/target/release/bundle/deb/*.deb
+              excalidraw-desktop/src-tauri/target/release/bundle/rpm/*.rpm
           - name: windows
             os: windows-latest
             tauri_args: ""

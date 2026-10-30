@@ -17,6 +17,7 @@
   "bundle": {
     "targets": [
       "deb",
+      "rpm",
       "appimage"
     ],
     "linux": {
@@ -26,16 +27,38 @@
         "depends": [
           "libpoppler-glib8"
         ],
-        "desktopTemplate": "linux/bundle.desktop"
+        "desktopTemplate": "linux/bundle.desktop",
+        "files": {
+          "/usr/share/mime/packages/vaultdraw.xml": "linux/vaultdraw-mime.xml",
+          "/usr/share/icons/hicolor/256x256/apps/excalidraw-vault.png": "icons/128x128@2x.png",
+          "/usr/share/icons/hicolor/512x512/apps/excalidraw-vault.png": "icons/icon.png",
+          "/usr/share/doc/vaultdraw/copyright": "../../LICENSE"
+        },
+        "recommends": [
+          "xdg-utils"
+        ]
       },
       "rpm": {
         "depends": [
-          "poppler-glib"
-        ]
+          "poppler-glib",
+          "webkit2gtk4.1",
+          "gtk3"
+        ],
+        "files": {
+          "/usr/share/mime/packages/vaultdraw.xml": "linux/vaultdraw-mime.xml",
+          "/usr/share/icons/hicolor/256x256/apps/excalidraw-vault.png": "icons/128x128@2x.png",
+          "/usr/share/icons/hicolor/512x512/apps/excalidraw-vault.png": "icons/icon.png",
+          "/usr/share/licenses/vaultdraw/LICENSE": "../../LICENSE"
+        },
+        "postRemoveScript": "linux/rpm-postun.sh"
       },
       "appimage": {
         "bundleMediaFramework": false
       }
-    }
+    },
+    "shortDescription": "Vaultdraw: an offline vault for Excalidraw drawings",
+    "longDescription": "Vaultdraw keeps your Excalidraw drawings in a folder you own. It is a desktop app built on the Excalidraw editor, with a command palette, notes, search and plugins. It works fully offline. Run vaultdraw --help for the command line.",
+    "license": "MIT",
+    "licenseFile": "../../LICENSE"
   }
 }

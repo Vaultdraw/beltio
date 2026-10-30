@@ -22,7 +22,7 @@ The tag must be `v` plus the version in `tauri.conf.json`. The first job stops t
 | Job | Runs on | Result |
 | --- | --- | --- |
 | version check | Linux | Stops the run on a tag or changelog mismatch |
-| build (three jobs) | macOS, Linux, Windows | Bundles: DMG (universal, Intel and Apple silicon), AppImage, deb, NSIS `setup.exe` |
+| build (three jobs) | macOS, Linux, Windows | Bundles: DMG (universal, Intel and Apple silicon), AppImage, deb, rpm, NSIS `setup.exe` |
 | draft release | Linux | Uploads every bundle and `SHA256SUMS` to a draft release for the tag |
 
 The build jobs cannot write to the repository. Only the last job can.
@@ -38,6 +38,10 @@ The build jobs cannot write to the repository. Only the last job can.
 ## Dry run
 
 Run the workflow by hand from the Actions tab (**Run workflow**) to build without a tag. It creates a draft for `v` plus the current version, at the chosen commit. Delete that draft before you push the real tag.
+
+## Arch (AUR)
+
+After you publish the release, update the `vaultdraw-bin` package: see [packaging/aur/README.md](../packaging/aur/README.md). The Linux install commands in [linux.md](linux.md) name the release version; change it there too.
 
 ## Signing (not set up yet)
 
