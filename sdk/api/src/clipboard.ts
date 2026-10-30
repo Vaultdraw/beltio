@@ -50,7 +50,7 @@ export interface ClipboardApi {
  * @since 0.28.0
  */
 export interface ToastOptions {
-  /** A button on the toast; it stays about eight seconds. @since 0.28.0 */
+  /** A button on the toast; it stays about eight seconds. @deprecated Use `actions`: still works in 1.x (the plugin log warns once), removed in 2.0. @since 0.28.0 */
   action?: { label: string; run: () => void };
   /**
    * Up to two buttons (for example "Cancel" or "View report"); replaces `action`.

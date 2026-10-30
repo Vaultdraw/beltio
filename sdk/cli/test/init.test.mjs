@@ -26,9 +26,9 @@ describe("init helpers", () => {
 
   it("rewrites only the top-level keys and drops the author", () => {
     const text =
-      'id = "x"\nname = "X"\nversion = "9.9.9"\napi = 0\nmain = "main.js"\ndescription = "old"\nauthor = "me"\n\n[[contributes.commands]]\nid = "x"\ntitle = "Keep"\nauthor = "keep"\n';
+      'id = "x"\nname = "X"\nversion = "9.9.9"\napi = 1\nmain = "main.js"\ndescription = "old"\nauthor = "me"\n\n[[contributes.commands]]\nid = "x"\ntitle = "Keep"\nauthor = "keep"\n';
     expect(rewriteManifest(text, "new-one")).toBe(
-      'id = "new-one"\nname = "New One"\nversion = "0.1.0"\napi = 0\nmain = "main.js"\ndescription = "A Vaultdraw plugin."\n\n[[contributes.commands]]\nid = "x"\ntitle = "Keep"\nauthor = "keep"\n',
+      'id = "new-one"\nname = "New One"\nversion = "0.1.0"\napi = 1\nmain = "main.js"\ndescription = "A Vaultdraw plugin."\n\n[[contributes.commands]]\nid = "x"\ntitle = "Keep"\nauthor = "keep"\n',
     );
   });
 

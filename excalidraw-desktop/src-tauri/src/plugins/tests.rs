@@ -147,12 +147,36 @@ fn compatibility() {
     let m = manifest::parse(SAMPLE).unwrap();
     assert_eq!(manifest::compatibility(&m, "0.1.0"), (true, None));
     assert_eq!(manifest::compatibility(&m, "0.0.9"), (false, Some("Needs app \u{2265} 0.1.0".into())));
+    // Level 1 is the 1.0 level; level 0 is the legacy level that still loads; anything else is refused.
     let mut v1 = m.clone();
     v1.api = 1;
-    assert_eq!(manifest::compatibility(&v1, "9.0.0"), (false, Some("Plugin API 1 is not supported".into())));
+    assert_eq!(manifest::compatibility(&v1, "9.0.0"), (true, None));
+    let mut v2 = m.clone();
+    v2.api = 2;
+    assert_eq!(manifest::compatibility(&v2, "9.0.0"), (false, Some("Plugin API 2 is not supported (this app implements 1)".into())));
     let mut none = m;
     none.min_app = None;
     assert!(manifest::compatibility(&none, "0.0.1").0);
+}
+
+#[test]
+fn min_api_refuses_a_newer_revision() {
+    let with = |extra: &str| manifest::parse(&format!("{}{extra}", "id = \"ab\"\nname = \"N\"\nversion = \"1.0.0\"\napi = 1\nmain = \"main.js\"\n")).unwrap();
+    assert_eq!(manifest::compatibility(&with(""), "0.2.0"), (true, None));
+    assert_eq!(manifest::compatibility(&with("min_api = \"1.0.0\"\n"), "0.2.0"), (true, None));
+    assert_eq!(manifest::compatibility(&with("min_api = \"0.9.0\"\n"), "0.2.0"), (true, None));
+    let (ok, why) = manifest::compatibility(&with("min_api = \"1.99.0\"\n"), "0.2.0");
+    assert!(!ok);
+    assert_eq!(why.unwrap(), "Needs plugin API \u{2265} 1.99.0 (this app has 1.0.0)");
+    assert!(manifest::parse("id = \"ab\"\nname = \"N\"\nversion = \"1.0.0\"\napi = 1\nmin_api = \"one\"\nmain = \"main.js\"\n").is_err());
+}
+
+/// The host's API revision is the version of `sdk/api/package.json`, so the app and the types never drift.
+#[test]
+fn api_revision_matches_the_sdk_package() {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../sdk/api/package.json");
+    let json: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+    assert_eq!(json["version"].as_str().unwrap(), manifest::API_REVISION);
 }
 
 // ---- scan ----

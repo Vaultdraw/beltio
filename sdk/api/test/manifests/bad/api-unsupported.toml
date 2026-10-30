@@ -3,5 +3,5 @@
 id = "demo-plugin"
 name = "Demo"
 version = "1.0.0"
-api = 1
+api = 2
 main = "main.js"

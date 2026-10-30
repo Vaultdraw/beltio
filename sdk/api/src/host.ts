@@ -4,9 +4,9 @@
  * @since 0.2.0
  */
 export interface ApiVersion {
-  /** The API level. 0 is experimental. @since 0.2.0 */
-  level: 0;
-  /** The revision within the level, such as `0.2.0`. It rises with every addition. @since 0.2.0 */
+  /** The API level: 1 since API 1.0. It changes only in a major release. A plugin that says `api = 0` still loads until 2.0. @since 0.2.0 */
+  level: 1;
+  /** The revision within the level, a semantic version such as `1.2.0`: minor for additions, patch for fixes. @since 0.2.0 */
   revision: string;
 }
 

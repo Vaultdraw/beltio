@@ -1,7 +1,7 @@
 id = "event-logger"
 name = "Event logger"
 version = "0.1.0"
-api = 0
+api = 1
 main = "main.js"
 description = "Example: subscribes to every app event at startup, shows a ring buffer in a panel, disposes cleanly"
 author = "Vaultdraw"

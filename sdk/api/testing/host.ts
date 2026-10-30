@@ -767,7 +767,7 @@ export function createMockHost(
       get host() {
         return (hostApi ??= Object.freeze({
           app: "0.0.0-mock",
-          api: Object.freeze({ level: 0 as const, revision: API_REVISION }),
+          api: Object.freeze({ level: 1 as const, revision: API_REVISION }),
           has: (name: string) =>
             typeof name === "string" && Object.hasOwn(FEATURES, name),
         }));

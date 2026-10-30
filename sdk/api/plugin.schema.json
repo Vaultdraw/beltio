@@ -29,12 +29,18 @@
     },
     "api": {
       "title": "API level",
-      "description": "The plugin API level this plugin targets. The app refuses any level it does not implement. Level 0 is experimental.",
-      "const": 0
+      "description": "The plugin API level this plugin targets: 1 for API 1.0. The app refuses any level it does not implement. Level 0 (before 1.0) still loads with a warning until API 2.0.",
+      "enum": [1, 0]
     },
     "min_app": {
       "title": "Minimum app version",
       "description": "Optional. Semantic version of the oldest Vaultdraw app that can run the plugin. Older apps refuse it.",
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "min_api": {
+      "title": "Minimum API revision",
+      "description": "Optional. Semantic version of the oldest plugin API revision the plugin needs, for example 1.2.0. An app with an older revision refuses the plugin and says so.",
       "type": "string",
       "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
     },

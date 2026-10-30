@@ -27,6 +27,7 @@ import {
   unblock,
   unblockLabel,
 } from "../theme/install/consent";
+import { isSupportedApi } from "../plugins/registry/apiLevel";
 import { toastStore } from "../toasts/toastStore";
 import { getPreferences } from "../vault/preferences";
 
@@ -209,7 +210,7 @@ export const PluginBrowserDialog = ({
     ) {
       e.preventDefault();
       const status = registryStatus(current, versions.get(current.id));
-      if (status !== "installed" && current.api === 0) {
+      if (status !== "installed" && isSupportedApi(current.api)) {
         void act(current, status === "update");
       }
     }
@@ -218,7 +219,7 @@ export const PluginBrowserDialog = ({
   const details = (e: RegistryEntry) => {
     const status = registryStatus(e, versions.get(e.id));
     const installedVersion = versions.get(e.id);
-    const incompatible = e.api !== 0;
+    const incompatible = !isSupportedApi(e.api);
     return (
       <section className="vault-pb__details" aria-label={`${e.name} details`}>
         <h3>{e.name}</h3>

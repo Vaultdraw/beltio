@@ -1,7 +1,7 @@
 id = "formula"
 name = "Formula"
 version = "0.1.0"
-api = 0
+api = 1
 min_app = "0.2.0"
 main = "main.js"
 description = "LaTeX formulas as images in a drawing, and the TeX renderer the notes view uses"

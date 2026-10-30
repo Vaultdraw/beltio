@@ -1,7 +1,7 @@
 id = "mermaid"
 name = "Mermaid"
 version = "0.1.0"
-api = 0
+api = 1
 min_app = "0.2.0"
 main = "main.js"
 description = "Mermaid diagrams to drawings: a method other programs and AI apps call"

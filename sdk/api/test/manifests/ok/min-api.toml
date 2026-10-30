@@ -1,0 +1,8 @@
+# code: none
+# rust: ok
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 1
+min_api = "1.0.0"
+main = "main.js"

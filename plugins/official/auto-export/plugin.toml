@@ -1,7 +1,7 @@
 id = "auto-export"
 name = "Auto-export"
 version = "0.1.0"
-api = 0
+api = 1
 min_app = "0.2.0"
 main = "main.js"
 description = "SVG and PNG copies of your drawings, written next to them or into an export folder when you save"

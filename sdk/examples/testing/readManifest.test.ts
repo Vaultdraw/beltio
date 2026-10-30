@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { parseManifest, readExample } from "./readManifest";
 
-const BASE = `id = "demo"\nname = "Demo"\nversion = "0.1.0"\napi = 0\nmain = "main.js"\n`;
+const BASE = `id = "demo"\nname = "Demo"\nversion = "0.1.0"\napi = 1\nmain = "main.js"\n`;
 
 describe("parseManifest", () => {
   it("applies defaults for optional keys", () => {
@@ -12,7 +12,7 @@ describe("parseManifest", () => {
     );
     expect(info).toMatchObject({
       id: "demo",
-      api: 0,
+      api: 1,
       minApp: null,
       description: null,
       source: "bundled",

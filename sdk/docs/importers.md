@@ -150,7 +150,7 @@ Settings → Plugins lists each clash and names the winner. The key reloads live
 
 ```toml
 id = "text-import"
-api = 0
+api = 1
 main = "main.js"
 
 [[contributes.importers]]

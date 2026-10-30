@@ -6,7 +6,10 @@ import { isSemver } from "./semver.mjs";
 import { parseToml, TomlError } from "./toml.mjs";
 
 export const MAX_MANIFEST_BYTES = 64 * 1024;
-export const SUPPORTED_API = 0;
+/** The plugin API level the app implements (1.0). */
+export const SUPPORTED_API = 1;
+/** The pre-1.0 level: still accepted, with a warning, until API 2.0. */
+export const LEGACY_API = 0;
 const MAX_COMMANDS = 200;
 const MAX_PANELS = 20;
 const MAX_SETTINGS = 100;
@@ -87,6 +90,7 @@ export const TOP_KEYS = new Set([
   "version",
   "api",
   "min_app",
+  "min_api",
   "main",
   "description",
   "author",
@@ -152,6 +156,8 @@ export function validateManifestText(text, file = "plugin.toml") {
   const warnings = [];
   /** @param {string} code @param {string} message */
   const err = (code, message) => errors.push({ code, message, file });
+  /** @param {string} code @param {string} message */
+  const warn = (code, message) => warnings.push({ code, message, file });
 
   if (Buffer.byteLength(text) > MAX_MANIFEST_BYTES) {
     err("manifest-too-large", "plugin.toml is larger than 64 KB");
@@ -214,6 +220,16 @@ export function validateManifestText(text, file = "plugin.toml") {
       );
     }
   }
+  if ("min_api" in doc) {
+    if (typeof doc.min_api !== "string" || !isSemver(doc.min_api)) {
+      err(
+        "min-api-invalid",
+        `min_api ${show(
+          doc.min_api,
+        )} is not a semantic version (for example 1.0.0)`,
+      );
+    }
+  }
   if ("min_app" in doc) {
     if (typeof doc.min_app !== "string" || !isSemver(doc.min_app)) {
       err(
@@ -235,7 +251,12 @@ export function validateManifestText(text, file = "plugin.toml") {
     }
   }
   if ("api" in doc) {
-    if (doc.api !== SUPPORTED_API) {
+    if (doc.api === LEGACY_API) {
+      warn(
+        "api-deprecated",
+        `api = 0 is the pre-1.0 level. It still loads; set api = ${SUPPORTED_API} (the app drops 0 in API 2.0)`,
+      );
+    } else if (doc.api !== SUPPORTED_API) {
       err(
         "api-unsupported",
         `Plugin API ${show(

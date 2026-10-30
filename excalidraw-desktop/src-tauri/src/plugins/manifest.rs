@@ -5,8 +5,12 @@ use serde_json::Value as Json;
 use std::collections::HashSet;
 
 pub(crate) const MAX_MANIFEST_BYTES: u64 = 64 * 1024;
-/// The plugin API major this app implements.
-pub(crate) const SUPPORTED_API: u32 = 0;
+/// The plugin API level this app implements (1.0).
+pub(crate) const SUPPORTED_API: u32 = 1;
+/// The pre-1.0 level. A manifest that says `api = 0` still loads, with a warning, until API 2.0.
+pub(crate) const LEGACY_API: u32 = 0;
+/// The API revision this app implements: the version of `sdk/api/package.json` (a test keeps them equal).
+pub(crate) const API_REVISION: &str = "1.0.0";
 const MAX_COMMANDS: usize = 200;
 const MAX_PANELS: usize = 20;
 const MAX_SETTINGS: usize = 100;
@@ -264,6 +268,9 @@ struct Raw {
     api: u32,
     #[serde(default)]
     min_app: Option<String>,
+    /// The oldest API revision the plugin needs, such as `1.2.0`.
+    #[serde(default)]
+    min_api: Option<String>,
     main: String,
     #[serde(default)]
     description: Option<String>,
@@ -292,6 +299,7 @@ pub(crate) struct Manifest {
     pub version: String,
     pub api: u32,
     pub min_app: Option<String>,
+    pub min_api: Option<String>,
     pub main: String,
     pub description: Option<String>,
     pub author: Option<String>,
@@ -606,6 +614,9 @@ fn validate(raw: Raw) -> Result<Manifest, String> {
     if let Some(m) = &raw.min_app {
         Version::parse(m).map_err(|_| format!("min_app '{m}' is not a semantic version"))?;
     }
+    if let Some(m) = &raw.min_api {
+        Version::parse(m).map_err(|_| format!("min_api '{m}' is not a semantic version"))?;
+    }
     if !is_safe_rel_path(&raw.main) {
         return Err(format!("main '{}' must be a relative path inside the plugin folder", raw.main));
     }
@@ -657,6 +668,7 @@ fn validate(raw: Raw) -> Result<Manifest, String> {
         version: raw.version,
         api: raw.api,
         min_app: raw.min_app,
+        min_api: raw.min_api,
         main: raw.main,
         description: raw.description,
         author: raw.author,
@@ -681,8 +693,13 @@ pub(crate) fn parse(text: &str) -> Result<Manifest, String> {
 
 /// `(compatible, problem)` for this app version.
 pub(crate) fn compatibility(m: &Manifest, app_version: &str) -> (bool, Option<String>) {
-    if m.api != SUPPORTED_API {
-        return (false, Some(format!("Plugin API {} is not supported", m.api)));
+    if m.api != SUPPORTED_API && m.api != LEGACY_API {
+        return (false, Some(format!("Plugin API {} is not supported (this app implements {SUPPORTED_API})", m.api)));
+    }
+    if let (Some(min), Ok(have)) = (&m.min_api, Version::parse(API_REVISION)) {
+        if Version::parse(min).is_ok_and(|min| min > have) {
+            return (false, Some(format!("Needs plugin API \u{2265} {min} (this app has {API_REVISION})")));
+        }
     }
     if let (Some(min), Ok(app)) = (&m.min_app, Version::parse(app_version)) {
         if Version::parse(min).is_ok_and(|min| min > app) {

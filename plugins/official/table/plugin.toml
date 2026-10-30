@@ -1,7 +1,7 @@
 id = "table"
 name = "Table"
 version = "0.1.0"
-api = 0
+api = 1
 min_app = "0.2.0"
 main = "main.js"
 description = "Turn pasted spreadsheet cells, CSV or a Markdown table into a table of ordinary Excalidraw shapes"

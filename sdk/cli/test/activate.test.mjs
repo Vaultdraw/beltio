@@ -10,7 +10,7 @@ afterAll(cleanup);
 const manifest = (extra = "") => `id = "demo-plugin"
 name = "Demo"
 version = "1.0.0"
-api = 0
+api = 1
 main = "main.js"
 ${extra}`;
 const cmd = (id) =>

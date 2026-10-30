@@ -1,7 +1,7 @@
 id = "pdf-import"
 name = "PDF import"
 version = "0.1.0"
-api = 0
+api = 1
 min_app = "0.2.0"
 main = "main.js"
 description = "Import the pages of a PDF as pictures in the open drawing"

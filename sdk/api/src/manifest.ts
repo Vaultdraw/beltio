@@ -10,7 +10,7 @@ export interface PluginManifestInfo {
   id: string;
   /** @since 0.1.0 */
   version: string;
-  /** @since 0.1.0 */
+  /** The install folder of the plugin. @deprecated An internal path with no use without file access: still filled in 1.x, removed in 2.0. @since 0.1.0 */
   dir: string;
   /**
    * What the plugin declared in `plugin.toml`. A declaration, not a sandbox.

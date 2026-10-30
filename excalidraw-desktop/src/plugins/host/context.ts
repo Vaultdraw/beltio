@@ -22,7 +22,12 @@ import { getWorkspaceBridge } from "../workspaceBridge";
 
 import { createShapesApi } from "../../../../sdk/api/shared/shapes";
 
-import { errorText, logLine, reportPluginError } from "./errors";
+import {
+  errorText,
+  logLine,
+  reportPluginError,
+  warnDeprecated,
+} from "./errors";
 import { guard } from "./guard";
 import { createHostApi } from "./hostContext";
 import { runCommandById } from "./runner";
@@ -102,6 +107,13 @@ export function createPluginContext(
   const { info } = rt;
   const id = info.id;
   const dataKey = dataKeyFor(id, info.dataKey);
+  if (info.api === 0) {
+    warnDeprecated(
+      id,
+      "api",
+      "plugin.toml says api = 0, the level before 1.0. It still loads; set api = 1 (level 0 is dropped in API 2.0)",
+    );
+  }
   const subscriptions: Disposable[] = [];
   let stopped = false;
   const isLive = () => !stopped;
@@ -285,6 +297,13 @@ export function createPluginContext(
     },
     ui: {
       toast: (message, options) => {
+        if (options?.action && !options.actions) {
+          warnDeprecated(
+            id,
+            "toast.action",
+            "ui.toast option `action` is replaced by `actions` and goes in API 2.0",
+          );
+        }
         const list =
           options?.actions ?? (options?.action ? [options.action] : []);
         const actions = (Array.isArray(list) ? list : [])

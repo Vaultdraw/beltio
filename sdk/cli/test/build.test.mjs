@@ -299,7 +299,7 @@ describe("build", () => {
     const dir = tmp();
     write(dir, {
       "plugin.toml":
-        'id = "no-src"\nname = "N"\nversion = "1.0.0"\napi = 0\nmain = "main.js"\n',
+        'id = "no-src"\nname = "N"\nversion = "1.0.0"\napi = 1\nmain = "main.js"\n',
     });
     const b = run(["build"], { cwd: dir });
     expect(b.code).toBe(1);
@@ -310,7 +310,7 @@ describe("build", () => {
     const dir = tmp();
     write(dir, {
       "plugin.toml":
-        'id = "plain"\nname = "P"\nversion = "1.0.0"\napi = 0\nmain = "src/main.js"\n',
+        'id = "plain"\nname = "P"\nversion = "1.0.0"\napi = 1\nmain = "src/main.js"\n',
       "src/main.js": "export default {}\n",
     });
     expect(isBuildProject(dir)).toBe(false);

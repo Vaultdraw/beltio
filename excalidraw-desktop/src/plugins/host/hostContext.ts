@@ -11,6 +11,6 @@ export const hasFeature = (name: string): boolean =>
 export const createHostApi = (): HostApi =>
   Object.freeze({
     app: APP_VERSION,
-    api: Object.freeze({ level: 0 as const, revision: API_REVISION }),
+    api: Object.freeze({ level: 1 as const, revision: API_REVISION }),
     has: hasFeature,
   });

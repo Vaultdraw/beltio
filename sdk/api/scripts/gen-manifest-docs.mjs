@@ -16,8 +16,9 @@ export const DOC_FILE = path.join(here, "..", "..", "docs", "manifest.md");
 export const EXAMPLE = `id = "hello-command"
 name = "Hello"
 version = "0.1.0"
-api = 0
+api = 1
 min_app = "0.1.0"
+min_api = "1.0.0"
 main = "main.js"
 description = "Says hello"
 author = "you"

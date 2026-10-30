@@ -164,6 +164,7 @@ export function parseManifest(source: string, mainBytes = 0): PluginInfo {
     version: top.version as string,
     api: top.api as number,
     minApp: str("min_app"),
+    minApi: str("min_api"),
     main: top.main as string,
     description: str("description"),
     author: str("author"),

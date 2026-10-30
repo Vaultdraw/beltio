@@ -10,8 +10,9 @@ Every key of a plugin manifest, with its limits. Generated from `sdk/api/plugin.
 id = "hello-command"
 name = "Hello"
 version = "0.1.0"
-api = 0
+api = 1
 min_app = "0.1.0"
+min_api = "1.0.0"
 main = "main.js"
 description = "Says hello"
 author = "you"
@@ -56,8 +57,9 @@ The path is relative to the manifest. The `vaultdraw-plugin init` templates ship
 | `id` | string | yes |  | `^[a-z0-9][a-z0-9-]{1,38}$` | Unique id. 2 to 39 characters of a-z, 0-9 and -, not starting with -. Full command ids are "<id>.<command id>". |
 | `name` | string | yes |  | not blank; 1 to 200 chars | Display name. 1 to 200 characters, not blank. |
 | `version` | string | yes |  | semantic version | The plugin's own semantic version, for example 1.0.0. |
-| `api` | `0` | yes |  |  | The plugin API level this plugin targets. The app refuses any level it does not implement. Level 0 is experimental. |
+| `api` | one of | yes |  | `1`, `0` | The plugin API level this plugin targets: 1 for API 1.0. The app refuses any level it does not implement. Level 0 (before 1.0) still loads with a warning until API 2.0. |
 | `min_app` | string | no |  | semantic version | Optional. Semantic version of the oldest Vaultdraw app that can run the plugin. Older apps refuse it. |
+| `min_api` | string | no |  | semantic version | Optional. Semantic version of the oldest plugin API revision the plugin needs, for example 1.2.0. An app with an older revision refuses the plugin and says so. |
 | `main` | string | yes |  | `^(?!(?:.*/)?\.\.?(?:/\|$))[^/\\:\u0000]+(?:/[^/\\:\u0000]+)*$`; 1 to 260 chars | Relative path of the ESM bundle inside the plugin folder, with / separators. No .., no ., no empty segment, no leading /, no backslash, no colon. At most 260 bytes. |
 | `description` | string | no |  | 0 to 1000 chars | Optional. One line about the plugin. At most 1000 characters. |
 | `author` | string | no |  | 0 to 1000 chars | Optional. Who made the plugin. At most 1000 characters. |

@@ -19,7 +19,7 @@ export interface MethodsApi {
    * @since 0.22.0
    */
   register(
-    name: string,
+    id: string,
     handler: (params: Json) => Json | Promise<Json>,
   ): Disposable;
 }

@@ -1,3 +1,4 @@
+// @vaultdraw/api 1.0.0
 // clipboard.ts
 import type { Disposable } from "./disposable";
 export interface PasteEvent {
@@ -48,6 +49,14 @@ export interface DiagramsApi {
 // disposable.ts
 export interface Disposable {
     dispose(): void;
+}
+
+// errors.ts
+export type PluginErrorCode = "CONFLICT" | "DRAWING_CHANGED" | "FONT_UNAVAILABLE" | "INVALID_ARGUMENT" | "INVALID_FILE" | "INVALID_PATH" | "IO_ERROR" | "NAME_COLLISION" | "NETWORK_ERROR" | "NETWORK_NOT_ALLOWED" | "NO_VAULT" | "NO_VERSION" | "NOT_FOUND" | "NOT_SUPPORTED" | "PERMISSION" | "QUOTA" | "READ_ONLY" | "TIMEOUT" | "TOO_LARGE";
+export interface PluginApiError extends Error {
+    readonly name: "PluginApiError";
+    readonly code: PluginErrorCode;
+    readonly issues?: readonly import("./scene").SceneOpIssue[];
 }
 
 // events.ts
@@ -115,7 +124,7 @@ export interface FoldersApi {
 
 // host.ts
 export interface ApiVersion {
-    level: 0;
+    level: 1;
     revision: string;
 }
 export interface HostApi {
@@ -156,6 +165,7 @@ export type { CommandsApi } from "./commands";
 export type { MethodsApi } from "./methods";
 export type { MathApi, MathRequest, MathResult } from "./math";
 export type { Disposable } from "./disposable";
+export type { PluginApiError, PluginErrorCode } from "./errors";
 export type { AppEventMap, EventsApi } from "./events";
 export type { CommandContribution, ImporterContribution, MenuContribution, MethodContribution, StatusBarContribution, ToolbarContribution, ToolContribution, ShapeContribution, ViewContribution, PanelContribution, PluginContributions, PluginManifestInfo, PluginPermission, } from "./manifest";
 export type { FolderEntry, FoldersApi, PickSourceOptions, PickTargetOptions, SourceFolder, TargetFolder, } from "./folders";
@@ -442,7 +452,7 @@ export interface MenusApi {
 import type { Disposable } from "./disposable";
 import type { Json } from "./storage";
 export interface MethodsApi {
-    register(name: string, handler: (params: Json) => Json | Promise<Json>): Disposable;
+    register(id: string, handler: (params: Json) => Json | Promise<Json>): Disposable;
 }
 
 // network.ts

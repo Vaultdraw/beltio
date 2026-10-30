@@ -1,7 +1,7 @@
 id = "status-clock"
 name = "Status clock"
 version = "0.1.0"
-api = 0
+api = 1
 min_app = "0.1.2"
 main = "main.js"
 description = "Example: a status bar item with a click command"

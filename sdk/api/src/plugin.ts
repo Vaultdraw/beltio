@@ -121,7 +121,7 @@ export interface PluginContext {
   readonly math: MathApi;
   /** Views that cover the drawing area. @since 0.17.0 */
   readonly overlays: OverlaysApi;
-  /** Drawing previews. @since 0.20.0 */
+  /** Drawing previews. @experimental Outside the 1.0 promise. @since 0.20.0 */
   readonly thumbnails: ThumbnailsApi;
   /** Diagram converters (Mermaid). @since 0.23.0 */
   readonly diagrams: DiagramsApi;

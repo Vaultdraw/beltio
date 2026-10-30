@@ -1,7 +1,7 @@
 id = "favourites"
 name = "Favourites"
 version = "0.1.0"
-api = 0
+api = 1
 min_app = "0.2.0"
 main = "main.js"
 description = "Bookmarks for drawings, notes and single elements, in your own order, kept per vault"

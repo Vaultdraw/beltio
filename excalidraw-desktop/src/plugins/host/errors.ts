@@ -89,9 +89,39 @@ export const pluginErrorCount = (id: string): number => counts.get(id) ?? 0;
 export const resetPluginErrors = (id: string): void => {
   counts.delete(id);
   problems.delete(id);
+  resetDeprecations(id);
+};
+
+const warned = new Set<string>();
+
+/**
+ * Tells the plugin author, once per plugin and name until the plugin reloads, that
+ * a name or value it uses is deprecated. The line goes to the plugin log
+ * (and the dev log); nothing else happens: a deprecation is a warning until 2.0.
+ */
+export const warnDeprecated = (
+  id: string,
+  name: string,
+  text: string,
+): void => {
+  const key = `${id}\u0000${name}`;
+  if (warned.has(key)) {
+    return;
+  }
+  warned.add(key);
+  logLine(id, "warn", `deprecated: ${text}`);
+};
+
+export const resetDeprecations = (id: string): void => {
+  for (const k of [...warned]) {
+    if (k.startsWith(`${id}\u0000`)) {
+      warned.delete(k);
+    }
+  }
 };
 
 export function resetErrors(): void {
+  warned.clear();
   counts.clear();
   logs.clear();
   problems.clear();

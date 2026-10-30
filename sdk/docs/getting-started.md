@@ -148,5 +148,5 @@ To write the plugin in TypeScript, start from a template with `init --template c
 
 - Tested on macOS only.
 - The CLI is not published to npm yet.
-- The plugin API is level 0 and experimental. It can change in a minor release, with changes listed in the CHANGELOG.
+- The plugin API is 1.0 and frozen: no breaking change before 2.0. [stability.md](stability.md) has the promise, the deprecation rules and the few `@experimental` areas that are outside it. Every change is in the [API change log](../api/CHANGELOG.md).
 - `ctx.log` lines go to a file only for `dev = true` plugins (the dev log). The app has no log view, and it writes nothing for other plugins.

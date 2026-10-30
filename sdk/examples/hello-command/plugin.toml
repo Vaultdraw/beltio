@@ -1,7 +1,7 @@
 id = "hello-command"
 name = "Hello"
 version = "0.1.0"
-api = 0
+api = 1
 main = "main.js"
 description = "Example: a command, a hotkey, a setting and a toast"
 author = "Vaultdraw"

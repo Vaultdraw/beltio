@@ -39,7 +39,7 @@ export function write(dir, files) {
 export const MANIFEST = `id = "demo-plugin"
 name = "Demo"
 version = "1.0.0"
-api = 0
+api = 1
 main = "main.js"
 `;
 

@@ -1,7 +1,7 @@
 {
   "name": "@vaultdraw/api",
-  "version": "0.37.0",
-  "description": "Types of the Vaultdraw plugin API",
+  "version": "1.0.0",
+  "description": "Types of the Vaultdraw plugin API (1.0)",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -14,7 +14,8 @@
   "files": [
     "src",
     "etc",
-    "testing"
+    "testing",
+    "CHANGELOG.md"
   ],
   "vaultdraw": {
     "minApp": "0.1.2"

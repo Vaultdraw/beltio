@@ -1,0 +1,8 @@
+# code: min-api-invalid
+# rust: min_api
+id = "demo-plugin"
+name = "Demo"
+version = "1.0.0"
+api = 1
+min_api = "one"
+main = "main.js"

@@ -1,6 +1,8 @@
 /**
  * The state of a drawing's thumbnail.
  *
+ * @experimental Outside the 1.0 promise: it may change or go in a minor release.
+ *
  * @since 0.20.0
  */
 export interface ThumbnailState {
@@ -14,6 +16,8 @@ export interface ThumbnailState {
  * Drawing previews, from the app's one thumbnail service (its cache and render queue are shared,
  * so a plugin adds no memory of its own). These are React hooks: call them while rendering a
  * component the plugin gave the app (a view, an overlay).
+ *
+ * @experimental Outside the 1.0 promise: it may change or go in a minor release.
  *
  * @since 0.20.0
  */

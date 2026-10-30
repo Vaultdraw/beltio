@@ -1,7 +1,7 @@
 id = "menu-demo"
 name = "Menu demo"
 version = "0.1.0"
-api = 0
+api = 1
 min_app = "0.1.2"
 main = "main.js"
 description = "Example: context menu items for tree rows, tabs and the canvas"

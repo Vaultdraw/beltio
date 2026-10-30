@@ -83,6 +83,21 @@ describe("validateManifestText", () => {
     ]);
   });
 
+  it("accepts api = 1; api = 0 loads but warns; api = 2 is refused", () => {
+    expect(with_("").warnings).toEqual([]);
+    const legacy = validateManifestText(base.replace("api = 1", "api = 0"));
+    expect(legacy.errors).toEqual([]);
+    expect(legacy.warnings.map((w) => w.code)).toEqual(["api-deprecated"]);
+    expect(
+      codes(validateManifestText(base.replace("api = 1", "api = 2"))),
+    ).toEqual(["api-unsupported"]);
+  });
+
+  it("checks min_api is a semantic version", () => {
+    expect(with_('min_api = "1.0.0"\n').errors).toEqual([]);
+    expect(codes(with_('min_api = "1.2"\n'))).toEqual(["min-api-invalid"]);
+  });
+
   it("keeps going after the first problem", () => {
     const r = validateManifestText(
       `id = "x"\nname = ""\nversion = "1"\napi = 3\nmain = "/abs"\ncolour = 1\n`,

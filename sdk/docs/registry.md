@@ -14,7 +14,7 @@ A registry is one `index.json` that lists plugin packages. Vaultdraw fetches it 
       "author": "ada",
       "description": "Counts the words in a note.",
       "version": "1.2.0",
-      "api": 0,
+      "api": 1,
       "min_app": "0.1.0",
       "permissions": ["vault.read"],
       "sha256": "<64 hex characters, the zip's SHA-256>",

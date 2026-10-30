@@ -34,6 +34,8 @@ export interface VaultEntry {
  * The vault's link graph, as bytes. The format is the app's `VDG1` graph export (a compact binary
  * table of notes, drawings, tags and links); a plugin that draws a graph decodes it itself.
  *
+ * @experimental Outside the 1.0 promise: it may change or go in a minor release.
+ *
  * @since 0.18.0
  */
 export interface VaultGraphApi {
@@ -61,6 +63,8 @@ export interface VaultGraphApi {
 /**
  * One change to the plugin's own vault settings table.
  *
+ * @experimental Outside the 1.0 promise: it may change or go in a minor release.
+ *
  * @since 0.19.0
  */
 export interface VaultTableChange {
@@ -75,6 +79,8 @@ export interface VaultTableChange {
  * Only plugins that ship with the app may use it (a plugin from anywhere else keeps scalar
  * settings under `[plugin.<id>]` with `contributes.settings`). Comments and other tables in the
  * file stay as they are.
+ *
+ * @experimental Outside the 1.0 promise: it may change or go in a minor release.
  *
  * @since 0.19.0
  */
@@ -223,6 +229,7 @@ export interface VaultApi {
   /**
    * The vault's link graph.
    *
+   * @experimental Outside the 1.0 promise: it may change or go in a minor release.
    * @since 0.18.0
    */
   readonly graph: VaultGraphApi;
@@ -235,6 +242,7 @@ export interface VaultApi {
   /**
    * The plugin's own table in the vault's settings file (bundled plugins only).
    *
+   * @experimental Outside the 1.0 promise: it may change or go in a minor release.
    * @since 0.19.0
    */
   readonly table: VaultTableApi;

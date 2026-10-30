@@ -1,7 +1,7 @@
 id = "flow-from-text"
 name = "Flow from text"
 version = "0.1.0"
-api = 0
+api = 1
 main = "main.js"
 description = "Example: methods other programs call (vaultdraw plugin call, AI apps). Draws a flowchart from Mermaid-style edges (A --> B) on the open drawing"
 author = "Vaultdraw"

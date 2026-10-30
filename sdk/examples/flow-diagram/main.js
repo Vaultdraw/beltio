@@ -80,8 +80,8 @@ export function stepOps(last, step) {
 
 /** `{ id }` ends need plugin API 0.9.0 or later. */
 const canBindToCanvas = (revision) => {
-  const [, minor] = String(revision).split(".").map(Number);
-  return minor >= 9;
+  const [major, minor] = String(revision).split(".").map(Number);
+  return major > 0 || minor >= 9;
 };
 
 export default definePlugin({

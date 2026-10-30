@@ -1,6 +1,6 @@
 # Plugin API reference
 
-What a Vaultdraw plugin is, what it can call, and what the app does for it. The API is experimental (level 0).
+What a Vaultdraw plugin is, what it can call, and what the app does for it. The API is at 1.0 and frozen: [stability.md](stability.md) says what that promises; every change is listed in the [API change log](../api/CHANGELOG.md).
 
 ## A plugin on disk
 
@@ -22,7 +22,8 @@ The manifest sits next to `main.js`. It names the plugin and declares its comman
 id = "hello-command"        # 2 to 39 characters: a-z, 0-9, -
 name = "Hello"
 version = "0.1.0"           # semver
-api = 0                     # API level this plugin targets
+api = 1                     # API level this plugin targets (1 for API 1.0)
+min_api = "1.0.0"           # optional: the oldest API revision it needs
 main = "main.js"            # relative path inside the folder
 
 [[contributes.commands]]
@@ -160,7 +161,7 @@ interface PluginContext {
   readonly host: {
     // since 0.2.0
     readonly app: string; // the app version
-    readonly api: { level: 0; revision: string }; // for example { level: 0, revision: "0.2.0" }
+    readonly api: { level: 1; revision: string }; // for example { level: 1, revision: "1.0.0" }
     has(feature: string): boolean; // "theme.tokens", "scene.batch", "drawing.saved"
   };
   readonly theme: {
@@ -210,6 +211,7 @@ Notes:
 
   `kind: "error"` gives the error look; it closes after the user's `interface.notice_seconds`. A toast with `progress` closes after about a minute without an update, so end it with a final toast on the same `id`. Buttons: at most two, labels cut at 40 characters, clicking one closes the toast and runs it.
 - A stored setting value outside a declared `min` / `max`, or of the wrong type, reads as the default and is reported as a settings problem. `ctx.settings.set` rejects such a value.
+- **Errors.** A refused call throws or rejects with a `PluginApiError` (`name`, `message`, and a `code` of the type `PluginErrorCode`). The codes are `CONFLICT`, `DRAWING_CHANGED`, `FONT_UNAVAILABLE`, `INVALID_ARGUMENT`, `INVALID_FILE`, `INVALID_PATH`, `IO_ERROR`, `NAME_COLLISION`, `NETWORK_ERROR`, `NETWORK_NOT_ALLOWED`, `NO_VAULT`, `NO_VERSION`, `NOT_FOUND`, `NOT_SUPPORTED`, `PERMISSION`, `QUOTA`, `READ_ONLY`, `TIMEOUT` and `TOO_LARGE`. A minor release may add a code, so keep a default branch. Each member's own errors are listed with it.
 - `ctx.scene.batch` rejects with a `code`:
 
   | Code | When |
@@ -438,7 +440,7 @@ await ctx.scene.batch([
 - An `update` earlier in the batch (say, moving the shape) is applied first; the arrow is drawn to the new place.
 - An arrow bound only to elements on the canvas is not centred with the rest of the batch: it is drawn from them.
 - One undo removes the arrow and its bindings. Only the named elements are touched, so the cost follows the batch, not the drawing.
-- Check `ctx.host.api.revision` (0.9.0 or later) before relying on it. Older hosts refuse `{ id }` with `INVALID_ARGUMENT`.
+- Check `ctx.host.api.revision` (0.9.0 or later; compare major and minor, since 1.0.0 has a minor of 0) before relying on it. Older hosts refuse `{ id }` with `INVALID_ARGUMENT`.
 - `vault.createDrawing` makes a new drawing, so `{ id }` there always fails with "no such element".
 
 ## Vault, workspace and importers (since 0.6.0)
@@ -529,7 +531,7 @@ Needs the permission `clipboard`. Declare `activation = ["onPaste"]` so the plug
 const text = await ctx.clipboard.readText();            // "" when empty or refused
 ctx.clipboard.onPaste(({ text }) => {
   if (!looksLikeMine(text)) return "pass";               // the editor pastes as usual
-  ctx.ui.toast("Convert it?", { action: { label: "Convert", run: () => {} } });
+  ctx.ui.toast("Convert it?", { actions: [{ label: "Convert", run: () => {} }] });
   return "pass";                                         // or "handled" to skip the editor's paste
 });
 ```
@@ -1024,12 +1026,13 @@ Dev log details:
 
 ## Versioning
 
-1. **Two numbers.** The **API level** is `api = 0` in the manifest. The host refuses a plugin that names another level. The **API revision** is the version of the `@vaultdraw/api` package, `0.N.P`. Its `package.json` has `vaultdraw.minApp`, the first app version that shipped that revision.
-2. **v0 is experimental.** Additions are optional members, tagged `@since` with the revision that added them.
-3. **Changes and removals** happen only in a minor revision. They are listed under "Plugin API" in the [CHANGELOG](../../CHANGELOG.md), they show as a diff of `sdk/api/etc/api-surface.d.ts`, and they keep the old form for one release when that is cheap.
-4. **`min_app` is the author's choice.** `vaultdraw-plugin check` warns when it is lower than what the code uses.
-5. **Ask, don't compare versions:** `ctx.host.api.revision` is there to show, and `ctx.host.has(feature)` is how a plugin decides what to use.
-6. **Real guarantees** (deprecation windows, an N-1 shim) begin at 1.0.
+The rules are in [stability.md](stability.md). In short:
+
+1. **Two numbers.** The **API level** is `api = 1` in the manifest (`api = 0`, the level before 1.0, still loads with a warning until 2.0). The **API revision** is the version of the `@vaultdraw/api` package, `1.N.P`; `ctx.host.api.revision` shows it. Its `package.json` has `vaultdraw.minApp`, the first app version that shipped that revision.
+2. **Semver.** A patch fixes, a minor adds or deprecates, a major removes.
+3. **`min_api` and `min_app` are the author's choice.** The app refuses a plugin whose `min_api` or `min_app` is newer than its own. `vaultdraw-plugin check` warns when `min_app` is lower than what the code uses.
+4. **Ask, don't compare versions:** `ctx.host.has(feature)` is how a plugin decides what to use.
+5. **Deprecations** warn in the plugin log and stay until the next major release.
 
 ## The `vaultdraw-plugin` tool
 
@@ -1062,12 +1065,13 @@ The templates are `.tpl` files in `sdk/cli/templates/`; `init` strips the suffix
 | `version-invalid` | error | `version` is not semver |
 | `min-app-invalid` | error | `min_app` is not semver |
 | `main-path-invalid` | error | `main` is not a relative path inside the folder |
-| `api-unsupported` | error | `api` is not a level the app implements (0) |
+| `api-unsupported` | error | `api` is not a level the app implements (1; 0 is accepted with `api-deprecated`) |
+| `min-api-invalid` | error | `min_api` is not semver |
 | `text-invalid` | error | `description` or `author` is too long or not text, or `dev` is not true or false |
 | `activation-unknown` | error | `activation` is not a list, or names an event other than `onStartupFinished` |
 | `permission-invalid` | error | `permissions` is not a list of strings |
 | `permission-unknown` | error | A permission name that does not exist |
-| `permission-reserved` | error | `net`, `secret` or `control`: reserved for later |
+| `permission-reserved` | error | `net` or `secret`: reserved for later |
 | `permission-duplicate` | error | The same permission twice |
 | `permission-too-many` | error | More than 8 permissions |
 | `dev-true` | error | `dev = true` in a plugin you ship; `vaultdraw-plugin dev` adds it to the installed copy |
@@ -1083,6 +1087,7 @@ The templates are `.tpl` files in `sdk/cli/templates/`; `init` strips the suffix
 | `bundle-large` | warning | `main` is over 100 KB |
 | `min-app-low` | warning | `min_app` is lower than the first app version with the API the code uses (best effort: it looks for `ctx.<area>` in the code) |
 | `readme-missing` | warning | No `README.md` |
+| `api-deprecated` | warning | `api = 0`: it still loads, set `api = 1` |
 | `zip-checksum` | error | Zip only: the file does not match its `.sha256` file, or that file holds no checksum |
 | `zip-invalid` | error | Zip only: the archive breaks the strict reader's rules (see [packaging.md](packaging.md#check-a-zip)) |
 | `zip-layout` | error | Zip only: `plugin.toml` is inside a single top folder instead of at the zip root |

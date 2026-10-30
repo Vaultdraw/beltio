@@ -1,7 +1,7 @@
 id = "stamp"
 name = "Stamp"
 version = "0.1.0"
-api = 0
+api = 1
 main = "main.js"
 description = "Example: commands that stamp a sticky note or a small flow onto the open drawing in one undo step"
 author = "Vaultdraw"

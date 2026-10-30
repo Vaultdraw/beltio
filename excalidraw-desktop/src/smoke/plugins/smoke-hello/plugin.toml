@@ -1,7 +1,7 @@
 id = "smoke-hello"
 name = "Smoke Hello"
 version = "0.1.0"
-api = 0
+api = 1
 main = "main.js"
 description = "Packaged smoke fixture"
 

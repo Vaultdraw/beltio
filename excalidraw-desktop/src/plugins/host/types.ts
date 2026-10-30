@@ -20,6 +20,8 @@ export interface PluginInfo {
   version: string;
   api: number;
   minApp: string | null;
+  /** The oldest API revision the plugin needs (`min_api`), or null. */
+  minApi: string | null;
   main: string;
   description: string | null;
   author: string | null;
