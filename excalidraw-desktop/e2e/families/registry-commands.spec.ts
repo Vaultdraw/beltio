@@ -48,6 +48,12 @@ const SKIP: { match: RegExp; reason: string }[] = [
       "only offered in a state this family does not build (history panel with a checkpoint, theme browser open, a conflict or read-only banner, an active search, list focus, snippets on); covered by the hotkeys family or their own specs",
   },
   {
+    match:
+      /^(memory\.freeUnusedImages|sync\.(compareWithConflictCopy|keepThis|keepOther))$/,
+    reason:
+      "offered only with unused images in memory or a conflict copy beside the file; not built here",
+  },
+  {
     match: /^vault\.(backup|restoreBackup)$/,
     reason: "writes a backup outside the vault or opens a native picker",
   },
