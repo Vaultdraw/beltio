@@ -55,10 +55,6 @@ test("narrow window: open and close the overlay, then widen: the file list is ba
 test("narrow window: clicking the open drawing in the overlay closes it", async ({
   page,
 }) => {
-  test.fail(
-    true,
-    "toimprove M-2: the overlay closes only when the open path changes",
-  );
   const errors = trackErrors(page);
   await page.setViewportSize({ width: 480, height: 700 });
   await openVault(page);
@@ -77,10 +73,6 @@ test("narrow window: clicking the open drawing in the overlay closes it", async 
 test("narrow window: renaming the open drawing in the overlay keeps the overlay open", async ({
   page,
 }) => {
-  test.fail(
-    true,
-    "toimprove M-3: a rename of the open file closes the overlay",
-  );
   const errors = trackErrors(page);
   await page.setViewportSize({ width: 480, height: 700 });
   await openVault(page);
@@ -126,10 +118,6 @@ test("narrow window: Escape on a row menu in the overlay closes the menu, not th
 test("narrow window: Escape in the overlay's search box clears the query and keeps the list", async ({
   page,
 }) => {
-  test.fail(
-    true,
-    "toimprove M-6: one Escape clears the search and closes the overlay",
-  );
   const errors = trackErrors(page);
   await page.setViewportSize({ width: 480, height: 700 });
   await openVault(page);

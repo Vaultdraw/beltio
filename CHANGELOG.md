@@ -16,6 +16,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Narrow window: the file list overlay behaves like Obsidian's drawer.** Picking the drawing that is already open closes it, renaming the open drawing keeps it open, and one Escape in its search box clears the query and keeps the list (the next Escape closes the list).
 - **A picked text colour on a heading now sticks on every path.** Paste styles and the eyedropper used to leave a heading in the theme's colour; and a heading made plain text and a heading again no longer keeps an old pick forever.
 - **Narrow window: closing the file list overlay no longer hides the list in a wide window.** The overlay is now a state of the narrow window only, so widening brings the docked list back (toimprove 247).
 - **The narrow-window file list takes its shadow and backdrop from the theme.** They were fixed black values a theme could not restyle; they now use the same tokens as menus and dialogs (toimprove 273).

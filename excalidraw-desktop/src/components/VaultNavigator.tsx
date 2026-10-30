@@ -529,16 +529,35 @@ export const VaultNavigator = ({
     onOpenNote,
     onToggleFolder,
     onSyncAction,
+    overlay,
+    onToggleCollapse,
+    activePath,
   });
-  live.current = { onOpenDrawing, onOpenNote, onToggleFolder, onSyncAction };
-  /** Opens a file row by its kind: drawings and Obsidian Excalidraw files as drawings, notes via the notes hook. */
+  live.current = {
+    onOpenDrawing,
+    onOpenNote,
+    onToggleFolder,
+    onSyncAction,
+    overlay,
+    onToggleCollapse,
+    activePath,
+  };
+  /**
+   * Opens a file row by its kind: drawings and Obsidian Excalidraw files as drawings, notes via the
+   * notes hook. In the narrow overlay, picking the file that is already open closes the overlay
+   * (the overlay only closes by itself when the open file changes).
+   */
   const openEntry = useCallback(
     (path: string, kind: EntryKind, newTab?: boolean) => {
       const opts = newTab ? { target: "new" as const } : undefined;
+      const current = live.current;
+      if (current.overlay && path === current.activePath) {
+        current.onToggleCollapse();
+      }
       if (kind === "note") {
-        void live.current.onOpenNote?.(path, opts);
+        void current.onOpenNote?.(path, opts);
       } else {
-        void live.current.onOpenDrawing(path, opts);
+        void current.onOpenDrawing(path, opts);
       }
     },
     [],
@@ -836,7 +855,9 @@ export const VaultNavigator = ({
             onKeyDown={(e) => {
               if (e.key === "Escape") {
                 // First Escape clears the query, the next one leaves the box.
+                // preventDefault keeps the narrow overlay's Escape listener from closing the list too.
                 if (searchQuery) {
+                  e.preventDefault();
                   setSearchQuery("");
                 } else {
                   e.currentTarget.blur();

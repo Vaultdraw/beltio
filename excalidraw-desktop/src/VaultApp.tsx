@@ -2474,11 +2474,12 @@ export const VaultApp = ({
   const navigatorHidden = !layout.shown.navigator;
   // Narrow window: the file list is an overlay; Esc or opening a file closes it.
   const navigatorOverlay = layout.narrow && !navigatorHidden;
+  // The document id, not the path: a rename keeps the id, so it does not count as opening a file.
   useNavigatorOverlay(
     doc,
     navigatorOverlay,
     handleToggleNavigator,
-    activeDoc?.path ?? plainNote,
+    activeDoc?.id ?? plainNote,
   );
   const editorRestore = useMemo(
     () =>
