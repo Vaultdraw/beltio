@@ -19,6 +19,7 @@ export const MARKDOWN_FIELDS = [
   "markdownH6Size",
   "markdownBlockGap",
   "markdownHeadingBold",
+  "markdownInlineStyles",
 ] as const;
 export type MarkdownField = typeof MARKDOWN_FIELDS[number];
 
@@ -39,6 +40,8 @@ export interface MarkdownPreferences {
   markdownBlockGap: number;
   /** markdown.heading_bold: headings in the bold variant of the text's font. */
   markdownHeadingBold: boolean;
+  /** markdown.inline_styles: a box that is entirely **bold** or `code` takes that look. */
+  markdownInlineStyles: boolean;
 }
 
 const SIZE_FIELDS = [
@@ -60,6 +63,7 @@ export const MARKDOWN_DEFAULTS: MarkdownPreferences = {
   markdownH6Size: DEFAULT_HEADING_SCALES[5],
   markdownBlockGap: DEFAULT_BLOCK_GAP,
   markdownHeadingBold: true,
+  markdownInlineStyles: true,
 };
 
 const isBool = (v: unknown): v is boolean => typeof v === "boolean";
@@ -78,6 +82,7 @@ const VALID: Record<MarkdownField, (v: unknown) => boolean> = {
   markdownH6Size: inRange(HEADING_SIZE_LIMITS),
   markdownBlockGap: inRange(BLOCK_GAP_LIMITS),
   markdownHeadingBold: isBool,
+  markdownInlineStyles: isBool,
 };
 
 export const MARKDOWN_MAPPINGS: readonly ConfigMapping[] = [
@@ -107,6 +112,12 @@ export const MARKDOWN_MAPPINGS: readonly ConfigMapping[] = [
     expected: "true or false",
     valid: isBool,
   },
+  {
+    field: "markdownInlineStyles",
+    key: "markdown.inline_styles",
+    expected: "true or false",
+    valid: isBool,
+  },
 ];
 
 /** Stored preferences -> valid Markdown fields; bad ones default. */
@@ -128,4 +139,5 @@ export const typingSettingsFrom = (
   headingScales: SIZE_FIELDS.map((f) => prefs[f]),
   blockGap: prefs.markdownBlockGap,
   headingBold: prefs.markdownHeadingBold,
+  inlineStyles: prefs.markdownInlineStyles,
 });

@@ -34,6 +34,7 @@ function harness(
     on?: boolean;
     isLabel?: boolean;
     headingBold?: boolean;
+    inlineStyles?: boolean;
     color?: string;
   } = {},
 ) {
@@ -63,6 +64,7 @@ function harness(
     getSettings: () => ({
       ...DEFAULT_MARKDOWN_TYPING_SETTINGS,
       headingBold: opts.headingBold ?? true,
+      inlineStyles: opts.inlineStyles ?? true,
     }),
   });
   const textarea = document.createElement("textarea");
@@ -713,5 +715,147 @@ describe("Markdown typing: the user's text colour (toimprove 162)", () => {
     expect(head.lineHeight).toBe(1.5);
     expect(head.fontFamily).toBe(108); // the bold face of Comic Shanns
     expect(body.fontFamily).toBe(8);
+  });
+});
+
+describe("Markdown typing: inline marks of a whole box", () => {
+  it("**Bold** makes the box bold and the marks go", () => {
+    const h = harness();
+    h.type("**Bold**");
+    expect(h.textarea.value).toBe("Bold");
+    expect(h.current().fontFamily).toBe(105);
+    expect(h.textarea.selectionStart).toBe(4);
+  });
+
+  it("`code` makes the box code (Cascadia) and the marks go", () => {
+    const h = harness();
+    h.type("`npm run`");
+    expect(h.textarea.value).toBe("npm run");
+    expect(h.current().fontFamily).toBe(3);
+  });
+
+  it("text typed after it stays bold", () => {
+    const h = harness();
+    h.type("**Bold** more");
+    expect(h.textarea.value).toBe("Bold more");
+    expect(h.current().fontFamily).toBe(105);
+  });
+
+  it.each([
+    ["an unmatched **", "**Bold", "**Bold"],
+    ["one star (italic start)", "*it*", "*it*"],
+    ["text before the marks", "a **b**", "a **b**"],
+    ["a space inside", "** b **", "** b **"],
+    ["nested marks", "**a*b**", "**a*b**"],
+    ["empty", "****", "****"],
+    ["a code fence", "```", "```"],
+    ["a space after the backtick", "` x`", "` x`"],
+  ])("%s stays literal", (_n, typed, expected) => {
+    const h = harness();
+    h.type(typed);
+    expect(h.textarea.value).toBe(expected);
+    expect(h.current().fontFamily).toBe(5);
+  });
+
+  it("marks inside a code box stay literal", () => {
+    const h = harness();
+    h.type("`a **b** c`");
+    // the closing backtick turns the whole box into code; the stars are its text
+    expect(h.textarea.value).toBe("a **b** c");
+    expect(h.current().fontFamily).toBe(3);
+  });
+
+  it("only the last line is not enough: a box with other lines stays literal", () => {
+    const h = harness();
+    h.type("one");
+    h.press("Enter");
+    h.type("**two**");
+    expect(h.textarea.value).toBe("one\n**two**");
+    expect(h.current().fontFamily).toBe(5);
+  });
+
+  it("a bold box over several lines", () => {
+    const h = harness();
+    h.type("**one");
+    h.press("Enter");
+    h.type("two**");
+    expect(h.textarea.value).toBe("one\ntwo");
+    expect(h.current().fontFamily).toBe(105);
+  });
+
+  it("Cmd+Z right after brings the marks and the font back", () => {
+    const h = harness();
+    h.type("**Bold**");
+    h.press("z", { metaKey: true });
+    expect(h.textarea.value).toBe("**Bold**");
+    expect(h.current().fontFamily).toBe(5);
+  });
+
+  it("a heading keeps its font and loses only the marks", () => {
+    const h = harness();
+    h.type("# **Title**");
+    expect(h.textarea.value).toBe("Title");
+    expect(h.current().customData).toMatchObject({ role: "h1" });
+    expect(h.current().fontFamily).toBe(105);
+  });
+
+  it("code inside a heading stays literal", () => {
+    const h = harness();
+    h.type("# `x`");
+    expect(h.textarea.value).toBe("`x`");
+  });
+
+  it("a bold box in a bold family without a bold face keeps its font", () => {
+    const h = harness();
+    h.current().fontFamily = 7;
+    h.type("**Big**");
+    expect(h.textarea.value).toBe("Big");
+    expect(h.current().fontFamily).toBe(7);
+  });
+
+  it("markdown.inline_styles off: nothing converts", () => {
+    const h = harness({ inlineStyles: false });
+    h.type("**Bold** `c`");
+    expect(h.textarea.value).toBe("**Bold** `c`");
+    expect(h.current().fontFamily).toBe(5);
+  });
+
+  it("mode off: nothing converts", () => {
+    const h = harness({ on: false });
+    h.type("**Bold**");
+    expect(h.textarea.value).toBe("**Bold**");
+  });
+
+  it("with a selection the star types normally", () => {
+    const h = harness();
+    h.type("**Bold*");
+    h.textarea.setSelectionRange(0, 2);
+    h.press("*");
+    expect(h.textarea.value).toBe("*Bold*");
+  });
+
+  it("the caret in the middle: no conversion", () => {
+    const h = harness();
+    h.type("**Bold*");
+    h.textarea.setSelectionRange(3, 3);
+    h.press("*");
+    expect(h.textarea.value).toBe("**B*old*");
+  });
+
+  it("CJK and emoji inside bold", () => {
+    const h = harness();
+    h.type("**标题 😀**");
+    expect(h.textarea.value).toBe("标题 😀");
+    expect(h.current().fontFamily).toBe(105);
+  });
+
+  it("Toggle bold while editing flips the box between bold and regular", async () => {
+    const { toggleBoldInEditor } = await import("./markdownTyping");
+    const h = harness();
+    h.type("hello");
+    expect(toggleBoldInEditor()).toBe(true);
+    expect(h.current().fontFamily).toBe(105);
+    expect(toggleBoldInEditor()).toBe(true);
+    expect(h.current().fontFamily).toBe(5);
   });
 });

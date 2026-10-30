@@ -80,6 +80,26 @@ const BoldSetting = () => {
   );
 };
 
+const InlineSetting = () => {
+  const { win } = useSettings();
+  const on = usePref(win, "markdownInlineStyles");
+  return (
+    <SettingRow
+      id="markdown-inline-styles"
+      htmlFor="vault-markdown-inline-styles"
+      testId="setting-markdown-inline-styles"
+    >
+      <Switch
+        id="vault-markdown-inline-styles"
+        checked={on}
+        onChange={(next) =>
+          updatePreferences({ markdownInlineStyles: next }, win)
+        }
+      />
+    </SettingRow>
+  );
+};
+
 const GapSetting = () => {
   const { win } = useSettings();
   const value = usePref(win, "markdownBlockGap");
@@ -107,4 +127,5 @@ export const markdownControls: SettingControls = {
   ),
   "markdown-block-gap": { Component: GapSetting },
   "markdown-heading-bold": { Component: BoldSetting },
+  "markdown-inline-styles": { Component: InlineSetting },
 };

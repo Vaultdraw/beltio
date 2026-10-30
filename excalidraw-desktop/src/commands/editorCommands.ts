@@ -113,6 +113,13 @@ export const EDITOR_COMMANDS: readonly CommandDefinition[] = [
     when: ["drawingOpen", "writable"],
   },
   {
+    id: "markdown.toggleBold",
+    title: "Markdown: Toggle bold",
+    category: "Markdown",
+    keys: { default: ["Mod+B"] },
+    when: ["drawingOpen", "writable"],
+  },
+  {
     id: "library.toggle",
     title: "Library: Open/close",
     category: "Library",

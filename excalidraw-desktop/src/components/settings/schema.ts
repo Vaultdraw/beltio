@@ -653,6 +653,15 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     keywords: ["markdown", "heading", "bold", "font", "weight"],
     configKey: "markdown.heading_bold",
   },
+  {
+    id: "markdown-inline-styles",
+    page: "drawing",
+    label: "Bold and code boxes",
+    description:
+      "In Markdown mode, a text box that is all bold (between two stars) or all code (between backticks) turns bold or monospaced when you type the closing mark, and the marks go.",
+    keywords: ["markdown", "bold", "code", "inline", "asterisks", "backtick"],
+    configKey: "markdown.inline_styles",
+  },
 
   // ---- Tools: pen and laser (page was "Pens & laser") ----
   {

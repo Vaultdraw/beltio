@@ -1080,7 +1080,9 @@ Type Markdown on the canvas, like in Obsidian or Notion. With Markdown mode on, 
 | `1. ` | A numbered item; Enter starts `2. `, and so on. |
 | `[ ] `, `- [ ] `, `[x] ` | A task `☐ ` or a done task `☑ `. **Markdown: Toggle task** (Cmd+L, rebindable) ticks or unticks the task on the caret's line, or the first task of the selected text. |
 | Backspace right after a list marker | The marker goes; the text stays. |
-| Cmd+Z right after a conversion | The typed marks (`# `, `> `, `- `) come back as plain text. |
+| `**text**` as the whole box | When you type the closing `**`, the marks go and the box is drawn in the bold variant of its font, as the Markdown import draws a note's all-bold paragraph. In a heading only the marks go (it is bold already). |
+| `` `text` `` as the whole box | When you type the closing backtick, the marks go and the box is drawn in Cascadia (a monospaced font). Marks inside it, like `**`, stay plain text. |
+| Cmd+Z right after a conversion | The typed marks (`# `, `> `, `- `, `**`) come back as plain text. |
 
 - **Per drawing.** Each drawing has its own switch: the **Markdown** button at the bottom of the canvas, or the palette command `Markdown mode: On or off` (Cmd+Alt+M, rebindable on the Hotkeys page). The switch is saved in the drawing. New drawings follow `typing` in `[markdown]` (**Settings → Drawing → Markdown**).
 - **Mode off.** Headings you already have stay as they are; new `#` stays plain text.
@@ -1090,7 +1092,8 @@ Type Markdown on the canvas, like in Obsidian or Notion. With Markdown mode on, 
 - **Colours come from the theme:** headings in the theme's `markdown.h1` … `h6` colours (or derived from its accents), quotes in the muted grey an imported quote gets, each made readable (at least 4.5:1) when the canvas shown is not the theme's page. A colour you pick on a heading afterwards is kept.
 - **Your text defaults carry over.** A heading, list or quote starts from the text tool's defaults (**Settings → Tools → Text**): its font (headings use the bold face of it), size (headings are `h1_size` … times it), alignment, line height and opacity. Your default text colour is the colour of normal text only: headings and quotes are drawn in the theme's Markdown colours, like Obsidian's `--h1-color`, so a green text default does not turn every heading green. The file remembers your colour (`customData.roleBase`) so a heading turned back into normal text keeps it.
 - **In page mode a text wraps at the page's edge.** A free text you type stays inside the page (it wraps instead of growing past the edge or jumping sideways), in or out of Markdown mode. Outside page mode the text still wraps at the edge of the view.
-- Bold, italic and inline code come later.
+- **Bold and code boxes (`inline_styles`).** An Excalidraw text has one font, so bold and code apply to a whole box, not to words inside a sentence: `**Bold**` typed alone in a box, or `` `code` `` alone in a box. A box with anything else around the marks, an unmatched `**`, a space just inside the marks, a selection, or the caret in the middle of the text stays as typed. Italic and bold words inside a sentence need mixed fonts in one text and come later. `inline_styles = false` turns this off.
+- **Markdown: Toggle bold** (Cmd+B, rebindable) flips the box being edited, or every selected text, between bold and its regular font. It works with the mode off too.
 
 ## Tool defaults
 
@@ -2099,6 +2102,7 @@ Markdown mode for typing on the canvas: `# ` at the start of a line makes a head
 | `h6_size` | `1` | a number from 0.5 to 8 (times the text size) |  | Heading 6 size, as a multiple of the text size. |
 | `block_gap` | `0.5` | a number from 0 to 4 (lines) |  | Space between a heading and the text box Enter starts below it, in lines. |
 | `heading_bold` | `true` | true or false |  | Headings typed in Markdown mode use the bold variant of the text's font. |
+| `inline_styles` | `true` | true or false |  | In Markdown mode a box that is entirely **bold** or `code` takes that look when you type the closing mark. |
 
 ### `[layout]`
 

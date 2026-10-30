@@ -21,6 +21,10 @@
  *   Enter on an empty item ends the list.
  * - Backspace right after a marker removes it.
  *
+ * Inline marks of a whole box (`markdown.inline_styles`): typing the closing
+ * `**` of a box that is entirely `**text**` makes it bold, a box that is
+ * entirely `` `text` `` code (Cascadia); the marks go (inlineRules.ts).
+ *
  * Cmd/Ctrl+Z right after any conversion brings the typed marks back.
  */
 import { boldFontOf, regularFontOf } from "@excalidraw/common";
@@ -32,6 +36,7 @@ import type {
 } from "@excalidraw/excalidraw/types";
 import type { ExcalidrawTextElement } from "@excalidraw/element/types";
 
+import { inlineFont, matchClosingMark, toggledBoldFont } from "./inlineRules";
 import {
   DEFAULT_BLOCK_GAP,
   DEFAULT_HEADING_SCALES,
@@ -82,12 +87,15 @@ export type MarkdownTypingSettings = {
   blockGap: number;
   /** Headings in the bold variant of the text's font (`markdown.heading_bold`). */
   headingBold: boolean;
+  /** A box that is entirely `**bold**` or `code` takes that look (`markdown.inline_styles`). */
+  inlineStyles: boolean;
 };
 
 export const DEFAULT_MARKDOWN_TYPING_SETTINGS: MarkdownTypingSettings = {
   headingScales: DEFAULT_HEADING_SCALES,
   blockGap: DEFAULT_BLOCK_GAP,
   headingBold: true,
+  inlineStyles: true,
 };
 
 type Conversion =
@@ -182,6 +190,19 @@ const belowAnchor = (
       : el.x;
   const gap = settings.blockGap * bodySize * el.lineHeight;
   return { x, y: el.y + el.height + gap };
+};
+
+/** The open editor session, for the Toggle bold command (null when no text is edited). */
+let activeSession: TextEditorSession | null = null;
+
+/** "Markdown: Toggle bold" while a text is edited: the whole box, bold <-> regular. Returns false when no text is edited. */
+export const toggleBoldInEditor = (): boolean => {
+  const el = activeSession?.getElement();
+  if (!activeSession || !el) {
+    return false;
+  }
+  activeSession.restyle({ fontFamily: toggledBoldFont(el.fontFamily) });
+  return true;
 };
 
 export function createMarkdownTyping(deps: {
@@ -295,6 +316,50 @@ export function createMarkdownTyping(deps: {
         fontFamily: fontFor(el.fontFamily, role, settings),
         customData: withRoleAndBody(undefined, role, el.strokeColor, bodySize),
       });
+      return true;
+    };
+
+    /**
+     * The closing `*` of `**text*` or the backtick of `` `text `` at the end of a box that holds
+     * nothing else: the marks go and the box takes the look (bold variant, or code font).
+     */
+    const closeMark = (key: string): boolean => {
+      const el = session.getElement();
+      const value = editable.value;
+      if (
+        !el ||
+        editable.selectionStart !== value.length ||
+        editable.selectionEnd !== value.length ||
+        !deps.getSettings().inlineStyles
+      ) {
+        return false;
+      }
+      const m = matchClosingMark(value, key);
+      if (!m) {
+        return false;
+      }
+      const heading = headingLevelOf(roleOf(el)) !== null;
+      if (heading && m.kind === "code") {
+        return false;
+      }
+      const style = {
+        fontSize: el.fontSize,
+        fontFamily: el.fontFamily,
+        customData: el.customData,
+      };
+      session.setText(m.inner, m.inner.length);
+      // a heading is bold already: only its marks go
+      if (!heading) {
+        restyle({ fontFamily: inlineFont(el.fontFamily, m.kind) });
+      }
+      lastConversion = {
+        kind: "inPlace",
+        elementId: el.id,
+        after: m.inner,
+        before: value + key,
+        caretBefore: value.length + 1,
+        style,
+      };
       return true;
     };
 
@@ -487,7 +552,13 @@ export function createMarkdownTyping(deps: {
     pendingSplit = null;
     pendingContinue = null;
 
+    activeSession = session;
     return {
+      detach: () => {
+        if (activeSession === session) {
+          activeSession = null;
+        }
+      },
       onKeyDown: (e) => {
         if (e.isComposing || e.keyCode === 229 || !deps.isOn()) {
           return false;
@@ -502,6 +573,13 @@ export function createMarkdownTyping(deps: {
           handled = backspace();
         } else if (mod && e.key.toLowerCase() === "z") {
           handled = undo();
+        } else if (
+          (e.key === "*" || e.key === "`") &&
+          !e.metaKey &&
+          !e.ctrlKey &&
+          !e.altKey
+        ) {
+          handled = closeMark(e.key);
         }
         if (handled) {
           e.preventDefault();

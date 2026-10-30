@@ -1089,6 +1089,19 @@
    "palette": true
   },
   {
+   "id": "markdown.toggleBold",
+   "title": "Markdown: Toggle bold",
+   "category": "Markdown",
+   "keys": [
+    "Mod+B"
+   ],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
    "id": "library.toggle",
    "title": "Library: Open/close",
    "category": "Library",
@@ -4699,6 +4712,13 @@
    "page": "drawing",
    "label": "Bold headings",
    "configKey": "markdown.heading_bold",
+   "section": null
+  },
+  {
+   "id": "markdown-inline-styles",
+   "page": "drawing",
+   "label": "Bold and code boxes",
+   "configKey": "markdown.inline_styles",
    "section": null
   },
   {

@@ -27,6 +27,7 @@ import { toggleFirstTask, toggleTaskInTextarea } from "./taskToggle";
 
 export const MARKDOWN_TOGGLE_COMMAND = "markdown.toggle";
 export const MARKDOWN_TOGGLE_TASK_COMMAND = "markdown.toggleTask";
+export const MARKDOWN_TOGGLE_BOLD_COMMAND = "markdown.toggleBold";
 
 /**
  * ☐ <-> ☑: on the caret's line while a text is edited, else on the first task
@@ -58,6 +59,17 @@ const toggleTask = (
   const next = toggleFirstTask(el.originalText);
   if (next !== null) {
     applyEdits(api, [{ elementId: el.id, field: "text", value: next }]);
+  }
+};
+
+/** Bold <-> regular: the edited box, else every selected text. Works with the mode off too. */
+const toggleBold = async (api: ExcalidrawImperativeAPI | null) => {
+  if (typingModule && (await typingModule).toggleBoldInEditor()) {
+    return;
+  }
+  if (api) {
+    const { toggleBoldSelected } = await import("./boldToggle");
+    await toggleBoldSelected(api);
   }
 };
 
@@ -144,6 +156,11 @@ export function useMarkdownMode({
     () =>
       registerCommandHandlers({
         [MARKDOWN_TOGGLE_COMMAND]: toggle,
+        [MARKDOWN_TOGGLE_BOLD_COMMAND]: () => {
+          if (live.current.isWritable()) {
+            void toggleBold(live.current.getApi());
+          }
+        },
         [MARKDOWN_TOGGLE_TASK_COMMAND]: () => {
           if (live.current.isWritable()) {
             toggleTask(live.current.getApi(), live.current.getContainer());

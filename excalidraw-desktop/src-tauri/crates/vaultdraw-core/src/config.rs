@@ -270,6 +270,8 @@ autosave_delay_ms = 500
 # block_gap = 0.5
 # Headings in the bold variant of the text's font
 # heading_bold = true
+# A box that is entirely **bold** or `code` takes that look when you type the closing mark
+# inline_styles = true
 
 [layout]
 # Show the header above the canvas (title, save status, History, Graph)

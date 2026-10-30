@@ -378,6 +378,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       heading_bold: {
         doc: "Headings typed in Markdown mode use the bold variant of the text's font.",
       },
+      inline_styles: {
+        doc: "In Markdown mode a box that is entirely **bold** or `code` takes that look when you type the closing mark.",
+      },
     },
   },
   {

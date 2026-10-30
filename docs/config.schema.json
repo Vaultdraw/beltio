@@ -1340,6 +1340,11 @@
           "description": "Headings typed in Markdown mode use the bold variant of the text's font.",
           "default": true,
           "type": "boolean"
+        },
+        "inline_styles": {
+          "description": "In Markdown mode a box that is entirely **bold** or `code` takes that look when you type the closing mark.",
+          "default": true,
+          "type": "boolean"
         }
       }
     },
