@@ -28,7 +28,7 @@ describe("statusMessage says what to do, in plain words", () => {
 describe("friendlyError", () => {
   it.each([
     ["NETWORK_DISABLED", /Offline mode is on, so nothing was sent/],
-    ["NETWORK_NOT_ALLOWED", /turned off in Settings/],
+    ["NETWORK_NOT_ALLOWED", /turned off by network\.allow_ai/],
     ["SECRET_MISSING", /No API key is saved/],
     ["NETWORK_TIMEOUT", /did not answer in time/],
     ["NETWORK_ERROR", /Could not reach/],

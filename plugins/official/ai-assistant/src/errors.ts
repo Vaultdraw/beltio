@@ -49,7 +49,7 @@ export function friendlyError(err: unknown, provider: ProviderId): string {
     case "NETWORK_DISABLED":
       return "Offline mode is on, so nothing was sent. Turn Offline mode off in Settings, or use a model on this computer (Ollama).";
     case "NETWORK_NOT_ALLOWED":
-      return "AI requests are turned off in Settings (network).";
+      return "AI requests are turned off by network.allow_ai in your config file. Remove it or set it to true.";
     case "SECRET_MISSING":
       return `No API key is saved. Use "AI: Set API key" to add one.`;
     case "NETWORK_TIMEOUT":

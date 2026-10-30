@@ -47,10 +47,13 @@ pub(crate) fn check_consent(config: Option<&Value>, purpose: &str) -> Result<()>
         Some(v) => v.as_bool() == Some(true),
     };
     if !allowed {
-        return Err(err(
-            "NETWORK_NOT_ALLOWED",
-            format!("Downloading {} is turned off in Settings.", purpose_phrase(purpose)),
-        ));
+        // `allow_ai` has no Settings switch: say where it is (toimprove 278)
+        let message = if purpose == "ai" {
+            "AI requests are turned off by network.allow_ai in your config file. Remove it or set it to true.".to_string()
+        } else {
+            format!("Downloading {} is turned off in Settings.", purpose_phrase(purpose))
+        };
+        return Err(err("NETWORK_NOT_ALLOWED", message));
     }
     Ok(())
 }

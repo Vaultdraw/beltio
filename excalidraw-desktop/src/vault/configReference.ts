@@ -675,6 +675,10 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
         doc: "`false` turns web pictures off (imported and pasted pictures stay boxes). Absent or `true` shows them.",
         default: "true",
       },
+      allow_ai: {
+        doc: "`false` turns AI requests off: the AI assistant plugin sends nothing, and says so. A model on this computer (Ollama) is not affected. Absent or `true` allows them. No Settings switch: use Offline mode to turn off every internet feature.",
+        default: "true",
+      },
       allow_updates: {
         doc: "`false` turns the update check off. Absent or `true` allows it.",
         default: "true",

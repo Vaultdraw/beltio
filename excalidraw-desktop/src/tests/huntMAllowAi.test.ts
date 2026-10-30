@@ -20,23 +20,21 @@ describe("network.allow_ai is a documented, visible switch (toimprove M-19)", ()
     expect(read("excalidraw-desktop/src-tauri/src/plugins/net.rs")).toContain(
       'const PURPOSE: &str = "ai";',
     );
+    // since 278 it names the key, because there is no Settings switch
     expect(read("plugins/official/ai-assistant/src/errors.ts")).toContain(
-      "turned off in Settings",
+      "turned off by network.allow_ai",
     );
     // Its siblings are documented.
     expect(read("docs/configuration.md")).toContain("network.allow_plugins");
   });
 
-  it.fails("docs/configuration.md documents network.allow_ai", () => {
+  it("docs/configuration.md documents network.allow_ai", () => {
     expect(read("docs/configuration.md")).toContain("allow_ai");
   });
 
-  it.fails(
-    "the key reference lists it (so Settings and the docs guard know it)",
-    () => {
-      expect(read("excalidraw-desktop/src/vault/configReference.ts")).toMatch(
-        /\ballow_ai\s*:/,
-      );
-    },
-  );
+  it("the key reference lists it (so Settings and the docs guard know it)", () => {
+    expect(read("excalidraw-desktop/src/vault/configReference.ts")).toMatch(
+      /\ballow_ai\s*:/,
+    );
+  });
 });
