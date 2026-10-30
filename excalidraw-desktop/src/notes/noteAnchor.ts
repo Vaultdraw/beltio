@@ -57,7 +57,10 @@ export function findAnchorElement(
         own = el.cloneNode(true) as HTMLElement;
         own.querySelectorAll("ul, ol").forEach((n) => n.remove());
       }
-      if (` ${(own.textContent ?? "").trimEnd()}`.endsWith(marker)) {
+      if (
+        own.querySelector(`[data-block-id="${CSS.escape(anchor.block)}"]`) ||
+        ` ${(own.textContent ?? "").trimEnd()}`.endsWith(marker)
+      ) {
         return el;
       }
     }

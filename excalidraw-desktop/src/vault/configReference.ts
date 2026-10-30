@@ -355,6 +355,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       math: {
         doc: "Render `$…$` and `$$…$$` as formulas in the reading view.",
       },
+      strict_line_breaks: {
+        doc: 'Obsidian\'s "Strict line breaks". Off, a single newline inside a paragraph is a line break in the reading view; on, it joins the lines (a blank line starts a new paragraph).',
+      },
       remote_images: {
         doc: "Show images from `http(s)` addresses in the reading view. Off, or Offline mode on, shows the alt text instead.",
       },

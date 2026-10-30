@@ -25,6 +25,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **The note reading view reads like Obsidian** (toimprove 185). A single newline is a line break (new `notes.strict_line_breaks`, off, is Obsidian's setting), `%%comments%%` and trailing `^block-ids` are hidden, and `[^1]` footnotes become numbered links with a list at the end.
 - **Every checkbox in a note ticks, even when the note holds a task-shaped example** (toimprove 186). An example in indented code, an HTML comment or a math block used to make every checkbox refuse ("Couldn't match that checkbox"); positions now come from the reading view's own parse.
 - **Enter or Backspace on an imported heading gives the note's body size** (toimprove 187). The import now remembers each heading's body size, and older imported headings are divided by the import's own steps (1.8, 1.6, 1.4, …) instead of the typing defaults, so h1 from a 16 px note gives 16 px, not 14.5.
 - **`![alt|100](pic.png)` is sized in a note's reading view,** as in Obsidian (`|100x50` sets width and height too); it used to keep `alt|100` as the alt text at full size.

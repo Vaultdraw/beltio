@@ -16,6 +16,7 @@ export const NOTES_FIELDS = [
   "notesAutosaveMs",
   "notesHighlightCode",
   "notesMath",
+  "notesStrictLineBreaks",
   "notesRemoteImages",
   "notesToggleTasks",
 ] as const;
@@ -43,6 +44,8 @@ export interface NotesPreferences {
   notesHighlightCode: boolean;
   /** Render `$…$` and `$$…$$` as formulas. */
   notesMath: boolean;
+  /** Obsidian's "Strict line breaks": off, a single newline in a paragraph is a line break. */
+  notesStrictLineBreaks: boolean;
   /** Load images from http(s) addresses. Off keeps the note fully offline. */
   notesRemoteImages: boolean;
   /** Tick task checkboxes in the reading view (written through the guarded save). */
@@ -59,6 +62,7 @@ export const NOTES_DEFAULTS: NotesPreferences = {
   notesAutosaveMs: 800,
   notesHighlightCode: true,
   notesMath: true,
+  notesStrictLineBreaks: false,
   notesRemoteImages: true,
   notesToggleTasks: true,
 };
@@ -81,6 +85,7 @@ const VALID: Record<NotesField, (v: unknown) => boolean> = {
   notesAutosaveMs: ints(NOTES_AUTOSAVE_MS),
   notesHighlightCode: isBool,
   notesMath: isBool,
+  notesStrictLineBreaks: isBool,
   notesRemoteImages: isBool,
   notesToggleTasks: isBool,
 };
@@ -129,6 +134,7 @@ export const NOTES_MAPPINGS: readonly ConfigMapping[] = [
   ),
   bool("notesHighlightCode", "notes.highlight_code"),
   bool("notesMath", "notes.math"),
+  bool("notesStrictLineBreaks", "notes.strict_line_breaks"),
   bool("notesRemoteImages", "notes.remote_images"),
   bool("notesToggleTasks", "notes.toggle_tasks"),
 ];

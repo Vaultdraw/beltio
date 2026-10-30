@@ -15,6 +15,8 @@ import { highlightCode } from "./highlight";
 import type { Token, Tokens, TokenizerAndRendererExtension } from "marked";
 
 export interface RenderContext {
+  /** Obsidian's "Strict line breaks", off by default: a single newline in a paragraph is a line break. */
+  strictLineBreaks?: boolean;
   /** Vault path a `[[target]]` points to, or null when it does not exist. */
   resolve: (target: string) => string | null;
   highlight: boolean;
@@ -203,11 +205,142 @@ const blockMath: TokenizerAndRendererExtension = {
   },
 };
 
+/** `%%comment%%` (on one line, or a block of lines between two `%%`): hidden, as in Obsidian. */
+const commentBlock: TokenizerAndRendererExtension = {
+  name: "notecommentblock",
+  level: "block",
+  start: (src) => src.indexOf("%%"),
+  tokenizer(src) {
+    const m = /^%%[ \t]*\n[\s\S]*?\n?%%[ \t]*(?:\n|$)/.exec(src);
+    return m ? { type: "notecommentblock", raw: m[0] } : undefined;
+  },
+  renderer: () => "",
+};
+
+const commentInline: TokenizerAndRendererExtension = {
+  name: "notecomment",
+  level: "inline",
+  start: (src) => src.indexOf("%%"),
+  tokenizer(src) {
+    const m = /^%%[\s\S]+?%%/.exec(src);
+    return m ? { type: "notecomment", raw: m[0] } : undefined;
+  },
+  renderer: () => "",
+};
+
+/** A trailing ` ^block-id` (the target of `[[note#^id]]`): the marker is not shown. */
+const blockId: TokenizerAndRendererExtension = {
+  name: "noteblockid",
+  level: "inline",
+  start: (src) => {
+    const m = /(?:^|[ \t])\^[A-Za-z0-9-]+[ \t]*(?:\n|$)/.exec(src);
+    return m ? src.indexOf("^", m.index) : -1;
+  },
+  tokenizer(src) {
+    const m = /^\^[A-Za-z0-9-]+[ \t]*(?=\n|$)/.exec(src);
+    return m
+      ? { type: "noteblockid", raw: m[0], id: m[0].slice(1).trim() }
+      : undefined;
+  },
+  // An empty marker keeps the target of `[[note#^id]]` findable (noteAnchor.ts) without showing it.
+  renderer: (token) =>
+    `<span class="note-block-id" data-block-id="${esc(
+      (token as unknown as { id: string }).id,
+    )}"></span>`,
+};
+
+/** Footnotes: `[^id]` references numbered in order, and `[^id]: text` definitions listed at the end. */
+interface Footnotes {
+  defs: Map<string, string>;
+  order: string[];
+}
+let notes: Footnotes = { defs: new Map(), order: [] };
+
+const footnoteDef: TokenizerAndRendererExtension = {
+  name: "footnotedef",
+  level: "block",
+  start: (src) => {
+    const m = /(?:^|\n)\[\^[^\]\s]+\]:/.exec(src);
+    return m ? m.index + (src[m.index] === "\n" ? 1 : 0) : -1;
+  },
+  tokenizer(src) {
+    const m =
+      /^\[\^([^\]\s]+)\]:[ \t]*([^\n]*(?:\n(?: {2,}|\t)[^\n]*)*)(?:\n|$)/.exec(
+        src,
+      );
+    return m
+      ? {
+          type: "footnotedef",
+          raw: m[0],
+          id: m[1],
+          body: m[2].replace(/\n[ \t]+/g, " ").trim(),
+        }
+      : undefined;
+  },
+  renderer(token) {
+    const t = token as unknown as { id: string; body: string };
+    notes.defs.set(t.id, t.body);
+    return "";
+  },
+};
+
+const footnoteRef: TokenizerAndRendererExtension = {
+  name: "footnoteref",
+  level: "inline",
+  start: (src) => src.indexOf("[^"),
+  tokenizer(src) {
+    const m = /^\[\^([^\]\s]+)\](?!:)/.exec(src);
+    return m ? { type: "footnoteref", raw: m[0], id: m[1] } : undefined;
+  },
+  renderer(token) {
+    const id = (token as unknown as { id: string }).id;
+    let n = notes.order.indexOf(id) + 1;
+    if (n === 0) {
+      notes.order.push(id);
+      n = notes.order.length;
+    }
+    return `<sup class="footnote-ref"><a href="#fn-${esc(id)}" id="fnref-${esc(
+      id,
+    )}" data-footnote="fn-${esc(id)}">${n}</a></sup>`;
+  },
+};
+
+/** The footnotes list for the references that have a definition; empty when there are none. */
+const footnotesHtml = (): string => {
+  const items = notes.order
+    .filter((id) => notes.defs.has(id))
+    .map(
+      (id) =>
+        `<li id="fn-${esc(id)}">${
+          marked.parseInline(notes.defs.get(id)!) as string
+        } <a href="#fnref-${esc(
+          id,
+        )}" class="footnote-back" data-footnote="fnref-${esc(
+          id,
+        )}">\u21a9</a></li>`,
+    );
+  return items.length
+    ? `<section class="footnotes"><hr><ol>${items.join("")}</ol></section>\n`
+    : "";
+};
+
 const CALLOUT = /^\[!([\w-]+)\]([+-]?)[ \t]*([^\n]*)(?:\n|$)/;
 
 const marked = new Marked({ gfm: true, breaks: false });
 marked.use({
-  extensions: [blockMath, embed, wikilink, tag, highlight, inlineMath],
+  extensions: [
+    commentBlock,
+    footnoteDef,
+    blockMath,
+    embed,
+    wikilink,
+    footnoteRef,
+    commentInline,
+    blockId,
+    tag,
+    highlight,
+    inlineMath,
+  ],
   renderer: {
     heading({ tokens, depth, text }: Tokens.Heading) {
       return `<h${depth} id="${esc(slug(text))}">${this.parser.parseInline(
@@ -296,9 +429,15 @@ export function lexNote(
 /** Unsafe HTML for `text`; always sanitise before use. */
 export function renderNoteHtml(text: string, context: RenderContext): string {
   ctx = context;
+  notes = { defs: new Map(), order: [] };
   try {
-    return marked.parse(stripFrontmatter(text), { async: false }) as string;
+    const html = marked.parse(stripFrontmatter(text), {
+      async: false,
+      breaks: context.strictLineBreaks !== true,
+    }) as string;
+    return html + footnotesHtml();
   } finally {
+    notes = { defs: new Map(), order: [] };
     ctx = { resolve: () => null, highlight: true, math: true };
   }
 }

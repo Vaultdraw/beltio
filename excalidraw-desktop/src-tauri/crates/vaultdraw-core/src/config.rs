@@ -253,6 +253,8 @@ autosave_delay_ms = 500
 # highlight_code = true
 # Render $...$ and $$...$$ as formulas
 # math = true
+# Obsidian's Strict line breaks: off, a single newline in a paragraph is a line break in the reading view
+# strict_line_breaks = false
 # Show images from http(s) addresses in the reading view (false, or Offline mode, shows the alt text)
 # remote_images = true
 # Tick task checkboxes by clicking them in the reading view
@@ -1739,7 +1741,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 170, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 171, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();

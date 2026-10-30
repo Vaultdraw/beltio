@@ -1275,6 +1275,11 @@
           "default": true,
           "type": "boolean"
         },
+        "strict_line_breaks": {
+          "description": "Obsidian's \"Strict line breaks\". Off, a single newline inside a paragraph is a line break in the reading view; on, it joins the lines (a blank line starts a new paragraph).",
+          "default": false,
+          "type": "boolean"
+        },
         "remote_images": {
           "description": "Show images from `http(s)` addresses in the reading view. Off, or Offline mode on, shows the alt text instead.",
           "default": true,

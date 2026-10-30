@@ -231,6 +231,7 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
         resolve: (t) => links.resolve(path, t),
         highlight: prefs.notesHighlightCode,
         math: prefs.notesMath,
+        strictLineBreaks: prefs.notesStrictLineBreaks,
       }),
       { remoteImages },
     );
@@ -242,6 +243,7 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
     path,
     prefs.notesHighlightCode,
     prefs.notesMath,
+    prefs.notesStrictLineBreaks,
     remoteImages,
   ]);
 
@@ -267,6 +269,7 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
             resolve: (target) => links.resolve(path, target),
             highlight: prefs.notesHighlightCode,
             math: prefs.notesMath,
+            strictLineBreaks: prefs.notesStrictLineBreaks,
           }),
           { remoteImages },
         ),
@@ -406,6 +409,14 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
       }
       const a = el.closest("a");
       if (!a) {
+        return;
+      }
+      if (a.dataset.footnote) {
+        // A footnote number and its back arrow scroll inside the note; the window never navigates.
+        e.preventDefault();
+        reading.current
+          ?.querySelector(`[id="${CSS.escape(a.dataset.footnote)}"]`)
+          ?.scrollIntoView({ block: "center" });
         return;
       }
       if (a.dataset.external) {

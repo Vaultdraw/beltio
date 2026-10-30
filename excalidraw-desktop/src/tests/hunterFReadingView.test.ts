@@ -24,16 +24,16 @@ const html = (md: string) =>
   );
 
 describe("hunter F-11: the reading view follows Obsidian for plain Markdown", () => {
-  it.fails("a single newline is a line break", () => {
+  it("a single newline is a line break", () => {
     expect(html("line one\nline two")).toMatch(/line one<br\s*\/?>\s*line two/);
   });
-  it.fails("%%comments%% are hidden", () => {
+  it("%%comments%% are hidden", () => {
     expect(html("keep %%drop%% this")).not.toContain("drop");
   });
-  it.fails("a trailing ^block-id is not shown", () => {
+  it("a trailing ^block-id is not shown", () => {
     expect(html("para ^blockid\n\nnext")).not.toContain("^blockid");
   });
-  it.fails("a footnote reference becomes a link, not the raw [^1]", () => {
+  it("a footnote reference becomes a link, not the raw [^1]", () => {
     expect(html("Fact[^1]\n\n[^1]: the source")).not.toContain("[^1]");
   });
 });
