@@ -1,0 +1,5316 @@
+{
+ "commands": [
+  {
+   "id": "file.save",
+   "title": "Save drawing",
+   "category": "File",
+   "keys": [
+    "Mod+S",
+    "Mod+Shift+S",
+    "Ctrl+S"
+   ],
+   "when": [
+    "drawingOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.open",
+   "title": "Open settings",
+   "category": "Settings",
+   "keys": [
+    "Mod+Comma",
+    "Ctrl+Comma"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "navigator.focusSearch",
+   "title": "Search vault",
+   "category": "Navigator",
+   "keys": [
+    "Mod+Shift+F",
+    "Ctrl+Shift+F"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "view.zoomIn",
+   "title": "Zoom in (interface)",
+   "category": "View",
+   "keys": [
+    "Mod+Shift+Equal",
+    "Mod+Shift+NumpadAdd"
+   ],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "view.zoomOut",
+   "title": "Zoom out (interface)",
+   "category": "View",
+   "keys": [
+    "Mod+Shift+Minus",
+    "Mod+Shift+NumpadSubtract"
+   ],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "view.zoomReset",
+   "title": "Reset interface zoom",
+   "category": "View",
+   "keys": [
+    "Mod+Shift+0",
+    "Mod+Shift+Numpad0"
+   ],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "palette.files",
+   "title": "Go to drawing",
+   "category": "Palette",
+   "keys": [
+    "Mod+P"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "palette.commands",
+   "title": "Show all commands",
+   "category": "Palette",
+   "keys": [
+    "Mod+Shift+P",
+    "Mod+Slash"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "vault.newDrawing",
+   "title": "New drawing",
+   "category": "Vault",
+   "keys": [
+    "Mod+N"
+   ],
+   "when": [
+    "vaultOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "vault.newFromTemplate",
+   "title": "Templates: New drawing from template",
+   "category": "Templates",
+   "keys": [
+    "Mod+Alt+N",
+    "Ctrl+Alt+N"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "view.toggleNavigator",
+   "title": "Toggle navigator",
+   "category": "Navigator",
+   "keys": [
+    "Mod+Backslash"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "view.toggleActivityBar",
+   "title": "Toggle activity bar",
+   "category": "View",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "cli.install",
+   "title": "Install 'vaultdraw' command in PATH",
+   "category": "Vault",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "cli.installSystem",
+   "title": "Install 'vaultdraw' command in /usr/local/bin",
+   "category": "Vault",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "vault.switch",
+   "title": "Open another vault",
+   "category": "Vault",
+   "keys": [],
+   "when": [
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "file.revealInFinder",
+   "title": "Reveal drawing in Finder",
+   "category": "File",
+   "keys": [],
+   "when": [
+    "drawingOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "file.duplicate",
+   "title": "Duplicate drawing",
+   "category": "File",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "appearance.toggleMode",
+   "title": "Toggle light/dark mode",
+   "category": "Appearance",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "app.restart",
+   "title": "Restart Vaultdraw",
+   "category": "Vault",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "settings.openHotkeys",
+   "title": "Settings: Hotkeys",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.scope.global",
+   "title": "Settings: Edit global settings",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.scope.vault",
+   "title": "Settings: Edit this vault's settings",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.page.general",
+   "title": "Settings: General",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.page.appearance",
+   "title": "Settings: Appearance",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.page.page",
+   "title": "Settings: Page",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.page.interface",
+   "title": "Settings: Interface",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.page.drawing",
+   "title": "Settings: Drawing",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.page.pens",
+   "title": "Settings: Pens & laser",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.page.tools",
+   "title": "Settings: Tools",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.page.files",
+   "title": "Settings: Files",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.page.links",
+   "title": "Settings: Links",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.page.history",
+   "title": "Settings: History",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.page.extensions",
+   "title": "Settings: Extensions",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.page.plugins",
+   "title": "Settings: Plugins",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.page.control",
+   "title": "Settings: Control",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "settings.page.about",
+   "title": "Settings: About",
+   "category": "Settings",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "appearance.mode.light",
+   "title": "Mode: Light",
+   "category": "Appearance",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "appearance.mode.dark",
+   "title": "Mode: Dark",
+   "category": "Appearance",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "appearance.mode.system",
+   "title": "Mode: System",
+   "category": "Appearance",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "appearance.syncCanvas.on",
+   "title": "Sync canvas with theme: On",
+   "category": "Appearance",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "appearance.syncCanvas.off",
+   "title": "Sync canvas with theme: Off",
+   "category": "Appearance",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "file.exportPng",
+   "title": "Export: PNG",
+   "category": "Export",
+   "keys": [],
+   "when": [
+    "drawingOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "file.exportSvg",
+   "title": "Export: SVG",
+   "category": "Export",
+   "keys": [],
+   "when": [
+    "drawingOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "file.exportPdf",
+   "title": "Export: PDF",
+   "category": "Export",
+   "keys": [],
+   "when": [
+    "drawingOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "file.importFile",
+   "title": "Import: File…",
+   "category": "File",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "plugins.cancelImport",
+   "title": "Import: Cancel",
+   "category": "File",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "file.saveCopy",
+   "title": "Save a copy",
+   "category": "Export",
+   "keys": [],
+   "when": [
+    "drawingOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "templates.saveDrawing",
+   "title": "Templates: Save drawing as template",
+   "category": "Templates",
+   "keys": [],
+   "when": [
+    "drawingOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "templates.revealGlobal",
+   "title": "Templates: Open the global templates folder",
+   "category": "Templates",
+   "keys": [],
+   "when": [
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.dismissNotice",
+   "title": "Page: Dismiss the page notice",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "navigator.searchTags",
+   "title": "Tags: Search by tag",
+   "category": "Tags",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "navigator.newFolder",
+   "title": "New folder",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "navigator.newDrawingInFolder",
+   "title": "Navigator: New drawing in selected folder",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "navigator.collapseAll",
+   "title": "Navigator: Collapse all folders",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "navigator.refresh",
+   "title": "Navigator: Refresh files",
+   "category": "Navigator",
+   "keys": [
+    "Mod+Shift+R"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "file.rename",
+   "title": "Rename drawing",
+   "category": "File",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "file.move",
+   "title": "Move drawing",
+   "category": "File",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "file.trash",
+   "title": "Move drawing to Trash",
+   "category": "File",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "vault.reveal",
+   "title": "Reveal vault folder",
+   "category": "Vault",
+   "keys": [],
+   "when": [
+    "vaultOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "vault.retryWritable",
+   "title": "Retry opening vault writable",
+   "category": "Vault",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "vault.revealRecovery",
+   "title": "Reveal recovery folder",
+   "category": "Vault",
+   "keys": [],
+   "when": [
+    "vaultOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "vault.openRecovered",
+   "title": "Open recovered drawings",
+   "category": "Vault",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "file.resolveConflict",
+   "title": "Resolve conflict",
+   "category": "File",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "navigator.sort.name_asc",
+   "title": "Sort: Name (A to Z)",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "navigator.sort.name_desc",
+   "title": "Sort: Name (Z to A)",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "navigator.sort.modified_desc",
+   "title": "Sort: Modified (new to old)",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "navigator.sort.modified_asc",
+   "title": "Sort: Modified (old to new)",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "paper.plain",
+   "title": "Paper: Plain",
+   "category": "Paper",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "paper.grid",
+   "title": "Paper: Grid",
+   "category": "Paper",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "paper.lines",
+   "title": "Paper: Lines",
+   "category": "Paper",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "paper.dots",
+   "title": "Paper: Dots",
+   "category": "Paper",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "paper.graph",
+   "title": "Paper: Graph",
+   "category": "Paper",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "paper.isometric",
+   "title": "Paper: Isometric",
+   "category": "Paper",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "paper.settings",
+   "title": "Paper settings…",
+   "category": "Paper",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.on",
+   "title": "Page mode: On",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.off",
+   "title": "Page mode: Off",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.toggle",
+   "title": "Page mode: Toggle",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.layout.continuous",
+   "title": "Page layout: Continuous",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.layout.separate",
+   "title": "Page layout: Separate pages",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.size.a3",
+   "title": "Page size: A3",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.size.a4",
+   "title": "Page size: A4",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.size.a5",
+   "title": "Page size: A5",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.size.b5",
+   "title": "Page size: B5",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.size.letter",
+   "title": "Page size: Letter",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.size.legal",
+   "title": "Page size: Legal",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.size.tablet",
+   "title": "Page size: Tablet (iPad 11-inch)",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.size.tabletLarge",
+   "title": "Page size: Tablet (iPad 13-inch)",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.size.phone",
+   "title": "Page size: Phone",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.orientation.portrait",
+   "title": "Page orientation: Portrait",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.orientation.landscape",
+   "title": "Page orientation: Landscape",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.setup",
+   "title": "Page setup…",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.paper.normal",
+   "title": "Paper theme: Normal",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.paper.oldSchool",
+   "title": "Paper theme: Old school",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.paper.match",
+   "title": "Paper theme: Match current theme",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.fitContent",
+   "title": "Fit content to page",
+   "category": "Page",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.next",
+   "title": "Next page",
+   "category": "Page",
+   "keys": [
+    "PageDown"
+   ],
+   "when": [
+    "drawingOpen",
+    "canvasFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "page.previous",
+   "title": "Previous page",
+   "category": "Page",
+   "keys": [
+    "PageUp"
+   ],
+   "when": [
+    "drawingOpen",
+    "canvasFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "markdown.toggle",
+   "title": "Markdown mode: On or off",
+   "category": "Markdown",
+   "keys": [
+    "Mod+Alt+M"
+   ],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "markdown.toggleTask",
+   "title": "Markdown: Toggle task",
+   "category": "Markdown",
+   "keys": [
+    "Mod+L"
+   ],
+   "when": [
+    "drawingOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "library.toggle",
+   "title": "Library: Open/close",
+   "category": "Library",
+   "keys": [],
+   "when": [
+    "drawingOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "pen.select1",
+   "title": "Select pen 1",
+   "category": "Pens",
+   "keys": [
+    "Alt+1"
+   ],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "pen.select2",
+   "title": "Select pen 2",
+   "category": "Pens",
+   "keys": [
+    "Alt+2"
+   ],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "pen.select3",
+   "title": "Select pen 3",
+   "category": "Pens",
+   "keys": [
+    "Alt+3"
+   ],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "pen.select4",
+   "title": "Select pen 4",
+   "category": "Pens",
+   "keys": [
+    "Alt+4"
+   ],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "pen.select5",
+   "title": "Select pen 5",
+   "category": "Pens",
+   "keys": [
+    "Alt+5"
+   ],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "pen.select6",
+   "title": "Select pen 6",
+   "category": "Pens",
+   "keys": [
+    "Alt+6"
+   ],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "pen.select7",
+   "title": "Select pen 7",
+   "category": "Pens",
+   "keys": [
+    "Alt+7"
+   ],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "pen.select8",
+   "title": "Select pen 8",
+   "category": "Pens",
+   "keys": [
+    "Alt+8"
+   ],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "pen.select9",
+   "title": "Select pen 9",
+   "category": "Pens",
+   "keys": [
+    "Alt+9"
+   ],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "toolDefaults.save.rectangle",
+   "title": "Tool defaults: Save current style for Rectangle",
+   "category": "Tool defaults",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "toolDefaults.reset.rectangle",
+   "title": "Tool defaults: Reset Rectangle",
+   "category": "Tool defaults",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "toolDefaults.save.diamond",
+   "title": "Tool defaults: Save current style for Diamond",
+   "category": "Tool defaults",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "toolDefaults.reset.diamond",
+   "title": "Tool defaults: Reset Diamond",
+   "category": "Tool defaults",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "toolDefaults.save.ellipse",
+   "title": "Tool defaults: Save current style for Ellipse",
+   "category": "Tool defaults",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "toolDefaults.reset.ellipse",
+   "title": "Tool defaults: Reset Ellipse",
+   "category": "Tool defaults",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "toolDefaults.save.arrow",
+   "title": "Tool defaults: Save current style for Arrow",
+   "category": "Tool defaults",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "toolDefaults.reset.arrow",
+   "title": "Tool defaults: Reset Arrow",
+   "category": "Tool defaults",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "toolDefaults.save.line",
+   "title": "Tool defaults: Save current style for Line",
+   "category": "Tool defaults",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "toolDefaults.reset.line",
+   "title": "Tool defaults: Reset Line",
+   "category": "Tool defaults",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "toolDefaults.save.text",
+   "title": "Tool defaults: Save current style for Text",
+   "category": "Tool defaults",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "toolDefaults.reset.text",
+   "title": "Tool defaults: Reset Text",
+   "category": "Tool defaults",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "toolDefaults.saveActive",
+   "title": "Tool defaults: Save current style for this tool",
+   "category": "Tool defaults",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "toolDefaults.resetDrawingStyles",
+   "title": "Tool defaults: Reset this drawing's styles to defaults",
+   "category": "Tool defaults",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.selection",
+   "title": "Tool: Selection",
+   "category": "Tools",
+   "keys": [
+    "V",
+    "1"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.rectangle",
+   "title": "Tool: Rectangle",
+   "category": "Tools",
+   "keys": [
+    "R",
+    "2"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.diamond",
+   "title": "Tool: Diamond",
+   "category": "Tools",
+   "keys": [
+    "D",
+    "3"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.ellipse",
+   "title": "Tool: Ellipse",
+   "category": "Tools",
+   "keys": [
+    "O",
+    "4"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.arrow",
+   "title": "Tool: Arrow",
+   "category": "Tools",
+   "keys": [
+    "A",
+    "5"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.line",
+   "title": "Tool: Line",
+   "category": "Tools",
+   "keys": [
+    "L",
+    "6"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.freedraw",
+   "title": "Tool: Draw",
+   "category": "Tools",
+   "keys": [
+    "P",
+    "X",
+    "7"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.text",
+   "title": "Tool: Text",
+   "category": "Tools",
+   "keys": [
+    "T",
+    "8"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.stickynote",
+   "title": "Tool: Sticky note",
+   "category": "Tools",
+   "keys": [
+    "N"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.image",
+   "title": "Tool: Image",
+   "category": "Tools",
+   "keys": [
+    "9"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.eraser",
+   "title": "Tool: Eraser",
+   "category": "Tools",
+   "keys": [
+    "E",
+    "0"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.hand",
+   "title": "Tool: Hand",
+   "category": "Tools",
+   "keys": [
+    "H"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.frame",
+   "title": "Tool: Frame",
+   "category": "Tools",
+   "keys": [
+    "F"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.autoshape",
+   "title": "Tool: Shape recognition",
+   "category": "Tools",
+   "keys": [
+    "Shift+X"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.laser",
+   "title": "Tool: Laser pointer",
+   "category": "Tools",
+   "keys": [
+    "K"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.bucketfill",
+   "title": "Tool: Bucket fill",
+   "category": "Tools",
+   "keys": [
+    "B"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tool.lock",
+   "title": "Tool: Keep tool active",
+   "category": "Tools",
+   "keys": [
+    "Q"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.toolKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "canvas.alignTop",
+   "title": "Canvas: Align top",
+   "category": "Canvas",
+   "keys": [
+    "Mod+Shift+ArrowUp"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.alignBottom",
+   "title": "Canvas: Align bottom",
+   "category": "Canvas",
+   "keys": [
+    "Mod+Shift+ArrowDown"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.alignLeft",
+   "title": "Canvas: Align left",
+   "category": "Canvas",
+   "keys": [
+    "Mod+Shift+ArrowLeft"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.alignRight",
+   "title": "Canvas: Align right",
+   "category": "Canvas",
+   "keys": [
+    "Mod+Shift+ArrowRight"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.alignVerticallyCentered",
+   "title": "Canvas: Center vertically",
+   "category": "Canvas",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.alignHorizontallyCentered",
+   "title": "Canvas: Center horizontally",
+   "category": "Canvas",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.distributeHorizontally",
+   "title": "Canvas: Distribute horizontally",
+   "category": "Canvas",
+   "keys": [
+    "Alt+H"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "canvas.distributeVertically",
+   "title": "Canvas: Distribute vertically",
+   "category": "Canvas",
+   "keys": [
+    "Alt+V"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "canvas.sendBackward",
+   "title": "Canvas: Send backward",
+   "category": "Canvas",
+   "keys": [
+    "Mod+BracketLeft"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.bringForward",
+   "title": "Canvas: Bring forward",
+   "category": "Canvas",
+   "keys": [
+    "Mod+BracketRight"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.sendToBack",
+   "title": "Canvas: Send to back",
+   "category": "Canvas",
+   "keys": [
+    "Mod+Alt+BracketLeft"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.bringToFront",
+   "title": "Canvas: Bring to front",
+   "category": "Canvas",
+   "keys": [
+    "Mod+Alt+BracketRight"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.flipHorizontal",
+   "title": "Canvas: Flip horizontal",
+   "category": "Canvas",
+   "keys": [
+    "Shift+H"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.flipVertical",
+   "title": "Canvas: Flip vertical",
+   "category": "Canvas",
+   "keys": [
+    "Shift+V"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.group",
+   "title": "Canvas: Group selection",
+   "category": "Canvas",
+   "keys": [
+    "Mod+G"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.ungroup",
+   "title": "Canvas: Ungroup",
+   "category": "Canvas",
+   "keys": [
+    "Mod+Shift+G"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.toggleElementLock",
+   "title": "Canvas: Lock or unlock selection",
+   "category": "Canvas",
+   "keys": [
+    "Mod+Shift+L"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.unlockAllElements",
+   "title": "Canvas: Unlock all",
+   "category": "Canvas",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.duplicateSelection",
+   "title": "Canvas: Duplicate selection",
+   "category": "Canvas",
+   "keys": [
+    "Mod+D"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.copyStyles",
+   "title": "Canvas: Copy styles",
+   "category": "Canvas",
+   "keys": [
+    "Mod+Alt+C"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.pasteStyles",
+   "title": "Canvas: Paste styles",
+   "category": "Canvas",
+   "keys": [
+    "Mod+Alt+V"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.decreaseFontSize",
+   "title": "Canvas: Decrease font size",
+   "category": "Canvas",
+   "keys": [
+    "Mod+Shift+Comma"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.increaseFontSize",
+   "title": "Canvas: Increase font size",
+   "category": "Canvas",
+   "keys": [
+    "Mod+Shift+Period"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.hyperlink",
+   "title": "Canvas: Edit element link",
+   "category": "Canvas",
+   "keys": [
+    "Mod+K"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.gridMode",
+   "title": "Canvas: Toggle grid",
+   "category": "Canvas",
+   "keys": [
+    "Mod+Quote"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.objectsSnapMode",
+   "title": "Canvas: Toggle snap to objects",
+   "category": "Canvas",
+   "keys": [
+    "Alt+S"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.zenMode",
+   "title": "Canvas: Toggle zen mode",
+   "category": "Canvas",
+   "keys": [
+    "Alt+Z"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.viewMode",
+   "title": "Canvas: Toggle view mode",
+   "category": "Canvas",
+   "keys": [
+    "Alt+R"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.stats",
+   "title": "Canvas: Toggle stats",
+   "category": "Canvas",
+   "keys": [
+    "Alt+Slash"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.zoomToFit",
+   "title": "Canvas: Zoom to fit all",
+   "category": "Canvas",
+   "keys": [
+    "Shift+1"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.zoomToFitSelectionInViewport",
+   "title": "Canvas: Zoom to fit selection",
+   "category": "Canvas",
+   "keys": [
+    "Shift+2"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "canvas.zoomToFitSelection",
+   "title": "Canvas: Zoom to selection",
+   "category": "Canvas",
+   "keys": [
+    "Shift+3"
+   ],
+   "when": [
+    "drawingOpen",
+    "!listFocus",
+    "!galleryFocus",
+    "!graphFocus",
+    "keys.actionKeys",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "keys.whichKey",
+   "title": "Keys: show which-key",
+   "category": "Keys",
+   "keys": [],
+   "when": [
+    "vaultOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "keys.cancel",
+   "title": "Keys: cancel pending sequence",
+   "category": "Keys",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "links.linkSelection",
+   "title": "Links: Link selection to drawing…",
+   "category": "Links",
+   "keys": [
+    "Mod+Alt+K"
+   ],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "links.insert",
+   "title": "Links: Insert link…",
+   "category": "Links",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "links.openUnderSelection",
+   "title": "Links: Open link under selection",
+   "category": "Links",
+   "keys": [
+    "Mod+Alt+Enter"
+   ],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "links.openUnderSelectionNew",
+   "title": "Links: Open link under selection in new tab",
+   "category": "Links",
+   "keys": [
+    "Mod+Alt+Shift+Enter"
+   ],
+   "when": [
+    "drawingOpen",
+    "!textEditing",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "links.toggleDock",
+   "title": "Links: Toggle backlinks panel",
+   "category": "Links",
+   "keys": [
+    "Mod+Alt+B"
+   ],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "links.back",
+   "title": "Links: Go back",
+   "category": "Links",
+   "keys": [
+    "Mod+Alt+ArrowLeft"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "links.forward",
+   "title": "Links: Go forward",
+   "category": "Links",
+   "keys": [
+    "Mod+Alt+ArrowRight"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "links.copyLinkToDrawing",
+   "title": "Links: Copy link to this drawing",
+   "category": "Links",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "links.openUri",
+   "title": "Links: Open a vaultdraw:// link…",
+   "category": "Links",
+   "keys": [],
+   "when": [
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "links.registerHandlers",
+   "title": "Links: Register Vaultdraw for links and files (Linux)",
+   "category": "Links",
+   "keys": [],
+   "when": [
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "links.hints",
+   "title": "Links: Show link hints",
+   "category": "Links",
+   "keys": [
+    "Shift+F"
+   ],
+   "when": [
+    "canvasFocus",
+    "!textEditing",
+    "!modalOpen",
+    "drawingOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "links.toggleStyling",
+   "title": "Links: Toggle link styling",
+   "category": "Links",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "links.toggleHoverPreview",
+   "title": "Links: Toggle link hover preview",
+   "category": "Links",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "links.bindDrawingHotkey",
+   "title": "Links: Assign hotkey to this drawing",
+   "category": "Links",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tags.rename",
+   "title": "Tags: Rename tag…",
+   "category": "Tags",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tags.focusPane",
+   "title": "Tags: Focus tags pane",
+   "category": "Tags",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tags.toggleSort",
+   "title": "Tags: Toggle sort by name/count",
+   "category": "Tags",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tags.toggleSection",
+   "title": "Tags: Collapse or expand the tags section",
+   "category": "Tags",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.checkpoint",
+   "title": "History: Create checkpoint",
+   "category": "History",
+   "keys": [
+    "Mod+Alt+S"
+   ],
+   "when": [
+    "drawingOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.toggle",
+   "title": "History: Show or hide history",
+   "category": "History",
+   "keys": [
+    "Mod+Shift+H"
+   ],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.timeTravel",
+   "title": "History: Time travel",
+   "category": "History",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.previous",
+   "title": "History: Previous version",
+   "category": "History",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.next",
+   "title": "History: Next version",
+   "category": "History",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.restore",
+   "title": "History: Restore this version",
+   "category": "History",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.restoreReplace",
+   "title": "History: Restore by replacing the drawing",
+   "category": "History",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.restoreCopy",
+   "title": "History: Restore as a copy",
+   "category": "History",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.copySelection",
+   "title": "History: Copy selection to the drawing",
+   "category": "History",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.exportExcalidraw",
+   "title": "History: Export version as .excalidraw",
+   "category": "History",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.exportImage",
+   "title": "History: Export version as image",
+   "category": "History",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.toggleHighlights",
+   "title": "History: Toggle change highlights",
+   "category": "History",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.deleteCheckpoint",
+   "title": "History: Delete this checkpoint",
+   "category": "History",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.deleteAll",
+   "title": "History: Delete all history of this drawing",
+   "category": "History",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.excludeFromGit",
+   "title": "History: Exclude history from git",
+   "category": "History",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.backToCurrent",
+   "title": "History: Back to current version",
+   "category": "History",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "history.dismissGitNotice",
+   "title": "History: Dismiss the git notice",
+   "category": "History",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "plugins.openSettings",
+   "title": "Plugins: Open plugin settings",
+   "category": "Plugins",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "plugins.installFolder",
+   "title": "Plugins: Install from folder…",
+   "category": "Plugins",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "plugins.reloadList",
+   "title": "Plugins: Reload plugin list",
+   "category": "Plugins",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "plugins.openFolder",
+   "title": "Plugins: Open plugins folder",
+   "category": "Plugins",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "plugins.deleteData",
+   "title": "Plugins: Delete data of a plugin…",
+   "category": "Plugins",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "plugins.browse",
+   "title": "Plugins: Browse community plugins…",
+   "category": "Plugins",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "plugins.browseRefresh",
+   "title": "Plugins: Refresh the community plugins list…",
+   "category": "Plugins",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.new",
+   "title": "Tabs: New tab",
+   "category": "Tabs",
+   "keys": [
+    "Mod+T"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.close",
+   "title": "Tabs: Close tab",
+   "category": "Tabs",
+   "keys": [
+    "Mod+W"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.closeOthers",
+   "title": "Tabs: Close other tabs",
+   "category": "Tabs",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.closeRight",
+   "title": "Tabs: Close tabs to the right",
+   "category": "Tabs",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.closeAll",
+   "title": "Tabs: Close all tabs",
+   "category": "Tabs",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.reopenClosed",
+   "title": "Tabs: Reopen closed tab",
+   "category": "Tabs",
+   "keys": [
+    "Mod+Shift+T"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.next",
+   "title": "Tabs: Next tab",
+   "category": "Tabs",
+   "keys": [
+    "Mod+Shift+BracketRight",
+    "Ctrl+PageDown"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.prev",
+   "title": "Tabs: Previous tab",
+   "category": "Tabs",
+   "keys": [
+    "Mod+Shift+BracketLeft",
+    "Ctrl+PageUp"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.mruNext",
+   "title": "Tabs: Switch to recent tab",
+   "category": "Tabs",
+   "keys": [
+    "Ctrl+Tab"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.mruPrev",
+   "title": "Tabs: Switch to previous recent tab",
+   "category": "Tabs",
+   "keys": [
+    "Ctrl+Shift+Tab"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.goTo1",
+   "title": "Tabs: Go to tab 1",
+   "category": "Tabs",
+   "keys": [
+    "Mod+1"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.goTo2",
+   "title": "Tabs: Go to tab 2",
+   "category": "Tabs",
+   "keys": [
+    "Mod+2"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.goTo3",
+   "title": "Tabs: Go to tab 3",
+   "category": "Tabs",
+   "keys": [
+    "Mod+3"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.goTo4",
+   "title": "Tabs: Go to tab 4",
+   "category": "Tabs",
+   "keys": [
+    "Mod+4"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.goTo5",
+   "title": "Tabs: Go to tab 5",
+   "category": "Tabs",
+   "keys": [
+    "Mod+5"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.goTo6",
+   "title": "Tabs: Go to tab 6",
+   "category": "Tabs",
+   "keys": [
+    "Mod+6"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.goTo7",
+   "title": "Tabs: Go to tab 7",
+   "category": "Tabs",
+   "keys": [
+    "Mod+7"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.goTo8",
+   "title": "Tabs: Go to tab 8",
+   "category": "Tabs",
+   "keys": [
+    "Mod+8"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.goToLast",
+   "title": "Tabs: Go to last tab",
+   "category": "Tabs",
+   "keys": [
+    "Mod+9"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.togglePin",
+   "title": "Tabs: Pin or unpin tab",
+   "category": "Tabs",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.moveLeft",
+   "title": "Tabs: Move tab left",
+   "category": "Tabs",
+   "keys": [
+    "Mod+Alt+Shift+BracketLeft"
+   ],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.moveRight",
+   "title": "Tabs: Move tab right",
+   "category": "Tabs",
+   "keys": [
+    "Mod+Alt+Shift+BracketRight"
+   ],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.showAll",
+   "title": "Tabs: Show open tabs",
+   "category": "Tabs",
+   "keys": [
+    "Mod+Shift+A"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.focusStrip",
+   "title": "Tabs: Focus tab strip",
+   "category": "Tabs",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.copyPath",
+   "title": "Tabs: Copy path",
+   "category": "Tabs",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.reveal",
+   "title": "Tabs: Reveal in navigator",
+   "category": "Tabs",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "tabs.toggleStrip",
+   "title": "Tabs: Show or hide tab strip",
+   "category": "Tabs",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "file.openInNewTab",
+   "title": "Tabs: Open drawing in new tab…",
+   "category": "Tabs",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "window.close",
+   "title": "Window: Close window",
+   "category": "Tabs",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "list.down",
+   "title": "List: Move down",
+   "category": "Navigator",
+   "keys": [
+    "J",
+    "ArrowDown"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.up",
+   "title": "List: Move up",
+   "category": "Navigator",
+   "keys": [
+    "K",
+    "ArrowUp"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.first",
+   "title": "List: Go to first",
+   "category": "Navigator",
+   "keys": [
+    "G",
+    "Home"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.last",
+   "title": "List: Go to last",
+   "category": "Navigator",
+   "keys": [
+    "Shift+G",
+    "End"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.expand",
+   "title": "List: Expand folder",
+   "category": "Navigator",
+   "keys": [
+    "L",
+    "ArrowRight"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.collapse",
+   "title": "List: Collapse folder or go to parent",
+   "category": "Navigator",
+   "keys": [
+    "H",
+    "ArrowLeft"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.open",
+   "title": "List: Open item",
+   "category": "Navigator",
+   "keys": [
+    "Enter",
+    "NumpadEnter",
+    "O"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.select",
+   "title": "List: Select item",
+   "category": "Navigator",
+   "keys": [
+    "Space"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.openInNewTab",
+   "title": "List: Open item in new tab",
+   "category": "Navigator",
+   "keys": [
+    "Mod+Enter",
+    "Mod+NumpadEnter",
+    "Ctrl+Enter"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.rename",
+   "title": "List: Rename item",
+   "category": "Navigator",
+   "keys": [
+    "R",
+    "F2"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.delete",
+   "title": "List: Delete item",
+   "category": "Navigator",
+   "keys": [
+    "D",
+    "Delete",
+    "Backspace"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.newItem",
+   "title": "List: New drawing here",
+   "category": "Navigator",
+   "keys": [
+    "A"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.newFolder",
+   "title": "List: New folder here",
+   "category": "Navigator",
+   "keys": [
+    "Shift+A"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.move",
+   "title": "List: Move item",
+   "category": "Navigator",
+   "keys": [
+    "M"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.menu",
+   "title": "List: Show item menu",
+   "category": "Navigator",
+   "keys": [
+    "Shift+F10",
+    "ContextMenu"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.nextView",
+   "title": "List: Switch view",
+   "category": "Navigator",
+   "keys": [
+    "Tab"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.exit",
+   "title": "List: Leave list",
+   "category": "Navigator",
+   "keys": [
+    "Escape"
+   ],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.duplicate",
+   "title": "List: Duplicate item",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.saveAsTemplate",
+   "title": "List: Save item as template",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.reveal",
+   "title": "List: Reveal item in file manager",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.showAsGrid",
+   "title": "List: Show folder as grid",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.localGraph",
+   "title": "List: Show local graph of item",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.history",
+   "title": "List: Show item history",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.exportPng",
+   "title": "List: Export item as PNG",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.exportSvg",
+   "title": "List: Export item as SVG",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.exportPdf",
+   "title": "List: Export item as PDF",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.saveCopy",
+   "title": "List: Save a copy of item",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.copyPath",
+   "title": "List: Copy item path (relative to the vault)",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.copyAbsolutePath",
+   "title": "List: Copy item absolute path",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.copyLink",
+   "title": "List: Copy item link",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "navigator.focusTree",
+   "title": "Navigator: Focus file tree",
+   "category": "Navigator",
+   "keys": [
+    "Mod+Alt+F"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "navigator.clearSearch",
+   "title": "Navigator: Clear search",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "thumbnails.toggle",
+   "title": "Thumbnails: Show/hide thumbnails",
+   "category": "Thumbnails",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "thumbnails.clearCache",
+   "title": "Thumbnails: Clear cache for this vault",
+   "category": "Thumbnails",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "memory.freeUnusedImages",
+   "title": "Memory: Free unused images",
+   "category": "Memory",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "network.toggleOffline",
+   "title": "Offline mode: on or off",
+   "category": "Network",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "sync.compareWithConflictCopy",
+   "title": "Sync: Compare with conflict copy",
+   "category": "Sync",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "sync.keepThis",
+   "title": "Sync: Keep this version (the other goes to history)",
+   "category": "Sync",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "sync.keepOther",
+   "title": "Sync: Keep the other version (this one goes to history)",
+   "category": "Sync",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "extensions.toggle.search",
+   "title": "Extensions: Toggle Full-text search",
+   "category": "Extensions",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "extensions.toggle.links",
+   "title": "Extensions: Toggle Links",
+   "category": "Extensions",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "extensions.toggle.tags",
+   "title": "Extensions: Toggle Tags",
+   "category": "Extensions",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "extensions.toggle.graph",
+   "title": "Extensions: Toggle Graph view",
+   "category": "Extensions",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "extensions.toggle.library",
+   "title": "Extensions: Toggle Library",
+   "category": "Extensions",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "extensions.toggle.templates",
+   "title": "Extensions: Toggle Templates",
+   "category": "Extensions",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "extensions.toggle.history",
+   "title": "Extensions: Toggle History panel",
+   "category": "Extensions",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "extensions.toggle.formula",
+   "title": "Extensions: Toggle Formulas",
+   "category": "Extensions",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "extensions.toggle.mermaid",
+   "title": "Extensions: Toggle Mermaid to Excalidraw",
+   "category": "Extensions",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "extensions.toggle.pdfImport",
+   "title": "Extensions: Toggle PDF import",
+   "category": "Extensions",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "extensions.toggle.notes",
+   "title": "Extensions: Toggle Markdown notes",
+   "category": "Extensions",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "extensions.defaults",
+   "title": "Extensions: Restore defaults",
+   "category": "Extensions",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "extensions.bisect.start",
+   "title": "Extensions: Find the extension causing a problem (bisect)",
+   "category": "Extensions",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "extensions.bisect.still",
+   "title": "Extensions bisect: The problem still happens",
+   "category": "Extensions",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "extensions.bisect.gone",
+   "title": "Extensions bisect: The problem is gone",
+   "category": "Extensions",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "extensions.bisect.stop",
+   "title": "Extensions bisect: Stop",
+   "category": "Extensions",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "notes.toggleEdit",
+   "title": "Notes: Toggle reading and editing",
+   "category": "Notes",
+   "keys": [
+    "Mod+E"
+   ],
+   "when": [
+    "vaultOpen",
+    "!drawingOpen",
+    "notes.active",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "notes.save",
+   "title": "Notes: Save",
+   "category": "Notes",
+   "keys": [
+    "Mod+S"
+   ],
+   "when": [
+    "vaultOpen",
+    "!drawingOpen",
+    "notes.active",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "notes.reload",
+   "title": "Notes: Reload from disk",
+   "category": "Notes",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!drawingOpen",
+    "notes.active",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "notes.toggleVim",
+   "title": "Notes: Toggle Vim keys",
+   "category": "Notes",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!drawingOpen",
+    "notes.active",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "notes.toggleLineWrap",
+   "title": "Notes: Toggle line wrap",
+   "category": "Notes",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!drawingOpen",
+    "notes.active",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "notes.toggleLineNumbers",
+   "title": "Notes: Toggle line numbers",
+   "category": "Notes",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!drawingOpen",
+    "notes.active",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "ai.toggle",
+   "title": "AI: Toggle AI",
+   "category": "AI",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "ai.toggleMcp",
+   "title": "AI: Toggle AI tools interface (MCP)",
+   "category": "AI",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "ai.copyMcpSetup",
+   "title": "AI: Copy the AI app setup (MCP server config)",
+   "category": "AI",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "watchdog.toggle",
+   "title": "Hang watchdog: Turn on or off",
+   "category": "Hang watchdog",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "watchdog.showLastHang",
+   "title": "Hang watchdog: Show the last hang",
+   "category": "Hang watchdog",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "window.minimize",
+   "title": "Window: Minimize",
+   "category": "Window",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "window.toggleMaximize",
+   "title": "Window: Maximize or restore",
+   "category": "Window",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "config.reload",
+   "title": "Config: Reload config files",
+   "category": "Config",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "config.openFile",
+   "title": "Config: Open config.toml",
+   "category": "Config",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "config.openOverrides",
+   "title": "Config: Show Settings changes file (overrides.toml)",
+   "category": "Config",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "config.openFolder",
+   "title": "Config: Open config folder",
+   "category": "Config",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "config.resetOverrides",
+   "title": "Config: Reset all Settings changes",
+   "category": "Config",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "config.check",
+   "title": "Config: Check config files",
+   "category": "Config",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "config.debugInfo",
+   "title": "Config: Show debug info",
+   "category": "Config",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "profile.switch",
+   "title": "Profile: Switch profile",
+   "category": "Profile",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "profile.new",
+   "title": "Profile: New profile",
+   "category": "Profile",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "profile.duplicate",
+   "title": "Profile: Duplicate a profile",
+   "category": "Profile",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "profile.delete",
+   "title": "Profile: Delete a profile",
+   "category": "Profile",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "profile.useForVault",
+   "title": "Profile: Use the active profile for this vault",
+   "category": "Profile",
+   "keys": [],
+   "when": [
+    "vaultOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "profile.clearForVault",
+   "title": "Profile: Stop choosing a profile for this vault",
+   "category": "Profile",
+   "keys": [],
+   "when": [
+    "vaultOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "vault.backup",
+   "title": "Vault: Back up vault…",
+   "category": "Vault",
+   "keys": [],
+   "when": [
+    "vaultOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "vault.restoreBackup",
+   "title": "Vault: Restore from backup…",
+   "category": "Vault",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "markdown.updateImportedNotes",
+   "title": "Markdown: Update imported notes to my theme and font",
+   "category": "Markdown",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "markdown.updateThisNote",
+   "title": "Markdown: Update this note to my theme and font anyway",
+   "category": "Markdown",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "writable"
+   ],
+   "palette": true
+  },
+  {
+   "id": "theme.browse",
+   "title": "Themes: Browse community themes",
+   "category": "Themes",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "theme.browseRefresh",
+   "title": "Themes: Refresh the community themes list",
+   "category": "Themes",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "theme.installFromUrl",
+   "title": "Themes: Install from URL or GitHub repo",
+   "category": "Themes",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "theme.update",
+   "title": "Themes: Check installed themes for updates",
+   "category": "Themes",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "theme.uninstall",
+   "title": "Themes: Remove an installed theme",
+   "category": "Themes",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "themeBrowser.next",
+   "title": "Theme browser: Next theme",
+   "category": "Themes",
+   "keys": [
+    "ArrowRight"
+   ],
+   "when": [
+    "themeBrowser.open"
+   ],
+   "palette": true
+  },
+  {
+   "id": "themeBrowser.prev",
+   "title": "Theme browser: Previous theme",
+   "category": "Themes",
+   "keys": [
+    "ArrowLeft"
+   ],
+   "when": [
+    "themeBrowser.open"
+   ],
+   "palette": true
+  },
+  {
+   "id": "themeBrowser.down",
+   "title": "Theme browser: Theme below",
+   "category": "Themes",
+   "keys": [
+    "ArrowDown"
+   ],
+   "when": [
+    "themeBrowser.open"
+   ],
+   "palette": true
+  },
+  {
+   "id": "themeBrowser.up",
+   "title": "Theme browser: Theme above",
+   "category": "Themes",
+   "keys": [
+    "ArrowUp"
+   ],
+   "when": [
+    "themeBrowser.open"
+   ],
+   "palette": true
+  },
+  {
+   "id": "themeBrowser.activate",
+   "title": "Theme browser: Install or use the selected theme",
+   "category": "Themes",
+   "keys": [
+    "Enter"
+   ],
+   "when": [
+    "themeBrowser.open"
+   ],
+   "palette": true
+  },
+  {
+   "id": "themeBrowser.remove",
+   "title": "Theme browser: Remove the selected theme",
+   "category": "Themes",
+   "keys": [
+    "Delete",
+    "Shift+Delete"
+   ],
+   "when": [
+    "themeBrowser.open"
+   ],
+   "palette": true
+  },
+  {
+   "id": "themeBrowser.search",
+   "title": "Theme browser: Focus the search box",
+   "category": "Themes",
+   "keys": [
+    "Slash"
+   ],
+   "when": [
+    "themeBrowser.open"
+   ],
+   "palette": true
+  },
+  {
+   "id": "themeBrowser.close",
+   "title": "Theme browser: Close",
+   "category": "Themes",
+   "keys": [],
+   "when": [
+    "themeBrowser.open"
+   ],
+   "palette": true
+  },
+  {
+   "id": "help.website",
+   "title": "Help: Website",
+   "category": "Help",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "help.docs",
+   "title": "Help: Documentation",
+   "category": "Help",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "help.keyboard",
+   "title": "Help: Keyboard shortcuts",
+   "category": "Help",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "help.reportBug",
+   "title": "Help: Report a bug",
+   "category": "Help",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "help.requestFeature",
+   "title": "Help: Request a feature",
+   "category": "Help",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "help.whatsNew",
+   "title": "Help: What's new",
+   "category": "Help",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "help.checkUpdates",
+   "title": "Help: Check for updates",
+   "category": "Help",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "help.source",
+   "title": "Help: Source code",
+   "category": "Help",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "help.license",
+   "title": "Help: License and credits",
+   "category": "Help",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "help.about",
+   "title": "Help: About Vaultdraw",
+   "category": "Help",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "snippets.openFolder",
+   "title": "CSS snippets: Open folder",
+   "category": "Appearance",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "snippets.reload",
+   "title": "CSS snippets: Reload",
+   "category": "Appearance",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "layout.preset.focus",
+   "title": "Layout: Focus mode",
+   "category": "View",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": false
+  },
+  {
+   "id": "view.focusMode",
+   "title": "View: Focus mode",
+   "category": "View",
+   "keys": [
+    "Mod+Shift+Enter"
+   ],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "view.focusMode.exit",
+   "title": "View: Exit focus mode",
+   "category": "View",
+   "keys": [
+    "Escape"
+   ],
+   "when": [
+    "focus.active",
+    "!modalOpen",
+    "!textEditing",
+    "!listFocus",
+    "!graphFocus",
+    "!galleryFocus"
+   ],
+   "palette": false
+  },
+  {
+   "id": "layout.reset",
+   "title": "Layout: Default layout",
+   "category": "View",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "layout.toggleHeader",
+   "title": "Layout: Toggle header",
+   "category": "View",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "layout.toggleFooter",
+   "title": "Layout: Toggle editor footer",
+   "category": "View",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "appearance.vaultTheme.pin",
+   "title": "Appearance: Use the current theme for this vault only",
+   "category": "Appearance",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "appearance.vaultTheme.reset",
+   "title": "Appearance: Use the global theme in this vault",
+   "category": "Appearance",
+   "keys": [],
+   "when": [
+    "vaultOpen",
+    "writable",
+    "!modalOpen"
+   ],
+   "palette": true
+  }
+ ],
+ "settings": [
+  {
+   "id": "profile",
+   "page": "general",
+   "label": "Profile",
+   "configKey": null,
+   "section": null
+  },
+  {
+   "id": "backup",
+   "page": "general",
+   "label": "Backup",
+   "configKey": null,
+   "section": null
+  },
+  {
+   "id": "config-file",
+   "page": "general",
+   "label": "Config file",
+   "configKey": null,
+   "section": null
+  },
+  {
+   "id": "network-offline",
+   "page": "general",
+   "label": "Offline mode",
+   "configKey": "network.offline",
+   "section": null
+  },
+  {
+   "id": "network-updates",
+   "page": "general",
+   "label": "Check for updates at startup",
+   "configKey": "updates.check_on_startup",
+   "section": null
+  },
+  {
+   "id": "network-themes",
+   "page": "general",
+   "label": "Allow downloading themes",
+   "configKey": "network.allow_themes",
+   "section": null
+  },
+  {
+   "id": "network-plugins",
+   "page": "general",
+   "label": "Allow the community plugins list",
+   "configKey": "network.allow_plugins",
+   "section": null
+  },
+  {
+   "id": "mode",
+   "page": "appearance",
+   "label": "Mode",
+   "configKey": "appearance.mode",
+   "section": null
+  },
+  {
+   "id": "sync-canvas",
+   "page": "appearance",
+   "label": "Sync canvas with theme",
+   "configKey": "appearance.sync_canvas",
+   "section": null
+  },
+  {
+   "id": "canvas-background",
+   "page": "appearance",
+   "label": "Default canvas background",
+   "configKey": "appearance.canvas_background",
+   "section": null
+  },
+  {
+   "id": "accent-colour",
+   "page": "appearance",
+   "label": "Accent",
+   "configKey": "appearance.accent_color",
+   "section": null
+  },
+  {
+   "id": "paper",
+   "page": "appearance",
+   "label": "Canvas pattern",
+   "configKey": "paper.style",
+   "section": null
+  },
+  {
+   "id": "colour-theme",
+   "page": "appearance",
+   "label": "Colour theme",
+   "configKey": "appearance.theme",
+   "section": null
+  },
+  {
+   "id": "install-theme",
+   "page": "appearance",
+   "label": "Install themes",
+   "configKey": null,
+   "section": null
+  },
+  {
+   "id": "themes-folder",
+   "page": "appearance",
+   "label": "Themes folder",
+   "configKey": null,
+   "section": null
+  },
+  {
+   "id": "css-snippets",
+   "page": "appearance",
+   "label": "CSS snippets",
+   "configKey": "appearance.snippets",
+   "section": null
+  },
+  {
+   "id": "theme-max-size",
+   "page": "appearance",
+   "label": "Largest theme file",
+   "configKey": "themes.max_install_kb",
+   "section": null
+  },
+  {
+   "id": "theme-previews",
+   "page": "appearance",
+   "label": "Theme preview images",
+   "configKey": "themes.previews",
+   "section": null
+  },
+  {
+   "id": "theme-index-ttl",
+   "page": "appearance",
+   "label": "Refresh the themes list",
+   "configKey": "themes.index_ttl_hours",
+   "section": null
+  },
+  {
+   "id": "page-mode",
+   "page": "page",
+   "label": "Default mode for new drawings",
+   "configKey": "page.mode",
+   "section": null
+  },
+  {
+   "id": "page-layout",
+   "page": "page",
+   "label": "Layout",
+   "configKey": "page.layout",
+   "section": null
+  },
+  {
+   "id": "page-size",
+   "page": "page",
+   "label": "Page size",
+   "configKey": "page.size",
+   "section": null
+  },
+  {
+   "id": "page-orientation",
+   "page": "page",
+   "label": "Orientation",
+   "configKey": "page.orientation",
+   "section": null
+  },
+  {
+   "id": "page-paper-theme",
+   "page": "page",
+   "label": "Paper theme",
+   "configKey": "page.paper_theme",
+   "section": null
+  },
+  {
+   "id": "interface-zoom",
+   "page": "interface",
+   "label": "Interface zoom",
+   "configKey": "interface.zoom",
+   "section": null
+  },
+  {
+   "id": "show-tag-chips",
+   "page": "interface",
+   "label": "Show tag chips in the file tree",
+   "configKey": "interface.show_tag_chips",
+   "section": null
+  },
+  {
+   "id": "notice-seconds",
+   "page": "interface",
+   "label": "Error notices stay for",
+   "configKey": "interface.notice_seconds",
+   "section": null
+  },
+  {
+   "id": "thumbnails",
+   "page": "interface",
+   "label": "Show drawing thumbnails",
+   "configKey": "interface.thumbnails",
+   "section": null
+  },
+  {
+   "id": "activity-bar",
+   "page": "interface",
+   "label": "Activity bar",
+   "configKey": "interface.activity_bar",
+   "section": null
+  },
+  {
+   "id": "activity-bar-entries",
+   "page": "interface",
+   "label": "Activity bar entries",
+   "configKey": "interface.activity_bar_order",
+   "section": null
+  },
+  {
+   "id": "sort-order",
+   "page": "interface",
+   "label": "Navigator sort order",
+   "configKey": "navigator.sort",
+   "section": null
+  },
+  {
+   "id": "font-family",
+   "page": "drawing",
+   "label": "Default font family",
+   "configKey": "editor.font_family",
+   "section": null
+  },
+  {
+   "id": "font-size",
+   "page": "drawing",
+   "label": "Default font size",
+   "configKey": "editor.font_size",
+   "section": null
+  },
+  {
+   "id": "stroke-color",
+   "page": "drawing",
+   "label": "Default stroke colour",
+   "configKey": "editor.stroke_color",
+   "section": null
+  },
+  {
+   "id": "background-fill",
+   "page": "drawing",
+   "label": "Default background fill",
+   "configKey": "editor.background_color",
+   "section": null
+  },
+  {
+   "id": "fill-style",
+   "page": "drawing",
+   "label": "Default fill style",
+   "configKey": "editor.fill_style",
+   "section": null
+  },
+  {
+   "id": "stroke-width",
+   "page": "drawing",
+   "label": "Default stroke width",
+   "configKey": "editor.stroke_width",
+   "section": null
+  },
+  {
+   "id": "roughness",
+   "page": "drawing",
+   "label": "Default roughness",
+   "configKey": "editor.roughness",
+   "section": null
+  },
+  {
+   "id": "markdown-typing",
+   "page": "drawing",
+   "label": "Markdown mode in new drawings",
+   "configKey": "markdown.typing",
+   "section": null
+  },
+  {
+   "id": "markdown-h1-size",
+   "page": "drawing",
+   "label": "Heading 1 size",
+   "configKey": "markdown.h1_size",
+   "section": null
+  },
+  {
+   "id": "markdown-h2-size",
+   "page": "drawing",
+   "label": "Heading 2 size",
+   "configKey": "markdown.h2_size",
+   "section": null
+  },
+  {
+   "id": "markdown-h3-size",
+   "page": "drawing",
+   "label": "Heading 3 size",
+   "configKey": "markdown.h3_size",
+   "section": null
+  },
+  {
+   "id": "markdown-h4-size",
+   "page": "drawing",
+   "label": "Heading 4 size",
+   "configKey": "markdown.h4_size",
+   "section": null
+  },
+  {
+   "id": "markdown-h5-size",
+   "page": "drawing",
+   "label": "Heading 5 size",
+   "configKey": "markdown.h5_size",
+   "section": null
+  },
+  {
+   "id": "markdown-h6-size",
+   "page": "drawing",
+   "label": "Heading 6 size",
+   "configKey": "markdown.h6_size",
+   "section": null
+  },
+  {
+   "id": "markdown-block-gap",
+   "page": "drawing",
+   "label": "Space below a heading",
+   "configKey": "markdown.block_gap",
+   "section": null
+  },
+  {
+   "id": "markdown-heading-bold",
+   "page": "drawing",
+   "label": "Bold headings",
+   "configKey": "markdown.heading_bold",
+   "section": null
+  },
+  {
+   "id": "pen-presets",
+   "page": "tools",
+   "label": "Pen presets",
+   "configKey": "pens.presets",
+   "section": "pen"
+  },
+  {
+   "id": "laser-color",
+   "page": "tools",
+   "label": "Laser colour",
+   "configKey": "laser.color",
+   "section": "laser"
+  },
+  {
+   "id": "laser-size",
+   "page": "tools",
+   "label": "Laser size",
+   "configKey": "laser.size",
+   "section": "laser"
+  },
+  {
+   "id": "laser-fade",
+   "page": "tools",
+   "label": "Laser fade time",
+   "configKey": "laser.decay_ms",
+   "section": "laser"
+  },
+  {
+   "id": "laser-length",
+   "page": "tools",
+   "label": "Laser tail length",
+   "configKey": "laser.length",
+   "section": "laser"
+  },
+  {
+   "id": "tool-rectangle",
+   "page": "tools",
+   "label": "Rectangle",
+   "configKey": "tools.rectangle",
+   "section": "rectangle"
+  },
+  {
+   "id": "tool-diamond",
+   "page": "tools",
+   "label": "Diamond",
+   "configKey": "tools.diamond",
+   "section": "diamond"
+  },
+  {
+   "id": "tool-ellipse",
+   "page": "tools",
+   "label": "Ellipse",
+   "configKey": "tools.ellipse",
+   "section": "ellipse"
+  },
+  {
+   "id": "tool-arrow",
+   "page": "tools",
+   "label": "Arrow",
+   "configKey": "tools.arrow",
+   "section": "arrow"
+  },
+  {
+   "id": "tool-line",
+   "page": "tools",
+   "label": "Line",
+   "configKey": "tools.line",
+   "section": "line"
+  },
+  {
+   "id": "tool-text",
+   "page": "tools",
+   "label": "Text",
+   "configKey": "tools.text",
+   "section": "text"
+  },
+  {
+   "id": "vault-folder",
+   "page": "files",
+   "label": "Vault folder",
+   "configKey": null,
+   "section": null
+  },
+  {
+   "id": "autosave",
+   "page": "files",
+   "label": "Autosave delay",
+   "configKey": "saving.autosave_delay_ms",
+   "section": null
+  },
+  {
+   "id": "confirm-delete",
+   "page": "files",
+   "label": "Confirm before trashing",
+   "configKey": "files.confirm_delete",
+   "section": null
+  },
+  {
+   "id": "new-drawing-folder",
+   "page": "files",
+   "label": "New drawings go to",
+   "configKey": "files.new_drawing_folder",
+   "section": null
+  },
+  {
+   "id": "templates-folder",
+   "page": "files",
+   "label": "Templates folder",
+   "configKey": "files.templates_folder",
+   "section": null
+  },
+  {
+   "id": "pdf-max-side",
+   "page": "files",
+   "label": "PDF import resolution",
+   "configKey": "pdf_import.max_side",
+   "section": null
+  },
+  {
+   "id": "pdf-format",
+   "page": "files",
+   "label": "PDF import image format",
+   "configKey": "pdf_import.format",
+   "section": null
+  },
+  {
+   "id": "pdf-quality",
+   "page": "files",
+   "label": "PDF import JPEG quality",
+   "configKey": "pdf_import.quality",
+   "section": null
+  },
+  {
+   "id": "pdf-lock-pages",
+   "page": "files",
+   "label": "Lock imported PDF pages",
+   "configKey": "pdf_import.lock_pages",
+   "section": null
+  },
+  {
+   "id": "pdf-warn-pages",
+   "page": "files",
+   "label": "PDF page count warning",
+   "configKey": "pdf_import.warn_pages",
+   "section": null
+  },
+  {
+   "id": "pdf-pixel-budget",
+   "page": "files",
+   "label": "PDF import pixel budget",
+   "configKey": "pdf_import.pixel_budget_mp",
+   "section": null
+  },
+  {
+   "id": "recovery-store",
+   "page": "files",
+   "label": "Crash recovery store",
+   "configKey": null,
+   "section": null
+  },
+  {
+   "id": "settings-file",
+   "page": "files",
+   "label": "Settings file",
+   "configKey": null,
+   "section": null
+  },
+  {
+   "id": "link-format",
+   "page": "links",
+   "label": "New link format",
+   "configKey": "links.new_link_format",
+   "section": null
+  },
+  {
+   "id": "link-shape-format",
+   "page": "links",
+   "label": "Shape link format",
+   "configKey": "links.shape_link_format",
+   "section": null
+  },
+  {
+   "id": "link-open-modifier",
+   "page": "links",
+   "label": "Open link modifier",
+   "configKey": "links.open_modifier",
+   "section": null
+  },
+  {
+   "id": "link-update-on-rename",
+   "page": "links",
+   "label": "Update links on rename",
+   "configKey": "links.update_on_rename",
+   "section": null
+  },
+  {
+   "id": "link-autocomplete",
+   "page": "links",
+   "label": "Link suggestions",
+   "configKey": "links.autocomplete",
+   "section": null
+  },
+  {
+   "id": "link-hint-chars",
+   "page": "links",
+   "label": "Hint characters",
+   "configKey": "links.hint_chars",
+   "section": null
+  },
+  {
+   "id": "link-style",
+   "page": "links",
+   "label": "Style links in text",
+   "configKey": "links.style_links",
+   "section": null
+  },
+  {
+   "id": "link-color",
+   "page": "links",
+   "label": "Link colour",
+   "configKey": "links.color",
+   "section": null
+  },
+  {
+   "id": "link-hover-preview",
+   "page": "links",
+   "label": "Hover preview",
+   "configKey": "links.hover_preview",
+   "section": null
+  },
+  {
+   "id": "tags-autocomplete",
+   "page": "links",
+   "label": "Tag suggestions",
+   "configKey": "tags.autocomplete",
+   "section": null
+  },
+  {
+   "id": "tags-pane-sort",
+   "page": "links",
+   "label": "Tags pane order",
+   "configKey": "tags.pane_sort",
+   "section": null
+  },
+  {
+   "id": "history-enabled",
+   "page": "history",
+   "label": "Enable history",
+   "configKey": "history.enabled",
+   "section": null
+  },
+  {
+   "id": "history-interval",
+   "page": "history",
+   "label": "Version interval (minutes)",
+   "configKey": "history.interval_minutes",
+   "section": null
+  },
+  {
+   "id": "history-keep-all",
+   "page": "history",
+   "label": "Keep every version for (hours)",
+   "configKey": "history.keep_all_hours",
+   "section": null
+  },
+  {
+   "id": "history-keep-hourly",
+   "page": "history",
+   "label": "Then keep one per hour for (hours)",
+   "configKey": "history.keep_hourly_hours",
+   "section": null
+  },
+  {
+   "id": "history-keep-daily",
+   "page": "history",
+   "label": "Then keep one per day for (days)",
+   "configKey": "history.keep_daily_days",
+   "section": null
+  },
+  {
+   "id": "history-keep-weekly",
+   "page": "history",
+   "label": "Then keep one per week for (weeks)",
+   "configKey": "history.keep_weekly_weeks",
+   "section": null
+  },
+  {
+   "id": "history-retention-preset",
+   "page": "history",
+   "label": "Retention preset",
+   "configKey": null,
+   "section": null
+  },
+  {
+   "id": "history-size-cap",
+   "page": "history",
+   "label": "Size limit (MB)",
+   "configKey": "history.size_cap_mb",
+   "section": null
+  },
+  {
+   "id": "history-highlight",
+   "page": "history",
+   "label": "Highlight changes in preview",
+   "configKey": "history.highlight_changes",
+   "section": null
+  },
+  {
+   "id": "history-privacy",
+   "page": "history",
+   "label": "Privacy",
+   "configKey": null,
+   "section": null
+  },
+  {
+   "id": "history-git",
+   "page": "history",
+   "label": "Exclude history from git",
+   "configKey": null,
+   "section": null
+  },
+  {
+   "id": "history-delete-all",
+   "page": "history",
+   "label": "Delete all history of the open drawing",
+   "configKey": null,
+   "section": null
+  },
+  {
+   "id": "tabs-enabled",
+   "page": "interface",
+   "label": "Enable tabs",
+   "configKey": "tabs.enabled",
+   "section": null
+  },
+  {
+   "id": "tabs-show-strip",
+   "page": "interface",
+   "label": "Show tab strip",
+   "configKey": "tabs.show_strip",
+   "section": null
+  },
+  {
+   "id": "tabs-open-from-navigator",
+   "page": "interface",
+   "label": "Open drawings from the file tree in",
+   "configKey": "tabs.open_from_navigator",
+   "section": null
+  },
+  {
+   "id": "tabs-focus-new",
+   "page": "interface",
+   "label": "Switch to a new tab when it opens",
+   "configKey": "tabs.focus_new",
+   "section": null
+  },
+  {
+   "id": "tabs-new-tab-position",
+   "page": "interface",
+   "label": "New tabs open",
+   "configKey": "tabs.new_tab_position",
+   "section": null
+  },
+  {
+   "id": "tabs-ctrl-tab",
+   "page": "interface",
+   "label": "Ctrl+Tab goes to",
+   "configKey": "tabs.ctrl_tab",
+   "section": null
+  },
+  {
+   "id": "tabs-close-pinned",
+   "page": "interface",
+   "label": "Close pinned tabs with the shortcut",
+   "configKey": "tabs.close_pinned",
+   "section": null
+  },
+  {
+   "id": "tabs-restore",
+   "page": "interface",
+   "label": "Restore open tabs when a vault opens",
+   "configKey": "tabs.restore",
+   "section": null
+  },
+  {
+   "id": "tabs-undo-budget",
+   "page": "interface",
+   "label": "Keep undo history for background tabs (MB)",
+   "configKey": "tabs.undo_budget_mb",
+   "section": null
+  },
+  {
+   "id": "layout-header",
+   "page": "interface",
+   "label": "Header",
+   "configKey": "layout.header",
+   "section": null
+  },
+  {
+   "id": "layout-footer",
+   "page": "interface",
+   "label": "Editor footer",
+   "configKey": "layout.footer",
+   "section": null
+  },
+  {
+   "id": "memory-free-unused-images",
+   "page": "interface",
+   "label": "Free images you can no longer undo back",
+   "configKey": "memory.free_unused_images",
+   "section": null
+  },
+  {
+   "id": "memory-undo-steps",
+   "page": "interface",
+   "label": "Undo steps kept per drawing",
+   "configKey": "memory.undo_steps",
+   "section": null
+  },
+  {
+   "id": "memory-low-memory-canvas",
+   "page": "interface",
+   "label": "Low-memory canvas (restart to apply)",
+   "configKey": "memory.low_memory_canvas",
+   "section": null
+  },
+  {
+   "id": "sync-conflict-badge",
+   "page": "interface",
+   "label": "Mark conflict copies in the file tree",
+   "configKey": "sync.conflict_badge",
+   "section": null
+  },
+  {
+   "id": "sync-download-placeholders",
+   "page": "interface",
+   "label": "Download iCloud files when you open them",
+   "configKey": "sync.download_placeholders",
+   "section": null
+  },
+  {
+   "id": "services-search-start",
+   "page": "general",
+   "label": "Start search index",
+   "configKey": "search.start",
+   "section": null
+  },
+  {
+   "id": "services-links-start",
+   "page": "general",
+   "label": "Start link index",
+   "configKey": "links.start",
+   "section": null
+  },
+  {
+   "id": "services-history-start",
+   "page": "general",
+   "label": "Start file history",
+   "configKey": "history.start",
+   "section": null
+  },
+  {
+   "id": "services-files-list-start",
+   "page": "general",
+   "label": "Start file list",
+   "configKey": "files.list_start",
+   "section": null
+  },
+  {
+   "id": "files-speculative-open",
+   "page": "files",
+   "label": "Read drawings ahead on mouse-down",
+   "configKey": "files.speculative_open",
+   "section": null
+  },
+  {
+   "id": "files-auto-reload",
+   "page": "files",
+   "label": "Reload when files change outside the app",
+   "configKey": "files.auto_reload",
+   "section": null
+  },
+  {
+   "id": "hotkeys-list",
+   "page": "hotkeys",
+   "label": "Hotkeys",
+   "configKey": null,
+   "section": null
+  },
+  {
+   "id": "extensions-list",
+   "page": "extensions",
+   "label": "Built-in extensions",
+   "configKey": null,
+   "section": null
+  },
+  {
+   "id": "plugins-installed",
+   "page": "plugins",
+   "label": "Installed plugins",
+   "configKey": null,
+   "section": null
+  },
+  {
+   "id": "ai-enabled",
+   "page": "control",
+   "label": "AI",
+   "configKey": "ai.enabled",
+   "section": null
+  },
+  {
+   "id": "ai-mcp-enabled",
+   "page": "control",
+   "label": "AI tools interface (MCP)",
+   "configKey": "ai.mcp_enabled",
+   "section": null
+  },
+  {
+   "id": "control-notify-edits",
+   "page": "control",
+   "label": "Edit notices",
+   "configKey": "control.notify_edits",
+   "section": null
+  },
+  {
+   "id": "watchdog-enabled",
+   "page": "interface",
+   "label": "Hang watchdog",
+   "configKey": "watchdog.enabled",
+   "section": null
+  },
+  {
+   "id": "watchdog-grace",
+   "page": "interface",
+   "label": "Hang watchdog delay",
+   "configKey": "watchdog.grace_ms",
+   "section": null
+  },
+  {
+   "id": "window-decorations",
+   "page": "interface",
+   "label": "Window title bar",
+   "configKey": "window.decorations",
+   "section": null
+  },
+  {
+   "id": "about-info",
+   "page": "about",
+   "label": "About Vaultdraw",
+   "configKey": null,
+   "section": null
+  }
+ ],
+ "pages": [
+  {
+   "id": "general",
+   "label": "General"
+  },
+  {
+   "id": "appearance",
+   "label": "Appearance"
+  },
+  {
+   "id": "page",
+   "label": "Page"
+  },
+  {
+   "id": "interface",
+   "label": "Interface"
+  },
+  {
+   "id": "drawing",
+   "label": "Drawing"
+  },
+  {
+   "id": "tools",
+   "label": "Tools"
+  },
+  {
+   "id": "hotkeys",
+   "label": "Hotkeys"
+  },
+  {
+   "id": "files",
+   "label": "Files"
+  },
+  {
+   "id": "links",
+   "label": "Links"
+  },
+  {
+   "id": "history",
+   "label": "History"
+  },
+  {
+   "id": "extensions",
+   "label": "Extensions"
+  },
+  {
+   "id": "plugins",
+   "label": "Plugins"
+  },
+  {
+   "id": "control",
+   "label": "Control"
+  },
+  {
+   "id": "about",
+   "label": "About"
+  }
+ ]
+}
