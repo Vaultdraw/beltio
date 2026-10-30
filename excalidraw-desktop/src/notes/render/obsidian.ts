@@ -9,6 +9,8 @@
  */
 import { Marked } from "marked";
 
+import { findTags, MAX_TAG_CHARS } from "../../tags/grammar";
+
 import { altAndSize } from "./imageSize";
 import { highlightCode } from "./highlight";
 
@@ -128,16 +130,25 @@ const embed: TokenizerAndRendererExtension = {
   },
 };
 
+/** Enough text after `#` for the longest tag the grammar accepts. */
+const TAG_LOOKAHEAD = 4 * MAX_TAG_CHARS + 2;
+
 const tag: TokenizerAndRendererExtension = {
   name: "notetag",
   level: "inline",
-  start: (src) => {
-    const m = /(?:^|[\s(])#[\p{L}\p{N}_/-]/u.exec(src);
-    return m ? src.indexOf("#", m.index) : -1;
-  },
-  tokenizer(src) {
-    const m = /^#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/u.exec(src);
-    return m ? { type: "notetag", raw: m[0], tag: m[1] } : undefined;
+  start: (src) => src.indexOf("#"),
+  // The tag pane's own grammar (tags/grammar.ts, the port of search/tags.rs), so a chip is always
+  // a tag the pane lists and a click finds it (toimprove 217). The character before `#` is the
+  // end of the token before it.
+  tokenizer(src, tokens) {
+    if (src[0] !== "#") {
+      return undefined;
+    }
+    const prev = tokens.at(-1)?.raw.slice(-1) ?? "";
+    const m = findTags(prev + src.slice(0, TAG_LOOKAHEAD))[0];
+    return m && m.start === prev.length
+      ? { type: "notetag", raw: `#${m.display}`, tag: m.display }
+      : undefined;
   },
   renderer(token) {
     const name = (token as unknown as { tag: string }).tag;

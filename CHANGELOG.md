@@ -25,6 +25,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Tag chips in a note are the tags the tag pane lists** (toimprove 217). Colours like `#1e1e1e` are no longer chips that search for nothing, `#tag-` and `#a/b/` read as `tag` and `a/b`, and `"#q"`, `list,#c` and `x:#k` are chips like in the pane; the reading view now uses the same tag grammar as the pane and the search.
 - **`$$E=mc^2$$` inside a sentence shows the formula** (toimprove 208). It showed the dollar signs; it is now display math on its own line, as in Obsidian. Single-dollar prices stay text.
 - **`![[pic.png|caption|300x200]]` keeps its size, and the caption is the picture's alt text** (toimprove 211). The reading view now reads the text after `|` with the same parser as the import and the native side.
 - **`![[Note#^tbl]]` finds a block id written on its own line after a table, quote or list** (toimprove 210). Obsidian's documented form for those blocks showed as an unresolved embed; the embed now shows the block above the id line, and `[[Note#^tbl]]` scrolls to it.

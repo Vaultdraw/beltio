@@ -210,7 +210,16 @@ describe("J-8: tag chips in a note follow the tag grammar the tag pane uses (toi
       ...div.querySelectorAll<HTMLElement>(".note-body .note-tag, .note-tag"),
     ].map((e) => e.dataset.tag);
   };
-  const AGREE = ["#café today", "[#br]", "#_under", "#2024", "#tag's", "#Ünï"];
+  const AGREE = [
+    "#café today",
+    "[#br]",
+    "#_under",
+    "#2024",
+    "#tag's",
+    "#Ünï",
+    "C# and issue#12 are not tags",
+    "two #a #b",
+  ];
   const DRIFT = [
     "colour #ff00aa here",
     "bg #1e1e1e",
@@ -228,7 +237,7 @@ describe("J-8: tag chips in a note follow the tag grammar the tag pane uses (toi
     });
   }
   for (const text of DRIFT) {
-    it.fails(`${text}: the chips are the tags the pane lists`, () => {
+    it(`${text}: the chips are the tags the pane lists`, () => {
       expect(chips(text)).toEqual(findTags(text).map((m) => m.display));
     });
   }
