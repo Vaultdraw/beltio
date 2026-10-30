@@ -118,6 +118,10 @@ describe("@vaultdraw/api public surface", () => {
 
   it("knows the experimental areas", () => {
     expect([...experimentalNames()].sort()).toEqual([
+      "NetApi",
+      "NetRequest",
+      "NetResponse",
+      "SecretApi",
       "ThumbnailState",
       "ThumbnailsApi",
       "VaultGraphApi",

@@ -2,6 +2,17 @@
 
 The history of `@vaultdraw/api` (the types), the manifest and the `vaultdraw-plugin` tool. The API follows [semantic versioning](https://semver.org/spec/v2.0.0.html) from 1.0.0 on; [stability.md](../docs/stability.md) says what that promises. The app's own change log is `CHANGELOG.md` at the repository root.
 
+## 1.1.0
+
+An addition for the official AI assistant plugin. Nothing a 1.0 plugin uses changes.
+
+### Added
+
+- **`ctx.net`** (permission `net`, `@experimental`): `request(...)` sends a request from the app, not the page (the page's content policy allows no `fetch`) and streams the answer. https only, or http to this computer; no private address; no redirects; Offline mode blocks other computers and still allows this computer. `auth` adds a stored secret as a header, so the page never holds it.
+- **`ctx.secret`** (permission `secret`, `@experimental`): `set`, `has`, `delete` for secrets such as API keys. There is no read-back.
+- Errors of `ctx.net` carry the codes listed on its members (`NETWORK_DISABLED`, `NETWORK_TIMEOUT`, `PRIVATE_ADDRESS`, `SECRET_MISSING`, `ABORTED` and others); the `PluginErrorCode` type is unchanged.
+- The permission names `net` and `secret` are no longer reserved.
+
 ## 1.0.0
 
 The API is frozen after an audit of every exported name (the audit is in the project notes; its table has 250 type members, 13 manifest keys, 7 permissions, 6 events and 6 commands, none removed).

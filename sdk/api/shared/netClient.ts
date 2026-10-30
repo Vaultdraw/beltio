@@ -15,7 +15,9 @@ const TAG_DATA = 0;
 const TAG_END = 1;
 const TAG_PENDING = 2;
 
-const aborted = () => new PluginApiError("ABORTED", "The request was stopped");
+/** A stopped request: its code (`ABORTED`) is documented on `NetApi`, outside the frozen `PluginErrorCode`. */
+const aborted = () =>
+  Object.assign(new Error("The request was stopped"), { code: "ABORTED" });
 const json = (value: unknown) => encoder.encode(JSON.stringify(value));
 
 export function createNetClient(raw: RawCall, need: () => void): NetApi {

@@ -1,4 +1,4 @@
-// @vaultdraw/api 1.0.0
+// @vaultdraw/api 1.1.0
 // clipboard.ts
 import type { Disposable } from "./disposable";
 export interface PasteEvent {
