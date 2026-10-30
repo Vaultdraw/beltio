@@ -75,7 +75,7 @@ describe("buildTree sorting", () => {
   });
 });
 
-describe("buildTree performance (5,000 entries)", () => {
+describe("buildTree order on 5,000 entries", () => {
   const big = new Map<string, VaultEntry[]>();
   const folders: VaultEntry[] = [];
   for (let f = 0; f < 50; f++) {
@@ -89,32 +89,26 @@ describe("buildTree performance (5,000 entries)", () => {
   }
   big.set("", folders);
 
-  it.each(SORT_ORDERS as readonly SortOrder[])(
-    "%s is fast and ordered",
-    (order) => {
-      const start = performance.now();
-      const tree = buildTree(big, "", order);
-      const elapsed = performance.now() - start;
-      expect(elapsed).toBeLessThan(250);
-      expect(tree).toHaveLength(50);
-      expect(tree.every((n) => n.entry.kind === "folder")).toBe(true);
-      const first = tree[0].children!;
-      expect(first).toHaveLength(99);
-      if (order === "name_asc") {
-        expect(names(tree)[1]).toBe("Folder 1");
-        expect(names(first).slice(0, 3)).toEqual([
-          "Drawing 0.excalidraw",
-          "Drawing 1.excalidraw",
-          "Drawing 2.excalidraw",
-        ]);
-      }
-      if (order === "modified_desc") {
-        expect(first[0].entry.modifiedAt).toBe(6);
-        expect(names(first).slice(0, 2)).toEqual([
-          "Drawing 6.excalidraw",
-          "Drawing 13.excalidraw",
-        ]);
-      }
-    },
-  );
+  it.each(SORT_ORDERS as readonly SortOrder[])("%s is ordered", (order) => {
+    const tree = buildTree(big, "", order);
+    expect(tree).toHaveLength(50);
+    expect(tree.every((n) => n.entry.kind === "folder")).toBe(true);
+    const first = tree[0].children!;
+    expect(first).toHaveLength(99);
+    if (order === "name_asc") {
+      expect(names(tree)[1]).toBe("Folder 1");
+      expect(names(first).slice(0, 3)).toEqual([
+        "Drawing 0.excalidraw",
+        "Drawing 1.excalidraw",
+        "Drawing 2.excalidraw",
+      ]);
+    }
+    if (order === "modified_desc") {
+      expect(first[0].entry.modifiedAt).toBe(6);
+      expect(names(first).slice(0, 2)).toEqual([
+        "Drawing 6.excalidraw",
+        "Drawing 13.excalidraw",
+      ]);
+    }
+  });
 });

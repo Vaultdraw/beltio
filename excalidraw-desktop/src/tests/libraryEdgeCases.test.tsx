@@ -34,10 +34,8 @@ describe("LibraryStore edge cases (large library, real timers)", () => {
     repo.setFile("personal", serializeLibraryAsJSON(many(2000)));
     const store = new LibraryStore(repo, { scheduleIdle: (run) => run() });
 
-    const t0 = performance.now();
     const loaded = (await store.adapter.load({ source: "load" }))!
       .libraryItems as LibraryItem[];
-    const loadMs = performance.now() - t0;
     expect(loaded).toHaveLength(2000);
 
     // A burst of edits (5 saves), then a flush: exactly one write.
@@ -46,17 +44,9 @@ describe("LibraryStore edge cases (large library, real timers)", () => {
         libraryItems: [item(`new${i}`), ...loaded.slice(0, 1990 + i)],
       });
     }
-    const t1 = performance.now();
     await store.flush();
-    const flushMs = performance.now() - t1;
     expect(repo.writes).toHaveLength(1);
     expect(JSON.parse(repo.writes[0].json).libraryItems).toHaveLength(1995);
-    // eslint-disable-next-line no-console
-    console.log(
-      `LIB2000 load=${loadMs.toFixed(0)}ms flush=${flushMs.toFixed(0)}ms`,
-    );
-    expect(loadMs).toBeLessThan(10_000);
-    expect(flushMs).toBeLessThan(10_000);
     store.dispose();
   });
 });

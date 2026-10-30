@@ -8,18 +8,12 @@ import { describe, expect, it } from "vitest";
  * time to a fixed threshold. sceneOps.bench and host.bench failed test:fast under load at least
  * four times in one night and leads waved them through by hand. Timing checks live in
  * `*.bench.test.ts` files (left out of the fast tier) or assert CPU time or operation counts.
- * KNOWN lists the files that still do it, to move to bench files (toimprove); never add to it.
+ * KNOWN lists files allowed to contain such a check (only this guard's own sample text); never add to it.
  */
 const ROOT = resolve(__dirname, "../../..");
 const KNOWN = new Set([
   // this guard's own sample text
   "excalidraw-desktop/src/tests/wallclock.guard.test.ts",
-  "excalidraw-desktop/src/tabs/historyBytes.test.ts",
-  "excalidraw-desktop/src/tests/libraryEdgeCases.test.tsx",
-  "excalidraw-desktop/src/tests/treeSort.test.ts",
-  "packages/excalidraw/tests/libraryNames.test.tsx",
-  "plugins/official/markdown-import/test/layout/budget.test.ts",
-  "sdk/examples/word-count/main.test.tsx",
 ]);
 
 const walk = (dir: string, out: string[] = []): string[] => {

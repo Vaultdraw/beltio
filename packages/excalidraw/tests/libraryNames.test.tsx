@@ -4,10 +4,7 @@ import { vi } from "vitest";
 
 import { isLibraryMenuOpenAtom } from "../components/LibraryMenu";
 import { actionAddToLibrary } from "../actions/actionAddToLibrary";
-import {
-  getLibraryItemSearchText,
-  withLibraryItemName,
-} from "../components/LibraryMenuItems";
+import { withLibraryItemName } from "../components/LibraryMenuItems";
 import {
   LIBRARY_ITEM_NAME_MAX_LENGTH,
   getHoverPreviewPosition,
@@ -620,20 +617,6 @@ describe("library item names", () => {
       await waitFor(() =>
         expect(visibleIds(container)).toEqual(["library-unit-frameItem"]),
       );
-    });
-
-    it("filters 2000 items quickly once the search text is cached", () => {
-      const many = Array.from({ length: 2000 }, (_, i) =>
-        makeItem(`i${i}`, i % 7 ? `Item ${i}` : undefined, `text ${i}`),
-      );
-      const filter = (query: string) =>
-        many.filter((item) => getLibraryItemSearchText(item).includes(query));
-      expect(filter("text 1999")).toHaveLength(1); // warms the cache
-      const start = performance.now();
-      const found = filter("item 19");
-      const elapsed = performance.now() - start;
-      expect(found.length).toBeGreaterThan(0);
-      expect(elapsed).toBeLessThan(50);
     });
 
     it("does not match unnamed items without text", async () => {
