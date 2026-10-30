@@ -18,13 +18,12 @@ import type { StepRange } from "./stepper";
  * (DeclaredSettingsPage, any step a plugin picks). Rows marked `fails` are confirmed broken on
  * main; the fixer drops `fails` once stepValue snaps on a rounded cell.
  */
-type Row = { name: string; range: StepRange; known?: boolean };
+type Row = { name: string; range: StepRange };
 
 const RANGES: Row[] = [
   {
     name: "PDF JPEG quality",
     range: { min: 0.5, max: 1, step: 0.05 },
-    known: true,
   },
   { name: "heading size", range: { min: 0.5, max: 8, step: 0.125 } },
   { name: "Markdown block gap", range: { min: 0, max: 4, step: 0.25 } },
@@ -32,17 +31,14 @@ const RANGES: Row[] = [
   {
     name: "plugin step 0.1",
     range: { min: 0, max: 3, step: 0.1 },
-    known: true,
   },
   {
     name: "plugin step 0.01",
     range: { min: 0, max: 1, step: 0.01 },
-    known: true,
   },
   {
     name: "plugin step 0.05 from 0.05",
     range: { min: 0.05, max: 2, step: 0.05 },
-    known: true,
   },
   { name: "whole steps", range: { min: 200, max: 60000, step: 200 } },
 ];
@@ -59,7 +55,7 @@ const grid = ({ min, max, step }: StepRange) => {
 
 describe("every number setting moves one clean step per arrow press", () => {
   for (const row of RANGES) {
-    (row.known ? it.fails : it)(row.name, () => {
+    it(row.name, () => {
       const g = grid(row.range);
       const bad: string[] = [];
       g.forEach((v, i) => {

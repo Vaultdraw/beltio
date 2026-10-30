@@ -14,9 +14,16 @@ export const stepValue = (
   dir: 1 | -1,
   { min, max, step }: StepRange,
 ): number => {
-  const cell = (value - min) / step;
+  // (0.85 - 0.5) / 0.05 is 6.999… in floating point: round the cell first so a value on the grid
+  // is on it, and the press moves one whole step.
+  const cell = Math.round(((value - min) / step) * 1e9) / 1e9;
   const next = dir === 1 ? Math.floor(cell) + 1 : Math.ceil(cell) - 1;
-  return Math.min(max, Math.max(min, min + next * step));
+  // Keep the step's decimals (0.1 steps give 0.3, not 0.30000000000000004).
+  const decimals = (String(step).split(".")[1] ?? "").length;
+  return Math.min(
+    max,
+    Math.max(min, Number((min + next * step).toFixed(decimals))),
+  );
 };
 
 /**
