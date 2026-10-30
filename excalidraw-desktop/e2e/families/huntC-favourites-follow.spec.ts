@@ -10,14 +10,15 @@ const name = (page: Page, n: string) =>
   page.locator(".vault-tree-item__name", { hasText: n }).first();
 const favs = (page: Page) => page.getByTestId("favourite-row");
 const rename = async (page: Page, n: string, to: string) => {
-  const r = page
-    .locator(".vault-tree-item", { has: name(page, n) })
-    .first();
+  const r = page.locator(".vault-tree-item", { has: name(page, n) }).first();
   await r.hover();
   await r.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("menuitem", { name: "Rename…", exact: true }).click();
   await page.getByRole("dialog").getByLabel("New name").fill(to);
-  await page.getByRole("dialog").getByRole("button", { name: "Rename" }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Rename" })
+    .click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 };
 
