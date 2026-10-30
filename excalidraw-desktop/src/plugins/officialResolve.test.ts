@@ -88,7 +88,6 @@ describe("official plugins are on unless turned off", () => {
       "favourites",
       "auto-export",
       "table",
-      "ai-assistant",
     ]);
     restoreExtensionDefaults();
     expect(getPreferences().pluginsEnabled).toEqual([
@@ -103,8 +102,7 @@ describe("official plugins are on unless turned off", () => {
       "auto-export",
       "table",
     ]);
-    // Off by default, so it is recorded as off (the rest are on).
-    expect(getPreferences().pluginsDisabled).toEqual(["ai-assistant"]);
+    expect(getPreferences().pluginsDisabled).toEqual([]);
   });
 
   it("the AI assistant is off by default: no saved list gains it, Restore defaults leaves it off", () => {

@@ -550,9 +550,9 @@ export function resolveOfficial(
   return { enabled: enabled.filter((id) => !disabled.includes(id)), disabled };
 }
 
-/** The official plugins a given enabled list leaves off: what to record as `plugins.disabled`. */
+/** The default-on official plugins a given enabled list leaves off: what to record as `plugins.disabled` (a default-off plugin that is not enabled is off without being listed). */
 export const disabledOfficial = (enabled: readonly string[]): string[] =>
-  OFFICIAL_IDS.filter((id) => !enabled.includes(id));
+  DEFAULT_ON_IDS.filter((id) => !enabled.includes(id));
 
 export const isOfficialPluginId = (id: string): boolean =>
   OFFICIAL_PLUGINS.some((p) => p.id === id);

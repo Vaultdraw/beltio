@@ -167,7 +167,7 @@ fn min_api_refuses_a_newer_revision() {
     assert_eq!(manifest::compatibility(&with("min_api = \"0.9.0\"\n"), "0.2.0"), (true, None));
     let (ok, why) = manifest::compatibility(&with("min_api = \"1.99.0\"\n"), "0.2.0");
     assert!(!ok);
-    assert_eq!(why.unwrap(), "Needs plugin API \u{2265} 1.99.0 (this app has 1.0.0)");
+    assert_eq!(why.unwrap(), "Needs plugin API \u{2265} 1.99.0 (this app has 1.1.0)");
     assert!(manifest::parse("id = \"ab\"\nname = \"N\"\nversion = \"1.0.0\"\napi = 1\nmin_api = \"one\"\nmain = \"main.js\"\n").is_err());
 }
 

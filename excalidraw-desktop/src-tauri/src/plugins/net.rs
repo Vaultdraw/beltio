@@ -587,7 +587,8 @@ mod tests {
         let body: Vec<u8> = (0..50_000u32).map(|i| (i % 251) as u8).collect();
         let sent = body.clone();
         let (base, _) = start(move |_| Resp::ok(sent.clone()));
-        let (id, status) = open_ok(dir.path(), "t-order", json!({"url": format!("{base}/x"), "method": "POST", "body": "{}"}));
+        let (id, status) = open_ok(dir.path(), "t-order", json!({"url": format!("{base}/x"), "method": "GET"}));
+        // GET: the test server never reads a request body, and closing on unread bytes resets the connection.
         assert_eq!(status, 200);
         let (got, err) = drain(dir.path(), "t-order", id);
         assert!(err.is_none());
