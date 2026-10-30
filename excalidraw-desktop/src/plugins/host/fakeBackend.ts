@@ -1,4 +1,11 @@
 /** In-memory PluginsBackend for vitest and the e2e harness. */
+import {
+  createFakeNet,
+  fakeNetRow,
+  NET_ROWS,
+  SECRET_ROWS,
+  type FakeNet,
+} from "../../../../sdk/api/shared/fakeNet";
 import { createFakeFolderStore } from "../../../../sdk/api/shared/fakeFolders";
 import {
   fakeParseMarkdown,
@@ -79,6 +86,8 @@ export interface FakeBackend extends PluginsBackend {
     asked: string[][];
     fetched: string[];
   };
+  /** The `net.*` and `secret.*` rows (permissions `net` and `secret`): script the provider with `net.respond`. */
+  net: FakeNet;
   /** The `folders.*` rows' state: what the pickers return next, the sources and targets handed out. */
   folders: FakeFolderStore;
 }
@@ -431,6 +440,7 @@ export function createFakeBackend(
       asked: [],
       fetched: [],
     },
+    net: createFakeNet(),
     folders: createFakeFolderStore({
       open: () => fake.vaultOpen,
       readOnly: () => fake.vaultReadOnly,
@@ -460,6 +470,16 @@ export function createFakeBackend(
           );
         }
         return pdfRow(fake.pdf, method, body);
+      }
+      if (NET_ROWS.has(method) || SECRET_ROWS.has(method)) {
+        const need = method.startsWith("net.") ? "net" : "secret";
+        if (!plugin.permissions.includes(need)) {
+          throw coded(
+            "PERMISSION",
+            `${pluginId}: ${method} needs the permission "${need}", which plugin.toml does not declare`,
+          );
+        }
+        return fakeNetRow(fake.net, pluginId, method, body ?? new Uint8Array(0));
       }
       if (method.startsWith("network.")) {
         if (!plugin.permissions.includes("network.images")) {

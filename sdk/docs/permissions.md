@@ -28,9 +28,11 @@ permissions = ["vault.read", "vault.write", "folders.import", "control", "pdf", 
 | `control` | Let the vaultdraw command, scripts and the AI apps you allow call its methods | `[[contributes.methods]]` and `ctx.methods` (since 0.22.0): other programs call the methods the plugin declares. A plugin that declares methods must declare `control`. Adding it in an update needs review, like a write permission |
 | `clipboard` | Read the clipboard text and see the text you paste | `ctx.clipboard` (since 0.28.0): `readText()` and `onPaste(cb)` for multi-line plain text; copied shapes and images never reach a plugin. Not a write permission, so adding it needs no review |
 | `network.images` | Download the pictures of web pages that your notes show, unless Offline mode or the user's setting turns it off | `ctx.network` (since 0.31.0): `askImages(urls)` answers whether web pictures are on (no dialog is shown) and `fetchImage(url)` returns the bytes. Only the `images` purpose: public http or https, no private or local address, at most 10 MiB, a picture by its bytes. |
+| `net` | Send requests to the addresses it is set up for, such as an AI provider, with keys you store | `ctx.net` (since 1.1.0, experimental): `request(...)` sent by the app. https only, or http to this computer; no private address; no redirects. Offline mode blocks other computers and still allows this computer |
+| `secret` | Keep secrets such as API keys in a protected file the plugin can never read back | `ctx.secret` (since 1.1.0, experimental): `set`, `has`, `delete`. Used by `ctx.net` through `auth`. Kept in the state folder, readable by this user only, not encrypted |
 | `pdf` | Open PDF files you pick and draw their pages | `ctx.pdf` (since 0.26.0): a native file dialog for a PDF, opening PDF bytes, and rendering pages to pictures with the app's renderer. It reads the file you pick or the bytes you pass and writes nothing, so adding it needs no review |
 
-At most 8, no duplicates. An unknown name is a manifest error, so an older app refuses a plugin that needs a newer one. The names `net` and `secret` are reserved for later and are refused today. `ctx.manifest.permissions` returns the list.
+At most 8, no duplicates. An unknown name is a manifest error, so an older app refuses a plugin that needs a newer one. `ctx.manifest.permissions` returns the list.
 
 Since API 0.3.0 the app checks them in its native layer: every native call of the plugin API goes through one gateway (`plugin_call`), which looks the method up in a fixed list, then refuses (`code: "PERMISSION"`) a call whose permission your `plugin.toml` does not declare or the user has not confirmed. `ctx.storage` needs no permission.
 
@@ -63,6 +65,8 @@ Since API 0.3.0 the app checks them in its native layer: every native call of th
 | `ctx.pdf.pick()`, `ctx.pdf.open(name, bytes)` and every `PdfDocument` call | `pdf` | 0.26.0 |
 | `ctx.clipboard.readText()`, `ctx.clipboard.onPaste(cb)` | `clipboard` | 0.28.0 |
 | `ctx.network.askImages(urls)`, `ctx.network.fetchImage(url)` | `network.images` | 0.31.0 |
+| `ctx.net.request(...)` | `net` | 1.1.0 |
+| `ctx.secret.set`, `has`, `delete` | `secret` | 1.1.0 |
 | `ctx.pdf.settings()`, `ctx.scene.placePages(sizes)`, `ctx.scene.sizeBytes()` | none | 0.26.0 |
 
 A call that needs a permission your `plugin.toml` does not declare fails with `code: "PERMISSION"`. An importer runs on a file the user chose, so its input needs no permission; an importer that calls `ctx.vault` still needs the permission for that call.

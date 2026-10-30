@@ -21,7 +21,9 @@ import type { VaultApi } from "./vault";
 import type { ShapesApi } from "./shapes";
 import type { DiagramsApi } from "./diagrams";
 import type { ClipboardApi, ToastOptions } from "./clipboard";
+import type { NetApi } from "./net";
 import type { NetworkApi } from "./network";
+import type { SecretApi } from "./secret";
 import type { PdfApi } from "./pdf";
 import type { ThumbnailsApi } from "./thumbnails";
 import type { ToolsApi } from "./tools";
@@ -131,6 +133,10 @@ export interface PluginContext {
   readonly clipboard: ClipboardApi;
   /** Download the pictures of web pages a note shows, once the user allows it. Needs the permission `network.images`. @since 0.31.0 */
   readonly network: NetworkApi;
+  /** Requests to the internet or this computer, sent by the app. Needs the permission `net`. @experimental @since 1.1.0 */
+  readonly net: NetApi;
+  /** Secrets such as API keys, never readable back. Needs the permission `secret`. @experimental @since 1.1.0 */
+  readonly secret: SecretApi;
   /** Full-screen presenting of the open drawing. @since 0.29.0 */
   readonly present: PresentApi;
   /**

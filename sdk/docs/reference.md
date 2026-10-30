@@ -1071,7 +1071,7 @@ The templates are `.tpl` files in `sdk/cli/templates/`; `init` strips the suffix
 | `activation-unknown` | error | `activation` is not a list, or names an event other than `onStartupFinished` |
 | `permission-invalid` | error | `permissions` is not a list of strings |
 | `permission-unknown` | error | A permission name that does not exist |
-| `permission-reserved` | error | `net` or `secret`: reserved for later |
+| `permission-reserved` | error | a name kept for later API revisions (none today) |
 | `permission-duplicate` | error | The same permission twice |
 | `permission-too-many` | error | More than 8 permissions |
 | `dev-true` | error | `dev = true` in a plugin you ship; `vaultdraw-plugin dev` adds it to the installed copy |

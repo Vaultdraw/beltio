@@ -187,7 +187,9 @@ export type { DiagramsApi, MermaidDrawing } from "./diagrams";
 export type { ThumbnailState, ThumbnailsApi } from "./thumbnails";
 export type { PdfApi, PdfDocument, PdfImportSettings, PdfPageSize, PdfRenderOptions, } from "./pdf";
 export type { ClipboardApi, PasteEvent, PasteResult, ToastOptions, } from "./clipboard";
+export type { NetApi, NetRequest, NetResponse } from "./net";
 export type { NetworkApi } from "./network";
+export type { SecretApi } from "./secret";
 export type { ToolHandlers, ToolPoint, ToolsApi } from "./tools";
 export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";
@@ -206,7 +208,7 @@ export interface PluginManifestInfo {
     permissions: readonly PluginPermission[];
     dataKey: string;
 }
-export type PluginPermission = "vault.read" | "vault.write" | "folders.import" | "control" | "pdf" | "clipboard" | "network.images";
+export type PluginPermission = "vault.read" | "vault.write" | "folders.import" | "control" | "pdf" | "clipboard" | "network.images" | "net" | "secret";
 export interface CommandContribution {
     id: string;
     title: string;
@@ -455,6 +457,32 @@ export interface MethodsApi {
     register(id: string, handler: (params: Json) => Json | Promise<Json>): Disposable;
 }
 
+// net.ts
+export interface NetRequest {
+    url: string;
+    method?: "GET" | "POST";
+    headers?: Record<string, string>;
+    body?: string;
+    timeoutMs?: number;
+    auth?: {
+        secret: string;
+        header: string;
+        prefix?: string;
+    };
+}
+export interface NetResponse {
+    readonly status: number;
+    readonly ok: boolean;
+    readonly body: AsyncIterable<Uint8Array>;
+    text(): Promise<string>;
+    close(): void;
+}
+export interface NetApi {
+    request(request: NetRequest, options?: {
+        signal?: AbortSignal;
+    }): Promise<NetResponse>;
+}
+
 // network.ts
 export interface NetworkApi {
     askImages(urls: readonly string[]): Promise<boolean>;
@@ -657,7 +685,9 @@ import type { VaultApi } from "./vault";
 import type { ShapesApi } from "./shapes";
 import type { DiagramsApi } from "./diagrams";
 import type { ClipboardApi, ToastOptions } from "./clipboard";
+import type { NetApi } from "./net";
 import type { NetworkApi } from "./network";
+import type { SecretApi } from "./secret";
 import type { PdfApi } from "./pdf";
 import type { ThumbnailsApi } from "./thumbnails";
 import type { ToolsApi } from "./tools";
@@ -707,6 +737,8 @@ export interface PluginContext {
     readonly pdf: PdfApi;
     readonly clipboard: ClipboardApi;
     readonly network: NetworkApi;
+    readonly net: NetApi;
+    readonly secret: SecretApi;
     readonly present: PresentApi;
     readonly subscriptions: Disposable[];
     setTimeout(fn: () => void, ms: number): Disposable;
@@ -883,6 +915,13 @@ export interface SceneContextApi {
         height: number;
     }[]): PagePlacement;
     sizeBytes(): number;
+}
+
+// secret.ts
+export interface SecretApi {
+    set(name: string, value: string): Promise<void>;
+    has(name: string): Promise<boolean>;
+    delete(name: string): Promise<void>;
 }
 
 // settings.ts

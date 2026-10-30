@@ -77,14 +77,14 @@
     },
     "permissions": {
       "title": "Permissions",
-      "description": "Optional. What the plugin does to your files, shown in the enable dialog. A declaration and a consent record, not a sandbox: the app loads the plugin only while you have confirmed what it declares, and asks again when an update adds a write permission. At most 8. The names net and secret are reserved and refused for now.",
+      "description": "Optional. What the plugin does to your files, shown in the enable dialog. A declaration and a consent record, not a sandbox: the app loads the plugin only while you have confirmed what it declares, and asks again when an update adds a write permission. At most 8. net sends requests to the internet addresses the plugin is configured for, such as an AI provider (ctx.net). secret keeps secrets such as API keys that the plugin can never read back (ctx.secret).",
       "type": "array",
       "maxItems": 8,
       "uniqueItems": true,
       "items": {
         "title": "Permission",
-        "description": "vault.read reads the drawings in your vault. vault.write creates drawings in your vault. folders.import reads a folder you pick and writes into a destination you pick (ctx.folders). control lets other programs (the vaultdraw command, scripts, AI apps you allow) call the methods the plugin declares. pdf opens PDF files you pick and renders their pages (ctx.pdf). clipboard reads the clipboard text and sees pasted text (ctx.clipboard). network.images downloads the pictures of web pages a note shows, once you allow it (ctx.network).",
-        "enum": ["vault.read", "vault.write", "folders.import", "control", "pdf", "clipboard", "network.images"]
+        "description": "vault.read reads the drawings in your vault. vault.write creates drawings in your vault. folders.import reads a folder you pick and writes into a destination you pick (ctx.folders). control lets other programs (the vaultdraw command, scripts, AI apps you allow) call the methods the plugin declares. pdf opens PDF files you pick and renders their pages (ctx.pdf). clipboard reads the clipboard text and sees pasted text (ctx.clipboard). network.images downloads the pictures of web pages a note shows, once you allow it (ctx.network). net sends requests to addresses it is configured for (ctx.net). secret keeps secrets such as API keys (ctx.secret).",
+        "enum": ["vault.read", "vault.write", "folders.import", "control", "pdf", "clipboard", "network.images", "net", "secret"]
       }
     },
     "data_key": {

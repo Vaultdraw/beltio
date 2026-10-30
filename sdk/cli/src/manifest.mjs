@@ -80,9 +80,11 @@ export const PERMISSIONS = [
   "pdf",
   "clipboard",
   "network.images",
+  "net",
+  "secret",
 ];
 /** Kept for later API revisions; an app that knows them as reserved refuses a manifest that uses one. */
-const RESERVED_PERMISSIONS = ["net", "secret"];
+const RESERVED_PERMISSIONS = [];
 
 export const TOP_KEYS = new Set([
   "id",

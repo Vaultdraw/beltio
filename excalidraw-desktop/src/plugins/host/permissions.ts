@@ -14,6 +14,8 @@ export const PERMISSION_TEXT: Readonly<Record<string, string>> = {
   clipboard: "Read the clipboard text and see the text you paste",
   "network.images":
     "Download the pictures of web pages that your notes show, after you allow it",
+  net: "Send requests to the addresses it is set up for, such as an AI provider, using the keys you store",
+  secret: "Keep secrets such as API keys, which it can never read back",
   pdf: "Open PDF files you pick and draw their pages",
   control:
     "Let the vaultdraw command, scripts and the AI apps you allow call its methods",

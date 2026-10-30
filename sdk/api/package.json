@@ -1,7 +1,7 @@
 {
   "name": "@vaultdraw/api",
-  "version": "1.0.0",
-  "description": "Types of the Vaultdraw plugin API (1.0)",
+  "version": "1.1.0",
+  "description": "Types of the Vaultdraw plugin API (1.x)",
   "private": true,
   "type": "module",
   "license": "MIT",

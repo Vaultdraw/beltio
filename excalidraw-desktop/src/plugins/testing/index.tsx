@@ -58,6 +58,7 @@ import { FakePdfBridge, makePages } from "../../tests/fakePdfBridge";
 
 import { createFakeScene, type FakeScene } from "./fakeScene";
 
+import type { FakeNet } from "../../../../sdk/api/testing/net";
 import type { FakeNetwork } from "../../../../sdk/api/testing/network";
 
 import type {
@@ -320,6 +321,8 @@ export interface TestPlugin {
   clipboard: FakeClipboard;
   /** `ctx.network` in tests: the fake backend's `network` rows (see sdk/api/testing/network.ts). */
   network: FakeNetwork;
+  /** `ctx.net` and `ctx.secret` in tests: the fake backend's `net` rows. */
+  net: FakeNet;
   /**
    * Drops a file on the drawing as the app does: finds the importer by
    * extension, runs the real import runner and resolves to the scene write
@@ -956,6 +959,7 @@ export async function boot(
     pdf,
     clipboard,
     network: backend.network,
+    net: backend.net,
     async import(fileName, content, at) {
       const match = findImporter(fileName);
       const active = getActiveScene();

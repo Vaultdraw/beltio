@@ -32,7 +32,7 @@ Every file starts with two comment lines.
 | `activation-unknown` | Unknown activation event, including `onDrop:<ext>` when no importer declares `<ext>`. |
 | `permission-invalid` | `permissions` is not a list of strings. |
 | `permission-unknown` | A permission name that does not exist. |
-| `permission-reserved` | `net`, `secret` or `control`: reserved for later. |
+| `permission-reserved` | A name kept for later API revisions (none today). |
 | `permission-duplicate` | The same permission twice. |
 | `permission-too-many` | More than 8 permissions. |
 | `data-key-invalid` | `data_key` is not lower case letters, digits, `_` and `-` in parts joined by `.` (at most 64 characters) |

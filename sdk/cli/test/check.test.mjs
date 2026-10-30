@@ -133,7 +133,6 @@ describe("validateManifestText", () => {
     ["activation = ['onStartupFinished', 'later']", "activation-unknown"],
     ["activation = 'onStartupFinished'", "activation-unknown"],
     ["permissions = ['vault.delete']", "permission-unknown"],
-    ["permissions = ['net']", "permission-reserved"],
     ["permissions = ['vault.read', 'vault.read']", "permission-duplicate"],
     ["permissions = 'vault.read'", "permission-invalid"],
     ["min_app = '1.2'", "min-app-invalid"],

@@ -51,7 +51,9 @@ import { createVaultApi } from "./vaultContext";
 import { createDiagramsApi } from "./diagramsContext";
 import { createClipboardApi } from "./clipboardContext";
 import { createPdfApi } from "./pdfContext";
+import { createNetApi } from "./netContext";
 import { createNetworkApi } from "./networkContext";
+import { createSecretApi } from "./secretContext";
 import { createPresentApi } from "./presentContext";
 import { createThumbnailsApi } from "./thumbnailsContext";
 import { createWorkspaceApi } from "./workspaceContext";
@@ -211,6 +213,8 @@ export function createPluginContext(
   let overlaysApi: OverlaysApi | undefined;
   let presentApi: PluginContext["present"] | undefined;
   let networkApi: PluginContext["network"] | undefined;
+  let netApi: PluginContext["net"] | undefined;
+  let secretApi: PluginContext["secret"] | undefined;
   let thumbnailsApi: ThumbnailsApi | undefined;
   let diagramsApi: DiagramsApi | undefined;
   let pdfApi: PdfApi | undefined;
@@ -471,6 +475,12 @@ export function createPluginContext(
     },
     get network() {
       return (networkApi ??= createNetworkApi(rt));
+    },
+    get net() {
+      return (netApi ??= createNetApi(rt));
+    },
+    get secret() {
+      return (secretApi ??= createSecretApi(rt));
     },
     get present() {
       return (presentApi ??= createPresentApi(id, track));

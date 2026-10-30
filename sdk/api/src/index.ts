@@ -124,7 +124,9 @@ export type {
   PasteResult,
   ToastOptions,
 } from "./clipboard";
+export type { NetApi, NetRequest, NetResponse } from "./net";
 export type { NetworkApi } from "./network";
+export type { SecretApi } from "./secret";
 export type { ToolHandlers, ToolPoint, ToolsApi } from "./tools";
 export type { OpenViewOptions, ViewFile, ViewProps, ViewsApi } from "./views";
 export type { Json, StorageApi, StorageScope } from "./storage";

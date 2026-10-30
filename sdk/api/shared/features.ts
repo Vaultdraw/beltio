@@ -1,7 +1,7 @@
 // Generated from the @since tags of sdk/api/src by sdk/api/scripts/gen-features.mjs. Do not edit.
 
 /** The API revision of this build (the version of sdk/api/package.json). */
-export const API_REVISION = "1.0.0";
+export const API_REVISION = "1.1.0";
 
 /** Feature name to the revision that added it. `ctx.host.has(name)` is true for these. */
 export const FEATURES: Readonly<Record<string, string>> = {
@@ -50,6 +50,8 @@ export const FEATURES: Readonly<Record<string, string>> = {
   "menus.target": "0.12.0",
   methods: "0.22.0",
   "methods.register": "0.22.0",
+  net: "1.1.0",
+  "net.request": "1.1.0",
   network: "0.31.0",
   "network.askImages": "0.31.0",
   "network.fetchImage": "0.31.0",
@@ -87,6 +89,10 @@ export const FEATURES: Readonly<Record<string, string>> = {
   "scene.sizeBytes": "0.26.0",
   "scene.useScene": "0.1.0",
   "scene.viewportCenter": "0.1.0",
+  secret: "1.1.0",
+  "secret.delete": "1.1.0",
+  "secret.has": "1.1.0",
+  "secret.set": "1.1.0",
   setInterval: "0.1.0",
   setTimeout: "0.1.0",
   settings: "0.1.0",

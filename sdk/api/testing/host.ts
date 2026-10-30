@@ -54,6 +54,7 @@ import {
 import { createFoldersModel } from "./folders";
 import { createPagesMock } from "./pages";
 import { createClipboardModel, type FakeClipboard } from "./clipboard";
+import { createNetModel, type FakeNet } from "./net";
 import { createNetworkModel, type FakeNetwork } from "./network";
 import { createPdfModel } from "./pdf";
 import { createSceneModel } from "./scene";
@@ -144,6 +145,8 @@ export interface MockHost {
   clipboard: FakeClipboard;
   /** What `ctx.network` serves (needs the permission `network.images`). */
   network: FakeNetwork;
+  /** `ctx.net` and `ctx.secret` in tests: set `respond`, read `requests` and `secrets` (permissions `net` and `secret`). */
+  net: FakeNet;
   /** Drops a file on the active drawing; resolves to the scene write it made, or null. */
   importFile(
     fileName: string,
@@ -239,6 +242,7 @@ export function createMockHost(
   const pdfModel = createPdfModel();
   const clipboardModel = createClipboardModel();
   const networkModel = createNetworkModel();
+  const netModel = createNetModel();
   const folders = createFoldersModel(vault, {
     open: () => vault.fake.setVault !== undefined && vaultIsOpen(),
     readOnly: () => vaultReadOnly(),
@@ -580,6 +584,8 @@ export function createMockHost(
     let pdfApi: PluginContext["pdf"] | undefined;
     let clipboardApi: PluginContext["clipboard"] | undefined;
     let networkApi: PluginContext["network"] | undefined;
+    let netApi: PluginContext["net"] | undefined;
+    let secretApi: PluginContext["secret"] | undefined;
     let menusApi: PluginContext["menus"] | undefined;
     let pagesApi: PluginContext["pages"] | undefined;
     let foldersApi: PluginContext["folders"] | undefined;
@@ -850,6 +856,12 @@ export function createMockHost(
       },
       get network() {
         return (networkApi ??= networkModel.api(id, info.permissions));
+      },
+      get net() {
+        return (netApi ??= netModel.netApi(id, info.permissions));
+      },
+      get secret() {
+        return (secretApi ??= netModel.secretApi(id, info.permissions));
       },
       get pdf() {
         // No native renderer in tests: set one up with `pdf` on the mock host.
@@ -1420,6 +1432,7 @@ export function createMockHost(
     pdf: pdfModel.fake,
     clipboard: clipboardModel.fake,
     network: networkModel.fake,
+    net: netModel.fake,
     importFile,
     cancelImport() {
       if (!importing) {
@@ -1645,6 +1658,7 @@ export function createMockHost(
       pdfModel.reset();
       clipboardModel.reset();
       networkModel.reset();
+      netModel.reset();
       presenting?.end();
       activePath = "fake.excalidraw";
       sceneReadOnly = false;
