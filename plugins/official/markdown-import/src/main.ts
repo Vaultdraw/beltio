@@ -147,6 +147,12 @@ const plugin: Plugin = definePlugin({
         await cur.doc?.abort();
         throw abortError();
       }
+      if (part === 0) {
+        // An empty or blank note is still a note (Obsidian opens it, and the vault import writes
+        // an empty drawing for it): make one empty page.
+        await open(1);
+        cur.doc!.append([], 1);
+      }
       await cur.doc?.finish();
       last = {
         name: fileName,

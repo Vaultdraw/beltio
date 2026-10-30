@@ -143,12 +143,12 @@ test("Import file… copes with the files a user really has", async ({
 
 // A-14: an empty or blank note imported with "Import file…" does nothing at all: no drawing, no
 // notice (the log says parts: 0). The vault import writes an empty drawing for the same note, and
-// Obsidian opens an empty note as an empty note. Remove fixme to reproduce.
+// Obsidian opens an empty note as an empty note: it now makes an empty drawing.
 for (const [name, body] of [
   ["Empty.md", ""],
   ["Blank lines.md", "   \n\n  \n"],
 ] as const) {
-  test.fixme(
+  test(
     `A-14: importing ${name} makes a drawing or says why not`,
     async ({ page }) => {
       const errors = trackErrors(page);
