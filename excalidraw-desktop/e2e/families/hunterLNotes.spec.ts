@@ -117,22 +117,21 @@ test.describe("hunter L: notes in an Obsidian-shaped vault", () => {
   });
 
   // L-4 (toimprove 259): a link inside an embedded note is followed from the HOST's folder.
-  test(
-    "a Markdown link inside an embedded note opens the file next to that note (L-4)",
-    async ({ page }) => {
-      await row(page, "Inbox/Daily.md").click();
-      const reading = page.getByTestId("note-reading");
-      const link = reading.locator(".note-embed").getByRole("link", {
-        name: "plan index",
-      });
-      await link.click();
-      await expect(selectedTab(page)).toHaveAttribute(
-        "data-path",
-        "Projects/index.md",
-        { timeout: 3000 },
-      );
-    },
-  );
+  test("a Markdown link inside an embedded note opens the file next to that note (L-4)", async ({
+    page,
+  }) => {
+    await row(page, "Inbox/Daily.md").click();
+    const reading = page.getByTestId("note-reading");
+    const link = reading.locator(".note-embed").getByRole("link", {
+      name: "plan index",
+    });
+    await link.click();
+    await expect(selectedTab(page)).toHaveAttribute(
+      "data-path",
+      "Projects/index.md",
+      { timeout: 3000 },
+    );
+  });
 
   // L-8 [improvement]: a task inside an embedded note is a disabled box (NoteView enables only the
   // host's own boxes). Obsidian ticks it, writing the embedded note's file.

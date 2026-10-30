@@ -56,14 +56,11 @@ describe("a plugin's secrets go with its data (toimprove M-20)", () => {
     ).toBe(true);
   });
 
-  it(
-    "installing different code under an old id forgets its secrets too",
-    () => {
-      expect(
-        touchesSecrets(
-          fnBody(read("install.rs"), "install_folder_with_fresh_consent"),
-        ),
-      ).toBe(true);
-    },
-  );
+  it("installing different code under an old id forgets its secrets too", () => {
+    expect(
+      touchesSecrets(
+        fnBody(read("install.rs"), "install_folder_with_fresh_consent"),
+      ),
+    ).toBe(true);
+  });
 });
