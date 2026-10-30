@@ -103,11 +103,6 @@ const exportFills = async (page: Page, darkSwitch?: boolean) => {
 test("hunter B: SVG export keeps the stored colour of role text, in the light and dark app theme and with another theme", async ({
   page,
 }) => {
-  // linux-ci-triage (2026-10-30): Escape does not close the export dialog after a click inside it on Linux WebKitGTK (reproduced 4 runs); probable real Linux bug in Excalidraw's Modal focus handling. Tracking: personal/feature/linux-ci-triage/TRIAGE.md.
-  test.skip(
-    process.platform === "linux",
-    "Escape does not close the export dialog after a click inside it on Linux WebKitGTK",
-  );
   const errors = trackErrors(page);
   await openSeededVault(page, { "Roles.excalidraw": scene });
   await treeName(page, "Roles").click();
@@ -128,5 +123,25 @@ test("hunter B: SVG export keeps the stored colour of role text, in the light an
   // "Dark mode" switch off the stored colours come back
   await runCommand(page, "Toggle light/dark mode");
   expect(await exportFills(page, false)).toEqual(STORED);
+  expect(errors).toEqual([]);
+});
+
+// Family: Excalidraw's own dialogs close on Escape wherever the focus is, also when a click left
+// it on the page body (Linux WebKitGTK does that after the export button runs).
+test("Escape closes the export dialog when the focus fell to the page body", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await openSeededVault(page, { "Roles.excalidraw": scene });
+  await treeName(page, "Roles").click();
+  await expect(page.locator(".vault-editor canvas.interactive")).toBeVisible();
+  await openExportDialogFromMenu(page);
+  await expect(page.locator(".ImageExportModal")).toHaveCount(1);
+  await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+  expect(await page.evaluate(() => document.activeElement?.tagName)).toBe(
+    "BODY",
+  );
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".ImageExportModal")).toHaveCount(0);
   expect(errors).toEqual([]);
 });

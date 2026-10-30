@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
 import { KEYS } from "@excalidraw/common";
@@ -32,6 +32,39 @@ export const Modal: React.FC<{
     [modalRoot],
   );
 
+  // A click on a button inside the dialog can leave focus on <body> (the button is disabled while
+  // it works, as in the image export on Linux WebKitGTK), and a key pressed there never reaches
+  // the dialog. Escape on the page body closes the topmost dialog, as with focus inside it.
+  const modalRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(props.onCloseRequest);
+  onCloseRef.current = props.onCloseRequest;
+  const doc = modalRoot?.ownerDocument;
+  useEffect(() => {
+    if (!doc) {
+      return;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      const el = modalRef.current;
+      if (
+        event.key !== KEYS.ESCAPE ||
+        event.defaultPrevented ||
+        !el ||
+        (event.target !== doc.body && event.target !== doc.documentElement)
+      ) {
+        return;
+      }
+      const dialogs = doc.querySelectorAll(".Modal");
+      if (dialogs[dialogs.length - 1] !== el) {
+        return;
+      }
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      onCloseRef.current();
+    };
+    doc.addEventListener("keydown", onKeyDown, true);
+    return () => doc.removeEventListener("keydown", onKeyDown, true);
+  }, [doc]);
+
   if (!modalRoot) {
     return null;
   }
@@ -50,6 +83,7 @@ export const Modal: React.FC<{
       className={clsx("Modal", props.className, {
         "animations-disabled": animationsDisabled,
       })}
+      ref={modalRef}
       role="dialog"
       aria-modal="true"
       onKeyDown={handleKeydown}
