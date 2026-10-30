@@ -78,10 +78,9 @@ test("notes Vim keys: normal mode does not type, o opens a line, :w saves", asyn
   expect(saved).not.toContain("ovim");
 });
 
-test("[toimprove 212, fails until fixed] notes Vim keys: :w in a note opened in a second tab saves that note", async ({
+test("notes Vim keys: :w in a note opened in a second tab saves that note (toimprove 212)", async ({
   page,
 }) => {
-  test.fail(true, "toimprove 212: :w is bound to the first editor's save");
   await seed(page, {
     "Alpha.md": "# Alpha\n\none\n",
     "Beta.md": "# Beta\n\ntwo\n",

@@ -73,13 +73,11 @@ const LINKS: LinkRow[] = [
     name: "Obsidian's shortest path (unique name in another folder)",
     href: "Ideas.md",
     opens: "Ideas",
-    bug: "toimprove 209",
   },
   {
     name: "Obsidian's absolute path in vault",
     href: "Areas/Ideas.md",
     opens: "Ideas",
-    bug: "toimprove 209",
   },
 ];
 
