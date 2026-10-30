@@ -2,7 +2,6 @@
 //! are left out when empty. The TypeScript mirror (documented field by field) is `sdk/api/src/markdown.ts`.
 
 use serde::Serialize;
-use std::collections::BTreeMap;
 
 pub const SCHEMA_VERSION: u32 = 1;
 
@@ -34,7 +33,39 @@ pub struct Frontmatter {
     pub tags: Vec<String>,
     pub aliases: Vec<String>,
     /// Every top-level key as a string (lists joined with ", ").
-    pub properties: BTreeMap<String, String>,
+    /// In the order the note writes them (Obsidian's properties panel keeps the file's order).
+    pub properties: Properties,
+}
+
+/// Top-level front matter keys in file order. Serialized as a JSON object, so the reading view's
+/// `Object.keys` sees the file's order (toimprove 281).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Properties(pub Vec<(String, String)>);
+
+impl Properties {
+    pub fn get(&self, key: &str) -> Option<&String> {
+        self.0.iter().find(|(k, _)| k == key).map(|(_, v)| v)
+    }
+    pub fn keys(&self) -> impl Iterator<Item = &String> {
+        self.0.iter().map(|(k, _)| k)
+    }
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+impl Serialize for Properties {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeMap;
+        let mut m = s.serialize_map(Some(self.0.len()))?;
+        for (k, v) in &self.0 {
+            m.serialize_entry(k, v)?;
+        }
+        m.end()
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, PartialEq)]

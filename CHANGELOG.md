@@ -35,6 +35,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **Save as template on an Obsidian drawing offers the drawing's name.** It offered "Plan.excalidraw.md"; it now offers "Plan" (toimprove 277).
 - **Cmd+Z in a Markdown-mode box after a heading brings back a word you deleted.** After Enter on a heading, typing a word and deleting it, Cmd+Z jumped back to the heading and lost the word; once anything is typed in the box, Cmd+Z is the text box's own undo (toimprove 263).
 - **A Markdown link inside an embedded note opens the file next to that note.** It resolved from the note that held the embed, so `[plan index](index.md)` in an embedded `Projects/Plan.md` opened `Inbox/index.md`; links and `[[#Heading]]` links now follow the note that wrote them (toimprove 259).
+- **A note's properties are listed in the note's order.** They were alphabetical (`title, date, author` showed as `author, date, title`); the reading view now keeps the file's order, as Obsidian's properties panel does (toimprove 281).
 
 ## [0.2.0] - 2026-10-28
 

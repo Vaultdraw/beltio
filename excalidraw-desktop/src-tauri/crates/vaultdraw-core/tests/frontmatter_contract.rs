@@ -28,3 +28,14 @@ fn native_front_matter_matches_the_table() {
         .collect();
     assert!(bad.is_empty(), "rows that disagree: {bad:?}");
 }
+
+#[test]
+fn native_properties_keep_the_file_order() {
+    let table: serde_json::Value = serde_json::from_str(include_str!("../src/contract/frontmatter_cases.json")).unwrap();
+    for r in table["propertyKeys"].as_array().unwrap() {
+        let doc = parse_markdown(r["text"].as_str().unwrap(), &ParseOptions::default());
+        let got: Vec<String> = doc.frontmatter.unwrap().properties.keys().cloned().collect();
+        let want: Vec<String> = r["keys"].as_array().unwrap().iter().map(|k| k.as_str().unwrap().to_string()).collect();
+        assert_eq!(got, want, "{}", r["label"]);
+    }
+}

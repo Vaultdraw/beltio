@@ -16,10 +16,10 @@
       "A 2"
     ],
     "properties": {
+      "tags": "one, two, #three",
       "aliases": "A1, A 2",
       "cssclasses": "wide",
-      "note": "multi\nline",
-      "tags": "one, two, #three"
+      "note": "multi\nline"
     }
   },
   "blocks": [

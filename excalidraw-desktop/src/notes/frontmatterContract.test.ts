@@ -35,3 +35,17 @@ describe("front matter: every copy agrees with Obsidian", () => {
     );
   }
 });
+
+describe("front matter: properties keep the note's order (toimprove 281)", () => {
+  for (const r of (
+    table as unknown as {
+      propertyKeys: { label: string; text: string; keys: string[] }[];
+    }
+  ).propertyKeys) {
+    it(`browser stand-in: ${r.label}`, () => {
+      expect(
+        Object.keys(standInNoteDoc(r.text).frontmatter?.properties ?? {}),
+      ).toEqual(r.keys);
+    });
+  }
+});

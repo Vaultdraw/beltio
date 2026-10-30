@@ -2,7 +2,7 @@
 //! `[a, b]` and block lists (`- a`). Not a YAML parser: anchors, nested maps and the like are
 //! kept as plain text.
 
-use super::model::{Frontmatter, Range};
+use super::model::{Frontmatter, Properties, Range};
 use std::collections::BTreeMap;
 
 fn unquote(s: &str) -> &str {
@@ -66,13 +66,17 @@ pub fn parse(raw: &str, range: Range) -> Frontmatter {
         }
         cur = Some(key);
     }
-    let mut properties = BTreeMap::new();
+    let mut properties: Vec<(String, String)> = Vec::new();
     for k in &order {
         let v = match lists.get(k) {
             Some(l) => l.join(", "),
             None => scalars.get(k).cloned().unwrap_or_default(),
         };
-        properties.insert(k.clone(), v);
+        // a repeated key keeps its first place and its last value, as a map would
+        match properties.iter_mut().find(|(pk, _)| pk == k) {
+            Some(slot) => slot.1 = v,
+            None => properties.push((k.clone(), v)),
+        }
     }
     let get = |names: &[&str], split_ws: bool| -> Vec<String> {
         let mut out: Vec<String> = Vec::new();
@@ -95,5 +99,5 @@ pub fn parse(raw: &str, range: Range) -> Frontmatter {
     };
     let tags = get(&["tags", "tag"], true).iter().map(|t| clean_tag(t)).filter(|t| !t.is_empty()).collect();
     let aliases = get(&["aliases", "alias"], false).iter().map(|a| a.trim().to_string()).collect();
-    Frontmatter { range, raw, tags, aliases, properties }
+    Frontmatter { range, raw, tags, aliases, properties: Properties(properties) }
 }

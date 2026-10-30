@@ -16,10 +16,10 @@
       "Two Words"
     ],
     "properties": {
-      "aliases": "One, Two Words",
-      "status": "draft",
+      "title": "Quoted Title",
       "tags": "alpha, #beta, gamma/sub",
-      "title": "Quoted Title"
+      "aliases": "One, Two Words",
+      "status": "draft"
     }
   },
   "blocks": [
