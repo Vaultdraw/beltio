@@ -28,3 +28,7 @@ test("an official plugin's source runs the specs that load it; its unit tests ru
     ["families/old-imports", "mdImport"]);
   assert.deepEqual(impactedSpecs(["plugins/official/markdown-import/test/x.test.ts"], SPECS, load).specs, []);
 });
+test("a changed family spec runs (families/ is not in the top-level name list)", () => {
+  assert.deepEqual(impactedSpecs(["excalidraw-desktop/e2e/families/extension-switches.spec.ts"], SPECS).specs,
+    ["families/extension-switches"]);
+});

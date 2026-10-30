@@ -58,9 +58,10 @@ export function impactedSpecs(changedFiles, specNames, pluginSpecs = () => []) {
       for (const n of pluginSpecs(plugin[1])) if (!out.has(n)) out.set(n, f);
       continue;
     }
-    const spec = f.match(/^excalidraw-desktop\/e2e\/([^/]+)\.spec\.ts$/);
+    const spec = f.match(/^excalidraw-desktop\/e2e\/((?:families\/)?[^/]+)\.spec\.ts$/);
     if (spec) {
-      add([spec[1]], f);
+      // A changed spec always runs, family sweeps included (they ran nowhere before, 2026-10-30).
+      if (!out.has(spec[1])) out.set(spec[1], f);
       continue;
     }
     // e2e/<area>Helpers.ts, e2e/<area>Harness.tsx, e2e/fake<Area>.ts
