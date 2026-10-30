@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, test } from "vitest";
 
-import { altOf, pairBoxes } from "../src/boxes";
+import { altOf, isSettled, pairBoxes } from "../src/boxes";
 import { isWebTarget } from "../src/webImages";
 
 import type { BoxElement } from "../src/boxes";
@@ -72,4 +72,15 @@ describe("altOf", () => {
       "How to Install RAM in a PC | Tom's Hardware",
     ],
   ])("%s", (label, alt) => expect(altOf(label)).toBe(alt));
+});
+
+describe("isSettled: the quiet fill on open skips boxes that can never download", () => {
+  test.each([
+    ["Web page, not a picture: An article", true],
+    ["Image over 10 MB: a photo", true],
+    ["Web image refused (not a public web address): a", true],
+    ["Web image could not be downloaded: a cat", false],
+    ["Web image: a cat", false],
+    ["Web image, not downloaded (Offline mode is on): a cat", false],
+  ])("%s", (label, settled) => expect(isSettled(label)).toBe(settled));
 });

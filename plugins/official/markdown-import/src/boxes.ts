@@ -84,6 +84,14 @@ export const pairBoxes = <T extends BoxElement>(
 /** The note's own alt text of a label: what follows the reason, or the whole label. */
 export const altOf = (label: string): string => label.replace(REASON, "");
 
+/**
+ * A box whose label already says the picture can never download (a web page, over 10 MB, refused
+ * address): another try, when a note opens, would fetch the same thing again. Only the user's
+ * "Download images" asks again.
+ */
+export const isSettled = (label: string): boolean =>
+  /^(Web page, not a picture|Image over 10 MB|Web image refused)/.test(label);
+
 /** The placeholder boxes of the open drawing. */
 export const findBoxes = (ctx: PluginContext): Box[] => {
   const els = ctx.scene.elements();
@@ -167,7 +175,11 @@ export async function downloadImages(
   ctx: PluginContext,
   quiet = false,
 ): Promise<void> {
-  const boxes = findBoxes(ctx).filter((b) => isWebTarget(b.link));
+  const boxes = findBoxes(ctx).filter(
+    (b) =>
+      isWebTarget(b.link) &&
+      !(quiet && isSettled((b.label as { text?: string }).text ?? "")),
+  );
   if (boxes.length === 0) {
     if (!quiet) {
       ctx.ui.toast("This drawing has no web pictures to download");

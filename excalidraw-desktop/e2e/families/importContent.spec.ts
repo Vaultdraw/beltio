@@ -62,11 +62,6 @@ const row = (page: Page, path: string) =>
 test("an imported note shows its pictures and a real table", async ({
   page,
 }) => {
-  // linux-ci-triage (2026-10-30): the import fetches 3 pictures where macOS fetches 2 (reproduced 3 runs); check for a double download. Tracking: personal/feature/linux-ci-triage/TRIAGE.md.
-  test.skip(
-    process.platform === "linux",
-    "the import fetches 3 pictures where macOS fetches 2",
-  );
   const errors = trackErrors(page);
   await openVault(page, "?plugins=markdown-import");
   await page.waitForFunction(() => (window as any).__pluginsReady === true);
@@ -110,6 +105,9 @@ test("an imported note shows its pictures and a real table", async ({
     true,
   );
   expect(texts.some((t) => /Close-up of a chip/.test(t))).toBe(false);
+  // Opening the note runs the quiet fill; a box that says "not a picture" is not fetched again,
+  // so the web page was asked for once (Linux ran the fill before this line, macOS after it).
+  await page.waitForTimeout(1500);
   expect(
     await page.evaluate(
       () => (window as any).__plugins.backend.network.fetched.length,
