@@ -141,6 +141,9 @@ if (tier === "fast") {
       "related",
       "--run",
       "--passWithNoTests",
+      // Wall-clock benchmarks fail under load: they belong to the perf tier (2026-10-30).
+      "--exclude",
+      "**/*.bench.test.ts",
       ...rel([...desktopSrc, ...pkgSrc]),
     ]);
   }
@@ -154,6 +157,9 @@ if (tier === "fast") {
       "related",
       "--run",
       "--passWithNoTests",
+      // Wall-clock benchmarks fail under load: they belong to the perf tier (2026-10-30).
+      "--exclude",
+      "**/*.bench.test.ts",
       ...rel(sdkPlugins),
     ]);
   if (pkgSrc.length)
@@ -162,6 +168,9 @@ if (tier === "fast") {
       "related",
       "--run",
       "--passWithNoTests",
+      // Wall-clock benchmarks fail under load: they belong to the perf tier (2026-10-30).
+      "--exclude",
+      "**/*.bench.test.ts",
       ...rel(pkgSrc),
     ]);
   // Tests that read plugin manifests from disk are invisible to `vitest related`
