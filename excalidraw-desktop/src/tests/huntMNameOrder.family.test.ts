@@ -38,35 +38,32 @@ describe("family: every list of names follows the tree's order (toimprove M-11)"
     );
   });
 
-  it(
-    "the template picker lists vault and global templates in the tree's order",
-    async () => {
-      const entry = (name: string) => ({
-        path: `Templates/${name}.excalidraw`,
-        name: `${name}.excalidraw`,
-        kind: "drawing" as const,
-        modifiedAt: 0,
-        size: 0,
-      });
-      const r = await listTemplates({
-        repository: {
-          listDirectory: async () => NAMES.map(entry),
-        } as never,
-        handle: "h",
-        folder: "Templates",
-        global: {
-          list: async () =>
-            NAMES.map((n) => ({
-              name: `${n}.excalidraw`,
-              modifiedAt: 0,
-              size: 0,
-            })),
-        } as never,
-      });
-      expect(r.vault.map((t) => t.name)).toEqual(treeOrder(NAMES));
-      expect(r.global.map((t) => t.name)).toEqual(treeOrder(NAMES));
-    },
-  );
+  it("the template picker lists vault and global templates in the tree's order", async () => {
+    const entry = (name: string) => ({
+      path: `Templates/${name}.excalidraw`,
+      name: `${name}.excalidraw`,
+      kind: "drawing" as const,
+      modifiedAt: 0,
+      size: 0,
+    });
+    const r = await listTemplates({
+      repository: {
+        listDirectory: async () => NAMES.map(entry),
+      } as never,
+      handle: "h",
+      folder: "Templates",
+      global: {
+        list: async () =>
+          NAMES.map((n) => ({
+            name: `${n}.excalidraw`,
+            modifiedAt: 0,
+            size: 0,
+          })),
+      } as never,
+    });
+    expect(r.vault.map((t) => t.name)).toEqual(treeOrder(NAMES));
+    expect(r.global.map((t) => t.name)).toEqual(treeOrder(NAMES));
+  });
 
   it("the tags panel orders child tags in the tree's order", () => {
     const kids = ["10", "2", "1"];
