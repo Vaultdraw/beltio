@@ -12,7 +12,7 @@
 { "mcpServers": { "vaultdraw": { "command": "vaultdraw", "args": ["mcp"] } } }
 ```
 
-Claude Code: `claude mcp add vaultdraw -- vaultdraw mcp`. The palette command **AI: Copy the AI app setup** puts the JSON above on the clipboard. Use the full path of `vaultdraw` if the AI app does not see your shell's `PATH`.
+Claude Code: `claude mcp add vaultdraw -- vaultdraw mcp`. The palette command **External AI tools: Copy the AI app setup** puts the JSON above on the clipboard. Use the full path of `vaultdraw` if the AI app does not see your shell's `PATH`.
 
 ## The tools
 

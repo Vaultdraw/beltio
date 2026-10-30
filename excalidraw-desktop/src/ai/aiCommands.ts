@@ -24,7 +24,7 @@ export const AI_COMMANDS: CommandDefinition[] = [
   },
   {
     id: AI_COMMAND_IDS.copyMcpSetup,
-    title: "AI: Copy the AI app setup (MCP server config)",
+    title: "External AI tools: Copy the AI app setup (MCP server config)",
     category: "AI",
     keys: { default: [] },
     when: ["vaultOpen", "!modalOpen"],

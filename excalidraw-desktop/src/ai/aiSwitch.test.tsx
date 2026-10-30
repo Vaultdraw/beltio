@@ -107,7 +107,7 @@ describe("AI commands", () => {
         "ai.toggleMcp",
         "External AI tools: Toggle the AI tools interface (MCP)",
       ],
-      ["ai.copyMcpSetup", "AI: Copy the AI app setup (MCP server config)"],
+      ["ai.copyMcpSetup", "External AI tools: Copy the AI app setup (MCP server config)"],
     ]) {
       const command = getCommand(id)!;
       expect(command.title).toBe(title);

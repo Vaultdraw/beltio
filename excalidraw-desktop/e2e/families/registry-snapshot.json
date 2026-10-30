@@ -3852,7 +3852,7 @@
   },
   {
    "id": "ai.copyMcpSetup",
-   "title": "AI: Copy the AI app setup (MCP server config)",
+   "title": "External AI tools: Copy the AI app setup (MCP server config)",
    "category": "AI",
    "keys": [],
    "when": [
