@@ -62,13 +62,13 @@
 
 .vault-setup__brand {
   margin: 0 0 var(--vd-space-4);
-  font-size: var(--vd-fs-display);
+  font-size: var(--vd-fs-title);
   font-weight: 600;
 }
 
 .vault-setup__title {
   margin: 0 0 var(--vd-space-2);
-  font-size: 22px;
+  font-size: var(--vd-fs-display);
   font-weight: 600;
   line-height: 1.25;
   outline: none;

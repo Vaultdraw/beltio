@@ -125,6 +125,8 @@ const NOT_MODAL: Record<string, string> = {
     "yields to anything that handled Escape (defaultPrevented)",
   "layout/useNavigatorOverlay.ts":
     "the narrow-window file list: yields to any dialog or menu that handles Escape first (defaultPrevented, escapeBelongsToOther)",
+  "onboarding/SetupWizard.tsx":
+    "first-run setup owns the whole window; Escape steps back and yields to anything that handled it (defaultPrevented)",
   "tabs/TabContextMenu.tsx": "menu",
   "tabs/useStripDrag.ts": "Escape cancels a drag",
 };

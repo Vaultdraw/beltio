@@ -19,6 +19,8 @@ const ALLOWED: Record<string, string> = {
     "the settings window: full-size two-pane surface, own Escape (clear search first); uses the scrim class",
   "excalidraw-desktop/src/components/readonly/ReadOnlyBadge.tsx":
     "a non-modal popover (no aria-modal, no backdrop)",
+  "excalidraw-desktop/src/onboarding/SetupWizard.tsx":
+    "the first-run setup: a full-window surface, not a layer over the app; Escape steps back",
   "plugins/official/_shared/DialogFrame.tsx":
     "the one frame copy the official plugins share (they use the public API only, so cannot import Dialog)",
 };
