@@ -500,12 +500,35 @@ fn hostile_child() {
     h.join().expect("parse panicked");
 }
 
-/// toimprove (hunter A-12): a note nested a few thousand levels deep (a line of `>` characters,
-/// a deeply indented list) overflows the stack of the thread that parses it, which aborts the whole
-/// app, and the indexer parses every note of the vault at start-up. Run with
-/// `cargo test -p vaultdraw-core hostile_notes -- --ignored` to see it fail.
+/// Hunter A-12: a note nested a few thousand levels deep (a line of `>` characters, a deeply
+/// indented list) overflowed the stack of the thread that parsed it and aborted the whole app at
+/// every vault open. Containers deeper than `MAX_NEST` are now read as one flat paragraph.
 #[test]
 fn hostile_notes_parse_without_crashing() {
     let failures: Vec<_> = hostile_cases().into_iter().filter(|(n, _)| !parses_in_child(n)).map(|(n, _)| n).collect();
     assert!(failures.is_empty(), "crashed or panicked on: {failures:?}");
+}
+
+/// A-12 family: what is nested past the cap is kept as text, not dropped.
+#[test]
+fn deep_nesting_keeps_its_words() {
+    fn all_text(blocks: &[Block], out: &mut String) {
+        for b in blocks {
+            match &b.kind {
+                BlockKind::Paragraph { text, .. } | BlockKind::ListItem { text, .. } => out.push_str(text),
+                BlockKind::Blockquote { blocks } | BlockKind::Callout { blocks, .. } => all_text(blocks, out),
+                _ => {}
+            }
+        }
+    }
+    for src in [
+        format!("{} deep words", ">".repeat(200)),
+        format!("{}deep words", "> ".repeat(200)),
+        (0..200).map(|i| format!("{}- level {i}\n", "  ".repeat(i))).collect::<String>() + &"  ".repeat(200) + "- deep words\n",
+    ] {
+        let doc = parse(&src);
+        let mut text = String::new();
+        all_text(&doc.blocks, &mut text);
+        assert!(text.contains("deep words"), "{}", &src[..40]);
+    }
 }
