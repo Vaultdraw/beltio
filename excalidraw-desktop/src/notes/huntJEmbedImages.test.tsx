@@ -68,9 +68,25 @@ it("sanity: properties are listed", async () => {
   expect(props.textContent).toContain("draft");
 });
 
-it.fails("a [[link]] in a property value is a link to the note", async () => {
+it("a [[link]] in a property value is a link to the note", async () => {
   render(<NoteView path="Props.md" openPath={() => {}} vault={vault} />);
   const props = await screen.findByTestId("note-properties");
   expect(props.querySelector("a")).not.toBeNull();
   expect(props.textContent).not.toContain("[[");
+});
+
+it("a web address in a property is a link; other text stays text", async () => {
+  const files = new FakeNoteFiles();
+  files.setOnDisk(
+    "Props.md",
+    '---\nsource: "see https://example.com/a. **not bold**"\n---\n# P\n',
+  );
+  setNoteFiles(files);
+  render(<NoteView path="Props.md" openPath={() => {}} vault={vault} />);
+  const props = await screen.findByTestId("note-properties");
+  expect(props.querySelector("a")?.getAttribute("href")).toBe(
+    "https://example.com/a",
+  );
+  expect(props.querySelector("strong")).toBeNull();
+  expect(props.textContent).toContain("**not bold**");
 });

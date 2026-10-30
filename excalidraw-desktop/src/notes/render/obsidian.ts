@@ -9,6 +9,7 @@
  */
 import { Marked, Renderer, Tokenizer } from "marked";
 
+import { findLinks } from "../../links/grammar";
 import { findTags, MAX_TAG_CHARS } from "../../tags/grammar";
 
 import { altAndSize } from "./imageSize";
@@ -509,6 +510,36 @@ export function lexNote(
       tokens: marked.lexer(body),
       skipped: (removed.match(/\n/g) ?? []).length,
     };
+  } finally {
+    ctx = { resolve: () => null, highlight: true, math: true };
+  }
+}
+
+/**
+ * Unsafe HTML for a property value, as Obsidian's properties panel shows it: plain text whose
+ * `[[links]]` and web addresses are links (toimprove 230). Always sanitise before use.
+ */
+export function renderPropertyHtml(
+  value: string,
+  context: RenderContext,
+): string {
+  ctx = context;
+  try {
+    let out = "";
+    let at = 0;
+    const text = (s: string) =>
+      esc(s).replace(
+        /\bhttps?:\/\/[^\s<>"]+[^\s<>".,;:!?)\]]/g,
+        (url) => `<a href="${url}">${url}</a>`,
+      );
+    for (const link of findLinks(value)) {
+      out += text(value.slice(at, link.start));
+      out += marked.parseInline(value.slice(link.start, link.end), {
+        async: false,
+      }) as string;
+      at = link.end;
+    }
+    return out + text(value.slice(at));
   } finally {
     ctx = { resolve: () => null, highlight: true, math: true };
   }

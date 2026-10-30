@@ -59,7 +59,11 @@ import {
   hydrateRemoteImages,
   type EmbedDeps,
 } from "./render/hydrate";
-import { renderNoteHtml, stripFrontmatter } from "./render/obsidian";
+import {
+  renderNoteHtml,
+  renderPropertyHtml,
+  stripFrontmatter,
+} from "./render/obsidian";
 import { sanitizeNoteHtml } from "./render/sanitize";
 
 import "./notes.css";
@@ -636,7 +640,18 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
               {propKeys.map((k) => (
                 <div key={k} className="note-property">
                   <dt>{k}</dt>
-                  <dd>{props[k]}</dd>
+                  <dd
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizeNoteHtml(
+                        renderPropertyHtml(String(props[k]), {
+                          resolve: (target) => links.resolve(path, target),
+                          highlight: false,
+                          math: false,
+                        }),
+                        { remoteImages: false },
+                      ),
+                    }}
+                  />
                 </div>
               ))}
             </dl>
