@@ -130,6 +130,8 @@ interface VaultNavigatorProps {
   vault: VaultInfo;
   activePath: string | null;
   collapsed: boolean;
+  /** Narrow window: the list floats over the drawing instead of sitting beside it. */
+  overlay?: boolean;
   onToggleCollapse: () => void;
   onOpenDrawing: (path: string, opts?: { target: OpenTarget }) => unknown;
   /** A Markdown note was chosen in the tree (the notes plugin handles it; nothing opens without it). */
@@ -211,6 +213,7 @@ export const VaultNavigator = ({
   vault,
   activePath,
   collapsed,
+  overlay,
   onToggleCollapse,
   onOpenDrawing,
   onOpenNote,
@@ -724,7 +727,7 @@ export const VaultNavigator = ({
       ref={asideRef}
       className={`vault-navigator ${
         collapsed ? "vault-navigator--collapsed" : ""
-      }`}
+      } ${overlay ? "vault-navigator--overlay" : ""}`}
       style={collapsed ? undefined : { width, flexBasis: width }}
       aria-label="Vault file navigator"
       // Its dialogs render inside: keep them visible to assistive tech when

@@ -195,6 +195,7 @@ import {
   type NavigatorAction,
   type NavigatorRequest,
 } from "./components/VaultNavigator";
+import { useNavigatorOverlay } from "./layout/useNavigatorOverlay";
 import { useExplorerExport } from "./export/useExplorerExport";
 import { Onboarding } from "./components/Onboarding";
 import { ConflictDialog } from "./components/ConflictDialog";
@@ -2464,6 +2465,14 @@ export const VaultApp = ({
   );
   layoutRef.current = layout;
   const navigatorHidden = !layout.shown.navigator;
+  // Narrow window: the file list is an overlay; Esc or opening a file closes it.
+  const navigatorOverlay = layout.narrow && !navigatorHidden;
+  useNavigatorOverlay(
+    doc,
+    navigatorOverlay,
+    handleToggleNavigator,
+    activeDoc?.path ?? plainNote,
+  );
   const editorRestore = useMemo(
     () =>
       activeDoc
@@ -3406,6 +3415,13 @@ export const VaultApp = ({
         {templates.dialogs}
         {appLinks.dialogs}
         {appTags.dialog}
+        {navigatorOverlay && (
+          <div
+            className="vault-navigator-scrim"
+            data-testid="navigator-scrim"
+            onPointerDown={handleToggleNavigator}
+          />
+        )}
         <VaultNavigator
           // A new vault gets a fresh navigator (search text, focus, open dialogs), as Obsidian
           // opens a vault in a clean window (hunter C-7).
@@ -3413,6 +3429,7 @@ export const VaultApp = ({
           vault={vault}
           activePath={activeDoc?.path ?? null}
           collapsed={navigatorHidden}
+          overlay={layout.narrow}
           onToggleCollapse={handleToggleNavigator}
           onRefresh={refreshFiles}
           onOpenNote={(path, opts) => {

@@ -3,6 +3,7 @@ import { expect, type Page } from "@playwright/test";
 import { stepProblems } from "../scenarios/checks";
 
 import { test } from "../fixture";
+import { runCommand } from "../pageHelpers";
 import {
   clickMainMenuItem,
   openDrawing,
@@ -46,6 +47,9 @@ const walk = async (
   };
   await openVault(page);
   await check("home");
+  // The file list is folded at these widths: open it over the drawing as a user does.
+  await runCommand(page, "Toggle navigator");
+  await check("file list overlay");
   // main menu (hamburger) is only in the editor; open a drawing for the editor's own chrome
   await page
     .locator(".vault-tree-item__name", { hasText: "DSA" })
@@ -57,6 +61,8 @@ const walk = async (
   await page.keyboard.press("Escape");
 
   const nav = page.getByLabel("Vault file navigator");
+  // Opening the drawing closed the overlay: open it again.
+  await runCommand(page, "Toggle navigator");
   if (!(await nav.isVisible())) {
     out.push(`[${size.width} ${theme}] navigator not visible`);
   }

@@ -57,7 +57,7 @@ export interface LayoutPreferences {
   focusOn: boolean;
   /**
    * `[layout] narrow_width`: below this window width (px) the file list starts folded, for
-   * narrow or tiled windows; 0 = never, the default (hunter A-7, toimprove 138).
+   * narrow or tiled windows, and shows as an overlay when asked for; 0 = never (hunter A-7, toimprove 138).
    */
   layoutNarrowWidth: number;
 }
@@ -71,7 +71,7 @@ export const LAYOUT_DEFAULTS: LayoutPreferences = {
   focusRemember: false,
   focusHint: false,
   focusOn: false,
-  layoutNarrowWidth: 0,
+  layoutNarrowWidth: 600,
 };
 
 export const FOCUS_PRESET = "focus";

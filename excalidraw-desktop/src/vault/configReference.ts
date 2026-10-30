@@ -407,7 +407,7 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
         doc: 'A preset to apply at launch and whenever this value changes; `""` = none.',
       },
       narrow_width: {
-        doc: "Below this window width (pixels) the file list starts folded, so a narrow or tiled window keeps room for the drawing; Toggle navigator shows it again for this window only. 0 (the default) never folds it.",
+        doc: "Below this window width (pixels) the file list folds, so a narrow or tiled window keeps room for the drawing; Toggle navigator opens it over the drawing, and Esc, a click outside it or opening a file closes it. 0 never folds it (the list always sits beside the drawing).",
       },
       presets: {
         doc: "Named presets, `[layout.presets.<name>]`, each listing the parts it shows or hides: `header`, `navigator`, `activity_bar`, `tab_strip`, `footer`, `status_bar`. `focus` is built in.",

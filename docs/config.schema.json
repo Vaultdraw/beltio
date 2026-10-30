@@ -1389,8 +1389,8 @@
           "type": "string"
         },
         "narrow_width": {
-          "description": "Below this window width (pixels) the file list starts folded, so a narrow or tiled window keeps room for the drawing; Toggle navigator shows it again for this window only. 0 (the default) never folds it.",
-          "default": 0,
+          "description": "Below this window width (pixels) the file list folds, so a narrow or tiled window keeps room for the drawing; Toggle navigator opens it over the drawing, and Esc, a click outside it or opening a file closes it. 0 never folds it (the list always sits beside the drawing).",
+          "default": 600,
           "type": "integer",
           "minimum": 0,
           "maximum": 4000

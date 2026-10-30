@@ -4,6 +4,10 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Changed
+
+- **Narrow windows: the file list opens over the drawing.** Below `[layout] narrow_width` (now 600 px by default; 0 turns it off) the file list folds and Toggle navigator opens it as an overlay on the right; Esc, a click outside it or opening a file closes it and focus returns to where it was. At 360 px the tabs and toolbars now have the whole window.
+
 ### Fixed
 
 - **A table copied with old-Mac line ends is pasted as a table.** A spreadsheet or CSV copy that separates rows with a lone carriage return was one long row and pasted as plain text.

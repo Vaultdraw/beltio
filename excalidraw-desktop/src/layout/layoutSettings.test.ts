@@ -166,12 +166,12 @@ describe("layout store", () => {
 });
 
 describe("[layout] narrow_width (hunter A-7)", () => {
-  it("accepts whole pixels from 0 to 4000 and defaults to 0 (never folds)", async () => {
+  it("accepts whole pixels from 0 to 4000 and defaults to 600 (a 280 px list plus 320 px of drawing)", async () => {
     const { LAYOUT_MAPPINGS, LAYOUT_DEFAULTS } = await import(
       "./layoutSettings"
     );
     const m = LAYOUT_MAPPINGS.find((x) => x.key === "layout.narrow_width")!;
-    expect(LAYOUT_DEFAULTS.layoutNarrowWidth).toBe(0);
+    expect(LAYOUT_DEFAULTS.layoutNarrowWidth).toBe(600);
     for (const ok of [0, 600, 4000]) {
       expect(m.valid(ok)).toBe(true);
     }

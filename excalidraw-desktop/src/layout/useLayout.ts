@@ -64,6 +64,8 @@ export interface Layout {
   reveal: (part: LayoutPart) => void;
   /** Focus mode is on. */
   focusActive: boolean;
+  /** The window is narrower than `[layout] narrow_width`: the file list is an overlay. */
+  narrow: boolean;
 }
 
 export function useLayout(
@@ -249,7 +251,7 @@ export function useLayout(
     };
   }, [win, toggleGoverned]);
 
-  return { shown, toggleGoverned, reveal, focusActive };
+  return { shown, toggleGoverned, reveal, focusActive, narrow };
 }
 
 /** The navigator folded in a narrow window, under any preset (a preset can still show it). */

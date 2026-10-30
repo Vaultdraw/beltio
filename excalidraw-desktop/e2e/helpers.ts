@@ -58,8 +58,11 @@ export const enterVault = async (
 ) => {
   const onboarding = page.getByRole("button", { name: /Open vault folder/ });
   const navigator = page.getByLabel("Vault file navigator");
+  // In a narrow window ([layout] narrow_width) the file list is folded: the vault is open when
+  // the shell is there, with or without the list.
+  const shell = page.locator(".vault-main");
   await expect(async () => {
-    if (await navigator.isVisible()) {
+    if ((await navigator.isVisible()) || (await shell.isVisible())) {
       return;
     }
     // Fails (and is polled again) while the page is still loading or when the
@@ -71,7 +74,7 @@ export const enterVault = async (
     }
     await onboarding.click({ timeout: 1000 });
   }).toPass({ timeout: 30_000 });
-  await expect(navigator).toBeVisible();
+  await expect(shell).toBeVisible();
 };
 
 export const openVault = async (page: Page, query = "") => {

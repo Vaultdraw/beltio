@@ -329,6 +329,26 @@ html.dark {
   overflow: hidden;
 }
 
+/* Narrow window ([layout] narrow_width): the file list floats over the drawing, from the right
+   edge, and leaves a strip of the drawing to tap to close it. */
+.vault-navigator--overlay:not(.vault-navigator--collapsed) {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  min-width: 0;
+  max-width: calc(100% - 44px) !important;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.28);
+  transition: none;
+}
+
+.vault-navigator-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: rgba(0, 0, 0, 0.32);
+}
+
 .vault-navigator__toolbar {
   display: flex;
   align-items: center;

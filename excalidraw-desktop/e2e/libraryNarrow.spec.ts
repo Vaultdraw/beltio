@@ -3,6 +3,7 @@ import { expect, type Page } from "@playwright/test";
 import { test } from "./fixture";
 
 import { openDrawing, openVault } from "./helpers";
+import { runCommand } from "./pageHelpers";
 
 /**
  * The library's pending "add" tile only follows the selection while the
@@ -43,6 +44,10 @@ for (const { name, width, height } of sizes) {
   }) => {
     await page.setViewportSize({ width, height });
     await openVault(page);
+    if (width < 600) {
+      // The file list is folded in a narrow window ([layout] narrow_width): open it over the drawing.
+      await runCommand(page, "Toggle navigator");
+    }
     for (const folder of ["DSA", "Dynamic Programming"]) {
       await page
         .locator(".vault-tree-item__name", { hasText: folder })
