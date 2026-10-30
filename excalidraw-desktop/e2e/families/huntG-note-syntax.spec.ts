@@ -18,9 +18,6 @@ type Row = {
   bug?: string;
 };
 
-const F11 =
-  "toimprove 185 (F-11): single newlines, %%comments%%, ^block-ids and footnotes";
-
 const ROWS: Row[] = [
   {
     name: "a callout shows as a box with its title and body",
@@ -142,7 +139,6 @@ const ROWS: Row[] = [
       await expect(r).not.toContainText("not seen");
       await expect(r).not.toContainText("%%");
     },
-    bug: F11,
   },
   {
     name: "a ^block-id at a line end is hidden",
@@ -151,7 +147,6 @@ const ROWS: Row[] = [
       await expect(r).toContainText("A paragraph with an id.");
       await expect(r).not.toContainText("^abc123");
     },
-    bug: F11,
   },
   {
     name: "a single newline is a line break",
@@ -160,7 +155,6 @@ const ROWS: Row[] = [
       const p = r.locator("p", { hasText: "first line" });
       await expect(p.locator("br")).toHaveCount(1);
     },
-    bug: F11,
   },
 ];
 
