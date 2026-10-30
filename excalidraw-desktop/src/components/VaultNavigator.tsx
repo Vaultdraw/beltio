@@ -13,6 +13,7 @@ import {
   entryDisplayName,
   entryWord,
   fileKind,
+  hasDrawingExt,
   stripDrawingExt,
 } from "../vault/fileKind";
 
@@ -694,7 +695,7 @@ export const VaultNavigator = ({
     setCreateError(null);
     try {
       if (createKind === "drawing") {
-        const fullDrawingName = createName.trim().endsWith(".excalidraw")
+        const fullDrawingName = hasDrawingExt(createName.trim())
           ? createName.trim()
           : `${createName.trim()}.excalidraw`;
         await onCreateDrawing(createParent, fullDrawingName);

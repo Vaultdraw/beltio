@@ -1,4 +1,10 @@
-import { stripDrawingExt } from "./fileKind";
+import {
+  DRAWING_EXT,
+  EXCALIDRAW_MD_EXT,
+  fileKind,
+  NOTE_EXT,
+  stripDrawingExt,
+} from "./fileKind";
 import { DEFAULT_SORT_ORDER, sortEntries, type SortOrder } from "./sortOrder";
 import { joinPath, type VaultEntry, type VaultRepository } from "./types";
 
@@ -44,15 +50,25 @@ export function duplicateName(path: string): string {
   const slash = path.lastIndexOf("/");
   const parent = slash >= 0 ? path.slice(0, slash) : "";
   const file = slash >= 0 ? path.slice(slash + 1) : path;
-  const base = file.endsWith(".excalidraw")
-    ? file.slice(0, -".excalidraw".length)
-    : file;
+  // A note keeps its extension (`Idea copy.md`, `Idea copy.excalidraw.md`); a drawing in any letter
+  // case becomes `.excalidraw`.
+  const kind = fileKind(file);
+  const keepExt = kind === "note" || kind === "excalidrawMd";
+  const ext = keepExt
+    ? file.slice(
+        file.length -
+          (kind === "note" ? NOTE_EXT.length : EXCALIDRAW_MD_EXT.length),
+      )
+    : DRAWING_EXT;
+  const base = keepExt
+    ? file.slice(0, file.length - ext.length)
+    : stripDrawingExt(file);
   const copyBase = / copy( \d+)?$/.test(base)
     ? base.replace(/ copy( \d+)?$/, (m) =>
         m === " copy" ? " copy 2" : ` copy ${Number(m.split(" ")[2]) + 1}`,
       )
     : `${base} copy`;
-  return joinPath(parent, `${copyBase}.excalidraw`);
+  return joinPath(parent, `${copyBase}${ext}`);
 }
 
 export function getParentPath(path: string): string {

@@ -16,10 +16,6 @@ import { describe, expect, it } from "vitest";
  */
 const KNOWN: Record<string, { count: number; why: string }> = {
   "VaultApp.tsx": { count: 1, why: "lower-cased; review when touched" },
-  "components/VaultNavigator.tsx": {
-    count: 1,
-    why: "BROKEN: inline New drawing is case-sensitive (hunter F-9)",
-  },
   "notes/FakeNoteFiles.ts": {
     count: 2,
     why: "browser stand-in, lower-cased, excludes .excalidraw.md",
@@ -30,17 +26,9 @@ const KNOWN: Record<string, { count: number; why: string }> = {
     why: "perf harness, generated names",
   },
   "plugins/host/pagesContext.ts": { count: 1, why: "lower-cased" },
-  "plugins/host/vaultContext.ts": {
-    count: 2,
-    why: "BROKEN: plugin file calls are case-sensitive (hunter F-9)",
-  },
-  "tabs/useTabs.ts": {
-    count: 1,
-    why: "BROKEN: .excalidraw.md taken for a note (hunter F-7)",
-  },
   "vault/treeStore.ts": {
-    count: 3,
-    why: "line 47 BROKEN: Duplicate is case-sensitive (hunter F-9); 86 and 150 lower-cased",
+    count: 2,
+    why: "lower-cased",
   },
 };
 

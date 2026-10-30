@@ -23,6 +23,9 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Notes and drawings sort together.** In a folder with drawings and notes, "Name (Z to A)" and the date orders now sort every file by the chosen order (they used to leave them in listing order).
+- **A background tab of an Obsidian drawing follows a rename made outside.** It was treated as a note and lost its file.
+- **Upper-case `.EXCALIDRAW` files behave like any drawing.** Duplicate gives "Plan copy.excalidraw" (it made "Plan.EXCALIDRAW copy.excalidraw"), the New drawing field no longer doubles the extension, and plugin file calls accept the path. Duplicating a note keeps `.md`.
 - **Theme Look up and Install agree on a theme's name.** A name over 80 characters, "Source", or one with invisible or text-direction characters is refused at Look up (it used to pass and fail only on Install), a name ending in a dot is accepted as Install accepts it (it was refused with "Folder names cannot end with a dot"), and 80 emoji no longer pass Install only to fail writing the folder.
 - **Pasted long text in page mode wraps at the page edge.** Typed text already did; a pasted paragraph used to wrap at up to 800 px and ran past the right edge of an A5, B5 or phone page.
 - **Look up on a bad theme file explains itself in plain words, and refuses an unusable name at once.** The message no longer names theme keys (`mSurface`) or format hints; a theme named like `../x` is refused at Look up, not after Install.

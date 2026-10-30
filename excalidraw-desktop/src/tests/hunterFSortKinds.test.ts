@@ -26,14 +26,14 @@ const e = (
 });
 
 describe("hunter F-6: files of different kinds sort together", () => {
-  it.fails("a drawing and a note are ordered both ways (antisymmetry)", () => {
+  it("a drawing and a note are ordered both ways (antisymmetry)", () => {
     const a = e("a.excalidraw", "drawing");
     const b = e("b.md", "note");
     expect(Math.sign(compareEntries(a, b, "name_asc"))).toBe(-1);
     expect(Math.sign(compareEntries(b, a, "name_asc"))).toBe(1);
   });
 
-  it.fails("the navigator lists a mixed folder A to Z", () => {
+  it("the navigator lists a mixed folder A to Z", () => {
     // a new note is appended after the listing's order until the next refresh
     const entries = [
       e("a.excalidraw", "drawing", 1),
@@ -52,7 +52,7 @@ describe("hunter F-6: files of different kinds sort together", () => {
     ]);
   });
 
-  it.fails("the other three orders also keep a mixed folder in order", () => {
+  it("the other three orders also keep a mixed folder in order", () => {
     const entries = [
       e("a.excalidraw", "drawing", 1),
       e("b.md", "note", 2),

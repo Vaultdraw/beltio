@@ -14,6 +14,7 @@ import {
   toSceneElement,
   validateOps,
 } from "../../sceneOps";
+import { hasDrawingExt } from "../../vault/fileKind";
 import { getPreferences } from "../../vault/preferences";
 import { getWorkspaceBridge } from "../workspaceBridge";
 
@@ -91,7 +92,7 @@ export function createVaultApi(rt: PluginRuntime): VaultApi {
     async replaceDrawing(path, scene, options) {
       need("vault.replaceDrawing", "vault.write");
       checkVaultPath(path, "file");
-      if (!path.endsWith(".excalidraw")) {
+      if (!hasDrawingExt(path)) {
         throw new PluginApiError(
           "INVALID_PATH",
           "The path must end in .excalidraw",
@@ -138,7 +139,7 @@ export function createVaultApi(rt: PluginRuntime): VaultApi {
     async trashDrawing(path, options) {
       need("vault.trashDrawing", "vault.write");
       checkVaultPath(path, "file");
-      if (!path.endsWith(".excalidraw")) {
+      if (!hasDrawingExt(path)) {
         throw new PluginApiError(
           "INVALID_PATH",
           "The path must end in .excalidraw",

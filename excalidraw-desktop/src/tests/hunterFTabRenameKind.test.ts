@@ -21,7 +21,7 @@ describe("hunter F-7: the outside-rename follow knows an Obsidian drawing is not
     expect("Idea.excalidraw.md".endsWith(".md")).toBe(true);
   });
 
-  it.fails("findRenamed does not classify by a bare .md suffix", () => {
+  it("findRenamed does not classify by a bare .md suffix", () => {
     expect(source).not.toMatch(
       /const note = path\.toLowerCase\(\)\.endsWith\("\.md"\)/,
     );

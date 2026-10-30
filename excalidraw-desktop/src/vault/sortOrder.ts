@@ -33,14 +33,17 @@ const collator = new Intl.Collator(undefined, {
   sensitivity: "base",
 });
 
-/** Folders always come first; `order` applies within folders and drawings. */
+/** Folders always come first; `order` applies within folders and among all files together. */
 export const compareEntries = (
   a: Pick<VaultEntry, "kind" | "name" | "modifiedAt">,
   b: Pick<VaultEntry, "kind" | "name" | "modifiedAt">,
   order: SortOrder,
 ): number => {
-  if (a.kind !== b.kind) {
-    return a.kind === "folder" ? -1 : 1;
+  // Only a folder against a file is decided by kind; files of different kinds (drawing, note,
+  // Obsidian drawing) sort together by the chosen order, as in Obsidian.
+  const aFolder = a.kind === "folder";
+  if (aFolder !== (b.kind === "folder")) {
+    return aFolder ? -1 : 1;
   }
   switch (order) {
     case "name_desc":

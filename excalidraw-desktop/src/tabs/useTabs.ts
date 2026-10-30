@@ -11,7 +11,7 @@ import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
 import { getNoteFiles } from "../notes/noteBackend";
 import { savedNoteRevision } from "../notes/openNotes";
-import { stripDrawingExt } from "../vault/fileKind";
+import { fileKind, stripDrawingExt } from "../vault/fileKind";
 import { findRenamed } from "../vault/renamePairing";
 
 import { registerCommandHandlers } from "../commands/handlerRegistry";
@@ -339,7 +339,7 @@ export function useTabs(args: UseTabsArgs): TabsApi {
         if (path === null) {
           return null;
         }
-        const note = path.toLowerCase().endsWith(".md");
+        const note = fileKind(path) === "note";
         if (!note && active) {
           return null;
         }
