@@ -253,6 +253,24 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     configKey: "appearance.canvas_background",
   },
   {
+    id: "invert-svg-in-dark",
+    page: "appearance",
+    label: "Invert SVG pictures in dark mode",
+    description:
+      "Like Excalidraw, SVG pictures are drawn inverted in dark mode so black line icons stay visible. Off keeps their colours. PNG and JPEG pictures are never inverted.",
+    keywords: [
+      "svg",
+      "picture",
+      "image",
+      "dark",
+      "invert",
+      "colour",
+      "color",
+      "logo",
+    ],
+    configKey: "appearance.invert_svg_in_dark",
+  },
+  {
     id: "accent-colour",
     page: "appearance",
     label: "Accent",

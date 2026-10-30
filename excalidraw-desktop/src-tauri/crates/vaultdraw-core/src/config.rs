@@ -50,6 +50,8 @@ mode = "system"
 sync_canvas = false
 # Canvas background for new drawings when sync_canvas is off
 canvas_background = "#ffffff"
+# Draw SVG pictures inverted in dark mode, like Excalidraw (false keeps their colours)
+# invert_svg_in_dark = true
 # Replace the theme's primary colour, like "#6965db" ("" = the theme's own)
 # accent_color = ""
 # CSS snippets to apply, by file name in snippets/, like ["wide-sidebar"]
@@ -1741,7 +1743,7 @@ mod tests {
     #[test]
     fn set_then_remove_keeps_every_comment_of_the_default_config() {
         let settings = default_settings();
-        assert_eq!(settings.iter().filter(|s| s.4).count(), 171, "{settings:?}");
+        assert_eq!(settings.iter().filter(|s| s.4).count(), 172, "{settings:?}");
         for (table, key, default, line, commented) in settings {
             let k = format!("{table}.{key}");
             let set = apply_changes(DEFAULT_CONFIG, &[change(&k, other_value(&default))]).unwrap();

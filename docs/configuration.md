@@ -25,6 +25,7 @@ theme = "Default"            # a built-in theme or one in themes/
 mode = "system"              # light | dark | system
 sync_canvas = false          # canvas follows the theme's colours
 canvas_background = "#ffffff" # for new drawings when sync_canvas is off
+invert_svg_in_dark = true    # SVG pictures drawn inverted in dark mode, like Excalidraw
 accent_color = ""            # "#rrggbb" replaces the theme's primary colour; "" = the theme's own
 snippets = []                # CSS snippets to apply, by file name in snippets/, e.g. ["wide-sidebar"]
 
@@ -573,6 +574,8 @@ An imported note stores which role each heading, link and code box plays, not th
 #### Sync canvas with theme
 
 With `sync_canvas = true` (**Sync canvas with theme** in Settings), the canvas is recoloured on screen: its background becomes the theme's background, and the pencil, stroke and fill colours from Excalidraw's palette become matching theme colours. This only changes what you see. Saved drawings and PNG/SVG exports keep Excalidraw's standard colours, so they look the same for anyone who opens them. With it off, the canvas renders as in regular Excalidraw.
+
+In dark mode Excalidraw draws SVG pictures inverted, so black line icons stay visible on the dark canvas. Logos and coloured SVG drawings then look wrong: `invert_svg_in_dark = false` (**Invert SVG pictures in dark mode** in Settings → Appearance) keeps their colours, on screen and in dark exports. PNG and JPEG pictures are never inverted. The change applies at once.
 
 Themes are data only: colour values, no code.
 
@@ -1885,6 +1888,7 @@ Theme, light or dark mode, and canvas colours.
 | `mode` | `"system"` | "light", "dark" or "system" | yes | Light, dark, or follow the system. |
 | `sync_canvas` | `false` | true or false |  | The canvas background, pencil and palette colours follow the theme. |
 | `canvas_background` | `"#ffffff"` | a colour like "#ffffff" |  | Canvas background for new drawings when `sync_canvas` is off. |
+| `invert_svg_in_dark` | `true` | true or false |  | SVG pictures are drawn inverted in dark mode, like Excalidraw, so black line icons stay visible. Off keeps their colours (logos, coloured drawings). PNG and JPEG pictures are never inverted. Exports follow it. |
 | `accent_color` | `""` | a colour like "#6965db", or "" for the theme's own | yes | Replaces the theme's primary colour, nudged for contrast; empty uses the theme's own. |
 | `snippets` | `[]` | a list of snippet names like ["wide-sidebar"] |  | CSS snippets to apply, by file name in `snippets/` without `.css`, in this order. See [CSS snippets](#css-snippets). |
 

@@ -5,6 +5,7 @@ import {
   SVG_NS,
   THEME,
   DARK_THEME_FILTER,
+  shouldInvertSvgImagesInDark,
   getFontFamilyString,
   isBoldFont,
   isRTL,
@@ -684,7 +685,8 @@ const renderElementToSvg = (
 
         if (
           renderConfig.theme === THEME.DARK &&
-          fileData.mimeType === MIME_TYPES.svg
+          fileData.mimeType === MIME_TYPES.svg &&
+          shouldInvertSvgImagesInDark()
         ) {
           g.setAttribute("filter", DARK_THEME_FILTER);
         }

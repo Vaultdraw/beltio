@@ -12,7 +12,11 @@ import {
   useState,
 } from "react";
 
-import { setCanvasSync, setCanvasThemeSource } from "../editor/canvasSync";
+import {
+  setCanvasSync,
+  setCanvasThemeSource,
+  setInvertSvgInDark,
+} from "../editor/canvasSync";
 import { openInstallDialog } from "../theme/install/installStore";
 import { THEMES_REPO } from "../theme/removedThemes";
 import { toastStore } from "../toasts/toastStore";
@@ -128,6 +132,17 @@ export const useAppearance = (
     setCanvasThemeSource(source);
     setCanvasSync(snapshot.syncCanvas ? source : null);
   }, [doc, snapshot]);
+
+  // `appearance.invert_svg_in_dark`, live from config.toml and Settings.
+  const invertSvg = useMemo(
+    () => getPreferences(win).invertSvgInDark,
+    // `tick` re-reads preferences after local edits and config reloads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tick, win],
+  );
+  useLayoutEffect(() => {
+    setInvertSvgInDark(invertSvg);
+  }, [invertSvg]);
 
   // The config names a theme that left the app: say so once, offer the install.
   const removed = snapshot.removed;

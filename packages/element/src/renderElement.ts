@@ -26,6 +26,7 @@ import {
   applyDarkModeFilter,
   getTextDisplayColor,
   getDisplayColorTransformVersion,
+  shouldInvertSvgImagesInDark,
   isSafari,
   STICKY_NOTE_EDGE_SHADOW_OPACITY,
   STICKY_NOTE_EDGE_SHADOW_WIDTH,
@@ -591,7 +592,8 @@ const drawElementOnCanvas = (
 
         const shouldInvertImage =
           renderConfig.theme === THEME.DARK &&
-          cacheEntry?.mimeType === MIME_TYPES.svg;
+          cacheEntry?.mimeType === MIME_TYPES.svg &&
+          shouldInvertSvgImagesInDark();
 
         if (shouldInvertImage && isSafari) {
           const devicePixelRatio = window.devicePixelRatio || 1;

@@ -38,6 +38,11 @@
           "format": "color",
           "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent|[a-zA-Z]+)$"
         },
+        "invert_svg_in_dark": {
+          "description": "SVG pictures are drawn inverted in dark mode, like Excalidraw, so black line icons stay visible. Off keeps their colours (logos, coloured drawings). PNG and JPEG pictures are never inverted. Exports follow it.",
+          "default": true,
+          "type": "boolean"
+        },
         "accent_color": {
           "description": "Replaces the theme's primary colour, nudged for contrast; empty uses the theme's own.",
           "default": "",

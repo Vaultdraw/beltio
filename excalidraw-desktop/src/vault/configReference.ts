@@ -77,6 +77,9 @@ export const CONFIG_REFERENCE: readonly TableDoc[] = [
       canvas_background: {
         doc: "Canvas background for new drawings when `sync_canvas` is off.",
       },
+      invert_svg_in_dark: {
+        doc: "SVG pictures are drawn inverted in dark mode, like Excalidraw, so black line icons stay visible. Off keeps their colours (logos, coloured drawings). PNG and JPEG pictures are never inverted. Exports follow it.",
+      },
       accent_color: {
         doc: "Replaces the theme's primary colour, nudged for contrast; empty uses the theme's own.",
       },

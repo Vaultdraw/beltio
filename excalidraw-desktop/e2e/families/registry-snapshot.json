@@ -4456,6 +4456,13 @@
    "section": null
   },
   {
+   "id": "invert-svg-in-dark",
+   "page": "appearance",
+   "label": "Invert SVG pictures in dark mode",
+   "configKey": "appearance.invert_svg_in_dark",
+   "section": null
+  },
+  {
    "id": "accent-colour",
    "page": "appearance",
    "label": "Accent",

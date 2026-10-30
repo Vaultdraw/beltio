@@ -9,6 +9,7 @@ import {
   invertColorForDarkMode,
   setDisplayColorTransform,
   setDisplayTextRoleColor,
+  setInvertSvgImagesInDark,
 } from "@excalidraw/excalidraw";
 
 import { buildCanvasColorTransform } from "../theme";
@@ -191,6 +192,18 @@ export const setPageDisplay = (display: PageDisplay | null): boolean => {
 };
 
 export const isCanvasSyncActive = () => currentTransform !== null;
+
+/**
+ * `appearance.invert_svg_in_dark`: whether SVG pictures are drawn inverted in
+ * the dark theme (Excalidraw's default). Repaints the editors when it changes.
+ */
+export const setInvertSvgInDark = (on: boolean): boolean => {
+  if (!setInvertSvgImagesInDark(on)) {
+    return false;
+  }
+  repaintAll();
+  return true;
+};
 
 /** Editors register a repaint callback (invalidate caches + re-render). */
 export const registerCanvasRepaint = (repaint: () => void) => {

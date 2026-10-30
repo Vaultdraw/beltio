@@ -359,6 +359,19 @@ const ThemePreviewsSetting = () => {
   );
 };
 
+const InvertSvgInDarkSetting = () => {
+  const on = usePreference("invertSvgInDark");
+  return (
+    <SettingRow id="invert-svg-in-dark" htmlFor="vault-invert-svg-in-dark">
+      <Switch
+        id="vault-invert-svg-in-dark"
+        checked={on}
+        onChange={(next) => updatePreferences({ invertSvgInDark: next })}
+      />
+    </SettingRow>
+  );
+};
+
 const ThemeIndexTtlSetting = () => {
   const hours = usePreference("themesIndexTtlHours");
   return (
@@ -382,6 +395,7 @@ export const appearanceControls: SettingControls = {
   "sync-canvas": { Component: SyncCanvasSetting },
   "accent-colour": { Component: AccentSetting },
   "canvas-background": { Component: CanvasBackgroundSetting },
+  "invert-svg-in-dark": { Component: InvertSvgInDarkSetting },
   paper: { Component: PaperSetting },
   "install-theme": { Component: InstallThemeSetting },
   "theme-max-size": { Component: ThemeMaxSizeSetting },

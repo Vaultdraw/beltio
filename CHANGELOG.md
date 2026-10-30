@@ -25,6 +25,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **SVG pictures can keep their colours in dark mode** (toimprove 133). Excalidraw draws SVG pictures inverted in dark mode, which turns logos and coloured drawings into negatives. New `appearance.invert_svg_in_dark` (on by default, like Excalidraw; Settings → Appearance) turns it off, on screen and in dark exports, with live reload.
 - **Cmd+B and Cmd+L work on a selected labelled shape** (toimprove 199). Markdown: Toggle bold and Markdown: Toggle task now act on the label of a selected shape or arrow, not only on a selected text box.
 - **Obsidian's custom task statuses show as checkboxes** (toimprove 216). `- [/] doing`, `- [-] cancelled`, `- [>] later` and any other single character showed as text "[/]"; they are now ticked boxes that keep their character for themes (`data-task`), and ticking one clears it, as in Obsidian.
 - **Tag chips in a note are the tags the tag pane lists** (toimprove 217). Colours like `#1e1e1e` are no longer chips that search for nothing, `#tag-` and `#a/b/` read as `tag` and `a/b`, and `"#q"`, `list,#c` and `x:#k` are chips like in the pane; the reading view now uses the same tag grammar as the pane and the search.

@@ -162,6 +162,24 @@ export const getTextDisplayColor = (
 export const getDisplayColorTransformVersion = () =>
   displayColorTransformVersion;
 
+// Vaultdraw host hook: Excalidraw inverts SVG pictures in the dark theme so
+// black line icons stay visible. Hosts can turn that off (photos and logos
+// keep their colours). Shares the transform's version, so cached element
+// canvases repaint when it changes. Returns true when the value changed.
+let invertSvgImagesInDark = true;
+export const setInvertSvgImagesInDark = (on: boolean): boolean => {
+  if (on === invertSvgImagesInDark) {
+    return false;
+  }
+  invertSvgImagesInDark = on;
+  displayColorTransformVersion++;
+  displayColorListeners.forEach((listener) => listener());
+  return true;
+};
+
+/** Whether an SVG picture is drawn inverted in the dark theme (default true). */
+export const shouldInvertSvgImagesInDark = () => invertSvgImagesInDark;
+
 /** Notified whenever the display colour transform is set (or cleared). */
 export const subscribeDisplayColorTransform = (listener: () => void) => {
   displayColorListeners.add(listener);

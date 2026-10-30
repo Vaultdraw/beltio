@@ -17,6 +17,7 @@ import {
   isShallowEqual,
   setDisplayColorTransform,
   setDisplayTextRoleColor,
+  setInvertSvgImagesInDark,
 } from "@excalidraw/common";
 
 import App, {
@@ -618,6 +619,7 @@ export {
   invertColorForDarkMode,
   setDisplayColorTransform,
   setDisplayTextRoleColor,
+  setInvertSvgImagesInDark,
 };
 export type {
   DisplayColorTransform,
