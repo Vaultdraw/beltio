@@ -5,18 +5,20 @@
  * Every way a heading box comes into being is a row: typed now, typed under another
  * `markdown.h1_size`, typed before the fix (no remembered size), and imported from a note at every
  * level and two body sizes. The imported rows build the element the way the import does
- * (`fontPlan` sizes, `buildPageElements` with the import's data key), not a hand-made stand-in:
+ * (the import's `HEADING_SCALE` read from its source, `buildPageElements` with the import's data key), not a hand-made stand-in:
  * the hunter E-5 evidence used a hand-made "imported" heading at scale 2, while the import really
  * uses Obsidian's steps 1.8, 1.6, 1.4, 1.25, 1.125, 1, so the 0381b502 fallback (today's typing
  * default scale 2, 1.5, 1.25, …) still gives an imported heading the wrong body size
  * (h1 from 16 px: 29 / 2 = 14.5 px). Rows that fail today are `it.fails`; drop `fails` when fixed.
  */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, expect, it, vi } from "vitest";
 
 import type { TextEditorSession } from "@excalidraw/excalidraw/types";
 
 import { buildPageElements } from "../../../sdk/api/shared/pageItems";
-import { fontPlan } from "../../../plugins/official/markdown-import/src/layout/fonts";
 
 import {
   createMarkdownTyping,
@@ -47,12 +49,27 @@ const box = (fontSize: number, customData: Record<string, unknown>): El => ({
   text: "Title",
 });
 
-const FONTS = { body: "sans", heading: "sans", code: "mono" } as never;
+// The import's own heading steps, read from its source (the plugin is not part of this
+// TypeScript project): `HEADING_SCALE` in markdown-import/src/layout/fonts.ts, sizes rounded to
+// 0.5 px as its `fontPlan` does.
+const IMPORT_SCALE = JSON.parse(
+  /const HEADING_SCALE = (\[[^\]]+\])/.exec(
+    readFileSync(
+      resolve(
+        __dirname,
+        "../../../plugins/official/markdown-import/src/layout/fonts.ts",
+      ),
+      "utf8",
+    ),
+  )![1],
+) as number[];
+const importSize = (level: number, body: number) =>
+  Math.round(body * IMPORT_SCALE[level - 1] * 2) / 2;
 
 /** A heading exactly as the Markdown import writes it. */
 const imported = (level: number, body: number): El => {
-  const role = `h${level}` as "h1";
-  const size = fontPlan(FONTS, body)[role].size;
+  const role = `h${level}`;
+  const size = importSize(level, body);
   const item = {
     type: "text",
     page: 0,
