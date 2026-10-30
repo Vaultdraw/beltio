@@ -261,8 +261,58 @@ describe("window methods (C3)", () => {
     });
     expect(files.closeTab).toHaveBeenCalledWith("t2");
     expect(files.tabState()!.tabs.some((t) => t.id === "t2")).toBe(false);
-    expect((await call("tab.close", { index: 1 })).error.code).toBe(
-      "INVALID_PARAMS",
+    // Close takes the same targets as focus: a number (as `tab focus 1`) and a bare drawing name.
+    expect(await call("tab.close", { index: 1 })).toEqual({ closed: true });
+    expect(files.closeTab).toHaveBeenLastCalledWith("t1");
+  });
+
+  it("tab.focus and tab.close take a bare drawing name; several matches say so (hunter C small items)", async () => {
+    const { call, files } = make();
+    expect(await call("tab.focus", { id: "c" })).toEqual({ id: "t2" });
+    expect(await call("tab.focus", { id: "A.excalidraw" })).toEqual({
+      id: "t1",
+    });
+    expect(await call("tab.close", { id: "c" })).toEqual({ closed: true });
+    expect(files.closeTab).toHaveBeenLastCalledWith("t2");
+    expect((await call("tab.close", { id: "nothing" })).error.code).toBe(
+      "NOT_FOUND",
+    );
+    // An exact tab id still wins over a name.
+    expect(await call("tab.focus", { id: "t3" })).toEqual({ id: "t3" });
+    const two = make({
+      tabState: () => ({
+        ...tabsState(),
+        tabs: [
+          {
+            id: "t1",
+            path: "x/Plan.excalidraw",
+            pinned: false,
+            missing: false,
+          },
+          {
+            id: "t2",
+            path: "y/Plan.excalidraw",
+            pinned: false,
+            missing: false,
+          },
+        ],
+      }),
+    });
+    const e = (await two.call("tab.close", { id: "Plan" })).error;
+    expect(e.code).toBe("INVALID_PARAMS");
+    expect(e.message).toContain("2 tabs show a drawing called Plan");
+  });
+
+  it("file.move keeps the kind of a file renamed without an extension (hunter C-8)", async () => {
+    const { call, files } = make();
+    expect(await call("file.move", { from: "a.excalidraw", to: "b" })).toEqual({
+      from: "a.excalidraw",
+      to: "b.excalidraw",
+    });
+    expect(files.moveEntry).toHaveBeenLastCalledWith(
+      "a.excalidraw",
+      "b.excalidraw",
+      true,
     );
   });
 

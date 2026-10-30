@@ -311,7 +311,7 @@ export function createWindowMethods(
     },
     "tab.list": tabList,
     "tab.focus": async (params) => {
-      const id = resolveTabId(f.tabState(), params, true);
+      const id = resolveTabId(f.tabState(), params);
       await f.activateTab(id);
       if (f.tabState()?.activeId !== id) {
         throw new ControlError("UNAVAILABLE", "The tab could not be focused", {
@@ -321,7 +321,7 @@ export function createWindowMethods(
       return { id };
     },
     "tab.close": async (params) => {
-      const id = resolveTabId(f.tabState(), params, false);
+      const id = resolveTabId(f.tabState(), params);
       await f.closeTab(id);
       if (f.tabState()?.tabs.some((t) => t.id === id)) {
         throw new ControlError("UNAVAILABLE", "The tab could not be closed", {

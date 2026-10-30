@@ -1,3 +1,5 @@
+import { stripDrawingExt } from "../vault/fileKind";
+
 import { ControlError } from "./errors";
 import { objectParams } from "./params";
 
@@ -51,12 +53,16 @@ export function tabListResult(
   };
 }
 
-/** Tab id from {id} | {index (1-based)} | {path}. */
-export function resolveTabId(
-  state: TabsState | null,
-  params: unknown,
-  allowIndex: boolean,
-): string {
+/** The file name of a tab's path without folders or the drawing extension, lower case. */
+const baseName = (path: string): string =>
+  stripDrawingExt(path.slice(path.lastIndexOf("/") + 1)).toLowerCase();
+
+/**
+ * Tab id from {id} | {index (1-based)} | {path}, for `tab.focus` and `tab.close` alike. An `id` that
+ * is no tab id may be a bare drawing name (`Alpha`, as `open Alpha` takes): the one tab showing a
+ * drawing of that name, or an error that says which several match.
+ */
+export function resolveTabId(state: TabsState | null, params: unknown): string {
   if (!state) {
     throw new ControlError("NOT_FOUND", "Tabs are disabled");
   }
@@ -64,15 +70,26 @@ export function resolveTabId(
   let tab;
   if (typeof p.id === "string") {
     tab = state.tabs.find((t) => t.id === p.id);
-  } else if (allowIndex && typeof p.index === "number") {
+    if (!tab) {
+      const want = stripDrawingExt(p.id).toLowerCase();
+      const named = state.tabs.filter(
+        (t) => t.path && baseName(t.path) === want,
+      );
+      if (named.length > 1) {
+        throw new ControlError(
+          "INVALID_PARAMS",
+          `${named.length} tabs show a drawing called ${p.id}: use the tab number or the full path`,
+          { params: p },
+        );
+      }
+      tab = named[0];
+    }
+  } else if (typeof p.index === "number") {
     tab = state.tabs[Math.trunc(p.index) - 1];
   } else if (typeof p.path === "string") {
     tab = state.tabs.find((t) => t.path === p.path);
   } else {
-    throw new ControlError(
-      "INVALID_PARAMS",
-      allowIndex ? "id, index or path required" : "id or path required",
-    );
+    throw new ControlError("INVALID_PARAMS", "id, index or path required");
   }
   if (!tab) {
     throw new ControlError("NOT_FOUND", "No such tab", { params: p });

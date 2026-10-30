@@ -1,4 +1,9 @@
-import { DRAWING_EXT } from "../vault/fileKind";
+import {
+  DRAWING_EXT,
+  EXCALIDRAW_MD_EXT,
+  NOTE_EXT,
+  fileKind,
+} from "../vault/fileKind";
 
 import { ControlError } from "./errors";
 
@@ -51,12 +56,31 @@ export const splitPath = (path: string): { parent: string; name: string } => {
 export const joinRel = (parent: string, name: string): string =>
   parent ? `${parent}/${name}` : name;
 
-/** `to` ending in "/" means "into that folder, keeping the name". */
+/** The extension a file of this name keeps when it is renamed: "" for folders and other files. */
+const keptExt = (name: string): string => {
+  switch (fileKind(name)) {
+    case "drawing":
+      return DRAWING_EXT;
+    case "excalidrawMd":
+      return EXCALIDRAW_MD_EXT;
+    case "note":
+      return NOTE_EXT;
+    default:
+      return "";
+  }
+};
+
+/**
+ * `to` ending in "/" means "into that folder, keeping the name". A drawing or note renamed to a
+ * name without a known extension keeps its own (`new` adds .excalidraw the same way; Obsidian's
+ * rename keeps .md); a name that already says what it is wins, and a folder is never given one.
+ */
 export const moveDestination = (from: string, to: string): string => {
   const dest = relPath(to, "to", true);
-  return to.endsWith("/") || dest === ""
-    ? joinRel(dest, splitPath(from).name)
-    : dest;
+  if (to.endsWith("/") || dest === "") {
+    return joinRel(dest, splitPath(from).name);
+  }
+  return fileKind(dest) === "other" ? `${dest}${keptExt(from)}` : dest;
 };
 
 /** Optional boolean: absent = `fallback`, anything but a boolean is invalid. */

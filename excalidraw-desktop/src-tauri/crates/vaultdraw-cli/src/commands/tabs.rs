@@ -21,19 +21,21 @@ fn tab_params(cli: &Cli, arg: &str) -> Value {
     }
 }
 
+/// A tab argument for `focus` and `close` alike: all digits is a 1-based index, else an id, a bare
+/// drawing name or a file target.
+fn tab_target(cli: &Cli, arg: &str) -> Value {
+    match arg.parse::<u64>() {
+        Ok(n) if arg.bytes().all(|b| b.is_ascii_digit()) => json!({ "index": n }),
+        _ => tab_params(cli, arg),
+    }
+}
+
 pub fn run(cli: &Cli, action: &TabAction) -> Result<(), Fail> {
     match action {
-        TabAction::Focus { id } => {
-            // All digits: a 1-based index.
-            let p = match id.parse::<u64>() {
-                Ok(n) if id.bytes().all(|b| b.is_ascii_digit()) => json!({ "index": n }),
-                _ => tab_params(cli, id),
-            };
-            request(cli, methods::TAB_FOCUS, Some(p), |v| format!("focused {}", v.get("id").and_then(Value::as_str).unwrap_or("")), false)
-        }
+        TabAction::Focus { id } => request(cli, methods::TAB_FOCUS, Some(tab_target(cli, id)), |v| format!("focused {}", v.get("id").and_then(Value::as_str).unwrap_or("")), false),
         TabAction::Close { id } => {
             let human = |v: &Value| if v.get("closed").and_then(Value::as_bool) == Some(false) { "not closed" } else { "closed" }.to_string();
-            request(cli, methods::TAB_CLOSE, Some(tab_params(cli, id)), human, false)
+            request(cli, methods::TAB_CLOSE, Some(tab_target(cli, id)), human, false)
         }
     }
 }
