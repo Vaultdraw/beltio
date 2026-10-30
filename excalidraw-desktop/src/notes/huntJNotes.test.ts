@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createResolver } from "../links/resolve";
+import { findTags } from "../tags/grammar";
 
 import { findAnchorElement } from "./noteAnchor";
 import { resolveRelativeHref } from "./relativeLink";
@@ -179,4 +180,84 @@ describe("J-2 family: what a Markdown link must NOT open (toimprove 209)", () =>
       resolveRelativeHref("Projects/Plan.md", "Nope.md", paths),
     ).toBeNull();
   });
+});
+
+describe("J-7: Obsidian's custom task statuses (toimprove 216)", () => {
+  const boxes = (md: string) => {
+    const div = document.createElement("div");
+    div.innerHTML = html(md);
+    return [
+      ...div.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+    ];
+  };
+  it("sanity: [ ] and [x] are boxes", () => {
+    expect(boxes("- [ ] a\n- [x] b")).toHaveLength(2);
+  });
+  for (const mark of ["/", "-", ">", "?"]) {
+    it.fails(`- [${mark}] is a ticked box, not the text "[${mark}]"`, () => {
+      const md = `- [${mark}] item`;
+      expect(boxes(md)).toHaveLength(1);
+      expect(html(md)).not.toContain(`[${mark === ">" ? "&gt;" : mark}]`);
+    });
+  }
+});
+
+describe("J-8: tag chips in a note follow the tag grammar the tag pane uses (toimprove 217)", () => {
+  const chips = (md: string) => {
+    const div = document.createElement("div");
+    div.innerHTML = html(md);
+    return [
+      ...div.querySelectorAll<HTMLElement>(".note-body .note-tag, .note-tag"),
+    ].map((e) => e.dataset.tag);
+  };
+  const AGREE = ["#café today", "[#br]", "#_under", "#2024", "#tag's", "#Ünï"];
+  const DRIFT = [
+    "colour #ff00aa here",
+    "bg #1e1e1e",
+    "#a1b",
+    "ends #tag-",
+    "path #a/b/",
+    "x #a//b",
+    'quote "#q"',
+    "list,#c",
+    "x:#k",
+  ];
+  for (const text of AGREE) {
+    it(`sanity: ${text}`, () => {
+      expect(chips(text)).toEqual(findTags(text).map((m) => m.display));
+    });
+  }
+  for (const text of DRIFT) {
+    it.fails(`${text}: the chips are the tags the pane lists`, () => {
+      expect(chips(text)).toEqual(findTags(text).map((m) => m.display));
+    });
+  }
+});
+
+describe("J-9: ![[Sketch]] embeds a drawing (toimprove 218)", () => {
+  it.fails(
+    "a drawing embed shows the drawing or at least a link to it",
+    async () => {
+      const root = document.createElement("div");
+      root.innerHTML = sanitizeNoteHtml(
+        renderNoteHtml("See ![[Sketch]] here.", {
+          resolve: (t) => (t === "Sketch" ? "Sketch.excalidraw" : null),
+          highlight: false,
+          math: true,
+        }),
+        { remoteImages: false },
+      );
+      document.body.append(root);
+      await hydrateEmbeds(root, {
+        imageUrl: async () => null,
+        // The native read refuses anything that is not a .md note (note_file.rs check_note_path).
+        noteText: async (p: string) => (p.endsWith(".md") ? "" : null),
+        renderNested: () => "",
+        afterNested: async () => {},
+      } as never);
+      const embed = root.querySelector('[data-path="Sketch.excalidraw"]')!;
+      root.remove();
+      expect(embed.querySelector("img, svg, canvas, a")).not.toBeNull();
+    },
+  );
 });

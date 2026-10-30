@@ -1,0 +1,18 @@
+{
+  "about": "Front matter (Obsidian's properties block) as three copies read it: the reading view hides it (notes/render/obsidian.ts stripFrontmatter), the native parser lists its properties and tags (markdown/frontmatter.rs through pulldown-cmark), and the browser stand-in (notes/noteDoc.ts standInNoteDoc) answers in Playwright. Obsidian is the answer key. `hidden`: the block is not shown as text. `tags`: the front matter's tags ([] when there is no block). TypeScript rows: src/notes/frontmatterContract.test.ts; Rust rows: vaultdraw-core/tests/frontmatter_contract.rs. `drift` names the copies that disagree today, with the toimprove number (bug hunter J, 2026-10-30).",
+  "cases": [
+    { "label": "flow list", "text": "---\ntitle: A\ntags: [x, y]\n---\nbody\n", "hidden": true, "tags": ["x", "y"] },
+    { "label": "block list", "text": "---\ntags:\n  - one\n  - two\n---\nbody\n", "hidden": true, "tags": ["one", "two"], "drift": { "standIn": "toimprove 215" } },
+    { "label": "comma scalar", "text": "---\ntags: a, b\n---\nbody\n", "hidden": true, "tags": ["a", "b"] },
+    { "label": "CRLF line ends", "text": "---\r\ntags: [x]\r\n---\r\nbody\r\n", "hidden": true, "tags": ["x"] },
+    { "label": "byte order mark", "text": "﻿---\ntags: [x]\n---\nbody\n", "hidden": true, "tags": ["x"] },
+    { "label": "closed with ...", "text": "---\ntags: [x]\n...\nbody\n", "hidden": true, "tags": ["x"] },
+    { "label": "spaces after the dashes", "text": "--- \ntags: [x]\n---  \nbody\n", "hidden": true, "tags": ["x"] },
+    { "label": "no newline at the end", "text": "---\ntags: [x]\n---", "hidden": true, "tags": ["x"] },
+    { "label": "blank first line", "text": "---\n\ntags: [x]\n---\nbody\n", "hidden": true, "tags": ["x"], "drift": { "native": "toimprove 215" } },
+    { "label": "empty block", "text": "---\n---\nbody\n", "hidden": true, "tags": [] },
+    { "label": "never closed", "text": "---\ntags: [x]\nbody\n", "hidden": false, "tags": [] },
+    { "label": "blank line before the dashes", "text": "\n---\ntags: [x]\n---\nbody\n", "hidden": false, "tags": [], "drift": { "native": "toimprove 215" } },
+    { "label": "four dashes", "text": "----\ntags: [x]\n----\nbody\n", "hidden": false, "tags": [] }
+  ]
+}
