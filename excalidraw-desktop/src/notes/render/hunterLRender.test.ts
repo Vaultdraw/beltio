@@ -32,7 +32,7 @@ describe("hunter L-9: a drawing embed with a size", () => {
     expect(linkText(html("![[Sketch|my sketch]]"))).toBe("my sketch");
   });
 
-  it.fails.each(["![[Sketch|500]]", "![[Sketch|500x300]]"])(
+  it.each(["![[Sketch|500]]", "![[Sketch|500x300]]"])(
     "%s reads as the drawing's name, not the size",
     (md) => {
       expect(linkText(html(md))).toBe("Sketch");
@@ -45,7 +45,7 @@ describe("hunter L-10: a footnote referenced inside another footnote", () => {
     expect(html("A[^a]\n\n[^a]: first")).toContain('id="fn-a"');
   });
 
-  it.fails("is listed too, so its number leads somewhere", () => {
+  it("is listed too, so its number leads somewhere", () => {
     const out = html("A[^a]\n\n[^a]: see [^b]\n[^b]: inner");
     expect(out).toContain('href="#fn-b"');
     expect(out).toContain('id="fn-b"');

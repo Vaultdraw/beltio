@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { stripDrawingExt } from "../vault/fileKind";
+import { drawingStem } from "../vault/fileKind";
 
 import {
   errorMessage,
@@ -166,7 +166,7 @@ export function useTemplates(o: Options) {
       )}
       {enabled && saveTarget && vault && (
         <SaveTemplateModal
-          defaultName={stripDrawingExt(saveTarget.split("/").pop()!)}
+          defaultName={drawingStem(saveTarget.split("/").pop()!)}
           ownerDocument={o.doc}
           readOnlyVault={vault.readOnly}
           onSave={save}

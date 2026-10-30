@@ -35,10 +35,6 @@ const PINNED: Record<string, [count: number, why: string]> = {
     1,
     "link targets: .excalidraw is the written form",
   ],
-  "excalidraw-desktop/src/templates/useTemplates.tsx": [
-    1,
-    "templates are .excalidraw files",
-  ],
   "excalidraw-desktop/src/vault/treeStore.ts": [
     1,
     "duplicateName: the drawing branch (Obsidian drawings keep .excalidraw.md)",

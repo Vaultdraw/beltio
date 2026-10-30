@@ -129,9 +129,11 @@ const embed: TokenizerAndRendererExtension = {
     if (path && kind === "note" && fileKind(path) !== "note") {
       // A drawing (`![[Sketch]]`): no note text to show, so it is a link that opens the drawing
       // instead of a dead word (toimprove 218).
+      // `|500` / `|500x300` is the Excalidraw plugin's size, not a label (toimprove 275).
       const data = `data-target="${esc(target)}" data-path="${esc(path)}"`;
+      const label = alias ? altAndSize(alias).alt : "";
       return `<span class="note-embed note-embed-drawing" ${data}><a class="wikilink" href="#" ${data}>${esc(
-        alias || target,
+        label || target,
       )}</a></span>`;
     }
     const attrs = `data-embed="${kind}" data-target="${esc(target)}"${
@@ -361,14 +363,21 @@ const footnoteRef: TokenizerAndRendererExtension = {
 
 /** The footnotes list for the references that have a definition; empty when there are none. */
 const footnotesHtml = (): string => {
-  const items = notes.order
-    .filter((id) => notes.defs.has(id))
-    .map((id) => {
-      const k = esc(`${ctx.idScope ?? ""}${id}`);
-      return `<li id="fn-${k}">${inline(
+  // Index loop: rendering a definition can reference a new footnote (`[^a]: see [^b]`), which
+  // is appended to `order` and must be listed too (toimprove 276).
+  const items: string[] = [];
+  for (let i = 0; i < notes.order.length; i++) {
+    const id = notes.order[i];
+    if (!notes.defs.has(id)) {
+      continue;
+    }
+    const k = esc(`${ctx.idScope ?? ""}${id}`);
+    items.push(
+      `<li id="fn-${k}">${inline(
         notes.defs.get(id)!,
-      )} <a href="#fnref-${k}" class="footnote-back" data-footnote="fnref-${k}">\u21a9</a></li>`;
-    });
+      )} <a href="#fnref-${k}" class="footnote-back" data-footnote="fnref-${k}">\u21a9</a></li>`,
+    );
+  }
   return items.length
     ? `<section class="footnotes"><hr><ol>${items.join("")}</ol></section>\n`
     : "";

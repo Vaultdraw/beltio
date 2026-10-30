@@ -30,6 +30,9 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **A favourite of a deleted element says so.** Opening it used to show the drawing and do nothing; now a notice reads "That element is no longer in the drawing".
 - **A table copied with old-Mac line ends is pasted as a table.** A spreadsheet or CSV copy that separates rows with a lone carriage return was one long row and pasted as plain text.
 - **Offline mode and the safety checks also cover the browser-only download path** (theme install, themes and plugins lists): Offline mode, https only, no private or local addresses, redirects checked. The desktop app never used this path; Rust does its downloads.
+- **A drawing embed with a size reads as the drawing's name.** `![[Sketch|500]]` showed a link reading "500"; Obsidian reads `|500` as the width, so the link now reads "Sketch" (toimprove 275).
+- **A footnote used only inside another footnote is listed.** Its number used to lead to nothing; it now appears in the footnotes list (toimprove 276).
+- **Save as template on an Obsidian drawing offers the drawing's name.** It offered "Plan.excalidraw.md"; it now offers "Plan" (toimprove 277).
 
 ## [0.2.0] - 2026-10-28
 

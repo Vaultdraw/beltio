@@ -12,7 +12,7 @@
 import { describe, expect, it } from "vitest";
 
 import { FakeVaultRepository } from "../tests/fakeVaultRepository";
-import { drawingStem, stripDrawingExt } from "../vault/fileKind";
+import { drawingStem } from "../vault/fileKind";
 
 import { createGlobalTemplateStore } from "./globalTemplates";
 import { saveAsTemplate } from "./saveTemplate";
@@ -23,8 +23,8 @@ const deps = () => {
   return { repository, handle: repository.handle, folder: "Templates", global };
 };
 
-// the dialog's prefilled name, exactly as useTemplates.tsx computes it
-const prefilled = (path: string) => stripDrawingExt(path.split("/").pop()!);
+// the dialog's prefilled name, exactly as useTemplates.tsx computes it (drawingStem, toimprove 277)
+const prefilled = (path: string) => drawingStem(path.split("/").pop()!);
 
 describe("hunter L-11: a template saved from an Obsidian drawing", () => {
   it("sanity: a .excalidraw drawing gives a clean name", async () => {
@@ -37,19 +37,16 @@ describe("hunter L-11: a template saved from an Obsidian drawing", () => {
     expect(entry.name).toBe("Plan");
   });
 
-  it.fails(
-    "an Obsidian drawing's template is named like the drawing, without .excalidraw.md",
-    async () => {
-      const path = "Drawings/Plan.excalidraw.md";
-      expect(drawingStem("Plan.excalidraw.md")).toBe("Plan");
-      const entry = await saveAsTemplate({
-        ...deps(),
-        scope: "vault",
-        name: prefilled(path),
-        json: "{}",
-      });
-      expect(entry.name).toBe("Plan");
-      expect(entry.path).toBe("Templates/Plan.excalidraw");
-    },
-  );
+  it("an Obsidian drawing's template is named like the drawing, without .excalidraw.md", async () => {
+    const path = "Drawings/Plan.excalidraw.md";
+    expect(drawingStem("Plan.excalidraw.md")).toBe("Plan");
+    const entry = await saveAsTemplate({
+      ...deps(),
+      scope: "vault",
+      name: prefilled(path),
+      json: "{}",
+    });
+    expect(entry.name).toBe("Plan");
+    expect(entry.path).toBe("Templates/Plan.excalidraw");
+  });
 });
