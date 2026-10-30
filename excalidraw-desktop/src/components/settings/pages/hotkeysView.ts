@@ -1,5 +1,6 @@
 /** Pure view logic of the Hotkeys page: filters, counts, grouping, conflict text. */
 import { formatKeyLabel } from "../../../palette/shortcuts";
+import { foldKey } from "../../../search/foldKey";
 
 import type { Conflict } from "../../../commands/conflicts";
 import type {
@@ -75,14 +76,18 @@ export const filterInfos = (
     filter,
   }: { text: string; chord: Chord | null; filter: FilterId },
 ): HotkeyInfo[] => {
-  const needle = text.trim().toLocaleLowerCase();
+  // Every word, in any order, folded like the vault search (as the Settings search does,
+  // toimprove 223): "toggle mode" finds "Toggle light/dark mode".
+  const words = foldKey(text.trim()).split(/\s+/).filter(Boolean);
   return infos.filter(
     (info) =>
       (!chord || info.keys.includes(chord)) &&
-      (!needle ||
-        `${info.command.title}\n${info.command.id}\n${info.command.category}`
-          .toLocaleLowerCase()
-          .includes(needle)) &&
+      (!words.length ||
+        ((hay) => words.every((w) => hay.includes(w)))(
+          foldKey(
+            `${info.command.title}\n${info.command.id}\n${info.command.category}`,
+          ),
+        )) &&
       matchesFilter(info, filter),
   );
 };

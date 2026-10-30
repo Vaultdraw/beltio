@@ -25,6 +25,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Settings > Hotkeys search matches each word in any order** (toimprove 223). "toggle mode" finds "Toggle light/dark mode", like the Settings search and the command palette; accents fold too.
 - **A plugin number setting without a declared minimum or maximum takes any number in Settings** (toimprove 234). It was capped at 0 to 1000; typing 5000 stored 1000.
 - **Escape on the file tree's row menu or the Sort order menu gives focus back** (toimprove 221). The tree or the Sort order button has it again, so j and k keep working, as with the tab menu.
 - **A box typed as `` `code` `` takes the theme's code colour** (toimprove 228). It now carries the `code` role like imported code, so `markdown.code` in a theme applies; Cmd+Z brings the marks and the plain colour back.

@@ -46,7 +46,7 @@ describe("hunter K-4: the Hotkeys search finds a command by its words", () => {
     expect(palette("toggle mode")).toContain("appearance.toggleMode");
   });
 
-  it.fails.each(ROWS)("toimprove 223: %s finds %s", (text, id) => {
+  it.each(ROWS)("toimprove 223: %s finds %s", (text, id) => {
     expect(page(text)).toContain(id);
   });
 });
