@@ -1,5 +1,5 @@
 export default {
-  activate(ctx) {
+  activate() {
     throw new Error("load exploded");
   },
 };
