@@ -16,6 +16,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Escape closes Excalidraw's own dialogs after a click inside them (Linux).** In the image export dialog a click left the focus on the page behind it (the button is disabled while it works), so Escape did nothing; Escape on the page body now closes the top dialog.
+- **Opening an imported note no longer downloads a web page again.** A link that is not a picture ("Web page, not a picture"), is over 10 MB or was refused is not fetched a second time when the note opens; **Download images** still tries again on request.
 - **Escape closes Settings when a button or switch inside it has focus.** The editor underneath had already marked the key handled, so Settings stayed open (seen on Linux, where a click focuses the control; Tab does it everywhere).
 - **Linux CI:** the Linux workflow runs typecheck, unit tests, `cargo test`, the end-to-end suite (three shards) and the bundles in parallel jobs; the end-to-end tests use the system's own copy, paste and select-all keys in text boxes.
 - **Narrow window: the file list overlay behaves like Obsidian's drawer.** Picking the drawing that is already open closes it, renaming the open drawing keeps it open, and one Escape in its search box clears the query and keeps the list (the next Escape closes the list).

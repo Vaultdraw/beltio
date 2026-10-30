@@ -115,8 +115,6 @@ const openSettings = async (page: Page) => {
 test("every Settings page lays out cleanly at a wide and a narrow window", async ({
   page,
 }) => {
-  // linux-ci-triage (2026-10-30): times out on Linux (120 s, reproduced 3 runs); not yet diagnosed. Tracking: personal/feature/linux-ci-triage/TRIAGE.md.
-  test.skip(process.platform === "linux", "times out on Linux");
   const errors = trackErrors(page);
   await page.addInitScript((long) => {
     (window as any).__e2eConfig = { include: { files: ["colors.toml"] } };

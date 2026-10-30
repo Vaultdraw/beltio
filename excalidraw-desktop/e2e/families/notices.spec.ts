@@ -152,13 +152,6 @@ test.describe("notices family", () => {
 
   for (const member of members) {
     test(member.name, async ({ page }) => {
-      // linux-ci-triage (2026-10-30): the failed-create toast never shows on Linux WebKitGTK
-      // (reproduced 3 runs, not diagnosed). Tracking: personal/feature/linux-ci-triage/TRIAGE.md.
-      test.skip(
-        process.platform === "linux" &&
-          member.name === "create a folder fails (New folder dialog)",
-        "the failed-create toast does not show on Linux (linux-ci-triage)",
-      );
       const notice = noticeOf(page, member);
 
       // 1. Appears as a small corner notice in plain words; no full-width bar.
@@ -234,5 +227,21 @@ test.describe("notices family", () => {
     await expect(notice).toBeVisible();
     await page.mouse.move(5, 5);
     await expect(notice).toHaveCount(0, { timeout: 6000 });
+  });
+
+  // A failed New folder is not a notice: the dialog stays open and says why (toimprove 184).
+  test("create a folder fails: the New folder dialog says why inline, no notice", async ({
+    page,
+  }) => {
+    await failRepo(page, "createFolder", "read-only volume");
+    await page.getByRole("button", { name: "New folder" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Name").fill("Nope");
+    await dialog.getByRole("button", { name: "Create" }).click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText(/Something went wrong/);
+    await expect(page.locator(".vd-toast")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
   });
 });
