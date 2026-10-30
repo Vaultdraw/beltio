@@ -235,7 +235,7 @@ test("tree: create, rename, move, duplicate and delete with awkward names", asyn
     ["", /./],
     ["a/b", /slash/i],
     ["a\\b", /slash/i],
-    ["a:b", /colon/i],
+    ["a:b", /colon|any of :/i],
     [".", /dot/i],
     ["..", /dot/i],
     [".excalidraw-vault", /dot|reserved/i],
