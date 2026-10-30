@@ -73,17 +73,8 @@ const members: Member[] = [
     },
     text: /Couldn't move "Graphs(\.excalidraw)?" to the Trash: .*disk is full/,
   },
-  {
-    name: "create a folder fails (New folder dialog)",
-    trigger: async (page) => {
-      await failRepo(page, "createFolder", "read-only volume");
-      await page.getByRole("button", { name: "New folder" }).click();
-      const dialog = page.getByRole("dialog");
-      await dialog.getByLabel("Name").fill("Nope");
-      await dialog.getByRole("button", { name: "Create" }).click();
-    },
-    text: /Couldn't create the folder "Nope": .*read-only volume/,
-  },
+  // "create a folder fails" is not a notice any more: the New folder dialog stays open and
+  // says why inline (toimprove 184; unit-tested in src/tests/hunterFCreateDialog.test.ts).
   {
     name: "rename fails (row menu, Rename dialog)",
     trigger: async (page) => {
