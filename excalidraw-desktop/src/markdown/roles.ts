@@ -12,6 +12,8 @@ export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
 /** A quote box (`> `): drawn in the theme's quote colour. */
 export const QUOTE_ROLE = "quote";
+/** A box typed as `code` (the theme's `markdown.code` colour applies). */
+export const CODE_ROLE = "code";
 
 /** Roles a whole text box takes (Enter after them starts a new box). */
 export const isBoxRole = (role: unknown): boolean =>

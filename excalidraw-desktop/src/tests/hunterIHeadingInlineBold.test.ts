@@ -105,12 +105,9 @@ describe("hunter I-9: a typed `code` box takes the theme's code colour", () => {
     expect(h.el.fontFamily).toBe(3);
   });
 
-  it.fails(
-    "it carries the code role, so the theme's code colour applies",
-    () => {
-      const h = session(true);
-      h.type("`npm run`");
-      expect(h.el.customData).toMatchObject({ role: "code" });
-    },
-  );
+  it("it carries the code role, so the theme's code colour applies", () => {
+    const h = session(true);
+    h.type("`npm run`");
+    expect(h.el.customData).toMatchObject({ role: "code" });
+  });
 });

@@ -47,6 +47,7 @@ import {
   nextMarker,
 } from "./lineRules";
 import {
+  CODE_ROLE,
   QUOTE_ROLE,
   headingLevelOf,
   headingRole,
@@ -362,11 +363,22 @@ export function createMarkdownTyping(deps: {
         fontFamily: el.fontFamily,
         customData: el.customData,
       };
+      const strokeColor = el.strokeColor;
       session.setText(m.inner, m.inner.length);
       // a bold heading only loses its marks; a regular one (heading_bold
       // off) turns bold like any other box
       if (!heading || !isBoldFont(style.fontFamily)) {
-        restyle({ fontFamily: inlineFont(style.fontFamily, m.kind) });
+        // a code box takes the code role, so the theme's code colour applies
+        // (a box with a role of its own, like a quote, keeps it)
+        const codeRole = m.kind === "code" && !roleOf(el);
+        restyle({
+          fontFamily: inlineFont(style.fontFamily, m.kind),
+          ...(codeRole
+            ? {
+                customData: withRole(style.customData, CODE_ROLE, strokeColor),
+              }
+            : {}),
+        });
       }
       lastConversion = {
         kind: "inPlace",
