@@ -25,6 +25,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Vim keys in notes: `:w` saves the note you are in** (toimprove 212). With two notes opened, `:w` in the second one saved the first; each note editor now carries its own save, as Vim writes the current buffer.
 - **"cafe" finds the folder Café, and the Move dialog lists Week 2 before Week 10** (toimprove 201). The sidebar search and the Move dialog filter fold case and accents like the vault search, and the Move dialog orders folders like the file tree.
 - **Cmd+P finds "Łódź plan" when you type "lodz"** (toimprove 197). The quick switcher and the command palette fold letters like the vault search (ß, Ł, Đ, Æ, Ø, accents, kana), so "strasse" finds "Straße" and "orsted" finds "Ørsted".
 - **A to Z puts "Untitled" before "Untitled 2" and "Untitled 10"** (toimprove 196). The file tree sorts by the name it shows, without `.excalidraw` or `.md`, in natural order, as Zed and Obsidian do.
