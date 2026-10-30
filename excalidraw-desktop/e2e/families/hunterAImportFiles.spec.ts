@@ -148,27 +148,26 @@ for (const [name, body] of [
   ["Empty.md", ""],
   ["Blank lines.md", "   \n\n  \n"],
 ] as const) {
-  test(
-    `A-14: importing ${name} makes a drawing or says why not`,
-    async ({ page }) => {
-      const errors = trackErrors(page);
-      await openVault(page, "?plugins=markdown-import");
-      await page.waitForFunction(() => (window as any).__pluginsReady === true);
-      await seedAndOpen(page, "Start.excalidraw");
-      const before = await page.locator(".vault-tree-item__name").count();
-      await importFile(page, { name, body, expect: "either" });
-      const reaction = async () => {
-        const names = await page
-          .locator(".vault-tree-item__name")
-          .allInnerTexts();
-        const toast = (await page.locator(".vd-toast").allInnerTexts())
-          .join(" ")
-          .replace(/Saved/g, "")
-          .trim();
-        return names.length > before || toast.length > 0;
-      };
-      await expect.poll(reaction, { timeout: 10_000 }).toBe(true);
-      expect(errors).toEqual([]);
-    },
-  );
+  test(`A-14: importing ${name} makes a drawing or says why not`, async ({
+    page,
+  }) => {
+    const errors = trackErrors(page);
+    await openVault(page, "?plugins=markdown-import");
+    await page.waitForFunction(() => (window as any).__pluginsReady === true);
+    await seedAndOpen(page, "Start.excalidraw");
+    const before = await page.locator(".vault-tree-item__name").count();
+    await importFile(page, { name, body, expect: "either" });
+    const reaction = async () => {
+      const names = await page
+        .locator(".vault-tree-item__name")
+        .allInnerTexts();
+      const toast = (await page.locator(".vd-toast").allInnerTexts())
+        .join(" ")
+        .replace(/Saved/g, "")
+        .trim();
+      return names.length > before || toast.length > 0;
+    };
+    await expect.poll(reaction, { timeout: 10_000 }).toBe(true);
+    expect(errors).toEqual([]);
+  });
 }

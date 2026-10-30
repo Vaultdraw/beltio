@@ -117,48 +117,47 @@ test("a vault import with odd note names keeps every note", async ({
 // A-15: the import report explains a failed note with the file system's own words ("Path contains
 // an invalid component"). Say what is wrong: a name Windows cannot hold, a name too long, a
 // character the vault does not allow.
-test(
-  "A-15: the import report gives plain reasons for a note it could not write",
-  async ({ page }) => {
-    await openVault(page, "?plugins=markdown-import");
-    await page.waitForFunction(() => (window as any).__pluginsReady === true);
-    await seedAndOpen(page, "Start.excalidraw");
-    await page.evaluate(() => {
-      (window as any).__plugins.backend.folders.sourcePick = {
-        name: "Odd",
-        files: {
-          "Plain.md": "# a\n",
-          "CON.md": "# b\n",
-          "colon: in name.md": "# c\n",
-        },
-      };
-    });
-    await clickMainMenuItem(page, "Import Obsidian vault…");
-    await expect(row(page, "Odd")).toBeVisible({ timeout: 60_000 });
-    await page.waitForTimeout(3000);
-    const report: string = await page.evaluate(async () => {
-      const r = (window as any).__vaultRepo;
-      for (const p of [
-        "Odd/Import report.excalidraw",
-        "Import report.excalidraw",
-      ]) {
-        try {
-          const d = await r.readDrawing(r.handle, p);
-          return JSON.parse(d.json)
-            .elements.filter((e: any) => e.type === "text")
-            .map((e: any) => e.text)
-            .join("\n");
-        } catch {
-          /* next */
-        }
+test("A-15: the import report gives plain reasons for a note it could not write", async ({
+  page,
+}) => {
+  await openVault(page, "?plugins=markdown-import");
+  await page.waitForFunction(() => (window as any).__pluginsReady === true);
+  await seedAndOpen(page, "Start.excalidraw");
+  await page.evaluate(() => {
+    (window as any).__plugins.backend.folders.sourcePick = {
+      name: "Odd",
+      files: {
+        "Plain.md": "# a\n",
+        "CON.md": "# b\n",
+        "colon: in name.md": "# c\n",
+      },
+    };
+  });
+  await clickMainMenuItem(page, "Import Obsidian vault…");
+  await expect(row(page, "Odd")).toBeVisible({ timeout: 60_000 });
+  await page.waitForTimeout(3000);
+  const report: string = await page.evaluate(async () => {
+    const r = (window as any).__vaultRepo;
+    for (const p of [
+      "Odd/Import report.excalidraw",
+      "Import report.excalidraw",
+    ]) {
+      try {
+        const d = await r.readDrawing(r.handle, p);
+        return JSON.parse(d.json)
+          .elements.filter((e: any) => e.type === "text")
+          .map((e: any) => e.text)
+          .join("\n");
+      } catch {
+        /* next */
       }
-      return "";
-    });
-    expect(report).toContain("CON");
-    expect(report).toMatch(/reserved Windows name/);
-    expect(report).toMatch(/character : is not allowed/);
-    expect(report, "failure reasons in plain words").not.toMatch(
-      /invalid component|Path contains/i,
-    );
-  },
-);
+    }
+    return "";
+  });
+  expect(report).toContain("CON");
+  expect(report).toMatch(/reserved Windows name/);
+  expect(report).toMatch(/character : is not allowed/);
+  expect(report, "failure reasons in plain words").not.toMatch(
+    /invalid component|Path contains/i,
+  );
+});
