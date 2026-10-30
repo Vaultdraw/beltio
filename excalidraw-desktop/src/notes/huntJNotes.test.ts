@@ -261,3 +261,34 @@ describe("J-9: ![[Sketch]] embeds a drawing (toimprove 218)", () => {
     },
   );
 });
+
+describe("J-10: Markdown in a callout title (toimprove 219)", () => {
+  const title = (md: string) => {
+    const div = document.createElement("div");
+    div.innerHTML = sanitizeNoteHtml(
+      renderNoteHtml(md, {
+        resolve: (t) => (t === "Other" ? "Other.md" : null),
+        highlight: false,
+        math: true,
+      }),
+      { remoteImages: false },
+    );
+    return div.querySelector(".callout-title")!;
+  };
+  it("sanity: an empty title is the type's name", () => {
+    expect(title("> [!NOTE]\n> body").textContent).toBe("Note");
+  });
+  it.fails("bold and a wikilink in the title are rendered", () => {
+    const t = title("> [!tip] Read **this** and [[Other]]\n> body");
+    expect(t.querySelector("strong")?.textContent).toBe("this");
+    expect(t.querySelector("a.wikilink")?.getAttribute("data-path")).toBe(
+      "Other.md",
+    );
+    expect(t.textContent).not.toContain("**");
+  });
+  it.fails("inline code in the title is code", () => {
+    expect(
+      title("> [!info] Has `code`\n> b").querySelector("code"),
+    ).not.toBeNull();
+  });
+});
