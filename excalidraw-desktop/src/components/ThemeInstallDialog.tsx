@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { foldKey } from "../search/foldKey";
+import { hasAllWords, queryWords } from "../search/matchWords";
+
 import { getInstallBackend } from "../theme/install/backends";
 import {
   applyUpdate,
@@ -258,8 +261,8 @@ export const ThemeInstallDialog = ({
     if (step.k !== "pick") {
       return [];
     }
-    const q = filter.trim().toLowerCase();
-    return step.repo.themes.filter((t) => t.name.toLowerCase().includes(q));
+    const words = queryWords(filter);
+    return step.repo.themes.filter((t) => hasAllWords(words, foldKey(t.name)));
   }, [step, filter]);
 
   const busy = step.k === "busy";

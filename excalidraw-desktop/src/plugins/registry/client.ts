@@ -1,5 +1,7 @@
 /** Loads the plugins list (cache first, one fetch when stale) and works out what each entry means for this machine. */
 
+import { foldKey } from "../../search/foldKey";
+import { hasAllWords, queryWords } from "../../search/matchWords";
 import {
   browserCatalogueBackend,
   PLUGIN_CACHE_KEY,
@@ -77,13 +79,15 @@ export const searchRegistry = (
   entries: readonly RegistryEntry[],
   query: string,
 ): RegistryEntry[] => {
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const words = queryWords(query);
   if (words.length === 0) {
     return [...entries];
   }
   return entries.filter((e) => {
-    const hay = `${e.id} ${e.name} ${e.author} ${e.description}`.toLowerCase();
-    return words.every((w) => hay.includes(w));
+    return hasAllWords(
+      words,
+      foldKey(`${e.id} ${e.name} ${e.author} ${e.description}`),
+    );
   });
 };
 

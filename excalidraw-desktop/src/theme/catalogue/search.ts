@@ -1,5 +1,8 @@
 /** Search and filters for the theme browser: in memory, instant for thousands of entries. */
 
+import { foldKey } from "../../search/foldKey";
+import { queryWords } from "../../search/matchWords";
+
 import type { CatalogueEntry, ThemeMode } from "./types";
 
 export interface Filters {
@@ -13,20 +16,20 @@ export const NO_FILTERS: Filters = { query: "", tag: "", mode: "all" };
 
 /** Score of one token against one entry; 0 = no match. */
 const tokenScore = (token: string, e: CatalogueEntry): number => {
-  const name = e.name.toLowerCase();
+  const name = foldKey(e.name);
   if (name.startsWith(token)) {
     return 100;
   }
   if (name.includes(token)) {
     return 60;
   }
-  if (e.tags.some((t) => t.toLowerCase().includes(token))) {
+  if (e.tags.some((t) => foldKey(t).includes(token))) {
     return 30;
   }
-  if (e.author.toLowerCase().includes(token)) {
+  if (foldKey(e.author).includes(token)) {
     return 20;
   }
-  if (e.description.toLowerCase().includes(token)) {
+  if (foldKey(e.description).includes(token)) {
     return 10;
   }
   return 0;
@@ -37,7 +40,7 @@ export const filterEntries = (
   entries: readonly CatalogueEntry[],
   filters: Filters,
 ): CatalogueEntry[] => {
-  const tokens = filters.query.toLowerCase().split(/\s+/).filter(Boolean);
+  const tokens = queryWords(filters.query);
   const tag = filters.tag.toLowerCase();
   const scored: { entry: CatalogueEntry; score: number; at: number }[] = [];
   entries.forEach((entry, at) => {

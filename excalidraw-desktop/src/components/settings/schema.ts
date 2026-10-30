@@ -8,6 +8,8 @@
  */
 
 import { withoutShortcuts } from "../../commands/shortcutText";
+import { foldKey } from "../../search/foldKey";
+import { hasAllWords, queryWords } from "../../search/matchWords";
 import {
   HISTORY_SETTINGS_PAGES,
   HISTORY_SETTINGS_SCHEMA,
@@ -1226,9 +1228,12 @@ export const settingsForPage = (
 ): SettingSchema[] => schema.filter((s) => s.page === page);
 
 const haystack = (s: SettingSchema) =>
-  [s.label, withoutShortcuts(s.description), ...s.keywords, s.configKey ?? ""]
-    .join("\n")
-    .toLocaleLowerCase();
+  [
+    s.label,
+    withoutShortcuts(s.description),
+    ...s.keywords,
+    s.configKey ?? "",
+  ].join("\n");
 
 /**
  * Settings whose label, description, keywords or config key contain every
@@ -1239,14 +1244,11 @@ export const searchSettings = (
   query: string,
   schema: readonly SettingSchema[] = SETTINGS_SCHEMA,
 ): SettingSchema[] => {
-  const words = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  const words = queryWords(query);
   if (!words.length) {
     return [];
   }
-  return schema.filter((s) => {
-    const text = haystack(s);
-    return words.every((w) => text.includes(w));
-  });
+  return schema.filter((s) => hasAllWords(words, foldKey(haystack(s))));
 };
 
 /** Search results grouped by page, in sidebar order. */

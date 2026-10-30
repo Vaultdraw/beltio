@@ -11,6 +11,9 @@ import {
   useState,
 } from "react";
 
+import { foldKey } from "../search/foldKey";
+import { hasAllWords, queryWords } from "../search/matchWords";
+
 import { IconCheck, IconSearch } from "./Icons";
 import { Segmented } from "./settings/pages/controls";
 import { ThemeHalf } from "./ThemePreviewCard";
@@ -40,12 +43,12 @@ export const filterThemes = (
   themes: readonly ThemeEntry[],
   query: string,
 ): readonly ThemeEntry[] => {
-  const q = query.trim().toLocaleLowerCase();
-  if (!q) {
+  const words = queryWords(query);
+  if (words.length === 0) {
     return themes;
   }
   return themes.filter((entry) =>
-    themeEntryName(entry).toLocaleLowerCase().includes(q),
+    hasAllWords(words, foldKey(themeEntryName(entry))),
   );
 };
 

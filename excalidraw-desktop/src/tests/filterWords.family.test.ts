@@ -37,7 +37,6 @@ const MEMBERS: {
         ),
         q,
       ).map((e) => e.name),
-    broken: { words: "toimprove 246" },
   },
   {
     name: "installed theme picker (ThemePicker filterThemes)",
@@ -46,7 +45,6 @@ const MEMBERS: {
         names.map((n) => ({ key: n, id: n, name: n } as ThemeEntry)),
         q,
       ).map((e) => e.name),
-    broken: { words: "toimprove 246", fold: "toimprove 246" },
   },
   {
     name: "theme browser (catalogue filterEntries)",
@@ -65,7 +63,6 @@ const MEMBERS: {
         ),
         { ...NO_FILTERS, query: q },
       ).map((e) => e.name),
-    broken: { fold: "toimprove 246" },
   },
   {
     name: "plugin browser (registry searchRegistry)",
@@ -82,7 +79,6 @@ const MEMBERS: {
         ),
         q,
       ).map((e) => e.name),
-    broken: { fold: "toimprove 246" },
   },
   {
     name: "Settings search (searchSettings)",
@@ -97,7 +93,6 @@ const MEMBERS: {
           configKey: "",
         })),
       ).map((s) => s.label),
-    broken: { fold: "toimprove 246" },
   },
 ];
 

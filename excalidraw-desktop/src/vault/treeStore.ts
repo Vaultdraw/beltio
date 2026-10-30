@@ -1,3 +1,4 @@
+import { hasAllWords, queryWords } from "../search/matchWords";
 import { foldKey } from "../search/foldKey";
 
 import {
@@ -38,13 +39,12 @@ export function searchEntries(
   entries: VaultEntry[],
   query: string,
 ): VaultEntry[] {
-  const q = foldKey(query.trim());
-  if (!q) {
+  const words = queryWords(query);
+  if (words.length === 0) {
     return [];
   }
-  return entries.filter(
-    (entry) =>
-      foldKey(entry.path).includes(q) || foldKey(entry.name).includes(q),
+  return entries.filter((entry) =>
+    hasAllWords(words, foldKey(`${entry.path}\n${entry.name}`)),
   );
 }
 
