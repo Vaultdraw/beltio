@@ -1,4 +1,3 @@
-import * as fs from "node:fs";
 
 import { expect, type Page } from "@playwright/test";
 
