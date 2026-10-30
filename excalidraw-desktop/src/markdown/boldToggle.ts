@@ -12,6 +12,7 @@ import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import { fontsReady, measureTextUpdate } from "../editor/links/remeasure";
 
 import { toggledBoldFont } from "./inlineRules";
+import { selectedTexts } from "./selectedTexts";
 
 type AnyElement = Record<string, any> & { id: string; type: string };
 
@@ -23,9 +24,7 @@ export async function toggleBoldSelected(
 ): Promise<number> {
   const state = api.getAppState();
   const all = api.getSceneElementsIncludingDeleted() as unknown as AnyElement[];
-  const texts = all.filter(
-    (e) => e.type === "text" && !e.isDeleted && state.selectedElementIds[e.id],
-  );
+  const texts = selectedTexts(all, state.selectedElementIds);
   if (texts.length === 0) {
     return 0;
   }

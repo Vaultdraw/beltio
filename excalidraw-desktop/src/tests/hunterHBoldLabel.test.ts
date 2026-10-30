@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { toggleBoldSelected } from "../markdown/boldToggle";
+import { selectedTexts } from "../markdown/selectedTexts";
 
 vi.mock("../editor/links/remeasure", () => ({
   fontsReady: async () => undefined,
@@ -48,8 +49,38 @@ describe("hunter H-4: Cmd+B on a selected labelled shape", () => {
     expect(await toggleBoldSelected(f.api)).toBe(1);
   });
 
-  it.fails("the selected shape's label is toggled", async () => {
+  it("the selected shape's label is toggled", async () => {
     const f = fake(["r"]);
     expect(await toggleBoldSelected(f.api)).toBe(1);
+  });
+});
+
+describe("selectedTexts: the family (bold and task toggle share it)", () => {
+  const scene = [
+    { id: "r", type: "rectangle" },
+    { id: "t", type: "text", containerId: "r" },
+    { id: "a", type: "arrow" },
+    { id: "al", type: "text", containerId: "a" },
+    { id: "free", type: "text", containerId: null },
+    { id: "gone", type: "text", containerId: "r", isDeleted: true },
+  ];
+
+  it("a selected shape or arrow gives its label; a free text gives itself", () => {
+    expect(selectedTexts(scene, { r: true, a: true }).map((e) => e.id)).toEqual(
+      ["t", "al"],
+    );
+    expect(selectedTexts(scene, { free: true }).map((e) => e.id)).toEqual([
+      "free",
+    ]);
+  });
+
+  it("shape and label both selected count once; deleted labels never", () => {
+    expect(selectedTexts(scene, { r: true, t: true }).map((e) => e.id)).toEqual(
+      ["t"],
+    );
+  });
+
+  it("an unselected shape's label is left alone", () => {
+    expect(selectedTexts(scene, { a: true }).map((e) => e.id)).toEqual(["al"]);
   });
 });

@@ -23,6 +23,7 @@ import { getPreferences, subscribePreferences } from "../vault/preferences";
 import { applyEdits } from "../editor/links/applyEdits";
 
 import { typingSettingsFrom } from "./markdownSettings";
+import { selectedTexts } from "./selectedTexts";
 import { toggleFirstTask, toggleTaskInTextarea } from "./taskToggle";
 
 export const MARKDOWN_TOGGLE_COMMAND = "markdown.toggle";
@@ -31,7 +32,7 @@ export const MARKDOWN_TOGGLE_BOLD_COMMAND = "markdown.toggleBold";
 
 /**
  * ☐ <-> ☑: on the caret's line while a text is edited, else on the first task
- * line of the one selected text (one undo step). Works with the mode off too:
+ * line of the one selected text or selected shape's label (one undo step). Works with the mode off too:
  * it only edits task lines that are already there.
  */
 const toggleTask = (
@@ -49,9 +50,10 @@ const toggleTask = (
     return;
   }
   const state = api.getAppState();
-  const selected = api
-    .getSceneElements()
-    .filter((el) => state.selectedElementIds[el.id] && el.type === "text");
+  const selected = selectedTexts(
+    api.getSceneElements(),
+    state.selectedElementIds,
+  );
   if (selected.length !== 1) {
     return;
   }
