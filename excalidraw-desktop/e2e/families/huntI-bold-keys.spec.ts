@@ -134,3 +134,51 @@ test("hunter I: Cmd+L ticks the task of the selected text and ticks it back (cov
     .toBe(true);
   expect(errors).toEqual([]);
 });
+
+// Family sweep for I-5: drawing-changing keys pressed in a text field outside the canvas.
+// Each row: what is typed on the canvas, the key, and how the saved text must still read.
+const FIELD_KEYS = [
+  {
+    key: "ControlOrMeta+l",
+    typed: "- [ ] call Ana",
+    shown: "☐ call Ana",
+    same: (el: any) => el?.text === "☐ call Ana",
+  },
+  {
+    key: "ControlOrMeta+b",
+    typed: "plain words",
+    shown: "plain words",
+    same: (el: any) => el?.fontFamily < 100,
+  },
+];
+
+for (const row of FIELD_KEYS) {
+  test(`hunter I-5 family: ${row.key} typed in the navigator search box leaves the selected canvas text alone`, async ({
+    page,
+  }) => {
+    test.fail();
+    const errors = trackErrors(page);
+    await open(page);
+    await editor(page).getByTestId("markdown-chip").click();
+    await typeBox(page, 0.3, 0.8, row.typed);
+    await page.keyboard.press("Escape");
+    await expect
+      .poll(async () => !!(await textWith(page, row.shown)), {
+        timeout: 10_000,
+      })
+      .toBe(true);
+    const search = page.getByPlaceholder("Search drawings and text…");
+    await search.click();
+    await search.type("gra");
+    await page.keyboard.press(row.key);
+    await page.waitForTimeout(3500);
+    const all = (await readScene(page, DRAWING)).elements.filter(
+      (el: any) => !el.isDeleted && el.type === "text",
+    );
+    const mine = all.find(
+      (el: any) => el.text === row.shown || el.text === "☑ call Ana",
+    );
+    expect(row.same(mine)).toBe(true);
+    expect(errors).toEqual([]);
+  });
+}
