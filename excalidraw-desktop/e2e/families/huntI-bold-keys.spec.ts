@@ -155,7 +155,6 @@ for (const row of FIELD_KEYS) {
   test(`hunter I-5 family: ${row.key} typed in the navigator search box leaves the selected canvas text alone`, async ({
     page,
   }) => {
-    test.fail();
     const errors = trackErrors(page);
     await open(page);
     await editor(page).getByTestId("markdown-chip").click();
