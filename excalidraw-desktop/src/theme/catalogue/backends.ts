@@ -1,9 +1,11 @@
 /** Catalogue backends: the desktop app (Rust fetches and caches) and the browser harness. */
 
 import { isTauriAvailable } from "../../vault/DesktopVaultRepository";
-import { LOOPBACK, readCapped, sha256Hex } from "../install/backends";
+import { guardedFetch } from "../../network/webFetchGuard";
+import { readCapped, sha256Hex } from "../install/backends";
 import { InstallError, toInstallError } from "../install/types";
 
+import type { ConsentField } from "../install/consent";
 import type { CatalogueBackend, RawIndex } from "./types";
 
 type Invoke = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
@@ -41,41 +43,13 @@ export const tauriCatalogueBackend = (
 const CACHE_KEY = "vaultdraw-theme-catalogue-v1";
 export const PLUGIN_CACHE_KEY = "vaultdraw-plugin-registry-v1";
 
-/** https, or http on this machine (the browser harness). */
-const webUrl = (raw: string, win: Window): URL => {
-  let url: URL;
-  try {
-    url = new URL(raw, win.location.href);
-  } catch {
-    throw new InstallError("BAD_URL", `"${raw}" is not a web address`);
-  }
-  if (
-    url.protocol !== "https:" &&
-    !(url.protocol === "http:" && LOOPBACK.has(url.hostname))
-  ) {
-    throw new InstallError("BAD_URL", "Only https addresses can be used");
-  }
-  return url;
-};
-
 const download = async (
   raw: string,
   maxBytes: number,
   win: Window,
+  field: ConsentField,
 ): Promise<Uint8Array<ArrayBuffer>> => {
-  const url = webUrl(raw, win);
-  let response: Response;
-  try {
-    response = await win.fetch(url.href);
-  } catch {
-    throw new InstallError("NETWORK", `Could not reach ${url.host}`);
-  }
-  if (!response.ok) {
-    throw new InstallError(
-      "HTTP_STATUS",
-      `${url.host} answered ${response.status}`,
-    );
-  }
+  const { response } = await guardedFetch(raw, win, field);
   return readCapped(response, maxBytes);
 };
 
@@ -84,6 +58,7 @@ export const browserCatalogueBackend = (
   win: Window,
   cacheKey = CACHE_KEY,
   invalidMessage = "The themes list is not valid JSON",
+  field: ConsentField = "networkAllowThemes",
 ): CatalogueBackend => ({
   cached: async () => {
     try {
@@ -94,7 +69,7 @@ export const browserCatalogueBackend = (
     }
   },
   refresh: async (url, maxBytes) => {
-    const bytes = await download(url, maxBytes, win);
+    const bytes = await download(url, maxBytes, win, field);
     let json: string;
     try {
       json = new TextDecoder("utf-8", { fatal: true })
@@ -117,7 +92,7 @@ export const browserCatalogueBackend = (
     }
     return raw;
   },
-  preview: (url, maxBytes) => download(url, maxBytes, win),
+  preview: (url, maxBytes) => download(url, maxBytes, win, field),
 });
 
 /** The backend for this window. */

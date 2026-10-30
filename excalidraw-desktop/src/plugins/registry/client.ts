@@ -39,6 +39,7 @@ export const getRegistryBackend = async (
     win,
     PLUGIN_CACHE_KEY,
     "The plugins list is not valid JSON",
+    "networkAllowPlugins",
   );
 };
 

@@ -2,6 +2,7 @@
 
 import { isTauriAvailable } from "../../vault/DesktopVaultRepository";
 
+import { guardedFetch } from "../../network/webFetchGuard";
 import { readStoredThemes, writeStoredThemes } from "./browserStore";
 import { InstallError, toInstallError } from "./types";
 
@@ -49,8 +50,6 @@ export const sha256Hex = async (
     .join("");
 };
 
-export const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
-
 const tooLarge = (maxBytes: number) =>
   new InstallError(
     "TOO_LARGE",
@@ -91,33 +90,14 @@ export const readCapped = async (
   }
 };
 
-/** Direct URL download only; https, or http on this machine. Themes are stored in localStorage. */
+/** Direct URL download only; the checks are in `network/webFetchGuard.ts`. Themes are stored in localStorage. */
 export const browserBackend = (win: Window): InstallBackend => {
   const download = async (raw: string, maxBytes: number): Promise<Fetched> => {
-    let url: URL;
-    try {
-      url = new URL(raw, win.location.href);
-    } catch {
-      throw new InstallError("BAD_URL", `"${raw}" is not a web address`);
-    }
-    if (
-      url.protocol !== "https:" &&
-      !(url.protocol === "http:" && LOOPBACK.has(url.hostname))
-    ) {
-      throw new InstallError("BAD_URL", "Only https addresses can be used");
-    }
-    let response: Response;
-    try {
-      response = await win.fetch(url.href);
-    } catch {
-      throw new InstallError("NETWORK", `Could not reach ${url.host}`);
-    }
-    if (!response.ok) {
-      throw new InstallError(
-        "HTTP_STATUS",
-        `${url.host} answered ${response.status}`,
-      );
-    }
+    const { response, url } = await guardedFetch(
+      raw,
+      win,
+      "networkAllowThemes",
+    );
     const bytes = await readCapped(response, maxBytes);
     let json: string;
     try {
