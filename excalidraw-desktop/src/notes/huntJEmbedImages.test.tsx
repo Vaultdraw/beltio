@@ -20,13 +20,18 @@ Range.prototype.getBoundingClientRect = () => new DOMRect();
 
 const vault = {
   handle: "h",
-  paths: () => ["Host.md", "Other.md", "pics/a.png"] as readonly string[],
+  paths: () =>
+    ["Host.md", "Other.md", "Props.md", "pics/a.png"] as readonly string[],
 };
 
 beforeEach(() => {
   const files = new FakeNoteFiles();
   files.setOnDisk("Host.md", "# Host\n\n![own](pics/a.png)\n\n![[Other]]\n");
   files.setOnDisk("Other.md", "Embedded text.\n\n![inner](pics/a.png)\n");
+  files.setOnDisk(
+    "Props.md",
+    '---\nup: "[[Other]]"\nstatus: draft\n---\n# Props\n',
+  );
   setNoteFiles(files);
   updatePreferences({ notesOpenIn: "reading", notesVim: false });
 });
@@ -58,3 +63,17 @@ it.fails(
     expect(inner!.getAttribute("src")).toBeNull();
   },
 );
+
+// J-14 (toimprove 230): a [[link]] in a property value is a link in Obsidian's properties panel.
+it("sanity: properties are listed", async () => {
+  render(<NoteView path="Props.md" openPath={() => {}} vault={vault} />);
+  const props = await screen.findByTestId("note-properties");
+  expect(props.textContent).toContain("draft");
+});
+
+it.fails("a [[link]] in a property value is a link to the note", async () => {
+  render(<NoteView path="Props.md" openPath={() => {}} vault={vault} />);
+  const props = await screen.findByTestId("note-properties");
+  expect(props.querySelector("a")).not.toBeNull();
+  expect(props.textContent).not.toContain("[[");
+});
