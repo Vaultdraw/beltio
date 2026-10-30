@@ -58,15 +58,18 @@ describe("plugin browser: a version that needs a newer app (toimprove M-5)", () 
     ).toBeTruthy();
   });
 
-  it.fails(
-    "the update to a version the app cannot run is not offered",
-    async () => {
-      render(<PluginBrowserDialog onClose={() => {}} />);
-      const btn = await screen.findByRole("button", {
-        name: "Update to 2.0.0",
-      });
-      fireEvent.click(btn);
-      expect(install).not.toHaveBeenCalled();
-    },
-  );
+  it("the update to a version the app cannot run is not offered", async () => {
+    render(<PluginBrowserDialog onClose={() => {}} />);
+    const btn = await screen.findByRole("button", {
+      name: "Update to 2.0.0",
+    });
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(btn);
+    expect(install).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(
+        "Update Vaultdraw to 99.0.0 or newer to update this plugin.",
+      ),
+    ).toBeTruthy();
+  });
 });

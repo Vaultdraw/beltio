@@ -15,6 +15,7 @@ import {
 } from "../plugins/host/manage";
 import { permissionText } from "../plugins/host/permissions";
 import {
+  compareVersions,
   getRegistryBackend,
   loadRegistry,
   registryStatus,
@@ -27,6 +28,7 @@ import {
   unblock,
   unblockLabel,
 } from "../theme/install/consent";
+import { APP_VERSION } from "../appVersion";
 import { isSupportedApi } from "../plugins/registry/apiLevel";
 import { toastStore } from "../toasts/toastStore";
 import { getPreferences } from "../vault/preferences";
@@ -150,6 +152,10 @@ export const PluginBrowserDialog = ({
     }
   };
 
+  /** A version that needs a newer app is not offered: it would replace a working plugin with one that will not load (toimprove 251; Obsidian). */
+  const needsNewerApp = (entry: RegistryEntry) =>
+    !!entry.minApp && compareVersions(APP_VERSION, entry.minApp) < 0;
+
   const act = async (entry: RegistryEntry, update: boolean) => {
     setBusy(true);
     setError(null);
@@ -210,7 +216,11 @@ export const PluginBrowserDialog = ({
     ) {
       e.preventDefault();
       const status = registryStatus(current, versions.get(current.id));
-      if (status !== "installed" && isSupportedApi(current.api)) {
+      if (
+        status !== "installed" &&
+        isSupportedApi(current.api) &&
+        !needsNewerApp(current)
+      ) {
         void act(current, status === "update");
       }
     }
@@ -219,7 +229,8 @@ export const PluginBrowserDialog = ({
   const details = (e: RegistryEntry) => {
     const status = registryStatus(e, versions.get(e.id));
     const installedVersion = versions.get(e.id);
-    const incompatible = !isSupportedApi(e.api);
+    const newerApp = needsNewerApp(e);
+    const incompatible = !isSupportedApi(e.api) || newerApp;
     return (
       <section className="vault-pb__details" aria-label={`${e.name} details`}>
         <h3>{e.name}</h3>
@@ -248,10 +259,16 @@ export const PluginBrowserDialog = ({
             ))}
           </ul>
         )}
-        {incompatible && (
+        {!isSupportedApi(e.api) && (
           <p role="note">
             This plugin targets plugin API {e.api}, which this Vaultdraw does
             not run.
+          </p>
+        )}
+        {newerApp && (
+          <p role="note">
+            Update Vaultdraw to {e.minApp} or newer to{" "}
+            {status === "update" ? "update" : "install"} this plugin.
           </p>
         )}
         {installedVersion !== undefined && (

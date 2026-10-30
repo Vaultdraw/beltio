@@ -46,6 +46,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **`vaultdraw://new?path=` on an existing note or Obsidian drawing opens it** instead of creating a stray `….excalidraw.md.excalidraw` file next to it (toimprove 265).
 - **Template picker and tags panel order names like the file tree.** "Meeting 10" came before "Meeting 2" there; both now use the tree's natural order (toimprove 261).
 - **A one-line link is underlined only as wide as its text,** also in a box the user made wider (it was underlined across the whole box, with a link strip over empty space) (toimprove 258).
+- **The plugin browser does not offer an update that needs a newer Vaultdraw.** Update and Install are off, with a line saying which version to update to, instead of replacing a working plugin with one that will not load (toimprove 251).
 
 ## [0.2.0] - 2026-10-28
 
