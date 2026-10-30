@@ -3,7 +3,6 @@ import { expect, type Page } from "@playwright/test";
 import { test } from "../fixture";
 import {
   activeTab,
-  clickTree,
   openSeededVault,
   readTabs,
   sceneJson,

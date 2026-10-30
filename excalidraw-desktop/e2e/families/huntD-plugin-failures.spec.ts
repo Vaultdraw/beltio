@@ -30,7 +30,6 @@ test("a panel that throws shows a message, the app and other panels keep working
   await start(page, "badpanel,hello");
   await page.getByRole("button", { name: "Bad panel" }).first().click();
   await expect(page.getByRole("alert")).toContainText(/crashed/);
-  await page.screenshot({ path: "../.cache/e2e-shots/huntD-badpanel.png" });
   await page.getByRole("button", { name: "Good panel" }).click();
   await expect(page.getByTestId("good-panel")).toBeVisible();
   // the crashed panel stays a message beside the good one (panels are not exclusive)
@@ -47,9 +46,6 @@ for (const id of ["badload", "badsyntax"]) {
     await start(page, `${id},hello`);
     await runCmd(page, `${id === "badload" ? "Bad load" : "Bad syntax"}: run`);
     await page.waitForTimeout(800);
-    await page.screenshot({ path: `../.cache/e2e-shots/huntD-${id}.png` });
-    const body = (await page.locator("body").innerText()).replace(/\s+/g, " ");
-    console.log(id, "VISIBLE:", body.slice(0, 600));
     await expect(
       page.getByText(/failed|error|couldn.t|could not|problem/i).first(),
     ).toBeVisible({ timeout: 3000 });
