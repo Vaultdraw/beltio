@@ -118,9 +118,7 @@ describe("guard: name filters fold accents", () => {
 const ALL_DIRS = [...DIRS, join(ROOT, "../sdk")];
 const TABLE_COPY = /\.replace\(\s*\/[ßæœøłđı]/;
 const PIECEWISE = /\b(?:fold|foldKey)\(\s*(?:ch|c|char)\s*\)/;
-const PIECEWISE_KNOWN: Record<string, string> = {
-  "src/commands/fuzzy.ts": "toimprove 214 (Cmd+P folds per code unit)",
-};
+const PIECEWISE_KNOWN: Record<string, string> = {};
 
 describe("guard: one fold table, applied to whole names", () => {
   const files = ALL_DIRS.flatMap((d) => walk(d)).map((f) => ({
@@ -141,10 +139,7 @@ describe("guard: one fold table, applied to whole names", () => {
   it("no new per-character fold", () => {
     expect(piecewise.filter((f) => !PIECEWISE_KNOWN[f])).toEqual([]);
   });
-  it.fails(
-    "no per-character fold left (empty PIECEWISE_KNOWN with 214)",
-    () => {
-      expect(piecewise).toEqual([]);
-    },
-  );
+  it("no per-character fold left (fixed with 214: fuzzy.ts folds clusters)", () => {
+    expect(piecewise).toEqual([]);
+  });
 });
