@@ -23,9 +23,7 @@ const OWNER = "src/tags/grammar.ts";
 const KNOWN: Record<string, string> = {
   // src/notes/render/obsidian.ts (reading-view chips) uses findTags since 2f5a9aaa (toimprove 217).
   "../sdk/api/shared/markdown.ts": "toimprove 233 (plugin API note tags)",
-  "src/notes/markdownLang.ts": "toimprove 233 (note editor highlights tags)",
-  "src/editor/tags/tagTrigger.ts":
-    "the # suggestion trigger: same characters as the grammar, should import them",
+  // src/notes/markdownLang.ts and src/editor/tags/tagTrigger.ts use the grammar since toimprove 233.
 };
 
 const walk = (dir: string, out: string[] = []): string[] => {

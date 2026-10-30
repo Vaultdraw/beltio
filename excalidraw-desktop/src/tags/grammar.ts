@@ -15,7 +15,10 @@ export type TagMatch = {
 };
 
 export const OPENERS = new Set(["(", "[", "{", '"', "'", "<", ",", ";", ":"]);
-const BODY_RUN = /[\p{Alphabetic}\p{N}_\-/̀-ͯ]*/uy;
+/** One character of a tag's body; the first one must also match `TAG_START`. */
+export const TAG_BODY_CHAR = /[\p{Alphabetic}\p{N}_\-/̀-ͯ]/u;
+export const TAG_START = /^[\p{Alphabetic}\p{N}_]/u;
+const BODY_RUN = new RegExp(`${TAG_BODY_CHAR.source}*`, "uy");
 
 const opensTag = (prev: string | undefined) =>
   prev === undefined || /\s/.test(prev) || OPENERS.has(prev);
@@ -29,7 +32,7 @@ const isHexColour = (body: string) =>
 function accept(raw: string): string | null {
   const cut = raw.indexOf("//");
   const body = (cut < 0 ? raw : raw.slice(0, cut)).replace(/[-/]+$/, "");
-  if (!/^[\p{Alphabetic}\p{N}_]/u.test(body)) {
+  if (!TAG_START.test(body)) {
     return null;
   }
   if ([...body].length > MAX_TAG_CHARS) {

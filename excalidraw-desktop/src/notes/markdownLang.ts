@@ -12,6 +12,8 @@ import {
 } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
 
+import { findTags, MAX_TAG_CHARS } from "../tags/grammar";
+
 import type { StringStream } from "@codemirror/language";
 
 interface State {
@@ -90,8 +92,17 @@ const language = StreamLanguage.define<State>({
     if (stream.match(/^\$\$?[^\s$][^$\n]*\$\$?/)) {
       return "number";
     }
-    if (stream.match(/^#[\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*/u)) {
-      return "atom";
+    if (stream.peek() === "#") {
+      // The tag pane's grammar, so the editor marks exactly what the pane lists (toimprove 233).
+      const prev = stream.pos > 0 ? stream.string[stream.pos - 1] : "";
+      const m = findTags(
+        prev +
+          stream.string.slice(stream.pos, stream.pos + 4 * MAX_TAG_CHARS + 2),
+      )[0];
+      if (m && m.start === prev.length) {
+        stream.pos += 1 + m.display.length;
+        return "atom";
+      }
     }
     if (stream.match(/^\^[\w-]+\s*$/)) {
       return "comment";

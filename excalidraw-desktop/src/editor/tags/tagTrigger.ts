@@ -3,7 +3,12 @@
  * before the caret (same boundary rules as src/tags/grammar.ts), ranks the
  * vault's tags, and inserts `#Display`.
  */
-import { MAX_TAG_CHARS, OPENERS } from "../../tags/grammar";
+import {
+  MAX_TAG_CHARS,
+  OPENERS,
+  TAG_BODY_CHAR,
+  TAG_START,
+} from "../../tags/grammar";
 import { tagStore } from "../../tags/tagStore";
 import { DEFAULT_TAGS_SETTINGS } from "../../tags/types";
 
@@ -22,8 +27,6 @@ export type OpenTag = {
 };
 
 const MAX_ROWS = 8;
-const BODY_CHAR = /[\p{Alphabetic}\p{N}_\-/̀-ͯ]/u;
-const START_CHAR = /^[\p{Alphabetic}\p{N}_]/u;
 
 function isBody(code: number): boolean {
   if (code < 128) {
@@ -39,7 +42,7 @@ function isBody(code: number): boolean {
   // surrogate halves: astral letters, accepted as body text
   return (
     (code >= 0xd800 && code <= 0xdfff) ||
-    BODY_CHAR.test(String.fromCharCode(code))
+    TAG_BODY_CHAR.test(String.fromCharCode(code))
   );
 }
 
@@ -61,7 +64,7 @@ export function findOpenTag(value: string, caret: number): OpenTag | null {
       }
     }
     const query = value.slice(i + 1, caret);
-    if (query && (!START_CHAR.test(query) || query.includes("//"))) {
+    if (query && (!TAG_START.test(query) || query.includes("//"))) {
       return null;
     }
     let end = caret;
