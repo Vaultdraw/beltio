@@ -309,7 +309,11 @@ impl<'a, 's> Walk<'a, 's> {
     fn item(&mut self, r: StdRange<usize>, ordered: bool, out: &mut Vec<Block>, depth: usize) {
         let range = self.ctx.range(&r);
         let marker: String = self.ctx.src[r.start..].split_whitespace().next().unwrap_or("-").to_string();
-        let mut task = TaskState::None;
+        // Obsidian's custom task statuses (`- [/] doing`): pulldown-cmark knows only `[ ]` and `[x]`,
+        // so any other single character is read here, as the reading view does (toimprove 235).
+        let skip = custom_status_end(&self.ctx.src[r.start..r.end], marker.len()).map(|n| r.start + n);
+        let mut task = if skip.is_some() { TaskState::Done } else { TaskState::None };
+        let skip = skip.unwrap_or(0);
         let mut inl = Inl::new();
         let mut emitted = false;
         let mut started = false;
@@ -344,7 +348,9 @@ impl<'a, 's> Walk<'a, 's> {
                         if matches!(ev, Event::End(TagEnd::Paragraph)) {
                             break;
                         }
-                        inl.feed(&mut self.ctx, ev, &r2);
+                        if let Some((ev, r2)) = after_status(ev, r2, skip) {
+                            inl.feed(&mut self.ctx, ev, &r2);
+                        }
                     }
                 }
                 Event::Start(Tag::List(first)) => {
@@ -372,7 +378,9 @@ impl<'a, 's> Walk<'a, 's> {
                 | Event::HardBreak
                 | Event::End(_)) => {
                     started = true;
-                    inl.feed(&mut self.ctx, ev, &er);
+                    if let Some((ev, er)) = after_status(ev, er, skip) {
+                        inl.feed(&mut self.ctx, ev, &er);
+                    }
                 }
                 ev => self.block(ev, er, out, depth),
             }
@@ -451,4 +459,43 @@ fn callout_head(src_from_quote: &str) -> Option<(String, FoldState, String)> {
         _ => (FoldState::None, after),
     };
     Some((ty.to_ascii_lowercase(), fold, title.trim().to_string()))
+}
+
+/// In a list item's source (`marker` bytes long), the end of an Obsidian custom task status such
+/// as `[/] ` (any one character but a space or x, then a space), or None.
+fn custom_status_end(item: &str, marker: usize) -> Option<usize> {
+    let rest = item.get(marker..)?;
+    let ws = rest.len() - rest.trim_start_matches([' ', '\t']).len();
+    if ws == 0 {
+        return None;
+    }
+    let mut chars = rest[ws..].char_indices();
+    let (_, open) = chars.next()?;
+    let (_, mark) = chars.next()?;
+    let (close_at, close) = chars.next()?;
+    let (gap_at, gap) = chars.next()?;
+    if open != '[' || close != ']' || !matches!(gap, ' ' | '\t') || matches!(mark, ' ' | 'x' | 'X' | ']' | '[' | '\\' | '\n') {
+        return None;
+    }
+    let _ = close_at;
+    let after = &rest[ws + gap_at..];
+    let spaces = after.len() - after.trim_start_matches([' ', '\t']).len();
+    Some(marker + ws + gap_at + spaces)
+}
+
+/// `ev` without the part before `skip` (a custom task status); None when it lies wholly before.
+fn after_status<'b>(ev: Event<'b>, r: StdRange<usize>, skip: usize) -> Option<(Event<'b>, StdRange<usize>)> {
+    if skip <= r.start {
+        return Some((ev, r));
+    }
+    match ev {
+        Event::Text(t) if r.end <= skip => {
+            let _ = t;
+            None
+        }
+        Event::Text(t) if t.len() == r.end - r.start && t.is_char_boundary(skip - r.start) => {
+            Some((Event::Text(CowStr::from(t[skip - r.start..].to_string())), skip..r.end))
+        }
+        ev => Some((ev, r)),
+    }
 }

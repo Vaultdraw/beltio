@@ -40,3 +40,30 @@ describe("note editor tag marks follow the tag grammar", () => {
     });
   }
 });
+
+describe("note editor marks a custom task status with its list marker (toimprove 235)", () => {
+  const keyword = (line: string) => {
+    const state = EditorState.create({
+      doc: line,
+      extensions: markdownSupport(),
+    });
+    const tree = ensureSyntaxTree(state, state.doc.length, 5000)!;
+    let out = "";
+    highlightTree(tree, classHighlighter, (from, to, cls) => {
+      if (cls.includes("tok-keyword")) {
+        out += line.slice(from, to);
+      }
+    });
+    return out;
+  };
+  for (const line of [
+    "- [/] doing",
+    "- [x] done",
+    "- [ ] open",
+    "1. [>] later",
+  ]) {
+    it(line, () => {
+      expect(keyword(line)).toBe(line.slice(0, line.indexOf("]") + 2));
+    });
+  }
+});

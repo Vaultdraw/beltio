@@ -532,3 +532,30 @@ fn deep_nesting_keeps_its_words() {
         assert!(text.contains("deep words"), "{}", &src[..40]);
     }
 }
+
+// toimprove 235: Obsidian's custom task statuses are tasks for the import too, as in the reading view.
+#[test]
+fn custom_task_statuses() {
+    let doc = parse("- [/] doing\n- [-] cancelled\n- [ ] open\n- [x] done\n- [[Note]] link\n\n1. [>] later\n\n- [/] loose\n\n- [?] item\n");
+    let items: Vec<(TaskState, String)> = doc
+        .blocks
+        .iter()
+        .filter_map(|b| match &b.kind {
+            BlockKind::ListItem { task, text, .. } => Some((*task, text.clone())),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        items,
+        vec![
+            (TaskState::Done, "doing".to_string()),
+            (TaskState::Done, "cancelled".to_string()),
+            (TaskState::Open, "open".to_string()),
+            (TaskState::Done, "done".to_string()),
+            (TaskState::None, "[[Note]] link".to_string()),
+            (TaskState::Done, "later".to_string()),
+            (TaskState::Done, "loose".to_string()),
+            (TaskState::Done, "item".to_string()),
+        ]
+    );
+}

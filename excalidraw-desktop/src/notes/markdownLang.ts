@@ -64,7 +64,8 @@ const language = StreamLanguage.define<State>({
       if (stream.match(/^\s*>\s?/)) {
         return "quote";
       }
-      if (stream.match(/^\s*(?:[-*+]|\d+[.)])\s(?:\[[ xX]\]\s)?/)) {
+      // Any one status character, as Obsidian (`[/]`, `[-]`, `[>]`; toimprove 235).
+      if (stream.match(/^\s*(?:[-*+]|\d+[.)])\s(?:\[[^\]\\\n]\]\s)?/)) {
         return "keyword";
       }
       if (stream.match(/^(?:---|\*\*\*|___)\s*$/)) {
