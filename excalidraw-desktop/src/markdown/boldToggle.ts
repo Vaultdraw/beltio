@@ -28,13 +28,13 @@ export async function toggleBoldSelected(
   if (texts.length === 0) {
     return 0;
   }
-  const allBold = texts.every((e) => isBoldFont(e.fontFamily));
   const wanted = (e: AnyElement) => toggledBoldFont(e.fontFamily);
-  // a family without a bold face (Lilita One) has nothing to change
-  const changing = texts.filter(
-    (e) =>
-      (allBold ? isBoldFont(e.fontFamily) : !isBoldFont(e.fontFamily)) &&
-      wanted(e) !== e.fontFamily,
+  // A family without a bold face (Lilita One, Assistant) has nothing to
+  // change and no say in "all bold already?", or Cmd+B would stick on bold.
+  const toggleable = texts.filter((e) => wanted(e) !== e.fontFamily);
+  const allBold = toggleable.every((e) => isBoldFont(e.fontFamily));
+  const changing = toggleable.filter((e) =>
+    allBold ? isBoldFont(e.fontFamily) : !isBoldFont(e.fontFamily),
   );
   if (changing.length === 0) {
     return 0;

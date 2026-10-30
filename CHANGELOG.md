@@ -25,6 +25,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Cmd+B flips back to regular with a Lilita One or Assistant text in the selection** (toimprove 213). Fonts without a bold face no longer count when Toggle bold asks whether everything is bold already.
 - **Cmd+B no longer drops what changed while the bold font loaded** (toimprove 204). Toggle bold re-reads the drawing after the font wait, so a shape drawn or a change reloaded in that moment stays.
 - **SVG pictures can keep their colours in dark mode** (toimprove 133). Excalidraw draws SVG pictures inverted in dark mode, which turns logos and coloured drawings into negatives. New `appearance.invert_svg_in_dark` (on by default, like Excalidraw; Settings → Appearance) turns it off, on screen and in dark exports, with live reload.
 - **Cmd+B and Cmd+L work on a selected labelled shape** (toimprove 199). Markdown: Toggle bold and Markdown: Toggle task now act on the label of a selected shape or arrow, not only on a selected text box.

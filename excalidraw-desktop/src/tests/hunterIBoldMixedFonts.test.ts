@@ -45,7 +45,7 @@ describe("hunter I-6: Cmd+B with a font that has no bold face in the selection",
     expect(s.fonts()).toEqual([5, 5]);
   });
 
-  it.fails.each([7, 10])(
+  it.each([7, 10])(
     "with family %i selected too, the second Cmd+B makes the Excalifont text regular again",
     async (other) => {
       const s = scene([5, other]);
@@ -55,4 +55,10 @@ describe("hunter I-6: Cmd+B with a font that has no bold face in the selection",
       expect(s.fonts()).toEqual([5, other]);
     },
   );
+
+  it("only fonts without a bold face selected: nothing changes", async () => {
+    const s = scene([7, 10]);
+    expect(await toggleBoldSelected(s.api)).toBe(0);
+    expect(s.fonts()).toEqual([7, 10]);
+  });
 });
