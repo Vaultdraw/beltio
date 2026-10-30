@@ -85,8 +85,11 @@ const exportFills = async (page: Page, darkSwitch?: boolean) => {
   await openExportDialogFromMenu(page);
   if (darkSwitch !== undefined) {
     const sw = page.locator('input[name="exportDarkModeSwitch"]');
-    if (darkSwitch) await sw.check();
-    else await sw.uncheck();
+    if (darkSwitch) {
+      await sw.check();
+    } else {
+      await sw.uncheck();
+    }
   }
   await page.evaluate(() => ((window as any).__vaultRepo.exported.length = 0));
   await exportDialogButton(page, "SVG").click();

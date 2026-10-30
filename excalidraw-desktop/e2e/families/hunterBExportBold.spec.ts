@@ -1,13 +1,11 @@
-import { expect, type Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 
 import { test } from "../fixture";
 import {
   exportDialogButton,
   exportedNames,
   openExportDialogFromMenu,
-  trackErrors,
 } from "../helpers";
-import { runCommand } from "../pageHelpers";
 import { openSeededVault, sceneJson, treeName } from "../tabsHelpers";
 
 // Hunter B round 4: export to SVG keeps the stored colour of Markdown role text (headings,

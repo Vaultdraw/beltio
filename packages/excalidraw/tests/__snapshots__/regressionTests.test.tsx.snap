@@ -2556,6 +2556,156 @@ exports[`regression tests > arrow keys > [end of test] undo stack 1`] = `
     },
     "id": "id2",
   },
+  {
+    "appState": AppStateDelta {
+      "delta": Delta {
+        "deleted": {},
+        "inserted": {},
+      },
+    },
+    "elements": {
+      "added": {},
+      "removed": {},
+      "updated": {
+        "id0": {
+          "deleted": {
+            "version": 4,
+            "x": 9,
+          },
+          "inserted": {
+            "version": 3,
+            "x": 10,
+          },
+        },
+      },
+    },
+    "id": "id4",
+  },
+  {
+    "appState": AppStateDelta {
+      "delta": Delta {
+        "deleted": {},
+        "inserted": {},
+      },
+    },
+    "elements": {
+      "added": {},
+      "removed": {},
+      "updated": {
+        "id0": {
+          "deleted": {
+            "version": 5,
+            "x": 8,
+          },
+          "inserted": {
+            "version": 4,
+            "x": 9,
+          },
+        },
+      },
+    },
+    "id": "id6",
+  },
+  {
+    "appState": AppStateDelta {
+      "delta": Delta {
+        "deleted": {},
+        "inserted": {},
+      },
+    },
+    "elements": {
+      "added": {},
+      "removed": {},
+      "updated": {
+        "id0": {
+          "deleted": {
+            "version": 6,
+            "x": 9,
+          },
+          "inserted": {
+            "version": 5,
+            "x": 8,
+          },
+        },
+      },
+    },
+    "id": "id8",
+  },
+  {
+    "appState": AppStateDelta {
+      "delta": Delta {
+        "deleted": {},
+        "inserted": {},
+      },
+    },
+    "elements": {
+      "added": {},
+      "removed": {},
+      "updated": {
+        "id0": {
+          "deleted": {
+            "version": 7,
+            "y": 9,
+          },
+          "inserted": {
+            "version": 6,
+            "y": 10,
+          },
+        },
+      },
+    },
+    "id": "id10",
+  },
+  {
+    "appState": AppStateDelta {
+      "delta": Delta {
+        "deleted": {},
+        "inserted": {},
+      },
+    },
+    "elements": {
+      "added": {},
+      "removed": {},
+      "updated": {
+        "id0": {
+          "deleted": {
+            "version": 8,
+            "y": 8,
+          },
+          "inserted": {
+            "version": 7,
+            "y": 9,
+          },
+        },
+      },
+    },
+    "id": "id12",
+  },
+  {
+    "appState": AppStateDelta {
+      "delta": Delta {
+        "deleted": {},
+        "inserted": {},
+      },
+    },
+    "elements": {
+      "added": {},
+      "removed": {},
+      "updated": {
+        "id0": {
+          "deleted": {
+            "version": 9,
+            "y": 9,
+          },
+          "inserted": {
+            "version": 8,
+            "y": 8,
+          },
+        },
+      },
+    },
+    "id": "id14",
+  },
 ]
 `;
 

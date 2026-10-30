@@ -113,8 +113,9 @@ test("hunter B: palette 'Insert:' entries for odd library names insert the right
       if (
         e.scrollWidth > e.clientWidth + 1 &&
         getComputedStyle(e).overflowX === "visible"
-      )
+      ) {
         return true;
+      }
       e = e.parentElement;
     }
     return false;

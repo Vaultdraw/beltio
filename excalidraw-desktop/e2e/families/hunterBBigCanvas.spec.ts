@@ -101,6 +101,8 @@ test("hunter B: 2,000 elements: select all, move, undo, redo, copy-paste and exp
       e.bytes.length,
     ]),
   );
-  console.log("SIZES", JSON.stringify(sizes));
+  for (const [, bytes] of sizes) {
+    expect(bytes).toBeGreaterThan(10_000);
+  }
   expect(errors).toEqual([]);
 });

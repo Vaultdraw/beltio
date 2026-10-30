@@ -30,7 +30,9 @@ const snap = (p: Page) =>
       )}|${e.width.toFixed(2)}|${e.height.toFixed(2)}|${e.groupIds.join(",")}|${
         e.locked
       }|${e.angle}`;
-      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+      for (let i = 0; i < s.length; i++) {
+        h = (h * 31 + s.charCodeAt(i)) | 0;
+      }
     }
     return `${els.length}:${els.map((e: any) => e.id).join(",").length}:${h}`;
   });
@@ -102,7 +104,6 @@ test("hunter B: selection commands on 2,000 elements run cleanly and one undo re
       }
     }
   }
-  console.log("BAD", JSON.stringify(bad));
   expect(bad).toEqual([]);
   expect(errors).toEqual([]);
 });
