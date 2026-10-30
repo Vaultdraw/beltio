@@ -84,6 +84,11 @@ export interface OfficialPlugin {
    * multi-line text starts it, so it costs nothing at launch.
    */
   pasteHook?: boolean;
+  /**
+   * Off until the user turns it on (Settings, Plugins): it is not in the default `plugins.enabled`,
+   * and an older config does not gain it. For a plugin that talks to the network with a key.
+   */
+  defaultOff?: boolean;
 }
 
 export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
@@ -470,6 +475,35 @@ export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
       },
     ],
   },
+  {
+    id: "ai-assistant",
+    name: "AI assistant",
+    defaultOff: true,
+    importers: [],
+    commands: [
+      { id: "ask", title: "AI: Ask about this drawing", when: ["vaultOpen"] },
+      {
+        id: "describe",
+        title: "AI: Describe the selection",
+        when: ["drawingOpen"],
+      },
+      {
+        id: "diagram",
+        title: "AI: Generate a diagram from text",
+        when: ["drawingOpen"],
+      },
+      {
+        id: "summarise",
+        title: "AI: Summarise this note",
+        when: ["drawingOpen"],
+      },
+      { id: "cancel", title: "AI: Stop the answer" },
+      { id: "clear", title: "AI: Clear the conversation" },
+      { id: "set-key", title: "AI: Set API key" },
+      { id: "remove-key", title: "AI: Remove API key" },
+    ],
+    panels: [{ id: "assistant", title: "AI assistant", icon: "template" }],
+  },
 ];
 
 /**
@@ -480,6 +514,11 @@ export const OFFICIAL_PLUGINS: readonly OfficialPlugin[] = [
 export const OFFICIAL_IDS: readonly string[] = OFFICIAL_PLUGINS.map(
   (p) => p.id,
 );
+
+/** The ones that start on: every official plugin except those marked `defaultOff`. */
+export const DEFAULT_ON_IDS: readonly string[] = OFFICIAL_PLUGINS.filter(
+  (p) => !p.defaultOff,
+).map((p) => p.id);
 
 /**
  * Official plugins that shipped in a release before `plugins.disabled` did: an old `plugins.enabled`
@@ -503,7 +542,7 @@ export function resolveOfficial(
       ? LEGACY_OFFICIAL.filter((id) => !savedEnabled.includes(id))
       : [])
   ).filter((id) => OFFICIAL_IDS.includes(id));
-  for (const id of OFFICIAL_IDS) {
+  for (const id of DEFAULT_ON_IDS) {
     if (!disabled.includes(id) && !enabled.includes(id)) {
       enabled.push(id);
     }

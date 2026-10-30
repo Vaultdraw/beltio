@@ -2,7 +2,7 @@
  * Handlers of the extension commands (extensionCommandDefs.ts). They write `[extensions]` like Settings does; the change applies
  * live. The palette's fuzzy filter ("ext tog") is the picker.
  */
-import { OFFICIAL_IDS } from "../plugins/officialPlugins";
+import { DEFAULT_ON_IDS } from "../plugins/officialPlugins";
 import { toastStore } from "../toasts/toastStore";
 import { getPreferences, updatePreferences } from "../vault/preferences";
 
@@ -40,7 +40,7 @@ export function restoreExtensionDefaults(win?: Window | null): void {
   updatePreferences(
     {
       ...EXTENSION_DEFAULTS,
-      pluginsEnabled: [...new Set([...enabled, ...OFFICIAL_IDS])],
+      pluginsEnabled: [...new Set([...enabled, ...DEFAULT_ON_IDS])],
     },
     win,
   );

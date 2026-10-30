@@ -1,0 +1,11 @@
+{
+  "name": "@vaultdraw/plugin-ai-assistant",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The official AI assistant plugin: ask a model you choose, with your own key",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node ../../../sdk/cli/bin/vaultdraw-plugin.mjs check dist"
+  }
+}

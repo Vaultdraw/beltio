@@ -1,0 +1,94 @@
+id = "ai-assistant"
+name = "AI assistant"
+version = "0.1.0"
+api = 0
+min_app = "0.2.0"
+main = "main.js"
+description = "Ask a model you choose about your drawing, with your own key. Off until you turn it on"
+author = "Vaultdraw"
+permissions = ["net", "secret"]
+
+[[contributes.panels]]
+id = "assistant"
+title = "AI assistant"
+
+[[contributes.commands]]
+id = "ask"
+title = "AI: Ask about this drawing"
+when = ["vaultOpen"]
+
+[[contributes.commands]]
+id = "describe"
+title = "AI: Describe the selection"
+when = ["drawingOpen"]
+
+[[contributes.commands]]
+id = "diagram"
+title = "AI: Generate a diagram from text"
+when = ["drawingOpen"]
+
+[[contributes.commands]]
+id = "summarise"
+title = "AI: Summarise this note"
+when = ["drawingOpen"]
+
+[[contributes.commands]]
+id = "cancel"
+title = "AI: Stop the answer"
+
+[[contributes.commands]]
+id = "clear"
+title = "AI: Clear the conversation"
+
+[[contributes.commands]]
+id = "set-key"
+title = "AI: Set API key"
+
+[[contributes.commands]]
+id = "remove-key"
+title = "AI: Remove API key"
+
+[[contributes.settings]]
+key = "provider"
+type = "select"
+title = "Provider"
+description = "Anthropic and OpenAI need your own key. Ollama runs on this computer and needs none. For another OpenAI-style service or server, pick OpenAI and set its address."
+default = "anthropic"
+options = [{ value = "anthropic", label = "Anthropic" }, { value = "openai", label = "OpenAI (or compatible)" }, { value = "ollama", label = "Ollama (this computer)" }]
+scope = ["global"]
+
+[[contributes.settings]]
+key = "model"
+type = "string"
+title = "Model"
+description = "The model name the provider knows. Empty uses a common default for the provider."
+default = ""
+scope = ["global"]
+
+[[contributes.settings]]
+key = "base_url"
+type = "string"
+title = "Address"
+description = "Where requests go. Empty uses the provider's usual address. https, or http to this computer only."
+default = ""
+scope = ["global"]
+
+[[contributes.settings]]
+key = "timeout_s"
+type = "int"
+title = "Timeout"
+description = "Seconds to wait for a connection and between parts of the answer."
+default = 60
+min = 5
+max = 600
+scope = ["global"]
+
+[[contributes.settings]]
+key = "max_context_chars"
+type = "int"
+title = "Most drawing text to send"
+description = "The drawing is sent as text; anything past this many characters is left out. Use \"Show what is sent\" in the panel to see it."
+default = 12000
+min = 500
+max = 200000
+scope = ["global"]

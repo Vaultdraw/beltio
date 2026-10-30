@@ -5,6 +5,7 @@ import { parseToml } from "../../sdk/cli/src/toml.mjs";
 import favouritesToml from "../../plugins/official/favourites/plugin.toml?raw";
 import formulaToml from "../../plugins/official/formula/plugin.toml?raw";
 import autoExportToml from "../../plugins/official/auto-export/plugin.toml?raw";
+import aiToml from "../../plugins/official/ai-assistant/plugin.toml?raw";
 import tableToml from "../../plugins/official/table/plugin.toml?raw";
 import graphToml from "../../plugins/official/graph/plugin.toml?raw";
 import mermaidToml from "../../plugins/official/mermaid/plugin.toml?raw";
@@ -83,6 +84,7 @@ export async function installDefaultBackend(win: Window): Promise<void> {
     infoOf("pdf-import", pdfImportToml),
     infoOf("auto-export", autoExportToml),
     infoOf("table", tableToml),
+    infoOf("ai-assistant", aiToml),
     infoOf("graph", graphToml),
     infoOf("mermaid", mermaidToml),
     infoOf("markdown-import", markdownImportToml),

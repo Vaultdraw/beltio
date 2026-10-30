@@ -88,6 +88,7 @@ describe("official plugins are on unless turned off", () => {
       "favourites",
       "auto-export",
       "table",
+      "ai-assistant",
     ]);
     restoreExtensionDefaults();
     expect(getPreferences().pluginsEnabled).toEqual([
@@ -102,6 +103,23 @@ describe("official plugins are on unless turned off", () => {
       "auto-export",
       "table",
     ]);
-    expect(getPreferences().pluginsDisabled).toEqual([]);
+    // Off by default, so it is recorded as off (the rest are on).
+    expect(getPreferences().pluginsDisabled).toEqual(["ai-assistant"]);
+  });
+
+  it("the AI assistant is off by default: no saved list gains it, Restore defaults leaves it off", () => {
+    for (const saved of [undefined, [], ["markdown-import"]]) {
+      const v = prefs(saved ? { plugins: { enabled: saved } } : {});
+      expect(v.pluginsEnabled ?? []).not.toContain("ai-assistant");
+    }
+    updatePreferences({ pluginsEnabled: ["markdown-import", "mine"] });
+    restoreExtensionDefaults();
+    expect(getPreferences().pluginsEnabled).not.toContain("ai-assistant");
+    // The user turns it on: it stays on.
+    updatePreferences({
+      pluginsEnabled: [...getPreferences().pluginsEnabled, "ai-assistant"],
+    });
+    expect(getPreferences().pluginsEnabled).toContain("ai-assistant");
+    expect(getPreferences().pluginsDisabled).not.toContain("ai-assistant");
   });
 });

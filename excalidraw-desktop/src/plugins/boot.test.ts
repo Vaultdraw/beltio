@@ -163,7 +163,7 @@ describe("official plugins (on by default, no startup cost)", () => {
       }
     }
     // Panels (frames, favourites) get a button too, shown by default, with a palette command.
-    for (const p of OFFICIAL_PLUGINS) {
+    for (const p of OFFICIAL_PLUGINS.filter((x) => !x.defaultOff)) {
       for (const panel of p.panels ?? []) {
         const id = `${p.id}.${panel.id}`;
         const entry = activityBarRegistry

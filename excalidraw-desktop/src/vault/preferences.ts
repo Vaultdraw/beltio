@@ -112,7 +112,7 @@ import {
 } from "../pdfImport/types";
 import {
   disabledOfficial,
-  OFFICIAL_IDS,
+  DEFAULT_ON_IDS,
   resolveOfficial,
 } from "../plugins/officialPlugins";
 import { DEFAULT_TEMPLATES_FOLDER } from "../templates/types";
@@ -516,7 +516,7 @@ export const DEFAULT_PREFERENCES: VaultPreferences = {
   libraryFolders: [],
   libraryDefault: "",
   // Official plugins are on by default and load on first use (plugins/officialPlugins.ts).
-  pluginsEnabled: [...OFFICIAL_IDS],
+  pluginsEnabled: [...DEFAULT_ON_IDS],
   pluginsDisabled: [],
   pluginImporters: {},
   pluginsStorageLimitKb: DEFAULT_PLUGIN_STORAGE_KB,
