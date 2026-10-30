@@ -1225,6 +1225,11 @@ describe("render override geometry", () => {
       alphas.push(context.globalAlpha);
       drawImage.call(context, ...args);
     });
+    // The link marker is stroked (no image): it carries the element's alpha.
+    const linkAlphas: number[] = [];
+    vi.spyOn(context, "stroke").mockImplementation(() => {
+      linkAlphas.push(context.globalAlpha);
+    });
     draw(
       new Map([
         [child.id, { opacity: 50 }],
@@ -1232,11 +1237,9 @@ describe("render override geometry", () => {
       ]),
     );
     const erasedAlpha = (0.25 * ELEMENT_READY_TO_ERASE_OPACITY) / 100;
-    expect(alphas).toEqual([
-      erasedAlpha * DEFAULT_REDUCED_GLOBAL_ALPHA,
-      erasedAlpha,
-      1,
-    ]);
+    expect(alphas).toEqual([erasedAlpha * DEFAULT_REDUCED_GLOBAL_ALPHA, 1]);
+    // the first stroke is the child's link marker (the next one is the frame)
+    expect(linkAlphas[0]).toBeCloseTo(erasedAlpha * 0.9);
     expect(context.globalAlpha).toBe(1);
   });
 
