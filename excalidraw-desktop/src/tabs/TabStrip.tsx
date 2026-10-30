@@ -299,7 +299,9 @@ export const TabStrip = memo(
     const dismissList = useCallback((restoreFocus: boolean) => {
       setListOpen(false);
       if (restoreFocus) {
-        tabElement(latest.current.activeId)?.focus();
+        // After a pick the active id is still the old tab: focusing it must not scroll the
+        // strip away from the tab just picked (the strip scrolls to the new active tab itself).
+        tabElement(latest.current.activeId)?.focus({ preventScroll: true });
       }
     }, []);
 
