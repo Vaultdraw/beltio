@@ -212,7 +212,7 @@ describe("hunter L-6: Cmd+Z in the box Enter made, after typing in it", () => {
     expect(h.current().id).toBe(heading.id);
   });
 
-  it.fails(
+  it(
     "a word typed and deleted there comes back with Cmd+Z (the key is left to the text box)",
     () => {
       const h = harness();

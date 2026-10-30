@@ -33,6 +33,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **A drawing embed with a size reads as the drawing's name.** `![[Sketch|500]]` showed a link reading "500"; Obsidian reads `|500` as the width, so the link now reads "Sketch" (toimprove 275).
 - **A footnote used only inside another footnote is listed.** Its number used to lead to nothing; it now appears in the footnotes list (toimprove 276).
 - **Save as template on an Obsidian drawing offers the drawing's name.** It offered "Plan.excalidraw.md"; it now offers "Plan" (toimprove 277).
+- **Cmd+Z in a Markdown-mode box after a heading brings back a word you deleted.** After Enter on a heading, typing a word and deleting it, Cmd+Z jumped back to the heading and lost the word; once anything is typed in the box, Cmd+Z is the text box's own undo (toimprove 263).
 
 ## [0.2.0] - 2026-10-28
 

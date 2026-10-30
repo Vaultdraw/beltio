@@ -596,6 +596,14 @@ export function createMarkdownTyping(deps: {
         }
       },
       onKeyDown: (e) => {
+        // Anything typed in the box Enter made (even if deleted again) makes Cmd+Z the text
+        // box's own undo, so a deleted word comes back (hunter L-6, toimprove 263).
+        if (editable.value !== "") {
+          const mine = session.getElement();
+          if (mine) {
+            continuedFrom.delete(mine.id);
+          }
+        }
         if (e.isComposing || e.keyCode === 229 || !deps.isOn()) {
           return false;
         }
