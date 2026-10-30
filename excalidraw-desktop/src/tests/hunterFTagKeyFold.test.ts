@@ -32,7 +32,7 @@ const NATIVE: [string, string, string][] = [
 
 describe("hunter F-4: the # popup finds tags typed with letters the native fold changes", () => {
   for (const [typed, key, display] of NATIVE) {
-    it.fails(`typing ${typed} finds the tag stored as ${key}`, () => {
+    it(`typing ${typed} finds the tag stored as ${key}`, () => {
       const hits = rankTags([tag(key, display)], typed, 5);
       expect(hits.length).toBe(1);
     });

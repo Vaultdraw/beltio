@@ -23,6 +23,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Tags and links with ß, æ, œ, ø, ł, đ, ı, kana or Hindi and Thai text match like search does.** The # tag popup found no tag typed with those letters, `[[Orsted]]` did not resolve to Ørsted nor `[[Strasse]]` to Straße, and Hindi or Thai tags lost their vowel and tone marks. One fold now serves the index and the editor.
 - **Notes and drawings sort together.** In a folder with drawings and notes, "Name (Z to A)" and the date orders now sort every file by the chosen order (they used to leave them in listing order).
 - **A background tab of an Obsidian drawing follows a rename made outside.** It was treated as a note and lost its file.
 - **Upper-case `.EXCALIDRAW` files behave like any drawing.** Duplicate gives "Plan copy.excalidraw" (it made "Plan.EXCALIDRAW copy.excalidraw"), the New drawing field no longer doubles the extension, and plugin file calls accept the path. Duplicating a note keeps `.md`.

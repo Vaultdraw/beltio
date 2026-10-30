@@ -25,7 +25,7 @@ const cases: [string, string][] = [
 describe("hunter F-4b: the TS link resolver folds like the native one", () => {
   const resolver = new LinkResolver(files);
   for (const [typed, want] of cases) {
-    it.fails(`[[${typed}]] opens ${want}`, () => {
+    it(`[[${typed}]] opens ${want}`, () => {
       expect(resolver.resolve("a.excalidraw", `[[${typed}]]`).path).toBe(want);
     });
   }

@@ -4,15 +4,14 @@
  * Order: relative form from the source folder, exact path, unique basename,
  * then the shortest matching path. Case- and accent-folded.
  */
+import { foldKey } from "../search/foldKey";
+
 import { findLinks, parseLinkField, stripExtension } from "./grammar";
 
 import type { Resolution } from "./types";
 
-const COMBINING_MARKS = /\p{M}/gu;
-
-/** Same fold as the search index: NFKD, marks stripped, lowercase. */
-export const foldKey = (s: string) =>
-  s.normalize("NFKD").replace(COMBINING_MARKS, "").toLowerCase();
+/** Same fold as the search index (one case table pins both). */
+export { foldKey };
 
 const folderOf = (path: string) =>
   path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";

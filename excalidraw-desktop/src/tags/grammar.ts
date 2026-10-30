@@ -2,6 +2,8 @@
  * Tag grammar, a port of src-tauri/src/search/tags.rs (keep them in sync).
  * A tag is `#word` in a text element or frame name; offsets are UTF-16.
  */
+import { foldKey } from "../search/foldKey";
+
 export const MAX_TAG_CHARS = 64;
 
 export type TagMatch = {
@@ -14,7 +16,6 @@ export type TagMatch = {
 
 export const OPENERS = new Set(["(", "[", "{", '"', "'", "<", ",", ";", ":"]);
 const BODY_RUN = /[\p{Alphabetic}\p{N}_\-/̀-ͯ]*/uy;
-const COMBINING_MARKS = /\p{M}/gu;
 
 const opensTag = (prev: string | undefined) =>
   prev === undefined || /\s/.test(prev) || OPENERS.has(prev);
@@ -56,9 +57,8 @@ export function findTags(text: string): TagMatch[] {
   return out;
 }
 
-/** Case/accent-folded key (NFKD, marks stripped, lowercase). */
-export const tagKey = (display: string) =>
-  display.normalize("NFKD").replace(COMBINING_MARKS, "").toLowerCase();
+/** Case/accent-folded key, the same fold as the search index (one table pins both). */
+export const tagKey = (display: string) => foldKey(display);
 
 /** True when `key` equals `filter` or lives under it (`dsa/graphs` under `dsa`). */
 export const keyUnder = (key: string, filter: string) =>
