@@ -309,12 +309,37 @@ unsafe fn guard_and_hook(view: *mut AnyObject) -> Result<(), String> {
     Ok(())
 }
 
+/// Keeps `view` alive while `WEBVIEW` holds it: a retain on store, a release on clear. Without
+/// it a destroyed and recreated window would leave the grace re-check messaging a freed object.
+unsafe fn store_view(view: *mut AnyObject) {
+    let _: *mut AnyObject = msg_send![view, retain];
+    release_view(WEBVIEW.swap(view, Ordering::SeqCst));
+}
+
+/// Empties `WEBVIEW` (the window is gone) and drops our retain.
+fn clear_view() {
+    release_view(WEBVIEW.swap(std::ptr::null_mut(), Ordering::SeqCst));
+}
+
+fn release_view(view: *mut AnyObject) {
+    if !view.is_null() {
+        unsafe {
+            let _: () = msg_send![view, release];
+        }
+    }
+}
+
 pub fn install(window: &WebviewWindow) {
     let _ = APP.set(window.app_handle().clone());
+    window.on_window_event(|event| {
+        if matches!(event, tauri::WindowEvent::Destroyed) {
+            clear_view();
+        }
+    });
     let result = window.with_webview(|webview| {
         let view = webview.inner() as *mut AnyObject;
         match unsafe { guard_and_hook(view) } {
-            Ok(()) => WEBVIEW.store(view, Ordering::SeqCst),
+            Ok(()) => unsafe { store_view(view) },
             Err(why) => eprintln!("{}", off_line(&why)),
         }
     });
@@ -352,6 +377,27 @@ mod tests {
                 let d = protocol_getMethodDescription(proto, Sel::register(name), Bool::NO, Bool::YES);
                 assert!(!d.name.is_null(), "{name:?}");
             }
+        }
+    }
+
+    #[test]
+    fn the_stored_view_stays_alive_until_cleared() {
+        // toimprove 243: the slot retains the view, so the owner dropping it cannot free it
+        // under the grace re-check; clearing releases our retain and empties the slot.
+        unsafe {
+            let obj: *mut AnyObject = msg_send![class!(NSObject), new]; // retain count 1 (ours)
+            store_view(obj); // 2
+            let count: usize = msg_send![obj, retainCount];
+            assert_eq!(count, 2);
+            let _: () = msg_send![obj, release]; // the window lets go: 1, still alive
+            assert_eq!(WEBVIEW.load(Ordering::SeqCst), obj);
+            let count: usize = msg_send![obj, retainCount];
+            assert_eq!(count, 1);
+            let alive: Bool = msg_send![obj, isKindOfClass: class!(NSObject)];
+            assert!(alive.as_bool());
+            clear_view(); // freed here
+            assert!(WEBVIEW.load(Ordering::SeqCst).is_null());
+            assert!(!is_main_view(obj));
         }
     }
 
