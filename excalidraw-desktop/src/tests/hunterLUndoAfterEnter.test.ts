@@ -212,23 +212,20 @@ describe("hunter L-6: Cmd+Z in the box Enter made, after typing in it", () => {
     expect(h.current().id).toBe(heading.id);
   });
 
-  it(
-    "a word typed and deleted there comes back with Cmd+Z (the key is left to the text box)",
-    () => {
-      const h = harness();
-      h.type("# Title");
-      h.press("Enter");
-      const body = h.current();
-      h.type("word");
-      for (let i = 0; i < 4; i++) {
-        h.press("Backspace");
-      }
-      expect(h.textarea.value).toBe("");
-      // the text box's own undo would bring "word" back: the extension must not take the key
-      expect(h.press("z", { metaKey: true })).toBe(false);
-      expect(h.current().id).toBe(body.id);
-    },
-  );
+  it("a word typed and deleted there comes back with Cmd+Z (the key is left to the text box)", () => {
+    const h = harness();
+    h.type("# Title");
+    h.press("Enter");
+    const body = h.current();
+    h.type("word");
+    for (let i = 0; i < 4; i++) {
+      h.press("Backspace");
+    }
+    expect(h.textarea.value).toBe("");
+    // the text box's own undo would bring "word" back: the extension must not take the key
+    expect(h.press("z", { metaKey: true })).toBe(false);
+    expect(h.current().id).toBe(body.id);
+  });
 });
 
 /**
