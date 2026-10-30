@@ -10,6 +10,7 @@ The API is frozen after an audit of every exported name (the audit is in the pro
 
 - **API level 1.** `ctx.host.api.level` is `1` and `plugin.toml` says `api = 1`. A manifest with `api = 0` still loads, with a warning in the plugin log and in `vaultdraw-plugin check` (`api-deprecated`), until API 2.0.
 - `MethodsApi.register(name, …)` is `register(id, …)`. Types only.
+- The note parse stand-in used by the mock host and the browser test host now shares the app's tag grammar and `alt|size` parser (`#fff` is a tag, `#ff00aa` is not; `![[a.png|caption|300x200]]` keeps alt and both sizes), so plugin tests see what the app sees.
 
 ### Added
 

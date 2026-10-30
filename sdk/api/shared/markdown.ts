@@ -5,7 +5,9 @@
  * and `[[wikilinks]]` only; the real parser is the Rust one
  * (vaultdraw_core::markdown).
  */
+import { altAndSize } from "./imageSize";
 import { PluginApiError, utf8Length } from "./rules";
+import { findTags } from "./tagGrammar";
 
 import type {
   MarkdownParseOptions,
@@ -52,7 +54,6 @@ export const markdownParams = (
   return soft === undefined ? { text } : { text, softBreakNewline: soft };
 };
 
-const TAG = /(^|\s)#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/gu;
 const WIKILINK = /\[\[([^\]|#]+)(?:#([^\]|]+))?(?:\|([^\]]+))?\]\]/g;
 
 /** Wikilink spans over the literal text, as the Rust parser reports them. */
@@ -278,14 +279,14 @@ const tableOrImage = (
   }
   const wiki = /^!\[\[([^\]|#]+)(?:\|([^\]]*))?\]\]$/.exec(body);
   if (wiki && IMAGE_NAME.test(wiki[1].trim())) {
-    const size = /^(\d+)(?:x(\d+))?$/.exec(
-      (wiki[2] ?? "").split("|").pop() ?? "",
-    );
+    const { alt, width, height } = altAndSize(wiki[2] ?? "");
     return {
       kind: "image",
       target: wiki[1].trim(),
       remote: false,
-      ...(size ? { width: Number(size[1]) } : {}),
+      ...(alt ? { alt } : {}),
+      ...(width !== undefined ? { width } : {}),
+      ...(height !== undefined ? { height } : {}),
       range,
     } as NoteBlock;
   }
@@ -298,12 +299,15 @@ const tableOrImage = (
       // keep as written
     }
     const remote = /^(https?|data):/i.test(target);
+    const { alt, width, height } = altAndSize(md[1]);
     if (remote || IMAGE_NAME.test(target)) {
       return {
         kind: "image",
         target,
         remote,
-        ...(md[1] ? { alt: md[1] } : {}),
+        ...(alt ? { alt } : {}),
+        ...(width !== undefined ? { width } : {}),
+        ...(height !== undefined ? { height } : {}),
         range,
       } as NoteBlock;
     }
@@ -383,11 +387,11 @@ export const fakeParseMarkdown = (
     const range = [start, offset] as const;
     const body = chunk.trim();
     words += body.split(/\s+/).filter(Boolean).length;
-    for (const m of body.matchAll(TAG)) {
-      const key = m[2].toLowerCase();
+    for (const { display } of findTags(body)) {
+      const key = display.toLowerCase();
       if (!seen.has(key)) {
         seen.add(key);
-        tags.push(m[2]);
+        tags.push(display);
       }
     }
     for (const m of body.matchAll(WIKILINK)) {

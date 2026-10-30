@@ -19,10 +19,9 @@ const DIRS = [
 ];
 // A `#` followed by a Unicode letter class, or the grammar's body class itself.
 const TAG_COPY = [/#\(?\[\\p\{L\}/, /\[\\p\{Alphabetic\}\\p\{N\}_/];
-const OWNER = "src/tags/grammar.ts";
+const OWNERS = ["src/tags/grammar.ts", "../sdk/api/shared/tagGrammar.ts"];
 const KNOWN: Record<string, string> = {
   // src/notes/render/obsidian.ts (reading-view chips) uses findTags since 2f5a9aaa (toimprove 217).
-  "../sdk/api/shared/markdown.ts": "toimprove 233 (plugin API note tags)",
   // src/notes/markdownLang.ts and src/editor/tags/tagTrigger.ts use the grammar since toimprove 233.
 };
 
@@ -50,7 +49,7 @@ describe("guard: one tag grammar", () => {
       return TAG_COPY.some((re) => re.test(text));
     })
     .map((f) => relative(ROOT, f).split("\\").join("/"))
-    .filter((f) => f !== OWNER);
+    .filter((f) => !OWNERS.includes(f));
 
   it("no new copy of the tag pattern outside tags/grammar.ts", () => {
     expect(copies.filter((f) => !KNOWN[f])).toEqual([]);
@@ -58,7 +57,7 @@ describe("guard: one tag grammar", () => {
   it("KNOWN lists only copies that still exist (delete fixed ones)", () => {
     expect(Object.keys(KNOWN).filter((f) => !copies.includes(f))).toEqual([]);
   });
-  it.fails("no copies left (chips and the plugin parse use findTags)", () => {
+  it("no copies left (chips, the editor and the plugin parse use the grammar)", () => {
     expect(copies).toEqual([]);
   });
 });

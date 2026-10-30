@@ -17,13 +17,12 @@ const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
 const SIZE_COPY = /\(\\d\+\)\(\?:x\(\\d\+\)\)\?/;
 /** The parser and its plugin copy, both pinned by `alt_size_cases.json`. */
 const PINNED = [
-  "excalidraw-desktop/src/notes/render/imageSize.ts",
+  "sdk/api/shared/imageSize.ts",
   "plugins/official/markdown-import/src/layout/literalImages.ts",
 ];
-const KNOWN_211 = [
-  // hydrate.ts uses altAndSize since toimprove 211 (fixer A).
-  // page mode's image block: drops the height and refuses "| 300" with a space
-  "sdk/api/shared/markdown.ts",
+const KNOWN_211: string[] = [
+  // hydrate.ts uses altAndSize since toimprove 211 (fixer A); the plugin API's note parse stand-in
+  // (sdk/api/shared/markdown.ts) uses it since the API 1.0 audit.
 ];
 
 const copies = () =>
@@ -41,10 +40,7 @@ describe("one alt|size parser (altAndSize)", () => {
   it("no new copy of the size pattern outside imageSize.ts", () => {
     expect(copies().filter((f) => !KNOWN_211.includes(f))).toEqual([]);
   });
-  it.fails(
-    "the page-mode parser uses altAndSize too (fails until sdk/api/shared/markdown.ts does)",
-    () => {
-      expect(copies()).toEqual([]);
-    },
-  );
+  it("the page-mode parser uses altAndSize too", () => {
+    expect(copies()).toEqual([]);
+  });
 });
