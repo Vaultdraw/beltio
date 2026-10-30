@@ -13,8 +13,10 @@ Plugins, Markdown notes and Obsidian vaults, backup, libraries, profiles, Linux 
 
 ## What is new
 
-- **Plugin platform (API 0.29.0).** Plugins add commands, panels, tab kinds, canvas tools, shapes and importers, and load only when used. A permission prompt gates each plugin, and ids of official plugins cannot be reused. Official plugins: graph, gallery, formula, mermaid, PDF import, Markdown import, table, favourites, frames and presenting, auto-export (off until enabled).
-- **Markdown and Obsidian.** `.md` notes open in a tab with a reading view and a CodeMirror editor (optional Vim keys). Obsidian vaults open in place; **Import Obsidian vault...** converts notes, links, images and `.excalidraw.md` drawings, and writes an import report.
+- **Plugin platform (API 0.37.0).** Plugins add commands, panels, tab kinds, canvas tools, shapes and importers, and load only when used. A permission prompt gates each plugin, and ids of official plugins cannot be reused. Official plugins: graph, gallery, formula, mermaid, PDF import, Markdown import, table, favourites and auto-export (off until enabled).
+- **Markdown and Obsidian.** `.md` notes open in a tab with a reading view that follows Obsidian (line breaks, `%%comments%%`, footnotes, callouts, tasks, embeds) and a CodeMirror editor (optional Vim keys). Obsidian vaults open in place; **Import Obsidian vault...** converts notes, links, images, tables and `.excalidraw.md` drawings in your theme and font, writes an import report, and can re-import a note later. Markdown mode types headings, `**bold**` and `` `code` `` on the canvas. Limits: bold words inside a sentence stay regular (one text, one font), and a drawing embedded in a note is a link, not a picture.
+- **Network on by default, with one Offline mode.** No permission prompts: themes, plugin lists and web pictures just work, with safety checks (public http or https addresses only, size limits). **Settings, General, Offline mode** (or `network.offline = true`) turns every internet feature off. Once per launch a quiet check tells you if a newer release exists (`updates.check_on_startup`).
+- **Files and menus.** Notes and Obsidian drawings rename, move and trash from the file tree; folders with files go to the Trash; a drawing renamed outside the app keeps its tab; every dialog uses one frame; any key can be rebound; SVG pictures can keep their colours in dark mode (`appearance.invert_svg_in_dark`).
 - **Backup and restore.** `Vault: Back up vault...` writes a zip of your drawings, notes and attachments in the background.
 - **Several libraries, profiles, focus mode.** Each `.excalidrawlib` is its own section; named profiles layer settings, keys and theme; `view.focusMode` hides everything but the canvas.
 - **Synced folders.** Conflict copies from iCloud Drive, Dropbox, Syncthing and OneDrive show a badge and can be compared with the original.
@@ -30,6 +32,11 @@ Plugins, Markdown notes and Obsidian vaults, backup, libraries, profiles, Linux 
 - Repeated failed saves keep one recovery copy per drawing, so recovery storage no longer fills up.
 - Saves wait for a rename or move in progress; no false "Drawing changed on disk".
 - Creating drawings works on exFAT and FAT drives.
+- Auto-export never overwrites or deletes an image it did not write; removed exports go to the Trash.
+- Exported SVGs embed only image data, never a web address from the drawing.
+- Theme names with invisible or text-direction characters are refused; uninstalling a theme keeps files you added.
+- Deleting a profile moves it to `profiles/.removed/`; deleting a library twice keeps both copies.
+- A folder deleted or renamed outside the app no longer lingers in the tree; a drawing that cannot be closed no longer freezes the window.
 - `vaultdraw://cmd` links run only an allow list of safe commands.
 - A community plugin cannot take an official plugin's id or a built-in command group name; a plugin never run before always asks.
 

@@ -314,6 +314,9 @@ autosave_delay_ms = 500
 # which_key_delay_ms = 400
 # Where the popup shows: "bottom" or "center"
 # which_key_position = "bottom"
+# Names for key groups in the popup: a [keys.labels] table, one line per sequence. Example:
+# [keys.labels]
+# "<leader> f" = "file"
 
 [library]
 # Extra folders of .excalidrawlib files, each file a library: ["~/Documents/Libraries"]

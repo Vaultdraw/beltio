@@ -1498,14 +1498,14 @@ Big images are the largest thing a drawing keeps in memory. Vaultdraw releases a
 | --- | --- | --- | --- |
 | `memory.free_unused_images` | Interface → Memory | `true` | Releases image data that no element and no undo or redo step can restore. `false` keeps it until the drawing closes. |
 | `memory.undo_steps` | Interface → Memory | `1000` | Undo steps kept per drawing, 10 to 10000. Older steps are dropped, and with them the images only they could restore. |
-| `memory.low_memory_canvas` | Interface → Memory | `false` | Backs the editor canvases with CPU memory instead of GPU surfaces: about 100 MB less memory at the peak, but panning drops to about 60 frames per second. Read when the editor starts, so restart Vaultdraw after changing it. |
+| `memory.low_memory_canvas` | Interface → Memory | `false` | Backs the editor canvases with CPU memory instead of GPU surfaces: about 100 MB less memory at the peak, but panning drops to about 60 frames per second. Read when the editor starts, so restart Vaultdraw after changing it: Settings shows **Restart now** while the saved value differs from the running one (command `app.restart`). |
 
 - **When it runs.** About 20 seconds after you stop editing, in idle time. Typing and drawing never wait for it. A drawing without images does nothing.
 - **What is safe.** An image stays while an element shows it, or while any undo or redo step could bring a deleted one back. Saved drawings never change: a deleted image is already left out of the file when it saves.
 - **After the undo horizon.** Once a deletion is older than `undo_steps` steps, Cmd+Z can no longer restore it, and its image data is released. Restoring an older version from History still works: it brings its images back.
 - **Command.** `Memory: Free unused images` (in the command palette, rebindable) does it now, without the wait, and shows how much it freed.
 - Changes apply live: edit `config.toml` or Settings and the next idle pass uses the new values (except `low_memory_canvas`, below).
-- **Low-memory canvas.** Off by default. On, the editor draws on canvases that live in CPU memory (`willReadFrequently`), so WebKit keeps no window-sized display buffers for them. Measured on the packaged app with three small drawings open: whole-app peak about 360 MB instead of about 470 MB, idle about 220 MB, but the pan frame interval goes from about 8 ms to about 17 ms (about 120 to about 60 frames per second). The canvases are created when the editor starts, so the key is read once: restart Vaultdraw after changing it.
+- **Low-memory canvas.** Off by default. On, the editor draws on canvases that live in CPU memory (`willReadFrequently`), so WebKit keeps no window-sized display buffers for them. Measured on the packaged app with three small drawings open: whole-app peak about 365 MB instead of about 470 MB, idle about 220 MB, but the pan frame interval goes from about 8 ms to about 17 ms (about 120 to about 60 frames per second). The canvases are created when the editor starts, so the key is read once: restart Vaultdraw after changing it.
 - **When caches are freed.** `memory.hidden_purge_s` (default 120) is how long the window stays hidden before every cache is freed; `memory.idle_purge_s` (default 180) is how long without input before off-screen caches are freed. 0 turns a trigger off. Shorter values suit a 4 GB Mac.
 
 ## Sync services
@@ -1630,7 +1630,7 @@ A banner at the top says "Safe start" and why. It has two buttons: "Restart norm
 
 To leave safe start, run "Restart normally" (command `app.restartNormally`) from the palette or the banner. Neither command has a default key; bind one in `[hotkeys]` if you want.
 
-**Plugin safe mode is separate and unchanged.** After two crashed launches with plugins on, every plugin stays off; built-in extensions keep running. With Option held at launch, or after "Restart in safe mode" (command `plugins.restartSafeMode`), only the plugins you added stay off: the official ones that ship with the app (graph, gallery, frames, Markdown import and the rest) keep running. The banner for a core safe start shows only for the core kind.
+**Plugin safe mode is separate and unchanged.** After two crashed launches with plugins on, every plugin stays off; built-in extensions keep running. With Option held at launch, or after "Restart in safe mode" (command `plugins.restartSafeMode`), only the plugins you added stay off: the official ones that ship with the app (graph, gallery, Markdown import and the rest) keep running. The banner for a core safe start shows only for the core kind.
 
 **Environment variables**
 
