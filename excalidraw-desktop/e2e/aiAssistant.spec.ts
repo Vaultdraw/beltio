@@ -117,7 +117,9 @@ test("AI assistant: turn it on, save a key, ask, stream, stop, offline", async (
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByRole("alert")).toContainText("No API key is saved");
   expect(
-    await page.evaluate(() => (window as any).__plugins.backend.net.requests.length),
+    await page.evaluate(
+      () => (window as any).__plugins.backend.net.requests.length,
+    ),
   ).toBe(0);
 
   // Save the key; it is hidden and not shown again.
@@ -133,14 +135,20 @@ test("AI assistant: turn it on, save a key, ask, stream, stop, offline", async (
   // Ask: the answer streams in, and the request carries the drawing's text but not the key.
   await input.fill("What pages are there?");
   await page.getByLabel("Show what is sent").check();
-  await expect(page.getByLabel("What is sent", { exact: true })).toContainText("Login page");
+  await expect(page.getByLabel("What is sent", { exact: true })).toContainText(
+    "Login page",
+  );
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByText("Two pages: login and checkout.")).toBeVisible({
     timeout: 10_000,
   });
   const sent = await page.evaluate(() => {
     const r = (window as any).__plugins.backend.net.requests[0];
-    return { ...r, authValue: r.authHeader?.value, authHeader: r.authHeader?.name };
+    return {
+      ...r,
+      authValue: r.authHeader?.value,
+      authHeader: r.authHeader?.name,
+    };
   });
   expect(sent.url).toBe("https://api.anthropic.com/v1/messages");
   expect(sent.authHeader).toBe("x-api-key");
@@ -151,8 +159,10 @@ test("AI assistant: turn it on, save a key, ask, stream, stop, offline", async (
   // Stop a slow answer: what arrived stays, and no error shows.
   await page.evaluate(() => {
     (window as any).__plugins.backend.net.respond = () => ({
-      chunks: Array.from({ length: 30 }, (_, i) =>
-        `data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"w${i} "}}\n\n`,
+      chunks: Array.from(
+        { length: 30 },
+        (_, i) =>
+          `data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"w${i} "}}\n\n`,
       ),
       chunkDelayMs: 60,
     });
@@ -176,7 +186,9 @@ test("AI assistant: turn it on, save a key, ask, stream, stop, offline", async (
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByRole("alert")).toContainText("Offline mode is on");
   expect(
-    await page.evaluate(() => (window as any).__plugins.backend.net.requests.length),
+    await page.evaluate(
+      () => (window as any).__plugins.backend.net.requests.length,
+    ),
   ).toBe(0);
 
   expect(errors).toEqual([]);

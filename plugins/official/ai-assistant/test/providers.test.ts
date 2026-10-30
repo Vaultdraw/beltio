@@ -54,12 +54,20 @@ describe("buildRequest", () => {
 
   it("OpenAI-style server on this computer without a key sends no key header", () => {
     const r = buildRequest(
-      cfg({ provider: "openai", baseUrl: "http://localhost:1234/v1", hasKey: false }),
+      cfg({
+        provider: "openai",
+        baseUrl: "http://localhost:1234/v1",
+        hasKey: false,
+      }),
       "S",
       MSGS,
     );
     expect(r.auth).toBeUndefined();
-    expect(needsKey(cfg({ provider: "openai", baseUrl: "http://localhost:1234/v1" }))).toBe(false);
+    expect(
+      needsKey(
+        cfg({ provider: "openai", baseUrl: "http://localhost:1234/v1" }),
+      ),
+    ).toBe(false);
   });
 
   it("Ollama: this computer, no key", () => {
@@ -126,7 +134,10 @@ describe("stream parsers read every split of the bytes", () => {
   for (const [provider, body] of cases) {
     it(provider, () => {
       for (const size of [1, 2, 3, 7, 50, body.length]) {
-        expect(stream(provider, body, size)).toEqual({ out: "Hello é", done: true });
+        expect(stream(provider, body, size)).toEqual({
+          out: "Hello é",
+          done: true,
+        });
       }
     });
   }
@@ -137,7 +148,7 @@ describe("stream parsers read every split of the bytes", () => {
   });
 
   it("garbage lines and comments are skipped, not fatal", () => {
-    const body = ": ping\nnot json\ndata: {oops\n" + SSE_OPENAI;
+    const body = `: ping\nnot json\ndata: {oops\n${SSE_OPENAI}`;
     expect(stream("openai", body, 9).out).toBe("Hello é");
   });
 
@@ -145,8 +156,12 @@ describe("stream parsers read every split of the bytes", () => {
     const body = 'data: {"type":"error","error":{"message":"Overloaded"}}\n';
     expect(() => stream("anthropic", body, 100)).toThrow(ProviderError);
     expect(() => stream("anthropic", body, 100)).toThrow("Overloaded");
-    expect(() => stream("ollama", '{"error":"model not found"}\n', 100)).toThrow("model not found");
-    expect(() => stream("openai", 'data: {"error":{"message":"bad"}}\n', 100)).toThrow("bad");
+    expect(() =>
+      stream("ollama", '{"error":"model not found"}\n', 100),
+    ).toThrow("model not found");
+    expect(() =>
+      stream("openai", 'data: {"error":{"message":"bad"}}\n', 100),
+    ).toThrow("bad");
   });
 });
 

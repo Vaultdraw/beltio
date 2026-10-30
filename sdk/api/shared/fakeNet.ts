@@ -68,7 +68,11 @@ const tagged = (tag: number, rest?: Uint8Array) => {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export const NET_ROWS = new Set(["net.open", "net.read", "net.close"]);
-export const SECRET_ROWS = new Set(["secret.set", "secret.has", "secret.delete"]);
+export const SECRET_ROWS = new Set([
+  "secret.set",
+  "secret.has",
+  "secret.delete",
+]);
 
 const streams = new Map<number, Stream>();
 let nextId = 1;

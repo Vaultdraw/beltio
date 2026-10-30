@@ -128,7 +128,10 @@ export interface StreamParser {
 }
 
 /** Splits a stream into lines and hands each to `onLine`. */
-function lineParser(onLine: (line: string) => string | null, isDone: () => boolean): StreamParser {
+function lineParser(
+  onLine: (line: string) => string | null,
+  isDone: () => boolean,
+): StreamParser {
   let rest = "";
   const take = (lines: string[]) =>
     lines.flatMap((l) => {
@@ -173,54 +176,60 @@ const errorText = (e: unknown): string => {
 export function createParser(provider: ProviderId): StreamParser {
   let finished = false;
   if (provider === "ollama") {
-    return lineParser((line) => {
-      const j = line.trim() ? parseJson(line) : null;
+    return lineParser(
+      (line) => {
+        const j = line.trim() ? parseJson(line) : null;
+        if (!j) {
+          return null;
+        }
+        if (j.error) {
+          throw new ProviderError(errorText(j.error));
+        }
+        if (j.done) {
+          finished = true;
+        }
+        const text = j.message?.content;
+        return typeof text === "string" && text ? text : null;
+      },
+      () => finished,
+    );
+  }
+  return lineParser(
+    (line) => {
+      if (!line.startsWith("data:")) {
+        return null;
+      }
+      const data = line.slice(5).trim();
+      if (data === "[DONE]") {
+        finished = true;
+        return null;
+      }
+      const j = parseJson(data);
       if (!j) {
         return null;
+      }
+      if (provider === "anthropic") {
+        if (j.type === "error") {
+          throw new ProviderError(errorText(j.error));
+        }
+        if (j.type === "message_stop") {
+          finished = true;
+        }
+        const t = j.type === "content_block_delta" ? j.delta?.text : undefined;
+        return typeof t === "string" && t ? t : null;
       }
       if (j.error) {
         throw new ProviderError(errorText(j.error));
       }
-      if (j.done) {
+      const choice = j.choices?.[0];
+      if (choice?.finish_reason) {
         finished = true;
       }
-      const text = j.message?.content;
-      return typeof text === "string" && text ? text : null;
-    }, () => finished);
-  }
-  return lineParser((line) => {
-    if (!line.startsWith("data:")) {
-      return null;
-    }
-    const data = line.slice(5).trim();
-    if (data === "[DONE]") {
-      finished = true;
-      return null;
-    }
-    const j = parseJson(data);
-    if (!j) {
-      return null;
-    }
-    if (provider === "anthropic") {
-      if (j.type === "error") {
-        throw new ProviderError(errorText(j.error));
-      }
-      if (j.type === "message_stop") {
-        finished = true;
-      }
-      const t = j.type === "content_block_delta" ? j.delta?.text : undefined;
+      const t = choice?.delta?.content;
       return typeof t === "string" && t ? t : null;
-    }
-    if (j.error) {
-      throw new ProviderError(errorText(j.error));
-    }
-    const choice = j.choices?.[0];
-    if (choice?.finish_reason) {
-      finished = true;
-    }
-    const t = choice?.delta?.content;
-    return typeof t === "string" && t ? t : null;
-  }, () => finished);
+    },
+    () => finished,
+  );
 }
 
 /** The provider's own message out of an error body (JSON `error.message`, or the plain text). */

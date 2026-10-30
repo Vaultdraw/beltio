@@ -18,7 +18,10 @@ export default function Panel({ session }: { session: Session }) {
   const [draft, setDraft] = useState("");
   const [key, setKey] = useState("");
   const [showSent, setShowSent] = useState(false);
-  const [preview, setPreview] = useState<{ sent: string; summary: string } | null>(null);
+  const [preview, setPreview] = useState<{
+    sent: string;
+    summary: string;
+  } | null>(null);
   const box = useRef<HTMLTextAreaElement>(null);
   const keyBox = useRef<HTMLInputElement>(null);
   const keyDetails = useRef<HTMLDetailsElement>(null);
@@ -67,7 +70,8 @@ export default function Panel({ session }: { session: Session }) {
     }
   };
   const sent = running || s.answer || s.error ? s.sent : preview?.sent ?? "";
-  const ctxSummary = running || s.answer ? s.context?.summary : preview?.summary;
+  const ctxSummary =
+    running || s.answer ? s.context?.summary : preview?.summary;
 
   return (
     <div className="vd-ai">
@@ -118,11 +122,19 @@ export default function Panel({ session }: { session: Session }) {
             Send
           </button>
         )}
-        <button className="vd-ai-btn" onClick={() => session.clear()} disabled={!s.answer && !s.error && s.history.length === 0}>
+        <button
+          className="vd-ai-btn"
+          onClick={() => session.clear()}
+          disabled={!s.answer && !s.error && s.history.length === 0}
+        >
           Clear
         </button>
         <label className="vd-ai-check">
-          <input type="checkbox" checked={showSent} onChange={(e) => setShowSent(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={showSent}
+            onChange={(e) => setShowSent(e.target.checked)}
+          />
           Show what is sent
         </label>
       </div>
@@ -133,7 +145,9 @@ export default function Panel({ session }: { session: Session }) {
             Sent to {s.via || "the model"}
             {ctxSummary ? ` (${ctxSummary})` : ""}
           </div>
-          <pre>{`Instructions:\n${SYSTEM[s.task]}\n\nMessage:\n${sent || "(nothing yet)"}`}</pre>
+          <pre>{`Instructions:\n${SYSTEM[s.task]}\n\nMessage:\n${
+            sent || "(nothing yet)"
+          }`}</pre>
         </div>
       ) : null}
 
@@ -148,15 +162,25 @@ export default function Panel({ session }: { session: Session }) {
           <pre>{s.answer || "Waiting for the answer…"}</pre>
           {!running && s.answer ? (
             <div className="vd-ai-row">
-              <button className="vd-ai-btn" onClick={() => void navigator.clipboard.writeText(s.answer)}>
+              <button
+                className="vd-ai-btn"
+                onClick={() => void navigator.clipboard.writeText(s.answer)}
+              >
                 Copy
               </button>
               {s.task === "diagram" ? (
-                <button className="vd-ai-btn vd-ai-primary" onClick={() => void session.draw()}>
+                <button
+                  className="vd-ai-btn vd-ai-primary"
+                  onClick={() => void session.draw()}
+                >
                   Draw it
                 </button>
               ) : null}
-              {s.drawn !== null ? <span className="vd-ai-via">Drew {s.drawn} shapes. Undo with Cmd+Z.</span> : null}
+              {s.drawn !== null ? (
+                <span className="vd-ai-via">
+                  Drew {s.drawn} shapes. Undo with Cmd+Z.
+                </span>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -165,8 +189,10 @@ export default function Panel({ session }: { session: Session }) {
       <details className="vd-ai-key" ref={keyDetails}>
         <summary>Key and provider</summary>
         <p className="vd-ai-note">
-          {s.hasKey ? "A key is saved on this computer." : "No key is saved."} It is kept outside your config and
-          your vault, and the app cannot show it again. Provider, model and address are in Settings, Plugins, AI assistant.
+          {s.hasKey ? "A key is saved on this computer." : "No key is saved."}{" "}
+          It is kept outside your config and your vault, and the app cannot show
+          it again. Provider, model and address are in Settings, Plugins, AI
+          assistant.
         </p>
         <div className="vd-ai-row">
           <input
@@ -192,7 +218,10 @@ export default function Panel({ session }: { session: Session }) {
             Save key
           </button>
           {s.hasKey ? (
-            <button className="vd-ai-btn" onClick={() => void session.removeKey()}>
+            <button
+              className="vd-ai-btn"
+              onClick={() => void session.removeKey()}
+            >
               Remove key
             </button>
           ) : null}

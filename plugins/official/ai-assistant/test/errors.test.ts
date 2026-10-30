@@ -39,11 +39,15 @@ describe("friendlyError", () => {
   });
 
   it("Ollama unreachable names Ollama", () => {
-    expect(friendlyError({ code: "NETWORK_ERROR" }, "ollama")).toMatch(/Is it running/);
+    expect(friendlyError({ code: "NETWORK_ERROR" }, "ollama")).toMatch(
+      /Is it running/,
+    );
   });
 
   it("a provider error and an unknown error keep their message", () => {
-    expect(friendlyError(new ProviderError("Overloaded"), "anthropic")).toMatch(/Overloaded/);
+    expect(friendlyError(new ProviderError("Overloaded"), "anthropic")).toMatch(
+      /Overloaded/,
+    );
     expect(friendlyError(new Error("boom"), "openai")).toBe("boom");
   });
 });

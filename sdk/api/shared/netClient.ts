@@ -3,11 +3,14 @@
  * app and the scripted fake in the test host, so both behave the same. Rows: `net.open`,
  * `net.read` (one tagged chunk: 0 data, 1 end, 2 nothing yet, 3 error) and `net.close`.
  */
-import type { NetApi, NetRequest, NetResponse } from "../src/index";
-
 import { PluginApiError } from "./rules";
 
-export type RawCall = (method: string, body?: Uint8Array) => Promise<Uint8Array>;
+import type { NetApi, NetRequest, NetResponse } from "../src/index";
+
+export type RawCall = (
+  method: string,
+  body?: Uint8Array,
+) => Promise<Uint8Array>;
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -108,8 +111,15 @@ export function createSecretClient(raw: RawCall, need: (m: string) => void) {
     async set(name: string, value: string) {
       need("secret.set");
       checkName(name);
-      if (typeof value !== "string" || value.length < 1 || value.length > 4096) {
-        throw new PluginApiError("INVALID_ARGUMENT", "A secret is 1 to 4096 characters");
+      if (
+        typeof value !== "string" ||
+        value.length < 1 ||
+        value.length > 4096
+      ) {
+        throw new PluginApiError(
+          "INVALID_ARGUMENT",
+          "A secret is 1 to 4096 characters",
+        );
       }
       await raw("secret.set", body({ name, value }));
     },

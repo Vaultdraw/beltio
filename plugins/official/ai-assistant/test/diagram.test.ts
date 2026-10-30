@@ -18,11 +18,28 @@ describe("mermaidFrom", () => {
 
 describe("insertDiagram", () => {
   const ops: SceneOp[] = [
-    { op: "add", ref: "a", element: { type: "rectangle", x: 0, y: 0, width: 100, height: 50 } },
-    { op: "add", element: { type: "arrow", x: 100, y: 25, width: 40, height: 0, start: { ref: "a" } } as any },
+    {
+      op: "add",
+      ref: "a",
+      element: { type: "rectangle", x: 0, y: 0, width: 100, height: 50 },
+    },
+    {
+      op: "add",
+      element: {
+        type: "arrow",
+        x: 100,
+        y: 25,
+        width: 40,
+        height: 0,
+        start: { ref: "a" },
+      } as any,
+    },
   ];
   const fakeCtx = (convert: () => Promise<unknown>) => {
-    const batch = vi.fn(async (o: readonly SceneOp[]) => ({ ids: o.map((_, i) => `id${i}`), refs: {} }));
+    const batch = vi.fn(async (o: readonly SceneOp[]) => ({
+      ids: o.map((_, i) => `id${i}`),
+      refs: {},
+    }));
     const ctx = {
       diagrams: { mermaidToElements: vi.fn(convert) },
       scene: { viewportCenter: () => ({ x: 500, y: 300 }), batch },
@@ -31,8 +48,15 @@ describe("insertDiagram", () => {
   };
 
   it("centres the diagram in the view and applies it in one batch", async () => {
-    const { ctx, batch } = fakeCtx(async () => ({ ops, width: 140, height: 50, skipped: 0 }));
-    expect(await insertDiagram(ctx, "```mermaid\nflowchart TD\nA-->B\n```")).toBe(2);
+    const { ctx, batch } = fakeCtx(async () => ({
+      ops,
+      width: 140,
+      height: 50,
+      skipped: 0,
+    }));
+    expect(
+      await insertDiagram(ctx, "```mermaid\nflowchart TD\nA-->B\n```"),
+    ).toBe(2);
     expect(batch).toHaveBeenCalledTimes(1);
     const sent = batch.mock.calls[0][0] as any[];
     expect(sent[0].element.x).toBe(430);
@@ -44,12 +68,19 @@ describe("insertDiagram", () => {
     const { ctx, batch } = fakeCtx(async () => {
       throw new Error("Parse error on line 1");
     });
-    await expect(insertDiagram(ctx, "nonsense")).rejects.toThrow(/could not be drawn: Parse error/);
+    await expect(insertDiagram(ctx, "nonsense")).rejects.toThrow(
+      /could not be drawn: Parse error/,
+    );
     expect(batch).not.toHaveBeenCalled();
   });
 
   it("an empty answer is refused", async () => {
-    const { ctx } = fakeCtx(async () => ({ ops, width: 1, height: 1, skipped: 0 }));
+    const { ctx } = fakeCtx(async () => ({
+      ops,
+      width: 1,
+      height: 1,
+      skipped: 0,
+    }));
     await expect(insertDiagram(ctx, "  ")).rejects.toThrow(/no diagram/);
   });
 });

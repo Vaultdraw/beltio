@@ -16,7 +16,9 @@ export interface Context {
 const round = (n: number) => Math.round(n);
 
 const line = (e: SceneElement): string => {
-  const box = `at (${round(e.x)}, ${round(e.y)}) size ${round(e.width)}x${round(e.height)}`;
+  const box = `at (${round(e.x)}, ${round(e.y)}) size ${round(e.width)}x${round(
+    e.height,
+  )}`;
   const label = e.text ? ` "${e.text.replace(/\s+/g, " ").trim()}"` : "";
   const name = e.name ? ` "${e.name}"` : "";
   return `- ${e.type}${label || name} ${box}`;
@@ -38,7 +40,9 @@ export function describeElements(
   const texts = elements.filter((e) => e.text).length;
   return {
     text,
-    summary: `${elements.length} element${elements.length === 1 ? "" : "s"}, ${texts} with text`,
+    summary: `${elements.length} element${
+      elements.length === 1 ? "" : "s"
+    }, ${texts} with text`,
     cut,
   };
 }

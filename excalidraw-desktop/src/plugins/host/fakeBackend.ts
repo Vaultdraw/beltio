@@ -479,7 +479,12 @@ export function createFakeBackend(
             `${pluginId}: ${method} needs the permission "${need}", which plugin.toml does not declare`,
           );
         }
-        return fakeNetRow(fake.net, pluginId, method, body ?? new Uint8Array(0));
+        return fakeNetRow(
+          fake.net,
+          pluginId,
+          method,
+          body ?? new Uint8Array(0),
+        );
       }
       if (method.startsWith("network.")) {
         if (!plugin.permissions.includes("network.images")) {
