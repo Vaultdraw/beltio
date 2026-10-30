@@ -1,0 +1,31 @@
+{
+  "about": "Theme names: one table for the Look up pre-check (theme/install/installer.ts validateCandidate) and the native install (src-tauri/src/theme_install.rs sanitize_name). backendOk is the right answer for the name as given. nativeToday: what sanitize_name answers today where it is wrong (remove when fixed). lookUpOk: Look up trims the name before sending it, so it accepts what the install then accepts (validator, hunter F-1 and F-2, 2026-10-30).",
+  "cases": [
+    { "label": "plain", "name": "Dracula", "backendOk": true },
+    { "label": "accents and CJK", "name": "Ünïcödé 主题", "backendOk": true },
+    { "label": "80 characters", "name": { "repeat": "A", "times": 80 }, "backendOk": true },
+    { "label": "81 characters", "name": { "repeat": "A", "times": 81 }, "backendOk": false },
+    { "label": "100 characters", "name": { "repeat": "A", "times": 100 }, "backendOk": false },
+    { "label": "80 emoji (320 bytes: too long for a folder name)", "name": { "repeat": "🎨", "times": 80 }, "backendOk": false, "nativeToday": true },
+    { "label": "reserved Source", "name": "Source", "backendOk": false },
+    { "label": "reserved source", "name": "source", "backendOk": false },
+    { "label": "reserved SOURCE", "name": "SOURCE", "backendOk": false },
+    { "label": "leading dot", "name": ".hidden", "backendOk": false },
+    { "label": "trailing dot", "name": "Dracula.", "backendOk": true },
+    { "label": "Windows device name", "name": "CON", "backendOk": true },
+    { "label": "leading space", "name": " Dracula", "backendOk": false, "lookUpOk": true },
+    { "label": "trailing space", "name": "Dracula ", "backendOk": false, "lookUpOk": true },
+    { "label": "slash", "name": "a/b", "backendOk": false },
+    { "label": "backslash", "name": "a\\b", "backendOk": false },
+    { "label": "colon", "name": "a:b", "backendOk": false },
+    { "label": "star", "name": "a*b", "backendOk": false },
+    { "label": "question mark", "name": "a?b", "backendOk": false },
+    { "label": "quote", "name": "a\"b", "backendOk": false },
+    { "label": "angle brackets", "name": "a<b>", "backendOk": false },
+    { "label": "pipe", "name": "a|b", "backendOk": false },
+    { "label": "C0 control", "name": "a\u0007b", "backendOk": false },
+    { "label": "C1 control", "name": "a\u0085b", "backendOk": false },
+    { "label": "right-to-left override", "name": "a‮b", "backendOk": false },
+    { "label": "right-to-left isolate", "name": "a⁧b", "backendOk": false }
+  ]
+}
