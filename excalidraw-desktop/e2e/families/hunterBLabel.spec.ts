@@ -89,3 +89,39 @@ test.fixme(
     expect(label.fontSize).toBeLessThan(40);
   },
 );
+
+test("hunter B: a quote in a shape label drops back to body text with Backspace and stays bound", async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  const base = await labelled(page);
+  await type(page, "> wise");
+  await page.keyboard.press("Escape");
+  await expect
+    .poll(async () => (await live(page)).length, { timeout: 10_000 })
+    .toBeGreaterThan(base);
+  const labelOf = async () =>
+    (await live(page)).slice(base).find((e: any) => e.type === "text");
+  await expect
+    .poll(async () => (await labelOf())?.customData?.role)
+    .toBe("quote");
+  expect((await labelOf()).containerId).toBeTruthy();
+  // reopen the label, Backspace at the start of the quote line: back to body text, still bound
+  const b = await canvasBox(page);
+  await page.mouse.dblclick(
+    b.x + b.width * 0.5 + 130,
+    b.y + b.height * 0.7 + 80,
+  );
+  await expect(page.locator(ta)).toBeFocused();
+  await page.keyboard.press("Meta+ArrowLeft");
+  await page.keyboard.press("Backspace");
+  await page.keyboard.press("Escape");
+  await expect
+    .poll(async () => (await labelOf())?.customData?.role ?? null, {
+      timeout: 10_000,
+    })
+    .toBeNull();
+  expect((await labelOf()).text).toBe("wise");
+  expect((await labelOf()).containerId).toBeTruthy();
+  expect(errors).toEqual([]);
+});
