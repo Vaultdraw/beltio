@@ -1421,6 +1421,13 @@ const createExtensionSession = ({
         roughness: from.roughness,
         strokeWidth: from.strokeWidth,
         frameId: from.frameId,
+        // Vaultdraw: the next block stays in the card's group (a label's
+        // group is its container's)
+        groupIds: [
+          ...((from.containerId &&
+            app.scene.getNonDeletedElement(from.containerId)?.groupIds) ||
+            from.groupIds),
+        ],
         customData,
       });
       app.insertNewElements([created]);

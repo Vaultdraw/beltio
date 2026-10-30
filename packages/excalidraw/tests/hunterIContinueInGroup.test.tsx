@@ -21,7 +21,7 @@ unmountComponent();
 describe("hunter I-8: the box Enter makes after a grouped heading", () => {
   afterEach(() => unmountComponent());
 
-  it.fails("keeps the heading's group", async () => {
+  it("keeps the heading's group", async () => {
     let session: TextEditorSession | null = null;
     const extension: TextEditorExtension = {
       attach: (s) => {
