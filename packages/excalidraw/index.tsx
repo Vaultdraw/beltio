@@ -97,6 +97,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     langCode = defaultLang.code,
     viewModeEnabled,
     interaction,
+    linkIndicator,
     ui,
     activeTool,
     zenModeEnabled,
@@ -251,6 +252,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           langCode={langCode}
           viewModeEnabled={viewModeEnabled}
           interaction={interaction}
+          linkIndicator={linkIndicator}
           ui={ui}
           activeTool={activeTool}
           zenModeEnabled={zenModeEnabled}
@@ -305,6 +307,7 @@ const areEqual = (prevProps: ExcalidrawProps, nextProps: ExcalidrawProps) => {
     UIOptions: prevUIOptions = {},
     imageOptions: prevImageOptions,
     interaction: prevInteraction,
+    linkIndicator: prevLinkIndicator,
     ui: prevUI,
     activeTool: prevActiveTool,
     ...prev
@@ -314,6 +317,7 @@ const areEqual = (prevProps: ExcalidrawProps, nextProps: ExcalidrawProps) => {
     UIOptions: nextUIOptions = {},
     imageOptions: nextImageOptions,
     interaction: nextInteraction,
+    linkIndicator: nextLinkIndicator,
     ui: nextUI,
     activeTool: nextActiveTool,
     ...next
@@ -328,6 +332,13 @@ const areEqual = (prevProps: ExcalidrawProps, nextProps: ExcalidrawProps) => {
         (nextActiveTool?.type === "custom" ? nextActiveTool.customType : null));
 
   if (!isActiveToolSame) {
+    return false;
+  }
+
+  if (
+    prevLinkIndicator?.style !== nextLinkIndicator?.style ||
+    prevLinkIndicator?.color !== nextLinkIndicator?.color
+  ) {
     return false;
   }
 

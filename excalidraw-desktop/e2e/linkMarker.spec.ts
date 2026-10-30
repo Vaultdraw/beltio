@@ -174,12 +174,17 @@ const inkAt = (page: Page, sx: number, sy: number) =>
       const dpr = canvas.width / canvas.getBoundingClientRect().width;
       const px = Math.round((x + st.scrollX) * st.zoom.value * dpr);
       const py = Math.round((y + st.scrollY) * st.zoom.value * dpr);
-      const d = canvas.getContext("2d")!.getImageData(px, py - 3, 24, 7).data;
+      const ctx = canvas.getContext("2d")!;
+      const d = ctx.getImageData(px, py - 3, 24, 7).data;
+      // an empty spot of the same canvas is the background
+      const ref = ctx.getImageData(px + 600, py, 1, 1).data;
       let n = 0;
       for (let i = 0; i < d.length; i += 4) {
-        const bright = d[i] + d[i + 1] + d[i + 2];
-        const bg = bright > 740 || bright < 40;
-        if (d[i + 3] > 0 && !bg) {
+        const diff =
+          Math.abs(d[i] - ref[0]) +
+          Math.abs(d[i + 1] - ref[1]) +
+          Math.abs(d[i + 2] - ref[2]);
+        if (diff > 60) {
           n += 1;
         }
       }
@@ -252,17 +257,23 @@ test("a linked element shows a line or corner icon, in light and dark, and opens
   await expect
     .poll(() => inkAt(page, web[0] + 10, underlineY))
     .toBeGreaterThan(0);
+  const withLine = await inkAt(page, web[0] + 10, underlineY);
   await shot(page, "after-underline-dark");
 
   // "Corner icon" only: the line is gone and no longer clickable.
   await setIndicator(page, "Corner icon");
-  await expect.poll(() => inkAt(page, web[0] + 10, underlineY)).toBe(0);
+  // (the letters themselves sit near the band, so compare with the line on)
+  await expect
+    .poll(() => inkAt(page, web[0] + 10, underlineY))
+    .toBeLessThan(withLine);
   await shot(page, "after-icon-dark");
   const before = (await opened(page)).length;
   await clickScene(page, web[0] + 30, underlineY);
   await page.waitForTimeout(200);
   expect((await opened(page)).length).toBe(before);
-  // ...but the corner of the text still opens it.
+  // ...but the corner of the text still opens it (the click above selected the
+  // text, and a selected element is edited, not opened).
+  await clickScene(page, 700, 500);
   await clickScene(page, web[0] + web[2] + 6, web[1] - 6);
   await expect.poll(async () => (await opened(page)).length).toBe(before + 1);
 
