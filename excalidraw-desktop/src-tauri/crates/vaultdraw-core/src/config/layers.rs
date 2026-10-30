@@ -320,6 +320,7 @@ pub fn update_overrides_in(dirs: &Dirs, changes: &[LayerChange]) -> Result<()> {
             text
         }
     };
+    refuse_new_problems(existing.as_deref().unwrap_or(""), &updated)?;
     if existing.as_deref() != Some(updated.as_str()) {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(ioerr)?;
@@ -327,6 +328,22 @@ pub fn update_overrides_in(dirs: &Dirs, changes: &[LayerChange]) -> Result<()> {
         write_atomic(&path, updated.as_bytes())?;
     }
     Ok(())
+}
+
+/// A write must not add a problem `config check` would report (unknown key, wrong type, value out
+/// of range): the same schema check, so the CLI, the control API, MCP and Settings refuse alike
+/// (Neovim `:set wrap=banana` is refused naming the option). Problems already in the file stay
+/// (the user may have put them there by hand) and do not block a good change.
+fn refuse_new_problems(before: &str, after: &str) -> Result<()> {
+    let known: Vec<String> = check_text(before, OVERRIDES_FILE, "").into_iter().map(|p| p.message).collect();
+    match check_text(after, OVERRIDES_FILE, "").into_iter().find(|p| !known.contains(&p.message)) {
+        Some(p) => {
+            // "unknown key x (ignored; did you mean y?)" reads as "unknown key x (did you mean y?)" when nothing is saved.
+            let said = p.message.replace(" (ignored; ", " (").replace(" (ignored)", "");
+            Err(err("CONFIG_INVALID", format!("{said}. Nothing was changed.")))
+        }
+        None => Ok(()),
+    }
 }
 
 /// Where a dotted key's value comes from, for `config get --source` and the Settings chips.

@@ -124,6 +124,40 @@ mod tests {
     }
 
     #[test]
+    fn set_refuses_a_wrong_type_an_unknown_key_and_a_value_out_of_range_and_writes_nothing() {
+        // The same schema `config check` uses; one table row per refusal (hunter C, C-9).
+        let rows: [(&str, Value, &str); 5] = [
+            ("files.auto_reload", json!("banana"), "files.auto_reload"),
+            ("files.auto_reloadd", json!(false), "did you mean files.auto_reload"),
+            ("editor.font_size", json!("big"), "editor.font_size"),
+            ("nosuch.key", json!(1), "unknown key nosuch"),
+            ("control.enabled", json!(3), "control.enabled"),
+        ];
+        for (key, value, says) in rows {
+            let (_t, d) = dirs();
+            let e = set(&d, &json!({"changes": [{"key": key, "value": value}]})).unwrap_err();
+            assert!(e.message.contains(says), "{key}: {}", e.message);
+            assert!(e.message.contains("Nothing was changed"), "{}", e.message);
+            assert!(!d.overrides_file().exists(), "{key} wrote a file");
+        }
+        // One bad change in a batch refuses the whole batch.
+        let (_t, d) = dirs();
+        assert!(set(&d, &json!({"changes": [{"key": "editor.font_size", "value": 20}, {"key": "nope.x", "value": 1}]})).is_err());
+        assert!(!d.overrides_file().exists());
+    }
+
+    #[test]
+    fn set_accepts_good_values_resets_and_hand_written_problems_do_not_block_a_good_change() {
+        let (_t, d) = dirs();
+        fs::create_dir_all(&d.state).unwrap();
+        fs::write(d.overrides_file(), "[files]\nauto_reload = \"banana\"\n").unwrap();
+        set(&d, &json!({"changes": [{"key": "editor.font_size", "value": 20}]})).unwrap();
+        // Putting a correct value over the bad one is allowed too.
+        set(&d, &json!({"changes": [{"key": "files.auto_reload", "value": true}]})).unwrap();
+        set(&d, &json!({"changes": [{"key": "editor.font_size", "value": null}]})).unwrap();
+    }
+
+    #[test]
     fn bad_params_are_invalid() {
         let (_t, d) = dirs();
         assert_eq!(set(&d, &json!({})).unwrap_err().code, vaultdraw_protocol::INVALID_PARAMS);
