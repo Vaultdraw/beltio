@@ -120,7 +120,6 @@ test.use({ actionTimeout: 8000 });
 test("AI: a refused Send (no key) keeps the question in the box", async ({
   page,
 }) => {
-  test.fail(true, "toimprove M-15: the question is cleared before the refusal");
   const errors = trackErrors(page);
   await setup(page);
   const input = page.getByLabel("Ask about this drawing");
@@ -168,7 +167,6 @@ test("AI: a wrong key says so in plain words; Remove key forgets it", async ({
 test("AI: Copy under an answer says it copied (or could not)", async ({
   page,
 }) => {
-  test.fail(true, "toimprove M-16: the assistant's Copy is silent");
   const errors = trackErrors(page);
   await setup(page);
   await saveKey(page);
@@ -280,7 +278,6 @@ for (const theme of ["light", "dark"] as const) {
 test("AI panel: the checkbox follows the theme colour like the app's own", async ({
   page,
 }) => {
-  test.fail(true, "toimprove M-21: no accent-color in ai.css");
   const errors = trackErrors(page);
   await setup(page);
   const box = page.getByLabel("Show what is sent");

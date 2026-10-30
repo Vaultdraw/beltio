@@ -1,4 +1,4 @@
-.vd-ai { padding: var(--vd-space-3, 8px); font: var(--vd-fs-body, 13px) var(--vd-font, inherit); color: var(--vault-text, inherit); display: flex; flex-direction: column; gap: var(--vd-space-3, 8px); }
+.vd-ai { padding: var(--vd-space-3, 8px); font: var(--vd-fs-body, 13px) var(--vd-font, inherit); color: var(--vault-text, inherit); display: flex; flex-direction: column; gap: var(--vd-space-3, 8px); accent-color: var(--vault-primary, auto); }
 .vd-ai-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: var(--vd-fs-emph, 14px); }
 .vd-ai-via, .vd-ai-note, .vd-ai-sent-title { color: var(--vault-text-faint, #888); font-size: var(--vd-fs-caption, 11px); line-height: 1.5; }
 .vd-ai-note { margin: 0 0 6px; }

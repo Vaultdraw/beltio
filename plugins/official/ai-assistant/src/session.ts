@@ -61,6 +61,8 @@ export interface Session {
   refreshKey(): Promise<void>;
   setKey(value: string): Promise<void>;
   removeKey(): Promise<void>;
+  /** Copies the current answer and says whether it worked. */
+  copyAnswer(): Promise<void>;
   /** Draws the Mermaid in the current answer. */
   draw(): Promise<void>;
   config(): ProviderConfig;
@@ -313,6 +315,14 @@ export function createSession(ctx: PluginContext): Session {
       await ctx.secret.set(secretNameOf(config()), value.trim());
       hasKey = true;
       set({ hasKey, error: null });
+    },
+    async copyAnswer() {
+      try {
+        await navigator.clipboard.writeText(state.answer);
+        ctx.ui.toast("Copied the answer");
+      } catch {
+        ctx.ui.toast("Could not copy the answer");
+      }
     },
     async removeKey() {
       await ctx.secret.delete(secretNameOf(config()));

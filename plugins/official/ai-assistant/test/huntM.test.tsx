@@ -61,7 +61,7 @@ describe("a refused Send keeps the question (toimprove M-15)", () => {
     expect(box().value).toBe("");
   });
 
-  it.fails("no key: the message says so and the question stays", async () => {
+  it("no key: the message says so and the question stays", async () => {
     await start({ key: false });
     send("What is on it?");
     await waitFor(() =>
@@ -71,18 +71,15 @@ describe("a refused Send keeps the question (toimprove M-15)", () => {
     expect(box().value).toBe("What is on it?");
   });
 
-  it.fails(
-    "Offline mode: the message says so and the question stays",
-    async () => {
-      await start();
-      p!.net.offline = () => true;
-      send("What is on it?");
-      await waitFor(() =>
-        expect(screen.getByRole("alert").textContent).toContain("Offline mode"),
-      );
-      expect(box().value).toBe("What is on it?");
-    },
-  );
+  it("Offline mode: the message says so and the question stays", async () => {
+    await start();
+    p!.net.offline = () => true;
+    send("What is on it?");
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain("Offline mode"),
+    );
+    expect(box().value).toBe("What is on it?");
+  });
 });
 
 describe("Copy under an answer reports what happened (toimprove M-16)", () => {
@@ -92,7 +89,7 @@ describe("Copy under an answer reports what happened (toimprove M-16)", () => {
       ["the clipboard refuses", () => Promise.reject(new Error("denied"))],
     ] as const
   ).forEach(([what, write]) => {
-    it.fails(`${what}: a notice says so`, async () => {
+    it(`${what}: a notice says so`, async () => {
       await start();
       Object.defineProperty(navigator, "clipboard", {
         value: { writeText: vi.fn(write) },

@@ -63,7 +63,15 @@ export default function Panel({ session }: { session: Session }) {
   const running = s.status === "running";
   const send = () => {
     if (!running) {
-      void session.run(s.task, draft);
+      const asked = draft;
+      void session.run(s.task, draft).then(() => {
+        // A question that was refused (no key, Offline mode, an empty drawing) stays in the box
+        // for the next try (toimprove 270).
+        const now = session.get();
+        if (now.error && !now.answer) {
+          setDraft((d) => (d === "" ? asked : d));
+        }
+      });
       if (s.task === "ask") {
         setDraft("");
       }
@@ -164,7 +172,7 @@ export default function Panel({ session }: { session: Session }) {
             <div className="vd-ai-row">
               <button
                 className="vd-ai-btn"
-                onClick={() => void navigator.clipboard.writeText(s.answer)}
+                onClick={() => void session.copyAnswer()}
               >
                 Copy
               </button>
