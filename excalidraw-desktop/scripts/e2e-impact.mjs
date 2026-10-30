@@ -1,7 +1,8 @@
 // Maps changed files to the Playwright specs that cover them (test impact analysis, KISS).
 // Playwright's own --only-changed follows spec imports only; the app under test is served by
 // Vite, so app source changes need this path -> spec map.
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 
 // Specs that exercise the shell end to end; run when a shared file changes.
 export const CORE_SPECS = ["crud", "edge", "navigator", "commandPalette", "text"];
@@ -37,14 +38,24 @@ const ALIASES = {
 
 const lower = (s) => s.toLowerCase();
 
-/** specNames: spec basenames without ".spec.ts". Returns { specs: string[], reasons: Record<spec, file> }. */
-export function impactedSpecs(changedFiles, specNames) {
+/**
+ * specNames: spec basenames without ".spec.ts". `pluginSpecs(id)`: the specs that load an official
+ * plugin (a change under plugins/official/<id>/ maps to no app file, so without it no spec ran:
+ * the bug utilizer's slip on 2026-10-30 broke old-imports.spec with a plugin-only change).
+ * Returns { specs: string[], reasons: Record<spec, file> }.
+ */
+export function impactedSpecs(changedFiles, specNames, pluginSpecs = () => []) {
   const byPrefix = (prefix) => specNames.filter((s) => lower(s).startsWith(lower(prefix)));
   const out = new Map();
   const add = (names, why) => names.forEach((n) => specNames.includes(n) && !out.has(n) && out.set(n, why));
   for (const f of changedFiles) {
     if (SHARED.some((re) => re.test(f))) {
       add(CORE_SPECS, f);
+      continue;
+    }
+    const plugin = f.match(/^plugins\/official\/([^/]+)\/(?!test\/)/);
+    if (plugin) {
+      for (const n of pluginSpecs(plugin[1])) if (!out.has(n)) out.set(n, f);
       continue;
     }
     const spec = f.match(/^excalidraw-desktop\/e2e\/([^/]+)\.spec\.ts$/);
@@ -76,4 +87,18 @@ export function impactedSpecs(changedFiles, specNames) {
 
 export function listSpecNames(e2eDir) {
   return readdirSync(e2eDir).filter((f) => f.endsWith(".spec.ts")).map((f) => f.slice(0, -".spec.ts".length));
+}
+
+/** Specs (top level and families/) whose text names the plugin id, e.g. "?plugins=markdown-import". */
+export function specsLoadingPlugin(e2eDir, id) {
+  const out = [];
+  for (const sub of ["", "families"]) {
+    const dir = path.join(e2eDir, sub);
+    if (!existsSync(dir)) continue;
+    for (const f of readdirSync(dir)) {
+      if (!f.endsWith(".spec.ts") || /perf/i.test(f)) continue;
+      if (readFileSync(path.join(dir, f), "utf8").includes(id)) out.push(path.join(sub, f.slice(0, -".spec.ts".length)));
+    }
+  }
+  return out;
 }

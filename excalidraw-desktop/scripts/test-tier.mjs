@@ -12,7 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
-import { impactedSpecs, listSpecNames } from "./e2e-impact.mjs";
+import { impactedSpecs, listSpecNames, specsLoadingPlugin } from "./e2e-impact.mjs";
 import { lintableFiles } from "./lint-files.mjs";
 import { exitOnSignals, runGuarded } from "./run-guarded.mjs";
 
@@ -194,6 +194,7 @@ if (tier === "fast") {
     const { specs, reasons } = impactedSpecs(
       files,
       listSpecNames(path.join(desktop, "e2e")),
+      (id) => specsLoadingPlugin(path.join(desktop, "e2e"), id),
     );
     // The UI crawler (testing.md "Crawler first") runs whenever app UI code or styles changed: ~2 min, light + dark.
     const uiChanged = files.some(

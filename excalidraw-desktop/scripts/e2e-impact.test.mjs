@@ -22,3 +22,9 @@ test("shared files and unmapped sources run the core set; unit tests and docs ru
   assert.deepEqual(impactedSpecs(["excalidraw-desktop/src/tags/x.test.ts", "README.md", "excalidraw-desktop/src-tauri/src/lib.rs"], SPECS).specs, []);
   assert.deepEqual(impactedSpecs(["excalidraw-desktop/src/perf/probe.ts"], SPECS).specs, []);
 });
+test("an official plugin's source runs the specs that load it; its unit tests run none (2026-10-30 slip)", () => {
+  const load = (id) => (id === "markdown-import" ? ["mdImport", "families/old-imports"] : []);
+  assert.deepEqual(impactedSpecs(["plugins/official/markdown-import/src/reimport.ts"], SPECS, load).specs,
+    ["families/old-imports", "mdImport"]);
+  assert.deepEqual(impactedSpecs(["plugins/official/markdown-import/test/x.test.ts"], SPECS, load).specs, []);
+});
