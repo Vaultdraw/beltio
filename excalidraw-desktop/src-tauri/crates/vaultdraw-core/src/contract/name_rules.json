@@ -1,0 +1,145 @@
+{
+ "about": "Which vault path names the native core accepts (paths.rs validate_relative) and FakeVaultRepository (the browser e2e backend) must accept, one row each. Both suites read this file: vaultdraw-core tests.rs (name_rules_match_the_shared_table) and src/tests/vaultNameRules.test.ts. Written by hunter A, round 3: the fake accepted CON, a colon, a question mark, trailing dots and 256-byte names, so no Playwright test could ever see the native refusal text.",
+ "cases": [
+  {
+   "name": "plain name",
+   "path": "Ideas",
+   "invalid": false
+  },
+  {
+   "name": "spaces inside",
+   "path": "My ideas  here",
+   "invalid": false
+  },
+  {
+   "name": "accents and emoji",
+   "path": "Café 🚀 日本語",
+   "invalid": false
+  },
+  {
+   "name": "leading space",
+   "path": "  lead",
+   "invalid": false
+  },
+  {
+   "name": "starts with dash or hash",
+   "path": "-a/#b",
+   "invalid": false
+  },
+  {
+   "name": "brackets and percent",
+   "path": "[x] (y) 100%",
+   "invalid": false
+  },
+  {
+   "name": "nested path",
+   "path": "a/b/c",
+   "invalid": false
+  },
+  {
+   "name": "name of 255 bytes",
+   "path": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "invalid": false
+  },
+  {
+   "name": "name of 256 bytes",
+   "path": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "invalid": true
+  },
+  {
+   "name": "Windows device name CON",
+   "path": "CON",
+   "invalid": true
+  },
+  {
+   "name": "Windows device name in lower case",
+   "path": "con",
+   "invalid": true
+  },
+  {
+   "name": "Windows device name with an ending",
+   "path": "nul.excalidraw",
+   "invalid": true
+  },
+  {
+   "name": "device name inside a path",
+   "path": "a/AUX/b",
+   "invalid": true
+  },
+  {
+   "name": "COM1",
+   "path": "COM1",
+   "invalid": true
+  },
+  {
+   "name": "trailing dot",
+   "path": "name.",
+   "invalid": true
+  },
+  {
+   "name": "trailing space",
+   "path": "name ",
+   "invalid": true
+  },
+  {
+   "name": "colon",
+   "path": "a:b",
+   "invalid": true
+  },
+  {
+   "name": "question mark",
+   "path": "what?",
+   "invalid": true
+  },
+  {
+   "name": "star",
+   "path": "a*b",
+   "invalid": true
+  },
+  {
+   "name": "double quote",
+   "path": "say \"hi\"",
+   "invalid": true
+  },
+  {
+   "name": "pipe",
+   "path": "a|b",
+   "invalid": true
+  },
+  {
+   "name": "angle brackets",
+   "path": "<tag>",
+   "invalid": true
+  },
+  {
+   "name": "backslash",
+   "path": "a\\b",
+   "invalid": true
+  },
+  {
+   "name": "control character",
+   "path": "a\u0007b",
+   "invalid": true
+  },
+  {
+   "name": "empty segment",
+   "path": "a//b",
+   "invalid": true
+  },
+  {
+   "name": "dot segment",
+   "path": "a/./b",
+   "invalid": true
+  },
+  {
+   "name": "parent segment",
+   "path": "a/../b",
+   "invalid": true
+  },
+  {
+   "name": "metadata folder in any case",
+   "path": ".EXCALIDRAW-VAULT/x",
+   "invalid": true
+  }
+ ]
+}

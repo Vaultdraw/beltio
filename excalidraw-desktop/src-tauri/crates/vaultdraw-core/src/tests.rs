@@ -513,3 +513,20 @@ fn a_read_only_note_is_not_replaced() {
     assert_eq!(e.code, "READ_ONLY");
     assert_eq!(fs::read_to_string(&p).unwrap(), "one");
 }
+
+/// The names the native core accepts, one table shared with the browser stand-in
+/// (`contract/name_rules.json`, read by `src/tests/vaultNameRules.test.ts`).
+#[test]
+fn name_rules_match_the_shared_table() {
+    let table: serde_json::Value = serde_json::from_str(include_str!("contract/name_rules.json")).unwrap();
+    let mut wrong = Vec::new();
+    for c in table["cases"].as_array().unwrap() {
+        let path = c["path"].as_str().unwrap();
+        let invalid = c["invalid"].as_bool().unwrap();
+        let got_invalid = crate::paths::validate_relative(path).is_err();
+        if got_invalid != invalid {
+            wrong.push(format!("{}: {:?} native invalid={got_invalid}, table says {invalid}", c["name"], path));
+        }
+    }
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}
