@@ -1752,3 +1752,25 @@ fn every_official_manifest_parses_and_is_compatible() {
     assert!(bad.is_empty(), "{bad:#?}");
     assert!(seen >= 9, "found {seen} official plugins");
 }
+
+/// `vaultdraw-core/src/contract/plugin_compat_cases.json` is read here and by
+/// `sdk/cli/test/pluginCompatContract.test.mjs`: the loader and `vaultdraw-plugin check` agree on
+/// which manifests load (validator, hunter M-4, toimprove 250).
+#[test]
+fn plugin_compat_contract_table() {
+    let table: serde_json::Value =
+        serde_json::from_str(include_str!("../../crates/vaultdraw-core/src/contract/plugin_compat_cases.json")).unwrap();
+    let base = table["base"].as_str().unwrap();
+    let mut failures = Vec::new();
+    for row in table["cases"].as_array().unwrap() {
+        let mut text = format!("{base}api = {}\n", row["api"]);
+        if let Some(min) = row["min_api"].as_str() {
+            text.push_str(&format!("min_api = \"{min}\"\n"));
+        }
+        let loads = manifest::parse(&text).map(|m| manifest::compatibility(&m, "99.0.0").0).unwrap_or(false);
+        if loads != row["loads"].as_bool().unwrap() {
+            failures.push(format!("{}: loads = {loads}", row["label"]));
+        }
+    }
+    assert!(failures.is_empty(), "{failures:#?}");
+}

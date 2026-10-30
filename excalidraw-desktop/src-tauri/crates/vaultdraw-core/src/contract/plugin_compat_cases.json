@@ -1,0 +1,14 @@
+{
+  "about": "Which plugin.toml the app loads (src-tauri/src/plugins/manifest.rs parse + compatibility, plugins::tests::plugin_compat_contract_table) and which ones `vaultdraw-plugin check` reports as an error (sdk/cli/src/manifest.mjs validateManifestText, sdk/cli/test/pluginCompatContract.test.mjs). The check tool is the loader's twin: a plugin it passes must load (validator, hunter M-4, toimprove 250, 2026-10-30 night). `base` is the manifest without its api line; each row adds `api = <api>` and, when set, `min_api`.",
+  "base": "id = \"demo-plugin\"\nname = \"Demo\"\nversion = \"1.0.0\"\nmain = \"main.js\"\n",
+  "cases": [
+    { "label": "API level 1", "api": 1, "loads": true },
+    { "label": "legacy level 0 still loads", "api": 0, "loads": true },
+    { "label": "unknown level 2", "api": 2, "loads": false },
+    { "label": "min_api equal to the revision", "api": 1, "min_api": "1.0.0", "loads": true },
+    { "label": "min_api older than the revision", "api": 1, "min_api": "0.9.0", "loads": true },
+    { "label": "min_api one patch newer", "api": 1, "min_api": "1.0.1", "loads": false, "check_known": "toimprove 250" },
+    { "label": "min_api a minor newer", "api": 1, "min_api": "1.5.0", "loads": false, "check_known": "toimprove 250" },
+    { "label": "min_api a major newer", "api": 1, "min_api": "2.0.0", "loads": false, "check_known": "toimprove 250" }
+  ]
+}
