@@ -600,6 +600,16 @@
             "off"
           ]
         },
+        "canvas_indicator": {
+          "description": "How a linked element is marked on the canvas: `underline`, `icon` or `both`.",
+          "default": "underline",
+          "type": "string",
+          "enum": [
+            "underline",
+            "icon",
+            "both"
+          ]
+        },
         "start": {
           "description": "When the link index starts: `open` (vault open), `idle` (once the app is idle) or `use` (first links action). Starting links also starts search. See [Startup](#startup).",
           "default": "idle",

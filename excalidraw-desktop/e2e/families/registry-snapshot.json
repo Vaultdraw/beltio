@@ -4953,6 +4953,13 @@
    "section": null
   },
   {
+   "id": "link-canvas-indicator",
+   "page": "links",
+   "label": "Link marker on the canvas",
+   "configKey": "links.canvas_indicator",
+   "section": null
+  },
+  {
    "id": "tags-autocomplete",
    "page": "links",
    "label": "Tag suggestions",
