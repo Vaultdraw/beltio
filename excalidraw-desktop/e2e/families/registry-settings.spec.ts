@@ -199,6 +199,11 @@ test("every setting: changed through Settings, saved, reset", async ({
           add("Reset did not put the config layer back");
         }
       }
+      // A question that opens later than the 200 ms above (slow machine): answer it now.
+      if (!(await dlg.isVisible()) && (await other.count())) {
+        await page.keyboard.press("Escape");
+        await page.waitForTimeout(300);
+      }
       if (!(await dlg.isVisible())) {
         add("the Settings window closed by itself");
         break;
