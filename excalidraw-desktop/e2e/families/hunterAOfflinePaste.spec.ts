@@ -160,7 +160,7 @@ test("spreadsheet cells pasted while Offline mode is on still offer a table", as
 });
 
 // A-10: copying a part of a web page (words and a picture) and pasting it keeps only the picture;
-// the words are dropped, online as well as offline. Obsidian keeps both. Remove fixme to reproduce.
+// the words were dropped, online as well as offline. Obsidian keeps both (fixed: page order kept).
 test("A-10: pasting rich text with a web picture keeps the words", async ({
   page,
 }) => {
