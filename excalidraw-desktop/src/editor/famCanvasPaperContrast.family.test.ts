@@ -78,7 +78,7 @@ for (const paper of ["normal", "oldSchool"] as const) {
             mode,
             key: `${entry.id ?? entry.theme!.id}-${mode}`,
           });
-          setPageDisplay("identity");
+          setPageDisplay("identity", background);
           const resolve = resolvers[resolvers.length - 1];
           expect(resolve, "the editor installs a role resolver").toBeTruthy();
           for (const role of ROLES) {
@@ -97,11 +97,6 @@ for (const paper of ["normal", "oldSchool"] as const) {
       }
       expect(low, `${low.length} role colours under ${MIN}:1`).toEqual([]);
     };
-    (paper === "oldSchool" ? it.fails : it)(
-      paper === "oldSchool"
-        ? "every built-in theme and mode (toimprove 312)"
-        : "every built-in theme and mode",
-      run,
-    );
+    it("every built-in theme and mode (toimprove 312)", run);
   });
 }

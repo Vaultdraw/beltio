@@ -102,7 +102,9 @@ const applyRoleColors = () => {
   const display = effectiveDisplay();
   setDisplayTextRoleColor(
     roleResolver(
-      pageDisplay === "identity" ? STANDARD_CANVAS : display?.canvas ?? null,
+      pageDisplay === "identity"
+        ? pagePaper ?? STANDARD_CANVAS
+        : display?.canvas ?? null,
     ),
   );
 };
@@ -123,6 +125,9 @@ let suspended = 0;
 // UI); "match" = the theme transform + surface, whatever the toggle says.
 export type PageDisplay = "identity" | "match";
 let pageDisplay: PageDisplay | null = null;
+// The paper drawn under an "identity" page (Old school is cream): role colours keep their
+// contrast against it, not against white (toimprove 312).
+let pagePaper: string | null = null;
 let themeSource: SyncSource | null = null;
 const identityTransform: Transform = (color) => color;
 const repainters = new Set<() => void>();
@@ -179,11 +184,17 @@ export const setCanvasThemeSource = (source: SyncSource | null): void => {
 };
 
 /** Page mode's display override (null = page mode off: today's behaviour). Returns true when it changed. */
-export const setPageDisplay = (display: PageDisplay | null): boolean => {
-  if (display === pageDisplay) {
+export const setPageDisplay = (
+  display: PageDisplay | null,
+  /** The paper colour of an "identity" page (role colours read against it). */
+  paper: string | null = null,
+): boolean => {
+  const nextPaper = display === "identity" ? paper : null;
+  if (display === pageDisplay && nextPaper === pagePaper) {
     return false;
   }
   pageDisplay = display;
+  pagePaper = nextPaper;
   if (suspended === 0) {
     applyDisplay();
   }
@@ -263,6 +274,7 @@ export const resetCanvasSync = () => {
   currentCanvas = null;
   suspended = 0;
   pageDisplay = null;
+  pagePaper = null;
   themeSource = null;
   built = null;
   roleColorFor = null;

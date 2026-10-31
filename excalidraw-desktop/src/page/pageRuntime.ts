@@ -15,6 +15,7 @@ import { arrayToMap } from "@excalidraw/common";
 import { CaptureUpdateAction } from "@excalidraw/excalidraw";
 import {
   isPageModeOn,
+  PAPER_THEME_COLORS,
   pageSetupKey,
 } from "@excalidraw/excalidraw/data/pageSetup";
 
@@ -162,6 +163,7 @@ export class PageRuntime {
           ? "match"
           : "identity"
         : null,
+      setup ? PAPER_THEME_COLORS[setup.paperTheme].background : null,
     );
     const geometry = geometryKey(setup);
     if (on && (!this.wasOn || geometry !== this.geometry)) {
