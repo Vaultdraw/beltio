@@ -692,7 +692,7 @@ export function createMarkdownTyping(deps: {
         } else if (mod && e.key.toLowerCase() === "z") {
           handled = undo();
         } else if (
-          (e.key === "*" || e.key === "`") &&
+          (e.key === "*" || e.key === "_" || e.key === "`") &&
           !e.metaKey &&
           !e.ctrlKey &&
           !e.altKey

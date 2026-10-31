@@ -221,17 +221,19 @@ const code = (text: string): Want => ({ text, font: CODE_FONT });
 const ROWS: Row[] = [
   { kind: "free text", mark: "**Bold**", want: bold("Bold") },
   { kind: "free text", mark: "`code`", want: code("code") },
-  { kind: "free text", mark: "__Bold__", want: bold("Bold"), broken: 300 },
-  { kind: "free text", mark: "**a * b**", want: bold("a * b"), broken: 300 },
+  { kind: "free text", mark: "__Bold__", want: bold("Bold") },
+  { kind: "free text", mark: "**a * b**", want: bold("a * b") },
   { kind: "heading", mark: "**Bold**", want: bold("Bold") },
-  { kind: "heading", mark: "__Bold__", want: bold("Bold"), broken: 300 },
+  { kind: "heading", mark: "__Bold__", want: bold("Bold") },
   { kind: "quote", mark: "**Bold**", want: bold("Bold") },
   { kind: "quote", mark: "`code`", want: code("code") },
-  { kind: "quote", mark: "__Bold__", want: bold("Bold"), broken: 300 },
+  { kind: "quote", mark: "__Bold__", want: bold("Bold") },
   { kind: "shape label", mark: "**Bold**", want: bold("Bold") },
   { kind: "shape label", mark: "`code`", want: code("code") },
-  { kind: "shape label", mark: "__Bold__", want: bold("Bold"), broken: 300 },
-  // a one-item list: the marks stay in the text and nothing is bold or code
+  { kind: "shape label", mark: "__Bold__", want: bold("Bold") },
+  // a one-item list: the marks stay in the text and nothing is bold or code. Marks inside a
+  // list item (and words inside a line) are the owner's open "inline step 2" decision: these
+  // rows stay it.fails until it is made (one font per box today).
   { kind: "bullet item", mark: "**Bold**", want: "literal", broken: 300 },
   { kind: "task item", mark: "**Bold**", want: "literal", broken: 300 },
   { kind: "numbered item", mark: "**Bold**", want: "literal", broken: 300 },

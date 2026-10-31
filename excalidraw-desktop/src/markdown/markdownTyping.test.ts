@@ -766,7 +766,10 @@ describe("Markdown typing: inline marks of a whole box", () => {
     ["one star (italic start)", "*it*", "*it*"],
     ["text before the marks", "a **b**", "a **b**"],
     ["a space inside", "** b **", "** b **"],
-    ["nested marks", "**a*b**", "**a*b**"],
+    // (a lone `*` inside is text and the box turns bold: `**a*b**`, CommonMark, toimprove 300)
+    ["three stars", "***", "***"],
+    ["snake_case words (underscores)", "snake_case_name_", "snake_case_name_"],
+    ["one underscore pair (italic start)", "_it_", "_it_"],
     ["empty", "****", "****"],
     ["a code fence", "```", "```"],
     ["a space after the backtick", "` x`", "` x`"],
