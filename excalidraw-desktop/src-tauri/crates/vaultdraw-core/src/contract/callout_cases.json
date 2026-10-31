@@ -1,0 +1,193 @@
+{
+ "about": "Which text is a callout (family: twin parsers, hunter [notes] 2026-10-31). `callouts` are the expected [type, fold] pairs in order (Obsidian). The reading view (src/notes/calloutContract.test.ts) and the native parser (tests/callout_contract.rs) run these rows. `drift` marks a side that disagrees today.",
+ "cases": [
+  {
+   "label": "plain",
+   "text": "> [!note]\n> body",
+   "callouts": [
+    [
+     "note",
+     "none"
+    ]
+   ]
+  },
+  {
+   "label": "upper-case type and title",
+   "text": "> [!NOTE] Title\n> body",
+   "callouts": [
+    [
+     "note",
+     "none"
+    ]
+   ]
+  },
+  {
+   "label": "fold open",
+   "text": "> [!note]+ T\n> body",
+   "callouts": [
+    [
+     "note",
+     "open"
+    ]
+   ]
+  },
+  {
+   "label": "fold closed",
+   "text": "> [!note]- T\n> body",
+   "callouts": [
+    [
+     "note",
+     "closed"
+    ]
+   ]
+  },
+  {
+   "label": "no space after the quote mark",
+   "text": ">[!note] T\n>body",
+   "callouts": [
+    [
+     "note",
+     "none"
+    ]
+   ]
+  },
+  {
+   "label": "underscore and dash in the type",
+   "text": "> [!my_type-2]\n> x",
+   "callouts": [
+    [
+     "my_type-2",
+     "none"
+    ]
+   ]
+  },
+  {
+   "label": "space inside the brackets",
+   "text": "> [! note]\n> x",
+   "callouts": []
+  },
+  {
+   "label": "empty type",
+   "text": "> [!]\n> x",
+   "callouts": []
+  },
+  {
+   "label": "not in a quote",
+   "text": "[!note]\nbody",
+   "callouts": []
+  },
+  {
+   "label": "nested callouts",
+   "text": "> [!a]\n> > [!b]\n> > x",
+   "callouts": [
+    [
+     "a",
+     "none"
+    ],
+    [
+     "b",
+     "none"
+    ]
+   ]
+  },
+  {
+   "label": "in a list item",
+   "text": "- item\n\n  > [!tip] x\n  > y",
+   "callouts": [
+    [
+     "tip",
+     "none"
+    ]
+   ]
+  },
+  {
+   "label": "second line of a quote",
+   "text": "> text\n> [!note]",
+   "callouts": []
+  },
+  {
+   "label": "blank first line of a quote",
+   "text": ">\n> [!note]\n> x",
+   "callouts": []
+  },
+  {
+   "label": "closed with a blank line",
+   "text": "> [!note]-\n>\n> body",
+   "callouts": [
+    [
+     "note",
+     "closed"
+    ]
+   ]
+  },
+  {
+   "label": "head only",
+   "text": "> [!note]",
+   "callouts": [
+    [
+     "note",
+     "none"
+    ]
+   ]
+  },
+  {
+   "label": "space before the closing bracket",
+   "text": "> [!note ]\n> x",
+   "callouts": []
+  },
+  {
+   "label": "non-ASCII type",
+   "text": "> [!ñote]\n> x",
+   "callouts": []
+  },
+  {
+   "label": "CRLF line ends",
+   "text": "> [!note]\r\n> body",
+   "callouts": [
+    [
+     "note",
+     "none"
+    ]
+   ]
+  },
+  {
+   "label": "lazy continuation line",
+   "text": "> [!note] T\nlazy line",
+   "callouts": [
+    [
+     "note",
+     "none"
+    ]
+   ]
+  },
+  {
+   "label": "two callouts in a row",
+   "text": "> [!a]\n> x\n\n> [!b]\n> y",
+   "callouts": [
+    [
+     "a",
+     "none"
+    ],
+    [
+     "b",
+     "none"
+    ]
+   ]
+  },
+  {
+   "label": "callout inside a code fence",
+   "text": "```\n> [!note]\n> x\n```",
+   "callouts": []
+  },
+  {
+   "label": "digits only type",
+   "text": "> [!123]\n> x",
+   "callouts": [
+    [
+     "123",
+     "none"
+    ]
+   ]
+  }
+ ]
+}
