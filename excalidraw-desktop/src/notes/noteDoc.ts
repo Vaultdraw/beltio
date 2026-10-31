@@ -12,9 +12,9 @@ import {
   loadTauriInvoke,
 } from "../vault/DesktopVaultRepository";
 
-import type { NoteDoc } from "../plugins/api";
-
 import { readFrontmatter } from "./standInFrontmatter";
+
+import type { NoteDoc } from "../plugins/api";
 
 /** The reading view's rule (render/obsidian.ts FRONTMATTER), one case table pins both. */
 const FRONT =
