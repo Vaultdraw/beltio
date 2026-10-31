@@ -98,28 +98,23 @@ test.describe(
       };
       // `..`: the fake words it in jargon (toimprove 317); the Mac user reads the native words.
       const title = `${label}: refused in plain words, nothing created, edits kept`;
-      if (label === "a parent folder") {
-        test.fail(title, run);
-      } else {
-        test(title, run);
-      }
+      test(title, run);
     }
 
     // toimprove 318: the dialog refuses it instead of adding the extension like the New dialog.
-    test.fail(
-      "a name typed without the extension becomes a drawing the tree shows",
-      async ({ page }) => {
-        const { dialog, field } = await toCopyField(page);
-        await field.fill("DSA/My kept edits");
-        await dialog
-          .getByRole("button", { name: "Save a copy and continue" })
-          .click();
-        await expect(
-          page.getByRole("dialog", { name: /conflict/i }),
-        ).toHaveCount(0);
-        await expect(row(page, "DSA/My kept edits.excalidraw")).toBeVisible();
-        expect(await exists(page, "DSA/My kept edits")).toBe(false);
-      },
-    );
+    test("a name typed without the extension becomes a drawing the tree shows", async ({
+      page,
+    }) => {
+      const { dialog, field } = await toCopyField(page);
+      await field.fill("DSA/My kept edits");
+      await dialog
+        .getByRole("button", { name: "Save a copy and continue" })
+        .click();
+      await expect(page.getByRole("dialog", { name: /conflict/i })).toHaveCount(
+        0,
+      );
+      await expect(row(page, "DSA/My kept edits.excalidraw")).toBeVisible();
+      expect(await exists(page, "DSA/My kept edits")).toBe(false);
+    });
   },
 );

@@ -51,29 +51,26 @@ export function assertValidRelativePath(path: string): void {
   if (path === "") {
     return; // vault root
   }
-  if (path.startsWith("/") || path.startsWith("\\")) {
-    throw makeError("INVALID_PATH", `absolute path rejected: ${path}`);
-  }
-  if (path.includes("\\")) {
-    throw makeError("INVALID_PATH", `backslash separator rejected: ${path}`);
-  }
-  if (new TextEncoder().encode(path).length > 4096) {
-    // The native core's MAX_REL_PATH_BYTES.
+  // The native core's checks and words, in its order (`paths.rs validate_relative` and
+  // `component_problem`), so a spec reads what the user reads (toimprove 317).
+  if (
+    path.startsWith("/") ||
+    path.includes("\\") ||
+    path.includes("\0") ||
+    new TextEncoder().encode(path).length > 4096 // MAX_REL_PATH_BYTES
+  ) {
     throw makeError(
       "INVALID_PATH",
       "Path must be a bounded vault-relative path using forward slashes",
     );
   }
-  if (path === "." || path === "..") {
-    throw makeError("INVALID_PATH", `reserved path rejected: ${path}`);
-  }
   const segments = path.split("/");
   for (const seg of segments) {
-    if (seg === "" || seg === "." || seg === "..") {
-      throw makeError(
-        "INVALID_PATH",
-        `traversal/empty segment rejected: ${path}`,
-      );
+    if (seg === "") {
+      throw makeError("INVALID_PATH", "A name cannot be empty");
+    }
+    if (seg === "." || seg === "..") {
+      throw makeError("INVALID_PATH", "A name cannot be only dots");
     }
     // The native core's naming rules and words (shared table: contract/name_rules.json).
     const problem = nameProblem(seg);

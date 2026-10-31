@@ -35,7 +35,7 @@ describe("family (twins): the fake refuses in the native core's words", () => {
     expect(await messageOf("a?b")).toContain("is not allowed in a name");
   });
   for (const [label, path, native] of ROWS) {
-    it.fails(`${label}: says "${native}" (toimprove 317)`, async () => {
+    it(`${label}: says "${native}" (toimprove 317)`, async () => {
       expect(await messageOf(path)).toContain(native);
     });
   }
