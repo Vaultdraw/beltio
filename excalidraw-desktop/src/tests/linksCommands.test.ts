@@ -45,10 +45,10 @@ const EXPECTED: Record<string, { title: string; keys: string[] }> = {
     title: "Links: Toggle backlinks panel",
     keys: ["Mod+Alt+B"],
   },
-  "links.back": { title: "Links: Go back", keys: ["Mod+Alt+ArrowLeft"] },
+  "links.back": { title: "Links: Go back", keys: ["Alt+ArrowLeft"] },
   "links.forward": {
     title: "Links: Go forward",
-    keys: ["Mod+Alt+ArrowRight"],
+    keys: ["Alt+ArrowRight"],
   },
   "links.copyLinkToDrawing": {
     title: "Links: Copy link to this drawing",
@@ -85,6 +85,13 @@ describe("Links commands", () => {
       "!textEditing",
       "!modalOpen",
       "drawingOpen",
+    ]);
+  });
+
+  it("back and forward: Alt+arrows on Linux and Windows, Cmd+Option+arrows on macOS (toimprove 321)", () => {
+    expect(getCommand("links.back")!.keys.mac).toEqual(["Mod+Alt+ArrowLeft"]);
+    expect(getCommand("links.forward")!.keys.mac).toEqual([
+      "Mod+Alt+ArrowRight",
     ]);
   });
 

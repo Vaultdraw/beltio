@@ -30,6 +30,27 @@ const OTHER_ONLY: ReadonlyMap<Chord, string> = new Map([
   ["Mod+Alt+Delete", "the system security screen uses this key"],
 ]);
 
+/**
+ * Keys the common Linux desktops take by default (GNOME `switch-to-workspace-*` and lock screen,
+ * Xfce and Cinnamon workspaces and terminal, the window menu). Not every desktop does, so the
+ * Hotkeys page warns but does not refuse (toimprove 321).
+ */
+const LINUX_DESKTOP: ReadonlyMap<Chord, string> = new Map(
+  [
+    ["Mod+Alt+ArrowLeft", "switch workspaces"],
+    ["Mod+Alt+ArrowRight", "switch workspaces"],
+    ["Mod+Alt+ArrowUp", "switch workspaces"],
+    ["Mod+Alt+ArrowDown", "switch workspaces"],
+    ["Mod+Alt+T", "open a terminal"],
+    ["Mod+Alt+L", "lock the screen"],
+    ["Alt+Space", "open the window menu"],
+    ["Alt+Escape", "cycle windows"],
+  ].map(([chord, what]) => [
+    chord,
+    `many Linux desktops (GNOME, Xfce, Cinnamon) ${what} with this key, so it may never reach Vaultdraw`,
+  ]),
+);
+
 const TEXT_FIELD: ReadonlyMap<Chord, string> = new Map(
   [
     ["Mod+C", "copy"],
@@ -65,6 +86,11 @@ export function reservedInfo(
           : undefined);
   if (system) {
     return { reason: system, blocked: true };
+  }
+  const desktop =
+    platform === "linux" ? LINUX_DESKTOP.get(normalized) : undefined;
+  if (desktop) {
+    return { reason: desktop, blocked: false };
   }
   const text = TEXT_FIELD.get(normalized);
   return text ? { reason: text, blocked: false } : null;

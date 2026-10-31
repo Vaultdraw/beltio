@@ -17,6 +17,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Linux: link history Back and Forward are Alt+← and Alt+→.** Ctrl+Alt+← and Ctrl+Alt+→ switch workspaces on GNOME, Xfce and Cinnamon, so the keys never reached Vaultdraw. macOS keeps ⌥⌘← and ⌥⌘→. The Hotkeys page now warns when you bind a key these desktops take (toimprove 321).
 - **Every failure notice is an error notice.** A message such as "Couldn't save." (a note that failed to save), "Couldn't tick that task", a sync conflict failure or a plugin's "Could not …" was an info notice that left after 5 seconds; it now stays as long as **Error notices stay for** says and looks like an error. The rule lives in the notice queue, so new messages follow it too (toimprove 323).
 - **Page mode: Enter under a heading near the bottom of a page moves the paragraph to the next page.** When the new paragraph started just below the page edge, it was pulled up over the heading; it now starts at the top of the next page.
 - **A colour set on a heading by a plugin or `vaultdraw scene update` shows.** Black set this way stayed hidden under the theme's heading colour; it now wins, as a colour picked in the colour panel does.

@@ -229,14 +229,16 @@ const LINKS_COMMANDS: CommandDefinition[] = [
     id: "links.back",
     title: "Links: Go back",
     category: "Links",
-    keys: { default: ["Mod+Alt+ArrowLeft"] },
+    // Linux and Windows: Alt+Left like browsers; Ctrl+Alt+Left switches workspaces on GNOME,
+    // Xfce and Cinnamon (toimprove 321). macOS keeps Cmd+Option+Left, like Obsidian.
+    keys: { default: ["Alt+ArrowLeft"], mac: ["Mod+Alt+ArrowLeft"] },
     when: ["vaultOpen", "!modalOpen"],
   },
   {
     id: "links.forward",
     title: "Links: Go forward",
     category: "Links",
-    keys: { default: ["Mod+Alt+ArrowRight"] },
+    keys: { default: ["Alt+ArrowRight"], mac: ["Mod+Alt+ArrowRight"] },
     when: ["vaultOpen", "!modalOpen"],
   },
   {

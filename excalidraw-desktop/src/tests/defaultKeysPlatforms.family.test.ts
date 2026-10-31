@@ -50,23 +50,17 @@ describe("family (linux): default keys reach their command on every platform", (
     "Alt+Escape",
   ];
 
-  it.fails(
-    "linux: no default chord is a key the common desktops take (toimprove 321)",
-    () => {
-      const taken = chordsOf("linux")
-        .filter(({ chord }) => LINUX_DESKTOP_KEYS.includes(chord))
-        .map(({ id, chord }) => `${id} ${chord}`);
-      expect(taken).toEqual([]);
-    },
-  );
+  it("linux: no default chord is a key the common desktops take (toimprove 321)", () => {
+    const taken = chordsOf("linux")
+      .filter(({ chord }) => LINUX_DESKTOP_KEYS.includes(chord))
+      .map(({ id, chord }) => `${id} ${chord}`);
+    expect(taken).toEqual([]);
+  });
 
-  it.fails(
-    "linux: the Hotkeys page warns when a user binds a key the common desktops take (toimprove 321)",
-    () => {
-      const unwarned = LINUX_DESKTOP_KEYS.filter(
-        (chord) => !reservedInfo(chord, "linux"),
-      );
-      expect(unwarned).toEqual([]);
-    },
-  );
+  it("linux: the Hotkeys page warns when a user binds a key the common desktops take (toimprove 321)", () => {
+    const unwarned = LINUX_DESKTOP_KEYS.filter(
+      (chord) => !reservedInfo(chord, "linux"),
+    );
+    expect(unwarned).toEqual([]);
+  });
 });
