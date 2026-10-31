@@ -148,3 +148,40 @@ describe("the note view survives a hostile note", () => {
     window.removeEventListener("error", swallow);
   });
 });
+
+describe("the note view's error boundary (toimprove 296)", () => {
+  afterEach(() => {
+    cleanup();
+    setNoteFiles(null);
+  });
+  it("shows a plain message when drawing throws, and Open as text opens the editor", async () => {
+    const swallow = (e: ErrorEvent) => e.preventDefault();
+    window.addEventListener("error", swallow);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const files = new FakeNoteFiles();
+    files.setOnDisk("n.md", "# Title\n\nbody");
+    setNoteFiles(files);
+    let boom = true;
+    render(
+      <NoteView
+        path="n.md"
+        openPath={() => undefined}
+        vault={{
+          handle: "h",
+          paths: () => {
+            if (boom) {
+              throw new Error("boom");
+            }
+            return ["n.md"];
+          },
+        }}
+      />,
+    );
+    const err = await screen.findByTestId("note-error");
+    expect(err.textContent).toContain("This note couldn't be displayed");
+    boom = false;
+    window.removeEventListener("error", swallow);
+    screen.getByRole("button", { name: "Open as text" }).click();
+    expect(await screen.findByLabelText("Show reading view")).toBeTruthy();
+  });
+});

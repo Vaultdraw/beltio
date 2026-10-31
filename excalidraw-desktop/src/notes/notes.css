@@ -358,3 +358,11 @@ details.callout > summary {
     background: transparent;
   }
 }
+.note-error {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--text-muted, inherit);
+}

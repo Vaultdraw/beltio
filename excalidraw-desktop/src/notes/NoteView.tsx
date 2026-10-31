@@ -9,6 +9,8 @@
  * user's say (NoteSaver).
  */
 import {
+  Component,
+  type ErrorInfo,
   lazy,
   Suspense,
   useCallback,
@@ -150,7 +152,13 @@ const enableEmbeddedTasks = (root: HTMLElement, hostPath: string): void => {
   }
 };
 
-const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
+const NoteViewInner = ({
+  path,
+  openPath,
+  openSearch,
+  vault,
+  startEditing,
+}: TabKindViewProps & { startEditing?: boolean }) => {
   const prefs = usePrefs();
   // Web pictures: the notes switch, Offline mode and the web-pictures switch all have to allow it.
   const remoteImages =
@@ -159,7 +167,9 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
     prefs.networkAllowImages !== false;
   const [loaded, setLoaded] = useState<Loaded>(null);
   const [text, setText] = useState("");
-  const [mode, setMode] = useState<Mode>(prefs.notesOpenIn);
+  const [mode, setMode] = useState<Mode>(
+    startEditing ? "editing" : prefs.notesOpenIn,
+  );
   const [status, setStatus] = useState<{ s: SaveStatus; message?: string }>({
     s: "saved",
   });
@@ -791,5 +801,56 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
     </div>
   );
 };
+
+/**
+ * Nothing a note says may take the window down: a throw while drawing it shows a plain message
+ * with "Open as text" (the editor, which draws no Markdown). Toimprove 296.
+ */
+class NoteBoundary extends Component<
+  TabKindViewProps,
+  { failed: boolean; asText: boolean }
+> {
+  state = { failed: false, asText: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error(
+      `note "${this.props.path}" could not be displayed:`,
+      error,
+      info,
+    );
+  }
+
+  componentDidUpdate(prev: TabKindViewProps) {
+    if (prev.path !== this.props.path && this.state.failed) {
+      this.setState({ failed: false, asText: false });
+    }
+  }
+
+  render() {
+    if (!this.state.failed) {
+      return <NoteViewInner {...this.props} startEditing={this.state.asText} />;
+    }
+    return (
+      <div className="note-error" role="alert" data-testid="note-error">
+        <p>This note couldn&apos;t be displayed.</p>
+        {!this.state.asText && (
+          <button
+            type="button"
+            className="vault-btn vault-btn--ghost vault-btn--sm"
+            onClick={() => this.setState({ failed: false, asText: true })}
+          >
+            Open as text
+          </button>
+        )}
+      </div>
+    );
+  }
+}
+
+const NoteView = (props: TabKindViewProps) => <NoteBoundary {...props} />;
 
 export default NoteView;
