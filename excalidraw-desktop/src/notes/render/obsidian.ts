@@ -543,6 +543,118 @@ const FRONTMATTER =
 export const stripFrontmatter = (text: string): string =>
   text.replace(FRONTMATTER, "");
 
+/** Lines per part when a note is read in parts (see `byParts`). */
+const PART_LINES = 400;
+const FENCE_LINE = /^ {0,3}(```|~~~)/;
+const QUOTE_LINE = /^ {0,3}>/;
+/** 100 quote marks at the start of a line: deeper than any real note, and near the library's limit. */
+const DEEP_QUOTE = /^(?: {0,3}>){100}/m;
+
+/**
+ * `body` cut into parts at blank lines outside code fences, each about `size` lines; a longer
+ * quote is also cut between two of its lines (other blocks, like a table, never are).
+ * The parts joined give `body` back.
+ */
+export function noteParts(body: string, size = PART_LINES): string[] {
+  const lines = body.split("\n");
+  const parts: string[] = [];
+  let start = 0;
+  let lastBlank = -1;
+  let fence: string | null = null;
+  const cut = (end: number) => {
+    parts.push(
+      lines.slice(start, end).join("\n") + (end < lines.length ? "\n" : ""),
+    );
+    start = end;
+    lastBlank = -1;
+  };
+  for (let i = 0; i < lines.length; i++) {
+    const f = FENCE_LINE.exec(lines[i]);
+    if (f) {
+      fence = fence === null ? f[1] : fence === f[1] ? null : fence;
+    } else if (fence === null && lines[i].trim() === "") {
+      lastBlank = i;
+    }
+    if (i + 1 - start < size || i + 1 >= lines.length) {
+      continue;
+    }
+    if (lastBlank > start) {
+      cut(lastBlank + 1);
+    } else if (
+      fence === null &&
+      QUOTE_LINE.test(lines[i]) &&
+      QUOTE_LINE.test(lines[i + 1])
+    ) {
+      cut(i + 1);
+    }
+  }
+  if (start < lines.length) {
+    cut(lines.length);
+  }
+  return parts;
+}
+
+/**
+ * True when the Markdown library would recurse too deep or take time growing with the square of
+ * the quote: a line with 100 quote marks, or one quote longer than `PART_LINES` lines with no
+ * blank line (a pasted mail thread). Such a note is read in parts from the start.
+ */
+const needsParts = (body: string): boolean => {
+  if (DEEP_QUOTE.test(body)) {
+    return true;
+  }
+  let run = 0;
+  let at = 0;
+  while (at <= body.length) {
+    const nl = body.indexOf("\n", at);
+    const end = nl < 0 ? body.length : nl;
+    run = QUOTE_LINE.test(body.slice(at, Math.min(end, at + 4))) ? run + 1 : 0;
+    if (run > PART_LINES) {
+      return true;
+    }
+    if (nl < 0) {
+      break;
+    }
+    at = nl + 1;
+  }
+  return false;
+};
+
+/**
+ * Runs `run` on the whole note. A note the Markdown library cannot read in one go (nested deeper
+ * than its recursion can go, or a quote so long it would freeze the window; toimprove 296) is
+ * read in parts instead, and a part that still throws goes to `fallback`. A note never breaks
+ * the reading view; only a part the library cannot read loses its formatting.
+ */
+function byParts<T>(
+  body: string,
+  run: (part: string) => T,
+  fallback: (part: string) => T,
+  restart: () => void = () => {},
+): T[] {
+  if (!needsParts(body)) {
+    try {
+      return [run(body)];
+    } catch {
+      restart();
+    }
+  }
+  // A part that still throws is read block by block; only a block that throws alone falls back.
+  return noteParts(body).flatMap((part) => {
+    try {
+      return [run(part)];
+    } catch {
+      return noteParts(part, 1).map((block) => {
+        try {
+          return run(block);
+        } catch {
+          return fallback(block);
+        }
+      });
+    }
+  });
+}
+
 /**
  * The block tokens the reading view renders for `text` (front matter stripped), and how many lines
  * the stripped front matter took. For code that must agree with what the renderer drew, such as
@@ -557,7 +669,15 @@ export function lexNote(
   ctx = { resolve: () => null, highlight: false, math };
   try {
     return {
-      tokens: marked.lexer(body),
+      // A part the library cannot read is one plain paragraph: it draws no checkbox, and the
+      // renderer shows it as plain text (byParts), so both still agree.
+      tokens: byParts(
+        body,
+        (part) => marked.lexer(part),
+        (part): Token[] => [
+          { type: "paragraph", raw: part, text: part, tokens: [] },
+        ],
+      ).flat(),
       skipped: (removed.match(/\n/g) ?? []).length,
     };
   } finally {
@@ -600,10 +720,19 @@ export function renderNoteHtml(text: string, context: RenderContext): string {
   ctx = context;
   notes = { defs: new Map(), order: [] };
   try {
-    const html = marked.parse(stripFrontmatter(text), {
-      async: false,
-      breaks: context.strictLineBreaks !== true,
-    }) as string;
+    const breaks = context.strictLineBreaks !== true;
+    const html = byParts(
+      stripFrontmatter(text),
+      (part) => marked.parse(part, { async: false, breaks }) as string,
+      (part) =>
+        `<p class="note-raw">${esc(part.replace(/\n+$/, "")).replace(
+          /\n/g,
+          "<br>",
+        )}</p>\n`,
+      () => {
+        notes = { defs: new Map(), order: [] };
+      },
+    ).join("");
     return html + footnotesHtml();
   } finally {
     notes = { defs: new Map(), order: [] };
