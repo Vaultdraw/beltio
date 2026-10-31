@@ -214,19 +214,16 @@ const STEPS: Step[] = [
     name: "Enter continues a bullet list",
     setup: (h) => h.type("- a"),
     act: (h) => h.press("Enter"),
-    broken: 301,
   },
   {
     name: "Enter continues a numbered list",
     setup: (h) => h.type("1. a"),
     act: (h) => h.press("Enter"),
-    broken: 301,
   },
   {
     name: "Enter continues a task list",
     setup: (h) => h.type("- [ ] a"),
     act: (h) => h.press("Enter"),
-    broken: 301,
   },
   {
     name: "Enter on an empty item ends the list",
@@ -235,7 +232,6 @@ const STEPS: Step[] = [
       h.press("Enter");
     },
     act: (h) => h.press("Enter"),
-    broken: 301,
   },
   {
     name: "Backspace right after a marker removes the marker",
@@ -244,7 +240,6 @@ const STEPS: Step[] = [
       h.press("Enter");
     },
     act: (h) => h.press("Backspace"),
-    broken: 301,
   },
   {
     name: "Backspace at the start of a heading makes it body text",
@@ -253,7 +248,6 @@ const STEPS: Step[] = [
       h.textarea.setSelectionRange(0, 0);
     },
     act: (h) => h.press("Backspace"),
-    broken: 301,
   },
 ];
 

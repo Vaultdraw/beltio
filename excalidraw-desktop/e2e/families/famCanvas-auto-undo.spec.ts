@@ -44,28 +44,24 @@ const ROWS: Row[] = [
     typed: "- a",
     keys: ["Enter"],
     before: "• a",
-    broken: 301,
   },
   {
     name: "Enter continues a numbered list",
     typed: "1. a",
     keys: ["Enter"],
     before: "1. a",
-    broken: 301,
   },
   {
     name: "Enter on an empty item ends the list",
     typed: "- a",
     keys: ["Enter", "Enter"],
     before: "• a\n• ",
-    broken: 301,
   },
   {
     name: "Cmd+L ticks a task",
     typed: "- [ ] a",
     keys: ["Meta+l"],
     before: "☐ a",
-    broken: 313,
   },
 ];
 

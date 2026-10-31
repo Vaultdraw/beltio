@@ -43,7 +43,12 @@ const toggleTask = (
     "textarea.excalidraw-wysiwyg",
   );
   if (textarea?.isConnected) {
-    toggleTaskInTextarea(textarea);
+    const before = textarea.value;
+    const caret = textarea.selectionStart;
+    if (toggleTaskInTextarea(textarea)) {
+      // One Cmd+Z takes it back (toimprove 313); the typing module is loaded while it edits.
+      void typingModule?.then((m) => m.rememberEditorEdit(before, caret));
+    }
     return;
   }
   if (!api) {

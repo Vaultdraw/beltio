@@ -210,6 +210,16 @@ const belowAnchor = (
 
 /** The open editor session, for the Toggle bold command (null when no text is edited). */
 let activeSession: TextEditorSession | null = null;
+/** Remembers an edit made from outside (a command) in the open session's undo. */
+let recordActive: ((before: string, caretBefore: number) => void) | null = null;
+
+/**
+ * A command changed the text being edited (Markdown: Toggle task); `before` and `caretBefore` are
+ * the text and caret just before. Assigning a text box's value clears its own undo, so the
+ * extension remembers the step and one Cmd+Z takes it back (toimprove 313).
+ */
+export const rememberEditorEdit = (before: string, caretBefore: number) =>
+  recordActive?.(before, caretBefore);
 
 /** "Markdown: Toggle bold" while a text is edited: the whole box, bold <-> regular. Returns false when no text is edited. */
 export const toggleBoldInEditor = (): boolean => {
@@ -436,12 +446,48 @@ export function createMarkdownTyping(deps: {
       });
     };
 
+    /**
+     * An automatic edit of the text (list Enter, marker Backspace): one Cmd+Z takes it back, like
+     * a conversion. `session.setText` clears the text box's own undo (toimprove 301).
+     */
+    const autoEdit = (
+      el: ExcalidrawTextElement,
+      text: string,
+      caret: number,
+    ) => {
+      const before = editable.value;
+      const caretBefore = editable.selectionStart;
+      session.setText(text, caret);
+      lastConversion = {
+        kind: "inPlace",
+        elementId: el.id,
+        after: editable.value,
+        before,
+        caretBefore,
+      };
+    };
+
+    /** The box back to body text; one Cmd+Z gives the heading or quote back (toimprove 301). */
     const toBody = (el: ExcalidrawTextElement) => {
+      // read before restyling: the scene mutates elements in place
+      const style = {
+        fontSize: el.fontSize,
+        fontFamily: el.fontFamily,
+        customData: el.customData,
+      };
       restyle({
         fontSize: bodySizeOf(el),
         fontFamily: regularFontOf(el.fontFamily),
         customData: withRoleAndBody(el.customData, null, undefined, 0),
       });
+      lastConversion = {
+        kind: "inPlace",
+        elementId: el.id,
+        after: editable.value,
+        before: editable.value,
+        caretBefore: editable.selectionStart,
+        style,
+      };
     };
 
     const enter = (): boolean => {
@@ -485,7 +531,8 @@ export function createMarkdownTyping(deps: {
             item.marker,
           );
           const text = `${indent}${marker} `;
-          session.setText(
+          autoEdit(
+            el,
             value.slice(0, start) + text + value.slice(start + item.length),
             start + text.length,
           );
@@ -493,14 +540,16 @@ export function createMarkdownTyping(deps: {
         }
         if (line.length === item.length) {
           // an empty item: Enter ends the list (the marker goes)
-          session.setText(
+          autoEdit(
+            el,
             value.slice(0, start) + value.slice(start + item.length),
             start,
           );
           return true;
         }
         const next = `\n${item.indent}${nextMarker(item.marker)} `;
-        session.setText(
+        autoEdit(
+          el,
           value.slice(0, from) + next + value.slice(to),
           from + next.length,
         );
@@ -537,7 +586,6 @@ export function createMarkdownTyping(deps: {
       if (caret === 0) {
         if (isBoxRole(roleOf(el))) {
           toBody(el);
-          lastConversion = null;
           return true;
         }
         return backToBlock(el);
@@ -546,7 +594,8 @@ export function createMarkdownTyping(deps: {
       const item = listItemOf(value.slice(start, lineEnd(value, caret)));
       if (item && caret === start + item.length) {
         // right after a marker: the marker goes, the text stays
-        session.setText(
+        autoEdit(
+          el,
           value.slice(0, start) + item.indent + value.slice(caret),
           start + item.indent.length,
         );
@@ -589,10 +638,26 @@ export function createMarkdownTyping(deps: {
     pendingContinue = null;
 
     activeSession = session;
+    const record = (before: string, caretBefore: number) => {
+      const el = session.getElement();
+      if (el && editable.value !== before) {
+        lastConversion = {
+          kind: "inPlace",
+          elementId: el.id,
+          after: editable.value,
+          before,
+          caretBefore,
+        };
+      }
+    };
+    recordActive = record;
     return {
       detach: () => {
         if (activeSession === session) {
           activeSession = null;
+        }
+        if (recordActive === record) {
+          recordActive = null;
         }
       },
       onKeyDown: (e) => {
@@ -604,10 +669,19 @@ export function createMarkdownTyping(deps: {
             continuedFrom.delete(mine.id);
           }
         }
-        if (e.isComposing || e.keyCode === 229 || !deps.isOn()) {
+        if (e.isComposing || e.keyCode === 229) {
           return false;
         }
         const mod = (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey;
+        // A remembered step is taken back even with the mode off (Toggle task works off too).
+        if (!deps.isOn()) {
+          const handled = mod && e.key.toLowerCase() === "z" && undo();
+          if (handled) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          return handled;
+        }
         let handled = false;
         if (e.key === " " && isPlainKey(e)) {
           handled = space();
