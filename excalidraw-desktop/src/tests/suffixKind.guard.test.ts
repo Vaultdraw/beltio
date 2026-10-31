@@ -15,7 +15,6 @@ import { describe, expect, it } from "vitest";
  * has; lower the count (or delete the line) when one is fixed.
  */
 const KNOWN: Record<string, { count: number; why: string }> = {
-  "VaultApp.tsx": { count: 1, why: "lower-cased; review when touched" },
   "notes/FakeNoteFiles.ts": {
     count: 2,
     why: "browser stand-in, lower-cased, excludes .excalidraw.md",
