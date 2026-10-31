@@ -10,7 +10,7 @@ import {
   historyKeymap,
   indentWithTab,
 } from "@codemirror/commands";
-import { Compartment, EditorState } from "@codemirror/state";
+import { Compartment, EditorState, StateEffect } from "@codemirror/state";
 import {
   drawSelection,
   EditorView,
@@ -114,6 +114,7 @@ const NoteEditor = (props: NoteEditorProps) => {
   const look = useRef(new Compartment());
   const vimSlot = useRef(new Compartment());
   const silent = useRef(false);
+  const searchKeys = useRef(false);
 
   useEffect(() => {
     const parent = host.current;
@@ -177,11 +178,24 @@ const NoteEditor = (props: NoteEditorProps) => {
         v.focus();
         if (action === "find") {
           // The search panel is its own chunk, loaded on the first Find.
-          void import("@codemirror/search").then(({ openSearchPanel }) => {
-            if (view.current === v) {
+          void import("@codemirror/search").then(
+            ({ openSearchPanel, searchKeymap }) => {
+              if (view.current !== v) {
+                return;
+              }
+              if (!searchKeys.current) {
+                // Escape, Enter, F3 / Mod-G in the panel. Mod-F stays the rebindable
+                // Notes: Find in note command.
+                searchKeys.current = true;
+                v.dispatch({
+                  effects: StateEffect.appendConfig.of(
+                    keymap.of(searchKeymap.filter((b) => b.key !== "Mod-f")),
+                  ),
+                });
+              }
               openSearchPanel(v);
-            }
-          });
+            },
+          );
           return;
         }
         toggleMark(action === "bold" ? "**" : "*")(v);
