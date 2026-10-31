@@ -52,7 +52,11 @@ import { taskLines, toggleTask } from "./noteTasks";
 import { NoteSaver, type SaveStatus } from "./noteSaver";
 import { registerOpenNote } from "./openNotes";
 import { resolveRelativeHref } from "./relativeLink";
-import { NOTES_ACTIVE_KEY, NOTES_COMMAND_IDS as ID } from "./notesCommands";
+import {
+  NOTES_ACTIVE_KEY,
+  NOTES_COMMAND_IDS as ID,
+  NOTES_EDITING_KEY,
+} from "./notesCommands";
 import {
   hydrateEmbeds,
   hydrateMath,
@@ -604,6 +608,10 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
   api.current = { toggleEdit };
   useEffect(() => {
     const off = defineContextKey(NOTES_ACTIVE_KEY, () => true);
+    const offEditing = defineContextKey(
+      NOTES_EDITING_KEY,
+      () => modeRef.current === "editing",
+    );
     const unbind = registerCommandHandlers({
       [ID.toggleEdit]: () => api.current.toggleEdit(),
       [ID.save]: () => void saver.current?.flush(),
@@ -621,10 +629,14 @@ const NoteView = ({ path, openPath, openSearch, vault }: TabKindViewProps) => {
           notesLineNumbers: !cachedPreferences().notesLineNumbers,
         });
       },
+      [ID.bold]: () => editor.current?.run("bold"),
+      [ID.italic]: () => editor.current?.run("italic"),
+      [ID.find]: () => editor.current?.run("find"),
     });
     return () => {
       unbind();
       off();
+      offEditing();
     };
   }, [load]);
 

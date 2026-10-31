@@ -1638,6 +1638,7 @@ Markdown notes (`.md`) open in a tab, in a reading view or an editor. The `notes
 - **Tasks:** click a `- [ ]` checkbox in the reading view to tick it. The line is rewritten through the guarded save (revision checked, so a conflict shows the usual banner). Turn it off with `notes.toggle_tasks`.
 - **Tags:** click a tag chip to search the vault for that tag (`tag:#name`).
 - **Tabs off:** with `tabs.enabled = false` a note opens in the main pane in place of the home screen; opening a drawing brings the editor back.
+- **Lists:** while editing, Enter at the end of a list item, task or quote starts the next one (numbers count up, a task starts unticked); Enter on an empty item ends the list, as in Obsidian.
 - **Vim keys:** `notes.vim` (or **Notes: Toggle Vim keys**) turns on the Vim mode of the editor; `:w` saves.
 
 | Command | Default key | Does |
@@ -1648,6 +1649,9 @@ Markdown notes (`.md`) open in a tab, in a reading view or an editor. The `notes
 | `notes.toggleVim` | | Vim keys on or off |
 | `notes.toggleLineWrap` | | Line wrap on or off |
 | `notes.toggleLineNumbers` | | Line numbers on or off |
+| `notes.bold` | Cmd/Ctrl+B | Bold the selection, or remove its `**` marks (while editing) |
+| `notes.italic` | Cmd/Ctrl+I | Italic the selection, or remove its `*` marks (while editing) |
+| `notes.find` | Cmd/Ctrl+F | Find (and replace) in the note (while editing) |
 
 They are offered only while a note tab is shown. Keys are in [`[notes]`](#notes-1) below.
 

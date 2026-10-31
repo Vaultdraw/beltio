@@ -3829,6 +3829,54 @@
    "palette": true
   },
   {
+   "id": "notes.bold",
+   "title": "Notes: Bold",
+   "category": "Notes",
+   "keys": [
+    "Mod+B"
+   ],
+   "when": [
+    "vaultOpen",
+    "!drawingOpen",
+    "notes.active",
+    "!modalOpen",
+    "notes.editing"
+   ],
+   "palette": true
+  },
+  {
+   "id": "notes.italic",
+   "title": "Notes: Italic",
+   "category": "Notes",
+   "keys": [
+    "Mod+I"
+   ],
+   "when": [
+    "vaultOpen",
+    "!drawingOpen",
+    "notes.active",
+    "!modalOpen",
+    "notes.editing"
+   ],
+   "palette": true
+  },
+  {
+   "id": "notes.find",
+   "title": "Notes: Find in note",
+   "category": "Notes",
+   "keys": [
+    "Mod+F"
+   ],
+   "when": [
+    "vaultOpen",
+    "!drawingOpen",
+    "notes.active",
+    "!modalOpen",
+    "notes.editing"
+   ],
+   "palette": true
+  },
+  {
    "id": "ai.toggle",
    "title": "External AI tools: Toggle AI access",
    "category": "AI",

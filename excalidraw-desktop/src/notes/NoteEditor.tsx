@@ -21,12 +21,18 @@ import {
 import { useEffect, useRef } from "react";
 
 import { markdownSupport } from "./markdownLang";
+import { continueMarkup, toggleMark } from "./noteEditKeys";
+
+/** Editing actions the note commands run (Notes: Bold, Italic, Find in note). */
+export type NoteEditAction = "bold" | "italic" | "find";
 
 export interface NoteEditorHandle {
   getText: () => string;
   /** Replaces the whole text (after a reload) without reporting a change. */
   setText: (text: string) => void;
   focus: () => void;
+  /** Runs an editing action on the editor's selection and focuses it. */
+  run: (action: NoteEditAction) => void;
 }
 
 export interface NoteEditorProps {
@@ -70,6 +76,32 @@ const theme = (fontSize: number) =>
       background: "var(--vault-primary) !important",
       color: "var(--vault-bg) !important",
     },
+    // Find in note (Mod+F): the search panel follows the theme.
+    ".cm-panels": {
+      backgroundColor: "var(--vault-surface)",
+      color: "var(--vault-text)",
+    },
+    ".cm-panels.cm-panels-bottom": {
+      borderTop: "1px solid var(--vault-border)",
+    },
+    ".cm-panels.cm-panels-top": {
+      borderBottom: "1px solid var(--vault-border)",
+    },
+    ".cm-textfield, .cm-button": {
+      color: "var(--vault-text)",
+      backgroundColor: "var(--vault-bg)",
+      backgroundImage: "none",
+      border: "1px solid var(--vault-border)",
+      borderRadius: "4px",
+    },
+    ".cm-textfield:focus-visible, .cm-button:focus-visible": {
+      outline: "2px solid var(--vault-primary)",
+    },
+    ".cm-panel.cm-search label": { fontSize: "inherit" },
+    ".cm-searchMatch": { backgroundColor: "var(--vault-sel)" },
+    ".cm-searchMatch.cm-searchMatch-selected": {
+      backgroundColor: "var(--vault-primary-light)",
+    },
   });
 
 const NoteEditor = (props: NoteEditorProps) => {
@@ -106,6 +138,8 @@ const NoteEditor = (props: NoteEditorProps) => {
               return true;
             },
           },
+          // Obsidian: Enter continues a list, task or quote; an empty item ends it.
+          { key: "Enter", run: continueMarkup },
           indentWithTab,
           ...defaultKeymap,
           ...historyKeymap,
@@ -139,6 +173,19 @@ const NoteEditor = (props: NoteEditorProps) => {
         }
       },
       focus: () => v.focus(),
+      run: (action) => {
+        v.focus();
+        if (action === "find") {
+          // The search panel is its own chunk, loaded on the first Find.
+          void import("@codemirror/search").then(({ openSearchPanel }) => {
+            if (view.current === v) {
+              openSearchPanel(v);
+            }
+          });
+          return;
+        }
+        toggleMark(action === "bold" ? "**" : "*")(v);
+      },
     });
     return () => {
       live.current.onReady(null);

@@ -10,13 +10,19 @@
  * - Cmd+F does nothing (Obsidian: find in the note; Neovim `/` only with Vim keys on).
  * Each row presses the key through the editor's own keymap (runScopeHandlers; jsdom is not a
  * Mac, so Mod is Ctrl here).
+ * Fixed (toimprove 280): Enter is in the editor's keymap; Cmd+B / Cmd+I / Cmd+F are the
+ * rebindable commands Notes: Bold / Italic / Find in note, which run the editor handle's
+ * actions (the window dispatcher claims the key before CodeMirror sees it).
  */
 import { cleanup, render } from "@testing-library/react";
 import { EditorSelection } from "@codemirror/state";
 import { EditorView, runScopeHandlers } from "@codemirror/view";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import NoteEditor from "./NoteEditor";
+import { NOTES_COMMANDS } from "./notesCommands";
+
+import type { NoteEditorHandle } from "./NoteEditor";
 
 Range.prototype.getClientRects = (() => ({
   length: 0,
@@ -27,6 +33,7 @@ Range.prototype.getBoundingClientRect = () => new DOMRect();
 afterEach(cleanup);
 
 const editor = (doc: string) => {
+  let handle: NoteEditorHandle | null = null;
   const { container } = render(
     <NoteEditor
       initial={doc}
@@ -36,7 +43,9 @@ const editor = (doc: string) => {
       fontSize={16}
       onChange={() => {}}
       onSave={() => {}}
-      onReady={() => {}}
+      onReady={(h) => {
+        handle = h;
+      }}
     />,
   );
   const view = EditorView.findFromDOM(
@@ -48,7 +57,11 @@ const editor = (doc: string) => {
       new KeyboardEvent("keydown", { key, ...mods }),
       "editor",
     );
-  return { view, press };
+  return {
+    view,
+    press,
+    run: (a: "bold" | "italic" | "find") => handle!.run(a),
+  };
 };
 
 describe("hunter L-12: note editor keys (Obsidian's defaults)", () => {
@@ -59,22 +72,39 @@ describe("hunter L-12: note editor keys (Obsidian's defaults)", () => {
     expect(view.state.doc.toString()).toBe("a");
   });
 
-  it.fails("Enter at the end of a list item starts the next item", () => {
+  it("Enter at the end of a list item starts the next item", () => {
     const { view, press } = editor("- milk");
     view.dispatch({ selection: EditorSelection.cursor(6) });
     press("Enter");
     expect(view.state.doc.toString()).toBe("- milk\n- ");
   });
 
-  it.fails("Cmd+B makes the selection bold", () => {
-    const { view, press } = editor("say word");
+  it("Cmd+B (Notes: Bold) makes the selection bold", () => {
+    const { view, run } = editor("say word");
     view.dispatch({ selection: EditorSelection.range(4, 8) });
-    press("b", { ctrlKey: true });
+    run("bold");
     expect(view.state.doc.toString()).toBe("say **word**");
   });
 
-  it.fails("Cmd+F opens find in the note", () => {
-    const { press } = editor("text");
-    expect(press("f", { ctrlKey: true })).toBe(true);
+  it("Cmd+F (Notes: Find in note) opens find in the note", async () => {
+    const { view, run } = editor("text");
+    run("find");
+    await vi.waitFor(() =>
+      expect(view.dom.querySelector(".cm-search")).not.toBeNull(),
+    );
+  });
+
+  it("the three are rebindable note commands on Obsidian's keys, only while editing", () => {
+    const keys = Object.fromEntries(
+      NOTES_COMMANDS.map((c) => [c.id, c.keys.default]),
+    );
+    expect(keys["notes.bold"]).toEqual(["Mod+B"]);
+    expect(keys["notes.italic"]).toEqual(["Mod+I"]);
+    expect(keys["notes.find"]).toEqual(["Mod+F"]);
+    for (const id of ["notes.bold", "notes.italic", "notes.find"]) {
+      expect(NOTES_COMMANDS.find((c) => c.id === id)!.when).toContain(
+        "notes.editing",
+      );
+    }
   });
 });
