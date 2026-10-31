@@ -47,7 +47,6 @@ const rows: {
   label: string;
   opens: string;
   anchor: NoteAnchor;
-  broken?: boolean;
 }[] = [
   {
     name: "wikilink to a heading",
@@ -76,7 +75,6 @@ const rows: {
     label: "go",
     opens: "Other.md",
     anchor: { block: "blk" },
-    broken: true,
   },
 ];
 
@@ -101,6 +99,6 @@ const click = async (r: Row) => {
 
 describe("a click on a link with an anchor queues the anchor", () => {
   for (const r of rows) {
-    (r.broken ? it.fails : it)(r.name, () => click(r));
+    it(r.name, () => click(r));
   }
 });

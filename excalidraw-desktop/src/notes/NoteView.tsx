@@ -70,6 +70,7 @@ import {
   renderPropertyHtml,
   stripFrontmatter,
 } from "./render/obsidian";
+import { locateBlock, locateSection } from "./render/sections";
 import { sanitizeNoteHtml } from "./render/sanitize";
 
 import "./notes.css";
@@ -128,16 +129,48 @@ const loadVaultPictures = (
 const usePrefs = () =>
   useSyncExternalStore(subscribePreferences, () => cachedPreferences());
 
-/** The whole-note embed a box sits in (not a heading or block part, whose boxes do not line up with the file). */
+/** The embed (a whole note, or a heading or block part of one) a box sits in. */
 const embedOf = (box: HTMLElement, hostPath: string): HTMLElement | null => {
   const embed = box.closest<HTMLElement>(".note-embed-note[data-path]");
-  return embed &&
-    embed.dataset.path &&
-    embed.dataset.path !== hostPath &&
-    !embed.dataset.heading &&
-    !embed.dataset.block
+  return embed && embed.dataset.path && embed.dataset.path !== hostPath
     ? embed
     : null;
+};
+
+/**
+ * Which task of the embedded file a drawn box is. A whole note maps box N to task N; a heading or
+ * block part is found in the file again, and its Nth task is the file's task on that line (a
+ * `![[Plan#Steps]]` box ticks the line of `Plan.md` it was drawn from). -1 when the file no longer
+ * matches what is drawn (toimprove 319).
+ */
+const embedTaskIndex = (
+  content: string,
+  part: DOMStringMap,
+  box: number,
+  drawn: number,
+  math: boolean,
+): number => {
+  const fileTasks = taskLines(content, math);
+  if (box < 0) {
+    return -1;
+  }
+  if (!part.heading && !part.block) {
+    return drawn === fileTasks.length ? box : -1;
+  }
+  const body = stripFrontmatter(content);
+  const skipped = (
+    content.slice(0, content.length - body.length).match(/\n/g) ?? []
+  ).length;
+  const found = part.block
+    ? locateBlock(body, part.block)
+    : locateSection(body, part.heading ?? "");
+  if (!found) {
+    return -1;
+  }
+  const inPart = taskLines(found.text, math);
+  return inPart.length === drawn
+    ? fileTasks.indexOf(skipped + found.line + inPart[box])
+    : -1;
 };
 
 /** Makes the task boxes of a hydrated embedded note clickable (toimprove 267). */
@@ -431,12 +464,15 @@ const NoteViewInner = ({
       }
       try {
         const file = await getNoteFiles().read(handle, target);
-        const index = own.indexOf(box);
+        const index = embedTaskIndex(
+          file.content,
+          embed.dataset,
+          own.indexOf(box),
+          own.length,
+          prefs.notesMath,
+        );
         const next =
-          index >= 0 &&
-          own.length === taskLines(file.content, prefs.notesMath).length
-            ? toggleTask(file.content, index, prefs.notesMath)
-            : null;
+          index >= 0 ? toggleTask(file.content, index, prefs.notesMath) : null;
         if (next === null) {
           fail("Open that note and edit it there.");
           return;
@@ -547,7 +583,13 @@ const NoteViewInner = ({
         );
         if (to) {
           if (to.heading) {
-            queueAnchor(to.path, { heading: to.heading });
+            // `#^id` names a block, as in Obsidian (toimprove 324).
+            queueAnchor(
+              to.path,
+              to.heading.startsWith("^")
+                ? { block: to.heading.slice(1) }
+                : { heading: to.heading },
+            );
           }
           if (to.path !== path) {
             openPath(to.path, {

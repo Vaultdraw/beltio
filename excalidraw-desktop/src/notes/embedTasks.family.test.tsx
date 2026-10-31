@@ -4,7 +4,7 @@
  * it. A whole-note embed (`![[Plan]]`) ticks its own file (toimprove 267, done). A SECTION embed
  * (`![[Plan#Steps]]`) or BLOCK embed (`![[Plan#^id]]`) draws only part of the file, so its boxes
  * stay greyed out (NoteView.tsx `embedOf`). Obsidian ticks them and writes the embedded file.
- * `it.fails` rows turn red when it is fixed (toimprove 319).
+ * Toimprove 319, fixed: a part embed finds its lines in the file again.
  */
 import {
   cleanup,
@@ -62,7 +62,10 @@ const rows: {
   host: string;
   label: string;
   after: string;
-  broken?: boolean;
+  /** The file's text when it is not the usual plan. */
+  plan?: string;
+  /** Lines that must still be open after the click: nothing else is ticked. */
+  untouched?: string[];
 }[] = [
   {
     name: "a whole-note embed",
@@ -75,14 +78,27 @@ const rows: {
     host: "![[Plan#Steps]]\n",
     label: "step two",
     after: "- [x] step two",
-    broken: true,
   },
   {
     name: "a block embed",
     host: "- [ ] block task ^b1\n\n![[Plan#^b1]]\n",
     label: "block task",
     after: "- [x] block task",
-    broken: true,
+  },
+  {
+    name: "a section embed of a file with front matter ticks only its own line",
+    host: "![[Plan#Later]]\n",
+    plan: `---\na: 1\nb: 2\n---\n${PLAN}`,
+    label: "later task",
+    after: "- [x] later task",
+    untouched: ["- [ ] top task", "- [ ] step one", "- [ ] step two"],
+  },
+  {
+    name: "a section embed of the second task",
+    host: "![[Plan#Steps]]\n",
+    label: "step one",
+    after: "- [x] step one",
+    untouched: ["- [ ] top task", "- [ ] step two", "- [ ] later task"],
   },
 ];
 
@@ -91,6 +107,9 @@ type Row = typeof rows[number];
 const tick = async (r: Row) => {
   if (r.name === "a block embed") {
     files.setOnDisk("Plan.md", "Intro\n\n- [ ] block task ^b1\n- [ ] other\n");
+  }
+  if (r.plan) {
+    files.setOnDisk("Plan.md", r.plan);
   }
   const reading = await open(r.host);
   const box = [
@@ -105,10 +124,14 @@ const tick = async (r: Row) => {
     const read = await files.read("h", "Plan.md");
     expect(read.content).toContain(r.after);
   });
+  const read = await files.read("h", "Plan.md");
+  for (const open of r.untouched ?? []) {
+    expect(read.content, `${open} stays open`).toContain(open);
+  }
 };
 
 describe("a task inside an embed is ticked in the file that wrote it", () => {
   for (const r of rows) {
-    (r.broken ? it.fails : it)(r.name, () => tick(r));
+    it(r.name, () => tick(r));
   }
 });
