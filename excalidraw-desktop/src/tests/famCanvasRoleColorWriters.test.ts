@@ -49,7 +49,6 @@ type Writer = {
 const writers: Writer[] = [
   {
     name: "plugin or CLI scene update (applyOps update strokeColor)",
-    broken: 298,
     write: (color) => {
       const h = heading() as any;
       const { api, updateScene } = stubApi([h]);

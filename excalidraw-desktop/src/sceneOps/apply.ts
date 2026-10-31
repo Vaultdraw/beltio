@@ -9,6 +9,7 @@ import {
   boldFontOf,
   getSizeFromPoints,
   isBoldFont,
+  rolePickUpdate,
 } from "@excalidraw/common";
 import {
   computeBoundTextPosition,
@@ -128,6 +129,21 @@ const updated = (
   if (data !== undefined && dataKey) {
     // `{}`, not undefined: newElementWith skips an undefined-only patch (hunter B-1 family).
     patch.customData = withData(el.customData, dataKey, data) ?? {};
+  }
+  if (plain.strokeColor !== undefined) {
+    // A colour set by a plugin or the `vaultdraw` command is a pick, like one from the colour
+    // panel: it wins over a heading's theme colour, stock black included (toimprove 298).
+    Object.assign(
+      patch,
+      rolePickUpdate(
+        {
+          type: el.type,
+          customData:
+            (patch.customData as typeof el.customData) ?? el.customData,
+        },
+        "strokeColor",
+      ),
+    );
   }
   let next = newElementWith(el, patch as never);
   const relayout =
