@@ -17,7 +17,6 @@ type Case = {
   from: string;
   typed: string;
   want: string | null;
-  brokenNote?: boolean;
 };
 
 const cases: Case[] = [
@@ -83,7 +82,6 @@ const cases: Case[] = [
     from: "a.md",
     typed: "cafe",
     want: "Café.excalidraw",
-    brokenNote: true,
   },
   {
     name: "the extension typed",
@@ -108,9 +106,7 @@ const resolveLink = (c: Case) =>
 
 describe("a link opens the same file in the reading view and in the link resolver", () => {
   for (const c of cases) {
-    (c.brokenNote ? it.fails : it)(`${c.name}: reading view`, () =>
-      expect(resolveNote(c)).toBe(c.want),
-    );
+    it(`${c.name}: reading view`, () => expect(resolveNote(c)).toBe(c.want));
     it(`${c.name}: link resolver`, () => expect(resolveLink(c)).toBe(c.want));
   }
 });
@@ -121,14 +117,9 @@ describe("the reading view folds a typed link like the search index (fold_cases.
     input: string;
     folded: string;
   }[]) {
-    // Today the reading view folds case and composition only; every row that needs more is broken.
-    const broken = r.folded !== r.input.toLowerCase().normalize("NFC");
-    (broken ? it.fails : it)(
-      `${r.label}: [[${r.folded}]] opens ${r.input}.md`,
-      () => {
-        const idx = createNoteLinkIndex([`${r.input}.md`]);
-        expect(idx.resolve("x.md", r.folded)).toBe(`${r.input}.md`);
-      },
-    );
+    it(`${r.label}: [[${r.folded}]] opens ${r.input}.md`, () => {
+      const idx = createNoteLinkIndex([`${r.input}.md`]);
+      expect(idx.resolve("x.md", r.folded)).toBe(`${r.input}.md`);
+    });
   }
 });

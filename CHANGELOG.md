@@ -21,6 +21,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **A failed copy says so plainly, as an error.** **Links: Copy link to this drawing** no longer prints the raw engine error, and a failed copy of the AI app setup is an error notice, not an info one (toimprove 304).
 - **The Move dialog and the Rename tag picker find words in any order.** "mocha catppuccin" finds the folder "Catppuccin Mocha", and "work project" the tag `#project/work`, like the quick switcher and every other filter (toimprove 303).
 - **A note that cannot be drawn no longer takes the window down.** If anything goes wrong while the reading view draws a note, the tab says "This note couldn't be displayed" with an "Open as text" button that opens the note in the editor, and the rest of the app keeps working.
+- **A link typed without the accent opens the note.** `[[cafe]]` for `Café.md`, `[[Strasse]]`, `[[Orsted]]`, full-width and kana now find the note in the reading view like backlinks, search and the switcher do. Before, the link was drawn dead and clicking it created a duplicate note.
 
 - **Linux: Settings no longer talks about macOS.** Appearance → Mode reads "follow the system", and the Hang watchdog rows and commands, which work on macOS only, are shown on macOS only (toimprove 307).
 - **Linux: Ctrl+Q quits and F11 toggles full screen.** Linux has no app menu, so neither key did anything. **Window: Quit Vaultdraw** saves first, like closing the window; both are in the palette and can be rebound (toimprove 308).

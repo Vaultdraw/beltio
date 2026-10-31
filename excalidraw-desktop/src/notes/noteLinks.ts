@@ -6,7 +6,11 @@
  * `Name.md`, else `Name.excalidraw`); other files (images, PDFs) need their
  * extension. The index is built once per file list.
  */
-const fold = (s: string) => s.toLowerCase().normalize("NFC");
+import { foldKey } from "../search/foldKey";
+
+// The index's own fold (accents, ß, ø, full-width, kana), so a link typed without the accent finds
+// the same note here as in backlinks, the switcher and search (toimprove 314).
+const fold = foldKey;
 const NOTE_EXT = /\.(?:md|markdown)$/i;
 const DRAWING_EXT = /\.excalidraw$/i;
 
