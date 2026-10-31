@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
 
+import { detectPlatform } from "../../../commands/keys";
+
 import {
   DEFAULT_PREFERENCES,
   getPreferences,
@@ -60,7 +62,12 @@ const GraceSetting = () => {
   );
 };
 
+// The watchdog runs on macOS only (src-tauri/src/watchdog): elsewhere its rows would be switches
+// that do nothing (toimprove 307).
+const onMac = ({ win }: { win: Window | null }) =>
+  detectPlatform(win) === "mac";
+
 export const watchdogControls: SettingControls = {
-  "watchdog-enabled": { Component: EnabledSetting },
-  "watchdog-grace": { Component: GraceSetting },
+  "watchdog-enabled": { Component: EnabledSetting, available: onMac },
+  "watchdog-grace": { Component: GraceSetting, available: onMac },
 };

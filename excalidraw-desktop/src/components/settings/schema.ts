@@ -232,7 +232,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     id: "mode",
     page: "appearance",
     label: "Mode",
-    description: "Light, dark, or follow macOS.",
+    description: "Light, dark, or follow the system.",
     keywords: ["dark", "light", "system", "theme", "colour scheme", "color"],
     configKey: "appearance.mode",
     perVault: true,
@@ -1135,8 +1135,7 @@ export const SETTINGS_SCHEMA: readonly SettingSchema[] = [
     id: "watchdog-enabled",
     page: "interface",
     label: "Hang watchdog",
-    description:
-      "Show a Wait / Quit dialog when the page stops answering (macOS).",
+    description: "Show a Wait / Quit dialog when the page stops answering.",
     keywords: [
       "hang",
       "freeze",

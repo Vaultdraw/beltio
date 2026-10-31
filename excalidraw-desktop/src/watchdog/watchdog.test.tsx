@@ -16,6 +16,8 @@ import {
   preferencesToConfigChanges,
 } from "../vault/settingsSync";
 
+import { watchdogControls } from "../components/settings/pages/Watchdog";
+
 import { WatchdogHost } from "./WatchdogHost";
 
 const invokeMock = vi.fn();
@@ -108,7 +110,45 @@ describe("watchdog commands", () => {
     }
   });
 
+  // jsdom's user agent names the host system, so both fields are set.
+  const asPlatform = (platform: string) => {
+    for (const key of ["platform", "userAgent"]) {
+      Object.defineProperty(window.navigator, key, {
+        value: platform,
+        configurable: true,
+      });
+    }
+  };
+  afterEach(() => {
+    const nav = window.navigator as unknown as Record<string, unknown>;
+    delete nav.platform;
+    delete nav.userAgent;
+  });
+
+  it("are bound on macOS only, where the watchdog runs (toimprove 307)", () => {
+    asPlatform("Linux x86_64");
+    const linux = render(<WatchdogHost win={window} />);
+    expect(getRegisteredHandler("watchdog.toggle")).toBeUndefined();
+    linux.unmount();
+    asPlatform("MacIntel");
+    render(<WatchdogHost win={window} />);
+    expect(getRegisteredHandler("watchdog.toggle")).toBeTypeOf("function");
+  });
+
+  it("its Settings rows are offered on macOS only", () => {
+    const ctx = { win: window } as unknown as Parameters<
+      NonNullable<typeof watchdogControls["watchdog-enabled"]["available"]>
+    >[0];
+    for (const id of ["watchdog-enabled", "watchdog-grace"]) {
+      asPlatform("Linux x86_64");
+      expect(watchdogControls[id].available!(ctx), id).toBe(false);
+      asPlatform("MacIntel");
+      expect(watchdogControls[id].available!(ctx), id).toBe(true);
+    }
+  });
+
   it("toggle flips the preference and says so", () => {
+    asPlatform("MacIntel");
     render(<WatchdogHost win={window} />);
     const run = getRegisteredHandler("watchdog.toggle")!;
     run();
@@ -120,6 +160,7 @@ describe("watchdog commands", () => {
   });
 
   it("show the last hang reads the native record", async () => {
+    asPlatform("MacIntel");
     invokeMock.mockResolvedValue({
       atMs: Date.UTC(2026, 9, 27, 12, 0, 0),
       secondsUnresponsive: 12,
@@ -133,6 +174,7 @@ describe("watchdog commands", () => {
   });
 
   it("says no hang when there is none or the call fails", async () => {
+    asPlatform("MacIntel");
     render(<WatchdogHost win={window} />);
     const run = getRegisteredHandler("watchdog.showLastHang")!;
     invokeMock.mockResolvedValue(null);

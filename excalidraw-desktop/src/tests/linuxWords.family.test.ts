@@ -29,12 +29,9 @@ vi.hoisted(() => {
 const MAC_WORDS = /\bCmd\b|⌘|\bFinder\b|\bmacOS\b|\bSpotlight\b|\bOption\b/;
 
 /** Rows that name macOS today, and why each is wrong on Linux. */
-const BROKEN: Record<string, string> = {
-  "setting:mode":
-    'Mode says "follow macOS"; Linux follows the desktop\'s colour scheme too',
-  "setting:watchdog-enabled":
-    "the Hang watchdog row is on every platform but works on macOS only (it says so; Linux sees a switch that does nothing)",
-};
+// Fixed (toimprove 307): Mode says "follow the system"; the Hang watchdog rows and commands are
+// shown on macOS only (watchdogPlatform.test.tsx), so their text need not name it.
+const BROKEN: Record<string, string> = {};
 
 const rows: { id: string; text: string }[] = [
   ...SETTINGS_SCHEMA.map((s) => ({

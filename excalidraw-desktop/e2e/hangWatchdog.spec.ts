@@ -6,6 +6,9 @@ import { openVault, trackErrors } from "./helpers";
 
 const PREFS_KEY = "excalidraw-vault-preferences-v1";
 
+// The watchdog runs on macOS only; elsewhere Settings does not show its rows (toimprove 307).
+test.skip(process.platform !== "darwin", "the Hang watchdog is macOS only");
+
 test("Settings > Interface: the Hang watchdog switch is on, turns off and is saved", async ({
   page,
 }) => {
