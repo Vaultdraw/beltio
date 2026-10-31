@@ -63,7 +63,6 @@ const MEMBERS: {
       moveRows(names, new Set(), q)
         .filter((r) => r.matches)
         .map((r) => r.entry.path),
-    broken: { words: "toimprove 303" },
   },
   {
     name: "Hotkeys page filter (filterInfos)",

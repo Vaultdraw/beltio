@@ -5,7 +5,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { foldKey } from "../../search/foldKey";
+import { matchesWords } from "../../search/matchWords";
 import { validateTagInput } from "../../tags/renameFlow";
 import { errorMessage } from "../../vault/types";
 import { Dialog } from "../Dialog";
@@ -44,9 +44,10 @@ const PickTag = ({
   const [query, setQuery] = useState("");
   const [index, setIndex] = useState(0);
   const rows = useMemo(() => {
-    const q = foldKey(query.trim().replace(/^#/, ""));
+    // Each word in any order, folded, like every type-to-filter list (toimprove 246, 303).
+    const q = query.trim().replace(/^#/, "");
     return tags
-      .filter((t) => t.tag.includes(q) || foldKey(t.display).includes(q))
+      .filter((t) => matchesWords(q, t.tag, t.display))
       .slice(0, MAX_ROWS);
   }, [tags, query]);
   const choose = (t: TagCount | undefined) =>

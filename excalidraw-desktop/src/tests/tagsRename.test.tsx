@@ -166,6 +166,9 @@ describe("RenameTagDialog picker folds accents (toimprove 201 family)", () => {
     ["cafe\u0301", "Café"], // typed decomposed
     ["café", "Cafe"], // typed with the accent, tag written without
     ["STRASSE", "Straße"],
+    // words in any order, like every type-to-filter list (toimprove 303 family)
+    ["work project", "Project/Work"],
+    ["#graphs dsa", "DSA/Graphs"],
   ])("typing %s finds %s", (typed, display) => {
     const key = foldKey(display);
     render(

@@ -1,4 +1,4 @@
-import { foldKey } from "../search/foldKey";
+import { matchesWords, queryWords } from "../search/matchWords";
 import { compareEntries } from "../vault/sortOrder";
 import { getBaseName } from "../vault/treeStore";
 
@@ -57,13 +57,12 @@ export function matchingFolderPaths(
   folders: readonly string[],
   query: string,
 ): Set<string> {
-  const needle = foldKey(query.trim());
   const keep = new Set<string>([""]);
-  if (needle === "") {
+  if (queryWords(query).length === 0) {
     return keep;
   }
   for (const folder of folders) {
-    if (nameMatches(folder, needle)) {
+    if (nameMatches(folder, query)) {
       let path = folder;
       while (path !== "") {
         keep.add(path);
@@ -78,9 +77,12 @@ export function matchingFolderPaths(
 /** `matches`: the folder itself fits the type-ahead (false for ancestors kept only for context; always true without a filter). */
 export type MoveRow = TreeRow & { hasChildren: boolean; matches: boolean };
 
-/** Case and accents fold like the vault search: "cafe" finds "Café". */
+/**
+ * Each word, in any order, with case and accents folded, like every type-to-filter list
+ * (search/matchWords.ts): "cafe" finds "Café", "mocha catppuccin" finds "Catppuccin Mocha".
+ */
 const nameMatches = (path: string, query: string): boolean =>
-  path !== "" && foldKey(getBaseName(path)).includes(foldKey(query.trim()));
+  path !== "" && matchesWords(query, getBaseName(path));
 
 /**
  * Rows the Move dialog shows: the whole tree with `expanded` folders open, or,
