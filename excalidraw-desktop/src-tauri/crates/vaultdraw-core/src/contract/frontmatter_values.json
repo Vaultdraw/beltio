@@ -9,10 +9,7 @@
      "Due date",
      "2026-01-01"
     ]
-   ],
-   "drift": {
-    "standIn": "toimprove 316"
-   }
+   ]
   },
   {
    "label": "unicode key",
@@ -22,10 +19,7 @@
      "título",
      "Hola"
     ]
-   ],
-   "drift": {
-    "standIn": "toimprove 316"
-   }
+   ]
   },
   {
    "label": "colon in a value",
@@ -55,10 +49,7 @@
      "k",
      "a, b"
     ]
-   ],
-   "drift": {
-    "standIn": "toimprove 316"
-   }
+   ]
   },
   {
    "label": "block list joined",
@@ -118,10 +109,7 @@
      "up",
      "[[Home]]"
     ]
-   ],
-   "drift": {
-    "native": "toimprove 315"
-   }
+   ]
   },
   {
    "label": "unquoted wikilink with alias",
@@ -131,10 +119,7 @@
      "up",
      "[[Home|Start]]"
     ]
-   ],
-   "drift": {
-    "native": "toimprove 315"
-   }
+   ]
   },
   {
    "label": "unquoted wikilink with folder",
@@ -144,10 +129,7 @@
      "up",
      "[[Folder/Home]]"
     ]
-   ],
-   "drift": {
-    "native": "toimprove 315"
-   }
+   ]
   },
   {
    "label": "unquoted wikilink with heading",
@@ -157,10 +139,7 @@
      "up",
      "[[Home#Part]]"
     ]
-   ],
-   "drift": {
-    "native": "toimprove 315"
-   }
+   ]
   },
   {
    "label": "trailing comment",
@@ -170,11 +149,7 @@
      "k",
      "v"
     ]
-   ],
-   "drift": {
-    "native": "toimprove 315",
-    "standIn": "toimprove 315"
-   }
+   ]
   },
   {
    "label": "single-quote escape",
@@ -184,11 +159,7 @@
      "title",
      "it's"
     ]
-   ],
-   "drift": {
-    "native": "toimprove 315",
-    "standIn": "toimprove 315"
-   }
+   ]
   },
   {
    "label": "quoted key",
@@ -198,11 +169,67 @@
      "my key",
      "v"
     ]
-   ],
-   "drift": {
-    "native": "toimprove 315",
-    "standIn": "toimprove 315"
-   }
+   ]
+  },
+  {
+   "label": "comment inside quotes is kept",
+   "yaml": "k: \"a # b\"",
+   "props": [
+    [
+     "k",
+     "a # b"
+    ]
+   ]
+  },
+  {
+   "label": "hash without a space is kept",
+   "yaml": "k: a#b",
+   "props": [
+    [
+     "k",
+     "a#b"
+    ]
+   ]
+  },
+  {
+   "label": "comment after a quoted value",
+   "yaml": "k: 'a' # note",
+   "props": [
+    [
+     "k",
+     "a"
+    ]
+   ]
+  },
+  {
+   "label": "comment after a list item",
+   "yaml": "k:\n  - a # one\n  - b",
+   "props": [
+    [
+     "k",
+     "a, b"
+    ]
+   ]
+  },
+  {
+   "label": "wikilink with a space before the hash",
+   "yaml": "up: [[Home #Part]]",
+   "props": [
+    [
+     "up",
+     "[[Home #Part]]"
+    ]
+   ]
+  },
+  {
+   "label": "quoted key with a colon",
+   "yaml": "\"a: b\": v",
+   "props": [
+    [
+     "a: b",
+     "v"
+    ]
+   ]
   }
  ]
 }

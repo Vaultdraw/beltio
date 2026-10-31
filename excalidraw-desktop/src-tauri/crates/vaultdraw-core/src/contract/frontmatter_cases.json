@@ -99,6 +99,33 @@
       "text": "----\ntags: [x]\n----\nbody\n",
       "hidden": false,
       "tags": []
+    },
+    {
+      "label": "block list item with a comment",
+      "text": "---\ntags:\n  - a # comment\n  - b\n---\nbody\n",
+      "hidden": true,
+      "tags": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "label": "scalar tags with a comment",
+      "text": "---\ntags: a, b # old ones\n---\nbody\n",
+      "hidden": true,
+      "tags": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "label": "flow list with a comment",
+      "text": "---\ntags: [a, b] # old ones\n---\nbody\n",
+      "hidden": true,
+      "tags": [
+        "a",
+        "b"
+      ]
     }
   ],
   "propertyKeys": [

@@ -20,6 +20,8 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **The Read-Only badge gives focus back.** Closing its panel with Escape or **Try again** from the keyboard returns focus to the badge, instead of the top of the window (toimprove 305).
 - **A failed copy says so plainly, as an error.** **Links: Copy link to this drawing** no longer prints the raw engine error, and a failed copy of the AI app setup is an error notice, not an info one (toimprove 304).
 - **The Move dialog and the Rename tag picker find words in any order.** "mocha catppuccin" finds the folder "Catppuccin Mocha", and "work project" the tag `#project/work`, like the quick switcher and every other filter (toimprove 303).
+- **Properties read like YAML and Obsidian.** `up: [[Home]]` keeps its link (it showed `[Home]`), `k: v # note` and tag items like `- a # old` lose their comment, `'it''s'` reads as `it's`, and a quoted key such as `"my key"` loses its quotes. The browser test stand-in reads spaced and non-ASCII keys and flow lists the same way.
+
 - **A note that cannot be drawn no longer takes the window down.** If anything goes wrong while the reading view draws a note, the tab says "This note couldn't be displayed" with an "Open as text" button that opens the note in the editor, and the rest of the app keeps working.
 - **A link typed without the accent opens the note.** `[[cafe]]` for `Café.md`, `[[Strasse]]`, `[[Orsted]]`, full-width and kana now find the note in the reading view like backlinks, search and the switcher do. Before, the link was drawn dead and clicking it created a duplicate note.
 
