@@ -246,6 +246,15 @@ const STEPS: Step[] = [
     act: (h) => h.press("Backspace"),
     broken: 301,
   },
+  {
+    name: "Backspace at the start of a heading makes it body text",
+    setup: (h) => {
+      h.type("# T");
+      h.textarea.setSelectionRange(0, 0);
+    },
+    act: (h) => h.press("Backspace"),
+    broken: 301,
+  },
 ];
 
 describe("family: one Cmd+Z takes back an automatic edit of Markdown typing", () => {
@@ -253,13 +262,17 @@ describe("family: one Cmd+Z takes back an automatic edit of Markdown typing", ()
     const run = () => {
       const h = harness();
       step.setup(h);
-      const before = h.textarea.value;
+      const look = () =>
+        `${h.textarea.value}|${h.current().customData?.role ?? ""}|${
+          h.current().fontFamily
+        }|${h.current().fontSize}`;
+      const before = look();
       step.act(h);
-      expect(h.textarea.value).not.toBe(before);
+      expect(look()).not.toBe(before);
       // the extension must take the key itself: the textarea has no undo left to run
       const handled = h.press("z", { metaKey: true });
       expect(handled).toBe(true);
-      expect(h.textarea.value).toBe(before);
+      expect(look()).toBe(before);
     };
     (step.broken !== undefined ? it.fails : it)(step.name, run);
   }
