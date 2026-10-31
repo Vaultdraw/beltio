@@ -24,7 +24,7 @@ import { DesktopVaultLinks } from "./links/DesktopVaultLinks";
 import { useLinkDisplayPrefs } from "./links/useLinkDisplayPrefs";
 import { useSpeculativeOpen } from "./speculative/useSpeculativeOpen";
 import { useAutoReload } from "./watch/useAutoReload";
-import { resolveOpenTarget } from "./control/openTarget";
+import { isOpenableFile, resolveOpenTarget } from "./control/openTarget";
 import { createAppFiles } from "./control/appFiles";
 import { waitForEditor } from "./control/editorReady";
 import { createBusyCounter } from "./control/busyCounter";
@@ -2897,7 +2897,7 @@ export const VaultApp = ({
     }),
     openTarget: async (target, cwd) => {
       // Before the file list is complete (files.list_start, or a walk in
-      // progress) any drawing path is tried; opening reports a missing one.
+      // progress) any drawing or note path is tried; opening reports a missing one.
       const listed =
         !!vault && listStartedFor.current === vault.handle && !isIndexing;
       if (!listed) {
@@ -2907,9 +2907,9 @@ export const VaultApp = ({
         ? resolveOpenTarget(target, cwd, vault.path, (p) =>
             listed
               ? allIndexedEntries.some(
-                  (e) => e.kind === "drawing" && e.path === p,
+                  (e) => e.kind !== "folder" && e.path === p,
                 )
-              : p.toLowerCase().endsWith(".excalidraw"),
+              : isOpenableFile(p),
           )
         : null;
       if (path === null) {

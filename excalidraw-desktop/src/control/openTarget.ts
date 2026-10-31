@@ -1,4 +1,4 @@
-import { DRAWING_EXT } from "../vault/fileKind";
+import { DRAWING_EXT, fileKind } from "../vault/fileKind";
 import { decodeVaultUrl } from "../links/linkUri";
 
 const EXT = DRAWING_EXT;
@@ -14,6 +14,14 @@ const normalize = (path: string): string => {
   }
   return out.join("/");
 };
+
+/**
+ * A file the app opens in a tab: a drawing, a note or an Obsidian drawing (any name, before the
+ * file list exists; afterwards the list says what exists). Folders and other files are not.
+ * The same set `vaultdraw open` (file.open) and the link runner open (toimprove 306).
+ */
+export const isOpenableFile = (path: string): boolean =>
+  fileKind(path) !== "other";
 
 /**
  * The vault-relative drawing path a CLI target points at: a vaultdraw://open

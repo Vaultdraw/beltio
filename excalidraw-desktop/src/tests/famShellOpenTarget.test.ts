@@ -14,7 +14,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { resolveOpenTarget } from "../control/openTarget";
+import { isOpenableFile, resolveOpenTarget } from "../control/openTarget";
 
 const app = readFileSync(join(__dirname, "..", "VaultApp.tsx"), "utf8");
 const at = app.indexOf("openTarget: async (target, cwd)");
@@ -37,11 +37,19 @@ describe("family (shell hunter): the command line opens any file of the vault", 
     expect(block).toContain("resolveOpenTarget");
   });
 
-  it.fails(
-    "app.openTarget accepts a note or an Obsidian drawing, not only .excalidraw drawings (toimprove 306)",
-    () => {
-      expect(block).not.toMatch(/kind === "drawing"/);
-      expect(block).not.toMatch(/endsWith\("\.excalidraw"\)/);
-    },
-  );
+  it("app.openTarget accepts a note or an Obsidian drawing, not only .excalidraw drawings (toimprove 306)", () => {
+    expect(block).not.toMatch(/kind === "drawing"/);
+    expect(block).not.toMatch(/endsWith\("\.excalidraw"\)/);
+  });
+
+  it.each([
+    ["Plan.excalidraw", true],
+    ["Notes/Plan.md", true],
+    ["Obsidian/Sketch.excalidraw.md", true],
+    ["UPPER.MD", true],
+    ["picture.png", false],
+    ["Folder", false],
+  ])("before the file list exists, %s is tried: %s", (p, want) => {
+    expect(isOpenableFile(p)).toBe(want);
+  });
 });
