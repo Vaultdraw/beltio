@@ -46,6 +46,9 @@ export const LIST_ACTIONS = [
   "copyPath",
   "copyAbsolutePath",
   "copyLink",
+  // sync services: a conflict copy's compare, an iCloud placeholder's download
+  "compareConflict",
+  "downloadFromCloud",
 ] as const;
 
 export type ListAction = typeof LIST_ACTIONS[number];

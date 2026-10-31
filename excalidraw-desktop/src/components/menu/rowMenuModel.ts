@@ -130,15 +130,21 @@ export function buildRowMenu({
       : []),
     ...(isDrawing && entry.sync === "conflict" && a.syncAction
       ? [
-          item("compare", "Compare with original…", () =>
-            a.syncAction?.(entry, "compare"),
+          item(
+            "compare",
+            "Compare with original…",
+            () => a.syncAction?.(entry, "compare"),
+            { commandId: "list.compareConflict" },
           ),
         ]
       : []),
     ...(entry.sync === "placeholder" && a.syncAction
       ? [
-          item("download", "Download from iCloud", () =>
-            a.syncAction?.(entry, "download"),
+          item(
+            "download",
+            "Download from iCloud",
+            () => a.syncAction?.(entry, "download"),
+            { commandId: "list.downloadFromCloud" },
           ),
         ]
       : []),

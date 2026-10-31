@@ -30,7 +30,11 @@ import { decideMove, updatedMessage } from "./moveFlow";
 import { toastRewriteDone } from "./rewriteToast";
 import { createResolver } from "./resolve";
 
-import type { LinksDockHandle } from "../components/links/LinksDock";
+import type {
+  LinksDockHandle,
+  LinksDockTab,
+  LinksDockTabRequest,
+} from "../components/links/LinksDock";
 import type { EditorLinksBridge } from "../editor/links/useVaultEditorLinks";
 
 import type { ConfirmRequest } from "./moveFlow";
@@ -417,6 +421,18 @@ export function useAppLinks(deps: AppLinksDeps) {
     }
   }, [dockVisible]);
 
+  // `links.showBacklinks` / `links.showOutgoing`: show the dock (and the navigator) on that tab.
+  const [tabRequest, setTabRequest] = useState<LinksDockTabRequest | null>(
+    null,
+  );
+  const showDockTab = useCallback((tab: LinksDockTab) => {
+    setDockVisibleState(true);
+    setDockVisible(true, live.current.win);
+    live.current.showNavigator();
+    setDockFocus((n) => n + 1);
+    setTabRequest((r) => ({ tab, n: (r?.n ?? 0) + 1 }));
+  }, []);
+
   useEffect(() => {
     if (dockFocus > 0 && dockVisible) {
       const t = setTimeout(() => dockRef.current?.focus(), 0);
@@ -487,6 +503,8 @@ export function useAppLinks(deps: AppLinksDeps) {
     }
     return registerCommandHandlers({
       "links.toggleDock": () => toggleRef.current(),
+      "links.showBacklinks": () => showDockTab("backlinks"),
+      "links.showOutgoing": () => showDockTab("outgoing"),
       "links.back": () => go("back"),
       "links.forward": () => go("forward"),
       "links.copyLinkToDrawing": copyLink,
@@ -510,7 +528,7 @@ export function useAppLinks(deps: AppLinksDeps) {
         }
       },
     });
-  }, [go, enabled]);
+  }, [go, enabled, showDockTab]);
   // `drawing.open:<path>` (hotkeys bound to a drawing) is core: always bound.
   useEffect(
     () =>
@@ -551,6 +569,7 @@ export function useAppLinks(deps: AppLinksDeps) {
     bridge,
     dockRef,
     dockVisible,
+    tabRequest,
     refreshKey,
     openLink,
     createTarget,

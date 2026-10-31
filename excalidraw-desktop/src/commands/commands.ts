@@ -212,6 +212,20 @@ const LINKS_COMMANDS: CommandDefinition[] = [
     when: ["drawingOpen", "!modalOpen"],
   },
   {
+    id: "links.showBacklinks",
+    title: "Links: Show backlinks",
+    category: "Links",
+    keys: { default: [] },
+    when: ["drawingOpen", "!modalOpen"],
+  },
+  {
+    id: "links.showOutgoing",
+    title: "Links: Show outgoing links",
+    category: "Links",
+    keys: { default: [] },
+    when: ["drawingOpen", "!modalOpen"],
+  },
+  {
     id: "links.back",
     title: "Links: Go back",
     category: "Links",

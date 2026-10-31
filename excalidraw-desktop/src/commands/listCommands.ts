@@ -64,6 +64,8 @@ export const LIST_COMMANDS: readonly CommandDefinition[] = [
   list("copyPath", "Copy item path (relative to the vault)", []),
   list("copyAbsolutePath", "Copy item absolute path", []),
   list("copyLink", "Copy item link", []),
+  list("compareConflict", "Compare conflict copy with original", []),
+  list("downloadFromCloud", "Download item from iCloud", []),
   {
     id: FOCUS_TREE_COMMAND_ID,
     title: "Navigator: Focus file tree",

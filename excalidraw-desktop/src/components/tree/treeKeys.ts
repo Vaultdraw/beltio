@@ -50,6 +50,8 @@ export interface TreeRowActions {
   export?(path: string, format: ExplorerExportFormat): void;
   /** Copy the row's path: relative to the vault, absolute, or a vaultdraw:// link. */
   copyPath?(path: string, kind: "relative" | "absolute" | "link"): void;
+  /** A sync-service row: compare a conflict copy, download an iCloud placeholder. */
+  sync?(entry: VaultEntry, action: "compare" | "download"): void;
 }
 
 /** Everything the tree implements (it has no second view: Tab leaves it). */
@@ -85,6 +87,8 @@ export const TREE_ACTIONS: readonly TreeAction[] = [
   "copyPath",
   "copyAbsolutePath",
   "copyLink",
+  "compareConflict",
+  "downloadFromCloud",
 ];
 
 /**
@@ -196,8 +200,21 @@ function rowMenuActions(
   const { path } = item;
   const bind = (fn: ((path: string) => void) | undefined, when = true) =>
     fn && when ? () => fn(path) : undefined;
+  const sync = r.sync;
+  // Same conditions as the menu's "Compare with original…" and "Download from iCloud".
+  const syncActions: TreeActions = sync
+    ? {
+        ...(item.kind === "drawing" && item.sync === "conflict"
+          ? { compareConflict: () => sync(item, "compare") }
+          : {}),
+        ...(item.sync === "placeholder"
+          ? { downloadFromCloud: () => sync(item, "download") }
+          : {}),
+      }
+    : {};
   if (item.kind === "folder") {
     return {
+      ...syncActions,
       reveal: bind(r.reveal),
       showAsGrid: bind(r.showAsGrid),
       ...copyActions(path, r, true),
@@ -217,6 +234,7 @@ function rowMenuActions(
     exportSvg: exportAs("svg"),
     exportPdf: exportAs("pdf"),
     saveCopy: exportAs("copy"),
+    ...syncActions,
     ...copyActions(path, r),
   };
 }

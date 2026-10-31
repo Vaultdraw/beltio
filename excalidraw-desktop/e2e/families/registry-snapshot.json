@@ -2382,6 +2382,28 @@
    "palette": true
   },
   {
+   "id": "links.showBacklinks",
+   "title": "Links: Show backlinks",
+   "category": "Links",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
+   "id": "links.showOutgoing",
+   "title": "Links: Show outgoing links",
+   "category": "Links",
+   "keys": [],
+   "when": [
+    "drawingOpen",
+    "!modalOpen"
+   ],
+   "palette": true
+  },
+  {
    "id": "links.back",
    "title": "Links: Go back",
    "category": "Links",
@@ -3503,6 +3525,26 @@
   {
    "id": "list.copyLink",
    "title": "List: Copy item link",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.compareConflict",
+   "title": "List: Compare conflict copy with original",
+   "category": "Navigator",
+   "keys": [],
+   "when": [
+    "listFocus"
+   ],
+   "palette": true
+  },
+  {
+   "id": "list.downloadFromCloud",
+   "title": "List: Download item from iCloud",
    "category": "Navigator",
    "keys": [],
    "when": [

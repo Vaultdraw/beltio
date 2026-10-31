@@ -80,13 +80,10 @@ const SURFACES: Surface[] = [
   {
     file: "components/links/LinksDock.tsx",
     handlers: 6,
-    commands: [],
+    // The Create button: Enter (list.open) on an unresolved row creates it too.
+    commands: ["links.showBacklinks", "links.showOutgoing", "list.open"],
     plumbing: 3,
-    gaps: [
-      { what: "Backlinks tab" },
-      { what: "Outgoing links tab" },
-      { what: "Create the missing target of an unresolved link" },
-    ],
+    gaps: [],
   },
   {
     file: "tabs/TabStrip.tsx",
@@ -144,11 +141,7 @@ describe("every audited click action has a command", () => {
     const gaps = SURFACES.flatMap((s) =>
       s.gaps.map((g) => `${s.file}: ${g.what}`),
     );
-    expect(gaps).toEqual([
-      "components/links/LinksDock.tsx: Backlinks tab",
-      "components/links/LinksDock.tsx: Outgoing links tab",
-      "components/links/LinksDock.tsx: Create the missing target of an unresolved link",
-    ]);
+    expect(gaps).toEqual([]);
   });
 });
 
@@ -163,8 +156,8 @@ const entry = (kind: VaultEntry["kind"], sync?: string): VaultEntry =>
 const flatten = (nodes: readonly MenuNode[]): MenuNode[] =>
   nodes.flatMap((n) => (n.kind === "submenu" ? flatten(n.items) : [n]));
 
-/** Row-menu items with no command today (they open a conflict or iCloud download flow). */
-const ROW_MENU_GAPS = new Set(["compare", "download"]);
+/** Row-menu items with no command today (none left: compare and download got theirs). */
+const ROW_MENU_GAPS = new Set<string>([]);
 
 describe("the file tree row menu", () => {
   const noop = () => {};

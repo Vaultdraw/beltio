@@ -3546,6 +3546,7 @@ export const VaultApp = ({
                   handle={vault.handle}
                   path={activeDoc?.path ?? null}
                   refreshKey={appLinks.refreshKey}
+                  tabRequest={appLinks.tabRequest}
                   onOpen={(path, elementId) =>
                     void appLinks.openLink(path, elementId)
                   }

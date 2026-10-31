@@ -659,6 +659,7 @@ export const VaultNavigator = ({
       export:
         onExportDrawing &&
         ((path, format) => void onExportDrawing(path, format)),
+      sync: onSyncAction && ((entry, action) => onSyncAction(entry, action)),
       copyPath: (path, kind) =>
         void copyEntryPath(
           kind,

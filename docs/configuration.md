@@ -1274,6 +1274,8 @@ All of these are in the Cmd+Shift+P palette, and each can be rebound on the Hotk
 | Links: Insert link…                  | —       | —               |
 | Links: Open link under selection     | ⌥⌘↵     | Ctrl+Alt+Enter  |
 | Links: Toggle backlinks panel        | ⌥⌘B     | Ctrl+Alt+B      |
+| Links: Show backlinks                | —       | —               |
+| Links: Show outgoing links           | —       | —               |
 | Links: Go back                       | ⌥⌘←     | Ctrl+Alt+←      |
 | Links: Go forward                    | ⌥⌘→     | Ctrl+Alt+→      |
 | Links: Copy link to this drawing     | —       | —               |

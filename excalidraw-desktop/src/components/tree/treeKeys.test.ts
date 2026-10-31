@@ -254,6 +254,42 @@ describe("row menu items as list commands (command audit)", () => {
     expect(t.actions.exportPng).toBeDefined();
   });
 
+  it("compare a conflict copy and download an iCloud placeholder, only on such rows", () => {
+    const sync = vi.fn();
+    const rows: TreeRow[] = [
+      {
+        entry: { ...entry("d.excalidraw", "drawing"), sync: "conflict" },
+        depth: 0,
+        expanded: false,
+      },
+      {
+        entry: { ...entry("p.excalidraw", "drawing"), sync: "placeholder" },
+        depth: 0,
+        expanded: false,
+      },
+      {
+        entry: { ...entry("n.md", "note"), sync: "conflict" },
+        depth: 0,
+        expanded: false,
+      },
+      ...ROWS,
+    ];
+    const at = (path: string) =>
+      deps(path, { rows, row: { ...row(), sync } }).actions;
+    at("d.excalidraw").compareConflict!();
+    at("p.excalidraw").downloadFromCloud!();
+    expect(sync.mock.calls.map(([e, a]) => [e.path, a])).toEqual([
+      ["d.excalidraw", "compare"],
+      ["p.excalidraw", "download"],
+    ]);
+    expect(at("d.excalidraw").downloadFromCloud).toBeUndefined();
+    expect(at("p.excalidraw").compareConflict).toBeUndefined();
+    // The menu offers compare on drawings only.
+    expect(at("n.md").compareConflict).toBeUndefined();
+    expect(at("c.excalidraw").compareConflict).toBeUndefined();
+    expect(at("c.excalidraw").downloadFromCloud).toBeUndefined();
+  });
+
   it("skip items the app does not provide", () => {
     const { duplicate, reveal, showAsGrid } = row();
     const t = deps("c.excalidraw", {

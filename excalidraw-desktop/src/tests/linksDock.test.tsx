@@ -210,6 +210,23 @@ describe("LinksDock", () => {
     );
   });
 
+  it("links.showBacklinks / links.showOutgoing pick the tab, at mount and later", async () => {
+    const { props } = setup();
+    const tab = (name: RegExp) =>
+      screen.getByRole("tab", { name }).getAttribute("aria-selected");
+    const { rerender } = render(
+      <LinksDock {...props} tabRequest={{ tab: "outgoing", n: 1 }} />,
+    );
+    await screen.findByRole("tab", { name: /Outgoing \(2\)/ });
+    expect(tab(/Outgoing/)).toBe("true");
+    rerender(<LinksDock {...props} tabRequest={{ tab: "backlinks", n: 2 }} />);
+    expect(tab(/Backlinks/)).toBe("true");
+    // The same command again after a click on the other tab still switches.
+    fireEvent.click(screen.getByRole("tab", { name: /Outgoing/ }));
+    rerender(<LinksDock {...props} tabRequest={{ tab: "backlinks", n: 3 }} />);
+    expect(tab(/Backlinks/)).toBe("true");
+  });
+
   it("refetches when the drawing changes and when refreshKey changes (debounced)", async () => {
     const { repo, links, props } = setup();
     const { rerender } = render(<LinksDock {...props} />);

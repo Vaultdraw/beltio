@@ -50,10 +50,14 @@ export type LinksDockProps = {
   /** "Create" an unresolved target. */
   onCreate(target: string): void;
   visible: boolean;
+  /** A tab asked for by `links.showBacklinks` / `links.showOutgoing`; `n` changes per request. */
+  tabRequest?: LinksDockTabRequest | null;
   ref?: Ref<LinksDockHandle>;
 };
 
-type Tab = "backlinks" | "outgoing";
+export type LinksDockTab = "backlinks" | "outgoing";
+export type LinksDockTabRequest = { tab: LinksDockTab; n: number };
+type Tab = LinksDockTab;
 type Section = "linked" | "unlinked" | "outgoing" | "unresolved";
 
 type Row =
@@ -169,7 +173,8 @@ export function buildRows(
 
 export function LinksDock(props: LinksDockProps) {
   const { links, handle, path, refreshKey, onOpen, onCreate, visible } = props;
-  const [tab, setTab] = useState<Tab>("backlinks");
+  const { tabRequest } = props;
+  const [tab, setTab] = useState<Tab>(tabRequest?.tab ?? "backlinks");
   const [collapsed, setCollapsed] = useState<Record<Section, boolean>>({
     linked: false,
     unlinked: true,
@@ -260,6 +265,13 @@ export function LinksDock(props: LinksDockProps) {
     );
     el?.scrollIntoView?.({ block: "nearest" });
   }, [selected?.key]);
+
+  useEffect(() => {
+    if (tabRequest) {
+      setTab(tabRequest.tab);
+      setSelectedKey(null);
+    }
+  }, [tabRequest]);
 
   const toggle = useCallback((section: Section, value?: boolean) => {
     setCollapsed((c) => ({ ...c, [section]: value ?? !c[section] }));
