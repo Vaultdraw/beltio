@@ -38,7 +38,10 @@ const ROWS: Row[] = [
     name: "New drawing from the empty state, three times",
     seed: "?seed=empty",
     create: async (page) => {
-      await page.getByRole("button", { name: "New Drawing" }).first().click();
+      await page
+        .locator(".vault-home")
+        .getByRole("button", { name: "New drawing" })
+        .click();
     },
     expected: [
       "Untitled.excalidraw",
