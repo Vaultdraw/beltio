@@ -27,7 +27,7 @@ const checked = (md: string): boolean[] => {
   ].map((b) => b.hasAttribute("checked"));
 };
 
-type Row = { name: string; md: string };
+type Row = { name: string; md: string; broken?: boolean };
 
 const REAL = "- [ ] real one\n- [ ] real two\n";
 const rows: Row[] = [
@@ -62,11 +62,92 @@ const rows: Row[] = [
     name: "list item continued by a four-space paragraph",
     md: "- [ ] a\n\n    still a\n- [ ] b\n",
   },
+  // Added by the family hunter [notes] (2026-10-31): more shapes that hold a task-shaped line.
+  {
+    name: "capital X and other status marks",
+    md: "- [X] a\n- [-] b\n- [/] c\n- [ ] d\n",
+  },
+  { name: "ordered with a paren", md: "1) [ ] a\n2) [x] b\n" },
+  { name: "empty task text", md: "- [ ]\n- [ ] after\n" },
+  {
+    name: "task in a table cell is not a task",
+    md: `| a |\n|---|\n| - [ ] cell |\n\n${REAL}`,
+  },
+  {
+    name: "task in a footnote definition",
+    md: `x[^1]\n\n[^1]: - [ ] in note\n\n${REAL}`,
+  },
+  { name: "after an html block", md: `<div>\n- [ ] html\n</div>\n\n${REAL}` },
+  { name: "after a setext heading", md: `Title\n=====\n\n${REAL}` },
+  { name: "tab indented nesting", md: "- [ ] a\n\t- [ ] b\n\t\t- [ ] c\n" },
+  { name: "lone CR line ends", md: REAL.replace(/\n/g, "\r") },
+  {
+    name: "BOM then front matter with dots",
+    md: `\uFEFF---\na: 1\n...\n${REAL}`,
+  },
+  {
+    name: "loose list with blank lines",
+    md: "- [ ] a\n\n- [ ] b\n\n- [x] c\n",
+  },
+  {
+    name: "task text with wikilink, code and math",
+    md: "- [ ] see [[Note]] `- [ ] x` $a$\n- [ ] two\n",
+  },
+  {
+    name: "fence inside a list item",
+    md: "- [ ] a\n  ```\n  - [ ] code\n  ```\n- [ ] b\n",
+  },
+  {
+    name: "quote nested in a list item",
+    md: "- [ ] a\n  > - [ ] quoted\n- [ ] b\n",
+  },
+  {
+    name: "callout nested in a list item",
+    md: "- [ ] a\n  > [!note]\n  > - [ ] in callout\n- [ ] b\n",
+  },
+  {
+    name: "task straight after a paragraph line",
+    md: "text\n- [ ] a\n- [ ] b\n",
+  },
+  { name: "task right under a heading, no blank", md: "# H\n- [ ] a\n" },
+  {
+    name: "inline %% comment spanning lines",
+    md: `a %%\n- [ ] hidden\n%% b\n\n${REAL}`,
+  },
+  { name: "after a $$ block on one line", md: `$$ x $$\n\n${REAL}` },
+  { name: "unclosed fence swallows the rest", md: "```\n- [ ] code\n" },
+  { name: "unclosed math block", md: "$$\n- [ ] x\n\n- [ ] y\n" },
+  { name: "unclosed %% comment", md: "%%\n- [ ] x\n\n- [ ] y\n" },
+  {
+    name: "unicode line separator inside text",
+    md: "- [ ] a\u2028b\n- [ ] c\n",
+  },
+  {
+    name: "a form feed and a vertical tab",
+    md: "- [ ] a\fb\n- [ ] c\u000bd\n",
+  },
+  {
+    name: "emoji and combining marks before the task",
+    md: "# \u{1F600}e\u0301\n\n- [ ] a\n",
+  },
+  {
+    name: "60 tasks",
+    md: Array.from({ length: 60 }, (_, i) => `- [ ] t${i}`).join("\n"),
+  },
+  { name: "star bullets with hard breaks", md: "* [ ] a  \n  more\n* [ ] b\n" },
+  {
+    name: "html comment inline, same line",
+    md: "<!-- c --> - [ ] a\n\n- [ ] b\n",
+  },
+  {
+    name: "reference definition between tasks",
+    md: "- [ ] a\n\n[ref]: https://x.y\n\n- [ ] b\n",
+  },
 ];
 
 describe("family: the Nth checkbox ticks the Nth rendered task", () => {
   for (const row of rows) {
-    it(row.name, () => {
+    (row.broken ? it.fails : it)(row.name, () => {
       const before = checked(row.md);
       expect(taskLines(row.md).length, "checkboxes vs task lines").toBe(
         before.length,
