@@ -8,8 +8,13 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { createFakeNet, fakeNetRow } from "../../../sdk/api/shared/fakeNet";
+import {
+  createFakeNet,
+  fakeNetRow,
+  isBlockedIpLiteral,
+} from "../../../sdk/api/shared/fakeNet";
 import table from "../../src-tauri/crates/vaultdraw-core/src/contract/net_address_cases.json";
+import hosts from "../../src-tauri/crates/vaultdraw-core/src/contract/private_host_cases.json";
 
 const enc = new TextEncoder();
 const open = async (url: string): Promise<string> => {
@@ -38,4 +43,15 @@ describe("fake ctx.net answers like the app's net.rs (toimprove M-18)", () => {
       expect(await open(url)).toBe(want);
     });
   });
+});
+
+describe("the fake refuses the same IP literals as the app (private_host_cases.json, toimprove 274)", () => {
+  for (const { host, blocked } of hosts.cases as {
+    host: string;
+    blocked: boolean;
+  }[]) {
+    it(`${host} -> ${blocked ? "blocked" : "allowed"}`, () => {
+      expect(isBlockedIpLiteral(host)).toBe(blocked);
+    });
+  }
 });
