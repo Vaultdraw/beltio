@@ -17,6 +17,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **File conflict → Save as copy adds `.excalidraw` to a name typed without it**, like the New dialog, instead of refusing the name (toimprove 318).
 - **Linux: the launcher entry from "Links: Register Vaultdraw for links and files" has the Vaultdraw icon.** It named an icon nothing installs, so AppImage and copied installs showed a generic icon; it now names the icon the packages install and writes that icon into your own icon folder (`~/.local/share/icons`), never replacing a file that is not Vaultdraw's (toimprove 310).
 - **Linux: link history Back and Forward are Alt+← and Alt+→.** Ctrl+Alt+← and Ctrl+Alt+→ switch workspaces on GNOME, Xfce and Cinnamon, so the keys never reached Vaultdraw. macOS keeps ⌥⌘← and ⌥⌘→. The Hotkeys page now warns when you bind a key these desktops take (toimprove 321).
 - **Markdown mode: `__Bold__` and `**a * b**` turn a box bold, as `**Bold**` does.** Both stayed as typed characters. Marks inside a list item still stay as typed (one font per box).

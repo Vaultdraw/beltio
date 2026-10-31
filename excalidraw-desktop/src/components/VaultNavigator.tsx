@@ -13,7 +13,7 @@ import {
   entryDisplayName,
   entryWord,
   fileKind,
-  hasDrawingExt,
+  withDrawingExt,
   drawingStem,
 } from "../vault/fileKind";
 
@@ -728,10 +728,7 @@ export const VaultNavigator = ({
     }
     try {
       if (createKind === "drawing") {
-        const fullDrawingName = hasDrawingExt(createName.trim())
-          ? createName.trim()
-          : `${createName.trim()}.excalidraw`;
-        await onCreateDrawing(createParent, fullDrawingName);
+        await onCreateDrawing(createParent, withDrawingExt(createName));
       } else {
         await onCreateFolder(createParent, createName.trim());
       }

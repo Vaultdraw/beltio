@@ -6,6 +6,7 @@ import {
   hasHiddenComponent,
   isHiddenName,
   stripDrawingExt,
+  withDrawingExt,
 } from "./fileKind";
 
 const fixtures = raw as {
@@ -27,5 +28,17 @@ describe("fileKind (shared fixtures with Rust)", () => {
   it("finds hidden path components", () => {
     expect(hasHiddenComponent("a/.trash/b.md")).toBe(true);
     expect(hasHiddenComponent("a/b.md")).toBe(false);
+  });
+});
+
+describe("withDrawingExt (toimprove 318)", () => {
+  it.each([
+    ["My kept edits", "My kept edits.excalidraw"],
+    ["DSA/My kept edits", "DSA/My kept edits.excalidraw"],
+    ["  Plan  ", "Plan.excalidraw"],
+    ["Plan.excalidraw", "Plan.excalidraw"],
+    ["Plan.EXCALIDRAW", "Plan.EXCALIDRAW"],
+  ])("%s becomes %s", (typed, want) => {
+    expect(withDrawingExt(typed)).toBe(want);
   });
 });

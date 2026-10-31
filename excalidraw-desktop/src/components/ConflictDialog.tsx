@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { withDrawingExt } from "../vault/fileKind";
 import { duplicateName, getBaseName } from "../vault/treeStore";
 
 import { userError } from "./userError";
@@ -46,7 +47,8 @@ export const ConflictDialog = ({
     setProcessing(true);
     setError(null);
     try {
-      await onSaveCopy(copyPath.trim());
+      // A name typed without `.excalidraw` gets it, like the New dialog (toimprove 318).
+      await onSaveCopy(copyPath.trim() === "" ? "" : withDrawingExt(copyPath));
       onClose();
     } catch (err: unknown) {
       setError(userError(err));

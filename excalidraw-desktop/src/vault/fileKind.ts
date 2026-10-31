@@ -30,6 +30,15 @@ const endsWithCi = (name: string, ext: string): boolean => {
 export const hasDrawingExt = (name: string): boolean =>
   endsWithCi(name, DRAWING_EXT);
 
+/**
+ * A drawing's file name from what the user typed: `.excalidraw` is added when missing, as the
+ * New dialog and the conflict's Save as copy do (toimprove 318). Trimmed.
+ */
+export const withDrawingExt = (name: string): string => {
+  const t = name.trim();
+  return hasDrawingExt(t) ? t : `${t}${DRAWING_EXT}`;
+};
+
 /** `name` without a trailing `.excalidraw` (any case); unchanged when it has none. */
 export const stripDrawingExt = (name: string): string =>
   hasDrawingExt(name) ? name.slice(0, name.length - DRAWING_EXT.length) : name;
