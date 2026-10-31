@@ -1,0 +1,193 @@
+{
+ "about": "Which text is a [[wikilink]] (family: twin parsers, hunter [notes] 2026-10-31, toimprove 320). `links` are the expected targets in order (Obsidian). The reading view (src/notes/wikilinkContract.test.ts) and the native parser (tests/wikilink_contract.rs) run these rows. `drift` marks a side that disagrees today; its test asserts the row still disagrees, so it turns red when fixed.",
+ "cases": [
+  {
+   "label": "plain",
+   "text": "see [[Note]] now",
+   "links": [
+    "Note"
+   ]
+  },
+  {
+   "label": "alias",
+   "text": "[[Note|shown]]",
+   "links": [
+    "Note"
+   ]
+  },
+  {
+   "label": "heading",
+   "text": "[[Note#Part]]",
+   "links": [
+    "Note"
+   ]
+  },
+  {
+   "label": "block",
+   "text": "[[Note#^abc]]",
+   "links": [
+    "Note"
+   ]
+  },
+  {
+   "label": "two on a line",
+   "text": "[[A]] and [[B]]",
+   "links": [
+    "A",
+    "B"
+   ]
+  },
+  {
+   "label": "adjacent",
+   "text": "[[A]][[B]]",
+   "links": [
+    "A",
+    "B"
+   ]
+  },
+  {
+   "label": "spaces inside",
+   "text": "[[ Note ]]",
+   "links": [
+    "Note"
+   ]
+  },
+  {
+   "label": "link to a heading of this note",
+   "text": "[[#Part]]",
+   "links": [
+    ""
+   ]
+  },
+  {
+   "label": "alias holding a pipe",
+   "text": "[[Note|a|b]]",
+   "links": [
+    "Note"
+   ]
+  },
+  {
+   "label": "escaped pipe in a table",
+   "text": "| h |\n|---|\n| [[Note\\|a]] |",
+   "links": [
+    "Note"
+   ]
+  },
+  {
+   "label": "a .excalidraw name keeps its extension",
+   "text": "[[Sketch.excalidraw]]",
+   "links": [
+    "Sketch.excalidraw"
+   ]
+  },
+  {
+   "label": "in inline code",
+   "text": "`[[Note]]`",
+   "links": []
+  },
+  {
+   "label": "in a fence",
+   "text": "```\n[[Note]]\n```",
+   "links": []
+  },
+  {
+   "label": "escaped open bracket",
+   "text": "\\[[Note]]",
+   "links": []
+  },
+  {
+   "label": "an embed is not a link",
+   "text": "![[Note]]",
+   "links": []
+  },
+  {
+   "label": "empty",
+   "text": "[[]]",
+   "links": []
+  },
+  {
+   "label": "in a heading",
+   "text": "# [[Note]]",
+   "links": [
+    "Note"
+   ]
+  },
+  {
+   "label": "in a callout title",
+   "text": "> [!note] [[Note]]\n> x",
+   "links": [
+    "Note"
+   ]
+  },
+  {
+   "label": "name with a line break",
+   "text": "[[a\nb]]",
+   "links": [],
+   "drift": {
+    "native": "toimprove 320"
+   }
+  },
+  {
+   "label": "name with a closing bracket",
+   "text": "[[a]b]]",
+   "links": [],
+   "drift": {
+    "native": "toimprove 320"
+   }
+  },
+  {
+   "label": "name with a bracket pair",
+   "text": "[[a [b] c]]",
+   "links": [],
+   "drift": {
+    "native": "toimprove 320"
+   }
+  },
+  {
+   "label": "name with an opening bracket",
+   "text": "[[a[b]]]",
+   "links": [],
+   "drift": {
+    "native": "toimprove 320",
+    "reading": "toimprove 320"
+   }
+  },
+  {
+   "label": "triple brackets",
+   "text": "[[[Note]]]",
+   "links": [
+    "Note"
+   ],
+   "drift": {
+    "reading": "toimprove 320"
+   }
+  },
+  {
+   "label": "an unclosed link before a closed one",
+   "text": "[[open and [[Note]]",
+   "links": [
+    "Note"
+   ],
+   "drift": {
+    "reading": "toimprove 320"
+   }
+  },
+  {
+   "label": "only an alias",
+   "text": "[[|shown]]",
+   "links": [],
+   "drift": {
+    "reading": "toimprove 320"
+   }
+  },
+  {
+   "label": "only spaces",
+   "text": "[[ ]]",
+   "links": [],
+   "drift": {
+    "native": "toimprove 320",
+    "reading": "toimprove 320"
+   }
+  }
+ ]
+}
