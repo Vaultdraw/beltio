@@ -1407,7 +1407,7 @@ const createExtensionSession = ({
         return;
       }
       submit();
-      const created = newTextElement({
+      const made = newTextElement({
         x,
         y,
         text,
@@ -1429,7 +1429,24 @@ const createExtensionSession = ({
             from.groupIds),
         ],
         customData,
+        // Vaultdraw: a rotated card's next block turns with it (toimprove 299)
+        angle: from.angle,
       });
+      let created = made;
+      if (from.angle) {
+        // (x, y) is "below" in the box's own frame: turn the new box's centre about the centre
+        // of the box it continues, so it stays below along the rotated axis.
+        const [cx, cy] = pointRotateRads(
+          pointFrom(made.x + made.width / 2, made.y + made.height / 2),
+          pointFrom(from.x + from.width / 2, from.y + from.height / 2),
+          from.angle,
+        );
+        created = {
+          ...made,
+          x: cx - made.width / 2,
+          y: cy - made.height / 2,
+        };
+      }
       app.insertNewElements([created]);
       editExisting(created, Math.min(caret, created.originalText.length));
     },

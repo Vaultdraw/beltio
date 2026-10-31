@@ -50,7 +50,6 @@ const ROWS: Row[] = [
     name: "angle (a rotated card)",
     from: { angle: 0.4 as never },
     prop: "angle",
-    broken: 299,
   },
 ];
 
@@ -106,4 +105,65 @@ describe("family: a continued box inherits what the box it continues has", () =>
     };
     (row.broken !== undefined ? it.fails : it)(row.name, run);
   }
+});
+
+describe("toimprove 299: a rotated card's next block sits below along the turned axis", () => {
+  afterEach(() => unmountComponent());
+
+  it("the body's centre is the unrotated 'below' point turned about the heading's centre", async () => {
+    let session: TextEditorSession | null = null;
+    const extension: TextEditorExtension = {
+      attach: (s) => {
+        session ??= s;
+        return {};
+      },
+    };
+    await render(
+      <Excalidraw
+        handleKeyboardGlobally={true}
+        textEditorExtension={() => extension}
+      />,
+    );
+    const angle = Math.PI / 2;
+    const heading = API.createElement({
+      type: "text",
+      text: "Title",
+      x: 0,
+      y: 0,
+      angle: angle as never,
+    } as never);
+    API.setElements([heading]);
+    act(() => {
+      window.h.app.text.startTextEditing({
+        sceneX: 0,
+        sceneY: 0,
+        insertAtParentCenter: false,
+        textElement: heading as never,
+      });
+    });
+    await getTextEditor();
+    // the heading as the editor measured it, when Enter continues it
+    const live = window.h.elements.find((e) => e.id === heading.id)!;
+    const hc = { x: live.x + live.width / 2, y: live.y + live.height / 2 };
+    act(() => {
+      session!.continueInNewText({
+        x: 0,
+        y: 100,
+        text: "Body",
+        caret: 0,
+        fontSize: 20,
+      });
+    });
+    const body = window.h.elements.find(
+      (e) => e.type === "text" && e.id !== heading.id && !e.isDeleted,
+    ) as any;
+    const bc = { x: body.x + body.width / 2, y: body.y + body.height / 2 };
+    // Unrotated, the body's centre is (w/2, 100 + h/2), below the heading. A quarter turn
+    // clockwise (screen y down) maps an offset (dx, dy) from the heading's centre to (-dy, dx).
+    const dx = body.width / 2 - hc.x;
+    const dy = 100 + body.height / 2 - hc.y;
+    expect(body.angle).toBeCloseTo(angle);
+    expect(bc.x).toBeCloseTo(hc.x - dy, 3);
+    expect(bc.y).toBeCloseTo(hc.y + dx, 3);
+  });
 });
