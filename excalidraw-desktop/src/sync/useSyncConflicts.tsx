@@ -126,6 +126,7 @@ export function useSyncConflicts({
       } catch (e) {
         toastStore.push({
           message: `Could not download ${entry.name}: ${errorMessage(e)}`,
+          kind: "error",
         });
       }
     },
@@ -182,6 +183,7 @@ export function useSyncConflicts({
             (e) =>
               toastStore.push({
                 message: `Could not keep this version: ${errorMessage(e)}`,
+                kind: "error",
               }),
           );
         },
@@ -198,6 +200,7 @@ export function useSyncConflicts({
             (e) =>
               toastStore.push({
                 message: `Could not keep the other version: ${errorMessage(e)}`,
+                kind: "error",
               }),
           );
         },

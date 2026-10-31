@@ -1,5 +1,6 @@
 /** Builds the PluginContext of one plugin. Everything registered goes into `subscriptions`. */
 import { closePanel, openPanel } from "../../slots/panelStore";
+import { isFailureMessage } from "../../toasts/queue";
 import { toastStore } from "../../toasts/toastStore";
 import { dataKeyFor } from "../../sceneOps/validate";
 import { getPreferences, subscribePreferences } from "../../vault/preferences";
@@ -327,7 +328,12 @@ export function createPluginContext(
         const total = Number(p?.total);
         toastStore.push({
           message: `${info.name}: ${String(message)}`,
-          kind: options?.kind === "error" ? "error" : "info",
+          // A plugin's "Could not …" without a kind is an error too, like the app's (toimprove 323).
+          kind:
+            options?.kind === "error" ||
+            (options?.kind === undefined && isFailureMessage(String(message)))
+              ? "error"
+              : "info",
           ...(typeof options?.detail === "string" && options.detail
             ? { detail: options.detail.slice(0, 200) }
             : {}),

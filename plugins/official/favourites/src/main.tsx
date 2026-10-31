@@ -28,7 +28,7 @@ async function openFavourite(ctx: PluginContext, f: Favourite) {
   try {
     await ctx.workspace.open(f.path);
   } catch {
-    ctx.ui.toast(`Could not open ${f.path}`);
+    ctx.ui.toast(`Could not open ${f.path}`, { kind: "error" });
     return;
   }
   const { element } = f;

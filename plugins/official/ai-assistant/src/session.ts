@@ -321,7 +321,7 @@ export function createSession(ctx: PluginContext): Session {
         await navigator.clipboard.writeText(state.answer);
         ctx.ui.toast("Copied the answer");
       } catch {
-        ctx.ui.toast("Could not copy the answer");
+        ctx.ui.toast("Could not copy the answer", { kind: "error" });
       }
     },
     async removeKey() {

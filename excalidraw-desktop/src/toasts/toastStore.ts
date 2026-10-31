@@ -7,6 +7,7 @@ import {
   holdToast,
   pushToast,
   releaseToast,
+  toastKind,
 } from "./queue";
 
 import type { Toast, ToastInput, ToastQueue } from "./queue";
@@ -37,7 +38,7 @@ export function createToastStore(now: () => number = Date.now) {
   return {
     /** Returns the id of the toast now showing this message. */
     push: (input: ToastInput): number | undefined => {
-      const kind = input.kind ?? "info";
+      const kind = toastKind(input);
       set(
         pushToast(
           queue,

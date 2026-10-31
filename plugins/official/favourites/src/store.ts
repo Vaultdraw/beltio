@@ -60,7 +60,7 @@ export function createStore(ctx: PluginContext): FavouritesStore {
         { key: "items", value: value.length ? value : null },
       ]);
     } catch (e) {
-      ctx.ui.toast("Could not save favourites");
+      ctx.ui.toast("Could not save favourites", { kind: "error" });
       ctx.log.warn(e instanceof Error ? e.message : String(e));
     }
   };

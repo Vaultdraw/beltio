@@ -14,6 +14,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { toastKind } from "../toasts/queue";
+
 const DESKTOP = join(__dirname, "..", "..");
 const FAILURE = /^(Could not|Couldn.t|Cannot|Can.t|Failed|Unable)/;
 const CALL =
@@ -35,22 +37,18 @@ for (const f of files) {
   const text = readFileSync(join(DESKTOP, f), "utf8");
   for (const m of text.matchAll(CALL)) {
     const first = /["`'](.{0,60})/.exec(m[2]);
-    if (first && FAILURE.test(first[1]) && !/["']error["']/.test(m[2])) {
+    // No kind given: the toast queue makes a failure-worded message an error itself (toastKind,
+    // and the plugin host for plugin toasts), so only an explicit other kind is a miss.
+    const explicitKind =
+      /kind:\s*["'](info|success)["']|,\s*["']info["']\s*\)/.test(m[2]);
+    if (first && FAILURE.test(first[1]) && explicitKind) {
       found.push(`${f}:${text.slice(0, m.index).split("\n").length}`);
     }
   }
 }
 
 /** File -> how many failure notices in it are not error notices today. */
-const KNOWN: Record<string, number> = {
-  "src/ai/aiSwitch.ts": 1,
-  "src/notes/NoteView.tsx": 4,
-  "src/sync/useSyncConflicts.tsx": 3,
-  "../plugins/official/ai-assistant/src/session.ts": 1,
-  "../plugins/official/favourites/src/main.tsx": 1,
-  "../plugins/official/favourites/src/store.ts": 1,
-  "../plugins/official/formula/src/main.tsx": 1,
-};
+const KNOWN: Record<string, number> = {};
 
 const perFile = (list: string[]) =>
   list.reduce<Record<string, number>>((acc, at) => {
@@ -71,7 +69,19 @@ describe("family (shell hunter): a failure notice is an error notice", () => {
     expect(perFile(found)).toEqual(KNOWN);
   });
 
-  it.fails("no failure notice is an info notice (toimprove 323)", () => {
+  it("no failure notice is an info notice (toimprove 323)", () => {
     expect(found).toEqual([]);
+  });
+
+  it.each([
+    ["Couldn't save. The disk is full.", "error"],
+    ["Could not copy the path", "error"],
+    ['Cannot create a note named "a/b"', "error"],
+    ["Couldn’t tick that task.", "error"],
+    ["Copied a.excalidraw", "info"],
+    ["Import failed", "info"],
+  ] as const)("the queue gives %s the kind %s", (message, kind) => {
+    expect(toastKind({ message })).toBe(kind);
+    expect(toastKind({ message, kind: "info" })).toBe("info");
   });
 });

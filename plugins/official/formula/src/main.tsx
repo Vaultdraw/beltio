@@ -42,6 +42,7 @@ export default definePlugin({
     const fail = (e: unknown) =>
       ctx.ui.toast(
         e instanceof Error ? e.message : "Could not place the formula",
+        { kind: "error" },
       );
 
     const open = (what: Mode) => {

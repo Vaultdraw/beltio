@@ -58,6 +58,22 @@ export const PROGRESS_MS = 60000;
 export const emptyQueue = (): ToastQueue => ({ toasts: [], nextId: 1 });
 
 /** Lifetime in ms; Infinity for 0 (sticky). */
+/** A message that reports a failure, as the app words them ("Could not …", "Couldn't …"). */
+const FAILURE_WORDS =
+  /^(Could not|Couldn['’]t|Cannot|Can['’]t|Failed|Unable)\b/;
+
+/**
+ * The toast's kind: what the caller says, else an error when the message reports a failure, so
+ * every failure notice follows the user's "Error notices stay for" time and looks like an error,
+ * whoever wrote it (toimprove 323). Otherwise info.
+ */
+export const toastKind = (input: ToastInput): Toast["kind"] =>
+  input.kind ?? (isFailureMessage(input.message) ? "error" : "info");
+
+/** Whether a notice's text reports a failure. */
+export const isFailureMessage = (message: string): boolean =>
+  FAILURE_WORDS.test(message);
+
 const lifetime = (input: ToastInput): number => {
   const ms =
     input.durationMs ??
@@ -65,7 +81,7 @@ const lifetime = (input: ToastInput): number => {
       ? PROGRESS_MS
       : input.action || input.actions?.length
       ? ACTION_MS
-      : input.kind === "error"
+      : toastKind(input) === "error"
       ? ERROR_MS
       : INFO_MS);
   return ms <= 0 ? Infinity : ms;
@@ -81,7 +97,7 @@ export function pushToast(
   input: ToastInput,
   now: number,
 ): ToastQueue {
-  const kind = input.kind ?? "info";
+  const kind = toastKind(input);
   const life = lifetime(input);
   const expiresAt = now + life;
   const sticky = life === Infinity;
