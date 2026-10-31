@@ -117,7 +117,9 @@ describe("byParts fallback", () => {
     expect(html).toContain('class="note-raw"');
     expect(html).toContain("&lt;b&gt;x&lt;/b&gt;");
     expect(html).toContain("<em>end</em>");
-    expect(taskLines(`${">".repeat(20000)} - [ ] t\n\n- [ ] real`)).toEqual([2]);
+    expect(taskLines(`${">".repeat(20000)} - [ ] t\n\n- [ ] real`)).toEqual([
+      2,
+    ]);
   });
 });
 
