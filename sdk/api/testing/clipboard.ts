@@ -4,7 +4,7 @@
  */
 import { permissionError } from "../shared/vaultPaths";
 
-import type { Disposable, PasteResult } from "../src/index";
+import type { Disposable, PasteResult } from "@vaultdraw/api";
 
 export interface FakeClipboard {
   /** What `ctx.clipboard.readText()` returns. */

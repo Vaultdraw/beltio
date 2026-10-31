@@ -5,7 +5,7 @@
  */
 import { PluginApiError } from "./rules";
 
-import type { NetApi, NetRequest, NetResponse } from "../src/index";
+import type { NetApi, NetRequest, NetResponse } from "@vaultdraw/api";
 
 export type RawCall = (
   method: string,

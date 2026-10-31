@@ -12,7 +12,7 @@ import type {
   SceneContextApi,
   SceneOp,
   ShapeDef,
-} from "../src/index";
+} from "@vaultdraw/api";
 
 /** Most SVG text a shape may render, in bytes. */
 export const SHAPE_MAX_SVG_BYTES = 200 * 1024;

@@ -87,30 +87,29 @@ describe("check warns on deprecated names in the code (toimprove M-7)", () => {
 // plugin and Zed's extension template run their build with tools `npm install` brings.
 describe("template scripts run after npm install (toimprove M-8)", () => {
   for (const template of ["command", "panel", "scene"]) {
-    it.fails(
-      `${template}: every script's tool is installed by npm install`,
-      () => {
-        const parent = tmp("vdp-huntm-");
-        const r = run([
-          "init",
-          "demo-tpl",
-          "--template",
-          template,
-          "--dir",
-          parent,
-        ]);
-        expect(r.code).toBe(0);
-        const pkg = JSON.parse(
-          readFileSync(path.join(parent, "demo-tpl", "package.json"), "utf8"),
-        );
-        const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-        const uses = Object.values(pkg.scripts).some((s) =>
-          /^vaultdraw-plugin\b/.test(s),
-        );
-        expect(uses).toBe(true);
-        expect(Object.keys(deps)).toContain("vaultdraw-plugin");
-      },
-    );
+    it(`${template}: every script's tool is installed by npm install`, () => {
+      const parent = tmp("vdp-huntm-");
+      const r = run([
+        "init",
+        "demo-tpl",
+        "--template",
+        template,
+        "--dir",
+        parent,
+      ]);
+      expect(r.code).toBe(0);
+      const pkg = JSON.parse(
+        readFileSync(path.join(parent, "demo-tpl", "package.json"), "utf8"),
+      );
+      const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+      const uses = Object.values(pkg.scripts).some((s) =>
+        /^vaultdraw-plugin\b/.test(s),
+      );
+      expect(uses).toBe(true);
+      expect(Object.keys(deps)).toContain("vaultdraw-plugin");
+      // The dependency is this SDK's own command folder, so the bin it installs is this tool.
+      expect(deps["vaultdraw-plugin"]).toBe(`file:${path.join(SDK, "cli")}`);
+    });
   }
 });
 

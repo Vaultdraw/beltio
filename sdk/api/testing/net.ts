@@ -7,7 +7,7 @@ import { createFakeNet, fakeNetRow, type FakeNet } from "../shared/fakeNet";
 import { createNetClient, createSecretClient } from "../shared/netClient";
 import { permissionError } from "../shared/vaultPaths";
 
-import type { NetApi, SecretApi } from "../src/index";
+import type { NetApi, SecretApi } from "@vaultdraw/api";
 
 export type { FakeNet, FakeNetReply, FakeNetRequest } from "../shared/fakeNet";
 

@@ -143,6 +143,26 @@ function allFiles(dir) {
 }
 
 /**
+ * The scripts run `vaultdraw-plugin`, which is not on npm yet: the project gets it as a
+ * dev dependency on this copy of the SDK (`file:`), so `npm install` puts the command in
+ * `node_modules/.bin` and `npm run dev/build/check/package` work (toimprove 254).
+ * @param {string} text the template's package.json
+ */
+export function withLocalTool(text) {
+  const pkg = JSON.parse(text);
+  const deps = {
+    ...pkg.devDependencies,
+    "vaultdraw-plugin": `file:${path.join(sdkRoot(), "cli")}`,
+  };
+  pkg.devDependencies = Object.fromEntries(
+    Object.keys(deps)
+      .sort()
+      .map((k) => [k, deps[k]]),
+  );
+  return `${JSON.stringify(pkg, null, 2)}\n`;
+}
+
+/**
  * A TypeScript project from `templates/<name>/`. Template files end in `.tpl` (so the
  * repo's own tools ignore them); `__ID__` and `__NAME__` are replaced.
  * @param {string} id
@@ -175,9 +195,12 @@ function initTemplate(id, template, parent, out) {
     writeFileSync(f, data);
   };
   for (const f of allFiles(templateDir)) {
-    const text = readFileSync(path.join(templateDir, ...f.split("/")), "utf8")
+    let text = readFileSync(path.join(templateDir, ...f.split("/")), "utf8")
       .replaceAll("__ID__", id)
       .replaceAll("__NAME__", name);
+    if (f === "package.json.tpl") {
+      text = withLocalTool(text);
+    }
     // Taplo and VS Code read this line: completion and errors in plugin.toml.
     put(
       f.replace(/\.tpl$/, ""),

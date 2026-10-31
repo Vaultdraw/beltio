@@ -26,23 +26,19 @@ describe.skipIf(!existsSync(TSC))(
   "fresh templates type-check (toimprove M-10)",
   () => {
     for (const template of ["command", "panel", "scene"]) {
-      it.fails(
-        `${template}: init, then tsc -p . has no errors`,
-        () => {
-          mkdirSync(SCRATCH, { recursive: true });
-          const id = `t-${template}`;
-          expect(
-            run(["init", id, "--template", template, "--dir", SCRATCH]).code,
-          ).toBe(0);
-          const r = spawnSync(TSC, ["--noEmit", "-p", "."], {
-            cwd: path.join(SCRATCH, id),
-            encoding: "utf8",
-          });
-          expect(r.stdout + r.stderr).not.toMatch(/error TS/);
-          expect(r.status).toBe(0);
-        },
-        120_000,
-      );
+      it(`${template}: init, then tsc -p . has no errors`, () => {
+        mkdirSync(SCRATCH, { recursive: true });
+        const id = `t-${template}`;
+        expect(
+          run(["init", id, "--template", template, "--dir", SCRATCH]).code,
+        ).toBe(0);
+        const r = spawnSync(TSC, ["--noEmit", "-p", "."], {
+          cwd: path.join(SCRATCH, id),
+          encoding: "utf8",
+        });
+        expect(r.stdout + r.stderr).not.toMatch(/error TS/);
+        expect(r.status).toBe(0);
+      }, 120_000);
     }
   },
 );

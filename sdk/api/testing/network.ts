@@ -5,7 +5,7 @@
 import { PluginApiError } from "../shared/rules";
 import { permissionError } from "../shared/vaultPaths";
 
-import type { NetworkApi } from "../src/index";
+import type { NetworkApi } from "@vaultdraw/api";
 
 export interface FakeNetwork {
   /** Pictures by address (bytes), or an error code to reject with (`"NOT_AN_IMAGE"`, `"HTTP_STATUS"`, ...). */

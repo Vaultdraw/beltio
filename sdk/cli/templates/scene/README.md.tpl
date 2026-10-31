@@ -4,7 +4,7 @@ A Vaultdraw plugin written in TypeScript.
 
 | Command | What it does |
 | --- | --- |
-| `npm install` | Install the dev tools (esbuild, TypeScript, Vitest) |
+| `npm install` | Install the dev tools (esbuild, TypeScript, Vitest, and the `vaultdraw-plugin` command from the SDK folder `init` ran from) |
 | `npm run dev` | Build into `dist/`, copy it into your plugins folder, rebuild on every save |
 | `npm test` | Run the tests (`src/main.test.ts`) without the app |
 | `npm run build` | Bundle `src/main.ts` into `dist/main.js` |

@@ -17,6 +17,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Plugin tool: a new TypeScript plugin builds and type-checks right after `npm install`.** `vaultdraw-plugin init --template …` now adds the tool itself as a dev dependency on your SDK folder, so `npm run dev`, `build`, `check` and `package` find it, and the copied test kit no longer imports files `init` does not copy, so `tsc` and editors show no errors in a fresh project (toimprove 254, 260).
 - **Plugin tool: `vaultdraw-plugin check` agrees with the app on `min_api` and warns on deprecated names.** A `min_api` newer than the plugin API the tool knows (1.2.0) is now an error (`min-api-unsupported`), as the app refuses to load such a plugin; the toast option `action` and `ctx.manifest.dir` in the code give a `deprecated` warning, as the stability promise says. The plugin getting-started guide uses a shell function that works in zsh (toimprove 250, 253, 255).
 - **A long note with no blank line opens at once.** A pasted log or CSV of 8,000 lines with no empty line took 7 seconds to show in the reading view (and grew four times slower for twice the text); it now takes about 0.1 second. The rendered result is unchanged.
 - **A note with old-Mac line ends (a lone CR) can be ticked.** Clicking a checkbox in the reading view did nothing in such a note. The note keeps its own line ends when it is saved.
