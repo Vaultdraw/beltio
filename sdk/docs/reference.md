@@ -1069,6 +1069,7 @@ The templates are `.tpl` files in `sdk/cli/templates/`; `init` strips the suffix
 | `main-path-invalid` | error | `main` is not a relative path inside the folder |
 | `api-unsupported` | error | `api` is not a level the app implements (1; 0 is accepted with `api-deprecated`) |
 | `min-api-invalid` | error | `min_api` is not semver |
+| `min-api-unsupported` | error | `min_api` is newer than the API revision the tool knows (apps with that revision refuse the plugin) |
 | `text-invalid` | error | `description` or `author` is too long or not text, or `dev` is not true or false |
 | `activation-unknown` | error | `activation` is not a list, or names an event other than `onStartupFinished` |
 | `permission-invalid` | error | `permissions` is not a list of strings |
@@ -1090,6 +1091,7 @@ The templates are `.tpl` files in `sdk/cli/templates/`; `init` strips the suffix
 | `min-app-low` | warning | `min_app` is lower than the first app version with the API the code uses (best effort: it looks for `ctx.<area>` in the code) |
 | `readme-missing` | warning | No `README.md` |
 | `api-deprecated` | warning | `api = 0`: it still loads, set `api = 1` |
+| `deprecated` | warning | the code uses a deprecated name (the toast option `action`, `ctx.manifest.dir`); best effort |
 | `zip-checksum` | error | Zip only: the file does not match its `.sha256` file, or that file holds no checksum |
 | `zip-invalid` | error | Zip only: the archive breaks the strict reader's rules (see [packaging.md](packaging.md#check-a-zip)) |
 | `zip-layout` | error | Zip only: `plugin.toml` is inside a single top folder instead of at the zip root |

@@ -2,12 +2,18 @@
  * Static checks of `plugin.toml` text. The Rust app (`manifest.rs`) is the authority;
  * the corpus in `sdk/api/test/manifests` keeps the two in step.
  */
-import { isSemver } from "./semver.mjs";
+import { compareSemver, isSemver } from "./semver.mjs";
 import { parseToml, TomlError } from "./toml.mjs";
 
 export const MAX_MANIFEST_BYTES = 64 * 1024;
 /** The plugin API level the app implements (1.0). */
 export const SUPPORTED_API = 1;
+/**
+ * The API revision this SDK describes, the same as `API_REVISION` in the app's manifest.rs and
+ * the version in sdk/api/package.json (a test keeps the three equal). The app refuses a plugin
+ * whose `min_api` is newer.
+ */
+export const API_REVISION = "1.2.0";
 /** The pre-1.0 level: still accepted, with a warning, until API 2.0. */
 export const LEGACY_API = 0;
 const MAX_COMMANDS = 200;
@@ -229,6 +235,12 @@ export function validateManifestText(text, file = "plugin.toml") {
         `min_api ${show(
           doc.min_api,
         )} is not a semantic version (for example 1.0.0)`,
+      );
+    } else if (compareSemver(doc.min_api, API_REVISION) > 0) {
+      // The twin of manifest.rs `compatibility`: an app with this revision refuses the plugin.
+      err(
+        "min-api-unsupported",
+        `min_api ${doc.min_api} is newer than plugin API ${API_REVISION}, the revision this tool knows; apps with ${API_REVISION} refuse the plugin. Lower min_api, or update the SDK if a newer app is out`,
       );
     }
   }

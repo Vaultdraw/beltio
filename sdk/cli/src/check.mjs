@@ -36,6 +36,23 @@ export const API_AREAS = /** @type {const} */ ([
 ]);
 
 /**
+ * Deprecated names `check` can see in the code (stability.md "Deprecation" step 2), the same list
+ * as "Deprecated" in sdk/api/CHANGELOG.md. Best effort: a regular expression per use, run on the
+ * code without comments. `api = 0` is the manifest's `api-deprecated`.
+ */
+export const DEPRECATED_USES = /** @type {const} */ ([
+  [
+    // `ui.toast(…, { action: … })`; `actions:` is the replacement and does not match.
+    /\bui\.toast\s*\((?:[^()]|\([^()]*\))*?\baction\s*:/,
+    "the ui.toast option `action` is replaced by `actions` and goes in API 2.0",
+  ],
+  [
+    /\bmanifest\.dir\b/,
+    "`ctx.manifest.dir` is an internal path; it is still filled in 1.x and goes in API 2.0",
+  ],
+]);
+
+/**
  * @typedef {import("./manifest.mjs").Finding} Finding
  * @typedef {{ ok: boolean, errors: Finding[], warnings: Finding[] }} CheckResult
  */
@@ -360,7 +377,17 @@ function checkMain(root, main, minApp, errors, warnings) {
     const file = /** @type {string} */ (queue.shift());
     const rel = path.relative(root, file).split(path.sep).join("/");
     const code = readFileSync(file, "utf8");
-    usesApi ||= API_AREAS.some(([re]) => re.test(stripComments(code)));
+    const bare = stripComments(code);
+    usesApi ||= API_AREAS.some(([re]) => re.test(bare));
+    for (const [re, message] of DEPRECATED_USES) {
+      if (re.test(bare)) {
+        warnings.push({
+          code: "deprecated",
+          file: rel,
+          message: `${rel} uses a deprecated name: ${message}`,
+        });
+      }
+    }
     for (const spec of scanImports(code)) {
       if (spec.startsWith("./") || spec.startsWith("../")) {
         const target = path.resolve(path.dirname(file), spec);

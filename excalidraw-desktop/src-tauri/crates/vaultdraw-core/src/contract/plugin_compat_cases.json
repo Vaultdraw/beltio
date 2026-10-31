@@ -7,8 +7,8 @@
     { "label": "unknown level 2", "api": 2, "loads": false },
     { "label": "min_api 1.0.0, the first 1.x revision", "api": 1, "min_api": "1.0.0", "loads": true },
     { "label": "min_api older than the revision", "api": 1, "min_api": "0.9.0", "loads": true },
-    { "label": "min_api a far patch", "api": 1, "min_api": "1.999.1", "loads": false, "check_known": "toimprove 250" },
-    { "label": "min_api a far minor", "api": 1, "min_api": "1.999.0", "loads": false, "check_known": "toimprove 250" },
-    { "label": "min_api a far major", "api": 1, "min_api": "9.0.0", "loads": false, "check_known": "toimprove 250" }
+    { "label": "min_api a far patch", "api": 1, "min_api": "1.999.1", "loads": false },
+    { "label": "min_api a far minor", "api": 1, "min_api": "1.999.0", "loads": false },
+    { "label": "min_api a far major", "api": 1, "min_api": "9.0.0", "loads": false }
   ]
 }

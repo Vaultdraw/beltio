@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { checkPlugin } from "../src/check.mjs";
-import { validateManifestText } from "../src/manifest.mjs";
+import { API_REVISION, validateManifestText } from "../src/manifest.mjs";
 
 import { cleanup, makePlugin, MANIFEST, run, SDK, tmp } from "./helpers.mjs";
 
@@ -31,13 +31,14 @@ describe("min_api against the API revision this SDK implements (toimprove M-4)",
     expect(findings(`${MANIFEST}min_api = "${REVISION}"\n`)).toEqual([]);
   });
 
+  it("the check tool's revision is the SDK's (and so the app's, surface.test)", () => {
+    expect(API_REVISION).toBe(REVISION);
+  });
+
   for (const v of ["1.5.0", "2.0.0"]) {
-    it.fails(
-      `min_api = "${v}" (newer than ${REVISION}) is reported, as the app refuses it`,
-      () => {
-        expect(findings(`${MANIFEST}min_api = "${v}"\n`)).not.toEqual([]);
-      },
-    );
+    it(`min_api = "${v}" (newer than ${REVISION}) is reported, as the app refuses it`, () => {
+      expect(findings(`${MANIFEST}min_api = "${v}"\n`)).not.toEqual([]);
+    });
   }
 });
 
@@ -56,6 +57,14 @@ describe("check warns on deprecated names in the code (toimprove M-7)", () => {
     ).toEqual([]);
   });
 
+  it("the replacement `actions` and a comment naming the old option stay clean", () => {
+    const body =
+      '// was { action: … } before 1.0\nctx.ui.toast("Saved", { actions: [{ label: "Undo", run: () => {} }] });';
+    expect(checkPlugin(makePlugin({ "main.js": code(body) })).warnings).toEqual(
+      [],
+    );
+  });
+
   for (const [what, body] of [
     [
       "ToastOptions.action",
@@ -63,9 +72,9 @@ describe("check warns on deprecated names in the code (toimprove M-7)", () => {
     ],
     ["ctx.manifest.dir", "ctx.log.info(ctx.manifest.dir);"],
   ]) {
-    it.fails(`${what} in main.js gets a deprecation warning`, () => {
+    it(`${what} in main.js gets a deprecation warning`, () => {
       const r = checkPlugin(makePlugin({ "main.js": code(body) }));
-      expect(r.warnings.length).toBeGreaterThan(0);
+      expect(r.warnings.map((w) => w.code)).toEqual(["deprecated"]);
     });
   }
 });
@@ -114,13 +123,10 @@ describe("getting-started works as written on macOS (toimprove M-9)", () => {
     path.join(SDK, "docs", "getting-started.md"),
     "utf8",
   );
-  it.fails("no command depends on word-splitting a shell variable", () => {
+  it("no command depends on word-splitting a shell variable", () => {
     expect(doc).not.toMatch(/^\$VP /m);
   });
-  it.fails(
-    "the api-unsupported example matches what check prints today (implements 1)",
-    () => {
-      expect(doc).not.toContain("this version of the app implements 0");
-    },
-  );
+  it("the api-unsupported example matches what check prints today (implements 1)", () => {
+    expect(doc).not.toContain("this version of the app implements 0");
+  });
 });

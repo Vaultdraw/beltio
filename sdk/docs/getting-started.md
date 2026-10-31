@@ -4,16 +4,16 @@ Five minutes from `init` to a toast in the Vaultdraw window. You need Node 22 or
 
 > **Not on npm yet.** The `vaultdraw-plugin` command is not published. Run it from a clone of this repo as `node <repo>/sdk/cli/bin/vaultdraw-plugin.mjs ...`. `npx vaultdraw-plugin` does not work today.
 
-The steps below use a shell variable so the commands stay short:
+The steps below use a shell function so the commands stay short. It works in zsh (the macOS default) and bash:
 
 ```bash
-VP="node /path/to/vaultdraw/sdk/cli/bin/vaultdraw-plugin.mjs"
+vp() { node /path/to/vaultdraw/sdk/cli/bin/vaultdraw-plugin.mjs "$@"; }
 ```
 
 ## 1. Create a plugin
 
 ```bash
-$VP init my-hello
+vp init my-hello
 ```
 
 ```
@@ -24,7 +24,7 @@ Next steps:
   vaultdraw-plugin dev .
 ```
 
-(That last line shows the short name; use your `$VP` form.) The folder has five files:
+(That last line shows the short name; use your `vp` function.) The folder has five files:
 
 | File | What it is |
 | --- | --- |
@@ -40,7 +40,7 @@ The id must be 2 to 39 characters of `a-z`, `0-9` and `-`. `init --example focus
 
 ```bash
 cd my-hello
-$VP dev .
+vp dev .
 ```
 
 ```
@@ -76,11 +76,11 @@ Saving `main.js` works the same way. Each reload keeps the old module in memory 
 ## 4. Check it
 
 ```bash
-$VP check .
+vp check .
 ```
 
 ```
-Checked my-hello: no problems found.
+Checked .: no problems found.
 ```
 
 `--json` prints the same result for scripts:
@@ -89,7 +89,7 @@ Checked my-hello: no problems found.
 { "schemaVersion": 1, "ok": true, "errors": [], "warnings": [] }
 ```
 
-With a problem (here `api = 9`), the output is `error: Plugin API 9 is not supported (this version of the app implements 0) [api-unsupported] (plugin.toml)` and `Checked my-hello: 1 error, 0 warnings.` In JSON, each finding has `code`, `message` and `file`.
+With a problem (here `api = 9`), the output is `error: Plugin API 9 is not supported (this version of the app implements 1) [api-unsupported] (plugin.toml)` and `Checked .: 1 error, 0 warnings.` In JSON, each finding has `code`, `message` and `file`.
 
 | Exit code | Meaning                                                          |
 | --------- | ---------------------------------------------------------------- |
@@ -105,12 +105,12 @@ Every finding code is listed in the [reference](reference.md).
 - **Reference:** [reference.md](reference.md) covers the manifest, the whole `ctx` API, the lifecycle and every check code.
 - **Dev log:** see [below](#the-dev-log).
 - **Errors:** use `ctx.log`, not `console.*`, which is not attributed to your plugin. A command declared but not bound in `activate()` fails with a toast. Errors are attributed to your plugin. A `dev` plugin that errors out is stopped for the session only, and the next save starts it again with a fresh count.
-- **Keep your own config untouched:** use the [sandbox](#the-sandbox) (`dev --sandbox`), or by hand: `$VP dev --print-env` prints a throwaway config and state folder as `VAULTDRAW_CONFIG_DIR=...` and `VAULTDRAW_STATE_DIR=...`. Start the app with those two variables set and run `dev` with the same variables (or `--config-dir <dir>`). `dev` then writes there, not to `~/.config/vaultdraw/`. By hand, the app still opens your own recent vault; the sandbox does not.
-- **Does it activate?** `$VP check . --activate` also runs `activate()` once in a dry host and reports commands or panels that are declared but never bound (see the [reference](reference.md#check-codes)).
+- **Keep your own config untouched:** use the [sandbox](#the-sandbox) (`dev --sandbox`), or by hand: `vp dev --print-env` prints a throwaway config and state folder as `VAULTDRAW_CONFIG_DIR=...` and `VAULTDRAW_STATE_DIR=...`. Start the app with those two variables set and run `dev` with the same variables (or `--config-dir <dir>`). `dev` then writes there, not to `~/.config/vaultdraw/`. By hand, the app still opens your own recent vault; the sandbox does not.
+- **Does it activate?** `vp check . --activate` also runs `activate()` once in a dry host and reports commands or panels that are declared but never bound (see the [reference](reference.md#check-codes)).
 
 ## The sandbox
 
-`$VP dev . --sandbox` starts the app on a throwaway copy of everything, so a buggy plugin cannot touch your settings or drawings:
+`vp dev . --sandbox` starts the app on a throwaway copy of everything, so a buggy plugin cannot touch your settings or drawings:
 
 ```
 Sandbox: /tmp/vds-aB3dEf (removed when you stop)
