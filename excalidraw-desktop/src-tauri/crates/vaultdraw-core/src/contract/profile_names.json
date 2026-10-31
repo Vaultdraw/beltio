@@ -1,0 +1,25 @@
+{
+  "about": "Profile names: one table for the New profile dialog (src/vault/profiles.ts profileNameError) and the native rule (vaultdraw-core config/profiles.rs valid_profile_name). ok is the right answer for the name as given, with no profile existing yet (family hunter shell, 2026-10-31).",
+  "cases": [
+    { "label": "plain", "name": "work", "ok": true },
+    { "label": "digits, underscore, dash", "name": "a1_b-2", "ok": true },
+    { "label": "one letter", "name": "x", "ok": true },
+    { "label": "48 letters", "name": { "repeat": "a", "times": 48 }, "ok": true },
+    { "label": "49 letters", "name": { "repeat": "a", "times": 49 }, "ok": false },
+    { "label": "empty", "name": "", "ok": false },
+    { "label": "reserved default", "name": "default", "ok": false },
+    { "label": "reserved Default", "name": "Default", "ok": false },
+    { "label": "reserved DEFAULT", "name": "DEFAULT", "ok": false },
+    { "label": "space inside", "name": "my profile", "ok": false },
+    { "label": "dot", "name": "a.b", "ok": false },
+    { "label": "slash", "name": "a/b", "ok": false },
+    { "label": "parent folder", "name": "..", "ok": false },
+    { "label": "leading dash", "name": "-x", "ok": true },
+    { "label": "accented letter", "name": "café", "ok": false },
+    { "label": "CJK", "name": "工作", "ok": false },
+    { "label": "emoji", "name": "work🎨", "ok": false },
+    { "label": "trailing newline", "name": "work\n", "ok": false },
+    { "label": "fullwidth digit", "name": "１", "ok": false },
+    { "label": "Windows device name", "name": "CON", "ok": true }
+  ]
+}
