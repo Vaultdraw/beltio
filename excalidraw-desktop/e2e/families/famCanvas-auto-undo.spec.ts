@@ -60,6 +60,13 @@ const ROWS: Row[] = [
     before: "• a\n• ",
     broken: 301,
   },
+  {
+    name: "Cmd+L ticks a task",
+    typed: "- [ ] a",
+    keys: ["Meta+l"],
+    before: "☐ a",
+    broken: 313,
+  },
 ];
 
 for (const row of ROWS) {
