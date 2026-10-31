@@ -1,0 +1,193 @@
+{
+ "about": "Which #text is a tag in a note body (family: twin parsers, hunter [notes] 2026-10-31). `tags` are the expected tags in order (Obsidian). The reading view (src/notes/tagShapes.family.test.ts) and the native parser (tests/note_tag_contract.rs) run these rows. `drift` marks a side that disagrees today; its test asserts the row still disagrees, so it turns red when fixed.",
+ "cases": [
+  {
+   "label": "plain",
+   "text": "a #one b",
+   "tags": [
+    "one"
+   ]
+  },
+  {
+   "label": "in a list item",
+   "text": "- #one\n- x #two",
+   "tags": [
+    "one",
+    "two"
+   ]
+  },
+  {
+   "label": "in a task",
+   "text": "- [ ] do #one",
+   "tags": [
+    "one"
+   ]
+  },
+  {
+   "label": "in a quote",
+   "text": "> a #one",
+   "tags": [
+    "one"
+   ]
+  },
+  {
+   "label": "in a callout title",
+   "text": "> [!note] About #one\n> body",
+   "tags": [
+    "one"
+   ]
+  },
+  {
+   "label": "in a table cell",
+   "text": "| h |\n|---|\n| #one |",
+   "tags": [
+    "one"
+   ]
+  },
+  {
+   "label": "in bold and italic",
+   "text": "**#one** and *#two*",
+   "tags": [
+    "one",
+    "two"
+   ]
+  },
+  {
+   "label": "in a footnote",
+   "text": "a[^1]\n\n[^1]: see #one",
+   "tags": [
+    "one"
+   ]
+  },
+  {
+   "label": "nested tag with slash",
+   "text": "#a/b/c",
+   "tags": [
+    "a/b/c"
+   ]
+  },
+  {
+   "label": "in inline code",
+   "text": "use `#one` here",
+   "tags": []
+  },
+  {
+   "label": "in a fence",
+   "text": "```\n#one\n```",
+   "tags": []
+  },
+  {
+   "label": "in indented code",
+   "text": "para\n\n    #one",
+   "tags": []
+  },
+  {
+   "label": "in a url fragment",
+   "text": "see https://x.y/page#one now",
+   "tags": []
+  },
+  {
+   "label": "in an angle url",
+   "text": "see <https://x.y/page#one> now",
+   "tags": []
+  },
+  {
+   "label": "in a link target",
+   "text": "[text](page.md#one)",
+   "tags": []
+  },
+  {
+   "label": "in a wikilink heading",
+   "text": "[[Note#one]]",
+   "tags": []
+  },
+  {
+   "label": "in a wikilink alias",
+   "text": "[[Note|about #one]]",
+   "tags": []
+  },
+  {
+   "label": "in an embed size",
+   "text": "![[pic.png#one]]",
+   "tags": []
+  },
+  {
+   "label": "in an html attribute",
+   "text": "<a href=\"#one\">x</a>",
+   "tags": [],
+   "drift": {
+    "native": "toimprove 322"
+   }
+  },
+  {
+   "label": "in an html comment",
+   "text": "<!-- #one -->",
+   "tags": []
+  },
+  {
+   "label": "in a %% comment",
+   "text": "%% #one %%",
+   "tags": []
+  },
+  {
+   "label": "in inline math",
+   "text": "$a #one b$",
+   "tags": []
+  },
+  {
+   "label": "in a math block",
+   "text": "$$\n#one\n$$",
+   "tags": []
+  },
+  {
+   "label": "in a heading line start (a heading, not a tag)",
+   "text": "# one",
+   "tags": []
+  },
+  {
+   "label": "in a heading text",
+   "text": "# Title #one",
+   "tags": [
+    "one"
+   ]
+  },
+  {
+   "label": "in an image alt",
+   "text": "![alt #one](pic.png)",
+   "tags": []
+  },
+  {
+   "label": "in a block id",
+   "text": "text ^one",
+   "tags": []
+  },
+  {
+   "label": "escaped hash",
+   "text": "a \\#one b",
+   "tags": [],
+   "drift": {
+    "native": "toimprove 322"
+   }
+  },
+  {
+   "label": "a hash then space",
+   "text": "a # one b",
+   "tags": []
+  },
+  {
+   "label": "a number tag",
+   "text": "issue #123 and #1a",
+   "tags": [
+    "1a"
+   ]
+  },
+  {
+   "label": "twice the same tag",
+   "text": "#one and #one",
+   "tags": [
+    "one",
+    "one"
+   ]
+  }
+ ]
+}
