@@ -31,7 +31,7 @@ const viewTargets = (md: string): string[] => {
 
 describe("wikilinks: the reading view agrees with the native parser's table", () => {
   for (const r of table.cases as Row[]) {
-    (r.drift?.reading ? it.fails : it)(r.label, () => {
+    it(r.label, () => {
       expect(viewTargets(r.text)).toEqual(r.links);
     });
   }

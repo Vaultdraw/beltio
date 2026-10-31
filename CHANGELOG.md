@@ -22,6 +22,10 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 - **Every failure notice is an error notice.** A message such as "Couldn't save." (a note that failed to save), "Couldn't tick that task", a sync conflict failure or a plugin's "Could not …" was an info notice that left after 5 seconds; it now stays as long as **Error notices stay for** says and looks like an error. The rule lives in the notice queue, so new messages follow it too (toimprove 323).
 - **Page mode: Enter under a heading near the bottom of a page moves the paragraph to the next page.** When the new paragraph started just below the page edge, it was pulled up over the heading; it now starts at the top of the next page.
 - **A colour set on a heading by a plugin or `vaultdraw scene update` shows.** Black set this way stayed hidden under the theme's heading colour; it now wins, as a colour picked in the colour panel does.
+- **Tasks in a section or block embed tick.** The checkboxes of `![[Plan#Steps]]` and `![[Plan#^id]]` work like a whole-note embed: the click ticks the right line of the embedded file.
+- **A Markdown link to a block, `[text](Note.md#^id)`, scrolls to the block.** It only opened the note before.
+- **Wikilinks and tags agree between the reading view and the index.** `[[a\nb]]`, `[[a]b]]`, `[[ ]]` and `[[|shown]]` are text in both; `[[[Note]]]` and `[[open and [[Note]]` link `Note` in both. An HTML anchor like `<a href="#top">` or an escaped `\#one` no longer adds a tag to the tag pane.
+
 - **A note section embed `![[Note#Heading]]` finds the section the reading view shows.** Headings that hold links (`## See [[Other]]`), setext headings and headings indented up to three spaces now start a section, and a `#` line inside a long fence, a `$$` block or a `%%` or HTML comment no longer ends one early.
 - **A footnote used twice, or a heading named `fn-1`, no longer breaks its links.** Each repeat reference gets its own id and its own back arrow (as in Obsidian), and a heading never takes a footnote's id.
 

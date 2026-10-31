@@ -9,7 +9,7 @@
  */
 import { Marked, Renderer, Tokenizer } from "marked";
 
-import { findLinks } from "../../links/grammar";
+import { findLinks, MAX_LINK_CHARS } from "../../links/grammar";
 import { fileKind } from "../../vault/fileKind";
 import { findTags, MAX_TAG_CHARS } from "../../tags/grammar";
 
@@ -115,8 +115,16 @@ const wikilink: TokenizerAndRendererExtension = {
   level: "inline",
   start: wordStart("[["),
   tokenizer(src) {
-    const m = /^\[\[([^\]\n]+)\]\]/.exec(src);
-    return m ? { type: "wikilink", raw: m[0], inner: m[1] } : undefined;
+    // The shared link grammar decides what is a link (one line, no brackets inside, something
+    // before the `|`), so the view and the native parser agree (toimprove 320).
+    const first = findLinks(src.slice(0, MAX_LINK_CHARS + 8))[0];
+    return first && first.start === 0
+      ? {
+          type: "wikilink",
+          raw: src.slice(0, first.end),
+          inner: src.slice(2, first.end - 2),
+        }
+      : undefined;
   },
   renderer(token) {
     const { target, heading, blockRef } = splitWikilink(

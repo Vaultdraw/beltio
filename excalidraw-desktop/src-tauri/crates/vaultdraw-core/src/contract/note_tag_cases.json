@@ -114,10 +114,7 @@
   {
    "label": "in an html attribute",
    "text": "<a href=\"#one\">x</a>",
-   "tags": [],
-   "drift": {
-    "native": "toimprove 322"
-   }
+   "tags": []
   },
   {
    "label": "in an html comment",
@@ -164,10 +161,7 @@
   {
    "label": "escaped hash",
    "text": "a \\#one b",
-   "tags": [],
-   "drift": {
-    "native": "toimprove 322"
-   }
+   "tags": []
   },
   {
    "label": "a hash then space",
@@ -186,6 +180,20 @@
    "text": "#one and #one",
    "tags": [
     "one",
+    "one"
+   ]
+  },
+  {
+   "label": "a tag after an html tag",
+   "text": "<b>x</b> #one",
+   "tags": [
+    "one"
+   ]
+  },
+  {
+   "label": "an html attribute and a tag",
+   "text": "<a href=\"#top\">x</a> #one",
+   "tags": [
     "one"
    ]
   }

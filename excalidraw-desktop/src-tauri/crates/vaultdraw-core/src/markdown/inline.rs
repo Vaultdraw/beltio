@@ -216,6 +216,25 @@ pub struct Finished {
     pub block_id: Option<String>,
 }
 
+/// Whether a text event that starts at byte `start` of `src` is a `#` written as `\#` (an odd run
+/// of backslashes before it). The parser drops the backslash, so only the source tells.
+pub fn is_escaped_hash(src: &str, t: &str, start: usize) -> bool {
+    t.starts_with('#') && src.as_bytes().get(..start).is_some_and(|b| b.iter().rev().take_while(|c| **c == b'\\').count() % 2 == 1)
+}
+
+/// Whether `[[...]]` is a link as the shared link grammar reads it (`links/grammar.rs`, the reading
+/// view's `findLinks`): one line, no `[` or `]` inside, at most 256 characters, and something
+/// before the `|` (so `[[#Part]]` is a link to this note, `[[|shown]]` and `[[ ]]` are not).
+fn wikilink_text_ok(literal: &str) -> bool {
+    let Some(inner) = literal.strip_prefix("[[").and_then(|s| s.strip_suffix("]]")) else {
+        return false;
+    };
+    if inner.chars().any(|c| matches!(c, '[' | ']' | '\n' | '\r')) || inner.encode_utf16().count() > 256 {
+        return false;
+    }
+    !inner.split('|').next().unwrap_or("").trim().is_empty()
+}
+
 impl Finished {
     /// Turns the pieces into blocks in source order; `make(text, inline, first)` builds the block
     /// for a text piece (`first`: it is the first block). The `^block-id` goes on the last block.
@@ -333,7 +352,15 @@ impl Inl {
             return matches!(ev, Event::InlineHtml(_) | Event::Html(_) | Event::Text(_) | Event::SoftBreak | Event::HardBreak);
         }
         match ev {
-            Event::Text(t) => self.push_prose(ctx, &t),
+            Event::Text(t) => {
+                // An escaped hash (`\#one`) is text, never a tag (toimprove 322).
+                let escaped = is_escaped_hash(ctx.src, &t, range.start);
+                let s = self.text.len();
+                self.push_prose(ctx, &t);
+                if escaped && self.text.len() > s && self.text.as_bytes().get(s) == Some(&b'#') {
+                    self.no_tag.push((s, s + 1));
+                }
+            }
             Event::Code(c) => {
                 if !self.in_comment {
                     let s = self.text.len();
@@ -406,7 +433,16 @@ impl Inl {
                         ctx.dropped_html += 1;
                     } else {
                         let t = html_to_text(&h, &mut ctx.dropped_html);
+                        let s = self.text.len();
                         self.push(&t);
+                        // A `#` inside a tag (`<a href="#one">`) is an anchor, not a tag (toimprove 322).
+                        let mut at = 0;
+                        while let Some(i) = t[at..].find('<') {
+                            let from = at + i;
+                            let to = t[from..].find('>').map_or(t.len(), |j| from + j + 1);
+                            self.no_tag.push((s + from, s + to));
+                            at = to;
+                        }
                     }
                 }
             }
@@ -484,6 +520,13 @@ impl Inl {
     fn end_wiki(&mut self, ctx: &mut Ctx) {
         let Some(w) = self.wiki.take() else { return };
         let literal = &ctx.src[w.range.clone()];
+        if !wikilink_text_ok(literal) {
+            // Not a link in Obsidian or in the reading view (`[[a\nb]]`, `[[a]b]]`, `[[ ]]`): plain text.
+            if !self.in_comment {
+                self.push(literal);
+            }
+            return;
+        }
         let (target, heading, block_ref) = split_target(&w.dest);
         let alias = if w.has_pothole { Some(w.alias.clone()).filter(|a| !a.is_empty()) } else { None };
         let start = self.u16len;

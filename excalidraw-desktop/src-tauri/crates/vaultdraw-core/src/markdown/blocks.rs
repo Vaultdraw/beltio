@@ -71,6 +71,12 @@ impl<'a, 's> Walk<'a, 's> {
         loop {
             match self.raw() {
                 None => break,
+                // An escaped `\#` stays its own event: merged, the escape would be lost and the
+                // `#one` after it read as a tag (toimprove 322).
+                Some((Event::Text(t), r2)) if super::inline::is_escaped_hash(self.ctx.src, &t, r2.start) => {
+                    self.queue.push_back((Event::Text(t), r2));
+                    break;
+                }
                 Some((Event::Text(t), r2)) => {
                     merged.get_or_insert_with(|| first.to_string()).push_str(&t);
                     end = r2.end;
