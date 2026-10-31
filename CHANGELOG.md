@@ -17,6 +17,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **A failed copy says so plainly, as an error.** **Links: Copy link to this drawing** no longer prints the raw engine error, and a failed copy of the AI app setup is an error notice, not an info one (toimprove 304).
 - **The Move dialog and the Rename tag picker find words in any order.** "mocha catppuccin" finds the folder "Catppuccin Mocha", and "work project" the tag `#project/work`, like the quick switcher and every other filter (toimprove 303).
 - **Linux: Settings no longer talks about macOS.** Appearance → Mode reads "follow the system", and the Hang watchdog rows and commands, which work on macOS only, are shown on macOS only (toimprove 307).
 - **Linux: Ctrl+Q quits and F11 toggles full screen.** Linux has no app menu, so neither key did anything. **Window: Quit Vaultdraw** saves first, like closing the window; both are in the palette and can be rebound (toimprove 308).

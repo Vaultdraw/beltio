@@ -97,6 +97,9 @@ export const copyMcpSetup = async (win?: Window | null) => {
       }`,
     });
   } catch {
-    toastStore.push({ message: "Could not copy the AI app setup" });
+    toastStore.push({
+      message: "Could not copy the AI app setup",
+      kind: "error",
+    });
   }
 };

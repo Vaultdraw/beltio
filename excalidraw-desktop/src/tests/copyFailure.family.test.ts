@@ -28,14 +28,10 @@ const MEMBERS: {
   {
     file: "src/ai/aiSwitch.ts",
     way: "error-toast",
-    broken: {
-      kindOrWords: "failure toast is not an error toast (toimprove 304)",
-    },
   },
   {
     file: "src/links/useAppLinks.tsx",
     way: "error-toast",
-    broken: { kindOrWords: "prints the raw error (toimprove 304)" },
   },
   { file: "src/vault/clipboard.ts", way: "inline" },
   {

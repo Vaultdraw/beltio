@@ -494,8 +494,8 @@ export function useAppLinks(deps: AppLinksDeps) {
       try {
         await (d.win ?? window).navigator.clipboard.writeText(wikiLink(target));
         d.notify(`Copied ${wikiLink(target)}`, "info");
-      } catch (err) {
-        d.notify(`Could not copy: ${errorMessage(err)}`, "error");
+      } catch {
+        d.notify("Could not copy the link", "error");
       }
     };
     if (!enabled) {
