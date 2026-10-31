@@ -433,8 +433,29 @@ const inline = (md: string): string =>
     async: false,
     breaks: ctx.strictLineBreaks !== true,
   }) as string;
+/**
+ * How far emphasis (`*`, `_`, `**`) and strikethrough (`~~`) look for their closing marks. marked
+ * scans the rest of the paragraph from every opener, so a long paragraph of unclosed `**` or `_`
+ * (a pasted log) took time growing with its square: 6,400 lines 3.9 s (toimprove 297). Emphasis
+ * longer than this many characters is not a thing people write; the opener then stays text.
+ */
+const EMPHASIS_REACH = 2000;
+const reach = (s: string) =>
+  s.length > EMPHASIS_REACH ? s.slice(0, EMPHASIS_REACH) : s;
+
 marked.use({
   tokenizer: {
+    emStrong(src, maskedSrc, prevChar) {
+      return Tokenizer.prototype.emStrong.call(
+        this,
+        reach(src),
+        reach(maskedSrc),
+        prevChar,
+      );
+    },
+    del(src) {
+      return Tokenizer.prototype.del.call(this, reach(src));
+    },
     list(src) {
       const tok = this as unknown as {
         rules: { other: Record<string, unknown> };
