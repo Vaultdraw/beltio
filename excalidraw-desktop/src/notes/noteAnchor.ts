@@ -4,6 +4,8 @@
  * note's view takes it once the reading view is drawn. Nothing exists until a
  * link with an anchor is clicked.
  */
+import { headingSlug } from "./render/slug";
+
 export interface NoteAnchor {
   heading?: string;
   block?: string;
@@ -30,12 +32,6 @@ export function onAnchorQueued(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-const slug = (s: string) =>
-  s
-    .toLowerCase()
-    .trim()
-    .replace(/[^\p{L}\p{N}\s-]/gu, "")
-    .replace(/\s+/g, "-");
 const plain = (s: string) =>
   s
     .toLowerCase()
@@ -72,7 +68,7 @@ export function findAnchorElement(
   }
   if (anchor.heading) {
     const byId = root.querySelector<HTMLElement>(
-      `[id="${CSS.escape(slug(anchor.heading))}"]`,
+      `[id="${CSS.escape(headingSlug(anchor.heading))}"]`,
     );
     if (byId) {
       return byId;

@@ -16,6 +16,8 @@ import { findTags, MAX_TAG_CHARS } from "../../tags/grammar";
 import { altAndSize } from "./imageSize";
 import { highlightCode } from "./highlight";
 
+import { headingSlug } from "./slug";
+
 import type { Token, Tokens, TokenizerAndRendererExtension } from "marked";
 
 export interface RenderContext {
@@ -43,12 +45,7 @@ const esc = (s: string): string =>
 let ctx: RenderContext = { resolve: () => null, highlight: true, math: true };
 
 const IMAGE = /\.(?:png|jpe?g|gif|webp|svg|bmp|avif)$/i;
-const slug = (s: string) =>
-  s
-    .toLowerCase()
-    .trim()
-    .replace(/[^\p{L}\p{N}\s-]/gu, "")
-    .replace(/\s+/g, "-");
+const slug = headingSlug;
 
 /** `target#heading^block` and `|alias` of the inside of `[[…]]` / `![[…]]`. */
 export function splitWikilink(inner: string): {
@@ -96,6 +93,23 @@ const wordStart =
     return i >= 0 ? i : end;
   };
 
+/** The text a `[[wikilink]]` shows: its alias, else the target with its heading or block. */
+export function wikilinkLabel(inner: string): string {
+  const { target, heading, blockRef, alias } = splitWikilink(inner);
+  return (
+    alias ||
+    (heading
+      ? target
+        ? `${target} > ${heading}`
+        : heading
+      : blockRef
+      ? target
+        ? `${target} > ^${blockRef}`
+        : `^${blockRef}`
+      : target)
+  );
+}
+
 const wikilink: TokenizerAndRendererExtension = {
   name: "wikilink",
   level: "inline",
@@ -105,21 +119,11 @@ const wikilink: TokenizerAndRendererExtension = {
     return m ? { type: "wikilink", raw: m[0], inner: m[1] } : undefined;
   },
   renderer(token) {
-    const { target, heading, blockRef, alias } = splitWikilink(
+    const { target, heading, blockRef } = splitWikilink(
       (token as unknown as { inner: string }).inner,
     );
     const path = target ? ctx.resolve(target) : "";
-    const label =
-      alias ||
-      (heading
-        ? target
-          ? `${target} > ${heading}`
-          : heading
-        : blockRef
-        ? target
-          ? `${target} > ^${blockRef}`
-          : `^${blockRef}`
-        : target);
+    const label = wikilinkLabel((token as unknown as { inner: string }).inner);
     const data = `data-target="${esc(target)}"${
       heading ? ` data-heading="${esc(heading)}"` : ""
     }${blockRef ? ` data-block="${esc(blockRef)}"` : ""}${
@@ -338,8 +342,15 @@ const blockId: TokenizerAndRendererExtension = {
 interface Footnotes {
   defs: Map<string, string>;
   order: string[];
+  /** How many references each footnote has had so far (ids of a repeat end in `-2`, `-3`, as Obsidian's). */
+  uses: Map<string, number>;
 }
-let notes: Footnotes = { defs: new Map(), order: [] };
+const freshNotes = (): Footnotes => ({
+  defs: new Map(),
+  order: [],
+  uses: new Map(),
+});
+let notes: Footnotes = freshNotes();
 
 const footnoteDef: TokenizerAndRendererExtension = {
   name: "footnotedef",
@@ -382,7 +393,10 @@ const footnoteRef: TokenizerAndRendererExtension = {
       n = notes.order.length;
     }
     const k = esc(`${ctx.idScope ?? ""}${id}`);
-    return `<sup class="footnote-ref"><a href="#fn-${k}" id="fnref-${k}" data-footnote="fn-${k}">${n}</a></sup>`;
+    const use = (notes.uses.get(id) ?? 0) + 1;
+    notes.uses.set(id, use);
+    const refId = use === 1 ? `fnref-${k}` : `fnref-${k}-${use}`;
+    return `<sup class="footnote-ref"><a href="#fn-${k}" id="${refId}" data-footnote="fn-${k}">${n}</a></sup>`;
   },
 };
 
@@ -397,11 +411,17 @@ const footnotesHtml = (): string => {
       continue;
     }
     const k = esc(`${ctx.idScope ?? ""}${id}`);
-    items.push(
-      `<li id="fn-${k}">${inline(
-        notes.defs.get(id)!,
-      )} <a href="#fnref-${k}" class="footnote-back" data-footnote="fnref-${k}">\u21a9</a></li>`,
-    );
+    // One back arrow per reference: the first goes to `fnref-k`, the others to `fnref-k-2` ...
+    const backs = Array.from(
+      { length: Math.max(1, notes.uses.get(id) ?? 1) },
+      (_, j) => {
+        const ref = j === 0 ? `fnref-${k}` : `fnref-${k}-${j + 1}`;
+        return `<a href="#${ref}" class="footnote-back" data-footnote="${ref}">\u21a9${
+          j === 0 ? "" : `<sup>${j + 1}</sup>`
+        }</a>`;
+      },
+    ).join(" ");
+    items.push(`<li id="fn-${k}">${inline(notes.defs.get(id)!)} ${backs}</li>`);
   }
   return items.length
     ? `<section class="footnotes"><hr><ol>${items.join("")}</ol></section>\n`
@@ -739,7 +759,7 @@ export function renderPropertyHtml(
 /** Unsafe HTML for `text`; always sanitise before use. */
 export function renderNoteHtml(text: string, context: RenderContext): string {
   ctx = context;
-  notes = { defs: new Map(), order: [] };
+  notes = freshNotes();
   try {
     const breaks = context.strictLineBreaks !== true;
     const html = byParts(
@@ -751,12 +771,12 @@ export function renderNoteHtml(text: string, context: RenderContext): string {
           "<br>",
         )}</p>\n`,
       () => {
-        notes = { defs: new Map(), order: [] };
+        notes = freshNotes();
       },
     ).join("");
     return html + footnotesHtml();
   } finally {
-    notes = { defs: new Map(), order: [] };
+    notes = freshNotes();
     ctx = { resolve: () => null, highlight: true, math: true };
   }
 }

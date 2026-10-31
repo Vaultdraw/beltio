@@ -1,10 +1,11 @@
 /**
- * Pieces of a note for `![[Note#Heading]]` and `![[Note#^block]]` embeds,
- * found by scanning lines (fenced code is skipped so a `#` comment in code
- * is not a heading).
+ * Pieces of a note for `![[Note#Heading]]` and `![[Note#^block]]` embeds. Headings come from the
+ * renderer's own tokens (`lexNote`), so what counts as a heading, and what is only text inside a
+ * fence, a `$$` block, a `%%` or html comment, matches the reading view exactly (toimprove 311).
  */
-const FENCE = /^\s{0,3}(```|~~~)/;
-const HEADING = /^(#{1,6})[ \t]+(.*?)[ \t]*#*[ \t]*$/;
+import { lexNote, wikilinkLabel } from "./obsidian";
+
+import type { Token, Tokens } from "marked";
 
 const norm = (s: string) =>
   s
@@ -13,35 +14,62 @@ const norm = (s: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
+const newlines = (s: string) => (s.match(/\n/g) ?? []).length;
+
+type Inline = Token & { tokens?: Token[]; text?: string; inner?: string };
+
+/** The text a heading shows in the reading view, without its markup. */
+function shownText(tokens: Token[] | undefined): string {
+  let out = "";
+  for (const t of (tokens ?? []) as Inline[]) {
+    if (t.type === "wikilink") {
+      out += wikilinkLabel(t.inner ?? "");
+    } else if (
+      t.type === "html" ||
+      t.type === "notecomment" ||
+      t.type === "noteblockid" ||
+      t.type === "footnoteref"
+    ) {
+      continue;
+    } else if (t.type === "br") {
+      out += " ";
+    } else if (t.tokens) {
+      out += shownText(t.tokens);
+    } else if (
+      t.type === "text" ||
+      t.type === "escape" ||
+      t.type === "codespan"
+    ) {
+      out += t.text ?? "";
+    } else {
+      out += t.raw;
+    }
+  }
+  return out;
+}
+
 /** The heading's line through the line before the next heading of the same or a higher level. */
 export function extractSection(text: string, heading: string): string | null {
-  const lines = text.split(/\r?\n/);
+  const src = text.replace(/\r\n?/g, "\n");
+  const { tokens, skipped } = lexNote(src, true);
+  const lines = src.split("\n");
   const want = norm(heading);
-  let fence: string | null = null;
+  let line = skipped;
   let start = -1;
   let level = 0;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const f = FENCE.exec(line);
-    if (f) {
-      fence = fence === null ? f[1] : fence === f[1] ? null : fence;
-      continue;
-    }
-    if (fence) {
-      continue;
-    }
-    const h = HEADING.exec(line);
-    if (!h) {
-      continue;
-    }
-    if (start < 0) {
-      if (norm(h[2]) === want) {
-        start = i;
-        level = h[1].length;
+  for (const t of tokens) {
+    if (t.type === "heading") {
+      const h = t as Tokens.Heading;
+      if (start < 0) {
+        if (norm(shownText(h.tokens)) === want) {
+          start = line;
+          level = h.depth;
+        }
+      } else if (h.depth <= level) {
+        return lines.slice(start, line).join("\n").trimEnd();
       }
-    } else if (h[1].length <= level) {
-      return lines.slice(start, i).join("\n").trimEnd();
     }
+    line += newlines(t.raw);
   }
   return start < 0 ? null : lines.slice(start).join("\n").trimEnd();
 }
