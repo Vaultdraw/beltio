@@ -103,7 +103,7 @@ fn trash_file(p: &Path) -> Result<()> {
     }
     #[cfg(not(test))]
     {
-        trash::delete(p).map_err(|e| err("TRASH_FAILED", format!("Could not move the export to the Trash: {e}")))
+        trash::delete(p).map_err(|e| err("IO_ERROR", format!("Could not move the export to the Trash: {e}")))
     }
 }
 

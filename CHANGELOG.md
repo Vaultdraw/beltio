@@ -17,6 +17,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Plugin API: removing an export that cannot go to the Trash rejects with `IO_ERROR`.** It rejected with `TRASH_FAILED`, a code not in `PluginErrorCode`.
 - **File conflict → Save as copy adds `.excalidraw` to a name typed without it**, like the New dialog, instead of refusing the name (toimprove 318).
 - **Plugin SDK: the test `ctx.net` refuses the addresses the app refuses.** The mock host and the browser harness accepted private network addresses (`https://10.0.0.1`, `https://[fd00::1]`), a user name and password in the address, and threw a raw error on text that is not an address; they now answer `PRIVATE_ADDRESS` and `INVALID_URL` as the app does, so a plugin's tests no longer pass for requests the app never sends.
 - **Markdown mode: Enter after `**bold**` or `` `code` `` starts plain text.** A box made bold or code by its marks kept that look for everything typed after Enter; Enter at its end now starts a plain box below, as in Obsidian (Backspace in the empty box goes back).

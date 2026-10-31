@@ -59,7 +59,8 @@ describe("every code a plugin call rejects with is in PluginErrorCode (toimprove
       "PRIVATE_ADDRESS",
       "SECRET_MISSING",
       "TOO_MANY_STREAMS",
-      "TRASH_FAILED",
+      // TRASH_FAILED is gone: an export's Trash failure is IO_ERROR (toimprove 262, part 1).
+      // The rest need the union extended, a minor API version (left for the plugins team).
     ]);
   });
 
