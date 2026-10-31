@@ -119,7 +119,11 @@ import { ActivityBar } from "./activityBar/ActivityBar";
 import { FocusChip } from "./layout/FocusChip";
 import { LAYOUT_COMMAND_IDS } from "./layout/layoutCommands";
 import { useActivityBarShown } from "./activityBar/activityBarRegistry";
-import { getRegisteredHandler } from "./commands/handlerRegistry";
+import {
+  getRegisteredHandler,
+  registerCommandHandlers,
+} from "./commands/handlerRegistry";
+import { WINDOW_COMMAND_IDS } from "./commands/windowCommands";
 import { closeInstallDialog } from "./theme/install/installStore";
 import { useThemeInstall } from "./theme/install/useThemeInstall";
 import { TabStrip } from "./tabs/TabStrip";
@@ -191,7 +195,7 @@ import { useCanvasImport } from "./canvasImport/useCanvasImport";
 
 import { OfflineBadge } from "./components/OfflineBadge";
 import { WindowControls } from "./components/WindowControls";
-import { isCustomChrome } from "./vault/windowChrome";
+import { isCustomChrome, runWindowAction } from "./vault/windowChrome";
 import { VaultHeader } from "./components/VaultHeader";
 import {
   VaultNavigator,
@@ -863,6 +867,20 @@ export const VaultApp = ({
       unlistenQuit?.();
     };
   }, [flushAndDestroy]);
+
+  // Quit and full screen as commands (Ctrl+Q, F11 off macOS, whose app menu has them): Quit
+  // takes the same save barrier as Cmd+Q and closing the window (toimprove 308).
+  useEffect(
+    () =>
+      registerCommandHandlers({
+        [WINDOW_COMMAND_IDS.quit]: () => void flushAndDestroy(),
+        [WINDOW_COMMAND_IDS.toggleFullscreen]: () =>
+          void runWindowAction("toggleFullscreen").catch(() => {
+            // Not running inside Tauri.
+          }),
+      }),
+    [flushAndDestroy],
+  );
 
   // Explicit Save action wired to flushDoc (file.save command and UI Save button)
   const handleExplicitSave = useCallback(async () => {

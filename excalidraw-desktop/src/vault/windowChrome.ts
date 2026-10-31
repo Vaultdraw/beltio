@@ -32,7 +32,11 @@ export const applyChromeClass = (
   return on;
 };
 
-export type WindowAction = "minimize" | "toggleMaximize" | "close";
+export type WindowAction =
+  | "minimize"
+  | "toggleMaximize"
+  | "toggleFullscreen"
+  | "close";
 
 /** Runs one window action through the Tauri window API (loaded on first use). */
 export const runWindowAction = async (action: WindowAction): Promise<void> => {
@@ -42,6 +46,8 @@ export const runWindowAction = async (action: WindowAction): Promise<void> => {
     await current.minimize();
   } else if (action === "toggleMaximize") {
     await current.toggleMaximize();
+  } else if (action === "toggleFullscreen") {
+    await current.setFullscreen(!(await current.isFullscreen()));
   } else {
     await current.close();
   }

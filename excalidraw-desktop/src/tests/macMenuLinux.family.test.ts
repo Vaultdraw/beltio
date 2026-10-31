@@ -29,13 +29,11 @@ const MEMBERS: {
     item: "Vaultdraw > Quit",
     id: "app.quit",
     key: "Mod+Q",
-    broken: "no Quit command and no Ctrl+Q on Linux (toimprove 308)",
   },
   {
     item: "View > Enter Full Screen",
     id: "window.toggleFullscreen",
     key: "F11",
-    broken: "no full-screen command and no F11 on Linux (toimprove 308)",
   },
 ];
 

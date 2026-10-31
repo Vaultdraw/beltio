@@ -17,6 +17,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- **Linux: Ctrl+Q quits and F11 toggles full screen.** Linux has no app menu, so neither key did anything. **Window: Quit Vaultdraw** saves first, like closing the window; both are in the palette and can be rebound (toimprove 308).
 - **A note or an Obsidian drawing handed to the running app opens.** `vaultdraw launch ~/vault/Notes/Plan.md`, a second launch with a file, and a Linux "Open With" said "Cannot open" for anything but a `.excalidraw` drawing; they now open notes and `.excalidraw.md` drawings too, like `vaultdraw open` (toimprove 306).
 - **Five click-only actions now have palette commands.** **Links: Show backlinks** and **Links: Show outgoing links** open the links panel on that tab (like Obsidian's commands); a conflict copy's **Compare with original…** and an iCloud file's **Download from iCloud** are **List: Compare conflict copy with original** and **List: Download item from iCloud** on the focused file-tree row. All can be bound to keys; the panel's **Create** button is Enter on an unresolved link.
 - **Plugin tool: a new TypeScript plugin builds and type-checks right after `npm install`.** `vaultdraw-plugin init --template …` now adds the tool itself as a dev dependency on your SDK folder, so `npm run dev`, `build`, `check` and `package` find it, and the copied test kit no longer imports files `init` does not copy, so `tsc` and editors show no errors in a fresh project (toimprove 254, 260).

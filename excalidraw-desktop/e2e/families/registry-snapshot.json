@@ -3990,6 +3990,22 @@
    "palette": true
   },
   {
+   "id": "window.toggleFullscreen",
+   "title": "Window: Toggle full screen",
+   "category": "Window",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
+   "id": "app.quit",
+   "title": "Window: Quit Vaultdraw",
+   "category": "Window",
+   "keys": [],
+   "when": [],
+   "palette": true
+  },
+  {
    "id": "config.reload",
    "title": "Config: Reload config files",
    "category": "Config",

@@ -14,6 +14,7 @@ import {
   CUSTOM_CHROME_CLASS,
   isCustomChrome,
   isWindowDecorations,
+  runWindowAction,
 } from "./windowChrome";
 
 const current = {
@@ -21,6 +22,8 @@ const current = {
   toggleMaximize: vi.fn(async () => {}),
   close: vi.fn(async () => {}),
   isMaximized: vi.fn(async () => false),
+  isFullscreen: vi.fn(async () => false),
+  setFullscreen: vi.fn(async (_on: boolean) => {}),
   onResized: vi.fn(async () => () => {}),
 };
 vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => current }));
@@ -120,5 +123,26 @@ describe("WindowControls", () => {
       render(<WindowControls />);
     });
     expect(screen.getByRole("button", { name: "Restore window" })).toBeTruthy();
+  });
+});
+
+describe("quit and full screen off macOS (toimprove 308)", () => {
+  it("are commands with Ctrl+Q and F11, and no key on macOS (the app menu has them)", () => {
+    expect(getCommand("app.quit")?.keys).toEqual({
+      default: ["Mod+Q"],
+      mac: [],
+    });
+    expect(getCommand("window.toggleFullscreen")?.keys).toEqual({
+      default: ["F11"],
+      mac: [],
+    });
+  });
+
+  it("full screen toggles from the window's current state", async () => {
+    await runWindowAction("toggleFullscreen");
+    expect(current.setFullscreen).toHaveBeenLastCalledWith(true);
+    current.isFullscreen.mockResolvedValueOnce(true);
+    await runWindowAction("toggleFullscreen");
+    expect(current.setFullscreen).toHaveBeenLastCalledWith(false);
   });
 });
