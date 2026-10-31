@@ -8,7 +8,6 @@ import { DEFAULT_PREFERENCES, getPreferences } from "../vault/preferences";
 import {
   getSettingsStatus,
   PREFERENCES_CHANGED_EVENT,
-  SETTINGS_STATUS_EVENT,
 } from "../vault/settingsSync";
 
 import { isSceneReady } from "../editor/sceneReady";
@@ -53,11 +52,7 @@ import type { InvokeFn } from "../vault/DesktopVaultRepository";
 
 import type { ExportSmokeContext } from "./exportSmoke";
 
-import type {
-  ConfigChange,
-  LoadSettingsResult,
-  SettingsStatus,
-} from "../vault/settingsSync";
+import type { ConfigChange, LoadSettingsResult } from "../vault/settingsSync";
 import type {
   PreferencesSnapshot,
   VaultPreferences,
@@ -2269,62 +2264,29 @@ export async function runDesktopSmoke(): Promise<void> {
       return { latencyMs, autosaveDelayMs: 1500 };
     });
 
+    // Every config writer shares the schema check (3bd3867b): a Settings write of a bad value is
+    // refused with a message naming the key, and nothing changes on screen.
     await softStep("config-invalid-value-banner", async () => {
-      let lastStatus: SettingsStatus | null = null;
-      const onStatus = (event: Event) => {
-        lastStatus = (event as CustomEvent<SettingsStatus>).detail;
-      };
-      win.addEventListener(SETTINGS_STATUS_EVENT, onStatus);
+      const before = getPreferences(win).theme;
+      let refused = "";
       try {
         await call("update_config", {
           changes: [{ key: "appearance.mode", value: "neon" }],
         });
-        const banner = await waitFor(
-          "settings problem banner",
-          () => {
-            const alert = doc.querySelector<HTMLElement>(".vault-global-alert");
-            return alert?.textContent?.includes("appearance.mode")
-              ? alert.textContent
-              : null;
-          },
-          3000,
-        );
-        const fallbackTheme = getPreferences(win).theme;
-        if (fallbackTheme !== "system") {
-          throw new Error(
-            `Invalid mode should fall back to "system", got ${fallbackTheme}`,
-          );
-        }
-        if (getPreferences(win).autosaveDelayMs !== 1500) {
-          throw new Error("Valid fields must keep their values");
-        }
-        await call("update_config", {
-          changes: [{ key: "appearance.mode", value: "dark" }],
-        });
-        await waitFor(
-          "banner cleared after fix",
-          () => {
-            const alert = doc.querySelector<HTMLElement>(".vault-global-alert");
-            return alert?.textContent?.includes("appearance.mode")
-              ? null
-              : true;
-          },
-          3000,
-        );
-        await waitFor(
-          "theme back to dark",
-          () => (getPreferences(win).theme === "dark" ? true : null),
-          3000,
-        );
-        return {
-          banner: banner.trim(),
-          fallbackTheme,
-          statusProblemsAfterFix: getSettingsStatus().problems,
-          sawStatusEvent: lastStatus !== null,
-        };
-      } finally {
-        win.removeEventListener(SETTINGS_STATUS_EVENT, onStatus);
+      } catch (e) {
+        const m = (e as { message?: unknown } | null)?.message;
+        refused = typeof m === "string" ? m : JSON.stringify(e);
       }
+      if (!refused.includes("appearance.mode")) {
+        throw new Error(`A bad appearance.mode was not refused: "${refused}"`);
+      }
+      if (getPreferences(win).theme !== before) {
+        throw new Error("A refused write must not change the theme");
+      }
+      if (getPreferences(win).autosaveDelayMs !== 1500) {
+        throw new Error("Valid fields must keep their values");
+      }
+      return { refused, theme: before };
     });
 
     await softStep("config-hotkey-key-roundtrip", async () => {
@@ -3237,7 +3199,10 @@ export async function runDesktopSmoke(): Promise<void> {
           }).catch(() => [] as VaultEntry[]);
           return (
             entries.find(
-              (e) => e.kind === "drawing" && e.name.startsWith(`${name}-`),
+              (e) =>
+                e.kind === "drawing" &&
+                (e.name === `${name}.excalidraw` ||
+                  e.name.startsWith(`${name} `)),
             )?.path ?? null
           );
         },

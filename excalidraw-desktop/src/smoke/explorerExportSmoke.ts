@@ -26,10 +26,17 @@ const pickRowMenuItem = async (ctx: ExportSmokeContext, label: string) => {
       clientY: box.top + box.height / 2,
     }),
   );
-  const item = await ctx.waitFor(`${label} row menu item`, () =>
+  const findItem = (text: string) =>
     Array.from(
       ctx.doc.querySelectorAll<HTMLElement>(".vault-menu [role='menuitem']"),
-    ).find((el) => el.textContent?.trim() === label),
+    ).find((el) => el.textContent?.trim() === text);
+  // The file menu groups the export items under an "Export" submenu.
+  const group = await ctx.waitFor("Export row menu group", () =>
+    findItem("Export"),
+  );
+  group.click();
+  const item = await ctx.waitFor(`${label} row menu item`, () =>
+    findItem(label),
   );
   item.click();
 };
