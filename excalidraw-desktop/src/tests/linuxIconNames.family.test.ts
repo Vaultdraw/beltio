@@ -41,7 +41,7 @@ describe("family (linux): a desktop entry's icon is installed", () => {
     expect(iconOf(packaged)).toBe("{{icon}}");
   });
 
-  it.fails(
+  it(
     "the entry the registration command writes names an installed icon (toimprove 310)",
     () => {
       const wrote = /write.*icon|\.png/i.test(handlers);

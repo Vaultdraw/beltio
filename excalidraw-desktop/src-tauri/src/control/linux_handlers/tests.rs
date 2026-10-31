@@ -54,11 +54,14 @@ fn the_data_folder_is_the_users_never_system_wide() {
 }
 
 #[test]
-fn plan_names_exactly_two_files_under_the_data_folder_and_three_commands() {
+fn plan_names_exactly_three_files_under_the_data_folder_and_three_commands() {
     let d = tempfile::tempdir().unwrap();
     let p = plan(d.path(), PROGRAM).unwrap();
     let paths: Vec<_> = p.files.iter().map(|f| Path::new(&f.path).strip_prefix(d.path()).unwrap().to_str().unwrap().to_string()).collect();
-    assert_eq!(paths, ["applications/vaultdraw.desktop", "mime/packages/vaultdraw.xml"]);
+    assert_eq!(
+        paths,
+        ["applications/vaultdraw.desktop", "mime/packages/vaultdraw.xml", "icons/hicolor/256x256/apps/excalidraw-vault.png"]
+    );
     assert!(p.files.iter().all(|f| f.state == State::New));
     assert_eq!(p.commands.len(), 3);
     assert_eq!(p.commands[2].last().map(String::as_str), Some("x-scheme-handler/vaultdraw"), "only the link scheme gets a default");
@@ -75,13 +78,16 @@ fn apply_writes_the_files_runs_the_helpers_and_is_idempotent() {
         Ok(())
     };
     let r = apply(&plan(d.path(), PROGRAM).unwrap(), &run).unwrap();
-    assert_eq!(r.written.len(), 2);
+    assert_eq!(r.written.len(), 3);
     assert_eq!(ran.borrow().len(), 3);
+    // The entry names the icon it wrote, the same name the packages install (toimprove 310).
+    assert!(desktop_text(PROGRAM).unwrap().contains("\nIcon=excalidraw-vault\n"));
+    assert_eq!(fs::read(d.path().join(ICON_PATH)).unwrap(), ICON_PNG);
     let desktop = fs::read_to_string(d.path().join("applications/vaultdraw.desktop")).unwrap();
     assert_eq!(desktop, desktop_text(PROGRAM).unwrap());
     ran.borrow_mut().clear();
     let again = apply(&plan(d.path(), PROGRAM).unwrap(), &run).unwrap();
-    assert!(again.written.is_empty() && again.skipped.len() == 2);
+    assert!(again.written.is_empty() && again.skipped.len() == 3);
     assert!(ran.borrow().is_empty(), "nothing changed, nothing run");
 }
 
@@ -92,6 +98,7 @@ fn a_moved_program_updates_our_own_file() {
     let p = plan(d.path(), "/new/place/Vaultdraw").unwrap();
     assert_eq!(p.files[0].state, State::Update);
     assert_eq!(p.files[1].state, State::Same);
+    assert_eq!(p.files[2].state, State::Same);
     let r = apply(&p, &no_run).unwrap();
     assert_eq!(r.written.len(), 1);
     assert!(fs::read_to_string(d.path().join("applications/vaultdraw.desktop")).unwrap().contains("/new/place/Vaultdraw"));
@@ -107,7 +114,7 @@ fn security_a_file_that_is_not_ours_is_never_replaced() {
     assert_eq!(p.files[0].state, State::Foreign);
     let r = apply(&p, &no_run).unwrap();
     assert_eq!(fs::read_to_string(apps.join("vaultdraw.desktop")).unwrap(), "[Desktop Entry]\nName=Mine\n");
-    assert_eq!(r.written.len(), 1, "the free target is still written");
+    assert_eq!(r.written.len(), 2, "the free targets are still written");
     assert!(r.skipped[0].contains("left alone"));
 }
 
@@ -143,7 +150,7 @@ fn a_missing_helper_is_a_note_not_a_failure() {
     let d = tempfile::tempdir().unwrap();
     let run = |prog: &str, _: &[&str]| if prog == "xdg-mime" { Err("not found".to_string()) } else { Ok(()) };
     let r = apply(&plan(d.path(), PROGRAM).unwrap(), &run).unwrap();
-    assert_eq!(r.written.len(), 2);
+    assert_eq!(r.written.len(), 3);
     assert_eq!(r.notes, ["xdg-mime: not found"]);
 }
 
@@ -160,4 +167,16 @@ fn a_data_folder_with_spaces_stays_one_argument() {
     };
     apply(&plan(&spaced, PROGRAM).unwrap(), &run).unwrap();
     assert_eq!(ran.borrow()[0], ["update-desktop-database".to_string(), spaced.join("applications").to_string_lossy().into_owned()]);
+}
+
+#[test]
+fn security_an_icon_that_is_not_ours_is_left_alone() {
+    let d = tempfile::tempdir().unwrap();
+    let icon = d.path().join(ICON_PATH);
+    fs::create_dir_all(icon.parent().unwrap()).unwrap();
+    fs::write(&icon, b"my own picture").unwrap();
+    let p = plan(d.path(), PROGRAM).unwrap();
+    assert_eq!(p.files[2].state, State::Foreign);
+    apply(&p, &no_run).unwrap();
+    assert_eq!(fs::read(&icon).unwrap(), b"my own picture");
 }

@@ -24,6 +24,11 @@ const DESKTOP_TEMPLATE: &str = include_str!("../../linux/vaultdraw.desktop");
 const MIME_XML: &str = include_str!("../../linux/vaultdraw-mime.xml");
 pub(crate) const MARKER: &str = "Managed by Vaultdraw";
 const DESKTOP_NAME: &str = "vaultdraw.desktop";
+/// The icon name the deb and rpm packages install (`tauri.linux.conf.json`) and the desktop file
+/// names. An AppImage or a copied binary installs no icon, so the command writes this one into
+/// the user's own icon folder (toimprove 310).
+const ICON_PNG: &[u8] = include_bytes!("../../icons/128x128@2x.png");
+const ICON_PATH: &str = "icons/hicolor/256x256/apps/excalidraw-vault.png";
 const MIME_NAME: &str = "vaultdraw.xml";
 
 /// What exists at a target path now.
@@ -45,7 +50,7 @@ pub(crate) struct FilePlan {
     pub path: String,
     pub state: State,
     #[serde(skip)]
-    pub text: String,
+    pub text: Vec<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -97,7 +102,7 @@ pub(crate) fn data_home(xdg: Option<&str>, home: Option<&str>) -> Result<PathBuf
     }
 }
 
-fn state_of(path: &Path, text: &str) -> Result<State> {
+fn state_of(path: &Path, text: &[u8]) -> Result<State> {
     match std::fs::symlink_metadata(path) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(State::New),
         Err(e) => Err(crate::ioerr(e)),
@@ -105,10 +110,9 @@ fn state_of(path: &Path, text: &str) -> Result<State> {
         Ok(m) if !m.is_file() => Ok(State::Foreign),
         Ok(_) => {
             let now = std::fs::read(path).map_err(crate::ioerr)?;
-            let now = String::from_utf8_lossy(&now);
             Ok(if now == text {
                 State::Same
-            } else if now.contains(MARKER) {
+            } else if String::from_utf8_lossy(&now).contains(MARKER) {
                 State::Update
             } else {
                 State::Foreign
@@ -121,10 +125,16 @@ fn state_of(path: &Path, text: &str) -> Result<State> {
 pub(crate) fn plan(data_home: &Path, program: &str) -> Result<Plan> {
     let desktop = data_home.join("applications").join(DESKTOP_NAME);
     let mime = data_home.join("mime/packages").join(MIME_NAME);
-    let dtext = desktop_text(program)?;
+    let icon = data_home.join(ICON_PATH);
+    let dtext = desktop_text(program)?.into_bytes();
+    let file = |path: &Path, text: Vec<u8>| -> Result<FilePlan> {
+        Ok(FilePlan { state: state_of(path, &text)?, path: path.to_string_lossy().into_owned(), text })
+    };
     let files = vec![
-        FilePlan { state: state_of(&desktop, &dtext)?, path: desktop.to_string_lossy().into_owned(), text: dtext },
-        FilePlan { state: state_of(&mime, MIME_XML)?, path: mime.to_string_lossy().into_owned(), text: MIME_XML.to_string() },
+        file(&desktop, dtext)?,
+        file(&mime, MIME_XML.as_bytes().to_vec())?,
+        // A picture has no room for the marker: a different file there is the user's, left alone.
+        file(&icon, ICON_PNG.to_vec())?,
     ];
     let argv = |parts: &[&str]| parts.iter().map(|p| p.to_string()).collect::<Vec<_>>();
     let commands = vec![
@@ -158,9 +168,9 @@ pub(crate) fn apply(plan: &Plan, run: &dyn Fn(&str, &[&str]) -> std::result::Res
                     std::fs::create_dir_all(parent).map_err(crate::ioerr)?;
                 }
                 if s == State::New {
-                    crate::write_atomic_new(path, f.text.as_bytes())?;
+                    crate::write_atomic_new(path, &f.text)?;
                 } else {
-                    crate::write_atomic(path, f.text.as_bytes())?;
+                    crate::write_atomic(path, &f.text)?;
                 }
                 report.written.push(f.path.clone());
             }
@@ -208,7 +218,7 @@ pub(crate) async fn links_handlers_plan() -> Result<Plan> {
 }
 
 /// Writes the files after the user confirmed the dialog. Takes no argument: it can only write
-/// the two fixed files.
+/// the three fixed files.
 #[tauri::command]
 pub(crate) async fn links_handlers_apply() -> Result<Report> {
     if !cfg!(target_os = "linux") {
