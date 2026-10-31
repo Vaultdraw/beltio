@@ -242,7 +242,7 @@ describe("hunter L-14: Enter after a box made bold or code by its marks", () => 
     expect(h.current().fontFamily).toBe(105);
   });
 
-  it.fails.each([
+  it.each([
     ["**a**", 105],
     ["`a`", 3],
   ])(
@@ -257,4 +257,33 @@ describe("hunter L-14: Enter after a box made bold or code by its marks", () => 
       expect(h.current().fontFamily).toBe(5);
     },
   );
+});
+
+describe("toimprove 282: what Enter after a mark-made box does not do", () => {
+  it("Enter in the middle of a bold box still adds a line in the box", () => {
+    const h = harness();
+    h.type("**ab**");
+    h.textarea.setSelectionRange(1, 1);
+    h.press("Enter");
+    expect(h.current().text).toBe("a\nb");
+    expect(h.current().fontFamily).toBe(105);
+  });
+
+  it("Backspace in the new empty box goes back to the bold box", () => {
+    const h = harness();
+    h.type("**a**");
+    h.press("Enter");
+    h.press("Backspace");
+    expect(h.current().text).toBe("a");
+    expect(h.current().fontFamily).toBe(105);
+  });
+
+  it("a box made bold with the Toggle bold command keeps adding lines (no marks were typed)", () => {
+    const h = harness();
+    h.type("a");
+    h.current().fontFamily = 105;
+    h.press("Enter");
+    h.type("b");
+    expect(h.current().text).toBe("a\nb");
+  });
 });

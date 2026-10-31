@@ -99,6 +99,9 @@ export const DEFAULT_MARKDOWN_TYPING_SETTINGS: MarkdownTypingSettings = {
   inlineStyles: true,
 };
 
+/** customData key: the font a box had before its marks made it bold or code (toimprove 282). */
+const MARK_FONT = "markFont";
+
 type Conversion =
   | {
       kind: "inPlace";
@@ -383,11 +386,14 @@ export function createMarkdownTyping(deps: {
         const codeRole = m.kind === "code" && !roleOf(el);
         restyle({
           fontFamily: inlineFont(style.fontFamily, m.kind),
-          ...(codeRole
-            ? {
-                customData: withRole(style.customData, CODE_ROLE, strokeColor),
-              }
-            : {}),
+          // MARK_FONT: the look came from the marks, so Enter at the end starts plain text
+          // below in this font, as Obsidian does (toimprove 282)
+          customData: {
+            ...(codeRole
+              ? withRole(style.customData, CODE_ROLE, strokeColor)
+              : style.customData),
+            [MARK_FONT]: style.fontFamily,
+          },
         });
       }
       lastConversion = {
@@ -429,7 +435,12 @@ export function createMarkdownTyping(deps: {
     };
 
     /** End a heading or quote box; a body box starts below. */
-    const endBox = (el: ExcalidrawTextElement, head: string, tail: string) => {
+    const endBox = (
+      el: ExcalidrawTextElement,
+      head: string,
+      tail: string,
+      fontFamily = regularFontOf(el.fontFamily),
+    ) => {
       const settings = deps.getSettings();
       if (head !== editable.value) {
         session.setText(head, head.length);
@@ -442,7 +453,7 @@ export function createMarkdownTyping(deps: {
         text: tail,
         caret: 0,
         fontSize: bodySize,
-        fontFamily: regularFontOf(el.fontFamily),
+        fontFamily,
       });
     };
 
@@ -553,6 +564,21 @@ export function createMarkdownTyping(deps: {
           value.slice(0, from) + next + value.slice(to),
           from + next.length,
         );
+        return true;
+      }
+      const markFont = el.customData?.[MARK_FONT];
+      if (
+        typeof markFont === "number" &&
+        (role === null || role === CODE_ROLE) &&
+        !session.isLabel &&
+        from === to &&
+        to === value.length &&
+        value !== "" &&
+        (el.fontFamily === inlineFont(markFont, "bold") ||
+          el.fontFamily === inlineFont(markFont, "code"))
+      ) {
+        // a box made bold or code by its marks: Enter at the end starts plain text below
+        endBox(el, value, "", markFont);
         return true;
       }
       if (role === QUOTE_ROLE && !session.isLabel && from === to) {
