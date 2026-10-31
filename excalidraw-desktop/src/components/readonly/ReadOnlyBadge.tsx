@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { describeReadOnly } from "../../vault/readOnlyReason";
 import { IconLock } from "../Icons";
@@ -18,7 +18,21 @@ export const ReadOnlyBadge = ({ vault, onRetry }: ReadOnlyBadgeProps) => {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const badgeRef = useRef<HTMLButtonElement>(null);
   const { summary, detail } = describeReadOnly(vault);
+  // Closing with focus inside the panel hands it back to the badge, as the row, sort and tab
+  // menus do (toimprove 221, 305); a click elsewhere keeps the focus where the click put it.
+  const focusInPanel = () => {
+    const root = rootRef.current;
+    const active = root?.ownerDocument.activeElement;
+    return !!active && active !== badgeRef.current && !!root?.contains(active);
+  };
+  const close = useCallback((returnFocus: boolean) => {
+    setOpen(false);
+    if (returnFocus) {
+      badgeRef.current?.focus();
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -32,7 +46,7 @@ export const ReadOnlyBadge = ({ vault, onRetry }: ReadOnlyBadgeProps) => {
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setOpen(false);
+        close(focusInPanel());
       }
     };
     doc?.addEventListener("pointerdown", onDown, true);
@@ -41,21 +55,24 @@ export const ReadOnlyBadge = ({ vault, onRetry }: ReadOnlyBadgeProps) => {
       doc?.removeEventListener("pointerdown", onDown, true);
       doc?.removeEventListener("keydown", onKey, true);
     };
-  }, [open]);
+  }, [open, close]);
 
   const retry = async () => {
+    // Read before "Try again" is disabled: a disabled button drops its focus.
+    const returnFocus = focusInPanel();
     setBusy(true);
     try {
       await onRetry?.();
     } finally {
       setBusy(false);
-      setOpen(false);
+      close(returnFocus);
     }
   };
 
   return (
     <div className="vault-readonly" ref={rootRef}>
       <button
+        ref={badgeRef}
         type="button"
         className="vault-badge vault-badge--readonly"
         title={`Read-only: ${summary}. Click for details.`}

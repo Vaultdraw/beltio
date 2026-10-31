@@ -39,28 +39,22 @@ describe("family (shell hunter): a closed popover hands focus back to its opener
     expect(document.activeElement).toBe(badge);
   });
 
-  it.fails(
-    "Read-Only badge: Try again from the keyboard leaves focus on the badge (toimprove 305)",
-    async () => {
-      const badge = open();
-      const retry = screen.getByRole("button", { name: "Try again" });
-      retry.focus();
-      await act(async () => {
-        fireEvent.click(retry);
-      });
-      expect(screen.queryByRole("dialog")).toBeNull();
-      expect(document.activeElement).toBe(badge);
-    },
-  );
+  it("Read-Only badge: Try again from the keyboard leaves focus on the badge (toimprove 305)", async () => {
+    const badge = open();
+    const retry = screen.getByRole("button", { name: "Try again" });
+    retry.focus();
+    await act(async () => {
+      fireEvent.click(retry);
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(badge);
+  });
 
-  it.fails(
-    "Read-Only badge: Escape with focus inside the panel leaves focus on the badge (toimprove 305)",
-    () => {
-      const badge = open();
-      screen.getByRole("button", { name: "Try again" }).focus();
-      fireEvent.keyDown(document, { key: "Escape" });
-      expect(screen.queryByRole("dialog")).toBeNull();
-      expect(document.activeElement).toBe(badge);
-    },
-  );
+  it("Read-Only badge: Escape with focus inside the panel leaves focus on the badge (toimprove 305)", () => {
+    const badge = open();
+    screen.getByRole("button", { name: "Try again" }).focus();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(badge);
+  });
 });
