@@ -18,6 +18,7 @@ All notable changes to Vaultdraw are listed here. The format follows [Keep a Cha
 ### Fixed
 
 - **Every failure notice is an error notice.** A message such as "Couldn't save." (a note that failed to save), "Couldn't tick that task", a sync conflict failure or a plugin's "Could not …" was an info notice that left after 5 seconds; it now stays as long as **Error notices stay for** says and looks like an error. The rule lives in the notice queue, so new messages follow it too (toimprove 323).
+- **Page mode: Enter under a heading near the bottom of a page moves the paragraph to the next page.** When the new paragraph started just below the page edge, it was pulled up over the heading; it now starts at the top of the next page.
 - **A colour set on a heading by a plugin or `vaultdraw scene update` shows.** Black set this way stayed hidden under the theme's heading colour; it now wins, as a colour picked in the colour panel does.
 - **The Read-Only badge gives focus back.** Closing its panel with Escape or **Try again** from the keyboard returns focus to the badge, instead of the top of the window (toimprove 305).
 - **A failed copy says so plainly, as an error.** **Links: Copy link to this drawing** no longer prints the raw engine error, and a failed copy of the AI app setup is an error notice, not an info one (toimprove 304).

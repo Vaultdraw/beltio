@@ -83,24 +83,21 @@ describe("family: where a free text lands when its top is near a page's bottom e
       }
     });
 
-    it.fails(
-      `${name}: a box whose top is at or below the edge is never pulled up (toimprove 302)`,
-      () => {
-        const pulled: string[] = [];
-        for (const h of HEIGHTS) {
-          for (const y of tops.filter((t) => t >= bottom)) {
-            const el = box(y, h, width);
-            const dy =
-              planEnforcement(setup, [el], [el], {}, toMap([el])).get("t")
-                ?.dy ?? 0;
-            if (dy < 0) {
-              pulled.push(`h=${h} top=bottom+${y - bottom} dy=${dy}`);
-            }
+    it(`${name}: a box whose top is at or below the edge is never pulled up (toimprove 302)`, () => {
+      const pulled: string[] = [];
+      for (const h of HEIGHTS) {
+        for (const y of tops.filter((t) => t >= bottom)) {
+          const el = box(y, h, width);
+          const dy =
+            planEnforcement(setup, [el], [el], {}, toMap([el])).get("t")?.dy ??
+            0;
+          if (dy < 0) {
+            pulled.push(`h=${h} top=bottom+${y - bottom} dy=${dy}`);
           }
         }
-        expect(pulled).toEqual([]);
-      },
-    );
+      }
+      expect(pulled).toEqual([]);
+    });
 
     it(`${name}: a box that starts on the page and crosses the edge flows to the next page`, () => {
       for (const h of HEIGHTS) {

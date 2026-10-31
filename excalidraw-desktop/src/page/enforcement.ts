@@ -66,12 +66,14 @@ const flowToNextPage = (
   if (
     index + 1 >= setup.pageCount ||
     y1 < page.y ||
-    y1 >= bottom ||
     y2 <= bottom ||
     y2 - y1 > page.height
   ) {
     return null;
   }
+  // A top at or below the edge (in the gap between two sheets: Enter under a heading that ends
+  // just above it) flows down too; the nearest-page clamp would pull it up over the heading
+  // (toimprove 302).
   const next = getPageRect(setup, index + 1);
   const dy = next.y - y1;
   const { dx } = getClampToPageOffset(
