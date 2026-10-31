@@ -1,0 +1,208 @@
+{
+ "about": "Front matter property VALUES (family: twin parsers, hunter [notes] 2026-10-31, toimprove 315). `props` are the expected [key, value] pairs in file order, as YAML and Obsidian read them. `drift.native` marks a row the native parser reads differently today: its Rust test asserts the row still disagrees, so it turns red when fixed (then delete `drift`).",
+ "cases": [
+  {
+   "label": "spaced key",
+   "yaml": "Due date: 2026-01-01",
+   "props": [
+    [
+     "Due date",
+     "2026-01-01"
+    ]
+   ],
+   "drift": {
+    "standIn": "toimprove 316"
+   }
+  },
+  {
+   "label": "unicode key",
+   "yaml": "título: Hola",
+   "props": [
+    [
+     "título",
+     "Hola"
+    ]
+   ],
+   "drift": {
+    "standIn": "toimprove 316"
+   }
+  },
+  {
+   "label": "colon in a value",
+   "yaml": "url: https://a.b/c?d=e",
+   "props": [
+    [
+     "url",
+     "https://a.b/c?d=e"
+    ]
+   ]
+  },
+  {
+   "label": "quoted colon",
+   "yaml": "title: \"a: b\"",
+   "props": [
+    [
+     "title",
+     "a: b"
+    ]
+   ]
+  },
+  {
+   "label": "flow list joined",
+   "yaml": "k: [a, b]",
+   "props": [
+    [
+     "k",
+     "a, b"
+    ]
+   ],
+   "drift": {
+    "standIn": "toimprove 316"
+   }
+  },
+  {
+   "label": "block list joined",
+   "yaml": "k:\n  - a\n  - b",
+   "props": [
+    [
+     "k",
+     "a, b"
+    ]
+   ]
+  },
+  {
+   "label": "quoted wikilink",
+   "yaml": "up: \"[[Home]]\"",
+   "props": [
+    [
+     "up",
+     "[[Home]]"
+    ]
+   ]
+  },
+  {
+   "label": "single-quoted wikilink",
+   "yaml": "up: '[[Home]]'",
+   "props": [
+    [
+     "up",
+     "[[Home]]"
+    ]
+   ]
+  },
+  {
+   "label": "block list of unquoted wikilinks",
+   "yaml": "rel:\n  - [[A]]\n  - [[B]]",
+   "props": [
+    [
+     "rel",
+     "[[A]], [[B]]"
+    ]
+   ]
+  },
+  {
+   "label": "text around a wikilink",
+   "yaml": "up: see [[Home]] now",
+   "props": [
+    [
+     "up",
+     "see [[Home]] now"
+    ]
+   ]
+  },
+  {
+   "label": "unquoted wikilink",
+   "yaml": "up: [[Home]]",
+   "props": [
+    [
+     "up",
+     "[[Home]]"
+    ]
+   ],
+   "drift": {
+    "native": "toimprove 315"
+   }
+  },
+  {
+   "label": "unquoted wikilink with alias",
+   "yaml": "up: [[Home|Start]]",
+   "props": [
+    [
+     "up",
+     "[[Home|Start]]"
+    ]
+   ],
+   "drift": {
+    "native": "toimprove 315"
+   }
+  },
+  {
+   "label": "unquoted wikilink with folder",
+   "yaml": "up: [[Folder/Home]]",
+   "props": [
+    [
+     "up",
+     "[[Folder/Home]]"
+    ]
+   ],
+   "drift": {
+    "native": "toimprove 315"
+   }
+  },
+  {
+   "label": "unquoted wikilink with heading",
+   "yaml": "up: [[Home#Part]]",
+   "props": [
+    [
+     "up",
+     "[[Home#Part]]"
+    ]
+   ],
+   "drift": {
+    "native": "toimprove 315"
+   }
+  },
+  {
+   "label": "trailing comment",
+   "yaml": "k: v # note",
+   "props": [
+    [
+     "k",
+     "v"
+    ]
+   ],
+   "drift": {
+    "native": "toimprove 315",
+    "standIn": "toimprove 315"
+   }
+  },
+  {
+   "label": "single-quote escape",
+   "yaml": "title: 'it''s'",
+   "props": [
+    [
+     "title",
+     "it's"
+    ]
+   ],
+   "drift": {
+    "native": "toimprove 315",
+    "standIn": "toimprove 315"
+   }
+  },
+  {
+   "label": "quoted key",
+   "yaml": "\"my key\": v",
+   "props": [
+    [
+     "my key",
+     "v"
+    ]
+   ],
+   "drift": {
+    "native": "toimprove 315",
+    "standIn": "toimprove 315"
+   }
+  }
+ ]
+}
